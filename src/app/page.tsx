@@ -3,7 +3,11 @@
 import { useEffect, useState, useCallback } from "react";
 import { getTopicConfig } from "@/lib/topics";
 import { getLevelFromXP } from "@/lib/xp";
+import { t, getLang, setLang } from "@/lib/i18n";
+import LanguageToggle from "@/components/LanguageToggle";
 import Link from "next/link";
+
+type Lang = 'de' | 'en'
 
 interface User {
   id: string;
@@ -50,6 +54,16 @@ export default function Home() {
   const [topics, setTopics] = useState<TopicCount[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [lang, setLangState] = useState<Lang>('de');
+
+  useEffect(() => {
+    setLangState(getLang());
+  }, []);
+
+  const switchLang = (l: Lang) => {
+    setLang(l);
+    setLangState(l);
+  };
 
   const authenticate = useCallback(async () => {
     try {
@@ -69,7 +83,6 @@ export default function Home() {
       });
 
       if (!res.ok) {
-        // For non-Telegram access, show demo mode
         setError("demo");
         setLoading(false);
         return;
@@ -79,7 +92,6 @@ export default function Home() {
       setUser(data.user);
       setGam(data.gamification);
 
-      // Fetch topics
       const topicRes = await fetch("/api/questions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -89,11 +101,11 @@ export default function Home() {
       setTopics(topicData);
     } catch (e) {
       console.error(e);
-      setError("Verbindungsfehler");
+      setError(t('connection_error', lang));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [lang]);
 
   useEffect(() => {
     authenticate();
@@ -104,14 +116,14 @@ export default function Home() {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-teal-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-slate-400">Laden...</p>
+          <p className="text-slate-400">{t('loading', lang)}</p>
         </div>
       </div>
     );
   }
 
   if (error === "demo" || !user) {
-    return <DemoHome topics={topics} />;
+    return <DemoHome topics={topics} lang={lang} onLangChange={switchLang} />;
   }
 
   const xpInfo = getLevelFromXP(gam?.total_xp || 0);
@@ -126,25 +138,28 @@ export default function Home() {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h1 className="text-xl font-bold">
-              Hallo, {user.first_name}! 👋
+              {t('hello', lang)}, {user.first_name}! 👋
             </h1>
             <p className="text-slate-400 text-sm">
               {xpInfo.rank} · Level {xpInfo.level}
             </p>
           </div>
-          <Link
-            href="/stats"
-            className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center"
-          >
-            📊
-          </Link>
+          <div className="flex items-center gap-2">
+            <LanguageToggle lang={lang} onChange={switchLang} />
+            <Link
+              href="/stats"
+              className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center"
+            >
+              📊
+            </Link>
+          </div>
         </div>
 
         {/* Stats Bar */}
         <div className="grid grid-cols-3 gap-3 mb-4">
           <StatCard icon="⚡" value={gam?.total_xp || 0} label="XP" color="text-amber-400" />
-          <StatCard icon="🔥" value={gam?.current_streak || 0} label="Streak" color="text-red-400" />
-          <StatCard icon="✅" value={`${accuracy}%`} label="Genauigkeit" color="text-green-400" />
+          <StatCard icon="🔥" value={gam?.current_streak || 0} label={t('streak', lang)} color="text-red-400" />
+          <StatCard icon="✅" value={`${accuracy}%`} label={t('accuracy', lang)} color="text-green-400" />
         </div>
 
         {/* XP Progress Bar */}
@@ -155,13 +170,13 @@ export default function Home() {
           />
         </div>
         <p className="text-xs text-slate-500 mb-4">
-          {Math.round(xpInfo.progress)}% zum nächsten Level
+          {Math.round(xpInfo.progress)}% {t('to_next_level', lang)}
         </p>
 
         {/* Daily Progress */}
         <div className="bg-slate-800/50 rounded-xl p-3 mb-6 border border-slate-700/50">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-slate-300">Tagesziel</span>
+            <span className="text-sm text-slate-300">{t('daily_progress', lang)}</span>
             <span className="text-sm font-medium text-teal-400">
               {gam?.daily_questions_today || 0}/{user.daily_goal}
             </span>
@@ -181,28 +196,28 @@ export default function Home() {
           href={`/quiz?topic=random&userId=${user.id}`}
           className="block w-full bg-gradient-to-r from-teal-600 to-teal-500 text-white text-center py-4 rounded-2xl font-semibold text-lg shadow-lg shadow-teal-500/20 pulse-glow"
         >
-          🚀 Schnellstart — Zufälliges Thema
+          🚀 {t('quick_start', lang)}
         </Link>
       </div>
 
       {/* Topics Grid */}
       <div className="px-4 pb-8">
-        <h2 className="text-lg font-semibold mb-3">Fachgebiete</h2>
+        <h2 className="text-lg font-semibold mb-3">{t('specialties', lang)}</h2>
         <div className="grid grid-cols-2 gap-3">
-          {topics.map((t) => {
-            const config = getTopicConfig(t.topic);
+          {topics.map((tp) => {
+            const config = getTopicConfig(tp.topic);
             return (
               <Link
-                key={t.topic}
-                href={`/quiz?topic=${encodeURIComponent(t.topic)}&userId=${user.id}`}
+                key={tp.topic}
+                href={`/quiz?topic=${encodeURIComponent(tp.topic)}&userId=${user.id}`}
                 className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4 hover:bg-slate-800 transition-colors active:scale-95"
               >
                 <div className="text-2xl mb-2">{config.icon}</div>
                 <div className="text-sm font-medium leading-tight mb-1">
-                  {t.topic}
+                  {tp.topic}
                 </div>
                 <div className="text-xs text-slate-400">
-                  {t.count} Fragen
+                  {tp.count} {t('questions', lang)}
                 </div>
               </Link>
             );
@@ -223,31 +238,34 @@ function StatCard({ icon, value, label, color }: { icon: string; value: number |
   );
 }
 
-function DemoHome({ topics }: { topics: TopicCount[] }) {
+function DemoHome({ topics, lang, onLangChange }: { topics: TopicCount[]; lang: Lang; onLangChange: (l: Lang) => void }) {
   return (
     <main className="min-h-screen safe-area-top safe-area-bottom px-4 pt-8">
+      <div className="flex justify-end mb-4">
+        <LanguageToggle lang={lang} onChange={onLangChange} />
+      </div>
       <div className="text-center mb-8">
         <div className="text-5xl mb-4">🏥</div>
         <h1 className="text-2xl font-bold mb-2">MedPrüf</h1>
-        <p className="text-slate-400">Deutsche Medizinprüfung Vorbereitung</p>
+        <p className="text-slate-400">{t('exam_prep', lang)}</p>
         <p className="text-slate-500 text-sm mt-2">
-          Öffne diese App in Telegram für den vollen Zugang.
+          {t('open_in_telegram', lang)}
         </p>
       </div>
       
       {topics.length > 0 && (
         <div>
           <h2 className="text-lg font-semibold mb-3">
-            {topics.reduce((sum, t) => sum + t.count, 0)} Fragen in {topics.length} Fachgebieten
+            {topics.reduce((sum, tp) => sum + tp.count, 0)} {t('questions_in_topics', lang)} {topics.length} {t('topics_label', lang)}
           </h2>
           <div className="grid grid-cols-2 gap-3">
-            {topics.map((t) => {
-              const config = getTopicConfig(t.topic);
+            {topics.map((tp) => {
+              const config = getTopicConfig(tp.topic);
               return (
-                <div key={t.topic} className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4">
+                <div key={tp.topic} className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-4">
                   <div className="text-2xl mb-2">{config.icon}</div>
-                  <div className="text-sm font-medium">{t.topic}</div>
-                  <div className="text-xs text-slate-400">{t.count} Fragen</div>
+                  <div className="text-sm font-medium">{tp.topic}</div>
+                  <div className="text-xs text-slate-400">{tp.count} {t('questions', lang)}</div>
                 </div>
               );
             })}
