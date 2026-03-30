@@ -7,12 +7,6 @@ export async function GET(req: NextRequest) {
   const limit = parseInt(req.nextUrl.searchParams.get('limit') || '1')
   const userId = req.nextUrl.searchParams.get('userId')
 
-  let query = sb.from('questions').select('*').eq('is_active', true)
-  
-  if (topic && topic !== 'random') {
-    query = query.eq('topic', topic)
-  }
-
   // If user provided, prioritize questions due for review
   if (userId) {
     const { data: progress } = await sb
@@ -29,7 +23,7 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // Get count first
+  // Get count for random offset
   const countQuery = sb.from('questions').select('id', { count: 'exact', head: true }).eq('is_active', true)
   if (topic && topic !== 'random') {
     countQuery.eq('topic', topic)
@@ -39,6 +33,11 @@ export async function GET(req: NextRequest) {
   if (!count) return NextResponse.json([])
   
   const offset = Math.floor(Math.random() * Math.max(1, count - limit))
+  
+  let query = sb.from('questions').select('*').eq('is_active', true)
+  if (topic && topic !== 'random') {
+    query = query.eq('topic', topic)
+  }
   const { data, error } = await query.range(offset, offset + limit - 1)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -50,10 +49,10 @@ export async function POST(req: NextRequest) {
   const { action } = await req.json()
   
   if (action === 'topics') {
-    // Query all questions and aggregate topic counts
-    const { data: questions } = await sb.from('questions').select('topic').eq('is_active', true)
+    // Use count query per topic - get distinct topics first
+    const { data: allTopics } = await sb.from('questions').select('topic').eq('is_active', true).limit(10000)
     const counts: Record<string, number> = {}
-    questions?.forEach(q => { counts[q.topic] = (counts[q.topic] || 0) + 1 })
+    allTopics?.forEach(q => { counts[q.topic] = (counts[q.topic] || 0) + 1 })
     const result = Object.entries(counts)
       .map(([topic, count]) => ({ topic, count }))
       .sort((a, b) => b.count - a.count)
