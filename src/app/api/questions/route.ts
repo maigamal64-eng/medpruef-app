@@ -49,14 +49,34 @@ export async function POST(req: NextRequest) {
   const { action } = await req.json()
   
   if (action === 'topics') {
-    // Use count query per topic - get distinct topics first
-    const { data: allTopics } = await sb.from('questions').select('topic').eq('is_active', true).limit(10000)
-    const counts: Record<string, number> = {}
-    allTopics?.forEach(q => { counts[q.topic] = (counts[q.topic] || 0) + 1 })
-    const result = Object.entries(counts)
-      .map(([topic, count]) => ({ topic, count }))
-      .sort((a, b) => b.count - a.count)
-    return NextResponse.json(result)
+    // Use individual count queries per known topic to avoid row limit issues
+    const knownTopics = [
+      'Chirurgische Fächer',
+      'Dermatologie und Venerologie', 
+      'Innere Medizin',
+      'Neurologie',
+      'Psychiatrie',
+      'Frauenheilkunde/Gynäkologie',
+      'Kinder- und Jugendheilkunde',
+      'Augenheilkunde',
+      'Hals-Nasen-Ohrenheilkunde',
+      'Notfall- und Intensivmedizin',
+    ]
+    
+    const results = await Promise.all(
+      knownTopics.map(async (topic) => {
+        const { count } = await sb
+          .from('questions')
+          .select('id', { count: 'exact', head: true })
+          .eq('is_active', true)
+          .eq('topic', topic)
+        return { topic, count: count || 0 }
+      })
+    )
+    
+    return NextResponse.json(
+      results.filter(r => r.count > 0).sort((a, b) => b.count - a.count)
+    )
   }
 
   return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
