@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { getTopicConfig } from "@/lib/topics";
 import { t, getLang, setLang } from "@/lib/i18n";
@@ -54,7 +55,9 @@ function formatTime(seconds: number): string {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
-export default function ExamPage() {
+function ExamContent() {
+  const searchParams = useSearchParams();
+  const examSource = searchParams.get("examSource") || "SIP";
   const [lang, setLangState] = useState<Lang>("de");
   const [userId, setUserId] = useState("");
   const [userName, setUserName] = useState("");
@@ -90,7 +93,7 @@ export default function ExamPage() {
     for (let i = 0; i < EXAM_CONFIG.length; i++) {
       const { topic, count } = EXAM_CONFIG[i];
       try {
-        const params = new URLSearchParams({ topic, limit: String(count) });
+        const params = new URLSearchParams({ topic, limit: String(count), examSource });
         const res = await fetch(`/api/questions?${params}`);
         const data: Question[] = await res.json();
         allQuestions.push(...data);
@@ -111,7 +114,7 @@ export default function ExamPage() {
     setCurrentIdx(0);
     setTimeLeft(EXAM_DURATION_S);
     setPhase("exam");
-  }, []);
+  }, [examSource]);
 
   // Timer management
   useEffect(() => {
@@ -649,5 +652,17 @@ export default function ExamPage() {
       </main>
       <BottomNav lang={lang} userId={userId} />
     </div>
+  );
+}
+
+export default function ExamPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen bg-[#0C1324]">
+        <div className="w-14 h-14 border-2 border-[#6BD8CB] border-t-transparent rounded-full animate-spin" />
+      </div>
+    }>
+      <ExamContent />
+    </Suspense>
   );
 }

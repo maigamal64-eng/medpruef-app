@@ -5,6 +5,12 @@ import Link from "next/link";
 import { getLang, setLang, t } from "@/lib/i18n";
 import { getLevelFromXP } from "@/lib/xp";
 import { getStoredSession, clearSession } from "@/lib/auth";
+import {
+  EXAM_SOURCES,
+  getStoredExamSource,
+  setStoredExamSource,
+  type ExamSourceId,
+} from "@/lib/topics";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import LanguageToggle from "@/components/LanguageToggle";
@@ -64,6 +70,7 @@ export default function ProfilePage() {
   const [editData, setEditData] = useState<ProfileData>({ university: "", country: "", targetDate: "" });
   const [favIds, setFavIds] = useState<number[]>([]);
   const [saved, setSaved] = useState(false);
+  const [examSource, setExamSourceState] = useState<ExamSourceId>("SIP");
 
   useEffect(() => {
     setLangState(getLang());
@@ -73,6 +80,7 @@ export default function ProfilePage() {
     setProfile(p);
     setEditData(p);
     setFavIds(loadFavoriteIds());
+    setExamSourceState(getStoredExamSource());
   }, []);
 
   const switchLang = (l: Lang) => {
@@ -115,20 +123,33 @@ export default function ProfilePage() {
             <h1 className="text-base font-bold text-[#DCE1FB]">{t("profile", lang)}</h1>
             <LanguageToggle lang={lang} onChange={switchLang} />
           </div>
-          <div className="flex flex-col items-center justify-center min-h-[calc(100vh-60px)] px-4 text-center">
+          <div className="flex flex-col items-center justify-center min-h-[calc(100vh-60px)] px-4 text-center max-w-sm mx-auto">
             <div className="text-5xl mb-4">👤</div>
             <p className="text-[#BCC9C6] font-medium mb-2">{t("profile_not_logged_in", lang)}</p>
             <p className="text-[#879391] text-sm mb-6">
               {lang === "de"
-                ? "Nutze den Telegram-Login auf der Startseite"
-                : "Use Telegram login on the home page"}
+                ? "Melde dich mit Telegram an, um deinen Fortschritt zu speichern"
+                : "Sign in with Telegram to save your progress"}
             </p>
-            <Link
-              href="/"
-              className="px-6 py-3 bg-[#6BD8CB] text-[#003732] rounded font-bold text-sm hover:bg-[#89F5E7] transition-colors"
-            >
-              {t("back_home", lang)}
-            </Link>
+            <div className="flex flex-col gap-3 w-full mb-4">
+              <a
+                href="https://t.me/MedPruefBot?start=web_login"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-3 bg-[#229ED9] hover:bg-[#1e8fc0] text-white px-5 py-3 rounded font-semibold text-sm transition-all"
+              >
+                <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current" aria-hidden="true">
+                  <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.833.941z"/>
+                </svg>
+                {lang === "de" ? "Mit Telegram anmelden" : "Sign in with Telegram"}
+              </a>
+              <Link
+                href="/"
+                className="px-6 py-3 bg-[#191F31] border border-[#3D4947] text-[#BCC9C6] rounded text-sm hover:border-[#6BD8CB]/40 transition-colors"
+              >
+                ← {t("back_home", lang)}
+              </Link>
+            </div>
           </div>
         </main>
         <BottomNav lang={lang} />
@@ -383,6 +404,63 @@ export default function ProfilePage() {
               />
             </div>
           </div>
+
+          {/* Exam selection */}
+          <div className="bg-[#191F31] border border-[#3D4947] rounded p-5">
+            <h3 className="text-sm font-semibold text-[#DCE1FB] mb-3">
+              {lang === "de" ? "Prüfungsauswahl" : "Exam Selection"}
+            </h3>
+            <div className="space-y-2">
+              {EXAM_SOURCES.map((exam) => (
+                <button
+                  key={exam.id}
+                  onClick={() => {
+                    setStoredExamSource(exam.id);
+                    setExamSourceState(exam.id);
+                  }}
+                  className={`w-full flex items-center gap-3 rounded p-3 text-left text-sm transition-all ${
+                    examSource === exam.id
+                      ? "bg-[#6BD8CB]/12 border border-[#6BD8CB]/40 text-[#6BD8CB]"
+                      : "border border-[#3D4947] text-[#BCC9C6] hover:border-[#6BD8CB]/30"
+                  }`}
+                >
+                  <span>{exam.badge}</span>
+                  <span className="flex-1">{exam.fullName}</span>
+                  <span className="font-mono text-xs text-[#879391]">
+                    {exam.questions.toLocaleString("de-DE")}
+                  </span>
+                  {examSource === exam.id && (
+                    <span className="text-[#6BD8CB] text-xs font-bold">✓</span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Connect Telegram — shown if guest */}
+          {user.id.startsWith("guest_") && (
+            <div className="bg-[#191F31] border border-[#3D4947] rounded p-5">
+              <h3 className="text-sm font-semibold text-[#DCE1FB] mb-2">
+                {lang === "de" ? "Später mit Telegram verbinden" : "Connect Telegram later"}
+              </h3>
+              <p className="text-xs text-[#879391] mb-4">
+                {lang === "de"
+                  ? "Verbinde deinen Fortschritt mit Telegram, um geräteübergreifend zu lernen."
+                  : "Connect your progress to Telegram to study across devices."}
+              </p>
+              <a
+                href="https://t.me/MedPruefBot?start=web_login"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-3 bg-[#229ED9] hover:bg-[#1e8fc0] text-white px-5 py-3 rounded font-semibold text-sm transition-all w-full"
+              >
+                <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current" aria-hidden="true">
+                  <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.833.941z"/>
+                </svg>
+                {lang === "de" ? "Mit Telegram verbinden" : "Connect with Telegram"}
+              </a>
+            </div>
+          )}
 
           {/* Logout */}
           <button

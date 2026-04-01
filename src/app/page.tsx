@@ -5,7 +5,12 @@ import { getTopicConfig } from "@/lib/topics";
 import { getLevelFromXP } from "@/lib/xp";
 import { t, getLang, setLang } from "@/lib/i18n";
 import { isTelegramMiniApp, getMiniAppInitData, getStoredSession, storeSession } from "@/lib/auth";
-import type { TelegramWidgetUser, StoredSession } from "@/lib/auth";
+import {
+  getStoredExamSource,
+  hasSelectedExam,
+  setStoredExamSource,
+  type ExamSourceId,
+} from "@/lib/topics";
 import LanguageToggle from "@/components/LanguageToggle";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
@@ -14,6 +19,7 @@ import StatsCard from "@/components/StatsCard";
 import StreakWidget from "@/components/StreakWidget";
 import XPBar from "@/components/XPBar";
 import DailyGoalRing from "@/components/DailyGoalRing";
+import ExamSelector from "@/components/ExamSelector";
 import Link from "next/link";
 
 type Lang = "de" | "en";
@@ -54,7 +60,6 @@ declare global {
         themeParams: Record<string, string>;
       };
     };
-    onTelegramAuth?: (user: TelegramWidgetUser) => void;
   }
 }
 
@@ -65,15 +70,32 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [lang, setLangState] = useState<Lang>("de");
+  const [examSource, setExamSource] = useState<ExamSourceId>("SIP");
+  const [showExamSelector, setShowExamSelector] = useState(false);
 
   useEffect(() => {
     setLangState(getLang());
+    const src = getStoredExamSource();
+    setExamSource(src);
+    if (!hasSelectedExam() && !isTelegramMiniApp()) {
+      setShowExamSelector(true);
+    }
   }, []);
 
   const switchLang = (l: Lang) => {
     setLang(l);
     setLangState(l);
   };
+
+  const fetchTopics = useCallback(async (src: ExamSourceId) => {
+    const res = await fetch("/api/questions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "topics", examSource: src }),
+    });
+    const data = await res.json();
+    setTopics(data);
+  }, []);
 
   const authenticate = useCallback(async () => {
     try {
@@ -87,17 +109,11 @@ export default function Home() {
         tg.setBackgroundColor("#0C1324");
       }
 
-      // Always fetch topics
-      const topicRes = await fetch("/api/questions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "topics" }),
-      });
-      const topicData = await topicRes.json();
-      setTopics(topicData);
+      const src = getStoredExamSource();
+      setExamSource(src);
+      await fetchTopics(src);
 
       if (isMiniApp) {
-        // Mini App: authenticate via initData
         const initData = getMiniAppInitData();
         const res = await fetch("/api/auth", {
           method: "POST",
@@ -112,8 +128,12 @@ export default function Home() {
         const data = await res.json();
         setUser(data.user);
         setGam(data.gamification);
+        // Mini App: auto-select exam if not set
+        if (!hasSelectedExam()) {
+          setStoredExamSource("SIP");
+          setExamSource("SIP");
+        }
       } else {
-        // Web: check localStorage for a stored Login Widget session
         const stored = getStoredSession();
         if (stored) {
           setUser(stored.user);
@@ -128,13 +148,24 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [fetchTopics]);
 
   useEffect(() => {
     authenticate();
   }, [authenticate]);
 
-  if (loading) {
+  const handleExamSelected = useCallback(
+    async (id: ExamSourceId) => {
+      setExamSource(id);
+      setShowExamSelector(false);
+      setLoading(true);
+      await fetchTopics(id);
+      setLoading(false);
+    },
+    [fetchTopics]
+  );
+
+  if (loading && !showExamSelector) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-[#0C1324]">
         <div className="text-center animate-fade-in">
@@ -145,8 +176,20 @@ export default function Home() {
     );
   }
 
+  if (showExamSelector) {
+    return <ExamSelector lang={lang} onSelect={handleExamSelected} />;
+  }
+
   if (error === "demo" || !user) {
-    return <DemoHome topics={topics} lang={lang} onLangChange={switchLang} />;
+    return (
+      <DemoHome
+        topics={topics}
+        lang={lang}
+        examSource={examSource}
+        onLangChange={switchLang}
+        onChangeExam={() => setShowExamSelector(true)}
+      />
+    );
   }
 
   const xpInfo = getLevelFromXP(gam?.total_xp || 0);
@@ -179,7 +222,8 @@ export default function Home() {
                   {t("hello", lang)}, {user.first_name}
                 </h1>
                 <p className="text-xs text-[#879391]">
-                  {xpInfo.rank} · {t("level", lang)} <span className="font-mono">{xpInfo.level}</span>
+                  {xpInfo.rank} · {t("level", lang)}{" "}
+                  <span className="font-mono">{xpInfo.level}</span>
                 </p>
               </div>
             </div>
@@ -195,7 +239,16 @@ export default function Home() {
             </h1>
             <p className="text-sm text-[#879391]">{t("exam_prep", lang)}</p>
           </div>
-          <LanguageToggle lang={lang} onChange={switchLang} />
+          <div className="flex items-center gap-3">
+            {/* Exam badge */}
+            <button
+              onClick={() => setShowExamSelector(true)}
+              className="text-xs font-mono bg-[#6BD8CB]/10 text-[#6BD8CB] px-2.5 py-1.5 rounded border border-[#6BD8CB]/20 hover:bg-[#6BD8CB]/20 transition-colors"
+            >
+              {examSource}
+            </button>
+            <LanguageToggle lang={lang} onChange={switchLang} />
+          </div>
         </div>
 
         <div className="px-4 lg:px-8 py-4">
@@ -215,7 +268,7 @@ export default function Home() {
           {/* Quick Actions */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
             <Link
-              href={`/quiz?topic=random&userId=${user.id}`}
+              href={`/quiz?topic=random&userId=${user.id}&examSource=${examSource}`}
               className="flex items-center gap-3 bg-[#6BD8CB] hover:bg-[#89F5E7] text-[#003732] px-5 py-3.5 rounded font-semibold pulse-glow transition-all active:scale-[0.98]"
             >
               <span className="text-xl">🚀</span>
@@ -224,7 +277,7 @@ export default function Home() {
 
             {topics.length > 0 && (
               <Link
-                href={`/quiz?topic=${encodeURIComponent(topics[0].topic)}&userId=${user.id}`}
+                href={`/quiz?topic=${encodeURIComponent(topics[0].topic)}&userId=${user.id}&examSource=${examSource}`}
                 className="flex items-center gap-3 bg-[#191F31] border border-[#3D4947] text-[#DCE1FB] px-5 py-3.5 rounded font-medium hover:border-[#6BD8CB]/40 transition-all"
               >
                 <span className="text-xl">▶️</span>
@@ -232,13 +285,13 @@ export default function Home() {
               </Link>
             )}
 
-            <div className="flex items-center gap-3 bg-[#151B2D] border border-[#3D4947] text-[#879391] px-5 py-3.5 rounded cursor-not-allowed relative overflow-hidden">
-              <span className="text-xl opacity-50">📋</span>
+            <Link
+              href={`/exam?examSource=${examSource}`}
+              className="flex items-center gap-3 bg-[#191F31] border border-[#3D4947] text-[#DCE1FB] px-5 py-3.5 rounded font-medium hover:border-[#6BD8CB]/40 transition-all"
+            >
+              <span className="text-xl">📋</span>
               <span className="text-sm">{t("mock_exam", lang)}</span>
-              <span className="absolute top-2 right-2 text-[9px] font-medium bg-[#FFB95F]/12 text-[#FFB95F] px-1.5 py-0.5 rounded border border-[#FFB95F]/20">
-                {t("coming_soon", lang)}
-              </span>
-            </div>
+            </Link>
           </div>
 
           {/* Topics Grid */}
@@ -253,6 +306,7 @@ export default function Home() {
                   userId={user.id}
                   lang={lang}
                   delay={i * 50}
+                  examSource={examSource}
                 />
               ))}
             </div>
@@ -279,61 +333,40 @@ export default function Home() {
 function DemoHome({
   topics,
   lang,
+  examSource,
   onLangChange,
+  onChangeExam,
 }: {
   topics: TopicCount[];
   lang: Lang;
+  examSource: ExamSourceId;
   onLangChange: (l: Lang) => void;
+  onChangeExam: () => void;
 }) {
-  const [authLoading, setAuthLoading] = useState(false);
-  const [authError, setAuthError] = useState("");
-
-  useEffect(() => {
-    // Register global callback for Telegram Login Widget
-    window.onTelegramAuth = async (widgetUser: TelegramWidgetUser) => {
-      setAuthLoading(true);
-      setAuthError("");
-      try {
-        const res = await fetch("/api/auth", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ widgetData: widgetUser }),
-        });
-        if (!res.ok) {
-          setAuthError(lang === "de" ? "Anmeldung fehlgeschlagen" : "Login failed");
-          setAuthLoading(false);
-          return;
-        }
-        const session: StoredSession = await res.json();
-        storeSession(session);
-        window.location.reload();
-      } catch {
-        setAuthError(lang === "de" ? "Verbindungsfehler" : "Connection error");
-        setAuthLoading(false);
-      }
-    };
-
-    return () => {
-      delete window.onTelegramAuth;
-    };
-  }, [lang]);
-
-  // Inject Telegram Login Widget via DOM (Next.js <Script> doesn't pass data-* attrs correctly)
-  useEffect(() => {
-    const container = document.getElementById("telegram-login-container");
-    if (!container || container.children.length > 0) return;
-
-    const script = document.createElement("script");
-    script.src = "https://telegram.org/js/telegram-widget.js?22";
-    script.setAttribute("data-telegram-login", "MedPruefBot");
-    script.setAttribute("data-size", "large");
-    script.setAttribute("data-onauth", "onTelegramAuth(user)");
-    script.setAttribute("data-request-access", "write");
-    script.async = true;
-    container.appendChild(script);
-  }, []);
-
   const totalQuestions = topics.reduce((sum, tp) => sum + tp.count, 0);
+
+  const handleGuestContinue = () => {
+    const guestId = `guest_${Date.now()}`;
+    const session = {
+      user: {
+        id: guestId,
+        telegram_id: 0,
+        first_name: lang === "de" ? "Gast" : "Guest",
+        xp_total: 0,
+        streak_count: 0,
+        daily_goal: 20,
+      },
+      gamification: {
+        total_xp: 0,
+        current_streak: 0,
+        total_questions_answered: 0,
+        total_correct: 0,
+        daily_questions_today: 0,
+      },
+    };
+    storeSession(session);
+    window.location.reload();
+  };
 
   return (
     <div className="min-h-screen bg-[#0C1324] safe-area-top safe-area-bottom">
@@ -362,15 +395,25 @@ function DemoHome({
             </div>
             <div className="w-px h-8 bg-[#3D4947]" />
             <div className="text-center">
-              <p className="text-2xl font-bold text-[#FFB95F] font-mono">{topics.length || "19"}</p>
+              <p className="text-2xl font-bold text-[#FFB95F] font-mono">{topics.length || "10"}</p>
               <p className="text-xs text-[#879391]">{t("topics", lang)}</p>
             </div>
+            <div className="w-px h-8 bg-[#3D4947]" />
+            {/* Exam badge — clickable to change */}
+            <button onClick={onChangeExam} className="text-center group">
+              <p className="text-lg font-bold text-[#FFB95F] font-mono group-hover:text-[#FFD080] transition-colors">
+                {examSource}
+              </p>
+              <p className="text-xs text-[#879391] group-hover:text-[#BCC9C6] transition-colors">
+                {lang === "de" ? "Prüfung" : "Exam"}
+              </p>
+            </button>
           </div>
 
           {/* Primary CTA */}
           <div className="mt-6">
             <Link
-              href="/quiz?topic=random"
+              href={`/quiz?topic=random&examSource=${examSource}`}
               className="inline-flex items-center gap-3 bg-[#6BD8CB] hover:bg-[#89F5E7] text-[#003732] px-7 py-3.5 rounded font-bold text-base pulse-glow transition-all active:scale-[0.98]"
             >
               <span className="text-xl">🚀</span>
@@ -380,7 +423,7 @@ function DemoHome({
         </div>
       </div>
 
-      {/* Topics — prominent, clickable, no login required */}
+      {/* Topics */}
       {topics.length > 0 && (
         <div className="px-4 pb-6 max-w-4xl mx-auto">
           <h2 className="text-base font-semibold mb-3 text-[#DCE1FB]">{t("practice_topics", lang)}</h2>
@@ -390,7 +433,7 @@ function DemoHome({
               return (
                 <Link
                   key={tp.topic}
-                  href={`/quiz?topic=${encodeURIComponent(tp.topic)}`}
+                  href={`/quiz?topic=${encodeURIComponent(tp.topic)}&examSource=${examSource}`}
                   className="topic-card-border bg-[#191F31] border border-[#3D4947] rounded p-4 animate-fade-in hover:border-[#6BD8CB]/40 hover:bg-[#1E2640] transition-all active:scale-[0.98]"
                   style={{
                     borderLeftColor: config.color,
@@ -409,32 +452,49 @@ function DemoHome({
         </div>
       )}
 
-      {/* Sign-in prompt — below topics */}
+      {/* Login + Guest prompt */}
       <div className="px-4 pb-10 max-w-4xl mx-auto">
-        <div className="border border-[#3D4947] rounded bg-[#151B2D] p-5 text-center">
-          <p className="text-sm text-[#BCC9C6] font-medium mb-1">
-            {lang === "de" ? "Fortschritt speichern & Statistiken verfolgen" : "Save progress & track your stats"}
-          </p>
-          <p className="text-xs text-[#879391] mb-4">
+        <div className="border border-[#3D4947] rounded bg-[#151B2D] p-5">
+          <p className="text-sm text-[#BCC9C6] font-medium mb-1 text-center">
             {lang === "de"
-              ? "Melde dich mit Telegram an — kostenlos, keine App nötig"
-              : "Sign in with Telegram — free, no app required"}
+              ? "Fortschritt speichern & Statistiken verfolgen"
+              : "Save progress & track your stats"}
+          </p>
+          <p className="text-xs text-[#879391] mb-5 text-center">
+            {lang === "de"
+              ? "Melde dich mit Telegram an oder fahre als Gast fort"
+              : "Sign in with Telegram or continue as guest"}
           </p>
 
-          {authLoading ? (
-            <div className="flex items-center justify-center gap-2 text-[#879391] text-sm">
-              <div className="w-4 h-4 border-2 border-[#6BD8CB] border-t-transparent rounded-full animate-spin" />
-              {lang === "de" ? "Wird angemeldet…" : "Signing in…"}
-            </div>
-          ) : (
-            <div className="flex justify-center">
-              <div id="telegram-login-container" />
-            </div>
-          )}
+          <div className="flex flex-col sm:flex-row gap-3">
+            {/* Telegram deep link button */}
+            <a
+              href="https://t.me/MedPruefBot?start=web_login"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 flex items-center justify-center gap-3 bg-[#229ED9] hover:bg-[#1e8fc0] text-white px-5 py-3 rounded font-semibold text-sm transition-all active:scale-[0.98]"
+            >
+              <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current" aria-hidden="true">
+                <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.833.941z"/>
+              </svg>
+              {lang === "de" ? "Mit Telegram anmelden" : "Sign in with Telegram"}
+            </a>
 
-          {authError && (
-            <p className="text-xs text-[#FFB4AB] mt-2">{authError}</p>
-          )}
+            {/* Guest continue */}
+            <button
+              onClick={handleGuestContinue}
+              className="flex-1 flex items-center justify-center gap-2 bg-[#191F31] border border-[#3D4947] hover:border-[#6BD8CB]/40 text-[#BCC9C6] px-5 py-3 rounded font-medium text-sm transition-all active:scale-[0.98]"
+            >
+              <span>👤</span>
+              {lang === "de" ? "Als Gast fortfahren" : "Continue as guest"}
+            </button>
+          </div>
+
+          <p className="text-center text-[10px] text-[#879391]/60 mt-3">
+            {lang === "de"
+              ? "Gastmodus speichert Fortschritt lokal – kein Konto nötig"
+              : "Guest mode saves progress locally — no account needed"}
+          </p>
         </div>
       </div>
     </div>

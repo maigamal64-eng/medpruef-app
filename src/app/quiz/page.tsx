@@ -28,6 +28,7 @@ interface Question {
 function QuizContent() {
   const searchParams = useSearchParams();
   const topic = searchParams.get("topic") || "random";
+  const examSource = searchParams.get("examSource") || "SIP";
 
   const [userId, setUserId] = useState<string>("");
   const [question, setQuestion] = useState<Question | null>(null);
@@ -68,6 +69,7 @@ function QuizContent() {
     try {
       const params = new URLSearchParams({ topic, limit: "1" });
       if (userId) params.set("userId", userId);
+      params.set("examSource", examSource);
       const res = await fetch(`/api/questions?${params}`);
       const data = await res.json();
       if (Array.isArray(data) && data.length > 0) {
@@ -78,7 +80,7 @@ function QuizContent() {
     } finally {
       setLoading(false);
     }
-  }, [topic, userId]);
+  }, [topic, userId, examSource]);
 
   useEffect(() => {
     if (userId !== undefined) fetchQuestion();

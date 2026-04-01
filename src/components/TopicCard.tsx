@@ -13,11 +13,15 @@ interface TopicCardProps {
   lang: Lang;
   accuracy?: number;
   delay?: number;
+  examSource?: string;
 }
 
-export default function TopicCard({ topic, count, userId, lang, accuracy, delay = 0 }: TopicCardProps) {
+export default function TopicCard({ topic, count, userId, lang, accuracy, delay = 0, examSource }: TopicCardProps) {
   const config = getTopicConfig(topic);
-  const href = userId ? `/quiz?topic=${encodeURIComponent(topic)}&userId=${userId}` : "#";
+  const params = new URLSearchParams({ topic });
+  if (userId) params.set('userId', userId);
+  if (examSource) params.set('examSource', examSource);
+  const href = `/quiz?${params.toString()}`;
 
   return (
     <Link
