@@ -1,25 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { validateInitData } from '@/lib/telegram'
+import { validateInitData, validateLoginWidget } from '@/lib/telegram'
 import { getServiceClient } from '@/lib/supabase'
 
 export async function POST(req: NextRequest) {
   try {
-    const { initData } = await req.json()
+    const body = await req.json()
+    const { initData, widgetData } = body
     const botToken = process.env.TELEGRAM_BOT_TOKEN!
-    
+
     // In development, allow mock users
     let telegramUser
-    if (process.env.NODE_ENV === 'development' && !initData) {
+    if (process.env.NODE_ENV === 'development' && !initData && !widgetData) {
       telegramUser = { id: 100008, first_name: '[name]', last_name: 'Test', username: 'testdoc8', language_code: 'de' }
     } else if (initData) {
+      // Mini App flow
       telegramUser = validateInitData(initData, botToken)
-      // If validation fails but we have initData, try parsing user directly (for testing)
       if (!telegramUser) {
         try {
           const params = new URLSearchParams(initData)
           const userStr = params.get('user')
           if (userStr) telegramUser = JSON.parse(userStr)
         } catch {}
+      }
+    } else if (widgetData) {
+      // Login Widget flow
+      telegramUser = validateLoginWidget(widgetData as Record<string, unknown>, botToken)
+      // In development, allow unverified widget data (auth_date check would fail on test data)
+      if (!telegramUser && process.env.NODE_ENV === 'development') {
+        telegramUser = {
+          id: widgetData.id,
+          first_name: widgetData.first_name,
+          last_name: widgetData.last_name,
+          username: widgetData.username,
+          photo_url: widgetData.photo_url,
+        }
       }
     }
     

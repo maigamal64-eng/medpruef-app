@@ -41,3 +41,6 @@ yarn-error.log*
 next-env.d.ts
 .env.local
 import_questions.py
+extracted-images/
+optimized-images/
+design-reference/

@@ -1,0 +1,243 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { getLang, setLang } from "@/lib/i18n";
+import { TOPIC_CONFIG } from "@/lib/topics";
+import Sidebar from "@/components/Sidebar";
+import BottomNav from "@/components/BottomNav";
+import LanguageToggle from "@/components/LanguageToggle";
+import { getStoredSession } from "@/lib/auth";
+
+type Lang = "de" | "en";
+
+interface Resource {
+  title: string;
+  description: string;
+  type: "link" | "tip" | "guideline";
+  url?: string;
+  specialty?: string;
+}
+
+const RESOURCES_DE: Resource[] = [
+  // Official guidelines
+  { title: "IMPP – Institut für medizinische und pharmazeutische Prüfungsfragen", description: "Offizielle Informationen zum Staatsexamen und Kenntnisprüfung", type: "link", url: "https://www.impp.de" },
+  { title: "Bundesärztekammer – Kenntnisprüfung", description: "Informationen zur Approbation für ausländische Ärzte", type: "link", url: "https://www.bundesaerztekammer.de" },
+  { title: "AMBOSS – Klinisches Wissen", description: "Umfassendes medizinisches Wissen mit Fragen und Lernkarten", type: "link", url: "https://www.amboss.com" },
+
+  // Preparation tips
+  { title: "Strukturierter Lernplan", description: "Beginne 6 Monate vor der Prüfung. Plane täglich mindestens 3–4 Stunden ein. Fokus auf Innere Medizin und Chirurgie.", type: "tip" },
+  { title: "Schwerpunkte", description: "Innere Medizin und Chirurgie machen jeweils 12% der Prüfung aus. Diese Fächer haben die meisten Fragen – priorisiere sie.", type: "tip" },
+  { title: "Sprachvorbereitung", description: "Medizinische Terminologie auf Deutsch ist entscheidend. Nutze Fachwörterbücher und übe mit deutschen Kollegen.", type: "tip" },
+  { title: "Prüfungsstrategie", description: "Bei unklaren Fragen: Schließe offensichtlich falsche Antworten aus. Keine negative Bewertung – beantworte alle Fragen.", type: "tip" },
+
+  // By specialty
+  { title: "Innere Medizin", description: "Harrison's Principles of Internal Medicine (engl.) oder Herold Innere Medizin (deutsch) – Standardwerke für die Prüfungsvorbereitung", type: "guideline", specialty: "Innere Medizin" },
+  { title: "Chirurgie", description: "Duale Reihe Chirurgie von Thieme – umfassend und prüfungsrelevant", type: "guideline", specialty: "Chirurgische Fächer" },
+  { title: "Pädiatrie", description: "Leitlinien der DGKJ (Deutsche Gesellschaft für Kinder- und Jugendmedizin) online verfügbar", type: "guideline", specialty: "Kinder- und Jugendheilkunde" },
+  { title: "Neurologie", description: "Leitlinien der DGN (Deutsche Gesellschaft für Neurologie) – kostenlos unter leitlinien.dgn.org", type: "guideline", specialty: "Neurologie" },
+  { title: "Psychiatrie", description: "S3-Leitlinien der DGPPN (Deutsche Gesellschaft für Psychiatrie) für die häufigsten Erkrankungen", type: "guideline", specialty: "Psychiatrie" },
+];
+
+const RESOURCES_EN: Resource[] = [
+  // Official
+  { title: "IMPP – Institute for Medical and Pharmaceutical Examination Questions", description: "Official information on the state examination and knowledge test", type: "link", url: "https://www.impp.de" },
+  { title: "German Medical Association – Kenntnisprüfung", description: "Information on Approbation for foreign doctors", type: "link", url: "https://www.bundesaerztekammer.de" },
+  { title: "AMBOSS – Clinical Knowledge", description: "Comprehensive medical knowledge with questions and flashcards", type: "link", url: "https://www.amboss.com" },
+
+  // Tips
+  { title: "Structured Study Plan", description: "Start 6 months before the exam. Plan at least 3–4 hours daily. Focus on Internal Medicine and Surgery.", type: "tip" },
+  { title: "Priority Areas", description: "Internal Medicine and Surgery each make up 12% of the exam. These subjects have the most questions — prioritize them.", type: "tip" },
+  { title: "Language Preparation", description: "German medical terminology is crucial. Use medical dictionaries and practice with German-speaking colleagues.", type: "tip" },
+  { title: "Exam Strategy", description: "For unclear questions: eliminate obviously wrong answers. No negative marking — answer all questions.", type: "tip" },
+
+  // By specialty
+  { title: "Internal Medicine", description: "Harrison's Principles of Internal Medicine (English) or Herold Innere Medizin (German) — standard references", type: "guideline", specialty: "Innere Medizin" },
+  { title: "Surgery", description: "Duale Reihe Chirurgie by Thieme — comprehensive and exam-relevant", type: "guideline", specialty: "Chirurgische Fächer" },
+  { title: "Pediatrics", description: "DGKJ guidelines (German Society for Pediatrics) available online", type: "guideline", specialty: "Kinder- und Jugendheilkunde" },
+  { title: "Neurology", description: "DGN guidelines (German Society for Neurology) — free at leitlinien.dgn.org", type: "guideline", specialty: "Neurologie" },
+  { title: "Psychiatry", description: "S3 guidelines from DGPPN (German Association for Psychiatry) for the most common conditions", type: "guideline", specialty: "Psychiatrie" },
+];
+
+const TYPE_STYLES = {
+  link: { bg: "bg-[#6BD8CB]/8", border: "border-[#6BD8CB]/25", badge: "bg-[#6BD8CB]/15 text-[#6BD8CB]", icon: "🔗" },
+  tip: { bg: "bg-[#FFB95F]/6", border: "border-[#FFB95F]/25", badge: "bg-[#FFB95F]/15 text-[#FFB95F]", icon: "💡" },
+  guideline: { bg: "bg-[#191F31]", border: "border-[#3D4947]", badge: "bg-[#BCC9C6]/10 text-[#BCC9C6]", icon: "📖" },
+};
+
+export default function MaterialsPage() {
+  const [lang, setLangState] = useState<Lang>("de");
+  const [userId, setUserId] = useState("");
+  const [userName, setUserName] = useState("");
+  const [activeSection, setActiveSection] = useState<"all" | "links" | "tips" | "specialty">("all");
+
+  useEffect(() => {
+    setLangState(getLang());
+    const session = getStoredSession();
+    if (session) {
+      setUserId(session.user.id);
+      setUserName(session.user.first_name);
+    }
+  }, []);
+
+  const switchLang = (l: Lang) => {
+    setLang(l);
+    setLangState(l);
+  };
+
+  const resources = lang === "de" ? RESOURCES_DE : RESOURCES_EN;
+
+  const filtered = resources.filter((r) => {
+    if (activeSection === "all") return true;
+    if (activeSection === "links") return r.type === "link";
+    if (activeSection === "tips") return r.type === "tip";
+    if (activeSection === "specialty") return r.type === "guideline";
+    return true;
+  });
+
+  const tabs = [
+    { key: "all", label: lang === "de" ? "Alle" : "All" },
+    { key: "links", label: lang === "de" ? "Ressourcen" : "Resources" },
+    { key: "tips", label: lang === "de" ? "Tipps" : "Tips" },
+    { key: "specialty", label: lang === "de" ? "Fachgebiete" : "By Specialty" },
+  ] as const;
+
+  return (
+    <div className="app-layout">
+      <Sidebar lang={lang} userId={userId} userName={userName} />
+
+      <main className="main-content safe-area-top safe-area-bottom bg-[#0C1324]">
+        <div className="px-4 lg:px-8 pt-4 pb-2 flex items-center justify-between border-b border-[#3D4947]">
+          <Link href="/" className="text-[#879391] hover:text-[#DCE1FB] text-sm transition-colors">
+            ← {lang === "de" ? "Zurück" : "Back"}
+          </Link>
+          <h1 className="text-base font-bold text-[#DCE1FB]">
+            {lang === "de" ? "Lernmaterialien" : "Study Materials"}
+          </h1>
+          <LanguageToggle lang={lang} onChange={switchLang} />
+        </div>
+
+        <div className="px-4 lg:px-8 py-4 max-w-2xl mx-auto">
+          {/* Hero */}
+          <div className="bg-[#191F31] border border-[#3D4947] rounded p-5 mb-5">
+            <div className="flex items-center gap-4">
+              <div className="text-4xl">📚</div>
+              <div>
+                <h2 className="text-base font-semibold text-[#DCE1FB] mb-1">
+                  {lang === "de" ? "Kenntnisprüfung Vorbereitung" : "Kenntnisprüfung Preparation"}
+                </h2>
+                <p className="text-sm text-[#879391]">
+                  {lang === "de"
+                    ? "Offizielle Ressourcen, Lernbuchtipps und Prüfungsstrategie"
+                    : "Official resources, textbook recommendations, and exam strategy"}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Tabs */}
+          <div className="flex gap-1 mb-5 bg-[#151B2D] p-1 rounded border border-[#3D4947]">
+            {tabs.map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveSection(tab.key)}
+                className={`flex-1 py-1.5 text-xs font-medium rounded transition-all ${
+                  activeSection === tab.key
+                    ? "bg-[#191F31] text-[#DCE1FB] border border-[#3D4947]"
+                    : "text-[#879391] hover:text-[#BCC9C6]"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Resources list */}
+          <div className="space-y-3">
+            {filtered.map((r, i) => {
+              const style = TYPE_STYLES[r.type];
+              const specialty = r.specialty ? TOPIC_CONFIG[r.specialty] : null;
+              return (
+                <div key={i} className={`${style.bg} border ${style.border} rounded p-4`}>
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      {specialty ? (
+                        <span className="text-xl flex-shrink-0">{specialty.icon}</span>
+                      ) : (
+                        <span className="text-xl flex-shrink-0">{style.icon}</span>
+                      )}
+                      <h3 className="text-sm font-semibold text-[#DCE1FB] truncate">{r.title}</h3>
+                    </div>
+                    <span className={`text-[10px] px-2 py-0.5 rounded font-medium flex-shrink-0 ${style.badge}`}>
+                      {r.type === "link"
+                        ? lang === "de" ? "Ressource" : "Resource"
+                        : r.type === "tip"
+                        ? lang === "de" ? "Tipp" : "Tip"
+                        : lang === "de" ? "Fachgebiet" : "Specialty"}
+                    </span>
+                  </div>
+                  <p className="text-sm text-[#BCC9C6] leading-relaxed ml-8">{r.description}</p>
+                  {r.url && (
+                    <a
+                      href={r.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 mt-2 ml-8 text-xs text-[#6BD8CB] hover:text-[#89F5E7] transition-colors"
+                    >
+                      {lang === "de" ? "Öffnen" : "Open"} ↗
+                    </a>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Exam structure overview */}
+          {(activeSection === "all" || activeSection === "specialty") && (
+            <div className="mt-6">
+              <h2 className="text-base font-semibold text-[#DCE1FB] mb-3">
+                {lang === "de" ? "Prüfungsstruktur" : "Exam Structure"}
+              </h2>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { topic: "Innere Medizin", q: 30 },
+                  { topic: "Chirurgische Fächer", q: 30 },
+                  { topic: "Kinder- und Jugendheilkunde", q: 30 },
+                  { topic: "Neurologie", q: 25 },
+                  { topic: "Dermatologie und Venerologie", q: 25 },
+                  { topic: "Frauenheilkunde/Gynäkologie", q: 25 },
+                  { topic: "Notfall- und Intensivmedizin", q: 25 },
+                  { topic: "Hals-Nasen-Ohrenheilkunde", q: 20 },
+                  { topic: "Psychiatrie", q: 20 },
+                  { topic: "Augenheilkunde", q: 20 },
+                ].map(({ topic, q }) => {
+                  const cfg = TOPIC_CONFIG[topic] || { icon: "📋", color: "#6BD8CB" };
+                  const pct = Math.round((q / 250) * 100);
+                  return (
+                    <div key={topic} className="bg-[#191F31] border border-[#3D4947] rounded p-3">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <span>{cfg.icon}</span>
+                        <span className="text-xs text-[#DCE1FB] font-medium flex-1 truncate">{topic}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 bg-[#23293C] rounded-full h-1 overflow-hidden">
+                          <div
+                            className="h-full rounded-full"
+                            style={{ width: `${pct}%`, backgroundColor: cfg.color }}
+                          />
+                        </div>
+                        <span className="text-[10px] text-[#879391] font-mono w-8 text-right">{q}F</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      </main>
+
+      <BottomNav lang={lang} userId={userId} />
+    </div>
+  );
+}

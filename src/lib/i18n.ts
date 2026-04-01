@@ -82,6 +82,74 @@ const translations = {
   'demo_mode': { de: 'Demo-Modus', en: 'Demo Mode' },
   'demo_description': { de: 'Anmeldung über Telegram erforderlich für personalisierte Statistiken.', en: 'Sign in via Telegram for personalized stats.' },
   'practice_topics': { de: 'Übungsthemen', en: 'Practice Topics' },
+
+  // Navigation new pages
+  'exam': { de: 'Prüfung', en: 'Exam' },
+  'about': { de: 'Über uns', en: 'About' },
+  'materials': { de: 'Materialien', en: 'Materials' },
+  'profile': { de: 'Profil', en: 'Profile' },
+
+  // Exam simulation
+  'exam_sim_title': { de: 'Prüfungssimulation', en: 'Exam Simulation' },
+  'exam_sim_desc': { de: '250 Fragen · 10 Fachgebiete · 4 Stunden', en: '250 questions · 10 specialties · 4 hours' },
+  'start_exam': { de: 'Prüfung starten', en: 'Start Exam' },
+  'time_remaining': { de: 'Verbleibende Zeit', en: 'Time Remaining' },
+  'exam_submit': { de: 'Prüfung abgeben', en: 'Submit Exam' },
+  'exam_submit_confirm': { de: 'Prüfung wirklich abgeben? Nicht beantwortete Fragen zählen als falsch.', en: 'Really submit? Unanswered questions count as wrong.' },
+  'exam_finished': { de: 'Prüfung abgeschlossen', en: 'Exam Completed' },
+  'exam_result': { de: 'Dein Ergebnis', en: 'Your Result' },
+  'exam_passed': { de: 'Bestanden ✓', en: 'Passed ✓' },
+  'exam_failed': { de: 'Nicht bestanden', en: 'Not Passed' },
+  'pass_threshold': { de: '60% zum Bestehen erforderlich', en: '60% required to pass' },
+  'review_answers': { de: 'Antworten überprüfen', en: 'Review Answers' },
+  'exam_new': { de: 'Neue Prüfung', en: 'New Exam' },
+  'exam_loading': { de: 'Prüfung wird vorbereitet...', en: 'Preparing exam...' },
+  'unanswered': { de: 'Nicht beantwortet', en: 'Unanswered' },
+  'specialty_results': { de: 'Ergebnis nach Fachgebiet', en: 'Results by Specialty' },
+  'time_up': { de: 'Zeit abgelaufen!', en: 'Time is up!' },
+
+  // QuestionCard notes & favorites
+  'add_note': { de: 'Notiz hinzufügen', en: 'Add Note' },
+  'note_placeholder': { de: 'Persönliche Notiz zu dieser Frage...', en: 'Personal note for this question...' },
+  'note_saved': { de: 'Gespeichert', en: 'Saved' },
+  'save_note': { de: 'Speichern', en: 'Save' },
+  'bookmark': { de: 'Merken', en: 'Bookmark' },
+  'bookmarked': { de: 'Gemerkt', en: 'Bookmarked' },
+
+  // Profile page
+  'edit': { de: 'Bearbeiten', en: 'Edit' },
+  'save': { de: 'Speichern', en: 'Save' },
+  'cancel': { de: 'Abbrechen', en: 'Cancel' },
+  'university': { de: 'Universität', en: 'University' },
+  'country_of_origin': { de: 'Herkunftsland', en: 'Country of Origin' },
+  'target_exam_date': { de: 'Ziel-Prüfungsdatum', en: 'Target Exam Date' },
+  'select_university': { de: 'Universität wählen', en: 'Select university' },
+  'select_country': { de: 'Land eingeben', en: 'Enter country' },
+  'favorites': { de: 'Gemerkte Fragen', en: 'Bookmarked Questions' },
+  'no_favorites': { de: 'Noch keine gemerkten Fragen', en: 'No bookmarked questions yet' },
+  'profile_not_logged_in': { de: 'Bitte melde dich an, um dein Profil zu sehen', en: 'Please sign in to view your profile' },
+  'progress_overview': { de: 'Fortschrittsübersicht', en: 'Progress Overview' },
+
+  // Materials page
+  'study_resources': { de: 'Lernmaterialien', en: 'Study Materials' },
+  'exam_guidelines': { de: 'Prüfungsrichtlinien', en: 'Exam Guidelines' },
+  'preparation_tips': { de: 'Vorbereitungstipps', en: 'Preparation Tips' },
+  'official_resources': { de: 'Offizielle Ressourcen', en: 'Official Resources' },
+  'by_specialty': { de: 'Nach Fachgebiet', en: 'By Specialty' },
+
+  // About page
+  'about_title': { de: 'Über MedPrüf', en: 'About MedPrüf' },
+  'about_description': { de: 'Lernplattform für die Kenntnisprüfung', en: 'Learning platform for the Kenntnisprüfung' },
+  'contact': { de: 'Kontakt', en: 'Contact' },
+  'team': { de: 'Team', en: 'Team' },
+  'social_media': { de: 'Social Media', en: 'Social Media' },
+
+  // Stats enhancements
+  'study_time_est': { de: 'Geschätzte Lernzeit', en: 'Estimated Study Time' },
+  'completion_pct': { de: 'Gesamtfortschritt', en: 'Overall Progress' },
+  'questions_per_specialty': { de: 'Fragen pro Fachgebiet', en: 'Questions per Specialty' },
+  'weekly_activity': { de: 'Wochenaktivität', en: 'Weekly Activity' },
+  'sign_in_for_stats': { de: 'Melde dich an um Statistiken zu sehen', en: 'Sign in to see statistics' },
 } as const
 
 export type TranslationKey = keyof typeof translations

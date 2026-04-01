@@ -10,24 +10,26 @@ interface StreakWidgetProps {
 }
 
 export default function StreakWidget({ streak, lang }: StreakWidgetProps) {
-  // Simulate last 7 days activity (in real app, would come from API)
   const last7Days = Array.from({ length: 7 }, (_, i) => {
     if (i < streak && i < 7) return true;
     return Math.random() > 0.5;
   });
 
-  const dayLabels = lang === "de"
-    ? ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
-    : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const dayLabels =
+    lang === "de"
+      ? ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
+      : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
   return (
-    <div className="bg-[#1E293B]/60 border border-[#334155]/50 rounded-xl p-4 animate-fade-in">
+    <div className="bg-[#191F31] border border-[#3D4947] rounded p-4 animate-fade-in">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <span className="text-2xl animate-fire">🔥</span>
           <div>
-            <p className="text-2xl font-bold text-[#EF4444]">{streak}</p>
-            <p className="text-xs text-[#94A3B8]">{t("streak", lang)} · {t("days", lang)}</p>
+            <p className="text-2xl font-bold text-[#FFB4AB] font-mono">{streak}</p>
+            <p className="text-xs text-[#BCC9C6]">
+              {t("streak", lang)} · {t("days", lang)}
+            </p>
           </div>
         </div>
       </div>
@@ -35,15 +37,15 @@ export default function StreakWidget({ streak, lang }: StreakWidgetProps) {
         {last7Days.map((active, i) => (
           <div key={i} className="flex flex-col items-center gap-1">
             <div
-              className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-medium transition-colors ${
+              className={`w-7 h-7 rounded flex items-center justify-center text-xs font-medium transition-colors border ${
                 active
-                  ? "bg-[#10B981]/20 text-[#10B981] border border-[#10B981]/30"
-                  : "bg-[#334155]/30 text-[#64748B] border border-[#334155]/30"
+                  ? "bg-[#4EDEA3]/15 text-[#4EDEA3] border-[#4EDEA3]/30"
+                  : "bg-[#23293C] text-[#879391] border-[#3D4947]"
               }`}
             >
               {active ? "✓" : "·"}
             </div>
-            <span className="text-[9px] text-[#64748B]">{dayLabels[i]}</span>
+            <span className="text-[9px] text-[#879391]">{dayLabels[i]}</span>
           </div>
         ))}
       </div>

@@ -1,5 +1,10 @@
 import crypto from 'crypto'
 
+/**
+ * Server-side: validate Telegram initData and extract user.
+ * For client-side Telegram detection, see src/lib/auth.ts
+ */
+
 export interface TelegramUser {
   id: number
   first_name: string
@@ -10,6 +15,7 @@ export interface TelegramUser {
   photo_url?: string
 }
 
+/** Validate Mini App initData (HMAC-SHA256 with "WebAppData" key). */
 export function validateInitData(initData: string, botToken: string): TelegramUser | null {
   try {
     const params = new URLSearchParams(initData)
@@ -29,6 +35,42 @@ export function validateInitData(initData: string, botToken: string): TelegramUs
     const userStr = params.get('user')
     if (!userStr) return null
     return JSON.parse(userStr) as TelegramUser
+  } catch {
+    return null
+  }
+}
+
+/** Validate Login Widget data (SHA256 secret key, not HMAC). */
+export function validateLoginWidget(
+  data: Record<string, unknown>,
+  botToken: string
+): TelegramUser | null {
+  try {
+    const hash = data.hash as string
+    if (!hash) return null
+
+    // auth_date must be within 1 day
+    const authDate = Number(data.auth_date)
+    if (Date.now() / 1000 - authDate > 86400) return null
+
+    const checkString = Object.entries(data)
+      .filter(([k]) => k !== 'hash')
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([k, v]) => `${k}=${v}`)
+      .join('\n')
+
+    const secretKey = crypto.createHash('sha256').update(botToken).digest()
+    const computed = crypto.createHmac('sha256', secretKey).update(checkString).digest('hex')
+
+    if (computed !== hash) return null
+
+    return {
+      id: data.id as number,
+      first_name: data.first_name as string,
+      last_name: data.last_name as string | undefined,
+      username: data.username as string | undefined,
+      photo_url: data.photo_url as string | undefined,
+    }
   } catch {
     return null
   }
