@@ -1,0 +1,116 @@
+"use client";
+
+import Link from "next/link";
+import { getTopicConfig } from "@/lib/topics";
+
+type Lang = "de" | "en";
+
+interface SearchQuestion {
+  id: number;
+  topic: string;
+  question: string;
+  source_file?: string;
+}
+
+interface SearchResultsProps {
+  results: SearchQuestion[];
+  query: string;
+  loading: boolean;
+  lang: Lang;
+  examSource: string;
+}
+
+function truncate(text: string, max: number): string {
+  return text.length > max ? text.slice(0, max) + "…" : text;
+}
+
+function sourceBadge(source_file?: string): string {
+  if (!source_file) return "SIP";
+  if (source_file.startsWith("KMP")) return source_file;
+  return "SIP";
+}
+
+export default function SearchResults({
+  results,
+  query,
+  loading,
+  lang,
+  examSource,
+}: SearchResultsProps) {
+  if (!query) return null;
+
+  if (loading) {
+    return (
+      <div className="mt-2 bg-[#191F31] border border-[#3D4947] rounded p-4 text-center">
+        <div className="w-5 h-5 border-2 border-[#6BD8CB] border-t-transparent rounded-full animate-spin mx-auto" />
+      </div>
+    );
+  }
+
+  if (results.length === 0) {
+    return (
+      <div className="mt-2 bg-[#191F31] border border-[#3D4947] rounded p-4 text-center">
+        <p className="text-sm text-[#879391]">
+          {lang === "de" ? "Keine Ergebnisse gefunden" : "No results found"}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-2 bg-[#191F31] border border-[#3D4947] rounded overflow-hidden">
+      <div className="px-3 py-2 border-b border-[#3D4947]">
+        <p className="text-[10px] uppercase tracking-wider text-[#879391] font-semibold">
+          {lang === "de" ? "Suchergebnisse" : "Search Results"} ({results.length})
+        </p>
+      </div>
+
+      <ul>
+        {results.map((q, i) => {
+          const cfg = getTopicConfig(q.topic);
+          return (
+            <li
+              key={q.id}
+              className={`border-b border-[#3D4947]/50 last:border-b-0 ${i % 2 === 0 ? "" : "bg-[#151B2D]/30"}`}
+            >
+              <Link
+                href={`/quiz?topic=${encodeURIComponent(q.topic)}&questionId=${q.id}&examSource=${examSource}`}
+                className="flex items-start gap-3 px-3 py-3 hover:bg-[#1E2640] transition-colors group"
+              >
+                {/* Topic badge */}
+                <span
+                  className="mt-0.5 flex-shrink-0 w-6 h-6 rounded flex items-center justify-center text-xs"
+                  style={{ backgroundColor: `${cfg.color}20`, color: cfg.color }}
+                >
+                  {cfg.icon}
+                </span>
+
+                {/* Question text */}
+                <span className="flex-1 min-w-0">
+                  <span className="text-sm text-[#DCE1FB] group-hover:text-white transition-colors leading-snug">
+                    {truncate(q.question, 120)}
+                  </span>
+                  <span className="mt-1 flex items-center gap-2">
+                    <span
+                      className="text-[10px] font-medium truncate max-w-[100px]"
+                      style={{ color: cfg.color }}
+                    >
+                      {q.topic}
+                    </span>
+                    <span className="text-[10px] bg-[#23293C] text-[#879391] px-1.5 py-0.5 rounded font-mono">
+                      {sourceBadge(q.source_file)}
+                    </span>
+                  </span>
+                </span>
+
+                <span className="text-[#3D4947] group-hover:text-[#6BD8CB] transition-colors text-xs flex-shrink-0">
+                  →
+                </span>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}

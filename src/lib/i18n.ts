@@ -144,6 +144,19 @@ const translations = {
   'team': { de: 'Team', en: 'Team' },
   'social_media': { de: 'Social Media', en: 'Social Media' },
 
+  // Search
+  'search_placeholder': { de: 'Frage suchen...', en: 'Search questions...' },
+  'search_results': { de: 'Suchergebnisse', en: 'Search Results' },
+  'no_search_results': { de: 'Keine Ergebnisse gefunden', en: 'No results found' },
+
+  // Vienna exam parts
+  'sip4_label': { de: 'SIP 4 — Teil 1', en: 'SIP 4 — Part 1' },
+  'sip5_label': { de: 'SIP 5 — Teil 2', en: 'SIP 5 — Part 2' },
+  'practice_sip4': { de: 'SIP 4 üben', en: 'Practice SIP 4' },
+  'practice_sip5': { de: 'SIP 5 üben', en: 'Practice SIP 5' },
+  'all_parts': { de: 'Alle Teile', en: 'All Parts' },
+  'exam_part_selector': { de: 'Prüfungsteil wählen', en: 'Choose Exam Part' },
+
   // Stats enhancements
   'study_time_est': { de: 'Geschätzte Lernzeit', en: 'Estimated Study Time' },
   'completion_pct': { de: 'Gesamtfortschritt', en: 'Overall Progress' },

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
 import { generateWrongOptions, buildMCQOptions } from '@/lib/mcq'
+import { VIENNA_EXAM_PARTS } from '@/lib/topics'
 
 /**
  * Apply exam source filter to a Supabase query builder.
@@ -21,6 +22,22 @@ export async function GET(req: NextRequest) {
   const limit = parseInt(req.nextUrl.searchParams.get('limit') || '1')
   const userId = req.nextUrl.searchParams.get('userId')
   const examSource = req.nextUrl.searchParams.get('examSource') || 'SIP'
+  const search = req.nextUrl.searchParams.get('search')
+  const tag = req.nextUrl.searchParams.get('tag')
+  const part = req.nextUrl.searchParams.get('part') as 'sip4' | 'sip5' | null
+
+  // Search mode: text search across question + answer columns
+  if (search) {
+    let query = sb.from('questions').select('*').eq('is_active', true)
+    query = applyExamSourceFilter(query, examSource)
+    if (topic && topic !== 'random') query = query.eq('topic', topic)
+    if (part && VIENNA_EXAM_PARTS[part]) query = query.in('topic', VIENNA_EXAM_PARTS[part])
+    if (tag) query = query.contains('tags', [tag])
+    query = query.or(`question.ilike.%${search}%,answer.ilike.%${search}%`)
+    const { data, error } = await query.limit(Math.min(limit, 30))
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json(attachOptions(data || []))
+  }
 
   // If real user (not guest), prioritize spaced-repetition review questions
   if (userId && !userId.startsWith('guest_')) {
@@ -45,9 +62,9 @@ export async function GET(req: NextRequest) {
   // Get count for random offset
   let countQuery = sb.from('questions').select('id', { count: 'exact', head: true }).eq('is_active', true)
   countQuery = applyExamSourceFilter(countQuery, examSource)
-  if (topic && topic !== 'random') {
-    countQuery = countQuery.eq('topic', topic)
-  }
+  if (topic && topic !== 'random') countQuery = countQuery.eq('topic', topic)
+  if (part && VIENNA_EXAM_PARTS[part]) countQuery = countQuery.in('topic', VIENNA_EXAM_PARTS[part])
+  if (tag) countQuery = countQuery.contains('tags', [tag])
   const { count } = await countQuery
 
   if (!count) return NextResponse.json([])
@@ -56,9 +73,9 @@ export async function GET(req: NextRequest) {
 
   let query = sb.from('questions').select('*').eq('is_active', true)
   query = applyExamSourceFilter(query, examSource)
-  if (topic && topic !== 'random') {
-    query = query.eq('topic', topic)
-  }
+  if (topic && topic !== 'random') query = query.eq('topic', topic)
+  if (part && VIENNA_EXAM_PARTS[part]) query = query.in('topic', VIENNA_EXAM_PARTS[part])
+  if (tag) query = query.contains('tags', [tag])
   const { data, error } = await query.range(offset, offset + limit - 1)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

@@ -66,6 +66,24 @@ export const EXAM_SOURCES = [
 
 export type ExamSourceId = typeof EXAM_SOURCES[number]['id']
 
+/** Vienna Kenntnisprüfung exam parts */
+export const VIENNA_EXAM_PARTS: Record<'sip4' | 'sip5', string[]> = {
+  sip4: [
+    'Chirurgische Fächer',
+    'Innere Medizin',
+    'Dermatologie und Venerologie',
+  ],
+  sip5: [
+    'Augenheilkunde',
+    'Hals-Nasen-Ohrenheilkunde',
+    'Psychiatrie',
+    'Notfall- und Intensivmedizin',
+    'Frauenheilkunde/Gynäkologie',
+    'Kinder- und Jugendheilkunde',
+    'Neurologie',
+  ],
+}
+
 export const EXAM_SOURCE_KEY = 'medpruef_exam_source'
 
 export function getStoredExamSource(): ExamSourceId {

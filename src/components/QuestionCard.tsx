@@ -18,6 +18,7 @@ interface Question {
   exam_dates: string[];
   options?: MCQOption[];
   image_url?: string;
+  tags?: string[];
 }
 
 interface QuestionCardProps {
@@ -187,20 +188,19 @@ export default function QuestionCard({
           </div>
         </div>
 
-        {/* Difficulty dots */}
-        <div className="flex items-center gap-1.5 mb-4">
-          {[1, 2, 3, 4, 5].map((d) => (
-            <div
-              key={d}
-              className={`w-1.5 h-1.5 rounded-full transition-colors ${
-                d <= question.difficulty ? "bg-[#FFB95F]" : "bg-[#3D4947]"
-              }`}
-            />
-          ))}
-          <span className="text-[10px] text-[#879391] ml-1 font-mono">
-            {question.difficulty}/5
-          </span>
-        </div>
+        {/* Tags — shown if available */}
+        {question.tags && question.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mb-4">
+            {question.tags.map((tag) => (
+              <span
+                key={tag}
+                className="text-[10px] px-2 py-0.5 rounded-full border border-[#6BD8CB]/30 bg-[#6BD8CB]/8 text-[#6BD8CB] font-medium"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
 
         {/* Optional image */}
         {effectiveImageUrl && (

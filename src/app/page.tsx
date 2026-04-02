@@ -9,6 +9,7 @@ import {
   getStoredExamSource,
   hasSelectedExam,
   setStoredExamSource,
+  VIENNA_EXAM_PARTS,
   type ExamSourceId,
 } from "@/lib/topics";
 import LanguageToggle from "@/components/LanguageToggle";
@@ -20,6 +21,8 @@ import StreakWidget from "@/components/StreakWidget";
 import XPBar from "@/components/XPBar";
 import DailyGoalRing from "@/components/DailyGoalRing";
 import ExamSelector from "@/components/ExamSelector";
+import SearchBar from "@/components/SearchBar";
+import SearchResults from "@/components/SearchResults";
 import Link from "next/link";
 
 type Lang = "de" | "en";
@@ -72,6 +75,9 @@ export default function Home() {
   const [lang, setLangState] = useState<Lang>("de");
   const [examSource, setExamSource] = useState<ExamSourceId>("SIP");
   const [showExamSelector, setShowExamSelector] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<Record<string, unknown>[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
 
   useEffect(() => {
     setLangState(getLang());
@@ -163,6 +169,28 @@ export default function Home() {
       setLoading(false);
     },
     [fetchTopics]
+  );
+
+  const handleSearch = useCallback(
+    async (query: string) => {
+      setSearchQuery(query);
+      if (!query) {
+        setSearchResults([]);
+        return;
+      }
+      setSearchLoading(true);
+      try {
+        const params = new URLSearchParams({ search: query, examSource, limit: "20" });
+        const res = await fetch(`/api/questions?${params}`);
+        const data = await res.json();
+        setSearchResults(Array.isArray(data) ? data : []);
+      } catch {
+        setSearchResults([]);
+      } finally {
+        setSearchLoading(false);
+      }
+    },
+    [examSource]
   );
 
   if (loading && !showExamSelector) {
@@ -294,23 +322,102 @@ export default function Home() {
             </Link>
           </div>
 
-          {/* Topics Grid */}
+          {/* Search */}
           <div className="mb-5">
-            <h2 className="text-base font-semibold mb-3 text-[#DCE1FB]">{t("specialties", lang)}</h2>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-              {topics.map((tp, i) => (
-                <TopicCard
-                  key={tp.topic}
-                  topic={tp.topic}
-                  count={tp.count}
-                  userId={user.id}
-                  lang={lang}
-                  delay={i * 50}
-                  examSource={examSource}
-                />
-              ))}
-            </div>
+            <SearchBar lang={lang} onSearch={handleSearch} />
+            {searchQuery && (
+              <SearchResults
+                results={searchResults as unknown as Parameters<typeof SearchResults>[0]["results"]}
+                query={searchQuery}
+                loading={searchLoading}
+                lang={lang}
+                examSource={examSource}
+              />
+            )}
           </div>
+
+          {/* Topics Grid — hidden while searching */}
+          {!searchQuery && (
+            <div className="mb-5">
+              <h2 className="text-base font-semibold mb-3 text-[#DCE1FB]">{t("specialties", lang)}</h2>
+
+              {examSource === "SIP" ? (
+                <>
+                  {/* SIP quick-start buttons */}
+                  <div className="grid grid-cols-2 gap-2 mb-4">
+                    <Link
+                      href={`/exam?examSource=SIP&part=sip4`}
+                      className="flex items-center gap-2 bg-[#191F31] border border-[#3D4947] hover:border-[#6BD8CB]/40 rounded px-3 py-2.5 text-sm font-medium text-[#DCE1FB] transition-all"
+                    >
+                      <span>📋</span>
+                      <span className="truncate">{t("practice_sip4", lang)}</span>
+                    </Link>
+                    <Link
+                      href={`/exam?examSource=SIP&part=sip5`}
+                      className="flex items-center gap-2 bg-[#191F31] border border-[#3D4947] hover:border-[#6BD8CB]/40 rounded px-3 py-2.5 text-sm font-medium text-[#DCE1FB] transition-all"
+                    >
+                      <span>📋</span>
+                      <span className="truncate">{t("practice_sip5", lang)}</span>
+                    </Link>
+                  </div>
+
+                  {/* SIP 4 section */}
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-[#FFB95F] mb-2">
+                    {t("sip4_label", lang)}
+                  </h3>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 mb-4">
+                    {topics
+                      .filter((tp) => VIENNA_EXAM_PARTS.sip4.includes(tp.topic))
+                      .map((tp, i) => (
+                        <TopicCard
+                          key={tp.topic}
+                          topic={tp.topic}
+                          count={tp.count}
+                          userId={user.id}
+                          lang={lang}
+                          delay={i * 50}
+                          examSource={examSource}
+                        />
+                      ))}
+                  </div>
+
+                  {/* SIP 5 section */}
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-[#6BD8CB] mb-2">
+                    {t("sip5_label", lang)}
+                  </h3>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+                    {topics
+                      .filter((tp) => VIENNA_EXAM_PARTS.sip5.includes(tp.topic))
+                      .map((tp, i) => (
+                        <TopicCard
+                          key={tp.topic}
+                          topic={tp.topic}
+                          count={tp.count}
+                          userId={user.id}
+                          lang={lang}
+                          delay={i * 50}
+                          examSource={examSource}
+                        />
+                      ))}
+                  </div>
+                </>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+                  {topics.map((tp, i) => (
+                    <TopicCard
+                      key={tp.topic}
+                      topic={tp.topic}
+                      count={tp.count}
+                      userId={user.id}
+                      lang={lang}
+                      delay={i * 50}
+                      examSource={examSource}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Mini Stats Row (mobile only) */}
           <div className="grid grid-cols-4 gap-2 lg:hidden mb-5">
@@ -344,6 +451,25 @@ function DemoHome({
   onChangeExam: () => void;
 }) {
   const totalQuestions = topics.reduce((sum, tp) => sum + tp.count, 0);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<Record<string, unknown>[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+
+  const handleDemoSearch = useCallback(
+    async (query: string) => {
+      setSearchQuery(query);
+      if (!query) { setSearchResults([]); return; }
+      setSearchLoading(true);
+      try {
+        const params = new URLSearchParams({ search: query, examSource, limit: "20" });
+        const res = await fetch(`/api/questions?${params}`);
+        const data = await res.json();
+        setSearchResults(Array.isArray(data) ? data : []);
+      } catch { setSearchResults([]); }
+      finally { setSearchLoading(false); }
+    },
+    [examSource]
+  );
 
   const handleGuestContinue = () => {
     const guestId = `guest_${Date.now()}`;
@@ -423,32 +549,108 @@ function DemoHome({
         </div>
       </div>
 
-      {/* Topics */}
-      {topics.length > 0 && (
+      {/* Search */}
+      <div className="px-4 pb-4 max-w-4xl mx-auto">
+        <SearchBar lang={lang} onSearch={handleDemoSearch} />
+        {searchQuery && (
+          <SearchResults
+            results={searchResults as unknown as Parameters<typeof SearchResults>[0]["results"]}
+            query={searchQuery}
+            loading={searchLoading}
+            lang={lang}
+            examSource={examSource}
+          />
+        )}
+      </div>
+
+      {/* Topics — hidden while searching */}
+      {topics.length > 0 && !searchQuery && (
         <div className="px-4 pb-6 max-w-4xl mx-auto">
           <h2 className="text-base font-semibold mb-3 text-[#DCE1FB]">{t("practice_topics", lang)}</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-            {topics.map((tp, i) => {
-              const config = getTopicConfig(tp.topic);
-              return (
+
+          {examSource === "SIP" ? (
+            <>
+              {/* SIP quick-start buttons */}
+              <div className="grid grid-cols-2 gap-2 mb-4">
                 <Link
-                  key={tp.topic}
-                  href={`/quiz?topic=${encodeURIComponent(tp.topic)}&examSource=${examSource}`}
-                  className="topic-card-border bg-[#191F31] border border-[#3D4947] rounded p-4 animate-fade-in hover:border-[#6BD8CB]/40 hover:bg-[#1E2640] transition-all active:scale-[0.98]"
-                  style={{
-                    borderLeftColor: config.color,
-                    animationDelay: `${i * 50}ms`,
-                  }}
+                  href={`/exam?examSource=SIP&part=sip4`}
+                  className="flex items-center gap-2 bg-[#191F31] border border-[#3D4947] hover:border-[#6BD8CB]/40 rounded px-3 py-2.5 text-sm font-medium text-[#DCE1FB] transition-all"
                 >
-                  <div className="text-2xl mb-2">{config.icon}</div>
-                  <div className="text-sm font-semibold mb-1 text-[#DCE1FB]">{tp.topic}</div>
-                  <div className="text-xs text-[#879391] font-mono">
-                    {tp.count} {t("questions", lang)}
-                  </div>
+                  <span>📋</span>
+                  <span className="truncate">{t("practice_sip4", lang)}</span>
                 </Link>
-              );
-            })}
-          </div>
+                <Link
+                  href={`/exam?examSource=SIP&part=sip5`}
+                  className="flex items-center gap-2 bg-[#191F31] border border-[#3D4947] hover:border-[#6BD8CB]/40 rounded px-3 py-2.5 text-sm font-medium text-[#DCE1FB] transition-all"
+                >
+                  <span>📋</span>
+                  <span className="truncate">{t("practice_sip5", lang)}</span>
+                </Link>
+              </div>
+
+              {/* SIP 4 group */}
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-[#FFB95F] mb-2">
+                {t("sip4_label", lang)}
+              </h3>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mb-4">
+                {topics.filter((tp) => VIENNA_EXAM_PARTS.sip4.includes(tp.topic)).map((tp, i) => {
+                  const config = getTopicConfig(tp.topic);
+                  return (
+                    <Link
+                      key={tp.topic}
+                      href={`/quiz?topic=${encodeURIComponent(tp.topic)}&examSource=${examSource}`}
+                      className="topic-card-border bg-[#191F31] border border-[#3D4947] rounded p-4 animate-fade-in hover:border-[#6BD8CB]/40 hover:bg-[#1E2640] transition-all active:scale-[0.98]"
+                      style={{ borderLeftColor: config.color, animationDelay: `${i * 50}ms` }}
+                    >
+                      <div className="text-2xl mb-2">{config.icon}</div>
+                      <div className="text-sm font-semibold mb-1 text-[#DCE1FB]">{tp.topic}</div>
+                      <div className="text-xs text-[#879391] font-mono">{tp.count} {t("questions", lang)}</div>
+                    </Link>
+                  );
+                })}
+              </div>
+
+              {/* SIP 5 group */}
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-[#6BD8CB] mb-2">
+                {t("sip5_label", lang)}
+              </h3>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                {topics.filter((tp) => VIENNA_EXAM_PARTS.sip5.includes(tp.topic)).map((tp, i) => {
+                  const config = getTopicConfig(tp.topic);
+                  return (
+                    <Link
+                      key={tp.topic}
+                      href={`/quiz?topic=${encodeURIComponent(tp.topic)}&examSource=${examSource}`}
+                      className="topic-card-border bg-[#191F31] border border-[#3D4947] rounded p-4 animate-fade-in hover:border-[#6BD8CB]/40 hover:bg-[#1E2640] transition-all active:scale-[0.98]"
+                      style={{ borderLeftColor: config.color, animationDelay: `${i * 50}ms` }}
+                    >
+                      <div className="text-2xl mb-2">{config.icon}</div>
+                      <div className="text-sm font-semibold mb-1 text-[#DCE1FB]">{tp.topic}</div>
+                      <div className="text-xs text-[#879391] font-mono">{tp.count} {t("questions", lang)}</div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              {topics.map((tp, i) => {
+                const config = getTopicConfig(tp.topic);
+                return (
+                  <Link
+                    key={tp.topic}
+                    href={`/quiz?topic=${encodeURIComponent(tp.topic)}&examSource=${examSource}`}
+                    className="topic-card-border bg-[#191F31] border border-[#3D4947] rounded p-4 animate-fade-in hover:border-[#6BD8CB]/40 hover:bg-[#1E2640] transition-all active:scale-[0.98]"
+                    style={{ borderLeftColor: config.color, animationDelay: `${i * 50}ms` }}
+                  >
+                    <div className="text-2xl mb-2">{config.icon}</div>
+                    <div className="text-sm font-semibold mb-1 text-[#DCE1FB]">{tp.topic}</div>
+                    <div className="text-xs text-[#879391] font-mono">{tp.count} {t("questions", lang)}</div>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 

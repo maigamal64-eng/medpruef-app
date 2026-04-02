@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { getTopicConfig } from "@/lib/topics";
+import { getTopicConfig, VIENNA_EXAM_PARTS } from "@/lib/topics";
 import { t, getLang, setLang } from "@/lib/i18n";
 import { getStoredSession } from "@/lib/auth";
 import type { MCQOption } from "@/lib/mcq";
@@ -13,6 +13,7 @@ import LanguageToggle from "@/components/LanguageToggle";
 
 type Lang = "de" | "en";
 type ExamPhase = "entry" | "loading" | "exam" | "results" | "review";
+type ExamPart = "all" | "sip4" | "sip5";
 
 interface Question {
   id: number;
@@ -61,6 +62,9 @@ function ExamContent() {
   const [lang, setLangState] = useState<Lang>("de");
   const [userId, setUserId] = useState("");
   const [userName, setUserName] = useState("");
+  const [selectedPart, setSelectedPart] = useState<ExamPart>(
+    (searchParams.get("part") as ExamPart) || "all"
+  );
   const [phase, setPhase] = useState<ExamPhase>("entry");
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loadProgress, setLoadProgress] = useState(0);
@@ -90,8 +94,13 @@ function ExamContent() {
     setLoadProgress(0);
     const allQuestions: Question[] = [];
 
-    for (let i = 0; i < EXAM_CONFIG.length; i++) {
-      const { topic, count } = EXAM_CONFIG[i];
+    const partTopics = selectedPart !== "all" ? VIENNA_EXAM_PARTS[selectedPart] : null;
+    const configToUse = partTopics
+      ? EXAM_CONFIG.filter((c) => partTopics.includes(c.topic))
+      : EXAM_CONFIG;
+
+    for (let i = 0; i < configToUse.length; i++) {
+      const { topic, count } = configToUse[i];
       try {
         const params = new URLSearchParams({ topic, limit: String(count), examSource });
         const res = await fetch(`/api/questions?${params}`);
@@ -100,7 +109,7 @@ function ExamContent() {
       } catch {
         // If a topic fails, continue with others
       }
-      setLoadProgress(Math.round(((i + 1) / EXAM_CONFIG.length) * 100));
+      setLoadProgress(Math.round(((i + 1) / configToUse.length) * 100));
     }
 
     // Shuffle for realism
@@ -114,7 +123,7 @@ function ExamContent() {
     setCurrentIdx(0);
     setTimeLeft(EXAM_DURATION_S);
     setPhase("exam");
-  }, [examSource]);
+  }, [examSource, selectedPart]);
 
   // Timer management
   useEffect(() => {
@@ -214,6 +223,40 @@ function ExamContent() {
                   );
                 })}
               </div>
+
+              {/* SIP part selector — only shown for SIP exam source */}
+              {examSource === "SIP" && (
+                <div className="mb-6">
+                  <p className="text-xs text-[#879391] font-semibold uppercase tracking-wider mb-2 text-center">
+                    {t("exam_part_selector", lang)}
+                  </p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(["all", "sip4", "sip5"] as ExamPart[]).map((p) => (
+                      <button
+                        key={p}
+                        onClick={() => setSelectedPart(p)}
+                        className={`py-2.5 rounded text-sm font-semibold border transition-colors ${
+                          selectedPart === p
+                            ? "bg-[#FFB95F] border-[#FFB95F] text-[#1A0E00]"
+                            : "bg-[#191F31] border-[#3D4947] text-[#BCC9C6] hover:border-[#FFB95F]/40"
+                        }`}
+                      >
+                        {p === "all" ? t("all_parts", lang) : p === "sip4" ? "SIP 4" : "SIP 5"}
+                      </button>
+                    ))}
+                  </div>
+                  {selectedPart !== "all" && (
+                    <p className="text-[10px] text-[#879391] text-center mt-2">
+                      {selectedPart === "sip4" ? t("sip4_label", lang) : t("sip5_label", lang)}
+                      {" · "}
+                      {EXAM_CONFIG.filter((c) =>
+                        VIENNA_EXAM_PARTS[selectedPart].includes(c.topic)
+                      ).reduce((s, c) => s + c.count, 0)}{" "}
+                      {t("questions", lang)}
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* Pass threshold notice */}
               <div className="bg-[#FFB95F]/6 border border-[#FFB95F]/25 rounded p-4 mb-6 text-center">
@@ -515,11 +558,6 @@ function ExamContent() {
               >
                 {qCfg.icon} <span className="max-w-[140px] truncate">{q.topic}</span>
               </span>
-              <div className="flex items-center gap-1">
-                {[1, 2, 3, 4, 5].map((d) => (
-                  <div key={d} className={`w-1.5 h-1.5 rounded-full ${d <= q.difficulty ? "bg-[#FFB95F]" : "bg-[#3D4947]"}`} />
-                ))}
-              </div>
             </div>
 
             <p className="text-base md:text-lg font-medium text-[#DCE1FB] mb-5 leading-relaxed">
