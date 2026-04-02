@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
-import { generateWrongOptions, buildMCQOptions } from '@/lib/mcq'
+import { generateWrongOptions, buildMCQOptions, buildMCQFromStored } from '@/lib/mcq'
 import { VIENNA_EXAM_PARTS } from '@/lib/topics'
 
 /**
@@ -88,10 +88,20 @@ function attachOptions(questions: Record<string, unknown>[]) {
     const answer = (q.answer as string) || ''
     const topic = (q.topic as string) || ''
     const question = (q.question as string) || ''
-    const wrong = generateWrongOptions(question, answer, topic)
-    const options = buildMCQOptions(answer, wrong)
+    const storedDistractors = (q.distractors as string[]) || []
+
+    let options
+    if (storedDistractors.length >= 3) {
+      // Use pre-generated AI distractors from DB
+      options = buildMCQFromStored(answer, storedDistractors)
+    } else {
+      // Fallback: try auto-generation (returns null if can't generate quality options)
+      const wrong = generateWrongOptions(question, answer, topic)
+      options = buildMCQOptions(answer, wrong)
+    }
 
     // image_url is stored in the DB — pass it through directly
+    // options: null means show in open-answer mode (no MCQ)
     return { ...q, options }
   })
 }

@@ -97,15 +97,16 @@ export default function QuestionCard({
   const [noteSaved, setNoteSaved] = useState(false);
   const [isFav, setIsFav] = useState(false);
 
-  const answered = selectedIdx !== null;
+  const [showAnswer, setShowAnswer] = useState(false);
+  const answered = selectedIdx !== null || showAnswer;
+  const isOpenAnswer = !question.options || question.options.length < 2;
 
-  const options: MCQOption[] = question.options || [
-    { text: question.answer, correct: true },
-  ];
+  const options: MCQOption[] = question.options || [];
 
   // Load persisted note and favorite state on question change
   useEffect(() => {
     setSelectedIdx(null);
+    setShowAnswer(false);
     setShowNoteInput(false);
     setNoteSaved(false);
     if (typeof window !== "undefined") {
@@ -243,7 +244,28 @@ export default function QuestionCard({
 
         {/* MCQ Options */}
         <div className="space-y-2">
-          {options.map((opt, idx) => (
+          {isOpenAnswer && !showAnswer && (
+            <button
+              onClick={() => {
+                setShowAnswer(true);
+                onAnswer?.(true);
+              }}
+              className="w-full p-4 rounded-lg border border-[#6BD8CB]/30 bg-[#6BD8CB]/5 hover:bg-[#6BD8CB]/10 transition-all text-center"
+            >
+              <span className="text-[#6BD8CB] font-medium">
+                {lang === "de" ? "Antwort anzeigen" : "Show Answer"}
+              </span>
+            </button>
+          )}
+          {isOpenAnswer && showAnswer && (
+            <div className="p-4 rounded-lg border border-[#6BD8CB]/30 bg-[#6BD8CB]/10">
+              <p className="text-xs text-[#6BD8CB] uppercase tracking-wider mb-1 font-medium">
+                {lang === "de" ? "Richtige Antwort" : "Correct Answer"}
+              </p>
+              <p className="text-[#DCE1FB] text-sm leading-relaxed">{question.answer}</p>
+            </div>
+          )}
+          {!isOpenAnswer && options.map((opt, idx) => (
             <button
               key={idx}
               onClick={() => handleSelect(idx)}
