@@ -5,6 +5,7 @@ import { getTopicConfig } from "@/lib/topics";
 import { t } from "@/lib/i18n";
 import type { MCQOption } from "@/lib/mcq";
 import ImageLightbox from "@/components/ImageLightbox";
+import { trackEvent } from "@/lib/tracker";
 
 type Lang = "de" | "en";
 
@@ -129,6 +130,7 @@ export default function QuestionCard({
 
   const handleToggleFav = () => {
     setIsFav(toggleFavorite(question.id));
+    trackEvent("bookmark", { questionId: question.id, topic: question.topic });
   };
 
   const getOptionStyle = (idx: number, opt: MCQOption): string => {

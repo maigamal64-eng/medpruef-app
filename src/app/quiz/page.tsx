@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { t, getLang, setLang } from "@/lib/i18n";
+import { trackEvent, trackPageView } from "@/lib/tracker";
 import { getStoredSession } from "@/lib/auth";
 import LanguageToggle from "@/components/LanguageToggle";
 import Sidebar from "@/components/Sidebar";
@@ -44,6 +45,7 @@ function QuizContent() {
 
   useEffect(() => {
     setLangState(getLang());
+    trackPageView("quiz");
     // Resolve userId: URL param → stored session fallback
     const paramId = searchParams.get("userId") || "";
     if (paramId) {
@@ -92,6 +94,7 @@ function QuizContent() {
       setAnswered(true);
       setQuestionCount((c) => c + 1);
       if (isCorrect) setCorrectCount((c) => c + 1);
+      trackEvent("question_answer", { questionId: question?.id, topic: question?.topic, isCorrect, timeSpent: Date.now() - startTime, examSource });
 
       // Skip API tracking if no authenticated userId
       if (!userId) return;

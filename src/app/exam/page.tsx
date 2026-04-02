@@ -6,6 +6,7 @@ import Link from "next/link";
 import { getTopicConfig, VIENNA_EXAM_PARTS } from "@/lib/topics";
 import { t, getLang, setLang } from "@/lib/i18n";
 import { getStoredSession } from "@/lib/auth";
+import { trackEvent, trackPageView } from "@/lib/tracker";
 import type { MCQOption } from "@/lib/mcq";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";

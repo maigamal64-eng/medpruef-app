@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import Script from "next/script";
+import TrackerInit from "@/components/TrackerInit";
 
 const inter = Inter({
   subsets: ["latin", "latin-ext"],
@@ -49,6 +50,7 @@ export default function RootLayout({
       <body
         className={`${inter.className} ${jetbrainsMono.variable} bg-[#0C1324] text-[#DCE1FB] min-h-screen antialiased`}
       >
+        <TrackerInit />
         {children}
       </body>
     </html>
