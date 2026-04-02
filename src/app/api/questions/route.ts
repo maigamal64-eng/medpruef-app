@@ -82,9 +82,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json(attachOptions(data || []))
 }
 
-const IMAGE_KEYWORDS = ['Bild', 'Abbildung', 'Röntgen', 'EKG', 'CT', 'MRT', 'Befund']
-
-/** Attach shuffled MCQ options and image_url to each question */
+/** Attach shuffled MCQ options to each question. image_url comes from DB. */
 function attachOptions(questions: Record<string, unknown>[]) {
   return questions.map((q) => {
     const answer = (q.answer as string) || ''
@@ -93,14 +91,8 @@ function attachOptions(questions: Record<string, unknown>[]) {
     const wrong = generateWrongOptions(question, answer, topic)
     const options = buildMCQOptions(answer, wrong)
 
-    const hasImageKeyword = IMAGE_KEYWORDS.some(
-      (kw) => question.includes(kw) || answer.includes(kw)
-    )
-    const image_url = hasImageKeyword
-      ? '/question-images/placeholder-medical.svg'
-      : undefined
-
-    return { ...q, options, ...(image_url ? { image_url } : {}) }
+    // image_url is stored in the DB — pass it through directly
+    return { ...q, options }
   })
 }
 
