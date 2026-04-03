@@ -48,14 +48,19 @@ export default function AboutPage() {
           {/* Hero */}
           <div className="text-center mb-8">
             <div className="w-20 h-20 rounded border border-[#007B5F]/30 bg-[#007B5F]/10 flex items-center justify-center text-4xl mx-auto mb-4">
-              🏥
+              <img src="/brand/logo-mark.png" alt="MedPrüf" className="w-12 h-12" />
             </div>
-            <h1 className="text-2xl font-bold text-[#1A2B3C] mb-2">MedPrüf</h1>
+            <img src="/brand/logo-brandmark.png" alt="MedPrüf" className="h-10 mx-auto" />
             <p className="text-[#4A5568] text-base">
               {lang === "de"
                 ? "Deine Lernplattform für die Kenntnisprüfung"
                 : "Your learning platform for the Kenntnisprüfung"}
             </p>
+          </div>
+
+          {/* Authority Seal */}
+          <div className="text-center mb-6">
+            <img src="/brand/authority-seal.png" alt="MedPrüf Official Seal" className="w-32 mx-auto" />
           </div>
 
           {/* What is MedPrüf */}

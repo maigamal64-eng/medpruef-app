@@ -19,9 +19,9 @@ export default function ExamSelector({ lang, onSelect }: Props) {
         {/* Header */}
         <div className="text-center mb-8">
           <div className="w-16 h-16 rounded border border-[#007B5F]/30 bg-[#007B5F]/10 flex items-center justify-center text-3xl mx-auto mb-4">
-            🏥
+            <img src="/brand/logo-mark.png" alt="MedPrüf" className="w-12 h-12" />
           </div>
-          <h1 className="text-2xl font-bold text-[#1A2B3C] mb-2">MedPrüf</h1>
+          <img src="/brand/logo-brandmark.png" alt="MedPrüf" className="h-10 mx-auto" />
           <p className="text-[#A0AEC0] text-sm">
             {lang === "de"
               ? "Welche Prüfung bereitest du vor?"

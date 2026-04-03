@@ -13,6 +13,10 @@ const inter = Inter({
 
 
 export const metadata: Metadata = {
+  icons: {
+    icon: "/brand/favicon-64.png",
+    apple: "/brand/app-icon.png"
+  },
   title: "MedPrüf — Prüfungsvorbereitung",
   description: "Deutsche Medizinprüfung Vorbereitung",
 };

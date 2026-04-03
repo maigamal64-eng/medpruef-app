@@ -505,9 +505,9 @@ function DemoHome({
           </div>
 
           <div className="w-16 h-16 rounded border border-[#007B5F]/30 bg-[#007B5F]/10 flex items-center justify-center text-3xl mx-auto mb-4">
-            🏥
+            <img src="/brand/logo-mark.png" alt="MedPrüf" className="w-12 h-12" />
           </div>
-          <h1 className="text-3xl font-bold mb-2 tracking-tight text-[#1A2B3C]">MedPrüf</h1>
+          <img src="/brand/logo-brandmark.png" alt="MedPrüf" className="h-10 mx-auto" />
           <p className="text-[#4A5568] text-base mb-1">{t("exam_prep", lang)}</p>
           <p className="text-[#A0AEC0] text-sm">{t("demo_description", lang)}</p>
 
@@ -657,6 +657,9 @@ function DemoHome({
       {/* Login + Guest prompt */}
       <div className="px-4 pb-10 max-w-4xl mx-auto">
         <div className="border border-[#E4E9F0] rounded bg-[#FFFFFF] p-5">
+          <div className="text-center mb-4">
+            <img src="/brand/logo-brandmark.png" alt="MedPrüf" className="h-8 mx-auto" />
+          </div>
           <p className="text-sm text-[#4A5568] font-medium mb-1 text-center">
             {lang === "de"
               ? "Fortschritt speichern & Statistiken verfolgen"
