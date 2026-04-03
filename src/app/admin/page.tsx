@@ -58,19 +58,19 @@ function StatCard({
   accent?: string;
 }) {
   return (
-    <div className="bg-[#191F31] border border-[#3D4947] rounded p-4">
-      <p className="text-[#879391] text-xs uppercase tracking-wider mb-1">{label}</p>
-      <p className={`text-2xl font-bold font-mono ${accent || "text-[#DCE1FB]"}`}>{value}</p>
-      {sub && <p className="text-[#879391] text-xs mt-1">{sub}</p>}
+    <div className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-4">
+      <p className="text-[#A0AEC0] text-xs uppercase tracking-wider mb-1">{label}</p>
+      <p className={`text-2xl font-bold font-mono ${accent || "text-[#1A2B3C]"}`}>{value}</p>
+      {sub && <p className="text-[#A0AEC0] text-xs mt-1">{sub}</p>}
     </div>
   );
 }
 
 const tooltipStyle = {
-  backgroundColor: "#191F31",
-  border: "1px solid #3D4947",
+  backgroundColor: "#FFFFFF",
+  border: "1px solid #E4E9F0",
   borderRadius: 6,
-  color: "#DCE1FB",
+  color: "#1A2B3C",
   fontSize: 12,
 };
 
@@ -98,18 +98,18 @@ export default function AdminPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#0C1324]">
-        <div className="w-10 h-10 border-2 border-[#6BD8CB] border-t-transparent rounded-full animate-spin" />
+      <div className="flex items-center justify-center min-h-screen bg-[#F7F9FC]">
+        <div className="w-10 h-10 border-2 border-[#007B5F] border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   if (!authorized) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#0C1324]">
+      <div className="flex items-center justify-center min-h-screen bg-[#F7F9FC]">
         <div className="text-center">
           <p className="text-5xl mb-4">🔒</p>
-          <p className="text-[#879391]">Access denied</p>
+          <p className="text-[#A0AEC0]">Access denied</p>
         </div>
       </div>
     );
@@ -117,8 +117,8 @@ export default function AdminPage() {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#0C1324]">
-        <p className="text-[#FFB4AB]">{error}</p>
+      <div className="flex items-center justify-center min-h-screen bg-[#F7F9FC]">
+        <p className="text-[#D64545]">{error}</p>
       </div>
     );
   }
@@ -128,18 +128,18 @@ export default function AdminPage() {
   const shortDate = (d: string) => d.slice(5); // "MM-DD"
 
   return (
-    <div className="min-h-screen bg-[#0C1324] text-[#DCE1FB] p-4 lg:p-8">
+    <div className="min-h-screen bg-[#F7F9FC] text-[#1A2B3C] p-4 lg:p-8">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-[#DCE1FB]">Admin Dashboard</h1>
-          <p className="text-[#879391] text-sm mt-1">MedPrüf Analytics</p>
+          <h1 className="text-2xl font-bold text-[#1A2B3C]">Admin Dashboard</h1>
+          <p className="text-[#A0AEC0] text-sm mt-1">MedPrüf Analytics</p>
         </div>
 
         {/* KPI Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
-          <StatCard label="Total Users" value={stats.totalUsers} accent="text-[#6BD8CB]" />
-          <StatCard label="DAU" value={stats.dau} sub="Active today" accent="text-[#4EDEA3]" />
+          <StatCard label="Total Users" value={stats.totalUsers} accent="text-[#007B5F]" />
+          <StatCard label="DAU" value={stats.dau} sub="Active today" accent="text-[#00A896]" />
           <StatCard label="WAU" value={stats.wau} sub="Active this week" />
           <StatCard label="MAU" value={stats.mau} sub="Active this month" />
         </div>
@@ -148,30 +148,30 @@ export default function AdminPage() {
           <StatCard
             label="Questions Today"
             value={stats.questionsToday}
-            accent="text-[#FFB95F]"
+            accent="text-[#F4A261]"
           />
           <StatCard
             label="Questions This Week"
             value={stats.questionsThisWeek}
-            accent="text-[#FFB95F]"
+            accent="text-[#F4A261]"
           />
         </div>
 
         {/* Daily Active Users Chart */}
-        <div className="bg-[#191F31] border border-[#3D4947] rounded p-4 mb-6">
-          <h2 className="text-sm font-semibold text-[#BCC9C6] uppercase tracking-wider mb-4">
+        <div className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-4 mb-6">
+          <h2 className="text-sm font-semibold text-[#4A5568] uppercase tracking-wider mb-4">
             Daily Active Users — Last 30 Days
           </h2>
           <ResponsiveContainer width="100%" height={200}>
             <LineChart data={stats.dailyActiveUsers}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#23293C" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#F7F9FC" />
               <XAxis
                 dataKey="date"
                 tickFormatter={shortDate}
-                tick={{ fill: "#879391", fontSize: 10 }}
+                tick={{ fill: "#A0AEC0", fontSize: 10 }}
                 interval={4}
               />
-              <YAxis tick={{ fill: "#879391", fontSize: 10 }} allowDecimals={false} />
+              <YAxis tick={{ fill: "#A0AEC0", fontSize: 10 }} allowDecimals={false} />
               <Tooltip
                 contentStyle={tooltipStyle}
                 labelFormatter={(v) => `Date: ${v}`}
@@ -180,7 +180,7 @@ export default function AdminPage() {
               <Line
                 type="monotone"
                 dataKey="users"
-                stroke="#6BD8CB"
+                stroke="#007B5F"
                 strokeWidth={2}
                 dot={false}
               />
@@ -189,37 +189,37 @@ export default function AdminPage() {
         </div>
 
         {/* Peak Study Hours */}
-        <div className="bg-[#191F31] border border-[#3D4947] rounded p-4 mb-6">
-          <h2 className="text-sm font-semibold text-[#BCC9C6] uppercase tracking-wider mb-4">
+        <div className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-4 mb-6">
+          <h2 className="text-sm font-semibold text-[#4A5568] uppercase tracking-wider mb-4">
             Peak Study Hours (UTC)
           </h2>
           <ResponsiveContainer width="100%" height={180}>
             <BarChart data={stats.peakStudyHours}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#23293C" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#F7F9FC" />
               <XAxis
                 dataKey="hour"
                 tickFormatter={(h) => `${h}h`}
-                tick={{ fill: "#879391", fontSize: 10 }}
+                tick={{ fill: "#A0AEC0", fontSize: 10 }}
                 interval={2}
               />
-              <YAxis tick={{ fill: "#879391", fontSize: 10 }} allowDecimals={false} />
+              <YAxis tick={{ fill: "#A0AEC0", fontSize: 10 }} allowDecimals={false} />
               <Tooltip
                 contentStyle={tooltipStyle}
                 labelFormatter={(h) => `Hour: ${h}:00`}
                 formatter={(v) => [`${v}`, "Questions"]}
               />
-              <Bar dataKey="count" fill="#FFB95F" radius={[2, 2, 0, 0]} />
+              <Bar dataKey="count" fill="#F4A261" radius={[2, 2, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
 
         {/* Accuracy by Topic */}
-        <div className="bg-[#191F31] border border-[#3D4947] rounded p-4 mb-6">
-          <h2 className="text-sm font-semibold text-[#BCC9C6] uppercase tracking-wider mb-4">
+        <div className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-4 mb-6">
+          <h2 className="text-sm font-semibold text-[#4A5568] uppercase tracking-wider mb-4">
             Accuracy by Topic (last 30 days)
           </h2>
           {stats.avgAccuracyByTopic.length === 0 ? (
-            <p className="text-[#879391] text-sm">No data yet</p>
+            <p className="text-[#A0AEC0] text-sm">No data yet</p>
           ) : (
             <ResponsiveContainer width="100%" height={240}>
               <BarChart
@@ -227,19 +227,19 @@ export default function AdminPage() {
                 layout="vertical"
                 margin={{ left: 8 }}
               >
-                <CartesianGrid strokeDasharray="3 3" stroke="#23293C" horizontal={false} />
-                <XAxis type="number" domain={[0, 100]} tick={{ fill: "#879391", fontSize: 10 }} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#F7F9FC" horizontal={false} />
+                <XAxis type="number" domain={[0, 100]} tick={{ fill: "#A0AEC0", fontSize: 10 }} />
                 <YAxis
                   dataKey="topic"
                   type="category"
                   width={130}
-                  tick={{ fill: "#879391", fontSize: 10 }}
+                  tick={{ fill: "#A0AEC0", fontSize: 10 }}
                 />
                 <Tooltip
                   contentStyle={tooltipStyle}
                   formatter={(v) => [`${v}%`, "Accuracy"]}
                 />
-                <Bar dataKey="accuracy" fill="#4EDEA3" radius={[0, 2, 2, 0]} />
+                <Bar dataKey="accuracy" fill="#00A896" radius={[0, 2, 2, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -247,37 +247,37 @@ export default function AdminPage() {
 
         {/* Top & Weak Topics */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
-          <div className="bg-[#191F31] border border-[#3D4947] rounded p-4">
-            <h2 className="text-sm font-semibold text-[#4EDEA3] uppercase tracking-wider mb-3">
+          <div className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-4">
+            <h2 className="text-sm font-semibold text-[#00A896] uppercase tracking-wider mb-3">
               Top Topics by Volume
             </h2>
             <div className="space-y-2">
               {stats.topTopics.length === 0 && (
-                <p className="text-[#879391] text-sm">No data yet</p>
+                <p className="text-[#A0AEC0] text-sm">No data yet</p>
               )}
               {stats.topTopics.map((t) => (
                 <div key={t.topic} className="flex items-center justify-between text-sm">
-                  <span className="text-[#BCC9C6] truncate max-w-[65%]">{t.topic}</span>
-                  <span className="text-[#879391] font-mono text-xs">{t.total} Qs</span>
+                  <span className="text-[#4A5568] truncate max-w-[65%]">{t.topic}</span>
+                  <span className="text-[#A0AEC0] font-mono text-xs">{t.total} Qs</span>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="bg-[#191F31] border border-[#3D4947] rounded p-4">
-            <h2 className="text-sm font-semibold text-[#FFB4AB] uppercase tracking-wider mb-3">
+          <div className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-4">
+            <h2 className="text-sm font-semibold text-[#D64545] uppercase tracking-wider mb-3">
               Weak Topics (lowest accuracy)
             </h2>
             <div className="space-y-2">
               {stats.weakTopics.length === 0 && (
-                <p className="text-[#879391] text-sm">No data yet</p>
+                <p className="text-[#A0AEC0] text-sm">No data yet</p>
               )}
               {stats.weakTopics.map((t) => (
                 <div key={t.topic} className="flex items-center justify-between text-sm">
-                  <span className="text-[#BCC9C6] truncate max-w-[65%]">{t.topic}</span>
+                  <span className="text-[#4A5568] truncate max-w-[65%]">{t.topic}</span>
                   <span
                     className={`font-mono text-xs ${
-                      t.accuracy >= 60 ? "text-[#4EDEA3]" : t.accuracy >= 40 ? "text-[#FFB95F]" : "text-[#FFB4AB]"
+                      t.accuracy >= 60 ? "text-[#00A896]" : t.accuracy >= 40 ? "text-[#F4A261]" : "text-[#D64545]"
                     }`}
                   >
                     {t.accuracy}%

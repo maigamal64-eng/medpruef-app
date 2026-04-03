@@ -29,7 +29,7 @@ export default function ImageLightbox({ src, alt = "Bild", onClose }: ImageLight
     >
       {/* Close button */}
       <button
-        className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/80 hover:text-white transition-colors"
+        className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-[#1A2B3C]/80 hover:text-[#1A2B3C] transition-colors"
         onClick={onClose}
         aria-label="Schließen"
       >

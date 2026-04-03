@@ -21,13 +21,13 @@ export default function StreakWidget({ streak, lang }: StreakWidgetProps) {
       : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
   return (
-    <div className="bg-[#191F31] border border-[#3D4947] rounded p-4 animate-fade-in">
+    <div className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-4 animate-fade-in">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <span className="text-2xl animate-fire">🔥</span>
           <div>
-            <p className="text-2xl font-bold text-[#FFB4AB] font-mono">{streak}</p>
-            <p className="text-xs text-[#BCC9C6]">
+            <p className="text-2xl font-bold text-[#D64545] font-mono">{streak}</p>
+            <p className="text-xs text-[#4A5568]">
               {t("streak", lang)} · {t("days", lang)}
             </p>
           </div>
@@ -39,13 +39,13 @@ export default function StreakWidget({ streak, lang }: StreakWidgetProps) {
             <div
               className={`w-7 h-7 rounded flex items-center justify-center text-xs font-medium transition-colors border ${
                 active
-                  ? "bg-[#4EDEA3]/15 text-[#4EDEA3] border-[#4EDEA3]/30"
-                  : "bg-[#23293C] text-[#879391] border-[#3D4947]"
+                  ? "bg-[#00A896]/15 text-[#00A896] border-[#00A896]/30"
+                  : "bg-[#F7F9FC] text-[#A0AEC0] border-[#E4E9F0]"
               }`}
             >
               {active ? "✓" : "·"}
             </div>
-            <span className="text-[9px] text-[#879391]">{dayLabels[i]}</span>
+            <span className="text-[9px] text-[#A0AEC0]">{dayLabels[i]}</span>
           </div>
         ))}
       </div>

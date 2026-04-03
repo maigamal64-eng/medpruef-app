@@ -115,18 +115,18 @@ export default function ProfilePage() {
     return (
       <div className="app-layout">
         <Sidebar lang={lang} />
-        <main className="main-content safe-area-top safe-area-bottom bg-[#0C1324]">
-          <div className="px-4 lg:px-8 pt-4 pb-2 flex items-center justify-between border-b border-[#3D4947]">
-            <Link href="/" className="text-[#879391] hover:text-[#DCE1FB] text-sm transition-colors">
+        <main className="main-content safe-area-top safe-area-bottom bg-[#F7F9FC]">
+          <div className="px-4 lg:px-8 pt-4 pb-2 flex items-center justify-between border-b border-[#E4E9F0]">
+            <Link href="/" className="text-[#A0AEC0] hover:text-[#1A2B3C] text-sm transition-colors">
               ← {t("back_home", lang)}
             </Link>
-            <h1 className="text-base font-bold text-[#DCE1FB]">{t("profile", lang)}</h1>
+            <h1 className="text-base font-bold text-[#1A2B3C]">{t("profile", lang)}</h1>
             <LanguageToggle lang={lang} onChange={switchLang} />
           </div>
           <div className="flex flex-col items-center justify-center min-h-[calc(100vh-60px)] px-4 text-center max-w-sm mx-auto">
             <div className="text-5xl mb-4">👤</div>
-            <p className="text-[#BCC9C6] font-medium mb-2">{t("profile_not_logged_in", lang)}</p>
-            <p className="text-[#879391] text-sm mb-6">
+            <p className="text-[#4A5568] font-medium mb-2">{t("profile_not_logged_in", lang)}</p>
+            <p className="text-[#A0AEC0] text-sm mb-6">
               {lang === "de"
                 ? "Melde dich mit Telegram an, um deinen Fortschritt zu speichern"
                 : "Sign in with Telegram to save your progress"}
@@ -136,7 +136,7 @@ export default function ProfilePage() {
                 href="https://t.me/MedPruefBot?start=web_login"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center gap-3 bg-[#229ED9] hover:bg-[#1e8fc0] text-white px-5 py-3 rounded font-semibold text-sm transition-all"
+                className="flex items-center justify-center gap-3 bg-[#229ED9] hover:bg-[#1e8fc0] text-[#1A2B3C] px-5 py-3 rounded font-semibold text-sm transition-all"
               >
                 <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current" aria-hidden="true">
                   <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.833.941z"/>
@@ -145,7 +145,7 @@ export default function ProfilePage() {
               </a>
               <Link
                 href="/"
-                className="px-6 py-3 bg-[#191F31] border border-[#3D4947] text-[#BCC9C6] rounded text-sm hover:border-[#6BD8CB]/40 transition-colors"
+                className="px-6 py-3 bg-[#FFFFFF] border border-[#E4E9F0] text-[#4A5568] rounded text-sm hover:border-[#007B5F]/40 transition-colors"
               >
                 ← {t("back_home", lang)}
               </Link>
@@ -168,77 +168,77 @@ export default function ProfilePage() {
         accuracy={accuracy}
       />
 
-      <main className="main-content safe-area-top safe-area-bottom bg-[#0C1324]">
-        <div className="px-4 lg:px-8 pt-4 pb-2 flex items-center justify-between border-b border-[#3D4947]">
-          <Link href="/" className="text-[#879391] hover:text-[#DCE1FB] text-sm transition-colors">
+      <main className="main-content safe-area-top safe-area-bottom bg-[#F7F9FC]">
+        <div className="px-4 lg:px-8 pt-4 pb-2 flex items-center justify-between border-b border-[#E4E9F0]">
+          <Link href="/" className="text-[#A0AEC0] hover:text-[#1A2B3C] text-sm transition-colors">
             ← {t("back_home", lang)}
           </Link>
-          <h1 className="text-base font-bold text-[#DCE1FB]">{t("profile", lang)}</h1>
+          <h1 className="text-base font-bold text-[#1A2B3C]">{t("profile", lang)}</h1>
           <LanguageToggle lang={lang} onChange={switchLang} />
         </div>
 
         <div className="px-4 lg:px-8 py-5 max-w-2xl mx-auto space-y-4">
 
           {/* User card */}
-          <div className="bg-[#191F31] border border-[#3D4947] rounded p-5">
+          <div className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-5">
             <div className="flex items-center gap-4 mb-4">
-              <div className="w-14 h-14 rounded border border-[#6BD8CB]/30 bg-[#6BD8CB]/10 flex items-center justify-center text-2xl font-bold text-[#6BD8CB]">
+              <div className="w-14 h-14 rounded border border-[#007B5F]/30 bg-[#007B5F]/10 flex items-center justify-center text-2xl font-bold text-[#007B5F]">
                 {user.first_name.charAt(0).toUpperCase()}
               </div>
               <div>
-                <h2 className="text-lg font-bold text-[#DCE1FB]">
+                <h2 className="text-lg font-bold text-[#1A2B3C]">
                   {user.first_name}{user.last_name ? ` ${user.last_name}` : ""}
                 </h2>
-                <p className="text-sm text-[#879391]">
+                <p className="text-sm text-[#A0AEC0]">
                   {xpInfo.rank} · <span className="font-mono">Lv.{xpInfo.level}</span>
                 </p>
-                <p className="text-xs text-[#879391] font-mono mt-0.5">
+                <p className="text-xs text-[#A0AEC0] font-mono mt-0.5">
                   ID: {user.telegram_id}
                 </p>
               </div>
             </div>
             {/* XP progress */}
-            <div className="h-1.5 bg-[#23293C] rounded-full overflow-hidden mb-1">
+            <div className="h-1.5 bg-[#F7F9FC] rounded-full overflow-hidden mb-1">
               <div
-                className="h-full bg-[#6BD8CB] rounded-full transition-all"
+                className="h-full bg-[#007B5F] rounded-full transition-all"
                 style={{ width: `${xpInfo.progress}%` }}
               />
             </div>
-            <p className="text-[10px] text-[#879391] font-mono">
+            <p className="text-[10px] text-[#A0AEC0] font-mono">
               {Math.round(xpInfo.progress)}% {t("to_next_level", lang)}
             </p>
           </div>
 
           {/* Stats overview */}
           <div className="grid grid-cols-2 gap-3">
-            <div className="bg-[#191F31] border border-[#3D4947] rounded p-4 text-center">
-              <p className="text-2xl font-bold text-[#FFB95F] font-mono">{gam?.total_xp || 0}</p>
-              <p className="text-xs text-[#879391]">{t("total_xp", lang)}</p>
+            <div className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-4 text-center">
+              <p className="text-2xl font-bold text-[#F4A261] font-mono">{gam?.total_xp || 0}</p>
+              <p className="text-xs text-[#A0AEC0]">{t("total_xp", lang)}</p>
             </div>
-            <div className="bg-[#191F31] border border-[#3D4947] rounded p-4 text-center">
-              <p className="text-2xl font-bold text-[#FFB4AB] font-mono">🔥 {gam?.current_streak || 0}</p>
-              <p className="text-xs text-[#879391]">{t("current_streak", lang)}</p>
+            <div className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-4 text-center">
+              <p className="text-2xl font-bold text-[#D64545] font-mono">🔥 {gam?.current_streak || 0}</p>
+              <p className="text-xs text-[#A0AEC0]">{t("current_streak", lang)}</p>
             </div>
-            <div className="bg-[#191F31] border border-[#3D4947] rounded p-4 text-center">
-              <p className="text-2xl font-bold text-[#4EDEA3] font-mono">{accuracy}%</p>
-              <p className="text-xs text-[#879391]">{t("accuracy", lang)}</p>
+            <div className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-4 text-center">
+              <p className="text-2xl font-bold text-[#00A896] font-mono">{accuracy}%</p>
+              <p className="text-xs text-[#A0AEC0]">{t("accuracy", lang)}</p>
             </div>
-            <div className="bg-[#191F31] border border-[#3D4947] rounded p-4 text-center">
-              <p className="text-2xl font-bold text-[#6BD8CB] font-mono">{gam?.total_questions_answered || 0}</p>
-              <p className="text-xs text-[#879391]">{t("total_answered", lang)}</p>
+            <div className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-4 text-center">
+              <p className="text-2xl font-bold text-[#007B5F] font-mono">{gam?.total_questions_answered || 0}</p>
+              <p className="text-xs text-[#A0AEC0]">{t("total_answered", lang)}</p>
             </div>
           </div>
 
           {/* Editable profile info */}
-          <div className="bg-[#191F31] border border-[#3D4947] rounded p-5">
+          <div className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-5">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-sm font-semibold text-[#DCE1FB]">
+              <h3 className="text-sm font-semibold text-[#1A2B3C]">
                 {lang === "de" ? "Angaben" : "Details"}
               </h3>
               {!editing ? (
                 <button
                   onClick={() => { setEditData(profile); setEditing(true); }}
-                  className="text-xs text-[#6BD8CB] hover:text-[#89F5E7] transition-colors"
+                  className="text-xs text-[#007B5F] hover:text-[#00A896] transition-colors"
                 >
                   ✏ {t("edit", lang)}
                 </button>
@@ -249,11 +249,11 @@ export default function ProfilePage() {
               <div className="space-y-4">
                 {/* University */}
                 <div>
-                  <label className="block text-xs text-[#879391] mb-1.5">{t("university", lang)}</label>
+                  <label className="block text-xs text-[#A0AEC0] mb-1.5">{t("university", lang)}</label>
                   <select
                     value={editData.university}
                     onChange={(e) => setEditData({ ...editData, university: e.target.value })}
-                    className="w-full bg-[#23293C] border border-[#3D4947] rounded px-3 py-2.5 text-sm text-[#DCE1FB] focus:outline-none focus:border-[#6BD8CB]/50"
+                    className="w-full bg-[#F7F9FC] border border-[#E4E9F0] rounded px-3 py-2.5 text-sm text-[#1A2B3C] focus:outline-none focus:border-[#007B5F]/50"
                   >
                     <option value="">{t("select_university", lang)}</option>
                     {universities.map((u) => (
@@ -264,37 +264,37 @@ export default function ProfilePage() {
 
                 {/* Country */}
                 <div>
-                  <label className="block text-xs text-[#879391] mb-1.5">{t("country_of_origin", lang)}</label>
+                  <label className="block text-xs text-[#A0AEC0] mb-1.5">{t("country_of_origin", lang)}</label>
                   <input
                     type="text"
                     value={editData.country}
                     onChange={(e) => setEditData({ ...editData, country: e.target.value })}
                     placeholder={t("select_country", lang)}
-                    className="w-full bg-[#23293C] border border-[#3D4947] rounded px-3 py-2.5 text-sm text-[#DCE1FB] placeholder-[#879391] focus:outline-none focus:border-[#6BD8CB]/50"
+                    className="w-full bg-[#F7F9FC] border border-[#E4E9F0] rounded px-3 py-2.5 text-sm text-[#1A2B3C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#007B5F]/50"
                   />
                 </div>
 
                 {/* Target exam date */}
                 <div>
-                  <label className="block text-xs text-[#879391] mb-1.5">{t("target_exam_date", lang)}</label>
+                  <label className="block text-xs text-[#A0AEC0] mb-1.5">{t("target_exam_date", lang)}</label>
                   <input
                     type="date"
                     value={editData.targetDate}
                     onChange={(e) => setEditData({ ...editData, targetDate: e.target.value })}
-                    className="w-full bg-[#23293C] border border-[#3D4947] rounded px-3 py-2.5 text-sm text-[#DCE1FB] focus:outline-none focus:border-[#6BD8CB]/50"
+                    className="w-full bg-[#F7F9FC] border border-[#E4E9F0] rounded px-3 py-2.5 text-sm text-[#1A2B3C] focus:outline-none focus:border-[#007B5F]/50"
                   />
                 </div>
 
                 <div className="flex gap-3 pt-1">
                   <button
                     onClick={handleSave}
-                    className="flex-1 py-2.5 bg-[#6BD8CB]/15 border border-[#6BD8CB]/30 text-[#6BD8CB] text-sm font-medium rounded hover:bg-[#6BD8CB]/25 transition-colors"
+                    className="flex-1 py-2.5 bg-[#007B5F]/15 border border-[#007B5F]/30 text-[#007B5F] text-sm font-medium rounded hover:bg-[#007B5F]/25 transition-colors"
                   >
                     {t("save", lang)}
                   </button>
                   <button
                     onClick={() => setEditing(false)}
-                    className="flex-1 py-2.5 border border-[#3D4947] text-[#879391] text-sm rounded hover:border-[#6BD8CB]/30 transition-colors"
+                    className="flex-1 py-2.5 border border-[#E4E9F0] text-[#A0AEC0] text-sm rounded hover:border-[#007B5F]/30 transition-colors"
                   >
                     {t("cancel", lang)}
                   </button>
@@ -323,7 +323,7 @@ export default function ProfilePage() {
                   muted={!profile.targetDate}
                 />
                 {saved && (
-                  <p className="text-xs text-[#4EDEA3] animate-fade-in">✓ {t("note_saved", lang)}</p>
+                  <p className="text-xs text-[#00A896] animate-fade-in">✓ {t("note_saved", lang)}</p>
                 )}
               </div>
             )}
@@ -336,9 +336,9 @@ export default function ProfilePage() {
             const diff = Math.ceil((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
             if (diff <= 0) return null;
             return (
-              <div className="bg-[#FFB95F]/6 border border-[#FFB95F]/25 rounded p-4 text-center">
-                <p className="text-3xl font-bold text-[#FFB95F] font-mono mb-1">{diff}</p>
-                <p className="text-sm text-[#BCC9C6]">
+              <div className="bg-[#F4A261]/6 border border-[#F4A261]/25 rounded p-4 text-center">
+                <p className="text-3xl font-bold text-[#F4A261] font-mono mb-1">{diff}</p>
+                <p className="text-sm text-[#4A5568]">
                   {lang === "de" ? "Tage bis zur Prüfung" : "days until your exam"}
                 </p>
               </div>
@@ -346,35 +346,35 @@ export default function ProfilePage() {
           })()}
 
           {/* Bookmarked questions */}
-          <div className="bg-[#191F31] border border-[#3D4947] rounded p-5">
-            <h3 className="text-sm font-semibold text-[#DCE1FB] mb-3">
+          <div className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-5">
+            <h3 className="text-sm font-semibold text-[#1A2B3C] mb-3">
               ★ {t("favorites", lang)}{" "}
               {favIds.length > 0 && (
-                <span className="font-mono text-[#879391]">({favIds.length})</span>
+                <span className="font-mono text-[#A0AEC0]">({favIds.length})</span>
               )}
             </h3>
             {favIds.length === 0 ? (
-              <p className="text-sm text-[#879391]">{t("no_favorites", lang)}</p>
+              <p className="text-sm text-[#A0AEC0]">{t("no_favorites", lang)}</p>
             ) : (
               <div className="space-y-1">
                 {favIds.slice(0, 10).map((id) => (
                   <div
                     key={id}
-                    className="flex items-center justify-between py-2 border-b border-[#3D4947]/50 last:border-0"
+                    className="flex items-center justify-between py-2 border-b border-[#E4E9F0]/50 last:border-0"
                   >
-                    <span className="text-sm text-[#BCC9C6] font-mono">
+                    <span className="text-sm text-[#4A5568] font-mono">
                       {lang === "de" ? "Frage" : "Question"} #{id}
                     </span>
                     <Link
                       href={`/quiz?questionId=${id}`}
-                      className="text-xs text-[#6BD8CB] hover:text-[#89F5E7] transition-colors"
+                      className="text-xs text-[#007B5F] hover:text-[#00A896] transition-colors"
                     >
                       {lang === "de" ? "Üben" : "Practice"} →
                     </Link>
                   </div>
                 ))}
                 {favIds.length > 10 && (
-                  <p className="text-xs text-[#879391] pt-1 font-mono">
+                  <p className="text-xs text-[#A0AEC0] pt-1 font-mono">
                     +{favIds.length - 10} {lang === "de" ? "weitere" : "more"}
                   </p>
                 )}
@@ -383,21 +383,21 @@ export default function ProfilePage() {
           </div>
 
           {/* Daily goal progress */}
-          <div className="bg-[#191F31] border border-[#3D4947] rounded p-5">
-            <h3 className="text-sm font-semibold text-[#DCE1FB] mb-3">
+          <div className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-5">
+            <h3 className="text-sm font-semibold text-[#1A2B3C] mb-3">
               {lang === "de" ? "Tagesziel" : "Daily Goal"}
             </h3>
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-[#BCC9C6]">
+              <span className="text-sm text-[#4A5568]">
                 {gam?.daily_questions_today || 0} / {user.daily_goal || 20}
               </span>
-              <span className="text-sm font-mono text-[#6BD8CB]">
+              <span className="text-sm font-mono text-[#007B5F]">
                 {Math.min(100, Math.round(((gam?.daily_questions_today || 0) / (user.daily_goal || 20)) * 100))}%
               </span>
             </div>
-            <div className="h-2 bg-[#23293C] rounded-full overflow-hidden">
+            <div className="h-2 bg-[#F7F9FC] rounded-full overflow-hidden">
               <div
-                className="h-full bg-[#6BD8CB] rounded-full transition-all"
+                className="h-full bg-[#007B5F] rounded-full transition-all"
                 style={{
                   width: `${Math.min(100, Math.round(((gam?.daily_questions_today || 0) / (user.daily_goal || 20)) * 100))}%`,
                 }}
@@ -406,8 +406,8 @@ export default function ProfilePage() {
           </div>
 
           {/* Exam selection */}
-          <div className="bg-[#191F31] border border-[#3D4947] rounded p-5">
-            <h3 className="text-sm font-semibold text-[#DCE1FB] mb-3">
+          <div className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-5">
+            <h3 className="text-sm font-semibold text-[#1A2B3C] mb-3">
               {lang === "de" ? "Prüfungsauswahl" : "Exam Selection"}
             </h3>
             <div className="space-y-2">
@@ -420,17 +420,17 @@ export default function ProfilePage() {
                   }}
                   className={`w-full flex items-center gap-3 rounded p-3 text-left text-sm transition-all ${
                     examSource === exam.id
-                      ? "bg-[#6BD8CB]/12 border border-[#6BD8CB]/40 text-[#6BD8CB]"
-                      : "border border-[#3D4947] text-[#BCC9C6] hover:border-[#6BD8CB]/30"
+                      ? "bg-[#007B5F]/12 border border-[#007B5F]/40 text-[#007B5F]"
+                      : "border border-[#E4E9F0] text-[#4A5568] hover:border-[#007B5F]/30"
                   }`}
                 >
                   <span>{exam.badge}</span>
                   <span className="flex-1">{exam.fullName}</span>
-                  <span className="font-mono text-xs text-[#879391]">
+                  <span className="font-mono text-xs text-[#A0AEC0]">
                     {exam.questions.toLocaleString("de-DE")}
                   </span>
                   {examSource === exam.id && (
-                    <span className="text-[#6BD8CB] text-xs font-bold">✓</span>
+                    <span className="text-[#007B5F] text-xs font-bold">✓</span>
                   )}
                 </button>
               ))}
@@ -439,11 +439,11 @@ export default function ProfilePage() {
 
           {/* Connect Telegram — shown if guest */}
           {user.id.startsWith("guest_") && (
-            <div className="bg-[#191F31] border border-[#3D4947] rounded p-5">
-              <h3 className="text-sm font-semibold text-[#DCE1FB] mb-2">
+            <div className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-5">
+              <h3 className="text-sm font-semibold text-[#1A2B3C] mb-2">
                 {lang === "de" ? "Später mit Telegram verbinden" : "Connect Telegram later"}
               </h3>
-              <p className="text-xs text-[#879391] mb-4">
+              <p className="text-xs text-[#A0AEC0] mb-4">
                 {lang === "de"
                   ? "Verbinde deinen Fortschritt mit Telegram, um geräteübergreifend zu lernen."
                   : "Connect your progress to Telegram to study across devices."}
@@ -452,7 +452,7 @@ export default function ProfilePage() {
                 href="https://t.me/MedPruefBot?start=web_login"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center gap-3 bg-[#229ED9] hover:bg-[#1e8fc0] text-white px-5 py-3 rounded font-semibold text-sm transition-all w-full"
+                className="flex items-center justify-center gap-3 bg-[#229ED9] hover:bg-[#1e8fc0] text-[#1A2B3C] px-5 py-3 rounded font-semibold text-sm transition-all w-full"
               >
                 <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current" aria-hidden="true">
                   <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.833.941z"/>
@@ -465,7 +465,7 @@ export default function ProfilePage() {
           {/* Logout */}
           <button
             onClick={handleLogout}
-            className="w-full py-3 border border-[#FFB4AB]/30 text-[#FFB4AB] text-sm rounded hover:bg-[#FFB4AB]/8 transition-colors"
+            className="w-full py-3 border border-[#D64545]/30 text-[#D64545] text-sm rounded hover:bg-[#D64545]/8 transition-colors"
           >
             {lang === "de" ? "Abmelden" : "Sign Out"}
           </button>
@@ -492,8 +492,8 @@ function ProfileRow({
     <div className="flex items-center gap-3">
       <span className="text-base w-6 flex-shrink-0">{icon}</span>
       <div className="flex-1 min-w-0">
-        <p className="text-[10px] text-[#879391] uppercase tracking-wider">{label}</p>
-        <p className={`text-sm ${muted ? "text-[#879391] italic" : "text-[#DCE1FB]"}`}>{value}</p>
+        <p className="text-[10px] text-[#A0AEC0] uppercase tracking-wider">{label}</p>
+        <p className={`text-sm ${muted ? "text-[#A0AEC0] italic" : "text-[#1A2B3C]"}`}>{value}</p>
       </div>
     </div>
   );

@@ -33,12 +33,12 @@ export default function AboutPage() {
     <div className="app-layout">
       <Sidebar lang={lang} userId={userId} userName={userName} />
 
-      <main className="main-content safe-area-top safe-area-bottom bg-[#0C1324]">
-        <div className="px-4 lg:px-8 pt-4 pb-2 flex items-center justify-between border-b border-[#3D4947]">
-          <Link href="/" className="text-[#879391] hover:text-[#DCE1FB] text-sm transition-colors">
+      <main className="main-content safe-area-top safe-area-bottom bg-[#F7F9FC]">
+        <div className="px-4 lg:px-8 pt-4 pb-2 flex items-center justify-between border-b border-[#E4E9F0]">
+          <Link href="/" className="text-[#A0AEC0] hover:text-[#1A2B3C] text-sm transition-colors">
             ← {lang === "de" ? "Zurück" : "Back"}
           </Link>
-          <h1 className="text-base font-bold text-[#DCE1FB]">
+          <h1 className="text-base font-bold text-[#1A2B3C]">
             {lang === "de" ? "Über MedPrüf" : "About MedPrüf"}
           </h1>
           <LanguageToggle lang={lang} onChange={switchLang} />
@@ -47,11 +47,11 @@ export default function AboutPage() {
         <div className="px-4 lg:px-8 py-6 max-w-2xl mx-auto">
           {/* Hero */}
           <div className="text-center mb-8">
-            <div className="w-20 h-20 rounded border border-[#6BD8CB]/30 bg-[#6BD8CB]/10 flex items-center justify-center text-4xl mx-auto mb-4">
+            <div className="w-20 h-20 rounded border border-[#007B5F]/30 bg-[#007B5F]/10 flex items-center justify-center text-4xl mx-auto mb-4">
               🏥
             </div>
-            <h1 className="text-2xl font-bold text-[#DCE1FB] mb-2">MedPrüf</h1>
-            <p className="text-[#BCC9C6] text-base">
+            <h1 className="text-2xl font-bold text-[#1A2B3C] mb-2">MedPrüf</h1>
+            <p className="text-[#4A5568] text-base">
               {lang === "de"
                 ? "Deine Lernplattform für die Kenntnisprüfung"
                 : "Your learning platform for the Kenntnisprüfung"}
@@ -59,11 +59,11 @@ export default function AboutPage() {
           </div>
 
           {/* What is MedPrüf */}
-          <div className="bg-[#191F31] border border-[#3D4947] rounded p-5 mb-4">
-            <h2 className="text-base font-semibold text-[#6BD8CB] mb-3">
+          <div className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-5 mb-4">
+            <h2 className="text-base font-semibold text-[#007B5F] mb-3">
               {lang === "de" ? "Was ist MedPrüf?" : "What is MedPrüf?"}
             </h2>
-            <p className="text-[#BCC9C6] text-sm leading-relaxed">
+            <p className="text-[#4A5568] text-sm leading-relaxed">
               {lang === "de"
                 ? "MedPrüf ist eine spezialisierte Lernplattform für ausländische Ärztinnen und Ärzte, die sich auf die deutsche Kenntnisprüfung vorbereiten. Mit über 7.000 Übungsfragen aus allen relevanten Fachgebieten helfen wir dir, die Prüfung erfolgreich zu bestehen."
                 : "MedPrüf is a specialized learning platform for foreign doctors preparing for the German Kenntnisprüfung (Knowledge Examination). With over 7,000 practice questions across all relevant specialties, we help you pass the exam successfully."}
@@ -71,8 +71,8 @@ export default function AboutPage() {
           </div>
 
           {/* Target audience */}
-          <div className="bg-[#191F31] border border-[#3D4947] rounded p-5 mb-4">
-            <h2 className="text-base font-semibold text-[#FFB95F] mb-3">
+          <div className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-5 mb-4">
+            <h2 className="text-base font-semibold text-[#F4A261] mb-3">
               {lang === "de" ? "Für wen ist MedPrüf?" : "Who is MedPrüf for?"}
             </h2>
             <ul className="space-y-2">
@@ -90,8 +90,8 @@ export default function AboutPage() {
                     "Anyone looking to refresh their medical knowledge",
                   ]
               ).map((item, i) => (
-                <li key={i} className="flex items-start gap-2 text-sm text-[#BCC9C6]">
-                  <span className="text-[#6BD8CB] mt-0.5 flex-shrink-0">✓</span>
+                <li key={i} className="flex items-start gap-2 text-sm text-[#4A5568]">
+                  <span className="text-[#007B5F] mt-0.5 flex-shrink-0">✓</span>
                   <span>{item}</span>
                 </li>
               ))}
@@ -99,11 +99,11 @@ export default function AboutPage() {
           </div>
 
           {/* Kenntnisprüfung info */}
-          <div className="bg-[#191F31] border border-[#3D4947] rounded p-5 mb-4">
-            <h2 className="text-base font-semibold text-[#DCE1FB] mb-3">
+          <div className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-5 mb-4">
+            <h2 className="text-base font-semibold text-[#1A2B3C] mb-3">
               {lang === "de" ? "Die Kenntnisprüfung" : "The Kenntnisprüfung"}
             </h2>
-            <p className="text-[#BCC9C6] text-sm leading-relaxed mb-3">
+            <p className="text-[#4A5568] text-sm leading-relaxed mb-3">
               {lang === "de"
                 ? "Die Kenntnisprüfung ist eine staatliche Prüfung für Ärzte mit ausländischer Ausbildung. Sie prüft, ob die medizinischen Kenntnisse dem Stand der deutschen Approbationsordnung entsprechen."
                 : "The Kenntnisprüfung is a state examination for doctors with foreign training. It tests whether medical knowledge meets the standards of the German Approbationsordnung (medical licensing regulation)."}
@@ -115,17 +115,17 @@ export default function AboutPage() {
                 { label: lang === "de" ? "Prüfungsdauer" : "Exam duration", value: "4h" },
                 { label: lang === "de" ? "Fachgebiete" : "Specialties", value: "10" },
               ].map((stat) => (
-                <div key={stat.label} className="bg-[#151B2D] rounded p-3 text-center">
-                  <p className="text-lg font-bold text-[#6BD8CB] font-mono">{stat.value}</p>
-                  <p className="text-[10px] text-[#879391] mt-0.5">{stat.label}</p>
+                <div key={stat.label} className="bg-[#FFFFFF] rounded p-3 text-center">
+                  <p className="text-lg font-bold text-[#007B5F] font-mono">{stat.value}</p>
+                  <p className="text-[10px] text-[#A0AEC0] mt-0.5">{stat.label}</p>
                 </div>
               ))}
             </div>
           </div>
 
           {/* Features */}
-          <div className="bg-[#191F31] border border-[#3D4947] rounded p-5 mb-4">
-            <h2 className="text-base font-semibold text-[#DCE1FB] mb-3">
+          <div className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-5 mb-4">
+            <h2 className="text-base font-semibold text-[#1A2B3C] mb-3">
               {lang === "de" ? "Features" : "Features"}
             </h2>
             <div className="grid grid-cols-2 gap-3">
@@ -137,7 +137,7 @@ export default function AboutPage() {
                 { icon: "🌍", label: lang === "de" ? "Deutsch & Englisch" : "German & English" },
                 { icon: "📱", label: lang === "de" ? "Telegram Mini App" : "Telegram Mini App" },
               ].map((f) => (
-                <div key={f.label} className="flex items-center gap-2 text-sm text-[#BCC9C6]">
+                <div key={f.label} className="flex items-center gap-2 text-sm text-[#4A5568]">
                   <span>{f.icon}</span>
                   <span>{f.label}</span>
                 </div>
@@ -146,11 +146,11 @@ export default function AboutPage() {
           </div>
 
           {/* Team */}
-          <div className="bg-[#191F31] border border-[#3D4947] rounded p-5 mb-4">
-            <h2 className="text-base font-semibold text-[#DCE1FB] mb-3">
+          <div className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-5 mb-4">
+            <h2 className="text-base font-semibold text-[#1A2B3C] mb-3">
               {lang === "de" ? "Team & Kontakt" : "Team & Contact"}
             </h2>
-            <p className="text-[#BCC9C6] text-sm leading-relaxed mb-4">
+            <p className="text-[#4A5568] text-sm leading-relaxed mb-4">
               {lang === "de"
                 ? "MedPrüf wird von einem engagierten Team entwickelt, das selbst Erfahrung mit der Approbation in Deutschland hat. Wir wissen, wie herausfordernd dieser Prozess ist."
                 : "MedPrüf is developed by a dedicated team with firsthand experience in German medical licensure. We understand how challenging this process can be."}
@@ -164,7 +164,7 @@ export default function AboutPage() {
                   href={link.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center gap-2 px-3 py-2 bg-[#23293C] border border-[#3D4947] rounded text-sm text-[#BCC9C6] hover:border-[#6BD8CB]/40 hover:text-[#DCE1FB] transition-colors"
+                  className="flex items-center gap-2 px-3 py-2 bg-[#F7F9FC] border border-[#E4E9F0] rounded text-sm text-[#4A5568] hover:border-[#007B5F]/40 hover:text-[#1A2B3C] transition-colors"
                 >
                   <span>{link.icon}</span>
                   <span>{link.label}</span>
@@ -174,8 +174,8 @@ export default function AboutPage() {
           </div>
 
           {/* Social media */}
-          <div className="bg-[#191F31] border border-[#3D4947] rounded p-5">
-            <h2 className="text-base font-semibold text-[#DCE1FB] mb-3">
+          <div className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-5">
+            <h2 className="text-base font-semibold text-[#1A2B3C] mb-3">
               {lang === "de" ? "Social Media" : "Social Media"}
             </h2>
             <div className="flex flex-wrap gap-2">
@@ -187,11 +187,11 @@ export default function AboutPage() {
                 <a
                   key={s.label}
                   href={s.href}
-                  className="flex items-center gap-2 px-3 py-2 bg-[#23293C] border border-[#3D4947] rounded text-sm text-[#879391] cursor-pointer"
+                  className="flex items-center gap-2 px-3 py-2 bg-[#F7F9FC] border border-[#E4E9F0] rounded text-sm text-[#A0AEC0] cursor-pointer"
                 >
                   <span>{s.icon}</span>
                   <span>{s.label}</span>
-                  <span className="text-[9px] bg-[#FFB95F]/10 text-[#FFB95F] px-1 rounded border border-[#FFB95F]/20">
+                  <span className="text-[9px] bg-[#F4A261]/10 text-[#F4A261] px-1 rounded border border-[#F4A261]/20">
                     {lang === "de" ? "Bald" : "Soon"}
                   </span>
                 </a>

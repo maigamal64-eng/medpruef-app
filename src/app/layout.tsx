@@ -1,19 +1,16 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import Script from "next/script";
 import TrackerInit from "@/components/TrackerInit";
 
 const inter = Inter({
-  subsets: ["latin", "latin-ext"],
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "700", "900"],
   display: "swap",
 });
 
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-jetbrains-mono",
-});
+
 
 export const metadata: Metadata = {
   title: "MedPrüf — Prüfungsvorbereitung",
@@ -25,7 +22,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: "#0C1324",
+  themeColor: "#F7F9FC",
 };
 
 export default function RootLayout({
@@ -36,11 +33,7 @@ export default function RootLayout({
   return (
     <html lang="de" dir="ltr" className="dark">
       <head>
-        {/* Material Symbols icon font */}
-        <link
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap"
-        />
+
         {/* Telegram WebApp SDK — afterInteractive so it doesn't block, graceful in browser */}
         <Script
           src="https://telegram.org/js/telegram-web-app.js"
@@ -48,7 +41,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${inter.className} ${jetbrainsMono.variable} bg-[#0C1324] text-[#DCE1FB] min-h-screen antialiased`}
+        className={`${inter.className} bg-[#F7F9FC] text-[#1A2B3C] min-h-screen antialiased`}
       >
         <TrackerInit />
         {children}

@@ -41,16 +41,16 @@ export default function SearchResults({
 
   if (loading) {
     return (
-      <div className="mt-2 bg-[#191F31] border border-[#3D4947] rounded p-4 text-center">
-        <div className="w-5 h-5 border-2 border-[#6BD8CB] border-t-transparent rounded-full animate-spin mx-auto" />
+      <div className="mt-2 bg-[#FFFFFF] border border-[#E4E9F0] rounded p-4 text-center">
+        <div className="w-5 h-5 border-2 border-[#007B5F] border-t-transparent rounded-full animate-spin mx-auto" />
       </div>
     );
   }
 
   if (results.length === 0) {
     return (
-      <div className="mt-2 bg-[#191F31] border border-[#3D4947] rounded p-4 text-center">
-        <p className="text-sm text-[#879391]">
+      <div className="mt-2 bg-[#FFFFFF] border border-[#E4E9F0] rounded p-4 text-center">
+        <p className="text-sm text-[#A0AEC0]">
           {lang === "de" ? "Keine Ergebnisse gefunden" : "No results found"}
         </p>
       </div>
@@ -58,9 +58,9 @@ export default function SearchResults({
   }
 
   return (
-    <div className="mt-2 bg-[#191F31] border border-[#3D4947] rounded overflow-hidden">
-      <div className="px-3 py-2 border-b border-[#3D4947]">
-        <p className="text-[10px] uppercase tracking-wider text-[#879391] font-semibold">
+    <div className="mt-2 bg-[#FFFFFF] border border-[#E4E9F0] rounded overflow-hidden">
+      <div className="px-3 py-2 border-b border-[#E4E9F0]">
+        <p className="text-[10px] uppercase tracking-wider text-[#A0AEC0] font-semibold">
           {lang === "de" ? "Suchergebnisse" : "Search Results"} ({results.length})
         </p>
       </div>
@@ -71,7 +71,7 @@ export default function SearchResults({
           return (
             <li
               key={q.id}
-              className={`border-b border-[#3D4947]/50 last:border-b-0 ${i % 2 === 0 ? "" : "bg-[#151B2D]/30"}`}
+              className={`border-b border-[#E4E9F0]/50 last:border-b-0 ${i % 2 === 0 ? "" : "bg-[#FFFFFF]/30"}`}
             >
               <Link
                 href={`/quiz?topic=${encodeURIComponent(q.topic)}&questionId=${q.id}&examSource=${examSource}`}
@@ -87,7 +87,7 @@ export default function SearchResults({
 
                 {/* Question text */}
                 <span className="flex-1 min-w-0">
-                  <span className="text-sm text-[#DCE1FB] group-hover:text-white transition-colors leading-snug">
+                  <span className="text-sm text-[#1A2B3C] group-hover:text-[#1A2B3C] transition-colors leading-snug">
                     {truncate(q.question, 120)}
                   </span>
                   <span className="mt-1 flex items-center gap-2">
@@ -97,13 +97,13 @@ export default function SearchResults({
                     >
                       {q.topic}
                     </span>
-                    <span className="text-[10px] bg-[#23293C] text-[#879391] px-1.5 py-0.5 rounded font-mono">
+                    <span className="text-[10px] bg-[#F7F9FC] text-[#A0AEC0] px-1.5 py-0.5 rounded font-mono">
                       {sourceBadge(q.source_file)}
                     </span>
                   </span>
                 </span>
 
-                <span className="text-[#3D4947] group-hover:text-[#6BD8CB] transition-colors text-xs flex-shrink-0">
+                <span className="text-[#E4E9F0] group-hover:text-[#007B5F] transition-colors text-xs flex-shrink-0">
                   →
                 </span>
               </Link>

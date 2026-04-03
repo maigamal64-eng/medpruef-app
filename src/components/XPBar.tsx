@@ -32,18 +32,18 @@ export default function XPBar({ totalXp, lang, compact = false }: XPBarProps) {
         <div className="flex items-center justify-between mb-1.5">
           <div className="flex items-center gap-2">
             <span className="text-lg">{icon}</span>
-            <span className="text-sm font-semibold text-[#DCE1FB]">{xpInfo.rank}</span>
-            <span className="text-xs text-[#BCC9C6] font-mono">Lv.{xpInfo.level}</span>
+            <span className="text-sm font-semibold text-[#1A2B3C]">{xpInfo.rank}</span>
+            <span className="text-xs text-[#4A5568] font-mono">Lv.{xpInfo.level}</span>
           </div>
-          <span className="text-xs text-[#FFB95F] font-medium font-mono">{totalXp} XP</span>
+          <span className="text-xs text-[#F4A261] font-medium font-mono">{totalXp} XP</span>
         </div>
-        <div className="h-1.5 bg-[#23293C] rounded-full overflow-hidden">
+        <div className="h-1.5 bg-[#F7F9FC] rounded-full overflow-hidden">
           <div
-            className="h-full bg-[#6BD8CB] rounded-full animate-progress"
+            className="h-full bg-[#007B5F] rounded-full animate-progress"
             style={{ width: `${xpInfo.progress}%` }}
           />
         </div>
-        <p className="text-[10px] text-[#879391] mt-1 text-right font-mono">
+        <p className="text-[10px] text-[#A0AEC0] mt-1 text-right font-mono">
           {Math.round(xpInfo.progress)}% {t("to_next_level", lang)}
         </p>
       </div>
@@ -51,33 +51,33 @@ export default function XPBar({ totalXp, lang, compact = false }: XPBarProps) {
   }
 
   return (
-    <div className="bg-[#191F31] border border-[#3D4947] rounded p-4 animate-fade-in">
+    <div className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-4 animate-fade-in">
       <div className="flex items-center gap-3 mb-3">
-        <div className="w-11 h-11 rounded bg-[#FFB95F]/10 border border-[#FFB95F]/20 flex items-center justify-center text-xl">
+        <div className="w-11 h-11 rounded bg-[#F4A261]/10 border border-[#F4A261]/20 flex items-center justify-center text-xl">
           {icon}
         </div>
         <div className="flex-1">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-base font-bold text-[#DCE1FB]">{xpInfo.rank}</p>
-              <p className="text-xs text-[#BCC9C6] font-mono">
+              <p className="text-base font-bold text-[#1A2B3C]">{xpInfo.rank}</p>
+              <p className="text-xs text-[#4A5568] font-mono">
                 {t("level", lang)} {xpInfo.level}
               </p>
             </div>
             <div className="text-right">
-              <p className="text-base font-bold text-[#FFB95F] font-mono">{totalXp}</p>
-              <p className="text-xs text-[#879391]">XP</p>
+              <p className="text-base font-bold text-[#F4A261] font-mono">{totalXp}</p>
+              <p className="text-xs text-[#A0AEC0]">XP</p>
             </div>
           </div>
         </div>
       </div>
-      <div className="h-2 bg-[#23293C] rounded-full overflow-hidden">
+      <div className="h-2 bg-[#F7F9FC] rounded-full overflow-hidden">
         <div
-          className="h-full bg-[#FFB95F] rounded-full animate-progress"
+          className="h-full bg-[#F4A261] rounded-full animate-progress"
           style={{ width: `${xpInfo.progress}%` }}
         />
       </div>
-      <p className="text-xs text-[#879391] mt-1.5 text-right font-mono">
+      <p className="text-xs text-[#A0AEC0] mt-1.5 text-right font-mono">
         {Math.round(xpInfo.progress)}% {t("to_next_level", lang)}
       </p>
     </div>

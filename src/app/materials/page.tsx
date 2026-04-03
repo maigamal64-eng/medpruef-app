@@ -60,9 +60,9 @@ const RESOURCES_EN: Resource[] = [
 ];
 
 const TYPE_STYLES = {
-  link: { bg: "bg-[#6BD8CB]/8", border: "border-[#6BD8CB]/25", badge: "bg-[#6BD8CB]/15 text-[#6BD8CB]", icon: "🔗" },
-  tip: { bg: "bg-[#FFB95F]/6", border: "border-[#FFB95F]/25", badge: "bg-[#FFB95F]/15 text-[#FFB95F]", icon: "💡" },
-  guideline: { bg: "bg-[#191F31]", border: "border-[#3D4947]", badge: "bg-[#BCC9C6]/10 text-[#BCC9C6]", icon: "📖" },
+  link: { bg: "bg-[#007B5F]/8", border: "border-[#007B5F]/25", badge: "bg-[#007B5F]/15 text-[#007B5F]", icon: "🔗" },
+  tip: { bg: "bg-[#F4A261]/6", border: "border-[#F4A261]/25", badge: "bg-[#F4A261]/15 text-[#F4A261]", icon: "💡" },
+  guideline: { bg: "bg-[#FFFFFF]", border: "border-[#E4E9F0]", badge: "bg-[#4A5568]/10 text-[#4A5568]", icon: "📖" },
 };
 
 export default function MaterialsPage() {
@@ -106,12 +106,12 @@ export default function MaterialsPage() {
     <div className="app-layout">
       <Sidebar lang={lang} userId={userId} userName={userName} />
 
-      <main className="main-content safe-area-top safe-area-bottom bg-[#0C1324]">
-        <div className="px-4 lg:px-8 pt-4 pb-2 flex items-center justify-between border-b border-[#3D4947]">
-          <Link href="/" className="text-[#879391] hover:text-[#DCE1FB] text-sm transition-colors">
+      <main className="main-content safe-area-top safe-area-bottom bg-[#F7F9FC]">
+        <div className="px-4 lg:px-8 pt-4 pb-2 flex items-center justify-between border-b border-[#E4E9F0]">
+          <Link href="/" className="text-[#A0AEC0] hover:text-[#1A2B3C] text-sm transition-colors">
             ← {lang === "de" ? "Zurück" : "Back"}
           </Link>
-          <h1 className="text-base font-bold text-[#DCE1FB]">
+          <h1 className="text-base font-bold text-[#1A2B3C]">
             {lang === "de" ? "Lernmaterialien" : "Study Materials"}
           </h1>
           <LanguageToggle lang={lang} onChange={switchLang} />
@@ -119,14 +119,14 @@ export default function MaterialsPage() {
 
         <div className="px-4 lg:px-8 py-4 max-w-2xl mx-auto">
           {/* Hero */}
-          <div className="bg-[#191F31] border border-[#3D4947] rounded p-5 mb-5">
+          <div className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-5 mb-5">
             <div className="flex items-center gap-4">
               <div className="text-4xl">📚</div>
               <div>
-                <h2 className="text-base font-semibold text-[#DCE1FB] mb-1">
+                <h2 className="text-base font-semibold text-[#1A2B3C] mb-1">
                   {lang === "de" ? "Kenntnisprüfung Vorbereitung" : "Kenntnisprüfung Preparation"}
                 </h2>
-                <p className="text-sm text-[#879391]">
+                <p className="text-sm text-[#A0AEC0]">
                   {lang === "de"
                     ? "Offizielle Ressourcen, Lernbuchtipps und Prüfungsstrategie"
                     : "Official resources, textbook recommendations, and exam strategy"}
@@ -136,15 +136,15 @@ export default function MaterialsPage() {
           </div>
 
           {/* Tabs */}
-          <div className="flex gap-1 mb-5 bg-[#151B2D] p-1 rounded border border-[#3D4947]">
+          <div className="flex gap-1 mb-5 bg-[#FFFFFF] p-1 rounded border border-[#E4E9F0]">
             {tabs.map((tab) => (
               <button
                 key={tab.key}
                 onClick={() => setActiveSection(tab.key)}
                 className={`flex-1 py-1.5 text-xs font-medium rounded transition-all ${
                   activeSection === tab.key
-                    ? "bg-[#191F31] text-[#DCE1FB] border border-[#3D4947]"
-                    : "text-[#879391] hover:text-[#BCC9C6]"
+                    ? "bg-[#FFFFFF] text-[#1A2B3C] border border-[#E4E9F0]"
+                    : "text-[#A0AEC0] hover:text-[#4A5568]"
                 }`}
               >
                 {tab.label}
@@ -166,7 +166,7 @@ export default function MaterialsPage() {
                       ) : (
                         <span className="text-xl flex-shrink-0">{style.icon}</span>
                       )}
-                      <h3 className="text-sm font-semibold text-[#DCE1FB] truncate">{r.title}</h3>
+                      <h3 className="text-sm font-semibold text-[#1A2B3C] truncate">{r.title}</h3>
                     </div>
                     <span className={`text-[10px] px-2 py-0.5 rounded font-medium flex-shrink-0 ${style.badge}`}>
                       {r.type === "link"
@@ -176,13 +176,13 @@ export default function MaterialsPage() {
                         : lang === "de" ? "Fachgebiet" : "Specialty"}
                     </span>
                   </div>
-                  <p className="text-sm text-[#BCC9C6] leading-relaxed ml-8">{r.description}</p>
+                  <p className="text-sm text-[#4A5568] leading-relaxed ml-8">{r.description}</p>
                   {r.url && (
                     <a
                       href={r.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 mt-2 ml-8 text-xs text-[#6BD8CB] hover:text-[#89F5E7] transition-colors"
+                      className="inline-flex items-center gap-1 mt-2 ml-8 text-xs text-[#007B5F] hover:text-[#00A896] transition-colors"
                     >
                       {lang === "de" ? "Öffnen" : "Open"} ↗
                     </a>
@@ -195,7 +195,7 @@ export default function MaterialsPage() {
           {/* Exam structure overview */}
           {(activeSection === "all" || activeSection === "specialty") && (
             <div className="mt-6">
-              <h2 className="text-base font-semibold text-[#DCE1FB] mb-3">
+              <h2 className="text-base font-semibold text-[#1A2B3C] mb-3">
                 {lang === "de" ? "Prüfungsstruktur" : "Exam Structure"}
               </h2>
               <div className="grid grid-cols-2 gap-2">
@@ -211,22 +211,22 @@ export default function MaterialsPage() {
                   { topic: "Psychiatrie", q: 20 },
                   { topic: "Augenheilkunde", q: 20 },
                 ].map(({ topic, q }) => {
-                  const cfg = TOPIC_CONFIG[topic] || { icon: "📋", color: "#6BD8CB" };
+                  const cfg = TOPIC_CONFIG[topic] || { icon: "📋", color: "#007B5F" };
                   const pct = Math.round((q / 250) * 100);
                   return (
-                    <div key={topic} className="bg-[#191F31] border border-[#3D4947] rounded p-3">
+                    <div key={topic} className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-3">
                       <div className="flex items-center gap-2 mb-1.5">
                         <span>{cfg.icon}</span>
-                        <span className="text-xs text-[#DCE1FB] font-medium flex-1 truncate">{topic}</span>
+                        <span className="text-xs text-[#1A2B3C] font-medium flex-1 truncate">{topic}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <div className="flex-1 bg-[#23293C] rounded-full h-1 overflow-hidden">
+                        <div className="flex-1 bg-[#F7F9FC] rounded-full h-1 overflow-hidden">
                           <div
                             className="h-full rounded-full"
                             style={{ width: `${pct}%`, backgroundColor: cfg.color }}
                           />
                         </div>
-                        <span className="text-[10px] text-[#879391] font-mono w-8 text-right">{q}F</span>
+                        <span className="text-[10px] text-[#A0AEC0] font-mono w-8 text-right">{q}F</span>
                       </div>
                     </div>
                   );

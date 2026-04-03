@@ -49,50 +49,50 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0, streak = 
     const active = isActive(key);
     if (active) {
       return highlight
-        ? "flex items-center gap-3 px-3 py-2.5 rounded mb-0.5 transition-all duration-150 bg-[#FFB95F]/12 text-[#FFB95F] font-medium border border-[#FFB95F]/20"
-        : "flex items-center gap-3 px-3 py-2.5 rounded mb-0.5 transition-all duration-150 bg-[#6BD8CB]/12 text-[#6BD8CB] font-medium border border-[#6BD8CB]/20";
+        ? "flex items-center gap-3 px-3 py-2.5 rounded mb-0.5 transition-all duration-150 bg-[#F4A261]/12 text-[#F4A261] font-medium border border-[#F4A261]/20"
+        : "flex items-center gap-3 px-3 py-2.5 rounded mb-0.5 transition-all duration-150 bg-[#007B5F]/12 text-[#007B5F] font-medium border border-[#007B5F]/20";
     }
-    return `flex items-center gap-3 px-3 py-2.5 rounded mb-0.5 transition-all duration-150 text-[#BCC9C6] hover:bg-[#191F31] hover:text-[#DCE1FB] ${
-      highlight ? "hover:text-[#FFB95F]" : ""
+    return `flex items-center gap-3 px-3 py-2.5 rounded mb-0.5 transition-all duration-150 text-[#4A5568] hover:bg-[#FFFFFF] hover:text-[#1A2B3C] ${
+      highlight ? "hover:text-[#F4A261]" : ""
     }`;
   };
 
   return (
     <aside className="sidebar flex flex-col">
       {/* Logo */}
-      <div className="px-5 pt-6 pb-4 border-b border-[#3D4947]">
+      <div className="px-5 pt-6 pb-4 border-b border-[#E4E9F0]">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded border border-[#6BD8CB]/30 bg-[#6BD8CB]/10 flex items-center justify-center text-base font-bold text-[#6BD8CB]">
+          <div className="w-9 h-9 rounded border border-[#007B5F]/30 bg-[#007B5F]/10 flex items-center justify-center text-base font-bold text-[#007B5F]">
             M
           </div>
           <div>
-            <h1 className="text-base font-bold text-[#DCE1FB] tracking-tight">MedPrüf</h1>
-            <p className="text-[11px] text-[#879391] leading-tight">{t("exam_prep", lang)}</p>
+            <h1 className="text-base font-bold text-[#1A2B3C] tracking-tight">MedPrüf</h1>
+            <p className="text-[11px] text-[#A0AEC0] leading-tight">{t("exam_prep", lang)}</p>
           </div>
         </div>
       </div>
 
       {/* User card */}
       {userName && (
-        <div className="mx-4 my-4 p-3 rounded bg-[#191F31] border border-[#3D4947]">
+        <div className="mx-4 my-4 p-3 rounded bg-[#FFFFFF] border border-[#E4E9F0]">
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-8 h-8 rounded bg-[#6BD8CB]/15 border border-[#6BD8CB]/30 flex items-center justify-center text-sm font-bold text-[#6BD8CB]">
+            <div className="w-8 h-8 rounded bg-[#007B5F]/15 border border-[#007B5F]/30 flex items-center justify-center text-sm font-bold text-[#007B5F]">
               {userName.charAt(0).toUpperCase()}
             </div>
             <div>
-              <p className="text-sm font-semibold text-[#DCE1FB]">{userName}</p>
-              <p className="text-xs text-[#879391]">
+              <p className="text-sm font-semibold text-[#1A2B3C]">{userName}</p>
+              <p className="text-xs text-[#A0AEC0]">
                 {xpInfo.rank} · <span className="font-mono">Lv.{xpInfo.level}</span>
               </p>
             </div>
           </div>
-          <div className="h-1 bg-[#23293C] rounded-full overflow-hidden">
+          <div className="h-1 bg-[#F7F9FC] rounded-full overflow-hidden">
             <div
-              className="h-full bg-[#6BD8CB] rounded-full animate-progress"
+              className="h-full bg-[#007B5F] rounded-full animate-progress"
               style={{ width: `${xpInfo.progress}%` }}
             />
           </div>
-          <p className="text-[10px] text-[#879391] mt-1 font-mono">
+          <p className="text-[10px] text-[#A0AEC0] mt-1 font-mono">
             {Math.round(xpInfo.progress)}% {t("to_next_level", lang)}
           </p>
         </div>
@@ -100,7 +100,7 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0, streak = 
 
       {/* Main Navigation */}
       <nav className="px-3 mb-2">
-        <p className="text-[10px] uppercase tracking-wider text-[#879391] font-semibold px-2 mb-2">
+        <p className="text-[10px] uppercase tracking-wider text-[#A0AEC0] font-semibold px-2 mb-2">
           {t("navigation", lang)}
         </p>
         {mainNavItems.map((item) => (
@@ -108,7 +108,7 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0, streak = 
             <span className="text-base">{item.icon}</span>
             <span className="text-sm">{item.label}</span>
             {item.highlight && !isActive(item.key) && (
-              <span className="ml-auto text-[9px] font-medium bg-[#FFB95F]/12 text-[#FFB95F] px-1.5 py-0.5 rounded border border-[#FFB95F]/20">
+              <span className="ml-auto text-[9px] font-medium bg-[#F4A261]/12 text-[#F4A261] px-1.5 py-0.5 rounded border border-[#F4A261]/20">
                 Neu
               </span>
             )}
@@ -118,7 +118,7 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0, streak = 
 
       {/* Secondary Navigation */}
       <nav className="px-3 mb-4">
-        <p className="text-[10px] uppercase tracking-wider text-[#879391] font-semibold px-2 mb-2">
+        <p className="text-[10px] uppercase tracking-wider text-[#A0AEC0] font-semibold px-2 mb-2">
           {lang === "de" ? "Mehr" : "More"}
         </p>
         {secondaryNavItems.map((item) => (
@@ -132,21 +132,21 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0, streak = 
       {/* Quick stats */}
       {userName && (
         <div className="px-3 mb-4">
-          <p className="text-[10px] uppercase tracking-wider text-[#879391] font-semibold px-2 mb-2">
+          <p className="text-[10px] uppercase tracking-wider text-[#A0AEC0] font-semibold px-2 mb-2">
             {t("your_stats", lang)}
           </p>
           <div className="grid grid-cols-3 gap-2 px-2">
             <div className="text-center">
-              <p className="text-base font-bold text-[#FFB95F] font-mono">{totalXp}</p>
-              <p className="text-[10px] text-[#879391]">XP</p>
+              <p className="text-base font-bold text-[#F4A261] font-mono">{totalXp}</p>
+              <p className="text-[10px] text-[#A0AEC0]">XP</p>
             </div>
             <div className="text-center">
-              <p className="text-base font-bold text-[#FFB4AB] font-mono">🔥{streak}</p>
-              <p className="text-[10px] text-[#879391]">{t("streak", lang)}</p>
+              <p className="text-base font-bold text-[#D64545] font-mono">🔥{streak}</p>
+              <p className="text-[10px] text-[#A0AEC0]">{t("streak", lang)}</p>
             </div>
             <div className="text-center">
-              <p className="text-base font-bold text-[#4EDEA3] font-mono">{accuracy}%</p>
-              <p className="text-[10px] text-[#879391]">{t("accuracy", lang)}</p>
+              <p className="text-base font-bold text-[#00A896] font-mono">{accuracy}%</p>
+              <p className="text-[10px] text-[#A0AEC0]">{t("accuracy", lang)}</p>
             </div>
           </div>
         </div>
@@ -154,7 +154,7 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0, streak = 
 
       {/* Topics list */}
       <div className="px-3 flex-1 overflow-y-auto">
-        <p className="text-[10px] uppercase tracking-wider text-[#879391] font-semibold px-2 mb-2">
+        <p className="text-[10px] uppercase tracking-wider text-[#A0AEC0] font-semibold px-2 mb-2">
           {t("topics", lang)}
         </p>
         <div className="space-y-0.5">
@@ -162,7 +162,7 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0, streak = 
             <Link
               key={topic}
               href={userId ? `/quiz?topic=${encodeURIComponent(topic)}&userId=${userId}` : "#"}
-              className="flex items-center gap-2.5 px-3 py-2 rounded text-[#BCC9C6] hover:bg-[#191F31] hover:text-[#DCE1FB] transition-all duration-150"
+              className="flex items-center gap-2.5 px-3 py-2 rounded text-[#4A5568] hover:bg-[#FFFFFF] hover:text-[#1A2B3C] transition-all duration-150"
             >
               <span className="text-sm">{config.icon}</span>
               <span className="text-xs truncate">{topic}</span>
@@ -172,8 +172,8 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0, streak = 
       </div>
 
       {/* Footer */}
-      <div className="px-5 py-4 border-t border-[#3D4947]">
-        <p className="text-[10px] text-[#879391] text-center font-mono">MedPrüf v1.0</p>
+      <div className="px-5 py-4 border-t border-[#E4E9F0]">
+        <p className="text-[10px] text-[#A0AEC0] text-center font-mono">MedPrüf v1.0</p>
       </div>
     </aside>
   );

@@ -26,7 +26,7 @@ export default function TopicCard({ topic, count, userId, lang, accuracy, delay 
   return (
     <Link
       href={href}
-      className="topic-card-border bg-[#191F31] border border-[#3D4947] rounded p-4 card-hover block animate-fade-in"
+      className="topic-card-border bg-[#FFFFFF] border border-[#E4E9F0] rounded p-4 card-hover block animate-fade-in"
       style={{
         borderLeftColor: config.color,
         animationDelay: `${delay}ms`,
@@ -38,22 +38,22 @@ export default function TopicCard({ topic, count, userId, lang, accuracy, delay 
           <span
             className={`text-xs font-medium font-mono px-1.5 py-0.5 rounded border ${
               accuracy >= 70
-                ? "bg-[#4EDEA3]/10 text-[#4EDEA3] border-[#4EDEA3]/20"
+                ? "bg-[#00A896]/10 text-[#00A896] border-[#00A896]/20"
                 : accuracy >= 40
-                ? "bg-[#FFB95F]/10 text-[#FFB95F] border-[#FFB95F]/20"
-                : "bg-[#FFB4AB]/10 text-[#FFB4AB] border-[#FFB4AB]/20"
+                ? "bg-[#F4A261]/10 text-[#F4A261] border-[#F4A261]/20"
+                : "bg-[#D64545]/10 text-[#D64545] border-[#D64545]/20"
             }`}
           >
             {accuracy}%
           </span>
         )}
       </div>
-      <h3 className="text-sm font-semibold leading-tight mb-1 text-[#DCE1FB]">{topic}</h3>
-      <p className="text-xs text-[#879391] mb-2 font-mono">
+      <h3 className="text-sm font-semibold leading-tight mb-1 text-[#1A2B3C]">{topic}</h3>
+      <p className="text-xs text-[#A0AEC0] mb-2 font-mono">
         {count} {t("questions", lang)}
       </p>
       {/* Progress bar */}
-      <div className="h-0.5 bg-[#23293C] rounded-full overflow-hidden">
+      <div className="h-0.5 bg-[#F7F9FC] rounded-full overflow-hidden">
         <div
           className="h-full rounded-full animate-progress"
           style={{

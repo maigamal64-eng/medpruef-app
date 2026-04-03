@@ -33,7 +33,7 @@ export default function BottomNav({ lang, userId }: BottomNavProps) {
 
   return (
     <nav className="bottom-nav fixed bottom-0 left-0 right-0 z-50 safe-area-bottom">
-      <div className="bg-[#151B2D] border-t border-[#3D4947]">
+      <div className="bg-[#FFFFFF] border-t border-[#E4E9F0]">
         <div className="flex items-center justify-around px-1 py-2">
           {items.map((item) => {
             const active = isActive(item.key);
@@ -45,21 +45,21 @@ export default function BottomNav({ lang, userId }: BottomNavProps) {
                 className={`flex flex-col items-center gap-0.5 py-1.5 px-3 rounded transition-all duration-200 ${
                   active
                     ? item.highlight
-                      ? "text-[#FFB95F]"
-                      : "text-[#6BD8CB]"
+                      ? "text-[#F4A261]"
+                      : "text-[#007B5F]"
                     : examHighlight
-                    ? "text-[#FFB95F]/60 active:text-[#FFB95F]"
-                    : "text-[#879391] active:text-[#BCC9C6]"
+                    ? "text-[#F4A261]/60 active:text-[#F4A261]"
+                    : "text-[#A0AEC0] active:text-[#4A5568]"
                 }`}
               >
                 <span className={`text-lg transition-transform duration-200 ${active ? "scale-110" : ""}`}>
                   {item.icon}
                 </span>
-                <span className={`text-[9px] font-medium ${active ? (item.highlight ? "text-[#FFB95F]" : "text-[#6BD8CB]") : examHighlight ? "text-[#FFB95F]/60" : ""}`}>
+                <span className={`text-[9px] font-medium ${active ? (item.highlight ? "text-[#F4A261]" : "text-[#007B5F]") : examHighlight ? "text-[#F4A261]/60" : ""}`}>
                   {item.label}
                 </span>
                 {active && (
-                  <div className={`w-1 h-1 rounded-full mt-0.5 ${item.highlight ? "bg-[#FFB95F]" : "bg-[#6BD8CB]"}`} />
+                  <div className={`w-1 h-1 rounded-full mt-0.5 ${item.highlight ? "bg-[#F4A261]" : "bg-[#007B5F]"}`} />
                 )}
               </Link>
             );

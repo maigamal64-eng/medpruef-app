@@ -1,59 +1,68 @@
 @import "tailwindcss";
 
 @theme {
-  /* Clinical Precision color system */
-  --color-background: #0C1324;
-  --color-surface-lowest: #070D1F;
-  --color-surface-low: #151B2D;
-  --color-surface: #191F31;
-  --color-surface-high: #23293C;
-  --color-surface-highest: #2E3447;
-  --color-surface-bright: #33394C;
+  /* MedPrüf Brand Identity */
+  --color-background: #F7F9FC;
+  --color-surface-lowest: #FFFFFF;
+  --color-surface-low: #FFFFFF;
+  --color-surface: #FFFFFF;
+  --color-surface-high: #F7F9FC;
+  --color-surface-highest: #E4E9F0;
+  --color-surface-bright: #FFFFFF;
 
-  --color-primary: #6BD8CB;
-  --color-primary-fixed: #89F5E7;
-  --color-primary-dark: #005049;
-  --color-primary-container: #29A195;
+  --color-primary: #001B3D;
+  --color-primary-fixed: #003A8C;
+  --color-primary-dark: #001028;
+  --color-primary-container: #007B5F;
 
-  --color-secondary: #FFB95F;
-  --color-secondary-dark: #EE9800;
+  --color-secondary: #007B5F;
+  --color-secondary-dark: #005A45;
 
-  --color-tertiary: #4EDEA3;
-  --color-tertiary-container: #00A572;
+  --color-tertiary: #00A896;
+  --color-tertiary-container: #1bb680;
 
-  --color-error: #FFB4AB;
-  --color-error-container: #93000A;
+  --color-error: #D64545;
+  --color-error-container: #FDECEC;
 
-  --color-on-surface: #DCE1FB;
-  --color-on-surface-variant: #BCC9C6;
-  --color-outline: #879391;
-  --color-outline-variant: #3D4947;
+  --color-on-surface: #1A2B3C;
+  --color-on-surface-variant: #4A5568;
+  --color-outline: #A0AEC0;
+  --color-outline-variant: #E4E9F0;
 
   --color-telegram: #2AABEE;
 
-  --font-family-mono: "JetBrains Mono", monospace;
+  --color-success-bg: #E6F4F1;
+  --color-warning-bg: #FFF4E6;
+  --color-warning: #F4A261;
+  --color-info-bg: #EAF3F9;
+  --color-info: #3A7CA5;
+  --color-cta: #003A8C;
+  --color-accent: #00A896;
+  --color-hover: #1bb680;
+
+  --font-family-mono: "Inter", sans-serif;
 }
 
 :root {
-  --teal: #6BD8CB;
-  --teal-dark: #005049;
-  --teal-light: #89F5E7;
-  --amber: #FFB95F;
-  --amber-dark: #EE9800;
-  --green: #4EDEA3;
-  --red: #FFB4AB;
-  --navy: #151B2D;
-  --navy-dark: #0C1324;
-  --surface: #191F31;
-  --surface-high: #23293C;
-  --border: #3D4947;
+  --teal: #007B5F;
+  --teal-dark: #005A45;
+  --teal-light: #00A896;
+  --amber: #F4A261;
+  --amber-dark: #D68A3A;
+  --green: #007B5F;
+  --red: #D64545;
+  --navy: #FFFFFF;
+  --navy-dark: #F7F9FC;
+  --surface: #FFFFFF;
+  --surface-high: #F7F9FC;
+  --border: #E4E9F0;
 }
 
 * { box-sizing: border-box; }
 
 body {
-  background: var(--navy-dark);
-  color: #DCE1FB;
+  background: #F7F9FC;
+  color: #1A2B3C;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -83,8 +92,8 @@ body {
 .xp-animation { animation: xp-pop 1.2s ease-out forwards; }
 
 @keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(107, 216, 203, 0.3); }
-  50% { box-shadow: 0 0 16px 4px rgba(107, 216, 203, 0.1); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0, 123, 95, 0.3); }
+  50% { box-shadow: 0 0 16px 4px rgba(0, 123, 95, 0.1); }
 }
 .pulse-glow { animation: pulse-glow 2.5s ease-in-out infinite; }
 
@@ -117,7 +126,7 @@ body {
 .animate-float-up { animation: float-up 1.5s ease-out forwards; }
 
 .card-hover { transition: transform 0.2s ease, border-color 0.2s ease; }
-.card-hover:hover { transform: translateY(-1px); border-color: rgba(107, 216, 203, 0.3); }
+.card-hover:hover { transform: translateY(-1px); border-color: rgba(0, 123, 95, 0.3); }
 .card-hover:active { transform: scale(0.98); }
 
 .progress-ring-circle {
@@ -129,7 +138,7 @@ body {
 /* === SCROLLBAR === */
 ::-webkit-scrollbar { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #3D4947; border-radius: 2px; }
+::-webkit-scrollbar-thumb { background: #A0AEC0; border-radius: 2px; }
 
 /* === LAYOUT === */
 .app-layout { display: flex; min-height: 100vh; min-height: 100dvh; }
@@ -137,8 +146,8 @@ body {
 .sidebar {
   width: 260px;
   flex-shrink: 0;
-  background: var(--navy);
-  border-right: 1px solid #3D4947;
+  background: #FFFFFF;
+  border-right: 1px solid #E4E9F0;
   position: sticky;
   top: 0;
   height: 100vh;
@@ -163,7 +172,7 @@ body {
 textarea:focus {
   outline: none;
   border-color: var(--teal);
-  box-shadow: 0 0 0 2px rgba(107, 216, 203, 0.15);
+  box-shadow: 0 0 0 2px rgba(0, 123, 95, 0.15);
 }
 
 .badge-locked { filter: grayscale(1) opacity(0.4); }

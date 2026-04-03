@@ -128,10 +128,10 @@ function QuizContent() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#0C1324]">
+      <div className="flex items-center justify-center min-h-screen bg-[#F7F9FC]">
         <div className="text-center animate-fade-in">
-          <div className="w-12 h-12 border-2 border-[#6BD8CB] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-          <p className="text-[#879391] text-sm">{t("loading", lang)}</p>
+          <div className="w-12 h-12 border-2 border-[#007B5F] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-[#A0AEC0] text-sm">{t("loading", lang)}</p>
         </div>
       </div>
     );
@@ -139,13 +139,13 @@ function QuizContent() {
 
   if (!question) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen px-4 bg-[#0C1324]">
+      <div className="flex flex-col items-center justify-center min-h-screen px-4 bg-[#F7F9FC]">
         <div className="text-center animate-fade-in">
           <div className="text-5xl mb-4">📭</div>
-          <p className="text-[#BCC9C6] mb-4 text-lg">{t("no_questions", lang)}</p>
+          <p className="text-[#4A5568] mb-4 text-lg">{t("no_questions", lang)}</p>
           <Link
             href="/"
-            className="inline-flex items-center gap-2 text-[#6BD8CB] hover:text-[#89F5E7] transition-colors font-medium"
+            className="inline-flex items-center gap-2 text-[#007B5F] hover:text-[#00A896] transition-colors font-medium"
           >
             ← {t("back_home", lang)}
           </Link>
@@ -158,12 +158,12 @@ function QuizContent() {
     <div className="app-layout">
       <Sidebar lang={lang} userId={userId} />
 
-      <main className="main-content safe-area-top safe-area-bottom flex flex-col min-h-screen bg-[#0C1324]">
+      <main className="main-content safe-area-top safe-area-bottom flex flex-col min-h-screen bg-[#F7F9FC]">
         {/* Quiz Header */}
-        <div className="px-4 lg:px-8 pt-4 pb-2 flex items-center justify-between flex-shrink-0 border-b border-[#3D4947]">
+        <div className="px-4 lg:px-8 pt-4 pb-2 flex items-center justify-between flex-shrink-0 border-b border-[#E4E9F0]">
           <Link
             href="/"
-            className="flex items-center gap-1.5 text-[#879391] hover:text-[#DCE1FB] transition-colors text-sm"
+            className="flex items-center gap-1.5 text-[#A0AEC0] hover:text-[#1A2B3C] transition-colors text-sm"
           >
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="opacity-60">
               <path d="M10 12L6 8L10 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -173,9 +173,9 @@ function QuizContent() {
           <div className="flex items-center gap-3">
             {questionCount > 0 && (
               <div className="flex items-center gap-2 text-sm font-mono">
-                <span className="text-[#4EDEA3] font-medium">{correctCount}✓</span>
-                <span className="text-[#3D4947]">/</span>
-                <span className="text-[#BCC9C6]">{questionCount}</span>
+                <span className="text-[#00A896] font-medium">{correctCount}✓</span>
+                <span className="text-[#E4E9F0]">/</span>
+                <span className="text-[#4A5568]">{questionCount}</span>
               </div>
             )}
             <LanguageToggle lang={lang} onChange={switchLang} />
@@ -187,7 +187,7 @@ function QuizContent() {
           {/* Floating XP animation */}
           {showXpFloat && xpEarned !== null && (
             <div className="absolute top-4 right-8 z-10">
-              <span className="xp-animation inline-block text-[#FFB95F] font-bold font-mono text-2xl">
+              <span className="xp-animation inline-block text-[#F4A261] font-bold font-mono text-2xl">
                 +{xpEarned} XP
               </span>
             </div>
@@ -207,7 +207,7 @@ function QuizContent() {
           {answered && (
             <button
               onClick={fetchQuestion}
-              className="mt-4 w-full bg-[#6BD8CB] hover:bg-[#89F5E7] text-[#003732] py-3.5 rounded font-semibold text-base transition-all duration-200 active:scale-[0.98] animate-fade-in"
+              className="mt-4 w-full bg-[#007B5F] hover:bg-[#00A896] text-[#003732] py-3.5 rounded font-semibold text-base transition-all duration-200 active:scale-[0.98] animate-fade-in"
             >
               {t("next_question", lang)} →
             </button>
@@ -215,7 +215,7 @@ function QuizContent() {
 
           {/* Login prompt for unauthenticated users */}
           {!userId && (
-            <p className="mt-3 text-center text-xs text-[#879391]">
+            <p className="mt-3 text-center text-xs text-[#A0AEC0]">
               {lang === "de"
                 ? "Nicht angemeldet — Fortschritt wird nicht gespeichert"
                 : "Not signed in — progress will not be saved"}
@@ -225,28 +225,28 @@ function QuizContent() {
 
         {/* Session Stats Bar */}
         {questionCount > 0 && (
-          <div className="px-4 lg:px-8 py-3 border-t border-[#3D4947] bg-[#151B2D] flex-shrink-0">
+          <div className="px-4 lg:px-8 py-3 border-t border-[#E4E9F0] bg-[#FFFFFF] flex-shrink-0">
             <div className="max-w-3xl mx-auto flex items-center justify-between text-sm">
               <div className="flex items-center gap-4">
-                <span className="text-[#BCC9C6]">
+                <span className="text-[#4A5568]">
                   {t("session_stats", lang)}:{" "}
-                  <strong className="text-[#DCE1FB] font-mono">{questionCount}</strong>{" "}
+                  <strong className="text-[#1A2B3C] font-mono">{questionCount}</strong>{" "}
                   {t("answered", lang)}
                 </span>
                 <span
                   className={`font-medium font-mono ${
                     sessionAccuracy >= 70
-                      ? "text-[#4EDEA3]"
+                      ? "text-[#00A896]"
                       : sessionAccuracy >= 40
-                      ? "text-[#FFB95F]"
-                      : "text-[#FFB4AB]"
+                      ? "text-[#F4A261]"
+                      : "text-[#D64545]"
                   }`}
                 >
                   {sessionAccuracy}% {t("accuracy", lang)}
                 </span>
               </div>
               {totalXpSession > 0 && (
-                <span className="text-[#FFB95F] font-medium font-mono">
+                <span className="text-[#F4A261] font-medium font-mono">
                   +{totalXpSession} XP
                 </span>
               )}
@@ -264,8 +264,8 @@ export default function QuizPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex items-center justify-center min-h-screen bg-[#0C1324]">
-          <div className="w-12 h-12 border-2 border-[#6BD8CB] border-t-transparent rounded-full animate-spin" />
+        <div className="flex items-center justify-center min-h-screen bg-[#F7F9FC]">
+          <div className="w-12 h-12 border-2 border-[#007B5F] border-t-transparent rounded-full animate-spin" />
         </div>
       }
     >
