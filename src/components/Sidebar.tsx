@@ -50,9 +50,9 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0, streak = 
     if (active) {
       return highlight
         ? "flex items-center gap-3 px-3 py-2.5 rounded mb-0.5 transition-all duration-150 bg-[#F4A261]/12 text-[#F4A261] font-medium border border-[#F4A261]/20"
-        : "flex items-center gap-3 px-3 py-2.5 rounded mb-0.5 transition-all duration-150 bg-[#007B5F]/12 text-[#007B5F] font-medium border border-[#007B5F]/20";
+        : "flex items-center gap-3 px-3 py-2.5 rounded mb-0.5 transition-all duration-150 bg-[#129B7F]/12 text-[#129B7F] font-medium border border-[#129B7F]/20";
     }
-    return `flex items-center gap-3 px-3 py-2.5 rounded mb-0.5 transition-all duration-150 text-[#4A5568] hover:bg-[#FFFFFF] hover:text-[#1A2B3C] ${
+    return `flex items-center gap-3 px-3 py-2.5 rounded mb-0.5 transition-all duration-150 text-[#4A5568] hover:bg-[#FFFFFF] hover:text-[#152B4E] ${
       highlight ? "hover:text-[#F4A261]" : ""
     }`;
   };
@@ -62,11 +62,11 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0, streak = 
       {/* Logo */}
       <div className="px-5 pt-6 pb-4 border-b border-[#E4E9F0]">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded border border-[#007B5F]/30 bg-[#007B5F]/10 flex items-center justify-center text-base font-bold text-[#007B5F]">
-            M
-          </div>
+          <img src="/brand/logo-mark.png" alt="MedPrüf" className="w-9 h-9" />
           <div>
-            <h1 className="text-base font-bold text-[#1A2B3C] tracking-tight">MedPrüf</h1>
+            <h1 className="text-base font-bold text-[#152B4E] tracking-tight">
+              <span>Med</span><span className="text-[#129B7F]">Prüf</span>
+            </h1>
             <p className="text-[11px] text-[#A0AEC0] leading-tight">{t("exam_prep", lang)}</p>
           </div>
         </div>
@@ -76,11 +76,11 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0, streak = 
       {userName && (
         <div className="mx-4 my-4 p-3 rounded bg-[#FFFFFF] border border-[#E4E9F0]">
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-8 h-8 rounded bg-[#007B5F]/15 border border-[#007B5F]/30 flex items-center justify-center text-sm font-bold text-[#007B5F]">
+            <div className="w-8 h-8 rounded bg-[#129B7F]/15 border border-[#129B7F]/30 flex items-center justify-center text-sm font-bold text-[#129B7F]">
               {userName.charAt(0).toUpperCase()}
             </div>
             <div>
-              <p className="text-sm font-semibold text-[#1A2B3C]">{userName}</p>
+              <p className="text-sm font-semibold text-[#152B4E]">{userName}</p>
               <p className="text-xs text-[#A0AEC0]">
                 {xpInfo.rank} · <span className="font-mono">Lv.{xpInfo.level}</span>
               </p>
@@ -88,7 +88,7 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0, streak = 
           </div>
           <div className="h-1 bg-[#F7F9FC] rounded-full overflow-hidden">
             <div
-              className="h-full bg-[#007B5F] rounded-full animate-progress"
+              className="h-full bg-[#129B7F] rounded-full animate-progress"
               style={{ width: `${xpInfo.progress}%` }}
             />
           </div>
@@ -162,7 +162,7 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0, streak = 
             <Link
               key={topic}
               href={userId ? `/quiz?topic=${encodeURIComponent(topic)}&userId=${userId}` : "#"}
-              className="flex items-center gap-2.5 px-3 py-2 rounded text-[#4A5568] hover:bg-[#FFFFFF] hover:text-[#1A2B3C] transition-all duration-150"
+              className="flex items-center gap-2.5 px-3 py-2 rounded text-[#4A5568] hover:bg-[#FFFFFF] hover:text-[#152B4E] transition-all duration-150"
             >
               <span className="text-sm">{config.icon}</span>
               <span className="text-xs truncate">{topic}</span>

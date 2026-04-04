@@ -138,7 +138,7 @@ export default function Onboarding({ lang = "de", onComplete }: OnboardingProps)
                 <div
                   className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all ${
                     index <= currentStep
-                      ? "bg-[#007B5F] text-white"
+                      ? "bg-[#129B7F] text-white"
                       : "bg-gray-200 text-gray-500"
                   }`}
                 >
@@ -151,7 +151,7 @@ export default function Onboarding({ lang = "de", onComplete }: OnboardingProps)
                 {index < steps.length - 1 && (
                   <div
                     className={`w-12 h-0.5 mx-2 transition-all ${
-                      index < currentStep ? "bg-[#007B5F]" : "bg-gray-200"
+                      index < currentStep ? "bg-[#129B7F]" : "bg-gray-200"
                     }`}
                   />
                 )}
@@ -163,10 +163,10 @@ export default function Onboarding({ lang = "de", onComplete }: OnboardingProps)
         {/* Content */}
         <div className="px-8 pb-8">
           <div className="text-center mb-8">
-            <div className="w-16 h-16 rounded-full bg-[#007B5F]/10 flex items-center justify-center mx-auto mb-4">
-              <currentStepData.icon className="w-8 h-8 text-[#007B5F]" />
+            <div className="w-16 h-16 rounded-full bg-[#129B7F]/10 flex items-center justify-center mx-auto mb-4">
+              <currentStepData.icon className="w-8 h-8 text-[#129B7F]" />
             </div>
-            <h2 className="text-2xl font-bold text-[#001B3D] mb-2">
+            <h2 className="text-2xl font-bold text-[#152B4E] mb-2">
               {currentStepData.title}
             </h2>
             <p className="text-gray-600">{currentStepData.subtitle}</p>
@@ -177,14 +177,14 @@ export default function Onboarding({ lang = "de", onComplete }: OnboardingProps)
             {currentStep === 0 && (
               <div className="space-y-3">
                 <div
-                  className="p-4 rounded-xl border-2 border-[#007B5F] bg-[#007B5F]/5 cursor-pointer transition-all"
+                  className="p-4 rounded-xl border-2 border-[#129B7F] bg-[#129B7F]/5 cursor-pointer transition-all"
                 >
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="font-semibold text-[#001B3D]">SIP Staatsexamen</h3>
+                      <h3 className="font-semibold text-[#152B4E]">SIP Staatsexamen</h3>
                       <p className="text-sm text-gray-600">Staatsprüfung für Medizin in Deutschland</p>
                     </div>
-                    <div className="w-6 h-6 rounded-full border-2 border-[#007B5F] bg-[#007B5F] flex items-center justify-center">
+                    <div className="w-6 h-6 rounded-full border-2 border-[#129B7F] bg-[#129B7F] flex items-center justify-center">
                       <CheckCircle2 className="w-4 h-4 text-white" />
                     </div>
                   </div>
@@ -209,7 +209,7 @@ export default function Onboarding({ lang = "de", onComplete }: OnboardingProps)
                     <button
                       className={`w-full p-4 rounded-xl border-2 text-left transition-all ${
                         data.examDate === preset.value
-                          ? "border-[#007B5F] bg-[#007B5F]/5"
+                          ? "border-[#129B7F] bg-[#129B7F]/5"
                           : "border-gray-200 hover:border-gray-300"
                       }`}
                       onClick={() => setData({ ...data, examDate: preset.value })}
@@ -217,7 +217,7 @@ export default function Onboarding({ lang = "de", onComplete }: OnboardingProps)
                       <div className="flex items-center justify-between">
                         <span className="font-medium">{preset.label}</span>
                         {data.examDate === preset.value && (
-                          <CheckCircle2 className="w-5 h-5 text-[#007B5F]" />
+                          <CheckCircle2 className="w-5 h-5 text-[#129B7F]" />
                         )}
                       </div>
                       {preset.value !== "custom" && preset.value !== "not_planned" && (
@@ -232,7 +232,7 @@ export default function Onboarding({ lang = "de", onComplete }: OnboardingProps)
                         type="date"
                         value={customDate}
                         onChange={(e) => setCustomDate(e.target.value)}
-                        className="mt-2 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#007B5F]/20 focus:border-[#007B5F]"
+                        className="mt-2 w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#129B7F]/20 focus:border-[#129B7F]"
                       />
                     )}
                   </div>
@@ -248,18 +248,18 @@ export default function Onboarding({ lang = "de", onComplete }: OnboardingProps)
                     key={level.value}
                     className={`w-full p-4 rounded-xl border-2 text-left transition-all ${
                       data.level === level.value
-                        ? "border-[#007B5F] bg-[#007B5F]/5"
+                        ? "border-[#129B7F] bg-[#129B7F]/5"
                         : "border-gray-200 hover:border-gray-300"
                     }`}
                     onClick={() => setData({ ...data, level: level.value })}
                   >
                     <div className="flex items-center justify-between">
                       <div>
-                        <h3 className="font-medium text-[#001B3D]">{level.label}</h3>
+                        <h3 className="font-medium text-[#152B4E]">{level.label}</h3>
                         <p className="text-sm text-gray-600">{level.description}</p>
                       </div>
                       {data.level === level.value && (
-                        <CheckCircle2 className="w-5 h-5 text-[#007B5F]" />
+                        <CheckCircle2 className="w-5 h-5 text-[#129B7F]" />
                       )}
                     </div>
                   </button>
@@ -288,7 +288,7 @@ export default function Onboarding({ lang = "de", onComplete }: OnboardingProps)
               disabled={!canProceed()}
               className={`flex items-center gap-2 px-6 py-2 rounded-lg font-medium transition-all ${
                 canProceed()
-                  ? "bg-[#007B5F] text-white hover:bg-[#007B5F]/90"
+                  ? "bg-[#129B7F] text-white hover:bg-[#129B7F]/90"
                   : "bg-gray-200 text-gray-400 cursor-not-allowed"
               }`}
             >

@@ -34,34 +34,6 @@ export const EXAM_SOURCES = [
     questions: 7042,
     badge: '📋',
   },
-  {
-    id: 'KMP5b',
-    label: 'KMP5b',
-    fullName: 'KoalaMed KMP5b',
-    questions: 672,
-    badge: '🐨',
-  },
-  {
-    id: 'KMP6a',
-    label: 'KMP6a',
-    fullName: 'KoalaMed KMP6a',
-    questions: 2087,
-    badge: '🐨',
-  },
-  {
-    id: 'KMP6b',
-    label: 'KMP6b',
-    fullName: 'KoalaMed KMP6b',
-    questions: 1763,
-    badge: '🐨',
-  },
-  {
-    id: 'all',
-    label: 'Alle',
-    fullName: 'Alle Prüfungen',
-    questions: 11764,
-    badge: '📚',
-  },
 ] as const
 
 export type ExamSourceId = typeof EXAM_SOURCES[number]['id']

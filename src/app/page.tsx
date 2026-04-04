@@ -90,7 +90,7 @@ export default function Home() {
     try {
       const onboardingData = localStorage.getItem("medpruef_onboarding");
       const parsed = onboardingData ? JSON.parse(onboardingData) : null;
-      if (!parsed?.completedAt && !hasSelectedExam() && !isTelegramMiniApp()) {
+      if (!parsed?.completedAt && !isTelegramMiniApp()) {
         setShowOnboarding(true);
       }
     } catch {}
@@ -209,7 +209,7 @@ export default function Home() {
     return (
       <div className="flex items-center justify-center min-h-screen bg-[#F7F9FC]">
         <div className="text-center animate-fade-in">
-          <div className="w-14 h-14 border-2 border-[#007B5F] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <div className="w-14 h-14 border-2 border-[#129B7F] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
           <p className="text-[#A0AEC0] text-sm">{t("loading", lang)}</p>
         </div>
       </div>
@@ -263,11 +263,11 @@ export default function Home() {
         <div className="lg:hidden px-4 pt-4 pb-2 border-b border-[#E4E9F0]">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded bg-[#007B5F]/15 border border-[#007B5F]/30 flex items-center justify-center text-sm font-bold text-[#007B5F]">
+              <div className="w-9 h-9 rounded bg-[#129B7F]/15 border border-[#129B7F]/30 flex items-center justify-center text-sm font-bold text-[#129B7F]">
                 {user.first_name.charAt(0).toUpperCase()}
               </div>
               <div>
-                <h1 className="text-base font-bold text-[#1A2B3C]">
+                <h1 className="text-base font-bold text-[#152B4E]">
                   {t("hello", lang)}, {user.first_name}
                 </h1>
                 <p className="text-xs text-[#A0AEC0]">
@@ -283,7 +283,7 @@ export default function Home() {
         {/* Desktop Header */}
         <div className="hidden lg:flex items-center justify-between px-8 pt-6 pb-2">
           <div>
-            <h1 className="text-2xl font-bold text-[#1A2B3C]">
+            <h1 className="text-2xl font-bold text-[#152B4E]">
               {t("hello", lang)}, {user.first_name}
             </h1>
             <p className="text-sm text-[#A0AEC0]">{t("exam_prep", lang)}</p>
@@ -292,7 +292,7 @@ export default function Home() {
             {/* Exam badge */}
             <button
               onClick={() => setShowExamSelector(true)}
-              className="text-xs font-mono bg-[#007B5F]/10 text-[#007B5F] px-2.5 py-1.5 rounded border border-[#007B5F]/20 hover:bg-[#007B5F]/20 transition-colors"
+              className="text-xs font-mono bg-[#129B7F]/10 text-[#129B7F] px-2.5 py-1.5 rounded border border-[#129B7F]/20 hover:bg-[#129B7F]/20 transition-colors"
             >
               {examSource}
             </button>
@@ -318,7 +318,7 @@ export default function Home() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
             <Link
               href={`/quiz?topic=random&userId=${user.id}&examSource=${examSource}`}
-              className="flex items-center gap-3 bg-[#007B5F] hover:bg-[#00A896] text-[#003732] px-5 py-3.5 rounded font-semibold pulse-glow transition-all active:scale-[0.98]"
+              className="flex items-center gap-3 bg-[#129B7F] hover:bg-[#00A896] text-[#003732] px-5 py-3.5 rounded font-semibold pulse-glow transition-all active:scale-[0.98]"
             >
               <span className="text-xl">🚀</span>
               <span className="text-sm">{t("random_quiz", lang)}</span>
@@ -327,7 +327,7 @@ export default function Home() {
             {topics.length > 0 && (
               <Link
                 href={`/quiz?topic=${encodeURIComponent(topics[0].topic)}&userId=${user.id}&examSource=${examSource}`}
-                className="flex items-center gap-3 bg-[#FFFFFF] border border-[#E4E9F0] text-[#1A2B3C] px-5 py-3.5 rounded font-medium hover:border-[#007B5F]/40 transition-all"
+                className="flex items-center gap-3 bg-[#FFFFFF] border border-[#E4E9F0] text-[#152B4E] px-5 py-3.5 rounded font-medium hover:border-[#129B7F]/40 transition-all"
               >
                 <span className="text-xl">▶️</span>
                 <span className="text-sm truncate">{t("continue_where_left", lang)}</span>
@@ -336,7 +336,7 @@ export default function Home() {
 
             <Link
               href={`/exam?examSource=${examSource}`}
-              className="flex items-center gap-3 bg-[#FFFFFF] border border-[#E4E9F0] text-[#1A2B3C] px-5 py-3.5 rounded font-medium hover:border-[#007B5F]/40 transition-all"
+              className="flex items-center gap-3 bg-[#FFFFFF] border border-[#E4E9F0] text-[#152B4E] px-5 py-3.5 rounded font-medium hover:border-[#129B7F]/40 transition-all"
             >
               <span className="text-xl">📋</span>
               <span className="text-sm">{t("mock_exam", lang)}</span>
@@ -360,7 +360,7 @@ export default function Home() {
           {/* Topics Grid — hidden while searching */}
           {!searchQuery && (
             <div className="mb-5">
-              <h2 className="text-base font-semibold mb-3 text-[#1A2B3C]">{t("specialties", lang)}</h2>
+              <h2 className="text-base font-semibold mb-3 text-[#152B4E]">{t("specialties", lang)}</h2>
 
               {examSource === "SIP" ? (
                 <>
@@ -368,14 +368,14 @@ export default function Home() {
                   <div className="grid grid-cols-2 gap-2 mb-4">
                     <Link
                       href={`/exam?examSource=SIP&part=sip4`}
-                      className="flex items-center gap-2 bg-[#FFFFFF] border border-[#E4E9F0] hover:border-[#007B5F]/40 rounded px-3 py-2.5 text-sm font-medium text-[#1A2B3C] transition-all"
+                      className="flex items-center gap-2 bg-[#FFFFFF] border border-[#E4E9F0] hover:border-[#129B7F]/40 rounded px-3 py-2.5 text-sm font-medium text-[#152B4E] transition-all"
                     >
                       <span>📋</span>
                       <span className="truncate">{t("practice_sip4", lang)}</span>
                     </Link>
                     <Link
                       href={`/exam?examSource=SIP&part=sip5`}
-                      className="flex items-center gap-2 bg-[#FFFFFF] border border-[#E4E9F0] hover:border-[#007B5F]/40 rounded px-3 py-2.5 text-sm font-medium text-[#1A2B3C] transition-all"
+                      className="flex items-center gap-2 bg-[#FFFFFF] border border-[#E4E9F0] hover:border-[#129B7F]/40 rounded px-3 py-2.5 text-sm font-medium text-[#152B4E] transition-all"
                     >
                       <span>📋</span>
                       <span className="truncate">{t("practice_sip5", lang)}</span>
@@ -403,7 +403,7 @@ export default function Home() {
                   </div>
 
                   {/* SIP 5 section */}
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-[#007B5F] mb-2">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-[#129B7F] mb-2">
                     {t("sip5_label", lang)}
                   </h3>
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
@@ -445,7 +445,7 @@ export default function Home() {
             <StatsCard icon="⚡" value={gam?.total_xp || 0} label="XP" color="text-[#F4A261]" delay={0} />
             <StatsCard icon="🔥" value={gam?.current_streak || 0} label={t("streak", lang)} color="text-[#D64545]" delay={50} />
             <StatsCard icon="✅" value={`${accuracy}%`} label={t("accuracy", lang)} color="text-[#00A896]" delay={100} />
-            <StatsCard icon="📝" value={gam?.total_questions_answered || 0} label={t("answered", lang)} color="text-[#007B5F]" delay={150} />
+            <StatsCard icon="📝" value={gam?.total_questions_answered || 0} label={t("answered", lang)} color="text-[#129B7F]" delay={150} />
           </div>
         </div>
       </main>
@@ -458,7 +458,7 @@ export default function Home() {
             {weakTopics.slice(0, 2).map(t => (
               <Link key={t.topic} href={`/quiz?topic=${encodeURIComponent(t.topic)}&examSource=${examSource}`}
                 className="block p-4 bg-[#FFF4E6] border-l-4 border-[#F4A261] rounded-r">
-                <p className="text-sm font-semibold text-[#1A2B3C]">
+                <p className="text-sm font-semibold text-[#152B4E]">
                   💡 Du bist schwach in {t.topic} ({Math.round(t.accuracy * 100)}%) — jetzt üben?
                 </p>
               </Link>
@@ -536,23 +536,23 @@ function DemoHome({
     <div className="min-h-screen bg-[#F7F9FC] safe-area-top safe-area-bottom">
       {/* Hero */}
       <div className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-[#007B5F]/6 to-transparent pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#129B7F]/6 to-transparent pointer-events-none" />
         <div className="relative px-4 pt-8 pb-6 text-center max-w-2xl mx-auto">
           <div className="flex justify-end mb-6">
             <LanguageToggle lang={lang} onChange={onLangChange} />
           </div>
 
-          <div className="w-16 h-16 rounded border border-[#007B5F]/30 bg-[#007B5F]/10 flex items-center justify-center text-3xl mx-auto mb-4">
+          <div className="w-16 h-16 rounded border border-[#129B7F]/30 bg-[#129B7F]/10 flex items-center justify-center text-3xl mx-auto mb-4">
             <img src="/brand/logo-mark.png" alt="MedPrüf" className="w-12 h-12" />
           </div>
-          <img src="/brand/logo-brandmark.png" alt="MedPrüf" className="h-10 mx-auto" />
+          <img src="/brand/wordmark-twotone.png" alt="MedPrüf" className="h-10 mx-auto" />
           <p className="text-[#4A5568] text-base mb-1">{t("exam_prep", lang)}</p>
           <p className="text-[#A0AEC0] text-sm">{t("demo_description", lang)}</p>
 
           {/* Stats bar */}
           <div className="flex items-center justify-center gap-6 mt-5">
             <div className="text-center">
-              <p className="text-2xl font-bold text-[#007B5F] font-mono">
+              <p className="text-2xl font-bold text-[#129B7F] font-mono">
                 {totalQuestions > 0 ? totalQuestions.toLocaleString("de-DE") : "7.042"}
               </p>
               <p className="text-xs text-[#A0AEC0]">{t("questions", lang)}</p>
@@ -578,7 +578,7 @@ function DemoHome({
           <div className="mt-6">
             <Link
               href={`/quiz?topic=random&examSource=${examSource}`}
-              className="inline-flex items-center gap-3 bg-[#007B5F] hover:bg-[#00A896] text-[#003732] px-7 py-3.5 rounded font-bold text-base pulse-glow transition-all active:scale-[0.98]"
+              className="inline-flex items-center gap-3 bg-[#129B7F] hover:bg-[#00A896] text-[#003732] px-7 py-3.5 rounded font-bold text-base pulse-glow transition-all active:scale-[0.98]"
             >
               <span className="text-xl">🚀</span>
               {lang === "de" ? "Übung starten" : "Start Practice"}
@@ -604,7 +604,7 @@ function DemoHome({
       {/* Topics — hidden while searching */}
       {topics.length > 0 && !searchQuery && (
         <div className="px-4 pb-6 max-w-4xl mx-auto">
-          <h2 className="text-base font-semibold mb-3 text-[#1A2B3C]">{t("practice_topics", lang)}</h2>
+          <h2 className="text-base font-semibold mb-3 text-[#152B4E]">{t("practice_topics", lang)}</h2>
 
           {examSource === "SIP" ? (
             <>
@@ -612,14 +612,14 @@ function DemoHome({
               <div className="grid grid-cols-2 gap-2 mb-4">
                 <Link
                   href={`/exam?examSource=SIP&part=sip4`}
-                  className="flex items-center gap-2 bg-[#FFFFFF] border border-[#E4E9F0] hover:border-[#007B5F]/40 rounded px-3 py-2.5 text-sm font-medium text-[#1A2B3C] transition-all"
+                  className="flex items-center gap-2 bg-[#FFFFFF] border border-[#E4E9F0] hover:border-[#129B7F]/40 rounded px-3 py-2.5 text-sm font-medium text-[#152B4E] transition-all"
                 >
                   <span>📋</span>
                   <span className="truncate">{t("practice_sip4", lang)}</span>
                 </Link>
                 <Link
                   href={`/exam?examSource=SIP&part=sip5`}
-                  className="flex items-center gap-2 bg-[#FFFFFF] border border-[#E4E9F0] hover:border-[#007B5F]/40 rounded px-3 py-2.5 text-sm font-medium text-[#1A2B3C] transition-all"
+                  className="flex items-center gap-2 bg-[#FFFFFF] border border-[#E4E9F0] hover:border-[#129B7F]/40 rounded px-3 py-2.5 text-sm font-medium text-[#152B4E] transition-all"
                 >
                   <span>📋</span>
                   <span className="truncate">{t("practice_sip5", lang)}</span>
@@ -637,11 +637,11 @@ function DemoHome({
                     <Link
                       key={tp.topic}
                       href={`/quiz?topic=${encodeURIComponent(tp.topic)}&examSource=${examSource}`}
-                      className="topic-card-border bg-[#FFFFFF] border border-[#E4E9F0] rounded p-4 animate-fade-in hover:border-[#007B5F]/40 hover:bg-[#1E2640] transition-all active:scale-[0.98]"
+                      className="topic-card-border bg-[#FFFFFF] border border-[#E4E9F0] rounded p-4 animate-fade-in hover:border-[#129B7F]/40 hover:bg-[#1E2640] transition-all active:scale-[0.98]"
                       style={{ borderLeftColor: config.color, animationDelay: `${i * 50}ms` }}
                     >
                       <div className="text-2xl mb-2">{config.icon}</div>
-                      <div className="text-sm font-semibold mb-1 text-[#1A2B3C]">{tp.topic}</div>
+                      <div className="text-sm font-semibold mb-1 text-[#152B4E]">{tp.topic}</div>
                       <div className="text-xs text-[#A0AEC0] font-mono">{tp.count} {t("questions", lang)}</div>
                     </Link>
                   );
@@ -649,7 +649,7 @@ function DemoHome({
               </div>
 
               {/* SIP 5 group */}
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-[#007B5F] mb-2">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-[#129B7F] mb-2">
                 {t("sip5_label", lang)}
               </h3>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
@@ -659,11 +659,11 @@ function DemoHome({
                     <Link
                       key={tp.topic}
                       href={`/quiz?topic=${encodeURIComponent(tp.topic)}&examSource=${examSource}`}
-                      className="topic-card-border bg-[#FFFFFF] border border-[#E4E9F0] rounded p-4 animate-fade-in hover:border-[#007B5F]/40 hover:bg-[#1E2640] transition-all active:scale-[0.98]"
+                      className="topic-card-border bg-[#FFFFFF] border border-[#E4E9F0] rounded p-4 animate-fade-in hover:border-[#129B7F]/40 hover:bg-[#1E2640] transition-all active:scale-[0.98]"
                       style={{ borderLeftColor: config.color, animationDelay: `${i * 50}ms` }}
                     >
                       <div className="text-2xl mb-2">{config.icon}</div>
-                      <div className="text-sm font-semibold mb-1 text-[#1A2B3C]">{tp.topic}</div>
+                      <div className="text-sm font-semibold mb-1 text-[#152B4E]">{tp.topic}</div>
                       <div className="text-xs text-[#A0AEC0] font-mono">{tp.count} {t("questions", lang)}</div>
                     </Link>
                   );
@@ -678,11 +678,11 @@ function DemoHome({
                   <Link
                     key={tp.topic}
                     href={`/quiz?topic=${encodeURIComponent(tp.topic)}&examSource=${examSource}`}
-                    className="topic-card-border bg-[#FFFFFF] border border-[#E4E9F0] rounded p-4 animate-fade-in hover:border-[#007B5F]/40 hover:bg-[#1E2640] transition-all active:scale-[0.98]"
+                    className="topic-card-border bg-[#FFFFFF] border border-[#E4E9F0] rounded p-4 animate-fade-in hover:border-[#129B7F]/40 hover:bg-[#1E2640] transition-all active:scale-[0.98]"
                     style={{ borderLeftColor: config.color, animationDelay: `${i * 50}ms` }}
                   >
                     <div className="text-2xl mb-2">{config.icon}</div>
-                    <div className="text-sm font-semibold mb-1 text-[#1A2B3C]">{tp.topic}</div>
+                    <div className="text-sm font-semibold mb-1 text-[#152B4E]">{tp.topic}</div>
                     <div className="text-xs text-[#A0AEC0] font-mono">{tp.count} {t("questions", lang)}</div>
                   </Link>
                 );
@@ -696,7 +696,7 @@ function DemoHome({
       <div className="px-4 pb-10 max-w-4xl mx-auto">
         <div className="border border-[#E4E9F0] rounded bg-[#FFFFFF] p-5">
           <div className="text-center mb-4">
-            <img src="/brand/logo-brandmark.png" alt="MedPrüf" className="h-8 mx-auto" />
+            <img src="/brand/wordmark-twotone.png" alt="MedPrüf" className="h-8 mx-auto" />
           </div>
           <p className="text-sm text-[#4A5568] font-medium mb-1 text-center">
             {lang === "de"
@@ -715,7 +715,7 @@ function DemoHome({
               href="https://t.me/MedPruefBot?start=web_login"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex-1 flex items-center justify-center gap-3 bg-[#229ED9] hover:bg-[#1e8fc0] text-[#1A2B3C] px-5 py-3 rounded font-semibold text-sm transition-all active:scale-[0.98]"
+              className="flex-1 flex items-center justify-center gap-3 bg-[#229ED9] hover:bg-[#1e8fc0] text-[#152B4E] px-5 py-3 rounded font-semibold text-sm transition-all active:scale-[0.98]"
             >
               <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current" aria-hidden="true">
                 <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.833.941z"/>
@@ -726,7 +726,7 @@ function DemoHome({
             {/* Guest continue */}
             <button
               onClick={handleGuestContinue}
-              className="flex-1 flex items-center justify-center gap-2 bg-[#FFFFFF] border border-[#E4E9F0] hover:border-[#007B5F]/40 text-[#4A5568] px-5 py-3 rounded font-medium text-sm transition-all active:scale-[0.98]"
+              className="flex-1 flex items-center justify-center gap-2 bg-[#FFFFFF] border border-[#E4E9F0] hover:border-[#129B7F]/40 text-[#4A5568] px-5 py-3 rounded font-medium text-sm transition-all active:scale-[0.98]"
             >
               <span>👤</span>
               {lang === "de" ? "Als Gast fortfahren" : "Continue as guest"}

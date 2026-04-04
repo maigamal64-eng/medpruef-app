@@ -44,3 +44,5 @@ import_questions.py
 extracted-images/
 optimized-images/
 design-reference/
+sip-anki.apkg
+anki_import.py

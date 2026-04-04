@@ -48,7 +48,7 @@ export default function BottomNav({ lang, userId }: BottomNavProps) {
                   active
                     ? item.highlight
                       ? "text-[#F4A261]"
-                      : "text-[#007B5F]"
+                      : "text-[#129B7F]"
                     : examHighlight
                     ? "text-[#F4A261]/60 active:text-[#F4A261]"
                     : "text-[#A0AEC0] active:text-[#4A5568]"
@@ -57,11 +57,11 @@ export default function BottomNav({ lang, userId }: BottomNavProps) {
                 <span className={`text-lg transition-transform duration-200 ${active ? "scale-110" : ""}`}>
                   {item.icon}
                 </span>
-                <span className={`text-[9px] font-medium ${active ? (item.highlight ? "text-[#F4A261]" : "text-[#007B5F]") : examHighlight ? "text-[#F4A261]/60" : ""}`}>
+                <span className={`text-[9px] font-medium ${active ? (item.highlight ? "text-[#F4A261]" : "text-[#129B7F]") : examHighlight ? "text-[#F4A261]/60" : ""}`}>
                   {item.label}
                 </span>
                 {active && (
-                  <div className={`w-1 h-1 rounded-full mt-0.5 ${item.highlight ? "bg-[#F4A261]" : "bg-[#007B5F]"}`} />
+                  <div className={`w-1 h-1 rounded-full mt-0.5 ${item.highlight ? "bg-[#F4A261]" : "bg-[#129B7F]"}`} />
                 )}
               </Link>
             );

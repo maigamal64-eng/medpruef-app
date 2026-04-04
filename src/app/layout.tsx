@@ -14,11 +14,19 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   icons: {
-    icon: "/brand/favicon-64.png",
-    apple: "/brand/app-icon.png"
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/brand/favicon-64.png", type: "image/png", sizes: "64x64" },
+    ],
+    apple: "/apple-touch-icon.png",
   },
   title: "MedPrüf — Prüfungsvorbereitung",
-  description: "Deutsche Medizinprüfung Vorbereitung",
+  description: "Deutsche Medizinprüfung Vorbereitung — SIP Staatsexamen",
+  openGraph: {
+    title: "MedPrüf — Prüfungsvorbereitung",
+    description: "Bereite dich optimal auf die deutsche Medizinprüfung vor",
+    images: [{ url: "/brand/og-image.png", width: 1200, height: 630 }],
+  },
 };
 
 export const viewport: Viewport = {
@@ -37,7 +45,7 @@ export default function RootLayout({
   return (
     <html lang="de" dir="ltr" className="dark">
       <head>
-
+        <link rel="manifest" href="/manifest.json" />
         {/* Telegram WebApp SDK — afterInteractive so it doesn't block, graceful in browser */}
         <Script
           src="https://telegram.org/js/telegram-web-app.js"
@@ -45,7 +53,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${inter.className} bg-[#F7F9FC] text-[#1A2B3C] min-h-screen antialiased`}
+        className={`${inter.className} bg-[#F7F9FC] text-[#152B4E] min-h-screen antialiased`}
       >
         <TrackerInit />
         {children}
