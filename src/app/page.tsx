@@ -21,8 +21,10 @@ import StreakWidget from "@/components/StreakWidget";
 import XPBar from "@/components/XPBar";
 import DailyGoalRing from "@/components/DailyGoalRing";
 import ExamSelector from "@/components/ExamSelector";
+import Onboarding from "@/components/Onboarding";
 import SearchBar from "@/components/SearchBar";
 import SearchResults from "@/components/SearchResults";
+import { getWeakTopics, type TopicStats } from "@/lib/weakness";
 import Link from "next/link";
 
 type Lang = "de" | "en";
@@ -75,6 +77,8 @@ export default function Home() {
   const [lang, setLangState] = useState<Lang>("de");
   const [examSource, setExamSource] = useState<ExamSourceId>("SIP");
   const [showExamSelector, setShowExamSelector] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [weakTopics, setWeakTopics] = useState<TopicStats[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Record<string, unknown>[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
@@ -83,9 +87,13 @@ export default function Home() {
     setLangState(getLang());
     const src = getStoredExamSource();
     setExamSource(src);
-    if (!hasSelectedExam() && !isTelegramMiniApp()) {
-      setShowExamSelector(true);
-    }
+    try {
+      const onboardingData = localStorage.getItem("medpruef_onboarding");
+      const parsed = onboardingData ? JSON.parse(onboardingData) : null;
+      if (!parsed?.completedAt && !hasSelectedExam() && !isTelegramMiniApp()) {
+        setShowOnboarding(true);
+      }
+    } catch {}
   }, []);
 
   const switchLang = (l: Lang) => {
@@ -160,6 +168,10 @@ export default function Home() {
     authenticate();
   }, [authenticate]);
 
+  useEffect(() => {
+    setWeakTopics(getWeakTopics());
+  }, []);
+
   const handleExamSelected = useCallback(
     async (id: ExamSourceId) => {
       setExamSource(id);
@@ -202,6 +214,15 @@ export default function Home() {
         </div>
       </div>
     );
+  }
+
+  if (showOnboarding) {
+    return <Onboarding lang={lang} onComplete={(data) => {
+      setShowOnboarding(false);
+      setStoredExamSource(data.examSource as ExamSourceId);
+      setExamSource(data.examSource as ExamSourceId);
+      fetchTopics(data.examSource as ExamSourceId);
+    }} />;
   }
 
   if (showExamSelector) {
@@ -428,6 +449,23 @@ export default function Home() {
           </div>
         </div>
       </main>
+
+
+      {/* Weakness prompts */}
+      {weakTopics.length > 0 && (
+        <div className="px-4 mb-6">
+          <div className="space-y-2">
+            {weakTopics.slice(0, 2).map(t => (
+              <Link key={t.topic} href={`/quiz?topic=${encodeURIComponent(t.topic)}&examSource=${examSource}`}
+                className="block p-4 bg-[#FFF4E6] border-l-4 border-[#F4A261] rounded-r">
+                <p className="text-sm font-semibold text-[#1A2B3C]">
+                  💡 Du bist schwach in {t.topic} ({Math.round(t.accuracy * 100)}%) — jetzt üben?
+                </p>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       <BottomNav lang={lang} userId={user.id} />
     </div>

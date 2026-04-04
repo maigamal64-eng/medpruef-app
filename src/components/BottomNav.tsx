@@ -18,6 +18,7 @@ export default function BottomNav({ lang, userId }: BottomNavProps) {
     { href: "/", icon: "🏠", label: t("home", lang), key: "home" },
     { href: userId ? `/quiz?topic=random&userId=${userId}` : "/quiz?topic=random", icon: "📝", label: t("quiz", lang), key: "quiz" },
     { href: "/exam", icon: "🎓", label: t("exam", lang), key: "exam", highlight: true },
+    { href: "/mentor", icon: "🧠", label: "Mentor", key: "mentor" },
     { href: userId ? `/stats?userId=${userId}` : "/stats", icon: "📊", label: t("stats", lang), key: "stats" },
     { href: "/profile", icon: "👤", label: t("profile", lang), key: "profile" },
   ];
@@ -27,6 +28,7 @@ export default function BottomNav({ lang, userId }: BottomNavProps) {
     if (key === "quiz") return pathname.startsWith("/quiz");
     if (key === "stats") return pathname.startsWith("/stats");
     if (key === "exam") return pathname.startsWith("/exam");
+    if (key === "mentor") return pathname.startsWith("/mentor");
     if (key === "profile") return pathname.startsWith("/profile");
     return false;
   };

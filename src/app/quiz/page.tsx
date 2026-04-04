@@ -6,6 +6,7 @@ import Link from "next/link";
 import { t, getLang, setLang } from "@/lib/i18n";
 import { trackEvent, trackPageView } from "@/lib/tracker";
 import { getStoredSession } from "@/lib/auth";
+import { recordAnswer } from "@/lib/weakness";
 import LanguageToggle from "@/components/LanguageToggle";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
@@ -94,6 +95,7 @@ function QuizContent() {
       setAnswered(true);
       setQuestionCount((c) => c + 1);
       if (isCorrect) setCorrectCount((c) => c + 1);
+      recordAnswer(question.topic, isCorrect);
       trackEvent("question_answer", { questionId: question?.id, topic: question?.topic, isCorrect, timeSpent: Date.now() - startTime, examSource });
 
       // Skip API tracking if no authenticated userId
@@ -202,6 +204,19 @@ function QuizContent() {
             onAnswer={handleAnswer}
             imageUrl={question.image_url}
           />
+
+          {/* Explanation display */}
+          {answered && question?.explanation && (
+            <div className="mt-4 p-4 bg-[#EAF3F9] border-l-4 border-[#3A7CA5] rounded-r">
+              <p className="text-sm font-semibold text-[#001B3D] mb-1">🧠 Erklärung</p>
+              <p className="text-sm text-[#1A2B3C]">{question.explanation}</p>
+            </div>
+          )}
+          {answered && !question?.explanation && (
+            <div className="mt-4 p-4 bg-[#F7F9FC] border-l-4 border-[#A0AEC0] rounded-r opacity-70">
+              <p className="text-sm text-[#A0AEC0]">🤖 KI-Erklärung wird bald verfügbar sein</p>
+            </div>
+          )}
 
           {/* Next question button — appears after answering */}
           {answered && (
