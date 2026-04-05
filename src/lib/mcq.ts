@@ -1,10 +1,32 @@
 export interface MCQOption {
   text: string;
   correct: boolean;
+  position?: number;
+  image_url?: string | null;
+}
+
+export interface StoredChoice {
+  text: string;
+  correct: boolean;
+  position: number;
+  image_url?: string | null;
+}
+
+/**
+ * Build shuffled MCQ options from a structured `choices` JSONB column.
+ * Preserves per-choice image_url and keeps the correct count intact.
+ */
+export function buildMCQFromChoices(choices: StoredChoice[]): MCQOption[] {
+  return shuffle(choices.map(c => ({
+    text: c.text,
+    correct: !!c.correct,
+    position: c.position,
+    image_url: c.image_url ?? null,
+  })));
 }
 
 // Shuffle array in-place using Fisher-Yates
-function shuffle<T>(arr: T[]): T[] {
+export function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));

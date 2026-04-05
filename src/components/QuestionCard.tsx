@@ -18,6 +18,7 @@ interface Question {
   difficulty: number;
   exam_dates: string[];
   options?: MCQOption[];
+  n_correct?: number;
   image_url?: string;
   tags?: string[];
 }
@@ -90,7 +91,8 @@ export default function QuestionCard({
   imageUrl,
 }: QuestionCardProps) {
   const config = getTopicConfig(question.topic);
-  const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
+  const [selectedIdxs, setSelectedIdxs] = useState<Set<number>>(new Set());
+  const [submitted, setSubmitted] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [note, setNote] = useState("");
   const [showNoteInput, setShowNoteInput] = useState(false);
@@ -98,14 +100,16 @@ export default function QuestionCard({
   const [isFav, setIsFav] = useState(false);
 
   const [showAnswer, setShowAnswer] = useState(false);
-  const answered = selectedIdx !== null || showAnswer;
+  const answered = submitted || showAnswer;
   const isOpenAnswer = !question.options || question.options.length < 2;
-
   const options: MCQOption[] = question.options || [];
+  const nCorrect = question.n_correct ?? options.filter(o => o.correct).length;
+  const isMulti = nCorrect >= 2;
 
   // Load persisted note and favorite state on question change
   useEffect(() => {
-    setSelectedIdx(null);
+    setSelectedIdxs(new Set());
+    setSubmitted(false);
     setShowAnswer(false);
     setShowNoteInput(false);
     setNoteSaved(false);
@@ -119,8 +123,29 @@ export default function QuestionCard({
 
   const handleSelect = (idx: number) => {
     if (answered) return;
-    setSelectedIdx(idx);
-    onAnswer?.(options[idx].correct);
+    if (isMulti) {
+      // Checkbox behavior: toggle the index
+      setSelectedIdxs(prev => {
+        const next = new Set(prev);
+        if (next.has(idx)) next.delete(idx); else next.add(idx);
+        return next;
+      });
+    } else {
+      // Radio behavior: select + immediately grade
+      setSelectedIdxs(new Set([idx]));
+      setSubmitted(true);
+      onAnswer?.(options[idx].correct);
+    }
+  };
+
+  const handleSubmitMulti = () => {
+    if (answered || selectedIdxs.size === 0) return;
+    setSubmitted(true);
+    // Strict grading: selected set must equal correct set exactly
+    const correctIdxs = new Set(options.map((o, i) => o.correct ? i : -1).filter(i => i >= 0));
+    const isCorrect = selectedIdxs.size === correctIdxs.size
+      && [...selectedIdxs].every(i => correctIdxs.has(i));
+    onAnswer?.(isCorrect);
   };
 
   const handleSaveNote = () => {
@@ -137,12 +162,13 @@ export default function QuestionCard({
   const getOptionStyle = (idx: number, opt: MCQOption): string => {
     const base =
       "w-full text-left px-4 py-3 border text-sm font-medium transition-all duration-200 flex items-center gap-3 rounded";
+    const isSelected = selectedIdxs.has(idx);
 
     if (!answered) {
-      return `${base} bg-[#FFFFFF] border-[#E4E9F0] text-[#1A2B3C] hover:border-[#007B5F]/50 hover:bg-[#FFFFFF] active:scale-[0.99]`;
+      return `${base} ${isSelected ? "bg-[#007B5F]/8 border-[#007B5F]/60 text-[#1A2B3C]" : "bg-[#FFFFFF] border-[#E4E9F0] text-[#1A2B3C]"} hover:border-[#007B5F]/50 active:scale-[0.99]`;
     }
 
-    if (idx === selectedIdx) {
+    if (isSelected) {
       if (opt.correct) {
         return `${base} bg-[#00A896]/12 border-[#00A896] text-[#00A896]`;
       } else {
@@ -156,9 +182,14 @@ export default function QuestionCard({
   };
 
   const getOptionIcon = (idx: number, opt: MCQOption): string => {
-    if (!answered) return String.fromCharCode(65 + idx);
-    if (idx === selectedIdx && opt.correct) return "✓";
-    if (idx === selectedIdx && !opt.correct) return "✗";
+    const isSelected = selectedIdxs.has(idx);
+    if (!answered) {
+      return isSelected
+        ? (isMulti ? "☑" : "●")
+        : (isMulti ? "☐" : String.fromCharCode(65 + idx));
+    }
+    if (isSelected && opt.correct) return "✓";
+    if (isSelected && !opt.correct) return "✗";
     if (opt.correct) return "✓";
     return String.fromCharCode(65 + idx);
   };
@@ -265,31 +296,55 @@ export default function QuestionCard({
               <p className="text-[#1A2B3C] text-sm leading-relaxed">{question.answer}</p>
             </div>
           )}
-          {!isOpenAnswer && options.map((opt, idx) => (
-            <button
-              key={idx}
-              onClick={() => handleSelect(idx)}
-              disabled={answered}
-              className={getOptionStyle(idx, opt)}
-            >
-              <span
-                className={`w-6 h-6 rounded flex-shrink-0 flex items-center justify-center text-xs font-bold border font-mono ${
-                  !answered
-                    ? "bg-[#F7F9FC] border-[#E4E9F0] text-[#4A5568]"
-                    : idx === selectedIdx && opt.correct
-                    ? "bg-[#00A896]/20 border-[#00A896] text-[#00A896]"
-                    : idx === selectedIdx && !opt.correct
-                    ? "bg-[#D64545]/20 border-[#D64545] text-[#D64545]"
-                    : opt.correct
-                    ? "bg-[#00A896]/10 border-[#00A896]/50 text-[#00A896]"
-                    : "bg-[#F7F9FC] border-[#E4E9F0]/40 text-[#A0AEC0]"
-                }`}
+          {!isOpenAnswer && isMulti && !answered && (
+            <p className="text-[11px] text-[#F4A261] font-semibold mb-1">
+              ⓘ {lang === "de" ? `Mehrfachantwort (${nCorrect} richtig)` : `Multi-select (${nCorrect} correct)`}
+            </p>
+          )}
+          {!isOpenAnswer && options.map((opt, idx) => {
+            const isSelected = selectedIdxs.has(idx);
+            return (
+              <button
+                key={idx}
+                onClick={() => handleSelect(idx)}
+                disabled={answered}
+                className={getOptionStyle(idx, opt)}
               >
-                {getOptionIcon(idx, opt)}
-              </span>
-              <span className="flex-1">{opt.text}</span>
+                <span
+                  className={`w-6 h-6 rounded flex-shrink-0 flex items-center justify-center text-xs font-bold border font-mono ${
+                    !answered
+                      ? isSelected
+                        ? "bg-[#007B5F]/15 border-[#007B5F] text-[#007B5F]"
+                        : "bg-[#F7F9FC] border-[#E4E9F0] text-[#4A5568]"
+                      : isSelected && opt.correct
+                      ? "bg-[#00A896]/20 border-[#00A896] text-[#00A896]"
+                      : isSelected && !opt.correct
+                      ? "bg-[#D64545]/20 border-[#D64545] text-[#D64545]"
+                      : opt.correct
+                      ? "bg-[#00A896]/10 border-[#00A896]/50 text-[#00A896]"
+                      : "bg-[#F7F9FC] border-[#E4E9F0]/40 text-[#A0AEC0]"
+                  }`}
+                >
+                  {getOptionIcon(idx, opt)}
+                </span>
+                <div className="flex-1 flex flex-col items-start gap-1.5">
+                  {opt.image_url && (
+                    <img src={opt.image_url} alt="" className="max-h-24 object-contain rounded border border-[#E4E9F0]" />
+                  )}
+                  <span>{opt.text}</span>
+                </div>
+              </button>
+            );
+          })}
+          {!isOpenAnswer && isMulti && !answered && (
+            <button
+              onClick={handleSubmitMulti}
+              disabled={selectedIdxs.size === 0}
+              className="w-full mt-2 py-3 bg-[#F4A261] hover:bg-[#FFC97A] text-[#1A0E00] rounded font-bold text-sm transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {lang === "de" ? "Antwort prüfen" : "Check Answer"}
             </button>
-          ))}
+          )}
         </div>
 
         {/* Explanation — shown after answering */}

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
-import { generateWrongOptions, buildMCQOptions, buildMCQFromStored } from '@/lib/mcq'
+import { generateWrongOptions, buildMCQOptions, buildMCQFromStored, buildMCQFromChoices } from '@/lib/mcq'
+import type { StoredChoice } from '@/lib/mcq'
 import { VIENNA_EXAM_PARTS } from '@/lib/topics'
 
 /**
@@ -200,27 +201,33 @@ export async function GET(req: NextRequest) {
   return NextResponse.json(attachOptions(data || []))
 }
 
-/** Attach shuffled MCQ options to each question. image_url comes from DB. */
+/** Attach shuffled MCQ options + n_correct to each question. image_url comes from DB. */
 function attachOptions(questions: Record<string, unknown>[]) {
   return questions.map((q) => {
     const answer = (q.answer as string) || ''
     const topic = (q.topic as string) || ''
     const question = (q.question as string) || ''
     const storedDistractors = (q.distractors as string[]) || []
+    const storedChoices = q.choices as StoredChoice[] | null | undefined
 
     let options
-    if (storedDistractors.length >= 3) {
-      // Use pre-generated AI distractors from DB
+    let nCorrect = 0
+    if (Array.isArray(storedChoices) && storedChoices.length >= 2) {
+      // New path: structured choices from Anki re-import (preserves multi-correct)
+      options = buildMCQFromChoices(storedChoices)
+      nCorrect = storedChoices.filter(c => c.correct).length
+    } else if (storedDistractors.length >= 3) {
+      // Legacy path: single correct + stored distractors
       options = buildMCQFromStored(answer, storedDistractors)
+      nCorrect = 1
     } else {
-      // Fallback: try auto-generation (returns null if can't generate quality options)
       const wrong = generateWrongOptions(question, answer, topic)
       options = buildMCQOptions(answer, wrong)
+      nCorrect = options ? 1 : 0
     }
 
-    // image_url is stored in the DB — pass it through directly
-    // options: null means show in open-answer mode (no MCQ)
-    return { ...q, options }
+    // options: null → open-answer mode
+    return { ...q, options, n_correct: nCorrect }
   })
 }
 

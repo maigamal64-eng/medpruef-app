@@ -73,6 +73,7 @@ interface Question {
   difficulty: number;
   exam_dates: string[];
   options?: MCQOption[];
+  n_correct?: number;
   image_url?: string;
 }
 
@@ -118,7 +119,8 @@ function ExamContent() {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loadProgress, setLoadProgress] = useState(0);
   const [currentIdx, setCurrentIdx] = useState(0);
-  const [answers, setAnswers] = useState<Record<number, number>>({}); // questionIndex → optionIndex
+  const [answers, setAnswers] = useState<Record<number, number[]>>({}); // questionIndex → selected option indices (multi-select)
+  const [pendingSelection, setPendingSelection] = useState<Set<number>>(new Set()); // current question's tentative selection (multi)
   const [timeLeft, setTimeLeft] = useState(EXAM_DURATION_S);
   const [reviewIdx, setReviewIdx] = useState(0);
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
@@ -253,6 +255,11 @@ function ExamContent() {
     setPhase("exam");
   }, [examSource, selectedPart, customFilters, buildCustomParams]);
 
+  // Clear pending multi-select when moving between questions
+  useEffect(() => {
+    setPendingSelection(new Set());
+  }, [currentIdx]);
+
   // Timer management
   useEffect(() => {
     if (phase === "exam") {
@@ -277,9 +284,30 @@ function ExamContent() {
     };
   }, [phase]);
 
+  // Determine if the current question is multi-correct
+  const isMultiQ = (q?: Question) => (q?.n_correct ?? (q?.options?.filter(o => o.correct).length ?? 0)) >= 2;
+
   const handleSelectOption = (optIdx: number) => {
     if (answers[currentIdx] !== undefined) return; // already answered
-    setAnswers((prev) => ({ ...prev, [currentIdx]: optIdx }));
+    const q = questions[currentIdx];
+    if (isMultiQ(q)) {
+      // Multi-select: toggle in pending
+      setPendingSelection(prev => {
+        const next = new Set(prev);
+        if (next.has(optIdx)) next.delete(optIdx); else next.add(optIdx);
+        return next;
+      });
+    } else {
+      // Single-correct: commit immediately
+      setAnswers((prev) => ({ ...prev, [currentIdx]: [optIdx] }));
+    }
+  };
+
+  const handleSubmitMulti = () => {
+    if (answers[currentIdx] !== undefined) return;
+    if (pendingSelection.size === 0) return;
+    setAnswers(prev => ({ ...prev, [currentIdx]: Array.from(pendingSelection).sort() }));
+    setPendingSelection(new Set());
   };
 
   const handleSubmitExam = () => {
@@ -288,24 +316,36 @@ function ExamContent() {
     setPhase("results");
   };
 
+  /**
+   * Strict grading: a question is correct when the selected option indices
+   * exactly match the set of correct option indices (full credit, no partial).
+   */
+  const isQuestionCorrect = (q: Question | undefined, selected: number[] | undefined): boolean => {
+    if (!q?.options || !selected || selected.length === 0) return false;
+    const correctIdxs = q.options
+      .map((o, i) => o.correct ? i : -1)
+      .filter(i => i >= 0);
+    if (selected.length !== correctIdxs.length) return false;
+    const selSet = new Set(selected);
+    return correctIdxs.every(i => selSet.has(i));
+  };
+
   // Compute results grouped by topic
   const computeResults = (): TopicResult[] => {
     const map: Record<string, { total: number; correct: number }> = {};
     questions.forEach((q, idx) => {
       if (!map[q.topic]) map[q.topic] = { total: 0, correct: 0 };
       map[q.topic].total += 1;
-      const selectedOpt = answers[idx];
-      if (selectedOpt !== undefined && q.options?.[selectedOpt]?.correct) {
+      if (isQuestionCorrect(q, answers[idx])) {
         map[q.topic].correct += 1;
       }
     });
     return Object.entries(map).map(([topic, v]) => ({ topic, ...v }));
   };
 
-  const totalCorrect = Object.entries(answers).filter(([idxStr, optIdx]) => {
-    const q = questions[parseInt(idxStr)];
-    return q?.options?.[optIdx]?.correct;
-  }).length;
+  const totalCorrect = Object.entries(answers).filter(([idxStr, selected]) =>
+    isQuestionCorrect(questions[parseInt(idxStr)], selected)
+  ).length;
 
   const overallPct = questions.length > 0 ? totalCorrect / questions.length : 0;
   const passed = overallPct >= PASS_THRESHOLD;
@@ -599,8 +639,11 @@ function ExamContent() {
     const rq = questions[reviewIdx];
     if (!rq) return null;
     const rcfg = getTopicConfig(rq.topic);
-    const userOpt = answers[reviewIdx];
+    const userSelections = answers[reviewIdx];
+    const userSet = new Set(userSelections || []);
     const opts = rq.options || [{ text: rq.answer, correct: true }];
+    const wasAnswered = userSelections !== undefined && userSelections.length > 0;
+    const wasCorrect = wasAnswered && isQuestionCorrect(rq, userSelections);
 
     return (
       <div className="app-layout">
@@ -637,15 +680,15 @@ function ExamContent() {
                   {rcfg.icon} {rq.topic}
                 </span>
                 <span className={`text-xs font-medium font-mono px-2 py-0.5 rounded ${
-                  userOpt !== undefined && opts[userOpt]?.correct
+                  wasCorrect
                     ? "bg-[#00A896]/15 text-[#00A896]"
-                    : userOpt !== undefined
+                    : wasAnswered
                     ? "bg-[#D64545]/15 text-[#D64545]"
                     : "bg-[#F7F9FC] text-[#A0AEC0]"
                 }`}>
-                  {userOpt === undefined
+                  {!wasAnswered
                     ? t("unanswered", lang)
-                    : opts[userOpt]?.correct
+                    : wasCorrect
                     ? `✓ ${t("correct", lang)}`
                     : `✗ ${t("wrong", lang)}`}
                 </span>
@@ -655,18 +698,24 @@ function ExamContent() {
 
               <div className="space-y-2">
                 {opts.map((opt, oi) => {
+                  const wasSelected = userSet.has(oi);
                   let style = "w-full text-left px-4 py-3 border rounded text-sm font-medium flex items-center gap-3 ";
-                  if (oi === userOpt && opt.correct) style += "bg-[#00A896]/12 border-[#00A896] text-[#00A896]";
-                  else if (oi === userOpt && !opt.correct) style += "bg-[#D64545]/12 border-[#D64545] text-[#D64545]";
+                  if (wasSelected && opt.correct) style += "bg-[#00A896]/12 border-[#00A896] text-[#00A896]";
+                  else if (wasSelected && !opt.correct) style += "bg-[#D64545]/12 border-[#D64545] text-[#D64545]";
                   else if (opt.correct) style += "bg-[#00A896]/8 border-[#00A896]/60 text-[#00A896]/80";
                   else style += "bg-[#FFFFFF] border-[#E4E9F0]/40 text-[#A0AEC0] opacity-50";
 
                   return (
                     <div key={oi} className={style}>
                       <span className="w-6 h-6 rounded border flex-shrink-0 flex items-center justify-center text-xs font-bold font-mono border-current">
-                        {oi === userOpt && opt.correct ? "✓" : oi === userOpt ? "✗" : opt.correct ? "✓" : String.fromCharCode(65 + oi)}
+                        {wasSelected && opt.correct ? "✓" : wasSelected ? "✗" : opt.correct ? "✓" : String.fromCharCode(65 + oi)}
                       </span>
-                      <span className="flex-1">{opt.text}</span>
+                      <div className="flex-1 flex flex-col items-start gap-1.5">
+                        {opt.image_url && (
+                          <img src={opt.image_url} alt="" className="max-h-24 object-contain rounded border border-[#E4E9F0]" />
+                        )}
+                        <span>{opt.text}</span>
+                      </div>
                     </div>
                   );
                 })}
@@ -806,8 +855,13 @@ function ExamContent() {
   if (!q) return null;
   const qCfg = getTopicConfig(q.topic);
   const qOpts = q.options || [{ text: q.answer, correct: true }];
-  const selectedOpt = answers[currentIdx];
-  const qAnswered = selectedOpt !== undefined;
+  const selectedForQ = answers[currentIdx];
+  const qAnswered = selectedForQ !== undefined;
+  const qSelectedSet = new Set(selectedForQ || []);
+  const qPendingSet = pendingSelection;
+  const qIsMulti = isMultiQ(q);
+  const qNCorrect = q.n_correct ?? qOpts.filter(o => o.correct).length;
+  const qWasCorrect = qAnswered && isQuestionCorrect(q, selectedForQ);
   const answeredCount = Object.keys(answers).length;
   const timerWarning = timeLeft < 600; // last 10 minutes
 
@@ -862,16 +916,26 @@ function ExamContent() {
               {q.question}
             </p>
 
+            {qIsMulti && !qAnswered && (
+              <p className="text-[11px] text-[#F4A261] font-semibold mb-2">
+                ⓘ {lang === "de" ? `Mehrfachantwort (${qNCorrect} richtig)` : `Multi-select (${qNCorrect} correct)`}
+              </p>
+            )}
             <div className="space-y-2">
               {qOpts.map((opt, oi) => {
+                const isSelPre = qPendingSet.has(oi);       // pre-submit (multi)
+                const isSelPost = qSelectedSet.has(oi);     // post-submit
+                const isSel = qAnswered ? isSelPost : isSelPre;
                 let style =
                   "w-full text-left px-4 py-3 border text-sm font-medium transition-all duration-200 flex items-center gap-3 rounded ";
 
                 if (!qAnswered) {
-                  style += "bg-[#FFFFFF] border-[#E4E9F0] text-[#1A2B3C] hover:border-[#007B5F]/50 hover:bg-[#FFFFFF] active:scale-[0.99]";
-                } else if (oi === selectedOpt && opt.correct) {
+                  style += isSel
+                    ? "bg-[#007B5F]/8 border-[#007B5F]/60 text-[#1A2B3C] active:scale-[0.99]"
+                    : "bg-[#FFFFFF] border-[#E4E9F0] text-[#1A2B3C] hover:border-[#007B5F]/50 active:scale-[0.99]";
+                } else if (isSelPost && opt.correct) {
                   style += "bg-[#00A896]/12 border-[#00A896] text-[#00A896]";
-                } else if (oi === selectedOpt && !opt.correct) {
+                } else if (isSelPost && !opt.correct) {
                   style += "bg-[#D64545]/12 border-[#D64545] text-[#D64545]";
                 } else if (opt.correct) {
                   style += "bg-[#00A896]/8 border-[#00A896]/60 text-[#00A896]/80";
@@ -880,10 +944,12 @@ function ExamContent() {
                 }
 
                 const icon = !qAnswered
-                  ? String.fromCharCode(65 + oi)
-                  : oi === selectedOpt && opt.correct
+                  ? isSel
+                    ? (qIsMulti ? "☑" : "●")
+                    : (qIsMulti ? "☐" : String.fromCharCode(65 + oi))
+                  : isSelPost && opt.correct
                   ? "✓"
-                  : oi === selectedOpt
+                  : isSelPost
                   ? "✗"
                   : opt.correct
                   ? "✓"
@@ -899,10 +965,12 @@ function ExamContent() {
                     <span
                       className={`w-6 h-6 rounded flex-shrink-0 flex items-center justify-center text-xs font-bold border font-mono ${
                         !qAnswered
-                          ? "bg-[#F7F9FC] border-[#E4E9F0] text-[#4A5568]"
-                          : oi === selectedOpt && opt.correct
+                          ? isSel
+                            ? "bg-[#007B5F]/15 border-[#007B5F] text-[#007B5F]"
+                            : "bg-[#F7F9FC] border-[#E4E9F0] text-[#4A5568]"
+                          : isSelPost && opt.correct
                           ? "bg-[#00A896]/20 border-[#00A896] text-[#00A896]"
-                          : oi === selectedOpt
+                          : isSelPost
                           ? "bg-[#D64545]/20 border-[#D64545] text-[#D64545]"
                           : opt.correct
                           ? "bg-[#00A896]/10 border-[#00A896]/50 text-[#00A896]"
@@ -911,11 +979,36 @@ function ExamContent() {
                     >
                       {icon}
                     </span>
-                    <span className="flex-1">{opt.text}</span>
+                    <div className="flex-1 flex flex-col items-start gap-1.5">
+                      {opt.image_url && (
+                        <img src={opt.image_url} alt="" className="max-h-24 object-contain rounded border border-[#E4E9F0]" />
+                      )}
+                      <span>{opt.text}</span>
+                    </div>
                   </button>
                 );
               })}
+              {qIsMulti && !qAnswered && (
+                <button
+                  onClick={handleSubmitMulti}
+                  disabled={qPendingSet.size === 0}
+                  className="w-full mt-2 py-3 bg-[#F4A261] hover:bg-[#FFC97A] text-[#1A0E00] rounded font-bold text-sm transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  {lang === "de" ? "Antwort prüfen" : "Check Answer"}
+                </button>
+              )}
             </div>
+
+            {/* Post-submit feedback (multi-correct) */}
+            {qAnswered && qIsMulti && (
+              <div className={`mt-3 px-3 py-2 rounded text-xs font-semibold ${
+                qWasCorrect ? "bg-[#00A896]/10 text-[#00A896]" : "bg-[#D64545]/10 text-[#D64545]"
+              }`}>
+                {qWasCorrect
+                  ? (lang === "de" ? "✓ Alle richtig!" : "✓ All correct!")
+                  : (lang === "de" ? "✗ Nicht vollständig richtig (strikt bewertet)" : "✗ Not fully correct (strict grading)")}
+              </div>
+            )}
 
             {/* Explanation in exam mode */}
             {qAnswered && q.explanation && (
