@@ -114,7 +114,9 @@ export async function GET(req: NextRequest) {
   const sb = getServiceClient()
   const sp = req.nextUrl.searchParams
 
-  const limit = parseInt(sp.get('limit') || '1')
+  const rawLimit = sp.get('limit')
+  const limit = rawLimit ? parseInt(rawLimit) : 1
+  const limitExplicit = rawLimit !== null
   const userId = sp.get('userId')
   const countOnlyRaw = sp.get('countOnly')
   const countOnly = countOnlyRaw === '1' || countOnlyRaw === 'true'
@@ -145,7 +147,9 @@ export async function GET(req: NextRequest) {
   if (filters.ids.length > 0) {
     let q = sb.from('questions').select('*').eq('is_active', true)
     q = applyFilters(q, filters)
-    const { data, error } = await q.limit(Math.min(limit || filters.ids.length, 500))
+    // When no explicit limit is passed, return all matching ids (capped at 500).
+    const effectiveLimit = limitExplicit ? limit : filters.ids.length
+    const { data, error } = await q.limit(Math.min(effectiveLimit, 500))
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json(attachOptions(data || []))
   }
