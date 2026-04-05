@@ -45,4 +45,5 @@ extracted-images/
 optimized-images/
 design-reference/
 sip-anki.apkg
+*.apkg
 anki_import.py

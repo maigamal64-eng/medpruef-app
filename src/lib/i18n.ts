@@ -18,7 +18,7 @@ const translations = {
   'quick_start': { de: 'Schnellstart — Zufälliges Thema', en: 'Quick Start — Random Topic' },
   'specialties': { de: 'Fachgebiete', en: 'Specialties' },
   'connection_error': { de: 'Verbindungsfehler', en: 'Connection error' },
-  'exam_prep': { de: 'Deutsche Medizinprüfung Vorbereitung', en: 'German Medical Exam Preparation' },
+  'exam_prep': { de: 'Österreichische Kenntnisprüfung Vorbereitung (Wien)', en: 'Austrian Kenntnisprüfung Preparation (Vienna)' },
   'open_in_telegram': { de: 'Öffne diese App in Telegram für den vollen Zugang.', en: 'Open this app in Telegram for full access.' },
   'questions_in_topics': { de: 'Fragen in', en: 'questions in' },
   'topics_label': { de: 'Fachgebieten', en: 'specialties' },
@@ -156,6 +156,22 @@ const translations = {
   'practice_sip5': { de: 'SIP 5 üben', en: 'Practice SIP 5' },
   'all_parts': { de: 'Alle Teile', en: 'All Parts' },
   'exam_part_selector': { de: 'Prüfungsteil wählen', en: 'Choose Exam Part' },
+
+  // Custom exam builder
+  'custom_exam': { de: 'Eigene', en: 'Custom' },
+  'custom_exam_label': { de: 'Eigene Auswahl — filtern', en: 'Custom — filter questions' },
+  'custom_subjects': { de: 'Fachgebiete', en: 'Subjects' },
+  'custom_tags': { de: 'Tags (Komma-getrennt)', en: 'Tags (comma-separated)' },
+  'custom_date_range': { de: 'Prüfungsdatum (Zeitraum)', en: 'Exam date range' },
+  'custom_date_from': { de: 'Von', en: 'From' },
+  'custom_date_to': { de: 'Bis', en: 'To' },
+  'custom_bookmarks_only': { de: 'Nur gemerkte Fragen', en: 'Bookmarked only' },
+  'custom_notes_only': { de: 'Nur Fragen mit Notizen', en: 'Questions with notes only' },
+  'custom_size': { de: 'Anzahl Fragen', en: 'Number of questions' },
+  'custom_search_label': { de: 'Im Text suchen', en: 'Search in text' },
+  'custom_matching': { de: 'passende Fragen', en: 'matching questions' },
+  'custom_no_matches': { de: 'Keine passenden Fragen', en: 'No matching questions' },
+  'custom_loading_count': { de: 'Zählt…', en: 'Counting…' },
 
   // Stats enhancements
   'study_time_est': { de: 'Geschätzte Lernzeit', en: 'Estimated Study Time' },

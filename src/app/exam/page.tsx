@@ -14,7 +14,55 @@ import LanguageToggle from "@/components/LanguageToggle";
 
 type Lang = "de" | "en";
 type ExamPhase = "entry" | "loading" | "exam" | "results" | "review";
-type ExamPart = "all" | "sip4" | "sip5";
+type ExamPart = "all" | "sip4" | "sip5" | "custom";
+
+interface CustomFilters {
+  subjects: string[];
+  tags: string;
+  dateFrom: string;
+  dateTo: string;
+  bookmarksOnly: boolean;
+  notesOnly: boolean;
+  search: string;
+  limit: number;
+}
+
+const DEFAULT_CUSTOM_FILTERS: CustomFilters = {
+  subjects: [],
+  tags: "",
+  dateFrom: "",
+  dateTo: "",
+  bookmarksOnly: false,
+  notesOnly: false,
+  search: "",
+  limit: 50,
+};
+
+function readBookmarkIds(): number[] {
+  if (typeof window === "undefined") return [];
+  const raw = localStorage.getItem("medpruef_favorites");
+  if (!raw) return [];
+  try {
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr)) return [];
+    return arr.map((x) => (typeof x === "number" ? x : parseInt(String(x), 10))).filter((n) => Number.isFinite(n));
+  } catch {
+    return [];
+  }
+}
+
+function readNoteIds(): number[] {
+  if (typeof window === "undefined") return [];
+  const out: number[] = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k?.startsWith("medpruef_notes_")) {
+      const id = parseInt(k.replace("medpruef_notes_", ""), 10);
+      if (Number.isFinite(id)) out.push(id);
+    }
+  }
+  return out;
+}
 
 interface Question {
   id: number;
@@ -74,6 +122,9 @@ function ExamContent() {
   const [timeLeft, setTimeLeft] = useState(EXAM_DURATION_S);
   const [reviewIdx, setReviewIdx] = useState(0);
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
+  const [customFilters, setCustomFilters] = useState<CustomFilters>(DEFAULT_CUSTOM_FILTERS);
+  const [customCount, setCustomCount] = useState<number | null>(null);
+  const [customCounting, setCustomCounting] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -90,27 +141,103 @@ function ExamContent() {
     setLangState(l);
   };
 
+  /**
+   * Build URLSearchParams from custom filter state.
+   * Bookmarks/notes are client-side localStorage filters — their IDs are
+   * resolved here and intersected into the `ids` param.
+   */
+  const buildCustomParams = useCallback((f: CustomFilters) => {
+    const p = new URLSearchParams({ examSource });
+    if (f.subjects.length > 0) p.set("topics", f.subjects.join(","));
+    const tagList = f.tags.split(",").map((s) => s.trim()).filter(Boolean);
+    if (tagList.length > 0) p.set("tags", tagList.join(","));
+    if (f.dateFrom) p.set("examDateFrom", f.dateFrom);
+    if (f.dateTo) p.set("examDateTo", f.dateTo);
+    if (f.search.trim()) p.set("search", f.search.trim());
+    // Client-only filters: intersect bookmark & note ID lists
+    let ids: number[] | null = null;
+    if (f.bookmarksOnly) ids = readBookmarkIds();
+    if (f.notesOnly) {
+      const noteIds = readNoteIds();
+      ids = ids ? ids.filter((x) => noteIds.includes(x)) : noteIds;
+    }
+    return { params: p, ids };
+  }, [examSource]);
+
+  // Debounced live count preview for custom exam builder
+  useEffect(() => {
+    if (selectedPart !== "custom") {
+      setCustomCount(null);
+      return;
+    }
+    setCustomCounting(true);
+    const handle = setTimeout(async () => {
+      try {
+        const { params, ids } = buildCustomParams(customFilters);
+        params.set("countOnly", "1");
+        if (ids !== null) {
+          if (ids.length === 0) { setCustomCount(0); setCustomCounting(false); return; }
+          params.set("ids", ids.join(","));
+        }
+        const res = await fetch(`/api/questions?${params}`);
+        const data = await res.json();
+        setCustomCount(typeof data.count === "number" ? data.count : 0);
+      } catch {
+        setCustomCount(0);
+      } finally {
+        setCustomCounting(false);
+      }
+    }, 300);
+    return () => clearTimeout(handle);
+  }, [selectedPart, customFilters, buildCustomParams]);
+
   const loadExam = useCallback(async () => {
     setPhase("loading");
     setLoadProgress(0);
     const allQuestions: Question[] = [];
 
-    const partTopics = selectedPart !== "all" ? VIENNA_EXAM_PARTS[selectedPart] : null;
-    const configToUse = partTopics
-      ? EXAM_CONFIG.filter((c) => partTopics.includes(c.topic))
-      : EXAM_CONFIG;
-
-    for (let i = 0; i < configToUse.length; i++) {
-      const { topic, count } = configToUse[i];
+    if (selectedPart === "custom") {
+      // Single filtered fetch
       try {
-        const params = new URLSearchParams({ topic, limit: String(count), examSource });
+        const { params, ids } = buildCustomParams(customFilters);
+        params.set("limit", String(customFilters.limit));
+        if (ids !== null) {
+          if (ids.length === 0) {
+            setQuestions([]);
+            setAnswers({});
+            setCurrentIdx(0);
+            setTimeLeft(EXAM_DURATION_S);
+            setPhase("exam");
+            return;
+          }
+          params.set("ids", ids.join(","));
+        }
+        setLoadProgress(40);
         const res = await fetch(`/api/questions?${params}`);
         const data: Question[] = await res.json();
-        allQuestions.push(...data);
+        if (Array.isArray(data)) allQuestions.push(...data);
+        setLoadProgress(90);
       } catch {
-        // If a topic fails, continue with others
+        // swallow — proceed with empty set
       }
-      setLoadProgress(Math.round(((i + 1) / configToUse.length) * 100));
+    } else {
+      const partTopics = selectedPart !== "all" ? VIENNA_EXAM_PARTS[selectedPart] : null;
+      const configToUse = partTopics
+        ? EXAM_CONFIG.filter((c) => partTopics.includes(c.topic))
+        : EXAM_CONFIG;
+
+      for (let i = 0; i < configToUse.length; i++) {
+        const { topic, count } = configToUse[i];
+        try {
+          const params = new URLSearchParams({ topic, limit: String(count), examSource });
+          const res = await fetch(`/api/questions?${params}`);
+          const data: Question[] = await res.json();
+          allQuestions.push(...data);
+        } catch {
+          // If a topic fails, continue with others
+        }
+        setLoadProgress(Math.round(((i + 1) / configToUse.length) * 100));
+      }
     }
 
     // Shuffle for realism
@@ -124,7 +251,7 @@ function ExamContent() {
     setCurrentIdx(0);
     setTimeLeft(EXAM_DURATION_S);
     setPhase("exam");
-  }, [examSource, selectedPart]);
+  }, [examSource, selectedPart, customFilters, buildCustomParams]);
 
   // Timer management
   useEffect(() => {
@@ -206,24 +333,32 @@ function ExamContent() {
                 <p className="text-[#A0AEC0] text-sm">{t("exam_sim_desc", lang)}</p>
               </div>
 
-              {/* Exam info cards */}
-              <div className="grid grid-cols-2 gap-3 mb-6">
-                {EXAM_CONFIG.map(({ topic, count }) => {
-                  const cfg = getTopicConfig(topic);
-                  return (
-                    <div
-                      key={topic}
-                      className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-3 flex items-center gap-3"
-                    >
-                      <span className="text-xl">{cfg.icon}</span>
-                      <div className="min-w-0">
-                        <p className="text-xs font-medium text-[#1A2B3C] truncate">{topic}</p>
-                        <p className="text-[10px] text-[#A0AEC0] font-mono">{count} {t("questions", lang)}</p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+              {/* Exam info cards — filtered by selected part (hidden in custom mode, replaced by filter panel) */}
+              {selectedPart !== "custom" && (() => {
+                const displayedConfig =
+                  selectedPart === "sip4" || selectedPart === "sip5"
+                    ? EXAM_CONFIG.filter((c) => VIENNA_EXAM_PARTS[selectedPart].includes(c.topic))
+                    : EXAM_CONFIG;
+                return (
+                  <div className="grid grid-cols-2 gap-3 mb-6">
+                    {displayedConfig.map(({ topic, count }) => {
+                      const cfg = getTopicConfig(topic);
+                      return (
+                        <div
+                          key={topic}
+                          className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-3 flex items-center gap-3"
+                        >
+                          <span className="text-xl">{cfg.icon}</span>
+                          <div className="min-w-0">
+                            <p className="text-xs font-medium text-[#1A2B3C] truncate">{topic}</p>
+                            <p className="text-[10px] text-[#A0AEC0] font-mono">{count} {t("questions", lang)}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
 
               {/* SIP part selector — only shown for SIP exam source */}
               {examSource === "SIP" && (
@@ -231,8 +366,8 @@ function ExamContent() {
                   <p className="text-xs text-[#A0AEC0] font-semibold uppercase tracking-wider mb-2 text-center">
                     {t("exam_part_selector", lang)}
                   </p>
-                  <div className="grid grid-cols-3 gap-2">
-                    {(["all", "sip4", "sip5"] as ExamPart[]).map((p) => (
+                  <div className="grid grid-cols-4 gap-2">
+                    {(["all", "sip4", "sip5", "custom"] as ExamPart[]).map((p) => (
                       <button
                         key={p}
                         onClick={() => setSelectedPart(p)}
@@ -242,11 +377,17 @@ function ExamContent() {
                             : "bg-[#FFFFFF] border-[#E4E9F0] text-[#4A5568] hover:border-[#F4A261]/40"
                         }`}
                       >
-                        {p === "all" ? t("all_parts", lang) : p === "sip4" ? "SIP 4" : "SIP 5"}
+                        {p === "all"
+                          ? t("all_parts", lang)
+                          : p === "sip4"
+                          ? "SIP 4"
+                          : p === "sip5"
+                          ? "SIP 5"
+                          : t("custom_exam", lang)}
                       </button>
                     ))}
                   </div>
-                  {selectedPart !== "all" && (
+                  {selectedPart === "sip4" || selectedPart === "sip5" ? (
                     <p className="text-[10px] text-[#A0AEC0] text-center mt-2">
                       {selectedPart === "sip4" ? t("sip4_label", lang) : t("sip5_label", lang)}
                       {" · "}
@@ -255,7 +396,157 @@ function ExamContent() {
                       ).reduce((s, c) => s + c.count, 0)}{" "}
                       {t("questions", lang)}
                     </p>
-                  )}
+                  ) : null}
+                </div>
+              )}
+
+              {/* Custom filter panel */}
+              {selectedPart === "custom" && (
+                <div className="mb-6 bg-[#FFFFFF] border border-[#E4E9F0] rounded p-4 space-y-4">
+                  <p className="text-xs text-[#A0AEC0] font-semibold uppercase tracking-wider">
+                    {t("custom_exam_label", lang)}
+                  </p>
+
+                  {/* Subjects multi-select */}
+                  <div>
+                    <label className="block text-xs font-semibold text-[#4A5568] mb-2">
+                      {t("custom_subjects", lang)}
+                    </label>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {EXAM_CONFIG.map(({ topic }) => {
+                        const checked = customFilters.subjects.includes(topic);
+                        return (
+                          <label
+                            key={topic}
+                            className={`flex items-center gap-2 px-2 py-1.5 rounded border cursor-pointer text-xs transition-colors ${
+                              checked
+                                ? "bg-[#F4A261]/10 border-[#F4A261]/40 text-[#1A2B3C]"
+                                : "bg-[#F7F9FC] border-[#E4E9F0] text-[#4A5568] hover:border-[#F4A261]/30"
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={(e) => {
+                                setCustomFilters((f) => ({
+                                  ...f,
+                                  subjects: e.target.checked
+                                    ? [...f.subjects, topic]
+                                    : f.subjects.filter((s) => s !== topic),
+                                }));
+                              }}
+                              className="w-3 h-3 accent-[#F4A261]"
+                            />
+                            <span className="truncate">{topic}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Tags input */}
+                  <div>
+                    <label className="block text-xs font-semibold text-[#4A5568] mb-1.5">
+                      {t("custom_tags", lang)}
+                    </label>
+                    <input
+                      type="text"
+                      value={customFilters.tags}
+                      onChange={(e) => setCustomFilters((f) => ({ ...f, tags: e.target.value }))}
+                      placeholder="cardio, sip4a"
+                      className="w-full px-3 py-2 text-xs border border-[#E4E9F0] rounded focus:outline-none focus:border-[#F4A261]"
+                    />
+                  </div>
+
+                  {/* Date range */}
+                  <div>
+                    <label className="block text-xs font-semibold text-[#4A5568] mb-1.5">
+                      {t("custom_date_range", lang)}
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="month"
+                        value={customFilters.dateFrom}
+                        onChange={(e) => setCustomFilters((f) => ({ ...f, dateFrom: e.target.value }))}
+                        className="flex-1 px-3 py-2 text-xs border border-[#E4E9F0] rounded focus:outline-none focus:border-[#F4A261]"
+                      />
+                      <span className="text-xs text-[#A0AEC0]">—</span>
+                      <input
+                        type="month"
+                        value={customFilters.dateTo}
+                        onChange={(e) => setCustomFilters((f) => ({ ...f, dateTo: e.target.value }))}
+                        className="flex-1 px-3 py-2 text-xs border border-[#E4E9F0] rounded focus:outline-none focus:border-[#F4A261]"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Toggles */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <label className="flex items-center gap-2 px-3 py-2 rounded border border-[#E4E9F0] bg-[#F7F9FC] text-xs text-[#4A5568] cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={customFilters.bookmarksOnly}
+                        onChange={(e) => setCustomFilters((f) => ({ ...f, bookmarksOnly: e.target.checked }))}
+                        className="w-3 h-3 accent-[#F4A261]"
+                      />
+                      <span>{t("custom_bookmarks_only", lang)}</span>
+                    </label>
+                    <label className="flex items-center gap-2 px-3 py-2 rounded border border-[#E4E9F0] bg-[#F7F9FC] text-xs text-[#4A5568] cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={customFilters.notesOnly}
+                        onChange={(e) => setCustomFilters((f) => ({ ...f, notesOnly: e.target.checked }))}
+                        className="w-3 h-3 accent-[#F4A261]"
+                      />
+                      <span>{t("custom_notes_only", lang)}</span>
+                    </label>
+                  </div>
+
+                  {/* Search */}
+                  <div>
+                    <label className="block text-xs font-semibold text-[#4A5568] mb-1.5">
+                      {t("custom_search_label", lang)}
+                    </label>
+                    <input
+                      type="text"
+                      value={customFilters.search}
+                      onChange={(e) => setCustomFilters((f) => ({ ...f, search: e.target.value }))}
+                      placeholder={t("search_placeholder", lang)}
+                      className="w-full px-3 py-2 text-xs border border-[#E4E9F0] rounded focus:outline-none focus:border-[#F4A261]"
+                    />
+                  </div>
+
+                  {/* Exam size slider */}
+                  <div>
+                    <label className="block text-xs font-semibold text-[#4A5568] mb-1.5">
+                      {t("custom_size", lang)}: <span className="font-mono text-[#F4A261]">{customFilters.limit}</span>
+                    </label>
+                    <input
+                      type="range"
+                      min={10}
+                      max={200}
+                      step={10}
+                      value={customFilters.limit}
+                      onChange={(e) => setCustomFilters((f) => ({ ...f, limit: parseInt(e.target.value, 10) }))}
+                      className="w-full accent-[#F4A261]"
+                    />
+                  </div>
+
+                  {/* Live count */}
+                  <div className="pt-3 border-t border-[#E4E9F0] text-center">
+                    {customCounting ? (
+                      <p className="text-xs text-[#A0AEC0] font-mono">{t("custom_loading_count", lang)}</p>
+                    ) : customCount === 0 ? (
+                      <p className="text-xs text-[#D64545] font-semibold">{t("custom_no_matches", lang)}</p>
+                    ) : (
+                      <p className="text-xs text-[#4A5568]">
+                        <span className="font-mono font-bold text-[#F4A261] text-base">
+                          ≈ {customCount ?? "—"}
+                        </span>{" "}
+                        {t("custom_matching", lang)}
+                      </p>
+                    )}
+                  </div>
                 </div>
               )}
 
@@ -266,9 +557,15 @@ function ExamContent() {
 
               <button
                 onClick={loadExam}
-                className="w-full bg-[#F4A261] hover:bg-[#FFC97A] text-[#1A0E00] py-4 rounded font-bold text-base transition-all active:scale-[0.98]"
+                disabled={selectedPart === "custom" && (customCount === null || customCount === 0)}
+                className="w-full bg-[#F4A261] hover:bg-[#FFC97A] text-[#1A0E00] py-4 rounded font-bold text-base transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-[#F4A261]"
               >
                 🎓 {t("start_exam", lang)}
+                {selectedPart === "custom" && customCount !== null && customCount > 0 && (
+                  <span className="ml-2 font-mono text-sm opacity-70">
+                    ({Math.min(customCount, customFilters.limit)})
+                  </span>
+                )}
               </button>
             </div>
           </div>

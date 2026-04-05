@@ -23,6 +23,7 @@ import DailyGoalRing from "@/components/DailyGoalRing";
 import ExamSelector from "@/components/ExamSelector";
 import Onboarding from "@/components/Onboarding";
 import SearchBar from "@/components/SearchBar";
+import TelegramLoginWidget, { type TelegramWidgetUser } from "@/components/TelegramLoginWidget";
 import SearchResults from "@/components/SearchResults";
 import { getWeakTopics, type TopicStats } from "@/lib/weakness";
 import Link from "next/link";
@@ -94,6 +95,38 @@ export default function Home() {
         setShowOnboarding(true);
       }
     } catch {}
+  }, []);
+
+  // Bot deep-link login: if URL carries ?tg_token=..., exchange it for a session.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    const tgToken = url.searchParams.get("tg_token");
+    if (!tgToken) return;
+    (async () => {
+      try {
+        const res = await fetch("/api/auth", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tokenExchange: tgToken }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          storeSession({ user: data.user, gamification: data.gamification });
+          // Remove the one-time token from the URL so a refresh can't replay it.
+          url.searchParams.delete("tg_token");
+          window.history.replaceState({}, "", url.toString());
+          // Reload so the rest of the app picks up the new session.
+          window.location.reload();
+        } else {
+          // Clear the bad token from the URL regardless
+          url.searchParams.delete("tg_token");
+          window.history.replaceState({}, "", url.toString());
+        }
+      } catch {
+        // ignore
+      }
+    })();
   }, []);
 
   const switchLang = (l: Lang) => {
@@ -509,6 +542,22 @@ function DemoHome({
     [examSource]
   );
 
+  const handleWidgetAuth = useCallback(async (wu: TelegramWidgetUser) => {
+    try {
+      const res = await fetch("/api/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ widgetData: wu }),
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      storeSession({ user: data.user, gamification: data.gamification });
+      window.location.reload();
+    } catch (e) {
+      console.error("Widget auth failed", e);
+    }
+  }, []);
+
   const handleGuestContinue = () => {
     const guestId = `guest_${Date.now()}`;
     const session = {
@@ -709,8 +758,18 @@ function DemoHome({
               : "Sign in with Telegram or continue as guest"}
           </p>
 
+          {/* Telegram Login Widget (web/desktop primary, iframe-based) */}
+          <div className="flex justify-center mb-3">
+            <TelegramLoginWidget
+              botName="MedPruefBot"
+              onAuth={handleWidgetAuth}
+              buttonSize="large"
+              cornerRadius={6}
+            />
+          </div>
+
           <div className="flex flex-col sm:flex-row gap-3">
-            {/* Telegram deep link button */}
+            {/* Telegram deep link button (mobile / in-bot fallback) */}
             <a
               href="https://t.me/MedPruefBot?start=web_login"
               target="_blank"

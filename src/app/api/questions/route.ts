@@ -16,24 +16,144 @@ function applyExamSourceFilter(query: any, examSource: string | null) {
   return query.eq('source_file', examSource)
 }
 
+interface FilterParams {
+  examSource: string | null
+  topic: string | null
+  topics: string[]
+  part: 'sip4' | 'sip5' | null
+  tag: string | null
+  tags: string[]
+  search: string | null
+  ids: number[]
+  examDateFrom: string | null
+  examDateTo: string | null
+}
+
+/**
+ * Build enumerated list of YYYY-MM month strings between `from` and `to`, inclusive.
+ * Capped at 48 entries (4 years) to keep the overlap array bounded.
+ * If only one bound is present, extends 12 months in the unbounded direction.
+ */
+function buildMonthRange(from?: string | null, to?: string | null): string[] {
+  const MAX = 48
+  const re = /^(\d{4})-(\d{2})$/
+  const parse = (s: string | null | undefined): [number, number] | null => {
+    if (!s) return null
+    const m = s.match(re)
+    if (!m) return null
+    return [parseInt(m[1], 10), parseInt(m[2], 10)]
+  }
+  let start = parse(from)
+  let end = parse(to)
+  if (!start && !end) return []
+  if (start && !end) end = [start[0] + 1, start[1]]
+  if (end && !start) start = [end[0] - 1, end[1]]
+  const out: string[] = []
+  let [y, m] = start!
+  const [ey, em] = end!
+  while (out.length < MAX) {
+    out.push(`${y}-${String(m).padStart(2, '0')}`)
+    if (y > ey || (y === ey && m >= em)) break
+    m += 1
+    if (m > 12) { m = 1; y += 1 }
+  }
+  return out
+}
+
+function parseCsv(value: string | null): string[] {
+  if (!value) return []
+  return value.split(',').map((s) => s.trim()).filter(Boolean)
+}
+
+function parseIdsCsv(value: string | null): number[] {
+  if (!value) return []
+  return value
+    .split(',')
+    .map((s) => parseInt(s.trim(), 10))
+    .filter((n) => Number.isFinite(n))
+}
+
+/**
+ * Apply all filters uniformly to a Supabase query builder.
+ * Used by both count and data queries so they stay in sync.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function applyFilters(query: any, p: FilterParams) {
+  query = applyExamSourceFilter(query, p.examSource)
+  // topics (plural) takes precedence over topic (singular)
+  if (p.topics.length > 0) {
+    query = query.in('topic', p.topics)
+  } else if (p.topic && p.topic !== 'random') {
+    query = query.eq('topic', p.topic)
+  }
+  if (p.part && VIENNA_EXAM_PARTS[p.part]) {
+    query = query.in('topic', VIENNA_EXAM_PARTS[p.part])
+  }
+  // tags (plural, AND) takes precedence over tag (singular)
+  if (p.tags.length > 0) {
+    query = query.contains('tags', p.tags)
+  } else if (p.tag) {
+    query = query.contains('tags', [p.tag])
+  }
+  if (p.ids.length > 0) {
+    query = query.in('id', p.ids)
+  }
+  if (p.examDateFrom || p.examDateTo) {
+    const months = buildMonthRange(p.examDateFrom, p.examDateTo)
+    if (months.length > 0) query = query.overlaps('exam_dates', months)
+  }
+  if (p.search) {
+    // Escape % and , to minimize .or() parsing breakage
+    const safe = p.search.replace(/[,%]/g, ' ')
+    query = query.or(`question.ilike.%${safe}%,answer.ilike.%${safe}%`)
+  }
+  return query
+}
+
 export async function GET(req: NextRequest) {
   const sb = getServiceClient()
-  const topic = req.nextUrl.searchParams.get('topic')
-  const limit = parseInt(req.nextUrl.searchParams.get('limit') || '1')
-  const userId = req.nextUrl.searchParams.get('userId')
-  const examSource = req.nextUrl.searchParams.get('examSource') || 'SIP'
-  const search = req.nextUrl.searchParams.get('search')
-  const tag = req.nextUrl.searchParams.get('tag')
-  const part = req.nextUrl.searchParams.get('part') as 'sip4' | 'sip5' | null
+  const sp = req.nextUrl.searchParams
+
+  const limit = parseInt(sp.get('limit') || '1')
+  const userId = sp.get('userId')
+  const countOnlyRaw = sp.get('countOnly')
+  const countOnly = countOnlyRaw === '1' || countOnlyRaw === 'true'
+
+  const filters: FilterParams = {
+    examSource: sp.get('examSource') || 'SIP',
+    topic: sp.get('topic'),
+    topics: parseCsv(sp.get('topics')),
+    part: sp.get('part') as 'sip4' | 'sip5' | null,
+    tag: sp.get('tag'),
+    tags: parseCsv(sp.get('tags')),
+    search: sp.get('search'),
+    ids: parseIdsCsv(sp.get('ids')),
+    examDateFrom: sp.get('examDateFrom'),
+    examDateTo: sp.get('examDateTo'),
+  }
+
+  // countOnly short-circuit — returns { count } without question payloads
+  if (countOnly) {
+    let cq = sb.from('questions').select('id', { count: 'exact', head: true }).eq('is_active', true)
+    cq = applyFilters(cq, filters)
+    const { count, error } = await cq
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ count: count || 0 })
+  }
+
+  // Explicit selection mode (ids) returns matching questions directly, skipping spaced-rep
+  if (filters.ids.length > 0) {
+    let q = sb.from('questions').select('*').eq('is_active', true)
+    q = applyFilters(q, filters)
+    const { data, error } = await q.limit(Math.min(limit || filters.ids.length, 500))
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json(attachOptions(data || []))
+  }
 
   // Search mode: text search across question + answer columns
-  if (search) {
+  if (filters.search) {
     let query = sb.from('questions').select('*').eq('is_active', true)
-    query = applyExamSourceFilter(query, examSource)
-    if (topic && topic !== 'random') query = query.eq('topic', topic)
-    if (part && VIENNA_EXAM_PARTS[part]) query = query.in('topic', VIENNA_EXAM_PARTS[part])
-    if (tag) query = query.contains('tags', [tag])
-    query = query.or(`question.ilike.%${search}%,answer.ilike.%${search}%`)
+    query = applyFilters(query, filters)
     const { data, error } = await query.limit(Math.min(limit, 30))
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json(attachOptions(data || []))
@@ -51,9 +171,9 @@ export async function GET(req: NextRequest) {
     const { data: progress } = await reviewQuery
 
     if (progress && progress.length > 0) {
-      const ids = progress.map(p => p.question_id)
-      let q = sb.from('questions').select('*').in('id', ids)
-      q = applyExamSourceFilter(q, examSource)
+      const reviewIds = progress.map((p) => p.question_id)
+      let q = sb.from('questions').select('*').in('id', reviewIds)
+      q = applyExamSourceFilter(q, filters.examSource)
       const { data } = await q
       if (data && data.length > 0) return NextResponse.json(attachOptions(data))
     }
@@ -61,10 +181,7 @@ export async function GET(req: NextRequest) {
 
   // Get count for random offset
   let countQuery = sb.from('questions').select('id', { count: 'exact', head: true }).eq('is_active', true)
-  countQuery = applyExamSourceFilter(countQuery, examSource)
-  if (topic && topic !== 'random') countQuery = countQuery.eq('topic', topic)
-  if (part && VIENNA_EXAM_PARTS[part]) countQuery = countQuery.in('topic', VIENNA_EXAM_PARTS[part])
-  if (tag) countQuery = countQuery.contains('tags', [tag])
+  countQuery = applyFilters(countQuery, filters)
   const { count } = await countQuery
 
   if (!count) return NextResponse.json([])
@@ -72,10 +189,7 @@ export async function GET(req: NextRequest) {
   const offset = Math.floor(Math.random() * Math.max(1, count - limit))
 
   let query = sb.from('questions').select('*').eq('is_active', true)
-  query = applyExamSourceFilter(query, examSource)
-  if (topic && topic !== 'random') query = query.eq('topic', topic)
-  if (part && VIENNA_EXAM_PARTS[part]) query = query.in('topic', VIENNA_EXAM_PARTS[part])
-  if (tag) query = query.contains('tags', [tag])
+  query = applyFilters(query, filters)
   const { data, error } = await query.range(offset, offset + limit - 1)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

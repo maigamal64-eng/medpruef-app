@@ -50,7 +50,7 @@ export default function AboutPage() {
             <div className="w-20 h-20 rounded border border-[#007B5F]/30 bg-[#007B5F]/10 flex items-center justify-center text-4xl mx-auto mb-4">
               <img src="/brand/logo-mark.png" alt="MedPrüf" className="w-12 h-12" />
             </div>
-            <img src="/brand/logo-brandmark.png" alt="MedPrüf" className="h-10 mx-auto" />
+            <img src="/brand/logo-full.png" alt="MedPrüf" className="h-10 mx-auto" />
             <p className="text-[#4A5568] text-base">
               {lang === "de"
                 ? "Deine Lernplattform für die Kenntnisprüfung"
@@ -60,7 +60,7 @@ export default function AboutPage() {
 
           {/* Authority Seal */}
           <div className="text-center mb-6">
-            <img src="/brand/authority-seal.png" alt="MedPrüf Official Seal" className="w-32 mx-auto" />
+            <img src="/brand/seal.png" alt="MedPrüf Official Seal" className="w-32 mx-auto" />
           </div>
 
           {/* What is MedPrüf */}
@@ -70,8 +70,8 @@ export default function AboutPage() {
             </h2>
             <p className="text-[#4A5568] text-sm leading-relaxed">
               {lang === "de"
-                ? "MedPrüf ist eine spezialisierte Lernplattform für ausländische Ärztinnen und Ärzte, die sich auf die deutsche Kenntnisprüfung vorbereiten. Mit über 7.000 Übungsfragen aus allen relevanten Fachgebieten helfen wir dir, die Prüfung erfolgreich zu bestehen."
-                : "MedPrüf is a specialized learning platform for foreign doctors preparing for the German Kenntnisprüfung (Knowledge Examination). With over 7,000 practice questions across all relevant specialties, we help you pass the exam successfully."}
+                ? "MedPrüf ist eine spezialisierte Lernplattform für ausländische Ärztinnen und Ärzte, die sich auf die österreichische Kenntnisprüfung (Wien) vorbereiten. Mit über 7.000 Übungsfragen aus allen relevanten Fachgebieten helfen wir dir, die Prüfung erfolgreich zu bestehen."
+                : "MedPrüf is a specialized learning platform for foreign doctors preparing for the Austrian Kenntnisprüfung (Vienna). With over 7,000 practice questions across all relevant specialties, we help you pass the exam successfully."}
             </p>
           </div>
 
@@ -84,13 +84,13 @@ export default function AboutPage() {
               {(lang === "de"
                 ? [
                     "Ärztinnen und Ärzte mit ausländischem Abschluss",
-                    "Approbationssuchende in Deutschland und Österreich",
+                    "Approbationssuchende in Österreich (Wien)",
                     "Mediziner, die die Kenntnisprüfung ablegen müssen",
                     "Alle, die ihr medizinisches Wissen auffrischen möchten",
                   ]
                 : [
                     "Doctors with foreign medical degrees",
-                    "Those seeking medical licensure (Approbation) in Germany/Austria",
+                    "Those seeking medical licensure (Approbation) in Austria (Vienna)",
                     "Physicians required to take the Kenntnisprüfung",
                     "Anyone looking to refresh their medical knowledge",
                   ]
@@ -110,8 +110,8 @@ export default function AboutPage() {
             </h2>
             <p className="text-[#4A5568] text-sm leading-relaxed mb-3">
               {lang === "de"
-                ? "Die Kenntnisprüfung ist eine staatliche Prüfung für Ärzte mit ausländischer Ausbildung. Sie prüft, ob die medizinischen Kenntnisse dem Stand der deutschen Approbationsordnung entsprechen."
-                : "The Kenntnisprüfung is a state examination for doctors with foreign training. It tests whether medical knowledge meets the standards of the German Approbationsordnung (medical licensing regulation)."}
+                ? "Die Kenntnisprüfung ist eine staatliche Prüfung für Ärzte mit ausländischer Ausbildung. Sie prüft, ob die medizinischen Kenntnisse dem Stand der österreichischen Ärzteausbildungsordnung (ÄAO) entsprechen."
+                : "The Kenntnisprüfung is a state examination for doctors with foreign training. It tests whether medical knowledge meets the standards of the Austrian Ärzteausbildungsordnung (ÄAO)."}
             </p>
             <div className="grid grid-cols-2 gap-3">
               {[
@@ -157,8 +157,8 @@ export default function AboutPage() {
             </h2>
             <p className="text-[#4A5568] text-sm leading-relaxed mb-4">
               {lang === "de"
-                ? "MedPrüf wird von einem engagierten Team entwickelt, das selbst Erfahrung mit der Approbation in Deutschland hat. Wir wissen, wie herausfordernd dieser Prozess ist."
-                : "MedPrüf is developed by a dedicated team with firsthand experience in German medical licensure. We understand how challenging this process can be."}
+                ? "MedPrüf wird von einem engagierten Team entwickelt, das selbst Erfahrung mit der Approbation in Österreich hat. Wir wissen, wie herausfordernd dieser Prozess ist."
+                : "MedPrüf is developed by a dedicated team with firsthand experience in Austrian medical licensure. We understand how challenging this process can be."}
             </p>
             <div className="flex flex-wrap gap-2">
               {[

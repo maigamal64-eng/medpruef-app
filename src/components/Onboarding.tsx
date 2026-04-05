@@ -129,9 +129,9 @@ export default function Onboarding({ lang = "de", onComplete }: OnboardingProps)
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full mx-4 overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full mx-4 max-h-[90vh] flex flex-col overflow-hidden">
         {/* Progress indicator */}
-        <div className="px-8 pt-8">
+        <div className="px-8 pt-8 shrink-0">
           <div className="flex items-center justify-between mb-8">
             {steps.map((_, index) => (
               <div key={index} className="flex items-center">
@@ -161,7 +161,7 @@ export default function Onboarding({ lang = "de", onComplete }: OnboardingProps)
         </div>
 
         {/* Content */}
-        <div className="px-8 pb-8">
+        <div className="px-8 flex-1 overflow-y-auto">
           <div className="text-center mb-8">
             <div className="w-16 h-16 rounded-full bg-[#129B7F]/10 flex items-center justify-center mx-auto mb-4">
               <currentStepData.icon className="w-8 h-8 text-[#129B7F]" />
@@ -182,7 +182,7 @@ export default function Onboarding({ lang = "de", onComplete }: OnboardingProps)
                   <div className="flex items-center justify-between">
                     <div>
                       <h3 className="font-semibold text-[#152B4E]">SIP Staatsexamen</h3>
-                      <p className="text-sm text-gray-600">Staatsprüfung für Medizin in Deutschland</p>
+                      <p className="text-sm text-gray-600">Kenntnisprüfung Medizin (Wien, Österreich)</p>
                     </div>
                     <div className="w-6 h-6 rounded-full border-2 border-[#129B7F] bg-[#129B7F] flex items-center justify-center">
                       <CheckCircle2 className="w-4 h-4 text-white" />
@@ -267,35 +267,36 @@ export default function Onboarding({ lang = "de", onComplete }: OnboardingProps)
               </div>
             )}
           </div>
+          <div className="h-4" />
+        </div>
 
-          {/* Navigation */}
-          <div className="flex items-center justify-between mt-8 pt-6 border-t border-gray-100">
-            <button
-              onClick={handleBack}
-              disabled={currentStep === 0}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
-                currentStep === 0
-                  ? "text-gray-400 cursor-not-allowed"
-                  : "text-gray-600 hover:text-gray-800"
-              }`}
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Zurück
-            </button>
+        {/* Navigation */}
+        <div className="px-8 py-4 border-t border-gray-100 shrink-0 flex items-center justify-between bg-white">
+          <button
+            onClick={handleBack}
+            disabled={currentStep === 0}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+              currentStep === 0
+                ? "text-gray-400 cursor-not-allowed"
+                : "text-gray-600 hover:text-gray-800"
+            }`}
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Zurück
+          </button>
 
-            <button
-              onClick={handleNext}
-              disabled={!canProceed()}
-              className={`flex items-center gap-2 px-6 py-2 rounded-lg font-medium transition-all ${
-                canProceed()
-                  ? "bg-[#129B7F] text-white hover:bg-[#129B7F]/90"
-                  : "bg-gray-200 text-gray-400 cursor-not-allowed"
-              }`}
-            >
-              {isLastStep ? "Starten" : "Weiter"}
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          </div>
+          <button
+            onClick={handleNext}
+            disabled={!canProceed()}
+            className={`flex items-center gap-2 px-6 py-2 rounded-lg font-medium transition-all ${
+              canProceed()
+                ? "bg-[#129B7F] text-white hover:bg-[#129B7F]/90"
+                : "bg-gray-200 text-gray-400 cursor-not-allowed"
+            }`}
+          >
+            {isLastStep ? "Starten" : "Weiter"}
+            <ArrowRight className="w-4 h-4" />
+          </button>
         </div>
       </div>
     </div>

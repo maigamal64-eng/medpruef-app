@@ -21,10 +21,10 @@ export const metadata: Metadata = {
     apple: "/apple-touch-icon.png",
   },
   title: "MedPrüf — Prüfungsvorbereitung",
-  description: "Deutsche Medizinprüfung Vorbereitung — SIP Staatsexamen",
+  description: "Österreichische Kenntnisprüfung Vorbereitung (Wien) — SIP 4 & SIP 5",
   openGraph: {
     title: "MedPrüf — Prüfungsvorbereitung",
-    description: "Bereite dich optimal auf die deutsche Medizinprüfung vor",
+    description: "Bereite dich optimal auf die Wiener Kenntnisprüfung vor",
     images: [{ url: "/brand/og-image.png", width: 1200, height: 630 }],
   },
 };
