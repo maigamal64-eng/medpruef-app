@@ -446,15 +446,17 @@ def parse_all_notes(db_path: str, media_url_map: dict) -> tuple:
         if len(explanation) > 2500:
             explanation = explanation[:2500] + '...'
 
-        # Question-level images: look only in question_html, fall back to first choice image
+        # Collect images from ALL fields: question, choices, explanation
         q_imgs = extract_img_srcs(question_html)
-        q_urls = [media_url_map[s] for s in q_imgs if s in media_url_map]
-        if not q_urls:
-            # pick first choice with image
-            for c in choices:
-                if c.get('image_url'):
-                    q_urls = [c['image_url']]
-                    break
+        expl_imgs = extract_img_srcs(extra1)
+        all_imgs_raw = q_imgs + expl_imgs
+        all_urls = [media_url_map[s] for s in all_imgs_raw if s in media_url_map]
+        # Also pick from choice images
+        for c in choices:
+            if c.get('image_url') and c['image_url'] not in all_urls:
+                all_urls.append(c['image_url'])
+        # Primary image: question first, then explanation, then choice
+        q_urls = all_urls
 
         # Map topic: Title → prefix lookup (reliable), then regex fallback on question
         topic = map_topic_by_title(title)
@@ -529,8 +531,14 @@ def parse_all_notes(db_path: str, media_url_map: dict) -> tuple:
             if len(explanation) > 2500:
                 explanation = explanation[:2500] + '...'
 
-            q_imgs = extract_img_srcs(q_html)
-            q_urls = [media_url_map[s] for s in q_imgs if s in media_url_map]
+            # Collect images from ALL fields: front, back (answer), notizen (explanation)
+            all_imgs = (extract_img_srcs(q_html)
+                        + extract_img_srcs(a_html)
+                        + extract_img_srcs(notes_html))
+            q_urls = [media_url_map[s] for s in all_imgs if s in media_url_map]
+            # Deduplicate preserving order
+            seen_urls = set()
+            q_urls = [u for u in q_urls if not (u in seen_urls or seen_urls.add(u))]
 
             # Detect inline choices: A) ... B) ... C) ...
             has_inline = bool(INLINE_CHOICE_RE.search(question_text))
@@ -634,8 +642,8 @@ def parse_all_notes(db_path: str, media_url_map: dict) -> tuple:
             raw_tags = (tags_str or '').strip().split()
             clean = clean_tags(raw_tags, None, 0) + [label.lower().replace('+', 'plus'), 'open-answer']
             clean = list(dict.fromkeys(clean))
-            q_imgs = extract_img_srcs(fields[0])
-            q_urls = [media_url_map[s] for s in q_imgs if s in media_url_map]
+            all_imgs = extract_img_srcs(fields[0]) + extract_img_srcs(fields[1] if len(fields) > 1 else '')
+            q_urls = list(dict.fromkeys(media_url_map[s] for s in all_imgs if s in media_url_map))
             out.append({
                 'anki_note_id': nid,
                 'topic': map_topic('', raw_tags) or 'Sonstige',
