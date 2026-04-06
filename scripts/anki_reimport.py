@@ -855,6 +855,13 @@ def upload_media(needed_origs: set, media_map_inv: dict, extract_dir: str,
         try:
             with open(path, 'rb') as f:
                 data = f.read()
+            # Anki 2.1.54+ stores media as zstd-compressed. Decompress if needed.
+            if data[:4] == b'\x28\xb5\x2f\xfd':  # zstd magic bytes
+                try:
+                    dctx = zstandard.ZstdDecompressor()
+                    data = dctx.decompress(data, max_output_size=50_000_000)
+                except Exception:
+                    pass  # not actually zstd, use as-is
             r = requests.post(f"{url}/{sp}", data=data,
                               headers={**hdr, "Content-Type": mime, "x-upsert": "true"},
                               timeout=45)
