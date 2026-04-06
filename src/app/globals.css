@@ -306,9 +306,9 @@ body {
 .sidebar {
   width: 260px;
   flex-shrink: 0;
-  background: #FFFFFF;
-  border-right: 1px solid rgba(228, 233, 240, 0.6);
-  box-shadow: 2px 0 12px rgba(0,27,61,0.04);
+  background: #001B3D;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 2px 0 12px rgba(0,27,61,0.15);
   position: sticky;
   top: 0;
   height: 100vh;
@@ -317,6 +317,11 @@ body {
   transition: transform 0.3s ease, width 0.3s ease;
   z-index: 20;
 }
+
+/* Dark sidebar scrollbar */
+.sidebar::-webkit-scrollbar { width: 4px; }
+.sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+.sidebar::-webkit-scrollbar-track { background: transparent; }
 
 .main-content { flex: 1; min-width: 0; padding-bottom: 0; }
 

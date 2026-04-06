@@ -321,7 +321,11 @@ export default function Home() {
             <h1 className="text-2xl font-bold text-[#1A2B3C]">
               {t("hello", lang)}, {user.first_name}
             </h1>
-            <p className="text-sm text-[#A0AEC0]">{t("exam_prep", lang)}</p>
+            <p className="text-sm text-[#A0AEC0]">
+              {lang === "de"
+                ? "Kenntnisprufung-Vorbereitung (Wien)"
+                : "Austrian Kenntnisprufung Preparation (Vienna)"}
+            </p>
           </div>
           <div className="flex items-center gap-3">
             {/* Exam badge */}
@@ -331,6 +335,7 @@ export default function Home() {
             >
               {examSource}
             </button>
+            <div className="w-px h-6 bg-[#E4E9F0]" />
             <LanguageToggle lang={lang} onChange={switchLang} />
           </div>
         </div>
@@ -338,43 +343,45 @@ export default function Home() {
         <div className="px-4 lg:px-8 py-4">
           {/* Top Row: Stats + Daily Goal */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-            <DailyGoalRing
-              current={gam?.daily_questions_today || 0}
-              goal={user.daily_goal || 20}
-              lang={lang}
-            />
-            <StreakWidget streak={gam?.current_streak || 0} lang={lang} />
-            <div className="md:col-span-2 lg:col-span-1">
+            <div className="border-t-[3px] border-t-[#007B5F] rounded-2xl p-5 shadow-[var(--shadow-card)] bg-white">
+              <DailyGoalRing
+                current={gam?.daily_questions_today || 0}
+                goal={user.daily_goal || 20}
+                lang={lang}
+              />
+            </div>
+            <div className="border-t-[3px] border-t-[#F4A261] rounded-2xl p-5 shadow-[var(--shadow-card)] bg-white">
+              <StreakWidget streak={gam?.current_streak || 0} lang={lang} />
+            </div>
+            <div className="md:col-span-2 lg:col-span-1 border-t-[3px] border-t-[#003A8C] rounded-2xl p-5 shadow-[var(--shadow-card)] bg-white">
               <XPBar totalXp={gam?.total_xp || 0} lang={lang} />
             </div>
           </div>
 
           {/* Quick Actions */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+          <div className="grid grid-cols-3 gap-3 mb-6">
             <Link
               href={`/quiz?topic=random&userId=${user.id}&examSource=${examSource}`}
-              className="btn-primary flex items-center gap-3 px-5 py-4 text-base rounded-xl pulse-glow active:scale-[0.98]"
+              className="btn-primary flex items-center justify-center gap-3 px-5 py-4 text-base rounded-xl shadow-md pulse-glow active:scale-[0.98]"
             >
               <Shuffle className="w-5 h-5" />
               <span className="text-sm">{t("random_quiz", lang)}</span>
             </Link>
 
-            {topics.length > 0 && (
-              <Link
-                href={`/quiz?topic=${encodeURIComponent(topics[0].topic)}&userId=${user.id}&examSource=${examSource}`}
-                className="flex items-center gap-3 bg-[#FFFFFF] border border-[#E4E9F0] text-[#1A2B3C] px-5 py-4 rounded-xl font-medium hover:border-[#007B5F]/40 hover:shadow-md transition-all"
-              >
-                <PlayCircle className="w-5 h-5 flex-shrink-0 text-[#007B5F]" />
-                <span className="text-xs leading-tight">{t("continue_where_left", lang)}</span>
-              </Link>
-            )}
+            <Link
+              href={topics.length > 0 ? `/quiz?topic=${encodeURIComponent(topics[0].topic)}&userId=${user.id}&examSource=${examSource}` : "#"}
+              className="btn-secondary flex items-center justify-center gap-3 px-5 py-4 rounded-xl shadow-[var(--shadow-xs)] hover:shadow-md transition-all"
+            >
+              <PlayCircle className="w-5 h-5 flex-shrink-0 text-[#007B5F]" />
+              <span className="text-sm">{t("continue_where_left", lang)}</span>
+            </Link>
 
             <Link
               href={`/exam?examSource=${examSource}`}
-              className="flex items-center gap-3 bg-[#FFFFFF] border border-[#E4E9F0] text-[#1A2B3C] px-5 py-4 rounded-xl font-medium hover:border-[#007B5F]/40 hover:shadow-md transition-all"
+              className="btn-secondary flex items-center justify-center gap-3 px-5 py-4 rounded-xl shadow-[var(--shadow-xs)] hover:shadow-md transition-all"
             >
               <ClipboardList className="w-5 h-5 flex-shrink-0 text-[#003A8C]" />
-              <span className="text-xs">{t("mock_exam", lang)}</span>
+              <span className="text-sm">{t("mock_exam", lang)}</span>
             </Link>
           </div>
 
@@ -395,22 +402,22 @@ export default function Home() {
           {/* Topics Grid — hidden while searching */}
           {!searchQuery && (
             <div className="mb-6">
-              <h2 className="text-lg font-semibold mb-4 text-[#1A2B3C] border-l-[3px] border-[#007B5F] pl-3">{t("specialties", lang)}</h2>
+              <h2 className="text-lg font-bold mb-4 text-[#1A2B3C] border-l-[3px] border-l-[#007B5F] pl-3">{t("specialties", lang)}</h2>
 
               {examSource === "SIP" ? (
                 <>
                   {/* SIP quick-start buttons */}
-                  <div className="grid grid-cols-2 gap-2 mb-4">
+                  <div className="grid grid-cols-2 gap-3 mb-4">
                     <Link
                       href={`/exam?examSource=SIP&part=sip4`}
-                      className="flex items-center gap-2 bg-[#FFFFFF] border border-[#E4E9F0] hover:border-[#007B5F]/40 rounded px-3 py-2.5 text-sm font-medium text-[#1A2B3C] transition-all"
+                      className="btn-secondary flex items-center gap-2 rounded-xl px-4 py-3 text-sm transition-all hover:shadow-md"
                     >
                       <ClipboardList className="w-4 h-4 flex-shrink-0 text-[#F4A261]" />
                       <span className="truncate">{t("practice_sip4", lang)}</span>
                     </Link>
                     <Link
                       href={`/exam?examSource=SIP&part=sip5`}
-                      className="flex items-center gap-2 bg-[#FFFFFF] border border-[#E4E9F0] hover:border-[#007B5F]/40 rounded px-3 py-2.5 text-sm font-medium text-[#1A2B3C] transition-all"
+                      className="btn-secondary flex items-center gap-2 rounded-xl px-4 py-3 text-sm transition-all hover:shadow-md"
                     >
                       <ClipboardList className="w-4 h-4 flex-shrink-0 text-[#007B5F]" />
                       <span className="truncate">{t("practice_sip5", lang)}</span>
@@ -418,7 +425,7 @@ export default function Home() {
                   </div>
 
                   {/* SIP 4 section */}
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-[#F4A261] mb-3">
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-[#F4A261] mb-3 border-l-[3px] border-l-[#F4A261] pl-3">
                     {t("sip4_label", lang)}
                   </h3>
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-5 stagger">
@@ -438,7 +445,7 @@ export default function Home() {
                   </div>
 
                   {/* SIP 5 section */}
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-[#007B5F] mb-3">
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-[#007B5F] mb-3 border-l-[3px] border-l-[#007B5F] pl-3">
                     {t("sip5_label", lang)}
                   </h3>
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 stagger">
@@ -476,18 +483,24 @@ export default function Home() {
           )}
 
           {/* View Progress Link */}
-          <div className="mb-6 text-right">
-            <Link href="/stats" className="text-sm text-[#007B5F] hover:text-[#00A896] transition-colors font-medium">
-              {lang === "de" ? "Fortschritt ansehen" : "View Progress"} →
-            </Link>
-          </div>
+          <Link href="/progress" className="block text-center py-3 text-sm font-medium text-[#007B5F] hover:text-[#003A8C] transition-colors">
+            {lang === "de" ? "Fortschritt ansehen" : "View Full Progress"} &rarr;
+          </Link>
 
           {/* Mini Stats Row (mobile only) */}
-          <div className="grid grid-cols-4 gap-2 lg:hidden mb-6 stagger">
-            <StatsCard icon={<Zap className="w-4 h-4" />} value={gam?.total_xp || 0} label="XP" color="text-[#F4A261]" delay={0} />
-            <StatsCard icon={<Flame className="w-4 h-4" />} value={gam?.current_streak || 0} label={t("streak", lang)} color="text-[#D64545]" delay={50} />
-            <StatsCard icon={<CheckCircle className="w-4 h-4" />} value={`${accuracy}%`} label={t("accuracy", lang)} color="text-[#00A896]" delay={100} />
-            <StatsCard icon={<FileTextIcon className="w-4 h-4" />} value={gam?.total_questions_answered || 0} label={t("answered", lang)} color="text-[#007B5F]" delay={150} />
+          <div className="grid grid-cols-4 gap-2 lg:hidden mb-6 mt-4 stagger">
+            <div className="rounded-xl border-t-2 border-t-[#F4A261] bg-white shadow-[var(--shadow-xs)]">
+              <StatsCard icon={<Zap className="w-4 h-4" />} value={gam?.total_xp || 0} label="XP" color="text-[#F4A261]" delay={0} />
+            </div>
+            <div className="rounded-xl border-t-2 border-t-[#D64545] bg-white shadow-[var(--shadow-xs)]">
+              <StatsCard icon={<Flame className="w-4 h-4" />} value={gam?.current_streak || 0} label={t("streak", lang)} color="text-[#D64545]" delay={50} />
+            </div>
+            <div className="rounded-xl border-t-2 border-t-[#00A896] bg-white shadow-[var(--shadow-xs)]">
+              <StatsCard icon={<CheckCircle className="w-4 h-4" />} value={`${accuracy}%`} label={t("accuracy", lang)} color="text-[#00A896]" delay={100} />
+            </div>
+            <div className="rounded-xl border-t-2 border-t-[#007B5F] bg-white shadow-[var(--shadow-xs)]">
+              <StatsCard icon={<FileTextIcon className="w-4 h-4" />} value={gam?.total_questions_answered || 0} label={t("answered", lang)} color="text-[#007B5F]" delay={150} />
+            </div>
           </div>
         </div>
       </main>
@@ -636,7 +649,7 @@ function DemoHome({
           <div className="mt-6">
             <Link
               href={`/quiz?topic=random&examSource=${examSource}`}
-              className="btn-primary inline-flex items-center gap-3 px-7 py-3.5 text-base pulse-glow active:scale-[0.98]"
+              className="btn-primary inline-flex items-center gap-3 px-7 py-3.5 text-base shadow-md pulse-glow active:scale-[0.98]"
             >
               <Shuffle className="w-5 h-5" />
               {lang === "de" ? "Übung starten" : "Start Practice"}
@@ -662,22 +675,22 @@ function DemoHome({
       {/* Topics — hidden while searching */}
       {topics.length > 0 && !searchQuery && (
         <div className="px-4 pb-6 max-w-4xl mx-auto">
-          <h2 className="text-base font-semibold mb-3 text-[#1A2B3C]">{t("practice_topics", lang)}</h2>
+          <h2 className="text-lg font-bold mb-4 text-[#1A2B3C] border-l-[3px] border-l-[#007B5F] pl-3">{t("practice_topics", lang)}</h2>
 
           {examSource === "SIP" ? (
             <>
               {/* SIP quick-start buttons */}
-              <div className="grid grid-cols-2 gap-2 mb-4">
+              <div className="grid grid-cols-2 gap-3 mb-4">
                 <Link
                   href={`/exam?examSource=SIP&part=sip4`}
-                  className="flex items-center gap-2 bg-[#FFFFFF] border border-[#E4E9F0] hover:border-[#007B5F]/40 rounded px-3 py-2.5 text-sm font-medium text-[#1A2B3C] transition-all"
+                  className="btn-secondary flex items-center gap-2 rounded-xl px-4 py-3 text-sm transition-all hover:shadow-md"
                 >
                   <ClipboardList className="w-4 h-4 flex-shrink-0 text-[#F4A261]" />
                   <span className="truncate">{t("practice_sip4", lang)}</span>
                 </Link>
                 <Link
                   href={`/exam?examSource=SIP&part=sip5`}
-                  className="flex items-center gap-2 bg-[#FFFFFF] border border-[#E4E9F0] hover:border-[#007B5F]/40 rounded px-3 py-2.5 text-sm font-medium text-[#1A2B3C] transition-all"
+                  className="btn-secondary flex items-center gap-2 rounded-xl px-4 py-3 text-sm transition-all hover:shadow-md"
                 >
                   <ClipboardList className="w-4 h-4 flex-shrink-0 text-[#007B5F]" />
                   <span className="truncate">{t("practice_sip5", lang)}</span>
@@ -685,20 +698,22 @@ function DemoHome({
               </div>
 
               {/* SIP 4 group */}
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-[#F4A261] mb-2">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-[#F4A261] mb-3 border-l-[3px] border-l-[#F4A261] pl-3">
                 {t("sip4_label", lang)}
               </h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mb-4 stagger">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-5 stagger">
                 {topics.filter((tp) => VIENNA_EXAM_PARTS.sip4.includes(tp.topic)).map((tp, i) => {
                   const config = getTopicConfig(tp.topic);
                   return (
                     <Link
                       key={tp.topic}
                       href={`/quiz?topic=${encodeURIComponent(tp.topic)}&examSource=${examSource}`}
-                      className="card-interactive border-l-[3px] p-4 active:scale-[0.98]"
+                      className="card-interactive border-l-[3px] rounded-2xl p-5 active:scale-[0.98]"
                       style={{ borderLeftColor: config.color, animationDelay: `${i * 50}ms` }}
                     >
-                      <div className="mb-2"><TopicIcon name={config.icon} className="w-6 h-6" /></div>
+                      <div className="w-10 h-10 rounded-full flex items-center justify-center mb-3" style={{ backgroundColor: `${config.color}15` }}>
+                        <TopicIcon name={config.icon} className="w-5 h-5" style={{ color: config.color }} />
+                      </div>
                       <div className="text-sm font-semibold mb-1 text-[#1A2B3C]">{tp.topic}</div>
                       <div className="text-xs text-[#A0AEC0] font-mono">{tp.count} {t("questions", lang)}</div>
                     </Link>
@@ -707,20 +722,22 @@ function DemoHome({
               </div>
 
               {/* SIP 5 group */}
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-[#007B5F] mb-2">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-[#007B5F] mb-3 border-l-[3px] border-l-[#007B5F] pl-3">
                 {t("sip5_label", lang)}
               </h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 stagger">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 stagger">
                 {topics.filter((tp) => VIENNA_EXAM_PARTS.sip5.includes(tp.topic)).map((tp, i) => {
                   const config = getTopicConfig(tp.topic);
                   return (
                     <Link
                       key={tp.topic}
                       href={`/quiz?topic=${encodeURIComponent(tp.topic)}&examSource=${examSource}`}
-                      className="card-interactive border-l-[3px] p-4 active:scale-[0.98]"
+                      className="card-interactive border-l-[3px] rounded-2xl p-5 active:scale-[0.98]"
                       style={{ borderLeftColor: config.color, animationDelay: `${i * 50}ms` }}
                     >
-                      <div className="mb-2"><TopicIcon name={config.icon} className="w-6 h-6" /></div>
+                      <div className="w-10 h-10 rounded-full flex items-center justify-center mb-3" style={{ backgroundColor: `${config.color}15` }}>
+                        <TopicIcon name={config.icon} className="w-5 h-5" style={{ color: config.color }} />
+                      </div>
                       <div className="text-sm font-semibold mb-1 text-[#1A2B3C]">{tp.topic}</div>
                       <div className="text-xs text-[#A0AEC0] font-mono">{tp.count} {t("questions", lang)}</div>
                     </Link>
@@ -729,17 +746,19 @@ function DemoHome({
               </div>
             </>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 stagger">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 stagger">
               {topics.map((tp, i) => {
                 const config = getTopicConfig(tp.topic);
                 return (
                   <Link
                     key={tp.topic}
                     href={`/quiz?topic=${encodeURIComponent(tp.topic)}&examSource=${examSource}`}
-                    className="card-interactive border-l-[3px] p-4 active:scale-[0.98]"
+                    className="card-interactive border-l-[3px] rounded-2xl p-5 active:scale-[0.98]"
                     style={{ borderLeftColor: config.color, animationDelay: `${i * 50}ms` }}
                   >
-                    <div className="mb-2"><TopicIcon name={config.icon} className="w-6 h-6" /></div>
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center mb-3" style={{ backgroundColor: `${config.color}15` }}>
+                      <TopicIcon name={config.icon} className="w-5 h-5" style={{ color: config.color }} />
+                    </div>
                     <div className="text-sm font-semibold mb-1 text-[#1A2B3C]">{tp.topic}</div>
                     <div className="text-xs text-[#A0AEC0] font-mono">{tp.count} {t("questions", lang)}</div>
                   </Link>
