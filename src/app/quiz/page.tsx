@@ -32,6 +32,8 @@ function QuizContent() {
   const searchParams = useSearchParams();
   const topic = searchParams.get("topic") || "random";
   const examSource = searchParams.get("examSource") || "SIP";
+  const initialQuestionId = searchParams.get("questionId");
+  const [usedInitialId, setUsedInitialId] = useState(false);
 
   const [userId, setUserId] = useState<string>("");
   const [question, setQuestion] = useState<Question | null>(null);
@@ -71,6 +73,19 @@ function QuizContent() {
     setStartTime(Date.now());
 
     try {
+      // If we have an initial questionId from search and haven't used it yet, load that specific question
+      if (initialQuestionId && !usedInitialId) {
+        setUsedInitialId(true);
+        const params = new URLSearchParams({ ids: initialQuestionId, examSource });
+        const res = await fetch(`/api/questions?${params}`);
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          setQuestion(data[0]);
+          setLoading(false);
+          return;
+        }
+      }
+      // Default: fetch random question by topic
       const params = new URLSearchParams({ topic, limit: "1" });
       if (userId) params.set("userId", userId);
       params.set("examSource", examSource);
@@ -84,7 +99,7 @@ function QuizContent() {
     } finally {
       setLoading(false);
     }
-  }, [topic, userId, examSource]);
+  }, [topic, userId, examSource, initialQuestionId, usedInitialId]);
 
   useEffect(() => {
     if (userId !== undefined) fetchQuestion();
