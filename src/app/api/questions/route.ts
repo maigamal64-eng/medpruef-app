@@ -122,6 +122,8 @@ export async function GET(req: NextRequest) {
   const countOnlyRaw = sp.get('countOnly')
   const countOnly = countOnlyRaw === '1' || countOnlyRaw === 'true'
 
+  const mcqOnly = sp.get('mcqOnly') === '1' || sp.get('mcqOnly') === 'true'
+
   const filters: FilterParams = {
     examSource: sp.get('examSource') || 'SIP',
     topic: sp.get('topic'),
@@ -135,10 +137,15 @@ export async function GET(req: NextRequest) {
     examDateTo: sp.get('examDateTo'),
   }
 
+  // Helper: apply mcqOnly filter (questions must have structured choices JSONB, not null)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const withMcq = (q: any) => mcqOnly ? q.not('choices', 'is', null) : q
+
   // countOnly short-circuit — returns { count } without question payloads
   if (countOnly) {
     let cq = sb.from('questions').select('id', { count: 'exact', head: true }).eq('is_active', true)
     cq = applyFilters(cq, filters)
+    cq = withMcq(cq)
     const { count, error } = await cq
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json({ count: count || 0 })
@@ -148,6 +155,7 @@ export async function GET(req: NextRequest) {
   if (filters.ids.length > 0) {
     let q = sb.from('questions').select('*').eq('is_active', true)
     q = applyFilters(q, filters)
+    q = withMcq(q)
     // When no explicit limit is passed, return all matching ids (capped at 500).
     const effectiveLimit = limitExplicit ? limit : filters.ids.length
     const { data, error } = await q.limit(Math.min(effectiveLimit, 500))
@@ -159,6 +167,7 @@ export async function GET(req: NextRequest) {
   if (filters.search) {
     let query = sb.from('questions').select('*').eq('is_active', true)
     query = applyFilters(query, filters)
+    query = withMcq(query)
     const { data, error } = await query.limit(Math.min(limit, 30))
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json(attachOptions(data || []))
@@ -187,6 +196,7 @@ export async function GET(req: NextRequest) {
   // Get count for random offset
   let countQuery = sb.from('questions').select('id', { count: 'exact', head: true }).eq('is_active', true)
   countQuery = applyFilters(countQuery, filters)
+  countQuery = withMcq(countQuery)
   const { count } = await countQuery
 
   if (!count) return NextResponse.json([])
@@ -195,6 +205,7 @@ export async function GET(req: NextRequest) {
 
   let query = sb.from('questions').select('*').eq('is_active', true)
   query = applyFilters(query, filters)
+  query = withMcq(query)
   const { data, error } = await query.range(offset, offset + limit - 1)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

@@ -179,6 +179,7 @@ function ExamContent() {
       try {
         const { params, ids } = buildCustomParams(customFilters);
         params.set("countOnly", "1");
+        params.set("mcqOnly", "1");
         if (ids !== null) {
           if (ids.length === 0) { setCustomCount(0); setCustomCounting(false); return; }
           params.set("ids", ids.join(","));
@@ -205,6 +206,7 @@ function ExamContent() {
       try {
         const { params, ids } = buildCustomParams(customFilters);
         params.set("limit", String(customFilters.limit));
+        params.set("mcqOnly", "1");
         if (ids !== null) {
           if (ids.length === 0) {
             setQuestions([]);
@@ -233,7 +235,7 @@ function ExamContent() {
       for (let i = 0; i < configToUse.length; i++) {
         const { topic, count } = configToUse[i];
         try {
-          const params = new URLSearchParams({ topic, limit: String(count), examSource });
+          const params = new URLSearchParams({ topic, limit: String(count), examSource, mcqOnly: "1" });
           const res = await fetch(`/api/questions?${params}`);
           const data: Question[] = await res.json();
           allQuestions.push(...data);
