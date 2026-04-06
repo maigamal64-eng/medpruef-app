@@ -33,7 +33,7 @@ function QuizContent() {
   const topic = searchParams.get("topic") || "random";
   const examSource = searchParams.get("examSource") || "SIP";
   const initialQuestionId = searchParams.get("questionId");
-  const usedInitialIdRef = useRef(false);
+  const [initialLoaded, setInitialLoaded] = useState(false);
 
   const [userId, setUserId] = useState<string>("");
   const [question, setQuestion] = useState<Question | null>(null);
@@ -65,6 +65,23 @@ function QuizContent() {
     setLangState(l);
   };
 
+  // Load the specific question from search result (runs ONCE, independent of userId)
+  useEffect(() => {
+    if (!initialQuestionId || initialLoaded) return;
+    setInitialLoaded(true);
+    setLoading(true);
+    const params = new URLSearchParams({ ids: initialQuestionId, examSource });
+    fetch(`/api/questions?${params}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          setQuestion(data[0]);
+        }
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [initialQuestionId, examSource, initialLoaded]);
+
   const fetchQuestion = useCallback(async () => {
     setLoading(true);
     setAnswered(false);
@@ -73,19 +90,6 @@ function QuizContent() {
     setStartTime(Date.now());
 
     try {
-      // If we have an initial questionId from search and haven't used it yet, load that specific question
-      if (initialQuestionId && !usedInitialIdRef.current) {
-        usedInitialIdRef.current = true;
-        const params = new URLSearchParams({ ids: initialQuestionId, examSource });
-        const res = await fetch(`/api/questions?${params}`);
-        const data = await res.json();
-        if (Array.isArray(data) && data.length > 0) {
-          setQuestion(data[0]);
-          setLoading(false);
-          return;
-        }
-      }
-      // Default: fetch random question by topic
       const params = new URLSearchParams({ topic, limit: "1" });
       if (userId) params.set("userId", userId);
       params.set("examSource", examSource);
@@ -99,11 +103,13 @@ function QuizContent() {
     } finally {
       setLoading(false);
     }
-  }, [topic, userId, examSource, initialQuestionId]);
+  }, [topic, userId, examSource]);
 
+  // For non-search loads: fetch random question once userId resolves
   useEffect(() => {
+    if (initialQuestionId) return; // skip — handled by the initial-load effect above
     if (userId !== undefined) fetchQuestion();
-  }, [fetchQuestion, userId]);
+  }, [fetchQuestion, userId, initialQuestionId]);
 
   const handleAnswer = useCallback(
     async (isCorrect: boolean) => {
