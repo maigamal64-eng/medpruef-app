@@ -70,7 +70,7 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0, streak = 
       {/* Logo */}
       <div className="px-5 pt-6 pb-4 border-b border-white/[0.06]">
         <div className="flex items-center gap-3">
-          <img src="/brand/logo-mark.png" alt="MedPruf" className="w-9 h-9" />
+          <img src="/brand/logo-mark.png" alt="MedPruf" className="w-9 h-9" style={{ filter: 'brightness(0) invert(1)' }} />
           <div>
             <h1 className="text-base font-bold text-white tracking-tight">
               <span>Med</span><span className="text-[#00A896]">Pruf</span>
