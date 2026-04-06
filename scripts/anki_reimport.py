@@ -97,24 +97,73 @@ NT_CLOZE = 1695203452183
 # ───── Topic mapping (from Title / notetype hints) ──────────────────────────
 
 TOPIC_PATTERNS = [
-    (r'innere.?med|kardio|angiolog|endokrin|nephrolog|gastro|pneumolog|rheumatolog|infektiolog|hämatolog|onkolog|hämostaseolog', 'Innere Medizin'),
-    (r'chirurg|surger|operativ|unfallchirurg|orthop|mkg|mund.kiefer|neurochirurg', 'Chirurgische Fächer'),
-    (r'derma|venerolog|hauterkrank', 'Dermatologie und Venerologie'),
-    (r'neurolog(?!ie der|ical)', 'Neurologie'),
-    (r'psychiatr|psychosomat', 'Psychiatrie'),
-    (r'frauen|gyn(?:äkolog)?|geburts|obstet', 'Frauenheilkunde/Gynäkologie'),
-    (r'päd|pedi|kinder|neonat', 'Kinder- und Jugendheilkunde'),
-    (r'ophthalm|augen(?!heil)', 'Augenheilkunde'),
-    (r'augenheil', 'Augenheilkunde'),
-    (r'hno|hals.nasen|ohrenheilkund|ent(?!\w)', 'Hals-Nasen-Ohrenheilkunde'),
-    (r'notfall|intensiv|anästhesiol|emergency', 'Notfall- und Intensivmedizin'),
+    # Broad keyword matches for question content + tags
+    (r'innere.?med|internal.?med|innereeb|kardio|angiolog|endokrin|nephrolog|gastro|pneumolog|rheumatolog|infektiolog|hämatolog|onkolog|hämostaseolog|diabetes|hypertonie|herzinsuffizienz|myokardinfarkt|herzinfarkt|arrhyth|tachykard|bradykard|vorhofflimmern|angina.pectoris|koronarsyndrom|lungenembolie|pulmonalembolie|thrombose|anämie|leukämie|lymphom|leberzirrhose|hepatitis|pankreatitis|colitis|morbus.crohn|cholezystitis|niereninsuffizienz|dialyse|schilddrüse|thyreoiditis|hypothyreose|hyperthyreose|addison|cushing|phäochromozytom|elektrolyt|infektionsserolog|serolog|ekg', 'Innere Medizin'),
+    (r'chirurg|surger|operativ|unfallchirurg|orthop|mkg|mund.kiefer|neurochirurg|appendizitis|appendektomie|hernie|ileus|fraktur|osteosynthese|luxation|polytrauma|wundheilung|peritonitis|cholezystektomie|transplant|urolog', 'Chirurgische Fächer'),
+    (r'derma|venerolog|hauterkrank|exanthem|urtikaria|psoriasis|ekzem|melanom|basaliom|akne|mykose|erythem|pemphig|lichen', 'Dermatologie und Venerologie'),
+    (r'neurolog(?!ie der|ical)|neuro::|\bneuro\b|schlaganfall|apoplex|epileps|parkinson|multiple.sklerose|meningitis|enzephalitis|neuropathie|demenz|alzheimer|migräne|kopfschmerz|tia|ischämisch|hirnstamm|zerebr|guillain', 'Neurologie'),
+    (r'psychiatr|psychosomat|depression|schizophren|psychos|bipolar|angststörung|zwangsstörung|persönlichkeitsstörung|suizid|delirium|abhängigkeit|sucht|anorex|bulimi|ptbs', 'Psychiatrie'),
+    (r'frauen|gyn(?:äkolog)?|geburts|obstet|schwanger|präeklamps|eklamps|gestationsdiabetes|zervix|endometri|ovar|mamma|sectio|wehen|geburt|kontrazep|menstruat|amenorrh|myom', 'Frauenheilkunde/Gynäkologie'),
+    (r'päd|pedi|kinder|neonat|säugling|kleinkind|neugeboren|kindesmisshandlung|impfung|entwicklung|pubertät|wachstum|stillen', 'Kinder- und Jugendheilkunde'),
+    (r'ophthalm|augen|visus|glaukom|katarakt|retina|makula|konjunktivitis|keratitis|uveitis|netzhaut|sehschärfe|diplopie|strabismus|amaurosis|ophth.new', 'Augenheilkunde'),
+    (r'\bhno\b|\bent\b|hals.nasen|ohrenheilkund|otitis|sinusitis|tonsill|larynx|pharynx|hörsturz|tinnitus|schwindel|vertigo|cholesteatom|epistaxis|stridor|dysphonie|cochlea|reinke|rhinitis|nasenseptum|heiserkeit', 'Hals-Nasen-Ohrenheilkunde'),
+    (r'notfall|intensiv|anästhes|emergency|reanimation|schock|intubation|beatmung|triage|rettung|kreislaufstillstand|sepsis|anaphylax|polytrauma|verbrennung', 'Notfall- und Intensivmedizin'),
 ]
 
-def map_topic(title: str, tags: list = None) -> str:
-    """Map the AllInOne Title field (or note tags) to one of the 10 canonical topics."""
-    if not title and not tags:
+# Explicit prefix/exact match for known AllInOne Title values.
+# More reliable than regex alone because Anki uses free-form titles.
+TITLE_MAP = {
+    'innere medizin': 'Innere Medizin',
+    'internal medicine': 'Innere Medizin',
+    'internal med': 'Innere Medizin',
+    'innereeb': 'Innere Medizin',
+    'selfmade::ekg': 'Innere Medizin',
+    'infektionsserolog': 'Innere Medizin',
+    'ent': 'Hals-Nasen-Ohrenheilkunde',
+    'ent ': 'Hals-Nasen-Ohrenheilkunde',
+    'ent-': 'Hals-Nasen-Ohrenheilkunde',
+    'er': 'Notfall- und Intensivmedizin',
+    'er:': 'Notfall- und Intensivmedizin',
+    'notfall': 'Notfall- und Intensivmedizin',
+    'anästhes': 'Notfall- und Intensivmedizin',
+    'ophth': 'Augenheilkunde',
+    'neuro': 'Neurologie',
+    'neurolog': 'Neurologie',
+    'psychiatr': 'Psychiatrie',
+    'derma': 'Dermatologie und Venerologie',
+    'chirurg': 'Chirurgische Fächer',
+    'gyn': 'Frauenheilkunde/Gynäkologie',
+    'frauen': 'Frauenheilkunde/Gynäkologie',
+    'päd': 'Kinder- und Jugendheilkunde',
+    'pedi': 'Kinder- und Jugendheilkunde',
+    'kinder': 'Kinder- und Jugendheilkunde',
+    'hno': 'Hals-Nasen-Ohrenheilkunde',
+    'urolog': 'Chirurgische Fächer',
+    'zahnmedizin': 'Chirurgische Fächer',
+    'embryolog': 'Sonstige',
+    'pharmakolog': 'Innere Medizin',
+    'radiopaed': 'Chirurgische Fächer',
+}
+
+def map_topic_by_title(title: str) -> str:
+    """Try to map a Title value via explicit prefix lookup."""
+    t = (title or '').lower().strip()
+    if not t:
         return 'Sonstige'
-    haystack = f"{title or ''} {' '.join(tags or [])}".lower()
+    for prefix, topic in TITLE_MAP.items():
+        if t.startswith(prefix) or t == prefix:
+            return topic
+    return 'Sonstige'
+
+def map_topic(text: str, tags: list = None) -> str:
+    """Map text (title or question content) + tags to a canonical topic.
+
+    Uses TOPIC_PATTERNS regex for content-based matching.
+    For AllInOne Title values, callers should use map_topic_by_title() first.
+    """
+    if not text and not tags:
+        return 'Sonstige'
+    haystack = f"{text or ''} {' '.join(tags or '')}".lower()
     for pattern, topic in TOPIC_PATTERNS:
         if re.search(pattern, haystack):
             return topic
@@ -386,9 +435,18 @@ def parse_all_notes(db_path: str, media_url_map: dict) -> tuple:
                     q_urls = [c['image_url']]
                     break
 
+        # Map topic: Title → prefix lookup (reliable), then regex fallback on question
+        topic = map_topic_by_title(title)
+        if topic == 'Sonstige':
+            topic = map_topic(title, raw_tags)
+        if topic == 'Sonstige':
+            topic = map_topic(question_text, raw_tags)
+        if topic == 'Sonstige' and explanation:
+            topic = map_topic(explanation, raw_tags)
+
         out.append({
             'anki_note_id': nid,
-            'topic': map_topic(title, raw_tags),
+            'topic': topic,
             'question': question_text[:1500],
             'answer': answer[:500],
             'explanation': explanation,
@@ -406,7 +464,12 @@ def parse_all_notes(db_path: str, media_url_map: dict) -> tuple:
         })
         stats[f'allinone_qtype{qtype}_n{n_correct}'] += 1
 
-    # --- SIP4a / SIP5a (open-answer) ---
+    # --- SIP4a / SIP5a ---
+    # Many SIP4a notes have inline choices "A) ... B) ... C) ..." in the Front field.
+    # We detect those, extract choices, and build proper MCQ structure.
+    INLINE_CHOICE_RE = re.compile(r'(?<!\w)([A-E])\)\s*')
+    DATE_PREFIX_RE = re.compile(r'^(?:\d{4}-\d{2}\s*(?:[/,]\s*)?)+')
+
     for mid, label in [(NT_SIP4A, 'SIP4a'), (NT_SIP5A, 'SIP5a')]:
         cur.execute(f"SELECT id, flds, tags FROM notes WHERE mid = {mid}")
         for nid, flds, tags_str in cur.fetchall():
@@ -427,22 +490,94 @@ def parse_all_notes(db_path: str, media_url_map: dict) -> tuple:
                 stats['skip_empty_q'] += 1
                 continue
 
+            # Extract exam dates from: tags, termin field, AND question-text prefix
+            raw_tags = (tags_str or '').strip().split()
+            dates_from_tags = parse_exam_dates_from_tags(raw_tags)
+            dates_from_termin = parse_exam_dates_from_termin(termin)
+            # Question often starts with "2018-02 ..." — extract that too
+            dates_from_prefix = []
+            prefix_match = DATE_PREFIX_RE.match(question_text)
+            if prefix_match:
+                dates_from_prefix = YM_RE.findall(prefix_match.group(0))
+                # Strip the date prefix from the question text
+                question_text = question_text[prefix_match.end():].strip()
+            dates = sorted(set(dates_from_tags + dates_from_termin + dates_from_prefix))
+
+            # Use Anki Notizen (notes_html) as explanation — NOT AI garbage
             explanation = strip_html(notes_html, keep_newlines=True)
             if len(explanation) > 2500:
                 explanation = explanation[:2500] + '...'
-            raw_tags = (tags_str or '').strip().split()
-            dates = sorted(set(parse_exam_dates_from_tags(raw_tags)
-                               + parse_exam_dates_from_termin(termin)))
-            clean = clean_tags(raw_tags, None, 0)
-            clean = [label.lower(), 'open-answer'] + clean
-            clean = list(dict.fromkeys(clean))
 
             q_imgs = extract_img_srcs(q_html)
             q_urls = [media_url_map[s] for s in q_imgs if s in media_url_map]
 
+            # Detect inline choices: A) ... B) ... C) ...
+            has_inline = bool(INLINE_CHOICE_RE.search(question_text))
+            choices = None
+            distractors = None
+            is_mcq = False
+
+            if has_inline:
+                # Split question from choices
+                parts = INLINE_CHOICE_RE.split(question_text)
+                # parts = [stem, 'A', 'choice_a_text', 'B', 'choice_b_text', ...]
+                stem = parts[0].strip()
+                choice_list = []
+                for j in range(1, len(parts) - 1, 2):
+                    letter = parts[j]
+                    text = parts[j + 1].strip() if j + 1 < len(parts) else ''
+                    if text:
+                        choice_list.append((letter, text))
+
+                if len(choice_list) >= 2:
+                    is_mcq = True
+                    question_text = stem
+                    # Match correct answer by comparing against Back field
+                    answer_norm = answer.lower().strip()
+                    choices = []
+                    for i, (letter, text) in enumerate(choice_list):
+                        # Match: exact or partial (answer may be abbreviated)
+                        is_correct = (text.lower().strip() == answer_norm
+                                      or answer_norm in text.lower().strip()
+                                      or text.lower().strip() in answer_norm)
+                        choices.append({
+                            'text': text[:600],
+                            'correct': is_correct,
+                            'position': i,
+                            'image_url': None,
+                        })
+                    # Ensure at least one correct — if no match, try fuzzy
+                    if not any(c['correct'] for c in choices):
+                        # Try matching by first word or key substring
+                        for c in choices:
+                            if answer_norm.split()[0] in c['text'].lower():
+                                c['correct'] = True
+                                break
+                    # Still no match → mark first as correct and flag
+                    if not any(c['correct'] for c in choices):
+                        choices[0]['correct'] = True
+                        stats['sip_choice_match_fallback'] += 1
+
+                    correct_texts = [c['text'] for c in choices if c['correct']]
+                    distractors = [c['text'] for c in choices if not c['correct']][:8]
+                    answer = correct_texts[0] if correct_texts else answer
+
+            # Topic: infer from question content since SIP4a has no Title field
+            topic = map_topic(question_text, raw_tags)
+            if topic == 'Sonstige':
+                # Fallback: try the answer + explanation
+                topic = map_topic(f"{answer} {explanation or ''}", raw_tags)
+
+            clean = clean_tags(raw_tags, 2 if is_mcq else None, 1 if is_mcq else 0)
+            if not is_mcq:
+                clean = [label.lower(), 'open-answer'] + clean
+            else:
+                clean = [label.lower()] + clean
+            clean = list(dict.fromkeys(clean))
+
             out.append({
                 'anki_note_id': nid,
-                'topic': map_topic('', raw_tags) or 'Sonstige',
+                'topic': topic,
                 'question': question_text[:1500],
                 'answer': answer[:500],
                 'explanation': explanation,
@@ -452,13 +587,16 @@ def parse_all_notes(db_path: str, media_url_map: dict) -> tuple:
                 'tags': clean,
                 'image_url': q_urls[0] if q_urls else None,
                 'image_urls': q_urls or None,
-                'distractors': None,
-                'choices': None,   # no choices → open-answer mode
+                'distractors': distractors,
+                'choices': choices,
                 '_raw_tags': raw_tags,
                 '_qhash': hash_question(question_text),
                 '_notetype': label,
             })
-            stats[label.lower()] += 1
+            if is_mcq:
+                stats[f'{label.lower()}_mcq'] += 1
+            else:
+                stats[label.lower()] += 1
 
     # --- Basic / Basic+ (open-answer, short) ---
     for mid, label in [(NT_BASIC, 'Basic'), (NT_BASICPLUS, 'Basic+')]:
