@@ -4,7 +4,7 @@ type Lang = "de" | "en";
 
 export default function LanguageToggle({ lang, onChange }: { lang: Lang; onChange: (l: Lang) => void }) {
   return (
-    <div className="flex items-center bg-[#FFFFFF] rounded p-0.5 text-xs border border-[#E4E9F0]">
+    <div className="flex items-center bg-[#FFFFFF] rounded-lg shadow-[var(--shadow-xs)] p-0.5 text-xs border border-[#E4E9F0]">
       <button
         onClick={() => onChange("de")}
         className={`px-3 py-1.5 rounded font-medium transition-all duration-200 ${

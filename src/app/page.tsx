@@ -353,7 +353,7 @@ export default function Home() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
             <Link
               href={`/quiz?topic=random&userId=${user.id}&examSource=${examSource}`}
-              className="flex items-center gap-3 bg-[#007B5F] hover:bg-[#00A896] text-[#003732] px-5 py-3.5 rounded font-semibold pulse-glow transition-all active:scale-[0.98]"
+              className="btn-primary flex items-center gap-3 px-5 py-3.5 pulse-glow active:scale-[0.98]"
             >
               <span className="text-xl">🚀</span>
               <span className="text-sm">{t("random_quiz", lang)}</span>
@@ -421,7 +421,7 @@ export default function Home() {
                   <h3 className="text-xs font-semibold uppercase tracking-wider text-[#F4A261] mb-2">
                     {t("sip4_label", lang)}
                   </h3>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 mb-4">
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 mb-4 stagger">
                     {topics
                       .filter((tp) => VIENNA_EXAM_PARTS.sip4.includes(tp.topic))
                       .map((tp, i) => (
@@ -441,7 +441,7 @@ export default function Home() {
                   <h3 className="text-xs font-semibold uppercase tracking-wider text-[#007B5F] mb-2">
                     {t("sip5_label", lang)}
                   </h3>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 stagger">
                     {topics
                       .filter((tp) => VIENNA_EXAM_PARTS.sip5.includes(tp.topic))
                       .map((tp, i) => (
@@ -458,7 +458,7 @@ export default function Home() {
                   </div>
                 </>
               ) : (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 stagger">
                   {topics.map((tp, i) => (
                     <TopicCard
                       key={tp.topic}
@@ -476,7 +476,7 @@ export default function Home() {
           )}
 
           {/* Mini Stats Row (mobile only) */}
-          <div className="grid grid-cols-4 gap-2 lg:hidden mb-5">
+          <div className="grid grid-cols-4 gap-2 lg:hidden mb-5 stagger">
             <StatsCard icon="⚡" value={gam?.total_xp || 0} label="XP" color="text-[#F4A261]" delay={0} />
             <StatsCard icon={<Flame className="w-4 h-4" />} value={gam?.current_streak || 0} label={t("streak", lang)} color="text-[#D64545]" delay={50} />
             <StatsCard icon="✅" value={`${accuracy}%`} label={t("accuracy", lang)} color="text-[#00A896]" delay={100} />
@@ -587,7 +587,7 @@ function DemoHome({
     <div className="min-h-screen bg-[#F7F9FC] safe-area-top safe-area-bottom">
       {/* Hero */}
       <div className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-[#007B5F]/6 to-transparent pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#007B5F]/[0.03] to-transparent pointer-events-none" />
         <div className="relative px-4 pt-8 pb-6 text-center max-w-2xl mx-auto">
           <div className="flex justify-end mb-6">
             <LanguageToggle lang={lang} onChange={onLangChange} />
@@ -629,7 +629,7 @@ function DemoHome({
           <div className="mt-6">
             <Link
               href={`/quiz?topic=random&examSource=${examSource}`}
-              className="inline-flex items-center gap-3 bg-[#007B5F] hover:bg-[#00A896] text-[#003732] px-7 py-3.5 rounded font-bold text-base pulse-glow transition-all active:scale-[0.98]"
+              className="btn-primary inline-flex items-center gap-3 px-7 py-3.5 text-base pulse-glow active:scale-[0.98]"
             >
               <span className="text-xl">🚀</span>
               {lang === "de" ? "Übung starten" : "Start Practice"}
@@ -681,14 +681,14 @@ function DemoHome({
               <h3 className="text-xs font-semibold uppercase tracking-wider text-[#F4A261] mb-2">
                 {t("sip4_label", lang)}
               </h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mb-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 mb-4 stagger">
                 {topics.filter((tp) => VIENNA_EXAM_PARTS.sip4.includes(tp.topic)).map((tp, i) => {
                   const config = getTopicConfig(tp.topic);
                   return (
                     <Link
                       key={tp.topic}
                       href={`/quiz?topic=${encodeURIComponent(tp.topic)}&examSource=${examSource}`}
-                      className="topic-card-border bg-[#FFFFFF] border border-[#E4E9F0] rounded p-4 animate-fade-in hover:border-[#007B5F]/40 hover:bg-[#1E2640] transition-all active:scale-[0.98]"
+                      className="topic-card-border card-interactive p-4 active:scale-[0.98]"
                       style={{ borderLeftColor: config.color, animationDelay: `${i * 50}ms` }}
                     >
                       <div className="mb-2"><TopicIcon name={config.icon} className="w-6 h-6" /></div>
@@ -703,14 +703,14 @@ function DemoHome({
               <h3 className="text-xs font-semibold uppercase tracking-wider text-[#007B5F] mb-2">
                 {t("sip5_label", lang)}
               </h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 stagger">
                 {topics.filter((tp) => VIENNA_EXAM_PARTS.sip5.includes(tp.topic)).map((tp, i) => {
                   const config = getTopicConfig(tp.topic);
                   return (
                     <Link
                       key={tp.topic}
                       href={`/quiz?topic=${encodeURIComponent(tp.topic)}&examSource=${examSource}`}
-                      className="topic-card-border bg-[#FFFFFF] border border-[#E4E9F0] rounded p-4 animate-fade-in hover:border-[#007B5F]/40 hover:bg-[#1E2640] transition-all active:scale-[0.98]"
+                      className="topic-card-border card-interactive p-4 active:scale-[0.98]"
                       style={{ borderLeftColor: config.color, animationDelay: `${i * 50}ms` }}
                     >
                       <div className="mb-2"><TopicIcon name={config.icon} className="w-6 h-6" /></div>
@@ -722,14 +722,14 @@ function DemoHome({
               </div>
             </>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 stagger">
               {topics.map((tp, i) => {
                 const config = getTopicConfig(tp.topic);
                 return (
                   <Link
                     key={tp.topic}
                     href={`/quiz?topic=${encodeURIComponent(tp.topic)}&examSource=${examSource}`}
-                    className="topic-card-border bg-[#FFFFFF] border border-[#E4E9F0] rounded p-4 animate-fade-in hover:border-[#007B5F]/40 hover:bg-[#1E2640] transition-all active:scale-[0.98]"
+                    className="topic-card-border card-interactive p-4 active:scale-[0.98]"
                     style={{ borderLeftColor: config.color, animationDelay: `${i * 50}ms` }}
                   >
                     <div className="text-2xl mb-2">{config.icon}</div>
@@ -745,7 +745,7 @@ function DemoHome({
 
       {/* Login + Guest prompt */}
       <div className="px-4 pb-10 max-w-4xl mx-auto">
-        <div className="border border-[#E4E9F0] rounded bg-[#FFFFFF] p-5">
+        <div className="card p-5">
           <div className="text-center mb-4">
             <img src="/brand/wordmark-twotone.png" alt="MedPrüf" className="h-8 mx-auto" />
           </div>

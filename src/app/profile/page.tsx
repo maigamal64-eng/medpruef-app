@@ -180,7 +180,7 @@ export default function ProfilePage() {
         <div className="px-4 lg:px-8 py-5 max-w-2xl mx-auto space-y-4">
 
           {/* User card */}
-          <div className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-5">
+          <div className="card p-5">
             <div className="flex items-center gap-4 mb-4">
               <div className="w-14 h-14 rounded border border-[#007B5F]/30 bg-[#007B5F]/10 flex items-center justify-center text-2xl font-bold text-[#007B5F]">
                 {user.first_name.charAt(0).toUpperCase()}
@@ -211,26 +211,26 @@ export default function ProfilePage() {
 
           {/* Stats overview */}
           <div className="grid grid-cols-2 gap-3">
-            <div className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-4 text-center">
+            <div className="card p-4 text-center">
               <p className="text-2xl font-bold text-[#F4A261] font-mono">{gam?.total_xp || 0}</p>
               <p className="text-xs text-[#A0AEC0]">{t("total_xp", lang)}</p>
             </div>
-            <div className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-4 text-center">
+            <div className="card p-4 text-center">
               <p className="text-2xl font-bold text-[#D64545] font-mono">🔥 {gam?.current_streak || 0}</p>
               <p className="text-xs text-[#A0AEC0]">{t("current_streak", lang)}</p>
             </div>
-            <div className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-4 text-center">
+            <div className="card p-4 text-center">
               <p className="text-2xl font-bold text-[#00A896] font-mono">{accuracy}%</p>
               <p className="text-xs text-[#A0AEC0]">{t("accuracy", lang)}</p>
             </div>
-            <div className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-4 text-center">
+            <div className="card p-4 text-center">
               <p className="text-2xl font-bold text-[#007B5F] font-mono">{gam?.total_questions_answered || 0}</p>
               <p className="text-xs text-[#A0AEC0]">{t("total_answered", lang)}</p>
             </div>
           </div>
 
           {/* Editable profile info */}
-          <div className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-5">
+          <div className="card p-5">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold text-[#1A2B3C]">
                 {lang === "de" ? "Angaben" : "Details"}
@@ -288,7 +288,7 @@ export default function ProfilePage() {
                 <div className="flex gap-3 pt-1">
                   <button
                     onClick={handleSave}
-                    className="flex-1 py-2.5 bg-[#007B5F]/15 border border-[#007B5F]/30 text-[#007B5F] text-sm font-medium rounded hover:bg-[#007B5F]/25 transition-colors"
+                    className="btn-secondary flex-1 py-2.5 text-sm"
                   >
                     {t("save", lang)}
                   </button>
@@ -346,7 +346,7 @@ export default function ProfilePage() {
           })()}
 
           {/* Bookmarked questions */}
-          <div className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-5">
+          <div className="card p-5">
             <h3 className="text-sm font-semibold text-[#1A2B3C] mb-3">
               ★ {t("favorites", lang)}{" "}
               {favIds.length > 0 && (
@@ -383,7 +383,7 @@ export default function ProfilePage() {
           </div>
 
           {/* Daily goal progress */}
-          <div className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-5">
+          <div className="card p-5">
             <h3 className="text-sm font-semibold text-[#1A2B3C] mb-3">
               {lang === "de" ? "Tagesziel" : "Daily Goal"}
             </h3>
@@ -406,7 +406,7 @@ export default function ProfilePage() {
           </div>
 
           {/* Exam selection */}
-          <div className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-5">
+          <div className="card p-5">
             <h3 className="text-sm font-semibold text-[#1A2B3C] mb-3">
               {lang === "de" ? "Prüfungsauswahl" : "Exam Selection"}
             </h3>
@@ -439,7 +439,7 @@ export default function ProfilePage() {
 
           {/* Connect Telegram — shown if guest */}
           {user.id.startsWith("guest_") && (
-            <div className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-5">
+            <div className="card p-5">
               <h3 className="text-sm font-semibold text-[#1A2B3C] mb-2">
                 {lang === "de" ? "Später mit Telegram verbinden" : "Connect Telegram later"}
               </h3>

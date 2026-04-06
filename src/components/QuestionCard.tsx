@@ -163,24 +163,24 @@ export default function QuestionCard({
 
   const getOptionStyle = (idx: number, opt: MCQOption): string => {
     const base =
-      "w-full text-left px-4 py-3 border text-sm font-medium transition-all duration-200 flex items-center gap-3 rounded";
+      "w-full text-left px-4 py-3 text-sm font-medium transition-all duration-200 flex items-center gap-3";
     const isSelected = selectedIdxs.has(idx);
 
     if (!answered) {
-      return `${base} ${isSelected ? "bg-[#007B5F]/8 border-[#007B5F]/60 text-[#1A2B3C]" : "bg-[#FFFFFF] border-[#E4E9F0] text-[#1A2B3C]"} hover:border-[#007B5F]/50 active:scale-[0.99]`;
+      return `${base} ${isSelected ? "bg-[#007B5F]/8 border border-[#007B5F]/60 text-[#1A2B3C] rounded-xl" : "bg-white rounded-xl border border-[#E4E9F0]/80 shadow-[var(--shadow-xs)] hover:shadow-[var(--shadow-card)] hover:border-[#007B5F]/30 hover:bg-[#F7F9FC] text-[#1A2B3C]"} active:scale-[0.99]`;
     }
 
     if (isSelected) {
       if (opt.correct) {
-        return `${base} bg-[#00A896]/12 border-[#00A896] text-[#00A896]`;
+        return `${base} bg-[#00A896]/12 border border-[#00A896] text-[#00A896] rounded-xl animate-answer-correct`;
       } else {
-        return `${base} bg-[#D64545]/12 border-[#D64545] text-[#D64545]`;
+        return `${base} bg-[#D64545]/12 border border-[#D64545] text-[#D64545] rounded-xl animate-answer-wrong`;
       }
     }
     if (opt.correct) {
-      return `${base} bg-[#00A896]/8 border-[#00A896]/60 text-[#00A896]/80`;
+      return `${base} bg-[#00A896]/8 border border-[#00A896]/60 text-[#00A896]/80 rounded-xl`;
     }
-    return `${base} bg-[#FFFFFF] border-[#E4E9F0]/40 text-[#A0AEC0] opacity-50`;
+    return `${base} bg-[#FFFFFF] border border-[#E4E9F0]/40 text-[#A0AEC0] opacity-50 rounded-xl`;
   };
 
   const getOptionIcon = (idx: number, opt: MCQOption): string => {
@@ -200,7 +200,7 @@ export default function QuestionCard({
 
   return (
     <>
-      <div className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-5 md:p-6 animate-slide-up">
+      <div className="card p-5 md:p-6 animate-slide-up">
         {/* Top row: topic badge + question counter + bookmark */}
         <div className="flex items-center justify-between mb-4">
           <span
@@ -214,7 +214,7 @@ export default function QuestionCard({
             <button
               onClick={handleToggleFav}
               title={isFav ? t("bookmarked", lang) : t("bookmark", lang)}
-              className={`text-base transition-colors ${isFav ? "text-[#F4A261]" : "text-[#E4E9F0] hover:text-[#F4A261]"}`}
+              className={`text-base transition-colors ${isFav ? "text-[#F4A261] animate-bookmark" : "text-[#E4E9F0] hover:text-[#F4A261]"}`}
             >
               {isFav ? "★" : "☆"}
             </button>
@@ -313,7 +313,7 @@ export default function QuestionCard({
                 className={getOptionStyle(idx, opt)}
               >
                 <span
-                  className={`w-6 h-6 rounded flex-shrink-0 flex items-center justify-center text-xs font-bold border font-mono ${
+                  className={`w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center text-xs font-bold border font-mono ${
                     !answered
                       ? isSelected
                         ? "bg-[#007B5F]/15 border-[#007B5F] text-[#007B5F]"
@@ -351,7 +351,7 @@ export default function QuestionCard({
 
         {/* Explanation — shown after answering */}
         {answered && question.explanation && (
-          <div className="mt-4 bg-[#F4A261]/6 border border-[#F4A261]/25 rounded p-4 animate-fade-in">
+          <div className="mt-4 bg-[#F4A261]/6 border border-[#F4A261]/25 rounded p-4 animate-slide-reveal">
             <p className="text-[10px] uppercase tracking-wider text-[#F4A261] font-semibold mb-2">
               <Lightbulb className="w-4 h-4 inline" /> {t("explanation", lang)}
             </p>
@@ -371,7 +371,7 @@ export default function QuestionCard({
                 <span>{t("add_note", lang)}</span>
               </button>
             ) : (
-              <div className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-3">
+              <div className="bg-[#FFFFFF] border border-[#E4E9F0] rounded-xl shadow-[var(--shadow-xs)] p-3">
                 <p className="text-[10px] uppercase tracking-wider text-[#A0AEC0] font-semibold mb-2">
                   <FileText className="w-3 h-3 inline" /> {t("add_note", lang)}
                 </p>

@@ -17,18 +17,18 @@ export default function DailyGoalRing({ current, goal, lang }: DailyGoalRingProp
   const offset = circumference - progress * circumference;
 
   return (
-    <div className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-4 animate-fade-in">
+    <div className="card p-4">
       <div className="flex items-center gap-4">
         <div className="relative w-24 h-24 flex-shrink-0">
           <svg width="96" height="96" viewBox="0 0 96 96">
             {/* Track */}
-            <circle cx="48" cy="48" r={radius} fill="none" stroke="#F7F9FC" strokeWidth="5" />
+            <circle cx="48" cy="48" r={radius} fill="none" stroke="#F7F9FC" strokeWidth="6" />
             {/* Progress */}
             <circle
               cx="48" cy="48" r={radius}
               fill="none"
               stroke={progress >= 1 ? "#00A896" : "#007B5F"}
-              strokeWidth="5"
+              strokeWidth="6"
               strokeLinecap="butt"
               strokeDasharray={circumference}
               strokeDashoffset={offset}

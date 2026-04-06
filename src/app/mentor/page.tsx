@@ -65,8 +65,8 @@ export default function MentorPage() {
           <div>
             <h2 className="text-xl font-semibold text-[#1A2B3C] mb-4">Was erwartet dich?</h2>
             
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="bg-white rounded-xl border border-[#E4E9F0] p-6">
+            <div className="grid md:grid-cols-2 gap-6 stagger">
+              <div className="card p-5">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-10 h-10 rounded-lg bg-[#007B5F]/10 flex items-center justify-center">
                     <MessageSquare className="w-5 h-5 text-[#007B5F]" />
@@ -76,7 +76,7 @@ export default function MentorPage() {
                 <p className="text-[#4A5568] text-sm">Stelle Fragen zu jedem Thema und erhalte verständliche Erklärungen mit Beispielen.</p>
               </div>
               
-              <div className="bg-white rounded-xl border border-[#E4E9F0] p-6">
+              <div className="card p-5">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-10 h-10 rounded-lg bg-[#F4A261]/10 flex items-center justify-center">
                     <BarChart3 className="w-5 h-5 text-[#F4A261]" />
@@ -86,7 +86,7 @@ export default function MentorPage() {
                 <p className="text-[#4A5568] text-sm">Automatische Erkennung deiner Lernlücken und personalisierte Wiederholungsvorschläge.</p>
               </div>
               
-              <div className="bg-white rounded-xl border border-[#E4E9F0] p-6">
+              <div className="card p-5">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-10 h-10 rounded-lg bg-[#00A896]/10 flex items-center justify-center">
                     <GraduationCap className="w-5 h-5 text-[#00A896]" />
@@ -96,7 +96,7 @@ export default function MentorPage() {
                 <p className="text-[#4A5568] text-sm">Übe mündliche Prüfungen mit KI-simulierten Prüfern und realistischen Fallbeispielen.</p>
               </div>
               
-              <div className="bg-white rounded-xl border border-[#E4E9F0] p-6">
+              <div className="card p-5">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-10 h-10 rounded-lg bg-[#D64545]/10 flex items-center justify-center">
                     <Brain className="w-5 h-5 text-[#D64545]" />
@@ -109,7 +109,7 @@ export default function MentorPage() {
           </div>
 
           {/* Notification Section */}
-          <div className="bg-white rounded-xl border border-[#E4E9F0] p-8 text-center">
+          <div className="card p-8 text-center">
             {!notified ? (
               <>
                 <Bell className="w-12 h-12 text-[#007B5F] mx-auto mb-4" />
@@ -133,7 +133,7 @@ export default function MentorPage() {
           </div>
 
           {/* Preview Features */}
-          <div className="bg-white rounded-xl border border-[#E4E9F0] p-6">
+          <div className="card p-6">
             <h3 className="font-semibold text-[#1A2B3C] mb-4">Erste Features</h3>
             <div className="space-y-4">
               <div className="flex items-start gap-4">

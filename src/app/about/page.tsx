@@ -45,7 +45,7 @@ export default function AboutPage() {
           <LanguageToggle lang={lang} onChange={switchLang} />
         </div>
 
-        <div className="px-4 lg:px-8 py-6 max-w-2xl mx-auto">
+        <div className="px-4 lg:px-8 py-6 max-w-2xl mx-auto stagger">
           {/* Hero */}
           <div className="text-center mb-8">
             <div className="w-20 h-20 rounded border border-[#007B5F]/30 bg-[#007B5F]/10 flex items-center justify-center text-4xl mx-auto mb-4">
@@ -65,7 +65,7 @@ export default function AboutPage() {
           </div>
 
           {/* What is MedPrüf */}
-          <div className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-5 mb-4">
+          <div className="card p-5 mb-4">
             <h2 className="text-base font-semibold text-[#007B5F] mb-3">
               {lang === "de" ? "Was ist MedPrüf?" : "What is MedPrüf?"}
             </h2>
@@ -77,7 +77,7 @@ export default function AboutPage() {
           </div>
 
           {/* Target audience */}
-          <div className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-5 mb-4">
+          <div className="card p-5 mb-4">
             <h2 className="text-base font-semibold text-[#F4A261] mb-3">
               {lang === "de" ? "Für wen ist MedPrüf?" : "Who is MedPrüf for?"}
             </h2>
@@ -105,7 +105,7 @@ export default function AboutPage() {
           </div>
 
           {/* Kenntnisprüfung info */}
-          <div className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-5 mb-4">
+          <div className="card p-5 mb-4">
             <h2 className="text-base font-semibold text-[#1A2B3C] mb-3">
               {lang === "de" ? "Die Kenntnisprüfung" : "The Kenntnisprüfung"}
             </h2>
@@ -130,7 +130,7 @@ export default function AboutPage() {
           </div>
 
           {/* Features */}
-          <div className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-5 mb-4">
+          <div className="card p-5 mb-4">
             <h2 className="text-base font-semibold text-[#1A2B3C] mb-3">
               {lang === "de" ? "Features" : "Features"}
             </h2>
@@ -152,7 +152,7 @@ export default function AboutPage() {
           </div>
 
           {/* Team */}
-          <div className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-5 mb-4">
+          <div className="card p-5 mb-4">
             <h2 className="text-base font-semibold text-[#1A2B3C] mb-3">
               {lang === "de" ? "Team & Kontakt" : "Team & Contact"}
             </h2>
@@ -180,7 +180,7 @@ export default function AboutPage() {
           </div>
 
           {/* Social media */}
-          <div className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-5">
+          <div className="card p-5">
             <h2 className="text-base font-semibold text-[#1A2B3C] mb-3">
               {lang === "de" ? "Social Media" : "Social Media"}
             </h2>

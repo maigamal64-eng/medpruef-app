@@ -127,7 +127,7 @@ export default function MaterialsPage() {
 
         <div className="px-4 lg:px-8 py-4 max-w-2xl mx-auto">
           {/* Hero */}
-          <div className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-5 mb-5">
+          <div className="card p-5 mb-5">
             <div className="flex items-center gap-4">
               <div className="text-4xl">📚</div>
               <div>
@@ -161,12 +161,12 @@ export default function MaterialsPage() {
           </div>
 
           {/* Resources list */}
-          <div className="space-y-3">
+          <div className="space-y-3 stagger">
             {filtered.map((r, i) => {
               const style = TYPE_STYLES[r.type];
               const specialty = r.specialty ? TOPIC_CONFIG[r.specialty] : null;
               return (
-                <div key={i} className={`${style.bg} border ${style.border} rounded p-4`}>
+                <div key={i} className={`card-interactive ${style.bg} border ${style.border} p-4`}>
                   <div className="flex items-start justify-between gap-3 mb-2">
                     <div className="flex items-center gap-2 flex-1 min-w-0">
                       {specialty ? (
@@ -222,7 +222,7 @@ export default function MaterialsPage() {
                   const cfg = TOPIC_CONFIG[topic] || { icon: "📋", color: "#007B5F" };
                   const pct = Math.round((q / 250) * 100);
                   return (
-                    <div key={topic} className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-3">
+                    <div key={topic} className="card p-3">
                       <div className="flex items-center gap-2 mb-1.5">
                         <TopicIcon name={cfg.icon} className="w-4 h-4" />
                         <span className="text-xs text-[#1A2B3C] font-medium flex-1 truncate">{topic}</span>

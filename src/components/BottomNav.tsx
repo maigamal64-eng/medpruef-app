@@ -37,8 +37,8 @@ export default function BottomNav({ lang, userId }: BottomNavProps) {
 
   return (
     <nav className="bottom-nav fixed bottom-0 left-0 right-0 z-50 safe-area-bottom">
-      <div className="bg-[#FFFFFF] border-t border-[#E4E9F0]">
-        <div className="flex items-center justify-around px-1 py-2">
+      <div className="glass border-t border-[#E4E9F0] shadow-[var(--shadow-elevated)] mx-3 mb-2 rounded-2xl">
+        <div className="flex items-center justify-around px-1 py-2.5">
           {items.map((item) => {
             const active = isActive(item.key);
             const examHighlight = item.highlight && !active;

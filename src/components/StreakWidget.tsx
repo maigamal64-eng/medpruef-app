@@ -21,7 +21,7 @@ export default function StreakWidget({ streak, lang }: StreakWidgetProps) {
       : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
   return (
-    <div className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-4 animate-fade-in">
+    <div className="card p-4">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <span className="text-2xl animate-fire">🔥</span>
@@ -37,7 +37,7 @@ export default function StreakWidget({ streak, lang }: StreakWidgetProps) {
         {last7Days.map((active, i) => (
           <div key={i} className="flex flex-col items-center gap-1">
             <div
-              className={`w-7 h-7 rounded flex items-center justify-center text-xs font-medium transition-colors border ${
+              className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-medium transition-colors border ${
                 active
                   ? "bg-[#00A896]/15 text-[#00A896] border-[#00A896]/30"
                   : "bg-[#F7F9FC] text-[#A0AEC0] border-[#E4E9F0]"

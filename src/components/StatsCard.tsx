@@ -13,8 +13,7 @@ interface StatsCardProps {
 export default function StatsCard({ icon, value, label, color, delay = 0 }: StatsCardProps) {
   return (
     <div
-      className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-4 text-center card-hover animate-fade-in"
-      style={{ animationDelay: `${delay}ms` }}
+      className="card p-4 text-center"
     >
       <div className="text-2xl mb-1">{icon}</div>
       <div className={`text-xl font-bold font-mono ${color}`}>{value}</div>

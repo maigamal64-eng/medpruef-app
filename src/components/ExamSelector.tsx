@@ -15,7 +15,7 @@ export default function ExamSelector({ lang, onSelect }: Props) {
 
   return (
     <div className="fixed inset-0 bg-[#F7F9FC] z-50 flex flex-col items-center justify-center px-4">
-      <div className="w-full max-w-md animate-fade-in">
+      <div className="w-full max-w-md animate-scale-in">
         {/* Header */}
         <div className="text-center mb-8">
           <div className="w-16 h-16 rounded border border-[#007B5F]/30 bg-[#007B5F]/10 flex items-center justify-center mx-auto mb-4">
@@ -35,7 +35,7 @@ export default function ExamSelector({ lang, onSelect }: Props) {
             <button
               key={exam.id}
               onClick={() => handle(exam.id)}
-              className="w-full flex items-center gap-4 bg-[#FFFFFF] border border-[#E4E9F0] hover:border-[#007B5F]/50 hover:bg-[#1E2640] rounded p-4 text-left transition-all active:scale-[0.98] group"
+              className="w-full flex items-center gap-4 bg-[#FFFFFF] border border-[#E4E9F0] shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-card-hover)] hover:border-[#007B5F]/50 hover:bg-[#F7F9FC] rounded-xl p-4 text-left transition-all active:scale-[0.98] group"
             >
               <span className="text-2xl">{exam.badge}</span>
               <div className="flex-1 min-w-0">

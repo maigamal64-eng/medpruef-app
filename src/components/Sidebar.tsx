@@ -51,10 +51,10 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0, streak = 
     const active = isActive(key);
     if (active) {
       return highlight
-        ? "flex items-center gap-3 px-3 py-2.5 rounded mb-0.5 transition-all duration-150 bg-[#F4A261]/12 text-[#F4A261] font-medium border border-[#F4A261]/20"
-        : "flex items-center gap-3 px-3 py-2.5 rounded mb-0.5 transition-all duration-150 bg-[#007B5F]/12 text-[#007B5F] font-medium border border-[#007B5F]/20";
+        ? "flex items-center gap-3 px-3 py-2.5 rounded-r-lg mb-0.5 transition-all duration-150 bg-[#F4A261]/12 text-[#F4A261] font-medium border-l-[3px] border-l-[#F4A261]"
+        : "flex items-center gap-3 px-3 py-2.5 rounded-r-lg mb-0.5 transition-all duration-150 bg-[#007B5F]/8 text-[#007B5F] font-medium border-l-[3px] border-l-[#007B5F]";
     }
-    return `flex items-center gap-3 px-3 py-2.5 rounded mb-0.5 transition-all duration-150 text-[#4A5568] hover:bg-[#FFFFFF] hover:text-[#1A2B3C] ${
+    return `flex items-center gap-3 px-3 py-2.5 rounded mb-0.5 transition-colors duration-150 text-[#4A5568] hover:bg-[#F7F9FC] hover:text-[#1A2B3C] ${
       highlight ? "hover:text-[#F4A261]" : ""
     }`;
   };
@@ -138,15 +138,15 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0, streak = 
             {t("your_stats", lang)}
           </p>
           <div className="grid grid-cols-3 gap-2 px-2">
-            <div className="text-center">
+            <div className="text-center bg-[#F7F9FC] rounded-lg p-2">
               <p className="text-base font-bold text-[#F4A261] font-mono">{totalXp}</p>
               <p className="text-[10px] text-[#A0AEC0]">XP</p>
             </div>
-            <div className="text-center">
+            <div className="text-center bg-[#F7F9FC] rounded-lg p-2">
               <p className="text-base font-bold text-[#D64545] font-mono flex items-center justify-center gap-1"><Flame className="w-4 h-4" />{streak}</p>
               <p className="text-[10px] text-[#A0AEC0]">{t("streak", lang)}</p>
             </div>
-            <div className="text-center">
+            <div className="text-center bg-[#F7F9FC] rounded-lg p-2">
               <p className="text-base font-bold text-[#00A896] font-mono">{accuracy}%</p>
               <p className="text-[10px] text-[#A0AEC0]">{t("accuracy", lang)}</p>
             </div>
@@ -164,7 +164,7 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0, streak = 
             <Link
               key={topic}
               href={userId ? `/quiz?topic=${encodeURIComponent(topic)}&userId=${userId}` : "#"}
-              className="flex items-center gap-2.5 px-3 py-2 rounded text-[#4A5568] hover:bg-[#FFFFFF] hover:text-[#1A2B3C] transition-all duration-150"
+              className="flex items-center gap-2.5 px-3 py-2 text-[#4A5568] hover:bg-[#F7F9FC] rounded-lg transition-colors duration-150"
             >
               <TopicIcon name={config.icon} className="w-4 h-4" />
               <span className="text-xs truncate">{topic}</span>

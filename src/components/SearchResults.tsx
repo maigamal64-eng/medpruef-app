@@ -42,7 +42,7 @@ export default function SearchResults({
 
   if (loading) {
     return (
-      <div className="mt-2 bg-[#FFFFFF] border border-[#E4E9F0] rounded p-4 text-center">
+      <div className="mt-2 card p-4 text-center">
         <div className="w-5 h-5 border-2 border-[#007B5F] border-t-transparent rounded-full animate-spin mx-auto" />
       </div>
     );
@@ -50,7 +50,7 @@ export default function SearchResults({
 
   if (results.length === 0) {
     return (
-      <div className="mt-2 bg-[#FFFFFF] border border-[#E4E9F0] rounded p-4 text-center">
+      <div className="mt-2 card p-4 text-center">
         <p className="text-sm text-[#A0AEC0]">
           {lang === "de" ? "Keine Ergebnisse gefunden" : "No results found"}
         </p>
@@ -59,7 +59,7 @@ export default function SearchResults({
   }
 
   return (
-    <div className="mt-2 bg-[#FFFFFF] border border-[#E4E9F0] rounded overflow-hidden">
+    <div className="mt-2 card overflow-hidden">
       <div className="px-3 py-2 border-b border-[#E4E9F0]">
         <p className="text-[10px] uppercase tracking-wider text-[#A0AEC0] font-semibold">
           {lang === "de" ? "Suchergebnisse" : "Search Results"} ({results.length})
@@ -76,7 +76,7 @@ export default function SearchResults({
             >
               <Link
                 href={`/quiz?topic=${encodeURIComponent(q.topic)}&questionId=${q.id}&examSource=${examSource}`}
-                className="flex items-start gap-3 px-3 py-3 hover:bg-[#1E2640] transition-colors group"
+                className="flex items-start gap-3 px-3 py-3 hover:bg-[#F7F9FC] transition-colors group"
               >
                 {/* Topic badge */}
                 <span

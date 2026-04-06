@@ -51,7 +51,7 @@ export default function XPBar({ totalXp, lang, compact = false }: XPBarProps) {
   }
 
   return (
-    <div className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-4 animate-fade-in">
+    <div className="card p-4">
       <div className="flex items-center gap-3 mb-3">
         <div className="w-11 h-11 rounded bg-[#F4A261]/10 border border-[#F4A261]/20 flex items-center justify-center text-xl">
           {icon}

@@ -47,7 +47,7 @@ export default function SearchBar({ lang, onSearch, autoFocus }: SearchBarProps)
         value={value}
         onChange={handleChange}
         placeholder={lang === "de" ? "Frage suchen..." : "Search questions..."}
-        className="w-full bg-[#FFFFFF] border border-[#E4E9F0] rounded pl-9 pr-9 py-2.5 text-sm text-[#1A2B3C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#007B5F]/50 transition-colors"
+        className="w-full bg-[#FFFFFF] border border-[#E4E9F0] rounded-xl shadow-[var(--shadow-xs)] pl-9 pr-9 py-2.5 text-sm text-[#1A2B3C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#007B5F]/50 focus:shadow-[var(--shadow-card)] transition-all"
       />
 
       {/* Clear button */}

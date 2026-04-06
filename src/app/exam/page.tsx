@@ -382,13 +382,13 @@ function ExamContent() {
                     ? EXAM_CONFIG.filter((c) => VIENNA_EXAM_PARTS[selectedPart].includes(c.topic))
                     : EXAM_CONFIG;
                 return (
-                  <div className="grid grid-cols-2 gap-3 mb-6">
+                  <div className="grid grid-cols-2 gap-3 mb-6 stagger">
                     {displayedConfig.map(({ topic, count }) => {
                       const cfg = getTopicConfig(topic);
                       return (
                         <div
                           key={topic}
-                          className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-3 flex items-center gap-3"
+                          className="card p-3 flex items-center gap-3"
                         >
                           <TopicIcon name={cfg.icon} className="w-5 h-5" />
                           <div className="min-w-0">
@@ -444,7 +444,7 @@ function ExamContent() {
 
               {/* Custom filter panel */}
               {selectedPart === "custom" && (
-                <div className="mb-6 bg-[#FFFFFF] border border-[#E4E9F0] rounded p-4 space-y-4">
+                <div className="mb-6 card p-4 space-y-4">
                   <p className="text-xs text-[#A0AEC0] font-semibold uppercase tracking-wider">
                     {t("custom_exam_label", lang)}
                   </p>
@@ -600,7 +600,7 @@ function ExamContent() {
               <button
                 onClick={loadExam}
                 disabled={selectedPart === "custom" && (customCount === null || customCount === 0)}
-                className="w-full bg-[#003A8C] hover:bg-[#003A8C]/90 text-white py-4 rounded font-bold text-base transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-[#003A8C]"
+                className="btn-primary w-full py-4 text-base disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <GraduationCap className="w-5 h-5 inline" /> {t("start_exam", lang)}
                 {selectedPart === "custom" && customCount !== null && customCount > 0 && (
@@ -673,7 +673,7 @@ function ExamContent() {
               />
             </div>
 
-            <div className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-5 mb-4">
+            <div className="card p-5 mb-4">
               <div className="flex items-center justify-between mb-3">
                 <span
                   className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium"
@@ -775,7 +775,7 @@ function ExamContent() {
             <h1 className="text-xl font-bold text-[#1A2B3C] mb-6">{t("exam_finished", lang)}</h1>
 
             {/* Overall result */}
-            <div className={`rounded p-6 border mb-6 text-center ${
+            <div className={`rounded-xl p-6 border mb-6 text-center animate-scale-in ${
               passed
                 ? "bg-[#00A896]/8 border-[#00A896]/40"
                 : "bg-[#D64545]/8 border-[#D64545]/40"
@@ -801,7 +801,7 @@ function ExamContent() {
                   const pct = total > 0 ? Math.round((correct / total) * 100) : 0;
                   const topicPassed = pct >= 60;
                   return (
-                    <div key={topic} className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-3">
+                    <div key={topic} className="card p-3">
                       <div className="flex items-center justify-between mb-1.5">
                         <div className="flex items-center gap-2">
                           <TopicIcon name={cfg.icon} className="w-4 h-4" />
@@ -840,7 +840,7 @@ function ExamContent() {
               </button>
               <button
                 onClick={() => setPhase("entry")}
-                className="w-full py-3.5 bg-[#003A8C] hover:bg-[#003A8C]/90 text-white rounded font-bold transition-all active:scale-[0.98]"
+                className="btn-primary w-full py-3.5"
               >
                 <GraduationCap className="w-5 h-5 inline" /> {t("exam_new", lang)}
               </button>
@@ -904,7 +904,7 @@ function ExamContent() {
 
         {/* Question */}
         <div className="flex-1 px-4 lg:px-8 py-4 max-w-3xl mx-auto w-full overflow-y-auto">
-          <div className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-5 md:p-6 mb-4">
+          <div className="card p-5 md:p-6 mb-4">
             <div className="flex items-center justify-between mb-4">
               <span
                 className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium"
@@ -1043,14 +1043,14 @@ function ExamContent() {
         </div>
 
         {/* Submit bar */}
-        <div className="px-4 lg:px-8 py-3 border-t border-[#E4E9F0] bg-[#FFFFFF] flex-shrink-0">
+        <div className="px-4 lg:px-8 py-3 border-t border-[#E4E9F0] glass flex-shrink-0">
           <div className="max-w-3xl mx-auto flex items-center justify-between">
             <span className="text-xs text-[#A0AEC0] font-mono">
               {answeredCount}/{questions.length} {t("answered", lang)}
             </span>
             <button
               onClick={() => setShowSubmitConfirm(true)}
-              className="px-5 py-2.5 bg-[#003A8C] hover:bg-[#003A8C]/90 text-white rounded font-bold text-sm transition-all active:scale-[0.98]"
+              className="btn-primary px-5 py-2.5 text-sm"
             >
               {t("exam_submit", lang)}
             </button>
@@ -1060,7 +1060,7 @@ function ExamContent() {
         {/* Submit confirm modal */}
         {showSubmitConfirm && (
           <div className="fixed inset-0 z-50 bg-[#F7F9FC]/80 flex items-center justify-center px-4">
-            <div className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-6 max-w-sm w-full animate-fade-in">
+            <div className="card p-6 max-w-sm w-full animate-scale-in">
               <p className="text-[#1A2B3C] font-semibold mb-2">{t("exam_submit", lang)}</p>
               <p className="text-[#A0AEC0] text-sm mb-5">{t("exam_submit_confirm", lang)}</p>
               <div className="flex gap-3">

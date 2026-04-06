@@ -27,14 +27,16 @@ export default function TopicCard({ topic, count, userId, lang, accuracy, delay 
   return (
     <Link
       href={href}
-      className="topic-card-border bg-[#FFFFFF] border border-[#E4E9F0] rounded p-4 card-hover block animate-fade-in"
+      className="topic-card-border card-interactive p-4 block"
       style={{
         borderLeftColor: config.color,
         animationDelay: `${delay}ms`,
       }}
     >
       <div className="flex items-start justify-between mb-2">
-        <TopicIcon name={config.icon} className="w-6 h-6" />
+        <span className="w-9 h-9 rounded-lg flex items-center justify-center" style={{ backgroundColor: `${config.color}1A` }}>
+          <TopicIcon name={config.icon} className="w-6 h-6" />
+        </span>
         {accuracy !== undefined && accuracy > 0 && (
           <span
             className={`text-xs font-medium font-mono px-1.5 py-0.5 rounded border ${
@@ -54,7 +56,7 @@ export default function TopicCard({ topic, count, userId, lang, accuracy, delay 
         {count} {t("questions", lang)}
       </p>
       {/* Progress bar */}
-      <div className="h-0.5 bg-[#F7F9FC] rounded-full overflow-hidden">
+      <div className="h-1.5 bg-[#F7F9FC] rounded-full overflow-hidden">
         <div
           className="h-full rounded-full animate-progress"
           style={{
