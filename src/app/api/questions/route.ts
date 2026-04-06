@@ -174,6 +174,8 @@ export async function GET(req: NextRequest) {
   }
 
   // If real user (not guest), prioritize spaced-repetition review questions
+  // — but still respect topic/part/mcqOnly filters so the user gets reviews
+  // from the subject they selected, not random other topics
   if (userId && !userId.startsWith('guest_')) {
     const reviewQuery = sb
       .from('user_question_progress')
@@ -186,8 +188,9 @@ export async function GET(req: NextRequest) {
 
     if (progress && progress.length > 0) {
       const reviewIds = progress.map((p) => p.question_id)
-      let q = sb.from('questions').select('*').in('id', reviewIds)
-      q = applyExamSourceFilter(q, filters.examSource)
+      let q = sb.from('questions').select('*').in('id', reviewIds).eq('is_active', true)
+      q = applyFilters(q, filters)
+      q = withMcq(q)
       const { data } = await q
       if (data && data.length > 0) return NextResponse.json(attachOptions(data))
     }

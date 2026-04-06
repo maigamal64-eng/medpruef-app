@@ -38,6 +38,7 @@ function QuizContent() {
   const [userId, setUserId] = useState<string>("");
   const [question, setQuestion] = useState<Question | null>(null);
   const [loading, setLoading] = useState(true);
+  const [topicTotal, setTopicTotal] = useState<number>(0);
   const [xpEarned, setXpEarned] = useState<number | null>(null);
   const [answered, setAnswered] = useState(false);
   const [questionCount, setQuestionCount] = useState(0);
@@ -58,7 +59,14 @@ function QuizContent() {
       const session = getStoredSession();
       setUserId(session?.user?.id || "");
     }
-  }, [searchParams]);
+    // Fetch total question count for this topic
+    const countParams = new URLSearchParams({ countOnly: "1", examSource });
+    if (topic && topic !== "random") countParams.set("topic", topic);
+    fetch(`/api/questions?${countParams}`)
+      .then((r) => r.json())
+      .then((d) => { if (d.count) setTopicTotal(d.count); })
+      .catch(() => {});
+  }, [searchParams, topic, examSource]);
 
   const switchLang = (l: Lang) => {
     setLang(l);
@@ -221,7 +229,7 @@ function QuizContent() {
           <QuestionCard
             question={question}
             questionNumber={questionCount + (answered ? 0 : 1)}
-            totalQuestions={20}
+            totalQuestions={topicTotal || 20}
             lang={lang}
             onAnswer={handleAnswer}
             imageUrl={question.image_url}
