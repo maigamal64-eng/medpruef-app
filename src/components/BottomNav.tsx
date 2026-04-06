@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { t } from "@/lib/i18n";
+import { Home, FileText, GraduationCap, Brain, BarChart3, User } from "lucide-react";
 
 type Lang = "de" | "en";
 
@@ -14,13 +15,14 @@ interface BottomNavProps {
 export default function BottomNav({ lang, userId }: BottomNavProps) {
   const pathname = usePathname();
 
+  const iconClass = "w-5 h-5";
   const items = [
-    { href: "/", icon: "🏠", label: t("home", lang), key: "home" },
-    { href: userId ? `/quiz?topic=random&userId=${userId}` : "/quiz?topic=random", icon: "📝", label: t("quiz", lang), key: "quiz" },
-    { href: "/exam", icon: "🎓", label: t("exam", lang), key: "exam", highlight: true },
-    { href: "/mentor", icon: "🧠", label: "Mentor", key: "mentor" },
-    { href: userId ? `/stats?userId=${userId}` : "/stats", icon: "📊", label: t("stats", lang), key: "stats" },
-    { href: "/profile", icon: "👤", label: t("profile", lang), key: "profile" },
+    { href: "/", icon: <Home className={iconClass} />, label: t("home", lang), key: "home" },
+    { href: userId ? `/quiz?topic=random&userId=${userId}` : "/quiz?topic=random", icon: <FileText className={iconClass} />, label: t("quiz", lang), key: "quiz" },
+    { href: "/exam", icon: <GraduationCap className={iconClass} />, label: t("exam", lang), key: "exam", highlight: true },
+    { href: "/mentor", icon: <Brain className={iconClass} />, label: "Mentor", key: "mentor" },
+    { href: userId ? `/stats?userId=${userId}` : "/stats", icon: <BarChart3 className={iconClass} />, label: t("stats", lang), key: "stats" },
+    { href: "/profile", icon: <User className={iconClass} />, label: t("profile", lang), key: "profile" },
   ];
 
   const isActive = (key: string) => {
@@ -48,20 +50,20 @@ export default function BottomNav({ lang, userId }: BottomNavProps) {
                   active
                     ? item.highlight
                       ? "text-[#F4A261]"
-                      : "text-[#129B7F]"
+                      : "text-[#007B5F]"
                     : examHighlight
                     ? "text-[#F4A261]/60 active:text-[#F4A261]"
                     : "text-[#A0AEC0] active:text-[#4A5568]"
                 }`}
               >
-                <span className={`text-lg transition-transform duration-200 ${active ? "scale-110" : ""}`}>
+                <span className={`transition-transform duration-200 ${active ? "scale-110" : ""}`}>
                   {item.icon}
                 </span>
-                <span className={`text-[9px] font-medium ${active ? (item.highlight ? "text-[#F4A261]" : "text-[#129B7F]") : examHighlight ? "text-[#F4A261]/60" : ""}`}>
+                <span className={`text-[9px] font-medium ${active ? (item.highlight ? "text-[#F4A261]" : "text-[#007B5F]") : examHighlight ? "text-[#F4A261]/60" : ""}`}>
                   {item.label}
                 </span>
                 {active && (
-                  <div className={`w-1 h-1 rounded-full mt-0.5 ${item.highlight ? "bg-[#F4A261]" : "bg-[#129B7F]"}`} />
+                  <div className={`w-1 h-1 rounded-full mt-0.5 ${item.highlight ? "bg-[#F4A261]" : "bg-[#007B5F]"}`} />
                 )}
               </Link>
             );

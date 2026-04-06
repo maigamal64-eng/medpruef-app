@@ -53,7 +53,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${inter.className} bg-[#F7F9FC] text-[#152B4E] min-h-screen antialiased`}
+        className={`${inter.className} bg-[#F7F9FC] text-[#1A2B3C] min-h-screen antialiased`}
       >
         <TrackerInit />
         {children}

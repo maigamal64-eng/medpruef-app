@@ -10,6 +10,8 @@ import { getStoredSession } from "@/lib/auth";
 import LanguageToggle from "@/components/LanguageToggle";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
+import TopicIcon from "@/components/TopicIcon";
+import { BarChart3, Flame, GraduationCap } from "lucide-react";
 
 type Lang = "de" | "en";
 
@@ -125,7 +127,7 @@ function StatsContent() {
             <LanguageToggle lang={lang} onChange={switchLang} />
           </div>
           <div className="flex flex-col items-center justify-center min-h-[calc(100vh-60px)] px-4 text-center">
-            <div className="text-5xl mb-4">📊</div>
+            <div className="mb-4"><BarChart3 className="w-12 h-12 text-[#A0AEC0] mx-auto" /></div>
             <p className="text-[#4A5568] font-medium mb-2">{t("sign_in_for_stats", lang)}</p>
             <Link href="/" className="mt-4 px-6 py-3 bg-[#007B5F] text-[#003732] rounded font-bold text-sm hover:bg-[#00A896] transition-colors">
               {t("back_home", lang)}
@@ -163,7 +165,7 @@ function StatsContent() {
               <div className="text-xs text-[#A0AEC0]">{xpInfo.rank}</div>
             </div>
             <div className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-4 text-center">
-              <div className="text-3xl font-bold text-[#D64545] font-mono">🔥 {gam?.current_streak || 0}</div>
+              <div className="text-3xl font-bold text-[#D64545] font-mono flex items-center justify-center gap-1"><Flame className="w-6 h-6" /> {gam?.current_streak || 0}</div>
               <div className="text-xs text-[#A0AEC0]">{t("current_streak", lang)}</div>
             </div>
             <div className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-4 text-center">
@@ -234,7 +236,7 @@ function StatsContent() {
                       <div key={topic} className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-3">
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
-                            <span>{config.icon}</span>
+                            <TopicIcon name={config.icon} className="w-4 h-4" />
                             <span className="text-sm font-medium text-[#1A2B3C]">{topic}</span>
                           </div>
                           <div className="flex items-center gap-2">
@@ -281,7 +283,7 @@ function StatsContent() {
                   <div key={topic} className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-3">
                     <div className="flex items-center justify-between mb-1.5">
                       <div className="flex items-center gap-2">
-                        <span>{config.icon}</span>
+                        <TopicIcon name={config.icon} className="w-4 h-4" />
                         <span className="text-xs text-[#1A2B3C]">{topic}</span>
                       </div>
                       <span className="text-[10px] text-[#A0AEC0] font-mono">{answered}/{total}</span>
@@ -311,7 +313,7 @@ function StatsContent() {
               href={`/exam`}
               className="flex items-center justify-center gap-3 w-full py-3.5 bg-[#F4A261]/12 border border-[#F4A261]/25 rounded text-[#F4A261] font-semibold text-sm hover:bg-[#F4A261]/20 transition-colors"
             >
-              🎓 {lang === "de" ? "Prüfungssimulation starten" : "Start Exam Simulation"}
+              <GraduationCap className="w-5 h-5 inline" /> {lang === "de" ? "Prüfungssimulation starten" : "Start Exam Simulation"}
             </Link>
           </div>
         </div>

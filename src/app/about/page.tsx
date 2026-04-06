@@ -7,6 +7,7 @@ import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import LanguageToggle from "@/components/LanguageToggle";
 import { getStoredSession } from "@/lib/auth";
+import { FileText, GraduationCap, BarChart3, Flame, Globe, Smartphone, Send, Share2, Camera, Check } from "lucide-react";
 
 type Lang = "de" | "en";
 
@@ -96,7 +97,7 @@ export default function AboutPage() {
                   ]
               ).map((item, i) => (
                 <li key={i} className="flex items-start gap-2 text-sm text-[#4A5568]">
-                  <span className="text-[#007B5F] mt-0.5 flex-shrink-0">✓</span>
+                  <Check className="w-4 h-4 text-[#007B5F] mt-0.5 flex-shrink-0" />
                   <span>{item}</span>
                 </li>
               ))}
@@ -135,15 +136,15 @@ export default function AboutPage() {
             </h2>
             <div className="grid grid-cols-2 gap-3">
               {[
-                { icon: "📝", label: lang === "de" ? "7.000+ Übungsfragen" : "7,000+ Practice Questions" },
-                { icon: "🎓", label: lang === "de" ? "Prüfungssimulation" : "Exam Simulation" },
-                { icon: "📊", label: lang === "de" ? "Detaillierte Statistiken" : "Detailed Statistics" },
-                { icon: "🔥", label: lang === "de" ? "Gamification & XP" : "Gamification & XP" },
-                { icon: "🌍", label: lang === "de" ? "Deutsch & Englisch" : "German & English" },
-                { icon: "📱", label: lang === "de" ? "Telegram Mini App" : "Telegram Mini App" },
+                { icon: <FileText className="w-4 h-4" />, label: lang === "de" ? "7.000+ Übungsfragen" : "7,000+ Practice Questions" },
+                { icon: <GraduationCap className="w-4 h-4" />, label: lang === "de" ? "Prüfungssimulation" : "Exam Simulation" },
+                { icon: <BarChart3 className="w-4 h-4" />, label: lang === "de" ? "Detaillierte Statistiken" : "Detailed Statistics" },
+                { icon: <Flame className="w-4 h-4" />, label: lang === "de" ? "Gamification & XP" : "Gamification & XP" },
+                { icon: <Globe className="w-4 h-4" />, label: lang === "de" ? "Deutsch & Englisch" : "German & English" },
+                { icon: <Smartphone className="w-4 h-4" />, label: lang === "de" ? "Telegram Mini App" : "Telegram Mini App" },
               ].map((f) => (
                 <div key={f.label} className="flex items-center gap-2 text-sm text-[#4A5568]">
-                  <span>{f.icon}</span>
+                  {f.icon}
                   <span>{f.label}</span>
                 </div>
               ))}
@@ -162,7 +163,7 @@ export default function AboutPage() {
             </p>
             <div className="flex flex-wrap gap-2">
               {[
-                { icon: "✉️", label: "Telegram", href: "https://t.me/MedPruefBot" },
+                { icon: <Send className="w-4 h-4" />, label: "Telegram", href: "https://t.me/MedPruefBot" },
               ].map((link) => (
                 <a
                   key={link.label}
@@ -171,7 +172,7 @@ export default function AboutPage() {
                   rel="noopener noreferrer"
                   className="flex items-center gap-2 px-3 py-2 bg-[#F7F9FC] border border-[#E4E9F0] rounded text-sm text-[#4A5568] hover:border-[#007B5F]/40 hover:text-[#1A2B3C] transition-colors"
                 >
-                  <span>{link.icon}</span>
+                  {link.icon}
                   <span>{link.label}</span>
                 </a>
               ))}
@@ -185,16 +186,16 @@ export default function AboutPage() {
             </h2>
             <div className="flex flex-wrap gap-2">
               {[
-                { icon: "📱", label: "Telegram Bot", href: "#" },
-                { icon: "🐦", label: "Twitter / X", href: "#" },
-                { icon: "📸", label: "Instagram", href: "#" },
+                { icon: <Smartphone className="w-4 h-4" />, label: "Telegram Bot", href: "#" },
+                { icon: <Share2 className="w-4 h-4" />, label: "Twitter / X", href: "#" },
+                { icon: <Camera className="w-4 h-4" />, label: "Instagram", href: "#" },
               ].map((s) => (
                 <a
                   key={s.label}
                   href={s.href}
                   className="flex items-center gap-2 px-3 py-2 bg-[#F7F9FC] border border-[#E4E9F0] rounded text-sm text-[#A0AEC0] cursor-pointer"
                 >
-                  <span>{s.icon}</span>
+                  {s.icon}
                   <span>{s.label}</span>
                   <span className="text-[9px] bg-[#F4A261]/10 text-[#F4A261] px-1 rounded border border-[#F4A261]/20">
                     {lang === "de" ? "Bald" : "Soon"}

@@ -18,7 +18,7 @@ export default function ExamSelector({ lang, onSelect }: Props) {
       <div className="w-full max-w-md animate-fade-in">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="w-16 h-16 rounded border border-[#129B7F]/30 bg-[#129B7F]/10 flex items-center justify-center mx-auto mb-4">
+          <div className="w-16 h-16 rounded border border-[#007B5F]/30 bg-[#007B5F]/10 flex items-center justify-center mx-auto mb-4">
             <img src="/brand/logo-mark.png" alt="MedPrüf" className="w-12 h-12" />
           </div>
           <img src="/brand/wordmark-twotone.png" alt="MedPrüf" className="h-10 mx-auto" />
@@ -35,13 +35,13 @@ export default function ExamSelector({ lang, onSelect }: Props) {
             <button
               key={exam.id}
               onClick={() => handle(exam.id)}
-              className="w-full flex items-center gap-4 bg-[#FFFFFF] border border-[#E4E9F0] hover:border-[#129B7F]/50 hover:bg-[#1E2640] rounded p-4 text-left transition-all active:scale-[0.98] group"
+              className="w-full flex items-center gap-4 bg-[#FFFFFF] border border-[#E4E9F0] hover:border-[#007B5F]/50 hover:bg-[#1E2640] rounded p-4 text-left transition-all active:scale-[0.98] group"
             >
               <span className="text-2xl">{exam.badge}</span>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="font-semibold text-[#152B4E] text-sm">{exam.fullName}</span>
-                  <span className="text-[10px] font-mono bg-[#129B7F]/10 text-[#129B7F] px-1.5 py-0.5 rounded border border-[#129B7F]/20">
+                  <span className="font-semibold text-[#1A2B3C] text-sm">{exam.fullName}</span>
+                  <span className="text-[10px] font-mono bg-[#007B5F]/10 text-[#007B5F] px-1.5 py-0.5 rounded border border-[#007B5F]/20">
                     {exam.id}
                   </span>
                 </div>
@@ -50,7 +50,7 @@ export default function ExamSelector({ lang, onSelect }: Props) {
                   {lang === "de" ? "Fragen" : "questions"}
                 </div>
               </div>
-              <span className="text-[#129B7F] opacity-0 group-hover:opacity-100 transition-opacity text-lg">
+              <span className="text-[#007B5F] opacity-0 group-hover:opacity-100 transition-opacity text-lg">
                 →
               </span>
             </button>

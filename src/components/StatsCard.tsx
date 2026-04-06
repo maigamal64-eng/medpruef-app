@@ -1,7 +1,9 @@
 "use client";
 
+import { type ReactNode } from "react";
+
 interface StatsCardProps {
-  icon: string;
+  icon: ReactNode;
   value: string | number;
   label: string;
   color: string;

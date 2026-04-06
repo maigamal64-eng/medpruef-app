@@ -8,6 +8,8 @@ import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import LanguageToggle from "@/components/LanguageToggle";
 import { getStoredSession } from "@/lib/auth";
+import TopicIcon from "@/components/TopicIcon";
+import { Link as LinkIcon, Lightbulb, BookOpen } from "lucide-react";
 
 type Lang = "de" | "en";
 
@@ -59,10 +61,16 @@ const RESOURCES_EN: Resource[] = [
   { title: "Psychiatry", description: "S3 guidelines from DGPPN (German Association for Psychiatry) for the most common conditions", type: "guideline", specialty: "Psychiatrie" },
 ];
 
+const TYPE_ICONS = {
+  link: <LinkIcon className="w-5 h-5" />,
+  tip: <Lightbulb className="w-5 h-5" />,
+  guideline: <BookOpen className="w-5 h-5" />,
+};
+
 const TYPE_STYLES = {
-  link: { bg: "bg-[#007B5F]/8", border: "border-[#007B5F]/25", badge: "bg-[#007B5F]/15 text-[#007B5F]", icon: "🔗" },
-  tip: { bg: "bg-[#F4A261]/6", border: "border-[#F4A261]/25", badge: "bg-[#F4A261]/15 text-[#F4A261]", icon: "💡" },
-  guideline: { bg: "bg-[#FFFFFF]", border: "border-[#E4E9F0]", badge: "bg-[#4A5568]/10 text-[#4A5568]", icon: "📖" },
+  link: { bg: "bg-[#007B5F]/8", border: "border-[#007B5F]/25", badge: "bg-[#007B5F]/15 text-[#007B5F]" },
+  tip: { bg: "bg-[#F4A261]/6", border: "border-[#F4A261]/25", badge: "bg-[#F4A261]/15 text-[#F4A261]" },
+  guideline: { bg: "bg-[#FFFFFF]", border: "border-[#E4E9F0]", badge: "bg-[#4A5568]/10 text-[#4A5568]" },
 };
 
 export default function MaterialsPage() {
@@ -162,9 +170,9 @@ export default function MaterialsPage() {
                   <div className="flex items-start justify-between gap-3 mb-2">
                     <div className="flex items-center gap-2 flex-1 min-w-0">
                       {specialty ? (
-                        <span className="text-xl flex-shrink-0">{specialty.icon}</span>
+                        <span className="flex-shrink-0"><TopicIcon name={specialty.icon} className="w-5 h-5" /></span>
                       ) : (
-                        <span className="text-xl flex-shrink-0">{style.icon}</span>
+                        <span className="flex-shrink-0">{TYPE_ICONS[r.type]}</span>
                       )}
                       <h3 className="text-sm font-semibold text-[#1A2B3C] truncate">{r.title}</h3>
                     </div>
@@ -216,7 +224,7 @@ export default function MaterialsPage() {
                   return (
                     <div key={topic} className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-3">
                       <div className="flex items-center gap-2 mb-1.5">
-                        <span>{cfg.icon}</span>
+                        <TopicIcon name={cfg.icon} className="w-4 h-4" />
                         <span className="text-xs text-[#1A2B3C] font-medium flex-1 truncate">{topic}</span>
                       </div>
                       <div className="flex items-center gap-2">

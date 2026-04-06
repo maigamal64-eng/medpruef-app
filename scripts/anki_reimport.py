@@ -297,13 +297,29 @@ def parse_answers_flags(s: str) -> list:
     return [1 if p == '1' else 0 for p in parts]
 
 YM_RE = re.compile(r'\b(\d{4}-\d{2})\b')
-YEAR_RE = re.compile(r'^\d{4}$')
+YEAR_RE = re.compile(r'^(\d{4})$')
+YEAR_IN_TAG_RE = re.compile(r'\b(20\d{2})\b')
 
 def parse_exam_dates_from_tags(tags: list) -> list:
+    """Extract exam dates from Anki tags. Returns YYYY-MM and YYYY formats."""
     out = set()
     for t in tags:
+        # Exact YYYY-MM format (most precise)
         for m in YM_RE.finditer(t):
             out.add(m.group(1))
+        # Standalone year tags like "2024", "2023" — store as YYYY
+        if YEAR_RE.fullmatch(t.strip()):
+            year = t.strip()
+            # Only include if no more precise YYYY-MM already present for same year
+            if not any(d.startswith(year + '-') for d in out):
+                out.add(year)
+    # Remove bare YYYY if a more precise YYYY-MM exists for same year
+    to_remove = set()
+    for d in out:
+        if len(d) == 4:  # bare year
+            if any(x.startswith(d + '-') for x in out if len(x) == 7):
+                to_remove.add(d)
+    out -= to_remove
     return sorted(out)
 
 def parse_exam_dates_from_termin(termin: str) -> list:
@@ -314,17 +330,22 @@ def parse_exam_dates_from_termin(termin: str) -> list:
 def clean_tags(raw_tags, qtype, n_correct):
     """Turn Anki tags into clean system tags + user tags.
 
-    Drops pure YYYY-MM and YYYY tags (dates live in exam_dates).
+    Drops pure YYYY-MM tags (dates live in exam_dates).
+    Drops pure YYYY tags (also in exam_dates).
+    Drops common noise tags (January, Block*, PRE*, SPT*).
     Keeps disease/module/theme tags as-is.
     Prepends qtype:N and multi-correct markers when relevant.
     """
+    NOISE_PREFIXES = ('january', 'block', 'pre4a', 'pre5a', 'spt', '.sip-')
     keep = []
     for t in raw_tags:
         if not t:
             continue
         if YM_RE.fullmatch(t):
             continue
-        if YEAR_RE.fullmatch(t):
+        if YEAR_RE.fullmatch(t.strip()):
+            continue
+        if t.lower().startswith(NOISE_PREFIXES):
             continue
         keep.append(t)
     out = []

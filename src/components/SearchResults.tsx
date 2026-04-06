@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { getTopicConfig } from "@/lib/topics";
+import TopicIcon from "@/components/TopicIcon";
 
 type Lang = "de" | "en";
 
@@ -82,7 +83,7 @@ export default function SearchResults({
                   className="mt-0.5 flex-shrink-0 w-6 h-6 rounded flex items-center justify-center text-xs"
                   style={{ backgroundColor: `${cfg.color}20`, color: cfg.color }}
                 >
-                  {cfg.icon}
+                  <TopicIcon name={cfg.icon} className="w-4 h-4" />
                 </span>
 
                 {/* Question text */}

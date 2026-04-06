@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { getTopicConfig } from "@/lib/topics";
 import { t } from "@/lib/i18n";
+import TopicIcon from "@/components/TopicIcon";
 
 type Lang = "de" | "en";
 
@@ -33,7 +34,7 @@ export default function TopicCard({ topic, count, userId, lang, accuracy, delay 
       }}
     >
       <div className="flex items-start justify-between mb-2">
-        <span className="text-2xl">{config.icon}</span>
+        <TopicIcon name={config.icon} className="w-6 h-6" />
         {accuracy !== undefined && accuracy > 0 && (
           <span
             className={`text-xs font-medium font-mono px-1.5 py-0.5 rounded border ${

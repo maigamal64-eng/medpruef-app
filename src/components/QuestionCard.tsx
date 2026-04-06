@@ -6,6 +6,8 @@ import { t } from "@/lib/i18n";
 import type { MCQOption } from "@/lib/mcq";
 import ImageLightbox from "@/components/ImageLightbox";
 import { trackEvent } from "@/lib/tracker";
+import TopicIcon from "@/components/TopicIcon";
+import { Lightbulb, FileText } from "lucide-react";
 
 type Lang = "de" | "en";
 
@@ -205,7 +207,7 @@ export default function QuestionCard({
             className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium"
             style={{ backgroundColor: `${config.color}18`, color: config.color }}
           >
-            <span>{config.icon}</span>
+            <TopicIcon name={config.icon} className="w-4 h-4" />
             <span className="max-w-[140px] truncate">{question.topic}</span>
           </span>
           <div className="flex items-center gap-2">
@@ -351,7 +353,7 @@ export default function QuestionCard({
         {answered && question.explanation && (
           <div className="mt-4 bg-[#F4A261]/6 border border-[#F4A261]/25 rounded p-4 animate-fade-in">
             <p className="text-[10px] uppercase tracking-wider text-[#F4A261] font-semibold mb-2">
-              💡 {t("explanation", lang)}
+              <Lightbulb className="w-4 h-4 inline" /> {t("explanation", lang)}
             </p>
             <p className="text-[#4A5568] leading-relaxed text-sm">{question.explanation}</p>
           </div>
@@ -365,13 +367,13 @@ export default function QuestionCard({
                 onClick={() => setShowNoteInput(true)}
                 className="flex items-center gap-1.5 text-xs text-[#A0AEC0] hover:text-[#4A5568] transition-colors"
               >
-                <span>📝</span>
+                <FileText className="w-4 h-4" />
                 <span>{t("add_note", lang)}</span>
               </button>
             ) : (
               <div className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-3">
                 <p className="text-[10px] uppercase tracking-wider text-[#A0AEC0] font-semibold mb-2">
-                  📝 {t("add_note", lang)}
+                  <FileText className="w-3 h-3 inline" /> {t("add_note", lang)}
                 </p>
                 <textarea
                   value={note}

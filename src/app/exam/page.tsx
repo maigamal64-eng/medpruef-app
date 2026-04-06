@@ -11,6 +11,8 @@ import type { MCQOption } from "@/lib/mcq";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import LanguageToggle from "@/components/LanguageToggle";
+import TopicIcon from "@/components/TopicIcon";
+import { GraduationCap, Lightbulb, Clock, AlertTriangle, Search } from "lucide-react";
 
 type Lang = "de" | "en";
 type ExamPhase = "entry" | "loading" | "exam" | "results" | "review";
@@ -366,8 +368,8 @@ function ExamContent() {
           <div className="flex flex-col items-center justify-center min-h-[calc(100vh-60px)] px-4 py-8">
             <div className="max-w-lg w-full">
               <div className="text-center mb-8">
-                <div className="w-20 h-20 rounded border border-[#F4A261]/30 bg-[#F4A261]/10 flex items-center justify-center text-4xl mx-auto mb-5">
-                  🎓
+                <div className="w-20 h-20 rounded border border-[#F4A261]/30 bg-[#F4A261]/10 flex items-center justify-center mx-auto mb-5">
+                  <GraduationCap className="w-10 h-10 text-[#F4A261]" />
                 </div>
                 <h1 className="text-2xl font-bold text-[#1A2B3C] mb-2">{t("exam_sim_title", lang)}</h1>
                 <p className="text-[#A0AEC0] text-sm">{t("exam_sim_desc", lang)}</p>
@@ -388,7 +390,7 @@ function ExamContent() {
                           key={topic}
                           className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-3 flex items-center gap-3"
                         >
-                          <span className="text-xl">{cfg.icon}</span>
+                          <TopicIcon name={cfg.icon} className="w-5 h-5" />
                           <div className="min-w-0">
                             <p className="text-xs font-medium text-[#1A2B3C] truncate">{topic}</p>
                             <p className="text-[10px] text-[#A0AEC0] font-mono">{count} {t("questions", lang)}</p>
@@ -592,15 +594,15 @@ function ExamContent() {
 
               {/* Pass threshold notice */}
               <div className="bg-[#F4A261]/6 border border-[#F4A261]/25 rounded p-4 mb-6 text-center">
-                <p className="text-sm text-[#F4A261]">⚠ {t("pass_threshold", lang)}</p>
+                <p className="text-sm text-[#F4A261] flex items-center justify-center gap-1"><AlertTriangle className="w-4 h-4 inline" /> {t("pass_threshold", lang)}</p>
               </div>
 
               <button
                 onClick={loadExam}
                 disabled={selectedPart === "custom" && (customCount === null || customCount === 0)}
-                className="w-full bg-[#F4A261] hover:bg-[#FFC97A] text-[#1A0E00] py-4 rounded font-bold text-base transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-[#F4A261]"
+                className="w-full bg-[#003A8C] hover:bg-[#003A8C]/90 text-white py-4 rounded font-bold text-base transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-[#003A8C]"
               >
-                🎓 {t("start_exam", lang)}
+                <GraduationCap className="w-5 h-5 inline" /> {t("start_exam", lang)}
                 {selectedPart === "custom" && customCount !== null && customCount > 0 && (
                   <span className="ml-2 font-mono text-sm opacity-70">
                     ({Math.min(customCount, customFilters.limit)})
@@ -620,7 +622,7 @@ function ExamContent() {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-[#F7F9FC] px-4">
         <div className="text-center animate-fade-in max-w-sm w-full">
-          <div className="text-4xl mb-4">🎓</div>
+          <GraduationCap className="w-10 h-10 text-[#F4A261] mx-auto mb-4" />
           <p className="text-[#4A5568] font-semibold mb-6">{t("exam_loading", lang)}</p>
           <div className="bg-[#F7F9FC] rounded-full h-2 mb-3 overflow-hidden">
             <div
@@ -677,7 +679,7 @@ function ExamContent() {
                   className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium"
                   style={{ backgroundColor: `${rcfg.color}18`, color: rcfg.color }}
                 >
-                  {rcfg.icon} {rq.topic}
+                  <TopicIcon name={rcfg.icon} className="w-4 h-4 inline" /> {rq.topic}
                 </span>
                 <span className={`text-xs font-medium font-mono px-2 py-0.5 rounded ${
                   wasCorrect
@@ -724,7 +726,7 @@ function ExamContent() {
               {rq.explanation && (
                 <div className="mt-4 bg-[#F4A261]/6 border border-[#F4A261]/25 rounded p-4">
                   <p className="text-[10px] uppercase tracking-wider text-[#F4A261] font-semibold mb-2">
-                    💡 {t("explanation", lang)}
+                    <Lightbulb className="w-4 h-4 inline" /> {t("explanation", lang)}
                   </p>
                   <p className="text-[#4A5568] text-sm leading-relaxed">{rq.explanation}</p>
                 </div>
@@ -802,7 +804,7 @@ function ExamContent() {
                     <div key={topic} className="bg-[#FFFFFF] border border-[#E4E9F0] rounded p-3">
                       <div className="flex items-center justify-between mb-1.5">
                         <div className="flex items-center gap-2">
-                          <span>{cfg.icon}</span>
+                          <TopicIcon name={cfg.icon} className="w-4 h-4" />
                           <span className="text-sm text-[#1A2B3C] font-medium">{topic}</span>
                         </div>
                         <span className={`text-sm font-bold font-mono ${topicPassed ? "text-[#00A896]" : "text-[#D64545]"}`}>
@@ -834,13 +836,13 @@ function ExamContent() {
                 onClick={() => { setReviewIdx(0); setPhase("review"); }}
                 className="w-full py-3.5 border border-[#E4E9F0] rounded text-[#1A2B3C] font-medium hover:border-[#007B5F]/40 transition-colors"
               >
-                🔍 {t("review_answers", lang)}
+                <Search className="w-4 h-4 inline" /> {t("review_answers", lang)}
               </button>
               <button
                 onClick={() => setPhase("entry")}
-                className="w-full py-3.5 bg-[#F4A261] hover:bg-[#FFC97A] text-[#1A0E00] rounded font-bold transition-all active:scale-[0.98]"
+                className="w-full py-3.5 bg-[#003A8C] hover:bg-[#003A8C]/90 text-white rounded font-bold transition-all active:scale-[0.98]"
               >
-                🎓 {t("exam_new", lang)}
+                <GraduationCap className="w-5 h-5 inline" /> {t("exam_new", lang)}
               </button>
             </div>
           </div>
@@ -886,7 +888,7 @@ function ExamContent() {
                   ? "bg-[#D64545]/10 border-[#D64545]/30 text-[#D64545] animate-pulse"
                   : "bg-[#F7F9FC] border-[#E4E9F0] text-[#1A2B3C]"
               }`}>
-                ⏱ {formatTime(timeLeft)}
+                <Clock className="w-4 h-4 inline" /> {formatTime(timeLeft)}
               </div>
               <LanguageToggle lang={lang} onChange={switchLang} />
             </div>
@@ -908,7 +910,7 @@ function ExamContent() {
                 className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium"
                 style={{ backgroundColor: `${qCfg.color}18`, color: qCfg.color }}
               >
-                {qCfg.icon} <span className="max-w-[140px] truncate">{q.topic}</span>
+                <TopicIcon name={qCfg.icon} className="w-4 h-4 inline" /> <span className="max-w-[140px] truncate">{q.topic}</span>
               </span>
             </div>
 
@@ -1048,7 +1050,7 @@ function ExamContent() {
             </span>
             <button
               onClick={() => setShowSubmitConfirm(true)}
-              className="px-5 py-2.5 bg-[#F4A261] hover:bg-[#FFC97A] text-[#1A0E00] rounded font-bold text-sm transition-all active:scale-[0.98]"
+              className="px-5 py-2.5 bg-[#003A8C] hover:bg-[#003A8C]/90 text-white rounded font-bold text-sm transition-all active:scale-[0.98]"
             >
               {t("exam_submit", lang)}
             </button>
@@ -1070,7 +1072,7 @@ function ExamContent() {
                 </button>
                 <button
                   onClick={handleSubmitExam}
-                  className="flex-1 py-2.5 bg-[#F4A261] text-[#1A0E00] rounded font-bold text-sm hover:bg-[#FFC97A] transition-colors"
+                  className="flex-1 py-2.5 bg-[#003A8C] text-white rounded font-bold text-sm hover:bg-[#003A8C]/90 transition-colors"
                 >
                   {t("exam_submit", lang)}
                 </button>
