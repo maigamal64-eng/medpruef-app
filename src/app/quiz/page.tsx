@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, Suspense } from "react";
+import { useEffect, useState, useCallback, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { t, getLang, setLang } from "@/lib/i18n";
@@ -33,7 +33,7 @@ function QuizContent() {
   const topic = searchParams.get("topic") || "random";
   const examSource = searchParams.get("examSource") || "SIP";
   const initialQuestionId = searchParams.get("questionId");
-  const [usedInitialId, setUsedInitialId] = useState(false);
+  const usedInitialIdRef = useRef(false);
 
   const [userId, setUserId] = useState<string>("");
   const [question, setQuestion] = useState<Question | null>(null);
@@ -74,8 +74,8 @@ function QuizContent() {
 
     try {
       // If we have an initial questionId from search and haven't used it yet, load that specific question
-      if (initialQuestionId && !usedInitialId) {
-        setUsedInitialId(true);
+      if (initialQuestionId && !usedInitialIdRef.current) {
+        usedInitialIdRef.current = true;
         const params = new URLSearchParams({ ids: initialQuestionId, examSource });
         const res = await fetch(`/api/questions?${params}`);
         const data = await res.json();
@@ -99,7 +99,7 @@ function QuizContent() {
     } finally {
       setLoading(false);
     }
-  }, [topic, userId, examSource, initialQuestionId, usedInitialId]);
+  }, [topic, userId, examSource, initialQuestionId]);
 
   useEffect(() => {
     if (userId !== undefined) fetchQuestion();
