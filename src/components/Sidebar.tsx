@@ -6,7 +6,7 @@ import { t } from "@/lib/i18n";
 import { getLevelFromXP } from "@/lib/xp";
 import { TOPIC_CONFIG } from "@/lib/topics";
 import TopicIcon from "@/components/TopicIcon";
-import { Home, FileText, GraduationCap, BarChart3, BookOpen, Info, User, Flame } from "lucide-react";
+import { Home, FileText, GraduationCap, BarChart3, TrendingUp, BookOpen, Info, User, Flame } from "lucide-react";
 
 type Lang = "de" | "en";
 
@@ -28,6 +28,7 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0, streak = 
     { href: userId ? `/quiz?topic=random&userId=${userId}` : "/quiz", icon: <FileText className="w-4 h-4" />, label: t("quiz", lang), key: "quiz" },
     { href: "/exam", icon: <GraduationCap className="w-4 h-4" />, label: t("exam", lang), key: "exam", highlight: true },
     { href: userId ? `/stats?userId=${userId}` : "/stats", icon: <BarChart3 className="w-4 h-4" />, label: t("stats", lang), key: "stats" },
+    { href: "/progress", icon: <TrendingUp className="w-4 h-4" />, label: t("progress", lang), key: "progress" },
   ];
 
   const secondaryNavItems = [
@@ -40,6 +41,7 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0, streak = 
     if (key === "home") return pathname === "/";
     if (key === "quiz") return pathname.startsWith("/quiz");
     if (key === "stats") return pathname.startsWith("/stats");
+    if (key === "progress") return pathname.startsWith("/progress");
     if (key === "exam") return pathname.startsWith("/exam");
     if (key === "materials") return pathname.startsWith("/materials");
     if (key === "about") return pathname.startsWith("/about");

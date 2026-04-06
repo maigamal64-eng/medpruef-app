@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { t } from "@/lib/i18n";
-import { Home, FileText, GraduationCap, Brain, BarChart3, User } from "lucide-react";
+import { Home, FileText, GraduationCap, TrendingUp, BarChart3, User } from "lucide-react";
 
 type Lang = "de" | "en";
 
@@ -20,8 +20,8 @@ export default function BottomNav({ lang, userId }: BottomNavProps) {
     { href: "/", icon: <Home className={iconClass} />, label: t("home", lang), key: "home" },
     { href: userId ? `/quiz?topic=random&userId=${userId}` : "/quiz?topic=random", icon: <FileText className={iconClass} />, label: t("quiz", lang), key: "quiz" },
     { href: "/exam", icon: <GraduationCap className={iconClass} />, label: t("exam", lang), key: "exam", highlight: true },
-    { href: "/mentor", icon: <Brain className={iconClass} />, label: "Mentor", key: "mentor" },
     { href: userId ? `/stats?userId=${userId}` : "/stats", icon: <BarChart3 className={iconClass} />, label: t("stats", lang), key: "stats" },
+    { href: "/progress", icon: <TrendingUp className={iconClass} />, label: t("progress", lang), key: "progress" },
     { href: "/profile", icon: <User className={iconClass} />, label: t("profile", lang), key: "profile" },
   ];
 
@@ -30,7 +30,7 @@ export default function BottomNav({ lang, userId }: BottomNavProps) {
     if (key === "quiz") return pathname.startsWith("/quiz");
     if (key === "stats") return pathname.startsWith("/stats");
     if (key === "exam") return pathname.startsWith("/exam");
-    if (key === "mentor") return pathname.startsWith("/mentor");
+    if (key === "progress") return pathname.startsWith("/progress");
     if (key === "profile") return pathname.startsWith("/profile");
     return false;
   };

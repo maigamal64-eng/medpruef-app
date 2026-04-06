@@ -179,6 +179,24 @@ const translations = {
   'questions_per_specialty': { de: 'Fragen pro Fachgebiet', en: 'Questions per Specialty' },
   'weekly_activity': { de: 'Wochenaktivität', en: 'Weekly Activity' },
   'sign_in_for_stats': { de: 'Melde dich an um Statistiken zu sehen', en: 'Sign in to see statistics' },
+
+  // Progress dashboard
+  'progress': { de: 'Fortschritt', en: 'Progress' },
+  'progress_title': { de: 'Lernfortschritt', en: 'Learning Progress' },
+  'current_streak_label': { de: 'Aktuelle Serie', en: 'Current Streak' },
+  'level_and_xp': { de: 'Level & XP', en: 'Level & XP' },
+  'topic_progress': { de: 'Fortschritt nach Fachgebiet', en: 'Progress by Specialty' },
+  'sort_by_accuracy': { de: 'Nach Genauigkeit', en: 'By Accuracy' },
+  'sort_by_count': { de: 'Nach Anzahl', en: 'By Count' },
+  'bookmarked_questions': { de: 'Gemerkte Fragen', en: 'Bookmarked Questions' },
+  'my_notes': { de: 'Meine Notizen', en: 'My Notes' },
+  'no_bookmarks': { de: 'Noch keine Lesezeichen — markiere Fragen mit \u2605 beim Lernen', en: 'No bookmarks yet — star \u2605 questions while studying' },
+  'no_notes': { de: 'Noch keine Notizen — füge Notizen beim Lernen hinzu', en: 'No notes yet — add notes while reviewing answers' },
+  'exam_readiness': { de: 'Prüfungsbereitschaft', en: 'Exam Readiness' },
+  'days_until_exam': { de: 'Tage bis zur Prüfung', en: 'Days until exam' },
+  'practice_weak': { de: 'Schwächen üben', en: 'Practice Weak Topics' },
+  'of_total': { de: 'von gesamt', en: 'of total' },
+  'correct_of': { de: 'richtig von', en: 'correct of' },
 } as const
 
 export type TranslationKey = keyof typeof translations
