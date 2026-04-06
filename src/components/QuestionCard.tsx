@@ -163,7 +163,7 @@ export default function QuestionCard({
 
   const getOptionStyle = (idx: number, opt: MCQOption): string => {
     const base =
-      "w-full text-left px-4 py-3 text-sm font-medium transition-all duration-200 flex items-center gap-3";
+      "w-full text-left px-4 py-3 min-h-[56px] text-sm font-medium transition-all duration-200 flex items-center gap-3";
     const isSelected = selectedIdxs.has(idx);
 
     if (!answered) {
@@ -200,7 +200,7 @@ export default function QuestionCard({
 
   return (
     <>
-      <div className="card p-5 md:p-6 animate-slide-up">
+      <div className="card rounded-2xl p-6 md:p-8 animate-slide-up">
         {/* Top row: topic badge + question counter + bookmark */}
         <div className="flex items-center justify-between mb-4">
           <span
@@ -257,7 +257,7 @@ export default function QuestionCard({
         )}
 
         {/* Question text */}
-        <p className="text-base md:text-lg leading-relaxed font-medium text-[#1A2B3C] mb-4">
+        <p className="text-lg md:text-xl leading-relaxed font-medium text-[#1A2B3C] mb-4">
           {question.question}
         </p>
 
@@ -276,7 +276,7 @@ export default function QuestionCard({
         )}
 
         {/* MCQ Options */}
-        <div className="space-y-2">
+        <div className="space-y-3">
           {isOpenAnswer && !showAnswer && (
             <button
               onClick={() => {
@@ -313,7 +313,7 @@ export default function QuestionCard({
                 className={getOptionStyle(idx, opt)}
               >
                 <span
-                  className={`w-8 h-8 rounded-lg flex-shrink-0 flex items-center justify-center text-xs font-bold border font-mono ${
+                  className={`w-9 h-9 rounded-xl flex-shrink-0 flex items-center justify-center text-sm font-bold border font-mono ${
                     !answered
                       ? isSelected
                         ? "bg-[#007B5F]/15 border-[#007B5F] text-[#007B5F]"

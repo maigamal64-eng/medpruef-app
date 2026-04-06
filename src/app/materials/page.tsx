@@ -127,7 +127,7 @@ export default function MaterialsPage() {
 
         <div className="px-4 lg:px-8 py-4 max-w-2xl mx-auto">
           {/* Hero */}
-          <div className="card p-5 mb-5">
+          <div className="card rounded-2xl p-5 mb-5">
             <div className="flex items-center gap-4">
               <div className="text-4xl">📚</div>
               <div>
@@ -166,7 +166,7 @@ export default function MaterialsPage() {
               const style = TYPE_STYLES[r.type];
               const specialty = r.specialty ? TOPIC_CONFIG[r.specialty] : null;
               return (
-                <div key={i} className={`card-interactive ${style.bg} border ${style.border} p-4`}>
+                <div key={i} className={`card-interactive rounded-2xl ${style.bg} border ${style.border} p-5`}>
                   <div className="flex items-start justify-between gap-3 mb-2">
                     <div className="flex items-center gap-2 flex-1 min-w-0">
                       {specialty ? (

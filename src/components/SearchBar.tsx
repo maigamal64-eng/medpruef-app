@@ -37,7 +37,7 @@ export default function SearchBar({ lang, onSearch, autoFocus }: SearchBarProps)
   return (
     <div className="relative flex items-center">
       {/* Search icon */}
-      <span className="absolute left-3 text-[#A0AEC0] pointer-events-none text-base leading-none">
+      <span className="absolute left-3.5 text-[#A0AEC0] pointer-events-none text-lg leading-none">
         🔍
       </span>
 
@@ -47,7 +47,7 @@ export default function SearchBar({ lang, onSearch, autoFocus }: SearchBarProps)
         value={value}
         onChange={handleChange}
         placeholder={lang === "de" ? "Frage suchen..." : "Search questions..."}
-        className="w-full bg-[#FFFFFF] border border-[#E4E9F0] rounded-xl shadow-[var(--shadow-xs)] pl-9 pr-9 py-2.5 text-sm text-[#1A2B3C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#007B5F]/50 focus:shadow-[var(--shadow-card)] transition-all"
+        className="w-full bg-[#FFFFFF] border border-[#E4E9F0] rounded-xl shadow-[var(--shadow-xs)] pl-10 pr-9 py-3 text-base text-[#1A2B3C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#007B5F]/50 focus:shadow-[0_0_0_3px_rgba(0,123,95,0.15)] transition-all"
       />
 
       {/* Clear button */}

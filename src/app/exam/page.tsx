@@ -390,7 +390,7 @@ function ExamContent() {
                       return (
                         <div
                           key={topic}
-                          className="card p-3 flex items-center gap-3"
+                          className="card rounded-2xl p-3 flex items-center gap-3"
                         >
                           <TopicIcon name={cfg.icon} className="w-5 h-5" />
                           <div className="min-w-0">
@@ -777,12 +777,12 @@ function ExamContent() {
             <h1 className="text-xl font-bold text-[#1A2B3C] mb-6">{t("exam_finished", lang)}</h1>
 
             {/* Overall result */}
-            <div className={`rounded-xl p-6 border mb-6 text-center animate-scale-in ${
+            <div className={`rounded-2xl p-8 border mb-6 text-center animate-scale-in ${
               passed
                 ? "bg-[#00A896]/8 border-[#00A896]/40"
                 : "bg-[#D64545]/8 border-[#D64545]/40"
             }`}>
-              <div className={`text-5xl font-bold font-mono mb-2 ${passed ? "text-[#00A896]" : "text-[#D64545]"}`}>
+              <div className={`text-5xl font-black font-mono mb-2 ${passed ? "text-[#00A896]" : "text-[#D64545]"}`}>
                 {Math.round(overallPct * 100)}%
               </div>
               <div className={`text-lg font-bold mb-2 ${passed ? "text-[#00A896]" : "text-[#D64545]"}`}>
@@ -906,7 +906,46 @@ function ExamContent() {
 
         {/* Question */}
         <div className="flex-1 px-4 lg:px-8 py-4 max-w-3xl mx-auto w-full overflow-y-auto">
-          <div className="card p-5 md:p-6 mb-4">
+          {/* Question Navigator Grid */}
+          <div className="mb-4 overflow-x-auto">
+            <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto p-1">
+              {(() => {
+                const maxVisible = 30;
+                const showAll = questions.length <= maxVisible;
+                const displayed = showAll ? questions : questions.slice(0, maxVisible);
+                return (
+                  <>
+                    {displayed.map((_, idx) => {
+                      const isAnswered = answers[idx] !== undefined;
+                      const isCurrent = idx === currentIdx;
+                      return (
+                        <button
+                          key={idx}
+                          onClick={() => setCurrentIdx(idx)}
+                          className={`w-7 h-7 rounded-lg text-[10px] font-mono flex-shrink-0 flex items-center justify-center transition-all ${
+                            isCurrent
+                              ? "bg-[#003A8C] text-white shadow-sm"
+                              : isAnswered
+                              ? "bg-[#00A896]/20 text-[#00A896] border border-[#00A896]/30"
+                              : "bg-[#F7F9FC] text-[#A0AEC0] border border-[#E4E9F0]"
+                          }`}
+                        >
+                          {idx + 1}
+                        </button>
+                      );
+                    })}
+                    {!showAll && (
+                      <span className="w-7 h-7 flex items-center justify-center text-[10px] text-[#A0AEC0] font-mono">
+                        ...
+                      </span>
+                    )}
+                  </>
+                );
+              })()}
+            </div>
+          </div>
+
+          <div className="card rounded-2xl p-5 md:p-6 mb-4">
             <div className="flex items-center justify-between mb-4">
               <span
                 className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium"

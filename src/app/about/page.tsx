@@ -65,7 +65,7 @@ export default function AboutPage() {
           </div>
 
           {/* What is MedPrüf */}
-          <div className="card p-5 mb-4">
+          <div className="card rounded-2xl p-6 mb-4">
             <h2 className="text-base font-semibold text-[#007B5F] mb-3">
               {lang === "de" ? "Was ist MedPrüf?" : "What is MedPrüf?"}
             </h2>
@@ -77,7 +77,7 @@ export default function AboutPage() {
           </div>
 
           {/* Target audience */}
-          <div className="card p-5 mb-4">
+          <div className="card rounded-2xl p-6 mb-4">
             <h2 className="text-base font-semibold text-[#F4A261] mb-3">
               {lang === "de" ? "Für wen ist MedPrüf?" : "Who is MedPrüf for?"}
             </h2>
@@ -105,7 +105,7 @@ export default function AboutPage() {
           </div>
 
           {/* Kenntnisprüfung info */}
-          <div className="card p-5 mb-4">
+          <div className="card rounded-2xl p-6 mb-4">
             <h2 className="text-base font-semibold text-[#1A2B3C] mb-3">
               {lang === "de" ? "Die Kenntnisprüfung" : "The Kenntnisprüfung"}
             </h2>
@@ -121,16 +121,16 @@ export default function AboutPage() {
                 { label: lang === "de" ? "Prüfungsdauer" : "Exam duration", value: "4h" },
                 { label: lang === "de" ? "Fachgebiete" : "Specialties", value: "10" },
               ].map((stat) => (
-                <div key={stat.label} className="bg-[#FFFFFF] rounded p-3 text-center">
-                  <p className="text-lg font-bold text-[#007B5F] font-mono">{stat.value}</p>
-                  <p className="text-[10px] text-[#A0AEC0] mt-0.5">{stat.label}</p>
+                <div key={stat.label} className="bg-[#FFFFFF] rounded-xl p-3 text-center">
+                  <p className="text-2xl font-black text-[#007B5F] font-mono">{stat.value}</p>
+                  <p className="text-[10px] text-[#A0AEC0] mt-1">{stat.label}</p>
                 </div>
               ))}
             </div>
           </div>
 
           {/* Features */}
-          <div className="card p-5 mb-4">
+          <div className="card rounded-2xl p-6 mb-4">
             <h2 className="text-base font-semibold text-[#1A2B3C] mb-3">
               {lang === "de" ? "Features" : "Features"}
             </h2>
@@ -152,7 +152,7 @@ export default function AboutPage() {
           </div>
 
           {/* Team */}
-          <div className="card p-5 mb-4">
+          <div className="card rounded-2xl p-6 mb-4">
             <h2 className="text-base font-semibold text-[#1A2B3C] mb-3">
               {lang === "de" ? "Team & Kontakt" : "Team & Contact"}
             </h2>
@@ -180,7 +180,7 @@ export default function AboutPage() {
           </div>
 
           {/* Social media */}
-          <div className="card p-5">
+          <div className="card rounded-2xl p-6">
             <h2 className="text-base font-semibold text-[#1A2B3C] mb-3">
               {lang === "de" ? "Social Media" : "Social Media"}
             </h2>

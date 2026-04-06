@@ -13,11 +13,11 @@ interface StatsCardProps {
 export default function StatsCard({ icon, value, label, color, delay = 0 }: StatsCardProps) {
   return (
     <div
-      className="card p-4 text-center"
+      className="card rounded-2xl p-5 text-center"
     >
-      <div className="text-2xl mb-1">{icon}</div>
-      <div className={`text-xl font-bold font-mono ${color}`}>{value}</div>
-      <div className="text-xs text-[#A0AEC0] mt-0.5">{label}</div>
+      <div className="w-10 h-10 rounded-xl bg-[#007B5F]/10 flex items-center justify-center mx-auto mb-2">{icon}</div>
+      <div className={`text-2xl font-black font-mono text-[#1A2B3C]`}>{value}</div>
+      <div className="text-xs text-[#A0AEC0] font-medium mt-1">{label}</div>
     </div>
   );
 }

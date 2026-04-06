@@ -51,27 +51,27 @@ export default function XPBar({ totalXp, lang, compact = false }: XPBarProps) {
   }
 
   return (
-    <div className="card p-4">
+    <div className="card rounded-2xl p-5">
       <div className="flex items-center gap-3 mb-3">
-        <div className="w-11 h-11 rounded bg-[#F4A261]/10 border border-[#F4A261]/20 flex items-center justify-center text-xl">
+        <div className="w-11 h-11 rounded-xl bg-[#F4A261]/10 border border-[#F4A261]/20 flex items-center justify-center text-xl">
           {icon}
         </div>
         <div className="flex-1">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-base font-bold text-[#1A2B3C]">{xpInfo.rank}</p>
+              <p className="text-lg font-bold text-[#1A2B3C]">{xpInfo.rank}</p>
               <p className="text-xs text-[#4A5568] font-mono">
                 {t("level", lang)} {xpInfo.level}
               </p>
             </div>
             <div className="text-right">
-              <p className="text-base font-bold text-[#F4A261] font-mono">{totalXp}</p>
+              <p className="text-2xl font-black text-[#F4A261] font-mono">{totalXp}</p>
               <p className="text-xs text-[#A0AEC0]">XP</p>
             </div>
           </div>
         </div>
       </div>
-      <div className="h-2 bg-[#F7F9FC] rounded-full overflow-hidden">
+      <div className="h-2.5 bg-[#F7F9FC] rounded-full overflow-hidden">
         <div
           className="h-full bg-[#F4A261] rounded-full animate-progress"
           style={{ width: `${xpInfo.progress}%` }}

@@ -337,7 +337,7 @@ export default function Home() {
 
         <div className="px-4 lg:px-8 py-4">
           {/* Top Row: Stats + Daily Goal */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
             <DailyGoalRing
               current={gam?.daily_questions_today || 0}
               goal={user.daily_goal || 20}
@@ -350,10 +350,10 @@ export default function Home() {
           </div>
 
           {/* Quick Actions */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
             <Link
               href={`/quiz?topic=random&userId=${user.id}&examSource=${examSource}`}
-              className="btn-primary flex items-center gap-3 px-5 py-3.5 pulse-glow active:scale-[0.98]"
+              className="btn-primary flex items-center gap-3 px-5 py-4 text-base rounded-xl pulse-glow active:scale-[0.98]"
             >
               <Shuffle className="w-5 h-5" />
               <span className="text-sm">{t("random_quiz", lang)}</span>
@@ -362,7 +362,7 @@ export default function Home() {
             {topics.length > 0 && (
               <Link
                 href={`/quiz?topic=${encodeURIComponent(topics[0].topic)}&userId=${user.id}&examSource=${examSource}`}
-                className="flex items-center gap-3 bg-[#FFFFFF] border border-[#E4E9F0] text-[#1A2B3C] px-5 py-3.5 rounded font-medium hover:border-[#007B5F]/40 transition-all"
+                className="flex items-center gap-3 bg-[#FFFFFF] border border-[#E4E9F0] text-[#1A2B3C] px-5 py-4 rounded-xl font-medium hover:border-[#007B5F]/40 hover:shadow-md transition-all"
               >
                 <PlayCircle className="w-5 h-5 flex-shrink-0 text-[#007B5F]" />
                 <span className="text-xs leading-tight">{t("continue_where_left", lang)}</span>
@@ -371,7 +371,7 @@ export default function Home() {
 
             <Link
               href={`/exam?examSource=${examSource}`}
-              className="flex items-center gap-3 bg-[#FFFFFF] border border-[#E4E9F0] text-[#1A2B3C] px-5 py-3.5 rounded font-medium hover:border-[#007B5F]/40 transition-all"
+              className="flex items-center gap-3 bg-[#FFFFFF] border border-[#E4E9F0] text-[#1A2B3C] px-5 py-4 rounded-xl font-medium hover:border-[#007B5F]/40 hover:shadow-md transition-all"
             >
               <ClipboardList className="w-5 h-5 flex-shrink-0 text-[#003A8C]" />
               <span className="text-xs">{t("mock_exam", lang)}</span>
@@ -379,7 +379,7 @@ export default function Home() {
           </div>
 
           {/* Search */}
-          <div className="mb-5">
+          <div className="mb-6">
             <SearchBar lang={lang} onSearch={handleSearch} />
             {searchQuery && (
               <SearchResults
@@ -394,8 +394,8 @@ export default function Home() {
 
           {/* Topics Grid — hidden while searching */}
           {!searchQuery && (
-            <div className="mb-5">
-              <h2 className="text-base font-semibold mb-3 text-[#1A2B3C]">{t("specialties", lang)}</h2>
+            <div className="mb-6">
+              <h2 className="text-lg font-semibold mb-4 text-[#1A2B3C] border-l-[3px] border-[#007B5F] pl-3">{t("specialties", lang)}</h2>
 
               {examSource === "SIP" ? (
                 <>
@@ -418,10 +418,10 @@ export default function Home() {
                   </div>
 
                   {/* SIP 4 section */}
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-[#F4A261] mb-2">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-[#F4A261] mb-3">
                     {t("sip4_label", lang)}
                   </h3>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 mb-4 stagger">
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-5 stagger">
                     {topics
                       .filter((tp) => VIENNA_EXAM_PARTS.sip4.includes(tp.topic))
                       .map((tp, i) => (
@@ -438,10 +438,10 @@ export default function Home() {
                   </div>
 
                   {/* SIP 5 section */}
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-[#007B5F] mb-2">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-[#007B5F] mb-3">
                     {t("sip5_label", lang)}
                   </h3>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 stagger">
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 stagger">
                     {topics
                       .filter((tp) => VIENNA_EXAM_PARTS.sip5.includes(tp.topic))
                       .map((tp, i) => (
@@ -458,7 +458,7 @@ export default function Home() {
                   </div>
                 </>
               ) : (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 stagger">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 stagger">
                   {topics.map((tp, i) => (
                     <TopicCard
                       key={tp.topic}
@@ -475,8 +475,15 @@ export default function Home() {
             </div>
           )}
 
+          {/* View Progress Link */}
+          <div className="mb-6 text-right">
+            <Link href="/stats" className="text-sm text-[#007B5F] hover:text-[#00A896] transition-colors font-medium">
+              {lang === "de" ? "Fortschritt ansehen" : "View Progress"} →
+            </Link>
+          </div>
+
           {/* Mini Stats Row (mobile only) */}
-          <div className="grid grid-cols-4 gap-2 lg:hidden mb-5 stagger">
+          <div className="grid grid-cols-4 gap-2 lg:hidden mb-6 stagger">
             <StatsCard icon={<Zap className="w-4 h-4" />} value={gam?.total_xp || 0} label="XP" color="text-[#F4A261]" delay={0} />
             <StatsCard icon={<Flame className="w-4 h-4" />} value={gam?.current_streak || 0} label={t("streak", lang)} color="text-[#D64545]" delay={50} />
             <StatsCard icon={<CheckCircle className="w-4 h-4" />} value={`${accuracy}%`} label={t("accuracy", lang)} color="text-[#00A896]" delay={100} />

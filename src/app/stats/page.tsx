@@ -152,30 +152,30 @@ function StatsContent() {
           <LanguageToggle lang={lang} onChange={switchLang} />
         </div>
 
-        <div className="px-4 lg:px-8 py-5 max-w-2xl mx-auto space-y-5">
+        <div className="px-4 lg:px-8 py-5 max-w-2xl mx-auto space-y-6">
 
           {/* Overview Cards */}
           <div className="grid grid-cols-2 gap-3 stagger">
-            <div className="card p-4 text-center">
-              <div className="text-3xl font-bold text-[#F4A261] font-mono">{gam?.total_xp || 0}</div>
-              <div className="text-xs text-[#A0AEC0]">{t("total_xp", lang)}</div>
+            <div className="card rounded-2xl p-6 text-center">
+              <div className="text-3xl font-black text-[#F4A261] font-mono">{gam?.total_xp || 0}</div>
+              <div className="text-xs text-[#A0AEC0] font-medium mt-1">{t("total_xp", lang)}</div>
             </div>
-            <div className="card p-4 text-center">
-              <div className="text-3xl font-bold text-[#007B5F] font-mono">Lv.{xpInfo.level}</div>
-              <div className="text-xs text-[#A0AEC0]">{xpInfo.rank}</div>
+            <div className="card rounded-2xl p-6 text-center">
+              <div className="text-3xl font-black text-[#007B5F] font-mono">Lv.{xpInfo.level}</div>
+              <div className="text-xs text-[#A0AEC0] font-medium mt-1">{xpInfo.rank}</div>
             </div>
-            <div className="card p-4 text-center">
-              <div className="text-3xl font-bold text-[#D64545] font-mono flex items-center justify-center gap-1"><Flame className="w-6 h-6" /> {gam?.current_streak || 0}</div>
-              <div className="text-xs text-[#A0AEC0]">{t("current_streak", lang)}</div>
+            <div className="card rounded-2xl p-6 text-center">
+              <div className="text-3xl font-black text-[#D64545] font-mono flex items-center justify-center gap-1"><Flame className="w-6 h-6" /> {gam?.current_streak || 0}</div>
+              <div className="text-xs text-[#A0AEC0] font-medium mt-1">{t("current_streak", lang)}</div>
             </div>
-            <div className="card p-4 text-center">
-              <div className="text-3xl font-bold text-[#00A896] font-mono">{accuracy}%</div>
-              <div className="text-xs text-[#A0AEC0]">{t("accuracy", lang)}</div>
+            <div className="card rounded-2xl p-6 text-center">
+              <div className="text-3xl font-black text-[#00A896] font-mono">{accuracy}%</div>
+              <div className="text-xs text-[#A0AEC0] font-medium mt-1">{t("accuracy", lang)}</div>
             </div>
           </div>
 
           {/* Summary row */}
-          <div className="card p-4 space-y-2.5">
+          <div className="card rounded-2xl p-6 space-y-2.5">
             <StatRow label={t("total_answered", lang)} value={String(gam?.total_questions_answered || 0)} valueClass="text-[#1A2B3C]" />
             <StatRow label={t("correct", lang)} value={String(gam?.total_correct || 0)} valueClass="text-[#00A896]" />
             <StatRow label={t("longest_streak", lang)} value={`${gam?.longest_streak || 0} ${t("days", lang)}`} valueClass="text-[#1A2B3C]" />
@@ -183,7 +183,7 @@ function StatsContent() {
           </div>
 
           {/* Overall progress */}
-          <div className="card p-4">
+          <div className="card rounded-2xl p-6">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm font-semibold text-[#1A2B3C]">{t("completion_pct", lang)}</span>
               <span className="text-sm font-bold font-mono text-[#007B5F]">{overallCompletion}%</span>
@@ -201,7 +201,7 @@ function StatsContent() {
 
           {/* Daily goal */}
           {gam?.daily_questions_today !== undefined && (
-            <div className="card p-4">
+            <div className="card rounded-2xl p-6">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-sm font-semibold text-[#1A2B3C]">
                   {lang === "de" ? "Tagesziel (heute)" : "Daily Goal (today)"}
@@ -225,7 +225,7 @@ function StatsContent() {
           {/* Per-specialty accuracy */}
           {Object.keys(topicStats).length > 0 && (
             <div>
-              <h2 className="text-base font-semibold mb-3 text-[#1A2B3C]">{t("topic_breakdown", lang)}</h2>
+              <h2 className="text-lg font-semibold mb-4 text-[#1A2B3C] border-l-[3px] border-[#007B5F] pl-3">{t("topic_breakdown", lang)}</h2>
               <div className="space-y-2">
                 {Object.entries(topicStats)
                   .sort(([, a], [, b]) => b.total - a.total)
@@ -233,7 +233,7 @@ function StatsContent() {
                     const config = getTopicConfig(topic);
                     const acc = stat.total > 0 ? Math.round((stat.correct / stat.total) * 100) : 0;
                     return (
-                      <div key={topic} className="card p-3">
+                      <div key={topic} className="card rounded-xl p-4">
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
                             <TopicIcon name={config.icon} className="w-4 h-4" />
@@ -251,12 +251,12 @@ function StatsContent() {
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <div className="flex-1 bg-[#F7F9FC] rounded-full h-2">
+                          <div className="flex-1 bg-[#F7F9FC] rounded-full h-2.5">
                             <div
-                              className="h-2 rounded-full transition-all bg-gradient-to-r"
+                              className="h-2.5 rounded-full transition-all"
                               style={{
                                 width: `${acc}%`,
-                                backgroundColor: acc >= 70 ? "#00A896" : acc >= 40 ? "#F4A261" : "#D64545",
+                                background: acc >= 70 ? "linear-gradient(to right, #00A896, #00A896aa)" : acc >= 40 ? "linear-gradient(to right, #F4A261, #F4A261aa)" : "linear-gradient(to right, #D64545, #D64545aa)",
                               }}
                             />
                           </div>
@@ -273,7 +273,7 @@ function StatsContent() {
 
           {/* All-specialties progress (questions practiced vs available) */}
           <div>
-            <h2 className="text-base font-semibold mb-3 text-[#1A2B3C]">{t("questions_per_specialty", lang)}</h2>
+            <h2 className="text-lg font-semibold mb-4 text-[#1A2B3C] border-l-[3px] border-[#F4A261] pl-3">{t("questions_per_specialty", lang)}</h2>
             <div className="space-y-2">
               {Object.entries(TOPIC_CONFIG).map(([topic, config]) => {
                 const answered = topicStats[topic]?.total || 0;
