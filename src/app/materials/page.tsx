@@ -23,28 +23,28 @@ interface Resource {
 
 const RESOURCES_DE: Resource[] = [
   // Official guidelines
-  { title: "IMPP – Institut für medizinische und pharmazeutische Prüfungsfragen", description: "Offizielle Informationen zum Staatsexamen und Kenntnisprüfung", type: "link", url: "https://www.impp.de" },
-  { title: "Bundesärztekammer – Kenntnisprüfung", description: "Informationen zur Approbation für ausländische Ärzte", type: "link", url: "https://www.bundesaerztekammer.de" },
+  { title: "ÖÄK – Österreichische Ärztekammer", description: "Offizielle Informationen zur Kenntnisprüfung und Approbation in Österreich", type: "link", url: "https://www.aerztekammer.at" },
+  { title: "MedUni Wien – Kenntnisprüfung", description: "Informationen zur Wiener Kenntnisprüfung für ausländische Ärzte", type: "link", url: "https://www.meduniwien.ac.at" },
   { title: "AMBOSS – Klinisches Wissen", description: "Umfassendes medizinisches Wissen mit Fragen und Lernkarten", type: "link", url: "https://www.amboss.com" },
 
   // Preparation tips
   { title: "Strukturierter Lernplan", description: "Beginne 6 Monate vor der Prüfung. Plane täglich mindestens 3–4 Stunden ein. Fokus auf Innere Medizin und Chirurgie.", type: "tip" },
   { title: "Schwerpunkte", description: "Innere Medizin und Chirurgie machen jeweils 12% der Prüfung aus. Diese Fächer haben die meisten Fragen – priorisiere sie.", type: "tip" },
-  { title: "Sprachvorbereitung", description: "Medizinische Terminologie auf Deutsch ist entscheidend. Nutze Fachwörterbücher und übe mit deutschen Kollegen.", type: "tip" },
+  { title: "Sprachvorbereitung", description: "Medizinische Terminologie auf Deutsch ist entscheidend. Nutze Fachwörterbücher und übe mit deutschsprachigen Kollegen.", type: "tip" },
   { title: "Prüfungsstrategie", description: "Bei unklaren Fragen: Schließe offensichtlich falsche Antworten aus. Keine negative Bewertung – beantworte alle Fragen.", type: "tip" },
 
   // By specialty
-  { title: "Innere Medizin", description: "Harrison's Principles of Internal Medicine (engl.) oder Herold Innere Medizin (deutsch) – Standardwerke für die Prüfungsvorbereitung", type: "guideline", specialty: "Innere Medizin" },
+  { title: "Innere Medizin", description: "Harrison's Principles of Internal Medicine (engl.) oder Herold Innere Medizin (deutsch) – Standardwerke", type: "guideline", specialty: "Innere Medizin" },
   { title: "Chirurgie", description: "Duale Reihe Chirurgie von Thieme – umfassend und prüfungsrelevant", type: "guideline", specialty: "Chirurgische Fächer" },
-  { title: "Pädiatrie", description: "Leitlinien der DGKJ (Deutsche Gesellschaft für Kinder- und Jugendmedizin) online verfügbar", type: "guideline", specialty: "Kinder- und Jugendheilkunde" },
-  { title: "Neurologie", description: "Leitlinien der DGN (Deutsche Gesellschaft für Neurologie) – kostenlos unter leitlinien.dgn.org", type: "guideline", specialty: "Neurologie" },
-  { title: "Psychiatrie", description: "S3-Leitlinien der DGPPN (Deutsche Gesellschaft für Psychiatrie) für die häufigsten Erkrankungen", type: "guideline", specialty: "Psychiatrie" },
+  { title: "Pädiatrie", description: "Leitlinien der ÖGKJ (Österreichische Gesellschaft für Kinder- und Jugendheilkunde) online verfügbar", type: "guideline", specialty: "Kinder- und Jugendheilkunde" },
+  { title: "Neurologie", description: "Leitlinien der ÖGN (Österreichische Gesellschaft für Neurologie) – kostenlos verfügbar", type: "guideline", specialty: "Neurologie" },
+  { title: "Psychiatrie", description: "Leitlinien der ÖGPP (Österreichische Gesellschaft für Psychiatrie und Psychotherapie) für die häufigsten Erkrankungen", type: "guideline", specialty: "Psychiatrie" },
 ];
 
 const RESOURCES_EN: Resource[] = [
   // Official
-  { title: "IMPP – Institute for Medical and Pharmaceutical Examination Questions", description: "Official information on the state examination and knowledge test", type: "link", url: "https://www.impp.de" },
-  { title: "German Medical Association – Kenntnisprüfung", description: "Information on Approbation for foreign doctors", type: "link", url: "https://www.bundesaerztekammer.de" },
+  { title: "ÖÄK – Austrian Medical Chamber", description: "Official information on the Kenntnisprüfung and medical licensure in Austria", type: "link", url: "https://www.aerztekammer.at" },
+  { title: "MedUni Vienna – Kenntnisprüfung", description: "Information on Vienna's Kenntnisprüfung for foreign doctors", type: "link", url: "https://www.meduniwien.ac.at" },
   { title: "AMBOSS – Clinical Knowledge", description: "Comprehensive medical knowledge with questions and flashcards", type: "link", url: "https://www.amboss.com" },
 
   // Tips
@@ -56,9 +56,9 @@ const RESOURCES_EN: Resource[] = [
   // By specialty
   { title: "Internal Medicine", description: "Harrison's Principles of Internal Medicine (English) or Herold Innere Medizin (German) — standard references", type: "guideline", specialty: "Innere Medizin" },
   { title: "Surgery", description: "Duale Reihe Chirurgie by Thieme — comprehensive and exam-relevant", type: "guideline", specialty: "Chirurgische Fächer" },
-  { title: "Pediatrics", description: "DGKJ guidelines (German Society for Pediatrics) available online", type: "guideline", specialty: "Kinder- und Jugendheilkunde" },
-  { title: "Neurology", description: "DGN guidelines (German Society for Neurology) — free at leitlinien.dgn.org", type: "guideline", specialty: "Neurologie" },
-  { title: "Psychiatry", description: "S3 guidelines from DGPPN (German Association for Psychiatry) for the most common conditions", type: "guideline", specialty: "Psychiatrie" },
+  { title: "Pediatrics", description: "ÖGKJ guidelines (Austrian Society for Pediatrics) available online", type: "guideline", specialty: "Kinder- und Jugendheilkunde" },
+  { title: "Neurology", description: "ÖGN guidelines (Austrian Society for Neurology) — available online", type: "guideline", specialty: "Neurologie" },
+  { title: "Psychiatry", description: "ÖGPP guidelines (Austrian Society for Psychiatry and Psychotherapy) for the most common conditions", type: "guideline", specialty: "Psychiatrie" },
 ];
 
 const TYPE_ICONS = {
