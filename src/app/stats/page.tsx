@@ -157,19 +157,19 @@ function StatsContent() {
           {/* Overview Cards */}
           <div className="grid grid-cols-2 gap-3 stagger">
             <div className="card rounded-2xl p-6 text-center">
-              <div className="text-3xl font-black text-[#F4A261] font-mono">{gam?.total_xp || 0}</div>
+              <div className="text-4xl font-black text-[#F4A261] font-mono">{gam?.total_xp || 0}</div>
               <div className="text-xs text-[#A0AEC0] font-medium mt-1">{t("total_xp", lang)}</div>
             </div>
             <div className="card rounded-2xl p-6 text-center">
-              <div className="text-3xl font-black text-[#007B5F] font-mono">Lv.{xpInfo.level}</div>
+              <div className="text-4xl font-black text-[#007B5F] font-mono">Lv.{xpInfo.level}</div>
               <div className="text-xs text-[#A0AEC0] font-medium mt-1">{xpInfo.rank}</div>
             </div>
             <div className="card rounded-2xl p-6 text-center">
-              <div className="text-3xl font-black text-[#D64545] font-mono flex items-center justify-center gap-1"><Flame className="w-6 h-6" /> {gam?.current_streak || 0}</div>
+              <div className="text-4xl font-black text-[#D64545] font-mono flex items-center justify-center gap-1"><Flame className="w-6 h-6" /> {gam?.current_streak || 0}</div>
               <div className="text-xs text-[#A0AEC0] font-medium mt-1">{t("current_streak", lang)}</div>
             </div>
             <div className="card rounded-2xl p-6 text-center">
-              <div className="text-3xl font-black text-[#00A896] font-mono">{accuracy}%</div>
+              <div className="text-4xl font-black text-[#00A896] font-mono">{accuracy}%</div>
               <div className="text-xs text-[#A0AEC0] font-medium mt-1">{t("accuracy", lang)}</div>
             </div>
           </div>
@@ -229,14 +229,14 @@ function StatsContent() {
               <div className="space-y-2">
                 {Object.entries(topicStats)
                   .sort(([, a], [, b]) => b.total - a.total)
-                  .map(([topic, stat]) => {
+                  .map(([topic, stat], idx) => {
                     const config = getTopicConfig(topic);
                     const acc = stat.total > 0 ? Math.round((stat.correct / stat.total) * 100) : 0;
                     return (
-                      <div key={topic} className="card rounded-xl p-4">
+                      <div key={topic} className={`card rounded-xl p-4 ${idx % 2 === 1 ? "bg-[#F7F9FC]/50" : ""}`}>
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
-                            <TopicIcon name={config.icon} className="w-4 h-4" />
+                            <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: config.color }} />
                             <span className="text-sm font-medium text-[#1A2B3C]">{topic}</span>
                           </div>
                           <div className="flex items-center gap-2">

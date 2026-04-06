@@ -273,6 +273,15 @@ body {
 .stagger > *:nth-child(11) { animation-delay: 600ms; }
 .stagger > *:nth-child(12) { animation-delay: 660ms; }
 
+/* ═══ HOVER-LIFT ═══ */
+.hover-lift {
+  transition: transform 200ms var(--ease-out), box-shadow 200ms var(--ease-out);
+}
+.hover-lift:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-card-hover);
+}
+
 /* ═══ HOVER/INTERACTION COMPAT ═══ */
 .card-hover { transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease; box-shadow: var(--shadow-card); }
 .card-hover:hover { transform: translateY(-2px); border-color: rgba(0, 123, 95, 0.25); box-shadow: var(--shadow-card-hover); }

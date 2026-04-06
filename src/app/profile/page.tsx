@@ -182,7 +182,7 @@ export default function ProfilePage() {
           {/* User card */}
           <div className="card rounded-2xl p-6">
             <div className="flex items-center gap-4 mb-4">
-              <div className="w-14 h-14 rounded border border-[#007B5F]/30 bg-[#007B5F]/10 flex items-center justify-center text-2xl font-bold text-[#007B5F]">
+              <div className="w-16 h-16 rounded-full bg-[#007B5F]/10 flex items-center justify-center text-2xl font-bold text-[#007B5F] ring-4 ring-[#007B5F]/20">
                 {user.first_name.charAt(0).toUpperCase()}
               </div>
               <div>
@@ -270,7 +270,7 @@ export default function ProfilePage() {
                     value={editData.country}
                     onChange={(e) => setEditData({ ...editData, country: e.target.value })}
                     placeholder={t("select_country", lang)}
-                    className="w-full bg-[#F7F9FC] border border-[#E4E9F0] rounded px-3 py-2.5 text-sm text-[#1A2B3C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#007B5F]/50"
+                    className="w-full bg-[#F7F9FC] border border-[#E4E9F0] rounded-xl px-3 py-3 text-sm text-[#1A2B3C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#007B5F]/50 focus:bg-white transition-colors"
                   />
                 </div>
 

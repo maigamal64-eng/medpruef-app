@@ -167,20 +167,20 @@ export default function QuestionCard({
     const isSelected = selectedIdxs.has(idx);
 
     if (!answered) {
-      return `${base} ${isSelected ? "bg-[#007B5F]/8 border border-[#007B5F]/60 text-[#1A2B3C] rounded-xl" : "bg-white rounded-xl border border-[#E4E9F0]/80 shadow-[var(--shadow-xs)] hover:shadow-[var(--shadow-card)] hover:border-[#007B5F]/30 hover:bg-[#F7F9FC] text-[#1A2B3C]"} active:scale-[0.99]`;
+      return `${base} ${isSelected ? "bg-[#007B5F]/8 border border-[#007B5F]/60 text-[#1A2B3C] rounded-2xl" : "bg-[#F7F9FC] rounded-2xl border border-transparent hover:border-[#007B5F]/30 hover:bg-white hover:shadow-[var(--shadow-card)] text-[#1A2B3C]"} active:scale-[0.99]`;
     }
 
     if (isSelected) {
       if (opt.correct) {
-        return `${base} bg-[#00A896]/12 border border-[#00A896] text-[#00A896] rounded-xl animate-answer-correct`;
+        return `${base} bg-[#00A896]/12 border border-[#00A896] border-l-4 border-l-[#00A896] text-[#00A896] rounded-2xl animate-answer-correct`;
       } else {
-        return `${base} bg-[#D64545]/12 border border-[#D64545] text-[#D64545] rounded-xl animate-answer-wrong`;
+        return `${base} bg-[#D64545]/12 border border-[#D64545] text-[#D64545] rounded-2xl animate-answer-wrong`;
       }
     }
     if (opt.correct) {
-      return `${base} bg-[#00A896]/8 border border-[#00A896]/60 text-[#00A896]/80 rounded-xl`;
+      return `${base} bg-[#00A896]/8 border border-[#00A896]/60 border-l-4 border-l-[#00A896] text-[#00A896]/80 rounded-2xl`;
     }
-    return `${base} bg-[#FFFFFF] border border-[#E4E9F0]/40 text-[#A0AEC0] opacity-50 rounded-xl`;
+    return `${base} bg-[#FFFFFF] border border-[#E4E9F0]/40 text-[#A0AEC0] opacity-50 rounded-2xl`;
   };
 
   const getOptionIcon = (idx: number, opt: MCQOption): string => {
@@ -204,7 +204,7 @@ export default function QuestionCard({
         {/* Top row: topic badge + question counter + bookmark */}
         <div className="flex items-center justify-between mb-4">
           <span
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium"
             style={{ backgroundColor: `${config.color}18`, color: config.color }}
           >
             <TopicIcon name={config.icon} className="w-4 h-4" />
@@ -257,7 +257,7 @@ export default function QuestionCard({
         )}
 
         {/* Question text */}
-        <p className="text-lg md:text-xl leading-relaxed font-medium text-[#1A2B3C] mb-4">
+        <p className="text-lg md:text-xl leading-relaxed font-medium text-[#001B3D] mb-4">
           {question.question}
         </p>
 
@@ -351,7 +351,7 @@ export default function QuestionCard({
 
         {/* Explanation — shown after answering */}
         {answered && question.explanation && (
-          <div className="mt-4 bg-[#F4A261]/6 border border-[#F4A261]/25 rounded p-4 animate-slide-reveal">
+          <div className="mt-4 bg-[#F4A261]/6 border border-[#F4A261]/25 border-l-4 border-l-[#007B5F] rounded p-4 animate-slide-reveal">
             <p className="text-[10px] uppercase tracking-wider text-[#F4A261] font-semibold mb-2">
               <Lightbulb className="w-4 h-4 inline" /> {t("explanation", lang)}
             </p>

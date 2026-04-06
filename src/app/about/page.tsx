@@ -48,10 +48,10 @@ export default function AboutPage() {
         <div className="px-4 lg:px-8 py-6 max-w-2xl mx-auto stagger">
           {/* Hero */}
           <div className="text-center mb-8">
-            <div className="w-20 h-20 rounded border border-[#007B5F]/30 bg-[#007B5F]/10 flex items-center justify-center text-4xl mx-auto mb-4">
+            <div className="w-20 h-20 rounded-2xl border border-[#007B5F]/30 bg-[#007B5F]/10 flex items-center justify-center text-4xl mx-auto mb-5">
               <img src="/brand/logo-mark.png" alt="MedPrüf" className="w-12 h-12" />
             </div>
-            <img src="/brand/logo-full.png" alt="MedPrüf" className="h-10 mx-auto" />
+            <img src="/brand/logo-full.png" alt="MedPrüf" className="h-10 mx-auto mb-2" />
             <p className="text-[#4A5568] text-base">
               {lang === "de"
                 ? "Deine Lernplattform für die Kenntnisprüfung"
@@ -60,7 +60,7 @@ export default function AboutPage() {
           </div>
 
           {/* Authority Seal */}
-          <div className="text-center mb-6">
+          <div className="text-center mb-8">
             <img src="/brand/seal.png" alt="MedPrüf Official Seal" className="w-32 mx-auto" />
           </div>
 
@@ -122,7 +122,7 @@ export default function AboutPage() {
                 { label: lang === "de" ? "Fachgebiete" : "Specialties", value: "10" },
               ].map((stat) => (
                 <div key={stat.label} className="bg-[#FFFFFF] rounded-xl p-3 text-center">
-                  <p className="text-2xl font-black text-[#007B5F] font-mono">{stat.value}</p>
+                  <p className="text-3xl font-black text-[#007B5F] font-mono">{stat.value}</p>
                   <p className="text-[10px] text-[#A0AEC0] mt-1">{stat.label}</p>
                 </div>
               ))}
@@ -136,15 +136,17 @@ export default function AboutPage() {
             </h2>
             <div className="grid grid-cols-2 gap-3">
               {[
-                { icon: <FileText className="w-4 h-4" />, label: lang === "de" ? "7.000+ Übungsfragen" : "7,000+ Practice Questions" },
-                { icon: <GraduationCap className="w-4 h-4" />, label: lang === "de" ? "Prüfungssimulation" : "Exam Simulation" },
-                { icon: <BarChart3 className="w-4 h-4" />, label: lang === "de" ? "Detaillierte Statistiken" : "Detailed Statistics" },
-                { icon: <Flame className="w-4 h-4" />, label: lang === "de" ? "Gamification & XP" : "Gamification & XP" },
-                { icon: <Globe className="w-4 h-4" />, label: lang === "de" ? "Deutsch & Englisch" : "German & English" },
-                { icon: <Smartphone className="w-4 h-4" />, label: lang === "de" ? "Telegram Mini App" : "Telegram Mini App" },
+                { icon: <FileText className="w-4 h-4 text-white" />, label: lang === "de" ? "7.000+ Übungsfragen" : "7,000+ Practice Questions" },
+                { icon: <GraduationCap className="w-4 h-4 text-white" />, label: lang === "de" ? "Prüfungssimulation" : "Exam Simulation" },
+                { icon: <BarChart3 className="w-4 h-4 text-white" />, label: lang === "de" ? "Detaillierte Statistiken" : "Detailed Statistics" },
+                { icon: <Flame className="w-4 h-4 text-white" />, label: lang === "de" ? "Gamification & XP" : "Gamification & XP" },
+                { icon: <Globe className="w-4 h-4 text-white" />, label: lang === "de" ? "Deutsch & Englisch" : "German & English" },
+                { icon: <Smartphone className="w-4 h-4 text-white" />, label: lang === "de" ? "Telegram Mini App" : "Telegram Mini App" },
               ].map((f) => (
-                <div key={f.label} className="flex items-center gap-2 text-sm text-[#4A5568]">
-                  {f.icon}
+                <div key={f.label} className="flex items-center gap-3 text-sm text-[#4A5568]">
+                  <div className="w-10 h-10 rounded-full bg-[#007B5F] flex items-center justify-center flex-shrink-0">
+                    {f.icon}
+                  </div>
                   <span>{f.label}</span>
                 </div>
               ))}

@@ -369,8 +369,8 @@ function ExamContent() {
 
           <div className="flex flex-col items-center justify-center min-h-[calc(100vh-60px)] px-4 py-8">
             <div className="max-w-lg w-full">
-              <div className="text-center mb-8">
-                <div className="w-20 h-20 rounded border border-[#F4A261]/30 bg-[#F4A261]/10 flex items-center justify-center mx-auto mb-5">
+              <div className="bg-gradient-to-r from-[#001B3D]/[0.04] to-[#007B5F]/[0.04] rounded-2xl p-6 text-center mb-8">
+                <div className="w-20 h-20 rounded-2xl border border-[#F4A261]/30 bg-[#F4A261]/10 flex items-center justify-center mx-auto mb-5">
                   <GraduationCap className="w-10 h-10 text-[#F4A261]" />
                 </div>
                 <h1 className="text-2xl font-bold text-[#1A2B3C] mb-2">{t("exam_sim_title", lang)}</h1>
@@ -384,7 +384,7 @@ function ExamContent() {
                     ? EXAM_CONFIG.filter((c) => VIENNA_EXAM_PARTS[selectedPart].includes(c.topic))
                     : EXAM_CONFIG;
                 return (
-                  <div className="grid grid-cols-2 gap-3 mb-6 stagger">
+                  <div className="grid grid-cols-2 gap-4 mb-6 stagger">
                     {displayedConfig.map(({ topic, count }) => {
                       const cfg = getTopicConfig(topic);
                       return (
@@ -415,7 +415,7 @@ function ExamContent() {
                       <button
                         key={p}
                         onClick={() => setSelectedPart(p)}
-                        className={`py-2.5 rounded text-sm font-semibold border transition-colors ${
+                        className={`py-3 rounded-2xl text-sm font-semibold border transition-colors ${
                           selectedPart === p
                             ? "bg-[#F4A261] border-[#F4A261] text-[#1A0E00]"
                             : "bg-[#FFFFFF] border-[#E4E9F0] text-[#4A5568] hover:border-[#F4A261]/40"

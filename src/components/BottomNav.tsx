@@ -38,7 +38,7 @@ export default function BottomNav({ lang, userId }: BottomNavProps) {
   return (
     <nav className="bottom-nav fixed bottom-0 left-0 right-0 z-50 safe-area-bottom">
       <div className="glass border-t border-[#E4E9F0] shadow-[var(--shadow-elevated)] mx-3 mb-2 rounded-2xl">
-        <div className="flex items-center justify-around px-1 py-2.5">
+        <div className="flex items-center justify-around px-1 py-3">
           {items.map((item) => {
             const active = isActive(item.key);
             const examHighlight = item.highlight && !active;
@@ -53,13 +53,13 @@ export default function BottomNav({ lang, userId }: BottomNavProps) {
                       : "text-[#007B5F]"
                     : examHighlight
                     ? "text-[#F4A261]/60 active:text-[#F4A261]"
-                    : "text-[#A0AEC0] active:text-[#4A5568]"
+                    : "text-[#A0AEC0]/70 active:text-[#4A5568]"
                 }`}
               >
                 <span className={`transition-transform duration-200 ${active ? "scale-110" : ""}`}>
                   {item.icon}
                 </span>
-                <span className={`text-[9px] font-medium ${active ? (item.highlight ? "text-[#F4A261]" : "text-[#007B5F]") : examHighlight ? "text-[#F4A261]/60" : ""}`}>
+                <span className={`text-[9px] ${active ? (item.highlight ? "text-[#F4A261] font-semibold" : "text-[#007B5F] font-semibold") : examHighlight ? "text-[#F4A261]/60 font-medium" : "font-medium"}`}>
                   {item.label}
                 </span>
                 {active && (

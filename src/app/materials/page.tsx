@@ -144,14 +144,14 @@ export default function MaterialsPage() {
           </div>
 
           {/* Tabs */}
-          <div className="flex gap-1 mb-5 bg-[#FFFFFF] p-1 rounded border border-[#E4E9F0]">
+          <div className="flex gap-1 mb-5 bg-[#F7F9FC] p-1 rounded-xl border border-[#E4E9F0]">
             {tabs.map((tab) => (
               <button
                 key={tab.key}
                 onClick={() => setActiveSection(tab.key)}
-                className={`flex-1 py-1.5 text-xs font-medium rounded transition-all ${
+                className={`flex-1 py-2 text-xs font-medium rounded-xl transition-all ${
                   activeSection === tab.key
-                    ? "bg-[#FFFFFF] text-[#1A2B3C] border border-[#E4E9F0]"
+                    ? "bg-[#007B5F] text-white shadow-sm"
                     : "text-[#A0AEC0] hover:text-[#4A5568]"
                 }`}
               >
@@ -169,6 +169,7 @@ export default function MaterialsPage() {
                 <div key={i} className={`card-interactive rounded-2xl ${style.bg} border ${style.border} p-5`}>
                   <div className="flex items-start justify-between gap-3 mb-2">
                     <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <span className={`w-2 h-2 rounded-full flex-shrink-0 ${r.type === "link" ? "bg-[#007B5F]" : r.type === "tip" ? "bg-[#F4A261]" : "bg-[#4A5568]"}`} />
                       {specialty ? (
                         <span className="flex-shrink-0"><TopicIcon name={specialty.icon} className="w-5 h-5" /></span>
                       ) : (

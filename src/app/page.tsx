@@ -5,7 +5,7 @@ import { getTopicConfig } from "@/lib/topics";
 import { getLevelFromXP } from "@/lib/xp";
 import { t, getLang, setLang } from "@/lib/i18n";
 import TopicIcon from "@/components/TopicIcon";
-import { Flame, FileText as FileTextIcon, Lightbulb, Shuffle, PlayCircle, ClipboardList, Zap, CheckCircle, User, Inbox } from "lucide-react";
+import { Flame, FileText as FileTextIcon, Lightbulb, Shuffle, PlayCircle, ClipboardList, Zap, CheckCircle, User, Inbox, ChevronRight, GraduationCap } from "lucide-react";
 import { isTelegramMiniApp, getMiniAppInitData, getStoredSession, storeSession } from "@/lib/auth";
 import {
   getStoredExamSource,
@@ -316,27 +316,31 @@ export default function Home() {
         </div>
 
         {/* Desktop Header */}
-        <div className="hidden lg:flex items-center justify-between px-8 pt-6 pb-2">
-          <div>
-            <h1 className="text-2xl font-bold text-[#1A2B3C]">
-              {t("hello", lang)}, {user.first_name}
-            </h1>
-            <p className="text-sm text-[#A0AEC0]">
-              {lang === "de"
-                ? "Kenntnisprufung-Vorbereitung (Wien)"
-                : "Austrian Kenntnisprufung Preparation (Vienna)"}
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            {/* Exam badge */}
-            <button
-              onClick={() => setShowExamSelector(true)}
-              className="text-xs font-mono bg-[#007B5F]/10 text-[#007B5F] px-2.5 py-1.5 rounded border border-[#007B5F]/20 hover:bg-[#007B5F]/20 transition-colors"
-            >
-              {examSource}
-            </button>
-            <div className="w-px h-6 bg-[#E4E9F0]" />
-            <LanguageToggle lang={lang} onChange={switchLang} />
+        <div className="hidden lg:block px-8 pt-6 pb-2">
+          <div className="bg-gradient-to-r from-[#001B3D]/[0.04] to-[#007B5F]/[0.04] rounded-2xl p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-bold text-[#1A2B3C]">
+                  {t("hello", lang)}, {user.first_name}
+                </h1>
+                <p className="text-sm text-[#A0AEC0]">
+                  {lang === "de"
+                    ? "Kenntnisprufung-Vorbereitung (Wien)"
+                    : "Austrian Kenntnisprufung Preparation (Vienna)"}
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                {/* Exam badge */}
+                <button
+                  onClick={() => setShowExamSelector(true)}
+                  className="text-xs font-mono bg-[#007B5F]/10 text-[#007B5F] px-2.5 py-1.5 rounded border border-[#007B5F]/20 hover:bg-[#007B5F]/20 transition-colors"
+                >
+                  {examSource}
+                </button>
+                <div className="w-px h-6 bg-[#E4E9F0]" />
+                <LanguageToggle lang={lang} onChange={switchLang} />
+              </div>
+            </div>
           </div>
         </div>
 
@@ -362,7 +366,7 @@ export default function Home() {
           <div className="grid grid-cols-3 gap-3 mb-6">
             <Link
               href={`/quiz?topic=random&userId=${user.id}&examSource=${examSource}`}
-              className="btn-primary flex items-center justify-center gap-3 px-5 py-4 text-base rounded-xl shadow-md pulse-glow active:scale-[0.98]"
+              className="btn-primary flex items-center justify-center gap-3 px-5 min-h-[56px] text-base rounded-2xl shadow-md pulse-glow active:scale-[0.98]"
             >
               <Shuffle className="w-5 h-5" />
               <span className="text-sm">{t("random_quiz", lang)}</span>
@@ -370,7 +374,7 @@ export default function Home() {
 
             <Link
               href={topics.length > 0 ? `/quiz?topic=${encodeURIComponent(topics[0].topic)}&userId=${user.id}&examSource=${examSource}` : "#"}
-              className="btn-secondary flex items-center justify-center gap-3 px-5 py-4 rounded-xl shadow-[var(--shadow-xs)] hover:shadow-md transition-all"
+              className="btn-secondary flex items-center justify-center gap-3 px-5 min-h-[56px] rounded-2xl shadow-[var(--shadow-xs)] hover:shadow-md transition-all"
             >
               <PlayCircle className="w-5 h-5 flex-shrink-0 text-[#007B5F]" />
               <span className="text-sm">{t("continue_where_left", lang)}</span>
@@ -378,16 +382,18 @@ export default function Home() {
 
             <Link
               href={`/exam?examSource=${examSource}`}
-              className="btn-secondary flex items-center justify-center gap-3 px-5 py-4 rounded-xl shadow-[var(--shadow-xs)] hover:shadow-md transition-all"
+              className="btn-secondary flex items-center justify-center gap-3 px-5 min-h-[56px] rounded-2xl shadow-[var(--shadow-xs)] hover:shadow-md transition-all"
             >
-              <ClipboardList className="w-5 h-5 flex-shrink-0 text-[#003A8C]" />
+              <GraduationCap className="w-5 h-5 flex-shrink-0 text-[#003A8C]" />
               <span className="text-sm">{t("mock_exam", lang)}</span>
             </Link>
           </div>
 
           {/* Search */}
           <div className="mb-6">
-            <SearchBar lang={lang} onSearch={handleSearch} />
+            <div className="card rounded-2xl p-1">
+              <SearchBar lang={lang} onSearch={handleSearch} />
+            </div>
             {searchQuery && (
               <SearchResults
                 results={searchResults as unknown as Parameters<typeof SearchResults>[0]["results"]}
@@ -402,7 +408,9 @@ export default function Home() {
           {/* Topics Grid — hidden while searching */}
           {!searchQuery && (
             <div className="mb-6">
-              <h2 className="text-lg font-bold mb-4 text-[#1A2B3C] border-l-[3px] border-l-[#007B5F] pl-3">{t("specialties", lang)}</h2>
+              <h2 className="text-lg font-bold mb-4 text-[#1A2B3C] border-l-[3px] border-l-[#007B5F] pl-3">
+                {t("specialties", lang)} <span className="text-sm font-normal text-[#A0AEC0] ml-1">({topics.length})</span>
+              </h2>
 
               {examSource === "SIP" ? (
                 <>
@@ -410,17 +418,23 @@ export default function Home() {
                   <div className="grid grid-cols-2 gap-3 mb-4">
                     <Link
                       href={`/exam?examSource=SIP&part=sip4`}
-                      className="btn-secondary flex items-center gap-2 rounded-xl px-4 py-3 text-sm transition-all hover:shadow-md"
+                      className="card-interactive rounded-2xl p-4 flex items-center justify-between text-sm transition-all"
                     >
-                      <ClipboardList className="w-4 h-4 flex-shrink-0 text-[#F4A261]" />
-                      <span className="truncate">{t("practice_sip4", lang)}</span>
+                      <div className="flex items-center gap-2">
+                        <ClipboardList className="w-4 h-4 flex-shrink-0 text-[#F4A261]" />
+                        <span className="truncate font-medium">{t("practice_sip4", lang)}</span>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-[#A0AEC0]" />
                     </Link>
                     <Link
                       href={`/exam?examSource=SIP&part=sip5`}
-                      className="btn-secondary flex items-center gap-2 rounded-xl px-4 py-3 text-sm transition-all hover:shadow-md"
+                      className="card-interactive rounded-2xl p-4 flex items-center justify-between text-sm transition-all"
                     >
-                      <ClipboardList className="w-4 h-4 flex-shrink-0 text-[#007B5F]" />
-                      <span className="truncate">{t("practice_sip5", lang)}</span>
+                      <div className="flex items-center gap-2">
+                        <ClipboardList className="w-4 h-4 flex-shrink-0 text-[#007B5F]" />
+                        <span className="truncate font-medium">{t("practice_sip5", lang)}</span>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-[#A0AEC0]" />
                     </Link>
                   </div>
 
@@ -428,7 +442,7 @@ export default function Home() {
                   <h3 className="text-sm font-bold uppercase tracking-wider text-[#F4A261] mb-3 border-l-[3px] border-l-[#F4A261] pl-3">
                     {t("sip4_label", lang)}
                   </h3>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mb-5 stagger">
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5 mb-5 stagger">
                     {topics
                       .filter((tp) => VIENNA_EXAM_PARTS.sip4.includes(tp.topic))
                       .map((tp, i) => (
@@ -448,7 +462,7 @@ export default function Home() {
                   <h3 className="text-sm font-bold uppercase tracking-wider text-[#007B5F] mb-3 border-l-[3px] border-l-[#007B5F] pl-3">
                     {t("sip5_label", lang)}
                   </h3>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 stagger">
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5 stagger">
                     {topics
                       .filter((tp) => VIENNA_EXAM_PARTS.sip5.includes(tp.topic))
                       .map((tp, i) => (
@@ -483,8 +497,11 @@ export default function Home() {
           )}
 
           {/* View Progress Link */}
-          <Link href="/progress" className="block text-center py-3 text-sm font-medium text-[#007B5F] hover:text-[#003A8C] transition-colors">
-            {lang === "de" ? "Fortschritt ansehen" : "View Full Progress"} &rarr;
+          <Link href="/progress" className="card rounded-2xl p-4 flex items-center justify-between hover:shadow-[var(--shadow-card-hover)] transition-all">
+            <span className="text-sm font-medium text-[#007B5F]">
+              {lang === "de" ? "Fortschritt ansehen" : "View Full Progress"}
+            </span>
+            <ChevronRight className="w-5 h-5 text-[#A0AEC0]" />
           </Link>
 
           {/* Mini Stats Row (mobile only) */}
