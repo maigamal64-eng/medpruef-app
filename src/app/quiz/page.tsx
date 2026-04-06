@@ -7,6 +7,7 @@ import { t, getLang, setLang } from "@/lib/i18n";
 import { trackEvent, trackPageView } from "@/lib/tracker";
 import { getStoredSession } from "@/lib/auth";
 import { recordAnswer } from "@/lib/weakness";
+import { Brain, Inbox, Bot } from "lucide-react";
 import LanguageToggle from "@/components/LanguageToggle";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
@@ -143,7 +144,7 @@ function QuizContent() {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen px-4 bg-[#F7F9FC]">
         <div className="text-center animate-fade-in">
-          <div className="text-5xl mb-4">📭</div>
+          <Inbox className="w-12 h-12 text-[#A0AEC0] mx-auto mb-4" />
           <p className="text-[#4A5568] mb-4 text-lg">{t("no_questions", lang)}</p>
           <Link
             href="/"
@@ -208,13 +209,13 @@ function QuizContent() {
           {/* Explanation display */}
           {answered && question?.explanation && (
             <div className="mt-4 p-4 bg-[#EAF3F9] border-l-4 border-[#3A7CA5] rounded-r">
-              <p className="text-sm font-semibold text-[#001B3D] mb-1">🧠 Erklärung</p>
+              <p className="text-sm font-semibold text-[#001B3D] mb-1 flex items-center gap-1.5"><Brain className="w-4 h-4" /> Erklärung</p>
               <p className="text-sm text-[#1A2B3C]">{question.explanation}</p>
             </div>
           )}
           {answered && !question?.explanation && (
             <div className="mt-4 p-4 bg-[#F7F9FC] border-l-4 border-[#A0AEC0] rounded-r opacity-70">
-              <p className="text-sm text-[#A0AEC0]">🤖 KI-Erklärung wird bald verfügbar sein</p>
+              <p className="text-sm text-[#A0AEC0] flex items-center gap-1.5"><Bot className="w-4 h-4" /> KI-Erklärung wird bald verfügbar sein</p>
             </div>
           )}
 

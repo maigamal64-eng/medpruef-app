@@ -27,7 +27,7 @@ export default function TopicCard({ topic, count, userId, lang, accuracy, delay 
   return (
     <Link
       href={href}
-      className="topic-card-border card-interactive p-4 block"
+      className="card-interactive border-l-[3px] p-4 block"
       style={{
         borderLeftColor: config.color,
         animationDelay: `${delay}ms`,
@@ -47,7 +47,7 @@ export default function TopicCard({ topic, count, userId, lang, accuracy, delay 
                 : "bg-[#D64545]/10 text-[#D64545] border-[#D64545]/20"
             }`}
           >
-            {accuracy}%
+            {Math.min(accuracy, 100)}%
           </span>
         )}
       </div>
@@ -60,7 +60,7 @@ export default function TopicCard({ topic, count, userId, lang, accuracy, delay 
         <div
           className="h-full rounded-full animate-progress"
           style={{
-            width: `${accuracy || 0}%`,
+            width: `${Math.min(accuracy || 0, 100)}%`,
             backgroundColor: config.color,
           }}
         />

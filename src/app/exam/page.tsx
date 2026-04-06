@@ -1016,7 +1016,7 @@ function ExamContent() {
             {qAnswered && q.explanation && (
               <div className="mt-4 bg-[#F4A261]/6 border border-[#F4A261]/25 rounded p-4 animate-fade-in">
                 <p className="text-[10px] uppercase tracking-wider text-[#F4A261] font-semibold mb-2">
-                  💡 {t("explanation", lang)}
+                  <Lightbulb className="w-4 h-4 inline" /> {t("explanation", lang)}
                 </p>
                 <p className="text-[#4A5568] text-sm leading-relaxed">{q.explanation}</p>
               </div>

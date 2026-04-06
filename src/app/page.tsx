@@ -5,7 +5,7 @@ import { getTopicConfig } from "@/lib/topics";
 import { getLevelFromXP } from "@/lib/xp";
 import { t, getLang, setLang } from "@/lib/i18n";
 import TopicIcon from "@/components/TopicIcon";
-import { Flame, FileText as FileTextIcon, Lightbulb } from "lucide-react";
+import { Flame, FileText as FileTextIcon, Lightbulb, Shuffle, PlayCircle, ClipboardList, Zap, CheckCircle, User, Inbox } from "lucide-react";
 import { isTelegramMiniApp, getMiniAppInitData, getStoredSession, storeSession } from "@/lib/auth";
 import {
   getStoredExamSource,
@@ -355,7 +355,7 @@ export default function Home() {
               href={`/quiz?topic=random&userId=${user.id}&examSource=${examSource}`}
               className="btn-primary flex items-center gap-3 px-5 py-3.5 pulse-glow active:scale-[0.98]"
             >
-              <span className="text-xl">🚀</span>
+              <Shuffle className="w-5 h-5" />
               <span className="text-sm">{t("random_quiz", lang)}</span>
             </Link>
 
@@ -364,8 +364,8 @@ export default function Home() {
                 href={`/quiz?topic=${encodeURIComponent(topics[0].topic)}&userId=${user.id}&examSource=${examSource}`}
                 className="flex items-center gap-3 bg-[#FFFFFF] border border-[#E4E9F0] text-[#1A2B3C] px-5 py-3.5 rounded font-medium hover:border-[#007B5F]/40 transition-all"
               >
-                <span className="text-xl">▶️</span>
-                <span className="text-sm truncate">{t("continue_where_left", lang)}</span>
+                <PlayCircle className="w-5 h-5 flex-shrink-0 text-[#007B5F]" />
+                <span className="text-xs leading-tight">{t("continue_where_left", lang)}</span>
               </Link>
             )}
 
@@ -373,8 +373,8 @@ export default function Home() {
               href={`/exam?examSource=${examSource}`}
               className="flex items-center gap-3 bg-[#FFFFFF] border border-[#E4E9F0] text-[#1A2B3C] px-5 py-3.5 rounded font-medium hover:border-[#007B5F]/40 transition-all"
             >
-              <span className="text-xl">📋</span>
-              <span className="text-sm">{t("mock_exam", lang)}</span>
+              <ClipboardList className="w-5 h-5 flex-shrink-0 text-[#003A8C]" />
+              <span className="text-xs">{t("mock_exam", lang)}</span>
             </Link>
           </div>
 
@@ -405,14 +405,14 @@ export default function Home() {
                       href={`/exam?examSource=SIP&part=sip4`}
                       className="flex items-center gap-2 bg-[#FFFFFF] border border-[#E4E9F0] hover:border-[#007B5F]/40 rounded px-3 py-2.5 text-sm font-medium text-[#1A2B3C] transition-all"
                     >
-                      <span>📋</span>
+                      <ClipboardList className="w-4 h-4 flex-shrink-0 text-[#F4A261]" />
                       <span className="truncate">{t("practice_sip4", lang)}</span>
                     </Link>
                     <Link
                       href={`/exam?examSource=SIP&part=sip5`}
                       className="flex items-center gap-2 bg-[#FFFFFF] border border-[#E4E9F0] hover:border-[#007B5F]/40 rounded px-3 py-2.5 text-sm font-medium text-[#1A2B3C] transition-all"
                     >
-                      <span>📋</span>
+                      <ClipboardList className="w-4 h-4 flex-shrink-0 text-[#007B5F]" />
                       <span className="truncate">{t("practice_sip5", lang)}</span>
                     </Link>
                   </div>
@@ -477,9 +477,9 @@ export default function Home() {
 
           {/* Mini Stats Row (mobile only) */}
           <div className="grid grid-cols-4 gap-2 lg:hidden mb-5 stagger">
-            <StatsCard icon="⚡" value={gam?.total_xp || 0} label="XP" color="text-[#F4A261]" delay={0} />
+            <StatsCard icon={<Zap className="w-4 h-4" />} value={gam?.total_xp || 0} label="XP" color="text-[#F4A261]" delay={0} />
             <StatsCard icon={<Flame className="w-4 h-4" />} value={gam?.current_streak || 0} label={t("streak", lang)} color="text-[#D64545]" delay={50} />
-            <StatsCard icon="✅" value={`${accuracy}%`} label={t("accuracy", lang)} color="text-[#00A896]" delay={100} />
+            <StatsCard icon={<CheckCircle className="w-4 h-4" />} value={`${accuracy}%`} label={t("accuracy", lang)} color="text-[#00A896]" delay={100} />
             <StatsCard icon={<FileTextIcon className="w-4 h-4" />} value={gam?.total_questions_answered || 0} label={t("answered", lang)} color="text-[#007B5F]" delay={150} />
           </div>
         </div>
@@ -488,13 +488,13 @@ export default function Home() {
 
       {/* Weakness prompts */}
       {weakTopics.length > 0 && (
-        <div className="px-4 mb-6">
+        <div className="px-4 mb-6 max-w-full overflow-hidden">
           <div className="space-y-2">
-            {weakTopics.slice(0, 2).map(t => (
-              <Link key={t.topic} href={`/quiz?topic=${encodeURIComponent(t.topic)}&examSource=${examSource}`}
-                className="block p-4 bg-[#FFF4E6] border-l-4 border-[#F4A261] rounded-r">
-                <p className="text-sm font-semibold text-[#1A2B3C]">
-                  <Lightbulb className="w-4 h-4 inline" /> Du bist schwach in {t.topic} ({Math.round(t.accuracy * 100)}%) — jetzt üben?
+            {weakTopics.slice(0, 2).map(wt => (
+              <Link key={wt.topic} href={`/quiz?topic=${encodeURIComponent(wt.topic)}&examSource=${examSource}`}
+                className="block p-4 bg-[#FFF4E6] border-l-4 border-[#F4A261] rounded-r max-w-full overflow-hidden">
+                <p className="text-sm font-semibold text-[#1A2B3C] flex items-center gap-1.5">
+                  <Lightbulb className="w-4 h-4 flex-shrink-0" /> <span className="truncate">Du bist schwach in {wt.topic} ({Math.min(Math.round(wt.accuracy * 100), 100)}%)</span> <span className="flex-shrink-0">— jetzt üben?</span>
                 </p>
               </Link>
             ))}
@@ -631,7 +631,7 @@ function DemoHome({
               href={`/quiz?topic=random&examSource=${examSource}`}
               className="btn-primary inline-flex items-center gap-3 px-7 py-3.5 text-base pulse-glow active:scale-[0.98]"
             >
-              <span className="text-xl">🚀</span>
+              <Shuffle className="w-5 h-5" />
               {lang === "de" ? "Übung starten" : "Start Practice"}
             </Link>
           </div>
@@ -665,14 +665,14 @@ function DemoHome({
                   href={`/exam?examSource=SIP&part=sip4`}
                   className="flex items-center gap-2 bg-[#FFFFFF] border border-[#E4E9F0] hover:border-[#007B5F]/40 rounded px-3 py-2.5 text-sm font-medium text-[#1A2B3C] transition-all"
                 >
-                  <span>📋</span>
+                  <ClipboardList className="w-4 h-4 flex-shrink-0 text-[#F4A261]" />
                   <span className="truncate">{t("practice_sip4", lang)}</span>
                 </Link>
                 <Link
                   href={`/exam?examSource=SIP&part=sip5`}
                   className="flex items-center gap-2 bg-[#FFFFFF] border border-[#E4E9F0] hover:border-[#007B5F]/40 rounded px-3 py-2.5 text-sm font-medium text-[#1A2B3C] transition-all"
                 >
-                  <span>📋</span>
+                  <ClipboardList className="w-4 h-4 flex-shrink-0 text-[#007B5F]" />
                   <span className="truncate">{t("practice_sip5", lang)}</span>
                 </Link>
               </div>
@@ -688,7 +688,7 @@ function DemoHome({
                     <Link
                       key={tp.topic}
                       href={`/quiz?topic=${encodeURIComponent(tp.topic)}&examSource=${examSource}`}
-                      className="topic-card-border card-interactive p-4 active:scale-[0.98]"
+                      className="card-interactive border-l-[3px] p-4 active:scale-[0.98]"
                       style={{ borderLeftColor: config.color, animationDelay: `${i * 50}ms` }}
                     >
                       <div className="mb-2"><TopicIcon name={config.icon} className="w-6 h-6" /></div>
@@ -710,7 +710,7 @@ function DemoHome({
                     <Link
                       key={tp.topic}
                       href={`/quiz?topic=${encodeURIComponent(tp.topic)}&examSource=${examSource}`}
-                      className="topic-card-border card-interactive p-4 active:scale-[0.98]"
+                      className="card-interactive border-l-[3px] p-4 active:scale-[0.98]"
                       style={{ borderLeftColor: config.color, animationDelay: `${i * 50}ms` }}
                     >
                       <div className="mb-2"><TopicIcon name={config.icon} className="w-6 h-6" /></div>
@@ -729,10 +729,10 @@ function DemoHome({
                   <Link
                     key={tp.topic}
                     href={`/quiz?topic=${encodeURIComponent(tp.topic)}&examSource=${examSource}`}
-                    className="topic-card-border card-interactive p-4 active:scale-[0.98]"
+                    className="card-interactive border-l-[3px] p-4 active:scale-[0.98]"
                     style={{ borderLeftColor: config.color, animationDelay: `${i * 50}ms` }}
                   >
-                    <div className="text-2xl mb-2">{config.icon}</div>
+                    <div className="mb-2"><TopicIcon name={config.icon} className="w-6 h-6" /></div>
                     <div className="text-sm font-semibold mb-1 text-[#1A2B3C]">{tp.topic}</div>
                     <div className="text-xs text-[#A0AEC0] font-mono">{tp.count} {t("questions", lang)}</div>
                   </Link>
@@ -789,7 +789,7 @@ function DemoHome({
               onClick={handleGuestContinue}
               className="flex-1 flex items-center justify-center gap-2 bg-[#FFFFFF] border border-[#E4E9F0] hover:border-[#007B5F]/40 text-[#4A5568] px-5 py-3 rounded font-medium text-sm transition-all active:scale-[0.98]"
             >
-              <span>👤</span>
+              <User className="w-4 h-4 flex-shrink-0" />
               {lang === "de" ? "Als Gast fortfahren" : "Continue as guest"}
             </button>
           </div>
