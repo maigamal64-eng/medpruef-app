@@ -13,6 +13,31 @@ import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import TopicIcon from "@/components/TopicIcon";
 import { TrendingUp, Star, StickyNote, GraduationCap, AlertTriangle } from "lucide-react";
+import { ResponsiveContainer, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from "recharts";
+
+/** Spider chart showing accuracy by topic */
+function StudyRadar({ topics, lang }: { topics: { topic: string; answered: number; correct: number }[]; lang: string }) {
+  const data = topics
+    .filter((t) => t.answered > 0)
+    .map((t) => ({
+      subject: t.topic.split("/")[0].replace("- und ", "/").substring(0, 16),
+      accuracy: Math.round((t.correct / t.answered) * 100),
+      fullMark: 100,
+    }));
+
+  if (data.length < 3) return <p className="text-sm text-[#A0AEC0] text-center py-8">{lang === "de" ? "Löse mehr Fragen für den Radar" : "Answer more questions to see the radar"}</p>;
+
+  return (
+    <ResponsiveContainer width="100%" height={320}>
+      <RadarChart data={data} outerRadius="75%">
+        <PolarGrid stroke="#E4E9F0" />
+        <PolarAngleAxis dataKey="subject" tick={{ fontSize: 10, fill: "#4A5568" }} />
+        <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fontSize: 9, fill: "#A0AEC0" }} axisLine={false} />
+        <Radar name="Accuracy" dataKey="accuracy" stroke="#007B5F" fill="#007B5F" fillOpacity={0.2} strokeWidth={2} />
+      </RadarChart>
+    </ResponsiveContainer>
+  );
+}
 
 type Lang = "de" | "en";
 
@@ -410,6 +435,18 @@ export default function ProgressPage() {
               })}
             </div>
           </div>
+
+          {/* ===== STUDY RADAR — Spider Chart ===== */}
+          {topicStats.length > 0 && (
+            <div className="card rounded-2xl p-5">
+              <h2 className="text-lg font-semibold text-[#1A2B3C] mb-4">
+                {lang === "de" ? "Stärken-Radar" : "Study Radar"}
+              </h2>
+              <div className="flex justify-center">
+                <StudyRadar topics={topicStats} lang={lang} />
+              </div>
+            </div>
+          )}
 
           {/* ===== SECTION 3: Saved Items ===== */}
           <div className="card rounded-2xl p-5">

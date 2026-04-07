@@ -49,6 +49,18 @@ function QuizContent() {
   const [lang, setLangState] = useState<Lang>("de");
   const [showXpFloat, setShowXpFloat] = useState(false);
 
+  // Auto-save quiz progress to localStorage every 30 seconds
+  useEffect(() => {
+    const SAVE_KEY = "medpruef_quiz_autosave";
+    const interval = setInterval(() => {
+      if (question && questionCount > 0) {
+        const state = { topic, questionCount, correctCount, totalXpSession, timestamp: Date.now() };
+        localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+      }
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [question, questionCount, correctCount, totalXpSession, topic]);
+
   useEffect(() => {
     setLangState(getLang());
     trackPageView("quiz");
