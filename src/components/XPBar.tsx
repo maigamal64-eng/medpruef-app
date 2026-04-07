@@ -5,6 +5,19 @@ import { t } from "@/lib/i18n";
 
 type Lang = "de" | "en";
 
+const XP_THRESHOLDS = [0, 100, 300, 600, 1000, 2000, 4000, 8000];
+const MAX_LEVEL = 8;
+
+const milestones: Record<number, { de: string; en: string }> = {
+  2: { de: "Quiz-Modi freischalten", en: "Unlock quiz modes" },
+  3: { de: "Prüfungssimulation", en: "Exam simulation" },
+  4: { de: "Erweiterte Statistiken", en: "Advanced analytics" },
+  5: { de: "Lernempfehlungen", en: "Study recommendations" },
+  6: { de: "Experten-Tools", en: "Expert tools" },
+  7: { de: "Experten-Tools", en: "Expert tools" },
+  8: { de: "Experten-Tools", en: "Expert tools" },
+};
+
 interface XPBarProps {
   totalXp: number;
   lang: Lang;
@@ -80,6 +93,35 @@ export default function XPBar({ totalXp, lang, compact = false }: XPBarProps) {
       <p className="text-xs text-[#A0AEC0] mt-1.5 text-right font-mono">
         {Math.round(xpInfo.progress)}% {t("to_next_level", lang)}
       </p>
+      {/* Milestone preview */}
+      {xpInfo.level >= MAX_LEVEL ? (
+        <p className="text-[11px] text-[#A0AEC0] mt-1.5">
+          {lang === "de" ? "Maximalstufe erreicht" : "Max level reached"} 🏆
+        </p>
+      ) : (
+        (() => {
+          const nextLevel = xpInfo.level + 1;
+          const nextThreshold = XP_THRESHOLDS[nextLevel - 1] || XP_THRESHOLDS[XP_THRESHOLDS.length - 1] * 2;
+          const xpToNext = Math.max(0, nextThreshold - totalXp);
+          const milestone = milestones[nextLevel];
+          return (
+            <>
+              <p className="text-[11px] text-[#A0AEC0] mt-1.5">
+                {lang === "de"
+                  ? `+${xpToNext} XP bis Level ${nextLevel}`
+                  : `+${xpToNext} XP to Level ${nextLevel}`}
+              </p>
+              {milestone && (
+                <p className="text-[10px] text-[#A0AEC0]/70 mt-0.5">
+                  {lang === "de"
+                    ? `Level ${nextLevel}: ${milestone.de}`
+                    : `Unlock "${milestone.en}" at Level ${nextLevel}`}
+                </p>
+              )}
+            </>
+          );
+        })()
+      )}
     </div>
   );
 }

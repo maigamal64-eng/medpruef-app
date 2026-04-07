@@ -42,17 +42,26 @@ export default function TopicCard({ topic, count, userId, lang, accuracy, delay 
           <TopicIcon name={config.icon} className="w-6 h-6" style={{ color: config.color }} />
         </span>
         {accuracy !== undefined && accuracy > 0 && (
-          <span
-            className={`text-[11px] font-semibold font-mono px-2 py-0.5 rounded-lg ${
-              accuracy >= 70
-                ? "bg-[#00A896]/12 text-[#00A896]"
-                : accuracy >= 40
-                ? "bg-[#F4A261]/12 text-[#F4A261]"
-                : "bg-[#D64545]/12 text-[#D64545]"
-            }`}
-          >
-            {Math.min(accuracy, 100)}%
-          </span>
+          <div className="flex flex-col items-end gap-1">
+            <span
+              className={`text-[11px] font-semibold font-mono px-2 py-0.5 rounded-lg ${
+                accuracy >= 70
+                  ? "bg-[#00A896]/12 text-[#00A896]"
+                  : accuracy >= 40
+                  ? "bg-[#F4A261]/12 text-[#F4A261]"
+                  : "bg-[#D64545]/12 text-[#D64545]"
+              }`}
+            >
+              {Math.min(accuracy, 100)}%
+            </span>
+            {/* Strength badge */}
+            <div className="flex items-center gap-1.5">
+              <span className={`w-2 h-2 rounded-full ${accuracy >= 80 ? 'bg-[#00A896]' : accuracy >= 40 ? 'bg-[#F4A261]' : 'bg-[#D64545]'}`} />
+              <span className={`text-[10px] font-semibold ${accuracy >= 80 ? 'text-[#00A896]' : accuracy >= 40 ? 'text-[#F4A261]' : 'text-[#D64545]'}`}>
+                {accuracy >= 80 ? 'Strong' : accuracy >= 40 ? 'Weak' : 'Needs Revision'}
+              </span>
+            </div>
+          </div>
         )}
       </div>
 
@@ -62,9 +71,17 @@ export default function TopicCard({ topic, count, userId, lang, accuracy, delay 
       </h3>
 
       {/* Question count */}
-      <p className="text-xs text-[#A0AEC0] mb-3 font-mono">
+      <p className="text-xs text-[#A0AEC0] mb-1 font-mono">
         {count.toLocaleString("de-DE")} {t("questions", lang)}
       </p>
+
+      {/* Fix now link for weak topics */}
+      {accuracy !== undefined && accuracy > 0 && accuracy < 60 && (
+        <p className="text-[11px] font-semibold text-[#D64545] mb-2 hover:underline">
+          {lang === "de" ? "Jetzt verbessern" : "Fix now"} →
+        </p>
+      )}
+      {(accuracy === undefined || accuracy === 0 || accuracy >= 60) && <div className="mb-3" />}
 
       {/* Progress bar */}
       <div className="h-1.5 bg-[#F7F9FC] rounded-full overflow-hidden">

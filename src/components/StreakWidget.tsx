@@ -1,8 +1,37 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { t } from "@/lib/i18n";
 
 type Lang = "de" | "en";
+
+function StreakCountdown() {
+  const [timeLeft, setTimeLeft] = useState("");
+
+  useEffect(() => {
+    function calcTimeLeft() {
+      const now = new Date();
+      const midnight = new Date(now);
+      midnight.setHours(24, 0, 0, 0);
+      const diff = midnight.getTime() - now.getTime();
+      const h = Math.floor(diff / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+    }
+    setTimeLeft(calcTimeLeft());
+    const interval = setInterval(() => setTimeLeft(calcTimeLeft()), 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  if (!timeLeft) return null;
+
+  return (
+    <p className="text-xs text-[#F4A261] font-mono mt-0.5">
+      ⚠ Resets in {timeLeft}
+    </p>
+  );
+}
 
 interface StreakWidgetProps {
   streak: number;
@@ -49,6 +78,7 @@ export default function StreakWidget({ streak, lang }: StreakWidgetProps) {
             <p className="text-xs text-[#4A5568]">
               {t("streak", lang)} · {t("days", lang)}
             </p>
+            {streak > 0 && <StreakCountdown />}
           </div>
         </div>
       </div>
