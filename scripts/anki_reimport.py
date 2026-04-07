@@ -113,45 +113,73 @@ TOPIC_PATTERNS = [
 # Explicit prefix/exact match for known AllInOne Title values.
 # More reliable than regex alone because Anki uses free-form titles.
 TITLE_MAP = {
+    # Innere Medizin — exact and prefix matches
     'innere medizin': 'Innere Medizin',
     'internal medicine': 'Innere Medizin',
     'internal med': 'Innere Medizin',
     'innereeb': 'Innere Medizin',
     'selfmade::ekg': 'Innere Medizin',
     'infektionsserolog': 'Innere Medizin',
-    'ent': 'Hals-Nasen-Ohrenheilkunde',
-    'ent ': 'Hals-Nasen-Ohrenheilkunde',
-    'ent-': 'Hals-Nasen-Ohrenheilkunde',
-    'er': 'Notfall- und Intensivmedizin',
-    'er:': 'Notfall- und Intensivmedizin',
-    'notfall': 'Notfall- und Intensivmedizin',
-    'anästhes': 'Notfall- und Intensivmedizin',
-    'ophth': 'Augenheilkunde',
+    'pharmakolog': 'Innere Medizin',
+    # Chirurgische Fächer — all Anki title variants
+    'surgery': 'Chirurgische Fächer',
+    'chirurg': 'Chirurgische Fächer',
+    'urolog': 'Chirurgische Fächer',
+    'zahnmedizin': 'Chirurgische Fächer',
+    'radiopaed': 'Chirurgische Fächer',
+    # Neurologie — all Anki title variants
     'neuro': 'Neurologie',
     'neurolog': 'Neurologie',
+    'neurology': 'Neurologie',
+    # Psychiatrie — all Anki title variants
     'psychiatr': 'Psychiatrie',
+    'psychiatry': 'Psychiatrie',
+    # Dermatologie — all Anki title variants
     'derma': 'Dermatologie und Venerologie',
-    'chirurg': 'Chirurgische Fächer',
-    'gyn': 'Frauenheilkunde/Gynäkologie',
+    'dermatolog': 'Dermatologie und Venerologie',
+    'dermatology': 'Dermatologie und Venerologie',
+    # HNO — all Anki title variants
+    'ent': 'Hals-Nasen-Ohrenheilkunde',
+    'hno': 'Hals-Nasen-Ohrenheilkunde',
+    # Notfall — all Anki title variants including ER and Emergency
+    'notfall': 'Notfall- und Intensivmedizin',
+    'emergency': 'Notfall- und Intensivmedizin',
+    'er:': 'Notfall- und Intensivmedizin',
+    'er ': 'Notfall- und Intensivmedizin',
+    'anästhes': 'Notfall- und Intensivmedizin',
+    # Augenheilkunde
+    'ophth': 'Augenheilkunde',
+    'augen': 'Augenheilkunde',
+    # Frauenheilkunde — all Anki title variants including OBGYN
     'frauen': 'Frauenheilkunde/Gynäkologie',
+    'gyn': 'Frauenheilkunde/Gynäkologie',
+    'obgyn': 'Frauenheilkunde/Gynäkologie',
+    # Pädiatrie — all Anki title variants
+    'pediatr': 'Kinder- und Jugendheilkunde',
     'päd': 'Kinder- und Jugendheilkunde',
     'pedi': 'Kinder- und Jugendheilkunde',
     'kinder': 'Kinder- und Jugendheilkunde',
-    'hno': 'Hals-Nasen-Ohrenheilkunde',
-    'urolog': 'Chirurgische Fächer',
-    'zahnmedizin': 'Chirurgische Fächer',
     'embryolog': 'Sonstige',
-    'pharmakolog': 'Innere Medizin',
-    'radiopaed': 'Chirurgische Fächer',
+}
+
+# Exact matches for short ambiguous titles (checked before prefix matching)
+TITLE_EXACT = {
+    'er': 'Notfall- und Intensivmedizin',
+    'ent': 'Hals-Nasen-Ohrenheilkunde',
+    'hno': 'Hals-Nasen-Ohrenheilkunde',
+    'derma': 'Dermatologie und Venerologie',
 }
 
 def map_topic_by_title(title: str) -> str:
-    """Try to map a Title value via explicit prefix lookup."""
+    """Try to map a Title value via exact then prefix lookup."""
     t = (title or '').lower().strip()
     if not t:
         return 'Sonstige'
+    # Check exact matches first (for short ambiguous titles like "ER", "ENT")
+    if t in TITLE_EXACT:
+        return TITLE_EXACT[t]
     for prefix, topic in TITLE_MAP.items():
-        if t.startswith(prefix) or t == prefix:
+        if t.startswith(prefix):
             return topic
     return 'Sonstige'
 
@@ -387,13 +415,85 @@ def collect_img_srcs_from_fields(field_values: list) -> list:
         out.extend(extract_img_srcs(v or ''))
     return out
 
-# ───── Main parser ───────────────────────────────────────────────────────────
+# ───── Deck-based topic assignment ────────────────────────────────────────────
 
-def parse_all_notes(db_path: str, media_url_map: dict) -> tuple:
-    """Return (list_of_question_dicts, parse_stats, error_log)."""
+# Anki deck names contain topic numbers/names. This mapping is the authoritative
+# source for topic assignment — more reliable than Title fields or content regex.
+DECK_TOPIC_PATTERNS = [
+    ('01 - innere', 'Innere Medizin'),
+    ('01-innere', 'Innere Medizin'),
+    ('innere medizin', 'Innere Medizin'),
+    ('02 - chirurgie', 'Chirurgische Fächer'),
+    ('02-chirurgie', 'Chirurgische Fächer'),
+    ('03 - pedia', 'Kinder- und Jugendheilkunde'),
+    ('03-pediatrie', 'Kinder- und Jugendheilkunde'),
+    ('06-pediatrie', 'Kinder- und Jugendheilkunde'),
+    ('04 - neuro', 'Neurologie'),
+    ('04-neuro', 'Neurologie'),
+    ('05-neuro', 'Neurologie'),
+    ('05- gyneco', 'Frauenheilkunde/Gynäkologie'),
+    ('05-gyneco', 'Frauenheilkunde/Gynäkologie'),
+    ('04-frauen', 'Frauenheilkunde/Gynäkologie'),
+    ('gyneco', 'Frauenheilkunde/Gynäkologie'),
+    ('06 - derma', 'Dermatologie und Venerologie'),
+    ('06-derma', 'Dermatologie und Venerologie'),
+    ('03-dermatologie', 'Dermatologie und Venerologie'),
+    ('07 - er', 'Notfall- und Intensivmedizin'),
+    ('07-er', 'Notfall- und Intensivmedizin'),
+    ('08 - hno', 'Hals-Nasen-Ohrenheilkunde'),
+    ('08-hno', 'Hals-Nasen-Ohrenheilkunde'),
+    ('09-hno', 'Hals-Nasen-Ohrenheilkunde'),
+    ('09 - psych', 'Psychiatrie'),
+    ('09-psych', 'Psychiatrie'),
+    ('08-psych', 'Psychiatrie'),
+    ('10 - ophthalmo', 'Augenheilkunde'),
+    ('10-augen', 'Augenheilkunde'),
+    ('10-ophthalmo', 'Augenheilkunde'),
+]
+
+def build_deck_topic_map(db_path: str) -> dict:
+    """Build a mapping of note_id → canonical topic using Anki deck assignments.
+
+    This is the most reliable topic source because the Anki user organized
+    their cards into topic-specific decks (01-Innere, 02-Chirurgie, etc.).
+    """
     conn = sqlite3.connect(db_path)
     conn.create_collation('unicase', lambda a, b: (a > b) - (a < b))
     cur = conn.cursor()
+
+    # Build deck_id → topic mapping
+    deck_topics = {}
+    cur.execute("SELECT id, name FROM decks")
+    for did, name in cur.fetchall():
+        name_lower = name.lower()
+        for pattern, topic in DECK_TOPIC_PATTERNS:
+            if pattern in name_lower:
+                deck_topics[did] = topic
+                break
+
+    # Map note_id → topic via cards table (note can be in multiple decks; take first match)
+    note_topic = {}
+    cur.execute("SELECT nid, did FROM cards")
+    for nid, did in cur.fetchall():
+        if nid not in note_topic and did in deck_topics:
+            note_topic[nid] = deck_topics[did]
+
+    conn.close()
+    print(f"  deck-based topic map: {len(note_topic)} notes mapped from {len(deck_topics)} decks")
+    return note_topic
+
+# ───── Main parser ───────────────────────────────────────────────────────────
+
+def parse_all_notes(db_path: str, media_url_map: dict, deck_topic_map: dict = None) -> tuple:
+    """Return (list_of_question_dicts, parse_stats, error_log).
+
+    If deck_topic_map is provided, it takes PRIORITY over Title-based and
+    content-based topic assignment. This is the authoritative source.
+    """
+    conn = sqlite3.connect(db_path)
+    conn.create_collation('unicase', lambda a, b: (a > b) - (a < b))
+    cur = conn.cursor()
+    dtm = deck_topic_map or {}
 
     stats = Counter()
     errors = []
@@ -458,8 +558,10 @@ def parse_all_notes(db_path: str, media_url_map: dict) -> tuple:
         # Primary image: question first, then explanation, then choice
         q_urls = all_urls
 
-        # Map topic: Title → prefix lookup (reliable), then regex fallback on question
-        topic = map_topic_by_title(title)
+        # Map topic: deck assignment (authoritative) → Title → content regex fallback
+        topic = dtm.get(nid) or 'Sonstige'
+        if topic == 'Sonstige':
+            topic = map_topic_by_title(title)
         if topic == 'Sonstige':
             topic = map_topic(title, raw_tags)
         if topic == 'Sonstige':
@@ -591,10 +693,11 @@ def parse_all_notes(db_path: str, media_url_map: dict) -> tuple:
                     distractors = [c['text'] for c in choices if not c['correct']][:8]
                     answer = correct_texts[0] if correct_texts else answer
 
-            # Topic: infer from question content since SIP4a has no Title field
-            topic = map_topic(question_text, raw_tags)
+            # Topic: deck assignment (authoritative) → content regex fallback
+            topic = dtm.get(nid) or 'Sonstige'
             if topic == 'Sonstige':
-                # Fallback: try the answer + explanation
+                topic = map_topic(question_text, raw_tags)
+            if topic == 'Sonstige':
                 topic = map_topic(f"{answer} {explanation or ''}", raw_tags)
 
             clean = clean_tags(raw_tags, 2 if is_mcq else None, 1 if is_mcq else 0)
@@ -1067,10 +1170,14 @@ def main():
     # inverse: orig_name -> str(idx)
     media_map_inv = {v: k for k, v in media_map.items()}
 
+    # Build deck-based topic map (authoritative topic assignment from Anki deck structure)
+    print("→ building deck-based topic map")
+    deck_topic_map = build_deck_topic_map(db_path)
+
     # First pass: parse notes with empty URL map to collect referenced filenames
     print("→ first-pass parse (discover referenced media)")
     dummy_map = {}
-    questions, stats, errors = parse_all_notes(db_path, dummy_map)
+    questions, stats, errors = parse_all_notes(db_path, dummy_map, deck_topic_map)
     referenced_names = set()
     for q in questions:
         # collect raw filenames referenced in the HTML before URL substitution
@@ -1108,9 +1215,9 @@ def main():
         # synthetic URLs for dry-run so we can see shape
         url_map.update({o: storage_public_url(storage_path_for(o)) for o in present})
 
-    # Second pass: re-parse with real URL map
+    # Second pass: re-parse with real URL map + deck topic map
     print("→ second-pass parse (with resolved image URLs)")
-    questions, stats, errors = parse_all_notes(db_path, url_map)
+    questions, stats, errors = parse_all_notes(db_path, url_map, deck_topic_map)
     print_stats(stats, errors, questions)
 
     if args.dry_run:
