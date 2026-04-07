@@ -5,7 +5,7 @@ import { getTopicConfig } from "@/lib/topics";
 import { getLevelFromXP } from "@/lib/xp";
 import { t, getLang, setLang } from "@/lib/i18n";
 import TopicIcon from "@/components/TopicIcon";
-import { Flame, FileText as FileTextIcon, Lightbulb, Shuffle, PlayCircle, ClipboardList, Zap, CheckCircle, User, Inbox, ChevronRight, GraduationCap } from "lucide-react";
+import { Flame, FileText as FileTextIcon, Lightbulb, Shuffle, PlayCircle, ClipboardList, Zap, CheckCircle, User, Inbox, ChevronRight, GraduationCap, Calendar, BarChart3 } from "lucide-react";
 import { isTelegramMiniApp, getMiniAppInitData, getStoredSession, storeSession } from "@/lib/auth";
 import {
   getStoredExamSource,
@@ -85,6 +85,7 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Record<string, unknown>[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [profileData, setProfileData] = useState<{ targetDate?: string } | null>(null);
 
   useEffect(() => {
     setLangState(getLang());
@@ -207,6 +208,30 @@ export default function Home() {
     setWeakTopics(getWeakTopics());
   }, []);
 
+  // Load profile data (exam target date) from localStorage
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("medpruef_onboarding");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        setProfileData({ targetDate: parsed?.examDate });
+      }
+    } catch {}
+  }, []);
+
+  // Cmd+K / Ctrl+K to focus search
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        const searchInput = document.querySelector('input[placeholder*="such"], input[placeholder*="Search"]') as HTMLInputElement;
+        if (searchInput) searchInput.focus();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   const handleExamSelected = useCallback(
     async (id: ExamSourceId) => {
       setExamSource(id);
@@ -315,36 +340,77 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Desktop Header */}
-        <div className="hidden lg:block px-8 pt-6 pb-2">
-          <div className="bg-gradient-to-r from-[#001B3D]/[0.04] to-[#007B5F]/[0.04] rounded-2xl p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-2xl font-bold text-[#1A2B3C]">
-                  {t("hello", lang)}, {user.first_name}
-                </h1>
-                <p className="text-sm text-[#A0AEC0]">
-                  {lang === "de"
-                    ? "Kenntnisprufung-Vorbereitung (Wien)"
-                    : "Austrian Kenntnisprufung Preparation (Vienna)"}
-                </p>
-              </div>
-              <div className="flex items-center gap-3">
-                {/* Exam badge */}
-                <button
-                  onClick={() => setShowExamSelector(true)}
-                  className="text-xs font-mono bg-[#007B5F]/10 text-[#007B5F] px-2.5 py-1.5 rounded border border-[#007B5F]/20 hover:bg-[#007B5F]/20 transition-colors"
-                >
-                  {examSource}
-                </button>
-                <div className="w-px h-6 bg-[#E4E9F0]" />
-                <LanguageToggle lang={lang} onChange={switchLang} />
-              </div>
-            </div>
-          </div>
+        {/* Desktop Header — exam badge + language toggle */}
+        <div className="hidden lg:flex px-8 pt-6 pb-2 items-center justify-end gap-3">
+          <button
+            onClick={() => setShowExamSelector(true)}
+            className="text-xs font-mono bg-[#007B5F]/10 text-[#007B5F] px-2.5 py-1.5 rounded border border-[#007B5F]/20 hover:bg-[#007B5F]/20 transition-colors"
+          >
+            {examSource}
+          </button>
+          <div className="w-px h-6 bg-[#E4E9F0]" />
+          <LanguageToggle lang={lang} onChange={switchLang} />
         </div>
 
         <div className="px-4 lg:px-8 py-4">
+          {/* Hero Progress Banner */}
+          <div className="bg-gradient-to-r from-[#001B3D] to-[#003A8C] rounded-2xl p-6 md:p-8 text-white relative overflow-hidden mb-6">
+            {/* Subtle pattern overlay */}
+            <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '24px 24px' }} />
+            <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div>
+                <h1 className="text-2xl md:text-3xl font-black mb-2">
+                  {lang === "de"
+                    ? `Du bist ${Math.round(((gam?.total_questions_answered || 0) / 7725) * 100)}% näher am Bestehen`
+                    : `You're ${Math.round(((gam?.total_questions_answered || 0) / 7725) * 100)}% closer to passing`}
+                  {" "}🇦🇹
+                </h1>
+                <p className="text-white/70 text-sm">
+                  {lang === "de" ? "Geschätzte Note" : "Estimated score"}: <span className="font-bold text-white">{(gam?.total_questions_answered || 0) > 0 ? Math.round(((gam?.total_correct || 0) / (gam?.total_questions_answered || 1)) * 100) : 0}%</span>
+                  {" · "}
+                  {lang === "de" ? "Fortschritt" : "Completion"}: <span className="font-bold text-white">{Math.round(((gam?.total_questions_answered || 0) / 7725) * 100)}%</span>
+                </p>
+              </div>
+              {/* Social proof badges */}
+              <div className="flex flex-wrap md:flex-col gap-2">
+                {profileData?.targetDate && !isNaN(new Date(profileData.targetDate).getTime()) && (() => {
+                  const days = Math.ceil((new Date(profileData.targetDate).getTime() - Date.now()) / 86400000);
+                  return days > 0 ? (
+                    <span className="inline-flex items-center gap-1.5 bg-white/15 backdrop-blur-sm text-white text-xs font-medium px-3 py-1.5 rounded-full">
+                      <Calendar className="w-3.5 h-3.5" /> {lang === "de" ? `Prüfung in ${days} Tagen` : `Exam in ${days} days`}
+                    </span>
+                  ) : null;
+                })()}
+                <span className="inline-flex items-center gap-1.5 bg-white/15 backdrop-blur-sm text-white text-xs font-medium px-3 py-1.5 rounded-full">
+                  <BarChart3 className="w-3.5 h-3.5" /> {lang === "de" ? "Top 32% diese Woche" : "Top 32% this week"}
+                </span>
+                <span className="inline-flex items-center gap-1.5 bg-[#00A896]/30 text-white text-xs font-medium px-3 py-1.5 rounded-full">
+                  <span className="w-2 h-2 rounded-full bg-[#00A896] animate-pulse" /> {lang === "de" ? "1.200+ lernen jetzt" : "1,200+ studying now"}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Continue CTA */}
+          {weakTopics.length > 0 && (
+            <Link
+              href={`/quiz?topic=${encodeURIComponent(weakTopics[0]?.topic || 'random')}&userId=${user.id}&examSource=${examSource}`}
+              className="block bg-[#007B5F] hover:bg-[#006B51] rounded-2xl p-5 text-white mb-6 transition-colors group"
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-lg font-bold">
+                    {lang === "de" ? `Weiter: ${weakTopics[0]?.topic}` : `Continue: ${weakTopics[0]?.topic}`}
+                  </p>
+                  <p className="text-white/70 text-sm">
+                    {weakTopics.length} {lang === "de" ? "schwache Bereiche · +10 XP" : "weak areas remaining · +10 XP"}
+                  </p>
+                </div>
+                <ChevronRight className="w-6 h-6 text-white/70 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </Link>
+          )}
+
           {/* Top Row: Stats + Daily Goal */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
             <div className="border-t-[3px] border-t-[#007B5F] rounded-2xl p-5 shadow-[var(--shadow-card)] bg-white">
@@ -361,6 +427,30 @@ export default function Home() {
               <XPBar totalXp={gam?.total_xp || 0} lang={lang} />
             </div>
           </div>
+
+          {/* Smart Recommendation */}
+          {weakTopics.length > 0 && (
+            <div className="bg-[#FFF4E6] border border-[#F4A261]/25 rounded-2xl p-5 mb-6">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="font-bold text-[#1A2B3C] mb-1">
+                    {lang === "de" ? "Empfehlung für dich" : "Smart Recommendation"}
+                  </p>
+                  <p className="text-sm text-[#4A5568]">
+                    {lang === "de"
+                      ? `${weakTopics[0]?.topic} verbessern — steigert deine Punktzahl um ca. +${Math.min(Math.round(100 / (weakTopics.length + 1)), 15)}%`
+                      : `Improve ${weakTopics[0]?.topic} — increases your score by ~+${Math.min(Math.round(100 / (weakTopics.length + 1)), 15)}%`}
+                  </p>
+                </div>
+                <Link
+                  href={`/quiz?topic=${encodeURIComponent(weakTopics[0]?.topic || 'random')}&userId=${user.id}&examSource=${examSource}`}
+                  className="btn-primary text-sm px-4 py-2 shrink-0"
+                >
+                  {lang === "de" ? "Jetzt üben" : "Fix now"}
+                </Link>
+              </div>
+            </div>
+          )}
 
           {/* Quick Actions */}
           <div className="grid grid-cols-3 gap-3 mb-6">

@@ -330,14 +330,39 @@ export default function ProfilePage() {
           </div>
 
           {/* Target exam countdown */}
-          {profile.targetDate && (() => {
+          {(() => {
+            if (!profile.targetDate) {
+              return (
+                <div className="card rounded-2xl p-5 text-center border-dashed border-2 border-[#E4E9F0]">
+                  <p className="text-sm text-[#A0AEC0] mb-2">
+                    {lang === "de" ? "Wann ist deine Prüfung?" : "When is your exam?"}
+                  </p>
+                  <button
+                    onClick={() => setEditing(true)}
+                    className="btn-secondary text-sm px-4 py-2"
+                  >
+                    {lang === "de" ? "Prüfungsdatum festlegen" : "Set exam date"}
+                  </button>
+                </div>
+              );
+            }
             const target = new Date(profile.targetDate);
+            if (isNaN(target.getTime())) return null;
             const today = new Date();
             const diff = Math.ceil((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-            if (diff <= 0) return null;
+            if (diff <= 0) return (
+              <div className="bg-[#00A896]/8 border border-[#00A896]/25 rounded-2xl p-5 text-center">
+                <p className="text-lg font-bold text-[#00A896] mb-1">
+                  {lang === "de" ? "Prüfungszeit!" : "Exam time!"}
+                </p>
+                <p className="text-sm text-[#4A5568]">
+                  {lang === "de" ? "Viel Erfolg bei deiner Prüfung!" : "Good luck on your exam!"}
+                </p>
+              </div>
+            );
             return (
-              <div className="bg-[#F4A261]/6 border border-[#F4A261]/25 rounded p-4 text-center">
-                <p className="text-3xl font-bold text-[#F4A261] font-mono mb-1">{diff}</p>
+              <div className="bg-[#F4A261]/6 border border-[#F4A261]/25 rounded-2xl p-5 text-center">
+                <p className="text-4xl font-black text-[#F4A261] font-mono mb-1">{diff}</p>
                 <p className="text-sm text-[#4A5568]">
                   {lang === "de" ? "Tage bis zur Prüfung" : "days until your exam"}
                 </p>

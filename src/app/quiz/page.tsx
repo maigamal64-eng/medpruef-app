@@ -119,6 +119,21 @@ function QuizContent() {
     if (userId !== undefined) fetchQuestion();
   }, [fetchQuestion, userId, initialQuestionId]);
 
+  // Keyboard shortcuts: N/→ for next, Esc for back
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+      if ((e.key === 'n' || e.key === 'ArrowRight') && answered) {
+        e.preventDefault();
+        fetchQuestion();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [answered, fetchQuestion]);
+
   const handleAnswer = useCallback(
     async (isCorrect: boolean) => {
       if (!question || answered) return;

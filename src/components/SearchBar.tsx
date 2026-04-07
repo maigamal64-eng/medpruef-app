@@ -51,7 +51,7 @@ export default function SearchBar({ lang, onSearch, autoFocus }: SearchBarProps)
       />
 
       {/* Clear button */}
-      {value && (
+      {value ? (
         <button
           onClick={handleClear}
           className="absolute right-3 text-[#A0AEC0] hover:text-[#4A5568] transition-colors text-sm leading-none"
@@ -59,6 +59,10 @@ export default function SearchBar({ lang, onSearch, autoFocus }: SearchBarProps)
         >
           ✕
         </button>
+      ) : (
+        <span className="absolute right-3 top-1/2 -translate-y-1/2 hidden md:flex items-center gap-0.5 text-[10px] text-[#A0AEC0] bg-[#F7F9FC] border border-[#E4E9F0] rounded px-1.5 py-0.5 pointer-events-none">
+          ⌘K
+        </span>
       )}
     </div>
   );

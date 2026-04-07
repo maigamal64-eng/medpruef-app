@@ -123,6 +123,47 @@ export default function QuestionCard({
     }
   }, [question.id]);
 
+  // Keyboard shortcuts for answer selection
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger when typing in an input/textarea
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+      const key = e.key.toLowerCase();
+
+      // A-E to select answer options
+      if (!answered && options.length > 0) {
+        const idx = key.charCodeAt(0) - 97; // 'a' = 0, 'b' = 1, etc.
+        if (idx >= 0 && idx < options.length) {
+          e.preventDefault();
+          if (isMulti) {
+            // Toggle checkbox selection
+            setSelectedIdxs(prev => {
+              const next = new Set(prev);
+              if (next.has(idx)) next.delete(idx);
+              else next.add(idx);
+              return next;
+            });
+          } else {
+            // Single select — immediately select and grade
+            setSelectedIdxs(new Set([idx]));
+            setSubmitted(true);
+            onAnswer?.(options[idx].correct);
+          }
+        }
+      }
+
+      // F to toggle bookmark
+      if (key === 'f' && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault();
+        handleToggleFav();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [answered, options, isMulti, onAnswer]);
+
   const handleSelect = (idx: number) => {
     if (answered) return;
     if (isMulti) {
