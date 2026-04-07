@@ -169,11 +169,11 @@ export default function QuestionCard({
   /** Render question text with highlights applied */
   const renderHighlightedText = (text: string) => {
     if (!highlights.length) return text;
-    let result = text;
     // Build a regex that matches any highlighted phrase (escaped)
-    const escaped = highlights.map(h => h.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+    const escaped = highlights.map(h => h.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).filter(Boolean);
+    if (!escaped.length) return text;
     const regex = new RegExp(`(${escaped.join("|")})`, "gi");
-    const parts = result.split(regex);
+    const parts = text.split(regex);
     return parts.map((part, i) => {
       const isHighlighted = highlights.some(h => h.toLowerCase() === part.toLowerCase());
       return isHighlighted ? (
@@ -359,7 +359,7 @@ export default function QuestionCard({
         )}
 
         {/* Question text (selectable for highlighting) */}
-        <p className="text-lg md:text-xl leading-relaxed font-medium text-[#001B3D] mb-4 select-text" data-question-text>
+        <p className="text-lg md:text-xl leading-relaxed font-medium text-[#001B3D] mb-4" style={{ userSelect: 'text' }} data-question-text>
           {renderHighlightedText(question.question)}
         </p>
 
