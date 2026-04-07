@@ -7,7 +7,7 @@ import type { MCQOption } from "@/lib/mcq";
 import ImageLightbox from "@/components/ImageLightbox";
 import { trackEvent } from "@/lib/tracker";
 import TopicIcon from "@/components/TopicIcon";
-import { Lightbulb, FileText } from "lucide-react";
+import { Lightbulb, FileText, Highlighter } from "lucide-react";
 
 type Lang = "de" | "en";
 
@@ -102,26 +102,87 @@ export default function QuestionCard({
   const [isFav, setIsFav] = useState(false);
 
   const [showAnswer, setShowAnswer] = useState(false);
+  const [highlights, setHighlights] = useState<string[]>([]);
+  const [showHighlightBtn, setShowHighlightBtn] = useState(false);
+  const [highlightPos, setHighlightPos] = useState({ x: 0, y: 0 });
   const answered = submitted || showAnswer;
   const isOpenAnswer = !question.options || question.options.length < 2;
   const options: MCQOption[] = question.options || [];
   const nCorrect = question.n_correct ?? options.filter(o => o.correct).length;
   const isMulti = nCorrect >= 2;
 
-  // Load persisted note and favorite state on question change
+  const highlightKey = (id: number) => `medpruef_highlights_${id}`;
+
+  // Load persisted note, favorite, and highlight state on question change
   useEffect(() => {
     setSelectedIdxs(new Set());
     setSubmitted(false);
     setShowAnswer(false);
     setShowNoteInput(false);
     setNoteSaved(false);
+    setShowHighlightBtn(false);
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem(getNoteKey(question.id)) || "";
       setNote(saved);
       setShowNoteInput(!!saved);
       setIsFav(getFavorites().includes(question.id));
+      try {
+        const hl = JSON.parse(localStorage.getItem(highlightKey(question.id)) || "[]");
+        setHighlights(Array.isArray(hl) ? hl : []);
+      } catch { setHighlights([]); }
     }
   }, [question.id]);
+
+  // Detect text selection on the question text for highlighting
+  useEffect(() => {
+    const handleMouseUp = () => {
+      const sel = window.getSelection();
+      if (!sel || sel.isCollapsed || !sel.toString().trim()) {
+        setShowHighlightBtn(false);
+        return;
+      }
+      const text = sel.toString().trim();
+      if (text.length < 3 || text.length > 500) { setShowHighlightBtn(false); return; }
+      // Check if selection is within the question text element
+      const anchor = sel.anchorNode?.parentElement;
+      if (!anchor?.closest("[data-question-text]")) { setShowHighlightBtn(false); return; }
+      const range = sel.getRangeAt(0);
+      const rect = range.getBoundingClientRect();
+      setHighlightPos({ x: rect.left + rect.width / 2, y: rect.top - 8 });
+      setShowHighlightBtn(true);
+    };
+    document.addEventListener("mouseup", handleMouseUp);
+    return () => document.removeEventListener("mouseup", handleMouseUp);
+  }, []);
+
+  const handleHighlight = () => {
+    const sel = window.getSelection();
+    if (!sel || !sel.toString().trim()) return;
+    const text = sel.toString().trim();
+    const next = [...highlights, text];
+    setHighlights(next);
+    localStorage.setItem(highlightKey(question.id), JSON.stringify(next));
+    sel.removeAllRanges();
+    setShowHighlightBtn(false);
+  };
+
+  /** Render question text with highlights applied */
+  const renderHighlightedText = (text: string): React.ReactNode => {
+    if (!highlights.length) return text;
+    let result = text;
+    // Build a regex that matches any highlighted phrase (escaped)
+    const escaped = highlights.map(h => h.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+    const regex = new RegExp(`(${escaped.join("|")})`, "gi");
+    const parts = result.split(regex);
+    return parts.map((part, i) => {
+      const isHighlighted = highlights.some(h => h.toLowerCase() === part.toLowerCase());
+      return isHighlighted ? (
+        <mark key={i} className="bg-yellow-200/80 rounded px-0.5">{part}</mark>
+      ) : (
+        <span key={i}>{part}</span>
+      );
+    });
+  };
 
   // Keyboard shortcuts for answer selection
   useEffect(() => {
@@ -297,10 +358,26 @@ export default function QuestionCard({
           </button>
         )}
 
-        {/* Question text */}
-        <p className="text-lg md:text-xl leading-relaxed font-medium text-[#001B3D] mb-4">
-          {question.question}
+        {/* Question text (selectable for highlighting) */}
+        <p className="text-lg md:text-xl leading-relaxed font-medium text-[#001B3D] mb-4 select-text" data-question-text>
+          {renderHighlightedText(question.question)}
         </p>
+
+        {/* Floating highlight button — appears on text selection */}
+        {showHighlightBtn && (
+          <div
+            className="fixed z-50 animate-scale-in"
+            style={{ left: highlightPos.x, top: highlightPos.y, transform: "translate(-50%, -100%)" }}
+          >
+            <button
+              onMouseDown={(e) => { e.preventDefault(); handleHighlight(); }}
+              className="flex items-center gap-1.5 bg-[#001B3D] text-white text-xs font-medium px-3 py-1.5 rounded-lg shadow-lg hover:bg-[#003A8C] transition-colors"
+            >
+              <Highlighter className="w-3.5 h-3.5" />
+              Highlight
+            </button>
+          </div>
+        )}
 
         {/* Exam date chips */}
         {question.exam_dates && question.exam_dates.length > 0 && (
