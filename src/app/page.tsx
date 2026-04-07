@@ -442,7 +442,7 @@ export default function Home() {
                   <h3 className="text-sm font-bold uppercase tracking-wider text-[#F4A261] mb-3 border-l-[3px] border-l-[#F4A261] pl-3">
                     {t("sip4_label", lang)}
                   </h3>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5 mb-5 stagger">
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-5 mb-5 stagger">
                     {topics
                       .filter((tp) => VIENNA_EXAM_PARTS.sip4.includes(tp.topic))
                       .map((tp, i) => (
@@ -462,7 +462,7 @@ export default function Home() {
                   <h3 className="text-sm font-bold uppercase tracking-wider text-[#007B5F] mb-3 border-l-[3px] border-l-[#007B5F] pl-3">
                     {t("sip5_label", lang)}
                   </h3>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5 stagger">
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-5 stagger">
                     {topics
                       .filter((tp) => VIENNA_EXAM_PARTS.sip5.includes(tp.topic))
                       .map((tp, i) => (
@@ -479,7 +479,7 @@ export default function Home() {
                   </div>
                 </>
               ) : (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 stagger">
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-4 stagger">
                   {topics.map((tp, i) => (
                     <TopicCard
                       key={tp.topic}
@@ -725,14 +725,15 @@ function DemoHome({
                     <Link
                       key={tp.topic}
                       href={`/quiz?topic=${encodeURIComponent(tp.topic)}&examSource=${examSource}`}
-                      className="card-interactive border-l-[3px] rounded-2xl p-5 active:scale-[0.98]"
-                      style={{ borderLeftColor: config.color, animationDelay: `${i * 50}ms` }}
+                      className="card-interactive rounded-2xl p-5 active:scale-[0.98] relative overflow-hidden group"
+                      style={{ animationDelay: `${i * 50}ms` }}
                     >
-                      <div className="w-10 h-10 rounded-full flex items-center justify-center mb-3" style={{ backgroundColor: `${config.color}15` }}>
-                        <TopicIcon name={config.icon} className="w-5 h-5" style={{ color: config.color }} />
+                      <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl" style={{ backgroundColor: config.color }} />
+                      <div className="w-11 h-11 rounded-xl flex items-center justify-center mb-3 transition-transform duration-200 group-hover:scale-110" style={{ backgroundColor: `${config.color}18` }}>
+                        <TopicIcon name={config.icon} className="w-6 h-6" style={{ color: config.color }} />
                       </div>
-                      <div className="text-sm font-semibold mb-1 text-[#1A2B3C]">{tp.topic}</div>
-                      <div className="text-xs text-[#A0AEC0] font-mono">{tp.count} {t("questions", lang)}</div>
+                      <div className="text-[15px] font-semibold leading-snug mb-1 text-[#1A2B3C] line-clamp-2 min-h-[2.5rem]" title={tp.topic}>{tp.topic}</div>
+                      <div className="text-xs text-[#A0AEC0] font-mono">{tp.count.toLocaleString("de-DE")} {t("questions", lang)}</div>
                     </Link>
                   );
                 })}
@@ -749,14 +750,15 @@ function DemoHome({
                     <Link
                       key={tp.topic}
                       href={`/quiz?topic=${encodeURIComponent(tp.topic)}&examSource=${examSource}`}
-                      className="card-interactive border-l-[3px] rounded-2xl p-5 active:scale-[0.98]"
-                      style={{ borderLeftColor: config.color, animationDelay: `${i * 50}ms` }}
+                      className="card-interactive rounded-2xl p-5 active:scale-[0.98] relative overflow-hidden group"
+                      style={{ animationDelay: `${i * 50}ms` }}
                     >
-                      <div className="w-10 h-10 rounded-full flex items-center justify-center mb-3" style={{ backgroundColor: `${config.color}15` }}>
-                        <TopicIcon name={config.icon} className="w-5 h-5" style={{ color: config.color }} />
+                      <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl" style={{ backgroundColor: config.color }} />
+                      <div className="w-11 h-11 rounded-xl flex items-center justify-center mb-3 transition-transform duration-200 group-hover:scale-110" style={{ backgroundColor: `${config.color}18` }}>
+                        <TopicIcon name={config.icon} className="w-6 h-6" style={{ color: config.color }} />
                       </div>
-                      <div className="text-sm font-semibold mb-1 text-[#1A2B3C]">{tp.topic}</div>
-                      <div className="text-xs text-[#A0AEC0] font-mono">{tp.count} {t("questions", lang)}</div>
+                      <div className="text-[15px] font-semibold leading-snug mb-1 text-[#1A2B3C] line-clamp-2 min-h-[2.5rem]" title={tp.topic}>{tp.topic}</div>
+                      <div className="text-xs text-[#A0AEC0] font-mono">{tp.count.toLocaleString("de-DE")} {t("questions", lang)}</div>
                     </Link>
                   );
                 })}

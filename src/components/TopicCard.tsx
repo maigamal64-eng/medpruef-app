@@ -27,41 +27,52 @@ export default function TopicCard({ topic, count, userId, lang, accuracy, delay 
   return (
     <Link
       href={href}
-      className="card-interactive border-l-[3px] p-5 block rounded-2xl"
-      style={{
-        borderLeftColor: config.color,
-        animationDelay: `${delay}ms`,
-      }}
+      className="card-interactive block rounded-2xl p-5 overflow-hidden relative group"
+      style={{ animationDelay: `${delay}ms` }}
     >
-      <div className="flex items-start justify-between mb-2">
-        <span className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${config.color}1A` }}>
-          <TopicIcon name={config.icon} className="w-6 h-6" />
+      {/* Colored top accent bar */}
+      <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl" style={{ backgroundColor: config.color }} />
+
+      {/* Icon in colored circle */}
+      <div className="flex items-start justify-between mb-3">
+        <span
+          className="w-11 h-11 rounded-xl flex items-center justify-center transition-transform duration-200 group-hover:scale-110"
+          style={{ backgroundColor: `${config.color}18` }}
+        >
+          <TopicIcon name={config.icon} className="w-6 h-6" style={{ color: config.color }} />
         </span>
         {accuracy !== undefined && accuracy > 0 && (
           <span
-            className={`text-xs font-medium font-mono px-1.5 py-0.5 rounded border ${
+            className={`text-[11px] font-semibold font-mono px-2 py-0.5 rounded-lg ${
               accuracy >= 70
-                ? "bg-[#00A896]/10 text-[#00A896] border-[#00A896]/20"
+                ? "bg-[#00A896]/12 text-[#00A896]"
                 : accuracy >= 40
-                ? "bg-[#F4A261]/10 text-[#F4A261] border-[#F4A261]/20"
-                : "bg-[#D64545]/10 text-[#D64545] border-[#D64545]/20"
+                ? "bg-[#F4A261]/12 text-[#F4A261]"
+                : "bg-[#D64545]/12 text-[#D64545]"
             }`}
           >
             {Math.min(accuracy, 100)}%
           </span>
         )}
       </div>
-      <h3 className="text-base font-semibold leading-tight mb-1 text-[#1A2B3C]">{topic}</h3>
-      <p className="text-xs text-[#A0AEC0] mb-2 font-mono">
-        {count} {t("questions", lang)}
+
+      {/* Topic name — truncated with tooltip */}
+      <h3 className="text-[15px] font-semibold leading-snug mb-1 text-[#1A2B3C] line-clamp-2 min-h-[2.5rem]" title={topic}>
+        {topic}
+      </h3>
+
+      {/* Question count */}
+      <p className="text-xs text-[#A0AEC0] mb-3 font-mono">
+        {count.toLocaleString("de-DE")} {t("questions", lang)}
       </p>
+
       {/* Progress bar */}
-      <div className="h-2 bg-[#F7F9FC] rounded-full overflow-hidden">
+      <div className="h-1.5 bg-[#F7F9FC] rounded-full overflow-hidden">
         <div
           className="h-full rounded-full animate-progress"
           style={{
             width: `${Math.min(accuracy || 0, 100)}%`,
-            background: `linear-gradient(to right, ${config.color}, ${config.color}80)`,
+            background: `linear-gradient(to right, ${config.color}, ${config.color}60)`,
           }}
         />
       </div>
