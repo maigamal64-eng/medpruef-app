@@ -11,6 +11,7 @@ import type { MCQOption } from "@/lib/mcq";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import LanguageToggle from "@/components/LanguageToggle";
+import ThemeToggle from "@/components/ThemeToggle";
 import TopicIcon from "@/components/TopicIcon";
 import { GraduationCap, Lightbulb, Clock, AlertTriangle, Search } from "lucide-react";
 
@@ -364,7 +365,10 @@ function ExamContent() {
             <Link href="/" className="text-[#A0AEC0] hover:text-[#1A2B3C] text-sm transition-colors">
               ← {t("back_home", lang)}
             </Link>
-            <LanguageToggle lang={lang} onChange={switchLang} />
+            <div className="flex items-center gap-2">
+              <ThemeToggle />
+              <LanguageToggle lang={lang} onChange={switchLang} />
+            </div>
           </div>
 
           <div className="flex flex-col items-center justify-center min-h-[calc(100vh-60px)] px-4 py-8">
@@ -663,7 +667,10 @@ function ExamContent() {
             <span className="text-xs text-[#A0AEC0] font-mono">
               {reviewIdx + 1} / {questions.length}
             </span>
-            <LanguageToggle lang={lang} onChange={switchLang} />
+            <div className="flex items-center gap-2">
+              <ThemeToggle />
+              <LanguageToggle lang={lang} onChange={switchLang} />
+            </div>
           </div>
 
           <div className="px-4 lg:px-8 py-4 max-w-3xl mx-auto">
@@ -770,7 +777,10 @@ function ExamContent() {
             <Link href="/" className="text-[#A0AEC0] hover:text-[#1A2B3C] text-sm transition-colors">
               ← {t("back_home", lang)}
             </Link>
-            <LanguageToggle lang={lang} onChange={switchLang} />
+            <div className="flex items-center gap-2">
+              <ThemeToggle />
+              <LanguageToggle lang={lang} onChange={switchLang} />
+            </div>
           </div>
 
           <div className="px-4 lg:px-8 py-6 max-w-2xl mx-auto">
@@ -892,6 +902,7 @@ function ExamContent() {
               }`}>
                 <Clock className="w-4 h-4 inline" /> {formatTime(timeLeft)}
               </div>
+              <ThemeToggle />
               <LanguageToggle lang={lang} onChange={switchLang} />
             </div>
           </div>

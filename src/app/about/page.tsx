@@ -6,6 +6,7 @@ import { getLang, setLang } from "@/lib/i18n";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import LanguageToggle from "@/components/LanguageToggle";
+import ThemeToggle from "@/components/ThemeToggle";
 import { getStoredSession } from "@/lib/auth";
 import { FileText, GraduationCap, BarChart3, Flame, Globe, Smartphone, Send, Share2, Camera, Check } from "lucide-react";
 
@@ -42,7 +43,10 @@ export default function AboutPage() {
           <h1 className="text-base font-bold text-[#1A2B3C]">
             {lang === "de" ? "Über MedPrüf" : "About MedPrüf"}
           </h1>
-          <LanguageToggle lang={lang} onChange={switchLang} />
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <LanguageToggle lang={lang} onChange={switchLang} />
+          </div>
         </div>
 
         <div className="px-4 lg:px-8 py-6 max-w-2xl mx-auto stagger">

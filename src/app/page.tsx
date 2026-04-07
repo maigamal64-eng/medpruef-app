@@ -27,6 +27,7 @@ import Onboarding from "@/components/Onboarding";
 import SearchBar from "@/components/SearchBar";
 import TelegramLoginWidget, { type TelegramWidgetUser } from "@/components/TelegramLoginWidget";
 import SearchResults from "@/components/SearchResults";
+import ThemeToggle from "@/components/ThemeToggle";
 import { getWeakTopics, type TopicStats } from "@/lib/weakness";
 import Link from "next/link";
 
@@ -336,6 +337,7 @@ export default function Home() {
                 </p>
               </div>
             </div>
+            <ThemeToggle />
             <LanguageToggle lang={lang} onChange={switchLang} />
           </div>
         </div>
@@ -349,6 +351,7 @@ export default function Home() {
             {examSource}
           </button>
           <div className="w-px h-6 bg-[#E4E9F0]" />
+          <ThemeToggle />
           <LanguageToggle lang={lang} onChange={switchLang} />
         </div>
 
@@ -716,7 +719,8 @@ function DemoHome({
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-[#007B5F]/[0.03] to-transparent pointer-events-none" />
         <div className="relative px-4 pt-8 pb-6 text-center max-w-2xl mx-auto">
-          <div className="flex justify-end mb-6">
+          <div className="flex justify-end mb-6 gap-2">
+            <ThemeToggle />
             <LanguageToggle lang={lang} onChange={onLangChange} />
           </div>
 

@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import Script from "next/script";
 import TrackerInit from "@/components/TrackerInit";
+import ThemeProvider from "@/components/ThemeProvider";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -43,7 +44,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="de" dir="ltr" className="dark">
+    <html lang="de" dir="ltr" suppressHydrationWarning>
       <head>
         <link rel="manifest" href="/manifest.json" />
         {/* Telegram WebApp SDK — afterInteractive so it doesn't block, graceful in browser */}
@@ -55,6 +56,7 @@ export default function RootLayout({
       <body
         className={`${inter.className} bg-[#F7F9FC] text-[#1A2B3C] min-h-screen antialiased`}
       >
+        <ThemeProvider />
         <TrackerInit />
         {children}
       </body>

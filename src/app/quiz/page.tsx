@@ -9,6 +9,7 @@ import { getStoredSession } from "@/lib/auth";
 import { recordAnswer } from "@/lib/weakness";
 import { Brain, Inbox, Bot } from "lucide-react";
 import LanguageToggle from "@/components/LanguageToggle";
+import ThemeToggle from "@/components/ThemeToggle";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import QuestionCard from "@/components/QuestionCard";
@@ -225,6 +226,7 @@ function QuizContent() {
                 <span className="text-[#4A5568]">{questionCount}</span>
               </div>
             )}
+            <ThemeToggle />
             <LanguageToggle lang={lang} onChange={switchLang} />
           </div>
         </div>

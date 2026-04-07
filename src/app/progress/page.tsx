@@ -8,6 +8,7 @@ import { t, getLang, setLang } from "@/lib/i18n";
 import { getStoredSession } from "@/lib/auth";
 import { getStoredExamSource } from "@/lib/topics";
 import LanguageToggle from "@/components/LanguageToggle";
+import ThemeToggle from "@/components/ThemeToggle";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import TopicIcon from "@/components/TopicIcon";
@@ -266,7 +267,10 @@ export default function ProgressPage() {
             &larr; {t("back_home", lang)}
           </Link>
           <h1 className="text-base font-bold text-[#1A2B3C]">{t("progress", lang)}</h1>
-          <LanguageToggle lang={lang} onChange={switchLang} />
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <LanguageToggle lang={lang} onChange={switchLang} />
+          </div>
         </div>
 
         <div className="px-4 lg:px-8 py-5 max-w-3xl mx-auto space-y-6 pb-28">

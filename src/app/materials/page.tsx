@@ -7,6 +7,7 @@ import { TOPIC_CONFIG } from "@/lib/topics";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import LanguageToggle from "@/components/LanguageToggle";
+import ThemeToggle from "@/components/ThemeToggle";
 import { getStoredSession } from "@/lib/auth";
 import TopicIcon from "@/components/TopicIcon";
 import { Link as LinkIcon, Lightbulb, BookOpen } from "lucide-react";
@@ -122,7 +123,10 @@ export default function MaterialsPage() {
           <h1 className="text-base font-bold text-[#1A2B3C]">
             {lang === "de" ? "Lernmaterialien" : "Study Materials"}
           </h1>
-          <LanguageToggle lang={lang} onChange={switchLang} />
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <LanguageToggle lang={lang} onChange={switchLang} />
+          </div>
         </div>
 
         <div className="px-4 lg:px-8 py-4 max-w-2xl mx-auto">

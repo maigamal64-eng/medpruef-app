@@ -14,6 +14,7 @@ import {
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import LanguageToggle from "@/components/LanguageToggle";
+import ThemeToggle from "@/components/ThemeToggle";
 
 type Lang = "de" | "en";
 
@@ -121,7 +122,10 @@ export default function ProfilePage() {
               ← {t("back_home", lang)}
             </Link>
             <h1 className="text-base font-bold text-[#1A2B3C]">{t("profile", lang)}</h1>
-            <LanguageToggle lang={lang} onChange={switchLang} />
+            <div className="flex items-center gap-2">
+              <ThemeToggle />
+              <LanguageToggle lang={lang} onChange={switchLang} />
+            </div>
           </div>
           <div className="flex flex-col items-center justify-center min-h-[calc(100vh-60px)] px-4 text-center max-w-sm mx-auto">
             <div className="text-5xl mb-4">👤</div>
@@ -174,7 +178,10 @@ export default function ProfilePage() {
             ← {t("back_home", lang)}
           </Link>
           <h1 className="text-base font-bold text-[#1A2B3C]">{t("profile", lang)}</h1>
-          <LanguageToggle lang={lang} onChange={switchLang} />
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <LanguageToggle lang={lang} onChange={switchLang} />
+          </div>
         </div>
 
         <div className="px-4 lg:px-8 py-5 max-w-2xl mx-auto space-y-5">
