@@ -167,7 +167,7 @@ export default function QuestionCard({
   };
 
   /** Render question text with highlights applied */
-  const renderHighlightedText = (text: string): React.ReactNode => {
+  const renderHighlightedText = (text: string) => {
     if (!highlights.length) return text;
     let result = text;
     // Build a regex that matches any highlighted phrase (escaped)
@@ -177,7 +177,7 @@ export default function QuestionCard({
     return parts.map((part, i) => {
       const isHighlighted = highlights.some(h => h.toLowerCase() === part.toLowerCase());
       return isHighlighted ? (
-        <mark key={i} className="bg-yellow-200/80 rounded px-0.5">{part}</mark>
+        <mark key={i} className="rounded px-0.5" style={{ backgroundColor: 'rgba(250, 204, 21, 0.5)' }}>{part}</mark>
       ) : (
         <span key={i}>{part}</span>
       );
