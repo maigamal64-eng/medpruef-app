@@ -93,13 +93,8 @@ export default function Home() {
     setLangState(getLang());
     const src = getStoredExamSource();
     setExamSource(src);
-    try {
-      const onboardingData = localStorage.getItem("medpruef_onboarding");
-      const parsed = onboardingData ? JSON.parse(onboardingData) : null;
-      if (!parsed?.completedAt && !isTelegramMiniApp()) {
-        setShowOnboarding(true);
-      }
-    } catch {}
+    // Onboarding only shows AFTER login, not before (non-logged-in users go to /landing)
+    // Checked after authenticate() resolves — see below
   }, []);
 
   // Bot deep-link login: if URL carries ?tg_token=..., exchange it for a session.
@@ -190,6 +185,14 @@ export default function Home() {
         if (stored) {
           setUser(stored.user);
           setGam(stored.gamification);
+          // Show onboarding ONLY for logged-in users who haven't completed it
+          try {
+            const onboardingData = localStorage.getItem("medpruef_onboarding");
+            const parsed = onboardingData ? JSON.parse(onboardingData) : null;
+            if (!parsed?.completedAt) {
+              setShowOnboarding(true);
+            }
+          } catch {}
         } else {
           setError("demo");
         }
@@ -299,6 +302,19 @@ export default function Home() {
 
   if (showExamSelector) {
     return <ExamSelector lang={lang} onSelect={handleExamSelected} />;
+  }
+
+  // Non-logged-in users → redirect to /landing (the marketing page)
+  if ((error === "demo" || !user) && typeof window !== "undefined") {
+    // Check if we're in Telegram Mini App (don't redirect, show demo)
+    if (!isTelegramMiniApp()) {
+      window.location.href = "/landing";
+      return (
+        <div className="flex items-center justify-center min-h-screen bg-[#F7F9FC]">
+          <div className="w-14 h-14 border-2 border-[#007B5F] border-t-transparent rounded-full animate-spin" />
+        </div>
+      );
+    }
   }
 
   if (error === "demo" || !user) {

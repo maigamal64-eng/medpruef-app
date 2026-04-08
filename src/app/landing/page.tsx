@@ -250,7 +250,7 @@ function HeroSection({
                   Bestehe deine Kenntnisprüfung —
                   <br />
                   <span className="bg-gradient-to-r from-[#00A896] via-[#1bb680] to-[#00A896] bg-clip-text text-transparent">
-                    Vorbereitet auf Arabisch, nach Wiener Standards
+                    Für ausländische Ärzte, nach Wiener Standards
                   </span>
                 </>
               ) : (
@@ -258,7 +258,7 @@ function HeroSection({
                   Pass Your Kenntnisprüfung —
                   <br />
                   <span className="bg-gradient-to-r from-[#00A896] via-[#1bb680] to-[#00A896] bg-clip-text text-transparent">
-                    Prepared in Arabic, Designed for Austrian Standards
+                    For Foreign Doctors, Designed for Austrian Standards
                   </span>
                 </>
               )}
@@ -346,8 +346,8 @@ function HeroSection({
               </div>
               <span className="text-sm text-white/50">
                 {lang === "de"
-                  ? "2.400+ arabischsprachige Ärzte dabei"
-                  : "Joined by 2,400+ Arabic-speaking doctors"}
+                  ? "2.400+ Ärzte aus aller Welt dabei"
+                  : "Joined by 2,400+ doctors worldwide"}
               </span>
             </div>
           </div>
@@ -379,8 +379,8 @@ function ProblemSection({ lang }: { lang: Lang }) {
           : "Studying in a second language is exhausting",
       desc:
         lang === "de"
-          ? "Medizinische Fachliteratur auf Deutsch zu verstehen, wenn Arabisch deine Muttersprache ist, kostet doppelt so viel Energie. Jede Frage wird zum Kampf gegen die Sprache statt gegen den Stoff."
-          : "Understanding medical literature in German when Arabic is your mother tongue takes twice the energy. Every question becomes a fight against the language instead of the material.",
+          ? "Medizinische Fachliteratur auf Deutsch zu verstehen, wenn es nicht deine Muttersprache ist, kostet doppelt so viel Energie. Jede Frage wird zum Kampf gegen die Sprache statt gegen den Stoff."
+          : "Understanding medical literature in German as a foreign doctor takes twice the energy. Every question becomes a fight against the language instead of the material.",
     },
     {
       icon: <FileQuestion className="w-7 h-7" />,
@@ -823,13 +823,14 @@ function PricingSection({ lang }: { lang: Lang }) {
       period: "EUR",
       desc:
         lang === "de"
-          ? "Teste MedPrüf ohne Risiko"
-          : "Try MedPrüf risk-free",
+          ? "Die meisten Funktionen kostenlos — für immer"
+          : "Most features free — forever",
       features: [
-        lang === "de" ? "50 Fragen pro Monat" : "50 questions per month",
+        lang === "de" ? "Alle 7.725+ Fragen" : "All 7,725+ questions",
+        lang === "de" ? "Quiz & Prüfungssimulation" : "Quiz & exam simulation",
         lang === "de" ? "Grundlegende Statistiken" : "Basic analytics",
-        lang === "de" ? "1 Probeprüfung" : "1 mock exam",
-        lang === "de" ? "Dark Mode" : "Dark mode",
+        lang === "de" ? "Dark Mode + Karteikarten" : "Dark mode + flashcards",
+        lang === "de" ? "Curriculum-Übersicht" : "Curriculum overview",
       ],
       cta: lang === "de" ? "Kostenlos starten" : "Start Free",
       popular: false,
@@ -846,15 +847,15 @@ function PricingSection({ lang }: { lang: Lang }) {
           : "or 149 EUR/year (save 35%)",
       desc:
         lang === "de"
-          ? "Voller Zugang zu allem"
-          : "Full access to everything",
+          ? "Unbegrenzt + KI-Funktionen"
+          : "Unlimited + AI features",
       features: [
-        lang === "de" ? "Alle 7.725+ Fragen" : "All 7,725+ questions",
+        lang === "de" ? "Unbegrenzte Lesezeichen & Notizen" : "Unlimited bookmarks & notes",
         lang === "de" ? "Unbegrenzte Probeprüfungen" : "Unlimited mock exams",
-        lang === "de" ? "Volle Leistungsanalyse" : "Full performance analytics",
-        lang === "de" ? "Karteikarten + Spaced Repetition" : "Flashcards + spaced repetition",
-        lang === "de" ? "Dark Mode + PWA" : "Dark mode + PWA",
+        lang === "de" ? "KI-Lernempfehlungen" : "AI study recommendations",
+        lang === "de" ? "Erweiterte Leistungsanalyse" : "Advanced performance analytics",
         lang === "de" ? "Prioritäts-Support" : "Priority support",
+        lang === "de" ? "Peer-Vergleich (Perzentile)" : "Peer comparison (percentile)",
       ],
       cta: lang === "de" ? "Pro starten" : "Start Pro",
       popular: true,
