@@ -78,7 +78,7 @@ export default function XPBar({ totalXp, lang, compact = false }: XPBarProps) {
               </p>
             </div>
             <div className="text-right">
-              <p className="text-2xl font-black text-[#F4A261] font-mono">{totalXp}</p>
+              <p className="text-2xl font-black text-[#F4A261] font-mono font-display">{totalXp}</p>
               <p className="text-xs text-[#A0AEC0]">XP</p>
             </div>
           </div>

@@ -503,8 +503,14 @@ function Footer({ lang }: { lang: Lang }) {
           </div>
         </div>
 
-        <div className="mt-8 pt-6 border-t border-white/10 text-center text-xs text-white/30">
-          {t("landing_footer_disclaimer", lang)}
+        <div className="mt-8 pt-6 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p className="text-center sm:text-left text-xs text-white/30">
+            {t("landing_footer_disclaimer", lang)}
+          </p>
+          <div className="flex items-center gap-2 text-xs text-white/40 flex-shrink-0">
+            <Shield className="w-4 h-4" />
+            GDPR Compliant · Data hosted in EU
+          </div>
         </div>
       </div>
     </footer>

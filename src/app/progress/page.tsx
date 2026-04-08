@@ -13,7 +13,8 @@ import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import TopicIcon from "@/components/TopicIcon";
 import { TrendingUp, Star, StickyNote, GraduationCap, AlertTriangle } from "lucide-react";
-import { ResponsiveContainer, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from "recharts";
+import { SkeletonCard } from "@/components/Skeleton";
+import { ResponsiveContainer, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
 
 /** Spider chart showing accuracy by topic */
 function StudyRadar({ topics, lang }: { topics: { topic: string; answered: number; correct: number }[]; lang: string }) {
@@ -36,6 +37,173 @@ function StudyRadar({ topics, lang }: { topics: { topic: string; answered: numbe
         <Radar name="Accuracy" dataKey="accuracy" stroke="#007B5F" fill="#007B5F" fillOpacity={0.2} strokeWidth={2} />
       </RadarChart>
     </ResponsiveContainer>
+  );
+}
+
+/** Weekly performance chart — reads quiz results from localStorage */
+function WeeklyChart({ lang }: { lang: string }) {
+  const [data, setData] = useState<{ day: string; accuracy: number; questions: number }[]>([]);
+
+  useEffect(() => {
+    try {
+      const raw = JSON.parse(localStorage.getItem("medpruef_quiz_results") || "[]");
+      if (!Array.isArray(raw) || raw.length === 0) {
+        setData([]);
+        return;
+      }
+      const now = new Date();
+      const days: Record<string, { correct: number; total: number }> = {};
+      const dayNames = lang === "de"
+        ? ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"]
+        : ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+      // Initialize last 7 days
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(now);
+        d.setDate(d.getDate() - i);
+        const key = d.toISOString().split("T")[0];
+        days[key] = { correct: 0, total: 0 };
+      }
+
+      for (const r of raw) {
+        if (!r.timestamp) continue;
+        const key = new Date(r.timestamp).toISOString().split("T")[0];
+        if (days[key]) {
+          days[key].total += 1;
+          if (r.correct) days[key].correct += 1;
+        }
+      }
+
+      const chartData = Object.entries(days).map(([dateStr, stats]) => {
+        const d = new Date(dateStr);
+        return {
+          day: dayNames[d.getDay()],
+          accuracy: stats.total > 0 ? Math.round((stats.correct / stats.total) * 100) : 0,
+          questions: stats.total,
+        };
+      });
+      setData(chartData);
+    } catch {
+      setData([]);
+    }
+  }, [lang]);
+
+  if (data.length === 0 || data.every((d) => d.questions === 0)) {
+    return (
+      <p className="text-sm text-[#A0AEC0] text-center py-8">
+        {lang === "de" ? "Beginne zu lernen, um deinen Wochentrend zu sehen" : "Start practicing to see your weekly trend"}
+      </p>
+    );
+  }
+
+  return (
+    <ResponsiveContainer width="100%" height={200}>
+      <LineChart data={data}>
+        <CartesianGrid strokeDasharray="3 3" stroke="#E4E9F0" />
+        <XAxis dataKey="day" tick={{ fontSize: 11, fill: "#A0AEC0" }} axisLine={false} tickLine={false} />
+        <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: "#A0AEC0" }} axisLine={false} tickLine={false} width={30} />
+        <Tooltip
+          contentStyle={{ background: "#fff", border: "1px solid #E4E9F0", borderRadius: 8, fontSize: 12 }}
+          formatter={(value: unknown, name: unknown) => [
+            `${value}${name === "accuracy" ? "%" : ""}`,
+            name === "accuracy" ? (lang === "de" ? "Genauigkeit" : "Accuracy") : (lang === "de" ? "Fragen" : "Questions"),
+          ]}
+        />
+        <Line type="monotone" dataKey="accuracy" stroke="#007B5F" strokeWidth={2} dot={{ r: 4, fill: "#007B5F" }} activeDot={{ r: 6 }} />
+        <Line type="monotone" dataKey="questions" stroke="#003A8C" strokeWidth={1.5} strokeDasharray="4 4" dot={false} />
+      </LineChart>
+    </ResponsiveContainer>
+  );
+}
+
+/** Activity heatmap — GitHub-style 7x4 grid */
+function ActivityHeatmap({ lang }: { lang: string }) {
+  const [cells, setCells] = useState<{ date: string; count: number; label: string }[]>([]);
+
+  useEffect(() => {
+    try {
+      const raw = JSON.parse(localStorage.getItem("medpruef_quiz_results") || "[]");
+      const countByDate: Record<string, number> = {};
+      if (Array.isArray(raw)) {
+        for (const r of raw) {
+          if (!r.timestamp) continue;
+          const key = new Date(r.timestamp).toISOString().split("T")[0];
+          countByDate[key] = (countByDate[key] || 0) + 1;
+        }
+      }
+
+      const now = new Date();
+      const result: { date: string; count: number; label: string }[] = [];
+      // 28 days (4 weeks)
+      for (let i = 27; i >= 0; i--) {
+        const d = new Date(now);
+        d.setDate(d.getDate() - i);
+        const key = d.toISOString().split("T")[0];
+        result.push({
+          date: key,
+          count: countByDate[key] || 0,
+          label: `${d.getDate()}.${d.getMonth() + 1}`,
+        });
+      }
+      setCells(result);
+    } catch {
+      setCells([]);
+    }
+  }, []);
+
+  const getColor = (count: number): string => {
+    if (count === 0) return "bg-[#F7F9FC]";
+    if (count <= 5) return "bg-[#007B5F]/20";
+    if (count <= 15) return "bg-[#007B5F]/40";
+    if (count <= 30) return "bg-[#007B5F]/60";
+    return "bg-[#007B5F]";
+  };
+
+  if (cells.length === 0) return null;
+
+  // Arrange into 4 rows x 7 columns (weeks as rows)
+  const weeks: typeof cells[] = [];
+  for (let i = 0; i < cells.length; i += 7) {
+    weeks.push(cells.slice(i, i + 7));
+  }
+
+  const dayLabels = lang === "de"
+    ? ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
+    : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+  return (
+    <div>
+      {/* Day labels */}
+      <div className="grid grid-cols-7 gap-1 mb-1">
+        {dayLabels.map((d) => (
+          <span key={d} className="text-[9px] text-[#A0AEC0] text-center">{d}</span>
+        ))}
+      </div>
+      {/* Grid */}
+      <div className="space-y-1">
+        {weeks.map((week, wi) => (
+          <div key={wi} className="grid grid-cols-7 gap-1">
+            {week.map((cell) => (
+              <div
+                key={cell.date}
+                className={`calendar-cell ${getColor(cell.count)} rounded-sm transition-colors`}
+                title={`${cell.label}: ${cell.count} ${lang === "de" ? "Fragen" : "questions"}`}
+              />
+            ))}
+          </div>
+        ))}
+      </div>
+      {/* Legend */}
+      <div className="flex items-center justify-end gap-1 mt-2">
+        <span className="text-[9px] text-[#A0AEC0]">{lang === "de" ? "Weniger" : "Less"}</span>
+        <div className="calendar-cell bg-[#F7F9FC] rounded-sm" />
+        <div className="calendar-cell bg-[#007B5F]/20 rounded-sm" />
+        <div className="calendar-cell bg-[#007B5F]/40 rounded-sm" />
+        <div className="calendar-cell bg-[#007B5F]/60 rounded-sm" />
+        <div className="calendar-cell bg-[#007B5F] rounded-sm" />
+        <span className="text-[9px] text-[#A0AEC0]">{lang === "de" ? "Mehr" : "More"}</span>
+      </div>
+    </div>
   );
 }
 
@@ -276,7 +444,15 @@ export default function ProgressPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-[#F7F9FC]">
-        <div className="w-10 h-10 border-2 border-[#007B5F] border-t-transparent rounded-full animate-spin" />
+        <div className="w-full max-w-xl px-4 space-y-4 animate-fade-in">
+          <div className="grid grid-cols-2 gap-3">
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+          </div>
+          <SkeletonCard />
+        </div>
       </div>
     );
   }
@@ -305,7 +481,7 @@ export default function ProgressPage() {
             {/* Card 1: Questions Answered */}
             <div className="card rounded-2xl p-6 bg-[#007B5F]/[0.03]">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-3xl font-black font-mono text-[#1A2B3C]">{totalAnswered}</span>
+                <span className="text-3xl font-black font-mono font-display text-[#1A2B3C]">{totalAnswered}</span>
                 <svg width="40" height="40" viewBox="0 0 40 40" className="flex-shrink-0">
                   <circle cx="20" cy="20" r="16" fill="none" stroke="#E4E9F0" strokeWidth="3" />
                   <circle
@@ -322,7 +498,7 @@ export default function ProgressPage() {
 
             {/* Card 2: Overall Accuracy */}
             <div className={`card rounded-2xl p-6 ${accuracy >= 70 ? "bg-[#00A896]/[0.04]" : accuracy >= 40 ? "bg-[#F4A261]/[0.04]" : "bg-[#D64545]/[0.04]"}`}>
-              <span className={`text-3xl font-black font-mono ${accuracy >= 70 ? "text-[#00A896]" : accuracy >= 40 ? "text-[#F4A261]" : "text-[#D64545]"}`}>
+              <span className={`text-3xl font-black font-mono font-display ${accuracy >= 70 ? "text-[#00A896]" : accuracy >= 40 ? "text-[#F4A261]" : "text-[#D64545]"}`}>
                 {accuracy}%
               </span>
               <p className="text-xs text-[#A0AEC0] mt-2">{t("overall_accuracy", lang)}</p>
@@ -333,7 +509,7 @@ export default function ProgressPage() {
 
             {/* Card 3: Current Streak */}
             <div className="card rounded-2xl p-6 bg-[#D64545]/[0.03]">
-              <span className="text-3xl font-black font-mono text-[#1A2B3C]">{streak}</span>
+              <span className="text-3xl font-black font-mono font-display text-[#1A2B3C]">{streak}</span>
               <span className="text-sm text-[#A0AEC0] ml-1">{t("days", lang)}</span>
               <p className="text-xs text-[#A0AEC0] mt-2">{t("current_streak_label", lang)}</p>
               <div className="flex gap-1 mt-2">
@@ -359,6 +535,22 @@ export default function ProgressPage() {
               </div>
               <p className="text-[10px] text-[#A0AEC0] font-mono mt-1">Lv.{xpInfo.level} &middot; {Math.round(xpInfo.progress)}%</p>
             </div>
+          </div>
+
+          {/* ===== Weekly Performance Chart ===== */}
+          <div className="card rounded-2xl p-5">
+            <h2 className="text-lg font-semibold text-[#1A2B3C] mb-4">
+              {lang === "de" ? "Wochenleistung" : "Weekly Performance"}
+            </h2>
+            <WeeklyChart lang={lang} />
+          </div>
+
+          {/* ===== Activity Calendar Heatmap ===== */}
+          <div className="card rounded-2xl p-5">
+            <h2 className="text-lg font-semibold text-[#1A2B3C] mb-4">
+              {lang === "de" ? "Aktivitätskalender" : "Activity Calendar"}
+            </h2>
+            <ActivityHeatmap lang={lang} />
           </div>
 
           {/* ===== SECTION 2: Topic Progress ===== */}
@@ -594,7 +786,7 @@ export default function ProgressPage() {
             {daysUntilExam !== null && (
               <div className="flex items-center gap-4 p-4 rounded-xl bg-[#003A8C]/[0.04] border border-[#003A8C]/10">
                 <div className="text-center">
-                  <span className="text-3xl font-black font-mono text-[#003A8C]">{daysUntilExam}</span>
+                  <span className="text-3xl font-black font-mono font-display text-[#003A8C]">{daysUntilExam}</span>
                   <p className="text-xs text-[#A0AEC0]">{t("days_until_exam", lang)}</p>
                 </div>
                 <div className="flex-1">

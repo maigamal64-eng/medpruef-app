@@ -13,6 +13,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import QuestionCard from "@/components/QuestionCard";
+import { SkeletonCard } from "@/components/Skeleton";
 import type { MCQOption } from "@/lib/mcq";
 
 type Lang = "de" | "en";
@@ -189,9 +190,9 @@ function QuizContent() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-[#F7F9FC]">
-        <div className="card rounded-2xl p-8 text-center animate-scale-in">
-          <div className="w-12 h-12 border-2 border-[#007B5F] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-          <p className="text-[#A0AEC0] text-sm">{t("loading", lang)}</p>
+        <div className="w-full max-w-xl px-4 space-y-4 animate-scale-in">
+          <SkeletonCard />
+          <SkeletonCard />
         </div>
       </div>
     );

@@ -185,6 +185,9 @@ body {
 .safe-area-top { padding-top: env(safe-area-inset-top, 0px); }
 .safe-area-bottom { padding-bottom: env(safe-area-inset-bottom, 0px); }
 
+/* Plus Jakarta Sans for display headings & stats */
+.font-display { font-family: var(--font-display, 'Plus Jakarta Sans', 'Inter', sans-serif); }
+
 /* JetBrains Mono for numbers/metrics */
 .font-mono, .num {
   font-family: var(--font-jetbrains-mono, "JetBrains Mono", monospace) !important;

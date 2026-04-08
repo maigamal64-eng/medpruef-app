@@ -15,9 +15,18 @@ interface TopicCardProps {
   accuracy?: number;
   delay?: number;
   examSource?: string;
+  lastStudied?: string;
 }
 
-export default function TopicCard({ topic, count, userId, lang, accuracy, delay = 0, examSource }: TopicCardProps) {
+function getRelativeTime(dateStr: string, lang: Lang): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const days = Math.floor(diff / 86400000);
+  if (days === 0) return lang === "de" ? "Heute" : "Today";
+  if (days === 1) return lang === "de" ? "Gestern" : "Yesterday";
+  return lang === "de" ? `vor ${days} Tagen` : `${days} days ago`;
+}
+
+export default function TopicCard({ topic, count, userId, lang, accuracy, delay = 0, examSource, lastStudied }: TopicCardProps) {
   const config = getTopicConfig(topic);
   const params = new URLSearchParams({ topic });
   if (userId) params.set('userId', userId);
@@ -51,6 +60,7 @@ export default function TopicCard({ topic, count, userId, lang, accuracy, delay 
                   ? "bg-[#F4A261]/12 text-[#F4A261]"
                   : "bg-[#D64545]/12 text-[#D64545]"
               }`}
+              title={`${lang === "de" ? "Dieses Thema zu verbessern erhöht deine Gesamtnote um" : "Improving this topic increases your overall score by"} ~${Math.round(100 / 10)}%`}
             >
               {Math.min(accuracy, 100)}%
             </span>
@@ -71,9 +81,17 @@ export default function TopicCard({ topic, count, userId, lang, accuracy, delay 
       </h3>
 
       {/* Question count */}
-      <p className="text-xs text-[#A0AEC0] mb-1 font-mono">
+      <p className="text-xs text-[#A0AEC0] mb-0.5 font-mono">
         {count.toLocaleString("de-DE")} {t("questions", lang)}
       </p>
+      {lastStudied && (
+        <p className="text-[10px] text-[#A0AEC0]/70 mb-0.5">{getRelativeTime(lastStudied, lang)}</p>
+      )}
+      {accuracy !== undefined && accuracy > 0 && accuracy < 100 && (
+        <p className="text-[10px] text-[#A0AEC0]/70 mb-0.5">
+          ~{Math.ceil((100 - accuracy) / 5)} {lang === "de" ? "zum Meistern" : "to master"}
+        </p>
+      )}
 
       {/* Fix now link for weak topics */}
       {accuracy !== undefined && accuracy > 0 && accuracy < 60 && (

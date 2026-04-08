@@ -87,6 +87,7 @@ export default function Home() {
   const [searchResults, setSearchResults] = useState<Record<string, unknown>[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [profileData, setProfileData] = useState<{ targetDate?: string } | null>(null);
+  const [lastSessionInfo, setLastSessionInfo] = useState<{ totalXpSession: number; questionCount: number } | null>(null);
 
   useEffect(() => {
     setLangState(getLang());
@@ -218,6 +219,16 @@ export default function Home() {
         setProfileData({ targetDate: parsed?.examDate });
       }
     } catch {}
+  }, []);
+
+  // Load last session info from localStorage
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("medpruef_quiz_autosave") || "null");
+      if (saved && Date.now() - saved.timestamp < 86400000) {
+        setLastSessionInfo({ totalXpSession: saved.totalXpSession || 0, questionCount: saved.questionCount || 0 });
+      }
+    } catch { /* empty */ }
   }, []);
 
   // Cmd+K / Ctrl+K to focus search
@@ -362,7 +373,7 @@ export default function Home() {
             <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '24px 24px' }} />
             <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <div>
-                <h1 className="text-2xl md:text-3xl font-black mb-2">
+                <h1 className="text-2xl md:text-3xl font-black mb-2 font-display">
                   {lang === "de"
                     ? `Du bist ${Math.round(((gam?.total_questions_answered || 0) / 7725) * 100)}% näher am Bestehen`
                     : `You're ${Math.round(((gam?.total_questions_answered || 0) / 7725) * 100)}% closer to passing`}
@@ -373,6 +384,17 @@ export default function Home() {
                   {" · "}
                   {lang === "de" ? "Fortschritt" : "Completion"}: <span className="font-bold text-white">{Math.round(((gam?.total_questions_answered || 0) / 7725) * 100)}%</span>
                 </p>
+                {(() => {
+                  const answered = gam?.total_questions_answered || 0;
+                  const acc = answered > 0 ? Math.round(((gam?.total_correct || 0) / answered) * 100) : 0;
+                  const completion = Math.round((answered / 7725) * 100);
+                  const passProbability = answered > 10 ? Math.min(99, Math.round(acc * 0.7 + completion * 0.3)) : 0;
+                  return passProbability > 0 ? (
+                    <p className="text-white/70 text-sm mt-1">
+                      {lang === "de" ? "Bestehenswahrscheinlichkeit" : "Pass probability"}: <span className="font-bold text-white font-display">{passProbability}%</span>
+                    </p>
+                  ) : null;
+                })()}
               </div>
               {/* Social proof badges */}
               <div className="flex flex-wrap md:flex-col gap-2">
@@ -395,6 +417,13 @@ export default function Home() {
           </div>
 
           {/* Continue CTA */}
+          {weakTopics.length > 0 && lastSessionInfo && (
+            <div className="text-center mb-2">
+              <span className="inline-flex items-center gap-2 text-xs text-[#A0AEC0] bg-[#F7F9FC] border border-[#E4E9F0] rounded-full px-3 py-1">
+                {lang === "de" ? "Letzte Sitzung" : "Last session"}: <span className="font-semibold text-[#007B5F]">+{lastSessionInfo.totalXpSession} XP</span> · {lastSessionInfo.questionCount} {lang === "de" ? "Fragen" : "questions"}
+              </span>
+            </div>
+          )}
           {weakTopics.length > 0 && (
             <Link
               href={`/quiz?topic=${encodeURIComponent(weakTopics[0]?.topic || 'random')}&userId=${user.id}&examSource=${examSource}`}
