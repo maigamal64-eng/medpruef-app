@@ -353,17 +353,25 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Desktop Header — exam badge + language toggle */}
-        <div className="hidden lg:flex px-8 pt-6 pb-2 items-center justify-end gap-3">
-          <button
-            onClick={() => setShowExamSelector(true)}
-            className="text-xs font-mono bg-[#007B5F]/10 text-[#007B5F] px-2.5 py-1.5 rounded border border-[#007B5F]/20 hover:bg-[#007B5F]/20 transition-colors"
-          >
-            {examSource}
-          </button>
-          <div className="w-px h-6 bg-[#E4E9F0]" />
-          <ThemeToggle />
-          <LanguageToggle lang={lang} onChange={switchLang} />
+        {/* Desktop Header Bar */}
+        <div className="hidden lg:flex px-8 pt-6 pb-3 items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-[#1A2B3C]">
+              {t("hello", lang)}, {user.first_name}
+            </h1>
+            <p className="text-sm text-[#A0AEC0]">{t("exam_prep", lang)}</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowExamSelector(true)}
+              className="text-xs font-mono bg-[#007B5F]/10 text-[#007B5F] px-3 py-2 rounded-lg border border-[#007B5F]/20 hover:bg-[#007B5F]/20 transition-colors"
+            >
+              {examSource}
+            </button>
+            <div className="w-px h-6 bg-[#E4E9F0]" />
+            <ThemeToggle />
+            <LanguageToggle lang={lang} onChange={switchLang} />
+          </div>
         </div>
 
         <div className="px-4 lg:px-8 py-4">
@@ -443,19 +451,22 @@ export default function Home() {
             </Link>
           )}
 
-          {/* Top Row: Stats + Daily Goal */}
+          {/* Top Row: Stats + Daily Goal — single card layer, no nesting */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-            <div className="border-t-[3px] border-t-[#007B5F] rounded-2xl p-5 shadow-[var(--shadow-card)] bg-white">
+            <div className="card rounded-2xl p-5 relative overflow-hidden">
+              <div className="absolute top-0 left-0 right-0 h-1" style={{ background: 'linear-gradient(to right, #007B5F, #00A896)' }} />
               <DailyGoalRing
                 current={gam?.daily_questions_today || 0}
                 goal={user.daily_goal || 20}
                 lang={lang}
               />
             </div>
-            <div className="border-t-[3px] border-t-[#F4A261] rounded-2xl p-5 shadow-[var(--shadow-card)] bg-white">
+            <div className="card rounded-2xl p-5 relative overflow-hidden">
+              <div className="absolute top-0 left-0 right-0 h-1" style={{ background: 'linear-gradient(to right, #F4A261, #FFC97A)' }} />
               <StreakWidget streak={gam?.current_streak || 0} lang={lang} />
             </div>
-            <div className="md:col-span-2 lg:col-span-1 border-t-[3px] border-t-[#003A8C] rounded-2xl p-5 shadow-[var(--shadow-card)] bg-white">
+            <div className="card rounded-2xl p-5 relative overflow-hidden md:col-span-2 lg:col-span-1">
+              <div className="absolute top-0 left-0 right-0 h-1" style={{ background: 'linear-gradient(to right, #003A8C, #007B5F)' }} />
               <XPBar totalXp={gam?.total_xp || 0} lang={lang} />
             </div>
           </div>

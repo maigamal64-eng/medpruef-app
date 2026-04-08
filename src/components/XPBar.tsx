@@ -64,7 +64,7 @@ export default function XPBar({ totalXp, lang, compact = false }: XPBarProps) {
   }
 
   return (
-    <div className="card rounded-2xl p-5">
+    <div>
       <div className="flex items-center gap-3 mb-3">
         <div className="w-11 h-11 rounded-xl bg-[#F4A261]/10 border border-[#F4A261]/20 flex items-center justify-center text-xl">
           {icon}

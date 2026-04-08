@@ -69,7 +69,7 @@ export default function StreakWidget({ streak, lang }: StreakWidgetProps) {
   };
 
   return (
-    <div className="card rounded-2xl p-5">
+    <div>
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <span className="text-2xl animate-fire">🔥</span>

@@ -19,7 +19,7 @@ export default function DailyGoalRing({ current, goal, lang }: DailyGoalRingProp
   const pctText = Math.round(progress * 100);
 
   return (
-    <div className="card rounded-2xl p-5">
+    <div>
       <div className="flex items-center gap-4">
         <div className="relative w-24 h-24 flex-shrink-0">
           <svg width="96" height="96" viewBox="0 0 96 96">
