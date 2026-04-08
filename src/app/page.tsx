@@ -304,10 +304,11 @@ export default function Home() {
     return <ExamSelector lang={lang} onSelect={handleExamSelected} />;
   }
 
-  // Non-logged-in users → redirect to /landing (the marketing page)
+  // Non-logged-in users → redirect to /landing UNLESS they came from landing (?start=1) or are guest
   if ((error === "demo" || !user) && typeof window !== "undefined") {
-    // Check if we're in Telegram Mini App (don't redirect, show demo)
-    if (!isTelegramMiniApp()) {
+    const params = new URLSearchParams(window.location.search);
+    const fromLanding = params.get("start") === "1" || params.get("guest") === "1";
+    if (!isTelegramMiniApp() && !fromLanding) {
       window.location.href = "/landing";
       return (
         <div className="flex items-center justify-center min-h-screen bg-[#F7F9FC]">
