@@ -467,6 +467,24 @@ export default function QuestionCard({
           )}
         </div>
 
+        {/* Post-answer feedback strip */}
+        {answered && (
+          <div className="mt-3 flex items-center justify-between bg-[#F7F9FC] rounded-xl px-4 py-2.5 text-sm animate-fade-in">
+            <div className="flex items-center gap-3">
+              <span className="font-semibold text-[#007B5F]">+10 XP</span>
+              <span className="text-[#A0AEC0]">&middot;</span>
+              <span className="text-[#4A5568]">
+                {nCorrect > 0 && selectedIdxs.size > 0 && [...selectedIdxs].some(i => options[i]?.correct)
+                  ? (lang === "de" ? "Richtig!" : "Correct!")
+                  : (lang === "de" ? "Netter Versuch!" : "Nice try!")}
+              </span>
+            </div>
+            <span className="text-xs text-[#A0AEC0]">
+              N &rarr; {lang === "de" ? "Nächste" : "Next"}
+            </span>
+          </div>
+        )}
+
         {/* Explanation — shown after answering */}
         {answered && question.explanation && (
           <div className="mt-4 bg-[#F4A261]/6 border border-[#F4A261]/25 border-l-4 border-l-[#007B5F] rounded p-4 animate-slide-reveal">

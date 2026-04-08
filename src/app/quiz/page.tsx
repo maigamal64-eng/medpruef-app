@@ -8,7 +8,7 @@ import { t, getLang, setLang } from "@/lib/i18n";
 import { trackEvent, trackPageView } from "@/lib/tracker";
 import { getStoredSession } from "@/lib/auth";
 import { recordAnswer } from "@/lib/weakness";
-import { Brain, Inbox, Bot } from "lucide-react";
+import { Brain, Inbox, Bot, CheckCircle2 } from "lucide-react";
 import LanguageToggle from "@/components/LanguageToggle";
 import ThemeToggle from "@/components/ThemeToggle";
 import Sidebar from "@/components/Sidebar";
@@ -50,6 +50,8 @@ function QuizContent() {
   const [startTime, setStartTime] = useState(Date.now());
   const [lang, setLangState] = useState<Lang>("de");
   const [showXpFloat, setShowXpFloat] = useState(false);
+  const [showSessionComplete, setShowSessionComplete] = useState(false);
+  const [sessionHistory, setSessionHistory] = useState<Array<{correct: boolean}>>([]);
 
   // Auto-save quiz progress to localStorage every 30 seconds
   useEffect(() => {
@@ -110,6 +112,7 @@ function QuizContent() {
     setAnswered(false);
     setXpEarned(null);
     setShowXpFloat(false);
+    setShowSessionComplete(false);
     setStartTime(Date.now());
 
     try {
@@ -155,6 +158,7 @@ function QuizContent() {
       setAnswered(true);
       setQuestionCount((c) => c + 1);
       if (isCorrect) setCorrectCount((c) => c + 1);
+      setSessionHistory(prev => [...prev, { correct: isCorrect }]);
       recordAnswer(question.topic, isCorrect);
       trackEvent("question_answer", { questionId: question?.id, topic: question?.topic, isCorrect, timeSpent: Date.now() - startTime, examSource });
 
@@ -184,6 +188,14 @@ function QuizContent() {
     },
     [question, answered, userId, startTime]
   );
+
+  // Trigger session completion panel every 20 questions (or topicTotal if < 20)
+  useEffect(() => {
+    const milestone = topicTotal > 0 && topicTotal < 20 ? topicTotal : 20;
+    if (questionCount > 0 && questionCount % milestone === 0 && answered) {
+      setShowSessionComplete(true);
+    }
+  }, [questionCount, answered, topicTotal]);
 
   const sessionAccuracy =
     questionCount > 0 ? Math.round((correctCount / questionCount) * 100) : 0;
@@ -244,6 +256,23 @@ function QuizContent() {
             <LanguageToggle lang={lang} onChange={switchLang} />
           </div>
         </div>
+
+        {/* Session progress segments */}
+        {sessionHistory.length > 0 && (
+          <div className="px-4 lg:px-8 pt-2">
+            <div className="flex gap-0.5 max-w-xs">
+              {sessionHistory.map((h, i) => (
+                <div
+                  key={i}
+                  className={`h-1.5 flex-1 rounded-full ${h.correct ? 'bg-[#00A896]' : 'bg-[#D64545]'}`}
+                />
+              ))}
+              {!answered && (
+                <div className="h-1.5 flex-1 rounded-full bg-[#E4E9F0]" />
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Main Quiz Content — split view on desktop after answering (UWorld-style) */}
         <div className={`flex-1 px-4 lg:px-8 py-4 w-full relative ${answered ? 'max-w-6xl' : 'max-w-3xl'} mx-auto transition-all duration-300`}>
@@ -306,6 +335,62 @@ function QuizContent() {
               </div>
             )}
           </div>
+
+          {/* Session Completion Panel */}
+          {showSessionComplete && (
+            <div className="card rounded-2xl p-6 md:p-8 text-center animate-scale-in mt-4">
+              <div className="mb-4">
+                <CheckCircle2 className="w-12 h-12 text-[#00A896] mx-auto mb-2" />
+                <h2 className="text-xl font-bold text-[#1A2B3C] font-display">
+                  {lang === "de" ? "Sitzung abgeschlossen!" : "Session Complete!"}
+                </h2>
+                <p className="text-sm text-[#A0AEC0]">
+                  {lang === "de" ? "Fantastische Arbeit!" : "Fantastic Work!"}
+                </p>
+              </div>
+
+              {/* Accuracy ring */}
+              <div className="mb-4">
+                <span className="text-5xl font-black font-display text-[#007B5F]">
+                  {questionCount > 0 ? Math.round((correctCount / questionCount) * 100) : 0}%
+                </span>
+                <p className="text-sm text-[#A0AEC0]">{lang === "de" ? "Genauigkeit" : "Accuracy"}</p>
+              </div>
+
+              {/* XP earned */}
+              <div className="inline-flex items-center gap-2 bg-[#007B5F]/10 text-[#007B5F] font-bold px-4 py-2 rounded-xl mb-4">
+                +{totalXpSession} XP {lang === "de" ? "verdient" : "earned"}
+              </div>
+
+              {/* Stats row */}
+              <div className="grid grid-cols-2 gap-3 mb-6">
+                <div className="card rounded-xl p-3 text-center">
+                  <p className="text-lg font-bold font-mono text-[#1A2B3C]">{correctCount}/{questionCount}</p>
+                  <p className="text-xs text-[#A0AEC0]">{lang === "de" ? "Richtig" : "Correct"}</p>
+                </div>
+                <div className="card rounded-xl p-3 text-center">
+                  <p className="text-lg font-bold font-mono text-[#1A2B3C]">{sessionHistory.filter(h => h.correct).length}</p>
+                  <p className="text-xs text-[#A0AEC0]">{lang === "de" ? "Serie gehalten" : "Streak maintained"}</p>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowSessionComplete(false)}
+                  className="flex-1 btn-secondary py-3 text-sm rounded-xl"
+                >
+                  {lang === "de" ? "Antworten prüfen" : "Review Answers"}
+                </button>
+                <button
+                  onClick={() => { setShowSessionComplete(false); fetchQuestion(); }}
+                  className="flex-1 btn-primary py-3 text-sm rounded-xl"
+                >
+                  {lang === "de" ? "Nächste Sitzung" : "Next Session"}
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Login prompt for unauthenticated users */}
           {!userId && (
