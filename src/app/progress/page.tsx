@@ -691,6 +691,9 @@ export default function ProgressPage() {
                             >
                               <TopicIcon name={config.icon} className="w-3 h-3" />
                             </div>
+                            {(q as Record<string, unknown>).image_url && (
+                              <img src={String((q as Record<string, unknown>).image_url)} alt="" className="w-10 h-10 rounded object-cover flex-shrink-0 border border-[#E4E9F0]" />
+                            )}
                             <Link
                               href={`/quiz?questionId=${q.id}&topic=${encodeURIComponent(q.topic)}&examSource=${examSource}`}
                               className="flex-1 min-w-0"

@@ -86,6 +86,11 @@ export default function SearchResults({
                   <TopicIcon name={cfg.icon} className="w-4 h-4" />
                 </span>
 
+                {/* Image thumbnail if available */}
+                {q.image_url && (
+                  <img src={q.image_url as string} alt="" className="w-10 h-10 rounded object-cover flex-shrink-0 border border-[#E4E9F0]" />
+                )}
+
                 {/* Question text */}
                 <span className="flex-1 min-w-0">
                   <span className="text-sm text-[#1A2B3C] group-hover:text-[#1A2B3C] transition-colors leading-snug">
