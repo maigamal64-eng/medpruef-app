@@ -50,13 +50,19 @@ function buildMonthRange(from?: string | null, to?: string | null): string[] {
   if (start && !end) end = [start[0] + 1, start[1]]
   if (end && !start) start = [end[0] - 1, end[1]]
   const out: string[] = []
+  const yearsIncluded = new Set<number>()
   let [y, m] = start!
   const [ey, em] = end!
   while (out.length < MAX) {
     out.push(`${y}-${String(m).padStart(2, '0')}`)
+    yearsIncluded.add(y)
     if (y > ey || (y === ey && m >= em)) break
     m += 1
     if (m > 12) { m = 1; y += 1 }
+  }
+  // Also include bare YYYY strings so questions with year-only dates match
+  for (const yr of yearsIncluded) {
+    out.push(String(yr))
   }
   return out
 }
