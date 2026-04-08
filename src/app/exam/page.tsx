@@ -362,7 +362,7 @@ function ExamContent() {
       <div className="app-layout">
         <Sidebar lang={lang} userId={userId} userName={userName} />
         <main className="main-content safe-area-top safe-area-bottom bg-[#F7F9FC]">
-          <div className="px-4 lg:px-8 pt-4 pb-2 flex items-center justify-between border-b border-[#E4E9F0]">
+          <div className="px-6 lg:px-10 pt-4 pb-2 flex items-center justify-between border-b border-[#E4E9F0]">
             <Link href="/" className="text-[#A0AEC0] hover:text-[#1A2B3C] text-sm transition-colors">
               ← {t("back_home", lang)}
             </Link>
@@ -389,7 +389,7 @@ function ExamContent() {
                     ? EXAM_CONFIG.filter((c) => VIENNA_EXAM_PARTS[selectedPart].includes(c.topic))
                     : EXAM_CONFIG;
                 return (
-                  <div className="grid grid-cols-2 gap-4 mb-6 stagger">
+                  <div className="grid grid-cols-2 gap-6 mb-10 stagger">
                     {displayedConfig.map(({ topic, count }) => {
                       const cfg = getTopicConfig(topic);
                       return (
@@ -658,7 +658,7 @@ function ExamContent() {
       <div className="app-layout">
         <Sidebar lang={lang} userId={userId} userName={userName} />
         <main className="main-content safe-area-top safe-area-bottom bg-[#F7F9FC]">
-          <div className="px-4 lg:px-8 pt-4 pb-2 flex items-center justify-between border-b border-[#E4E9F0]">
+          <div className="px-6 lg:px-10 pt-4 pb-2 flex items-center justify-between border-b border-[#E4E9F0]">
             <button
               onClick={() => setPhase("results")}
               className="text-[#A0AEC0] hover:text-[#1A2B3C] text-sm transition-colors"
@@ -781,7 +781,7 @@ function ExamContent() {
       <div className="app-layout">
         <Sidebar lang={lang} userId={userId} userName={userName} />
         <main className="main-content safe-area-top safe-area-bottom bg-[#F7F9FC]">
-          <div className="px-4 lg:px-8 pt-4 pb-2 flex items-center justify-between border-b border-[#E4E9F0]">
+          <div className="px-6 lg:px-10 pt-4 pb-2 flex items-center justify-between border-b border-[#E4E9F0]">
             <Link href="/" className="text-[#A0AEC0] hover:text-[#1A2B3C] text-sm transition-colors">
               ← {t("back_home", lang)}
             </Link>

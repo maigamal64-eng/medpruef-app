@@ -6,7 +6,7 @@ import { getTopicConfig } from "@/lib/topics";
 import { getLevelFromXP } from "@/lib/xp";
 import { t, getLang, setLang } from "@/lib/i18n";
 import TopicIcon from "@/components/TopicIcon";
-import { Flame, FileText as FileTextIcon, Lightbulb, Shuffle, PlayCircle, ClipboardList, Zap, CheckCircle, User, Inbox, ChevronRight, GraduationCap, Calendar, BarChart3 } from "lucide-react";
+import { Flame, FileText as FileTextIcon, Lightbulb, Shuffle, PlayCircle, ClipboardList, Zap, CheckCircle, User, Inbox, ChevronRight, GraduationCap, Calendar, BarChart3, Search, AlertTriangle } from "lucide-react";
 import { isTelegramMiniApp, getMiniAppInitData, getStoredSession, storeSession } from "@/lib/auth";
 import {
   getStoredExamSource,
@@ -87,6 +87,7 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<Record<string, unknown>[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [profileData, setProfileData] = useState<{ targetDate?: string } | null>(null);
   const [lastSessionInfo, setLastSessionInfo] = useState<{ totalXpSession: number; questionCount: number } | null>(null);
 
@@ -240,8 +241,12 @@ export default function Home() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
-        const searchInput = document.querySelector('input[placeholder*="such"], input[placeholder*="Search"]') as HTMLInputElement;
-        if (searchInput) searchInput.focus();
+        setSearchOpen(true);
+        // Focus after DOM updates
+        setTimeout(() => {
+          const searchInput = document.querySelector('input[placeholder*="such"], input[placeholder*="Search"]') as HTMLInputElement;
+          if (searchInput) searchInput.focus();
+        }, 100);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -384,12 +389,19 @@ export default function Home() {
               {examSource}
             </button>
             <div className="w-px h-6 bg-[#E4E9F0]" />
+            <button
+              onClick={() => setSearchOpen(!searchOpen)}
+              className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-[#E4E9F0]/50 text-[#A0AEC0] transition-colors"
+              title="Search (Cmd+K)"
+            >
+              <Search className="w-[18px] h-[18px]" />
+            </button>
             <ThemeToggle />
             <LanguageToggle lang={lang} onChange={switchLang} />
           </div>
         </div>
 
-        <div className="px-4 lg:px-8 py-4">
+        <div className="px-6 lg:px-10 py-4">
           {/* Hero Progress Banner */}
           <div className="bg-gradient-to-r from-[#001B3D] to-[#003A8C] rounded-2xl p-6 md:p-8 text-white relative overflow-hidden mb-6">
             {/* Subtle pattern overlay */}
@@ -450,7 +462,7 @@ export default function Home() {
           {weakTopics.length > 0 && (
             <Link
               href={`/quiz?topic=${encodeURIComponent(weakTopics[0]?.topic || 'random')}&userId=${user.id}&examSource=${examSource}`}
-              className="block bg-[#007B5F] hover:bg-[#006B51] rounded-2xl p-5 text-white mb-6 transition-colors group"
+              className="block cta-shimmer rounded-2xl p-5 text-white mb-10 group"
             >
               <div className="flex items-center justify-between">
                 <div>
@@ -466,79 +478,86 @@ export default function Home() {
             </Link>
           )}
 
-          {/* Top Row: Stats + Daily Goal — single card layer, no nesting */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-            <div className="card rounded-2xl p-5 relative overflow-hidden">
-              <div className="absolute top-0 left-0 right-0 h-1" style={{ background: 'linear-gradient(to right, #007B5F, #00A896)' }} />
+          {/* Top Row: Stats + Daily Goal */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
+            <div className="card rounded-2xl p-6">
               <DailyGoalRing
                 current={gam?.daily_questions_today || 0}
                 goal={user.daily_goal || 20}
                 lang={lang}
               />
             </div>
-            <div className="card rounded-2xl p-5 relative overflow-hidden">
-              <div className="absolute top-0 left-0 right-0 h-1" style={{ background: 'linear-gradient(to right, #F4A261, #FFC97A)' }} />
+            <div className="card rounded-2xl p-6">
               <StreakWidget streak={gam?.current_streak || 0} lang={lang} />
             </div>
-            <div className="card rounded-2xl p-5 relative overflow-hidden md:col-span-2 lg:col-span-1">
-              <div className="absolute top-0 left-0 right-0 h-1" style={{ background: 'linear-gradient(to right, #003A8C, #007B5F)' }} />
+            <div className="card rounded-2xl p-6 md:col-span-2 lg:col-span-1">
               <XPBar totalXp={gam?.total_xp || 0} lang={lang} />
             </div>
           </div>
 
-          {/* Smart Recommendation */}
+          {/* Weakest Subject — urgency block */}
           {weakTopics.length > 0 && (
-            <div className="bg-[#FFF4E6] border border-[#F4A261]/25 rounded-2xl p-5 mb-6">
-              <div className="flex items-start justify-between">
+            <div className="bg-[#FFF4E6] border border-[#F4A261]/25 border-l-4 border-l-[#F4A261] rounded-2xl p-6 mb-10">
+              <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="font-bold text-[#1A2B3C] mb-1">
-                    {lang === "de" ? "Empfehlung für dich" : "Smart Recommendation"}
+                  <p className="font-bold text-[#1A2B3C] mb-1 flex items-center gap-2">
+                    <AlertTriangle className="w-5 h-5 text-[#F4A261]" />
+                    {lang === "de" ? "Dein schwächstes Fach" : "Your weakest subject"}
                   </p>
                   <p className="text-sm text-[#4A5568]">
                     {lang === "de"
-                      ? `${weakTopics[0]?.topic} verbessern — steigert deine Punktzahl um ca. +${Math.min(Math.round(100 / (weakTopics.length + 1)), 15)}%`
-                      : `Improve ${weakTopics[0]?.topic} — increases your score by ~+${Math.min(Math.round(100 / (weakTopics.length + 1)), 15)}%`}
+                      ? `${weakTopics[0]?.topic} verbessern — steigert deine Punktzahl um +${Math.min(Math.round(100 / (weakTopics.length + 1)), 15)}%`
+                      : `Improving ${weakTopics[0]?.topic} increases your score by +${Math.min(Math.round(100 / (weakTopics.length + 1)), 15)}%`}
                   </p>
                 </div>
                 <Link
                   href={`/quiz?topic=${encodeURIComponent(weakTopics[0]?.topic || 'random')}&userId=${user.id}&examSource=${examSource}`}
-                  className="btn-primary text-sm px-4 py-2 shrink-0"
+                  className="btn-primary text-sm px-5 py-2.5 shrink-0 font-bold"
                 >
-                  {lang === "de" ? "Jetzt üben" : "Fix now"}
+                  {lang === "de" ? "Jetzt verbessern" : "Fix now"}
                 </Link>
               </div>
             </div>
           )}
 
-          {/* Quick Actions */}
-          <div className="grid grid-cols-3 gap-3 mb-6">
+          {/* Quick Actions — Continue CTA dominant */}
+          <div className="space-y-3 mb-10">
+            {/* Continue CTA — full width, dominant, shimmer */}
             <Link
-              href={`/quiz?topic=random&userId=${user.id}&examSource=${examSource}`}
-              className="btn-primary flex items-center justify-center gap-3 px-5 min-h-[56px] text-base rounded-2xl shadow-md pulse-glow active:scale-[0.98]"
+              href={weakTopics.length > 0
+                ? `/quiz?topic=${encodeURIComponent(weakTopics[0]?.topic || 'random')}&userId=${user.id}&examSource=${examSource}`
+                : topics.length > 0
+                  ? `/quiz?topic=${encodeURIComponent(topics[0].topic)}&userId=${user.id}&examSource=${examSource}`
+                  : "#"}
+              className="cta-shimmer flex items-center justify-center gap-3 py-5 text-lg font-bold text-white rounded-2xl shadow-md active:scale-[0.98] transition-transform"
             >
-              <Shuffle className="w-5 h-5" />
-              <span className="text-sm">{t("random_quiz", lang)}</span>
+              <PlayCircle className="w-6 h-6" />
+              {weakTopics.length > 0
+                ? (lang === "de" ? `Weiter: ${weakTopics[0]?.topic}` : `Continue: ${weakTopics[0]?.topic}`)
+                : t("continue_where_left", lang)}
             </Link>
 
-            <Link
-              href={topics.length > 0 ? `/quiz?topic=${encodeURIComponent(topics[0].topic)}&userId=${user.id}&examSource=${examSource}` : "#"}
-              className="btn-secondary flex items-center justify-center gap-3 px-5 min-h-[56px] rounded-2xl shadow-[var(--shadow-xs)] hover:shadow-md transition-all"
-            >
-              <PlayCircle className="w-5 h-5 flex-shrink-0 text-[#007B5F]" />
-              <span className="text-sm">{t("continue_where_left", lang)}</span>
-            </Link>
-
-            <Link
-              href={`/exam?examSource=${examSource}`}
-              className="btn-secondary flex items-center justify-center gap-3 px-5 min-h-[56px] rounded-2xl shadow-[var(--shadow-xs)] hover:shadow-md transition-all"
-            >
-              <GraduationCap className="w-5 h-5 flex-shrink-0 text-[#003A8C]" />
-              <span className="text-sm">{t("mock_exam", lang)}</span>
-            </Link>
+            {/* Secondary row */}
+            <div className="grid grid-cols-2 gap-3">
+              <Link
+                href={`/quiz?topic=random&userId=${user.id}&examSource=${examSource}`}
+                className="btn-secondary flex items-center justify-center gap-2 px-4 py-3 rounded-2xl text-sm"
+              >
+                <Shuffle className="w-4 h-4 text-[#007B5F]" />
+                {t("random_quiz", lang)}
+              </Link>
+              <Link
+                href={`/exam?examSource=${examSource}`}
+                className="text-sm text-[#A0AEC0] hover:text-[#1A2B3C] flex items-center justify-center gap-2 px-4 py-3 rounded-2xl transition-colors"
+              >
+                <GraduationCap className="w-4 h-4" />
+                {t("mock_exam", lang)}
+              </Link>
+            </div>
           </div>
 
-          {/* Search */}
-          <div className="mb-6">
+          {/* Search — icon-triggered on desktop, always visible on mobile */}
+          <div className={`mb-10 ${searchOpen ? '' : 'lg:hidden'}`}>
             <div className="card rounded-2xl p-1">
               <SearchBar lang={lang} onSearch={handleSearch} />
             </div>
@@ -555,7 +574,7 @@ export default function Home() {
 
           {/* Topics Grid — hidden while searching */}
           {!searchQuery && (
-            <div className="mb-6">
+            <div className="mb-10">
               <h2 className="text-lg font-bold mb-4 text-[#1A2B3C] border-l-[3px] border-l-[#007B5F] pl-3">
                 {t("specialties", lang)} <span className="text-sm font-normal text-[#A0AEC0] ml-1">({topics.length})</span>
               </h2>
@@ -590,7 +609,7 @@ export default function Home() {
                   <h3 className="text-sm font-bold uppercase tracking-wider text-[#F4A261] mb-3 border-l-[3px] border-l-[#F4A261] pl-3">
                     {t("sip4_label", lang)}
                   </h3>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-5 mb-5 stagger">
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-6 mb-10 stagger">
                     {topics
                       .filter((tp) => VIENNA_EXAM_PARTS.sip4.includes(tp.topic))
                       .map((tp, i) => (
@@ -610,7 +629,7 @@ export default function Home() {
                   <h3 className="text-sm font-bold uppercase tracking-wider text-[#007B5F] mb-3 border-l-[3px] border-l-[#007B5F] pl-3">
                     {t("sip5_label", lang)}
                   </h3>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-5 stagger">
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-6 stagger">
                     {topics
                       .filter((tp) => VIENNA_EXAM_PARTS.sip5.includes(tp.topic))
                       .map((tp, i) => (
@@ -653,17 +672,17 @@ export default function Home() {
           </Link>
 
           {/* Mini Stats Row (mobile only) */}
-          <div className="grid grid-cols-4 gap-2 lg:hidden mb-6 mt-4 stagger">
-            <div className="rounded-xl border-t-2 border-t-[#F4A261] bg-white shadow-[var(--shadow-xs)]">
+          <div className="grid grid-cols-4 gap-3 lg:hidden mb-10 mt-4 stagger">
+            <div className="card rounded-xl">
               <StatsCard icon={<Zap className="w-4 h-4" />} value={gam?.total_xp || 0} label="XP" color="text-[#F4A261]" delay={0} />
             </div>
-            <div className="rounded-xl border-t-2 border-t-[#D64545] bg-white shadow-[var(--shadow-xs)]">
+            <div className="card rounded-xl">
               <StatsCard icon={<Flame className="w-4 h-4" />} value={gam?.current_streak || 0} label={t("streak", lang)} color="text-[#D64545]" delay={50} />
             </div>
-            <div className="rounded-xl border-t-2 border-t-[#00A896] bg-white shadow-[var(--shadow-xs)]">
+            <div className="card rounded-xl">
               <StatsCard icon={<CheckCircle className="w-4 h-4" />} value={`${accuracy}%`} label={t("accuracy", lang)} color="text-[#00A896]" delay={100} />
             </div>
-            <div className="rounded-xl border-t-2 border-t-[#007B5F] bg-white shadow-[var(--shadow-xs)]">
+            <div className="card rounded-xl">
               <StatsCard icon={<FileTextIcon className="w-4 h-4" />} value={gam?.total_questions_answered || 0} label={t("answered", lang)} color="text-[#007B5F]" delay={150} />
             </div>
           </div>
@@ -825,7 +844,7 @@ function DemoHome({
       </div>
 
       {/* Search */}
-      <div className="px-4 pb-4 max-w-4xl mx-auto">
+      <div className="px-6 pb-6 max-w-4xl mx-auto">
         <SearchBar lang={lang} onSearch={handleDemoSearch} />
         {searchQuery && (
           <SearchResults
@@ -840,7 +859,7 @@ function DemoHome({
 
       {/* Topics — hidden while searching */}
       {topics.length > 0 && !searchQuery && (
-        <div className="px-4 pb-6 max-w-4xl mx-auto">
+        <div className="px-6 pb-10 max-w-4xl mx-auto">
           <h2 className="text-lg font-bold mb-4 text-[#1A2B3C] border-l-[3px] border-l-[#007B5F] pl-3">{t("practice_topics", lang)}</h2>
 
           {examSource === "SIP" ? (
@@ -867,20 +886,17 @@ function DemoHome({
               <h3 className="text-sm font-bold uppercase tracking-wider text-[#F4A261] mb-3 border-l-[3px] border-l-[#F4A261] pl-3">
                 {t("sip4_label", lang)}
               </h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-5 stagger">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-10 stagger">
                 {topics.filter((tp) => VIENNA_EXAM_PARTS.sip4.includes(tp.topic)).map((tp, i) => {
                   const config = getTopicConfig(tp.topic);
                   return (
                     <Link
                       key={tp.topic}
                       href={`/quiz?topic=${encodeURIComponent(tp.topic)}&examSource=${examSource}`}
-                      className="card-interactive rounded-2xl p-5 active:scale-[0.98] relative overflow-hidden group"
+                      className="card-interactive rounded-2xl p-6 active:scale-[0.98] group"
                       style={{ animationDelay: `${i * 50}ms` }}
                     >
-                      <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl" style={{ backgroundColor: config.color }} />
-                      <div className="w-11 h-11 rounded-xl flex items-center justify-center mb-3 transition-transform duration-200 group-hover:scale-110" style={{ backgroundColor: `${config.color}18` }}>
-                        <TopicIcon name={config.icon} className="w-6 h-6" style={{ color: config.color }} />
-                      </div>
+                      <TopicIcon name={config.icon} className="w-7 h-7 mb-3 transition-transform duration-200 group-hover:scale-110" style={{ color: config.color }} />
                       <div className="text-[15px] font-semibold leading-snug mb-1 text-[#1A2B3C] line-clamp-2 min-h-[2.5rem]" title={tp.topic}>{tp.topic}</div>
                       <div className="text-xs text-[#A0AEC0] font-mono">{tp.count.toLocaleString("de-DE")} {t("questions", lang)}</div>
                     </Link>
@@ -892,20 +908,17 @@ function DemoHome({
               <h3 className="text-sm font-bold uppercase tracking-wider text-[#007B5F] mb-3 border-l-[3px] border-l-[#007B5F] pl-3">
                 {t("sip5_label", lang)}
               </h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 stagger">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 stagger">
                 {topics.filter((tp) => VIENNA_EXAM_PARTS.sip5.includes(tp.topic)).map((tp, i) => {
                   const config = getTopicConfig(tp.topic);
                   return (
                     <Link
                       key={tp.topic}
                       href={`/quiz?topic=${encodeURIComponent(tp.topic)}&examSource=${examSource}`}
-                      className="card-interactive rounded-2xl p-5 active:scale-[0.98] relative overflow-hidden group"
+                      className="card-interactive rounded-2xl p-6 active:scale-[0.98] group"
                       style={{ animationDelay: `${i * 50}ms` }}
                     >
-                      <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl" style={{ backgroundColor: config.color }} />
-                      <div className="w-11 h-11 rounded-xl flex items-center justify-center mb-3 transition-transform duration-200 group-hover:scale-110" style={{ backgroundColor: `${config.color}18` }}>
-                        <TopicIcon name={config.icon} className="w-6 h-6" style={{ color: config.color }} />
-                      </div>
+                      <TopicIcon name={config.icon} className="w-7 h-7 mb-3 transition-transform duration-200 group-hover:scale-110" style={{ color: config.color }} />
                       <div className="text-[15px] font-semibold leading-snug mb-1 text-[#1A2B3C] line-clamp-2 min-h-[2.5rem]" title={tp.topic}>{tp.topic}</div>
                       <div className="text-xs text-[#A0AEC0] font-mono">{tp.count.toLocaleString("de-DE")} {t("questions", lang)}</div>
                     </Link>
@@ -914,19 +927,17 @@ function DemoHome({
               </div>
             </>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 stagger">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 stagger">
               {topics.map((tp, i) => {
                 const config = getTopicConfig(tp.topic);
                 return (
                   <Link
                     key={tp.topic}
                     href={`/quiz?topic=${encodeURIComponent(tp.topic)}&examSource=${examSource}`}
-                    className="card-interactive border-l-[3px] rounded-2xl p-5 active:scale-[0.98]"
-                    style={{ borderLeftColor: config.color, animationDelay: `${i * 50}ms` }}
+                    className="card-interactive rounded-2xl p-6 active:scale-[0.98] group"
+                    style={{ animationDelay: `${i * 50}ms` }}
                   >
-                    <div className="w-10 h-10 rounded-full flex items-center justify-center mb-3" style={{ backgroundColor: `${config.color}15` }}>
-                      <TopicIcon name={config.icon} className="w-5 h-5" style={{ color: config.color }} />
-                    </div>
+                    <TopicIcon name={config.icon} className="w-7 h-7 mb-3 transition-transform duration-200 group-hover:scale-110" style={{ color: config.color }} />
                     <div className="text-sm font-semibold mb-1 text-[#1A2B3C]">{tp.topic}</div>
                     <div className="text-xs text-[#A0AEC0] font-mono">{tp.count} {t("questions", lang)}</div>
                   </Link>

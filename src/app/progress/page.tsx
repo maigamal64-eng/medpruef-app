@@ -463,7 +463,7 @@ export default function ProgressPage() {
 
       <main className="main-content safe-area-top safe-area-bottom bg-[#F7F9FC]">
         {/* Header */}
-        <div className="px-4 lg:px-8 pt-4 pb-2 flex items-center justify-between border-b border-[#E4E9F0]">
+        <div className="px-6 lg:px-10 pt-4 pb-2 flex items-center justify-between border-b border-[#E4E9F0]">
           <Link href="/" className="text-[#A0AEC0] hover:text-[#1A2B3C] text-sm transition-colors">
             &larr; {t("back_home", lang)}
           </Link>
@@ -474,10 +474,10 @@ export default function ProgressPage() {
           </div>
         </div>
 
-        <div className="px-4 lg:px-8 py-5 max-w-3xl mx-auto space-y-6 pb-28">
+        <div className="px-6 lg:px-10 py-5 max-w-3xl mx-auto space-y-10 pb-28">
 
           {/* ===== SECTION 1: Overview Metrics ===== */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 stagger">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 stagger">
             {/* Card 1: Questions Answered */}
             <div className="card rounded-2xl p-6 bg-[#007B5F]/[0.03]">
               <div className="flex items-center justify-between mb-2">

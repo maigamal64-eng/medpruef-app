@@ -56,19 +56,11 @@ function SpecialtyCard({
 
   return (
     <div
-      className="card-interactive rounded-2xl p-6 min-h-[200px] flex flex-col relative overflow-hidden group"
+      className="card-interactive rounded-2xl p-6 min-h-[200px] flex flex-col group"
     >
-      {/* Colored top accent bar */}
-      <div className="absolute top-0 left-0 right-0 h-1.5 rounded-t-2xl" style={{ backgroundColor: config.color }} />
-
       {/* Icon + Name */}
       <div className="flex items-start gap-3 mb-4">
-        <div
-          className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform duration-200 group-hover:scale-110"
-          style={{ backgroundColor: `${config.color}18` }}
-        >
-          <TopicIcon name={config.icon} className="w-6 h-6" style={{ color: config.color }} />
-        </div>
+        <TopicIcon name={config.icon} className="w-7 h-7 flex-shrink-0 transition-transform duration-200 group-hover:scale-110" style={{ color: config.color }} />
         <div className="min-w-0 flex-1">
           <h3 className="text-base font-bold text-[#1A2B3C] leading-snug line-clamp-2" title={data.topic}>{data.topic}</h3>
           <p className="text-xs text-[#A0AEC0] font-mono mt-1">
@@ -252,7 +244,7 @@ export default function CurriculumPage() {
 
       <main className="main-content safe-area-top safe-area-bottom bg-[#F7F9FC]">
         {/* Header */}
-        <div className="px-4 lg:px-8 pt-4 pb-2 flex items-center justify-between border-b border-[#E4E9F0]">
+        <div className="px-6 lg:px-10 pt-4 pb-2 flex items-center justify-between border-b border-[#E4E9F0]">
           <Link href="/" className="text-[#A0AEC0] hover:text-[#1A2B3C] text-sm transition-colors">
             &larr; {t("back_home", lang)}
           </Link>
@@ -266,7 +258,7 @@ export default function CurriculumPage() {
           </div>
         </div>
 
-        <div className="px-4 lg:px-8 py-5 max-w-5xl mx-auto space-y-8 pb-28">
+        <div className="px-6 lg:px-10 py-5 max-w-5xl mx-auto space-y-10 pb-28">
           {/* Overview bar */}
           <div className="card rounded-2xl p-5">
             <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6">
@@ -309,7 +301,7 @@ export default function CurriculumPage() {
                 {sip4Count.toLocaleString("de-DE")} {t("questions", lang)}
               </span>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 stagger">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 stagger">
               {sip4Topics.map((td) => (
                 <SpecialtyCard key={td.topic} data={td} userId={userId} lang={lang} />
               ))}
@@ -325,7 +317,7 @@ export default function CurriculumPage() {
                 {sip5Count.toLocaleString("de-DE")} {t("questions", lang)}
               </span>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 stagger">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 stagger">
               {sip5Topics.map((td) => (
                 <SpecialtyCard key={td.topic} data={td} userId={userId} lang={lang} />
               ))}

@@ -490,3 +490,19 @@ textarea:focus {
   position: absolute;
   inset: 0;
 }
+
+/* ═══ CTA SHIMMER ═══ */
+@keyframes cta-shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.cta-shimmer {
+  background: linear-gradient(90deg, #007B5F 0%, #00A896 50%, #007B5F 100%);
+  background-size: 200% 100%;
+  animation: cta-shimmer 3s ease-in-out infinite;
+}
+
+[data-theme="dark"] .cta-shimmer {
+  background: linear-gradient(90deg, #005A45 0%, #008F80 50%, #005A45 100%);
+  background-size: 200% 100%;
+}

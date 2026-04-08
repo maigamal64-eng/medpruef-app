@@ -36,20 +36,12 @@ export default function TopicCard({ topic, count, userId, lang, accuracy, delay 
   return (
     <Link
       href={href}
-      className="card-interactive block rounded-2xl p-5 overflow-hidden relative group"
+      className="card-interactive block rounded-2xl p-6 group"
       style={{ animationDelay: `${delay}ms` }}
     >
-      {/* Colored top accent bar */}
-      <div className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl" style={{ backgroundColor: config.color }} />
-
-      {/* Icon in colored circle */}
+      {/* Icon — direct, no background */}
       <div className="flex items-start justify-between mb-3">
-        <span
-          className="w-11 h-11 rounded-xl flex items-center justify-center transition-transform duration-200 group-hover:scale-110"
-          style={{ backgroundColor: `${config.color}18` }}
-        >
-          <TopicIcon name={config.icon} className="w-6 h-6" style={{ color: config.color }} />
-        </span>
+        <TopicIcon name={config.icon} className="w-7 h-7 transition-transform duration-200 group-hover:scale-110" style={{ color: config.color }} />
         {accuracy !== undefined && accuracy > 0 && (
           <div className="flex flex-col items-end gap-1">
             <span

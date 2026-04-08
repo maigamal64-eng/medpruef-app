@@ -37,16 +37,17 @@ export function LogoWordmark({ className = "h-8", white = false }: { className?:
 
 /** Branded loading spinner with pulsing logomark */
 export function BrandedLoader({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
-  const sizes = { sm: "w-8 h-8", md: "w-14 h-14", lg: "w-20 h-20" };
+  const sizes = { sm: "w-12 h-12", md: "w-20 h-20", lg: "w-28 h-28" };
+  const dotSizes = { sm: "w-1.5 h-1.5", md: "w-2 h-2", lg: "w-2.5 h-2.5" };
   return (
-    <div className="flex flex-col items-center justify-center gap-3">
+    <div className="flex flex-col items-center justify-center gap-4">
       <div className={`${sizes[size]} animate-pulse`}>
         <img src="/brand/logomark.svg" alt="" className="w-full h-full" />
       </div>
-      <div className="flex gap-1">
-        <span className="w-1.5 h-1.5 rounded-full bg-[#007B5F] animate-bounce" style={{ animationDelay: "0ms" }} />
-        <span className="w-1.5 h-1.5 rounded-full bg-[#007B5F] animate-bounce" style={{ animationDelay: "150ms" }} />
-        <span className="w-1.5 h-1.5 rounded-full bg-[#007B5F] animate-bounce" style={{ animationDelay: "300ms" }} />
+      <div className="flex gap-1.5">
+        <span className={`${dotSizes[size]} rounded-full bg-[#007B5F] animate-bounce`} style={{ animationDelay: "0ms" }} />
+        <span className={`${dotSizes[size]} rounded-full bg-[#007B5F] animate-bounce`} style={{ animationDelay: "150ms" }} />
+        <span className={`${dotSizes[size]} rounded-full bg-[#007B5F] animate-bounce`} style={{ animationDelay: "300ms" }} />
       </div>
     </div>
   );

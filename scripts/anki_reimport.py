@@ -730,7 +730,12 @@ def parse_all_notes(db_path: str, media_url_map: dict, deck_topic_map: dict = No
             else:
                 stats[label.lower()] += 1
 
-    # --- Basic / Basic+ (open-answer, short) ---
+    # --- Basic / Basic+ (open-answer, short — OR inline MCQ with \nA) pattern) ---
+    # Some Basic notes have choices embedded in the question text separated by
+    # newlines: "...question text...\nA) Choice one\nB) Choice two\nC) ..."
+    # We detect and parse these the same way as SIP4a inline choices.
+    BASIC_INLINE_RE = re.compile(r'\n\s*[A-E]\)\s*')
+
     for mid, label in [(NT_BASIC, 'Basic'), (NT_BASICPLUS, 'Basic+')]:
         cur.execute(f"SELECT id, flds, tags FROM notes WHERE mid = {mid}")
         for nid, flds, tags_str in cur.fetchall():
@@ -743,13 +748,73 @@ def parse_all_notes(db_path: str, media_url_map: dict, deck_topic_map: dict = No
             if not question_text or not answer:
                 continue
             raw_tags = (tags_str or '').strip().split()
-            clean = clean_tags(raw_tags, None, 0) + [label.lower().replace('+', 'plus'), 'open-answer']
-            clean = list(dict.fromkeys(clean))
             all_imgs = extract_img_srcs(fields[0]) + extract_img_srcs(fields[1] if len(fields) > 1 else '')
             q_urls = list(dict.fromkeys(media_url_map[s] for s in all_imgs if s in media_url_map))
+
+            # Detect inline choices: \nA) ... \nB) ... \nC) ...
+            has_inline = bool(BASIC_INLINE_RE.search(question_text))
+            choices = None
+            distractors = None
+            is_mcq = False
+
+            if has_inline:
+                # Split on the INLINE_CHOICE_RE (same as SIP4a) to extract choices
+                parts = INLINE_CHOICE_RE.split(question_text)
+                stem = parts[0].strip()
+                choice_list = []
+                for j in range(1, len(parts) - 1, 2):
+                    letter = parts[j]
+                    text = parts[j + 1].strip() if j + 1 < len(parts) else ''
+                    if text:
+                        choice_list.append((letter, text))
+
+                if len(choice_list) >= 2:
+                    is_mcq = True
+                    question_text = stem
+                    answer_norm = answer.lower().strip()
+                    choices = []
+                    for i, (letter, text) in enumerate(choice_list):
+                        is_correct = (text.lower().strip() == answer_norm
+                                      or answer_norm in text.lower().strip()
+                                      or text.lower().strip() in answer_norm)
+                        choices.append({
+                            'text': text[:600],
+                            'correct': is_correct,
+                            'position': i,
+                            'image_url': None,
+                        })
+                    # Ensure at least one correct — try fuzzy match if none found
+                    if not any(c['correct'] for c in choices):
+                        for c in choices:
+                            if answer_norm.split()[0] in c['text'].lower():
+                                c['correct'] = True
+                                break
+                    # Still no match → mark first as correct and flag
+                    if not any(c['correct'] for c in choices):
+                        choices[0]['correct'] = True
+                        stats['basic_choice_match_fallback'] += 1
+
+                    correct_texts = [c['text'] for c in choices if c['correct']]
+                    distractors = [c['text'] for c in choices if not c['correct']][:8]
+                    answer = correct_texts[0] if correct_texts else answer
+                    stats[f'{label.lower().replace("+", "plus")}_mcq'] += 1
+
+            if not is_mcq:
+                clean = clean_tags(raw_tags, None, 0) + [label.lower().replace('+', 'plus'), 'open-answer']
+            else:
+                clean = clean_tags(raw_tags, 2, 1) + [label.lower().replace('+', 'plus')]
+            clean = list(dict.fromkeys(clean))
+
+            # Topic: deck assignment → content regex fallback
+            topic = dtm.get(nid) or 'Sonstige'
+            if topic == 'Sonstige':
+                topic = map_topic(question_text, raw_tags)
+            if topic == 'Sonstige':
+                topic = map_topic(f"{answer}", raw_tags)
+
             out.append({
                 'anki_note_id': nid,
-                'topic': map_topic('', raw_tags) or 'Sonstige',
+                'topic': topic,
                 'question': question_text[:1500],
                 'answer': answer[:500],
                 'explanation': None,
@@ -759,13 +824,14 @@ def parse_all_notes(db_path: str, media_url_map: dict, deck_topic_map: dict = No
                 'tags': clean,
                 'image_url': q_urls[0] if q_urls else None,
                 'image_urls': q_urls or None,
-                'distractors': None,
-                'choices': None,
+                'distractors': distractors,
+                'choices': choices,
                 '_raw_tags': raw_tags,
                 '_qhash': hash_question(question_text),
                 '_notetype': label,
             })
-            stats[label.lower().replace('+', 'plus')] += 1
+            if not is_mcq:
+                stats[label.lower().replace('+', 'plus')] += 1
 
     # --- Derma TestYourself + BL21 (have choices field) ---
     for mid, label in [(NT_DERMA, 'Derma'), (NT_BL21, 'BL21')]:

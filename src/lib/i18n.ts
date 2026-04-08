@@ -54,7 +54,7 @@ const translations = {
   'quiz': { de: 'Quiz', en: 'Quiz' },
   'continue_where_left': { de: 'Weiter wo du aufgehört hast', en: 'Continue where you left off' },
   'random_quiz': { de: 'Zufälliges Quiz', en: 'Random Quiz' },
-  'mock_exam': { de: 'Probeprüfung', en: 'Mock Exam' },
+  'mock_exam': { de: 'Prüfung testen', en: 'Test yourself (Mock Exam)' },
   'coming_soon': { de: 'Bald verfügbar', en: 'Coming Soon' },
   'recent_activity': { de: 'Letzte Aktivität', en: 'Recent Activity' },
   'quick_actions': { de: 'Schnellaktionen', en: 'Quick Actions' },
