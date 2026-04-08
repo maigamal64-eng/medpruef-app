@@ -95,7 +95,7 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0, streak = 
       {/* Logo */}
       <div className={`border-b border-white/[0.06] ${collapsed ? "px-3 pt-5 pb-3" : "px-5 pt-6 pb-4"}`}>
         <div className={`flex items-center ${collapsed ? "justify-center" : "gap-3"}`}>
-          <img src="/brand/logo-mark.png" alt="MedPrüf" className="w-9 h-9 flex-shrink-0" style={{ filter: 'brightness(0) invert(1)' }} />
+          <img src="/brand/logomark.svg" alt="MedPrüf" className="w-9 h-9 flex-shrink-0" style={{ filter: 'brightness(0) invert(1)' }} />
           {!collapsed && (
             <div>
               <h1 className="text-base font-bold text-white tracking-tight">

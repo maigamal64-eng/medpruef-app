@@ -53,7 +53,7 @@ export default function AboutPage() {
           {/* Hero */}
           <div className="text-center mb-8">
             <div className="w-20 h-20 rounded-2xl border border-[#007B5F]/30 bg-[#007B5F]/10 flex items-center justify-center text-4xl mx-auto mb-5">
-              <img src="/brand/logo-mark.png" alt="MedPrüf" className="w-12 h-12" />
+              <img src="/brand/logomark.svg" alt="MedPrüf" className="w-12 h-12" />
             </div>
             <img src="/brand/logo-full.png" alt="MedPrüf" className="h-10 mx-auto mb-2" />
             <p className="text-[#4A5568] text-base">

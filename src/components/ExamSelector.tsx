@@ -19,7 +19,7 @@ export default function ExamSelector({ lang, onSelect }: Props) {
         {/* Header */}
         <div className="text-center mb-8">
           <div className="w-16 h-16 rounded border border-[#007B5F]/30 bg-[#007B5F]/10 flex items-center justify-center mx-auto mb-4">
-            <img src="/brand/logo-mark.png" alt="MedPrüf" className="w-12 h-12" />
+            <img src="/brand/logomark.svg" alt="MedPrüf" className="w-12 h-12" />
           </div>
           <img src="/brand/wordmark-twotone.png" alt="MedPrüf" className="h-10 mx-auto" />
           <p className="text-[#A0AEC0] text-sm">

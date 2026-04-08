@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, Suspense } from "react";
+import { BrandedLoader } from "@/components/Logo";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { getLevelFromXP } from "@/lib/xp";
@@ -99,7 +100,7 @@ function StatsContent() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-[#F7F9FC]">
-        <div className="w-10 h-10 border-2 border-[#007B5F] border-t-transparent rounded-full animate-spin" />
+        <BrandedLoader />
       </div>
     );
   }
@@ -345,7 +346,7 @@ export default function StatsPage() {
     <Suspense
       fallback={
         <div className="flex items-center justify-center min-h-screen bg-[#F7F9FC]">
-          <div className="w-10 h-10 border-2 border-[#007B5F] border-t-transparent rounded-full animate-spin" />
+          <BrandedLoader />
         </div>
       }
     >

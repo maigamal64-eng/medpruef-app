@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { BrandedLoader } from "@/components/Logo";
 import { getTopicConfig } from "@/lib/topics";
 import { getLevelFromXP } from "@/lib/xp";
 import { t, getLang, setLang } from "@/lib/i18n";
@@ -283,10 +284,7 @@ export default function Home() {
   if (loading && !showExamSelector) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-[#F7F9FC]">
-        <div className="text-center animate-fade-in">
-          <div className="w-14 h-14 border-2 border-[#007B5F] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-[#A0AEC0] text-sm">{t("loading", lang)}</p>
-        </div>
+        <BrandedLoader size="lg" />
       </div>
     );
   }
@@ -312,7 +310,7 @@ export default function Home() {
       window.location.href = "/landing";
       return (
         <div className="flex items-center justify-center min-h-screen bg-[#F7F9FC]">
-          <div className="w-14 h-14 border-2 border-[#007B5F] border-t-transparent rounded-full animate-spin" />
+          <BrandedLoader />
         </div>
       );
     }
@@ -782,7 +780,7 @@ function DemoHome({
           </div>
 
           <div className="w-16 h-16 rounded border border-[#007B5F]/30 bg-[#007B5F]/10 flex items-center justify-center text-3xl mx-auto mb-4">
-            <img src="/brand/logo-mark.png" alt="MedPrüf" className="w-12 h-12" />
+            <img src="/brand/logomark.svg" alt="MedPrüf" className="w-12 h-12" />
           </div>
           <img src="/brand/wordmark-twotone.png" alt="MedPrüf" className="h-10 mx-auto" />
           <p className="text-[#4A5568] text-base mb-1">{t("exam_prep", lang)}</p>

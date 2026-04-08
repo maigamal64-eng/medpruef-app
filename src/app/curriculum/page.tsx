@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { BrandedLoader } from "@/components/Logo";
 import Link from "next/link";
 import { t, getLang, setLang } from "@/lib/i18n";
 import { getStoredSession } from "@/lib/auth";
@@ -240,7 +241,7 @@ export default function CurriculumPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-[#F7F9FC]">
-        <div className="w-10 h-10 border-2 border-[#007B5F] border-t-transparent rounded-full animate-spin" />
+        <BrandedLoader />
       </div>
     );
   }

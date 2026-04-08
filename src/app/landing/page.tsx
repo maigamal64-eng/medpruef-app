@@ -107,7 +107,7 @@ function FloatingNav({
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Image
-              src="/brand/logo-mark.png"
+              src="/brand/logomark.svg"
               alt="MedPrüf"
               width={28}
               height={28}
@@ -194,7 +194,7 @@ function HeroSection({
       <div className="relative z-10 max-w-7xl mx-auto w-full px-6 pt-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Image
-            src="/brand/logo-mark.png"
+            src="/brand/logomark.svg"
             alt="MedPrüf"
             width={36}
             height={36}
@@ -1070,7 +1070,7 @@ function Footer({ lang }: { lang: Lang }) {
           <div className="md:col-span-1">
             <div className="flex items-center gap-2 mb-4">
               <Image
-                src="/brand/logo-mark.png"
+                src="/brand/logomark.svg"
                 alt="MedPrüf"
                 width={28}
                 height={28}

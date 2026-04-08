@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef, Suspense } from "react";
+import { BrandedLoader } from "@/components/Logo";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { t, getLang, setLang } from "@/lib/i18n";
@@ -358,7 +359,7 @@ export default function QuizPage() {
     <Suspense
       fallback={
         <div className="flex items-center justify-center min-h-screen bg-[#F7F9FC]">
-          <div className="w-12 h-12 border-2 border-[#007B5F] border-t-transparent rounded-full animate-spin" />
+          <BrandedLoader />
         </div>
       }
     >

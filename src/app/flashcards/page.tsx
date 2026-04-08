@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, Suspense } from "react";
+import { BrandedLoader } from "@/components/Logo";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { getLang, setLang, t } from "@/lib/i18n";
@@ -168,10 +169,7 @@ function FlashcardContent() {
   if (loading && !question) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-[#F7F9FC]">
-        <div className="card rounded-2xl p-8 text-center animate-scale-in">
-          <div className="w-12 h-12 border-2 border-[#007B5F] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-          <p className="text-[#A0AEC0] text-sm">{t("loading", lang)}</p>
-        </div>
+        <BrandedLoader />
       </div>
     );
   }
@@ -384,7 +382,7 @@ export default function FlashcardsPage() {
     <Suspense
       fallback={
         <div className="flex items-center justify-center min-h-screen bg-[#F7F9FC]">
-          <div className="w-12 h-12 border-2 border-[#007B5F] border-t-transparent rounded-full animate-spin" />
+          <BrandedLoader />
         </div>
       }
     >
