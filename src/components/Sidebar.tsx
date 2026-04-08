@@ -7,7 +7,7 @@ import { t } from "@/lib/i18n";
 import { getLevelFromXP } from "@/lib/xp";
 import { TOPIC_CONFIG } from "@/lib/topics";
 import TopicIcon from "@/components/TopicIcon";
-import { Home, FileText, GraduationCap, BarChart3, TrendingUp, BookOpen, Info, User, Flame, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { Home, FileText, GraduationCap, BarChart3, TrendingUp, BookOpen, Info, User, Flame, PanelLeftClose, PanelLeftOpen, Layers, Settings } from "lucide-react";
 
 type Lang = "de" | "en";
 
@@ -42,6 +42,7 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0, streak = 
   const mainNavItems = [
     { href: "/", icon: <Home className="w-5 h-5" />, label: t("home", lang), key: "home" },
     { href: userId ? `/quiz?topic=random&userId=${userId}` : "/quiz", icon: <FileText className="w-5 h-5" />, label: t("quiz", lang), key: "quiz" },
+    { href: "/flashcards", icon: <Layers className="w-5 h-5" />, label: t("flashcards", lang), key: "flashcards" },
     { href: "/exam", icon: <GraduationCap className="w-5 h-5" />, label: t("exam", lang), key: "exam", highlight: true },
     { href: userId ? `/stats?userId=${userId}` : "/stats", icon: <BarChart3 className="w-5 h-5" />, label: t("stats", lang), key: "stats" },
     { href: "/progress", icon: <TrendingUp className="w-5 h-5" />, label: t("progress", lang), key: "progress" },
@@ -51,17 +52,20 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0, streak = 
     { href: "/materials", icon: <BookOpen className="w-5 h-5" />, label: t("materials", lang), key: "materials" },
     { href: "/about", icon: <Info className="w-5 h-5" />, label: t("about", lang), key: "about" },
     { href: "/profile", icon: <User className="w-5 h-5" />, label: t("profile", lang), key: "profile" },
+    { href: "/settings", icon: <Settings className="w-5 h-5" />, label: t("settings", lang), key: "settings" },
   ];
 
   const isActive = (key: string) => {
     if (key === "home") return pathname === "/";
     if (key === "quiz") return pathname.startsWith("/quiz");
+    if (key === "flashcards") return pathname.startsWith("/flashcards");
     if (key === "stats") return pathname.startsWith("/stats");
     if (key === "progress") return pathname.startsWith("/progress");
     if (key === "exam") return pathname.startsWith("/exam");
     if (key === "materials") return pathname.startsWith("/materials");
     if (key === "about") return pathname.startsWith("/about");
     if (key === "profile") return pathname.startsWith("/profile");
+    if (key === "settings") return pathname.startsWith("/settings");
     return false;
   };
 

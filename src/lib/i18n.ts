@@ -197,6 +197,39 @@ const translations = {
   'practice_weak': { de: 'Schwächen üben', en: 'Practice Weak Topics' },
   'of_total': { de: 'von gesamt', en: 'of total' },
   'correct_of': { de: 'richtig von', en: 'correct of' },
+
+  // Settings page
+  'settings': { de: 'Einstellungen', en: 'Settings' },
+  'appearance': { de: 'Darstellung', en: 'Appearance' },
+  'dark_mode': { de: 'Dunkelmodus', en: 'Dark Mode' },
+  'language': { de: 'Sprache', en: 'Language' },
+  'study_preferences': { de: 'Lerneinstellungen', en: 'Study Preferences' },
+  'daily_goal_setting': { de: 'Tagesziel (Fragen)', en: 'Daily Goal (Questions)' },
+  'exam_target_date': { de: 'Prüfungstermin', en: 'Exam Target Date' },
+  'exam_source_label': { de: 'Prüfungsquelle', en: 'Exam Source' },
+  'notifications': { de: 'Benachrichtigungen', en: 'Notifications' },
+  'coming_soon_label': { de: 'Bald verfügbar', en: 'Coming Soon' },
+  'daily_reminder': { de: 'Tägliche Erinnerung', en: 'Daily Reminder' },
+  'streak_warning': { de: 'Serie-Warnung', en: 'Streak Warning' },
+  'weekly_progress_notif': { de: 'Wöchentlicher Fortschritt', en: 'Weekly Progress' },
+  'data_privacy': { de: 'Daten & Datenschutz', en: 'Data & Privacy' },
+  'clear_data': { de: 'Lerndaten löschen', en: 'Clear Study Data' },
+  'clear_data_confirm': { de: 'Alle lokalen Lerndaten wirklich löschen? Dies kann nicht rückgängig gemacht werden.', en: 'Really clear all local study data? This cannot be undone.' },
+  'data_cleared': { de: 'Daten gelöscht', en: 'Data Cleared' },
+  'export_progress': { de: 'Fortschritt exportieren', en: 'Export Progress' },
+  'logout': { de: 'Abmelden', en: 'Sign Out' },
+  'app_version': { de: 'App-Version', en: 'App Version' },
+
+  // Flashcards page
+  'flashcards': { de: 'Karteikarten', en: 'Flashcards' },
+  'flip_card': { de: 'Karte umdrehen', en: 'Flip Card' },
+  'tap_to_flip': { de: 'Tippe zum Umdrehen', en: 'Tap to flip' },
+  'again': { de: 'Nochmal', en: 'Again' },
+  'hard': { de: 'Schwer', en: 'Hard' },
+  'good': { de: 'Gut', en: 'Good' },
+  'easy': { de: 'Einfach', en: 'Easy' },
+  'flashcard_hint': { de: 'Wie gut konntest du die Antwort?', en: 'How well did you know the answer?' },
+  'cards_today': { de: 'Karten heute', en: 'Cards today' },
 } as const
 
 export type TranslationKey = keyof typeof translations

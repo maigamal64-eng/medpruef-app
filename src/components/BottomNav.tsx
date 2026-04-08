@@ -27,11 +27,11 @@ export default function BottomNav({ lang, userId }: BottomNavProps) {
 
   const isActive = (key: string) => {
     if (key === "home") return pathname === "/";
-    if (key === "quiz") return pathname.startsWith("/quiz");
+    if (key === "quiz") return pathname.startsWith("/quiz") || pathname.startsWith("/flashcards");
     if (key === "stats") return pathname.startsWith("/stats");
     if (key === "exam") return pathname.startsWith("/exam");
     if (key === "progress") return pathname.startsWith("/progress");
-    if (key === "profile") return pathname.startsWith("/profile");
+    if (key === "profile") return pathname.startsWith("/profile") || pathname.startsWith("/settings");
     return false;
   };
 

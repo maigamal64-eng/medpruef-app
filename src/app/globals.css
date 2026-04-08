@@ -428,3 +428,21 @@ textarea:focus {
 
 .calendar-cell { width: 12px; height: 12px; border-radius: 2px; }
 @media (min-width: 768px) { .calendar-cell { width: 14px; height: 14px; border-radius: 2px; } }
+
+/* ═══ FLASHCARD FLIP ═══ */
+.flip-card { perspective: 1200px; }
+.flip-card-inner {
+  transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform-style: preserve-3d;
+  position: relative;
+}
+.flip-card-inner.flipped { transform: rotateY(180deg); }
+.flip-card-front, .flip-card-back {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.flip-card-back {
+  transform: rotateY(180deg);
+  position: absolute;
+  inset: 0;
+}
