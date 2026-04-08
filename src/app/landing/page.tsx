@@ -833,6 +833,7 @@ function PricingSection({ lang }: { lang: Lang }) {
         lang === "de" ? "Curriculum-Übersicht" : "Curriculum overview",
       ],
       cta: lang === "de" ? "Kostenlos starten" : "Start Free",
+      comingSoon: false,
       popular: false,
       color: "#A0AEC0",
       bgClass: "bg-white",
@@ -961,7 +962,7 @@ function PricingSection({ lang }: { lang: Lang }) {
                 ))}
               </ul>
 
-              {(tier as any).comingSoon && tier.name !== (lang === "de" ? "Kostenlos" : "Free") ? (
+              {tier.comingSoon ? (
                 <div className={`text-center py-3.5 rounded-xl font-semibold text-sm ${
                   tier.popular
                     ? "bg-[#007B5F]/20 text-[#007B5F] border border-[#007B5F]/30"
