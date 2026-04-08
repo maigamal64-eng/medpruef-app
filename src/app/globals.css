@@ -88,48 +88,89 @@
 }
 
 [data-theme="dark"] body {
-  background: var(--dm-bg);
-  color: var(--dm-text);
+  background: var(--dm-bg) !important;
+  color: var(--dm-text) !important;
+}
+
+/* Dark mode: main content area */
+[data-theme="dark"] .main-content {
+  background-color: var(--dm-bg) !important;
 }
 
 [data-theme="dark"] .card,
 [data-theme="dark"] .card-interactive {
-  background: var(--dm-surface);
-  border-color: var(--dm-border-subtle);
+  background: var(--dm-surface) !important;
+  border-color: var(--dm-border-subtle) !important;
   box-shadow: var(--dm-shadow-card);
 }
 
 [data-theme="dark"] .card-interactive:hover {
   box-shadow: var(--dm-shadow-card);
-  border-color: var(--dm-border);
+  border-color: var(--dm-border) !important;
 }
 
 [data-theme="dark"] .btn-secondary {
-  background: var(--dm-surface);
-  color: var(--dm-text);
-  border-color: var(--dm-border);
+  background: var(--dm-surface) !important;
+  color: var(--dm-text) !important;
+  border-color: var(--dm-border) !important;
 }
 
 [data-theme="dark"] .btn-secondary:hover {
-  background: var(--dm-surface-raised);
+  background: var(--dm-surface-raised) !important;
+}
+
+[data-theme="dark"] .btn-primary {
+  box-shadow: 0 1px 3px rgba(0,0,0,0.4);
 }
 
 [data-theme="dark"] .glass {
-  background: rgba(15, 23, 42, 0.85);
-  border-color: rgba(51, 65, 85, 0.3);
+  background: rgba(15, 23, 42, 0.9) !important;
+  border-color: rgba(51, 65, 85, 0.4) !important;
 }
 
-/* Dark mode overrides for common Tailwind color classes */
-[data-theme="dark"] .bg-\[\#F7F9FC\] { background-color: var(--dm-bg) !important; }
-[data-theme="dark"] .bg-\[\#FFFFFF\] { background-color: var(--dm-surface) !important; }
+/* Dark mode: broad overrides for all common bg/text/border patterns */
+[data-theme="dark"] .bg-\[\#F7F9FC\],
+[data-theme="dark"] .bg-\[\#F7F9FC\]\/50 { background-color: var(--dm-bg) !important; }
+
+[data-theme="dark"] .bg-\[\#FFFFFF\],
 [data-theme="dark"] .bg-white { background-color: var(--dm-surface) !important; }
-[data-theme="dark"] .text-\[\#1A2B3C\] { color: var(--dm-text) !important; }
+[data-theme="dark"] .bg-white { background-color: var(--dm-surface) !important; }
+
+/* Text colors */
+[data-theme="dark"] .text-\[\#1A2B3C\],
 [data-theme="dark"] .text-\[\#001B3D\] { color: var(--dm-text) !important; }
 [data-theme="dark"] .text-\[\#4A5568\] { color: var(--dm-text-secondary) !important; }
 [data-theme="dark"] .text-\[\#A0AEC0\] { color: var(--dm-text-muted) !important; }
-[data-theme="dark"] .border-\[\#E4E9F0\] { border-color: var(--dm-border) !important; }
-[data-theme="dark"] .border-\[\#E4E9F0\]\/60 { border-color: var(--dm-border-subtle) !important; }
+
+/* Borders */
+[data-theme="dark"] .border-\[\#E4E9F0\],
+[data-theme="dark"] .border-\[\#E4E9F0\]\/60 { border-color: var(--dm-border) !important; }
+[data-theme="dark"] .border-b { border-color: var(--dm-border) !important; }
+[data-theme="dark"] .border-t { border-color: var(--dm-border) !important; }
+
+/* Inputs and form elements */
+[data-theme="dark"] input,
+[data-theme="dark"] textarea,
+[data-theme="dark"] select {
+  background-color: var(--dm-surface-raised) !important;
+  color: var(--dm-text) !important;
+  border-color: var(--dm-border) !important;
+}
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] textarea::placeholder {
+  color: var(--dm-text-muted) !important;
+}
+
+/* Specific component overrides */
 [data-theme="dark"] .bg-\[\#F7F9FC\]\/50 { background-color: rgba(30, 41, 59, 0.5) !important; }
+[data-theme="dark"] .bg-\[\#EAF3F9\] { background-color: rgba(30, 58, 82, 0.3) !important; }
+[data-theme="dark"] .bg-\[\#FFF4E6\] { background-color: rgba(100, 60, 20, 0.3) !important; }
+[data-theme="dark"] .bg-\[\#E6F4F1\] { background-color: rgba(0, 80, 60, 0.2) !important; }
+[data-theme="dark"] .bg-\[\#FDECEC\] { background-color: rgba(100, 30, 30, 0.2) !important; }
+
+/* Scrollbar in dark mode */
+[data-theme="dark"] ::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.3) !important; }
+[data-theme="dark"] ::-webkit-scrollbar-track { background: transparent !important; }
 
 * { box-sizing: border-box; }
 
