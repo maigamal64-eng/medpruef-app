@@ -55,20 +55,22 @@ function SpecialtyCard({
 
   return (
     <div
-      className="card-interactive rounded-2xl p-6 min-h-[180px] flex flex-col"
-      style={{ borderLeft: `3px solid ${config.color}` }}
+      className="card-interactive rounded-2xl p-6 min-h-[200px] flex flex-col relative overflow-hidden group"
     >
+      {/* Colored top accent bar */}
+      <div className="absolute top-0 left-0 right-0 h-1.5 rounded-t-2xl" style={{ backgroundColor: config.color }} />
+
       {/* Icon + Name */}
-      <div className="flex items-start gap-3 mb-3">
+      <div className="flex items-start gap-3 mb-4">
         <div
-          className="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0"
-          style={{ backgroundColor: `${config.color}15` }}
+          className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform duration-200 group-hover:scale-110"
+          style={{ backgroundColor: `${config.color}18` }}
         >
-          <TopicIcon name={config.icon} className="w-5 h-5" style={{ color: config.color }} />
+          <TopicIcon name={config.icon} className="w-6 h-6" style={{ color: config.color }} />
         </div>
         <div className="min-w-0 flex-1">
-          <h3 className="text-lg font-bold text-[#1A2B3C] leading-tight">{data.topic}</h3>
-          <p className="text-sm text-[#A0AEC0] font-mono mt-0.5">
+          <h3 className="text-base font-bold text-[#1A2B3C] leading-snug line-clamp-2" title={data.topic}>{data.topic}</h3>
+          <p className="text-xs text-[#A0AEC0] font-mono mt-1">
             {data.total.toLocaleString("de-DE")} {t("questions", lang)}
           </p>
         </div>
@@ -122,10 +124,11 @@ function SpecialtyCard({
             ? `/quiz?topic=${encodeURIComponent(data.topic)}&userId=${userId}&examSource=${examSource}`
             : `/quiz?topic=${encodeURIComponent(data.topic)}&examSource=${examSource}`
         }
-        className="flex items-center justify-center gap-2 mt-2 py-2.5 rounded-xl text-sm font-semibold transition-colors"
+        className="flex items-center justify-center gap-2 mt-2 py-3 rounded-xl text-sm font-semibold transition-all duration-200 border shadow-sm hover:shadow-md active:scale-[0.98]"
         style={{
-          backgroundColor: `${config.color}10`,
+          backgroundColor: `${config.color}12`,
           color: config.color,
+          borderColor: `${config.color}25`,
         }}
       >
         {t("start_practice_topic", lang)} <ArrowRight className="w-4 h-4" />

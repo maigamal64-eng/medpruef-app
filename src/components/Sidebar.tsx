@@ -130,9 +130,10 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0, streak = 
         </div>
       )}
       {userName && collapsed && (
-        <div className="flex justify-center my-3">
-          <div className="w-10 h-10 rounded-full bg-[#007B5F] flex items-center justify-center text-sm font-bold text-white ring-2 ring-[#00A896]/30">
+        <div className="flex justify-center my-3" title={`${userName} · ${xpInfo.rank} · Lv.${xpInfo.level}`}>
+          <div className="w-10 h-10 rounded-full bg-[#007B5F] flex items-center justify-center text-sm font-bold text-white ring-2 ring-[#00A896]/30 relative">
             {userName.charAt(0).toUpperCase()}
+            <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-[#00A896] rounded-full border-2 border-[#001B3D]" />
           </div>
         </div>
       )}
