@@ -705,6 +705,13 @@ function ExamContent() {
                 </span>
               </div>
 
+              {/* Question image */}
+              {rq.image_url && (
+                <div className="mb-4 rounded-xl overflow-hidden border border-[#E4E9F0]">
+                  <img src={rq.image_url} alt="Medizinische Abbildung" className="w-full max-h-64 object-contain bg-white" />
+                </div>
+              )}
+
               <p className="text-base font-medium text-[#1A2B3C] mb-4">{rq.question}</p>
 
               <div className="space-y-2">
@@ -965,6 +972,13 @@ function ExamContent() {
                 <TopicIcon name={qCfg.icon} className="w-4 h-4 inline" /> <span className="max-w-[140px] truncate">{q.topic}</span>
               </span>
             </div>
+
+            {/* Question image */}
+            {q.image_url && (
+              <div className="mb-4 rounded-xl overflow-hidden border border-[#E4E9F0]">
+                <img src={q.image_url} alt="Medizinische Abbildung" className="w-full max-h-64 object-contain bg-white" />
+              </div>
+            )}
 
             <p className="text-base md:text-lg font-medium text-[#1A2B3C] mb-5 leading-relaxed">
               {q.question}
