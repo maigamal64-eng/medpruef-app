@@ -11,6 +11,7 @@ interface SearchQuestion {
   topic: string;
   question: string;
   source_file?: string;
+  image_url?: string;
 }
 
 interface SearchResultsProps {
@@ -87,7 +88,7 @@ export default function SearchResults({
                 </span>
 
                 {/* Image thumbnail if available */}
-                {typeof q.image_url === "string" && q.image_url && (
+                {q.image_url && (
                   <img src={q.image_url} alt="" className="w-10 h-10 rounded object-cover flex-shrink-0 border border-[#E4E9F0]" />
                 )}
 
