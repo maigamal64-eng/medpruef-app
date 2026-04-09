@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Allow: /landing
+Allow: /about
+
+Disallow: /api/
+Disallow: /admin/
+
+Sitemap: https://medpruf.com/sitemap.xml

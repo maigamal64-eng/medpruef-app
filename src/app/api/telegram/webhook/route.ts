@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic'
  *
  * Registered via:
  *   curl "https://api.telegram.org/bot<TOKEN>/setWebhook" \
- *     -d '{"url":"https://medpruef.app/api/telegram/webhook","secret_token":"<SECRET>","allowed_updates":["message"]}'
+ *     -d '{"url":"https://medpruf.com/api/telegram/webhook","secret_token":"<SECRET>","allowed_updates":["message"]}'
  *
  * Required env vars:
  *   - TELEGRAM_BOT_TOKEN
@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true })
   }
 
-  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://medpruef.app').replace(/\/$/, '')
+  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://medpruf.com').replace(/\/$/, '')
   const loginUrl = `${siteUrl}/?tg_token=${encodeURIComponent(token)}`
   const text =
     from.language_code?.startsWith('de')
