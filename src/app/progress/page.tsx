@@ -352,6 +352,7 @@ export default function ProgressPage() {
               id: q.id as number,
               topic: q.topic as string,
               question: q.question as string,
+              image_url: typeof q.image_url === "string" ? q.image_url : undefined,
             }))
           );
         }
@@ -375,6 +376,7 @@ export default function ProgressPage() {
               id: q.id as number,
               topic: q.topic as string,
               question: q.question as string,
+              image_url: typeof q.image_url === "string" ? q.image_url : undefined,
             }))
           );
         }
