@@ -28,6 +28,7 @@ import Onboarding from "@/components/Onboarding";
 import SearchBar from "@/components/SearchBar";
 import TelegramLoginWidget, { type TelegramWidgetUser } from "@/components/TelegramLoginWidget";
 import SearchResults from "@/components/SearchResults";
+import SearchModal from "@/components/SearchModal";
 import ThemeToggle from "@/components/ThemeToggle";
 import { getWeakTopics, type TopicStats } from "@/lib/weakness";
 import Link from "next/link";
@@ -600,24 +601,29 @@ export default function Home() {
             </Link>
           </div>
 
-          {/* Search — icon-triggered on desktop, always visible on mobile */}
-          <div className={`mb-10 ${searchOpen ? '' : 'lg:hidden'}`}>
-            <div className="card rounded-2xl p-1">
-              <SearchBar lang={lang} onSearch={handleSearch} />
-            </div>
-            {searchQuery && (
-              <SearchResults
-                results={searchResults as unknown as Parameters<typeof SearchResults>[0]["results"]}
-                query={searchQuery}
-                loading={searchLoading}
-                lang={lang}
-                examSource={examSource}
-              />
-            )}
+          {/* Search — mobile inline bar opens modal, desktop uses icon */}
+          <div className="mb-10 lg:hidden">
+            <button
+              onClick={() => setSearchOpen(true)}
+              className="w-full card rounded-2xl p-3.5 flex items-center gap-3 text-[#A0AEC0] hover:border-[#007B5F]/30 transition-colors"
+            >
+              <Search className="w-5 h-5" />
+              <span className="text-sm">{lang === "de" ? "Frage suchen..." : "Search questions..."}</span>
+              <kbd className="ml-auto text-[10px] bg-[#F7F9FC] border border-[#E4E9F0] rounded px-1.5 py-0.5 font-mono">⌘K</kbd>
+            </button>
           </div>
 
-          {/* Topics Grid — hidden while searching */}
-          {!searchQuery && (
+          {/* Search Modal */}
+          <SearchModal
+            open={searchOpen}
+            onClose={() => setSearchOpen(false)}
+            lang={lang}
+            examSource={examSource}
+            userId={user.id}
+          />
+
+          {/* Topics Grid */}
+          {(
             <div className="mb-10">
               <h2 className="text-lg font-bold mb-4 text-[#1A2B3C] border-l-[3px] border-l-[#007B5F] pl-3">
                 {t("specialties", lang)} <span className="text-sm font-normal text-[#A0AEC0] ml-1">({topics.length})</span>

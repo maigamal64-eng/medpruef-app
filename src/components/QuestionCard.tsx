@@ -7,7 +7,8 @@ import type { MCQOption } from "@/lib/mcq";
 import ImageLightbox from "@/components/ImageLightbox";
 import { trackEvent } from "@/lib/tracker";
 import TopicIcon from "@/components/TopicIcon";
-import { Lightbulb, FileText, Highlighter } from "lucide-react";
+import { Lightbulb, FileText, Highlighter, Bot } from "lucide-react";
+import AIChatAssistant from "@/components/AIChatAssistant";
 
 type Lang = "de" | "en";
 
@@ -105,6 +106,7 @@ export default function QuestionCard({
   const [isFav, setIsFav] = useState(false);
 
   const [showAnswer, setShowAnswer] = useState(false);
+  const [showAIChat, setShowAIChat] = useState(false);
   const [highlights, setHighlights] = useState<string[]>([]);
   const [showHighlightBtn, setShowHighlightBtn] = useState(false);
   const [highlightPos, setHighlightPos] = useState({ x: 0, y: 0 });
@@ -121,6 +123,7 @@ export default function QuestionCard({
     setSelectedIdxs(new Set());
     setSubmitted(false);
     setShowAnswer(false);
+    setShowAIChat(false);
     setShowNoteInput(false);
     setNoteSaved(false);
     setShowHighlightBtn(false);
@@ -498,9 +501,19 @@ export default function QuestionCard({
           </div>
         )}
 
-        {/* Notes section — visible after answering */}
+        {/* Action buttons — visible after answering */}
         {answered && (
-          <div className="mt-3 animate-fade-in">
+          <div className="mt-3 animate-fade-in flex items-center gap-3">
+            {/* AI Explain button */}
+            <button
+              onClick={() => setShowAIChat(true)}
+              className="flex items-center gap-1.5 text-xs text-[#003A8C] bg-[#003A8C]/8 hover:bg-[#003A8C]/15 px-3 py-1.5 rounded-lg transition-colors font-medium"
+            >
+              <Bot className="w-4 h-4" />
+              <span>{lang === "de" ? "KI-Erklärung" : "AI Explain"}</span>
+            </button>
+
+            {/* Add Note button */}
             {!showNoteInput ? (
               <button
                 onClick={() => setShowNoteInput(true)}
@@ -542,6 +555,18 @@ export default function QuestionCard({
           </div>
         )}
       </div>
+
+      {/* AI Chat Assistant */}
+      <AIChatAssistant
+        open={showAIChat}
+        onClose={() => setShowAIChat(false)}
+        lang={lang}
+        questionText={question.question}
+        answerText={question.answer}
+        explanation={question.explanation}
+        topic={question.topic}
+        options={options.map(o => ({ text: o.text, correct: o.correct }))}
+      />
 
       {/* Lightbox */}
       {lightboxOpen && effectiveImageUrl && (
