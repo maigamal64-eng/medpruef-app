@@ -87,8 +87,8 @@ export default function SearchResults({
                 </span>
 
                 {/* Image thumbnail if available */}
-                {q.image_url && (
-                  <img src={q.image_url as string} alt="" className="w-10 h-10 rounded object-cover flex-shrink-0 border border-[#E4E9F0]" />
+                {typeof q.image_url === "string" && q.image_url && (
+                  <img src={q.image_url} alt="" className="w-10 h-10 rounded object-cover flex-shrink-0 border border-[#E4E9F0]" />
                 )}
 
                 {/* Question text */}
