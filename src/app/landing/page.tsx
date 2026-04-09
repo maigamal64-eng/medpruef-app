@@ -150,7 +150,7 @@ function FloatingNav({
               </button>
             </div>
             <Link
-              href="/?start=1"
+              href="/login"
               className="hidden sm:inline-flex items-center gap-1.5 bg-[#007B5F] hover:bg-[#00A896] text-white text-sm font-semibold px-4 py-2 rounded-lg transition-all"
             >
               {lang === "de" ? "Starten" : "Get Started"}
@@ -274,7 +274,7 @@ function HeroSection({
             {/* CTAs */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
               <Link
-                href="/?start=1"
+                href="/login"
                 className="inline-flex items-center gap-2.5 bg-[#007B5F] hover:bg-[#00A896] text-white font-bold text-lg px-8 py-4 rounded-xl transition-all shadow-lg shadow-[#007B5F]/25 hover:shadow-xl hover:shadow-[#00A896]/25 hover:scale-[1.02] pulse-glow"
               >
                 {lang === "de"
@@ -972,7 +972,7 @@ function PricingSection({ lang }: { lang: Lang }) {
                 </div>
               ) : (
                 <Link
-                  href="/?start=1"
+                  href="/login"
                   className={`text-center py-3.5 rounded-xl font-semibold text-sm transition-all block ${
                     tier.popular
                       ? "bg-[#007B5F] text-white hover:bg-[#005A45] shadow-md"
@@ -1030,7 +1030,7 @@ function FinalCTASection({ lang }: { lang: Lang }) {
         </p>
 
         <Link
-          href="/?start=1"
+          href="/login"
           className="inline-flex items-center gap-3 bg-white text-[#007B5F] font-bold text-lg px-10 py-4 rounded-xl hover:bg-white/90 transition-all shadow-lg shadow-black/10 hover:shadow-xl hover:scale-[1.02]"
         >
           {lang === "de" ? "Kostenlos starten" : "Start Free"}
@@ -1094,7 +1094,7 @@ function Footer({ lang }: { lang: Lang }) {
             </h4>
             <ul className="space-y-2.5 text-sm">
               <li>
-                <Link href="/?start=1" className="hover:text-white transition-colors">
+                <Link href="/login" className="hover:text-white transition-colors">
                   {lang === "de" ? "Fragen-Bank" : "Question Bank"}
                 </Link>
               </li>
