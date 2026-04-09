@@ -73,6 +73,46 @@ declare global {
   }
 }
 
+/** Floating weakness toast — appears top-right, auto-dismisses after 8s */
+function WeaknessToast({ weakTopics, lang, examSource }: { weakTopics: TopicStats[]; lang: string; examSource: string }) {
+  const [visible, setVisible] = useState(true);
+  const [dismissed, setDismissed] = useState(false);
+
+  useEffect(() => {
+    if (weakTopics.length === 0) return;
+    const timer = setTimeout(() => setVisible(false), 8000);
+    return () => clearTimeout(timer);
+  }, [weakTopics.length]);
+
+  if (!visible || dismissed || weakTopics.length === 0) return null;
+  const wt = weakTopics[0];
+  const acc = Math.min(Math.round(wt.accuracy), 100);
+
+  return (
+    <div className="fixed top-4 right-4 z-50 max-w-sm animate-slide-up">
+      <div className="card rounded-xl p-4 shadow-[var(--shadow-elevated)] border-l-4 border-l-[#F4A261] bg-white">
+        <div className="flex items-start gap-3">
+          <Lightbulb className="w-5 h-5 text-[#F4A261] flex-shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-[#1A2B3C] mb-0.5">
+              {lang === "de" ? `${wt.topic} verbessern` : `Improve ${wt.topic}`}
+            </p>
+            <p className="text-xs text-[#A0AEC0]">
+              {lang === "de" ? `${acc}% Genauigkeit — jetzt üben?` : `${acc}% accuracy — practice now?`}
+            </p>
+          </div>
+          <button
+            onClick={() => setDismissed(true)}
+            className="text-[#A0AEC0] hover:text-[#4A5568] transition-colors flex-shrink-0"
+          >
+            <span className="text-lg leading-none">&times;</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Home() {
   const [user, setUser] = useState<User | null>(null);
   const [gam, setGam] = useState<Gamification | null>(null);
@@ -690,21 +730,8 @@ export default function Home() {
       </main>
 
 
-      {/* Weakness prompts */}
-      {weakTopics.length > 0 && (
-        <div className="px-4 mb-6 max-w-full overflow-hidden">
-          <div className="space-y-2">
-            {weakTopics.slice(0, 2).map(wt => (
-              <Link key={wt.topic} href={`/quiz?topic=${encodeURIComponent(wt.topic)}&examSource=${examSource}`}
-                className="block p-4 bg-[#FFF4E6] border-l-4 border-[#F4A261] rounded-r max-w-full overflow-hidden">
-                <p className="text-sm font-semibold text-[#1A2B3C] flex items-center gap-1.5">
-                  <Lightbulb className="w-4 h-4 flex-shrink-0" /> <span className="truncate">Du bist schwach in {wt.topic} ({Math.min(Math.round(wt.accuracy * 100), 100)}%)</span> <span className="flex-shrink-0">— jetzt üben?</span>
-                </p>
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Weakness toast — floating top-right, auto-dismiss */}
+      <WeaknessToast weakTopics={weakTopics} lang={lang} examSource={examSource} />
 
       <BottomNav lang={lang} userId={user.id} />
     </div>
