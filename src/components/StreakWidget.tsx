@@ -5,7 +5,7 @@ import { t } from "@/lib/i18n";
 
 type Lang = "de" | "en";
 
-function StreakCountdown() {
+function StreakCountdown({ lang }: { lang: Lang }) {
   const [timeLeft, setTimeLeft] = useState("");
 
   useEffect(() => {
@@ -28,7 +28,7 @@ function StreakCountdown() {
 
   return (
     <p className="text-xs text-[#F4A261] font-mono mt-0.5">
-      ⚠ Resets in {timeLeft}
+      ⚠ {lang === "de" ? "Setzt zurück in" : "Resets in"} {timeLeft}
     </p>
   );
 }
@@ -78,7 +78,7 @@ export default function StreakWidget({ streak, lang }: StreakWidgetProps) {
             <p className="text-xs text-[#4A5568]">
               {t("streak", lang)} · {t("days", lang)}
             </p>
-            {streak > 0 && <StreakCountdown />}
+            {streak > 0 && <StreakCountdown lang={lang} />}
           </div>
         </div>
       </div>

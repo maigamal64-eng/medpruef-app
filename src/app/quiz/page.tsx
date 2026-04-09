@@ -274,8 +274,8 @@ function QuizContent() {
           </div>
         )}
 
-        {/* Main Quiz Content — split view on desktop after answering (UWorld-style) */}
-        <div className={`flex-1 px-4 lg:px-8 py-4 w-full relative ${answered ? 'max-w-6xl' : 'max-w-3xl'} mx-auto transition-all duration-300`}>
+        {/* Main Quiz Content — fixed width container, no jump on answer */}
+        <div className="flex-1 px-4 lg:px-8 py-4 w-full relative max-w-5xl mx-auto">
           {/* Floating XP animation */}
           {showXpFloat && xpEarned !== null && (
             <div className="absolute top-4 right-8 z-10">
@@ -285,7 +285,7 @@ function QuizContent() {
             </div>
           )}
 
-          <div className={`${answered ? 'lg:grid lg:grid-cols-[1fr,400px] lg:gap-6' : ''}`}>
+          <div className={`${answered ? 'lg:grid lg:grid-cols-[1fr,380px] lg:gap-6' : 'max-w-3xl mx-auto'}`}>
             {/* LEFT: Question Card with MCQ */}
             <div>
               <QuestionCard
@@ -295,6 +295,7 @@ function QuizContent() {
                 lang={lang}
                 onAnswer={handleAnswer}
                 imageUrl={question.image_url}
+                hideExplanation={answered}
               />
             </div>
 

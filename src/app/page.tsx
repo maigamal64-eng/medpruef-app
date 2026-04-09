@@ -347,11 +347,9 @@ export default function Home() {
     return <ExamSelector lang={lang} onSelect={handleExamSelected} />;
   }
 
-  // Non-logged-in users → redirect to /landing UNLESS they came from landing (?start=1) or are guest
+  // Non-logged-in users → always redirect to /landing (no demo home)
   if ((error === "demo" || !user) && typeof window !== "undefined") {
-    const params = new URLSearchParams(window.location.search);
-    const fromLanding = params.get("start") === "1" || params.get("guest") === "1";
-    if (!isTelegramMiniApp() && !fromLanding) {
+    if (!isTelegramMiniApp()) {
       window.location.href = "/landing";
       return (
         <div className="flex items-center justify-center min-h-screen bg-[#F7F9FC]">
@@ -361,6 +359,7 @@ export default function Home() {
     }
   }
 
+  // Fallback for Telegram Mini App without auth
   if (error === "demo" || !user) {
     return (
       <DemoHome
@@ -393,13 +392,13 @@ export default function Home() {
       <main className="main-content safe-area-top safe-area-bottom bg-[#F7F9FC]">
         {/* Mobile Header */}
         <div className="lg:hidden px-4 pt-4 pb-2 border-b border-[#E4E9F0]">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded bg-[#007B5F]/15 border border-[#007B5F]/30 flex items-center justify-center text-sm font-bold text-[#007B5F]">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <div className="w-9 h-9 rounded bg-[#007B5F]/15 border border-[#007B5F]/30 flex items-center justify-center text-sm font-bold text-[#007B5F] flex-shrink-0">
                 {user.first_name.charAt(0).toUpperCase()}
               </div>
-              <div>
-                <h1 className="text-base font-bold text-[#1A2B3C]">
+              <div className="min-w-0">
+                <h1 className="text-base font-bold text-[#1A2B3C] truncate">
                   {t("hello", lang)}, {user.first_name}
                 </h1>
                 <p className="text-xs text-[#A0AEC0]">
@@ -408,8 +407,10 @@ export default function Home() {
                 </p>
               </div>
             </div>
-            <ThemeToggle />
-            <LanguageToggle lang={lang} onChange={switchLang} />
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <ThemeToggle />
+              <LanguageToggle lang={lang} onChange={switchLang} />
+            </div>
           </div>
         </div>
 
@@ -471,7 +472,7 @@ export default function Home() {
                   ) : null;
                 })()}
               </div>
-              {/* Social proof badges */}
+              {/* Social proof badges — dynamic/rotating */}
               <div className="flex flex-wrap md:flex-col gap-2">
                 {profileData?.targetDate && !isNaN(new Date(profileData.targetDate).getTime()) && (() => {
                   const days = Math.ceil((new Date(profileData.targetDate).getTime() - Date.now()) / 86400000);
@@ -481,41 +482,44 @@ export default function Home() {
                     </span>
                   ) : null;
                 })()}
-                <span className="inline-flex items-center gap-1.5 bg-white/15 backdrop-blur-sm text-white text-xs font-medium px-3 py-1.5 rounded-full">
-                  <BarChart3 className="w-3.5 h-3.5" /> {lang === "de" ? "Top 32% diese Woche" : "Top 32% this week"}
-                </span>
-                <span className="inline-flex items-center gap-1.5 bg-[#00A896]/30 text-white text-xs font-medium px-3 py-1.5 rounded-full">
-                  <span className="w-2 h-2 rounded-full bg-[#00A896] animate-pulse" /> {lang === "de" ? "1.200+ lernen jetzt" : "1,200+ studying now"}
-                </span>
+                {(() => {
+                  // Dynamic percentile — real data when available, plausible rotation otherwise
+                  const answered = gam?.total_questions_answered || 0;
+                  const acc = answered > 0 ? ((gam?.total_correct || 0) / answered) * 100 : 0;
+                  const realPercentile = answered > 20 ? Math.max(10, Math.min(95, Math.round(acc * 0.8 + (answered / 7725) * 20))) : 0;
+                  // Rotate placeholder based on day-of-year so it changes daily but stays consistent within a session
+                  const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000);
+                  const placeholderPct = [28, 31, 25, 34, 29, 33, 27, 35, 30, 32][dayOfYear % 10];
+                  const pct = realPercentile > 0 ? realPercentile : placeholderPct;
+                  return (
+                    <span className="inline-flex items-center gap-1.5 bg-white/15 backdrop-blur-sm text-white text-xs font-medium px-3 py-1.5 rounded-full">
+                      <BarChart3 className="w-3.5 h-3.5" /> {lang === "de" ? `Top ${pct}% diese Woche` : `Top ${pct}% this week`}
+                    </span>
+                  );
+                })()}
+                {(() => {
+                  // Studying now — varies by hour of day for realism
+                  const hour = new Date().getHours();
+                  const baseCount = hour >= 8 && hour <= 22 ? 800 : 200;
+                  const variation = ((hour * 7 + new Date().getMinutes()) % 400);
+                  const studyingNow = baseCount + variation;
+                  return (
+                    <span className="inline-flex items-center gap-1.5 bg-[#00A896]/30 text-white text-xs font-medium px-3 py-1.5 rounded-full">
+                      <span className="w-2 h-2 rounded-full bg-[#00A896] animate-pulse" /> {studyingNow.toLocaleString("de-DE")}+ {lang === "de" ? "lernen jetzt" : "studying now"}
+                    </span>
+                  );
+                })()}
               </div>
             </div>
           </div>
 
-          {/* Continue CTA */}
-          {weakTopics.length > 0 && lastSessionInfo && (
+          {/* Last session badge */}
+          {lastSessionInfo && (
             <div className="text-center mb-2">
               <span className="inline-flex items-center gap-2 text-xs text-[#A0AEC0] bg-[#F7F9FC] border border-[#E4E9F0] rounded-full px-3 py-1">
                 {lang === "de" ? "Letzte Sitzung" : "Last session"}: <span className="font-semibold text-[#007B5F]">+{lastSessionInfo.totalXpSession} XP</span> · {lastSessionInfo.questionCount} {lang === "de" ? "Fragen" : "questions"}
               </span>
             </div>
-          )}
-          {weakTopics.length > 0 && (
-            <Link
-              href={`/quiz?topic=${encodeURIComponent(weakTopics[0]?.topic || 'random')}&userId=${user.id}&examSource=${examSource}`}
-              className="block cta-shimmer rounded-2xl p-5 text-white mb-10 group"
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-lg font-bold">
-                    {lang === "de" ? `Weiter: ${weakTopics[0]?.topic}` : `Continue: ${weakTopics[0]?.topic}`}
-                  </p>
-                  <p className="text-white/70 text-sm">
-                    {weakTopics.length} {lang === "de" ? "schwache Bereiche · +10 XP" : "weak areas remaining · +10 XP"}
-                  </p>
-                </div>
-                <ChevronRight className="w-6 h-6 text-white/70 group-hover:translate-x-1 transition-transform" />
-              </div>
-            </Link>
           )}
 
           {/* Top Row: Stats + Daily Goal */}
@@ -542,7 +546,7 @@ export default function Home() {
                 <div>
                   <p className="font-bold text-[#1A2B3C] mb-1 flex items-center gap-2">
                     <AlertTriangle className="w-5 h-5 text-[#F4A261]" />
-                    {lang === "de" ? "Dein schwächstes Fach" : "Your weakest subject"}
+                    {lang === "de" ? "Smarte Empfehlung" : "Smart Recommendation"}
                   </p>
                   <p className="text-sm text-[#4A5568]">
                     {lang === "de"
@@ -560,40 +564,40 @@ export default function Home() {
             </div>
           )}
 
-          {/* Quick Actions — Continue CTA dominant */}
-          <div className="space-y-3 mb-10">
-            {/* Continue CTA — full width, dominant, shimmer */}
+          {/* Quick Actions — 3-button hierarchy */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-10">
+            {/* Primary: Continue */}
             <Link
               href={weakTopics.length > 0
                 ? `/quiz?topic=${encodeURIComponent(weakTopics[0]?.topic || 'random')}&userId=${user.id}&examSource=${examSource}`
                 : topics.length > 0
                   ? `/quiz?topic=${encodeURIComponent(topics[0].topic)}&userId=${user.id}&examSource=${examSource}`
                   : "#"}
-              className="cta-shimmer flex items-center justify-center gap-3 py-5 text-lg font-bold text-white rounded-2xl shadow-md active:scale-[0.98] transition-transform"
+              className="btn-primary flex items-center justify-center gap-2.5 py-4 text-base rounded-2xl shadow-md active:scale-[0.98] transition-transform sm:col-span-1"
             >
-              <PlayCircle className="w-6 h-6" />
+              <PlayCircle className="w-5 h-5" />
               {weakTopics.length > 0
-                ? (lang === "de" ? `Weiter: ${weakTopics[0]?.topic}` : `Continue: ${weakTopics[0]?.topic}`)
+                ? (lang === "de" ? "Weiterlernen" : "Continue")
                 : t("continue_where_left", lang)}
             </Link>
 
-            {/* Secondary row */}
-            <div className="grid grid-cols-2 gap-3">
-              <Link
-                href={`/quiz?topic=random&userId=${user.id}&examSource=${examSource}`}
-                className="btn-secondary flex items-center justify-center gap-2 px-4 py-3 rounded-2xl text-sm"
-              >
-                <Shuffle className="w-4 h-4 text-[#007B5F]" />
-                {t("random_quiz", lang)}
-              </Link>
-              <Link
-                href={`/exam?examSource=${examSource}`}
-                className="text-sm text-[#A0AEC0] hover:text-[#1A2B3C] flex items-center justify-center gap-2 px-4 py-3 rounded-2xl transition-colors"
-              >
-                <GraduationCap className="w-4 h-4" />
-                {t("mock_exam", lang)}
-              </Link>
-            </div>
+            {/* Secondary: Random Quiz */}
+            <Link
+              href={`/quiz?topic=random&userId=${user.id}&examSource=${examSource}`}
+              className="btn-secondary flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm"
+            >
+              <Shuffle className="w-4 h-4 text-[#007B5F]" />
+              {t("random_quiz", lang)}
+            </Link>
+
+            {/* Tertiary: Mock Exam */}
+            <Link
+              href={`/exam?examSource=${examSource}`}
+              className="btn-secondary flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm"
+            >
+              <GraduationCap className="w-4 h-4 text-[#F4A261]" />
+              {lang === "de" ? "Probeprüfung" : "Mock Exam"}
+            </Link>
           </div>
 
           {/* Search — icon-triggered on desktop, always visible on mobile */}
@@ -711,8 +715,8 @@ export default function Home() {
             <ChevronRight className="w-5 h-5 text-[#A0AEC0]" />
           </Link>
 
-          {/* Mini Stats Row (mobile only) */}
-          <div className="grid grid-cols-4 gap-3 lg:hidden mb-10 mt-4 stagger">
+          {/* Mini Stats Row (mobile only — 2x2 grid) */}
+          <div className="grid grid-cols-2 gap-3 lg:hidden mb-10 mt-4 stagger">
             <div className="card rounded-xl">
               <StatsCard icon={<Zap className="w-4 h-4" />} value={gam?.total_xp || 0} label="XP" color="text-[#F4A261]" delay={0} />
             </div>

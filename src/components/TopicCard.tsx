@@ -60,7 +60,11 @@ export default function TopicCard({ topic, count, userId, lang, accuracy, delay 
             <div className="flex items-center gap-1.5">
               <span className={`w-2 h-2 rounded-full ${accuracy >= 80 ? 'bg-[#00A896]' : accuracy >= 40 ? 'bg-[#F4A261]' : 'bg-[#D64545]'}`} />
               <span className={`text-[10px] font-semibold ${accuracy >= 80 ? 'text-[#00A896]' : accuracy >= 40 ? 'text-[#F4A261]' : 'text-[#D64545]'}`}>
-                {accuracy >= 80 ? 'Strong' : accuracy >= 40 ? 'Weak' : 'Needs Revision'}
+                {accuracy >= 80
+                  ? (lang === "de" ? "Stark" : "Strong")
+                  : accuracy >= 40
+                  ? (lang === "de" ? "Schwach" : "Weak")
+                  : (lang === "de" ? "Wiederholung" : "Needs Revision")}
               </span>
             </div>
           </div>
@@ -81,7 +85,7 @@ export default function TopicCard({ topic, count, userId, lang, accuracy, delay 
       )}
       {accuracy !== undefined && accuracy > 0 && accuracy < 100 && (
         <p className="text-[10px] text-[#A0AEC0]/70 mb-0.5">
-          ~{Math.ceil((100 - accuracy) / 5)} {lang === "de" ? "zum Meistern" : "to master"}
+          ~{Math.ceil((100 - accuracy) / 5)} {lang === "de" ? "Fragen zum Meistern" : "questions to master"}
         </p>
       )}
 

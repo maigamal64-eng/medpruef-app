@@ -168,6 +168,28 @@
 [data-theme="dark"] .bg-\[\#E6F4F1\] { background-color: rgba(0, 80, 60, 0.2) !important; }
 [data-theme="dark"] .bg-\[\#FDECEC\] { background-color: rgba(100, 30, 30, 0.2) !important; }
 
+/* Additional dark mode overrides */
+[data-theme="dark"] .bg-\[\#F4A261\]\/6 { background-color: rgba(100, 60, 20, 0.15) !important; }
+[data-theme="dark"] .border-\[\#F4A261\]\/25 { border-color: rgba(244, 162, 97, 0.3) !important; }
+[data-theme="dark"] .text-\[\#F4A261\] { color: #F4A261 !important; }
+[data-theme="dark"] .bg-\[\#F7F9FC\]\/50,
+[data-theme="dark"] .hover\:bg-\[\#F7F9FC\]:hover { background-color: var(--dm-surface-raised) !important; }
+[data-theme="dark"] .hover\:bg-\[\#E4E9F0\]\/50:hover { background-color: rgba(51, 65, 85, 0.5) !important; }
+[data-theme="dark"] .shadow-md { box-shadow: 0 4px 6px rgba(0,0,0,0.3) !important; }
+[data-theme="dark"] .hover\:text-\[\#1A2B3C\]:hover { color: var(--dm-text) !important; }
+[data-theme="dark"] .hover\:text-\[\#4A5568\]:hover { color: var(--dm-text-secondary) !important; }
+[data-theme="dark"] .border-\[\#007B5F\]\/20 { border-color: rgba(0, 123, 95, 0.3) !important; }
+[data-theme="dark"] .border-\[\#007B5F\]\/30 { border-color: rgba(0, 123, 95, 0.35) !important; }
+
+/* Dark mode: session stats bar, quiz option backgrounds */
+[data-theme="dark"] .bg-\[\#007B5F\]\/8 { background-color: rgba(0, 123, 95, 0.15) !important; }
+[data-theme="dark"] .bg-\[\#00A896\]\/12 { background-color: rgba(0, 168, 150, 0.2) !important; }
+[data-theme="dark"] .bg-\[\#D64545\]\/12 { background-color: rgba(214, 69, 69, 0.2) !important; }
+[data-theme="dark"] .bg-\[\#00A896\]\/8 { background-color: rgba(0, 168, 150, 0.15) !important; }
+
+/* Dark mode: WeaknessToast */
+[data-theme="dark"] .bg-\[\#FFF4E6\] { background-color: rgba(100, 60, 20, 0.3) !important; }
+
 /* Scrollbar in dark mode */
 [data-theme="dark"] ::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.3) !important; }
 [data-theme="dark"] ::-webkit-scrollbar-track { background: transparent !important; }
@@ -489,6 +511,32 @@ textarea:focus {
   transform: rotateY(180deg);
   position: absolute;
   inset: 0;
+}
+
+/* ═══ BRANDED LOADER — bouncing ü dots ═══ */
+@keyframes loader-dot-bounce {
+  0%, 100% { transform: translateY(0); }
+  40% { transform: translateY(-18px); }
+  60% { transform: translateY(-18px); }
+}
+.loader-dot-left {
+  animation: loader-dot-bounce 1.2s ease-in-out infinite;
+  transform-origin: center;
+}
+.loader-dot-right {
+  animation: loader-dot-bounce 1.2s ease-in-out infinite 0.3s;
+  transform-origin: center;
+}
+/* Dark mode: make logo body visible on dark background */
+[data-theme="dark"] .branded-loader path,
+[data-theme="dark"] .branded-loader polygon {
+  fill: #E2E8F0 !important;
+}
+
+/* Dark mode: bottom nav */
+[data-theme="dark"] .bottom-nav .glass {
+  background: rgba(15, 23, 42, 0.95) !important;
+  border-color: var(--dm-border) !important;
 }
 
 /* ═══ CTA SHIMMER ═══ */

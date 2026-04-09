@@ -28,7 +28,7 @@ function getQuizHistory(): QuizResult[] {
     const results: QuizResult[] = [];
     
     // Check last session data
-    const lastSession = localStorage.getItem("medprep_last_session");
+    const lastSession = localStorage.getItem("medpruef_last_session");
     if (lastSession) {
       const session = JSON.parse(lastSession);
       // This is just session progress, not detailed results
@@ -36,7 +36,7 @@ function getQuizHistory(): QuizResult[] {
     }
     
     // Check for any stored quiz results
-    const storedResults = localStorage.getItem("medprep_quiz_results");
+    const storedResults = localStorage.getItem("medpruef_quiz_results");
     if (storedResults) {
       const parsed = JSON.parse(storedResults);
       if (Array.isArray(parsed)) {
@@ -123,7 +123,7 @@ export function addQuizResult(topic: string, questionId: string, correct: boolea
     // Keep only the last 1000 results to prevent localStorage bloat
     const limited = history.slice(-1000);
     
-    localStorage.setItem("medprep_quiz_results", JSON.stringify(limited));
+    localStorage.setItem("medpruef_quiz_results", JSON.stringify(limited));
   } catch (error) {
     console.error('Error saving quiz result:', error);
   }
@@ -175,6 +175,6 @@ export function generateMockData() {
     }
   }
   
-  localStorage.setItem("medprep_quiz_results", JSON.stringify(mockResults));
+  localStorage.setItem("medpruef_quiz_results", JSON.stringify(mockResults));
   console.log(`Generated ${mockResults.length} mock quiz results`);
 }

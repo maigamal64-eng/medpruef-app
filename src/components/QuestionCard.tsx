@@ -32,6 +32,8 @@ interface QuestionCardProps {
   lang: Lang;
   onAnswer?: (isCorrect: boolean) => void;
   imageUrl?: string;
+  /** Hide inline explanation (used when split-view shows explanation separately) */
+  hideExplanation?: boolean;
 }
 
 const DE_MONTHS = [
@@ -91,6 +93,7 @@ export default function QuestionCard({
   lang,
   onAnswer,
   imageUrl,
+  hideExplanation = false,
 }: QuestionCardProps) {
   const config = getTopicConfig(question.topic);
   const [selectedIdxs, setSelectedIdxs] = useState<Set<number>>(new Set());
@@ -485,8 +488,8 @@ export default function QuestionCard({
           </div>
         )}
 
-        {/* Explanation — shown after answering */}
-        {answered && question.explanation && (
+        {/* Explanation — shown after answering (hidden when split-view shows it separately) */}
+        {answered && question.explanation && !hideExplanation && (
           <div className="mt-4 bg-[#F4A261]/6 border border-[#F4A261]/25 border-l-4 border-l-[#007B5F] rounded p-4 animate-slide-reveal">
             <p className="text-[10px] uppercase tracking-wider text-[#F4A261] font-semibold mb-2">
               <Lightbulb className="w-4 h-4 inline" /> {t("explanation", lang)}
