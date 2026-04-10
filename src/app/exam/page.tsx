@@ -14,7 +14,10 @@ import BottomNav from "@/components/BottomNav";
 import LanguageToggle from "@/components/LanguageToggle";
 import ThemeToggle from "@/components/ThemeToggle";
 import TopicIcon from "@/components/TopicIcon";
-import { GraduationCap, Lightbulb, Clock, AlertTriangle, Search } from "lucide-react";
+import QuestionActions from "@/components/QuestionActions";
+import QuestionCard from "@/components/QuestionCard";
+import ImageLightbox from "@/components/ImageLightbox";
+import { GraduationCap, Clock, AlertTriangle, Search } from "lucide-react";
 
 type Lang = "de" | "en";
 type ExamPhase = "entry" | "loading" | "exam" | "results" | "review";
@@ -124,10 +127,10 @@ function ExamContent() {
   const [loadProgress, setLoadProgress] = useState(0);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [answers, setAnswers] = useState<Record<number, number[]>>({}); // questionIndex → selected option indices (multi-select)
-  const [pendingSelection, setPendingSelection] = useState<Set<number>>(new Set()); // current question's tentative selection (multi)
   const [timeLeft, setTimeLeft] = useState(EXAM_DURATION_S);
   const [reviewIdx, setReviewIdx] = useState(0);
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const [customFilters, setCustomFilters] = useState<CustomFilters>(DEFAULT_CUSTOM_FILTERS);
   const [customCount, setCustomCount] = useState<number | null>(null);
   const [customCounting, setCustomCounting] = useState(false);
@@ -261,11 +264,6 @@ function ExamContent() {
     setPhase("exam");
   }, [examSource, selectedPart, customFilters, buildCustomParams]);
 
-  // Clear pending multi-select when moving between questions
-  useEffect(() => {
-    setPendingSelection(new Set());
-  }, [currentIdx]);
-
   // Timer management
   useEffect(() => {
     if (phase === "exam") {
@@ -289,32 +287,6 @@ function ExamContent() {
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, [phase]);
-
-  // Determine if the current question is multi-correct
-  const isMultiQ = (q?: Question) => (q?.n_correct ?? (q?.options?.filter(o => o.correct).length ?? 0)) >= 2;
-
-  const handleSelectOption = (optIdx: number) => {
-    if (answers[currentIdx] !== undefined) return; // already answered
-    const q = questions[currentIdx];
-    if (isMultiQ(q)) {
-      // Multi-select: toggle in pending
-      setPendingSelection(prev => {
-        const next = new Set(prev);
-        if (next.has(optIdx)) next.delete(optIdx); else next.add(optIdx);
-        return next;
-      });
-    } else {
-      // Single-correct: commit immediately
-      setAnswers((prev) => ({ ...prev, [currentIdx]: [optIdx] }));
-    }
-  };
-
-  const handleSubmitMulti = () => {
-    if (answers[currentIdx] !== undefined) return;
-    if (pendingSelection.size === 0) return;
-    setAnswers(prev => ({ ...prev, [currentIdx]: Array.from(pendingSelection).sort() }));
-    setPendingSelection(new Set());
-  };
 
   const handleSubmitExam = () => {
     setShowSubmitConfirm(false);
@@ -647,10 +619,7 @@ function ExamContent() {
   if (phase === "review") {
     const rq = questions[reviewIdx];
     if (!rq) return null;
-    const rcfg = getTopicConfig(rq.topic);
     const userSelections = answers[reviewIdx];
-    const userSet = new Set(userSelections || []);
-    const opts = rq.options || [{ text: rq.answer, correct: true }];
     const wasAnswered = userSelections !== undefined && userSelections.length > 0;
     const wasCorrect = wasAnswered && isQuestionCorrect(rq, userSelections);
 
@@ -683,72 +652,56 @@ function ExamContent() {
               />
             </div>
 
-            <div className="card p-5 mb-4">
-              <div className="flex items-center justify-between mb-3">
-                <span
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium"
-                  style={{ backgroundColor: `${rcfg.color}18`, color: rcfg.color }}
-                >
-                  <TopicIcon name={rcfg.icon} className="w-4 h-4 inline" /> {rq.topic}
-                </span>
-                <span className={`text-xs font-medium font-mono px-2 py-0.5 rounded ${
-                  wasCorrect
-                    ? "bg-[#00A896]/15 text-[#00A896]"
-                    : wasAnswered
-                    ? "bg-[#D64545]/15 text-[#D64545]"
-                    : "bg-[#F7F9FC] text-[#A0AEC0]"
-                }`}>
-                  {!wasAnswered
-                    ? t("unanswered", lang)
-                    : wasCorrect
-                    ? `✓ ${t("correct", lang)}`
-                    : `✗ ${t("wrong", lang)}`}
-                </span>
-              </div>
-
-              {/* Question image */}
-              {rq.image_url && (
-                <div className="mb-4 rounded-xl overflow-hidden border border-[#E4E9F0]">
-                  <img src={rq.image_url} alt="Medizinische Abbildung" className="w-full max-h-64 object-contain bg-white" />
-                </div>
-              )}
-
-              <p className="text-base font-medium text-[#1A2B3C] mb-4">{rq.question}</p>
-
-              <div className="space-y-2">
-                {opts.map((opt, oi) => {
-                  const wasSelected = userSet.has(oi);
-                  let style = "w-full text-left px-4 py-3 border rounded text-sm font-medium flex items-center gap-3 ";
-                  if (wasSelected && opt.correct) style += "bg-[#00A896]/12 border-[#00A896] text-[#00A896]";
-                  else if (wasSelected && !opt.correct) style += "bg-[#D64545]/12 border-[#D64545] text-[#D64545]";
-                  else if (opt.correct) style += "bg-[#00A896]/8 border-[#00A896]/60 text-[#00A896]/80";
-                  else style += "bg-[#FFFFFF] border-[#E4E9F0]/40 text-[#A0AEC0] opacity-50";
-
-                  return (
-                    <div key={oi} className={style}>
-                      <span className="w-6 h-6 rounded border flex-shrink-0 flex items-center justify-center text-xs font-bold font-mono border-current">
-                        {wasSelected && opt.correct ? "✓" : wasSelected ? "✗" : opt.correct ? "✓" : String.fromCharCode(65 + oi)}
-                      </span>
-                      <div className="flex-1 flex flex-col items-start gap-1.5">
-                        {opt.image_url && (
-                          <img src={opt.image_url} alt="" className="max-h-24 object-contain rounded border border-[#E4E9F0]" />
-                        )}
-                        <span>{opt.text}</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {rq.explanation && (
-                <div className="mt-4 bg-[#F4A261]/6 border border-[#F4A261]/25 rounded p-4">
-                  <p className="text-[10px] uppercase tracking-wider text-[#F4A261] font-semibold mb-2">
-                    <Lightbulb className="w-4 h-4 inline" /> {t("explanation", lang)}
-                  </p>
-                  <p className="text-[#4A5568] text-sm leading-relaxed">{rq.explanation}</p>
-                </div>
-              )}
+            <div className="mb-2 flex items-center justify-end">
+              <span className={`text-xs font-medium font-mono px-2 py-0.5 rounded ${
+                wasCorrect
+                  ? "bg-[#00A896]/15 text-[#00A896]"
+                  : wasAnswered
+                  ? "bg-[#D64545]/15 text-[#D64545]"
+                  : "bg-[#F7F9FC] text-[#A0AEC0]"
+              }`}>
+                {!wasAnswered
+                  ? t("unanswered", lang)
+                  : wasCorrect
+                  ? `✓ ${t("correct", lang)}`
+                  : `✗ ${t("wrong", lang)}`}
+              </span>
             </div>
+
+            <div className="mb-4">
+              <QuestionCard
+                key={`review-${rq.id}`}
+                question={rq}
+                questionNumber={reviewIdx + 1}
+                totalQuestions={questions.length}
+                lang={lang}
+                hideActions
+                hideFeedbackStrip
+                initialSelected={userSelections}
+                initiallyAnswered={true}
+              />
+            </div>
+
+            {/* Action rail — favorite, AI explain, notes, report */}
+            <div className="mb-4">
+              <QuestionActions
+                question={{
+                  id: rq.id,
+                  topic: rq.topic,
+                  question: rq.question,
+                  answer: rq.answer,
+                  explanation: rq.explanation,
+                  options: rq.options,
+                }}
+                lang={lang}
+                layout="row"
+                answered={true}
+              />
+            </div>
+
+            {lightboxSrc && (
+              <ImageLightbox src={lightboxSrc} alt="Medizinische Abbildung" onClose={() => setLightboxSrc(null)} />
+            )}
 
             <div className="flex gap-3">
               <button
@@ -875,15 +828,8 @@ function ExamContent() {
   // ── EXAM ──
   const q = questions[currentIdx];
   if (!q) return null;
-  const qCfg = getTopicConfig(q.topic);
-  const qOpts = q.options || [{ text: q.answer, correct: true }];
   const selectedForQ = answers[currentIdx];
   const qAnswered = selectedForQ !== undefined;
-  const qSelectedSet = new Set(selectedForQ || []);
-  const qPendingSet = pendingSelection;
-  const qIsMulti = isMultiQ(q);
-  const qNCorrect = q.n_correct ?? qOpts.filter(o => o.correct).length;
-  const qWasCorrect = qAnswered && isQuestionCorrect(q, selectedForQ);
   const answeredCount = Object.keys(answers).length;
   const timerWarning = timeLeft < 600; // last 10 minutes
 
@@ -964,131 +910,43 @@ function ExamContent() {
             </div>
           </div>
 
-          <div className="card rounded-2xl p-5 md:p-6 mb-4">
-            <div className="flex items-center justify-between mb-4">
-              <span
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium"
-                style={{ backgroundColor: `${qCfg.color}18`, color: qCfg.color }}
-              >
-                <TopicIcon name={qCfg.icon} className="w-4 h-4 inline" /> <span className="max-w-[140px] truncate">{q.topic}</span>
-              </span>
-            </div>
-
-            {/* Question image */}
-            {q.image_url && (
-              <div className="mb-4 rounded-xl overflow-hidden border border-[#E4E9F0]">
-                <img src={q.image_url} alt="Medizinische Abbildung" className="w-full max-h-64 object-contain bg-white" />
-              </div>
-            )}
-
-            <p className="text-base md:text-lg font-medium text-[#1A2B3C] mb-5 leading-relaxed">
-              {q.question}
-            </p>
-
-            {qIsMulti && !qAnswered && (
-              <p className="text-[11px] text-[#F4A261] font-semibold mb-2">
-                ⓘ {lang === "de" ? `Mehrfachantwort (${qNCorrect} richtig)` : `Multi-select (${qNCorrect} correct)`}
-              </p>
-            )}
-            <div className="space-y-2">
-              {qOpts.map((opt, oi) => {
-                const isSelPre = qPendingSet.has(oi);       // pre-submit (multi)
-                const isSelPost = qSelectedSet.has(oi);     // post-submit
-                const isSel = qAnswered ? isSelPost : isSelPre;
-                let style =
-                  "w-full text-left px-4 py-3 border text-sm font-medium transition-all duration-200 flex items-center gap-3 rounded ";
-
-                if (!qAnswered) {
-                  style += isSel
-                    ? "bg-[#007B5F]/8 border-[#007B5F]/60 text-[#1A2B3C] active:scale-[0.99]"
-                    : "bg-[#FFFFFF] border-[#E4E9F0] text-[#1A2B3C] hover:border-[#007B5F]/50 active:scale-[0.99]";
-                } else if (isSelPost && opt.correct) {
-                  style += "bg-[#00A896]/12 border-[#00A896] text-[#00A896]";
-                } else if (isSelPost && !opt.correct) {
-                  style += "bg-[#D64545]/12 border-[#D64545] text-[#D64545]";
-                } else if (opt.correct) {
-                  style += "bg-[#00A896]/8 border-[#00A896]/60 text-[#00A896]/80";
-                } else {
-                  style += "bg-[#FFFFFF] border-[#E4E9F0]/40 text-[#A0AEC0] opacity-50";
-                }
-
-                const icon = !qAnswered
-                  ? isSel
-                    ? (qIsMulti ? "☑" : "●")
-                    : (qIsMulti ? "☐" : String.fromCharCode(65 + oi))
-                  : isSelPost && opt.correct
-                  ? "✓"
-                  : isSelPost
-                  ? "✗"
-                  : opt.correct
-                  ? "✓"
-                  : String.fromCharCode(65 + oi);
-
-                return (
-                  <button
-                    key={oi}
-                    onClick={() => handleSelectOption(oi)}
-                    disabled={qAnswered}
-                    className={style}
-                  >
-                    <span
-                      className={`w-6 h-6 rounded flex-shrink-0 flex items-center justify-center text-xs font-bold border font-mono ${
-                        !qAnswered
-                          ? isSel
-                            ? "bg-[#007B5F]/15 border-[#007B5F] text-[#007B5F]"
-                            : "bg-[#F7F9FC] border-[#E4E9F0] text-[#4A5568]"
-                          : isSelPost && opt.correct
-                          ? "bg-[#00A896]/20 border-[#00A896] text-[#00A896]"
-                          : isSelPost
-                          ? "bg-[#D64545]/20 border-[#D64545] text-[#D64545]"
-                          : opt.correct
-                          ? "bg-[#00A896]/10 border-[#00A896]/50 text-[#00A896]"
-                          : "bg-[#F7F9FC] border-[#E4E9F0]/40 text-[#A0AEC0]"
-                      }`}
-                    >
-                      {icon}
-                    </span>
-                    <div className="flex-1 flex flex-col items-start gap-1.5">
-                      {opt.image_url && (
-                        <img src={opt.image_url} alt="" className="max-h-24 object-contain rounded border border-[#E4E9F0]" />
-                      )}
-                      <span>{opt.text}</span>
-                    </div>
-                  </button>
-                );
-              })}
-              {qIsMulti && !qAnswered && (
-                <button
-                  onClick={handleSubmitMulti}
-                  disabled={qPendingSet.size === 0}
-                  className="w-full mt-2 py-3 bg-[#F4A261] hover:bg-[#FFC97A] text-[#1A0E00] rounded font-bold text-sm transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  {lang === "de" ? "Antwort prüfen" : "Check Answer"}
-                </button>
-              )}
-            </div>
-
-            {/* Post-submit feedback (multi-correct) */}
-            {qAnswered && qIsMulti && (
-              <div className={`mt-3 px-3 py-2 rounded text-xs font-semibold ${
-                qWasCorrect ? "bg-[#00A896]/10 text-[#00A896]" : "bg-[#D64545]/10 text-[#D64545]"
-              }`}>
-                {qWasCorrect
-                  ? (lang === "de" ? "✓ Alle richtig!" : "✓ All correct!")
-                  : (lang === "de" ? "✗ Nicht vollständig richtig (strikt bewertet)" : "✗ Not fully correct (strict grading)")}
-              </div>
-            )}
-
-            {/* Explanation in exam mode */}
-            {qAnswered && q.explanation && (
-              <div className="mt-4 bg-[#F4A261]/6 border border-[#F4A261]/25 rounded p-4 animate-fade-in">
-                <p className="text-[10px] uppercase tracking-wider text-[#F4A261] font-semibold mb-2">
-                  <Lightbulb className="w-4 h-4 inline" /> {t("explanation", lang)}
-                </p>
-                <p className="text-[#4A5568] text-sm leading-relaxed">{q.explanation}</p>
-              </div>
-            )}
+          <div className="mb-4">
+            <QuestionCard
+              key={`active-${q.id}`}
+              question={q}
+              questionNumber={currentIdx + 1}
+              totalQuestions={questions.length}
+              lang={lang}
+              hideActions
+              hideFeedbackStrip
+              initialSelected={selectedForQ}
+              initiallyAnswered={qAnswered}
+              onCommit={(idxs) => {
+                setAnswers((prev) => ({ ...prev, [currentIdx]: idxs }));
+              }}
+            />
           </div>
+
+          {/* Action rail — favorite, AI explain, notes, report */}
+          <div className="mb-4">
+            <QuestionActions
+              question={{
+                id: q.id,
+                topic: q.topic,
+                question: q.question,
+                answer: q.answer,
+                explanation: q.explanation,
+                options: q.options,
+              }}
+              lang={lang}
+              layout="row"
+              answered={qAnswered}
+            />
+          </div>
+
+          {lightboxSrc && (
+            <ImageLightbox src={lightboxSrc} alt="Medizinische Abbildung" onClose={() => setLightboxSrc(null)} />
+          )}
 
           {/* Navigation */}
           <div className="flex gap-2 mb-4">

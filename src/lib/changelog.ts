@@ -25,6 +25,51 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ═══ 2026-04-10 ═══
   {
     date: "2026-04-10",
+    tag: "improvement",
+    title: { de: "Prüfung verwendet jetzt die neue Fragekarte", en: "Exam now uses the unified question card" },
+    description: {
+      de: "Die Prüfung rendert Fragen jetzt mit derselben Karte wie das Quiz. Hervorhebungen, Bild-Lightbox, KI-Erklärung, Notizen, Favorit, Melden — alles funktioniert konsistent zwischen Quiz und Prüfung.",
+      en: "The exam now renders questions with the same card as the quiz. Highlights, image lightbox, AI explain, notes, favorite, report — everything works consistently between quiz and exam.",
+    },
+  },
+  {
+    date: "2026-04-10",
+    tag: "admin",
+    title: { de: "Bereinigungsskript für Erklärungen", en: "Explanation cleanup script" },
+    description: {
+      de: "Neues Skript scripts/clean_explanations.py extrahiert versehentlich in Erklärungen gelandete Prüfungsdaten ([2016-09]) und schreibt sie in das exam_dates-Feld zurück.",
+      en: "New scripts/clean_explanations.py extracts exam-date markers ([2016-09]) accidentally captured into explanations and writes them back to the exam_dates column.",
+    },
+  },
+  {
+    date: "2026-04-10",
+    tag: "improvement",
+    title: { de: "Prüfungsmodus erhält neue Funktionen", en: "Exam mode gets new features" },
+    description: {
+      de: "Die Prüfungsseite zeigt jetzt die neue Aktionsleiste (Favorit, KI-Erklärung, Notizen, Melden), öffnet Bilder im Lightbox und entfernt automatisch fehlerhafte Datumsmarkierungen aus Erklärungstexten.",
+      en: "The exam page now shows the new action rail (favorite, AI explain, notes, report), opens images in a lightbox, and automatically strips malformed date markers from explanation text.",
+    },
+  },
+  {
+    date: "2026-04-10",
+    tag: "fix",
+    title: { de: "Fehlerhafte Erklärungen bereinigt", en: "Cleaned up malformed explanations" },
+    description: {
+      de: "Erklärungen, die fälschlicherweise mit Prüfungsdaten wie [2016-09] beginnen, werden jetzt überall im Quiz und in der Prüfung automatisch bereinigt.",
+      en: "Explanations that wrongly began with exam-date markers like [2016-09] are now stripped automatically across the quiz and exam.",
+    },
+  },
+  {
+    date: "2026-04-10",
+    tag: "feature",
+    title: { de: "Quiz-Erlebnis komplett überarbeitet", en: "Quiz experience overhaul" },
+    description: {
+      de: "Neuer Konfigurationsbildschirm beim Quizstart (Fächer, Tags, Anzahl, Zeitlimit, Prüfungszeitraum). Aktionen (Favorit, KI-Erklärung, Notizen, Melden) sind jetzt in einer dedizierten Seitenleiste platziert. Frage melden öffnet sich als Modal. Die nächste Frage wird vorab geladen und erscheint sofort. Fortschrittsbalken spiegelt die gewählte Quizlänge präzise wider. Erfolgsmeldungen erscheinen unter der Karte ohne den Quizfluss zu unterbrechen.",
+      en: "New customization screen on quiz start (subjects, tags, count, time limit, exam date range). Action buttons (favorite, AI explain, notes, report) moved to a dedicated side rail using available negative space. Report opens as a modal. The next question is preloaded and appears instantly. Progress bar precisely reflects the chosen quiz length. Milestone cards appear below without interrupting the quiz flow.",
+    },
+  },
+  {
+    date: "2026-04-10",
     tag: "feature",
     title: { de: "Änderungsprotokoll", en: "Changelog" },
     description: {

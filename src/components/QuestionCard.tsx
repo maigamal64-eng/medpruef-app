@@ -7,6 +7,7 @@ import type { MCQOption } from "@/lib/mcq";
 import ImageLightbox from "@/components/ImageLightbox";
 import { trackEvent } from "@/lib/tracker";
 import TopicIcon from "@/components/TopicIcon";
+import { cleanExplanation } from "@/lib/explanation";
 import { Lightbulb, FileText, Highlighter, Bot, Flag, CheckCircle2, Edit3, AlertTriangle, X, ThumbsUp, ThumbsDown } from "lucide-react";
 import AIChatAssistant from "@/components/AIChatAssistant";
 
@@ -37,6 +38,16 @@ interface QuestionCardProps {
   hideExplanation?: boolean;
   /** User tier for feature gating */
   userTier?: string;
+  /** Hide inline favorite/flag/note/report/AI buttons — used when an external QuestionActions rail is rendered */
+  hideActions?: boolean;
+  /** Controlled-mode: pre-populate selection on (re)mount or question change. */
+  initialSelected?: number[];
+  /** Controlled-mode: render in answered/result state from the start (used for review). */
+  initiallyAnswered?: boolean;
+  /** Controlled-mode: fired alongside onAnswer when the user finalizes a selection — gives the parent the actual indices so external state (e.g. an exam answers dict) can be updated. */
+  onCommit?: (selected: number[], isCorrect: boolean) => void;
+  /** Hide the "+10 XP · Correct!" feedback strip (used by exam mode where there is no XP per-question). */
+  hideFeedbackStrip?: boolean;
 }
 
 const DE_MONTHS = [
@@ -98,10 +109,17 @@ export default function QuestionCard({
   imageUrl,
   hideExplanation = false,
   userTier = "free",
+  hideActions = false,
+  initialSelected,
+  initiallyAnswered = false,
+  onCommit,
+  hideFeedbackStrip = false,
 }: QuestionCardProps) {
   const config = getTopicConfig(question.topic);
-  const [selectedIdxs, setSelectedIdxs] = useState<Set<number>>(new Set());
-  const [submitted, setSubmitted] = useState(false);
+  const [selectedIdxs, setSelectedIdxs] = useState<Set<number>>(
+    () => new Set(initialSelected ?? [])
+  );
+  const [submitted, setSubmitted] = useState(initiallyAnswered);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [note, setNote] = useState("");
   const [showNoteInput, setShowNoteInput] = useState(false);
@@ -134,8 +152,8 @@ export default function QuestionCard({
 
   // Load persisted note, favorite, and highlight state on question change
   useEffect(() => {
-    setSelectedIdxs(new Set());
-    setSubmitted(false);
+    setSelectedIdxs(new Set(initialSelected ?? []));
+    setSubmitted(initiallyAnswered);
     setShowAnswer(false);
     setShowAIChat(false);
     setShowNoteInput(false);
@@ -156,6 +174,10 @@ export default function QuestionCard({
         setHighlights(Array.isArray(hl) ? hl : []);
       } catch { setHighlights([]); }
     }
+    // initialSelected/initiallyAnswered are intentionally read at render time but
+    // only re-applied on question change — adding them as deps would wipe user
+    // interactions on every parent re-render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [question.id]);
 
   // Detect text selection on the question text for highlighting
@@ -235,6 +257,7 @@ export default function QuestionCard({
             setSelectedIdxs(new Set([idx]));
             setSubmitted(true);
             onAnswer?.(options[idx].correct);
+            onCommit?.([idx], options[idx].correct);
           }
         }
       }
@@ -248,7 +271,7 @@ export default function QuestionCard({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [answered, options, isMulti, onAnswer]);
+  }, [answered, options, isMulti, onAnswer, onCommit]);
 
   const handleSelect = (idx: number) => {
     if (answered) return;
@@ -264,6 +287,7 @@ export default function QuestionCard({
       setSelectedIdxs(new Set([idx]));
       setSubmitted(true);
       onAnswer?.(options[idx].correct);
+      onCommit?.([idx], options[idx].correct);
     }
   };
 
@@ -275,6 +299,7 @@ export default function QuestionCard({
     const isCorrect = selectedIdxs.size === correctIdxs.size
       && [...selectedIdxs].every(i => correctIdxs.has(i));
     onAnswer?.(isCorrect);
+    onCommit?.([...selectedIdxs].sort((a, b) => a - b), isCorrect);
   };
 
   const handleSaveNote = () => {
@@ -338,8 +363,7 @@ export default function QuestionCard({
             <span className="max-w-[140px] truncate">{question.topic}</span>
           </span>
           <div className="flex items-center gap-2">
-            {/* Flag — always visible as subtle icon */}
-            {!suggestionSubmitted ? (
+            {!hideActions && !suggestionSubmitted && (
               <button
                 onClick={() => { setShowSuggestion(!showSuggestion); setSuggestionType(null); }}
                 title={lang === "de" ? "Problem melden" : "Report issue"}
@@ -347,16 +371,19 @@ export default function QuestionCard({
               >
                 <Flag className="w-4 h-4" />
               </button>
-            ) : (
+            )}
+            {!hideActions && suggestionSubmitted && (
               <CheckCircle2 className="w-4 h-4 text-[#00A896]" />
             )}
-            <button
-              onClick={handleToggleFav}
-              title={isFav ? t("bookmarked", lang) : t("bookmark", lang)}
-              className={`text-base transition-colors ${isFav ? "text-[#F4A261] animate-bookmark" : "text-[#E4E9F0] hover:text-[#F4A261]"}`}
-            >
-              {isFav ? "★" : "☆"}
-            </button>
+            {!hideActions && (
+              <button
+                onClick={handleToggleFav}
+                title={isFav ? t("bookmarked", lang) : t("bookmark", lang)}
+                className={`text-base transition-colors ${isFav ? "text-[#F4A261] animate-bookmark" : "text-[#E4E9F0] hover:text-[#F4A261]"}`}
+              >
+                {isFav ? "★" : "☆"}
+              </button>
+            )}
             <span className="text-xs text-[#A0AEC0] font-mono">
               {t("q", lang)}{questionNumber} / {totalQuestions}
             </span>
@@ -505,7 +532,7 @@ export default function QuestionCard({
         </div>
 
         {/* Post-answer feedback strip */}
-        {answered && (
+        {answered && !hideFeedbackStrip && (
           <div className="mt-3 flex items-center justify-between bg-[#F7F9FC] rounded-xl px-4 py-2.5 text-sm animate-fade-in">
             <div className="flex items-center gap-3">
               <span className="font-semibold text-[#007B5F]">+10 XP</span>
@@ -523,12 +550,15 @@ export default function QuestionCard({
         )}
 
         {/* Explanation — shown after answering (hidden when split-view shows it separately) */}
-        {answered && question.explanation && !hideExplanation && (
+        {answered && !hideExplanation && (() => {
+          const cleaned = cleanExplanation(question.explanation);
+          if (!cleaned) return null;
+          return (
           <div className="mt-4 bg-[#F4A261]/6 border border-[#F4A261]/25 border-l-4 border-l-[#007B5F] rounded p-4 animate-slide-reveal">
             <p className="text-[10px] uppercase tracking-wider text-[#F4A261] font-semibold mb-2">
               <Lightbulb className="w-4 h-4 inline" /> {t("explanation", lang)}
             </p>
-            <p className="text-[#4A5568] leading-relaxed text-sm">{question.explanation}</p>
+            <p className="text-[#4A5568] leading-relaxed text-sm">{cleaned}</p>
             <div className="flex items-center gap-2 mt-3 pt-2 border-t border-[#E4E9F0]">
               <span className="text-[10px] text-[#A0AEC0]">
                 {lang === "de" ? "Hilfreich?" : "Helpful?"}
@@ -575,10 +605,11 @@ export default function QuestionCard({
               </button>
             </div>
           </div>
-        )}
+          );
+        })()}
 
         {/* Action buttons — visible after answering */}
-        {answered && (
+        {answered && !hideActions && (
           <div className="mt-3 animate-fade-in flex items-center gap-3">
             {/* AI Explain button */}
             <button
@@ -620,7 +651,7 @@ export default function QuestionCard({
         )}
 
           {/* Note input (expanded) */}
-          {answered && showNoteInput && (
+          {answered && !hideActions && showNoteInput && (
             <div className="mt-3 animate-fade-in">
               <div className="bg-[#FFFFFF] border border-[#E4E9F0] rounded-xl shadow-[var(--shadow-xs)] p-3">
                 <p className="text-[10px] uppercase tracking-wider text-[#A0AEC0] font-semibold mb-2">
@@ -654,7 +685,7 @@ export default function QuestionCard({
           )}
 
           {/* Suggestion / Flag form (expanded) */}
-          {answered && showSuggestion && !suggestionSubmitted && (
+          {answered && !hideActions && showSuggestion && !suggestionSubmitted && (
             <div className="mt-3 animate-fade-in">
               <div className="bg-[#FFFFFF] border border-[#E4E9F0] rounded-xl shadow-[var(--shadow-xs)] p-4">
                 <div className="flex items-center justify-between mb-3">
@@ -848,18 +879,20 @@ export default function QuestionCard({
       </div>
 
       {/* AI Chat Assistant */}
-      <AIChatAssistant
-        open={showAIChat}
-        onClose={() => setShowAIChat(false)}
-        lang={lang}
-        questionId={question.id}
-        questionText={question.question}
-        answerText={question.answer}
-        explanation={question.explanation}
-        topic={question.topic}
-        options={options.map(o => ({ text: o.text, correct: o.correct }))}
-        userTier={userTier}
-      />
+      {!hideActions && (
+        <AIChatAssistant
+          open={showAIChat}
+          onClose={() => setShowAIChat(false)}
+          lang={lang}
+          questionId={question.id}
+          questionText={question.question}
+          answerText={question.answer}
+          explanation={question.explanation}
+          topic={question.topic}
+          options={options.map(o => ({ text: o.text, correct: o.correct }))}
+          userTier={userTier}
+        />
+      )}
 
       {/* Lightbox */}
       {lightboxOpen && effectiveImageUrl && (
