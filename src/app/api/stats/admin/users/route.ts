@@ -12,6 +12,7 @@ interface UserRow {
   telegram_username: string | null;
   photo_url: string | null;
   role: string;
+  tier: string | null;
   created_at: string;
   updated_at: string;
   user_gamification: {
@@ -33,7 +34,7 @@ export async function GET() {
       .from("users")
       .select(`
         id, telegram_id, email, first_name, last_name, telegram_username,
-        photo_url, role, created_at, updated_at,
+        photo_url, role, tier, created_at, updated_at,
         user_gamification (
           total_xp, current_streak, total_questions_answered, total_correct,
           daily_questions_today, last_study_date
@@ -95,6 +96,7 @@ export async function GET() {
         username: u.telegram_username,
         photo_url: u.photo_url,
         role: u.role || "user",
+        tier: u.tier || "free",
         status,
         created_at: u.created_at,
         xp: gam?.total_xp || 0,
@@ -127,6 +129,7 @@ export async function PATCH(req: NextRequest) {
     // Update user fields
     const userUpdates: Record<string, unknown> = {};
     if (updates.role) userUpdates.role = updates.role;
+    if (updates.tier) userUpdates.tier = updates.tier;
     if (updates.first_name !== undefined) userUpdates.first_name = updates.first_name;
     if (updates.last_name !== undefined) userUpdates.last_name = updates.last_name;
     if (updates.email !== undefined) userUpdates.email = updates.email;

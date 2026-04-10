@@ -8,7 +8,7 @@ import { t, getLang, setLang } from "@/lib/i18n";
 import { trackEvent, trackPageView } from "@/lib/tracker";
 import { getStoredSession } from "@/lib/auth";
 import { recordAnswer } from "@/lib/weakness";
-import { Brain, Inbox, Bot, CheckCircle2 } from "lucide-react";
+import { Inbox, CheckCircle2 } from "lucide-react";
 import LanguageToggle from "@/components/LanguageToggle";
 import ThemeToggle from "@/components/ThemeToggle";
 import Sidebar from "@/components/Sidebar";
@@ -274,8 +274,8 @@ function QuizContent() {
           </div>
         )}
 
-        {/* Main Quiz Content — fixed width container, no jump on answer */}
-        <div className="flex-1 px-4 lg:px-8 py-4 w-full relative max-w-5xl mx-auto">
+        {/* Main Quiz Content — FIXED width, never changes on answer */}
+        <div className="flex-1 px-4 lg:px-8 py-4 w-full relative max-w-3xl mx-auto">
           {/* Floating XP animation */}
           {showXpFloat && xpEarned !== null && (
             <div className="absolute top-4 right-8 z-10">
@@ -285,57 +285,30 @@ function QuizContent() {
             </div>
           )}
 
-          <div className={`${answered ? 'lg:grid lg:grid-cols-[1fr,380px] lg:gap-6' : 'max-w-3xl mx-auto'}`}>
-            {/* LEFT: Question Card with MCQ */}
-            <div>
-              <QuestionCard
-                question={question}
-                questionNumber={questionCount + (answered ? 0 : 1)}
-                totalQuestions={topicTotal || 20}
-                lang={lang}
-                onAnswer={handleAnswer}
-                imageUrl={question.image_url}
-                hideExplanation={answered}
-              />
+          {/* Question Card — same width always */}
+          <QuestionCard
+            question={question}
+            questionNumber={questionCount + (answered ? 0 : 1)}
+            totalQuestions={topicTotal || 20}
+            lang={lang}
+            onAnswer={handleAnswer}
+            imageUrl={question.image_url}
+          />
+
+          {/* After answering: Next button (explanation is inside QuestionCard) */}
+          {answered && (
+            <div className="mt-4 space-y-3 animate-fade-in">
+              <button
+                onClick={fetchQuestion}
+                className="w-full btn-primary py-4 text-base rounded-xl"
+              >
+                {t("next_question", lang)} →
+              </button>
+              <p className="text-[10px] text-[#A0AEC0] text-center">
+                {lang === "de" ? "Drücke" : "Press"} <kbd className="px-1.5 py-0.5 bg-[#F7F9FC] border border-[#E4E9F0] rounded text-[10px] font-mono">N</kbd> {lang === "de" ? "für nächste Frage" : "for next question"}
+              </p>
             </div>
-
-            {/* RIGHT (desktop) / BELOW (mobile): Explanation + Next */}
-            {answered && (
-              <div className="mt-4 lg:mt-0 space-y-4 animate-fade-in">
-                {question?.explanation ? (
-                  <div className="card rounded-2xl p-5 border-l-4 border-[#3A7CA5]">
-                    <p className="text-sm font-bold text-[#001B3D] mb-3 flex items-center gap-1.5">
-                      <Brain className="w-4 h-4 text-[#3A7CA5]" />
-                      {lang === "de" ? "Erklärung" : "Explanation"}
-                    </p>
-                    <p className="text-sm text-[#4A5568] leading-relaxed whitespace-pre-line">{question.explanation}</p>
-                    {question.image_url && (
-                      <img src={question.image_url} alt="" className="mt-3 max-h-48 rounded-lg object-contain" />
-                    )}
-                  </div>
-                ) : (
-                  <div className="card rounded-2xl p-5 border-l-4 border-[#A0AEC0] opacity-70">
-                    <p className="text-sm text-[#A0AEC0] flex items-center gap-1.5">
-                      <Bot className="w-4 h-4" />
-                      {lang === "de" ? "KI-Erklärung wird bald verfügbar sein" : "AI explanation coming soon"}
-                    </p>
-                  </div>
-                )}
-
-                <button
-                  onClick={fetchQuestion}
-                  className="w-full btn-primary py-4 text-base rounded-xl animate-fade-in"
-                >
-                  {t("next_question", lang)} →
-                </button>
-
-                {/* Keyboard shortcut hint */}
-                <p className="text-[10px] text-[#A0AEC0] text-center">
-                  {lang === "de" ? "Drücke" : "Press"} <kbd className="px-1.5 py-0.5 bg-[#F7F9FC] border border-[#E4E9F0] rounded text-[10px] font-mono">N</kbd> {lang === "de" ? "für nächste Frage" : "for next question"}
-                </p>
-              </div>
-            )}
-          </div>
+          )}
 
           {/* Session Completion Panel */}
           {showSessionComplete && (

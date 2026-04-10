@@ -42,6 +42,7 @@ interface UserRow {
   username: string | null;
   photo_url: string | null;
   role: string;
+  tier: string;
   status: string;
   created_at: string;
   xp: number;
@@ -194,8 +195,9 @@ export default function AdminDashboard() {
   const [expandedQuestion, setExpandedQuestion] = useState<number | null>(null);
   const [editingQuestion, setEditingQuestion] = useState<number | null>(null);
   const [questionEditForm, setQuestionEditForm] = useState<Record<string, unknown>>({});
-  const [questionTab, setQuestionTab] = useState<"browse" | "duplicates">("browse");
+  const [questionTab, setQuestionTab] = useState<"browse" | "duplicates" | "reviews">("browse");
   const [duplicates, setDuplicates] = useState<DuplicateData | null>(null);
+  const [suggestions, setSuggestions] = useState<{ suggestions: unknown[]; counts: { pending: number; approved: number; rejected: number; total: number } } | null>(null);
 
   // Analytics state
   const [activities, setActivities] = useState<ActivityRow[]>([]);
@@ -255,6 +257,14 @@ export default function AdminDashboard() {
     } catch { /* optional */ }
   }, []);
 
+  const fetchSuggestions = useCallback(async () => {
+    try {
+      const res = await fetch("/api/suggestions?limit=100");
+      if (!res.ok) throw new Error("Failed");
+      setSuggestions(await res.json());
+    } catch { /* optional */ }
+  }, []);
+
   const fetchActivity = useCallback(async (eventType?: string) => {
     try {
       const params = new URLSearchParams({ limit: "100" });
@@ -285,8 +295,9 @@ export default function AdminDashboard() {
     if (section === "questions" && !questionStats) fetchQuestionStats();
     if (section === "questions" && questions.length === 0) fetchQuestions(1);
     if (section === "questions" && questionTab === "duplicates" && !duplicates) fetchDuplicates();
+    if (section === "questions" && questionTab === "reviews" && !suggestions) fetchSuggestions();
     if (section === "analytics" && activities.length === 0) fetchActivity();
-  }, [section, questionStats, questions.length, questionTab, duplicates, activities.length, fetchQuestionStats, fetchQuestions, fetchDuplicates, fetchActivity]);
+  }, [section, questionStats, questions.length, questionTab, duplicates, suggestions, activities.length, fetchQuestionStats, fetchQuestions, fetchDuplicates, fetchSuggestions, fetchActivity]);
 
   // ─── User Actions ───────────────────────────────────────────────────
 
@@ -553,6 +564,8 @@ export default function AdminDashboard() {
                   onTabChange={setQuestionTab}
                   duplicates={duplicates}
                   onRefreshDuplicates={fetchDuplicates}
+                  suggestions={suggestions}
+                  onRefreshSuggestions={fetchSuggestions}
                 />
               )}
               {section === "analytics" && (
@@ -796,6 +809,7 @@ function UsersSection({
                   { key: "name", label: "User", align: "left" },
                   { key: "auth", label: "Auth", align: "left" },
                   { key: "role", label: "Role", align: "left" },
+                  { key: "tier", label: "Tier", align: "left" },
                   { key: "status", label: "Status", align: "left" },
                   { key: "xp", label: "XP", align: "right" },
                   { key: "streak", label: "Streak", align: "right" },
@@ -854,6 +868,28 @@ function UsersSection({
                         className="text-xs border border-[#E4E9F0] rounded px-2 py-1 bg-white focus:outline-none focus:border-[#007B5F]/50"
                       >
                         <option value="user">User</option>
+                        <option value="admin">Admin</option>
+                      </select>
+                    </td>
+                    {/* Tier dropdown */}
+                    <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
+                      <select
+                        value={u.tier || "free"}
+                        onChange={async (e) => {
+                          await fetch("/api/stats/admin/users", {
+                            method: "PATCH",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ userId: u.id, updates: { tier: e.target.value } }),
+                          });
+                        }}
+                        className={`text-[10px] border rounded px-2 py-1 font-semibold focus:outline-none ${
+                          (u.tier || "free") === "pro" ? "border-[#F4A261] text-[#F4A261] bg-[#F4A261]/5" :
+                          (u.tier || "free") === "admin" ? "border-[#D64545] text-[#D64545] bg-[#D64545]/5" :
+                          "border-[#E4E9F0] text-[#4A5568] bg-white"
+                        }`}
+                      >
+                        <option value="free">Free</option>
+                        <option value="pro">Pro</option>
                         <option value="admin">Admin</option>
                       </select>
                     </td>
@@ -1009,7 +1045,7 @@ function QuestionsSection({
   onSearchChange, onTopicFilterChange, onExplFilterChange, onActiveFilterChange, onSearch, onPageChange,
   expandedQuestion, onExpandQuestion,
   editingQuestion, onStartEditQuestion, questionEditForm, onQuestionEditFormChange, onSaveQuestionEdit, onCancelQuestionEdit,
-  tab, onTabChange, duplicates, onRefreshDuplicates,
+  tab, onTabChange, duplicates, onRefreshDuplicates, suggestions, onRefreshSuggestions,
 }: {
   stats: QuestionStats | null;
   questions: QuestionRow[];
@@ -1034,10 +1070,12 @@ function QuestionsSection({
   onQuestionEditFormChange: (k: string, v: unknown) => void;
   onSaveQuestionEdit: (id: number) => void;
   onCancelQuestionEdit: () => void;
-  tab: "browse" | "duplicates";
-  onTabChange: (t: "browse" | "duplicates") => void;
+  tab: "browse" | "duplicates" | "reviews";
+  onTabChange: (t: "browse" | "duplicates" | "reviews") => void;
   duplicates: DuplicateData | null;
   onRefreshDuplicates: () => void;
+  suggestions: { suggestions: unknown[]; counts: { pending: number; approved: number; rejected: number; total: number } } | null;
+  onRefreshSuggestions: () => void;
 }) {
   return (
     <div className="space-y-4">
@@ -1085,9 +1123,15 @@ function QuestionsSection({
         >
           <AlertTriangle size={14} className="inline mr-1.5" />Duplicates
         </button>
+        <button
+          onClick={() => onTabChange("reviews")}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${tab === "reviews" ? "bg-[#F4A261] text-white" : "text-[#4A5568] hover:bg-[#F7F9FC]"}`}
+        >
+          Reviews {suggestions?.counts.pending ? <span className="ml-1 bg-[#D64545] text-white text-[10px] px-1.5 py-0.5 rounded-full">{suggestions.counts.pending}</span> : null}
+        </button>
       </div>
 
-      {tab === "browse" ? (
+      {tab === "browse" && (
         <>
           {/* Search + Filters */}
           <div className="flex flex-col sm:flex-row gap-3">
@@ -1362,8 +1406,9 @@ function QuestionsSection({
             </details>
           )}
         </>
-      ) : (
-        /* Duplicates Tab */
+      )}
+
+      {tab === "duplicates" && (
         <div className="card rounded-xl p-6">
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -1408,6 +1453,115 @@ function QuestionsSection({
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {tab === "reviews" && (
+        <div className="space-y-4">
+          {/* Review Stats */}
+          {suggestions && (
+            <div className="grid grid-cols-4 gap-3">
+              <div className="card rounded-xl p-3 text-center">
+                <p className="text-lg font-bold text-[#1A2B3C] font-mono">{suggestions.counts.total}</p>
+                <p className="text-[10px] text-[#A0AEC0]">Total</p>
+              </div>
+              <div className="card rounded-xl p-3 text-center">
+                <p className="text-lg font-bold text-[#F4A261] font-mono">{suggestions.counts.pending}</p>
+                <p className="text-[10px] text-[#A0AEC0]">Pending</p>
+              </div>
+              <div className="card rounded-xl p-3 text-center">
+                <p className="text-lg font-bold text-[#00A896] font-mono">{suggestions.counts.approved}</p>
+                <p className="text-[10px] text-[#A0AEC0]">Approved</p>
+              </div>
+              <div className="card rounded-xl p-3 text-center">
+                <p className="text-lg font-bold text-[#D64545] font-mono">{suggestions.counts.rejected}</p>
+                <p className="text-[10px] text-[#A0AEC0]">Rejected</p>
+              </div>
+            </div>
+          )}
+
+          {/* Suggestions List */}
+          <div className="card rounded-xl overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-[#E4E9F0]">
+              <h3 className="text-sm font-semibold text-[#1A2B3C]">User Suggestions & Flags</h3>
+              <button onClick={onRefreshSuggestions} className="btn-secondary text-xs px-3 py-1.5 rounded-lg flex items-center gap-1">
+                <RotateCcw size={12} /> Refresh
+              </button>
+            </div>
+
+            {!suggestions ? (
+              <p className="text-sm text-[#A0AEC0] text-center py-8">Loading suggestions...</p>
+            ) : suggestions.suggestions.length === 0 ? (
+              <p className="text-sm text-[#A0AEC0] text-center py-8">No suggestions yet</p>
+            ) : (
+              <div className="divide-y divide-[#E4E9F0]">
+                {(suggestions.suggestions as Record<string, unknown>[]).map((s) => (
+                  <div key={s.id as number} className="px-4 py-3 hover:bg-[#F7F9FC]">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
+                            s.type === "flag" ? "bg-[#D64545]/10 text-[#D64545]" : "bg-[#007B5F]/10 text-[#007B5F]"
+                          }`}>
+                            {(String(s.type)) === "flag" ? "FLAG" : "EDIT"}
+                          </span>
+                          {s.reason ? (
+                            <span className="text-[10px] bg-[#F7F9FC] text-[#4A5568] px-2 py-0.5 rounded border border-[#E4E9F0]">
+                              {String(s.reason)}
+                            </span>
+                          ) : null}
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
+                            s.status === "pending" ? "bg-[#F4A261]/10 text-[#F4A261]" :
+                            s.status === "approved" ? "bg-[#00A896]/10 text-[#00A896]" :
+                            "bg-[#D64545]/10 text-[#D64545]"
+                          }`}>
+                            {String(s.status)}
+                          </span>
+                        </div>
+                        <p className="text-sm text-[#1A2B3C] mb-0.5">Q#{s.question_id as number}: {(String(s.question_text || ""))?.slice(0, 100)}...</p>
+                        <p className="text-xs text-[#A0AEC0]">
+                          By {String(s.user_name || "Anonymous")} · {String(s.question_topic || "")} · {new Date(String(s.created_at)).toLocaleDateString("de-DE")}
+                        </p>
+                        {s.details ? <p className="text-xs text-[#4A5568] mt-1 italic">&quot;{String(s.details)}&quot;</p> : null}
+                      </div>
+
+                      {/* Actions */}
+                      {s.status === "pending" && (
+                        <div className="flex gap-1.5 flex-shrink-0">
+                          <button
+                            onClick={async () => {
+                              await fetch("/api/suggestions", {
+                                method: "PATCH",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ suggestionId: s.id, action: "approve" }),
+                              });
+                              onRefreshSuggestions();
+                            }}
+                            className="text-[10px] bg-[#00A896] text-white px-2.5 py-1 rounded-lg font-medium hover:bg-[#008F80]"
+                          >
+                            Approve
+                          </button>
+                          <button
+                            onClick={async () => {
+                              await fetch("/api/suggestions", {
+                                method: "PATCH",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ suggestionId: s.id, action: "reject" }),
+                              });
+                              onRefreshSuggestions();
+                            }}
+                            className="text-[10px] bg-[#D64545]/10 text-[#D64545] px-2.5 py-1 rounded-lg font-medium hover:bg-[#D64545]/20"
+                          >
+                            Reject
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
