@@ -35,6 +35,8 @@ interface QuestionCardProps {
   imageUrl?: string;
   /** Hide inline explanation (used when split-view shows explanation separately) */
   hideExplanation?: boolean;
+  /** User tier for feature gating */
+  userTier?: string;
 }
 
 const DE_MONTHS = [
@@ -95,6 +97,7 @@ export default function QuestionCard({
   onAnswer,
   imageUrl,
   hideExplanation = false,
+  userTier = "free",
 }: QuestionCardProps) {
   const config = getTopicConfig(question.topic);
   const [selectedIdxs, setSelectedIdxs] = useState<Set<number>>(new Set());
@@ -334,6 +337,18 @@ export default function QuestionCard({
             <span className="max-w-[140px] truncate">{question.topic}</span>
           </span>
           <div className="flex items-center gap-2">
+            {/* Flag — always visible as subtle icon */}
+            {!suggestionSubmitted ? (
+              <button
+                onClick={() => { setShowSuggestion(!showSuggestion); setSuggestionType(null); }}
+                title={lang === "de" ? "Problem melden" : "Report issue"}
+                className={`transition-colors ${showSuggestion ? "text-[#D64545]" : "text-[#E4E9F0] hover:text-[#D64545]"}`}
+              >
+                <Flag className="w-4 h-4" />
+              </button>
+            ) : (
+              <CheckCircle2 className="w-4 h-4 text-[#00A896]" />
+            )}
             <button
               onClick={handleToggleFav}
               title={isFav ? t("bookmarked", lang) : t("bookmark", lang)}
@@ -791,11 +806,13 @@ export default function QuestionCard({
         open={showAIChat}
         onClose={() => setShowAIChat(false)}
         lang={lang}
+        questionId={question.id}
         questionText={question.question}
         answerText={question.answer}
         explanation={question.explanation}
         topic={question.topic}
         options={options.map(o => ({ text: o.text, correct: o.correct }))}
+        userTier={userTier}
       />
 
       {/* Lightbox */}

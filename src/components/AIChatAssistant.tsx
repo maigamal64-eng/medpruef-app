@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { X, Send, Bot, User, Loader2 } from "lucide-react";
+import { X, Send, Bot, User, Loader2, Lock } from "lucide-react";
 import { trackEvent } from "@/lib/tracker";
+import ReactMarkdown from "react-markdown";
 
 type Lang = "de" | "en";
 
@@ -15,37 +16,44 @@ interface AIChatAssistantProps {
   open: boolean;
   onClose: () => void;
   lang: Lang;
+  questionId: number;
   questionText: string;
   answerText: string;
   explanation?: string;
   topic: string;
   options?: { text: string; correct: boolean }[];
+  userTier?: string;
 }
 
 export default function AIChatAssistant({
   open,
   onClose,
   lang,
+  questionId,
   questionText,
   answerText,
   explanation,
   topic,
   options,
+  userTier = "free",
 }: AIChatAssistantProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [initialized, setInitialized] = useState(false);
+  const [cachedExplanation, setCachedExplanation] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Auto-generate initial explanation when opened
+  const isPro = userTier === "pro" || userTier === "admin";
+
+  // Auto-generate or load cached explanation when opened
   useEffect(() => {
     if (!open || initialized) return;
     setInitialized(true);
     setMessages([]);
-    trackEvent("ai_chat_open", { topic, questionLength: questionText.length });
-    generateExplanation();
+    trackEvent("ai_chat_open", { topic, questionId });
+    loadOrGenerateExplanation();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
@@ -77,14 +85,27 @@ ${optionsText ? `OPTIONS:\n${optionsText}` : ""}
 CORRECT ANSWER: ${answerText}
 ${explanation ? `EXPLANATION: ${explanation}` : ""}
 
-Provide clear, educational explanations. Use medical terminology but explain it.
+Provide clear, educational explanations in markdown format. Use medical terminology but explain it.
 Respond in ${lang === "de" ? "German" : "English"}.
-Keep responses concise but thorough. Use bullet points for clarity.`;
+Use **bold** for key terms, bullet points for clarity, and structured headings.`;
   };
 
-  const generateExplanation = async () => {
+  const loadOrGenerateExplanation = async () => {
     setLoading(true);
     try {
+      // Try to load cached explanation from DB first
+      const cacheRes = await fetch(`/api/ai-chat?questionId=${questionId}`);
+      if (cacheRes.ok) {
+        const cacheData = await cacheRes.json();
+        if (cacheData.cached && cacheData.explanation) {
+          setCachedExplanation(cacheData.explanation);
+          setMessages([{ role: "assistant", content: cacheData.explanation }]);
+          setLoading(false);
+          return;
+        }
+      }
+
+      // Generate new explanation
       const systemPrompt = buildSystemContext();
       const userPrompt = lang === "de"
         ? "Erkläre diese Frage und warum die richtige Antwort korrekt ist. Gehe auch kurz auf die falschen Antworten ein."
@@ -96,6 +117,7 @@ Keep responses concise but thorough. Use bullet points for clarity.`;
         body: JSON.stringify({
           system: systemPrompt,
           messages: [{ role: "user", content: userPrompt }],
+          questionId, // For caching
         }),
       });
 
@@ -103,14 +125,16 @@ Keep responses concise but thorough. Use bullet points for clarity.`;
         setMessages([{
           role: "assistant",
           content: lang === "de"
-            ? "KI-Assistent ist momentan nicht verfügbar. Die Erklärung wird bald hinzugefügt."
-            : "AI assistant is currently unavailable. Explanation will be added soon.",
+            ? "KI-Assistent ist momentan nicht verfügbar."
+            : "AI assistant is currently unavailable.",
         }]);
         return;
       }
 
       const data = await response.json();
-      setMessages([{ role: "assistant", content: data.reply || data.content || "..." }]);
+      const reply = data.reply || data.content || "...";
+      setCachedExplanation(reply);
+      setMessages([{ role: "assistant", content: reply }]);
     } catch {
       setMessages([{
         role: "assistant",
@@ -126,12 +150,15 @@ Keep responses concise but thorough. Use bullet points for clarity.`;
   const handleSend = async () => {
     const text = input.trim();
     if (!text || loading) return;
-    setInput("");
 
+    // Pro-only custom chat
+    if (!isPro) return;
+
+    setInput("");
     const newMessages = [...messages, { role: "user" as const, content: text }];
     setMessages(newMessages);
     setLoading(true);
-    trackEvent("ai_chat_message", { messageLength: text.length, topic });
+    trackEvent("ai_chat_message", { messageLength: text.length, topic, questionId });
 
     try {
       const response = await fetch("/api/ai-chat", {
@@ -149,7 +176,7 @@ Keep responses concise but thorough. Use bullet points for clarity.`;
     } catch {
       setMessages([...newMessages, {
         role: "assistant",
-        content: lang === "de" ? "Fehler beim Senden. Bitte erneut versuchen." : "Error sending. Please try again.",
+        content: lang === "de" ? "Fehler beim Senden." : "Error sending.",
       }]);
     } finally {
       setLoading(false);
@@ -175,10 +202,12 @@ Keep responses concise but thorough. Use bullet points for clarity.`;
             </div>
             <div>
               <h3 className="text-sm font-semibold text-white">
-                {lang === "de" ? "KI-Assistent" : "AI Assistant"}
+                {lang === "de" ? "KI-Erklärung" : "AI Explanation"}
               </h3>
               <p className="text-[10px] text-white/60">
-                {lang === "de" ? "Stelle eine Frage" : "Ask a question"}
+                {cachedExplanation
+                  ? (lang === "de" ? "Generiert · für alle verfügbar" : "Generated · available for all")
+                  : (lang === "de" ? "Wird generiert..." : "Generating...")}
               </p>
             </div>
           </div>
@@ -204,7 +233,9 @@ Keep responses concise but thorough. Use bullet points for clarity.`;
                   ? "bg-[#003A8C] text-white rounded-tr-sm"
                   : "bg-[#F7F9FC] text-[#1A2B3C] rounded-tl-sm border border-[#E4E9F0]"
               }`}>
-                <div className="whitespace-pre-line">{msg.content}</div>
+                <div className="prose prose-sm max-w-none prose-headings:text-[#001B3D] prose-headings:font-semibold prose-headings:text-sm prose-p:my-1 prose-ul:my-1 prose-li:my-0.5 prose-strong:text-[#007B5F]">
+                  <ReactMarkdown>{msg.content}</ReactMarkdown>
+                </div>
               </div>
             </div>
           ))}
@@ -223,30 +254,36 @@ Keep responses concise but thorough. Use bullet points for clarity.`;
           <div ref={messagesEndRef} />
         </div>
 
-        {/* Input */}
+        {/* Input — Pro only for custom questions */}
         <div className="px-4 py-3 border-t border-[#E4E9F0] bg-white">
-          <div className="flex items-center gap-2">
-            <input
-              ref={inputRef}
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-              placeholder={lang === "de" ? "z.B. Warum ist diese Antwort richtig?" : "e.g. Why is this answer correct?"}
-              className="flex-1 bg-[#F7F9FC] border border-[#E4E9F0] rounded-xl px-4 py-2.5 text-sm text-[#1A2B3C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#007B5F]/50"
-              disabled={loading}
-            />
-            <button
-              onClick={handleSend}
-              disabled={!input.trim() || loading}
-              className="w-10 h-10 rounded-xl bg-[#007B5F] text-white flex items-center justify-center hover:bg-[#00A896] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <Send className="w-4 h-4" />
-            </button>
-          </div>
-          <p className="text-[10px] text-[#A0AEC0] text-center mt-1.5">
-            {lang === "de" ? "Enter drücken zum Senden" : "Press Enter to send"}
-          </p>
+          {isPro ? (
+            <div className="flex items-center gap-2">
+              <input
+                ref={inputRef}
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+                placeholder={lang === "de" ? "Stelle eine Folgefrage..." : "Ask a follow-up question..."}
+                className="flex-1 bg-[#F7F9FC] border border-[#E4E9F0] rounded-xl px-4 py-2.5 text-sm text-[#1A2B3C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#007B5F]/50"
+                disabled={loading}
+              />
+              <button
+                onClick={handleSend}
+                disabled={!input.trim() || loading}
+                className="w-10 h-10 rounded-xl bg-[#007B5F] text-white flex items-center justify-center hover:bg-[#00A896] transition-colors disabled:opacity-40"
+              >
+                <Send className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center gap-2 py-1 text-xs text-[#A0AEC0]">
+              <Lock className="w-3.5 h-3.5" />
+              {lang === "de"
+                ? "Folgefragen sind ein Pro-Feature"
+                : "Follow-up questions are a Pro feature"}
+            </div>
+          )}
         </div>
       </div>
     </div>
