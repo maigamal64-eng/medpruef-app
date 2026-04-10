@@ -7,7 +7,7 @@ import type { MCQOption } from "@/lib/mcq";
 import ImageLightbox from "@/components/ImageLightbox";
 import { trackEvent } from "@/lib/tracker";
 import TopicIcon from "@/components/TopicIcon";
-import { Lightbulb, FileText, Highlighter, Bot, Flag, CheckCircle2, Edit3, AlertTriangle, X } from "lucide-react";
+import { Lightbulb, FileText, Highlighter, Bot, Flag, CheckCircle2, Edit3, AlertTriangle, X, ThumbsUp, ThumbsDown } from "lucide-react";
 import AIChatAssistant from "@/components/AIChatAssistant";
 
 type Lang = "de" | "en";
@@ -119,6 +119,7 @@ export default function QuestionCard({
   const [editExplanation, setEditExplanation] = useState("");
   const [editTopic, setEditTopic] = useState("");
   const [suggestionSubmitted, setSuggestionSubmitted] = useState(false);
+  const [explanationRating, setExplanationRating] = useState<1 | -1 | null>(null);
   const [suggestionLoading, setSuggestionLoading] = useState(false);
   const [highlights, setHighlights] = useState<string[]>([]);
   const [showHighlightBtn, setShowHighlightBtn] = useState(false);
@@ -528,6 +529,51 @@ export default function QuestionCard({
               <Lightbulb className="w-4 h-4 inline" /> {t("explanation", lang)}
             </p>
             <p className="text-[#4A5568] leading-relaxed text-sm">{question.explanation}</p>
+            <div className="flex items-center gap-2 mt-3 pt-2 border-t border-[#E4E9F0]">
+              <span className="text-[10px] text-[#A0AEC0]">
+                {lang === "de" ? "Hilfreich?" : "Helpful?"}
+              </span>
+              <button
+                onClick={() => {
+                  if (explanationRating === 1) return;
+                  setExplanationRating(1);
+                  trackEvent("feature_use", { feature: "explanation_rating", rating: 1, questionId: question.id });
+                  fetch("/api/explanation-rating", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ questionId: question.id, rating: 1 }),
+                  }).catch(() => {});
+                }}
+                className={`p-1 rounded transition-colors ${
+                  explanationRating === 1
+                    ? "text-[#007B5F] bg-[#007B5F]/10"
+                    : "text-[#A0AEC0] hover:text-[#007B5F] hover:bg-[#007B5F]/5"
+                }`}
+                title={lang === "de" ? "Hilfreich" : "Helpful"}
+              >
+                <ThumbsUp className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => {
+                  if (explanationRating === -1) return;
+                  setExplanationRating(-1);
+                  trackEvent("feature_use", { feature: "explanation_rating", rating: -1, questionId: question.id });
+                  fetch("/api/explanation-rating", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ questionId: question.id, rating: -1 }),
+                  }).catch(() => {});
+                }}
+                className={`p-1 rounded transition-colors ${
+                  explanationRating === -1
+                    ? "text-[#D64545] bg-[#D64545]/10"
+                    : "text-[#A0AEC0] hover:text-[#D64545] hover:bg-[#D64545]/5"
+                }`}
+                title={lang === "de" ? "Nicht hilfreich" : "Not helpful"}
+              >
+                <ThumbsDown className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
         )}
 

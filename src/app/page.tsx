@@ -536,7 +536,27 @@ export default function Home() {
               <StreakWidget streak={gam?.current_streak || 0} lang={lang} />
             </div>
             <div className="card rounded-2xl p-6 md:col-span-2 lg:col-span-1">
-              <XPBar totalXp={gam?.total_xp || 0} lang={lang} />
+              {(() => {
+                const target = profileData?.targetDate;
+                if (target) {
+                  const daysLeft = Math.ceil((new Date(target).getTime() - Date.now()) / 86400000);
+                  if (daysLeft > 0) {
+                    const urgency = daysLeft <= 14 ? "#D64545" : daysLeft <= 30 ? "#F4A261" : "#007B5F";
+                    return (
+                      <div className="text-center">
+                        <p className="text-xs uppercase tracking-wider font-semibold mb-2" style={{ color: urgency }}>
+                          {t("exam_countdown", lang)}
+                        </p>
+                        <p className="text-4xl font-bold font-display" style={{ color: urgency }}>
+                          {daysLeft}
+                        </p>
+                        <p className="text-sm text-[#4A5568] mt-1">{t("days_until_exam", lang)}</p>
+                      </div>
+                    );
+                  }
+                }
+                return <XPBar totalXp={gam?.total_xp || 0} lang={lang} />;
+              })()}
             </div>
           </div>
 
@@ -598,6 +618,15 @@ export default function Home() {
             >
               <GraduationCap className="w-4 h-4 text-[#F4A261]" />
               {lang === "de" ? "Probeprüfung" : "Mock Exam"}
+            </Link>
+
+            {/* Timed Practice */}
+            <Link
+              href="/timed-practice"
+              className="btn-secondary flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm"
+            >
+              <Zap className="w-4 h-4 text-[#00A896]" />
+              {t("timed_practice", lang)}
             </Link>
           </div>
 
