@@ -26,6 +26,8 @@ export async function POST(req: NextRequest) {
     }
 
     const db = getServiceClient();
+    const ip = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "unknown";
+    const ua = req.headers.get("user-agent") || "unknown";
 
     // Create a new session record
     if (createSession) {
@@ -38,6 +40,20 @@ export async function POST(req: NextRequest) {
         },
         { onConflict: "id" }
       );
+
+      // Log session start in activity log
+      const isUuid = /^[0-9a-f]{8}-/.test(userId);
+      if (isUuid) {
+        await db.from("user_activity_log").insert({
+          user_id: userId,
+          session_id: sessionId,
+          event_type: "session_start",
+          action: "create_session",
+          metadata: { device_info: deviceInfo || {} },
+          ip_address: ip,
+          user_agent: ua,
+        }).then(() => {});
+      }
     }
 
     // Mark session as ended
@@ -63,6 +79,7 @@ export async function POST(req: NextRequest) {
 
     // Insert events batch
     if (events && events.length > 0) {
+      // Original user_events table
       const rows = events.map((e) => ({
         user_id: userId,
         session_id: sessionId,
@@ -70,8 +87,27 @@ export async function POST(req: NextRequest) {
         event_data: e.data || {},
         created_at: e.timestamp || new Date().toISOString(),
       }));
-
       await db.from("user_events").insert(rows);
+
+      // Enhanced activity log (only for real UUID users, not guest_xxx)
+      const isUuid = /^[0-9a-f]{8}-/.test(userId);
+      if (isUuid) {
+        const activityRows = events.map((e) => ({
+          user_id: userId,
+          session_id: sessionId,
+          event_type: e.type,
+          page: (e.data?.page as string) || null,
+          component: (e.data?.component as string) || null,
+          action: (e.data?.action as string) || e.type,
+          metadata: e.data || {},
+          question_id: (e.data?.questionId as number) || null,
+          topic: (e.data?.topic as string) || null,
+          duration_ms: (e.data?.timeSpent as number) || (e.data?.timeSpentMs as number) || null,
+          ip_address: ip,
+          user_agent: ua,
+        }));
+        await db.from("user_activity_log").insert(activityRows).then(() => {});
+      }
 
       // Track pages_visited on page_view events
       const pageViews = events

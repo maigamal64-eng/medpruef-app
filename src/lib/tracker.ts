@@ -32,7 +32,14 @@ export type TrackEventType =
   | "cta_click"
   | "login_attempt"
   | "login_success"
-  | "guest_start";
+  | "guest_start"
+  | "quiz_start"
+  | "quiz_complete"
+  | "answer_time"
+  | "page_leave"
+  | "scroll_depth"
+  | "error"
+  | "feature_use";
 
 interface QueuedEvent {
   type: TrackEventType;
@@ -119,6 +126,14 @@ export function initTracker(userId: string): void {
         userAgent: navigator.userAgent,
         language: navigator.language,
         platform: navigator.platform,
+        screenWidth: window.screen?.width,
+        screenHeight: window.screen?.height,
+        viewportWidth: window.innerWidth,
+        viewportHeight: window.innerHeight,
+        devicePixelRatio: window.devicePixelRatio,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        referrer: document.referrer || null,
+        url: window.location.href,
       },
     }),
   }).catch(() => {});

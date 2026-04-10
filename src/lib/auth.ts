@@ -1,6 +1,6 @@
 /**
  * Client-side authentication utilities.
- * Supports Telegram Mini App (initData) and Telegram Login Widget.
+ * Supports Telegram Mini App, Telegram Login Widget, and Email/Password.
  * Safe to import in Client Components — no Node.js APIs.
  */
 
@@ -19,9 +19,11 @@ export interface TelegramWidgetUser {
 export interface StoredSession {
   user: {
     id: string;
-    telegram_id: number;
+    telegram_id?: number;
+    email?: string;
     first_name: string;
     last_name?: string;
+    role?: string;
     xp_total: number;
     streak_count: number;
     daily_goal: number;
@@ -75,4 +77,10 @@ export function clearSession(): void {
   try {
     localStorage.removeItem(SESSION_KEY);
   } catch {}
+}
+
+/** Check if the current user has admin role. */
+export function isAdmin(): boolean {
+  const session = getStoredSession();
+  return session?.user?.role === 'admin';
 }

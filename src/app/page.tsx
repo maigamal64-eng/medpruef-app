@@ -37,7 +37,7 @@ type Lang = "de" | "en";
 
 interface User {
   id: string;
-  telegram_id: number;
+  telegram_id?: number;
   first_name: string;
   last_name?: string;
   xp_total: number;
