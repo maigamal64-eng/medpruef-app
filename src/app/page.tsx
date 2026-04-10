@@ -131,6 +131,7 @@ export default function Home() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [profileData, setProfileData] = useState<{ targetDate?: string } | null>(null);
   const [lastSessionInfo, setLastSessionInfo] = useState<{ totalXpSession: number; questionCount: number } | null>(null);
+  const [processingTgToken, setProcessingTgToken] = useState(false);
 
   useEffect(() => {
     setLangState(getLang());
@@ -141,11 +142,13 @@ export default function Home() {
   }, []);
 
   // Bot deep-link login: if URL carries ?tg_token=..., exchange it for a session.
+  // This runs BEFORE the redirect-to-landing check so we don't lose the token.
   useEffect(() => {
     if (typeof window === "undefined") return;
     const url = new URL(window.location.href);
     const tgToken = url.searchParams.get("tg_token");
     if (!tgToken) return;
+    setProcessingTgToken(true);
     (async () => {
       try {
         const res = await fetch("/api/auth", {
@@ -162,12 +165,13 @@ export default function Home() {
           // Reload so the rest of the app picks up the new session.
           window.location.reload();
         } else {
-          // Clear the bad token from the URL regardless
+          // Clear the bad token from the URL and fall through to normal flow
           url.searchParams.delete("tg_token");
           window.history.replaceState({}, "", url.toString());
+          setProcessingTgToken(false);
         }
       } catch {
-        // ignore
+        setProcessingTgToken(false);
       }
     })();
   }, []);
@@ -348,9 +352,23 @@ export default function Home() {
     return <ExamSelector lang={lang} onSelect={handleExamSelected} />;
   }
 
+  // If we're processing a Telegram bot token, show loader instead of redirecting
+  if (processingTgToken) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-[#F7F9FC] gap-4">
+        <BrandedLoader size="lg" />
+        <p className="text-sm text-[#4A5568]">
+          {lang === "de" ? "Anmeldung läuft..." : "Signing in..."}
+        </p>
+      </div>
+    );
+  }
+
   // Non-logged-in users → always redirect to /landing (no demo home)
   if ((error === "demo" || !user) && typeof window !== "undefined") {
-    if (!isTelegramMiniApp()) {
+    // Don't redirect if there's still a tg_token in the URL (race condition protection)
+    const hasToken = new URLSearchParams(window.location.search).get("tg_token");
+    if (!isTelegramMiniApp() && !hasToken) {
       window.location.href = "/landing";
       return (
         <div className="flex items-center justify-center min-h-screen bg-[#F7F9FC]">
