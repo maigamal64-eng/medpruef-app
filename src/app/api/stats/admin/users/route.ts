@@ -4,10 +4,12 @@ import { getServiceClient } from "@/lib/supabase";
 interface UserRow {
   id: string;
   telegram_id: string | null;
+  email: string | null;
   first_name: string | null;
   last_name: string | null;
-  username: string | null;
+  telegram_username: string | null;
   photo_url: string | null;
+  role: string;
   created_at: string;
   user_gamification: {
     total_xp: number;
@@ -28,10 +30,12 @@ export async function GET() {
         `
         id,
         telegram_id,
+        email,
         first_name,
         last_name,
-        username,
+        telegram_username,
         photo_url,
+        role,
         created_at,
         user_gamification (
           total_xp,
@@ -101,10 +105,12 @@ export async function GET() {
       return {
         id: u.id,
         telegram_id: u.telegram_id,
+        email: u.email,
         name:
-          [u.first_name, u.last_name].filter(Boolean).join(" ") || u.username || "Anonymous",
-        username: u.username,
+          [u.first_name, u.last_name].filter(Boolean).join(" ") || u.telegram_username || "Anonymous",
+        username: u.telegram_username,
         photo_url: u.photo_url,
+        role: u.role || "user",
         created_at: u.created_at,
         xp: gam?.total_xp || 0,
         streak: gam?.current_streak || 0,
