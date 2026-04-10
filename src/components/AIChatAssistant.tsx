@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { X, Send, Bot, User, Loader2 } from "lucide-react";
+import { trackEvent } from "@/lib/tracker";
 
 type Lang = "de" | "en";
 
@@ -43,6 +44,7 @@ export default function AIChatAssistant({
     if (!open || initialized) return;
     setInitialized(true);
     setMessages([]);
+    trackEvent("ai_chat_open", { topic, questionLength: questionText.length });
     generateExplanation();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -129,6 +131,7 @@ Keep responses concise but thorough. Use bullet points for clarity.`;
     const newMessages = [...messages, { role: "user" as const, content: text }];
     setMessages(newMessages);
     setLoading(true);
+    trackEvent("ai_chat_message", { messageLength: text.length, topic });
 
     try {
       const response = await fetch("/api/ai-chat", {

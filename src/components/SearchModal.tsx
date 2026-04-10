@@ -5,6 +5,7 @@ import { Search, X, ArrowRight, Loader2, FileText } from "lucide-react";
 import { getTopicConfig } from "@/lib/topics";
 import TopicIcon from "@/components/TopicIcon";
 import Link from "next/link";
+import { trackEvent } from "@/lib/tracker";
 
 type Lang = "de" | "en";
 
@@ -71,6 +72,7 @@ export default function SearchModal({ open, onClose, lang, examSource, userId }:
         setTotalCount(countData.count || 0);
 
         // Get results (up to 50)
+        trackEvent("search", { query: q, examSource });
         const params = new URLSearchParams({ search: q, examSource, limit: "50" });
         const res = await fetch(`/api/questions?${params}`);
         const data = await res.json();

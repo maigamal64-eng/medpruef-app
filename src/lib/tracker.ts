@@ -18,7 +18,21 @@ export type TrackEventType =
   | "exam_start"
   | "exam_end"
   | "exam_abandon"
-  | "explanation_view";
+  | "explanation_view"
+  | "ai_chat_open"
+  | "ai_chat_message"
+  | "flashcard_flip"
+  | "flashcard_rate"
+  | "note_save"
+  | "highlight_add"
+  | "theme_toggle"
+  | "language_change"
+  | "onboarding_complete"
+  | "search_result_click"
+  | "cta_click"
+  | "login_attempt"
+  | "login_success"
+  | "guest_start";
 
 interface QueuedEvent {
   type: TrackEventType;
