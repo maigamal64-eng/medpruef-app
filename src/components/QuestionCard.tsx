@@ -7,7 +7,7 @@ import type { MCQOption } from "@/lib/mcq";
 import ImageLightbox from "@/components/ImageLightbox";
 import { trackEvent } from "@/lib/tracker";
 import TopicIcon from "@/components/TopicIcon";
-import { Lightbulb, FileText, Highlighter, Bot } from "lucide-react";
+import { Lightbulb, FileText, Highlighter, Bot, Flag, CheckCircle2, Edit3, AlertTriangle, X } from "lucide-react";
 import AIChatAssistant from "@/components/AIChatAssistant";
 
 type Lang = "de" | "en";
@@ -107,6 +107,16 @@ export default function QuestionCard({
 
   const [showAnswer, setShowAnswer] = useState(false);
   const [showAIChat, setShowAIChat] = useState(false);
+  // Suggestion/flag state
+  const [showSuggestion, setShowSuggestion] = useState(false);
+  const [suggestionType, setSuggestionType] = useState<"flag" | "edit" | null>(null);
+  const [flagReason, setFlagReason] = useState("");
+  const [flagDetails, setFlagDetails] = useState("");
+  const [editQuestion, setEditQuestion] = useState("");
+  const [editExplanation, setEditExplanation] = useState("");
+  const [editTopic, setEditTopic] = useState("");
+  const [suggestionSubmitted, setSuggestionSubmitted] = useState(false);
+  const [suggestionLoading, setSuggestionLoading] = useState(false);
   const [highlights, setHighlights] = useState<string[]>([]);
   const [showHighlightBtn, setShowHighlightBtn] = useState(false);
   const [highlightPos, setHighlightPos] = useState({ x: 0, y: 0 });
@@ -127,6 +137,11 @@ export default function QuestionCard({
     setShowNoteInput(false);
     setNoteSaved(false);
     setShowHighlightBtn(false);
+    setShowSuggestion(false);
+    setSuggestionType(null);
+    setFlagReason("");
+    setFlagDetails("");
+    setSuggestionSubmitted(false);
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem(getNoteKey(question.id)) || "";
       setNote(saved);
@@ -514,7 +529,7 @@ export default function QuestionCard({
             </button>
 
             {/* Add Note button */}
-            {!showNoteInput ? (
+            {!showNoteInput && (
               <button
                 onClick={() => setShowNoteInput(true)}
                 className="flex items-center gap-1.5 text-xs text-[#A0AEC0] hover:text-[#4A5568] transition-colors"
@@ -522,7 +537,30 @@ export default function QuestionCard({
                 <FileText className="w-4 h-4" />
                 <span>{t("add_note", lang)}</span>
               </button>
-            ) : (
+            )}
+
+            {/* Flag / Suggest button */}
+            {!suggestionSubmitted && (
+              <button
+                onClick={() => { setShowSuggestion(!showSuggestion); setSuggestionType(null); }}
+                className={`flex items-center gap-1.5 text-xs transition-colors ${showSuggestion ? "text-[#D64545]" : "text-[#A0AEC0] hover:text-[#D64545]"}`}
+              >
+                <Flag className="w-4 h-4" />
+                <span>{lang === "de" ? "Melden" : "Report"}</span>
+              </button>
+            )}
+            {suggestionSubmitted && (
+              <span className="flex items-center gap-1.5 text-xs text-[#00A896] animate-fade-in">
+                <CheckCircle2 className="w-4 h-4" />
+                {lang === "de" ? "Gesendet ✓" : "Submitted ✓"}
+              </span>
+            )}
+          </div>
+        )}
+
+          {/* Note input (expanded) */}
+          {answered && showNoteInput && (
+            <div className="mt-3 animate-fade-in">
               <div className="bg-[#FFFFFF] border border-[#E4E9F0] rounded-xl shadow-[var(--shadow-xs)] p-3">
                 <p className="text-[10px] uppercase tracking-wider text-[#A0AEC0] font-semibold mb-2">
                   <FileText className="w-3 h-3 inline" /> {t("add_note", lang)}
@@ -551,9 +589,201 @@ export default function QuestionCard({
                   )}
                 </div>
               </div>
-            )}
-          </div>
-        )}
+            </div>
+          )}
+
+          {/* Suggestion / Flag form (expanded) */}
+          {answered && showSuggestion && !suggestionSubmitted && (
+            <div className="mt-3 animate-fade-in">
+              <div className="bg-[#FFFFFF] border border-[#E4E9F0] rounded-xl shadow-[var(--shadow-xs)] p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-xs font-semibold text-[#1A2B3C] flex items-center gap-1.5">
+                    <Flag className="w-3.5 h-3.5 text-[#D64545]" />
+                    {lang === "de" ? "Problem melden" : "Report Issue"}
+                  </p>
+                  <button onClick={() => setShowSuggestion(false)} className="text-[#A0AEC0] hover:text-[#4A5568]">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Step 1: Choose type */}
+                {!suggestionType && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => setSuggestionType("flag")}
+                      className="flex items-center gap-2 p-3 border border-[#E4E9F0] rounded-xl hover:border-[#D64545]/40 hover:bg-[#D64545]/5 transition-all text-left"
+                    >
+                      <AlertTriangle className="w-5 h-5 text-[#D64545]" />
+                      <div>
+                        <p className="text-sm font-medium text-[#1A2B3C]">{lang === "de" ? "Problem melden" : "Report Issue"}</p>
+                        <p className="text-[10px] text-[#A0AEC0]">{lang === "de" ? "Fehler, Duplikat, unklar" : "Error, duplicate, unclear"}</p>
+                      </div>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSuggestionType("edit");
+                        setEditQuestion(question.question);
+                        setEditExplanation(question.explanation || "");
+                        setEditTopic(question.topic);
+                      }}
+                      className="flex items-center gap-2 p-3 border border-[#E4E9F0] rounded-xl hover:border-[#007B5F]/40 hover:bg-[#007B5F]/5 transition-all text-left"
+                    >
+                      <Edit3 className="w-5 h-5 text-[#007B5F]" />
+                      <div>
+                        <p className="text-sm font-medium text-[#1A2B3C]">{lang === "de" ? "Änderung vorschlagen" : "Suggest Edit"}</p>
+                        <p className="text-[10px] text-[#A0AEC0]">{lang === "de" ? "Text, Erklärung bearbeiten" : "Edit text, explanation"}</p>
+                      </div>
+                    </button>
+                  </div>
+                )}
+
+                {/* Step 2a: Flag form */}
+                {suggestionType === "flag" && (
+                  <div className="space-y-3">
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        { value: "incorrect_answer", de: "Falsche Antwort", en: "Incorrect Answer" },
+                        { value: "malformed", de: "Fehlerhaft", en: "Malformed" },
+                        { value: "duplicate", de: "Duplikat", en: "Duplicate" },
+                        { value: "typo", de: "Tippfehler", en: "Typo" },
+                        { value: "unclear", de: "Unklar", en: "Unclear" },
+                        { value: "missing_explanation", de: "Erklärung fehlt", en: "Missing Explanation" },
+                        { value: "wrong_topic", de: "Falsches Thema", en: "Wrong Topic" },
+                        { value: "other", de: "Sonstiges", en: "Other" },
+                      ].map((r) => (
+                        <button
+                          key={r.value}
+                          onClick={() => setFlagReason(r.value)}
+                          className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
+                            flagReason === r.value
+                              ? "bg-[#D64545]/10 border-[#D64545]/40 text-[#D64545] font-semibold"
+                              : "border-[#E4E9F0] text-[#4A5568] hover:border-[#D64545]/30"
+                          }`}
+                        >
+                          {lang === "de" ? r.de : r.en}
+                        </button>
+                      ))}
+                    </div>
+                    <textarea
+                      value={flagDetails}
+                      onChange={(e) => setFlagDetails(e.target.value)}
+                      placeholder={lang === "de" ? "Weitere Details (optional)..." : "Additional details (optional)..."}
+                      rows={2}
+                      className="w-full bg-[#F7F9FC] border border-[#E4E9F0] rounded-lg px-3 py-2 text-sm text-[#1A2B3C] placeholder-[#A0AEC0] resize-none focus:outline-none focus:border-[#D64545]/30"
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={async () => {
+                          if (!flagReason) return;
+                          setSuggestionLoading(true);
+                          try {
+                            await fetch("/api/suggestions", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({
+                                questionId: question.id,
+                                type: "flag",
+                                reason: flagReason,
+                                details: flagDetails || null,
+                              }),
+                            });
+                            setSuggestionSubmitted(true);
+                            setShowSuggestion(false);
+                            trackEvent("feature_use", { feature: "flag_question", reason: flagReason, questionId: question.id });
+                          } catch { /* silent */ }
+                          finally { setSuggestionLoading(false); }
+                        }}
+                        disabled={!flagReason || suggestionLoading}
+                        className="btn-primary text-xs px-4 py-2 rounded-lg disabled:opacity-40"
+                      >
+                        {suggestionLoading ? "..." : (lang === "de" ? "Senden" : "Submit")}
+                      </button>
+                      <button
+                        onClick={() => setSuggestionType(null)}
+                        className="text-xs text-[#A0AEC0] hover:text-[#4A5568] px-3 py-2"
+                      >
+                        {t("cancel", lang)}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Step 2b: Edit suggestion form */}
+                {suggestionType === "edit" && (
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-[10px] text-[#A0AEC0] uppercase tracking-wider font-semibold mb-1 block">
+                        {lang === "de" ? "Fragetext" : "Question Text"}
+                      </label>
+                      <textarea
+                        value={editQuestion}
+                        onChange={(e) => setEditQuestion(e.target.value)}
+                        rows={3}
+                        className="w-full bg-[#F7F9FC] border border-[#E4E9F0] rounded-lg px-3 py-2 text-sm text-[#1A2B3C] resize-none focus:outline-none focus:border-[#007B5F]/30"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] text-[#A0AEC0] uppercase tracking-wider font-semibold mb-1 block">
+                        {lang === "de" ? "Erklärung" : "Explanation"}
+                      </label>
+                      <textarea
+                        value={editExplanation}
+                        onChange={(e) => setEditExplanation(e.target.value)}
+                        rows={3}
+                        placeholder={lang === "de" ? "Erklärung hinzufügen oder bearbeiten..." : "Add or edit explanation..."}
+                        className="w-full bg-[#F7F9FC] border border-[#E4E9F0] rounded-lg px-3 py-2 text-sm text-[#1A2B3C] placeholder-[#A0AEC0] resize-none focus:outline-none focus:border-[#007B5F]/30"
+                      />
+                    </div>
+                    <textarea
+                      value={flagDetails}
+                      onChange={(e) => setFlagDetails(e.target.value)}
+                      placeholder={lang === "de" ? "Was hast du geändert? (optional)" : "What did you change? (optional)"}
+                      rows={1}
+                      className="w-full bg-[#F7F9FC] border border-[#E4E9F0] rounded-lg px-3 py-2 text-sm text-[#1A2B3C] placeholder-[#A0AEC0] resize-none focus:outline-none focus:border-[#007B5F]/30"
+                    />
+                    <div className="flex gap-2">
+                      <button
+                        onClick={async () => {
+                          const changes: Record<string, string> = {};
+                          if (editQuestion !== question.question) changes.question = editQuestion;
+                          if (editExplanation !== (question.explanation || "")) changes.explanation = editExplanation;
+                          if (editTopic !== question.topic) changes.topic = editTopic;
+                          if (Object.keys(changes).length === 0 && !flagDetails) return;
+                          setSuggestionLoading(true);
+                          try {
+                            await fetch("/api/suggestions", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({
+                                questionId: question.id,
+                                type: "edit",
+                                details: flagDetails || null,
+                                suggestedChanges: Object.keys(changes).length > 0 ? changes : null,
+                              }),
+                            });
+                            setSuggestionSubmitted(true);
+                            setShowSuggestion(false);
+                            trackEvent("feature_use", { feature: "suggest_edit", questionId: question.id });
+                          } catch { /* silent */ }
+                          finally { setSuggestionLoading(false); }
+                        }}
+                        disabled={suggestionLoading}
+                        className="btn-primary text-xs px-4 py-2 rounded-lg disabled:opacity-40"
+                      >
+                        {suggestionLoading ? "..." : (lang === "de" ? "Vorschlag senden" : "Submit Suggestion")}
+                      </button>
+                      <button
+                        onClick={() => setSuggestionType(null)}
+                        className="text-xs text-[#A0AEC0] hover:text-[#4A5568] px-3 py-2"
+                      >
+                        {t("cancel", lang)}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
       </div>
 
       {/* AI Chat Assistant */}
