@@ -1,5 +1,7 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
+
+export const dynamic = "force-dynamic";
 
 interface UserRow {
   id: string;
@@ -11,127 +13,167 @@ interface UserRow {
   photo_url: string | null;
   role: string;
   created_at: string;
+  updated_at: string;
   user_gamification: {
     total_xp: number;
     current_streak: number;
     total_questions_answered: number;
     total_correct: number;
+    daily_questions_today: number;
+    last_study_date: string | null;
   }[] | null;
 }
 
+// GET — List all users with gamification data
 export async function GET() {
   try {
     const db = getServiceClient();
 
-    // Fetch users with their gamification data
     const { data: users, error: usersError } = await db
       .from("users")
-      .select(
-        `
-        id,
-        telegram_id,
-        email,
-        first_name,
-        last_name,
-        telegram_username,
-        photo_url,
-        role,
-        created_at,
+      .select(`
+        id, telegram_id, email, first_name, last_name, telegram_username,
+        photo_url, role, created_at, updated_at,
         user_gamification (
-          total_xp,
-          current_streak,
-          total_questions_answered,
-          total_correct
+          total_xp, current_streak, total_questions_answered, total_correct,
+          daily_questions_today, last_study_date
         )
-      `
-      )
+      `)
       .order("created_at", { ascending: false });
 
     if (usersError) {
-      console.error("[/api/stats/admin/users] usersError:", usersError);
-      return NextResponse.json(
-        { error: "Failed to fetch users" },
-        { status: 500 }
-      );
+      console.error("[admin/users GET]", usersError);
+      return NextResponse.json({ error: "Failed to fetch users" }, { status: 500 });
     }
 
-    // Fetch the latest event per user for "last active"
-    let latestEvents: { user_id: string; last_active: string }[] | null = null;
-    let eventsError: { message: string } | null = null;
-    try {
-      const rpcResult = await db.rpc("get_latest_events_per_user");
-      latestEvents = rpcResult.data as typeof latestEvents;
-      eventsError = rpcResult.error;
-    } catch {
-      eventsError = { message: "RPC not found" };
-    }
-
-    // Build a lookup map for last_active
+    // Get last active from user_events
     const lastActiveMap: Record<string, string> = {};
-    if (!eventsError && latestEvents) {
-      for (const evt of latestEvents as { user_id: string; last_active: string }[]) {
-        lastActiveMap[evt.user_id] = evt.last_active;
+    const { data: events } = await db
+      .from("user_events")
+      .select("user_id, created_at")
+      .order("created_at", { ascending: false })
+      .limit(5000);
+
+    if (events) {
+      for (const evt of events) {
+        const uid = evt.user_id as string;
+        if (!lastActiveMap[uid]) lastActiveMap[uid] = evt.created_at as string;
       }
     }
 
-    // If RPC is not available, fall back to fetching events manually
-    if (eventsError || !latestEvents) {
-      const { data: events } = await db
-        .from("user_events")
-        .select("user_id, created_at")
-        .order("created_at", { ascending: false })
-        .limit(5000);
+    // Get answer counts from answer_history for more accurate data
+    const { data: answerCounts } = await db
+      .from("answer_history")
+      .select("user_id");
 
-      if (events) {
-        for (const evt of events) {
-          const uid = evt.user_id as string;
-          if (!lastActiveMap[uid]) {
-            lastActiveMap[uid] = evt.created_at as string;
-          }
-        }
+    const answerCountMap: Record<string, number> = {};
+    if (answerCounts) {
+      for (const a of answerCounts) {
+        const uid = a.user_id as string;
+        answerCountMap[uid] = (answerCountMap[uid] || 0) + 1;
       }
     }
 
-    // Map to clean response
     const result = (users as UserRow[]).map((u) => {
       const gam = u.user_gamification?.[0] || null;
-      const questionsAnswered = gam?.total_questions_answered || 0;
+      const questionsAnswered = gam?.total_questions_answered || answerCountMap[u.id] || 0;
       const totalCorrect = gam?.total_correct || 0;
-      const accuracy =
-        questionsAnswered > 0
-          ? Math.round((totalCorrect / questionsAnswered) * 100)
-          : 0;
+      const accuracy = questionsAnswered > 0 ? Math.round((totalCorrect / questionsAnswered) * 100) : 0;
+      const lastActive = lastActiveMap[u.id] || u.updated_at || u.created_at;
+
+      // Determine status
+      const daysSinceActive = Math.floor((Date.now() - new Date(lastActive).getTime()) / 86400000);
+      const status = daysSinceActive <= 1 ? "active" : daysSinceActive <= 7 ? "recent" : "inactive";
 
       return {
         id: u.id,
         telegram_id: u.telegram_id,
         email: u.email,
-        name:
-          [u.first_name, u.last_name].filter(Boolean).join(" ") || u.telegram_username || "Anonymous",
+        name: [u.first_name, u.last_name].filter(Boolean).join(" ") || u.telegram_username || "Anonymous",
+        first_name: u.first_name,
+        last_name: u.last_name,
         username: u.telegram_username,
         photo_url: u.photo_url,
         role: u.role || "user",
+        status,
         created_at: u.created_at,
         xp: gam?.total_xp || 0,
         streak: gam?.current_streak || 0,
         questions_answered: questionsAnswered,
         accuracy,
-        last_active: lastActiveMap[u.id] || u.created_at,
+        daily_today: gam?.daily_questions_today || 0,
+        last_study: gam?.last_study_date || null,
+        last_active: lastActive,
       };
     });
 
-    // Sort by last_active desc
-    result.sort(
-      (a, b) =>
-        new Date(b.last_active).getTime() - new Date(a.last_active).getTime()
-    );
-
+    result.sort((a, b) => new Date(b.last_active).getTime() - new Date(a.last_active).getTime());
     return NextResponse.json(result);
   } catch (err) {
-    console.error("[/api/stats/admin/users]", err);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    console.error("[admin/users GET]", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+// PATCH — Edit user (role, name, reset gamification)
+export async function PATCH(req: NextRequest) {
+  try {
+    const db = getServiceClient();
+    const body = await req.json();
+    const { userId, updates } = body;
+
+    if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
+
+    // Update user fields
+    const userUpdates: Record<string, unknown> = {};
+    if (updates.role) userUpdates.role = updates.role;
+    if (updates.first_name !== undefined) userUpdates.first_name = updates.first_name;
+    if (updates.last_name !== undefined) userUpdates.last_name = updates.last_name;
+    if (updates.email !== undefined) userUpdates.email = updates.email;
+
+    if (Object.keys(userUpdates).length > 0) {
+      userUpdates.updated_at = new Date().toISOString();
+      const { error } = await db.from("users").update(userUpdates).eq("id", userId);
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    // Reset gamification if requested
+    if (updates.reset_gamification) {
+      await db.from("user_gamification").update({
+        total_xp: 0, current_streak: 0, longest_streak: 0,
+        total_questions_answered: 0, total_correct: 0,
+        daily_questions_today: 0, level: 1, rank_name: "Praktikant",
+      }).eq("user_id", userId);
+    }
+
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error("[admin/users PATCH]", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+// DELETE — Remove a user and related data
+export async function DELETE(req: NextRequest) {
+  try {
+    const db = getServiceClient();
+    const { searchParams } = new URL(req.url);
+    const userId = searchParams.get("id");
+
+    if (!userId) return NextResponse.json({ error: "id required" }, { status: 400 });
+
+    // Delete related data first (foreign key constraints)
+    await db.from("answer_history").delete().eq("user_id", userId);
+    await db.from("user_question_progress").delete().eq("user_id", userId);
+    await db.from("user_gamification").delete().eq("user_id", userId);
+    await db.from("user_activity_log").delete().eq("user_id", userId);
+    // Delete user
+    const { error } = await db.from("users").delete().eq("id", userId);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    return NextResponse.json({ ok: true });
+  } catch (err) {
+    console.error("[admin/users DELETE]", err);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

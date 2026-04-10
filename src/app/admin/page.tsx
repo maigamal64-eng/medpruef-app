@@ -1,14 +1,22 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
+import {
+  LayoutDashboard, Users, FileText, Activity, Settings,
+  ChevronDown, Search, Edit3, Trash2, RotateCcw, Shield, Mail,
+  Download, Filter, Eye, EyeOff, AlertTriangle, CheckCircle,
+  Clock, TrendingUp, Zap, BarChart3,
+} from "lucide-react";
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip,
   ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell,
 } from "recharts";
 
-// ─── Types ──────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+// TYPES
+// ═══════════════════════════════════════════════════════════════════════════
 
-type Tab = "overview" | "users" | "questions" | "analytics";
+type Section = "dashboard" | "users" | "questions" | "analytics" | "system";
 
 interface OverviewData {
   totalUsers: number;
@@ -29,15 +37,52 @@ interface UserRow {
   telegram_id: string | null;
   email: string | null;
   name: string;
+  first_name: string | null;
+  last_name: string | null;
   username: string | null;
   photo_url: string | null;
   role: string;
+  status: string;
   created_at: string;
   xp: number;
   streak: number;
   questions_answered: number;
   accuracy: number;
+  daily_today: number;
+  last_study: string | null;
   last_active: string;
+}
+
+interface QuestionStats {
+  totalAll: number;
+  active: number;
+  inactive: number;
+  withMCQ: number;
+  withExplanations: number;
+  withImages: number;
+  mcqPct: number;
+  explPct: number;
+  imgPct: number;
+  byTopic: { topic: string; count: number }[];
+}
+
+interface QuestionRow {
+  id: number;
+  topic: string;
+  question: string;
+  answer: string;
+  explanation: string | null;
+  choices: { text: string; correct?: boolean }[] | null;
+  image_url: string | null;
+  exam_dates: string[] | null;
+  tags: string[] | null;
+  is_active: boolean;
+  anki_note_id: number | null;
+  created_at: string;
+  question_preview: string;
+  choices_count: number;
+  has_explanation: boolean;
+  has_image: boolean;
 }
 
 interface DuplicateData {
@@ -66,19 +111,38 @@ interface ActivityRow {
   created_at: string;
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// CONSTANTS
+// ═══════════════════════════════════════════════════════════════════════════
+
 const COLORS = ["#007B5F", "#003A8C", "#F4A261", "#D64545", "#00A896", "#3A7CA5", "#8B5CF6", "#EC4899"];
 
+const NAV_ITEMS: { key: Section; label: string; icon: typeof LayoutDashboard }[] = [
+  { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { key: "users", label: "Users", icon: Users },
+  { key: "questions", label: "Questions", icon: FileText },
+  { key: "analytics", label: "Analytics", icon: Activity },
+  { key: "system", label: "System", icon: Settings },
+];
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════════════════
+
 function formatDate(iso: string) {
+  if (!iso) return "---";
   const d = new Date(iso);
   return d.toLocaleDateString("de-DE", { day: "2-digit", month: "short", year: "numeric" });
 }
 
 function formatTime(iso: string) {
+  if (!iso) return "---";
   const d = new Date(iso);
   return d.toLocaleString("de-DE", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
 }
 
 function timeAgo(iso: string) {
+  if (!iso) return "---";
   const diff = Date.now() - new Date(iso).getTime();
   const mins = Math.floor(diff / 60000);
   if (mins < 1) return "just now";
@@ -89,36 +153,98 @@ function timeAgo(iso: string) {
   return `${days}d ago`;
 }
 
-// ─── Main Component ─────────────────────────────────────────────────────
+function statusColor(status: string) {
+  if (status === "active") return "bg-[#007B5F]/10 text-[#007B5F]";
+  if (status === "recent") return "bg-[#F4A261]/10 text-[#F4A261]";
+  return "bg-[#A0AEC0]/10 text-[#A0AEC0]";
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MAIN COMPONENT
+// ═══════════════════════════════════════════════════════════════════════════
 
 export default function AdminDashboard() {
-  const [tab, setTab] = useState<Tab>("overview");
+  const [section, setSection] = useState<Section>("dashboard");
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  // Dashboard state
   const [overview, setOverview] = useState<OverviewData | null>(null);
+
+  // Users state
   const [users, setUsers] = useState<UserRow[]>([]);
+  const [userSearch, setUserSearch] = useState("");
+  const [expandedUser, setExpandedUser] = useState<string | null>(null);
+  const [editingUser, setEditingUser] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<Record<string, string>>({});
+  const [deletingUser, setDeletingUser] = useState<string | null>(null);
+  const [userSort, setUserSort] = useState<{ col: string; asc: boolean }>({ col: "last_active", asc: false });
+
+  // Questions state
+  const [questionStats, setQuestionStats] = useState<QuestionStats | null>(null);
+  const [questions, setQuestions] = useState<QuestionRow[]>([]);
+  const [questionPage, setQuestionPage] = useState(1);
+  const [questionTotal, setQuestionTotal] = useState(0);
+  const [questionTotalPages, setQuestionTotalPages] = useState(0);
+  const [questionSearch, setQuestionSearch] = useState("");
+  const [questionTopicFilter, setQuestionTopicFilter] = useState("");
+  const [questionExplFilter, setQuestionExplFilter] = useState("all");
+  const [questionActiveFilter, setQuestionActiveFilter] = useState("all");
+  const [expandedQuestion, setExpandedQuestion] = useState<number | null>(null);
+  const [editingQuestion, setEditingQuestion] = useState<number | null>(null);
+  const [questionEditForm, setQuestionEditForm] = useState<Record<string, unknown>>({});
+  const [questionTab, setQuestionTab] = useState<"browse" | "duplicates">("browse");
   const [duplicates, setDuplicates] = useState<DuplicateData | null>(null);
+
+  // Analytics state
   const [activities, setActivities] = useState<ActivityRow[]>([]);
   const [activityTotal, setActivityTotal] = useState(0);
   const [activityEventTypes, setActivityEventTypes] = useState<string[]>([]);
   const [activityFilter, setActivityFilter] = useState("");
-  const [userSearch, setUserSearch] = useState("");
-  const [selectedUser, setSelectedUser] = useState<string | null>(null);
-  const [error, setError] = useState("");
+
+  // ─── Fetch Functions ────────────────────────────────────────────────
 
   const fetchOverview = useCallback(async () => {
     try {
       const res = await fetch("/api/stats/admin");
-      if (!res.ok) throw new Error("Failed");
+      if (!res.ok) throw new Error("Failed to load overview");
       setOverview(await res.json());
-    } catch { setError("Failed to load overview"); }
+    } catch (e) { setError((e as Error).message); }
   }, []);
 
   const fetchUsers = useCallback(async () => {
     try {
       const res = await fetch("/api/stats/admin/users");
-      if (!res.ok) throw new Error("Failed");
+      if (!res.ok) throw new Error("Failed to load users");
       setUsers(await res.json());
-    } catch { setError("Failed to load users"); }
+    } catch (e) { setError((e as Error).message); }
+  }, []);
+
+  const fetchQuestionStats = useCallback(async () => {
+    try {
+      const res = await fetch("/api/stats/admin/questions");
+      if (!res.ok) throw new Error("Failed to load question stats");
+      setQuestionStats(await res.json());
+    } catch (e) { setError((e as Error).message); }
+  }, []);
+
+  const fetchQuestions = useCallback(async (page = 1, topic = "", search = "", hasExpl = "all", isActive = "all") => {
+    try {
+      const params = new URLSearchParams({ mode: "browse", page: String(page), limit: "25" });
+      if (topic) params.set("topic", topic);
+      if (search) params.set("search", search);
+      if (hasExpl === "with") params.set("hasExplanation", "true");
+      if (hasExpl === "without") params.set("hasExplanation", "false");
+      if (isActive === "active") params.set("isActive", "true");
+      if (isActive === "inactive") params.set("isActive", "false");
+      const res = await fetch(`/api/stats/admin/questions?${params}`);
+      if (!res.ok) throw new Error("Failed to load questions");
+      const data = await res.json();
+      setQuestions(data.questions || []);
+      setQuestionTotal(data.total || 0);
+      setQuestionTotalPages(data.totalPages || 0);
+    } catch (e) { setError((e as Error).message); }
   }, []);
 
   const fetchDuplicates = useCallback(async () => {
@@ -129,19 +255,20 @@ export default function AdminDashboard() {
     } catch { /* optional */ }
   }, []);
 
-  const fetchActivity = useCallback(async (eventType?: string, userId?: string) => {
+  const fetchActivity = useCallback(async (eventType?: string) => {
     try {
       const params = new URLSearchParams({ limit: "100" });
       if (eventType) params.set("eventType", eventType);
-      if (userId) params.set("userId", userId);
       const res = await fetch(`/api/stats/admin/activity?${params}`);
-      if (!res.ok) throw new Error("Failed");
+      if (!res.ok) throw new Error("Failed to load activity");
       const data = await res.json();
       setActivities(data.activities || []);
       setActivityTotal(data.total || 0);
       setActivityEventTypes(data.eventTypes || []);
-    } catch { /* optional */ }
+    } catch (e) { setError((e as Error).message); }
   }, []);
+
+  // ─── Initial Load ───────────────────────────────────────────────────
 
   const refresh = useCallback(async () => {
     setLoading(true);
@@ -152,124 +279,342 @@ export default function AdminDashboard() {
 
   useEffect(() => { refresh(); }, [refresh]);
 
+  // ─── Section-specific Loading ───────────────────────────────────────
+
   useEffect(() => {
-    if (tab === "questions" && !duplicates) fetchDuplicates();
-    if (tab === "analytics" && activities.length === 0) fetchActivity();
-  }, [tab, duplicates, activities.length, fetchDuplicates, fetchActivity]);
+    if (section === "questions" && !questionStats) fetchQuestionStats();
+    if (section === "questions" && questions.length === 0) fetchQuestions(1);
+    if (section === "questions" && questionTab === "duplicates" && !duplicates) fetchDuplicates();
+    if (section === "analytics" && activities.length === 0) fetchActivity();
+  }, [section, questionStats, questions.length, questionTab, duplicates, activities.length, fetchQuestionStats, fetchQuestions, fetchDuplicates, fetchActivity]);
 
-  const filteredUsers = users.filter((u) => {
-    if (!userSearch) return true;
-    const q = userSearch.toLowerCase();
-    return u.name.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q) || u.username?.toLowerCase().includes(q) || u.id.includes(q);
-  });
+  // ─── User Actions ───────────────────────────────────────────────────
 
-  const tabs: { key: Tab; label: string }[] = [
-    { key: "overview", label: "Overview" },
-    { key: "users", label: `Users (${users.length})` },
-    { key: "questions", label: "Questions" },
-    { key: "analytics", label: "Analytics" },
-  ];
+  const handleUserRoleChange = async (userId: string, newRole: string) => {
+    try {
+      const res = await fetch("/api/stats/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, updates: { role: newRole } }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      setUsers((prev) => prev.map((u) => u.id === userId ? { ...u, role: newRole } : u));
+    } catch { setError("Failed to update role"); }
+  };
+
+  const handleUserEdit = async (userId: string) => {
+    try {
+      const res = await fetch("/api/stats/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, updates: editForm }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      setEditingUser(null);
+      await fetchUsers();
+    } catch { setError("Failed to update user"); }
+  };
+
+  const handleResetGamification = async (userId: string) => {
+    try {
+      const res = await fetch("/api/stats/admin/users", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, updates: { reset_gamification: true } }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      await fetchUsers();
+    } catch { setError("Failed to reset gamification"); }
+  };
+
+  const handleUserDelete = async (userId: string) => {
+    try {
+      const res = await fetch(`/api/stats/admin/users?id=${userId}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed");
+      setDeletingUser(null);
+      setUsers((prev) => prev.filter((u) => u.id !== userId));
+    } catch { setError("Failed to delete user"); }
+  };
+
+  // ─── Question Actions ───────────────────────────────────────────────
+
+  const handleQuestionSearch = () => {
+    setQuestionPage(1);
+    fetchQuestions(1, questionTopicFilter, questionSearch, questionExplFilter, questionActiveFilter);
+  };
+
+  const handleQuestionEdit = async (questionId: number) => {
+    try {
+      const res = await fetch("/api/stats/admin/questions", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ questionId, updates: questionEditForm }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      setEditingQuestion(null);
+      fetchQuestions(questionPage, questionTopicFilter, questionSearch, questionExplFilter, questionActiveFilter);
+    } catch { setError("Failed to update question"); }
+  };
+
+  // ─── Filtered & Sorted Users ────────────────────────────────────────
+
+  const filteredUsers = useMemo(() => {
+    let result = users;
+    if (userSearch) {
+      const q = userSearch.toLowerCase();
+      result = result.filter((u) =>
+        u.name.toLowerCase().includes(q) ||
+        u.email?.toLowerCase().includes(q) ||
+        u.username?.toLowerCase().includes(q) ||
+        u.id.includes(q)
+      );
+    }
+    return [...result].sort((a, b) => {
+      const col = userSort.col as keyof UserRow;
+      const aVal = a[col] ?? "";
+      const bVal = b[col] ?? "";
+      if (typeof aVal === "number" && typeof bVal === "number") {
+        return userSort.asc ? aVal - bVal : bVal - aVal;
+      }
+      return userSort.asc
+        ? String(aVal).localeCompare(String(bVal))
+        : String(bVal).localeCompare(String(aVal));
+    });
+  }, [users, userSearch, userSort]);
+
+  const totalQuestionsInDB = questionStats?.totalAll ?? overview?.avgAccuracyByTopic?.reduce((s, t) => s + t.total, 0) ?? 0;
+  const explanationCoverage = questionStats ? questionStats.explPct : 0;
+
+  // ─── Render ─────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen bg-[#F7F9FC]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div className="flex min-h-screen bg-[#F7F9FC]">
+      {/* ═══ SIDEBAR ═══ */}
+      <aside
+        className={`fixed lg:sticky top-0 left-0 h-screen z-30 bg-[#001B3D] transition-all duration-300 flex flex-col ${
+          sidebarOpen ? "w-[220px]" : "w-0 lg:w-[64px]"
+        } overflow-hidden`}
+      >
+        {/* Logo */}
+        <div className="flex items-center gap-2 px-4 py-5 border-b border-white/10">
+          <div className="w-8 h-8 rounded-lg bg-[#007B5F] flex items-center justify-center flex-shrink-0">
+            <Shield size={16} className="text-white" />
+          </div>
+          {sidebarOpen && (
+            <div className="overflow-hidden">
+              <p className="text-white text-sm font-bold leading-tight">MedPr&uuml;f</p>
+              <p className="text-[#A0AEC0] text-[10px]">Admin Panel</p>
+            </div>
+          )}
+        </div>
+
+        {/* Nav Items */}
+        <nav className="flex-1 py-4 space-y-1 px-2">
+          {NAV_ITEMS.map((item) => {
+            const Icon = item.icon;
+            const active = section === item.key;
+            return (
+              <button
+                key={item.key}
+                onClick={() => { setSection(item.key); if (window.innerWidth < 1024) setSidebarOpen(false); }}
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all ${
+                  active
+                    ? "bg-[#007B5F] text-white shadow-md"
+                    : "text-[#A0AEC0] hover:text-white hover:bg-white/5"
+                }`}
+              >
+                <Icon size={18} className="flex-shrink-0" />
+                {sidebarOpen && <span className="font-medium">{item.label}</span>}
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* Sidebar Footer */}
+        {sidebarOpen && (
+          <div className="px-4 py-4 border-t border-white/10">
+            <p className="text-[10px] text-[#A0AEC0]">MedPr&uuml;f Admin v2.0</p>
+            <p className="text-[10px] text-[#A0AEC0]/50">Internal Use Only</p>
+          </div>
+        )}
+      </aside>
+
+      {/* Sidebar overlay on mobile */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/30 z-20 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* ═══ MAIN CONTENT ═══ */}
+      <main className="flex-1 min-w-0">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-[#1A2B3C]">Admin Dashboard</h1>
-            <p className="text-sm text-[#A0AEC0]">MedPrüf Analytics & Management</p>
-          </div>
-          <button onClick={refresh} className="btn-primary px-4 py-2 text-sm rounded-xl">
-            Refresh
-          </button>
-        </div>
-
-        {/* Tabs */}
-        <div className="flex gap-1 mb-6 bg-white rounded-xl p-1 shadow-sm border border-[#E4E9F0]">
-          {tabs.map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className={`flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${
-                tab === t.key
-                  ? "bg-[#007B5F] text-white shadow-sm"
-                  : "text-[#4A5568] hover:bg-[#F7F9FC]"
-              }`}
-            >
-              {t.label}
+        <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-[#E4E9F0] px-4 sm:px-6 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="lg:hidden p-2 rounded-lg hover:bg-[#F7F9FC] text-[#4A5568]"
+              >
+                <BarChart3 size={20} />
+              </button>
+              <div>
+                <h1 className="text-lg font-bold text-[#1A2B3C]">
+                  {NAV_ITEMS.find((n) => n.key === section)?.label || "Dashboard"}
+                </h1>
+                <p className="text-xs text-[#A0AEC0]">MedPr&uuml;f Analytics &amp; Management</p>
+              </div>
+            </div>
+            <button onClick={refresh} className="btn-primary px-4 py-2 text-sm rounded-xl flex items-center gap-2">
+              <RotateCcw size={14} />
+              Refresh
             </button>
-          ))}
-        </div>
+          </div>
+        </header>
 
+        {/* Error Banner */}
         {error && (
-          <div className="bg-[#D64545]/10 border border-[#D64545]/25 text-[#D64545] text-sm rounded-xl px-4 py-3 mb-4">
+          <div className="mx-4 sm:mx-6 mt-4 bg-[#D64545]/10 border border-[#D64545]/25 text-[#D64545] text-sm rounded-xl px-4 py-3 flex items-center gap-2">
+            <AlertTriangle size={16} />
             {error}
+            <button onClick={() => setError("")} className="ml-auto text-xs underline">Dismiss</button>
           </div>
         )}
 
-        {loading ? (
-          <div className="text-center py-12 text-[#A0AEC0]">Loading...</div>
-        ) : (
-          <>
-            {tab === "overview" && overview && <OverviewTab data={overview} />}
-            {tab === "users" && (
-              <UsersTab
-                users={filteredUsers}
-                search={userSearch}
-                onSearch={setUserSearch}
-                selectedUser={selectedUser}
-                onSelectUser={(id) => { setSelectedUser(id === selectedUser ? null : id); }}
-              />
-            )}
-            {tab === "questions" && <QuestionsTab duplicates={duplicates} onRefresh={fetchDuplicates} />}
-            {tab === "analytics" && (
-              <AnalyticsTab
-                activities={activities}
-                total={activityTotal}
-                eventTypes={activityEventTypes}
-                filter={activityFilter}
-                onFilterChange={(f) => { setActivityFilter(f); fetchActivity(f || undefined); }}
-              />
-            )}
-          </>
-        )}
-
-        <p className="text-center text-xs text-[#A0AEC0] mt-8">MedPrüf Admin — Internal Use Only</p>
-      </div>
+        {/* Content Area */}
+        <div className="px-4 sm:px-6 py-6">
+          {loading ? (
+            <div className="text-center py-20 text-[#A0AEC0]">
+              <RotateCcw size={24} className="animate-spin mx-auto mb-3" />
+              <p className="text-sm">Loading dashboard...</p>
+            </div>
+          ) : (
+            <>
+              {section === "dashboard" && overview && (
+                <DashboardSection data={overview} totalQuestions={totalQuestionsInDB} explCoverage={explanationCoverage} />
+              )}
+              {section === "users" && (
+                <UsersSection
+                  users={filteredUsers}
+                  allUsers={users}
+                  search={userSearch}
+                  onSearch={setUserSearch}
+                  expandedUser={expandedUser}
+                  onExpandUser={(id) => setExpandedUser(id === expandedUser ? null : id)}
+                  editingUser={editingUser}
+                  onStartEdit={(u) => {
+                    setEditingUser(u.id);
+                    setEditForm({ first_name: u.first_name || "", last_name: u.last_name || "", email: u.email || "" });
+                  }}
+                  editForm={editForm}
+                  onEditFormChange={(k, v) => setEditForm((prev) => ({ ...prev, [k]: v }))}
+                  onSaveEdit={handleUserEdit}
+                  onCancelEdit={() => setEditingUser(null)}
+                  onRoleChange={handleUserRoleChange}
+                  onResetGamification={handleResetGamification}
+                  deletingUser={deletingUser}
+                  onDeleteRequest={(id) => setDeletingUser(id)}
+                  onDeleteConfirm={handleUserDelete}
+                  onDeleteCancel={() => setDeletingUser(null)}
+                  sort={userSort}
+                  onSort={(col) => setUserSort((prev) => ({ col, asc: prev.col === col ? !prev.asc : false }))}
+                />
+              )}
+              {section === "questions" && (
+                <QuestionsSection
+                  stats={questionStats}
+                  questions={questions}
+                  page={questionPage}
+                  total={questionTotal}
+                  totalPages={questionTotalPages}
+                  search={questionSearch}
+                  topicFilter={questionTopicFilter}
+                  explFilter={questionExplFilter}
+                  activeFilter={questionActiveFilter}
+                  onSearchChange={setQuestionSearch}
+                  onTopicFilterChange={setQuestionTopicFilter}
+                  onExplFilterChange={setQuestionExplFilter}
+                  onActiveFilterChange={setQuestionActiveFilter}
+                  onSearch={handleQuestionSearch}
+                  onPageChange={(p) => { setQuestionPage(p); fetchQuestions(p, questionTopicFilter, questionSearch, questionExplFilter, questionActiveFilter); }}
+                  expandedQuestion={expandedQuestion}
+                  onExpandQuestion={(id) => setExpandedQuestion(id === expandedQuestion ? null : id)}
+                  editingQuestion={editingQuestion}
+                  onStartEditQuestion={(q) => {
+                    setEditingQuestion(q.id);
+                    setQuestionEditForm({ explanation: q.explanation || "", topic: q.topic, is_active: q.is_active });
+                  }}
+                  questionEditForm={questionEditForm}
+                  onQuestionEditFormChange={(k, v) => setQuestionEditForm((prev) => ({ ...prev, [k]: v }))}
+                  onSaveQuestionEdit={handleQuestionEdit}
+                  onCancelQuestionEdit={() => setEditingQuestion(null)}
+                  tab={questionTab}
+                  onTabChange={setQuestionTab}
+                  duplicates={duplicates}
+                  onRefreshDuplicates={fetchDuplicates}
+                />
+              )}
+              {section === "analytics" && (
+                <AnalyticsSection
+                  activities={activities}
+                  total={activityTotal}
+                  eventTypes={activityEventTypes}
+                  filter={activityFilter}
+                  onFilterChange={(f) => { setActivityFilter(f); fetchActivity(f || undefined); }}
+                />
+              )}
+              {section === "system" && (
+                <SystemSection questionStats={questionStats} users={users} onRefreshStats={fetchQuestionStats} />
+              )}
+            </>
+          )}
+        </div>
+      </main>
     </div>
   );
 }
 
-// ─── Overview Tab ───────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+// SECTION: DASHBOARD
+// ═══════════════════════════════════════════════════════════════════════════
 
-function OverviewTab({ data }: { data: OverviewData }) {
-  const metrics = [
-    { label: "Total Users", value: data.totalUsers, color: "text-[#007B5F]" },
-    { label: "DAU", value: data.dau, color: "text-[#003A8C]" },
-    { label: "WAU", value: data.wau, color: "text-[#F4A261]" },
-    { label: "MAU", value: data.mau, color: "text-[#00A896]" },
-    { label: "Q Today", value: data.questionsToday, color: "text-[#D64545]" },
-    { label: "Q This Week", value: data.questionsThisWeek, color: "text-[#3A7CA5]" },
+function DashboardSection({ data, totalQuestions, explCoverage }: { data: OverviewData; totalQuestions: number; explCoverage: number }) {
+  const kpis = [
+    { label: "Total Users", value: data.totalUsers, icon: Users, color: "#007B5F" },
+    { label: "Active Users (DAU)", value: data.dau, icon: Zap, color: "#003A8C" },
+    { label: "Weekly Active (WAU)", value: data.wau, icon: TrendingUp, color: "#F4A261" },
+    { label: "Monthly Active (MAU)", value: data.mau, icon: Activity, color: "#00A896" },
+    { label: "Questions Today", value: data.questionsToday, icon: FileText, color: "#D64545" },
+    { label: "Answered This Week", value: data.questionsThisWeek, icon: BarChart3, color: "#3A7CA5" },
+    { label: "Total Questions in DB", value: totalQuestions, icon: FileText, color: "#8B5CF6" },
+    { label: "Explanation Coverage", value: `${explCoverage}%`, icon: CheckCircle, color: "#007B5F" },
   ];
 
   return (
     <div className="space-y-6">
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        {metrics.map((m) => (
-          <div key={m.label} className="card rounded-xl p-4 text-center">
-            <p className={`text-2xl font-bold font-mono ${m.color}`}>{m.value}</p>
-            <p className="text-xs text-[#A0AEC0] mt-1">{m.label}</p>
-          </div>
-        ))}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 stagger">
+        {kpis.map((kpi) => {
+          const Icon = kpi.icon;
+          return (
+            <div key={kpi.label} className="card rounded-xl p-4">
+              <div className="flex items-center justify-between mb-2">
+                <Icon size={18} style={{ color: kpi.color }} />
+                <span className="text-[10px] text-[#A0AEC0] uppercase tracking-wider">{kpi.label}</span>
+              </div>
+              <p className="text-2xl font-bold font-mono" style={{ color: kpi.color }}>{kpi.value}</p>
+            </div>
+          );
+        })}
       </div>
 
-      {/* Charts row */}
+      {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* DAU Chart */}
         <div className="card rounded-xl p-5">
           <h3 className="text-sm font-semibold text-[#1A2B3C] mb-4">Daily Active Users (30d)</h3>
-          <ResponsiveContainer width="100%" height={200}>
+          <ResponsiveContainer width="100%" height={220}>
             <LineChart data={data.dailyActiveUsers}>
               <CartesianGrid strokeDasharray="3 3" stroke="#E4E9F0" />
               <XAxis dataKey="date" tick={{ fontSize: 10 }} tickFormatter={(v) => v.slice(5)} />
@@ -282,8 +627,8 @@ function OverviewTab({ data }: { data: OverviewData }) {
 
         {/* Peak Hours */}
         <div className="card rounded-xl p-5">
-          <h3 className="text-sm font-semibold text-[#1A2B3C] mb-4">Study Hours Distribution</h3>
-          <ResponsiveContainer width="100%" height={200}>
+          <h3 className="text-sm font-semibold text-[#1A2B3C] mb-4">Peak Study Hours</h3>
+          <ResponsiveContainer width="100%" height={220}>
             <BarChart data={data.peakStudyHours}>
               <CartesianGrid strokeDasharray="3 3" stroke="#E4E9F0" />
               <XAxis dataKey="hour" tick={{ fontSize: 10 }} tickFormatter={(v) => `${v}h`} />
@@ -298,39 +643,51 @@ function OverviewTab({ data }: { data: OverviewData }) {
       {/* Topic Performance */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="card rounded-xl p-5">
-          <h3 className="text-sm font-semibold text-[#1A2B3C] mb-4">Top Topics (by volume)</h3>
+          <h3 className="text-sm font-semibold text-[#1A2B3C] mb-4 flex items-center gap-2">
+            <TrendingUp size={16} className="text-[#007B5F]" /> Top 5 Topics
+          </h3>
           <div className="space-y-3">
-            {data.topTopics.map((t) => (
+            {data.topTopics.map((t, i) => (
               <div key={t.topic} className="flex items-center justify-between">
-                <span className="text-sm text-[#4A5568] truncate max-w-[200px]">{t.topic}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-mono text-[#A0AEC0] w-5">{i + 1}.</span>
+                  <span className="text-sm text-[#4A5568] truncate max-w-[180px]">{t.topic}</span>
+                </div>
                 <div className="flex items-center gap-3">
                   <span className="text-xs text-[#A0AEC0] font-mono">{t.total} Q</span>
-                  <span className={`text-xs font-mono font-bold ${t.accuracy >= 70 ? "text-[#00A896]" : t.accuracy >= 40 ? "text-[#F4A261]" : "text-[#D64545]"}`}>
+                  <span className={`text-xs font-mono font-bold ${t.accuracy >= 70 ? "text-[#007B5F]" : t.accuracy >= 40 ? "text-[#F4A261]" : "text-[#D64545]"}`}>
                     {t.accuracy}%
                   </span>
                 </div>
               </div>
             ))}
+            {data.topTopics.length === 0 && <p className="text-xs text-[#A0AEC0] text-center py-4">No data yet</p>}
           </div>
         </div>
 
         <div className="card rounded-xl p-5">
-          <h3 className="text-sm font-semibold text-[#1A2B3C] mb-4">Weakest Topics (need improvement)</h3>
+          <h3 className="text-sm font-semibold text-[#1A2B3C] mb-4 flex items-center gap-2">
+            <AlertTriangle size={16} className="text-[#D64545]" /> Weakest 5 Topics
+          </h3>
           <div className="space-y-3">
-            {data.weakTopics.map((t) => (
+            {data.weakTopics.map((t, i) => (
               <div key={t.topic} className="flex items-center justify-between">
-                <span className="text-sm text-[#4A5568] truncate max-w-[200px]">{t.topic}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-mono text-[#A0AEC0] w-5">{i + 1}.</span>
+                  <span className="text-sm text-[#4A5568] truncate max-w-[180px]">{t.topic}</span>
+                </div>
                 <div className="flex items-center gap-3">
                   <span className="text-xs text-[#A0AEC0] font-mono">{t.total} Q</span>
                   <span className="text-xs font-mono font-bold text-[#D64545]">{t.accuracy}%</span>
                 </div>
               </div>
             ))}
+            {data.weakTopics.length === 0 && <p className="text-xs text-[#A0AEC0] text-center py-4">No data yet</p>}
           </div>
         </div>
       </div>
 
-      {/* Accuracy by Topic Pie */}
+      {/* Topic Distribution Pie */}
       {data.avgAccuracyByTopic.length > 0 && (
         <div className="card rounded-xl p-5">
           <h3 className="text-sm font-semibold text-[#1A2B3C] mb-4">Question Distribution by Topic</h3>
@@ -358,202 +715,710 @@ function OverviewTab({ data }: { data: OverviewData }) {
   );
 }
 
-// ─── Users Tab ──────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+// SECTION: USERS
+// ═══════════════════════════════════════════════════════════════════════════
 
-function UsersTab({
-  users, search, onSearch, selectedUser, onSelectUser,
+function UsersSection({
+  users, allUsers, search, onSearch, expandedUser, onExpandUser,
+  editingUser, onStartEdit, editForm, onEditFormChange, onSaveEdit, onCancelEdit,
+  onRoleChange, onResetGamification, deletingUser, onDeleteRequest, onDeleteConfirm, onDeleteCancel,
+  sort, onSort,
 }: {
   users: UserRow[];
+  allUsers: UserRow[];
   search: string;
   onSearch: (q: string) => void;
-  selectedUser: string | null;
-  onSelectUser: (id: string) => void;
+  expandedUser: string | null;
+  onExpandUser: (id: string) => void;
+  editingUser: string | null;
+  onStartEdit: (u: UserRow) => void;
+  editForm: Record<string, string>;
+  onEditFormChange: (k: string, v: string) => void;
+  onSaveEdit: (id: string) => void;
+  onCancelEdit: () => void;
+  onRoleChange: (id: string, role: string) => void;
+  onResetGamification: (id: string) => void;
+  deletingUser: string | null;
+  onDeleteRequest: (id: string) => void;
+  onDeleteConfirm: (id: string) => void;
+  onDeleteCancel: () => void;
+  sort: { col: string; asc: boolean };
+  onSort: (col: string) => void;
 }) {
+  const activeToday = allUsers.filter((u) => u.status === "active").length;
+
   return (
     <div className="space-y-4">
       {/* Search */}
-      <input
-        type="text"
-        value={search}
-        onChange={(e) => onSearch(e.target.value)}
-        placeholder="Search by name, email, username, or ID..."
-        className="w-full bg-white border border-[#E4E9F0] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[#007B5F]/50"
-      />
+      <div className="relative">
+        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#A0AEC0]" />
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => onSearch(e.target.value)}
+          placeholder="Search by name, email, username, or ID..."
+          className="w-full bg-white border border-[#E4E9F0] rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:border-[#007B5F]/50"
+        />
+      </div>
 
-      {/* Stats row */}
-      <div className="grid grid-cols-4 gap-3">
+      {/* Stats Row */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <div className="card rounded-xl p-3 text-center">
-          <p className="text-lg font-bold text-[#007B5F] font-mono">{users.length}</p>
-          <p className="text-[10px] text-[#A0AEC0]">Total Users</p>
+          <p className="text-lg font-bold text-[#007B5F] font-mono">{allUsers.length}</p>
+          <p className="text-[10px] text-[#A0AEC0]">Total</p>
         </div>
         <div className="card rounded-xl p-3 text-center">
-          <p className="text-lg font-bold text-[#003A8C] font-mono">{users.filter((u) => u.email).length}</p>
+          <p className="text-lg font-bold text-[#003A8C] font-mono">{allUsers.filter((u) => u.email).length}</p>
           <p className="text-[10px] text-[#A0AEC0]">Email Users</p>
         </div>
         <div className="card rounded-xl p-3 text-center">
-          <p className="text-lg font-bold text-[#F4A261] font-mono">{users.filter((u) => u.telegram_id).length}</p>
+          <p className="text-lg font-bold text-[#00A896] font-mono">{allUsers.filter((u) => u.telegram_id).length}</p>
           <p className="text-[10px] text-[#A0AEC0]">Telegram Users</p>
         </div>
         <div className="card rounded-xl p-3 text-center">
-          <p className="text-lg font-bold text-[#D64545] font-mono">{users.filter((u) => u.role === "admin").length}</p>
+          <p className="text-lg font-bold text-[#D64545] font-mono">{allUsers.filter((u) => u.role === "admin").length}</p>
           <p className="text-[10px] text-[#A0AEC0]">Admins</p>
+        </div>
+        <div className="card rounded-xl p-3 text-center">
+          <p className="text-lg font-bold text-[#F4A261] font-mono">{activeToday}</p>
+          <p className="text-[10px] text-[#A0AEC0]">Active Today</p>
         </div>
       </div>
 
-      {/* User table */}
+      {/* User Table */}
       <div className="card rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-[#F7F9FC] border-b border-[#E4E9F0]">
-                <th className="text-left px-4 py-3 text-[#A0AEC0] font-medium">User</th>
-                <th className="text-left px-4 py-3 text-[#A0AEC0] font-medium">Auth</th>
-                <th className="text-right px-4 py-3 text-[#A0AEC0] font-medium">XP</th>
-                <th className="text-right px-4 py-3 text-[#A0AEC0] font-medium">Streak</th>
-                <th className="text-right px-4 py-3 text-[#A0AEC0] font-medium">Answered</th>
-                <th className="text-right px-4 py-3 text-[#A0AEC0] font-medium">Accuracy</th>
-                <th className="text-right px-4 py-3 text-[#A0AEC0] font-medium">Last Active</th>
-                <th className="text-right px-4 py-3 text-[#A0AEC0] font-medium">Joined</th>
+                {[
+                  { key: "name", label: "User", align: "left" },
+                  { key: "auth", label: "Auth", align: "left" },
+                  { key: "role", label: "Role", align: "left" },
+                  { key: "status", label: "Status", align: "left" },
+                  { key: "xp", label: "XP", align: "right" },
+                  { key: "streak", label: "Streak", align: "right" },
+                  { key: "questions_answered", label: "Questions", align: "right" },
+                  { key: "accuracy", label: "Accuracy", align: "right" },
+                  { key: "last_active", label: "Last Active", align: "right" },
+                  { key: "created_at", label: "Joined", align: "right" },
+                  { key: "actions", label: "Actions", align: "center" },
+                ].map((col) => (
+                  <th
+                    key={col.key}
+                    className={`px-3 py-2.5 text-[#A0AEC0] font-medium text-xs whitespace-nowrap ${col.align === "right" ? "text-right" : col.align === "center" ? "text-center" : "text-left"} ${col.key !== "auth" && col.key !== "actions" ? "cursor-pointer hover:text-[#4A5568]" : ""}`}
+                    onClick={() => col.key !== "auth" && col.key !== "actions" && onSort(col.key)}
+                  >
+                    {col.label}
+                    {sort.col === col.key && <ChevronDown size={12} className={`inline ml-1 transition-transform ${sort.asc ? "rotate-180" : ""}`} />}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
               {users.map((u) => (
-                <tr
-                  key={u.id}
-                  onClick={() => onSelectUser(u.id)}
-                  className={`border-b border-[#E4E9F0]/50 cursor-pointer transition-colors ${
-                    selectedUser === u.id ? "bg-[#007B5F]/5" : "hover:bg-[#F7F9FC]"
-                  }`}
-                >
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-[#007B5F]/10 flex items-center justify-center text-xs font-bold text-[#007B5F]">
-                        {u.name.charAt(0).toUpperCase()}
-                      </div>
-                      <div>
-                        <p className="font-medium text-[#1A2B3C]">{u.name}</p>
-                        {u.role === "admin" && (
-                          <span className="text-[9px] bg-[#D64545]/10 text-[#D64545] px-1.5 py-0.5 rounded font-semibold">ADMIN</span>
+                <>
+                  <tr
+                    key={u.id}
+                    onClick={() => onExpandUser(u.id)}
+                    className={`border-b border-[#E4E9F0]/50 cursor-pointer transition-colors ${
+                      expandedUser === u.id ? "bg-[#007B5F]/5" : "hover:bg-[#F7F9FC]"
+                    }`}
+                  >
+                    {/* Avatar + Name */}
+                    <td className="px-3 py-2.5">
+                      <div className="flex items-center gap-2">
+                        {u.photo_url ? (
+                          <img src={u.photo_url} alt="" className="w-7 h-7 rounded-full object-cover" />
+                        ) : (
+                          <div className="w-7 h-7 rounded-full bg-[#007B5F]/10 flex items-center justify-center text-xs font-bold text-[#007B5F]">
+                            {u.name.charAt(0).toUpperCase()}
+                          </div>
                         )}
+                        <span className="font-medium text-[#1A2B3C] truncate max-w-[120px]">{u.name}</span>
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex gap-1">
-                      {u.telegram_id && <span className="text-[9px] bg-[#229ED9]/10 text-[#229ED9] px-1.5 py-0.5 rounded">TG</span>}
-                      {u.email && <span className="text-[9px] bg-[#007B5F]/10 text-[#007B5F] px-1.5 py-0.5 rounded">Email</span>}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-right font-mono text-[#F4A261]">{u.xp}</td>
-                  <td className="px-4 py-3 text-right font-mono">{u.streak > 0 ? `🔥${u.streak}` : "—"}</td>
-                  <td className="px-4 py-3 text-right font-mono">{u.questions_answered}</td>
-                  <td className="px-4 py-3 text-right">
-                    <span className={`font-mono ${u.accuracy >= 70 ? "text-[#00A896]" : u.accuracy >= 40 ? "text-[#F4A261]" : "text-[#D64545]"}`}>
-                      {u.accuracy > 0 ? `${u.accuracy}%` : "—"}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-right text-[#A0AEC0] text-xs">{timeAgo(u.last_active)}</td>
-                  <td className="px-4 py-3 text-right text-[#A0AEC0] text-xs">{formatDate(u.created_at)}</td>
-                </tr>
+                    </td>
+                    {/* Auth Badges */}
+                    <td className="px-3 py-2.5">
+                      <div className="flex gap-1">
+                        {u.telegram_id && <span className="text-[9px] bg-[#229ED9]/10 text-[#229ED9] px-1.5 py-0.5 rounded font-semibold">TG</span>}
+                        {u.email && <span className="text-[9px] bg-[#007B5F]/10 text-[#007B5F] px-1.5 py-0.5 rounded font-semibold">Email</span>}
+                      </div>
+                    </td>
+                    {/* Role dropdown */}
+                    <td className="px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
+                      <select
+                        value={u.role}
+                        onChange={(e) => onRoleChange(u.id, e.target.value)}
+                        className="text-xs border border-[#E4E9F0] rounded px-2 py-1 bg-white focus:outline-none focus:border-[#007B5F]/50"
+                      >
+                        <option value="user">User</option>
+                        <option value="admin">Admin</option>
+                      </select>
+                    </td>
+                    {/* Status */}
+                    <td className="px-3 py-2.5">
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${statusColor(u.status)}`}>
+                        {u.status}
+                      </span>
+                    </td>
+                    {/* XP */}
+                    <td className="px-3 py-2.5 text-right font-mono text-[#F4A261] text-xs">{u.xp.toLocaleString()}</td>
+                    {/* Streak */}
+                    <td className="px-3 py-2.5 text-right font-mono text-xs">{u.streak > 0 ? `${u.streak}d` : "---"}</td>
+                    {/* Questions */}
+                    <td className="px-3 py-2.5 text-right font-mono text-xs">{u.questions_answered}</td>
+                    {/* Accuracy */}
+                    <td className="px-3 py-2.5 text-right">
+                      <span className={`font-mono text-xs ${u.accuracy >= 70 ? "text-[#007B5F]" : u.accuracy >= 40 ? "text-[#F4A261]" : "text-[#D64545]"}`}>
+                        {u.accuracy > 0 ? `${u.accuracy}%` : "---"}
+                      </span>
+                    </td>
+                    {/* Last Active */}
+                    <td className="px-3 py-2.5 text-right text-[#A0AEC0] text-xs whitespace-nowrap">{timeAgo(u.last_active)}</td>
+                    {/* Joined */}
+                    <td className="px-3 py-2.5 text-right text-[#A0AEC0] text-xs whitespace-nowrap">{formatDate(u.created_at)}</td>
+                    {/* Actions */}
+                    <td className="px-3 py-2.5 text-center" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center justify-center gap-1">
+                        <button
+                          onClick={() => onStartEdit(u)}
+                          className="p-1.5 rounded-md hover:bg-[#007B5F]/10 text-[#4A5568] hover:text-[#007B5F] transition-colors"
+                          title="Edit"
+                        >
+                          <Edit3 size={13} />
+                        </button>
+                        <button
+                          onClick={() => onResetGamification(u.id)}
+                          className="p-1.5 rounded-md hover:bg-[#F4A261]/10 text-[#4A5568] hover:text-[#F4A261] transition-colors"
+                          title="Reset gamification"
+                        >
+                          <RotateCcw size={13} />
+                        </button>
+                        <button
+                          onClick={() => onDeleteRequest(u.id)}
+                          className="p-1.5 rounded-md hover:bg-[#D64545]/10 text-[#4A5568] hover:text-[#D64545] transition-colors"
+                          title="Delete"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+
+                  {/* Delete Confirmation */}
+                  {deletingUser === u.id && (
+                    <tr key={`del-${u.id}`}>
+                      <td colSpan={11} className="px-4 py-3 bg-[#D64545]/5 border-b border-[#D64545]/20">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm text-[#D64545] font-medium">
+                            <AlertTriangle size={14} className="inline mr-1" />
+                            Are you sure you want to delete {u.name}? This cannot be undone.
+                          </p>
+                          <div className="flex gap-2">
+                            <button onClick={() => onDeleteConfirm(u.id)} className="text-xs bg-[#D64545] text-white px-3 py-1.5 rounded-lg font-medium">
+                              Confirm Delete
+                            </button>
+                            <button onClick={onDeleteCancel} className="text-xs bg-white border border-[#E4E9F0] text-[#4A5568] px-3 py-1.5 rounded-lg">
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+
+                  {/* Expanded Detail / Edit */}
+                  {expandedUser === u.id && (
+                    <tr key={`exp-${u.id}`}>
+                      <td colSpan={11} className="px-4 py-4 bg-[#F7F9FC]/50 border-b border-[#E4E9F0]">
+                        {editingUser === u.id ? (
+                          <div className="space-y-3">
+                            <h4 className="text-xs font-semibold text-[#1A2B3C] uppercase tracking-wider">Editing: {u.name}</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                              <div>
+                                <label className="text-[10px] text-[#A0AEC0] block mb-1">First Name</label>
+                                <input
+                                  value={editForm.first_name || ""}
+                                  onChange={(e) => onEditFormChange("first_name", e.target.value)}
+                                  className="w-full border border-[#E4E9F0] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-[#007B5F]/50"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-[10px] text-[#A0AEC0] block mb-1">Last Name</label>
+                                <input
+                                  value={editForm.last_name || ""}
+                                  onChange={(e) => onEditFormChange("last_name", e.target.value)}
+                                  className="w-full border border-[#E4E9F0] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-[#007B5F]/50"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-[10px] text-[#A0AEC0] block mb-1">Email</label>
+                                <input
+                                  value={editForm.email || ""}
+                                  onChange={(e) => onEditFormChange("email", e.target.value)}
+                                  className="w-full border border-[#E4E9F0] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-[#007B5F]/50"
+                                />
+                              </div>
+                            </div>
+                            <div className="flex gap-2">
+                              <button onClick={() => onSaveEdit(u.id)} className="btn-primary text-xs px-4 py-2 rounded-lg">Save Changes</button>
+                              <button onClick={onCancelEdit} className="btn-secondary text-xs px-4 py-2 rounded-lg">Cancel</button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                            <div><span className="text-[#A0AEC0] text-xs">ID:</span> <span className="font-mono text-[10px] break-all">{u.id}</span></div>
+                            <div><span className="text-[#A0AEC0] text-xs">Email:</span> <span className="text-xs">{u.email || "---"}</span></div>
+                            <div><span className="text-[#A0AEC0] text-xs">Telegram:</span> <span className="text-xs font-mono">{u.telegram_id || "---"}</span></div>
+                            <div><span className="text-[#A0AEC0] text-xs">Username:</span> <span className="text-xs">@{u.username || "---"}</span></div>
+                            <div><span className="text-[#A0AEC0] text-xs">Daily Today:</span> <span className="text-xs font-mono">{u.daily_today}</span></div>
+                            <div><span className="text-[#A0AEC0] text-xs">Last Study:</span> <span className="text-xs">{u.last_study ? formatDate(u.last_study) : "---"}</span></div>
+                            <div><span className="text-[#A0AEC0] text-xs">Last Active:</span> <span className="text-xs">{formatTime(u.last_active)}</span></div>
+                            <div><span className="text-[#A0AEC0] text-xs">Photo:</span> {u.photo_url ? <a href={u.photo_url} target="_blank" rel="noopener noreferrer" className="text-xs text-[#003A8C] underline">View</a> : <span className="text-xs">---</span>}</div>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  )}
+                </>
               ))}
+              {users.length === 0 && (
+                <tr>
+                  <td colSpan={11} className="px-4 py-8 text-center text-[#A0AEC0] text-sm">
+                    {search ? "No users match your search" : "No users found"}
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
       </div>
+    </div>
+  );
+}
 
-      {/* Selected user detail */}
-      {selectedUser && (() => {
-        const u = users.find((x) => x.id === selectedUser);
-        if (!u) return null;
-        return (
-          <div className="card rounded-xl p-6">
-            <h3 className="text-sm font-semibold text-[#1A2B3C] mb-4">User Detail: {u.name}</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-              <div><span className="text-[#A0AEC0]">ID:</span> <span className="font-mono text-xs break-all">{u.id}</span></div>
-              <div><span className="text-[#A0AEC0]">Email:</span> {u.email || "—"}</div>
-              <div><span className="text-[#A0AEC0]">Telegram:</span> {u.telegram_id || "—"}</div>
-              <div><span className="text-[#A0AEC0]">Username:</span> @{u.username || "—"}</div>
-              <div><span className="text-[#A0AEC0]">Role:</span> <span className="font-semibold">{u.role}</span></div>
-              <div><span className="text-[#A0AEC0]">XP:</span> <span className="font-mono">{u.xp}</span></div>
-              <div><span className="text-[#A0AEC0]">Streak:</span> <span className="font-mono">{u.streak}</span></div>
-              <div><span className="text-[#A0AEC0]">Accuracy:</span> <span className="font-mono">{u.accuracy}%</span></div>
-              <div><span className="text-[#A0AEC0]">Questions:</span> <span className="font-mono">{u.questions_answered}</span></div>
-              <div><span className="text-[#A0AEC0]">Joined:</span> {formatDate(u.created_at)}</div>
-              <div><span className="text-[#A0AEC0]">Last Active:</span> {formatTime(u.last_active)}</div>
+// ═══════════════════════════════════════════════════════════════════════════
+// SECTION: QUESTIONS
+// ═══════════════════════════════════════════════════════════════════════════
+
+function QuestionsSection({
+  stats, questions, page, total, totalPages,
+  search, topicFilter, explFilter, activeFilter,
+  onSearchChange, onTopicFilterChange, onExplFilterChange, onActiveFilterChange, onSearch, onPageChange,
+  expandedQuestion, onExpandQuestion,
+  editingQuestion, onStartEditQuestion, questionEditForm, onQuestionEditFormChange, onSaveQuestionEdit, onCancelQuestionEdit,
+  tab, onTabChange, duplicates, onRefreshDuplicates,
+}: {
+  stats: QuestionStats | null;
+  questions: QuestionRow[];
+  page: number;
+  total: number;
+  totalPages: number;
+  search: string;
+  topicFilter: string;
+  explFilter: string;
+  activeFilter: string;
+  onSearchChange: (v: string) => void;
+  onTopicFilterChange: (v: string) => void;
+  onExplFilterChange: (v: string) => void;
+  onActiveFilterChange: (v: string) => void;
+  onSearch: () => void;
+  onPageChange: (p: number) => void;
+  expandedQuestion: number | null;
+  onExpandQuestion: (id: number) => void;
+  editingQuestion: number | null;
+  onStartEditQuestion: (q: QuestionRow) => void;
+  questionEditForm: Record<string, unknown>;
+  onQuestionEditFormChange: (k: string, v: unknown) => void;
+  onSaveQuestionEdit: (id: number) => void;
+  onCancelQuestionEdit: () => void;
+  tab: "browse" | "duplicates";
+  onTabChange: (t: "browse" | "duplicates") => void;
+  duplicates: DuplicateData | null;
+  onRefreshDuplicates: () => void;
+}) {
+  return (
+    <div className="space-y-4">
+      {/* Stats Cards */}
+      {stats && (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          <div className="card rounded-xl p-3 text-center">
+            <p className="text-lg font-bold text-[#007B5F] font-mono">{stats.totalAll.toLocaleString()}</p>
+            <p className="text-[10px] text-[#A0AEC0]">Total</p>
+          </div>
+          <div className="card rounded-xl p-3 text-center">
+            <p className="text-lg font-bold text-[#003A8C] font-mono">{stats.active.toLocaleString()}</p>
+            <p className="text-[10px] text-[#A0AEC0]">Active</p>
+          </div>
+          <div className="card rounded-xl p-3 text-center">
+            <p className="text-lg font-bold text-[#A0AEC0] font-mono">{stats.inactive.toLocaleString()}</p>
+            <p className="text-[10px] text-[#A0AEC0]">Inactive</p>
+          </div>
+          <div className="card rounded-xl p-3 text-center">
+            <p className="text-lg font-bold text-[#00A896] font-mono">{stats.mcqPct}%</p>
+            <p className="text-[10px] text-[#A0AEC0]">MCQ</p>
+          </div>
+          <div className="card rounded-xl p-3 text-center">
+            <p className="text-lg font-bold text-[#F4A261] font-mono">{stats.explPct}%</p>
+            <p className="text-[10px] text-[#A0AEC0]">Explanation</p>
+          </div>
+          <div className="card rounded-xl p-3 text-center">
+            <p className="text-lg font-bold text-[#D64545] font-mono">{stats.imgPct}%</p>
+            <p className="text-[10px] text-[#A0AEC0]">Image</p>
+          </div>
+        </div>
+      )}
+
+      {/* Tab Switcher */}
+      <div className="flex gap-1 bg-white rounded-xl p-1 shadow-sm border border-[#E4E9F0] w-fit">
+        <button
+          onClick={() => onTabChange("browse")}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${tab === "browse" ? "bg-[#007B5F] text-white" : "text-[#4A5568] hover:bg-[#F7F9FC]"}`}
+        >
+          <FileText size={14} className="inline mr-1.5" />Browse
+        </button>
+        <button
+          onClick={() => onTabChange("duplicates")}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${tab === "duplicates" ? "bg-[#007B5F] text-white" : "text-[#4A5568] hover:bg-[#F7F9FC]"}`}
+        >
+          <AlertTriangle size={14} className="inline mr-1.5" />Duplicates
+        </button>
+      </div>
+
+      {tab === "browse" ? (
+        <>
+          {/* Search + Filters */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#A0AEC0]" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => onSearchChange(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && onSearch()}
+                placeholder="Search question text..."
+                className="w-full bg-white border border-[#E4E9F0] rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:border-[#007B5F]/50"
+              />
+            </div>
+            <select
+              value={topicFilter}
+              onChange={(e) => onTopicFilterChange(e.target.value)}
+              className="bg-white border border-[#E4E9F0] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#007B5F]/50"
+            >
+              <option value="">All Topics</option>
+              {(stats?.byTopic || []).map((t) => (
+                <option key={t.topic} value={t.topic}>{t.topic} ({t.count})</option>
+              ))}
+            </select>
+            <select
+              value={explFilter}
+              onChange={(e) => onExplFilterChange(e.target.value)}
+              className="bg-white border border-[#E4E9F0] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#007B5F]/50"
+            >
+              <option value="all">All Explanations</option>
+              <option value="with">With Explanation</option>
+              <option value="without">Without Explanation</option>
+            </select>
+            <select
+              value={activeFilter}
+              onChange={(e) => onActiveFilterChange(e.target.value)}
+              className="bg-white border border-[#E4E9F0] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#007B5F]/50"
+            >
+              <option value="all">All Status</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+            <button onClick={onSearch} className="btn-primary px-4 py-2.5 rounded-xl text-sm flex items-center gap-2">
+              <Filter size={14} /> Filter
+            </button>
+          </div>
+
+          {/* Results count */}
+          <p className="text-xs text-[#A0AEC0]">{total.toLocaleString()} questions found -- Page {page} of {totalPages}</p>
+
+          {/* Questions Table */}
+          <div className="card rounded-xl overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-[#F7F9FC] border-b border-[#E4E9F0]">
+                    <th className="text-left px-3 py-2.5 text-[#A0AEC0] font-medium text-xs">ID</th>
+                    <th className="text-left px-3 py-2.5 text-[#A0AEC0] font-medium text-xs">Topic</th>
+                    <th className="text-left px-3 py-2.5 text-[#A0AEC0] font-medium text-xs">Question</th>
+                    <th className="text-center px-3 py-2.5 text-[#A0AEC0] font-medium text-xs">Choices</th>
+                    <th className="text-center px-3 py-2.5 text-[#A0AEC0] font-medium text-xs">Expl</th>
+                    <th className="text-center px-3 py-2.5 text-[#A0AEC0] font-medium text-xs">Img</th>
+                    <th className="text-left px-3 py-2.5 text-[#A0AEC0] font-medium text-xs">Exam Dates</th>
+                    <th className="text-center px-3 py-2.5 text-[#A0AEC0] font-medium text-xs">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {questions.map((q) => (
+                    <>
+                      <tr
+                        key={q.id}
+                        onClick={() => onExpandQuestion(q.id)}
+                        className={`border-b border-[#E4E9F0]/50 cursor-pointer transition-colors ${
+                          expandedQuestion === q.id ? "bg-[#007B5F]/5" : "hover:bg-[#F7F9FC]"
+                        } ${!q.is_active ? "opacity-50" : ""}`}
+                      >
+                        <td className="px-3 py-2.5 font-mono text-xs text-[#A0AEC0]">#{q.id}</td>
+                        <td className="px-3 py-2.5">
+                          <span className="text-[10px] bg-[#003A8C]/10 text-[#003A8C] px-2 py-0.5 rounded font-medium truncate max-w-[120px] inline-block">
+                            {q.topic?.slice(0, 20) || "---"}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2.5 text-xs text-[#4A5568] max-w-[300px] truncate">{q.question_preview}</td>
+                        <td className="px-3 py-2.5 text-center font-mono text-xs">{q.choices_count || "---"}</td>
+                        <td className="px-3 py-2.5 text-center">
+                          {q.has_explanation
+                            ? <CheckCircle size={14} className="inline text-[#007B5F]" />
+                            : <EyeOff size={14} className="inline text-[#A0AEC0]" />
+                          }
+                        </td>
+                        <td className="px-3 py-2.5 text-center">
+                          {q.has_image
+                            ? <Eye size={14} className="inline text-[#003A8C]" />
+                            : <span className="text-[#A0AEC0] text-xs">---</span>
+                          }
+                        </td>
+                        <td className="px-3 py-2.5 text-xs text-[#A0AEC0]">
+                          {q.exam_dates?.length ? q.exam_dates.slice(0, 2).join(", ") + (q.exam_dates.length > 2 ? ` +${q.exam_dates.length - 2}` : "") : "---"}
+                        </td>
+                        <td className="px-3 py-2.5 text-center" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            onClick={() => onStartEditQuestion(q)}
+                            className="p-1.5 rounded-md hover:bg-[#007B5F]/10 text-[#4A5568] hover:text-[#007B5F] transition-colors"
+                            title="Edit"
+                          >
+                            <Edit3 size={13} />
+                          </button>
+                        </td>
+                      </tr>
+
+                      {/* Expanded Question Detail */}
+                      {expandedQuestion === q.id && (
+                        <tr key={`exp-q-${q.id}`}>
+                          <td colSpan={8} className="px-4 py-4 bg-[#F7F9FC]/50 border-b border-[#E4E9F0]">
+                            {editingQuestion === q.id ? (
+                              <div className="space-y-3">
+                                <h4 className="text-xs font-semibold text-[#1A2B3C] uppercase tracking-wider">Editing Question #{q.id}</h4>
+                                <div>
+                                  <label className="text-[10px] text-[#A0AEC0] block mb-1">Topic</label>
+                                  <input
+                                    value={(questionEditForm.topic as string) || ""}
+                                    onChange={(e) => onQuestionEditFormChange("topic", e.target.value)}
+                                    className="w-full border border-[#E4E9F0] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-[#007B5F]/50"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-[10px] text-[#A0AEC0] block mb-1">Explanation</label>
+                                  <textarea
+                                    value={(questionEditForm.explanation as string) || ""}
+                                    onChange={(e) => onQuestionEditFormChange("explanation", e.target.value)}
+                                    rows={4}
+                                    className="w-full border border-[#E4E9F0] rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-[#007B5F]/50"
+                                  />
+                                </div>
+                                <div className="flex items-center gap-3">
+                                  <label className="flex items-center gap-2 text-sm">
+                                    <input
+                                      type="checkbox"
+                                      checked={!!questionEditForm.is_active}
+                                      onChange={(e) => onQuestionEditFormChange("is_active", e.target.checked)}
+                                      className="accent-[#007B5F]"
+                                    />
+                                    Active
+                                  </label>
+                                </div>
+                                <div className="flex gap-2">
+                                  <button onClick={() => onSaveQuestionEdit(q.id)} className="btn-primary text-xs px-4 py-2 rounded-lg">Save</button>
+                                  <button onClick={onCancelQuestionEdit} className="btn-secondary text-xs px-4 py-2 rounded-lg">Cancel</button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="space-y-3">
+                                {/* Full question text */}
+                                <div>
+                                  <p className="text-[10px] text-[#A0AEC0] uppercase tracking-wider mb-1">Question</p>
+                                  <p className="text-sm text-[#1A2B3C] whitespace-pre-wrap">{q.question}</p>
+                                </div>
+
+                                {/* Choices */}
+                                {q.choices && q.choices.length > 0 && (
+                                  <div>
+                                    <p className="text-[10px] text-[#A0AEC0] uppercase tracking-wider mb-1">Choices</p>
+                                    <div className="space-y-1">
+                                      {q.choices.map((c, i) => (
+                                        <div key={i} className={`flex items-start gap-2 text-sm px-2 py-1 rounded ${c.correct ? "bg-[#007B5F]/10 text-[#007B5F] font-medium" : "text-[#4A5568]"}`}>
+                                          <span className="font-mono text-xs mt-0.5">{String.fromCharCode(65 + i)}.</span>
+                                          <span>{c.text}</span>
+                                          {c.correct && <CheckCircle size={14} className="flex-shrink-0 mt-0.5" />}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Answer */}
+                                {q.answer && (
+                                  <div>
+                                    <p className="text-[10px] text-[#A0AEC0] uppercase tracking-wider mb-1">Answer</p>
+                                    <p className="text-sm text-[#007B5F] font-medium">{q.answer}</p>
+                                  </div>
+                                )}
+
+                                {/* Explanation */}
+                                <div>
+                                  <p className="text-[10px] text-[#A0AEC0] uppercase tracking-wider mb-1">Explanation</p>
+                                  <p className="text-sm text-[#4A5568] whitespace-pre-wrap">{q.explanation || "No explanation yet."}</p>
+                                </div>
+
+                                {/* Metadata */}
+                                <div className="flex flex-wrap gap-4 text-xs text-[#A0AEC0]">
+                                  <span>Anki: {q.anki_note_id || "---"}</span>
+                                  <span>Tags: {q.tags?.join(", ") || "---"}</span>
+                                  <span>Active: {q.is_active ? "Yes" : "No"}</span>
+                                  {q.image_url && (
+                                    <a href={q.image_url} target="_blank" rel="noopener noreferrer" className="text-[#003A8C] underline">View Image</a>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      )}
+                    </>
+                  ))}
+                  {questions.length === 0 && (
+                    <tr>
+                      <td colSpan={8} className="px-4 py-8 text-center text-[#A0AEC0] text-sm">No questions found</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
-        );
-      })()}
-    </div>
-  );
-}
 
-// ─── Questions Tab ──────────────────────────────────────────────────────
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2">
+              <button
+                onClick={() => onPageChange(Math.max(1, page - 1))}
+                disabled={page <= 1}
+                className="btn-secondary text-xs px-3 py-1.5 rounded-lg disabled:opacity-40"
+              >
+                Prev
+              </button>
+              {Array.from({ length: Math.min(7, totalPages) }, (_, i) => {
+                let p: number;
+                if (totalPages <= 7) {
+                  p = i + 1;
+                } else if (page <= 4) {
+                  p = i + 1;
+                } else if (page >= totalPages - 3) {
+                  p = totalPages - 6 + i;
+                } else {
+                  p = page - 3 + i;
+                }
+                return (
+                  <button
+                    key={p}
+                    onClick={() => onPageChange(p)}
+                    className={`w-8 h-8 rounded-lg text-xs font-medium transition-all ${
+                      p === page ? "bg-[#007B5F] text-white" : "bg-white border border-[#E4E9F0] text-[#4A5568] hover:bg-[#F7F9FC]"
+                    }`}
+                  >
+                    {p}
+                  </button>
+                );
+              })}
+              <button
+                onClick={() => onPageChange(Math.min(totalPages, page + 1))}
+                disabled={page >= totalPages}
+                className="btn-secondary text-xs px-3 py-1.5 rounded-lg disabled:opacity-40"
+              >
+                Next
+              </button>
+            </div>
+          )}
 
-function QuestionsTab({ duplicates, onRefresh }: { duplicates: DuplicateData | null; onRefresh: () => void }) {
-  return (
-    <div className="space-y-6">
-      {/* Question Stats */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="card rounded-xl p-4 text-center">
-          <p className="text-2xl font-bold text-[#007B5F] font-mono">7,725</p>
-          <p className="text-xs text-[#A0AEC0]">Active Questions</p>
-        </div>
-        <div className="card rounded-xl p-4 text-center">
-          <p className="text-2xl font-bold text-[#F4A261] font-mono">{duplicates?.totalGroups || "..."}</p>
-          <p className="text-xs text-[#A0AEC0]">Duplicate Groups</p>
-        </div>
-        <div className="card rounded-xl p-4 text-center">
-          <p className="text-2xl font-bold text-[#D64545] font-mono">{duplicates?.totalExtraCopies || "..."}</p>
-          <p className="text-xs text-[#A0AEC0]">Extra Copies</p>
-        </div>
-      </div>
-
-      {/* Duplicate Scanner */}
-      <div className="card rounded-xl p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="text-sm font-semibold text-[#1A2B3C]">Duplicate Detection</h3>
-            <p className="text-xs text-[#A0AEC0]">Questions with identical text (first 200 chars)</p>
-          </div>
-          <button onClick={onRefresh} className="btn-secondary text-xs px-3 py-1.5 rounded-lg">
-            Re-scan
-          </button>
-        </div>
-
-        {!duplicates ? (
-          <p className="text-sm text-[#A0AEC0] text-center py-4">Scanning...</p>
-        ) : duplicates.totalGroups === 0 ? (
-          <p className="text-sm text-[#00A896] text-center py-4">✓ No duplicates found</p>
-        ) : (
-          <div className="space-y-3 max-h-[400px] overflow-y-auto">
-            {duplicates.groups.map((g, i) => (
-              <div key={i} className="border border-[#E4E9F0] rounded-lg p-3">
-                <div className="flex items-start justify-between mb-2">
-                  <p className="text-sm text-[#4A5568] flex-1">{g.text}</p>
-                  <span className="text-xs bg-[#D64545]/10 text-[#D64545] px-2 py-0.5 rounded font-mono ml-2">
-                    {g.count}x
-                  </span>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {g.questions.map((q) => (
-                    <span key={q.id} className="text-[10px] bg-[#F7F9FC] border border-[#E4E9F0] rounded px-2 py-1 font-mono">
-                      #{q.id} · {q.topic?.slice(0, 15)}
-                    </span>
-                  ))}
-                </div>
+          {/* Topic Breakdown (collapsible) */}
+          {stats && stats.byTopic.length > 0 && (
+            <details className="card rounded-xl p-4">
+              <summary className="text-sm font-semibold text-[#1A2B3C] cursor-pointer">
+                Topic Breakdown ({stats.byTopic.length} topics)
+              </summary>
+              <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2">
+                {stats.byTopic.map((t) => (
+                  <div key={t.topic} className="flex items-center justify-between py-1.5 px-2 rounded hover:bg-[#F7F9FC]">
+                    <span className="text-xs text-[#4A5568] truncate max-w-[200px]">{t.topic}</span>
+                    <span className="text-xs font-mono text-[#007B5F] font-bold">{t.count}</span>
+                  </div>
+                ))}
               </div>
-            ))}
+            </details>
+          )}
+        </>
+      ) : (
+        /* Duplicates Tab */
+        <div className="card rounded-xl p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-sm font-semibold text-[#1A2B3C]">Duplicate Detection</h3>
+              <p className="text-xs text-[#A0AEC0]">
+                {duplicates
+                  ? `${duplicates.totalGroups} groups, ${duplicates.totalExtraCopies} extra copies`
+                  : "Scanning..."
+                }
+              </p>
+            </div>
+            <button onClick={onRefreshDuplicates} className="btn-secondary text-xs px-3 py-1.5 rounded-lg flex items-center gap-1">
+              <RotateCcw size={12} /> Re-scan
+            </button>
           </div>
-        )}
-      </div>
+
+          {!duplicates ? (
+            <p className="text-sm text-[#A0AEC0] text-center py-8">Scanning for duplicates...</p>
+          ) : duplicates.totalGroups === 0 ? (
+            <div className="text-center py-8">
+              <CheckCircle size={32} className="text-[#007B5F] mx-auto mb-2" />
+              <p className="text-sm text-[#007B5F] font-medium">No duplicates found</p>
+            </div>
+          ) : (
+            <div className="space-y-3 max-h-[500px] overflow-y-auto">
+              {duplicates.groups.map((g, i) => (
+                <div key={i} className="border border-[#E4E9F0] rounded-lg p-3">
+                  <div className="flex items-start justify-between mb-2">
+                    <p className="text-xs text-[#4A5568] flex-1 line-clamp-2">{g.text}</p>
+                    <span className="text-[10px] bg-[#D64545]/10 text-[#D64545] px-2 py-0.5 rounded font-mono ml-2 flex-shrink-0">
+                      {g.count}x
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {g.questions.map((q) => (
+                      <span key={q.id} className="text-[10px] bg-[#F7F9FC] border border-[#E4E9F0] rounded px-2 py-1 font-mono">
+                        #{q.id} -- {q.topic?.slice(0, 15)}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
 
-// ─── Analytics Tab ──────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+// SECTION: ANALYTICS
+// ═══════════════════════════════════════════════════════════════════════════
 
-function AnalyticsTab({
+function AnalyticsSection({
   activities, total, eventTypes, filter, onFilterChange,
 }: {
   activities: ActivityRow[];
@@ -564,52 +1429,58 @@ function AnalyticsTab({
 }) {
   return (
     <div className="space-y-4">
-      {/* Filter */}
-      <div className="flex items-center gap-3">
-        <select
-          value={filter}
-          onChange={(e) => onFilterChange(e.target.value)}
-          className="bg-white border border-[#E4E9F0] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#007B5F]/50"
-        >
-          <option value="">All Events ({total})</option>
-          {eventTypes.map((t) => (
-            <option key={t} value={t}>{t}</option>
-          ))}
-        </select>
-        <span className="text-xs text-[#A0AEC0]">
-          Showing {activities.length} of {total} events
-        </span>
+      {/* Header + Filter */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <select
+            value={filter}
+            onChange={(e) => onFilterChange(e.target.value)}
+            className="bg-white border border-[#E4E9F0] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#007B5F]/50"
+          >
+            <option value="">All Events</option>
+            {eventTypes.map((t) => (
+              <option key={t} value={t}>{t}</option>
+            ))}
+          </select>
+          <span className="text-xs text-[#A0AEC0]">
+            Showing {activities.length} of {total.toLocaleString()} events
+          </span>
+        </div>
+        <div className="card rounded-xl px-4 py-2">
+          <p className="text-lg font-bold text-[#007B5F] font-mono">{total.toLocaleString()}</p>
+          <p className="text-[10px] text-[#A0AEC0]">Total Events</p>
+        </div>
       </div>
 
-      {/* Activity feed */}
+      {/* Activity Feed Table */}
       <div className="card rounded-xl overflow-hidden">
         <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
           <table className="w-full text-sm">
             <thead className="sticky top-0 bg-white z-10">
               <tr className="bg-[#F7F9FC] border-b border-[#E4E9F0]">
-                <th className="text-left px-3 py-2 text-[#A0AEC0] font-medium text-xs">Time</th>
-                <th className="text-left px-3 py-2 text-[#A0AEC0] font-medium text-xs">Event</th>
-                <th className="text-left px-3 py-2 text-[#A0AEC0] font-medium text-xs">Page</th>
-                <th className="text-left px-3 py-2 text-[#A0AEC0] font-medium text-xs">User</th>
-                <th className="text-left px-3 py-2 text-[#A0AEC0] font-medium text-xs">Details</th>
+                <th className="text-left px-3 py-2.5 text-[#A0AEC0] font-medium text-xs">Time</th>
+                <th className="text-left px-3 py-2.5 text-[#A0AEC0] font-medium text-xs">Event Type</th>
+                <th className="text-left px-3 py-2.5 text-[#A0AEC0] font-medium text-xs">Page</th>
+                <th className="text-left px-3 py-2.5 text-[#A0AEC0] font-medium text-xs">User ID</th>
+                <th className="text-left px-3 py-2.5 text-[#A0AEC0] font-medium text-xs">Details</th>
               </tr>
             </thead>
             <tbody>
               {activities.map((a) => (
                 <tr key={a.id} className="border-b border-[#E4E9F0]/30 hover:bg-[#F7F9FC]">
-                  <td className="px-3 py-2 text-[#A0AEC0] text-xs whitespace-nowrap">{formatTime(a.created_at)}</td>
-                  <td className="px-3 py-2">
-                    <span className="text-xs bg-[#003A8C]/10 text-[#003A8C] px-2 py-0.5 rounded font-mono">
+                  <td className="px-3 py-2.5 text-[#A0AEC0] text-xs whitespace-nowrap">{formatTime(a.created_at)}</td>
+                  <td className="px-3 py-2.5">
+                    <span className="text-[10px] bg-[#003A8C]/10 text-[#003A8C] px-2 py-0.5 rounded font-mono">
                       {a.event_type}
                     </span>
                   </td>
-                  <td className="px-3 py-2 text-xs text-[#4A5568]">{a.page || "—"}</td>
-                  <td className="px-3 py-2 text-xs font-mono text-[#A0AEC0]">{a.user_id?.slice(0, 8)}...</td>
-                  <td className="px-3 py-2 text-xs text-[#A0AEC0] max-w-[200px] truncate">
-                    {a.topic && <span className="text-[#007B5F]">{a.topic} </span>}
-                    {a.question_id && <span>Q#{a.question_id} </span>}
-                    {a.duration_ms && <span>{a.duration_ms}ms </span>}
-                    {a.ip_address && a.ip_address !== "unknown" && <span className="text-[#A0AEC0]/50">{a.ip_address}</span>}
+                  <td className="px-3 py-2.5 text-xs text-[#4A5568]">{a.page || "---"}</td>
+                  <td className="px-3 py-2.5 text-xs font-mono text-[#A0AEC0]">{a.user_id?.slice(0, 8)}...</td>
+                  <td className="px-3 py-2.5 text-xs text-[#A0AEC0] max-w-[250px] truncate">
+                    {a.topic && <span className="text-[#007B5F] mr-1">{a.topic}</span>}
+                    {a.question_id && <span className="mr-1">Q#{a.question_id}</span>}
+                    {a.duration_ms && <span className="mr-1">{a.duration_ms}ms</span>}
+                    {a.ip_address && a.ip_address !== "unknown" && <span className="text-[#A0AEC0]/60">{a.ip_address}</span>}
                   </td>
                 </tr>
               ))}
@@ -620,6 +1491,156 @@ function AnalyticsTab({
               )}
             </tbody>
           </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SECTION: SYSTEM
+// ═══════════════════════════════════════════════════════════════════════════
+
+function SystemSection({
+  questionStats, users, onRefreshStats,
+}: {
+  questionStats: QuestionStats | null;
+  users: UserRow[];
+  onRefreshStats: () => void;
+}) {
+  const admins = users.filter((u) => u.role === "admin");
+
+  return (
+    <div className="space-y-6">
+      {/* Database Stats */}
+      <div className="card rounded-xl p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-semibold text-[#1A2B3C] flex items-center gap-2">
+            <BarChart3 size={16} className="text-[#007B5F]" /> Database Statistics
+          </h3>
+          <button onClick={onRefreshStats} className="btn-secondary text-xs px-3 py-1.5 rounded-lg flex items-center gap-1">
+            <RotateCcw size={12} /> Refresh
+          </button>
+        </div>
+        {questionStats ? (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-[#F7F9FC] rounded-lg p-3">
+              <p className="text-lg font-bold text-[#007B5F] font-mono">{questionStats.totalAll.toLocaleString()}</p>
+              <p className="text-[10px] text-[#A0AEC0]">Total Questions</p>
+            </div>
+            <div className="bg-[#F7F9FC] rounded-lg p-3">
+              <p className="text-lg font-bold text-[#003A8C] font-mono">{questionStats.active.toLocaleString()}</p>
+              <p className="text-[10px] text-[#A0AEC0]">Active</p>
+            </div>
+            <div className="bg-[#F7F9FC] rounded-lg p-3">
+              <p className="text-lg font-bold text-[#A0AEC0] font-mono">{questionStats.inactive.toLocaleString()}</p>
+              <p className="text-[10px] text-[#A0AEC0]">Inactive</p>
+            </div>
+            <div className="bg-[#F7F9FC] rounded-lg p-3">
+              <p className="text-lg font-bold text-[#00A896] font-mono">{questionStats.byTopic?.length || 0}</p>
+              <p className="text-[10px] text-[#A0AEC0]">Topics</p>
+            </div>
+            <div className="bg-[#F7F9FC] rounded-lg p-3">
+              <p className="text-lg font-bold text-[#F4A261] font-mono">{questionStats.withMCQ.toLocaleString()}</p>
+              <p className="text-[10px] text-[#A0AEC0]">With MCQ</p>
+            </div>
+            <div className="bg-[#F7F9FC] rounded-lg p-3">
+              <p className="text-lg font-bold text-[#D64545] font-mono">{questionStats.withExplanations.toLocaleString()}</p>
+              <p className="text-[10px] text-[#A0AEC0]">With Explanations</p>
+            </div>
+            <div className="bg-[#F7F9FC] rounded-lg p-3">
+              <p className="text-lg font-bold text-[#8B5CF6] font-mono">{questionStats.withImages.toLocaleString()}</p>
+              <p className="text-[10px] text-[#A0AEC0]">With Images</p>
+            </div>
+            <div className="bg-[#F7F9FC] rounded-lg p-3">
+              <p className="text-lg font-bold text-[#007B5F] font-mono">{users.length}</p>
+              <p className="text-[10px] text-[#A0AEC0]">Total Users</p>
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-[#A0AEC0] text-center py-4">Loading stats...</p>
+        )}
+
+        {/* Topic Counts Table */}
+        {questionStats && questionStats.byTopic.length > 0 && (
+          <div className="mt-4">
+            <p className="text-xs font-semibold text-[#4A5568] mb-2">Questions per Topic</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
+              {questionStats.byTopic.map((t) => (
+                <div key={t.topic} className="flex items-center justify-between py-1.5 px-2 rounded hover:bg-[#F7F9FC] text-xs">
+                  <span className="text-[#4A5568] truncate max-w-[200px]">{t.topic}</span>
+                  <span className="font-mono text-[#007B5F] font-bold">{t.count.toLocaleString()}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Admin Users */}
+      <div className="card rounded-xl p-5">
+        <h3 className="text-sm font-semibold text-[#1A2B3C] mb-4 flex items-center gap-2">
+          <Shield size={16} className="text-[#D64545]" /> Admin Users ({admins.length})
+        </h3>
+        {admins.length > 0 ? (
+          <div className="space-y-2">
+            {admins.map((a) => (
+              <div key={a.id} className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-[#F7F9FC]">
+                <div className="flex items-center gap-3">
+                  {a.photo_url ? (
+                    <img src={a.photo_url} alt="" className="w-8 h-8 rounded-full object-cover" />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-[#D64545]/10 flex items-center justify-center text-xs font-bold text-[#D64545]">
+                      {a.name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-sm font-medium text-[#1A2B3C]">{a.name}</p>
+                    <p className="text-[10px] text-[#A0AEC0]">{a.email || a.username || a.id.slice(0, 12)}</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-[#A0AEC0]">Last active: {timeAgo(a.last_active)}</p>
+                  <p className="text-[10px] text-[#A0AEC0]">Joined: {formatDate(a.created_at)}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-[#A0AEC0] text-center py-4">No admin users configured</p>
+        )}
+      </div>
+
+      {/* App Info */}
+      <div className="card rounded-xl p-5">
+        <h3 className="text-sm font-semibold text-[#1A2B3C] mb-4 flex items-center gap-2">
+          <Settings size={16} className="text-[#4A5568]" /> App Information
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+          <div className="bg-[#F7F9FC] rounded-lg p-3">
+            <p className="text-[10px] text-[#A0AEC0] mb-0.5">Application</p>
+            <p className="text-[#1A2B3C] font-medium">MedPr&uuml;f v2.0</p>
+          </div>
+          <div className="bg-[#F7F9FC] rounded-lg p-3">
+            <p className="text-[10px] text-[#A0AEC0] mb-0.5">Supabase Project</p>
+            <p className="font-mono text-xs text-[#4A5568]">xfgllbkpgbginbjikjbb</p>
+          </div>
+          <div className="bg-[#F7F9FC] rounded-lg p-3">
+            <p className="text-[10px] text-[#A0AEC0] mb-0.5">Deployment</p>
+            <p className="text-[#4A5568]">Vercel (auto-deploy from main)</p>
+          </div>
+          <div className="bg-[#F7F9FC] rounded-lg p-3">
+            <p className="text-[10px] text-[#A0AEC0] mb-0.5">Domain</p>
+            <p className="text-[#003A8C]">medpruf.com</p>
+          </div>
+          <div className="bg-[#F7F9FC] rounded-lg p-3">
+            <p className="text-[10px] text-[#A0AEC0] mb-0.5">Framework</p>
+            <p className="text-[#4A5568]">Next.js 15 + TypeScript</p>
+          </div>
+          <div className="bg-[#F7F9FC] rounded-lg p-3">
+            <p className="text-[10px] text-[#A0AEC0] mb-0.5">Auth</p>
+            <p className="text-[#4A5568]">Telegram (Widget + Bot) + Guest</p>
+          </div>
         </div>
       </div>
     </div>
