@@ -7,7 +7,7 @@ import { t } from "@/lib/i18n";
 import { getLevelFromXP } from "@/lib/xp";
 import { TOPIC_CONFIG } from "@/lib/topics";
 import TopicIcon from "@/components/TopicIcon";
-import { Home, FileText, GraduationCap, BarChart3, TrendingUp, BookOpen, Info, User, Flame, PanelLeftClose, PanelLeftOpen, Layers, Settings, Map } from "lucide-react";
+import { Home, FileText, GraduationCap, BarChart3, TrendingUp, BookOpen, Info, User, Flame, PanelLeftClose, PanelLeftOpen, Layers, Settings, Map, Sparkles } from "lucide-react";
 
 type Lang = "de" | "en";
 
@@ -51,6 +51,7 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0, streak = 
 
   const secondaryNavItems = [
     { href: "/materials", icon: <BookOpen className="w-5 h-5" />, label: t("materials", lang), key: "materials" },
+    { href: "/changelog", icon: <Sparkles className="w-5 h-5" />, label: lang === "de" ? "Neuigkeiten" : "What's New", key: "changelog" },
     { href: "/about", icon: <Info className="w-5 h-5" />, label: t("about", lang), key: "about" },
     { href: "/profile", icon: <User className="w-5 h-5" />, label: t("profile", lang), key: "profile" },
     { href: "/settings", icon: <Settings className="w-5 h-5" />, label: t("settings", lang), key: "settings" },
@@ -68,6 +69,7 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0, streak = 
     if (key === "about") return pathname.startsWith("/about");
     if (key === "profile") return pathname.startsWith("/profile");
     if (key === "settings") return pathname.startsWith("/settings");
+    if (key === "changelog") return pathname.startsWith("/changelog");
     return false;
   };
 

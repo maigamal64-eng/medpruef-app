@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import {
-  LayoutDashboard, Users, FileText, Activity, Settings,
+  LayoutDashboard, Users, FileText, Activity, Settings, Sparkles,
   ChevronDown, Search, Edit3, Trash2, RotateCcw, Shield, Mail,
   Download, Filter, Eye, EyeOff, AlertTriangle, CheckCircle,
   Clock, TrendingUp, Zap, BarChart3,
@@ -11,12 +11,13 @@ import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip,
   ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell,
 } from "recharts";
+import { CHANGELOG, type ChangelogEntry } from "@/lib/changelog";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES
 // ═══════════════════════════════════════════════════════════════════════════
 
-type Section = "dashboard" | "users" | "questions" | "analytics" | "system";
+type Section = "dashboard" | "users" | "questions" | "analytics" | "changelog" | "system";
 
 interface OverviewData {
   totalUsers: number;
@@ -123,6 +124,7 @@ const NAV_ITEMS: { key: Section; label: string; icon: typeof LayoutDashboard }[]
   { key: "users", label: "Users", icon: Users },
   { key: "questions", label: "Questions", icon: FileText },
   { key: "analytics", label: "Analytics", icon: Activity },
+  { key: "changelog", label: "Changelog", icon: Sparkles },
   { key: "system", label: "System", icon: Settings },
 ];
 
@@ -577,6 +579,7 @@ export default function AdminDashboard() {
                   onFilterChange={(f) => { setActivityFilter(f); fetchActivity(f || undefined); }}
                 />
               )}
+              {section === "changelog" && <ChangelogSection />}
               {section === "system" && (
                 <SystemSection questionStats={questionStats} users={users} onRefreshStats={fetchQuestionStats} />
               )}
@@ -1793,9 +1796,89 @@ function SystemSection({
           </div>
           <div className="bg-[#F7F9FC] rounded-lg p-3">
             <p className="text-[10px] text-[#A0AEC0] mb-0.5">Auth</p>
-            <p className="text-[#4A5568]">Telegram (Widget + Bot) + Guest</p>
+            <p className="text-[#4A5568]">Telegram (Widget + Bot) + Email + Guest</p>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SECTION: CHANGELOG (admin view — shows ALL entries including admin-only)
+// ═══════════════════════════════════════════════════════════════════════════
+
+function ChangelogSection() {
+  // Group ALL entries (including admin) by date
+  const grouped: Record<string, ChangelogEntry[]> = {};
+  for (const entry of CHANGELOG) {
+    if (!grouped[entry.date]) grouped[entry.date] = [];
+    grouped[entry.date].push(entry);
+  }
+  const dates = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
+
+  const tagColors: Record<string, string> = {
+    feature: "bg-[#007B5F]/10 text-[#007B5F]",
+    improvement: "bg-[#003A8C]/10 text-[#003A8C]",
+    fix: "bg-[#F4A261]/10 text-[#F4A261]",
+    admin: "bg-[#D64545]/10 text-[#D64545]",
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="card rounded-xl p-5">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h3 className="text-sm font-semibold text-[#1A2B3C]">Full Changelog (Admin View)</h3>
+            <p className="text-xs text-[#A0AEC0]">
+              {CHANGELOG.length} total entries · {CHANGELOG.filter((e) => e.tag === "admin").length} admin-only
+            </p>
+          </div>
+          <a
+            href="/changelog"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-secondary text-xs px-3 py-1.5 rounded-lg"
+          >
+            View User Version
+          </a>
+        </div>
+        <p className="text-xs text-[#A0AEC0] italic">
+          ⚠️ Maintained in <code className="bg-[#F7F9FC] px-1.5 py-0.5 rounded">src/lib/changelog.ts</code>. Edit that file to add new entries — they automatically appear here AND on /changelog.
+        </p>
+      </div>
+
+      {/* Timeline */}
+      <div className="space-y-6">
+        {dates.map((date) => (
+          <section key={date}>
+            <div className="flex items-center gap-2 mb-3">
+              <Clock size={14} className="text-[#A0AEC0]" />
+              <h3 className="text-sm font-semibold text-[#4A5568]">
+                {new Date(date).toLocaleDateString("de-AT", { day: "numeric", month: "long", year: "numeric" })}
+              </h3>
+              <span className="text-[10px] text-[#A0AEC0]">({grouped[date].length} entries)</span>
+            </div>
+
+            <div className="space-y-2 pl-4 border-l-2 border-[#E4E9F0]">
+              {grouped[date].map((entry, i) => (
+                <div key={`${date}-${i}`} className="card rounded-lg p-3 -ml-4 pl-6 relative">
+                  <div className={`absolute left-2 top-4 w-2.5 h-2.5 rounded-full ${tagColors[entry.tag].split(' ')[0]}`} />
+                  <div className="flex items-start gap-2 mb-1">
+                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${tagColors[entry.tag]}`}>
+                      {entry.tag.toUpperCase()}
+                    </span>
+                  </div>
+                  <h4 className="text-sm font-semibold text-[#1A2B3C] mb-0.5">
+                    {entry.title.en}
+                  </h4>
+                  <p className="text-xs text-[#4A5568] mb-1">{entry.description.en}</p>
+                  <p className="text-[10px] text-[#A0AEC0] italic">DE: {entry.title.de}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        ))}
       </div>
     </div>
   );

@@ -1,0 +1,337 @@
+/**
+ * MedPrüf Changelog
+ *
+ * IMPORTANT: Update this file whenever user-facing features are added, fixed, or removed.
+ * Add new entries at the TOP of the array (reverse chronological).
+ *
+ * Tags:
+ * - "feature" — new user-facing feature
+ * - "improvement" — enhancement to existing feature
+ * - "fix" — bug fix
+ * - "admin" — admin-only change (shown only in admin changelog)
+ */
+
+export type ChangelogTag = "feature" | "improvement" | "fix" | "admin";
+
+export interface ChangelogEntry {
+  date: string;        // ISO date YYYY-MM-DD
+  version?: string;    // Optional semver
+  tag: ChangelogTag;
+  title: { de: string; en: string };
+  description: { de: string; en: string };
+}
+
+export const CHANGELOG: ChangelogEntry[] = [
+  // ═══ 2026-04-10 ═══
+  {
+    date: "2026-04-10",
+    tag: "feature",
+    title: { de: "Änderungsprotokoll", en: "Changelog" },
+    description: {
+      de: "Neue Seite, auf der alle Updates und Verbesserungen an MedPrüf aufgelistet sind.",
+      en: "New page listing all updates and improvements to MedPrüf.",
+    },
+  },
+  {
+    date: "2026-04-10",
+    tag: "fix",
+    title: { de: "Fragenkarten-Breite stabil", en: "Question card width stable" },
+    description: {
+      de: "Die Fragenkarte ändert nicht mehr ihre Breite, wenn du eine Antwort auswählst.",
+      en: "The question card no longer changes width when you select an answer.",
+    },
+  },
+  {
+    date: "2026-04-10",
+    tag: "improvement",
+    title: { de: "KI-Erklärungen zwischengespeichert", en: "AI explanations cached" },
+    description: {
+      de: "KI-Erklärungen werden jetzt einmal pro Frage generiert und für alle Nutzer zwischengespeichert — schneller und effizienter.",
+      en: "AI explanations are now generated once per question and cached for all users — faster and more efficient.",
+    },
+  },
+  {
+    date: "2026-04-10",
+    tag: "feature",
+    title: { de: "Markdown-Rendering in KI-Chat", en: "Markdown rendering in AI chat" },
+    description: {
+      de: "KI-Erklärungen werden jetzt mit formatierter Darstellung (Überschriften, Listen, Fettdruck) angezeigt.",
+      en: "AI explanations now render with proper formatting (headings, lists, bold text).",
+    },
+  },
+  {
+    date: "2026-04-10",
+    tag: "feature",
+    title: { de: "Frage melden & Vorschläge", en: "Report questions & suggest edits" },
+    description: {
+      de: "Melde Probleme oder schlage Änderungen an Fragen direkt beim Lernen vor. Klicke auf das Flag-Symbol oben rechts.",
+      en: "Report issues or suggest edits to questions directly while studying. Click the flag icon in the top right.",
+    },
+  },
+  {
+    date: "2026-04-10",
+    tag: "feature",
+    title: { de: "Zeitübung", en: "Timed Practice" },
+    description: {
+      de: "Neue Zeitübung: 10, 20 oder 30 Fragen mit Zeitlimit und Zusammenfassung am Ende.",
+      en: "New timed practice mode: 10, 20, or 30 questions with a time limit and summary at the end.",
+    },
+  },
+  {
+    date: "2026-04-10",
+    tag: "feature",
+    title: { de: "Prüfungs-Countdown auf Startseite", en: "Exam countdown on home" },
+    description: {
+      de: "Setze dein Prüfungsdatum und sieh die verbleibenden Tage direkt auf der Startseite.",
+      en: "Set your exam date and see the days remaining directly on the home page.",
+    },
+  },
+  {
+    date: "2026-04-10",
+    tag: "feature",
+    title: { de: "Tastaturkürzel-Leitfaden", en: "Keyboard shortcut guide" },
+    description: {
+      de: "Drücke ?, um alle verfügbaren Tastaturkürzel zu sehen (A-E Antwort auswählen, F Lesezeichen, N nächste Frage).",
+      en: "Press ? to see all available keyboard shortcuts (A-E select answer, F bookmark, N next question).",
+    },
+  },
+  {
+    date: "2026-04-10",
+    tag: "feature",
+    title: { de: "Bewertung von Erklärungen", en: "Rate explanations" },
+    description: {
+      de: "Bewerte KI-Erklärungen mit Daumen hoch/runter, um uns zu helfen, die Qualität zu verbessern.",
+      en: "Rate AI explanations with thumbs up/down to help us improve quality.",
+    },
+  },
+  {
+    date: "2026-04-10",
+    tag: "feature",
+    title: { de: "Automatischer Dunkelmodus", en: "Auto dark mode" },
+    description: {
+      de: "MedPrüf erkennt jetzt automatisch dein System-Farbschema (hell/dunkel).",
+      en: "MedPrüf now automatically detects your system color scheme (light/dark).",
+    },
+  },
+  {
+    date: "2026-04-10",
+    tag: "feature",
+    title: { de: "Rechtliche Seiten hinzugefügt", en: "Legal pages added" },
+    description: {
+      de: "Datenschutz, Nutzungsbedingungen und Impressum sind jetzt verfügbar (gesetzlich erforderlich).",
+      en: "Privacy policy, terms of service, and legal notice are now available (legally required).",
+    },
+  },
+  {
+    date: "2026-04-10",
+    tag: "feature",
+    title: { de: "Cookie-Banner", en: "Cookie banner" },
+    description: {
+      de: "GDPR-konformer Cookie-Banner — akzeptiere oder lehne Analyse-Cookies ab.",
+      en: "GDPR-compliant cookie banner — accept or decline analytics cookies.",
+    },
+  },
+  {
+    date: "2026-04-10",
+    tag: "admin",
+    title: { de: "Admin: Vorschläge-Warteschlange", en: "Admin: Suggestions queue" },
+    description: {
+      de: "Admin kann jetzt Nutzer-Meldungen und Bearbeitungsvorschläge im Admin-Panel überprüfen.",
+      en: "Admin can now review user reports and edit suggestions in the admin panel.",
+    },
+  },
+  {
+    date: "2026-04-10",
+    tag: "admin",
+    title: { de: "Admin: Tier-Verwaltung", en: "Admin: Tier management" },
+    description: {
+      de: "Admin kann Nutzer-Tier (Free/Pro/Admin) direkt aus der Nutzertabelle ändern.",
+      en: "Admin can change user tier (Free/Pro/Admin) directly from the users table.",
+    },
+  },
+
+  // ═══ 2026-04-09 ═══
+  {
+    date: "2026-04-09",
+    tag: "feature",
+    title: { de: "E-Mail-Anmeldung", en: "Email login" },
+    description: {
+      de: "Registriere und melde dich mit E-Mail und Passwort an — keine Telegram-Nutzung erforderlich.",
+      en: "Register and sign in with email and password — no Telegram required.",
+    },
+  },
+  {
+    date: "2026-04-09",
+    tag: "feature",
+    title: { de: "Umfassendes Admin-Dashboard", en: "Comprehensive admin dashboard" },
+    description: {
+      de: "Admin-Panel mit 5 Bereichen: Dashboard, Nutzer, Fragen, Analysen, System.",
+      en: "Admin panel with 5 sections: Dashboard, Users, Questions, Analytics, System.",
+    },
+  },
+  {
+    date: "2026-04-09",
+    tag: "improvement",
+    title: { de: "Login-Flow vereinfacht", en: "Simplified login flow" },
+    description: {
+      de: "Neue /login-Seite mit allen Authentifizierungsoptionen an einem Ort.",
+      en: "New /login page with all authentication options in one place.",
+    },
+  },
+  {
+    date: "2026-04-09",
+    tag: "improvement",
+    title: { de: "Mobiles Design verbessert", en: "Improved mobile design" },
+    description: {
+      de: "Bessere Navigation auf mobilen Geräten mit prominentem Quiz-Button in der unteren Leiste.",
+      en: "Better mobile navigation with prominent quiz button in the bottom bar.",
+    },
+  },
+  {
+    date: "2026-04-09",
+    tag: "feature",
+    title: { de: "Medpruf.com Domain", en: "Medpruf.com domain" },
+    description: {
+      de: "MedPrüf ist jetzt unter medpruf.com erreichbar!",
+      en: "MedPrüf is now available at medpruf.com!",
+    },
+  },
+
+  // ═══ 2026-04-08 ═══
+  {
+    date: "2026-04-08",
+    tag: "feature",
+    title: { de: "Curriculum-Karte", en: "Curriculum map" },
+    description: {
+      de: "Neue Seite mit Baumansicht aller Fachgebiete und deinem Fortschritt.",
+      en: "New page with tree view of all specialties and your progress.",
+    },
+  },
+  {
+    date: "2026-04-08",
+    tag: "feature",
+    title: { de: "Karteikarten-Modus", en: "Flashcard mode" },
+    description: {
+      de: "Lerne mit interaktiven Karteikarten mit 3D-Flip-Animation und Vertrauensbewertungen.",
+      en: "Study with interactive flashcards featuring 3D flip animation and confidence ratings.",
+    },
+  },
+  {
+    date: "2026-04-08",
+    tag: "feature",
+    title: { de: "Fortschritts-Dashboard", en: "Progress dashboard" },
+    description: {
+      de: "Umfassende Statistiken mit Radar-Diagramm, Wochenansicht und Prüfungsbereitschaft.",
+      en: "Comprehensive stats with radar chart, weekly view, and exam readiness.",
+    },
+  },
+  {
+    date: "2026-04-08",
+    tag: "feature",
+    title: { de: "PWA-Unterstützung", en: "PWA support" },
+    description: {
+      de: "Installiere MedPrüf auf deinem Startbildschirm für schnellen Zugriff.",
+      en: "Install MedPrüf on your home screen for quick access.",
+    },
+  },
+  {
+    date: "2026-04-08",
+    tag: "improvement",
+    title: { de: "Dark Mode", en: "Dark mode" },
+    description: {
+      de: "Vollständiger Dunkelmodus mit Umschalter in der Kopfzeile.",
+      en: "Full dark mode with toggle in the header.",
+    },
+  },
+
+  // ═══ 2026-04-07 ═══
+  {
+    date: "2026-04-07",
+    tag: "feature",
+    title: { de: "Individueller Prüfungs-Builder", en: "Custom exam builder" },
+    description: {
+      de: "Erstelle deine eigene Prüfung mit Filtern für Fächer, Tags, Prüfungsdaten und mehr.",
+      en: "Create your own exam with filters for subjects, tags, exam dates, and more.",
+    },
+  },
+  {
+    date: "2026-04-07",
+    tag: "feature",
+    title: { de: "Suchfunktion", en: "Search function" },
+    description: {
+      de: "Suche schnell nach Fragen mit Cmd+K oder dem Suchsymbol.",
+      en: "Quickly search for questions with Cmd+K or the search icon.",
+    },
+  },
+
+  // ═══ 2026-04-06 ═══
+  {
+    date: "2026-04-06",
+    tag: "feature",
+    title: { de: "7.725 Fragen importiert", en: "7,725 questions imported" },
+    description: {
+      de: "Vollständige Fragensammlung aus SIP 4 & SIP 5 ist jetzt verfügbar, einschließlich Bildern.",
+      en: "Complete question bank from SIP 4 & SIP 5 is now available, including images.",
+    },
+  },
+  {
+    date: "2026-04-06",
+    tag: "feature",
+    title: { de: "Multi-Antwort-Fragen", en: "Multi-select questions" },
+    description: {
+      de: "Unterstützung für Fragen mit mehreren richtigen Antworten (Checkbox-UI).",
+      en: "Support for questions with multiple correct answers (checkbox UI).",
+    },
+  },
+
+  // ═══ 2026-04-05 ═══
+  {
+    date: "2026-04-05",
+    tag: "feature",
+    title: { de: "Telegram-Anmeldung", en: "Telegram login" },
+    description: {
+      de: "Melde dich mit deinem Telegram-Konto an — schnell und sicher.",
+      en: "Sign in with your Telegram account — fast and secure.",
+    },
+  },
+  {
+    date: "2026-04-05",
+    tag: "feature",
+    title: { de: "Prüfungssimulation", en: "Exam simulation" },
+    description: {
+      de: "Vollständige 250-Fragen-Prüfungssimulation mit 4-Stunden-Zeitlimit.",
+      en: "Full 250-question exam simulation with 4-hour time limit.",
+    },
+  },
+
+  // ═══ 2026-04-04 ═══
+  {
+    date: "2026-04-04",
+    tag: "feature",
+    title: { de: "XP & Streaks", en: "XP & Streaks" },
+    description: {
+      de: "Verdiene XP für jede beantwortete Frage und halte deine tägliche Serie aufrecht.",
+      en: "Earn XP for every answered question and maintain your daily streak.",
+    },
+  },
+  {
+    date: "2026-04-04",
+    tag: "feature",
+    title: { de: "Lesezeichen & Notizen", en: "Bookmarks & notes" },
+    description: {
+      de: "Markiere Fragen als Favoriten und füge persönliche Notizen hinzu.",
+      en: "Bookmark questions and add personal notes.",
+    },
+  },
+
+  // ═══ 2026-04-01 ═══
+  {
+    date: "2026-04-01",
+    tag: "feature",
+    title: { de: "MedPrüf Launch", en: "MedPrüf Launch" },
+    description: {
+      de: "MedPrüf ist live! Die erste App speziell für die österreichische Kenntnisprüfung (Wien).",
+      en: "MedPrüf is live! The first app specifically for the Austrian Kenntnisprüfung (Vienna).",
+    },
+  },
+];
