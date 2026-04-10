@@ -278,17 +278,7 @@ export default function LoginPage() {
               <div className="flex-1 h-px bg-[#E4E9F0]" />
             </div>
 
-            {/* Telegram Login Widget */}
-            <div className="flex justify-center">
-              <TelegramLoginWidget
-                botName="MedPruefBot"
-                onAuth={handleWidgetAuth}
-                buttonSize="large"
-                cornerRadius={12}
-              />
-            </div>
-
-            {/* Telegram deep link */}
+            {/* Telegram login */}
             <a
               href="https://t.me/MedPruefBot?start=web_login"
               target="_blank"

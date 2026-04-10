@@ -1002,18 +1002,8 @@ function DemoHome({
               : "Sign in with Telegram or continue as guest"}
           </p>
 
-          {/* Telegram Login Widget (web/desktop primary, iframe-based) */}
-          <div className="flex justify-center mb-3">
-            <TelegramLoginWidget
-              botName="MedPruefBot"
-              onAuth={handleWidgetAuth}
-              buttonSize="large"
-              cornerRadius={6}
-            />
-          </div>
-
           <div className="flex flex-col sm:flex-row gap-3">
-            {/* Telegram deep link button (mobile / in-bot fallback) */}
+            {/* Telegram login */}
             <a
               href="https://t.me/MedPruefBot?start=web_login"
               target="_blank"
