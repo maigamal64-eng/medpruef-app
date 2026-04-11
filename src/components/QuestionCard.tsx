@@ -24,6 +24,7 @@ interface Question {
   options?: MCQOption[];
   n_correct?: number;
   image_url?: string;
+  image_urls?: string[];
   tags?: string[];
 }
 
@@ -120,7 +121,7 @@ export default function QuestionCard({
     () => new Set(initialSelected ?? [])
   );
   const [submitted, setSubmitted] = useState(initiallyAnswered);
-  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const [note, setNote] = useState("");
   const [showNoteInput, setShowNoteInput] = useState(false);
   const [noteSaved, setNoteSaved] = useState(false);
@@ -350,6 +351,20 @@ export default function QuestionCard({
 
   const effectiveImageUrl = imageUrl ?? question.image_url;
 
+  // Per Mohamed: explanation images currently appear together with the question
+  // image — they should only show up AFTER answering. The Anki importer dumps
+  // question, explanation, and choice images all into `image_urls`, so the
+  // best heuristic without a schema change is:
+  //   - image_urls[0] = the question image (always shown)
+  //   - the rest, minus any URL that is already a choice image, are extras
+  //     that we treat as explanation images.
+  const choiceImageUrls = new Set(
+    options.map((o) => o.image_url).filter((u): u is string => !!u)
+  );
+  const extraImages = (question.image_urls ?? [])
+    .slice(1)
+    .filter((u) => !!u && u !== effectiveImageUrl && !choiceImageUrls.has(u));
+
   return (
     <>
       <div className="card rounded-2xl p-6 md:p-8 animate-slide-up">
@@ -407,7 +422,7 @@ export default function QuestionCard({
         {/* Optional image */}
         {effectiveImageUrl && (
           <button
-            onClick={() => setLightboxOpen(true)}
+            onClick={() => setLightboxSrc(effectiveImageUrl)}
             className="block w-full mb-4 rounded overflow-hidden border border-[#E4E9F0] hover:border-[#007B5F]/40 transition-colors group"
             aria-label="Bild vergrößern"
           >
@@ -607,6 +622,32 @@ export default function QuestionCard({
           </div>
           );
         })()}
+
+        {/* Explanation images — only shown after answering, per Mohamed.
+            These come from the explanation field in the source Anki note and
+            are imported into image_urls beyond the first entry. */}
+        {answered && extraImages.length > 0 && (
+          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 animate-fade-in">
+            {extraImages.map((src, i) => (
+              <button
+                key={src + i}
+                type="button"
+                onClick={() => setLightboxSrc(src)}
+                className="block w-full rounded-xl overflow-hidden border border-[#E4E9F0] dark:border-[#334155] hover:border-[#007B5F]/40 transition-colors group"
+                aria-label={lang === "de" ? "Bild vergrößern" : "Enlarge image"}
+              >
+                <img
+                  src={src}
+                  alt={lang === "de" ? `Erklärungsbild ${i + 1}` : `Explanation image ${i + 1}`}
+                  className="w-full max-h-72 object-contain bg-white dark:bg-[#1E293B]"
+                />
+                <p className="text-[10px] text-[#A0AEC0] text-center py-1 bg-white dark:bg-[#1E293B] group-hover:text-[#4A5568] transition-colors">
+                  {lang === "de" ? "Erklärungsbild · Klicken zum Vergrößern" : "Explanation image · Click to enlarge"}
+                </p>
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Action buttons — visible after answering */}
         {answered && !hideActions && (
@@ -894,12 +935,12 @@ export default function QuestionCard({
         />
       )}
 
-      {/* Lightbox */}
-      {lightboxOpen && effectiveImageUrl && (
+      {/* Lightbox — opens for whichever image was clicked (question or extra) */}
+      {lightboxSrc && (
         <ImageLightbox
-          src={effectiveImageUrl}
+          src={lightboxSrc}
           alt="Medizinische Abbildung"
-          onClose={() => setLightboxOpen(false)}
+          onClose={() => setLightboxSrc(null)}
         />
       )}
     </>

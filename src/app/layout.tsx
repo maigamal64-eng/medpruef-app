@@ -25,6 +25,10 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://medpruf.com"),
   icons: {
     icon: [
+      // Modern browsers prefer the SVG: transparent background, automatic
+      // dark/light variant via prefers-color-scheme baked into the file.
+      { url: "/favicon.svg", type: "image/svg+xml" },
+      // Fallbacks for older browsers and the OS bookmark cache.
       { url: "/favicon.ico", sizes: "any" },
       { url: "/brand/favicon-64.png", type: "image/png", sizes: "64x64" },
     ],

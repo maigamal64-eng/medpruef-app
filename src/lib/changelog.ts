@@ -22,6 +22,70 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  // ═══ 2026-04-11 ═══
+  {
+    date: "2026-04-11",
+    tag: "feature",
+    title: { de: "Landing-Page komplett überarbeitet", en: "Landing page rewrite" },
+    description: {
+      de: "Neue, launch-bereite Startseite mit Hero, Funktionsübersicht, Beispielfrage zum Ausprobieren, transparenter Preisgestaltung, FAQ und Teaser für kommende Prüfungen (Approbation Deutschland).",
+      en: "New launch-ready landing page with hero, feature overview, interactive sample question, transparent pricing, FAQ, and a teaser for upcoming exams (Approbation Germany).",
+    },
+  },
+  {
+    date: "2026-04-11",
+    tag: "feature",
+    title: { de: "Live-Anmelde-Tracker im Admin", en: "Live new-users tracker in admin" },
+    description: {
+      de: "Das Admin-Dashboard zeigt jetzt eine Echtzeit-Karte mit neuen Registrierungen (letzte Stunde, heute, 7/30 Tage) plus die letzten 10 Anmeldungen — automatische Aktualisierung alle 30 Sekunden.",
+      en: "The admin dashboard now shows a live card with new registrations (last hour, today, 7/30 days) plus the last 10 signups — auto-refreshing every 30 seconds.",
+    },
+  },
+  {
+    date: "2026-04-11",
+    tag: "improvement",
+    title: { de: "Schlankere Seitenleiste", en: "Streamlined sidebar" },
+    description: {
+      de: "Die Seitenleiste passt jetzt vollständig auf den Desktop ohne zu scrollen. Während eines Quiz oder einer Prüfung wird sie automatisch ausgeblendet, damit du dich konzentrieren kannst.",
+      en: "The sidebar now fits the desktop without scrolling. During a quiz or exam it auto-hides so you can focus.",
+    },
+  },
+  {
+    date: "2026-04-11",
+    tag: "improvement",
+    title: { de: "Prüfungsfragen nach Fach gruppiert", en: "Exam questions grouped by subject" },
+    description: {
+      de: "In der Prüfungssimulation kommen jetzt alle Fragen eines Fachs hintereinander, dann das nächste Fach — wie in der echten Wiener Kenntnisprüfung. SIP-4- und Vollprüfungen enthalten außerdem 2-3 garantierte EKG-Fragen.",
+      en: "Exam simulation now groups all questions of one subject consecutively before moving to the next — matching the real Vienna Kenntnisprüfung. SIP 4 and full exams now also include 2-3 guaranteed ECG questions.",
+    },
+  },
+  {
+    date: "2026-04-11",
+    tag: "fix",
+    title: { de: "Erklärungsbilder erscheinen erst nach der Antwort", en: "Explanation images now appear after answering" },
+    description: {
+      de: "Bilder, die zur Erklärung gehören, wurden bisher zusammen mit der Frage angezeigt. Sie erscheinen jetzt erst, nachdem du geantwortet hast.",
+      en: "Images that belong to the explanation used to appear together with the question. They now appear only after you have answered.",
+    },
+  },
+  {
+    date: "2026-04-11",
+    tag: "fix",
+    title: { de: "Dark Mode synchronisiert", en: "Dark mode unified" },
+    description: {
+      de: "Die automatische Dunkelmodus-Erkennung und der manuelle Schalter sind jetzt vollständig synchronisiert — keine gemischten Themes mehr.",
+      en: "Automatic dark mode detection and the manual toggle are now fully unified — no more mixed themes.",
+    },
+  },
+  {
+    date: "2026-04-11",
+    tag: "fix",
+    title: { de: "Transparentes Favicon mit Dark/Light", en: "Transparent favicon with dark/light variants" },
+    description: {
+      de: "Neues SVG-Favicon mit transparentem Hintergrund, das automatisch zwischen Dark- und Light-Mode wechselt.",
+      en: "New SVG favicon with transparent background that automatically switches between dark and light mode.",
+    },
+  },
   // ═══ 2026-04-10 ═══
   {
     date: "2026-04-10",

@@ -251,13 +251,71 @@ function ExamContent() {
       }
     }
 
-    // Shuffle for realism
-    for (let i = allQuestions.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [allQuestions[i], allQuestions[j]] = [allQuestions[j], allQuestions[i]];
+    // ─── EKG quota (per Mohamed) ─────────────────────────────────────────
+    // Every SIP4 / full exam must contain 2-3 ECG questions. We identify
+    // them by question text containing "EKG" (case-insensitive); the tag is
+    // unreliable. If we are short, fetch a few extras and dedupe by id.
+    const isEkg = (q: Question) => /ekg/i.test(q.question || "");
+    const enforceEkg = selectedPart === "sip4" || selectedPart === "all";
+    if (enforceEkg) {
+      const target = 3;
+      const present = allQuestions.filter(isEkg).length;
+      const need = Math.max(0, target - present);
+      if (need > 0) {
+        try {
+          const params = new URLSearchParams({
+            search: "EKG",
+            limit: String(need + 4),
+            mcqOnly: "1",
+            examSource,
+          });
+          const res = await fetch(`/api/questions?${params}`);
+          const ekgPool: Question[] = await res.json();
+          if (Array.isArray(ekgPool)) {
+            const seen = new Set(allQuestions.map((q) => q.id));
+            const fresh = ekgPool.filter((q) => !seen.has(q.id) && isEkg(q));
+            const inject = fresh.slice(0, need);
+            // Replace the first non-EKG question of the matching topic when
+            // possible so the topic-distribution stays roughly correct.
+            for (const ekgQ of inject) {
+              const replaceIdx = allQuestions.findIndex(
+                (q) => q.topic === ekgQ.topic && !isEkg(q)
+              );
+              if (replaceIdx >= 0) allQuestions[replaceIdx] = ekgQ;
+              else allQuestions.push(ekgQ);
+            }
+          }
+        } catch {
+          /* swallow — best effort */
+        }
+      }
     }
 
-    setQuestions(allQuestions);
+    // ─── Group by subject (per Mohamed) ──────────────────────────────────
+    // Questions of one subject must come consecutively, then the next
+    // subject. Within each subject we still shuffle to add variety.
+    const groups = new Map<string, Question[]>();
+    const topicOrder: string[] = [];
+    for (const q of allQuestions) {
+      const key = q.topic || "Sonstige";
+      if (!groups.has(key)) {
+        groups.set(key, []);
+        topicOrder.push(key);
+      }
+      groups.get(key)!.push(q);
+    }
+    const grouped: Question[] = [];
+    for (const topic of topicOrder) {
+      const bucket = groups.get(topic)!;
+      // Fisher-Yates shuffle within the bucket
+      for (let i = bucket.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [bucket[i], bucket[j]] = [bucket[j], bucket[i]];
+      }
+      grouped.push(...bucket);
+    }
+
+    setQuestions(grouped);
     setAnswers({});
     setCurrentIdx(0);
     setTimeLeft(EXAM_DURATION_S);

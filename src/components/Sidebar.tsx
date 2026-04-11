@@ -5,8 +5,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { t } from "@/lib/i18n";
 import { getLevelFromXP } from "@/lib/xp";
-import { TOPIC_CONFIG } from "@/lib/topics";
-import TopicIcon from "@/components/TopicIcon";
 import { Home, FileText, GraduationCap, BarChart3, TrendingUp, BookOpen, Info, User, Flame, PanelLeftClose, PanelLeftOpen, Layers, Settings, Map, Sparkles } from "lucide-react";
 
 type Lang = "de" | "en";
@@ -32,6 +30,12 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0, streak = 
       setCollapsed(localStorage.getItem(COLLAPSE_KEY) === "1");
     }
   }, []);
+
+  // Auto-hide the sidebar while a quiz or exam is in progress so the user has
+  // a distraction-free testing surface (per Mohamed's feedback).
+  if (pathname.startsWith("/quiz") || pathname.startsWith("/exam")) {
+    return null;
+  }
 
   const toggleCollapse = () => {
     const next = !collapsed;
@@ -210,27 +214,11 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0, streak = 
         </div>
       )}
 
-      {/* Topics list — only expanded */}
-      {!collapsed && (
-        <div className="px-3 mt-4 mb-2 flex-1 overflow-y-auto">
-          <p className="text-[10px] uppercase tracking-widest text-[#A0AEC0]/50 font-semibold px-2 mb-2">
-            {t("topics", lang)}
-          </p>
-          <div className="space-y-0.5">
-            {Object.entries(TOPIC_CONFIG).map(([topic, config]) => (
-              <Link
-                key={topic}
-                href={userId ? `/quiz?topic=${encodeURIComponent(topic)}&userId=${userId}` : "#"}
-                className="flex items-center gap-2.5 px-3 py-2 text-[13px] text-[#A0AEC0] hover:text-white hover:bg-white/5 rounded-lg transition-colors duration-150"
-              >
-                <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: config.color }} />
-                <span className="truncate">{topic}</span>
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
-      {collapsed && <div className="flex-1" />}
+      {/* Flex spacer pushes the collapse toggle to the bottom — the topics
+          list used to live here but it duplicated /curriculum and forced the
+          sidebar to scroll on standard desktops. Use the Curriculum nav item
+          (in the main nav above) to browse topics. */}
+      <div className="flex-1" />
 
       {/* Collapse toggle */}
       <div className={`border-t border-white/[0.06] ${collapsed ? "px-2 py-3" : "px-4 py-3"}`}>

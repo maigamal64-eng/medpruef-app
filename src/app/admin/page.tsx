@@ -174,6 +174,25 @@ export default function AdminDashboard() {
 
   // Dashboard state
   const [overview, setOverview] = useState<OverviewData | null>(null);
+  const [newUsers, setNewUsers] = useState<{
+    lastHour: number;
+    today: number;
+    lastSevenDays: number;
+    lastThirtyDays: number;
+    total: number;
+    recent: Array<{
+      id: string;
+      email: string | null;
+      first_name: string | null;
+      last_name: string | null;
+      telegram_username: string | null;
+      tier: string | null;
+      created_at: string;
+    }>;
+    generatedAt: string;
+  } | null>(null);
+  // Baseline used to highlight signups that arrive after the page loaded
+  const [newUsersBaseline, setNewUsersBaseline] = useState<number | null>(null);
 
   // Users state
   const [users, setUsers] = useState<UserRow[]>([]);
@@ -215,6 +234,21 @@ export default function AdminDashboard() {
       if (!res.ok) throw new Error("Failed to load overview");
       setOverview(await res.json());
     } catch (e) { setError((e as Error).message); }
+  }, []);
+
+  // Live new-users tracker (polls every 30s while admin is on the dashboard)
+  const fetchNewUsers = useCallback(async () => {
+    try {
+      const res = await fetch("/api/stats/admin/new-users", { cache: "no-store" });
+      if (!res.ok) return;
+      const data = await res.json();
+      setNewUsers(data);
+      // Capture the very first total as the baseline so the "since opened"
+      // counter is meaningful for outreach monitoring.
+      setNewUsersBaseline((b) => (b === null ? data.total : b));
+    } catch {
+      /* polling, swallow */
+    }
   }, []);
 
   const fetchUsers = useCallback(async () => {
@@ -285,11 +319,18 @@ export default function AdminDashboard() {
   const refresh = useCallback(async () => {
     setLoading(true);
     setError("");
-    await Promise.all([fetchOverview(), fetchUsers()]);
+    await Promise.all([fetchOverview(), fetchUsers(), fetchNewUsers()]);
     setLoading(false);
-  }, [fetchOverview, fetchUsers]);
+  }, [fetchOverview, fetchUsers, fetchNewUsers]);
 
   useEffect(() => { refresh(); }, [refresh]);
+
+  // Live new-users polling — only while the admin is on the dashboard tab.
+  useEffect(() => {
+    if (section !== "dashboard") return;
+    const id = setInterval(fetchNewUsers, 30000);
+    return () => clearInterval(id);
+  }, [section, fetchNewUsers]);
 
   // ─── Section-specific Loading ───────────────────────────────────────
 
@@ -505,7 +546,14 @@ export default function AdminDashboard() {
           ) : (
             <>
               {section === "dashboard" && overview && (
-                <DashboardSection data={overview} totalQuestions={totalQuestionsInDB} explCoverage={explanationCoverage} />
+                <>
+                  <NewUsersTracker
+                    data={newUsers}
+                    baseline={newUsersBaseline}
+                    onRefresh={fetchNewUsers}
+                  />
+                  <DashboardSection data={overview} totalQuestions={totalQuestionsInDB} explCoverage={explanationCoverage} />
+                </>
               )}
               {section === "users" && (
                 <UsersSection
@@ -587,6 +635,153 @@ export default function AdminDashboard() {
           )}
         </div>
       </main>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SECTION: LIVE NEW USERS TRACKER
+// ═══════════════════════════════════════════════════════════════════════════
+
+interface NewUsersData {
+  lastHour: number;
+  today: number;
+  lastSevenDays: number;
+  lastThirtyDays: number;
+  total: number;
+  recent: Array<{
+    id: string;
+    email: string | null;
+    first_name: string | null;
+    last_name: string | null;
+    telegram_username: string | null;
+    tier: string | null;
+    created_at: string;
+  }>;
+  generatedAt: string;
+}
+
+function NewUsersTracker({
+  data,
+  baseline,
+  onRefresh,
+}: {
+  data: NewUsersData | null;
+  baseline: number | null;
+  onRefresh: () => void;
+}) {
+  if (!data) {
+    return (
+      <div className="card rounded-2xl p-5 mb-6 animate-pulse">
+        <div className="h-5 w-48 bg-[#E4E9F0] rounded mb-3" />
+        <div className="h-12 w-32 bg-[#E4E9F0] rounded" />
+      </div>
+    );
+  }
+
+  const sinceOpened = baseline !== null ? Math.max(0, data.total - baseline) : 0;
+  const updated = new Date(data.generatedAt);
+  const updatedStr = updated.toLocaleTimeString("de-DE", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+
+  const stats: Array<{ label: string; value: number; tone: string }> = [
+    { label: "Letzte Stunde", value: data.lastHour, tone: "text-[#00A896]" },
+    { label: "Heute", value: data.today, tone: "text-[#007B5F]" },
+    { label: "7 Tage", value: data.lastSevenDays, tone: "text-[#003A8C]" },
+    { label: "30 Tage", value: data.lastThirtyDays, tone: "text-[#3A7CA5]" },
+  ];
+
+  return (
+    <div className="card rounded-2xl p-5 mb-6 border-l-4 border-l-[#00A896]">
+      <div className="flex items-start justify-between mb-4">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <div className="relative w-2.5 h-2.5">
+              <span className="absolute inset-0 rounded-full bg-[#00A896] animate-ping opacity-60" />
+              <span className="absolute inset-0 rounded-full bg-[#00A896]" />
+            </div>
+            <h3 className="text-base font-semibold text-[#1A2B3C] dark:text-[#E2E8F0]">
+              Live Registrierungen
+            </h3>
+            {sinceOpened > 0 && (
+              <span className="text-xs font-mono font-bold text-white bg-[#00A896] px-2 py-0.5 rounded-full animate-pulse">
+                +{sinceOpened} seit Öffnen
+              </span>
+            )}
+          </div>
+          <p className="text-[11px] text-[#A0AEC0] font-mono">
+            {data.total.toLocaleString("de-DE")} Nutzer · aktualisiert {updatedStr}
+          </p>
+        </div>
+        <button
+          onClick={onRefresh}
+          className="text-xs text-[#A0AEC0] hover:text-[#1A2B3C] dark:hover:text-[#E2E8F0] transition-colors px-2 py-1"
+        >
+          ↻ Jetzt
+        </button>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+        {stats.map((s) => (
+          <div
+            key={s.label}
+            className="rounded-xl bg-[#F7F9FC] dark:bg-[#1E293B] border border-[#E4E9F0]/60 dark:border-[#334155]/60 px-3 py-3"
+          >
+            <p className="text-[10px] uppercase tracking-wider text-[#A0AEC0] font-semibold mb-1">
+              {s.label}
+            </p>
+            <p className={`text-2xl font-bold font-mono ${s.tone}`}>
+              {s.value}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      {data.recent.length > 0 && (
+        <div>
+          <p className="text-[10px] uppercase tracking-wider text-[#A0AEC0] font-semibold mb-2">
+            Letzte 10 Anmeldungen
+          </p>
+          <div className="space-y-1">
+            {data.recent.map((u) => {
+              const name = [u.first_name, u.last_name].filter(Boolean).join(" ").trim()
+                || u.telegram_username
+                || u.email
+                || u.id.slice(0, 8);
+              const ts = new Date(u.created_at);
+              const isFresh = baseline !== null && ts.getTime() > new Date(Date.now() - 60_000 * 10).getTime();
+              return (
+                <div
+                  key={u.id}
+                  className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs ${
+                    isFresh
+                      ? "bg-[#00A896]/8 border border-[#00A896]/30"
+                      : "bg-[#F7F9FC]/60 dark:bg-[#1E293B]/60"
+                  }`}
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    {isFresh && <span className="w-1.5 h-1.5 rounded-full bg-[#00A896] animate-pulse" />}
+                    <span className="font-medium text-[#1A2B3C] dark:text-[#E2E8F0] truncate">
+                      {name}
+                    </span>
+                    {u.tier && u.tier !== "free" && (
+                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#F4A261]/15 text-[#F4A261] font-semibold uppercase">
+                        {u.tier}
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-[10px] text-[#A0AEC0] font-mono whitespace-nowrap ml-3">
+                    {ts.toLocaleString("de-DE", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
