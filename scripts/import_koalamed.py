@@ -51,7 +51,7 @@ from importers.base import (  # noqa: E402
 )
 
 KOALAMED_DIR = Path("source-files/koalamed")
-EXAM_TYPE = "koalamed"
+EXAM_TYPE = "kmp_innsbruck"
 
 # KMP section label → canonical topic. Values must match questions.topic CHECK
 # constraints if we add one for koalamed; for now they're free-text.
@@ -371,7 +371,7 @@ def main():
                 question=stem,
                 answer=answer_text,
                 choices=choices_jsonb,
-                tags=[kmp_label.lower(), "koalamed"] + ([f"multi_{multi}"] if multi > 1 else []),
+                tags=[kmp_label.lower(), "kmp_innsbruck"] + ([f"multi_{multi}"] if multi > 1 else []),
             )
             if row["content_hash"] in existing_hashes:
                 skipped["dupe"] += 1

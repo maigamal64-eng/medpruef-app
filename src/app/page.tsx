@@ -600,8 +600,8 @@ export default function Home() {
             </div>
           )}
 
-          {/* Quick Actions — 2×2 grid on sm+, stacked on mobile */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-10">
+          {/* Quick Actions — 3-column grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-10">
             {/* Primary: Continue */}
             <Link
               href={weakTopics.length > 0
@@ -609,9 +609,9 @@ export default function Home() {
                 : topics.length > 0
                   ? `/quiz?topic=${encodeURIComponent(topics[0].topic)}&userId=${user.id}&examSource=${examSource}`
                   : "#"}
-              className="btn-primary flex items-center justify-center gap-2 py-3.5 text-sm rounded-2xl shadow-md active:scale-[0.98] transition-transform"
+              className="btn-primary flex items-center justify-center gap-2.5 py-4 text-base rounded-2xl shadow-md active:scale-[0.98] transition-transform"
             >
-              <PlayCircle className="w-4 h-4" />
+              <PlayCircle className="w-5 h-5" />
               {weakTopics.length > 0
                 ? (lang === "de" ? "Weiterlernen" : "Continue")
                 : t("continue_where_left", lang)}
@@ -624,15 +624,6 @@ export default function Home() {
             >
               <Shuffle className="w-4 h-4 text-[#007B5F]" />
               {t("random_quiz", lang)}
-            </Link>
-
-            {/* Timed Practice */}
-            <Link
-              href="/timed-practice"
-              className="btn-secondary flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm"
-            >
-              <Zap className="w-4 h-4 text-[#00A896]" />
-              {t("timed_practice", lang)}
             </Link>
 
             {/* Mock Exam */}

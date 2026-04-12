@@ -114,7 +114,7 @@ export default function ExamSwitcherInline({ variant = 'header', className = '' 
           </div>
           {EXAM_SOURCES.map(exam => {
             const isActive = exam.id === active
-            const isComing = exam.id === 'koalamed'
+            const isComing = exam.id === 'kmp_innsbruck'
             return (
               <button
                 key={exam.id}

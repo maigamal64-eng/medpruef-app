@@ -3,7 +3,7 @@
 // The app supports multiple exam types via questions.exam_type:
 //   - 'kenntnispruefung' (Vienna Austrian Kenntnisprüfung — the original product)
 //   - 'pharma'           (Pharmakologie Rezeptierkunde — 335 short-answer questions)
-//   - 'koalamed'         (KoalaMed KMP — reserved, importer pending)
+//   - 'kmp_innsbruck'    (Kumulative Modulprüfung, Med Uni Innsbruck — importer pending)
 //
 // Every API call and every page respects a single "active exam" chosen via the
 // ExamSelector in the header. URL-level consistency is handled by the
@@ -23,7 +23,7 @@ export const TOPIC_CONFIG: Record<string, { icon: string; color: string }> = {
   'Notfall- und Intensivmedizin': { icon: 'Zap', color: '#D64545' },
   // Pharma exam (single topic)
   'Pharmakologie': { icon: 'Pill', color: '#8B5CF6' },
-  // KoalaMed topic variants (kept for future)
+  // KMP Innsbruck topic variants (kept for future)
   'Dermatologie': { icon: 'Dna', color: '#007B5F' },
   'Gynäkologie und Geburtshilfe': { icon: 'Baby', color: '#EC4899' },
   'HNO': { icon: 'Ear', color: '#14B8A6' },
@@ -63,13 +63,13 @@ export const EXAM_SOURCES = [
     description: { de: 'Rezeptierkunde / Stichpunkte', en: 'Prescription Studies' },
   },
   {
-    id: 'koalamed',
-    label: 'KoalaMed',
-    fullName: 'KoalaMed KMP',
+    id: 'kmp_innsbruck',
+    label: 'KMP Innsbruck',
+    fullName: 'Kumulative Modulprüfung (Innsbruck)',
     shortLabel: 'KMP',
-    badge: '🐨',
+    badge: '🏔️',
     questions: 0,
-    description: { de: 'KoalaMed Modulprüfungen (in Vorbereitung)', en: 'KoalaMed KMP (coming soon)' },
+    description: { de: 'Kumulative Modulprüfung — Med Uni Innsbruck (in Vorbereitung)', en: 'Cumulative Module Exam — Med Uni Innsbruck (coming soon)' },
   },
 ] as const
 
