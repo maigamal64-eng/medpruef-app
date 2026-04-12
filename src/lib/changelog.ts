@@ -27,12 +27,12 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-04-12",
     tag: "feature",
     title: {
-      de: "Prüfungs-Umschalter oben rechts",
-      en: "Exam switcher in the top-right",
+      de: "Neue Prüfung: KMP Innsbruck (3.091 Fragen)",
+      en: "New exam: KMP Innsbruck (3,091 questions)",
     },
     description: {
-      de: "Ein neuer Umschalter schwebt oben rechts auf jeder Seite. Darüber wechseln Sie zwischen Kenntnisprüfung und Pharmakologie, ohne sich abzumelden. Alle Fragen, Prüfungen, Fortschritte und Statistiken aktualisieren sich automatisch für die ausgewählte Prüfung.",
-      en: "A new floating switcher sits in the top-right corner of every page. Use it to toggle between Kenntnisprüfung and Pharmacology without logging out. All questions, exams, progress, and stats update automatically for the selected exam.",
+      de: "Die Kumulative Modulprüfung (KMP) der Medizinischen Universität Innsbruck ist jetzt verfügbar. 3.091 Fragen in 12 Fachgebieten. Wählen Sie im Prüfungs-Umschalter in der Seitenleiste zwischen Kenntnisprüfung Wien, KMP Innsbruck und Pharmakologie.",
+      en: "The Cumulative Module Exam (KMP) from the Medical University of Innsbruck is now available. 3,091 questions across 12 specialties. Use the exam switcher in the sidebar to choose between Vienna Kenntnisprüfung, KMP Innsbruck, and Pharmacology.",
     },
   },
   {
@@ -43,44 +43,92 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "New exam: Pharmacology Prescription Studies (335 questions)",
     },
     description: {
-      de: "Eine komplett neue Prüfungskategorie ist jetzt verfügbar: Pharmakologie Rezeptierkunde/Stichpunkte mit 335 kurzen Q&A-Fragen. Über einen Prüfungs-Umschalter in der Kopfzeile wählen Sie zwischen Kenntnisprüfung und Pharma (weitere Prüfungen folgen).",
-      en: "A completely new exam category is now available: Pharmacology Prescription Studies with 335 short-answer questions. Use the exam switcher in the header to toggle between Kenntnisprüfung and Pharma (more exams coming).",
+      de: "335 Kurzantwort-Fragen zur Pharmakologie und Rezeptierkunde sind jetzt verfügbar. Ideal zur Vorbereitung auf den Pharmakologie-Teil der Prüfung.",
+      en: "335 short-answer questions on pharmacology and prescription studies are now available. Ideal for preparing the pharmacology section of the exam.",
     },
   },
   {
     date: "2026-04-12",
     tag: "feature",
     title: {
-      de: "Februar-2026 SIP5a Prüfung hinzugefügt",
-      en: "February 2026 SIP5a exam added",
+      de: "Februar-2026 SIP5a Prüfungsfragen hinzugefügt",
+      en: "February 2026 SIP5a exam questions added",
     },
     description: {
-      de: "Die brandneue Wiener SIP5a Prüfung vom 16. Februar 2026 wurde als 154 frische Fragen in die Kenntnisprüfung-Bibliothek aufgenommen. Sie decken Neurologie, Psychiatrie, Kinder- und Jugendheilkunde, Frauenheilkunde, Augenheilkunde, HNO sowie Notfall- und Intensivmedizin ab und sind mit dem Tag sip2026 markiert.",
-      en: "The brand-new Vienna SIP5a exam from February 16, 2026 has been added as 154 fresh questions to the Kenntnisprüfung library. They cover Neurology, Psychiatry, Pediatrics, Gynecology, Ophthalmology, ENT, and Emergency/Intensive Care, and are tagged with sip2026.",
+      de: "154 brandneue Fragen aus der Wiener SIP5a Prüfung vom Februar 2026 wurden in die Kenntnisprüfung-Bibliothek aufgenommen.",
+      en: "154 brand-new questions from the Vienna SIP5a exam (February 2026) have been added to the Kenntnisprüfung library.",
+    },
+  },
+  {
+    date: "2026-04-12",
+    tag: "feature",
+    title: {
+      de: "Prüfungssimulation komplett überarbeitet",
+      en: "Exam simulation completely redesigned",
+    },
+    description: {
+      de: "Die Prüfungssimulation funktioniert jetzt wie eine echte Prüfung: Antworten auswählen, frei zwischen Fragen navigieren und am Ende abgeben. Keine sofortige Korrektur mehr bei jeder Frage. Links sehen Sie eine fachbasierte Übersicht mit Fortschritt pro Fachgebiet.",
+      en: "The exam simulation now works like a real exam: select answers, navigate freely between questions, and submit when done. No instant feedback per question. A topic-based navigator on the left shows your progress by specialty.",
+    },
+  },
+  {
+    date: "2026-04-12",
+    tag: "feature",
+    title: {
+      de: "Lesezeichen und Fehler wiederholen",
+      en: "Bookmarks and mistake review",
+    },
+    description: {
+      de: "Auf der Startseite gibt es jetzt Schnellzugriff auf gespeicherte Fragen und falsch beantwortete Fragen, damit Sie gezielt wiederholen können.",
+      en: "The home page now has quick access to your bookmarked questions and questions you got wrong, so you can review them efficiently.",
     },
   },
   {
     date: "2026-04-12",
     tag: "improvement",
     title: {
-      de: "Fragenqualität: Themen gegen offizielle Prüfungsunterlagen validiert",
-      en: "Question quality: topics validated against official exam sources",
+      de: "Themen-Karten zeigen Ihren Fortschritt",
+      en: "Topic cards show your progress",
     },
     description: {
-      de: "Jede Frage wurde gegen die offiziellen Wiener Tertial-Prüfungsunterlagen abgeglichen. 19 falsch zugeordnete Fragen wurden in das korrekte Fachgebiet verschoben (z.B. Katatonie von Neurologie zu Psychiatrie, kindliches Exanthem von Dermatologie zu Kinderheilkunde, Diabetes insipidus eines 14-Jährigen von Neurologie zu Kinderheilkunde). 99,9% der bestehenden Zuordnungen wurden als korrekt bestätigt.",
-      en: "Every question was cross-checked against the official Vienna tertial exam source materials. 19 mis-assigned questions were moved to their correct specialty (e.g. catatonia from Neurology to Psychiatry, childhood exanthem from Dermatology to Pediatrics, 14-year-old with diabetes insipidus from Neurology to Pediatrics). 99.9% of existing assignments were confirmed correct.",
+      de: "Jede Fachgebietskarte auf der Startseite zeigt jetzt Ihre Genauigkeit, einen Stärke-Indikator und wie viele Fragen Sie bereits bearbeitet haben.",
+      en: "Each specialty card on the home page now shows your accuracy, a strength indicator, and how many questions you have practiced.",
+    },
+  },
+  {
+    date: "2026-04-12",
+    tag: "improvement",
+    title: {
+      de: "Fragenqualität verbessert",
+      en: "Question quality improved",
+    },
+    description: {
+      de: "Alle Fragen wurden gegen offizielle Prüfungsunterlagen abgeglichen. Falsch zugeordnete Fragen wurden korrigiert und Duplikate entfernt. Insgesamt jetzt fast 11.000 aktive Fragen.",
+      en: "All questions were validated against official exam sources. Mis-assigned questions were corrected and duplicates removed. Nearly 11,000 active questions total.",
+    },
+  },
+  {
+    date: "2026-04-12",
+    tag: "improvement",
+    title: {
+      de: "Navigation und Seitenleiste verbessert",
+      en: "Navigation and sidebar improved",
+    },
+    description: {
+      de: "Die Seitenleiste wurde kompakter gestaltet und passt ohne Scrollen auf den Desktop. Profil und Einstellungen wurden zusammengeführt.",
+      en: "The sidebar has been made more compact and fits on desktop without scrolling. Profile and settings have been merged into one page.",
     },
   },
   {
     date: "2026-04-12",
     tag: "admin",
     title: {
-      de: "Datenbank-Bereinigung: veraltete Legacy-Einträge entfernt",
-      en: "Database cleanup: legacy entries purged",
+      de: "Datenbank-Bereinigung und Schema-Erweiterung",
+      en: "Database cleanup and schema extension",
     },
     description: {
-      de: "Rund 7.900 veraltete, inaktive Fragen aus der ersten Import-Generation wurden entfernt. Die 3 Einträge mit Nutzerhistorie wurden in eine Archivtabelle gesichert. Die Datenbank ist jetzt 50% schlanker.",
-      en: "About 7,900 obsolete inactive questions from the first import generation were removed. The 3 entries with user history were preserved in an archive table. The database is now 50% leaner.",
+      de: "7.900 Legacy-Einträge entfernt, exam_type/content_hash Spalten, get_topic_counts() RPC, normalize_question_text() Funktion, pdf_question_index + topic_reclassifications Tabellen, 94 Duplikate per SHA256-Hash entfernt, Prüfungs-Umschalter API, Admin exam_type Filter.",
+      en: "Purged 7,900 legacy rows, added exam_type/content_hash columns, get_topic_counts() RPC, normalize_question_text() function, pdf_question_index + topic_reclassifications tables, removed 94 duplicates via SHA256 hash, exam preference API, admin exam_type filter.",
     },
   },
   // ═══ 2026-04-11 ═══
