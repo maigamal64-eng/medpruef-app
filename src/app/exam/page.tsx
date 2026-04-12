@@ -929,32 +929,87 @@ function ExamContent() {
 
         {/* Exam body: 2-column on desktop (navigator left, question right) */}
         <div className="flex-1 flex overflow-hidden">
-          {/* Left panel: Question navigator grid — hidden on mobile, shown on lg+ */}
-          <div className="hidden lg:flex flex-col w-56 flex-shrink-0 border-r border-[#E4E9F0] dark:border-white/[0.06] bg-[#F7F9FC] dark:bg-[#0F172A] overflow-y-auto p-3">
-            <p className="text-[10px] uppercase tracking-wider text-[#A0AEC0] font-semibold mb-2">
-              {lang === "de" ? "Fragen" : "Questions"} ({answeredCount}/{questions.length})
-            </p>
-            <div className="grid grid-cols-5 gap-1">
-              {questions.map((_, idx) => {
-                const isAnswered = answers[idx] !== undefined;
-                const isCurrent = idx === currentIdx;
-                return (
-                  <button
-                    key={idx}
-                    onClick={() => setCurrentIdx(idx)}
-                    className={`w-full aspect-square rounded text-[9px] font-mono flex items-center justify-center transition-all ${
-                      isCurrent
-                        ? "bg-[#003A8C] text-white shadow-sm ring-2 ring-[#003A8C]/50"
-                        : isAnswered
-                        ? "bg-[#003A8C]/15 text-[#003A8C] dark:bg-[#3A7CA5]/25 dark:text-[#3A7CA5] font-semibold"
-                        : "bg-white dark:bg-white/5 text-[#A0AEC0] border border-[#E4E9F0] dark:border-white/10 hover:border-[#003A8C]/30"
-                    }`}
-                  >
-                    {idx + 1}
-                  </button>
-                );
-              })}
+          {/* Left panel: Topic-based navigator — hidden on mobile, shown on lg+ */}
+          <div className="hidden lg:flex flex-col w-64 flex-shrink-0 border-r border-[#E4E9F0] dark:border-white/[0.06] bg-[#F7F9FC] dark:bg-[#0F172A] overflow-y-auto">
+            <div className="p-3 border-b border-[#E4E9F0] dark:border-white/[0.06]">
+              <p className="text-[10px] uppercase tracking-wider text-[#A0AEC0] font-semibold">
+                {lang === "de" ? "Fortschritt" : "Progress"}: {answeredCount}/{questions.length}
+              </p>
+              <div className="h-1.5 bg-[#E4E9F0] dark:bg-white/10 rounded-full mt-1.5 overflow-hidden">
+                <div className="h-full bg-[#003A8C] rounded-full transition-all" style={{ width: `${questions.length ? (answeredCount / questions.length) * 100 : 0}%` }} />
+              </div>
             </div>
+            {(() => {
+              // Build topic groups from the question array (already grouped by topic)
+              const groups: { topic: string; startIdx: number; count: number }[] = [];
+              let lastTopic = "";
+              for (let i = 0; i < questions.length; i++) {
+                const t = questions[i].topic || "Sonstige";
+                if (t !== lastTopic) {
+                  groups.push({ topic: t, startIdx: i, count: 1 });
+                  lastTopic = t;
+                } else {
+                  groups[groups.length - 1].count++;
+                }
+              }
+              // Which group is current?
+              const currentGroup = groups.findIndex(g => currentIdx >= g.startIdx && currentIdx < g.startIdx + g.count);
+              return groups.map((g, gi) => {
+                const groupAnswered = Array.from({ length: g.count }, (_, i) => answers[g.startIdx + i] !== undefined).filter(Boolean).length;
+                const isCurrentGroup = gi === currentGroup;
+                const pct = g.count > 0 ? Math.round((groupAnswered / g.count) * 100) : 0;
+                const topicConfig = getTopicConfig(g.topic);
+                return (
+                  <div key={`${g.topic}-${g.startIdx}`} className="border-b border-[#E4E9F0] dark:border-white/[0.06] last:border-b-0">
+                    {/* Topic header — always visible, clickable to jump to first question */}
+                    <button
+                      onClick={() => setCurrentIdx(g.startIdx)}
+                      className={`w-full text-left px-3 py-2.5 flex items-center gap-2 transition-colors ${
+                        isCurrentGroup ? "bg-[#003A8C]/8 dark:bg-[#3A7CA5]/10" : "hover:bg-[#F7F9FC] dark:hover:bg-white/5"
+                      }`}
+                    >
+                      <TopicIcon name={topicConfig.icon} className="w-4 h-4 flex-shrink-0" style={{ color: topicConfig.color }} />
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-xs font-medium truncate ${isCurrentGroup ? "text-[#003A8C] dark:text-[#3A7CA5]" : "text-[#4A5568] dark:text-[#A0AEC0]"}`}>
+                          {g.topic}
+                        </p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <div className="flex-1 h-1 bg-[#E4E9F0] dark:bg-white/10 rounded-full overflow-hidden">
+                            <div className="h-full bg-[#003A8C] rounded-full transition-all" style={{ width: `${pct}%` }} />
+                          </div>
+                          <span className="text-[9px] font-mono text-[#A0AEC0] flex-shrink-0">{groupAnswered}/{g.count}</span>
+                        </div>
+                      </div>
+                    </button>
+                    {/* Expanded question numbers — only for current group */}
+                    {isCurrentGroup && (
+                      <div className="px-3 pb-2 flex flex-wrap gap-1">
+                        {Array.from({ length: g.count }, (_, i) => {
+                          const idx = g.startIdx + i;
+                          const isAnswered = answers[idx] !== undefined;
+                          const isCurrent = idx === currentIdx;
+                          return (
+                            <button
+                              key={idx}
+                              onClick={() => setCurrentIdx(idx)}
+                              className={`w-6 h-6 rounded text-[8px] font-mono flex items-center justify-center transition-all ${
+                                isCurrent
+                                  ? "bg-[#003A8C] text-white ring-1 ring-[#003A8C]"
+                                  : isAnswered
+                                  ? "bg-[#003A8C]/15 text-[#003A8C]"
+                                  : "bg-white dark:bg-white/5 text-[#A0AEC0] border border-[#E4E9F0] dark:border-white/10"
+                              }`}
+                            >
+                              {idx + 1}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              });
+            })()}
           </div>
 
           {/* Right panel: question content + navigation */}
