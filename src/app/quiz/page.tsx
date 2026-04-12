@@ -408,7 +408,7 @@ function QuizContent() {
         <div className="px-4 lg:px-8 pt-3 pb-2 flex-shrink-0">
           <div className="flex items-center justify-between text-[10px] text-[#A0AEC0] mb-1.5 font-mono">
             <span>
-              {questionCount} / {config.targetCount} {lang === "de" ? "Fragen" : "questions"}
+              {questionCount} / {autoStarted && topicTotal > 0 ? topicTotal : config.targetCount} {lang === "de" ? "Fragen" : "questions"}
             </span>
             <span>{progressPct}%</span>
           </div>
@@ -462,7 +462,7 @@ function QuizContent() {
                   <QuestionCard
                     question={question}
                     questionNumber={questionCount + (answered ? 0 : 1)}
-                    totalQuestions={config.targetCount}
+                    totalQuestions={autoStarted && topicTotal > 0 ? topicTotal : config.targetCount}
                     lang={lang}
                     onAnswer={handleAnswer}
                     imageUrl={question.image_url}
