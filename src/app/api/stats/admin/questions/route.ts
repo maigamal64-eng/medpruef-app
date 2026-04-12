@@ -60,14 +60,16 @@ async function handleBrowse(db: ReturnType<typeof getServiceClient>, url: URL) {
   const search = url.searchParams.get("search");
   const hasExplanation = url.searchParams.get("hasExplanation");
   const isActive = url.searchParams.get("isActive");
+  const examType = url.searchParams.get("examType");
   const offset = (page - 1) * limit;
 
   let query = db
     .from("questions")
-    .select("id, topic, question, answer, explanation, choices, image_url, exam_dates, tags, is_active, anki_note_id, created_at", { count: "exact" })
+    .select("id, topic, question, answer, explanation, choices, image_url, exam_dates, tags, is_active, anki_note_id, exam_type, source_file, created_at", { count: "exact" })
     .order("id", { ascending: false })
     .range(offset, offset + limit - 1);
 
+  if (examType) query = query.eq("exam_type", examType);
   if (topic) query = query.eq("topic", topic);
   if (search) query = query.ilike("question", `%${search}%`);
   if (hasExplanation === "true") query = query.not("explanation", "is", null).neq("explanation", "");

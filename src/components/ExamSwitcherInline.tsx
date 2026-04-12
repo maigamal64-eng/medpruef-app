@@ -65,6 +65,21 @@ export default function ExamSwitcherInline({ variant = 'header', className = '' 
     setActive(id)
     setStoredExamSource(id)
     setOpen(false)
+
+    // Persist to server for logged-in users (fire-and-forget)
+    try {
+      const session = localStorage.getItem('medpruef_session')
+      const parsed = session ? JSON.parse(session) : null
+      const userId = parsed?.user?.id
+      if (userId && !userId.startsWith('guest_')) {
+        fetch('/api/user/exam-preference', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId, activeExam: id }),
+        }).catch(() => {}) // non-blocking
+      }
+    } catch {} // localStorage read can fail in some contexts
+
     window.dispatchEvent(new CustomEvent('medpruef:examChanged', { detail: { examSource: id } }))
     setTimeout(() => window.location.reload(), 50)
   }

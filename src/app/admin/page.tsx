@@ -211,6 +211,7 @@ export default function AdminDashboard() {
   const [questionTotalPages, setQuestionTotalPages] = useState(0);
   const [questionSearch, setQuestionSearch] = useState("");
   const [questionTopicFilter, setQuestionTopicFilter] = useState("");
+  const [questionExamTypeFilter, setQuestionExamTypeFilter] = useState("all");
   const [questionExplFilter, setQuestionExplFilter] = useState("all");
   const [questionActiveFilter, setQuestionActiveFilter] = useState("all");
   const [expandedQuestion, setExpandedQuestion] = useState<number | null>(null);
@@ -267,7 +268,7 @@ export default function AdminDashboard() {
     } catch (e) { setError((e as Error).message); }
   }, []);
 
-  const fetchQuestions = useCallback(async (page = 1, topic = "", search = "", hasExpl = "all", isActive = "all") => {
+  const fetchQuestions = useCallback(async (page = 1, topic = "", search = "", hasExpl = "all", isActive = "all", examType = "all") => {
     try {
       const params = new URLSearchParams({ mode: "browse", page: String(page), limit: "25" });
       if (topic) params.set("topic", topic);
@@ -276,6 +277,7 @@ export default function AdminDashboard() {
       if (hasExpl === "without") params.set("hasExplanation", "false");
       if (isActive === "active") params.set("isActive", "true");
       if (isActive === "inactive") params.set("isActive", "false");
+      if (examType && examType !== "all") params.set("examType", examType);
       const res = await fetch(`/api/stats/admin/questions?${params}`);
       if (!res.ok) throw new Error("Failed to load questions");
       const data = await res.json();
@@ -394,7 +396,7 @@ export default function AdminDashboard() {
 
   const handleQuestionSearch = () => {
     setQuestionPage(1);
-    fetchQuestions(1, questionTopicFilter, questionSearch, questionExplFilter, questionActiveFilter);
+    fetchQuestions(1, questionTopicFilter, questionSearch, questionExplFilter, questionActiveFilter, questionExamTypeFilter);
   };
 
   const handleQuestionEdit = async (questionId: number) => {
@@ -406,7 +408,7 @@ export default function AdminDashboard() {
       });
       if (!res.ok) throw new Error("Failed");
       setEditingQuestion(null);
-      fetchQuestions(questionPage, questionTopicFilter, questionSearch, questionExplFilter, questionActiveFilter);
+      fetchQuestions(questionPage, questionTopicFilter, questionSearch, questionExplFilter, questionActiveFilter, questionExamTypeFilter);
     } catch { setError("Failed to update question"); }
   };
 
@@ -591,14 +593,16 @@ export default function AdminDashboard() {
                   totalPages={questionTotalPages}
                   search={questionSearch}
                   topicFilter={questionTopicFilter}
+                  examTypeFilter={questionExamTypeFilter}
                   explFilter={questionExplFilter}
                   activeFilter={questionActiveFilter}
                   onSearchChange={setQuestionSearch}
                   onTopicFilterChange={setQuestionTopicFilter}
+                  onExamTypeFilterChange={setQuestionExamTypeFilter}
                   onExplFilterChange={setQuestionExplFilter}
                   onActiveFilterChange={setQuestionActiveFilter}
                   onSearch={handleQuestionSearch}
-                  onPageChange={(p) => { setQuestionPage(p); fetchQuestions(p, questionTopicFilter, questionSearch, questionExplFilter, questionActiveFilter); }}
+                  onPageChange={(p) => { setQuestionPage(p); fetchQuestions(p, questionTopicFilter, questionSearch, questionExplFilter, questionActiveFilter, questionExamTypeFilter); }}
                   expandedQuestion={expandedQuestion}
                   onExpandQuestion={(id) => setExpandedQuestion(id === expandedQuestion ? null : id)}
                   editingQuestion={editingQuestion}
@@ -1239,8 +1243,8 @@ function UsersSection({
 
 function QuestionsSection({
   stats, questions, page, total, totalPages,
-  search, topicFilter, explFilter, activeFilter,
-  onSearchChange, onTopicFilterChange, onExplFilterChange, onActiveFilterChange, onSearch, onPageChange,
+  search, topicFilter, examTypeFilter, explFilter, activeFilter,
+  onSearchChange, onTopicFilterChange, onExamTypeFilterChange, onExplFilterChange, onActiveFilterChange, onSearch, onPageChange,
   expandedQuestion, onExpandQuestion,
   editingQuestion, onStartEditQuestion, questionEditForm, onQuestionEditFormChange, onSaveQuestionEdit, onCancelQuestionEdit,
   tab, onTabChange, duplicates, onRefreshDuplicates, suggestions, onRefreshSuggestions,
@@ -1252,10 +1256,12 @@ function QuestionsSection({
   totalPages: number;
   search: string;
   topicFilter: string;
+  examTypeFilter: string;
   explFilter: string;
   activeFilter: string;
   onSearchChange: (v: string) => void;
   onTopicFilterChange: (v: string) => void;
+  onExamTypeFilterChange: (v: string) => void;
   onExplFilterChange: (v: string) => void;
   onActiveFilterChange: (v: string) => void;
   onSearch: () => void;
@@ -1344,6 +1350,16 @@ function QuestionsSection({
                 className="w-full bg-white border border-[#E4E9F0] rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:border-[#007B5F]/50"
               />
             </div>
+            <select
+              value={examTypeFilter}
+              onChange={(e) => onExamTypeFilterChange(e.target.value)}
+              className="bg-white border border-[#E4E9F0] rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-[#007B5F]/50"
+            >
+              <option value="all">All Exams</option>
+              <option value="kenntnispruefung">Kenntnisprüfung</option>
+              <option value="kmp_innsbruck">KMP Innsbruck</option>
+              <option value="pharma">Pharma</option>
+            </select>
             <select
               value={topicFilter}
               onChange={(e) => onTopicFilterChange(e.target.value)}
