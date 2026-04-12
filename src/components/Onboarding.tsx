@@ -46,7 +46,7 @@ export default function Onboarding({ lang = "de", onComplete }: OnboardingProps)
   const l = lang as "de" | "en";
   const [step, setStep] = useState(0);
   const [data, setData] = useState<Partial<OnboardingData>>({
-    examSource: "SIP",
+    examSource: "kenntnispruefung",
     dailyGoal: 20,
     language: lang,
     darkMode: getStoredTheme() === "dark",
@@ -73,7 +73,7 @@ export default function Onboarding({ lang = "de", onComplete }: OnboardingProps)
     if (examDate === "custom" && customDate) examDate = customDate;
 
     const completed: OnboardingData = {
-      examSource: data.examSource || "SIP",
+      examSource: data.examSource || "kenntnispruefung",
       examDate,
       level: data.level || "beginner",
       dailyGoal: data.dailyGoal || 20,

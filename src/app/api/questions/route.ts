@@ -2,19 +2,24 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
 import { generateWrongOptions, buildMCQOptions, buildMCQFromStored, buildMCQFromChoices } from '@/lib/mcq'
 import type { StoredChoice } from '@/lib/mcq'
-import { VIENNA_EXAM_PARTS } from '@/lib/topics'
+import { VIENNA_EXAM_PARTS, DEFAULT_EXAM_SOURCE, EXAM_SOURCE_IDS } from '@/lib/topics'
 
 /**
  * Apply exam source filter to a Supabase query builder.
- * KoalaMed questions are identified by source_file = 'KMP6a'/'KMP6b'/'KMP5b'.
- * SIP questions have source_file = original PDF file names (not starting with KMP).
+ *
+ * As of 2026-04-12 the `examSource` query param matches `questions.exam_type`
+ * directly. Legacy 'SIP' value is mapped to 'kenntnispruefung' for backwards
+ * compatibility with clients still holding the old localStorage value.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function applyExamSourceFilter(query: any, examSource: string | null) {
   if (!examSource || examSource === 'all') return query
-  if (examSource === 'SIP') return query.not('source_file', 'like', 'KMP%')
-  // KMP5b / KMP6a / KMP6b
-  return query.eq('source_file', examSource)
+  const normalized = examSource === 'SIP' ? 'kenntnispruefung' : examSource
+  if (!(EXAM_SOURCE_IDS as string[]).includes(normalized)) {
+    // Unknown value — fall back to default exam to avoid leaking cross-exam data
+    return query.eq('exam_type', DEFAULT_EXAM_SOURCE)
+  }
+  return query.eq('exam_type', normalized)
 }
 
 interface FilterParams {
@@ -131,7 +136,7 @@ export async function GET(req: NextRequest) {
   const mcqOnly = sp.get('mcqOnly') === '1' || sp.get('mcqOnly') === 'true'
 
   const filters: FilterParams = {
-    examSource: sp.get('examSource') || 'SIP',
+    examSource: sp.get('examSource') || DEFAULT_EXAM_SOURCE,
     topic: sp.get('topic'),
     topics: parseCsv(sp.get('topics')),
     part: sp.get('part') as 'sip4' | 'sip5' | null,
@@ -257,77 +262,34 @@ export async function POST(req: NextRequest) {
   const { action, examSource } = body
 
   if (action === 'topics') {
-    // For specific exam sources, fetch distinct topics dynamically
-    if (examSource && examSource !== 'SIP' && examSource !== 'all') {
-      // KoalaMed: get all distinct topics for this exam source
-      const { data } = await sb
-        .from('questions')
-        .select('topic')
-        .eq('source_file', examSource)
-        .eq('is_active', true)
+    // Fetch distinct topics for the active exam directly from the DB.
+    // This works for any exam_type — no hard-coded topic lists, no SIP/KMP special-casing.
+    const normalized = !examSource || examSource === 'SIP'
+      ? DEFAULT_EXAM_SOURCE
+      : examSource
+    let topicsQuery = sb
+      .from('questions')
+      .select('topic')
+      .eq('is_active', true)
+    if (normalized !== 'all') {
+      topicsQuery = topicsQuery.eq('exam_type', normalized)
+    }
+    const { data } = await topicsQuery
+    if (!data) return NextResponse.json([])
 
-      if (!data) return NextResponse.json([])
-
-      // Count per topic
-      const counts: Record<string, number> = {}
-      for (const row of data) {
-        const t = row.topic as string
-        counts[t] = (counts[t] || 0) + 1
-      }
-
-      const results = Object.entries(counts)
-        .map(([topic, count]) => ({ topic, count }))
-        .filter(r => r.count > 0)
-        .sort((a, b) => b.count - a.count)
-
-      return NextResponse.json(results)
+    const counts: Record<string, number> = {}
+    for (const row of data) {
+      const t = row.topic as string
+      if (!t) continue
+      counts[t] = (counts[t] || 0) + 1
     }
 
-    // SIP or all: use known topic list with optional source filter
-    const knownTopics = [
-      'Chirurgische Fächer',
-      'Dermatologie und Venerologie',
-      'Innere Medizin',
-      'Neurologie',
-      'Psychiatrie',
-      'Frauenheilkunde/Gynäkologie',
-      'Kinder- und Jugendheilkunde',
-      'Augenheilkunde',
-      'Hals-Nasen-Ohrenheilkunde',
-      'Notfall- und Intensivmedizin',
-    ]
+    const results = Object.entries(counts)
+      .map(([topic, count]) => ({ topic, count }))
+      .filter(r => r.count > 0)
+      .sort((a, b) => b.count - a.count)
 
-    // For "all", also include KoalaMed-specific topics
-    const allTopics = examSource === 'all'
-      ? [
-          ...knownTopics,
-          'Dermatologie',
-          'Gynäkologie und Geburtshilfe',
-          'HNO',
-          'Kinder und Jugendheilkunde',
-          'Kinder und Jugendpsychiatrie',
-          'Intensivmedizin',
-          'chirurgische Spezialfächer und Anästhesie',
-          'Allgemeine Chirurgie',
-        ]
-      : knownTopics
-
-    const results = await Promise.all(
-      allTopics.map(async (topic) => {
-        let q = sb
-          .from('questions')
-          .select('id', { count: 'exact', head: true })
-          .eq('is_active', true)
-          .eq('topic', topic)
-        q = applyExamSourceFilter(q, examSource || 'SIP')
-        const { count } = await q
-        return { topic, count: count || 0 }
-      })
-    )
-
-    return NextResponse.json(
-      results.filter(r => r.count > 0).sort((a, b) => b.count - a.count)
-    )
+    return NextResponse.json(results)
   }
 
   return NextResponse.json({ error: 'Unknown action' }, { status: 400 })

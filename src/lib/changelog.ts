@@ -27,6 +27,18 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-04-12",
     tag: "feature",
     title: {
+      de: "Prüfungs-Umschalter oben rechts",
+      en: "Exam switcher in the top-right",
+    },
+    description: {
+      de: "Ein neuer Umschalter schwebt oben rechts auf jeder Seite. Darüber wechseln Sie zwischen Kenntnisprüfung und Pharmakologie, ohne sich abzumelden. Alle Fragen, Prüfungen, Fortschritte und Statistiken aktualisieren sich automatisch für die ausgewählte Prüfung.",
+      en: "A new floating switcher sits in the top-right corner of every page. Use it to toggle between Kenntnisprüfung and Pharmacology without logging out. All questions, exams, progress, and stats update automatically for the selected exam.",
+    },
+  },
+  {
+    date: "2026-04-12",
+    tag: "feature",
+    title: {
       de: "Neue Prüfung: Pharmakologie Rezeptierkunde (335 Fragen)",
       en: "New exam: Pharmacology Prescription Studies (335 questions)",
     },

@@ -115,7 +115,7 @@ function formatTime(seconds: number): string {
 
 function ExamContent() {
   const searchParams = useSearchParams();
-  const examSource = searchParams.get("examSource") || "SIP";
+  const examSource = searchParams.get("examSource") || "kenntnispruefung";
   const [lang, setLangState] = useState<Lang>("de");
   const [userId, setUserId] = useState("");
   const [userName, setUserName] = useState("");

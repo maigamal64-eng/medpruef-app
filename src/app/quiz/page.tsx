@@ -48,7 +48,7 @@ function QuizContent() {
   const searchParams = useSearchParams();
   const initialTopic = searchParams.get("topic");
   const initialQuestionId = searchParams.get("questionId");
-  const examSource = searchParams.get("examSource") || "SIP";
+  const examSource = searchParams.get("examSource") || "kenntnispruefung";
 
   const [userId, setUserId] = useState<string>("");
   const [lang, setLangState] = useState<Lang>("de");

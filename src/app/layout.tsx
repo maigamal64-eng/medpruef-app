@@ -5,6 +5,7 @@ import Script from "next/script";
 import TrackerInit from "@/components/TrackerInit";
 import ThemeProvider from "@/components/ThemeProvider";
 import PWAInstall from "@/components/PWAInstall";
+import ExamSwitcher from "@/components/ExamSwitcher";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -153,6 +154,7 @@ export default function RootLayout({
         <ThemeProvider />
         <TrackerInit />
         <PWAInstall />
+        <ExamSwitcher />
         {children}
       </body>
     </html>

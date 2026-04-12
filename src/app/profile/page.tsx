@@ -71,7 +71,7 @@ export default function ProfilePage() {
   const [editData, setEditData] = useState<ProfileData>({ university: "", country: "", targetDate: "" });
   const [favIds, setFavIds] = useState<number[]>([]);
   const [saved, setSaved] = useState(false);
-  const [examSource, setExamSourceState] = useState<ExamSourceId>("SIP");
+  const [examSource, setExamSourceState] = useState<ExamSourceId>("kenntnispruefung");
 
   useEffect(() => {
     setLangState(getLang());

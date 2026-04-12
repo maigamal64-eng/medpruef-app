@@ -121,7 +121,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [lang, setLangState] = useState<Lang>("de");
-  const [examSource, setExamSource] = useState<ExamSourceId>("SIP");
+  const [examSource, setExamSource] = useState<ExamSourceId>("kenntnispruefung");
   const [showExamSelector, setShowExamSelector] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [weakTopics, setWeakTopics] = useState<TopicStats[]>([]);
@@ -224,8 +224,8 @@ export default function Home() {
         setGam(data.gamification);
         // Mini App: auto-select exam if not set
         if (!hasSelectedExam()) {
-          setStoredExamSource("SIP");
-          setExamSource("SIP");
+          setStoredExamSource("kenntnispruefung");
+          setExamSource("kenntnispruefung");
         }
       } else {
         const stored = getStoredSession();
@@ -676,7 +676,7 @@ export default function Home() {
                 {t("specialties", lang)} <span className="text-sm font-normal text-[#A0AEC0] ml-1">({topics.length})</span>
               </h2>
 
-              {examSource === "SIP" ? (
+              {examSource === "kenntnispruefung" ? (
                 <>
                   {/* SIP quick-start buttons */}
                   <div className="grid grid-cols-2 gap-3 mb-4">
@@ -946,7 +946,7 @@ function DemoHome({
         <div className="px-6 pb-10 max-w-4xl mx-auto">
           <h2 className="text-lg font-bold mb-4 text-[#1A2B3C] border-l-[3px] border-l-[#007B5F] pl-3">{t("practice_topics", lang)}</h2>
 
-          {examSource === "SIP" ? (
+          {examSource === "kenntnispruefung" ? (
             <>
               {/* SIP quick-start buttons */}
               <div className="grid grid-cols-2 gap-3 mb-4">
