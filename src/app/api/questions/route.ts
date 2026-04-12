@@ -31,6 +31,7 @@ interface FilterParams {
   tags: string[]
   search: string | null
   ids: number[]
+  excludeIds: number[]
   examDateFrom: string | null
   examDateTo: string | null
 }
@@ -110,6 +111,11 @@ function applyFilters(query: any, p: FilterParams) {
   if (p.ids.length > 0) {
     query = query.in('id', p.ids)
   }
+  // Exclude already-seen questions (used by quiz to avoid repeats)
+  if (p.excludeIds.length > 0) {
+    // Supabase .not('id', 'in', ...) needs a parenthesized comma list
+    query = query.not('id', 'in', `(${p.excludeIds.join(',')})`)
+  }
   if (p.examDateFrom || p.examDateTo) {
     const months = buildMonthRange(p.examDateFrom, p.examDateTo)
     if (months.length > 0) query = query.overlaps('exam_dates', months)
@@ -144,6 +150,7 @@ export async function GET(req: NextRequest) {
     tags: parseCsv(sp.get('tags')),
     search: sp.get('search'),
     ids: parseIdsCsv(sp.get('ids')),
+    excludeIds: parseIdsCsv(sp.get('excludeIds')),
     examDateFrom: sp.get('examDateFrom'),
     examDateTo: sp.get('examDateTo'),
   }

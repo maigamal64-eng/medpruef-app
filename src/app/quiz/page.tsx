@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, Suspense } from "react";
+import { useEffect, useState, useCallback, useRef, Suspense } from "react";
 import { BrandedLoader } from "@/components/Logo";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -33,7 +33,7 @@ interface Question {
   image_url?: string;
 }
 
-function buildQueryParams(config: QuizConfig, userId: string): URLSearchParams {
+function buildQueryParams(config: QuizConfig, userId: string, excludeIds?: number[]): URLSearchParams {
   const p = new URLSearchParams({ limit: "1", examSource: config.examSource });
   if (userId) p.set("userId", userId);
   if (config.topics.length === 1) p.set("topic", config.topics[0]);
@@ -41,6 +41,10 @@ function buildQueryParams(config: QuizConfig, userId: string): URLSearchParams {
   if (config.tags.length > 0) p.set("tags", config.tags.join(","));
   if (config.examDateFrom) p.set("examDateFrom", config.examDateFrom);
   if (config.examDateTo) p.set("examDateTo", config.examDateTo);
+  // Exclude already-seen questions to prevent repeats within a session
+  if (excludeIds && excludeIds.length > 0) {
+    p.set("excludeIds", excludeIds.join(","));
+  }
   return p;
 }
 
@@ -55,6 +59,7 @@ function QuizContent() {
   const [config, setConfig] = useState<QuizConfig | null>(null);
 
   // Quiz state
+  const seenIdsRef = useRef<number[]>([]);
   const [question, setQuestion] = useState<Question | null>(null);
   const [nextQuestion, setNextQuestion] = useState<Question | null>(null);
   const [loading, setLoading] = useState(false);
@@ -127,10 +132,14 @@ function QuizContent() {
   const fetchQuestion = useCallback(async (): Promise<Question | null> => {
     if (!config) return null;
     try {
-      const params = buildQueryParams(config, userId);
+      const params = buildQueryParams(config, userId, seenIdsRef.current);
       const res = await fetch(`/api/questions?${params}`);
       const data = await res.json();
-      if (Array.isArray(data) && data.length > 0) return data[0];
+      if (Array.isArray(data) && data.length > 0) {
+        const q = data[0];
+        if (q.id) seenIdsRef.current.push(q.id);
+        return q;
+      }
     } catch (e) {
       console.error(e);
     }
