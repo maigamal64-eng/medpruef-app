@@ -22,6 +22,31 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  // ═══ 2026-04-12 ═══
+  {
+    date: "2026-04-12",
+    tag: "improvement",
+    title: {
+      de: "Fragenqualität: Themen gegen offizielle Prüfungsunterlagen validiert",
+      en: "Question quality: topics validated against official exam sources",
+    },
+    description: {
+      de: "Jede Frage wurde gegen die offiziellen Wiener Tertial-Prüfungsunterlagen abgeglichen. 19 falsch zugeordnete Fragen wurden in das korrekte Fachgebiet verschoben (z.B. Katatonie von Neurologie zu Psychiatrie, kindliches Exanthem von Dermatologie zu Kinderheilkunde, Diabetes insipidus eines 14-Jährigen von Neurologie zu Kinderheilkunde). 99,9% der bestehenden Zuordnungen wurden als korrekt bestätigt.",
+      en: "Every question was cross-checked against the official Vienna tertial exam source materials. 19 mis-assigned questions were moved to their correct specialty (e.g. catatonia from Neurology to Psychiatry, childhood exanthem from Dermatology to Pediatrics, 14-year-old with diabetes insipidus from Neurology to Pediatrics). 99.9% of existing assignments were confirmed correct.",
+    },
+  },
+  {
+    date: "2026-04-12",
+    tag: "admin",
+    title: {
+      de: "Datenbank-Bereinigung: veraltete Legacy-Einträge entfernt",
+      en: "Database cleanup: legacy entries purged",
+    },
+    description: {
+      de: "Rund 7.900 veraltete, inaktive Fragen aus der ersten Import-Generation wurden entfernt. Die 3 Einträge mit Nutzerhistorie wurden in eine Archivtabelle gesichert. Die Datenbank ist jetzt 50% schlanker.",
+      en: "About 7,900 obsolete inactive questions from the first import generation were removed. The 3 entries with user history were preserved in an archive table. The database is now 50% leaner.",
+    },
+  },
   // ═══ 2026-04-11 ═══
   {
     date: "2026-04-11",

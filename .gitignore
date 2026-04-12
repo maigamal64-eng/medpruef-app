@@ -47,3 +47,13 @@ design-reference/
 sip-anki.apkg
 *.apkg
 anki_import.py
+
+# Python artifacts (remediation scripts)
+scripts/__pycache__/
+*.pyc
+
+# Large binary source materials — local only, ~530 MB
+source-files/
+
+# Extraction/dry-run reports
+reports/
