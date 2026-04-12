@@ -929,42 +929,29 @@ function ExamContent() {
 
         {/* Question */}
         <div className="flex-1 px-4 lg:px-8 py-4 max-w-3xl mx-auto w-full overflow-y-auto">
-          {/* Question Navigator Grid */}
-          <div className="mb-4 overflow-x-auto">
-            <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto p-1">
-              {(() => {
-                const maxVisible = 30;
-                const showAll = questions.length <= maxVisible;
-                const displayed = showAll ? questions : questions.slice(0, maxVisible);
+          {/* Question Navigator Grid — shows ALL questions, scrollable */}
+          <div className="mb-4">
+            <div className="flex flex-wrap gap-1 max-h-32 overflow-y-auto p-1 bg-white/5 rounded-xl border border-[#E4E9F0] dark:border-white/[0.06]">
+              {questions.map((_, idx) => {
+                const isAnswered = answers[idx] !== undefined;
+                const isCurrent = idx === currentIdx;
                 return (
-                  <>
-                    {displayed.map((_, idx) => {
-                      const isAnswered = answers[idx] !== undefined;
-                      const isCurrent = idx === currentIdx;
-                      return (
-                        <button
-                          key={idx}
-                          onClick={() => setCurrentIdx(idx)}
-                          className={`w-7 h-7 rounded-lg text-[10px] font-mono flex-shrink-0 flex items-center justify-center transition-all ${
-                            isCurrent
-                              ? "bg-[#003A8C] text-white shadow-sm"
-                              : isAnswered
-                              ? "bg-[#00A896]/20 text-[#00A896] border border-[#00A896]/30"
-                              : "bg-[#F7F9FC] text-[#A0AEC0] border border-[#E4E9F0]"
-                          }`}
-                        >
-                          {idx + 1}
-                        </button>
-                      );
-                    })}
-                    {!showAll && (
-                      <span className="w-7 h-7 flex items-center justify-center text-[10px] text-[#A0AEC0] font-mono">
-                        ...
-                      </span>
-                    )}
-                  </>
+                  <button
+                    key={idx}
+                    onClick={() => setCurrentIdx(idx)}
+                    className={`w-6 h-6 rounded text-[9px] font-mono flex-shrink-0 flex items-center justify-center transition-all ${
+                      isCurrent
+                        ? "bg-[#003A8C] text-white shadow-sm ring-1 ring-[#003A8C]"
+                        : isAnswered
+                        ? "bg-[#003A8C]/20 text-[#003A8C] dark:bg-[#3A7CA5]/30 dark:text-[#3A7CA5]"
+                        : "bg-[#F7F9FC] dark:bg-white/5 text-[#A0AEC0] border border-[#E4E9F0] dark:border-white/10"
+                    }`}
+                    title={`${lang === "de" ? "Frage" : "Question"} ${idx + 1}${isAnswered ? " ✓" : ""}`}
+                  >
+                    {idx + 1}
+                  </button>
                 );
-              })()}
+              })}
             </div>
           </div>
 
@@ -978,27 +965,10 @@ function ExamContent() {
               hideActions
               hideFeedbackStrip
               initialSelected={selectedForQ}
-              initiallyAnswered={qAnswered}
+              initiallyAnswered={false}
               onCommit={(idxs) => {
                 setAnswers((prev) => ({ ...prev, [currentIdx]: idxs }));
               }}
-            />
-          </div>
-
-          {/* Action rail — favorite, AI explain, notes, report */}
-          <div className="mb-4">
-            <QuestionActions
-              question={{
-                id: q.id,
-                topic: q.topic,
-                question: q.question,
-                answer: q.answer,
-                explanation: q.explanation,
-                options: q.options,
-              }}
-              lang={lang}
-              layout="row"
-              answered={qAnswered}
             />
           </div>
 
