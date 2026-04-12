@@ -91,11 +91,14 @@ function QuizContent() {
     }
   }, [searchParams]);
 
-  // If user came in from search-result deep-link, auto-skip setup with sane defaults
+  // Auto-skip setup when arriving with a topic or questionId in the URL.
+  // This is the "instant practice" flow: clicking "Continue" on the home page
+  // or a topic card should start quizzing immediately, not show the config page.
   useEffect(() => {
-    if (initialQuestionId && !config) {
+    if (config) return; // already configured
+    if (initialQuestionId || initialTopic) {
       setConfig({
-        topics: [],
+        topics: initialTopic && initialTopic !== "random" ? [initialTopic] : [],
         tags: [],
         targetCount: 20,
         timeLimitMin: null,
@@ -104,7 +107,7 @@ function QuizContent() {
         examSource,
       });
     }
-  }, [initialQuestionId, config, examSource]);
+  }, [initialQuestionId, initialTopic, config, examSource]);
 
   // Once config exists, fetch total available pool size for the milestone card
   useEffect(() => {

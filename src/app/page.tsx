@@ -6,7 +6,7 @@ import { getTopicConfig } from "@/lib/topics";
 import { getLevelFromXP } from "@/lib/xp";
 import { t, getLang, setLang } from "@/lib/i18n";
 import TopicIcon from "@/components/TopicIcon";
-import { Flame, FileText as FileTextIcon, Lightbulb, Shuffle, PlayCircle, ClipboardList, Zap, CheckCircle, User, Inbox, ChevronRight, GraduationCap, Calendar, BarChart3, Search, AlertTriangle } from "lucide-react";
+import { Flame, FileText as FileTextIcon, Lightbulb, Shuffle, PlayCircle, ClipboardList, Zap, CheckCircle, User, Inbox, ChevronRight, GraduationCap, Calendar, BarChart3, Search, AlertTriangle, Star, AlertCircle } from "lucide-react";
 import { isTelegramMiniApp, getMiniAppInitData, getStoredSession, storeSession } from "@/lib/auth";
 import {
   getStoredExamSource,
@@ -636,6 +636,38 @@ export default function Home() {
             </Link>
           </div>
 
+          {/* Quick review modes — bookmarks + wrong answers */}
+          <div className="grid grid-cols-2 gap-3 mb-6">
+            <Link
+              href={`/progress?tab=bookmarks`}
+              className="card-interactive rounded-xl p-4 flex items-center gap-3 group"
+            >
+              <Star className="w-5 h-5 text-[#F4A261]" />
+              <div>
+                <p className="text-sm font-medium text-[#1A2B3C]">
+                  {lang === "de" ? "Lesezeichen" : "Bookmarks"}
+                </p>
+                <p className="text-[11px] text-[#A0AEC0]">
+                  {lang === "de" ? "Gespeicherte Fragen üben" : "Practice saved questions"}
+                </p>
+              </div>
+            </Link>
+            <Link
+              href={`/quiz?topic=random&userId=${user.id}&examSource=${examSource}&tag=wrong`}
+              className="card-interactive rounded-xl p-4 flex items-center gap-3 group"
+            >
+              <AlertCircle className="w-5 h-5 text-[#D64545]" />
+              <div>
+                <p className="text-sm font-medium text-[#1A2B3C]">
+                  {lang === "de" ? "Fehler wiederholen" : "Review Mistakes"}
+                </p>
+                <p className="text-[11px] text-[#A0AEC0]">
+                  {lang === "de" ? "Falsch beantwortete Fragen" : "Questions you got wrong"}
+                </p>
+              </div>
+            </Link>
+          </div>
+
           {/* Search — mobile inline bar opens modal, desktop uses icon */}
           <div className="mb-10 lg:hidden">
             <button
@@ -706,6 +738,7 @@ export default function Home() {
                           lang={lang}
                           delay={i * 50}
                           examSource={examSource}
+                          accuracy={weakTopics.find(w => w.topic === tp.topic)?.accuracy}
                         />
                       ))}
                   </div>
@@ -726,6 +759,7 @@ export default function Home() {
                           lang={lang}
                           delay={i * 50}
                           examSource={examSource}
+                          accuracy={weakTopics.find(w => w.topic === tp.topic)?.accuracy}
                         />
                       ))}
                   </div>
@@ -741,6 +775,7 @@ export default function Home() {
                       lang={lang}
                       delay={i * 50}
                       examSource={examSource}
+                      accuracy={weakTopics.find(w => w.topic === tp.topic)?.accuracy}
                     />
                   ))}
                 </div>
