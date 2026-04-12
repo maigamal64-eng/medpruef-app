@@ -25,6 +25,30 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ═══ 2026-04-12 ═══
   {
     date: "2026-04-12",
+    tag: "feature",
+    title: {
+      de: "Neue Prüfung: Pharmakologie Rezeptierkunde (335 Fragen)",
+      en: "New exam: Pharmacology Prescription Studies (335 questions)",
+    },
+    description: {
+      de: "Eine komplett neue Prüfungskategorie ist jetzt verfügbar: Pharmakologie Rezeptierkunde/Stichpunkte mit 335 kurzen Q&A-Fragen. Über einen Prüfungs-Umschalter in der Kopfzeile wählen Sie zwischen Kenntnisprüfung und Pharma (weitere Prüfungen folgen).",
+      en: "A completely new exam category is now available: Pharmacology Prescription Studies with 335 short-answer questions. Use the exam switcher in the header to toggle between Kenntnisprüfung and Pharma (more exams coming).",
+    },
+  },
+  {
+    date: "2026-04-12",
+    tag: "feature",
+    title: {
+      de: "Februar-2026 SIP5a Prüfung hinzugefügt",
+      en: "February 2026 SIP5a exam added",
+    },
+    description: {
+      de: "Die brandneue Wiener SIP5a Prüfung vom 16. Februar 2026 wurde als 154 frische Fragen in die Kenntnisprüfung-Bibliothek aufgenommen. Sie decken Neurologie, Psychiatrie, Kinder- und Jugendheilkunde, Frauenheilkunde, Augenheilkunde, HNO sowie Notfall- und Intensivmedizin ab und sind mit dem Tag sip2026 markiert.",
+      en: "The brand-new Vienna SIP5a exam from February 16, 2026 has been added as 154 fresh questions to the Kenntnisprüfung library. They cover Neurology, Psychiatry, Pediatrics, Gynecology, Ophthalmology, ENT, and Emergency/Intensive Care, and are tagged with sip2026.",
+    },
+  },
+  {
+    date: "2026-04-12",
     tag: "improvement",
     title: {
       de: "Fragenqualität: Themen gegen offizielle Prüfungsunterlagen validiert",
