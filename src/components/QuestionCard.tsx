@@ -49,6 +49,10 @@ interface QuestionCardProps {
   onCommit?: (selected: number[], isCorrect: boolean) => void;
   /** Hide the "+10 XP · Correct!" feedback strip (used by exam mode where there is no XP per-question). */
   hideFeedbackStrip?: boolean;
+  /** Exam simulation mode: selections are tracked but never graded.
+   *  Hides "Antwort prüfen" button, auto-commits on every toggle,
+   *  and never reveals correct/wrong coloring. */
+  examMode?: boolean;
 }
 
 const DE_MONTHS = [
@@ -115,6 +119,7 @@ export default function QuestionCard({
   initiallyAnswered = false,
   onCommit,
   hideFeedbackStrip = false,
+  examMode = false,
 }: QuestionCardProps) {
   const config = getTopicConfig(question.topic);
   const [selectedIdxs, setSelectedIdxs] = useState<Set<number>>(
@@ -245,7 +250,20 @@ export default function QuestionCard({
         const idx = key.charCodeAt(0) - 97; // 'a' = 0, 'b' = 1, etc.
         if (idx >= 0 && idx < options.length) {
           e.preventDefault();
-          if (isMulti) {
+          if (examMode) {
+            // Exam mode: select/toggle without grading
+            if (isMulti) {
+              setSelectedIdxs(prev => {
+                const next = new Set(prev);
+                if (next.has(idx)) next.delete(idx); else next.add(idx);
+                onCommit?.([...next].sort((a, b) => a - b), false);
+                return next;
+              });
+            } else {
+              setSelectedIdxs(new Set([idx]));
+              onCommit?.([idx], false);
+            }
+          } else if (isMulti) {
             // Toggle checkbox selection
             setSelectedIdxs(prev => {
               const next = new Set(prev);
@@ -276,6 +294,21 @@ export default function QuestionCard({
 
   const handleSelect = (idx: number) => {
     if (answered) return;
+    if (examMode) {
+      // Exam mode: select/toggle without grading, auto-commit
+      if (isMulti) {
+        setSelectedIdxs(prev => {
+          const next = new Set(prev);
+          if (next.has(idx)) next.delete(idx); else next.add(idx);
+          onCommit?.([...next].sort((a, b) => a - b), false);
+          return next;
+        });
+      } else {
+        setSelectedIdxs(new Set([idx]));
+        onCommit?.([idx], false);
+      }
+      return;
+    }
     if (isMulti) {
       // Checkbox behavior: toggle the index
       setSelectedIdxs(prev => {
@@ -535,7 +568,7 @@ export default function QuestionCard({
               </button>
             );
           })}
-          {!isOpenAnswer && isMulti && !answered && (
+          {!isOpenAnswer && isMulti && !answered && !examMode && (
             <button
               onClick={handleSubmitMulti}
               disabled={selectedIdxs.size === 0}

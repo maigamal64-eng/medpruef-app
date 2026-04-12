@@ -927,11 +927,14 @@ function ExamContent() {
           </div>
         </div>
 
-        {/* Question */}
-        <div className="flex-1 px-4 lg:px-8 py-4 max-w-3xl mx-auto w-full overflow-y-auto">
-          {/* Question Navigator Grid — shows ALL questions, scrollable */}
-          <div className="mb-4">
-            <div className="flex flex-wrap gap-1 max-h-32 overflow-y-auto p-1 bg-white/5 rounded-xl border border-[#E4E9F0] dark:border-white/[0.06]">
+        {/* Exam body: 2-column on desktop (navigator left, question right) */}
+        <div className="flex-1 flex overflow-hidden">
+          {/* Left panel: Question navigator grid — hidden on mobile, shown on lg+ */}
+          <div className="hidden lg:flex flex-col w-56 flex-shrink-0 border-r border-[#E4E9F0] dark:border-white/[0.06] bg-[#F7F9FC] dark:bg-[#0F172A] overflow-y-auto p-3">
+            <p className="text-[10px] uppercase tracking-wider text-[#A0AEC0] font-semibold mb-2">
+              {lang === "de" ? "Fragen" : "Questions"} ({answeredCount}/{questions.length})
+            </p>
+            <div className="grid grid-cols-5 gap-1">
               {questions.map((_, idx) => {
                 const isAnswered = answers[idx] !== undefined;
                 const isCurrent = idx === currentIdx;
@@ -939,14 +942,13 @@ function ExamContent() {
                   <button
                     key={idx}
                     onClick={() => setCurrentIdx(idx)}
-                    className={`w-6 h-6 rounded text-[9px] font-mono flex-shrink-0 flex items-center justify-center transition-all ${
+                    className={`w-full aspect-square rounded text-[9px] font-mono flex items-center justify-center transition-all ${
                       isCurrent
-                        ? "bg-[#003A8C] text-white shadow-sm ring-1 ring-[#003A8C]"
+                        ? "bg-[#003A8C] text-white shadow-sm ring-2 ring-[#003A8C]/50"
                         : isAnswered
-                        ? "bg-[#003A8C]/20 text-[#003A8C] dark:bg-[#3A7CA5]/30 dark:text-[#3A7CA5]"
-                        : "bg-[#F7F9FC] dark:bg-white/5 text-[#A0AEC0] border border-[#E4E9F0] dark:border-white/10"
+                        ? "bg-[#003A8C]/15 text-[#003A8C] dark:bg-[#3A7CA5]/25 dark:text-[#3A7CA5] font-semibold"
+                        : "bg-white dark:bg-white/5 text-[#A0AEC0] border border-[#E4E9F0] dark:border-white/10 hover:border-[#003A8C]/30"
                     }`}
-                    title={`${lang === "de" ? "Frage" : "Question"} ${idx + 1}${isAnswered ? " ✓" : ""}`}
                   >
                     {idx + 1}
                   </button>
@@ -955,43 +957,73 @@ function ExamContent() {
             </div>
           </div>
 
-          <div className="mb-4">
-            <QuestionCard
-              key={`active-${q.id}`}
-              question={q}
-              questionNumber={currentIdx + 1}
-              totalQuestions={questions.length}
-              lang={lang}
-              hideActions
-              hideFeedbackStrip
-              initialSelected={selectedForQ}
-              initiallyAnswered={false}
-              onCommit={(idxs) => {
-                setAnswers((prev) => ({ ...prev, [currentIdx]: idxs }));
-              }}
-            />
-          </div>
+          {/* Right panel: question content + navigation */}
+          <div className="flex-1 flex flex-col overflow-y-auto">
+            {/* Mobile-only: compact horizontal question navigator */}
+            <div className="lg:hidden px-4 pt-3">
+              <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto">
+                {questions.map((_, idx) => {
+                  const isAnswered = answers[idx] !== undefined;
+                  const isCurrent = idx === currentIdx;
+                  return (
+                    <button
+                      key={idx}
+                      onClick={() => setCurrentIdx(idx)}
+                      className={`w-6 h-6 rounded text-[8px] font-mono flex-shrink-0 flex items-center justify-center ${
+                        isCurrent
+                          ? "bg-[#003A8C] text-white"
+                          : isAnswered
+                          ? "bg-[#003A8C]/15 text-[#003A8C]"
+                          : "bg-[#F7F9FC] text-[#A0AEC0] border border-[#E4E9F0]"
+                      }`}
+                    >
+                      {idx + 1}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
 
-          {lightboxSrc && (
-            <ImageLightbox src={lightboxSrc} alt="Medizinische Abbildung" onClose={() => setLightboxSrc(null)} />
-          )}
+            <div className="px-4 lg:px-8 py-4 max-w-3xl w-full mx-auto">
+              <div className="mb-4">
+                <QuestionCard
+                  key={`active-${q.id}`}
+                  question={q}
+                  questionNumber={currentIdx + 1}
+                  totalQuestions={questions.length}
+                  lang={lang}
+                  hideFeedbackStrip
+                  initialSelected={selectedForQ}
+                  initiallyAnswered={false}
+                  examMode
+                  onCommit={(idxs) => {
+                    setAnswers((prev) => ({ ...prev, [currentIdx]: idxs }));
+                  }}
+                />
+              </div>
 
-          {/* Navigation */}
-          <div className="flex gap-2 mb-4">
-            <button
-              onClick={() => setCurrentIdx(Math.max(0, currentIdx - 1))}
-              disabled={currentIdx === 0}
-              className="flex-1 py-3 border border-[#E4E9F0] rounded text-[#4A5568] text-sm font-medium disabled:opacity-30 hover:border-[#007B5F]/40 transition-colors"
-            >
-              ←
-            </button>
-            <button
-              onClick={() => setCurrentIdx(Math.min(questions.length - 1, currentIdx + 1))}
-              disabled={currentIdx === questions.length - 1}
-              className="flex-2 flex-1 py-3 bg-[#007B5F]/12 border border-[#007B5F]/25 rounded text-[#007B5F] text-sm font-medium disabled:opacity-30 hover:bg-[#007B5F]/20 transition-colors"
-            >
-              {lang === "de" ? "Weiter" : "Next"} →
-            </button>
+              {lightboxSrc && (
+                <ImageLightbox src={lightboxSrc} alt="Medizinische Abbildung" onClose={() => setLightboxSrc(null)} />
+              )}
+
+              {/* Navigation */}
+              <div className="flex gap-2 mb-4">
+                <button
+                  onClick={() => setCurrentIdx(Math.max(0, currentIdx - 1))}
+                  disabled={currentIdx === 0}
+                  className="flex-1 py-3 border border-[#E4E9F0] rounded-xl text-[#4A5568] text-sm font-medium disabled:opacity-30 hover:border-[#007B5F]/40 transition-colors"
+                >
+                  ← {lang === "de" ? "Zurück" : "Back"}
+                </button>
+                <button
+                  onClick={() => setCurrentIdx(Math.min(questions.length - 1, currentIdx + 1))}
+                  disabled={currentIdx === questions.length - 1}
+                  className="flex-1 py-3 bg-[#007B5F]/12 border border-[#007B5F]/25 rounded-xl text-[#007B5F] text-sm font-medium disabled:opacity-30 hover:bg-[#007B5F]/20 transition-colors"
+                >
+                  {lang === "de" ? "Weiter" : "Next"} →
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
