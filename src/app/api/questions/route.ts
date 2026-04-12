@@ -262,32 +262,25 @@ export async function POST(req: NextRequest) {
   const { action, examSource } = body
 
   if (action === 'topics') {
-    // Fetch distinct topics for the active exam directly from the DB.
-    // This works for any exam_type — no hard-coded topic lists, no SIP/KMP special-casing.
+    // Use the get_topic_counts() RPC function to bypass the Supabase REST
+    // 1000-row limit. The function does GROUP BY server-side and returns
+    // at most ~15 rows (one per topic).
     const normalized = !examSource || examSource === 'SIP'
       ? DEFAULT_EXAM_SOURCE
       : examSource
-    let topicsQuery = sb
-      .from('questions')
-      .select('topic')
-      .eq('is_active', true)
-    if (normalized !== 'all') {
-      topicsQuery = topicsQuery.eq('exam_type', normalized)
-    }
-    const { data } = await topicsQuery
-    if (!data) return NextResponse.json([])
 
-    const counts: Record<string, number> = {}
-    for (const row of data) {
-      const t = row.topic as string
-      if (!t) continue
-      counts[t] = (counts[t] || 0) + 1
+    const { data, error } = await sb.rpc('get_topic_counts', {
+      p_exam_type: normalized === 'all' ? null : normalized,
+    })
+
+    if (error) {
+      console.error('[topics RPC error]', error)
+      return NextResponse.json([], { status: 500 })
     }
 
-    const results = Object.entries(counts)
-      .map(([topic, count]) => ({ topic, count }))
-      .filter(r => r.count > 0)
-      .sort((a, b) => b.count - a.count)
+    const results = (data || [])
+      .filter((r: { topic: string; count: number }) => r.count > 0)
+      .map((r: { topic: string; count: number }) => ({ topic: r.topic, count: Number(r.count) }))
 
     return NextResponse.json(results)
   }

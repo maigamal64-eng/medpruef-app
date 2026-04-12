@@ -31,7 +31,9 @@ export default function ExamSwitcherInline({ variant = 'header', className = '' 
   const [active, setActive] = useState<ExamSourceId>('kenntnispruefung')
   const [mounted, setMounted] = useState(false)
   const [open, setOpen] = useState(false)
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null)
   const rootRef = useRef<HTMLDivElement>(null)
+  const btnRef = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     setActive(getStoredExamSource())
@@ -101,7 +103,16 @@ export default function ExamSwitcherInline({ variant = 'header', className = '' 
   return (
     <div ref={rootRef} className={`relative inline-block ${className}`}>
       <button
-        onClick={() => setOpen(o => !o)}
+        ref={btnRef}
+        onClick={() => {
+          if (!open && btnRef.current) {
+            const rect = btnRef.current.getBoundingClientRect()
+            // Position dropdown below the button, clamped to viewport
+            const left = Math.max(8, Math.min(rect.left, window.innerWidth - 272))
+            setDropdownPos({ top: rect.bottom + 8, left })
+          }
+          setOpen(o => !o)
+        }}
         className={btnClass}
         aria-haspopup="listbox"
         aria-expanded={open}
@@ -116,12 +127,12 @@ export default function ExamSwitcherInline({ variant = 'header', className = '' 
         </svg>
       </button>
 
-      {open && (
+      {open && dropdownPos && (
         <div
-          className={`absolute ${variant === 'sidebar' ? 'left-0' : variant === 'compact' ? 'left-0' : 'right-0'} top-full mt-2 w-64
-                      bg-white dark:bg-slate-800
-                      border border-slate-200 dark:border-slate-700
-                      rounded-xl shadow-xl overflow-hidden z-50`}
+          className="fixed w-64 bg-white dark:bg-slate-800
+                     border border-slate-200 dark:border-slate-700
+                     rounded-xl shadow-xl overflow-hidden"
+          style={{ top: dropdownPos.top, left: dropdownPos.left, zIndex: 9999 }}
           role="listbox"
         >
           <div className="px-3 py-2 text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 border-b border-slate-100 dark:border-slate-700">
@@ -129,7 +140,7 @@ export default function ExamSwitcherInline({ variant = 'header', className = '' 
           </div>
           {EXAM_SOURCES.map(exam => {
             const isActive = exam.id === active
-            const isComing = exam.id === 'kmp_innsbruck'
+            const isComing = false // all exams are now live
             return (
               <button
                 key={exam.id}
