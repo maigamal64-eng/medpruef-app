@@ -9,39 +9,39 @@ import {
 } from '@/lib/topics'
 
 /**
- * Floating exam-type pill in the top-right corner of every page.
+ * Inline exam-type dropdown. Meant to be dropped into an existing header or
+ * sidebar — no fixed positioning, fits the flow of whatever parent contains
+ * it. The dropdown panel is absolutely positioned relative to the button.
  *
- * Click to open a small dropdown and switch between Kenntnisprüfung / Pharma
- * / KoalaMed. Selection is persisted to localStorage (`medpruef_exam_source`)
- * — the existing key used by every page's fetch call for the `examSource`
- * query param — so the switch takes effect on the next data load.
+ * Variants:
+ *   - "sidebar":  dark surface for the sidebar user-card area
+ *   - "header":   light surface for page top-bars (home, progress, etc.)
+ *   - "compact":  icon-only pill (mobile / tight spaces)
  *
- * On switch, we soft-reload the page to force every on-screen query to
- * re-run against the new exam_type (no app-wide React Query / SWR store
- * exists, so a reload is the safest way to guarantee consistent UX).
- *
- * This is distinct from `ExamSelector.tsx`, which is the full-screen
- * onboarding picker shown to new users on their first visit.
+ * On switch, persists to localStorage (`medpruef_exam_source`) and soft-reloads
+ * so every on-screen query refetches against the new exam_type. The legacy
+ * full-screen ExamSelector flow is no longer triggered.
  */
-export default function ExamSwitcher() {
+interface Props {
+  variant?: 'sidebar' | 'header' | 'compact'
+  className?: string
+}
+
+export default function ExamSwitcherInline({ variant = 'header', className = '' }: Props) {
   const [active, setActive] = useState<ExamSourceId>('kenntnispruefung')
   const [mounted, setMounted] = useState(false)
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
 
-  // Hydrate from localStorage after mount (avoid SSR mismatch)
   useEffect(() => {
     setActive(getStoredExamSource())
     setMounted(true)
   }, [])
 
-  // Close on outside click / Escape
   useEffect(() => {
     if (!open) return
     const onClick = (e: MouseEvent) => {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
-        setOpen(false)
-      }
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false)
     }
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false)
     document.addEventListener('mousedown', onClick)
@@ -52,16 +52,10 @@ export default function ExamSwitcher() {
     }
   }, [open])
 
-  // Hide on /landing, /login, /privacy, /terms, /impressum, /changelog, /about
-  // where the switcher would be noise / collide with page chrome.
-  const [shouldRender, setShouldRender] = useState(false)
-  useEffect(() => {
-    const hiddenPaths = ['/landing', '/login', '/privacy', '/terms', '/impressum', '/changelog', '/about']
-    const path = window.location.pathname
-    setShouldRender(!hiddenPaths.some(p => path === p || path.startsWith(p + '/')))
-  }, [])
-
-  if (!mounted || !shouldRender) return null
+  if (!mounted) {
+    // Render an invisible placeholder with the same dimensions to avoid layout shift
+    return <div className={`h-9 ${className}`} aria-hidden />
+  }
 
   const switchTo = (id: ExamSourceId) => {
     if (id === active) {
@@ -71,40 +65,48 @@ export default function ExamSwitcher() {
     setActive(id)
     setStoredExamSource(id)
     setOpen(false)
-    // Notify any same-page subscribers (optional)
     window.dispatchEvent(new CustomEvent('medpruef:examChanged', { detail: { examSource: id } }))
-    // Soft reload so every page re-fetches with the new exam_type
     setTimeout(() => window.location.reload(), 50)
   }
 
   const activeExam = EXAM_SOURCES.find(e => e.id === active) ?? EXAM_SOURCES[0]
 
+  // ─── Button styles per variant ───
+  const btnClass = (() => {
+    if (variant === 'sidebar') {
+      return 'w-full flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/[0.08] transition-colors text-sm text-white'
+    }
+    if (variant === 'compact') {
+      return 'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#007B5F]/10 hover:bg-[#007B5F]/20 border border-[#007B5F]/20 text-xs font-mono text-[#007B5F] transition-colors'
+    }
+    // header
+    return 'flex items-center gap-2 px-3 py-2 rounded-lg bg-[#007B5F]/10 hover:bg-[#007B5F]/20 border border-[#007B5F]/20 text-sm font-medium text-[#007B5F] transition-colors'
+  })()
+
   return (
-    <div ref={rootRef} className="fixed top-3 right-3 z-[60] select-none">
+    <div ref={rootRef} className={`relative inline-block ${className}`}>
       <button
         onClick={() => setOpen(o => !o)}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full
-                   bg-white/90 dark:bg-slate-800/90 backdrop-blur
-                   border border-slate-200 dark:border-slate-700
-                   shadow-sm hover:shadow-md transition-all
-                   text-xs font-medium text-slate-700 dark:text-slate-200"
+        className={btnClass}
         aria-haspopup="listbox"
         aria-expanded={open}
         title={`Prüfung: ${activeExam.fullName}`}
       >
-        <span className="text-sm leading-none">{activeExam.badge}</span>
-        <span>{activeExam.shortLabel}</span>
-        <svg width="10" height="10" viewBox="0 0 20 20" fill="currentColor" className="opacity-60">
+        <span className="text-base leading-none">{activeExam.badge}</span>
+        <span className="truncate">
+          {variant === 'compact' ? activeExam.shortLabel : activeExam.label}
+        </span>
+        <svg width="10" height="10" viewBox="0 0 20 20" fill="currentColor" className="opacity-60 flex-shrink-0">
           <path d="M5 7l5 5 5-5H5z" />
         </svg>
       </button>
 
       {open && (
         <div
-          className="absolute top-full right-0 mt-2 w-64
-                     bg-white dark:bg-slate-800
-                     border border-slate-200 dark:border-slate-700
-                     rounded-xl shadow-xl overflow-hidden"
+          className={`absolute ${variant === 'sidebar' ? 'left-0' : variant === 'compact' ? 'left-0' : 'right-0'} top-full mt-2 w-64
+                      bg-white dark:bg-slate-800
+                      border border-slate-200 dark:border-slate-700
+                      rounded-xl shadow-xl overflow-hidden z-50`}
           role="listbox"
         >
           <div className="px-3 py-2 text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 border-b border-slate-100 dark:border-slate-700">
@@ -112,19 +114,17 @@ export default function ExamSwitcher() {
           </div>
           {EXAM_SOURCES.map(exam => {
             const isActive = exam.id === active
-            // koalamed is reserved — no questions imported yet
             const isComing = exam.id === 'koalamed'
             return (
               <button
                 key={exam.id}
                 onClick={() => !isComing && switchTo(exam.id)}
                 disabled={isComing}
-                className={`w-full flex items-start gap-2.5 px-3 py-2.5 text-left
-                            transition-colors
+                className={`w-full flex items-start gap-2.5 px-3 py-2.5 text-left transition-colors
                             ${isActive
                               ? 'bg-[#00A896]/10 text-[#00A896]'
                               : isComing
-                                ? 'opacity-40 cursor-not-allowed'
+                                ? 'opacity-40 cursor-not-allowed text-slate-700 dark:text-slate-200'
                                 : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200'
                             }`}
                 role="option"
@@ -148,6 +148,11 @@ export default function ExamSwitcher() {
                   <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
                     {exam.fullName}
                   </div>
+                  {exam.questions > 0 && (
+                    <div className="text-[10px] text-slate-400 dark:text-slate-500 font-mono mt-0.5">
+                      {exam.questions.toLocaleString('de-DE')} Fragen
+                    </div>
+                  )}
                 </div>
               </button>
             )

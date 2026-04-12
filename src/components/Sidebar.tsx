@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { t } from "@/lib/i18n";
 import { getLevelFromXP } from "@/lib/xp";
 import { Home, FileText, GraduationCap, BarChart3, TrendingUp, BookOpen, Info, User, Flame, PanelLeftClose, PanelLeftOpen, Layers, Settings, Map, Sparkles } from "lucide-react";
+import ExamSwitcherInline from "./ExamSwitcherInline";
 
 type Lang = "de" | "en";
 
@@ -141,6 +142,17 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0, streak = 
             {userName.charAt(0).toUpperCase()}
             <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-[#00A896] rounded-full border-2 border-[#001B3D]" />
           </div>
+        </div>
+      )}
+
+      {/* Exam Switcher — only visible when expanded; collapsed sidebar users
+          can still switch via the mobile home header pill. */}
+      {!collapsed && (
+        <div className="px-4 mb-2">
+          <p className="text-[10px] uppercase tracking-widest text-[#A0AEC0]/50 font-semibold px-1 mb-1.5">
+            {lang === "de" ? "Prüfung" : "Exam"}
+          </p>
+          <ExamSwitcherInline variant="sidebar" className="w-full" />
         </div>
       )}
 

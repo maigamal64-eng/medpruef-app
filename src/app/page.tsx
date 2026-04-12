@@ -24,6 +24,7 @@ import StreakWidget from "@/components/StreakWidget";
 import XPBar from "@/components/XPBar";
 import DailyGoalRing from "@/components/DailyGoalRing";
 import ExamSelector from "@/components/ExamSelector";
+import ExamSwitcherInline from "@/components/ExamSwitcherInline";
 import Onboarding from "@/components/Onboarding";
 import SearchBar from "@/components/SearchBar";
 import TelegramLoginWidget, { type TelegramWidgetUser } from "@/components/TelegramLoginWidget";
@@ -427,6 +428,7 @@ export default function Home() {
               </div>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
+              <ExamSwitcherInline variant="compact" />
               <ThemeToggle />
               <LanguageToggle lang={lang} onChange={switchLang} />
             </div>
@@ -442,13 +444,8 @@ export default function Home() {
             <p className="text-sm text-[#A0AEC0]">{t("exam_prep", lang)}</p>
           </div>
           <div className="flex items-center gap-3">
-            <button
-              onClick={() => setShowExamSelector(true)}
-              className="text-xs font-mono bg-[#007B5F]/10 text-[#007B5F] px-3 py-2 rounded-lg border border-[#007B5F]/20 hover:bg-[#007B5F]/20 transition-colors"
-            >
-              {examSource}
-            </button>
-            <div className="w-px h-6 bg-[#E4E9F0]" />
+            {/* Exam switcher is in the sidebar on desktop — no need here.
+                Search + theme + language toggles remain. */}
             <button
               onClick={() => setSearchOpen(!searchOpen)}
               className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-[#E4E9F0]/50 text-[#A0AEC0] transition-colors"
