@@ -13,6 +13,7 @@ interface TopicCardProps {
   userId?: string;
   lang: Lang;
   accuracy?: number;
+  answered?: number; // how many questions answered in this topic
   delay?: number;
   examSource?: string;
   lastStudied?: string;
@@ -26,7 +27,7 @@ function getRelativeTime(dateStr: string, lang: Lang): string {
   return lang === "de" ? `vor ${days} Tagen` : `${days} days ago`;
 }
 
-export default function TopicCard({ topic, count, userId, lang, accuracy, delay = 0, examSource, lastStudied }: TopicCardProps) {
+export default function TopicCard({ topic, count, userId, lang, accuracy, answered, delay = 0, examSource, lastStudied }: TopicCardProps) {
   const config = getTopicConfig(topic);
   const params = new URLSearchParams({ topic });
   if (userId) params.set('userId', userId);
@@ -54,7 +55,7 @@ export default function TopicCard({ topic, count, userId, lang, accuracy, delay 
               }`}
               title={`${lang === "de" ? "Dieses Thema zu verbessern erhöht deine Gesamtnote um" : "Improving this topic increases your overall score by"} ~${Math.round(100 / 10)}%`}
             >
-              {Math.min(accuracy, 100)}%
+              {Math.round(Math.min(accuracy, 100))}%
             </span>
             {/* Strength badge */}
             <div className="flex items-center gap-1.5">
@@ -83,9 +84,9 @@ export default function TopicCard({ topic, count, userId, lang, accuracy, delay 
       {lastStudied && (
         <p className="text-[10px] text-[#A0AEC0]/70 mb-0.5">{getRelativeTime(lastStudied, lang)}</p>
       )}
-      {accuracy !== undefined && accuracy > 0 && accuracy < 100 && (
-        <p className="text-[10px] text-[#A0AEC0]/70 mb-0.5">
-          ~{Math.ceil((100 - accuracy) / 5)} {lang === "de" ? "Fragen zum Meistern" : "questions to master"}
+      {answered !== undefined && answered > 0 && (
+        <p className="text-[10px] text-[#A0AEC0]/70 mb-0.5 font-mono">
+          {answered}/{count} {lang === "de" ? "bearbeitet" : "practiced"}
         </p>
       )}
 
@@ -97,12 +98,12 @@ export default function TopicCard({ topic, count, userId, lang, accuracy, delay 
       )}
       {(accuracy === undefined || accuracy === 0 || accuracy >= 60) && <div className="mb-3" />}
 
-      {/* Progress bar */}
+      {/* Progress bar — based on completion (answered/total), not accuracy */}
       <div className="h-1.5 bg-[#F7F9FC] rounded-full overflow-hidden">
         <div
           className="h-full rounded-full animate-progress"
           style={{
-            width: `${Math.min(accuracy || 0, 100)}%`,
+            width: `${count > 0 ? Math.min(((answered || 0) / count) * 100, 100) : 0}%`,
             background: `linear-gradient(to right, ${config.color}, ${config.color}60)`,
           }}
         />

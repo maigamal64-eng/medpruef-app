@@ -739,6 +739,7 @@ export default function Home() {
                           delay={i * 50}
                           examSource={examSource}
                           accuracy={weakTopics.find(w => w.topic === tp.topic)?.accuracy}
+                          answered={weakTopics.find(w => w.topic === tp.topic)?.total}
                         />
                       ))}
                   </div>
@@ -760,6 +761,7 @@ export default function Home() {
                           delay={i * 50}
                           examSource={examSource}
                           accuracy={weakTopics.find(w => w.topic === tp.topic)?.accuracy}
+                          answered={weakTopics.find(w => w.topic === tp.topic)?.total}
                         />
                       ))}
                   </div>
@@ -776,6 +778,7 @@ export default function Home() {
                       delay={i * 50}
                       examSource={examSource}
                       accuracy={weakTopics.find(w => w.topic === tp.topic)?.accuracy}
+                      answered={weakTopics.find(w => w.topic === tp.topic)?.total}
                     />
                   ))}
                 </div>

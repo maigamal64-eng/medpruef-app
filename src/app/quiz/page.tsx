@@ -91,16 +91,22 @@ function QuizContent() {
     }
   }, [searchParams]);
 
+  // Track whether the quiz was auto-started from a topic link (instant practice)
+  // vs manually configured via the QuizSetup screen
+  const [autoStarted, setAutoStarted] = useState(false);
+
   // Auto-skip setup when arriving with a topic or questionId in the URL.
   // This is the "instant practice" flow: clicking "Continue" on the home page
   // or a topic card should start quizzing immediately, not show the config page.
+  // Uses a high targetCount so the user practices until they choose to stop.
   useEffect(() => {
     if (config) return; // already configured
     if (initialQuestionId || initialTopic) {
+      setAutoStarted(true);
       setConfig({
         topics: initialTopic && initialTopic !== "random" ? [initialTopic] : [],
         tags: [],
-        targetCount: 20,
+        targetCount: 9999, // practice until user leaves — no artificial cap
         timeLimitMin: null,
         examDateFrom: null,
         examDateTo: null,
@@ -354,16 +360,28 @@ function QuizContent() {
       <main className="main-content safe-area-top safe-area-bottom flex flex-col min-h-screen bg-[#F7F9FC] dark:bg-[#0F172A]">
         {/* Header */}
         <div className="px-4 lg:px-8 pt-4 pb-3 flex items-center justify-between flex-shrink-0 border-b border-[#E4E9F0] dark:border-[#334155] bg-white/60 dark:bg-[#1E293B]/60 backdrop-blur-sm">
-          <button
-            onClick={restart}
-            className="flex items-center gap-1.5 text-[#A0AEC0] hover:text-[#1A2B3C] dark:hover:text-[#E2E8F0] transition-colors text-sm"
-            title={lang === "de" ? "Zurück zur Konfiguration" : "Back to setup"}
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="opacity-60">
-              <path d="M10 12L6 8L10 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-            {lang === "de" ? "Neue Konfiguration" : "New setup"}
-          </button>
+          {autoStarted ? (
+            <Link
+              href="/"
+              className="flex items-center gap-1.5 text-[#A0AEC0] hover:text-[#1A2B3C] dark:hover:text-[#E2E8F0] transition-colors text-sm"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="opacity-60">
+                <path d="M10 12L6 8L10 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              ← {t("back_home", lang)}
+            </Link>
+          ) : (
+            <button
+              onClick={restart}
+              className="flex items-center gap-1.5 text-[#A0AEC0] hover:text-[#1A2B3C] dark:hover:text-[#E2E8F0] transition-colors text-sm"
+              title={lang === "de" ? "Zurück zur Konfiguration" : "Back to setup"}
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="opacity-60">
+                <path d="M10 12L6 8L10 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              {lang === "de" ? "Neue Konfiguration" : "New setup"}
+            </button>
+          )}
 
           <div className="flex items-center gap-3">
             {timeRemaining !== null && (
