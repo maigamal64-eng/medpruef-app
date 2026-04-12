@@ -27,9 +27,11 @@ function truncate(text: string, max: number): string {
 }
 
 function sourceBadge(source_file?: string): string {
-  if (!source_file) return "SIP";
-  if (source_file.startsWith("KMP")) return source_file;
-  return "SIP";
+  if (!source_file) return "KP";
+  if (source_file.startsWith("KMP")) return "KMP";
+  if (source_file.startsWith("VIENNA_2026")) return "2026";
+  if (source_file.startsWith("PHARMA")) return "Pharma";
+  return "KP";
 }
 
 export default function SearchResults({

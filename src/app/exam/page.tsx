@@ -440,7 +440,7 @@ function ExamContent() {
               })()}
 
               {/* SIP part selector — only shown for SIP exam source */}
-              {examSource === "SIP" && (
+              {examSource === "kenntnispruefung" && (
                 <div className="mb-6">
                   <p className="text-xs text-[#A0AEC0] font-semibold uppercase tracking-wider mb-2 text-center">
                     {t("exam_part_selector", lang)}

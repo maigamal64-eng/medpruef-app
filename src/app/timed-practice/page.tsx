@@ -5,6 +5,7 @@ import { BrandedLoader } from "@/components/Logo";
 import { t, getLang } from "@/lib/i18n";
 import { trackEvent, trackPageView } from "@/lib/tracker";
 import { getStoredSession } from "@/lib/auth";
+import { getStoredExamSource } from "@/lib/topics";
 import { Timer, Play, CheckCircle2, ArrowLeft, Clock } from "lucide-react";
 import LanguageToggle from "@/components/LanguageToggle";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -62,8 +63,9 @@ function TimedPracticeContent() {
 
   const startPractice = useCallback(async () => {
     try {
+      const examSource = getStoredExamSource();
       const res = await fetch(
-        `/api/questions?limit=${questionCount}&random=true`
+        `/api/questions?limit=${questionCount}&random=true&examSource=${examSource}`
       );
       if (!res.ok) throw new Error("Failed to load questions");
       const data = await res.json();

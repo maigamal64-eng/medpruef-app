@@ -600,8 +600,8 @@ export default function Home() {
             </div>
           )}
 
-          {/* Quick Actions — 3-button hierarchy */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-10">
+          {/* Quick Actions — 2×2 grid on sm+, stacked on mobile */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-10">
             {/* Primary: Continue */}
             <Link
               href={weakTopics.length > 0
@@ -609,30 +609,21 @@ export default function Home() {
                 : topics.length > 0
                   ? `/quiz?topic=${encodeURIComponent(topics[0].topic)}&userId=${user.id}&examSource=${examSource}`
                   : "#"}
-              className="btn-primary flex items-center justify-center gap-2.5 py-4 text-base rounded-2xl shadow-md active:scale-[0.98] transition-transform sm:col-span-1"
+              className="btn-primary flex items-center justify-center gap-2 py-3.5 text-sm rounded-2xl shadow-md active:scale-[0.98] transition-transform"
             >
-              <PlayCircle className="w-5 h-5" />
+              <PlayCircle className="w-4 h-4" />
               {weakTopics.length > 0
                 ? (lang === "de" ? "Weiterlernen" : "Continue")
                 : t("continue_where_left", lang)}
             </Link>
 
-            {/* Secondary: Random Quiz */}
+            {/* Random Quiz */}
             <Link
               href={`/quiz?topic=random&userId=${user.id}&examSource=${examSource}`}
               className="btn-secondary flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm"
             >
               <Shuffle className="w-4 h-4 text-[#007B5F]" />
               {t("random_quiz", lang)}
-            </Link>
-
-            {/* Tertiary: Mock Exam */}
-            <Link
-              href={`/exam?examSource=${examSource}`}
-              className="btn-secondary flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm"
-            >
-              <GraduationCap className="w-4 h-4 text-[#F4A261]" />
-              {lang === "de" ? "Probeprüfung" : "Mock Exam"}
             </Link>
 
             {/* Timed Practice */}
@@ -642,6 +633,15 @@ export default function Home() {
             >
               <Zap className="w-4 h-4 text-[#00A896]" />
               {t("timed_practice", lang)}
+            </Link>
+
+            {/* Mock Exam */}
+            <Link
+              href={`/exam?examSource=${examSource}`}
+              className="btn-secondary flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm"
+            >
+              <GraduationCap className="w-4 h-4 text-[#F4A261]" />
+              {lang === "de" ? "Probeprüfung" : "Mock Exam"}
             </Link>
           </div>
 
@@ -678,7 +678,7 @@ export default function Home() {
                   {/* SIP quick-start buttons */}
                   <div className="grid grid-cols-2 gap-3 mb-4">
                     <Link
-                      href={`/exam?examSource=SIP&part=sip4`}
+                      href={`/exam?examSource=kenntnispruefung&part=sip4`}
                       className="card-interactive rounded-2xl p-4 flex items-center justify-between text-sm transition-all"
                     >
                       <div className="flex items-center gap-2">
@@ -688,7 +688,7 @@ export default function Home() {
                       <ChevronRight className="w-4 h-4 text-[#A0AEC0]" />
                     </Link>
                     <Link
-                      href={`/exam?examSource=SIP&part=sip5`}
+                      href={`/exam?examSource=kenntnispruefung&part=sip5`}
                       className="card-interactive rounded-2xl p-4 flex items-center justify-between text-sm transition-all"
                     >
                       <div className="flex items-center gap-2">
@@ -948,14 +948,14 @@ function DemoHome({
               {/* SIP quick-start buttons */}
               <div className="grid grid-cols-2 gap-3 mb-4">
                 <Link
-                  href={`/exam?examSource=SIP&part=sip4`}
+                  href={`/exam?examSource=kenntnispruefung&part=sip4`}
                   className="btn-secondary flex items-center gap-2 rounded-xl px-4 py-3 text-sm transition-all hover:shadow-md"
                 >
                   <ClipboardList className="w-4 h-4 flex-shrink-0 text-[#F4A261]" />
                   <span className="truncate">{t("practice_sip4", lang)}</span>
                 </Link>
                 <Link
-                  href={`/exam?examSource=SIP&part=sip5`}
+                  href={`/exam?examSource=kenntnispruefung&part=sip5`}
                   className="btn-secondary flex items-center gap-2 rounded-xl px-4 py-3 text-sm transition-all hover:shadow-md"
                 >
                   <ClipboardList className="w-4 h-4 flex-shrink-0 text-[#007B5F]" />
