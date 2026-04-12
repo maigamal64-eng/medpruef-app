@@ -20,7 +20,7 @@ export default function BottomNav({ lang, userId }: BottomNavProps) {
     if (key === "quiz") return pathname.startsWith("/quiz") || pathname.startsWith("/flashcards");
     if (key === "exam") return pathname.startsWith("/exam");
     if (key === "progress") return pathname.startsWith("/progress") || pathname.startsWith("/stats");
-    if (key === "profile") return pathname.startsWith("/profile") || pathname.startsWith("/settings");
+    if (key === "settings") return pathname.startsWith("/settings") || pathname.startsWith("/profile");
     return false;
   };
 
@@ -81,10 +81,10 @@ export default function BottomNav({ lang, userId }: BottomNavProps) {
             </span>
           </Link>
 
-          {/* Profile */}
-          <Link href="/profile" className={navItemClass("profile")}>
+          {/* Settings (was Profile) */}
+          <Link href="/settings" className={navItemClass("settings")}>
             <User className="w-5 h-5" />
-            <span className={`text-[10px] ${isActive("profile") ? "font-semibold text-[#007B5F]" : "font-medium"}`}>
+            <span className={`text-[10px] ${isActive("settings") ? "font-semibold text-[#007B5F]" : "font-medium"}`}>
               {t("profile", lang)}
             </span>
           </Link>
