@@ -291,20 +291,7 @@ export default function LoginPage() {
               {lang === "de" ? "Mit Telegram anmelden" : "Sign in with Telegram"}
             </a>
 
-            {/* Guest mode */}
-            <button
-              onClick={handleGuestContinue}
-              className="w-full flex items-center justify-center gap-2 border border-[#E4E9F0] hover:border-[#007B5F]/40 text-[#4A5568] px-5 py-3 rounded-xl font-medium text-sm transition-all active:scale-[0.98]"
-            >
-              <User className="w-4 h-4 flex-shrink-0" />
-              {lang === "de" ? "Als Gast fortfahren" : "Continue as Guest"}
-            </button>
-
-            <p className="text-center text-[10px] text-[#A0AEC0]/60">
-              {lang === "de"
-                ? "Gastmodus speichert Fortschritt lokal — kein Konto nötig"
-                : "Guest mode saves progress locally — no account needed"}
-            </p>
+            {/* Guest mode removed — all users must register to track progress */}
           </div>
 
           {/* Benefits */}

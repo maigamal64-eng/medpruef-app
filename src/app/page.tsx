@@ -33,6 +33,7 @@ import SearchModal from "@/components/SearchModal";
 import ThemeToggle from "@/components/ThemeToggle";
 import { getWeakTopics, type TopicStats } from "@/lib/weakness";
 import Link from "next/link";
+import WhatsNewModal from "@/components/WhatsNewModal";
 
 type Lang = "de" | "en";
 
@@ -855,6 +856,7 @@ export default function Home() {
 
 
       {/* Weakness toast — floating top-right, auto-dismiss */}
+      <WhatsNewModal />
       <WeaknessToast weakTopics={weakTopics} lang={lang} examSource={examSource} />
 
       <BottomNav lang={lang} userId={user.id} />

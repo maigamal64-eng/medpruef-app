@@ -6,6 +6,7 @@ import TrackerInit from "@/components/TrackerInit";
 import ThemeProvider from "@/components/ThemeProvider";
 import PWAInstall from "@/components/PWAInstall";
 import FeedbackWidget from "@/components/FeedbackWidget";
+import GuestMigrationBanner from "@/components/GuestMigrationBanner";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -153,6 +154,7 @@ export default function RootLayout({
         <ThemeProvider />
         <TrackerInit />
         <PWAInstall />
+        <GuestMigrationBanner />
         <FeedbackWidget />
         {children}
       </body>
