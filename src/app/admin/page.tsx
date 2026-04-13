@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Users, FileText, Activity, Settings, Sparkles,
   ChevronDown, Search, Edit3, Trash2, RotateCcw, Shield, Mail,
   Download, Filter, Eye, EyeOff, AlertTriangle, CheckCircle,
-  Clock, TrendingUp, Zap, BarChart3,
+  Clock, TrendingUp, Zap, BarChart3, MessageSquarePlus,
 } from "lucide-react";
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip,
@@ -17,7 +17,7 @@ import { CHANGELOG, type ChangelogEntry } from "@/lib/changelog";
 // TYPES
 // ═══════════════════════════════════════════════════════════════════════════
 
-type Section = "dashboard" | "users" | "questions" | "analytics" | "changelog" | "system";
+type Section = "dashboard" | "users" | "questions" | "analytics" | "feedback" | "changelog" | "system";
 
 interface OverviewData {
   totalUsers: number;
@@ -124,6 +124,7 @@ const NAV_ITEMS: { key: Section; label: string; icon: typeof LayoutDashboard }[]
   { key: "users", label: "Users", icon: Users },
   { key: "questions", label: "Questions", icon: FileText },
   { key: "analytics", label: "Analytics", icon: Activity },
+  { key: "feedback", label: "Feedback", icon: MessageSquarePlus },
   { key: "changelog", label: "Changelog", icon: Sparkles },
   { key: "system", label: "System", icon: Settings },
 ];
@@ -135,13 +136,13 @@ const NAV_ITEMS: { key: Section; label: string; icon: typeof LayoutDashboard }[]
 function formatDate(iso: string) {
   if (!iso) return "---";
   const d = new Date(iso);
-  return d.toLocaleDateString("de-DE", { day: "2-digit", month: "short", year: "numeric" });
+  return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 }
 
 function formatTime(iso: string) {
   if (!iso) return "---";
   const d = new Date(iso);
-  return d.toLocaleString("de-DE", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+  return d.toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
 }
 
 function timeAgo(iso: string) {
@@ -554,6 +555,7 @@ export default function AdminDashboard() {
                     baseline={newUsersBaseline}
                     onRefresh={fetchNewUsers}
                   />
+                  <ClarityCard />
                   <DashboardSection data={overview} totalQuestions={totalQuestionsInDB} explCoverage={explanationCoverage} />
                 </>
               )}
@@ -631,6 +633,7 @@ export default function AdminDashboard() {
                   onFilterChange={(f) => { setActivityFilter(f); fetchActivity(f || undefined); }}
                 />
               )}
+              {section === "feedback" && <FeedbackSection />}
               {section === "changelog" && <ChangelogSection />}
               {section === "system" && (
                 <SystemSection questionStats={questionStats} users={users} onRefreshStats={fetchQuestionStats} />
@@ -685,17 +688,17 @@ function NewUsersTracker({
 
   const sinceOpened = baseline !== null ? Math.max(0, data.total - baseline) : 0;
   const updated = new Date(data.generatedAt);
-  const updatedStr = updated.toLocaleTimeString("de-DE", {
+  const updatedStr = updated.toLocaleTimeString("en-GB", {
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
   });
 
   const stats: Array<{ label: string; value: number; tone: string }> = [
-    { label: "Letzte Stunde", value: data.lastHour, tone: "text-[#00A896]" },
-    { label: "Heute", value: data.today, tone: "text-[#007B5F]" },
-    { label: "7 Tage", value: data.lastSevenDays, tone: "text-[#003A8C]" },
-    { label: "30 Tage", value: data.lastThirtyDays, tone: "text-[#3A7CA5]" },
+    { label: "Last Hour", value: data.lastHour, tone: "text-[#00A896]" },
+    { label: "Today", value: data.today, tone: "text-[#007B5F]" },
+    { label: "7 Days", value: data.lastSevenDays, tone: "text-[#003A8C]" },
+    { label: "30 Days", value: data.lastThirtyDays, tone: "text-[#3A7CA5]" },
   ];
 
   return (
@@ -708,16 +711,16 @@ function NewUsersTracker({
               <span className="absolute inset-0 rounded-full bg-[#00A896]" />
             </div>
             <h3 className="text-base font-semibold text-[#1A2B3C] dark:text-[#E2E8F0]">
-              Live Registrierungen
+              Live Registrations
             </h3>
             {sinceOpened > 0 && (
               <span className="text-xs font-mono font-bold text-white bg-[#00A896] px-2 py-0.5 rounded-full animate-pulse">
-                +{sinceOpened} seit Öffnen
+                +{sinceOpened} since opened
               </span>
             )}
           </div>
           <p className="text-[11px] text-[#A0AEC0] font-mono">
-            {data.total.toLocaleString("de-DE")} Nutzer · aktualisiert {updatedStr}
+            {data.total.toLocaleString("en-GB")} users · updated {updatedStr}
           </p>
         </div>
         <button
@@ -778,7 +781,7 @@ function NewUsersTracker({
                     )}
                   </div>
                   <span className="text-[10px] text-[#A0AEC0] font-mono whitespace-nowrap ml-3">
-                    {ts.toLocaleString("de-DE", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+                    {ts.toLocaleString("en-GB", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
                   </span>
                 </div>
               );
@@ -1734,7 +1737,7 @@ function QuestionsSection({
                         </div>
                         <p className="text-sm text-[#1A2B3C] mb-0.5">Q#{s.question_id as number}: {(String(s.question_text || ""))?.slice(0, 100)}...</p>
                         <p className="text-xs text-[#A0AEC0]">
-                          By {String(s.user_name || "Anonymous")} · {String(s.question_topic || "")} · {new Date(String(s.created_at)).toLocaleDateString("de-DE")}
+                          By {String(s.user_name || "Anonymous")} · {String(s.question_topic || "")} · {new Date(String(s.created_at)).toLocaleDateString("en-GB")}
                         </p>
                         {s.details ? <p className="text-xs text-[#4A5568] mt-1 italic">&quot;{String(s.details)}&quot;</p> : null}
                       </div>
@@ -1784,6 +1787,178 @@ function QuestionsSection({
 
 // ═══════════════════════════════════════════════════════════════════════════
 // SECTION: ANALYTICS
+// ═══════════════════════════════════════════════════════════════════════════
+// CLARITY UX CARD
+// ═══════════════════════════════════════════════════════════════════════════
+
+function ClarityCard() {
+  const [data, setData] = useState<Record<string, unknown> | null>(null);
+  useEffect(() => {
+    fetch("/api/stats/admin/clarity")
+      .then(r => r.json())
+      .then(setData)
+      .catch(() => {});
+  }, []);
+
+  if (!data) return null;
+
+  const deadClicks = data.DeadClickCount as { percentage: number; count: string } | undefined;
+  const rageClicks = data.RageClickCount as { percentage: number; count: string } | undefined;
+  const scrollDepth = data.scrollDepth as number | undefined;
+  const totalSessions = data.totalSessions as string | undefined;
+  const popularPages = (data.popularPages || []) as Array<{ url: string; visitsCount: string }>;
+
+  return (
+    <div className="card rounded-2xl p-5 mb-6 border-l-4 border-l-[#8B5CF6]">
+      <div className="flex items-center gap-2 mb-4">
+        <Eye className="w-4 h-4 text-[#8B5CF6]" />
+        <h3 className="text-sm font-bold text-[#1A2B3C]">Clarity UX Insights</h3>
+        <span className="text-[10px] text-[#A0AEC0] ml-auto">{totalSessions || "—"} sessions</span>
+      </div>
+      <div className="grid grid-cols-3 gap-3 mb-4">
+        <div className="bg-[#F7F9FC] rounded-xl p-3 text-center">
+          <p className="text-lg font-bold text-[#D64545] font-mono">{deadClicks?.percentage || 0}%</p>
+          <p className="text-[10px] text-[#A0AEC0]">Dead Clicks</p>
+        </div>
+        <div className="bg-[#F7F9FC] rounded-xl p-3 text-center">
+          <p className="text-lg font-bold text-[#F4A261] font-mono">{rageClicks?.percentage || 0}%</p>
+          <p className="text-[10px] text-[#A0AEC0]">Rage Clicks</p>
+        </div>
+        <div className="bg-[#F7F9FC] rounded-xl p-3 text-center">
+          <p className="text-lg font-bold text-[#00A896] font-mono">{scrollDepth ? Math.round(scrollDepth) : 0}%</p>
+          <p className="text-[10px] text-[#A0AEC0]">Avg Scroll Depth</p>
+        </div>
+      </div>
+      {popularPages.length > 0 && (
+        <div>
+          <p className="text-[10px] uppercase tracking-wider text-[#A0AEC0] font-semibold mb-2">Top Pages</p>
+          <div className="space-y-1">
+            {popularPages.slice(0, 5).map((p, i) => (
+              <div key={i} className="flex items-center justify-between text-xs">
+                <span className="text-[#4A5568] truncate">{p.url.replace('https://medpruf.com', '')}</span>
+                <span className="text-[#A0AEC0] font-mono ml-2 flex-shrink-0">{p.visitsCount}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// FEEDBACK SECTION
+// ═══════════════════════════════════════════════════════════════════════════
+
+interface FeedbackItem {
+  id: number;
+  user_id: string | null;
+  message: string;
+  context: Record<string, unknown>;
+  status: string;
+  admin_note: string | null;
+  created_at: string;
+}
+
+function FeedbackSection() {
+  const [items, setItems] = useState<FeedbackItem[]>([]);
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [loading, setLoading] = useState(true);
+
+  const fetchFeedback = useCallback(async (status = "all") => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/feedback?status=${status}&limit=100`);
+      if (res.ok) setItems(await res.json());
+    } catch {} finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { fetchFeedback(statusFilter); }, [fetchFeedback, statusFilter]);
+
+  const updateStatus = async (id: number, status: string, note?: string) => {
+    await fetch("/api/feedback", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, status, admin_note: note }),
+    });
+    fetchFeedback(statusFilter);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-bold">User Feedback</h3>
+        <div className="flex gap-2">
+          {["all", "new", "reviewed", "resolved", "dismissed"].map(s => (
+            <button key={s} onClick={() => setStatusFilter(s)}
+              className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors ${
+                statusFilter === s
+                  ? "bg-[#003A8C] text-white"
+                  : "bg-[#F7F9FC] text-[#4A5568] hover:bg-[#E4E9F0]"
+              }`}
+            >{s === "all" ? "All" : s.charAt(0).toUpperCase() + s.slice(1)}</button>
+          ))}
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="text-center py-8 text-[#A0AEC0]">Loading...</div>
+      ) : items.length === 0 ? (
+        <div className="text-center py-8 text-[#A0AEC0]">
+          {statusFilter === "new" ? "No new feedback 🎉" : "No feedback matching this filter"}
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {items.map(item => (
+            <div key={item.id} className="card rounded-xl p-4 border-l-4 border-l-[#003A8C]">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-[#1A2B3C] whitespace-pre-wrap mb-2">{item.message}</p>
+                  <div className="flex flex-wrap gap-2 text-[10px] text-[#A0AEC0]">
+                    <span>{new Date(item.created_at).toLocaleString("en-GB")}</span>
+                    {item.user_id && <span>User: {item.user_id.slice(0, 8)}...</span>}
+                    {!item.user_id && <span className="text-[#D64545]">Anonymous</span>}
+                    {item.context?.pathname ? <span>Page: {String(item.context.pathname)}</span> : null}
+                    {item.context?.examType ? <span>Exam: {String(item.context.examType)}</span> : null}
+                    {item.context?.screenSize ? <span>Screen: {String(item.context.screenSize)}</span> : null}
+                  </div>
+                  {item.admin_note && (
+                    <p className="text-xs text-[#007B5F] mt-2 italic">Note: {item.admin_note}</p>
+                  )}
+                </div>
+                <div className="flex flex-col gap-1 flex-shrink-0">
+                  <span className={`text-[9px] px-2 py-0.5 rounded font-semibold ${
+                    item.status === "new" ? "bg-[#D64545]/15 text-[#D64545]" :
+                    item.status === "reviewed" ? "bg-[#F4A261]/15 text-[#F4A261]" :
+                    item.status === "resolved" ? "bg-[#00A896]/15 text-[#00A896]" :
+                    "bg-[#A0AEC0]/15 text-[#A0AEC0]"
+                  }`}>{item.status}</span>
+                  {item.status === "new" && (
+                    <>
+                      <button onClick={() => updateStatus(item.id, "reviewed")}
+                        className="text-[9px] px-2 py-1 bg-[#F4A261]/10 text-[#F4A261] rounded hover:bg-[#F4A261]/20">
+                        Mark Reviewed
+                      </button>
+                      <button onClick={() => updateStatus(item.id, "resolved")}
+                        className="text-[9px] px-2 py-1 bg-[#00A896]/10 text-[#00A896] rounded hover:bg-[#00A896]/20">
+                        Resolve
+                      </button>
+                      <button onClick={() => updateStatus(item.id, "dismissed")}
+                        className="text-[9px] px-2 py-1 bg-[#A0AEC0]/10 text-[#A0AEC0] rounded hover:bg-[#A0AEC0]/20">
+                        Dismiss
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 
 function AnalyticsSection({
