@@ -614,7 +614,7 @@ export default function Home() {
                   </p>
                 </div>
                 <Link
-                  href={`/quiz?topic=${encodeURIComponent(weakTopics[0]?.topic || 'random')}&userId=${user.id}&examSource=${examSource}`}
+                  href={`/quiz?topic=${encodeURIComponent(weakTopics[0]?.topic || 'random')}&userId=${user.id}&examSource=${examSource}&autoStart=1`}
                   className="btn-primary text-sm px-5 py-2.5 shrink-0 font-bold"
                 >
                   {lang === "de" ? "Jetzt verbessern" : "Fix now"}
@@ -628,9 +628,9 @@ export default function Home() {
             {/* Primary: Continue */}
             <Link
               href={weakTopics.length > 0
-                ? `/quiz?topic=${encodeURIComponent(weakTopics[0]?.topic || 'random')}&userId=${user.id}&examSource=${examSource}`
+                ? `/quiz?topic=${encodeURIComponent(weakTopics[0]?.topic || 'random')}&userId=${user.id}&examSource=${examSource}&autoStart=1`
                 : topics.length > 0
-                  ? `/quiz?topic=${encodeURIComponent(topics[0].topic)}&userId=${user.id}&examSource=${examSource}`
+                  ? `/quiz?topic=${encodeURIComponent(topics[0].topic)}&userId=${user.id}&examSource=${examSource}&autoStart=1`
                   : "#"}
               className="btn-primary flex items-center justify-center gap-2.5 py-4 text-base rounded-2xl shadow-md active:scale-[0.98] transition-transform"
             >
@@ -676,7 +676,7 @@ export default function Home() {
               </div>
             </Link>
             <Link
-              href={`/quiz?topic=random&userId=${user.id}&examSource=${examSource}&practiceMode=wrong`}
+              href={`/quiz?topic=random&userId=${user.id}&examSource=${examSource}&practiceMode=wrong&autoStart=1`}
               className="card-interactive rounded-xl p-4 flex items-center gap-3 group"
             >
               <AlertCircle className="w-5 h-5 text-[#D64545]" />

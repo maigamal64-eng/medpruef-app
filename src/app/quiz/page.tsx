@@ -56,6 +56,7 @@ function QuizContent() {
   const initialQuestionId = searchParams.get("questionId");
   const examSource = searchParams.get("examSource") || "kenntnispruefung";
   const practiceMode = searchParams.get("practiceMode") || "all";
+  const autoStart = searchParams.get("autoStart") === "1";
 
   const [userId, setUserId] = useState<string>("");
   const [lang, setLangState] = useState<Lang>("de");
@@ -98,25 +99,26 @@ function QuizContent() {
   // vs manually configured via the QuizSetup screen
   const [autoStarted, setAutoStarted] = useState(false);
 
-  // Auto-skip setup when arriving with a topic or questionId in the URL.
-  // This is the "instant practice" flow: clicking "Continue" on the home page
-  // or a topic card should start quizzing immediately, not show the config page.
-  // Uses a high targetCount so the user practices until they choose to stop.
+  // Auto-skip setup ONLY when:
+  // 1. Deep-link with a specific questionId (from search results)
+  // 2. Explicit autoStart=1 param (from "Continue" button or "Review Mistakes")
+  // All other links (topic cards, "Random Quiz") show the config screen
+  // with the topic pre-selected so users can customize count/filters.
   useEffect(() => {
-    if (config) return; // already configured
-    if (initialQuestionId || initialTopic) {
+    if (config) return;
+    if (initialQuestionId || autoStart) {
       setAutoStarted(true);
       setConfig({
         topics: initialTopic && initialTopic !== "random" ? [initialTopic] : [],
         tags: [],
-        targetCount: 9999, // practice until user leaves — no artificial cap
+        targetCount: 9999,
         timeLimitMin: null,
         examDateFrom: null,
         examDateTo: null,
         examSource,
       });
     }
-  }, [initialQuestionId, initialTopic, config, examSource]);
+  }, [initialQuestionId, autoStart, initialTopic, config, examSource]);
 
   // Once config exists, fetch total available pool size for the milestone card
   useEffect(() => {
