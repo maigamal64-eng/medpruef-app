@@ -94,5 +94,12 @@ export async function POST(req: NextRequest) {
     last_active_date: today,
   }).eq('id', userId)
 
-  return NextResponse.json({ xp, totalXp: (gam?.total_xp || 0) + xp })
+  // Return updated gamification snapshot so the client can refresh localStorage
+  const { data: updatedGam } = await sb.from('user_gamification').select('*').eq('user_id', userId).single()
+
+  return NextResponse.json({
+    xp,
+    totalXp: updatedGam?.total_xp || (gam?.total_xp || 0) + xp,
+    gamification: updatedGam || null,
+  })
 }

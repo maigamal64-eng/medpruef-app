@@ -843,11 +843,16 @@ export default function QuestionCard({
                           if (!flagReason) return;
                           setSuggestionLoading(true);
                           try {
+                            // Capture userId from session for attribution
+                            const sess = typeof window !== 'undefined'
+                              ? JSON.parse(localStorage.getItem('medpruef_session') || '{}')
+                              : {};
                             await fetch("/api/suggestions", {
                               method: "POST",
                               headers: { "Content-Type": "application/json" },
                               body: JSON.stringify({
                                 questionId: question.id,
+                                userId: sess?.user?.id || null,
                                 type: "flag",
                                 reason: flagReason,
                                 details: flagDetails || null,
@@ -917,11 +922,15 @@ export default function QuestionCard({
                           if (Object.keys(changes).length === 0 && !flagDetails) return;
                           setSuggestionLoading(true);
                           try {
+                            const editSess = typeof window !== 'undefined'
+                              ? JSON.parse(localStorage.getItem('medpruef_session') || '{}')
+                              : {};
                             await fetch("/api/suggestions", {
                               method: "POST",
                               headers: { "Content-Type": "application/json" },
                               body: JSON.stringify({
                                 questionId: question.id,
+                                userId: editSess?.user?.id || null,
                                 type: "edit",
                                 details: flagDetails || null,
                                 suggestedChanges: Object.keys(changes).length > 0 ? changes : null,

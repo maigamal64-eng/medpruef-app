@@ -31,6 +31,25 @@ export async function POST(req: NextRequest) {
   }
 }
 
+/** PATCH — Admin: update feedback status + add note */
+export async function PATCH(req: NextRequest) {
+  try {
+    const { id, status, admin_note } = await req.json()
+    if (!id || !status) {
+      return NextResponse.json({ error: 'id and status required' }, { status: 400 })
+    }
+    const sb = getServiceClient()
+    const update: Record<string, unknown> = { status }
+    if (admin_note !== undefined) update.admin_note = admin_note
+    const { error } = await sb.from('user_feedback').update(update).eq('id', id)
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ ok: true })
+  } catch (err) {
+    console.error('[feedback PATCH]', err)
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 })
+  }
+}
+
 /** GET — Admin: list feedback (newest first) */
 export async function GET(req: NextRequest) {
   try {

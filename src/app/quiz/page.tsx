@@ -301,6 +301,16 @@ function QuizContent() {
         setTotalXpSession((p) => p + (data.xp || 0));
         setShowXpFloat(true);
         setTimeout(() => setShowXpFloat(false), 1500);
+        // Update stored session with fresh gamification so home page reflects changes
+        if (data.gamification) {
+          try {
+            const sess = JSON.parse(localStorage.getItem('medpruef_session') || '{}');
+            if (sess.gamification) {
+              sess.gamification = data.gamification;
+              localStorage.setItem('medpruef_session', JSON.stringify(sess));
+            }
+          } catch {} // non-critical
+        }
       } catch (e) {
         console.error(e);
       }

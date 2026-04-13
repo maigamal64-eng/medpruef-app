@@ -257,6 +257,24 @@ export default function Home() {
     authenticate();
   }, [authenticate]);
 
+  // Refresh gamification data when returning from a quiz (page becomes visible again)
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && user?.id && !user.id.startsWith('guest_')) {
+        fetch(`/api/auth`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ emailLogin: { email: '', password: '' } }), // dummy — we just need to re-fetch
+        }).catch(() => {}); // non-critical
+        // Simpler: just re-read the stored session (which the answer API updates)
+        const stored = getStoredSession();
+        if (stored?.gamification) setGam(stored.gamification);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [user?.id]);
+
   // Fetch server-side per-topic progress once user and examSource are known
   const [topicProgress, setTopicProgress] = useState<Record<string, { answered: number; correct: number; wrong: number; accuracy: number }>>({});
   useEffect(() => {
