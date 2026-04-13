@@ -257,9 +257,32 @@ export default function Home() {
     authenticate();
   }, [authenticate]);
 
+  // Fetch server-side per-topic progress once user and examSource are known
+  const [topicProgress, setTopicProgress] = useState<Record<string, { answered: number; correct: number; wrong: number; accuracy: number }>>({});
   useEffect(() => {
-    setWeakTopics(getWeakTopics());
-  }, []);
+    if (!user?.id || user.id.startsWith('guest_')) {
+      // For guests, fall back to localStorage weakness detection
+      setWeakTopics(getWeakTopics());
+      return;
+    }
+    fetch(`/api/user/topic-progress?userId=${user.id}&examType=${examSource}`)
+      .then(r => r.json())
+      .then((data: Array<{ topic: string; answered: number; correct: number; wrong: number; accuracy: number }>) => {
+        const map: typeof topicProgress = {};
+        const weak: TopicStats[] = [];
+        for (const tp of data) {
+          map[tp.topic] = { answered: tp.answered, correct: tp.correct, wrong: tp.wrong, accuracy: tp.accuracy };
+          if (tp.answered > 0) {
+            weak.push({ topic: tp.topic, correct: tp.correct, total: tp.answered, accuracy: tp.accuracy });
+          }
+        }
+        setTopicProgress(map);
+        setWeakTopics(weak.filter(w => w.accuracy < 80).sort((a, b) => a.accuracy - b.accuracy));
+      })
+      .catch(() => {
+        setWeakTopics(getWeakTopics());
+      });
+  }, [user?.id, examSource]);
 
   // Load profile data (exam target date) from localStorage
   useEffect(() => {
@@ -653,7 +676,7 @@ export default function Home() {
               </div>
             </Link>
             <Link
-              href={`/quiz?topic=random&userId=${user.id}&examSource=${examSource}&tag=wrong`}
+              href={`/quiz?topic=random&userId=${user.id}&examSource=${examSource}&practiceMode=wrong`}
               className="card-interactive rounded-xl p-4 flex items-center gap-3 group"
             >
               <AlertCircle className="w-5 h-5 text-[#D64545]" />
@@ -738,8 +761,8 @@ export default function Home() {
                           lang={lang}
                           delay={i * 50}
                           examSource={examSource}
-                          accuracy={weakTopics.find(w => w.topic === tp.topic)?.accuracy}
-                          answered={weakTopics.find(w => w.topic === tp.topic)?.total}
+                          accuracy={topicProgress[tp.topic]?.accuracy}
+                          answered={topicProgress[tp.topic]?.answered}
                         />
                       ))}
                   </div>
@@ -760,8 +783,8 @@ export default function Home() {
                           lang={lang}
                           delay={i * 50}
                           examSource={examSource}
-                          accuracy={weakTopics.find(w => w.topic === tp.topic)?.accuracy}
-                          answered={weakTopics.find(w => w.topic === tp.topic)?.total}
+                          accuracy={topicProgress[tp.topic]?.accuracy}
+                          answered={topicProgress[tp.topic]?.answered}
                         />
                       ))}
                   </div>

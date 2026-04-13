@@ -33,7 +33,7 @@ interface Question {
   image_url?: string;
 }
 
-function buildQueryParams(config: QuizConfig, userId: string, excludeIds?: number[]): URLSearchParams {
+function buildQueryParams(config: QuizConfig, userId: string, excludeIds?: number[], practiceMode?: string): URLSearchParams {
   const p = new URLSearchParams({ limit: "1", examSource: config.examSource });
   if (userId) p.set("userId", userId);
   if (config.topics.length === 1) p.set("topic", config.topics[0]);
@@ -41,9 +41,11 @@ function buildQueryParams(config: QuizConfig, userId: string, excludeIds?: numbe
   if (config.tags.length > 0) p.set("tags", config.tags.join(","));
   if (config.examDateFrom) p.set("examDateFrom", config.examDateFrom);
   if (config.examDateTo) p.set("examDateTo", config.examDateTo);
-  // Exclude already-seen questions to prevent repeats within a session
   if (excludeIds && excludeIds.length > 0) {
     p.set("excludeIds", excludeIds.join(","));
+  }
+  if (practiceMode && practiceMode !== "all") {
+    p.set("practiceMode", practiceMode);
   }
   return p;
 }
@@ -53,6 +55,7 @@ function QuizContent() {
   const initialTopic = searchParams.get("topic");
   const initialQuestionId = searchParams.get("questionId");
   const examSource = searchParams.get("examSource") || "kenntnispruefung";
+  const practiceMode = searchParams.get("practiceMode") || "all";
 
   const [userId, setUserId] = useState<string>("");
   const [lang, setLangState] = useState<Lang>("de");
@@ -141,7 +144,7 @@ function QuizContent() {
   const fetchQuestion = useCallback(async (): Promise<Question | null> => {
     if (!config) return null;
     try {
-      const params = buildQueryParams(config, userId, seenIdsRef.current);
+      const params = buildQueryParams(config, userId, seenIdsRef.current, practiceMode);
       const res = await fetch(`/api/questions?${params}`);
       const data = await res.json();
       if (Array.isArray(data) && data.length > 0) {

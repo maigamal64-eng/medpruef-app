@@ -34,6 +34,10 @@ interface FilterParams {
   excludeIds: number[]
   examDateFrom: string | null
   examDateTo: string | null
+  /** Practice mode: 'unseen' = exclude already-answered, 'wrong' = only wrong answers, 'review' = spaced-rep due */
+  practiceMode: 'all' | 'unseen' | 'wrong' | 'review'
+  /** Filter by exam year — matches questions whose exam_dates array contains this year prefix */
+  examYear: string | null
 }
 
 /**
@@ -125,6 +129,14 @@ function applyFilters(query: any, p: FilterParams) {
     const safe = p.search.replace(/[,%]/g, ' ')
     query = query.or(`question.ilike.%${safe}%,answer.ilike.%${safe}%`)
   }
+  // Exam year filter — matches questions whose exam_dates array contains any YYYY-MM starting with this year
+  if (p.examYear && /^\d{4}$/.test(p.examYear)) {
+    // Generate all 12 months for the year and check overlap
+    const yearMonths = Array.from({ length: 12 }, (_, i) =>
+      `${p.examYear}-${String(i + 1).padStart(2, '0')}`)
+    yearMonths.push(p.examYear!) // also match bare "YYYY" entries
+    query = query.overlaps('exam_dates', yearMonths)
+  }
   return query
 }
 
@@ -153,6 +165,8 @@ export async function GET(req: NextRequest) {
     excludeIds: parseIdsCsv(sp.get('excludeIds')),
     examDateFrom: sp.get('examDateFrom'),
     examDateTo: sp.get('examDateTo'),
+    practiceMode: (sp.get('practiceMode') as 'all' | 'unseen' | 'wrong' | 'review') || 'all',
+    examYear: sp.get('examYear'),
   }
 
   // Helper: apply mcqOnly filter (questions must have structured choices JSONB, not null)
@@ -189,6 +203,41 @@ export async function GET(req: NextRequest) {
     const { data, error } = await query.limit(Math.min(limit, 30))
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json(attachOptions(data || []))
+  }
+
+  // ── Practice mode: unseen / wrong ──
+  // These modes query answer_history to build inclusion/exclusion lists,
+  // then fall through to the normal random-fetch below.
+  if (filters.practiceMode !== 'all' && userId && !userId.startsWith('guest_')) {
+    if (filters.practiceMode === 'wrong') {
+      // Fetch question IDs the user answered incorrectly (ever)
+      const { data: wrongRows } = await sb
+        .from('answer_history')
+        .select('question_id')
+        .eq('user_id', userId)
+        .eq('is_correct', false)
+        .limit(5000)
+      if (wrongRows && wrongRows.length > 0) {
+        const wrongIds = [...new Set(wrongRows.map(r => r.question_id))]
+        // Override filters to only include these IDs
+        filters.ids = wrongIds
+      } else {
+        return NextResponse.json([]) // no wrong answers yet
+      }
+    } else if (filters.practiceMode === 'unseen') {
+      // Fetch question IDs the user has already answered (any result)
+      const { data: seenRows } = await sb
+        .from('answer_history')
+        .select('question_id')
+        .eq('user_id', userId)
+        .limit(50000)
+      if (seenRows && seenRows.length > 0) {
+        const seenIds = [...new Set(seenRows.map(r => r.question_id))]
+        // Add to excludeIds so only unseen questions are returned
+        filters.excludeIds = [...filters.excludeIds, ...seenIds]
+      }
+    }
+    // Fall through to normal fetch with the updated filters
   }
 
   // If real user (not guest), prioritize spaced-repetition review questions
