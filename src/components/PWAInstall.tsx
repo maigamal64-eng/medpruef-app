@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Download, X } from "lucide-react";
+import { Download, X, RefreshCw } from "lucide-react";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
@@ -8,32 +8,103 @@ interface BeforeInstallPromptEvent extends Event {
 }
 
 /**
- * Registers the service worker on mount and shows an "Install App" banner
- * when the browser supports PWA installation.
+ * Registers the service worker on mount, detects new versions, and shows
+ * an "Install App" banner when the browser supports PWA installation.
+ *
+ * SW update flow (fixes the stale-JS-after-deploy bug):
+ *  1. On load, register /sw.js and check for updates every 60s.
+ *  2. When a new worker is found, show a "Update available" banner.
+ *  3. User clicks Update → post SKIP_WAITING → controllerchange → reload.
+ *  4. As a safety net, hard-reload automatically if controllerchange fires
+ *     while the tab is hidden (user comes back to a fresh build).
  */
 export default function PWAInstall() {
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showBanner, setShowBanner] = useState(false);
   const [dismissed, setDismissed] = useState(false);
+  const [waitingWorker, setWaitingWorker] = useState<ServiceWorker | null>(null);
+  const [updateAvailable, setUpdateAvailable] = useState(false);
 
   useEffect(() => {
-    // Register service worker
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/sw.js").catch(() => {});
-    }
+    if (!("serviceWorker" in navigator)) return;
+
+    let refreshing = false;
+    const reloadOnControllerChange = () => {
+      if (refreshing) return;
+      refreshing = true;
+      window.location.reload();
+    };
+    navigator.serviceWorker.addEventListener("controllerchange", reloadOnControllerChange);
+
+    // Listen for SW_UPDATED broadcast from activate handler
+    const onMessage = (event: MessageEvent) => {
+      if (event.data?.type === "SW_UPDATED") {
+        // Silent hard reload — background tabs reload immediately,
+        // foreground tabs show the update banner first via updatefound flow.
+        if (document.visibilityState === "hidden") {
+          window.location.reload();
+        }
+      }
+    };
+    navigator.serviceWorker.addEventListener("message", onMessage);
+
+    navigator.serviceWorker
+      .register("/sw.js")
+      .then((registration) => {
+        // If a worker is already waiting (from a prior session), surface it immediately.
+        if (registration.waiting) {
+          setWaitingWorker(registration.waiting);
+          setUpdateAvailable(true);
+        }
+
+        // New worker found — wait until installed, then prompt the user.
+        registration.addEventListener("updatefound", () => {
+          const newWorker = registration.installing;
+          if (!newWorker) return;
+          newWorker.addEventListener("statechange", () => {
+            if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
+              setWaitingWorker(newWorker);
+              setUpdateAvailable(true);
+            }
+          });
+        });
+
+        // Poll for updates every 60s and on tab focus — catches deploys
+        // without requiring the user to reload manually.
+        const checkForUpdate = () => registration.update().catch(() => {});
+        const interval = setInterval(checkForUpdate, 60_000);
+        window.addEventListener("focus", checkForUpdate);
+        return () => {
+          clearInterval(interval);
+          window.removeEventListener("focus", checkForUpdate);
+        };
+      })
+      .catch(() => {});
 
     // Capture the install prompt
     const handler = (e: Event) => {
       e.preventDefault();
       setInstallPrompt(e as BeforeInstallPromptEvent);
-      // Don't show if user previously dismissed
       if (!localStorage.getItem("medpruef_pwa_dismissed")) {
         setShowBanner(true);
       }
     };
     window.addEventListener("beforeinstallprompt", handler);
-    return () => window.removeEventListener("beforeinstallprompt", handler);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handler);
+      navigator.serviceWorker.removeEventListener("controllerchange", reloadOnControllerChange);
+      navigator.serviceWorker.removeEventListener("message", onMessage);
+    };
   }, []);
+
+  const handleUpdate = () => {
+    if (waitingWorker) {
+      waitingWorker.postMessage({ type: "SKIP_WAITING" });
+    } else {
+      // Fallback: just hard-reload
+      window.location.reload();
+    }
+  };
 
   const handleInstall = async () => {
     if (!installPrompt) return;
@@ -50,6 +121,31 @@ export default function PWAInstall() {
     setDismissed(true);
     localStorage.setItem("medpruef_pwa_dismissed", "1");
   };
+
+  // Update banner takes priority over install banner
+  if (updateAvailable) {
+    return (
+      <div className="fixed bottom-20 left-4 right-4 md:left-auto md:right-6 md:bottom-6 md:w-80 z-50 animate-slide-up">
+        <div className="card rounded-2xl p-4 shadow-[var(--shadow-elevated)] border border-[#003A8C]/25 bg-white">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#003A8C]/10 flex items-center justify-center flex-shrink-0">
+              <RefreshCw className="w-5 h-5 text-[#003A8C]" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-[#1A2B3C] mb-0.5">New version available</p>
+              <p className="text-xs text-[#A0AEC0] mb-3">Reload to get the latest questions and fixes.</p>
+              <button
+                onClick={handleUpdate}
+                className="btn-primary text-xs px-3 py-1.5 flex items-center gap-1.5"
+              >
+                <RefreshCw className="w-3 h-3" /> Reload now
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!showBanner || dismissed) return null;
 

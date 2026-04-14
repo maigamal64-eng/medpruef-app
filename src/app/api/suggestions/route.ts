@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
   try {
     const db = getServiceClient();
     const body = await req.json();
-    const { questionId, userId, type, reason, details, suggestedChanges } = body;
+    const { questionId, userId, type, reason, details, suggestedChanges, context } = body;
 
     if (!questionId || !type) {
       return NextResponse.json({ error: "questionId and type required" }, { status: 400 });
@@ -17,15 +17,29 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "type must be 'flag' or 'edit'" }, { status: 400 });
     }
 
+    // Validate userId — guest IDs ("guest_1234567890") are not UUIDs and would fail the uuid column
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const validUserId = userId && uuidRegex.test(userId) ? userId : null;
+
+    // Enrich context with server-side data
+    const enrichedContext = {
+      ...(context || {}),
+      ip: req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null,
+      server_user_agent: req.headers.get("user-agent") || null,
+      guest_id: (!validUserId && userId) ? userId : null, // preserve raw guest_* ID for triage
+      submitted_at: new Date().toISOString(),
+    };
+
     const { data, error } = await db
       .from("question_suggestions")
       .insert({
         question_id: questionId,
-        user_id: userId || null,
+        user_id: validUserId,
         type,
         reason: reason || null,
         details: details || null,
         suggested_changes: suggestedChanges || null,
+        context: enrichedContext,
         status: "pending",
       })
       .select("id")

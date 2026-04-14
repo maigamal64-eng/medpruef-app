@@ -1740,6 +1740,30 @@ function QuestionsSection({
                           By {String(s.user_name || "Anonymous")} · {String(s.question_topic || "")} · {new Date(String(s.created_at)).toLocaleDateString("en-GB")}
                         </p>
                         {s.details ? <p className="text-xs text-[#4A5568] mt-1 italic">&quot;{String(s.details)}&quot;</p> : null}
+                        {(() => {
+                          const ctx = s.context as Record<string, unknown> | null;
+                          if (!ctx) return null;
+                          const url = ctx.url as string | undefined;
+                          const examType = ctx.exam_type as string | undefined;
+                          const ua = ctx.user_agent as string | undefined;
+                          const viewport = ctx.viewport as string | undefined;
+                          const guestId = ctx.guest_id as string | undefined;
+                          const sessionName = ctx.session_first_name as string | undefined;
+                          const ip = ctx.ip as string | undefined;
+                          const buildId = ctx.build_id as string | undefined;
+                          return (
+                            <div className="mt-2 flex flex-wrap gap-1 text-[10px]">
+                              {sessionName && <span className="bg-[#007B5F]/10 text-[#007B5F] px-1.5 py-0.5 rounded">{sessionName}</span>}
+                              {guestId && <span className="bg-[#F4A261]/10 text-[#F4A261] px-1.5 py-0.5 rounded">guest: {guestId.slice(0, 18)}</span>}
+                              {examType && <span className="bg-[#003A8C]/10 text-[#003A8C] px-1.5 py-0.5 rounded">{examType}</span>}
+                              {url && <span className="bg-[#F7F9FC] text-[#4A5568] px-1.5 py-0.5 rounded border border-[#E4E9F0] truncate max-w-[220px]" title={url}>{new URL(url).pathname}</span>}
+                              {viewport && <span className="bg-[#F7F9FC] text-[#A0AEC0] px-1.5 py-0.5 rounded border border-[#E4E9F0]">{viewport}</span>}
+                              {ip && <span className="bg-[#F7F9FC] text-[#A0AEC0] px-1.5 py-0.5 rounded border border-[#E4E9F0]">{ip}</span>}
+                              {buildId && <span className="bg-[#F7F9FC] text-[#A0AEC0] px-1.5 py-0.5 rounded border border-[#E4E9F0]" title={buildId}>build: {buildId.slice(0, 7)}</span>}
+                              {ua && <span className="bg-[#F7F9FC] text-[#A0AEC0] px-1.5 py-0.5 rounded border border-[#E4E9F0] truncate max-w-[260px]" title={ua}>{(ua.match(/\(([^)]+)\)/)?.[1] || ua).slice(0, 40)}</span>}
+                            </div>
+                          );
+                        })()}
                       </div>
 
                       {/* Actions */}

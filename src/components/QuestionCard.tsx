@@ -6,6 +6,7 @@ import { t } from "@/lib/i18n";
 import type { MCQOption } from "@/lib/mcq";
 import ImageLightbox from "@/components/ImageLightbox";
 import { trackEvent } from "@/lib/tracker";
+import { captureClientContext } from "@/lib/clientContext";
 import TopicIcon from "@/components/TopicIcon";
 import { cleanExplanation } from "@/lib/explanation";
 import { Lightbulb, FileText, Highlighter, Bot, Flag, CheckCircle2, Edit3, AlertTriangle, X, ThumbsUp, ThumbsDown } from "lucide-react";
@@ -843,19 +844,18 @@ export default function QuestionCard({
                           if (!flagReason) return;
                           setSuggestionLoading(true);
                           try {
-                            // Capture userId from session for attribution
-                            const sess = typeof window !== 'undefined'
-                              ? JSON.parse(localStorage.getItem('medpruef_session') || '{}')
-                              : {};
+                            // Capture userId + full client context for attribution/triage
+                            const ctx = captureClientContext({ question_id: question.id });
                             await fetch("/api/suggestions", {
                               method: "POST",
                               headers: { "Content-Type": "application/json" },
                               body: JSON.stringify({
                                 questionId: question.id,
-                                userId: sess?.user?.id || null,
+                                userId: ctx.session_user_id,
                                 type: "flag",
                                 reason: flagReason,
                                 details: flagDetails || null,
+                                context: ctx,
                               }),
                             });
                             setSuggestionSubmitted(true);
@@ -922,18 +922,17 @@ export default function QuestionCard({
                           if (Object.keys(changes).length === 0 && !flagDetails) return;
                           setSuggestionLoading(true);
                           try {
-                            const editSess = typeof window !== 'undefined'
-                              ? JSON.parse(localStorage.getItem('medpruef_session') || '{}')
-                              : {};
+                            const editCtx = captureClientContext({ question_id: question.id });
                             await fetch("/api/suggestions", {
                               method: "POST",
                               headers: { "Content-Type": "application/json" },
                               body: JSON.stringify({
                                 questionId: question.id,
-                                userId: editSess?.user?.id || null,
+                                userId: editCtx.session_user_id,
                                 type: "edit",
                                 details: flagDetails || null,
                                 suggestedChanges: Object.keys(changes).length > 0 ? changes : null,
+                                context: editCtx,
                               }),
                             });
                             setSuggestionSubmitted(true);

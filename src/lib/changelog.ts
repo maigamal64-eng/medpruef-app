@@ -25,6 +25,42 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ═══ 2026-04-14 ═══
   {
     date: "2026-04-14",
+    tag: "improvement",
+    title: {
+      de: "Automatische Updates: Neue Versionen ohne Neuladen",
+      en: "Automatic updates: new versions without manual reload",
+    },
+    description: {
+      de: 'Die App erkennt jetzt automatisch, wenn eine neue Version bereitsteht. Du siehst eine "Neue Version verfügbar"-Anzeige und kannst mit einem Klick neu laden. Der Cache wird bei jedem Deploy automatisch geleert – keine hängenden alten Versionen mehr.',
+      en: `The app now automatically detects when a new version is available. You'll see a "New version available" prompt and can reload with one click. The cache is purged automatically on every deploy — no more stale old versions.`,
+    },
+  },
+  {
+    date: "2026-04-14",
+    tag: "admin",
+    title: {
+      de: "Fragen-Meldungen erfassen jetzt vollständigen Kontext",
+      en: "Question reports now capture full context",
+    },
+    description: {
+      de: "Bei jeder gemeldeten Frage werden jetzt URL, Prüfungstyp, Gerät und Browser mitgespeichert – auch bei anonymen und Gast-Nutzern. Dadurch kann jede Meldung zuverlässig nachverfolgt werden.",
+      en: "Every question report now captures URL, exam type, device, and browser — even for anonymous and guest users. This makes every report traceable and triageable.",
+    },
+  },
+  {
+    date: "2026-04-14",
+    tag: "admin",
+    title: {
+      de: "152 unvollständige Vienna-2026-Fragen ergänzt",
+      en: "152 incomplete Vienna 2026 questions completed",
+    },
+    description: {
+      de: "Beim Import der Vienna-2026-Prüfungen wurden bei 152 Fragen nicht alle Antwortoptionen korrekt extrahiert. Die fehlenden Distraktoren wurden für alle betroffenen Fragen ergänzt. Jetzt haben wieder alle Fragen 5 vollständige Antwortoptionen.",
+      en: "During the Vienna 2026 exam import, 152 questions had missing answer options. The missing distractors have been added for every affected question. All questions once again have 5 complete answer options.",
+    },
+  },
+  {
+    date: "2026-04-14",
     tag: "admin",
     title: {
       de: "9 gemeldete Fragen überprüft und korrigiert",
