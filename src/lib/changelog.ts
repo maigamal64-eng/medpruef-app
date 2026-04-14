@@ -22,6 +22,31 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  // ═══ 2026-04-14 ═══
+  {
+    date: "2026-04-14",
+    tag: "admin",
+    title: {
+      de: "9 gemeldete Fragen überprüft und korrigiert",
+      en: "9 reported questions reviewed and fixed",
+    },
+    description: {
+      de: "Nutzer-Meldungen zu fehlenden Antwortoptionen (Vienna 2026 Import), falschen Antworten und unvollständigen Erklärungen wurden bearbeitet: Pulmonalembolie-Reanimation, Peritonsillarabszess-Komplikationen, Netzhautperipherie-Untersuchung, SLE/Skleritis, MS/Dimethylfumarat-Monitoring und Adenoviren-Konjunktivitis.",
+      en: "User reports about missing answer options (Vienna 2026 import), wrong answers, and incomplete explanations have been resolved: pulmonary embolism reanimation, peritonsillar abscess complications, peripheral retina examination, SLE/scleritis, MS/Dimethylfumarate monitoring, and adenovirus conjunctivitis.",
+    },
+  },
+  {
+    date: "2026-04-14",
+    tag: "fix",
+    title: {
+      de: "Service Worker: neue Deploys werden sofort übernommen",
+      en: "Service worker: new deploys take effect immediately",
+    },
+    description: {
+      de: "Der Service Worker hat HTML- und JavaScript-Dateien zu aggressiv gecacht (stale-while-revalidate). Neue Features wurden daher erst nach mehrfachem Neuladen sichtbar. Ab jetzt werden HTML-Seiten und Next.js-Bundles immer frisch vom Netz geladen; Icons und Bilder bleiben offline verfügbar.",
+      en: "The service worker was caching HTML and JavaScript too aggressively (stale-while-revalidate), so new features only appeared after multiple reloads. From now on, HTML pages and Next.js bundles always load fresh from the network; icons and images remain available offline.",
+    },
+  },
   // ═══ 2026-04-12 ═══
   {
     date: "2026-04-12",
