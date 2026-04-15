@@ -91,6 +91,53 @@ export default function RootLayout({
   return (
     <html lang="de" dir="ltr" suppressHydrationWarning>
       <head>
+        {/*
+          Stale-SW kill-switch — MUST run before anything else.
+
+          Problem: users who registered the pre-2026-04-14 static SW
+          (public/sw.js, medpruef-v1) are in a cache-purgatory loop. The old
+          SW does stale-while-revalidate for every same-origin request, so
+          their browser keeps serving pre-daffcb5 JS — which has no
+          captureClientContext — which means every flag/feedback from them
+          lands in the DB anonymous. The *new* /api/sw is deployed, but the
+          old SW won't be replaced until Chrome's own 24h update check fires
+          OR the user hard-reloads.
+
+          This inline script closes the loop: on every HTML load, it pings
+          the current SW controller with GET_BUILD_ID. The *new* SW responds
+          with its build id. The *old* SW has no handler and never responds.
+          After 1.5s of no response (or a build-id mismatch) we unregister
+          every SW, delete every cache, and hard-reload. A sessionStorage
+          flag prevents a reload loop if something goes wrong.
+        */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){
+  if(!('serviceWorker' in navigator))return;
+  try{if(sessionStorage.getItem('medpruef_sw_reloaded'))return;}catch(e){}
+  var EXPECTED=${JSON.stringify(process.env.NEXT_PUBLIC_BUILD_ID || "")};
+  function killStale(){
+    try{sessionStorage.setItem('medpruef_sw_reloaded','1');}catch(e){}
+    var p1=navigator.serviceWorker.getRegistrations().then(function(rs){return Promise.all(rs.map(function(r){return r.unregister();}));}).catch(function(){});
+    var p2=('caches' in window)?caches.keys().then(function(ks){return Promise.all(ks.map(function(k){return caches.delete(k);}));}).catch(function(){}):Promise.resolve();
+    Promise.all([p1,p2]).then(function(){location.reload();});
+  }
+  if(!navigator.serviceWorker.controller)return;
+  var responded=false;
+  var timer=setTimeout(function(){if(responded)return;responded=true;console.warn('[medpruef] stale SW: no build-id response, nuking');killStale();},1500);
+  function onMsg(ev){
+    if(responded)return;
+    if(!ev.data||ev.data.type!=='BUILD_ID')return;
+    responded=true;clearTimeout(timer);
+    navigator.serviceWorker.removeEventListener('message',onMsg);
+    var swBuild=ev.data.buildId||'';
+    if(EXPECTED&&swBuild&&swBuild!==EXPECTED){console.warn('[medpruef] SW build mismatch:',swBuild,'!=',EXPECTED);killStale();}
+  }
+  navigator.serviceWorker.addEventListener('message',onMsg);
+  try{navigator.serviceWorker.controller.postMessage({type:'GET_BUILD_ID'});}catch(e){}
+})();`,
+          }}
+        />
         <link rel="manifest" href="/manifest.json" />
         <link rel="canonical" href="https://medpruf.com" />
         {/* Structured data — Organization + WebApplication */}

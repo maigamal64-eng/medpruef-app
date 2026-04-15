@@ -22,6 +22,31 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  // ═══ 2026-04-15 ═══
+  {
+    date: "2026-04-15",
+    tag: "fix",
+    title: {
+      de: "Zwei fehlerhafte Fragen korrigiert (Psychiatrie + Pädiatrie)",
+      en: "Two incorrect questions fixed (Psychiatry + Pediatrics)",
+    },
+    description: {
+      de: "Die Frage zu Mydriasis und Intoxikation (Psychiatrie) hatte alle 5 Antworten als richtig markiert – jetzt sind nur noch Kokain, Amphetamin und Anticholinergika richtig (Opiate und Benzodiazepine verursachen dagegen Miosis). Die Frage zu Spastik bei Cerebralparese (Pädiatrie) hatte gar keinen echten Fragesatz – jetzt steht dort korrekt „Welche der folgenden Maßnahmen verbessern die Spastik bei Cerebralparese (CP)? (3 richtige Antworten)\". Beide Fragen mit medizinischer Erklärung versehen. Danke an die Nutzer, die diese Fehler gemeldet haben!",
+      en: "The mydriasis/intoxication question (Psychiatry) had all 5 choices marked correct — now only Cocaine, Amphetamine, and Anticholinergics are correct (Opiates and Benzodiazepines cause miosis instead). The spasticity in cerebral palsy question (Pediatrics) had no real question stem — now it correctly asks \"Which of the following measures improve spasticity in cerebral palsy (CP)? (3 correct answers)\". Both questions now include a medical explanation. Thanks to the users who reported these!",
+    },
+  },
+  {
+    date: "2026-04-15",
+    tag: "admin",
+    title: {
+      de: "Kill-Switch gegen hängende alte App-Versionen",
+      en: "Kill-switch for stuck old app versions",
+    },
+    description: {
+      de: "Beim ersten Laden jeder Seite prüft die App jetzt, ob ein alter Service Worker die Kontrolle hat. Falls ja, wird er automatisch abgemeldet, alle Caches geleert und die Seite neu geladen – damit Nutzer nicht in einer alten Version hängen bleiben, bis der Browser von selbst aktualisiert.",
+      en: "On every page load, the app now checks if an old service worker is still in control. If so, it automatically unregisters it, clears all caches, and reloads — so users don't stay stuck on an old version until the browser decides to refresh on its own.",
+    },
+  },
   // ═══ 2026-04-14 ═══
   {
     date: "2026-04-14",
