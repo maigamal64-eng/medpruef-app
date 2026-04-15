@@ -9,13 +9,20 @@ export const revalidate = false;
 // issue that caused the "flags still show Anonymous" bug on 2026-04-13.
 //
 // Rewritten from /sw.js (see next.config.ts rewrites).
+//
+// IMPORTANT: the fallback MUST be stable across requests. Earlier versions
+// used `dev-${Date.now()}` here, which made the SW body byte-different on
+// every fetch — every 60s poll in PWAInstall.tsx saw a "new" worker and
+// showed the "Reload now" banner in an endless loop (fixed 2026-04-15).
+// The fallback now uses `dev-local`, which matches the same stable fallback
+// in next.config.ts so client EXPECTED and SW BUILD_ID agree in dev.
 
 function getBuildId(): string {
   return (
     process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 12) ||
     process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA?.slice(0, 12) ||
     process.env.NEXT_BUILD_ID ||
-    `dev-${Date.now()}`
+    "dev-local"
   );
 }
 

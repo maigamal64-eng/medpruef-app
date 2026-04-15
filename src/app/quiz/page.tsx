@@ -56,7 +56,11 @@ function QuizContent() {
   const initialQuestionId = searchParams.get("questionId");
   const examSource = searchParams.get("examSource") || "kenntnispruefung";
   const practiceMode = searchParams.get("practiceMode") || "all";
-  const autoStart = searchParams.get("autoStart") === "1";
+  // Explicit opt-in for the customize-quiz screen. Default is auto-start so
+  // topic cards, practice-mode buttons, and random-practice links go straight
+  // into questions — customize is a separate, explicit flow, not the default.
+  // Old links carrying `autoStart=1` still work since auto-start is default.
+  const wantsSetup = searchParams.get("setup") === "1";
 
   const [userId, setUserId] = useState<string>("");
   const [lang, setLangState] = useState<Lang>("de");
@@ -99,26 +103,31 @@ function QuizContent() {
   // vs manually configured via the QuizSetup screen
   const [autoStarted, setAutoStarted] = useState(false);
 
-  // Auto-skip setup ONLY when:
-  // 1. Deep-link with a specific questionId (from search results)
-  // 2. Explicit autoStart=1 param (from "Continue" button or "Review Mistakes")
-  // All other links (topic cards, "Random Quiz") show the config screen
-  // with the topic pre-selected so users can customize count/filters.
+  // DEFAULT: auto-start. Every entry to /quiz is a practice session — topic
+  // cards, random-practice, practice modes (unseen/wrong/review), deep-links
+  // from search results. The /api/questions route already handles spaced-rep
+  // review prioritization for logged-in users under practiceMode='all', so
+  // "continue where I left off in this topic" works automatically.
+  //
+  // OPT-IN customize: the QuizSetup screen is ONLY shown when the URL
+  // explicitly carries `?setup=1`. Customize is a quiz-specific feature, not
+  // the default entry gate for practice. Old links carrying `autoStart=1`
+  // still work — they just hit the same default auto-start branch.
   useEffect(() => {
     if (config) return;
-    if (initialQuestionId || autoStart) {
-      setAutoStarted(true);
-      setConfig({
-        topics: initialTopic && initialTopic !== "random" ? [initialTopic] : [],
-        tags: [],
-        targetCount: 9999,
-        timeLimitMin: null,
-        examDateFrom: null,
-        examDateTo: null,
-        examSource,
-      });
-    }
-  }, [initialQuestionId, autoStart, initialTopic, config, examSource]);
+    if (wantsSetup) return; // Explicit opt-in to customize screen
+    // Auto-start — skips QuizSetup, jumps straight into questions
+    setAutoStarted(true);
+    setConfig({
+      topics: initialTopic && initialTopic !== "random" ? [initialTopic] : [],
+      tags: [],
+      targetCount: 9999,
+      timeLimitMin: null,
+      examDateFrom: null,
+      examDateTo: null,
+      examSource,
+    });
+  }, [wantsSetup, initialTopic, config, examSource]);
 
   // Once config exists, fetch total available pool size for the milestone card
   useEffect(() => {

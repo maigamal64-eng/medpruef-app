@@ -69,11 +69,18 @@ const nextConfig: NextConfig = {
 
   env: {
     // Expose build ID to the client so captureClientContext() can stamp it
-    // onto flag/feedback submissions. Falls back to a dev timestamp locally.
+    // onto flag/feedback submissions.
+    //
+    // IMPORTANT: the fallback MUST be stable (no Date.now()). The SW route
+    // at /api/sw uses the same stable fallback, so the inline kill-switch
+    // in layout.tsx compares EXPECTED == SW BUILD_ID and agrees in dev. An
+    // earlier version used `dev-${Date.now()}` here, which caused the
+    // "Reload now" banner to reappear every 60s in dev and on any non-
+    // Vercel host because the SW body kept byte-changing (fixed 2026-04-15).
     NEXT_PUBLIC_BUILD_ID:
       process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 12) ||
       process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA?.slice(0, 12) ||
-      `dev-${Date.now()}`,
+      "dev-local",
   },
 };
 

@@ -27,6 +27,30 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-04-15",
     tag: "fix",
     title: {
+      de: "Themen-Übung startet wieder direkt – ohne Konfigurations-Umweg",
+      en: "Topic practice now starts directly — no more customize detour",
+    },
+    description: {
+      de: "Wenn du ein Fach auf der Startseite oder im Curriculum antippst oder „Zufallsfragen\" wählst, springst du jetzt sofort in die Fragen – ohne den Umweg über den „Quiz konfigurieren\"-Bildschirm. Die Spaced-Repetition-Logik entscheidet im Hintergrund automatisch, welche Frage als nächstes dran ist, sodass du dort weitermachst, wo du aufgehört hast. Das Konfigurations-Menü bleibt für den expliziten „Quiz konfigurieren\"-Einstieg erhalten.",
+      en: "Tapping a subject on the home page or curriculum, or hitting \"Random questions\", now drops you straight into practice — no more detour through the \"Customize your quiz\" screen. The spaced-repetition engine picks the next question for you so you pick up where you left off. The customize screen is still available for explicit opt-in.",
+    },
+  },
+  {
+    date: "2026-04-15",
+    tag: "fix",
+    title: {
+      de: "„Neue Version verfügbar\"-Schleife gestoppt",
+      en: "\"New version available\" loop stopped",
+    },
+    description: {
+      de: "Der Service Worker bekam außerhalb der Produktion bei jeder Abfrage eine neue Build-ID (auf Basis von Date.now()), wodurch der Browser alle 60 Sekunden einen „neuen\" Service Worker erkannte und den „Reload jetzt\"-Hinweis anzeigte. Die Build-ID ist jetzt stabil, wenn keine Vercel-Commit-SHA verfügbar ist, sodass der Hinweis nur noch bei echten Deployments erscheint.",
+      en: "Outside production, the service worker got a new build ID on every fetch (driven by Date.now()), so the browser saw a \"new\" worker every 60 seconds and kept popping the \"Reload now\" banner. The build ID is now stable when no Vercel commit SHA is present, so the banner only appears when there's actually a new deploy.",
+    },
+  },
+  {
+    date: "2026-04-15",
+    tag: "fix",
+    title: {
       de: "Zwei fehlerhafte Fragen korrigiert (Psychiatrie + Pädiatrie)",
       en: "Two incorrect questions fixed (Psychiatry + Pediatrics)",
     },
