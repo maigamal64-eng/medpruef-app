@@ -22,7 +22,115 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
-  // ═══ 2026-04-15 ═══
+  // ═══ 2026-04-15 (overnight audit) ═══
+  {
+    date: "2026-04-15",
+    tag: "improvement",
+    title: {
+      de: "Sicherheits-Generalüberholung: Admin-Bereich geschützt, neue Zugriffskontrollen",
+      en: "Security overhaul: admin panel protected, new access controls",
+    },
+    description: {
+      de: "Eine umfassende Sicherheitsüberprüfung deckte mehrere Wege auf, wie externe Angreifer private Benutzerdaten lesen oder verändern konnten. Das ist jetzt geschlossen: alle Admin-Endpunkte verlangen jetzt eine Admin-Anmeldung, alle Datenbank-Tabellen haben strenge Zeilenebene-Sicherheit (RLS) erhalten, das Login akzeptiert keine gefälschten Telegram-Signaturen mehr, und bcrypt-Passwort-Hashes werden nicht mehr an den Client gesendet. Eine bekannte Next.js-Schwachstelle (HIGH) wurde gepatcht. Für Nutzer:innen ändert sich nichts außer mehr Sicherheit.",
+      en: "A comprehensive security audit uncovered multiple paths for external attackers to read or modify private user data. Closed: all admin endpoints now require admin authentication, every database table has strict row-level security, login no longer accepts forged Telegram signatures, and bcrypt password hashes are no longer sent to the client. A known Next.js HIGH CVE was patched. Nothing changes for users except more safety.",
+    },
+  },
+  {
+    date: "2026-04-15",
+    tag: "improvement",
+    title: {
+      de: "Cookie-Banner aktiv — GA4 und Clarity nur nach Zustimmung",
+      en: "Cookie banner active — GA4 and Clarity only after consent",
+    },
+    description: {
+      de: "Bisher wurden Google Analytics und Microsoft Clarity bei jedem Seitenaufruf sofort geladen, unabhängig von der Cookie-Entscheidung. Ein Cookie-Banner war im Code vorhanden, aber nicht aktiviert. Das haben wir jetzt korrekt zusammengeführt: beim ersten Besuch erscheint der Banner, und die Analyse-Tools werden erst nach dem Klick auf „Akzeptieren\" geladen. Dies entspricht der ePrivacy-Richtlinie und dem österreichischen TTDSG.",
+      en: "Until now, Google Analytics and Microsoft Clarity loaded on every page visit regardless of the cookie choice. A cookie banner existed in the code but was never mounted. Now wired up correctly: first visit shows the banner, and analytics tools only load after clicking \"Accept\". This complies with the ePrivacy Directive and Austrian TTDSG.",
+    },
+  },
+  {
+    date: "2026-04-15",
+    tag: "fix",
+    title: {
+      de: "Alle bisherigen Fragen-Meldungen wurden anonym gespeichert — korrigiert",
+      en: "All previous question reports were stored anonymously — fixed",
+    },
+    description: {
+      de: "Eine Untersuchung hat gezeigt, dass alle 45 bisher gemeldeten Fragen ohne Nutzer-ID in der Datenbank landeten, obwohl eingeloggte Nutzer:innen gemeldet haben. Das Formular hat die ID einfach nicht mitgesendet. Ab jetzt wird die Nutzer-ID korrekt erfasst — bei beiden Meldungs-Wegen (inline und im Modal). Das heißt wir können ab jetzt gemeldete Fragen einer Person zuordnen und bei Bedarf nachfragen. Bereits gemeldete Fragen bleiben anonym, aber das Problem ist für die Zukunft behoben.",
+      en: "An investigation revealed that all 45 previously reported questions landed in the database without a user ID, even when logged-in users submitted them. The form simply wasn't sending the ID. The user ID is now captured correctly through both report paths (inline form and modal). This means we can now attribute reports to specific users and follow up when needed. Previously submitted reports stay anonymous, but the problem is fixed going forward.",
+    },
+  },
+  {
+    date: "2026-04-15",
+    tag: "fix",
+    title: {
+      de: "Zoom auf Handy wieder freigegeben",
+      en: "Pinch-to-zoom restored on mobile",
+    },
+    description: {
+      de: "Beim Lesen langer klinischer Fragentexte konnte man bisher auf dem Handy nicht zoomen. Das war ein Barrierefreiheits-Fehler (WCAG 2.1 1.4.4) und ist jetzt behoben — du kannst wieder mit zwei Fingern zoomen.",
+      en: "Reading long clinical question texts on mobile used to block pinch-zoom. This was an accessibility violation (WCAG 2.1 1.4.4) and is now fixed — two-finger zoom works again.",
+    },
+  },
+  {
+    date: "2026-04-15",
+    tag: "fix",
+    title: {
+      de: "Streak-Widget zeigt nur echte Aktivität, keine erfundenen Tage mehr",
+      en: "Streak widget now shows real activity only, no more invented days",
+    },
+    description: {
+      de: "Das 7-Tage-Streak-Widget zeigte bisher für Tage außerhalb deines aktuellen Streaks zufällig aktive/inaktive Zellen — das war Fake-Daten, die sich bei jedem Seitenaufruf geändert haben. Jetzt zeigt das Widget nur deinen tatsächlichen Streak; nicht-gestreakte Tage sind ausgegraut.",
+      en: "The 7-day streak widget used to randomly flip non-streak days active/inactive — that was fake data that changed on every page render. The widget now shows only your real streak; non-streak days are greyed out honestly.",
+    },
+  },
+  {
+    date: "2026-04-15",
+    tag: "improvement",
+    title: {
+      de: "Admin-Statistiken korrigiert — DAU/WAU/MAU zeigen jetzt die echten Zahlen",
+      en: "Admin statistics fixed — DAU/WAU/MAU now show real numbers",
+    },
+    description: {
+      de: "Das Admin-Dashboard zählte tägliche/wöchentliche/monatliche aktive Nutzer:innen, indem es alle Events in den Browser lud und dort zählte — aber Supabase liefert nur die letzten 1000 Zeilen. Sobald mehr Events vorlagen, fing die Zahl an zu lügen. Die Berechnung läuft jetzt serverseitig in der Datenbank und ist bei jedem Volumen korrekt.",
+      en: "The admin dashboard counted daily/weekly/monthly active users by loading all events into the browser and counting there — but Supabase only returns the last 1000 rows. Once events crossed 1000 the number started lying. The computation now runs server-side in the database and stays correct at any volume.",
+    },
+  },
+  {
+    date: "2026-04-15",
+    tag: "admin",
+    title: {
+      de: "Seitenaufrufe-Tracking über alle Routen wiederhergestellt",
+      en: "Pageview tracking restored across all routes",
+    },
+    description: {
+      de: "Google Analytics registrierte bisher nur die Landing-Seite jedes Besuchs, weil der SPA-Navigation nie ein neues `config`-Event mitgegeben wurde. Ein neuer TrackRouteChange-Baustein löst bei jeder Navigation korrekt ein Pageview-Event aus. Damit werden Funnel-Analysen und Verweilzeit pro Seite zum ersten Mal überhaupt in GA4 verwertbar.",
+      en: "Google Analytics only tracked the landing URL of each visit because the App Router's client-side navigation never re-fired `config`. A new TrackRouteChange component now triggers a pageview event on every soft navigation. For the first time, funnel analysis and per-page engagement are actually usable in GA4.",
+    },
+  },
+  {
+    date: "2026-04-15",
+    tag: "admin",
+    title: {
+      de: "Sitzungsende wird jetzt korrekt registriert",
+      en: "Session end now correctly recorded",
+    },
+    description: {
+      de: "Alle 1240 bisherigen Sitzungen in der Datenbank hatten kein Ende-Datum — die `endSession`-Funktion war vorhanden, wurde aber nie aufgerufen. Jetzt wird jede Sitzung beim Schließen des Tabs (mit 5 Minuten Karenzzeit beim Tab-Wechsel) korrekt beendet. Damit lassen sich erstmals echte Sitzungsdauern messen.",
+      en: "All 1,240 previous sessions in the database had no end timestamp — the `endSession` function existed but was never called. Sessions now terminate correctly on tab close (with a 5-minute grace window for tab-switching). Real session durations are now measurable for the first time.",
+    },
+  },
+  {
+    date: "2026-04-15",
+    tag: "improvement",
+    title: {
+      de: "Alle Fragenzahlen im Produkt auf 10.993 aktualisiert",
+      en: "All question counts across the product updated to 10,993",
+    },
+    description: {
+      de: "Mehrere Stellen im Produkt (Startseite, Login, Onboarding, Landingpage, Metadaten) zeigten noch „7.725 Fragen\" — den Stand vor der Erweiterung um KMP Innsbruck und Pharmakologie. Alle Zahlen wurden auf 10.993 aktualisiert und die Landingpage nennt jetzt alle drei Prüfungstypen korrekt.",
+      en: "Several places in the product (home, login, onboarding, landing, metadata) still showed \"7,725 questions\" — the count from before the KMP Innsbruck and Pharmakologie expansion. Updated to 10,993 everywhere, and the landing page now correctly names all three exam types.",
+    },
+  },
   {
     date: "2026-04-15",
     tag: "fix",
