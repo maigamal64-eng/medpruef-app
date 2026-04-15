@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
+import { requireAdmin } from "@/lib/auth-guard";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
+  const guard = await requireAdmin(req);
+  if ("error" in guard) return guard.error;
   try {
     const db = getServiceClient();
     const url = new URL(req.url);

@@ -1,23 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
 import { EXAM_SOURCE_IDS } from '@/lib/topics'
+import { requireUser } from '@/lib/auth-guard'
 
 export const dynamic = 'force-dynamic'
 
 /**
- * PATCH — Update the user's active_exam preference.
- * Body: { userId: string, activeExam: ExamSourceId }
- * Only logged-in users (not guests) can persist this.
+ * PATCH — Update the current user's active_exam preference.
+ *
+ * Auth: requireUser — userId derived from the session header. The
+ * previous version accepted `userId` in the body, which meant any
+ * stranger could flip any user's exam preference (BE-P1-012).
  */
 export async function PATCH(req: NextRequest) {
+  const guard = await requireUser(req)
+  if ('error' in guard) return guard.error
+  const userId = guard.userId
+
   try {
-    const { userId, activeExam } = await req.json()
-    if (!userId || !activeExam) {
-      return NextResponse.json({ error: 'userId and activeExam required' }, { status: 400 })
-    }
-    if (userId.startsWith('guest_')) {
-      // Guest sessions don't have a DB row; preference is localStorage-only
-      return NextResponse.json({ ok: true, persisted: false })
+    const { activeExam } = await req.json()
+    if (!activeExam) {
+      return NextResponse.json({ error: 'activeExam required' }, { status: 400 })
     }
     if (!(EXAM_SOURCE_IDS as string[]).includes(activeExam)) {
       return NextResponse.json({ error: 'Invalid exam type' }, { status: 400 })

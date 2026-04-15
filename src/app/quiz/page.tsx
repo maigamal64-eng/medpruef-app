@@ -3,6 +3,11 @@
 import { useEffect, useState, useCallback, useRef, Suspense } from "react";
 import { BrandedLoader } from "@/components/Logo";
 import { useSearchParams } from "next/navigation";
+// Auth-aware fetch wrapper: adds the x-user-id header that server
+// routes expect under the 2026-04-15 auth-guard regime. Import alias
+// means the existing `fetch(...)` call sites in this file don't need
+// to be rewritten — they automatically get the header.
+import { authFetch as fetch } from "@/lib/authFetch";
 import Link from "next/link";
 import { t, getLang, setLang } from "@/lib/i18n";
 import { trackEvent, trackPageView } from "@/lib/tracker";

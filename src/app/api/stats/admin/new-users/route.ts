@@ -1,5 +1,8 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
+import { requireAdmin } from "@/lib/auth-guard";
+
+export const dynamic = "force-dynamic";
 
 /**
  * Live new-users tracker for the admin dashboard.
@@ -9,7 +12,9 @@ import { getServiceClient } from "@/lib/supabase";
  *
  * The admin dashboard polls this every 30s.
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const guard = await requireAdmin(req);
+  if ("error" in guard) return guard.error;
   try {
     const db = getServiceClient();
     const now = new Date();

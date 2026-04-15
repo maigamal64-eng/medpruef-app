@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
+import { requireAdmin } from "@/lib/auth-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +27,9 @@ interface UserRow {
 }
 
 // GET — List all users with gamification data
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const guard = await requireAdmin(req);
+  if ("error" in guard) return guard.error;
   try {
     const db = getServiceClient();
 
@@ -119,6 +122,8 @@ export async function GET() {
 
 // PATCH — Edit user (role, name, reset gamification)
 export async function PATCH(req: NextRequest) {
+  const guard = await requireAdmin(req);
+  if ("error" in guard) return guard.error;
   try {
     const db = getServiceClient();
     const body = await req.json();
@@ -156,8 +161,18 @@ export async function PATCH(req: NextRequest) {
   }
 }
 
-// DELETE — Remove a user and related data
+// DELETE — Remove a user and related data (GDPR erasure).
+// Note: answer_history, user_gamification, user_question_progress all
+// have ON DELETE CASCADE on users.id (verified live 2026-04-15), so
+// deleting users cascades them automatically. user_activity_log +
+// question_suggestions have ON DELETE NO ACTION so we clear them
+// manually. user_feedback / user_events / user_sessions have no FK
+// (they support guest_ IDs in the same column) so we clear them by
+// user_id filter. This covers every table that references the user
+// either by FK or by text column.
 export async function DELETE(req: NextRequest) {
+  const guard = await requireAdmin(req);
+  if ("error" in guard) return guard.error;
   try {
     const db = getServiceClient();
     const { searchParams } = new URL(req.url);
@@ -165,12 +180,25 @@ export async function DELETE(req: NextRequest) {
 
     if (!userId) return NextResponse.json({ error: "id required" }, { status: 400 });
 
-    // Delete related data first (foreign key constraints)
-    await db.from("answer_history").delete().eq("user_id", userId);
-    await db.from("user_question_progress").delete().eq("user_id", userId);
-    await db.from("user_gamification").delete().eq("user_id", userId);
-    await db.from("user_activity_log").delete().eq("user_id", userId);
-    // Delete user
+    // Clear tables that don't cascade from users.id (audit reports
+    // 02-database.md DB-P0-002 + 03-backend-api.md BE-P3-031).
+    // Errors are tolerated on these — the important one is the final
+    // users.delete which is checked below. If any of these fail we
+    // log but keep going; the cascade will still get answer_history,
+    // user_gamification, user_question_progress via FK.
+    const manualTables = [
+      "user_activity_log",
+      "question_suggestions",
+      "user_feedback",
+      "user_events",
+      "user_sessions",
+    ] as const;
+    for (const t of manualTables) {
+      const { error } = await db.from(t).delete().eq("user_id", userId);
+      if (error) console.error(`[admin/users DELETE] clear ${t}:`, error);
+    }
+    // Delete user — remaining tables (answer_history, user_gamification,
+    // user_question_progress) cascade from here.
     const { error } = await db.from("users").delete().eq("id", userId);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 

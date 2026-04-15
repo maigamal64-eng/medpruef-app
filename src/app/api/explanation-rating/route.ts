@@ -1,7 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
+import { requireUser } from "@/lib/auth-guard";
 
+export const dynamic = "force-dynamic";
+
+// Auth: requireUser so ratings can't be spammed by random IPs. Note
+// this still doesn't enforce one-vote-per-user — that's BE-P1-014
+// (a new explanation_ratings table) which is tracked as a P2 item.
+// The guard here at least closes the abuse-at-scale vector.
 export async function POST(req: NextRequest) {
+  const guard = await requireUser(req);
+  if ("error" in guard) return guard.error;
   try {
     const { questionId, rating } = await req.json();
 

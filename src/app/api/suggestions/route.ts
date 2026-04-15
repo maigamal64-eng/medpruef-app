@@ -1,14 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
+import { requireAdmin } from "@/lib/auth-guard";
 
 export const dynamic = "force-dynamic";
 
-// POST — User submits a flag or edit suggestion
+// POST — User submits a flag or edit suggestion.
+//
+// User identity: prefers the `x-user-id` header set by authFetch
+// (which is verified against the users table via a lightweight check
+// below) over any body-supplied userId. Before this fix, the body
+// userId was the ONLY source — and all 45 existing rows in
+// question_suggestions had `user_id = null` because the flag forms
+// weren't consistently including it. The live DB audit on 2026-04-15
+// confirmed this. Anonymous submissions are still allowed (tracked
+// via the guest_id context field).
 export async function POST(req: NextRequest) {
   try {
     const db = getServiceClient();
     const body = await req.json();
-    const { questionId, userId, type, reason, details, suggestedChanges, context } = body;
+    const { questionId, type, reason, details, suggestedChanges, context } = body;
 
     if (!questionId || !type) {
       return NextResponse.json({ error: "questionId and type required" }, { status: 400 });
@@ -17,16 +27,38 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "type must be 'flag' or 'edit'" }, { status: 400 });
     }
 
-    // Validate userId — guest IDs ("guest_1234567890") are not UUIDs and would fail the uuid column
+    // Prefer header-provided identity; fall back to body for legacy
+    // clients that haven't migrated. Either way, validate as UUID and
+    // verify the row actually exists (prevents stuffing arbitrary
+    // UUIDs as user_id). Guest IDs (guest_*) are stored in context
+    // instead.
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    const validUserId = userId && uuidRegex.test(userId) ? userId : null;
+    const headerId = req.headers.get("x-user-id");
+    const bodyId = (body.userId as string | undefined) || null;
+    let validUserId: string | null = null;
+    let rawId: string | null = null;
+    const candidate =
+      headerId && uuidRegex.test(headerId)
+        ? headerId
+        : bodyId && uuidRegex.test(bodyId)
+          ? bodyId
+          : null;
+    if (candidate) {
+      const { data: userRow } = await db
+        .from("users")
+        .select("id")
+        .eq("id", candidate)
+        .maybeSingle();
+      if (userRow) validUserId = candidate;
+    }
+    if (!validUserId && bodyId) rawId = bodyId; // preserve guest_* IDs for triage
 
     // Enrich context with server-side data
     const enrichedContext = {
       ...(context || {}),
       ip: req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null,
       server_user_agent: req.headers.get("user-agent") || null,
-      guest_id: (!validUserId && userId) ? userId : null, // preserve raw guest_* ID for triage
+      guest_id: rawId || null, // preserve raw guest_* ID for triage
       submitted_at: new Date().toISOString(),
     };
 
@@ -59,6 +91,8 @@ export async function POST(req: NextRequest) {
 
 // GET — Admin fetches suggestions (with question + user info joined)
 export async function GET(req: NextRequest) {
+  const guard = await requireAdmin(req);
+  if ("error" in guard) return guard.error;
   try {
     const db = getServiceClient();
     const url = new URL(req.url);
@@ -136,10 +170,15 @@ export async function GET(req: NextRequest) {
 
 // PATCH — Admin resolves a suggestion (approve, reject, modify)
 export async function PATCH(req: NextRequest) {
+  const guard = await requireAdmin(req);
+  if ("error" in guard) return guard.error;
   try {
     const db = getServiceClient();
     const body = await req.json();
-    const { suggestionId, action, adminNote, adminUserId } = body;
+    // Prefer the guard-derived userId over any client-supplied adminUserId.
+    // adminUserId is kept in the body for backward-compat but ignored below.
+    const { suggestionId, action, adminNote } = body;
+    const adminUserId = guard.userId;
 
     if (!suggestionId || !action) {
       return NextResponse.json({ error: "suggestionId and action required" }, { status: 400 });

@@ -7,6 +7,8 @@ import ThemeProvider from "@/components/ThemeProvider";
 import PWAInstall from "@/components/PWAInstall";
 import FeedbackWidget from "@/components/FeedbackWidget";
 import GuestMigrationBanner from "@/components/GuestMigrationBanner";
+import CookieBannerMount from "@/components/CookieBannerMount";
+import ConsentGatedAnalytics from "@/components/ConsentGatedAnalytics";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -171,24 +173,15 @@ export default function RootLayout({
             }),
           }}
         />
-        {/* Google Analytics 4 */}
-        {process.env.NEXT_PUBLIC_GA_ID && (
-          <>
-            <Script
-              src={`https://www.googletagmanager.com/gtag/js?id=${process.env.NEXT_PUBLIC_GA_ID}`}
-              strategy="afterInteractive"
-            />
-            <Script id="ga-init" strategy="afterInteractive">
-              {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${process.env.NEXT_PUBLIC_GA_ID}',{page_path:window.location.pathname});`}
-            </Script>
-          </>
-        )}
-        {/* Microsoft Clarity */}
-        {process.env.NEXT_PUBLIC_CLARITY_ID && (
-          <Script id="clarity-init" strategy="afterInteractive">
-            {`(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);})(window,document,"clarity","script","${process.env.NEXT_PUBLIC_CLARITY_ID}");`}
-          </Script>
-        )}
+        {/*
+          Google Analytics 4 + Microsoft Clarity are now loaded by
+          <ConsentGatedAnalytics /> ONLY after the user explicitly
+          accepts cookies. This is the ePrivacy / Austrian TTDSG fix
+          the 2026-04-15 audit flagged as a P0 legal issue (the prior
+          implementation unconditionally loaded both on first paint
+          regardless of consent, and the CookieBanner was defined in
+          the repo but never mounted).
+        */}
         {/* Telegram WebApp SDK — afterInteractive so it doesn't block, graceful in browser */}
         <Script
           src="https://telegram.org/js/telegram-web-app.js"
@@ -203,6 +196,8 @@ export default function RootLayout({
         <PWAInstall />
         <GuestMigrationBanner />
         <FeedbackWidget />
+        <CookieBannerMount />
+        <ConsentGatedAnalytics />
         {children}
       </body>
     </html>

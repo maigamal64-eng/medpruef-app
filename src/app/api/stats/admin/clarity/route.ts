@@ -1,4 +1,5 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
+import { requireAdmin } from '@/lib/auth-guard'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,7 +12,9 @@ export const dynamic = 'force-dynamic'
  *
  * The Clarity token is stored server-side — never exposed to the client.
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const guard = await requireAdmin(req)
+  if ('error' in guard) return guard.error
   try {
     const token = process.env.CLARITY_API_TOKEN
     if (!token) {

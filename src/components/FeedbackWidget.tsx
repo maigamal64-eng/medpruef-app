@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { MessageSquarePlus, X, Send, Check } from 'lucide-react'
 import { getStoredSession } from '@/lib/auth'
 import { getStoredExamSource } from '@/lib/topics'
+import { authFetch as fetch } from '@/lib/authFetch'
 
 /**
  * Global floating feedback button — visible on every page.

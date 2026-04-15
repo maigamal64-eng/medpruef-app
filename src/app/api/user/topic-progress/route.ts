@@ -1,25 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
+import { requireUser } from '@/lib/auth-guard'
 
 export const dynamic = 'force-dynamic'
 
 /**
- * GET /api/user/topic-progress?userId=...&examType=...
+ * GET /api/user/topic-progress?examType=...
  *
- * Returns per-topic progress for a user:
+ * Returns per-topic progress for the authenticated user:
  *   { topic, total, answered, correct, wrong, accuracy }
  *
- * Used by the home page topic cards and the "wrong answers by topic" review screen.
+ * Auth: requireUser — userId comes from the session header, not the
+ * query string. Previously this endpoint accepted `?userId=<uuid>`
+ * and returned any user's progress (BE-P1-012 in the 2026-04-15 audit).
  */
 export async function GET(req: NextRequest) {
+  const guard = await requireUser(req)
+  if ('error' in guard) return guard.error
+  const userId = guard.userId
+
   try {
     const sp = req.nextUrl.searchParams
-    const userId = sp.get('userId')
     const examType = sp.get('examType') || 'kenntnispruefung'
-
-    if (!userId || userId.startsWith('guest_')) {
-      return NextResponse.json([])
-    }
 
     const sb = getServiceClient()
 

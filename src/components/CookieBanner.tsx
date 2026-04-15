@@ -30,11 +30,24 @@ export default function CookieBanner({ lang }: CookieBannerProps) {
 
   const handleAccept = () => {
     localStorage.setItem(COOKIE_KEY, "accepted");
+    // Tell any listening component (ConsentGatedAnalytics) that the
+    // user just granted consent — so GA4 and Clarity can lazy-load
+    // without a full page reload.
+    try {
+      window.dispatchEvent(new CustomEvent("medpruef-consent", { detail: "accepted" }));
+    } catch {
+      /* non-critical */
+    }
     setVisible(false);
   };
 
   const handleDecline = () => {
     localStorage.setItem(COOKIE_KEY, "declined");
+    try {
+      window.dispatchEvent(new CustomEvent("medpruef-consent", { detail: "declined" }));
+    } catch {
+      /* non-critical */
+    }
     setVisible(false);
   };
 

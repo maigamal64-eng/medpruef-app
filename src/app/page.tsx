@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { BrandedLoader } from "@/components/Logo";
+import { authFetch as fetch } from "@/lib/authFetch";
 import { getTopicConfig } from "@/lib/topics";
 import { getLevelFromXP } from "@/lib/xp";
 import { t, getLang, setLang } from "@/lib/i18n";

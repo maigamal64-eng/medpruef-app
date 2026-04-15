@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
+import { requireAdmin } from "@/lib/auth-guard";
 
 export const dynamic = "force-dynamic";
 
 // GET — Stats overview OR paginated browse
 export async function GET(req: NextRequest) {
+  const guard = await requireAdmin(req);
+  if ("error" in guard) return guard.error;
   try {
     const db = getServiceClient();
     const url = new URL(req.url);
@@ -99,6 +102,8 @@ async function handleBrowse(db: ReturnType<typeof getServiceClient>, url: URL) {
 
 // PATCH — Edit a question
 export async function PATCH(req: NextRequest) {
+  const guard = await requireAdmin(req);
+  if ("error" in guard) return guard.error;
   try {
     const db = getServiceClient();
     const body = await req.json();

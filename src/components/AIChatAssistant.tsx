@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { X, Send, Bot, User, Loader2, Lock } from "lucide-react";
 import { trackEvent } from "@/lib/tracker";
 import ReactMarkdown from "react-markdown";
+import { authFetch as fetch } from "@/lib/authFetch";
 
 type Lang = "de" | "en";
 

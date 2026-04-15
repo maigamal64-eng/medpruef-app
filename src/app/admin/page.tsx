@@ -12,6 +12,11 @@ import {
   ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell,
 } from "recharts";
 import { CHANGELOG, type ChangelogEntry } from "@/lib/changelog";
+// Use the auth-aware fetch wrapper for every admin API call. It adds
+// the `x-user-id` header that the server-side requireAdmin guard
+// checks. Aliased to `fetch` so the 20 existing call sites don't need
+// to be rewritten — they just automatically pick up the header.
+import { authFetch as fetch } from "@/lib/authFetch";
 
 // ═══════════════════════════════════════════════════════════════════════════
 // TYPES

@@ -4,6 +4,13 @@ import { useEffect, useState } from "react";
 import { X, Flag, AlertTriangle, Edit3, CheckCircle2 } from "lucide-react";
 import { t } from "@/lib/i18n";
 import { trackEvent } from "@/lib/tracker";
+// Auth-aware fetch so the x-user-id header is set on the
+// /api/suggestions POST. Before 2026-04-15 this modal's POST dropped
+// userId entirely — all 45 existing flag rows had user_id = NULL.
+// The alias pattern means the existing fetch() call sites below
+// automatically pick up the header.
+import { authFetch as fetch } from "@/lib/authFetch";
+import { captureClientContext } from "@/lib/clientContext";
 
 type Lang = "de" | "en";
 
@@ -80,6 +87,7 @@ export default function ReportQuestionModal({
     if (!flagReason) return;
     setLoading(true);
     try {
+      const context = captureClientContext({ question_id: questionId });
       await fetch("/api/suggestions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -88,6 +96,7 @@ export default function ReportQuestionModal({
           type: "flag",
           reason: flagReason,
           details: details || null,
+          context,
         }),
       });
       setSubmitted(true);
@@ -108,6 +117,7 @@ export default function ReportQuestionModal({
     if (Object.keys(changes).length === 0 && !details) return;
     setLoading(true);
     try {
+      const context = captureClientContext({ question_id: questionId });
       await fetch("/api/suggestions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -116,6 +126,7 @@ export default function ReportQuestionModal({
           type: "edit",
           details: details || null,
           suggestedChanges: Object.keys(changes).length > 0 ? changes : null,
+          context,
         }),
       });
       setSubmitted(true);

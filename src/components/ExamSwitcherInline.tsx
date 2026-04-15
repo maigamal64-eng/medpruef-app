@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
+import { authFetch as fetch } from '@/lib/authFetch'
 import {
   EXAM_SOURCES,
   getStoredExamSource,
