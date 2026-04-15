@@ -10,7 +10,53 @@ const CANONICAL_HOST = "medpruf.com";
 // every preview would just bounce to production.
 const IS_PRODUCTION = process.env.VERCEL_ENV === "production";
 
+// Content Security Policy — starts as report-only so a bad directive
+// can't break the site. Once Clarity / Vercel logs show no violations
+// for 1-2 weeks, flip `Content-Security-Policy-Report-Only` to
+// `Content-Security-Policy` below. The two inline <script> blocks in
+// layout.tsx (SW kill-switch, GA init, Clarity init, JSON-LD) all need
+// 'unsafe-inline' since they're not nonce'd; that's the pragmatic
+// choice given the existing inline scripts.
+const CSP = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.clarity.ms https://telegram.org",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "img-src 'self' data: blob: https://[project].supabase.co https://www.googletagmanager.com https://www.google-analytics.com https://t.me",
+  "font-src 'self' data: https://fonts.gstatic.com",
+  "connect-src 'self' https://[project].supabase.co https://www.google-analytics.com https://region1.google-analytics.com https://*.clarity.ms https://api.openai.com",
+  "frame-src 'self' https://oauth.telegram.org",
+  "worker-src 'self'",
+  "manifest-src 'self'",
+  "frame-ancestors 'self'",
+  "base-uri 'self'",
+  "form-action 'self'",
+].join("; ");
+
+// Global security headers. Apply to every route except the SW file
+// (which needs its own cache-control override, handled separately in
+// the headers() block below).
+const SECURITY_HEADERS = [
+  {
+    key: "Strict-Transport-Security",
+    value: "max-age=63072000; includeSubDomains; preload",
+  },
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "X-Frame-Options", value: "SAMEORIGIN" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  {
+    key: "Permissions-Policy",
+    value: "camera=(), microphone=(), geolocation=(), interest-cohort=()",
+  },
+  // Report-only while we bed in. Flip to `Content-Security-Policy`
+  // once the Vercel log drain (or Sentry, once installed) shows no
+  // violation reports for 1-2 weeks.
+  { key: "Content-Security-Policy-Report-Only", value: CSP },
+];
+
 const nextConfig: NextConfig = {
+  reactStrictMode: true,
+  poweredByHeader: false,
+
   async rewrites() {
     return [
       // Dynamic, build-versioned service worker.
@@ -63,6 +109,14 @@ const nextConfig: NextConfig = {
           { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
           { key: "Service-Worker-Allowed", value: "/" },
         ],
+      },
+      {
+        // Global security headers applied to every HTML / API / static route.
+        // Added 2026-04-15 after the full audit (reports/review-2026-04-15/
+        // 07-infra.md and 01-security.md both flagged the complete absence
+        // of CSP / XFO / Referrer / Permissions headers).
+        source: "/:path*",
+        headers: SECURITY_HEADERS,
       },
     ];
   },

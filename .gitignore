@@ -55,5 +55,9 @@ scripts/__pycache__/
 # Large binary source materials — local only, ~530 MB
 source-files/
 
-# Extraction/dry-run reports
+# Extraction/dry-run reports — everything under reports/ is ignored by
+# default. If you want a specific subdirectory tracked (e.g. the
+# reports/review-2026-04-15/ audit deliverables), force-add the files
+# the first time with `git add -f`; git will keep them tracked after
+# that regardless of this rule.
 reports/
