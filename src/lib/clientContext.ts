@@ -55,7 +55,12 @@ export function captureClientContext(
       activeExam = sess?.user?.active_exam || null;
     }
     activeExam = activeExam || localStorage.getItem("medpruef_active_exam");
-    langPref = localStorage.getItem("medpruef_lang");
+    // NOTE: the key is `medpruef-lang` (dash), not `medpruef_lang`
+    // (underscore). The rest of the codebase (i18n.ts, Onboarding.tsx)
+    // writes the dash variant; reading the underscore variant meant
+    // lang_pref was null in every flag/feedback submission since the
+    // context-capture shipped. Fixed 2026-04-15 (Frontend audit P1-4).
+    langPref = localStorage.getItem("medpruef-lang");
   } catch {
     /* localStorage unavailable */
   }

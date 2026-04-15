@@ -30,7 +30,8 @@ const TOPIC_TOTALS: Record<string, number> = {
   "Augenheilkunde": 399,
 };
 
-const TOTAL_QUESTIONS = 7725;
+// Catalog total across all 3 exam types (2026-04-15).
+const TOTAL_QUESTIONS = 10993;
 
 interface TopicData {
   topic: string;

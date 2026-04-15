@@ -41,8 +41,8 @@ const COPY = {
     title_l2: { de: "Kenntnisprüfung", en: "Kenntnisprüfung" },
     title_l3: { de: "beim ersten Mal.", en: "on your first attempt." },
     subtitle: {
-      de: "7.725 echte Klinikfragen aus SIP 4 und SIP 5 — strukturiert wie die echte Wiener Prüfung. Auf Deutsch oder Englisch lernen, KI-Erklärungen freischalten, mit Spaced Repetition trainieren.",
-      en: "7,725 real clinical questions from SIP 4 and SIP 5 — structured exactly like the live Vienna exam. Study in German or English, unlock AI explanations, train with spaced repetition.",
+      de: "10.993 echte Klinikfragen aus Kenntnisprüfung Wien (SIP 4 + SIP 5), KMP Innsbruck und Pharmakologie — strukturiert wie die echten Prüfungen. Auf Deutsch oder Englisch lernen, KI-Erklärungen freischalten, mit Spaced Repetition trainieren.",
+      en: "10,993 real clinical questions covering Kenntnisprüfung Wien (SIP 4 + SIP 5), KMP Innsbruck, and Pharmakologie — structured like the live exams. Study in German or English, unlock AI explanations, train with spaced repetition.",
     },
     cta_primary: { de: "Kostenlos starten", en: "Start free" },
     cta_secondary: { de: "Beispielfrage ansehen", en: "See a sample question" },
@@ -52,9 +52,9 @@ const COPY = {
     },
   },
   stats: [
-    { value: "7.725", label: { de: "Klinikfragen", en: "Clinical questions" } },
-    { value: "10", label: { de: "Fachgebiete", en: "Specialties" } },
-    { value: "SIP 4+5", label: { de: "Wiener Format", en: "Vienna format" } },
+    { value: "10.993", label: { de: "Klinikfragen", en: "Clinical questions" } },
+    { value: "16", label: { de: "Fachgebiete", en: "Specialties" } },
+    { value: "3", label: { de: "Prüfungstypen", en: "Exam types" } },
     { value: "DE / EN", label: { de: "Zweisprachig", en: "Bilingual" } },
   ],
   why: {
@@ -208,7 +208,7 @@ const COPY = {
         price: "€19",
         period: { de: "/ Monat", en: "/ month" },
         features: [
-          { de: "Alle 7.725 Fragen freigeschaltet", en: "All 7,725 questions unlocked" },
+          { de: "Alle 10.993 Fragen freigeschaltet (Kenntnisprüfung, KMP, Pharma)", en: "All 10,993 questions unlocked (Kenntnisprüfung, KMP, Pharma)" },
           { de: "Unbegrenzte Prüfungssimulationen", en: "Unlimited exam simulations" },
           { de: "Eigene KI-Folgefragen", en: "Custom AI follow-up questions" },
           { de: "Streak-Schutz", en: "Streak freeze" },
@@ -227,8 +227,8 @@ const COPY = {
       {
         q: { de: "Sind die Fragen echt?", en: "Are the questions real?" },
         a: {
-          de: "Ja. Alle 7.725 Fragen stammen aus dokumentierten SIP-4- und SIP-5-Prüfungen seit 2016, manuell validiert und mit Erklärungen ergänzt.",
-          en: "Yes. All 7,725 questions come from documented SIP 4 and SIP 5 exams since 2016, manually validated and enriched with explanations.",
+          de: "Ja. Alle 10.993 Fragen stammen aus dokumentierten offiziellen Prüfungen — 7.567 aus der Kenntnisprüfung Wien (SIP 4 + SIP 5) seit 2016, 3.091 aus der KMP Innsbruck und 335 aus der Pharmakologie. Alle manuell validiert und mit Erklärungen ergänzt.",
+          en: "Yes. All 10,993 questions come from documented official exams — 7,567 from Kenntnisprüfung Wien (SIP 4 + SIP 5) since 2016, 3,091 from KMP Innsbruck, and 335 from Pharmakologie. All manually validated and enriched with explanations.",
         },
       },
       {

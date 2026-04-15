@@ -28,7 +28,6 @@ import ExamSelector from "@/components/ExamSelector";
 import ExamSwitcherInline from "@/components/ExamSwitcherInline";
 import Onboarding from "@/components/Onboarding";
 import SearchBar from "@/components/SearchBar";
-import TelegramLoginWidget, { type TelegramWidgetUser } from "@/components/TelegramLoginWidget";
 import SearchResults from "@/components/SearchResults";
 import SearchModal from "@/components/SearchModal";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -510,19 +509,19 @@ export default function Home() {
               <div>
                 <h1 className="text-2xl md:text-3xl font-black mb-2 font-display">
                   {lang === "de"
-                    ? `Du bist ${Math.round(((gam?.total_questions_answered || 0) / 7725) * 100)}% näher am Bestehen`
-                    : `You're ${Math.round(((gam?.total_questions_answered || 0) / 7725) * 100)}% closer to passing`}
+                    ? `Du bist ${Math.round(((gam?.total_questions_answered || 0) / 10993) * 100)}% näher am Bestehen`
+                    : `You're ${Math.round(((gam?.total_questions_answered || 0) / 10993) * 100)}% closer to passing`}
                   {" "}🇦🇹
                 </h1>
                 <p className="text-white/70 text-sm">
                   {lang === "de" ? "Geschätzte Note" : "Estimated score"}: <span className="font-bold text-white">{(gam?.total_questions_answered || 0) > 0 ? Math.round(((gam?.total_correct || 0) / (gam?.total_questions_answered || 1)) * 100) : 0}%</span>
                   {" · "}
-                  {lang === "de" ? "Fortschritt" : "Completion"}: <span className="font-bold text-white">{Math.round(((gam?.total_questions_answered || 0) / 7725) * 100)}%</span>
+                  {lang === "de" ? "Fortschritt" : "Completion"}: <span className="font-bold text-white">{Math.round(((gam?.total_questions_answered || 0) / 10993) * 100)}%</span>
                 </p>
                 {(() => {
                   const answered = gam?.total_questions_answered || 0;
                   const acc = answered > 0 ? Math.round(((gam?.total_correct || 0) / answered) * 100) : 0;
-                  const completion = Math.round((answered / 7725) * 100);
+                  const completion = Math.round((answered / 10993) * 100);
                   const passProbability = answered > 10 ? Math.min(99, Math.round(acc * 0.7 + completion * 0.3)) : 0;
                   return passProbability > 0 ? (
                     <p className="text-white/70 text-sm mt-1">
@@ -545,7 +544,7 @@ export default function Home() {
                   // Dynamic percentile — real data when available, plausible rotation otherwise
                   const answered = gam?.total_questions_answered || 0;
                   const acc = answered > 0 ? ((gam?.total_correct || 0) / answered) * 100 : 0;
-                  const realPercentile = answered > 20 ? Math.max(10, Math.min(95, Math.round(acc * 0.8 + (answered / 7725) * 20))) : 0;
+                  const realPercentile = answered > 20 ? Math.max(10, Math.min(95, Math.round(acc * 0.8 + (answered / 10993) * 20))) : 0;
                   // Rotate placeholder based on day-of-year so it changes daily but stays consistent within a session
                   const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000);
                   const placeholderPct = [28, 31, 25, 34, 29, 33, 27, 35, 30, 32][dayOfYear % 10];
@@ -902,21 +901,8 @@ function DemoHome({
     [examSource]
   );
 
-  const handleWidgetAuth = useCallback(async (wu: TelegramWidgetUser) => {
-    try {
-      const res = await fetch("/api/auth", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ widgetData: wu }),
-      });
-      if (!res.ok) return;
-      const data = await res.json();
-      storeSession({ user: data.user, gamification: data.gamification });
-      window.location.reload();
-    } catch (e) {
-      console.error("Widget auth failed", e);
-    }
-  }, []);
+  // Widget-based Telegram login was removed Apr 10 (only bot deep-
+  // link remains). Dead code removed 2026-04-15.
 
   const handleGuestContinue = () => {
     const guestId = `guest_${Date.now()}`;

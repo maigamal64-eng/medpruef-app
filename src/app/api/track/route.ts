@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 
+export const dynamic = "force-dynamic";
+
+// Max events accepted per POST. Prevents a malicious client from
+// stuffing the events table with a single 10MB request. Anything
+// over this is rejected with 413 (Backend audit BE-P1-13).
+const MAX_EVENTS_PER_BATCH = 500;
+
 interface TrackEvent {
   type: string;
   data: Record<string, unknown>;
@@ -23,6 +30,12 @@ export async function POST(req: NextRequest) {
 
     if (!userId || !sessionId) {
       return NextResponse.json({ error: "Missing userId or sessionId" }, { status: 400 });
+    }
+    if (Array.isArray(events) && events.length > MAX_EVENTS_PER_BATCH) {
+      return NextResponse.json(
+        { error: `events[] max ${MAX_EVENTS_PER_BATCH}` },
+        { status: 413 },
+      );
     }
 
     const db = getServiceClient();
@@ -77,7 +90,11 @@ export async function POST(req: NextRequest) {
         .eq("id", sessionId);
     }
 
-    // Insert events batch
+    // Insert events batch. Errors are now surfaced in the response
+    // via a non-OK status, which lets the client-side tracker
+    // re-queue and retry. Previously the inserts were fire-and-
+    // forget and silently dropped rows on failure (Analytics audit
+    // P0-A2, Backend audit BE-P0-002).
     if (events && events.length > 0) {
       // Original user_events table
       const rows = events.map((e) => ({
@@ -87,7 +104,14 @@ export async function POST(req: NextRequest) {
         event_data: e.data || {},
         created_at: e.timestamp || new Date().toISOString(),
       }));
-      await db.from("user_events").insert(rows);
+      const { error: eventsErr } = await db.from("user_events").insert(rows);
+      if (eventsErr) {
+        console.error("[/api/track] user_events insert:", eventsErr);
+        return NextResponse.json(
+          { error: "Failed to record events", code: "TRACK_INSERT_FAILED" },
+          { status: 500, headers: { "x-track-failed": "1" } },
+        );
+      }
 
       // Enhanced activity log (only for real UUID users, not guest_xxx)
       const isUuid = /^[0-9a-f]{8}-/.test(userId);
@@ -106,7 +130,14 @@ export async function POST(req: NextRequest) {
           ip_address: ip,
           user_agent: ua,
         }));
-        await db.from("user_activity_log").insert(activityRows).then(() => {});
+        const { error: activityErr } = await db
+          .from("user_activity_log")
+          .insert(activityRows);
+        // Activity log failure is non-critical (user_events is the
+        // authoritative stream) but we still log it.
+        if (activityErr) {
+          console.error("[/api/track] user_activity_log insert:", activityErr);
+        }
       }
 
       // Track pages_visited on page_view events

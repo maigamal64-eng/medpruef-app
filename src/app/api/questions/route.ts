@@ -4,6 +4,8 @@ import { generateWrongOptions, buildMCQOptions, buildMCQFromStored, buildMCQFrom
 import type { StoredChoice } from '@/lib/mcq'
 import { VIENNA_EXAM_PARTS, DEFAULT_EXAM_SOURCE, EXAM_SOURCE_IDS } from '@/lib/topics'
 
+export const dynamic = 'force-dynamic'
+
 /**
  * Apply exam source filter to a Supabase query builder.
  *
@@ -115,10 +117,17 @@ function applyFilters(query: any, p: FilterParams) {
   if (p.ids.length > 0) {
     query = query.in('id', p.ids)
   }
-  // Exclude already-seen questions (used by quiz to avoid repeats)
+  // Exclude already-seen questions (used by quiz to avoid repeats).
+  // Defense-in-depth: filter to integers only before string-
+  // concatenating into the PostgREST filter — parseIdsCsv already
+  // does this, but we want the guarantee at the point of use so a
+  // future sanitizer loosening can't introduce a SQL injection path
+  // (Backend audit BE-P2-019).
   if (p.excludeIds.length > 0) {
-    // Supabase .not('id', 'in', ...) needs a parenthesized comma list
-    query = query.not('id', 'in', `(${p.excludeIds.join(',')})`)
+    const safeIds = p.excludeIds.filter((n) => Number.isInteger(n) && n >= 0)
+    if (safeIds.length > 0) {
+      query = query.not('id', 'in', `(${safeIds.join(',')})`)
+    }
   }
   if (p.examDateFrom || p.examDateTo) {
     const months = buildMonthRange(p.examDateFrom, p.examDateTo)

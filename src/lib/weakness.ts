@@ -138,43 +138,6 @@ export function recordAnswer(topic: string, correct: boolean) {
   addQuizResult(topic, questionId, correct);
 }
 
-/**
- * Generate mock data for demonstration
- */
-export function generateMockData() {
-  if (typeof window === 'undefined') return;
-  
-  const topics = [
-    "Innere Medizin",
-    "Chirurgie", 
-    "Pädiatrie",
-    "Neurologie",
-    "Gynäkologie",
-    "Notfallmedizin",
-    "Psychiatrie",
-    "Orthopädie",
-  ];
-  
-  const mockResults: QuizResult[] = [];
-  
-  for (const topic of topics) {
-    const questionCount = Math.floor(Math.random() * 20) + 5; // 5-25 questions per topic
-    
-    for (let i = 0; i < questionCount; i++) {
-      // Simulate different accuracy rates for different topics
-      let correctChance = 0.7; // 70% default
-      if (topic === "Neurologie" || topic === "Orthopädie") correctChance = 0.4; // Weak topics
-      if (topic === "Innere Medizin" || topic === "Pädiatrie") correctChance = 0.85; // Strong topics
-      
-      mockResults.push({
-        topic,
-        questionId: `mock_${topic}_${i}`,
-        correct: Math.random() < correctChance,
-        timestamp: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
-      });
-    }
-  }
-  
-  localStorage.setItem("medpruef_quiz_results", JSON.stringify(mockResults));
-  console.log(`Generated ${mockResults.length} mock quiz results`);
-}
+// generateMockData() was removed 2026-04-15 (Frontend audit P2-5).
+// It was dev-only demo data that shipped in the production client
+// bundle. Never called from production code paths.

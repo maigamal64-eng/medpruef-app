@@ -144,14 +144,58 @@ export function initTracker(userId: string): void {
     flushEvents().catch(() => {});
   }, FLUSH_INTERVAL_MS);
 
-  // Use sendBeacon on page unload
-  window.addEventListener("visibilitychange", () => {
+  // On tab hide OR pagehide: flush remaining events via sendBeacon
+  // AND call the /api/track endSession branch so user_sessions gets
+  // its ended_at + duration_seconds populated. Previously endSession
+  // was exported but never called, so every session in the DB had
+  // `ended_at IS NULL` (verified: all 1,240 rows were orphaned).
+  // Analytics audit P1-A1. Uses a 5-minute grace window so users
+  // switching tabs don't end their session prematurely.
+  let _endTimer: ReturnType<typeof setTimeout> | null = null;
+  const GRACE_MS = 5 * 60 * 1000;
+  const onVisibility = () => {
     if (document.visibilityState === "hidden") {
       flushBeacon();
+      if (_endTimer) clearTimeout(_endTimer);
+      _endTimer = setTimeout(() => {
+        endSession().catch(() => {});
+      }, GRACE_MS);
+    } else if (document.visibilityState === "visible") {
+      // User came back within the grace window — cancel the end.
+      if (_endTimer) {
+        clearTimeout(_endTimer);
+        _endTimer = null;
+      }
     }
-  });
+  };
+  window.addEventListener("visibilitychange", onVisibility);
   window.addEventListener("pagehide", () => {
     flushBeacon();
+    // pagehide is a near-certain signal the user is leaving the
+    // tab for good — fire the endSession call directly via beacon
+    // if available, otherwise fall back to fetch().
+    if (_sessionId && _userId) {
+      const payload = JSON.stringify({
+        sessionId: _sessionId,
+        userId: _userId,
+        endSession: true,
+      });
+      try {
+        if (typeof navigator !== "undefined" && navigator.sendBeacon) {
+          const blob = new Blob([payload], { type: "application/json" });
+          navigator.sendBeacon("/api/track", blob);
+        } else {
+          fetch("/api/track", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: payload,
+            keepalive: true,
+          }).catch(() => {});
+        }
+      } catch {
+        /* non-critical */
+      }
+    }
   });
 
   trackEvent("session_start", { userId });

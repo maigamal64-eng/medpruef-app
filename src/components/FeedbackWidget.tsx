@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { usePathname } from 'next/navigation'
 import { MessageSquarePlus, X, Send, Check } from 'lucide-react'
 import { getStoredSession } from '@/lib/auth'
 import { getStoredExamSource } from '@/lib/topics'
@@ -21,6 +22,12 @@ export default function FeedbackWidget() {
   const [sending, setSending] = useState(false)
   const [mounted, setMounted] = useState(false)
   const textRef = useRef<HTMLTextAreaElement>(null)
+  // Reactive pathname — previously this read window.location.pathname
+  // inside render, which only re-evaluated when a parent re-rendered
+  // for unrelated reasons. After navigation from /quiz → /admin the
+  // widget would stay visible. usePathname from next/navigation fires
+  // on every App Router navigation. Fixed 2026-04-15 (Frontend P1-3).
+  const pathname = usePathname()
 
   useEffect(() => { setMounted(true) }, [])
 
@@ -31,8 +38,7 @@ export default function FeedbackWidget() {
   if (!mounted) return null
 
   // Hide on certain pages
-  const path = typeof window !== 'undefined' ? window.location.pathname : ''
-  if (['/landing', '/login', '/admin', '/privacy', '/terms', '/impressum'].some(p => path.startsWith(p))) {
+  if (['/landing', '/login', '/admin', '/privacy', '/terms', '/impressum'].some(p => pathname?.startsWith(p))) {
     return null
   }
 

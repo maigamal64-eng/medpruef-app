@@ -9,6 +9,8 @@ import FeedbackWidget from "@/components/FeedbackWidget";
 import GuestMigrationBanner from "@/components/GuestMigrationBanner";
 import CookieBannerMount from "@/components/CookieBannerMount";
 import ConsentGatedAnalytics from "@/components/ConsentGatedAnalytics";
+import TrackRouteChange from "@/components/TrackRouteChange";
+import { Suspense } from "react";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -41,7 +43,7 @@ export const metadata: Metadata = {
     default: "MedPrüf — Austrian Kenntnisprüfung Preparation (Vienna)",
     template: "%s | MedPrüf",
   },
-  description: "Prepare for the Austrian Kenntnisprüfung (Vienna) with 7,725+ clinical questions across 10 medical specialties. SIP 4 & SIP 5 exam simulation, flashcards, performance analytics. Built for foreign doctors.",
+  description: "Prepare for Austrian medical exams (Kenntnisprüfung Wien, KMP Innsbruck, Pharmakologie) with 10,993+ clinical questions across 16 specialties. Exam simulation, flashcards, spaced repetition, performance analytics. Built for foreign doctors.",
   keywords: [
     "Kenntnisprüfung", "Austrian medical exam", "Vienna medical license",
     "SIP 4", "SIP 5", "medical exam preparation", "Ärztekammer Wien",
@@ -66,13 +68,13 @@ export const metadata: Metadata = {
     url: "https://medpruf.com",
     siteName: "MedPrüf",
     title: "MedPrüf — Austrian Kenntnisprüfung Preparation",
-    description: "7,725+ clinical questions for the Vienna Kenntnisprüfung. Exam simulation, flashcards, analytics. Built for foreign doctors seeking Austrian medical licensure.",
+    description: "10,993+ clinical questions for Austrian medical licensing (Kenntnisprüfung Wien, KMP Innsbruck, Pharmakologie). Exam simulation, flashcards, analytics. Built for foreign doctors.",
     images: [{ url: "/brand/og-image.png", width: 1200, height: 630, alt: "MedPrüf — Kenntnisprüfung Preparation" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "MedPrüf — Austrian Kenntnisprüfung Preparation",
-    description: "7,725+ clinical questions for the Vienna Kenntnisprüfung. Built for foreign doctors.",
+    description: "10,993+ clinical questions for Austrian medical exams. Built for foreign doctors.",
     images: ["/brand/og-image.png"],
   },
 };
@@ -80,8 +82,13 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  // WCAG 2.1 1.4.4 requires that users can resize text to 200%
+  // without loss of content or functionality. Previously this export
+  // set `maximumScale: 1, userScalable: false` which blocked pinch-
+  // zoom entirely — a hard a11y fail, especially given the audience
+  // (doctors reading dense German clinical text on mobile). Fixed
+  // 2026-04-15 (Infra P2-INFRA-3 + UX audit, cross-referenced by
+  // Frontend agent).
   themeColor: "#F7F9FC",
 };
 
@@ -151,7 +158,7 @@ export default function RootLayout({
               "@type": "WebApplication",
               "name": "MedPrüf",
               "url": "https://medpruf.com",
-              "description": "Austrian Kenntnisprüfung preparation platform with 7,725+ clinical questions across 10 medical specialties.",
+              "description": "Austrian medical exam preparation platform with 10,993+ clinical questions across 16 specialties and 3 exam types.",
               "applicationCategory": "EducationalApplication",
               "operatingSystem": "Web",
               "offers": {
@@ -193,6 +200,11 @@ export default function RootLayout({
       >
         <ThemeProvider />
         <TrackerInit />
+        {/* TrackRouteChange uses useSearchParams; Suspense wrapper
+            is required by Next.js 15 for components that read it. */}
+        <Suspense fallback={null}>
+          <TrackRouteChange />
+        </Suspense>
         <PWAInstall />
         <GuestMigrationBanner />
         <FeedbackWidget />

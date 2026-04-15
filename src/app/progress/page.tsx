@@ -236,7 +236,12 @@ const TOPIC_TOTALS: Record<string, number> = {
   "Augenheilkunde": 399,
 };
 
-const TOTAL_QUESTIONS = 7725;
+// Catalog total across all 3 exam types as of 2026-04-15 (verified
+// against DB: 7567 Kenntnisprüfung + 3091 KMP Innsbruck + 335 Pharma).
+// A future refactor should read this from /api/questions?countOnly=1
+// per active exam so the progress % reflects the user's chosen exam
+// and adapts automatically when content is added.
+const TOTAL_QUESTIONS = 10993;
 
 export default function ProgressPage() {
   const [lang, setLangState] = useState<Lang>("de");

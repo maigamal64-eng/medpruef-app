@@ -149,7 +149,7 @@ export default function Onboarding({ lang = "de", onComplete }: OnboardingProps)
                   <div>
                     <h3 className="font-semibold text-[#1A2B3C]">SIP Kenntnisprüfung</h3>
                     <p className="text-sm text-[#A0AEC0]">{l === "de" ? "Kenntnisprüfung Medizin (Wien, Österreich)" : "Medical Knowledge Exam (Vienna, Austria)"}</p>
-                    <p className="text-xs text-[#007B5F] font-mono mt-1">7.725 {l === "de" ? "Fragen" : "questions"} · 10 {l === "de" ? "Fachgebiete" : "specialties"}</p>
+                    <p className="text-xs text-[#007B5F] font-mono mt-1">7.567 {l === "de" ? "Fragen" : "questions"} · 10 {l === "de" ? "Fachgebiete" : "specialties"}</p>
                   </div>
                   <CheckCircle2 className="w-6 h-6 text-[#007B5F]" />
                 </div>

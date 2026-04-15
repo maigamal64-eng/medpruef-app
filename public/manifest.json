@@ -1,7 +1,7 @@
 {
-  "name": "MedPrüf — Kenntnisprüfung Vorbereitung",
+  "name": "MedPrüf — Österreichische Arztprüfungen",
   "short_name": "MedPrüf",
-  "description": "Österreichische Kenntnisprüfung Vorbereitung (Wien) — 7.725 Fragen",
+  "description": "10.993 Fragen für Kenntnisprüfung Wien, KMP Innsbruck und Pharmakologie — Prüfungssimulation, Karteikarten und Spaced Repetition",
   "start_url": "https://medpruf.com/",
   "id": "medpruf",
   "scope": "/",

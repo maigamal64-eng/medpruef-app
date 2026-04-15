@@ -39,10 +39,18 @@ interface StreakWidgetProps {
 }
 
 export default function StreakWidget({ streak, lang }: StreakWidgetProps) {
-  const last7Days = Array.from({ length: 7 }, (_, i) => {
-    if (i < streak && i < 7) return true;
-    return Math.random() > 0.5;
-  });
+  // Fill the 7-day strip from the REAL streak only. The previous
+  // implementation filled the non-streak days with `Math.random()`
+  // which invented data on every render — users with a 3-day streak
+  // saw the "other 4 days" flicker active/inactive as the parent
+  // re-rendered for unrelated reasons. Fixed 2026-04-15 (Frontend
+  // audit P1-6, UX audit).
+  //
+  // Future: fetch real per-day activity from /api/stats and render
+  // it here so the strip actually shows a historical week. For now
+  // we just show the current streak as a solid bar of active cells
+  // and grey out the rest.
+  const last7Days = Array.from({ length: 7 }, (_, i) => i < Math.min(streak, 7));
 
   const dayLabels =
     lang === "de"

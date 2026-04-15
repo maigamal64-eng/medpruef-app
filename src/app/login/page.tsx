@@ -5,7 +5,10 @@ import Link from "next/link";
 import { getLang, setLang } from "@/lib/i18n";
 import { getStoredSession, storeSession } from "@/lib/auth";
 import { BrandedLoader } from "@/components/Logo";
-import TelegramLoginWidget, { type TelegramWidgetUser } from "@/components/TelegramLoginWidget";
+// TelegramLoginWidget was removed from the UI on Apr 10 (only bot
+// deep-link remains) — the import + handleWidgetAuth handler were
+// kept around in this file as dead code. Removed 2026-04-15 as part
+// of the audit cleanup (Frontend P2-4).
 import ThemeToggle from "@/components/ThemeToggle";
 import { ArrowLeft, User, Shield, Zap, BookOpen, Mail, Eye, EyeOff } from "lucide-react";
 
@@ -71,29 +74,6 @@ export default function LoginPage() {
         return;
       }
 
-      storeSession({ user: data.user, gamification: data.gamification });
-      window.location.href = "/";
-    } catch {
-      setError(lang === "de" ? "Verbindungsfehler" : "Connection error");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleWidgetAuth = async (wu: TelegramWidgetUser) => {
-    setLoading(true);
-    setError("");
-    try {
-      const res = await fetch("/api/auth", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ widgetData: wu }),
-      });
-      if (!res.ok) {
-        setError(lang === "de" ? "Telegram-Anmeldung fehlgeschlagen" : "Telegram login failed");
-        return;
-      }
-      const data = await res.json();
       storeSession({ user: data.user, gamification: data.gamification });
       window.location.href = "/";
     } catch {
@@ -300,7 +280,7 @@ export default function LoginPage() {
               <div className="w-10 h-10 rounded-xl bg-[#007B5F]/10 flex items-center justify-center mx-auto mb-2">
                 <BookOpen className="w-5 h-5 text-[#007B5F]" />
               </div>
-              <p className="text-[11px] text-[#4A5568] font-medium">7.725 {lang === "de" ? "Fragen" : "Questions"}</p>
+              <p className="text-[11px] text-[#4A5568] font-medium">10.993 {lang === "de" ? "Fragen" : "Questions"}</p>
             </div>
             <div className="text-center">
               <div className="w-10 h-10 rounded-xl bg-[#F4A261]/10 flex items-center justify-center mx-auto mb-2">

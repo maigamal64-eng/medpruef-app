@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { usePathname } from 'next/navigation'
 import { getStoredSession } from '@/lib/auth'
 import { AlertTriangle, UserPlus } from 'lucide-react'
 import Link from 'next/link'
@@ -9,28 +10,29 @@ import Link from 'next/link'
  * Persistent banner shown to users logged in as guest_*.
  * Encourages them to create an account to preserve progress.
  * Hidden on /login, /landing, /privacy, /terms pages.
+ *
+ * 2026-04-15: switched from `window.location.pathname`-on-mount to
+ * `usePathname()` from next/navigation so the hide/show decision
+ * reacts to App Router soft navigations (Frontend audit P1-8).
+ * Also stopped setting `isGuest=false` as a "hide" mechanism —
+ * isGuest now tracks the real session state honestly.
  */
 export default function GuestMigrationBanner() {
   const [isGuest, setIsGuest] = useState(false)
   const [dismissed, setDismissed] = useState(false)
+  const pathname = usePathname()
 
   useEffect(() => {
     const session = getStoredSession()
     const userId = session?.user?.id || ''
     setIsGuest(userId.startsWith('guest_'))
-    // Don't show if already dismissed this session
     setDismissed(sessionStorage.getItem('medpruef_guest_banner_dismissed') === '1')
   }, [])
 
-  useEffect(() => {
-    // Hide on certain pages
-    const path = window.location.pathname
-    if (['/login', '/landing', '/privacy', '/terms', '/impressum'].some(p => path.startsWith(p))) {
-      setIsGuest(false)
-    }
-  }, [])
-
-  if (!isGuest || dismissed) return null
+  const hideOnPath = ['/login', '/landing', '/privacy', '/terms', '/impressum'].some(p =>
+    pathname?.startsWith(p)
+  )
+  if (!isGuest || dismissed || hideOnPath) return null
 
   const handleDismiss = () => {
     setDismissed(true)

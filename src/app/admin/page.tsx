@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { Fragment, useEffect, useState, useCallback, useMemo } from "react";
 import {
   LayoutDashboard, Users, FileText, Activity, Settings, Sparkles,
   ChevronDown, Search, Edit3, Trash2, RotateCcw, Shield, Mail,
@@ -1042,9 +1042,12 @@ function UsersSection({
             </thead>
             <tbody>
               {users.map((u) => (
-                <>
+                // Fragment key must be on the root node of the map
+                // callback, not on an inner <tr>. The previous bare
+                // <> caused React to warn about missing keys and
+                // reconcile incorrectly (Frontend audit P0-2).
+                <Fragment key={u.id}>
                   <tr
-                    key={u.id}
                     onClick={() => onExpandUser(u.id)}
                     className={`border-b border-[#E4E9F0]/50 cursor-pointer transition-colors ${
                       expandedUser === u.id ? "bg-[#007B5F]/5" : "hover:bg-[#F7F9FC]"
@@ -1155,7 +1158,7 @@ function UsersSection({
 
                   {/* Delete Confirmation */}
                   {deletingUser === u.id && (
-                    <tr key={`del-${u.id}`}>
+                    <tr>
                       <td colSpan={11} className="px-4 py-3 bg-[#D64545]/5 border-b border-[#D64545]/20">
                         <div className="flex items-center justify-between">
                           <p className="text-sm text-[#D64545] font-medium">
@@ -1177,7 +1180,7 @@ function UsersSection({
 
                   {/* Expanded Detail / Edit */}
                   {expandedUser === u.id && (
-                    <tr key={`exp-${u.id}`}>
+                    <tr>
                       <td colSpan={11} className="px-4 py-4 bg-[#F7F9FC]/50 border-b border-[#E4E9F0]">
                         {editingUser === u.id ? (
                           <div className="space-y-3">
@@ -1228,7 +1231,7 @@ function UsersSection({
                       </td>
                     </tr>
                   )}
-                </>
+                </Fragment>
               ))}
               {users.length === 0 && (
                 <tr>
@@ -1422,9 +1425,8 @@ function QuestionsSection({
                 </thead>
                 <tbody>
                   {questions.map((q) => (
-                    <>
+                    <Fragment key={q.id}>
                       <tr
-                        key={q.id}
                         onClick={() => onExpandQuestion(q.id)}
                         className={`border-b border-[#E4E9F0]/50 cursor-pointer transition-colors ${
                           expandedQuestion === q.id ? "bg-[#007B5F]/5" : "hover:bg-[#F7F9FC]"
@@ -1466,7 +1468,7 @@ function QuestionsSection({
 
                       {/* Expanded Question Detail */}
                       {expandedQuestion === q.id && (
-                        <tr key={`exp-q-${q.id}`}>
+                        <tr>
                           <td colSpan={8} className="px-4 py-4 bg-[#F7F9FC]/50 border-b border-[#E4E9F0]">
                             {editingQuestion === q.id ? (
                               <div className="space-y-3">
@@ -1556,7 +1558,7 @@ function QuestionsSection({
                           </td>
                         </tr>
                       )}
-                    </>
+                    </Fragment>
                   ))}
                   {questions.length === 0 && (
                     <tr>

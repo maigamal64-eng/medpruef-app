@@ -412,7 +412,9 @@ export default function SettingsPage() {
 
               <div className="py-2 border-t border-[#E4E9F0]">
                 <p className="text-sm text-[#4A5568] text-center">
-                  Made with &hearts; for Arabic-speaking doctors
+                  {lang === "de"
+                    ? "Mit \u2665 für ausländische Ärzt:innen in Österreich"
+                    : "Made with \u2665 for foreign doctors in Austria"}
                 </p>
                 <p className="text-xs text-[#A0AEC0] text-center mt-1">
                   {lang === "de"

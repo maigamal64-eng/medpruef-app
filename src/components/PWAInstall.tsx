@@ -28,6 +28,15 @@ export default function PWAInstall() {
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return;
 
+    // Refs the async .then() writes to and the cleanup reads from.
+    // Previously the cleanup function was returned from *inside* the
+    // .then() callback, which made it unreachable to React — the 60s
+    // interval and the `focus` listener never got torn down. Fast-
+    // Refresh in dev visibly stacked intervals. Fixed 2026-04-15
+    // (Frontend audit P1-1).
+    let interval: ReturnType<typeof setInterval> | undefined;
+    let focusHandler: (() => void) | undefined;
+
     let refreshing = false;
     const reloadOnControllerChange = () => {
       if (refreshing) return;
@@ -69,15 +78,15 @@ export default function PWAInstall() {
           });
         });
 
-        // Poll for updates every 60s and on tab focus — catches deploys
-        // without requiring the user to reload manually.
-        const checkForUpdate = () => registration.update().catch(() => {});
-        const interval = setInterval(checkForUpdate, 60_000);
-        window.addEventListener("focus", checkForUpdate);
-        return () => {
-          clearInterval(interval);
-          window.removeEventListener("focus", checkForUpdate);
+        // Poll for updates every 60s and on tab focus — catches
+        // deploys without requiring the user to reload manually.
+        // Stored in outer-scope vars so the cleanup below can release
+        // them.
+        focusHandler = () => {
+          registration.update().catch(() => {});
         };
+        interval = setInterval(focusHandler, 60_000);
+        window.addEventListener("focus", focusHandler);
       })
       .catch(() => {});
 
@@ -94,6 +103,8 @@ export default function PWAInstall() {
       window.removeEventListener("beforeinstallprompt", handler);
       navigator.serviceWorker.removeEventListener("controllerchange", reloadOnControllerChange);
       navigator.serviceWorker.removeEventListener("message", onMessage);
+      if (interval) clearInterval(interval);
+      if (focusHandler) window.removeEventListener("focus", focusHandler);
     };
   }, []);
 
