@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs";
 
 // Canonical host — all production traffic should land here. Any request from
 // a non-canonical host (old Vercel preview URLs, stale bookmarks, the old
@@ -138,4 +139,24 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  // Sentry org + project for source map uploads + error grouping.
+  org: "medpruf",
+  project: "javascript-nextjs",
+
+  // Auth token for source map uploads at build time. On Vercel, set
+  // SENTRY_AUTH_TOKEN as an env var. Locally, the token is in
+  // ./.env.shared.
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+
+  // Suppress noisy source-map upload logs during build.
+  silent: true,
+
+  // Don't widen the Next.js bundle with Sentry tunneling or Webpack
+  // plugin features we don't need yet.
+  widenClientFileUpload: true,
+  disableLogger: true,
+
+  // Auto-instrument server components and API routes.
+  automaticVercelMonitors: true,
+});
