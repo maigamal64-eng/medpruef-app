@@ -287,11 +287,11 @@ export default function SettingsPage() {
                 <div>
                   <p className="text-sm font-medium text-[#1A2B3C]">{t("exam_source_label", lang)}</p>
                   <p className="text-xs text-[#A0AEC0]">
-                    {lang === "de" ? "Kenntnisprüfung Wien" : "Kenntnisprüfung Vienna"}
+                    {lang === "de" ? "Kenntnisprüfung Wien · KMP Innsbruck · Pharmakologie" : "Kenntnisprüfung Vienna · KMP Innsbruck · Pharmacology"}
                   </p>
                 </div>
                 <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-[#007B5F]/10 text-[#007B5F] text-xs font-semibold rounded-lg">
-                  SIP
+                  3 {lang === "de" ? "Prüfungen" : "exams"}
                 </span>
               </div>
             </div>
@@ -418,8 +418,8 @@ export default function SettingsPage() {
                 </p>
                 <p className="text-xs text-[#A0AEC0] text-center mt-1">
                   {lang === "de"
-                    ? "\u00d6sterreichische Kenntnisprüfung (Wien)"
-                    : "Austrian Kenntnisprüfung (Vienna)"}
+                    ? "Österreichische Medizinprüfungen — 10.993 Fragen"
+                    : "Austrian medical exams — 10,993 questions"}
                 </p>
               </div>
 

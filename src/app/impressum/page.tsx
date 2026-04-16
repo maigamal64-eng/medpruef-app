@@ -37,10 +37,15 @@ export default function ImpressumPage() {
                 {lang === "de" ? "Angaben gemäß § 5 ECG" : "Information pursuant to § 5 ECG"}
               </h2>
               <p>
-                <strong>[name]</strong><br />
-                [name]<br />
+                <strong>MedPrüf</strong><br />
+                {lang === "de" ? "Ein persönliches Projekt von" : "A personal project by"} [name]<br />
+                {lang === "de" ? "Betrieben durch" : "Operated by"}: [name]<br />
+                E-Mail:{" "}
+                <a href="mailto:user-0a1d478f@example.com" className="text-[#003A8C] hover:underline">
+                  user-0a1d478f@example.com
+                </a><br />
                 {lang === "de" ? "Adresse auf Anfrage" : "Address available on request"}<br />
-                {lang === "de" ? "Österreich" : "Austria"}
+                {lang === "de" ? "Ägypten (Betrieb für Nutzer in Österreich)" : "Egypt (operated for users in Austria)"}
               </p>
             </section>
 
@@ -58,10 +63,12 @@ export default function ImpressumPage() {
 
             <section>
               <h2 className="text-lg font-semibold text-[#1A2B3C] mb-2">
-                {lang === "de" ? "Umsatzsteuer-Identifikationsnummer" : "VAT Identification Number"}
+                {lang === "de" ? "Unternehmensform" : "Business type"}
               </h2>
               <p>
-                UID: {lang === "de" ? "wird nachgetragen" : "to be added"}
+                {lang === "de"
+                  ? "Persönliches Projekt — kein eingetragenes Unternehmen. Keine UID-Nummer, keine Gewerbeberechtigung erforderlich (nicht-gewerbliche Bildungsplattform)."
+                  : "Personal project — not a registered company. No VAT ID, no trade license required (non-commercial educational platform)."}
               </p>
             </section>
 
