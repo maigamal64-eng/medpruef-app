@@ -38,6 +38,7 @@ type PublicUser = {
   active_exam: string | null;
   language_code: string | null;
   created_at: string | null;
+  email_status: "valid" | "bounced" | "unverified" | null;
 };
 
 function sanitizeUser(raw: Record<string, unknown> | null): PublicUser | null {
@@ -55,6 +56,7 @@ function sanitizeUser(raw: Record<string, unknown> | null): PublicUser | null {
     active_exam: (raw.active_exam as string | null) || null,
     language_code: (raw.language_code as string | null) || null,
     created_at: (raw.created_at as string | null) || null,
+    email_status: (raw.email_status as string | null) as PublicUser["email_status"] || null,
   };
 }
 

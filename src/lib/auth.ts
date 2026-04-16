@@ -21,6 +21,7 @@ export interface StoredSession {
     id: string;
     telegram_id?: number;
     email?: string;
+    email_status?: 'valid' | 'bounced' | 'unverified' | null;
     first_name: string;
     last_name?: string;
     role?: string;

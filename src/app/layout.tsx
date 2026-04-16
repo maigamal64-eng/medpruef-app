@@ -7,6 +7,7 @@ import ThemeProvider from "@/components/ThemeProvider";
 import PWAInstall from "@/components/PWAInstall";
 import FeedbackWidget from "@/components/FeedbackWidget";
 import GuestMigrationBanner from "@/components/GuestMigrationBanner";
+import EmailValidationModal from "@/components/EmailValidationModal";
 import CookieBannerMount from "@/components/CookieBannerMount";
 import ConsentGatedAnalytics from "@/components/ConsentGatedAnalytics";
 import TrackRouteChange from "@/components/TrackRouteChange";
@@ -207,6 +208,7 @@ export default function RootLayout({
         </Suspense>
         <PWAInstall />
         <GuestMigrationBanner />
+        <EmailValidationModal />
         <FeedbackWidget />
         <CookieBannerMount />
         <ConsentGatedAnalytics />

@@ -22,6 +22,30 @@ export interface ChangelogEntry {
 }
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    date: "2026-04-16",
+    tag: "feature",
+    title: {
+      de: "E-Mail-Validierung: Benachrichtigung bei ungültiger E-Mail-Adresse",
+      en: "Email validation: notification for invalid email addresses",
+    },
+    description: {
+      de: "Nutzer mit ungültigen E-Mail-Adressen werden beim nächsten Login benachrichtigt und können ihre Adresse direkt aktualisieren.",
+      en: "Users with invalid email addresses are notified on next login and can update their address directly.",
+    },
+  },
+  {
+    date: "2026-04-16",
+    tag: "admin",
+    title: {
+      de: "E-Mail-Status-Tracking in der Datenbank",
+      en: "Email status tracking in database",
+    },
+    description: {
+      de: "Neue Spalte email_status (valid/bounced/unverified) zur Nachverfolgung der E-Mail-Zustellbarkeit. API-Endpunkt /api/user/email-update für Nutzer-Self-Service.",
+      en: "New email_status column (valid/bounced/unverified) for delivery tracking. API endpoint /api/user/email-update for user self-service.",
+    },
+  },
   // ═══ 2026-04-15 (overnight audit) ═══
   {
     date: "2026-04-15",
