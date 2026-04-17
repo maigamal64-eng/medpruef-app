@@ -39,15 +39,26 @@ export const dynamic = "force-dynamic";
  *     null (no overwrite of good existing content).
  */
 
+// Upgraded 2026-04-17 per user feedback (Mounzer 3/5 + Hu "bessere
+// Erklärungen"). Enforces strict structure that makes explanations
+// easier to skim on mobile: TL;DR → correct answer reasoning →
+// distractor-by-distractor breakdown → guideline citation.
 const SYSTEM_PROMPT = [
-  "You are MedPrüf's AI study tutor, helping foreign doctors prepare",
-  "for the Austrian Kenntnisprüfung. Always respond in the same",
-  "language as the question (German by default, English if asked).",
-  "Be precise, clinically accurate, and cite the specific",
-  "physiological / pharmacological reasoning. Use short bullet points",
-  "and tables when appropriate. Never speculate about a diagnosis",
-  "without the evidence to back it.",
-].join(" ");
+  "You are MedPrüf's AI study tutor for the Austrian Kenntnisprüfung.",
+  "Respond in the same language as the question (German default, English if asked).",
+  "",
+  "MANDATORY FORMAT:",
+  "1. Start with a one-sentence **TL;DR** (bold) summarizing the correct answer.",
+  "2. Section '**Warum die richtige Antwort**' / '**Why the correct answer**' — 2–4 bullets with clinical/physiological reasoning. Use **bold** for key medical terms.",
+  "3. Section '**Warum die anderen falsch sind**' / '**Why the others are wrong**' — one short bullet per distractor naming the specific reason.",
+  "4. Where relevant, cite the guideline or source: ERC 2021, ESC, ÖDG, Österreichischer Impfplan, WHO, AGES.",
+  "",
+  "HARD CONSTRAINTS:",
+  "- Max ~400 words total. Fit on a mobile screen.",
+  "- Use markdown (**bold**, bullet lists, small tables where helpful).",
+  "- Never speculate without evidence. If uncertain, say so explicitly.",
+  "- Do NOT regurgitate the question. Go straight to reasoning.",
+].join("\n");
 
 const MAX_MESSAGES = 20;
 const MAX_MESSAGE_CHARS = 4000;
@@ -123,13 +134,14 @@ export async function POST(req: NextRequest) {
     console.error("[ai-chat] quota check failed (failing open):", err);
   }
 
-  let parsed: { messages?: unknown; questionId?: unknown };
+  let parsed: { messages?: unknown; questionId?: unknown; regenerate?: unknown };
   try {
     parsed = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
-  const { messages, questionId } = parsed;
+  const { messages, questionId, regenerate } = parsed;
+  const forceRegenerate = regenerate === true;
 
   if (!Array.isArray(messages) || messages.length === 0) {
     return NextResponse.json({ error: "messages[] required" }, { status: 400 });
@@ -235,9 +247,12 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Cache the explanation ONLY when there isn't one yet. Prevents the
-  // content-poisoning vector where an attacker could rewrite any
-  // question's explanation.
+  // Cache the explanation ONLY when there isn't one yet (default),
+  // OR always overwrite if pro/admin user explicitly requested
+  // regenerate=true (bypasses content-poisoning protection because
+  // the tier gate already ensures the caller is trusted + has quota).
+  // When regenerating, also reset the rating counters so the new
+  // explanation is judged on its own merits.
   if (qidNum && sanitized.length === 1) {
     try {
       const db = getServiceClient();
@@ -246,13 +261,19 @@ export async function POST(req: NextRequest) {
         .select("ai_explanation")
         .eq("id", qidNum)
         .maybeSingle();
-      if (!existing?.ai_explanation) {
+      const shouldWrite = !existing?.ai_explanation || forceRegenerate;
+      if (shouldWrite) {
+        const update: Record<string, unknown> = {
+          ai_explanation: reply,
+          ai_explanation_generated_at: new Date().toISOString(),
+        };
+        if (forceRegenerate) {
+          update.explanation_rating_sum = 0;
+          update.explanation_rating_count = 0;
+        }
         const { error: cacheErr } = await db
           .from("questions")
-          .update({
-            ai_explanation: reply,
-            ai_explanation_generated_at: new Date().toISOString(),
-          })
+          .update(update)
           .eq("id", qidNum);
         if (cacheErr) console.error("[ai-chat] cache write:", cacheErr);
       }

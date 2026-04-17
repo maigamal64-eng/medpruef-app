@@ -931,7 +931,7 @@ function Footer({ lang }: { lang: Lang }) {
             <ul className="space-y-2 text-sm text-white/80">
               <li><a href="#features" className="hover:text-white transition-colors">{COPY.nav.features[lang]}</a></li>
               <li><a href="#sample" className="hover:text-white transition-colors">{COPY.nav.sample[lang]}</a></li>
-              <li><a href="#pricing" className="hover:text-white transition-colors">{COPY.nav.pricing[lang]}</a></li>
+              <li><Link href="/pricing" className="hover:text-white transition-colors">{COPY.nav.pricing[lang]}</Link></li>
               <li><Link href="/changelog" className="hover:text-white transition-colors">Changelog</Link></li>
             </ul>
           </div>

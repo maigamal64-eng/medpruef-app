@@ -23,6 +23,54 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-04-17",
+    tag: "feature",
+    title: {
+      de: "Weiterlernen, wo du aufgehört hast",
+      en: "Continue where you left off",
+    },
+    description: {
+      de: "Neue „Fortsetzen\u201C-Karte auf der Startseite: sobald du Fragen beantwortet hast, merken wir uns dein letztes Fachgebiet und schlagen dir die nächste fällige Frage vor (Spaced-Repetition-Logik). Ein Klick bringt dich direkt dorthin, wo du gestern warst. Karte blendet sich automatisch aus, wenn deine letzte Sitzung länger als 7 Tage her ist.",
+      en: "New \"Continue\" card on the home page: once you've answered any questions, we remember your last topic and suggest the next spaced-rep-due question. One click takes you back to exactly where you left off yesterday. Auto-hides if your last session was more than 7 days ago.",
+    },
+  },
+  {
+    date: "2026-04-17",
+    tag: "improvement",
+    title: {
+      de: "KI-Erklärungen: besser strukturiert, jetzt regenerierbar (Pro)",
+      en: "AI explanations: better structure, regeneratable (Pro)",
+    },
+    description: {
+      de: "Neues strengeres Format für KI-Erklärungen: TL;DR zuerst, dann „Warum die richtige Antwort\u201C mit Bullet-Points und Fettdruck für Fachbegriffe, dann Distraktor-für-Distraktor Begründung, mit Leitlinien-Referenzen (ERC 2021, ESC, ÖDG, AGES). Max. ~400 Wörter damit es auf das Handy passt. Pro-Nutzer können eine Erklärung jetzt neu generieren lassen (Refresh-Button oben im KI-Chat) — der neue Text überschreibt den alten und setzt die Bewertungen zurück. Thumbs-down landet jetzt außerdem im Feedback-Posteingang, damit schlechte Erklärungen systematisch verbessert werden.",
+      en: "Stricter format for AI explanations: TL;DR first, then \"Why the correct answer\" with bullet points and bold medical terms, then distractor-by-distractor reasoning with guideline references (ERC 2021, ESC, ÖDG, AGES). Capped at ~400 words so it fits on mobile. Pro users can now regenerate an explanation (Refresh button at the top of the AI chat) — the new text overwrites the old and resets the ratings. Thumbs-down now also drops into the feedback inbox so bad explanations get systematically improved.",
+    },
+  },
+  {
+    date: "2026-04-17",
+    tag: "feature",
+    title: {
+      de: "Personalisierter Lernplan (Lernplan)",
+      en: "Personalized study plan (Lernplan)",
+    },
+    description: {
+      de: "Neue Seite /study-plan baut dir aus deinem Prüfungsdatum, Tagesziel und Fortschritt pro Fachgebiet einen Tag-für-Tag-Lernplan. Die ersten 70% der Zeit fokussieren neues Material, die letzten 30% reine Wiederholung. Schwache Themen (< 60% Genauigkeit) bekommen mehr Gewicht. Jede Tages-Karte zeigt Fachgebiete mit Anzahl, direktem Start-Button und grünem Haken, sobald das Tagesziel erfüllt ist.",
+      en: "New /study-plan page generates a day-by-day learning plan from your exam date, daily goal, and per-topic progress. First 70% of the timeline focuses on new material, last 30% on pure review. Weak topics (< 60% accuracy) get extra weight. Every day card shows topics with target counts, a direct Start button, and a green checkmark once today's goal is met.",
+    },
+  },
+  {
+    date: "2026-04-17",
+    tag: "feature",
+    title: {
+      de: "Preisseite: Free, Pro und Gruppentarife transparent",
+      en: "Pricing page: Free, Pro, and Group plans — transparent",
+    },
+    description: {
+      de: "Neue Seite /pricing zeigt, was heute kostenlos ist, und welche Pro- und Gruppentarife bald verfügbar sind. Interesse anmelden per E-Mail — wir melden uns mit dem endgültigen Preis vor dem Launch. Erreichbar über die Seitenleiste (Preise), die Einstellungen (Konto) und die Startseiten-Fußzeile.",
+      en: "New /pricing page shows what's free today and which Pro + Group plans are coming soon. Sign up by email — we'll share final pricing before launch. Reachable from the sidebar (Pricing), settings (Account), and the landing-page footer.",
+    },
+  },
+  {
     date: "2026-04-16",
     tag: "feature",
     title: {

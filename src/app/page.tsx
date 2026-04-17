@@ -7,7 +7,7 @@ import { getTopicConfig } from "@/lib/topics";
 import { getLevelFromXP } from "@/lib/xp";
 import { t, getLang, setLang } from "@/lib/i18n";
 import TopicIcon from "@/components/TopicIcon";
-import { Flame, FileText as FileTextIcon, Lightbulb, Shuffle, PlayCircle, ClipboardList, Zap, CheckCircle, User, Inbox, ChevronRight, GraduationCap, Calendar, BarChart3, Search, AlertTriangle, Star, AlertCircle } from "lucide-react";
+import { Flame, FileText as FileTextIcon, Lightbulb, Shuffle, PlayCircle, ClipboardList, Zap, CheckCircle, User, Inbox, ChevronRight, GraduationCap, Calendar, CalendarDays, BarChart3, Search, AlertTriangle, Star, AlertCircle } from "lucide-react";
 import { isTelegramMiniApp, getMiniAppInitData, getStoredSession, storeSession } from "@/lib/auth";
 import {
   getStoredExamSource,
@@ -35,6 +35,7 @@ import { getWeakTopics, type TopicStats } from "@/lib/weakness";
 import Link from "next/link";
 import WhatsNewModal from "@/components/WhatsNewModal";
 import UserSurveyModal from "@/components/UserSurveyModal";
+import ResumeSessionCard from "@/components/ResumeSessionCard";
 
 type Lang = "de" | "en";
 
@@ -618,6 +619,9 @@ export default function Home() {
             </div>
           </div>
 
+          {/* Resume where you left off — addresses Abobaker's feedback */}
+          {!user.id.startsWith("guest_") && <ResumeSessionCard userId={user.id} lang={lang} />}
+
           {/* Weakest Subject — urgency block */}
           {weakTopics.length > 0 && (
             <div className="bg-[#FFF4E6] border border-[#F4A261]/25 border-l-4 border-l-[#F4A261] rounded-2xl p-6 mb-10">
@@ -642,6 +646,35 @@ export default function Home() {
               </div>
             </div>
           )}
+
+          {/* Lernplan CTA — personalized study plan */}
+          <Link
+            href="/study-plan"
+            className="card-interactive rounded-2xl p-5 mb-6 flex items-center gap-4 group"
+          >
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#007B5F] to-[#003A8C] flex items-center justify-center flex-shrink-0 shadow-sm">
+              <CalendarDays className="w-6 h-6 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-[#1A2B3C] flex items-center gap-2">
+                {lang === "de" ? "Dein Lernplan" : "Your Study Plan"}
+                {profileData?.targetDate && !isNaN(new Date(profileData.targetDate).getTime()) && (() => {
+                  const days = Math.ceil((new Date(profileData.targetDate).getTime() - Date.now()) / 86400000);
+                  return days > 0 ? (
+                    <span className="inline-flex items-center gap-1 bg-[#007B5F]/10 text-[#007B5F] text-[10px] font-bold px-2 py-0.5 rounded-full">
+                      {lang === "de" ? `${days} Tage` : `${days} days`}
+                    </span>
+                  ) : null;
+                })()}
+              </p>
+              <p className="text-xs text-[#A0AEC0] mt-0.5">
+                {lang === "de"
+                  ? "Tagesplan bis zur Prüfung ansehen"
+                  : "See your day-by-day plan to the exam"}
+              </p>
+            </div>
+            <ChevronRight className="w-5 h-5 text-[#A0AEC0] group-hover:text-[#007B5F] group-hover:translate-x-0.5 transition-all flex-shrink-0" />
+          </Link>
 
           {/* Quick Actions — 3-column grid */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-10">

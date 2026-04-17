@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { X, Send, Bot, User, Loader2, Lock } from "lucide-react";
+import { X, Send, Bot, User, Loader2, Lock, RefreshCw } from "lucide-react";
 import { trackEvent } from "@/lib/tracker";
 import ReactMarkdown from "react-markdown";
 import { authFetch as fetch } from "@/lib/authFetch";
@@ -91,22 +91,24 @@ Respond in ${lang === "de" ? "German" : "English"}.
 Use **bold** for key terms, bullet points for clarity, and structured headings.`;
   };
 
-  const loadOrGenerateExplanation = async () => {
+  const loadOrGenerateExplanation = async (forceRegenerate = false) => {
     setLoading(true);
     try {
-      // Try to load cached explanation from DB first
-      const cacheRes = await fetch(`/api/ai-chat?questionId=${questionId}`);
-      if (cacheRes.ok) {
-        const cacheData = await cacheRes.json();
-        if (cacheData.cached && cacheData.explanation) {
-          setCachedExplanation(cacheData.explanation);
-          setMessages([{ role: "assistant", content: cacheData.explanation }]);
-          setLoading(false);
-          return;
+      // Try to load cached explanation from DB first, unless regenerating
+      if (!forceRegenerate) {
+        const cacheRes = await fetch(`/api/ai-chat?questionId=${questionId}`);
+        if (cacheRes.ok) {
+          const cacheData = await cacheRes.json();
+          if (cacheData.cached && cacheData.explanation) {
+            setCachedExplanation(cacheData.explanation);
+            setMessages([{ role: "assistant", content: cacheData.explanation }]);
+            setLoading(false);
+            return;
+          }
         }
       }
 
-      // Generate new explanation
+      // Generate new explanation (or regenerate over an existing one for pro users)
       const systemPrompt = buildSystemContext();
       const userPrompt = lang === "de"
         ? "Erkläre diese Frage und warum die richtige Antwort korrekt ist. Gehe auch kurz auf die falschen Antworten ein."
@@ -119,6 +121,7 @@ Use **bold** for key terms, bullet points for clarity, and structured headings.`
           system: systemPrompt,
           messages: [{ role: "user", content: userPrompt }],
           questionId, // For caching
+          regenerate: forceRegenerate, // Server gates to pro/admin
         }),
       });
 
@@ -146,6 +149,11 @@ Use **bold** for key terms, bullet points for clarity, and structured headings.`
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleRegenerate = async () => {
+    if (!isPro || loading) return;
+    await loadOrGenerateExplanation(true);
   };
 
   const handleSend = async () => {
@@ -212,9 +220,31 @@ Use **bold** for key terms, bullet points for clarity, and structured headings.`
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="text-white/60 hover:text-white transition-colors">
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-1">
+            {/* Regenerate button — Pro/admin only. Shows Lock icon for free users. */}
+            {cachedExplanation && !loading && (
+              isPro ? (
+                <button
+                  onClick={handleRegenerate}
+                  className="p-1.5 rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+                  title={lang === "de" ? "Neu generieren" : "Regenerate"}
+                  aria-label={lang === "de" ? "Neu generieren" : "Regenerate"}
+                >
+                  <RefreshCw className="w-4 h-4" />
+                </button>
+              ) : (
+                <span
+                  className="p-1.5 rounded-lg text-white/30 cursor-not-allowed"
+                  title={lang === "de" ? "Pro-Feature: Erklärung neu generieren" : "Pro feature: regenerate explanation"}
+                >
+                  <Lock className="w-4 h-4" />
+                </span>
+              )
+            )}
+            <button onClick={onClose} className="text-white/60 hover:text-white transition-colors p-1.5">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Messages */}

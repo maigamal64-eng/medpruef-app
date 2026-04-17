@@ -3,11 +3,12 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getLang, setLang, t } from "@/lib/i18n";
-import { getStoredSession, clearSession } from "@/lib/auth";
+import { getStoredSession, clearSession, storeSession } from "@/lib/auth";
 import { getStoredTheme, setStoredTheme, type Theme } from "@/components/ThemeProvider";
+import { authFetch } from "@/lib/authFetch";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
-import { Moon, Sun, Globe, Target, Calendar, Bell, Trash2, Download, LogOut, Info, Shield } from "lucide-react";
+import { Moon, Sun, Globe, Target, Calendar, Bell, Trash2, Download, LogOut, Info, Shield, Crown, ArrowRight } from "lucide-react";
 
 type Lang = "de" | "en";
 
@@ -44,9 +45,49 @@ export default function SettingsPage() {
   useEffect(() => {
     setLangState(getLang());
     setThemeState(getStoredTheme());
-    setSession(getStoredSession());
-    setProfile(loadProfile());
+    const stored = getStoredSession();
+    setSession(stored);
+    const local = loadProfile();
+    // Hydrate from server-stored daily_goal when available — server is
+    // the source of truth for Lernplan, localStorage is fallback-only.
+    if (stored?.user?.daily_goal && stored.user.daily_goal !== local.dailyGoal) {
+      const merged = { ...local, dailyGoal: stored.user.daily_goal };
+      setProfile(merged);
+      saveProfile(merged);
+    } else {
+      setProfile(local);
+    }
   }, []);
+
+  /**
+   * Best-effort PATCH to /api/user/exam-preference. Failures are
+   * swallowed because the local state is already the source of truth
+   * for non-Lernplan features; the Lernplan page will simply show "no
+   * exam date" if the server never received the update.
+   */
+  const persistToServer = async (patch: { examDate?: string | null; dailyGoal?: number }) => {
+    const stored = getStoredSession();
+    if (!stored?.user?.id || stored.user.id.startsWith("guest_")) return;
+    try {
+      await authFetch("/api/user/exam-preference", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patch),
+      });
+      if (patch.dailyGoal !== undefined) {
+        // Keep the session in sync so Lernplan sees the new value without a re-login.
+        const fresh = getStoredSession();
+        if (fresh?.user) {
+          storeSession({
+            ...fresh,
+            user: { ...fresh.user, daily_goal: patch.dailyGoal },
+          });
+        }
+      }
+    } catch {
+      // non-critical
+    }
+  };
 
   const switchLang = (l: Lang) => {
     setLang(l);
@@ -64,12 +105,15 @@ export default function SettingsPage() {
     const updated = { ...profile, dailyGoal: clamped };
     setProfile(updated);
     saveProfile(updated);
+    void persistToServer({ dailyGoal: clamped });
   };
 
   const handleTargetDateChange = (value: string) => {
     const updated = { ...profile, targetDate: value };
     setProfile(updated);
     saveProfile(updated);
+    // Empty string → clear. Otherwise send as YYYY-MM-DD.
+    void persistToServer({ examDate: value || null });
   };
 
   const handleClearData = () => {
@@ -292,6 +336,54 @@ export default function SettingsPage() {
                 </div>
                 <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-[#007B5F]/10 text-[#007B5F] text-xs font-semibold rounded-lg">
                   3 {lang === "de" ? "Prüfungen" : "exams"}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* ===== SECTION: Konto (Account) — pricing + tier ===== */}
+          <div className="card rounded-2xl p-5">
+            <h2 className="text-lg font-semibold text-[#1A2B3C] mb-4 flex items-center gap-2">
+              <Crown className="w-5 h-5 text-[#007B5F]" />
+              {lang === "de" ? "Konto" : "Account"}
+            </h2>
+
+            {/* Pricing link */}
+            <Link
+              href="/pricing"
+              className="flex items-center justify-between py-3 border-b border-[#E4E9F0] group"
+            >
+              <div className="flex items-center gap-3">
+                <Crown className="w-5 h-5 text-[#00A896]" />
+                <div>
+                  <p className="text-sm font-medium text-[#1A2B3C]">
+                    {lang === "de" ? "Preise & Tarife" : "Pricing & plans"}
+                  </p>
+                  <p className="text-xs text-[#A0AEC0]">
+                    {lang === "de"
+                      ? "Free, Pro und Gruppentarife anzeigen"
+                      : "See Free, Pro and Group plans"}
+                  </p>
+                </div>
+              </div>
+              <ArrowRight className="w-4 h-4 text-[#A0AEC0] group-hover:text-[#007B5F] group-hover:translate-x-0.5 transition-all" />
+            </Link>
+
+            {/* Current tier */}
+            <div className="py-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-[#1A2B3C]">
+                    {lang === "de" ? "Aktueller Tarif" : "Current plan"}
+                  </p>
+                  <p className="text-xs text-[#A0AEC0]">
+                    {lang === "de"
+                      ? "Voller Zugang, kostenlos"
+                      : "Full access, free"}
+                  </p>
+                </div>
+                <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-[#007B5F]/10 text-[#007B5F] text-xs font-semibold rounded-lg">
+                  {lang === "de" ? "Kostenlos" : "Free"}
                 </span>
               </div>
             </div>

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { t } from "@/lib/i18n";
 import { getLevelFromXP } from "@/lib/xp";
-import { Home, FileText, GraduationCap, BarChart3, TrendingUp, Map, Settings, Sparkles, PanelLeftClose, PanelLeftOpen, Layers } from "lucide-react";
+import { Home, FileText, GraduationCap, BarChart3, TrendingUp, Map, Settings, Sparkles, PanelLeftClose, PanelLeftOpen, Layers, Crown, CalendarDays } from "lucide-react";
 import ExamSwitcherInline from "./ExamSwitcherInline";
 
 type Lang = "de" | "en";
@@ -51,6 +51,8 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0 }: Sidebar
     { href: userId ? `/stats?userId=${userId}` : "/stats", icon: <BarChart3 className="w-5 h-5" />, label: t("stats", lang), key: "stats" },
     { href: "/progress", icon: <TrendingUp className="w-5 h-5" />, label: t("progress", lang), key: "progress" },
     { href: "/curriculum", icon: <Map className="w-5 h-5" />, label: t("curriculum", lang), key: "curriculum" },
+    { href: "/study-plan", icon: <CalendarDays className="w-5 h-5" />, label: lang === "de" ? "Lernplan" : "Study Plan", key: "study-plan" },
+    { href: "/pricing", icon: <Crown className="w-5 h-5" />, label: lang === "de" ? "Preise" : "Pricing", key: "pricing" },
   ];
 
   const bottomItems = [
