@@ -198,7 +198,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${inter.className} ${plusJakarta.variable} bg-[#F7F9FC] text-[#1A2B3C] min-h-screen antialiased`}
+        className={`${inter.className} ${plusJakarta.variable} bg-[var(--mp-surface-sunken)] text-[var(--mp-fg)] min-h-screen antialiased`}
       >
         <ThemeProvider />
         <TrackerInit />

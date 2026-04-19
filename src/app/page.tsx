@@ -501,79 +501,25 @@ export default function Home() {
         </div>
 
         <div className="px-6 lg:px-10 py-4">
-          {/* Hero Progress Banner */}
-          <div className="bg-gradient-to-r from-[#001B3D] to-[#003A8C] rounded-2xl p-6 md:p-8 text-white relative overflow-hidden mb-6">
-            {/* Subtle pattern overlay */}
-            <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '24px 24px' }} />
-            <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-              <div>
-                <h1 className="text-2xl md:text-3xl font-black mb-2 font-display">
-                  {lang === "de"
-                    ? `Du bist ${Math.round(((gam?.total_questions_answered || 0) / 10993) * 100)}% näher am Bestehen`
-                    : `You're ${Math.round(((gam?.total_questions_answered || 0) / 10993) * 100)}% closer to passing`}
-                  {" "}🇦🇹
-                </h1>
-                <p className="text-white/70 text-sm">
-                  {lang === "de" ? "Geschätzte Note" : "Estimated score"}: <span className="font-bold text-white">{(gam?.total_questions_answered || 0) > 0 ? Math.round(((gam?.total_correct || 0) / (gam?.total_questions_answered || 1)) * 100) : 0}%</span>
-                  {" · "}
-                  {lang === "de" ? "Fortschritt" : "Completion"}: <span className="font-bold text-white">{Math.round(((gam?.total_questions_answered || 0) / 10993) * 100)}%</span>
-                </p>
-                {(() => {
-                  const answered = gam?.total_questions_answered || 0;
-                  const acc = answered > 0 ? Math.round(((gam?.total_correct || 0) / answered) * 100) : 0;
-                  const completion = Math.round((answered / 10993) * 100);
-                  const passProbability = answered > 10 ? Math.min(99, Math.round(acc * 0.7 + completion * 0.3)) : 0;
-                  return passProbability > 0 ? (
-                    <p className="text-white/70 text-sm mt-1">
-                      {lang === "de" ? "Bestehenswahrscheinlichkeit" : "Pass probability"}: <span className="font-bold text-white font-display">{passProbability}%</span>
-                    </p>
-                  ) : null;
-                })()}
-              </div>
-              {/* Social proof badges — dynamic/rotating */}
-              <div className="flex flex-wrap md:flex-col gap-2">
-                {profileData?.targetDate && !isNaN(new Date(profileData.targetDate).getTime()) && (() => {
-                  const days = Math.ceil((new Date(profileData.targetDate).getTime() - Date.now()) / 86400000);
-                  return days > 0 ? (
-                    <span className="inline-flex items-center gap-1.5 bg-white/15 backdrop-blur-sm text-white text-xs font-medium px-3 py-1.5 rounded-full">
-                      <Calendar className="w-3.5 h-3.5" /> {lang === "de" ? `Prüfung in ${days} Tagen` : `Exam in ${days} days`}
-                    </span>
-                  ) : null;
-                })()}
-                {(() => {
-                  // Dynamic percentile — real data when available, plausible rotation otherwise
-                  const answered = gam?.total_questions_answered || 0;
-                  const acc = answered > 0 ? ((gam?.total_correct || 0) / answered) * 100 : 0;
-                  const realPercentile = answered > 20 ? Math.max(10, Math.min(95, Math.round(acc * 0.8 + (answered / 10993) * 20))) : 0;
-                  // Rotate placeholder based on day-of-year so it changes daily but stays consistent within a session
-                  const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000);
-                  const placeholderPct = [28, 31, 25, 34, 29, 33, 27, 35, 30, 32][dayOfYear % 10];
-                  const pct = realPercentile > 0 ? realPercentile : placeholderPct;
-                  return (
-                    <span className="inline-flex items-center gap-1.5 bg-white/15 backdrop-blur-sm text-white text-xs font-medium px-3 py-1.5 rounded-full">
-                      <BarChart3 className="w-3.5 h-3.5" /> {lang === "de" ? `Top ${pct}% diese Woche` : `Top ${pct}% this week`}
-                    </span>
-                  );
-                })()}
-                {(() => {
-                  // Studying now — varies by hour of day for realism
-                  const hour = new Date().getHours();
-                  const baseCount = hour >= 8 && hour <= 22 ? 800 : 200;
-                  const variation = ((hour * 7 + new Date().getMinutes()) % 400);
-                  const studyingNow = baseCount + variation;
-                  return (
-                    <span className="inline-flex items-center gap-1.5 bg-[var(--mp-accent-teal)]/30 text-white text-xs font-medium px-3 py-1.5 rounded-full">
-                      <span className="w-2 h-2 rounded-full bg-[var(--mp-accent-teal)] animate-pulse" /> {studyingNow.toLocaleString("de-DE")}+ {lang === "de" ? "lernen jetzt" : "studying now"}
-                    </span>
-                  );
-                })()}
-              </div>
-            </div>
-          </div>
+          {/*
+            HOME LAYOUT (Home-A clinical minimal + Gamification-B hero).
 
-          {/* Last session badge */}
+            The old "Hero Progress Banner" (Oxford→CTA gradient with
+            pass-probability + rotating social-proof pills) was removed
+            2026-04-19 — it was redundant with <GamificationHero/> below.
+            The unique signals it carried:
+              • pass probability → moved to /progress (where users look
+                for analytics)
+              • social-proof rotations → not brand-appropriate for a
+                clinical tool, dropped
+              • exam countdown → already rendered next to the gamification
+                hero as a dedicated countdown card when exam_date is set
+            Net effect: one banner at the top, less visual clutter.
+          */}
+
+          {/* Last session badge — slim, above the hero */}
           {lastSessionInfo && (
-            <div className="text-center mb-2">
+            <div className="text-center mb-3">
               <span className="inline-flex items-center gap-2 text-xs text-[var(--mp-fg-subtle)] bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)] rounded-full px-3 py-1">
                 {lang === "de" ? "Letzte Sitzung" : "Last session"}: <span className="font-semibold text-[var(--mp-viridian)]">+{lastSessionInfo.totalXpSession} XP</span> · {lastSessionInfo.questionCount} {lang === "de" ? "Fragen" : "questions"}
               </span>

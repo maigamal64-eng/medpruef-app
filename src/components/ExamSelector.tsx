@@ -14,15 +14,15 @@ export default function ExamSelector({ lang, onSelect }: Props) {
   };
 
   return (
-    <div className="fixed inset-0 bg-[#F7F9FC] z-50 flex flex-col items-center justify-center px-4">
+    <div className="fixed inset-0 bg-[var(--mp-surface-sunken)] z-50 flex flex-col items-center justify-center px-4">
       <div className="w-full max-w-md animate-scale-in">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="w-16 h-16 rounded border border-[#007B5F]/30 bg-[#007B5F]/10 flex items-center justify-center mx-auto mb-4">
+          <div className="w-16 h-16 rounded border border-[var(--mp-viridian)]/30 bg-[var(--mp-viridian)]/10 flex items-center justify-center mx-auto mb-4">
             <img src="/brand/logomark.svg" alt="MedPrüf" className="w-12 h-12" />
           </div>
           <img src="/brand/wordmark-twotone.png" alt="MedPrüf" className="h-10 mx-auto" />
-          <p className="text-[#A0AEC0] text-sm">
+          <p className="text-[var(--mp-fg-subtle)] text-sm">
             {lang === "de"
               ? "Welche Prüfung bereitest du vor?"
               : "Which exam are you preparing for?"}
@@ -35,35 +35,35 @@ export default function ExamSelector({ lang, onSelect }: Props) {
             <button
               key={exam.id}
               onClick={() => handle(exam.id)}
-              className="w-full flex items-center gap-4 bg-[#FFFFFF] border border-[#E4E9F0] shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-card-hover)] hover:border-[#007B5F]/50 hover:bg-[#F7F9FC] rounded-xl p-4 text-left transition-all active:scale-[0.98] group"
+              className="w-full flex items-center gap-4 bg-[var(--mp-surface-raised)] border border-[var(--mp-border)] shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-card-hover)] hover:border-[var(--mp-viridian)]/50 hover:bg-[var(--mp-surface-sunken)] rounded-xl p-4 text-left transition-all active:scale-[0.98] group"
             >
               <span className="text-2xl">{exam.badge}</span>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="font-semibold text-[#1A2B3C] text-sm">{exam.fullName}</span>
-                  <span className="text-[10px] font-mono bg-[#007B5F]/10 text-[#007B5F] px-1.5 py-0.5 rounded border border-[#007B5F]/20">
+                  <span className="font-semibold text-[var(--mp-fg)] text-sm">{exam.fullName}</span>
+                  <span className="text-[10px] font-mono bg-[var(--mp-viridian)]/10 text-[var(--mp-viridian)] px-1.5 py-0.5 rounded border border-[var(--mp-viridian)]/20">
                     {exam.id}
                   </span>
                 </div>
-                <div className="text-xs text-[#A0AEC0] font-mono mt-0.5">
+                <div className="text-xs text-[var(--mp-fg-subtle)] font-mono mt-0.5">
                   {exam.questions.toLocaleString("de-DE")}{" "}
                   {lang === "de" ? "Fragen" : "questions"}
                 </div>
               </div>
-              <span className="text-[#007B5F] opacity-0 group-hover:opacity-100 transition-opacity text-lg">
+              <span className="text-[var(--mp-viridian)] opacity-0 group-hover:opacity-100 transition-opacity text-lg">
                 →
               </span>
             </button>
           ))}
         </div>
 
-        <div className="mt-4 p-3 rounded border border-[#E4E9F0] bg-[#F7F9FC] text-center">
-          <p className="text-xs text-[#A0AEC0]">
+        <div className="mt-4 p-3 rounded border border-[var(--mp-border)] bg-[var(--mp-surface-sunken)] text-center">
+          <p className="text-xs text-[var(--mp-fg-subtle)]">
             {lang === "de" ? "Mehr Prüfungen kommen bald" : "More exams coming soon"}
           </p>
         </div>
 
-        <p className="text-center text-[10px] text-[#A0AEC0]/60 mt-4">
+        <p className="text-center text-[10px] text-[var(--mp-fg-subtle)]/60 mt-4">
           {lang === "de"
             ? "Du kannst dies jederzeit im Profil ändern"
             : "You can change this anytime in your profile"}

@@ -37,7 +37,7 @@ export default function SearchBar({ lang, onSearch, autoFocus }: SearchBarProps)
   return (
     <div className="relative flex items-center">
       {/* Search icon */}
-      <span className="absolute left-3.5 text-[#A0AEC0] pointer-events-none text-lg leading-none">
+      <span className="absolute left-3.5 text-[var(--mp-fg-subtle)] pointer-events-none text-lg leading-none">
         🔍
       </span>
 
@@ -47,20 +47,20 @@ export default function SearchBar({ lang, onSearch, autoFocus }: SearchBarProps)
         value={value}
         onChange={handleChange}
         placeholder={lang === "de" ? "Frage suchen..." : "Search questions..."}
-        className="w-full bg-[#FFFFFF] border border-[#E4E9F0] rounded-xl shadow-[var(--shadow-xs)] pl-10 pr-9 py-3 text-base text-[#1A2B3C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#007B5F]/50 focus:shadow-[0_0_0_3px_rgba(0,123,95,0.15)] transition-all"
+        className="w-full bg-[var(--mp-surface-raised)] border border-[var(--mp-border)] rounded-xl shadow-[var(--shadow-xs)] pl-10 pr-9 py-3 text-base text-[var(--mp-fg)] placeholder-[var(--mp-fg-subtle)] focus:outline-none focus:border-[var(--mp-viridian)]/50 focus:shadow-[0_0_0_3px_rgba(0,123,95,0.15)] transition-all"
       />
 
       {/* Clear button */}
       {value ? (
         <button
           onClick={handleClear}
-          className="absolute right-3 text-[#A0AEC0] hover:text-[#4A5568] transition-colors text-sm leading-none"
+          className="absolute right-3 text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg-muted)] transition-colors text-sm leading-none"
           aria-label={lang === "de" ? "Suche löschen" : "Clear search"}
         >
           ✕
         </button>
       ) : (
-        <span className="absolute right-3 top-1/2 -translate-y-1/2 hidden md:flex items-center gap-0.5 text-[10px] text-[#A0AEC0] bg-[#F7F9FC] border border-[#E4E9F0] rounded px-1.5 py-0.5 pointer-events-none">
+        <span className="absolute right-3 top-1/2 -translate-y-1/2 hidden md:flex items-center gap-0.5 text-[10px] text-[var(--mp-fg-subtle)] bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)] rounded px-1.5 py-0.5 pointer-events-none">
           ⌘K
         </span>
       )}

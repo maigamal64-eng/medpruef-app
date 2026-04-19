@@ -137,14 +137,14 @@ export default function PWAInstall() {
   if (updateAvailable) {
     return (
       <div className="fixed bottom-20 left-4 right-4 md:left-auto md:right-6 md:bottom-6 md:w-80 z-50 animate-slide-up">
-        <div className="card rounded-2xl p-4 shadow-[var(--shadow-elevated)] border border-[#003A8C]/25 bg-white">
+        <div className="card rounded-2xl p-4 shadow-[var(--shadow-elevated)] border border-[var(--mp-cta-blue)]/25 bg-[var(--mp-surface-raised)]">
           <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#003A8C]/10 flex items-center justify-center flex-shrink-0">
-              <RefreshCw className="w-5 h-5 text-[#003A8C]" />
+            <div className="w-10 h-10 rounded-xl bg-[var(--mp-cta-blue)]/10 flex items-center justify-center flex-shrink-0">
+              <RefreshCw className="w-5 h-5 text-[var(--mp-cta-blue)]" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-[#1A2B3C] mb-0.5">New version available</p>
-              <p className="text-xs text-[#A0AEC0] mb-3">Reload to get the latest questions and fixes.</p>
+              <p className="text-sm font-semibold text-[var(--mp-fg)] mb-0.5">New version available</p>
+              <p className="text-xs text-[var(--mp-fg-subtle)] mb-3">Reload to get the latest questions and fixes.</p>
               <button
                 onClick={handleUpdate}
                 className="btn-primary text-xs px-3 py-1.5 flex items-center gap-1.5"
@@ -162,24 +162,24 @@ export default function PWAInstall() {
 
   return (
     <div className="fixed bottom-20 left-4 right-4 md:left-auto md:right-6 md:bottom-6 md:w-80 z-40 animate-slide-up">
-      <div className="card rounded-2xl p-4 shadow-[var(--shadow-elevated)] border border-[#007B5F]/20 bg-white">
+      <div className="card rounded-2xl p-4 shadow-[var(--shadow-elevated)] border border-[var(--mp-viridian)]/20 bg-white">
         <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#007B5F]/10 flex items-center justify-center flex-shrink-0">
-            <Download className="w-5 h-5 text-[#007B5F]" />
+          <div className="w-10 h-10 rounded-xl bg-[var(--mp-viridian)]/10 flex items-center justify-center flex-shrink-0">
+            <Download className="w-5 h-5 text-[var(--mp-viridian)]" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-[#1A2B3C] mb-0.5">Install MedPrüf</p>
-            <p className="text-xs text-[#A0AEC0] mb-3">Study offline — on the bus, metro, anywhere.</p>
+            <p className="text-sm font-semibold text-[var(--mp-fg)] mb-0.5">Install MedPrüf</p>
+            <p className="text-xs text-[var(--mp-fg-subtle)] mb-3">Study offline — on the bus, metro, anywhere.</p>
             <div className="flex gap-2">
               <button onClick={handleInstall} className="btn-primary text-xs px-3 py-1.5">
                 Install
               </button>
-              <button onClick={handleDismiss} className="text-xs text-[#A0AEC0] hover:text-[#4A5568]">
+              <button onClick={handleDismiss} className="text-xs text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg-muted)]">
                 Not now
               </button>
             </div>
           </div>
-          <button onClick={handleDismiss} className="text-[#A0AEC0] hover:text-[#4A5568]">
+          <button onClick={handleDismiss} className="text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg-muted)]">
             <X className="w-4 h-4" />
           </button>
         </div>

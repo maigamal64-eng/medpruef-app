@@ -54,7 +54,7 @@ export default function MentorPage() {
       <div className="px-4 pb-20 max-w-4xl mx-auto">
         {/* Coming Soon Badge */}
         <div className="mb-8">
-          <div className="inline-flex items-center gap-2 bg-[var(--mp-warning-bg)] border border-[var(--mp-status-warning)]/30 rounded-full px-4 py-2 text-sm font-medium text-[#B8860B]">
+          <div className="inline-flex items-center gap-2 bg-[var(--mp-warning-bg)] border border-[var(--mp-status-warning)]/30 rounded-full px-4 py-2 text-sm font-medium text-[var(--mp-status-warning)]">
             <Calendar className="w-4 h-4" />
             Kommt bald: Q2 2024
           </div>
