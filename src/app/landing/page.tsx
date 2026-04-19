@@ -6,288 +6,275 @@ import Link from "next/link";
 import { getLang, setLang } from "@/lib/i18n";
 import {
   ArrowRight,
+  Baby,
   Brain,
-  CheckCircle2,
-  ClipboardList,
+  ChevronRight,
   Clock,
-  GraduationCap,
-  Layers,
-  LineChart,
-  Mail,
-  ShieldCheck,
+  Dna,
+  Ear,
+  Eye,
+  Flag,
+  Globe,
+  HeartPulse,
+  Languages,
+  MessageCircle,
+  Pill,
+  Scissors,
   Sparkles,
-  Star,
   Stethoscope,
+  Target,
+  Users,
+  Zap,
 } from "lucide-react";
 
 type Lang = "de" | "en";
 
 /* ─────────────────────────────────────────────────────────────
-   Copy — every string in one place, bilingual, no placeholders
+   Copy — every string in one place, bilingual
    ───────────────────────────────────────────────────────────── */
-
 const COPY = {
   nav: {
     features: { de: "Funktionen", en: "Features" },
-    sample: { de: "Beispielfrage", en: "Sample question" },
+    how: { de: "So funktioniert's", en: "How it works" },
     pricing: { de: "Preise", en: "Pricing" },
-    faq: { de: "FAQ", en: "FAQ" },
     login: { de: "Anmelden", en: "Sign in" },
     start: { de: "Kostenlos starten", en: "Start free" },
   },
   hero: {
-    badge: { de: "Wien · Kenntnisprüfung", en: "Vienna · Kenntnisprüfung" },
-    title_l1: { de: "Bestehe die", en: "Pass the" },
-    title_l2: { de: "Kenntnisprüfung", en: "Kenntnisprüfung" },
-    title_l3: { de: "beim ersten Mal.", en: "on your first attempt." },
-    subtitle: {
-      de: "10.993 echte Klinikfragen aus Kenntnisprüfung Wien (SIP 4 + SIP 5), KMP Innsbruck und Pharmakologie — strukturiert wie die echten Prüfungen. Auf Deutsch oder Englisch lernen, KI-Erklärungen freischalten, mit Spaced Repetition trainieren.",
-      en: "10,993 real clinical questions covering Kenntnisprüfung Wien (SIP 4 + SIP 5), KMP Innsbruck, and Pharmakologie — structured like the live exams. Study in German or English, unlock AI explanations, train with spaced repetition.",
+    eyebrow: {
+      de: "— Österreich · Ärztliche Kenntnisprüfung",
+      en: "— Austria · Medical Licensing Exams",
     },
-    cta_primary: { de: "Kostenlos starten", en: "Start free" },
-    cta_secondary: { de: "Beispielfrage ansehen", en: "See a sample question" },
-    trust: {
-      de: "Keine Kreditkarte · Sofortiger Zugriff · DSGVO-konform",
-      en: "No credit card · Instant access · GDPR compliant",
+    title_pre: { de: "Hör auf,", en: "Stop studying" },
+    title_mid: { de: "alles", en: "everything" },
+    title_post: { de: "zu lernen.", en: "." },
+    title_line2: { de: "Lern das, was drankommt.", en: "Study what's on the exam." },
+    subtitle: {
+      de: "Lerne gezielt für die österreichische Ärzteprüfung 🇦🇹. 10.993 Fragen, klinische KI-Erklärungen in 7 Sprachen, Lernplan auf dein Prüfungsdatum.",
+      en: "Study targeted for the Austrian medical licensing exams 🇦🇹. 10,993 questions, clinical AI explanations in 7 languages, study plan down to your exam date.",
+    },
+    cta_primary: { de: "Jetzt lernen", en: "Start studying" },
+    cta_secondary: { de: "So funktioniert's", en: "How it works" },
+    cta_note: {
+      de: "Kostenlos · 200 Fragen · Keine Karte",
+      en: "Free · 200 questions · No credit card",
     },
   },
   stats: [
-    { value: "10.993", label: { de: "Klinikfragen", en: "Clinical questions" } },
-    { value: "16", label: { de: "Fachgebiete", en: "Specialties" } },
-    { value: "3", label: { de: "Prüfungstypen", en: "Exam types" } },
-    { value: "DE / EN", label: { de: "Zweisprachig", en: "Bilingual" } },
+    {
+      value: "10.993",
+      value_en: "10,993",
+      label: { de: "Fragen", en: "Questions" },
+    },
+    {
+      value: "3",
+      value_en: "3",
+      label: { de: "Prüfungen", en: "Exam types" },
+      sub: { de: "Wien · Innsbruck · Pharma", en: "Vienna · Innsbruck · Pharma" },
+    },
+    {
+      value: "7",
+      value_en: "7",
+      label: { de: "Sprachen", en: "Languages" },
+    },
+    {
+      value: "1.806",
+      value_en: "1,806",
+      label: { de: "Mehrfachantworten", en: "Multi-correct" },
+    },
   ],
-  why: {
-    eyebrow: { de: "Warum MedPrüf", en: "Why MedPrüf" },
-    title: {
-      de: "Die Prüfung ist hart. Dein Training muss härter sein.",
-      en: "The exam is hard. Your training has to be harder.",
-    },
-    body: {
-      de: "Die österreichische Kenntnisprüfung entscheidet über deine Approbation in Wien. Wir haben jede SIP-4- und SIP-5-Frage seit 2016 katalogisiert, korrigiert, erklärt und in ein Trainingssystem gepackt, das sich an deine Schwächen anpasst.",
-      en: "The Austrian Kenntnisprüfung decides whether you can practice medicine in Vienna. We have catalogued, corrected, explained and packaged every SIP 4 and SIP 5 question since 2016 into a training system that adapts to your weak spots.",
-    },
-  },
-  features: {
-    eyebrow: { de: "Funktionen", en: "Features" },
-    title: { de: "Alles, was du zum Bestehen brauchst", en: "Everything you need to pass" },
-    items: [
-      {
-        icon: ClipboardList,
-        title: { de: "Echte Prüfungssimulation", en: "Real exam simulation" },
-        body: {
-          de: "250 Fragen, 4 Stunden, exakt wie SIP 4 + 5. Inklusive 2-3 EKG-Fragen pro Durchlauf, gruppiert nach Fach.",
-          en: "250 questions, 4 hours, exactly like SIP 4 + 5. Includes 2-3 ECG questions per run, grouped by subject.",
-        },
-      },
-      {
-        icon: Brain,
-        title: { de: "Adaptives Lernen (SM-2)", en: "Adaptive learning (SM-2)" },
-        body: {
-          de: "Spaced Repetition zeigt dir Fragen genau dann wieder, wenn du sie zu vergessen beginnst.",
-          en: "Spaced repetition resurfaces each question right when you are about to forget it.",
-        },
-      },
-      {
-        icon: Sparkles,
-        title: { de: "KI-Erklärungen auf Abruf", en: "AI explanations on demand" },
-        body: {
-          de: "Verstehst du eine Antwort nicht? GPT-4o erklärt dir den klinischen Hintergrund auf Deutsch oder Englisch.",
-          en: "Don't understand an answer? GPT-4o explains the clinical reasoning in German or English.",
-        },
-      },
-      {
-        icon: LineChart,
-        title: { de: "Schwächen-Analyse", en: "Weakness analytics" },
-        body: {
-          de: "Radar-Chart, Topic-Heatmap, Pass-Wahrscheinlichkeit — du weißt jederzeit, wo du stehst.",
-          en: "Radar chart, topic heatmap, pass probability — always know exactly where you stand.",
-        },
-      },
-      {
-        icon: Layers,
-        title: { de: "Karteikarten-Modus", en: "Flashcard mode" },
-        body: {
-          de: "3D-Karten mit Confidence-Buttons. Perfekt für die letzten Tage vor der Prüfung.",
-          en: "3D flip cards with confidence buttons. Perfect for the final days before the exam.",
-        },
-      },
-      {
-        icon: Stethoscope,
-        title: { de: "10 Fachgebiete", en: "10 specialties" },
-        body: {
-          de: "Innere, Chirurgie, Neurologie, Psychiatrie, Gynäkologie, Pädiatrie, HNO, Augen, Notfall, Dermatologie.",
-          en: "Internal, Surgery, Neurology, Psychiatry, Gynecology, Pediatrics, ENT, Ophthalmology, Emergency, Dermatology.",
-        },
-      },
-    ],
-  },
   how: {
     eyebrow: { de: "So funktioniert's", en: "How it works" },
     title: { de: "In drei Schritten zur Prüfungsreife", en: "Exam-ready in three steps" },
     steps: [
       {
-        n: "1",
-        title: { de: "Anmelden", en: "Sign up" },
+        n: "01",
+        title: { de: "Prüfung wählen", en: "Choose your exam" },
         body: {
-          de: "Per E-Mail oder Telegram. Sofortiger Zugriff auf 200 freie Fragen.",
-          en: "By email or Telegram. Instant access to 200 free questions.",
+          de: "Kenntnisprüfung Wien, KMP Innsbruck oder Pharmakologie — wir kennen die Gewichtung jeder Prüfung.",
+          en: "Kenntnisprüfung Wien, KMP Innsbruck or Pharmakologie — we know the weighting of each exam.",
         },
       },
       {
-        n: "2",
-        title: { de: "Lernen", en: "Study" },
+        n: "02",
+        title: { de: "Täglich üben", en: "Practice daily" },
         body: {
-          de: "Quiz, Karteikarten oder Curriculum — täglich 20-50 Fragen mit Erklärung.",
-          en: "Quiz, flashcards, or curriculum — 20-50 questions with explanations every day.",
+          de: "20-50 Fragen pro Tag mit Spaced Repetition. Der Lernplan passt sich deinem Prüfungsdatum an.",
+          en: "20-50 questions per day with spaced repetition. The study plan adapts to your exam date.",
         },
       },
       {
-        n: "3",
-        title: { de: "Prüfen", en: "Simulate" },
+        n: "03",
+        title: { de: "Simulieren", en: "Simulate" },
         body: {
-          de: "Volle Prüfungssimulation, sobald du bereit bist. Teste, wo du stehst.",
-          en: "Run a full exam simulation when you're ready. Find out where you stand.",
+          de: "Volle Prüfungssimulation. 4 Stunden, Themen-Navigator, aufgeschobene Bewertung — wie am Prüfungstag.",
+          en: "Full exam simulation. 4 hours, topic navigator, deferred grading — just like exam day.",
         },
       },
     ],
   },
-  sample: {
-    eyebrow: { de: "Beispielfrage", en: "Sample question" },
-    title: { de: "So sieht eine MedPrüf-Frage aus", en: "What a MedPrüf question looks like" },
-    topic: { de: "Innere Medizin", en: "Internal Medicine" },
-    question: {
-      de: "Eine 68-jährige Patientin stellt sich mit akuter Dyspnoe und Brustschmerzen vor. Im EKG zeigen sich tiefe S-Zacken in I, Q-Zacke und negatives T in III. Welche Verdachtsdiagnose ist am wahrscheinlichsten?",
-      en: "A 68-year-old female presents with acute dyspnea and chest pain. The ECG shows deep S waves in lead I, Q waves and inverted T in lead III. What is the most likely diagnosis?",
+  features: {
+    eyebrow: { de: "Was MedPrüf anders macht", en: "What makes MedPrüf different" },
+    title: {
+      de: "Nicht noch eine Karteikarten-App.",
+      en: "Not another flashcard app.",
     },
-    options: [
-      { letter: "A", text: { de: "Akuter Myokardinfarkt der Hinterwand", en: "Acute inferior wall myocardial infarction" }, correct: false },
-      { letter: "B", text: { de: "Lungenembolie", en: "Pulmonary embolism" }, correct: true },
-      { letter: "C", text: { de: "Perikarditis", en: "Pericarditis" }, correct: false },
-      { letter: "D", text: { de: "Aortendissektion", en: "Aortic dissection" }, correct: false },
+    subtitle: {
+      de: "Sechs Werkzeuge, die du in jeder anderen Prüfungs-App vermisst.",
+      en: "Six tools you miss in every other exam app.",
+    },
+    items: [
+      {
+        icon: Brain,
+        title: { de: "Klinische KI-Erklärungen", en: "Clinical AI explanations" },
+        body: {
+          de: "TL;DR zuerst, dann Leitlinien-Referenzen: ERC 2021, ESC, ÖDG. Nicht Wikipedia — klinisch.",
+          en: "TL;DR first, then guideline references: ERC 2021, ESC, ÖDG. Not Wikipedia — clinical.",
+        },
+      },
+      {
+        icon: Globe,
+        title: { de: "7 Sprachen", en: "7 languages" },
+        body: {
+          de: "Fragen auf Deutsch (wie in der echten Prüfung). Erklärungen in Deutsch, Englisch, Russisch, Arabisch, Türkisch, Ukrainisch, Rumänisch.",
+          en: "Questions in German (as in the real exam). Explanations in German, English, Russian, Arabic, Turkish, Ukrainian, Romanian.",
+        },
+      },
+      {
+        icon: HeartPulse,
+        title: { de: "Spaced Repetition (SM-2)", en: "Spaced repetition (SM-2)" },
+        body: {
+          de: "Fragen tauchen genau dann auf, wenn du sie zu vergessen beginnst. Wie Anki — nur klinisch kuratiert.",
+          en: "Questions resurface right when you're about to forget. Like Anki — but clinically curated.",
+        },
+      },
+      {
+        icon: Clock,
+        title: { de: "Prüfungssimulation", en: "Exam simulation" },
+        body: {
+          de: "4 Stunden, Themen-Navigator, aufgeschobene Bewertung. Trainiert Prüfungs-Ausdauer, nicht nur Wissen.",
+          en: "4 hours, topic navigator, deferred grading. Trains exam stamina, not just knowledge.",
+        },
+      },
+      {
+        icon: Target,
+        title: { de: "Lernplan bis zum Prüfungstag", en: "Study plan to exam day" },
+        body: {
+          de: "Countdown auf dein Prüfungsdatum. 70% neu + 30% Wiederholung, gewichtet nach deinen Schwächen.",
+          en: "Countdown to your exam date. 70% new + 30% review, weighted by your weak topics.",
+        },
+      },
+      {
+        icon: Sparkles,
+        title: { de: "Fragen melden → wir fixen", en: "Report questions → we fix" },
+        body: {
+          de: "Fehler in einer Frage? Ein Tap. Wir prüfen, korrigieren ähnliche Fragen und schicken dir eine Dankes-Mail.",
+          en: "Error in a question? One tap. We review, fix similar questions, and email you a thank-you.",
+        },
+      },
     ],
-    explanation: {
-      de: "Das SI-QIII-TIII-Muster (McGinn-White-Zeichen) ist ein klassisches, wenn auch unspezifisches EKG-Zeichen einer akuten Lungenembolie mit Rechtsherzbelastung. Es findet sich nur bei ca. 20 % der Patienten mit gesicherter LE.",
-      en: "The S1-Q3-T3 pattern (McGinn-White sign) is a classic but non-specific ECG finding in acute pulmonary embolism with right heart strain. It is present in only ~20% of confirmed PE cases.",
-    },
   },
-  coming: {
-    eyebrow: { de: "Bald verfügbar", en: "Coming soon" },
-    title: { de: "Mehr Prüfungen sind in Arbeit", en: "More exams are on the way" },
-    body: {
-      de: "MedPrüf startet mit der Wiener Kenntnisprüfung. In den kommenden Monaten erweitern wir die Plattform um weitere medizinische Prüfungen für ausländische Ärzt:innen in Österreich und Deutschland.",
-      en: "MedPrüf is launching with the Vienna Kenntnisprüfung. Over the coming months we are expanding to additional medical exams for foreign doctors in Austria and Germany.",
+  subjects: {
+    eyebrow: { de: "Fachgebiete", en: "Specialties" },
+    title: {
+      de: "16 Fachgebiete. Echte Fragen. Nichts erfunden.",
+      en: "16 specialties. Real questions. Nothing invented.",
     },
-    upcoming: [
-      { de: "Approbation Deutschland — Fachsprachenprüfung", en: "Approbation Germany — Fachsprachenprüfung" },
-      { de: "Approbation Deutschland — Kenntnisprüfung", en: "Approbation Germany — Kenntnisprüfung" },
-      { de: "Österreichische Ärztekammer-Diplome", en: "Austrian Ärztekammer diplomas" },
+    subtitle: {
+      de: "Jede Frage stammt aus einer dokumentierten offiziellen Prüfung — Kenntnisprüfung Wien (SIP 4 + SIP 5), KMP Innsbruck, Pharmakologie.",
+      en: "Every question comes from a documented official exam — Kenntnisprüfung Wien (SIP 4 + SIP 5), KMP Innsbruck, Pharmakologie.",
+    },
+    items: [
+      { icon: HeartPulse, name: { de: "Innere Medizin", en: "Internal Medicine" } },
+      { icon: Scissors, name: { de: "Chirurgie", en: "Surgery" } },
+      { icon: Brain, name: { de: "Neurologie", en: "Neurology" } },
+      { icon: MessageCircle, name: { de: "Psychiatrie", en: "Psychiatry" } },
+      { icon: Eye, name: { de: "Augenheilkunde", en: "Ophthalmology" } },
+      { icon: Ear, name: { de: "HNO", en: "ENT" } },
+      { icon: Baby, name: { de: "Pädiatrie", en: "Pediatrics" } },
+      { icon: Users, name: { de: "Gynäkologie", en: "Gynecology" } },
+      { icon: Zap, name: { de: "Notfallmedizin", en: "Emergency" } },
+      { icon: Dna, name: { de: "Dermatologie", en: "Dermatology" } },
+      { icon: Pill, name: { de: "Pharmakologie", en: "Pharmacology" } },
+      { icon: Stethoscope, name: { de: "Sozialmedizin", en: "Social Medicine" } },
     ],
-    notify: { de: "Benachrichtige mich", en: "Notify me" },
   },
   pricing: {
     eyebrow: { de: "Preise", en: "Pricing" },
-    title: { de: "Fair und transparent", en: "Fair and transparent" },
-    plans: [
+    title: { de: "Fair. Transparent. Kündbar.", en: "Fair. Transparent. Cancel anytime." },
+    subtitle: {
+      de: "Starte kostenlos. Upgrade, wenn du bereit bist.",
+      en: "Start free. Upgrade when you're ready.",
+    },
+    tiers: [
       {
         name: { de: "Kostenlos", en: "Free" },
         price: "€0",
-        period: { de: "/ immer", en: "/ forever" },
-        features: [
-          { de: "200 Fragen", en: "200 questions" },
-          { de: "1 vollständige Prüfungssimulation", en: "1 full exam simulation" },
-          { de: "Karteikarten-Modus", en: "Flashcard mode" },
-          { de: "Gespeicherte KI-Erklärungen", en: "Cached AI explanations" },
-        ],
+        period: { de: "immer", en: "forever" },
+        pitch: { de: "200 Fragen + 1 Simulation", en: "200 questions + 1 simulation" },
+        status: "live",
         cta: { de: "Kostenlos starten", en: "Start free" },
         href: "/login",
-        highlight: false,
       },
       {
         name: "Pro",
         price: "€19",
-        period: { de: "/ Monat", en: "/ month" },
-        features: [
-          { de: "Alle 10.993 Fragen freigeschaltet (Kenntnisprüfung, KMP, Pharma)", en: "All 10,993 questions unlocked (Kenntnisprüfung, KMP, Pharma)" },
-          { de: "Unbegrenzte Prüfungssimulationen", en: "Unlimited exam simulations" },
-          { de: "Eigene KI-Folgefragen", en: "Custom AI follow-up questions" },
-          { de: "Streak-Schutz", en: "Streak freeze" },
-          { de: "Schwächen-Analyse + Pass-Wahrscheinlichkeit", en: "Weakness analytics + pass probability" },
-        ],
-        cta: { de: "Pro starten", en: "Get Pro" },
-        href: "/login",
-        highlight: true,
+        period: { de: "Monat", en: "month" },
+        pitch: {
+          de: "Alle 10.993 Fragen · KI-Chat · Streak-Schutz",
+          en: "All 10,993 questions · AI chat · Streak freeze",
+        },
+        status: "soon",
+        cta: { de: "Warteliste", en: "Waitlist" },
+        href: "/pricing",
+      },
+      {
+        name: "Group",
+        price: "€49",
+        period: { de: "Team", en: "team" },
+        pitch: {
+          de: "5 Sitze · Lerngruppe · Gruppen-Fortschritt",
+          en: "5 seats · Study group · Group progress",
+        },
+        status: "soon",
+        cta: { de: "Warteliste", en: "Waitlist" },
+        href: "/pricing",
       },
     ],
+    link: { de: "Alle Preise vergleichen", en: "Compare all plans" },
+    comingSoon: { de: "Bald", en: "Soon" },
   },
-  faq: {
-    eyebrow: { de: "Häufige Fragen", en: "FAQ" },
-    title: { de: "Du fragst, wir antworten", en: "You ask, we answer" },
-    items: [
-      {
-        q: { de: "Sind die Fragen echt?", en: "Are the questions real?" },
-        a: {
-          de: "Ja. Alle 10.993 Fragen stammen aus dokumentierten offiziellen Prüfungen — 7.567 aus der Kenntnisprüfung Wien (SIP 4 + SIP 5) seit 2016, 3.091 aus der KMP Innsbruck und 335 aus der Pharmakologie. Alle manuell validiert und mit Erklärungen ergänzt.",
-          en: "Yes. All 10,993 questions come from documented official exams — 7,567 from Kenntnisprüfung Wien (SIP 4 + SIP 5) since 2016, 3,091 from KMP Innsbruck, and 335 from Pharmakologie. All manually validated and enriched with explanations.",
-        },
-      },
-      {
-        q: { de: "Kann ich auf Englisch lernen?", en: "Can I study in English?" },
-        a: {
-          de: "Die Fragen selbst sind auf Deutsch (so wie in der echten Prüfung). Die Oberfläche, Erklärungen und KI-Antworten kannst du jederzeit auf Englisch umstellen.",
-          en: "The questions themselves are in German (as in the real exam). The interface, explanations, and AI answers can be switched to English at any time.",
-        },
-      },
-      {
-        q: { de: "Funktioniert das Mobile?", en: "Does it work on mobile?" },
-        a: {
-          de: "Ja. MedPrüf ist eine Progressive Web App — installierbar auf iOS und Android, funktioniert offline für gespeicherte Inhalte.",
-          en: "Yes. MedPrüf is a Progressive Web App — installable on iOS and Android, works offline for cached content.",
-        },
-      },
-      {
-        q: { de: "Wie aktuell sind die Fragen?", en: "How current are the questions?" },
-        a: {
-          de: "Letzter Import: Februar 2025. Wir aktualisieren das Fragebank-Set nach jeder neuen offiziellen Prüfung.",
-          en: "Last import: February 2025. We refresh the question bank after every new official exam release.",
-        },
-      },
-      {
-        q: { de: "Wie sicher sind meine Daten?", en: "How safe is my data?" },
-        a: {
-          de: "DSGVO-konform, gehostet in der EU (Vercel + Supabase EU-Region). Du kannst dein Konto jederzeit selbst löschen.",
-          en: "GDPR compliant, hosted in the EU (Vercel + Supabase EU region). You can delete your account at any time yourself.",
-        },
-      },
-      {
-        q: { de: "Gibt es eine Geld-zurück-Garantie?", en: "Is there a money-back guarantee?" },
-        a: {
-          de: "Pro ist monatlich kündbar. Kein Vertrag, keine Mindestlaufzeit. Schreib uns, wenn du nicht zufrieden bist.",
-          en: "Pro is monthly and cancellable any time. No contract, no minimum commitment. Reach out if you're not happy.",
-        },
-      },
-    ],
+  proof: {
+    eyebrow: { de: "Von Ärzt:innen bewertet", en: "Rated by physicians" },
+    title: {
+      de: "10.993 Fragen, kuratiert von Ärzt:innen für Ärzt:innen.",
+      en: "10,993 questions, curated by physicians for physicians.",
+    },
+    quote: {
+      de: "Jede Frage stammt aus einer dokumentierten offiziellen Prüfung. Nichts erfunden, nichts geraten. 7.567 aus Wien seit 2016, 3.091 aus Innsbruck, 335 aus Pharmakologie.",
+      en: "Every question comes from a documented official exam. Nothing invented, nothing guessed. 7,567 from Vienna since 2016, 3,091 from Innsbruck, 335 from Pharmacology.",
+    },
   },
   cta: {
-    title: { de: "Bereit für Wien?", en: "Ready for Vienna?" },
+    title: { de: "Bereit für deine Prüfung?", en: "Ready for your exam?" },
     subtitle: {
       de: "Starte heute kostenlos. Kein Risiko, keine Kreditkarte.",
       en: "Start free today. No risk, no credit card.",
     },
-    button: { de: "Konto anlegen", en: "Create account" },
+    button: { de: "Kostenlos starten", en: "Start free" },
+    trust: {
+      de: "DSGVO-konform · Gehostet in der EU · Jederzeit kündbar",
+      en: "GDPR compliant · Hosted in the EU · Cancel anytime",
+    },
   },
   footer: {
     tagline: {
-      de: "Vorbereitung auf die Wiener Kenntnisprüfung — gebaut von und für ausländische Ärzt:innen.",
-      en: "Vienna Kenntnisprüfung preparation — built by and for foreign doctors.",
+      de: "Vorbereitung auf österreichische Ärzteprüfungen — gebaut von und für ausländische Ärzt:innen.",
+      en: "Austrian medical exam preparation — built by and for foreign doctors.",
     },
     product: { de: "Produkt", en: "Product" },
     legal: { de: "Rechtliches", en: "Legal" },
-    company: { de: "Unternehmen", en: "Company" },
-    rights: {
-      de: "Alle Rechte vorbehalten.",
-      en: "All rights reserved.",
-    },
+    rights: { de: "Alle Rechte vorbehalten.", en: "All rights reserved." },
   },
 };
 
@@ -309,21 +296,19 @@ export default function LandingPage() {
   };
 
   if (!mounted) {
-    return <div className="min-h-screen bg-[#F7F9FC]" />;
+    return <div className="min-h-screen bg-[var(--mp-surface-sunken)]" />;
   }
 
   return (
-    <div className="min-h-screen bg-white text-[#1A2B3C]">
+    <div className="min-h-screen bg-[var(--mp-surface-raised)] text-[var(--mp-fg)]">
       <Nav lang={lang} onLangChange={switchLang} />
       <Hero lang={lang} />
-      <Stats lang={lang} />
-      <Why lang={lang} />
-      <Features lang={lang} />
+      <StatsStrip lang={lang} />
       <HowItWorks lang={lang} />
-      <SampleQuestion lang={lang} />
-      <ComingSoon lang={lang} />
-      <Pricing lang={lang} />
-      <FAQ lang={lang} />
+      <Features lang={lang} />
+      <Subjects lang={lang} />
+      <PricingPreview lang={lang} />
+      <SocialProof lang={lang} />
       <FinalCTA lang={lang} />
       <Footer lang={lang} />
     </div>
@@ -331,12 +316,12 @@ export default function LandingPage() {
 }
 
 /* ─────────────────────────────────────────────────────────────
-   Nav
+   Nav — transparent over hero, inverts on scroll past hero
    ───────────────────────────────────────────────────────────── */
 function Nav({ lang, onLangChange }: { lang: Lang; onLangChange: (l: Lang) => void }) {
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 24);
+    const onScroll = () => setScrolled(window.scrollY > 480);
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
@@ -345,59 +330,117 @@ function Nav({ lang, onLangChange }: { lang: Lang; onLangChange: (l: Lang) => vo
     <nav
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         scrolled
-          ? "bg-white/85 backdrop-blur-xl border-b border-[#E4E9F0] shadow-sm"
+          ? "bg-[var(--mp-surface-raised)]/92 backdrop-blur-xl border-b border-[var(--mp-border-subtle)] shadow-sm"
           : "bg-transparent"
       }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-        <Link href="/landing" className="flex items-center gap-2.5">
-          <Image src="/brand/logomark.svg" alt="MedPrüf" width={32} height={32} />
-          <span className="text-lg font-bold text-[#001B3D] tracking-tight font-display">
-            Med<span className="text-[#00A896]">Prüf</span>
+        <Link
+          href="/landing"
+          className={`flex items-center gap-2.5 ${scrolled ? "" : "text-white"}`}
+          aria-label="MedPrüf home"
+        >
+          <Image
+            src="/brand/logomark.svg"
+            alt=""
+            width={32}
+            height={32}
+            style={scrolled ? {} : { filter: "brightness(0) invert(1)" }}
+          />
+          <span
+            className={`text-lg font-bold tracking-tight font-display ${
+              scrolled ? "text-[var(--mp-oxford-blue)]" : "text-white"
+            }`}
+          >
+            Med<span className="text-[var(--mp-accent-teal)]">Prüf</span>
           </span>
         </Link>
 
-        <div className="hidden md:flex items-center gap-7 text-sm font-medium text-[#4A5568]">
-          <a href="#features" className="hover:text-[#001B3D] transition-colors">
+        <div
+          className={`hidden md:flex items-center gap-7 text-sm font-medium ${
+            scrolled ? "text-[var(--mp-fg-muted)]" : "text-white/70"
+          }`}
+        >
+          <a
+            href="#features"
+            className={`transition-colors ${
+              scrolled ? "hover:text-[var(--mp-oxford-blue)]" : "hover:text-white"
+            }`}
+          >
             {COPY.nav.features[lang]}
           </a>
-          <a href="#sample" className="hover:text-[#001B3D] transition-colors">
-            {COPY.nav.sample[lang]}
+          <a
+            href="#how"
+            className={`transition-colors ${
+              scrolled ? "hover:text-[var(--mp-oxford-blue)]" : "hover:text-white"
+            }`}
+          >
+            {COPY.nav.how[lang]}
           </a>
-          <a href="#pricing" className="hover:text-[#001B3D] transition-colors">
+          <a
+            href="#pricing"
+            className={`transition-colors ${
+              scrolled ? "hover:text-[var(--mp-oxford-blue)]" : "hover:text-white"
+            }`}
+          >
             {COPY.nav.pricing[lang]}
-          </a>
-          <a href="#faq" className="hover:text-[#001B3D] transition-colors">
-            {COPY.nav.faq[lang]}
           </a>
         </div>
 
-        <div className="flex items-center gap-2.5">
-          <div className="flex items-center bg-[#F7F9FC] rounded-lg p-0.5 text-xs border border-[#E4E9F0]">
-            {(["de", "en"] as Lang[]).map((l) => (
-              <button
-                key={l}
-                onClick={() => onLangChange(l)}
-                className={`px-2.5 py-1 rounded font-semibold transition-all ${
-                  lang === l ? "bg-[#007B5F] text-white" : "text-[#A0AEC0] hover:text-[#4A5568]"
-                }`}
-              >
-                {l.toUpperCase()}
-              </button>
-            ))}
+        <div className="flex items-center gap-2">
+          {/* Language toggle */}
+          <div
+            className={`flex items-center rounded-lg p-0.5 text-xs border ${
+              scrolled
+                ? "bg-[var(--mp-surface-sunken)] border-[var(--mp-border-subtle)]"
+                : "bg-white/10 border-white/20"
+            }`}
+            role="group"
+            aria-label="Language"
+          >
+            {(["de", "en"] as Lang[]).map((l) => {
+              const active = lang === l;
+              return (
+                <button
+                  key={l}
+                  onClick={() => onLangChange(l)}
+                  aria-pressed={active}
+                  aria-label={l === "de" ? "Deutsch" : "English"}
+                  className={`px-2.5 py-1 rounded font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-[var(--mp-accent-teal)] ${
+                    active
+                      ? "bg-[var(--mp-viridian)] text-white"
+                      : scrolled
+                      ? "text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg-muted)]"
+                      : "text-white/60 hover:text-white"
+                  }`}
+                >
+                  {l.toUpperCase()}
+                </button>
+              );
+            })}
           </div>
+
           <Link
             href="/login"
-            className="hidden sm:inline-flex items-center gap-1.5 text-sm font-semibold text-[#4A5568] hover:text-[#001B3D] transition-colors px-3 py-2"
+            className={`hidden sm:inline-flex items-center gap-1.5 text-sm font-semibold transition-colors px-3 py-2 ${
+              scrolled
+                ? "text-[var(--mp-fg-muted)] hover:text-[var(--mp-oxford-blue)]"
+                : "text-white/80 hover:text-white"
+            }`}
           >
             {COPY.nav.login[lang]}
           </Link>
+
           <Link
             href="/login"
-            className="inline-flex items-center gap-1.5 bg-[#001B3D] hover:bg-[#003A8C] text-white text-sm font-semibold px-4 py-2 rounded-xl transition-all shadow-sm hover:shadow-md"
+            className={`inline-flex items-center gap-1.5 text-sm font-bold px-4 py-2 rounded-xl transition-all shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--mp-accent-teal)] ${
+              scrolled
+                ? "bg-[var(--mp-oxford-blue)] hover:bg-[var(--mp-cta-blue)] text-white"
+                : "bg-[var(--mp-accent-teal)] hover:brightness-110 text-[var(--mp-oxford-blue-dk)]"
+            }`}
           >
             {COPY.nav.start[lang]}
-            <ArrowRight className="w-3.5 h-3.5" />
+            <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
           </Link>
         </div>
       </div>
@@ -406,138 +449,316 @@ function Nav({ lang, onLangChange }: { lang: Lang; onLangChange: (l: Lang) => vo
 }
 
 /* ─────────────────────────────────────────────────────────────
-   Hero
+   Hero — dark editorial (Oxford Blue bg, white text, always dark)
    ───────────────────────────────────────────────────────────── */
 function Hero({ lang }: { lang: Lang }) {
   return (
-    <section className="relative pt-32 pb-20 overflow-hidden bg-gradient-to-b from-[#F7F9FC] via-white to-white">
+    <section className="relative overflow-hidden text-white" style={{ background: "var(--mp-oxford-blue-dk)" }}>
+      {/* Teal radial glow — top-right */}
       <div
-        className="absolute inset-0 opacity-[0.04] pointer-events-none"
+        aria-hidden="true"
+        className="absolute pointer-events-none"
         style={{
-          backgroundImage:
-            "radial-gradient(circle, #001B3D 1px, transparent 1px)",
+          top: "-160px",
+          right: "-160px",
+          width: "640px",
+          height: "640px",
+          borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(0,168,150,0.28), transparent 65%)",
+        }}
+      />
+      {/* CTA blue glow — bottom-left */}
+      <div
+        aria-hidden="true"
+        className="absolute pointer-events-none"
+        style={{
+          bottom: "-200px",
+          left: "-160px",
+          width: "540px",
+          height: "540px",
+          borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(0,58,140,0.35), transparent 65%)",
+        }}
+      />
+      {/* Subtle dot grid */}
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 opacity-[0.06] pointer-events-none"
+        style={{
+          backgroundImage: "radial-gradient(circle, #ffffff 1px, transparent 1px)",
           backgroundSize: "28px 28px",
         }}
       />
-      <div className="absolute top-20 right-[-10%] w-[600px] h-[600px] rounded-full bg-[#00A896]/8 blur-[120px] pointer-events-none" />
-      <div className="absolute -bottom-32 left-[-10%] w-[500px] h-[500px] rounded-full bg-[#003A8C]/6 blur-[100px] pointer-events-none" />
 
-      <div className="relative max-w-5xl mx-auto px-4 sm:px-6 text-center">
-        <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#007B5F]/10 border border-[#007B5F]/20 text-[#007B5F] text-xs font-semibold mb-6">
-          <Sparkles className="w-3.5 h-3.5" />
-          {COPY.hero.badge[lang]}
-        </span>
+      <div className="relative max-w-6xl mx-auto px-4 sm:px-6 pt-32 pb-24 md:pt-40 md:pb-32">
+        <p
+          className="mp-num mb-5 text-xs md:text-sm font-bold uppercase"
+          style={{ color: "var(--mp-accent-teal)", letterSpacing: "0.12em" }}
+        >
+          {COPY.hero.eyebrow[lang]}
+        </p>
 
-        <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-black text-[#001B3D] leading-[1.05] tracking-tight font-display mb-5">
-          {COPY.hero.title_l1[lang]}{" "}
-          <span className="text-[#00A896]">{COPY.hero.title_l2[lang]}</span>
+        <h1
+          className="font-display font-black tracking-tight text-white mb-6"
+          style={{
+            fontSize: "clamp(40px, 7vw, 80px)",
+            lineHeight: "1.02",
+            letterSpacing: "-0.035em",
+          }}
+        >
+          {COPY.hero.title_pre[lang]}{" "}
+          <em
+            className="font-black"
+            style={{ color: "var(--mp-accent-teal)", fontStyle: "italic" }}
+          >
+            {COPY.hero.title_mid[lang]}
+          </em>
+          {lang === "de" ? " " : ""}
+          {COPY.hero.title_post[lang]}
           <br />
-          {COPY.hero.title_l3[lang]}
+          <span className="text-white/90">{COPY.hero.title_line2[lang]}</span>
         </h1>
 
-        <p className="text-base sm:text-lg md:text-xl text-[#4A5568] max-w-2xl mx-auto mb-8 leading-relaxed">
+        <p
+          className="mp-body text-white/75 max-w-2xl mb-9"
+          style={{ fontSize: "clamp(16px, 1.8vw, 19px)", lineHeight: 1.55 }}
+        >
           {COPY.hero.subtitle[lang]}
         </p>
 
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-5">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-6">
           <Link
             href="/login"
-            className="inline-flex items-center gap-2 bg-[#001B3D] hover:bg-[#003A8C] text-white text-base font-semibold px-7 py-4 rounded-2xl transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5"
+            className="cta-shimmer inline-flex items-center justify-center gap-2 text-[var(--mp-oxford-blue-dk)] font-extrabold px-7 py-4 rounded-xl transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--mp-accent-teal)] focus:ring-offset-[var(--mp-oxford-blue-dk)]"
+            style={{ fontSize: "15px" }}
           >
             {COPY.hero.cta_primary[lang]}
-            <ArrowRight className="w-4 h-4" />
+            <ArrowRight className="w-4 h-4" aria-hidden="true" />
           </Link>
           <a
-            href="#sample"
-            className="inline-flex items-center gap-2 bg-white border border-[#E4E9F0] hover:border-[#007B5F] text-[#1A2B3C] text-base font-semibold px-7 py-4 rounded-2xl transition-all hover:shadow-md"
+            href="#how"
+            className="inline-flex items-center justify-center gap-2 bg-transparent text-white border border-white/25 hover:border-white/60 hover:bg-white/5 font-semibold px-7 py-4 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white focus:ring-offset-[var(--mp-oxford-blue-dk)]"
+            style={{ fontSize: "15px" }}
           >
             {COPY.hero.cta_secondary[lang]}
+            <ChevronRight className="w-4 h-4" aria-hidden="true" />
           </a>
+          <span className="text-white/50 sm:ml-2" style={{ fontSize: "12px" }}>
+            {COPY.hero.cta_note[lang]}
+          </span>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Stats strip — quiet KPI row at the edge of the hero
+   ───────────────────────────────────────────────────────────── */
+function StatsStrip({ lang }: { lang: Lang }) {
+  return (
+    <section className="relative text-white" style={{ background: "var(--mp-oxford-blue-dk)" }}>
+      <div className="relative max-w-6xl mx-auto px-4 sm:px-6">
+        <div
+          className="grid grid-cols-2 md:grid-cols-4 border-t border-b"
+          style={{ borderColor: "rgba(255,255,255,0.1)" }}
+        >
+          {COPY.stats.map((s, i) => (
+            <div
+              key={i}
+              className="py-6 px-4 md:px-6"
+              style={{
+                borderRight:
+                  i < COPY.stats.length - 1 ? "1px solid rgba(255,255,255,0.1)" : "none",
+              }}
+            >
+              <div
+                className="mp-num font-black text-white"
+                style={{
+                  fontSize: "clamp(26px, 3.5vw, 36px)",
+                  letterSpacing: "-0.02em",
+                  lineHeight: 1,
+                  fontFamily: "var(--mp-font-display)",
+                }}
+              >
+                {lang === "en" ? s.value_en : s.value}
+              </div>
+              <div
+                className="mp-caption mt-1.5 text-white/60 font-bold uppercase"
+                style={{ fontSize: "10px", letterSpacing: "0.08em" }}
+              >
+                {s.label[lang]}
+              </div>
+              {s.sub && (
+                <div className="mt-1 text-white/45" style={{ fontSize: "10px" }}>
+                  {s.sub[lang]}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────
+   How it works — 3-step, inverts to light theme
+   ───────────────────────────────────────────────────────────── */
+function HowItWorks({ lang }: { lang: Lang }) {
+  return (
+    <section id="how" className="py-24 bg-[var(--mp-surface-raised)]">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6">
+        <div className="mb-14 max-w-2xl">
+          <p
+            className="mp-caption uppercase font-bold mb-3 text-[var(--mp-viridian)]"
+            style={{ letterSpacing: "0.12em" }}
+          >
+            {COPY.how.eyebrow[lang]}
+          </p>
+          <h2 className="mp-h2 font-display font-extrabold text-[var(--mp-fg)]">
+            {COPY.how.title[lang]}
+          </h2>
         </div>
 
-        <p className="text-xs text-[#A0AEC0] flex items-center justify-center gap-1.5">
-          <ShieldCheck className="w-3.5 h-3.5 text-[#00A896]" />
-          {COPY.hero.trust[lang]}
-        </p>
-      </div>
-    </section>
-  );
-}
-
-/* ─────────────────────────────────────────────────────────────
-   Stats strip
-   ───────────────────────────────────────────────────────────── */
-function Stats({ lang }: { lang: Lang }) {
-  return (
-    <section className="py-12 border-y border-[#E4E9F0] bg-[#F7F9FC]">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 grid grid-cols-2 md:grid-cols-4 gap-6">
-        {COPY.stats.map((s) => (
-          <div key={s.value} className="text-center">
-            <div className="text-3xl md:text-4xl font-black font-display text-[#001B3D]">
-              {s.value}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {COPY.how.steps.map((s, i) => (
+            <div key={s.n} className="relative">
+              <div className="flex items-baseline gap-3 mb-4">
+                <span
+                  className="mp-num font-black"
+                  style={{
+                    fontSize: "48px",
+                    color: "var(--mp-viridian)",
+                    letterSpacing: "-0.04em",
+                    lineHeight: 1,
+                  }}
+                >
+                  {s.n}
+                </span>
+                {i < COPY.how.steps.length - 1 && (
+                  <span
+                    className="hidden md:block h-px flex-1 bg-[var(--mp-border-subtle)] translate-y-[-6px]"
+                    aria-hidden="true"
+                  />
+                )}
+              </div>
+              <h3 className="mp-h3 font-display font-bold text-[var(--mp-fg)] mb-2">
+                {s.title[lang]}
+              </h3>
+              <p
+                className="mp-body text-[var(--mp-fg-muted)] leading-relaxed"
+                style={{ fontSize: "15px" }}
+              >
+                {s.body[lang]}
+              </p>
             </div>
-            <div className="text-xs text-[#A0AEC0] uppercase tracking-wider font-semibold mt-1">
-              {s.label[lang]}
-            </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </section>
   );
 }
 
 /* ─────────────────────────────────────────────────────────────
-   Why
-   ───────────────────────────────────────────────────────────── */
-function Why({ lang }: { lang: Lang }) {
-  return (
-    <section className="py-20 bg-white">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 text-center">
-        <p className="text-xs uppercase tracking-widest text-[#007B5F] font-bold mb-3">
-          {COPY.why.eyebrow[lang]}
-        </p>
-        <h2 className="text-3xl md:text-4xl font-bold text-[#001B3D] font-display leading-tight mb-5">
-          {COPY.why.title[lang]}
-        </h2>
-        <p className="text-base md:text-lg text-[#4A5568] leading-relaxed">
-          {COPY.why.body[lang]}
-        </p>
-      </div>
-    </section>
-  );
-}
-
-/* ─────────────────────────────────────────────────────────────
-   Features
+   Features — 6-card grid
    ───────────────────────────────────────────────────────────── */
 function Features({ lang }: { lang: Lang }) {
   return (
-    <section id="features" className="py-20 bg-[#F7F9FC]">
+    <section id="features" className="py-24 bg-[var(--mp-surface-sunken)]">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
-        <div className="text-center mb-12">
-          <p className="text-xs uppercase tracking-widest text-[#007B5F] font-bold mb-3">
+        <div className="mb-12 max-w-2xl">
+          <p
+            className="mp-caption uppercase font-bold mb-3 text-[var(--mp-viridian)]"
+            style={{ letterSpacing: "0.12em" }}
+          >
             {COPY.features.eyebrow[lang]}
           </p>
-          <h2 className="text-3xl md:text-4xl font-bold text-[#001B3D] font-display">
+          <h2 className="mp-h2 font-display font-extrabold text-[var(--mp-fg)] mb-3">
             {COPY.features.title[lang]}
           </h2>
+          <p className="mp-body text-[var(--mp-fg-muted)]" style={{ fontSize: "17px" }}>
+            {COPY.features.subtitle[lang]}
+          </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {COPY.features.items.map((f) => {
             const Icon = f.icon;
             return (
-              <div
+              <article
                 key={f.title.en}
-                className="bg-white border border-[#E4E9F0] rounded-2xl p-6 hover:border-[#007B5F]/40 hover:shadow-lg transition-all"
+                className="mp-card p-6 hover:border-[var(--mp-viridian)]/40 transition-all"
               >
-                <div className="w-12 h-12 rounded-xl bg-[#007B5F]/10 flex items-center justify-center mb-4">
-                  <Icon className="w-6 h-6 text-[#007B5F]" />
+                <div
+                  className="w-11 h-11 rounded-xl flex items-center justify-center mb-5"
+                  style={{ background: "rgba(0, 123, 95, 0.1)" }}
+                >
+                  <Icon className="w-5 h-5 text-[var(--mp-viridian)]" aria-hidden="true" />
                 </div>
-                <h3 className="text-base font-bold text-[#001B3D] mb-2 font-display">
+                <h3
+                  className="mp-h3 font-display font-bold text-[var(--mp-fg)] mb-2"
+                  style={{ fontSize: "17px" }}
+                >
                   {f.title[lang]}
                 </h3>
-                <p className="text-sm text-[#4A5568] leading-relaxed">{f.body[lang]}</p>
+                <p
+                  className="mp-body text-[var(--mp-fg-muted)] leading-relaxed"
+                  style={{ fontSize: "14px" }}
+                >
+                  {f.body[lang]}
+                </p>
+              </article>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Subjects — 16 specialties grid
+   ───────────────────────────────────────────────────────────── */
+function Subjects({ lang }: { lang: Lang }) {
+  return (
+    <section className="py-24 bg-[var(--mp-surface-raised)]">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6">
+        <div className="mb-12 max-w-2xl">
+          <p
+            className="mp-caption uppercase font-bold mb-3 text-[var(--mp-viridian)]"
+            style={{ letterSpacing: "0.12em" }}
+          >
+            {COPY.subjects.eyebrow[lang]}
+          </p>
+          <h2 className="mp-h2 font-display font-extrabold text-[var(--mp-fg)] mb-3">
+            {COPY.subjects.title[lang]}
+          </h2>
+          <p className="mp-body text-[var(--mp-fg-muted)]" style={{ fontSize: "17px" }}>
+            {COPY.subjects.subtitle[lang]}
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+          {COPY.subjects.items.map((s, i) => {
+            const Icon = s.icon;
+            return (
+              <div
+                key={i}
+                className="mp-card flex flex-col items-center justify-center text-center gap-2 p-4 hover:border-[var(--mp-viridian)]/40"
+              >
+                <div
+                  className="w-10 h-10 rounded-lg flex items-center justify-center"
+                  style={{ background: "rgba(0, 58, 140, 0.08)" }}
+                >
+                  <Icon className="w-5 h-5 text-[var(--mp-cta-blue)]" aria-hidden="true" />
+                </div>
+                <span
+                  className="mp-body text-[var(--mp-fg)] font-semibold"
+                  style={{ fontSize: "13px" }}
+                >
+                  {s.name[lang]}
+                </span>
               </div>
             );
           })}
@@ -548,350 +769,180 @@ function Features({ lang }: { lang: Lang }) {
 }
 
 /* ─────────────────────────────────────────────────────────────
-   How it works
+   Pricing preview — 3-tier brief, links to /pricing for detail
    ───────────────────────────────────────────────────────────── */
-function HowItWorks({ lang }: { lang: Lang }) {
+function PricingPreview({ lang }: { lang: Lang }) {
   return (
-    <section className="py-20 bg-white">
+    <section id="pricing" className="py-24 bg-[var(--mp-surface-sunken)]">
       <div className="max-w-5xl mx-auto px-4 sm:px-6">
-        <div className="text-center mb-12">
-          <p className="text-xs uppercase tracking-widest text-[#007B5F] font-bold mb-3">
-            {COPY.how.eyebrow[lang]}
-          </p>
-          <h2 className="text-3xl md:text-4xl font-bold text-[#001B3D] font-display">
-            {COPY.how.title[lang]}
-          </h2>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {COPY.how.steps.map((s) => (
-            <div key={s.n} className="text-center md:text-left relative">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#001B3D] to-[#003A8C] text-white text-xl font-black font-display flex items-center justify-center mb-4 mx-auto md:mx-0 shadow-md">
-                {s.n}
-              </div>
-              <h3 className="text-lg font-bold text-[#001B3D] mb-2 font-display">
-                {s.title[lang]}
-              </h3>
-              <p className="text-sm text-[#4A5568] leading-relaxed">{s.body[lang]}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ─────────────────────────────────────────────────────────────
-   Sample question
-   ───────────────────────────────────────────────────────────── */
-function SampleQuestion({ lang }: { lang: Lang }) {
-  const [revealed, setRevealed] = useState(false);
-  const [picked, setPicked] = useState<number | null>(null);
-
-  const onPick = (i: number) => {
-    if (revealed) return;
-    setPicked(i);
-    setRevealed(true);
-  };
-
-  return (
-    <section id="sample" className="py-20 bg-[#F7F9FC]">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6">
-        <div className="text-center mb-10">
-          <p className="text-xs uppercase tracking-widest text-[#007B5F] font-bold mb-3">
-            {COPY.sample.eyebrow[lang]}
-          </p>
-          <h2 className="text-3xl md:text-4xl font-bold text-[#001B3D] font-display">
-            {COPY.sample.title[lang]}
-          </h2>
-        </div>
-
-        <div className="bg-white border border-[#E4E9F0] rounded-2xl p-6 md:p-8 shadow-lg">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold bg-[#003A8C]/10 text-[#003A8C] mb-4">
-            <Stethoscope className="w-3.5 h-3.5" />
-            {COPY.sample.topic[lang]}
-          </span>
-
-          <p className="text-base md:text-lg leading-relaxed font-medium text-[#001B3D] mb-5">
-            {COPY.sample.question[lang]}
-          </p>
-
-          <div className="space-y-2.5">
-            {COPY.sample.options.map((opt, i) => {
-              const isPicked = picked === i;
-              let style =
-                "w-full text-left px-4 py-3 border rounded-xl text-sm font-medium flex items-center gap-3 transition-all ";
-              if (!revealed) {
-                style +=
-                  "bg-[#F7F9FC] border-[#E4E9F0] hover:border-[#007B5F]/50 hover:bg-white text-[#1A2B3C] active:scale-[0.99]";
-              } else if (isPicked && opt.correct) {
-                style += "bg-[#00A896]/10 border-[#00A896] text-[#00A896]";
-              } else if (isPicked && !opt.correct) {
-                style += "bg-[#D64545]/10 border-[#D64545] text-[#D64545]";
-              } else if (opt.correct) {
-                style += "bg-[#00A896]/8 border-[#00A896]/60 text-[#00A896]/90";
-              } else {
-                style += "bg-white border-[#E4E9F0]/40 text-[#A0AEC0] opacity-60";
-              }
-              return (
-                <button key={opt.letter} onClick={() => onPick(i)} className={style}>
-                  <span className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold border border-current font-mono flex-shrink-0">
-                    {revealed && isPicked && opt.correct
-                      ? "✓"
-                      : revealed && isPicked
-                      ? "✗"
-                      : revealed && opt.correct
-                      ? "✓"
-                      : opt.letter}
-                  </span>
-                  <span>{opt.text[lang]}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          {revealed && (
-            <div className="mt-5 bg-[#F4A261]/8 border border-[#F4A261]/25 rounded-xl p-4 animate-fade-in">
-              <p className="text-[10px] uppercase tracking-wider text-[#F4A261] font-bold mb-2">
-                {lang === "de" ? "Erklärung" : "Explanation"}
-              </p>
-              <p className="text-[#4A5568] text-sm leading-relaxed">
-                {COPY.sample.explanation[lang]}
-              </p>
-            </div>
-          )}
-        </div>
-
-        <p className="text-center text-xs text-[#A0AEC0] mt-5">
-          {lang === "de"
-            ? "7.724 weitere Fragen warten auf dich nach der Anmeldung."
-            : "7,724 more questions waiting for you after sign up."}
-        </p>
-      </div>
-    </section>
-  );
-}
-
-/* ─────────────────────────────────────────────────────────────
-   Coming soon (more exams teaser)
-   ───────────────────────────────────────────────────────────── */
-function ComingSoon({ lang }: { lang: Lang }) {
-  return (
-    <section className="py-20 bg-gradient-to-br from-[#001B3D] via-[#00244F] to-[#003A8C] text-white relative overflow-hidden">
-      <div
-        className="absolute inset-0 opacity-[0.06] pointer-events-none"
-        style={{
-          backgroundImage:
-            "radial-gradient(circle, #ffffff 1px, transparent 1px)",
-          backgroundSize: "24px 24px",
-        }}
-      />
-      <div className="absolute top-0 right-[-15%] w-[500px] h-[500px] rounded-full bg-[#00A896]/15 blur-[120px] pointer-events-none" />
-
-      <div className="relative max-w-4xl mx-auto px-4 sm:px-6 text-center">
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 border border-white/20 text-[#00A896] text-xs font-semibold mb-5">
-          <Clock className="w-3.5 h-3.5" />
-          {COPY.coming.eyebrow[lang]}
-        </div>
-        <h2 className="text-3xl md:text-4xl font-bold font-display mb-5">
-          {COPY.coming.title[lang]}
-        </h2>
-        <p className="text-base md:text-lg text-white/80 max-w-2xl mx-auto leading-relaxed mb-8">
-          {COPY.coming.body[lang]}
-        </p>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-8 max-w-3xl mx-auto">
-          {COPY.coming.upcoming.map((u) => (
-            <div
-              key={u.en}
-              className="bg-white/5 backdrop-blur border border-white/10 rounded-xl p-4 text-left flex items-start gap-3"
-            >
-              <GraduationCap className="w-5 h-5 text-[#00A896] flex-shrink-0 mt-0.5" />
-              <span className="text-sm font-medium">{u[lang]}</span>
-            </div>
-          ))}
-        </div>
-
-        <a
-          href="mailto:hello@medpruf.com?subject=Notify%20me%20about%20new%20exams"
-          className="inline-flex items-center gap-2 bg-[#00A896] hover:bg-[#00C0AB] text-[#001B3D] text-sm font-bold px-6 py-3 rounded-xl transition-all shadow-lg hover:shadow-xl"
-        >
-          <Mail className="w-4 h-4" />
-          {COPY.coming.notify[lang]}
-        </a>
-      </div>
-    </section>
-  );
-}
-
-/* ─────────────────────────────────────────────────────────────
-   Pricing
-   ───────────────────────────────────────────────────────────── */
-function Pricing({ lang }: { lang: Lang }) {
-  return (
-    <section id="pricing" className="py-20 bg-white">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6">
-        <div className="text-center mb-12">
-          <p className="text-xs uppercase tracking-widest text-[#007B5F] font-bold mb-3">
+        <div className="mb-12 max-w-2xl">
+          <p
+            className="mp-caption uppercase font-bold mb-3 text-[var(--mp-viridian)]"
+            style={{ letterSpacing: "0.12em" }}
+          >
             {COPY.pricing.eyebrow[lang]}
           </p>
-          <h2 className="text-3xl md:text-4xl font-bold text-[#001B3D] font-display">
+          <h2 className="mp-h2 font-display font-extrabold text-[var(--mp-fg)] mb-3">
             {COPY.pricing.title[lang]}
           </h2>
+          <p className="mp-body text-[var(--mp-fg-muted)]" style={{ fontSize: "17px" }}>
+            {COPY.pricing.subtitle[lang]}
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 max-w-3xl mx-auto">
-          {COPY.pricing.plans.map((p) => {
-            const isPro = p.highlight;
-            const planName = typeof p.name === "string" ? p.name : p.name[lang];
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          {COPY.pricing.tiers.map((t) => {
+            const planName = typeof t.name === "string" ? t.name : t.name[lang];
+            const isSoon = t.status === "soon";
             return (
-              <div
-                key={planName}
-                className={`relative rounded-2xl p-8 border-2 transition-all ${
-                  isPro
-                    ? "bg-gradient-to-br from-[#001B3D] to-[#003A8C] text-white border-[#00A896] shadow-xl scale-[1.02]"
-                    : "bg-white border-[#E4E9F0] text-[#1A2B3C]"
-                }`}
-              >
-                {isPro && (
-                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#00A896] text-white text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full shadow-md">
-                    {lang === "de" ? "Empfohlen" : "Recommended"}
+              <div key={planName} className="mp-card p-6 relative flex flex-col">
+                {isSoon && (
+                  <span
+                    className="absolute top-4 right-4 text-[10px] uppercase font-bold px-2 py-0.5 rounded-full"
+                    style={{
+                      color: "var(--mp-warning-dk)",
+                      background: "var(--mp-warning-bg)",
+                      letterSpacing: "0.08em",
+                    }}
+                  >
+                    {COPY.pricing.comingSoon[lang]}
                   </span>
                 )}
                 <h3
-                  className={`text-2xl font-bold font-display mb-1 ${
-                    isPro ? "text-white" : "text-[#001B3D]"
-                  }`}
+                  className="mp-h3 font-display font-bold text-[var(--mp-fg)] mb-1"
+                  style={{ fontSize: "18px" }}
                 >
                   {planName}
                 </h3>
-                <div className="flex items-baseline gap-1 mb-6">
+                <div className="flex items-baseline gap-1.5 mb-4">
                   <span
-                    className={`text-5xl font-black font-display ${
-                      isPro ? "text-white" : "text-[#001B3D]"
-                    }`}
+                    className="font-black text-[var(--mp-fg)]"
+                    style={{
+                      fontFamily: "var(--mp-font-display)",
+                      fontSize: "32px",
+                      letterSpacing: "-0.02em",
+                      lineHeight: 1,
+                    }}
                   >
-                    {p.price}
+                    {t.price}
                   </span>
-                  <span className={`text-sm ${isPro ? "text-white/70" : "text-[#A0AEC0]"}`}>
-                    {p.period[lang]}
+                  <span className="text-[var(--mp-fg-subtle)]" style={{ fontSize: "13px" }}>
+                    / {t.period[lang]}
                   </span>
                 </div>
-                <ul className="space-y-2.5 mb-7">
-                  {p.features.map((f) => (
-                    <li
-                      key={f.en}
-                      className={`flex items-start gap-2.5 text-sm ${
-                        isPro ? "text-white/90" : "text-[#4A5568]"
-                      }`}
-                    >
-                      <CheckCircle2
-                        className={`w-4 h-4 flex-shrink-0 mt-0.5 ${
-                          isPro ? "text-[#00A896]" : "text-[#007B5F]"
-                        }`}
-                      />
-                      <span>{f[lang]}</span>
-                    </li>
-                  ))}
-                </ul>
-                <Link
-                  href={p.href}
-                  className={`block text-center py-3 rounded-xl font-semibold text-sm transition-all ${
-                    isPro
-                      ? "bg-[#00A896] hover:bg-[#00C0AB] text-[#001B3D] shadow-lg hover:shadow-xl"
-                      : "bg-[#001B3D] hover:bg-[#003A8C] text-white"
-                  }`}
+                <p
+                  className="mp-body text-[var(--mp-fg-muted)] flex-1 mb-5"
+                  style={{ fontSize: "14px" }}
                 >
-                  {p.cta[lang]}
+                  {t.pitch[lang]}
+                </p>
+                <Link
+                  href={t.href}
+                  className={`mp-btn ${isSoon ? "mp-btn--secondary" : "mp-btn--success"} w-full justify-center`}
+                >
+                  {t.cta[lang]}
                 </Link>
               </div>
             );
           })}
         </div>
+
+        <div className="text-center">
+          <Link
+            href="/pricing"
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--mp-viridian)] hover:underline focus:outline-none focus:ring-2 focus:ring-[var(--mp-viridian)] rounded"
+          >
+            {COPY.pricing.link[lang]}
+            <ChevronRight className="w-4 h-4" aria-hidden="true" />
+          </Link>
+        </div>
       </div>
     </section>
   );
 }
 
 /* ─────────────────────────────────────────────────────────────
-   FAQ
+   Social proof — quiet quote band
    ───────────────────────────────────────────────────────────── */
-function FAQ({ lang }: { lang: Lang }) {
-  const [open, setOpen] = useState<number | null>(0);
-
+function SocialProof({ lang }: { lang: Lang }) {
   return (
-    <section id="faq" className="py-20 bg-[#F7F9FC]">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6">
-        <div className="text-center mb-12">
-          <p className="text-xs uppercase tracking-widest text-[#007B5F] font-bold mb-3">
-            {COPY.faq.eyebrow[lang]}
-          </p>
-          <h2 className="text-3xl md:text-4xl font-bold text-[#001B3D] font-display">
-            {COPY.faq.title[lang]}
-          </h2>
-        </div>
-
-        <div className="space-y-2">
-          {COPY.faq.items.map((item, i) => {
-            const isOpen = open === i;
-            return (
-              <div
-                key={item.q.en}
-                className="bg-white border border-[#E4E9F0] rounded-xl overflow-hidden"
-              >
-                <button
-                  onClick={() => setOpen(isOpen ? null : i)}
-                  className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-[#F7F9FC]/60 transition-colors"
-                >
-                  <span className="text-sm md:text-base font-semibold text-[#001B3D]">
-                    {item.q[lang]}
-                  </span>
-                  <span className={`text-[#007B5F] text-xl transition-transform ${isOpen ? "rotate-45" : ""}`}>
-                    +
-                  </span>
-                </button>
-                {isOpen && (
-                  <div className="px-5 pb-4 -mt-1 text-sm text-[#4A5568] leading-relaxed animate-fade-in">
-                    {item.a[lang]}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
+    <section className="py-20 bg-[var(--mp-surface-raised)] border-y border-[var(--mp-border-subtle)]">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 text-center">
+        <p
+          className="mp-caption uppercase font-bold mb-4"
+          style={{ color: "var(--mp-viridian)", letterSpacing: "0.12em" }}
+        >
+          {COPY.proof.eyebrow[lang]}
+        </p>
+        <h2 className="mp-h2 font-display font-extrabold text-[var(--mp-fg)] mb-5 leading-tight">
+          {COPY.proof.title[lang]}
+        </h2>
+        <p
+          className="mp-body text-[var(--mp-fg-muted)]"
+          style={{ fontSize: "17px", lineHeight: 1.6 }}
+        >
+          {COPY.proof.quote[lang]}
+        </p>
       </div>
     </section>
   );
 }
 
 /* ─────────────────────────────────────────────────────────────
-   Final CTA
+   Final CTA — dark band to match hero
    ───────────────────────────────────────────────────────────── */
 function FinalCTA({ lang }: { lang: Lang }) {
   return (
-    <section className="py-20 bg-white">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 text-center">
-        <h2 className="text-4xl md:text-5xl font-black font-display text-[#001B3D] mb-4">
+    <section
+      className="relative py-24 text-white overflow-hidden"
+      style={{ background: "var(--mp-oxford-blue-dk)" }}
+    >
+      <div
+        aria-hidden="true"
+        className="absolute pointer-events-none"
+        style={{
+          top: "-120px",
+          left: "50%",
+          transform: "translateX(-50%)",
+          width: "700px",
+          height: "700px",
+          borderRadius: "50%",
+          background: "radial-gradient(circle, rgba(0,168,150,0.2), transparent 65%)",
+        }}
+      />
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 opacity-[0.05] pointer-events-none"
+        style={{
+          backgroundImage: "radial-gradient(circle, #ffffff 1px, transparent 1px)",
+          backgroundSize: "28px 28px",
+        }}
+      />
+      <div className="relative max-w-3xl mx-auto px-4 sm:px-6 text-center">
+        <h2
+          className="font-display font-black text-white mb-5 leading-[1.05]"
+          style={{
+            fontSize: "clamp(32px, 5vw, 56px)",
+            letterSpacing: "-0.03em",
+          }}
+        >
           {COPY.cta.title[lang]}
         </h2>
-        <p className="text-base md:text-lg text-[#4A5568] mb-8">{COPY.cta.subtitle[lang]}</p>
+        <p className="text-white/75 mb-9" style={{ fontSize: "17px" }}>
+          {COPY.cta.subtitle[lang]}
+        </p>
         <Link
           href="/login"
-          className="inline-flex items-center gap-2 bg-[#001B3D] hover:bg-[#003A8C] text-white text-base font-bold px-8 py-4 rounded-2xl transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5"
+          className="cta-shimmer inline-flex items-center justify-center gap-2 text-[var(--mp-oxford-blue-dk)] font-extrabold px-8 py-4 rounded-xl transition-all shadow-xl hover:shadow-2xl hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--mp-accent-teal)] focus:ring-offset-[var(--mp-oxford-blue-dk)]"
+          style={{ fontSize: "16px" }}
         >
           {COPY.cta.button[lang]}
-          <ArrowRight className="w-4 h-4" />
+          <ArrowRight className="w-4 h-4" aria-hidden="true" />
         </Link>
-        <div className="flex items-center justify-center gap-2 mt-5 text-xs text-[#A0AEC0]">
-          <Star className="w-3.5 h-3.5 text-[#F4A261] fill-[#F4A261]" />
-          <Star className="w-3.5 h-3.5 text-[#F4A261] fill-[#F4A261]" />
-          <Star className="w-3.5 h-3.5 text-[#F4A261] fill-[#F4A261]" />
-          <Star className="w-3.5 h-3.5 text-[#F4A261] fill-[#F4A261]" />
-          <Star className="w-3.5 h-3.5 text-[#F4A261] fill-[#F4A261]" />
-          <span className="ml-1">
-            {lang === "de" ? "von ärztlichen Tester:innen" : "from physician testers"}
-          </span>
-        </div>
+        <p className="mt-5 text-xs text-white/50 flex items-center justify-center gap-2 flex-wrap">
+          <Languages className="w-3.5 h-3.5" aria-hidden="true" />
+          {COPY.cta.trust[lang]}
+        </p>
       </div>
     </section>
   );
@@ -903,20 +954,20 @@ function FinalCTA({ lang }: { lang: Lang }) {
 function Footer({ lang }: { lang: Lang }) {
   const year = new Date().getFullYear();
   return (
-    <footer className="bg-[#001B3D] text-white pt-16 pb-8">
+    <footer className="bg-[var(--mp-oxford-blue)] text-white pt-16 pb-8">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-10">
           <div className="md:col-span-2">
             <div className="flex items-center gap-2.5 mb-3">
               <Image
                 src="/brand/logomark.svg"
-                alt="MedPrüf"
+                alt=""
                 width={32}
                 height={32}
                 style={{ filter: "brightness(0) invert(1)" }}
               />
               <span className="text-lg font-bold tracking-tight font-display">
-                Med<span className="text-[#00A896]">Prüf</span>
+                Med<span className="text-[var(--mp-accent-teal)]">Prüf</span>
               </span>
             </div>
             <p className="text-sm text-white/70 leading-relaxed max-w-md">
@@ -929,10 +980,31 @@ function Footer({ lang }: { lang: Lang }) {
               {COPY.footer.product[lang]}
             </p>
             <ul className="space-y-2 text-sm text-white/80">
-              <li><a href="#features" className="hover:text-white transition-colors">{COPY.nav.features[lang]}</a></li>
-              <li><a href="#sample" className="hover:text-white transition-colors">{COPY.nav.sample[lang]}</a></li>
-              <li><Link href="/pricing" className="hover:text-white transition-colors">{COPY.nav.pricing[lang]}</Link></li>
-              <li><Link href="/changelog" className="hover:text-white transition-colors">Changelog</Link></li>
+              <li>
+                <a href="#features" className="hover:text-white transition-colors">
+                  {COPY.nav.features[lang]}
+                </a>
+              </li>
+              <li>
+                <a href="#how" className="hover:text-white transition-colors">
+                  {COPY.nav.how[lang]}
+                </a>
+              </li>
+              <li>
+                <Link href="/pricing" className="hover:text-white transition-colors">
+                  {COPY.nav.pricing[lang]}
+                </Link>
+              </li>
+              <li>
+                <Link href="/changelog" className="hover:text-white transition-colors">
+                  Changelog
+                </Link>
+              </li>
+              <li>
+                <Link href="/about" className="hover:text-white transition-colors">
+                  {lang === "de" ? "Über uns" : "About"}
+                </Link>
+              </li>
             </ul>
           </div>
 
@@ -941,16 +1013,41 @@ function Footer({ lang }: { lang: Lang }) {
               {COPY.footer.legal[lang]}
             </p>
             <ul className="space-y-2 text-sm text-white/80">
-              <li><Link href="/privacy" className="hover:text-white transition-colors">{lang === "de" ? "Datenschutz" : "Privacy"}</Link></li>
-              <li><Link href="/terms" className="hover:text-white transition-colors">{lang === "de" ? "AGB" : "Terms"}</Link></li>
-              <li><Link href="/impressum" className="hover:text-white transition-colors">Impressum</Link></li>
+              <li>
+                <Link href="/privacy" className="hover:text-white transition-colors">
+                  {lang === "de" ? "Datenschutz" : "Privacy"}
+                </Link>
+              </li>
+              <li>
+                <Link href="/terms" className="hover:text-white transition-colors">
+                  {lang === "de" ? "AGB" : "Terms"}
+                </Link>
+              </li>
+              <li>
+                <Link href="/impressum" className="hover:text-white transition-colors">
+                  Impressum
+                </Link>
+              </li>
             </ul>
           </div>
         </div>
 
         <div className="pt-6 border-t border-white/10 flex flex-col md:flex-row md:items-center md:justify-between gap-3 text-xs text-white/50">
-          <p>© {year} MedPrüf · [name]. {COPY.footer.rights[lang]}</p>
-          <p>medpruf.com · <a href="mailto:hello@medpruf.com" className="hover:text-white transition-colors">hello@medpruf.com</a></p>
+          <p>
+            © {year} MedPrüf · [name]. {COPY.footer.rights[lang]}
+          </p>
+          <p className="flex items-center gap-2">
+            <span>medpruf.com</span>
+            <span aria-hidden="true">·</span>
+            <a href="mailto:hello@medpruf.com" className="hover:text-white transition-colors">
+              hello@medpruf.com
+            </a>
+            <span aria-hidden="true">·</span>
+            <span className="inline-flex items-center gap-1">
+              <Flag className="w-3 h-3" aria-hidden="true" />
+              Wien, AT
+            </span>
+          </p>
         </div>
       </div>
     </footer>

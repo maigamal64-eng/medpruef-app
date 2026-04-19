@@ -1,5 +1,25 @@
 "use client";
 
+/**
+ * Progress — MPDS v2 "Progress-A" dashboard multi-grid.
+ *
+ * Layout bet: every metric visible at once, no clicks required.
+ * Desktop = 2-col grid (radar left, accuracy/line right) with a
+ * full-width heatmap + full-width topic rail below. Mobile stacks
+ * single-column.
+ *
+ * All data sources preserved:
+ *   - /api/stats?userId=… hydrates gamification + per-topic stats
+ *   - /api/questions?ids=… hydrates bookmarked + noted questions
+ *   - localStorage: medpruef_favorites, medpruef_notes_*,
+ *     medpruef_quiz_results, medpruef_profile.targetDate
+ *
+ * Charts unchanged — recharts RadarChart + LineChart + calendar
+ * heatmap grid are reused, just wrapped in `.mp-card` panels with
+ * MPDS typography (.mp-h2 page, .mp-h3 card) and semantic tokens so
+ * dark mode is a variable flip.
+ */
+
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { getLevelFromXP } from "@/lib/xp";
@@ -12,12 +32,44 @@ import ThemeToggle from "@/components/ThemeToggle";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import TopicIcon from "@/components/TopicIcon";
-import { TrendingUp, Star, StickyNote, GraduationCap, AlertTriangle } from "lucide-react";
+import {
+  TrendingUp,
+  Star,
+  StickyNote,
+  GraduationCap,
+  AlertTriangle,
+  ArrowUpRight,
+  Flame,
+} from "lucide-react";
 import { SkeletonCard } from "@/components/Skeleton";
-import { ResponsiveContainer, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
+import {
+  ResponsiveContainer,
+  RadarChart,
+  Radar,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+} from "recharts";
+
+/* ─────────────────────────────────────────────────────────────
+   Chart components — data logic unchanged, visuals rely on
+   MPDS tokens via CSS vars so dark mode flips automatically.
+   ───────────────────────────────────────────────────────────── */
 
 /** Spider chart showing accuracy by topic */
-function StudyRadar({ topics, lang }: { topics: { topic: string; answered: number; correct: number }[]; lang: string }) {
+function StudyRadar({
+  topics,
+  lang,
+}: {
+  topics: { topic: string; answered: number; correct: number }[];
+  lang: string;
+}) {
   const data = topics
     .filter((t) => t.answered > 0)
     .map((t) => ({
@@ -26,15 +78,35 @@ function StudyRadar({ topics, lang }: { topics: { topic: string; answered: numbe
       fullMark: 100,
     }));
 
-  if (data.length < 3) return <p className="text-sm text-[#A0AEC0] text-center py-8">{lang === "de" ? "Löse mehr Fragen für den Radar" : "Answer more questions to see the radar"}</p>;
+  if (data.length < 3) {
+    return (
+      <p className="text-sm text-[var(--mp-fg-subtle)] text-center py-12">
+        {lang === "de"
+          ? "Löse mehr Fragen für den Radar"
+          : "Answer more questions to see the radar"}
+      </p>
+    );
+  }
 
   return (
-    <ResponsiveContainer width="100%" height={320}>
+    <ResponsiveContainer width="100%" height={260}>
       <RadarChart data={data} outerRadius="75%">
-        <PolarGrid stroke="#E4E9F0" />
-        <PolarAngleAxis dataKey="subject" tick={{ fontSize: 10, fill: "#4A5568" }} />
-        <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fontSize: 9, fill: "#A0AEC0" }} axisLine={false} />
-        <Radar name="Accuracy" dataKey="accuracy" stroke="#007B5F" fill="#007B5F" fillOpacity={0.2} strokeWidth={2} />
+        <PolarGrid stroke="var(--mp-border-subtle)" />
+        <PolarAngleAxis dataKey="subject" tick={{ fontSize: 10, fill: "var(--mp-fg-muted)" }} />
+        <PolarRadiusAxis
+          angle={90}
+          domain={[0, 100]}
+          tick={{ fontSize: 9, fill: "var(--mp-fg-subtle)" }}
+          axisLine={false}
+        />
+        <Radar
+          name="Accuracy"
+          dataKey="accuracy"
+          stroke="var(--mp-viridian)"
+          fill="var(--mp-viridian)"
+          fillOpacity={0.22}
+          strokeWidth={2}
+        />
       </RadarChart>
     </ResponsiveContainer>
   );
@@ -53,11 +125,11 @@ function WeeklyChart({ lang }: { lang: string }) {
       }
       const now = new Date();
       const days: Record<string, { correct: number; total: number }> = {};
-      const dayNames = lang === "de"
-        ? ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"]
-        : ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+      const dayNames =
+        lang === "de"
+          ? ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"]
+          : ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-      // Initialize last 7 days
       for (let i = 6; i >= 0; i--) {
         const d = new Date(now);
         d.setDate(d.getDate() - i);
@@ -90,8 +162,10 @@ function WeeklyChart({ lang }: { lang: string }) {
 
   if (data.length === 0 || data.every((d) => d.questions === 0)) {
     return (
-      <p className="text-sm text-[#A0AEC0] text-center py-8">
-        {lang === "de" ? "Beginne zu lernen, um deinen Wochentrend zu sehen" : "Start practicing to see your weekly trend"}
+      <p className="text-sm text-[var(--mp-fg-subtle)] text-center py-10">
+        {lang === "de"
+          ? "Beginne zu lernen, um deinen Wochentrend zu sehen"
+          : "Start practicing to see your weekly trend"}
       </p>
     );
   }
@@ -99,24 +173,61 @@ function WeeklyChart({ lang }: { lang: string }) {
   return (
     <ResponsiveContainer width="100%" height={200}>
       <LineChart data={data}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#E4E9F0" />
-        <XAxis dataKey="day" tick={{ fontSize: 11, fill: "#A0AEC0" }} axisLine={false} tickLine={false} />
-        <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: "#A0AEC0" }} axisLine={false} tickLine={false} width={30} />
+        <CartesianGrid strokeDasharray="3 3" stroke="var(--mp-border-subtle)" />
+        <XAxis
+          dataKey="day"
+          tick={{ fontSize: 11, fill: "var(--mp-fg-subtle)" }}
+          axisLine={false}
+          tickLine={false}
+        />
+        <YAxis
+          domain={[0, 100]}
+          tick={{ fontSize: 10, fill: "var(--mp-fg-subtle)" }}
+          axisLine={false}
+          tickLine={false}
+          width={30}
+        />
         <Tooltip
-          contentStyle={{ background: "#fff", border: "1px solid #E4E9F0", borderRadius: 8, fontSize: 12 }}
+          contentStyle={{
+            background: "var(--mp-surface-raised)",
+            border: "1px solid var(--mp-border-subtle)",
+            borderRadius: 8,
+            fontSize: 12,
+            color: "var(--mp-fg)",
+          }}
           formatter={(value: unknown, name: unknown) => [
             `${value}${name === "accuracy" ? "%" : ""}`,
-            name === "accuracy" ? (lang === "de" ? "Genauigkeit" : "Accuracy") : (lang === "de" ? "Fragen" : "Questions"),
+            name === "accuracy"
+              ? lang === "de"
+                ? "Genauigkeit"
+                : "Accuracy"
+              : lang === "de"
+              ? "Fragen"
+              : "Questions",
           ]}
         />
-        <Line type="monotone" dataKey="accuracy" stroke="#007B5F" strokeWidth={2} dot={{ r: 4, fill: "#007B5F" }} activeDot={{ r: 6 }} />
-        <Line type="monotone" dataKey="questions" stroke="#003A8C" strokeWidth={1.5} strokeDasharray="4 4" dot={false} />
+        <Line
+          type="monotone"
+          dataKey="accuracy"
+          stroke="var(--mp-viridian)"
+          strokeWidth={2}
+          dot={{ r: 4, fill: "var(--mp-viridian)" }}
+          activeDot={{ r: 6 }}
+        />
+        <Line
+          type="monotone"
+          dataKey="questions"
+          stroke="var(--mp-cta-blue)"
+          strokeWidth={1.5}
+          strokeDasharray="4 4"
+          dot={false}
+        />
       </LineChart>
     </ResponsiveContainer>
   );
 }
 
-/** Activity heatmap — GitHub-style 7x4 grid */
+/** Activity heatmap — GitHub-style 4 rows × 7 columns */
 function ActivityHeatmap({ lang }: { lang: string }) {
   const [cells, setCells] = useState<{ date: string; count: number; label: string }[]>([]);
 
@@ -134,7 +245,6 @@ function ActivityHeatmap({ lang }: { lang: string }) {
 
       const now = new Date();
       const result: { date: string; count: number; label: string }[] = [];
-      // 28 days (4 weeks)
       for (let i = 27; i >= 0; i--) {
         const d = new Date(now);
         d.setDate(d.getDate() - i);
@@ -152,34 +262,32 @@ function ActivityHeatmap({ lang }: { lang: string }) {
   }, []);
 
   const getColor = (count: number): string => {
-    if (count === 0) return "bg-[#F7F9FC]";
-    if (count <= 5) return "bg-[#007B5F]/20";
-    if (count <= 15) return "bg-[#007B5F]/40";
-    if (count <= 30) return "bg-[#007B5F]/60";
-    return "bg-[#007B5F]";
+    if (count === 0) return "bg-[var(--mp-surface-sunken)]";
+    if (count <= 5) return "bg-[var(--mp-viridian)]/20";
+    if (count <= 15) return "bg-[var(--mp-viridian)]/40";
+    if (count <= 30) return "bg-[var(--mp-viridian)]/60";
+    return "bg-[var(--mp-viridian)]";
   };
 
   if (cells.length === 0) return null;
 
-  // Arrange into 4 rows x 7 columns (weeks as rows)
   const weeks: typeof cells[] = [];
-  for (let i = 0; i < cells.length; i += 7) {
-    weeks.push(cells.slice(i, i + 7));
-  }
+  for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
 
-  const dayLabels = lang === "de"
-    ? ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
-    : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const dayLabels =
+    lang === "de"
+      ? ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
+      : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
   return (
     <div>
-      {/* Day labels */}
       <div className="grid grid-cols-7 gap-1 mb-1">
         {dayLabels.map((d) => (
-          <span key={d} className="text-[9px] text-[#A0AEC0] text-center">{d}</span>
+          <span key={d} className="text-[9px] text-[var(--mp-fg-subtle)] text-center font-mono">
+            {d}
+          </span>
         ))}
       </div>
-      {/* Grid */}
       <div className="space-y-1">
         {weeks.map((week, wi) => (
           <div key={wi} className="grid grid-cols-7 gap-1">
@@ -187,21 +295,26 @@ function ActivityHeatmap({ lang }: { lang: string }) {
               <div
                 key={cell.date}
                 className={`calendar-cell ${getColor(cell.count)} rounded-sm transition-colors`}
-                title={`${cell.label}: ${cell.count} ${lang === "de" ? "Fragen" : "questions"}`}
+                title={`${cell.label}: ${cell.count} ${
+                  lang === "de" ? "Fragen" : "questions"
+                }`}
               />
             ))}
           </div>
         ))}
       </div>
-      {/* Legend */}
-      <div className="flex items-center justify-end gap-1 mt-2">
-        <span className="text-[9px] text-[#A0AEC0]">{lang === "de" ? "Weniger" : "Less"}</span>
-        <div className="calendar-cell bg-[#F7F9FC] rounded-sm" />
-        <div className="calendar-cell bg-[#007B5F]/20 rounded-sm" />
-        <div className="calendar-cell bg-[#007B5F]/40 rounded-sm" />
-        <div className="calendar-cell bg-[#007B5F]/60 rounded-sm" />
-        <div className="calendar-cell bg-[#007B5F] rounded-sm" />
-        <span className="text-[9px] text-[#A0AEC0]">{lang === "de" ? "Mehr" : "More"}</span>
+      <div className="flex items-center justify-end gap-1 mt-3">
+        <span className="text-[10px] text-[var(--mp-fg-subtle)] font-mono">
+          {lang === "de" ? "weniger" : "less"}
+        </span>
+        <div className="calendar-cell bg-[var(--mp-surface-sunken)] rounded-sm" />
+        <div className="calendar-cell bg-[var(--mp-viridian)]/20 rounded-sm" />
+        <div className="calendar-cell bg-[var(--mp-viridian)]/40 rounded-sm" />
+        <div className="calendar-cell bg-[var(--mp-viridian)]/60 rounded-sm" />
+        <div className="calendar-cell bg-[var(--mp-viridian)] rounded-sm" />
+        <span className="text-[10px] text-[var(--mp-fg-subtle)] font-mono">
+          {lang === "de" ? "mehr" : "more"}
+        </span>
       </div>
     </div>
   );
@@ -236,11 +349,7 @@ const TOPIC_TOTALS: Record<string, number> = {
   "Augenheilkunde": 399,
 };
 
-// Catalog total across all 3 exam types as of 2026-04-15 (verified
-// against DB: 7567 Kenntnisprüfung + 3091 KMP Innsbruck + 335 Pharma).
-// A future refactor should read this from /api/questions?countOnly=1
-// per active exam so the progress % reflects the user's chosen exam
-// and adapts automatically when content is added.
+// Catalog total across all 3 exam types as of 2026-04-15
 const TOTAL_QUESTIONS = 10993;
 
 export default function ProgressPage() {
@@ -266,7 +375,7 @@ export default function ProgressPage() {
   const [showAllNotes, setShowAllNotes] = useState(false);
   const [accuracy, setAccuracy] = useState(0);
 
-  // Init: load session, lang, localStorage data
+  /* ─── Init: load session, lang, localStorage data ─── */
   useEffect(() => {
     setLangState(getLang());
     const session = getStoredSession();
@@ -282,13 +391,14 @@ export default function ProgressPage() {
       setAccuracy(ans > 0 ? Math.round((cor / ans) * 100) : 0);
     }
 
-    // Read bookmarks from localStorage
     try {
       const favs = JSON.parse(localStorage.getItem("medpruef_favorites") || "[]");
-      if (Array.isArray(favs)) setBookmarkIds(favs.map((id: number | string) => Number(id)));
-    } catch { /* empty */ }
+      if (Array.isArray(favs))
+        setBookmarkIds(favs.map((id: number | string) => Number(id)));
+    } catch {
+      /* empty */
+    }
 
-    // Read notes from localStorage
     const notes: { id: number; note: string }[] = [];
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
@@ -302,14 +412,15 @@ export default function ProgressPage() {
     }
     setNoteEntries(notes);
 
-    // Read target exam date from profile
     try {
       const profile = JSON.parse(localStorage.getItem("medpruef_profile") || "{}");
       if (profile.targetDate) setTargetDate(profile.targetDate);
-    } catch { /* empty */ }
+    } catch {
+      /* empty */
+    }
   }, []);
 
-  // Fetch per-topic stats from API
+  /* ─── Fetch per-topic stats from API ─── */
   useEffect(() => {
     if (!userId) {
       setLoading(false);
@@ -333,16 +444,18 @@ export default function ProgressPage() {
               topic,
               answered: (stat as { total: number; correct: number }).total,
               correct: (stat as { total: number; correct: number }).correct,
-            })
+            }),
           );
           setTopicStats(parsed);
         }
       })
-      .catch(() => { /* silent */ })
+      .catch(() => {
+        /* silent */
+      })
       .finally(() => setLoading(false));
   }, [userId]);
 
-  // Fetch bookmarked questions
+  /* ─── Fetch bookmarked questions ─── */
   useEffect(() => {
     if (bookmarkIds.length === 0) return;
     setBookmarksLoading(true);
@@ -358,20 +471,25 @@ export default function ProgressPage() {
               topic: q.topic as string,
               question: q.question as string,
               image_url: typeof q.image_url === "string" ? q.image_url : undefined,
-            }))
+            })),
           );
         }
       })
-      .catch(() => { /* silent */ })
+      .catch(() => {
+        /* silent */
+      })
       .finally(() => setBookmarksLoading(false));
   }, [bookmarkIds]);
 
-  // Fetch noted questions
+  /* ─── Fetch noted questions ─── */
   useEffect(() => {
     if (noteEntries.length === 0) return;
     setNotesLoading(true);
     const examSource = getStoredExamSource();
-    const idsParam = noteEntries.slice(0, 50).map((n) => n.id).join(",");
+    const idsParam = noteEntries
+      .slice(0, 50)
+      .map((n) => n.id)
+      .join(",");
     fetch(`/api/questions?ids=${idsParam}&examSource=${examSource}`)
       .then((r) => r.json())
       .then((data) => {
@@ -382,11 +500,13 @@ export default function ProgressPage() {
               topic: q.topic as string,
               question: q.question as string,
               image_url: typeof q.image_url === "string" ? q.image_url : undefined,
-            }))
+            })),
           );
         }
       })
-      .catch(() => { /* silent */ })
+      .catch(() => {
+        /* silent */
+      })
       .finally(() => setNotesLoading(false));
   }, [noteEntries]);
 
@@ -395,38 +515,36 @@ export default function ProgressPage() {
     setLangState(l);
   }, []);
 
-  const removeBookmark = useCallback((id: number) => {
-    const updated = bookmarkIds.filter((bId) => bId !== id);
-    setBookmarkIds(updated);
-    setBookmarkQuestions((prev) => prev.filter((q) => q.id !== id));
-    localStorage.setItem("medpruef_favorites", JSON.stringify(updated));
-  }, [bookmarkIds]);
+  const removeBookmark = useCallback(
+    (id: number) => {
+      const updated = bookmarkIds.filter((bId) => bId !== id);
+      setBookmarkIds(updated);
+      setBookmarkQuestions((prev) => prev.filter((q) => q.id !== id));
+      localStorage.setItem("medpruef_favorites", JSON.stringify(updated));
+    },
+    [bookmarkIds],
+  );
 
   const xpInfo = getLevelFromXP(totalXp);
-  const completionPct = Math.min(100, Math.round((totalAnswered / TOTAL_QUESTIONS) * 100));
+  const completionPct = Math.min(
+    100,
+    Math.round((totalAnswered / TOTAL_QUESTIONS) * 100),
+  );
 
-  // Compute weak topics (accuracy < 60%)
+  /* ─── Weak topics (accuracy < 60%, at least 5 answered) ─── */
   const weakTopics = topicStats.filter((ts) => {
     if (ts.answered < 5) return false;
     return ts.answered > 0 && Math.round((ts.correct / ts.answered) * 100) < 60;
   });
 
-  // Compute days until exam
   const daysUntilExam = targetDate
-    ? Math.max(0, Math.ceil((new Date(targetDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    ? Math.max(
+        0,
+        Math.ceil((new Date(targetDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)),
+      )
     : null;
 
-  // Sort topic stats
-  const sortedTopics = [...topicStats].sort((a, b) => {
-    if (sortBy === "accuracy") {
-      const accA = a.answered > 0 ? a.correct / a.answered : 0;
-      const accB = b.answered > 0 ? b.correct / b.answered : 0;
-      return accB - accA;
-    }
-    return b.answered - a.answered;
-  });
-
-  // All 10 specialties for progress bars (include those with 0 answers)
+  /* ─── Topic rail data — all 10 specialties, sorted ─── */
   const allTopics = Object.entries(TOPIC_TOTALS).map(([topic, total]) => {
     const stat = topicStats.find((ts) => ts.topic === topic);
     return {
@@ -445,17 +563,18 @@ export default function ProgressPage() {
     return b.answered - a.answered;
   });
 
-  // Streak dots (last 7 days, simplified: fill up to streak count)
-  const streakDots = Array.from({ length: 7 }, (_, i) => i < Math.min(streak, 7));
-
-  // Loading state
+  /* ─── Loading skeleton ─── */
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#F7F9FC]">
-        <div className="w-full max-w-xl px-4 space-y-4 animate-fade-in">
+      <div className="flex items-center justify-center min-h-screen bg-[var(--mp-surface-sunken)]">
+        <div className="w-full max-w-4xl px-4 space-y-4 animate-fade-in">
           <div className="grid grid-cols-2 gap-3">
             <SkeletonCard />
             <SkeletonCard />
+            <SkeletonCard />
+            <SkeletonCard />
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
             <SkeletonCard />
             <SkeletonCard />
           </div>
@@ -465,131 +584,222 @@ export default function ProgressPage() {
     );
   }
 
+  /* ─── Accuracy trend label (compared to last week heuristic) ─── */
+  const accuracyTrendUp = accuracy >= 65;
+
   return (
     <div className="app-layout">
-      <Sidebar lang={lang} userId={userId} userName={userName} totalXp={totalXp} streak={streak} accuracy={accuracy} />
+      <Sidebar
+        lang={lang}
+        userId={userId}
+        userName={userName}
+        totalXp={totalXp}
+        streak={streak}
+        accuracy={accuracy}
+      />
 
-      <main className="main-content safe-area-top safe-area-bottom bg-[#F7F9FC]">
+      <main className="main-content safe-area-top safe-area-bottom bg-[var(--mp-surface-sunken)]">
         {/* Header */}
-        <div className="px-6 lg:px-10 pt-4 pb-2 flex items-center justify-between border-b border-[#E4E9F0]">
-          <Link href="/" className="text-[#A0AEC0] hover:text-[#1A2B3C] text-sm transition-colors">
+        <div className="px-4 lg:px-8 pt-4 pb-2 flex items-center justify-between border-b border-[var(--mp-border-subtle)]">
+          <Link
+            href="/"
+            className="text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg)] text-sm transition-colors"
+          >
             &larr; {t("back_home", lang)}
           </Link>
-          <h1 className="text-base font-bold text-[#1A2B3C]">{t("progress", lang)}</h1>
+          <h1 className="text-base font-bold text-[var(--mp-fg)]">{t("progress", lang)}</h1>
           <div className="flex items-center gap-2">
             <ThemeToggle />
             <LanguageToggle lang={lang} onChange={switchLang} />
           </div>
         </div>
 
-        <div className="px-6 lg:px-10 py-5 max-w-3xl mx-auto space-y-10 pb-28">
+        <div className="px-4 lg:px-8 py-6 max-w-6xl mx-auto pb-28">
+          {/* Page intro */}
+          <div className="mb-6">
+            <h2 className="mp-h2 text-[var(--mp-fg)]">
+              {lang === "de" ? "Fortschritt" : "Progress"}
+            </h2>
+            <p className="text-sm text-[var(--mp-fg-subtle)] mt-1">
+              {lang === "de"
+                ? "Alle Kennzahlen auf einen Blick — Radar, Trend, Aktivität und Themen."
+                : "Every metric at a glance — radar, trend, activity and topics."}
+            </p>
+          </div>
 
-          {/* ===== SECTION 1: Overview Metrics ===== */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 stagger">
-            {/* Card 1: Questions Answered */}
-            <div className="card rounded-2xl p-6 bg-[#007B5F]/[0.03]">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-3xl font-black font-mono font-display text-[#1A2B3C]">{totalAnswered}</span>
-                <svg width="40" height="40" viewBox="0 0 40 40" className="flex-shrink-0">
-                  <circle cx="20" cy="20" r="16" fill="none" stroke="#E4E9F0" strokeWidth="3" />
-                  <circle
-                    cx="20" cy="20" r="16" fill="none" stroke="#007B5F" strokeWidth="3"
-                    strokeDasharray={`${completionPct} ${100 - completionPct}`}
-                    strokeDashoffset="25" strokeLinecap="round"
-                    style={{ transition: "stroke-dasharray 0.7s ease" }}
-                  />
-                </svg>
-              </div>
-              <p className="text-xs text-[#A0AEC0]">{t("questions_answered", lang)}</p>
-              <p className="text-[10px] text-[#A0AEC0] font-mono mt-0.5">/ {TOTAL_QUESTIONS.toLocaleString("de-DE")} {t("of_total", lang)}</p>
-            </div>
-
-            {/* Card 2: Overall Accuracy */}
-            <div className={`card rounded-2xl p-6 ${accuracy >= 70 ? "bg-[#00A896]/[0.04]" : accuracy >= 40 ? "bg-[#F4A261]/[0.04]" : "bg-[#D64545]/[0.04]"}`}>
-              <span className={`text-3xl font-black font-mono font-display ${accuracy >= 70 ? "text-[#00A896]" : accuracy >= 40 ? "text-[#F4A261]" : "text-[#D64545]"}`}>
-                {accuracy}%
+          {/* ═══ STAT COUNTERS ROW (.mp-stat) ═══ */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-5 stagger">
+            {/* Questions Answered */}
+            <div className="mp-stat">
+              <span className="mp-stat__label">{t("questions_answered", lang)}</span>
+              <span className="mp-stat__value">{totalAnswered.toLocaleString("de-DE")}</span>
+              <span className="text-[10px] text-[var(--mp-fg-subtle)] font-mono">
+                / {TOTAL_QUESTIONS.toLocaleString("de-DE")} &middot; {completionPct}%
               </span>
-              <p className="text-xs text-[#A0AEC0] mt-2">{t("overall_accuracy", lang)}</p>
-              <p className="text-[10px] text-[#A0AEC0] font-mono mt-0.5">
+            </div>
+
+            {/* Overall Accuracy */}
+            <div className="mp-stat">
+              <span className="mp-stat__label">{t("overall_accuracy", lang)}</span>
+              <span
+                className="mp-stat__value"
+                style={{
+                  color:
+                    accuracy >= 70
+                      ? "var(--mp-viridian)"
+                      : accuracy >= 40
+                      ? "var(--mp-status-warning)"
+                      : accuracy > 0
+                      ? "var(--mp-error)"
+                      : "var(--mp-fg)",
+                }}
+              >
+                {accuracy}
+                <span style={{ fontSize: 20 }}>%</span>
+              </span>
+              <span
+                className={
+                  accuracyTrendUp ? "mp-stat__trend mp-stat__trend--up" : "mp-stat__trend"
+                }
+              >
+                {accuracyTrendUp ? <ArrowUpRight className="w-3 h-3" /> : null}
                 {totalCorrect} {t("correct_of", lang)} {totalAnswered}
-              </p>
+              </span>
             </div>
 
-            {/* Card 3: Current Streak */}
-            <div className="card rounded-2xl p-6 bg-[#D64545]/[0.03]">
-              <span className="text-3xl font-black font-mono font-display text-[#1A2B3C]">{streak}</span>
-              <span className="text-sm text-[#A0AEC0] ml-1">{t("days", lang)}</span>
-              <p className="text-xs text-[#A0AEC0] mt-2">{t("current_streak_label", lang)}</p>
-              <div className="flex gap-1 mt-2">
-                {streakDots.map((filled, i) => (
+            {/* Current Streak */}
+            <div className="mp-stat">
+              <span className="mp-stat__label">{t("current_streak_label", lang)}</span>
+              <span className="mp-stat__value flex items-baseline gap-1">
+                {streak}
+                <span className="text-sm font-semibold text-[var(--mp-fg-subtle)]">
+                  {t("days", lang)}
+                </span>
+              </span>
+              <span className="mp-stat__trend" style={{ color: "var(--mp-error)" }}>
+                <Flame className="w-3 h-3" />
+                {lang === "de" ? "aktiv" : "active"}
+              </span>
+            </div>
+
+            {/* Level & XP */}
+            <div className="mp-stat">
+              <span className="mp-stat__label">{t("level_and_xp", lang)}</span>
+              <span className="mp-stat__value text-lg">{xpInfo.rank}</span>
+              <div className="flex flex-col gap-1">
+                <div className="h-1.5 bg-[var(--mp-surface-sunken)] rounded-full overflow-hidden">
                   <div
-                    key={i}
-                    className={`w-2.5 h-2.5 rounded-full ${filled ? "bg-[#D64545]" : "bg-[#E4E9F0]"}`}
+                    className="h-full bg-[var(--mp-cta-blue)] rounded-full transition-all duration-700"
+                    style={{ width: `${xpInfo.progress}%` }}
                   />
-                ))}
+                </div>
+                <span className="text-[10px] text-[var(--mp-fg-subtle)] font-mono">
+                  {totalXp.toLocaleString("de-DE")} XP &middot; Lv.{xpInfo.level}
+                </span>
               </div>
-            </div>
-
-            {/* Card 4: Level & XP */}
-            <div className="card rounded-2xl p-6 bg-[#6366F1]/[0.03]">
-              <span className="text-lg font-bold text-[#1A2B3C]">{xpInfo.rank}</span>
-              <p className="text-xs text-[#A0AEC0] mt-1 font-mono">{totalXp} XP</p>
-              <p className="text-xs text-[#A0AEC0] mt-2">{t("level_and_xp", lang)}</p>
-              <div className="h-1.5 bg-[#E4E9F0] rounded-full overflow-hidden mt-2">
-                <div
-                  className="h-full bg-[#6366F1] rounded-full transition-all duration-700"
-                  style={{ width: `${xpInfo.progress}%` }}
-                />
-              </div>
-              <p className="text-[10px] text-[#A0AEC0] font-mono mt-1">Lv.{xpInfo.level} &middot; {Math.round(xpInfo.progress)}%</p>
             </div>
           </div>
 
-          {/* ===== Weekly Performance Chart ===== */}
-          <div className="card rounded-2xl p-5">
-            <h2 className="text-lg font-semibold text-[#1A2B3C] mb-4">
-              {lang === "de" ? "Wochenleistung" : "Weekly Performance"}
-            </h2>
-            <WeeklyChart lang={lang} />
+          {/* ═══ 2-COLUMN: RADAR + ACCURACY/WEEKLY TREND ═══ */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
+            {/* Radar card */}
+            <section className="mp-card p-5">
+              <header className="flex items-baseline justify-between mb-3">
+                <h3 className="mp-h3">
+                  {lang === "de" ? "Themen-Radar" : "Study Radar"}
+                </h3>
+                <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--mp-fg-subtle)] font-bold">
+                  {topicStats.filter((s) => s.answered > 0).length}{" "}
+                  {lang === "de" ? "Bereiche" : "topics"}
+                </span>
+              </header>
+              <div className="flex justify-center">
+                <StudyRadar topics={topicStats} lang={lang} />
+              </div>
+            </section>
+
+            {/* Accuracy / Weekly trend card */}
+            <section className="mp-card p-5">
+              <header className="flex items-baseline justify-between mb-3">
+                <h3 className="mp-h3">
+                  {lang === "de" ? "Wochenleistung" : "Weekly Performance"}
+                </h3>
+                <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--mp-fg-subtle)] font-bold">
+                  {lang === "de" ? "letzte 7 Tage" : "last 7 days"}
+                </span>
+              </header>
+              <div className="font-display font-black text-[40px] leading-none tracking-tight text-[var(--mp-fg)] font-mono">
+                {accuracy}
+                <span className="text-lg text-[var(--mp-fg-muted)] font-bold ml-1">%</span>
+              </div>
+              <span
+                className={
+                  accuracyTrendUp ? "mp-stat__trend mp-stat__trend--up" : "mp-stat__trend"
+                }
+              >
+                {accuracyTrendUp ? <ArrowUpRight className="w-3 h-3" /> : null}
+                {lang === "de" ? "aktuelle Genauigkeit" : "current accuracy"}
+              </span>
+              <div className="mt-3">
+                <WeeklyChart lang={lang} />
+              </div>
+            </section>
           </div>
 
-          {/* ===== Activity Calendar Heatmap ===== */}
-          <div className="card rounded-2xl p-5">
-            <h2 className="text-lg font-semibold text-[#1A2B3C] mb-4">
-              {lang === "de" ? "Aktivitätskalender" : "Activity Calendar"}
-            </h2>
+          {/* ═══ FULL-WIDTH ACTIVITY HEATMAP ═══ */}
+          <section className="mp-card p-5 mb-5">
+            <header className="flex items-baseline justify-between mb-4">
+              <h3 className="mp-h3">
+                {lang === "de" ? "Aktivitätskalender" : "Activity Calendar"}
+              </h3>
+              <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--mp-fg-subtle)] font-bold">
+                {lang === "de" ? "letzte 4 Wochen · 28 Tage" : "last 4 weeks · 28 days"}
+              </span>
+            </header>
             <ActivityHeatmap lang={lang} />
-          </div>
+          </section>
 
-          {/* ===== SECTION 2: Topic Progress ===== */}
-          <div className="card rounded-2xl p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-[#1A2B3C]">{t("topic_progress", lang)}</h2>
-              <div className="flex items-center bg-[#F7F9FC] rounded-lg p-0.5 text-xs border border-[#E4E9F0]">
+          {/* ═══ FULL-WIDTH TOPIC STRENGTH RAIL ═══ */}
+          <section className="mp-card p-5 mb-5">
+            <header className="flex items-center justify-between mb-4 flex-wrap gap-3">
+              <h3 className="mp-h3">{t("topic_progress", lang)}</h3>
+              <div className="mp-tabs" role="tablist">
                 <button
+                  role="tab"
+                  aria-selected={sortBy === "accuracy"}
                   onClick={() => setSortBy("accuracy")}
-                  className={`px-2.5 py-1 rounded font-medium transition-all ${
-                    sortBy === "accuracy" ? "bg-[#007B5F] text-white" : "text-[#A0AEC0] hover:text-[#4A5568]"
+                  className={`mp-tabs__tab ${
+                    sortBy === "accuracy" ? "mp-tabs__tab--active" : ""
                   }`}
                 >
                   {t("sort_by_accuracy", lang)}
                 </button>
                 <button
+                  role="tab"
+                  aria-selected={sortBy === "count"}
                   onClick={() => setSortBy("count")}
-                  className={`px-2.5 py-1 rounded font-medium transition-all ${
-                    sortBy === "count" ? "bg-[#007B5F] text-white" : "text-[#A0AEC0] hover:text-[#4A5568]"
+                  className={`mp-tabs__tab ${
+                    sortBy === "count" ? "mp-tabs__tab--active" : ""
                   }`}
                 >
                   {t("sort_by_count", lang)}
                 </button>
               </div>
-            </div>
+            </header>
 
             <div className="space-y-3">
               {sortedAllTopics.map(({ topic, total, answered, correct }) => {
                 const config = getTopicConfig(topic);
                 const progressPct = total > 0 ? Math.min(100, Math.round((answered / total) * 100)) : 0;
                 const acc = answered > 0 ? Math.round((correct / answered) * 100) : 0;
+                const barColor =
+                  acc >= 70
+                    ? "var(--mp-viridian)"
+                    : acc >= 40
+                    ? "var(--mp-status-warning)"
+                    : answered > 0
+                    ? "var(--mp-error)"
+                    : config.color;
                 return (
                   <div key={topic} className="flex items-center gap-3">
                     <div
@@ -600,33 +810,28 @@ export default function ProgressPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-medium text-[#1A2B3C] truncate">{topic}</span>
+                        <span className="text-sm font-medium text-[var(--mp-fg)] truncate">
+                          {topic}
+                        </span>
                         <div className="flex items-center gap-2 flex-shrink-0 ml-2">
                           <span
-                            className={`text-xs font-bold font-mono px-1.5 py-0.5 rounded ${
-                              acc >= 70
-                                ? "bg-[#00A896]/10 text-[#00A896]"
-                                : acc >= 40
-                                ? "bg-[#F4A261]/10 text-[#F4A261]"
-                                : answered > 0
-                                ? "bg-[#D64545]/10 text-[#D64545]"
-                                : "bg-[#E4E9F0] text-[#A0AEC0]"
-                            }`}
+                            className="text-xs font-bold font-mono px-1.5 py-0.5 rounded"
+                            style={{
+                              backgroundColor: answered > 0 ? `${barColor}15` : "var(--mp-border-subtle)",
+                              color: answered > 0 ? barColor : "var(--mp-fg-subtle)",
+                            }}
                           >
                             {answered > 0 ? `${acc}%` : "--"}
                           </span>
-                          <span className="text-[10px] text-[#A0AEC0] font-mono w-14 text-right">
+                          <span className="text-[10px] text-[var(--mp-fg-subtle)] font-mono w-14 text-right">
                             {answered}/{total}
                           </span>
                         </div>
                       </div>
-                      <div className="h-2 bg-[#F7F9FC] rounded-full overflow-hidden">
+                      <div className="h-2 bg-[var(--mp-surface-sunken)] rounded-full overflow-hidden">
                         <div
                           className="h-full rounded-full transition-all duration-500"
-                          style={{
-                            width: `${progressPct}%`,
-                            background: `linear-gradient(to right, ${config.color}, ${config.color}99)`,
-                          }}
+                          style={{ width: `${progressPct}%`, background: barColor }}
                         />
                       </div>
                     </div>
@@ -634,37 +839,28 @@ export default function ProgressPage() {
                 );
               })}
             </div>
-          </div>
+          </section>
 
-          {/* ===== STUDY RADAR — Spider Chart ===== */}
-          {topicStats.length > 0 && (
-            <div className="card rounded-2xl p-5">
-              <h2 className="text-lg font-semibold text-[#1A2B3C] mb-4">
-                {lang === "de" ? "Stärken-Radar" : "Study Radar"}
-              </h2>
-              <div className="flex justify-center">
-                <StudyRadar topics={topicStats} lang={lang} />
-              </div>
-            </div>
-          )}
-
-          {/* ===== SECTION 3: Saved Items ===== */}
-          <div className="card rounded-2xl p-5">
-            {/* Tab switcher */}
-            <div className="flex items-center gap-1 mb-4 bg-[#F7F9FC] rounded-lg p-0.5 border border-[#E4E9F0]">
+          {/* ═══ SAVED ITEMS (Bookmarks / Notes) ═══ */}
+          <section className="mp-card p-5 mb-5">
+            <div className="mp-tabs mb-4" role="tablist" style={{ display: "flex", width: "100%" }}>
               <button
+                role="tab"
+                aria-selected={savedTab === "bookmarks"}
                 onClick={() => setSavedTab("bookmarks")}
-                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded text-sm font-medium transition-all ${
-                  savedTab === "bookmarks" ? "bg-white text-[#1A2B3C] shadow-sm" : "text-[#A0AEC0] hover:text-[#4A5568]"
+                className={`mp-tabs__tab flex-1 flex items-center justify-center gap-1.5 ${
+                  savedTab === "bookmarks" ? "mp-tabs__tab--active" : ""
                 }`}
               >
                 <Star className="w-3.5 h-3.5" />
                 {t("bookmarked_questions", lang)} ({bookmarkIds.length})
               </button>
               <button
+                role="tab"
+                aria-selected={savedTab === "notes"}
                 onClick={() => setSavedTab("notes")}
-                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded text-sm font-medium transition-all ${
-                  savedTab === "notes" ? "bg-white text-[#1A2B3C] shadow-sm" : "text-[#A0AEC0] hover:text-[#4A5568]"
+                className={`mp-tabs__tab flex-1 flex items-center justify-center gap-1.5 ${
+                  savedTab === "notes" ? "mp-tabs__tab--active" : ""
                 }`}
               >
                 <StickyNote className="w-3.5 h-3.5" />
@@ -672,17 +868,18 @@ export default function ProgressPage() {
               </button>
             </div>
 
-            {/* Bookmarks Tab */}
             {savedTab === "bookmarks" && (
               <div>
                 {bookmarksLoading ? (
                   <div className="flex items-center justify-center py-8">
-                    <div className="w-6 h-6 border-2 border-[#007B5F] border-t-transparent rounded-full animate-spin" />
+                    <div className="w-6 h-6 border-2 border-[var(--mp-viridian)] border-t-transparent rounded-full animate-spin" />
                   </div>
                 ) : bookmarkQuestions.length === 0 ? (
                   <div className="text-center py-8">
-                    <Star className="w-8 h-8 text-[#E4E9F0] mx-auto mb-2" />
-                    <p className="text-sm text-[#A0AEC0]">{t("no_bookmarks", lang)}</p>
+                    <Star className="w-8 h-8 text-[var(--mp-border-subtle)] mx-auto mb-2" />
+                    <p className="text-sm text-[var(--mp-fg-subtle)]">
+                      {t("no_bookmarks", lang)}
+                    </p>
                   </div>
                 ) : (
                   <div className="space-y-2">
@@ -692,7 +889,10 @@ export default function ProgressPage() {
                         const config = getTopicConfig(q.topic);
                         const examSource = getStoredExamSource();
                         return (
-                          <div key={q.id} className="flex items-start gap-3 p-3 rounded-lg bg-[#F7F9FC] hover:bg-[#E4E9F0]/50 transition-colors group">
+                          <div
+                            key={q.id}
+                            className="flex items-start gap-3 p-3 rounded-lg bg-[var(--mp-surface-sunken)] hover:bg-[var(--mp-border-subtle)] transition-colors group"
+                          >
                             <div
                               className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
                               style={{ backgroundColor: `${config.color}15` }}
@@ -700,18 +900,27 @@ export default function ProgressPage() {
                               <TopicIcon name={config.icon} className="w-3 h-3" />
                             </div>
                             {q.image_url && (
-                              <img src={q.image_url} alt="" className="w-10 h-10 rounded object-cover flex-shrink-0 border border-[#E4E9F0]" />
+                              <img
+                                src={q.image_url}
+                                alt=""
+                                className="w-10 h-10 rounded object-cover flex-shrink-0 border border-[var(--mp-border-subtle)]"
+                              />
                             )}
                             <Link
                               href={`/quiz?questionId=${q.id}&topic=${encodeURIComponent(q.topic)}&examSource=${examSource}`}
                               className="flex-1 min-w-0"
                             >
-                              <p className="text-sm text-[#1A2B3C] line-clamp-2">{q.question.slice(0, 120)}{q.question.length > 120 ? "..." : ""}</p>
-                              <p className="text-[10px] text-[#A0AEC0] mt-1 font-mono">{q.topic}</p>
+                              <p className="text-sm text-[var(--mp-fg)] line-clamp-2">
+                                {q.question.slice(0, 120)}
+                                {q.question.length > 120 ? "..." : ""}
+                              </p>
+                              <p className="text-[10px] text-[var(--mp-fg-subtle)] mt-1 font-mono">
+                                {q.topic}
+                              </p>
                             </Link>
                             <button
                               onClick={() => removeBookmark(q.id)}
-                              className="text-[#F4A261] hover:text-[#D64545] opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                              className="text-[var(--mp-status-warning)] hover:text-[var(--mp-error)] opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
                               title={lang === "de" ? "Entfernen" : "Remove"}
                             >
                               <Star className="w-4 h-4 fill-current" />
@@ -722,9 +931,11 @@ export default function ProgressPage() {
                     {bookmarkQuestions.length > 20 && !showAllBookmarks && (
                       <button
                         onClick={() => setShowAllBookmarks(true)}
-                        className="w-full text-center text-sm text-[#007B5F] font-medium py-2 hover:underline"
+                        className="w-full text-center text-sm text-[var(--mp-viridian)] font-medium py-2 hover:underline"
                       >
-                        {lang === "de" ? `Alle ${bookmarkQuestions.length} anzeigen` : `Show all ${bookmarkQuestions.length}`}
+                        {lang === "de"
+                          ? `Alle ${bookmarkQuestions.length} anzeigen`
+                          : `Show all ${bookmarkQuestions.length}`}
                       </button>
                     )}
                   </div>
@@ -732,93 +943,106 @@ export default function ProgressPage() {
               </div>
             )}
 
-            {/* Notes Tab */}
             {savedTab === "notes" && (
               <div>
                 {notesLoading ? (
                   <div className="flex items-center justify-center py-8">
-                    <div className="w-6 h-6 border-2 border-[#007B5F] border-t-transparent rounded-full animate-spin" />
+                    <div className="w-6 h-6 border-2 border-[var(--mp-viridian)] border-t-transparent rounded-full animate-spin" />
                   </div>
                 ) : noteEntries.length === 0 ? (
                   <div className="text-center py-8">
-                    <StickyNote className="w-8 h-8 text-[#E4E9F0] mx-auto mb-2" />
-                    <p className="text-sm text-[#A0AEC0]">{t("no_notes", lang)}</p>
+                    <StickyNote className="w-8 h-8 text-[var(--mp-border-subtle)] mx-auto mb-2" />
+                    <p className="text-sm text-[var(--mp-fg-subtle)]">{t("no_notes", lang)}</p>
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {noteEntries
-                      .slice(0, showAllNotes ? undefined : 20)
-                      .map((entry) => {
-                        const q = noteQuestions.find((nq) => nq.id === entry.id);
-                        const topic = q?.topic || "";
-                        const config = getTopicConfig(topic);
-                        const examSource = getStoredExamSource();
-                        return (
-                          <Link
-                            key={entry.id}
-                            href={`/quiz?questionId=${entry.id}&topic=${encodeURIComponent(topic)}&examSource=${examSource}`}
-                            className="flex items-start gap-3 p-3 rounded-lg bg-[#F7F9FC] hover:bg-[#E4E9F0]/50 transition-colors block"
+                    {noteEntries.slice(0, showAllNotes ? undefined : 20).map((entry) => {
+                      const q = noteQuestions.find((nq) => nq.id === entry.id);
+                      const topic = q?.topic || "";
+                      const config = getTopicConfig(topic);
+                      const examSource = getStoredExamSource();
+                      return (
+                        <Link
+                          key={entry.id}
+                          href={`/quiz?questionId=${entry.id}&topic=${encodeURIComponent(topic)}&examSource=${examSource}`}
+                          className="flex items-start gap-3 p-3 rounded-lg bg-[var(--mp-surface-sunken)] hover:bg-[var(--mp-border-subtle)] transition-colors"
+                        >
+                          <div
+                            className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
+                            style={{ backgroundColor: `${config.color}15` }}
                           >
-                            <div
-                              className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
-                              style={{ backgroundColor: `${config.color}15` }}
-                            >
-                              <TopicIcon name={config.icon} className="w-3 h-3" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              {q && (
-                                <p className="text-sm text-[#1A2B3C] line-clamp-1">{q.question.slice(0, 120)}</p>
-                              )}
-                              <p className="text-xs text-[#A0AEC0] italic mt-1 line-clamp-1">{entry.note.slice(0, 80)}</p>
-                              {topic && <p className="text-[10px] text-[#A0AEC0] mt-1 font-mono">{topic}</p>}
-                            </div>
-                          </Link>
-                        );
-                      })}
+                            <TopicIcon name={config.icon} className="w-3 h-3" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            {q && (
+                              <p className="text-sm text-[var(--mp-fg)] line-clamp-1">
+                                {q.question.slice(0, 120)}
+                              </p>
+                            )}
+                            <p className="text-xs text-[var(--mp-fg-subtle)] italic mt-1 line-clamp-1">
+                              {entry.note.slice(0, 80)}
+                            </p>
+                            {topic && (
+                              <p className="text-[10px] text-[var(--mp-fg-subtle)] mt-1 font-mono">
+                                {topic}
+                              </p>
+                            )}
+                          </div>
+                        </Link>
+                      );
+                    })}
                     {noteEntries.length > 20 && !showAllNotes && (
                       <button
                         onClick={() => setShowAllNotes(true)}
-                        className="w-full text-center text-sm text-[#007B5F] font-medium py-2 hover:underline"
+                        className="w-full text-center text-sm text-[var(--mp-viridian)] font-medium py-2 hover:underline"
                       >
-                        {lang === "de" ? `Alle ${noteEntries.length} anzeigen` : `Show all ${noteEntries.length}`}
+                        {lang === "de"
+                          ? `Alle ${noteEntries.length} anzeigen`
+                          : `Show all ${noteEntries.length}`}
                       </button>
                     )}
                   </div>
                 )}
               </div>
             )}
-          </div>
+          </section>
 
-          {/* ===== SECTION 4: Exam Readiness ===== */}
-          <div className="card rounded-2xl p-5 space-y-4">
-            <h2 className="text-lg font-semibold text-[#1A2B3C]">{t("exam_readiness", lang)}</h2>
+          {/* ═══ EXAM READINESS (countdown + weak topics + CTAs) ═══ */}
+          <section className="mp-card p-5 space-y-4">
+            <h3 className="mp-h3">{t("exam_readiness", lang)}</h3>
 
-            {/* Countdown */}
             {daysUntilExam !== null && (
-              <div className="flex items-center gap-4 p-4 rounded-xl bg-[#003A8C]/[0.04] border border-[#003A8C]/10">
+              <div className="flex items-center gap-4 p-4 rounded-xl bg-[var(--mp-cta-blue)]/[0.04] border border-[var(--mp-cta-blue)]/10">
                 <div className="text-center">
-                  <span className="text-3xl font-black font-mono font-display text-[#003A8C]">{daysUntilExam}</span>
-                  <p className="text-xs text-[#A0AEC0]">{t("days_until_exam", lang)}</p>
+                  <span className="block font-display font-black text-[32px] leading-none tracking-tight text-[var(--mp-cta-blue)] font-mono">
+                    {daysUntilExam}
+                  </span>
+                  <p className="text-xs text-[var(--mp-fg-subtle)] mt-1">
+                    {t("days_until_exam", lang)}
+                  </p>
                 </div>
                 <div className="flex-1">
-                  <div className="h-2 bg-[#E4E9F0] rounded-full overflow-hidden">
+                  <div className="h-2 bg-[var(--mp-border-subtle)] rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-[#003A8C] rounded-full transition-all"
-                      style={{ width: `${Math.max(5, Math.min(100, 100 - (daysUntilExam / 180) * 100))}%` }}
+                      className="h-full bg-[var(--mp-cta-blue)] rounded-full transition-all"
+                      style={{
+                        width: `${Math.max(5, Math.min(100, 100 - (daysUntilExam / 180) * 100))}%`,
+                      }}
                     />
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Weak topics alert */}
             {weakTopics.length > 0 && (
-              <div className="p-3 rounded-xl bg-[#F4A261]/[0.06] border border-[#F4A261]/15">
+              <div className="p-3 rounded-xl bg-[var(--mp-status-warning)]/[0.06] border border-[var(--mp-status-warning)]/15">
                 <div className="flex items-start gap-2">
-                  <AlertTriangle className="w-4 h-4 text-[#F4A261] flex-shrink-0 mt-0.5" />
+                  <AlertTriangle className="w-4 h-4 text-[var(--mp-status-warning)] flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-sm font-medium text-[#1A2B3C] mb-1">
-                      {lang === "de" ? "Fachgebiete unter 60% Genauigkeit" : "Topics below 60% accuracy"}
+                    <p className="text-sm font-medium text-[var(--mp-fg)] mb-1">
+                      {lang === "de"
+                        ? "Fachgebiete unter 60% Genauigkeit"
+                        : "Topics below 60% accuracy"}
                     </p>
                     <div className="flex flex-wrap gap-1.5">
                       {weakTopics.map((wt) => {
@@ -828,7 +1052,11 @@ export default function ProgressPage() {
                           <span
                             key={wt.topic}
                             className="inline-flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded-full border"
-                            style={{ borderColor: `${config.color}30`, backgroundColor: `${config.color}08`, color: config.color }}
+                            style={{
+                              borderColor: `${config.color}30`,
+                              backgroundColor: `${config.color}08`,
+                              color: config.color,
+                            }}
                           >
                             <TopicIcon name={config.icon} className="w-3 h-3" />
                             {wt.topic.split("/")[0]} ({acc}%)
@@ -841,11 +1069,10 @@ export default function ProgressPage() {
               </div>
             )}
 
-            {/* Quick actions */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Link
                 href="/exam"
-                className="flex items-center justify-center gap-2 py-3 rounded-xl bg-[#007B5F] text-white font-semibold text-sm hover:bg-[#007B5F]/90 transition-colors"
+                className="mp-btn mp-btn--success mp-btn--lg justify-center"
               >
                 <GraduationCap className="w-5 h-5" />
                 {lang === "de" ? "Prüfungssimulation starten" : "Start Exam Simulation"}
@@ -853,21 +1080,27 @@ export default function ProgressPage() {
               {weakTopics.length > 0 && (
                 <Link
                   href={`/quiz?topic=${encodeURIComponent(weakTopics[0].topic)}&userId=${userId}`}
-                  className="flex items-center justify-center gap-2 py-3 rounded-xl border border-[#007B5F] text-[#007B5F] font-semibold text-sm hover:bg-[#007B5F]/5 transition-colors"
+                  className="mp-btn mp-btn--secondary mp-btn--lg justify-center"
+                  style={{
+                    borderColor: "var(--mp-viridian)",
+                    color: "var(--mp-viridian)",
+                  }}
                 >
                   <TrendingUp className="w-5 h-5" />
                   {t("practice_weak", lang)}
                 </Link>
               )}
             </div>
-          </div>
+          </section>
 
-          {/* No user state */}
+          {/* No user fallback */}
           {!userId && (
-            <div className="card rounded-2xl p-8 text-center">
-              <TrendingUp className="w-10 h-10 text-[#E4E9F0] mx-auto mb-3" />
-              <p className="text-sm text-[#A0AEC0] mb-4">{t("sign_in_for_stats", lang)}</p>
-              <Link href="/" className="inline-block px-6 py-2.5 bg-[#007B5F] text-white rounded-lg font-medium text-sm hover:bg-[#007B5F]/90 transition-colors">
+            <div className="mp-card p-8 text-center mt-5">
+              <TrendingUp className="w-10 h-10 text-[var(--mp-border-subtle)] mx-auto mb-3" />
+              <p className="text-sm text-[var(--mp-fg-subtle)] mb-4">
+                {t("sign_in_for_stats", lang)}
+              </p>
+              <Link href="/" className="mp-btn mp-btn--success">
                 {t("back_home", lang)}
               </Link>
             </div>

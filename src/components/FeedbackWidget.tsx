@@ -92,8 +92,8 @@ export default function FeedbackWidget() {
         <button
           onClick={() => setOpen(true)}
           className="fixed bottom-20 right-4 md:bottom-6 md:right-6 z-50
-                     w-11 h-11 rounded-full bg-[#003A8C] text-white shadow-lg
-                     hover:bg-[#003A8C]/90 hover:shadow-xl transition-all
+                     w-11 h-11 rounded-full bg-[var(--mp-cta-blue)] text-white shadow-lg
+                     hover:bg-[var(--mp-cta-blue)]/90 hover:shadow-xl transition-all
                      flex items-center justify-center
                      active:scale-95"
           title="Feedback / Problem melden"
@@ -107,7 +107,7 @@ export default function FeedbackWidget() {
         <div className="fixed bottom-20 right-4 md:bottom-6 md:right-6 z-50 w-80 max-w-[calc(100vw-2rem)]">
           <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 bg-[#003A8C] text-white">
+            <div className="flex items-center justify-between px-4 py-3 bg-[var(--mp-cta-blue)] text-white">
               <span className="text-sm font-semibold">Feedback / Problem melden</span>
               <button onClick={() => setOpen(false)} className="hover:bg-white/20 rounded p-1 transition-colors">
                 <X className="w-4 h-4" />
@@ -116,9 +116,9 @@ export default function FeedbackWidget() {
 
             {sent ? (
               <div className="p-6 text-center">
-                <Check className="w-8 h-8 text-[#00A896] mx-auto mb-2" />
-                <p className="text-sm font-medium text-[#1A2B3C] dark:text-white">Danke! / Thank you!</p>
-                <p className="text-xs text-[#A0AEC0] mt-1">Wir schauen uns das an.</p>
+                <Check className="w-8 h-8 text-[var(--mp-accent-teal)] mx-auto mb-2" />
+                <p className="text-sm font-medium text-[var(--mp-fg)]">Danke! / Thank you!</p>
+                <p className="text-xs text-[var(--mp-fg-subtle)] mt-1">Wir schauen uns das an.</p>
               </div>
             ) : (
               <div className="p-4">
@@ -127,18 +127,18 @@ export default function FeedbackWidget() {
                   value={message}
                   onChange={e => setMessage(e.target.value)}
                   placeholder="Was ist Ihnen aufgefallen? / What did you notice?"
-                  className="w-full h-24 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 resize-none focus:outline-none focus:border-[#003A8C]/50"
+                  className="w-full h-24 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 resize-none focus:outline-none focus:border-[var(--mp-cta-blue)]/50"
                   maxLength={2000}
                 />
                 <div className="flex items-center justify-between mt-2">
-                  <span className="text-[10px] text-[#A0AEC0]">
+                  <span className="text-[10px] text-[var(--mp-fg-subtle)]">
                     Seite & Kontext werden automatisch erfasst
                   </span>
                   <button
                     onClick={handleSubmit}
                     disabled={!message.trim() || sending}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-[#003A8C] text-white rounded-lg text-xs font-medium
-                               disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#003A8C]/90 transition-colors"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--mp-cta-blue)] text-white rounded-lg text-xs font-medium
+                               disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[var(--mp-cta-blue)]/90 transition-colors"
                   >
                     <Send className="w-3.5 h-3.5" />
                     {sending ? '...' : 'Senden'}

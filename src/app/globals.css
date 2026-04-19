@@ -869,24 +869,25 @@ textarea:focus {
 .mp-toast--error   .mp-toast__icon { background: var(--mp-error); }
 .mp-toast--warning .mp-toast__icon { background: var(--mp-warning-dk); }
 
-/* ═══ EMPTY STATE (.mp-empty) ═══ */
+/* ═══ EMPTY STATE (.mp-empty) — alt-A illustrated/warm ═══ */
 .mp-empty { text-align: center; padding: 48px 24px; }
 .mp-empty__art {
-  width: 72px; height: 72px; margin: 0 auto 16px;
+  width: 120px; height: 120px; margin: 0 auto 20px;
   border-radius: var(--mp-r-card);
-  background: var(--mp-surface-sunken);
-  border: 1px dashed var(--mp-border);
   display: flex; align-items: center; justify-content: center;
-  color: var(--mp-fg-subtle);
+  background: var(--mp-info-bg); color: var(--mp-info);
 }
+.mp-empty__art--success { background: var(--mp-success-bg); color: var(--mp-viridian); }
+.mp-empty__art--warning { background: var(--mp-warning-bg); color: var(--mp-warning-dk); }
+.mp-empty__art svg { width: 48px; height: 48px; }
 .mp-empty__title {
   font-family: var(--mp-font-display);
-  font-size: 17px; font-weight: 700; color: var(--mp-fg);
-  margin-bottom: 4px;
+  font-size: 18px; font-weight: 800; color: var(--mp-fg);
+  letter-spacing: -0.01em; margin-bottom: 6px;
 }
 .mp-empty__body {
-  font-size: 13px; color: var(--mp-fg-muted);
-  max-width: 320px; margin: 0 auto 16px; line-height: 1.5;
+  font-size: 14px; color: var(--mp-fg-muted);
+  max-width: 420px; margin: 0 auto 18px; line-height: 1.55;
 }
 
 /* ═══ TABS (.mp-tabs) ═══ */
@@ -979,6 +980,21 @@ textarea:focus {
 }
 .mp-stat__trend--up   { color: var(--mp-viridian); }
 .mp-stat__trend--down { color: var(--mp-error); }
+
+/* ═══ BRANDED LOADER (Loader-A: EKG sinus rhythm) ═══ */
+@keyframes mp-loader-ekg {
+  0%   { stroke-dashoffset: 300; }
+  55%  { stroke-dashoffset: 0; }
+  100% { stroke-dashoffset: -300; }
+}
+.mp-loader-ekg {
+  stroke-dasharray: 300;
+  stroke-dashoffset: 300;
+  animation: mp-loader-ekg 1.8s var(--mp-ease-out) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .mp-loader-ekg { animation: none; stroke-dashoffset: 0; }
+}
 
 /* ═══ ACHIEVEMENT RANK GLYPH (.mp-rank) — emoji replacement ═══ */
 .mp-rank {

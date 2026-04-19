@@ -103,21 +103,21 @@ function formatExamDate(iso: string, lang: Lang): string {
 function focusBadge(focus: "review" | "weak" | "new", lang: Lang) {
   if (focus === "weak") {
     return {
-      bg: "bg-[#D64545]/10",
-      text: "text-[#D64545]",
+      bg: "bg-[var(--mp-error)]/10",
+      text: "text-[var(--mp-error)]",
       label: lang === "de" ? "Schwach" : "Weak",
     };
   }
   if (focus === "review") {
     return {
-      bg: "bg-[#F4A261]/15",
-      text: "text-[#F4A261]",
+      bg: "bg-[var(--mp-status-warning)]/15",
+      text: "text-[var(--mp-status-warning)]",
       label: lang === "de" ? "Wiederholen" : "Review",
     };
   }
   return {
-    bg: "bg-[#007B5F]/10",
-    text: "text-[#007B5F]",
+    bg: "bg-[var(--mp-viridian)]/10",
+    text: "text-[var(--mp-viridian)]",
     label: lang === "de" ? "Neu" : "New",
   };
 }
@@ -186,7 +186,7 @@ export default function StudyPlanPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#F7F9FC]">
+      <div className="flex items-center justify-center min-h-screen bg-[var(--mp-surface-sunken)]">
         <BrandedLoader size="lg" />
       </div>
     );
@@ -197,13 +197,13 @@ export default function StudyPlanPage() {
     return (
       <div className="app-layout">
         <Sidebar lang={lang} />
-        <main className="main-content safe-area-top safe-area-bottom bg-[#F7F9FC]">
+        <main className="main-content safe-area-top safe-area-bottom bg-[var(--mp-surface-sunken)]">
           <div className="px-6 py-16 flex flex-col items-center text-center max-w-md mx-auto">
-            <Target className="w-10 h-10 text-[#A0AEC0] mb-4" />
-            <h1 className="text-xl font-bold text-[#1A2B3C] mb-2">
+            <Target className="w-10 h-10 text-[var(--mp-fg-subtle)] mb-4" />
+            <h1 className="text-xl font-bold text-[var(--mp-fg)] mb-2">
               {lang === "de" ? "Lernplan" : "Study Plan"}
             </h1>
-            <p className="text-sm text-[#4A5568] mb-6">
+            <p className="text-sm text-[var(--mp-fg-muted)] mb-6">
               {lang === "de"
                 ? "Melde dich an, um deinen personalisierten Lernplan zu sehen."
                 : "Sign in to see your personalized study plan."}
@@ -228,17 +228,17 @@ export default function StudyPlanPage() {
         streak={user.streak_count || 0}
       />
 
-      <main className="main-content safe-area-top safe-area-bottom bg-[#F7F9FC]">
+      <main className="main-content safe-area-top safe-area-bottom bg-[var(--mp-surface-sunken)]">
         {/* Header */}
-        <div className="px-4 lg:px-8 pt-4 pb-3 border-b border-[#E4E9F0] flex items-center justify-between">
+        <div className="px-4 lg:px-8 pt-4 pb-3 border-b border-[var(--mp-border)] flex items-center justify-between">
           <Link
             href="/"
-            className="text-[#A0AEC0] hover:text-[#1A2B3C] text-sm transition-colors"
+            className="text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg)] text-sm transition-colors"
           >
             &larr; {t("back_home", lang)}
           </Link>
-          <h1 className="text-base font-bold text-[#1A2B3C] flex items-center gap-2">
-            <Target className="w-4 h-4 text-[#007B5F]" />
+          <h1 className="text-base font-bold text-[var(--mp-fg)] flex items-center gap-2">
+            <Target className="w-4 h-4 text-[var(--mp-viridian)]" />
             {lang === "de" ? "Lernplan" : "Study Plan"}
           </h1>
           <div className="flex items-center gap-2">
@@ -251,13 +251,13 @@ export default function StudyPlanPage() {
           {/* ===== No exam date → prompt ===== */}
           {resp && !resp.hasExamDate && (
             <div className="card rounded-2xl p-6 md:p-10 text-center">
-              <Calendar className="w-12 h-12 mx-auto mb-4 text-[#A0AEC0]" />
-              <h2 className="text-lg md:text-xl font-bold text-[#1A2B3C] mb-2">
+              <Calendar className="w-12 h-12 mx-auto mb-4 text-[var(--mp-fg-subtle)]" />
+              <h2 className="text-lg md:text-xl font-bold text-[var(--mp-fg)] mb-2">
                 {lang === "de"
                   ? "Kein Prüfungsdatum gesetzt"
                   : "No exam date set"}
               </h2>
-              <p className="text-sm text-[#4A5568] mb-6 max-w-md mx-auto">
+              <p className="text-sm text-[var(--mp-fg-muted)] mb-6 max-w-md mx-auto">
                 {lang === "de"
                   ? "Setze dein Prüfungsdatum in den Einstellungen, um einen personalisierten Lernplan zu erhalten."
                   : "Set your exam date in Settings to generate a personalized study plan."}
@@ -309,13 +309,13 @@ export default function StudyPlanPage() {
                       )}{" "}
                       {lang === "de" ? "Fragen geplant" : "questions planned"}
                     </span>
-                    <span className="inline-flex items-center gap-1.5 bg-[#00A896]/30 text-white text-xs font-medium px-3 py-1.5 rounded-full">
+                    <span className="inline-flex items-center gap-1.5 bg-[var(--mp-accent-teal)]/30 text-white text-xs font-medium px-3 py-1.5 rounded-full">
                       <Target className="w-3.5 h-3.5" /> {dailyGoal}/
                       {lang === "de" ? "Tag" : "day"}
                     </span>
                   </div>
                   {plan.status === "tight" && (
-                    <p className="text-xs text-[#F4A261] mt-3 flex items-center gap-1.5">
+                    <p className="text-xs text-[var(--mp-status-warning)] mt-3 flex items-center gap-1.5">
                       <AlertTriangle className="w-3.5 h-3.5" />
                       {lang === "de"
                         ? "Wenig Zeit — Fokus auf Wiederholung deiner Schwächen."
@@ -323,7 +323,7 @@ export default function StudyPlanPage() {
                     </p>
                   )}
                   {plan.status === "expired" && (
-                    <p className="text-xs text-[#F4A261] mt-3 flex items-center gap-1.5">
+                    <p className="text-xs text-[var(--mp-status-warning)] mt-3 flex items-center gap-1.5">
                       <AlertTriangle className="w-3.5 h-3.5" />
                       {lang === "de"
                         ? "Prüfungstermin liegt in der Vergangenheit oder ist heute — aktualisiere ihn in den Einstellungen."
@@ -343,24 +343,24 @@ export default function StudyPlanPage() {
               {/* Today's progress */}
               <div className="card rounded-2xl p-5">
                 <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-sm font-bold text-[#1A2B3C] flex items-center gap-2">
-                    <Target className="w-4 h-4 text-[#007B5F]" />
+                  <h3 className="text-sm font-bold text-[var(--mp-fg)] flex items-center gap-2">
+                    <Target className="w-4 h-4 text-[var(--mp-viridian)]" />
                     {lang === "de" ? "Heute" : "Today"}
                   </h3>
-                  <span className="text-xs font-mono text-[#4A5568]">
+                  <span className="text-xs font-mono text-[var(--mp-fg-muted)]">
                     {doneToday}/{dailyGoal}{" "}
                     {lang === "de" ? "Fragen" : "questions"}
                   </span>
                 </div>
-                <div className="h-2 bg-[#F7F9FC] rounded-full overflow-hidden">
+                <div className="h-2 bg-[var(--mp-surface-sunken)] rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-[#007B5F] rounded-full transition-all duration-300"
+                    className="h-full bg-[var(--mp-viridian)] rounded-full transition-all duration-300"
                     style={{
                       width: `${Math.min(100, Math.round((doneToday / Math.max(1, dailyGoal)) * 100))}%`,
                     }}
                   />
                 </div>
-                <p className="text-xs text-[#A0AEC0] mt-2">
+                <p className="text-xs text-[var(--mp-fg-subtle)] mt-2">
                   {doneToday >= dailyGoal
                     ? lang === "de"
                       ? "Tagesziel erreicht — weiter so!"
@@ -374,7 +374,7 @@ export default function StudyPlanPage() {
               {/* Weekly calendar */}
               <div className="card rounded-2xl p-4 md:p-5">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-sm font-bold text-[#1A2B3C]">
+                  <h3 className="text-sm font-bold text-[var(--mp-fg)]">
                     {lang === "de" ? "Woche im Überblick" : "Week Overview"}
                   </h3>
                   <div className="flex items-center gap-1">
@@ -384,14 +384,14 @@ export default function StudyPlanPage() {
                         d.setDate(d.getDate() - 7);
                         setWeekAnchor(d);
                       }}
-                      className="w-8 h-8 rounded-lg border border-[#E4E9F0] flex items-center justify-center text-[#4A5568] hover:bg-[#F7F9FC] transition-colors"
+                      className="w-8 h-8 rounded-lg border border-[var(--mp-border)] flex items-center justify-center text-[var(--mp-fg-muted)] hover:bg-[var(--mp-surface-sunken)] transition-colors"
                       aria-label={lang === "de" ? "Vorige Woche" : "Previous week"}
                     >
                       <ChevronLeft className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => setWeekAnchor(new Date())}
-                      className="px-2.5 h-8 rounded-lg border border-[#E4E9F0] text-xs text-[#4A5568] hover:bg-[#F7F9FC] transition-colors"
+                      className="px-2.5 h-8 rounded-lg border border-[var(--mp-border)] text-xs text-[var(--mp-fg-muted)] hover:bg-[var(--mp-surface-sunken)] transition-colors"
                     >
                       {lang === "de" ? "Heute" : "Today"}
                     </button>
@@ -401,7 +401,7 @@ export default function StudyPlanPage() {
                         d.setDate(d.getDate() + 7);
                         setWeekAnchor(d);
                       }}
-                      className="w-8 h-8 rounded-lg border border-[#E4E9F0] flex items-center justify-center text-[#4A5568] hover:bg-[#F7F9FC] transition-colors"
+                      className="w-8 h-8 rounded-lg border border-[var(--mp-border)] flex items-center justify-center text-[var(--mp-fg-muted)] hover:bg-[var(--mp-surface-sunken)] transition-colors"
                       aria-label={lang === "de" ? "Nächste Woche" : "Next week"}
                     >
                       <ChevronRight className="w-4 h-4" />
@@ -425,30 +425,30 @@ export default function StudyPlanPage() {
                         key={iso}
                         className={`rounded-xl border px-1 py-2 md:px-2 md:py-3 text-center transition-all ${
                           isToday
-                            ? "bg-[#007B5F]/10 border-[#007B5F]/40 ring-2 ring-[#007B5F]/30"
+                            ? "bg-[var(--mp-viridian)]/10 border-[var(--mp-viridian)]/40 ring-2 ring-[var(--mp-viridian)]/30"
                             : outsidePlan
-                            ? "bg-[#F7F9FC] border-[#E4E9F0] opacity-50"
+                            ? "bg-[var(--mp-surface-sunken)] border-[var(--mp-border)] opacity-50"
                             : isRest
-                            ? "bg-[#F7F9FC] border-[#E4E9F0]"
-                            : "bg-white border-[#E4E9F0]"
+                            ? "bg-[var(--mp-surface-sunken)] border-[var(--mp-border)]"
+                            : "bg-white border-[var(--mp-border)]"
                         }`}
                       >
-                        <p className="text-[10px] uppercase font-semibold text-[#A0AEC0] tracking-wider">
+                        <p className="text-[10px] uppercase font-semibold text-[var(--mp-fg-subtle)] tracking-wider">
                           {labels[i]}
                         </p>
                         <p
                           className={`text-base md:text-lg font-display font-bold ${
-                            isToday ? "text-[#007B5F]" : "text-[#1A2B3C]"
+                            isToday ? "text-[var(--mp-viridian)]" : "text-[var(--mp-fg)]"
                           }`}
                         >
                           {d.getDate()}
                         </p>
                         {isDone ? (
-                          <CheckCircle2 className="w-3.5 h-3.5 text-[#00A896] mx-auto mt-1" />
+                          <CheckCircle2 className="w-3.5 h-3.5 text-[var(--mp-accent-teal)] mx-auto mt-1" />
                         ) : outsidePlan ? (
-                          <p className="text-[9px] text-[#A0AEC0] mt-0.5">—</p>
+                          <p className="text-[9px] text-[var(--mp-fg-subtle)] mt-0.5">—</p>
                         ) : (
-                          <p className="text-[10px] text-[#4A5568] font-mono mt-0.5">
+                          <p className="text-[10px] text-[var(--mp-fg-muted)] font-mono mt-0.5">
                             {planned}
                           </p>
                         )}
@@ -460,7 +460,7 @@ export default function StudyPlanPage() {
 
               {/* Day cards for the week */}
               <div className="space-y-3">
-                <h3 className="text-sm font-bold text-[#1A2B3C] border-l-[3px] border-l-[#007B5F] pl-3">
+                <h3 className="text-sm font-bold text-[var(--mp-fg)] border-l-[3px] border-l-[var(--mp-viridian)] pl-3">
                   {lang === "de" ? "Deine Tage" : "Your days"}
                 </h3>
                 {weekDays.map(d => {
@@ -471,14 +471,14 @@ export default function StudyPlanPage() {
                     return (
                       <div
                         key={iso}
-                        className="card rounded-2xl p-4 opacity-60 border border-dashed border-[#E4E9F0]"
+                        className="card rounded-2xl p-4 opacity-60 border border-dashed border-[var(--mp-border)]"
                       >
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-xs uppercase tracking-wider font-semibold text-[#A0AEC0]">
+                            <p className="text-xs uppercase tracking-wider font-semibold text-[var(--mp-fg-subtle)]">
                               {formatLongDate(iso, lang)}
                             </p>
-                            <p className="text-sm text-[#A0AEC0] mt-1">
+                            <p className="text-sm text-[var(--mp-fg-subtle)] mt-1">
                               {lang === "de"
                                 ? "Außerhalb des Plans"
                                 : "Outside the plan window"}
@@ -494,40 +494,40 @@ export default function StudyPlanPage() {
                     <div
                       key={iso}
                       className={`card rounded-2xl p-4 md:p-5 ${
-                        isToday ? "ring-2 ring-[#007B5F]/30 border-[#007B5F]/40" : ""
+                        isToday ? "ring-2 ring-[var(--mp-viridian)]/30 border-[var(--mp-viridian)]/40" : ""
                       }`}
                     >
                       <div className="flex items-start justify-between gap-3 mb-3">
                         <div className="min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <p className="text-xs uppercase tracking-wider font-semibold text-[#007B5F]">
+                            <p className="text-xs uppercase tracking-wider font-semibold text-[var(--mp-viridian)]">
                               {formatLongDate(iso, lang)}
                             </p>
                             {isToday && (
-                              <span className="inline-flex items-center gap-1 bg-[#007B5F]/10 text-[#007B5F] text-[10px] font-bold px-2 py-0.5 rounded-full">
+                              <span className="inline-flex items-center gap-1 bg-[var(--mp-viridian)]/10 text-[var(--mp-viridian)] text-[10px] font-bold px-2 py-0.5 rounded-full">
                                 {lang === "de" ? "Heute" : "Today"}
                               </span>
                             )}
                             {dayPlan.phase === "consolidation" && (
-                              <span className="inline-flex items-center gap-1 bg-[#F4A261]/15 text-[#F4A261] text-[10px] font-bold px-2 py-0.5 rounded-full">
+                              <span className="inline-flex items-center gap-1 bg-[var(--mp-status-warning)]/15 text-[var(--mp-status-warning)] text-[10px] font-bold px-2 py-0.5 rounded-full">
                                 {lang === "de" ? "Festigen" : "Consolidate"}
                               </span>
                             )}
                             {dayPlan.phase === "new" && (
-                              <span className="inline-flex items-center gap-1 bg-[#003A8C]/10 text-[#003A8C] text-[10px] font-bold px-2 py-0.5 rounded-full">
+                              <span className="inline-flex items-center gap-1 bg-[var(--mp-cta-blue)]/10 text-[var(--mp-cta-blue)] text-[10px] font-bold px-2 py-0.5 rounded-full">
                                 {lang === "de" ? "Neues Material" : "New material"}
                               </span>
                             )}
                           </div>
-                          <p className="text-sm font-bold text-[#1A2B3C] mt-1 font-mono">
+                          <p className="text-sm font-bold text-[var(--mp-fg)] mt-1 font-mono">
                             {dayPlan.totalQuestions}{" "}
-                            <span className="font-normal text-[#4A5568] text-xs">
+                            <span className="font-normal text-[var(--mp-fg-muted)] text-xs">
                               {lang === "de" ? "Fragen geplant" : "questions planned"}
                             </span>
                           </p>
                         </div>
                         {goalHit ? (
-                          <span className="inline-flex items-center gap-1 text-[#00A896] text-xs font-semibold shrink-0">
+                          <span className="inline-flex items-center gap-1 text-[var(--mp-accent-teal)] text-xs font-semibold shrink-0">
                             <CheckCircle2 className="w-4 h-4" />{" "}
                             {lang === "de" ? "Erledigt" : "Done"}
                           </span>
@@ -535,7 +535,7 @@ export default function StudyPlanPage() {
                       </div>
 
                       {dayPlan.topics.length === 0 ? (
-                        <p className="text-xs text-[#A0AEC0] italic">
+                        <p className="text-xs text-[var(--mp-fg-subtle)] italic">
                           {lang === "de"
                             ? "Ruhetag — freiwilliges Lernen möglich"
                             : "Rest day — optional practice"}
@@ -553,7 +553,7 @@ export default function StudyPlanPage() {
                             return (
                               <div
                                 key={tt.topic}
-                                className="flex items-center gap-3 p-2.5 rounded-xl bg-[#F7F9FC] border border-[#E4E9F0]"
+                                className="flex items-center gap-3 p-2.5 rounded-xl bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)]"
                               >
                                 <div
                                   className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
@@ -566,7 +566,7 @@ export default function StudyPlanPage() {
                                   />
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-medium text-[#1A2B3C] truncate">
+                                  <p className="text-sm font-medium text-[var(--mp-fg)] truncate">
                                     {tt.topic}
                                   </p>
                                   <div className="flex items-center gap-2 mt-0.5">
@@ -575,7 +575,7 @@ export default function StudyPlanPage() {
                                     >
                                       {badge.label}
                                     </span>
-                                    <span className="text-[11px] text-[#4A5568] font-mono">
+                                    <span className="text-[11px] text-[var(--mp-fg-muted)] font-mono">
                                       {tt.targetCount}{" "}
                                       {lang === "de" ? "Fragen" : "q's"}
                                     </span>
@@ -600,12 +600,12 @@ export default function StudyPlanPage() {
 
               {/* Weak topics recap */}
               {plan.weakTopics.length > 0 && (
-                <div className="bg-[#FFF4E6] border border-[#F4A261]/25 border-l-4 border-l-[#F4A261] rounded-2xl p-5">
-                  <p className="font-bold text-[#1A2B3C] mb-2 flex items-center gap-2">
-                    <AlertTriangle className="w-4 h-4 text-[#F4A261]" />
+                <div className="bg-[var(--mp-warning-bg)] border border-[var(--mp-status-warning)]/25 border-l-4 border-l-[var(--mp-status-warning)] rounded-2xl p-5">
+                  <p className="font-bold text-[var(--mp-fg)] mb-2 flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-[var(--mp-status-warning)]" />
                     {lang === "de" ? "Deine Schwächen" : "Your weak topics"}
                   </p>
-                  <p className="text-xs text-[#4A5568] mb-3">
+                  <p className="text-xs text-[var(--mp-fg-muted)] mb-3">
                     {lang === "de"
                       ? "Diese Fachgebiete bekommen im Plan mehr Gewicht."
                       : "These specialties are weighted heavier in your plan."}
@@ -617,7 +617,7 @@ export default function StudyPlanPage() {
                         href={`/quiz?topic=${encodeURIComponent(
                           topic
                         )}&userId=${user.id}&examSource=${activeExam}&practiceMode=wrong&autoStart=1`}
-                        className="inline-flex items-center gap-1.5 bg-white border border-[#F4A261]/30 text-[#1A2B3C] text-xs font-medium px-3 py-1.5 rounded-full hover:bg-[#F4A261]/10 transition-colors"
+                        className="inline-flex items-center gap-1.5 bg-white border border-[var(--mp-status-warning)]/30 text-[var(--mp-fg)] text-xs font-medium px-3 py-1.5 rounded-full hover:bg-[var(--mp-status-warning)]/10 transition-colors"
                       >
                         {topic}
                       </Link>
@@ -626,7 +626,7 @@ export default function StudyPlanPage() {
                 </div>
               )}
 
-              <p className="text-center text-xs text-[#A0AEC0] pt-2">
+              <p className="text-center text-xs text-[var(--mp-fg-subtle)] pt-2">
                 {lang === "de"
                   ? "Plan passt sich täglich an deinen Fortschritt an."
                   : "Plan adapts daily to your progress."}

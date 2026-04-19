@@ -4,12 +4,12 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
+  ArrowRight,
   Check,
-  Sparkles,
-  Users,
   Crown,
-  Clock,
-  Send,
+  Users,
+  Sparkles,
+  ChevronDown,
 } from "lucide-react";
 import { getLang, setLang } from "@/lib/i18n";
 import { getStoredSession } from "@/lib/auth";
@@ -18,34 +18,47 @@ import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import LanguageToggle from "@/components/LanguageToggle";
 import ThemeToggle from "@/components/ThemeToggle";
+import { Dialog, TextField, useToast } from "@/components/ui";
 
 type Lang = "de" | "en";
-type TierInterest = "pro" | "group";
+type WaitlistTier = "pro" | "group";
 
 /**
- * /pricing — public pricing page.
+ * /pricing — MPDS v2 "Pricing-B" redesign.
  *
- * Context: Abobaker asked what Pro costs and how to get it. There was
- * no pricing visibility inside the app, only on the marketing landing
- * page. This page is reachable from Sidebar → Preise, Settings →
- * Konto section, and the landing footer. Open to logged-out visitors
- * (auth layout still shows Sidebar + BottomNav when logged in).
+ * Alternative picked: Featured Pro + slim secondary rows. Pro is THE
+ * product (the revenue path), Free and Group are supporting cast. See
+ * design-system/preview/alt-pricing.html for the visual spec.
  *
- * Tiers:
- *   - Free (current)          — live, links to /login
- *   - Pro (coming soon)       — waitlist signup
- *   - Group (coming soon)     — waitlist signup
+ * Layout:
+ *   1. Hero — value claim + waitlist framing
+ *   2. Pro card (featured, elevated, viridian accent) + Coming Soon badge
+ *      → primary CTA opens MPDS <Dialog> with email <TextField>
+ *   3. Free slim row — live, links to /login
+ *   4. Group slim row — coming soon, same waitlist dialog, tier="group"
+ *   5. FAQ/details — plain <details> blocks
+ *   6. Final pro-waitlist CTA
  *
- * Waitlist signups POST to /api/waitlist with email + tier.
+ * Price placeholder: "€15–30 / Monat" — TBD, [name] sets final before launch.
  */
 export default function PricingPage() {
   const [lang, setLangState] = useState<Lang>("de");
   const [mounted, setMounted] = useState(false);
   const [session, setSession] = useState<ReturnType<typeof getStoredSession>>(null);
 
+  // Waitlist dialog state (shared between Pro + Group + final CTA)
+  const [waitOpen, setWaitOpen] = useState(false);
+  const [waitTier, setWaitTier] = useState<WaitlistTier>("pro");
+  const [email, setEmail] = useState("");
+  const [emailErr, setEmailErr] = useState<string | undefined>(undefined);
+  const [submitting, setSubmitting] = useState(false);
+  const toast = useToast();
+
   useEffect(() => {
     setLangState(getLang());
-    setSession(getStoredSession());
+    const s = getStoredSession();
+    setSession(s);
+    if (s?.user?.email) setEmail(s.user.email);
     setMounted(true);
   }, []);
 
@@ -54,28 +67,112 @@ export default function PricingPage() {
     setLangState(l);
   };
 
+  const openWaitlist = (tier: WaitlistTier) => {
+    setWaitTier(tier);
+    setEmailErr(undefined);
+    setWaitOpen(true);
+  };
+
+  const submitWaitlist = async () => {
+    const e = email.trim();
+    if (!e || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) {
+      setEmailErr(
+        lang === "de" ? "Bitte gültige E-Mail eingeben." : "Please enter a valid email."
+      );
+      return;
+    }
+    setEmailErr(undefined);
+    setSubmitting(true);
+    try {
+      const r = await fetch("/api/waitlist", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: e, tierInterest: waitTier }),
+      });
+      if (r.ok) {
+        toast.success(
+          lang === "de" ? "Du bist auf der Warteliste!" : "You're on the waitlist!",
+          lang === "de"
+            ? "Wir melden uns, sobald Pro startet."
+            : "We'll reach out as soon as Pro launches."
+        );
+        setWaitOpen(false);
+      } else {
+        toast.error(
+          lang === "de" ? "Konnte nicht eintragen" : "Could not sign up",
+          lang === "de"
+            ? "Bitte versuche es später nochmal."
+            : "Please try again later."
+        );
+      }
+    } catch {
+      toast.error(
+        lang === "de" ? "Netzwerkfehler" : "Network error",
+        lang === "de" ? "Keine Verbindung zum Server." : "No connection to server."
+      );
+    }
+    setSubmitting(false);
+  };
+
   if (!mounted) {
-    return <div className="min-h-screen bg-[#F7F9FC]" />;
+    return <div className="min-h-screen bg-[var(--mp-surface-sunken)]" />;
   }
 
   const user = session?.user;
+  const isPro = waitTier === "pro";
+
+  /* Pro feature bullets — the "clinical expert" pitch */
+  const proFeatures: Array<{ de: string; en: string }> = [
+    {
+      de: "Alle 10.993 Fragen ohne Limits",
+      en: "All 10,993 questions, no limits",
+    },
+    {
+      de: "Klinische KI-Erklärungen in 7 Sprachen (unbegrenzt)",
+      en: "Clinical AI explanations in 7 languages (unlimited)",
+    },
+    {
+      de: "Persönlicher Lernplan bis zum Prüfungsdatum",
+      en: "Personal study plan up to your exam date",
+    },
+    {
+      de: "Spaced-Repetition-Algorithmus (SM-2)",
+      en: "Spaced-repetition algorithm (SM-2)",
+    },
+    {
+      de: "Prüfungssimulation (4 Stunden, realistisch)",
+      en: "Exam simulation (4 hours, realistic)",
+    },
+    {
+      de: "Streak Freeze (einen Tag pro Woche)",
+      en: "Streak Freeze (one day per week)",
+    },
+    {
+      de: "Priorisierter Support",
+      en: "Priority support",
+    },
+    {
+      de: "Früher Zugang zu neuen Prüfungsmodulen (Zahnmedizin in Planung)",
+      en: "Early access to new exam modules (dentistry in the pipeline)",
+    },
+  ];
 
   return (
     <div className="app-layout">
       <Sidebar lang={lang} userId={user?.id} userName={user?.first_name} />
 
-      <main className="main-content safe-area-top safe-area-bottom bg-[#F7F9FC]">
-        {/* Header */}
-        <div className="px-4 lg:px-8 pt-4 pb-2 flex items-center justify-between border-b border-[#E4E9F0]">
+      <main className="main-content safe-area-top safe-area-bottom bg-[var(--mp-surface-sunken)]">
+        {/* ══════════ Header ══════════ */}
+        <div className="px-4 lg:px-8 pt-4 pb-2 flex items-center justify-between border-b border-[var(--mp-border)] bg-[var(--mp-surface-raised)]">
           <Link
             href={user ? "/" : "/landing"}
-            className="flex items-center gap-1.5 text-[#A0AEC0] hover:text-[#1A2B3C] text-sm transition-colors"
+            className="flex items-center gap-1.5 text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg)] text-sm transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
             {lang === "de" ? "Zurück" : "Back"}
           </Link>
-          <h1 className="text-base font-bold text-[#1A2B3C] flex items-center gap-2">
-            <Crown className="w-4 h-4 text-[#007B5F]" />
+          <h1 className="text-base font-bold text-[var(--mp-fg)] flex items-center gap-2">
+            <Crown className="w-4 h-4 text-[var(--mp-viridian)]" />
             {lang === "de" ? "Preise" : "Pricing"}
           </h1>
           <div className="flex items-center gap-2">
@@ -84,517 +181,519 @@ export default function PricingPage() {
           </div>
         </div>
 
-        {/* Hero */}
-        <div className="max-w-5xl mx-auto px-4 lg:px-8 pt-8 pb-4 text-center">
-          <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#007B5F]/10 text-[#007B5F] text-xs font-semibold mb-4">
+        {/* ══════════ Hero ══════════ */}
+        <section className="max-w-5xl mx-auto px-4 lg:px-8 pt-12 pb-6 text-center">
+          <span className="mp-caption inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--mp-success-bg)] text-[var(--mp-viridian)] mb-5 normal-case tracking-[0.08em]">
             <Sparkles className="w-3.5 h-3.5" />
             {lang === "de" ? "Transparente Preise" : "Transparent pricing"}
           </span>
-          <h2 className="text-3xl md:text-4xl font-black text-[#1A2B3C] font-display mb-3 leading-tight">
-            {lang === "de" ? "Lerne jetzt. Bezahle, wenn es sich lohnt." : "Study now. Pay when it's worth it."}
-          </h2>
-          <p className="text-sm md:text-base text-[#4A5568] max-w-2xl mx-auto leading-relaxed">
+          <h2 className="mp-h1 mb-4 leading-[1.05]">
             {lang === "de"
-              ? "MedPrüf ist heute komplett kostenlos. Pro und Gruppentarife kommen bald — melde dich vor, und wir benachrichtigen dich mit den endgültigen Preisen."
-              : "MedPrüf is fully free today. Pro and Group plans are coming soon — sign up now and we'll notify you with the final pricing."}
+              ? "Lerne jetzt. Bezahle, wenn es sich lohnt."
+              : "Study now. Pay when it's worth it."}
+          </h2>
+          <p className="mp-body text-[var(--mp-fg-muted)] max-w-2xl mx-auto">
+            {lang === "de"
+              ? "Alle Funktionen kostenlos testen. Pro-Features kommen bald — trage dich in die Warteliste ein."
+              : "Try every feature for free. Pro features are coming soon — join the waitlist."}
           </p>
-        </div>
+        </section>
 
-        {/* Tiers */}
-        <div className="max-w-6xl mx-auto px-4 lg:px-8 py-6 pb-28">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-5">
-            <FreeTier lang={lang} loggedIn={!!user} />
-            <ProTier lang={lang} userId={user?.id} userEmail={user?.email} />
-            <GroupTier lang={lang} userId={user?.id} userEmail={user?.email} />
-          </div>
+        {/* ══════════ Featured Pro Card + slim secondary rows ══════════ */}
+        <section className="max-w-5xl mx-auto px-4 lg:px-8 pb-10">
+          <ProFeaturedCard
+            lang={lang}
+            features={proFeatures}
+            onWaitlist={() => openWaitlist("pro")}
+          />
 
-          {/* FAQ-lite */}
-          <div className="mt-10 max-w-3xl mx-auto">
-            <h3 className="text-lg font-bold text-[#1A2B3C] mb-4 font-display">
-              {lang === "de" ? "Häufige Fragen" : "Common questions"}
-            </h3>
-            <div className="space-y-3">
-              <FAQRow
-                q={
-                  lang === "de"
-                    ? "Was bekomme ich heute, kostenlos?"
-                    : "What do I get for free today?"
-                }
-                a={
-                  lang === "de"
-                    ? "Zugriff auf alle 10.993 Fragen (Kenntnisprüfung Wien, KMP Innsbruck, Pharmakologie), Quiz- und Karteikartenmodus, Fortschrittstracking, Prüfungssimulation und PWA-Installation. Keine Kreditkarte nötig."
-                    : "Access to all 10,993 questions (Kenntnisprüfung Vienna, KMP Innsbruck, Pharmakologie), quiz + flashcard modes, progress tracking, exam simulation, and PWA install. No credit card required."
-                }
-              />
-              <FAQRow
-                q={lang === "de" ? "Wann kommt Pro?" : "When does Pro launch?"}
-                a={
-                  lang === "de"
-                    ? "Wir zielen auf Q2/Q3 2026. Trag dich ein — du bekommst den endgültigen Preis und den Launch-Termin per E-Mail, bevor wir es öffentlich ankündigen."
-                    : "We're targeting Q2/Q3 2026. Sign up — you'll receive final pricing and the launch date by email before we announce publicly."
-                }
-              />
-              <FAQRow
-                q={lang === "de" ? "Was ist der Gruppentarif?" : "What is the Group plan?"}
-                a={
-                  lang === "de"
-                    ? "Für Krankenhäuser, Lerngruppen oder Kliniken, die 5+ Lizenzen brauchen. Geteiltes Fortschritts-Dashboard, Rabatt und persönlicher Onboarding-Support."
-                    : "For hospitals, study groups, or clinics that need 5+ licenses. Shared progress dashboard, volume discount, and personal onboarding support."
-                }
-              />
-              <FAQRow
-                q={
-                  lang === "de"
-                    ? "Ändert sich etwas für mich, wenn Pro kommt?"
-                    : "Will anything change for me when Pro launches?"
-                }
-                a={
-                  lang === "de"
-                    ? "Nein. Der kostenlose Zugang bleibt erhalten. Pro wird nur neue Funktionen freischalten (erweiterter KI-Chat, Offline-Modus, unbegrenzte Simulationen)."
-                    : "No. Your free access stays. Pro only unlocks new features (extended AI chat, offline mode, unlimited simulations)."
-                }
-              />
-            </div>
+          <div className="mt-6 space-y-3">
+            <FreeRow lang={lang} loggedIn={!!user} />
+            <GroupRow lang={lang} onWaitlist={() => openWaitlist("group")} />
           </div>
 
           {/* Fine print */}
-          <p className="text-center text-xs text-[#A0AEC0] mt-10">
+          <p className="text-center mp-small text-[var(--mp-fg-subtle)] mt-8">
             {lang === "de"
               ? "Preise in Euro, inkl. österreichischer USt. wo anwendbar. Kein Vertrag, jederzeit kündbar. Hosted in der EU."
               : "Prices in Euro, incl. Austrian VAT where applicable. No contract, cancel any time. Hosted in the EU."}
           </p>
-        </div>
+        </section>
+
+        {/* ══════════ FAQ ══════════ */}
+        <section className="max-w-3xl mx-auto px-4 lg:px-8 pb-12">
+          <h3 className="mp-h2 mb-5 text-center">
+            {lang === "de" ? "Häufige Fragen" : "Common questions"}
+          </h3>
+          <div className="space-y-3">
+            <FAQItem
+              q={
+                lang === "de"
+                  ? "Muss ich Pro jetzt kaufen?"
+                  : "Do I need to buy Pro now?"
+              }
+              a={
+                lang === "de"
+                  ? "Nein. Alles, was du für deine Prüfung brauchst, ist heute in der kostenlosen Version enthalten. Pro startet später als optionales Upgrade für Power-User."
+                  : "No. Everything you need for your exam is currently in the free version. Pro will launch later as an optional upgrade for power users."
+              }
+            />
+            <FAQItem
+              q={lang === "de" ? "Was kostet es genau?" : "What exactly will Pro cost?"}
+              a={
+                lang === "de"
+                  ? "Preisgestaltung: €15–30 / Monat (noch nicht final). Du zahlst nichts, bis Pro offiziell startet — Wartelisten-Mitglieder erhalten einen Einführungsrabatt."
+                  : "Pricing: €15–30 / month (not yet final). You pay nothing until Pro officially launches — waitlist members get an introductory discount."
+              }
+            />
+            <FAQItem
+              q={lang === "de" ? "Kann ich kündigen?" : "Can I cancel?"}
+              a={
+                lang === "de"
+                  ? "Jederzeit, mit einem Klick, ohne Begründung. Wir nutzen monatliche Abrechnung — kein langer Vertrag, kein Small Print."
+                  : "Any time, one click, no explanation needed. We use monthly billing — no long-term contract, no small print."
+              }
+            />
+            <FAQItem
+              q={lang === "de" ? "Ist meine Zahlung sicher?" : "Is payment secure?"}
+              a={
+                lang === "de"
+                  ? "Zahlung läuft über Stripe (in Vorbereitung). Wir speichern keine Kartendaten. Alle Transaktionen sind PCI-DSS-konform verschlüsselt."
+                  : "Payments are processed through Stripe (in preparation). We never store your card data. All transactions are PCI-DSS-compliant encrypted."
+              }
+            />
+            <FAQItem
+              q={lang === "de" ? "Gibt es eine Rückerstattung?" : "Is there a refund?"}
+              a={
+                lang === "de"
+                  ? "Ja — 14-tägige Rückerstattung ohne Rückfragen. Wenn Pro nicht das hält, was du dir vorgestellt hast, schreibst du uns an user-b7e46e80@example.com und das Geld ist am nächsten Werktag zurück."
+                  : "Yes — 14-day no-questions-asked refund. If Pro isn't what you expected, email user-b7e46e80@example.com and your money will be back on the next business day."
+              }
+            />
+            <FAQItem
+              q={
+                lang === "de"
+                  ? "Ändert sich etwas am kostenlosen Zugang, wenn Pro startet?"
+                  : "Will the free tier change when Pro launches?"
+              }
+              a={
+                lang === "de"
+                  ? "Der kostenlose Zugang bleibt erhalten — 200 Fragen + 1 vollständige Prüfung, keine Kreditkarte nötig. Pro schaltet lediglich zusätzliche Funktionen frei."
+                  : "Free access stays — 200 questions + 1 full exam, no credit card required. Pro simply unlocks additional features."
+              }
+            />
+          </div>
+        </section>
+
+        {/* ══════════ Final CTA ══════════ */}
+        <section className="max-w-3xl mx-auto px-4 lg:px-8 pb-28">
+          <div
+            className="relative rounded-[var(--mp-r-card)] overflow-hidden p-8 md:p-10 text-center"
+            style={{
+              background:
+                "linear-gradient(135deg, var(--mp-oxford-blue), var(--mp-cta-blue))",
+              boxShadow: "var(--mp-shadow-elev)",
+            }}
+          >
+            <div
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                background:
+                  "radial-gradient(circle at 85% 100%, rgba(0,168,150,0.28), transparent 60%)",
+              }}
+              aria-hidden
+            />
+            <div className="relative">
+              <h3 className="mp-h2 text-white mb-3">
+                {lang === "de"
+                  ? "Sei der Erste, der Pro bekommt."
+                  : "Be first in line for Pro."}
+              </h3>
+              <p className="mp-body text-white/80 max-w-xl mx-auto mb-6">
+                {lang === "de"
+                  ? "Warteliste-Mitglieder bekommen einen Einführungsrabatt und eine persönliche E-Mail, sobald Pro startet."
+                  : "Waitlist members receive an introductory discount and a personal email as soon as Pro launches."}
+              </p>
+              <button
+                type="button"
+                onClick={() => openWaitlist("pro")}
+                className="mp-btn mp-btn--lg inline-flex items-center gap-2"
+                style={{
+                  background: "var(--mp-accent-teal)",
+                  color: "var(--mp-oxford-blue-dk)",
+                }}
+              >
+                {lang === "de" ? "Auf die Pro-Warteliste" : "Join the Pro waitlist"}
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </section>
       </main>
 
       <BottomNav lang={lang} userId={user?.id} />
-    </div>
-  );
-}
 
-/* ═════════════════════════ Tier cards ═════════════════════════ */
-
-function FreeTier({ lang, loggedIn }: { lang: Lang; loggedIn: boolean }) {
-  const features = [
-    {
-      de: "Zugriff auf alle 10.993 Fragen (3 Prüfungstypen)",
-      en: "Access to all 10,993 questions (3 exam types)",
-    },
-    { de: "Quiz- und Karteikartenmodus", en: "Quiz and flashcard modes" },
-    { de: "Fortschrittstracking + Schwächen-Analyse", en: "Progress tracking + weakness analytics" },
-    { de: "Gespeicherte KI-Erklärungen", en: "Cached AI explanations" },
-    { de: "Prüfungssimulation", en: "Exam simulation" },
-    { de: "PWA: als App installierbar, offline-fähig", en: "PWA: installable app, works offline" },
-  ];
-
-  return (
-    <div className="relative rounded-2xl border-2 border-[#E4E9F0] bg-white p-6 flex flex-col h-full transition-all hover:border-[#007B5F]/40 hover:shadow-lg">
-      <div className="absolute -top-3 left-6 bg-[#007B5F] text-white text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full shadow">
-        {lang === "de" ? "Aktuell" : "Current"}
-      </div>
-      <div className="flex items-center gap-2 mb-2">
-        <Sparkles className="w-5 h-5 text-[#007B5F]" />
-        <h3 className="text-xl font-bold text-[#1A2B3C] font-display">
-          {lang === "de" ? "Kostenlos" : "Free"}
-        </h3>
-      </div>
-      <p className="text-xs text-[#A0AEC0] mb-4">
-        {lang === "de" ? "Für alle, die jetzt anfangen wollen." : "For anyone starting today."}
-      </p>
-
-      <div className="flex items-baseline gap-1 mb-5">
-        <span className="text-4xl font-black font-display text-[#1A2B3C]">€0</span>
-        <span className="text-sm text-[#A0AEC0]">{lang === "de" ? "/ immer" : "/ forever"}</span>
-      </div>
-
-      <ul className="space-y-2 mb-6 flex-1">
-        {features.map((f) => (
-          <li key={f.en} className="flex items-start gap-2 text-sm text-[#4A5568]">
-            <Check className="w-4 h-4 text-[#007B5F] flex-shrink-0 mt-0.5" />
-            <span>{f[lang]}</span>
-          </li>
-        ))}
-      </ul>
-
-      <Link
-        href={loggedIn ? "/" : "/login"}
-        className="block text-center py-3 rounded-xl font-semibold text-sm bg-[#F7F9FC] hover:bg-[#E4E9F0] text-[#1A2B3C] border border-[#E4E9F0] transition-colors"
-      >
-        {loggedIn
-          ? lang === "de"
-            ? "Zum Dashboard"
-            : "Go to dashboard"
-          : lang === "de"
-            ? "Kostenlos starten"
-            : "Start free"}
-      </Link>
-    </div>
-  );
-}
-
-function ProTier({
-  lang,
-  userId,
-  userEmail,
-}: {
-  lang: Lang;
-  userId?: string;
-  userEmail?: string;
-}) {
-  const features = [
-    {
-      de: "Erweiterter KI-Chat — 50 eigene Fragen pro Tag",
-      en: "Extended AI chat — 50 custom follow-ups per day",
-    },
-    { de: "Unbegrenzte Prüfungssimulationen", en: "Unlimited exam simulations" },
-    { de: "Streak-Schutz (Freeze Tokens)", en: "Streak freeze tokens" },
-    {
-      de: "Offline-Modus (sobald veröffentlicht)",
-      en: "Offline mode (when shipped)",
-    },
-    { de: "Prioritäts-Support per E-Mail", en: "Priority email support" },
-    {
-      de: "Alle zukünftigen Pro-Funktionen inklusive",
-      en: "All future Pro features included",
-    },
-  ];
-
-  return (
-    <TierCard
-      lang={lang}
-      tier="pro"
-      icon={<Crown className="w-5 h-5 text-[#00A896]" />}
-      name={{ de: "Pro", en: "Pro" }}
-      tagline={{
-        de: "Für den ernsthaften Prüfungs-Endspurt.",
-        en: "For the serious exam run-up.",
-      }}
-      priceLine={{
-        de: "Bald verfügbar",
-        en: "Coming soon",
-      }}
-      priceHint={{
-        de: "ab ~€15/Monat — finaler Preis wird kommuniziert",
-        en: "from ~€15/month — final pricing TBC",
-      }}
-      features={features}
-      highlight
-      userId={userId}
-      userEmail={userEmail}
-    />
-  );
-}
-
-function GroupTier({
-  lang,
-  userId,
-  userEmail,
-}: {
-  lang: Lang;
-  userId?: string;
-  userEmail?: string;
-}) {
-  const features = [
-    { de: "Ab 5 Nutzer:innen", en: "5+ users" },
-    { de: "Geteiltes Fortschritts-Dashboard", en: "Shared progress dashboard" },
-    { de: "Mengenrabatt (je mehr, desto günstiger)", en: "Volume discount (more seats, lower price)" },
-    { de: "Persönliches Onboarding", en: "Hands-on onboarding" },
-    { de: "Zentrale Abrechnung", en: "Central billing" },
-    { de: "SLA + Prioritäts-Support", en: "SLA + priority support" },
-  ];
-
-  return (
-    <TierCard
-      lang={lang}
-      tier="group"
-      icon={<Users className="w-5 h-5 text-[#003A8C]" />}
-      name={{ de: "Gruppe", en: "Group" }}
-      tagline={{
-        de: "Für Kliniken, Kurse und Lerngruppen.",
-        en: "For clinics, courses, and study groups.",
-      }}
-      priceLine={{ de: "Bald verfügbar", en: "Coming soon" }}
-      priceHint={{
-        de: "Individuelles Angebot — Preise nach Team-Größe",
-        en: "Custom quote — priced by team size",
-      }}
-      features={features}
-      userId={userId}
-      userEmail={userEmail}
-    />
-  );
-}
-
-/* ═══════════════════════ TierCard (shared) ═══════════════════════ */
-
-interface TierCardProps {
-  lang: Lang;
-  tier: TierInterest;
-  icon: React.ReactNode;
-  name: { de: string; en: string };
-  tagline: { de: string; en: string };
-  priceLine: { de: string; en: string };
-  priceHint: { de: string; en: string };
-  features: Array<{ de: string; en: string }>;
-  highlight?: boolean;
-  userId?: string;
-  userEmail?: string;
-}
-
-function TierCard({
-  lang,
-  tier,
-  icon,
-  name,
-  tagline,
-  priceLine,
-  priceHint,
-  features,
-  highlight = false,
-  userId,
-  userEmail,
-}: TierCardProps) {
-  const [formOpen, setFormOpen] = useState(false);
-  const [email, setEmail] = useState(userEmail || "");
-  const [note, setNote] = useState("");
-  const [status, setStatus] = useState<"idle" | "sending" | "ok" | "err">("idle");
-  const [errMsg, setErrMsg] = useState("");
-
-  useEffect(() => {
-    if (userEmail && !email) setEmail(userEmail);
-  }, [userEmail, email]);
-
-  const submit = async () => {
-    const e = email.trim();
-    if (!e || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) {
-      setStatus("err");
-      setErrMsg(
-        lang === "de" ? "Bitte gültige E-Mail eingeben." : "Please enter a valid email."
-      );
-      return;
-    }
-    setStatus("sending");
-    setErrMsg("");
-    try {
-      const res = await fetch("/api/waitlist", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: e,
-          tierInterest: tier,
-          note: note.trim() || undefined,
-          userId,
-        }),
-      });
-      if (!res.ok) {
-        const j = await res.json().catch(() => ({}));
-        throw new Error(j?.error || `HTTP ${res.status}`);
-      }
-      setStatus("ok");
-      setNote("");
-    } catch (err) {
-      console.error("[waitlist submit]", err);
-      setStatus("err");
-      setErrMsg(
-        lang === "de"
-          ? "Etwas ist schiefgelaufen. Bitte später erneut versuchen."
-          : "Something went wrong. Please try again later."
-      );
-    }
-  };
-
-  const cardStyles = highlight
-    ? "bg-gradient-to-br from-[#001B3D] to-[#003A8C] text-white border-[#00A896] shadow-xl md:scale-[1.02]"
-    : "bg-white border-[#E4E9F0] text-[#1A2B3C]";
-
-  return (
-    <div
-      className={`relative rounded-2xl border-2 p-6 flex flex-col h-full transition-all ${cardStyles}`}
-    >
-      {highlight && (
-        <div className="absolute -top-3 left-6 bg-[#00A896] text-[#001B3D] text-[10px] font-bold uppercase tracking-wider px-3 py-1 rounded-full shadow-md">
-          {lang === "de" ? "Am beliebtesten" : "Most popular"}
-        </div>
-      )}
-      <div className="flex items-center gap-2 mb-2">
-        {icon}
-        <h3 className={`text-xl font-bold font-display ${highlight ? "text-white" : "text-[#1A2B3C]"}`}>
-          {name[lang]}
-        </h3>
-      </div>
-      <p className={`text-xs mb-4 ${highlight ? "text-white/70" : "text-[#A0AEC0]"}`}>
-        {tagline[lang]}
-      </p>
-
-      <div className="mb-1 flex items-center gap-2">
-        <Clock className={`w-4 h-4 ${highlight ? "text-[#00A896]" : "text-[#F4A261]"}`} />
-        <span className={`text-sm font-bold ${highlight ? "text-[#00A896]" : "text-[#F4A261]"}`}>
-          {priceLine[lang]}
-        </span>
-      </div>
-      <p className={`text-xs mb-5 ${highlight ? "text-white/60" : "text-[#A0AEC0]"}`}>
-        {priceHint[lang]}{" "}
-        <span className={`uppercase tracking-wider font-bold ${highlight ? "text-[#00A896]" : "text-[#F4A261]"}`}>
-          TBC
-        </span>
-      </p>
-
-      <ul className="space-y-2 mb-6 flex-1">
-        {features.map((f) => (
-          <li
-            key={f.en}
-            className={`flex items-start gap-2 text-sm ${highlight ? "text-white/90" : "text-[#4A5568]"}`}
-          >
-            <Check
-              className={`w-4 h-4 flex-shrink-0 mt-0.5 ${highlight ? "text-[#00A896]" : "text-[#007B5F]"}`}
-            />
-            <span>{f[lang]}</span>
-          </li>
-        ))}
-      </ul>
-
-      {/* Waitlist form */}
-      {status === "ok" ? (
-        <div
-          className={`rounded-xl px-4 py-5 text-center ${
-            highlight ? "bg-white/10 border border-white/20" : "bg-[#00A896]/10 border border-[#00A896]/30"
-          }`}
-        >
-          <Check
-            className={`w-6 h-6 mx-auto mb-2 ${highlight ? "text-[#00A896]" : "text-[#00A896]"}`}
-          />
-          <p className={`text-sm font-semibold ${highlight ? "text-white" : "text-[#1A2B3C]"}`}>
-            {lang === "de"
-              ? "Danke! Wir melden uns, sobald verfügbar."
-              : "Thanks! We'll reach out as soon as it's available."}
-          </p>
-        </div>
-      ) : !formOpen ? (
-        <button
-          onClick={() => setFormOpen(true)}
-          className={`block w-full text-center py-3 rounded-xl font-semibold text-sm transition-all ${
-            highlight
-              ? "bg-[#00A896] hover:bg-[#00C0AB] text-[#001B3D] shadow-lg hover:shadow-xl"
-              : "bg-[#001B3D] hover:bg-[#003A8C] text-white"
-          }`}
-        >
-          {lang === "de" ? "Interesse anmelden" : "Notify me"}
-        </button>
-      ) : (
-        <div className="space-y-2">
-          <label
-            className={`block text-[11px] font-semibold uppercase tracking-wider ${
-              highlight ? "text-white/70" : "text-[#A0AEC0]"
-            }`}
-          >
-            {lang === "de" ? "Deine E-Mail" : "Your email"}
-          </label>
-          <input
-            type="email"
-            inputMode="email"
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
-            className={`w-full px-3 py-2.5 rounded-lg text-sm border focus:outline-none transition-colors ${
-              highlight
-                ? "bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-[#00A896]"
-                : "bg-white border-[#E4E9F0] text-[#1A2B3C] placeholder:text-[#A0AEC0] focus:border-[#007B5F]"
-            }`}
-          />
-          {tier === "group" && (
-            <>
-              <label
-                className={`block text-[11px] font-semibold uppercase tracking-wider pt-1 ${
-                  highlight ? "text-white/70" : "text-[#A0AEC0]"
-                }`}
-              >
-                {lang === "de" ? "Team-Größe (optional)" : "Team size (optional)"}
-              </label>
-              <input
-                type="text"
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                placeholder={lang === "de" ? "z.B. 10 Ärzt:innen" : "e.g. 10 doctors"}
-                className={`w-full px-3 py-2.5 rounded-lg text-sm border focus:outline-none transition-colors ${
-                  highlight
-                    ? "bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:border-[#00A896]"
-                    : "bg-white border-[#E4E9F0] text-[#1A2B3C] placeholder:text-[#A0AEC0] focus:border-[#007B5F]"
-                }`}
-              />
-            </>
-          )}
-          {status === "err" && errMsg && (
-            <p className="text-[11px] text-[#F4A261]">{errMsg}</p>
-          )}
-          <div className="flex items-center gap-2 pt-1">
+      {/* ══════════ Waitlist dialog (shared) ══════════ */}
+      <Dialog
+        open={waitOpen}
+        onOpenChange={setWaitOpen}
+        title={
+          isPro
+            ? lang === "de"
+              ? "Auf die Pro-Warteliste"
+              : "Join the Pro waitlist"
+            : lang === "de"
+              ? "Auf die Gruppen-Warteliste"
+              : "Join the Group waitlist"
+        }
+        description={
+          isPro
+            ? lang === "de"
+              ? "Wir mailen dir, sobald Pro verfügbar ist — plus einen Einführungsrabatt."
+              : "We'll email you as soon as Pro is live — plus an introductory discount."
+            : lang === "de"
+              ? "Wir melden uns mit Preisdetails für Teams und Lerngruppen."
+              : "We'll reach out with pricing details for teams and study groups."
+        }
+        footer={
+          <>
             <button
-              onClick={submit}
-              disabled={status === "sending"}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg font-semibold text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
-                highlight
-                  ? "bg-[#00A896] hover:bg-[#00C0AB] text-[#001B3D]"
-                  : "bg-[#001B3D] hover:bg-[#003A8C] text-white"
-              }`}
+              type="button"
+              className="mp-btn mp-btn--secondary"
+              onClick={() => setWaitOpen(false)}
+              disabled={submitting}
             >
-              <Send className="w-3.5 h-3.5" />
-              {status === "sending"
+              {lang === "de" ? "Abbrechen" : "Cancel"}
+            </button>
+            <button
+              type="button"
+              className="mp-btn mp-btn--success"
+              onClick={submitWaitlist}
+              disabled={submitting}
+            >
+              {submitting
                 ? lang === "de"
                   ? "Senden…"
                   : "Sending…"
                 : lang === "de"
-                  ? "Absenden"
-                  : "Submit"}
+                  ? "Auf die Warteliste"
+                  : "Join waitlist"}
             </button>
-            <button
-              onClick={() => {
-                setFormOpen(false);
-                setStatus("idle");
-                setErrMsg("");
-              }}
-              className={`px-3 py-2.5 rounded-lg font-medium text-xs transition-colors ${
-                highlight
-                  ? "text-white/70 hover:text-white hover:bg-white/10"
-                  : "text-[#A0AEC0] hover:text-[#4A5568] hover:bg-[#F7F9FC]"
-              }`}
-            >
-              {lang === "de" ? "Abbrechen" : "Cancel"}
-            </button>
-          </div>
-          <p
-            className={`text-[10px] pt-1 ${highlight ? "text-white/50" : "text-[#A0AEC0]"}`}
-          >
-            {lang === "de"
-              ? "Wir senden nur eine E-Mail, wenn der Tarif verfügbar ist. Kein Spam."
-              : "We'll only email you when the plan is live. No spam."}
-          </p>
-        </div>
-      )}
+          </>
+        }
+      >
+        <TextField
+          label={lang === "de" ? "Deine E-Mail" : "Your email"}
+          type="email"
+          inputMode="email"
+          autoComplete="email"
+          required
+          placeholder="user-6e2c059a@example.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          error={emailErr}
+          helper={
+            lang === "de"
+              ? "Wir mailen nur den Launch — kein Spam, keine Newsletter."
+              : "We only email the launch — no spam, no newsletters."
+          }
+        />
+      </Dialog>
     </div>
   );
 }
 
-/* ═══════════════════════ FAQ row ═══════════════════════ */
+/* ═══════════════════════ Featured Pro card ═══════════════════════ */
 
-function FAQRow({ q, a }: { q: string; a: string }) {
-  const [open, setOpen] = useState(false);
+function ProFeaturedCard({
+  lang,
+  features,
+  onWaitlist,
+}: {
+  lang: Lang;
+  features: Array<{ de: string; en: string }>;
+  onWaitlist: () => void;
+}) {
   return (
-    <div className="card rounded-xl overflow-hidden">
-      <button
-        onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-[#F7F9FC]/60 transition-colors"
-      >
-        <span className="text-sm font-semibold text-[#1A2B3C] pr-4">{q}</span>
+    <article
+      className="relative rounded-[var(--mp-r-card)] overflow-hidden"
+      style={{
+        background: "var(--mp-surface-raised)",
+        border: "2px solid var(--mp-viridian)",
+        boxShadow: "var(--mp-shadow-elev)",
+      }}
+    >
+      {/* Soft viridian glow from top-right */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background:
+            "radial-gradient(circle at 95% 0%, rgba(0,168,150,0.10), transparent 55%)",
+        }}
+        aria-hidden
+      />
+
+      {/* Coming Soon badge */}
+      <div className="absolute top-5 right-5 z-10">
         <span
-          className={`text-[#007B5F] text-lg transition-transform flex-shrink-0 ${open ? "rotate-45" : ""}`}
+          className="mp-caption inline-flex items-center gap-1.5 px-3 py-1 rounded-full"
+          style={{
+            background: "rgba(0,168,150,0.12)",
+            color: "var(--mp-accent-teal)",
+            border: "1px solid rgba(0,168,150,0.28)",
+            letterSpacing: "0.08em",
+            fontSize: "10px",
+          }}
         >
-          +
+          <span
+            className="inline-block w-1.5 h-1.5 rounded-full"
+            style={{ background: "var(--mp-accent-teal)" }}
+            aria-hidden
+          />
+          {lang === "de" ? "Bald verfügbar" : "Coming soon"}
         </span>
-      </button>
-      {open && (
-        <div className="px-4 pb-4 -mt-1 text-sm text-[#4A5568] leading-relaxed">
-          {a}
+      </div>
+
+      <div className="relative p-6 md:p-8 grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] gap-8 items-start">
+        {/* LEFT: Title, description, feature list */}
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <Crown className="w-5 h-5 text-[var(--mp-viridian)]" />
+            <span className="mp-caption text-[var(--mp-viridian)] normal-case tracking-[0.12em]">
+              {lang === "de" ? "Empfohlen" : "Recommended"}
+            </span>
+          </div>
+          <h3 className="mp-h2 mb-3">MedPrüf Pro</h3>
+          <p className="mp-body text-[var(--mp-fg-muted)] mb-6 max-w-xl">
+            {lang === "de"
+              ? "Alles, was du für die österreichische Kenntnisprüfung brauchst — klinische KI-Erklärungen, 4-Stunden-Simulation, persönlicher Lernplan, unbegrenzte Fragen."
+              : "Everything you need for the Austrian Kenntnisprüfung — clinical AI explanations, 4-hour simulation, personal study plan, unlimited questions."}
+          </p>
+
+          <ul className="space-y-2.5">
+            {features.map((f) => (
+              <li key={f.en} className="flex items-start gap-2.5">
+                <span
+                  className="flex-shrink-0 mt-0.5 inline-flex items-center justify-center rounded-full"
+                  style={{
+                    width: "18px",
+                    height: "18px",
+                    background: "rgba(0,123,95,0.12)",
+                    color: "var(--mp-viridian)",
+                  }}
+                  aria-hidden
+                >
+                  <Check className="w-3 h-3" strokeWidth={3} />
+                </span>
+                <span className="text-sm text-[var(--mp-fg)] leading-relaxed">
+                  {f[lang]}
+                </span>
+              </li>
+            ))}
+          </ul>
         </div>
-      )}
+
+        {/* RIGHT: Price + CTA — sticky-feeling column on desktop */}
+        <div
+          className="rounded-[12px] p-5 lg:sticky lg:top-4 flex flex-col gap-3"
+          style={{
+            background: "var(--mp-surface-sunken)",
+            border: "1px solid var(--mp-border-subtle)",
+          }}
+        >
+          <div>
+            <div className="flex items-baseline gap-1.5">
+              {/* TBD — [name] will set the final price before launch. Keep the
+                  range here so waitlist members understand the direction. */}
+              <span className="mp-num font-display font-black text-[var(--mp-fg)] text-[34px] leading-none">
+                €15–30
+              </span>
+              <span className="text-sm text-[var(--mp-fg-muted)]">
+                {lang === "de" ? "/ Monat" : "/ month"}
+              </span>
+            </div>
+            <p className="mp-small text-[var(--mp-fg-subtle)] mt-2">
+              {lang === "de"
+                ? "Finaler Preis wird mit Launch bekanntgegeben. Wartelisten-Mitglieder erhalten einen Einführungsrabatt."
+                : "Final price announced at launch. Waitlist members get an introductory discount."}
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={onWaitlist}
+            className="mp-btn mp-btn--success mp-btn--lg w-full inline-flex items-center justify-center gap-2"
+          >
+            {lang === "de" ? "Auf die Warteliste" : "Join waitlist"}
+            <ArrowRight className="w-4 h-4" />
+          </button>
+
+          <p className="mp-small text-[var(--mp-fg-subtle)] text-center">
+            {lang === "de"
+              ? "Keine Zahlung heute. Jederzeit kündbar."
+              : "No payment today. Cancel anytime."}
+          </p>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+/* ═══════════════════════ Free row (slim) ═══════════════════════ */
+
+function FreeRow({ lang, loggedIn }: { lang: Lang; loggedIn: boolean }) {
+  return (
+    <div
+      className="rounded-[var(--mp-r-card)] p-5 md:p-6 flex flex-col md:flex-row md:items-center gap-4 md:gap-6"
+      style={{
+        background: "var(--mp-surface-raised)",
+        border: "1px solid var(--mp-border-subtle)",
+      }}
+    >
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 mb-1.5">
+          <Sparkles className="w-4 h-4 text-[var(--mp-viridian)]" />
+          <h4 className="mp-h3 text-[18px]">Free</h4>
+          <span
+            className="mp-caption inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full normal-case tracking-[0.08em]"
+            style={{
+              background: "var(--mp-success-bg)",
+              color: "var(--mp-viridian)",
+              fontSize: "10px",
+            }}
+          >
+            <span
+              className="inline-block w-1.5 h-1.5 rounded-full"
+              style={{ background: "var(--mp-viridian)" }}
+              aria-hidden
+            />
+            {lang === "de" ? "Aktuell live" : "Live now"}
+          </span>
+        </div>
+        <p className="text-sm text-[var(--mp-fg-muted)]">
+          {lang === "de"
+            ? "200 Fragen + 1 Prüfung gratis, kein Paywall aktiv. Nutze jetzt."
+            : "200 questions + 1 exam free, no paywall enforced. Use it now."}
+        </p>
+      </div>
+
+      <div className="flex items-center gap-3 md:gap-4 md:ml-auto">
+        <div className="text-right">
+          <div className="mp-num font-display font-black text-[var(--mp-fg)] text-[22px] leading-none">
+            €0
+          </div>
+          <div className="mp-small text-[var(--mp-fg-subtle)]">
+            {lang === "de" ? "/ immer" : "/ forever"}
+          </div>
+        </div>
+        <Link
+          href={loggedIn ? "/" : "/login"}
+          className="mp-btn mp-btn--secondary inline-flex items-center gap-1.5 whitespace-nowrap"
+        >
+          {loggedIn
+            ? lang === "de"
+              ? "Zum Dashboard"
+              : "Go to dashboard"
+            : lang === "de"
+              ? "Kostenlos starten"
+              : "Start free"}
+          <ArrowRight className="w-3.5 h-3.5" />
+        </Link>
+      </div>
     </div>
+  );
+}
+
+/* ═══════════════════════ Group row (slim) ═══════════════════════ */
+
+function GroupRow({
+  lang,
+  onWaitlist,
+}: {
+  lang: Lang;
+  onWaitlist: () => void;
+}) {
+  return (
+    <div
+      className="rounded-[var(--mp-r-card)] p-5 md:p-6 flex flex-col md:flex-row md:items-center gap-4 md:gap-6"
+      style={{
+        background: "var(--mp-surface-raised)",
+        border: "1px solid var(--mp-border-subtle)",
+      }}
+    >
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 mb-1.5">
+          <Users className="w-4 h-4 text-[var(--mp-info)]" />
+          <h4 className="mp-h3 text-[18px]">Group</h4>
+          <span
+            className="mp-caption inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full normal-case tracking-[0.08em]"
+            style={{
+              background: "var(--mp-warning-bg)",
+              color: "var(--mp-warning-dk)",
+              fontSize: "10px",
+            }}
+          >
+            <span
+              className="inline-block w-1.5 h-1.5 rounded-full"
+              style={{ background: "var(--mp-warning-dk)" }}
+              aria-hidden
+            />
+            {lang === "de" ? "In Planung" : "Planned"}
+          </span>
+        </div>
+        <p className="text-sm text-[var(--mp-fg-muted)]">
+          {lang === "de"
+            ? "Lernen mit deinen Kolleg:innen. Gemeinsame Statistiken, geteilte Fragensammlungen."
+            : "Study with your colleagues. Shared stats, shared question collections."}
+        </p>
+      </div>
+
+      <div className="flex items-center gap-3 md:gap-4 md:ml-auto">
+        <div className="text-right">
+          <div className="mp-num font-display font-black text-[var(--mp-fg)] text-[18px] leading-none">
+            {lang === "de" ? "Ab €49" : "From €49"}
+          </div>
+          <div className="mp-small text-[var(--mp-fg-subtle)]">
+            {lang === "de" ? "/ Team / Monat" : "/ team / month"}
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onWaitlist}
+          className="mp-btn mp-btn--secondary inline-flex items-center gap-1.5 whitespace-nowrap"
+        >
+          {lang === "de" ? "Interesse zeigen" : "Show interest"}
+          <ArrowRight className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════ FAQ item ═══════════════════════ */
+
+function FAQItem({ q, a }: { q: string; a: string }) {
+  return (
+    <details
+      className="group rounded-[var(--mp-r-card)] overflow-hidden"
+      style={{
+        background: "var(--mp-surface-raised)",
+        border: "1px solid var(--mp-border-subtle)",
+      }}
+    >
+      <summary
+        className="flex items-center justify-between gap-4 px-5 py-4 cursor-pointer list-none hover:bg-[var(--mp-surface-sunken)] transition-colors"
+        style={{ userSelect: "none" }}
+      >
+        <span className="text-sm font-semibold text-[var(--mp-fg)] pr-2">{q}</span>
+        <ChevronDown
+          className="w-4 h-4 flex-shrink-0 text-[var(--mp-viridian)] transition-transform group-open:rotate-180"
+          aria-hidden
+        />
+      </summary>
+      <div className="px-5 pb-5 -mt-1 text-sm text-[var(--mp-fg-muted)] leading-relaxed">
+        {a}
+      </div>
+    </details>
   );
 }

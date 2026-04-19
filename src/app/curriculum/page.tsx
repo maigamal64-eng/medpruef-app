@@ -1,18 +1,43 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+/**
+ * Curriculum page — redesigned per MPDS alt Curriculum-B (2D heatmap matrix).
+ *
+ * Data reality (2026-04-17): MedPrüf does not track per-subarea (sub-topic)
+ * accuracy — only per-topic (`questions.topic`). So the "true" 2D matrix
+ * would be mostly empty. Instead we build a meaningful 2-column heatmap per
+ * topic, using derived signals we already have:
+ *
+ *   Col 1: Accuracy       — % correct from /api/stats topicStats (the primary
+ *                           mastery signal; also the color driver for the row).
+ *   Col 2: Progress       — % of the topic's questions the user has answered
+ *                           (coverage). Colored independently.
+ *
+ * Plus a rightmost average column (Accuracy, the dominant KPI).
+ * Rows = all specialties in the active exam (SIP 4 + SIP 5 for Kenntnisprüfung).
+ *
+ * If/when per-subarea tags (e.g. `subarea` column) ship, this file can swap
+ * in a wider grid without touching the rest of the page.
+ *
+ * Interaction:
+ *   - Row label click → /quiz?topic=... (practice that topic)
+ *   - Cell hover → tooltip "Topic / Column — N/M answered — X% accuracy"
+ *   - Cell click → same as row label
+ *   - Mobile: horizontal-scroll inside the grid container
+ */
+
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { BrandedLoader } from "@/components/Logo";
 import Link from "next/link";
 import { t, getLang, setLang } from "@/lib/i18n";
 import { getStoredSession } from "@/lib/auth";
-import { getTopicConfig, VIENNA_EXAM_PARTS, getStoredExamSource } from "@/lib/topics";
+import { VIENNA_EXAM_PARTS, getStoredExamSource } from "@/lib/topics";
 import { getAllTopicStats, type TopicStats } from "@/lib/weakness";
 import LanguageToggle from "@/components/LanguageToggle";
 import ThemeToggle from "@/components/ThemeToggle";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
-import TopicIcon from "@/components/TopicIcon";
-import { Map as MapIcon, GraduationCap, Shuffle, ArrowRight } from "lucide-react";
+import { Map as MapIcon, GraduationCap, Shuffle } from "lucide-react";
 
 type Lang = "de" | "en";
 
@@ -22,12 +47,12 @@ const TOPIC_TOTALS: Record<string, number> = {
   "Chirurgische Fächer": 1230,
   "Dermatologie und Venerologie": 746,
   "Frauenheilkunde/Gynäkologie": 745,
-  "Neurologie": 725,
-  "Psychiatrie": 685,
+  Neurologie: 725,
+  Psychiatrie: 685,
   "Notfall- und Intensivmedizin": 672,
   "Kinder- und Jugendheilkunde": 503,
   "Hals-Nasen-Ohrenheilkunde": 405,
-  "Augenheilkunde": 399,
+  Augenheilkunde: 399,
 };
 
 // Catalog total across all 3 exam types (2026-04-15).
@@ -41,92 +66,239 @@ interface TopicData {
   accuracy: number;
 }
 
-function SpecialtyCard({
-  data,
-  userId,
-  lang,
+// Short-label map — heatmap rows need tight text.
+const TOPIC_SHORT: Record<string, { de: string; en: string }> = {
+  "Innere Medizin": { de: "Innere", en: "Internal" },
+  "Chirurgische Fächer": { de: "Chirurgie", en: "Surgery" },
+  "Dermatologie und Venerologie": { de: "Derma", en: "Derma" },
+  "Frauenheilkunde/Gynäkologie": { de: "Gyn", en: "Gyn" },
+  Neurologie: { de: "Neuro", en: "Neuro" },
+  Psychiatrie: { de: "Psych", en: "Psych" },
+  "Notfall- und Intensivmedizin": { de: "Notfall", en: "Emerg." },
+  "Kinder- und Jugendheilkunde": { de: "Päd", en: "Peds" },
+  "Hals-Nasen-Ohrenheilkunde": { de: "HNO", en: "ENT" },
+  Augenheilkunde: { de: "Augen", en: "Ophth." },
+};
+
+function shortLabel(topic: string, lang: Lang) {
+  const map = TOPIC_SHORT[topic];
+  if (!map) return topic;
+  return lang === "de" ? map.de : map.en;
+}
+
+/** Map an accuracy % to a bucket: unseen | low | mid | good | strong. */
+type Bucket = "unseen" | "low" | "mid" | "good" | "strong";
+function bucketAccuracy(answered: number, accuracy: number): Bucket {
+  if (answered === 0) return "unseen";
+  if (accuracy < 40) return "low";
+  if (accuracy < 70) return "mid";
+  if (accuracy < 90) return "good";
+  return "strong";
+}
+
+/** Map a coverage % (progress) to the same 5-bucket scale. */
+function bucketProgress(progressPct: number, total: number): Bucket {
+  if (total === 0) return "unseen";
+  if (progressPct === 0) return "unseen";
+  if (progressPct < 25) return "low";
+  if (progressPct < 50) return "mid";
+  if (progressPct < 80) return "good";
+  return "strong";
+}
+
+function Cell({
+  bucket,
+  value,
+  label,
+  tooltip,
+  href,
 }: {
-  data: TopicData;
-  userId: string;
-  lang: Lang;
+  bucket: Bucket;
+  value: string;
+  label: string;
+  tooltip: string;
+  href: string;
 }) {
-  const config = getTopicConfig(data.topic);
-  const completionPct =
-    data.total > 0 ? Math.min(100, Math.round((data.answered / data.total) * 100)) : 0;
-  const examSource = getStoredExamSource();
+  // Per-bucket tone. Uses MPDS semantic tokens.
+  const toneCls = {
+    unseen:
+      "bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-subtle)] border border-dashed border-[var(--mp-border)]",
+    low:
+      "bg-[var(--mp-error-bg)] text-[var(--mp-status-error)] border border-[var(--mp-error-bg)]",
+    mid:
+      "bg-[var(--mp-warning-bg)] text-[var(--mp-status-warning)] border border-[var(--mp-warning-bg)]",
+    good:
+      "bg-[var(--mp-viridian)]/30 text-[var(--mp-fg)] border border-[var(--mp-viridian)]/30",
+    strong:
+      "bg-[var(--mp-viridian)] text-white border border-[var(--mp-viridian)]",
+  }[bucket];
 
   return (
-    <div
-      className="card-interactive rounded-2xl p-6 min-h-[200px] flex flex-col group"
+    <Link
+      href={href}
+      title={tooltip}
+      aria-label={`${label}: ${tooltip}`}
+      className={`group relative flex items-center justify-center rounded-md font-mono text-[10px] md:text-[11px] font-bold transition-transform duration-150 hover:scale-105 active:scale-95 min-w-[44px] h-[36px] md:min-w-[52px] md:h-[40px] ${toneCls}`}
     >
-      {/* Icon + Name */}
-      <div className="flex items-start gap-3 mb-4">
-        <TopicIcon name={config.icon} className="w-7 h-7 flex-shrink-0 transition-transform duration-200 group-hover:scale-110" style={{ color: config.color }} />
-        <div className="min-w-0 flex-1">
-          <h3 className="text-base font-bold text-[#1A2B3C] leading-snug line-clamp-2" title={data.topic}>{data.topic}</h3>
-          <p className="text-xs text-[#A0AEC0] font-mono mt-1">
-            {data.total.toLocaleString("de-DE")} {t("questions", lang)}
-          </p>
-        </div>
-      </div>
+      {value}
+    </Link>
+  );
+}
 
-      {/* Completion bar */}
-      <div className="mb-2">
-        <div className="flex items-center justify-between mb-1">
-          <span className="text-xs text-[#A0AEC0]">
-            {data.answered}/{data.total}
-          </span>
-          <span className="text-xs font-mono font-semibold text-[#1A2B3C]">
-            {completionPct}%
-          </span>
-        </div>
-        <div className="h-2.5 bg-[#F7F9FC] rounded-full overflow-hidden">
-          <div
-            className="h-full rounded-full transition-all duration-700"
-            style={{
-              width: `${completionPct}%`,
-              background: `linear-gradient(to right, ${config.color}, ${config.color}99)`,
-            }}
-          />
-        </div>
-      </div>
+function HeatmapRow({
+  td,
+  userId,
+  lang,
+  examSource,
+}: {
+  td: TopicData;
+  userId: string;
+  lang: Lang;
+  examSource: string;
+}) {
+  const qs = userId
+    ? `/quiz?topic=${encodeURIComponent(td.topic)}&userId=${userId}&examSource=${examSource}`
+    : `/quiz?topic=${encodeURIComponent(td.topic)}&examSource=${examSource}`;
 
-      {/* Accuracy pill */}
-      {data.answered > 0 && (
-        <div className="mb-3">
-          <span
-            className={`inline-flex items-center text-xs font-bold font-mono px-2 py-0.5 rounded-full ${
-              data.accuracy >= 70
-                ? "bg-[#00A896]/10 text-[#00A896]"
-                : data.accuracy >= 40
-                ? "bg-[#F4A261]/10 text-[#F4A261]"
-                : "bg-[#D64545]/10 text-[#D64545]"
-            }`}
-          >
-            {data.accuracy}% {lang === "de" ? "Genauigkeit" : "Accuracy"}
-          </span>
-        </div>
-      )}
+  const progressPct =
+    td.total > 0 ? Math.min(100, Math.round((td.answered / td.total) * 100)) : 0;
 
-      {/* Spacer */}
-      <div className="flex-1" />
+  const accBucket = bucketAccuracy(td.answered, td.accuracy);
+  const progBucket = bucketProgress(progressPct, td.total);
 
-      {/* Start Practice link */}
+  // Tooltip format per spec: "Topic / Column — N/M answered — X% accuracy"
+  const accTooltip =
+    td.answered > 0
+      ? `${td.topic} / ${lang === "de" ? "Genauigkeit" : "Accuracy"} — ${td.correct}/${td.answered} ${lang === "de" ? "korrekt" : "correct"} — ${td.accuracy}%`
+      : `${td.topic} / ${lang === "de" ? "Genauigkeit" : "Accuracy"} — ${lang === "de" ? "noch keine Antworten" : "no answers yet"}`;
+  const progTooltip = `${td.topic} / ${lang === "de" ? "Fortschritt" : "Progress"} — ${td.answered}/${td.total} ${lang === "de" ? "bearbeitet" : "answered"} — ${progressPct}%`;
+
+  const avgColor =
+    td.answered === 0
+      ? "text-[var(--mp-fg-subtle)]"
+      : td.accuracy >= 70
+      ? "text-[var(--mp-viridian)]"
+      : td.accuracy >= 40
+      ? "text-[var(--mp-status-warning)]"
+      : "text-[var(--mp-status-error)]";
+
+  return (
+    <div className="grid grid-cols-[120px_1fr_1fr_52px] md:grid-cols-[160px_1fr_1fr_64px] gap-2 items-center py-1">
       <Link
-        href={
-          userId
-            ? `/quiz?topic=${encodeURIComponent(data.topic)}&userId=${userId}&examSource=${examSource}`
-            : `/quiz?topic=${encodeURIComponent(data.topic)}&examSource=${examSource}`
-        }
-        className="flex items-center justify-center gap-2 mt-2 py-3 rounded-xl text-sm font-semibold transition-all duration-200 border shadow-sm hover:shadow-md active:scale-[0.98]"
-        style={{
-          backgroundColor: `${config.color}12`,
-          color: config.color,
-          borderColor: `${config.color}25`,
-        }}
+        href={qs}
+        className="text-xs md:text-sm font-display font-bold text-[var(--mp-fg)] hover:text-[var(--mp-viridian)] truncate"
+        title={td.topic}
       >
-        {t("start_practice_topic", lang)} <ArrowRight className="w-4 h-4" />
+        {shortLabel(td.topic, lang)}
       </Link>
+      <Cell
+        bucket={accBucket}
+        value={td.answered > 0 ? `${td.accuracy}` : "—"}
+        label={lang === "de" ? "Genauigkeit" : "Accuracy"}
+        tooltip={accTooltip}
+        href={qs}
+      />
+      <Cell
+        bucket={progBucket}
+        value={progressPct > 0 ? `${progressPct}` : "—"}
+        label={lang === "de" ? "Fortschritt" : "Progress"}
+        tooltip={progTooltip}
+        href={qs}
+      />
+      <div
+        className={`text-right font-mono font-bold text-[11px] md:text-xs ${avgColor}`}
+        title={accTooltip}
+      >
+        {td.answered > 0 ? `${td.accuracy}` : "—"}
+      </div>
+    </div>
+  );
+}
+
+function HeatmapSection({
+  title,
+  topics,
+  userId,
+  lang,
+  examSource,
+  accentVar,
+}: {
+  title: string;
+  topics: TopicData[];
+  userId: string;
+  lang: Lang;
+  examSource: string;
+  accentVar: string;
+}) {
+  if (topics.length === 0) return null;
+  return (
+    <section>
+      <div className="flex items-center gap-3 mb-3">
+        <div className="w-1 h-7 rounded-full" style={{ background: accentVar }} />
+        <h2 className="text-lg font-bold text-[var(--mp-fg)]">{title}</h2>
+        <span className="text-xs text-[var(--mp-fg-subtle)] font-mono">
+          {topics.reduce((s, t2) => s + t2.total, 0).toLocaleString("de-DE")}{" "}
+          {t("questions", lang)}
+        </span>
+      </div>
+
+      <div className="mp-card p-3 md:p-4 overflow-x-auto">
+        {/* Header row */}
+        <div className="grid grid-cols-[120px_1fr_1fr_52px] md:grid-cols-[160px_1fr_1fr_64px] gap-2 items-center pb-2 mb-2 border-b border-[var(--mp-border)]">
+          <div className="mp-caption text-[var(--mp-fg-subtle)]">
+            {lang === "de" ? "Thema" : "Topic"}
+          </div>
+          <div className="mp-caption text-[var(--mp-fg-subtle)] text-center">
+            {lang === "de" ? "Genauigkeit" : "Accuracy"}
+          </div>
+          <div className="mp-caption text-[var(--mp-fg-subtle)] text-center">
+            {lang === "de" ? "Fortschritt" : "Progress"}
+          </div>
+          <div className="mp-caption text-[var(--mp-fg-subtle)] text-right">
+            ∅
+          </div>
+        </div>
+
+        {topics.map((td) => (
+          <HeatmapRow
+            key={td.topic}
+            td={td}
+            userId={userId}
+            lang={lang}
+            examSource={examSource}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function Legend({ lang }: { lang: Lang }) {
+  return (
+    <div className="flex items-center flex-wrap gap-3 text-xs text-[var(--mp-fg-muted)]">
+      <span className="font-mono text-[10px] uppercase tracking-wider text-[var(--mp-fg-subtle)]">
+        {lang === "de" ? "Legende" : "Legend"}:
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span className="inline-block w-4 h-4 rounded-sm bg-[var(--mp-surface-sunken)] border border-dashed border-[var(--mp-border)]" />
+        {lang === "de" ? "Noch nicht" : "Unseen"}
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span className="inline-block w-4 h-4 rounded-sm bg-[var(--mp-error-bg)]" />
+        &lt;40%
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span className="inline-block w-4 h-4 rounded-sm bg-[var(--mp-warning-bg)]" />
+        40–70%
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span className="inline-block w-4 h-4 rounded-sm bg-[var(--mp-viridian)]/30" />
+        70–90%
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span className="inline-block w-4 h-4 rounded-sm bg-[var(--mp-viridian)]" />
+        &gt;90%
+      </span>
     </div>
   );
 }
@@ -141,6 +313,7 @@ export default function CurriculumPage() {
   const [totalAnswered, setTotalAnswered] = useState(0);
   const [topicData, setTopicData] = useState<TopicData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [examSource, setExamSource] = useState("kenntnispruefung");
 
   useEffect(() => {
     setLangState(getLang());
@@ -155,6 +328,7 @@ export default function CurriculumPage() {
       setTotalAnswered(ans);
       setAccuracy(ans > 0 ? Math.round((cor / ans) * 100) : 0);
     }
+    setExamSource(getStoredExamSource());
 
     // Build topic data from known totals + localStorage quiz results
     const localStats = getAllTopicStats();
@@ -163,22 +337,24 @@ export default function CurriculumPage() {
       statsMap.set(s.topic, s);
     }
 
-    const data: TopicData[] = Object.entries(TOPIC_TOTALS).map(([topic, total]) => {
-      const stat = statsMap.get(topic);
-      return {
-        topic,
-        total,
-        answered: stat?.total || 0,
-        correct: stat?.correct || 0,
-        accuracy: stat ? Math.round(stat.accuracy) : 0,
-      };
-    });
+    const data: TopicData[] = Object.entries(TOPIC_TOTALS).map(
+      ([topic, total]) => {
+        const stat = statsMap.get(topic);
+        return {
+          topic,
+          total,
+          answered: stat?.total || 0,
+          correct: stat?.correct || 0,
+          accuracy: stat ? Math.round(stat.accuracy) : 0,
+        };
+      }
+    );
 
     setTopicData(data);
     setLoading(false);
   }, []);
 
-  // Also try to get server-side stats if user is logged in
+  // Server-side stats for logged-in users
   useEffect(() => {
     if (!userId) return;
     fetch(`/api/stats?userId=${userId}`)
@@ -195,13 +371,21 @@ export default function CurriculumPage() {
         if (data.topicStats) {
           setTopicData((prev) =>
             prev.map((td) => {
-              const serverStat = (data.topicStats as Record<string, { total: number; correct: number }>)[td.topic];
+              const serverStat = (
+                data.topicStats as Record<
+                  string,
+                  { total: number; correct: number }
+                >
+              )[td.topic];
               if (serverStat) {
                 return {
                   ...td,
                   answered: serverStat.total,
                   correct: serverStat.correct,
-                  accuracy: serverStat.total > 0 ? Math.round((serverStat.correct / serverStat.total) * 100) : 0,
+                  accuracy:
+                    serverStat.total > 0
+                      ? Math.round((serverStat.correct / serverStat.total) * 100)
+                      : 0,
                 };
               }
               return td;
@@ -217,23 +401,33 @@ export default function CurriculumPage() {
     setLangState(l);
   }, []);
 
-  const completionPct = Math.min(100, Math.round((totalAnswered / TOTAL_QUESTIONS) * 100));
+  const completionPct = Math.min(
+    100,
+    Math.round((totalAnswered / TOTAL_QUESTIONS) * 100)
+  );
 
   // Build SIP 4 and SIP 5 topic lists
-  const sip4Topics = VIENNA_EXAM_PARTS.sip4
-    .map((name) => topicData.find((td) => td.topic === name))
-    .filter(Boolean) as TopicData[];
-
-  const sip5Topics = VIENNA_EXAM_PARTS.sip5
-    .map((name) => topicData.find((td) => td.topic === name))
-    .filter(Boolean) as TopicData[];
+  const sip4Topics = useMemo(
+    () =>
+      VIENNA_EXAM_PARTS.sip4
+        .map((name) => topicData.find((td) => td.topic === name))
+        .filter(Boolean) as TopicData[],
+    [topicData]
+  );
+  const sip5Topics = useMemo(
+    () =>
+      VIENNA_EXAM_PARTS.sip5
+        .map((name) => topicData.find((td) => td.topic === name))
+        .filter(Boolean) as TopicData[],
+    [topicData]
+  );
 
   const sip4Count = sip4Topics.reduce((sum, td) => sum + td.total, 0);
   const sip5Count = sip5Topics.reduce((sum, td) => sum + td.total, 0);
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#F7F9FC]">
+      <div className="flex items-center justify-center min-h-screen bg-[var(--mp-surface-sunken)]">
         <BrandedLoader />
       </div>
     );
@@ -241,16 +435,26 @@ export default function CurriculumPage() {
 
   return (
     <div className="app-layout">
-      <Sidebar lang={lang} userId={userId} userName={userName} totalXp={totalXp} streak={streak} accuracy={accuracy} />
+      <Sidebar
+        lang={lang}
+        userId={userId}
+        userName={userName}
+        totalXp={totalXp}
+        streak={streak}
+        accuracy={accuracy}
+      />
 
-      <main className="main-content safe-area-top safe-area-bottom bg-[#F7F9FC]">
+      <main className="main-content safe-area-top safe-area-bottom bg-[var(--mp-surface-sunken)]">
         {/* Header */}
-        <div className="px-6 lg:px-10 pt-4 pb-2 flex items-center justify-between border-b border-[#E4E9F0]">
-          <Link href="/" className="text-[#A0AEC0] hover:text-[#1A2B3C] text-sm transition-colors">
+        <div className="px-6 lg:px-10 pt-4 pb-2 flex items-center justify-between border-b border-[var(--mp-border)]">
+          <Link
+            href="/"
+            className="text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg)] text-sm transition-colors"
+          >
             &larr; {t("back_home", lang)}
           </Link>
-          <h1 className="text-base font-bold text-[#1A2B3C] flex items-center gap-2">
-            <MapIcon className="w-4 h-4 text-[#007B5F]" />
+          <h1 className="text-base font-bold text-[var(--mp-fg)] flex items-center gap-2">
+            <MapIcon className="w-4 h-4 text-[var(--mp-viridian)]" />
             {t("curriculum_title", lang)}
           </h1>
           <div className="flex items-center gap-2">
@@ -259,71 +463,84 @@ export default function CurriculumPage() {
           </div>
         </div>
 
-        <div className="px-6 lg:px-10 py-5 max-w-5xl mx-auto space-y-10 pb-28">
+        <div className="px-4 md:px-6 lg:px-10 py-5 max-w-5xl mx-auto space-y-6 pb-28">
           {/* Overview bar */}
-          <div className="card rounded-2xl p-5">
+          <div className="mp-card p-4 md:p-5">
             <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6">
               <div className="text-center">
-                <span className="text-2xl font-black font-mono text-[#1A2B3C]">
+                <span className="text-2xl font-black font-mono text-[var(--mp-fg)]">
                   {TOTAL_QUESTIONS.toLocaleString("de-DE")}
                 </span>
-                <p className="text-xs text-[#A0AEC0] mt-0.5">{t("total_questions_label", lang)}</p>
+                <p className="text-xs text-[var(--mp-fg-subtle)] mt-0.5">
+                  {t("total_questions_label", lang)}
+                </p>
               </div>
-              <div className="w-px h-10 bg-[#E4E9F0] hidden sm:block" />
+              <div className="w-px h-10 bg-[var(--mp-border)] hidden sm:block" />
               <div className="text-center">
-                <span className="text-lg font-bold font-mono text-[#F4A261]">
+                <span className="text-lg font-bold font-mono text-[var(--mp-status-warning)]">
                   {sip4Count.toLocaleString("de-DE")}
                 </span>
-                <p className="text-xs text-[#A0AEC0] mt-0.5">{t("sip4_label", lang)}</p>
+                <p className="text-xs text-[var(--mp-fg-subtle)] mt-0.5">
+                  {t("sip4_label", lang)}
+                </p>
               </div>
-              <div className="w-px h-10 bg-[#E4E9F0] hidden sm:block" />
+              <div className="w-px h-10 bg-[var(--mp-border)] hidden sm:block" />
               <div className="text-center">
-                <span className="text-lg font-bold font-mono text-[#007B5F]">
+                <span className="text-lg font-bold font-mono text-[var(--mp-viridian)]">
                   {sip5Count.toLocaleString("de-DE")}
                 </span>
-                <p className="text-xs text-[#A0AEC0] mt-0.5">{t("sip5_label", lang)}</p>
+                <p className="text-xs text-[var(--mp-fg-subtle)] mt-0.5">
+                  {t("sip5_label", lang)}
+                </p>
               </div>
-              <div className="w-px h-10 bg-[#E4E9F0] hidden sm:block" />
+              <div className="w-px h-10 bg-[var(--mp-border)] hidden sm:block" />
               <div className="text-center">
-                <span className="text-lg font-bold font-mono text-[#003A8C]">
+                <span className="text-lg font-bold font-mono text-[var(--mp-cta-blue)]">
                   {completionPct}%
                 </span>
-                <p className="text-xs text-[#A0AEC0] mt-0.5">{t("completion", lang)}</p>
+                <p className="text-xs text-[var(--mp-fg-subtle)] mt-0.5">
+                  {t("completion", lang)}
+                </p>
               </div>
             </div>
           </div>
 
-          {/* SIP 4 Section */}
-          <section>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-1 h-8 rounded-full bg-[#F4A261]" />
-              <h2 className="text-xl font-bold text-[#1A2B3C]">{t("sip4_label", lang)}</h2>
-              <span className="text-sm text-[#A0AEC0] font-mono">
-                {sip4Count.toLocaleString("de-DE")} {t("questions", lang)}
-              </span>
+          {/* Heatmap lede + legend */}
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div>
+              <h2 className="text-xl font-display font-black text-[var(--mp-fg)] tracking-tight">
+                {lang === "de"
+                  ? "Deine Stärken-Heatmap"
+                  : "Your Strengths Heatmap"}
+              </h2>
+              <p className="text-xs text-[var(--mp-fg-muted)] mt-1">
+                {lang === "de"
+                  ? `${sip4Topics.length + sip5Topics.length} Themen · Farbe = Genauigkeit · klicken zum Üben`
+                  : `${sip4Topics.length + sip5Topics.length} topics · color = accuracy · click to practice`}
+              </p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 stagger">
-              {sip4Topics.map((td) => (
-                <SpecialtyCard key={td.topic} data={td} userId={userId} lang={lang} />
-              ))}
-            </div>
-          </section>
+            <Legend lang={lang} />
+          </div>
 
-          {/* SIP 5 Section */}
-          <section>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-1 h-8 rounded-full bg-[#007B5F]" />
-              <h2 className="text-xl font-bold text-[#1A2B3C]">{t("sip5_label", lang)}</h2>
-              <span className="text-sm text-[#A0AEC0] font-mono">
-                {sip5Count.toLocaleString("de-DE")} {t("questions", lang)}
-              </span>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 stagger">
-              {sip5Topics.map((td) => (
-                <SpecialtyCard key={td.topic} data={td} userId={userId} lang={lang} />
-              ))}
-            </div>
-          </section>
+          {/* SIP 4 heatmap */}
+          <HeatmapSection
+            title={t("sip4_label", lang)}
+            topics={sip4Topics}
+            userId={userId}
+            lang={lang}
+            examSource={examSource}
+            accentVar="var(--mp-status-warning)"
+          />
+
+          {/* SIP 5 heatmap */}
+          <HeatmapSection
+            title={t("sip5_label", lang)}
+            topics={sip5Topics}
+            userId={userId}
+            lang={lang}
+            examSource={examSource}
+            accentVar="var(--mp-viridian)"
+          />
 
           {/* Quick Actions */}
           <div className="flex flex-col sm:flex-row gap-3">
@@ -335,7 +552,11 @@ export default function CurriculumPage() {
               {t("start_exam_simulation", lang)}
             </Link>
             <Link
-              href={userId ? `/quiz?topic=random&userId=${userId}` : "/quiz?topic=random"}
+              href={
+                userId
+                  ? `/quiz?topic=random&userId=${userId}`
+                  : "/quiz?topic=random"
+              }
               className="btn-secondary flex-1 py-3.5 text-center text-sm rounded-xl"
             >
               <Shuffle className="w-5 h-5" />

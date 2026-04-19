@@ -96,9 +96,9 @@ export default function QuestionActions({
     {
       key: "fav",
       label: isFav ? t("bookmarked", lang) : t("bookmark", lang),
-      icon: <Star className={`w-5 h-5 ${isFav ? "fill-[#F4A261] text-[#F4A261]" : ""}`} />,
+      icon: <Star className={`w-5 h-5 ${isFav ? "fill-[var(--mp-status-warning)] text-[var(--mp-status-warning)]" : ""}`} />,
       active: isFav,
-      activeClass: "border-[#F4A261]/40 bg-[#F4A261]/10 text-[#F4A261]",
+      activeClass: "border-[var(--mp-status-warning)]/40 bg-[var(--mp-status-warning)]/10 text-[var(--mp-status-warning)]",
       onClick: toggleFav,
       locked: false,
     },
@@ -107,7 +107,7 @@ export default function QuestionActions({
       label: lang === "de" ? "KI-Erklärung" : "AI Explain",
       icon: <Bot className="w-5 h-5" />,
       active: showAIChat,
-      activeClass: "border-[#003A8C]/40 bg-[#003A8C]/10 text-[#003A8C]",
+      activeClass: "border-[var(--mp-cta-blue)]/40 bg-[var(--mp-cta-blue)]/10 text-[var(--mp-cta-blue)]",
       onClick: () => !aiLocked && setShowAIChat(true),
       locked: aiLocked,
     },
@@ -116,7 +116,7 @@ export default function QuestionActions({
       label: t("add_note", lang),
       icon: <FileText className="w-5 h-5" />,
       active: showNotePanel || !!note,
-      activeClass: "border-[#00A896]/40 bg-[#00A896]/10 text-[#00A896]",
+      activeClass: "border-[var(--mp-accent-teal)]/40 bg-[var(--mp-accent-teal)]/10 text-[var(--mp-accent-teal)]",
       onClick: () => !noteLocked && setShowNotePanel((v) => !v),
       locked: noteLocked,
     },
@@ -125,7 +125,7 @@ export default function QuestionActions({
       label: lang === "de" ? "Melden" : "Report",
       icon: <Flag className="w-5 h-5" />,
       active: showReport,
-      activeClass: "border-[#D64545]/40 bg-[#D64545]/10 text-[#D64545]",
+      activeClass: "border-[var(--mp-error)]/40 bg-[var(--mp-error)]/10 text-[var(--mp-error)]",
       onClick: () => setShowReport(true),
       locked: false,
     },
@@ -147,7 +147,7 @@ export default function QuestionActions({
               className={`${baseBtn} ${
                 b.active
                   ? b.activeClass
-                  : "border-[#E4E9F0] dark:border-[#334155] text-[#4A5568] dark:text-[#A0AEC0] hover:border-[#007B5F]/40 hover:text-[#007B5F]"
+                  : "border-[var(--mp-border)] text-[var(--mp-fg-muted)] hover:border-[var(--mp-viridian)]/40 hover:text-[var(--mp-viridian)]"
               }`}
             >
               {b.icon}
@@ -205,11 +205,11 @@ export default function QuestionActions({
             className={`${baseBtn} ${
               b.active
                 ? b.activeClass
-                : "border-[#E4E9F0] dark:border-[#334155] bg-white dark:bg-[#1E293B] text-[#4A5568] dark:text-[#A0AEC0] hover:border-[#007B5F]/40 hover:text-[#007B5F] hover:shadow-[var(--shadow-card)]"
+                : "border-[var(--mp-border)] bg-[var(--mp-surface-raised)] text-[var(--mp-fg-muted)] hover:border-[var(--mp-viridian)]/40 hover:text-[var(--mp-viridian)] hover:shadow-[var(--shadow-card)]"
             }`}
           >
             {b.icon}
-            <span className="absolute right-full mr-2 top-1/2 -translate-y-1/2 px-2 py-1 rounded bg-[#1A2B3C] text-white text-[10px] font-medium opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap">
+            <span className="absolute right-full mr-2 top-1/2 -translate-y-1/2 px-2 py-1 rounded bg-[var(--mp-fg)] text-[var(--mp-fg-inverse)] text-[10px] font-medium opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap">
               {b.label}
             </span>
           </button>
@@ -270,12 +270,12 @@ function NotePanel({
   lang: Lang;
 }) {
   return (
-    <div className="w-full mt-3 bg-white dark:bg-[#1E293B] border border-[#E4E9F0] dark:border-[#334155] rounded-2xl shadow-[var(--shadow-card)] p-3 animate-fade-in">
+    <div className="w-full mt-3 bg-[var(--mp-surface-raised)] border border-[var(--mp-border)] rounded-2xl shadow-[var(--shadow-card)] p-3 animate-fade-in">
       <div className="flex items-center justify-between mb-2">
-        <p className="text-[11px] uppercase tracking-wider text-[#A0AEC0] font-semibold flex items-center gap-1">
+        <p className="text-[11px] uppercase tracking-wider text-[var(--mp-fg-subtle)] font-semibold flex items-center gap-1">
           <FileText className="w-3 h-3" /> {t("add_note", lang)}
         </p>
-        <button onClick={onClose} className="text-[#A0AEC0] hover:text-[#4A5568]">
+        <button onClick={onClose} className="text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg-muted)]">
           <X className="w-3.5 h-3.5" />
         </button>
       </div>
@@ -284,11 +284,11 @@ function NotePanel({
         onChange={(e) => setNote(e.target.value)}
         placeholder={t("note_placeholder", lang)}
         rows={4}
-        className="w-full bg-[#F7F9FC] dark:bg-[#0F172A] border border-[#E4E9F0] dark:border-[#334155] rounded-lg px-3 py-2 text-sm text-[#1A2B3C] dark:text-[#E2E8F0] placeholder-[#A0AEC0] resize-none focus:outline-none focus:border-[#007B5F]/50"
+        className="w-full bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)] rounded-lg px-3 py-2 text-sm text-[var(--mp-fg)] placeholder-[var(--mp-fg-subtle)] resize-none focus:outline-none focus:border-[var(--mp-viridian)]/50"
       />
       <button
         onClick={saveNote}
-        className="mt-2 w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-[#007B5F]/15 border border-[#007B5F]/30 text-[#007B5F] text-xs font-semibold rounded-lg hover:bg-[#007B5F]/25 transition-colors"
+        className="mt-2 w-full inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-[var(--mp-viridian)]/15 border border-[var(--mp-viridian)]/30 text-[var(--mp-viridian)] text-xs font-semibold rounded-lg hover:bg-[var(--mp-viridian)]/25 transition-colors"
       >
         <Save className="w-3.5 h-3.5" />
         {noteSaved ? `✓ ${t("note_saved", lang)}` : t("save_note", lang)}

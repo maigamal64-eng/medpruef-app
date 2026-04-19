@@ -55,9 +55,9 @@ export default function CookieBanner({ lang }: CookieBannerProps) {
 
   return (
     <div className="fixed bottom-20 md:bottom-4 left-4 right-4 z-40 flex justify-center animate-slide-reveal">
-      <div className="card w-full max-w-lg p-4 rounded-2xl shadow-xl border border-[#E4E9F0] flex items-center gap-4">
-        <Cookie className="w-6 h-6 text-[#F4A261] flex-shrink-0" />
-        <p className="text-sm text-[#4A5568] flex-1">
+      <div className="card w-full max-w-lg p-4 rounded-2xl shadow-xl border border-[var(--mp-border)] flex items-center gap-4">
+        <Cookie className="w-6 h-6 text-[var(--mp-status-warning)] flex-shrink-0" />
+        <p className="text-sm text-[var(--mp-fg-muted)] flex-1">
           {t("cookie_banner", lang)}
         </p>
         <div className="flex items-center gap-2 flex-shrink-0">

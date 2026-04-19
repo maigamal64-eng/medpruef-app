@@ -2,6 +2,7 @@
 
 import { getLevelFromXP } from "@/lib/xp";
 import { t } from "@/lib/i18n";
+import { AchievementRank, rankFromName } from "@/components/ui";
 
 type Lang = "de" | "en";
 
@@ -24,39 +25,31 @@ interface XPBarProps {
   compact?: boolean;
 }
 
-const rankIcons: Record<string, string> = {
-  "Praktikant": "🎓",
-  "Famulant": "📚",
-  "PJ-Student": "🩺",
-  "Assistenzarzt": "⚕️",
-  "Facharzt": "🏥",
-  "Oberarzt": "🔬",
-  "Chefarzt": "👨‍⚕️",
-  "Professor": "🏆",
-};
-
 export default function XPBar({ totalXp, lang, compact = false }: XPBarProps) {
   const xpInfo = getLevelFromXP(totalXp);
-  const icon = rankIcons[xpInfo.rank] || "🎓";
+  const tier = rankFromName(xpInfo.rank);
 
   if (compact) {
     return (
       <div className="animate-fade-in">
         <div className="flex items-center justify-between mb-1.5">
           <div className="flex items-center gap-2">
-            <span className="text-lg">{icon}</span>
-            <span className="text-sm font-semibold text-[#1A2B3C]">{xpInfo.rank}</span>
-            <span className="text-xs text-[#4A5568] font-mono">Lv.{xpInfo.level}</span>
+            {/* Inline variant — currentColor picks up the surrounding text */}
+            <span className="inline-flex items-center justify-center text-[var(--mp-viridian)]">
+              <AchievementRank tier={tier} size={22} variant="inline" aria-hidden />
+            </span>
+            <span className="text-sm font-semibold text-[var(--mp-fg)]">{xpInfo.rank}</span>
+            <span className="text-xs text-[var(--mp-fg-muted)] font-mono">Lv.{xpInfo.level}</span>
           </div>
-          <span className="text-xs text-[#F4A261] font-medium font-mono">{totalXp} XP</span>
+          <span className="text-xs text-[var(--mp-status-warning)] font-medium font-mono">{totalXp} XP</span>
         </div>
-        <div className="h-1.5 bg-[#F7F9FC] rounded-full overflow-hidden">
+        <div className="h-1.5 bg-[var(--mp-surface-sunken)] rounded-full overflow-hidden">
           <div
-            className="h-full bg-[#007B5F] rounded-full animate-progress"
+            className="h-full bg-[var(--mp-viridian)] rounded-full animate-progress"
             style={{ width: `${xpInfo.progress}%` }}
           />
         </div>
-        <p className="text-[10px] text-[#A0AEC0] mt-1 text-right font-mono">
+        <p className="text-[10px] text-[var(--mp-fg-subtle)] mt-1 text-right font-mono">
           {Math.round(xpInfo.progress)}% {t("to_next_level", lang)}
         </p>
       </div>
@@ -66,37 +59,37 @@ export default function XPBar({ totalXp, lang, compact = false }: XPBarProps) {
   return (
     <div>
       <div className="flex items-center gap-3 mb-3">
-        <div className="w-11 h-11 rounded-xl bg-[#F4A261]/10 border border-[#F4A261]/20 flex items-center justify-center text-xl">
-          {icon}
-        </div>
+        {/* Badge variant — gradient chip replaces the warning-tinted container
+            and the emoji rank icon. Accent color still drives XP numbers below. */}
+        <AchievementRank tier={tier} size={44} />
         <div className="flex-1">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-lg font-bold text-[#1A2B3C]">{xpInfo.rank}</p>
-              <p className="text-xs text-[#4A5568] font-mono">
+              <p className="text-lg font-bold text-[var(--mp-fg)]">{xpInfo.rank}</p>
+              <p className="text-xs text-[var(--mp-fg-muted)] font-mono">
                 {t("level", lang)} {xpInfo.level}
               </p>
             </div>
             <div className="text-right">
-              <p className="text-2xl font-black text-[#F4A261] font-mono font-display">{totalXp}</p>
-              <p className="text-xs text-[#A0AEC0]">XP</p>
+              <p className="text-2xl font-black text-[var(--mp-status-warning)] font-mono font-display">{totalXp}</p>
+              <p className="text-xs text-[var(--mp-fg-subtle)]">XP</p>
             </div>
           </div>
         </div>
       </div>
-      <div className="h-2.5 bg-[#F7F9FC] rounded-full overflow-hidden">
+      <div className="h-2.5 bg-[var(--mp-surface-sunken)] rounded-full overflow-hidden">
         <div
-          className="h-full bg-[#F4A261] rounded-full animate-progress"
+          className="h-full bg-[var(--mp-status-warning)] rounded-full animate-progress"
           style={{ width: `${xpInfo.progress}%` }}
         />
       </div>
-      <p className="text-xs text-[#A0AEC0] mt-1.5 text-right font-mono">
+      <p className="text-xs text-[var(--mp-fg-subtle)] mt-1.5 text-right font-mono">
         {Math.round(xpInfo.progress)}% {t("to_next_level", lang)}
       </p>
       {/* Milestone preview */}
       {xpInfo.level >= MAX_LEVEL ? (
-        <p className="text-[11px] text-[#A0AEC0] mt-1.5">
-          {lang === "de" ? "Maximalstufe erreicht" : "Max level reached"} 🏆
+        <p className="text-[11px] text-[var(--mp-fg-subtle)] mt-1.5">
+          {lang === "de" ? "Maximalstufe erreicht" : "Max level reached"}
         </p>
       ) : (
         (() => {
@@ -106,13 +99,13 @@ export default function XPBar({ totalXp, lang, compact = false }: XPBarProps) {
           const milestone = milestones[nextLevel];
           return (
             <>
-              <p className="text-[11px] text-[#A0AEC0] mt-1.5">
+              <p className="text-[11px] text-[var(--mp-fg-subtle)] mt-1.5">
                 {lang === "de"
                   ? `+${xpToNext} XP bis Level ${nextLevel}`
                   : `+${xpToNext} XP to Level ${nextLevel}`}
               </p>
               {milestone && (
-                <p className="text-[10px] text-[#A0AEC0]/70 mt-0.5">
+                <p className="text-[10px] text-[var(--mp-fg-subtle)]/70 mt-0.5">
                   {lang === "de"
                     ? `Level ${nextLevel}: ${milestone.de}`
                     : `Unlock "${milestone.en}" at Level ${nextLevel}`}

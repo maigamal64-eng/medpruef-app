@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
-import { X, ChevronRight, ChevronLeft, Check, Sparkles } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { ChevronRight, ChevronLeft, Check, Sparkles } from 'lucide-react'
 import { getStoredSession } from '@/lib/auth'
 import { authFetch as fetch } from '@/lib/authFetch'
+import { Dialog, Textarea } from '@/components/ui'
 
 const STORAGE_COMPLETED = 'medpruef_survey_v1_completed'
 const STORAGE_DISMISSED = 'medpruef_survey_v1_dismissed'
@@ -63,7 +64,6 @@ export default function UserSurveyModal() {
   const [openText, setOpenText] = useState('')
 
   const [submitting, setSubmitting] = useState(false)
-  const modalRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     try {
@@ -85,8 +85,6 @@ export default function UserSurveyModal() {
       return () => clearTimeout(timer)
     } catch { /* silent */ }
   }, [])
-
-  if (!show) return null
 
   const dismiss = () => {
     setShow(false)
@@ -193,345 +191,341 @@ export default function UserSurveyModal() {
 
   const step1Complete = ratings.every(r => r > 0)
 
-  return (
-    <div
-      className="fixed inset-0 z-[90] bg-black/60 backdrop-blur-sm flex items-center justify-center px-4"
-      onClick={dismiss}
-    >
-      <div
-        ref={modalRef}
-        className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-hidden animate-scale-in flex flex-col"
-        onClick={e => e.stopPropagation()}
-      >
-        {/* ── Header ── */}
-        {step < 4 && (
-          <div className="sticky top-0 bg-gradient-to-r from-[#001B3D] to-[#003A8C] text-white px-5 py-4 flex-shrink-0">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-[#F4A261]" />
-                <h2 className="text-base font-bold">Dein Feedback</h2>
-              </div>
-              <button
-                onClick={dismiss}
-                className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"
-                aria-label="Schließen"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            {/* Progress dots */}
-            <div className="flex items-center gap-2 mt-3">
-              {[1, 2, 3].map(s => (
-                <div key={s} className="flex-1 flex items-center gap-1">
-                  <div
-                    className={`h-1.5 rounded-full flex-1 transition-all duration-300 ${
-                      s < step
-                        ? 'bg-[#00A896]'
-                        : s === step
-                          ? 'bg-white'
-                          : 'bg-white/25'
-                    }`}
-                  />
-                </div>
-              ))}
-            </div>
-            <p className="text-white/50 text-[11px] mt-1.5">
-              Schritt {step} von 3
-            </p>
-          </div>
-        )}
+  const title = step === 4 ? 'Danke!' : 'Dein Feedback'
+  const description = step < 4 ? `Schritt ${step} von 3` : undefined
 
-        {/* ── Body — scrollable ── */}
-        <div className="overflow-y-auto flex-1 overscroll-contain">
-          {/* ═══ STEP 1: Ratings ═══ */}
-          {step === 1 && (
-            <div
-              key="step1"
-              className={`p-5 space-y-5 ${
-                direction === 'forward'
-                  ? 'animate-[survey-slide-left_0.25s_ease-out]'
-                  : 'animate-[survey-slide-right_0.25s_ease-out]'
-              }`}
+  let footer: React.ReactNode = null
+  if (step < 4) {
+    footer = (
+      <div className="flex items-center justify-between w-full">
+        <div>
+          {step === 1 ? (
+            <button
+              type="button"
+              onClick={dismiss}
+              className="text-xs text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg-muted)] transition-colors"
             >
-              <p className="text-sm text-[#4A5568] dark:text-slate-300 leading-relaxed">
-                Danke{firstName ? `, ${firstName}` : ''}! Dein Feedback hilft uns,
-                MedPrüf besser zu machen.
-              </p>
-
-              {RATING_QUESTIONS.map((q, qi) => (
-                <div key={qi}>
-                  <p className="text-sm font-medium text-[#1A2B3C] dark:text-white mb-2">
-                    {q}
-                  </p>
-                  <div className="flex gap-2">
-                    {RATING_LABELS.map((rl, ri) => {
-                      const value = ri + 1
-                      const selected = ratings[qi] === value
-                      return (
-                        <button
-                          key={ri}
-                          onClick={() => setRating(qi, value)}
-                          className={`
-                            flex-1 flex flex-col items-center gap-1 py-2.5 px-1 rounded-xl
-                            transition-all duration-150 min-h-[60px] min-w-[48px]
-                            ${
-                              selected
-                                ? 'bg-[#003A8C]/10 dark:bg-[#003A8C]/30 ring-2 ring-[#003A8C] scale-105'
-                                : 'bg-[#F7F9FC] dark:bg-slate-700 hover:bg-[#E4E9F0] dark:hover:bg-slate-600'
-                            }
-                          `}
-                          aria-label={`${rl.label} (${value}/5)`}
-                        >
-                          <span className="text-xl leading-none">{rl.emoji}</span>
-                          <span
-                            className={`text-[10px] leading-tight ${
-                              selected
-                                ? 'text-[#003A8C] dark:text-blue-300 font-semibold'
-                                : 'text-[#A0AEC0]'
-                            }`}
-                          >
-                            {rl.label}
-                          </span>
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* ═══ STEP 2: Multi-select ═══ */}
-          {step === 2 && (
-            <div
-              key="step2"
-              className={`p-5 space-y-6 ${
-                direction === 'forward'
-                  ? 'animate-[survey-slide-left_0.25s_ease-out]'
-                  : 'animate-[survey-slide-right_0.25s_ease-out]'
-              }`}
+              Später
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => goStep(step - 1)}
+              className="mp-btn mp-btn--secondary"
             >
-              {/* Best features */}
-              <div>
-                <p className="text-sm font-medium text-[#1A2B3C] dark:text-white mb-3">
-                  Was findest du am besten an MedPrüf?
-                </p>
-                <div className="grid grid-cols-2 gap-2">
-                  {BEST_FEATURES.map(feat => {
-                    const checked = bestFeatures.includes(feat)
-                    return (
-                      <button
-                        key={feat}
-                        onClick={() => toggleCheckbox(bestFeatures, setBestFeatures, feat)}
-                        className={`
-                          text-left text-sm px-3 py-2.5 rounded-xl transition-all duration-150
-                          ${
-                            checked
-                              ? 'bg-[#007B5F]/10 dark:bg-[#007B5F]/30 ring-1 ring-[#007B5F] text-[#007B5F] dark:text-emerald-300 font-medium'
-                              : 'bg-[#F7F9FC] dark:bg-slate-700 text-[#4A5568] dark:text-slate-300 hover:bg-[#E4E9F0] dark:hover:bg-slate-600'
-                          }
-                        `}
-                      >
-                        <span className="flex items-center gap-2">
-                          <span
-                            className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors ${
-                              checked
-                                ? 'bg-[#007B5F] border-[#007B5F]'
-                                : 'border-[#E4E9F0] dark:border-slate-500'
-                            }`}
-                          >
-                            {checked && <Check className="w-3 h-3 text-white" />}
-                          </span>
-                          {feat}
-                        </span>
-                      </button>
-                    )
-                  })}
-                </div>
-                <input
-                  type="text"
-                  placeholder="Andere..."
-                  value={bestOther}
-                  onChange={e => setBestOther(e.target.value)}
-                  maxLength={200}
-                  className="mt-2 w-full text-sm bg-[#F7F9FC] dark:bg-slate-700 border border-[#E4E9F0] dark:border-slate-600 rounded-xl px-3 py-2 focus:outline-none focus:border-[#007B5F]/50 text-[#1A2B3C] dark:text-white placeholder:text-[#A0AEC0]"
-                />
-              </div>
-
-              {/* Improvements */}
-              <div>
-                <p className="text-sm font-medium text-[#1A2B3C] dark:text-white mb-3">
-                  Was sollten wir als Nächstes verbessern?
-                </p>
-                <div className="grid grid-cols-2 gap-2">
-                  {IMPROVE_OPTIONS.map(opt => {
-                    const checked = improvements.includes(opt)
-                    return (
-                      <button
-                        key={opt}
-                        onClick={() => toggleCheckbox(improvements, setImprovements, opt)}
-                        className={`
-                          text-left text-sm px-3 py-2.5 rounded-xl transition-all duration-150
-                          ${
-                            checked
-                              ? 'bg-[#F4A261]/10 dark:bg-[#F4A261]/30 ring-1 ring-[#F4A261] text-[#D68B3D] dark:text-amber-300 font-medium'
-                              : 'bg-[#F7F9FC] dark:bg-slate-700 text-[#4A5568] dark:text-slate-300 hover:bg-[#E4E9F0] dark:hover:bg-slate-600'
-                          }
-                        `}
-                      >
-                        <span className="flex items-center gap-2">
-                          <span
-                            className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors ${
-                              checked
-                                ? 'bg-[#F4A261] border-[#F4A261]'
-                                : 'border-[#E4E9F0] dark:border-slate-500'
-                            }`}
-                          >
-                            {checked && <Check className="w-3 h-3 text-white" />}
-                          </span>
-                          {opt}
-                        </span>
-                      </button>
-                    )
-                  })}
-                </div>
-                <input
-                  type="text"
-                  placeholder="Andere..."
-                  value={improveOther}
-                  onChange={e => setImproveOther(e.target.value)}
-                  maxLength={200}
-                  className="mt-2 w-full text-sm bg-[#F7F9FC] dark:bg-slate-700 border border-[#E4E9F0] dark:border-slate-600 rounded-xl px-3 py-2 focus:outline-none focus:border-[#F4A261]/50 text-[#1A2B3C] dark:text-white placeholder:text-[#A0AEC0]"
-                />
-              </div>
-            </div>
-          )}
-
-          {/* ═══ STEP 3: Open text ═══ */}
-          {step === 3 && (
-            <div
-              key="step3"
-              className={`p-5 space-y-4 ${
-                direction === 'forward'
-                  ? 'animate-[survey-slide-left_0.25s_ease-out]'
-                  : 'animate-[survey-slide-right_0.25s_ease-out]'
-              }`}
-            >
-              <p className="text-sm font-medium text-[#1A2B3C] dark:text-white">
-                Möchtest du noch etwas hinzufügen?
-              </p>
-              <p className="text-xs text-[#A0AEC0]">
-                Optional — alles was dir einfällt hilft uns weiter.
-              </p>
-              <textarea
-                value={openText}
-                onChange={e => setOpenText(e.target.value)}
-                placeholder="Dein Kommentar..."
-                maxLength={2000}
-                className="w-full h-32 text-sm bg-[#F7F9FC] dark:bg-slate-700 border border-[#E4E9F0] dark:border-slate-600 rounded-xl px-4 py-3 resize-none focus:outline-none focus:border-[#003A8C]/50 text-[#1A2B3C] dark:text-white placeholder:text-[#A0AEC0]"
-              />
-            </div>
-          )}
-
-          {/* ═══ STEP 4: Success ═══ */}
-          {step === 4 && (
-            <div className="p-8 text-center animate-scale-in">
-              <div className="relative inline-block mb-4">
-                <span className="text-5xl">🎉</span>
-                {/* Confetti dots */}
-                {Array.from({ length: 12 }).map((_, i) => (
-                  <span
-                    key={i}
-                    className="absolute w-2 h-2 rounded-full"
-                    style={{
-                      backgroundColor: ['#007B5F', '#F4A261', '#003A8C', '#00A896', '#D64545'][i % 5],
-                      top: '50%',
-                      left: '50%',
-                      animation: `confetti-burst 0.8s ease-out ${i * 0.04}s forwards`,
-                      opacity: 0,
-                      transform: `rotate(${i * 30}deg) translateY(0)`,
-                    }}
-                  />
-                ))}
-              </div>
-              <h3 className="text-xl font-bold text-[#1A2B3C] dark:text-white mb-1 font-display">
-                Danke!
-              </h3>
-              <p className="text-sm text-[#A0AEC0]">
-                Dein Feedback macht MedPrüf besser.
-              </p>
-            </div>
+              <ChevronLeft className="w-4 h-4" aria-hidden />
+              Zurück
+            </button>
           )}
         </div>
 
-        {/* ── Footer nav ── */}
-        {step < 4 && (
-          <div className="sticky bottom-0 px-5 py-4 border-t border-[#E4E9F0] dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center justify-between flex-shrink-0">
-            <div>
-              {step === 1 ? (
+        <div className="flex items-center gap-2">
+          {step < 3 ? (
+            <button
+              type="button"
+              onClick={() => goStep(step + 1)}
+              disabled={step === 1 && !step1Complete}
+              className="mp-btn mp-btn--primary"
+            >
+              Weiter
+              <ChevronRight className="w-4 h-4" aria-hidden />
+            </button>
+          ) : (
+            <>
+              {!openText.trim() && (
                 <button
-                  onClick={dismiss}
-                  className="text-xs text-[#A0AEC0] hover:text-[#4A5568] dark:hover:text-slate-300 transition-colors"
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={submitting}
+                  className="text-xs text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg-muted)] transition-colors disabled:opacity-40"
                 >
-                  Später
-                </button>
-              ) : (
-                <button
-                  onClick={() => goStep(step - 1)}
-                  className="flex items-center gap-1 text-sm text-[#4A5568] dark:text-slate-300 hover:text-[#1A2B3C] dark:hover:text-white transition-colors"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                  Zurück
+                  Überspringen
                 </button>
               )}
-            </div>
-
-            <div>
-              {step < 3 ? (
-                <button
-                  onClick={() => goStep(step + 1)}
-                  disabled={step === 1 && !step1Complete}
-                  className="flex items-center gap-1.5 px-5 py-2.5 bg-[#003A8C] text-white rounded-xl text-sm font-semibold hover:bg-[#003A8C]/90 transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  Weiter
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              ) : (
-                <div className="flex items-center gap-2">
-                  {!openText.trim() && (
-                    <button
-                      onClick={handleSubmit}
-                      disabled={submitting}
-                      className="text-xs text-[#A0AEC0] hover:text-[#4A5568] dark:hover:text-slate-300 transition-colors disabled:opacity-40"
-                    >
-                      Überspringen
-                    </button>
-                  )}
-                  <button
-                    onClick={handleSubmit}
-                    disabled={submitting}
-                    className="flex items-center gap-1.5 px-5 py-2.5 bg-[#007B5F] text-white rounded-xl text-sm font-semibold hover:bg-[#007B5F]/90 transition-all active:scale-[0.98] disabled:opacity-60"
-                  >
-                    {submitting ? (
-                      <span className="flex items-center gap-2">
-                        <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        Senden...
-                      </span>
-                    ) : (
-                      <>
-                        Absenden
-                        <Check className="w-4 h-4" />
-                      </>
-                    )}
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={submitting}
+                className="mp-btn mp-btn--success"
+              >
+                {submitting ? (
+                  <span className="flex items-center gap-2">
+                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    Senden...
+                  </span>
+                ) : (
+                  <>
+                    Absenden
+                    <Check className="w-4 h-4" aria-hidden />
+                  </>
+                )}
+              </button>
+            </>
+          )}
+        </div>
       </div>
+    )
+  }
 
-      {/* Keyframe animations injected via plain style tag (no styled-jsx) */}
+  return (
+    <Dialog
+      open={show}
+      onOpenChange={(next) => {
+        if (!next) dismiss()
+      }}
+      title={title}
+      description={description}
+      maxWidth="560px"
+      footer={footer}
+    >
+      {/* Progress bar */}
+      {step < 4 && (
+        <div className="mb-4">
+          <div className="flex items-center gap-1 mb-1">
+            <Sparkles className="w-4 h-4 text-[var(--mp-warning)]" aria-hidden />
+            <span className="text-[11px] uppercase tracking-wider text-[var(--mp-fg-subtle)] font-semibold">
+              Umfrage
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            {[1, 2, 3].map(s => (
+              <div
+                key={s}
+                className={`h-1.5 rounded-full flex-1 transition-all duration-300 ${
+                  s < step
+                    ? 'bg-[var(--mp-viridian)]'
+                    : s === step
+                      ? 'bg-[var(--mp-cta-blue)]'
+                      : 'bg-[var(--mp-border)]'
+                }`}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ═══ STEP 1: Ratings ═══ */}
+      {step === 1 && (
+        <div
+          key="step1"
+          className={`space-y-5 ${
+            direction === 'forward'
+              ? 'animate-[survey-slide-left_0.25s_ease-out]'
+              : 'animate-[survey-slide-right_0.25s_ease-out]'
+          }`}
+        >
+          <p className="text-sm text-[var(--mp-fg-muted)] leading-relaxed">
+            Danke{firstName ? `, ${firstName}` : ''}! Dein Feedback hilft uns,
+            MedPrüf besser zu machen.
+          </p>
+
+          {RATING_QUESTIONS.map((q, qi) => (
+            <div key={qi}>
+              <p className="text-sm font-medium text-[var(--mp-fg)] mb-2">
+                {q}
+              </p>
+              <div className="flex gap-2">
+                {RATING_LABELS.map((rl, ri) => {
+                  const value = ri + 1
+                  const selected = ratings[qi] === value
+                  return (
+                    <button
+                      key={ri}
+                      type="button"
+                      onClick={() => setRating(qi, value)}
+                      className={`
+                        flex-1 flex flex-col items-center gap-1 py-2.5 px-1 rounded-xl
+                        transition-all duration-150 min-h-[60px] min-w-[48px]
+                        ${
+                          selected
+                            ? 'bg-[var(--mp-cta-blue)]/10 ring-2 ring-[var(--mp-cta-blue)] scale-105'
+                            : 'bg-[var(--mp-surface-sunken)] hover:bg-[var(--mp-border)]'
+                        }
+                      `}
+                      aria-label={`${rl.label} (${value}/5)`}
+                    >
+                      <span className="text-xl leading-none">{rl.emoji}</span>
+                      <span
+                        className={`text-[10px] leading-tight ${
+                          selected
+                            ? 'text-[var(--mp-cta-blue)] font-semibold'
+                            : 'text-[var(--mp-fg-subtle)]'
+                        }`}
+                      >
+                        {rl.label}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ═══ STEP 2: Multi-select ═══ */}
+      {step === 2 && (
+        <div
+          key="step2"
+          className={`space-y-6 ${
+            direction === 'forward'
+              ? 'animate-[survey-slide-left_0.25s_ease-out]'
+              : 'animate-[survey-slide-right_0.25s_ease-out]'
+          }`}
+        >
+          {/* Best features */}
+          <div>
+            <p className="text-sm font-medium text-[var(--mp-fg)] mb-3">
+              Was findest du am besten an MedPrüf?
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {BEST_FEATURES.map(feat => {
+                const checked = bestFeatures.includes(feat)
+                return (
+                  <button
+                    key={feat}
+                    type="button"
+                    onClick={() => toggleCheckbox(bestFeatures, setBestFeatures, feat)}
+                    className={`
+                      text-left text-sm px-3 py-2.5 rounded-xl transition-all duration-150
+                      ${
+                        checked
+                          ? 'bg-[var(--mp-viridian)]/10 ring-1 ring-[var(--mp-viridian)] text-[var(--mp-viridian)] font-medium'
+                          : 'bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-muted)] hover:bg-[var(--mp-border)]'
+                      }
+                    `}
+                  >
+                    <span className="flex items-center gap-2">
+                      <span
+                        className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors ${
+                          checked
+                            ? 'bg-[var(--mp-viridian)] border-[var(--mp-viridian)]'
+                            : 'border-[var(--mp-border)]'
+                        }`}
+                      >
+                        {checked && <Check className="w-3 h-3 text-white" aria-hidden />}
+                      </span>
+                      {feat}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+            <input
+              type="text"
+              placeholder="Andere..."
+              value={bestOther}
+              onChange={e => setBestOther(e.target.value)}
+              maxLength={200}
+              className="mt-2 w-full text-sm bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)] rounded-xl px-3 py-2 focus:outline-none focus:border-[var(--mp-viridian)]/50 text-[var(--mp-fg)] placeholder:text-[var(--mp-fg-subtle)]"
+              aria-label="Andere Funktionen"
+            />
+          </div>
+
+          {/* Improvements */}
+          <div>
+            <p className="text-sm font-medium text-[var(--mp-fg)] mb-3">
+              Was sollten wir als Nächstes verbessern?
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {IMPROVE_OPTIONS.map(opt => {
+                const checked = improvements.includes(opt)
+                return (
+                  <button
+                    key={opt}
+                    type="button"
+                    onClick={() => toggleCheckbox(improvements, setImprovements, opt)}
+                    className={`
+                      text-left text-sm px-3 py-2.5 rounded-xl transition-all duration-150
+                      ${
+                        checked
+                          ? 'bg-[var(--mp-warning)]/10 ring-1 ring-[var(--mp-warning)] text-[var(--mp-warning-dk)] font-medium'
+                          : 'bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-muted)] hover:bg-[var(--mp-border)]'
+                      }
+                    `}
+                  >
+                    <span className="flex items-center gap-2">
+                      <span
+                        className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors ${
+                          checked
+                            ? 'bg-[var(--mp-warning)] border-[var(--mp-warning)]'
+                            : 'border-[var(--mp-border)]'
+                        }`}
+                      >
+                        {checked && <Check className="w-3 h-3 text-white" aria-hidden />}
+                      </span>
+                      {opt}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+            <input
+              type="text"
+              placeholder="Andere..."
+              value={improveOther}
+              onChange={e => setImproveOther(e.target.value)}
+              maxLength={200}
+              className="mt-2 w-full text-sm bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)] rounded-xl px-3 py-2 focus:outline-none focus:border-[var(--mp-warning)]/50 text-[var(--mp-fg)] placeholder:text-[var(--mp-fg-subtle)]"
+              aria-label="Andere Verbesserungen"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* ═══ STEP 3: Open text ═══ */}
+      {step === 3 && (
+        <div
+          key="step3"
+          className={`space-y-4 ${
+            direction === 'forward'
+              ? 'animate-[survey-slide-left_0.25s_ease-out]'
+              : 'animate-[survey-slide-right_0.25s_ease-out]'
+          }`}
+        >
+          <p className="text-sm font-medium text-[var(--mp-fg)]">
+            Möchtest du noch etwas hinzufügen?
+          </p>
+          <Textarea
+            label="Dein Kommentar"
+            hideLabel
+            helper="Optional — alles was dir einfällt hilft uns weiter."
+            value={openText}
+            onChange={e => setOpenText(e.target.value)}
+            placeholder="Dein Kommentar..."
+            maxLength={2000}
+            rows={6}
+          />
+        </div>
+      )}
+
+      {/* ═══ STEP 4: Success ═══ */}
+      {step === 4 && (
+        <div className="py-4 text-center animate-scale-in">
+          <div className="relative inline-block mb-4">
+            <span className="text-5xl">🎉</span>
+            {Array.from({ length: 12 }).map((_, i) => (
+              <span
+                key={i}
+                className="absolute w-2 h-2 rounded-full"
+                style={{
+                  backgroundColor: ['#007B5F', '#D68A3A', '#003A8C', '#00A896', '#D64545'][i % 5],
+                  top: '50%',
+                  left: '50%',
+                  animation: `confetti-burst 0.8s ease-out ${i * 0.04}s forwards`,
+                  opacity: 0,
+                  transform: `rotate(${i * 30}deg) translateY(0)`,
+                }}
+              />
+            ))}
+          </div>
+          <p className="text-sm text-[var(--mp-fg-subtle)]">
+            Dein Feedback macht MedPrüf besser.
+          </p>
+        </div>
+      )}
+
+      {/* Keyframe animations */}
       <style dangerouslySetInnerHTML={{ __html: `
         @keyframes confetti-burst {
           0% { opacity: 1; transform: rotate(var(--r, 0deg)) translateY(0) scale(1); }
@@ -546,6 +540,6 @@ export default function UserSurveyModal() {
           to { opacity: 1; transform: translateX(0); }
         }
       ` }} />
-    </div>
+    </Dialog>
   )
 }

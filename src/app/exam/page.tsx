@@ -1,13 +1,12 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef, Suspense } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo, Suspense } from "react";
 import { BrandedLoader } from "@/components/Logo";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { getTopicConfig, VIENNA_EXAM_PARTS } from "@/lib/topics";
 import { t, getLang, setLang } from "@/lib/i18n";
 import { getStoredSession } from "@/lib/auth";
-import { trackEvent, trackPageView } from "@/lib/tracker";
 import type { MCQOption } from "@/lib/mcq";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
@@ -17,7 +16,7 @@ import TopicIcon from "@/components/TopicIcon";
 import QuestionActions from "@/components/QuestionActions";
 import QuestionCard from "@/components/QuestionCard";
 import ImageLightbox from "@/components/ImageLightbox";
-import { GraduationCap, Clock, AlertTriangle, Search } from "lucide-react";
+import { GraduationCap, Clock, AlertTriangle, Search, Flag, Map as MapIcon, X, ChevronLeft, ChevronRight } from "lucide-react";
 
 type Lang = "de" | "en";
 type ExamPhase = "entry" | "loading" | "exam" | "results" | "review";
@@ -127,6 +126,8 @@ function ExamContent() {
   const [loadProgress, setLoadProgress] = useState(0);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [answers, setAnswers] = useState<Record<number, number[]>>({}); // questionIndex → selected option indices (multi-select)
+  const [flaggedIdxs, setFlaggedIdxs] = useState<Set<number>>(new Set()); // session-only flag state for minimap
+  const [onlyFlagged, setOnlyFlagged] = useState(false);
   const [timeLeft, setTimeLeft] = useState(EXAM_DURATION_S);
   const [reviewIdx, setReviewIdx] = useState(0);
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
@@ -134,7 +135,9 @@ function ExamContent() {
   const [customFilters, setCustomFilters] = useState<CustomFilters>(DEFAULT_CUSTOM_FILTERS);
   const [customCount, setCustomCount] = useState<number | null>(null);
   const [customCounting, setCustomCounting] = useState(false);
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const minimapRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setLangState(getLang());
@@ -216,6 +219,7 @@ function ExamContent() {
           if (ids.length === 0) {
             setQuestions([]);
             setAnswers({});
+            setFlaggedIdxs(new Set());
             setCurrentIdx(0);
             setTimeLeft(EXAM_DURATION_S);
             setPhase("exam");
@@ -317,6 +321,7 @@ function ExamContent() {
 
     setQuestions(grouped);
     setAnswers({});
+    setFlaggedIdxs(new Set());
     setCurrentIdx(0);
     setTimeLeft(EXAM_DURATION_S);
     setPhase("exam");
@@ -352,6 +357,15 @@ function ExamContent() {
     setPhase("results");
   };
 
+  const toggleFlag = useCallback((idx: number) => {
+    setFlaggedIdxs((prev) => {
+      const next = new Set(prev);
+      if (next.has(idx)) next.delete(idx);
+      else next.add(idx);
+      return next;
+    });
+  }, []);
+
   /**
    * Strict grading: a question is correct when the selected option indices
    * exactly match the set of correct option indices (full credit, no partial).
@@ -386,14 +400,31 @@ function ExamContent() {
   const overallPct = questions.length > 0 ? totalCorrect / questions.length : 0;
   const passed = overallPct >= PASS_THRESHOLD;
 
+  // Topic groups used by the sidebar navigator + minimap section headers.
+  // Memoized because it's derived from the (stable-per-load) questions array.
+  const topicGroups = useMemo(() => {
+    const groups: { topic: string; startIdx: number; count: number }[] = [];
+    let lastTopic = "";
+    for (let i = 0; i < questions.length; i++) {
+      const t = questions[i].topic || "Sonstige";
+      if (t !== lastTopic) {
+        groups.push({ topic: t, startIdx: i, count: 1 });
+        lastTopic = t;
+      } else {
+        groups[groups.length - 1].count++;
+      }
+    }
+    return groups;
+  }, [questions]);
+
   // ── ENTRY ──
   if (phase === "entry") {
     return (
       <div className="app-layout">
         <Sidebar lang={lang} userId={userId} userName={userName} />
-        <main className="main-content safe-area-top safe-area-bottom bg-[#F7F9FC]">
-          <div className="px-6 lg:px-10 pt-4 pb-2 flex items-center justify-between border-b border-[#E4E9F0]">
-            <Link href="/" className="text-[#A0AEC0] hover:text-[#1A2B3C] text-sm transition-colors">
+        <main className="main-content safe-area-top safe-area-bottom bg-[var(--mp-surface-sunken)]">
+          <div className="px-6 lg:px-10 pt-4 pb-2 flex items-center justify-between border-b border-[var(--mp-border)]">
+            <Link href="/" className="text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg)] text-sm transition-colors">
               ← {t("back_home", lang)}
             </Link>
             <div className="flex items-center gap-2">
@@ -405,11 +436,11 @@ function ExamContent() {
           <div className="flex flex-col items-center justify-center min-h-[calc(100vh-60px)] px-4 py-8">
             <div className="max-w-lg w-full">
               <div className="bg-gradient-to-r from-[#001B3D]/[0.04] to-[#007B5F]/[0.04] rounded-2xl p-6 text-center mb-8">
-                <div className="w-20 h-20 rounded-2xl border border-[#F4A261]/30 bg-[#F4A261]/10 flex items-center justify-center mx-auto mb-5">
-                  <GraduationCap className="w-10 h-10 text-[#F4A261]" />
+                <div className="w-20 h-20 rounded-2xl border border-[var(--mp-status-warning)]/30 bg-[var(--mp-status-warning)]/10 flex items-center justify-center mx-auto mb-5">
+                  <GraduationCap className="w-10 h-10 text-[var(--mp-status-warning)]" />
                 </div>
-                <h1 className="text-2xl font-bold text-[#1A2B3C] mb-2">{t("exam_sim_title", lang)}</h1>
-                <p className="text-[#A0AEC0] text-sm">{t("exam_sim_desc", lang)}</p>
+                <h1 className="mp-h2 mb-2">{t("exam_sim_title", lang)}</h1>
+                <p className="text-[var(--mp-fg-subtle)] text-sm">{t("exam_sim_desc", lang)}</p>
               </div>
 
               {/* Exam info cards — filtered by selected part (hidden in custom mode, replaced by filter panel) */}
@@ -429,8 +460,8 @@ function ExamContent() {
                         >
                           <TopicIcon name={cfg.icon} className="w-5 h-5" />
                           <div className="min-w-0">
-                            <p className="text-xs font-medium text-[#1A2B3C] truncate">{topic}</p>
-                            <p className="text-[10px] text-[#A0AEC0] font-mono">{count} {t("questions", lang)}</p>
+                            <p className="text-xs font-medium text-[var(--mp-fg)] truncate">{topic}</p>
+                            <p className="text-[10px] text-[var(--mp-fg-subtle)] font-mono">{count} {t("questions", lang)}</p>
                           </div>
                         </div>
                       );
@@ -442,7 +473,7 @@ function ExamContent() {
               {/* SIP part selector — only shown for SIP exam source */}
               {examSource === "kenntnispruefung" && (
                 <div className="mb-6">
-                  <p className="text-xs text-[#A0AEC0] font-semibold uppercase tracking-wider mb-2 text-center">
+                  <p className="text-xs text-[var(--mp-fg-subtle)] font-semibold uppercase tracking-wider mb-2 text-center">
                     {t("exam_part_selector", lang)}
                   </p>
                   <div className="grid grid-cols-4 gap-2">
@@ -452,8 +483,8 @@ function ExamContent() {
                         onClick={() => setSelectedPart(p)}
                         className={`py-3 rounded-2xl text-sm font-semibold border transition-colors ${
                           selectedPart === p
-                            ? "bg-[#F4A261] border-[#F4A261] text-[#1A0E00]"
-                            : "bg-[#FFFFFF] border-[#E4E9F0] text-[#4A5568] hover:border-[#F4A261]/40"
+                            ? "bg-[var(--mp-status-warning)] border-[var(--mp-status-warning)] text-[#1A0E00]"
+                            : "bg-[var(--mp-surface-raised)] border-[var(--mp-border)] text-[var(--mp-fg-muted)] hover:border-[var(--mp-status-warning)]/40"
                         }`}
                       >
                         {p === "all"
@@ -467,7 +498,7 @@ function ExamContent() {
                     ))}
                   </div>
                   {selectedPart === "sip4" || selectedPart === "sip5" ? (
-                    <p className="text-[10px] text-[#A0AEC0] text-center mt-2">
+                    <p className="text-[10px] text-[var(--mp-fg-subtle)] text-center mt-2">
                       {selectedPart === "sip4" ? t("sip4_label", lang) : t("sip5_label", lang)}
                       {" · "}
                       {EXAM_CONFIG.filter((c) =>
@@ -482,13 +513,13 @@ function ExamContent() {
               {/* Custom filter panel */}
               {selectedPart === "custom" && (
                 <div className="mb-6 card p-4 space-y-4">
-                  <p className="text-xs text-[#A0AEC0] font-semibold uppercase tracking-wider">
+                  <p className="text-xs text-[var(--mp-fg-subtle)] font-semibold uppercase tracking-wider">
                     {t("custom_exam_label", lang)}
                   </p>
 
                   {/* Subjects multi-select */}
                   <div>
-                    <label className="block text-xs font-semibold text-[#4A5568] mb-2">
+                    <label className="block text-xs font-semibold text-[var(--mp-fg-muted)] mb-2">
                       {t("custom_subjects", lang)}
                     </label>
                     <div className="grid grid-cols-2 gap-1.5">
@@ -499,8 +530,8 @@ function ExamContent() {
                             key={topic}
                             className={`flex items-center gap-2 px-2 py-1.5 rounded border cursor-pointer text-xs transition-colors ${
                               checked
-                                ? "bg-[#F4A261]/10 border-[#F4A261]/40 text-[#1A2B3C]"
-                                : "bg-[#F7F9FC] border-[#E4E9F0] text-[#4A5568] hover:border-[#F4A261]/30"
+                                ? "bg-[var(--mp-status-warning)]/10 border-[var(--mp-status-warning)]/40 text-[var(--mp-fg)]"
+                                : "bg-[var(--mp-surface-sunken)] border-[var(--mp-border)] text-[var(--mp-fg-muted)] hover:border-[var(--mp-status-warning)]/30"
                             }`}
                           >
                             <input
@@ -514,7 +545,7 @@ function ExamContent() {
                                     : f.subjects.filter((s) => s !== topic),
                                 }));
                               }}
-                              className="w-3 h-3 accent-[#F4A261]"
+                              className="w-3 h-3 accent-[var(--mp-status-warning)]"
                             />
                             <span className="truncate">{topic}</span>
                           </label>
@@ -525,7 +556,7 @@ function ExamContent() {
 
                   {/* Tags input */}
                   <div>
-                    <label className="block text-xs font-semibold text-[#4A5568] mb-1.5">
+                    <label className="block text-xs font-semibold text-[var(--mp-fg-muted)] mb-1.5">
                       {t("custom_tags", lang)}
                     </label>
                     <input
@@ -533,13 +564,13 @@ function ExamContent() {
                       value={customFilters.tags}
                       onChange={(e) => setCustomFilters((f) => ({ ...f, tags: e.target.value }))}
                       placeholder="cardio, sip4a"
-                      className="w-full px-3 py-2 text-xs border border-[#E4E9F0] rounded focus:outline-none focus:border-[#F4A261]"
+                      className="w-full px-3 py-2 text-xs border border-[var(--mp-border)] rounded focus:outline-none focus:border-[var(--mp-status-warning)]"
                     />
                   </div>
 
                   {/* Date range */}
                   <div>
-                    <label className="block text-xs font-semibold text-[#4A5568] mb-1.5">
+                    <label className="block text-xs font-semibold text-[var(--mp-fg-muted)] mb-1.5">
                       {t("custom_date_range", lang)}
                     </label>
                     <div className="flex items-center gap-2">
@@ -547,35 +578,35 @@ function ExamContent() {
                         type="month"
                         value={customFilters.dateFrom}
                         onChange={(e) => setCustomFilters((f) => ({ ...f, dateFrom: e.target.value }))}
-                        className="flex-1 px-3 py-2 text-xs border border-[#E4E9F0] rounded focus:outline-none focus:border-[#F4A261]"
+                        className="flex-1 px-3 py-2 text-xs border border-[var(--mp-border)] rounded focus:outline-none focus:border-[var(--mp-status-warning)]"
                       />
-                      <span className="text-xs text-[#A0AEC0]">—</span>
+                      <span className="text-xs text-[var(--mp-fg-subtle)]">—</span>
                       <input
                         type="month"
                         value={customFilters.dateTo}
                         onChange={(e) => setCustomFilters((f) => ({ ...f, dateTo: e.target.value }))}
-                        className="flex-1 px-3 py-2 text-xs border border-[#E4E9F0] rounded focus:outline-none focus:border-[#F4A261]"
+                        className="flex-1 px-3 py-2 text-xs border border-[var(--mp-border)] rounded focus:outline-none focus:border-[var(--mp-status-warning)]"
                       />
                     </div>
                   </div>
 
                   {/* Toggles */}
                   <div className="grid grid-cols-2 gap-2">
-                    <label className="flex items-center gap-2 px-3 py-2 rounded border border-[#E4E9F0] bg-[#F7F9FC] text-xs text-[#4A5568] cursor-pointer">
+                    <label className="flex items-center gap-2 px-3 py-2 rounded border border-[var(--mp-border)] bg-[var(--mp-surface-sunken)] text-xs text-[var(--mp-fg-muted)] cursor-pointer">
                       <input
                         type="checkbox"
                         checked={customFilters.bookmarksOnly}
                         onChange={(e) => setCustomFilters((f) => ({ ...f, bookmarksOnly: e.target.checked }))}
-                        className="w-3 h-3 accent-[#F4A261]"
+                        className="w-3 h-3 accent-[var(--mp-status-warning)]"
                       />
                       <span>{t("custom_bookmarks_only", lang)}</span>
                     </label>
-                    <label className="flex items-center gap-2 px-3 py-2 rounded border border-[#E4E9F0] bg-[#F7F9FC] text-xs text-[#4A5568] cursor-pointer">
+                    <label className="flex items-center gap-2 px-3 py-2 rounded border border-[var(--mp-border)] bg-[var(--mp-surface-sunken)] text-xs text-[var(--mp-fg-muted)] cursor-pointer">
                       <input
                         type="checkbox"
                         checked={customFilters.notesOnly}
                         onChange={(e) => setCustomFilters((f) => ({ ...f, notesOnly: e.target.checked }))}
-                        className="w-3 h-3 accent-[#F4A261]"
+                        className="w-3 h-3 accent-[var(--mp-status-warning)]"
                       />
                       <span>{t("custom_notes_only", lang)}</span>
                     </label>
@@ -583,7 +614,7 @@ function ExamContent() {
 
                   {/* Search */}
                   <div>
-                    <label className="block text-xs font-semibold text-[#4A5568] mb-1.5">
+                    <label className="block text-xs font-semibold text-[var(--mp-fg-muted)] mb-1.5">
                       {t("custom_search_label", lang)}
                     </label>
                     <input
@@ -591,14 +622,14 @@ function ExamContent() {
                       value={customFilters.search}
                       onChange={(e) => setCustomFilters((f) => ({ ...f, search: e.target.value }))}
                       placeholder={t("search_placeholder", lang)}
-                      className="w-full px-3 py-2 text-xs border border-[#E4E9F0] rounded focus:outline-none focus:border-[#F4A261]"
+                      className="w-full px-3 py-2 text-xs border border-[var(--mp-border)] rounded focus:outline-none focus:border-[var(--mp-status-warning)]"
                     />
                   </div>
 
                   {/* Exam size slider */}
                   <div>
-                    <label className="block text-xs font-semibold text-[#4A5568] mb-1.5">
-                      {t("custom_size", lang)}: <span className="font-mono text-[#F4A261]">{customFilters.limit}</span>
+                    <label className="block text-xs font-semibold text-[var(--mp-fg-muted)] mb-1.5">
+                      {t("custom_size", lang)}: <span className="font-mono text-[var(--mp-status-warning)]">{customFilters.limit}</span>
                     </label>
                     <input
                       type="range"
@@ -607,19 +638,19 @@ function ExamContent() {
                       step={10}
                       value={customFilters.limit}
                       onChange={(e) => setCustomFilters((f) => ({ ...f, limit: parseInt(e.target.value, 10) }))}
-                      className="w-full accent-[#F4A261]"
+                      className="w-full accent-[var(--mp-status-warning)]"
                     />
                   </div>
 
                   {/* Live count */}
-                  <div className="pt-3 border-t border-[#E4E9F0] text-center">
+                  <div className="pt-3 border-t border-[var(--mp-border)] text-center">
                     {customCounting ? (
-                      <p className="text-xs text-[#A0AEC0] font-mono">{t("custom_loading_count", lang)}</p>
+                      <p className="text-xs text-[var(--mp-fg-subtle)] font-mono">{t("custom_loading_count", lang)}</p>
                     ) : customCount === 0 ? (
-                      <p className="text-xs text-[#D64545] font-semibold">{t("custom_no_matches", lang)}</p>
+                      <p className="text-xs text-[var(--mp-error)] font-semibold">{t("custom_no_matches", lang)}</p>
                     ) : (
-                      <p className="text-xs text-[#4A5568]">
-                        <span className="font-mono font-bold text-[#F4A261] text-base">
+                      <p className="text-xs text-[var(--mp-fg-muted)]">
+                        <span className="font-mono font-bold text-[var(--mp-status-warning)] text-base">
                           ≈ {customCount ?? "—"}
                         </span>{" "}
                         {t("custom_matching", lang)}
@@ -630,8 +661,8 @@ function ExamContent() {
               )}
 
               {/* Pass threshold notice */}
-              <div className="bg-[#F4A261]/6 border border-[#F4A261]/25 rounded p-4 mb-6 text-center">
-                <p className="text-sm text-[#F4A261] flex items-center justify-center gap-1"><AlertTriangle className="w-4 h-4 inline" /> {t("pass_threshold", lang)}</p>
+              <div className="bg-[var(--mp-status-warning)]/6 border border-[var(--mp-status-warning)]/25 rounded p-4 mb-6 text-center">
+                <p className="text-sm text-[var(--mp-status-warning)] flex items-center justify-center gap-1"><AlertTriangle className="w-4 h-4 inline" /> {t("pass_threshold", lang)}</p>
               </div>
 
               <button
@@ -657,17 +688,17 @@ function ExamContent() {
   // ── LOADING ──
   if (phase === "loading") {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-[#F7F9FC] px-4">
+      <div className="flex flex-col items-center justify-center min-h-screen bg-[var(--mp-surface-sunken)] px-4">
         <div className="text-center animate-fade-in max-w-sm w-full">
-          <GraduationCap className="w-10 h-10 text-[#F4A261] mx-auto mb-4" />
-          <p className="text-[#4A5568] font-semibold mb-6">{t("exam_loading", lang)}</p>
-          <div className="bg-[#F7F9FC] rounded-full h-2 mb-3 overflow-hidden">
+          <GraduationCap className="w-10 h-10 text-[var(--mp-status-warning)] mx-auto mb-4" />
+          <p className="text-[var(--mp-fg-muted)] font-semibold mb-6">{t("exam_loading", lang)}</p>
+          <div className="bg-[var(--mp-surface-sunken)] rounded-full h-2 mb-3 overflow-hidden">
             <div
-              className="h-full bg-[#F4A261] rounded-full transition-all duration-300"
+              className="h-full bg-[var(--mp-status-warning)] rounded-full transition-all duration-300"
               style={{ width: `${loadProgress}%` }}
             />
           </div>
-          <p className="text-[#A0AEC0] text-sm font-mono">{loadProgress}%</p>
+          <p className="text-[var(--mp-fg-subtle)] text-sm font-mono">{loadProgress}%</p>
         </div>
       </div>
     );
@@ -684,15 +715,15 @@ function ExamContent() {
     return (
       <div className="app-layout">
         <Sidebar lang={lang} userId={userId} userName={userName} />
-        <main className="main-content safe-area-top safe-area-bottom bg-[#F7F9FC]">
-          <div className="px-6 lg:px-10 pt-4 pb-2 flex items-center justify-between border-b border-[#E4E9F0]">
+        <main className="main-content safe-area-top safe-area-bottom bg-[var(--mp-surface-sunken)]">
+          <div className="px-6 lg:px-10 pt-4 pb-2 flex items-center justify-between border-b border-[var(--mp-border)]">
             <button
               onClick={() => setPhase("results")}
-              className="text-[#A0AEC0] hover:text-[#1A2B3C] text-sm transition-colors"
+              className="text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg)] text-sm transition-colors"
             >
               ← {lang === "de" ? "Ergebnisse" : "Results"}
             </button>
-            <span className="text-xs text-[#A0AEC0] font-mono">
+            <span className="text-xs text-[var(--mp-fg-subtle)] font-mono">
               {reviewIdx + 1} / {questions.length}
             </span>
             <div className="flex items-center gap-2">
@@ -703,9 +734,9 @@ function ExamContent() {
 
           <div className="px-4 lg:px-8 py-4 max-w-3xl mx-auto">
             {/* Progress bar */}
-            <div className="h-1 bg-[#F7F9FC] rounded-full mb-6 overflow-hidden">
+            <div className="h-1 bg-[var(--mp-surface-sunken)] rounded-full mb-6 overflow-hidden">
               <div
-                className="h-full bg-[#007B5F] rounded-full transition-all"
+                className="h-full bg-[var(--mp-viridian)] rounded-full transition-all"
                 style={{ width: `${((reviewIdx + 1) / questions.length) * 100}%` }}
               />
             </div>
@@ -713,10 +744,10 @@ function ExamContent() {
             <div className="mb-2 flex items-center justify-end">
               <span className={`text-xs font-medium font-mono px-2 py-0.5 rounded ${
                 wasCorrect
-                  ? "bg-[#00A896]/15 text-[#00A896]"
+                  ? "bg-[var(--mp-accent-teal)]/15 text-[var(--mp-accent-teal)]"
                   : wasAnswered
-                  ? "bg-[#D64545]/15 text-[#D64545]"
-                  : "bg-[#F7F9FC] text-[#A0AEC0]"
+                  ? "bg-[var(--mp-error)]/15 text-[var(--mp-error)]"
+                  : "bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-subtle)]"
               }`}>
                 {!wasAnswered
                   ? t("unanswered", lang)
@@ -765,14 +796,14 @@ function ExamContent() {
               <button
                 onClick={() => setReviewIdx(Math.max(0, reviewIdx - 1))}
                 disabled={reviewIdx === 0}
-                className="flex-1 py-3 border border-[#E4E9F0] rounded text-[#4A5568] text-sm font-medium disabled:opacity-30 hover:border-[#007B5F]/40 transition-colors"
+                className="flex-1 py-3 border border-[var(--mp-border)] rounded text-[var(--mp-fg-muted)] text-sm font-medium disabled:opacity-30 hover:border-[var(--mp-viridian)]/40 transition-colors"
               >
                 ← {lang === "de" ? "Zurück" : "Previous"}
               </button>
               <button
                 onClick={() => setReviewIdx(Math.min(questions.length - 1, reviewIdx + 1))}
                 disabled={reviewIdx === questions.length - 1}
-                className="flex-1 py-3 border border-[#E4E9F0] rounded text-[#4A5568] text-sm font-medium disabled:opacity-30 hover:border-[#007B5F]/40 transition-colors"
+                className="flex-1 py-3 border border-[var(--mp-border)] rounded text-[var(--mp-fg-muted)] text-sm font-medium disabled:opacity-30 hover:border-[var(--mp-viridian)]/40 transition-colors"
               >
                 {lang === "de" ? "Weiter" : "Next"} →
               </button>
@@ -791,9 +822,9 @@ function ExamContent() {
     return (
       <div className="app-layout">
         <Sidebar lang={lang} userId={userId} userName={userName} />
-        <main className="main-content safe-area-top safe-area-bottom bg-[#F7F9FC]">
-          <div className="px-6 lg:px-10 pt-4 pb-2 flex items-center justify-between border-b border-[#E4E9F0]">
-            <Link href="/" className="text-[#A0AEC0] hover:text-[#1A2B3C] text-sm transition-colors">
+        <main className="main-content safe-area-top safe-area-bottom bg-[var(--mp-surface-sunken)]">
+          <div className="px-6 lg:px-10 pt-4 pb-2 flex items-center justify-between border-b border-[var(--mp-border)]">
+            <Link href="/" className="text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg)] text-sm transition-colors">
               ← {t("back_home", lang)}
             </Link>
             <div className="flex items-center gap-2">
@@ -803,27 +834,27 @@ function ExamContent() {
           </div>
 
           <div className="px-4 lg:px-8 py-6 max-w-2xl mx-auto">
-            <h1 className="text-xl font-bold text-[#1A2B3C] mb-6">{t("exam_finished", lang)}</h1>
+            <h1 className="mp-h2 mb-6">{t("exam_finished", lang)}</h1>
 
             {/* Overall result */}
             <div className={`rounded-2xl p-8 border mb-6 text-center animate-scale-in ${
               passed
-                ? "bg-[#00A896]/8 border-[#00A896]/40"
-                : "bg-[#D64545]/8 border-[#D64545]/40"
+                ? "bg-[var(--mp-accent-teal)]/8 border-[var(--mp-accent-teal)]/40"
+                : "bg-[var(--mp-error)]/8 border-[var(--mp-error)]/40"
             }`}>
-              <div className={`text-5xl font-black font-mono mb-2 ${passed ? "text-[#00A896]" : "text-[#D64545]"}`}>
+              <div className={`text-5xl font-black font-mono mb-2 ${passed ? "text-[var(--mp-accent-teal)]" : "text-[var(--mp-error)]"}`}>
                 {Math.round(overallPct * 100)}%
               </div>
-              <div className={`text-lg font-bold mb-2 ${passed ? "text-[#00A896]" : "text-[#D64545]"}`}>
+              <div className={`text-lg font-bold mb-2 ${passed ? "text-[var(--mp-accent-teal)]" : "text-[var(--mp-error)]"}`}>
                 {passed ? t("exam_passed", lang) : t("exam_failed", lang)}
               </div>
-              <p className="text-[#A0AEC0] text-sm font-mono">
+              <p className="text-[var(--mp-fg-subtle)] text-sm font-mono">
                 {totalCorrect} / {questions.length} {t("correct", lang)} · {t("pass_threshold", lang)}
               </p>
             </div>
 
             {/* Specialty breakdown */}
-            <h2 className="text-base font-semibold text-[#1A2B3C] mb-3">{t("specialty_results", lang)}</h2>
+            <h2 className="text-base font-semibold text-[var(--mp-fg)] mb-3">{t("specialty_results", lang)}</h2>
             <div className="space-y-2 mb-6">
               {topicResults
                 .sort((a, b) => b.total - a.total)
@@ -836,23 +867,23 @@ function ExamContent() {
                       <div className="flex items-center justify-between mb-1.5">
                         <div className="flex items-center gap-2">
                           <TopicIcon name={cfg.icon} className="w-4 h-4" />
-                          <span className="text-sm text-[#1A2B3C] font-medium">{topic}</span>
+                          <span className="text-sm text-[var(--mp-fg)] font-medium">{topic}</span>
                         </div>
-                        <span className={`text-sm font-bold font-mono ${topicPassed ? "text-[#00A896]" : "text-[#D64545]"}`}>
+                        <span className={`text-sm font-bold font-mono ${topicPassed ? "text-[var(--mp-accent-teal)]" : "text-[var(--mp-error)]"}`}>
                           {pct}%
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <div className="flex-1 bg-[#F7F9FC] rounded-full h-1.5 overflow-hidden">
+                        <div className="flex-1 bg-[var(--mp-surface-sunken)] rounded-full h-1.5 overflow-hidden">
                           <div
                             className="h-full rounded-full transition-all"
                             style={{
                               width: `${pct}%`,
-                              backgroundColor: topicPassed ? "#00A896" : pct >= 40 ? "#F4A261" : "#D64545",
+                              backgroundColor: topicPassed ? "#00A896" : pct >= 40 ? "#D68A3A" : "#D64545",
                             }}
                           />
                         </div>
-                        <span className="text-[10px] text-[#A0AEC0] font-mono w-14 text-right">
+                        <span className="text-[10px] text-[var(--mp-fg-subtle)] font-mono w-14 text-right">
                           {correct}/{total}
                         </span>
                       </div>
@@ -865,7 +896,7 @@ function ExamContent() {
             <div className="flex flex-col gap-3">
               <button
                 onClick={() => { setReviewIdx(0); setPhase("review"); }}
-                className="w-full py-3.5 border border-[#E4E9F0] rounded text-[#1A2B3C] font-medium hover:border-[#007B5F]/40 transition-colors"
+                className="w-full py-3.5 border border-[var(--mp-border)] rounded text-[var(--mp-fg)] font-medium hover:border-[var(--mp-viridian)]/40 transition-colors"
               >
                 <Search className="w-4 h-4 inline" /> {t("review_answers", lang)}
               </button>
@@ -883,163 +914,365 @@ function ExamContent() {
     );
   }
 
-  // ── EXAM ──
+  // ── EXAM ── (Exam-B: minimap sidebar + question pane)
   const q = questions[currentIdx];
   if (!q) return null;
   const selectedForQ = answers[currentIdx];
-  const qAnswered = selectedForQ !== undefined;
   const answeredCount = Object.keys(answers).length;
+  const flaggedCount = flaggedIdxs.size;
+  const unansweredCount = questions.length - answeredCount;
   const timerWarning = timeLeft < 600; // last 10 minutes
+  const currentFlagged = flaggedIdxs.has(currentIdx);
+
+  // Submit CTA variant — success when everything answered, secondary w/ count otherwise.
+  const submitClass = unansweredCount === 0 ? "mp-btn mp-btn--success" : "mp-btn mp-btn--secondary";
+  const submitLabel = unansweredCount === 0
+    ? t("exam_submit", lang)
+    : `${t("exam_submit", lang)} · ${unansweredCount} ${lang === "de" ? "offen" : "open"}`;
+
+  // Visible indices when "only flagged" filter is on.
+  const visibleIdxs = onlyFlagged
+    ? Array.from({ length: questions.length }, (_, i) => i).filter((i) => flaggedIdxs.has(i))
+    : Array.from({ length: questions.length }, (_, i) => i);
+
+  // Keyboard navigation on the minimap grid.
+  // Arrow keys move focus to the next/prev/row-up/row-down cell. Enter/Space jumps.
+  const handleMinimapKey = (e: React.KeyboardEvent<HTMLButtonElement>, idxInVisible: number) => {
+    const cols = 10;
+    let next = idxInVisible;
+    if (e.key === "ArrowRight") next = Math.min(visibleIdxs.length - 1, idxInVisible + 1);
+    else if (e.key === "ArrowLeft") next = Math.max(0, idxInVisible - 1);
+    else if (e.key === "ArrowDown") next = Math.min(visibleIdxs.length - 1, idxInVisible + cols);
+    else if (e.key === "ArrowUp") next = Math.max(0, idxInVisible - cols);
+    else if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      const targetIdx = visibleIdxs[idxInVisible];
+      if (targetIdx !== undefined) {
+        setCurrentIdx(targetIdx);
+        setMobileDrawerOpen(false);
+      }
+      return;
+    } else {
+      return;
+    }
+    e.preventDefault();
+    if (next !== idxInVisible) {
+      const target = minimapRef.current?.querySelector<HTMLButtonElement>(`[data-cell-idx="${visibleIdxs[next]}"]`);
+      target?.focus();
+    }
+  };
+
+  // Minimap cell — shared between desktop sidebar and mobile drawer.
+  // State priority: current > flagged > answered > unanswered.
+  const MinimapCell = ({ idx, idxInVisible }: { idx: number; idxInVisible: number }) => {
+    const isCurrent = idx === currentIdx;
+    const isAnswered = answers[idx] !== undefined;
+    const isFlagged = flaggedIdxs.has(idx);
+
+    let cellClasses = "aspect-square w-full min-w-[32px] lg:min-w-[34px] rounded-md font-mono text-[10px] font-bold flex items-center justify-center transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mp-viridian)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--mp-surface-raised)]";
+
+    if (isCurrent) {
+      cellClasses += " bg-[var(--mp-viridian)]/15 text-[var(--mp-viridian)] border-2 border-[var(--mp-viridian)] shadow-[0_0_0_3px_rgba(0,168,150,0.2)]";
+    } else if (isFlagged && isAnswered) {
+      cellClasses += " bg-[var(--mp-warning-bg)] text-[var(--mp-status-warning)] border border-[var(--mp-status-warning)] ring-1 ring-[var(--mp-status-warning)]/40";
+    } else if (isFlagged) {
+      cellClasses += " bg-[var(--mp-warning-bg)] text-[var(--mp-status-warning)] border-2 border-[var(--mp-status-warning)]";
+    } else if (isAnswered) {
+      cellClasses += " bg-[var(--mp-oxford-blue)] text-white border border-transparent hover:bg-[var(--mp-cta-blue)] dark:bg-[var(--mp-viridian)] dark:text-[var(--mp-oxford-blue-dk)] dark:hover:bg-[var(--mp-viridian-dk)]";
+    } else {
+      cellClasses += " bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-subtle)] border border-[var(--mp-border)] hover:border-[var(--mp-viridian)]/50 hover:text-[var(--mp-fg)]";
+    }
+
+    return (
+      <button
+        type="button"
+        data-cell-idx={idx}
+        onClick={() => {
+          setCurrentIdx(idx);
+          setMobileDrawerOpen(false);
+        }}
+        onKeyDown={(e) => handleMinimapKey(e, idxInVisible)}
+        className={cellClasses}
+        aria-label={`${lang === "de" ? "Frage" : "Question"} ${idx + 1}${isAnswered ? ` · ${t("answered", lang)}` : ""}${isFlagged ? ` · ${lang === "de" ? "markiert" : "flagged"}` : ""}`}
+        aria-current={isCurrent ? "true" : undefined}
+      >
+        {idx + 1}
+      </button>
+    );
+  };
+
+  // Shared sidebar content — rendered in desktop <aside> and mobile drawer.
+  const sidebarContent = (
+    <div className="flex flex-col h-full min-h-0">
+      {/* Header: title + timer */}
+      <div className="p-4 border-b border-[var(--mp-border-subtle)] flex-shrink-0">
+        <div className="flex items-center justify-between mb-3">
+          <div className="min-w-0">
+            <p className="mp-caption text-[var(--mp-fg-subtle)]">
+              {lang === "de" ? "Simulation" : "Simulation"}
+            </p>
+            <p className="text-sm font-bold text-[var(--mp-fg)] truncate">
+              {t("exam_sim_title", lang)}
+            </p>
+          </div>
+          {/* Mobile close button */}
+          <button
+            type="button"
+            onClick={() => setMobileDrawerOpen(false)}
+            className="lg:hidden p-1.5 rounded-md text-[var(--mp-fg-subtle)] hover:bg-[var(--mp-surface-sunken)] hover:text-[var(--mp-fg)] transition-colors"
+            aria-label={lang === "de" ? "Schließen" : "Close"}
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        {/* Timer */}
+        <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border font-mono text-sm font-bold tabular-nums ${
+          timerWarning
+            ? "bg-[var(--mp-error-bg)] border-[var(--mp-error)]/40 text-[var(--mp-error)] animate-pulse"
+            : "bg-[var(--mp-surface-sunken)] border-[var(--mp-border)] text-[var(--mp-fg)]"
+        }`}>
+          <Clock className="w-4 h-4 flex-shrink-0" />
+          <span className="mp-caption text-[10px] text-[var(--mp-fg-subtle)]">
+            {lang === "de" ? "Restzeit" : "Time left"}
+          </span>
+          <span className="ml-auto">{formatTime(timeLeft)}</span>
+        </div>
+      </div>
+
+      {/* Stats + current-question flag */}
+      <div className="p-4 border-b border-[var(--mp-border-subtle)] flex-shrink-0">
+        <h3 className="mp-caption text-[var(--mp-fg-subtle)] mb-2">
+          {lang === "de" ? "Status" : "Status"}
+        </h3>
+        <div className="space-y-1.5 mb-3">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-[var(--mp-fg-muted)]">{t("answered", lang)}</span>
+            <span className="font-mono font-bold text-[var(--mp-fg)] tabular-nums">
+              {answeredCount} / {questions.length}
+            </span>
+          </div>
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-[var(--mp-fg-muted)]">{lang === "de" ? "Markiert" : "Flagged"}</span>
+            <span className="font-mono font-bold text-[var(--mp-status-warning)] tabular-nums">{flaggedCount}</span>
+          </div>
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-[var(--mp-fg-muted)]">{lang === "de" ? "Offen" : "Open"}</span>
+            <span className="font-mono font-bold text-[var(--mp-fg-subtle)] tabular-nums">{unansweredCount}</span>
+          </div>
+        </div>
+        {/* Progress bar */}
+        <div className="h-1.5 bg-[var(--mp-surface-sunken)] border border-[var(--mp-border-subtle)] rounded-full overflow-hidden mb-3">
+          <div
+            className="h-full bg-[var(--mp-viridian)] rounded-full transition-all"
+            style={{ width: `${questions.length ? (answeredCount / questions.length) * 100 : 0}%` }}
+          />
+        </div>
+        {/* Flag toggle for current question */}
+        <button
+          type="button"
+          onClick={() => toggleFlag(currentIdx)}
+          className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-xs font-semibold transition-colors ${
+            currentFlagged
+              ? "bg-[var(--mp-warning-bg)] border-[var(--mp-status-warning)] text-[var(--mp-status-warning)]"
+              : "bg-[var(--mp-surface-sunken)] border-[var(--mp-border)] text-[var(--mp-fg-muted)] hover:border-[var(--mp-status-warning)]/40 hover:text-[var(--mp-status-warning)]"
+          }`}
+          aria-pressed={currentFlagged}
+        >
+          <Flag className={`w-3.5 h-3.5 ${currentFlagged ? "fill-current" : ""}`} />
+          <span className="font-mono">
+            {lang === "de" ? "F" : "Q"}
+            {currentIdx + 1}
+          </span>
+          <span>·</span>
+          <span>
+            {currentFlagged
+              ? lang === "de" ? "Markierung aufheben" : "Unflag"
+              : lang === "de" ? "Markieren" : "Flag"}
+          </span>
+        </button>
+      </div>
+
+      {/* Topics section — compact list, clicking jumps to first question of group */}
+      {topicGroups.length > 1 && (
+        <div className="p-4 border-b border-[var(--mp-border-subtle)] flex-shrink-0">
+          <h3 className="mp-caption text-[var(--mp-fg-subtle)] mb-2">
+            {lang === "de" ? "Fachgebiete" : "Topics"}
+          </h3>
+          <div className="space-y-1">
+            {topicGroups.map((g) => {
+              const groupAnswered = Array.from({ length: g.count }, (_, i) => answers[g.startIdx + i] !== undefined).filter(Boolean).length;
+              const isCurrentGroup = currentIdx >= g.startIdx && currentIdx < g.startIdx + g.count;
+              const topicConfig = getTopicConfig(g.topic);
+              return (
+                <button
+                  key={`${g.topic}-${g.startIdx}`}
+                  type="button"
+                  onClick={() => {
+                    setCurrentIdx(g.startIdx);
+                    setMobileDrawerOpen(false);
+                  }}
+                  className={`w-full text-left px-2 py-1.5 rounded-md flex items-center gap-2 transition-colors ${
+                    isCurrentGroup
+                      ? "bg-[var(--mp-viridian)]/10 text-[var(--mp-viridian)]"
+                      : "hover:bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-muted)]"
+                  }`}
+                >
+                  <TopicIcon name={topicConfig.icon} className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span className="text-xs font-medium truncate flex-1">{g.topic}</span>
+                  <span className="text-[10px] font-mono tabular-nums text-[var(--mp-fg-subtle)] flex-shrink-0">
+                    {groupAnswered}/{g.count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Minimap grid + legend — scrollable inner region */}
+      <div className="flex-1 min-h-0 overflow-y-auto p-4">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="mp-caption text-[var(--mp-fg-subtle)]">
+            {lang === "de" ? "Navigation" : "Navigation"}
+          </h3>
+          <button
+            type="button"
+            onClick={() => setOnlyFlagged((v) => !v)}
+            className={`text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded transition-colors ${
+              onlyFlagged
+                ? "bg-[var(--mp-status-warning)]/15 text-[var(--mp-status-warning)]"
+                : "text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg)]"
+            }`}
+            aria-pressed={onlyFlagged}
+          >
+            {onlyFlagged
+              ? lang === "de" ? "Alle zeigen" : "Show all"
+              : lang === "de" ? "Nur markierte" : "Only flagged"}
+          </button>
+        </div>
+        <div
+          ref={minimapRef}
+          role="grid"
+          aria-label={lang === "de" ? "Frage-Navigation" : "Question navigation"}
+          className="grid grid-cols-10 gap-1 mb-3"
+        >
+          {visibleIdxs.length === 0 ? (
+            <p className="col-span-10 text-center text-xs text-[var(--mp-fg-subtle)] py-6">
+              {lang === "de" ? "Keine markierten Fragen" : "No flagged questions"}
+            </p>
+          ) : (
+            visibleIdxs.map((idx, pos) => (
+              <MinimapCell key={idx} idx={idx} idxInVisible={pos} />
+            ))
+          )}
+        </div>
+
+        {/* Legend */}
+        <div className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] font-mono text-[var(--mp-fg-subtle)] mb-4">
+          <span className="inline-flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-sm bg-[var(--mp-oxford-blue)] dark:bg-[var(--mp-viridian)]" />
+            {lang === "de" ? "beantw." : "answered"}
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-sm border-2 border-[var(--mp-viridian)] bg-[var(--mp-viridian)]/15" />
+            {lang === "de" ? "aktuell" : "current"}
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-sm bg-[var(--mp-warning-bg)] border-2 border-[var(--mp-status-warning)]" />
+            {lang === "de" ? "markiert" : "flagged"}
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-sm bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)]" />
+            {lang === "de" ? "offen" : "open"}
+          </span>
+        </div>
+      </div>
+
+      {/* Submit CTA — sticky at sidebar bottom */}
+      <div className="p-4 border-t border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] flex-shrink-0">
+        <button
+          type="button"
+          onClick={() => setShowSubmitConfirm(true)}
+          className={`${submitClass} w-full justify-center`}
+        >
+          <GraduationCap className="w-4 h-4" />
+          {submitLabel}
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <div className="app-layout">
       <Sidebar lang={lang} userId={userId} userName={userName} />
-      <main className="main-content safe-area-top safe-area-bottom flex flex-col min-h-screen bg-[#F7F9FC]">
-        {/* Exam header */}
-        <div className="px-4 lg:px-8 pt-3 pb-2 border-b border-[#E4E9F0] flex-shrink-0">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-3">
-              <span className="text-xs text-[#A0AEC0] font-mono">
+      <main className="main-content safe-area-top safe-area-bottom flex flex-col min-h-screen bg-[var(--mp-surface-sunken)]">
+        {/* Compact exam topbar — always visible */}
+        <div className="px-4 lg:px-8 pt-3 pb-2 border-b border-[var(--mp-border)] flex-shrink-0 bg-[var(--mp-surface-raised)]">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 min-w-0">
+              {/* Mobile menu trigger */}
+              <button
+                type="button"
+                onClick={() => setMobileDrawerOpen(true)}
+                className="lg:hidden mp-btn mp-btn--ghost mp-btn--sm"
+                aria-label={lang === "de" ? "Navigation öffnen" : "Open navigation"}
+              >
+                <MapIcon className="w-4 h-4" />
+                <span className="font-mono text-xs">{answeredCount}/{questions.length}</span>
+              </button>
+              <span className="hidden lg:inline-flex items-center gap-1.5 text-xs text-[var(--mp-fg-subtle)] font-mono tabular-nums">
                 {t("q", lang)}{currentIdx + 1}/{questions.length}
               </span>
-              <span className="text-xs text-[#A0AEC0]">
-                ✓ {answeredCount}/{questions.length}
+              <span className="hidden lg:inline-flex items-center gap-1 text-xs text-[var(--mp-fg-subtle)] font-mono">
+                <span className="text-[var(--mp-viridian)]">✓</span> {answeredCount}
+                <span className="mx-1 text-[var(--mp-border)]">·</span>
+                <Flag className="w-3 h-3 text-[var(--mp-status-warning)]" /> {flaggedCount}
               </span>
             </div>
-            <div className="flex items-center gap-3">
-              <div className={`flex items-center gap-1.5 px-3 py-1 rounded border font-mono text-sm font-bold ${
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border font-mono text-sm font-bold tabular-nums lg:hidden ${
                 timerWarning
-                  ? "bg-[#D64545]/10 border-[#D64545]/30 text-[#D64545] animate-pulse"
-                  : "bg-[#F7F9FC] border-[#E4E9F0] text-[#1A2B3C]"
+                  ? "bg-[var(--mp-error-bg)] border-[var(--mp-error)]/30 text-[var(--mp-error)] animate-pulse"
+                  : "bg-[var(--mp-surface-sunken)] border-[var(--mp-border)] text-[var(--mp-fg)]"
               }`}>
-                <Clock className="w-4 h-4 inline" /> {formatTime(timeLeft)}
+                <Clock className="w-3.5 h-3.5" />
+                {formatTime(timeLeft)}
               </div>
               <ThemeToggle />
               <LanguageToggle lang={lang} onChange={switchLang} />
             </div>
           </div>
           {/* Progress bar */}
-          <div className="h-1 bg-[#F7F9FC] rounded-full overflow-hidden">
+          <div className="h-1 bg-[var(--mp-surface-sunken)] rounded-full overflow-hidden mt-2">
             <div
-              className="h-full bg-[#F4A261] rounded-full transition-all duration-300"
+              className="h-full bg-[var(--mp-viridian)] rounded-full transition-all duration-300"
               style={{ width: `${((currentIdx + 1) / questions.length) * 100}%` }}
             />
           </div>
         </div>
 
-        {/* Exam body: 2-column on desktop (navigator left, question right) */}
+        {/* Exam body: minimap sidebar (desktop) + question pane */}
         <div className="flex-1 flex overflow-hidden">
-          {/* Left panel: Topic-based navigator — hidden on mobile, shown on lg+ */}
-          <div className="hidden lg:flex flex-col w-64 flex-shrink-0 border-r border-[#E4E9F0] dark:border-white/[0.06] bg-[#F7F9FC] dark:bg-[#0F172A] overflow-y-auto">
-            <div className="p-3 border-b border-[#E4E9F0] dark:border-white/[0.06]">
-              <p className="text-[10px] uppercase tracking-wider text-[#A0AEC0] font-semibold">
-                {lang === "de" ? "Fortschritt" : "Progress"}: {answeredCount}/{questions.length}
-              </p>
-              <div className="h-1.5 bg-[#E4E9F0] dark:bg-white/10 rounded-full mt-1.5 overflow-hidden">
-                <div className="h-full bg-[#003A8C] rounded-full transition-all" style={{ width: `${questions.length ? (answeredCount / questions.length) * 100 : 0}%` }} />
-              </div>
-            </div>
-            {(() => {
-              // Build topic groups from the question array (already grouped by topic)
-              const groups: { topic: string; startIdx: number; count: number }[] = [];
-              let lastTopic = "";
-              for (let i = 0; i < questions.length; i++) {
-                const t = questions[i].topic || "Sonstige";
-                if (t !== lastTopic) {
-                  groups.push({ topic: t, startIdx: i, count: 1 });
-                  lastTopic = t;
-                } else {
-                  groups[groups.length - 1].count++;
-                }
-              }
-              // Which group is current?
-              const currentGroup = groups.findIndex(g => currentIdx >= g.startIdx && currentIdx < g.startIdx + g.count);
-              return groups.map((g, gi) => {
-                const groupAnswered = Array.from({ length: g.count }, (_, i) => answers[g.startIdx + i] !== undefined).filter(Boolean).length;
-                const isCurrentGroup = gi === currentGroup;
-                const pct = g.count > 0 ? Math.round((groupAnswered / g.count) * 100) : 0;
-                const topicConfig = getTopicConfig(g.topic);
-                return (
-                  <div key={`${g.topic}-${g.startIdx}`} className="border-b border-[#E4E9F0] dark:border-white/[0.06] last:border-b-0">
-                    {/* Topic header — always visible, clickable to jump to first question */}
-                    <button
-                      onClick={() => setCurrentIdx(g.startIdx)}
-                      className={`w-full text-left px-3 py-2.5 flex items-center gap-2 transition-colors ${
-                        isCurrentGroup ? "bg-[#003A8C]/8 dark:bg-[#3A7CA5]/10" : "hover:bg-[#F7F9FC] dark:hover:bg-white/5"
-                      }`}
-                    >
-                      <TopicIcon name={topicConfig.icon} className="w-4 h-4 flex-shrink-0" style={{ color: topicConfig.color }} />
-                      <div className="flex-1 min-w-0">
-                        <p className={`text-xs font-medium truncate ${isCurrentGroup ? "text-[#003A8C] dark:text-[#3A7CA5]" : "text-[#4A5568] dark:text-[#A0AEC0]"}`}>
-                          {g.topic}
-                        </p>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <div className="flex-1 h-1 bg-[#E4E9F0] dark:bg-white/10 rounded-full overflow-hidden">
-                            <div className="h-full bg-[#003A8C] rounded-full transition-all" style={{ width: `${pct}%` }} />
-                          </div>
-                          <span className="text-[9px] font-mono text-[#A0AEC0] flex-shrink-0">{groupAnswered}/{g.count}</span>
-                        </div>
-                      </div>
-                    </button>
-                    {/* Expanded question numbers — only for current group */}
-                    {isCurrentGroup && (
-                      <div className="px-3 pb-2 flex flex-wrap gap-1">
-                        {Array.from({ length: g.count }, (_, i) => {
-                          const idx = g.startIdx + i;
-                          const isAnswered = answers[idx] !== undefined;
-                          const isCurrent = idx === currentIdx;
-                          return (
-                            <button
-                              key={idx}
-                              onClick={() => setCurrentIdx(idx)}
-                              className={`w-6 h-6 rounded text-[8px] font-mono flex items-center justify-center transition-all ${
-                                isCurrent
-                                  ? "bg-[#003A8C] text-white ring-1 ring-[#003A8C]"
-                                  : isAnswered
-                                  ? "bg-[#003A8C]/15 text-[#003A8C]"
-                                  : "bg-white dark:bg-white/5 text-[#A0AEC0] border border-[#E4E9F0] dark:border-white/10"
-                              }`}
-                            >
-                              {idx + 1}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                );
-              });
-            })()}
-          </div>
+          {/* Desktop sidebar — .mp-card styling, 300px wide */}
+          <aside className="hidden lg:flex flex-col w-[300px] flex-shrink-0 border-r border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] overflow-hidden">
+            {sidebarContent}
+          </aside>
 
-          {/* Right panel: question content + navigation */}
+          {/* Main question pane */}
           <div className="flex-1 flex flex-col overflow-y-auto">
-            {/* Mobile-only: compact horizontal question navigator */}
-            <div className="lg:hidden px-4 pt-3">
-              <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto">
-                {questions.map((_, idx) => {
-                  const isAnswered = answers[idx] !== undefined;
-                  const isCurrent = idx === currentIdx;
-                  return (
-                    <button
-                      key={idx}
-                      onClick={() => setCurrentIdx(idx)}
-                      className={`w-6 h-6 rounded text-[8px] font-mono flex-shrink-0 flex items-center justify-center ${
-                        isCurrent
-                          ? "bg-[#003A8C] text-white"
-                          : isAnswered
-                          ? "bg-[#003A8C]/15 text-[#003A8C]"
-                          : "bg-[#F7F9FC] text-[#A0AEC0] border border-[#E4E9F0]"
-                      }`}
-                    >
-                      {idx + 1}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
             <div className="px-4 lg:px-8 py-4 max-w-3xl w-full mx-auto">
+              {/* Question category pill — echoes alt-exam.html b-cat */}
+              <div className="flex items-center justify-between mb-3">
+                <span className="mp-caption text-[var(--mp-fg-subtle)] font-mono tabular-nums">
+                  {t("q", lang)}{currentIdx + 1} / {questions.length}
+                </span>
+                {q.topic && (
+                  <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-[var(--mp-viridian)]/10 text-[var(--mp-viridian)] truncate max-w-[60%]">
+                    {q.topic}
+                  </span>
+                )}
+              </div>
+
               <div className="mb-4">
                 <QuestionCard
                   key={`active-${q.id}`}
@@ -1061,58 +1294,125 @@ function ExamContent() {
                 <ImageLightbox src={lightboxSrc} alt="Medizinische Abbildung" onClose={() => setLightboxSrc(null)} />
               )}
 
-              {/* Navigation */}
-              <div className="flex gap-2 mb-4">
+              {/* Navigation bar — flag + prev/next */}
+              <div className="flex items-center justify-between gap-2 mb-4">
                 <button
-                  onClick={() => setCurrentIdx(Math.max(0, currentIdx - 1))}
-                  disabled={currentIdx === 0}
-                  className="flex-1 py-3 border border-[#E4E9F0] rounded-xl text-[#4A5568] text-sm font-medium disabled:opacity-30 hover:border-[#007B5F]/40 transition-colors"
+                  type="button"
+                  onClick={() => toggleFlag(currentIdx)}
+                  className={`inline-flex items-center gap-2 px-3 py-2.5 rounded-lg border text-sm font-semibold transition-colors ${
+                    currentFlagged
+                      ? "bg-[var(--mp-warning-bg)] border-[var(--mp-status-warning)] text-[var(--mp-status-warning)]"
+                      : "bg-[var(--mp-surface-raised)] border-[var(--mp-border)] text-[var(--mp-fg-muted)] hover:border-[var(--mp-status-warning)]/40 hover:text-[var(--mp-status-warning)]"
+                  }`}
+                  aria-pressed={currentFlagged}
                 >
-                  ← {lang === "de" ? "Zurück" : "Back"}
+                  <Flag className={`w-4 h-4 ${currentFlagged ? "fill-current" : ""}`} />
+                  <span className="hidden sm:inline">
+                    {currentFlagged
+                      ? lang === "de" ? `Markiert (${flaggedCount})` : `Flagged (${flaggedCount})`
+                      : lang === "de" ? "Markieren" : "Flag"}
+                  </span>
                 </button>
-                <button
-                  onClick={() => setCurrentIdx(Math.min(questions.length - 1, currentIdx + 1))}
-                  disabled={currentIdx === questions.length - 1}
-                  className="flex-1 py-3 bg-[#007B5F]/12 border border-[#007B5F]/25 rounded-xl text-[#007B5F] text-sm font-medium disabled:opacity-30 hover:bg-[#007B5F]/20 transition-colors"
-                >
-                  {lang === "de" ? "Weiter" : "Next"} →
-                </button>
+                <div className="flex gap-2 flex-1 max-w-sm">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentIdx(Math.max(0, currentIdx - 1))}
+                    disabled={currentIdx === 0}
+                    className="flex-1 py-2.5 border border-[var(--mp-border)] rounded-lg text-[var(--mp-fg-muted)] text-sm font-medium disabled:opacity-30 disabled:cursor-not-allowed hover:border-[var(--mp-viridian)]/40 hover:text-[var(--mp-fg)] transition-colors inline-flex items-center justify-center gap-1"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    <span className="font-mono tabular-nums text-xs">
+                      {currentIdx > 0 ? currentIdx : ""}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentIdx(Math.min(questions.length - 1, currentIdx + 1))}
+                    disabled={currentIdx === questions.length - 1}
+                    className="flex-1 py-2.5 bg-[var(--mp-oxford-blue)] text-white rounded-lg text-sm font-semibold disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[var(--mp-cta-blue)] dark:bg-[var(--mp-viridian)] dark:text-[var(--mp-oxford-blue-dk)] dark:hover:bg-[var(--mp-viridian-dk)] transition-colors inline-flex items-center justify-center gap-1"
+                  >
+                    <span className="font-mono tabular-nums text-xs">
+                      {currentIdx < questions.length - 1 ? currentIdx + 2 : ""}
+                    </span>
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Submit bar */}
-        <div className="px-4 lg:px-8 py-3 border-t border-[#E4E9F0] glass flex-shrink-0">
-          <div className="max-w-3xl mx-auto flex items-center justify-between">
-            <span className="text-xs text-[#A0AEC0] font-mono">
-              {answeredCount}/{questions.length} {t("answered", lang)}
-            </span>
+        {/* Mobile drawer (slide-up) — replaces old horizontal strip + bottom submit bar */}
+        {mobileDrawerOpen && (
+          <div
+            className="lg:hidden fixed inset-0 z-50 flex"
+            role="dialog"
+            aria-modal="true"
+            aria-label={lang === "de" ? "Prüfungs-Navigation" : "Exam navigation"}
+          >
             <button
-              onClick={() => setShowSubmitConfirm(true)}
-              className="btn-primary px-5 py-2.5 text-sm"
+              type="button"
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              onClick={() => setMobileDrawerOpen(false)}
+              aria-label={lang === "de" ? "Schließen" : "Close"}
+            />
+            <div className="relative w-full max-w-sm ml-auto h-full bg-[var(--mp-surface-raised)] shadow-[var(--mp-shadow-modal)] animate-slide-up flex flex-col">
+              {sidebarContent}
+            </div>
+          </div>
+        )}
+
+        {/* Mobile submit bar — always visible when drawer is closed */}
+        <div className="lg:hidden px-4 py-3 border-t border-[var(--mp-border)] bg-[var(--mp-surface-raised)] flex-shrink-0">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => toggleFlag(currentIdx)}
+              className={`p-2.5 rounded-lg border transition-colors ${
+                currentFlagged
+                  ? "bg-[var(--mp-warning-bg)] border-[var(--mp-status-warning)] text-[var(--mp-status-warning)]"
+                  : "border-[var(--mp-border)] text-[var(--mp-fg-muted)]"
+              }`}
+              aria-label={currentFlagged ? (lang === "de" ? "Markierung aufheben" : "Unflag") : (lang === "de" ? "Markieren" : "Flag")}
+              aria-pressed={currentFlagged}
             >
-              {t("exam_submit", lang)}
+              <Flag className={`w-4 h-4 ${currentFlagged ? "fill-current" : ""}`} />
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowSubmitConfirm(true)}
+              className={`${submitClass} flex-1 justify-center`}
+            >
+              {submitLabel}
             </button>
           </div>
         </div>
 
         {/* Submit confirm modal */}
         {showSubmitConfirm && (
-          <div className="fixed inset-0 z-50 bg-[#F7F9FC]/80 flex items-center justify-center px-4">
-            <div className="card p-6 max-w-sm w-full animate-scale-in">
-              <p className="text-[#1A2B3C] font-semibold mb-2">{t("exam_submit", lang)}</p>
-              <p className="text-[#A0AEC0] text-sm mb-5">{t("exam_submit_confirm", lang)}</p>
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center px-4">
+            <div className="mp-card p-6 max-w-sm w-full animate-scale-in">
+              <p className="mp-h3 mb-2">{t("exam_submit", lang)}</p>
+              <p className="text-[var(--mp-fg-muted)] text-sm mb-2">{t("exam_submit_confirm", lang)}</p>
+              {unansweredCount > 0 && (
+                <p className="text-xs text-[var(--mp-status-warning)] font-mono mb-4">
+                  <AlertTriangle className="w-3 h-3 inline mr-1" />
+                  {unansweredCount} {lang === "de" ? "Fragen offen" : "questions open"}
+                </p>
+              )}
+              {unansweredCount === 0 && <div className="mb-4" />}
               <div className="flex gap-3">
                 <button
+                  type="button"
                   onClick={() => setShowSubmitConfirm(false)}
-                  className="flex-1 py-2.5 border border-[#E4E9F0] rounded text-[#4A5568] text-sm hover:border-[#007B5F]/40 transition-colors"
+                  className="mp-btn mp-btn--secondary flex-1 justify-center"
                 >
                   {t("cancel", lang)}
                 </button>
                 <button
+                  type="button"
                   onClick={handleSubmitExam}
-                  className="flex-1 py-2.5 bg-[#003A8C] text-white rounded font-bold text-sm hover:bg-[#003A8C]/90 transition-colors"
+                  className="mp-btn mp-btn--primary flex-1 justify-center"
                 >
                   {t("exam_submit", lang)}
                 </button>
@@ -1129,7 +1429,7 @@ function ExamContent() {
 export default function ExamPage() {
   return (
     <Suspense fallback={
-      <div className="flex items-center justify-center min-h-screen bg-[#F7F9FC]">
+      <div className="flex items-center justify-center min-h-screen bg-[var(--mp-surface-sunken)]">
         <BrandedLoader />
       </div>
     }>

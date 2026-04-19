@@ -34,11 +34,23 @@ export default function TopicCard({ topic, count, userId, lang, accuracy, answer
   if (examSource) params.set('examSource', examSource);
   const href = `/quiz?${params.toString()}`;
 
+  // Compose an accessible label — screen readers get topic + count + accuracy at once.
+  const accuracyPart =
+    accuracy !== undefined && accuracy > 0
+      ? `, ${Math.round(Math.min(accuracy, 100))}% ${lang === "de" ? "Genauigkeit" : "accuracy"}`
+      : "";
+  const answeredPart =
+    answered !== undefined && answered > 0
+      ? `, ${answered} ${lang === "de" ? "von" : "of"} ${count} ${lang === "de" ? "bearbeitet" : "practiced"}`
+      : "";
+  const ariaLabel = `${topic}, ${count.toLocaleString("de-DE")} ${t("questions", lang)}${accuracyPart}${answeredPart}`;
+
   return (
     <Link
       href={href}
       className="card-interactive block rounded-2xl p-6 group"
       style={{ animationDelay: `${delay}ms` }}
+      aria-label={ariaLabel}
     >
       {/* Icon — direct, no background */}
       <div className="flex items-start justify-between mb-3">
@@ -48,10 +60,10 @@ export default function TopicCard({ topic, count, userId, lang, accuracy, answer
             <span
               className={`text-[11px] font-semibold font-mono px-2 py-0.5 rounded-lg ${
                 accuracy >= 70
-                  ? "bg-[#00A896]/12 text-[#00A896]"
+                  ? "bg-[var(--mp-accent-teal)]/12 text-[var(--mp-accent-teal)]"
                   : accuracy >= 40
-                  ? "bg-[#F4A261]/12 text-[#F4A261]"
-                  : "bg-[#D64545]/12 text-[#D64545]"
+                  ? "bg-[var(--mp-status-warning)]/12 text-[var(--mp-status-warning)]"
+                  : "bg-[var(--mp-error)]/12 text-[var(--mp-error)]"
               }`}
               title={`${lang === "de" ? "Dieses Thema zu verbessern erhöht deine Gesamtnote um" : "Improving this topic increases your overall score by"} ~${Math.round(100 / 10)}%`}
             >
@@ -59,8 +71,8 @@ export default function TopicCard({ topic, count, userId, lang, accuracy, answer
             </span>
             {/* Strength badge */}
             <div className="flex items-center gap-1.5">
-              <span className={`w-2 h-2 rounded-full ${accuracy >= 80 ? 'bg-[#00A896]' : accuracy >= 40 ? 'bg-[#F4A261]' : 'bg-[#D64545]'}`} />
-              <span className={`text-[10px] font-semibold ${accuracy >= 80 ? 'text-[#00A896]' : accuracy >= 40 ? 'text-[#F4A261]' : 'text-[#D64545]'}`}>
+              <span className={`w-2 h-2 rounded-full ${accuracy >= 80 ? 'bg-[var(--mp-accent-teal)]' : accuracy >= 40 ? 'bg-[var(--mp-status-warning)]' : 'bg-[var(--mp-error)]'}`} />
+              <span className={`text-[10px] font-semibold ${accuracy >= 80 ? 'text-[var(--mp-accent-teal)]' : accuracy >= 40 ? 'text-[var(--mp-status-warning)]' : 'text-[var(--mp-error)]'}`}>
                 {accuracy >= 80
                   ? (lang === "de" ? "Stark" : "Strong")
                   : accuracy >= 40
@@ -73,33 +85,33 @@ export default function TopicCard({ topic, count, userId, lang, accuracy, answer
       </div>
 
       {/* Topic name — truncated with tooltip */}
-      <h3 className="text-[15px] font-semibold leading-snug mb-1 text-[#1A2B3C] line-clamp-2 min-h-[2.5rem]" title={topic}>
+      <h3 className="text-[15px] font-semibold leading-snug mb-1 text-[var(--mp-fg)] line-clamp-2 min-h-[2.5rem]" title={topic}>
         {topic}
       </h3>
 
       {/* Question count */}
-      <p className="text-xs text-[#A0AEC0] mb-0.5 font-mono">
+      <p className="text-xs text-[var(--mp-fg-subtle)] mb-0.5 font-mono">
         {count.toLocaleString("de-DE")} {t("questions", lang)}
       </p>
       {lastStudied && (
-        <p className="text-[10px] text-[#A0AEC0]/70 mb-0.5">{getRelativeTime(lastStudied, lang)}</p>
+        <p className="text-[10px] text-[var(--mp-fg-subtle)]/70 mb-0.5">{getRelativeTime(lastStudied, lang)}</p>
       )}
       {answered !== undefined && answered > 0 && (
-        <p className="text-[10px] text-[#A0AEC0]/70 mb-0.5 font-mono">
+        <p className="text-[10px] text-[var(--mp-fg-subtle)]/70 mb-0.5 font-mono">
           {answered}/{count} {lang === "de" ? "bearbeitet" : "practiced"}
         </p>
       )}
 
       {/* Fix now link for weak topics */}
       {accuracy !== undefined && accuracy > 0 && accuracy < 60 && (
-        <p className="text-[11px] font-semibold text-[#D64545] mb-2 hover:underline">
+        <p className="text-[11px] font-semibold text-[var(--mp-error)] mb-2 hover:underline">
           {lang === "de" ? "Jetzt verbessern" : "Fix now"} →
         </p>
       )}
       {(accuracy === undefined || accuracy === 0 || accuracy >= 60) && <div className="mb-3" />}
 
       {/* Progress bar — based on completion (answered/total), not accuracy */}
-      <div className="h-1.5 bg-[#F7F9FC] rounded-full overflow-hidden">
+      <div className="h-1.5 bg-[var(--mp-surface-sunken)] rounded-full overflow-hidden">
         <div
           className="h-full rounded-full animate-progress"
           style={{

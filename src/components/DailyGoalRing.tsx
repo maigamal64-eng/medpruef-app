@@ -39,15 +39,15 @@ export default function DailyGoalRing({ current, goal, lang }: DailyGoalRingProp
             />
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-2xl font-black text-[#1A2B3C] font-mono">{current}</span>
-            <span className="text-xs text-[#A0AEC0]">{pctText}%</span>
+            <span className="text-2xl font-black text-[var(--mp-fg)] font-mono">{current}</span>
+            <span className="text-xs text-[var(--mp-fg-subtle)]">{pctText}%</span>
           </div>
         </div>
         <div>
-          <p className="text-sm font-semibold text-[#1A2B3C] mb-1">{t("daily_progress", lang)}</p>
-          <p className="text-xs text-[#4A5568]">{t("questions_today", lang)}</p>
+          <p className="text-sm font-semibold text-[var(--mp-fg)] mb-1">{t("daily_progress", lang)}</p>
+          <p className="text-xs text-[var(--mp-fg-muted)]">{t("questions_today", lang)}</p>
           {progress >= 1 && (
-            <span className="inline-block mt-2 text-xs font-medium text-[#00A896] bg-[#00A896]/10 px-2 py-0.5 rounded border border-[#00A896]/20">
+            <span className="inline-block mt-2 text-xs font-medium text-[var(--mp-accent-teal)] bg-[var(--mp-accent-teal)]/10 px-2 py-0.5 rounded border border-[var(--mp-accent-teal)]/20">
               {t("correct", lang)}!
             </span>
           )}

@@ -84,10 +84,10 @@ export default function ResumeSessionCard({ userId, lang }: Props) {
     return (
       <div className="card rounded-2xl p-5 mb-6 animate-pulse">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#E4E9F0] dark:bg-[#334155]" />
+          <div className="w-10 h-10 rounded-xl bg-[var(--mp-border)]" />
           <div className="flex-1">
-            <div className="h-4 w-2/3 bg-[#E4E9F0] dark:bg-[#334155] rounded mb-2" />
-            <div className="h-3 w-1/3 bg-[#E4E9F0] dark:bg-[#334155] rounded" />
+            <div className="h-4 w-2/3 bg-[var(--mp-border)] rounded mb-2" />
+            <div className="h-3 w-1/3 bg-[var(--mp-border)] rounded" />
           </div>
         </div>
       </div>
@@ -108,22 +108,22 @@ export default function ResumeSessionCard({ userId, lang }: Props) {
   return (
     <Link
       href={resumeHref}
-      className="block mb-6 card-interactive rounded-2xl p-5 border-l-4 border-l-[#007B5F] bg-gradient-to-br from-[#00A896]/5 to-transparent hover:shadow-[var(--shadow-elevated)] transition-all group stagger-in"
+      className="block mb-6 card-interactive rounded-2xl p-5 border-l-4 border-l-[var(--mp-viridian)] bg-gradient-to-br from-[#00A896]/5 to-transparent hover:shadow-[var(--shadow-elevated)] transition-all group stagger-in"
     >
       <div className="flex items-center gap-4">
-        <div className="w-12 h-12 rounded-xl bg-[#007B5F]/15 flex items-center justify-center flex-shrink-0">
-          <BookOpen className="w-6 h-6 text-[#007B5F]" />
+        <div className="w-12 h-12 rounded-xl bg-[var(--mp-viridian)]/15 flex items-center justify-center flex-shrink-0">
+          <BookOpen className="w-6 h-6 text-[var(--mp-viridian)]" />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <p className="text-sm font-bold text-[#1A2B3C] dark:text-[#E2E8F0] truncate">
+            <p className="text-sm font-bold text-[var(--mp-fg)] truncate">
               {lang === "de" ? `Weiter mit ${session.topic}` : `Continue ${session.topic}`}
             </p>
-            <span className="text-[10px] uppercase tracking-wider bg-[#00A896]/15 text-[#007B5F] px-2 py-0.5 rounded-full font-semibold">
+            <span className="text-[10px] uppercase tracking-wider bg-[var(--mp-accent-teal)]/15 text-[var(--mp-viridian)] px-2 py-0.5 rounded-full font-semibold">
               {lang === "de" ? "Fortsetzen" : "Resume"}
             </span>
           </div>
-          <p className="text-xs text-[#A0AEC0] mt-1 flex items-center gap-1.5 flex-wrap">
+          <p className="text-xs text-[var(--mp-fg-subtle)] mt-1 flex items-center gap-1.5 flex-wrap">
             <Clock className="w-3 h-3" />
             <span>{relTime}</span>
             <span>·</span>
@@ -139,7 +139,7 @@ export default function ResumeSessionCard({ userId, lang }: Props) {
             </span>
           </p>
         </div>
-        <ArrowRight className="w-5 h-5 text-[#007B5F] flex-shrink-0 group-hover:translate-x-0.5 transition-transform" />
+        <ArrowRight className="w-5 h-5 text-[var(--mp-viridian)] flex-shrink-0 group-hover:translate-x-0.5 transition-transform" />
       </div>
     </Link>
   );

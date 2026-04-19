@@ -1,9 +1,34 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { t } from "@/lib/i18n";
+import { authFetch as fetch } from "@/lib/authFetch";
 
 type Lang = "de" | "en";
+
+interface DayActivity {
+  date: string;       // YYYY-MM-DD in Europe/Vienna
+  answered: number;
+  correct: number;
+  xpEarned?: number;
+}
+
+/**
+ * Intensity buckets tied to answered-count.
+ * inactive: 0 answers
+ * light:    1–4
+ * mid:      5–14
+ * strong:   15+
+ * Today gets a slight visual lift on top of its intensity bucket.
+ */
+type Intensity = "inactive" | "light" | "mid" | "strong";
+
+function bucketFor(answered: number): Intensity {
+  if (answered <= 0) return "inactive";
+  if (answered < 5) return "light";
+  if (answered < 15) return "mid";
+  return "strong";
+}
 
 function StreakCountdown({ lang }: { lang: Lang }) {
   const [timeLeft, setTimeLeft] = useState("");
@@ -27,7 +52,7 @@ function StreakCountdown({ lang }: { lang: Lang }) {
   if (!timeLeft) return null;
 
   return (
-    <p className="text-xs text-[#F4A261] font-mono mt-0.5">
+    <p className="text-xs text-[var(--mp-status-warning)] font-mono mt-0.5">
       ⚠ {lang === "de" ? "Setzt zurück in" : "Resets in"} {timeLeft}
     </p>
   );
@@ -38,43 +63,85 @@ interface StreakWidgetProps {
   lang: Lang;
 }
 
+/**
+ * StreakWidget renders:
+ *  - the current streak count + 🔥 emoji
+ *  - a countdown until the Vienna-midnight reset (when streak > 0)
+ *  - a 7-cell "last week" strip of REAL per-day activity
+ *
+ * Activity is fetched from `/api/stats/last7days` on mount via the
+ * authenticated client helper. While the fetch is in flight, the
+ * strip falls back to the simple "first N of 7 are lit" visualization
+ * based on the streak prop — so nothing ever appears broken and
+ * unauthenticated/guest users still see a sensible strip.
+ *
+ * DD-09 (2026-04-17): replaced the assumption-based strip with real
+ * per-day data. The "today highlight" now uses the last entry of the
+ * API response (= Vienna today) rather than `new Date().getDay()` so
+ * the client's local TZ doesn't skew the visualization.
+ */
 export default function StreakWidget({ streak, lang }: StreakWidgetProps) {
-  // Fill the 7-day strip from the REAL streak only. The previous
-  // implementation filled the non-streak days with `Math.random()`
-  // which invented data on every render — users with a 3-day streak
-  // saw the "other 4 days" flicker active/inactive as the parent
-  // re-rendered for unrelated reasons. Fixed 2026-04-15 (Frontend
-  // audit P1-6, UX audit).
-  //
-  // Future: fetch real per-day activity from /api/stats and render
-  // it here so the strip actually shows a historical week. For now
-  // we just show the current streak as a solid bar of active cells
-  // and grey out the rest.
-  const last7Days = Array.from({ length: 7 }, (_, i) => i < Math.min(streak, 7));
+  const [days, setDays] = useState<DayActivity[] | null>(null);
+  const [error, setError] = useState<boolean>(false);
 
-  const dayLabels =
-    lang === "de"
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetch("/api/stats/last7days", { cache: "no-store" });
+        if (!r.ok) {
+          // 401 for guests is expected — fall through to fallback
+          // rendering. Other failures behave the same way.
+          if (!cancelled) setError(true);
+          return;
+        }
+        const json = (await r.json()) as { days?: DayActivity[] };
+        if (!cancelled && Array.isArray(json.days) && json.days.length === 7) {
+          setDays(json.days);
+        } else if (!cancelled) {
+          setError(true);
+        }
+      } catch {
+        if (!cancelled) setError(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Day-of-week labels keyed off each entry's date so the strip
+  // matches the actual Vienna calendar (not the client's system TZ).
+  const dayLabels = useMemo(() => {
+    const labelsDe = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
+    const labelsEn = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const labels = lang === "de" ? labelsDe : labelsEn;
+
+    if (days) {
+      return days.map(d => {
+        // Parse YYYY-MM-DD as a LOCAL date (not UTC) so the weekday
+        // label lines up with Vienna's local calendar. Using `new
+        // Date("2026-04-17")` would parse as UTC-midnight and flip to
+        // the previous day for callers west of UTC.
+        const [y, m, day] = d.date.split("-").map(Number);
+        const local = new Date(y, (m || 1) - 1, day || 1);
+        return labels[local.getDay()] || "";
+      });
+    }
+    // Fallback order matches the legacy strip: Monday-first.
+    return lang === "de"
       ? ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
       : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  }, [days, lang]);
 
-  // Compute intensity levels for active days
-  const getIntensity = (active: boolean, dayIndex: number) => {
-    if (!active) return "inactive";
-    const today = new Date().getDay();
-    // Convert JS Sunday=0 to Monday=0 format
-    const todayMon = today === 0 ? 6 : today - 1;
-    const daysAgo = (todayMon - dayIndex + 7) % 7;
-    if (daysAgo === 0) return "today";
-    if (daysAgo <= 2) return "recent";
-    return "older";
-  };
-
-  const intensityStyles = {
-    today: "bg-[#007B5F] text-white border-[#007B5F]",
-    recent: "bg-[#007B5F]/70 text-white border-[#007B5F]/50",
-    older: "bg-[#007B5F]/40 text-white border-[#007B5F]/30",
-    inactive: "bg-[#F7F9FC] text-[#A0AEC0] border-[#E4E9F0]",
-  };
+  // Fallback strip — used while loading, on error, or for guests.
+  // Lights the last N of 7 cells based on streak count, matching the
+  // pre-DD-09 behavior.
+  const fallbackCells = useMemo(
+    () =>
+      Array.from({ length: 7 }, (_, i) => i < Math.min(streak, 7)),
+    [streak]
+  );
 
   return (
     <div>
@@ -82,8 +149,8 @@ export default function StreakWidget({ streak, lang }: StreakWidgetProps) {
         <div className="flex items-center gap-2">
           <span className="text-2xl animate-fire">🔥</span>
           <div>
-            <p className="text-3xl font-black text-[#D64545] font-mono">{streak}</p>
-            <p className="text-xs text-[#4A5568]">
+            <p className="text-3xl font-black text-[var(--mp-error)] font-mono">{streak}</p>
+            <p className="text-xs text-[var(--mp-fg-muted)]">
               {t("streak", lang)} · {t("days", lang)}
             </p>
             {streak > 0 && <StreakCountdown lang={lang} />}
@@ -91,20 +158,142 @@ export default function StreakWidget({ streak, lang }: StreakWidgetProps) {
         </div>
       </div>
       <div className="flex items-center justify-between gap-1">
-        {last7Days.map((active, i) => {
-          const intensity = getIntensity(active, i);
-          return (
-            <div key={i} className="flex flex-col items-center gap-1">
-              <div
-                className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs font-medium transition-colors border ${intensityStyles[intensity]}`}
-              >
-                {active ? "✓" : "·"}
-              </div>
-              <span className="text-[9px] text-[#A0AEC0]">{dayLabels[i]}</span>
-            </div>
-          );
-        })}
+        {days && !error
+          ? days.map((d, i) => {
+              const isToday = i === days.length - 1;
+              const intensity = bucketFor(d.answered);
+              return (
+                <DayCell
+                  key={d.date}
+                  intensity={intensity}
+                  label={dayLabels[i] || ""}
+                  answered={d.answered}
+                  correct={d.correct}
+                  date={d.date}
+                  isToday={isToday}
+                  lang={lang}
+                />
+              );
+            })
+          : fallbackCells.map((active, i) => {
+              const intensity: Intensity = active ? "mid" : "inactive";
+              // In the fallback we treat the last cell as "today" to
+              // match the new data-driven visualization.
+              const isToday = i === fallbackCells.length - 1;
+              return (
+                <DayCell
+                  key={i}
+                  intensity={intensity}
+                  label={dayLabels[i] || ""}
+                  answered={active ? 1 : 0}
+                  correct={0}
+                  date={null}
+                  isToday={isToday}
+                  lang={lang}
+                  fallback
+                />
+              );
+            })}
       </div>
+    </div>
+  );
+}
+
+interface DayCellProps {
+  intensity: Intensity;
+  label: string;
+  answered: number;
+  correct: number;
+  date: string | null;
+  isToday: boolean;
+  lang: Lang;
+  fallback?: boolean;
+}
+
+const INTENSITY_CLASS: Record<Intensity, string> = {
+  inactive:
+    "bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-subtle)] border-[var(--mp-border)]",
+  light:
+    "bg-[color-mix(in_srgb,var(--mp-viridian)_35%,transparent)] text-white border-[color-mix(in_srgb,var(--mp-viridian)_40%,transparent)]",
+  mid: "bg-[color-mix(in_srgb,var(--mp-viridian)_65%,transparent)] text-white border-[color-mix(in_srgb,var(--mp-viridian)_55%,transparent)]",
+  strong: "bg-[var(--mp-viridian)] text-white border-[var(--mp-viridian)]",
+};
+
+function DayCell({
+  intensity,
+  label,
+  answered,
+  correct,
+  date,
+  isToday,
+  lang,
+  fallback = false,
+}: DayCellProps) {
+  const accuracy = answered > 0 ? Math.round((correct / answered) * 100) : 0;
+
+  const ariaLabel = (() => {
+    // Translate the weekday label back to a full-day name for a11y.
+    // We keep it straightforward — short labels are fine for screen
+    // readers too since the date gives full context in the tooltip.
+    const dateStr = date || "";
+    if (fallback) {
+      return answered > 0
+        ? lang === "de"
+          ? `${label}: Tag der Serie`
+          : `${label}: streak day`
+        : lang === "de"
+          ? `${label}: kein Lernen`
+          : `${label}: no learning`;
+    }
+    if (answered === 0) {
+      return lang === "de"
+        ? `${label} ${dateStr}: kein Lernen`
+        : `${label} ${dateStr}: no learning`;
+    }
+    return lang === "de"
+      ? `${label} ${dateStr}: ${answered} Fragen beantwortet, ${accuracy}% korrekt`
+      : `${label} ${dateStr}: ${answered} questions answered, ${accuracy}% correct`;
+  })();
+
+  const tooltip = fallback
+    ? undefined
+    : answered === 0
+      ? lang === "de"
+        ? `${date} · ${lang === "de" ? "kein Lernen" : "no learning"}`
+        : `${date} · no learning`
+      : lang === "de"
+        ? `${date} · ${answered} Fragen · ${accuracy}% korrekt`
+        : `${date} · ${answered} questions · ${accuracy}% correct`;
+
+  const todayRing = isToday
+    ? "ring-2 ring-offset-1 ring-[var(--mp-viridian)] ring-offset-[var(--mp-surface)]"
+    : "";
+
+  const content = (() => {
+    if (intensity === "inactive") return "·";
+    if (isToday) return answered > 0 ? answered : "·";
+    return "✓";
+  })();
+
+  return (
+    <div className="flex flex-col items-center gap-1 motion-safe:animate-[scale-in_200ms_ease-out]">
+      <div
+        title={tooltip}
+        aria-label={ariaLabel}
+        role="img"
+        className={`w-9 h-9 rounded-xl flex items-center justify-center text-xs font-medium border transition-colors ${INTENSITY_CLASS[intensity]} ${todayRing}`}
+      >
+        <span aria-hidden>{content}</span>
+      </div>
+      <span
+        className={`text-[9px] ${
+          isToday
+            ? "text-[var(--mp-viridian)] font-semibold"
+            : "text-[var(--mp-fg-subtle)]"
+        }`}
+      >
+        {label}
+      </span>
     </div>
   );
 }

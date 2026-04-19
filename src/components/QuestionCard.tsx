@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { authFetch as fetch } from "@/lib/authFetch";
 import { getTopicConfig } from "@/lib/topics";
 import { t } from "@/lib/i18n";
@@ -10,7 +10,7 @@ import { trackEvent } from "@/lib/tracker";
 import { captureClientContext } from "@/lib/clientContext";
 import TopicIcon from "@/components/TopicIcon";
 import { cleanExplanation } from "@/lib/explanation";
-import { Lightbulb, FileText, Highlighter, Bot, Flag, CheckCircle2, Edit3, AlertTriangle, X, ThumbsUp, ThumbsDown } from "lucide-react";
+import { Lightbulb, FileText, Highlighter, Bot, Flag, CheckCircle2, Edit3, AlertTriangle, X, ThumbsUp, ThumbsDown, BookOpen, Languages } from "lucide-react";
 import AIChatAssistant from "@/components/AIChatAssistant";
 import TranslateButton from "@/components/TranslateButton";
 
@@ -131,7 +131,6 @@ export default function QuestionCard({
   const [submitted, setSubmitted] = useState(initiallyAnswered);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
   const [note, setNote] = useState("");
-  const [showNoteInput, setShowNoteInput] = useState(false);
   const [noteSaved, setNoteSaved] = useState(false);
   const [isFav, setIsFav] = useState(false);
 
@@ -151,6 +150,10 @@ export default function QuestionCard({
   const [highlights, setHighlights] = useState<string[]>([]);
   const [showHighlightBtn, setShowHighlightBtn] = useState(false);
   const [highlightPos, setHighlightPos] = useState({ x: 0, y: 0 });
+  // Quiz-B tabbed post-answer context. Tabs: erklaerung | ki | notizen | uebersetzen | quelle
+  type PostAnswerTab = "erklaerung" | "ki" | "notizen" | "uebersetzen" | "quelle";
+  const [activeTab, setActiveTab] = useState<PostAnswerTab>("erklaerung");
+  const tabRefs = useRef<Partial<Record<PostAnswerTab, HTMLButtonElement | null>>>({});
   const answered = submitted || showAnswer;
   const isOpenAnswer = !question.options || question.options.length < 2;
   const options: MCQOption[] = question.options || [];
@@ -165,7 +168,6 @@ export default function QuestionCard({
     setSubmitted(initiallyAnswered);
     setShowAnswer(false);
     setShowAIChat(false);
-    setShowNoteInput(false);
     setNoteSaved(false);
     setShowHighlightBtn(false);
     setShowSuggestion(false);
@@ -173,10 +175,10 @@ export default function QuestionCard({
     setFlagReason("");
     setFlagDetails("");
     setSuggestionSubmitted(false);
+    setActiveTab("erklaerung");
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem(getNoteKey(question.id)) || "";
       setNote(saved);
-      setShowNoteInput(!!saved);
       setIsFav(getFavorites().includes(question.id));
       try {
         const hl = JSON.parse(localStorage.getItem(highlightKey(question.id)) || "[]");
@@ -356,20 +358,20 @@ export default function QuestionCard({
     const isSelected = selectedIdxs.has(idx);
 
     if (!answered) {
-      return `${base} ${isSelected ? "bg-[#007B5F]/8 border border-[#007B5F]/60 text-[#1A2B3C] rounded-2xl" : "bg-[#F7F9FC] rounded-2xl border border-transparent hover:border-[#007B5F]/30 hover:bg-white hover:shadow-[var(--shadow-card)] text-[#1A2B3C]"} active:scale-[0.99]`;
+      return `${base} ${isSelected ? "bg-[var(--mp-viridian)]/8 border border-[var(--mp-viridian)]/60 text-[var(--mp-fg)] rounded-2xl" : "bg-[var(--mp-surface-sunken)] rounded-2xl border border-transparent hover:border-[var(--mp-viridian)]/30 hover:bg-white hover:shadow-[var(--shadow-card)] text-[var(--mp-fg)]"} active:scale-[0.99]`;
     }
 
     if (isSelected) {
       if (opt.correct) {
-        return `${base} bg-[#00A896]/12 border border-[#00A896] border-l-4 border-l-[#00A896] text-[#00A896] rounded-2xl animate-answer-correct`;
+        return `${base} bg-[var(--mp-accent-teal)]/12 border border-[var(--mp-accent-teal)] border-l-4 border-l-[var(--mp-accent-teal)] text-[var(--mp-accent-teal)] rounded-2xl animate-answer-correct`;
       } else {
-        return `${base} bg-[#D64545]/12 border border-[#D64545] text-[#D64545] rounded-2xl animate-answer-wrong`;
+        return `${base} bg-[var(--mp-error)]/12 border border-[var(--mp-error)] text-[var(--mp-error)] rounded-2xl animate-answer-wrong`;
       }
     }
     if (opt.correct) {
-      return `${base} bg-[#00A896]/8 border border-[#00A896]/60 border-l-4 border-l-[#00A896] text-[#00A896]/80 rounded-2xl`;
+      return `${base} bg-[var(--mp-accent-teal)]/8 border border-[var(--mp-accent-teal)]/60 border-l-4 border-l-[var(--mp-accent-teal)] text-[var(--mp-accent-teal)]/80 rounded-2xl`;
     }
-    return `${base} bg-[#FFFFFF] border border-[#E4E9F0]/40 text-[#A0AEC0] opacity-50 rounded-2xl`;
+    return `${base} bg-[var(--mp-surface-raised)] border border-[var(--mp-border)]/40 text-[var(--mp-fg-subtle)] opacity-50 rounded-2xl`;
   };
 
   const getOptionIcon = (idx: number, opt: MCQOption): string => {
@@ -418,24 +420,24 @@ export default function QuestionCard({
               <button
                 onClick={() => { setShowSuggestion(!showSuggestion); setSuggestionType(null); }}
                 title={lang === "de" ? "Problem melden" : "Report issue"}
-                className={`transition-colors ${showSuggestion ? "text-[#D64545]" : "text-[#E4E9F0] hover:text-[#D64545]"}`}
+                className={`transition-colors ${showSuggestion ? "text-[var(--mp-error)]" : "text-[var(--mp-border)] hover:text-[var(--mp-error)]"}`}
               >
                 <Flag className="w-4 h-4" />
               </button>
             )}
             {!hideActions && suggestionSubmitted && (
-              <CheckCircle2 className="w-4 h-4 text-[#00A896]" />
+              <CheckCircle2 className="w-4 h-4 text-[var(--mp-accent-teal)]" />
             )}
             {!hideActions && (
               <button
                 onClick={handleToggleFav}
                 title={isFav ? t("bookmarked", lang) : t("bookmark", lang)}
-                className={`text-base transition-colors ${isFav ? "text-[#F4A261] animate-bookmark" : "text-[#E4E9F0] hover:text-[#F4A261]"}`}
+                className={`text-base transition-colors ${isFav ? "text-[var(--mp-status-warning)] animate-bookmark" : "text-[var(--mp-border)] hover:text-[var(--mp-status-warning)]"}`}
               >
                 {isFav ? "★" : "☆"}
               </button>
             )}
-            <span className="text-xs text-[#A0AEC0] font-mono">
+            <span className="text-xs text-[var(--mp-fg-subtle)] font-mono">
               {t("q", lang)}{questionNumber} / {totalQuestions}
             </span>
           </div>
@@ -447,7 +449,7 @@ export default function QuestionCard({
             {question.tags.map((tag) => (
               <span
                 key={tag}
-                className="text-[10px] px-2 py-0.5 rounded-full border border-[#007B5F]/30 bg-[#007B5F]/8 text-[#007B5F] font-medium"
+                className="text-[10px] px-2 py-0.5 rounded-full border border-[var(--mp-viridian)]/30 bg-[var(--mp-viridian)]/8 text-[var(--mp-viridian)] font-medium"
               >
                 {tag}
               </span>
@@ -459,22 +461,22 @@ export default function QuestionCard({
         {effectiveImageUrl && (
           <button
             onClick={() => setLightboxSrc(effectiveImageUrl)}
-            className="block w-full mb-4 rounded overflow-hidden border border-[#E4E9F0] hover:border-[#007B5F]/40 transition-colors group"
+            className="block w-full mb-4 rounded overflow-hidden border border-[var(--mp-border)] hover:border-[var(--mp-viridian)]/40 transition-colors group"
             aria-label="Bild vergrößern"
           >
             <img
               src={effectiveImageUrl}
               alt="Medizinische Abbildung"
-              className="w-full max-h-64 object-contain bg-[#FFFFFF] rounded-sm"
+              className="w-full max-h-64 object-contain bg-[var(--mp-surface-raised)] rounded-sm"
             />
-            <p className="text-[10px] text-[#A0AEC0] text-center py-1 bg-[#FFFFFF] group-hover:text-[#4A5568] transition-colors">
+            <p className="text-[10px] text-[var(--mp-fg-subtle)] text-center py-1 bg-[var(--mp-surface-raised)] group-hover:text-[var(--mp-fg-muted)] transition-colors">
               {lang === "de" ? "Zum Vergrößern klicken" : "Click to enlarge"}
             </p>
           </button>
         )}
 
         {/* Question text (selectable for highlighting) */}
-        <p className="text-lg md:text-xl leading-relaxed font-medium text-[#001B3D] mb-4" style={{ userSelect: 'text' }} data-question-text>
+        <p className="text-lg md:text-xl leading-relaxed font-medium text-[var(--mp-fg)] mb-4" style={{ userSelect: 'text' }} data-question-text>
           {renderHighlightedText(question.question)}
         </p>
 
@@ -486,7 +488,7 @@ export default function QuestionCard({
           >
             <button
               onMouseDown={(e) => { e.preventDefault(); handleHighlight(); }}
-              className="flex items-center gap-1.5 bg-[#001B3D] text-white text-xs font-medium px-3 py-1.5 rounded-lg shadow-lg hover:bg-[#003A8C] transition-colors"
+              className="flex items-center gap-1.5 bg-[var(--mp-oxford-blue)] text-white text-xs font-medium px-3 py-1.5 rounded-lg shadow-lg hover:bg-[var(--mp-cta-blue)] transition-colors"
             >
               <Highlighter className="w-3.5 h-3.5" />
               Highlight
@@ -500,7 +502,7 @@ export default function QuestionCard({
             {question.exam_dates.slice(0, 5).map((d) => (
               <span
                 key={d}
-                className="text-[10px] bg-[#F7F9FC] text-[#A0AEC0] px-2 py-0.5 rounded border border-[#E4E9F0] font-mono"
+                className="text-[10px] bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-subtle)] px-2 py-0.5 rounded border border-[var(--mp-border)] font-mono"
               >
                 {formatExamDate(d, lang)}
               </span>
@@ -516,23 +518,23 @@ export default function QuestionCard({
                 setShowAnswer(true);
                 onAnswer?.(true);
               }}
-              className="w-full p-4 rounded-lg border border-[#007B5F]/30 bg-[#007B5F]/5 hover:bg-[#007B5F]/10 transition-all text-center"
+              className="w-full p-4 rounded-lg border border-[var(--mp-viridian)]/30 bg-[var(--mp-viridian)]/5 hover:bg-[var(--mp-viridian)]/10 transition-all text-center"
             >
-              <span className="text-[#007B5F] font-medium">
+              <span className="text-[var(--mp-viridian)] font-medium">
                 {lang === "de" ? "Antwort anzeigen" : "Show Answer"}
               </span>
             </button>
           )}
           {isOpenAnswer && showAnswer && (
-            <div className="p-4 rounded-lg border border-[#007B5F]/30 bg-[#007B5F]/10">
-              <p className="text-xs text-[#007B5F] uppercase tracking-wider mb-1 font-medium">
+            <div className="p-4 rounded-lg border border-[var(--mp-viridian)]/30 bg-[var(--mp-viridian)]/10">
+              <p className="text-xs text-[var(--mp-viridian)] uppercase tracking-wider mb-1 font-medium">
                 {lang === "de" ? "Richtige Antwort" : "Correct Answer"}
               </p>
-              <p className="text-[#1A2B3C] text-sm leading-relaxed">{question.answer}</p>
+              <p className="text-[var(--mp-fg)] text-sm leading-relaxed">{question.answer}</p>
             </div>
           )}
           {!isOpenAnswer && isMulti && !answered && (
-            <p className="text-[11px] text-[#F4A261] font-semibold mb-1">
+            <p className="text-[11px] text-[var(--mp-status-warning)] font-semibold mb-1">
               ⓘ {lang === "de" ? `Mehrfachantwort (${nCorrect} richtig)` : `Multi-select (${nCorrect} correct)`}
             </p>
           )}
@@ -549,22 +551,22 @@ export default function QuestionCard({
                   className={`w-9 h-9 rounded-xl flex-shrink-0 flex items-center justify-center text-sm font-bold border font-mono ${
                     !answered
                       ? isSelected
-                        ? "bg-[#007B5F]/15 border-[#007B5F] text-[#007B5F]"
-                        : "bg-[#F7F9FC] border-[#E4E9F0] text-[#4A5568]"
+                        ? "bg-[var(--mp-viridian)]/15 border-[var(--mp-viridian)] text-[var(--mp-viridian)]"
+                        : "bg-[var(--mp-surface-sunken)] border-[var(--mp-border)] text-[var(--mp-fg-muted)]"
                       : isSelected && opt.correct
-                      ? "bg-[#00A896]/20 border-[#00A896] text-[#00A896]"
+                      ? "bg-[var(--mp-accent-teal)]/20 border-[var(--mp-accent-teal)] text-[var(--mp-accent-teal)]"
                       : isSelected && !opt.correct
-                      ? "bg-[#D64545]/20 border-[#D64545] text-[#D64545]"
+                      ? "bg-[var(--mp-error)]/20 border-[var(--mp-error)] text-[var(--mp-error)]"
                       : opt.correct
-                      ? "bg-[#00A896]/10 border-[#00A896]/50 text-[#00A896]"
-                      : "bg-[#F7F9FC] border-[#E4E9F0]/40 text-[#A0AEC0]"
+                      ? "bg-[var(--mp-accent-teal)]/10 border-[var(--mp-accent-teal)]/50 text-[var(--mp-accent-teal)]"
+                      : "bg-[var(--mp-surface-sunken)] border-[var(--mp-border)]/40 text-[var(--mp-fg-subtle)]"
                   }`}
                 >
                   {getOptionIcon(idx, opt)}
                 </span>
                 <div className="flex-1 flex flex-col items-start gap-1.5">
                   {opt.image_url && (
-                    <img src={opt.image_url} alt="" className="max-h-24 object-contain rounded border border-[#E4E9F0]" />
+                    <img src={opt.image_url} alt="" className="max-h-24 object-contain rounded border border-[var(--mp-border)]" />
                   )}
                   <span>{opt.text}</span>
                 </div>
@@ -575,7 +577,7 @@ export default function QuestionCard({
             <button
               onClick={handleSubmitMulti}
               disabled={selectedIdxs.size === 0}
-              className="w-full mt-2 py-3 bg-[#F4A261] hover:bg-[#FFC97A] text-[#1A0E00] rounded font-bold text-sm transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
+              className="w-full mt-2 py-3 bg-[var(--mp-status-warning)] hover:bg-[#FFC97A] text-[#1A0E00] rounded font-bold text-sm transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {lang === "de" ? "Antwort prüfen" : "Check Answer"}
             </button>
@@ -584,205 +586,305 @@ export default function QuestionCard({
 
         {/* Post-answer feedback strip */}
         {answered && !hideFeedbackStrip && (
-          <div className="mt-3 flex items-center justify-between bg-[#F7F9FC] rounded-xl px-4 py-2.5 text-sm animate-fade-in">
+          <div className="mt-3 flex items-center justify-between bg-[var(--mp-surface-sunken)] rounded-xl px-4 py-2.5 text-sm animate-fade-in">
             <div className="flex items-center gap-3">
-              <span className="font-semibold text-[#007B5F]">+10 XP</span>
-              <span className="text-[#A0AEC0]">&middot;</span>
-              <span className="text-[#4A5568]">
+              <span className="font-semibold text-[var(--mp-viridian)]">+10 XP</span>
+              <span className="text-[var(--mp-fg-subtle)]">&middot;</span>
+              <span className="text-[var(--mp-fg-muted)]">
                 {nCorrect > 0 && selectedIdxs.size > 0 && [...selectedIdxs].some(i => options[i]?.correct)
                   ? (lang === "de" ? "Richtig!" : "Correct!")
                   : (lang === "de" ? "Netter Versuch!" : "Nice try!")}
               </span>
             </div>
-            <span className="text-xs text-[#A0AEC0]">
+            <span className="text-xs text-[var(--mp-fg-subtle)]">
               N &rarr; {lang === "de" ? "Nächste" : "Next"}
             </span>
           </div>
         )}
 
-        {/* Explanation — shown after answering (hidden when split-view shows it separately) */}
+        {/* ──────────────────────────────────────────────────────────
+            Quiz-B: Tabbed post-answer context
+            Shown only when answered && !hideExplanation. Re-organises
+            the legacy [explanation] → [translate] → [notes] vertical
+            scroll into sibling tabs. Tabs: Erklärung / KI-Chat /
+            Notizen / Übersetzen / Quelle.
+            KI-Chat is an action-style tab that opens the existing
+            AIChatAssistant modal (kept as modal — not inlined).
+            ────────────────────────────────────────────────────────── */}
         {answered && !hideExplanation && (() => {
-          const cleaned = cleanExplanation(question.explanation);
-          if (!cleaned) return null;
+          const cleanedExplanation = cleanExplanation(question.explanation);
+          const hasExplanation = !!cleanedExplanation;
+          type TabDef = { id: PostAnswerTab; label: string; icon: React.ReactNode; isAction?: boolean };
+          const tabs: TabDef[] = [
+            { id: "erklaerung", label: lang === "de" ? "Erklärung" : "Explanation", icon: <Lightbulb className="w-3.5 h-3.5" /> },
+            { id: "ki", label: lang === "de" ? "KI-Chat" : "AI Chat", icon: <Bot className="w-3.5 h-3.5" />, isAction: true },
+            { id: "notizen", label: lang === "de" ? "Notizen" : "Notes", icon: <FileText className="w-3.5 h-3.5" /> },
+            { id: "uebersetzen", label: lang === "de" ? "Übersetzen" : "Translate", icon: <Languages className="w-3.5 h-3.5" /> },
+            { id: "quelle", label: lang === "de" ? "Quelle" : "Source", icon: <BookOpen className="w-3.5 h-3.5" /> },
+          ];
+          // Hide the Translate tab when there is nothing to translate
+          const visibleTabs = tabs.filter((tab) => (tab.id === "uebersetzen" ? hasExplanation : true));
+          // If the current active tab is no longer visible, fall back to notizen
+          const activeVisible: PostAnswerTab = visibleTabs.find((tb) => tb.id === activeTab)
+            ? activeTab
+            : "notizen";
+
+          const handleTabKeyDown = (e: ReactKeyboardEvent<HTMLButtonElement>, idx: number) => {
+            if (e.key !== "ArrowRight" && e.key !== "ArrowLeft" && e.key !== "Home" && e.key !== "End") return;
+            e.preventDefault();
+            let nextIdx = idx;
+            if (e.key === "ArrowRight") nextIdx = (idx + 1) % visibleTabs.length;
+            else if (e.key === "ArrowLeft") nextIdx = (idx - 1 + visibleTabs.length) % visibleTabs.length;
+            else if (e.key === "Home") nextIdx = 0;
+            else if (e.key === "End") nextIdx = visibleTabs.length - 1;
+            const nextTab = visibleTabs[nextIdx];
+            if (!nextTab) return;
+            if (!nextTab.isAction) setActiveTab(nextTab.id);
+            tabRefs.current[nextTab.id]?.focus();
+          };
+
+          const activateTab = (tab: TabDef) => {
+            if (tab.isAction && tab.id === "ki") {
+              // KI-Chat tab opens the AI chat modal rather than switching panes.
+              setShowAIChat(true);
+              trackEvent("feature_use", { feature: "ai_chat_open", source: "tab", questionId: question.id });
+              return;
+            }
+            setActiveTab(tab.id);
+          };
+
           return (
-          <div className="mt-4 bg-[#F4A261]/6 border border-[#F4A261]/25 border-l-4 border-l-[#007B5F] rounded p-4 animate-slide-reveal">
-            <p className="text-[10px] uppercase tracking-wider text-[#F4A261] font-semibold mb-2">
-              <Lightbulb className="w-4 h-4 inline" /> {t("explanation", lang)}
-            </p>
-            <p className="text-[#4A5568] leading-relaxed text-sm">{cleaned}</p>
-            <div className="flex items-center gap-2 mt-3 pt-2 border-t border-[#E4E9F0]">
-              <span className="text-[10px] text-[#A0AEC0]">
-                {lang === "de" ? "Hilfreich?" : "Helpful?"}
-              </span>
-              <button
-                onClick={() => {
-                  if (explanationRating === 1) return;
-                  setExplanationRating(1);
-                  trackEvent("feature_use", { feature: "explanation_rating", rating: 1, questionId: question.id });
-                  fetch("/api/explanation-rating", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ questionId: question.id, rating: 1 }),
-                  }).catch(() => {});
-                }}
-                className={`p-1 rounded transition-colors ${
-                  explanationRating === 1
-                    ? "text-[#007B5F] bg-[#007B5F]/10"
-                    : "text-[#A0AEC0] hover:text-[#007B5F] hover:bg-[#007B5F]/5"
-                }`}
-                title={lang === "de" ? "Hilfreich" : "Helpful"}
+            <div className="mt-4 animate-slide-reveal">
+              {/* Tab bar — horizontally scrollable on mobile */}
+              <div
+                role="tablist"
+                aria-label={lang === "de" ? "Zusatzinformationen" : "Additional information"}
+                className="flex items-stretch gap-1 overflow-x-auto border-b border-[var(--mp-border)] -mx-1 px-1"
+                style={{ scrollbarWidth: "thin" }}
               >
-                <ThumbsUp className="w-3.5 h-3.5" />
-              </button>
-              <button
-                onClick={() => {
-                  if (explanationRating === -1) return;
-                  setExplanationRating(-1);
-                  trackEvent("feature_use", { feature: "explanation_rating", rating: -1, questionId: question.id });
-                  fetch("/api/explanation-rating", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ questionId: question.id, rating: -1 }),
-                  }).catch(() => {});
-                }}
-                className={`p-1 rounded transition-colors ${
-                  explanationRating === -1
-                    ? "text-[#D64545] bg-[#D64545]/10"
-                    : "text-[#A0AEC0] hover:text-[#D64545] hover:bg-[#D64545]/5"
-                }`}
-                title={lang === "de" ? "Nicht hilfreich" : "Not helpful"}
-              >
-                <ThumbsDown className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
-          );
-        })()}
-
-        {/* Translate Explanation button — only shown when there's an
-            explanation worth translating. Renders the translated text
-            in-place (below the German explanation). Free tier: 5/day. */}
-        {answered && !hideExplanation && cleanExplanation(question.explanation) && (
-          <TranslateButton
-            questionId={question.id}
-            lang={lang}
-            userTier={userTier}
-            field="explanation"
-          />
-        )}
-
-        {/* Explanation images — only shown after answering, per Mohamed.
-            These come from the explanation field in the source Anki note and
-            are imported into image_urls beyond the first entry. */}
-        {answered && extraImages.length > 0 && (
-          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 animate-fade-in">
-            {extraImages.map((src, i) => (
-              <button
-                key={src + i}
-                type="button"
-                onClick={() => setLightboxSrc(src)}
-                className="block w-full rounded-xl overflow-hidden border border-[#E4E9F0] dark:border-[#334155] hover:border-[#007B5F]/40 transition-colors group"
-                aria-label={lang === "de" ? "Bild vergrößern" : "Enlarge image"}
-              >
-                <img
-                  src={src}
-                  alt={lang === "de" ? `Erklärungsbild ${i + 1}` : `Explanation image ${i + 1}`}
-                  className="w-full max-h-72 object-contain bg-white dark:bg-[#1E293B]"
-                />
-                <p className="text-[10px] text-[#A0AEC0] text-center py-1 bg-white dark:bg-[#1E293B] group-hover:text-[#4A5568] transition-colors">
-                  {lang === "de" ? "Erklärungsbild · Klicken zum Vergrößern" : "Explanation image · Click to enlarge"}
-                </p>
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Action buttons — visible after answering */}
-        {answered && !hideActions && (
-          <div className="mt-3 animate-fade-in flex items-center gap-3">
-            {/* AI Explain button */}
-            <button
-              onClick={() => setShowAIChat(true)}
-              className="flex items-center gap-1.5 text-xs text-[#003A8C] bg-[#003A8C]/8 hover:bg-[#003A8C]/15 px-3 py-1.5 rounded-lg transition-colors font-medium"
-            >
-              <Bot className="w-4 h-4" />
-              <span>{lang === "de" ? "KI-Erklärung" : "AI Explain"}</span>
-            </button>
-
-            {/* Add Note button */}
-            {!showNoteInput && (
-              <button
-                onClick={() => setShowNoteInput(true)}
-                className="flex items-center gap-1.5 text-xs text-[#A0AEC0] hover:text-[#4A5568] transition-colors"
-              >
-                <FileText className="w-4 h-4" />
-                <span>{t("add_note", lang)}</span>
-              </button>
-            )}
-
-            {/* Flag / Suggest button */}
-            {!suggestionSubmitted && (
-              <button
-                onClick={() => { setShowSuggestion(!showSuggestion); setSuggestionType(null); }}
-                className={`flex items-center gap-1.5 text-xs transition-colors ${showSuggestion ? "text-[#D64545]" : "text-[#A0AEC0] hover:text-[#D64545]"}`}
-              >
-                <Flag className="w-4 h-4" />
-                <span>{lang === "de" ? "Melden" : "Report"}</span>
-              </button>
-            )}
-            {suggestionSubmitted && (
-              <span className="flex items-center gap-1.5 text-xs text-[#00A896] animate-fade-in">
-                <CheckCircle2 className="w-4 h-4" />
-                {lang === "de" ? "Gesendet ✓" : "Submitted ✓"}
-              </span>
-            )}
-          </div>
-        )}
-
-          {/* Note input (expanded) */}
-          {answered && !hideActions && showNoteInput && (
-            <div className="mt-3 animate-fade-in">
-              <div className="bg-[#FFFFFF] border border-[#E4E9F0] rounded-xl shadow-[var(--shadow-xs)] p-3">
-                <p className="text-[10px] uppercase tracking-wider text-[#A0AEC0] font-semibold mb-2">
-                  <FileText className="w-3 h-3 inline" /> {t("add_note", lang)}
-                </p>
-                <textarea
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  placeholder={t("note_placeholder", lang)}
-                  rows={3}
-                  className="w-full bg-[#F7F9FC] border border-[#E4E9F0] rounded px-3 py-2 text-sm text-[#1A2B3C] placeholder-[#A0AEC0] resize-none focus:outline-none focus:border-[#007B5F]/50 font-sans"
-                />
-                <div className="flex items-center justify-between mt-2">
-                  <button
-                    onClick={handleSaveNote}
-                    className="px-3 py-1.5 bg-[#007B5F]/15 border border-[#007B5F]/30 text-[#007B5F] text-xs font-medium rounded hover:bg-[#007B5F]/25 transition-colors"
-                  >
-                    {noteSaved ? `✓ ${t("note_saved", lang)}` : t("save_note", lang)}
-                  </button>
-                  {note.length === 0 && (
+                {visibleTabs.map((tab, idx) => {
+                  const isActive = !tab.isAction && activeVisible === tab.id;
+                  return (
                     <button
-                      onClick={() => setShowNoteInput(false)}
-                      className="text-xs text-[#A0AEC0] hover:text-[#4A5568] transition-colors"
+                      key={tab.id}
+                      ref={(el) => { tabRefs.current[tab.id] = el; }}
+                      role="tab"
+                      type="button"
+                      id={`qc-tab-${tab.id}`}
+                      aria-selected={isActive}
+                      aria-controls={tab.isAction ? undefined : `qc-tabpanel-${tab.id}`}
+                      tabIndex={isActive || (idx === 0 && !visibleTabs.some(tb => !tb.isAction && tb.id === activeVisible)) ? 0 : -1}
+                      onClick={() => activateTab(tab)}
+                      onKeyDown={(e) => handleTabKeyDown(e, idx)}
+                      className={`flex items-center gap-1.5 px-3 py-2.5 text-xs font-semibold whitespace-nowrap border-b-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mp-viridian)]/40 focus-visible:rounded-t ${
+                        isActive
+                          ? "text-[var(--mp-fg)] border-b-[var(--mp-viridian)]"
+                          : "text-[var(--mp-fg-subtle)] border-b-transparent hover:text-[var(--mp-fg-muted)]"
+                      }`}
                     >
-                      {t("cancel", lang)}
+                      {tab.icon}
+                      <span>{tab.label}</span>
                     </button>
+                  );
+                })}
+              </div>
+
+              {/* Erklärung pane */}
+              {activeVisible === "erklaerung" && (
+                <div
+                  role="tabpanel"
+                  id="qc-tabpanel-erklaerung"
+                  aria-labelledby="qc-tab-erklaerung"
+                  className="pt-4 animate-fade-in"
+                >
+                  {hasExplanation ? (
+                    <div className="bg-[var(--mp-status-warning)]/6 border border-[var(--mp-status-warning)]/25 border-l-4 border-l-[var(--mp-viridian)] rounded p-4">
+                      <p className="text-[10px] uppercase tracking-wider text-[var(--mp-status-warning)] font-semibold mb-2">
+                        <Lightbulb className="w-4 h-4 inline" /> {t("explanation", lang)}
+                      </p>
+                      <p className="text-[var(--mp-fg-muted)] leading-relaxed text-sm">{cleanedExplanation}</p>
+                      <div className="flex items-center gap-2 mt-3 pt-2 border-t border-[var(--mp-border)]">
+                        <span className="text-[10px] text-[var(--mp-fg-subtle)]">
+                          {lang === "de" ? "Hilfreich?" : "Helpful?"}
+                        </span>
+                        <button
+                          onClick={() => {
+                            if (explanationRating === 1) return;
+                            setExplanationRating(1);
+                            trackEvent("feature_use", { feature: "explanation_rating", rating: 1, questionId: question.id });
+                            fetch("/api/explanation-rating", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ questionId: question.id, rating: 1 }),
+                            }).catch(() => {});
+                          }}
+                          className={`p-1 rounded transition-colors ${
+                            explanationRating === 1
+                              ? "text-[var(--mp-viridian)] bg-[var(--mp-viridian)]/10"
+                              : "text-[var(--mp-fg-subtle)] hover:text-[var(--mp-viridian)] hover:bg-[var(--mp-viridian)]/5"
+                          }`}
+                          title={lang === "de" ? "Hilfreich" : "Helpful"}
+                          aria-label={lang === "de" ? "Hilfreich" : "Helpful"}
+                        >
+                          <ThumbsUp className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (explanationRating === -1) return;
+                            setExplanationRating(-1);
+                            trackEvent("feature_use", { feature: "explanation_rating", rating: -1, questionId: question.id });
+                            fetch("/api/explanation-rating", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ questionId: question.id, rating: -1 }),
+                            }).catch(() => {});
+                          }}
+                          className={`p-1 rounded transition-colors ${
+                            explanationRating === -1
+                              ? "text-[var(--mp-error)] bg-[var(--mp-error)]/10"
+                              : "text-[var(--mp-fg-subtle)] hover:text-[var(--mp-error)] hover:bg-[var(--mp-error)]/5"
+                          }`}
+                          title={lang === "de" ? "Nicht hilfreich" : "Not helpful"}
+                          aria-label={lang === "de" ? "Nicht hilfreich" : "Not helpful"}
+                        >
+                          <ThumbsDown className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-[var(--mp-surface-sunken)] border border-dashed border-[var(--mp-border)] rounded-xl p-5 text-center">
+                      <Lightbulb className="w-5 h-5 mx-auto mb-2 text-[var(--mp-fg-subtle)]" />
+                      <p className="text-sm text-[var(--mp-fg-muted)] mb-1">
+                        {lang === "de" ? "Noch keine Erklärung vorhanden." : "No explanation available yet."}
+                      </p>
+                      <p className="text-xs text-[var(--mp-fg-subtle)]">
+                        {lang === "de"
+                          ? "Tippe auf „KI-Chat“ für eine KI-Erklärung."
+                          : "Tap \u201cAI Chat\u201d for an AI-generated explanation."}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Explanation images — rendered inside Erklärung tab */}
+                  {extraImages.length > 0 && (
+                    <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {extraImages.map((src, i) => (
+                        <button
+                          key={src + i}
+                          type="button"
+                          onClick={() => setLightboxSrc(src)}
+                          className="block w-full rounded-xl overflow-hidden border border-[var(--mp-border)] hover:border-[var(--mp-viridian)]/40 transition-colors group"
+                          aria-label={lang === "de" ? "Bild vergrößern" : "Enlarge image"}
+                        >
+                          <img
+                            src={src}
+                            alt={lang === "de" ? `Erklärungsbild ${i + 1}` : `Explanation image ${i + 1}`}
+                            className="w-full max-h-72 object-contain bg-[var(--mp-surface-raised)]"
+                          />
+                          <p className="text-[10px] text-[var(--mp-fg-subtle)] text-center py-1 bg-[var(--mp-surface-raised)] group-hover:text-[var(--mp-fg-muted)] transition-colors">
+                            {lang === "de" ? "Erklärungsbild · Klicken zum Vergrößern" : "Explanation image · Click to enlarge"}
+                          </p>
+                        </button>
+                      ))}
+                    </div>
                   )}
                 </div>
-              </div>
+              )}
+
+              {/* Notizen pane */}
+              {activeVisible === "notizen" && (
+                <div
+                  role="tabpanel"
+                  id="qc-tabpanel-notizen"
+                  aria-labelledby="qc-tab-notizen"
+                  className="pt-4 animate-fade-in"
+                >
+                  <div className="bg-[var(--mp-surface-raised)] border border-[var(--mp-border)] rounded-xl shadow-[var(--shadow-xs)] p-3">
+                    <p className="text-[10px] uppercase tracking-wider text-[var(--mp-fg-subtle)] font-semibold mb-2">
+                      <FileText className="w-3 h-3 inline" /> {t("add_note", lang)}
+                    </p>
+                    <textarea
+                      value={note}
+                      onChange={(e) => setNote(e.target.value)}
+                      placeholder={t("note_placeholder", lang)}
+                      rows={4}
+                      aria-label={t("add_note", lang)}
+                      className="w-full bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)] rounded px-3 py-2 text-sm text-[var(--mp-fg)] placeholder-[var(--mp-fg-subtle)] resize-none focus:outline-none focus:border-[var(--mp-viridian)]/50 font-sans"
+                    />
+                    <div className="flex items-center justify-between mt-2">
+                      <button
+                        onClick={handleSaveNote}
+                        className="px-3 py-1.5 bg-[var(--mp-viridian)]/15 border border-[var(--mp-viridian)]/30 text-[var(--mp-viridian)] text-xs font-medium rounded hover:bg-[var(--mp-viridian)]/25 transition-colors"
+                      >
+                        {noteSaved ? `\u2713 ${t("note_saved", lang)}` : t("save_note", lang)}
+                      </button>
+                      {note.length > 0 && (
+                        <span className="text-[10px] text-[var(--mp-fg-subtle)]">
+                          {note.length} {lang === "de" ? "Zeichen" : "chars"}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Übersetzen pane */}
+              {activeVisible === "uebersetzen" && (
+                <div
+                  role="tabpanel"
+                  id="qc-tabpanel-uebersetzen"
+                  aria-labelledby="qc-tab-uebersetzen"
+                  className="pt-4 animate-fade-in"
+                >
+                  <p className="text-xs text-[var(--mp-fg-muted)] mb-3">
+                    {lang === "de"
+                      ? "Übersetze die Erklärung in deine Sprache."
+                      : "Translate the explanation into your language."}
+                  </p>
+                  <TranslateButton
+                    questionId={question.id}
+                    lang={lang}
+                    userTier={userTier}
+                    field="explanation"
+                  />
+                </div>
+              )}
+
+              {/* Quelle pane — placeholder until guideline refs are parsed */}
+              {activeVisible === "quelle" && (
+                <div
+                  role="tabpanel"
+                  id="qc-tabpanel-quelle"
+                  aria-labelledby="qc-tab-quelle"
+                  className="pt-4 animate-fade-in"
+                >
+                  <div className="bg-[var(--mp-surface-sunken)] border border-dashed border-[var(--mp-border)] rounded-xl p-5 text-center">
+                    <BookOpen className="w-5 h-5 mx-auto mb-2 text-[var(--mp-fg-subtle)]" />
+                    <p className="text-sm text-[var(--mp-fg-muted)] mb-1">
+                      {lang === "de" ? "Noch keine Quellenangaben." : "No source references yet."}
+                    </p>
+                    <p className="text-xs text-[var(--mp-fg-subtle)]">
+                      {lang === "de"
+                        ? "Wir arbeiten daran, Leitlinien-Referenzen anzuhängen."
+                        : "We\u2019re working on attaching guideline references."}
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
-          )}
+          );
+        })()}
 
           {/* Suggestion / Flag form (expanded) */}
           {answered && !hideActions && showSuggestion && !suggestionSubmitted && (
             <div className="mt-3 animate-fade-in">
-              <div className="bg-[#FFFFFF] border border-[#E4E9F0] rounded-xl shadow-[var(--shadow-xs)] p-4">
+              <div className="bg-[var(--mp-surface-raised)] border border-[var(--mp-border)] rounded-xl shadow-[var(--shadow-xs)] p-4">
                 <div className="flex items-center justify-between mb-3">
-                  <p className="text-xs font-semibold text-[#1A2B3C] flex items-center gap-1.5">
-                    <Flag className="w-3.5 h-3.5 text-[#D64545]" />
+                  <p className="text-xs font-semibold text-[var(--mp-fg)] flex items-center gap-1.5">
+                    <Flag className="w-3.5 h-3.5 text-[var(--mp-error)]" />
                     {lang === "de" ? "Problem melden" : "Report Issue"}
                   </p>
-                  <button onClick={() => setShowSuggestion(false)} className="text-[#A0AEC0] hover:text-[#4A5568]">
+                  <button onClick={() => setShowSuggestion(false)} className="text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg-muted)]">
                     <X className="w-4 h-4" />
                   </button>
                 </div>
@@ -792,12 +894,12 @@ export default function QuestionCard({
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       onClick={() => setSuggestionType("flag")}
-                      className="flex items-center gap-2 p-3 border border-[#E4E9F0] rounded-xl hover:border-[#D64545]/40 hover:bg-[#D64545]/5 transition-all text-left"
+                      className="flex items-center gap-2 p-3 border border-[var(--mp-border)] rounded-xl hover:border-[var(--mp-error)]/40 hover:bg-[var(--mp-error)]/5 transition-all text-left"
                     >
-                      <AlertTriangle className="w-5 h-5 text-[#D64545]" />
+                      <AlertTriangle className="w-5 h-5 text-[var(--mp-error)]" />
                       <div>
-                        <p className="text-sm font-medium text-[#1A2B3C]">{lang === "de" ? "Problem melden" : "Report Issue"}</p>
-                        <p className="text-[10px] text-[#A0AEC0]">{lang === "de" ? "Fehler, Duplikat, unklar" : "Error, duplicate, unclear"}</p>
+                        <p className="text-sm font-medium text-[var(--mp-fg)]">{lang === "de" ? "Problem melden" : "Report Issue"}</p>
+                        <p className="text-[10px] text-[var(--mp-fg-subtle)]">{lang === "de" ? "Fehler, Duplikat, unklar" : "Error, duplicate, unclear"}</p>
                       </div>
                     </button>
                     <button
@@ -807,12 +909,12 @@ export default function QuestionCard({
                         setEditExplanation(question.explanation || "");
                         setEditTopic(question.topic);
                       }}
-                      className="flex items-center gap-2 p-3 border border-[#E4E9F0] rounded-xl hover:border-[#007B5F]/40 hover:bg-[#007B5F]/5 transition-all text-left"
+                      className="flex items-center gap-2 p-3 border border-[var(--mp-border)] rounded-xl hover:border-[var(--mp-viridian)]/40 hover:bg-[var(--mp-viridian)]/5 transition-all text-left"
                     >
-                      <Edit3 className="w-5 h-5 text-[#007B5F]" />
+                      <Edit3 className="w-5 h-5 text-[var(--mp-viridian)]" />
                       <div>
-                        <p className="text-sm font-medium text-[#1A2B3C]">{lang === "de" ? "Änderung vorschlagen" : "Suggest Edit"}</p>
-                        <p className="text-[10px] text-[#A0AEC0]">{lang === "de" ? "Text, Erklärung bearbeiten" : "Edit text, explanation"}</p>
+                        <p className="text-sm font-medium text-[var(--mp-fg)]">{lang === "de" ? "Änderung vorschlagen" : "Suggest Edit"}</p>
+                        <p className="text-[10px] text-[var(--mp-fg-subtle)]">{lang === "de" ? "Text, Erklärung bearbeiten" : "Edit text, explanation"}</p>
                       </div>
                     </button>
                   </div>
@@ -837,8 +939,8 @@ export default function QuestionCard({
                           onClick={() => setFlagReason(r.value)}
                           className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
                             flagReason === r.value
-                              ? "bg-[#D64545]/10 border-[#D64545]/40 text-[#D64545] font-semibold"
-                              : "border-[#E4E9F0] text-[#4A5568] hover:border-[#D64545]/30"
+                              ? "bg-[var(--mp-error)]/10 border-[var(--mp-error)]/40 text-[var(--mp-error)] font-semibold"
+                              : "border-[var(--mp-border)] text-[var(--mp-fg-muted)] hover:border-[var(--mp-error)]/30"
                           }`}
                         >
                           {lang === "de" ? r.de : r.en}
@@ -850,7 +952,7 @@ export default function QuestionCard({
                       onChange={(e) => setFlagDetails(e.target.value)}
                       placeholder={lang === "de" ? "Weitere Details (optional)..." : "Additional details (optional)..."}
                       rows={2}
-                      className="w-full bg-[#F7F9FC] border border-[#E4E9F0] rounded-lg px-3 py-2 text-sm text-[#1A2B3C] placeholder-[#A0AEC0] resize-none focus:outline-none focus:border-[#D64545]/30"
+                      className="w-full bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)] rounded-lg px-3 py-2 text-sm text-[var(--mp-fg)] placeholder-[var(--mp-fg-subtle)] resize-none focus:outline-none focus:border-[var(--mp-error)]/30"
                     />
                     <div className="flex gap-2">
                       <button
@@ -885,7 +987,7 @@ export default function QuestionCard({
                       </button>
                       <button
                         onClick={() => setSuggestionType(null)}
-                        className="text-xs text-[#A0AEC0] hover:text-[#4A5568] px-3 py-2"
+                        className="text-xs text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg-muted)] px-3 py-2"
                       >
                         {t("cancel", lang)}
                       </button>
@@ -897,18 +999,18 @@ export default function QuestionCard({
                 {suggestionType === "edit" && (
                   <div className="space-y-3">
                     <div>
-                      <label className="text-[10px] text-[#A0AEC0] uppercase tracking-wider font-semibold mb-1 block">
+                      <label className="text-[10px] text-[var(--mp-fg-subtle)] uppercase tracking-wider font-semibold mb-1 block">
                         {lang === "de" ? "Fragetext" : "Question Text"}
                       </label>
                       <textarea
                         value={editQuestion}
                         onChange={(e) => setEditQuestion(e.target.value)}
                         rows={3}
-                        className="w-full bg-[#F7F9FC] border border-[#E4E9F0] rounded-lg px-3 py-2 text-sm text-[#1A2B3C] resize-none focus:outline-none focus:border-[#007B5F]/30"
+                        className="w-full bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)] rounded-lg px-3 py-2 text-sm text-[var(--mp-fg)] resize-none focus:outline-none focus:border-[var(--mp-viridian)]/30"
                       />
                     </div>
                     <div>
-                      <label className="text-[10px] text-[#A0AEC0] uppercase tracking-wider font-semibold mb-1 block">
+                      <label className="text-[10px] text-[var(--mp-fg-subtle)] uppercase tracking-wider font-semibold mb-1 block">
                         {lang === "de" ? "Erklärung" : "Explanation"}
                       </label>
                       <textarea
@@ -916,7 +1018,7 @@ export default function QuestionCard({
                         onChange={(e) => setEditExplanation(e.target.value)}
                         rows={3}
                         placeholder={lang === "de" ? "Erklärung hinzufügen oder bearbeiten..." : "Add or edit explanation..."}
-                        className="w-full bg-[#F7F9FC] border border-[#E4E9F0] rounded-lg px-3 py-2 text-sm text-[#1A2B3C] placeholder-[#A0AEC0] resize-none focus:outline-none focus:border-[#007B5F]/30"
+                        className="w-full bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)] rounded-lg px-3 py-2 text-sm text-[var(--mp-fg)] placeholder-[var(--mp-fg-subtle)] resize-none focus:outline-none focus:border-[var(--mp-viridian)]/30"
                       />
                     </div>
                     <textarea
@@ -924,7 +1026,7 @@ export default function QuestionCard({
                       onChange={(e) => setFlagDetails(e.target.value)}
                       placeholder={lang === "de" ? "Was hast du geändert? (optional)" : "What did you change? (optional)"}
                       rows={1}
-                      className="w-full bg-[#F7F9FC] border border-[#E4E9F0] rounded-lg px-3 py-2 text-sm text-[#1A2B3C] placeholder-[#A0AEC0] resize-none focus:outline-none focus:border-[#007B5F]/30"
+                      className="w-full bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)] rounded-lg px-3 py-2 text-sm text-[var(--mp-fg)] placeholder-[var(--mp-fg-subtle)] resize-none focus:outline-none focus:border-[var(--mp-viridian)]/30"
                     />
                     <div className="flex gap-2">
                       <button
@@ -962,7 +1064,7 @@ export default function QuestionCard({
                       </button>
                       <button
                         onClick={() => setSuggestionType(null)}
-                        className="text-xs text-[#A0AEC0] hover:text-[#4A5568] px-3 py-2"
+                        className="text-xs text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg-muted)] px-3 py-2"
                       >
                         {t("cancel", lang)}
                       </button>

@@ -11,6 +11,7 @@ import EmailValidationModal from "@/components/EmailValidationModal";
 import CookieBannerMount from "@/components/CookieBannerMount";
 import ConsentGatedAnalytics from "@/components/ConsentGatedAnalytics";
 import TrackRouteChange from "@/components/TrackRouteChange";
+import { ToastProvider } from "@/components/ui";
 import { Suspense } from "react";
 
 const inter = Inter({
@@ -206,13 +207,18 @@ export default function RootLayout({
         <Suspense fallback={null}>
           <TrackRouteChange />
         </Suspense>
-        <PWAInstall />
-        <GuestMigrationBanner />
-        <EmailValidationModal />
-        <FeedbackWidget />
-        <CookieBannerMount />
-        <ConsentGatedAnalytics />
-        {children}
+        {/* ToastProvider wraps the app so any component can call useToast()
+            to push a transient notification. Renders a single a11y-live
+            region for screen readers. See src/components/ui/Toast.tsx. */}
+        <ToastProvider>
+          <PWAInstall />
+          <GuestMigrationBanner />
+          <EmailValidationModal />
+          <FeedbackWidget />
+          <CookieBannerMount />
+          <ConsentGatedAnalytics />
+          {children}
+        </ToastProvider>
       </body>
     </html>
   );

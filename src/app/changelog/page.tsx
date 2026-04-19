@@ -17,26 +17,26 @@ const TAG_CONFIG: Record<ChangelogTag, { icon: typeof Sparkles; label: { de: str
   feature: {
     icon: Sparkles,
     label: { de: "Neu", en: "New" },
-    color: "text-[#007B5F]",
-    bg: "bg-[#007B5F]/10",
+    color: "text-[var(--mp-viridian)]",
+    bg: "bg-[var(--mp-viridian)]/10",
   },
   improvement: {
     icon: Wrench,
     label: { de: "Verbessert", en: "Improved" },
-    color: "text-[#003A8C]",
-    bg: "bg-[#003A8C]/10",
+    color: "text-[var(--mp-cta-blue)]",
+    bg: "bg-[var(--mp-cta-blue)]/10",
   },
   fix: {
     icon: Bug,
     label: { de: "Behoben", en: "Fixed" },
-    color: "text-[#F4A261]",
-    bg: "bg-[#F4A261]/10",
+    color: "text-[var(--mp-status-warning)]",
+    bg: "bg-[var(--mp-status-warning)]/10",
   },
   admin: {
     icon: Wrench,
     label: { de: "Admin", en: "Admin" },
-    color: "text-[#A0AEC0]",
-    bg: "bg-[#A0AEC0]/10",
+    color: "text-[var(--mp-fg-subtle)]",
+    bg: "bg-[var(--mp-fg-subtle)]/10",
   },
 };
 
@@ -79,15 +79,15 @@ export default function ChangelogPage() {
     <div className="app-layout">
       <Sidebar lang={lang} userId={userId} />
 
-      <main className="main-content safe-area-top safe-area-bottom bg-[#F7F9FC]">
+      <main className="main-content safe-area-top safe-area-bottom bg-[var(--mp-surface-sunken)]">
         {/* Header */}
-        <div className="px-4 lg:px-8 pt-4 pb-2 flex items-center justify-between border-b border-[#E4E9F0]">
-          <Link href="/" className="flex items-center gap-1.5 text-[#A0AEC0] hover:text-[#1A2B3C] text-sm transition-colors">
+        <div className="px-4 lg:px-8 pt-4 pb-2 flex items-center justify-between border-b border-[var(--mp-border)]">
+          <Link href="/" className="flex items-center gap-1.5 text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg)] text-sm transition-colors">
             <ArrowLeft className="w-4 h-4" />
             {lang === "de" ? "Zurück" : "Back"}
           </Link>
-          <h1 className="text-base font-bold text-[#1A2B3C] flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-[#007B5F]" />
+          <h1 className="text-base font-bold text-[var(--mp-fg)] flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-[var(--mp-viridian)]" />
             {lang === "de" ? "Neuigkeiten" : "What's New"}
           </h1>
           <div className="flex items-center gap-2">
@@ -100,10 +100,10 @@ export default function ChangelogPage() {
         <div className="max-w-3xl mx-auto px-4 lg:px-8 py-6">
           {/* Hero */}
           <div className="text-center mb-8">
-            <h2 className="text-2xl md:text-3xl font-black text-[#1A2B3C] font-display mb-2">
+            <h2 className="text-2xl md:text-3xl font-black text-[var(--mp-fg)] font-display mb-2">
               {lang === "de" ? "Was ist neu in MedPrüf?" : "What's new in MedPrüf?"}
             </h2>
-            <p className="text-sm text-[#A0AEC0]">
+            <p className="text-sm text-[var(--mp-fg-subtle)]">
               {lang === "de"
                 ? "Wir arbeiten ständig daran, MedPrüf zu verbessern. Hier sind alle Updates."
                 : "We're constantly working to improve MedPrüf. Here are all the updates."}
@@ -115,15 +115,15 @@ export default function ChangelogPage() {
             {dates.map((date) => (
               <section key={date}>
                 {/* Date header */}
-                <div className="flex items-center gap-2 mb-3 sticky top-0 bg-[#F7F9FC] py-2 z-10">
-                  <Calendar className="w-4 h-4 text-[#A0AEC0]" />
-                  <h3 className="text-sm font-semibold text-[#4A5568]">
+                <div className="flex items-center gap-2 mb-3 sticky top-0 bg-[var(--mp-surface-sunken)] py-2 z-10">
+                  <Calendar className="w-4 h-4 text-[var(--mp-fg-subtle)]" />
+                  <h3 className="text-sm font-semibold text-[var(--mp-fg-muted)]">
                     {formatDate(date, lang)}
                   </h3>
                 </div>
 
                 {/* Entries */}
-                <div className="space-y-2.5 pl-6 border-l-2 border-[#E4E9F0]">
+                <div className="space-y-2.5 pl-6 border-l-2 border-[var(--mp-border)]">
                   {grouped[date].map((entry, i) => {
                     const config = TAG_CONFIG[entry.tag];
                     const Icon = config.icon;
@@ -140,10 +140,10 @@ export default function ChangelogPage() {
                             {config.label[lang]}
                           </span>
                         </div>
-                        <h4 className="text-sm font-semibold text-[#1A2B3C] mb-1">
+                        <h4 className="text-sm font-semibold text-[var(--mp-fg)] mb-1">
                           {entry.title[lang]}
                         </h4>
-                        <p className="text-xs text-[#4A5568] leading-relaxed">
+                        <p className="text-xs text-[var(--mp-fg-muted)] leading-relaxed">
                           {entry.description[lang]}
                         </p>
                       </div>
@@ -155,8 +155,8 @@ export default function ChangelogPage() {
           </div>
 
           {/* Footer */}
-          <div className="text-center mt-12 pt-8 border-t border-[#E4E9F0]">
-            <p className="text-xs text-[#A0AEC0]">
+          <div className="text-center mt-12 pt-8 border-t border-[var(--mp-border)]">
+            <p className="text-xs text-[var(--mp-fg-subtle)]">
               {lang === "de"
                 ? "Hast du einen Vorschlag? Melde ihn direkt in einer Frage."
                 : "Have a suggestion? Report it directly on a question."}

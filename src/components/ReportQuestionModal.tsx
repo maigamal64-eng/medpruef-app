@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { X, Flag, AlertTriangle, Edit3, CheckCircle2 } from "lucide-react";
+import { AlertTriangle, Edit3, CheckCircle2 } from "lucide-react";
 import { t } from "@/lib/i18n";
 import { trackEvent } from "@/lib/tracker";
 // Auth-aware fetch so the x-user-id header is set on the
@@ -11,6 +11,7 @@ import { trackEvent } from "@/lib/tracker";
 // automatically pick up the header.
 import { authFetch as fetch } from "@/lib/authFetch";
 import { captureClientContext } from "@/lib/clientContext";
+import { Dialog, Textarea } from "@/components/ui";
 
 type Lang = "de" | "en";
 
@@ -66,22 +67,6 @@ export default function ReportQuestionModal({
       setLoading(false);
     }
   }, [open, questionId, questionText, explanation, topic]);
-
-  // Esc to close
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    document.body.style.overflow = "hidden";
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = "";
-    };
-  }, [open, onClose]);
-
-  if (!open) return null;
 
   const submitFlag = async () => {
     if (!flagReason) return;
@@ -139,175 +124,162 @@ export default function ReportQuestionModal({
     }
   };
 
+  const dialogTitle = lang === "de" ? "Frage melden" : "Report question";
+
+  let footer: React.ReactNode = null;
+  if (!submitted && type === "flag") {
+    footer = (
+      <>
+        <button
+          className="mp-btn mp-btn--secondary"
+          onClick={() => setType(null)}
+        >
+          {t("cancel", lang)}
+        </button>
+        <button
+          className="mp-btn mp-btn--primary"
+          onClick={submitFlag}
+          disabled={!flagReason || loading}
+        >
+          {loading ? "..." : lang === "de" ? "Senden" : "Submit"}
+        </button>
+      </>
+    );
+  } else if (!submitted && type === "edit") {
+    footer = (
+      <>
+        <button
+          className="mp-btn mp-btn--secondary"
+          onClick={() => setType(null)}
+        >
+          {t("cancel", lang)}
+        </button>
+        <button
+          className="mp-btn mp-btn--primary"
+          onClick={submitEdit}
+          disabled={loading}
+        >
+          {loading ? "..." : lang === "de" ? "Vorschlag senden" : "Submit suggestion"}
+        </button>
+      </>
+    );
+  }
+
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center px-4 py-8 bg-[#001B3D]/60 backdrop-blur-sm animate-fade-in"
-      onClick={onClose}
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) onClose();
+      }}
+      title={dialogTitle}
+      maxWidth="520px"
+      footer={footer}
     >
-      <div
-        className="w-full max-w-lg max-h-[90vh] overflow-y-auto bg-white dark:bg-[#1E293B] rounded-2xl shadow-2xl border border-[#E4E9F0] dark:border-[#334155] animate-scale-in"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[#E4E9F0] dark:border-[#334155]">
-          <h2 className="text-base font-semibold text-[#1A2B3C] dark:text-[#E2E8F0] flex items-center gap-2">
-            <Flag className="w-4 h-4 text-[#D64545]" />
-            {lang === "de" ? "Frage melden" : "Report question"}
-          </h2>
+      {submitted ? (
+        <div className="text-center py-8 animate-fade-in">
+          <CheckCircle2 className="w-12 h-12 text-[var(--mp-viridian)] mx-auto mb-3" aria-hidden />
+          <p className="text-base font-semibold text-[var(--mp-fg)]">
+            {lang === "de" ? "Vielen Dank!" : "Thank you!"}
+          </p>
+          <p className="text-sm text-[var(--mp-fg-subtle)] mt-1">
+            {lang === "de" ? "Dein Feedback wurde gesendet." : "Your feedback has been submitted."}
+          </p>
+        </div>
+      ) : !type ? (
+        <div className="grid grid-cols-1 gap-3">
           <button
-            onClick={onClose}
-            className="text-[#A0AEC0] hover:text-[#1A2B3C] dark:hover:text-[#E2E8F0] transition-colors"
+            onClick={() => setType("flag")}
+            className="flex items-center gap-3 p-4 border border-[var(--mp-border)] rounded-xl hover:border-[var(--mp-error)]/40 hover:bg-[var(--mp-error)]/5 transition-all text-left"
           >
-            <X className="w-5 h-5" />
+            <AlertTriangle className="w-6 h-6 text-[var(--mp-error)] flex-shrink-0" aria-hidden />
+            <div>
+              <p className="text-sm font-semibold text-[var(--mp-fg)]">
+                {lang === "de" ? "Problem melden" : "Report a problem"}
+              </p>
+              <p className="text-xs text-[var(--mp-fg-subtle)] mt-0.5">
+                {lang === "de"
+                  ? "Fehler, Duplikat, unklar, fehlende Erklärung"
+                  : "Error, duplicate, unclear, missing explanation"}
+              </p>
+            </div>
+          </button>
+          <button
+            onClick={() => setType("edit")}
+            className="flex items-center gap-3 p-4 border border-[var(--mp-border)] rounded-xl hover:border-[var(--mp-viridian)]/40 hover:bg-[var(--mp-viridian)]/5 transition-all text-left"
+          >
+            <Edit3 className="w-6 h-6 text-[var(--mp-viridian)] flex-shrink-0" aria-hidden />
+            <div>
+              <p className="text-sm font-semibold text-[var(--mp-fg)]">
+                {lang === "de" ? "Änderung vorschlagen" : "Suggest an edit"}
+              </p>
+              <p className="text-xs text-[var(--mp-fg-subtle)] mt-0.5">
+                {lang === "de"
+                  ? "Fragetext oder Erklärung bearbeiten"
+                  : "Edit the question or explanation"}
+              </p>
+            </div>
           </button>
         </div>
-
-        <div className="p-5">
-          {submitted ? (
-            <div className="text-center py-8 animate-fade-in">
-              <CheckCircle2 className="w-12 h-12 text-[#00A896] mx-auto mb-3" />
-              <p className="text-base font-semibold text-[#1A2B3C] dark:text-[#E2E8F0]">
-                {lang === "de" ? "Vielen Dank!" : "Thank you!"}
-              </p>
-              <p className="text-sm text-[#A0AEC0] mt-1">
-                {lang === "de" ? "Dein Feedback wurde gesendet." : "Your feedback has been submitted."}
-              </p>
-            </div>
-          ) : !type ? (
-            <div className="grid grid-cols-1 gap-3">
-              <button
-                onClick={() => setType("flag")}
-                className="flex items-center gap-3 p-4 border border-[#E4E9F0] dark:border-[#334155] rounded-xl hover:border-[#D64545]/40 hover:bg-[#D64545]/5 transition-all text-left"
-              >
-                <AlertTriangle className="w-6 h-6 text-[#D64545] flex-shrink-0" />
-                <div>
-                  <p className="text-sm font-semibold text-[#1A2B3C] dark:text-[#E2E8F0]">
-                    {lang === "de" ? "Problem melden" : "Report a problem"}
-                  </p>
-                  <p className="text-xs text-[#A0AEC0] mt-0.5">
-                    {lang === "de" ? "Fehler, Duplikat, unklar, fehlende Erklärung" : "Error, duplicate, unclear, missing explanation"}
-                  </p>
-                </div>
-              </button>
-              <button
-                onClick={() => setType("edit")}
-                className="flex items-center gap-3 p-4 border border-[#E4E9F0] dark:border-[#334155] rounded-xl hover:border-[#007B5F]/40 hover:bg-[#007B5F]/5 transition-all text-left"
-              >
-                <Edit3 className="w-6 h-6 text-[#007B5F] flex-shrink-0" />
-                <div>
-                  <p className="text-sm font-semibold text-[#1A2B3C] dark:text-[#E2E8F0]">
-                    {lang === "de" ? "Änderung vorschlagen" : "Suggest an edit"}
-                  </p>
-                  <p className="text-xs text-[#A0AEC0] mt-0.5">
-                    {lang === "de" ? "Fragetext oder Erklärung bearbeiten" : "Edit the question or explanation"}
-                  </p>
-                </div>
-              </button>
-            </div>
-          ) : type === "flag" ? (
-            <div className="space-y-4">
-              <div>
-                <label className="text-[11px] uppercase tracking-wider text-[#A0AEC0] font-semibold mb-2 block">
-                  {lang === "de" ? "Was ist das Problem?" : "What's wrong?"}
-                </label>
-                <div className="flex flex-wrap gap-2">
-                  {FLAG_REASONS.map((r) => (
-                    <button
-                      key={r.value}
-                      onClick={() => setFlagReason(r.value)}
-                      className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
-                        flagReason === r.value
-                          ? "bg-[#D64545]/10 border-[#D64545]/40 text-[#D64545] font-semibold"
-                          : "border-[#E4E9F0] dark:border-[#334155] text-[#4A5568] dark:text-[#A0AEC0] hover:border-[#D64545]/30"
-                      }`}
-                    >
-                      {lang === "de" ? r.de : r.en}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <label className="text-[11px] uppercase tracking-wider text-[#A0AEC0] font-semibold mb-1.5 block">
-                  {lang === "de" ? "Details (optional)" : "Details (optional)"}
-                </label>
-                <textarea
-                  value={details}
-                  onChange={(e) => setDetails(e.target.value)}
-                  rows={3}
-                  className="w-full bg-[#F7F9FC] dark:bg-[#0F172A] border border-[#E4E9F0] dark:border-[#334155] rounded-lg px-3 py-2 text-sm text-[#1A2B3C] dark:text-[#E2E8F0] placeholder-[#A0AEC0] resize-none focus:outline-none focus:border-[#D64545]/30"
-                />
-              </div>
-              <div className="flex gap-2 pt-1">
+      ) : type === "flag" ? (
+        <div className="space-y-4">
+          <div>
+            <label className="text-[11px] uppercase tracking-wider text-[var(--mp-fg-subtle)] font-semibold mb-2 block">
+              {lang === "de" ? "Was ist das Problem?" : "What's wrong?"}
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {FLAG_REASONS.map((r) => (
                 <button
-                  onClick={submitFlag}
-                  disabled={!flagReason || loading}
-                  className="btn-primary text-sm px-5 py-2.5 rounded-xl disabled:opacity-40"
+                  key={r.value}
+                  onClick={() => setFlagReason(r.value)}
+                  className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
+                    flagReason === r.value
+                      ? "bg-[var(--mp-error)]/10 border-[var(--mp-error)]/40 text-[var(--mp-error)] font-semibold"
+                      : "border-[var(--mp-border)] text-[var(--mp-fg-muted)] hover:border-[var(--mp-error)]/30"
+                  }`}
                 >
-                  {loading ? "..." : lang === "de" ? "Senden" : "Submit"}
+                  {lang === "de" ? r.de : r.en}
                 </button>
-                <button
-                  onClick={() => setType(null)}
-                  className="text-sm text-[#A0AEC0] hover:text-[#4A5568] dark:hover:text-[#E2E8F0] px-3 py-2.5"
-                >
-                  {t("cancel", lang)}
-                </button>
-              </div>
+              ))}
             </div>
-          ) : (
-            <div className="space-y-4">
-              <div>
-                <label className="text-[11px] uppercase tracking-wider text-[#A0AEC0] font-semibold mb-1.5 block">
-                  {lang === "de" ? "Fragetext" : "Question text"}
-                </label>
-                <textarea
-                  value={editQuestion}
-                  onChange={(e) => setEditQuestion(e.target.value)}
-                  rows={3}
-                  className="w-full bg-[#F7F9FC] dark:bg-[#0F172A] border border-[#E4E9F0] dark:border-[#334155] rounded-lg px-3 py-2 text-sm text-[#1A2B3C] dark:text-[#E2E8F0] resize-none focus:outline-none focus:border-[#007B5F]/30"
-                />
-              </div>
-              <div>
-                <label className="text-[11px] uppercase tracking-wider text-[#A0AEC0] font-semibold mb-1.5 block">
-                  {lang === "de" ? "Erklärung" : "Explanation"}
-                </label>
-                <textarea
-                  value={editExplanation}
-                  onChange={(e) => setEditExplanation(e.target.value)}
-                  rows={4}
-                  placeholder={lang === "de" ? "Erklärung hinzufügen oder bearbeiten…" : "Add or edit explanation…"}
-                  className="w-full bg-[#F7F9FC] dark:bg-[#0F172A] border border-[#E4E9F0] dark:border-[#334155] rounded-lg px-3 py-2 text-sm text-[#1A2B3C] dark:text-[#E2E8F0] placeholder-[#A0AEC0] resize-none focus:outline-none focus:border-[#007B5F]/30"
-                />
-              </div>
-              <div>
-                <label className="text-[11px] uppercase tracking-wider text-[#A0AEC0] font-semibold mb-1.5 block">
-                  {lang === "de" ? "Was hast du geändert? (optional)" : "What did you change? (optional)"}
-                </label>
-                <textarea
-                  value={details}
-                  onChange={(e) => setDetails(e.target.value)}
-                  rows={2}
-                  className="w-full bg-[#F7F9FC] dark:bg-[#0F172A] border border-[#E4E9F0] dark:border-[#334155] rounded-lg px-3 py-2 text-sm text-[#1A2B3C] dark:text-[#E2E8F0] placeholder-[#A0AEC0] resize-none focus:outline-none focus:border-[#007B5F]/30"
-                />
-              </div>
-              <div className="flex gap-2 pt-1">
-                <button
-                  onClick={submitEdit}
-                  disabled={loading}
-                  className="btn-primary text-sm px-5 py-2.5 rounded-xl disabled:opacity-40"
-                >
-                  {loading ? "..." : lang === "de" ? "Vorschlag senden" : "Submit suggestion"}
-                </button>
-                <button
-                  onClick={() => setType(null)}
-                  className="text-sm text-[#A0AEC0] hover:text-[#4A5568] dark:hover:text-[#E2E8F0] px-3 py-2.5"
-                >
-                  {t("cancel", lang)}
-                </button>
-              </div>
-            </div>
-          )}
+          </div>
+          <Textarea
+            label={lang === "de" ? "Details (optional)" : "Details (optional)"}
+            value={details}
+            onChange={(e) => setDetails(e.target.value)}
+            rows={3}
+          />
         </div>
-      </div>
-    </div>
+      ) : (
+        <div className="space-y-4">
+          <Textarea
+            label={lang === "de" ? "Fragetext" : "Question text"}
+            value={editQuestion}
+            onChange={(e) => setEditQuestion(e.target.value)}
+            rows={3}
+          />
+          <Textarea
+            label={lang === "de" ? "Erklärung" : "Explanation"}
+            value={editExplanation}
+            onChange={(e) => setEditExplanation(e.target.value)}
+            rows={4}
+            placeholder={
+              lang === "de"
+                ? "Erklärung hinzufügen oder bearbeiten…"
+                : "Add or edit explanation…"
+            }
+          />
+          <Textarea
+            label={
+              lang === "de"
+                ? "Was hast du geändert? (optional)"
+                : "What did you change? (optional)"
+            }
+            value={details}
+            onChange={(e) => setDetails(e.target.value)}
+            rows={2}
+          />
+        </div>
+      )}
+    </Dialog>
   );
 }

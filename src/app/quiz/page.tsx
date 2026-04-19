@@ -356,7 +356,7 @@ function QuizContent() {
           <div className="px-4 lg:px-8 pt-4 flex items-center justify-between">
             <Link
               href="/"
-              className="flex items-center gap-1.5 text-[#A0AEC0] hover:text-[#1A2B3C] dark:hover:text-[#E2E8F0] transition-colors text-sm"
+              className="flex items-center gap-1.5 text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg)] transition-colors text-sm"
             >
               ← {t("back_home", lang)}
             </Link>
@@ -386,13 +386,13 @@ function QuizContent() {
     <div className="app-layout">
       <Sidebar lang={lang} userId={userId} />
 
-      <main className="main-content safe-area-top safe-area-bottom flex flex-col min-h-screen bg-[#F7F9FC] dark:bg-[#0F172A]">
+      <main className="main-content safe-area-top safe-area-bottom flex flex-col min-h-screen bg-[var(--mp-surface-sunken)]">
         {/* Header */}
-        <div className="px-4 lg:px-8 pt-4 pb-3 flex items-center justify-between flex-shrink-0 border-b border-[#E4E9F0] dark:border-[#334155] bg-white/60 dark:bg-[#1E293B]/60 backdrop-blur-sm">
+        <div className="px-4 lg:px-8 pt-4 pb-3 flex items-center justify-between flex-shrink-0 border-b border-[var(--mp-border)] bg-[var(--mp-surface-raised)]/60 backdrop-blur-sm">
           {autoStarted ? (
             <Link
               href="/"
-              className="flex items-center gap-1.5 text-[#A0AEC0] hover:text-[#1A2B3C] dark:hover:text-[#E2E8F0] transition-colors text-sm"
+              className="flex items-center gap-1.5 text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg)] transition-colors text-sm"
             >
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="opacity-60">
                 <path d="M10 12L6 8L10 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -402,7 +402,7 @@ function QuizContent() {
           ) : (
             <button
               onClick={restart}
-              className="flex items-center gap-1.5 text-[#A0AEC0] hover:text-[#1A2B3C] dark:hover:text-[#E2E8F0] transition-colors text-sm"
+              className="flex items-center gap-1.5 text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg)] transition-colors text-sm"
               title={lang === "de" ? "Zurück zur Konfiguration" : "Back to setup"}
             >
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="opacity-60">
@@ -415,7 +415,7 @@ function QuizContent() {
           <div className="flex items-center gap-3">
             {timeRemaining !== null && (
               <div className={`flex items-center gap-1.5 text-sm font-mono font-semibold ${
-                timeRemaining < 60 ? "text-[#D64545] animate-pulse" : "text-[#4A5568] dark:text-[#A0AEC0]"
+                timeRemaining < 60 ? "text-[var(--mp-error)] animate-pulse" : "text-[var(--mp-fg-muted)]"
               }`}>
                 <Clock className="w-4 h-4" />
                 {Math.floor(timeRemaining / 60)}:{String(timeRemaining % 60).padStart(2, "0")}
@@ -423,9 +423,9 @@ function QuizContent() {
             )}
             {questionCount > 0 && (
               <div className="flex items-center gap-1.5 text-sm font-mono">
-                <span className="text-[#00A896] font-semibold">{correctCount}✓</span>
-                <span className="text-[#E4E9F0] dark:text-[#334155]">/</span>
-                <span className="text-[#4A5568] dark:text-[#A0AEC0]">{questionCount}</span>
+                <span className="text-[var(--mp-accent-teal)] font-semibold">{correctCount}✓</span>
+                <span className="text-[var(--mp-border)]">/</span>
+                <span className="text-[var(--mp-fg-muted)]">{questionCount}</span>
               </div>
             )}
             <ThemeToggle />
@@ -435,13 +435,13 @@ function QuizContent() {
 
         {/* Progress bar — precise reflection of custom quiz length */}
         <div className="px-4 lg:px-8 pt-3 pb-2 flex-shrink-0">
-          <div className="flex items-center justify-between text-[10px] text-[#A0AEC0] mb-1.5 font-mono">
+          <div className="flex items-center justify-between text-[10px] text-[var(--mp-fg-subtle)] mb-1.5 font-mono">
             <span>
               {questionCount} / {autoStarted && topicTotal > 0 ? topicTotal : config.targetCount} {lang === "de" ? "Fragen" : "questions"}
             </span>
             <span>{progressPct}%</span>
           </div>
-          <div className="h-2 w-full bg-[#E4E9F0] dark:bg-[#334155] rounded-full overflow-hidden">
+          <div className="h-2 w-full bg-[var(--mp-border)] rounded-full overflow-hidden">
             <div
               className="h-full bg-gradient-to-r from-[#007B5F] to-[#00A896] rounded-full transition-all duration-500 ease-out"
               style={{ width: `${progressPct}%` }}
@@ -460,7 +460,7 @@ function QuizContent() {
               {/* Floating XP */}
               {showXpFloat && xpEarned !== null && (
                 <div className="absolute -top-2 right-2 z-20 pointer-events-none">
-                  <span className="xp-animation inline-block text-[#F4A261] font-bold font-mono text-2xl drop-shadow">
+                  <span className="xp-animation inline-block text-[var(--mp-status-warning)] font-bold font-mono text-2xl drop-shadow">
                     +{xpEarned} XP
                   </span>
                 </div>
@@ -483,8 +483,8 @@ function QuizContent() {
                 </div>
               ) : !question ? (
                 <div className="text-center py-12">
-                  <Inbox className="w-12 h-12 text-[#A0AEC0] mx-auto mb-4" />
-                  <p className="text-[#4A5568] dark:text-[#A0AEC0]">{t("no_questions", lang)}</p>
+                  <Inbox className="w-12 h-12 text-[var(--mp-fg-subtle)] mx-auto mb-4" />
+                  <p className="text-[var(--mp-fg-muted)]">{t("no_questions", lang)}</p>
                 </div>
               ) : (
                 <>
@@ -522,9 +522,9 @@ function QuizContent() {
                             : "Finish quiz →"
                           : `${t("next_question", lang)} →`}
                       </button>
-                      <p className="text-[10px] text-[#A0AEC0] text-center">
+                      <p className="text-[10px] text-[var(--mp-fg-subtle)] text-center">
                         {lang === "de" ? "Drücke" : "Press"}{" "}
-                        <kbd className="px-1.5 py-0.5 bg-[#F7F9FC] dark:bg-[#1E293B] border border-[#E4E9F0] dark:border-[#334155] rounded text-[10px] font-mono">N</kbd>{" "}
+                        <kbd className="px-1.5 py-0.5 bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)] rounded text-[10px] font-mono">N</kbd>{" "}
                         {lang === "de" ? "für die nächste Frage" : "for the next question"}
                       </p>
                     </div>
@@ -532,18 +532,18 @@ function QuizContent() {
 
                   {/* Milestone card — appears BELOW, doesn't replace the quiz */}
                   {milestoneVisible && (
-                    <div className="mt-4 card rounded-2xl p-5 animate-slide-up border-l-4 border-l-[#00A896] bg-gradient-to-br from-[#00A896]/5 to-transparent">
+                    <div className="mt-4 card rounded-2xl p-5 animate-slide-up border-l-4 border-l-[var(--mp-accent-teal)] bg-gradient-to-br from-[#00A896]/5 to-transparent">
                       <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-[#00A896]/15 flex items-center justify-center flex-shrink-0">
-                          <Sparkles className="w-5 h-5 text-[#00A896]" />
+                        <div className="w-10 h-10 rounded-xl bg-[var(--mp-accent-teal)]/15 flex items-center justify-center flex-shrink-0">
+                          <Sparkles className="w-5 h-5 text-[var(--mp-accent-teal)]" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-[#1A2B3C] dark:text-[#E2E8F0]">
+                          <p className="text-sm font-semibold text-[var(--mp-fg)]">
                             {lang === "de"
                               ? `${questionCount} Fragen geschafft! Weiter so 💪`
                               : `${questionCount} questions done! Keep going 💪`}
                           </p>
-                          <p className="text-xs text-[#A0AEC0] mt-0.5">
+                          <p className="text-xs text-[var(--mp-fg-subtle)] mt-0.5">
                             {lang === "de"
                               ? `${sessionAccuracy}% Genauigkeit · ${topicTotal.toLocaleString("de-DE")}+ Fragen verfügbar`
                               : `${sessionAccuracy}% accuracy · ${topicTotal.toLocaleString("en-US")}+ questions available`}
@@ -551,7 +551,7 @@ function QuizContent() {
                         </div>
                         <button
                           onClick={() => setMilestoneVisible(false)}
-                          className="text-[#A0AEC0] hover:text-[#4A5568] text-xs"
+                          className="text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg-muted)] text-xs"
                           aria-label="Dismiss"
                         >
                           ✕
@@ -580,7 +580,7 @@ function QuizContent() {
 
         {/* Login prompt for unauthenticated users */}
         {!userId && !quizFinished && (
-          <p className="px-4 pb-2 text-center text-xs text-[#A0AEC0]">
+          <p className="px-4 pb-2 text-center text-xs text-[var(--mp-fg-subtle)]">
             {lang === "de"
               ? "Nicht angemeldet — Fortschritt wird nicht gespeichert"
               : "Not signed in — progress will not be saved"}
@@ -619,13 +619,13 @@ function FinalCompletionCard({
   return (
     <div className="card rounded-3xl p-8 md:p-10 text-center animate-scale-in">
       <div className="mb-5">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[#007B5F]/10 border border-[#007B5F]/30 mb-3">
-          <Trophy className="w-8 h-8 text-[#007B5F]" />
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[var(--mp-viridian)]/10 border border-[var(--mp-viridian)]/30 mb-3">
+          <Trophy className="w-8 h-8 text-[var(--mp-viridian)]" />
         </div>
-        <h2 className="text-2xl md:text-3xl font-bold text-[#1A2B3C] dark:text-[#E2E8F0] font-display">
+        <h2 className="text-2xl md:text-3xl font-bold text-[var(--mp-fg)] font-display">
           {lang === "de" ? "Quiz abgeschlossen!" : "Quiz complete!"}
         </h2>
-        <p className="text-sm text-[#A0AEC0] mt-1">
+        <p className="text-sm text-[var(--mp-fg-subtle)] mt-1">
           {lang === "de"
             ? `${questionCount} von ${targetCount} Fragen bearbeitet`
             : `${questionCount} of ${targetCount} questions answered`}
@@ -634,32 +634,32 @@ function FinalCompletionCard({
 
       {/* Accuracy ring */}
       <div className="mb-5">
-        <div className="text-6xl md:text-7xl font-black font-display text-[#007B5F]">
+        <div className="text-6xl md:text-7xl font-black font-display text-[var(--mp-viridian)]">
           {accuracy}%
         </div>
-        <p className="text-sm text-[#A0AEC0] mt-1">
+        <p className="text-sm text-[var(--mp-fg-subtle)] mt-1">
           {lang === "de" ? "Genauigkeit" : "Accuracy"}
         </p>
       </div>
 
       {totalXp > 0 && (
-        <div className="inline-flex items-center gap-2 bg-[#F4A261]/15 text-[#F4A261] font-bold px-5 py-2.5 rounded-2xl mb-5">
+        <div className="inline-flex items-center gap-2 bg-[var(--mp-status-warning)]/15 text-[var(--mp-status-warning)] font-bold px-5 py-2.5 rounded-2xl mb-5">
           +{totalXp} XP {lang === "de" ? "verdient" : "earned"}
         </div>
       )}
 
       <div className="grid grid-cols-2 gap-3 mb-6">
         <div className="card rounded-xl p-3 text-center">
-          <p className="text-xl font-bold font-mono text-[#1A2B3C] dark:text-[#E2E8F0]">
+          <p className="text-xl font-bold font-mono text-[var(--mp-fg)]">
             {correctCount}/{questionCount}
           </p>
-          <p className="text-[11px] text-[#A0AEC0]">{lang === "de" ? "Richtig" : "Correct"}</p>
+          <p className="text-[11px] text-[var(--mp-fg-subtle)]">{lang === "de" ? "Richtig" : "Correct"}</p>
         </div>
         <div className="card rounded-xl p-3 text-center">
-          <p className="text-xl font-bold font-mono text-[#1A2B3C] dark:text-[#E2E8F0]">
+          <p className="text-xl font-bold font-mono text-[var(--mp-fg)]">
             {topicTotal > 0 ? `${topicTotal.toLocaleString("de-DE")}+` : "—"}
           </p>
-          <p className="text-[11px] text-[#A0AEC0]">{lang === "de" ? "Verfügbar" : "Available"}</p>
+          <p className="text-[11px] text-[var(--mp-fg-subtle)]">{lang === "de" ? "Verfügbar" : "Available"}</p>
         </div>
       </div>
 
@@ -679,7 +679,7 @@ export default function QuizPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex items-center justify-center min-h-screen bg-[#F7F9FC] dark:bg-[#0F172A]">
+        <div className="flex items-center justify-center min-h-screen bg-[var(--mp-surface-sunken)]">
           <BrandedLoader />
         </div>
       }

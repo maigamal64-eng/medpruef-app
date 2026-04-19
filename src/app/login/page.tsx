@@ -5,15 +5,23 @@ import Link from "next/link";
 import { getLang, setLang } from "@/lib/i18n";
 import { getStoredSession, storeSession } from "@/lib/auth";
 import { BrandedLoader } from "@/components/Logo";
-// TelegramLoginWidget was removed from the UI on Apr 10 (only bot
-// deep-link remains) — the import + handleWidgetAuth handler were
-// kept around in this file as dead code. Removed 2026-04-15 as part
-// of the audit cleanup (Frontend P2-4).
+import { TextField } from "@/components/ui";
 import ThemeToggle from "@/components/ThemeToggle";
-import { ArrowLeft, User, Shield, Zap, BookOpen, Mail, Eye, EyeOff } from "lucide-react";
+import {
+  ArrowLeft,
+  Shield,
+  Zap,
+  BookOpen,
+  ChevronDown,
+  Eye,
+  EyeOff,
+} from "lucide-react";
 
 type Lang = "de" | "en";
 type AuthMode = "login" | "register";
+
+// Telegram bot deep-link — keep as a single source of truth.
+const TELEGRAM_DEEP_LINK = "https://t.me/MedPruefBot?start=web_login";
 
 export default function LoginPage() {
   const [lang, setLangState] = useState<Lang>("de");
@@ -21,6 +29,7 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [mode, setMode] = useState<AuthMode>("login");
   const [showPassword, setShowPassword] = useState(false);
+  const [emailOpen, setEmailOpen] = useState(false);
 
   // Form fields
   const [email, setEmail] = useState("");
@@ -47,9 +56,10 @@ export default function LoginPage() {
     setError("");
 
     try {
-      const payload = mode === "login"
-        ? { emailLogin: { email, password } }
-        : { emailRegister: { email, password, firstName, lastName } };
+      const payload =
+        mode === "login"
+          ? { emailLogin: { email, password } }
+          : { emailRegister: { email, password, firstName, lastName } };
 
       const res = await fetch("/api/auth", {
         method: "POST",
@@ -64,13 +74,15 @@ export default function LoginPage() {
           de: {
             "Invalid credentials": "E-Mail oder Passwort falsch",
             "Email already registered": "E-Mail bereits registriert",
-            "Password must be at least 6 characters": "Passwort muss mindestens 6 Zeichen lang sein",
-            "This account uses Telegram login": "Dieses Konto verwendet Telegram-Login",
+            "Password must be at least 6 characters":
+              "Passwort muss mindestens 6 Zeichen lang sein",
+            "This account uses Telegram login":
+              "Dieses Konto verwendet Telegram-Login",
           },
           en: {},
         };
         const msg = data.error || "Error";
-        setError(lang === "de" ? (errorMessages.de[msg] || msg) : msg);
+        setError(lang === "de" ? errorMessages.de[msg] || msg : msg);
         return;
       }
 
@@ -83,49 +95,53 @@ export default function LoginPage() {
     }
   };
 
-  const handleGuestContinue = () => {
-    const guestId = `guest_${Date.now()}`;
-    storeSession({
-      user: {
-        id: guestId,
-        telegram_id: 0,
-        first_name: lang === "de" ? "Gast" : "Guest",
-        xp_total: 0,
-        streak_count: 0,
-        daily_goal: 20,
-      },
-      gamification: {
-        total_xp: 0,
-        current_streak: 0,
-        total_questions_answered: 0,
-        total_correct: 0,
-        daily_questions_today: 0,
-      },
-    });
-    window.location.href = "/";
-  };
-
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#F7F9FC]">
+      <div className="flex items-center justify-center min-h-screen bg-[var(--mp-surface-sunken)]">
         <BrandedLoader size="lg" />
       </div>
     );
   }
 
+  const tagline =
+    lang === "de"
+      ? "Österreichische Ärzteprüfung vorbereiten"
+      : "Prepare for the Austrian medical exam";
+
   return (
-    <div className="min-h-screen bg-[#F7F9FC] safe-area-top safe-area-bottom flex flex-col">
+    <div className="min-h-screen bg-[var(--mp-surface-sunken)] safe-area-top safe-area-bottom flex flex-col">
       {/* Header */}
       <div className="px-4 pt-4 pb-2 flex items-center justify-between">
-        <Link href="/landing" className="flex items-center gap-1.5 text-[#A0AEC0] hover:text-[#1A2B3C] text-sm transition-colors">
+        <Link
+          href="/landing"
+          className="flex items-center gap-1.5 text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg)] text-sm transition-colors"
+        >
           <ArrowLeft className="w-4 h-4" />
           {lang === "de" ? "Zurück" : "Back"}
         </Link>
         <div className="flex items-center gap-2">
           <ThemeToggle />
           <div className="flex text-xs">
-            <button onClick={() => switchLang("de")} className={`px-2 py-1 rounded-l font-medium transition-all ${lang === "de" ? "bg-[#007B5F] text-white" : "text-[#A0AEC0] bg-[#F7F9FC] border border-[#E4E9F0]"}`}>DE</button>
-            <button onClick={() => switchLang("en")} className={`px-2 py-1 rounded-r font-medium transition-all ${lang === "en" ? "bg-[#007B5F] text-white" : "text-[#A0AEC0] bg-[#F7F9FC] border border-[#E4E9F0]"}`}>EN</button>
+            <button
+              onClick={() => switchLang("de")}
+              className={`px-2 py-1 rounded-l font-medium transition-all ${
+                lang === "de"
+                  ? "bg-[var(--mp-viridian)] text-white"
+                  : "text-[var(--mp-fg-subtle)] bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)]"
+              }`}
+            >
+              DE
+            </button>
+            <button
+              onClick={() => switchLang("en")}
+              className={`px-2 py-1 rounded-r font-medium transition-all ${
+                lang === "en"
+                  ? "bg-[var(--mp-viridian)] text-white"
+                  : "text-[var(--mp-fg-subtle)] bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)]"
+              }`}
+            >
+              EN
+            </button>
           </div>
         </div>
       </div>
@@ -133,166 +149,239 @@ export default function LoginPage() {
       {/* Main content */}
       <div className="flex-1 flex items-center justify-center px-4 py-6">
         <div className="w-full max-w-md">
-          {/* Logo + title */}
+          {/* Hero — wordmark + tagline */}
           <div className="text-center mb-6">
-            <div className="w-16 h-16 rounded-xl border border-[#007B5F]/30 bg-[#007B5F]/10 flex items-center justify-center mx-auto mb-4">
-              <img src="/brand/logomark.svg" alt="MedPrüf" className="w-12 h-12" />
+            <div className="w-16 h-16 rounded-xl border border-[var(--mp-viridian)]/30 bg-[var(--mp-viridian)]/10 flex items-center justify-center mx-auto mb-4">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/brand/logomark.svg"
+                alt="MedPrüf"
+                className="w-12 h-12"
+              />
             </div>
-            <h1 className="text-2xl font-bold text-[#1A2B3C] mb-1">
-              {mode === "login"
-                ? (lang === "de" ? "Anmelden" : "Sign In")
-                : (lang === "de" ? "Konto erstellen" : "Create Account")}
+            <h1 className="text-2xl font-display font-extrabold text-[var(--mp-fg)] mb-1 tracking-tight">
+              MedPr&uuml;f
             </h1>
-            <p className="text-sm text-[#A0AEC0]">
-              {lang === "de"
-                ? "Österreichische Kenntnisprüfung Vorbereitung"
-                : "Austrian Kenntnisprüfung Preparation"}
-            </p>
+            <p className="text-sm text-[var(--mp-fg-subtle)]">{tagline}</p>
           </div>
 
-          {/* Auth card */}
-          <div className="card rounded-2xl p-6 space-y-5">
+          {/* Auth card — Telegram-primary */}
+          <div className="card rounded-2xl p-6 space-y-4">
             {error && (
-              <div className="bg-[#D64545]/10 border border-[#D64545]/25 text-[#D64545] text-sm rounded-xl px-4 py-3 text-center animate-fade-in">
+              <div className="bg-[var(--mp-error)]/10 border border-[var(--mp-error)]/25 text-[var(--mp-error)] text-sm rounded-xl px-4 py-3 text-center animate-fade-in">
                 {error}
               </div>
             )}
 
-            {/* Email/Password Form */}
-            <form onSubmit={handleEmailAuth} className="space-y-3">
-              {mode === "register" && (
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs text-[#A0AEC0] mb-1.5">{lang === "de" ? "Vorname" : "First Name"} *</label>
-                    <input
-                      type="text"
-                      value={firstName}
-                      onChange={(e) => setFirstName(e.target.value)}
-                      required
-                      className="w-full bg-[#F7F9FC] border border-[#E4E9F0] rounded-xl px-3 py-3 text-sm text-[#1A2B3C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#007B5F]/50 transition-colors"
-                      placeholder={lang === "de" ? "Vorname" : "First name"}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-[#A0AEC0] mb-1.5">{lang === "de" ? "Nachname" : "Last Name"}</label>
-                    <input
-                      type="text"
-                      value={lastName}
-                      onChange={(e) => setLastName(e.target.value)}
-                      className="w-full bg-[#F7F9FC] border border-[#E4E9F0] rounded-xl px-3 py-3 text-sm text-[#1A2B3C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#007B5F]/50 transition-colors"
-                      placeholder={lang === "de" ? "Nachname" : "Last name"}
-                    />
-                  </div>
-                </div>
-              )}
-
-              <div>
-                <label className="block text-xs text-[#A0AEC0] mb-1.5">E-Mail *</label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#A0AEC0]" />
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    className="w-full bg-[#F7F9FC] border border-[#E4E9F0] rounded-xl pl-10 pr-3 py-3 text-sm text-[#1A2B3C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#007B5F]/50 transition-colors"
-                    placeholder="name@example.com"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs text-[#A0AEC0] mb-1.5">{lang === "de" ? "Passwort" : "Password"} *</label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    minLength={6}
-                    className="w-full bg-[#F7F9FC] border border-[#E4E9F0] rounded-xl px-3 py-3 pr-10 text-sm text-[#1A2B3C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#007B5F]/50 transition-colors"
-                    placeholder={mode === "register" ? (lang === "de" ? "Min. 6 Zeichen" : "Min. 6 characters") : "••••••••"}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#A0AEC0] hover:text-[#4A5568] transition-colors"
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                className="w-full btn-primary py-3.5 text-sm rounded-xl"
-              >
-                {mode === "login"
-                  ? (lang === "de" ? "Anmelden" : "Sign In")
-                  : (lang === "de" ? "Konto erstellen" : "Create Account")}
-              </button>
-            </form>
-
-            {/* Toggle login/register */}
-            <p className="text-center text-sm text-[#A0AEC0]">
-              {mode === "login" ? (
-                <>
-                  {lang === "de" ? "Noch kein Konto?" : "No account yet?"}{" "}
-                  <button onClick={() => { setMode("register"); setError(""); }} className="text-[#007B5F] font-semibold hover:underline">
-                    {lang === "de" ? "Registrieren" : "Register"}
-                  </button>
-                </>
-              ) : (
-                <>
-                  {lang === "de" ? "Bereits ein Konto?" : "Already have an account?"}{" "}
-                  <button onClick={() => { setMode("login"); setError(""); }} className="text-[#007B5F] font-semibold hover:underline">
-                    {lang === "de" ? "Anmelden" : "Sign In"}
-                  </button>
-                </>
-              )}
-            </p>
-
-            <div className="flex items-center gap-3">
-              <div className="flex-1 h-px bg-[#E4E9F0]" />
-              <span className="text-xs text-[#A0AEC0]">{lang === "de" ? "oder" : "or"}</span>
-              <div className="flex-1 h-px bg-[#E4E9F0]" />
-            </div>
-
-            {/* Telegram login */}
+            {/* PRIMARY CTA: Telegram deep-link */}
             <a
-              href="https://t.me/MedPruefBot?start=web_login"
+              href={TELEGRAM_DEEP_LINK}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full flex items-center justify-center gap-3 bg-[#229ED9] hover:bg-[#1e8fc0] text-white px-5 py-3 rounded-xl font-semibold text-sm transition-all active:scale-[0.98]"
+              className="w-full flex items-center justify-center gap-3 bg-[#229ED9] hover:bg-[#1e8fc0] text-white px-5 py-4 rounded-xl font-semibold text-[15px] transition-all active:scale-[0.98] shadow-sm"
             >
-              <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current" aria-hidden="true">
-                <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.833.941z"/>
+              <svg
+                viewBox="0 0 24 24"
+                className="w-6 h-6 fill-current"
+                aria-hidden="true"
+              >
+                <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.833.941z" />
               </svg>
-              {lang === "de" ? "Mit Telegram anmelden" : "Sign in with Telegram"}
+              {lang === "de"
+                ? "Mit Telegram anmelden"
+                : "Continue with Telegram"}
             </a>
 
-            {/* Guest mode removed — all users must register to track progress */}
+            <p className="text-center text-xs text-[var(--mp-fg-subtle)] leading-snug">
+              {lang === "de"
+                ? "Schnell, ohne Passwort. Wir nutzen deinen Telegram-Namen und dein Profilbild."
+                : "Fast, no password. We use your Telegram name and photo."}
+            </p>
+
+            {/* Email disclosure */}
+            <button
+              type="button"
+              onClick={() => {
+                setEmailOpen((v) => !v);
+                setError("");
+              }}
+              aria-expanded={emailOpen}
+              aria-controls="email-auth-panel"
+              className="w-full flex items-center justify-center gap-2 text-sm text-[var(--mp-fg-muted)] hover:text-[var(--mp-fg)] transition-colors py-2"
+            >
+              <span className="flex-1 h-px bg-[var(--mp-border)]" aria-hidden />
+              <span className="whitespace-nowrap">
+                {lang === "de" ? "oder mit E-Mail" : "or continue with email"}
+                <ChevronDown
+                  className={`inline w-4 h-4 ml-1 transition-transform ${
+                    emailOpen ? "rotate-180" : ""
+                  }`}
+                  aria-hidden
+                />
+              </span>
+              <span className="flex-1 h-px bg-[var(--mp-border)]" aria-hidden />
+            </button>
+
+            {/* Email/Password Form — collapsed by default */}
+            {emailOpen && (
+              <div id="email-auth-panel" className="pt-1 space-y-4 animate-fade-in">
+                {/* Login / Register segmented control */}
+                <div className="mp-tabs w-full" role="tablist" aria-label={lang === "de" ? "E-Mail-Anmeldung oder Registrierung" : "Email sign-in or register"}>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={mode === "login"}
+                    className={`mp-tabs__tab flex-1 ${
+                      mode === "login" ? "mp-tabs__tab--active" : ""
+                    }`}
+                    onClick={() => {
+                      setMode("login");
+                      setError("");
+                    }}
+                  >
+                    {lang === "de" ? "Anmelden" : "Sign in"}
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={mode === "register"}
+                    className={`mp-tabs__tab flex-1 ${
+                      mode === "register" ? "mp-tabs__tab--active" : ""
+                    }`}
+                    onClick={() => {
+                      setMode("register");
+                      setError("");
+                    }}
+                  >
+                    {lang === "de" ? "Registrieren" : "Register"}
+                  </button>
+                </div>
+
+                <form onSubmit={handleEmailAuth} className="space-y-3">
+                  {mode === "register" && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <TextField
+                        label={lang === "de" ? "Vorname" : "First name"}
+                        type="text"
+                        required
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
+                        placeholder={
+                          lang === "de" ? "Vorname" : "First name"
+                        }
+                      />
+                      <TextField
+                        label={lang === "de" ? "Nachname" : "Last name"}
+                        type="text"
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
+                        placeholder={
+                          lang === "de" ? "Nachname" : "Last name"
+                        }
+                      />
+                    </div>
+                  )}
+
+                  <TextField
+                    label={lang === "de" ? "E-Mail" : "Email"}
+                    type="email"
+                    required
+                    autoComplete="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="name@example.com"
+                  />
+
+                  <div className="relative">
+                    <TextField
+                      label={lang === "de" ? "Passwort" : "Password"}
+                      type={showPassword ? "text" : "password"}
+                      required
+                      minLength={6}
+                      autoComplete={
+                        mode === "login" ? "current-password" : "new-password"
+                      }
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder={
+                        mode === "register"
+                          ? lang === "de"
+                            ? "Min. 6 Zeichen"
+                            : "Min. 6 characters"
+                          : "••••••••"
+                      }
+                      helper={
+                        mode === "register"
+                          ? lang === "de"
+                            ? "Mindestens 6 Zeichen."
+                            : "At least 6 characters."
+                          : undefined
+                      }
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((v) => !v)}
+                      aria-label={
+                        showPassword
+                          ? lang === "de"
+                            ? "Passwort verbergen"
+                            : "Hide password"
+                          : lang === "de"
+                          ? "Passwort anzeigen"
+                          : "Show password"
+                      }
+                      className="absolute right-3 top-[34px] text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg-muted)] transition-colors"
+                    >
+                      {showPassword ? (
+                        <EyeOff className="w-4 h-4" />
+                      ) : (
+                        <Eye className="w-4 h-4" />
+                      )}
+                    </button>
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="mp-btn mp-btn--secondary w-full justify-center"
+                  >
+                    {mode === "login"
+                      ? lang === "de"
+                        ? "Mit E-Mail anmelden"
+                        : "Sign in with email"
+                      : lang === "de"
+                      ? "Konto erstellen"
+                      : "Create account"}
+                  </button>
+                </form>
+              </div>
+            )}
           </div>
 
           {/* Benefits */}
           <div className="mt-6 grid grid-cols-3 gap-3">
             <div className="text-center">
-              <div className="w-10 h-10 rounded-xl bg-[#007B5F]/10 flex items-center justify-center mx-auto mb-2">
-                <BookOpen className="w-5 h-5 text-[#007B5F]" />
+              <div className="w-10 h-10 rounded-xl bg-[var(--mp-viridian)]/10 flex items-center justify-center mx-auto mb-2">
+                <BookOpen className="w-5 h-5 text-[var(--mp-viridian)]" />
               </div>
-              <p className="text-[11px] text-[#4A5568] font-medium">10.993 {lang === "de" ? "Fragen" : "Questions"}</p>
+              <p className="text-[11px] text-[var(--mp-fg-muted)] font-medium">
+                10.993 {lang === "de" ? "Fragen" : "Questions"}
+              </p>
             </div>
             <div className="text-center">
-              <div className="w-10 h-10 rounded-xl bg-[#F4A261]/10 flex items-center justify-center mx-auto mb-2">
-                <Zap className="w-5 h-5 text-[#F4A261]" />
+              <div className="w-10 h-10 rounded-xl bg-[var(--mp-status-warning)]/10 flex items-center justify-center mx-auto mb-2">
+                <Zap className="w-5 h-5 text-[var(--mp-status-warning)]" />
               </div>
-              <p className="text-[11px] text-[#4A5568] font-medium">{lang === "de" ? "XP & Serien" : "XP & Streaks"}</p>
+              <p className="text-[11px] text-[var(--mp-fg-muted)] font-medium">
+                {lang === "de" ? "XP & Serien" : "XP & Streaks"}
+              </p>
             </div>
             <div className="text-center">
-              <div className="w-10 h-10 rounded-xl bg-[#003A8C]/10 flex items-center justify-center mx-auto mb-2">
-                <Shield className="w-5 h-5 text-[#003A8C]" />
+              <div className="w-10 h-10 rounded-xl bg-[var(--mp-cta-blue)]/10 flex items-center justify-center mx-auto mb-2">
+                <Shield className="w-5 h-5 text-[var(--mp-cta-blue)]" />
               </div>
-              <p className="text-[11px] text-[#4A5568] font-medium">{lang === "de" ? "Prüfungsmodus" : "Exam Mode"}</p>
+              <p className="text-[11px] text-[var(--mp-fg-muted)] font-medium">
+                {lang === "de" ? "Prüfungsmodus" : "Exam Mode"}
+              </p>
             </div>
           </div>
         </div>

@@ -40,7 +40,7 @@ export default function GuestMigrationBanner() {
   }
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-[70] bg-gradient-to-r from-[#F4A261] to-[#D64545] text-white px-4 py-2.5 shadow-lg">
+    <div className="fixed top-0 left-0 right-0 z-[70] bg-gradient-to-r from-[#D68A3A] to-[#D64545] text-white px-4 py-2.5 shadow-lg">
       <div className="max-w-4xl mx-auto flex items-center justify-between gap-3">
         <div className="flex items-center gap-2 min-w-0">
           <AlertTriangle className="w-4 h-4 flex-shrink-0" />
@@ -51,7 +51,7 @@ export default function GuestMigrationBanner() {
         <div className="flex items-center gap-2 flex-shrink-0">
           <Link
             href="/login?mode=register"
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-[#D64545] rounded-lg text-xs font-bold hover:bg-white/90 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-[var(--mp-error)] rounded-lg text-xs font-bold hover:bg-white/90 transition-colors"
           >
             <UserPlus className="w-3.5 h-3.5" />
             Create Account

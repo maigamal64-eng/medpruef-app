@@ -1,5 +1,19 @@
 "use client";
 
+/**
+ * Settings — MPDS v2 "Settings-B" grouped-cards layout.
+ *
+ * 4 panels: Prüfung (exam setup), Lernen (learning/display), Konto
+ * (account), Sprache (display language). Each card uses `.mp-card`
+ * and semantic tokens (var(--mp-fg), var(--mp-surface-*) etc.) so
+ * dark mode "just works" without hex overrides.
+ *
+ * Business logic is untouched: the page still PATCHes
+ * `/api/user/exam-preference` with { examDate, dailyGoal } and still
+ * writes the same localStorage profile. Only the shell + controls
+ * were migrated to the MPDS primitives.
+ */
+
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getLang, setLang, t } from "@/lib/i18n";
@@ -8,7 +22,26 @@ import { getStoredTheme, setStoredTheme, type Theme } from "@/components/ThemePr
 import { authFetch } from "@/lib/authFetch";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
-import { Moon, Sun, Globe, Target, Calendar, Bell, Trash2, Download, LogOut, Info, Shield, Crown, ArrowRight } from "lucide-react";
+import {
+  Alert,
+  Dialog,
+  DialogFooter,
+  Select,
+  TextField,
+  useToast,
+} from "@/components/ui";
+import {
+  ArrowRight,
+  Crown,
+  Globe,
+  Info,
+  LogOut,
+  Moon,
+  Shield,
+  Sun,
+  Target,
+  Trash2,
+} from "lucide-react";
 
 type Lang = "de" | "en";
 
@@ -22,7 +55,9 @@ interface ProfileData {
 }
 
 function loadProfile(): ProfileData {
-  if (typeof window === "undefined") return { university: "", country: "", targetDate: "", dailyGoal: 20 };
+  if (typeof window === "undefined") {
+    return { university: "", country: "", targetDate: "", dailyGoal: 20 };
+  }
   try {
     const data = JSON.parse(localStorage.getItem(PROFILE_KEY) || "{}");
     return { university: "", country: "", targetDate: "", dailyGoal: 20, ...data };
@@ -36,11 +71,17 @@ function saveProfile(data: ProfileData) {
 }
 
 export default function SettingsPage() {
+  const toast = useToast();
   const [lang, setLangState] = useState<Lang>("de");
   const [theme, setThemeState] = useState<Theme>("light");
   const [session, setSession] = useState<ReturnType<typeof getStoredSession>>(null);
-  const [profile, setProfile] = useState<ProfileData>({ university: "", country: "", targetDate: "", dailyGoal: 20 });
-  const [cleared, setCleared] = useState(false);
+  const [profile, setProfile] = useState<ProfileData>({
+    university: "",
+    country: "",
+    targetDate: "",
+    dailyGoal: 20,
+  });
+  const [clearDialogOpen, setClearDialogOpen] = useState(false);
 
   useEffect(() => {
     setLangState(getLang());
@@ -106,6 +147,9 @@ export default function SettingsPage() {
     setProfile(updated);
     saveProfile(updated);
     void persistToServer({ dailyGoal: clamped });
+    toast.success(
+      lang === "de" ? "Tagesziel gespeichert" : "Daily goal saved",
+    );
   };
 
   const handleTargetDateChange = (value: string) => {
@@ -114,28 +158,31 @@ export default function SettingsPage() {
     saveProfile(updated);
     // Empty string → clear. Otherwise send as YYYY-MM-DD.
     void persistToServer({ examDate: value || null });
+    toast.success(
+      value
+        ? (lang === "de" ? "Prüfungstermin gespeichert" : "Exam date saved")
+        : (lang === "de" ? "Prüfungstermin entfernt" : "Exam date cleared"),
+    );
   };
 
   const handleClearData = () => {
-    const msg = t("clear_data_confirm", lang);
-    if (!window.confirm(msg)) return;
-
     // Clear quiz-related localStorage keys
     const keysToRemove: string[] = [];
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
-      if (key && (
-        key.startsWith("medpruef_notes_") ||
-        key === "medpruef_favorites" ||
-        key === "medpruef_quiz_autosave" ||
-        key === "medpruef_weakness"
-      )) {
+      if (
+        key &&
+        (key.startsWith("medpruef_notes_") ||
+          key === "medpruef_favorites" ||
+          key === "medpruef_quiz_autosave" ||
+          key === "medpruef_weakness")
+      ) {
         keysToRemove.push(key);
       }
     }
     keysToRemove.forEach((k) => localStorage.removeItem(k));
-    setCleared(true);
-    setTimeout(() => setCleared(false), 3000);
+    setClearDialogOpen(false);
+    toast.success(t("data_cleared", lang));
   };
 
   const handleLogout = () => {
@@ -150,6 +197,9 @@ export default function SettingsPage() {
       ? Math.round((gam.total_correct / gam.total_questions_answered) * 100)
       : 0;
 
+  const isGuest = !user || user.id?.startsWith("guest_");
+  const tierLabel = lang === "de" ? "Kostenlos" : "Free";
+
   return (
     <div className="app-layout">
       <Sidebar
@@ -161,373 +211,448 @@ export default function SettingsPage() {
         accuracy={accuracy}
       />
 
-      <main className="main-content safe-area-top safe-area-bottom bg-[#F7F9FC]">
+      <main className="main-content safe-area-top safe-area-bottom bg-[var(--mp-surface-sunken)]">
         {/* Header */}
-        <div className="px-4 lg:px-8 pt-4 pb-2 flex items-center justify-between border-b border-[#E4E9F0]">
-          <Link href="/" className="text-[#A0AEC0] hover:text-[#1A2B3C] text-sm transition-colors">
+        <div className="px-4 lg:px-8 pt-4 pb-2 flex items-center justify-between border-b border-[var(--mp-border-subtle)]">
+          <Link
+            href="/"
+            className="text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg)] text-sm transition-colors"
+          >
             &larr; {t("back_home", lang)}
           </Link>
-          <h1 className="text-base font-bold text-[#1A2B3C]">{t("settings", lang)}</h1>
+          <h1 className="text-base font-bold text-[var(--mp-fg)]">{t("settings", lang)}</h1>
           <div className="w-16" />
         </div>
 
-        <div className="px-4 lg:px-8 py-5 max-w-2xl mx-auto space-y-5 pb-28">
-
-          {/* ===== SECTION 1: Appearance ===== */}
-          <div className="card rounded-2xl p-5">
-            <h2 className="text-lg font-semibold text-[#1A2B3C] mb-4 flex items-center gap-2">
-              <Sun className="w-5 h-5 text-[#F4A261]" />
-              {t("appearance", lang)}
+        <div className="px-4 lg:px-8 py-6 max-w-5xl mx-auto pb-28">
+          {/* Page intro */}
+          <div className="mb-6">
+            <h2 className="mp-h2 text-[var(--mp-fg)]">
+              {lang === "de" ? "Einstellungen" : "Settings"}
             </h2>
-
-            {/* Dark mode toggle */}
-            <div className="flex items-center justify-between py-3 border-b border-[#E4E9F0]">
-              <div className="flex items-center gap-3">
-                {theme === "dark" ? (
-                  <Moon className="w-5 h-5 text-[#6366F1]" />
-                ) : (
-                  <Sun className="w-5 h-5 text-[#F4A261]" />
-                )}
-                <div>
-                  <p className="text-sm font-medium text-[#1A2B3C]">{t("dark_mode", lang)}</p>
-                  <p className="text-xs text-[#A0AEC0]">
-                    {theme === "dark"
-                      ? (lang === "de" ? "Aktiviert" : "Enabled")
-                      : (lang === "de" ? "Deaktiviert" : "Disabled")}
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={handleThemeToggle}
-                className={`relative w-12 h-7 rounded-full transition-colors duration-300 ${
-                  theme === "dark" ? "bg-[#6366F1]" : "bg-[#E4E9F0]"
-                }`}
-                aria-label="Toggle dark mode"
-              >
-                <span
-                  className={`absolute top-0.5 left-0.5 w-6 h-6 rounded-full bg-white shadow-md transition-transform duration-300 flex items-center justify-center ${
-                    theme === "dark" ? "translate-x-5" : "translate-x-0"
-                  }`}
-                >
-                  {theme === "dark" ? (
-                    <Moon className="w-3.5 h-3.5 text-[#6366F1]" />
-                  ) : (
-                    <Sun className="w-3.5 h-3.5 text-[#F4A261]" />
-                  )}
-                </span>
-              </button>
-            </div>
-
-            {/* Language toggle */}
-            <div className="flex items-center justify-between py-3">
-              <div className="flex items-center gap-3">
-                <Globe className="w-5 h-5 text-[#007B5F]" />
-                <div>
-                  <p className="text-sm font-medium text-[#1A2B3C]">{t("language", lang)}</p>
-                  <p className="text-xs text-[#A0AEC0]">
-                    {lang === "de" ? "Deutsch" : "English"}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center bg-[#F7F9FC] rounded-lg p-0.5 text-xs border border-[#E4E9F0]">
-                <button
-                  onClick={() => switchLang("de")}
-                  className={`px-3 py-1.5 rounded font-medium transition-all duration-200 ${
-                    lang === "de"
-                      ? "bg-[#007B5F] text-white"
-                      : "text-[#A0AEC0] hover:text-[#4A5568]"
-                  }`}
-                >
-                  DE
-                </button>
-                <button
-                  onClick={() => switchLang("en")}
-                  className={`px-3 py-1.5 rounded font-medium transition-all duration-200 ${
-                    lang === "en"
-                      ? "bg-[#007B5F] text-white"
-                      : "text-[#A0AEC0] hover:text-[#4A5568]"
-                  }`}
-                >
-                  EN
-                </button>
-              </div>
-            </div>
+            <p className="mp-small mt-1">
+              {lang === "de"
+                ? "Änderungen werden automatisch gespeichert."
+                : "Changes are saved automatically."}
+            </p>
           </div>
 
-          {/* ===== SECTION 2: Study Preferences ===== */}
-          <div className="card rounded-2xl p-5">
-            <h2 className="text-lg font-semibold text-[#1A2B3C] mb-4 flex items-center gap-2">
-              <Target className="w-5 h-5 text-[#007B5F]" />
-              {t("study_preferences", lang)}
-            </h2>
+          {/* 2-col grid on desktop, single column on mobile */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            {/* ═══ 1 · Prüfung ═══ */}
+            <section className="mp-card p-6">
+              <header className="mb-5">
+                <h3 className="mp-h3 flex items-center gap-2">
+                  <Target className="w-5 h-5 text-[var(--mp-viridian)]" aria-hidden />
+                  {lang === "de" ? "Prüfung" : "Exam"}
+                </h3>
+                <p className="mp-small mt-1">
+                  {lang === "de"
+                    ? "Welche Prüfung Sie ablegen möchten und wann."
+                    : "Which exam you plan to take and when."}
+                </p>
+              </header>
 
-            {/* Daily goal */}
-            <div className="py-3 border-b border-[#E4E9F0]">
-              <div className="flex items-center justify-between mb-2">
-                <div>
-                  <p className="text-sm font-medium text-[#1A2B3C]">{t("daily_goal_setting", lang)}</p>
-                  <p className="text-xs text-[#A0AEC0]">
-                    {lang === "de" ? "5-100 Fragen pro Tag" : "5-100 questions per day"}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => handleDailyGoalChange(profile.dailyGoal - 5)}
-                    className="w-8 h-8 rounded-lg border border-[#E4E9F0] flex items-center justify-center text-[#4A5568] hover:bg-[#F7F9FC] transition-colors text-sm font-bold"
-                    disabled={profile.dailyGoal <= 5}
-                  >
-                    -
-                  </button>
-                  <span className="w-10 text-center text-lg font-bold text-[#007B5F] font-mono">
-                    {profile.dailyGoal}
-                  </span>
-                  <button
-                    onClick={() => handleDailyGoalChange(profile.dailyGoal + 5)}
-                    className="w-8 h-8 rounded-lg border border-[#E4E9F0] flex items-center justify-center text-[#4A5568] hover:bg-[#F7F9FC] transition-colors text-sm font-bold"
-                    disabled={profile.dailyGoal >= 100}
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
-              {/* Goal progress bar preview */}
-              <div className="h-1.5 bg-[#F7F9FC] rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-[#007B5F] rounded-full transition-all duration-300"
-                  style={{ width: `${(profile.dailyGoal / 100) * 100}%` }}
-                />
-              </div>
-            </div>
-
-            {/* Exam target date */}
-            <div className="py-3 border-b border-[#E4E9F0]">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Calendar className="w-5 h-5 text-[#003A8C]" />
-                  <div>
-                    <p className="text-sm font-medium text-[#1A2B3C]">{t("exam_target_date", lang)}</p>
-                    <p className="text-xs text-[#A0AEC0]">
-                      {profile.targetDate
-                        ? new Date(profile.targetDate).toLocaleDateString(
-                            lang === "de" ? "de-AT" : "en-GB",
-                            { day: "numeric", month: "long", year: "numeric" }
-                          )
-                        : (lang === "de" ? "Nicht gesetzt" : "Not set")}
-                    </p>
-                  </div>
-                </div>
-                <input
+              <div className="space-y-5">
+                {/* Exam target date */}
+                <TextField
                   type="date"
+                  label={t("exam_target_date", lang)}
                   value={profile.targetDate}
                   onChange={(e) => handleTargetDateChange(e.target.value)}
-                  className="bg-[#F7F9FC] border border-[#E4E9F0] rounded-lg px-3 py-2 text-sm text-[#1A2B3C] focus:outline-none focus:border-[#007B5F]/50 w-40"
+                  helper={
+                    profile.targetDate
+                      ? new Date(profile.targetDate).toLocaleDateString(
+                          lang === "de" ? "de-AT" : "en-GB",
+                          { day: "numeric", month: "long", year: "numeric" },
+                        )
+                      : lang === "de"
+                      ? "Noch nicht gesetzt — legen Sie Ihren Prüfungstermin fest, um einen Lernplan zu erhalten."
+                      : "Not set yet — pick your exam date to unlock the study plan."
+                  }
                 />
-              </div>
-            </div>
 
-            {/* Exam source (read-only) */}
-            <div className="py-3">
-              <div className="flex items-center justify-between">
+                {/* Daily goal */}
                 <div>
-                  <p className="text-sm font-medium text-[#1A2B3C]">{t("exam_source_label", lang)}</p>
-                  <p className="text-xs text-[#A0AEC0]">
-                    {lang === "de" ? "Kenntnisprüfung Wien · KMP Innsbruck · Pharmakologie" : "Kenntnisprüfung Vienna · KMP Innsbruck · Pharmacology"}
-                  </p>
-                </div>
-                <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-[#007B5F]/10 text-[#007B5F] text-xs font-semibold rounded-lg">
-                  3 {lang === "de" ? "Prüfungen" : "exams"}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* ===== SECTION: Konto (Account) — pricing + tier ===== */}
-          <div className="card rounded-2xl p-5">
-            <h2 className="text-lg font-semibold text-[#1A2B3C] mb-4 flex items-center gap-2">
-              <Crown className="w-5 h-5 text-[#007B5F]" />
-              {lang === "de" ? "Konto" : "Account"}
-            </h2>
-
-            {/* Pricing link */}
-            <Link
-              href="/pricing"
-              className="flex items-center justify-between py-3 border-b border-[#E4E9F0] group"
-            >
-              <div className="flex items-center gap-3">
-                <Crown className="w-5 h-5 text-[#00A896]" />
-                <div>
-                  <p className="text-sm font-medium text-[#1A2B3C]">
-                    {lang === "de" ? "Preise & Tarife" : "Pricing & plans"}
-                  </p>
-                  <p className="text-xs text-[#A0AEC0]">
-                    {lang === "de"
-                      ? "Free, Pro und Gruppentarife anzeigen"
-                      : "See Free, Pro and Group plans"}
-                  </p>
-                </div>
-              </div>
-              <ArrowRight className="w-4 h-4 text-[#A0AEC0] group-hover:text-[#007B5F] group-hover:translate-x-0.5 transition-all" />
-            </Link>
-
-            {/* Current tier */}
-            <div className="py-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-[#1A2B3C]">
-                    {lang === "de" ? "Aktueller Tarif" : "Current plan"}
-                  </p>
-                  <p className="text-xs text-[#A0AEC0]">
-                    {lang === "de"
-                      ? "Voller Zugang, kostenlos"
-                      : "Full access, free"}
-                  </p>
-                </div>
-                <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-[#007B5F]/10 text-[#007B5F] text-xs font-semibold rounded-lg">
-                  {lang === "de" ? "Kostenlos" : "Free"}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* ===== SECTION 3: Notifications (Coming Soon) ===== */}
-          <div className="card rounded-2xl p-5 opacity-60">
-            <h2 className="text-lg font-semibold text-[#1A2B3C] mb-1 flex items-center gap-2">
-              <Bell className="w-5 h-5 text-[#A0AEC0]" />
-              {t("notifications", lang)}
-            </h2>
-            <p className="text-xs text-[#A0AEC0] mb-4">{t("coming_soon_label", lang)}</p>
-
-            <div className="space-y-3">
-              {[
-                { label: t("daily_reminder", lang), desc: lang === "de" ? "Erinnerung zum t\u00e4glichen Lernen" : "Reminder to study daily" },
-                { label: t("streak_warning", lang), desc: lang === "de" ? "Warnung vor Verlust der Serie" : "Warning before losing streak" },
-                { label: t("weekly_progress_notif", lang), desc: lang === "de" ? "W\u00f6chentliche Zusammenfassung" : "Weekly summary" },
-              ].map((item) => (
-                <div key={item.label} className="flex items-center justify-between py-2">
-                  <div>
-                    <p className="text-sm font-medium text-[#1A2B3C]">{item.label}</p>
-                    <p className="text-xs text-[#A0AEC0]">{item.desc}</p>
+                  <div className="flex items-center justify-between mb-2">
+                    <div>
+                      <p className="text-sm font-semibold text-[var(--mp-fg)]">
+                        {t("daily_goal_setting", lang)}
+                      </p>
+                      <p className="text-xs text-[var(--mp-fg-subtle)]">
+                        {lang === "de" ? "5–100 Fragen pro Tag" : "5–100 questions per day"}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleDailyGoalChange(profile.dailyGoal - 5)}
+                        className="w-9 h-9 rounded-lg border border-[var(--mp-border)] flex items-center justify-center text-[var(--mp-fg-muted)] hover:bg-[var(--mp-surface-sunken)] transition-colors text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed"
+                        disabled={profile.dailyGoal <= 5}
+                        aria-label={lang === "de" ? "Ziel verringern" : "Decrease goal"}
+                      >
+                        −
+                      </button>
+                      <span className="w-10 text-center text-lg font-bold text-[var(--mp-viridian)] font-mono tabular-nums">
+                        {profile.dailyGoal}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleDailyGoalChange(profile.dailyGoal + 5)}
+                        className="w-9 h-9 rounded-lg border border-[var(--mp-border)] flex items-center justify-center text-[var(--mp-fg-muted)] hover:bg-[var(--mp-surface-sunken)] transition-colors text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed"
+                        disabled={profile.dailyGoal >= 100}
+                        aria-label={lang === "de" ? "Ziel erhöhen" : "Increase goal"}
+                      >
+                        +
+                      </button>
+                    </div>
                   </div>
-                  <div className="relative w-12 h-7 rounded-full bg-[#E4E9F0] cursor-not-allowed">
-                    <span className="absolute top-0.5 left-0.5 w-6 h-6 rounded-full bg-white shadow-md" />
+                  {/* Goal progress bar preview */}
+                  <div
+                    className="h-1.5 bg-[var(--mp-surface-sunken)] rounded-full overflow-hidden"
+                    role="presentation"
+                  >
+                    <div
+                      className="h-full bg-[var(--mp-viridian)] rounded-full transition-all duration-300"
+                      style={{ width: `${profile.dailyGoal}%` }}
+                    />
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
 
-          {/* ===== SECTION 4: Data & Privacy ===== */}
-          <div className="card rounded-2xl p-5">
-            <h2 className="text-lg font-semibold text-[#1A2B3C] mb-4 flex items-center gap-2">
-              <Shield className="w-5 h-5 text-[#D64545]" />
-              {t("data_privacy", lang)}
-            </h2>
-
-            {/* Clear study data */}
-            <div className="py-3 border-b border-[#E4E9F0]">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Trash2 className="w-5 h-5 text-[#D64545]" />
+                {/* Exam source (read-only summary) */}
+                <div className="flex items-center justify-between pt-1">
                   <div>
-                    <p className="text-sm font-medium text-[#1A2B3C]">{t("clear_data", lang)}</p>
-                    <p className="text-xs text-[#A0AEC0]">
+                    <p className="text-sm font-semibold text-[var(--mp-fg)]">
+                      {t("exam_source_label", lang)}
+                    </p>
+                    <p className="text-xs text-[var(--mp-fg-subtle)] mt-0.5">
                       {lang === "de"
-                        ? "Lesezeichen, Notizen und Quiz-Daten entfernen"
-                        : "Remove bookmarks, notes, and quiz data"}
+                        ? "Kenntnisprüfung Wien · KMP Innsbruck · Pharmakologie"
+                        : "Kenntnisprüfung Vienna · KMP Innsbruck · Pharmacology"}
                     </p>
                   </div>
+                  <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-[var(--mp-success-bg)] text-[var(--mp-viridian)] text-xs font-semibold rounded-lg border border-[rgba(0,123,95,0.2)]">
+                    3 {lang === "de" ? "Prüfungen" : "exams"}
+                  </span>
                 </div>
-                <button
-                  onClick={handleClearData}
-                  className="px-3 py-1.5 border border-[#D64545]/30 text-[#D64545] text-xs font-medium rounded-lg hover:bg-[#D64545]/5 transition-colors"
-                >
-                  {cleared ? t("data_cleared", lang) : t("clear_data", lang)}
-                </button>
               </div>
-            </div>
+            </section>
 
-            {/* Export progress (placeholder) */}
-            <div className="py-3 border-b border-[#E4E9F0] opacity-60">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <Download className="w-5 h-5 text-[#A0AEC0]" />
-                  <div>
-                    <p className="text-sm font-medium text-[#1A2B3C]">{t("export_progress", lang)}</p>
-                    <p className="text-xs text-[#A0AEC0]">{t("coming_soon_label", lang)}</p>
-                  </div>
-                </div>
-                <button
-                  disabled
-                  className="px-3 py-1.5 border border-[#E4E9F0] text-[#A0AEC0] text-xs font-medium rounded-lg cursor-not-allowed"
-                >
-                  {t("export_progress", lang)}
-                </button>
-              </div>
-            </div>
+            {/* ═══ 2 · Lernen ═══ */}
+            <section className="mp-card p-6">
+              <header className="mb-5">
+                <h3 className="mp-h3 flex items-center gap-2">
+                  {theme === "dark" ? (
+                    <Moon className="w-5 h-5 text-[var(--mp-info)]" aria-hidden />
+                  ) : (
+                    <Sun
+                      className="w-5 h-5"
+                      style={{ color: "var(--mp-status-warning)" }}
+                      aria-hidden
+                    />
+                  )}
+                  {lang === "de" ? "Lernen & Darstellung" : "Learning & Display"}
+                </h3>
+                <p className="mp-small mt-1">
+                  {lang === "de"
+                    ? "Farbschema und Lernvoreinstellungen."
+                    : "Color scheme and learning defaults."}
+                </p>
+              </header>
 
-            {/* Logout */}
-            {user && (
-              <div className="py-3">
+              <div className="space-y-5">
+                {/* Dark mode toggle */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <LogOut className="w-5 h-5 text-[#D64545]" />
+                    {theme === "dark" ? (
+                      <Moon className="w-5 h-5 text-[var(--mp-info)]" aria-hidden />
+                    ) : (
+                      <Sun
+                        className="w-5 h-5"
+                        style={{ color: "var(--mp-status-warning)" }}
+                        aria-hidden
+                      />
+                    )}
                     <div>
-                      <p className="text-sm font-medium text-[#1A2B3C]">{t("logout", lang)}</p>
-                      <p className="text-xs text-[#A0AEC0]">
-                        {user.first_name} ({lang === "de" ? "angemeldet" : "signed in"})
+                      <p className="text-sm font-semibold text-[var(--mp-fg)]">
+                        {t("dark_mode", lang)}
+                      </p>
+                      <p className="text-xs text-[var(--mp-fg-subtle)]">
+                        {theme === "dark"
+                          ? lang === "de"
+                            ? "Aktiviert"
+                            : "Enabled"
+                          : lang === "de"
+                          ? "Deaktiviert"
+                          : "Disabled"}
                       </p>
                     </div>
                   </div>
                   <button
-                    onClick={handleLogout}
-                    className="px-3 py-1.5 border border-[#D64545]/30 text-[#D64545] text-xs font-medium rounded-lg hover:bg-[#D64545]/5 transition-colors"
+                    type="button"
+                    onClick={handleThemeToggle}
+                    role="switch"
+                    aria-checked={theme === "dark"}
+                    aria-label={t("dark_mode", lang)}
+                    className={`relative w-12 h-7 rounded-full transition-colors duration-300 ${
+                      theme === "dark"
+                        ? "bg-[var(--mp-cta-blue)]"
+                        : "bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)]"
+                    }`}
                   >
-                    {t("logout", lang)}
+                    <span
+                      className={`absolute top-0.5 left-0.5 w-6 h-6 rounded-full bg-white shadow-md transition-transform duration-300 flex items-center justify-center ${
+                        theme === "dark" ? "translate-x-5" : "translate-x-0"
+                      }`}
+                    >
+                      {theme === "dark" ? (
+                        <Moon className="w-3.5 h-3.5 text-[var(--mp-cta-blue)]" aria-hidden />
+                      ) : (
+                        <Sun
+                          className="w-3.5 h-3.5"
+                          style={{ color: "var(--mp-status-warning)" }}
+                          aria-hidden
+                        />
+                      )}
+                    </span>
                   </button>
                 </div>
-              </div>
-            )}
-          </div>
 
-          {/* ===== SECTION 5: About ===== */}
-          <div className="card rounded-2xl p-5">
-            <h2 className="text-lg font-semibold text-[#1A2B3C] mb-4 flex items-center gap-2">
-              <Info className="w-5 h-5 text-[#3A7CA5]" />
-              {t("about", lang)}
-            </h2>
-
-            <div className="space-y-3">
-              <div className="flex items-center justify-between py-2">
-                <p className="text-sm text-[#4A5568]">{t("app_version", lang)}</p>
-                <span className="text-sm font-mono text-[#007B5F]">MedPr&uuml;f v1.0</span>
-              </div>
-
-              <div className="py-2 border-t border-[#E4E9F0]">
-                <p className="text-sm text-[#4A5568] text-center">
+                {/* Notifications (coming soon) inline alert */}
+                <Alert
+                  variant="info"
+                  title={`${t("notifications", lang)} · ${t("coming_soon_label", lang)}`}
+                >
                   {lang === "de"
-                    ? "Mit \u2665 für ausländische Ärzt:innen in Österreich"
-                    : "Made with \u2665 for foreign doctors in Austria"}
-                </p>
-                <p className="text-xs text-[#A0AEC0] text-center mt-1">
-                  {lang === "de"
-                    ? "Österreichische Medizinprüfungen — 10.993 Fragen"
-                    : "Austrian medical exams — 10,993 questions"}
-                </p>
+                    ? "Tägliche Erinnerungen, Streak-Warnungen und wöchentliche Zusammenfassungen kommen bald."
+                    : "Daily reminders, streak warnings, and weekly summaries are coming soon."}
+                </Alert>
               </div>
+            </section>
 
-              <Link
-                href="/about"
-                className="block text-center text-sm text-[#007B5F] hover:text-[#00A896] transition-colors font-medium py-2"
-              >
-                {lang === "de" ? "Mehr erfahren" : "Learn more"} &rarr;
-              </Link>
-            </div>
+            {/* ═══ 3 · Konto ═══ */}
+            <section className="mp-card p-6">
+              <header className="mb-5">
+                <h3 className="mp-h3 flex items-center gap-2">
+                  <Crown className="w-5 h-5 text-[var(--mp-viridian)]" aria-hidden />
+                  {lang === "de" ? "Konto" : "Account"}
+                </h3>
+                <p className="mp-small mt-1">
+                  {lang === "de"
+                    ? "Abo, Anmeldung und Datenschutz."
+                    : "Plan, sign-in, and privacy."}
+                </p>
+              </header>
+
+              <div className="space-y-5">
+                {/* Email */}
+                {user?.email && (
+                  <div>
+                    <p className="text-xs font-semibold text-[var(--mp-fg-muted)] uppercase tracking-wide mb-1">
+                      {lang === "de" ? "E-Mail" : "Email"}
+                    </p>
+                    <p className="text-sm text-[var(--mp-fg)] font-mono break-all">
+                      {user.email}
+                    </p>
+                  </div>
+                )}
+
+                {/* Current tier */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-[var(--mp-fg)]">
+                      {lang === "de" ? "Aktueller Tarif" : "Current plan"}
+                    </p>
+                    <p className="text-xs text-[var(--mp-fg-subtle)] mt-0.5">
+                      {lang === "de" ? "Voller Zugang, kostenlos" : "Full access, free"}
+                    </p>
+                  </div>
+                  <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-[var(--mp-success-bg)] text-[var(--mp-viridian)] text-xs font-semibold rounded-lg border border-[rgba(0,123,95,0.2)]">
+                    {tierLabel}
+                  </span>
+                </div>
+
+                {/* Pricing link */}
+                <Link
+                  href="/pricing"
+                  className="flex items-center justify-between p-3 rounded-[var(--mp-r-input)] bg-[var(--mp-surface-sunken)] border border-[var(--mp-border-subtle)] hover:border-[rgba(0,123,95,0.3)] group transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <Crown className="w-4 h-4 text-[var(--mp-accent)]" aria-hidden />
+                    <div>
+                      <p className="text-sm font-semibold text-[var(--mp-fg)]">
+                        {lang === "de" ? "Preise & Tarife ansehen" : "See pricing & plans"}
+                      </p>
+                      <p className="text-xs text-[var(--mp-fg-subtle)]">
+                        {lang === "de"
+                          ? "Free, Pro und Gruppentarife"
+                          : "Free, Pro and Group tiers"}
+                      </p>
+                    </div>
+                  </div>
+                  <ArrowRight
+                    className="w-4 h-4 text-[var(--mp-fg-subtle)] group-hover:text-[var(--mp-viridian)] group-hover:translate-x-0.5 transition-all"
+                    aria-hidden
+                  />
+                </Link>
+
+                {/* Clear study data */}
+                <div className="pt-2 border-t border-[var(--mp-border-subtle)]">
+                  <p className="text-xs font-semibold text-[var(--mp-fg-muted)] uppercase tracking-wide mb-3 flex items-center gap-1.5">
+                    <Shield className="w-3.5 h-3.5" aria-hidden />
+                    {t("data_privacy", lang)}
+                  </p>
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-[var(--mp-fg)]">
+                        {t("clear_data", lang)}
+                      </p>
+                      <p className="text-xs text-[var(--mp-fg-subtle)]">
+                        {lang === "de"
+                          ? "Lesezeichen, Notizen und Quiz-Daten entfernen"
+                          : "Remove bookmarks, notes, and quiz data"}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setClearDialogOpen(true)}
+                      className="mp-btn mp-btn--destructive mp-btn--sm flex-shrink-0"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" aria-hidden />
+                      {t("clear_data", lang)}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Logout */}
+                {user && !isGuest && (
+                  <div className="flex items-center justify-between gap-3 pt-2 border-t border-[var(--mp-border-subtle)]">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-[var(--mp-fg)]">
+                        {t("logout", lang)}
+                      </p>
+                      <p className="text-xs text-[var(--mp-fg-subtle)]">
+                        {user.first_name} ·{" "}
+                        {lang === "de" ? "angemeldet" : "signed in"}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="mp-btn mp-btn--destructive mp-btn--sm flex-shrink-0"
+                    >
+                      <LogOut className="w-3.5 h-3.5" aria-hidden />
+                      {t("logout", lang)}
+                    </button>
+                  </div>
+                )}
+              </div>
+            </section>
+
+            {/* ═══ 4 · Sprache ═══ */}
+            <section className="mp-card p-6">
+              <header className="mb-5">
+                <h3 className="mp-h3 flex items-center gap-2">
+                  <Globe className="w-5 h-5 text-[var(--mp-viridian)]" aria-hidden />
+                  {t("language", lang)}
+                </h3>
+                <p className="mp-small mt-1">
+                  {lang === "de"
+                    ? "Sprache der Benutzeroberfläche."
+                    : "Interface language."}
+                </p>
+              </header>
+
+              <div className="space-y-5">
+                <Select
+                  label={lang === "de" ? "Oberflächensprache" : "Interface language"}
+                  helper={
+                    lang === "de"
+                      ? "Die Prüfungsfragen bleiben in Deutsch."
+                      : "Exam questions remain in German."
+                  }
+                  value={lang}
+                  onChange={(e) => switchLang(e.target.value as Lang)}
+                  options={[
+                    { value: "de", label: "Deutsch" },
+                    { value: "en", label: "English" },
+                  ]}
+                />
+
+                {/* About */}
+                <div className="pt-3 border-t border-[var(--mp-border-subtle)]">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Info className="w-4 h-4 text-[var(--mp-info)]" aria-hidden />
+                    <p className="text-xs font-semibold text-[var(--mp-fg-muted)] uppercase tracking-wide">
+                      {t("about", lang)}
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm text-[var(--mp-fg-muted)]">
+                      {t("app_version", lang)}
+                    </p>
+                    <span className="text-sm font-mono text-[var(--mp-viridian)]">
+                      MedPr&uuml;f v1.0
+                    </span>
+                  </div>
+                  <p className="text-xs text-[var(--mp-fg-subtle)] mb-3">
+                    {lang === "de"
+                      ? "Österreichische Medizinprüfungen — 10.993 Fragen"
+                      : "Austrian medical exams — 10,993 questions"}
+                  </p>
+                  <Link
+                    href="/about"
+                    className="text-sm text-[var(--mp-viridian)] hover:text-[var(--mp-accent)] transition-colors font-semibold inline-flex items-center gap-1"
+                  >
+                    {lang === "de" ? "Mehr erfahren" : "Learn more"}
+                    <ArrowRight className="w-3.5 h-3.5" aria-hidden />
+                  </Link>
+                </div>
+              </div>
+            </section>
           </div>
-
         </div>
       </main>
 
       <BottomNav lang={lang} userId={user?.id} />
+
+      {/* Destructive confirm dialog */}
+      <Dialog
+        open={clearDialogOpen}
+        onOpenChange={setClearDialogOpen}
+        title={t("clear_data", lang)}
+        description={
+          lang === "de"
+            ? "Lesezeichen, Notizen, Quiz-Autosave und lokale Schwachstellen-Daten werden entfernt."
+            : "Bookmarks, notes, quiz autosave, and local weakness data will be removed."
+        }
+        footer={
+          <DialogFooter>
+            <button
+              type="button"
+              className="mp-btn mp-btn--secondary"
+              onClick={() => setClearDialogOpen(false)}
+            >
+              {lang === "de" ? "Abbrechen" : "Cancel"}
+            </button>
+            <button
+              type="button"
+              className="mp-btn mp-btn--destructive"
+              onClick={handleClearData}
+            >
+              <Trash2 className="w-4 h-4" aria-hidden />
+              {t("clear_data", lang)}
+            </button>
+          </DialogFooter>
+        }
+      >
+        <Alert
+          variant="warning"
+          title={lang === "de" ? "Kann nicht rückgängig gemacht werden" : "Cannot be undone"}
+        >
+          {t("clear_data_confirm", lang)}
+        </Alert>
+      </Dialog>
     </div>
   );
 }

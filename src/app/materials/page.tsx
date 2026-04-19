@@ -69,9 +69,9 @@ const TYPE_ICONS = {
 };
 
 const TYPE_STYLES = {
-  link: { bg: "bg-[#007B5F]/8", border: "border-[#007B5F]/25", badge: "bg-[#007B5F]/15 text-[#007B5F]" },
-  tip: { bg: "bg-[#F4A261]/6", border: "border-[#F4A261]/25", badge: "bg-[#F4A261]/15 text-[#F4A261]" },
-  guideline: { bg: "bg-[#FFFFFF]", border: "border-[#E4E9F0]", badge: "bg-[#4A5568]/10 text-[#4A5568]" },
+  link: { bg: "bg-[var(--mp-viridian)]/8", border: "border-[var(--mp-viridian)]/25", badge: "bg-[var(--mp-viridian)]/15 text-[var(--mp-viridian)]" },
+  tip: { bg: "bg-[var(--mp-status-warning)]/6", border: "border-[var(--mp-status-warning)]/25", badge: "bg-[var(--mp-status-warning)]/15 text-[var(--mp-status-warning)]" },
+  guideline: { bg: "bg-[var(--mp-surface-raised)]", border: "border-[var(--mp-border)]", badge: "bg-[var(--mp-fg-muted)]/10 text-[var(--mp-fg-muted)]" },
 };
 
 export default function MaterialsPage() {
@@ -115,12 +115,12 @@ export default function MaterialsPage() {
     <div className="app-layout">
       <Sidebar lang={lang} userId={userId} userName={userName} />
 
-      <main className="main-content safe-area-top safe-area-bottom bg-[#F7F9FC]">
-        <div className="px-4 lg:px-8 pt-4 pb-2 flex items-center justify-between border-b border-[#E4E9F0]">
-          <Link href="/" className="text-[#A0AEC0] hover:text-[#1A2B3C] text-sm transition-colors">
+      <main className="main-content safe-area-top safe-area-bottom bg-[var(--mp-surface-sunken)]">
+        <div className="px-4 lg:px-8 pt-4 pb-2 flex items-center justify-between border-b border-[var(--mp-border)]">
+          <Link href="/" className="text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg)] text-sm transition-colors">
             ← {lang === "de" ? "Zurück" : "Back"}
           </Link>
-          <h1 className="text-base font-bold text-[#1A2B3C]">
+          <h1 className="text-base font-bold text-[var(--mp-fg)]">
             {lang === "de" ? "Lernmaterialien" : "Study Materials"}
           </h1>
           <div className="flex items-center gap-2">
@@ -135,10 +135,10 @@ export default function MaterialsPage() {
             <div className="flex items-center gap-4">
               <div className="text-4xl">📚</div>
               <div>
-                <h2 className="text-base font-semibold text-[#1A2B3C] mb-1">
+                <h2 className="text-base font-semibold text-[var(--mp-fg)] mb-1">
                   {lang === "de" ? "Kenntnisprüfung Vorbereitung" : "Kenntnisprüfung Preparation"}
                 </h2>
-                <p className="text-sm text-[#A0AEC0]">
+                <p className="text-sm text-[var(--mp-fg-subtle)]">
                   {lang === "de"
                     ? "Offizielle Ressourcen, Lernbuchtipps und Prüfungsstrategie"
                     : "Official resources, textbook recommendations, and exam strategy"}
@@ -148,15 +148,15 @@ export default function MaterialsPage() {
           </div>
 
           {/* Tabs */}
-          <div className="flex gap-1 mb-5 bg-[#F7F9FC] p-1 rounded-xl border border-[#E4E9F0]">
+          <div className="flex gap-1 mb-5 bg-[var(--mp-surface-sunken)] p-1 rounded-xl border border-[var(--mp-border)]">
             {tabs.map((tab) => (
               <button
                 key={tab.key}
                 onClick={() => setActiveSection(tab.key)}
                 className={`flex-1 py-2 text-xs font-medium rounded-xl transition-all ${
                   activeSection === tab.key
-                    ? "bg-[#007B5F] text-white shadow-sm"
-                    : "text-[#A0AEC0] hover:text-[#4A5568]"
+                    ? "bg-[var(--mp-viridian)] text-white shadow-sm"
+                    : "text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg-muted)]"
                 }`}
               >
                 {tab.label}
@@ -173,13 +173,13 @@ export default function MaterialsPage() {
                 <div key={i} className={`card-interactive rounded-2xl ${style.bg} border ${style.border} p-5`}>
                   <div className="flex items-start justify-between gap-3 mb-2">
                     <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <span className={`w-2 h-2 rounded-full flex-shrink-0 ${r.type === "link" ? "bg-[#007B5F]" : r.type === "tip" ? "bg-[#F4A261]" : "bg-[#4A5568]"}`} />
+                      <span className={`w-2 h-2 rounded-full flex-shrink-0 ${r.type === "link" ? "bg-[var(--mp-viridian)]" : r.type === "tip" ? "bg-[var(--mp-status-warning)]" : "bg-[var(--mp-fg-muted)]"}`} />
                       {specialty ? (
                         <span className="flex-shrink-0"><TopicIcon name={specialty.icon} className="w-5 h-5" /></span>
                       ) : (
                         <span className="flex-shrink-0">{TYPE_ICONS[r.type]}</span>
                       )}
-                      <h3 className="text-sm font-semibold text-[#1A2B3C] truncate">{r.title}</h3>
+                      <h3 className="text-sm font-semibold text-[var(--mp-fg)] truncate">{r.title}</h3>
                     </div>
                     <span className={`text-[10px] px-2 py-0.5 rounded font-medium flex-shrink-0 ${style.badge}`}>
                       {r.type === "link"
@@ -189,13 +189,13 @@ export default function MaterialsPage() {
                         : lang === "de" ? "Fachgebiet" : "Specialty"}
                     </span>
                   </div>
-                  <p className="text-sm text-[#4A5568] leading-relaxed ml-8">{r.description}</p>
+                  <p className="text-sm text-[var(--mp-fg-muted)] leading-relaxed ml-8">{r.description}</p>
                   {r.url && (
                     <a
                       href={r.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 mt-2 ml-8 text-xs text-[#007B5F] hover:text-[#00A896] transition-colors"
+                      className="inline-flex items-center gap-1 mt-2 ml-8 text-xs text-[var(--mp-viridian)] hover:text-[var(--mp-accent-teal)] transition-colors"
                     >
                       {lang === "de" ? "Öffnen" : "Open"} ↗
                     </a>
@@ -208,7 +208,7 @@ export default function MaterialsPage() {
           {/* Exam structure overview */}
           {(activeSection === "all" || activeSection === "specialty") && (
             <div className="mt-6">
-              <h2 className="text-base font-semibold text-[#1A2B3C] mb-3">
+              <h2 className="text-base font-semibold text-[var(--mp-fg)] mb-3">
                 {lang === "de" ? "Prüfungsstruktur" : "Exam Structure"}
               </h2>
               <div className="grid grid-cols-2 gap-2">
@@ -230,16 +230,16 @@ export default function MaterialsPage() {
                     <div key={topic} className="card p-3">
                       <div className="flex items-center gap-2 mb-1.5">
                         <TopicIcon name={cfg.icon} className="w-4 h-4" />
-                        <span className="text-xs text-[#1A2B3C] font-medium flex-1 truncate">{topic}</span>
+                        <span className="text-xs text-[var(--mp-fg)] font-medium flex-1 truncate">{topic}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <div className="flex-1 bg-[#F7F9FC] rounded-full h-1 overflow-hidden">
+                        <div className="flex-1 bg-[var(--mp-surface-sunken)] rounded-full h-1 overflow-hidden">
                           <div
                             className="h-full rounded-full"
                             style={{ width: `${pct}%`, backgroundColor: cfg.color }}
                           />
                         </div>
-                        <span className="text-[10px] text-[#A0AEC0] font-mono w-8 text-right">{q}F</span>
+                        <span className="text-[10px] text-[var(--mp-fg-subtle)] font-mono w-8 text-right">{q}F</span>
                       </div>
                     </div>
                   );

@@ -28,8 +28,8 @@ export default function BottomNav({ lang, userId }: BottomNavProps) {
     const active = isActive(key);
     return `flex flex-col items-center gap-0.5 py-1.5 px-2 rounded-xl transition-all duration-200 ${
       active
-        ? "text-[#007B5F]"
-        : "text-[#A0AEC0] active:text-[#4A5568]"
+        ? "text-[var(--mp-viridian)]"
+        : "text-[var(--mp-fg-subtle)] active:text-[var(--mp-fg-muted)]"
     }`;
   };
 
@@ -38,12 +38,12 @@ export default function BottomNav({ lang, userId }: BottomNavProps) {
 
   return (
     <nav className="bottom-nav fixed bottom-0 left-0 right-0 z-50 safe-area-bottom">
-      <div className="glass border-t border-[#E4E9F0] shadow-[var(--shadow-elevated)] mx-2 mb-2 rounded-2xl">
+      <div className="glass border-t border-[var(--mp-border)] shadow-[var(--shadow-elevated)] mx-2 mb-2 rounded-2xl">
         <div className="flex items-end justify-around px-2 pt-2 pb-2.5 relative">
           {/* Home */}
           <Link href="/" className={navItemClass("home")}>
             <Home className="w-5 h-5" />
-            <span className={`text-[10px] ${isActive("home") ? "font-semibold text-[#007B5F]" : "font-medium"}`}>
+            <span className={`text-[10px] ${isActive("home") ? "font-semibold text-[var(--mp-viridian)]" : "font-medium"}`}>
               {t("home", lang)}
             </span>
           </Link>
@@ -51,7 +51,7 @@ export default function BottomNav({ lang, userId }: BottomNavProps) {
           {/* Exam */}
           <Link href="/exam" className={navItemClass("exam")}>
             <GraduationCap className="w-5 h-5" />
-            <span className={`text-[10px] ${isActive("exam") ? "font-semibold text-[#007B5F]" : "font-medium"}`}>
+            <span className={`text-[10px] ${isActive("exam") ? "font-semibold text-[var(--mp-viridian)]" : "font-medium"}`}>
               {t("exam", lang)}
             </span>
           </Link>
@@ -63,12 +63,12 @@ export default function BottomNav({ lang, userId }: BottomNavProps) {
           >
             <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg ${
               quizActive
-                ? "bg-[#007B5F] ring-4 ring-[#007B5F]/20"
-                : "bg-[#003A8C] ring-4 ring-[#003A8C]/15 hover:bg-[#002d6e]"
+                ? "bg-[var(--mp-viridian)] ring-4 ring-[var(--mp-viridian)]/20"
+                : "bg-[var(--mp-cta-blue)] ring-4 ring-[var(--mp-cta-blue)]/15 hover:bg-[var(--mp-cta-blue-hover)]"
             }`}>
               <FileText className="w-6 h-6 text-white" />
             </div>
-            <span className={`text-[10px] mt-1 ${quizActive ? "font-bold text-[#007B5F]" : "font-semibold text-[#003A8C]"}`}>
+            <span className={`text-[10px] mt-1 ${quizActive ? "font-bold text-[var(--mp-viridian)]" : "font-semibold text-[var(--mp-cta-blue)]"}`}>
               {t("quiz", lang)}
             </span>
           </Link>
@@ -76,7 +76,7 @@ export default function BottomNav({ lang, userId }: BottomNavProps) {
           {/* Progress */}
           <Link href="/progress" className={navItemClass("progress")}>
             <TrendingUp className="w-5 h-5" />
-            <span className={`text-[10px] ${isActive("progress") ? "font-semibold text-[#007B5F]" : "font-medium"}`}>
+            <span className={`text-[10px] ${isActive("progress") ? "font-semibold text-[var(--mp-viridian)]" : "font-medium"}`}>
               {t("progress", lang)}
             </span>
           </Link>
@@ -84,7 +84,7 @@ export default function BottomNav({ lang, userId }: BottomNavProps) {
           {/* Settings (was Profile) */}
           <Link href="/settings" className={navItemClass("settings")}>
             <User className="w-5 h-5" />
-            <span className={`text-[10px] ${isActive("settings") ? "font-semibold text-[#007B5F]" : "font-medium"}`}>
+            <span className={`text-[10px] ${isActive("settings") ? "font-semibold text-[var(--mp-viridian)]" : "font-medium"}`}>
               {t("profile", lang)}
             </span>
           </Link>

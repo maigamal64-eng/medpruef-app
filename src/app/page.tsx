@@ -21,9 +21,7 @@ import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import TopicCard from "@/components/TopicCard";
 import StatsCard from "@/components/StatsCard";
-import StreakWidget from "@/components/StreakWidget";
-import XPBar from "@/components/XPBar";
-import DailyGoalRing from "@/components/DailyGoalRing";
+import GamificationHero from "@/components/GamificationHero";
 import ExamSelector from "@/components/ExamSelector";
 import ExamSwitcherInline from "@/components/ExamSwitcherInline";
 import Onboarding from "@/components/Onboarding";
@@ -95,20 +93,20 @@ function WeaknessToast({ weakTopics, lang, examSource }: { weakTopics: TopicStat
 
   return (
     <div className="fixed top-4 right-4 z-50 max-w-sm animate-slide-up">
-      <div className="card rounded-xl p-4 shadow-[var(--shadow-elevated)] border-l-4 border-l-[#F4A261] bg-white">
+      <div className="card rounded-xl p-4 shadow-[var(--shadow-elevated)] border-l-4 border-l-[var(--mp-status-warning)] bg-white">
         <div className="flex items-start gap-3">
-          <Lightbulb className="w-5 h-5 text-[#F4A261] flex-shrink-0 mt-0.5" />
+          <Lightbulb className="w-5 h-5 text-[var(--mp-status-warning)] flex-shrink-0 mt-0.5" />
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-[#1A2B3C] mb-0.5">
+            <p className="text-sm font-semibold text-[var(--mp-fg)] mb-0.5">
               {lang === "de" ? `${wt.topic} verbessern` : `Improve ${wt.topic}`}
             </p>
-            <p className="text-xs text-[#A0AEC0]">
+            <p className="text-xs text-[var(--mp-fg-subtle)]">
               {lang === "de" ? `${acc}% Genauigkeit — jetzt üben?` : `${acc}% accuracy — practice now?`}
             </p>
           </div>
           <button
             onClick={() => setDismissed(true)}
-            className="text-[#A0AEC0] hover:text-[#4A5568] transition-colors flex-shrink-0"
+            className="text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg-muted)] transition-colors flex-shrink-0"
           >
             <span className="text-lg leading-none">&times;</span>
           </button>
@@ -378,7 +376,7 @@ export default function Home() {
 
   if (loading && !showExamSelector) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#F7F9FC]">
+      <div className="flex items-center justify-center min-h-screen bg-[var(--mp-surface-sunken)]">
         <BrandedLoader size="lg" />
       </div>
     );
@@ -400,9 +398,9 @@ export default function Home() {
   // If we're processing a Telegram bot token, show loader instead of redirecting
   if (processingTgToken) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-[#F7F9FC] gap-4">
+      <div className="flex flex-col items-center justify-center min-h-screen bg-[var(--mp-surface-sunken)] gap-4">
         <BrandedLoader size="lg" />
-        <p className="text-sm text-[#4A5568]">
+        <p className="text-sm text-[var(--mp-fg-muted)]">
           {lang === "de" ? "Anmeldung läuft..." : "Signing in..."}
         </p>
       </div>
@@ -416,7 +414,7 @@ export default function Home() {
     if (!isTelegramMiniApp() && !hasToken) {
       window.location.href = "/landing";
       return (
-        <div className="flex items-center justify-center min-h-screen bg-[#F7F9FC]">
+        <div className="flex items-center justify-center min-h-screen bg-[var(--mp-surface-sunken)]">
           <BrandedLoader />
         </div>
       );
@@ -453,19 +451,19 @@ export default function Home() {
         accuracy={accuracy}
       />
 
-      <main className="main-content safe-area-top safe-area-bottom bg-[#F7F9FC]">
+      <main className="main-content safe-area-top safe-area-bottom bg-[var(--mp-surface-sunken)]">
         {/* Mobile Header */}
-        <div className="lg:hidden px-4 pt-4 pb-2 border-b border-[#E4E9F0]">
+        <div className="lg:hidden px-4 pt-4 pb-2 border-b border-[var(--mp-border)]">
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-3 min-w-0 flex-1">
-              <div className="w-9 h-9 rounded bg-[#007B5F]/15 border border-[#007B5F]/30 flex items-center justify-center text-sm font-bold text-[#007B5F] flex-shrink-0">
+              <div className="w-9 h-9 rounded bg-[var(--mp-viridian)]/15 border border-[var(--mp-viridian)]/30 flex items-center justify-center text-sm font-bold text-[var(--mp-viridian)] flex-shrink-0">
                 {user.first_name.charAt(0).toUpperCase()}
               </div>
               <div className="min-w-0">
-                <h1 className="text-base font-bold text-[#1A2B3C] truncate">
+                <h1 className="text-base font-bold text-[var(--mp-fg)] truncate">
                   {t("hello", lang)}, {user.first_name}
                 </h1>
-                <p className="text-xs text-[#A0AEC0]">
+                <p className="text-xs text-[var(--mp-fg-subtle)]">
                   {xpInfo.rank} · {t("level", lang)}{" "}
                   <span className="font-mono">{xpInfo.level}</span>
                 </p>
@@ -482,17 +480,17 @@ export default function Home() {
         {/* Desktop Header Bar */}
         <div className="hidden lg:flex px-8 pt-6 pb-3 items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-[#1A2B3C]">
+            <h1 className="text-2xl font-bold text-[var(--mp-fg)]">
               {t("hello", lang)}, {user.first_name}
             </h1>
-            <p className="text-sm text-[#A0AEC0]">{t("exam_prep", lang)}</p>
+            <p className="text-sm text-[var(--mp-fg-subtle)]">{t("exam_prep", lang)}</p>
           </div>
           <div className="flex items-center gap-3">
             {/* Exam switcher is in the sidebar on desktop — no need here.
                 Search + theme + language toggles remain. */}
             <button
               onClick={() => setSearchOpen(!searchOpen)}
-              className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-[#E4E9F0]/50 text-[#A0AEC0] transition-colors"
+              className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-[var(--mp-border)]/50 text-[var(--mp-fg-subtle)] transition-colors"
               title="Search (Cmd+K)"
             >
               <Search className="w-[18px] h-[18px]" />
@@ -564,8 +562,8 @@ export default function Home() {
                   const variation = ((hour * 7 + new Date().getMinutes()) % 400);
                   const studyingNow = baseCount + variation;
                   return (
-                    <span className="inline-flex items-center gap-1.5 bg-[#00A896]/30 text-white text-xs font-medium px-3 py-1.5 rounded-full">
-                      <span className="w-2 h-2 rounded-full bg-[#00A896] animate-pulse" /> {studyingNow.toLocaleString("de-DE")}+ {lang === "de" ? "lernen jetzt" : "studying now"}
+                    <span className="inline-flex items-center gap-1.5 bg-[var(--mp-accent-teal)]/30 text-white text-xs font-medium px-3 py-1.5 rounded-full">
+                      <span className="w-2 h-2 rounded-full bg-[var(--mp-accent-teal)] animate-pulse" /> {studyingNow.toLocaleString("de-DE")}+ {lang === "de" ? "lernen jetzt" : "studying now"}
                     </span>
                   );
                 })()}
@@ -576,62 +574,57 @@ export default function Home() {
           {/* Last session badge */}
           {lastSessionInfo && (
             <div className="text-center mb-2">
-              <span className="inline-flex items-center gap-2 text-xs text-[#A0AEC0] bg-[#F7F9FC] border border-[#E4E9F0] rounded-full px-3 py-1">
-                {lang === "de" ? "Letzte Sitzung" : "Last session"}: <span className="font-semibold text-[#007B5F]">+{lastSessionInfo.totalXpSession} XP</span> · {lastSessionInfo.questionCount} {lang === "de" ? "Fragen" : "questions"}
+              <span className="inline-flex items-center gap-2 text-xs text-[var(--mp-fg-subtle)] bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)] rounded-full px-3 py-1">
+                {lang === "de" ? "Letzte Sitzung" : "Last session"}: <span className="font-semibold text-[var(--mp-viridian)]">+{lastSessionInfo.totalXpSession} XP</span> · {lastSessionInfo.questionCount} {lang === "de" ? "Fragen" : "questions"}
               </span>
             </div>
           )}
 
-          {/* Top Row: Stats + Daily Goal */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
-            <div className="card rounded-2xl p-6">
-              <DailyGoalRing
-                current={gam?.daily_questions_today || 0}
-                goal={user.daily_goal || 20}
-                lang={lang}
-              />
-            </div>
-            <div className="card rounded-2xl p-6">
-              <StreakWidget streak={gam?.current_streak || 0} lang={lang} />
-            </div>
-            <div className="card rounded-2xl p-6 md:col-span-2 lg:col-span-1">
-              {(() => {
-                const target = profileData?.targetDate;
-                if (target) {
-                  const daysLeft = Math.ceil((new Date(target).getTime() - Date.now()) / 86400000);
-                  if (daysLeft > 0) {
-                    const urgency = daysLeft <= 14 ? "#D64545" : daysLeft <= 30 ? "#F4A261" : "#007B5F";
-                    return (
-                      <div className="text-center">
-                        <p className="text-xs uppercase tracking-wider font-semibold mb-2" style={{ color: urgency }}>
-                          {t("exam_countdown", lang)}
-                        </p>
-                        <p className="text-4xl font-bold font-display" style={{ color: urgency }}>
-                          {daysLeft}
-                        </p>
-                        <p className="text-sm text-[#4A5568] mt-1">{t("days_until_exam", lang)}</p>
-                      </div>
-                    );
-                  }
-                }
-                return <XPBar totalXp={gam?.total_xp || 0} lang={lang} />;
-              })()}
-            </div>
-          </div>
+          {/* Merged gamification hero (Gamification-B): streak + XP + daily goal + rank in one card. */}
+          {(() => {
+            const target = profileData?.targetDate;
+            const daysLeft = target ? Math.ceil((new Date(target).getTime() - Date.now()) / 86400000) : null;
+            const showCountdown = daysLeft !== null && daysLeft > 0;
+            return (
+              <div className={`grid grid-cols-1 ${showCountdown ? "md:grid-cols-2" : ""} gap-6 mb-10`}>
+                <GamificationHero
+                  streak={gam?.current_streak || 0}
+                  totalXp={gam?.total_xp || 0}
+                  dailyCurrent={gam?.daily_questions_today || 0}
+                  dailyGoal={user.daily_goal || 20}
+                  lang={lang}
+                />
+                {showCountdown && (() => {
+                  const urgency = daysLeft <= 14 ? "#D64545" : daysLeft <= 30 ? "#D68A3A" : "#007B5F";
+                  return (
+                    <div className="card rounded-2xl p-6 flex flex-col items-center justify-center text-center">
+                      <p className="text-xs uppercase tracking-wider font-semibold mb-2" style={{ color: urgency }}>
+                        {t("exam_countdown", lang)}
+                      </p>
+                      <p className="text-5xl font-bold font-display" style={{ color: urgency }}>
+                        {daysLeft}
+                      </p>
+                      <p className="text-sm text-[var(--mp-fg-muted)] mt-1">{t("days_until_exam", lang)}</p>
+                    </div>
+                  );
+                })()}
+              </div>
+            );
+          })()}
 
           {/* Resume where you left off — addresses Abobaker's feedback */}
           {!user.id.startsWith("guest_") && <ResumeSessionCard userId={user.id} lang={lang} />}
 
           {/* Weakest Subject — urgency block */}
           {weakTopics.length > 0 && (
-            <div className="bg-[#FFF4E6] border border-[#F4A261]/25 border-l-4 border-l-[#F4A261] rounded-2xl p-6 mb-10">
+            <div className="bg-[var(--mp-warning-bg)] border border-[var(--mp-status-warning)]/25 border-l-4 border-l-[var(--mp-status-warning)] rounded-2xl p-6 mb-10">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="font-bold text-[#1A2B3C] mb-1 flex items-center gap-2">
-                    <AlertTriangle className="w-5 h-5 text-[#F4A261]" />
+                  <p className="font-bold text-[var(--mp-fg)] mb-1 flex items-center gap-2">
+                    <AlertTriangle className="w-5 h-5 text-[var(--mp-status-warning)]" />
                     {lang === "de" ? "Smarte Empfehlung" : "Smart Recommendation"}
                   </p>
-                  <p className="text-sm text-[#4A5568]">
+                  <p className="text-sm text-[var(--mp-fg-muted)]">
                     {lang === "de"
                       ? `${weakTopics[0]?.topic} verbessern — steigert deine Punktzahl um +${Math.min(Math.round(100 / (weakTopics.length + 1)), 15)}%`
                       : `Improving ${weakTopics[0]?.topic} increases your score by +${Math.min(Math.round(100 / (weakTopics.length + 1)), 15)}%`}
@@ -656,24 +649,24 @@ export default function Home() {
               <CalendarDays className="w-6 h-6 text-white" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-[#1A2B3C] flex items-center gap-2">
+              <p className="text-sm font-bold text-[var(--mp-fg)] flex items-center gap-2">
                 {lang === "de" ? "Dein Lernplan" : "Your Study Plan"}
                 {profileData?.targetDate && !isNaN(new Date(profileData.targetDate).getTime()) && (() => {
                   const days = Math.ceil((new Date(profileData.targetDate).getTime() - Date.now()) / 86400000);
                   return days > 0 ? (
-                    <span className="inline-flex items-center gap-1 bg-[#007B5F]/10 text-[#007B5F] text-[10px] font-bold px-2 py-0.5 rounded-full">
+                    <span className="inline-flex items-center gap-1 bg-[var(--mp-viridian)]/10 text-[var(--mp-viridian)] text-[10px] font-bold px-2 py-0.5 rounded-full">
                       {lang === "de" ? `${days} Tage` : `${days} days`}
                     </span>
                   ) : null;
                 })()}
               </p>
-              <p className="text-xs text-[#A0AEC0] mt-0.5">
+              <p className="text-xs text-[var(--mp-fg-subtle)] mt-0.5">
                 {lang === "de"
                   ? "Tagesplan bis zur Prüfung ansehen"
                   : "See your day-by-day plan to the exam"}
               </p>
             </div>
-            <ChevronRight className="w-5 h-5 text-[#A0AEC0] group-hover:text-[#007B5F] group-hover:translate-x-0.5 transition-all flex-shrink-0" />
+            <ChevronRight className="w-5 h-5 text-[var(--mp-fg-subtle)] group-hover:text-[var(--mp-viridian)] group-hover:translate-x-0.5 transition-all flex-shrink-0" />
           </Link>
 
           {/* Quick Actions — 3-column grid */}
@@ -698,7 +691,7 @@ export default function Home() {
               href={`/quiz?topic=random&userId=${user.id}&examSource=${examSource}`}
               className="btn-secondary flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm"
             >
-              <Shuffle className="w-4 h-4 text-[#007B5F]" />
+              <Shuffle className="w-4 h-4 text-[var(--mp-viridian)]" />
               {t("random_quiz", lang)}
             </Link>
 
@@ -707,7 +700,7 @@ export default function Home() {
               href={`/exam?examSource=${examSource}`}
               className="btn-secondary flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm"
             >
-              <GraduationCap className="w-4 h-4 text-[#F4A261]" />
+              <GraduationCap className="w-4 h-4 text-[var(--mp-status-warning)]" />
               {lang === "de" ? "Probeprüfung" : "Mock Exam"}
             </Link>
           </div>
@@ -718,12 +711,12 @@ export default function Home() {
               href={`/progress?tab=bookmarks`}
               className="card-interactive rounded-xl p-4 flex items-center gap-3 group"
             >
-              <Star className="w-5 h-5 text-[#F4A261]" />
+              <Star className="w-5 h-5 text-[var(--mp-status-warning)]" />
               <div>
-                <p className="text-sm font-medium text-[#1A2B3C]">
+                <p className="text-sm font-medium text-[var(--mp-fg)]">
                   {lang === "de" ? "Lesezeichen" : "Bookmarks"}
                 </p>
-                <p className="text-[11px] text-[#A0AEC0]">
+                <p className="text-[11px] text-[var(--mp-fg-subtle)]">
                   {lang === "de" ? "Gespeicherte Fragen üben" : "Practice saved questions"}
                 </p>
               </div>
@@ -732,12 +725,12 @@ export default function Home() {
               href={`/quiz?topic=random&userId=${user.id}&examSource=${examSource}&practiceMode=wrong&autoStart=1`}
               className="card-interactive rounded-xl p-4 flex items-center gap-3 group"
             >
-              <AlertCircle className="w-5 h-5 text-[#D64545]" />
+              <AlertCircle className="w-5 h-5 text-[var(--mp-error)]" />
               <div>
-                <p className="text-sm font-medium text-[#1A2B3C]">
+                <p className="text-sm font-medium text-[var(--mp-fg)]">
                   {lang === "de" ? "Fehler wiederholen" : "Review Mistakes"}
                 </p>
-                <p className="text-[11px] text-[#A0AEC0]">
+                <p className="text-[11px] text-[var(--mp-fg-subtle)]">
                   {lang === "de" ? "Falsch beantwortete Fragen" : "Questions you got wrong"}
                 </p>
               </div>
@@ -748,11 +741,11 @@ export default function Home() {
           <div className="mb-10 lg:hidden">
             <button
               onClick={() => setSearchOpen(true)}
-              className="w-full card rounded-2xl p-3.5 flex items-center gap-3 text-[#A0AEC0] hover:border-[#007B5F]/30 transition-colors"
+              className="w-full card rounded-2xl p-3.5 flex items-center gap-3 text-[var(--mp-fg-subtle)] hover:border-[var(--mp-viridian)]/30 transition-colors"
             >
               <Search className="w-5 h-5" />
               <span className="text-sm">{lang === "de" ? "Frage suchen..." : "Search questions..."}</span>
-              <kbd className="ml-auto text-[10px] bg-[#F7F9FC] border border-[#E4E9F0] rounded px-1.5 py-0.5 font-mono">⌘K</kbd>
+              <kbd className="ml-auto text-[10px] bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)] rounded px-1.5 py-0.5 font-mono">⌘K</kbd>
             </button>
           </div>
 
@@ -768,8 +761,8 @@ export default function Home() {
           {/* Topics Grid */}
           {(
             <div className="mb-10">
-              <h2 className="text-lg font-bold mb-4 text-[#1A2B3C] border-l-[3px] border-l-[#007B5F] pl-3">
-                {t("specialties", lang)} <span className="text-sm font-normal text-[#A0AEC0] ml-1">({topics.length})</span>
+              <h2 className="text-lg font-bold mb-4 text-[var(--mp-fg)] border-l-[3px] border-l-[var(--mp-viridian)] pl-3">
+                {t("specialties", lang)} <span className="text-sm font-normal text-[var(--mp-fg-subtle)] ml-1">({topics.length})</span>
               </h2>
 
               {examSource === "kenntnispruefung" ? (
@@ -781,25 +774,25 @@ export default function Home() {
                       className="card-interactive rounded-2xl p-4 flex items-center justify-between text-sm transition-all"
                     >
                       <div className="flex items-center gap-2">
-                        <ClipboardList className="w-4 h-4 flex-shrink-0 text-[#F4A261]" />
+                        <ClipboardList className="w-4 h-4 flex-shrink-0 text-[var(--mp-status-warning)]" />
                         <span className="truncate font-medium">{t("practice_sip4", lang)}</span>
                       </div>
-                      <ChevronRight className="w-4 h-4 text-[#A0AEC0]" />
+                      <ChevronRight className="w-4 h-4 text-[var(--mp-fg-subtle)]" />
                     </Link>
                     <Link
                       href={`/exam?examSource=kenntnispruefung&part=sip5`}
                       className="card-interactive rounded-2xl p-4 flex items-center justify-between text-sm transition-all"
                     >
                       <div className="flex items-center gap-2">
-                        <ClipboardList className="w-4 h-4 flex-shrink-0 text-[#007B5F]" />
+                        <ClipboardList className="w-4 h-4 flex-shrink-0 text-[var(--mp-viridian)]" />
                         <span className="truncate font-medium">{t("practice_sip5", lang)}</span>
                       </div>
-                      <ChevronRight className="w-4 h-4 text-[#A0AEC0]" />
+                      <ChevronRight className="w-4 h-4 text-[var(--mp-fg-subtle)]" />
                     </Link>
                   </div>
 
                   {/* SIP 4 section */}
-                  <h3 className="text-sm font-bold uppercase tracking-wider text-[#F4A261] mb-3 border-l-[3px] border-l-[#F4A261] pl-3">
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--mp-status-warning)] mb-3 border-l-[3px] border-l-[var(--mp-status-warning)] pl-3">
                     {t("sip4_label", lang)}
                   </h3>
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-6 mb-10 stagger">
@@ -821,7 +814,7 @@ export default function Home() {
                   </div>
 
                   {/* SIP 5 section */}
-                  <h3 className="text-sm font-bold uppercase tracking-wider text-[#007B5F] mb-3 border-l-[3px] border-l-[#007B5F] pl-3">
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--mp-viridian)] mb-3 border-l-[3px] border-l-[var(--mp-viridian)] pl-3">
                     {t("sip5_label", lang)}
                   </h3>
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-6 stagger">
@@ -864,25 +857,25 @@ export default function Home() {
 
           {/* View Progress Link */}
           <Link href="/progress" className="card rounded-2xl p-4 flex items-center justify-between hover:shadow-[var(--shadow-card-hover)] transition-all">
-            <span className="text-sm font-medium text-[#007B5F]">
+            <span className="text-sm font-medium text-[var(--mp-viridian)]">
               {lang === "de" ? "Fortschritt ansehen" : "View Full Progress"}
             </span>
-            <ChevronRight className="w-5 h-5 text-[#A0AEC0]" />
+            <ChevronRight className="w-5 h-5 text-[var(--mp-fg-subtle)]" />
           </Link>
 
           {/* Mini Stats Row (mobile only — 2x2 grid) */}
           <div className="grid grid-cols-2 gap-3 lg:hidden mb-10 mt-4 stagger">
             <div className="card rounded-xl">
-              <StatsCard icon={<Zap className="w-4 h-4" />} value={gam?.total_xp || 0} label="XP" color="text-[#F4A261]" delay={0} />
+              <StatsCard icon={<Zap className="w-4 h-4" />} value={gam?.total_xp || 0} label="XP" color="text-[var(--mp-status-warning)]" delay={0} />
             </div>
             <div className="card rounded-xl">
-              <StatsCard icon={<Flame className="w-4 h-4" />} value={gam?.current_streak || 0} label={t("streak", lang)} color="text-[#D64545]" delay={50} />
+              <StatsCard icon={<Flame className="w-4 h-4" />} value={gam?.current_streak || 0} label={t("streak", lang)} color="text-[var(--mp-error)]" delay={50} />
             </div>
             <div className="card rounded-xl">
-              <StatsCard icon={<CheckCircle className="w-4 h-4" />} value={`${accuracy}%`} label={t("accuracy", lang)} color="text-[#00A896]" delay={100} />
+              <StatsCard icon={<CheckCircle className="w-4 h-4" />} value={`${accuracy}%`} label={t("accuracy", lang)} color="text-[var(--mp-accent-teal)]" delay={100} />
             </div>
             <div className="card rounded-xl">
-              <StatsCard icon={<FileTextIcon className="w-4 h-4" />} value={gam?.total_questions_answered || 0} label={t("answered", lang)} color="text-[#007B5F]" delay={150} />
+              <StatsCard icon={<FileTextIcon className="w-4 h-4" />} value={gam?.total_questions_answered || 0} label={t("answered", lang)} color="text-[var(--mp-viridian)]" delay={150} />
             </div>
           </div>
         </div>
@@ -963,7 +956,7 @@ function DemoHome({
   };
 
   return (
-    <div className="min-h-screen bg-[#F7F9FC] safe-area-top safe-area-bottom">
+    <div className="min-h-screen bg-[var(--mp-surface-sunken)] safe-area-top safe-area-bottom">
       {/* Hero */}
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-b from-[#007B5F]/[0.03] to-transparent pointer-events-none" />
@@ -973,33 +966,33 @@ function DemoHome({
             <LanguageToggle lang={lang} onChange={onLangChange} />
           </div>
 
-          <div className="w-16 h-16 rounded border border-[#007B5F]/30 bg-[#007B5F]/10 flex items-center justify-center text-3xl mx-auto mb-4">
+          <div className="w-16 h-16 rounded border border-[var(--mp-viridian)]/30 bg-[var(--mp-viridian)]/10 flex items-center justify-center text-3xl mx-auto mb-4">
             <img src="/brand/logomark.svg" alt="MedPrüf" className="w-12 h-12" />
           </div>
           <img src="/brand/wordmark-twotone.png" alt="MedPrüf" className="h-10 mx-auto" />
-          <p className="text-[#4A5568] text-base mb-1">{t("exam_prep", lang)}</p>
-          <p className="text-[#A0AEC0] text-sm">{t("demo_description", lang)}</p>
+          <p className="text-[var(--mp-fg-muted)] text-base mb-1">{t("exam_prep", lang)}</p>
+          <p className="text-[var(--mp-fg-subtle)] text-sm">{t("demo_description", lang)}</p>
 
           {/* Stats bar */}
           <div className="flex items-center justify-center gap-6 mt-5">
             <div className="text-center">
-              <p className="text-2xl font-bold text-[#007B5F] font-mono">
+              <p className="text-2xl font-bold text-[var(--mp-viridian)] font-mono">
                 {totalQuestions > 0 ? totalQuestions.toLocaleString("de-DE") : "7.042"}
               </p>
-              <p className="text-xs text-[#A0AEC0]">{t("questions", lang)}</p>
+              <p className="text-xs text-[var(--mp-fg-subtle)]">{t("questions", lang)}</p>
             </div>
-            <div className="w-px h-8 bg-[#E4E9F0]" />
+            <div className="w-px h-8 bg-[var(--mp-border)]" />
             <div className="text-center">
-              <p className="text-2xl font-bold text-[#F4A261] font-mono">{topics.length || "10"}</p>
-              <p className="text-xs text-[#A0AEC0]">{t("topics", lang)}</p>
+              <p className="text-2xl font-bold text-[var(--mp-status-warning)] font-mono">{topics.length || "10"}</p>
+              <p className="text-xs text-[var(--mp-fg-subtle)]">{t("topics", lang)}</p>
             </div>
-            <div className="w-px h-8 bg-[#E4E9F0]" />
+            <div className="w-px h-8 bg-[var(--mp-border)]" />
             {/* Exam badge — clickable to change */}
             <button onClick={onChangeExam} className="text-center group">
-              <p className="text-lg font-bold text-[#F4A261] font-mono group-hover:text-[#FFD080] transition-colors">
+              <p className="text-lg font-bold text-[var(--mp-status-warning)] font-mono group-hover:text-[#FFD080] transition-colors">
                 {examSource}
               </p>
-              <p className="text-xs text-[#A0AEC0] group-hover:text-[#4A5568] transition-colors">
+              <p className="text-xs text-[var(--mp-fg-subtle)] group-hover:text-[var(--mp-fg-muted)] transition-colors">
                 {lang === "de" ? "Prüfung" : "Exam"}
               </p>
             </button>
@@ -1035,7 +1028,7 @@ function DemoHome({
       {/* Topics — hidden while searching */}
       {topics.length > 0 && !searchQuery && (
         <div className="px-6 pb-10 max-w-4xl mx-auto">
-          <h2 className="text-lg font-bold mb-4 text-[#1A2B3C] border-l-[3px] border-l-[#007B5F] pl-3">{t("practice_topics", lang)}</h2>
+          <h2 className="text-lg font-bold mb-4 text-[var(--mp-fg)] border-l-[3px] border-l-[var(--mp-viridian)] pl-3">{t("practice_topics", lang)}</h2>
 
           {examSource === "kenntnispruefung" ? (
             <>
@@ -1045,20 +1038,20 @@ function DemoHome({
                   href={`/exam?examSource=kenntnispruefung&part=sip4`}
                   className="btn-secondary flex items-center gap-2 rounded-xl px-4 py-3 text-sm transition-all hover:shadow-md"
                 >
-                  <ClipboardList className="w-4 h-4 flex-shrink-0 text-[#F4A261]" />
+                  <ClipboardList className="w-4 h-4 flex-shrink-0 text-[var(--mp-status-warning)]" />
                   <span className="truncate">{t("practice_sip4", lang)}</span>
                 </Link>
                 <Link
                   href={`/exam?examSource=kenntnispruefung&part=sip5`}
                   className="btn-secondary flex items-center gap-2 rounded-xl px-4 py-3 text-sm transition-all hover:shadow-md"
                 >
-                  <ClipboardList className="w-4 h-4 flex-shrink-0 text-[#007B5F]" />
+                  <ClipboardList className="w-4 h-4 flex-shrink-0 text-[var(--mp-viridian)]" />
                   <span className="truncate">{t("practice_sip5", lang)}</span>
                 </Link>
               </div>
 
               {/* SIP 4 group */}
-              <h3 className="text-sm font-bold uppercase tracking-wider text-[#F4A261] mb-3 border-l-[3px] border-l-[#F4A261] pl-3">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--mp-status-warning)] mb-3 border-l-[3px] border-l-[var(--mp-status-warning)] pl-3">
                 {t("sip4_label", lang)}
               </h3>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-10 stagger">
@@ -1072,15 +1065,15 @@ function DemoHome({
                       style={{ animationDelay: `${i * 50}ms` }}
                     >
                       <TopicIcon name={config.icon} className="w-7 h-7 mb-3 transition-transform duration-200 group-hover:scale-110" style={{ color: config.color }} />
-                      <div className="text-[15px] font-semibold leading-snug mb-1 text-[#1A2B3C] line-clamp-2 min-h-[2.5rem]" title={tp.topic}>{tp.topic}</div>
-                      <div className="text-xs text-[#A0AEC0] font-mono">{tp.count.toLocaleString("de-DE")} {t("questions", lang)}</div>
+                      <div className="text-[15px] font-semibold leading-snug mb-1 text-[var(--mp-fg)] line-clamp-2 min-h-[2.5rem]" title={tp.topic}>{tp.topic}</div>
+                      <div className="text-xs text-[var(--mp-fg-subtle)] font-mono">{tp.count.toLocaleString("de-DE")} {t("questions", lang)}</div>
                     </Link>
                   );
                 })}
               </div>
 
               {/* SIP 5 group */}
-              <h3 className="text-sm font-bold uppercase tracking-wider text-[#007B5F] mb-3 border-l-[3px] border-l-[#007B5F] pl-3">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--mp-viridian)] mb-3 border-l-[3px] border-l-[var(--mp-viridian)] pl-3">
                 {t("sip5_label", lang)}
               </h3>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 stagger">
@@ -1094,8 +1087,8 @@ function DemoHome({
                       style={{ animationDelay: `${i * 50}ms` }}
                     >
                       <TopicIcon name={config.icon} className="w-7 h-7 mb-3 transition-transform duration-200 group-hover:scale-110" style={{ color: config.color }} />
-                      <div className="text-[15px] font-semibold leading-snug mb-1 text-[#1A2B3C] line-clamp-2 min-h-[2.5rem]" title={tp.topic}>{tp.topic}</div>
-                      <div className="text-xs text-[#A0AEC0] font-mono">{tp.count.toLocaleString("de-DE")} {t("questions", lang)}</div>
+                      <div className="text-[15px] font-semibold leading-snug mb-1 text-[var(--mp-fg)] line-clamp-2 min-h-[2.5rem]" title={tp.topic}>{tp.topic}</div>
+                      <div className="text-xs text-[var(--mp-fg-subtle)] font-mono">{tp.count.toLocaleString("de-DE")} {t("questions", lang)}</div>
                     </Link>
                   );
                 })}
@@ -1113,8 +1106,8 @@ function DemoHome({
                     style={{ animationDelay: `${i * 50}ms` }}
                   >
                     <TopicIcon name={config.icon} className="w-7 h-7 mb-3 transition-transform duration-200 group-hover:scale-110" style={{ color: config.color }} />
-                    <div className="text-sm font-semibold mb-1 text-[#1A2B3C]">{tp.topic}</div>
-                    <div className="text-xs text-[#A0AEC0] font-mono">{tp.count} {t("questions", lang)}</div>
+                    <div className="text-sm font-semibold mb-1 text-[var(--mp-fg)]">{tp.topic}</div>
+                    <div className="text-xs text-[var(--mp-fg-subtle)] font-mono">{tp.count} {t("questions", lang)}</div>
                   </Link>
                 );
               })}
@@ -1129,12 +1122,12 @@ function DemoHome({
           <div className="text-center mb-4">
             <img src="/brand/wordmark-twotone.png" alt="MedPrüf" className="h-8 mx-auto" />
           </div>
-          <p className="text-sm text-[#4A5568] font-medium mb-1 text-center">
+          <p className="text-sm text-[var(--mp-fg-muted)] font-medium mb-1 text-center">
             {lang === "de"
               ? "Fortschritt speichern & Statistiken verfolgen"
               : "Save progress & track your stats"}
           </p>
-          <p className="text-xs text-[#A0AEC0] mb-5 text-center">
+          <p className="text-xs text-[var(--mp-fg-subtle)] mb-5 text-center">
             {lang === "de"
               ? "Melde dich mit Telegram an oder fahre als Gast fort"
               : "Sign in with Telegram or continue as guest"}
@@ -1146,7 +1139,7 @@ function DemoHome({
               href="https://t.me/MedPruefBot?start=web_login"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex-1 flex items-center justify-center gap-3 bg-[#229ED9] hover:bg-[#1e8fc0] text-[#1A2B3C] px-5 py-3 rounded font-semibold text-sm transition-all active:scale-[0.98]"
+              className="flex-1 flex items-center justify-center gap-3 bg-[#229ED9] hover:bg-[#1e8fc0] text-[var(--mp-fg)] px-5 py-3 rounded font-semibold text-sm transition-all active:scale-[0.98]"
             >
               <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current" aria-hidden="true">
                 <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.833.941z"/>
@@ -1157,14 +1150,14 @@ function DemoHome({
             {/* Guest continue */}
             <button
               onClick={handleGuestContinue}
-              className="flex-1 flex items-center justify-center gap-2 bg-[#FFFFFF] border border-[#E4E9F0] hover:border-[#007B5F]/40 text-[#4A5568] px-5 py-3 rounded font-medium text-sm transition-all active:scale-[0.98]"
+              className="flex-1 flex items-center justify-center gap-2 bg-[var(--mp-surface-raised)] border border-[var(--mp-border)] hover:border-[var(--mp-viridian)]/40 text-[var(--mp-fg-muted)] px-5 py-3 rounded font-medium text-sm transition-all active:scale-[0.98]"
             >
               <User className="w-4 h-4 flex-shrink-0" />
               {lang === "de" ? "Als Gast fortfahren" : "Continue as guest"}
             </button>
           </div>
 
-          <p className="text-center text-[10px] text-[#A0AEC0]/60 mt-3">
+          <p className="text-center text-[10px] text-[var(--mp-fg-subtle)]/60 mt-3">
             {lang === "de"
               ? "Gastmodus speichert Fortschritt lokal – kein Konto nötig"
               : "Guest mode saves progress locally — no account needed"}

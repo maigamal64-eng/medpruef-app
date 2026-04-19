@@ -108,25 +108,25 @@ export default function Onboarding({ lang = "de", onComplete }: OnboardingProps)
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#001B3D]/60 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-[var(--shadow-modal)] max-w-lg w-full mx-4 max-h-[90vh] flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--mp-oxford-blue)]/60 backdrop-blur-sm">
+      <div className="bg-[var(--mp-surface-raised)] rounded-2xl shadow-[var(--shadow-modal)] max-w-lg w-full mx-4 max-h-[90vh] flex flex-col overflow-hidden">
         {/* Progress bar */}
         <div className="px-6 pt-5 pb-3 shrink-0">
           <div className="flex items-center justify-between mb-4">
             {STEPS.map((_, i) => (
               <div key={i} className="flex items-center">
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all ${
-                  i < step ? "bg-[#007B5F] text-white" : i === step ? "bg-[#003A8C] text-white ring-4 ring-[#003A8C]/20" : "bg-[#E4E9F0] text-[#A0AEC0]"
+                  i < step ? "bg-[var(--mp-viridian)] text-white" : i === step ? "bg-[var(--mp-cta-blue)] text-white ring-4 ring-[var(--mp-cta-blue)]/20" : "bg-[var(--mp-border)] text-[var(--mp-fg-subtle)]"
                 }`}>
                   {i < step ? <CheckCircle2 className="w-5 h-5" /> : i + 1}
                 </div>
                 {i < totalSteps - 1 && (
-                  <div className={`w-8 h-0.5 mx-1 transition-all ${i < step ? "bg-[#007B5F]" : "bg-[#E4E9F0]"}`} />
+                  <div className={`w-8 h-0.5 mx-1 transition-all ${i < step ? "bg-[var(--mp-viridian)]" : "bg-[var(--mp-border)]"}`} />
                 )}
               </div>
             ))}
           </div>
-          <p className="text-[10px] text-[#A0AEC0] text-center">
+          <p className="text-[10px] text-[var(--mp-fg-subtle)] text-center">
             {l === "de" ? `Schritt ${step + 1} von ${totalSteps}` : `Step ${step + 1} of ${totalSteps}`}
           </p>
         </div>
@@ -134,33 +134,33 @@ export default function Onboarding({ lang = "de", onComplete }: OnboardingProps)
         {/* Content */}
         <div className="px-6 flex-1 overflow-y-auto">
           <div className="text-center mb-6">
-            <div className="w-14 h-14 rounded-2xl bg-[#003A8C]/10 flex items-center justify-center mx-auto mb-3">
-              <currentStep.icon className="w-7 h-7 text-[#003A8C]" />
+            <div className="w-14 h-14 rounded-2xl bg-[var(--mp-cta-blue)]/10 flex items-center justify-center mx-auto mb-3">
+              <currentStep.icon className="w-7 h-7 text-[var(--mp-cta-blue)]" />
             </div>
-            <h2 className="text-xl font-bold text-[#1A2B3C] mb-1">{currentStep.title[l]}</h2>
-            <p className="text-sm text-[#A0AEC0]">{currentStep.subtitle[l]}</p>
+            <h2 className="text-xl font-bold text-[var(--mp-fg)] mb-1">{currentStep.title[l]}</h2>
+            <p className="text-sm text-[var(--mp-fg-subtle)]">{currentStep.subtitle[l]}</p>
           </div>
 
           {/* Step 1: Exam */}
           {step === 0 && (
             <div className="space-y-3">
-              <div className="p-4 rounded-xl border-2 border-[#007B5F] bg-[#007B5F]/5">
+              <div className="p-4 rounded-xl border-2 border-[var(--mp-viridian)] bg-[var(--mp-viridian)]/5">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="font-semibold text-[#1A2B3C]">SIP Kenntnisprüfung</h3>
-                    <p className="text-sm text-[#A0AEC0]">{l === "de" ? "Kenntnisprüfung Medizin (Wien, Österreich)" : "Medical Knowledge Exam (Vienna, Austria)"}</p>
-                    <p className="text-xs text-[#007B5F] font-mono mt-1">7.567 {l === "de" ? "Fragen" : "questions"} · 10 {l === "de" ? "Fachgebiete" : "specialties"}</p>
+                    <h3 className="font-semibold text-[var(--mp-fg)]">SIP Kenntnisprüfung</h3>
+                    <p className="text-sm text-[var(--mp-fg-subtle)]">{l === "de" ? "Kenntnisprüfung Medizin (Wien, Österreich)" : "Medical Knowledge Exam (Vienna, Austria)"}</p>
+                    <p className="text-xs text-[var(--mp-viridian)] font-mono mt-1">7.567 {l === "de" ? "Fragen" : "questions"} · 10 {l === "de" ? "Fachgebiete" : "specialties"}</p>
                   </div>
-                  <CheckCircle2 className="w-6 h-6 text-[#007B5F]" />
+                  <CheckCircle2 className="w-6 h-6 text-[var(--mp-viridian)]" />
                 </div>
               </div>
-              <div className="p-4 rounded-xl border border-[#E4E9F0] bg-[#F7F9FC] opacity-50">
+              <div className="p-4 rounded-xl border border-[var(--mp-border)] bg-[var(--mp-surface-sunken)] opacity-50">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="font-semibold text-[#A0AEC0]">{l === "de" ? "Weitere Prüfungen" : "More exams"}</h3>
-                    <p className="text-sm text-[#A0AEC0]">{l === "de" ? "Bald verfügbar" : "Coming soon"}</p>
+                    <h3 className="font-semibold text-[var(--mp-fg-subtle)]">{l === "de" ? "Weitere Prüfungen" : "More exams"}</h3>
+                    <p className="text-sm text-[var(--mp-fg-subtle)]">{l === "de" ? "Bald verfügbar" : "Coming soon"}</p>
                   </div>
-                  <span className="text-xs text-[#A0AEC0] bg-[#E4E9F0] px-2 py-0.5 rounded">{l === "de" ? "Bald" : "Soon"}</span>
+                  <span className="text-xs text-[var(--mp-fg-subtle)] bg-[var(--mp-border)] px-2 py-0.5 rounded">{l === "de" ? "Bald" : "Soon"}</span>
                 </div>
               </div>
             </div>
@@ -173,13 +173,13 @@ export default function Onboarding({ lang = "de", onComplete }: OnboardingProps)
                 <div key={preset.value}>
                   <button
                     className={`w-full p-3.5 rounded-xl border-2 text-left transition-all ${
-                      data.examDate === preset.value ? "border-[#003A8C] bg-[#003A8C]/5" : "border-[#E4E9F0] hover:border-[#A0AEC0]"
+                      data.examDate === preset.value ? "border-[var(--mp-cta-blue)] bg-[var(--mp-cta-blue)]/5" : "border-[var(--mp-border)] hover:border-[var(--mp-fg-subtle)]"
                     }`}
                     onClick={() => setData({ ...data, examDate: preset.value })}
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-medium text-sm">{preset.label[l]}</span>
-                      {data.examDate === preset.value && <CheckCircle2 className="w-5 h-5 text-[#003A8C]" />}
+                      {data.examDate === preset.value && <CheckCircle2 className="w-5 h-5 text-[var(--mp-cta-blue)]" />}
                     </div>
                   </button>
                   {preset.value === "custom" && data.examDate === "custom" && (
@@ -187,7 +187,7 @@ export default function Onboarding({ lang = "de", onComplete }: OnboardingProps)
                       type="date"
                       value={customDate}
                       onChange={(e) => setCustomDate(e.target.value)}
-                      className="mt-2 w-full px-3 py-2.5 border border-[#E4E9F0] rounded-xl focus:outline-none focus:border-[#003A8C] text-sm"
+                      className="mt-2 w-full px-3 py-2.5 border border-[var(--mp-border)] rounded-xl focus:outline-none focus:border-[var(--mp-cta-blue)] text-sm"
                     />
                   )}
                 </div>
@@ -199,8 +199,8 @@ export default function Onboarding({ lang = "de", onComplete }: OnboardingProps)
           {step === 2 && (
             <div className="space-y-6">
               <div className="text-center">
-                <span className="text-5xl font-black font-display text-[#003A8C]">{data.dailyGoal || 20}</span>
-                <p className="text-sm text-[#A0AEC0] mt-1">{l === "de" ? "Fragen pro Tag" : "questions per day"}</p>
+                <span className="text-5xl font-black font-display text-[var(--mp-cta-blue)]">{data.dailyGoal || 20}</span>
+                <p className="text-sm text-[var(--mp-fg-subtle)] mt-1">{l === "de" ? "Fragen pro Tag" : "questions per day"}</p>
               </div>
               <input
                 type="range"
@@ -209,9 +209,9 @@ export default function Onboarding({ lang = "de", onComplete }: OnboardingProps)
                 step={5}
                 value={data.dailyGoal || 20}
                 onChange={(e) => setData({ ...data, dailyGoal: parseInt(e.target.value) })}
-                className="w-full accent-[#003A8C]"
+                className="w-full accent-[var(--mp-cta-blue)]"
               />
-              <div className="flex justify-between text-xs text-[#A0AEC0]">
+              <div className="flex justify-between text-xs text-[var(--mp-fg-subtle)]">
                 <span>5</span>
                 <span>25</span>
                 <span>50</span>
@@ -224,14 +224,14 @@ export default function Onboarding({ lang = "de", onComplete }: OnboardingProps)
                     key={g}
                     onClick={() => setData({ ...data, dailyGoal: g })}
                     className={`py-2 rounded-xl text-sm font-semibold border transition-all ${
-                      data.dailyGoal === g ? "bg-[#003A8C] text-white border-[#003A8C]" : "bg-white border-[#E4E9F0] text-[#4A5568] hover:border-[#003A8C]"
+                      data.dailyGoal === g ? "bg-[var(--mp-cta-blue)] text-white border-[var(--mp-cta-blue)]" : "bg-[var(--mp-surface-raised)] border-[var(--mp-border)] text-[var(--mp-fg-muted)] hover:border-[var(--mp-cta-blue)]"
                     }`}
                   >
                     {g}
                   </button>
                 ))}
               </div>
-              <p className="text-xs text-[#A0AEC0] text-center">
+              <p className="text-xs text-[var(--mp-fg-subtle)] text-center">
                 {(data.dailyGoal || 20) <= 15
                   ? (l === "de" ? "🌱 Entspannt — perfekt zum Anfangen" : "🌱 Relaxed — perfect to start")
                   : (data.dailyGoal || 20) <= 30
@@ -250,17 +250,17 @@ export default function Onboarding({ lang = "de", onComplete }: OnboardingProps)
                 <button
                   key={level.value}
                   className={`w-full p-4 rounded-xl border-2 text-left transition-all ${
-                    data.level === level.value ? "border-[#003A8C] bg-[#003A8C]/5" : "border-[#E4E9F0] hover:border-[#A0AEC0]"
+                    data.level === level.value ? "border-[var(--mp-cta-blue)] bg-[var(--mp-cta-blue)]/5" : "border-[var(--mp-border)] hover:border-[var(--mp-fg-subtle)]"
                   }`}
                   onClick={() => setData({ ...data, level: level.value })}
                 >
                   <div className="flex items-center gap-3">
                     <span className="text-2xl">{level.emoji}</span>
                     <div className="flex-1">
-                      <h3 className="font-semibold text-[#1A2B3C]">{level.label[l]}</h3>
-                      <p className="text-sm text-[#A0AEC0]">{level.desc[l]}</p>
+                      <h3 className="font-semibold text-[var(--mp-fg)]">{level.label[l]}</h3>
+                      <p className="text-sm text-[var(--mp-fg-subtle)]">{level.desc[l]}</p>
                     </div>
-                    {data.level === level.value && <CheckCircle2 className="w-5 h-5 text-[#003A8C]" />}
+                    {data.level === level.value && <CheckCircle2 className="w-5 h-5 text-[var(--mp-cta-blue)]" />}
                   </div>
                 </button>
               ))}
@@ -271,15 +271,15 @@ export default function Onboarding({ lang = "de", onComplete }: OnboardingProps)
           {step === 4 && (
             <div className="space-y-4">
               {/* Language */}
-              <div className="p-4 rounded-xl border border-[#E4E9F0]">
-                <p className="text-sm font-semibold text-[#1A2B3C] mb-3">{l === "de" ? "Sprache" : "Language"}</p>
+              <div className="p-4 rounded-xl border border-[var(--mp-border)]">
+                <p className="text-sm font-semibold text-[var(--mp-fg)] mb-3">{l === "de" ? "Sprache" : "Language"}</p>
                 <div className="grid grid-cols-2 gap-2">
                   {[{ val: "de", label: "Deutsch 🇩🇪" }, { val: "en", label: "English 🇬🇧" }].map((opt) => (
                     <button
                       key={opt.val}
                       onClick={() => setData({ ...data, language: opt.val })}
                       className={`py-2.5 rounded-xl text-sm font-semibold border transition-all ${
-                        data.language === opt.val ? "bg-[#003A8C] text-white border-[#003A8C]" : "bg-white border-[#E4E9F0] text-[#4A5568]"
+                        data.language === opt.val ? "bg-[var(--mp-cta-blue)] text-white border-[var(--mp-cta-blue)]" : "bg-[var(--mp-surface-raised)] border-[var(--mp-border)] text-[var(--mp-fg-muted)]"
                       }`}
                     >
                       {opt.label}
@@ -289,31 +289,31 @@ export default function Onboarding({ lang = "de", onComplete }: OnboardingProps)
               </div>
 
               {/* Dark mode */}
-              <div className="p-4 rounded-xl border border-[#E4E9F0]">
+              <div className="p-4 rounded-xl border border-[var(--mp-border)]">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-semibold text-[#1A2B3C]">{l === "de" ? "Dunkles Design" : "Dark Mode"}</p>
-                    <p className="text-xs text-[#A0AEC0]">{l === "de" ? "Augen schonen beim Nachtlernen" : "Easy on eyes for night study"}</p>
+                    <p className="text-sm font-semibold text-[var(--mp-fg)]">{l === "de" ? "Dunkles Design" : "Dark Mode"}</p>
+                    <p className="text-xs text-[var(--mp-fg-subtle)]">{l === "de" ? "Augen schonen beim Nachtlernen" : "Easy on eyes for night study"}</p>
                   </div>
                   <button
                     onClick={() => setData({ ...data, darkMode: !data.darkMode })}
                     className={`w-14 h-7 rounded-full transition-colors flex items-center px-1 ${
-                      data.darkMode ? "bg-[#003A8C]" : "bg-[#E4E9F0]"
+                      data.darkMode ? "bg-[var(--mp-cta-blue)]" : "bg-[var(--mp-border)]"
                     }`}
                   >
                     <div className={`w-5 h-5 rounded-full bg-white shadow-sm transition-transform flex items-center justify-center ${
                       data.darkMode ? "translate-x-7" : ""
                     }`}>
-                      {data.darkMode ? <Moon className="w-3 h-3 text-[#003A8C]" /> : <Sun className="w-3 h-3 text-[#F4A261]" />}
+                      {data.darkMode ? <Moon className="w-3 h-3 text-[var(--mp-cta-blue)]" /> : <Sun className="w-3 h-3 text-[var(--mp-status-warning)]" />}
                     </div>
                   </button>
                 </div>
               </div>
 
               {/* Summary */}
-              <div className="p-4 rounded-xl bg-[#F7F9FC] border border-[#E4E9F0]">
-                <p className="text-xs font-semibold text-[#A0AEC0] uppercase tracking-wider mb-2">{l === "de" ? "Zusammenfassung" : "Summary"}</p>
-                <div className="space-y-1 text-sm text-[#4A5568]">
+              <div className="p-4 rounded-xl bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)]">
+                <p className="text-xs font-semibold text-[var(--mp-fg-subtle)] uppercase tracking-wider mb-2">{l === "de" ? "Zusammenfassung" : "Summary"}</p>
+                <div className="space-y-1 text-sm text-[var(--mp-fg-muted)]">
                   <p>📋 SIP Kenntnisprüfung (Wien)</p>
                   <p>📅 {data.examDate === "not_planned" || !data.examDate ? (l === "de" ? "Noch nicht geplant" : "Not planned") : data.examDate}</p>
                   <p>🎯 {data.dailyGoal || 20} {l === "de" ? "Fragen/Tag" : "questions/day"}</p>
@@ -327,12 +327,12 @@ export default function Onboarding({ lang = "de", onComplete }: OnboardingProps)
         </div>
 
         {/* Navigation */}
-        <div className="px-6 py-4 border-t border-[#E4E9F0] shrink-0 flex items-center justify-between bg-white">
+        <div className="px-6 py-4 border-t border-[var(--mp-border)] shrink-0 flex items-center justify-between bg-[var(--mp-surface-raised)]">
           <button
             onClick={() => step > 0 && setStep(step - 1)}
             disabled={step === 0}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-all text-sm ${
-              step === 0 ? "text-[#E4E9F0] cursor-not-allowed" : "text-[#4A5568] hover:text-[#1A2B3C]"
+              step === 0 ? "text-[var(--mp-border)] cursor-not-allowed" : "text-[var(--mp-fg-muted)] hover:text-[var(--mp-fg)]"
             }`}
           >
             <ArrowLeft className="w-4 h-4" />

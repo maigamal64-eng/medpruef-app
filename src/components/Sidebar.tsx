@@ -73,8 +73,8 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0 }: Sidebar
 
     if (active) {
       return collapsed
-        ? `${base} bg-[#007B5F]/20 text-[#00A896] font-semibold`
-        : `${base} bg-[#007B5F]/20 text-[#00A896] font-semibold border-l-[3px] border-l-[#00A896]`;
+        ? `${base} bg-[var(--mp-viridian)]/20 text-[var(--mp-accent-teal)] font-semibold`
+        : `${base} bg-[var(--mp-viridian)]/20 text-[var(--mp-accent-teal)] font-semibold border-l-[3px] border-l-[var(--mp-accent-teal)]`;
     }
     return `${base} text-[#A0AEC0] hover:bg-white/5 hover:text-white`;
   };
@@ -88,7 +88,7 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0 }: Sidebar
           {!collapsed && (
             <div>
               <h1 className="text-base font-bold text-white tracking-tight">
-                <span>Med</span><span className="text-[#00A896]">Prüf</span>
+                <span>Med</span><span className="text-[var(--mp-accent-teal)]">Prüf</span>
               </h1>
               <p className="text-[10px] text-[#A0AEC0] leading-tight">{t("exam_prep", lang)}</p>
             </div>
@@ -100,7 +100,7 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0 }: Sidebar
       {userName && !collapsed && (
         <div className="mx-3 mt-3 mb-1 p-2.5 rounded-xl bg-[#002952]">
           <div className="flex items-center gap-2.5 mb-2">
-            <div className="w-8 h-8 rounded-full bg-[#007B5F] flex items-center justify-center text-xs font-bold text-white ring-2 ring-[#00A896]/30 flex-shrink-0">
+            <div className="w-8 h-8 rounded-full bg-[var(--mp-viridian)] flex items-center justify-center text-xs font-bold text-white ring-2 ring-[var(--mp-accent-teal)]/30 flex-shrink-0">
               {userName.charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0 flex-1">
@@ -111,16 +111,16 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0 }: Sidebar
             </div>
           </div>
           <div className="h-1 bg-white/[0.08] rounded-full overflow-hidden mb-2">
-            <div className="h-full bg-[#00A896] rounded-full" style={{ width: `${xpInfo.progress}%` }} />
+            <div className="h-full bg-[var(--mp-accent-teal)] rounded-full" style={{ width: `${xpInfo.progress}%` }} />
           </div>
           <ExamSwitcherInline variant="sidebar" className="w-full" />
         </div>
       )}
       {userName && collapsed && (
         <div className="flex justify-center my-2" title={`${userName} · ${xpInfo.rank} · Lv.${xpInfo.level}`}>
-          <div className="w-9 h-9 rounded-full bg-[#007B5F] flex items-center justify-center text-xs font-bold text-white ring-2 ring-[#00A896]/30 relative">
+          <div className="w-9 h-9 rounded-full bg-[var(--mp-viridian)] flex items-center justify-center text-xs font-bold text-white ring-2 ring-[var(--mp-accent-teal)]/30 relative">
             {userName.charAt(0).toUpperCase()}
-            <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-[#00A896] rounded-full border-2 border-[#001B3D]" />
+            <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-[var(--mp-accent-teal)] rounded-full border-2 border-[var(--mp-oxford-blue)]" />
           </div>
         </div>
       )}
