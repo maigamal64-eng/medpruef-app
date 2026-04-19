@@ -1,0 +1,175 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link rel="stylesheet" href="../components_v2.css">
+<link rel="stylesheet" href="_alt-shell.css">
+<title>Doc template — Alternatives</title>
+<style>
+  .stage{padding:22px;height:100%;box-sizing:border-box;overflow:auto}
+
+  /* A: single-column reading */
+  .a-page{max-width:620px;margin:0 auto;font-family:var(--mp-font-body);color:#1A2B3C}
+  .a-crumbs{font-family:var(--mp-font-mono);font-size:11px;color:#A0AEC0;margin-bottom:16px}
+  .a-crumbs a{color:#4A5568;text-decoration:none}
+  .a-kicker{font-family:var(--mp-font-mono);font-size:11px;color:#00A896;letter-spacing:0.12em;text-transform:uppercase;font-weight:800;margin-bottom:8px}
+  .a-title{font-family:var(--mp-font-display);font-weight:900;font-size:32px;color:#001B3D;margin:0 0 6px;letter-spacing:-0.025em;line-height:1.1}
+  .a-lede{font-size:16px;color:#4A5568;line-height:1.55;margin-bottom:20px;max-width:520px}
+  .a-meta{font-family:var(--mp-font-mono);font-size:11px;color:#A0AEC0;padding-bottom:18px;border-bottom:1px solid #E4E9F0;margin-bottom:20px;display:flex;gap:16px}
+  .a-h2{font-family:var(--mp-font-display);font-weight:800;font-size:18px;color:#001B3D;margin:22px 0 6px;letter-spacing:-0.01em}
+  .a-p{font-size:14px;line-height:1.65;color:#1A2B3C;margin:0 0 12px}
+  .a-p strong{font-family:var(--mp-font-display);font-weight:700;color:#001B3D}
+  .a-cta{display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:13px;color:#003A8C;text-decoration:none;padding:8px 14px;border:1px solid #E4E9F0;border-radius:8px;background:#fff;margin-top:8px}
+
+  /* B: two-col with sidebar TOC */
+  .b-wrap{max-width:760px;margin:0 auto;display:grid;grid-template-columns:160px 1fr;gap:32px}
+  .b-toc{font-size:12px;position:sticky;top:0;align-self:start}
+  .b-toc-hd{font-family:var(--mp-font-mono);font-size:10px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:#A0AEC0;margin-bottom:10px}
+  .b-toc a{display:block;padding:5px 0;color:#4A5568;text-decoration:none;border-left:2px solid transparent;padding-left:8px;margin-left:-8px;font-weight:500}
+  .b-toc a.on{color:#001B3D;font-weight:700;border-color:#00A896}
+  .b-main{font-family:var(--mp-font-body);color:#1A2B3C}
+  .b-kicker{font-family:var(--mp-font-mono);font-size:11px;color:#00A896;letter-spacing:0.12em;text-transform:uppercase;font-weight:800;margin-bottom:6px}
+  .b-title{font-family:var(--mp-font-display);font-weight:900;font-size:28px;color:#001B3D;margin:0 0 8px;letter-spacing:-0.025em;line-height:1.1}
+  .b-lede{font-size:14px;color:#4A5568;line-height:1.55;margin-bottom:18px}
+  .b-h2{font-family:var(--mp-font-display);font-weight:800;font-size:16px;color:#001B3D;margin:20px 0 6px;letter-spacing:-0.01em;scroll-margin-top:20px}
+  .b-p{font-size:13px;line-height:1.65;color:#1A2B3C;margin:0 0 10px}
+  .b-callout{background:rgba(0,168,150,0.06);border:1px solid rgba(0,168,150,0.2);border-radius:10px;padding:12px 14px;margin:14px 0;font-size:12px;color:#1A2B3C;line-height:1.55}
+  .b-callout b{font-family:var(--mp-font-display);font-weight:700;color:#007B5F;display:block;margin-bottom:3px}
+
+  [data-theme="dark"] .a-title,[data-theme="dark"] .b-title,[data-theme="dark"] .a-h2,[data-theme="dark"] .b-h2{color:#E2E8F0}
+  [data-theme="dark"] .a-p,[data-theme="dark"] .b-p{color:#CBD5E1}
+  [data-theme="dark"] .a-lede,[data-theme="dark"] .b-lede{color:#94A3B8}
+  [data-theme="dark"] .a-p strong{color:#E2E8F0}
+  [data-theme="dark"] .a-meta{border-color:#334155;color:#64748B}
+  [data-theme="dark"] .a-cta{background:#1E293B;border-color:#334155;color:#7FB4D9}
+  [data-theme="dark"] .b-toc a{color:#94A3B8}
+  [data-theme="dark"] .b-toc a.on{color:#E2E8F0}
+  [data-theme="dark"] .b-callout{background:rgba(0,168,150,0.1);border-color:rgba(0,168,150,0.25)}
+  [data-theme="dark"] .b-callout b{color:#1BB680}
+</style>
+</head>
+<body>
+  <div class="alt-header">
+    <h1>Doc surface template — 2 alternatives</h1>
+    <p>Shared layout for About / Impressum / Datenschutz / AGB. A: single-column magazine-read (calm, authoritative) · B: two-col with sticky TOC (documentation-like).</p>
+  </div>
+
+  <div class="alt-stack">
+    <div class="alt-wrap">
+      <div class="alt-card">
+        <div class="alt-card__label"><div><span class="alt-card__name">A · Reading-first</span> <span class="alt-card__bet">— bet: legal pages deserve respect, not a nav tree</span></div><span class="alt-card__tag">LIGHT</span></div>
+        <div class="alt-card__body alt-card__body--light" style="min-height:720px">
+          <div class="stage">
+            <article class="a-page">
+              <div class="a-crumbs"><a href="#">MedPrüf</a> / Über uns</div>
+              <div class="a-kicker">Über MedPrüf</div>
+              <h1 class="a-title">Wir sind selbst den Weg gegangen.</h1>
+              <p class="a-lede">MedPrüf wurde von zwei Ärztinnen aus Damaskus und Teheran gebaut, die 2021 nach Wien kamen. Wir haben die Kenntnisprüfung mit Excel-Listen und ausgedruckten PDFs vorbereitet. Es hat funktioniert. Aber es musste besser gehen.</p>
+              <div class="a-meta"><span>Zuletzt aktualisiert: März 2026</span><span>·</span><span>Team 3 Personen</span></div>
+
+              <h2 class="a-h2">Was wir machen</h2>
+              <p class="a-p">Wir bauen die Prüfungsvorbereitung, die wir uns damals gewünscht hätten. <strong>10 993 geprüfte Fragen</strong>, ein Plan, der deine Schwächen findet, und Übersetzungen in die Sprachen, die die Lehrbücher nicht bedienen.</p>
+
+              <h2 class="a-h2">Was wir nicht machen</h2>
+              <p class="a-p">Keine Zertifikate, die nichts wert sind. Keine Videokurse, die du nie schaust. Kein Upsell zu einem &bdquo;Premium-Premium&ldquo;. Entweder du bestehst beim ersten Versuch — oder wir haben unseren Job verfehlt.</p>
+
+              <h2 class="a-h2">Unser Fachbeirat</h2>
+              <p class="a-p">Alle Fragen werden von drei in Österreich approbierten ÄrztInnen geprüft, bevor sie live gehen. Meldungen werden innerhalb von 72 Stunden beantwortet.</p>
+
+              <a href="#" class="a-cta">Mehr über unser Team →</a>
+            </article>
+          </div>
+        </div>
+      </div>
+      <div class="alt-card" data-theme="dark" style="background:#001028">
+        <div class="alt-card__label" style="background:#001028;border-color:rgba(255,255,255,0.05)"><div><span class="alt-card__name" style="color:#E2E8F0">A · Reading-first</span> <span class="alt-card__bet" style="color:#94A3B8">— dark</span></div><span class="alt-card__tag alt-card__tag--dark">DARK</span></div>
+        <div class="alt-card__body alt-card__body--dark" style="min-height:720px">
+          <div class="stage" data-theme="dark">
+            <article class="a-page">
+              <div class="a-crumbs"><a href="#" style="color:#94A3B8">MedPrüf</a> / Über uns</div>
+              <div class="a-kicker">Über MedPrüf</div>
+              <h1 class="a-title">Wir sind selbst den Weg gegangen.</h1>
+              <p class="a-lede">MedPrüf wurde von zwei Ärztinnen aus Damaskus und Teheran gebaut, die 2021 nach Wien kamen. Wir haben die Kenntnisprüfung mit Excel-Listen vorbereitet. Es musste besser gehen.</p>
+              <div class="a-meta"><span>Zuletzt aktualisiert: März 2026</span><span>·</span><span>Team 3 Personen</span></div>
+              <h2 class="a-h2">Was wir machen</h2>
+              <p class="a-p">Wir bauen die Prüfungsvorbereitung, die wir uns damals gewünscht hätten. <strong>10 993 geprüfte Fragen</strong>, ein Plan, der deine Schwächen findet, und Übersetzungen in die Sprachen, die die Lehrbücher nicht bedienen.</p>
+              <h2 class="a-h2">Was wir nicht machen</h2>
+              <p class="a-p">Keine Zertifikate, die nichts wert sind. Keine Videokurse, die du nie schaust. Entweder du bestehst beim ersten Versuch — oder wir haben unseren Job verfehlt.</p>
+              <h2 class="a-h2">Unser Fachbeirat</h2>
+              <p class="a-p">Alle Fragen werden von drei in Österreich approbierten ÄrztInnen geprüft, bevor sie live gehen.</p>
+              <a href="#" class="a-cta">Mehr über unser Team →</a>
+            </article>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="alt-wrap alt-wrap--full">
+      <div class="alt-card">
+        <div class="alt-card__label"><div><span class="alt-card__name">B · Two-col with TOC</span> <span class="alt-card__bet">— bet: dense legal docs need anchors; sticky side nav jumps</span></div><span class="alt-card__tag">LIGHT</span></div>
+        <div class="alt-card__body alt-card__body--light" style="min-height:720px">
+          <div class="stage">
+            <div class="b-wrap">
+              <nav class="b-toc">
+                <div class="b-toc-hd">Auf dieser Seite</div>
+                <a href="#wer" class="on">Verantwortlich</a>
+                <a href="#daten">Welche Daten</a>
+                <a href="#zweck">Zweck</a>
+                <a href="#speicher">Speicherdauer</a>
+                <a href="#rechte">Deine Rechte</a>
+                <a href="#cookies">Cookies</a>
+                <a href="#kontakt">Kontakt</a>
+              </nav>
+              <main class="b-main">
+                <div class="b-kicker">Datenschutzerklärung</div>
+                <h1 class="b-title">Datenschutz bei MedPrüf.</h1>
+                <p class="b-lede">In Übereinstimmung mit DSGVO Art. 13 und österreichischem DSG. Stand: 01. März 2026.</p>
+
+                <h2 class="b-h2" id="wer">Verantwortlich im Sinne der DSGVO</h2>
+                <p class="b-p">MedPrüf GmbH, Neubaugasse 12, 1070 Wien, Österreich. Vertreten durch Dr. L. Mohammadi. Kontakt: <a href="#" style="color:#003A8C">user-2063eb5e@example.com</a>.</p>
+
+                <h2 class="b-h2" id="daten">Welche Daten wir erheben</h2>
+                <p class="b-p">E-Mail-Adresse (zur Anmeldung), Lernfortschritt (Antworten, Zeit pro Frage, Streak), optionale Telegram-ID bei Verknüpfung. Wir erheben keine Klarnamen, keine Adresse, keine Zahlungsdaten — Zahlungen wickelt Stripe ab.</p>
+
+                <div class="b-callout"><b>Du hast die Kontrolle.</b> Alle Daten sind in den Einstellungen als JSON-Export verfügbar, und du kannst dein Konto in einem Klick löschen — inklusive 30 Tage Wiederherstellungsfrist.</div>
+
+                <h2 class="b-h2" id="zweck">Zweck der Verarbeitung</h2>
+                <p class="b-p">Die Daten dienen ausschließlich der Personalisierung deines Lernplans und der Darstellung deines Fortschritts. Wir verkaufen keine Daten, wir zeigen keine Werbung Dritter.</p>
+              </main>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="alt-wrap alt-wrap--full">
+      <div class="alt-card" data-theme="dark" style="background:#001028">
+        <div class="alt-card__label" style="background:#001028;border-color:rgba(255,255,255,0.05)"><div><span class="alt-card__name" style="color:#E2E8F0">B · TOC</span> <span class="alt-card__bet" style="color:#94A3B8">— dark</span></div><span class="alt-card__tag alt-card__tag--dark">DARK</span></div>
+        <div class="alt-card__body alt-card__body--dark" style="min-height:720px">
+          <div class="stage" data-theme="dark">
+            <div class="b-wrap">
+              <nav class="b-toc">
+                <div class="b-toc-hd">Auf dieser Seite</div>
+                <a href="#" class="on">Verantwortlich</a>
+                <a href="#">Welche Daten</a>
+                <a href="#">Zweck</a>
+                <a href="#">Speicherdauer</a>
+                <a href="#">Deine Rechte</a>
+                <a href="#">Cookies</a>
+                <a href="#">Kontakt</a>
+              </nav>
+              <main class="b-main">
+                <div class="b-kicker">Datenschutzerklärung</div>
+                <h1 class="b-title">Datenschutz bei MedPrüf.</h1>
+                <p class="b-lede">In Übereinstimmung mit DSGVO Art. 13 und österreichischem DSG. Stand: 01. März 2026.</p>
+                <h2 class="b-h2">Verantwortlich im Sinne der DSGVO</h2>
+                <p class="b-p">MedPrüf GmbH, Neubaugasse 12, 1070 Wien, Österreich. Vertreten durch Dr. L. Mohammadi. Kontakt: <a href="#" style="color:#7FB4D9">user-2063eb5e@example.com</a>.</p>
+                <h2 class="b-h2">Welche Daten wir erheben</h2>
+                <p class="b-p">E-Mail-Adresse, Lernfortschritt, optionale Telegram-ID. Keine Klarnamen, keine Adresse, keine Zahlungsdaten — Zahlungen wickelt Stripe ab.</p>
+                <div class="b-callout"><b>Du hast die Kontrolle.</b> Alle Daten als JSON-Export verfügbar. Konto in einem Klick löschbar — 30 Tage Wiederherstellungsfrist.</div>
+                <h2 class="b-h2">Zweck der Verarbeitung</h2>
+                <p class="b-p">Die Daten dienen ausschließlich der Personalisierung deines Lernplans. Wir verkaufen keine Daten, wir zeigen keine Werbung Dritter.</p>
+              </main>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body></html>

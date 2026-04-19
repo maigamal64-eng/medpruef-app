@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <title>MedPrüf — Web App UI Kit</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="../../colors_and_type.css">
+  <style>
+    html, body { margin: 0; background: #F7F9FC; color: #1A2B3C; font-family: var(--mp-font-body); }
+    * { box-sizing: border-box; }
+    .app-layout { display: flex; min-height: 100vh; }
+    .main { flex: 1; min-width: 0; background: #F7F9FC; }
+    .btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: #003A8C; color: #fff; font-weight: 600; border-radius: 10px; padding: 10px 20px; border: 0; cursor: pointer; box-shadow: 0 1px 2px rgba(0,27,61,.03), inset 0 1px 0 rgba(255,255,255,.1); transition: all 200ms var(--mp-ease-out); }
+    .btn-primary:hover { background: #002d6e; }
+    .btn-secondary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: #fff; color: #1A2B3C; font-weight: 500; border-radius: 10px; padding: 8px 16px; border: 1px solid #E4E9F0; cursor: pointer; box-shadow: 0 1px 2px rgba(0,27,61,.03); transition: all 200ms var(--mp-ease-out); }
+    .btn-secondary:hover { background: #F7F9FC; border-color: #A0AEC0; }
+    .btn-success { display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: #00A896; color: #fff; font-weight: 600; border-radius: 10px; padding: 10px 20px; border: 0; cursor: pointer; }
+    .card { background: #fff; border-radius: 14px; border: 1px solid rgba(228,233,240,.7); box-shadow: 0 1px 3px rgba(0,27,61,.05), 0 1px 2px rgba(0,27,61,.03); }
+    .card-interactive { background: #fff; border-radius: 14px; border: 1px solid rgba(228,233,240,.7); box-shadow: 0 1px 3px rgba(0,27,61,.05), 0 1px 2px rgba(0,27,61,.03); cursor: pointer; transition: all 200ms var(--mp-ease-out); }
+    .card-interactive:hover { box-shadow: 0 4px 12px rgba(0,27,61,.08), 0 2px 4px rgba(0,27,61,.04); transform: translateY(-2px); border-color: #E4E9F0; }
+    @keyframes cta-shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+    .cta-shimmer { background: linear-gradient(90deg, #007B5F 0%, #00A896 50%, #007B5F 100%); background-size: 200% 100%; animation: cta-shimmer 3s ease-in-out infinite; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <script type="text/babel" src="./Primitives.jsx"></script>
+  <script type="text/babel" src="./Sidebar.jsx"></script>
+  <script type="text/babel" src="./HomeScreen.jsx"></script>
+  <script type="text/babel" src="./QuizScreen.jsx"></script>
+  <script type="text/babel" src="./ProgressScreen.jsx"></script>
+
+  <script type="text/babel">
+    const { useState } = React;
+    function App() {
+      const [route, setRoute] = useState("home");
+      const [collapsed, setCollapsed] = useState(false);
+      const user = { name: "Aisha", rank: "Assistenzarzt", level: 4, progress: 68 };
+      return (
+        <div className="app-layout">
+          <Sidebar active={route} collapsed={collapsed} onToggleCollapse={() => setCollapsed(c => !c)} onNavigate={setRoute} user={user} />
+          <main className="main">
+            {route === "home"     && <HomeScreen onStartQuiz={() => setRoute("quiz")} />}
+            {route === "quiz"     && <QuizScreen onExit={() => setRoute("home")} />}
+            {route === "progress" && <ProgressScreen />}
+            {route !== "home" && route !== "quiz" && route !== "progress" && (
+              <div style={{ padding: 40, maxWidth: 800, margin: "60px auto", textAlign: "center", color: "#A0AEC0" }}>
+                <div style={{ fontSize: 18, fontFamily: "var(--mp-font-display)", fontWeight: 700, color: "#1A2B3C", marginBottom: 8 }}>Platzhalter</div>
+                <p>Diese Route ({route}) ist im UI-Kit nicht gemockt. Probiere Home, Quiz oder Fortschritt.</p>
+              </div>
+            )}
+          </main>
+        </div>
+      );
+    }
+    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+  </script>
+</body>
+</html>

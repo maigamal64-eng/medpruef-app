@@ -1,0 +1,177 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link rel="stylesheet" href="../components_v2.css">
+<link rel="stylesheet" href="_alt-shell.css">
+<title>Login — Alternatives</title>
+<style>
+  .stage{height:100%;box-sizing:border-box;display:flex;align-items:center;justify-content:center;padding:20px;overflow:hidden}
+
+  /* ─── A: Centered single card ─── */
+  .a-card{background:#fff;border:1px solid rgba(228,233,240,.7);border-radius:16px;padding:28px;width:100%;max-width:380px;box-shadow:0 8px 24px rgba(0,27,61,0.08)}
+  .a-logo{display:flex;align-items:center;gap:8px;font-family:var(--mp-font-display);font-weight:800;font-size:16px;color:#001B3D;margin-bottom:18px;letter-spacing:-0.01em}
+  .a-logo span{width:22px;height:22px;border-radius:6px;background:linear-gradient(135deg,#001B3D,#003A8C);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900}
+  .a-h{font-family:var(--mp-font-display);font-weight:800;font-size:22px;color:#001B3D;margin:0 0 4px;letter-spacing:-0.02em}
+  .a-sub{font-size:13px;color:#4A5568;margin:0 0 18px;line-height:1.5}
+  .a-migbanner{background:rgba(0,168,150,0.08);border:1px solid rgba(0,168,150,0.25);border-radius:10px;padding:9px 12px;font-size:12px;color:#007B5F;margin-bottom:16px;line-height:1.4}
+  .a-migbanner b{font-weight:700}
+  .a-field{margin-bottom:10px}
+  .a-label{font-size:12px;font-weight:600;color:#1A2B3C;margin-bottom:4px;display:block}
+  .a-input{width:100%;box-sizing:border-box;font-family:var(--mp-font-body);font-size:13px;padding:10px 12px;border:1px solid #E4E9F0;border-radius:8px;background:#F7F9FC;color:#1A2B3C}
+  .a-forgot{font-size:11px;color:#003A8C;float:right;text-decoration:none}
+  .a-cta{width:100%;padding:11px;background:#001B3D;color:#fff;border:none;border-radius:10px;font-weight:700;font-size:13px;cursor:pointer;margin-top:4px}
+  .a-divider{display:flex;align-items:center;gap:8px;margin:16px 0;color:#A0AEC0;font-size:11px;font-family:var(--mp-font-mono);text-transform:uppercase;letter-spacing:0.1em;font-weight:700}
+  .a-divider::before,.a-divider::after{content:"";flex:1;height:1px;background:#E4E9F0}
+  .a-tgbtn{width:100%;padding:10px;background:#fff;border:1px solid #E4E9F0;border-radius:10px;color:#1A2B3C;font-weight:600;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px}
+  .a-tgbtn .tg{width:20px;height:20px;border-radius:50%;background:#0088CC;color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900}
+  .a-foot{text-align:center;font-size:12px;color:#4A5568;margin-top:14px}
+  .a-foot a{color:#003A8C;text-decoration:none;font-weight:600}
+
+  /* ─── B: Split — marketing left, form right ─── */
+  .b-split{width:100%;max-width:860px;border-radius:16px;overflow:hidden;display:grid;grid-template-columns:1fr 1fr;box-shadow:0 8px 24px rgba(0,27,61,0.12);background:#fff}
+  .b-mkt{background:linear-gradient(135deg,#001B3D 0%,#003A8C 100%);color:#fff;padding:32px 26px;position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between}
+  .b-mkt::before{content:"";position:absolute;right:-60px;bottom:-60px;width:240px;height:240px;border-radius:50%;background:radial-gradient(circle,rgba(0,168,150,0.35),transparent 70%)}
+  .b-mkt-logo{display:flex;align-items:center;gap:8px;font-family:var(--mp-font-display);font-weight:800;font-size:15px;position:relative;z-index:1}
+  .b-mkt-logo span{width:22px;height:22px;border-radius:6px;background:#00A896;color:#001028;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:12px}
+  .b-mkt-hd{font-family:var(--mp-font-display);font-weight:900;font-size:26px;line-height:1.1;letter-spacing:-0.02em;position:relative;z-index:1;margin:0}
+  .b-mkt-hd em{font-style:normal;color:#1BB680}
+  .b-mkt-quote{font-size:13px;line-height:1.55;color:rgba(255,255,255,0.85);margin-top:18px;position:relative;z-index:1;padding-left:14px;border-left:2px solid #00A896}
+  .b-mkt-att{font-size:11px;color:rgba(255,255,255,0.55);margin-top:6px;font-family:var(--mp-font-mono);position:relative;z-index:1}
+  .b-form{padding:32px 26px;display:flex;flex-direction:column}
+  .b-h{font-family:var(--mp-font-display);font-weight:800;font-size:22px;color:#001B3D;margin:0 0 6px;letter-spacing:-0.02em}
+  .b-sub{font-size:13px;color:#4A5568;margin:0 0 18px}
+  .b-seg{display:flex;background:#F7F9FC;border-radius:10px;padding:3px;margin-bottom:14px;border:1px solid #E4E9F0}
+  .b-seg button{flex:1;padding:7px 10px;background:none;border:none;font-size:12px;font-weight:700;color:#4A5568;cursor:pointer;border-radius:7px}
+  .b-seg button.on{background:#fff;color:#001B3D;box-shadow:0 1px 2px rgba(0,27,61,0.05)}
+  .b-input{width:100%;box-sizing:border-box;font-size:13px;padding:10px 12px;border:1px solid #E4E9F0;border-radius:8px;background:#F7F9FC;margin-bottom:8px;color:#1A2B3C;font-family:var(--mp-font-body)}
+  .b-cta{width:100%;padding:11px;background:#00A896;color:#fff;border:none;border-radius:10px;font-weight:800;font-size:13px;cursor:pointer;margin-top:4px}
+  .b-tg{width:100%;padding:10px;background:#001B3D;color:#fff;border:none;border-radius:10px;font-weight:700;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:8px}
+  .b-foot{font-size:11px;color:#A0AEC0;text-align:center;margin-top:auto;padding-top:12px}
+
+  [data-theme="dark"] .a-card{background:#1E293B;border-color:rgba(51,65,85,0.7);box-shadow:0 8px 24px rgba(0,0,0,0.4)}
+  [data-theme="dark"] .a-h,[data-theme="dark"] .a-logo{color:#E2E8F0}
+  [data-theme="dark"] .a-sub{color:#94A3B8}
+  [data-theme="dark"] .a-input,[data-theme="dark"] .b-input{background:#0F172A;border-color:#334155;color:#E2E8F0}
+  [data-theme="dark"] .a-label{color:#CBD5E1}
+  [data-theme="dark"] .a-divider::before,[data-theme="dark"] .a-divider::after{background:#334155}
+  [data-theme="dark"] .a-divider{color:#64748B}
+  [data-theme="dark"] .a-tgbtn{background:#0F172A;border-color:#334155;color:#E2E8F0}
+  [data-theme="dark"] .a-foot{color:#94A3B8}
+  [data-theme="dark"] .a-cta{background:#003A8C}
+  [data-theme="dark"] .b-split{background:#1E293B}
+  [data-theme="dark"] .b-form{background:#1E293B}
+  [data-theme="dark"] .b-h{color:#E2E8F0}
+  [data-theme="dark"] .b-sub,[data-theme="dark"] .b-foot{color:#94A3B8}
+  [data-theme="dark"] .b-seg{background:#0F172A;border-color:#334155}
+  [data-theme="dark"] .b-seg button{color:#94A3B8}
+  [data-theme="dark"] .b-seg button.on{background:#1E293B;color:#E2E8F0}
+</style>
+</head>
+<body>
+  <div class="alt-header">
+    <h1>Login + register — 2 alternatives</h1>
+    <p>A: centered single card · B: split marketing + form. Both expose email/password, Telegram deep-link, and guest-migration banner.</p>
+  </div>
+
+  <div class="alt-stack">
+    <div class="alt-wrap">
+      <div class="alt-card">
+        <div class="alt-card__label"><div><span class="alt-card__name">A · Centered card</span> <span class="alt-card__bet">— bet: fast funnel; migration banner, form, Telegram fallback</span></div><span class="alt-card__tag">LIGHT</span></div>
+        <div class="alt-card__body alt-card__body--light">
+          <div class="stage">
+            <div class="a-card">
+              <div class="a-logo"><span>M</span>MedPrüf</div>
+              <h1 class="a-h">Willkommen zurück.</h1>
+              <p class="a-sub">23 Tage Streak — heute nicht brechen.</p>
+              <div class="a-migbanner">
+                <b>Du hast als Gast gelernt.</b> Melde dich an, um deine 847 Antworten und 23-Tage-Streak zu sichern.
+              </div>
+              <div class="a-field"><label class="a-label">E-Mail</label><input class="a-input" value="ahmed.k@example.com"></div>
+              <div class="a-field"><label class="a-label">Passwort <a href="#" class="a-forgot">Vergessen?</a></label><input class="a-input" type="password" value="••••••••"></div>
+              <button class="a-cta">Anmelden</button>
+              <div class="a-divider">oder</div>
+              <button class="a-tgbtn"><span class="tg">T</span> Mit Telegram verbinden</button>
+              <div class="a-foot">Noch kein Konto? <a href="#">Kostenlos registrieren →</a></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="alt-card" data-theme="dark" style="background:#001028">
+        <div class="alt-card__label" style="background:#001028;border-color:rgba(255,255,255,0.05)"><div><span class="alt-card__name" style="color:#E2E8F0">A · Centered card</span> <span class="alt-card__bet" style="color:#94A3B8">— dark</span></div><span class="alt-card__tag alt-card__tag--dark">DARK</span></div>
+        <div class="alt-card__body alt-card__body--dark">
+          <div class="stage" data-theme="dark">
+            <div class="a-card">
+              <div class="a-logo"><span>M</span>MedPrüf</div>
+              <h1 class="a-h">Willkommen zurück.</h1>
+              <p class="a-sub">23 Tage Streak — heute nicht brechen.</p>
+              <div class="a-migbanner" style="background:rgba(0,168,150,0.1);border-color:rgba(0,168,150,0.3);color:#1BB680"><b>Du hast als Gast gelernt.</b> Melde dich an, um deine Daten zu sichern.</div>
+              <div class="a-field"><label class="a-label">E-Mail</label><input class="a-input" value="ahmed.k@example.com"></div>
+              <div class="a-field"><label class="a-label">Passwort <a href="#" class="a-forgot" style="color:#7FB4D9">Vergessen?</a></label><input class="a-input" type="password" value="••••••••"></div>
+              <button class="a-cta">Anmelden</button>
+              <div class="a-divider">oder</div>
+              <button class="a-tgbtn"><span class="tg">T</span> Mit Telegram verbinden</button>
+              <div class="a-foot">Noch kein Konto? <a href="#" style="color:#7FB4D9">Registrieren →</a></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="alt-wrap alt-wrap--full">
+      <div class="alt-card">
+        <div class="alt-card__label"><div><span class="alt-card__name">B · Split marketing + form</span> <span class="alt-card__bet">— bet: login is also a pitch moment; quote + segmented tabs</span></div><span class="alt-card__tag">LIGHT</span></div>
+        <div class="alt-card__body alt-card__body--light" style="min-height:500px">
+          <div class="stage">
+            <div class="b-split">
+              <div class="b-mkt">
+                <div class="b-mkt-logo"><span>M</span>MedPrüf</div>
+                <h2 class="b-mkt-hd">10 993 Fragen.<br><em>Dein Plan zeigt dir, welche heute.</em></h2>
+                <div>
+                  <div class="b-mkt-quote">&ldquo;Bestanden beim ersten Versuch. Der Schwächen-Fokus hat mir die letzten zwei Wochen gerettet.&rdquo;</div>
+                  <div class="b-mkt-att">— Dr. L. M., Kenntnisprüfung 11/2025, Wien</div>
+                </div>
+              </div>
+              <div class="b-form">
+                <h2 class="b-h">Anmelden</h2>
+                <p class="b-sub">Oder <a href="#" style="color:#003A8C;font-weight:600;text-decoration:none">Konto erstellen</a> — kostenlos, ohne Karte.</p>
+                <div class="b-seg"><button class="on">E-Mail</button><button>Telegram</button></div>
+                <input class="b-input" placeholder="E-Mail" value="ahmed.k@example.com">
+                <input class="b-input" type="password" placeholder="Passwort" value="••••••••">
+                <button class="b-cta">Weiter →</button>
+                <button class="b-tg"><span style="width:16px;height:16px;border-radius:50%;background:#0088CC;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:900">T</span> Mit Telegram verbinden</button>
+                <div class="b-foot">Mit der Anmeldung stimmst du den <a href="#" style="color:#4A5568">Nutzungsbedingungen</a> zu.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="alt-wrap alt-wrap--full">
+      <div class="alt-card" data-theme="dark" style="background:#001028">
+        <div class="alt-card__label" style="background:#001028;border-color:rgba(255,255,255,0.05)"><div><span class="alt-card__name" style="color:#E2E8F0">B · Split</span> <span class="alt-card__bet" style="color:#94A3B8">— dark</span></div><span class="alt-card__tag alt-card__tag--dark">DARK</span></div>
+        <div class="alt-card__body alt-card__body--dark" style="min-height:500px">
+          <div class="stage" data-theme="dark">
+            <div class="b-split">
+              <div class="b-mkt" style="background:linear-gradient(135deg,#001028 0%,#001B3D 100%)">
+                <div class="b-mkt-logo"><span>M</span>MedPrüf</div>
+                <h2 class="b-mkt-hd">10 993 Fragen.<br><em>Dein Plan zeigt dir, welche heute.</em></h2>
+                <div>
+                  <div class="b-mkt-quote">&ldquo;Bestanden beim ersten Versuch. Der Schwächen-Fokus hat mir die letzten zwei Wochen gerettet.&rdquo;</div>
+                  <div class="b-mkt-att">— Dr. L. M., Kenntnisprüfung 11/2025, Wien</div>
+                </div>
+              </div>
+              <div class="b-form">
+                <h2 class="b-h">Anmelden</h2>
+                <p class="b-sub">Oder <a href="#" style="color:#7FB4D9;font-weight:600;text-decoration:none">Konto erstellen</a> — kostenlos.</p>
+                <div class="b-seg"><button class="on">E-Mail</button><button>Telegram</button></div>
+                <input class="b-input" value="ahmed.k@example.com">
+                <input class="b-input" type="password" value="••••••••">
+                <button class="b-cta">Weiter →</button>
+                <button class="b-tg" style="background:#003A8C"><span style="width:16px;height:16px;border-radius:50%;background:#0088CC;display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:900">T</span> Mit Telegram verbinden</button>
+                <div class="b-foot">Mit der Anmeldung stimmst du den Nutzungsbedingungen zu.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body></html>

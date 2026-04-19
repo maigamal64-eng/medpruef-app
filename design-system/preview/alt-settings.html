@@ -1,0 +1,205 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link rel="stylesheet" href="../components_v2.css">
+<link rel="stylesheet" href="_alt-shell.css">
+<title>Settings — Alternatives</title>
+<style>
+  .stage{padding:22px;height:100%;box-sizing:border-box;display:flex;align-items:flex-start;justify-content:center;overflow:hidden}
+  .kicker{font-family:var(--mp-font-mono);font-size:10px;color:#A0AEC0;letter-spacing:0.1em;text-transform:uppercase;font-weight:700;margin-bottom:4px}
+
+  /* A: single-column grouped cards, explicit + calm */
+  .a-page{max-width:560px;width:100%}
+  .a-hd{margin-bottom:16px}
+  .a-title{font-family:var(--mp-font-display);font-weight:900;font-size:24px;color:#001B3D;margin:0;letter-spacing:-0.02em}
+  .a-sub{font-size:13px;color:#4A5568;margin:2px 0 0}
+  .a-sec{margin-bottom:14px}
+  .a-card{background:#fff;border:1px solid rgba(228,233,240,.7);border-radius:12px;overflow:hidden}
+  .a-row{display:flex;align-items:center;padding:12px 14px;border-bottom:1px solid #F0F4F8;gap:14px}
+  .a-row:last-child{border-bottom:none}
+  .a-row .lbl{flex:1}
+  .a-row .ln{font-family:var(--mp-font-display);font-weight:600;font-size:13px;color:#1A2B3C}
+  .a-row .lh{font-size:11px;color:#A0AEC0;margin-top:2px}
+  .a-val{font-family:var(--mp-font-mono);font-size:12px;color:#4A5568;font-weight:600}
+  .a-pill{font-size:11px;padding:4px 10px;border-radius:999px;background:#F7F9FC;color:#1A2B3C;border:1px solid #E4E9F0;font-weight:600}
+  .a-tog{width:34px;height:20px;background:#E4E9F0;border-radius:999px;position:relative}
+  .a-tog.on{background:#00A896}
+  .a-tog::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:.15s}
+  .a-tog.on::after{left:16px}
+  .a-danger{color:#D64545 !important}
+
+  /* B: two-col with left nav */
+  .b-wrap{display:grid;grid-template-columns:180px 1fr;gap:24px;max-width:720px;width:100%}
+  .b-nav{font-size:12px;position:sticky;top:0}
+  .b-nav-hd{font-family:var(--mp-font-mono);font-size:10px;font-weight:800;letter-spacing:0.12em;text-transform:uppercase;color:#A0AEC0;margin-bottom:8px;padding-left:10px}
+  .b-nav a{display:flex;align-items:center;gap:8px;padding:7px 10px;color:#4A5568;text-decoration:none;border-radius:8px;font-weight:600;margin-bottom:1px}
+  .b-nav a svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;opacity:.7}
+  .b-nav a.on{background:rgba(0,168,150,0.08);color:#007B5F;font-weight:700}
+  .b-nav a.on svg{opacity:1;color:#00A896}
+  .b-sec-h{font-family:var(--mp-font-display);font-weight:800;font-size:16px;color:#001B3D;margin:0 0 3px;letter-spacing:-0.01em}
+  .b-sec-s{font-size:12px;color:#4A5568;margin:0 0 14px}
+  .b-row{display:grid;grid-template-columns:180px 1fr 120px;gap:16px;align-items:center;padding:14px 0;border-bottom:1px solid #F0F4F8}
+  .b-row:first-of-type{border-top:1px solid #F0F4F8}
+  .b-row .n{font-family:var(--mp-font-display);font-weight:600;font-size:13px;color:#1A2B3C}
+  .b-row .h{font-size:11px;color:#A0AEC0;margin-top:2px}
+  .b-row .ctrl{font-family:var(--mp-font-mono);font-size:12px;color:#4A5568;font-weight:600}
+  .b-inp{font-size:12px;padding:7px 10px;border:1px solid #E4E9F0;border-radius:7px;background:#F7F9FC;color:#1A2B3C;width:100%;box-sizing:border-box;font-family:var(--mp-font-body)}
+  .b-save{margin-top:16px;display:flex;gap:8px;justify-content:flex-end}
+  .b-btn{font-size:12px;padding:8px 14px;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-family:var(--mp-font-body)}
+  .b-btn.p{background:#001B3D;color:#fff}
+  .b-btn.s{background:transparent;color:#4A5568;border:1px solid #E4E9F0}
+
+  [data-theme="dark"] .a-title,[data-theme="dark"] .b-sec-h{color:#E2E8F0}
+  [data-theme="dark"] .a-sub,[data-theme="dark"] .b-sec-s{color:#94A3B8}
+  [data-theme="dark"] .a-card{background:#1E293B;border-color:rgba(51,65,85,0.7)}
+  [data-theme="dark"] .a-row{border-color:#334155}
+  [data-theme="dark"] .a-row .ln,[data-theme="dark"] .b-row .n{color:#E2E8F0}
+  [data-theme="dark"] .a-row .lh,[data-theme="dark"] .b-row .h,[data-theme="dark"] .a-val,[data-theme="dark"] .b-row .ctrl{color:#94A3B8}
+  [data-theme="dark"] .a-pill{background:#0F172A;border-color:#334155;color:#E2E8F0}
+  [data-theme="dark"] .a-tog{background:#334155}
+  [data-theme="dark"] .b-row{border-color:#334155}
+  [data-theme="dark"] .b-inp{background:#0F172A;border-color:#334155;color:#E2E8F0}
+  [data-theme="dark"] .b-nav a{color:#94A3B8}
+  [data-theme="dark"] .b-nav a.on{background:rgba(0,168,150,0.15);color:#1BB680}
+  [data-theme="dark"] .b-btn.p{background:#00A896;color:#001028}
+  [data-theme="dark"] .b-btn.s{color:#94A3B8;border-color:#334155}
+  [data-theme="dark"] .a-danger{color:#FC8181 !important}
+</style>
+</head>
+<body>
+  <div class="alt-header">
+    <h1>Settings /settings — 2 alternatives</h1>
+    <p>Fixes the v1 debt: dense-list + mixed icons. A: grouped cards (scan vertical) · B: two-col w/ left nav + explicit save.</p>
+  </div>
+
+  <div class="alt-stack">
+    <div class="alt-wrap">
+      <div class="alt-card">
+        <div class="alt-card__label"><div><span class="alt-card__name">A · Grouped cards</span> <span class="alt-card__bet">— bet: scannable, low-frequency use; edits inline</span></div><span class="alt-card__tag">LIGHT</span></div>
+        <div class="alt-card__body alt-card__body--light" style="min-height:620px">
+          <div class="stage">
+            <div class="a-page">
+              <div class="a-hd"><h1 class="a-title">Einstellungen</h1><p class="a-sub">Änderungen werden automatisch gespeichert.</p></div>
+
+              <div class="a-sec"><div class="kicker">Prüfung</div></div>
+              <div class="a-sec"><div class="a-card">
+                <div class="a-row"><div class="lbl"><div class="ln">Prüfungsart</div><div class="lh">Bestimmt deinen Fragen-Pool</div></div><span class="a-pill">Ärztliche Kenntnisprüfung</span></div>
+                <div class="a-row"><div class="lbl"><div class="ln">Prüfungsdatum</div><div class="lh">47 Tage verbleibend</div></div><span class="a-val">12. Mai 2026</span></div>
+                <div class="a-row"><div class="lbl"><div class="ln">Tägliches Ziel</div></div><span class="a-val">20 Fragen</span></div>
+              </div></div>
+
+              <div class="a-sec"><div class="kicker">Lernen</div></div>
+              <div class="a-sec"><div class="a-card">
+                <div class="a-row"><div class="lbl"><div class="ln">Primäre Sprache</div><div class="lh">Fragen und Erklärungen</div></div><span class="a-pill">Deutsch</span></div>
+                <div class="a-row"><div class="lbl"><div class="ln">Übersetzungssprache</div><div class="lh">Für &bdquo;Show translation&ldquo;-Button</div></div><span class="a-pill">العربية</span></div>
+                <div class="a-row"><div class="lbl"><div class="ln">Oberfläche</div></div><span class="a-pill">System folgen</span></div>
+              </div></div>
+
+              <div class="a-sec"><div class="kicker">Benachrichtigungen</div></div>
+              <div class="a-sec"><div class="a-card">
+                <div class="a-row"><div class="lbl"><div class="ln">Streak-Erinnerung</div><div class="lh">21:00 wenn noch keine Frage</div></div><span class="a-tog on"></span></div>
+                <div class="a-row"><div class="lbl"><div class="ln">Wöchentlicher Report</div><div class="lh">Sonntag · 10:00</div></div><span class="a-tog on"></span></div>
+                <div class="a-row"><div class="lbl"><div class="ln">Neue Features</div></div><span class="a-tog"></span></div>
+              </div></div>
+
+              <div class="a-sec"><div class="kicker">Konto</div></div>
+              <div class="a-sec"><div class="a-card">
+                <div class="a-row"><div class="lbl"><div class="ln">E-Mail</div></div><span class="a-val">ahmed.k@example.com</span></div>
+                <div class="a-row"><div class="lbl"><div class="ln">Telegram</div><div class="lh">Verknüpft · @ahmed_k</div></div><span class="a-pill" style="background:rgba(0,123,95,0.08);border-color:rgba(0,123,95,0.3);color:#007B5F">verbunden</span></div>
+                <div class="a-row"><div class="lbl"><div class="ln a-danger">Konto löschen</div><div class="lh">30 Tage Wiederherstellungsfrist</div></div><span style="font-size:11px;color:#4A5568">→</span></div>
+              </div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="alt-card" data-theme="dark" style="background:#001028">
+        <div class="alt-card__label" style="background:#001028;border-color:rgba(255,255,255,0.05)"><div><span class="alt-card__name" style="color:#E2E8F0">A · Grouped cards</span> <span class="alt-card__bet" style="color:#94A3B8">— dark</span></div><span class="alt-card__tag alt-card__tag--dark">DARK</span></div>
+        <div class="alt-card__body alt-card__body--dark" style="min-height:620px">
+          <div class="stage" data-theme="dark">
+            <div class="a-page">
+              <div class="a-hd"><h1 class="a-title">Einstellungen</h1><p class="a-sub">Änderungen werden automatisch gespeichert.</p></div>
+              <div class="a-sec"><div class="kicker">Prüfung</div></div>
+              <div class="a-sec"><div class="a-card">
+                <div class="a-row"><div class="lbl"><div class="ln">Prüfungsart</div><div class="lh">Bestimmt deinen Fragen-Pool</div></div><span class="a-pill">Ärztliche Kenntnisprüfung</span></div>
+                <div class="a-row"><div class="lbl"><div class="ln">Prüfungsdatum</div><div class="lh">47 Tage verbleibend</div></div><span class="a-val">12. Mai 2026</span></div>
+                <div class="a-row"><div class="lbl"><div class="ln">Tägliches Ziel</div></div><span class="a-val">20 Fragen</span></div>
+              </div></div>
+              <div class="a-sec"><div class="kicker">Lernen</div></div>
+              <div class="a-sec"><div class="a-card">
+                <div class="a-row"><div class="lbl"><div class="ln">Primäre Sprache</div></div><span class="a-pill">Deutsch</span></div>
+                <div class="a-row"><div class="lbl"><div class="ln">Übersetzungssprache</div></div><span class="a-pill">العربية</span></div>
+                <div class="a-row"><div class="lbl"><div class="ln">Oberfläche</div></div><span class="a-pill">System folgen</span></div>
+              </div></div>
+              <div class="a-sec"><div class="kicker">Benachrichtigungen</div></div>
+              <div class="a-sec"><div class="a-card">
+                <div class="a-row"><div class="lbl"><div class="ln">Streak-Erinnerung</div></div><span class="a-tog on"></span></div>
+                <div class="a-row"><div class="lbl"><div class="ln">Wöchentlicher Report</div></div><span class="a-tog on"></span></div>
+                <div class="a-row"><div class="lbl"><div class="ln">Neue Features</div></div><span class="a-tog"></span></div>
+              </div></div>
+              <div class="a-sec"><div class="kicker">Konto</div></div>
+              <div class="a-sec"><div class="a-card">
+                <div class="a-row"><div class="lbl"><div class="ln">E-Mail</div></div><span class="a-val">ahmed.k@example.com</span></div>
+                <div class="a-row"><div class="lbl"><div class="ln">Telegram</div></div><span class="a-pill" style="background:rgba(0,168,150,0.12);border-color:rgba(0,168,150,0.3);color:#1BB680">verbunden</span></div>
+                <div class="a-row"><div class="lbl"><div class="ln a-danger">Konto löschen</div></div><span style="font-size:11px;color:#94A3B8">→</span></div>
+              </div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="alt-wrap alt-wrap--full">
+      <div class="alt-card">
+        <div class="alt-card__label"><div><span class="alt-card__name">B · Two-col w/ nav + explicit save</span> <span class="alt-card__bet">— bet: feels like admin; inline text inputs; dirty-state save bar</span></div><span class="alt-card__tag">LIGHT</span></div>
+        <div class="alt-card__body alt-card__body--light" style="min-height:520px">
+          <div class="stage">
+            <div class="b-wrap">
+              <nav class="b-nav">
+                <div class="b-nav-hd">Einstellungen</div>
+                <a class="on"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Prüfung</a>
+                <a><svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>Lernen</a>
+                <a><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/></svg>Benachrichtigungen</a>
+                <a><svg viewBox="0 0 24 24"><circle cx="12" cy="7" r="4"/><path d="M5.5 21a6.5 6.5 0 0 1 13 0"/></svg>Konto</a>
+                <a><svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Abo</a>
+              </nav>
+              <section>
+                <h2 class="b-sec-h">Prüfung</h2>
+                <p class="b-sec-s">Welche Prüfung willst du bestehen und wann?</p>
+                <div class="b-row"><div><div class="n">Prüfungsart</div><div class="h">Bestimmt deinen Fragen-Pool und Sprache</div></div><div class="ctrl">Ärztliche Kenntnisprüfung</div><button class="b-btn s">Ändern</button></div>
+                <div class="b-row"><div><div class="n">Prüfungsdatum</div><div class="h">47 Tage verbleibend</div></div><input class="b-inp" value="2026-05-12"><button class="b-btn s">Kalender</button></div>
+                <div class="b-row"><div><div class="n">Tägliches Ziel</div><div class="h">Fragen pro Tag</div></div><input class="b-inp" value="20"><span class="ctrl">10–50</span></div>
+                <div class="b-row"><div><div class="n">Simulations-Erinnerung</div><div class="h">7 Tage vor der Prüfung</div></div><div class="ctrl">Eine Woche vorher</div><span class="a-tog on"></span></div>
+                <div class="b-save"><button class="b-btn s">Verwerfen</button><button class="b-btn p">Änderungen speichern</button></div>
+              </section>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="alt-wrap alt-wrap--full">
+      <div class="alt-card" data-theme="dark" style="background:#001028">
+        <div class="alt-card__label" style="background:#001028;border-color:rgba(255,255,255,0.05)"><div><span class="alt-card__name" style="color:#E2E8F0">B · Two-col</span> <span class="alt-card__bet" style="color:#94A3B8">— dark</span></div><span class="alt-card__tag alt-card__tag--dark">DARK</span></div>
+        <div class="alt-card__body alt-card__body--dark" style="min-height:520px">
+          <div class="stage" data-theme="dark">
+            <div class="b-wrap">
+              <nav class="b-nav">
+                <div class="b-nav-hd">Einstellungen</div>
+                <a class="on"><svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Prüfung</a>
+                <a><svg viewBox="0 0 24 24"><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>Lernen</a>
+                <a><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18"/></svg>Benachrichtigungen</a>
+                <a><svg viewBox="0 0 24 24"><circle cx="12" cy="7" r="4"/></svg>Konto</a>
+                <a><svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Abo</a>
+              </nav>
+              <section>
+                <h2 class="b-sec-h">Prüfung</h2>
+                <p class="b-sec-s">Welche Prüfung willst du bestehen und wann?</p>
+                <div class="b-row"><div><div class="n">Prüfungsart</div><div class="h">Bestimmt Fragen-Pool</div></div><div class="ctrl">Ärztliche Kenntnisprüfung</div><button class="b-btn s">Ändern</button></div>
+                <div class="b-row"><div><div class="n">Prüfungsdatum</div><div class="h">47 Tage verbleibend</div></div><input class="b-inp" value="2026-05-12"><button class="b-btn s">Kalender</button></div>
+                <div class="b-row"><div><div class="n">Tägliches Ziel</div><div class="h">Fragen pro Tag</div></div><input class="b-inp" value="20"><span class="ctrl">10–50</span></div>
+                <div class="b-save"><button class="b-btn s">Verwerfen</button><button class="b-btn p">Speichern</button></div>
+              </section>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body></html>

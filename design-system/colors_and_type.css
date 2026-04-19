@@ -1,0 +1,187 @@
+/* ═══════════════════════════════════════════════════════════════
+   MedPrüf Design System — Colors & Type (MPDS)
+   Canonical tokens, mirrored from src/app/globals.css
+   ═══════════════════════════════════════════════════════════════ */
+
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700;900&family=Plus+Jakarta+Sans:wght@600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap");
+
+:root {
+  /* ─── BRAND COLORS ─── */
+  --mp-oxford-blue:     #001B3D; /* primary surfaces, headings, high-trust */
+  --mp-oxford-blue-dk:  #001028;
+  --mp-viridian:        #007B5F; /* success, correct, "Pro" accents */
+  --mp-viridian-dk:     #005A45;
+  --mp-cta-blue:        #003A8C; /* primary buttons, links */
+  --mp-cta-blue-hover:  #002d6e;
+
+  /* ─── ACCENT COLORS ─── */
+  --mp-accent-teal:     #00A896; /* secondary accents, streak highlights */
+  --mp-accent-hover:    #1bb680;
+  --mp-warning:         #F4A261; /* caution, "review" badges */
+  --mp-warning-dk:      #D68A3A;
+  --mp-error:           #D64545; /* wrong answers, destructive */
+  --mp-info:            #3A7CA5; /* informational banners */
+
+  /* ─── SEMANTIC SURFACES (light) ─── */
+  --mp-bg:              #F7F9FC;
+  --mp-surface:         #FFFFFF;
+  --mp-surface-high:    #F7F9FC;
+  --mp-border:          #E4E9F0;
+  --mp-border-soft:     rgba(228, 233, 240, 0.7);
+
+  /* ─── TEXT (light) ─── */
+  --mp-text:            #1A2B3C;
+  --mp-text-muted:      #4A5568;
+  --mp-text-light:      #A0AEC0;
+
+  /* ─── TINTED BACKGROUNDS ─── */
+  --mp-success-bg:      #E6F4F1;
+  --mp-warning-bg:      #FFF4E6;
+  --mp-info-bg:         #EAF3F9;
+  --mp-error-bg:        #FDECEC;
+
+  /* ─── TYPEFACES ─── */
+  --mp-font-body:    "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --mp-font-display: "Plus Jakarta Sans", "Inter", sans-serif;
+  --mp-font-mono:    "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* ─── TYPE SCALE ─── */
+  --mp-h1-size: 40px;   --mp-h1-line: 1.1;  --mp-h1-weight: 800;
+  --mp-h2-size: 28px;   --mp-h2-line: 1.2;  --mp-h2-weight: 700;
+  --mp-h3-size: 20px;   --mp-h3-line: 1.3;  --mp-h3-weight: 600;
+  --mp-body-size: 16px; --mp-body-line: 1.55; --mp-body-weight: 400;
+  --mp-small-size: 13px; --mp-small-line: 1.4;
+  --mp-caption-size: 13px; --mp-caption-line: 1.4; /* uppercase-tracked */
+  --mp-mono-size: 14px;
+
+  /* ─── RADII ─── */
+  --mp-r-sm: 6px;   /* inputs: 8px target */
+  --mp-r-md: 10px;  /* buttons, small cards */
+  --mp-r-lg: 14px;  /* cards: 12-16px */
+  --mp-r-xl: 20px;  /* modals */
+  --mp-r-full: 9999px;
+
+  /* ─── ELEVATION (4 tiers) ─── */
+  --mp-shadow-xs:    0 1px 2px rgba(0,27,61,0.03);
+  --mp-shadow-card:  0 1px 3px rgba(0,27,61,0.05), 0 1px 2px rgba(0,27,61,0.03);
+  --mp-shadow-hover: 0 4px 12px rgba(0,27,61,0.08), 0 2px 4px rgba(0,27,61,0.04);
+  --mp-shadow-elev:  0 8px 24px rgba(0,27,61,0.10), 0 2px 8px rgba(0,27,61,0.05);
+  --mp-shadow-modal: 0 20px 60px rgba(0,27,61,0.15), 0 4px 16px rgba(0,27,61,0.08);
+
+  /* ─── SPACING (8pt grid) ─── */
+  --mp-s-1: 4px;
+  --mp-s-2: 8px;
+  --mp-s-3: 12px;
+  --mp-s-4: 16px;
+  --mp-s-5: 24px;
+  --mp-s-6: 32px;
+  --mp-s-7: 48px;
+  --mp-s-8: 64px;
+
+  /* ─── MOTION ─── */
+  --mp-ease-out:    cubic-bezier(0.16, 1, 0.3, 1);
+  --mp-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --mp-dur-micro:   120ms;
+  --mp-dur-base:    200ms;
+  --mp-dur-hero:    400ms;
+
+  /* ─── V2: SEMANTIC COMPONENT RADII (canon) ─── */
+  --mp-r-input:  8px;
+  --mp-r-button: 12px;
+  --mp-r-card:   16px;
+  --mp-r-modal:  20px;
+
+  /* ─── V2: ICON SIZES ─── */
+  --mp-icon-sm: 16px;
+  --mp-icon-md: 20px;
+  --mp-icon-lg: 24px;
+
+  /* ─── V2: FOCUS RING ─── */
+  --mp-focus-ring: 0 0 0 3px rgba(0, 123, 95, 0.35);
+  --mp-focus-ring-cta: 0 0 0 3px rgba(0, 58, 140, 0.30);
+  --mp-focus-ring-error: 0 0 0 3px rgba(214, 69, 69, 0.30);
+}
+
+/* ─── DARK MODE ─── */
+[data-theme="dark"] {
+  --mp-bg:           #0F172A;
+  --mp-surface:      #1E293B;
+  --mp-surface-high: #334155;
+  --mp-text:         #E2E8F0;
+  --mp-text-muted:   #94A3B8;
+  --mp-text-light:   #64748B;
+  --mp-border:       #334155;
+  --mp-border-soft:  rgba(51, 65, 85, 0.7);
+  --mp-viridian:     #00A896; /* viridian shifts brighter in dark */
+}
+
+/* ═══ SEMANTIC TYPE CLASSES ═══ */
+.mp-h1 {
+  font-family: var(--mp-font-display);
+  font-size: var(--mp-h1-size);
+  line-height: var(--mp-h1-line);
+  font-weight: var(--mp-h1-weight);
+  letter-spacing: -0.02em;
+  color: var(--mp-text);
+}
+.mp-h2 {
+  font-family: var(--mp-font-display);
+  font-size: var(--mp-h2-size);
+  line-height: var(--mp-h2-line);
+  font-weight: var(--mp-h2-weight);
+  letter-spacing: -0.01em;
+  color: var(--mp-text);
+}
+.mp-h3 {
+  font-family: var(--mp-font-display);
+  font-size: var(--mp-h3-size);
+  line-height: var(--mp-h3-line);
+  font-weight: var(--mp-h3-weight);
+  color: var(--mp-text);
+}
+.mp-body {
+  font-family: var(--mp-font-body);
+  font-size: var(--mp-body-size);
+  line-height: var(--mp-body-line);
+  font-weight: 400;
+  color: var(--mp-text);
+}
+.mp-ui {
+  font-family: var(--mp-font-body);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--mp-text);
+}
+.mp-small {
+  font-family: var(--mp-font-body);
+  font-size: var(--mp-small-size);
+  color: var(--mp-text-muted);
+}
+.mp-caption {
+  font-family: var(--mp-font-body);
+  font-size: var(--mp-caption-size);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--mp-text-light);
+}
+.mp-num {
+  font-family: var(--mp-font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.mp-hero-num {
+  font-family: var(--mp-font-display);
+  font-weight: 900;
+  font-size: 64px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--mp-text);
+}
+
+body {
+  font-family: var(--mp-font-body);
+  color: var(--mp-text);
+  background: var(--mp-bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}

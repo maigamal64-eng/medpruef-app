@@ -1,0 +1,34 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link rel="stylesheet" href="../components_v2.css">
+</head>
+<body style="margin:0;padding:32px;background:#F7F9FC;font-family:var(--mp-font-body);display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:640px">
+  <div class="mp-field">
+    <label class="mp-field__label">E-Mail</label>
+    <input class="mp-field__input" value="ahmed.k@example.com">
+    <span class="mp-field__helper">Für Passwort-Resets genutzt</span>
+  </div>
+
+  <div class="mp-field">
+    <label class="mp-field__label mp-field__label--required">Prüfungsdatum</label>
+    <input class="mp-field__input" placeholder="TT.MM.JJJJ">
+    <span class="mp-field__helper">Legt deinen Lernplan fest</span>
+  </div>
+
+  <div class="mp-field">
+    <label class="mp-field__label">Aktueller Wert</label>
+    <input class="mp-field__input" value="ahmed" style="border-color:var(--mp-viridian);box-shadow:var(--mp-focus-ring);background:var(--mp-surface-raised)">
+    <span class="mp-field__helper" style="color:var(--mp-viridian)">✓ Fokussiert — aktiv</span>
+  </div>
+
+  <div class="mp-field">
+    <label class="mp-field__label">Passwort</label>
+    <input class="mp-field__input mp-field__input--error" value="123">
+    <span class="mp-field__helper mp-field__helper--error">Mindestens 8 Zeichen erforderlich</span>
+  </div>
+
+  <div class="mp-field" style="grid-column:1/-1">
+    <label class="mp-field__label">Notiz zur Frage</label>
+    <textarea class="mp-field__input" rows="3" placeholder="z.B. Merksatz, Eselsbrücke, häufiger Fehler…">Cave: Differentialdiagnose nicht vergessen — immer zuerst EKG.</textarea>
+    <span class="mp-field__helper"><span style="font-family:var(--mp-font-mono)">62</span> / 280 Zeichen</span>
+  </div>
+</body></html>

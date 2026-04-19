@@ -1,0 +1,155 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link rel="stylesheet" href="../components_v2.css">
+<link rel="stylesheet" href="_alt-shell.css">
+<title>TopicCard — Alternatives</title>
+<style>
+  .stage{padding:20px;height:100%;display:flex;align-items:center;justify-content:center;box-sizing:border-box}
+  .row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:100%;max-width:560px}
+
+  /* A: dense data chips */
+  .a-card{background:#fff;border:1px solid rgba(228,233,240,.7);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px}
+  .a-top{display:flex;align-items:center;gap:8px}
+  .a-ic{width:30px;height:30px;border-radius:8px;background:rgba(0,27,61,0.06);color:#001B3D;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .a-ic svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .a-n{font-family:var(--mp-font-display);font-weight:700;font-size:13px;color:#1A2B3C;line-height:1.2;flex:1}
+  .a-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+  .a-chips{display:flex;flex-wrap:wrap;gap:4px}
+  .a-chip{font-family:var(--mp-font-mono);font-size:10px;padding:2px 6px;border-radius:5px;background:#F7F9FC;color:#4A5568;font-weight:600}
+  .a-chip.ok{background:rgba(0,123,95,0.08);color:#007B5F}
+  .a-chip.warn{background:rgba(244,162,97,0.12);color:#D68A3A}
+  .a-chip.err{background:rgba(214,69,69,0.08);color:#D64545}
+  .a-bar{height:3px;background:rgba(0,123,95,0.12);border-radius:2px;overflow:hidden}
+  .a-bar>span{display:block;height:100%;background:#007B5F}
+
+  /* B: numeric hero */
+  .b-card{background:#fff;border:1px solid rgba(228,233,240,.7);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:6px;min-height:110px;position:relative;overflow:hidden}
+  .b-top{display:flex;align-items:center;justify-content:space-between}
+  .b-n{font-family:var(--mp-font-display);font-weight:700;font-size:13px;color:#1A2B3C}
+  .b-ic{width:24px;height:24px;border-radius:6px;background:rgba(0,27,61,0.06);color:#001B3D;display:flex;align-items:center;justify-content:center}
+  .b-ic svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .b-big{font-family:var(--mp-font-display);font-weight:900;font-size:42px;line-height:1;color:#007B5F;letter-spacing:-0.03em;font-variant-numeric:tabular-nums;margin-top:auto}
+  .b-big.weak{color:#D64545}
+  .b-big.warn{color:#D68A3A}
+  .b-sub{font-family:var(--mp-font-mono);font-size:10px;color:#A0AEC0;display:flex;align-items:center;justify-content:space-between}
+  .b-status{font-size:10px;font-weight:700;letter-spacing:0.06em;color:#007B5F;text-transform:uppercase}
+  .b-status.weak{color:#D64545}
+  .b-status.warn{color:#D68A3A}
+
+  /* C: minimal icon+name */
+  .c-card{background:#fff;border:1px solid rgba(228,233,240,.7);border-radius:14px;padding:16px;display:flex;flex-direction:column;align-items:center;gap:8px;min-height:110px;text-align:center}
+  .c-ic{width:40px;height:40px;border-radius:10px;background:rgba(0,27,61,0.05);color:#001B3D;display:flex;align-items:center;justify-content:center}
+  .c-ic svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+  .c-n{font-family:var(--mp-font-display);font-weight:700;font-size:13px;color:#1A2B3C}
+  .c-dot{display:flex;align-items:center;gap:4px;font-family:var(--mp-font-mono);font-size:10px;color:#4A5568}
+  .c-dot .d{width:6px;height:6px;border-radius:50%}
+
+  [data-theme="dark"] .a-card,[data-theme="dark"] .b-card,[data-theme="dark"] .c-card{background:#1E293B;border-color:rgba(51,65,85,0.7)}
+  [data-theme="dark"] .a-n,[data-theme="dark"] .b-n,[data-theme="dark"] .c-n{color:#E2E8F0}
+  [data-theme="dark"] .a-chip{background:#0F172A;color:#94A3B8}
+  [data-theme="dark"] .a-chip.ok{background:rgba(0,168,150,0.15);color:#1BB680}
+  [data-theme="dark"] .a-chip.warn{background:rgba(244,162,97,0.15);color:#F4A261}
+  [data-theme="dark"] .a-chip.err{background:rgba(214,69,69,0.15);color:#FC8181}
+  [data-theme="dark"] .a-ic,[data-theme="dark"] .b-ic,[data-theme="dark"] .c-ic{background:rgba(0,168,150,0.12);color:#1BB680}
+  [data-theme="dark"] .b-big{color:#1BB680}
+  [data-theme="dark"] .b-big.weak{color:#FC8181}
+  [data-theme="dark"] .b-big.warn{color:#F4A261}
+  [data-theme="dark"] .b-sub,[data-theme="dark"] .c-dot{color:#94A3B8}
+</style>
+</head>
+<body>
+  <div class="alt-header">
+    <h1>TopicCard — 3 alternatives</h1>
+    <p>A: data-dense (accuracy + count + pace chips + progress bar) · B: numeric hero (one big number, scan at a glance) · C: minimalist (icon + name + one status dot, grid scan).</p>
+  </div>
+  <div class="alt-stack">
+    <!-- A -->
+    <div class="alt-wrap">
+      <div class="alt-card">
+        <div class="alt-card__label"><div><span class="alt-card__name">A · Dense data chips</span> <span class="alt-card__bet">— bet: serious learners scan 4 signals at once</span></div><span class="alt-card__tag">LIGHT</span></div>
+        <div class="alt-card__body alt-card__body--light">
+          <div class="stage"><div class="row">
+            <div class="a-card"><div class="a-top"><div class="a-ic"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div><div class="a-n">Kardiologie</div><span class="a-dot" style="background:#007B5F"></span></div><div class="a-chips"><span class="a-chip ok">78%</span><span class="a-chip">847</span><span class="a-chip">+12</span></div><div class="a-bar"><span style="width:78%"></span></div></div>
+            <div class="a-card"><div class="a-top"><div class="a-ic"><svg viewBox="0 0 24 24"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2z"/></svg></div><div class="a-n">Neurologie</div><span class="a-dot" style="background:#007B5F"></span></div><div class="a-chips"><span class="a-chip ok">71%</span><span class="a-chip">612</span><span class="a-chip">+4</span></div><div class="a-bar"><span style="width:71%"></span></div></div>
+            <div class="a-card"><div class="a-top"><div class="a-ic"><svg viewBox="0 0 24 24"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg></div><div class="a-n">Pädiatrie</div><span class="a-dot" style="background:#D64545"></span></div><div class="a-chips"><span class="a-chip err">32%</span><span class="a-chip">312</span><span class="a-chip warn">−8</span></div><div class="a-bar" style="background:rgba(214,69,69,0.15)"><span style="width:32%;background:#D64545"></span></div></div>
+            <div class="a-card"><div class="a-top"><div class="a-ic"><svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></div><div class="a-n">Chirurgie</div><span class="a-dot" style="background:#F4A261"></span></div><div class="a-chips"><span class="a-chip warn">65%</span><span class="a-chip">534</span><span class="a-chip">0</span></div><div class="a-bar" style="background:rgba(244,162,97,0.2)"><span style="width:65%;background:#D68A3A"></span></div></div>
+            <div class="a-card"><div class="a-top"><div class="a-ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6M4.22 4.22l4.24 4.24m7.08 7.08l4.24 4.24M1 12h6m6 0h6"/></svg></div><div class="a-n">Radiologie</div><span class="a-dot" style="background:#F4A261"></span></div><div class="a-chips"><span class="a-chip warn">69%</span><span class="a-chip">428</span><span class="a-chip">+2</span></div><div class="a-bar" style="background:rgba(244,162,97,0.2)"><span style="width:69%;background:#D68A3A"></span></div></div>
+            <div class="a-card"><div class="a-top"><div class="a-ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/></svg></div><div class="a-n">Psychiatrie</div><span class="a-dot" style="background:#007B5F"></span></div><div class="a-chips"><span class="a-chip ok">81%</span><span class="a-chip">189</span><span class="a-chip">+5</span></div><div class="a-bar"><span style="width:81%"></span></div></div>
+          </div></div>
+        </div>
+      </div>
+      <div class="alt-card" data-theme="dark" style="background:#001028">
+        <div class="alt-card__label" style="background:#001028;border-color:rgba(255,255,255,0.05)"><div><span class="alt-card__name" style="color:#E2E8F0">A · Dense data</span> <span class="alt-card__bet" style="color:#94A3B8">— dark</span></div><span class="alt-card__tag alt-card__tag--dark">DARK</span></div>
+        <div class="alt-card__body alt-card__body--dark">
+          <div class="stage" data-theme="dark"><div class="row">
+            <div class="a-card"><div class="a-top"><div class="a-ic"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div><div class="a-n">Kardiologie</div><span class="a-dot" style="background:#1BB680"></span></div><div class="a-chips"><span class="a-chip ok">78%</span><span class="a-chip">847</span><span class="a-chip">+12</span></div><div class="a-bar" style="background:rgba(0,168,150,0.2)"><span style="width:78%;background:#00A896"></span></div></div>
+            <div class="a-card"><div class="a-top"><div class="a-ic"><svg viewBox="0 0 24 24"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15"/></svg></div><div class="a-n">Neurologie</div><span class="a-dot" style="background:#1BB680"></span></div><div class="a-chips"><span class="a-chip ok">71%</span><span class="a-chip">612</span><span class="a-chip">+4</span></div><div class="a-bar" style="background:rgba(0,168,150,0.2)"><span style="width:71%;background:#00A896"></span></div></div>
+            <div class="a-card"><div class="a-top"><div class="a-ic"><svg viewBox="0 0 24 24"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg></div><div class="a-n">Pädiatrie</div><span class="a-dot" style="background:#FC8181"></span></div><div class="a-chips"><span class="a-chip err">32%</span><span class="a-chip">312</span><span class="a-chip warn">−8</span></div><div class="a-bar" style="background:rgba(214,69,69,0.2)"><span style="width:32%;background:#FC8181"></span></div></div>
+            <div class="a-card"><div class="a-top"><div class="a-ic"><svg viewBox="0 0 24 24"><path d="M14.7 6.3l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></div><div class="a-n">Chirurgie</div><span class="a-dot" style="background:#F4A261"></span></div><div class="a-chips"><span class="a-chip warn">65%</span><span class="a-chip">534</span><span class="a-chip">0</span></div><div class="a-bar" style="background:rgba(244,162,97,0.25)"><span style="width:65%;background:#F4A261"></span></div></div>
+            <div class="a-card"><div class="a-top"><div class="a-ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6"/></svg></div><div class="a-n">Radiologie</div><span class="a-dot" style="background:#F4A261"></span></div><div class="a-chips"><span class="a-chip warn">69%</span><span class="a-chip">428</span><span class="a-chip">+2</span></div><div class="a-bar" style="background:rgba(244,162,97,0.25)"><span style="width:69%;background:#F4A261"></span></div></div>
+            <div class="a-card"><div class="a-top"><div class="a-ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/></svg></div><div class="a-n">Psychiatrie</div><span class="a-dot" style="background:#1BB680"></span></div><div class="a-chips"><span class="a-chip ok">81%</span><span class="a-chip">189</span><span class="a-chip">+5</span></div><div class="a-bar" style="background:rgba(0,168,150,0.2)"><span style="width:81%;background:#00A896"></span></div></div>
+          </div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- B -->
+    <div class="alt-wrap">
+      <div class="alt-card">
+        <div class="alt-card__label"><div><span class="alt-card__name">B · Numeric hero</span> <span class="alt-card__bet">— bet: one number per card, grid is a dashboard</span></div><span class="alt-card__tag">LIGHT</span></div>
+        <div class="alt-card__body alt-card__body--light">
+          <div class="stage"><div class="row">
+            <div class="b-card"><div class="b-top"><div class="b-n">Kardiologie</div><div class="b-ic"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div></div><div class="b-big">78<span style="font-size:14px;font-weight:700">%</span></div><div class="b-sub"><span>847 Fragen</span><span class="b-status">Solide</span></div></div>
+            <div class="b-card"><div class="b-top"><div class="b-n">Neurologie</div><div class="b-ic"><svg viewBox="0 0 24 24"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15"/></svg></div></div><div class="b-big">71<span style="font-size:14px;font-weight:700">%</span></div><div class="b-sub"><span>612 Fragen</span><span class="b-status">Solide</span></div></div>
+            <div class="b-card"><div class="b-top"><div class="b-n">Pädiatrie</div><div class="b-ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div></div><div class="b-big weak">32<span style="font-size:14px;font-weight:700">%</span></div><div class="b-sub"><span>312 Fragen</span><span class="b-status weak">Schwach</span></div></div>
+            <div class="b-card"><div class="b-top"><div class="b-n">Chirurgie</div><div class="b-ic"><svg viewBox="0 0 24 24"><path d="M14.7 6.3l3.77-3.77"/></svg></div></div><div class="b-big warn">65<span style="font-size:14px;font-weight:700">%</span></div><div class="b-sub"><span>534 Fragen</span><span class="b-status warn">Wackelig</span></div></div>
+            <div class="b-card"><div class="b-top"><div class="b-n">Radiologie</div><div class="b-ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/></svg></div></div><div class="b-big warn">69<span style="font-size:14px;font-weight:700">%</span></div><div class="b-sub"><span>428 Fragen</span><span class="b-status warn">Wackelig</span></div></div>
+            <div class="b-card"><div class="b-top"><div class="b-n">Psychiatrie</div><div class="b-ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg></div></div><div class="b-big">81<span style="font-size:14px;font-weight:700">%</span></div><div class="b-sub"><span>189 Fragen</span><span class="b-status">Stark</span></div></div>
+          </div></div>
+        </div>
+      </div>
+      <div class="alt-card" data-theme="dark" style="background:#001028">
+        <div class="alt-card__label" style="background:#001028;border-color:rgba(255,255,255,0.05)"><div><span class="alt-card__name" style="color:#E2E8F0">B · Numeric hero</span> <span class="alt-card__bet" style="color:#94A3B8">— dark</span></div><span class="alt-card__tag alt-card__tag--dark">DARK</span></div>
+        <div class="alt-card__body alt-card__body--dark">
+          <div class="stage" data-theme="dark"><div class="row">
+            <div class="b-card"><div class="b-top"><div class="b-n">Kardiologie</div><div class="b-ic"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0"/></svg></div></div><div class="b-big">78<span style="font-size:14px;font-weight:700">%</span></div><div class="b-sub"><span>847 Fragen</span><span class="b-status">Solide</span></div></div>
+            <div class="b-card"><div class="b-top"><div class="b-n">Neurologie</div><div class="b-ic"><svg viewBox="0 0 24 24"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15"/></svg></div></div><div class="b-big">71<span style="font-size:14px;font-weight:700">%</span></div><div class="b-sub"><span>612 Fragen</span><span class="b-status">Solide</span></div></div>
+            <div class="b-card"><div class="b-top"><div class="b-n">Pädiatrie</div><div class="b-ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div></div><div class="b-big weak">32<span style="font-size:14px;font-weight:700">%</span></div><div class="b-sub"><span>312 Fragen</span><span class="b-status weak">Schwach</span></div></div>
+            <div class="b-card"><div class="b-top"><div class="b-n">Chirurgie</div><div class="b-ic"><svg viewBox="0 0 24 24"><path d="M14.7 6.3l3.77-3.77"/></svg></div></div><div class="b-big warn">65<span style="font-size:14px;font-weight:700">%</span></div><div class="b-sub"><span>534 Fragen</span><span class="b-status warn">Wackelig</span></div></div>
+            <div class="b-card"><div class="b-top"><div class="b-n">Radiologie</div><div class="b-ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/></svg></div></div><div class="b-big warn">69<span style="font-size:14px;font-weight:700">%</span></div><div class="b-sub"><span>428 Fragen</span><span class="b-status warn">Wackelig</span></div></div>
+            <div class="b-card"><div class="b-top"><div class="b-n">Psychiatrie</div><div class="b-ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg></div></div><div class="b-big">81<span style="font-size:14px;font-weight:700">%</span></div><div class="b-sub"><span>189 Fragen</span><span class="b-status">Stark</span></div></div>
+          </div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- C -->
+    <div class="alt-wrap">
+      <div class="alt-card">
+        <div class="alt-card__label"><div><span class="alt-card__name">C · Minimal icon + name</span> <span class="alt-card__bet">— bet: discovery grid; deep info lives one click deeper</span></div><span class="alt-card__tag">LIGHT</span></div>
+        <div class="alt-card__body alt-card__body--light">
+          <div class="stage"><div class="row">
+            <div class="c-card"><div class="c-ic"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div><div class="c-n">Kardiologie</div><div class="c-dot"><span class="d" style="background:#007B5F"></span>847</div></div>
+            <div class="c-card"><div class="c-ic"><svg viewBox="0 0 24 24"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2z"/></svg></div><div class="c-n">Neurologie</div><div class="c-dot"><span class="d" style="background:#007B5F"></span>612</div></div>
+            <div class="c-card"><div class="c-ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9 12l2 2 4-4"/></svg></div><div class="c-n">Pädiatrie</div><div class="c-dot"><span class="d" style="background:#D64545"></span>312</div></div>
+            <div class="c-card"><div class="c-ic"><svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></div><div class="c-n">Chirurgie</div><div class="c-dot"><span class="d" style="background:#F4A261"></span>534</div></div>
+            <div class="c-card"><div class="c-ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6M4.22 4.22l4.24 4.24m7.08 7.08l4.24 4.24M1 12h6m6 0h6"/></svg></div><div class="c-n">Radiologie</div><div class="c-dot"><span class="d" style="background:#F4A261"></span>428</div></div>
+            <div class="c-card"><div class="c-ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/></svg></div><div class="c-n">Psychiatrie</div><div class="c-dot"><span class="d" style="background:#007B5F"></span>189</div></div>
+          </div></div>
+        </div>
+      </div>
+      <div class="alt-card" data-theme="dark" style="background:#001028">
+        <div class="alt-card__label" style="background:#001028;border-color:rgba(255,255,255,0.05)"><div><span class="alt-card__name" style="color:#E2E8F0">C · Minimal</span> <span class="alt-card__bet" style="color:#94A3B8">— dark</span></div><span class="alt-card__tag alt-card__tag--dark">DARK</span></div>
+        <div class="alt-card__body alt-card__body--dark">
+          <div class="stage" data-theme="dark"><div class="row">
+            <div class="c-card"><div class="c-ic"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0"/></svg></div><div class="c-n">Kardiologie</div><div class="c-dot"><span class="d" style="background:#1BB680"></span>847</div></div>
+            <div class="c-card"><div class="c-ic"><svg viewBox="0 0 24 24"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15"/></svg></div><div class="c-n">Neurologie</div><div class="c-dot"><span class="d" style="background:#1BB680"></span>612</div></div>
+            <div class="c-card"><div class="c-ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg></div><div class="c-n">Pädiatrie</div><div class="c-dot"><span class="d" style="background:#FC8181"></span>312</div></div>
+            <div class="c-card"><div class="c-ic"><svg viewBox="0 0 24 24"><path d="M14.7 6.3l3.77-3.77"/></svg></div><div class="c-n">Chirurgie</div><div class="c-dot"><span class="d" style="background:#F4A261"></span>534</div></div>
+            <div class="c-card"><div class="c-ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/></svg></div><div class="c-n">Radiologie</div><div class="c-dot"><span class="d" style="background:#F4A261"></span>428</div></div>
+            <div class="c-card"><div class="c-ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg></div><div class="c-n">Psychiatrie</div><div class="c-dot"><span class="d" style="background:#1BB680"></span>189</div></div>
+          </div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body></html>

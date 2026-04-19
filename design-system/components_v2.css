@@ -1,0 +1,402 @@
+/* ═══════════════════════════════════════════════════════════════
+   MedPrüf Design System — V2 Additions
+   Layered on top of colors_and_type.css. Imports the base tokens.
+   Adds: semantic color aliases, component primitives, dark-mode
+   helper classes, achievement-icon utilities.
+   ═══════════════════════════════════════════════════════════════ */
+
+@import "./colors_and_type.css";
+
+/* ═══════════════════════════════════════════════════════════════
+   V2.1 — SEMANTIC COLOR ALIASES
+   These are the ONLY colors new code should reach for.
+   Raw --mp-* tokens remain, but components now target semantic
+   surfaces so dark mode is a variable flip, not a class override.
+   ═══════════════════════════════════════════════════════════════ */
+
+:root {
+  --mp-fg:              var(--mp-text);
+  --mp-fg-muted:        var(--mp-text-muted);
+  --mp-fg-subtle:       var(--mp-text-light);
+  --mp-fg-inverse:      #FFFFFF;
+
+  --mp-surface-raised:  #FFFFFF;
+  --mp-surface-sunken:  #F7F9FC;
+
+  --mp-border-strong:   #CBD5E1;
+  --mp-border-subtle:   var(--mp-border-soft);
+
+  --mp-action-primary:      var(--mp-cta-blue);
+  --mp-action-primary-hover: var(--mp-cta-blue-hover);
+  --mp-action-success:      var(--mp-viridian);
+  --mp-action-success-hover: var(--mp-viridian-dk);
+  --mp-action-destructive:  var(--mp-error);
+
+  --mp-status-success: var(--mp-viridian);
+  --mp-status-warning: var(--mp-warning-dk);   /* A11y: darkened from #F4A261 */
+  --mp-status-error:   var(--mp-error);
+  --mp-status-info:    var(--mp-info);
+}
+
+[data-theme="dark"] {
+  --mp-fg-inverse:      #0F172A;
+  --mp-surface-raised:  #1E293B;
+  --mp-surface-sunken:  #0F172A;
+  --mp-border-strong:   #475569;
+  --mp-border-subtle:   rgba(51, 65, 85, 0.6);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   V2.2 — LAYOUT PRIMITIVES
+   ═══════════════════════════════════════════════════════════════ */
+
+.mp-card {
+  background: var(--mp-surface-raised);
+  border: 1px solid var(--mp-border-subtle);
+  border-radius: var(--mp-r-card);
+  box-shadow: var(--mp-shadow-card);
+  transition: box-shadow var(--mp-dur-base) var(--mp-ease-out),
+              border-color var(--mp-dur-base) var(--mp-ease-out);
+}
+.mp-card--interactive { cursor: pointer; }
+.mp-card--interactive:hover {
+  box-shadow: var(--mp-shadow-hover);
+  border-color: rgba(0, 123, 95, 0.35);
+}
+
+.mp-divider {
+  height: 1px;
+  background: var(--mp-border-subtle);
+  margin: 16px 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   V2.3 — BUTTON PRIMITIVES
+   ═══════════════════════════════════════════════════════════════ */
+
+.mp-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: var(--mp-font-body);
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 1;
+  padding: 10px 16px;
+  border-radius: var(--mp-r-button);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background var(--mp-dur-micro) var(--mp-ease-out),
+              border-color var(--mp-dur-micro) var(--mp-ease-out),
+              transform var(--mp-dur-micro) var(--mp-ease-out),
+              box-shadow var(--mp-dur-micro) var(--mp-ease-out);
+}
+.mp-btn:focus-visible { outline: none; box-shadow: var(--mp-focus-ring); }
+.mp-btn:active { transform: scale(0.98); }
+
+.mp-btn--primary {
+  background: var(--mp-oxford-blue);
+  color: #FFFFFF;
+}
+.mp-btn--primary:hover { background: var(--mp-cta-blue); }
+.mp-btn--primary:focus-visible { box-shadow: var(--mp-focus-ring-cta); }
+
+.mp-btn--success {
+  background: var(--mp-viridian);
+  color: #FFFFFF;
+}
+.mp-btn--success:hover { background: var(--mp-viridian-dk); }
+
+.mp-btn--secondary {
+  background: var(--mp-surface-raised);
+  color: var(--mp-fg);
+  border-color: var(--mp-border);
+}
+.mp-btn--secondary:hover { background: var(--mp-surface-sunken); border-color: rgba(0,123,95,.4); }
+
+.mp-btn--ghost {
+  background: transparent;
+  color: var(--mp-fg-muted);
+}
+.mp-btn--ghost:hover { background: var(--mp-surface-sunken); color: var(--mp-fg); }
+
+.mp-btn--destructive {
+  background: transparent;
+  color: var(--mp-error);
+  border-color: rgba(214, 69, 69, .3);
+}
+.mp-btn--destructive:hover { background: rgba(214, 69, 69, .08); }
+
+.mp-btn--sm  { padding: 6px 12px;  font-size: 12px; }
+.mp-btn--lg  { padding: 14px 20px; font-size: 15px; }
+
+/* ═══════════════════════════════════════════════════════════════
+   V2.4 — FORM FIELD PRIMITIVE
+   ═══════════════════════════════════════════════════════════════ */
+
+.mp-field { display: flex; flex-direction: column; gap: 6px; }
+.mp-field__label {
+  font-family: var(--mp-font-body);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--mp-fg);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.mp-field__label--required::after {
+  content: "*";
+  color: var(--mp-error);
+  margin-left: 2px;
+}
+.mp-field__input {
+  font-family: var(--mp-font-body);
+  font-size: 14px;
+  color: var(--mp-fg);
+  background: var(--mp-surface-sunken);
+  border: 1px solid var(--mp-border);
+  border-radius: var(--mp-r-input);
+  padding: 10px 12px;
+  transition: border-color var(--mp-dur-micro) var(--mp-ease-out),
+              box-shadow var(--mp-dur-micro) var(--mp-ease-out);
+}
+.mp-field__input::placeholder { color: var(--mp-fg-subtle); }
+.mp-field__input:focus {
+  outline: none;
+  border-color: var(--mp-viridian);
+  box-shadow: var(--mp-focus-ring);
+  background: var(--mp-surface-raised);
+}
+.mp-field__input--error { border-color: var(--mp-error); }
+.mp-field__input--error:focus { box-shadow: var(--mp-focus-ring-error); }
+.mp-field__helper {
+  font-size: 12px;
+  color: var(--mp-fg-subtle);
+}
+.mp-field__helper--error { color: var(--mp-error); }
+
+/* ═══════════════════════════════════════════════════════════════
+   V2.5 — ALERT / BANNER
+   ═══════════════════════════════════════════════════════════════ */
+
+.mp-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--mp-r-card);
+  border: 1px solid;
+  font-size: 13px;
+  line-height: 1.45;
+}
+.mp-alert__icon { flex-shrink: 0; width: 18px; height: 18px; margin-top: 1px; }
+.mp-alert__title { font-weight: 700; margin-bottom: 2px; }
+.mp-alert__body { color: var(--mp-fg-muted); }
+
+.mp-alert--info    { background: var(--mp-info-bg);    border-color: rgba(58,124,165,.3); color: var(--mp-info); }
+.mp-alert--success { background: var(--mp-success-bg); border-color: rgba(0,123,95,.3);    color: var(--mp-viridian); }
+.mp-alert--warning { background: var(--mp-warning-bg); border-color: rgba(244,162,97,.3);  color: var(--mp-warning-dk); }
+.mp-alert--error   { background: var(--mp-error-bg);   border-color: rgba(214,69,69,.3);   color: var(--mp-error); }
+
+/* ═══════════════════════════════════════════════════════════════
+   V2.6 — TOAST
+   ═══════════════════════════════════════════════════════════════ */
+
+.mp-toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--mp-oxford-blue);
+  color: #FFFFFF;
+  padding: 10px 14px 10px 12px;
+  border-radius: var(--mp-r-button);
+  box-shadow: var(--mp-shadow-elev);
+  font-size: 13px;
+  font-weight: 500;
+  max-width: 360px;
+}
+.mp-toast__icon {
+  width: 20px; height: 20px;
+  border-radius: var(--mp-r-full);
+  background: var(--mp-viridian);
+  color: white;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.mp-toast--success .mp-toast__icon { background: var(--mp-viridian); }
+.mp-toast--error   .mp-toast__icon { background: var(--mp-error); }
+.mp-toast--warning .mp-toast__icon { background: var(--mp-warning-dk); }
+
+/* ═══════════════════════════════════════════════════════════════
+   V2.7 — EMPTY STATE
+   ═══════════════════════════════════════════════════════════════ */
+
+.mp-empty {
+  text-align: center;
+  padding: 48px 24px;
+}
+.mp-empty__art {
+  width: 72px; height: 72px;
+  margin: 0 auto 16px;
+  border-radius: var(--mp-r-card);
+  background: var(--mp-surface-sunken);
+  border: 1px dashed var(--mp-border);
+  display: flex; align-items: center; justify-content: center;
+  color: var(--mp-fg-subtle);
+}
+.mp-empty__title {
+  font-family: var(--mp-font-display);
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--mp-fg);
+  margin-bottom: 4px;
+}
+.mp-empty__body {
+  font-size: 13px;
+  color: var(--mp-fg-muted);
+  max-width: 320px;
+  margin: 0 auto 16px;
+  line-height: 1.5;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   V2.8 — TABS
+   ═══════════════════════════════════════════════════════════════ */
+
+.mp-tabs {
+  display: inline-flex;
+  gap: 2px;
+  padding: 4px;
+  background: var(--mp-surface-sunken);
+  border: 1px solid var(--mp-border);
+  border-radius: var(--mp-r-button);
+}
+.mp-tabs__tab {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--mp-fg-muted);
+  padding: 6px 14px;
+  border-radius: 8px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background var(--mp-dur-micro) var(--mp-ease-out),
+              color var(--mp-dur-micro) var(--mp-ease-out);
+}
+.mp-tabs__tab:hover { color: var(--mp-fg); }
+.mp-tabs__tab--active {
+  background: var(--mp-surface-raised);
+  color: var(--mp-fg);
+  box-shadow: var(--mp-shadow-xs);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   V2.9 — DIALOG (overlay + surface)
+   ═══════════════════════════════════════════════════════════════ */
+
+.mp-dialog__overlay {
+  position: fixed; inset: 0;
+  background: rgba(0, 27, 61, 0.55);
+  backdrop-filter: blur(6px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+  z-index: 50;
+}
+.mp-dialog__surface {
+  background: var(--mp-surface-raised);
+  border-radius: var(--mp-r-modal);
+  box-shadow: var(--mp-shadow-modal);
+  width: 100%;
+  max-width: 440px;
+  max-height: 85vh;
+  overflow: hidden;
+  display: flex; flex-direction: column;
+}
+.mp-dialog__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 20px 20px 12px;
+}
+.mp-dialog__title {
+  font-family: var(--mp-font-display);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--mp-fg);
+  margin: 0;
+}
+.mp-dialog__close {
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: var(--mp-fg-subtle);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.mp-dialog__close:hover { background: var(--mp-surface-sunken); color: var(--mp-fg); }
+.mp-dialog__body { padding: 0 20px 20px; overflow-y: auto; }
+.mp-dialog__footer {
+  display: flex;
+  gap: 8px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--mp-border-subtle);
+  background: var(--mp-surface-sunken);
+  justify-content: flex-end;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   V2.10 — CHART HELPERS (sparkline wrapper, stat card)
+   ═══════════════════════════════════════════════════════════════ */
+
+.mp-stat {
+  background: var(--mp-surface-raised);
+  border: 1px solid var(--mp-border-subtle);
+  border-radius: var(--mp-r-card);
+  padding: 16px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.mp-stat__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--mp-fg-subtle);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.mp-stat__value {
+  font-family: var(--mp-font-display);
+  font-size: 32px;
+  font-weight: 900;
+  line-height: 1;
+  color: var(--mp-fg);
+  font-variant-numeric: tabular-nums;
+}
+.mp-stat__trend {
+  font-size: 12px;
+  font-family: var(--mp-font-mono);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.mp-stat__trend--up   { color: var(--mp-viridian); }
+.mp-stat__trend--down { color: var(--mp-error); }
+
+/* ═══════════════════════════════════════════════════════════════
+   V2.11 — ACHIEVEMENT ICONS (emoji replacement set)
+   Minimalist line glyphs to replace emoji rank icons.
+   ═══════════════════════════════════════════════════════════════ */
+
+.mp-rank {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px; height: 40px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--mp-oxford-blue) 0%, var(--mp-cta-blue) 100%);
+  color: #FFFFFF;
+  flex-shrink: 0;
+}
+.mp-rank svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }

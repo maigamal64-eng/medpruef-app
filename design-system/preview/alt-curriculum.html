@@ -1,0 +1,202 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link rel="stylesheet" href="../components_v2.css">
+<link rel="stylesheet" href="_alt-shell.css">
+<title>Curriculum — Alternatives</title>
+<style>
+  .stage{padding:22px;height:100%;box-sizing:border-box;overflow:hidden}
+  /* A: collapsible tree */
+  .a-wrap{max-width:540px;margin:0 auto}
+  .a-hd{margin-bottom:12px}
+  .a-tt{font-family:var(--mp-font-display);font-weight:900;font-size:22px;color:#001B3D;margin:0;letter-spacing:-0.02em}
+  .a-sb{font-size:13px;color:#4A5568;margin:2px 0 0}
+  .a-search{display:flex;align-items:center;gap:8px;padding:9px 12px;background:#F7F9FC;border:1px solid #E4E9F0;border-radius:10px;margin:12px 0 8px;font-size:12px;color:#A0AEC0}
+  .a-search svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2}
+  .a-tree{background:#fff;border:1px solid rgba(228,233,240,.7);border-radius:12px;overflow:hidden}
+  .a-node{border-bottom:1px solid #F0F4F8}
+  .a-node:last-child{border-bottom:none}
+  .a-top{display:flex;align-items:center;gap:10px;padding:11px 14px;cursor:pointer}
+  .a-cx{font-family:var(--mp-font-mono);color:#A0AEC0;font-size:10px;width:8px;text-align:center;font-weight:900}
+  .a-n{font-family:var(--mp-font-display);font-weight:700;font-size:13px;color:#1A2B3C;flex:1;letter-spacing:-0.01em}
+  .a-meta{font-family:var(--mp-font-mono);font-size:10px;color:#A0AEC0;display:flex;gap:8px}
+  .a-pct{font-weight:700;color:#007B5F}
+  .a-pct.w{color:#D68A3A}
+  .a-pct.b{color:#D64545}
+  .a-bar{height:3px;background:rgba(0,123,95,0.1);margin:0 14px 8px;border-radius:2px;overflow:hidden}
+  .a-bar>span{display:block;height:100%;background:#007B5F;border-radius:2px}
+  .a-children{padding:4px 14px 10px;background:#F7F9FC;border-top:1px solid #F0F4F8}
+  .a-c{display:flex;align-items:center;gap:10px;padding:6px 8px;font-size:12px;color:#4A5568;border-radius:6px}
+  .a-c:hover{background:rgba(0,168,150,0.05)}
+  .a-c .cn{flex:1}
+  .a-c .cmeta{font-family:var(--mp-font-mono);font-size:10px;color:#A0AEC0}
+  .a-c .cdot{width:5px;height:5px;border-radius:50%}
+
+  /* B: 2d heatmap grid (topic × subtopic matrix) */
+  .b-wrap{max-width:700px;margin:0 auto}
+  .b-hd{display:flex;align-items:end;justify-content:space-between;margin-bottom:10px}
+  .b-ttw h3{font-family:var(--mp-font-display);font-weight:900;font-size:22px;color:#001B3D;margin:0 0 2px;letter-spacing:-0.02em}
+  .b-ttw p{font-size:12px;color:#4A5568;margin:0}
+  .b-legend{display:flex;align-items:center;gap:6px;font-family:var(--mp-font-mono);font-size:10px;color:#4A5568}
+  .b-legend .bar{width:80px;height:10px;border-radius:2px;background:linear-gradient(90deg,#FDECEC,#F4A261,#007B5F)}
+  .b-grid{background:#fff;border:1px solid rgba(228,233,240,.7);border-radius:12px;padding:14px;overflow:auto}
+  .b-row{display:grid;grid-template-columns:150px repeat(8,1fr) 60px;gap:2px;align-items:center;margin-bottom:2px}
+  .b-row.hd{grid-template-columns:150px repeat(8,1fr) 60px;margin-bottom:8px;font-family:var(--mp-font-mono);font-size:9px;color:#A0AEC0;letter-spacing:0.08em;text-transform:uppercase;font-weight:700}
+  .b-row.hd > div{text-align:center;padding:0 4px}
+  .b-row.hd .tl{text-align:left}
+  .b-lb{font-family:var(--mp-font-display);font-weight:700;font-size:12px;color:#1A2B3C;padding-right:6px}
+  .cell{aspect-ratio:1;border-radius:3px;display:flex;align-items:center;justify-content:center;font-family:var(--mp-font-mono);font-size:9px;font-weight:700;color:#fff;cursor:pointer}
+  .cell.n{background:#F0F4F8;color:#A0AEC0}
+  .cell.s{background:#FDECEC;color:#D64545}
+  .cell.m{background:#F4A261}
+  .cell.h{background:#007B5F}
+  .cell.vh{background:#001B3D}
+  .b-tot{font-family:var(--mp-font-mono);font-weight:700;font-size:11px;color:#001B3D;text-align:right}
+
+  [data-theme="dark"] .a-tt,[data-theme="dark"] .a-n,[data-theme="dark"] .b-ttw h3{color:#E2E8F0}
+  [data-theme="dark"] .a-sb,[data-theme="dark"] .b-ttw p{color:#94A3B8}
+  [data-theme="dark"] .a-tree,[data-theme="dark"] .b-grid{background:#1E293B;border-color:rgba(51,65,85,0.7)}
+  [data-theme="dark"] .a-node{border-color:#334155}
+  [data-theme="dark"] .a-children{background:#0F172A;border-color:#334155}
+  [data-theme="dark"] .a-c{color:#94A3B8}
+  [data-theme="dark"] .a-search{background:#0F172A;border-color:#334155;color:#64748B}
+  [data-theme="dark"] .a-bar{background:rgba(0,168,150,0.15)}
+  [data-theme="dark"] .a-bar>span{background:#1BB680}
+  [data-theme="dark"] .cell.n{background:#334155;color:#64748B}
+  [data-theme="dark"] .cell.s{background:rgba(214,69,69,0.25);color:#FC8181}
+  [data-theme="dark"] .cell.h{background:#00A896}
+  [data-theme="dark"] .cell.vh{background:#1BB680;color:#001028}
+  [data-theme="dark"] .b-lb{color:#E2E8F0}
+  [data-theme="dark"] .b-tot{color:#E2E8F0}
+</style>
+</head>
+<body>
+  <div class="alt-header">
+    <h1>Curriculum /curriculum — 2 alternatives</h1>
+    <p>A: collapsible tree (standard, hierarchical) · B: 2D heatmap matrix (topic × subtopic performance scan).</p>
+  </div>
+
+  <div class="alt-stack">
+    <div class="alt-wrap">
+      <div class="alt-card">
+        <div class="alt-card__label"><div><span class="alt-card__name">A · Collapsible tree</span> <span class="alt-card__bet">— bet: familiar, scannable; progress per branch</span></div><span class="alt-card__tag">LIGHT</span></div>
+        <div class="alt-card__body alt-card__body--light" style="min-height:620px">
+          <div class="stage">
+            <div class="a-wrap">
+              <div class="a-hd"><h1 class="a-tt">Curriculum</h1><p class="a-sb">8 Themen · 47 Unterthemen · 10 993 Fragen</p></div>
+              <div class="a-search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg><span>Thema oder Stichwort suchen…</span></div>
+              <div class="a-tree">
+                <div class="a-node">
+                  <div class="a-top"><span class="a-cx">▼</span><span class="a-n">Kardiologie</span><span class="a-meta"><span>847 Fragen</span><span class="a-pct">78%</span></span></div>
+                  <div class="a-bar"><span style="width:78%"></span></div>
+                  <div class="a-children">
+                    <div class="a-c"><span class="cdot" style="background:#007B5F"></span><span class="cn">Ischämische Herzkrankheit</span><span class="cmeta">184 · 82%</span></div>
+                    <div class="a-c"><span class="cdot" style="background:#007B5F"></span><span class="cn">Herzinsuffizienz</span><span class="cmeta">162 · 76%</span></div>
+                    <div class="a-c"><span class="cdot" style="background:#F4A261"></span><span class="cn">Rhythmusstörungen</span><span class="cmeta">198 · 68%</span></div>
+                    <div class="a-c"><span class="cdot" style="background:#007B5F"></span><span class="cn">Klappenvitien</span><span class="cmeta">148 · 81%</span></div>
+                    <div class="a-c"><span class="cdot" style="background:#007B5F"></span><span class="cn">Hypertonie</span><span class="cmeta">155 · 79%</span></div>
+                  </div>
+                </div>
+                <div class="a-node">
+                  <div class="a-top"><span class="a-cx">►</span><span class="a-n">Neurologie</span><span class="a-meta"><span>612 Fragen</span><span class="a-pct">71%</span></span></div>
+                  <div class="a-bar"><span style="width:71%"></span></div>
+                </div>
+                <div class="a-node">
+                  <div class="a-top"><span class="a-cx">▼</span><span class="a-n">Pädiatrie</span><span class="a-meta"><span>312 Fragen</span><span class="a-pct b">32%</span></span></div>
+                  <div class="a-bar" style="background:rgba(214,69,69,0.15)"><span style="width:32%;background:#D64545"></span></div>
+                  <div class="a-children">
+                    <div class="a-c"><span class="cdot" style="background:#D64545"></span><span class="cn">Neugeborene</span><span class="cmeta">88 · 28%</span></div>
+                    <div class="a-c"><span class="cdot" style="background:#D64545"></span><span class="cn">Impfungen</span><span class="cmeta">42 · 31%</span></div>
+                    <div class="a-c"><span class="cdot" style="background:#F4A261"></span><span class="cn">Atemwegserkrankungen</span><span class="cmeta">68 · 44%</span></div>
+                    <div class="a-c"><span class="cdot" style="background:#D64545"></span><span class="cn">Entwicklungsstörungen</span><span class="cmeta">54 · 22%</span></div>
+                  </div>
+                </div>
+                <div class="a-node">
+                  <div class="a-top"><span class="a-cx">►</span><span class="a-n">Chirurgie</span><span class="a-meta"><span>534 Fragen</span><span class="a-pct w">65%</span></span></div>
+                  <div class="a-bar" style="background:rgba(244,162,97,0.2)"><span style="width:65%;background:#D68A3A"></span></div>
+                </div>
+                <div class="a-node">
+                  <div class="a-top"><span class="a-cx">►</span><span class="a-n">Radiologie</span><span class="a-meta"><span>428 Fragen</span><span class="a-pct w">69%</span></span></div>
+                  <div class="a-bar" style="background:rgba(244,162,97,0.2)"><span style="width:69%;background:#D68A3A"></span></div>
+                </div>
+                <div class="a-node">
+                  <div class="a-top"><span class="a-cx">►</span><span class="a-n">Psychiatrie</span><span class="a-meta"><span>189 Fragen</span><span class="a-pct">81%</span></span></div>
+                  <div class="a-bar"><span style="width:81%"></span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="alt-card" data-theme="dark" style="background:#001028">
+        <div class="alt-card__label" style="background:#001028;border-color:rgba(255,255,255,0.05)"><div><span class="alt-card__name" style="color:#E2E8F0">A · Tree</span> <span class="alt-card__bet" style="color:#94A3B8">— dark</span></div><span class="alt-card__tag alt-card__tag--dark">DARK</span></div>
+        <div class="alt-card__body alt-card__body--dark" style="min-height:620px">
+          <div class="stage" data-theme="dark">
+            <div class="a-wrap">
+              <div class="a-hd"><h1 class="a-tt">Curriculum</h1><p class="a-sb">8 Themen · 47 Unterthemen · 10 993 Fragen</p></div>
+              <div class="a-search"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/></svg><span>Thema oder Stichwort suchen…</span></div>
+              <div class="a-tree">
+                <div class="a-node"><div class="a-top"><span class="a-cx">▼</span><span class="a-n">Kardiologie</span><span class="a-meta"><span>847 Fragen</span><span class="a-pct" style="color:#1BB680">78%</span></span></div><div class="a-bar"><span style="width:78%"></span></div><div class="a-children"><div class="a-c"><span class="cdot" style="background:#1BB680"></span><span class="cn">Ischämische Herzkrankheit</span><span class="cmeta">184 · 82%</span></div><div class="a-c"><span class="cdot" style="background:#F4A261"></span><span class="cn">Rhythmusstörungen</span><span class="cmeta">198 · 68%</span></div><div class="a-c"><span class="cdot" style="background:#1BB680"></span><span class="cn">Hypertonie</span><span class="cmeta">155 · 79%</span></div></div></div>
+                <div class="a-node"><div class="a-top"><span class="a-cx">►</span><span class="a-n">Neurologie</span><span class="a-meta"><span>612 Fragen</span><span class="a-pct" style="color:#1BB680">71%</span></span></div><div class="a-bar"><span style="width:71%"></span></div></div>
+                <div class="a-node"><div class="a-top"><span class="a-cx">▼</span><span class="a-n">Pädiatrie</span><span class="a-meta"><span>312 Fragen</span><span class="a-pct b" style="color:#FC8181">32%</span></span></div><div class="a-bar" style="background:rgba(214,69,69,0.25)"><span style="width:32%;background:#FC8181"></span></div><div class="a-children"><div class="a-c"><span class="cdot" style="background:#FC8181"></span><span class="cn">Neugeborene</span><span class="cmeta">88 · 28%</span></div><div class="a-c"><span class="cdot" style="background:#F4A261"></span><span class="cn">Atemwegserkrankungen</span><span class="cmeta">68 · 44%</span></div><div class="a-c"><span class="cdot" style="background:#FC8181"></span><span class="cn">Entwicklungsstörungen</span><span class="cmeta">54 · 22%</span></div></div></div>
+                <div class="a-node"><div class="a-top"><span class="a-cx">►</span><span class="a-n">Chirurgie</span><span class="a-meta"><span>534 Fragen</span><span class="a-pct w" style="color:#F4A261">65%</span></span></div><div class="a-bar" style="background:rgba(244,162,97,0.25)"><span style="width:65%;background:#F4A261"></span></div></div>
+                <div class="a-node"><div class="a-top"><span class="a-cx">►</span><span class="a-n">Psychiatrie</span><span class="a-meta"><span>189 Fragen</span><span class="a-pct" style="color:#1BB680">81%</span></span></div><div class="a-bar"><span style="width:81%"></span></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="alt-wrap alt-wrap--full">
+      <div class="alt-card">
+        <div class="alt-card__label"><div><span class="alt-card__name">B · Heatmap matrix</span> <span class="alt-card__bet">— bet: see blind spots instantly; 1 glance vs. 8 clicks</span></div><span class="alt-card__tag">LIGHT</span></div>
+        <div class="alt-card__body alt-card__body--light" style="min-height:460px">
+          <div class="stage">
+            <div class="b-wrap">
+              <div class="b-hd">
+                <div class="b-ttw"><h3>Deine Stärken-Heatmap</h3><p>8 Themen × 8 Unterbereiche · Farbe = Genauigkeit</p></div>
+                <div class="b-legend"><span>schwach</span><span class="bar"></span><span>stark</span></div>
+              </div>
+              <div class="b-grid">
+                <div class="b-row hd"><div class="tl">Thema</div><div>Diag.</div><div>Therapie</div><div>Notfall</div><div>Pharma</div><div>Anatomie</div><div>Labor</div><div>Bildgebung</div><div>Leitl.</div><div>∅</div></div>
+                <div class="b-row"><div class="b-lb">Kardio</div><div class="cell vh">82</div><div class="cell h">78</div><div class="cell h">84</div><div class="cell m">68</div><div class="cell h">79</div><div class="cell vh">85</div><div class="cell h">72</div><div class="cell h">76</div><div class="b-tot">78</div></div>
+                <div class="b-row"><div class="b-lb">Neuro</div><div class="cell h">74</div><div class="cell h">72</div><div class="cell m">66</div><div class="cell m">62</div><div class="cell h">78</div><div class="cell h">80</div><div class="cell h">70</div><div class="cell m">64</div><div class="b-tot">71</div></div>
+                <div class="b-row"><div class="b-lb">Pädiatrie</div><div class="cell s">38</div><div class="cell s">32</div><div class="cell s">28</div><div class="cell m">44</div><div class="cell s">36</div><div class="cell s">30</div><div class="cell s">26</div><div class="cell s">22</div><div class="b-tot" style="color:#D64545">32</div></div>
+                <div class="b-row"><div class="b-lb">Chirurgie</div><div class="cell m">64</div><div class="cell m">62</div><div class="cell h">72</div><div class="cell m">58</div><div class="cell h">70</div><div class="cell n">—</div><div class="cell m">66</div><div class="cell m">68</div><div class="b-tot">65</div></div>
+                <div class="b-row"><div class="b-lb">Radiologie</div><div class="cell h">72</div><div class="cell n">—</div><div class="cell m">64</div><div class="cell n">—</div><div class="cell h">76</div><div class="cell m">66</div><div class="cell m">68</div><div class="cell m">62</div><div class="b-tot">69</div></div>
+                <div class="b-row"><div class="b-lb">Psychiatrie</div><div class="cell h">84</div><div class="cell vh">86</div><div class="cell h">76</div><div class="cell vh">88</div><div class="cell h">78</div><div class="cell n">—</div><div class="cell h">72</div><div class="cell h">80</div><div class="b-tot">81</div></div>
+                <div class="b-row"><div class="b-lb">Endokrino</div><div class="cell h">78</div><div class="cell h">74</div><div class="cell m">66</div><div class="cell m">62</div><div class="cell h">72</div><div class="cell h">70</div><div class="cell m">68</div><div class="cell h">76</div><div class="b-tot">74</div></div>
+                <div class="b-row"><div class="b-lb">Gyn</div><div class="cell m">62</div><div class="cell m">58</div><div class="cell m">60</div><div class="cell s">46</div><div class="cell m">64</div><div class="cell m">66</div><div class="cell m">58</div><div class="cell m">54</div><div class="b-tot" style="color:#D68A3A">59</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="alt-wrap alt-wrap--full">
+      <div class="alt-card" data-theme="dark" style="background:#001028">
+        <div class="alt-card__label" style="background:#001028;border-color:rgba(255,255,255,0.05)"><div><span class="alt-card__name" style="color:#E2E8F0">B · Heatmap</span> <span class="alt-card__bet" style="color:#94A3B8">— dark</span></div><span class="alt-card__tag alt-card__tag--dark">DARK</span></div>
+        <div class="alt-card__body alt-card__body--dark" style="min-height:460px">
+          <div class="stage" data-theme="dark">
+            <div class="b-wrap">
+              <div class="b-hd">
+                <div class="b-ttw"><h3>Deine Stärken-Heatmap</h3><p>8 Themen × 8 Unterbereiche · Farbe = Genauigkeit</p></div>
+                <div class="b-legend" style="color:#94A3B8"><span>schwach</span><span class="bar" style="background:linear-gradient(90deg,rgba(214,69,69,0.4),#F4A261,#00A896)"></span><span>stark</span></div>
+              </div>
+              <div class="b-grid">
+                <div class="b-row hd"><div class="tl">Thema</div><div>Diag.</div><div>Therapie</div><div>Notfall</div><div>Pharma</div><div>Anatomie</div><div>Labor</div><div>Bildgebung</div><div>Leitl.</div><div>∅</div></div>
+                <div class="b-row"><div class="b-lb">Kardio</div><div class="cell vh">82</div><div class="cell h">78</div><div class="cell h">84</div><div class="cell m">68</div><div class="cell h">79</div><div class="cell vh">85</div><div class="cell h">72</div><div class="cell h">76</div><div class="b-tot">78</div></div>
+                <div class="b-row"><div class="b-lb">Neuro</div><div class="cell h">74</div><div class="cell h">72</div><div class="cell m">66</div><div class="cell m">62</div><div class="cell h">78</div><div class="cell h">80</div><div class="cell h">70</div><div class="cell m">64</div><div class="b-tot">71</div></div>
+                <div class="b-row"><div class="b-lb">Pädiatrie</div><div class="cell s">38</div><div class="cell s">32</div><div class="cell s">28</div><div class="cell m">44</div><div class="cell s">36</div><div class="cell s">30</div><div class="cell s">26</div><div class="cell s">22</div><div class="b-tot" style="color:#FC8181">32</div></div>
+                <div class="b-row"><div class="b-lb">Chirurgie</div><div class="cell m">64</div><div class="cell m">62</div><div class="cell h">72</div><div class="cell m">58</div><div class="cell h">70</div><div class="cell n">—</div><div class="cell m">66</div><div class="cell m">68</div><div class="b-tot">65</div></div>
+                <div class="b-row"><div class="b-lb">Radiologie</div><div class="cell h">72</div><div class="cell n">—</div><div class="cell m">64</div><div class="cell n">—</div><div class="cell h">76</div><div class="cell m">66</div><div class="cell m">68</div><div class="cell m">62</div><div class="b-tot">69</div></div>
+                <div class="b-row"><div class="b-lb">Psychiatrie</div><div class="cell h">84</div><div class="cell vh">86</div><div class="cell h">76</div><div class="cell vh">88</div><div class="cell h">78</div><div class="cell n">—</div><div class="cell h">72</div><div class="cell h">80</div><div class="b-tot">81</div></div>
+                <div class="b-row"><div class="b-lb">Endokrino</div><div class="cell h">78</div><div class="cell h">74</div><div class="cell m">66</div><div class="cell m">62</div><div class="cell h">72</div><div class="cell h">70</div><div class="cell m">68</div><div class="cell h">76</div><div class="b-tot">74</div></div>
+                <div class="b-row"><div class="b-lb">Gyn</div><div class="cell m">62</div><div class="cell m">58</div><div class="cell m">60</div><div class="cell s">46</div><div class="cell m">64</div><div class="cell m">66</div><div class="cell m">58</div><div class="cell m">54</div><div class="b-tot" style="color:#F4A261">59</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body></html>

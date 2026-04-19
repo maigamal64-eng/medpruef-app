@@ -1,0 +1,111 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link rel="stylesheet" href="../components_v2.css">
+<link rel="stylesheet" href="_alt-shell.css">
+<title>BrandedLoader — Alternatives</title>
+<style>
+  /* ── A: EKG-Pulse ── */
+  .ldr-a-wrap { display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;height:100%;padding:36px 20px }
+  .ldr-a-glyph { width:120px;height:40px;position:relative;color:var(--mp-viridian) }
+  .ldr-a-glyph svg { width:100%;height:100% }
+  .ldr-a-path { stroke-dasharray: 300; stroke-dashoffset: 300; animation: ldrA 1.8s var(--mp-ease-out) infinite }
+  @keyframes ldrA { 0%{stroke-dashoffset:300} 55%{stroke-dashoffset:0} 100%{stroke-dashoffset:-300} }
+  .ldr-a-label { font-family:var(--mp-font-display);font-weight:700;font-size:14px;color:var(--mp-fg);letter-spacing:-0.01em }
+  .ldr-a-sub { font-size:11px;font-family:var(--mp-font-mono);color:var(--mp-fg-subtle);letter-spacing:0.1em;text-transform:uppercase }
+
+  /* ── B: Progress Ring ── */
+  .ldr-b-wrap { display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;height:100%;padding:36px 20px }
+  .ldr-b-ring { position:relative;width:86px;height:86px }
+  .ldr-b-ring svg { transform:rotate(-90deg); width:100%;height:100% }
+  .ldr-b-track { fill:none;stroke:rgba(0,123,95,0.12);stroke-width:5 }
+  .ldr-b-arc { fill:none;stroke:var(--mp-viridian);stroke-width:5;stroke-linecap:round;stroke-dasharray: 70 226;transform-origin:50% 50%;animation: ldrB 1.2s linear infinite }
+  @keyframes ldrB { to { transform: rotate(360deg) } }
+  .ldr-b-u { position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--mp-font-display);font-weight:900;font-size:30px;color:var(--mp-oxford-blue);letter-spacing:-0.03em }
+  .ldr-b-label { font-family:var(--mp-font-display);font-weight:700;font-size:14px;color:var(--mp-fg) }
+
+  /* dark overrides */
+  [data-theme="dark"] .ldr-a-label,[data-theme="dark"] .ldr-b-label { color:#E2E8F0 }
+  [data-theme="dark"] .ldr-b-u { color:#E2E8F0 }
+  [data-theme="dark"] .ldr-a-glyph { color:#1BB680 }
+  [data-theme="dark"] .ldr-b-track { stroke:rgba(0,168,150,0.18) }
+  [data-theme="dark"] .ldr-b-arc { stroke:#00A896 }
+</style>
+</head>
+<body>
+  <div class="alt-header">
+    <h1>BrandedLoader — 2 alternatives</h1>
+    <p>Replaces the current bouncing-ü dots. Both preserve brand equity via color + the <em>ü</em> diaeresis as the rhythmic accent.</p>
+  </div>
+  <div class="alt-stack">
+    <!-- A -->
+    <div class="alt-wrap">
+      <div class="alt-card">
+        <div class="alt-card__label">
+          <div><span class="alt-card__name">A · EKG-Pulse</span> <span class="alt-card__bet">— clinical metaphor, domain-native motion</span></div>
+          <span class="alt-card__tag">LIGHT</span>
+        </div>
+        <div class="alt-card__body alt-card__body--light">
+          <div class="ldr-a-wrap">
+            <div class="ldr-a-glyph">
+              <svg viewBox="0 0 300 100" preserveAspectRatio="none">
+                <path class="ldr-a-path" d="M0 50 L60 50 L75 50 L90 20 L105 80 L120 30 L135 50 L300 50" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <div class="ldr-a-label">Laden…</div>
+            <div class="ldr-a-sub">medprüf · sinus rhythm</div>
+          </div>
+        </div>
+      </div>
+      <div class="alt-card" data-theme="dark" style="background:#001028">
+        <div class="alt-card__label" style="background:#001028;border-color:rgba(255,255,255,0.05)">
+          <div><span class="alt-card__name" style="color:#E2E8F0">A · EKG-Pulse</span> <span class="alt-card__bet" style="color:#94A3B8">— dark</span></div>
+          <span class="alt-card__tag alt-card__tag--dark">DARK</span>
+        </div>
+        <div class="alt-card__body alt-card__body--dark">
+          <div class="ldr-a-wrap">
+            <div class="ldr-a-glyph">
+              <svg viewBox="0 0 300 100" preserveAspectRatio="none">
+                <path class="ldr-a-path" d="M0 50 L60 50 L75 50 L90 20 L105 80 L120 30 L135 50 L300 50" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <div class="ldr-a-label">Laden…</div>
+            <div class="ldr-a-sub">medprüf · sinus rhythm</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- B -->
+    <div class="alt-wrap">
+      <div class="alt-card">
+        <div class="alt-card__label">
+          <div><span class="alt-card__name">B · Progress Ring</span> <span class="alt-card__bet">— echoes the DailyGoalRing; product-native motion</span></div>
+          <span class="alt-card__tag">LIGHT</span>
+        </div>
+        <div class="alt-card__body alt-card__body--light">
+          <div class="ldr-b-wrap">
+            <div class="ldr-b-ring">
+              <svg viewBox="0 0 100 100"><circle class="ldr-b-track" cx="50" cy="50" r="44"/><circle class="ldr-b-arc" cx="50" cy="50" r="44"/></svg>
+              <div class="ldr-b-u">ü</div>
+            </div>
+            <div class="ldr-b-label">Einen Moment</div>
+          </div>
+        </div>
+      </div>
+      <div class="alt-card" data-theme="dark" style="background:#001028">
+        <div class="alt-card__label" style="background:#001028;border-color:rgba(255,255,255,0.05)">
+          <div><span class="alt-card__name" style="color:#E2E8F0">B · Progress Ring</span> <span class="alt-card__bet" style="color:#94A3B8">— dark</span></div>
+          <span class="alt-card__tag alt-card__tag--dark">DARK</span>
+        </div>
+        <div class="alt-card__body alt-card__body--dark">
+          <div class="ldr-b-wrap">
+            <div class="ldr-b-ring">
+              <svg viewBox="0 0 100 100"><circle class="ldr-b-track" cx="50" cy="50" r="44"/><circle class="ldr-b-arc" cx="50" cy="50" r="44"/></svg>
+              <div class="ldr-b-u">ü</div>
+            </div>
+            <div class="ldr-b-label">Einen Moment</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body></html>

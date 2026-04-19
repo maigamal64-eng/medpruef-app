@@ -12,6 +12,7 @@ import TopicIcon from "@/components/TopicIcon";
 import { cleanExplanation } from "@/lib/explanation";
 import { Lightbulb, FileText, Highlighter, Bot, Flag, CheckCircle2, Edit3, AlertTriangle, X, ThumbsUp, ThumbsDown } from "lucide-react";
 import AIChatAssistant from "@/components/AIChatAssistant";
+import TranslateButton from "@/components/TranslateButton";
 
 type Lang = "de" | "en";
 
@@ -657,6 +658,18 @@ export default function QuestionCard({
           </div>
           );
         })()}
+
+        {/* Translate Explanation button — only shown when there's an
+            explanation worth translating. Renders the translated text
+            in-place (below the German explanation). Free tier: 5/day. */}
+        {answered && !hideExplanation && cleanExplanation(question.explanation) && (
+          <TranslateButton
+            questionId={question.id}
+            lang={lang}
+            userTier={userTier}
+            field="explanation"
+          />
+        )}
 
         {/* Explanation images — only shown after answering, per Mohamed.
             These come from the explanation field in the source Anki note and

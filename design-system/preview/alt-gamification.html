@@ -1,0 +1,230 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link rel="stylesheet" href="../components_v2.css">
+<link rel="stylesheet" href="_alt-shell.css">
+<title>Gamification trio — Alternatives</title>
+<style>
+  .trio-stage { padding: 28px; height: 100%; box-sizing:border-box; }
+  /* shared */
+  .chip-row { display:flex;align-items:center;gap:6px;font-size:11px;color:var(--mp-fg-muted);font-family:var(--mp-font-mono) }
+  .chip-row svg { width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2 }
+
+  /* ─── A: Muted, stacked, scannable ─── */
+  .a-trio { display:flex;flex-direction:column;gap:10px;max-width:280px }
+  .a-row { display:flex;align-items:center;gap:12px;padding:10px 12px;background:#fff;border:1px solid rgba(228,233,240,.7);border-radius:10px }
+  .a-icon { width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0 }
+  .a-lead { flex:1;min-width:0 }
+  .a-label { font-size:11px;color:var(--mp-fg-subtle);font-weight:600;letter-spacing:0.05em;text-transform:uppercase }
+  .a-value { font-family:var(--mp-font-display);font-weight:800;font-size:16px;color:var(--mp-fg);letter-spacing:-0.01em;font-variant-numeric:tabular-nums }
+  .a-bar { height:4px;background:rgba(0,123,95,0.15);border-radius:2px;overflow:hidden;margin-top:4px }
+  .a-bar > span { display:block;height:100%;background:var(--mp-viridian);border-radius:2px }
+  .a-trailing { font-family:var(--mp-font-mono);font-size:11px;color:var(--mp-fg-subtle);white-space:nowrap }
+
+  /* ─── B: Proud, merged hero card ─── */
+  .b-hero { background: linear-gradient(135deg,#001B3D 0%,#003A8C 100%);color:#fff;border-radius:16px;padding:20px;max-width:340px;position:relative;overflow:hidden;box-shadow:0 8px 24px rgba(0,27,61,0.25) }
+  .b-hero::before { content:"";position:absolute;right:-40px;top:-40px;width:160px;height:160px;border-radius:50%;background:radial-gradient(circle, rgba(0,168,150,0.35) 0%, transparent 70%) }
+  .b-top { display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;position:relative;z-index:1 }
+  .b-rank { display:flex;align-items:center;gap:10px }
+  .b-rank-badge { width:34px;height:34px;border-radius:10px;background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.18);display:flex;align-items:center;justify-content:center;color:#fff }
+  .b-rank-badge svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+  .b-rank-name { font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:rgba(255,255,255,0.6);font-weight:700 }
+  .b-rank-title { font-family:var(--mp-font-display);font-weight:700;font-size:15px;color:#fff }
+  .b-streak-pill { display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:999px;background:rgba(244,162,97,0.2);border:1px solid rgba(244,162,97,0.35);color:#FBD38D;font-family:var(--mp-font-mono);font-weight:700;font-size:11px }
+  .b-ring-row { display:flex;align-items:center;gap:16px;position:relative;z-index:1 }
+  .b-ring { position:relative;width:92px;height:92px;flex-shrink:0 }
+  .b-ring svg { transform:rotate(-90deg) }
+  .b-ring-track { fill:none;stroke:rgba(255,255,255,0.12);stroke-width:8 }
+  .b-ring-arc { fill:none;stroke:#00A896;stroke-width:8;stroke-linecap:round;stroke-dasharray:195 282 }
+  .b-ring-label { position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center }
+  .b-ring-label .big { font-family:var(--mp-font-display);font-weight:900;font-size:22px;line-height:1;font-variant-numeric:tabular-nums }
+  .b-ring-label .small { font-size:9px;color:rgba(255,255,255,0.6);letter-spacing:0.1em;text-transform:uppercase;font-weight:700;margin-top:2px }
+  .b-meta { flex:1 }
+  .b-meta .l { font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:rgba(255,255,255,0.55);font-weight:700;margin-bottom:4px }
+  .b-xp { display:flex;align-items:baseline;gap:6px;font-family:var(--mp-font-display) }
+  .b-xp .num { font-weight:900;font-size:22px;color:#fff;font-variant-numeric:tabular-nums;letter-spacing:-0.01em }
+  .b-xp .unit { font-size:11px;color:rgba(255,255,255,0.7);font-weight:600 }
+  .b-xp-bar { margin-top:6px;height:5px;background:rgba(255,255,255,0.12);border-radius:3px;overflow:hidden }
+  .b-xp-bar span { display:block;height:100%;background:linear-gradient(90deg,#00A896,#1BB680);border-radius:3px }
+  .b-xp-note { margin-top:4px;font-size:10px;color:rgba(255,255,255,0.55);font-family:var(--mp-font-mono) }
+
+  /* dark tuning */
+  [data-theme="dark"] .a-row { background:#1E293B;border-color:rgba(51,65,85,0.7) }
+  [data-theme="dark"] .a-label { color:#64748B }
+  [data-theme="dark"] .a-value { color:#E2E8F0 }
+  [data-theme="dark"] .a-trailing { color:#64748B }
+</style>
+</head>
+<body>
+  <div class="alt-header">
+    <h1>Streak + XP + DailyGoal trio — 2 alternatives</h1>
+    <p>Gamification-muted (background utility) vs. gamification-proud (hero card). 🔥 is the only allowed emoji — kept, but dialed to a streak-pill, not a decoration.</p>
+  </div>
+  <div class="alt-stack">
+    <!-- A -->
+    <div class="alt-wrap">
+      <div class="alt-card">
+        <div class="alt-card__label">
+          <div><span class="alt-card__name">A · Muted, stacked</span> <span class="alt-card__bet">— bet: clinical tool for adults; gamification present but quiet</span></div>
+          <span class="alt-card__tag">LIGHT</span>
+        </div>
+        <div class="alt-card__body alt-card__body--light">
+          <div class="trio-stage">
+            <div class="a-trio">
+              <div class="a-row">
+                <div class="a-icon" style="background:rgba(0,123,95,0.1);color:#007B5F">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                </div>
+                <div class="a-lead">
+                  <div class="a-label">Tagesziel</div>
+                  <div style="display:flex;align-items:baseline;gap:6px">
+                    <span class="a-value">14</span><span style="color:var(--mp-fg-subtle);font-size:13px">/ 20 Fragen</span>
+                  </div>
+                  <div class="a-bar"><span style="width:70%"></span></div>
+                </div>
+                <div class="a-trailing">70%</div>
+              </div>
+
+              <div class="a-row">
+                <div class="a-icon" style="background:rgba(244,162,97,0.12);color:#D68A3A">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
+                </div>
+                <div class="a-lead">
+                  <div class="a-label">Streak 🔥</div>
+                  <div class="a-value">23 <span style="color:var(--mp-fg-subtle);font-size:13px;font-weight:500">Tage</span></div>
+                </div>
+                <div class="a-trailing">Best: 41</div>
+              </div>
+
+              <div class="a-row">
+                <div class="a-icon" style="background:rgba(0,58,140,0.1);color:#003A8C">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                </div>
+                <div class="a-lead">
+                  <div class="a-label">Stufe 4 · Famulant</div>
+                  <div style="display:flex;align-items:baseline;gap:6px">
+                    <span class="a-value">1 420</span><span style="color:var(--mp-fg-subtle);font-size:13px">XP</span>
+                  </div>
+                  <div class="a-bar"><span style="width:58%"></span></div>
+                </div>
+                <div class="a-trailing">+580</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="alt-card" data-theme="dark" style="background:#001028">
+        <div class="alt-card__label" style="background:#001028;border-color:rgba(255,255,255,0.05)">
+          <div><span class="alt-card__name" style="color:#E2E8F0">A · Muted, stacked</span> <span class="alt-card__bet" style="color:#94A3B8">— dark</span></div>
+          <span class="alt-card__tag alt-card__tag--dark">DARK</span>
+        </div>
+        <div class="alt-card__body alt-card__body--dark">
+          <div class="trio-stage">
+            <div class="a-trio">
+              <div class="a-row">
+                <div class="a-icon" style="background:rgba(0,168,150,0.15);color:#1BB680">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                </div>
+                <div class="a-lead">
+                  <div class="a-label">Tagesziel</div>
+                  <div style="display:flex;align-items:baseline;gap:6px">
+                    <span class="a-value">14</span><span style="color:#64748B;font-size:13px">/ 20 Fragen</span>
+                  </div>
+                  <div class="a-bar" style="background:rgba(0,168,150,0.2)"><span style="width:70%;background:#00A896"></span></div>
+                </div>
+                <div class="a-trailing">70%</div>
+              </div>
+              <div class="a-row">
+                <div class="a-icon" style="background:rgba(244,162,97,0.18);color:#F4A261">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
+                </div>
+                <div class="a-lead"><div class="a-label">Streak 🔥</div><div class="a-value">23 <span style="color:#64748B;font-size:13px;font-weight:500">Tage</span></div></div>
+                <div class="a-trailing">Best: 41</div>
+              </div>
+              <div class="a-row">
+                <div class="a-icon" style="background:rgba(58,124,165,0.2);color:#7FB4D9">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                </div>
+                <div class="a-lead">
+                  <div class="a-label">Stufe 4 · Famulant</div>
+                  <div style="display:flex;align-items:baseline;gap:6px"><span class="a-value">1 420</span><span style="color:#64748B;font-size:13px">XP</span></div>
+                  <div class="a-bar" style="background:rgba(0,168,150,0.2)"><span style="width:58%;background:#00A896"></span></div>
+                </div>
+                <div class="a-trailing">+580</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- B -->
+    <div class="alt-wrap">
+      <div class="alt-card">
+        <div class="alt-card__label">
+          <div><span class="alt-card__name">B · Proud hero card</span> <span class="alt-card__bet">— bet: gamification is a feature, not a guilty pleasure; merged trio hero</span></div>
+          <span class="alt-card__tag">LIGHT</span>
+        </div>
+        <div class="alt-card__body alt-card__body--light">
+          <div class="trio-stage" style="display:flex;align-items:center;justify-content:center">
+            <div class="b-hero">
+              <div class="b-top">
+                <div class="b-rank">
+                  <div class="b-rank-badge">
+                    <svg viewBox="0 0 24 24"><path d="M10 2v6"/><path d="M14 2v6"/><path d="M8 8h8l-1 10a3 3 0 0 1-3 3h0a3 3 0 0 1-3-3L8 8z"/><path d="M12 14v4"/></svg>
+                  </div>
+                  <div><div class="b-rank-name">Stufe 4</div><div class="b-rank-title">Famulant</div></div>
+                </div>
+                <span class="b-streak-pill">🔥 23 Tage</span>
+              </div>
+              <div class="b-ring-row">
+                <div class="b-ring">
+                  <svg width="92" height="92" viewBox="0 0 100 100"><circle class="b-ring-track" cx="50" cy="50" r="45"/><circle class="b-ring-arc" cx="50" cy="50" r="45"/></svg>
+                  <div class="b-ring-label"><div class="big">14/20</div><div class="small">heute</div></div>
+                </div>
+                <div class="b-meta">
+                  <div class="l">Erfahrung</div>
+                  <div class="b-xp"><span class="num">1 420</span><span class="unit">/ 2 000 XP</span></div>
+                  <div class="b-xp-bar"><span style="width:71%"></span></div>
+                  <div class="b-xp-note">580 XP bis Assistenzarzt</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="alt-card" data-theme="dark" style="background:#001028">
+        <div class="alt-card__label" style="background:#001028;border-color:rgba(255,255,255,0.05)">
+          <div><span class="alt-card__name" style="color:#E2E8F0">B · Proud hero card</span> <span class="alt-card__bet" style="color:#94A3B8">— dark</span></div>
+          <span class="alt-card__tag alt-card__tag--dark">DARK</span>
+        </div>
+        <div class="alt-card__body alt-card__body--dark">
+          <div class="trio-stage" style="display:flex;align-items:center;justify-content:center">
+            <div class="b-hero" style="background:linear-gradient(135deg,#001028 0%,#002347 100%);box-shadow:0 8px 24px rgba(0,0,0,0.5)">
+              <div class="b-top">
+                <div class="b-rank">
+                  <div class="b-rank-badge">
+                    <svg viewBox="0 0 24 24"><path d="M10 2v6"/><path d="M14 2v6"/><path d="M8 8h8l-1 10a3 3 0 0 1-3 3h0a3 3 0 0 1-3-3L8 8z"/><path d="M12 14v4"/></svg>
+                  </div>
+                  <div><div class="b-rank-name">Stufe 4</div><div class="b-rank-title">Famulant</div></div>
+                </div>
+                <span class="b-streak-pill">🔥 23 Tage</span>
+              </div>
+              <div class="b-ring-row">
+                <div class="b-ring">
+                  <svg width="92" height="92" viewBox="0 0 100 100"><circle class="b-ring-track" cx="50" cy="50" r="45"/><circle class="b-ring-arc" cx="50" cy="50" r="45"/></svg>
+                  <div class="b-ring-label"><div class="big">14/20</div><div class="small">heute</div></div>
+                </div>
+                <div class="b-meta">
+                  <div class="l">Erfahrung</div>
+                  <div class="b-xp"><span class="num">1 420</span><span class="unit">/ 2 000 XP</span></div>
+                  <div class="b-xp-bar"><span style="width:71%"></span></div>
+                  <div class="b-xp-note">580 XP bis Assistenzarzt</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body></html>

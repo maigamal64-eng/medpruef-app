@@ -1,0 +1,248 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link rel="stylesheet" href="../components_v2.css">
+<link rel="stylesheet" href="_alt-shell.css">
+<title>Study plan — Alternatives</title>
+<style>
+  .stage{padding:22px;height:100%;box-sizing:border-box;overflow:hidden}
+  /* A: day-cards horizontal strip + countdown hero */
+  .a-wrap{max-width:760px;margin:0 auto}
+  .a-hero{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+  .a-count{background:linear-gradient(135deg,#001B3D,#003A8C);color:#fff;border-radius:14px;padding:20px;position:relative;overflow:hidden}
+  .a-count::before{content:"";position:absolute;right:-30px;bottom:-30px;width:140px;height:140px;border-radius:50%;background:radial-gradient(circle,rgba(0,168,150,0.3),transparent 70%)}
+  .a-count-k{font-family:var(--mp-font-mono);font-size:10px;color:#1BB680;letter-spacing:0.12em;text-transform:uppercase;font-weight:800;margin-bottom:4px;position:relative}
+  .a-count-n{font-family:var(--mp-font-display);font-weight:900;font-size:46px;letter-spacing:-0.03em;line-height:1;position:relative}
+  .a-count-l{font-size:12px;color:rgba(255,255,255,0.7);margin-top:3px;position:relative}
+  .a-count-d{font-family:var(--mp-font-mono);font-size:11px;color:rgba(255,255,255,0.85);margin-top:10px;position:relative;padding-top:10px;border-top:1px solid rgba(255,255,255,0.15)}
+  .a-sum{background:#fff;border:1px solid rgba(228,233,240,.7);border-radius:14px;padding:20px}
+  .a-sum-k{font-family:var(--mp-font-mono);font-size:10px;color:#A0AEC0;letter-spacing:0.12em;text-transform:uppercase;font-weight:700;margin-bottom:4px}
+  .a-sum-h{font-family:var(--mp-font-display);font-weight:800;font-size:16px;color:#001B3D;margin:0 0 10px;letter-spacing:-0.01em}
+  .a-sum-r{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid #F0F4F8;font-size:12px}
+  .a-sum-r:last-child{border-bottom:none}
+  .a-sum-r .l{color:#4A5568}
+  .a-sum-r .v{font-family:var(--mp-font-mono);color:#001B3D;font-weight:700}
+  .a-strip{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;margin-bottom:14px}
+  .a-day{background:#fff;border:1px solid rgba(228,233,240,.7);border-radius:10px;padding:10px 8px;text-align:center;position:relative}
+  .a-day.today{background:#001B3D;color:#fff;border-color:#001B3D}
+  .a-day.done{background:rgba(0,168,150,0.08);border-color:rgba(0,168,150,0.3)}
+  .a-day .dn{font-family:var(--mp-font-mono);font-size:9px;text-transform:uppercase;letter-spacing:0.08em;color:#A0AEC0;font-weight:700}
+  .a-day.today .dn{color:rgba(255,255,255,0.6)}
+  .a-day .dd{font-family:var(--mp-font-display);font-weight:800;font-size:18px;color:#001B3D;margin:2px 0 4px}
+  .a-day.today .dd{color:#fff}
+  .a-day .foc{font-size:10px;color:#4A5568;line-height:1.3}
+  .a-day.today .foc{color:#1BB680}
+  .a-day.done .foc{color:#007B5F}
+  .a-day .chk{position:absolute;top:5px;right:5px;color:#00A896;font-size:10px;font-weight:900}
+  .a-todo-hd{font-family:var(--mp-font-display);font-weight:800;font-size:14px;color:#001B3D;margin:0 0 8px;letter-spacing:-0.01em}
+  .a-todo{background:#fff;border:1px solid rgba(228,233,240,.7);border-radius:12px;padding:0;overflow:hidden}
+  .a-todo-r{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid #F0F4F8}
+  .a-todo-r:last-child{border-bottom:none}
+  .a-todo .bx{width:16px;height:16px;border-radius:4px;border:1.5px solid #A0AEC0;flex-shrink:0;position:relative}
+  .a-todo .bx.on{background:#00A896;border-color:#00A896}
+  .a-todo .bx.on::after{content:"";position:absolute;inset:3px;border-left:1.5px solid #fff;border-bottom:1.5px solid #fff;transform:rotate(-45deg) translate(1px,-2px);width:7px;height:4px;border-radius:1px}
+  .a-todo .t{flex:1;font-size:12px;color:#1A2B3C}
+  .a-todo .t.done{text-decoration:line-through;color:#A0AEC0}
+  .a-todo .tag{font-family:var(--mp-font-mono);font-size:10px;color:#4A5568;padding:2px 7px;border-radius:4px;background:#F7F9FC;font-weight:600}
+
+  /* B: vertical roadmap with phases */
+  .b-wrap{max-width:600px;margin:0 auto;position:relative;padding-left:34px}
+  .b-wrap::before{content:"";position:absolute;left:16px;top:10px;bottom:10px;width:2px;background:linear-gradient(180deg,#00A896,#003A8C 50%,#A0AEC0)}
+  .b-phase{position:relative;margin-bottom:18px}
+  .b-dot{position:absolute;left:-26px;top:3px;width:20px;height:20px;border-radius:50%;background:#fff;border:3px solid #00A896;display:flex;align-items:center;justify-content:center;font-family:var(--mp-font-display);font-weight:900;font-size:10px;color:#001B3D}
+  .b-dot.up{border-color:#A0AEC0;color:#A0AEC0}
+  .b-dot.cur{background:#00A896;color:#fff;box-shadow:0 0 0 4px rgba(0,168,150,0.2)}
+  .b-head{display:flex;align-items:baseline;gap:10px;margin-bottom:6px}
+  .b-name{font-family:var(--mp-font-display);font-weight:800;font-size:15px;color:#001B3D;letter-spacing:-0.01em}
+  .b-meta{font-family:var(--mp-font-mono);font-size:11px;color:#A0AEC0}
+  .b-desc{font-size:12px;color:#4A5568;margin:0 0 8px;line-height:1.5}
+  .b-card{background:#fff;border:1px solid rgba(228,233,240,.7);border-radius:10px;padding:10px 14px;font-size:12px}
+  .b-card.cur{background:rgba(0,168,150,0.05);border-color:rgba(0,168,150,0.3)}
+  .b-gt{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+  .b-chip{font-size:10px;padding:2px 7px;border-radius:4px;background:#F7F9FC;color:#4A5568;font-family:var(--mp-font-mono);font-weight:600;border:1px solid #E4E9F0}
+  .b-chip.on{background:#001B3D;color:#fff;border-color:#001B3D}
+  .b-prog{height:4px;background:rgba(0,27,61,0.08);border-radius:2px;margin-top:8px;overflow:hidden}
+  .b-prog>span{display:block;height:100%;background:#00A896}
+
+  [data-theme="dark"] .a-sum,[data-theme="dark"] .a-day,[data-theme="dark"] .a-todo,[data-theme="dark"] .b-card{background:#1E293B;border-color:rgba(51,65,85,0.7)}
+  [data-theme="dark"] .a-sum-h,[data-theme="dark"] .a-sum-r .v,[data-theme="dark"] .b-name,[data-theme="dark"] .a-todo-hd,[data-theme="dark"] .a-day .dd{color:#E2E8F0}
+  [data-theme="dark"] .a-sum-r .l,[data-theme="dark"] .b-desc{color:#94A3B8}
+  [data-theme="dark"] .a-sum-r{border-color:#334155}
+  [data-theme="dark"] .a-day .foc{color:#CBD5E1}
+  [data-theme="dark"] .a-day.done{background:rgba(0,168,150,0.1);border-color:rgba(0,168,150,0.3)}
+  [data-theme="dark"] .a-todo-r{border-color:#334155}
+  [data-theme="dark"] .a-todo .t{color:#E2E8F0}
+  [data-theme="dark"] .a-todo .tag{background:#0F172A;color:#94A3B8}
+  [data-theme="dark"] .b-wrap::before{background:linear-gradient(180deg,#1BB680,#003A8C 50%,#334155)}
+  [data-theme="dark"] .b-dot{background:#1E293B;color:#E2E8F0;border-color:#1BB680}
+  [data-theme="dark"] .b-dot.cur{background:#1BB680;color:#001028}
+  [data-theme="dark"] .b-meta{color:#64748B}
+  [data-theme="dark"] .b-card.cur{background:rgba(0,168,150,0.12);border-color:rgba(0,168,150,0.3)}
+  [data-theme="dark"] .b-chip{background:#0F172A;border-color:#334155;color:#94A3B8}
+  [data-theme="dark"] .b-chip.on{background:#1BB680;color:#001028;border-color:#1BB680}
+</style>
+</head>
+<body>
+  <div class="alt-header">
+    <h1>Study plan /study-plan — 2 alternatives</h1>
+    <p>A: countdown hero + 7-day strip + today's checklist (tactical) · B: vertical roadmap with phases (strategic, Ikigai-style).</p>
+  </div>
+
+  <div class="alt-stack">
+    <div class="alt-wrap alt-wrap--full">
+      <div class="alt-card">
+        <div class="alt-card__label"><div><span class="alt-card__name">A · Countdown + day cards</span> <span class="alt-card__bet">— bet: daily-driver; tactical; today is always one tap</span></div><span class="alt-card__tag">LIGHT</span></div>
+        <div class="alt-card__body alt-card__body--light" style="min-height:520px">
+          <div class="stage">
+            <div class="a-wrap">
+              <div class="a-hero">
+                <div class="a-count">
+                  <div class="a-count-k">Kenntnisprüfung Wien</div>
+                  <div class="a-count-n">47</div>
+                  <div class="a-count-l">Tage bis 12. Mai 2026</div>
+                  <div class="a-count-d">3 von 8 Themen auf Zielniveau · 2 noch rot</div>
+                </div>
+                <div class="a-sum">
+                  <div class="a-sum-k">Diese Woche</div>
+                  <h3 class="a-sum-h">Schwerpunkt Pädiatrie + Chirurgie</h3>
+                  <div class="a-sum-r"><span class="l">Geplante Fragen</span><span class="v">140</span></div>
+                  <div class="a-sum-r"><span class="l">Bisher absolviert</span><span class="v">74 / 140</span></div>
+                  <div class="a-sum-r"><span class="l">Fällige Karten (SM-2)</span><span class="v">38</span></div>
+                  <div class="a-sum-r"><span class="l">Prognose Bestehen</span><span class="v" style="color:#007B5F">72% · auf Kurs</span></div>
+                </div>
+              </div>
+              <div class="a-strip">
+                <div class="a-day done"><div class="dn">Mo</div><div class="dd">16</div><div class="foc">Neuro</div><span class="chk">✓</span></div>
+                <div class="a-day done"><div class="dn">Di</div><div class="dd">17</div><div class="foc">Kardio</div><span class="chk">✓</span></div>
+                <div class="a-day today"><div class="dn">Heute</div><div class="dd">18</div><div class="foc">Pädiatrie</div></div>
+                <div class="a-day"><div class="dn">Do</div><div class="dd">19</div><div class="foc">Chirurgie</div></div>
+                <div class="a-day"><div class="dn">Fr</div><div class="dd">20</div><div class="foc">Radio</div></div>
+                <div class="a-day"><div class="dn">Sa</div><div class="dd">21</div><div class="foc">Mixed</div></div>
+                <div class="a-day"><div class="dn">So</div><div class="dd">22</div><div class="foc">Simulation</div></div>
+              </div>
+              <h3 class="a-todo-hd">Heute: Pädiatrie fokussieren</h3>
+              <div class="a-todo">
+                <div class="a-todo-r"><span class="bx on"></span><span class="t done">10 neue Fragen Pädiatrie (Neugeborene)</span><span class="tag">08:30 · 12 min</span></div>
+                <div class="a-todo-r"><span class="bx on"></span><span class="t done">5 Karten wiederholen — Impfschema</span><span class="tag">08:45 · 4 min</span></div>
+                <div class="a-todo-r"><span class="bx"></span><span class="t">10 Fragen Pädiatrie (Notfälle)</span><span class="tag">~ 12 min</span></div>
+                <div class="a-todo-r"><span class="bx"></span><span class="t">Wiederholung: 23 fällige Karten</span><span class="tag">~ 14 min</span></div>
+                <div class="a-todo-r"><span class="bx"></span><span class="t">AMBOSS-Video &bdquo;Kindersterblichkeit&ldquo;</span><span class="tag">optional</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="alt-wrap alt-wrap--full">
+      <div class="alt-card" data-theme="dark" style="background:#001028">
+        <div class="alt-card__label" style="background:#001028;border-color:rgba(255,255,255,0.05)"><div><span class="alt-card__name" style="color:#E2E8F0">A · Countdown + days</span> <span class="alt-card__bet" style="color:#94A3B8">— dark</span></div><span class="alt-card__tag alt-card__tag--dark">DARK</span></div>
+        <div class="alt-card__body alt-card__body--dark" style="min-height:520px">
+          <div class="stage" data-theme="dark">
+            <div class="a-wrap">
+              <div class="a-hero">
+                <div class="a-count">
+                  <div class="a-count-k">Kenntnisprüfung Wien</div>
+                  <div class="a-count-n">47</div>
+                  <div class="a-count-l">Tage bis 12. Mai 2026</div>
+                  <div class="a-count-d">3 von 8 Themen auf Zielniveau · 2 noch rot</div>
+                </div>
+                <div class="a-sum">
+                  <div class="a-sum-k">Diese Woche</div>
+                  <h3 class="a-sum-h">Schwerpunkt Pädiatrie + Chirurgie</h3>
+                  <div class="a-sum-r"><span class="l">Geplante Fragen</span><span class="v">140</span></div>
+                  <div class="a-sum-r"><span class="l">Bisher absolviert</span><span class="v">74 / 140</span></div>
+                  <div class="a-sum-r"><span class="l">Fällige Karten</span><span class="v">38</span></div>
+                  <div class="a-sum-r"><span class="l">Prognose</span><span class="v" style="color:#1BB680">72% · auf Kurs</span></div>
+                </div>
+              </div>
+              <div class="a-strip">
+                <div class="a-day done"><div class="dn">Mo</div><div class="dd">16</div><div class="foc">Neuro</div><span class="chk">✓</span></div>
+                <div class="a-day done"><div class="dn">Di</div><div class="dd">17</div><div class="foc">Kardio</div><span class="chk">✓</span></div>
+                <div class="a-day today"><div class="dn">Heute</div><div class="dd">18</div><div class="foc">Pädiatrie</div></div>
+                <div class="a-day"><div class="dn">Do</div><div class="dd">19</div><div class="foc">Chirurgie</div></div>
+                <div class="a-day"><div class="dn">Fr</div><div class="dd">20</div><div class="foc">Radio</div></div>
+                <div class="a-day"><div class="dn">Sa</div><div class="dd">21</div><div class="foc">Mixed</div></div>
+                <div class="a-day"><div class="dn">So</div><div class="dd">22</div><div class="foc">Simulation</div></div>
+              </div>
+              <h3 class="a-todo-hd">Heute: Pädiatrie fokussieren</h3>
+              <div class="a-todo">
+                <div class="a-todo-r"><span class="bx on"></span><span class="t done">10 neue Fragen Pädiatrie (Neugeborene)</span><span class="tag">08:30 · 12 min</span></div>
+                <div class="a-todo-r"><span class="bx on"></span><span class="t done">5 Karten wiederholen — Impfschema</span><span class="tag">08:45 · 4 min</span></div>
+                <div class="a-todo-r"><span class="bx"></span><span class="t">10 Fragen Pädiatrie (Notfälle)</span><span class="tag">~ 12 min</span></div>
+                <div class="a-todo-r"><span class="bx"></span><span class="t">Wiederholung: 23 fällige Karten</span><span class="tag">~ 14 min</span></div>
+                <div class="a-todo-r"><span class="bx"></span><span class="t">AMBOSS-Video &bdquo;Kindersterblichkeit&ldquo;</span><span class="tag">optional</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="alt-wrap">
+      <div class="alt-card">
+        <div class="alt-card__label"><div><span class="alt-card__name">B · Roadmap phases</span> <span class="alt-card__bet">— bet: strategic view; see the whole 47 days at once</span></div><span class="alt-card__tag">LIGHT</span></div>
+        <div class="alt-card__body alt-card__body--light" style="min-height:620px">
+          <div class="stage">
+            <div class="b-wrap">
+              <div class="b-phase">
+                <div class="b-dot">1</div>
+                <div class="b-head"><span class="b-name">Grundlagen</span><span class="b-meta">Wochen 1–2 · abgeschlossen</span></div>
+                <p class="b-desc">Alle Themen einmal angelernt, Grundlagenverständnis.</p>
+                <div class="b-card"><div class="b-gt"><span class="b-chip on">Kardio 78%</span><span class="b-chip on">Neuro 71%</span><span class="b-chip on">Psychiatrie 81%</span><span class="b-chip on">Endokrino 74%</span></div><div class="b-prog"><span style="width:100%"></span></div></div>
+              </div>
+              <div class="b-phase">
+                <div class="b-dot cur">2</div>
+                <div class="b-head"><span class="b-name">Schwächen-Fokus</span><span class="b-meta">Wochen 3–5 · aktuell</span></div>
+                <p class="b-desc">Rote Themen hochziehen. Die Plan-Engine priorisiert deine 3 schwächsten Bereiche.</p>
+                <div class="b-card cur"><div class="b-gt"><span class="b-chip on">Pädiatrie 32% → Ziel 70%</span><span class="b-chip on">Chirurgie 65% → 75%</span><span class="b-chip">Radio 69%</span></div><div class="b-prog"><span style="width:42%"></span></div><div style="font-family:var(--mp-font-mono);font-size:11px;color:#007B5F;margin-top:6px;font-weight:700">74 / 180 Fragen</div></div>
+              </div>
+              <div class="b-phase">
+                <div class="b-dot up">3</div>
+                <div class="b-head"><span class="b-name">Simulationsphase</span><span class="b-meta">Wochen 6–7</span></div>
+                <p class="b-desc">3 komplette Prüfungssimulationen à 4 Stunden, exakt wie in Wien.</p>
+                <div class="b-card"><div class="b-gt"><span class="b-chip">3× 200 Fragen</span><span class="b-chip">4h Timer</span><span class="b-chip">verzögerte Auswertung</span></div></div>
+              </div>
+              <div class="b-phase">
+                <div class="b-dot up">4</div>
+                <div class="b-head"><span class="b-name">Feinschliff</span><span class="b-meta">letzte 7 Tage</span></div>
+                <p class="b-desc">Leichte Wiederholungen, keine neuen Themen. Schlaf &gt; Lernen.</p>
+                <div class="b-card"><div class="b-gt"><span class="b-chip">10 Karten/Tag</span><span class="b-chip">Pausentage 2</span></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="alt-card" data-theme="dark" style="background:#001028">
+        <div class="alt-card__label" style="background:#001028;border-color:rgba(255,255,255,0.05)"><div><span class="alt-card__name" style="color:#E2E8F0">B · Roadmap</span> <span class="alt-card__bet" style="color:#94A3B8">— dark</span></div><span class="alt-card__tag alt-card__tag--dark">DARK</span></div>
+        <div class="alt-card__body alt-card__body--dark" style="min-height:620px">
+          <div class="stage" data-theme="dark">
+            <div class="b-wrap">
+              <div class="b-phase">
+                <div class="b-dot">1</div>
+                <div class="b-head"><span class="b-name">Grundlagen</span><span class="b-meta">Wochen 1–2 · abgeschlossen</span></div>
+                <p class="b-desc">Alle Themen einmal angelernt.</p>
+                <div class="b-card"><div class="b-gt"><span class="b-chip on">Kardio 78%</span><span class="b-chip on">Neuro 71%</span><span class="b-chip on">Psychiatrie 81%</span></div><div class="b-prog" style="background:rgba(0,168,150,0.2)"><span style="width:100%;background:#1BB680"></span></div></div>
+              </div>
+              <div class="b-phase">
+                <div class="b-dot cur">2</div>
+                <div class="b-head"><span class="b-name">Schwächen-Fokus</span><span class="b-meta">Wochen 3–5 · aktuell</span></div>
+                <p class="b-desc">Rote Themen hochziehen.</p>
+                <div class="b-card cur"><div class="b-gt"><span class="b-chip on">Pädiatrie 32% → 70%</span><span class="b-chip on">Chirurgie 65% → 75%</span></div><div class="b-prog" style="background:rgba(0,168,150,0.2)"><span style="width:42%;background:#1BB680"></span></div><div style="font-family:var(--mp-font-mono);font-size:11px;color:#1BB680;margin-top:6px;font-weight:700">74 / 180 Fragen</div></div>
+              </div>
+              <div class="b-phase">
+                <div class="b-dot up">3</div>
+                <div class="b-head"><span class="b-name">Simulationsphase</span><span class="b-meta">Wochen 6–7</span></div>
+                <p class="b-desc">3 komplette Prüfungssimulationen à 4 Stunden.</p>
+                <div class="b-card"><div class="b-gt"><span class="b-chip">3× 200 Fragen</span><span class="b-chip">4h Timer</span></div></div>
+              </div>
+              <div class="b-phase">
+                <div class="b-dot up">4</div>
+                <div class="b-head"><span class="b-name">Feinschliff</span><span class="b-meta">letzte 7 Tage</span></div>
+                <p class="b-desc">Leichte Wiederholungen. Schlaf &gt; Lernen.</p>
+                <div class="b-card"><div class="b-gt"><span class="b-chip">10 Karten/Tag</span><span class="b-chip">Pausentage 2</span></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body></html>

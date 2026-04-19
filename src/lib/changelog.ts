@@ -23,6 +23,90 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-04-18",
+    tag: "admin",
+    title: {
+      de: "OCR-Tippfehler in KMP-Innsbruck- und Vienna-2026-Import-Fragen korrigiert",
+      en: "OCR typos in KMP Innsbruck + Vienna 2026 imported questions fixed",
+    },
+    description: {
+      de: "Systematischer OCR-Bereinigungslauf über 3.245 importierte KMP-Innsbruck- und Vienna-2026-SIP5a-Fragen: Etwa 3.800 unsichtbare Private-Use-Area-Unicode-Artefakte aus dem PDF-OCR-Import wurden in die korrekten Zeichen ausgetauscht (Bindestriche, Klammern, Leerzeichen). Zusätzlich wurden ~45 zusammengebrochene Bindestrich-Komposita (z. B. „HNOPraxis → HNO-Praxis“, „Lyme-Borreliose“, „Mutter-Kind-Pass“, „Vitamin-K-Antagonisten“), ~308 Satzgrenzen ohne Leerzeichen („erhöhtWie → erhöht. Wie“) sowie einzelne Rechtschreibfehler („metastastierten → metastasierten“) korrigiert. Abkürzungen wie „z. B.“, „u. a.“, „i. v.“, „bzw.“ blieben unangetastet. Insgesamt ~1.200 Fragen mit ~4.500 einzelnen Korrekturen.",
+      en: "Systematic OCR cleanup across 3,245 imported KMP Innsbruck + Vienna 2026 SIP5a questions: ~3,800 invisible Private-Use-Area unicode artifacts from the PDF OCR import swapped back to the right characters (hyphens, parens, spaces). Also fixed ~45 broken-hyphen compound words (e.g. \"HNOPraxis → HNO-Praxis\", \"Lyme-Borreliose\", \"Mutter-Kind-Pass\", \"Vitamin-K-Antagonisten\"), ~308 missing-space-after-punctuation sentence boundaries (\"erhöhtWie → erhöht. Wie\"), and isolated spelling errors (\"metastastierten → metastasierten\"). Abbreviations like \"z.B.\", \"u.a.\", \"i.v.\", \"bzw.\" preserved. Total ~1,200 questions touched with ~4,500 individual fixes.",
+    },
+  },
+  {
+    date: "2026-04-18",
+    tag: "improvement",
+    title: {
+      de: "Alle zwischengespeicherten KI-Erklärungen im neuen strikten Format neu generiert",
+      en: "All cached AI explanations regenerated in the new strict format",
+    },
+    description: {
+      de: "Seit 17.04. läuft ein neuer, strikter Prompt für die KI-Erklärungen: TL;DR → Begründung der richtigen Antwort → Distraktor-Analyse → Leitlinien-Referenzen (ERC 2021, ESC, ÖDG, Österreichischer Impfplan). Ältere Erklärungen mit dem alten, unstrukturierten Format wurden im Hintergrund aktualisiert, damit alle Nutzer (auch kostenlose) sofort die klarere Fassung sehen — ohne „Neu generieren\u201C zu klicken. Bewertungen wurden zurückgesetzt, damit die neuen Erklärungen auf ihren eigenen Beinen stehen.",
+      en: "Since Apr 17, a new strict prompt powers AI explanations: TL;DR → correct-answer reasoning → distractor-by-distractor breakdown → guideline citations (ERC 2021, ESC, ÖDG, Austrian immunization schedule). Older cached explanations from the pre-Apr-17 loose prompt were regenerated in the background so every user (including free) sees the crisper version immediately — no need to click \"Regenerate.\" Ratings were reset so the new explanations are judged on their own merits.",
+    },
+  },
+  {
+    date: "2026-04-18",
+    tag: "admin",
+    title: {
+      de: "39 Fragen mit falscher Anzahl korrekter Antworten gefunden und korrigiert (Import-Pipeline-Fehler)",
+      en: "39 questions with wrong correct-answer count detected and fixed (import pipeline bug)",
+    },
+    description: {
+      de: "Inhalts-Audit: 63 Fragen hatten im Stamm einen Hinweis wie „(3 richtige Antworten)\u201C, aber die choices-JSONB markierte eine abweichende Anzahl als correct. Ursache: der PDF-Import hat oft nur die erstgenannte richtige Option geflaggt. 39 eindeutige Fälle wurden medizinisch geprüft (ERC 2021, ESC 2023, ÖDG, Herold, Amboss) und korrigiert — fehlende richtige Optionen ergänzt oder falsch markierte entfernt. 24 Fälle wurden zur manuellen Prüfung geflaggt (16 mit Import-Textmerge-Bug „\\nF)\u201C, 8 mit medizinisch zweideutigem Stamm). Bericht in reports/content-audit-2026-04-18/multi-correct-count-mismatch.md.",
+      en: "Content audit: 63 questions had stem hints like \"(3 correct answers)\" but the choices JSONB marked a different count as correct. Root cause: the PDF importer often only flagged the first-listed correct option. 39 clear cases were medically reviewed (ERC 2021, ESC 2023, ÖDG, Herold, Amboss) and fixed — missing correct options added or wrong ones unmarked. 24 cases flagged for human review (16 with an import text-merge bug \"\\nF)\", 8 with medically ambiguous stems). Report at reports/content-audit-2026-04-18/multi-correct-count-mismatch.md.",
+    },
+  },
+  {
+    date: "2026-04-18",
+    tag: "admin",
+    title: {
+      de: "31 Fragen mit fehlenden Bildern identifiziert und für Admin-Prüfung markiert",
+      en: "31 questions with missing images identified and tagged for admin review",
+    },
+    description: {
+      de: "Datenqualitäts-Audit: Fragen mit Text wie „auf dem Bild zu sehen\u201C, „folgendes EKG\u201C, „dieses Röntgenbild\u201C, die aber keine image_url haben (Bild verloren beim Import). 31 bestätigte Fälle (3 Kenntnisprüfung Wien, 28 KMP Innsbruck, 0 Pharma) mit dem Tag missing_image markiert. Neuer Admin-Endpoint /api/stats/admin/missing-images für Triage. Keine Fragen deaktiviert — [name] entscheidet pro Frage, ob umgeschrieben oder manuell beschafft wird.",
+      en: "Data-quality audit: questions with stems like \"auf dem Bild zu sehen\", \"folgendes EKG\", \"dieses Röntgenbild\" that have no image_url (image lost during import). 31 confirmed cases (3 Kenntnisprüfung Wien, 28 KMP Innsbruck, 0 Pharma) tagged with missing_image. New admin endpoint /api/stats/admin/missing-images for triage. No questions deactivated — [name] decides per question whether to rewrite the stem or source the image manually.",
+    },
+  },
+  {
+    date: "2026-04-18",
+    tag: "feature",
+    title: {
+      de: "Übersetzung der Erklärungen in deine Sprache",
+      en: "Translate explanations into your language",
+    },
+    description: {
+      de: "Neuer „🌐 In meiner Sprache\u201C-Button unter jeder Erklärung: übersetzt den Text in Russisch, Arabisch, Englisch, Französisch, Türkisch, Ukrainisch oder Serbisch — medizinische Fachbegriffe, Medikamentennamen und Leitlinien-Bezeichnungen (ERC 2021, ESC, ÖDG) bleiben im Original. Übersetzungen werden einmalig erstellt und dann für alle Nutzer:innen gecacht. Free-Tier: 5 Übersetzungen/Tag. Pro: unbegrenzt.",
+      en: "New \"🌐 In my language\" button beneath every explanation: translates the text into Russian, Arabic, English, French, Turkish, Ukrainian, or Serbian — medical terminology, drug names, and guideline references (ERC 2021, ESC, ÖDG) stay in the original. Translations are generated once and then cached for everyone. Free tier: 5 translations/day. Pro: unlimited.",
+    },
+  },
+  {
+    date: "2026-04-18",
+    tag: "admin",
+    title: {
+      de: "Audit: alle Fragen mit fälschlich als alle-korrekt markierten Antworten behoben",
+      en: "Audit: all questions with falsely all-correct marked answers resolved",
+    },
+    description: {
+      de: "Vollständiger Scan der Datenbank nach Fragen, bei denen durch einen Import-Fehler ALLE Antwortmöglichkeiten als richtig markiert waren. Ergebnis: 0 verbleibende Fälle — der Datenfehler aus den Anki/KMP-Innsbruck/Wien-2026-Importpipelines ist vollständig beseitigt (20 Fragen in früheren Sweeps korrigiert). Nur q71498 (Spannungspneumothorax-Zeichen) behält legitimerweise alle 5 korrekten Antworten.",
+      en: "Full DB sweep for questions where an import bug marked ALL choices as correct. Result: 0 remaining cases — the data corruption from the Anki/KMP-Innsbruck/Vienna-2026 import pipelines is fully cleared (20 questions fixed in prior sweeps). Only q71498 (tension pneumothorax signs) legitimately keeps all 5 correct.",
+    },
+  },
+  {
+    date: "2026-04-18",
+    tag: "fix",
+    title: {
+      de: "KI-Chat: Markdown jetzt korrekt dargestellt",
+      en: "AI chat: markdown now renders correctly",
+    },
+    description: {
+      de: "KI-Erklärungen zeigen jetzt Fettdruck, Überschriften und Aufzählungen korrekt formatiert an — vorher erschien Markdown als Rohtext (**Fett** statt Fett, Bindestriche statt Bullet-Points). Die neue Darstellung passt sich automatisch an Hell-/Dunkelmodus an und nutzt die App-Farben für Fachbegriffe und Überschriften. Außerdem: klarere „Pro-Feature: Folgefragen stellen\u201C-Markierung für Gratis-Nutzer unter dem Chatfenster.",
+      en: "AI explanations now render bold text, headings, and bullet lists correctly — previously markdown appeared as raw text (**bold** instead of bold, dashes instead of bullet points). The new rendering adapts to light/dark mode and uses app brand colors for medical terms and headings. Also: clearer \"Pro feature: ask follow-up questions\" label for free users below the chat.",
+    },
+  },
+  {
     date: "2026-04-17",
     tag: "feature",
     title: {

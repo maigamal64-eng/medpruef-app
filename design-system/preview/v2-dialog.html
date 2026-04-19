@@ -1,0 +1,29 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link rel="stylesheet" href="../components_v2.css">
+<title>Dialog</title>
+</head>
+<body style="margin:0;padding:32px;background:#E4E9F0;font-family:var(--mp-font-body);min-height:400px;display:flex;align-items:center;justify-content:center">
+  <div class="mp-dialog__surface" style="max-width:440px">
+    <div class="mp-dialog__header">
+      <div>
+        <h3 class="mp-dialog__title">Fortschritt zurücksetzen?</h3>
+        <p style="margin:4px 0 0;font-size:13px;color:var(--mp-fg-muted)">Diese Aktion kann nicht rückgängig gemacht werden.</p>
+      </div>
+      <button class="mp-dialog__close" aria-label="Close">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="mp-dialog__body">
+      <div class="mp-alert mp-alert--warning" style="margin-bottom:12px">
+        <svg class="mp-alert__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <div><div class="mp-alert__title">Alle 2,847 beantworteten Fragen gehen verloren</div><div class="mp-alert__body">Lesezeichen, Notizen und Streak bleiben erhalten.</div></div>
+      </div>
+      <p style="font-size:13px;color:var(--mp-fg-muted);margin:0">Schreibe <strong style="font-family:var(--mp-font-mono);color:var(--mp-fg)">LÖSCHEN</strong> um zu bestätigen:</p>
+      <div class="mp-field" style="margin-top:8px"><input class="mp-field__input" placeholder="LÖSCHEN"></div>
+    </div>
+    <div class="mp-dialog__footer">
+      <button class="mp-btn mp-btn--ghost">Abbrechen</button>
+      <button class="mp-btn mp-btn--destructive" style="background:var(--mp-error);color:white;border-color:transparent">Zurücksetzen</button>
+    </div>
+  </div>
+</body></html>

@@ -1,0 +1,188 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link rel="stylesheet" href="../components_v2.css">
+<link rel="stylesheet" href="_alt-shell.css">
+<title>Empty / Loading / Error — Alternatives</title>
+<style>
+  .stage{padding:22px;height:100%;box-sizing:border-box;display:flex;align-items:center;justify-content:center;overflow:hidden}
+  .row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;width:100%;max-width:700px}
+  .st{background:#fff;border:1px solid rgba(228,233,240,.7);border-radius:14px;padding:28px 20px;min-height:240px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:10px}
+  .st .ic{width:44px;height:44px;border-radius:12px;background:rgba(0,27,61,0.06);color:#001B3D;display:flex;align-items:center;justify-content:center}
+  .st .ic svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+  .st h3{font-family:var(--mp-font-display);font-weight:700;font-size:14px;color:#001B3D;margin:0;letter-spacing:-0.01em}
+  .st p{font-size:12px;color:#4A5568;margin:0;line-height:1.5;max-width:220px}
+  .st .cta{font-size:11px;padding:7px 14px;background:#001B3D;color:#fff;border:none;border-radius:7px;font-weight:700;cursor:pointer;margin-top:4px}
+  .st.err .ic{background:rgba(214,69,69,0.1);color:#D64545}
+  .st.load .ic{background:rgba(0,168,150,0.1);color:#007B5F}
+  .kicker{font-family:var(--mp-font-mono);font-size:10px;color:#A0AEC0;letter-spacing:0.1em;text-transform:uppercase;font-weight:700}
+  /* loader skeleton */
+  .sk-lines{width:100%;display:flex;flex-direction:column;gap:6px;max-width:180px}
+  .sk-line{height:9px;border-radius:4px;background:linear-gradient(90deg,rgba(0,27,61,0.05) 0%,rgba(0,27,61,0.1) 50%,rgba(0,27,61,0.05) 100%);background-size:200% 100%;animation:sh 1.4s infinite}
+  .sk-line.s{width:70%}
+  .sk-line.xs{width:45%}
+  @keyframes sh{0%{background-position:200% 0}100%{background-position:-200% 0}}
+  .spin{width:32px;height:32px;border-radius:50%;border:3px solid rgba(0,168,150,0.15);border-top-color:#00A896;animation:rot 0.9s linear infinite}
+  @keyframes rot{to{transform:rotate(360deg)}}
+  /* B variants — illustrative */
+  .b-st{background:#fff;border:1px solid rgba(228,233,240,.7);border-radius:14px;padding:26px 20px;min-height:240px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:12px;overflow:hidden;position:relative}
+  .illus{width:120px;height:70px}
+  .b-cta{font-size:11px;padding:7px 14px;background:#001B3D;color:#fff;border:none;border-radius:7px;font-weight:700;cursor:pointer}
+  .b-link{font-size:11px;color:#4A5568;background:none;border:none;cursor:pointer;text-decoration:underline;font-weight:600}
+
+  [data-theme="dark"] .st,[data-theme="dark"] .b-st{background:#1E293B;border-color:rgba(51,65,85,0.7)}
+  [data-theme="dark"] .st h3{color:#E2E8F0}
+  [data-theme="dark"] .st p{color:#94A3B8}
+  [data-theme="dark"] .st .ic{background:rgba(0,168,150,0.15);color:#1BB680}
+  [data-theme="dark"] .st.err .ic{background:rgba(214,69,69,0.15);color:#FC8181}
+  [data-theme="dark"] .st .cta{background:#00A896;color:#001028}
+  [data-theme="dark"] .sk-line{background:linear-gradient(90deg,rgba(255,255,255,0.05) 0%,rgba(255,255,255,0.12) 50%,rgba(255,255,255,0.05) 100%);background-size:200% 100%}
+  [data-theme="dark"] .spin{border-color:rgba(0,168,150,0.2);border-top-color:#1BB680}
+  [data-theme="dark"] .kicker{color:#64748B}
+  [data-theme="dark"] .b-cta{background:#00A896;color:#001028}
+  [data-theme="dark"] .b-link{color:#94A3B8}
+</style>
+</head>
+<body>
+  <div class="alt-header">
+    <h1>Empty · Loading · Error canonicals — 2 alternatives</h1>
+    <p>Three canonical states used across Quiz, Flashcards, Progress, Curriculum. A: restrained (icon + copy + action) · B: illustrated (soft inline SVG scene, warmer tone).</p>
+  </div>
+
+  <div class="alt-stack">
+    <!-- A -->
+    <div class="alt-wrap">
+      <div class="alt-card">
+        <div class="alt-card__label"><div><span class="alt-card__name">A · Restrained</span> <span class="alt-card__bet">— bet: states live inside dense dashboards; illustrations would feel off</span></div><span class="alt-card__tag">LIGHT</span></div>
+        <div class="alt-card__body alt-card__body--light">
+          <div class="stage">
+            <div class="row">
+              <div class="st">
+                <div class="ic"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+                <div class="kicker">Empty</div>
+                <h3>Noch keine Fragen gelernt</h3>
+                <p>Starte deine erste Session — 10 Fragen in 8 Minuten.</p>
+                <button class="cta">Erste Session →</button>
+              </div>
+              <div class="st load">
+                <div class="spin"></div>
+                <div class="kicker">Loading</div>
+                <div class="sk-lines"><div class="sk-line"></div><div class="sk-line s"></div><div class="sk-line xs"></div></div>
+                <p style="margin-top:4px">Lade deine Fragen…</p>
+              </div>
+              <div class="st err">
+                <div class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
+                <div class="kicker" style="color:#D64545">Error</div>
+                <h3>Verbindung unterbrochen</h3>
+                <p>Dein Fortschritt ist lokal gespeichert. Wir synchronisieren sobald du wieder online bist.</p>
+                <button class="cta">Erneut versuchen</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="alt-card" data-theme="dark" style="background:#001028">
+        <div class="alt-card__label" style="background:#001028;border-color:rgba(255,255,255,0.05)"><div><span class="alt-card__name" style="color:#E2E8F0">A · Restrained</span> <span class="alt-card__bet" style="color:#94A3B8">— dark</span></div><span class="alt-card__tag alt-card__tag--dark">DARK</span></div>
+        <div class="alt-card__body alt-card__body--dark">
+          <div class="stage" data-theme="dark">
+            <div class="row">
+              <div class="st"><div class="ic"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div><div class="kicker">Empty</div><h3>Noch keine Fragen gelernt</h3><p>Starte deine erste Session — 10 Fragen in 8 Minuten.</p><button class="cta">Erste Session →</button></div>
+              <div class="st load"><div class="spin"></div><div class="kicker">Loading</div><div class="sk-lines"><div class="sk-line"></div><div class="sk-line s"></div><div class="sk-line xs"></div></div><p>Lade deine Fragen…</p></div>
+              <div class="st err"><div class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div><div class="kicker" style="color:#FC8181">Error</div><h3>Verbindung unterbrochen</h3><p>Dein Fortschritt ist lokal gespeichert.</p><button class="cta">Erneut versuchen</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- B -->
+    <div class="alt-wrap">
+      <div class="alt-card">
+        <div class="alt-card__label"><div><span class="alt-card__name">B · Illustrated</span> <span class="alt-card__bet">— bet: warmer moments on landing, onboarding, account creation</span></div><span class="alt-card__tag">LIGHT</span></div>
+        <div class="alt-card__body alt-card__body--light">
+          <div class="stage">
+            <div class="row">
+              <div class="b-st">
+                <svg class="illus" viewBox="0 0 200 110" fill="none">
+                  <rect x="22" y="28" width="66" height="70" rx="5" fill="#F0F4F8" stroke="#CBD5E0" stroke-width="1"/>
+                  <rect x="112" y="14" width="66" height="70" rx="5" fill="#F0F4F8" stroke="#CBD5E0" stroke-width="1" transform="rotate(4 145 49)"/>
+                  <line x1="34" y1="44" x2="76" y2="44" stroke="#CBD5E0" stroke-width="2" stroke-linecap="round"/>
+                  <line x1="34" y1="54" x2="68" y2="54" stroke="#CBD5E0" stroke-width="2" stroke-linecap="round"/>
+                  <circle cx="100" cy="54" r="14" fill="#00A896"/>
+                  <path d="M95 54l3 3 7-7" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                </svg>
+                <div class="kicker">Empty</div>
+                <h3 style="font-family:var(--mp-font-display);font-weight:800;font-size:15px;color:#001B3D;margin:0">Neuer Start, blanko Konto.</h3>
+                <p style="font-size:12px;color:#4A5568;margin:0;line-height:1.5;max-width:220px">Lass uns dein erstes Thema wählen. 10 Fragen — 8 Minuten.</p>
+                <button class="b-cta">Erste Session →</button>
+              </div>
+              <div class="b-st">
+                <svg class="illus" viewBox="0 0 200 110" fill="none">
+                  <circle cx="100" cy="55" r="30" fill="none" stroke="rgba(0,168,150,0.15)" stroke-width="3"/>
+                  <circle cx="100" cy="55" r="30" fill="none" stroke="#00A896" stroke-width="3" stroke-linecap="round" stroke-dasharray="30 160" transform="rotate(-90 100 55)"><animateTransform attributeName="transform" type="rotate" from="-90 100 55" to="270 100 55" dur="1s" repeatCount="indefinite"/></circle>
+                  <text x="100" y="60" text-anchor="middle" font-family="system-ui" font-size="14" font-weight="700" fill="#001B3D">ü</text>
+                </svg>
+                <div class="kicker">Loading</div>
+                <h3 style="font-family:var(--mp-font-display);font-weight:800;font-size:15px;color:#001B3D;margin:0">Deine Sitzung wird gemischt.</h3>
+                <p style="font-size:12px;color:#4A5568;margin:0;line-height:1.5;max-width:220px">Wir priorisieren deine 3 schwächsten Themen.</p>
+              </div>
+              <div class="b-st">
+                <svg class="illus" viewBox="0 0 200 110" fill="none">
+                  <path d="M45 85 L155 85 L100 25 Z" fill="rgba(244,162,97,0.15)" stroke="#D68A3A" stroke-width="1.5" stroke-linejoin="round"/>
+                  <line x1="100" y1="46" x2="100" y2="68" stroke="#D68A3A" stroke-width="2.5" stroke-linecap="round"/>
+                  <circle cx="100" cy="76" r="2" fill="#D68A3A"/>
+                </svg>
+                <div class="kicker" style="color:#D68A3A">Error</div>
+                <h3 style="font-family:var(--mp-font-display);font-weight:800;font-size:15px;color:#001B3D;margin:0">Kurz offline.</h3>
+                <p style="font-size:12px;color:#4A5568;margin:0;line-height:1.5;max-width:220px">Wir sichern deine Antworten lokal und syncen, sobald du wieder da bist.</p>
+                <div style="display:flex;gap:10px;align-items:center"><button class="b-cta">Erneut</button><button class="b-link">Offline weiter</button></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="alt-card" data-theme="dark" style="background:#001028">
+        <div class="alt-card__label" style="background:#001028;border-color:rgba(255,255,255,0.05)"><div><span class="alt-card__name" style="color:#E2E8F0">B · Illustrated</span> <span class="alt-card__bet" style="color:#94A3B8">— dark</span></div><span class="alt-card__tag alt-card__tag--dark">DARK</span></div>
+        <div class="alt-card__body alt-card__body--dark">
+          <div class="stage" data-theme="dark">
+            <div class="row">
+              <div class="b-st">
+                <svg class="illus" viewBox="0 0 200 110" fill="none">
+                  <rect x="22" y="28" width="66" height="70" rx="5" fill="#0F172A" stroke="#334155" stroke-width="1"/>
+                  <rect x="112" y="14" width="66" height="70" rx="5" fill="#0F172A" stroke="#334155" stroke-width="1" transform="rotate(4 145 49)"/>
+                  <line x1="34" y1="44" x2="76" y2="44" stroke="#334155" stroke-width="2" stroke-linecap="round"/>
+                  <line x1="34" y1="54" x2="68" y2="54" stroke="#334155" stroke-width="2" stroke-linecap="round"/>
+                  <circle cx="100" cy="54" r="14" fill="#00A896"/>
+                  <path d="M95 54l3 3 7-7" stroke="#001028" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                </svg>
+                <div class="kicker">Empty</div>
+                <h3 style="font-family:var(--mp-font-display);font-weight:800;font-size:15px;color:#E2E8F0;margin:0">Neuer Start, blanko Konto.</h3>
+                <p style="font-size:12px;color:#94A3B8;margin:0;line-height:1.5;max-width:220px">Lass uns dein erstes Thema wählen.</p>
+                <button class="b-cta">Erste Session →</button>
+              </div>
+              <div class="b-st">
+                <svg class="illus" viewBox="0 0 200 110" fill="none">
+                  <circle cx="100" cy="55" r="30" fill="none" stroke="rgba(0,168,150,0.2)" stroke-width="3"/>
+                  <circle cx="100" cy="55" r="30" fill="none" stroke="#1BB680" stroke-width="3" stroke-linecap="round" stroke-dasharray="30 160" transform="rotate(-90 100 55)"><animateTransform attributeName="transform" type="rotate" from="-90 100 55" to="270 100 55" dur="1s" repeatCount="indefinite"/></circle>
+                  <text x="100" y="60" text-anchor="middle" font-family="system-ui" font-size="14" font-weight="700" fill="#E2E8F0">ü</text>
+                </svg>
+                <div class="kicker">Loading</div>
+                <h3 style="font-family:var(--mp-font-display);font-weight:800;font-size:15px;color:#E2E8F0;margin:0">Deine Sitzung wird gemischt.</h3>
+                <p style="font-size:12px;color:#94A3B8;margin:0;line-height:1.5;max-width:220px">Wir priorisieren deine schwächsten Themen.</p>
+              </div>
+              <div class="b-st">
+                <svg class="illus" viewBox="0 0 200 110" fill="none">
+                  <path d="M45 85 L155 85 L100 25 Z" fill="rgba(244,162,97,0.15)" stroke="#F4A261" stroke-width="1.5" stroke-linejoin="round"/>
+                  <line x1="100" y1="46" x2="100" y2="68" stroke="#F4A261" stroke-width="2.5" stroke-linecap="round"/>
+                  <circle cx="100" cy="76" r="2" fill="#F4A261"/>
+                </svg>
+                <div class="kicker" style="color:#F4A261">Error</div>
+                <h3 style="font-family:var(--mp-font-display);font-weight:800;font-size:15px;color:#E2E8F0;margin:0">Kurz offline.</h3>
+                <p style="font-size:12px;color:#94A3B8;margin:0;line-height:1.5;max-width:220px">Wir sichern Antworten lokal.</p>
+                <div style="display:flex;gap:10px;align-items:center"><button class="b-cta">Erneut</button><button class="b-link">Offline weiter</button></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body></html>

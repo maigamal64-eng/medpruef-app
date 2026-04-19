@@ -1,0 +1,353 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link rel="stylesheet" href="../components_v2.css">
+<link rel="stylesheet" href="_alt-shell.css">
+<title>Admin — Alternatives</title>
+<style>
+  .stage{padding:0;height:100%;box-sizing:border-box;overflow:hidden;display:flex;flex-direction:column}
+
+  /* shared topbar */
+  .adbar{display:flex;align-items:center;gap:14px;padding:12px 20px;border-bottom:1px solid rgba(228,233,240,.7);background:#fff}
+  .adbar .crest{width:28px;height:28px;border-radius:8px;background:#001B3D;color:#fff;display:flex;align-items:center;justify-content:center;font-family:var(--mp-font-display);font-weight:900;font-size:14px}
+  .adbar .tit{font-family:var(--mp-font-display);font-weight:800;font-size:14px;color:#001B3D;letter-spacing:-0.005em}
+  .adbar .tit .env{font-family:var(--mp-font-mono);font-size:10px;background:rgba(214,69,69,0.1);color:#D64545;padding:2px 7px;border-radius:4px;margin-left:8px;letter-spacing:0.08em;text-transform:uppercase;font-weight:700}
+  .adbar .spacer{flex:1}
+  .adbar .u{display:flex;align-items:center;gap:8px;font-size:11px;color:#4A5568}
+  .adbar .u .av{width:26px;height:26px;border-radius:50%;background:#001B3D;color:#fff;display:flex;align-items:center;justify-content:center;font-family:var(--mp-font-display);font-weight:800;font-size:11px}
+
+  /* ═══ A: 7-tab horizontal nav + table-first ═══ */
+  .a-tabs{display:flex;gap:2px;padding:0 20px;background:#fff;border-bottom:1px solid rgba(228,233,240,.7)}
+  .a-tab{padding:12px 16px;font-size:12px;color:#4A5568;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;display:inline-flex;align-items:center;gap:6px}
+  .a-tab.on{color:#001B3D;border-bottom-color:#001B3D;font-weight:700}
+  .a-tab .pill{font-family:var(--mp-font-mono);font-size:9px;background:rgba(0,27,61,0.08);padding:1px 6px;border-radius:999px;color:#4A5568;font-weight:700}
+  .a-tab.on .pill{background:#001B3D;color:#fff}
+  .a-body{flex:1;padding:20px;background:#F7F9FC;overflow:auto}
+  .a-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+  .a-k{background:#fff;border:1px solid rgba(228,233,240,.7);border-radius:10px;padding:14px}
+  .a-k .l{font-family:var(--mp-font-mono);font-size:10px;color:#A0AEC0;letter-spacing:0.08em;text-transform:uppercase;font-weight:700}
+  .a-k .v{font-family:var(--mp-font-display);font-weight:900;font-size:26px;color:#001B3D;margin-top:2px;font-variant-numeric:tabular-nums;letter-spacing:-0.02em}
+  .a-k .d{font-family:var(--mp-font-mono);font-size:11px;margin-top:3px}
+  .a-k .d.up{color:#007B5F}.a-k .d.dn{color:#D64545}
+  .a-tbl{background:#fff;border:1px solid rgba(228,233,240,.7);border-radius:12px;overflow:hidden}
+  .a-thd{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid #E4E9F0}
+  .a-thd h3{font-family:var(--mp-font-display);font-weight:800;font-size:13px;color:#001B3D;margin:0;letter-spacing:-0.005em}
+  .a-tools{display:flex;gap:6px}
+  .a-btn{padding:6px 11px;border-radius:7px;background:#fff;border:1px solid #E4E9F0;font-size:11px;color:#4A5568;font-weight:600;cursor:pointer}
+  .a-btn.p{background:#001B3D;color:#fff;border-color:#001B3D}
+  .a-row{display:grid;grid-template-columns:2.2fr 1fr 1fr 0.8fr 0.8fr 0.6fr;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid #F0F4F8;font-size:12px}
+  .a-row:last-child{border-bottom:none}
+  .a-row.hd{background:#F7F9FC;font-family:var(--mp-font-mono);font-size:10px;color:#A0AEC0;letter-spacing:0.08em;text-transform:uppercase;font-weight:700;padding:8px 16px}
+  .a-u{display:flex;align-items:center;gap:10px}
+  .a-u .av{width:26px;height:26px;border-radius:50%;background:rgba(0,168,150,0.15);color:#007B5F;display:flex;align-items:center;justify-content:center;font-family:var(--mp-font-display);font-weight:700;font-size:11px}
+  .a-u .n{font-weight:600;color:#1A2B3C}
+  .a-u .e{font-family:var(--mp-font-mono);font-size:10px;color:#A0AEC0}
+  .a-pl{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:4px;font-family:var(--mp-font-mono);font-size:10px;font-weight:700;letter-spacing:0.04em}
+  .a-pl.pro{background:rgba(0,168,150,0.1);color:#007B5F}
+  .a-pl.free{background:rgba(160,174,192,0.15);color:#4A5568}
+  .a-pl.trial{background:rgba(244,162,97,0.15);color:#D68A3A}
+  .a-num{font-family:var(--mp-font-mono);font-weight:700;color:#001B3D;font-variant-numeric:tabular-nums}
+  .a-st{display:inline-flex;align-items:center;gap:4px;font-size:11px}
+  .a-st .dt{width:6px;height:6px;border-radius:50%}
+  .a-more{cursor:pointer;color:#A0AEC0;text-align:right}
+
+  /* ═══ B: Left-rail nav + KPI hero card ═══ */
+  .b-frame{flex:1;display:grid;grid-template-columns:220px 1fr;min-height:0}
+  .b-nav{background:#001B3D;color:#fff;padding:18px 10px;display:flex;flex-direction:column;gap:2px}
+  .b-crest{display:flex;align-items:center;gap:10px;padding:6px 10px 16px;border-bottom:1px solid rgba(255,255,255,0.1);margin-bottom:12px}
+  .b-crest .c{width:32px;height:32px;border-radius:8px;background:#fff;color:#001B3D;display:flex;align-items:center;justify-content:center;font-family:var(--mp-font-display);font-weight:900;font-size:16px}
+  .b-crest .t{font-family:var(--mp-font-display);font-weight:800;font-size:13px;letter-spacing:-0.005em}
+  .b-crest .e{font-family:var(--mp-font-mono);font-size:9px;color:#F4A261;letter-spacing:0.1em;text-transform:uppercase;font-weight:700;margin-top:2px}
+  .b-group{font-family:var(--mp-font-mono);font-size:9px;color:rgba(255,255,255,0.4);letter-spacing:0.1em;text-transform:uppercase;font-weight:700;padding:12px 10px 6px}
+  .b-item{padding:8px 10px;border-radius:7px;color:rgba(255,255,255,0.7);font-size:12px;font-weight:500;cursor:pointer;display:flex;align-items:center;gap:9px}
+  .b-item.on{background:rgba(255,255,255,0.08);color:#fff;font-weight:700}
+  .b-item .n{flex:1}
+  .b-item .c{font-family:var(--mp-font-mono);font-size:9px;background:rgba(255,255,255,0.08);padding:1px 6px;border-radius:999px;font-weight:700}
+  .b-item.on .c{background:#00A896;color:#fff}
+  .b-item svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .b-body{background:#F7F9FC;padding:20px 24px;overflow:auto}
+  .b-h1{font-family:var(--mp-font-display);font-weight:900;font-size:22px;color:#001B3D;letter-spacing:-0.02em;margin:0 0 14px}
+  .b-hero{background:linear-gradient(135deg,#001B3D 0%,#003A8C 100%);border-radius:16px;padding:24px;color:#fff;display:grid;grid-template-columns:1.5fr 1fr;gap:24px;margin-bottom:14px;position:relative;overflow:hidden}
+  .b-hero::before{content:"";position:absolute;right:-60px;bottom:-60px;width:220px;height:220px;border-radius:50%;background:radial-gradient(circle,rgba(0,168,150,0.3),transparent 70%)}
+  .b-hero-l{position:relative}
+  .b-hero-k{font-family:var(--mp-font-mono);font-size:11px;color:#1BB680;letter-spacing:0.12em;text-transform:uppercase;font-weight:800;margin-bottom:6px}
+  .b-hero-v{font-family:var(--mp-font-display);font-weight:900;font-size:48px;letter-spacing:-0.03em;line-height:1;margin:0 0 4px;font-variant-numeric:tabular-nums}
+  .b-hero-s{font-size:13px;color:rgba(255,255,255,0.65)}
+  .b-hero-bar{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:18px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.15)}
+  .b-hero-bar .l{font-family:var(--mp-font-mono);font-size:10px;color:rgba(255,255,255,0.5);letter-spacing:0.08em;text-transform:uppercase;font-weight:700}
+  .b-hero-bar .v{font-family:var(--mp-font-display);font-weight:800;font-size:18px;margin-top:3px;font-variant-numeric:tabular-nums}
+  .b-hero-r{position:relative;display:flex;flex-direction:column;justify-content:center}
+  .b-spark{height:60px;width:100%}
+  .b-cols{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .b-card{background:#fff;border:1px solid rgba(228,233,240,.7);border-radius:12px;padding:16px}
+  .b-card-h{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px}
+  .b-card-h h4{font-family:var(--mp-font-display);font-weight:800;font-size:13px;color:#001B3D;margin:0;letter-spacing:-0.005em}
+  .b-card-h .mute{font-family:var(--mp-font-mono);font-size:10px;color:#A0AEC0}
+  .b-q{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #F0F4F8;font-size:12px;color:#4A5568}
+  .b-q:last-child{border-bottom:none}
+  .b-q .v{font-family:var(--mp-font-mono);font-weight:700;color:#001B3D}
+  .b-act{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #F0F4F8;font-size:12px}
+  .b-act:last-child{border-bottom:none}
+  .b-act .dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+  .b-act .t{flex:1;color:#4A5568}
+  .b-act .t strong{color:#001B3D;font-weight:700}
+  .b-act .when{font-family:var(--mp-font-mono);font-size:10px;color:#A0AEC0}
+
+  [data-theme="dark"] .adbar{background:#0B1322;border-color:#1E293B}
+  [data-theme="dark"] .adbar .tit{color:#E2E8F0}
+  [data-theme="dark"] .adbar .u{color:#94A3B8}
+  [data-theme="dark"] .a-tabs{background:#0B1322;border-color:#1E293B}
+  [data-theme="dark"] .a-tab{color:#94A3B8}
+  [data-theme="dark"] .a-tab.on{color:#E2E8F0;border-bottom-color:#1BB680}
+  [data-theme="dark"] .a-tab .pill{background:rgba(255,255,255,0.08);color:#94A3B8}
+  [data-theme="dark"] .a-tab.on .pill{background:#1BB680;color:#001028}
+  [data-theme="dark"] .a-body,[data-theme="dark"] .b-body{background:#0F172A}
+  [data-theme="dark"] .a-k,[data-theme="dark"] .a-tbl,[data-theme="dark"] .b-card{background:#1E293B;border-color:rgba(51,65,85,0.7)}
+  [data-theme="dark"] .a-k .v,[data-theme="dark"] .a-u .n,[data-theme="dark"] .a-thd h3,[data-theme="dark"] .a-num,[data-theme="dark"] .b-h1,[data-theme="dark"] .b-card-h h4,[data-theme="dark"] .b-q .v{color:#E2E8F0}
+  [data-theme="dark"] .a-thd{border-color:#334155}
+  [data-theme="dark"] .a-row{border-color:#334155;color:#CBD5E1}
+  [data-theme="dark"] .a-row.hd{background:#0F172A;color:#64748B}
+  [data-theme="dark"] .a-btn{background:#1E293B;border-color:#334155;color:#CBD5E1}
+  [data-theme="dark"] .a-btn.p{background:#1BB680;color:#001028;border-color:#1BB680}
+  [data-theme="dark"] .a-u .av{background:rgba(0,168,150,0.2);color:#1BB680}
+  [data-theme="dark"] .a-pl.free{background:rgba(255,255,255,0.08);color:#94A3B8}
+  [data-theme="dark"] .b-nav{background:#0B1322}
+  [data-theme="dark"] .b-q,[data-theme="dark"] .b-act .t{color:#94A3B8}
+  [data-theme="dark"] .b-q{border-color:#334155}
+  [data-theme="dark"] .b-act .t strong{color:#E2E8F0}
+</style>
+</head>
+<body>
+  <div class="alt-header">
+    <h1>Admin /admin — 2 alternatives</h1>
+    <p>A: 7-tab horizontal nav + KPI strip + user table (operator-dense; great for daily ops) · B: left-rail nav + KPI hero card (content-first; reads like a product, not a spreadsheet).</p>
+  </div>
+
+  <div class="alt-stack">
+    <div class="alt-wrap alt-wrap--full">
+      <div class="alt-card">
+        <div class="alt-card__label"><div><span class="alt-card__name">A · 7-tab nav + table</span> <span class="alt-card__bet">— bet: operator mode; table is the primary surface</span></div><span class="alt-card__tag">LIGHT</span></div>
+        <div class="alt-card__body alt-card__body--light" style="min-height:620px">
+          <div class="stage">
+            <div class="adbar">
+              <div class="crest">ü</div>
+              <div><div class="tit">MedPrüf Admin<span class="env">Production</span></div></div>
+              <div class="spacer"></div>
+              <div class="u"><span class="av">DA</span>user-b700461f@example.com</div>
+            </div>
+            <div class="a-tabs">
+              <div class="a-tab on">Users <span class="pill">14 203</span></div>
+              <div class="a-tab">Questions <span class="pill">10 993</span></div>
+              <div class="a-tab">Topics <span class="pill">8</span></div>
+              <div class="a-tab">Content <span class="pill">247</span></div>
+              <div class="a-tab">Payments <span class="pill">892</span></div>
+              <div class="a-tab">Waitlist <span class="pill">1 247</span></div>
+              <div class="a-tab">Telegram <span class="pill">628</span></div>
+            </div>
+            <div class="a-body">
+              <div class="a-kpis">
+                <div class="a-k"><div class="l">Gesamtnutzer</div><div class="v">14 203</div><div class="d up">↑ +248 diese Woche</div></div>
+                <div class="a-k"><div class="l">Pro-Abos</div><div class="v">892</div><div class="d up">↑ +34 ggü. Vorwoche</div></div>
+                <div class="a-k"><div class="l">MRR</div><div class="v">€ 16 948</div><div class="d up">↑ +€ 646</div></div>
+                <div class="a-k"><div class="l">Churn (30 T)</div><div class="v">2,1%</div><div class="d dn">↑ +0,3% ggü. Vormonat</div></div>
+              </div>
+              <div class="a-tbl">
+                <div class="a-thd">
+                  <h3>Letzte Nutzer</h3>
+                  <div class="a-tools"><button class="a-btn">Filter</button><button class="a-btn">Export CSV</button><button class="a-btn p">+ Nutzer</button></div>
+                </div>
+                <div class="a-row hd"><div>Nutzer</div><div>Plan</div><div>Registriert</div><div>Fragen</div><div>Ø%</div><div></div></div>
+                <div class="a-row"><div class="a-u"><span class="av">MH</span><div><div class="n">Mohammed Haddad</div><div class="e">user-551ef650@example.com</div></div></div><span><span class="a-pl pro">Pro</span></span><div class="a-num" style="color:#4A5568;font-weight:500">vor 2 min</div><div class="a-num">847</div><div class="a-num" style="color:#007B5F">76%</div><div class="a-more">⋯</div></div>
+                <div class="a-row"><div class="a-u"><span class="av">AN</span><div><div class="n">Anastasiya Nowak</div><div class="e">user-a9d33f18@example.com</div></div></div><span><span class="a-pl trial">Trial</span></span><div class="a-num" style="color:#4A5568;font-weight:500">vor 18 min</div><div class="a-num">32</div><div class="a-num" style="color:#007B5F">81%</div><div class="a-more">⋯</div></div>
+                <div class="a-row"><div class="a-u"><span class="av">DK</span><div><div class="n">Dr. Kristina Weber</div><div class="e">k.weber@meduniwien.ac.at</div></div></div><span><span class="a-pl pro">Pro</span></span><div class="a-num" style="color:#4A5568;font-weight:500">vor 42 min</div><div class="a-num">2 148</div><div class="a-num" style="color:#007B5F">88%</div><div class="a-more">⋯</div></div>
+                <div class="a-row"><div class="a-u"><span class="av">YI</span><div><div class="n">Yusuf Ibrahim</div><div class="e">user-5745af12@example.com</div></div></div><span><span class="a-pl free">Free</span></span><div class="a-num" style="color:#4A5568;font-weight:500">vor 1 h</div><div class="a-num">186</div><div class="a-num" style="color:#D68A3A">58%</div><div class="a-more">⋯</div></div>
+                <div class="a-row"><div class="a-u"><span class="av">TP</span><div><div class="n">Teodora Petrović</div><div class="e">user-b85a523a@example.com</div></div></div><span><span class="a-pl pro">Pro</span></span><div class="a-num" style="color:#4A5568;font-weight:500">vor 2 h</div><div class="a-num">1 634</div><div class="a-num" style="color:#007B5F">73%</div><div class="a-more">⋯</div></div>
+                <div class="a-row"><div class="a-u"><span class="av">SV</span><div><div class="n">Sara Vasquez</div><div class="e">user-82cce0ff@example.com</div></div></div><span><span class="a-pl free">Free</span></span><div class="a-num" style="color:#4A5568;font-weight:500">vor 3 h</div><div class="a-num">24</div><div class="a-num" style="color:#D64545">42%</div><div class="a-more">⋯</div></div>
+                <div class="a-row"><div class="a-u"><span class="av">RM</span><div><div class="n">Raimi Mansour</div><div class="e">user-89933354@example.com</div></div></div><span><span class="a-pl pro">Pro</span></span><div class="a-num" style="color:#4A5568;font-weight:500">vor 4 h</div><div class="a-num">512</div><div class="a-num" style="color:#007B5F">71%</div><div class="a-more">⋯</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="alt-wrap alt-wrap--full">
+      <div class="alt-card" data-theme="dark" style="background:#001028">
+        <div class="alt-card__label" style="background:#001028;border-color:rgba(255,255,255,0.05)"><div><span class="alt-card__name" style="color:#E2E8F0">A · Tabs + table</span> <span class="alt-card__bet" style="color:#94A3B8">— dark</span></div><span class="alt-card__tag alt-card__tag--dark">DARK</span></div>
+        <div class="alt-card__body alt-card__body--dark" style="min-height:620px">
+          <div class="stage" data-theme="dark">
+            <div class="adbar">
+              <div class="crest">ü</div>
+              <div><div class="tit">MedPrüf Admin<span class="env">Production</span></div></div>
+              <div class="spacer"></div>
+              <div class="u"><span class="av">DA</span>user-b700461f@example.com</div>
+            </div>
+            <div class="a-tabs">
+              <div class="a-tab on">Users <span class="pill">14 203</span></div>
+              <div class="a-tab">Questions <span class="pill">10 993</span></div>
+              <div class="a-tab">Topics <span class="pill">8</span></div>
+              <div class="a-tab">Content <span class="pill">247</span></div>
+              <div class="a-tab">Payments <span class="pill">892</span></div>
+              <div class="a-tab">Waitlist <span class="pill">1 247</span></div>
+              <div class="a-tab">Telegram <span class="pill">628</span></div>
+            </div>
+            <div class="a-body">
+              <div class="a-kpis">
+                <div class="a-k"><div class="l">Gesamtnutzer</div><div class="v">14 203</div><div class="d up">↑ +248</div></div>
+                <div class="a-k"><div class="l">Pro-Abos</div><div class="v">892</div><div class="d up">↑ +34</div></div>
+                <div class="a-k"><div class="l">MRR</div><div class="v">€ 16 948</div><div class="d up">↑ +€ 646</div></div>
+                <div class="a-k"><div class="l">Churn</div><div class="v">2,1%</div><div class="d dn">↑ +0,3%</div></div>
+              </div>
+              <div class="a-tbl">
+                <div class="a-thd"><h3>Letzte Nutzer</h3><div class="a-tools"><button class="a-btn">Filter</button><button class="a-btn">Export</button><button class="a-btn p">+ Nutzer</button></div></div>
+                <div class="a-row hd"><div>Nutzer</div><div>Plan</div><div>Registriert</div><div>Fragen</div><div>Ø%</div><div></div></div>
+                <div class="a-row"><div class="a-u"><span class="av">MH</span><div><div class="n">Mohammed Haddad</div><div class="e">user-551ef650@example.com</div></div></div><span><span class="a-pl pro">Pro</span></span><div style="color:#94A3B8">vor 2 min</div><div class="a-num">847</div><div class="a-num" style="color:#1BB680">76%</div><div class="a-more">⋯</div></div>
+                <div class="a-row"><div class="a-u"><span class="av">AN</span><div><div class="n">Anastasiya Nowak</div><div class="e">user-a9d33f18@example.com</div></div></div><span><span class="a-pl trial">Trial</span></span><div style="color:#94A3B8">vor 18 min</div><div class="a-num">32</div><div class="a-num" style="color:#1BB680">81%</div><div class="a-more">⋯</div></div>
+                <div class="a-row"><div class="a-u"><span class="av">DK</span><div><div class="n">Dr. Kristina Weber</div><div class="e">k.weber@meduniwien.ac.at</div></div></div><span><span class="a-pl pro">Pro</span></span><div style="color:#94A3B8">vor 42 min</div><div class="a-num">2 148</div><div class="a-num" style="color:#1BB680">88%</div><div class="a-more">⋯</div></div>
+                <div class="a-row"><div class="a-u"><span class="av">YI</span><div><div class="n">Yusuf Ibrahim</div><div class="e">user-5745af12@example.com</div></div></div><span><span class="a-pl free">Free</span></span><div style="color:#94A3B8">vor 1 h</div><div class="a-num">186</div><div class="a-num" style="color:#F4A261">58%</div><div class="a-more">⋯</div></div>
+                <div class="a-row"><div class="a-u"><span class="av">TP</span><div><div class="n">Teodora Petrović</div><div class="e">user-b85a523a@example.com</div></div></div><span><span class="a-pl pro">Pro</span></span><div style="color:#94A3B8">vor 2 h</div><div class="a-num">1 634</div><div class="a-num" style="color:#1BB680">73%</div><div class="a-more">⋯</div></div>
+                <div class="a-row"><div class="a-u"><span class="av">SV</span><div><div class="n">Sara Vasquez</div><div class="e">user-82cce0ff@example.com</div></div></div><span><span class="a-pl free">Free</span></span><div style="color:#94A3B8">vor 3 h</div><div class="a-num">24</div><div class="a-num" style="color:#FC8181">42%</div><div class="a-more">⋯</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="alt-wrap alt-wrap--full">
+      <div class="alt-card">
+        <div class="alt-card__label"><div><span class="alt-card__name">B · Left rail + KPI hero</span> <span class="alt-card__bet">— bet: reads like a product, not a spreadsheet</span></div><span class="alt-card__tag">LIGHT</span></div>
+        <div class="alt-card__body alt-card__body--light" style="min-height:640px">
+          <div class="stage">
+            <div class="adbar">
+              <div class="crest">ü</div>
+              <div><div class="tit">MedPrüf Admin</div></div>
+              <div class="spacer"></div>
+              <div class="u"><span class="av">DA</span>user-b700461f@example.com</div>
+            </div>
+            <div class="b-frame">
+              <aside class="b-nav">
+                <div class="b-crest"><div class="c">ü</div><div><div class="t">MedPrüf</div><div class="e">Admin · Prod</div></div></div>
+                <div class="b-group">Überblick</div>
+                <div class="b-item on"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg><span class="n">Dashboard</span></div>
+                <div class="b-group">Nutzer &amp; Content</div>
+                <div class="b-item"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg><span class="n">Nutzer</span><span class="c">14,2k</span></div>
+                <div class="b-item"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01"/></svg><span class="n">Fragen</span><span class="c">11k</span></div>
+                <div class="b-item"><svg viewBox="0 0 24 24"><path d="M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7"/><path d="M3 7l9-4 9 4"/><path d="M12 12l9-5M12 12L3 7M12 12v9"/></svg><span class="n">Themen</span><span class="c">8</span></div>
+                <div class="b-item"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span class="n">Content</span><span class="c">247</span></div>
+                <div class="b-group">Commerce</div>
+                <div class="b-item"><svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg><span class="n">Zahlungen</span><span class="c">892</span></div>
+                <div class="b-item"><svg viewBox="0 0 24 24"><path d="M12 8c-2.8 0-5 2.2-5 5v7h10v-7c0-2.8-2.2-5-5-5z"/><circle cx="12" cy="5" r="2"/></svg><span class="n">Warteliste</span><span class="c">1,2k</span></div>
+                <div class="b-item"><svg viewBox="0 0 24 24"><path d="M22 2L11 13"/><path d="M22 2L15 22l-4-9-9-4 20-7z"/></svg><span class="n">Telegram</span><span class="c">628</span></div>
+              </aside>
+              <div class="b-body">
+                <h1 class="b-h1">Guten Morgen, Anna.</h1>
+                <div class="b-hero">
+                  <div class="b-hero-l">
+                    <div class="b-hero-k">Aktive Nutzer · letzte 7 Tage</div>
+                    <h2 class="b-hero-v">4 287</h2>
+                    <p class="b-hero-s">+412 ggü. Vorwoche · 30% aller Accounts</p>
+                    <div class="b-hero-bar">
+                      <div><div class="l">Pro-Abos</div><div class="v">892</div></div>
+                      <div><div class="l">MRR</div><div class="v">€ 16 948</div></div>
+                      <div><div class="l">Churn 30 T</div><div class="v" style="color:#F4A261">2,1%</div></div>
+                    </div>
+                  </div>
+                  <div class="b-hero-r">
+                    <svg class="b-spark" viewBox="0 0 300 60" preserveAspectRatio="none">
+                      <path d="M0,45 L20,40 L40,42 L60,36 L80,38 L100,30 L120,32 L140,26 L160,28 L180,22 L200,24 L220,18 L240,20 L260,14 L280,16 L300,10" stroke="#1BB680" stroke-width="2" fill="none"/>
+                      <path d="M0,45 L20,40 L40,42 L60,36 L80,38 L100,30 L120,32 L140,26 L160,28 L180,22 L200,24 L220,18 L240,20 L260,14 L280,16 L300,10 L300,60 L0,60 Z" fill="rgba(27,182,128,0.15)"/>
+                    </svg>
+                  </div>
+                </div>
+                <div class="b-cols">
+                  <div class="b-card">
+                    <div class="b-card-h"><h4>Top-Themen diese Woche</h4><span class="mute">nach Fragen</span></div>
+                    <div class="b-q"><span>Kardiologie</span><span class="v">18 204</span></div>
+                    <div class="b-q"><span>Pädiatrie</span><span class="v">14 872</span></div>
+                    <div class="b-q"><span>Neurologie</span><span class="v">12 031</span></div>
+                    <div class="b-q"><span>Innere · Endo</span><span class="v">9 514</span></div>
+                    <div class="b-q"><span>Psychiatrie</span><span class="v">7 802</span></div>
+                  </div>
+                  <div class="b-card">
+                    <div class="b-card-h"><h4>Letzte Aktivität</h4><span class="mute">System</span></div>
+                    <div class="b-act"><span class="dot" style="background:#007B5F"></span><span class="t"><strong>34 neue Fragen</strong> freigegeben — Chirurgie</span><span class="when">12:42</span></div>
+                    <div class="b-act"><span class="dot" style="background:#007B5F"></span><span class="t"><strong>Kristina Weber</strong> → Pro aktiviert</span><span class="when">12:38</span></div>
+                    <div class="b-act"><span class="dot" style="background:#D68A3A"></span><span class="t"><strong>Report gemeldet</strong> — Frage #4812 (Kardio)</span><span class="when">11:54</span></div>
+                    <div class="b-act"><span class="dot" style="background:#007B5F"></span><span class="t"><strong>SEPA-Payout</strong> abgeschlossen · € 4 128</span><span class="when">09:15</span></div>
+                    <div class="b-act"><span class="dot" style="background:#001B3D"></span><span class="t"><strong>Impfplan 2026</strong> aktualisiert · 12 Fragen geändert</span><span class="when">gestern</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="alt-wrap alt-wrap--full">
+      <div class="alt-card" data-theme="dark" style="background:#001028">
+        <div class="alt-card__label" style="background:#001028;border-color:rgba(255,255,255,0.05)"><div><span class="alt-card__name" style="color:#E2E8F0">B · Rail + hero</span> <span class="alt-card__bet" style="color:#94A3B8">— dark</span></div><span class="alt-card__tag alt-card__tag--dark">DARK</span></div>
+        <div class="alt-card__body alt-card__body--dark" style="min-height:640px">
+          <div class="stage" data-theme="dark">
+            <div class="adbar">
+              <div class="crest">ü</div>
+              <div><div class="tit">MedPrüf Admin</div></div>
+              <div class="spacer"></div>
+              <div class="u"><span class="av">DA</span>user-b700461f@example.com</div>
+            </div>
+            <div class="b-frame">
+              <aside class="b-nav">
+                <div class="b-crest"><div class="c">ü</div><div><div class="t">MedPrüf</div><div class="e">Admin · Prod</div></div></div>
+                <div class="b-group">Überblick</div>
+                <div class="b-item on"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg><span class="n">Dashboard</span></div>
+                <div class="b-group">Nutzer &amp; Content</div>
+                <div class="b-item"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg><span class="n">Nutzer</span><span class="c">14,2k</span></div>
+                <div class="b-item"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01"/></svg><span class="n">Fragen</span><span class="c">11k</span></div>
+                <div class="b-item"><svg viewBox="0 0 24 24"><path d="M3 7v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7"/></svg><span class="n">Themen</span><span class="c">8</span></div>
+                <div class="b-item"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg><span class="n">Content</span><span class="c">247</span></div>
+                <div class="b-group">Commerce</div>
+                <div class="b-item"><svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/></svg><span class="n">Zahlungen</span><span class="c">892</span></div>
+                <div class="b-item"><svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"/></svg><span class="n">Warteliste</span><span class="c">1,2k</span></div>
+                <div class="b-item"><svg viewBox="0 0 24 24"><path d="M22 2L11 13"/></svg><span class="n">Telegram</span><span class="c">628</span></div>
+              </aside>
+              <div class="b-body">
+                <h1 class="b-h1">Guten Morgen, Anna.</h1>
+                <div class="b-hero">
+                  <div class="b-hero-l">
+                    <div class="b-hero-k">Aktive Nutzer · 7 Tage</div>
+                    <h2 class="b-hero-v">4 287</h2>
+                    <p class="b-hero-s">+412 ggü. Vorwoche · 30% aller Accounts</p>
+                    <div class="b-hero-bar">
+                      <div><div class="l">Pro-Abos</div><div class="v">892</div></div>
+                      <div><div class="l">MRR</div><div class="v">€ 16 948</div></div>
+                      <div><div class="l">Churn</div><div class="v" style="color:#F4A261">2,1%</div></div>
+                    </div>
+                  </div>
+                  <div class="b-hero-r">
+                    <svg class="b-spark" viewBox="0 0 300 60" preserveAspectRatio="none">
+                      <path d="M0,45 L20,40 L40,42 L60,36 L80,38 L100,30 L120,32 L140,26 L160,28 L180,22 L200,24 L220,18 L240,20 L260,14 L280,16 L300,10" stroke="#1BB680" stroke-width="2" fill="none"/>
+                      <path d="M0,45 L20,40 L40,42 L60,36 L80,38 L100,30 L120,32 L140,26 L160,28 L180,22 L200,24 L220,18 L240,20 L260,14 L280,16 L300,10 L300,60 L0,60 Z" fill="rgba(27,182,128,0.15)"/>
+                    </svg>
+                  </div>
+                </div>
+                <div class="b-cols">
+                  <div class="b-card">
+                    <div class="b-card-h"><h4>Top-Themen</h4><span class="mute">Fragen</span></div>
+                    <div class="b-q"><span>Kardiologie</span><span class="v">18 204</span></div>
+                    <div class="b-q"><span>Pädiatrie</span><span class="v">14 872</span></div>
+                    <div class="b-q"><span>Neurologie</span><span class="v">12 031</span></div>
+                    <div class="b-q"><span>Innere</span><span class="v">9 514</span></div>
+                  </div>
+                  <div class="b-card">
+                    <div class="b-card-h"><h4>Aktivität</h4><span class="mute">System</span></div>
+                    <div class="b-act"><span class="dot" style="background:#1BB680"></span><span class="t"><strong>34 Fragen</strong> freigegeben — Chirurgie</span><span class="when">12:42</span></div>
+                    <div class="b-act"><span class="dot" style="background:#1BB680"></span><span class="t"><strong>Kristina Weber</strong> → Pro aktiviert</span><span class="when">12:38</span></div>
+                    <div class="b-act"><span class="dot" style="background:#F4A261"></span><span class="t"><strong>Report</strong> — Frage #4812</span><span class="when">11:54</span></div>
+                    <div class="b-act"><span class="dot" style="background:#1BB680"></span><span class="t"><strong>SEPA-Payout</strong> · € 4 128</span><span class="when">09:15</span></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body></html>

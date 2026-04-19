@@ -1,0 +1,143 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link rel="stylesheet" href="../components_v2.css">
+<link rel="stylesheet" href="_alt-shell.css">
+<title>Landing — Alternatives</title>
+<style>
+  .stage { height:100%;overflow:hidden;box-sizing:border-box }
+
+  /* ═══ A: Clinical-calm — restrained, quiet trust ═══ */
+  .a-page { background:#F7F9FC;padding:22px 28px;height:100%;box-sizing:border-box }
+  .a-nav { display:flex;align-items:center;justify-content:space-between;margin-bottom:24px }
+  .a-logo { display:flex;align-items:center;gap:8px;font-family:var(--mp-font-display);font-weight:800;font-size:16px;color:#001B3D;letter-spacing:-0.01em }
+  .a-logo-mark { width:22px;height:22px;border-radius:6px;background:linear-gradient(135deg,#001B3D,#003A8C);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900 }
+  .a-navlinks { display:flex;gap:20px;font-size:12px;color:#4A5568 }
+  .a-cta-pair { display:flex;gap:8px;align-items:center }
+  .a-btn-ghost { font-size:12px;color:#4A5568;background:none;border:none;cursor:pointer;padding:6px 10px }
+  .a-btn-solid { font-size:12px;color:#fff;background:#001B3D;border:none;padding:8px 14px;border-radius:10px;font-weight:600;cursor:pointer }
+  .a-hero { display:grid;grid-template-columns:1.3fr 1fr;gap:32px;align-items:center;margin-bottom:32px }
+  .a-eyebrow { font-family:var(--mp-font-mono);font-size:11px;color:#007B5F;letter-spacing:0.1em;text-transform:uppercase;font-weight:700;margin-bottom:10px;display:inline-flex;align-items:center;gap:6px }
+  .a-eyebrow::before { content:"";width:5px;height:5px;border-radius:50%;background:#007B5F }
+  .a-h1 { font-family:var(--mp-font-display);font-weight:900;font-size:44px;line-height:1.05;letter-spacing:-0.025em;color:#001B3D;margin:0 0 14px }
+  .a-h1 em { font-style:normal;color:#007B5F }
+  .a-lede { font-size:15px;line-height:1.6;color:#4A5568;max-width:440px;margin-bottom:20px }
+  .a-cta-row { display:flex;gap:8px;align-items:center }
+  .a-cta-primary { padding:11px 18px;background:#001B3D;color:#fff;border:none;border-radius:12px;font-weight:700;font-size:13px;cursor:pointer }
+  .a-cta-secondary { padding:11px 18px;background:transparent;color:#001B3D;border:1px solid #CBD5E1;border-radius:12px;font-weight:600;font-size:13px;cursor:pointer }
+  .a-microtrust { margin-top:12px;font-size:11px;color:#A0AEC0 }
+  .a-heromock { background:#fff;border-radius:14px;border:1px solid rgba(228,233,240,.7);padding:16px;box-shadow:0 8px 24px rgba(0,27,61,0.08);font-size:12px }
+  .a-heromock .cap { font-family:var(--mp-font-mono);font-size:10px;color:#A0AEC0;margin-bottom:8px }
+  .a-heromock .q { font-size:12px;font-weight:500;color:#1A2B3C;line-height:1.5;margin-bottom:10px }
+  .a-heromock .op { padding:7px 10px;border:1px solid #E4E9F0;border-radius:8px;font-size:11px;margin-bottom:4px;color:#1A2B3C;display:flex;justify-content:space-between }
+  .a-heromock .op.ok { background:rgba(0,123,95,0.08);border-color:#00A896;color:#007B5F;font-weight:600 }
+  .a-stats { display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:16px;background:#fff;border-radius:12px;border:1px solid rgba(228,233,240,.7) }
+  .a-stat { text-align:left }
+  .a-stat .n { font-family:var(--mp-font-display);font-weight:900;font-size:26px;color:#001B3D;font-variant-numeric:tabular-nums;letter-spacing:-0.02em;line-height:1 }
+  .a-stat .l { font-size:10px;color:#4A5568;letter-spacing:0.06em;text-transform:uppercase;font-weight:700;margin-top:4px }
+
+  /* ═══ B: Confident-editorial — bold opinionated claims ═══ */
+  .b-page { background:#001028;color:#fff;padding:0;height:100%;box-sizing:border-box;position:relative;overflow:hidden }
+  .b-page::before{content:"";position:absolute;top:-100px;right:-100px;width:500px;height:500px;border-radius:50%;background:radial-gradient(circle,rgba(0,168,150,0.25),transparent 65%);pointer-events:none}
+  .b-nav { display:flex;align-items:center;justify-content:space-between;padding:22px 28px;position:relative;z-index:1 }
+  .b-logo { display:flex;align-items:center;gap:8px;font-family:var(--mp-font-display);font-weight:800;font-size:16px;color:#fff }
+  .b-logo-mark { width:22px;height:22px;border-radius:6px;background:#00A896;color:#001028;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:12px }
+  .b-navlinks { display:flex;gap:20px;font-size:12px;color:rgba(255,255,255,0.65) }
+  .b-ctas { display:flex;gap:8px }
+  .b-btn-ghost { font-size:12px;color:rgba(255,255,255,0.85);background:none;border:none;cursor:pointer;padding:6px 10px }
+  .b-btn-solid { font-size:12px;color:#001028;background:#00A896;border:none;padding:8px 14px;border-radius:10px;font-weight:700;cursor:pointer }
+  .b-hero { padding: 20px 28px 28px;position:relative;z-index:1 }
+  .b-eye { font-family:var(--mp-font-mono);font-size:11px;color:#00A896;letter-spacing:0.12em;text-transform:uppercase;font-weight:700;margin-bottom:14px }
+  .b-h1 { font-family:var(--mp-font-display);font-weight:900;font-size:56px;line-height:1;letter-spacing:-0.035em;margin:0 0 18px;max-width:900px }
+  .b-h1 em { font-style:italic;color:#00A896;font-weight:800 }
+  .b-lede { font-size:16px;line-height:1.5;color:rgba(255,255,255,0.75);max-width:620px;margin-bottom:22px }
+  .b-cta-row { display:flex;gap:10px;align-items:center;margin-bottom:24px }
+  .b-cta-primary { padding:13px 22px;background:#00A896;color:#001028;border:none;border-radius:12px;font-weight:800;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:6px }
+  .b-cta-secondary { padding:13px 22px;background:transparent;color:#fff;border:1px solid rgba(255,255,255,0.25);border-radius:12px;font-weight:600;font-size:13px;cursor:pointer }
+  .b-cta-note { font-size:11px;color:rgba(255,255,255,0.5);margin-left:4px }
+  .b-strip { display:flex;gap:0;border-top:1px solid rgba(255,255,255,0.1);border-bottom:1px solid rgba(255,255,255,0.1);margin-top:4px }
+  .b-strip-cell { flex:1;padding:14px 16px;border-right:1px solid rgba(255,255,255,0.1) }
+  .b-strip-cell:last-child { border-right:none }
+  .b-strip-cell .n { font-family:var(--mp-font-display);font-weight:900;font-size:30px;letter-spacing:-0.03em;color:#fff;font-variant-numeric:tabular-nums;line-height:1 }
+  .b-strip-cell .l { font-size:10px;color:rgba(255,255,255,0.55);letter-spacing:0.08em;text-transform:uppercase;font-weight:700;margin-top:5px }
+</style>
+</head>
+<body>
+  <div class="alt-header">
+    <h1>Landing (/landing) — 2 alternatives</h1>
+    <p>A: clinical-calm restrained trust (Apple Health-adjacent) · B: confident-editorial bold claim (Lenny's Newsletter-adjacent). Real copy for Ärztliche Kenntnisprüfung · Fachsprachenprüfung · Nostrifikation.</p>
+  </div>
+  <div class="alt-stack">
+    <!-- A -->
+    <div class="alt-wrap alt-wrap--full">
+      <div class="alt-card">
+        <div class="alt-card__label"><div><span class="alt-card__name">A · Clinical-calm</span> <span class="alt-card__bet">— restrained, trust-first, KPIs in a quiet strip</span></div><span class="alt-card__tag">LIGHT</span></div>
+        <div class="alt-card__body alt-card__body--light" style="min-height:500px">
+          <div class="a-page">
+            <div class="a-nav">
+              <div class="a-logo"><span class="a-logo-mark">M</span>MedPrüf</div>
+              <div class="a-navlinks"><span>Prüfungen</span><span>Preise</span><span>Über uns</span><span>Blog</span></div>
+              <div class="a-cta-pair"><button class="a-btn-ghost">Anmelden</button><button class="a-btn-solid">Kostenlos starten</button></div>
+            </div>
+            <div class="a-hero">
+              <div>
+                <div class="a-eyebrow">Für Ärztinnen und Ärzte in Österreich</div>
+                <h1 class="a-h1">Die <em>Kenntnisprüfung</em> vorbereiten, ohne zu raten, was drankommt.</h1>
+                <p class="a-lede">10 993 echte Prüfungsfragen. Statistisch gewichtet nach Prüfungshäufigkeit. Angepasst an deinen Wissensstand — nicht an ein Marketing-Curriculum.</p>
+                <div class="a-cta-row">
+                  <button class="a-cta-primary">Kostenlos testen</button>
+                  <button class="a-cta-secondary">So funktioniert&rsquo;s</button>
+                </div>
+                <div class="a-microtrust">Keine Kreditkarte · 60 Fragen pro Tag kostenlos · DSGVO, gehostet in Wien</div>
+              </div>
+              <div class="a-heromock">
+                <div class="cap">Frage 14 / 60 · Kardiologie</div>
+                <div class="q">Welches Medikament ist bei einer hypertensiven Krise mit akuter Linksherzinsuffizienz primär indiziert?</div>
+                <div class="op"><span>A · Nifedipin sublingual</span></div>
+                <div class="op ok"><span>B · Glyceroltrinitrat i.v. + Furosemid</span><span>✓</span></div>
+                <div class="op"><span>C · Metoprolol p.o.</span></div>
+                <div class="op"><span>D · Captopril sublingual</span></div>
+              </div>
+            </div>
+            <div class="a-stats">
+              <div class="a-stat"><div class="n">10 993</div><div class="l">Fragen</div></div>
+              <div class="a-stat"><div class="n">3</div><div class="l">Prüfungstypen</div></div>
+              <div class="a-stat"><div class="n">7</div><div class="l">Sprachen</div></div>
+              <div class="a-stat"><div class="n">1 806</div><div class="l">Mehrfachauswahl</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- B -->
+    <div class="alt-wrap alt-wrap--full">
+      <div class="alt-card" style="background:#001028">
+        <div class="alt-card__label" style="background:#001028;border-color:rgba(255,255,255,0.05)"><div><span class="alt-card__name" style="color:#E2E8F0">B · Confident-editorial</span> <span class="alt-card__bet" style="color:#94A3B8">— dark hero, bold claim, opinionated voice</span></div><span class="alt-card__tag alt-card__tag--dark">DARK HERO</span></div>
+        <div class="alt-card__body" style="background:#001028;min-height:500px">
+          <div class="b-page">
+            <div class="b-nav">
+              <div class="b-logo"><span class="b-logo-mark">M</span>MedPrüf</div>
+              <div class="b-navlinks"><span>Prüfungen</span><span>Preise</span><span>Manifest</span><span>Login</span></div>
+              <div class="b-ctas"><button class="b-btn-ghost">Anmelden</button><button class="b-btn-solid">7 Tage Pro gratis</button></div>
+            </div>
+            <div class="b-hero">
+              <div class="b-eye">— Österreich · Ärztliche Kenntnisprüfung</div>
+              <h1 class="b-h1">Hör auf, <em>alles</em> zu lernen.<br>Lern das, was drankommt.</h1>
+              <p class="b-lede">Die Prüfung prüft 10 993 Fragen. Du brauchst nicht alle. MedPrüf zeigt dir, welche 600 dich 86% der Punkte bringen — und welche 40 du heute wiederholen solltest, bevor du sie vergisst.</p>
+              <div class="b-cta-row">
+                <button class="b-cta-primary">Jetzt lernen <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg></button>
+                <button class="b-cta-secondary">Wie wir Fragen gewichten →</button>
+                <span class="b-cta-note">Kostenlos · 60 Fragen/Tag · Keine Karte</span>
+              </div>
+            </div>
+            <div class="b-strip">
+              <div class="b-strip-cell"><div class="n">10 993</div><div class="l">Verifizierte Fragen</div></div>
+              <div class="b-strip-cell"><div class="n">3</div><div class="l">AT-Prüfungstypen</div></div>
+              <div class="b-strip-cell"><div class="n">7</div><div class="l">Sprachen</div></div>
+              <div class="b-strip-cell"><div class="n">1 806</div><div class="l">Multi-Correct</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body></html>

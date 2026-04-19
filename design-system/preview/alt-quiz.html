@@ -1,0 +1,234 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link rel="stylesheet" href="../components_v2.css">
+<link rel="stylesheet" href="_alt-shell.css">
+<title>Quiz — Alternatives</title>
+<style>
+  .stage { padding: 18px; height:100%; box-sizing:border-box; display:flex; justify-content:center }
+
+  /* ── A: Single-column scroll, linear reading ── */
+  .a-card { background:#fff;border:1px solid rgba(228,233,240,.7);border-radius:16px;padding:18px 20px;max-width:520px;width:100%;box-shadow:0 1px 3px rgba(0,27,61,0.05) }
+  .a-meta { display:flex;justify-content:space-between;align-items:center;font-family:var(--mp-font-mono);font-size:11px;color:#A0AEC0;margin-bottom:10px;letter-spacing:0.02em }
+  .a-chipset { display:flex;gap:6px }
+  .a-chip { font-size:10px;padding:2px 8px;border-radius:999px;background:rgba(0,58,140,0.08);color:#003A8C;font-weight:700 }
+  .a-stem { font-size:15px;font-weight:500;color:#1A2B3C;line-height:1.55;margin-bottom:14px }
+  .a-opts { display:flex;flex-direction:column;gap:8px;margin-bottom:12px }
+  .a-opt { background:#fff;border:1px solid #E4E9F0;border-radius:10px;padding:10px 14px;font-size:13px;color:#1A2B3C;display:flex;align-items:center;gap:10px }
+  .a-opt .l { font-family:var(--mp-font-mono);font-size:11px;color:#A0AEC0;font-weight:700;width:16px }
+  .a-opt--correct { background:rgba(0,123,95,0.08);border:2px solid #00A896;padding:9px 13px;color:#007B5F;font-weight:600 }
+  .a-opt--wrong { background:rgba(214,69,69,0.06);border:2px solid #D64545;padding:9px 13px;color:#D64545 }
+  .a-opt .mark { margin-left:auto;font-size:12px }
+  .a-expl { background:#F7F9FC;border-left:3px solid #007B5F;border-radius:6px;padding:10px 12px;font-size:12px;color:#4A5568;line-height:1.5;margin-bottom:10px }
+  .a-expl b { color:#1A2B3C }
+  .a-foot { display:flex;justify-content:space-between;align-items:center;padding-top:8px;border-top:1px solid rgba(228,233,240,.7) }
+  .a-tools { display:flex;gap:4px }
+  .a-tool { width:30px;height:30px;border-radius:8px;border:1px solid #E4E9F0;background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#4A5568 }
+  .a-tool svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .a-next { background:#001B3D;color:#fff;border:none;padding:8px 16px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px }
+
+  /* ── B: Split — question left, tabbed context right ── */
+  .b-card { background:#fff;border:1px solid rgba(228,233,240,.7);border-radius:16px;max-width:860px;width:100%;box-shadow:0 1px 3px rgba(0,27,61,0.05);display:grid;grid-template-columns:1fr 320px;overflow:hidden }
+  .b-q { padding:18px 20px;border-right:1px solid rgba(228,233,240,.7);display:flex;flex-direction:column;gap:10px }
+  .b-meta { display:flex;justify-content:space-between;align-items:center;font-family:var(--mp-font-mono);font-size:11px;color:#A0AEC0 }
+  .b-timer { font-family:var(--mp-font-mono);font-weight:700;color:#1A2B3C;font-size:13px;font-variant-numeric:tabular-nums }
+  .b-progressbar { height:3px;background:rgba(0,123,95,0.12);border-radius:2px;overflow:hidden }
+  .b-progressbar span { display:block;height:100%;width:23%;background:#007B5F }
+  .b-stem { font-size:16px;font-weight:500;color:#1A2B3C;line-height:1.55 }
+  .b-opts { display:flex;flex-direction:column;gap:8px }
+  .b-opt { background:#fff;border:1px solid #E4E9F0;border-radius:12px;padding:11px 14px;font-size:13px;color:#1A2B3C;display:flex;align-items:center;gap:10px;cursor:pointer }
+  .b-opt .l { font-family:var(--mp-font-mono);font-size:11px;background:#F7F9FC;border-radius:6px;padding:2px 7px;color:#4A5568;font-weight:700 }
+  .b-opt--correct { background:rgba(0,123,95,0.08);border:2px solid #00A896;padding:10px 13px }
+  .b-opt--correct .l { background:#00A896;color:#fff }
+  .b-opt--correct { color:#007B5F;font-weight:600 }
+  .b-actions { display:flex;justify-content:space-between;align-items:center;margin-top:auto;padding-top:10px }
+  .b-tools { display:flex;gap:4px }
+  .b-tool { width:30px;height:30px;border-radius:8px;border:1px solid #E4E9F0;background:#fff;color:#4A5568;display:flex;align-items:center;justify-content:center;cursor:pointer }
+  .b-tool svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .b-submit { background:#00A896;color:#fff;border:none;padding:9px 18px;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer }
+  .b-ctx { background:#F7F9FC;padding:0;display:flex;flex-direction:column }
+  .b-tabs-bar { display:flex;border-bottom:1px solid rgba(228,233,240,.7);background:#fff }
+  .b-tab { flex:1;padding:10px 6px;font-size:11px;font-weight:700;color:#4A5568;background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;letter-spacing:0.03em }
+  .b-tab--active { color:#001B3D;border-bottom-color:#00A896;background:#F7F9FC }
+  .b-ctx-body { padding:14px;flex:1;overflow-y:auto;font-size:12px;color:#4A5568;line-height:1.55 }
+  .b-ctx-body h4 { font-family:var(--mp-font-display);font-size:13px;color:#1A2B3C;margin:0 0 6px;font-weight:700 }
+  .b-ctx-body p { margin:0 0 8px }
+  .b-ctx-body .ref { font-family:var(--mp-font-mono);font-size:10px;color:#A0AEC0;padding-top:6px;border-top:1px dashed rgba(228,233,240,.9);margin-top:8px }
+  .b-pill { display:inline-block;padding:2px 8px;border-radius:999px;background:rgba(0,123,95,0.1);color:#007B5F;font-size:10px;font-weight:700;margin-right:4px }
+
+  /* dark */
+  [data-theme="dark"] .a-card,[data-theme="dark"] .b-card { background:#1E293B;border-color:rgba(51,65,85,0.7) }
+  [data-theme="dark"] .a-stem,[data-theme="dark"] .b-stem { color:#E2E8F0 }
+  [data-theme="dark"] .a-opt,[data-theme="dark"] .b-opt { background:#0F172A;border-color:#334155;color:#E2E8F0 }
+  [data-theme="dark"] .a-opt--correct { background:rgba(0,168,150,0.15);border-color:#00A896;color:#1BB680 }
+  [data-theme="dark"] .a-opt--wrong { background:rgba(214,69,69,0.12);border-color:#D64545;color:#FC8181 }
+  [data-theme="dark"] .a-expl { background:#0F172A;color:#94A3B8 }
+  [data-theme="dark"] .a-expl b { color:#E2E8F0 }
+  [data-theme="dark"] .a-foot { border-color:#334155 }
+  [data-theme="dark"] .a-tool,[data-theme="dark"] .b-tool { background:#0F172A;border-color:#334155;color:#94A3B8 }
+  [data-theme="dark"] .a-next { background:#003A8C }
+  [data-theme="dark"] .b-q { border-color:#334155 }
+  [data-theme="dark"] .b-ctx { background:#0F172A }
+  [data-theme="dark"] .b-tabs-bar { background:#1E293B;border-color:#334155 }
+  [data-theme="dark"] .b-tab { color:#94A3B8 }
+  [data-theme="dark"] .b-tab--active { color:#E2E8F0;background:#0F172A }
+  [data-theme="dark"] .b-ctx-body { color:#94A3B8 }
+  [data-theme="dark"] .b-ctx-body h4 { color:#E2E8F0 }
+  [data-theme="dark"] .b-opt--correct { background:rgba(0,168,150,0.15);color:#1BB680;border-color:#00A896 }
+  [data-theme="dark"] .b-opt .l { background:#334155;color:#CBD5E1 }
+</style>
+</head>
+<body>
+  <div class="alt-header">
+    <h1>Quiz / QuestionCard — 2 layout models</h1>
+    <p>A: linear single-column scroll (current mental model, tightened) · B: split layout with tabbed context drawer (tabbed exploration; explanation, references, AI chat, notes live as sibling tabs not stacked scroll).</p>
+  </div>
+  <div class="alt-stack">
+    <!-- A -->
+    <div class="alt-wrap">
+      <div class="alt-card">
+        <div class="alt-card__label"><div><span class="alt-card__name">A · Linear single-column</span> <span class="alt-card__bet">— bet: one narrative flow, read → answer → learn → next</span></div><span class="alt-card__tag">LIGHT</span></div>
+        <div class="alt-card__body alt-card__body--light">
+          <div class="stage">
+            <div class="a-card">
+              <div class="a-meta"><span>Frage 14 / 60 · Kardiologie</span>
+                <div class="a-chipset"><span class="a-chip">🇦🇹 AT</span><span class="a-chip" style="background:rgba(0,123,95,0.1);color:#007B5F">Einfachauswahl</span></div>
+              </div>
+              <div class="a-stem">Welches Medikament ist bei einer hypertensiven Krise mit akuter Linksherzinsuffizienz primär indiziert?</div>
+              <div class="a-opts">
+                <div class="a-opt"><span class="l">A</span> Nifedipin sublingual</div>
+                <div class="a-opt a-opt--correct"><span class="l">B</span> Glyceroltrinitrat i.v. + Furosemid<span class="mark">✓</span></div>
+                <div class="a-opt a-opt--wrong"><span class="l">C</span> Metoprolol p.o.<span class="mark">✕</span></div>
+                <div class="a-opt"><span class="l">D</span> Captopril sublingual</div>
+              </div>
+              <div class="a-expl"><b>Erklärung.</b> Bei hypertensiver Krise mit Linksherzinsuffizienz senkt Nitroglyzerin die Vorlast rasch und entlastet das linke Herz; Furosemid reduziert das Volumen. Beta-Blocker sind bei akuter Dekompensation kontraindiziert. <span style="color:#A0AEC0;font-family:var(--mp-font-mono);font-size:10px">ESC Guidelines 2023, Kap. 11.3</span></div>
+              <div class="a-foot">
+                <div class="a-tools">
+                  <button class="a-tool" title="Merken"><svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></button>
+                  <button class="a-tool" title="Notiz"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></button>
+                  <button class="a-tool" title="Übersetzen"><svg viewBox="0 0 24 24"><path d="M5 8l6 6"/><path d="M4 14l6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="M22 22l-5-10-5 10"/><path d="M14 18h6"/></svg></button>
+                  <button class="a-tool" title="Frage melden"><svg viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg></button>
+                </div>
+                <button class="a-next">Weiter <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="alt-card" data-theme="dark" style="background:#001028">
+        <div class="alt-card__label" style="background:#001028;border-color:rgba(255,255,255,0.05)"><div><span class="alt-card__name" style="color:#E2E8F0">A · Linear</span> <span class="alt-card__bet" style="color:#94A3B8">— dark</span></div><span class="alt-card__tag alt-card__tag--dark">DARK</span></div>
+        <div class="alt-card__body alt-card__body--dark">
+          <div class="stage" data-theme="dark">
+            <div class="a-card">
+              <div class="a-meta" style="color:#64748B"><span>Frage 14 / 60 · Kardiologie</span>
+                <div class="a-chipset"><span class="a-chip" style="background:rgba(58,124,165,0.2);color:#7FB4D9">🇦🇹 AT</span><span class="a-chip" style="background:rgba(0,168,150,0.18);color:#1BB680">Einfachauswahl</span></div>
+              </div>
+              <div class="a-stem">Welches Medikament ist bei einer hypertensiven Krise mit akuter Linksherzinsuffizienz primär indiziert?</div>
+              <div class="a-opts">
+                <div class="a-opt"><span class="l">A</span> Nifedipin sublingual</div>
+                <div class="a-opt a-opt--correct"><span class="l" style="color:#1BB680">B</span> Glyceroltrinitrat i.v. + Furosemid<span class="mark">✓</span></div>
+                <div class="a-opt a-opt--wrong"><span class="l" style="color:#FC8181">C</span> Metoprolol p.o.<span class="mark">✕</span></div>
+                <div class="a-opt"><span class="l">D</span> Captopril sublingual</div>
+              </div>
+              <div class="a-expl"><b>Erklärung.</b> Bei hypertensiver Krise mit Linksherzinsuffizienz senkt Nitroglyzerin die Vorlast rasch. Beta-Blocker sind bei akuter Dekompensation kontraindiziert.</div>
+              <div class="a-foot">
+                <div class="a-tools">
+                  <button class="a-tool"><svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></button>
+                  <button class="a-tool"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></button>
+                  <button class="a-tool"><svg viewBox="0 0 24 24"><path d="M5 8l6 6"/><path d="M4 14l6-6 2-3"/><path d="M2 5h12"/><path d="M22 22l-5-10-5 10"/></svg></button>
+                  <button class="a-tool"><svg viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg></button>
+                </div>
+                <button class="a-next">Weiter</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- B -->
+    <div class="alt-wrap alt-wrap--full">
+      <div class="alt-card">
+        <div class="alt-card__label"><div><span class="alt-card__name">B · Split + tabbed context</span> <span class="alt-card__bet">— bet: explanation, refs, AI chat, notes are peers not stacked scroll</span></div><span class="alt-card__tag">LIGHT</span></div>
+        <div class="alt-card__body alt-card__body--light">
+          <div class="stage">
+            <div class="b-card">
+              <div class="b-q">
+                <div class="b-meta"><span>Frage 14 / 60 · Kardiologie</span><span class="b-timer">1 : 23 : 40</span></div>
+                <div class="b-progressbar"><span></span></div>
+                <div class="b-stem">Welches Medikament ist bei einer hypertensiven Krise mit akuter Linksherzinsuffizienz primär indiziert?</div>
+                <div class="b-opts">
+                  <div class="b-opt"><span class="l">A</span> Nifedipin sublingual</div>
+                  <div class="b-opt b-opt--correct"><span class="l">B</span> Glyceroltrinitrat i.v. + Furosemid</div>
+                  <div class="b-opt"><span class="l">C</span> Metoprolol p.o.</div>
+                  <div class="b-opt"><span class="l">D</span> Captopril sublingual</div>
+                </div>
+                <div class="b-actions">
+                  <div class="b-tools">
+                    <button class="b-tool"><svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></button>
+                    <button class="b-tool"><svg viewBox="0 0 24 24"><path d="M5 8l6 6"/><path d="M4 14l6-6"/><path d="M2 5h12"/></svg></button>
+                    <button class="b-tool"><svg viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/></svg></button>
+                  </div>
+                  <button class="b-submit">Antwort prüfen →</button>
+                </div>
+              </div>
+              <div class="b-ctx">
+                <div class="b-tabs-bar">
+                  <button class="b-tab b-tab--active">Erklärung</button>
+                  <button class="b-tab">Quellen</button>
+                  <button class="b-tab">KI-Chat</button>
+                  <button class="b-tab">Notiz</button>
+                </div>
+                <div class="b-ctx-body">
+                  <span class="b-pill">Richtig: B</span>
+                  <h4>Nitroglyzerin entlastet das linke Herz</h4>
+                  <p>Bei hypertensiver Krise mit akuter Linksherzinsuffizienz senkt Nitroglyzerin über Venodilatation rasch die Vorlast. Furosemid reduziert zusätzlich das Volumen.</p>
+                  <p><strong>Cave:</strong> Beta-Blocker (Metoprolol) sind in der akuten Dekompensation kontraindiziert — sie verschlechtern die kardiale Pumpfunktion weiter.</p>
+                  <p>Nifedipin sublingual ist obsolet wegen unkontrollierter BD-Abfälle. Captopril wirkt zu langsam bei der Akuttherapie.</p>
+                  <div class="ref">ESC Guidelines 2023 · Kap. 11.3 · Prüfungshäufigkeit ★★★★☆</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="alt-wrap alt-wrap--full">
+      <div class="alt-card" data-theme="dark" style="background:#001028">
+        <div class="alt-card__label" style="background:#001028;border-color:rgba(255,255,255,0.05)"><div><span class="alt-card__name" style="color:#E2E8F0">B · Split + tabbed context</span> <span class="alt-card__bet" style="color:#94A3B8">— dark</span></div><span class="alt-card__tag alt-card__tag--dark">DARK</span></div>
+        <div class="alt-card__body alt-card__body--dark">
+          <div class="stage" data-theme="dark">
+            <div class="b-card">
+              <div class="b-q">
+                <div class="b-meta" style="color:#64748B"><span>Frage 14 / 60 · Kardiologie</span><span class="b-timer" style="color:#E2E8F0">1 : 23 : 40</span></div>
+                <div class="b-progressbar" style="background:rgba(0,168,150,0.18)"><span style="background:#00A896"></span></div>
+                <div class="b-stem">Welches Medikament ist bei einer hypertensiven Krise mit akuter Linksherzinsuffizienz primär indiziert?</div>
+                <div class="b-opts">
+                  <div class="b-opt"><span class="l">A</span> Nifedipin sublingual</div>
+                  <div class="b-opt b-opt--correct"><span class="l">B</span> Glyceroltrinitrat i.v. + Furosemid</div>
+                  <div class="b-opt"><span class="l">C</span> Metoprolol p.o.</div>
+                  <div class="b-opt"><span class="l">D</span> Captopril sublingual</div>
+                </div>
+                <div class="b-actions">
+                  <div class="b-tools">
+                    <button class="b-tool"><svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></button>
+                    <button class="b-tool"><svg viewBox="0 0 24 24"><path d="M5 8l6 6"/><path d="M4 14l6-6"/></svg></button>
+                  </div>
+                  <button class="b-submit">Antwort prüfen →</button>
+                </div>
+              </div>
+              <div class="b-ctx">
+                <div class="b-tabs-bar"><button class="b-tab b-tab--active">Erklärung</button><button class="b-tab">Quellen</button><button class="b-tab">KI-Chat</button><button class="b-tab">Notiz</button></div>
+                <div class="b-ctx-body">
+                  <span class="b-pill" style="background:rgba(0,168,150,0.15);color:#1BB680">Richtig: B</span>
+                  <h4>Nitroglyzerin entlastet das linke Herz</h4>
+                  <p>Bei hypertensiver Krise mit akuter Linksherzinsuffizienz senkt Nitroglyzerin über Venodilatation rasch die Vorlast.</p>
+                  <p><strong style="color:#E2E8F0">Cave:</strong> Beta-Blocker in der akuten Dekompensation kontraindiziert.</p>
+                  <div class="ref">ESC Guidelines 2023 · Kap. 11.3</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body></html>

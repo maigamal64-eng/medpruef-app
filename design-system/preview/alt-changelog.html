@@ -1,0 +1,191 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link rel="stylesheet" href="../components_v2.css">
+<link rel="stylesheet" href="_alt-shell.css">
+<title>Changelog — Alternatives</title>
+<style>
+  .stage{padding:22px;height:100%;box-sizing:border-box;overflow:hidden}
+
+  /* A: timeline-left, dense log */
+  .a-page{max-width:560px;margin:0 auto}
+  .a-head{margin-bottom:14px}
+  .a-title{font-family:var(--mp-font-display);font-weight:900;font-size:22px;color:#001B3D;margin:0 0 4px;letter-spacing:-0.02em}
+  .a-sub{font-size:13px;color:#4A5568;margin:0}
+  .a-filters{display:flex;gap:6px;margin:12px 0;flex-wrap:wrap}
+  .a-filter{font-size:11px;padding:4px 10px;border-radius:999px;background:#F7F9FC;color:#4A5568;border:1px solid #E4E9F0;cursor:pointer;font-weight:600}
+  .a-filter.on{background:#001B3D;color:#fff;border-color:#001B3D}
+  .a-tl{position:relative;padding-left:22px;margin-top:6px}
+  .a-tl::before{content:"";position:absolute;left:6px;top:6px;bottom:6px;width:2px;background:#E4E9F0}
+  .a-entry{position:relative;padding:10px 0 14px 6px}
+  .a-dot{position:absolute;left:-16px;top:14px;width:10px;height:10px;border-radius:50%;background:#007B5F;border:2px solid #fff;box-shadow:0 0 0 2px #E4E9F0}
+  .a-dot.feat{background:#003A8C}
+  .a-dot.fix{background:#D68A3A}
+  .a-meta{display:flex;align-items:center;gap:8px;font-family:var(--mp-font-mono);font-size:11px;color:#A0AEC0;margin-bottom:4px}
+  .a-ver{font-weight:700;color:#001B3D}
+  .a-tag{font-size:10px;padding:1px 6px;border-radius:4px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase}
+  .a-tag.new{background:rgba(0,123,95,0.1);color:#007B5F}
+  .a-tag.feat{background:rgba(0,58,140,0.1);color:#003A8C}
+  .a-tag.fix{background:rgba(244,162,97,0.15);color:#D68A3A}
+  .a-body{font-size:13px;color:#1A2B3C;line-height:1.5}
+  .a-body b{font-family:var(--mp-font-display);font-weight:700}
+  .a-bullets{margin:6px 0 0;padding:0 0 0 18px;font-size:12px;color:#4A5568;line-height:1.55}
+
+  /* B: card grid per release, featured hero */
+  .b-page{max-width:700px;margin:0 auto}
+  .b-head{text-align:center;margin-bottom:18px}
+  .b-title{font-family:var(--mp-font-display);font-weight:900;font-size:28px;color:#001B3D;margin:0 0 4px;letter-spacing:-0.02em}
+  .b-sub{font-size:13px;color:#4A5568;margin:0}
+  .b-hero{background:linear-gradient(135deg,#001B3D 0%,#003A8C 100%);color:#fff;border-radius:16px;padding:22px;margin-bottom:14px;position:relative;overflow:hidden}
+  .b-hero::before{content:"";position:absolute;right:-40px;bottom:-40px;width:180px;height:180px;border-radius:50%;background:radial-gradient(circle,rgba(0,168,150,0.3),transparent 70%)}
+  .b-hero-badge{font-family:var(--mp-font-mono);font-size:11px;color:#1BB680;letter-spacing:0.1em;text-transform:uppercase;font-weight:800;margin-bottom:8px;position:relative}
+  .b-hero-hd{font-family:var(--mp-font-display);font-weight:900;font-size:26px;line-height:1.1;letter-spacing:-0.02em;margin:0 0 6px;position:relative}
+  .b-hero-hd em{color:#1BB680;font-style:normal}
+  .b-hero-meta{font-family:var(--mp-font-mono);font-size:11px;color:rgba(255,255,255,0.6);margin-bottom:10px;position:relative}
+  .b-hero-body{font-size:13px;color:rgba(255,255,255,0.85);line-height:1.55;max-width:460px;position:relative}
+  .b-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .b-card{background:#fff;border:1px solid rgba(228,233,240,.7);border-radius:12px;padding:14px 16px}
+  .b-c-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+  .b-c-ver{font-family:var(--mp-font-mono);font-weight:700;font-size:12px;color:#001B3D}
+  .b-c-date{font-family:var(--mp-font-mono);font-size:11px;color:#A0AEC0}
+  .b-c-tag{font-size:10px;padding:2px 7px;border-radius:4px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase}
+  .b-c-hd{font-family:var(--mp-font-display);font-weight:700;font-size:14px;color:#1A2B3C;margin:0 0 4px;letter-spacing:-0.01em}
+  .b-c-body{font-size:12px;color:#4A5568;line-height:1.5}
+
+  [data-theme="dark"] .a-title,[data-theme="dark"] .b-title{color:#E2E8F0}
+  [data-theme="dark"] .a-sub,[data-theme="dark"] .b-sub{color:#94A3B8}
+  [data-theme="dark"] .a-filter{background:#0F172A;border-color:#334155;color:#94A3B8}
+  [data-theme="dark"] .a-filter.on{background:#00A896;color:#001028;border-color:#00A896}
+  [data-theme="dark"] .a-tl::before{background:#334155}
+  [data-theme="dark"] .a-dot{border-color:#0F172A;box-shadow:0 0 0 2px #334155}
+  [data-theme="dark"] .a-body{color:#E2E8F0}
+  [data-theme="dark"] .a-bullets{color:#94A3B8}
+  [data-theme="dark"] .a-ver{color:#E2E8F0}
+  [data-theme="dark"] .b-card{background:#1E293B;border-color:rgba(51,65,85,0.7)}
+  [data-theme="dark"] .b-c-ver,[data-theme="dark"] .b-c-hd{color:#E2E8F0}
+  [data-theme="dark"] .b-c-body{color:#94A3B8}
+</style>
+</head>
+<body>
+  <div class="alt-header">
+    <h1>Changelog /changelog — 2 alternatives</h1>
+    <p>A: timeline-left dense log (reads like a dev changelog) · B: featured-release hero + card grid (reads like a marketing changelog).</p>
+  </div>
+
+  <div class="alt-stack">
+    <div class="alt-wrap">
+      <div class="alt-card">
+        <div class="alt-card__label"><div><span class="alt-card__name">A · Timeline dense</span> <span class="alt-card__bet">— bet: power users scan versions fast; admin-only entries filtered out</span></div><span class="alt-card__tag">LIGHT</span></div>
+        <div class="alt-card__body alt-card__body--light">
+          <div class="stage">
+            <div class="a-page">
+              <div class="a-head">
+                <h1 class="a-title">Was ist neu</h1>
+                <p class="a-sub">Alle Updates, die dich als Lerner betreffen.</p>
+              </div>
+              <div class="a-filters">
+                <button class="a-filter on">Alle · 47</button>
+                <button class="a-filter">Neu · 12</button>
+                <button class="a-filter">Features · 23</button>
+                <button class="a-filter">Fixes · 12</button>
+              </div>
+              <div class="a-tl">
+                <div class="a-entry">
+                  <span class="a-dot"></span>
+                  <div class="a-meta"><span class="a-ver">v2.3.0</span><span>· 18. März 2026</span><span class="a-tag new">Neu</span></div>
+                  <div class="a-body"><b>Schwächen-Fokus-Modus.</b> Die Plan-Engine priorisiert jetzt Themen mit {'<'}60% Genauigkeit.
+                    <ul class="a-bullets">
+                      <li>Neue tägliche Wiederholungsschleife basierend auf SM-2</li>
+                      <li>Topic-Prio wird 3× täglich neu berechnet</li>
+                    </ul>
+                  </div>
+                </div>
+                <div class="a-entry">
+                  <span class="a-dot feat"></span>
+                  <div class="a-meta"><span class="a-ver">v2.2.1</span><span>· 12. März 2026</span><span class="a-tag feat">Feature</span></div>
+                  <div class="a-body"><b>Farsi und Russisch</b> zur On-Demand-Übersetzung. Sprachen jetzt insgesamt 7.</div>
+                </div>
+                <div class="a-entry">
+                  <span class="a-dot fix"></span>
+                  <div class="a-meta"><span class="a-ver">v2.2.0</span><span>· 06. März 2026</span><span class="a-tag fix">Fix</span></div>
+                  <div class="a-body"><b>Streak-Berechnung bei Zeitzonenwechsel.</b> User in Wien auf Reise meldeten falsche Streaks — behoben.</div>
+                </div>
+                <div class="a-entry">
+                  <span class="a-dot feat"></span>
+                  <div class="a-meta"><span class="a-ver">v2.1.3</span><span>· 28. Feb 2026</span><span class="a-tag feat">Feature</span></div>
+                  <div class="a-body"><b>Frage melden.</b> Melde unklare oder fehlerhafte Fragen direkt aus der Quizkarte; unser Fachbeirat prüft innerhalb 72h.</div>
+                </div>
+                <div class="a-entry">
+                  <span class="a-dot"></span>
+                  <div class="a-meta"><span class="a-ver">v2.1.0</span><span>· 18. Feb 2026</span><span class="a-tag new">Neu</span></div>
+                  <div class="a-body"><b>Prüfungssimulation.</b> 4-Stunden-Modus mit verzögerter Auswertung — exakt wie in Wien.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="alt-card" data-theme="dark" style="background:#001028">
+        <div class="alt-card__label" style="background:#001028;border-color:rgba(255,255,255,0.05)"><div><span class="alt-card__name" style="color:#E2E8F0">A · Timeline</span> <span class="alt-card__bet" style="color:#94A3B8">— dark</span></div><span class="alt-card__tag alt-card__tag--dark">DARK</span></div>
+        <div class="alt-card__body alt-card__body--dark">
+          <div class="stage" data-theme="dark">
+            <div class="a-page">
+              <div class="a-head"><h1 class="a-title">Was ist neu</h1><p class="a-sub">Alle Updates, die dich als Lerner betreffen.</p></div>
+              <div class="a-filters"><button class="a-filter on">Alle · 47</button><button class="a-filter">Neu · 12</button><button class="a-filter">Features · 23</button><button class="a-filter">Fixes · 12</button></div>
+              <div class="a-tl">
+                <div class="a-entry"><span class="a-dot" style="background:#1BB680"></span><div class="a-meta"><span class="a-ver">v2.3.0</span><span>· 18. März 2026</span><span class="a-tag new" style="background:rgba(0,168,150,0.15);color:#1BB680">Neu</span></div><div class="a-body"><b>Schwächen-Fokus-Modus.</b> Die Plan-Engine priorisiert jetzt Themen mit &lt;60% Genauigkeit.</div></div>
+                <div class="a-entry"><span class="a-dot feat" style="background:#7FB4D9"></span><div class="a-meta"><span class="a-ver">v2.2.1</span><span>· 12. März 2026</span><span class="a-tag feat" style="background:rgba(58,124,165,0.2);color:#7FB4D9">Feature</span></div><div class="a-body"><b>Farsi und Russisch</b> zur On-Demand-Übersetzung.</div></div>
+                <div class="a-entry"><span class="a-dot fix" style="background:#F4A261"></span><div class="a-meta"><span class="a-ver">v2.2.0</span><span>· 06. März 2026</span><span class="a-tag fix" style="background:rgba(244,162,97,0.15);color:#F4A261">Fix</span></div><div class="a-body"><b>Streak-Berechnung bei Zeitzonenwechsel</b> behoben.</div></div>
+                <div class="a-entry"><span class="a-dot feat" style="background:#7FB4D9"></span><div class="a-meta"><span class="a-ver">v2.1.3</span><span>· 28. Feb 2026</span><span class="a-tag feat" style="background:rgba(58,124,165,0.2);color:#7FB4D9">Feature</span></div><div class="a-body"><b>Frage melden.</b> Direkt aus der Quizkarte, 72h Antwortzeit.</div></div>
+                <div class="a-entry"><span class="a-dot" style="background:#1BB680"></span><div class="a-meta"><span class="a-ver">v2.1.0</span><span>· 18. Feb 2026</span><span class="a-tag new" style="background:rgba(0,168,150,0.15);color:#1BB680">Neu</span></div><div class="a-body"><b>Prüfungssimulation</b> — 4-Stunden-Modus.</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="alt-wrap alt-wrap--full">
+      <div class="alt-card">
+        <div class="alt-card__label"><div><span class="alt-card__name">B · Hero + card grid</span> <span class="alt-card__bet">— bet: latest release deserves celebration; older releases as tiles</span></div><span class="alt-card__tag">LIGHT</span></div>
+        <div class="alt-card__body alt-card__body--light" style="min-height:500px">
+          <div class="stage">
+            <div class="b-page">
+              <div class="b-head"><h1 class="b-title">Was ist neu</h1><p class="b-sub">Wir versenden nichts, worauf wir nicht stolz sind.</p></div>
+              <div class="b-hero">
+                <div class="b-hero-badge">— Aktuell · v2.3.0</div>
+                <h2 class="b-hero-hd">Schwächen-Fokus-Modus ist <em>live</em>.</h2>
+                <div class="b-hero-meta">18. März 2026 · 3 min Lesezeit</div>
+                <div class="b-hero-body">Die Plan-Engine priorisiert jetzt Themen mit weniger als 60% Genauigkeit. Konkret: du siehst deine 3 schwächsten Themen heute als erstes — und die Engine erinnert dich an Fragen, kurz bevor du sie vergessen würdest (SM-2).</div>
+              </div>
+              <div class="b-grid">
+                <div class="b-card">
+                  <div class="b-c-top"><span class="b-c-ver">v2.2.1</span><span class="b-c-tag" style="background:rgba(58,124,165,0.1);color:#003A8C">Sprachen</span></div>
+                  <h3 class="b-c-hd">Farsi + Russisch</h3>
+                  <div class="b-c-body">On-Demand-Übersetzung jetzt in 7 Sprachen verfügbar.</div>
+                  <div class="b-c-date" style="margin-top:6px">12. März 2026</div>
+                </div>
+                <div class="b-card">
+                  <div class="b-c-top"><span class="b-c-ver">v2.2.0</span><span class="b-c-tag" style="background:rgba(244,162,97,0.15);color:#D68A3A">Fix</span></div>
+                  <h3 class="b-c-hd">Streak bei Zeitzonenwechsel</h3>
+                  <div class="b-c-body">User auf Reise bekamen falsche Streak-Warnungen — jetzt an lokalem Tag verankert.</div>
+                  <div class="b-c-date" style="margin-top:6px">06. März 2026</div>
+                </div>
+                <div class="b-card">
+                  <div class="b-c-top"><span class="b-c-ver">v2.1.3</span><span class="b-c-tag" style="background:rgba(58,124,165,0.1);color:#003A8C">Feature</span></div>
+                  <h3 class="b-c-hd">Frage melden</h3>
+                  <div class="b-c-body">Direkt aus der Quizkarte. Fachbeirat antwortet innerhalb 72h.</div>
+                  <div class="b-c-date" style="margin-top:6px">28. Feb 2026</div>
+                </div>
+                <div class="b-card">
+                  <div class="b-c-top"><span class="b-c-ver">v2.1.0</span><span class="b-c-tag" style="background:rgba(0,123,95,0.1);color:#007B5F">Neu</span></div>
+                  <h3 class="b-c-hd">Prüfungssimulation</h3>
+                  <div class="b-c-body">4-Stunden-Modus mit verzögerter Auswertung — exakt wie in Wien.</div>
+                  <div class="b-c-date" style="margin-top:6px">18. Feb 2026</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body></html>

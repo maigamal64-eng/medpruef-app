@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, type ReactNode } from "react";
 import { X, Send, Bot, User, Loader2, Lock, RefreshCw } from "lucide-react";
 import { trackEvent } from "@/lib/tracker";
 import ReactMarkdown from "react-markdown";
@@ -47,6 +47,67 @@ export default function AIChatAssistant({
   const inputRef = useRef<HTMLInputElement>(null);
 
   const isPro = userTier === "pro" || userTier === "admin";
+
+  // Markdown renderer — the project uses Tailwind v4 without the
+  // @tailwindcss/typography plugin, so `prose` classes are no-ops.
+  // We render each markdown element with explicit utility classes so
+  // the AI's strict-format output (TL;DR / headings / bullets / bold terms)
+  // renders properly on both user and assistant bubbles, in light + dark mode.
+  const markdownComponents = (role: "user" | "assistant") => {
+    const isUser = role === "user";
+    const strongColor = isUser ? "text-white" : "text-[#007B5F] dark:text-[#00A896]";
+    const headingColor = isUser ? "text-white" : "text-[#001B3D] dark:text-[#E2E8F0]";
+    const linkColor = isUser ? "text-white underline" : "text-[#003A8C] dark:text-[#00A896] underline";
+    const codeBg = isUser
+      ? "bg-white/20 text-white"
+      : "bg-[#E4E9F0] text-[#001B3D] dark:bg-[#334155] dark:text-[#E2E8F0]";
+    const blockquoteBorder = isUser ? "border-white/40" : "border-[#007B5F]/40";
+    return {
+      h1: ({ children }: { children?: ReactNode }) => (
+        <h3 className={`text-sm font-display font-bold mt-3 mb-1.5 first:mt-0 ${headingColor}`}>{children}</h3>
+      ),
+      h2: ({ children }: { children?: ReactNode }) => (
+        <h3 className={`text-sm font-display font-bold mt-3 mb-1.5 first:mt-0 ${headingColor}`}>{children}</h3>
+      ),
+      h3: ({ children }: { children?: ReactNode }) => (
+        <h4 className={`text-sm font-display font-semibold mt-3 mb-1.5 first:mt-0 ${headingColor}`}>{children}</h4>
+      ),
+      h4: ({ children }: { children?: ReactNode }) => (
+        <h5 className={`text-[13px] font-semibold mt-2.5 mb-1 first:mt-0 ${headingColor}`}>{children}</h5>
+      ),
+      p: ({ children }: { children?: ReactNode }) => (
+        <p className="my-1.5 first:mt-0 last:mb-0 leading-relaxed">{children}</p>
+      ),
+      ul: ({ children }: { children?: ReactNode }) => (
+        <ul className="my-1.5 pl-5 list-disc space-y-1 marker:text-[#A0AEC0]">{children}</ul>
+      ),
+      ol: ({ children }: { children?: ReactNode }) => (
+        <ol className="my-1.5 pl-5 list-decimal space-y-1 marker:text-[#A0AEC0]">{children}</ol>
+      ),
+      li: ({ children }: { children?: ReactNode }) => (
+        <li className="leading-relaxed">{children}</li>
+      ),
+      strong: ({ children }: { children?: ReactNode }) => (
+        <strong className={`font-semibold ${strongColor}`}>{children}</strong>
+      ),
+      em: ({ children }: { children?: ReactNode }) => (
+        <em className="italic">{children}</em>
+      ),
+      a: ({ children, href }: { children?: ReactNode; href?: string }) => (
+        <a href={href} target="_blank" rel="noopener noreferrer" className={linkColor}>{children}</a>
+      ),
+      code: ({ children }: { children?: ReactNode }) => (
+        <code className={`px-1 py-0.5 rounded text-[12px] font-mono ${codeBg}`}>{children}</code>
+      ),
+      pre: ({ children }: { children?: ReactNode }) => (
+        <pre className={`my-2 p-2.5 rounded-lg overflow-x-auto text-[12px] font-mono ${codeBg}`}>{children}</pre>
+      ),
+      blockquote: ({ children }: { children?: ReactNode }) => (
+        <blockquote className={`my-2 pl-3 border-l-2 italic ${blockquoteBorder}`}>{children}</blockquote>
+      ),
+      hr: () => <hr className="my-3 border-[#E4E9F0] dark:border-[#334155]" />,
+    };
+  };
 
   // Auto-generate or load cached explanation when opened
   useEffect(() => {
@@ -200,7 +261,7 @@ Use **bold** for key terms, bullet points for clarity, and structured headings.`
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
 
       <div
-        className="relative w-full max-w-lg bg-white rounded-2xl shadow-[var(--shadow-modal)] overflow-hidden animate-scale-in flex flex-col max-h-[80vh]"
+        className="relative w-full max-w-lg bg-white dark:bg-[#0F172A] rounded-2xl shadow-[var(--shadow-modal)] overflow-hidden animate-scale-in flex flex-col max-h-[80vh]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -262,11 +323,9 @@ Use **bold** for key terms, bullet points for clarity, and structured headings.`
               <div className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
                 msg.role === "user"
                   ? "bg-[#003A8C] text-white rounded-tr-sm"
-                  : "bg-[#F7F9FC] text-[#1A2B3C] rounded-tl-sm border border-[#E4E9F0]"
+                  : "bg-[#F7F9FC] text-[#1A2B3C] rounded-tl-sm border border-[#E4E9F0] dark:bg-[#1E293B] dark:text-[#E2E8F0] dark:border-[#334155]"
               }`}>
-                <div className="prose prose-sm max-w-none prose-headings:text-[#001B3D] prose-headings:font-semibold prose-headings:text-sm prose-p:my-1 prose-ul:my-1 prose-li:my-0.5 prose-strong:text-[#007B5F]">
-                  <ReactMarkdown>{msg.content}</ReactMarkdown>
-                </div>
+                <ReactMarkdown components={markdownComponents(msg.role)}>{msg.content}</ReactMarkdown>
               </div>
             </div>
           ))}
@@ -286,7 +345,7 @@ Use **bold** for key terms, bullet points for clarity, and structured headings.`
         </div>
 
         {/* Input — Pro only for custom questions */}
-        <div className="px-4 py-3 border-t border-[#E4E9F0] bg-white">
+        <div className="px-4 py-3 border-t border-[#E4E9F0] bg-white dark:bg-[#0F172A] dark:border-[#334155]">
           {isPro ? (
             <div className="flex items-center gap-2">
               <input
@@ -295,24 +354,31 @@ Use **bold** for key terms, bullet points for clarity, and structured headings.`
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-                placeholder={lang === "de" ? "Stelle eine Folgefrage..." : "Ask a follow-up question..."}
-                className="flex-1 bg-[#F7F9FC] border border-[#E4E9F0] rounded-xl px-4 py-2.5 text-sm text-[#1A2B3C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#007B5F]/50"
+                placeholder={lang === "de" ? "Folgefrage stellen..." : "Ask a follow-up question..."}
+                aria-label={lang === "de" ? "Folgefrage stellen" : "Ask a follow-up question"}
+                className="flex-1 bg-[#F7F9FC] border border-[#E4E9F0] rounded-xl px-4 py-2.5 text-sm text-[#1A2B3C] placeholder-[#A0AEC0] focus:outline-none focus:border-[#007B5F]/50 dark:bg-[#1E293B] dark:border-[#334155] dark:text-[#E2E8F0]"
                 disabled={loading}
               />
               <button
                 onClick={handleSend}
                 disabled={!input.trim() || loading}
-                className="w-10 h-10 rounded-xl bg-[#007B5F] text-white flex items-center justify-center hover:bg-[#00A896] transition-colors disabled:opacity-40"
+                aria-label={lang === "de" ? "Folgefrage senden" : "Send follow-up question"}
+                className="w-10 h-10 rounded-xl bg-[#007B5F] text-white flex items-center justify-center hover:bg-[#00A896] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <Send className="w-4 h-4" />
               </button>
             </div>
           ) : (
-            <div className="flex items-center justify-center gap-2 py-1 text-xs text-[#A0AEC0]">
-              <Lock className="w-3.5 h-3.5" />
-              {lang === "de"
-                ? "Folgefragen sind ein Pro-Feature"
-                : "Follow-up questions are a Pro feature"}
+            <div
+              className="flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-[#F7F9FC] dark:bg-[#1E293B] text-xs text-[#4A5568] dark:text-[#A0AEC0]"
+              title={lang === "de" ? "Upgrade auf Pro, um Folgefragen zu stellen" : "Upgrade to Pro to ask follow-up questions"}
+            >
+              <Lock className="w-3.5 h-3.5 text-[#A0AEC0]" />
+              <span>
+                {lang === "de"
+                  ? "Pro-Feature: Folgefragen stellen"
+                  : "Pro feature: ask follow-up questions"}
+              </span>
             </div>
           )}
         </div>

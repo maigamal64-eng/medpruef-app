@@ -61,3 +61,4 @@ source-files/
 # the first time with `git add -f`; git will keep them tracked after
 # that regardless of this rule.
 reports/
+.claude/

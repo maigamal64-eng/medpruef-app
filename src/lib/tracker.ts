@@ -39,7 +39,8 @@ export type TrackEventType =
   | "page_leave"
   | "scroll_depth"
   | "error"
-  | "feature_use";
+  | "feature_use"
+  | "translation";
 
 interface QueuedEvent {
   type: TrackEventType;

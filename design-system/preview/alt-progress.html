@@ -1,0 +1,295 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link rel="stylesheet" href="../components_v2.css">
+<link rel="stylesheet" href="_alt-shell.css">
+<title>Progress — Alternatives</title>
+<style>
+  .stage{padding:20px;height:100%;overflow:auto;box-sizing:border-box}
+
+  /* ═══ A: Dashboard multi-grid (radar + line + heatmap + topic rail) ═══ */
+  .a-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:1000px;margin:0 auto}
+  .a-card{background:#fff;border:1px solid rgba(228,233,240,.7);border-radius:14px;padding:16px}
+  .a-hd{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px}
+  .a-tt{font-family:var(--mp-font-display);font-weight:800;font-size:14px;color:#001B3D;margin:0;letter-spacing:-0.005em}
+  .a-sb{font-family:var(--mp-font-mono);font-size:10px;color:#A0AEC0;letter-spacing:0.08em;text-transform:uppercase;font-weight:700}
+  .a-big{font-family:var(--mp-font-display);font-weight:900;font-size:36px;color:#001B3D;letter-spacing:-0.02em;line-height:1;font-variant-numeric:tabular-nums}
+  .a-big .unit{font-size:14px;color:#4A5568;font-weight:700;margin-left:3px}
+  .a-delta{display:inline-flex;align-items:center;gap:4px;font-family:var(--mp-font-mono);font-size:11px;color:#007B5F;font-weight:700;margin-top:4px}
+  .a-line{width:100%;height:70px;display:block}
+  .a-heat{display:grid;grid-template-columns:repeat(14,1fr);gap:3px}
+  .a-heat div{aspect-ratio:1;border-radius:2px}
+  .h0{background:#F0F4F8}
+  .h1{background:rgba(0,168,150,0.2)}
+  .h2{background:rgba(0,168,150,0.4)}
+  .h3{background:rgba(0,168,150,0.65)}
+  .h4{background:#00A896}
+  .h5{background:#001B3D}
+  .a-legend{display:flex;align-items:center;gap:6px;margin-top:10px;font-family:var(--mp-font-mono);font-size:10px;color:#A0AEC0}
+  .a-legend .row{display:flex;gap:2px}.a-legend .row div{width:10px;height:10px;border-radius:2px}
+  .a-rail{display:flex;flex-direction:column;gap:8px;max-height:260px;overflow:auto}
+  .a-t{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;background:#F7F9FC}
+  .a-t .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+  .a-t .n{font-size:12px;font-weight:600;color:#1A2B3C;flex:1}
+  .a-t .v{font-family:var(--mp-font-mono);font-size:11px;font-weight:700;color:#001B3D}
+  .a-t .bar{width:60px;height:3px;background:rgba(0,27,61,0.1);border-radius:2px;overflow:hidden}
+  .a-t .bar span{display:block;height:100%;background:#007B5F;border-radius:2px}
+
+  /* ═══ B: One-screen story — radar hero + narrative callouts ═══ */
+  .b-wrap{max-width:900px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+  .b-hero{background:linear-gradient(135deg,#001B3D 0%,#003A8C 100%);border-radius:16px;padding:26px;color:#fff;display:grid;grid-template-columns:auto 1fr;gap:26px;align-items:center;position:relative;overflow:hidden}
+  .b-hero::before{content:"";position:absolute;right:-40px;bottom:-60px;width:220px;height:220px;border-radius:50%;background:radial-gradient(circle,rgba(0,168,150,0.25),transparent 70%)}
+  .b-hero-r{position:relative}
+  .b-hero-h{font-family:var(--mp-font-mono);font-size:11px;color:#1BB680;letter-spacing:0.12em;text-transform:uppercase;font-weight:800;margin-bottom:6px}
+  .b-hero-q{font-family:var(--mp-font-display);font-weight:900;font-size:26px;letter-spacing:-0.02em;line-height:1.2;margin:0 0 8px}
+  .b-hero-s{font-size:13px;color:rgba(255,255,255,0.7);line-height:1.5;max-width:420px}
+  .b-stats{display:flex;gap:22px;margin-top:14px;padding-top:14px;border-top:1px solid rgba(255,255,255,0.15)}
+  .b-st{display:flex;flex-direction:column}
+  .b-st .v{font-family:var(--mp-font-display);font-weight:900;font-size:22px;color:#fff;font-variant-numeric:tabular-nums;letter-spacing:-0.02em;line-height:1}
+  .b-st .l{font-family:var(--mp-font-mono);font-size:10px;color:rgba(255,255,255,0.6);letter-spacing:0.08em;text-transform:uppercase;font-weight:700;margin-top:4px}
+  .b-callouts{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+  .b-co{background:#fff;border:1px solid rgba(228,233,240,.7);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:4px}
+  .b-co.good{border-left:3px solid #007B5F}
+  .b-co.warn{border-left:3px solid #D68A3A}
+  .b-co.bad{border-left:3px solid #D64545}
+  .b-co .k{font-family:var(--mp-font-mono);font-size:10px;color:#A0AEC0;letter-spacing:0.08em;text-transform:uppercase;font-weight:700}
+  .b-co .h{font-family:var(--mp-font-display);font-weight:800;font-size:14px;color:#001B3D;letter-spacing:-0.005em;margin:2px 0}
+  .b-co .s{font-size:12px;color:#4A5568;line-height:1.4}
+  .b-trend{background:#fff;border:1px solid rgba(228,233,240,.7);border-radius:12px;padding:16px}
+  .b-trend-hd{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px}
+  .b-trend-tt{font-family:var(--mp-font-display);font-weight:800;font-size:14px;color:#001B3D;letter-spacing:-0.005em}
+  .b-trend-n{font-family:var(--mp-font-mono);font-size:11px;color:#007B5F;font-weight:700}
+
+  [data-theme="dark"] .a-card,[data-theme="dark"] .b-co,[data-theme="dark"] .b-trend{background:#1E293B;border-color:rgba(51,65,85,0.7)}
+  [data-theme="dark"] .a-tt,[data-theme="dark"] .a-big,[data-theme="dark"] .b-co .h,[data-theme="dark"] .b-trend-tt{color:#E2E8F0}
+  [data-theme="dark"] .a-big .unit,[data-theme="dark"] .b-co .s{color:#94A3B8}
+  [data-theme="dark"] .a-sb,[data-theme="dark"] .b-co .k{color:#64748B}
+  [data-theme="dark"] .a-t{background:#0F172A}
+  [data-theme="dark"] .a-t .n{color:#E2E8F0}
+  [data-theme="dark"] .a-t .v{color:#E2E8F0}
+  [data-theme="dark"] .h0{background:#334155}
+  [data-theme="dark"] .h1{background:rgba(0,168,150,0.15)}
+  [data-theme="dark"] .h2{background:rgba(0,168,150,0.3)}
+  [data-theme="dark"] .h3{background:rgba(0,168,150,0.5)}
+  [data-theme="dark"] .h4{background:#00A896}
+  [data-theme="dark"] .h5{background:#1BB680}
+  [data-theme="dark"] .a-delta{color:#1BB680}
+  [data-theme="dark"] .b-trend-n{color:#1BB680}
+</style>
+</head>
+<body>
+  <div class="alt-header">
+    <h1>Progress /progress — 2 alternatives</h1>
+    <p>A: multi-card dashboard (radar + line + heatmap + topic rail — everything at once) · B: one-screen narrative (radar hero + 3 callouts telling the user what matters this week).</p>
+  </div>
+
+  <div class="alt-stack">
+    <div class="alt-wrap alt-wrap--full">
+      <div class="alt-card">
+        <div class="alt-card__label"><div><span class="alt-card__name">A · Dashboard multi-grid</span> <span class="alt-card__bet">— bet: power-user mode; everything visible, no clicks</span></div><span class="alt-card__tag">LIGHT</span></div>
+        <div class="alt-card__body alt-card__body--light" style="min-height:760px">
+          <div class="stage">
+            <div class="a-grid">
+              <div class="a-card">
+                <div class="a-hd"><h3 class="a-tt">Themen-Radar</h3><span class="a-sb">8 Bereiche</span></div>
+                <svg viewBox="0 0 220 220" style="width:100%;height:220px">
+                  <g transform="translate(110,110)" fill="none" stroke="#E4E9F0" stroke-width="1">
+                    <polygon points="0,-90 78,-45 78,45 0,90 -78,45 -78,-45"/>
+                    <polygon points="0,-70 60,-35 60,35 0,70 -60,35 -60,-35"/>
+                    <polygon points="0,-50 43,-25 43,25 0,50 -43,25 -43,-25"/>
+                    <polygon points="0,-30 26,-15 26,15 0,30 -26,15 -26,-15"/>
+                    <line x1="0" y1="0" x2="0" y2="-90"/>
+                    <line x1="0" y1="0" x2="78" y2="-45"/>
+                    <line x1="0" y1="0" x2="78" y2="45"/>
+                    <line x1="0" y1="0" x2="0" y2="90"/>
+                    <line x1="0" y1="0" x2="-78" y2="45"/>
+                    <line x1="0" y1="0" x2="-78" y2="-45"/>
+                  </g>
+                  <polygon points="110,40 178,75 171,144 110,182 36,145 43,74" fill="rgba(0,168,150,0.3)" stroke="#00A896" stroke-width="2"/>
+                  <g font-family="JetBrains Mono,monospace" font-size="9" fill="#4A5568" text-anchor="middle" font-weight="700">
+                    <text x="110" y="14">Kardio 78</text>
+                    <text x="200" y="72">Neuro 71</text>
+                    <text x="200" y="154">Chir 65</text>
+                    <text x="110" y="208">Päd 32</text>
+                    <text x="20" y="154">Radio 69</text>
+                    <text x="20" y="72">Psych 81</text>
+                  </g>
+                </svg>
+              </div>
+              <div class="a-card">
+                <div class="a-hd"><h3 class="a-tt">Genauigkeit</h3><span class="a-sb">letzte 30 Tage</span></div>
+                <div class="a-big">71<span class="unit">%</span></div>
+                <div class="a-delta">↑ +8% ggü. Vormonat</div>
+                <svg class="a-line" viewBox="0 0 300 70" preserveAspectRatio="none" style="margin-top:8px">
+                  <path d="M0,55 L20,52 L40,56 L60,48 L80,50 L100,42 L120,44 L140,38 L160,32 L180,36 L200,28 L220,24 L240,22 L260,18 L280,20 L300,14" stroke="#00A896" stroke-width="2" fill="none"/>
+                  <path d="M0,55 L20,52 L40,56 L60,48 L80,50 L100,42 L120,44 L140,38 L160,32 L180,36 L200,28 L220,24 L240,22 L260,18 L280,20 L300,14 L300,70 L0,70 Z" fill="rgba(0,168,150,0.12)"/>
+                </svg>
+              </div>
+              <div class="a-card" style="grid-column:1/-1">
+                <div class="a-hd"><h3 class="a-tt">Aktivität</h3><span class="a-sb">letzte 14 Wochen · 98 Tage</span></div>
+                <div class="a-heat">
+                  <div class="h2"></div><div class="h1"></div><div class="h3"></div><div class="h4"></div><div class="h2"></div><div class="h0"></div><div class="h1"></div><div class="h3"></div><div class="h4"></div><div class="h5"></div><div class="h3"></div><div class="h2"></div><div class="h1"></div><div class="h3"></div>
+                  <div class="h1"></div><div class="h2"></div><div class="h4"></div><div class="h3"></div><div class="h2"></div><div class="h1"></div><div class="h0"></div><div class="h2"></div><div class="h3"></div><div class="h4"></div><div class="h5"></div><div class="h4"></div><div class="h3"></div><div class="h2"></div>
+                  <div class="h3"></div><div class="h4"></div><div class="h5"></div><div class="h4"></div><div class="h3"></div><div class="h2"></div><div class="h1"></div><div class="h3"></div><div class="h4"></div><div class="h5"></div><div class="h5"></div><div class="h4"></div><div class="h4"></div><div class="h3"></div>
+                  <div class="h2"></div><div class="h3"></div><div class="h4"></div><div class="h5"></div><div class="h4"></div><div class="h3"></div><div class="h2"></div><div class="h4"></div><div class="h5"></div><div class="h5"></div><div class="h5"></div><div class="h5"></div><div class="h4"></div><div class="h4"></div>
+                  <div class="h3"></div><div class="h2"></div><div class="h3"></div><div class="h4"></div><div class="h5"></div><div class="h4"></div><div class="h3"></div><div class="h4"></div><div class="h5"></div><div class="h5"></div><div class="h5"></div><div class="h5"></div><div class="h5"></div><div class="h4"></div>
+                  <div class="h4"></div><div class="h3"></div><div class="h4"></div><div class="h5"></div><div class="h5"></div><div class="h5"></div><div class="h4"></div><div class="h5"></div><div class="h5"></div><div class="h5"></div><div class="h5"></div><div class="h5"></div><div class="h5"></div><div class="h5"></div>
+                  <div class="h5"></div><div class="h5"></div><div class="h5"></div><div class="h4"></div><div class="h4"></div><div class="h5"></div><div class="h5"></div><div class="h5"></div><div class="h5"></div><div class="h5"></div><div class="h5"></div><div class="h5"></div><div class="h5"></div><div class="h5"></div>
+                </div>
+                <div class="a-legend"><span>weniger</span><div class="row"><div class="h0"></div><div class="h1"></div><div class="h2"></div><div class="h3"></div><div class="h4"></div><div class="h5"></div></div><span>mehr</span><span style="margin-left:auto;color:#007B5F">🔥 14 Tage Streak</span></div>
+              </div>
+              <div class="a-card" style="grid-column:1/-1">
+                <div class="a-hd"><h3 class="a-tt">Themen</h3><span class="a-sb">sortiert nach Fortschritt</span></div>
+                <div class="a-rail">
+                  <div class="a-t"><span class="dot" style="background:#007B5F"></span><span class="n">Psychiatrie</span><span class="bar"><span style="width:81%"></span></span><span class="v">81%</span></div>
+                  <div class="a-t"><span class="dot" style="background:#007B5F"></span><span class="n">Kardiologie</span><span class="bar"><span style="width:78%"></span></span><span class="v">78%</span></div>
+                  <div class="a-t"><span class="dot" style="background:#007B5F"></span><span class="n">Endokrinologie</span><span class="bar"><span style="width:74%"></span></span><span class="v">74%</span></div>
+                  <div class="a-t"><span class="dot" style="background:#007B5F"></span><span class="n">Neurologie</span><span class="bar"><span style="width:71%"></span></span><span class="v">71%</span></div>
+                  <div class="a-t"><span class="dot" style="background:#D68A3A"></span><span class="n">Radiologie</span><span class="bar"><span style="width:69%;background:#D68A3A"></span></span><span class="v">69%</span></div>
+                  <div class="a-t"><span class="dot" style="background:#D68A3A"></span><span class="n">Chirurgie</span><span class="bar"><span style="width:65%;background:#D68A3A"></span></span><span class="v">65%</span></div>
+                  <div class="a-t"><span class="dot" style="background:#D68A3A"></span><span class="n">Gynäkologie</span><span class="bar"><span style="width:59%;background:#D68A3A"></span></span><span class="v">59%</span></div>
+                  <div class="a-t"><span class="dot" style="background:#D64545"></span><span class="n">Pädiatrie</span><span class="bar"><span style="width:32%;background:#D64545"></span></span><span class="v">32%</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="alt-wrap alt-wrap--full">
+      <div class="alt-card" data-theme="dark" style="background:#001028">
+        <div class="alt-card__label" style="background:#001028;border-color:rgba(255,255,255,0.05)"><div><span class="alt-card__name" style="color:#E2E8F0">A · Dashboard</span> <span class="alt-card__bet" style="color:#94A3B8">— dark</span></div><span class="alt-card__tag alt-card__tag--dark">DARK</span></div>
+        <div class="alt-card__body alt-card__body--dark" style="min-height:760px">
+          <div class="stage" data-theme="dark">
+            <div class="a-grid">
+              <div class="a-card"><div class="a-hd"><h3 class="a-tt">Themen-Radar</h3><span class="a-sb">8 Bereiche</span></div>
+                <svg viewBox="0 0 220 220" style="width:100%;height:220px">
+                  <g transform="translate(110,110)" fill="none" stroke="#334155" stroke-width="1">
+                    <polygon points="0,-90 78,-45 78,45 0,90 -78,45 -78,-45"/>
+                    <polygon points="0,-70 60,-35 60,35 0,70 -60,35 -60,-35"/>
+                    <polygon points="0,-50 43,-25 43,25 0,50 -43,25 -43,-25"/>
+                    <line x1="0" y1="0" x2="0" y2="-90"/><line x1="0" y1="0" x2="78" y2="-45"/><line x1="0" y1="0" x2="78" y2="45"/><line x1="0" y1="0" x2="0" y2="90"/><line x1="0" y1="0" x2="-78" y2="45"/><line x1="0" y1="0" x2="-78" y2="-45"/>
+                  </g>
+                  <polygon points="110,40 178,75 171,144 110,182 36,145 43,74" fill="rgba(27,182,128,0.3)" stroke="#1BB680" stroke-width="2"/>
+                  <g font-family="JetBrains Mono,monospace" font-size="9" fill="#94A3B8" text-anchor="middle" font-weight="700"><text x="110" y="14">Kardio 78</text><text x="200" y="72">Neuro 71</text><text x="200" y="154">Chir 65</text><text x="110" y="208">Päd 32</text><text x="20" y="154">Radio 69</text><text x="20" y="72">Psych 81</text></g>
+                </svg>
+              </div>
+              <div class="a-card"><div class="a-hd"><h3 class="a-tt">Genauigkeit</h3><span class="a-sb">letzte 30 Tage</span></div>
+                <div class="a-big">71<span class="unit">%</span></div><div class="a-delta">↑ +8%</div>
+                <svg class="a-line" viewBox="0 0 300 70" preserveAspectRatio="none" style="margin-top:8px"><path d="M0,55 L20,52 L40,56 L60,48 L80,50 L100,42 L120,44 L140,38 L160,32 L180,36 L200,28 L220,24 L240,22 L260,18 L280,20 L300,14" stroke="#1BB680" stroke-width="2" fill="none"/><path d="M0,55 L20,52 L40,56 L60,48 L80,50 L100,42 L120,44 L140,38 L160,32 L180,36 L200,28 L220,24 L240,22 L260,18 L280,20 L300,14 L300,70 L0,70 Z" fill="rgba(27,182,128,0.12)"/></svg>
+              </div>
+              <div class="a-card" style="grid-column:1/-1"><div class="a-hd"><h3 class="a-tt">Aktivität</h3><span class="a-sb">letzte 14 Wochen</span></div>
+                <div class="a-heat">
+                  <div class="h2"></div><div class="h1"></div><div class="h3"></div><div class="h4"></div><div class="h2"></div><div class="h0"></div><div class="h1"></div><div class="h3"></div><div class="h4"></div><div class="h5"></div><div class="h3"></div><div class="h2"></div><div class="h1"></div><div class="h3"></div>
+                  <div class="h1"></div><div class="h2"></div><div class="h4"></div><div class="h3"></div><div class="h2"></div><div class="h1"></div><div class="h0"></div><div class="h2"></div><div class="h3"></div><div class="h4"></div><div class="h5"></div><div class="h4"></div><div class="h3"></div><div class="h2"></div>
+                  <div class="h3"></div><div class="h4"></div><div class="h5"></div><div class="h4"></div><div class="h3"></div><div class="h2"></div><div class="h1"></div><div class="h3"></div><div class="h4"></div><div class="h5"></div><div class="h5"></div><div class="h4"></div><div class="h4"></div><div class="h3"></div>
+                  <div class="h2"></div><div class="h3"></div><div class="h4"></div><div class="h5"></div><div class="h4"></div><div class="h3"></div><div class="h2"></div><div class="h4"></div><div class="h5"></div><div class="h5"></div><div class="h5"></div><div class="h5"></div><div class="h4"></div><div class="h4"></div>
+                  <div class="h3"></div><div class="h2"></div><div class="h3"></div><div class="h4"></div><div class="h5"></div><div class="h4"></div><div class="h3"></div><div class="h4"></div><div class="h5"></div><div class="h5"></div><div class="h5"></div><div class="h5"></div><div class="h5"></div><div class="h4"></div>
+                  <div class="h4"></div><div class="h3"></div><div class="h4"></div><div class="h5"></div><div class="h5"></div><div class="h5"></div><div class="h4"></div><div class="h5"></div><div class="h5"></div><div class="h5"></div><div class="h5"></div><div class="h5"></div><div class="h5"></div><div class="h5"></div>
+                  <div class="h5"></div><div class="h5"></div><div class="h5"></div><div class="h4"></div><div class="h4"></div><div class="h5"></div><div class="h5"></div><div class="h5"></div><div class="h5"></div><div class="h5"></div><div class="h5"></div><div class="h5"></div><div class="h5"></div><div class="h5"></div>
+                </div>
+                <div class="a-legend"><span>weniger</span><div class="row"><div class="h0"></div><div class="h1"></div><div class="h2"></div><div class="h3"></div><div class="h4"></div><div class="h5"></div></div><span>mehr</span><span style="margin-left:auto;color:#1BB680">🔥 14 Tage</span></div>
+              </div>
+              <div class="a-card" style="grid-column:1/-1"><div class="a-hd"><h3 class="a-tt">Themen</h3><span class="a-sb">nach Fortschritt</span></div>
+                <div class="a-rail">
+                  <div class="a-t"><span class="dot" style="background:#1BB680"></span><span class="n">Psychiatrie</span><span class="bar"><span style="width:81%;background:#1BB680"></span></span><span class="v">81%</span></div>
+                  <div class="a-t"><span class="dot" style="background:#1BB680"></span><span class="n">Kardiologie</span><span class="bar"><span style="width:78%;background:#1BB680"></span></span><span class="v">78%</span></div>
+                  <div class="a-t"><span class="dot" style="background:#F4A261"></span><span class="n">Radiologie</span><span class="bar"><span style="width:69%;background:#F4A261"></span></span><span class="v">69%</span></div>
+                  <div class="a-t"><span class="dot" style="background:#F4A261"></span><span class="n">Chirurgie</span><span class="bar"><span style="width:65%;background:#F4A261"></span></span><span class="v">65%</span></div>
+                  <div class="a-t"><span class="dot" style="background:#FC8181"></span><span class="n">Pädiatrie</span><span class="bar"><span style="width:32%;background:#FC8181"></span></span><span class="v">32%</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="alt-wrap alt-wrap--full">
+      <div class="alt-card">
+        <div class="alt-card__label"><div><span class="alt-card__name">B · Narrative callouts</span> <span class="alt-card__bet">— bet: tell user what to DO this week, not just show data</span></div><span class="alt-card__tag">LIGHT</span></div>
+        <div class="alt-card__body alt-card__body--light" style="min-height:620px">
+          <div class="stage">
+            <div class="b-wrap">
+              <div class="b-hero">
+                <svg viewBox="0 0 220 220" style="width:200px;height:200px" class="b-hero-r">
+                  <g transform="translate(110,110)" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1">
+                    <polygon points="0,-90 78,-45 78,45 0,90 -78,45 -78,-45"/>
+                    <polygon points="0,-60 52,-30 52,30 0,60 -52,30 -52,-30"/>
+                    <polygon points="0,-30 26,-15 26,15 0,30 -26,15 -26,-15"/>
+                  </g>
+                  <polygon points="110,40 178,75 171,144 110,182 36,145 43,74" fill="rgba(27,182,128,0.3)" stroke="#1BB680" stroke-width="2.5"/>
+                </svg>
+                <div class="b-hero-r">
+                  <div class="b-hero-h">47 Tage · auf Kurs · 72% Prognose</div>
+                  <h2 class="b-hero-q">Du liegst +8% über Vormonat — aber Pädiatrie zieht alles runter.</h2>
+                  <p class="b-hero-s">Noch 3 Wochen bis zum Start der Prüfungsphase. Fokus diese Woche: Pädiatrie von 32 → 50 ziehen. Dann bist du bei 78% Gesamtprognose.</p>
+                  <div class="b-stats">
+                    <div class="b-st"><div class="v">71%</div><div class="l">Genauigkeit</div></div>
+                    <div class="b-st"><div class="v">2 847</div><div class="l">Fragen</div></div>
+                    <div class="b-st"><div class="v">14</div><div class="l">Tage Streak</div></div>
+                    <div class="b-st"><div class="v">62 h</div><div class="l">Lernzeit</div></div>
+                  </div>
+                </div>
+              </div>
+              <div class="b-callouts">
+                <div class="b-co good"><div class="k">Stark</div><div class="h">Psychiatrie, Kardio, Endo</div><div class="s">3 Themen über 74%. Nur noch Wiederholung, kein neuer Lernstoff.</div></div>
+                <div class="b-co warn"><div class="k">Wackelt</div><div class="h">Chirurgie &amp; Radiologie</div><div class="s">65–69%. Diese Woche je 15 Fragen pro Tag, dann sollten beide in den grünen Bereich.</div></div>
+                <div class="b-co bad"><div class="k">Kritisch</div><div class="h">Pädiatrie auf 32%</div><div class="s">Schwerpunkt 3 Wochen. Impfungen + Neugeborene zuerst — dort sind die Lücken am größten.</div></div>
+              </div>
+              <div class="b-trend">
+                <div class="b-trend-hd"><div class="b-trend-tt">Trend — letzte 30 Tage</div><div class="b-trend-n">↑ stabil wachsend</div></div>
+                <svg viewBox="0 0 800 120" preserveAspectRatio="none" style="width:100%;height:100px;display:block">
+                  <path d="M0,95 L40,90 L80,95 L120,82 L160,85 L200,72 L240,76 L280,65 L320,58 L360,62 L400,50 L440,42 L480,45 L520,36 L560,38 L600,30 L640,32 L680,26 L720,28 L760,22 L800,18" stroke="#00A896" stroke-width="2.5" fill="none"/>
+                  <path d="M0,95 L40,90 L80,95 L120,82 L160,85 L200,72 L240,76 L280,65 L320,58 L360,62 L400,50 L440,42 L480,45 L520,36 L560,38 L600,30 L640,32 L680,26 L720,28 L760,22 L800,18 L800,120 L0,120 Z" fill="rgba(0,168,150,0.1)"/>
+                  <line x1="0" y1="40" x2="800" y2="40" stroke="#D68A3A" stroke-width="1" stroke-dasharray="4 4"/>
+                  <text x="790" y="36" font-family="JetBrains Mono,monospace" font-size="10" font-weight="700" fill="#D68A3A" text-anchor="end">Ziel 75% Bestehensgrenze</text>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="alt-wrap alt-wrap--full">
+      <div class="alt-card" data-theme="dark" style="background:#001028">
+        <div class="alt-card__label" style="background:#001028;border-color:rgba(255,255,255,0.05)"><div><span class="alt-card__name" style="color:#E2E8F0">B · Narrative</span> <span class="alt-card__bet" style="color:#94A3B8">— dark</span></div><span class="alt-card__tag alt-card__tag--dark">DARK</span></div>
+        <div class="alt-card__body alt-card__body--dark" style="min-height:620px">
+          <div class="stage" data-theme="dark">
+            <div class="b-wrap">
+              <div class="b-hero">
+                <svg viewBox="0 0 220 220" style="width:200px;height:200px" class="b-hero-r">
+                  <g transform="translate(110,110)" fill="none" stroke="rgba(255,255,255,0.2)" stroke-width="1"><polygon points="0,-90 78,-45 78,45 0,90 -78,45 -78,-45"/><polygon points="0,-60 52,-30 52,30 0,60 -52,30 -52,-30"/><polygon points="0,-30 26,-15 26,15 0,30 -26,15 -26,-15"/></g>
+                  <polygon points="110,40 178,75 171,144 110,182 36,145 43,74" fill="rgba(27,182,128,0.35)" stroke="#1BB680" stroke-width="2.5"/>
+                </svg>
+                <div class="b-hero-r">
+                  <div class="b-hero-h">47 Tage · auf Kurs · 72% Prognose</div>
+                  <h2 class="b-hero-q">Du liegst +8% über Vormonat — aber Pädiatrie zieht alles runter.</h2>
+                  <p class="b-hero-s">Noch 3 Wochen bis zum Start der Prüfungsphase. Fokus diese Woche: Pädiatrie von 32 → 50 ziehen.</p>
+                  <div class="b-stats">
+                    <div class="b-st"><div class="v">71%</div><div class="l">Genauigkeit</div></div>
+                    <div class="b-st"><div class="v">2 847</div><div class="l">Fragen</div></div>
+                    <div class="b-st"><div class="v">14</div><div class="l">Streak</div></div>
+                    <div class="b-st"><div class="v">62 h</div><div class="l">Lernzeit</div></div>
+                  </div>
+                </div>
+              </div>
+              <div class="b-callouts">
+                <div class="b-co good"><div class="k">Stark</div><div class="h">Psychiatrie, Kardio, Endo</div><div class="s">3 Themen über 74%. Nur noch Wiederholung.</div></div>
+                <div class="b-co warn"><div class="k">Wackelt</div><div class="h">Chirurgie &amp; Radiologie</div><div class="s">65–69%. 15 Fragen / Tag, dann grün.</div></div>
+                <div class="b-co bad"><div class="k">Kritisch</div><div class="h">Pädiatrie 32%</div><div class="s">Schwerpunkt 3 Wochen. Impfungen + Neugeborene.</div></div>
+              </div>
+              <div class="b-trend">
+                <div class="b-trend-hd"><div class="b-trend-tt">Trend — 30 Tage</div><div class="b-trend-n">↑ stabil wachsend</div></div>
+                <svg viewBox="0 0 800 120" preserveAspectRatio="none" style="width:100%;height:100px;display:block">
+                  <path d="M0,95 L40,90 L80,95 L120,82 L160,85 L200,72 L240,76 L280,65 L320,58 L360,62 L400,50 L440,42 L480,45 L520,36 L560,38 L600,30 L640,32 L680,26 L720,28 L760,22 L800,18" stroke="#1BB680" stroke-width="2.5" fill="none"/>
+                  <path d="M0,95 L40,90 L80,95 L120,82 L160,85 L200,72 L240,76 L280,65 L320,58 L360,62 L400,50 L440,42 L480,45 L520,36 L560,38 L600,30 L640,32 L680,26 L720,28 L760,22 L800,18 L800,120 L0,120 Z" fill="rgba(27,182,128,0.1)"/>
+                  <line x1="0" y1="40" x2="800" y2="40" stroke="#F4A261" stroke-width="1" stroke-dasharray="4 4"/>
+                  <text x="790" y="36" font-family="JetBrains Mono,monospace" font-size="10" font-weight="700" fill="#F4A261" text-anchor="end">Ziel 75%</text>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body></html>

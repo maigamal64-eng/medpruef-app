@@ -1,0 +1,100 @@
+/* ═══════════════════════════════════════════════════════════════
+   MedPrüf Alternatives — shared preview shell
+   Wraps each alternative in a labeled frame with light/dark halves.
+   ═══════════════════════════════════════════════════════════════ */
+
+body {
+  margin: 0;
+  font-family: var(--mp-font-body);
+  background: #E4E9F0;
+  color: var(--mp-fg);
+  padding: 24px;
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+.alt-header {
+  max-width: 1200px;
+  margin: 0 auto 20px;
+}
+.alt-header h1 {
+  font-family: var(--mp-font-display);
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--mp-oxford-blue);
+  margin: 0 0 4px;
+  letter-spacing: -0.01em;
+}
+.alt-header p {
+  font-size: 14px;
+  color: #4A5568;
+  margin: 0;
+}
+
+.alt-wrap {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.alt-card {
+  background: #FFFFFF;
+  border-radius: var(--mp-r-card);
+  overflow: hidden;
+  box-shadow: var(--mp-shadow-elev);
+  display: flex;
+  flex-direction: column;
+}
+.alt-card__label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(228,233,240,.6);
+  background: #FFFFFF;
+}
+.alt-card__name {
+  font-family: var(--mp-font-display);
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--mp-oxford-blue);
+  letter-spacing: -0.005em;
+}
+.alt-card__bet {
+  font-size: 11px;
+  color: #4A5568;
+  font-style: italic;
+}
+.alt-card__tag {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(0,58,140,0.1);
+  color: #003A8C;
+}
+.alt-card__tag--dark {
+  background: rgba(0,27,61,0.92);
+  color: #9BB4D1;
+}
+.alt-card__body {
+  flex: 1;
+  min-height: 320px;
+}
+.alt-card__body--light { background: #F7F9FC; }
+.alt-card__body--dark  { background: #0F172A; }
+
+/* allow single-surface full-width */
+.alt-wrap--full { grid-template-columns: 1fr; }
+
+/* Utility */
+.alt-stack { display: flex; flex-direction: column; gap: 20px; }
+
+@media (max-width: 900px) {
+  .alt-wrap { grid-template-columns: 1fr; }
+}

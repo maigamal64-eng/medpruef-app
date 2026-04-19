@@ -1,0 +1,238 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link rel="stylesheet" href="../components_v2.css">
+<link rel="stylesheet" href="_alt-shell.css">
+<title>Home — Alternatives</title>
+<style>
+  .stage { padding: 20px; height: 100%; overflow:hidden; box-sizing:border-box }
+
+  /* ═══ A: Clinical minimal — two-column, no hero ═══ */
+  .a-grid { display:grid;grid-template-columns: 220px 1fr; gap:20px; height:100% }
+  .a-side { display:flex;flex-direction:column;gap:12px }
+  .a-kpi { background:#fff;border:1px solid rgba(228,233,240,.7);border-radius:12px;padding:12px }
+  .a-kpi .l { font-size:10px;letter-spacing:0.08em;text-transform:uppercase;color:#A0AEC0;font-weight:700 }
+  .a-kpi .v { font-family:var(--mp-font-display);font-weight:900;font-size:22px;color:#1A2B3C;margin-top:2px;font-variant-numeric:tabular-nums;letter-spacing:-0.02em }
+  .a-kpi .s { font-size:11px;color:#4A5568;margin-top:2px }
+  .a-kpi .bar { height:3px;background:rgba(0,123,95,0.12);border-radius:2px;margin-top:6px;overflow:hidden }
+  .a-kpi .bar span { display:block;height:100%;background:#007B5F }
+  .a-main { display:flex;flex-direction:column;gap:12px;min-width:0 }
+  .a-resume { background:#fff;border:1px solid rgba(228,233,240,.7);border-radius:12px;padding:14px;display:flex;align-items:center;gap:14px }
+  .a-resume-icon { width:40px;height:40px;border-radius:10px;background:rgba(0,123,95,0.1);color:#007B5F;display:flex;align-items:center;justify-content:center;flex-shrink:0 }
+  .a-resume-icon svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .a-resume-meta { flex:1;min-width:0 }
+  .a-resume .t { font-family:var(--mp-font-display);font-weight:700;font-size:14px;color:#1A2B3C }
+  .a-resume .c { font-family:var(--mp-font-mono);font-size:11px;color:#4A5568;margin-top:2px }
+  .a-btn { display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:10px;background:#001B3D;color:#fff;font-size:12px;font-weight:600;border:none;cursor:pointer;white-space:nowrap }
+  .a-topics { display:grid;grid-template-columns:repeat(3,1fr);gap:10px }
+  .a-topic { background:#fff;border:1px solid rgba(228,233,240,.7);border-radius:12px;padding:10px 12px;display:flex;align-items:center;gap:10px }
+  .a-topic-ic { width:28px;height:28px;border-radius:8px;background:rgba(0,27,61,0.06);color:#001B3D;display:flex;align-items:center;justify-content:center;flex-shrink:0 }
+  .a-topic-ic svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .a-topic .n { font-size:12px;font-weight:600;color:#1A2B3C }
+  .a-topic .p { font-family:var(--mp-font-mono);font-size:10px;color:#A0AEC0;margin-top:1px }
+  .a-topic .dot { width:6px;height:6px;border-radius:50%;margin-left:auto;flex-shrink:0 }
+  .a-hint { background:rgba(244,162,97,0.1);border:1px solid rgba(214,138,58,0.25);border-radius:12px;padding:10px 12px;display:flex;align-items:center;gap:10px;font-size:12px }
+  .a-hint-ic { width:24px;height:24px;border-radius:50%;background:#D68A3A;color:white;display:flex;align-items:center;justify-content:center;flex-shrink:0 }
+  .a-hint-ic svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2.5}
+
+  /* ═══ B: Editorial confident — big hero headline + ring ═══ */
+  .b-wrap { display:flex;flex-direction:column;gap:14px;height:100% }
+  .b-hero { background:linear-gradient(135deg,#001B3D 0%,#003A8C 80%);border-radius:14px;padding:22px;color:#fff;display:grid;grid-template-columns:1fr auto;gap:20px;align-items:center;position:relative;overflow:hidden }
+  .b-hero::before{content:"";position:absolute;right:-60px;bottom:-80px;width:240px;height:240px;border-radius:50%;background:radial-gradient(circle,rgba(0,168,150,0.3),transparent 70%)}
+  .b-greet { font-size:11px;color:rgba(255,255,255,0.55);letter-spacing:0.08em;text-transform:uppercase;font-weight:700;margin-bottom:4px;position:relative }
+  .b-head { font-family:var(--mp-font-display);font-weight:900;font-size:26px;line-height:1.15;letter-spacing:-0.02em;margin:0 0 10px;position:relative }
+  .b-head em { font-style:italic;color:#1BB680;font-weight:800 }
+  .b-sub { font-size:12px;color:rgba(255,255,255,0.75);margin-bottom:12px;position:relative;line-height:1.5 }
+  .b-cta { display:inline-flex;align-items:center;gap:6px;padding:9px 16px;background:#00A896;color:#fff;border-radius:10px;font-size:12px;font-weight:700;border:none;cursor:pointer;position:relative }
+  .b-ring-outer { position:relative;width:120px;height:120px;z-index:1 }
+  .b-ring-outer svg{transform:rotate(-90deg)}
+  .b-ring-label{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff}
+  .b-ring-label .num{font-family:var(--mp-font-display);font-weight:900;font-size:28px;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-0.02em}
+  .b-ring-label .label{font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,255,255,0.55);margin-top:3px;font-weight:700}
+  .b-row { display:grid;grid-template-columns:2fr 1fr;gap:12px;flex:1;min-height:0 }
+  .b-topics { display:grid;grid-template-columns:repeat(2,1fr);gap:8px }
+  .b-topic { background:#fff;border:1px solid rgba(228,233,240,.7);border-radius:12px;padding:10px 12px }
+  .b-topic .n { font-family:var(--mp-font-display);font-weight:700;font-size:13px;color:#1A2B3C }
+  .b-topic .row { display:flex;align-items:baseline;justify-content:space-between;margin-top:6px }
+  .b-topic .acc { font-family:var(--mp-font-display);font-weight:900;font-size:22px;color:#007B5F;font-variant-numeric:tabular-nums;letter-spacing:-0.02em }
+  .b-topic .cnt { font-family:var(--mp-font-mono);font-size:10px;color:#A0AEC0 }
+  .b-topic.weak .acc { color:#D64545 }
+  .b-side { display:flex;flex-direction:column;gap:8px }
+  .b-streak-card { background:#fff;border:1px solid rgba(228,233,240,.7);border-radius:12px;padding:12px;text-align:center }
+  .b-streak-card .fire { font-size:24px;line-height:1 }
+  .b-streak-card .v { font-family:var(--mp-font-display);font-weight:900;font-size:22px;color:#1A2B3C;letter-spacing:-0.01em }
+  .b-streak-card .l { font-size:10px;color:#A0AEC0;letter-spacing:0.08em;text-transform:uppercase;font-weight:700;margin-top:2px }
+  .b-hint-card { background:#1A2B3C;color:#fff;border-radius:12px;padding:12px;font-size:11px;line-height:1.5;flex:1 }
+  .b-hint-card .l { font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:#F4A261;font-weight:700;margin-bottom:4px }
+  .b-hint-card .h { font-family:var(--mp-font-display);font-weight:700;font-size:13px;margin-bottom:4px }
+
+  /* dark overrides */
+  [data-theme="dark"] .a-kpi,[data-theme="dark"] .a-resume,[data-theme="dark"] .a-topic { background:#1E293B;border-color:rgba(51,65,85,0.7) }
+  [data-theme="dark"] .a-kpi .v,[data-theme="dark"] .a-resume .t,[data-theme="dark"] .a-topic .n { color:#E2E8F0 }
+  [data-theme="dark"] .a-kpi .l,[data-theme="dark"] .a-topic .p { color:#64748B }
+  [data-theme="dark"] .a-resume .c { color:#94A3B8 }
+  [data-theme="dark"] .a-topic-ic { background:rgba(0,168,150,0.12);color:#1BB680 }
+  [data-theme="dark"] .a-resume-icon { background:rgba(0,168,150,0.18);color:#1BB680 }
+  [data-theme="dark"] .a-btn { background:#003A8C }
+  [data-theme="dark"] .a-hint { background:rgba(244,162,97,0.08);border-color:rgba(244,162,97,0.25);color:#FBD38D }
+
+  [data-theme="dark"] .b-topic,[data-theme="dark"] .b-streak-card { background:#1E293B;border-color:rgba(51,65,85,0.7) }
+  [data-theme="dark"] .b-topic .n,[data-theme="dark"] .b-streak-card .v { color:#E2E8F0 }
+  [data-theme="dark"] .b-topic .acc { color:#1BB680 }
+  [data-theme="dark"] .b-topic.weak .acc { color:#FC8181 }
+  [data-theme="dark"] .b-topic .cnt,[data-theme="dark"] .b-streak-card .l { color:#64748B }
+  [data-theme="dark"] .b-hint-card { background:#0B1220 }
+</style>
+</head>
+<body>
+  <div class="alt-header">
+    <h1>Home (/) — 2 alternatives</h1>
+    <p>A: clinical minimal, two-column, scannable at a glance · B: editorial confident, big headline, gamification proud.</p>
+  </div>
+  <div class="alt-stack">
+    <!-- A light + dark -->
+    <div class="alt-wrap">
+      <div class="alt-card">
+        <div class="alt-card__label"><div><span class="alt-card__name">A · Clinical minimal</span> <span class="alt-card__bet">— KPIs left, work right; no decoration</span></div><span class="alt-card__tag">LIGHT</span></div>
+        <div class="alt-card__body alt-card__body--light">
+          <div class="stage">
+            <div class="a-grid">
+              <div class="a-side">
+                <div class="a-kpi"><div class="l">Tagesziel</div><div class="v">14 / 20</div><div class="bar"><span style="width:70%"></span></div><div class="s" style="margin-top:6px">6 Fragen übrig</div></div>
+                <div class="a-kpi"><div class="l">Streak 🔥</div><div class="v">23 <span style="font-size:13px;color:#4A5568;font-weight:600">Tage</span></div><div class="s">Best: 41 Tage</div></div>
+                <div class="a-kpi"><div class="l">Stufe 4 · Famulant</div><div class="v">1 420 <span style="font-size:12px;color:#4A5568;font-weight:600">XP</span></div><div class="bar"><span style="width:71%"></span></div><div class="s" style="margin-top:6px">580 XP bis Assistenzarzt</div></div>
+                <div class="a-kpi"><div class="l">Prüfung in</div><div class="v">47 <span style="font-size:12px;color:#4A5568;font-weight:600">Tagen</span></div><div class="s">Kenntnisprüfung · 06.06.2026</div></div>
+              </div>
+              <div class="a-main">
+                <div class="a-resume">
+                  <div class="a-resume-icon"><svg viewBox="0 0 24 24"><polyline points="5 12 9 16 19 6"/></svg></div>
+                  <div class="a-resume-meta">
+                    <div class="t">Weiter bei Kardiologie</div>
+                    <div class="c">Frage 14 / 60 · 73% Genauigkeit</div>
+                  </div>
+                  <button class="a-btn">Fortsetzen <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></button>
+                </div>
+                <div class="a-hint">
+                  <div class="a-hint-ic"><svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/></svg></div>
+                  <div><strong>Pädiatrie</strong> — 32% Genauigkeit · 18 Fragen zum Wiederholen gespart ≈ 40 Exam-Punkte</div>
+                  <button style="margin-left:auto;background:#D68A3A;color:#fff;border:none;padding:5px 10px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">Jetzt</button>
+                </div>
+                <div class="a-topics">
+                  <div class="a-topic"><div class="a-topic-ic"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div><div><div class="n">Kardiologie</div><div class="p">847 · 78%</div></div><span class="dot" style="background:#007B5F"></span></div>
+                  <div class="a-topic"><div class="a-topic-ic"><svg viewBox="0 0 24 24"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2z"/></svg></div><div><div class="n">Neurologie</div><div class="p">612 · 71%</div></div><span class="dot" style="background:#007B5F"></span></div>
+                  <div class="a-topic"><div class="a-topic-ic"><svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></div><div><div class="n">Chirurgie</div><div class="p">534 · 65%</div></div><span class="dot" style="background:#F4A261"></span></div>
+                  <div class="a-topic"><div class="a-topic-ic"><svg viewBox="0 0 24 24"><path d="M9 12l2 2 4-4"/><path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z"/></svg></div><div><div class="n">Pädiatrie</div><div class="p">312 · 32%</div></div><span class="dot" style="background:#D64545"></span></div>
+                  <div class="a-topic"><div class="a-topic-ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6M4.22 4.22l4.24 4.24m7.08 7.08l4.24 4.24M1 12h6m6 0h6"/></svg></div><div><div class="n">Radiologie</div><div class="p">428 · 69%</div></div><span class="dot" style="background:#F4A261"></span></div>
+                  <div class="a-topic"><div class="a-topic-ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/></svg></div><div><div class="n">Psychiatrie</div><div class="p">189 · 81%</div></div><span class="dot" style="background:#007B5F"></span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="alt-card" data-theme="dark" style="background:#001028">
+        <div class="alt-card__label" style="background:#001028;border-color:rgba(255,255,255,0.05)"><div><span class="alt-card__name" style="color:#E2E8F0">A · Clinical minimal</span> <span class="alt-card__bet" style="color:#94A3B8">— dark</span></div><span class="alt-card__tag alt-card__tag--dark">DARK</span></div>
+        <div class="alt-card__body alt-card__body--dark">
+          <div class="stage" data-theme="dark">
+            <div class="a-grid">
+              <div class="a-side">
+                <div class="a-kpi"><div class="l">Tagesziel</div><div class="v">14 / 20</div><div class="bar" style="background:rgba(0,168,150,0.18)"><span style="width:70%;background:#00A896"></span></div><div class="s" style="color:#94A3B8;margin-top:6px">6 Fragen übrig</div></div>
+                <div class="a-kpi"><div class="l">Streak 🔥</div><div class="v">23 <span style="font-size:13px;color:#94A3B8;font-weight:600">Tage</span></div><div class="s" style="color:#94A3B8">Best: 41 Tage</div></div>
+                <div class="a-kpi"><div class="l">Stufe 4 · Famulant</div><div class="v">1 420 <span style="font-size:12px;color:#94A3B8;font-weight:600">XP</span></div><div class="bar" style="background:rgba(0,168,150,0.18)"><span style="width:71%;background:#00A896"></span></div><div class="s" style="color:#94A3B8;margin-top:6px">580 XP bis Assistenzarzt</div></div>
+                <div class="a-kpi"><div class="l">Prüfung in</div><div class="v">47 <span style="font-size:12px;color:#94A3B8;font-weight:600">Tagen</span></div><div class="s" style="color:#94A3B8">Kenntnisprüfung · 06.06.2026</div></div>
+              </div>
+              <div class="a-main">
+                <div class="a-resume">
+                  <div class="a-resume-icon"><svg viewBox="0 0 24 24"><polyline points="5 12 9 16 19 6"/></svg></div>
+                  <div class="a-resume-meta"><div class="t">Weiter bei Kardiologie</div><div class="c">Frage 14 / 60 · 73% Genauigkeit</div></div>
+                  <button class="a-btn">Fortsetzen</button>
+                </div>
+                <div class="a-hint"><div class="a-hint-ic"><svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/></svg></div><div><strong>Pädiatrie</strong> — 32% Genauigkeit · ≈ 40 Exam-Punkte</div></div>
+                <div class="a-topics">
+                  <div class="a-topic"><div class="a-topic-ic"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg></div><div><div class="n">Kardiologie</div><div class="p">847 · 78%</div></div><span class="dot" style="background:#1BB680"></span></div>
+                  <div class="a-topic"><div class="a-topic-ic"><svg viewBox="0 0 24 24"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2z"/></svg></div><div><div class="n">Neurologie</div><div class="p">612 · 71%</div></div><span class="dot" style="background:#1BB680"></span></div>
+                  <div class="a-topic"><div class="a-topic-ic"><svg viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></div><div><div class="n">Chirurgie</div><div class="p">534 · 65%</div></div><span class="dot" style="background:#F4A261"></span></div>
+                  <div class="a-topic"><div class="a-topic-ic"><svg viewBox="0 0 24 24"><path d="M9 12l2 2 4-4"/><path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9 9 4.03 9 9z"/></svg></div><div><div class="n">Pädiatrie</div><div class="p">312 · 32%</div></div><span class="dot" style="background:#FC8181"></span></div>
+                  <div class="a-topic"><div class="a-topic-ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6M4.22 4.22l4.24 4.24m7.08 7.08l4.24 4.24M1 12h6m6 0h6"/></svg></div><div><div class="n">Radiologie</div><div class="p">428 · 69%</div></div><span class="dot" style="background:#F4A261"></span></div>
+                  <div class="a-topic"><div class="a-topic-ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/></svg></div><div><div class="n">Psychiatrie</div><div class="p">189 · 81%</div></div><span class="dot" style="background:#1BB680"></span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- B light + dark -->
+    <div class="alt-wrap">
+      <div class="alt-card">
+        <div class="alt-card__label"><div><span class="alt-card__name">B · Editorial confident</span> <span class="alt-card__bet">— big headline, proud gamification, fewer KPIs up top</span></div><span class="alt-card__tag">LIGHT</span></div>
+        <div class="alt-card__body alt-card__body--light">
+          <div class="stage">
+            <div class="b-wrap">
+              <div class="b-hero">
+                <div>
+                  <div class="b-greet">Freitag · 20. März</div>
+                  <h2 class="b-head">47 Tage. <em>8 714 Fragen</em><br>trennen dich vom Ziel.</h2>
+                  <p class="b-sub">Heute: 6 Fragen Kardiologie. Morgen schließt sich dein Review-Fenster für Pädiatrie.</p>
+                  <button class="b-cta">Jetzt starten <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg></button>
+                </div>
+                <div class="b-ring-outer">
+                  <svg width="120" height="120" viewBox="0 0 100 100"><circle cx="50" cy="50" r="44" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="7"/><circle cx="50" cy="50" r="44" fill="none" stroke="#00A896" stroke-width="7" stroke-linecap="round" stroke-dasharray="194 276"/></svg>
+                  <div class="b-ring-label"><div class="num">14/20</div><div class="label">Heute</div></div>
+                </div>
+              </div>
+              <div class="b-row">
+                <div class="b-topics">
+                  <div class="b-topic"><div class="n">Kardiologie</div><div class="row"><span class="acc">78%</span><span class="cnt">847 Fragen</span></div></div>
+                  <div class="b-topic"><div class="n">Neurologie</div><div class="row"><span class="acc">71%</span><span class="cnt">612 Fragen</span></div></div>
+                  <div class="b-topic weak"><div class="n">Pädiatrie</div><div class="row"><span class="acc">32%</span><span class="cnt">312 Fragen</span></div></div>
+                  <div class="b-topic"><div class="n">Chirurgie</div><div class="row"><span class="acc" style="color:#D68A3A">65%</span><span class="cnt">534 Fragen</span></div></div>
+                </div>
+                <div class="b-side">
+                  <div class="b-streak-card"><div class="fire">🔥</div><div class="v">23</div><div class="l">Tage Streak</div></div>
+                  <div class="b-hint-card">
+                    <div class="l">Schwachstelle</div>
+                    <div class="h">Pädiatrie braucht dich</div>
+                    <div style="color:#94A3B8">32% Genauigkeit. 18 Fragen heute wiederholen ≈ 40 Exam-Punkte.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="alt-card" data-theme="dark" style="background:#001028">
+        <div class="alt-card__label" style="background:#001028;border-color:rgba(255,255,255,0.05)"><div><span class="alt-card__name" style="color:#E2E8F0">B · Editorial confident</span> <span class="alt-card__bet" style="color:#94A3B8">— dark</span></div><span class="alt-card__tag alt-card__tag--dark">DARK</span></div>
+        <div class="alt-card__body alt-card__body--dark">
+          <div class="stage" data-theme="dark">
+            <div class="b-wrap">
+              <div class="b-hero" style="background:linear-gradient(135deg,#001028 0%,#002347 100%)">
+                <div>
+                  <div class="b-greet">Freitag · 20. März</div>
+                  <h2 class="b-head">47 Tage. <em>8 714 Fragen</em><br>trennen dich vom Ziel.</h2>
+                  <p class="b-sub">Heute: 6 Fragen Kardiologie. Morgen schließt sich dein Review-Fenster für Pädiatrie.</p>
+                  <button class="b-cta">Jetzt starten</button>
+                </div>
+                <div class="b-ring-outer">
+                  <svg width="120" height="120" viewBox="0 0 100 100"><circle cx="50" cy="50" r="44" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="7"/><circle cx="50" cy="50" r="44" fill="none" stroke="#00A896" stroke-width="7" stroke-linecap="round" stroke-dasharray="194 276"/></svg>
+                  <div class="b-ring-label"><div class="num">14/20</div><div class="label">Heute</div></div>
+                </div>
+              </div>
+              <div class="b-row">
+                <div class="b-topics">
+                  <div class="b-topic"><div class="n">Kardiologie</div><div class="row"><span class="acc">78%</span><span class="cnt">847 Fragen</span></div></div>
+                  <div class="b-topic"><div class="n">Neurologie</div><div class="row"><span class="acc">71%</span><span class="cnt">612 Fragen</span></div></div>
+                  <div class="b-topic weak"><div class="n">Pädiatrie</div><div class="row"><span class="acc">32%</span><span class="cnt">312 Fragen</span></div></div>
+                  <div class="b-topic"><div class="n">Chirurgie</div><div class="row"><span class="acc" style="color:#F4A261">65%</span><span class="cnt">534 Fragen</span></div></div>
+                </div>
+                <div class="b-side">
+                  <div class="b-streak-card"><div class="fire">🔥</div><div class="v">23</div><div class="l">Tage Streak</div></div>
+                  <div class="b-hint-card"><div class="l">Schwachstelle</div><div class="h">Pädiatrie braucht dich</div><div style="color:#94A3B8">32% Genauigkeit. ≈ 40 Exam-Punkte.</div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body></html>

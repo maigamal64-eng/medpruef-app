@@ -1,0 +1,229 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link rel="stylesheet" href="../components_v2.css">
+<link rel="stylesheet" href="_alt-shell.css">
+<title>AIChatAssistant — Alternatives</title>
+<style>
+  .stage{padding:22px;height:100%;box-sizing:border-box;display:flex;align-items:center;justify-content:center;gap:20px;overflow:hidden}
+  /* shared context */
+  .ctx{flex:1;max-width:320px;background:#fff;border:1px solid rgba(228,233,240,.7);border-radius:14px;padding:18px;height:440px;box-sizing:border-box;font-family:var(--mp-font-body)}
+  .ctx-kicker{font-family:var(--mp-font-mono);font-size:10px;color:#A0AEC0;letter-spacing:0.1em;text-transform:uppercase;font-weight:700;margin-bottom:8px}
+  .ctx-q{font-family:var(--mp-font-display);font-weight:700;font-size:15px;color:#001B3D;line-height:1.4;margin-bottom:10px;letter-spacing:-0.01em}
+  .ctx-opt{font-size:12px;padding:8px 10px;border-radius:8px;background:#F7F9FC;border:1px solid #E4E9F0;margin-bottom:5px;color:#1A2B3C;line-height:1.4}
+  .ctx-opt.ok{background:rgba(0,123,95,0.06);border-color:rgba(0,123,95,0.3)}
+  .ctx-opt.wrong{background:rgba(214,69,69,0.05);border-color:rgba(214,69,69,0.25);color:#D64545}
+
+  /* A: side drawer */
+  .drawer{width:340px;height:440px;background:#fff;border:1px solid rgba(228,233,240,.7);border-radius:14px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 8px 24px rgba(0,27,61,0.08)}
+  .drw-hd{padding:14px 16px;border-bottom:1px solid #F0F4F8;display:flex;align-items:center;gap:10px}
+  .drw-hd .av{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#00A896,#003A8C);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:12px}
+  .drw-hd .tt{font-family:var(--mp-font-display);font-weight:800;font-size:13px;color:#001B3D;letter-spacing:-0.01em}
+  .drw-hd .sb{font-family:var(--mp-font-mono);font-size:10px;color:#A0AEC0}
+  .drw-hd .x{margin-left:auto;color:#A0AEC0;cursor:pointer;font-size:14px}
+  .drw-body{flex:1;padding:14px;overflow:hidden;display:flex;flex-direction:column;gap:8px}
+  .msg{font-size:12px;line-height:1.55;padding:9px 12px;border-radius:12px;max-width:86%}
+  .msg.a{background:#F7F9FC;color:#1A2B3C;align-self:flex-start;border-top-left-radius:4px}
+  .msg.u{background:#001B3D;color:#fff;align-self:flex-end;border-top-right-radius:4px}
+  .msg b{font-family:var(--mp-font-display);font-weight:700}
+  .msg.a em{font-style:normal;background:rgba(244,162,97,0.2);padding:0 3px;border-radius:3px}
+  .chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:auto;padding:10px 14px 6px}
+  .chip{font-size:11px;padding:5px 10px;border-radius:999px;background:#F7F9FC;border:1px solid #E4E9F0;color:#4A5568;font-weight:600;cursor:pointer;font-family:var(--mp-font-body)}
+  .drw-in{padding:8px 12px 12px;border-top:1px solid #F0F4F8;display:flex;gap:6px}
+  .drw-in input{flex:1;font-size:12px;padding:8px 10px;border:1px solid #E4E9F0;border-radius:8px;background:#F7F9FC;color:#1A2B3C;font-family:var(--mp-font-body)}
+  .drw-in button{padding:8px 12px;background:#001B3D;color:#fff;border:none;border-radius:8px;font-weight:700;font-size:11px;cursor:pointer}
+
+  /* B: bottom sheet inline */
+  .frame{width:280px;height:440px;background:#F7F9FC;border-radius:20px;border:6px solid #001028;position:relative;overflow:hidden}
+  .frame-top{padding:10px 12px;font-family:var(--mp-font-mono);font-size:10px;color:#A0AEC0;display:flex;justify-content:space-between}
+  .frame-q{padding:0 14px 10px;font-family:var(--mp-font-display);font-weight:700;font-size:13px;color:#001B3D;line-height:1.4}
+  .frame-opts{padding:0 14px}
+  .frame-opts .o{font-size:11px;padding:7px 10px;border-radius:8px;background:#fff;border:1px solid #E4E9F0;margin-bottom:4px;color:#1A2B3C}
+  .frame-opts .o.ok{background:rgba(0,123,95,0.08);border-color:rgba(0,123,95,0.3)}
+  .sheet{position:absolute;left:0;right:0;bottom:0;background:#fff;border-top-left-radius:18px;border-top-right-radius:18px;box-shadow:0 -8px 20px rgba(0,27,61,0.12);display:flex;flex-direction:column;max-height:280px}
+  .sheet-grab{width:36px;height:4px;border-radius:2px;background:#E4E9F0;margin:6px auto 8px}
+  .sheet-hd{padding:0 14px 8px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #F0F4F8}
+  .sheet-hd .av{width:22px;height:22px;border-radius:6px;background:linear-gradient(135deg,#00A896,#003A8C);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:10px}
+  .sheet-hd .tt{font-family:var(--mp-font-display);font-weight:700;font-size:11px;color:#001B3D}
+  .sheet-body{padding:10px 14px;overflow:hidden;display:flex;flex-direction:column;gap:7px;flex:1}
+  .smsg{font-size:11px;line-height:1.5;padding:7px 10px;border-radius:10px;max-width:90%}
+  .smsg.a{background:#F7F9FC;color:#1A2B3C;align-self:flex-start}
+  .smsg.u{background:#001B3D;color:#fff;align-self:flex-end}
+  .sheet-chips{display:flex;flex-wrap:wrap;gap:4px;padding:0 14px 8px}
+  .sheet-chip{font-size:10px;padding:4px 8px;border-radius:999px;background:#F7F9FC;border:1px solid #E4E9F0;color:#4A5568;font-weight:600}
+  .sheet-in{padding:6px 10px 10px;display:flex;gap:6px}
+  .sheet-in input{flex:1;font-size:11px;padding:6px 9px;border:1px solid #E4E9F0;border-radius:8px;background:#F7F9FC;color:#1A2B3C;font-family:var(--mp-font-body)}
+  .sheet-in button{padding:6px 10px;background:#001B3D;color:#fff;border:none;border-radius:8px;font-weight:700;font-size:10px}
+
+  [data-theme="dark"] .ctx,[data-theme="dark"] .drawer{background:#1E293B;border-color:rgba(51,65,85,0.7)}
+  [data-theme="dark"] .ctx-q,[data-theme="dark"] .drw-hd .tt{color:#E2E8F0}
+  [data-theme="dark"] .ctx-kicker,[data-theme="dark"] .drw-hd .sb{color:#64748B}
+  [data-theme="dark"] .ctx-opt{background:#0F172A;border-color:#334155;color:#E2E8F0}
+  [data-theme="dark"] .ctx-opt.ok{background:rgba(0,168,150,0.1);border-color:rgba(0,168,150,0.3)}
+  [data-theme="dark"] .ctx-opt.wrong{background:rgba(214,69,69,0.1);border-color:rgba(214,69,69,0.3);color:#FC8181}
+  [data-theme="dark"] .drw-hd,[data-theme="dark"] .drw-in{border-color:#334155}
+  [data-theme="dark"] .msg.a,[data-theme="dark"] .smsg.a{background:#0F172A;color:#E2E8F0}
+  [data-theme="dark"] .msg.u,[data-theme="dark"] .smsg.u{background:#00A896;color:#001028}
+  [data-theme="dark"] .chip,[data-theme="dark"] .sheet-chip{background:#0F172A;border-color:#334155;color:#94A3B8}
+  [data-theme="dark"] .drw-in input{background:#0F172A;border-color:#334155;color:#E2E8F0}
+  [data-theme="dark"] .drw-in button{background:#00A896;color:#001028}
+  [data-theme="dark"] .frame{background:#001028}
+  [data-theme="dark"] .frame-q{color:#E2E8F0}
+  [data-theme="dark"] .frame-top{color:#64748B}
+  [data-theme="dark"] .frame-opts .o{background:#1E293B;border-color:#334155;color:#E2E8F0}
+  [data-theme="dark"] .frame-opts .o.ok{background:rgba(0,168,150,0.15);border-color:rgba(0,168,150,0.3)}
+  [data-theme="dark"] .sheet{background:#1E293B}
+  [data-theme="dark"] .sheet-hd{border-color:#334155}
+  [data-theme="dark"] .sheet-hd .tt{color:#E2E8F0}
+  [data-theme="dark"] .sheet-grab{background:#334155}
+  [data-theme="dark"] .sheet-in input{background:#0F172A;border-color:#334155;color:#E2E8F0}
+  [data-theme="dark"] .sheet-in button{background:#00A896;color:#001028}
+</style>
+</head>
+<body>
+  <div class="alt-header">
+    <h1>AIChatAssistant — 2 alternatives</h1>
+    <p>Shown with the question card as live context. A: desktop side drawer (persistent, keyboard-driven) · B: mobile bottom sheet (draggable, one-thumb reach).</p>
+  </div>
+
+  <div class="alt-stack">
+    <div class="alt-wrap">
+      <div class="alt-card">
+        <div class="alt-card__label"><div><span class="alt-card__name">A · Side drawer</span> <span class="alt-card__bet">— bet: desktop; chat sits next to the question, no context switch</span></div><span class="alt-card__tag">LIGHT</span></div>
+        <div class="alt-card__body alt-card__body--light" style="min-height:500px">
+          <div class="stage">
+            <div class="ctx">
+              <div class="ctx-kicker">Frage 7/20 · Kardiologie</div>
+              <div class="ctx-q">Welches EKG-Zeichen ist am spezifischsten für eine akute STEMI-Diagnose?</div>
+              <div class="ctx-opt">ST-Senkung in V1–V3</div>
+              <div class="ctx-opt ok">ST-Hebung ≥1 mm in zwei zusammenhängenden Ableitungen ✓</div>
+              <div class="ctx-opt wrong">T-Inversion in aVL ✗ (deine Antwort)</div>
+              <div class="ctx-opt">Linksschenkelblock unklarer Dauer</div>
+            </div>
+            <div class="drawer">
+              <div class="drw-hd">
+                <div class="av">ü</div>
+                <div><div class="tt">MedPrüf Assistent</div><div class="sb">Bezug: Frage 7 · Kardiologie</div></div>
+                <div class="x">×</div>
+              </div>
+              <div class="drw-body">
+                <div class="msg u">Warum war T-Inversion in aVL falsch?</div>
+                <div class="msg a"><b>Kurz:</b> T-Inversion in aVL ist zwar mit <em>lateralen</em> Ischämien assoziiert, aber nicht spezifisch genug für eine akute STEMI-Diagnose.
+                  <br><br>Die STEMI-Kriterien verlangen eine <em>ST-Hebung</em> ≥1 mm in zwei <em>anatomisch zusammenhängenden</em> Ableitungen.</div>
+                <div class="msg u">Gib mir ein EKG-Beispiel.</div>
+                <div class="msg a">Klar — in Teil 2 der Quelle Herold S. 214 findest du ein anteriores STEMI-EKG mit ST-Hebung in V1–V4.</div>
+              </div>
+              <div class="chips">
+                <span class="chip">Zeige Quelle</span>
+                <span class="chip">Erkläre einfacher</span>
+                <span class="chip">Verwandte Frage</span>
+              </div>
+              <div class="drw-in">
+                <input placeholder="Frag etwas zu dieser Frage…" value="">
+                <button>↑</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="alt-card" data-theme="dark" style="background:#001028">
+        <div class="alt-card__label" style="background:#001028;border-color:rgba(255,255,255,0.05)"><div><span class="alt-card__name" style="color:#E2E8F0">A · Side drawer</span> <span class="alt-card__bet" style="color:#94A3B8">— dark</span></div><span class="alt-card__tag alt-card__tag--dark">DARK</span></div>
+        <div class="alt-card__body alt-card__body--dark" style="min-height:500px">
+          <div class="stage" data-theme="dark">
+            <div class="ctx">
+              <div class="ctx-kicker">Frage 7/20 · Kardiologie</div>
+              <div class="ctx-q">Welches EKG-Zeichen ist am spezifischsten für eine akute STEMI-Diagnose?</div>
+              <div class="ctx-opt">ST-Senkung in V1–V3</div>
+              <div class="ctx-opt ok">ST-Hebung ≥1 mm in zwei zusammenhängenden Ableitungen ✓</div>
+              <div class="ctx-opt wrong">T-Inversion in aVL ✗ (deine Antwort)</div>
+              <div class="ctx-opt">Linksschenkelblock unklarer Dauer</div>
+            </div>
+            <div class="drawer">
+              <div class="drw-hd"><div class="av">ü</div><div><div class="tt">MedPrüf Assistent</div><div class="sb">Bezug: Frage 7 · Kardiologie</div></div><div class="x">×</div></div>
+              <div class="drw-body">
+                <div class="msg u">Warum war T-Inversion in aVL falsch?</div>
+                <div class="msg a"><b>Kurz:</b> T-Inversion in aVL ist mit <em>lateralen</em> Ischämien assoziiert, aber nicht spezifisch für STEMI.<br><br>STEMI verlangt <em>ST-Hebung</em> ≥1 mm in zwei zusammenhängenden Ableitungen.</div>
+                <div class="msg u">Gib mir ein EKG-Beispiel.</div>
+                <div class="msg a">In Teil 2 der Quelle Herold S. 214 findest du ein anteriores STEMI-EKG mit ST-Hebung in V1–V4.</div>
+              </div>
+              <div class="chips"><span class="chip">Zeige Quelle</span><span class="chip">Erkläre einfacher</span><span class="chip">Verwandte Frage</span></div>
+              <div class="drw-in"><input placeholder="Frag etwas zu dieser Frage…"><button>↑</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="alt-wrap">
+      <div class="alt-card">
+        <div class="alt-card__label"><div><span class="alt-card__name">B · Bottom sheet</span> <span class="alt-card__bet">— bet: mobile; thumb-reach, dismissible, doesn't hide the question</span></div><span class="alt-card__tag">LIGHT</span></div>
+        <div class="alt-card__body alt-card__body--light" style="min-height:500px">
+          <div class="stage">
+            <div class="frame">
+              <div class="frame-top"><span>09:41</span><span>···</span></div>
+              <div class="frame-q">Welches EKG-Zeichen ist am spezifischsten für eine akute STEMI-Diagnose?</div>
+              <div class="frame-opts">
+                <div class="o">ST-Senkung in V1–V3</div>
+                <div class="o ok">ST-Hebung ≥1 mm ✓</div>
+              </div>
+              <div class="sheet">
+                <div class="sheet-grab"></div>
+                <div class="sheet-hd"><div class="av">ü</div><div class="tt">Assistent · Frage 7</div></div>
+                <div class="sheet-body">
+                  <div class="smsg u">Warum war T-Inversion falsch?</div>
+                  <div class="smsg a">T-Inversion in aVL ist nicht spezifisch genug. STEMI verlangt ST-Hebung ≥1 mm in zwei zusammenhängenden Ableitungen.</div>
+                  <div class="smsg a">Quelle: Herold S. 214</div>
+                </div>
+                <div class="sheet-chips"><span class="sheet-chip">Einfacher</span><span class="sheet-chip">Beispiel</span></div>
+                <div class="sheet-in"><input placeholder="Frag etwas…"><button>↑</button></div>
+              </div>
+            </div>
+            <div class="ctx">
+              <div class="ctx-kicker">Kontext: die gleiche Frage</div>
+              <div class="ctx-q" style="font-size:13px">Bottom sheet auf Mobile — der Assistent ist <em style="color:#00A896;font-style:normal">always reachable</em> über den Daumen, verdeckt aber nie die Frage komplett.</div>
+              <div style="font-size:11px;color:#4A5568;line-height:1.55;margin-top:10px">
+                <b style="font-family:var(--mp-font-display);color:#001B3D;display:block;margin-bottom:4px">Interaktionen:</b>
+                • Grab-Handle: ziehen zum Erweitern/Schließen<br>
+                • Auto-Snap auf 3 Höhen (Peek · Half · Full)<br>
+                • Tap auf Quick-Chip = Prompt-Template<br>
+                • Swipe-down dismisses komplett
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="alt-card" data-theme="dark" style="background:#001028">
+        <div class="alt-card__label" style="background:#001028;border-color:rgba(255,255,255,0.05)"><div><span class="alt-card__name" style="color:#E2E8F0">B · Bottom sheet</span> <span class="alt-card__bet" style="color:#94A3B8">— dark</span></div><span class="alt-card__tag alt-card__tag--dark">DARK</span></div>
+        <div class="alt-card__body alt-card__body--dark" style="min-height:500px">
+          <div class="stage" data-theme="dark">
+            <div class="frame">
+              <div class="frame-top"><span>09:41</span><span>···</span></div>
+              <div class="frame-q">Welches EKG-Zeichen ist am spezifischsten für eine akute STEMI-Diagnose?</div>
+              <div class="frame-opts">
+                <div class="o">ST-Senkung in V1–V3</div>
+                <div class="o ok">ST-Hebung ≥1 mm ✓</div>
+              </div>
+              <div class="sheet">
+                <div class="sheet-grab"></div>
+                <div class="sheet-hd"><div class="av">ü</div><div class="tt">Assistent · Frage 7</div></div>
+                <div class="sheet-body">
+                  <div class="smsg u">Warum war T-Inversion falsch?</div>
+                  <div class="smsg a">T-Inversion in aVL ist nicht spezifisch genug. STEMI verlangt ST-Hebung ≥1 mm in zwei zusammenhängenden Ableitungen.</div>
+                  <div class="smsg a">Quelle: Herold S. 214</div>
+                </div>
+                <div class="sheet-chips"><span class="sheet-chip">Einfacher</span><span class="sheet-chip">Beispiel</span></div>
+                <div class="sheet-in"><input placeholder="Frag etwas…"><button>↑</button></div>
+              </div>
+            </div>
+            <div class="ctx">
+              <div class="ctx-kicker">Kontext: die gleiche Frage</div>
+              <div class="ctx-q" style="font-size:13px">Bottom sheet auf Mobile — always reachable über den Daumen.</div>
+              <div style="font-size:11px;color:#94A3B8;line-height:1.55;margin-top:10px">
+                <b style="font-family:var(--mp-font-display);color:#E2E8F0;display:block;margin-bottom:4px">Interaktionen:</b>
+                • Grab-Handle ziehen<br>• Auto-Snap 3 Höhen<br>• Quick-Chip = Prompt-Template<br>• Swipe-down dismisses
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body></html>

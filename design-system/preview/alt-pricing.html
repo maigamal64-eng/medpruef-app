@@ -1,0 +1,178 @@
+<!doctype html><html><head><meta charset="utf-8">
+<link rel="stylesheet" href="../components_v2.css">
+<link rel="stylesheet" href="_alt-shell.css">
+<title>Pricing — Alternatives</title>
+<style>
+  .stage { padding:24px;height:100%;box-sizing:border-box;overflow:hidden }
+
+  /* ═══ A: 3 cards side-by-side, conventional ═══ */
+  .a-head { text-align:center;margin-bottom:18px }
+  .a-eyebrow { font-family:var(--mp-font-mono);font-size:11px;color:#007B5F;letter-spacing:0.1em;text-transform:uppercase;font-weight:700;margin-bottom:6px }
+  .a-ht { font-family:var(--mp-font-display);font-weight:900;font-size:28px;color:#001B3D;margin:0 0 6px;letter-spacing:-0.02em }
+  .a-hs { font-size:13px;color:#4A5568;margin:0 }
+  .a-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:14px;max-width:900px;margin:0 auto }
+  .a-tier { background:#fff;border:1px solid rgba(228,233,240,.7);border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:10px;position:relative }
+  .a-tier--featured { border:2px solid #007B5F;box-shadow:0 8px 24px rgba(0,123,95,0.15);transform:translateY(-4px) }
+  .a-tier--soon { opacity:0.72 }
+  .a-ribbon { position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:#007B5F;color:#fff;font-size:10px;font-weight:700;padding:3px 10px;border-radius:999px;letter-spacing:0.06em }
+  .a-ribbon--soon { background:#4A5568 }
+  .a-tname { font-family:var(--mp-font-display);font-weight:800;font-size:18px;color:#001B3D;letter-spacing:-0.01em }
+  .a-tdesc { font-size:11px;color:#4A5568;min-height:24px;line-height:1.4 }
+  .a-price { display:flex;align-items:baseline;gap:4px;margin:2px 0 4px }
+  .a-price .c { font-family:var(--mp-font-display);font-weight:900;font-size:32px;color:#001B3D;letter-spacing:-0.02em;font-variant-numeric:tabular-nums;line-height:1 }
+  .a-price .u { font-size:11px;color:#4A5568 }
+  .a-tlist { list-style:none;padding:0;margin:6px 0 10px;display:flex;flex-direction:column;gap:5px;font-size:12px;color:#1A2B3C;flex:1 }
+  .a-tlist li { display:flex;align-items:flex-start;gap:7px }
+  .a-tlist svg { width:12px;height:12px;color:#007B5F;flex-shrink:0;margin-top:3px }
+  .a-tlist .faint { color:#A0AEC0;text-decoration:line-through }
+  .a-tcta { padding:9px 14px;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;border:none;text-align:center }
+  .a-tcta--primary { background:#001B3D;color:#fff }
+  .a-tcta--featured { background:#007B5F;color:#fff }
+  .a-tcta--soon { background:#F7F9FC;color:#4A5568;border:1px solid #E4E9F0 }
+
+  /* ═══ B: Editorial — 1 feature card + 2 slim comparison rows ═══ */
+  .b-wrap { max-width:900px;margin:0 auto }
+  .b-head { margin-bottom:18px }
+  .b-hl { font-family:var(--mp-font-display);font-weight:900;font-size:36px;line-height:1.05;color:#001B3D;letter-spacing:-0.03em;margin:0 0 8px }
+  .b-hl em { color:#007B5F;font-style:normal }
+  .b-hsub { font-size:14px;color:#4A5568;max-width:560px;line-height:1.5 }
+  .b-feature { background:linear-gradient(135deg,#001B3D,#003A8C);color:#fff;border-radius:18px;padding:24px;position:relative;overflow:hidden;margin-bottom:12px }
+  .b-feature::before{content:"";position:absolute;right:-40px;bottom:-40px;width:220px;height:220px;border-radius:50%;background:radial-gradient(circle,rgba(0,168,150,0.35),transparent 70%);pointer-events:none}
+  .b-feature-grid { display:grid;grid-template-columns:1fr auto;gap:24px;align-items:end;position:relative }
+  .b-f-top { font-size:11px;color:rgba(255,255,255,0.6);letter-spacing:0.1em;text-transform:uppercase;font-weight:700;margin-bottom:8px }
+  .b-f-name { font-family:var(--mp-font-display);font-weight:900;font-size:28px;letter-spacing:-0.02em;margin:0 0 6px }
+  .b-f-tag { font-size:12px;color:rgba(255,255,255,0.8);margin-bottom:12px;line-height:1.5;max-width:420px }
+  .b-f-feats { display:flex;flex-wrap:wrap;gap:6px }
+  .b-f-feat { font-size:11px;padding:4px 10px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);border-radius:999px;color:rgba(255,255,255,0.9) }
+  .b-f-right { text-align:right;min-width:180px }
+  .b-f-price { font-family:var(--mp-font-display);font-weight:900;font-size:42px;letter-spacing:-0.03em;line-height:1;font-variant-numeric:tabular-nums }
+  .b-f-price span { font-size:12px;color:rgba(255,255,255,0.6);font-weight:600 }
+  .b-f-note { font-size:11px;color:rgba(255,255,255,0.55);margin-bottom:10px }
+  .b-f-cta { padding:11px 20px;background:#00A896;color:#001028;border:none;border-radius:12px;font-weight:800;font-size:13px;cursor:pointer;width:100%;margin-top:8px }
+  .b-row { background:#fff;border:1px solid rgba(228,233,240,.7);border-radius:14px;padding:16px 20px;display:flex;align-items:center;gap:16px;margin-bottom:8px }
+  .b-row-lead { flex:1;min-width:0 }
+  .b-row-name { display:flex;align-items:center;gap:8px;font-family:var(--mp-font-display);font-weight:700;font-size:15px;color:#1A2B3C }
+  .b-row-badge { font-size:10px;padding:2px 8px;border-radius:999px;background:rgba(74,85,104,0.1);color:#4A5568;font-weight:700;letter-spacing:0.04em }
+  .b-row-desc { font-size:12px;color:#4A5568;margin-top:2px }
+  .b-row-price { font-family:var(--mp-font-display);font-weight:800;font-size:18px;color:#001B3D;letter-spacing:-0.01em;white-space:nowrap }
+  .b-row-cta { padding:8px 14px;background:transparent;color:#001B3D;border:1px solid #CBD5E1;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap }
+  .b-row-cta--soon { background:#F7F9FC;color:#4A5568 }
+</style>
+</head>
+<body>
+  <div class="alt-header">
+    <h1>Pricing (/pricing) — 2 alternatives</h1>
+    <p>A: classic 3-up tier cards, scannable · B: editorial "featured Pro + slim secondary rows" — makes the waitlist energy feel intentional, not apologetic.</p>
+  </div>
+  <div class="alt-stack">
+    <div class="alt-wrap alt-wrap--full">
+      <div class="alt-card">
+        <div class="alt-card__label"><div><span class="alt-card__name">A · 3-up tiers</span> <span class="alt-card__bet">— conventional; Pro as the elevated middle</span></div><span class="alt-card__tag">LIGHT</span></div>
+        <div class="alt-card__body alt-card__body--light" style="min-height:460px">
+          <div class="stage">
+            <div class="a-head">
+              <div class="a-eyebrow">Transparent · Monatlich kündbar</div>
+              <h1 class="a-ht">Ein Preis für deine Vorbereitung.</h1>
+              <p class="a-hs">Kostenlos starten. Upgrade nur, wenn du es wirklich brauchst.</p>
+            </div>
+            <div class="a-grid">
+              <div class="a-tier">
+                <div class="a-tname">Free</div>
+                <div class="a-tdesc">Täglich lernen. Die Basis jeder Vorbereitung.</div>
+                <div class="a-price"><span class="c">€0</span><span class="u">/ immer</span></div>
+                <ul class="a-tlist">
+                  <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>60 Fragen täglich</li>
+                  <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Alle 3 AT-Prüfungstypen</li>
+                  <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Erklärungen zu jeder Frage</li>
+                  <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Streak, XP, Fortschritt</li>
+                  <li class="faint">KI-Chat & Übersetzungen</li>
+                </ul>
+                <button class="a-tcta a-tcta--primary">Kostenlos starten</button>
+              </div>
+              <div class="a-tier a-tier--featured">
+                <span class="a-ribbon">Beliebt</span>
+                <div class="a-tname">Pro</div>
+                <div class="a-tdesc">Für die 3 Monate vor der Prüfung.</div>
+                <div class="a-price"><span class="c">€19</span><span class="u">/ Monat</span></div>
+                <ul class="a-tlist">
+                  <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Unbegrenzte Fragen</li>
+                  <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>KI-Chat mit Kontext zur Frage</li>
+                  <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>7 Sprachen on-demand</li>
+                  <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Prüfungssimulation (4h)</li>
+                  <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Schwächen-Fokus-Modus</li>
+                </ul>
+                <button class="a-tcta a-tcta--featured">Pro ausprobieren</button>
+              </div>
+              <div class="a-tier a-tier--soon">
+                <span class="a-ribbon a-ribbon--soon">Bald</span>
+                <div class="a-tname">Group</div>
+                <div class="a-tdesc">Für Lerngruppen und Institute.</div>
+                <div class="a-price"><span class="c">€49</span><span class="u">/ Team / Monat</span></div>
+                <ul class="a-tlist">
+                  <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Alles aus Pro für 5 Mitglieder</li>
+                  <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Gemeinsame Lernpläne</li>
+                  <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Admin-Dashboard</li>
+                  <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>SSO & Rechnung</li>
+                </ul>
+                <button class="a-tcta a-tcta--soon">Warteliste</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="alt-wrap alt-wrap--full">
+      <div class="alt-card">
+        <div class="alt-card__label"><div><span class="alt-card__name">B · Featured Pro + slim rows</span> <span class="alt-card__bet">— Pro is THE product; Free and Group are supporting cast</span></div><span class="alt-card__tag">LIGHT</span></div>
+        <div class="alt-card__body alt-card__body--light" style="min-height:460px">
+          <div class="stage">
+            <div class="b-wrap">
+              <div class="b-head">
+                <h1 class="b-hl">€19 im Monat, <em>bis du bestanden hast</em>.</h1>
+                <p class="b-hsub">Im Schnitt bereiten sich Nutzer 14 Wochen vor. Das sind €66 — weniger als ein Lehrbuch, und du bekommst jede Frage, die drankommen könnte.</p>
+              </div>
+              <div class="b-feature">
+                <div class="b-feature-grid">
+                  <div>
+                    <div class="b-f-top">Empfohlen · Auch wöchentlich kündbar</div>
+                    <h3 class="b-f-name">MedPrüf Pro</h3>
+                    <div class="b-f-tag">Unbegrenzte Fragen, KI-Chat, Schwächen-Fokus, 4-Stunden-Simulation, 7 Sprachen, Prioritäts-Support.</div>
+                    <div class="b-f-feats">
+                      <span class="b-f-feat">Unbegrenzt</span>
+                      <span class="b-f-feat">KI-Chat</span>
+                      <span class="b-f-feat">Simulation</span>
+                      <span class="b-f-feat">Schwächen-Fokus</span>
+                      <span class="b-f-feat">7 Sprachen</span>
+                    </div>
+                  </div>
+                  <div class="b-f-right">
+                    <div class="b-f-price">€19<span>/Monat</span></div>
+                    <div class="b-f-note">oder €149 / Jahr (−35%)</div>
+                    <button class="b-f-cta">7 Tage gratis testen →</button>
+                  </div>
+                </div>
+              </div>
+              <div class="b-row">
+                <div class="b-row-lead">
+                  <div class="b-row-name">Free <span class="b-row-badge">Immer kostenlos</span></div>
+                  <div class="b-row-desc">60 Fragen pro Tag · Alle 3 AT-Prüfungstypen · Erklärungen und Fortschritt</div>
+                </div>
+                <div class="b-row-price">€0</div>
+                <button class="b-row-cta">Starten →</button>
+              </div>
+              <div class="b-row" style="opacity:0.8">
+                <div class="b-row-lead">
+                  <div class="b-row-name">Group <span class="b-row-badge" style="background:rgba(244,162,97,0.15);color:#D68A3A">In Entwicklung</span></div>
+                  <div class="b-row-desc">Ab 5 Plätzen · Admin-Dashboard · SSO · Sammelrechnung · Voraussichtlich Q3 2026</div>
+                </div>
+                <div class="b-row-price">Ab €49/Team</div>
+                <button class="b-row-cta b-row-cta--soon">Warteliste →</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body></html>
