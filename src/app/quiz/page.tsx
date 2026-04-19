@@ -443,7 +443,7 @@ function QuizContent() {
           </div>
           <div className="h-2 w-full bg-[var(--mp-border)] rounded-full overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-[#007B5F] to-[#00A896] rounded-full transition-all duration-500 ease-out"
+              className="h-full bg-gradient-to-r from-[var(--mp-viridian)] to-[var(--mp-accent-teal)] rounded-full transition-all duration-500 ease-out"
               style={{ width: `${progressPct}%` }}
             />
           </div>
@@ -532,7 +532,7 @@ function QuizContent() {
 
                   {/* Milestone card — appears BELOW, doesn't replace the quiz */}
                   {milestoneVisible && (
-                    <div className="mt-4 card rounded-2xl p-5 animate-slide-up border-l-4 border-l-[var(--mp-accent-teal)] bg-gradient-to-br from-[#00A896]/5 to-transparent">
+                    <div className="mt-4 card rounded-2xl p-5 animate-slide-up border-l-4 border-l-[var(--mp-accent-teal)] bg-gradient-to-br from-[var(--mp-accent-teal)]/5 to-transparent">
                       <div className="flex items-start gap-3">
                         <div className="w-10 h-10 rounded-xl bg-[var(--mp-accent-teal)]/15 flex items-center justify-center flex-shrink-0">
                           <Sparkles className="w-5 h-5 text-[var(--mp-accent-teal)]" />

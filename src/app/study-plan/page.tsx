@@ -278,7 +278,7 @@ export default function StudyPlanPage() {
           {plan && resp?.examDate && (
             <>
               {/* Hero */}
-              <div className="bg-gradient-to-r from-[#001B3D] to-[#003A8C] rounded-2xl p-5 md:p-7 text-white relative overflow-hidden">
+              <div className="bg-gradient-to-r from-[var(--mp-fg)] to-[var(--mp-cta-blue)] rounded-2xl p-5 md:p-7 text-white relative overflow-hidden">
                 <div
                   className="absolute inset-0 opacity-[0.04]"
                   style={{

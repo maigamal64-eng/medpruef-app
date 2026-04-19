@@ -110,7 +110,12 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 }
 
 function ToastViewport({ toasts, onDismiss }: { toasts: ToastItem[]; onDismiss: (id: number) => void }) {
-  if (typeof document === 'undefined') return null
+  // IMPORTANT: do NOT gate on `typeof document === 'undefined'` here.
+  // This component renders on both server and client via ToastProvider,
+  // and a null/div split triggers a hydration mismatch. The region is
+  // harmless when empty (fixed-positioned, pointer-events-none) so we
+  // render it unconditionally and let the portal-less viewport stay in
+  // the React tree. Only individual toasts render once `toasts` grows.
   return (
     <div
       role="region"

@@ -40,7 +40,7 @@ export default function GuestMigrationBanner() {
   }
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-[70] bg-gradient-to-r from-[#D68A3A] to-[#D64545] text-white px-4 py-2.5 shadow-lg">
+    <div className="fixed top-0 left-0 right-0 z-[70] bg-gradient-to-r from-[#D68A3A] to-[var(--mp-error)] text-white px-4 py-2.5 shadow-lg">
       <div className="max-w-4xl mx-auto flex items-center justify-between gap-3">
         <div className="flex items-center gap-2 min-w-0">
           <AlertTriangle className="w-4 h-4 flex-shrink-0" />

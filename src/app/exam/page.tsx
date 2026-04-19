@@ -435,7 +435,7 @@ function ExamContent() {
 
           <div className="flex flex-col items-center justify-center min-h-[calc(100vh-60px)] px-4 py-8">
             <div className="max-w-lg w-full">
-              <div className="bg-gradient-to-r from-[#001B3D]/[0.04] to-[#007B5F]/[0.04] rounded-2xl p-6 text-center mb-8">
+              <div className="bg-gradient-to-r from-[var(--mp-fg)]/[0.04] to-[var(--mp-viridian)]/[0.04] rounded-2xl p-6 text-center mb-8">
                 <div className="w-20 h-20 rounded-2xl border border-[var(--mp-status-warning)]/30 bg-[var(--mp-status-warning)]/10 flex items-center justify-center mx-auto mb-5">
                   <GraduationCap className="w-10 h-10 text-[var(--mp-status-warning)]" />
                 </div>
@@ -978,7 +978,7 @@ function ExamContent() {
     } else if (isFlagged) {
       cellClasses += " bg-[var(--mp-warning-bg)] text-[var(--mp-status-warning)] border-2 border-[var(--mp-status-warning)]";
     } else if (isAnswered) {
-      cellClasses += " bg-[var(--mp-oxford-blue)] text-white border border-transparent hover:bg-[var(--mp-cta-blue)] dark:bg-[var(--mp-viridian)] dark:text-[var(--mp-oxford-blue-dk)] dark:hover:bg-[var(--mp-viridian-dk)]";
+      cellClasses += " bg-[var(--mp-oxford-blue)] text-white border border-transparent hover:bg-[var(--mp-cta-blue)] dark:hover:bg-[var(--mp-viridian-dk)]";
     } else {
       cellClasses += " bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-subtle)] border border-[var(--mp-border)] hover:border-[var(--mp-viridian)]/50 hover:text-[var(--mp-fg)]";
     }
@@ -1170,7 +1170,7 @@ function ExamContent() {
         {/* Legend */}
         <div className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] font-mono text-[var(--mp-fg-subtle)] mb-4">
           <span className="inline-flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-sm bg-[var(--mp-oxford-blue)] dark:bg-[var(--mp-viridian)]" />
+            <span className="w-2.5 h-2.5 rounded-sm bg-[var(--mp-oxford-blue)]" />
             {lang === "de" ? "beantw." : "answered"}
           </span>
           <span className="inline-flex items-center gap-1.5">
@@ -1329,7 +1329,7 @@ function ExamContent() {
                     type="button"
                     onClick={() => setCurrentIdx(Math.min(questions.length - 1, currentIdx + 1))}
                     disabled={currentIdx === questions.length - 1}
-                    className="flex-1 py-2.5 bg-[var(--mp-oxford-blue)] text-white rounded-lg text-sm font-semibold disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[var(--mp-cta-blue)] dark:bg-[var(--mp-viridian)] dark:text-[var(--mp-oxford-blue-dk)] dark:hover:bg-[var(--mp-viridian-dk)] transition-colors inline-flex items-center justify-center gap-1"
+                    className="flex-1 py-2.5 bg-[var(--mp-oxford-blue)] text-white rounded-lg text-sm font-semibold disabled:opacity-30 disabled:cursor-not-allowed hover:bg-[var(--mp-cta-blue)] dark:hover:bg-[var(--mp-viridian-dk)] transition-colors inline-flex items-center justify-center gap-1"
                   >
                     <span className="font-mono tabular-nums text-xs">
                       {currentIdx < questions.length - 1 ? currentIdx + 2 : ""}

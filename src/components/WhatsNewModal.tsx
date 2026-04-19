@@ -15,7 +15,7 @@ interface Feature {
 
 const FEATURES: Feature[] = [
   {
-    icon: <Mountain className="w-5 h-5 text-[#003A8C]" />,
+    icon: <Mountain className="w-5 h-5 text-[var(--mp-cta-blue)]" />,
     title: 'KMP Innsbruck — 3.091 new questions',
     description: 'The Cumulative Module Exam (KMP) from Med Uni Innsbruck is now available. Switch exams via the sidebar.',
   },
@@ -25,7 +25,7 @@ const FEATURES: Feature[] = [
     description: 'Short-answer pharmacology questions for Rezeptierkunde preparation.',
   },
   {
-    icon: <Calendar className="w-5 h-5 text-[#00A896]" />,
+    icon: <Calendar className="w-5 h-5 text-[var(--mp-accent-teal)]" />,
     title: 'February 2026 SIP5a exam added',
     description: '154 fresh questions from the latest Vienna exam, organized by specialty.',
   },
@@ -35,12 +35,12 @@ const FEATURES: Feature[] = [
     description: 'Select answers freely, navigate between questions, and submit when ready — just like the real exam.',
   },
   {
-    icon: <Star className="w-5 h-5 text-[#D64545]" />,
+    icon: <Star className="w-5 h-5 text-[var(--mp-error)]" />,
     title: 'Bookmarks & mistake review',
     description: 'Quick access on the home page to your saved questions and questions you got wrong.',
   },
   {
-    icon: <MessageSquarePlus className="w-5 h-5 text-[#003A8C]" />,
+    icon: <MessageSquarePlus className="w-5 h-5 text-[var(--mp-cta-blue)]" />,
     title: 'Feedback button',
     description: 'See the blue button at the bottom-right? Use it to report issues or suggest improvements. We read every message.',
   },

@@ -108,7 +108,7 @@ export default function ResumeSessionCard({ userId, lang }: Props) {
   return (
     <Link
       href={resumeHref}
-      className="block mb-6 card-interactive rounded-2xl p-5 border-l-4 border-l-[var(--mp-viridian)] bg-gradient-to-br from-[#00A896]/5 to-transparent hover:shadow-[var(--shadow-elevated)] transition-all group stagger-in"
+      className="block mb-6 card-interactive rounded-2xl p-5 border-l-4 border-l-[var(--mp-viridian)] bg-gradient-to-br from-[var(--mp-accent-teal)]/5 to-transparent hover:shadow-[var(--shadow-elevated)] transition-all group stagger-in"
     >
       <div className="flex items-center gap-4">
         <div className="w-12 h-12 rounded-xl bg-[var(--mp-viridian)]/15 flex items-center justify-center flex-shrink-0">

@@ -98,17 +98,17 @@ export default function QuizSetup({ lang, examSource, initialTopic, onStart }: P
   };
 
   return (
-    <div className="min-h-screen bg-[#F7F9FC] dark:bg-[#0F172A] py-8 px-4">
+    <div className="min-h-screen bg-[var(--mp-surface-sunken)] py-8 px-4">
       <div className="max-w-3xl mx-auto animate-scale-in">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[#007B5F]/10 border border-[#007B5F]/30 mb-3">
-            <BookOpen className="w-7 h-7 text-[#007B5F]" />
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[var(--mp-viridian)]/10 border border-[var(--mp-viridian)]/30 mb-3">
+            <BookOpen className="w-7 h-7 text-[var(--mp-viridian)]" />
           </div>
-          <h1 className="text-2xl md:text-3xl font-bold text-[#1A2B3C] dark:text-[#E2E8F0] font-display">
+          <h1 className="text-2xl md:text-3xl font-bold text-[var(--mp-fg)] font-display">
             {lang === "de" ? "Quiz konfigurieren" : "Customize your quiz"}
           </h1>
-          <p className="text-sm text-[#A0AEC0] mt-1">
+          <p className="text-sm text-[var(--mp-fg-subtle)] mt-1">
             {lang === "de"
               ? "Wähle Themen, Anzahl und Zeitlimit"
               : "Pick topics, count, and time limit"}
@@ -119,10 +119,10 @@ export default function QuizSetup({ lang, examSource, initialTopic, onStart }: P
           {/* Topics */}
           <section className="card rounded-2xl p-5">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-semibold text-[#1A2B3C] dark:text-[#E2E8F0] flex items-center gap-2">
-                <BookOpen className="w-4 h-4 text-[#007B5F]" />
+              <h2 className="text-sm font-semibold text-[var(--mp-fg)] flex items-center gap-2">
+                <BookOpen className="w-4 h-4 text-[var(--mp-viridian)]" />
                 {lang === "de" ? "Fachgebiete" : "Subjects"}
-                <span className="text-xs text-[#A0AEC0] font-normal">
+                <span className="text-xs text-[var(--mp-fg-subtle)] font-normal">
                   ({selectedTopics.size === 0
                     ? lang === "de"
                       ? "alle"
@@ -133,7 +133,7 @@ export default function QuizSetup({ lang, examSource, initialTopic, onStart }: P
               {selectedTopics.size > 0 && (
                 <button
                   onClick={() => setSelectedTopics(new Set())}
-                  className="text-xs text-[#A0AEC0] hover:text-[#D64545] transition-colors flex items-center gap-1"
+                  className="text-xs text-[var(--mp-fg-subtle)] hover:text-[var(--mp-error)] transition-colors flex items-center gap-1"
                 >
                   <X className="w-3 h-3" />
                   {lang === "de" ? "Zurücksetzen" : "Clear"}
@@ -141,7 +141,7 @@ export default function QuizSetup({ lang, examSource, initialTopic, onStart }: P
               )}
             </div>
             {loading ? (
-              <div className="text-xs text-[#A0AEC0]">{lang === "de" ? "Lade…" : "Loading…"}</div>
+              <div className="text-xs text-[var(--mp-fg-subtle)]">{lang === "de" ? "Lade…" : "Loading…"}</div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {topicCounts.map((t) => {
@@ -153,8 +153,8 @@ export default function QuizSetup({ lang, examSource, initialTopic, onStart }: P
                       onClick={() => toggleTopic(t.topic)}
                       className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl border text-left transition-all active:scale-[0.98] ${
                         isSel
-                          ? "border-[#007B5F] bg-[#007B5F]/8 text-[#1A2B3C] dark:text-[#E2E8F0]"
-                          : "border-[#E4E9F0] dark:border-[#334155] hover:border-[#007B5F]/40 hover:bg-[#007B5F]/5 text-[#4A5568] dark:text-[#A0AEC0]"
+                          ? "border-[var(--mp-viridian)] bg-[var(--mp-viridian)]/8 text-[var(--mp-fg)]"
+                          : "border-[var(--mp-border)] hover:border-[var(--mp-viridian)]/40 hover:bg-[var(--mp-viridian)]/5 text-[var(--mp-fg-muted)]"
                       }`}
                     >
                       <span
@@ -164,7 +164,7 @@ export default function QuizSetup({ lang, examSource, initialTopic, onStart }: P
                         <TopicIcon name={cfg.icon} className="w-4 h-4" />
                       </span>
                       <span className="flex-1 text-xs font-medium truncate">{t.topic}</span>
-                      <span className="text-[10px] font-mono text-[#A0AEC0]">{t.count}</span>
+                      <span className="text-[10px] font-mono text-[var(--mp-fg-subtle)]">{t.count}</span>
                     </button>
                   );
                 })}
@@ -174,8 +174,8 @@ export default function QuizSetup({ lang, examSource, initialTopic, onStart }: P
 
           {/* Question count */}
           <section className="card rounded-2xl p-5">
-            <h2 className="text-sm font-semibold text-[#1A2B3C] dark:text-[#E2E8F0] flex items-center gap-2 mb-3">
-              <Hash className="w-4 h-4 text-[#007B5F]" />
+            <h2 className="text-sm font-semibold text-[var(--mp-fg)] flex items-center gap-2 mb-3">
+              <Hash className="w-4 h-4 text-[var(--mp-viridian)]" />
               {lang === "de" ? "Anzahl Fragen" : "Number of questions"}
             </h2>
             <div className="flex items-center gap-2 flex-wrap mb-3">
@@ -185,8 +185,8 @@ export default function QuizSetup({ lang, examSource, initialTopic, onStart }: P
                   onClick={() => setTargetCount(n)}
                   className={`px-4 py-2 rounded-xl text-sm font-mono font-semibold transition-all ${
                     targetCount === n
-                      ? "bg-[#007B5F] text-white shadow-[var(--shadow-card)]"
-                      : "bg-[#F7F9FC] dark:bg-[#1E293B] text-[#4A5568] dark:text-[#A0AEC0] hover:bg-[#007B5F]/10"
+                      ? "bg-[var(--mp-viridian)] text-white shadow-[var(--shadow-card)]"
+                      : "bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-muted)] hover:bg-[var(--mp-viridian)]/10"
                   }`}
                 >
                   {n}
@@ -201,11 +201,11 @@ export default function QuizSetup({ lang, examSource, initialTopic, onStart }: P
                   const v = parseInt(e.target.value, 10);
                   if (Number.isFinite(v) && v > 0) setTargetCount(v);
                 }}
-                className="w-20 px-3 py-2 rounded-xl text-sm font-mono text-center bg-[#F7F9FC] dark:bg-[#1E293B] border border-[#E4E9F0] dark:border-[#334155] text-[#1A2B3C] dark:text-[#E2E8F0] focus:outline-none focus:border-[#007B5F]"
+                className="w-20 px-3 py-2 rounded-xl text-sm font-mono text-center bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)] text-[var(--mp-fg)] focus:outline-none focus:border-[var(--mp-viridian)]"
               />
             </div>
             {totalAvailable > 0 && (
-              <p className="text-[11px] text-[#A0AEC0]">
+              <p className="text-[11px] text-[var(--mp-fg-subtle)]">
                 {lang === "de"
                   ? `${totalAvailable.toLocaleString("de-DE")} Fragen verfügbar mit deinen Filtern`
                   : `${totalAvailable.toLocaleString("en-US")} questions available with your filters`}
@@ -215,8 +215,8 @@ export default function QuizSetup({ lang, examSource, initialTopic, onStart }: P
 
           {/* Time limit */}
           <section className="card rounded-2xl p-5">
-            <h2 className="text-sm font-semibold text-[#1A2B3C] dark:text-[#E2E8F0] flex items-center gap-2 mb-3">
-              <Clock className="w-4 h-4 text-[#007B5F]" />
+            <h2 className="text-sm font-semibold text-[var(--mp-fg)] flex items-center gap-2 mb-3">
+              <Clock className="w-4 h-4 text-[var(--mp-viridian)]" />
               {lang === "de" ? "Zeitlimit" : "Time limit"}
             </h2>
             <div className="flex items-center gap-2 flex-wrap">
@@ -226,8 +226,8 @@ export default function QuizSetup({ lang, examSource, initialTopic, onStart }: P
                   onClick={() => setTimeLimitMin(p.value)}
                   className={`px-4 py-2 rounded-xl text-xs font-medium transition-all ${
                     timeLimitMin === p.value
-                      ? "bg-[#007B5F] text-white shadow-[var(--shadow-card)]"
-                      : "bg-[#F7F9FC] dark:bg-[#1E293B] text-[#4A5568] dark:text-[#A0AEC0] hover:bg-[#007B5F]/10"
+                      ? "bg-[var(--mp-viridian)] text-white shadow-[var(--shadow-card)]"
+                      : "bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-muted)] hover:bg-[var(--mp-viridian)]/10"
                   }`}
                 >
                   {p.label[lang]}
@@ -240,18 +240,18 @@ export default function QuizSetup({ lang, examSource, initialTopic, onStart }: P
           <section className="card rounded-2xl p-5">
             <button
               onClick={() => setShowAdvanced((v) => !v)}
-              className="w-full flex items-center justify-between text-sm font-semibold text-[#1A2B3C] dark:text-[#E2E8F0] mb-2"
+              className="w-full flex items-center justify-between text-sm font-semibold text-[var(--mp-fg)] mb-2"
             >
               <span className="flex items-center gap-2">
-                <Tag className="w-4 h-4 text-[#007B5F]" />
+                <Tag className="w-4 h-4 text-[var(--mp-viridian)]" />
                 {lang === "de" ? "Erweitert" : "Advanced"}
               </span>
-              <span className="text-xs text-[#A0AEC0]">{showAdvanced ? "−" : "+"}</span>
+              <span className="text-xs text-[var(--mp-fg-subtle)]">{showAdvanced ? "−" : "+"}</span>
             </button>
             {showAdvanced && (
               <div className="space-y-4 mt-3">
                 <div>
-                  <label className="text-[11px] uppercase tracking-wider text-[#A0AEC0] font-semibold mb-1.5 block">
+                  <label className="text-[11px] uppercase tracking-wider text-[var(--mp-fg-subtle)] font-semibold mb-1.5 block">
                     {lang === "de" ? "Tags (durch Komma getrennt)" : "Tags (comma-separated)"}
                   </label>
                   <input
@@ -259,12 +259,12 @@ export default function QuizSetup({ lang, examSource, initialTopic, onStart }: P
                     value={tagInput}
                     onChange={(e) => setTagInput(e.target.value)}
                     placeholder="kardiologie, ekg"
-                    className="w-full px-3 py-2 rounded-xl text-sm bg-[#F7F9FC] dark:bg-[#1E293B] border border-[#E4E9F0] dark:border-[#334155] text-[#1A2B3C] dark:text-[#E2E8F0] placeholder-[#A0AEC0] focus:outline-none focus:border-[#007B5F]"
+                    className="w-full px-3 py-2 rounded-xl text-sm bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)] text-[var(--mp-fg)] placeholder-[var(--mp-fg-subtle)] focus:outline-none focus:border-[var(--mp-viridian)]"
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-[11px] uppercase tracking-wider text-[#A0AEC0] font-semibold mb-1.5 flex items-center gap-1">
+                    <label className="text-[11px] uppercase tracking-wider text-[var(--mp-fg-subtle)] font-semibold mb-1.5 flex items-center gap-1">
                       <Calendar className="w-3 h-3" />
                       {lang === "de" ? "Prüfung von" : "Exam from"}
                     </label>
@@ -272,11 +272,11 @@ export default function QuizSetup({ lang, examSource, initialTopic, onStart }: P
                       type="month"
                       value={examDateFrom}
                       onChange={(e) => setExamDateFrom(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl text-sm bg-[#F7F9FC] dark:bg-[#1E293B] border border-[#E4E9F0] dark:border-[#334155] text-[#1A2B3C] dark:text-[#E2E8F0] focus:outline-none focus:border-[#007B5F]"
+                      className="w-full px-3 py-2 rounded-xl text-sm bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)] text-[var(--mp-fg)] focus:outline-none focus:border-[var(--mp-viridian)]"
                     />
                   </div>
                   <div>
-                    <label className="text-[11px] uppercase tracking-wider text-[#A0AEC0] font-semibold mb-1.5 flex items-center gap-1">
+                    <label className="text-[11px] uppercase tracking-wider text-[var(--mp-fg-subtle)] font-semibold mb-1.5 flex items-center gap-1">
                       <Calendar className="w-3 h-3" />
                       {lang === "de" ? "Prüfung bis" : "Exam to"}
                     </label>
@@ -284,7 +284,7 @@ export default function QuizSetup({ lang, examSource, initialTopic, onStart }: P
                       type="month"
                       value={examDateTo}
                       onChange={(e) => setExamDateTo(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl text-sm bg-[#F7F9FC] dark:bg-[#1E293B] border border-[#E4E9F0] dark:border-[#334155] text-[#1A2B3C] dark:text-[#E2E8F0] focus:outline-none focus:border-[#007B5F]"
+                      className="w-full px-3 py-2 rounded-xl text-sm bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)] text-[var(--mp-fg)] focus:outline-none focus:border-[var(--mp-viridian)]"
                     />
                   </div>
                 </div>

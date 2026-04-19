@@ -63,13 +63,13 @@ export default function AIChatAssistant({
   // renders properly on both user and assistant bubbles, in light + dark mode.
   const markdownComponents = (role: "user" | "assistant") => {
     const isUser = role === "user";
-    const strongColor = isUser ? "text-white" : "text-[#007B5F] dark:text-[#00A896]";
-    const headingColor = isUser ? "text-white" : "text-[#001B3D] dark:text-[#E2E8F0]";
-    const linkColor = isUser ? "text-white underline" : "text-[#003A8C] dark:text-[#00A896] underline";
+    const strongColor = isUser ? "text-white" : "text-[var(--mp-viridian)]";
+    const headingColor = isUser ? "text-white" : "text-[var(--mp-fg)]";
+    const linkColor = isUser ? "text-white underline" : "text-[var(--mp-cta-blue)] underline";
     const codeBg = isUser
       ? "bg-white/20 text-white"
-      : "bg-[#E4E9F0] text-[#001B3D] dark:bg-[#334155] dark:text-[#E2E8F0]";
-    const blockquoteBorder = isUser ? "border-white/40" : "border-[#007B5F]/40";
+      : "bg-[var(--mp-border)] text-[var(--mp-fg)]";
+    const blockquoteBorder = isUser ? "border-white/40" : "border-[var(--mp-viridian)]/40";
     return {
       h1: ({ children }: { children?: ReactNode }) => (
         <h3 className={`text-sm font-display font-bold mt-3 mb-1.5 first:mt-0 ${headingColor}`}>{children}</h3>
@@ -87,10 +87,10 @@ export default function AIChatAssistant({
         <p className="my-1.5 first:mt-0 last:mb-0 leading-relaxed">{children}</p>
       ),
       ul: ({ children }: { children?: ReactNode }) => (
-        <ul className="my-1.5 pl-5 list-disc space-y-1 marker:text-[#A0AEC0]">{children}</ul>
+        <ul className="my-1.5 pl-5 list-disc space-y-1 marker:text-[var(--mp-fg-subtle)]">{children}</ul>
       ),
       ol: ({ children }: { children?: ReactNode }) => (
-        <ol className="my-1.5 pl-5 list-decimal space-y-1 marker:text-[#A0AEC0]">{children}</ol>
+        <ol className="my-1.5 pl-5 list-decimal space-y-1 marker:text-[var(--mp-fg-subtle)]">{children}</ol>
       ),
       li: ({ children }: { children?: ReactNode }) => (
         <li className="leading-relaxed">{children}</li>
@@ -113,7 +113,7 @@ export default function AIChatAssistant({
       blockquote: ({ children }: { children?: ReactNode }) => (
         <blockquote className={`my-2 pl-3 border-l-2 italic ${blockquoteBorder}`}>{children}</blockquote>
       ),
-      hr: () => <hr className="my-3 border-[#E4E9F0] dark:border-[#334155]" />,
+      hr: () => <hr className="my-3 border-[var(--mp-border)]" />,
     };
   };
 
@@ -293,7 +293,7 @@ Use **bold** for key terms, bullet points for clarity, and structured headings.`
       {/* Status strip + regenerate control */}
       <div className="px-5 py-2.5 border-b border-[var(--mp-border-subtle)] flex items-center justify-between gap-3 bg-[var(--mp-surface-sunken)] sticky top-0 z-10">
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[#00A896] to-[#003A8C] flex items-center justify-center flex-shrink-0">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--mp-accent-teal)] to-[var(--mp-cta-blue)] flex items-center justify-center flex-shrink-0">
             <Bot className="w-4 h-4 text-white" />
           </div>
           <div className="min-w-0">
@@ -336,17 +336,17 @@ Use **bold** for key terms, bullet points for clarity, and structured headings.`
         {messages.map((msg, i) => (
           <div key={i} className={`flex items-start gap-2.5 ${msg.role === "user" ? "flex-row-reverse" : ""}`}>
             <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${
-              msg.role === "user" ? "bg-[#003A8C]/10" : "bg-[#007B5F]/10"
+              msg.role === "user" ? "bg-[var(--mp-cta-blue)]/10" : "bg-[var(--mp-viridian)]/10"
             }`}>
               {msg.role === "user"
-                ? <User className="w-4 h-4 text-[#003A8C]" />
-                : <Bot className="w-4 h-4 text-[#007B5F]" />
+                ? <User className="w-4 h-4 text-[var(--mp-cta-blue)]" />
+                : <Bot className="w-4 h-4 text-[var(--mp-viridian)]" />
               }
             </div>
             <div className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
               msg.role === "user"
-                ? "bg-[#003A8C] text-white rounded-tr-sm"
-                : "bg-[#F7F9FC] text-[#1A2B3C] rounded-tl-sm border border-[#E4E9F0] dark:bg-[#1E293B] dark:text-[#E2E8F0] dark:border-[#334155]"
+                ? "bg-[var(--mp-cta-blue)] text-white rounded-tr-sm"
+                : "bg-[var(--mp-surface-sunken)] text-[var(--mp-fg)] rounded-tl-sm border border-[var(--mp-border)]"
             }`}>
               <ReactMarkdown components={markdownComponents(msg.role)}>{msg.content}</ReactMarkdown>
             </div>
@@ -355,11 +355,11 @@ Use **bold** for key terms, bullet points for clarity, and structured headings.`
 
         {loading && (
           <div className="flex items-start gap-2.5">
-            <div className="w-7 h-7 rounded-lg bg-[#007B5F]/10 flex items-center justify-center flex-shrink-0">
-              <Bot className="w-4 h-4 text-[#007B5F]" />
+            <div className="w-7 h-7 rounded-lg bg-[var(--mp-viridian)]/10 flex items-center justify-center flex-shrink-0">
+              <Bot className="w-4 h-4 text-[var(--mp-viridian)]" />
             </div>
-            <div className="bg-[#F7F9FC] rounded-2xl rounded-tl-sm px-4 py-3 border border-[#E4E9F0] dark:bg-[#1E293B] dark:border-[#334155]">
-              <Loader2 className="w-4 h-4 text-[#007B5F] animate-spin" />
+            <div className="bg-[var(--mp-surface-sunken)] rounded-2xl rounded-tl-sm px-4 py-3 border border-[var(--mp-border)]">
+              <Loader2 className="w-4 h-4 text-[var(--mp-viridian)] animate-spin" />
             </div>
           </div>
         )}
@@ -390,14 +390,14 @@ Use **bold** for key terms, bullet points for clarity, and structured headings.`
               }}
               placeholder={lang === "de" ? "Folgefrage stellen…" : "Ask a follow-up question…"}
               aria-label={lang === "de" ? "Folgefrage stellen" : "Ask a follow-up question"}
-              className="flex-1 bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)] rounded-xl px-4 py-2.5 text-sm text-[var(--mp-fg)] placeholder-[var(--mp-fg-subtle)] focus:outline-none focus:border-[#007B5F]/50"
+              className="flex-1 bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)] rounded-xl px-4 py-2.5 text-sm text-[var(--mp-fg)] placeholder-[var(--mp-fg-subtle)] focus:outline-none focus:border-[var(--mp-viridian)]/50"
               disabled={loading}
             />
             <button
               onClick={handleSend}
               disabled={!input.trim() || loading}
               aria-label={lang === "de" ? "Folgefrage senden" : "Send follow-up question"}
-              className="w-10 h-10 rounded-xl bg-[#007B5F] text-white flex items-center justify-center hover:bg-[#00A896] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              className="w-10 h-10 rounded-xl bg-[var(--mp-viridian)] text-white flex items-center justify-center hover:bg-[var(--mp-accent-teal)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <Send className="w-4 h-4" />
             </button>

@@ -76,7 +76,7 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0 }: Sidebar
         ? `${base} bg-[var(--mp-viridian)]/20 text-[var(--mp-accent-teal)] font-semibold`
         : `${base} bg-[var(--mp-viridian)]/20 text-[var(--mp-accent-teal)] font-semibold border-l-[3px] border-l-[var(--mp-accent-teal)]`;
     }
-    return `${base} text-[#A0AEC0] hover:bg-white/5 hover:text-white`;
+    return `${base} text-[var(--mp-fg-subtle)] hover:bg-white/5 hover:text-white`;
   };
 
   return (
@@ -90,7 +90,7 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0 }: Sidebar
               <h1 className="text-base font-bold text-white tracking-tight">
                 <span>Med</span><span className="text-[var(--mp-accent-teal)]">Prüf</span>
               </h1>
-              <p className="text-[10px] text-[#A0AEC0] leading-tight">{t("exam_prep", lang)}</p>
+              <p className="text-[10px] text-[var(--mp-fg-subtle)] leading-tight">{t("exam_prep", lang)}</p>
             </div>
           )}
         </div>
@@ -105,7 +105,7 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0 }: Sidebar
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold text-white truncate">{userName}</p>
-              <p className="text-[10px] text-[#A0AEC0]">
+              <p className="text-[10px] text-[var(--mp-fg-subtle)]">
                 {xpInfo.rank} · <span className="font-mono">Lv.{xpInfo.level}</span>
               </p>
             </div>
@@ -155,7 +155,7 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0 }: Sidebar
       <div className={`border-t border-white/[0.06] ${collapsed ? "px-2 py-2" : "px-4 py-2"}`}>
         <button
           onClick={toggleCollapse}
-          className={`flex items-center ${collapsed ? "justify-center w-9 h-9 mx-auto" : "gap-2 w-full px-3 py-2"} rounded-xl text-[#A0AEC0]/60 hover:text-white hover:bg-white/5 transition-colors`}
+          className={`flex items-center ${collapsed ? "justify-center w-9 h-9 mx-auto" : "gap-2 w-full px-3 py-2"} rounded-xl text-[var(--mp-fg-subtle)]/60 hover:text-white hover:bg-white/5 transition-colors`}
           title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           {collapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}

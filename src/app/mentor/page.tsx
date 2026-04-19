@@ -41,7 +41,7 @@ export default function MentorPage() {
   return (
     <div className="min-h-screen bg-[var(--mp-surface-sunken)] safe-area-top safe-area-bottom">
       {/* Header */}
-      <div className="px-4 pt-8 pb-6 bg-gradient-to-b from-[#007B5F]/5 to-transparent">
+      <div className="px-4 pt-8 pb-6 bg-gradient-to-b from-[var(--mp-viridian)]/5 to-transparent">
         <div className="max-w-4xl mx-auto text-center">
           <div className="w-16 h-16 rounded-full bg-[var(--mp-viridian)]/10 border border-[var(--mp-viridian)]/20 flex items-center justify-center text-3xl mx-auto mb-4">
             🧠

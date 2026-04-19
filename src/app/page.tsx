@@ -591,7 +591,7 @@ export default function Home() {
             href="/study-plan"
             className="card-interactive rounded-2xl p-5 mb-6 flex items-center gap-4 group"
           >
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#007B5F] to-[#003A8C] flex items-center justify-center flex-shrink-0 shadow-sm">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[var(--mp-viridian)] to-[var(--mp-cta-blue)] flex items-center justify-center flex-shrink-0 shadow-sm">
               <CalendarDays className="w-6 h-6 text-white" />
             </div>
             <div className="flex-1 min-w-0">
@@ -905,7 +905,7 @@ function DemoHome({
     <div className="min-h-screen bg-[var(--mp-surface-sunken)] safe-area-top safe-area-bottom">
       {/* Hero */}
       <div className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-[#007B5F]/[0.03] to-transparent pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[var(--mp-viridian)]/[0.03] to-transparent pointer-events-none" />
         <div className="relative px-4 pt-8 pb-6 text-center max-w-2xl mx-auto">
           <div className="flex justify-end mb-6 gap-2">
             <ThemeToggle />

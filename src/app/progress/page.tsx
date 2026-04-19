@@ -382,12 +382,17 @@ export default function ProgressPage() {
     if (session) {
       setUserId(session.user.id);
       setUserName(session.user.first_name);
-      setTotalXp(session.gamification.total_xp || 0);
-      setStreak(session.gamification.current_streak || 0);
-      setTotalAnswered(session.gamification.total_questions_answered || 0);
-      setTotalCorrect(session.gamification.total_correct || 0);
-      const ans = session.gamification.total_questions_answered || 0;
-      const cor = session.gamification.total_correct || 0;
+      // Guard against older / minimal sessions that don't embed a
+      // gamification snapshot — the server will re-hydrate these after
+      // the next /api/stats call. Previous code crashed with
+      // "Cannot read properties of undefined (reading 'total_xp')".
+      const gm = session.gamification ?? {};
+      setTotalXp(gm.total_xp || 0);
+      setStreak(gm.current_streak || 0);
+      setTotalAnswered(gm.total_questions_answered || 0);
+      setTotalCorrect(gm.total_correct || 0);
+      const ans = gm.total_questions_answered || 0;
+      const cor = gm.total_correct || 0;
       setAccuracy(ans > 0 ? Math.round((cor / ans) * 100) : 0);
     }
 

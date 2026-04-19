@@ -46,7 +46,7 @@ export default function SearchResults({
   if (loading) {
     return (
       <div className="mt-2 card p-4 text-center">
-        <div className="w-5 h-5 border-2 border-[#007B5F] border-t-transparent rounded-full animate-spin mx-auto" />
+        <div className="w-5 h-5 border-2 border-[var(--mp-viridian)] border-t-transparent rounded-full animate-spin mx-auto" />
       </div>
     );
   }
@@ -54,7 +54,7 @@ export default function SearchResults({
   if (results.length === 0) {
     return (
       <div className="mt-2 card p-4 text-center">
-        <p className="text-sm text-[#A0AEC0]">
+        <p className="text-sm text-[var(--mp-fg-subtle)]">
           {lang === "de" ? "Keine Ergebnisse gefunden" : "No results found"}
         </p>
       </div>
@@ -63,8 +63,8 @@ export default function SearchResults({
 
   return (
     <div className="mt-2 card overflow-hidden">
-      <div className="px-3 py-2 border-b border-[#E4E9F0]">
-        <p className="text-[10px] uppercase tracking-wider text-[#A0AEC0] font-semibold">
+      <div className="px-3 py-2 border-b border-[var(--mp-border)]">
+        <p className="text-[10px] uppercase tracking-wider text-[var(--mp-fg-subtle)] font-semibold">
           {lang === "de" ? "Suchergebnisse" : "Search Results"} ({results.length})
         </p>
       </div>
@@ -75,11 +75,11 @@ export default function SearchResults({
           return (
             <li
               key={q.id}
-              className={`border-b border-[#E4E9F0]/50 last:border-b-0 ${i % 2 === 0 ? "" : "bg-[#FFFFFF]/30"}`}
+              className={`border-b border-[var(--mp-border)]/50 last:border-b-0 ${i % 2 === 0 ? "" : "bg-[var(--mp-surface-raised)]/30"}`}
             >
               <Link
                 href={`/quiz?topic=${encodeURIComponent(q.topic)}&questionId=${q.id}&examSource=${examSource}`}
-                className="flex items-start gap-3 px-3 py-3 hover:bg-[#F7F9FC] transition-colors group"
+                className="flex items-start gap-3 px-3 py-3 hover:bg-[var(--mp-surface-sunken)] transition-colors group"
               >
                 {/* Topic badge */}
                 <span
@@ -91,12 +91,12 @@ export default function SearchResults({
 
                 {/* Image thumbnail if available */}
                 {q.image_url && (
-                  <img src={q.image_url} alt="" className="w-10 h-10 rounded object-cover flex-shrink-0 border border-[#E4E9F0]" />
+                  <img src={q.image_url} alt="" className="w-10 h-10 rounded object-cover flex-shrink-0 border border-[var(--mp-border)]" />
                 )}
 
                 {/* Question text */}
                 <span className="flex-1 min-w-0">
-                  <span className="text-sm text-[#1A2B3C] group-hover:text-[#1A2B3C] transition-colors leading-snug">
+                  <span className="text-sm text-[var(--mp-fg)] group-hover:text-[var(--mp-fg)] transition-colors leading-snug">
                     {truncate(q.question, 120)}
                   </span>
                   <span className="mt-1 flex items-center gap-2">
@@ -106,13 +106,13 @@ export default function SearchResults({
                     >
                       {q.topic}
                     </span>
-                    <span className="text-[10px] bg-[#F7F9FC] text-[#A0AEC0] px-1.5 py-0.5 rounded font-mono">
+                    <span className="text-[10px] bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-subtle)] px-1.5 py-0.5 rounded font-mono">
                       {sourceBadge(q.source_file)}
                     </span>
                   </span>
                 </span>
 
-                <span className="text-[#E4E9F0] group-hover:text-[#007B5F] transition-colors text-xs flex-shrink-0">
+                <span className="text-[var(--mp-border)] group-hover:text-[var(--mp-viridian)] transition-colors text-xs flex-shrink-0">
                   →
                 </span>
               </Link>

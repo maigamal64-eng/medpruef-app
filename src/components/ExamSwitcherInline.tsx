@@ -95,10 +95,10 @@ export default function ExamSwitcherInline({ variant = 'header', className = '' 
       return 'w-full flex items-center gap-2 px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/[0.08] transition-colors text-sm text-white'
     }
     if (variant === 'compact') {
-      return 'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#007B5F]/10 hover:bg-[#007B5F]/20 border border-[#007B5F]/20 text-xs font-mono text-[#007B5F] transition-colors'
+      return 'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[var(--mp-viridian)]/10 hover:bg-[var(--mp-viridian)]/20 border border-[var(--mp-viridian)]/20 text-xs font-mono text-[var(--mp-viridian)] transition-colors'
     }
     // header
-    return 'flex items-center gap-2 px-3 py-2 rounded-lg bg-[#007B5F]/10 hover:bg-[#007B5F]/20 border border-[#007B5F]/20 text-sm font-medium text-[#007B5F] transition-colors'
+    return 'flex items-center gap-2 px-3 py-2 rounded-lg bg-[var(--mp-viridian)]/10 hover:bg-[var(--mp-viridian)]/20 border border-[var(--mp-viridian)]/20 text-sm font-medium text-[var(--mp-viridian)] transition-colors'
   })()
 
   return (
@@ -149,7 +149,7 @@ export default function ExamSwitcherInline({ variant = 'header', className = '' 
                 disabled={isComing}
                 className={`w-full flex items-start gap-2.5 px-3 py-2.5 text-left transition-colors
                             ${isActive
-                              ? 'bg-[#00A896]/10 text-[#00A896]'
+                              ? 'bg-[var(--mp-accent-teal)]/10 text-[var(--mp-accent-teal)]'
                               : isComing
                                 ? 'opacity-40 cursor-not-allowed text-slate-700 dark:text-slate-200'
                                 : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200'

@@ -321,10 +321,12 @@ export default function CurriculumPage() {
     if (session) {
       setUserId(session.user.id);
       setUserName(session.user.first_name);
-      setTotalXp(session.gamification.total_xp || 0);
-      setStreak(session.gamification.current_streak || 0);
-      const ans = session.gamification.total_questions_answered || 0;
-      const cor = session.gamification.total_correct || 0;
+      // Guard against sessions without a gamification snapshot.
+      const gm = session.gamification ?? {};
+      setTotalXp(gm.total_xp || 0);
+      setStreak(gm.current_streak || 0);
+      const ans = gm.total_questions_answered || 0;
+      const cor = gm.total_correct || 0;
       setTotalAnswered(ans);
       setAccuracy(ans > 0 ? Math.round((cor / ans) * 100) : 0);
     }
