@@ -78,7 +78,40 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // 3) Per-topic answer history for this user, scoped to the active exam
+    // 3) Per-topic answered/correct for this user, scoped to the active exam.
+    //
+    // Preferred source: `user_topic_strength` — the server-side counters
+    // populated by /api/answer via the `increment_topic_strength` RPC
+    // (backlog #13, 2026-04-21). This is cross-device and a single-row
+    // lookup per topic, so it's cheaper than scanning answer_history.
+    //
+    // Fallback: `answer_history` — used when the strength row is missing
+    // (e.g. pre-backfill, or a topic the user hasn't touched on any
+    // device yet). The fallback is also used as a secondary check so a
+    // topic that's in answer_history but not yet in user_topic_strength
+    // still influences the plan.
+    const { data: strengthRows, error: strengthErr } = await sb
+      .from("user_topic_strength")
+      .select("topic, answered, correct")
+      .eq("user_id", userId)
+      .eq("exam_type", activeExam);
+
+    if (strengthErr) {
+      console.error("[study-plan GET] topic strength error:", strengthErr);
+      // Fall through to the answer_history-only path below.
+    }
+
+    const strengthAgg: Record<string, { answered: number; correct: number }> = {};
+    for (const row of strengthRows || []) {
+      const topic = row.topic as string;
+      strengthAgg[topic] = {
+        answered: Number(row.answered) || 0,
+        correct: Number(row.correct) || 0,
+      };
+    }
+
+    // Pull answer_history as a fallback — only used for topics the new
+    // table hasn't caught up on. Cheap because we filter by user + exam.
     const { data: answerStats, error: answerErr } = await sb
       .from("answer_history")
       .select("question_id, is_correct, questions!inner(topic, exam_type)")
@@ -94,7 +127,7 @@ export async function GET(req: NextRequest) {
     // Aggregate per-topic answered/correct using distinct question_ids
     // so repeated answers on the same question don't inflate counts
     // (matches the behavior of /api/user/topic-progress).
-    const agg: Record<
+    const historyAgg: Record<
       string,
       { answered: Set<number>; correct: Set<number> }
     > = {};
@@ -102,17 +135,27 @@ export async function GET(req: NextRequest) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const topic = (row as any).questions?.topic as string | undefined;
       if (!topic) continue;
-      if (!agg[topic]) agg[topic] = { answered: new Set(), correct: new Set() };
-      agg[topic].answered.add(row.question_id);
-      if (row.is_correct) agg[topic].correct.add(row.question_id);
+      if (!historyAgg[topic]) historyAgg[topic] = { answered: new Set(), correct: new Set() };
+      historyAgg[topic].answered.add(row.question_id);
+      if (row.is_correct) historyAgg[topic].correct.add(row.question_id);
     }
 
     const availableTopics: TopicProgress[] = (
       (topicCounts || []) as { topic: string; count: number }[]
     ).map(tc => {
-      const a = agg[tc.topic];
-      const answered = a ? a.answered.size : 0;
-      const correct = a ? a.correct.size : 0;
+      // Prefer the server-side counters (cross-device, cumulative).
+      const s = strengthAgg[tc.topic];
+      const h = historyAgg[tc.topic];
+      const answered = s
+        ? s.answered
+        : h
+          ? h.answered.size
+          : 0;
+      const correct = s
+        ? s.correct
+        : h
+          ? h.correct.size
+          : 0;
       const total = Number(tc.count) || 0;
       return {
         topic: tc.topic,

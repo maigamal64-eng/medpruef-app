@@ -81,7 +81,21 @@ _QNUM_START_RE = re.compile(r"^(\d{1,3})\.\s")  # "1. Welche..."
 # followed by wrapped text on subsequent lines.
 _CHOICE_LETTER_INLINE_RE = re.compile(r"^([A-E])\s+(.+)$")
 _CHOICE_LETTER_ALONE_RE = re.compile(r"^([A-E])\s*$")
-_MULTI_CORRECT_RE = re.compile(r"\((\d+)\s+richtige\s+Antworten\)", re.IGNORECASE)
+# Detect explicit count ("(3 richtige Antworten)", "(2 richtige)") and vague
+# indicators ("Mehrere Antworten richtig", "Mehrfachauswahl"). The explicit
+# regex captures the count; the vague regex only flags that multi-correct is
+# indicated. Both broadened from the pre-Apr-18 version which only matched
+# "(N richtige Antworten)" — missing variants were a root cause of the
+# multi-correct count mismatch Agent D already fixed in the DB.
+_MULTI_CORRECT_RE = re.compile(
+    r"\((\d+)\s+richtige(?:\s+Antworten)?\)", re.IGNORECASE
+)
+_MULTI_VAGUE_RE = re.compile(
+    r"\bmehrere\s+antworten\b"
+    r"|\bmehrfachauswahl\b"
+    r"|\bmehr(?:ere|eren)?\s+richtig\w*\b",
+    re.IGNORECASE,
+)
 _RESULT_MARK_RE = re.compile(r"^\[(richtig|falsch)\]\s*$")
 # A candidate-answer line like lone "B" or "A, B, C" — ONLY counts as a
 # candidate answer if it has a comma (multi-letter). A single letter alone
@@ -157,9 +171,16 @@ def _try_choice_start(s: str) -> tuple[str, str] | None:
 
 
 def parse_question_block(qnum: int, lines: list[str]) -> dict:
-    """Parse one question block. Returns dict with stem, choices, multi_correct."""
+    """Parse one question block.
+
+    Returns:
+        qnum, stem, choices, multi_correct (int — N if stated, 1 by default),
+        multi_hint_vague (bool — stem had "Mehrere Antworten" / "Mehrfachauswahl"
+        without an explicit count).
+    """
     stem_parts: list[str] = []
     multi = 1
+    multi_hint_vague = False
     choices: list[dict] = []  # {letter, text}
     in_choices = False
     current_choice_letter: str | None = None
@@ -186,7 +207,13 @@ def parse_question_block(qnum: int, lines: list[str]) -> dict:
                 continue
             mc = _MULTI_CORRECT_RE.search(s)
             if mc:
-                multi = int(mc.group(1))
+                try:
+                    multi = int(mc.group(1))
+                except ValueError:
+                    pass
+                continue
+            if _MULTI_VAGUE_RE.search(s):
+                multi_hint_vague = True
                 continue
             stem_parts.append(s)
         else:
@@ -216,6 +243,7 @@ def parse_question_block(qnum: int, lines: list[str]) -> dict:
         "qnum": qnum,
         "stem": stem,
         "multi_correct": multi,
+        "multi_hint_vague": multi_hint_vague,
         "choices": choices,
     }
 
@@ -291,11 +319,14 @@ def main():
     report: list[str] = ["# Vienna 2026 Import — Dry-run sample\n"]
     sample_shown = 0
 
+    warn_multi_count = 0
+    warn_multi_vague = 0
     for parsed in (parse_question_block(qn, ls) for qn, ls in blocks):
         qnum = parsed["qnum"]
         stem = parsed["stem"]
         choices = parsed["choices"]
         multi = parsed["multi_correct"]
+        multi_hint_vague = parsed.get("multi_hint_vague", False)
 
         if not stem or len(stem) < 20:
             continue
@@ -307,6 +338,27 @@ def main():
         if not correct_letters:
             skipped_no_answer += 1
             continue
+
+        # Sanity-check multi-correct hints against the answer-key count.
+        # Emits WARNings but does not abort — operator reviews via stderr.
+        # This catches the pre-Apr-18 pattern where the stem advertised
+        # "(3 richtige Antworten)" but the parser only extracted 1 correct.
+        n_correct = len(correct_letters)
+        if multi > 1 and multi != n_correct:
+            sys.stderr.write(
+                f"[v2026] WARN qnum={qnum}: stem says "
+                f"'{multi} richtige Antworten' but answer key has "
+                f"{n_correct} ({', '.join(correct_letters)}). "
+                f"Manual review required.\n"
+            )
+            warn_multi_count += 1
+        elif multi == 1 and multi_hint_vague and n_correct < 2:
+            sys.stderr.write(
+                f"[v2026] WARN qnum={qnum}: stem suggests multi-correct "
+                f"('Mehrere Antworten') but answer key has only "
+                f"{n_correct}. Manual review required.\n"
+            )
+            warn_multi_vague += 1
 
         # Mark correct flag
         choices_out = []
@@ -354,6 +406,8 @@ def main():
     print(f"[v2026]   skipped (dupe hash):   {skipped_dupe}")
     print(f"[v2026]   skipped (no choices):  {skipped_no_choices}")
     print(f"[v2026]   skipped (no answer):   {skipped_no_answer}")
+    print(f"[v2026]   multi-correct count mismatches: {warn_multi_count}")
+    print(f"[v2026]   vague multi-correct hints w/ single correct: {warn_multi_vague}")
 
     Path("reports").mkdir(exist_ok=True)
     Path(args.report).write_text("\n".join(report), encoding="utf-8")

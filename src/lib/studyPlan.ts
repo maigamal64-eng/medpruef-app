@@ -74,6 +74,68 @@ export interface GenerateStudyPlanInput {
   now?: Date;
 }
 
+/**
+ * Row shape from the server-side `user_topic_strength` table (read via
+ * `/api/user/topic-strength` or directly by the service-role client).
+ * This is the cross-device source of truth for per-topic accuracy
+ * introduced in backlog #13 (2026-04-21).
+ */
+export interface TopicStrengthInput {
+  topic: string;
+  answered: number;
+  correct: number;
+}
+
+/**
+ * Merge per-topic totals (from `get_topic_counts`) with strength rows
+ * (from `user_topic_strength`) and optionally an answer_history
+ * fallback aggregation, into the `TopicProgress[]` shape consumed by
+ * `generateStudyPlan`.
+ *
+ * Precedence:
+ *   1. `user_topic_strength` row if present (cross-device counters)
+ *   2. Fallback answer_history aggregation if supplied
+ *   3. Zero (topic appears in the bank but user hasn't touched it)
+ *
+ * This keeps the study-plan endpoint's read logic in one place and
+ * lets the pure generator stay pure.
+ */
+export function mergeTopicProgressSources(
+  topicTotals: { topic: string; count: number }[],
+  strengthRows: TopicStrengthInput[],
+  fallbackHistory?: Record<string, { answered: number; correct: number }>
+): TopicProgress[] {
+  const strengthMap = new Map<string, TopicStrengthInput>();
+  for (const row of strengthRows || []) {
+    if (row && typeof row.topic === "string") strengthMap.set(row.topic, row);
+  }
+
+  return (topicTotals || []).map(tc => {
+    const total = Number(tc.count) || 0;
+    const s = strengthMap.get(tc.topic);
+    const h = fallbackHistory?.[tc.topic];
+
+    const answered = s
+      ? Number(s.answered) || 0
+      : h
+        ? Number(h.answered) || 0
+        : 0;
+    const correct = s
+      ? Number(s.correct) || 0
+      : h
+        ? Number(h.correct) || 0
+        : 0;
+
+    return {
+      topic: tc.topic,
+      total,
+      answered,
+      correct,
+      accuracy: answered > 0 ? Math.round((correct / answered) * 100) : 0,
+    };
+  });
+}
+
 const MS_PER_DAY = 86_400_000;
 const MAX_PLAN_DAYS = 365;
 const MIN_DAILY_QUESTIONS = 5;

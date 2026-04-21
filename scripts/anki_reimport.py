@@ -328,6 +328,47 @@ YM_RE = re.compile(r'\b(\d{4}-\d{2})\b')
 YEAR_RE = re.compile(r'^(\d{4})$')
 YEAR_IN_TAG_RE = re.compile(r'\b(20\d{2})\b')
 
+# Detect MedPrüf multi-correct hints in the question stem or body.
+# Common variants observed in Vienna 2026 + Anki imports:
+#   "(2 richtige Antworten)"  /  "(3 richtige Antworten)"  /  "(2 richtige)"
+#   "Mehrere Antworten richtig" / "Mehrere Antworten sind richtig"
+#   "Mehrfachauswahl" / "Multiple-Choice mit mehreren richtigen Antworten"
+# Returns N (int) if a specific count is stated, -1 if multi-correct is
+# indicated without a count, or None if no hint.
+_MULTI_COUNT_RE = re.compile(r"\((\d+)\s+richtige(?:\s+Antworten)?\)", re.IGNORECASE)
+_MULTI_VAGUE_RE = re.compile(
+    r"\bmehrere\s+antworten\b"
+    r"|\bmehrfachauswahl\b"
+    r"|\bmehr(?:ere)?\s+richtig\w*\b"
+    r"|\bmehr(?:eren)?\s+richtig\w*\b",
+    re.IGNORECASE,
+)
+
+
+def parse_multi_correct_hint(*texts: str) -> int | None:
+    """Scan any number of fields for a multi-correct hint. Returns N when the
+    hint states a specific count (e.g. '2 richtige Antworten' → 2), -1 when a
+    vague hint is found ('Mehrere Antworten'), or None when nothing matches.
+
+    Importers should use this against the question stem and any auxiliary text
+    (explanation, notes) to sanity-check the Answers flags parsed separately.
+    If the flagged-correct count differs from the hint, the importer should
+    WARN to stderr — silently importing would reintroduce the pre-Apr-18
+    multi-correct-count mismatch bug.
+    """
+    for t in texts:
+        if not t:
+            continue
+        m = _MULTI_COUNT_RE.search(t)
+        if m:
+            try:
+                return int(m.group(1))
+            except ValueError:
+                return -1
+        if _MULTI_VAGUE_RE.search(t):
+            return -1
+    return None
+
 def parse_exam_dates_from_tags(tags: list) -> list:
     """Extract exam dates from Anki tags. Returns YYYY-MM and YYYY formats."""
     out = set()
@@ -546,6 +587,29 @@ def parse_all_notes(db_path: str, media_url_map: dict, deck_topic_map: dict = No
         if len(explanation) > 2500:
             explanation = explanation[:2500] + '...'
 
+        # Sanity-check multi-correct hint against flagged-correct count.
+        # This catches the pre-Apr-18 import bug where the PDF importer only
+        # flagged the first-listed correct option even when the stem said
+        # "(3 richtige Antworten)". See reports/content-audit-2026-04-18.
+        mc_hint = parse_multi_correct_hint(question_text, explanation)
+        if mc_hint is not None:
+            if mc_hint == -1:
+                # Vague hint — only warn if single correct flagged
+                if n_correct < 2:
+                    sys.stderr.write(
+                        f"[anki-reimport] WARN nid={nid}: stem indicates "
+                        f"multiple correct answers but only {n_correct} "
+                        f"flagged. Review Answers field: {answers_s!r}\n"
+                    )
+                    stats['warn_multi_mismatch_vague'] += 1
+            elif mc_hint != n_correct:
+                sys.stderr.write(
+                    f"[anki-reimport] WARN nid={nid}: stem says "
+                    f"'{mc_hint} richtige Antworten' but {n_correct} flagged. "
+                    f"Review Answers field: {answers_s!r}\n"
+                )
+                stats['warn_multi_mismatch_count'] += 1
+
         # Collect images from ALL fields: question, choices, explanation
         q_imgs = extract_img_srcs(question_html)
         expl_imgs = extract_img_srcs(extra1)
@@ -693,6 +757,32 @@ def parse_all_notes(db_path: str, media_url_map: dict, deck_topic_map: dict = No
                     distractors = [c['text'] for c in choices if not c['correct']][:8]
                     answer = correct_texts[0] if correct_texts else answer
 
+                    # Warn if the stem advertises N correct but we only
+                    # managed to flag a different count from the Back field.
+                    # SIP4a/SIP5a give no authoritative flag list, so this
+                    # check is less reliable — still useful when the stem is
+                    # explicit ("(3 richtige Antworten)").
+                    n_flagged = len(correct_texts)
+                    mc_hint = parse_multi_correct_hint(question_text, explanation)
+                    if mc_hint is not None:
+                        if mc_hint == -1:
+                            if n_flagged < 2:
+                                sys.stderr.write(
+                                    f"[anki-reimport] WARN nid={nid} ({label}): "
+                                    f"stem suggests multi-correct but "
+                                    f"{n_flagged} flagged. Back field: "
+                                    f"{answer[:80]!r}\n"
+                                )
+                                stats['warn_multi_mismatch_vague'] += 1
+                        elif mc_hint != n_flagged:
+                            sys.stderr.write(
+                                f"[anki-reimport] WARN nid={nid} ({label}): "
+                                f"stem says '{mc_hint} richtige Antworten' "
+                                f"but {n_flagged} flagged. Back field: "
+                                f"{answer[:80]!r}\n"
+                            )
+                            stats['warn_multi_mismatch_count'] += 1
+
             # Topic: deck assignment (authoritative) → content regex fallback
             topic = dtm.get(nid) or 'Sonstige'
             if topic == 'Sonstige':
@@ -798,6 +888,26 @@ def parse_all_notes(db_path: str, media_url_map: dict, deck_topic_map: dict = No
                     distractors = [c['text'] for c in choices if not c['correct']][:8]
                     answer = correct_texts[0] if correct_texts else answer
                     stats[f'{label.lower().replace("+", "plus")}_mcq'] += 1
+
+                    # Warn if stem hints multi-correct but inline parse only
+                    # picked up one correct choice.
+                    n_flagged = len(correct_texts)
+                    mc_hint = parse_multi_correct_hint(question_text)
+                    if mc_hint is not None:
+                        if mc_hint == -1 and n_flagged < 2:
+                            sys.stderr.write(
+                                f"[anki-reimport] WARN nid={nid} ({label}): "
+                                f"stem suggests multi-correct but "
+                                f"{n_flagged} flagged.\n"
+                            )
+                            stats['warn_multi_mismatch_vague'] += 1
+                        elif mc_hint != -1 and mc_hint != n_flagged:
+                            sys.stderr.write(
+                                f"[anki-reimport] WARN nid={nid} ({label}): "
+                                f"stem says '{mc_hint} richtige Antworten' "
+                                f"but {n_flagged} flagged.\n"
+                            )
+                            stats['warn_multi_mismatch_count'] += 1
 
             if not is_mcq:
                 clean = clean_tags(raw_tags, None, 0) + [label.lower().replace('+', 'plus'), 'open-answer']

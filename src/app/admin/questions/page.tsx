@@ -1,0 +1,697 @@
+"use client";
+
+/**
+ * Admin / Questions tab.
+ *
+ * Three sub-tabs kept as local state (one route is enough for this
+ * level of hierarchy):
+ *   - Browse: paginated filterable editable question table
+ *   - Duplicates: content-hash-based duplicate group scanner
+ *   - Reviews: user-submitted flag/edit suggestion queue
+ *
+ * Mutations PATCH `/api/stats/admin/questions` (edits) and
+ * `/api/suggestions` (approve/reject). Toasts surface success/failure.
+ */
+
+import { Fragment, useCallback, useEffect, useState } from "react";
+import {
+  Search,
+  Edit3,
+  RotateCcw,
+  Filter,
+  Eye,
+  EyeOff,
+  AlertTriangle,
+  CheckCircle,
+  FileText,
+} from "lucide-react";
+import { authFetch as fetch } from "@/lib/authFetch";
+import {
+  useToast,
+  TextField,
+  Textarea,
+  Select,
+  EmptyState,
+} from "@/components/ui";
+import type {
+  QuestionRow,
+  QuestionStats,
+  DuplicateData,
+  SuggestionsResponse,
+} from "../_components/types";
+
+type SubTab = "browse" | "duplicates" | "reviews";
+
+export default function AdminQuestionsPage() {
+  const toast = useToast();
+
+  // Browse state
+  const [stats, setStats] = useState<QuestionStats | null>(null);
+  const [questions, setQuestions] = useState<QuestionRow[]>([]);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [search, setSearch] = useState("");
+  const [topicFilter, setTopicFilter] = useState("");
+  const [examTypeFilter, setExamTypeFilter] = useState("all");
+  const [explFilter, setExplFilter] = useState("all");
+  const [activeFilter, setActiveFilter] = useState("all");
+  const [expandedQuestion, setExpandedQuestion] = useState<number | null>(null);
+  const [editingQuestion, setEditingQuestion] = useState<number | null>(null);
+  const [questionEditForm, setQuestionEditForm] = useState<Record<string, unknown>>({});
+
+  // Sub-tab state
+  const [tab, setTab] = useState<SubTab>("browse");
+  const [duplicates, setDuplicates] = useState<DuplicateData | null>(null);
+  const [suggestions, setSuggestions] = useState<SuggestionsResponse | null>(null);
+
+  const fetchStats = useCallback(async () => {
+    try {
+      const res = await fetch("/api/stats/admin/questions");
+      if (!res.ok) throw new Error("Failed to load question stats");
+      setStats(await res.json());
+    } catch { /* optional */ }
+  }, []);
+
+  const fetchQuestions = useCallback(
+    async (p = 1, topic = "", q = "", hasExpl = "all", isActive = "all", examType = "all") => {
+      try {
+        const params = new URLSearchParams({ mode: "browse", page: String(p), limit: "25" });
+        if (topic) params.set("topic", topic);
+        if (q) params.set("search", q);
+        if (hasExpl === "with") params.set("hasExplanation", "true");
+        if (hasExpl === "without") params.set("hasExplanation", "false");
+        if (isActive === "active") params.set("isActive", "true");
+        if (isActive === "inactive") params.set("isActive", "false");
+        if (examType && examType !== "all") params.set("examType", examType);
+        const res = await fetch(`/api/stats/admin/questions?${params}`);
+        if (!res.ok) throw new Error("Failed to load questions");
+        const data = await res.json();
+        setQuestions(data.questions || []);
+        setTotal(data.total || 0);
+        setTotalPages(data.totalPages || 0);
+      } catch (e) { toast.error((e as Error).message); }
+    },
+    [toast]
+  );
+
+  const fetchDuplicates = useCallback(async () => {
+    try {
+      const res = await fetch("/api/stats/admin/duplicates");
+      if (!res.ok) throw new Error("Failed");
+      setDuplicates(await res.json());
+    } catch { /* optional */ }
+  }, []);
+
+  const fetchSuggestions = useCallback(async () => {
+    try {
+      const res = await fetch("/api/suggestions?limit=100");
+      if (!res.ok) throw new Error("Failed");
+      setSuggestions(await res.json());
+    } catch { /* optional */ }
+  }, []);
+
+  useEffect(() => {
+    fetchStats();
+    fetchQuestions(1);
+  }, [fetchStats, fetchQuestions]);
+
+  useEffect(() => {
+    if (tab === "duplicates" && !duplicates) fetchDuplicates();
+    if (tab === "reviews" && !suggestions) fetchSuggestions();
+  }, [tab, duplicates, suggestions, fetchDuplicates, fetchSuggestions]);
+
+  const handleSearch = () => {
+    setPage(1);
+    fetchQuestions(1, topicFilter, search, explFilter, activeFilter, examTypeFilter);
+  };
+
+  const handlePageChange = (p: number) => {
+    setPage(p);
+    fetchQuestions(p, topicFilter, search, explFilter, activeFilter, examTypeFilter);
+  };
+
+  const handleEdit = async (questionId: number) => {
+    try {
+      const res = await fetch("/api/stats/admin/questions", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ questionId, updates: questionEditForm }),
+      });
+      if (!res.ok) throw new Error("Failed");
+      setEditingQuestion(null);
+      fetchQuestions(page, topicFilter, search, explFilter, activeFilter, examTypeFilter);
+      toast.success(`Question #${questionId} saved`);
+    } catch { toast.error("Failed to update question"); }
+  };
+
+  const startEdit = (q: QuestionRow) => {
+    setEditingQuestion(q.id);
+    setQuestionEditForm({ explanation: q.explanation || "", topic: q.topic, is_active: q.is_active });
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Stats Cards — .mp-stat tight grid */}
+      {stats && (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          <div className="mp-stat" style={{ padding: 12 }}>
+            <span className="mp-stat__label">Total</span>
+            <span className="mp-stat__value" style={{ fontSize: 22, color: "var(--mp-viridian)" }}>{stats.totalAll.toLocaleString()}</span>
+          </div>
+          <div className="mp-stat" style={{ padding: 12 }}>
+            <span className="mp-stat__label">Active</span>
+            <span className="mp-stat__value" style={{ fontSize: 22, color: "var(--mp-cta-blue)" }}>{stats.active.toLocaleString()}</span>
+          </div>
+          <div className="mp-stat" style={{ padding: 12 }}>
+            <span className="mp-stat__label">Inactive</span>
+            <span className="mp-stat__value" style={{ fontSize: 22, color: "var(--mp-fg-subtle)" }}>{stats.inactive.toLocaleString()}</span>
+          </div>
+          <div className="mp-stat" style={{ padding: 12 }}>
+            <span className="mp-stat__label">MCQ</span>
+            <span className="mp-stat__value" style={{ fontSize: 22, color: "var(--mp-accent-teal)" }}>{stats.mcqPct}%</span>
+          </div>
+          <div className="mp-stat" style={{ padding: 12 }}>
+            <span className="mp-stat__label">Explanation</span>
+            <span className="mp-stat__value" style={{ fontSize: 22, color: "var(--mp-status-warning)" }}>{stats.explPct}%</span>
+          </div>
+          <div className="mp-stat" style={{ padding: 12 }}>
+            <span className="mp-stat__label">Image</span>
+            <span className="mp-stat__value" style={{ fontSize: 22, color: "var(--mp-error)" }}>{stats.imgPct}%</span>
+          </div>
+        </div>
+      )}
+
+      {/* Sub-tab switcher — .mp-tabs */}
+      <div className="mp-tabs" role="tablist">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "browse"}
+          onClick={() => setTab("browse")}
+          className={`mp-tabs__tab ${tab === "browse" ? "mp-tabs__tab--active" : ""} flex items-center gap-1.5`}
+        >
+          <FileText size={13} />Browse
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "duplicates"}
+          onClick={() => setTab("duplicates")}
+          className={`mp-tabs__tab ${tab === "duplicates" ? "mp-tabs__tab--active" : ""} flex items-center gap-1.5`}
+        >
+          <AlertTriangle size={13} />Duplicates
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "reviews"}
+          onClick={() => setTab("reviews")}
+          className={`mp-tabs__tab ${tab === "reviews" ? "mp-tabs__tab--active" : ""} flex items-center gap-1.5`}
+        >
+          Reviews
+          {suggestions?.counts.pending ? (
+            <span className="ml-0.5 bg-[var(--mp-error)] text-white text-[10px] font-mono px-1.5 py-0.5 rounded-full">
+              {suggestions.counts.pending}
+            </span>
+          ) : null}
+        </button>
+      </div>
+
+      {tab === "browse" && (
+        <>
+          {/* Search + Filters — MPDS fields */}
+          <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
+            <div className="relative flex-1 min-w-[220px]">
+              <Search size={16} className="absolute left-3 top-[13px] text-[var(--mp-fg-subtle)] pointer-events-none z-[1]" aria-hidden />
+              <input
+                type="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                placeholder="Search question text..."
+                aria-label="Search questions"
+                className="mp-field__input w-full pl-10"
+              />
+            </div>
+            <Select
+              label="Filter by exam"
+              hideLabel
+              value={examTypeFilter}
+              onChange={(e) => setExamTypeFilter(e.target.value)}
+              options={[
+                { value: "all", label: "All Exams" },
+                { value: "kenntnispruefung", label: "Kenntnisprüfung" },
+                { value: "kmp_innsbruck", label: "KMP Innsbruck" },
+                { value: "pharma", label: "Pharma" },
+              ]}
+            />
+            <Select
+              label="Filter by topic"
+              hideLabel
+              value={topicFilter}
+              onChange={(e) => setTopicFilter(e.target.value)}
+              options={[
+                { value: "", label: "All Topics" },
+                ...(stats?.byTopic || []).map((t) => ({ value: t.topic, label: `${t.topic} (${t.count})` })),
+              ]}
+            />
+            <Select
+              label="Filter by explanation status"
+              hideLabel
+              value={explFilter}
+              onChange={(e) => setExplFilter(e.target.value)}
+              options={[
+                { value: "all", label: "All Explanations" },
+                { value: "with", label: "With Explanation" },
+                { value: "without", label: "Without Explanation" },
+              ]}
+            />
+            <Select
+              label="Filter by active status"
+              hideLabel
+              value={activeFilter}
+              onChange={(e) => setActiveFilter(e.target.value)}
+              options={[
+                { value: "all", label: "All Status" },
+                { value: "active", label: "Active" },
+                { value: "inactive", label: "Inactive" },
+              ]}
+            />
+            <button onClick={handleSearch} className="mp-btn mp-btn--primary flex items-center gap-2">
+              <Filter size={14} /> Filter
+            </button>
+          </div>
+
+          {/* Results count */}
+          <p className="text-xs text-[var(--mp-fg-subtle)]">{total.toLocaleString()} questions found -- Page {page} of {totalPages}</p>
+
+          {/* Questions Table */}
+          <div className="card rounded-xl overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-[var(--mp-surface-sunken)] border-b border-[var(--mp-border)]">
+                    <th className="text-left px-3 py-2.5 text-[var(--mp-fg-subtle)] font-medium text-xs">ID</th>
+                    <th className="text-left px-3 py-2.5 text-[var(--mp-fg-subtle)] font-medium text-xs">Topic</th>
+                    <th className="text-left px-3 py-2.5 text-[var(--mp-fg-subtle)] font-medium text-xs">Question</th>
+                    <th className="text-center px-3 py-2.5 text-[var(--mp-fg-subtle)] font-medium text-xs">Choices</th>
+                    <th className="text-center px-3 py-2.5 text-[var(--mp-fg-subtle)] font-medium text-xs">Expl</th>
+                    <th className="text-center px-3 py-2.5 text-[var(--mp-fg-subtle)] font-medium text-xs">Img</th>
+                    <th className="text-left px-3 py-2.5 text-[var(--mp-fg-subtle)] font-medium text-xs">Exam Dates</th>
+                    <th className="text-center px-3 py-2.5 text-[var(--mp-fg-subtle)] font-medium text-xs">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {questions.map((q) => (
+                    <Fragment key={q.id}>
+                      <tr
+                        onClick={() => setExpandedQuestion(q.id === expandedQuestion ? null : q.id)}
+                        className={`border-b border-[var(--mp-border)]/50 cursor-pointer transition-colors ${
+                          expandedQuestion === q.id ? "bg-[var(--mp-viridian)]/5" : "hover:bg-[var(--mp-surface-sunken)]"
+                        } ${!q.is_active ? "opacity-50" : ""}`}
+                      >
+                        <td className="px-3 py-2.5 font-mono text-xs text-[var(--mp-fg-subtle)]">#{q.id}</td>
+                        <td className="px-3 py-2.5">
+                          <span className="text-[10px] bg-[var(--mp-cta-blue)]/10 text-[var(--mp-cta-blue)] px-2 py-0.5 rounded font-medium truncate max-w-[120px] inline-block">
+                            {q.topic?.slice(0, 20) || "---"}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2.5 text-xs text-[var(--mp-fg-muted)] max-w-[300px] truncate">{q.question_preview}</td>
+                        <td className="px-3 py-2.5 text-center font-mono text-xs">{q.choices_count || "---"}</td>
+                        <td className="px-3 py-2.5 text-center">
+                          {q.has_explanation
+                            ? <CheckCircle size={14} className="inline text-[var(--mp-viridian)]" />
+                            : <EyeOff size={14} className="inline text-[var(--mp-fg-subtle)]" />
+                          }
+                        </td>
+                        <td className="px-3 py-2.5 text-center">
+                          {q.has_image
+                            ? <Eye size={14} className="inline text-[var(--mp-cta-blue)]" />
+                            : <span className="text-[var(--mp-fg-subtle)] text-xs">---</span>
+                          }
+                        </td>
+                        <td className="px-3 py-2.5 text-xs text-[var(--mp-fg-subtle)]">
+                          {q.exam_dates?.length ? q.exam_dates.slice(0, 2).join(", ") + (q.exam_dates.length > 2 ? ` +${q.exam_dates.length - 2}` : "") : "---"}
+                        </td>
+                        <td className="px-3 py-2.5 text-center" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            onClick={() => startEdit(q)}
+                            className="p-1.5 rounded-md hover:bg-[var(--mp-viridian)]/10 text-[var(--mp-fg-muted)] hover:text-[var(--mp-viridian)] transition-colors"
+                            title="Edit"
+                          >
+                            <Edit3 size={13} />
+                          </button>
+                        </td>
+                      </tr>
+
+                      {/* Expanded Question Detail */}
+                      {expandedQuestion === q.id && (
+                        <tr>
+                          <td colSpan={8} className="px-4 py-4 bg-[var(--mp-surface-sunken)]/50 border-b border-[var(--mp-border)]">
+                            {editingQuestion === q.id ? (
+                              <div className="space-y-3">
+                                <h4 className="mp-caption text-[var(--mp-fg)]">Editing Question #{q.id}</h4>
+                                <TextField
+                                  label="Topic"
+                                  value={(questionEditForm.topic as string) || ""}
+                                  onChange={(e) => setQuestionEditForm((prev) => ({ ...prev, topic: e.target.value }))}
+                                />
+                                <Textarea
+                                  label="Explanation"
+                                  rows={4}
+                                  value={(questionEditForm.explanation as string) || ""}
+                                  onChange={(e) => setQuestionEditForm((prev) => ({ ...prev, explanation: e.target.value }))}
+                                />
+                                <div className="flex items-center gap-3">
+                                  <label className="flex items-center gap-2 text-sm">
+                                    <input
+                                      type="checkbox"
+                                      checked={!!questionEditForm.is_active}
+                                      onChange={(e) => setQuestionEditForm((prev) => ({ ...prev, is_active: e.target.checked }))}
+                                      className="accent-[var(--mp-viridian)]"
+                                    />
+                                    Active
+                                  </label>
+                                </div>
+                                <div className="flex gap-2">
+                                  <button onClick={() => handleEdit(q.id)} className="mp-btn mp-btn--primary mp-btn--sm">Save</button>
+                                  <button onClick={() => setEditingQuestion(null)} className="mp-btn mp-btn--secondary mp-btn--sm">Cancel</button>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="space-y-3">
+                                {/* Full question text */}
+                                <div>
+                                  <p className="text-[10px] text-[var(--mp-fg-subtle)] uppercase tracking-wider mb-1">Question</p>
+                                  <p className="text-sm text-[var(--mp-fg)] whitespace-pre-wrap">{q.question}</p>
+                                </div>
+
+                                {/* Choices */}
+                                {q.choices && q.choices.length > 0 && (
+                                  <div>
+                                    <p className="text-[10px] text-[var(--mp-fg-subtle)] uppercase tracking-wider mb-1">Choices</p>
+                                    <div className="space-y-1">
+                                      {q.choices.map((c, i) => (
+                                        <div key={i} className={`flex items-start gap-2 text-sm px-2 py-1 rounded ${c.correct ? "bg-[var(--mp-viridian)]/10 text-[var(--mp-viridian)] font-medium" : "text-[var(--mp-fg-muted)]"}`}>
+                                          <span className="font-mono text-xs mt-0.5">{String.fromCharCode(65 + i)}.</span>
+                                          <span>{c.text}</span>
+                                          {c.correct && <CheckCircle size={14} className="flex-shrink-0 mt-0.5" />}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Answer */}
+                                {q.answer && (
+                                  <div>
+                                    <p className="text-[10px] text-[var(--mp-fg-subtle)] uppercase tracking-wider mb-1">Answer</p>
+                                    <p className="text-sm text-[var(--mp-viridian)] font-medium">{q.answer}</p>
+                                  </div>
+                                )}
+
+                                {/* Explanation */}
+                                <div>
+                                  <p className="text-[10px] text-[var(--mp-fg-subtle)] uppercase tracking-wider mb-1">Explanation</p>
+                                  <p className="text-sm text-[var(--mp-fg-muted)] whitespace-pre-wrap">{q.explanation || "No explanation yet."}</p>
+                                </div>
+
+                                {/* Metadata */}
+                                <div className="flex flex-wrap gap-4 text-xs text-[var(--mp-fg-subtle)]">
+                                  <span>Anki: {q.anki_note_id || "---"}</span>
+                                  <span>Tags: {q.tags?.join(", ") || "---"}</span>
+                                  <span>Active: {q.is_active ? "Yes" : "No"}</span>
+                                  {q.image_url && (
+                                    <a href={q.image_url} target="_blank" rel="noopener noreferrer" className="text-[var(--mp-cta-blue)] underline">View Image</a>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  ))}
+                  {questions.length === 0 && (
+                    <tr>
+                      <td colSpan={8} className="px-4 py-2">
+                        <EmptyState
+                          tone="neutral"
+                          icon={<FileText className="w-10 h-10" aria-hidden />}
+                          title="No questions match these filters"
+                          body="Try clearing a filter or adjusting your search."
+                        />
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Pagination — .mp-btn pills */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2">
+              <button
+                onClick={() => handlePageChange(Math.max(1, page - 1))}
+                disabled={page <= 1}
+                className="mp-btn mp-btn--secondary mp-btn--sm disabled:opacity-40"
+              >
+                Prev
+              </button>
+              {Array.from({ length: Math.min(7, totalPages) }, (_, i) => {
+                let p: number;
+                if (totalPages <= 7) {
+                  p = i + 1;
+                } else if (page <= 4) {
+                  p = i + 1;
+                } else if (page >= totalPages - 3) {
+                  p = totalPages - 6 + i;
+                } else {
+                  p = page - 3 + i;
+                }
+                return (
+                  <button
+                    key={p}
+                    onClick={() => handlePageChange(p)}
+                    className={`mp-btn ${p === page ? "mp-btn--success" : "mp-btn--secondary"} mp-btn--sm`}
+                    style={{ minWidth: 32, padding: "6px 10px" }}
+                    aria-current={p === page ? "page" : undefined}
+                  >
+                    {p}
+                  </button>
+                );
+              })}
+              <button
+                onClick={() => handlePageChange(Math.min(totalPages, page + 1))}
+                disabled={page >= totalPages}
+                className="mp-btn mp-btn--secondary mp-btn--sm disabled:opacity-40"
+              >
+                Next
+              </button>
+            </div>
+          )}
+
+          {/* Topic Breakdown (collapsible) */}
+          {stats && stats.byTopic.length > 0 && (
+            <details className="card rounded-xl p-4">
+              <summary className="text-sm font-semibold text-[var(--mp-fg)] cursor-pointer">
+                Topic Breakdown ({stats.byTopic.length} topics)
+              </summary>
+              <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2">
+                {stats.byTopic.map((t) => (
+                  <div key={t.topic} className="flex items-center justify-between py-1.5 px-2 rounded hover:bg-[var(--mp-surface-sunken)]">
+                    <span className="text-xs text-[var(--mp-fg-muted)] truncate max-w-[200px]">{t.topic}</span>
+                    <span className="text-xs font-mono text-[var(--mp-viridian)] font-bold">{t.count}</span>
+                  </div>
+                ))}
+              </div>
+            </details>
+          )}
+        </>
+      )}
+
+      {tab === "duplicates" && (
+        <div className="card rounded-xl p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h3 className="text-sm font-semibold text-[var(--mp-fg)]">Duplicate Detection</h3>
+              <p className="text-xs text-[var(--mp-fg-subtle)]">
+                {duplicates
+                  ? `${duplicates.totalGroups} groups, ${duplicates.totalExtraCopies} extra copies`
+                  : "Scanning..."
+                }
+              </p>
+            </div>
+            <button onClick={fetchDuplicates} className="btn-secondary text-xs px-3 py-1.5 rounded-lg flex items-center gap-1">
+              <RotateCcw size={12} /> Re-scan
+            </button>
+          </div>
+
+          {!duplicates ? (
+            <p className="text-sm text-[var(--mp-fg-subtle)] text-center py-8">Scanning for duplicates...</p>
+          ) : duplicates.totalGroups === 0 ? (
+            <div className="text-center py-8">
+              <CheckCircle size={32} className="text-[var(--mp-viridian)] mx-auto mb-2" />
+              <p className="text-sm text-[var(--mp-viridian)] font-medium">No duplicates found</p>
+            </div>
+          ) : (
+            <div className="space-y-3 max-h-[500px] overflow-y-auto">
+              {duplicates.groups.map((g, i) => (
+                <div key={i} className="border border-[var(--mp-border)] rounded-lg p-3">
+                  <div className="flex items-start justify-between mb-2">
+                    <p className="text-xs text-[var(--mp-fg-muted)] flex-1 line-clamp-2">{g.text}</p>
+                    <span className="text-[10px] bg-[var(--mp-error)]/10 text-[var(--mp-error)] px-2 py-0.5 rounded font-mono ml-2 flex-shrink-0">
+                      {g.count}x
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {g.questions.map((q) => (
+                      <span key={q.id} className="text-[10px] bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)] rounded px-2 py-1 font-mono">
+                        #{q.id} -- {q.topic?.slice(0, 15)}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab === "reviews" && (
+        <div className="space-y-4">
+          {/* Review Stats */}
+          {suggestions && (
+            <div className="grid grid-cols-4 gap-3">
+              <div className="card rounded-xl p-3 text-center">
+                <p className="text-lg font-bold text-[var(--mp-fg)] font-mono">{suggestions.counts.total}</p>
+                <p className="text-[10px] text-[var(--mp-fg-subtle)]">Total</p>
+              </div>
+              <div className="card rounded-xl p-3 text-center">
+                <p className="text-lg font-bold text-[var(--mp-status-warning)] font-mono">{suggestions.counts.pending}</p>
+                <p className="text-[10px] text-[var(--mp-fg-subtle)]">Pending</p>
+              </div>
+              <div className="card rounded-xl p-3 text-center">
+                <p className="text-lg font-bold text-[var(--mp-accent-teal)] font-mono">{suggestions.counts.approved}</p>
+                <p className="text-[10px] text-[var(--mp-fg-subtle)]">Approved</p>
+              </div>
+              <div className="card rounded-xl p-3 text-center">
+                <p className="text-lg font-bold text-[var(--mp-error)] font-mono">{suggestions.counts.rejected}</p>
+                <p className="text-[10px] text-[var(--mp-fg-subtle)]">Rejected</p>
+              </div>
+            </div>
+          )}
+
+          {/* Suggestions List */}
+          <div className="card rounded-xl overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--mp-border)]">
+              <h3 className="text-sm font-semibold text-[var(--mp-fg)]">User Suggestions & Flags</h3>
+              <button onClick={fetchSuggestions} className="btn-secondary text-xs px-3 py-1.5 rounded-lg flex items-center gap-1">
+                <RotateCcw size={12} /> Refresh
+              </button>
+            </div>
+
+            {!suggestions ? (
+              <p className="text-sm text-[var(--mp-fg-subtle)] text-center py-8">Loading suggestions...</p>
+            ) : suggestions.suggestions.length === 0 ? (
+              <p className="text-sm text-[var(--mp-fg-subtle)] text-center py-8">No suggestions yet</p>
+            ) : (
+              <div className="divide-y divide-[var(--mp-border)]">
+                {(suggestions.suggestions as Record<string, unknown>[]).map((s) => (
+                  <div key={s.id as number} className="px-4 py-3 hover:bg-[var(--mp-surface-sunken)]">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
+                            s.type === "flag" ? "bg-[var(--mp-error)]/10 text-[var(--mp-error)]" : "bg-[var(--mp-viridian)]/10 text-[var(--mp-viridian)]"
+                          }`}>
+                            {(String(s.type)) === "flag" ? "FLAG" : "EDIT"}
+                          </span>
+                          {s.reason ? (
+                            <span className="text-[10px] bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-muted)] px-2 py-0.5 rounded border border-[var(--mp-border)]">
+                              {String(s.reason)}
+                            </span>
+                          ) : null}
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
+                            s.status === "pending" ? "bg-[var(--mp-status-warning)]/10 text-[var(--mp-status-warning)]" :
+                            s.status === "approved" ? "bg-[var(--mp-accent-teal)]/10 text-[var(--mp-accent-teal)]" :
+                            "bg-[var(--mp-error)]/10 text-[var(--mp-error)]"
+                          }`}>
+                            {String(s.status)}
+                          </span>
+                        </div>
+                        <p className="text-sm text-[var(--mp-fg)] mb-0.5">Q#{s.question_id as number}: {(String(s.question_text || ""))?.slice(0, 100)}...</p>
+                        <p className="text-xs text-[var(--mp-fg-subtle)]">
+                          By {String(s.user_name || "Anonymous")} · {String(s.question_topic || "")} · {new Date(String(s.created_at)).toLocaleDateString("en-GB")}
+                        </p>
+                        {s.details ? <p className="text-xs text-[var(--mp-fg-muted)] mt-1 italic">&quot;{String(s.details)}&quot;</p> : null}
+                        {(() => {
+                          const ctx = s.context as Record<string, unknown> | null;
+                          if (!ctx) return null;
+                          const url = ctx.url as string | undefined;
+                          const examType = ctx.exam_type as string | undefined;
+                          const ua = ctx.user_agent as string | undefined;
+                          const viewport = ctx.viewport as string | undefined;
+                          const guestId = ctx.guest_id as string | undefined;
+                          const sessionName = ctx.session_first_name as string | undefined;
+                          const ip = ctx.ip as string | undefined;
+                          const buildId = ctx.build_id as string | undefined;
+                          return (
+                            <div className="mt-2 flex flex-wrap gap-1 text-[10px]">
+                              {sessionName && <span className="bg-[var(--mp-viridian)]/10 text-[var(--mp-viridian)] px-1.5 py-0.5 rounded">{sessionName}</span>}
+                              {guestId && <span className="bg-[var(--mp-status-warning)]/10 text-[var(--mp-status-warning)] px-1.5 py-0.5 rounded">guest: {guestId.slice(0, 18)}</span>}
+                              {examType && <span className="bg-[var(--mp-cta-blue)]/10 text-[var(--mp-cta-blue)] px-1.5 py-0.5 rounded">{examType}</span>}
+                              {url && <span className="bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-muted)] px-1.5 py-0.5 rounded border border-[var(--mp-border)] truncate max-w-[220px]" title={url}>{new URL(url).pathname}</span>}
+                              {viewport && <span className="bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-subtle)] px-1.5 py-0.5 rounded border border-[var(--mp-border)]">{viewport}</span>}
+                              {ip && <span className="bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-subtle)] px-1.5 py-0.5 rounded border border-[var(--mp-border)]">{ip}</span>}
+                              {buildId && <span className="bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-subtle)] px-1.5 py-0.5 rounded border border-[var(--mp-border)]" title={buildId}>build: {buildId.slice(0, 7)}</span>}
+                              {ua && <span className="bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-subtle)] px-1.5 py-0.5 rounded border border-[var(--mp-border)] truncate max-w-[260px]" title={ua}>{(ua.match(/\(([^)]+)\)/)?.[1] || ua).slice(0, 40)}</span>}
+                            </div>
+                          );
+                        })()}
+                      </div>
+
+                      {/* Actions */}
+                      {s.status === "pending" && (
+                        <div className="flex gap-1.5 flex-shrink-0">
+                          <button
+                            onClick={async () => {
+                              await fetch("/api/suggestions", {
+                                method: "PATCH",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ suggestionId: s.id, action: "approve" }),
+                              });
+                              fetchSuggestions();
+                            }}
+                            className="text-[10px] bg-[var(--mp-accent-teal)] text-white px-2.5 py-1 rounded-lg font-medium hover:bg-[var(--mp-viridian-dk)]"
+                          >
+                            Approve
+                          </button>
+                          <button
+                            onClick={async () => {
+                              await fetch("/api/suggestions", {
+                                method: "PATCH",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ suggestionId: s.id, action: "reject" }),
+                              });
+                              fetchSuggestions();
+                            }}
+                            className="text-[10px] bg-[var(--mp-error)]/10 text-[var(--mp-error)] px-2.5 py-1 rounded-lg font-medium hover:bg-[var(--mp-error)]/20"
+                          >
+                            Reject
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

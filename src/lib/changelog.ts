@@ -24,6 +24,54 @@ export interface ChangelogEntry {
 export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-04-21",
+    tag: "admin",
+    title: {
+      de: "KMP-Erklärungen generiert (quellenbezogen, nicht AI-Cache)",
+      en: "KMP explanations generated (source text, not AI cache)",
+    },
+    description: {
+      de: "Neues Skript `scripts/generate_missing_kmp_explanations.py` füllt die `explanation`-Spalte (Quell-Text) für alle aktiven `kmp_innsbruck`-Fragen, bei denen die PDF-Import-Pipeline keine Erklärung mitliefern konnte (bisher ~3.091 Zeilen). 80–150 Wörter pro Erklärung in deutscher Sie-Form mit Bezug zu österreichischen/europäischen Leitlinien (ERC 2021, ESC, ÖDG, Österreichischer Impfplan), wo einschlägig. Klar getrennt vom AI-Chat-Cache (`ai_explanation`), der weiterhin über `/api/ai-chat` im strikten Apr-17-Format ausgeliefert wird. Provider: OpenAI gpt-4o-mini (Anthropic Haiku 4.5 als Primäroption, falls API-Key gesetzt). Gesamtkosten: ~$0,50. Idempotent — erneute Läufe überspringen bereits befüllte Zeilen automatisch.",
+      en: "New script `scripts/generate_missing_kmp_explanations.py` backfills the `explanation` column (source text) for every active `kmp_innsbruck` question where the PDF import pipeline couldn't carry a rationale through (~3,091 rows previously NULL). 80–150-word paragraphs in German Sie-form with Austrian/European guideline references (ERC 2021, ESC, ÖDG, Austrian Vaccination Schedule) where applicable. Strictly separate from the AI chat cache (`ai_explanation`), which continues to be served through `/api/ai-chat` in the Apr-17 strict format. Provider: OpenAI gpt-4o-mini (Anthropic Haiku 4.5 as primary when API key is set). Total cost: ~$0.50. Idempotent — re-running skips already-filled rows automatically.",
+    },
+  },
+  {
+    date: "2026-04-21",
+    tag: "admin",
+    title: {
+      de: "Exam-Jahr-Kontamination aus 1 Frage entfernt",
+      en: "Exam-year contamination removed from 1 question",
+    },
+    description: {
+      de: "Regex-basierte Bereinigung der `question`-Spalte: Eine Frage (q71637, Thema Gerinnung / Beinvenenthrombose) endete mit einer verrutschten Tag-Kennung „SPT2025“ plus doppeltem „(3 richtige Antworten)“-Fragment aus dem PDF-Import. Strip-Logik beschränkt auf `kenntnispruefung` + `kmp_innsbruck`; der Pharma-Pool ist nicht betroffen. Insgesamt 1 Zeile bereinigt — die übrigen ~10k aktiven Fragen haben keine Jahres-Endkontamination mehr.",
+      en: "Regex-based cleanup of the `question` column: one question (q71637, coagulation / deep-vein thrombosis) ended with a stray tag fragment \"SPT2025\" plus a duplicate \"(3 richtige Antworten)\" remnant from the PDF import. Strip logic scoped to `kenntnispruefung` + `kmp_innsbruck`; the Pharma pool is unaffected. Total: 1 row cleaned — the remaining ~10k active questions carry no year-end contamination.",
+    },
+  },
+  {
+    date: "2026-04-21",
+    tag: "admin",
+    title: {
+      de: "Import-Pipelines parsen jetzt „(N richtige Antworten)\"-Hinweise",
+      en: "Import pipelines now parse \"(N richtige Antworten)\" hints",
+    },
+    description: {
+      de: "`scripts/anki_reimport.py` und `scripts/import_vienna_2026.py` erkennen jetzt Multi-Correct-Hinweise im Frage-Stamm — explizit („(3 richtige Antworten)“, „(2 richtige)“) wie auch vage („Mehrere Antworten“, „Mehrfachauswahl“, flektierte Formen wie „mehreren richtigen“). Stimmt die im Stamm genannte Anzahl nicht mit den tatsächlich als `correct` geflaggten Auswahlmöglichkeiten überein, gibt der Import eine WARN-Meldung auf stderr aus (statt stillem Drop-in). Das verhindert die Wiedereinschleppung des Pre-Apr-18-Bugs, bei dem der PDF-Importer bei Mehrfach-Antworten oft nur die erste flaggte (siehe `reports/content-audit-2026-04-18/multi-correct-count-mismatch.md`).",
+      en: "`scripts/anki_reimport.py` and `scripts/import_vienna_2026.py` now detect multi-correct hints in the question stem — both explicit (\"(3 richtige Antworten)\", \"(2 richtige)\") and vague (\"Mehrere Antworten\", \"Mehrfachauswahl\", inflected forms like \"mehreren richtigen\"). If the count in the stem doesn't match the number of options actually flagged as `correct`, the import emits a WARN to stderr (instead of silent drop-in). This prevents re-introducing the pre-Apr-18 bug where the PDF importer frequently flagged only the first correct option on multi-correct questions (see `reports/content-audit-2026-04-18/multi-correct-count-mismatch.md`).",
+    },
+  },
+  {
+    date: "2026-04-21",
+    tag: "improvement",
+    title: {
+      de: "Geräteübergreifende Stärken-Analyse",
+      en: "Cross-device strength analysis",
+    },
+    description: {
+      de: "Dein Fortschritt pro Fachgebiet ist jetzt geräteübergreifend synchron — Handy und Laptop zeigen die gleichen Schwächen und denselben Lernplan. Bisher wurden Genauigkeit und schwache Themen nur lokal pro Gerät gespeichert, sodass die Startseite und der Lernplan auf jedem Gerät eine andere „schwächste\u201C Empfehlung anzeigten. Jetzt landet jede beantwortete Frage in einer serverseitigen Tabelle, und alle Geräte greifen auf denselben Stand zu.",
+      en: "Your per-topic progress is now synchronized across devices — phone and laptop show the same weak topics and the same study plan. Previously, accuracy and weakness signals were stored in each device's local storage, so the home page and Lernplan showed a different \"weakest topic\" on each device. Now every answered question is recorded in a server-side table, and every device reads the same snapshot.",
+    },
+  },
+  {
+    date: "2026-04-21",
     tag: "feature",
     title: {
       de: "Offline-Modus: Fragen vorab herunterladen und ohne Internet weiterlernen",

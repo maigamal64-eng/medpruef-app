@@ -52,9 +52,14 @@ export async function POST(req: NextRequest) {
   // the client isCorrect flag while the grading refactor is in flight;
   // but since the userId is now pinned to the session, the worst case
   // is a user cheating their OWN XP (not someone else's).
+  //
+  // We also pull `topic` + `exam_type` here so we can atomically update
+  // user_topic_strength — the server-side source of truth for per-topic
+  // accuracy that drives cross-device weakness detection + Study Plan
+  // (backlog #13, 2026-04-21).
   const { data: question, error: qErr } = await sb
     .from("questions")
-    .select("difficulty")
+    .select("difficulty, topic, exam_type")
     .eq("id", questionId)
     .maybeSingle();
   if (qErr) {
@@ -65,6 +70,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unknown question" }, { status: 404 });
   }
   const difficulty = (question as { difficulty?: number }).difficulty || 2;
+  const questionTopic = (question as { topic?: string }).topic || null;
+  const questionExamType = (question as { exam_type?: string }).exam_type || null;
   const xp = calculateXP(isCorrect, difficulty);
 
   // 1. answer_history insert
@@ -79,6 +86,25 @@ export async function POST(req: NextRequest) {
   if (historyErr) {
     console.error("[answer] answer_history insert:", historyErr);
     return NextResponse.json({ error: "Failed to record answer" }, { status: 500 });
+  }
+
+  // 1b. user_topic_strength — race-safe UPSERT + counter increment via RPC.
+  // This is the cross-device weakness signal that replaces the legacy
+  // localStorage-only `medpruef_quiz_results` store (backlog #13, 2026-04-21).
+  // The RPC is `security definer` + a single ON CONFLICT UPDATE, so two
+  // concurrent answers from different devices can't produce a race.
+  // Failure here is logged but does NOT fail the request — the answer
+  // itself has already been recorded and XP/streak logic below still runs.
+  if (questionTopic && questionExamType) {
+    const { error: strengthErr } = await sb.rpc("increment_topic_strength", {
+      p_user_id: userId,
+      p_exam_type: questionExamType,
+      p_topic: questionTopic,
+      p_is_correct: isCorrect,
+    });
+    if (strengthErr) {
+      console.error("[answer] topic strength RPC:", strengthErr);
+    }
   }
 
   // 2. user_question_progress upsert (spaced repetition)
