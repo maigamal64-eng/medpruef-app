@@ -403,16 +403,77 @@ Use **bold** for key terms, bullet points for clarity, and structured headings.`
             </button>
           </div>
         ) : (
-          <div
-            className="flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-[var(--mp-surface-sunken)] text-xs text-[var(--mp-fg-muted)]"
-            title={lang === "de" ? "Upgrade auf Pro, um Folgefragen zu stellen" : "Upgrade to Pro to ask follow-up questions"}
-          >
-            <Lock className="w-3.5 h-3.5 text-[var(--mp-fg-subtle)]" />
-            <span>
-              {lang === "de"
-                ? "Pro-Feature: Folgefragen stellen"
-                : "Pro feature: ask follow-up questions"}
-            </span>
+          <div className="space-y-3">
+            {/* Educational Pro card — explains the free vs. Pro split so
+                free users don't mistake the disabled input for a broken AI.
+                The cached KI-Erklärung they see ABOVE this card is free;
+                only interactive follow-ups require Pro. */}
+            <div
+              className="mp-card p-4"
+              style={{
+                background: "var(--mp-success-bg)",
+                borderColor: "rgba(0, 123, 95, 0.35)",
+                borderLeft: "4px solid var(--mp-viridian)",
+              }}
+              role="note"
+            >
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-lg bg-[var(--mp-viridian)]/15 flex items-center justify-center flex-shrink-0">
+                  <Lock className="w-4 h-4 text-[var(--mp-viridian)]" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="mp-h3 text-[15px] leading-tight mb-1.5 text-[var(--mp-fg)]">
+                    {lang === "de"
+                      ? "Interaktive Rückfragen mit Pro"
+                      : "Interactive follow-ups with Pro"}
+                  </h3>
+                  <p className="mp-body text-[13px] leading-snug text-[var(--mp-fg-muted)] mb-3">
+                    {lang === "de" ? (
+                      <>
+                        Diese Erklärung und alle anderen KI-Erklärungen sind für Sie kostenlos.
+                        Wenn Sie eine eigene Frage an die KI stellen wollen (z.&nbsp;B. „Warum ist Option C falsch?“),
+                        brauchen Sie Pro.
+                      </>
+                    ) : (
+                      <>
+                        This explanation and all other AI explanations are free for you.
+                        If you want to ask the AI your own question (e.g.&nbsp;&quot;Why is option C wrong?&quot;),
+                        you need Pro.
+                      </>
+                    )}
+                  </p>
+                  <a
+                    href="/pricing"
+                    className="mp-btn mp-btn--success mp-btn--sm"
+                    onClick={() => trackEvent("feature_use", { feature: "ai_chat_pro_upsell_click", questionId })}
+                  >
+                    {lang === "de" ? "Mehr über Pro →" : "Learn about Pro →"}
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            {/* Existing disabled input — kept per spec so the chat surface still
+                reads as a chat, just locked. */}
+            <div className="flex items-center gap-2 opacity-60">
+              <input
+                type="text"
+                value=""
+                readOnly
+                placeholder={lang === "de" ? "Folgefrage stellen (Pro)…" : "Ask a follow-up question (Pro)…"}
+                aria-label={lang === "de" ? "Folgefrage stellen – Pro erforderlich" : "Ask a follow-up question – Pro required"}
+                disabled
+                className="flex-1 bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)] rounded-xl px-4 py-2.5 text-sm text-[var(--mp-fg-subtle)] placeholder-[var(--mp-fg-subtle)] cursor-not-allowed"
+              />
+              <button
+                type="button"
+                disabled
+                aria-label={lang === "de" ? "Gesperrt – Pro erforderlich" : "Locked – Pro required"}
+                className="w-10 h-10 rounded-xl bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-subtle)] flex items-center justify-center cursor-not-allowed border border-[var(--mp-border)]"
+              >
+                <Lock className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         )}
       </div>

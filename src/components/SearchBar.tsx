@@ -10,10 +10,24 @@ interface SearchBarProps {
   autoFocus?: boolean;
 }
 
+/**
+ * Detect Mac via userAgent. SSR-safe — default to Mac to avoid
+ * first-paint flicker of the ⌘K chip; client effect re-evaluates.
+ */
+function useIsMac() {
+  const [isMac, setIsMac] = useState(true);
+  useEffect(() => {
+    if (typeof navigator === "undefined") return;
+    setIsMac(/Mac|iPhone|iPad|iPod/.test(navigator.userAgent || ""));
+  }, []);
+  return isMac;
+}
+
 export default function SearchBar({ lang, onSearch, autoFocus }: SearchBarProps) {
   const [value, setValue] = useState("");
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const isMac = useIsMac();
 
   useEffect(() => {
     if (autoFocus) inputRef.current?.focus();
@@ -60,8 +74,17 @@ export default function SearchBar({ lang, onSearch, autoFocus }: SearchBarProps)
           ✕
         </button>
       ) : (
-        <span className="absolute right-3 top-1/2 -translate-y-1/2 hidden md:flex items-center gap-0.5 text-[10px] text-[var(--mp-fg-subtle)] bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)] rounded px-1.5 py-0.5 pointer-events-none">
-          ⌘K
+        <span
+          className="absolute right-3 top-1/2 -translate-y-1/2 hidden md:flex items-center gap-1 text-[10px] text-[var(--mp-fg-subtle)] bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)] rounded px-1.5 py-0.5 pointer-events-none font-mono"
+          aria-hidden
+          title={
+            lang === "de"
+              ? `Tipp: drücke ${isMac ? "⌘K" : "Ctrl+K"} von überall`
+              : `Tip: press ${isMac ? "⌘K" : "Ctrl+K"} anywhere`
+          }
+        >
+          {isMac ? "⌘" : "Ctrl"}
+          <span>K</span>
         </span>
       )}
     </div>

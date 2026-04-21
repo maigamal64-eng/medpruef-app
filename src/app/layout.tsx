@@ -10,7 +10,9 @@ import GuestMigrationBanner from "@/components/GuestMigrationBanner";
 import EmailValidationModal from "@/components/EmailValidationModal";
 import CookieBannerMount from "@/components/CookieBannerMount";
 import ConsentGatedAnalytics from "@/components/ConsentGatedAnalytics";
+import OfflineIndicator from "@/components/OfflineIndicator";
 import TrackRouteChange from "@/components/TrackRouteChange";
+import SearchModalMount from "@/components/SearchModalMount";
 import { ToastProvider } from "@/components/ui";
 import { Suspense } from "react";
 
@@ -215,8 +217,10 @@ export default function RootLayout({
           <GuestMigrationBanner />
           <EmailValidationModal />
           <FeedbackWidget />
+          <SearchModalMount />
           <CookieBannerMount />
           <ConsentGatedAnalytics />
+          <OfflineIndicator />
           {children}
         </ToastProvider>
       </body>

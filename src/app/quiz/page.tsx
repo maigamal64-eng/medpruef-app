@@ -23,6 +23,14 @@ import QuestionActions from "@/components/QuestionActions";
 import QuizSetup, { type QuizConfig } from "@/components/QuizSetup";
 import { SkeletonCard } from "@/components/Skeleton";
 import type { MCQOption } from "@/lib/mcq";
+import {
+  getAllQuestions,
+  getQuestionsByTopic,
+  queuePendingAnswer,
+  type OfflineQuestion,
+} from "@/lib/offlineDb";
+import { buildMCQFromChoices, type StoredChoice } from "@/lib/mcq";
+import { CloudOff } from "lucide-react";
 
 type Lang = "de" | "en";
 
@@ -91,6 +99,29 @@ function QuizContent() {
   // Time limit
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null); // seconds
 
+  // ─── Offline mode ───
+  // Tracks `navigator.onLine` so the fetch + answer paths can branch
+  // to IndexedDB without touching the online flow. Also used to render
+  // the inline "Offline-Modus aktiv" banner above the question.
+  const [isOffline, setIsOffline] = useState<boolean>(
+    typeof navigator !== "undefined" ? !navigator.onLine : false,
+  );
+  // Randomized pool of OfflineQuestion — replenished when it empties.
+  // Tracks IDs we've already served this session so repeats are avoided
+  // (mirrors the server-side excludeIds behavior).
+  const offlinePoolRef = useRef<OfflineQuestion[]>([]);
+  const offlineServedRef = useRef<Set<number>>(new Set());
+  useEffect(() => {
+    const onOnline = () => setIsOffline(false);
+    const onOffline = () => setIsOffline(true);
+    window.addEventListener("online", onOnline);
+    window.addEventListener("offline", onOffline);
+    return () => {
+      window.removeEventListener("online", onOnline);
+      window.removeEventListener("offline", onOffline);
+    };
+  }, []);
+
   // ─── Init ───
   useEffect(() => {
     setLangState(getLang());
@@ -156,9 +187,72 @@ function QuizContent() {
     setLangState(l);
   };
 
+  // ─── Offline → Question adapter ───
+  // Converts an IndexedDB `OfflineQuestion` into the quiz's runtime
+  // `Question` shape, including the shuffled `options` array produced
+  // by `buildMCQFromChoices`. Open-answer fallbacks (no `choices`) are
+  // skipped in the offline pipeline for now.
+  const offlineToQuestion = useCallback(
+    (q: OfflineQuestion): Question | null => {
+      const storedChoices = q.choices as StoredChoice[] | null | undefined;
+      if (!Array.isArray(storedChoices) || storedChoices.length < 2) {
+        return null;
+      }
+      const options = buildMCQFromChoices(storedChoices);
+      return {
+        id: q.id,
+        topic: q.topic,
+        question: q.question,
+        answer: q.answer,
+        explanation: q.explanation ?? "",
+        difficulty: 2,
+        exam_dates: q.exam_dates ?? [],
+        options: options ?? undefined,
+        image_url: q.image_url ?? undefined,
+      };
+    },
+    [],
+  );
+
   // ─── Question fetching ───
   const fetchQuestion = useCallback(async (): Promise<Question | null> => {
     if (!config) return null;
+
+    // Offline branch — pull from IndexedDB instead of hitting the
+    // network. If the pool is empty, top it up from IDB filtered by
+    // examSource + (optionally) the first selected topic. We shuffle
+    // in place so each draw is a different question.
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      try {
+        if (offlinePoolRef.current.length === 0) {
+          const exam = config.examSource;
+          const topic =
+            config.topics.length === 1 ? config.topics[0] : null;
+          const rows: OfflineQuestion[] = topic
+            ? await getQuestionsByTopic(exam, topic)
+            : await getAllQuestions(exam);
+          const fresh = rows.filter((r) => !offlineServedRef.current.has(r.id));
+          // Fisher-Yates shuffle so each session order differs.
+          for (let i = fresh.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [fresh[i], fresh[j]] = [fresh[j], fresh[i]];
+          }
+          offlinePoolRef.current = fresh;
+        }
+        while (offlinePoolRef.current.length > 0) {
+          const next = offlinePoolRef.current.shift()!;
+          const q = offlineToQuestion(next);
+          if (!q) continue;
+          offlineServedRef.current.add(next.id);
+          seenIdsRef.current.push(next.id);
+          return q;
+        }
+      } catch (e) {
+        console.error("[quiz] offline fetch failed", e);
+      }
+      return null;
+    }
+
     try {
       const params = buildQueryParams(config, userId, seenIdsRef.current, practiceMode);
       const res = await fetch(`/api/questions?${params}`);
@@ -172,7 +266,7 @@ function QuizContent() {
       console.error(e);
     }
     return null;
-  }, [config, userId]);
+  }, [config, userId, offlineToQuestion]);
 
   // Initial question load (or specific id from search deep-link)
   useEffect(() => {
@@ -298,6 +392,25 @@ function QuizContent() {
       }
 
       if (!userId) return;
+
+      // Offline branch — queue the answer in IndexedDB. The auto-sync
+      // handler in src/lib/offlineSync.ts drains the queue to
+      // /api/answer when `online` fires, so XP + streak will settle as
+      // soon as the network comes back.
+      if (typeof navigator !== "undefined" && navigator.onLine === false) {
+        try {
+          await queuePendingAnswer({
+            questionId: question.id,
+            userAnswer: question.answer,
+            isCorrect,
+            timeSpentMs: Date.now() - startTime,
+          });
+        } catch (e) {
+          console.error("[quiz] queuePendingAnswer failed", e);
+        }
+        return;
+      }
+
       try {
         const res = await fetch("/api/answer", {
           method: "POST",
@@ -448,6 +561,38 @@ function QuizContent() {
             />
           </div>
         </div>
+
+        {/* Offline banner — appears when navigator.onLine === false.
+            Flags that answers queue locally until reconnect. */}
+        {isOffline && (
+          <div className="px-4 lg:px-8 pt-1 flex-shrink-0">
+            <div
+              role="status"
+              aria-live="polite"
+              className="flex items-start gap-2 px-3 py-2 rounded-lg border text-xs font-medium"
+              style={{
+                background: "var(--mp-warning-bg, rgba(244, 162, 97, 0.14))",
+                color: "var(--mp-status-warning, #F4A261)",
+                borderColor:
+                  "var(--mp-warning-border, rgba(244, 162, 97, 0.35))",
+              }}
+            >
+              <CloudOff className="w-4 h-4 flex-shrink-0 mt-0.5" aria-hidden />
+              <div className="min-w-0">
+                <p className="font-semibold">
+                  {lang === "de"
+                    ? "Offline-Modus aktiv"
+                    : "Offline mode active"}
+                </p>
+                <p className="text-[11px] opacity-90 mt-0.5">
+                  {lang === "de"
+                    ? "Ihre Antworten werden gespeichert und automatisch synchronisiert, sobald Sie wieder online sind."
+                    : "Your answers are saved and will sync automatically when you reconnect."}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Main canvas — full available width with side rails on desktop */}
         <div className="flex-1 w-full px-4 lg:px-8 py-4">

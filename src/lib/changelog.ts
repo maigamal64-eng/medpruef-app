@@ -23,6 +23,42 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-04-21",
+    tag: "feature",
+    title: {
+      de: "Offline-Modus: Fragen vorab herunterladen und ohne Internet weiterlernen",
+      en: "Offline mode: pre-download questions and keep studying without internet",
+    },
+    description: {
+      de: "Unter Einstellungen → Offline-Modus können Sie jetzt 100, 250 oder 500 Fragen auf Ihr Gerät laden. Wenn die Verbindung abbricht (U-Bahn, Krankenhaus-WLAN, Zug), zieht das Quiz nahtlos aus der lokalen IndexedDB. Antworten werden lokal in einer Warteschlange gespeichert und automatisch an den Server gesendet, sobald Sie wieder online sind — XP, Streak und Fortschritt bleiben also erhalten. Oben erscheint bei Offline-Betrieb eine dezente Statusanzeige („Offline · N Fragen verfügbar\u201C).",
+      en: "Under Settings → Offline mode you can now download 100, 250, or 500 questions to your device. If connectivity drops (metro, hospital WiFi, train), the quiz seamlessly pulls from your local IndexedDB instead of the server. Answers you record offline queue locally and auto-sync the moment you come back online — so XP, streak, and progress all catch up. A small pill at the top of the screen indicates offline state (\"Offline · N questions available\").",
+    },
+  },
+  {
+    date: "2026-04-21",
+    tag: "feature",
+    title: {
+      de: "Schnellsuche per Cmd+K",
+      en: "Quick search with Cmd+K",
+    },
+    description: {
+      de: "Drücke ⌘K (oder Ctrl+K auf Windows) überall im Produkt, um das neue Schnellsuche-Fenster zu öffnen. Finde Fragen, springe zu einem Fachgebiet, oder navigiere per Tastatur direkt zu einer Seite — mit den Pfeiltasten die Treffer durchwandern, Enter zum Öffnen, Esc zum Schließen. Alternativ funktioniert auch „/“, solange kein Eingabefeld aktiv ist.",
+      en: "Press ⌘K (or Ctrl+K on Windows) anywhere in the product to open the new quick-search palette. Find questions, jump to a specialty, or navigate to any page — arrow keys to walk the results, Enter to open, Esc to close. You can also press \u201C/\u201D when no input field is focused.",
+    },
+  },
+  {
+    date: "2026-04-21",
+    tag: "fix",
+    title: {
+      de: "KI-Erklärung vs. KI-Chat: klarere Benennung",
+      en: "AI Explanation vs. AI Chat: clearer naming",
+    },
+    description: {
+      de: "Der Tab unter jeder Frage heißt jetzt „KI-Erklärung“ statt „KI-Chat“, und eine kurze Info erklärt, dass KI-Erklärungen für alle kostenlos sind — nur eigene Rückfragen an die KI benötigen Pro. Frei-Nutzer:innen sehen beim Öffnen eine klare Erklär-Karte, damit sie nicht mehr glauben, die KI sei defekt.",
+      en: "The tab under every question is now called \u201cAI Explanation\u201d instead of \u201cAI Chat,\u201d and a short info tooltip clarifies that AI explanations are free for everyone — only your own follow-up questions to the AI require Pro. Free users now see a clear explainer card on open so they no longer think the AI is broken.",
+    },
+  },
+  {
     date: "2026-04-18",
     tag: "admin",
     title: {

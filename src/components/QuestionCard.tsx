@@ -10,7 +10,7 @@ import { trackEvent } from "@/lib/tracker";
 import { captureClientContext } from "@/lib/clientContext";
 import TopicIcon from "@/components/TopicIcon";
 import { cleanExplanation } from "@/lib/explanation";
-import { Lightbulb, FileText, Highlighter, Bot, Flag, CheckCircle2, Edit3, AlertTriangle, X, ThumbsUp, ThumbsDown, BookOpen, Languages } from "lucide-react";
+import { Lightbulb, FileText, Highlighter, Bot, Flag, CheckCircle2, Edit3, AlertTriangle, X, ThumbsUp, ThumbsDown, BookOpen, Languages, Info } from "lucide-react";
 import AIChatAssistant from "@/components/AIChatAssistant";
 import TranslateButton from "@/components/TranslateButton";
 
@@ -614,10 +614,21 @@ export default function QuestionCard({
         {answered && !hideExplanation && (() => {
           const cleanedExplanation = cleanExplanation(question.explanation);
           const hasExplanation = !!cleanedExplanation;
-          type TabDef = { id: PostAnswerTab; label: string; icon: React.ReactNode; isAction?: boolean };
+          type TabDef = { id: PostAnswerTab; label: string; icon: React.ReactNode; isAction?: boolean; hint?: string };
           const tabs: TabDef[] = [
             { id: "erklaerung", label: lang === "de" ? "Erklärung" : "Explanation", icon: <Lightbulb className="w-3.5 h-3.5" /> },
-            { id: "ki", label: lang === "de" ? "KI-Chat" : "AI Chat", icon: <Bot className="w-3.5 h-3.5" />, isAction: true },
+            {
+              id: "ki",
+              // Renamed from "KI-Chat" → "KI-Erklärung" (DE) / "AI Chat" → "AI Explanation" (EN)
+              // so free users don't mistake this for a Pro-locked chat. The surface IS an
+              // explanation; the Pro gate only applies to interactive follow-up questions.
+              label: lang === "de" ? "KI-Erklärung" : "AI Explanation",
+              icon: <Bot className="w-3.5 h-3.5" />,
+              isAction: true,
+              hint: lang === "de"
+                ? "Jede Frage hat eine KI-Erklärung — kostenlos. Pro-Nutzer:innen können zusätzlich eigene Rückfragen stellen."
+                : "Every question has an AI explanation — free for everyone. Pro users can additionally ask their own follow-up questions.",
+            },
             { id: "notizen", label: lang === "de" ? "Notizen" : "Notes", icon: <FileText className="w-3.5 h-3.5" /> },
             { id: "uebersetzen", label: lang === "de" ? "Übersetzen" : "Translate", icon: <Languages className="w-3.5 h-3.5" /> },
             { id: "quelle", label: lang === "de" ? "Quelle" : "Source", icon: <BookOpen className="w-3.5 h-3.5" /> },
@@ -684,6 +695,15 @@ export default function QuestionCard({
                     >
                       {tab.icon}
                       <span>{tab.label}</span>
+                      {tab.hint && (
+                        <span
+                          className="inline-flex items-center text-[var(--mp-fg-subtle)]"
+                          title={tab.hint}
+                          aria-label={tab.hint}
+                        >
+                          <Info className="w-3 h-3" />
+                        </span>
+                      )}
                     </button>
                   );
                 })}
@@ -759,8 +779,8 @@ export default function QuestionCard({
                       </p>
                       <p className="text-xs text-[var(--mp-fg-subtle)]">
                         {lang === "de"
-                          ? "Tippe auf „KI-Chat“ für eine KI-Erklärung."
-                          : "Tap \u201cAI Chat\u201d for an AI-generated explanation."}
+                          ? "Tippen Sie auf „KI-Erklärung“ für eine KI-generierte Erklärung."
+                          : "Tap \u201cAI Explanation\u201d for an AI-generated explanation."}
                       </p>
                     </div>
                   )}

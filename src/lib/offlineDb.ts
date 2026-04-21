@@ -1,0 +1,313 @@
+"use client";
+
+/**
+ * offlineDb — IndexedDB wrapper for the MedPrüf offline mode.
+ *
+ * User backlog item #7 — 6/11 surveys flagged offline mode as the #1
+ * improvement. Users study on trains, metros, and hospital floors
+ * where WiFi drops out mid-session. The existing PWA cache only
+ * captures already-visited pages; going offline before pre-loading
+ * questions drops the user cold.
+ *
+ * This module is the first half of the fix: a small, focused wrapper
+ * around the native IndexedDB API — no npm deps, no broad surface.
+ *
+ * Two object stores:
+ *   - `questions`       — question rows downloaded via /api/offline/questions,
+ *                         keyed by id, indexed by (exam_type, topic) so the quiz
+ *                         can pull a topic-filtered batch without scanning.
+ *   - `pending_answers` — answers recorded while offline, keyed by a UUID so the
+ *                         reconnect handler in src/lib/offlineSync.ts can drain
+ *                         them to /api/answer one-by-one.
+ *
+ * The DB is `medpruef-offline` at version 1. If the schema needs to grow
+ * (e.g. add a `pending_flags` store), bump DB_VERSION and handle the
+ * migration inside `onupgradeneeded`.
+ */
+
+export interface OfflineQuestion {
+  id: number;
+  topic: string;
+  question: string;
+  answer: string;
+  explanation: string | null;
+  ai_explanation: string | null;
+  exam_type: string;
+  choices: unknown;
+  image_url: string | null;
+  image_urls: string[] | null;
+  exam_dates: string[];
+  tags: string[];
+  cached_at: string;
+}
+
+export interface PendingAnswer {
+  id: string;
+  questionId: number;
+  userAnswer: string;
+  isCorrect: boolean;
+  timeSpentMs: number;
+  createdAt: string;
+}
+
+const DB_NAME = "medpruef-offline";
+const DB_VERSION = 1;
+const QUESTIONS_STORE = "questions";
+const PENDING_STORE = "pending_answers";
+
+let dbPromise: Promise<IDBDatabase> | null = null;
+
+function isIndexedDbAvailable(): boolean {
+  return typeof window !== "undefined" && typeof window.indexedDB !== "undefined";
+}
+
+/**
+ * Lazily open (or upgrade) the IDB database. Subsequent callers reuse
+ * the same Promise. On hard failure (Safari private-mode, corrupt DB)
+ * the Promise rejects and callers should fall back to online flow.
+ */
+export function openDb(): Promise<IDBDatabase> {
+  if (!isIndexedDbAvailable()) {
+    return Promise.reject(new Error("IndexedDB unavailable"));
+  }
+  if (dbPromise) return dbPromise;
+
+  dbPromise = new Promise<IDBDatabase>((resolve, reject) => {
+    const req = window.indexedDB.open(DB_NAME, DB_VERSION);
+
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(QUESTIONS_STORE)) {
+        const store = db.createObjectStore(QUESTIONS_STORE, { keyPath: "id" });
+        store.createIndex("by_exam_topic", ["exam_type", "topic"]);
+        store.createIndex("by_exam", "exam_type");
+      }
+      if (!db.objectStoreNames.contains(PENDING_STORE)) {
+        db.createObjectStore(PENDING_STORE, { keyPath: "id" });
+      }
+    };
+
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error ?? new Error("IDB open failed"));
+    req.onblocked = () => reject(new Error("IDB open blocked"));
+  });
+
+  return dbPromise;
+}
+
+function tx(
+  db: IDBDatabase,
+  store: string,
+  mode: IDBTransactionMode,
+): IDBObjectStore {
+  return db.transaction(store, mode).objectStore(store);
+}
+
+/**
+ * Bulk-write a batch of questions into the `questions` store. Uses a
+ * single readwrite transaction so partial writes don't leave the store
+ * inconsistent; resolves once `oncomplete` fires.
+ */
+export async function putQuestions(qs: OfflineQuestion[]): Promise<void> {
+  if (qs.length === 0) return;
+  const db = await openDb();
+  return new Promise<void>((resolve, reject) => {
+    const transaction = db.transaction(QUESTIONS_STORE, "readwrite");
+    const store = transaction.objectStore(QUESTIONS_STORE);
+    for (const q of qs) {
+      // `put` — insert-or-replace, so re-downloads refresh stale rows.
+      store.put(q);
+    }
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () =>
+      reject(transaction.error ?? new Error("putQuestions failed"));
+    transaction.onabort = () =>
+      reject(transaction.error ?? new Error("putQuestions aborted"));
+  });
+}
+
+/**
+ * Read all questions for a given exam_type + topic. Optional limit
+ * returns the first N (in insertion order); pass 0/undefined for all.
+ */
+export async function getQuestionsByTopic(
+  examType: string,
+  topic: string,
+  limit?: number,
+): Promise<OfflineQuestion[]> {
+  const db = await openDb();
+  return new Promise<OfflineQuestion[]>((resolve, reject) => {
+    const store = tx(db, QUESTIONS_STORE, "readonly");
+    const index = store.index("by_exam_topic");
+    const range = IDBKeyRange.only([examType, topic]);
+    const results: OfflineQuestion[] = [];
+    const cursorReq = index.openCursor(range);
+    cursorReq.onsuccess = (event) => {
+      const cursor = (event.target as IDBRequest<IDBCursorWithValue>).result;
+      if (cursor) {
+        results.push(cursor.value as OfflineQuestion);
+        if (typeof limit === "number" && limit > 0 && results.length >= limit) {
+          resolve(results);
+          return;
+        }
+        cursor.continue();
+      } else {
+        resolve(results);
+      }
+    };
+    cursorReq.onerror = () =>
+      reject(cursorReq.error ?? new Error("getQuestionsByTopic failed"));
+  });
+}
+
+/**
+ * Read all questions for a given exam_type. Used by the quiz offline
+ * branch when the user has no topic filter.
+ */
+export async function getAllQuestions(
+  examType: string,
+): Promise<OfflineQuestion[]> {
+  const db = await openDb();
+  return new Promise<OfflineQuestion[]>((resolve, reject) => {
+    const store = tx(db, QUESTIONS_STORE, "readonly");
+    const index = store.index("by_exam");
+    const range = IDBKeyRange.only(examType);
+    const req = index.getAll(range);
+    req.onsuccess = () => resolve((req.result as OfflineQuestion[]) ?? []);
+    req.onerror = () =>
+      reject(req.error ?? new Error("getAllQuestions failed"));
+  });
+}
+
+/**
+ * Count questions in the store. Optional `examType` narrows to a single
+ * exam; pass undefined for total across all exams.
+ */
+export async function countQuestions(examType?: string): Promise<number> {
+  if (!isIndexedDbAvailable()) return 0;
+  try {
+    const db = await openDb();
+    return new Promise<number>((resolve, reject) => {
+      const store = tx(db, QUESTIONS_STORE, "readonly");
+      let req: IDBRequest<number>;
+      if (examType) {
+        const index = store.index("by_exam");
+        req = index.count(IDBKeyRange.only(examType));
+      } else {
+        req = store.count();
+      }
+      req.onsuccess = () => resolve(req.result ?? 0);
+      req.onerror = () =>
+        reject(req.error ?? new Error("countQuestions failed"));
+    });
+  } catch {
+    // IndexedDB unavailable (private-mode Safari, blocked, etc.) — the
+    // settings UI just shows 0, which is accurate.
+    return 0;
+  }
+}
+
+/**
+ * Queue an answer for sync on reconnect. Assigns a UUID id + createdAt
+ * timestamp so the caller doesn't have to.
+ */
+export async function queuePendingAnswer(
+  p: Omit<PendingAnswer, "id" | "createdAt">,
+): Promise<void> {
+  const db = await openDb();
+  const row: PendingAnswer = {
+    ...p,
+    id:
+      typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+    createdAt: new Date().toISOString(),
+  };
+  return new Promise<void>((resolve, reject) => {
+    const transaction = db.transaction(PENDING_STORE, "readwrite");
+    transaction.objectStore(PENDING_STORE).put(row);
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () =>
+      reject(transaction.error ?? new Error("queuePendingAnswer failed"));
+  });
+}
+
+/**
+ * Read every queued answer. Does NOT delete them — the sync handler in
+ * src/lib/offlineSync.ts removes each row only after a successful POST
+ * to /api/answer, so network flakiness can't drop data.
+ */
+export async function drainPendingAnswers(): Promise<PendingAnswer[]> {
+  if (!isIndexedDbAvailable()) return [];
+  try {
+    const db = await openDb();
+    return new Promise<PendingAnswer[]>((resolve, reject) => {
+      const store = tx(db, PENDING_STORE, "readonly");
+      const req = store.getAll();
+      req.onsuccess = () => resolve((req.result as PendingAnswer[]) ?? []);
+      req.onerror = () =>
+        reject(req.error ?? new Error("drainPendingAnswers failed"));
+    });
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Remove a pending answer — called after a successful sync POST.
+ */
+export async function removePendingAnswer(id: string): Promise<void> {
+  const db = await openDb();
+  return new Promise<void>((resolve, reject) => {
+    const transaction = db.transaction(PENDING_STORE, "readwrite");
+    transaction.objectStore(PENDING_STORE).delete(id);
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () =>
+      reject(transaction.error ?? new Error("removePendingAnswer failed"));
+  });
+}
+
+/**
+ * Wipe every offline question + pending answer. Exposed in the Settings
+ * UI as "Offline-Daten löschen" — used when the user wants to free
+ * storage or start fresh after changing active exam.
+ */
+export async function clearAllOffline(): Promise<void> {
+  const db = await openDb();
+  return new Promise<void>((resolve, reject) => {
+    const transaction = db.transaction(
+      [QUESTIONS_STORE, PENDING_STORE],
+      "readwrite",
+    );
+    transaction.objectStore(QUESTIONS_STORE).clear();
+    transaction.objectStore(PENDING_STORE).clear();
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () =>
+      reject(transaction.error ?? new Error("clearAllOffline failed"));
+  });
+}
+
+/**
+ * Last-download timestamp helpers. Stored in localStorage (not IDB) so
+ * Settings can show it without opening a transaction. Key is per-exam
+ * so switching exams reveals the right "last sync" time.
+ */
+const LAST_SYNC_KEY = (examType: string) => `medpruef_offline_last_sync_${examType}`;
+
+export function getLastSync(examType: string): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return window.localStorage.getItem(LAST_SYNC_KEY(examType));
+  } catch {
+    return null;
+  }
+}
+
+export function setLastSync(examType: string, iso: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(LAST_SYNC_KEY(examType), iso);
+  } catch {
+    // quota / privacy mode — silently ignore
+  }
+}
