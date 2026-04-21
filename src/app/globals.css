@@ -353,13 +353,6 @@ body {
 @keyframes progress-fill { from { width: 0; } }
 .animate-progress { animation: progress-fill 1s var(--ease-out) forwards; }
 
-@keyframes float-up {
-  0% { opacity: 0; transform: translateY(10px); }
-  20% { opacity: 1; }
-  100% { opacity: 0; transform: translateY(-40px); }
-}
-.animate-float-up { animation: float-up 1.5s ease-out forwards; }
-
 @keyframes answer-correct {
   0% { box-shadow: 0 0 0 0 rgba(0,168,150,0.4); }
   50% { box-shadow: 0 0 0 8px rgba(0,168,150,0); }

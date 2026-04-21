@@ -1,14 +1,31 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { authFetch as fetch } from "@/lib/authFetch";
 import { t } from "@/lib/i18n";
 import { getLevelFromXP } from "@/lib/xp";
 import { Home, FileText, GraduationCap, BarChart3, TrendingUp, Map, Settings, Sparkles, PanelLeftClose, PanelLeftOpen, Layers, Crown, CalendarDays } from "lucide-react";
 import ExamSwitcherInline from "./ExamSwitcherInline";
+import {
+  EXAM_SOURCES,
+  getStoredExamSource,
+  setStoredExamSource,
+  type ExamSourceId,
+} from "@/lib/topics";
 
 type Lang = "de" | "en";
+
+/**
+ * Abbreviation shown in the 40px collapsed-rail exam chip.
+ * Keep these ≤3 chars — the chip is 40×40 with mono/tabular-nums type.
+ */
+const EXAM_ABBR: Record<ExamSourceId, string> = {
+  kenntnispruefung: "SIP",
+  kmp_innsbruck: "KMP",
+  pharma: "PHA",
+};
 
 interface SidebarProps {
   lang: Lang;
@@ -20,6 +37,157 @@ interface SidebarProps {
 }
 
 const COLLAPSE_KEY = "medpruef_sidebar_collapsed";
+
+/**
+ * Compact 40×40 exam chip shown ONLY in the collapsed sidebar rail.
+ * Keeps users oriented which exam they're prepping for (SIP / KMP / PHA)
+ * when the expanded ExamSwitcherInline is hidden. Clicking the chip opens
+ * a small dropdown — same switch semantics as the expanded switcher
+ * (persist localStorage + server preference + soft reload).
+ *
+ * Not rendered in expanded mode (that's ExamSwitcherInline's job) and
+ * never on mobile (the sidebar itself is hidden under 1024px).
+ */
+function CollapsedExamChip() {
+  const [active, setActive] = useState<ExamSourceId>("kenntnispruefung");
+  const [mounted, setMounted] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    setActive(getStoredExamSource());
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    const onClick = (e: MouseEvent) => {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    document.addEventListener("mousedown", onClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onClick);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  if (!mounted) {
+    // Prevent SSR/CSR hydration mismatch + layout shift
+    return <div className="h-10 my-2" aria-hidden />;
+  }
+
+  const activeExam = EXAM_SOURCES.find((e) => e.id === active) ?? EXAM_SOURCES[0];
+  const abbr = EXAM_ABBR[activeExam.id as ExamSourceId];
+
+  const switchTo = (id: ExamSourceId) => {
+    if (id === active) {
+      setOpen(false);
+      return;
+    }
+    setActive(id);
+    setStoredExamSource(id);
+    setOpen(false);
+
+    try {
+      const session = localStorage.getItem("medpruef_session");
+      const parsed = session ? JSON.parse(session) : null;
+      const userId = parsed?.user?.id;
+      if (userId && !userId.startsWith("guest_")) {
+        fetch("/api/user/exam-preference", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId, activeExam: id }),
+        }).catch(() => {});
+      }
+    } catch {}
+
+    window.dispatchEvent(new CustomEvent("medpruef:examChanged", { detail: { examSource: id } }));
+    setTimeout(() => window.location.reload(), 50);
+  };
+
+  return (
+    <div ref={rootRef} className="flex justify-center my-2">
+      <button
+        ref={btnRef}
+        onClick={() => {
+          if (!open && btnRef.current) {
+            const rect = btnRef.current.getBoundingClientRect();
+            // Anchor dropdown to the right edge of the collapsed rail
+            const left = Math.min(rect.right + 8, window.innerWidth - 272);
+            setDropdownPos({ top: rect.top, left });
+          }
+          setOpen((o) => !o);
+        }}
+        className="w-10 h-10 flex items-center justify-center rounded-xl
+                   bg-[var(--mp-viridian)]/15 hover:bg-[var(--mp-viridian)]/25
+                   border border-[var(--mp-viridian)]/30
+                   text-[var(--mp-accent-teal)]
+                   font-mono tabular-nums text-[11px] font-bold tracking-tight
+                   transition-colors"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={`Prüfung: ${activeExam.fullName}`}
+        title={activeExam.fullName}
+      >
+        {abbr}
+      </button>
+
+      {open && dropdownPos && (
+        <div
+          className="fixed w-64 bg-white dark:bg-slate-800
+                     border border-slate-200 dark:border-slate-700
+                     rounded-xl shadow-xl overflow-hidden"
+          style={{ top: dropdownPos.top, left: dropdownPos.left, zIndex: 9999 }}
+          role="listbox"
+        >
+          <div className="px-3 py-2 text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 border-b border-slate-100 dark:border-slate-700">
+            Prüfung / Exam
+          </div>
+          {EXAM_SOURCES.map((exam) => {
+            const isActive = exam.id === active;
+            return (
+              <button
+                key={exam.id}
+                onClick={() => switchTo(exam.id)}
+                className={`w-full flex items-start gap-2.5 px-3 py-2.5 text-left transition-colors
+                            ${isActive
+                              ? "bg-[var(--mp-accent-teal)]/10 text-[var(--mp-accent-teal)]"
+                              : "hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200"
+                            }`}
+                role="option"
+                aria-selected={isActive}
+              >
+                <span className="text-lg mt-0.5 leading-none">{exam.badge}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium flex items-center gap-2">
+                    <span className="truncate">{exam.label}</span>
+                    {isActive && (
+                      <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor" className="flex-shrink-0">
+                        <path d="M7.5 13.5L4 10l1.4-1.4 2.1 2.1 7-7L16 5.1z" />
+                      </svg>
+                    )}
+                  </div>
+                  <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                    {exam.fullName}
+                  </div>
+                  {exam.questions > 0 && (
+                    <div className="text-[10px] text-slate-400 dark:text-slate-500 font-mono mt-0.5">
+                      {exam.questions.toLocaleString("de-DE")} Fragen
+                    </div>
+                  )}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function Sidebar({ lang, userId, userName, totalXp = 0 }: SidebarProps) {
   const pathname = usePathname();
@@ -117,12 +285,16 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0 }: Sidebar
         </div>
       )}
       {userName && collapsed && (
-        <div className="flex justify-center my-2" title={`${userName} · ${xpInfo.rank} · Lv.${xpInfo.level}`}>
-          <div className="w-9 h-9 rounded-full bg-[var(--mp-viridian)] flex items-center justify-center text-xs font-bold text-white ring-2 ring-[var(--mp-accent-teal)]/30 relative">
-            {userName.charAt(0).toUpperCase()}
-            <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-[var(--mp-accent-teal)] rounded-full border-2 border-[var(--mp-oxford-blue)]" />
+        <>
+          <div className="flex justify-center my-2" title={`${userName} · ${xpInfo.rank} · Lv.${xpInfo.level}`}>
+            <div className="w-9 h-9 rounded-full bg-[var(--mp-viridian)] flex items-center justify-center text-xs font-bold text-white ring-2 ring-[var(--mp-accent-teal)]/30 relative">
+              {userName.charAt(0).toUpperCase()}
+              <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-[var(--mp-accent-teal)] rounded-full border-2 border-[var(--mp-oxford-blue)]" />
+            </div>
           </div>
-        </div>
+          {/* DD-10: exam chip — keeps the collapsed rail exam-aware */}
+          <CollapsedExamChip />
+        </>
       )}
 
       {/* Main Navigation */}
