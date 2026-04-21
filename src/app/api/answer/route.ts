@@ -157,8 +157,20 @@ export async function POST(req: NextRequest) {
   }
 
   // 3. user_gamification upsert (never silently skip — audit BE-P3-028)
-  const today = new Date().toISOString().split("T")[0];
-  const yesterdayStr = new Date(Date.now() - 86400000).toISOString().split("T")[0];
+  //
+  // Date arithmetic MUST happen in Europe/Vienna, not UTC. The old code used
+  // `new Date().toISOString().split('T')[0]` which is UTC — so a user answering
+  // at 01:00 Vienna time (23:00 UTC the previous day) got their streak scored
+  // against yesterday's UTC date, causing drift (C-2 audit 2026-04-21: 40 of
+  // 59 power users had stored current_streak ≠ actual consecutive-day count).
+  const viennaFmt = new Intl.DateTimeFormat("sv-SE", {
+    timeZone: "Europe/Vienna",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const today = viennaFmt.format(new Date()); // YYYY-MM-DD in Vienna
+  const yesterdayStr = viennaFmt.format(new Date(Date.now() - 86400000));
 
   // Make sure a gamification row exists — earlier code did a select-then-
   // skip-if-missing, which meant brand-new users silently earned zero XP.
@@ -178,12 +190,23 @@ export async function POST(req: NextRequest) {
   let updatedGam: Record<string, unknown> | null = null;
   if (gam) {
     const isNewDay = gam.daily_reset_date !== today;
-    const newStreak =
-      gam.last_study_date === yesterdayStr
-        ? gam.current_streak + (isNewDay ? 1 : 0)
-        : isNewDay
-          ? 1
-          : gam.current_streak;
+    // Streak rules (Vienna-local calendar days):
+    //   - If the last study day was yesterday: streak += 1 on the first answer
+    //     of a new day, otherwise unchanged.
+    //   - If the last study day was today already: streak unchanged.
+    //   - Otherwise (gap of >= 2 days OR no prior activity): reset to 1
+    //     (today counts as day 1 of the new streak).
+    const lastStudy = gam.last_study_date as string | null;
+    let newStreak: number;
+    if (!isNewDay) {
+      // Same calendar day — already counted, don't double-bump
+      newStreak = gam.current_streak || 1;
+    } else if (lastStudy === yesterdayStr) {
+      newStreak = (gam.current_streak || 0) + 1;
+    } else {
+      // Gap or first answer ever — restart at 1
+      newStreak = 1;
+    }
 
     const { data: updated, error: gamUpdErr } = await sb
       .from("user_gamification")

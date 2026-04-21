@@ -193,12 +193,11 @@ export default function RootLayout({
                 "@type": "Organization",
                 "name": "[name]",
                 "url": "https://example.com"
-              },
-              "aggregateRating": {
-                "@type": "AggregateRating",
-                "ratingValue": "4.8",
-                "ratingCount": "156"
               }
+              // aggregateRating removed 2026-04-22: hard-coded 4.8/156 did not
+              // match real user-data (23 surveys, avg 4.70). Google can penalize
+              // fabricated review metadata. Re-introduce when we have 100+ real
+              // reviews, ideally wired dynamically to user_feedback.
             }),
           }}
         />

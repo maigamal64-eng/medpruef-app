@@ -23,6 +23,66 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-04-22",
+    tag: "admin",
+    title: {
+      de: "KMP-Innsbruck-Bewertung repariert (C-1): 46 historische Antworten rückwirkend korrigiert",
+      en: "KMP Innsbruck grading fixed (C-1): 46 historical answers retroactively regraded",
+    },
+    description: {
+      de: "Der KoalaMed-Importer schrieb jede `choices`-Zeile mit dem Schlüssel `is_correct`, während alle anderen Prüfungstypen (Kenntnisprüfung Wien, Pharma) und der Client-seitige MCQ-Builder den Schlüssel `correct` lesen. Folge: jede Auswahloption auf KMP-Fragen kam als `correct: undefined` beim Client an, der sie als `false` bewertete — 46 von 47 gespeicherten Antworten mit echter Textübereinstimmung gegen `questions.answer` waren fälschlich als falsch markiert (98 % False-Negative-Rate). Migration `20260422000000_kmp_grading_backfill.sql` normalisiert alle 3.091 KMP-Fragen so, dass beide Schlüssel gesetzt sind (idempotent), regradet die `answer_history`-Zeilen wo der Text übereinstimmt, und synchronisiert `user_gamification.total_correct` anhand der tatsächlichen Korrekt-Zählung. 3 Nutzer betroffen.",
+      en: "The KoalaMed importer wrote every `choices` row with key `is_correct`, while every other exam type (Kenntnisprüfung Wien, Pharma) and the client-side MCQ builder read the key `correct`. Consequence: every answer option on KMP questions arrived at the client as `correct: undefined`, graded as `false` — 46 of 47 stored answers with a genuine text match against `questions.answer` were wrongly flagged wrong (98% false-negative rate). Migration `20260422000000_kmp_grading_backfill.sql` normalizes all 3,091 KMP questions to carry both keys (idempotent), regrades matching `answer_history` rows, and syncs `user_gamification.total_correct` from the actual true-count. 3 users affected.",
+    },
+  },
+  {
+    date: "2026-04-22",
+    tag: "admin",
+    title: {
+      de: "Streakzähler repariert (C-2): Tagesgrenze jetzt in Europe/Vienna, 33 Nutzerstreaks neu berechnet",
+      en: "Streak counter fixed (C-2): day boundary now in Europe/Vienna, 33 user streaks recomputed",
+    },
+    description: {
+      de: "`/api/answer` verglich `last_study_date` mit der UTC-Tagesgrenze (`new Date().toISOString().split('T')[0]`). Wiener Nutzer, die nach 01:00 Ortszeit antworteten, wurden gegen den UTC-Vortag gewertet — dadurch blieben Streaks fälschlich stehen, obwohl ein Tag übersprungen wurde, oder wurden beim Tageswechsel nicht erhöht. Audit (2026-04-21): 40 von 59 Power-Nutzern hatten einen drift-behafteten `current_streak`. Fix: Intl.DateTimeFormat mit `timeZone: 'Europe/Vienna'` für Tagesbucketing (gleiches Muster wie `/api/stats/last7days`) plus Backfill-Script `scripts/backfill_current_streak.py`, das die gespeicherten Streaks gegen aufeinanderfolgende Wiener Kalendertage im `answer_history` neu berechnet. Post-Backfill: 0 Abweichung übrig. `longest_streak` wird nur nach oben korrigiert.",
+      en: "`/api/answer` compared `last_study_date` against a UTC day boundary (`new Date().toISOString().split('T')[0]`). Vienna users answering after 01:00 local time were scored against the previous UTC day — so streaks either stayed alive through a missed day or failed to increment on a new day. Audit (2026-04-21): 40 of 59 power users had drifted `current_streak`. Fix: `Intl.DateTimeFormat` with `timeZone: 'Europe/Vienna'` for day-bucketing (same pattern as `/api/stats/last7days`) plus backfill script `scripts/backfill_current_streak.py` that recomputes stored streaks against consecutive Vienna-local days in `answer_history`. Post-backfill: 0 drift remaining. `longest_streak` is only adjusted upward.",
+    },
+  },
+  {
+    date: "2026-04-22",
+    tag: "improvement",
+    title: {
+      de: "Neu: Offline-Modus, Cmd+K-Suche und 7-Sprachen-Übersetzung angekündigt",
+      en: "What's New: offline mode, Cmd+K search, and 7-language translations announced",
+    },
+    description: {
+      de: "Der „Was ist neu\"-Dialog zeigt Bestandsnutzern jetzt drei zuletzt ausgelieferte Funktionen, die bisher unentdeckt blieben: den Offline-Modus (100–500 Fragen vorab laden in Einstellungen → Offline-Modus), die Schnellsuche mit Cmd+K von jeder Seite aus sowie die Übersetzung von Erklärungen in Russisch, Arabisch, Englisch, Französisch, Türkisch, Ukrainisch und Serbisch. `CURRENT_VERSION` auf `2026-04-22` gesetzt, damit der Dialog einmalig für alle eingeloggten Nicht-Gast-Accounts wieder erscheint.",
+      en: "The \"What's New\" dialog now surfaces three recently-shipped features that were previously invisible to existing users: offline mode (pre-download 100–500 questions in Settings → Offline mode), Cmd+K quick search from every page, and explanation translation into Russian, Arabic, English, French, Turkish, Ukrainian and Serbian. `CURRENT_VERSION` bumped to `2026-04-22` so the dialog re-shows once for every logged-in non-guest account.",
+    },
+  },
+  {
+    date: "2026-04-22",
+    tag: "admin",
+    title: {
+      de: "Sitemap aktualisiert — alle öffentlichen Routen erfasst",
+      en: "Sitemap refreshed — every public-facing route covered",
+    },
+    description: {
+      de: "Neue dynamische Sitemap unter `src/app/sitemap.ts` (Next.js 15 MetadataRoute). Abdeckung erweitert um `/pricing`, `/impressum`, `/privacy`, `/terms` und `/changelog` — vorher fehlten sie in der statischen `public/sitemap.xml` (~2 Wochen stale). Prioritäten: `/` = 1.0, `/landing` + `/pricing` = 0.9, `/about` + `/materials` = 0.7, legale Seiten + `/changelog` = 0.5. `lastModified` wird bei jedem Build dynamisch auf das aktuelle Datum gesetzt.",
+      en: "New dynamic sitemap at `src/app/sitemap.ts` (Next.js 15 MetadataRoute). Coverage expanded to include `/pricing`, `/impressum`, `/privacy`, `/terms` and `/changelog` — previously missing from the static `public/sitemap.xml` (~2 weeks stale). Priorities: `/` = 1.0, `/landing` + `/pricing` = 0.9, `/about` + `/materials` = 0.7, legal pages + `/changelog` = 0.5. `lastModified` is set dynamically to the current date on each build.",
+    },
+  },
+  {
+    date: "2026-04-22",
+    tag: "admin",
+    title: {
+      de: "JSON-LD: Fake-AggregateRating entfernt (Schema-Policy)",
+      en: "JSON-LD: fake AggregateRating removed (schema policy)",
+    },
+    description: {
+      de: "Der JSON-LD-Strukturdaten-Block in `src/app/layout.tsx` enthielt ein hart kodiertes `aggregateRating` mit 4,8/156 Bewertungen — reale Daten aus der Nutzerumfrage: 23 Antworten, Durchschnitt 4,70. Google kann Websites mit fabrizierten Bewertungsdaten abstrafen, daher wurde der Block komplett entfernt. Wird wieder aufgenommen, sobald 100+ echte Bewertungen vorliegen, idealerweise dynamisch aus `user_feedback`.",
+      en: "The JSON-LD structured-data block in `src/app/layout.tsx` hard-coded an `aggregateRating` of 4.8/156 reviews — real user-data: 23 surveys, avg 4.70. Google can penalize sites with fabricated review metadata, so the block was deleted entirely. Will be re-introduced once there are 100+ real reviews, ideally wired dynamically from `user_feedback`.",
+    },
+  },
+  {
     date: "2026-04-21",
     tag: "admin",
     title: {

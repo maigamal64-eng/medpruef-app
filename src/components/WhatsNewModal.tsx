@@ -1,10 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Mountain, Pill, Calendar, Target, Star, MessageSquarePlus } from 'lucide-react'
+import { Mountain, Pill, Calendar, Target, Star, MessageSquarePlus, WifiOff, Search, Languages } from 'lucide-react'
 import { Dialog } from '@/components/ui'
 
-const CURRENT_VERSION = '2026-04-12'
+const CURRENT_VERSION = '2026-04-22'
 const STORAGE_KEY = 'medpruef_whats_new_seen'
 
 interface Feature {
@@ -15,9 +15,24 @@ interface Feature {
 
 const FEATURES: Feature[] = [
   {
+    icon: <WifiOff className="w-5 h-5 text-[var(--mp-cta-blue)]" />,
+    title: 'Offline-Modus ist live — Fragen vorab herunterladen',
+    description: 'Laden Sie 100–500 Fragen vorab in Einstellungen → Offline-Modus. Dann können Sie im Zug, im Flugzeug oder in der Kaffeepause lernen, auch ohne WLAN. Ihre Antworten werden synchronisiert, sobald Sie wieder online sind.',
+  },
+  {
+    icon: <Search className="w-5 h-5 text-[var(--mp-accent-teal)]" />,
+    title: 'Schnellsuche mit Cmd+K',
+    description: 'Drücken Sie Cmd+K (Mac) oder Strg+K (Windows), um sofort die Volltextsuche über alle 10.993 Fragen zu öffnen — ohne Mausklick, von jeder Seite aus.',
+  },
+  {
+    icon: <Languages className="w-5 h-5 text-[#8B5CF6]" />,
+    title: 'Erklärungen in 7 Sprachen',
+    description: 'Sie können jede Erklärung jetzt auf Russisch, Arabisch, Englisch, Französisch, Türkisch, Ukrainisch oder Serbisch lesen. Medizinische Fachbegriffe, Medikamentennamen und Leitlinien-Bezüge bleiben dabei erhalten.',
+  },
+  {
     icon: <Mountain className="w-5 h-5 text-[var(--mp-cta-blue)]" />,
-    title: 'KMP Innsbruck — 3.091 new questions',
-    description: 'The Cumulative Module Exam (KMP) from Med Uni Innsbruck is now available. Switch exams via the sidebar.',
+    title: 'KMP Innsbruck — 3.091 neue Fragen',
+    description: 'Die Kumulative Modulprüfung (KMP) der Med Uni Innsbruck ist jetzt verfügbar. Wechseln Sie die Prüfung über die Seitenleiste.',
   },
   {
     icon: <Pill className="w-5 h-5 text-[#8B5CF6]" />,

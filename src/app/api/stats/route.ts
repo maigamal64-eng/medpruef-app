@@ -1,17 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
+import { requireUser } from '@/lib/auth-guard'
 
 export const dynamic = 'force-dynamic'
 
+/**
+ * GET /api/stats — returns per-user gamification + per-topic accuracy.
+ *
+ * SECURITY: gated by `requireUser`. The body/query userId is IGNORED
+ * — the caller's identity comes from the auth-guard verified
+ * x-user-id header. This closes SEC-LAUNCH-01 (discovered 2026-04-22
+ * during launch-readiness audit): previously anyone with a user's
+ * UUID could read their gamification snapshot + per-topic mastery
+ * by calling /api/stats?userId=<uuid> unauthenticated. Same pattern
+ * as /api/user/topic-progress and /api/user/topic-strength.
+ */
 export async function GET(req: NextRequest) {
-  const sb = getServiceClient()
-  const userId = req.nextUrl.searchParams.get('userId')
+  const guard = await requireUser(req)
+  if ('error' in guard) return guard.error
+  const userId = guard.userId
 
-  if (!userId) return NextResponse.json({ error: 'Missing userId' }, { status: 400 })
+  const sb = getServiceClient()
 
   // Get gamification
   const { data: gam } = await sb.from('user_gamification').select('*').eq('user_id', userId).single()
-  
+
   // Get per-topic stats
   const { data: answers } = await sb
     .from('answer_history')
