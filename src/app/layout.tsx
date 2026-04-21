@@ -126,15 +126,33 @@ export default function RootLayout({
         <script
           dangerouslySetInnerHTML={{
             __html: `(function(){
+  // Stale-SW kill-switch — now time-bucketed instead of once-per-session
+  // (changed 2026-04-21 after Abobaker-case diagnosis). Previous guard
+  // used sessionStorage boolean 'medpruef_sw_reloaded' which NEVER
+  // cleared in the same browser session — if the reload cycle didn't
+  // actually purge the old SW (iOS Safari edge case), the user was
+  // trapped for the lifetime of that tab session. Now the flag is a
+  // timestamp; the kill-switch is allowed to re-try every 30 minutes.
   if(!('serviceWorker' in navigator))return;
-  try{if(sessionStorage.getItem('medpruef_sw_reloaded'))return;}catch(e){}
+  var LAST_KILL_KEY='medpruef_sw_last_kill';
+  var RETRY_MS=30*60*1000;
+  try{
+    var last=parseInt(sessionStorage.getItem(LAST_KILL_KEY)||'0',10);
+    if(last && (Date.now()-last)<RETRY_MS)return;
+  }catch(e){}
   var EXPECTED=${JSON.stringify(process.env.NEXT_PUBLIC_BUILD_ID || "")};
   function killStale(){
-    try{sessionStorage.setItem('medpruef_sw_reloaded','1');}catch(e){}
+    try{sessionStorage.setItem(LAST_KILL_KEY,String(Date.now()));}catch(e){}
     var p1=navigator.serviceWorker.getRegistrations().then(function(rs){return Promise.all(rs.map(function(r){return r.unregister();}));}).catch(function(){});
     var p2=('caches' in window)?caches.keys().then(function(ks){return Promise.all(ks.map(function(k){return caches.delete(k);}));}).catch(function(){}):Promise.resolve();
     Promise.all([p1,p2]).then(function(){location.reload();});
   }
+  // Expose a user-invocable escape hatch so stuck users (like the
+  // Apr-21 Abobaker case on iOS Safari PWA) can force a rebuild even
+  // if the SW never responds with a build-id. PWAInstall.tsx already
+  // surfaces a "Reload now" banner when the SW posts an update event
+  // — this is the belt-and-suspenders fallback when it doesn't.
+  try{window.__medpruefForceRefresh=killStale;}catch(e){}
   if(!navigator.serviceWorker.controller)return;
   var responded=false;
   var timer=setTimeout(function(){if(responded)return;responded=true;console.warn('[medpruef] stale SW: no build-id response, nuking');killStale();},1500);

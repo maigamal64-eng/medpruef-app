@@ -7,6 +7,29 @@ the Kumulative Modulprüfung (KMP) at the Medical University of Innsbruck.
 exam_type='kmp_innsbruck' in the DB; source_file uses 'KOALAMED_KMP6a' etc.
 for internal traceability.
 
+────────────────────────────────────────────────────────────────────
+TODO (pipeline regression — surfaced Apr 21 during kmp6a spot-check):
+This importer never calls `page.get_images()`. When KoalaMed PDFs
+embed clinical images (EKG/CT/MRT/Röntgen) alongside vignettes,
+those images are silently dropped — in the 2026-04-21 audit, 22 of
+24 flagged kmp6a questions had NO image in the source PDF at all
+(exporter-side loss), but 2 WERE present and simply never got
+attached because this script doesn't extract them.
+
+Next reimport should:
+  1. For each page, enumerate images via `page.get_images(full=True)`.
+  2. Filter out background chrome (tiny ≤1 KB decorative PNGs — the
+     KoalaMed header/footer glyphs show up as 6-8 tiny images per page).
+  3. Map each remaining clinical image (≥5 KB) to the nearest-below
+     question stem by Y-coordinate.
+  4. Upload to Supabase Storage `question-images/koalamed/<kmp_label>/<nid>.webp`
+     (convert to WebP during upload — see scripts/convert_images_to_webp.py
+     for the cwebp wrapper pattern).
+  5. Set `image_url` on the question row.
+
+Spot-check report + implementation notes: /tmp/kmp6a-spot-check-2026-04-21.md
+────────────────────────────────────────────────────────────────────
+
 Format (confirmed from deep sampling of Koalamed (1).pdf pages 3-6):
   - Each question has a stem line (may span multiple lines)
   - Choice lines are prefixed with either:
