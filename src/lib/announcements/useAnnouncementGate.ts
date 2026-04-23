@@ -1,0 +1,241 @@
+"use client";
+
+/**
+ * useAnnouncementGate — the single source of truth for which marketing
+ * surface is allowed to render on the current page.
+ *
+ * Why this exists:
+ *
+ * The soft-launch shipped with three announcement surfaces
+ * (CohortCountdownBanner + SoftLaunchWelcomeModal + ReferralShareFloater)
+ * each self-gated via independent localStorage keys. Result: on first
+ * touch to medpruef.com a logged-in post-onboarding user could see all
+ * three simultaneously — two of them pitching the same €25-75 referral
+ * bounty. Read as spammy. Post-soft-launch sprint §1.4 centralises the
+ * gate so at most ONE non-modal surface renders at any time, behaviour-
+ * earned, with a strict priority queue.
+ *
+ * Cadence (matches §1.4.2 of the sprint prompt):
+ *
+ *   Session 1, <5 Qs answered                → null (nothing)
+ *   Session 1, ≥5 Qs                         → 'cohort_banner'
+ *   Session 2+, orientation_modal not seen   → 'orientation_modal'
+ *   Session 3+ OR ≥25 Qs answered            → 'referral_floater'
+ *     AND orientation_modal seen
+ *     AND cohort_banner dismissed
+ *     AND (7-day cooldown respected)
+ *   Else                                     → 'cohort_banner' (if not dismissed)
+ *                                              OR null
+ *
+ * PaywallUpgradeModal is orthogonal — caller-triggered by the 150Q cap
+ * hit in /api/questions, never elected by this gate. GuestMigrationBanner
+ * is likewise self-gated on the guest check; this hook only arbitrates
+ * between the four non-guest surfaces.
+ *
+ * Cross-device coherence: the gate state lives in `user_announcements`
+ * (server-side). Every page load hits /api/announcements/state which
+ * returns the current row + bumps session_count if > 30 min idle.
+ * Components use `markSeen(surface)` to dismiss server-side; the hook
+ * returns an optimistic local update + POSTs in the background.
+ *
+ * Usage:
+ *
+ *     const { activeSurface, markSeen } = useAnnouncementGate();
+ *     if (activeSurface !== 'cohort_banner') return null;   // surface filters itself
+ *
+ *     <button onClick={() => markSeen('cohort_banner')}>✕</button>
+ *
+ * Added 2026-04-23 post-soft-launch.
+ */
+
+import { useEffect, useState, useCallback, useRef } from "react";
+import { authFetch } from "@/lib/authFetch";
+
+// ── Types ────────────────────────────────────────────────────────
+
+export type ActiveSurface =
+  | "cohort_banner"
+  | "orientation_modal"
+  | "referral_floater"
+  | null;
+
+export type SurfaceKey = "orientation_modal" | "cohort_banner" | "referral_floater";
+
+export interface AnnouncementState {
+  userId: string;
+  sessionCount: number;
+  qsAnsweredTotal: number;
+  orientationModalSeenAt: string | null;
+  cohortBannerDismissedAt: string | null;
+  referralFloaterDismissedAt: string | null;
+  lastSessionAt: string;
+}
+
+export interface UseAnnouncementGateResult {
+  /** The one surface elected for this page load, or null if nothing is allowed. */
+  activeSurface: ActiveSurface;
+  /** Raw server state, useful for debug or deep conditional rendering. */
+  state: AnnouncementState | null;
+  /** True while the initial /state fetch is in flight. */
+  loading: boolean;
+  /**
+   * Mark a surface as seen / dismissed. Optimistically updates local
+   * state so the next render drops the surface, then POSTs to
+   * /api/announcements/seen in the background.
+   */
+  markSeen: (surface: SurfaceKey) => Promise<void>;
+}
+
+// ── Cadence thresholds ───────────────────────────────────────────
+
+const MIN_QS_FOR_COHORT_BANNER = 5;
+const MIN_QS_FOR_REFERRAL_FLOATER = 25;
+const MIN_SESSION_FOR_REFERRAL_FLOATER = 3;
+const REFERRAL_FLOATER_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+// ── Gate computation ─────────────────────────────────────────────
+
+export function computeActiveSurface(state: AnnouncementState | null): ActiveSurface {
+  if (!state) return null;
+
+  const {
+    sessionCount,
+    qsAnsweredTotal,
+    orientationModalSeenAt,
+    cohortBannerDismissedAt,
+    referralFloaterDismissedAt,
+  } = state;
+
+  // Session 1, fewer than 5 Qs → nothing. Let the user experience
+  // the product before asking for anything.
+  if (sessionCount <= 1 && qsAnsweredTotal < MIN_QS_FOR_COHORT_BANNER) {
+    return null;
+  }
+
+  // Session 2+ and the user hasn't seen the orientation modal yet.
+  // This is the one modal-style surface we allow; fires once ever.
+  if (sessionCount >= 2 && !orientationModalSeenAt) {
+    return "orientation_modal";
+  }
+
+  // Referral floater is eligible when the user is genuinely engaged:
+  // either they've started their third session OR they've answered at
+  // least 25 questions cumulatively — AND they've already cleared the
+  // orientation modal + dismissed the cohort banner once — AND they're
+  // outside the 7-day cooldown on the floater itself.
+  const referralFloaterEligible =
+    (sessionCount >= MIN_SESSION_FOR_REFERRAL_FLOATER ||
+      qsAnsweredTotal >= MIN_QS_FOR_REFERRAL_FLOATER) &&
+    orientationModalSeenAt !== null &&
+    cohortBannerDismissedAt !== null &&
+    cooldownElapsed(referralFloaterDismissedAt, REFERRAL_FLOATER_COOLDOWN_MS);
+
+  if (referralFloaterEligible) {
+    return "referral_floater";
+  }
+
+  // Default: cohort banner if it hasn't been dismissed yet, else nothing.
+  // The banner stays informational — the sprint prompt explicitly calls
+  // for removing price-drop copy from it.
+  if (!cohortBannerDismissedAt && qsAnsweredTotal >= MIN_QS_FOR_COHORT_BANNER) {
+    return "cohort_banner";
+  }
+
+  return null;
+}
+
+function cooldownElapsed(timestampIso: string | null, cooldownMs: number): boolean {
+  if (!timestampIso) return true; // never dismissed → eligible
+  const dismissedAt = new Date(timestampIso).getTime();
+  return Date.now() - dismissedAt >= cooldownMs;
+}
+
+// ── Hook ─────────────────────────────────────────────────────────
+
+export function useAnnouncementGate(): UseAnnouncementGateResult {
+  const [state, setState] = useState<AnnouncementState | null>(null);
+  const [loading, setLoading] = useState(true);
+  // Track in-flight markSeen requests so we don't fire the same POST
+  // twice on a double-click.
+  const inFlight = useRef<Set<SurfaceKey>>(new Set());
+
+  // Fetch initial state on mount. The server also bumps session_count
+  // if this is a new session, which is why we must hit it every page
+  // load (not just first render of the whole SPA lifecycle).
+  useEffect(() => {
+    let cancelled = false;
+
+    authFetch("/api/announcements/state", {
+      // Skip the 401 redirect — unauthenticated callers shouldn't
+      // see announcements but they shouldn't be bounced either.
+      skipAuthRedirect: true,
+    })
+      .then((r) => {
+        if (r.status === 401) return null; // anon / guest — no gate
+        if (!r.ok) return null;
+        return r.json();
+      })
+      .then((data) => {
+        if (cancelled) return;
+        if (data && data.state) {
+          setState(data.state);
+        }
+        setLoading(false);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const markSeen = useCallback(async (surface: SurfaceKey): Promise<void> => {
+    if (inFlight.current.has(surface)) return;
+    inFlight.current.add(surface);
+
+    // Optimistic update — flip the local timestamp so the gate re-
+    // evaluates immediately. If the POST fails, the next page load
+    // will reconcile from the server.
+    setState((prev) => {
+      if (!prev) return prev;
+      const nowIso = new Date().toISOString();
+      if (surface === "orientation_modal") {
+        return { ...prev, orientationModalSeenAt: nowIso };
+      }
+      if (surface === "cohort_banner") {
+        return { ...prev, cohortBannerDismissedAt: nowIso };
+      }
+      if (surface === "referral_floater") {
+        return { ...prev, referralFloaterDismissedAt: nowIso };
+      }
+      return prev;
+    });
+
+    try {
+      const res = await authFetch("/api/announcements/seen", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ surface }),
+        skipAuthRedirect: true,
+      });
+      if (res.ok) {
+        const data = await res.json().catch(() => null);
+        if (data && data.state) {
+          setState(data.state);
+        }
+      }
+    } catch {
+      // The optimistic update already landed; the next mount will
+      // reconcile from the server.
+    } finally {
+      inFlight.current.delete(surface);
+    }
+  }, []);
+
+  const activeSurface = computeActiveSurface(state);
+
+  return { activeSurface, state, loading, markSeen };
+}

@@ -201,27 +201,23 @@ export default function FaqPage() {
           {/* Referrals */}
           <FaqSection id="referrals" title={copy.ref.title[lang]}>
             <p>{copy.ref.intro[lang]}</p>
-            <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <PayoutPill
-                amount="€25"
-                label={lang === "de" ? "Monatlich / 3 Monate" : "Monthly / 3 months"}
-              />
-              <PayoutPill
-                amount="€50"
-                label={lang === "de" ? "6 Monate / 12 Monate" : "6 months / 12 months"}
-              />
-              <PayoutPill
-                amount="€75"
-                label={lang === "de" ? "Juni-26-Kohorte" : "June 26 Cohort"}
-                highlight
-              />
-            </div>
             <ul className="list-disc pl-5 space-y-1.5 mt-4">
               <li>{copy.ref.b1[lang]}</li>
               <li>{copy.ref.b2[lang]}</li>
               <li>{copy.ref.b3[lang]}</li>
               <li>{copy.ref.b4[lang]}</li>
             </ul>
+            <p className="mt-4 text-sm">
+              <Link
+                href="/referrals"
+                className="text-[var(--mp-viridian)] hover:underline inline-flex items-center gap-1"
+              >
+                {lang === "de"
+                  ? "Alle Prämienstufen und aktuelle Guthaben auf der Empfehlungsseite ansehen"
+                  : "See all payout tiers and current credits on the referrals page"}
+                <ArrowRight className="w-3 h-3" />
+              </Link>
+            </p>
             <p className="mt-3 mp-small text-[var(--mp-fg-subtle)]">
               {copy.ref.sepa[lang]}
             </p>
@@ -319,38 +315,9 @@ function FaqSection({
   );
 }
 
-function PayoutPill({
-  amount,
-  label,
-  highlight = false,
-}: {
-  amount: string;
-  label: string;
-  highlight?: boolean;
-}) {
-  return (
-    <div
-      className="rounded-[12px] p-4 flex flex-col items-start gap-1"
-      style={{
-        background: highlight ? "var(--mp-success-bg)" : "var(--mp-surface-sunken)",
-        border: highlight
-          ? "1px solid rgba(0,123,95,0.3)"
-          : "1px solid var(--mp-border-subtle)",
-      }}
-    >
-      <span
-        className="mp-num font-display font-black leading-none"
-        style={{
-          fontSize: "22px",
-          color: highlight ? "var(--mp-viridian)" : "var(--mp-fg)",
-        }}
-      >
-        {amount}
-      </span>
-      <span className="mp-small text-[var(--mp-fg-muted)]">{label}</span>
-    </div>
-  );
-}
+/* PayoutPill was removed 2026-04-23 (post-soft-launch §1.4.9 trust
+ * audit — concrete payout amounts stripped from the FAQ; the authoritative
+ * tier table lives on /referrals). */
 
 /* ═══════════════════════ Copy ═══════════════════════ */
 

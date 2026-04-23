@@ -86,8 +86,8 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-04-23",
     tag: "feature",
     title: {
-      de: "Founders-Launch: 6 Monate Vollzugang für €114, zahlbar in Krypto",
-      en: "Founders' launch: 6 months of full access for €114, payable in crypto",
+      de: "Juni-26-Kohorte live: 6 Monate Vollzugang für €114, zahlbar in Krypto",
+      en: "June 26 Cohort live: 6 months of full access for €114, payable in crypto",
     },
     description: {
       de: "Neue Preisgestaltung auf `/pricing`: Founders-Tarif als dominante Karte mit Live-Krypto-Checkout (USDT/USDC über NOWPayments). Sechs Monate MedPrüf Pro zum einmaligen Frühbucher-Preis von €114 — €19/Monat-Äquivalent, nur 100 Plätze. Standardtarife (€29/Mo, €79 für 3 Mo, €149 für 6 Mo, €229 für 12 Mo) bleiben sichtbar mit Hinweis „Stripe kommt bald\" plus Warteliste-Dialog, der E-Mail, Prüfungstyp (Wien/Innsbruck/Pharma) und optional Prüfungsdatum erfasst. Nach erfolgreicher Krypto-Zahlung landet der Founder auf `/?welcome=founder` und erhält Konfetti + Willkommens-Toast. Referral-Mechanik im Footer: €40 pro Empfehlung, bis zu €400 Rückerstattung der Prüfungsgebühr bei Bestehen.",

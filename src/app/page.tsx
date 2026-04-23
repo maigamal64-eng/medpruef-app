@@ -32,7 +32,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import { getWeakTopics, type TopicStats } from "@/lib/weakness";
 import Link from "next/link";
 import WhatsNewModal from "@/components/WhatsNewModal";
-import SoftLaunchWelcomeModal from "@/components/SoftLaunchWelcomeModal";
+import OrientationModal from "@/components/OrientationModal";
 import ReferralShareFloater from "@/components/ReferralShareFloater";
 import UserSurveyModal from "@/components/UserSurveyModal";
 import ResumeSessionCard from "@/components/ResumeSessionCard";
@@ -169,11 +169,11 @@ export default function Home() {
       const lng = getLang();
       toast.success(
         lng === "de"
-          ? "Willkommen in der Juni-26-Kohorte!"
-          : "Welcome to the June 26 Cohort!",
+          ? "Willkommen in der Juni-26-Kohorte."
+          : "Welcome to the June 26 Cohort.",
         lng === "de"
-          ? "Dein Vollzugang ist 6 Monate lang aktiv — inkl. Pass-Until-You-Pass. Viel Erfolg bei der Prüfung!"
-          : "Your full access is active for 6 months — with Pass-Until-You-Pass. Good luck with the exam!"
+          ? "Dein Vollzugang ist 6 Monate lang aktiv — inkl. Pass-Until-You-Pass. Viel Erfolg bei der Prüfung."
+          : "Your full access is active for 6 months — with Pass-Until-You-Pass. Good luck with the exam."
       );
       setShowCohortConfetti(true);
       // Clean the URL so refresh doesn't retrigger.
@@ -881,7 +881,7 @@ export default function Home() {
 
       {/* Weakness toast — floating top-right, auto-dismiss */}
       <WhatsNewModal />
-      <SoftLaunchWelcomeModal />
+      <OrientationModal />
       <UserSurveyModal />
       <ReferralShareFloater />
       <WeaknessToast weakTopics={weakTopics} lang={lang} examSource={examSource} />

@@ -31,6 +31,7 @@ import {
 } from "@/components/ui";
 import { formatDate, formatTime, timeAgo, statusColor } from "../_components/helpers";
 import type { UserRow } from "../_components/types";
+import { UserQuickActions } from "../_components/UserQuickActions";
 
 export default function AdminUsersPage() {
   const toast = useToast();
@@ -398,15 +399,27 @@ export default function AdminUsersPage() {
                             </div>
                           </div>
                         ) : (
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                            <div><span className="text-[var(--mp-fg-subtle)] text-xs">ID:</span> <span className="font-mono text-[10px] break-all">{u.id}</span></div>
-                            <div><span className="text-[var(--mp-fg-subtle)] text-xs">Email:</span> <span className="text-xs">{u.email || "---"}</span></div>
-                            <div><span className="text-[var(--mp-fg-subtle)] text-xs">Telegram:</span> <span className="text-xs font-mono">{u.telegram_id || "---"}</span></div>
-                            <div><span className="text-[var(--mp-fg-subtle)] text-xs">Username:</span> <span className="text-xs">@{u.username || "---"}</span></div>
-                            <div><span className="text-[var(--mp-fg-subtle)] text-xs">Daily Today:</span> <span className="text-xs font-mono">{u.daily_today}</span></div>
-                            <div><span className="text-[var(--mp-fg-subtle)] text-xs">Last Study:</span> <span className="text-xs">{u.last_study ? formatDate(u.last_study) : "---"}</span></div>
-                            <div><span className="text-[var(--mp-fg-subtle)] text-xs">Last Active:</span> <span className="text-xs">{formatTime(u.last_active)}</span></div>
-                            <div><span className="text-[var(--mp-fg-subtle)] text-xs">Photo:</span> {u.photo_url ? <a href={u.photo_url} target="_blank" rel="noopener noreferrer" className="text-xs text-[var(--mp-cta-blue)] underline">View</a> : <span className="text-xs">---</span>}</div>
+                          <div className="space-y-3">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                              <div><span className="text-[var(--mp-fg-subtle)] text-xs">ID:</span> <span className="font-mono text-[10px] break-all">{u.id}</span></div>
+                              <div><span className="text-[var(--mp-fg-subtle)] text-xs">Email:</span> <span className="text-xs">{u.email || "---"}</span></div>
+                              <div><span className="text-[var(--mp-fg-subtle)] text-xs">Telegram:</span> <span className="text-xs font-mono">{u.telegram_id || "---"}</span></div>
+                              <div><span className="text-[var(--mp-fg-subtle)] text-xs">Username:</span> <span className="text-xs">@{u.username || "---"}</span></div>
+                              <div><span className="text-[var(--mp-fg-subtle)] text-xs">Daily Today:</span> <span className="text-xs font-mono">{u.daily_today}</span></div>
+                              <div><span className="text-[var(--mp-fg-subtle)] text-xs">Last Study:</span> <span className="text-xs">{u.last_study ? formatDate(u.last_study) : "---"}</span></div>
+                              <div><span className="text-[var(--mp-fg-subtle)] text-xs">Last Active:</span> <span className="text-xs">{formatTime(u.last_active)}</span></div>
+                              <div><span className="text-[var(--mp-fg-subtle)] text-xs">Photo:</span> {u.photo_url ? <a href={u.photo_url} target="_blank" rel="noopener noreferrer" className="text-xs text-[var(--mp-cta-blue)] underline">View</a> : <span className="text-xs">---</span>}</div>
+                            </div>
+                            <div className="pt-2 border-t border-[var(--mp-border-subtle)] flex items-center justify-between gap-3 flex-wrap">
+                              <div className="text-[10px] text-[var(--mp-fg-muted)] uppercase tracking-wider">
+                                Quick actions
+                              </div>
+                              <UserQuickActions
+                                userId={u.id}
+                                userEmail={u.email}
+                                onChanged={fetchUsers}
+                              />
+                            </div>
                           </div>
                         )}
                       </td>

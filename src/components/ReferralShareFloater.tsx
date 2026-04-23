@@ -1,102 +1,83 @@
-'use client'
-
-import { useEffect, useState } from 'react'
-import { usePathname } from 'next/navigation'
-import Link from 'next/link'
-import { Gift, X } from 'lucide-react'
+"use client";
 
 /**
- * ReferralShareFloater — corner CTA nudging active users to share their
- * referral link. Soft-launch v1 (2026-04-23).
+ * ReferralShareFloater — bottom-right pill nudging engaged users to
+ * share their referral link.
  *
- * Show rules (all must be true):
- *   - Logged in, non-guest, post-onboarding.
- *   - On the home dashboard (/), the flashcards page, or /quiz (i.e.
- *     active-study surfaces — not legal/settings/auth pages).
- *   - User has completed at least 5 questions in their history
- *     (signal: the dashboard has rendered StatsCard with answered > 5).
- *     We don't block on this — we trust the page's own rendering — we
- *     just wait 6 seconds after mount so we don't greet the user with
- *     a referral nag.
- *   - Not dismissed in the last 7 days (localStorage timestamp).
+ * Post-soft-launch sprint §1.4.4 rewrite:
  *
- * Positioning:
- *   - Bottom-right floating pill, above the FeedbackWidget but below
- *     any active toast. Mobile: full-width bottom-banner (stacked above
- *     BottomNav via z-index + bottom offset).
+ *   - Visibility is elected by the shared announcement gate. Never
+ *     stacks with OrientationModal or CohortCountdownBanner. See
+ *     `src/lib/announcements/useAnnouncementGate.ts`.
+ *   - Gate enforces: session 3+ OR ≥25 Qs answered AND orientation
+ *     modal seen AND cohort banner dismissed. So this never fires on
+ *     first touch — only after the user has invested effort.
+ *   - Copy no longer name-drops "€25–75" on the first-touch surface.
+ *     The dollar figure stays on /referrals where the user lands with
+ *     intent. Here we say "Empfehle MedPrüf" without a price anchor.
+ *   - Safe-area inset on iPhone 14 Pro Max home indicator fixed via
+ *     `env(safe-area-inset-bottom)`.
+ *   - 7-day cooldown after dismiss preserved, enforced server-side.
+ *   - 6s mount delay preserved so we don't greet the user with a nag.
  *
- * NOTE: this component does NOT fetch the referral code — it links to
- * /referrals where the existing referral page handles code generation,
- * payouts, etc. Keeps this component cheap and decoupled.
+ * Still renders only on active-study paths (`/`, `/flashcards`,
+ * `/quiz`) — no point pitching a referral while the user is reading
+ * the privacy policy.
  */
 
-const STORAGE_KEY = 'medpruef_referral_floater_dismissed_at'
-const DISMISS_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000 // 7 days
-const ALLOWED_PATHS = ['/', '/flashcards', '/quiz']
-const MOUNT_DELAY_MS = 6000
+import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
+import Link from "next/link";
+import { Gift, X } from "lucide-react";
+import {
+  useAnnouncementGate,
+  type SurfaceKey,
+} from "@/lib/announcements/useAnnouncementGate";
+
+const SURFACE: SurfaceKey = "referral_floater";
+const ALLOWED_PATHS = ["/", "/flashcards", "/quiz"];
+const MOUNT_DELAY_MS = 6000;
 
 export default function ReferralShareFloater() {
-  const pathname = usePathname()
-  const [visible, setVisible] = useState(false)
+  const pathname = usePathname();
+  const { activeSurface, markSeen } = useAnnouncementGate();
+  const [mountedForLongEnough, setMountedForLongEnough] = useState(false);
 
+  // 6-second mount delay: don't greet the user with a referral pitch.
+  // The gate already enforces the 25-Qs threshold, but the delay is an
+  // extra layer of politeness — they just loaded the page, let them
+  // look at it first.
   useEffect(() => {
-    if (!pathname) return
-    if (!ALLOWED_PATHS.includes(pathname)) return
+    const timer = setTimeout(() => setMountedForLongEnough(true), MOUNT_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, []);
 
-    try {
-      // Gate 1: user logged in + non-guest?
-      const raw = localStorage.getItem('medpruef_session')
-      if (!raw) return
-      const session = JSON.parse(raw || '{}')
-      const userId = session?.user?.id || ''
-      if (!userId || userId.startsWith('guest_')) return
-
-      // Gate 2: post-onboarding?
-      const onboarding = JSON.parse(
-        localStorage.getItem('medpruef_onboarding') || '{}'
-      )
-      if (!onboarding?.completedAt) return
-
-      // Gate 3: cooldown from last dismiss?
-      const dismissedAtRaw = localStorage.getItem(STORAGE_KEY)
-      if (dismissedAtRaw) {
-        const dismissedAt = parseInt(dismissedAtRaw, 10)
-        if (
-          !isNaN(dismissedAt) &&
-          Date.now() - dismissedAt < DISMISS_COOLDOWN_MS
-        ) {
-          return
-        }
-      }
-
-      // Delayed reveal — avoid greeting users with a nag.
-      const timer = setTimeout(() => setVisible(true), MOUNT_DELAY_MS)
-      return () => clearTimeout(timer)
-    } catch {
-      // silent
-    }
-  }, [pathname])
+  if (!pathname || !ALLOWED_PATHS.includes(pathname)) return null;
+  if (activeSurface !== SURFACE) return null;
+  if (!mountedForLongEnough) return null;
 
   const handleDismiss = () => {
-    setVisible(false)
-    try {
-      localStorage.setItem(STORAGE_KEY, String(Date.now()))
-    } catch {}
-  }
-
-  if (!visible) return null
+    void markSeen(SURFACE);
+  };
 
   return (
     <div
       role="region"
       aria-label="Empfehlungsprogramm"
-      className="fixed z-[55] bottom-20 right-4 sm:bottom-4 sm:right-4 max-w-sm animate-fade-in"
+      className="fixed z-[55] right-4 max-w-sm animate-fade-in"
+      style={{
+        // Respect the iPhone 14 Pro Max home-indicator inset. On
+        // devices without a home indicator, `env(safe-area-inset-
+        // bottom)` resolves to 0 and the calc falls back to the
+        // existing 80px (mobile) / 16px (sm+) offset.
+        bottom: "calc(env(safe-area-inset-bottom, 0px) + 5rem)",
+      }}
     >
       <div className="relative rounded-[var(--mp-r-card)] bg-[var(--mp-surface)] border border-[var(--mp-border)] shadow-xl p-4 pr-10">
         <button
           type="button"
           onClick={handleDismiss}
-          className="absolute top-2 right-2 text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg)] p-1"
+          className="absolute top-2 right-2 text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg)] p-2 min-w-[44px] min-h-[44px] flex items-center justify-center"
           aria-label="Hinweis schließen"
         >
           <X className="w-4 h-4" aria-hidden />
@@ -104,26 +85,23 @@ export default function ReferralShareFloater() {
 
         <div className="flex items-start gap-3">
           <div className="w-9 h-9 rounded-[var(--mp-r-card)] bg-[var(--mp-cta-blue)]/10 flex items-center justify-center flex-shrink-0">
-            <Gift
-              className="w-5 h-5 text-[var(--mp-cta-blue)]"
-              aria-hidden
-            />
+            <Gift className="w-5 h-5 text-[var(--mp-cta-blue)]" aria-hidden />
           </div>
           <div className="min-w-0">
             <p className="text-sm font-semibold text-[var(--mp-fg)] leading-snug">
-              Empfehle MedPrüf — verdiene €25–75 pro Anmeldung
+              Empfehle MedPrüf
             </p>
             <p className="text-xs text-[var(--mp-fg-subtle)] mt-1 leading-relaxed">
-              Plus €400 Prüfungsgebühren-Rückzahlung, wenn du beim ersten
-              Mal bestehst.
+              Hilf anderen Prüflingen — und verdien Cash-Belohnungen,
+              wenn sie ein Abo abschließen.
             </p>
             <div className="mt-3 flex items-center gap-2">
               <Link
-                href="/referrals?utm_source=floater&utm_medium=floater&utm_campaign=soft_launch_v1"
-                onClick={() => setVisible(false)}
-                className="mp-btn mp-btn--primary text-xs px-3 py-1.5"
+                href="/referrals?utm_source=floater&utm_medium=floater&utm_campaign=post_launch"
+                onClick={handleDismiss}
+                className="mp-btn mp-btn--primary text-xs px-3 py-1.5 min-h-[44px] flex items-center justify-center"
               >
-                Link holen
+                Details ansehen
               </Link>
               <button
                 type="button"
@@ -137,5 +115,5 @@ export default function ReferralShareFloater() {
         </div>
       </div>
     </div>
-  )
+  );
 }

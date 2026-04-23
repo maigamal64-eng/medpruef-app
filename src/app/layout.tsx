@@ -46,9 +46,14 @@ export const metadata: Metadata = {
   },
   title: {
     default: "MedPrüf — Austrian Kenntnisprüfung Preparation (Vienna)",
-    template: "%s | MedPrüf",
+    // Per-page titles are already formatted as "{Page} — MedPrüf" in
+    // each route's metadata, so the template uses `%s` verbatim — we
+    // do NOT want a trailing " | MedPrüf" on a value that already ends
+    // with "— MedPrüf".
+    template: "%s",
   },
-  description: "Prepare for Austrian medical exams (Kenntnisprüfung Wien, KMP Innsbruck, Pharmakologie) with 10,993+ clinical questions across 16 specialties. Exam simulation, flashcards, spaced repetition, performance analytics. Built for foreign doctors.",
+  description:
+    "Specialized prep for the Austrian Kenntnisprüfung Wien, KMP Innsbruck, and Pharmakologie exams. 150 questions free — no credit card.",
   keywords: [
     "Kenntnisprüfung", "Austrian medical exam", "Vienna medical license",
     "SIP 4", "SIP 5", "medical exam preparation", "Ärztekammer Wien",
@@ -72,14 +77,16 @@ export const metadata: Metadata = {
     locale: "de_AT",
     url: "https://medpruf.com",
     siteName: "MedPrüf",
-    title: "MedPrüf — Austrian Kenntnisprüfung Preparation",
-    description: "10,993+ clinical questions for Austrian medical licensing (Kenntnisprüfung Wien, KMP Innsbruck, Pharmakologie). Exam simulation, flashcards, analytics. Built for foreign doctors.",
+    title: "MedPrüf — Austrian Kenntnisprüfung Preparation (Vienna)",
+    description:
+      "Specialized prep for the Austrian Kenntnisprüfung Wien, KMP Innsbruck, and Pharmakologie exams. 150 questions free — no credit card.",
     images: [{ url: "/brand/og-image.png", width: 1200, height: 630, alt: "MedPrüf — Kenntnisprüfung Preparation" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "MedPrüf — Austrian Kenntnisprüfung Preparation",
-    description: "10,993+ clinical questions for Austrian medical exams. Built for foreign doctors.",
+    title: "MedPrüf — Austrian Kenntnisprüfung Preparation (Vienna)",
+    description:
+      "Specialized prep for the Austrian Kenntnisprüfung Wien, KMP Innsbruck, and Pharmakologie exams. 150 questions free — no credit card.",
     images: ["/brand/og-image.png"],
   },
 };
@@ -134,6 +141,12 @@ export default function RootLayout({
   // actually purge the old SW (iOS Safari edge case), the user was
   // trapped for the lifetime of that tab session. Now the flag is a
   // timestamp; the kill-switch is allowed to re-try every 30 minutes.
+  //
+  // The YES/NO decision mirror lives at src/lib/sw-killswitch.ts as a
+  // pure function — see the matching unit test at
+  // tests/unit/lib/sw-killswitch.test.ts for the exhaustive case list.
+  // If you change the branches below, update the pure function + its
+  // tests in the SAME commit (post-soft-launch §1.4.8).
   if(!('serviceWorker' in navigator))return;
   var LAST_KILL_KEY='medpruef_sw_last_kill';
   var RETRY_MS=30*60*1000;
@@ -142,6 +155,16 @@ export default function RootLayout({
     if(last && (Date.now()-last)<RETRY_MS)return;
   }catch(e){}
   var EXPECTED=${JSON.stringify(process.env.NEXT_PUBLIC_BUILD_ID || "")};
+  // Dev-fallback sentinel — mirrors src/lib/sw-killswitch.ts.
+  // Rule 2: never reload when EXPECTED is empty or the literal 'dev-local'.
+  // Rule 1: reload when swBuild is null (SW silent past timeout).
+  // Rule 3: do NOT reload on empty swBuild — old SW may respond without an id.
+  function shouldReload(swBuild){
+    if(!EXPECTED||EXPECTED==='dev-local')return false;
+    if(swBuild===null)return true;
+    if(swBuild==='')return false;
+    return EXPECTED!==swBuild;
+  }
   function killStale(){
     try{sessionStorage.setItem(LAST_KILL_KEY,String(Date.now()));}catch(e){}
     var p1=navigator.serviceWorker.getRegistrations().then(function(rs){return Promise.all(rs.map(function(r){return r.unregister();}));}).catch(function(){});
@@ -156,14 +179,14 @@ export default function RootLayout({
   try{window.__medpruefForceRefresh=killStale;}catch(e){}
   if(!navigator.serviceWorker.controller)return;
   var responded=false;
-  var timer=setTimeout(function(){if(responded)return;responded=true;console.warn('[medpruef] stale SW: no build-id response, nuking');killStale();},1500);
+  var timer=setTimeout(function(){if(responded)return;responded=true;if(shouldReload(null)){console.warn('[medpruef] stale SW: no build-id response, nuking');killStale();}},1500);
   function onMsg(ev){
     if(responded)return;
     if(!ev.data||ev.data.type!=='BUILD_ID')return;
     responded=true;clearTimeout(timer);
     navigator.serviceWorker.removeEventListener('message',onMsg);
     var swBuild=ev.data.buildId||'';
-    if(EXPECTED&&swBuild&&swBuild!==EXPECTED){console.warn('[medpruef] SW build mismatch:',swBuild,'!=',EXPECTED);killStale();}
+    if(shouldReload(swBuild)){console.warn('[medpruef] SW build mismatch:',swBuild,'!=',EXPECTED);killStale();}
   }
   navigator.serviceWorker.addEventListener('message',onMsg);
   try{navigator.serviceWorker.controller.postMessage({type:'GET_BUILD_ID'});}catch(e){}

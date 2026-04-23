@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Datenschutz | MedPrüf",
+  title: "Datenschutz — MedPrüf",
   description:
     "Datenschutzerklärung: welche Daten wir erheben, warum, wie lange, und welche Rechte Sie haben gemäß DSGVO.",
   alternates: {
@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     url: "https://medpruf.com/privacy",
-    title: "Datenschutz | MedPrüf",
+    title: "Datenschutz — MedPrüf",
     description:
       "Datenschutzerklärung: welche Daten wir erheben, warum, wie lange, und welche Rechte Sie haben gemäß DSGVO.",
     images: [{ url: "/brand/og-image.png", width: 1200, height: 630 }],

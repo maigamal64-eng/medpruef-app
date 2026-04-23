@@ -39,7 +39,8 @@ import BottomNav from "@/components/BottomNav";
 import LanguageToggle from "@/components/LanguageToggle";
 import ThemeToggle from "@/components/ThemeToggle";
 import TopicIcon from "@/components/TopicIcon";
-import { Layers, RotateCcw, Inbox, History } from "lucide-react";
+import { Layers, RotateCcw, Inbox, History, Check, ShieldCheck, Lock } from "lucide-react";
+import { getPaywallCopy } from "@/lib/paywall-copy";
 
 type Lang = "de" | "en";
 type Confidence = "again" | "hard" | "good" | "easy";
@@ -277,24 +278,64 @@ function FlashcardContent() {
     // Free user exhausted the 150-question slice for this exam. Nudge
     // to /pricing instead of showing the generic "no questions" state
     // — they didn't run out of content, they ran out of free tier.
+    //
+    // Copy pulled from src/lib/paywall-copy.ts so this surface and the
+    // `PaywallUpgradeModal` present the identical offer, same bullet
+    // order, same reassurance line (post-soft-launch §1.4.7).
+    const paywallCopy = getPaywallCopy({ lang });
+    const pricingHref =
+      "/pricing?utm_source=flashcards_paywall&utm_medium=fullbleed&utm_campaign=paywall_v1";
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen px-4 bg-[var(--mp-surface-sunken)]">
-        <div className="text-center animate-fade-in max-w-md">
-          <Layers className="w-12 h-12 text-[var(--mp-viridian)] mx-auto mb-4" />
-          <h2 className="mp-h2 mb-2">
-            {lang === "de" ? "Freie 150 Karten durch" : "Free 150 cards complete"}
-          </h2>
+      <div className="flex flex-col items-center justify-center min-h-screen px-4 py-12 bg-[var(--mp-surface-sunken)]">
+        <div className="mp-card text-center animate-fade-in max-w-md w-full p-6 sm:p-8">
+          <Layers
+            className="w-12 h-12 text-[var(--mp-viridian)] mx-auto mb-4"
+            aria-hidden
+          />
+          <h2 className="mp-h2 mb-2">{paywallCopy.title}</h2>
           <p className="text-[var(--mp-fg-muted)] mb-6">
-            {lang === "de"
-              ? "Hol dir Pro für alle 10.993 Fragen plus Wiederholungsplan, Mock-Prüfung und die Juni-26-Garantie."
-              : "Upgrade to unlock all 10,993 questions plus spaced repetition, mock exam, and the June 26 Cohort pass-guarantee."}
+            {paywallCopy.description}
           </p>
+
+          <div className="flex items-start gap-3 p-3 mb-5 rounded-[var(--mp-r-card)] bg-[var(--mp-surface-sunken)] text-left">
+            <Lock
+              className="w-5 h-5 text-[var(--mp-cta-blue)] flex-shrink-0 mt-0.5"
+              aria-hidden
+            />
+            <p className="text-sm text-[var(--mp-fg)]">
+              {paywallCopy.milestoneIntro}{" "}
+              <span className="text-[var(--mp-fg-subtle)]">
+                {paywallCopy.milestoneFollowup}
+              </span>
+            </p>
+          </div>
+
+          <ul className="space-y-2 mb-6 text-left">
+            {paywallCopy.bullets.map((b, i) => (
+              <li key={i} className="flex items-start gap-2 text-sm">
+                <Check
+                  className="w-4 h-4 text-[var(--mp-accent-teal)] flex-shrink-0 mt-0.5"
+                  aria-hidden
+                />
+                <span className="text-[var(--mp-fg)]">{b}</span>
+              </li>
+            ))}
+          </ul>
+
           <Link
-            href="/pricing"
-            className="mp-btn mp-btn-primary inline-flex items-center gap-2"
+            href={pricingHref}
+            className="mp-btn mp-btn--primary mp-btn--lg inline-flex items-center justify-center gap-2 w-full"
           >
-            {lang === "de" ? "Pläne ansehen" : "See plans"}
+            {paywallCopy.primaryCta}
           </Link>
+
+          <div className="flex items-center justify-center gap-2 text-xs text-[var(--mp-fg-subtle)] pt-4">
+            <ShieldCheck
+              className="w-3.5 h-3.5 text-[var(--mp-accent-teal)]"
+              aria-hidden
+            />
+            <span>{paywallCopy.reassurance}</span>
+          </div>
         </div>
       </div>
     );

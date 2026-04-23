@@ -184,8 +184,8 @@ export default function PricingPage() {
       if (r.ok) {
         toast.success(
           lang === "de"
-            ? "Sie stehen auf der Warteliste!"
-            : "You're on the waitlist!",
+            ? "Sie stehen auf der Warteliste."
+            : "You're on the waitlist.",
           lang === "de"
             ? "Wir melden uns, sobald Stripe live ist."
             : "We'll notify you when Stripe goes live."
@@ -278,8 +278,8 @@ export default function PricingPage() {
       price: "€79",
       cadence: { de: "für 3 Monate", en: "for 3 months" },
       desc: {
-        de: "~€26/Monat — ideal für eine volle Prüfungsphase, Vollzugang.",
-        en: "~€26/mo — ideal for one full exam cycle, all-access.",
+        de: "Ideal für eine volle Prüfungsphase. Vollzugang zu allen 3 Prüfungstypen.",
+        en: "Ideal for one full exam cycle. All-access across all 3 exam types.",
       },
     },
     {
@@ -287,8 +287,8 @@ export default function PricingPage() {
       price: "€149",
       cadence: { de: "für 6 Monate", en: "for 6 months" },
       desc: {
-        de: "~€25/Monat — eine ganze Saison lernen, alle 3 Prüfungstypen.",
-        en: "~€25/mo — a full semester of prep, all 3 exam types.",
+        de: "Eine ganze Saison lernen, alle 3 Prüfungstypen.",
+        en: "A full semester of prep, all 3 exam types.",
       },
     },
     {
@@ -296,8 +296,8 @@ export default function PricingPage() {
       price: "€229",
       cadence: { de: "für 12 Monate", en: "for 12 months" },
       desc: {
-        de: "~€19/Monat — maximale Prüfungsbereitschaft · inkl. Pass-Until-You-Pass.",
-        en: "~€19/mo — maximum exam readiness · includes Pass-Until-You-Pass.",
+        de: "Maximale Prüfungsbereitschaft · inkl. Pass-Until-You-Pass.",
+        en: "Maximum exam readiness · includes Pass-Until-You-Pass.",
       },
       puyp: true,
     },
@@ -847,8 +847,8 @@ function CohortFeaturedCard({
             </div>
             <p className="text-sm text-[var(--mp-fg-muted)] mt-1.5">
               {lang === "de"
-                ? "für 6 Monate — entspricht €19/Monat"
-                : "for 6 months — €19/mo equivalent"}
+                ? "für 6 Monate Vollzugang, inkl. Pass-Until-You-Pass-Garantie"
+                : "6 months of all-access, with Pass-Until-You-Pass guarantee"}
             </p>
             <p
               className="mp-small mt-2 inline-flex items-center gap-1.5"
@@ -985,6 +985,10 @@ function StandardTierRow({
 /* ═══════════════════════ Referral block ═══════════════════════ */
 
 function ReferralBlock({ lang }: { lang: Lang }) {
+  // Post-soft-launch §1.4.9 trust audit: concrete per-tier payout amounts
+  // (€25 / €50 / €75) are strictly owned by /referrals. The pricing page
+  // only points users there — one source of truth for the exact figures
+  // avoids copy drift and keeps first-touch surfaces clean.
   return (
     <div
       className="rounded-[var(--mp-r-card)] overflow-hidden p-6 md:p-7"
@@ -1001,79 +1005,24 @@ function ReferralBlock({ lang }: { lang: Lang }) {
       </div>
       <h3 className="mp-h3 mb-2">
         {lang === "de"
-          ? "Lade Prüfungskandidat:innen ein — €25 / €50 / €75 pro Empfehlung"
-          : "Invite fellow Prüflinge — €25 / €50 / €75 per referral"}
+          ? "Lade Prüfungskandidat:innen ein — gestaffelte Prämien pro Empfehlung"
+          : "Invite fellow Prüflinge — tiered rewards per referral"}
       </h3>
       <p className="mp-body text-[var(--mp-fg-muted)] mb-4 max-w-2xl text-sm leading-relaxed">
         {lang === "de"
-          ? "Je nachdem, welches Abo deine Empfehlung abschließt. Auszahlung in USDT oder über Wise (kein SEPA mehr). 30-Tage-Sperrfrist nach Zahlungseingang. Bis zu €600 pro Jahr."
-          : "Payout depends on which plan your referral signs up for. Paid in USDT or via Wise (no SEPA). 30-day hold after their payment clears. Up to €600 per year."}
+          ? "Die Prämienhöhe hängt vom gewählten Tarif der empfohlenen Person ab. Auszahlung in USDT oder über Wise (kein SEPA). 30-Tage-Sperrfrist nach Zahlungseingang."
+          : "The reward depends on which plan your referral picks. Paid in USDT or via Wise (no SEPA). 30-day hold after their payment clears."}
       </p>
-
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-        <ReferralTier
-          payout="€25"
-          label={
-            lang === "de" ? "Monatlich / 3 Monate" : "Monthly / 3 months"
-          }
-        />
-        <ReferralTier
-          payout="€50"
-          label={
-            lang === "de" ? "6 Monate / 12 Monate" : "6 months / 12 months"
-          }
-        />
-        <ReferralTier
-          payout="€75"
-          label={
-            lang === "de"
-              ? "Juni-26-Kohorte"
-              : "June 26 Cohort"
-          }
-          highlight
-        />
-      </div>
 
       <Link
         href="/referrals"
         className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--mp-viridian)] hover:underline"
       >
-        {lang === "de" ? "Zum Empfehlungs-Dashboard" : "Go to referral dashboard"}
+        {lang === "de"
+          ? "Prämienstufen und Dashboard ansehen"
+          : "See payout tiers and dashboard"}
         <ArrowRight className="w-3.5 h-3.5" />
       </Link>
-    </div>
-  );
-}
-
-function ReferralTier({
-  payout,
-  label,
-  highlight = false,
-}: {
-  payout: string;
-  label: string;
-  highlight?: boolean;
-}) {
-  return (
-    <div
-      className="rounded-[12px] p-4 flex flex-col items-start gap-1"
-      style={{
-        background: highlight ? "var(--mp-success-bg)" : "var(--mp-surface-sunken)",
-        border: highlight
-          ? "1px solid rgba(0,123,95,0.3)"
-          : "1px solid var(--mp-border-subtle)",
-      }}
-    >
-      <span
-        className="mp-num font-display font-black leading-none"
-        style={{
-          fontSize: "24px",
-          color: highlight ? "var(--mp-viridian)" : "var(--mp-fg)",
-        }}
-      >
-        {payout}
-      </span>
-      <span className="mp-small text-[var(--mp-fg-muted)]">{label}</span>
     </div>
   );
 }

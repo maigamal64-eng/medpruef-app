@@ -1,18 +1,13 @@
 import { redirect } from "next/navigation";
 
 /**
- * /admin → /admin/dashboard.
+ * /admin → /admin/overview.
  *
- * The admin UI is split across nested routes (dashboard, users,
- * questions, analytics, feedback, changelog, system). Each tab is its
- * own page under this folder, and the shared shell (header + tab
- * strip + auth guard) lives in layout.tsx. This root page exists only
- * to redirect the bare /admin URL to the default dashboard tab.
- *
- * Historical context: pre-split this file was a 2,300-LOC monolith
- * with all 7 tabs rendered conditionally on local state. Split as
- * part of the MPDS burndown backlog item #14.
+ * Old redirect target was /admin/dashboard; flipped to /admin/overview
+ * on 2026-04-23 as part of the admin revamp (§2.1). The /admin/dashboard
+ * route still exists as a thin 301 stub for one release cycle — see
+ * next.config.ts redirects.
  */
 export default function AdminPage() {
-  redirect("/admin/dashboard");
+  redirect("/admin/overview");
 }

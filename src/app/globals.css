@@ -1004,3 +1004,22 @@ textarea:focus {
   stroke-width: 1.75;
   stroke-linecap: round; stroke-linejoin: round;
 }
+
+/*
+ * Cookie banner placement (post-soft-launch §1.4.6.2 fix).
+ *
+ * Mobile (<768px): compact bottom-right pill. Lifts above the mobile
+ * BottomNav (h-16 = 4rem) plus the iOS home-indicator safe area so the
+ * pill never collides with native system UI OR the app's own nav.
+ *
+ * Desktop (>=768px): centered bottom sheet, 1rem above the bottom of
+ * the viewport (the original layout — never had occlusion issues).
+ */
+.mp-cookie-banner {
+  bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
+}
+@media (min-width: 768px) {
+  .mp-cookie-banner {
+    bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  }
+}

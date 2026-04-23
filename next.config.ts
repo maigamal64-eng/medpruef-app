@@ -69,9 +69,20 @@ const nextConfig: NextConfig = {
   },
 
   async redirects() {
-    if (!IS_PRODUCTION) return [];
+    // Admin IA revamp (2026-04-23 §2.1) — legacy /admin/* routes → new homes.
+    // Temporary for one release cycle so bookmarked URLs don't 404; remove
+    // these once [name] confirms no-one is hitting them in logs.
+    const adminLegacyRedirects = [
+      { source: "/admin/dashboard", destination: "/admin/overview" },
+      { source: "/admin/analytics", destination: "/admin/overview" },
+      { source: "/admin/system", destination: "/admin/env" },
+      { source: "/admin/changelog", destination: "/admin/overview" },
+    ].map((r) => ({ ...r, permanent: false }));
+
+    if (!IS_PRODUCTION) return adminLegacyRedirects;
 
     return [
+      ...adminLegacyRedirects,
       // Catch-all: any .vercel.app host (old project name, stale preview
       // aliases, the old `medpruef-git-main-*.vercel.app` branch alias) →
       // canonical domain. Production deployments are served from the Vercel

@@ -104,6 +104,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Failed to record answer" }, { status: 500 });
   }
 
+  // 1a. Bump user_announcements.qs_answered_total — the announcement
+  // gate uses this to decide when the OrientationModal / cohort banner
+  // / referral floater are eligible to fire (cadence rules in
+  // src/lib/announcements/useAnnouncementGate.ts). Non-critical: row is
+  // upserted if missing, errors are logged but don't fail the request.
+  try {
+    await sb.rpc("increment_user_announcements_qs", { p_user_id: userId });
+  } catch (announceErr) {
+    console.error("[answer] user_announcements bump:", announceErr);
+  }
+
   // 1b. user_topic_strength — race-safe UPSERT + counter increment via RPC.
   // This is the cross-device weakness signal that replaces the legacy
   // localStorage-only `medpruef_quiz_results` store (backlog #13, 2026-04-21).

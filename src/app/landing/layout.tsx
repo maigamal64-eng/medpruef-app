@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "MedPrüf — Pass Your Austrian Kenntnisprüfung | Vienna Medical Exam Prep",
-  description: "Prepare for the Austrian Kenntnisprüfung (Vienna) with 10,993+ clinical questions, exam simulation, flashcards, and performance analytics. Free to start. Built for foreign doctors seeking Austrian medical licensure.",
+  title: "Prüfungsvorbereitung — MedPrüf",
+  description:
+    "Specialized prep for the Austrian Kenntnisprüfung Wien, KMP Innsbruck, and Pharmakologie exams. 150 questions free — no credit card.",
   keywords: [
     "Kenntnisprüfung", "Kenntnisprüfung preparation", "Austrian medical exam",
     "Vienna medical license", "SIP 4", "SIP 5", "medical exam questions",
@@ -17,9 +18,17 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     url: "https://medpruf.com/landing",
-    title: "MedPrüf — Pass Your Austrian Kenntnisprüfung",
-    description: "10,993+ clinical questions for the Vienna Kenntnisprüfung. Exam simulation, flashcards, analytics. Free to start — no credit card required.",
+    title: "Prüfungsvorbereitung — MedPrüf",
+    description:
+      "Specialized prep for the Austrian Kenntnisprüfung Wien, KMP Innsbruck, and Pharmakologie exams. 150 questions free — no credit card.",
     images: [{ url: "/brand/og-image.png", width: 1200, height: 630 }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Prüfungsvorbereitung — MedPrüf",
+    description:
+      "Specialized prep for the Austrian Kenntnisprüfung Wien, KMP Innsbruck, and Pharmakologie exams. 150 questions free — no credit card.",
+    images: ["/brand/og-image.png"],
   },
 };
 

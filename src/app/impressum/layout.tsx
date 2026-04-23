@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Impressum | MedPrüf",
+  title: "Impressum — MedPrüf",
   description:
     "Rechtliche Angaben gemäß §5 ECG — Betreiber, Kontakt, Datenschutzbehörde.",
   alternates: {
@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     url: "https://medpruf.com/impressum",
-    title: "Impressum | MedPrüf",
+    title: "Impressum — MedPrüf",
     description:
       "Rechtliche Angaben gemäß §5 ECG — Betreiber, Kontakt, Datenschutzbehörde.",
     images: [{ url: "/brand/og-image.png", width: 1200, height: 630 }],

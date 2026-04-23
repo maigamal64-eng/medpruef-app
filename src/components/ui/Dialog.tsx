@@ -75,10 +75,38 @@ export function Dialog({
   const surfaceRef = useRef<HTMLDivElement>(null)
   const previousFocusRef = useRef<HTMLElement | null>(null)
 
+  // Dedicated focus-return effect (post-soft-launch §1.4.6.5).
+  //
+  // Runs on every `open` transition:
+  //   false → true: capture the currently-focused element (the element
+  //   that triggered opening the dialog — usually a button) so we can
+  //   return focus to it on close.
+  //   true → false: if we captured a trigger and it's still attached
+  //   to the document, focus it. This ensures keyboard users end up
+  //   back where they started — a WCAG 2.4.3 (focus order) requirement.
+  //
+  // We run this separately from the keydown/scroll-lock effect so the
+  // focus-return fires deterministically even if the main effect's
+  // cleanup short-circuits (e.g. unmount under React strict-mode double
+  // render).
+  useEffect(() => {
+    if (open) {
+      previousFocusRef.current = (document.activeElement as HTMLElement | null) ?? null
+    } else if (previousFocusRef.current) {
+      const target = previousFocusRef.current
+      previousFocusRef.current = null
+      if (document.contains(target) && typeof target.focus === 'function') {
+        // Tiny rAF delay — React may still be clearing the portal when
+        // `open` flips. Deferring one frame lets the trigger element
+        // become the stable `document.activeElement` again.
+        requestAnimationFrame(() => target.focus())
+      }
+    }
+  }, [open])
+
   // Escape key + focus trap
   useEffect(() => {
     if (!open) return
-    previousFocusRef.current = document.activeElement as HTMLElement | null
 
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && closeOnEscape) {
@@ -119,10 +147,7 @@ export function Dialog({
       document.removeEventListener('keydown', handleKey)
       clearTimeout(focusTimer)
       document.body.style.overflow = prevOverflow
-      // Return focus to previously focused element
-      if (previousFocusRef.current && document.contains(previousFocusRef.current)) {
-        previousFocusRef.current.focus()
-      }
+      // Focus return is handled by the dedicated effect above.
     }
   }, [open, closeOnEscape, onOpenChange])
 

@@ -62,3 +62,9 @@ source-files/
 # that regardless of this rule.
 reports/
 .claude/
+
+# Playwright test artifacts
+/tests/e2e/.artifacts/
+/tests/e2e/.report/
+/playwright-report/
+/test-results/
