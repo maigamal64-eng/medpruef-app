@@ -145,6 +145,13 @@ function ExamContent() {
     if (session) {
       setUserId(session.user.id);
       setUserName(session.user.first_name);
+      // Lock 2026-04-23: the mock exam is Pro-only. Free users get
+      // redirected to /pricing with a contextual ?gate= deep-link so
+      // the upsell ties back to WHY they landed there.
+      const tier = session.user.tier || "free";
+      if (tier !== "pro" && tier !== "admin") {
+        window.location.href = "/pricing?gate=mock_exam";
+      }
     }
   }, []);
 

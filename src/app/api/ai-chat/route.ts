@@ -1,8 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { requireUser } from "@/lib/auth-guard";
+import { captureServerError } from "@/lib/sentry-capture";
+import { checkRateLimit, rateKey, rateLimitHeaders } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
+
+// In-memory burst guard on top of the DB-backed daily quota. Catches
+// someone calling the endpoint 100 times in a row. The daily
+// DAILY_QUOTA_PRO = 50 still applies; this just stops them from
+// burning it in 10 seconds.
+const AI_CHAT_BURST_LIMIT = { limit: 10, windowMs: 60_000 };
 
 /**
  * AI Explanation + Chat endpoint.
@@ -100,6 +108,22 @@ export async function POST(req: NextRequest) {
   if ("error" in guard) return guard.error;
   const { userId, tier } = guard;
 
+  // Burst guard — stops a single Pro user from slamming the endpoint
+  // and burning their daily quota in a programmatic loop.
+  const burstGate = checkRateLimit({
+    key: rateKey("ai-chat", userId),
+    ...AI_CHAT_BURST_LIMIT,
+  });
+  if (!burstGate.allowed) {
+    return NextResponse.json(
+      {
+        error: "AI chat burst limit reached — please pause a moment before asking again.",
+        retryAfter: burstGate.retryAfterSec,
+      },
+      { status: 429, headers: rateLimitHeaders(burstGate, AI_CHAT_BURST_LIMIT) }
+    );
+  }
+
   // Tier gate — only pro + admin can trigger upstream calls.
   if (tier === "free") {
     return NextResponse.json(
@@ -131,7 +155,15 @@ export async function POST(req: NextRequest) {
       );
     }
   } catch (err) {
-    console.error("[ai-chat] quota check failed (failing open):", err);
+    // Fail-open is intentional — we don't want a flaky events table to
+    // block Pro users from AI chat. But still ship it to Sentry so we
+    // notice if the quota is silently unenforced for long stretches.
+    captureServerError(err, {
+      route: "/api/ai-chat",
+      userId,
+      phase: "quota-check",
+      failOpen: true,
+    });
   }
 
   let parsed: { messages?: unknown; questionId?: unknown; regenerate?: unknown };
@@ -185,7 +217,16 @@ export async function POST(req: NextRequest) {
       const r = await fetch(url, { ...init, signal: controller.signal });
       return r;
     } catch (err) {
-      console.error("[ai-chat] upstream error:", err);
+      // Upstream (Anthropic/OpenAI) failure — network error or the
+      // AbortController firing at the 20s mark. Not a user-caused bug,
+      // but we still want the visibility in Sentry so a sustained
+      // outage shows up as a cluster.
+      captureServerError(err, {
+        route: "/api/ai-chat",
+        userId,
+        phase: "upstream",
+        upstream: url,
+      });
       return null;
     } finally {
       clearTimeout(timer);
@@ -278,7 +319,12 @@ export async function POST(req: NextRequest) {
         if (cacheErr) console.error("[ai-chat] cache write:", cacheErr);
       }
     } catch (err) {
-      console.error("[ai-chat] cache branch:", err);
+      captureServerError(err, {
+        route: "/api/ai-chat",
+        userId,
+        phase: "cache-write",
+        questionId: qidNum,
+      });
     }
   }
 

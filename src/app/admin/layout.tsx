@@ -26,12 +26,21 @@ import {
   Settings,
   Sparkles,
   Shield,
+  ShieldCheck,
   MessageSquarePlus,
   RotateCcw,
 } from "lucide-react";
 import { getStoredSession } from "@/lib/auth";
 
-type Section = "dashboard" | "users" | "questions" | "analytics" | "feedback" | "changelog" | "system";
+type Section =
+  | "dashboard"
+  | "users"
+  | "questions"
+  | "analytics"
+  | "feedback"
+  | "puyp"
+  | "changelog"
+  | "system";
 
 const NAV_ITEMS: { key: Section; label: string; icon: typeof LayoutDashboard; href: string }[] = [
   { key: "dashboard", label: "Dashboard", icon: LayoutDashboard, href: "/admin/dashboard" },
@@ -39,6 +48,7 @@ const NAV_ITEMS: { key: Section; label: string; icon: typeof LayoutDashboard; hr
   { key: "questions", label: "Questions", icon: FileText, href: "/admin/questions" },
   { key: "analytics", label: "Analytics", icon: Activity, href: "/admin/analytics" },
   { key: "feedback", label: "Feedback", icon: MessageSquarePlus, href: "/admin/feedback" },
+  { key: "puyp", label: "PUYP", icon: ShieldCheck, href: "/admin/puyp" },
   { key: "changelog", label: "Changelog", icon: Sparkles, href: "/admin/changelog" },
   { key: "system", label: "System", icon: Settings, href: "/admin/system" },
 ];

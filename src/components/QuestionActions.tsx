@@ -72,7 +72,20 @@ export default function QuestionActions({
     setShowReport(false);
   }, [question.id]);
 
+  // Lock 2026-04-23: bookmarks + notes are Pro-only. The storage is
+  // localStorage so there's no server gate — we just block the UI
+  // action and send the user to /pricing on click.
+  const isPro = userTier === "pro" || userTier === "admin";
+
   const toggleFav = () => {
+    if (!isPro) {
+      // Redirect to pricing with a deep-link gate so the upsell is
+      // contextual ("you tried to bookmark").
+      try {
+        window.location.href = "/pricing?gate=bookmarks";
+      } catch {}
+      return;
+    }
     const favs = readFavs();
     const idx = favs.indexOf(question.id);
     if (idx === -1) favs.push(question.id);
@@ -80,6 +93,16 @@ export default function QuestionActions({
     localStorage.setItem(FAV_KEY, JSON.stringify(favs));
     setIsFav(idx === -1);
     trackEvent("bookmark", { questionId: question.id, topic: question.topic });
+  };
+
+  const openNote = () => {
+    if (!isPro) {
+      try {
+        window.location.href = "/pricing?gate=notes";
+      } catch {}
+      return;
+    }
+    setShowNotePanel((v) => !v);
   };
 
   const saveNote = () => {
@@ -95,7 +118,13 @@ export default function QuestionActions({
   const buttons = [
     {
       key: "fav",
-      label: isFav ? t("bookmarked", lang) : t("bookmark", lang),
+      label: isPro
+        ? isFav
+          ? t("bookmarked", lang)
+          : t("bookmark", lang)
+        : lang === "de"
+        ? "Bookmarks (Pro)"
+        : "Bookmarks (Pro)",
       icon: <Star className={`w-5 h-5 ${isFav ? "fill-[var(--mp-status-warning)] text-[var(--mp-status-warning)]" : ""}`} />,
       active: isFav,
       activeClass: "border-[var(--mp-status-warning)]/40 bg-[var(--mp-status-warning)]/10 text-[var(--mp-status-warning)]",
@@ -113,11 +142,15 @@ export default function QuestionActions({
     },
     {
       key: "note",
-      label: t("add_note", lang),
+      label: isPro
+        ? t("add_note", lang)
+        : lang === "de"
+        ? "Notizen (Pro)"
+        : "Notes (Pro)",
       icon: <FileText className="w-5 h-5" />,
       active: showNotePanel || !!note,
       activeClass: "border-[var(--mp-accent-teal)]/40 bg-[var(--mp-accent-teal)]/10 text-[var(--mp-accent-teal)]",
-      onClick: () => !noteLocked && setShowNotePanel((v) => !v),
+      onClick: () => !noteLocked && openNote(),
       locked: noteLocked,
     },
     {

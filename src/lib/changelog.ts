@@ -23,6 +23,78 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-04-23",
+    tag: "feature",
+    title: {
+      de: "Empfehlungen — gestaffelte Prämien €25/€50/€75",
+      en: "Referrals — tiered €25/€50/€75 payouts",
+    },
+    description: {
+      de: "Pro Abo-Typ deines Empfehlten: Monatlich & 3 Monate = €25, 6 Monate & 12 Monate = €50, Juni-26-Kohorte = €75. Nach Zahlungseingang startet eine 30-Tage-Sperrfrist, anschließend wird die Prämie auszahlbar (USDT oder Wise — kein SEPA). Jahreslimit: €600 pro Empfehlender. Neue Referral-Seite mit 4-Spalten-Statusleiste (gesamt · in Sperre · auszahlbar · verdient) + Prämientabelle nach Abo-Typ.",
+      en: "Payout per plan your referee picks: monthly & 3 months = €25, 6 months & 12 months = €50, June 26 Cohort = €75. A 30-day hold starts once they pay, then the reward becomes claimable in USDT or via Wise (no SEPA). Annual cap: €600 per referrer. New referral page with 4-stat strip (total · in hold · claimable · earned) and a per-plan payout table.",
+    },
+  },
+  {
+    date: "2026-04-23",
+    tag: "feature",
+    title: {
+      de: "Kostenlose Stufe — 150 Fragen pro Prüfung",
+      en: "Free tier — 150 questions per exam",
+    },
+    description: {
+      de: "Kostenlose Nutzer sehen ab sofort die ersten 150 aktiven Fragen pro Prüfungstyp (Kenntnisprüfung Wien, KMP Innsbruck, Pharmakologie). Spaced-Repetition, Mock-Exam, Bookmarks und Notizen bleiben der Pro-Stufe vorbehalten. Beim Wechsel zwischen Prüfungen gibt es erneut 150 kostenlose Fragen. Wer alle 150 durchgearbeitet hat, sieht einen Paywall-Dialog mit Link zu den Tarifen.",
+      en: "Free users now see the first 150 active questions per exam type (Kenntnisprüfung Vienna, KMP Innsbruck, Pharmakologie). Spaced repetition, mock exam, bookmarks and notes remain Pro features. Switching exams unlocks another 150 free questions. Users who complete the free slice see a paywall dialog with a direct link to pricing.",
+    },
+  },
+  {
+    date: "2026-04-23",
+    tag: "feature",
+    title: {
+      de: "Pass-Until-You-Pass-Garantie — Nachweis-Upload + Verlängerung",
+      en: "Pass-Until-You-Pass guarantee — proof upload + extension flow",
+    },
+    description: {
+      de: "Wer in der Juni-26-Kohorte oder im Jahresabo den ersten echten Prüfungsversuch nicht besteht und ≥70 % des Fragenkatalogs bearbeitet hat, bekommt den Zugang kostenlos bis zum nächsten Prüfungszyklus verlängert (maximal 2 zusätzliche Zyklen pro Abonnement, kein Bargeld-Rückerstattungs-Weg). Neue Seite `/dashboard/exam-result` zeigt nach dem konfigurierten Prüfungsdatum zwei Buttons: „Bestanden\" (wird sofort gespeichert) oder „Nicht bestanden\" (Datum + Prüfungstyp + Nachweis-Upload, PDF oder Bild, max. 10 MB). Admin-Queue unter `/admin/puyp` mit Signed-URL-Preview, Genehmigen/Ablehnen, Vorschlag für neues Ablaufdatum aus `lib/exam-dates.ts`. Audit-Tabelle `subscription_extensions` protokolliert jede Verlängerung. Eligibilität fällt zurück auf `isPuypEligibleTier` aus `src/lib/nowpayments.ts`.",
+      en: "June 26 Cohort and 12-month subscribers who fail their first real attempt and have ≥70% Qbank completion get their access extended free through the next exam cycle (max 2 extra cycles per subscription, no cash-refund surface). New `/dashboard/exam-result` page surfaces two buttons after the configured exam date: \"I passed\" (self-recorded) or \"I failed\" (date + exam type + proof upload, PDF or image, max 10MB). Admin queue at `/admin/puyp` with signed-URL proof preview, approve/reject actions, and a next-exam-date suggestion from `lib/exam-dates.ts`. Audit table `subscription_extensions` logs every grant. Eligibility defers to `isPuypEligibleTier` from `src/lib/nowpayments.ts`.",
+    },
+  },
+  {
+    date: "2026-04-23",
+    tag: "improvement",
+    title: {
+      de: "Positionierungs-Update 23. April",
+      en: "April 23 positioning update",
+    },
+    description: {
+      de: "Die Juni-26-Kohorte ersetzt das Founders-Framing auf der Preis- und Landingpage. Kernversprechen: „Beim ersten Versuch bestehen — oder kostenlos weiterlernen, bis du es schaffst.\" Kostenloser Tarif (150 Fragen × 3 Prüfungstypen, volle Erklärungen, kein Ablaufdatum) bekommt eine eigene Karte. Pass-Until-You-Pass-Garantie auf der Juni-26-Kohorte (€114, 6 Monate) und dem Jahresabo. Gestaffelte Empfehlungsauszahlungen (€25 / €50 / €75 je nach Empfehlungs-Tarif, 30-Tage-Sperrfrist, €600/Jahr-Cap). Jeder bezahlte Tarif enthält jetzt alle drei Prüfungstypen. Neue `/faq` Seite mit PUYP-, Krypto-, Empfehlungs- und Free-Tier-FAQ. Jede „Founders\"-Referenz außerhalb historischer Changelogs wurde entfernt.",
+      en: "The June 26 Cohort replaces the Founders' framing on pricing + landing. Core promise: \"Pass first try — or study free until you do.\" Free tier (150 questions × 3 exam types, full explanations, no expiry) gets its own card. Pass-Until-You-Pass guarantee on the June 26 Cohort (€114, 6 months) and the annual plan. Tiered referral payouts (€25 / €50 / €75 depending on the referee's plan, 30-day hold, €600/year cap). Every paid tier now includes all three exam types. New `/faq` page with PUYP, crypto, referral and free-tier answers. Every \"Founders'\" string outside historical changelogs has been removed.",
+    },
+  },
+  {
+    date: "2026-04-23",
+    tag: "admin",
+    title: {
+      de: "Krypto-Zahlungsrail (NOWPayments) + Subscriptions-Schema live",
+      en: "Crypto payment rail (NOWPayments) + subscriptions schema live",
+    },
+    description: {
+      de: "Infrastruktur für den Founders'-Launch am 26. Juni: neue Migration `20260423000000_crypto_payments_and_referrals.sql` legt `subscriptions` (Audit-Tabelle + Source of Truth), `processed_webhook_events` (Idempotenz-Guard für IPN-Retries), `referrals` (€40/Empfehlung, bis zu €400 Prüfungsgebühr-Rückerstattung) und `waitlist` (Stripe-pending Non-Krypto-Signups) an. Neue Routes: `POST /api/checkout/nowpayments` (requireUser-geschützt, erzeugt eine NOWPayments-Rechnung nur für den Founders'-Tier — andere Tarife sind `available:false` bis Stripe Atlas klar ist) und `POST /api/webhooks/nowpayments` (keine Auth, HMAC-SHA512-Signatur über `x-nowpayments-sig` mit `JSON.stringify(body, Object.keys(body).sort())`, Idempotenz via `processed_webhook_events`-PK). Bei erfolgreicher Zahlung: Subscription auf `active`, `users.tier='pro'`, `users.tier_expires_at = jetzt + 6 Monate`, Empfehlungszeile qualifiziert. `partially_paid` innerhalb 0,5 %-Toleranz zählt als bezahlt (Netzwerkgebühr-Drift). Tests: `scripts/test_nowpayments_signature.mjs` (Node `--test`, 10 Cases für Signaturverifikation).",
+      en: "Infrastructure for the June 26 Founders' launch: new migration `20260423000000_crypto_payments_and_referrals.sql` adds `subscriptions` (audit table + source of truth), `processed_webhook_events` (idempotency guard for IPN retries), `referrals` (€40/referral, up to €400 exam-fee rebate) and `waitlist` (Stripe-pending non-crypto signups). New routes: `POST /api/checkout/nowpayments` (requireUser-guarded, creates a NOWPayments invoice only for the Founders' tier — other tiers are `available:false` until Stripe Atlas clears) and `POST /api/webhooks/nowpayments` (no auth, HMAC-SHA512 signature over `x-nowpayments-sig` using `JSON.stringify(body, Object.keys(body).sort())`, idempotency via `processed_webhook_events` PK). On successful payment: subscription → `active`, `users.tier='pro'`, `users.tier_expires_at = now + 6 months`, referral row qualified. `partially_paid` within 0.5% tolerance counts as paid (network-fee drift). Tests: `scripts/test_nowpayments_signature.mjs` (Node `--test`, 10 cases for signature verification).",
+    },
+  },
+  {
+    date: "2026-04-23",
+    tag: "feature",
+    title: {
+      de: "Founders-Launch: 6 Monate Vollzugang für €114, zahlbar in Krypto",
+      en: "Founders' launch: 6 months of full access for €114, payable in crypto",
+    },
+    description: {
+      de: "Neue Preisgestaltung auf `/pricing`: Founders-Tarif als dominante Karte mit Live-Krypto-Checkout (USDT/USDC über NOWPayments). Sechs Monate MedPrüf Pro zum einmaligen Frühbucher-Preis von €114 — €19/Monat-Äquivalent, nur 100 Plätze. Standardtarife (€29/Mo, €79 für 3 Mo, €149 für 6 Mo, €229 für 12 Mo) bleiben sichtbar mit Hinweis „Stripe kommt bald\" plus Warteliste-Dialog, der E-Mail, Prüfungstyp (Wien/Innsbruck/Pharma) und optional Prüfungsdatum erfasst. Nach erfolgreicher Krypto-Zahlung landet der Founder auf `/?welcome=founder` und erhält Konfetti + Willkommens-Toast. Referral-Mechanik im Footer: €40 pro Empfehlung, bis zu €400 Rückerstattung der Prüfungsgebühr bei Bestehen.",
+      en: "New pricing layout on `/pricing`: Founders' tier as the dominant card with live crypto checkout (USDT/USDC via NOWPayments). Six months of MedPrüf Pro for a one-time early-bird €114 — €19/mo equivalent, 100 seats only. Standard tiers (€29/mo, €79 for 3 mo, €149 for 6 mo, €229 for 12 mo) stay visible with a \"Stripe launching soon\" badge plus waitlist dialog capturing email, exam type (Vienna/Innsbruck/Pharma) and optional exam date. After a successful crypto payment the founder lands on `/?welcome=founder` and gets confetti + a welcome toast. Referral mechanic in the footer: €40 per referral, up to €400 exam-fee rebate on pass.",
+    },
+  },
+  {
     date: "2026-04-22",
     tag: "admin",
     title: {

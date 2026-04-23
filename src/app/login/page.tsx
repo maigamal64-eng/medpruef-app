@@ -23,6 +23,42 @@ type AuthMode = "login" | "register";
 // Telegram bot deep-link — keep as a single source of truth.
 const TELEGRAM_DEEP_LINK = "https://t.me/MedPruefBot?start=web_login";
 
+/**
+ * Referral-code capture. We persist the `?ref=<code>` param in
+ * localStorage so it survives the Telegram round-trip (user leaves
+ * the site, auths, returns) and the email/password form submit. After
+ * a successful auth we POST it to /api/referrals/claim and clear the
+ * key. See src/lib/referrals.ts for the matching server-side logic.
+ */
+const REF_CODE_KEY = "medpruef_ref_code";
+
+async function claimStoredReferralCode(userId: string): Promise<void> {
+  if (typeof window === "undefined") return;
+  const code = localStorage.getItem(REF_CODE_KEY);
+  if (!code) return;
+  try {
+    const r = await fetch("/api/referrals/claim", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        // authFetch isn't available pre-session-store; send header manually.
+        "x-user-id": userId,
+      },
+      body: JSON.stringify({ referralCode: code }),
+    });
+    // 200 = claimed, 409 = already claimed / self-refer, 404 = bad code.
+    // All three are terminal — drop the code either way so we don't
+    // keep retrying on every future login.
+    if (r.ok || r.status === 404 || r.status === 409) {
+      localStorage.removeItem(REF_CODE_KEY);
+    }
+  } catch {
+    // Network error — leave the code in storage so the next session
+    // picks it up. No toast here: the user is mid-redirect and won't
+    // see one.
+  }
+}
+
 export default function LoginPage() {
   const [lang, setLangState] = useState<Lang>("de");
   const [loading, setLoading] = useState(false);
@@ -39,6 +75,28 @@ export default function LoginPage() {
 
   useEffect(() => {
     setLangState(getLang());
+
+    // Capture ?ref=<code> and stash it for after signup. We do this
+    // BEFORE the session-redirect check so even already-logged-in
+    // users (who bounce straight to /) can still claim a ref if they
+    // happened to land here with ?ref= — the home page triggers the
+    // claim on mount.
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const ref = params.get("ref");
+      if (ref) {
+        const normalized = ref
+          .trim()
+          .toUpperCase()
+          .replace(/[^A-Z0-9]/g, "");
+        if (normalized.length >= 4 && normalized.length <= 16) {
+          localStorage.setItem(REF_CODE_KEY, normalized);
+        }
+      }
+    } catch {
+      // localStorage may be blocked in private mode — non-fatal.
+    }
+
     const session = getStoredSession();
     if (session?.user) {
       window.location.href = "/";
@@ -87,6 +145,12 @@ export default function LoginPage() {
       }
 
       storeSession({ user: data.user, gamification: data.gamification });
+      // Best-effort referral claim — fire and forget. The home page
+      // also has a fallback claim on mount so a failure here is not
+      // user-visible.
+      if (data.user?.id) {
+        await claimStoredReferralCode(data.user.id);
+      }
       window.location.href = "/";
     } catch {
       setError(lang === "de" ? "Verbindungsfehler" : "Connection error");

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
+import { captureServerError } from "@/lib/sentry-capture";
 
 export const dynamic = "force-dynamic";
 
@@ -106,7 +107,12 @@ export async function POST(req: NextRequest) {
       }));
       const { error: eventsErr } = await db.from("user_events").insert(rows);
       if (eventsErr) {
-        console.error("[/api/track] user_events insert:", eventsErr);
+        captureServerError(eventsErr, {
+          route: "/api/track",
+          userId,
+          phase: "user_events-insert",
+          batchSize: rows.length,
+        });
         return NextResponse.json(
           { error: "Failed to record events", code: "TRACK_INSERT_FAILED" },
           { status: 500, headers: { "x-track-failed": "1" } },
@@ -134,9 +140,15 @@ export async function POST(req: NextRequest) {
           .from("user_activity_log")
           .insert(activityRows);
         // Activity log failure is non-critical (user_events is the
-        // authoritative stream) but we still log it.
+        // authoritative stream) but we still ship it to Sentry so a
+        // sustained breakage shows up as a cluster.
         if (activityErr) {
-          console.error("[/api/track] user_activity_log insert:", activityErr);
+          captureServerError(activityErr, {
+            route: "/api/track",
+            userId,
+            phase: "activity_log-insert",
+            batchSize: activityRows.length,
+          });
         }
       }
 
@@ -163,7 +175,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ok: true });
   } catch (err) {
-    console.error("[/api/track]", err);
+    captureServerError(err, { route: "/api/track" });
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

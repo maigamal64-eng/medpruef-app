@@ -3,6 +3,53 @@ import { getServiceClient } from '@/lib/supabase'
 import { generateWrongOptions, buildMCQOptions, buildMCQFromStored, buildMCQFromChoices } from '@/lib/mcq'
 import type { StoredChoice } from '@/lib/mcq'
 import { VIENNA_EXAM_PARTS, DEFAULT_EXAM_SOURCE, EXAM_SOURCE_IDS } from '@/lib/topics'
+import { captureServerError } from '@/lib/sentry-capture'
+import {
+  FREE_TIER_QUESTIONS_PER_EXAM,
+  getFreeSliceIds,
+  isFreeTier,
+} from '@/lib/free-tier'
+
+/**
+ * Resolve the caller's tier using the `x-user-id` header. Unlike
+ * `requireUser`, this does NOT 401 on missing/unknown users — instead
+ * it returns `{ tier: 'free', userId: null }` so guest traffic is
+ * gated the same way as a logged-in free user.
+ *
+ * Runs ONE indexed lookup on `users.id`. For a 150ms-baseline route
+ * that's acceptable overhead. If tier gating becomes a hot path we'd
+ * cache by userId in a per-instance Map.
+ */
+async function resolveTier(
+  req: NextRequest,
+  sb: ReturnType<typeof getServiceClient>
+): Promise<{
+  userId: string | null
+  tier: 'free' | 'pro' | 'admin'
+  tierExpiresAt: string | null
+}> {
+  const headerId = req.headers.get('x-user-id')
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  if (!headerId || !UUID_RE.test(headerId)) {
+    return { userId: null, tier: 'free', tierExpiresAt: null }
+  }
+  try {
+    const { data } = await sb
+      .from('users')
+      .select('id, tier, tier_expires_at')
+      .eq('id', headerId)
+      .maybeSingle()
+    if (!data) return { userId: null, tier: 'free', tierExpiresAt: null }
+    return {
+      userId: data.id as string,
+      tier: ((data.tier as string) || 'free') as 'free' | 'pro' | 'admin',
+      tierExpiresAt:
+        (data as { tier_expires_at?: string | null }).tier_expires_at ?? null,
+    }
+  } catch {
+    return { userId: null, tier: 'free', tierExpiresAt: null }
+  }
+}
 
 export const dynamic = 'force-dynamic'
 
@@ -178,29 +225,115 @@ export async function GET(req: NextRequest) {
     examYear: sp.get('examYear'),
   }
 
+  // ── Free-tier gating (Lock 2026-04-23) ───────────────────────────
+  // Resolve the caller's tier from `x-user-id`. Unauthenticated guests
+  // are treated as free. Admin + active-Pro pass through unchanged.
+  //
+  // Free-tier rules:
+  //   - practiceMode='review' (spaced repetition) → 402
+  //   - practiceMode='wrong'  (requires full history) → 402
+  //   - all other fetches are INTERSECTED with the 150-question free
+  //     slice for the requested exam_type. When the intersection is
+  //     empty (free user has exhausted the slice), we return
+  //     { paywallHit: true, seen, limit } as a 200 so the client can
+  //     render the upgrade prompt.
+  const authed = await resolveTier(req, sb)
+  const free = isFreeTier(authed.tier, authed.tierExpiresAt)
+
+  if (free) {
+    // Pro-only practice modes — respond 402 so the UI can upsell.
+    if (filters.practiceMode === 'review') {
+      return NextResponse.json(
+        {
+          error: 'Pro only',
+          upgradeRequired: true,
+          gate: 'spaced_repetition',
+        },
+        { status: 402 }
+      )
+    }
+    if (filters.practiceMode === 'wrong') {
+      return NextResponse.json(
+        {
+          error: 'Pro only',
+          upgradeRequired: true,
+          gate: 'wrong_only',
+        },
+        { status: 402 }
+      )
+    }
+  }
+
   // Helper: apply mcqOnly filter (questions must have structured choices JSONB, not null)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const withMcq = (q: any) => mcqOnly ? q.not('choices', 'is', null) : q
 
-  // countOnly short-circuit — returns { count } without question payloads
+  // Helper: intersect a candidate-id list with the free slice for the
+  // current exam. Used only when `free` is true. For callers that have
+  // no examSource (defensive — shouldn't happen), we fall back to the
+  // default exam so we never ship free users an unbounded result.
+  const getFreeSliceForExam = async (): Promise<number[]> => {
+    const exam =
+      filters.examSource && filters.examSource !== 'all'
+        ? filters.examSource === 'SIP'
+          ? 'kenntnispruefung'
+          : filters.examSource
+        : DEFAULT_EXAM_SOURCE
+    return getFreeSliceIds(sb, exam)
+  }
+
+  // countOnly short-circuit — returns { count } without question payloads.
+  // For free users, the "count" is capped at the intersection of the
+  // caller's filters with the free slice, so UI counts don't promise
+  // thousands of questions that the free user can't actually draw.
   if (countOnly) {
     let cq = sb.from('questions').select('id', { count: 'exact', head: true }).eq('is_active', true)
     cq = applyFilters(cq, filters)
     cq = withMcq(cq)
+    if (free) {
+      const slice = await getFreeSliceForExam()
+      if (slice.length === 0) {
+        return NextResponse.json({ count: 0, freeTier: true })
+      }
+      cq = cq.in('id', slice)
+    }
     const { count, error } = await cq
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    return NextResponse.json({ count: count || 0 })
+    if (error) {
+      captureServerError(error, { route: '/api/questions', phase: 'select' })
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+    return NextResponse.json({
+      count: count || 0,
+      ...(free ? { freeTier: true, limit: FREE_TIER_QUESTIONS_PER_EXAM } : {}),
+    })
   }
 
-  // Explicit selection mode (ids) returns matching questions directly, skipping spaced-rep
+  // Explicit selection mode (ids) returns matching questions directly, skipping spaced-rep.
+  // For free users we intersect requested ids with the free slice — a free user
+  // linking to a question id they're not allowed to see gets nothing.
   if (filters.ids.length > 0) {
+    if (free) {
+      const slice = await getFreeSliceForExam()
+      const sliceSet = new Set(slice)
+      filters.ids = filters.ids.filter((id) => sliceSet.has(id))
+      if (filters.ids.length === 0) {
+        return NextResponse.json({
+          paywallHit: true,
+          seen: 0,
+          limit: FREE_TIER_QUESTIONS_PER_EXAM,
+        })
+      }
+    }
     let q = sb.from('questions').select('*').eq('is_active', true)
     q = applyFilters(q, filters)
     q = withMcq(q)
     // When no explicit limit is passed, return all matching ids (capped at 500).
     const effectiveLimit = limitExplicit ? limit : filters.ids.length
     const { data, error } = await q.limit(Math.min(effectiveLimit, 500))
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (error) {
+      captureServerError(error, { route: '/api/questions', phase: 'select' })
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
     return NextResponse.json(attachOptions(data || []))
   }
 
@@ -209,8 +342,18 @@ export async function GET(req: NextRequest) {
     let query = sb.from('questions').select('*').eq('is_active', true)
     query = applyFilters(query, filters)
     query = withMcq(query)
+    if (free) {
+      const slice = await getFreeSliceForExam()
+      if (slice.length === 0) {
+        return NextResponse.json([])
+      }
+      query = query.in('id', slice)
+    }
     const { data, error } = await query.limit(Math.min(limit, 30))
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (error) {
+      captureServerError(error, { route: '/api/questions', phase: 'select' })
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
     return NextResponse.json(attachOptions(data || []))
   }
 
@@ -249,10 +392,15 @@ export async function GET(req: NextRequest) {
     // Fall through to normal fetch with the updated filters
   }
 
-  // If real user (not guest), prioritize spaced-repetition review questions
-  // — but still respect topic/part/mcqOnly filters so the user gets reviews
-  // from the subject they selected, not random other topics
-  if (userId && !userId.startsWith('guest_')) {
+  // If real user (not guest) AND Pro, prioritize spaced-repetition review
+  // questions — but still respect topic/part/mcqOnly filters so the user
+  // gets reviews from the subject they selected, not random other topics.
+  //
+  // Free users are skipped here entirely. Their practiceMode='review' is
+  // already 402'd above; for practiceMode='all' we don't interject with
+  // SR-due questions because the spaced-rep scheduler is itself a Pro
+  // feature.
+  if (userId && !userId.startsWith('guest_') && !free) {
     const reviewQuery = sb
       .from('user_question_progress')
       .select('question_id')
@@ -272,19 +420,52 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // Get count for random offset
+  // Get count for random offset. Free-tier users only draw from the
+  // 150-question slice, so we count + range within it.
   let countQuery = sb.from('questions').select('id', { count: 'exact', head: true }).eq('is_active', true)
   countQuery = applyFilters(countQuery, filters)
   countQuery = withMcq(countQuery)
+  let freeSliceIds: number[] | null = null
+  if (free) {
+    freeSliceIds = await getFreeSliceForExam()
+    if (freeSliceIds.length === 0) {
+      return NextResponse.json({
+        paywallHit: true,
+        seen: 0,
+        limit: FREE_TIER_QUESTIONS_PER_EXAM,
+      })
+    }
+    countQuery = countQuery.in('id', freeSliceIds)
+  }
   const { count } = await countQuery
 
-  if (!count) return NextResponse.json([])
+  if (!count) {
+    // A free user whose excludeIds has covered every allowed question
+    // — that's a paywall hit, not a null result. We report how many
+    // they've already seen (best-effort: the slice size minus the
+    // non-excluded-within-slice count) so the client can show
+    // "150/150" or similar.
+    if (free && freeSliceIds && freeSliceIds.length > 0) {
+      const excludedInSlice = filters.excludeIds.filter((id) =>
+        freeSliceIds!.includes(id)
+      ).length
+      return NextResponse.json({
+        paywallHit: true,
+        seen: Math.min(excludedInSlice, FREE_TIER_QUESTIONS_PER_EXAM),
+        limit: FREE_TIER_QUESTIONS_PER_EXAM,
+      })
+    }
+    return NextResponse.json([])
+  }
 
   const offset = Math.floor(Math.random() * Math.max(1, count - limit))
 
   let query = sb.from('questions').select('*').eq('is_active', true)
   query = applyFilters(query, filters)
   query = withMcq(query)
+  if (free && freeSliceIds) {
+    query = query.in('id', freeSliceIds)
+  }
   const { data, error } = await query.range(offset, offset + limit - 1)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -339,7 +520,7 @@ export async function POST(req: NextRequest) {
     })
 
     if (error) {
-      console.error('[topics RPC error]', error)
+      captureServerError(error, { route: '/api/questions', method: 'POST', phase: 'topics-rpc' })
       return NextResponse.json([], { status: 500 })
     }
 

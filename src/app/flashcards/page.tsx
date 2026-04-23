@@ -117,6 +117,11 @@ function FlashcardContent() {
   const [flipped, setFlipped] = useState(false);
   const [dailyCount, setDailyCount] = useState(0);
   const [animatingOut, setAnimatingOut] = useState(false);
+  // Set when the free-tier gate returns `paywallHit: true` — the API
+  // returned 200 with no question because the user has exhausted their
+  // 150-question free slice. We render an upgrade prompt instead of
+  // spinning forever on the loading state.
+  const [paywallHit, setPaywallHit] = useState(false);
 
   // Session-only history rail (most recent first, capped)
   const [history, setHistory] = useState<HistoryEntry[]>([]);
@@ -150,6 +155,7 @@ function FlashcardContent() {
     setLoading(true);
     setFlipped(false);
     setAnimatingOut(false);
+    setPaywallHit(false);
 
     try {
       const examSource = getStoredExamSource();
@@ -161,6 +167,16 @@ function FlashcardContent() {
       if (Array.isArray(data) && data.length > 0) {
         setQuestion(data[0]);
         currentRef.current = data[0];
+      } else if (
+        data &&
+        typeof data === "object" &&
+        (data as { paywallHit?: boolean }).paywallHit
+      ) {
+        // Free-tier slice exhausted for this exam. Surface the upgrade
+        // prompt rather than trapping the user in a loading spinner.
+        setPaywallHit(true);
+        setQuestion(null);
+        currentRef.current = null;
       }
     } catch (e) {
       console.error(e);
@@ -253,6 +269,33 @@ function FlashcardContent() {
     return (
       <div className="flex items-center justify-center min-h-screen bg-[var(--mp-surface-sunken)]">
         <BrandedLoader />
+      </div>
+    );
+  }
+
+  if (paywallHit) {
+    // Free user exhausted the 150-question slice for this exam. Nudge
+    // to /pricing instead of showing the generic "no questions" state
+    // — they didn't run out of content, they ran out of free tier.
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen px-4 bg-[var(--mp-surface-sunken)]">
+        <div className="text-center animate-fade-in max-w-md">
+          <Layers className="w-12 h-12 text-[var(--mp-viridian)] mx-auto mb-4" />
+          <h2 className="mp-h2 mb-2">
+            {lang === "de" ? "Freie 150 Karten durch" : "Free 150 cards complete"}
+          </h2>
+          <p className="text-[var(--mp-fg-muted)] mb-6">
+            {lang === "de"
+              ? "Hol dir Pro für alle 10.993 Fragen plus Wiederholungsplan, Mock-Prüfung und die Juni-26-Garantie."
+              : "Upgrade to unlock all 10,993 questions plus spaced repetition, mock exam, and the June 26 Cohort pass-guarantee."}
+          </p>
+          <Link
+            href="/pricing"
+            className="mp-btn mp-btn-primary inline-flex items-center gap-2"
+          >
+            {lang === "de" ? "Pläne ansehen" : "See plans"}
+          </Link>
+        </div>
       </div>
     );
   }

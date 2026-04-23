@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
 import { requireAdmin } from '@/lib/auth-guard'
+import { captureServerError } from '@/lib/sentry-capture'
 
 export const dynamic = 'force-dynamic'
 
@@ -40,13 +41,13 @@ export async function POST(req: NextRequest) {
     })
 
     if (error) {
-      console.error('[feedback POST]', error)
+      captureServerError(error, { route: '/api/feedback', method: 'POST', phase: 'insert' })
       return NextResponse.json({ error: 'Failed to save' }, { status: 500 })
     }
 
     return NextResponse.json({ ok: true })
   } catch (err) {
-    console.error('[feedback POST]', err)
+    captureServerError(err, { route: '/api/feedback', method: 'POST' })
     return NextResponse.json({ error: 'Internal error' }, { status: 500 })
   }
 }
@@ -67,7 +68,7 @@ export async function PATCH(req: NextRequest) {
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json({ ok: true })
   } catch (err) {
-    console.error('[feedback PATCH]', err)
+    captureServerError(err, { route: '/api/feedback', method: 'PATCH', userId: guard.userId })
     return NextResponse.json({ error: 'Internal error' }, { status: 500 })
   }
 }
@@ -97,7 +98,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json(data || [])
   } catch (err) {
-    console.error('[feedback GET]', err)
+    captureServerError(err, { route: '/api/feedback', method: 'GET', userId: guard.userId })
     return NextResponse.json({ error: 'Internal error' }, { status: 500 })
   }
 }

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { calculateXP } from "@/lib/xp";
 import { requireUser } from "@/lib/auth-guard";
+import { captureServerError } from "@/lib/sentry-capture";
+import { isFreeTier } from "@/lib/free-tier";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +35,14 @@ export async function POST(req: NextRequest) {
   if ("error" in guard) return guard.error;
   const userId = guard.userId;
 
+  // Tier-aware branches. Free users still record answers + XP on
+  // free-slice questions (so signup still feels rewarding), but they
+  // DON'T get spaced-repetition scheduling — that's Pro. This matches
+  // the Lock 2026-04-23 gating decision: bookmarks, notes, mock exam,
+  // SR, and wrong-only practice are Pro-only. The questions route
+  // already gates fetches; /api/answer only has to skip the SR write.
+  const isFreeUser = isFreeTier(guard.tier, null);
+
   let body: { questionId?: number; isCorrect?: boolean; userAnswer?: string; timeSpentMs?: number };
   try {
     body = await req.json();
@@ -45,6 +55,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "questionId (number) and isCorrect (boolean) required" }, { status: 400 });
   }
 
+  // Top-level try/catch wraps all five sequential writes. Any unexpected
+  // throw (DB connectivity blip, RPC timeout, etc.) captures to Sentry
+  // with userId + questionId attached, then returns a sanitized 500 so
+  // we don't leak stack traces to the client. Per-write errors below
+  // are still logged individually for finer-grained debugging.
+  try {
   const sb = getServiceClient();
 
   // Fetch question difficulty and — importantly — the stored choices so
@@ -107,53 +123,60 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // 2. user_question_progress upsert (spaced repetition)
-  const { data: existing, error: progSelErr } = await sb
-    .from("user_question_progress")
-    .select("*")
-    .eq("user_id", userId)
-    .eq("question_id", questionId)
-    .maybeSingle();
-  if (progSelErr) {
-    console.error("[answer] progress select:", progSelErr);
-  }
-
-  if (existing) {
-    const newEase = isCorrect
-      ? Math.min(3.0, existing.ease_factor + 0.1)
-      : Math.max(1.3, existing.ease_factor - 0.2);
-    const newInterval = isCorrect
-      ? Math.max(1, Math.round(existing.interval_days * newEase))
-      : 0;
-    const nextReview = new Date();
-    nextReview.setDate(nextReview.getDate() + newInterval);
-
-    const { error: progUpdErr } = await sb
+  // 2. user_question_progress upsert (spaced repetition).
+  //    Lock 2026-04-23: SR scheduling is Pro-only. Free users still
+  //    record answer_history and earn XP, but we don't populate
+  //    user_question_progress for them — no next_review_at, no
+  //    ease_factor updates. When they upgrade, their history is
+  //    intact; SR will start scheduling them from the next answer.
+  if (!isFreeUser) {
+    const { data: existing, error: progSelErr } = await sb
       .from("user_question_progress")
-      .update({
-        times_seen: existing.times_seen + 1,
-        times_correct: existing.times_correct + (isCorrect ? 1 : 0),
-        ease_factor: newEase,
-        interval_days: newInterval,
+      .select("*")
+      .eq("user_id", userId)
+      .eq("question_id", questionId)
+      .maybeSingle();
+    if (progSelErr) {
+      console.error("[answer] progress select:", progSelErr);
+    }
+
+    if (existing) {
+      const newEase = isCorrect
+        ? Math.min(3.0, existing.ease_factor + 0.1)
+        : Math.max(1.3, existing.ease_factor - 0.2);
+      const newInterval = isCorrect
+        ? Math.max(1, Math.round(existing.interval_days * newEase))
+        : 0;
+      const nextReview = new Date();
+      nextReview.setDate(nextReview.getDate() + newInterval);
+
+      const { error: progUpdErr } = await sb
+        .from("user_question_progress")
+        .update({
+          times_seen: existing.times_seen + 1,
+          times_correct: existing.times_correct + (isCorrect ? 1 : 0),
+          ease_factor: newEase,
+          interval_days: newInterval,
+          next_review_at: nextReview.toISOString(),
+          last_seen_at: new Date().toISOString(),
+        })
+        .eq("id", existing.id);
+      if (progUpdErr) console.error("[answer] progress update:", progUpdErr);
+    } else {
+      const nextReview = new Date();
+      nextReview.setDate(nextReview.getDate() + (isCorrect ? 1 : 0));
+      const { error: progInsErr } = await sb.from("user_question_progress").insert({
+        user_id: userId,
+        question_id: questionId,
+        times_seen: 1,
+        times_correct: isCorrect ? 1 : 0,
+        ease_factor: isCorrect ? 2.6 : 2.3,
+        interval_days: isCorrect ? 1 : 0,
         next_review_at: nextReview.toISOString(),
         last_seen_at: new Date().toISOString(),
-      })
-      .eq("id", existing.id);
-    if (progUpdErr) console.error("[answer] progress update:", progUpdErr);
-  } else {
-    const nextReview = new Date();
-    nextReview.setDate(nextReview.getDate() + (isCorrect ? 1 : 0));
-    const { error: progInsErr } = await sb.from("user_question_progress").insert({
-      user_id: userId,
-      question_id: questionId,
-      times_seen: 1,
-      times_correct: isCorrect ? 1 : 0,
-      ease_factor: isCorrect ? 2.6 : 2.3,
-      interval_days: isCorrect ? 1 : 0,
-      next_review_at: nextReview.toISOString(),
-      last_seen_at: new Date().toISOString(),
-    });
-    if (progInsErr) console.error("[answer] progress insert:", progInsErr);
+      });
+      if (progInsErr) console.error("[answer] progress insert:", progInsErr);
+    }
   }
 
   // 3. user_gamification upsert (never silently skip — audit BE-P3-028)
@@ -245,4 +268,12 @@ export async function POST(req: NextRequest) {
     totalXp: (updatedGam?.total_xp as number) ?? ((gam?.total_xp as number) || 0) + xp,
     gamification: updatedGam || gam || null,
   });
+  } catch (err) {
+    captureServerError(err, {
+      route: "/api/answer",
+      userId,
+      questionId,
+    });
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+  }
 }

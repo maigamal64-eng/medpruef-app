@@ -7,6 +7,7 @@ import ThemeProvider from "@/components/ThemeProvider";
 import PWAInstall from "@/components/PWAInstall";
 import FeedbackWidget from "@/components/FeedbackWidget";
 import GuestMigrationBanner from "@/components/GuestMigrationBanner";
+import CohortCountdownBanner from "@/components/CohortCountdownBanner";
 import EmailValidationModal from "@/components/EmailValidationModal";
 import CookieBannerMount from "@/components/CookieBannerMount";
 import ConsentGatedAnalytics from "@/components/ConsentGatedAnalytics";
@@ -232,6 +233,7 @@ export default function RootLayout({
         <ToastProvider>
           <PWAInstall />
           <GuestMigrationBanner />
+          <CohortCountdownBanner />
           <EmailValidationModal />
           <FeedbackWidget />
           <SearchModalMount />

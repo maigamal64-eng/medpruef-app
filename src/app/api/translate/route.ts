@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { requireUser } from "@/lib/auth-guard";
+import { checkRateLimit, rateKey, rateLimitHeaders } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
+
+// Translation burst guard — the daily quota (5 for free, unlimited
+// for Pro) lives below, but a programmatic caller on Pro could still
+// spike costs. 15 translations/min is far above any real-user pattern
+// (clicking a lang flag on each question = one per question).
+const TRANSLATE_BURST_LIMIT = { limit: 15, windowMs: 60_000 };
 
 /**
  * POST /api/translate
@@ -94,6 +101,20 @@ export async function POST(req: NextRequest) {
   const guard = await requireUser(req);
   if ("error" in guard) return guard.error;
   const { userId, tier } = guard;
+
+  const burstGate = checkRateLimit({
+    key: rateKey("translate", userId),
+    ...TRANSLATE_BURST_LIMIT,
+  });
+  if (!burstGate.allowed) {
+    return NextResponse.json(
+      {
+        error: "Too many translation requests — please wait a moment.",
+        retryAfter: burstGate.retryAfterSec,
+      },
+      { status: 429, headers: rateLimitHeaders(burstGate, TRANSLATE_BURST_LIMIT) }
+    );
+  }
 
   let parsed: { questionId?: unknown; lang?: unknown; field?: unknown };
   try {

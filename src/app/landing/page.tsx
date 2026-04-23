@@ -42,22 +42,31 @@ const COPY = {
   },
   hero: {
     eyebrow: {
-      de: "— Österreich · Ärztliche Kenntnisprüfung",
-      en: "— Austria · Medical Licensing Exams",
+      de: "— Österreich · Kenntnisprüfung · KMP · Pharmakologie",
+      en: "— Austria · Kenntnisprüfung · KMP · Pharmakologie",
     },
-    title_pre: { de: "Hör auf,", en: "Stop studying" },
-    title_mid: { de: "alles", en: "everything" },
-    title_post: { de: "zu lernen.", en: "." },
-    title_line2: { de: "Lern das, was drankommt.", en: "Study what's on the exam." },
+    title_pre: { de: "Beim ersten Versuch", en: "Pass first" },
+    title_mid: { de: "bestehen", en: "try" },
+    title_post: { de: "—", en: "—" },
+    title_line2: {
+      de: "oder kostenlos weiterlernen, bis du es schaffst.",
+      en: "or study free until you do.",
+    },
     subtitle: {
-      de: "Lerne gezielt für die österreichische Ärzteprüfung 🇦🇹. 10.993 Fragen, klinische KI-Erklärungen in 7 Sprachen, Lernplan auf dein Prüfungsdatum.",
-      en: "Study targeted for the Austrian medical licensing exams 🇦🇹. 10,993 questions, clinical AI explanations in 7 languages, study plan down to your exam date.",
+      de: "Die einzige Prüfungsvorbereitung, die speziell für die österreichische Kenntnisprüfung, KMP und Pharmakologie gebaut wurde. Gebaut von Ärzt:innen, die selbst in deiner Lage waren.",
+      en: "The only exam prep built specifically for Austria's Kenntnisprüfung, KMP & Pharmakologie. Built by doctors who've been in your position.",
     },
-    cta_primary: { de: "Jetzt lernen", en: "Start studying" },
-    cta_secondary: { de: "So funktioniert's", en: "How it works" },
+    cta_primary: {
+      de: "Kostenlos starten — 150 Pharma-Fragen",
+      en: "Start free — 150 Pharmakologie questions",
+    },
+    cta_secondary: {
+      de: "Zur Juni-26-Kohorte",
+      en: "See the June 26 Cohort plans",
+    },
     cta_note: {
-      de: "Kostenlos · 200 Fragen · Keine Karte",
-      en: "Free · 200 questions · No credit card",
+      de: "Keine Karte · Juni-26-Kohorte mit Pass-Until-You-Pass-Garantie",
+      en: "No credit card · June 26 Cohort includes Pass-Until-You-Pass",
     },
   },
   stats: [
@@ -201,40 +210,46 @@ const COPY = {
   },
   pricing: {
     eyebrow: { de: "Preise", en: "Pricing" },
-    title: { de: "Fair. Transparent. Kündbar.", en: "Fair. Transparent. Cancel anytime." },
+    title: {
+      de: "Starte kostenlos. Upgrade zur Juni-26-Kohorte.",
+      en: "Start free. Upgrade to the June 26 Cohort.",
+    },
     subtitle: {
-      de: "Starte kostenlos. Upgrade, wenn du bereit bist.",
-      en: "Start free. Upgrade when you're ready.",
+      de: "Jeder bezahlte Tarif enthält alle drei Prüfungstypen. Pass-Until-You-Pass-Garantie auf der Kohorte und dem Jahresabo.",
+      en: "Every paid tier unlocks all three exam types. Pass-Until-You-Pass guarantee on the Cohort and the 12-month plan.",
     },
     tiers: [
       {
         name: { de: "Kostenlos", en: "Free" },
         price: "€0",
-        period: { de: "immer", en: "forever" },
-        pitch: { de: "200 Fragen + 1 Simulation", en: "200 questions + 1 simulation" },
+        period: { de: "dauerhaft", en: "forever" },
+        pitch: {
+          de: "150 Fragen × 3 Prüfungstypen · volle Erklärungen",
+          en: "150 questions × 3 exam types · full explanations",
+        },
         status: "live",
         cta: { de: "Kostenlos starten", en: "Start free" },
-        href: "/login",
+        href: "/quiz?exam=pharma&free=1",
       },
       {
-        name: "Pro",
-        price: "€19",
-        period: { de: "Monat", en: "month" },
+        name: { de: "Juni-26-Kohorte", en: "June 26 Cohort" },
+        price: "€114",
+        period: { de: "6 Monate", en: "6 months" },
         pitch: {
-          de: "Alle 10.993 Fragen · KI-Chat · Streak-Schutz",
-          en: "All 10,993 questions · AI chat · Streak freeze",
+          de: "Alle 10.993 Fragen · Pass-Until-You-Pass · Krypto-Checkout live",
+          en: "All 10,993 questions · Pass-Until-You-Pass · live crypto checkout",
         },
-        status: "soon",
-        cta: { de: "Warteliste", en: "Waitlist" },
+        status: "live",
+        cta: { de: "Zur Kohorte", en: "See the Cohort" },
         href: "/pricing",
       },
       {
-        name: "Group",
-        price: "€49",
-        period: { de: "Team", en: "team" },
+        name: { de: "12 Monate", en: "12 months" },
+        price: "€229",
+        period: { de: "Jahr", en: "year" },
         pitch: {
-          de: "5 Sitze · Lerngruppe · Gruppen-Fortschritt",
-          en: "5 seats · Study group · Group progress",
+          de: "Vollzugang · Pass-Until-You-Pass · Stripe kommt bald",
+          en: "All-access · Pass-Until-You-Pass · Stripe launching soon",
         },
         status: "soon",
         cta: { de: "Warteliste", en: "Waitlist" },
@@ -526,27 +541,35 @@ function Hero({ lang }: { lang: Lang }) {
           {COPY.hero.subtitle[lang]}
         </p>
 
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-4">
           <Link
-            href="/login"
+            href="/quiz?exam=pharma&free=1"
             className="cta-shimmer inline-flex items-center justify-center gap-2 text-[var(--mp-oxford-blue-dk)] font-extrabold px-7 py-4 rounded-xl transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--mp-accent-teal)] focus:ring-offset-[var(--mp-oxford-blue-dk)]"
             style={{ fontSize: "15px" }}
           >
             {COPY.hero.cta_primary[lang]}
             <ArrowRight className="w-4 h-4" aria-hidden="true" />
           </Link>
-          <a
-            href="#how"
+          <Link
+            href="/pricing"
             className="inline-flex items-center justify-center gap-2 bg-transparent text-white border border-white/25 hover:border-white/60 hover:bg-white/5 font-semibold px-7 py-4 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white focus:ring-offset-[var(--mp-oxford-blue-dk)]"
             style={{ fontSize: "15px" }}
           >
             {COPY.hero.cta_secondary[lang]}
             <ChevronRight className="w-4 h-4" aria-hidden="true" />
-          </a>
-          <span className="text-white/50 sm:ml-2" style={{ fontSize: "12px" }}>
-            {COPY.hero.cta_note[lang]}
-          </span>
+          </Link>
         </div>
+        <p
+          className="text-white/70 max-w-xl mb-6 font-medium"
+          style={{ fontSize: "13px" }}
+        >
+          {lang === "de"
+            ? "Gebaut von Ärzt:innen, die selbst in deiner Lage waren."
+            : "Built by doctors who've been in your position."}
+        </p>
+        <span className="text-white/50 block" style={{ fontSize: "12px" }}>
+          {COPY.hero.cta_note[lang]}
+        </span>
       </div>
     </section>
   );
@@ -993,6 +1016,11 @@ function Footer({ lang }: { lang: Lang }) {
               <li>
                 <Link href="/pricing" className="hover:text-white transition-colors">
                   {COPY.nav.pricing[lang]}
+                </Link>
+              </li>
+              <li>
+                <Link href="/faq" className="hover:text-white transition-colors">
+                  FAQ
                 </Link>
               </li>
               <li>

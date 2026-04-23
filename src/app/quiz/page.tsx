@@ -22,6 +22,7 @@ import QuestionCard from "@/components/QuestionCard";
 import QuestionActions from "@/components/QuestionActions";
 import QuizSetup, { type QuizConfig } from "@/components/QuizSetup";
 import { SkeletonCard } from "@/components/Skeleton";
+import { Alert, Dialog, DialogFooter } from "@/components/ui";
 import type { MCQOption } from "@/lib/mcq";
 import {
   getAllQuestions,
@@ -76,6 +77,10 @@ function QuizContent() {
   const wantsSetup = searchParams.get("setup") === "1";
 
   const [userId, setUserId] = useState<string>("");
+  // Tier surfaces client-side gates on bookmarks/notes (both Pro-only
+  // as of the 2026-04-23 Lock). Populated from the stored session
+  // where available; defaults to 'free' so a missing tier fails-closed.
+  const [userTier, setUserTier] = useState<string>("free");
   const [lang, setLangState] = useState<Lang>("de");
   const [config, setConfig] = useState<QuizConfig | null>(null);
 
@@ -106,6 +111,19 @@ function QuizContent() {
   const [isOffline, setIsOffline] = useState<boolean>(
     typeof navigator !== "undefined" ? !navigator.onLine : false,
   );
+
+  // ─── Paywall (Lock 2026-04-23, free-tier gating) ───
+  // Raised when /api/questions returns `paywallHit: true` (free user
+  // exhausted their 150-question slice) or a 402 (Pro-only practice
+  // mode requested — e.g. review / wrong-only).
+  const [paywall, setPaywall] = useState<
+    | {
+        kind: "qbank_limit" | "spaced_repetition" | "wrong_only";
+        seen?: number;
+        limit?: number;
+      }
+    | null
+  >(null);
   // Randomized pool of OfflineQuestion — replenished when it empties.
   // Tracks IDs we've already served this session so repeats are avoided
   // (mirrors the server-side excludeIds behavior).
@@ -132,6 +150,7 @@ function QuizContent() {
     } else {
       const session = getStoredSession();
       setUserId(session?.user?.id || "");
+      setUserTier(session?.user?.tier || "free");
     }
   }, [searchParams]);
 
@@ -256,7 +275,31 @@ function QuizContent() {
     try {
       const params = buildQueryParams(config, userId, seenIdsRef.current, practiceMode);
       const res = await fetch(`/api/questions?${params}`);
+      // Free-tier gate: 402 → pro-only practice mode. Client can't recover,
+      // only upsell.
+      if (res.status === 402) {
+        const body = await res.json().catch(() => ({}));
+        const gate = (body?.gate as string) || "qbank_limit";
+        setPaywall({
+          kind:
+            gate === "spaced_repetition"
+              ? "spaced_repetition"
+              : gate === "wrong_only"
+              ? "wrong_only"
+              : "qbank_limit",
+        });
+        return null;
+      }
       const data = await res.json();
+      // Free-tier gate: 200 with paywallHit → user has seen all 150.
+      if (data && data.paywallHit === true) {
+        setPaywall({
+          kind: "qbank_limit",
+          seen: typeof data.seen === "number" ? data.seen : undefined,
+          limit: typeof data.limit === "number" ? data.limit : 150,
+        });
+        return null;
+      }
       if (Array.isArray(data) && data.length > 0) {
         const q = data[0];
         if (q.id) seenIdsRef.current.push(q.id);
@@ -266,7 +309,7 @@ function QuizContent() {
       console.error(e);
     }
     return null;
-  }, [config, userId, offlineToQuestion]);
+  }, [config, userId, offlineToQuestion, practiceMode]);
 
   // Initial question load (or specific id from search deep-link)
   useEffect(() => {
@@ -648,6 +691,7 @@ function QuizContent() {
                     <QuestionActions
                       question={question}
                       lang={lang}
+                      userTier={userTier}
                       layout="row"
                       unlockAfterAnswer
                       answered={answered}
@@ -714,6 +758,7 @@ function QuizContent() {
                 <QuestionActions
                   question={question}
                   lang={lang}
+                  userTier={userTier}
                   layout="rail"
                   unlockAfterAnswer
                   answered={answered}
@@ -732,6 +777,61 @@ function QuizContent() {
           </p>
         )}
       </main>
+
+      {/* ─── Free-tier paywall (Lock 2026-04-23) ─── */}
+      <Dialog
+        open={paywall !== null}
+        onOpenChange={(open) => {
+          if (!open) setPaywall(null);
+        }}
+        title={
+          paywall?.kind === "spaced_repetition"
+            ? lang === "de"
+              ? "Review-Modus ist Pro"
+              : "Review mode is Pro"
+            : paywall?.kind === "wrong_only"
+            ? lang === "de"
+              ? "Falsche wiederholen ist Pro"
+              : "Wrong only is Pro"
+            : lang === "de"
+            ? `Free-Kontingent verbraucht — 150/150 Fragen gesehen`
+            : `Free tier complete — 150/150 questions seen`
+        }
+        description={
+          paywall?.kind === "qbank_limit"
+            ? lang === "de"
+              ? `Du hast alle ${paywall.limit ?? 150} kostenlosen ${examSource} Fragen durchgearbeitet.`
+              : `You've seen all ${paywall.limit ?? 150} free ${examSource} questions.`
+            : undefined
+        }
+        footer={
+          <DialogFooter>
+            <button
+              type="button"
+              onClick={() => setPaywall(null)}
+              className="mp-btn mp-btn--secondary"
+            >
+              {lang === "de" ? "Abbrechen" : "Cancel"}
+            </button>
+            <Link href="/pricing" className="mp-btn mp-btn--primary">
+              {lang === "de" ? "Tarife ansehen" : "See plans"}
+            </Link>
+          </DialogFooter>
+        }
+      >
+        <div className="space-y-3">
+          <p className="text-sm text-[var(--mp-fg)]">
+            {lang === "de"
+              ? "Upgrade schaltet alle 10.993 Fragen, Spaced-Repetition-Wiederholung, Prüfungssimulation, Bookmarks und die Pass-Until-You-Pass-Garantie der Juni-26-Kohorte frei."
+              : "Upgrade unlocks all 10,993 questions, spaced-repetition review, mock exam, bookmarks, and the Pass-Until-You-Pass guarantee on the June 26 Cohort."}
+          </p>
+          <Alert variant="info">
+            {lang === "de"
+              ? "Wechsle zu einer anderen Prüfung, um weitere 150 kostenlose Fragen zu bekommen — klicke auf den Prüfungswechsler oben links."
+              : "Switch to a different exam for another 150 free questions — use the exam switcher in the top-left sidebar."}
+          </Alert>
+        </div>
+      </Dialog>
 
       <BottomNav lang={lang} userId={userId} />
     </div>

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { requireAdmin } from "@/lib/auth-guard";
+import { captureServerError } from "@/lib/sentry-capture";
 
 export const dynamic = "force-dynamic";
 
@@ -78,13 +79,13 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (error) {
-      console.error("[suggestions POST]", error);
+      captureServerError(error, { route: "/api/suggestions", method: "POST", phase: "insert" });
       return NextResponse.json({ error: "Failed to submit" }, { status: 500 });
     }
 
     return NextResponse.json({ ok: true, id: data.id });
   } catch (err) {
-    console.error("[suggestions POST]", err);
+    captureServerError(err, { route: "/api/suggestions", method: "POST" });
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
@@ -110,7 +111,12 @@ export async function GET(req: NextRequest) {
 
     const { data: suggestions, count, error } = await query;
     if (error) {
-      console.error("[suggestions GET]", error);
+      captureServerError(error, {
+        route: "/api/suggestions",
+        method: "GET",
+        userId: guard.userId,
+        phase: "select",
+      });
       return NextResponse.json({ error: "Failed to fetch" }, { status: 500 });
     }
 
@@ -163,7 +169,7 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (err) {
-    console.error("[suggestions GET]", err);
+    captureServerError(err, { route: "/api/suggestions", method: "GET", userId: guard.userId });
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }
@@ -214,7 +220,13 @@ export async function PATCH(req: NextRequest) {
           .update(questionUpdates)
           .eq("id", suggestion.question_id);
         if (updateErr) {
-          console.error("[suggestions PATCH] Question update error:", updateErr);
+          captureServerError(updateErr, {
+            route: "/api/suggestions",
+            method: "PATCH",
+            userId: adminUserId,
+            phase: "apply-edit",
+            suggestionId,
+          });
           return NextResponse.json({ error: "Failed to apply changes" }, { status: 500 });
         }
       }
@@ -238,7 +250,7 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json({ ok: true, status });
   } catch (err) {
-    console.error("[suggestions PATCH]", err);
+    captureServerError(err, { route: "/api/suggestions", method: "PATCH", userId: guard.userId });
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

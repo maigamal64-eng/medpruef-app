@@ -17,4 +17,15 @@ Sentry.init({
 
   // Environment tagging
   environment: process.env.VERCEL_ENV || process.env.NODE_ENV || "development",
+
+  // Release tag — must match the `release.name` in next.config.ts so
+  // events + source maps line up. The Sentry build plugin auto-injects
+  // NEXT_PUBLIC_SENTRY_RELEASE at build time from that config; falling
+  // back to the commit SHA lets us still tag events if the plugin
+  // didn't run (e.g. an edge-case preview build).
+  release:
+    process.env.NEXT_PUBLIC_SENTRY_RELEASE ||
+    process.env.NEXT_PUBLIC_BUILD_ID ||
+    process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 12) ||
+    undefined,
 });

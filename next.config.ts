@@ -139,6 +139,22 @@ const nextConfig: NextConfig = {
   },
 };
 
+// Compute a stable Sentry release name. Uses the 12-char commit SHA
+// when Vercel provides one, otherwise falls back to `dev-local` so
+// local builds don't emit a fresh "release" per timestamp (same
+// rationale as the NEXT_PUBLIC_BUILD_ID fallback above).
+//
+// Release names let us tie each error event to a specific deploy
+// and cut "errors per release" charts in Sentry. The Vercel build
+// env also exports SENTRY_RELEASE automatically if
+// `automaticVercelMonitors: true` is set, but wiring it explicitly
+// here makes the source-map upload path use the same name — so
+// uploaded maps match the release Sentry stamps on events.
+const SENTRY_RELEASE =
+  process.env.SENTRY_RELEASE ||
+  process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 12) ||
+  "dev-local";
+
 export default withSentryConfig(nextConfig, {
   // Sentry org + project for source map uploads + error grouping.
   org: "medpruf",
@@ -148,6 +164,13 @@ export default withSentryConfig(nextConfig, {
   // SENTRY_AUTH_TOKEN as an env var. Locally, the token is in
   // ./.env.shared.
   authToken: process.env.SENTRY_AUTH_TOKEN,
+
+  // Release tag — lets us filter "errors on the 2026-04-22 deploy"
+  // in the Sentry UI, and makes source maps stitch to the right
+  // release when the Webpack plugin uploads them at build time.
+  release: {
+    name: SENTRY_RELEASE,
+  },
 
   // Suppress noisy source-map upload logs during build.
   silent: true,

@@ -32,8 +32,11 @@ import ThemeToggle from "@/components/ThemeToggle";
 import { getWeakTopics, type TopicStats } from "@/lib/weakness";
 import Link from "next/link";
 import WhatsNewModal from "@/components/WhatsNewModal";
+import SoftLaunchWelcomeModal from "@/components/SoftLaunchWelcomeModal";
+import ReferralShareFloater from "@/components/ReferralShareFloater";
 import UserSurveyModal from "@/components/UserSurveyModal";
 import ResumeSessionCard from "@/components/ResumeSessionCard";
+import { useToast } from "@/components/ui";
 
 type Lang = "de" | "en";
 
@@ -133,7 +136,55 @@ export default function Home() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [profileData, setProfileData] = useState<{ targetDate?: string } | null>(null);
   const [lastSessionInfo, setLastSessionInfo] = useState<{ totalXpSession: number; questionCount: number } | null>(null);
-  const [processingTgToken, setProcessingTgToken] = useState(false);
+  // Initialize synchronously on first render: if the URL already carries
+  // `?tg_token=...`, we're in the middle of a Telegram bot deep-link
+  // exchange. Setting the flag NOW (not in a useEffect, which runs AFTER
+  // first paint) prevents the early-return "redirect to /landing" branch
+  // from firing before the exchange useEffect can claim the token.
+  // Fixes C-3 Telegram deep-link race (was: commit `86caf6b` — unverified).
+  const [processingTgToken, setProcessingTgToken] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return new URLSearchParams(window.location.search).has("tg_token");
+    } catch {
+      return false;
+    }
+  });
+  const [showCohortConfetti, setShowCohortConfetti] = useState(false);
+  const toast = useToast();
+
+  // Juni-26-Kohorte post-checkout greeting — fires when the NOWPayments
+  // success redirect lands on /?welcome=cohort (or the legacy
+  // /?welcome=founder alias that older invoices may still carry).
+  // Shows a one-time toast + pure-CSS confetti burst, then cleans the
+  // URL so the greeting does NOT replay on refresh.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    const welcome = url.searchParams.get("welcome");
+    if (welcome !== "cohort" && welcome !== "founder") return;
+
+    // Small delay so the ToastProvider is mounted (layout wraps us).
+    const timer = setTimeout(() => {
+      const lng = getLang();
+      toast.success(
+        lng === "de"
+          ? "Willkommen in der Juni-26-Kohorte!"
+          : "Welcome to the June 26 Cohort!",
+        lng === "de"
+          ? "Dein Vollzugang ist 6 Monate lang aktiv — inkl. Pass-Until-You-Pass. Viel Erfolg bei der Prüfung!"
+          : "Your full access is active for 6 months — with Pass-Until-You-Pass. Good luck with the exam!"
+      );
+      setShowCohortConfetti(true);
+      // Clean the URL so refresh doesn't retrigger.
+      url.searchParams.delete("welcome");
+      window.history.replaceState({}, "", url.pathname + url.search);
+      // Remove confetti from the DOM once the animation finishes.
+      setTimeout(() => setShowCohortConfetti(false), 3000);
+    }, 200);
+
+    return () => clearTimeout(timer);
+  }, [toast]);
 
   useEffect(() => {
     setLangState(getLang());
@@ -830,10 +881,64 @@ export default function Home() {
 
       {/* Weakness toast — floating top-right, auto-dismiss */}
       <WhatsNewModal />
+      <SoftLaunchWelcomeModal />
       <UserSurveyModal />
+      <ReferralShareFloater />
       <WeaknessToast weakTopics={weakTopics} lang={lang} examSource={examSource} />
+      {showCohortConfetti && <CohortConfetti />}
 
       <BottomNav lang={lang} userId={user.id} />
+    </div>
+  );
+}
+
+/**
+ * Pure-CSS confetti burst for the Juni-26-Kohorte welcome handshake.
+ * Same animation pattern as UserSurveyModal's step-4 celebration —
+ * no new npm deps, scoped <style> tag, auto-cleans after 3s.
+ */
+function CohortConfetti() {
+  return (
+    <div
+      className="pointer-events-none fixed inset-0 z-[95] flex items-center justify-center"
+      aria-hidden
+    >
+      <div className="relative">
+        {Array.from({ length: 24 }).map((_, i) => (
+          <span
+            key={i}
+            className="absolute w-2 h-2 rounded-full"
+            style={{
+              backgroundColor: [
+                "#007B5F",
+                "#00A896",
+                "#003A8C",
+                "#D68A3A",
+                "#D64545",
+              ][i % 5],
+              top: 0,
+              left: 0,
+              animation: `cohort-confetti-burst 2.4s cubic-bezier(0.22, 1, 0.36, 1) ${i * 0.03}s forwards`,
+              opacity: 0,
+              transform: `rotate(${(i * 15) % 360}deg) translateY(0)`,
+            }}
+          />
+        ))}
+      </div>
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+          @keyframes cohort-confetti-burst {
+            0%   { opacity: 1; transform: rotate(var(--r, 0deg)) translateY(0) scale(1); }
+            70%  { opacity: 0.9; }
+            100% { opacity: 0; transform: rotate(var(--r, 0deg)) translateY(-220px) scale(0.4); }
+          }
+          @media (prefers-reduced-motion: reduce) {
+            [class*="cohort-confetti"] { animation: none !important; opacity: 0 !important; }
+          }
+        `,
+        }}
+      />
     </div>
   );
 }

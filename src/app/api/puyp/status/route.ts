@@ -1,0 +1,120 @@
+import { NextRequest, NextResponse } from "next/server";
+import { requireUser } from "@/lib/auth-guard";
+import { getServiceClient } from "@/lib/supabase";
+import { captureServerError } from "@/lib/sentry-capture";
+import { isPuypEligibleTier } from "@/lib/nowpayments";
+import {
+  computeQbankCompletion,
+  meetsPuypCompletionGate,
+  PUYP_MAX_EXTENSIONS,
+  type PuypExamType,
+} from "@/lib/puyp";
+
+export const dynamic = "force-dynamic";
+
+/**
+ * GET /api/puyp/status — snapshot of the user's Pass-Until-You-Pass
+ * eligibility for the exam-result UI.
+ *
+ * Returns everything the /dashboard/exam-result page needs to render
+ * without a second round-trip:
+ *   { eligible, reason?,
+ *     subscription?: { tier, expires_at, puyp_extensions_used },
+ *     exam_type, exam_date,
+ *     qbank_completion_pct, qbank_answered, qbank_total,
+ *     meets_completion_gate }
+ *
+ * Eligibility rules (Lock #1 April 23 2026):
+ *   - Must have an active subscription (status='active').
+ *   - Tier must be PUYP-eligible (isPuypEligibleTier).
+ *   - puyp_extensions_used must be < 2.
+ *
+ * "eligible=false" still returns the Qbank stats so the UI can show
+ * them in the non-eligible branch as context.
+ */
+export async function GET(req: NextRequest) {
+  const guard = await requireUser(req);
+  if ("error" in guard) return guard.error;
+  const { userId } = guard;
+
+  try {
+    const sb = getServiceClient();
+
+    const { data: user, error: userErr } = await sb
+      .from("users")
+      .select("active_exam, exam_date")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (userErr || !user) {
+      captureServerError(userErr, {
+        route: "/api/puyp/status",
+        userId,
+        step: "user_lookup",
+      });
+      return NextResponse.json(
+        { error: "User lookup failed" },
+        { status: 500 }
+      );
+    }
+
+    const examType =
+      ((user.active_exam as string | null) || "kenntnispruefung") as PuypExamType;
+
+    // Qbank completion snapshot — returned regardless of eligibility.
+    const completion = await computeQbankCompletion(userId, examType);
+
+    // Find the user's most-recent active subscription (if any).
+    const { data: activeSub } = await sb
+      .from("subscriptions")
+      .select("tier, expires_at, puyp_extensions_used, status")
+      .eq("user_id", userId)
+      .eq("status", "active")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    // Eligibility decision.
+    let eligible = false;
+    let reason: string | undefined;
+
+    if (!activeSub) {
+      reason =
+        "No active subscription. Pass-Until-You-Pass requires an active plan on the June 26 Cohort or 12-month tier.";
+    } else if (!isPuypEligibleTier(activeSub.tier as string | null)) {
+      reason =
+        "Your current tier is not eligible for Pass-Until-You-Pass. Upgrade to the June 26 Cohort or 12-month plan to qualify.";
+    } else if (
+      (Number(activeSub.puyp_extensions_used) || 0) >= PUYP_MAX_EXTENSIONS
+    ) {
+      reason = `You've already used the maximum ${PUYP_MAX_EXTENSIONS} Pass-Until-You-Pass extensions on this subscription.`;
+    } else {
+      eligible = true;
+    }
+
+    return NextResponse.json({
+      eligible,
+      reason,
+      subscription: activeSub
+        ? {
+            tier: activeSub.tier,
+            expires_at: activeSub.expires_at,
+            puyp_extensions_used:
+              Number(activeSub.puyp_extensions_used) || 0,
+          }
+        : undefined,
+      exam_type: examType,
+      exam_date: user.exam_date,
+      qbank_completion_pct: completion.pct,
+      qbank_answered: completion.answered,
+      qbank_total: completion.total,
+      meets_completion_gate: meetsPuypCompletionGate(completion),
+    });
+  } catch (err) {
+    captureServerError(err, { route: "/api/puyp/status", userId });
+    return NextResponse.json(
+      { error: "Internal error" },
+      { status: 500 }
+    );
+  }
+}

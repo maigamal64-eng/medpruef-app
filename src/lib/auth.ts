@@ -25,6 +25,9 @@ export interface StoredSession {
     first_name: string;
     last_name?: string;
     role?: string;
+    /** 'free' | 'pro' | 'admin' — populated by /api/auth after 2026-04-23 Lock */
+    tier?: string;
+    tier_expires_at?: string | null;
     xp_total: number;
     streak_count: number;
     daily_goal: number;
