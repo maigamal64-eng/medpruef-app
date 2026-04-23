@@ -256,39 +256,39 @@ export default function PricingPage() {
     },
   ];
 
-  /* Standard Stripe-pending tiers — slim rows under the Cohort card */
+  /**
+   * Standard Stripe-pending tiers — slim rows under the Cohort card.
+   *
+   * Ordered by ICP priority (6mo = "Core Prep" in the launch brief,
+   * the standard cohort length; 3mo = Final Sprint; 12mo carries PUYP;
+   * monthly is the indecisive fallback). On mobile the user scans the
+   * list top-to-bottom so we lead with 6mo rather than monthly.
+   */
   const standardTiers: Array<{
     id: StandardTier;
     price: string;
     cadence: { de: string; en: string };
     desc: { de: string; en: string };
     puyp?: boolean;
+    popular?: boolean;
   }> = [
     {
-      id: "monthly",
-      price: "€29",
-      cadence: { de: "/ Monat", en: "/ month" },
+      id: "6mo",
+      price: "€149",
+      cadence: { de: "für 6 Monate", en: "for 6 months" },
       desc: {
-        de: "Monatlich abrechnen — kürzester Zugang, alle 3 Prüfungstypen enthalten.",
-        en: "Monthly billing — shortest commitment, all 3 exam types included.",
+        de: "Die Standard-Prüfungsphase — 6 Monate Vollzugang, alle 3 Prüfungstypen.",
+        en: "Standard prep window — 6 months of full access, all 3 exam types.",
       },
+      popular: true,
     },
     {
       id: "3mo",
       price: "€79",
       cadence: { de: "für 3 Monate", en: "for 3 months" },
       desc: {
-        de: "Ideal für eine volle Prüfungsphase. Vollzugang zu allen 3 Prüfungstypen.",
-        en: "Ideal for one full exam cycle. All-access across all 3 exam types.",
-      },
-    },
-    {
-      id: "6mo",
-      price: "€149",
-      cadence: { de: "für 6 Monate", en: "for 6 months" },
-      desc: {
-        de: "Eine ganze Saison lernen, alle 3 Prüfungstypen.",
-        en: "A full semester of prep, all 3 exam types.",
+        de: "Endspurt vor der Prüfung. Vollzugang zu allen 3 Prüfungstypen.",
+        en: "Final sprint before exam day. All-access across all 3 exam types.",
       },
     },
     {
@@ -296,10 +296,19 @@ export default function PricingPage() {
       price: "€229",
       cadence: { de: "für 12 Monate", en: "for 12 months" },
       desc: {
-        de: "Maximale Prüfungsbereitschaft · inkl. Pass-Until-You-Pass.",
-        en: "Maximum exam readiness · includes Pass-Until-You-Pass.",
+        de: "Maximaler Puffer · inkl. Pass-Until-You-Pass-Garantie.",
+        en: "Maximum buffer · includes Pass-Until-You-Pass guarantee.",
       },
       puyp: true,
+    },
+    {
+      id: "monthly",
+      price: "€29",
+      cadence: { de: "/ Monat", en: "/ month" },
+      desc: {
+        de: "Monatlich — kürzester Zugang, jederzeit kündbar, alle 3 Prüfungen.",
+        en: "Month-to-month — shortest commitment, cancel any time, all 3 exams.",
+      },
     },
   ];
 
@@ -519,13 +528,13 @@ export default function PricingPage() {
         onOpenChange={setWaitOpen}
         title={
           lang === "de"
-            ? "Stripe-Warteliste beitreten"
-            : "Join Stripe waitlist"
+            ? "Warteliste beitreten"
+            : "Join the waitlist"
         }
         description={
           lang === "de"
-            ? "Wir melden uns, sobald die Kreditkarten-Zahlung live ist. Kein Spam, kein Newsletter."
-            : "We'll notify you when card payment goes live. No spam, no newsletter."
+            ? "Wir melden uns persönlich, sobald die Kreditkarten-Zahlung live ist. Kein Spam, kein Newsletter."
+            : "We'll reach out personally when card payment goes live. No spam, no newsletter."
         }
         footer={
           <>
@@ -545,7 +554,7 @@ export default function PricingPage() {
             >
               {submitting
                 ? lang === "de"
-                  ? "Senden…"
+                  ? "Wird gesendet…"
                   : "Sending…"
                 : lang === "de"
                   ? "Auf die Warteliste"
@@ -556,21 +565,22 @@ export default function PricingPage() {
       >
         <div className="space-y-4">
           <div
-            className="rounded-lg px-3 py-2 text-xs"
+            className="rounded-lg px-3 py-2 text-xs flex items-center gap-2"
             style={{
-              background: "var(--mp-surface-sunken)",
-              border: "1px solid var(--mp-border-subtle)",
-              color: "var(--mp-fg-muted)",
+              background: "var(--mp-success-bg)",
+              border: "1px solid rgba(0,123,95,0.22)",
+              color: "var(--mp-viridian)",
             }}
           >
-            {lang === "de" ? "Gewünschter Tarif: " : "Tier of interest: "}
-            <span className="font-semibold text-[var(--mp-fg)]">
-              {tierLabel(waitTier, lang)}
+            <Lock className="w-3 h-3 flex-shrink-0" aria-hidden />
+            <span>
+              {lang === "de" ? "Gewünschter Tarif: " : "Tier of interest: "}
+              <span className="font-semibold">{tierLabel(waitTier, lang)}</span>
             </span>
           </div>
 
           <TextField
-            label={lang === "de" ? "Ihre E-Mail" : "Your email"}
+            label={lang === "de" ? "E-Mail-Adresse" : "Email address"}
             type="email"
             inputMode="email"
             autoComplete="email"
@@ -610,10 +620,16 @@ export default function PricingPage() {
             onChange={(e) => setExamDate(e.target.value)}
             helper={
               lang === "de"
-                ? "Hilft uns, Sie zu priorisieren, wenn Stripe live ist."
+                ? "Hilft uns, dich zu priorisieren, sobald Stripe live ist."
                 : "Helps us prioritise you when Stripe goes live."
             }
           />
+
+          <p className="text-[11px] text-[var(--mp-fg-subtle)] leading-relaxed pt-1">
+            {lang === "de"
+              ? "Deine E-Mail wird ausschließlich für die Stripe-Benachrichtigung verwendet. Du kannst dich jederzeit austragen."
+              : "Your email is only used for the Stripe notification. You can unsubscribe any time."}
+          </p>
         </div>
       </Dialog>
     </div>
@@ -906,57 +922,75 @@ function StandardTierRow({
     cadence: { de: string; en: string };
     desc: { de: string; en: string };
     puyp?: boolean;
+    popular?: boolean;
   };
   onWaitlist: () => void;
 }) {
   return (
     <div
-      className="rounded-[var(--mp-r-card)] p-5 md:p-6 flex flex-col md:flex-row md:items-center gap-4 md:gap-6"
+      className="rounded-[var(--mp-r-card)] p-5 md:p-6 flex flex-col md:flex-row md:items-center gap-4 md:gap-6 transition-colors"
       style={{
         background: "var(--mp-surface-raised)",
-        border: "1px solid var(--mp-border-subtle)",
-        opacity: 0.92,
+        border: `1px solid ${tier.popular ? "rgba(0,123,95,0.25)" : "var(--mp-border-subtle)"}`,
       }}
     >
       <div className="flex-1 min-w-0">
         <div className="flex flex-wrap items-center gap-2 mb-1.5">
-          <h4 className="mp-h3 text-[18px]">
-            {tierLabel(tier.id, lang)}
-          </h4>
-          <span
-            className="mp-caption inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full normal-case tracking-[0.08em]"
-            style={{
-              background: "var(--mp-warning-bg)",
-              color: "var(--mp-warning-dk)",
-              fontSize: "10px",
-              fontWeight: 600,
-            }}
-          >
-            <Lock className="w-2.5 h-2.5" />
-            {lang === "de"
-              ? "Stripe kommt bald — Warteliste"
-              : "Stripe launching soon — waitlist"}
-          </span>
-          {tier.puyp && (
+          <h4 className="mp-h3 text-[18px]">{tierLabel(tier.id, lang)}</h4>
+          {tier.popular && (
             <span
-              className="mp-caption inline-flex items-center gap-1 px-2 py-0.5 rounded-full normal-case tracking-[0.08em]"
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full"
               style={{
                 background: "var(--mp-success-bg)",
                 color: "var(--mp-viridian)",
                 fontSize: "10px",
                 fontWeight: 700,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+              }}
+            >
+              {lang === "de" ? "Beliebt" : "Popular"}
+            </span>
+          )}
+          {tier.puyp && (
+            <span
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full"
+              style={{
+                background: "var(--mp-success-bg)",
+                color: "var(--mp-viridian)",
+                fontSize: "10px",
+                fontWeight: 700,
+                letterSpacing: "0.08em",
               }}
             >
               <ShieldCheck className="w-2.5 h-2.5" />
               PUYP
             </span>
           )}
+          <span
+            className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full"
+            style={{
+              background: "var(--mp-surface-sunken)",
+              color: "var(--mp-fg-muted)",
+              border: "1px solid var(--mp-border-subtle)",
+              fontSize: "10px",
+              fontWeight: 600,
+              letterSpacing: "0.06em",
+            }}
+          >
+            <Lock className="w-2.5 h-2.5" aria-hidden />
+            {lang === "de"
+              ? "Stripe startet bald"
+              : "Stripe launching soon"}
+          </span>
         </div>
-        <p className="text-sm text-[var(--mp-fg-muted)]">{tier.desc[lang]}</p>
+        <p className="text-sm text-[var(--mp-fg-muted)] leading-relaxed">
+          {tier.desc[lang]}
+        </p>
       </div>
 
-      <div className="flex items-center gap-3 md:gap-4 md:ml-auto">
-        <div className="text-right">
+      <div className="flex items-center justify-between md:justify-end gap-3 md:gap-5 md:ml-auto">
+        <div className="text-left md:text-right">
           <div className="mp-num font-display font-black text-[var(--mp-fg)] text-[22px] leading-none">
             {tier.price}
           </div>
@@ -974,7 +1008,7 @@ function StandardTierRow({
               : `Join waitlist for ${tierLabel(tier.id, lang)}`
           }
         >
-          {lang === "de" ? "Warteliste beitreten" : "Join waitlist"}
+          {lang === "de" ? "Warteliste" : "Waitlist"}
           <ArrowRight className="w-3.5 h-3.5" />
         </button>
       </div>
@@ -989,39 +1023,50 @@ function ReferralBlock({ lang }: { lang: Lang }) {
   // (€25 / €50 / €75) are strictly owned by /referrals. The pricing page
   // only points users there — one source of truth for the exact figures
   // avoids copy drift and keeps first-touch surfaces clean.
+  //
+  // Calm visual weight — surface-sunken background instead of raised,
+  // no borders on bullets, so it clearly subordinates to the tier cards
+  // above it without being buried.
   return (
     <div
       className="rounded-[var(--mp-r-card)] overflow-hidden p-6 md:p-7"
       style={{
-        background: "var(--mp-surface-raised)",
+        background: "var(--mp-surface-sunken)",
         border: "1px solid var(--mp-border-subtle)",
       }}
     >
       <div className="flex items-center gap-2 mb-3">
-        <Gift className="w-5 h-5 text-[var(--mp-viridian)]" />
-        <span className="mp-caption text-[var(--mp-viridian)] normal-case tracking-[0.12em]">
+        <Gift className="w-4 h-4 text-[var(--mp-viridian)]" aria-hidden />
+        <span
+          className="font-bold text-[var(--mp-viridian)]"
+          style={{
+            fontSize: "11px",
+            letterSpacing: "0.12em",
+            textTransform: "uppercase",
+          }}
+        >
           {lang === "de" ? "Empfehlungsprogramm" : "Referral program"}
         </span>
       </div>
-      <h3 className="mp-h3 mb-2">
+      <h3 className="mp-h3 mb-2 text-[20px]">
         {lang === "de"
-          ? "Lade Prüfungskandidat:innen ein — gestaffelte Prämien pro Empfehlung"
-          : "Invite fellow Prüflinge — tiered rewards per referral"}
+          ? "Lade andere Prüflinge ein — gestaffelte Prämien pro Abschluss."
+          : "Invite fellow candidates — tiered rewards per signed-up referral."}
       </h3>
-      <p className="mp-body text-[var(--mp-fg-muted)] mb-4 max-w-2xl text-sm leading-relaxed">
+      <p className="text-sm text-[var(--mp-fg-muted)] mb-5 max-w-2xl leading-relaxed">
         {lang === "de"
-          ? "Die Prämienhöhe hängt vom gewählten Tarif der empfohlenen Person ab. Auszahlung in USDT oder über Wise (kein SEPA). 30-Tage-Sperrfrist nach Zahlungseingang."
-          : "The reward depends on which plan your referral picks. Paid in USDT or via Wise (no SEPA). 30-day hold after their payment clears."}
+          ? "Die Prämienhöhe hängt vom gewählten Tarif deiner Empfehlung ab. Auszahlung in USDT oder über Wise, 30 Tage nach Zahlungseingang. Kein SEPA."
+          : "Reward scales with the plan your referral picks. Paid in USDT or via Wise, 30 days after their payment clears. No SEPA."}
       </p>
 
       <Link
         href="/referrals"
-        className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--mp-viridian)] hover:underline"
+        className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--mp-viridian)] hover:underline focus:outline-none focus:ring-2 focus:ring-[var(--mp-viridian)] rounded"
       >
         {lang === "de"
           ? "Prämienstufen und Dashboard ansehen"
           : "See payout tiers and dashboard"}
-        <ArrowRight className="w-3.5 h-3.5" />
+        <ArrowRight className="w-3.5 h-3.5" aria-hidden />
       </Link>
     </div>
   );
@@ -1030,69 +1075,75 @@ function ReferralBlock({ lang }: { lang: Lang }) {
 /* ═══════════════════════ PUYP block ═══════════════════════ */
 
 function PuypBlock({ lang }: { lang: Lang }) {
+  // Calm, sunken background — this block is reassurance copy, not
+  // a CTA. The Cohort card above is the primary conversion surface;
+  // here we just explain the mechanism in plain language.
   return (
     <div
       className="rounded-[var(--mp-r-card)] overflow-hidden p-6 md:p-7"
       style={{
-        background: "var(--mp-surface-raised)",
+        background: "var(--mp-surface-sunken)",
         border: "1px solid var(--mp-border-subtle)",
       }}
     >
       <div className="flex items-center gap-2 mb-3">
-        <ShieldCheck className="w-5 h-5 text-[var(--mp-viridian)]" />
-        <span className="mp-caption text-[var(--mp-viridian)] normal-case tracking-[0.12em]">
+        <ShieldCheck className="w-4 h-4 text-[var(--mp-viridian)]" aria-hidden />
+        <span
+          className="font-bold text-[var(--mp-viridian)]"
+          style={{
+            fontSize: "11px",
+            letterSpacing: "0.12em",
+            textTransform: "uppercase",
+          }}
+        >
           {lang === "de"
             ? "Pass-Until-You-Pass-Garantie"
             : "Pass-Until-You-Pass guarantee"}
         </span>
       </div>
-      <h3 className="mp-h3 mb-2">
+      <h3 className="mp-h3 mb-2 text-[20px]">
         {lang === "de"
-          ? "Wir stehen für unser Produkt ein"
-          : "We stand behind our product"}
+          ? "Du fällst durch? Wir verlängern — kostenlos."
+          : "Fail the exam? We extend — free."}
       </h3>
-      <p className="mp-body text-[var(--mp-fg-muted)] mb-4 max-w-2xl text-sm leading-relaxed">
+      <p className="text-sm text-[var(--mp-fg-muted)] mb-5 max-w-2xl leading-relaxed">
         {lang === "de"
-          ? "Wenn du in deiner ersten echten Prüfung durchfällst, verlängern wir deinen Zugang kostenlos bis zum nächsten Termin. Keine Cash-Rückerstattung — wir investieren stattdessen in dein Bestehen."
-          : "If you fail your first real exam attempt, we extend your access free through the next exam date. No cash refund — we invest in your pass instead."}
+          ? "Keine Cash-Rückerstattung — wir investieren stattdessen in dein Bestehen. Gilt nur für die Juni-26-Kohorte und den 12-Monats-Tarif."
+          : "No cash refund — we invest in your pass instead. Applies to the June 26 Cohort and the 12-month plan only."}
       </p>
 
-      <ul className="space-y-2 mb-4">
-        <li className="flex items-start gap-2 text-sm text-[var(--mp-fg)]">
-          <Check
-            className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-[var(--mp-viridian)]"
-            strokeWidth={3}
-          />
-          {lang === "de"
+      <ul className="space-y-2 mb-5">
+        {[
+          lang === "de"
             ? "Prüfungsergebnis (PDF oder Foto) hochladen — Admin prüft innerhalb 72 Stunden."
-            : "Upload your official result (PDF or photo) — admin verifies within 72 hours."}
-        </li>
-        <li className="flex items-start gap-2 text-sm text-[var(--mp-fg)]">
-          <Check
-            className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-[var(--mp-viridian)]"
-            strokeWidth={3}
-          />
-          {lang === "de"
+            : "Upload your official result (PDF or photo) — admin verifies within 72 hours.",
+          lang === "de"
             ? "Mindestens 70 % der relevanten Fragenbank müssen bearbeitet sein."
-            : "At least 70 % of the relevant Qbank must be completed."}
-        </li>
-        <li className="flex items-start gap-2 text-sm text-[var(--mp-fg)]">
-          <Check
-            className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-[var(--mp-viridian)]"
-            strokeWidth={3}
-          />
-          {lang === "de"
-            ? "Gilt für Juni-26-Kohorte und Jahresabo · bis zu zwei zusätzliche Zyklen."
-            : "Applies to June 26 Cohort and the 12-month plan · up to two extra cycles."}
-        </li>
+            : "At least 70 % of the relevant Qbank must be completed.",
+          lang === "de"
+            ? "Bis zu zwei zusätzliche Zyklen — also bis zu 18 Monate Zugang aus einer €114-Zahlung."
+            : "Up to two additional cycles — up to 18 months of access from one €114 payment.",
+        ].map((line) => (
+          <li
+            key={line}
+            className="flex items-start gap-2 text-sm text-[var(--mp-fg)] leading-relaxed"
+          >
+            <Check
+              className="w-3.5 h-3.5 mt-1 flex-shrink-0 text-[var(--mp-viridian)]"
+              strokeWidth={3}
+              aria-hidden
+            />
+            {line}
+          </li>
+        ))}
       </ul>
 
       <Link
         href="/faq#puyp"
-        className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--mp-viridian)] hover:underline"
+        className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--mp-viridian)] hover:underline focus:outline-none focus:ring-2 focus:ring-[var(--mp-viridian)] rounded"
       >
         {lang === "de" ? "Wie die Verifizierung läuft" : "How verification works"}
-        <ArrowRight className="w-3.5 h-3.5" />
+        <ArrowRight className="w-3.5 h-3.5" aria-hidden />
       </Link>
     </div>
   );

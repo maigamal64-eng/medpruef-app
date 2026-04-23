@@ -17,13 +17,16 @@ import {
   Globe,
   HeartPulse,
   Languages,
+  Menu,
   MessageCircle,
   Pill,
   Scissors,
+  ShieldCheck,
   Sparkles,
   Stethoscope,
   Target,
   Users,
+  X,
   Zap,
 } from "lucide-react";
 
@@ -57,12 +60,20 @@ const COPY = {
       en: "The only exam prep built specifically for Austria's Kenntnisprüfung, KMP & Pharmakologie. Built by doctors who've been in your position.",
     },
     cta_primary: {
+      de: "Kostenlos starten",
+      en: "Start free",
+    },
+    cta_primary_sub: {
+      de: "150 Pharma-Fragen · keine Karte",
+      en: "150 Pharmakologie questions · no card",
+    },
+    cta_primary_long: {
       de: "Kostenlos starten — 150 Pharma-Fragen",
       en: "Start free — 150 Pharmakologie questions",
     },
     cta_secondary: {
-      de: "Zur Juni-26-Kohorte",
-      en: "See the June 26 Cohort plans",
+      de: "Juni-26-Kohorte ansehen",
+      en: "See June 26 Cohort plans",
     },
     cta_note: {
       de: "Keine Karte · Juni-26-Kohorte mit Pass-Until-You-Pass-Garantie",
@@ -260,15 +271,32 @@ const COPY = {
     comingSoon: { de: "Bald", en: "Soon" },
   },
   proof: {
-    eyebrow: { de: "Von Ärzt:innen bewertet", en: "Rated by physicians" },
+    eyebrow: { de: "Inhalt & Qualität", en: "Content & quality" },
     title: {
       de: "10.993 Fragen, kuratiert von Ärzt:innen für Ärzt:innen.",
       en: "10,993 questions, curated by physicians for physicians.",
     },
     quote: {
-      de: "Jede Frage stammt aus einer dokumentierten offiziellen Prüfung. Nichts erfunden, nichts geraten. 7.567 aus Wien seit 2016, 3.091 aus Innsbruck, 335 aus Pharmakologie.",
-      en: "Every question comes from a documented official exam. Nothing invented, nothing guessed. 7,567 from Vienna since 2016, 3,091 from Innsbruck, 335 from Pharmacology.",
+      de: "Jede Frage stammt aus einer dokumentierten offiziellen Prüfung — nichts erfunden, nichts geraten.",
+      en: "Every question comes from a documented official exam — nothing invented, nothing guessed.",
     },
+    breakdown: [
+      {
+        n: "7.567",
+        n_en: "7,567",
+        label: { de: "Wien · seit 2016", en: "Vienna · since 2016" },
+      },
+      {
+        n: "3.091",
+        n_en: "3,091",
+        label: { de: "KMP Innsbruck", en: "KMP Innsbruck" },
+      },
+      {
+        n: "335",
+        n_en: "335",
+        label: { de: "Pharmakologie", en: "Pharmacology" },
+      },
+    ],
   },
   cta: {
     title: { de: "Bereit für deine Prüfung?", en: "Ready for your exam?" },
@@ -331,135 +359,260 @@ export default function LandingPage() {
 }
 
 /* ─────────────────────────────────────────────────────────────
-   Nav — transparent over hero, inverts on scroll past hero
+   Nav — transparent over hero, inverts on scroll past hero.
+   Desktop: inline links. Mobile: hamburger sheet (only DE/EN
+   toggle + Start CTA stay visible inline on mobile).
    ───────────────────────────────────────────────────────────── */
 function Nav({ lang, onLangChange }: { lang: Lang; onLangChange: (l: Lang) => void }) {
   const [scrolled, setScrolled] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 480);
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  // Lock body scroll when the mobile sheet is open
+  useEffect(() => {
+    if (!menuOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [menuOpen]);
+
+  const closeMenu = () => setMenuOpen(false);
+
   return (
-    <nav
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        scrolled
-          ? "bg-[var(--mp-surface-raised)]/92 backdrop-blur-xl border-b border-[var(--mp-border-subtle)] shadow-sm"
-          : "bg-transparent"
-      }`}
-    >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-        <Link
-          href="/landing"
-          className={`flex items-center gap-2.5 ${scrolled ? "" : "text-white"}`}
-          aria-label="MedPrüf home"
-        >
-          <Image
-            src="/brand/logomark.svg"
-            alt=""
-            width={32}
-            height={32}
-            style={scrolled ? {} : { filter: "brightness(0) invert(1)" }}
-          />
-          <span
-            className={`text-lg font-bold tracking-tight font-display ${
-              scrolled ? "text-[var(--mp-oxford-blue)]" : "text-white"
-            }`}
+    <>
+      <nav
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+          scrolled
+            ? "bg-[var(--mp-surface-raised)]/92 backdrop-blur-xl border-b border-[var(--mp-border-subtle)] shadow-sm"
+            : "bg-transparent"
+        }`}
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-2">
+          <Link
+            href="/landing"
+            className={`flex items-center gap-2.5 shrink-0 ${scrolled ? "" : "text-white"}`}
+            aria-label="MedPrüf home"
           >
-            Med<span className="text-[var(--mp-accent-teal)]">Prüf</span>
-          </span>
-        </Link>
+            <Image
+              src="/brand/logomark.svg"
+              alt=""
+              width={32}
+              height={32}
+              style={scrolled ? {} : { filter: "brightness(0) invert(1)" }}
+            />
+            <span
+              className={`text-lg font-bold tracking-tight font-display ${
+                scrolled ? "text-[var(--mp-oxford-blue)]" : "text-white"
+              }`}
+            >
+              Med<span className="text-[var(--mp-accent-teal)]">Prüf</span>
+            </span>
+          </Link>
 
-        <div
-          className={`hidden md:flex items-center gap-7 text-sm font-medium ${
-            scrolled ? "text-[var(--mp-fg-muted)]" : "text-white/70"
-          }`}
-        >
-          <a
-            href="#features"
-            className={`transition-colors ${
-              scrolled ? "hover:text-[var(--mp-oxford-blue)]" : "hover:text-white"
-            }`}
-          >
-            {COPY.nav.features[lang]}
-          </a>
-          <a
-            href="#how"
-            className={`transition-colors ${
-              scrolled ? "hover:text-[var(--mp-oxford-blue)]" : "hover:text-white"
-            }`}
-          >
-            {COPY.nav.how[lang]}
-          </a>
-          <a
-            href="#pricing"
-            className={`transition-colors ${
-              scrolled ? "hover:text-[var(--mp-oxford-blue)]" : "hover:text-white"
-            }`}
-          >
-            {COPY.nav.pricing[lang]}
-          </a>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {/* Language toggle */}
+          {/* Desktop inline links */}
           <div
-            className={`flex items-center rounded-lg p-0.5 text-xs border ${
-              scrolled
-                ? "bg-[var(--mp-surface-sunken)] border-[var(--mp-border-subtle)]"
-                : "bg-white/10 border-white/20"
+            className={`hidden md:flex items-center gap-7 text-sm font-medium ${
+              scrolled ? "text-[var(--mp-fg-muted)]" : "text-white/70"
             }`}
-            role="group"
-            aria-label="Language"
           >
-            {(["de", "en"] as Lang[]).map((l) => {
-              const active = lang === l;
-              return (
-                <button
-                  key={l}
-                  onClick={() => onLangChange(l)}
-                  aria-pressed={active}
-                  aria-label={l === "de" ? "Deutsch" : "English"}
-                  className={`px-2.5 py-1 rounded font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-[var(--mp-accent-teal)] ${
-                    active
-                      ? "bg-[var(--mp-viridian)] text-white"
-                      : scrolled
-                      ? "text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg-muted)]"
-                      : "text-white/60 hover:text-white"
-                  }`}
-                >
-                  {l.toUpperCase()}
-                </button>
-              );
-            })}
+            <a
+              href="#features"
+              className={`transition-colors ${
+                scrolled ? "hover:text-[var(--mp-oxford-blue)]" : "hover:text-white"
+              }`}
+            >
+              {COPY.nav.features[lang]}
+            </a>
+            <a
+              href="#how"
+              className={`transition-colors ${
+                scrolled ? "hover:text-[var(--mp-oxford-blue)]" : "hover:text-white"
+              }`}
+            >
+              {COPY.nav.how[lang]}
+            </a>
+            <a
+              href="#pricing"
+              className={`transition-colors ${
+                scrolled ? "hover:text-[var(--mp-oxford-blue)]" : "hover:text-white"
+              }`}
+            >
+              {COPY.nav.pricing[lang]}
+            </a>
           </div>
 
-          <Link
-            href="/login"
-            className={`hidden sm:inline-flex items-center gap-1.5 text-sm font-semibold transition-colors px-3 py-2 ${
-              scrolled
-                ? "text-[var(--mp-fg-muted)] hover:text-[var(--mp-oxford-blue)]"
-                : "text-white/80 hover:text-white"
-            }`}
-          >
-            {COPY.nav.login[lang]}
-          </Link>
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Language toggle — kept on mobile ([name]'s brief) */}
+            <div
+              className={`flex items-center rounded-lg p-0.5 text-xs border ${
+                scrolled
+                  ? "bg-[var(--mp-surface-sunken)] border-[var(--mp-border-subtle)]"
+                  : "bg-white/10 border-white/20"
+              }`}
+              role="group"
+              aria-label="Language"
+            >
+              {(["de", "en"] as Lang[]).map((l) => {
+                const active = lang === l;
+                return (
+                  <button
+                    key={l}
+                    onClick={() => onLangChange(l)}
+                    aria-pressed={active}
+                    aria-label={l === "de" ? "Deutsch" : "English"}
+                    className={`px-2.5 py-1 rounded font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-[var(--mp-accent-teal)] ${
+                      active
+                        ? "bg-[var(--mp-viridian)] text-white"
+                        : scrolled
+                          ? "text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg-muted)]"
+                          : "text-white/60 hover:text-white"
+                    }`}
+                  >
+                    {l.toUpperCase()}
+                  </button>
+                );
+              })}
+            </div>
 
-          <Link
-            href="/login"
-            className={`inline-flex items-center gap-1.5 text-sm font-bold px-4 py-2 rounded-xl transition-all shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--mp-accent-teal)] ${
-              scrolled
-                ? "bg-[var(--mp-oxford-blue)] hover:bg-[var(--mp-cta-blue)] text-white"
-                : "bg-[var(--mp-accent-teal)] hover:brightness-110 text-[var(--mp-oxford-blue-dk)]"
-            }`}
-          >
-            {COPY.nav.start[lang]}
-            <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
-          </Link>
+            {/* Sign in (desktop only) */}
+            <Link
+              href="/login"
+              className={`hidden md:inline-flex items-center gap-1.5 text-sm font-semibold transition-colors px-3 py-2 ${
+                scrolled
+                  ? "text-[var(--mp-fg-muted)] hover:text-[var(--mp-oxford-blue)]"
+                  : "text-white/80 hover:text-white"
+              }`}
+            >
+              {COPY.nav.login[lang]}
+            </Link>
+
+            {/* Start CTA — always visible */}
+            <Link
+              href="/login"
+              className={`inline-flex items-center gap-1.5 text-sm font-bold px-3 sm:px-4 py-2 rounded-xl transition-all shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--mp-accent-teal)] ${
+                scrolled
+                  ? "bg-[var(--mp-oxford-blue)] hover:bg-[var(--mp-cta-blue)] text-white"
+                  : "bg-[var(--mp-accent-teal)] hover:brightness-110 text-[var(--mp-oxford-blue-dk)]"
+              }`}
+            >
+              {COPY.nav.start[lang]}
+              <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
+            </Link>
+
+            {/* Hamburger — mobile only */}
+            <button
+              type="button"
+              onClick={() => setMenuOpen(true)}
+              aria-label={lang === "de" ? "Menü öffnen" : "Open menu"}
+              aria-expanded={menuOpen}
+              aria-controls="mobile-landing-nav"
+              className={`md:hidden inline-flex items-center justify-center rounded-lg p-2 transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--mp-accent-teal)] ${
+                scrolled
+                  ? "text-[var(--mp-fg)] hover:bg-[var(--mp-surface-sunken)]"
+                  : "text-white hover:bg-white/10"
+              }`}
+            >
+              <Menu className="w-5 h-5" aria-hidden="true" />
+            </button>
+          </div>
         </div>
-      </div>
-    </nav>
+      </nav>
+
+      {/* Mobile menu sheet */}
+      {menuOpen && (
+        <div
+          className="fixed inset-0 z-[60] md:hidden"
+          role="dialog"
+          aria-modal="true"
+          id="mobile-landing-nav"
+          aria-label={lang === "de" ? "Navigation" : "Navigation"}
+        >
+          <button
+            type="button"
+            aria-label={lang === "de" ? "Menü schließen" : "Close menu"}
+            onClick={closeMenu}
+            className="absolute inset-0 bg-black/55 backdrop-blur-[2px]"
+          />
+          <div
+            className="absolute right-0 top-0 bottom-0 w-[min(320px,88vw)] bg-[var(--mp-surface-raised)] border-l border-[var(--mp-border-subtle)] shadow-2xl flex flex-col"
+            style={{ paddingTop: "env(safe-area-inset-top)" }}
+          >
+            <div className="h-16 px-4 flex items-center justify-between border-b border-[var(--mp-border-subtle)]">
+              <span className="text-base font-bold font-display text-[var(--mp-fg)]">
+                Med<span className="text-[var(--mp-viridian)]">Prüf</span>
+              </span>
+              <button
+                type="button"
+                onClick={closeMenu}
+                aria-label={lang === "de" ? "Schließen" : "Close"}
+                className="rounded-lg p-2 text-[var(--mp-fg-muted)] hover:bg-[var(--mp-surface-sunken)] focus:outline-none focus:ring-2 focus:ring-[var(--mp-accent-teal)]"
+              >
+                <X className="w-5 h-5" aria-hidden="true" />
+              </button>
+            </div>
+            <nav className="flex-1 overflow-y-auto px-2 py-3">
+              <a
+                href="#features"
+                onClick={closeMenu}
+                className="flex items-center gap-3 px-3 py-3 rounded-xl text-[var(--mp-fg)] text-base font-semibold hover:bg-[var(--mp-surface-sunken)] transition-colors"
+              >
+                <Sparkles className="w-4 h-4 text-[var(--mp-viridian)]" aria-hidden="true" />
+                {COPY.nav.features[lang]}
+              </a>
+              <a
+                href="#how"
+                onClick={closeMenu}
+                className="flex items-center gap-3 px-3 py-3 rounded-xl text-[var(--mp-fg)] text-base font-semibold hover:bg-[var(--mp-surface-sunken)] transition-colors"
+              >
+                <Target className="w-4 h-4 text-[var(--mp-viridian)]" aria-hidden="true" />
+                {COPY.nav.how[lang]}
+              </a>
+              <a
+                href="#pricing"
+                onClick={closeMenu}
+                className="flex items-center gap-3 px-3 py-3 rounded-xl text-[var(--mp-fg)] text-base font-semibold hover:bg-[var(--mp-surface-sunken)] transition-colors"
+              >
+                <ShieldCheck className="w-4 h-4 text-[var(--mp-viridian)]" aria-hidden="true" />
+                {COPY.nav.pricing[lang]}
+              </a>
+              <Link
+                href="/faq"
+                onClick={closeMenu}
+                className="flex items-center gap-3 px-3 py-3 rounded-xl text-[var(--mp-fg)] text-base font-semibold hover:bg-[var(--mp-surface-sunken)] transition-colors"
+              >
+                <MessageCircle className="w-4 h-4 text-[var(--mp-viridian)]" aria-hidden="true" />
+                FAQ
+              </Link>
+              <div className="my-2 h-px bg-[var(--mp-border-subtle)]" />
+              <Link
+                href="/login"
+                onClick={closeMenu}
+                className="flex items-center gap-3 px-3 py-3 rounded-xl text-[var(--mp-fg-muted)] text-base font-semibold hover:bg-[var(--mp-surface-sunken)] transition-colors"
+              >
+                {COPY.nav.login[lang]}
+              </Link>
+            </nav>
+            <div className="p-4 border-t border-[var(--mp-border-subtle)]">
+              <Link
+                href="/login"
+                onClick={closeMenu}
+                className="mp-btn mp-btn--success mp-btn--lg w-full justify-center"
+              >
+                {COPY.nav.start[lang]}
+                <ArrowRight className="w-4 h-4" aria-hidden="true" />
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -535,32 +688,46 @@ function Hero({ lang }: { lang: Lang }) {
         </h1>
 
         <p
-          className="mp-body text-white/75 max-w-2xl mb-9"
-          style={{ fontSize: "clamp(16px, 1.8vw, 19px)", lineHeight: 1.55 }}
+          className="mp-body text-white/75 mb-9 max-w-md sm:max-w-xl md:max-w-2xl"
+          style={{
+            fontSize: "clamp(16px, 1.8vw, 19px)",
+            lineHeight: 1.55,
+            textWrap: "balance" as const,
+          }}
         >
           {COPY.hero.subtitle[lang]}
         </p>
 
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-4">
+        {/* CTAs — stacked + full-width on mobile, inline on desktop */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-5 w-full sm:w-auto">
           <Link
             href="/quiz?exam=pharma&free=1"
-            className="cta-shimmer inline-flex items-center justify-center gap-2 text-[var(--mp-oxford-blue-dk)] font-extrabold px-7 py-4 rounded-xl transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--mp-accent-teal)] focus:ring-offset-[var(--mp-oxford-blue-dk)]"
+            className="cta-shimmer inline-flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 text-[var(--mp-oxford-blue-dk)] font-extrabold px-6 sm:px-7 py-3.5 sm:py-4 rounded-xl transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--mp-accent-teal)] focus:ring-offset-[var(--mp-oxford-blue-dk)] w-full sm:w-auto"
             style={{ fontSize: "15px" }}
+            aria-label={COPY.hero.cta_primary_long[lang]}
           >
-            {COPY.hero.cta_primary[lang]}
-            <ArrowRight className="w-4 h-4" aria-hidden="true" />
+            <span className="flex items-center gap-2 whitespace-nowrap">
+              {/* Short label on mobile, long on desktop */}
+              <span className="sm:hidden">{COPY.hero.cta_primary[lang]}</span>
+              <span className="hidden sm:inline">{COPY.hero.cta_primary_long[lang]}</span>
+              <ArrowRight className="w-4 h-4" aria-hidden="true" />
+            </span>
+            <span className="sm:hidden text-[11px] font-semibold text-[var(--mp-oxford-blue-dk)]/70 whitespace-nowrap">
+              {COPY.hero.cta_primary_sub[lang]}
+            </span>
           </Link>
           <Link
             href="/pricing"
-            className="inline-flex items-center justify-center gap-2 bg-transparent text-white border border-white/25 hover:border-white/60 hover:bg-white/5 font-semibold px-7 py-4 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white focus:ring-offset-[var(--mp-oxford-blue-dk)]"
+            className="inline-flex items-center justify-center gap-2 bg-transparent text-white border border-white/25 hover:border-white/60 hover:bg-white/5 font-semibold px-6 sm:px-7 py-3.5 sm:py-4 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white focus:ring-offset-[var(--mp-oxford-blue-dk)] w-full sm:w-auto whitespace-nowrap"
             style={{ fontSize: "15px" }}
           >
             {COPY.hero.cta_secondary[lang]}
             <ChevronRight className="w-4 h-4" aria-hidden="true" />
           </Link>
         </div>
+
         <p
-          className="text-white/70 max-w-xl mb-6 font-medium"
+          className="text-white/70 max-w-xl mb-3 font-medium"
           style={{ fontSize: "13px" }}
         >
           {lang === "de"
@@ -576,49 +743,65 @@ function Hero({ lang }: { lang: Lang }) {
 }
 
 /* ─────────────────────────────────────────────────────────────
-   Stats strip — quiet KPI row at the edge of the hero
+   Stats strip — quiet KPI row at the edge of the hero.
+   2 cols on phones, 4 cols on md+. Vertical stacks of big
+   number + label + optional sub. Borders are column/row aware
+   so narrow viewports never collapse numbers next to labels.
    ───────────────────────────────────────────────────────────── */
 function StatsStrip({ lang }: { lang: Lang }) {
   return (
-    <section className="relative text-white" style={{ background: "var(--mp-oxford-blue-dk)" }}>
+    <section
+      className="relative text-white"
+      style={{ background: "var(--mp-oxford-blue-dk)" }}
+    >
       <div className="relative max-w-6xl mx-auto px-4 sm:px-6">
         <div
-          className="grid grid-cols-2 md:grid-cols-4 border-t border-b"
+          className="grid grid-cols-2 md:grid-cols-4 border-t border-b divide-x divide-white/10 md:divide-x-0"
           style={{ borderColor: "rgba(255,255,255,0.1)" }}
         >
-          {COPY.stats.map((s, i) => (
-            <div
-              key={i}
-              className="py-6 px-4 md:px-6"
-              style={{
-                borderRight:
-                  i < COPY.stats.length - 1 ? "1px solid rgba(255,255,255,0.1)" : "none",
-              }}
-            >
+          {COPY.stats.map((s, i) => {
+            // Phone (2-col): top row cells (i<2) get a bottom border.
+            // md+ (4-col): each cell except the last gets a right border.
+            const isTopRowOnPhone = i < 2;
+            const isLastOnDesktop = i === COPY.stats.length - 1;
+            return (
               <div
-                className="mp-num font-black text-white"
-                style={{
-                  fontSize: "clamp(26px, 3.5vw, 36px)",
-                  letterSpacing: "-0.02em",
-                  lineHeight: 1,
-                  fontFamily: "var(--mp-font-display)",
-                }}
+                key={i}
+                className={`flex flex-col items-start justify-center py-5 sm:py-6 px-4 md:px-6 min-w-0 ${
+                  isTopRowOnPhone ? "border-b md:border-b-0 border-white/10" : ""
+                } ${!isLastOnDesktop ? "md:border-r md:border-white/10" : ""}`}
               >
-                {lang === "en" ? s.value_en : s.value}
-              </div>
-              <div
-                className="mp-caption mt-1.5 text-white/60 font-bold uppercase"
-                style={{ fontSize: "10px", letterSpacing: "0.08em" }}
-              >
-                {s.label[lang]}
-              </div>
-              {s.sub && (
-                <div className="mt-1 text-white/45" style={{ fontSize: "10px" }}>
-                  {s.sub[lang]}
+                <div
+                  className="mp-num font-black text-white leading-none"
+                  style={{
+                    fontSize: "clamp(26px, 3.5vw, 36px)",
+                    fontFamily: "var(--mp-font-display)",
+                    letterSpacing: "-0.02em",
+                  }}
+                >
+                  {lang === "en" ? s.value_en : s.value}
                 </div>
-              )}
-            </div>
-          ))}
+                <div
+                  className="mt-2 text-white/65 font-bold leading-snug"
+                  style={{
+                    fontSize: "11px",
+                    letterSpacing: "0.1em",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  {s.label[lang]}
+                </div>
+                {s.sub && (
+                  <div
+                    className="mt-1 text-white/45 leading-snug"
+                    style={{ fontSize: "11px" }}
+                  >
+                    {s.sub[lang]}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
     </section>
@@ -630,9 +813,9 @@ function StatsStrip({ lang }: { lang: Lang }) {
    ───────────────────────────────────────────────────────────── */
 function HowItWorks({ lang }: { lang: Lang }) {
   return (
-    <section id="how" className="py-24 bg-[var(--mp-surface-raised)]">
+    <section id="how" className="py-20 md:py-24 bg-[var(--mp-surface-raised)]">
       <div className="max-w-5xl mx-auto px-4 sm:px-6">
-        <div className="mb-14 max-w-2xl">
+        <div className="mb-10 md:mb-14 max-w-2xl">
           <p
             className="mp-caption uppercase font-bold mb-3 text-[var(--mp-viridian)]"
             style={{ letterSpacing: "0.12em" }}
@@ -644,7 +827,7 @@ function HowItWorks({ lang }: { lang: Lang }) {
           </h2>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
           {COPY.how.steps.map((s, i) => (
             <div key={s.n} className="relative">
               <div className="flex items-baseline gap-3 mb-4">
@@ -688,9 +871,9 @@ function HowItWorks({ lang }: { lang: Lang }) {
    ───────────────────────────────────────────────────────────── */
 function Features({ lang }: { lang: Lang }) {
   return (
-    <section id="features" className="py-24 bg-[var(--mp-surface-sunken)]">
+    <section id="features" className="py-20 md:py-24 bg-[var(--mp-surface-sunken)]">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
-        <div className="mb-12 max-w-2xl">
+        <div className="mb-10 md:mb-12 max-w-2xl">
           <p
             className="mp-caption uppercase font-bold mb-3 text-[var(--mp-viridian)]"
             style={{ letterSpacing: "0.12em" }}
@@ -745,9 +928,9 @@ function Features({ lang }: { lang: Lang }) {
    ───────────────────────────────────────────────────────────── */
 function Subjects({ lang }: { lang: Lang }) {
   return (
-    <section className="py-24 bg-[var(--mp-surface-raised)]">
+    <section className="py-20 md:py-24 bg-[var(--mp-surface-raised)]">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
-        <div className="mb-12 max-w-2xl">
+        <div className="mb-10 md:mb-12 max-w-2xl">
           <p
             className="mp-caption uppercase font-bold mb-3 text-[var(--mp-viridian)]"
             style={{ letterSpacing: "0.12em" }}
@@ -768,13 +951,16 @@ function Subjects({ lang }: { lang: Lang }) {
             return (
               <div
                 key={i}
-                className="mp-card flex flex-col items-center justify-center text-center gap-2 p-4 hover:border-[var(--mp-viridian)]/40"
+                className="mp-card flex flex-col items-center justify-center text-center gap-2 p-4 hover:border-[var(--mp-viridian)]/40 transition-colors"
               >
                 <div
                   className="w-10 h-10 rounded-lg flex items-center justify-center"
-                  style={{ background: "rgba(0, 58, 140, 0.08)" }}
+                  style={{ background: "rgba(0, 123, 95, 0.08)" }}
                 >
-                  <Icon className="w-5 h-5 text-[var(--mp-cta-blue)]" aria-hidden="true" />
+                  <Icon
+                    className="w-5 h-5 text-[var(--mp-viridian)]"
+                    aria-hidden="true"
+                  />
                 </div>
                 <span
                   className="mp-body text-[var(--mp-fg)] font-semibold"
@@ -796,9 +982,9 @@ function Subjects({ lang }: { lang: Lang }) {
    ───────────────────────────────────────────────────────────── */
 function PricingPreview({ lang }: { lang: Lang }) {
   return (
-    <section id="pricing" className="py-24 bg-[var(--mp-surface-sunken)]">
+    <section id="pricing" className="py-20 md:py-24 bg-[var(--mp-surface-sunken)]">
       <div className="max-w-5xl mx-auto px-4 sm:px-6">
-        <div className="mb-12 max-w-2xl">
+        <div className="mb-10 md:mb-12 max-w-2xl">
           <p
             className="mp-caption uppercase font-bold mb-3 text-[var(--mp-viridian)]"
             style={{ letterSpacing: "0.12em" }}
@@ -885,12 +1071,14 @@ function PricingPreview({ lang }: { lang: Lang }) {
 }
 
 /* ─────────────────────────────────────────────────────────────
-   Social proof — quiet quote band
+   Content & quality — quiet proof band with sourced breakdown.
+   Replaces the old "Rated by physicians" social-proof line we
+   couldn't back with real data. Reads clinical, not hype-y.
    ───────────────────────────────────────────────────────────── */
 function SocialProof({ lang }: { lang: Lang }) {
   return (
-    <section className="py-20 bg-[var(--mp-surface-raised)] border-y border-[var(--mp-border-subtle)]">
-      <div className="max-w-3xl mx-auto px-4 sm:px-6 text-center">
+    <section className="py-20 md:py-24 bg-[var(--mp-surface-raised)] border-y border-[var(--mp-border-subtle)]">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
         <p
           className="mp-caption uppercase font-bold mb-4"
           style={{ color: "var(--mp-viridian)", letterSpacing: "0.12em" }}
@@ -901,11 +1089,42 @@ function SocialProof({ lang }: { lang: Lang }) {
           {COPY.proof.title[lang]}
         </h2>
         <p
-          className="mp-body text-[var(--mp-fg-muted)]"
-          style={{ fontSize: "17px", lineHeight: 1.6 }}
+          className="mp-body text-[var(--mp-fg-muted)] max-w-2xl mx-auto mb-10"
+          style={{ fontSize: "17px", lineHeight: 1.6, textWrap: "balance" as const }}
         >
           {COPY.proof.quote[lang]}
         </p>
+
+        {/* Source breakdown — three compact figures, label + sub */}
+        <div className="grid grid-cols-3 gap-3 md:gap-6 max-w-3xl mx-auto">
+          {COPY.proof.breakdown.map((b, i) => (
+            <div
+              key={i}
+              className="mp-card flex flex-col items-start justify-center p-4 md:p-5 text-left"
+            >
+              <div
+                className="mp-num font-black text-[var(--mp-oxford-blue)] dark:text-white leading-none"
+                style={{
+                  fontSize: "clamp(22px, 3vw, 32px)",
+                  fontFamily: "var(--mp-font-display)",
+                  letterSpacing: "-0.02em",
+                }}
+              >
+                {lang === "en" ? b.n_en : b.n}
+              </div>
+              <div
+                className="mt-2 font-bold text-[var(--mp-fg-muted)] leading-snug"
+                style={{
+                  fontSize: "11px",
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase",
+                }}
+              >
+                {b.label[lang]}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   );
@@ -917,7 +1136,7 @@ function SocialProof({ lang }: { lang: Lang }) {
 function FinalCTA({ lang }: { lang: Lang }) {
   return (
     <section
-      className="relative py-24 text-white overflow-hidden"
+      className="relative py-20 md:py-24 text-white overflow-hidden"
       style={{ background: "var(--mp-oxford-blue-dk)" }}
     >
       <div
@@ -972,12 +1191,15 @@ function FinalCTA({ lang }: { lang: Lang }) {
 }
 
 /* ─────────────────────────────────────────────────────────────
-   Footer
+   Footer — uses --mp-oxford-blue (slightly lighter than the final
+   CTA band's -dk variant) so it reads as a distinct section, not
+   a continuation of the CTA. Brand strip stays quiet; the CTA
+   button above remains the conversion focal point.
    ───────────────────────────────────────────────────────────── */
 function Footer({ lang }: { lang: Lang }) {
   const year = new Date().getFullYear();
   return (
-    <footer className="bg-[var(--mp-oxford-blue)] text-white pt-16 pb-8">
+    <footer className="bg-[var(--mp-oxford-blue)] text-white pt-14 md:pt-16 pb-8">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-10">
           <div className="md:col-span-2">

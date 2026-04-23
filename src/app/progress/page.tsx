@@ -62,7 +62,9 @@ import {
    MPDS tokens via CSS vars so dark mode flips automatically.
    ───────────────────────────────────────────────────────────── */
 
-/** Spider chart showing accuracy by topic */
+/** Spider chart showing accuracy by topic. Topic labels shortened to
+ *  12 chars on narrow viewports so adjacent labels don't overlap at
+ *  375px. Desktop keeps the longer slice. */
 function StudyRadar({
   topics,
   lang,
@@ -70,10 +72,21 @@ function StudyRadar({
   topics: { topic: string; answered: number; correct: number }[];
   lang: string;
 }) {
+  const [isNarrow, setIsNarrow] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(max-width: 640px)");
+    const onChange = () => setIsNarrow(mq.matches);
+    onChange();
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+  const labelLen = isNarrow ? 10 : 16;
+
   const data = topics
     .filter((t) => t.answered > 0)
     .map((t) => ({
-      subject: t.topic.split("/")[0].replace("- und ", "/").substring(0, 16),
+      subject: t.topic.split("/")[0].replace("- und ", "/").substring(0, labelLen),
       accuracy: Math.round((t.correct / t.answered) * 100),
       fullMark: 100,
     }));
@@ -90,9 +103,12 @@ function StudyRadar({
 
   return (
     <ResponsiveContainer width="100%" height={260}>
-      <RadarChart data={data} outerRadius="75%">
+      <RadarChart data={data} outerRadius="72%">
         <PolarGrid stroke="var(--mp-border-subtle)" />
-        <PolarAngleAxis dataKey="subject" tick={{ fontSize: 10, fill: "var(--mp-fg-muted)" }} />
+        <PolarAngleAxis
+          dataKey="subject"
+          tick={{ fontSize: isNarrow ? 9 : 10, fill: "var(--mp-fg-muted)" }}
+        />
         <PolarRadiusAxis
           angle={90}
           domain={[0, 100]}
@@ -262,10 +278,13 @@ function ActivityHeatmap({ lang }: { lang: string }) {
   }, []);
 
   const getColor = (count: number): string => {
-    if (count === 0) return "bg-[var(--mp-surface-sunken)]";
+    // Dark mode: empty cells (`--mp-surface-sunken` #0F172A) nearly
+    // blend into the raised panel `#1E293B`. Adding a subtle border
+    // ensures cell-grid edges are always visible, light and dark.
+    if (count === 0) return "bg-[var(--mp-surface-sunken)] border border-[var(--mp-border-subtle)]";
     if (count <= 5) return "bg-[var(--mp-viridian)]/20";
-    if (count <= 15) return "bg-[var(--mp-viridian)]/40";
-    if (count <= 30) return "bg-[var(--mp-viridian)]/60";
+    if (count <= 15) return "bg-[var(--mp-viridian)]/45";
+    if (count <= 30) return "bg-[var(--mp-viridian)]/70";
     return "bg-[var(--mp-viridian)]";
   };
 
@@ -307,10 +326,10 @@ function ActivityHeatmap({ lang }: { lang: string }) {
         <span className="text-[10px] text-[var(--mp-fg-subtle)] font-mono">
           {lang === "de" ? "weniger" : "less"}
         </span>
-        <div className="calendar-cell bg-[var(--mp-surface-sunken)] rounded-sm" />
+        <div className="calendar-cell bg-[var(--mp-surface-sunken)] border border-[var(--mp-border-subtle)] rounded-sm" />
         <div className="calendar-cell bg-[var(--mp-viridian)]/20 rounded-sm" />
-        <div className="calendar-cell bg-[var(--mp-viridian)]/40 rounded-sm" />
-        <div className="calendar-cell bg-[var(--mp-viridian)]/60 rounded-sm" />
+        <div className="calendar-cell bg-[var(--mp-viridian)]/45 rounded-sm" />
+        <div className="calendar-cell bg-[var(--mp-viridian)]/70 rounded-sm" />
         <div className="calendar-cell bg-[var(--mp-viridian)] rounded-sm" />
         <span className="text-[10px] text-[var(--mp-fg-subtle)] font-mono">
           {lang === "de" ? "mehr" : "more"}
@@ -356,6 +375,10 @@ export default function ProgressPage() {
   const [lang, setLangState] = useState<Lang>("de");
   const [userId, setUserId] = useState("");
   const [userName, setUserName] = useState("");
+  // Bookmarks + notes are Pro-only (Lock 2026-04-23). We gate the UI
+  // on this tier so the empty state reads "upgrade to unlock"
+  // instead of "nothing here".
+  const [userTier, setUserTier] = useState<string>("free");
   const [totalXp, setTotalXp] = useState(0);
   const [streak, setStreak] = useState(0);
   const [totalAnswered, setTotalAnswered] = useState(0);
@@ -382,6 +405,7 @@ export default function ProgressPage() {
     if (session) {
       setUserId(session.user.id);
       setUserName(session.user.first_name);
+      setUserTier(session.user.tier || "free");
       // Guard against older / minimal sessions that don't embed a
       // gamification snapshot — the server will re-hydrate these after
       // the next /api/stats call. Previous code crashed with
@@ -880,12 +904,40 @@ export default function ProgressPage() {
                     <div className="w-6 h-6 border-2 border-[var(--mp-viridian)] border-t-transparent rounded-full animate-spin" />
                   </div>
                 ) : bookmarkQuestions.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Star className="w-8 h-8 text-[var(--mp-border-subtle)] mx-auto mb-2" />
-                    <p className="text-sm text-[var(--mp-fg-subtle)]">
-                      {t("no_bookmarks", lang)}
-                    </p>
-                  </div>
+                  // Pro-gated empty state: free users should see "this
+                  // is a Pro feature" with an upsell, not a bare
+                  // "nothing here" line. Pro users genuinely with no
+                  // bookmarks get the neutral copy.
+                  userTier === "pro" || userTier === "admin" ? (
+                    <div className="text-center py-8">
+                      <Star className="w-8 h-8 text-[var(--mp-border-subtle)] mx-auto mb-2" />
+                      <p className="text-sm text-[var(--mp-fg-subtle)]">
+                        {t("no_bookmarks", lang)}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 px-4">
+                      <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-[var(--mp-status-warning)]/12 mb-3">
+                        <Star className="w-6 h-6 text-[var(--mp-status-warning)]" />
+                      </div>
+                      <h4 className="text-sm font-semibold text-[var(--mp-fg)] mb-1">
+                        {lang === "de"
+                          ? "Lesezeichen sind ein Pro-Feature"
+                          : "Bookmarks are a Pro feature"}
+                      </h4>
+                      <p className="text-xs text-[var(--mp-fg-muted)] mb-4 max-w-sm mx-auto leading-relaxed">
+                        {lang === "de"
+                          ? "Markiere schwierige Fragen mit einem Klick und komm später gezielt zurück — inklusive für alle Pro-Nutzer:innen."
+                          : "Flag tricky questions with one click and jump back to them anytime — included with every Pro plan."}
+                      </p>
+                      <Link
+                        href="/pricing?gate=bookmarks&utm_source=progress_bookmarks_tab"
+                        className="mp-btn mp-btn--primary inline-flex items-center gap-1.5"
+                      >
+                        {lang === "de" ? "Pro ansehen" : "See Pro"}
+                      </Link>
+                    </div>
+                  )
                 ) : (
                   <div className="space-y-2">
                     {bookmarkQuestions
@@ -955,10 +1007,34 @@ export default function ProgressPage() {
                     <div className="w-6 h-6 border-2 border-[var(--mp-viridian)] border-t-transparent rounded-full animate-spin" />
                   </div>
                 ) : noteEntries.length === 0 ? (
-                  <div className="text-center py-8">
-                    <StickyNote className="w-8 h-8 text-[var(--mp-border-subtle)] mx-auto mb-2" />
-                    <p className="text-sm text-[var(--mp-fg-subtle)]">{t("no_notes", lang)}</p>
-                  </div>
+                  userTier === "pro" || userTier === "admin" ? (
+                    <div className="text-center py-8">
+                      <StickyNote className="w-8 h-8 text-[var(--mp-border-subtle)] mx-auto mb-2" />
+                      <p className="text-sm text-[var(--mp-fg-subtle)]">{t("no_notes", lang)}</p>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 px-4">
+                      <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-[var(--mp-accent-teal)]/12 mb-3">
+                        <StickyNote className="w-6 h-6 text-[var(--mp-accent-teal)]" />
+                      </div>
+                      <h4 className="text-sm font-semibold text-[var(--mp-fg)] mb-1">
+                        {lang === "de"
+                          ? "Notizen sind ein Pro-Feature"
+                          : "Notes are a Pro feature"}
+                      </h4>
+                      <p className="text-xs text-[var(--mp-fg-muted)] mb-4 max-w-sm mx-auto leading-relaxed">
+                        {lang === "de"
+                          ? "Schreib dir Merkhilfen zu einzelnen Fragen — sie bleiben an der Frage hängen und kommen beim nächsten Versuch automatisch wieder hoch."
+                          : "Jot down memory aids per question — they stay attached and reappear the next time you see it."}
+                      </p>
+                      <Link
+                        href="/pricing?gate=notes&utm_source=progress_notes_tab"
+                        className="mp-btn mp-btn--primary inline-flex items-center gap-1.5"
+                      >
+                        {lang === "de" ? "Pro ansehen" : "See Pro"}
+                      </Link>
+                    </div>
+                  )
                 ) : (
                   <div className="space-y-2">
                     {noteEntries.slice(0, showAllNotes ? undefined : 20).map((entry) => {

@@ -39,8 +39,9 @@ import BottomNav from "@/components/BottomNav";
 import LanguageToggle from "@/components/LanguageToggle";
 import ThemeToggle from "@/components/ThemeToggle";
 import TopicIcon from "@/components/TopicIcon";
-import { Layers, RotateCcw, Inbox, History, Check, ShieldCheck, Lock } from "lucide-react";
+import { Layers, RotateCcw, History, Check, ShieldCheck, Lock, Sparkles } from "lucide-react";
 import { getPaywallCopy } from "@/lib/paywall-copy";
+import { EmptyState } from "@/components/ui";
 
 type Lang = "de" | "en";
 type Confidence = "again" | "hard" | "good" | "easy";
@@ -98,10 +99,16 @@ function ratingLabel(r: Confidence, lang: Lang): string {
 }
 
 function ratingColor(r: Confidence): string {
-  if (r === "again") return "var(--mp-error)";
-  if (r === "hard") return "var(--mp-status-warning)";
-  if (r === "good") return "var(--mp-viridian)";
-  return "var(--mp-cta-blue)";
+  // SM-2 isn't "wrong → right"; it's a difficulty gradient. Using
+  // `--mp-error` red for "Again" read as punishment (post-soft-launch
+  // audit). Migrated to an orange→yellow→viridian→blue ramp that
+  // reads as "more work needed" → "more confidence". The history-rail
+  // dots, retention % threshold colours, and button borders all share
+  // this scale so a glance tells the same story everywhere.
+  if (r === "again") return "var(--mp-warning)";          // warm orange — "revisit soon"
+  if (r === "hard") return "var(--mp-gamif-xp, #FBD38D)"; // soft gold — "getting there"
+  if (r === "good") return "var(--mp-viridian)";          // brand viridian — "solid"
+  return "var(--mp-cta-blue)";                             // cta blue — "mastered"
 }
 
 function FlashcardContent() {
@@ -342,17 +349,43 @@ function FlashcardContent() {
   }
 
   if (!question) {
+    // "No questions" covers two real-world cases: (1) a new user with
+    // nothing in their SM-2 queue yet, (2) an existing user who's
+    // cleared every due card for the day. Both deserve a warm "all
+    // caught up" nudge, not a blank "no questions" verdict.
     return (
       <div className="flex flex-col items-center justify-center min-h-screen px-4 bg-[var(--mp-surface-sunken)]">
-        <div className="text-center animate-fade-in">
-          <Inbox className="w-12 h-12 text-[var(--mp-fg-subtle)] mx-auto mb-4" />
-          <p className="text-[var(--mp-fg-muted)] mb-4 text-lg">{t("no_questions", lang)}</p>
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 text-[var(--mp-viridian)] hover:text-[var(--mp-accent-teal)] transition-colors font-medium"
-          >
-            &larr; {t("back_home", lang)}
-          </Link>
+        <div className="max-w-md w-full animate-fade-in">
+          <EmptyState
+            tone="success"
+            icon={<Sparkles className="w-10 h-10" aria-hidden />}
+            title={
+              lang === "de"
+                ? "Heute alles erledigt."
+                : "All caught up for today."
+            }
+            body={
+              lang === "de"
+                ? "Du hast alle fälligen Karten durchgearbeitet. Neue Wiederholungen freischalten sich automatisch — oder starte ein kurzes Zufalls-Quiz, um weiter zu üben."
+                : "You've cleared every card due right now. New reviews unlock automatically — or start a quick random quiz to keep the momentum."
+            }
+            action={
+              <div className="flex flex-col sm:flex-row gap-2 justify-center mt-2">
+                <Link
+                  href="/quiz"
+                  className="mp-btn mp-btn--primary"
+                >
+                  {lang === "de" ? "Zufalls-Quiz starten" : "Start random quiz"}
+                </Link>
+                <Link
+                  href="/"
+                  className="mp-btn mp-btn--ghost"
+                >
+                  {t("back_home", lang)}
+                </Link>
+              </div>
+            }
+          />
         </div>
       </div>
     );
@@ -588,10 +621,11 @@ function FlashcardContent() {
                   <div className="grid grid-cols-4 gap-2">
                     <button
                       onClick={() => handleConfidence("again")}
-                      className="py-3 rounded-xl text-sm font-bold transition-all border-2 active:scale-95 flex flex-col items-center gap-0.5"
+                      aria-label={`${t("again", lang)} — < 10 min`}
+                      className="min-h-[56px] py-3 rounded-xl text-sm font-bold transition-all border-2 active:scale-95 flex flex-col items-center gap-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--mp-warning)]"
                       style={{
-                        borderColor: "var(--mp-error)",
-                        color: "var(--mp-error)",
+                        borderColor: ratingColor("again"),
+                        color: ratingColor("again"),
                         background: "var(--mp-surface-raised)",
                       }}
                     >
@@ -602,9 +636,10 @@ function FlashcardContent() {
                     </button>
                     <button
                       onClick={() => handleConfidence("hard")}
-                      className="py-3 rounded-xl text-sm font-bold transition-all border-2 active:scale-95 flex flex-col items-center gap-0.5"
+                      aria-label={`${t("hard", lang)} — 1 ${lang === "de" ? "Tag" : "day"}`}
+                      className="min-h-[56px] py-3 rounded-xl text-sm font-bold transition-all border-2 active:scale-95 flex flex-col items-center gap-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--mp-status-warning)]"
                       style={{
-                        borderColor: "var(--mp-status-warning)",
+                        borderColor: ratingColor("hard"),
                         color: "var(--mp-status-warning)",
                         background: "var(--mp-surface-raised)",
                       }}
@@ -616,10 +651,11 @@ function FlashcardContent() {
                     </button>
                     <button
                       onClick={() => handleConfidence("good")}
-                      className="py-3 rounded-xl text-sm font-bold transition-all border-2 active:scale-95 flex flex-col items-center gap-0.5"
+                      aria-label={`${t("good", lang)} — 4 ${lang === "de" ? "Tage" : "days"}`}
+                      className="min-h-[56px] py-3 rounded-xl text-sm font-bold transition-all border-2 active:scale-95 flex flex-col items-center gap-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--mp-viridian)]"
                       style={{
-                        borderColor: "var(--mp-viridian)",
-                        color: "var(--mp-viridian)",
+                        borderColor: ratingColor("good"),
+                        color: ratingColor("good"),
                         background: "var(--mp-surface-raised)",
                       }}
                     >
@@ -630,10 +666,11 @@ function FlashcardContent() {
                     </button>
                     <button
                       onClick={() => handleConfidence("easy")}
-                      className="py-3 rounded-xl text-sm font-bold transition-all border-2 active:scale-95 flex flex-col items-center gap-0.5"
+                      aria-label={`${t("easy", lang)} — 12 ${lang === "de" ? "Tage" : "days"}`}
+                      className="min-h-[56px] py-3 rounded-xl text-sm font-bold transition-all border-2 active:scale-95 flex flex-col items-center gap-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--mp-cta-blue)]"
                       style={{
-                        borderColor: "var(--mp-cta-blue)",
-                        color: "var(--mp-cta-blue)",
+                        borderColor: ratingColor("easy"),
+                        color: ratingColor("easy"),
                         background: "var(--mp-surface-raised)",
                       }}
                     >
@@ -665,30 +702,39 @@ function FlashcardContent() {
 
             {/* ═══ HISTORY RAIL (desktop) ═══ */}
             <aside className="mp-card p-4 hidden lg:flex flex-col gap-4 h-fit sticky top-5">
+              {/* "Today" stats — mission-control tiles, not bottom-of-
+                  form greys. Big tabular-num values, 10px label below,
+                  two-column grid so they scan as data, not as prose. */}
               <div>
-                <div className="text-[10px] font-mono uppercase tracking-wider text-[var(--mp-fg-subtle)] font-bold mb-2">
+                <div className="text-[10px] font-mono uppercase tracking-wider text-[var(--mp-fg-subtle)] font-bold mb-2.5">
                   {lang === "de" ? "Heute" : "Today"}
                 </div>
-                <div className="flex justify-between text-xs text-[var(--mp-fg-muted)] py-1">
-                  <span>{lang === "de" ? "Erledigt" : "Done"}</span>
-                  <span className="font-mono font-bold text-[var(--mp-fg)]">
-                    {dailyCount}
-                  </span>
-                </div>
-                <div className="flex justify-between text-xs text-[var(--mp-fg-muted)] py-1">
-                  <span>{lang === "de" ? "Diese Session" : "This session"}</span>
-                  <span className="font-mono font-bold text-[var(--mp-fg)]">
-                    {history.length}
-                  </span>
+                <div className="grid grid-cols-2 gap-2 mb-1">
+                  <div className="rounded-xl bg-[var(--mp-surface-sunken)] px-3 py-2.5">
+                    <div className="text-xl font-black font-mono font-display tabular-nums text-[var(--mp-fg)] leading-none">
+                      {dailyCount}
+                    </div>
+                    <div className="mt-1 text-[10px] font-mono uppercase tracking-wider text-[var(--mp-fg-subtle)]">
+                      {lang === "de" ? "Erledigt" : "Done"}
+                    </div>
+                  </div>
+                  <div className="rounded-xl bg-[var(--mp-surface-sunken)] px-3 py-2.5">
+                    <div className="text-xl font-black font-mono font-display tabular-nums text-[var(--mp-fg)] leading-none">
+                      {history.length}
+                    </div>
+                    <div className="mt-1 text-[10px] font-mono uppercase tracking-wider text-[var(--mp-fg-subtle)]">
+                      {lang === "de" ? "Session" : "Session"}
+                    </div>
+                  </div>
                 </div>
                 {leaks > 0 && (
-                  <div className="flex justify-between text-xs py-1">
-                    <span className="text-[var(--mp-fg-muted)]">
+                  <div className="mt-2 rounded-xl bg-[var(--mp-surface-sunken)] px-3 py-2 flex items-baseline justify-between">
+                    <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--mp-fg-subtle)]">
                       Leaks ({lang === "de" ? "Nochmal" : "again"})
                     </span>
                     <span
-                      className="font-mono font-bold"
-                      style={{ color: "var(--mp-error)" }}
+                      className="font-mono font-black text-lg tabular-nums"
+                      style={{ color: ratingColor("again") }}
                     >
                       {leaks}
                     </span>
@@ -706,12 +752,15 @@ function FlashcardContent() {
                     <span
                       className="font-display font-black text-[32px] leading-none tracking-tight font-mono"
                       style={{
+                        // Calm ramp: no red. Low retention is a signal, not
+                        // a failure — warm orange says "needs more reps",
+                        // not "you're bad at this".
                         color:
                           retention >= 70
                             ? "var(--mp-viridian)"
                             : retention >= 40
                             ? "var(--mp-status-warning)"
-                            : "var(--mp-error)",
+                            : "var(--mp-warning)",
                       }}
                     >
                       {retention}%

@@ -57,6 +57,7 @@ import {
   Zap,
 } from "lucide-react";
 import { clearSession, getStoredSession } from "@/lib/auth";
+import { ShortcutHint } from "./_components/primitives";
 
 type SectionKey = "overview" | "revenue" | "content" | "product" | "system";
 
@@ -348,6 +349,27 @@ export default function AdminLayout({
 
   return (
     <div className="admin-shell min-h-screen flex" data-admin="1">
+      {/*
+        Dark-mode-first bootstrap — runs on first paint, before React
+        hydration completes, so the tiles render with the right tokens
+        even on a hard refresh. The useEffect above keeps the attribute
+        in sync afterwards.
+      */}
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `
+            (function(){
+              try {
+                var stored = localStorage.getItem('medpruef_admin_theme');
+                var theme = (stored === 'light' || stored === 'dark') ? stored : 'dark';
+                document.documentElement.setAttribute('data-theme', theme);
+              } catch (e) {
+                document.documentElement.setAttribute('data-theme', 'dark');
+              }
+            })();
+          `,
+        }}
+      />
       {/* ═══ SIDEBAR ═══ */}
       <aside
         className={`${sidebarCollapsed ? "w-[64px]" : "w-[240px]"} flex-shrink-0 border-r border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] transition-all duration-200`}
@@ -518,13 +540,14 @@ function NavSectionView({
       <Link
         href={href}
         className={`${rowBase} ${sectionActive ? rowActive : rowIdle} mx-2 my-0.5`}
-        title={collapsed ? section.label : undefined}
+        title={collapsed ? `${section.label} (g ${section.shortcut})` : undefined}
       >
         <Icon size={16} />
         {!collapsed && <span>{section.label}</span>}
         {!collapsed && (
-          <span className="ml-auto text-[10px] font-mono text-[var(--mp-fg-muted)]">
-            g·{section.shortcut}
+          <span className="ml-auto inline-flex items-center gap-0.5">
+            <ShortcutHint keys="g" />
+            <ShortcutHint keys={section.shortcut} />
           </span>
         )}
       </Link>
@@ -537,15 +560,16 @@ function NavSectionView({
         type="button"
         onClick={() => setOpen((v) => !v)}
         className={`${rowBase} ${anyChildActive ? rowActive : rowIdle} w-full`}
-        title={collapsed ? section.label : undefined}
+        title={collapsed ? `${section.label} (g ${section.shortcut})` : undefined}
         aria-expanded={open}
       >
         <Icon size={16} />
         {!collapsed && <span className="flex-1 text-left">{section.label}</span>}
         {!collapsed && (
           <>
-            <span className="text-[10px] font-mono text-[var(--mp-fg-muted)]">
-              g·{section.shortcut}
+            <span className="inline-flex items-center gap-0.5">
+              <ShortcutHint keys="g" />
+              <ShortcutHint keys={section.shortcut} />
             </span>
             <ChevronDown
               size={12}

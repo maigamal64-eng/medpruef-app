@@ -134,7 +134,7 @@ function StatsContent() {
           <div className="flex flex-col items-center justify-center min-h-[calc(100vh-60px)] px-4 text-center">
             <div className="mb-4"><BarChart3 className="w-12 h-12 text-[var(--mp-fg-subtle)] mx-auto" /></div>
             <p className="text-[var(--mp-fg-muted)] font-medium mb-2">{t("sign_in_for_stats", lang)}</p>
-            <Link href="/" className="mt-4 px-6 py-3 bg-[var(--mp-viridian)] text-[#003732] rounded font-bold text-sm hover:bg-[var(--mp-accent-teal)] transition-colors">
+            <Link href="/" className="mt-4 px-6 py-3 bg-[var(--mp-viridian)] text-white rounded-xl font-bold text-sm hover:bg-[var(--mp-viridian-dk)] transition-colors">
               {t("back_home", lang)}
             </Link>
           </div>
@@ -162,23 +162,26 @@ function StatsContent() {
 
         <div className="px-4 lg:px-8 py-5 max-w-2xl mx-auto space-y-6">
 
-          {/* Overview Cards */}
+          {/* Overview Cards — mission-control numbers, not random greys.
+              Uses the canonical gamification palette: XP gold, streak
+              warm orange (not red — streak is celebratory), accuracy
+              viridian. Rank gets viridian too since it's a milestone. */}
           <div className="grid grid-cols-2 gap-3 stagger">
             <div className="card rounded-2xl p-6 text-center">
-              <div className="text-4xl font-black text-[var(--mp-status-warning)] font-mono">{gam?.total_xp || 0}</div>
-              <div className="text-xs text-[var(--mp-fg-subtle)] font-medium mt-1">{t("total_xp", lang)}</div>
+              <div className="text-4xl font-black font-mono font-display tracking-tight text-[var(--mp-status-warning)] tabular-nums">{gam?.total_xp || 0}</div>
+              <div className="mp-caption text-[var(--mp-fg-muted)] font-semibold mt-1.5">{t("total_xp", lang)}</div>
             </div>
             <div className="card rounded-2xl p-6 text-center">
-              <div className="text-4xl font-black text-[var(--mp-viridian)] font-mono">Lv.{xpInfo.level}</div>
-              <div className="text-xs text-[var(--mp-fg-subtle)] font-medium mt-1">{xpInfo.rank}</div>
+              <div className="text-4xl font-black font-mono font-display tracking-tight text-[var(--mp-viridian)] tabular-nums">Lv.{xpInfo.level}</div>
+              <div className="mp-caption text-[var(--mp-fg-muted)] font-semibold mt-1.5">{xpInfo.rank}</div>
             </div>
             <div className="card rounded-2xl p-6 text-center">
-              <div className="text-4xl font-black text-[var(--mp-error)] font-mono flex items-center justify-center gap-1"><Flame className="w-6 h-6" /> {gam?.current_streak || 0}</div>
-              <div className="text-xs text-[var(--mp-fg-subtle)] font-medium mt-1">{t("current_streak", lang)}</div>
+              <div className="text-4xl font-black font-mono font-display tracking-tight text-[var(--mp-warning,#F4A261)] flex items-center justify-center gap-1.5 tabular-nums"><Flame className="w-6 h-6" /> {gam?.current_streak || 0}</div>
+              <div className="mp-caption text-[var(--mp-fg-muted)] font-semibold mt-1.5">{t("current_streak", lang)}</div>
             </div>
             <div className="card rounded-2xl p-6 text-center">
-              <div className="text-4xl font-black text-[var(--mp-accent-teal)] font-mono">{accuracy}%</div>
-              <div className="text-xs text-[var(--mp-fg-subtle)] font-medium mt-1">{t("accuracy", lang)}</div>
+              <div className="text-4xl font-black font-mono font-display tracking-tight text-[var(--mp-viridian)] tabular-nums">{accuracy}%</div>
+              <div className="mp-caption text-[var(--mp-fg-muted)] font-semibold mt-1.5">{t("accuracy", lang)}</div>
             </div>
           </div>
 
@@ -230,54 +233,112 @@ function StatsContent() {
             </div>
           )}
 
-          {/* Per-specialty accuracy */}
-          {Object.keys(topicStats).length > 0 && (
-            <div>
-              <h2 className="text-lg font-semibold mb-4 text-[var(--mp-fg)] border-l-[3px] border-[var(--mp-viridian)] pl-3">{t("topic_breakdown", lang)}</h2>
-              <div className="space-y-2">
-                {Object.entries(topicStats)
-                  .sort(([, a], [, b]) => b.total - a.total)
-                  .map(([topic, stat], idx) => {
-                    const config = getTopicConfig(topic);
-                    const acc = stat.total > 0 ? Math.round((stat.correct / stat.total) * 100) : 0;
-                    return (
-                      <div key={topic} className={`card rounded-xl p-4 ${idx % 2 === 1 ? "bg-[var(--mp-surface-sunken)]/50" : ""}`}>
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: config.color }} />
-                            <span className="text-sm font-medium text-[var(--mp-fg)]">{topic}</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-[var(--mp-fg-subtle)] font-mono">{stat.total} {t("answered", lang)}</span>
-                            <span
-                              className={`text-sm font-bold font-mono ${
-                                acc >= 70 ? "text-[var(--mp-accent-teal)]" : acc >= 40 ? "text-[var(--mp-status-warning)]" : "text-[var(--mp-error)]"
-                              }`}
-                            >
-                              {acc}%
-                            </span>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1 bg-[var(--mp-surface-sunken)] rounded-full h-2.5">
-                            <div
-                              className="h-2.5 rounded-full transition-all"
-                              style={{
-                                width: `${acc}%`,
-                                background: acc >= 70 ? "linear-gradient(to right, #00A896, #00A896aa)" : acc >= 40 ? "linear-gradient(to right, #D68A3A, #D68A3Aaa)" : "linear-gradient(to right, #D64545, #D64545aa)",
-                              }}
-                            />
-                          </div>
-                          <span className="text-[10px] text-[var(--mp-fg-subtle)] w-16 text-right font-mono">
-                            {stat.correct}/{stat.total}
-                          </span>
-                        </div>
+          {/* Per-specialty accuracy — rendered as Strengths vs Focus
+              areas so the eye immediately catches top/bottom groups.
+              Requires at least 5 topics with >=3 answers each so the
+              split isn't noisy at low data volumes. */}
+          {Object.keys(topicStats).length > 0 && (() => {
+            const withAcc = Object.entries(topicStats)
+              .filter(([, s]) => s.total >= 3)
+              .map(([topic, s]) => ({
+                topic,
+                total: s.total,
+                correct: s.correct,
+                acc: Math.round((s.correct / s.total) * 100),
+              }));
+            // Fallback: too few topics to split → render legacy flat list.
+            const showSplit = withAcc.length >= 5;
+            const sortedByAcc = [...withAcc].sort((a, b) => b.acc - a.acc || b.total - a.total);
+            const strengths = showSplit ? sortedByAcc.slice(0, Math.min(5, Math.floor(sortedByAcc.length / 2))) : [];
+            const focus = showSplit ? sortedByAcc.slice(-Math.min(5, Math.floor(sortedByAcc.length / 2))).reverse() : [];
+            const flat = Object.entries(topicStats)
+              .sort(([, a], [, b]) => b.total - a.total);
+
+            const renderRow = ({ topic, total, correct, acc }: typeof withAcc[number]) => {
+              const config = getTopicConfig(topic);
+              return (
+                <div key={topic} className="card rounded-xl p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: config.color }} />
+                      <span className="text-sm font-medium text-[var(--mp-fg)] truncate">{topic}</span>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className="text-xs text-[var(--mp-fg-subtle)] font-mono">{total} {t("answered", lang)}</span>
+                      <span
+                        className={`text-sm font-bold font-mono tabular-nums ${
+                          acc >= 70 ? "text-[var(--mp-viridian)]" : acc >= 40 ? "text-[var(--mp-status-warning)]" : "text-[var(--mp-warning,#F4A261)]"
+                        }`}
+                      >
+                        {acc}%
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 bg-[var(--mp-surface-sunken)] rounded-full h-2.5">
+                      <div
+                        className="h-2.5 rounded-full transition-all"
+                        style={{
+                          width: `${acc}%`,
+                          // Calm ramp: solid viridian at strong, amber
+                          // at mid, warm orange at low (no red — weak
+                          // topics are fuel for study, not failure).
+                          background: acc >= 70 ? "var(--mp-viridian)" : acc >= 40 ? "var(--mp-status-warning)" : "var(--mp-warning, #F4A261)",
+                        }}
+                      />
+                    </div>
+                    <span className="text-[10px] text-[var(--mp-fg-subtle)] w-16 text-right font-mono">
+                      {correct}/{total}
+                    </span>
+                  </div>
+                </div>
+              );
+            };
+
+            return (
+              <div>
+                <h2 className="text-lg font-semibold mb-4 text-[var(--mp-fg)] border-l-[3px] border-[var(--mp-viridian)] pl-3">{t("topic_breakdown", lang)}</h2>
+
+                {showSplit ? (
+                  <div className="space-y-5">
+                    <section>
+                      <h3 className="mp-caption uppercase tracking-wider text-[var(--mp-viridian)] font-bold mb-2">
+                        {lang === "de" ? "Stärken" : "Strengths"}
+                      </h3>
+                      <div className="space-y-2">
+                        {strengths.map(renderRow)}
                       </div>
-                    );
-                  })}
+                    </section>
+                    <section>
+                      <h3 className="mp-caption uppercase tracking-wider text-[var(--mp-warning-dk,#D68A3A)] font-bold mb-2">
+                        {lang === "de" ? "Jetzt dran — Schwerpunkte" : "Focus areas"}
+                      </h3>
+                      <div className="space-y-2">
+                        {focus.map(renderRow)}
+                      </div>
+                    </section>
+                  </div>
+                ) : (
+                  // Too few topics to split — show flat list with zebra background
+                  <div className="space-y-2">
+                    {flat.map(([topic, stat], idx) => {
+                      const row = {
+                        topic,
+                        total: stat.total,
+                        correct: stat.correct,
+                        acc: stat.total > 0 ? Math.round((stat.correct / stat.total) * 100) : 0,
+                      };
+                      return (
+                        <div key={topic} className={idx % 2 === 1 ? "opacity-[0.92]" : ""}>
+                          {renderRow(row)}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* All-specialties progress (questions practiced vs available) */}
           <div>
@@ -315,13 +376,16 @@ function StatsContent() {
             </div>
           </div>
 
-          {/* Quick action */}
+          {/* Quick action — primary CTA, not a warning. Surface the
+              exam sim directly with the canonical CTA treatment so it
+              stops reading as an alert. */}
           <div className="pb-4">
             <Link
               href={`/exam`}
-              className="flex items-center justify-center gap-3 w-full py-3.5 bg-[var(--mp-status-warning)]/12 border border-[var(--mp-status-warning)]/25 rounded text-[var(--mp-status-warning)] font-semibold text-sm hover:bg-[var(--mp-status-warning)]/20 transition-colors"
+              className="mp-btn mp-btn--primary w-full justify-center gap-2 py-3.5 rounded-xl"
             >
-              <GraduationCap className="w-5 h-5 inline" /> {lang === "de" ? "Prüfungssimulation starten" : "Start Exam Simulation"}
+              <GraduationCap className="w-5 h-5 inline" />
+              {lang === "de" ? "Prüfungssimulation starten" : "Start Exam Simulation"}
             </Link>
           </div>
         </div>

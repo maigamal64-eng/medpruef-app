@@ -4,10 +4,9 @@ import { useEffect, useState, useCallback } from "react";
 import { BrandedLoader } from "@/components/Logo";
 import { authFetch as fetch } from "@/lib/authFetch";
 import { getTopicConfig } from "@/lib/topics";
-import { getLevelFromXP } from "@/lib/xp";
 import { t, getLang, setLang } from "@/lib/i18n";
 import TopicIcon from "@/components/TopicIcon";
-import { Flame, FileText as FileTextIcon, Lightbulb, Shuffle, PlayCircle, ClipboardList, Zap, CheckCircle, User, Inbox, ChevronRight, GraduationCap, Calendar, CalendarDays, BarChart3, Search, AlertTriangle, Star, AlertCircle } from "lucide-react";
+import { Flame, FileText as FileTextIcon, Lightbulb, Shuffle, PlayCircle, ClipboardList, Zap, CheckCircle, User, ChevronRight, GraduationCap, CalendarDays, Search, Star, AlertCircle, Target, ArrowRight } from "lucide-react";
 import { isTelegramMiniApp, getMiniAppInitData, getStoredSession, storeSession } from "@/lib/auth";
 import {
   getStoredExamSource,
@@ -79,8 +78,11 @@ declare global {
   }
 }
 
-/** Floating weakness toast — appears top-right, auto-dismisses after 8s */
-function WeaknessToast({ weakTopics, lang, examSource }: { weakTopics: TopicStats[]; lang: string; examSource: string }) {
+/** Floating weakness toast — appears top-right, auto-dismisses after 8s.
+ *  Retuned Apr 23 to use the viridian "suggestion" palette (calm coach tone)
+ *  rather than the old warning-yellow accent. Matches the inline suggestion
+ *  card below the hero. */
+function WeaknessToast({ weakTopics, lang }: { weakTopics: TopicStats[]; lang: string }) {
   const [visible, setVisible] = useState(true);
   const [dismissed, setDismissed] = useState(false);
 
@@ -96,20 +98,24 @@ function WeaknessToast({ weakTopics, lang, examSource }: { weakTopics: TopicStat
 
   return (
     <div className="fixed top-4 right-4 z-50 max-w-sm animate-slide-up">
-      <div className="card rounded-xl p-4 shadow-[var(--shadow-elevated)] border-l-4 border-l-[var(--mp-status-warning)] bg-white">
+      <div
+        className="rounded-2xl p-4 shadow-[var(--mp-shadow-elev)] bg-[var(--mp-surface-raised)] border-l-[3px]"
+        style={{ borderLeftColor: "var(--mp-viridian)", border: "1px solid var(--mp-border-subtle)", borderLeft: "3px solid var(--mp-viridian)" }}
+      >
         <div className="flex items-start gap-3">
-          <Lightbulb className="w-5 h-5 text-[var(--mp-status-warning)] flex-shrink-0 mt-0.5" />
+          <Lightbulb className="w-5 h-5 text-[var(--mp-viridian)] flex-shrink-0 mt-0.5" aria-hidden />
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-[var(--mp-fg)] mb-0.5">
-              {lang === "de" ? `${wt.topic} verbessern` : `Improve ${wt.topic}`}
+              {lang === "de" ? `Fokus: ${wt.topic}` : `Focus: ${wt.topic}`}
             </p>
             <p className="text-xs text-[var(--mp-fg-subtle)]">
-              {lang === "de" ? `${acc}% Genauigkeit — jetzt üben?` : `${acc}% accuracy — practice now?`}
+              {lang === "de" ? `${acc}% Genauigkeit — 10 Fragen gezielt üben?` : `${acc}% accuracy — practice 10 focused questions?`}
             </p>
           </div>
           <button
             onClick={() => setDismissed(true)}
-            className="text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg-muted)] transition-colors flex-shrink-0"
+            className="text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg)] transition-colors flex-shrink-0 mp-focusable"
+            aria-label={lang === "de" ? "Schließen" : "Close"}
           >
             <span className="text-lg leading-none">&times;</span>
           </button>
@@ -117,6 +123,24 @@ function WeaknessToast({ weakTopics, lang, examSource }: { weakTopics: TopicStat
       </div>
     </div>
   );
+}
+
+/** Time-of-day-aware greeting. German/English parity. Kept local since it's
+ *  tiny and the dashboard is the only consumer. */
+function getGreeting(lang: "de" | "en"): string {
+  const h = new Date().getHours();
+  if (h < 12) return lang === "de" ? "Guten Morgen" : "Good morning";
+  if (h < 18) return lang === "de" ? "Guten Tag" : "Good afternoon";
+  return lang === "de" ? "Guten Abend" : "Good evening";
+}
+
+/** Human label for the active exam — used in the cohort chip next to the
+ *  greeting. Matches the ExamSwitcherInline naming. */
+function getExamLabel(examSource: string, lang: "de" | "en"): string {
+  if (examSource === "kenntnispruefung") return lang === "de" ? "Kenntnisprüfung Wien" : "Kenntnisprüfung Vienna";
+  if (examSource === "kmp_innsbruck") return lang === "de" ? "KMP Innsbruck" : "KMP Innsbruck";
+  if (examSource === "pharma") return lang === "de" ? "Pharmakologie" : "Pharmakologie";
+  return examSource;
 }
 
 export default function Home() {
@@ -130,9 +154,9 @@ export default function Home() {
   const [showExamSelector, setShowExamSelector] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [weakTopics, setWeakTopics] = useState<TopicStats[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<Record<string, unknown>[]>([]);
-  const [searchLoading, setSearchLoading] = useState(false);
+  // Search state in the authenticated shell is delegated to <SearchModal/>.
+  // We only track whether the modal is open — the query/results/loading live
+  // inside the modal itself.
   const [searchOpen, setSearchOpen] = useState(false);
   const [profileData, setProfileData] = useState<{ targetDate?: string } | null>(null);
   const [lastSessionInfo, setLastSessionInfo] = useState<{ totalXpSession: number; questionCount: number } | null>(null);
@@ -403,28 +427,6 @@ export default function Home() {
     [fetchTopics]
   );
 
-  const handleSearch = useCallback(
-    async (query: string) => {
-      setSearchQuery(query);
-      if (!query) {
-        setSearchResults([]);
-        return;
-      }
-      setSearchLoading(true);
-      try {
-        const params = new URLSearchParams({ search: query, examSource, limit: "20" });
-        const res = await fetch(`/api/questions?${params}`);
-        const data = await res.json();
-        setSearchResults(Array.isArray(data) ? data : []);
-      } catch {
-        setSearchResults([]);
-      } finally {
-        setSearchLoading(false);
-      }
-    },
-    [examSource]
-  );
-
   if (loading && !showExamSelector) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-[var(--mp-surface-sunken)]">
@@ -485,7 +487,9 @@ export default function Home() {
     );
   }
 
-  const xpInfo = getLevelFromXP(gam?.total_xp || 0);
+  // Overall accuracy — displayed inside GamificationHero + the mobile
+  // mini-stats row. Rank/level are resolved inside GamificationHero itself
+  // (via its own getLevelFromXP call), so we don't need it at this layer.
   const accuracy =
     gam && gam.total_questions_answered > 0
       ? Math.round((gam.total_correct / gam.total_questions_answered) * 100)
@@ -503,245 +507,335 @@ export default function Home() {
       />
 
       <main className="main-content safe-area-top safe-area-bottom bg-[var(--mp-surface-sunken)]">
-        {/* Mobile Header */}
-        <div className="lg:hidden px-4 pt-4 pb-2 border-b border-[var(--mp-border)]">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-3 min-w-0 flex-1">
-              <div className="w-9 h-9 rounded bg-[var(--mp-viridian)]/15 border border-[var(--mp-viridian)]/30 flex items-center justify-center text-sm font-bold text-[var(--mp-viridian)] flex-shrink-0">
-                {user.first_name.charAt(0).toUpperCase()}
-              </div>
-              <div className="min-w-0">
-                <h1 className="text-base font-bold text-[var(--mp-fg)] truncate">
-                  {t("hello", lang)}, {user.first_name}
-                </h1>
-                <p className="text-xs text-[var(--mp-fg-subtle)]">
-                  {xpInfo.rank} · {t("level", lang)}{" "}
-                  <span className="font-mono">{xpInfo.level}</span>
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <ExamSwitcherInline variant="compact" />
-              <ThemeToggle />
-              <LanguageToggle lang={lang} onChange={switchLang} />
-            </div>
-          </div>
-        </div>
+        {/*
+          DASHBOARD LAYOUT — redesigned 2026-04-23 (visual-overhaul sprint).
 
-        {/* Desktop Header Bar */}
-        <div className="hidden lg:flex px-8 pt-6 pb-3 items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-[var(--mp-fg)]">
-              {t("hello", lang)}, {user.first_name}
-            </h1>
-            <p className="text-sm text-[var(--mp-fg-subtle)]">{t("exam_prep", lang)}</p>
-          </div>
-          <div className="flex items-center gap-3">
-            {/* Exam switcher is in the sidebar on desktop — no need here.
-                Search + theme + language toggles remain. */}
+          Design principles:
+            • 8-pt spacing grid — section gaps 24/32/48px, card padding 16/24px.
+            • Card radius is `var(--mp-r-card)` (16px); buttons/pills smaller.
+            • Gamification hero OWNS the eye above the fold. Nothing competes.
+            • ONE primary CTA ("Continue"), secondaries are visually quieter.
+            • Coach tone replaces alert tone — viridian suggestions, no
+              warning-yellow for helpful nudges.
+            • All colors route through `var(--mp-*)` tokens. Dark mode is
+              a single variable flip, not a class-override matrix.
+            • Every interactive element has a visible `:focus-visible` ring.
+        */}
+
+        {/* ─── HEADER (mobile) ─────────────────────────────────────────────
+           Toolset (theme, language, search, exam switcher) collapsed into
+           a compact toolbar row so the greeting has room to breathe. */}
+        <div className="lg:hidden px-4 pt-5 pb-2">
+          <div className="flex items-center justify-end gap-2">
             <button
-              onClick={() => setSearchOpen(!searchOpen)}
-              className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-[var(--mp-border)]/50 text-[var(--mp-fg-subtle)] transition-colors"
-              title="Search (Cmd+K)"
+              onClick={() => setSearchOpen(true)}
+              className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-[var(--mp-surface-raised)] text-[var(--mp-fg-subtle)] transition-colors mp-focusable"
+              aria-label={t("suche_oeffnen", lang)}
             >
               <Search className="w-[18px] h-[18px]" />
             </button>
+            <ExamSwitcherInline variant="compact" />
             <ThemeToggle />
             <LanguageToggle lang={lang} onChange={switchLang} />
           </div>
         </div>
 
-        <div className="px-6 lg:px-10 py-4">
-          {/*
-            HOME LAYOUT (Home-A clinical minimal + Gamification-B hero).
+        {/* ─── HEADER (desktop) ────────────────────────────────────────────
+           Aligned right — the greeting lives in the content block below,
+           not in the header, so we don't duplicate the user's name twice. */}
+        <div className="hidden lg:flex px-10 pt-6 pb-2 items-center justify-end gap-3">
+          <button
+            onClick={() => setSearchOpen(!searchOpen)}
+            className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-[var(--mp-surface-raised)] text-[var(--mp-fg-subtle)] transition-colors mp-focusable"
+            aria-label={t("suche_oeffnen", lang)}
+            title="Cmd+K"
+          >
+            <Search className="w-[18px] h-[18px]" />
+          </button>
+          <ThemeToggle />
+          <LanguageToggle lang={lang} onChange={switchLang} />
+        </div>
 
-            The old "Hero Progress Banner" (Oxford→CTA gradient with
-            pass-probability + rotating social-proof pills) was removed
-            2026-04-19 — it was redundant with <GamificationHero/> below.
-            The unique signals it carried:
-              • pass probability → moved to /progress (where users look
-                for analytics)
-              • social-proof rotations → not brand-appropriate for a
-                clinical tool, dropped
-              • exam countdown → already rendered next to the gamification
-                hero as a dedicated countdown card when exam_date is set
-            Net effect: one banner at the top, less visual clutter.
-          */}
+        <div className="px-4 sm:px-6 lg:px-10 pb-8">
+          {/* ─── GREETING + COHORT CHIP ─────────────────────────────────── */}
+          {(() => {
+            const target = profileData?.targetDate;
+            const daysLeft = target ? Math.ceil((new Date(target).getTime() - Date.now()) / 86400000) : null;
+            return (
+              <div className="pt-2 pb-6 lg:pt-4 lg:pb-8">
+                <div className="flex items-baseline gap-3 flex-wrap">
+                  <h1
+                    className="mp-h2 lg:mp-h1"
+                    style={{
+                      fontFamily: "var(--mp-font-display)",
+                      fontWeight: 800,
+                      letterSpacing: "-0.02em",
+                      color: "var(--mp-fg)",
+                    }}
+                  >
+                    {getGreeting(lang)}, {user.first_name}
+                  </h1>
+                  {daysLeft !== null && daysLeft > 0 && (
+                    <span className="mp-cohort-chip" aria-label={lang === "de" ? `${daysLeft} Tage bis zur Prüfung` : `${daysLeft} days until exam`}>
+                      <span className="mp-cohort-chip__dot" aria-hidden />
+                      {getExamLabel(examSource, lang)}
+                      <span className="font-mono">· {daysLeft}{lang === "de" ? "T" : "d"}</span>
+                    </span>
+                  )}
+                </div>
+                <p className="mt-1 text-sm text-[var(--mp-fg-subtle)]">
+                  {lastSessionInfo
+                    ? (lang === "de"
+                        ? `Letzte Sitzung: +${lastSessionInfo.totalXpSession} XP · ${lastSessionInfo.questionCount} Fragen`
+                        : `Last session: +${lastSessionInfo.totalXpSession} XP · ${lastSessionInfo.questionCount} questions`)
+                    : t("dashboard_subtitle", lang)}
+                </p>
+              </div>
+            );
+          })()}
 
-          {/* Last session badge — slim, above the hero */}
-          {lastSessionInfo && (
-            <div className="text-center mb-3">
-              <span className="inline-flex items-center gap-2 text-xs text-[var(--mp-fg-subtle)] bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)] rounded-full px-3 py-1">
-                {lang === "de" ? "Letzte Sitzung" : "Last session"}: <span className="font-semibold text-[var(--mp-viridian)]">+{lastSessionInfo.totalXpSession} XP</span> · {lastSessionInfo.questionCount} {lang === "de" ? "Fragen" : "questions"}
-              </span>
-            </div>
-          )}
-
-          {/* Merged gamification hero (Gamification-B): streak + XP + daily goal + rank in one card. */}
+          {/* ─── GAMIFICATION HERO + COUNTDOWN ──────────────────────────
+             2-col at md+ with equal widths and a consistent 24px gap. The
+             hero is visually dominant via its dark gradient; the countdown
+             card is a calm companion on a light surface. */}
           {(() => {
             const target = profileData?.targetDate;
             const daysLeft = target ? Math.ceil((new Date(target).getTime() - Date.now()) / 86400000) : null;
             const showCountdown = daysLeft !== null && daysLeft > 0;
+            const urgencyColor =
+              daysLeft !== null
+                ? daysLeft <= 14
+                  ? "var(--mp-error)"
+                  : daysLeft <= 30
+                  ? "var(--mp-warning-dk)"
+                  : "var(--mp-viridian)"
+                : "var(--mp-viridian)";
+
             return (
-              <div className={`grid grid-cols-1 ${showCountdown ? "md:grid-cols-2" : ""} gap-6 mb-10`}>
+              <div
+                className={`grid grid-cols-1 ${showCountdown ? "md:grid-cols-2" : ""} gap-6 mb-8`}
+              >
                 <GamificationHero
                   streak={gam?.current_streak || 0}
                   totalXp={gam?.total_xp || 0}
                   dailyCurrent={gam?.daily_questions_today || 0}
                   dailyGoal={user.daily_goal || 20}
                   lang={lang}
+                  accuracy={accuracy}
+                  totalAnswered={gam?.total_questions_answered}
                 />
-                {showCountdown && (() => {
-                  const urgency = daysLeft <= 14 ? "#D64545" : daysLeft <= 30 ? "#D68A3A" : "#007B5F";
-                  return (
-                    <div className="card rounded-2xl p-6 flex flex-col items-center justify-center text-center">
-                      <p className="text-xs uppercase tracking-wider font-semibold mb-2" style={{ color: urgency }}>
-                        {t("exam_countdown", lang)}
-                      </p>
-                      <p className="text-5xl font-bold font-display" style={{ color: urgency }}>
-                        {daysLeft}
-                      </p>
-                      <p className="text-sm text-[var(--mp-fg-muted)] mt-1">{t("days_until_exam", lang)}</p>
-                    </div>
-                  );
-                })()}
+                {showCountdown && (
+                  <div
+                    className="rounded-2xl p-6 flex flex-col items-center justify-center text-center"
+                    style={{
+                      background: "var(--mp-surface-raised)",
+                      border: "1px solid var(--mp-border-subtle)",
+                      boxShadow: "var(--mp-shadow-card)",
+                    }}
+                    aria-label={lang === "de" ? "Prüfungs-Countdown" : "Exam countdown"}
+                  >
+                    <p
+                      className="mp-caption mb-3"
+                      style={{ color: urgencyColor, letterSpacing: "0.08em" }}
+                    >
+                      {t("exam_countdown", lang)}
+                    </p>
+                    <p
+                      className="mp-num"
+                      style={{
+                        fontFamily: "var(--mp-font-display)",
+                        fontWeight: 900,
+                        fontSize: 72,
+                        lineHeight: 1,
+                        color: urgencyColor,
+                      }}
+                    >
+                      {daysLeft}
+                    </p>
+                    <p className="text-sm text-[var(--mp-fg-muted)] mt-2">
+                      {t("days_until_exam", lang)}
+                    </p>
+                  </div>
+                )}
               </div>
             );
           })()}
 
-          {/* Resume where you left off — addresses Abobaker's feedback */}
+          {/* ─── RESUME SESSION CARD (if any) ───────────────────────────── */}
           {!user.id.startsWith("guest_") && <ResumeSessionCard userId={user.id} lang={lang} />}
 
-          {/* Weakest Subject — urgency block */}
-          {weakTopics.length > 0 && (
-            <div className="bg-[var(--mp-warning-bg)] border border-[var(--mp-status-warning)]/25 border-l-4 border-l-[var(--mp-status-warning)] rounded-2xl p-6 mb-10">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="font-bold text-[var(--mp-fg)] mb-1 flex items-center gap-2">
-                    <AlertTriangle className="w-5 h-5 text-[var(--mp-status-warning)]" />
-                    {lang === "de" ? "Smarte Empfehlung" : "Smart Recommendation"}
-                  </p>
-                  <p className="text-sm text-[var(--mp-fg-muted)]">
-                    {lang === "de"
-                      ? `${weakTopics[0]?.topic} verbessern — steigert deine Punktzahl um +${Math.min(Math.round(100 / (weakTopics.length + 1)), 15)}%`
-                      : `Improving ${weakTopics[0]?.topic} increases your score by +${Math.min(Math.round(100 / (weakTopics.length + 1)), 15)}%`}
-                  </p>
+          {/* ─── COACH SUGGESTION (calm viridian, replaces yellow warning)
+             Rendered only when we have weak-topic signal. Content uses the
+             lightbulb icon + viridian accent — feels helpful, not alarming.
+             CTA is "Practice 10 questions" (concrete), not "Fix now" (scary).
+           */}
+          {weakTopics.length > 0 && (() => {
+            const wt = weakTopics[0];
+            const acc = Math.min(Math.round(wt.accuracy), 100);
+            const href = `/quiz?topic=${encodeURIComponent(wt.topic)}&userId=${user.id}&examSource=${examSource}&practiceMode=wrong&limit=10&autoStart=1`;
+            return (
+              <Link
+                href={href}
+                className="mp-suggestion mp-suggestion--interactive mp-focusable mb-8 group block"
+                aria-label={t("coach_practice_10", lang)}
+              >
+                <div className="flex items-start gap-4">
+                  <div className="mp-suggestion__icon" aria-hidden>
+                    <Target className="w-5 h-5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[11px] uppercase font-bold tracking-wider text-[var(--mp-viridian)] mb-1" style={{ letterSpacing: "0.08em" }}>
+                      {t("coach_weak_topic_title", lang)}
+                    </p>
+                    <h3 className="mp-ui font-bold text-[var(--mp-fg)] mb-1">
+                      {wt.topic}
+                    </h3>
+                    <p className="mp-small text-[var(--mp-fg-muted)]">
+                      {lang === "de"
+                        ? `${acc}% Genauigkeit · 10 gezielte Fragen können dich sichtbar voranbringen.`
+                        : `${acc}% accuracy · 10 focused questions can move the needle.`}
+                    </p>
+                  </div>
+                  <span
+                    className="hidden sm:inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--mp-viridian)] flex-shrink-0 group-hover:translate-x-0.5 transition-transform"
+                  >
+                    {t("coach_practice_10", lang)}
+                    <ArrowRight className="w-4 h-4" aria-hidden />
+                  </span>
                 </div>
-                <Link
-                  href={`/quiz?topic=${encodeURIComponent(weakTopics[0]?.topic || 'random')}&userId=${user.id}&examSource=${examSource}&autoStart=1`}
-                  className="btn-primary text-sm px-5 py-2.5 shrink-0 font-bold"
-                >
-                  {lang === "de" ? "Jetzt verbessern" : "Fix now"}
-                </Link>
-              </div>
-            </div>
-          )}
+              </Link>
+            );
+          })()}
 
-          {/* Lernplan CTA — personalized study plan */}
+          {/* ─── PRIMARY ACTION ROW ─────────────────────────────────────
+             Mobile: primary is 2x the visual weight of the secondaries
+             (a tall 56-64px block above a two-column row of 44px slims).
+             Desktop: one row with primary 2fr + two secondaries 1fr each. */}
+          <div className="grid grid-cols-1 sm:grid-cols-[2fr_1fr_1fr] gap-3 mb-8">
+            <Link
+              href={
+                weakTopics.length > 0
+                  ? `/quiz?topic=${encodeURIComponent(weakTopics[0]?.topic || "random")}&userId=${user.id}&examSource=${examSource}&autoStart=1`
+                  : topics.length > 0
+                  ? `/quiz?topic=${encodeURIComponent(topics[0].topic)}&userId=${user.id}&examSource=${examSource}&autoStart=1`
+                  : "#"
+              }
+              className="mp-btn-primary-tall sm:py-4"
+              aria-label={t("continue_studying_cta", lang)}
+            >
+              <PlayCircle className="w-5 h-5" aria-hidden />
+              <span>
+                {weakTopics.length > 0
+                  ? t("continue_studying_cta", lang)
+                  : t("continue_where_left", lang)}
+              </span>
+            </Link>
+            <Link
+              href={`/quiz?topic=random&userId=${user.id}&examSource=${examSource}`}
+              className="mp-btn-secondary-slim"
+            >
+              <Shuffle className="w-4 h-4 text-[var(--mp-viridian)]" aria-hidden />
+              <span>{t("random_quiz", lang)}</span>
+            </Link>
+            <Link
+              href={`/exam?examSource=${examSource}`}
+              className="mp-btn-secondary-slim"
+            >
+              <GraduationCap className="w-4 h-4 text-[var(--mp-viridian)]" aria-hidden />
+              <span>{lang === "de" ? "Probeprüfung" : "Mock Exam"}</span>
+            </Link>
+          </div>
+
+          {/* ─── QUICK-REVIEW ROW (bookmarks + mistakes) ──────────────────
+             Two even tiles. Bookmarks uses warning-warm (earned to notice),
+             Mistakes uses error-muted (subdued, not alarming). */}
+          <div className="grid grid-cols-2 gap-3 mb-8">
+            <Link
+              href={`/progress?tab=bookmarks`}
+              className="mp-card rounded-2xl p-4 flex items-center gap-3 group mp-focusable hover:border-[var(--mp-viridian)]/35 transition-colors"
+            >
+              <div
+                className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{ background: "rgba(244,162,97,0.14)", color: "var(--mp-warning-dk)" }}
+                aria-hidden
+              >
+                <Star className="w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-[var(--mp-fg)]">
+                  {t("review_bookmarks", lang)}
+                </p>
+                <p className="text-[11px] text-[var(--mp-fg-subtle)]">
+                  {t("review_bookmarks_hint", lang)}
+                </p>
+              </div>
+            </Link>
+            <Link
+              href={`/quiz?topic=random&userId=${user.id}&examSource=${examSource}&practiceMode=wrong&autoStart=1`}
+              className="mp-card rounded-2xl p-4 flex items-center gap-3 group mp-focusable hover:border-[var(--mp-viridian)]/35 transition-colors"
+            >
+              <div
+                className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                style={{ background: "rgba(214,69,69,0.12)", color: "var(--mp-error)" }}
+                aria-hidden
+              >
+                <AlertCircle className="w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-[var(--mp-fg)]">
+                  {t("review_mistakes", lang)}
+                </p>
+                <p className="text-[11px] text-[var(--mp-fg-subtle)]">
+                  {t("review_mistakes_hint", lang)}
+                </p>
+              </div>
+            </Link>
+          </div>
+
+          {/* ─── LERNPLAN CTA ────────────────────────────────────────────
+             Solid viridian icon tile (no more dual-gradient), clean layout. */}
           <Link
             href="/study-plan"
-            className="card-interactive rounded-2xl p-5 mb-6 flex items-center gap-4 group"
+            className="mp-card rounded-2xl p-5 mb-8 flex items-center gap-4 group cursor-pointer mp-focusable hover:border-[var(--mp-viridian)]/35 transition-colors"
           >
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[var(--mp-viridian)] to-[var(--mp-cta-blue)] flex items-center justify-center flex-shrink-0 shadow-sm">
-              <CalendarDays className="w-6 h-6 text-white" />
+            <div
+              className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
+              style={{ background: "var(--mp-viridian)", color: "#FFFFFF", boxShadow: "var(--mp-shadow-xs)" }}
+              aria-hidden
+            >
+              <CalendarDays className="w-6 h-6" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-bold text-[var(--mp-fg)] flex items-center gap-2">
-                {lang === "de" ? "Dein Lernplan" : "Your Study Plan"}
+                {t("lernplan_title", lang)}
                 {profileData?.targetDate && !isNaN(new Date(profileData.targetDate).getTime()) && (() => {
                   const days = Math.ceil((new Date(profileData.targetDate).getTime() - Date.now()) / 86400000);
                   return days > 0 ? (
-                    <span className="inline-flex items-center gap-1 bg-[var(--mp-viridian)]/10 text-[var(--mp-viridian)] text-[10px] font-bold px-2 py-0.5 rounded-full">
+                    <span
+                      className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full"
+                      style={{ background: "rgba(0,123,95,0.12)", color: "var(--mp-viridian)" }}
+                    >
                       {lang === "de" ? `${days} Tage` : `${days} days`}
                     </span>
                   ) : null;
                 })()}
               </p>
               <p className="text-xs text-[var(--mp-fg-subtle)] mt-0.5">
-                {lang === "de"
-                  ? "Tagesplan bis zur Prüfung ansehen"
-                  : "See your day-by-day plan to the exam"}
+                {t("lernplan_subtitle", lang)}
               </p>
             </div>
-            <ChevronRight className="w-5 h-5 text-[var(--mp-fg-subtle)] group-hover:text-[var(--mp-viridian)] group-hover:translate-x-0.5 transition-all flex-shrink-0" />
+            <ChevronRight className="w-5 h-5 text-[var(--mp-fg-subtle)] group-hover:text-[var(--mp-viridian)] group-hover:translate-x-0.5 transition-all flex-shrink-0" aria-hidden />
           </Link>
 
-          {/* Quick Actions — 3-column grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-10">
-            {/* Primary: Continue */}
-            <Link
-              href={weakTopics.length > 0
-                ? `/quiz?topic=${encodeURIComponent(weakTopics[0]?.topic || 'random')}&userId=${user.id}&examSource=${examSource}&autoStart=1`
-                : topics.length > 0
-                  ? `/quiz?topic=${encodeURIComponent(topics[0].topic)}&userId=${user.id}&examSource=${examSource}&autoStart=1`
-                  : "#"}
-              className="btn-primary flex items-center justify-center gap-2.5 py-4 text-base rounded-2xl shadow-md active:scale-[0.98] transition-transform"
-            >
-              <PlayCircle className="w-5 h-5" />
-              {weakTopics.length > 0
-                ? (lang === "de" ? "Weiterlernen" : "Continue")
-                : t("continue_where_left", lang)}
-            </Link>
-
-            {/* Random Quiz */}
-            <Link
-              href={`/quiz?topic=random&userId=${user.id}&examSource=${examSource}`}
-              className="btn-secondary flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm"
-            >
-              <Shuffle className="w-4 h-4 text-[var(--mp-viridian)]" />
-              {t("random_quiz", lang)}
-            </Link>
-
-            {/* Mock Exam */}
-            <Link
-              href={`/exam?examSource=${examSource}`}
-              className="btn-secondary flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm"
-            >
-              <GraduationCap className="w-4 h-4 text-[var(--mp-status-warning)]" />
-              {lang === "de" ? "Probeprüfung" : "Mock Exam"}
-            </Link>
-          </div>
-
-          {/* Quick review modes — bookmarks + wrong answers */}
-          <div className="grid grid-cols-2 gap-3 mb-6">
-            <Link
-              href={`/progress?tab=bookmarks`}
-              className="card-interactive rounded-xl p-4 flex items-center gap-3 group"
-            >
-              <Star className="w-5 h-5 text-[var(--mp-status-warning)]" />
-              <div>
-                <p className="text-sm font-medium text-[var(--mp-fg)]">
-                  {lang === "de" ? "Lesezeichen" : "Bookmarks"}
-                </p>
-                <p className="text-[11px] text-[var(--mp-fg-subtle)]">
-                  {lang === "de" ? "Gespeicherte Fragen üben" : "Practice saved questions"}
-                </p>
-              </div>
-            </Link>
-            <Link
-              href={`/quiz?topic=random&userId=${user.id}&examSource=${examSource}&practiceMode=wrong&autoStart=1`}
-              className="card-interactive rounded-xl p-4 flex items-center gap-3 group"
-            >
-              <AlertCircle className="w-5 h-5 text-[var(--mp-error)]" />
-              <div>
-                <p className="text-sm font-medium text-[var(--mp-fg)]">
-                  {lang === "de" ? "Fehler wiederholen" : "Review Mistakes"}
-                </p>
-                <p className="text-[11px] text-[var(--mp-fg-subtle)]">
-                  {lang === "de" ? "Falsch beantwortete Fragen" : "Questions you got wrong"}
-                </p>
-              </div>
-            </Link>
-          </div>
-
-          {/* Search — mobile inline bar opens modal, desktop uses icon */}
-          <div className="mb-10 lg:hidden">
+          {/* ─── MOBILE SEARCH TRIGGER ─────────────────────────────────── */}
+          <div className="mb-8 lg:hidden">
             <button
               onClick={() => setSearchOpen(true)}
-              className="w-full card rounded-2xl p-3.5 flex items-center gap-3 text-[var(--mp-fg-subtle)] hover:border-[var(--mp-viridian)]/30 transition-colors"
+              className="mp-card w-full rounded-2xl p-3.5 flex items-center gap-3 text-[var(--mp-fg-subtle)] mp-focusable hover:border-[var(--mp-viridian)]/35 transition-colors"
+              aria-label={t("suche_oeffnen", lang)}
             >
-              <Search className="w-5 h-5" />
-              <span className="text-sm">{lang === "de" ? "Frage suchen..." : "Search questions..."}</span>
+              <Search className="w-5 h-5" aria-hidden />
+              <span className="text-sm">{lang === "de" ? "Frage suchen…" : "Search questions…"}</span>
               <kbd className="ml-auto text-[10px] bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)] rounded px-1.5 py-0.5 font-mono">⌘K</kbd>
             </button>
           </div>
@@ -755,124 +849,179 @@ export default function Home() {
             userId={user.id}
           />
 
-          {/* Topics Grid */}
-          {(
-            <div className="mb-10">
-              <h2 className="text-lg font-bold mb-4 text-[var(--mp-fg)] border-l-[3px] border-l-[var(--mp-viridian)] pl-3">
-                {t("specialties", lang)} <span className="text-sm font-normal text-[var(--mp-fg-subtle)] ml-1">({topics.length})</span>
-              </h2>
+          {/* ─── TOPICS GRID ────────────────────────────────────────────── */}
+          <div className="mb-8">
+            <h2
+              className="mp-h3 mb-4 flex items-center gap-2"
+              style={{ color: "var(--mp-fg)" }}
+            >
+              <span
+                className="inline-block w-1 h-6 rounded-full"
+                style={{ background: "var(--mp-viridian)" }}
+                aria-hidden
+              />
+              {t("specialties", lang)}
+              <span className="text-sm font-normal text-[var(--mp-fg-subtle)]">
+                ({topics.length})
+              </span>
+            </h2>
 
-              {examSource === "kenntnispruefung" ? (
-                <>
-                  {/* SIP quick-start buttons */}
-                  <div className="grid grid-cols-2 gap-3 mb-4">
-                    <Link
-                      href={`/exam?examSource=kenntnispruefung&part=sip4`}
-                      className="card-interactive rounded-2xl p-4 flex items-center justify-between text-sm transition-all"
-                    >
-                      <div className="flex items-center gap-2">
-                        <ClipboardList className="w-4 h-4 flex-shrink-0 text-[var(--mp-status-warning)]" />
-                        <span className="truncate font-medium">{t("practice_sip4", lang)}</span>
-                      </div>
-                      <ChevronRight className="w-4 h-4 text-[var(--mp-fg-subtle)]" />
-                    </Link>
-                    <Link
-                      href={`/exam?examSource=kenntnispruefung&part=sip5`}
-                      className="card-interactive rounded-2xl p-4 flex items-center justify-between text-sm transition-all"
-                    >
-                      <div className="flex items-center gap-2">
-                        <ClipboardList className="w-4 h-4 flex-shrink-0 text-[var(--mp-viridian)]" />
-                        <span className="truncate font-medium">{t("practice_sip5", lang)}</span>
-                      </div>
-                      <ChevronRight className="w-4 h-4 text-[var(--mp-fg-subtle)]" />
-                    </Link>
-                  </div>
-
-                  {/* SIP 4 section */}
-                  <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--mp-status-warning)] mb-3 border-l-[3px] border-l-[var(--mp-status-warning)] pl-3">
-                    {t("sip4_label", lang)}
-                  </h3>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-6 mb-10 stagger">
-                    {topics
-                      .filter((tp) => VIENNA_EXAM_PARTS.sip4.includes(tp.topic))
-                      .map((tp, i) => (
-                        <TopicCard
-                          key={tp.topic}
-                          topic={tp.topic}
-                          count={tp.count}
-                          userId={user.id}
-                          lang={lang}
-                          delay={i * 50}
-                          examSource={examSource}
-                          accuracy={topicProgress[tp.topic]?.accuracy}
-                          answered={topicProgress[tp.topic]?.answered}
-                        />
-                      ))}
-                  </div>
-
-                  {/* SIP 5 section */}
-                  <h3 className="text-sm font-bold uppercase tracking-wider text-[var(--mp-viridian)] mb-3 border-l-[3px] border-l-[var(--mp-viridian)] pl-3">
-                    {t("sip5_label", lang)}
-                  </h3>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-6 stagger">
-                    {topics
-                      .filter((tp) => VIENNA_EXAM_PARTS.sip5.includes(tp.topic))
-                      .map((tp, i) => (
-                        <TopicCard
-                          key={tp.topic}
-                          topic={tp.topic}
-                          count={tp.count}
-                          userId={user.id}
-                          lang={lang}
-                          delay={i * 50}
-                          examSource={examSource}
-                          accuracy={topicProgress[tp.topic]?.accuracy}
-                          answered={topicProgress[tp.topic]?.answered}
-                        />
-                      ))}
-                  </div>
-                </>
-              ) : (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-4 stagger">
-                  {topics.map((tp, i) => (
-                    <TopicCard
-                      key={tp.topic}
-                      topic={tp.topic}
-                      count={tp.count}
-                      userId={user.id}
-                      lang={lang}
-                      delay={i * 50}
-                      examSource={examSource}
-                      accuracy={weakTopics.find(w => w.topic === tp.topic)?.accuracy}
-                      answered={weakTopics.find(w => w.topic === tp.topic)?.total}
-                    />
-                  ))}
+            {examSource === "kenntnispruefung" ? (
+              <>
+                {/* SIP quick-start */}
+                <div className="grid grid-cols-2 gap-3 mb-6">
+                  <Link
+                    href={`/exam?examSource=kenntnispruefung&part=sip4`}
+                    className="mp-card rounded-2xl p-4 flex items-center justify-between text-sm mp-focusable hover:border-[var(--mp-viridian)]/35 transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <ClipboardList className="w-4 h-4 flex-shrink-0 text-[var(--mp-warning-dk)]" aria-hidden />
+                      <span className="truncate font-semibold">{t("practice_sip4", lang)}</span>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-[var(--mp-fg-subtle)]" aria-hidden />
+                  </Link>
+                  <Link
+                    href={`/exam?examSource=kenntnispruefung&part=sip5`}
+                    className="mp-card rounded-2xl p-4 flex items-center justify-between text-sm mp-focusable hover:border-[var(--mp-viridian)]/35 transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <ClipboardList className="w-4 h-4 flex-shrink-0 text-[var(--mp-viridian)]" aria-hidden />
+                      <span className="truncate font-semibold">{t("practice_sip5", lang)}</span>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-[var(--mp-fg-subtle)]" aria-hidden />
+                  </Link>
                 </div>
-              )}
-            </div>
-          )}
 
-          {/* View Progress Link */}
-          <Link href="/progress" className="card rounded-2xl p-4 flex items-center justify-between hover:shadow-[var(--shadow-card-hover)] transition-all">
-            <span className="text-sm font-medium text-[var(--mp-viridian)]">
-              {lang === "de" ? "Fortschritt ansehen" : "View Full Progress"}
+                {/* SIP 4 */}
+                <h3
+                  className="text-xs font-bold uppercase tracking-wider mb-3 flex items-center gap-2"
+                  style={{ color: "var(--mp-warning-dk)", letterSpacing: "0.08em" }}
+                >
+                  <span
+                    className="inline-block w-1 h-4 rounded-full"
+                    style={{ background: "var(--mp-warning-dk)" }}
+                    aria-hidden
+                  />
+                  {t("sip4_label", lang)}
+                </h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-4 mb-8 stagger">
+                  {topics
+                    .filter((tp) => VIENNA_EXAM_PARTS.sip4.includes(tp.topic))
+                    .map((tp, i) => (
+                      <TopicCard
+                        key={tp.topic}
+                        topic={tp.topic}
+                        count={tp.count}
+                        userId={user.id}
+                        lang={lang}
+                        delay={i * 50}
+                        examSource={examSource}
+                        accuracy={topicProgress[tp.topic]?.accuracy}
+                        answered={topicProgress[tp.topic]?.answered}
+                      />
+                    ))}
+                </div>
+
+                {/* SIP 5 */}
+                <h3
+                  className="text-xs font-bold uppercase tracking-wider mb-3 flex items-center gap-2"
+                  style={{ color: "var(--mp-viridian)", letterSpacing: "0.08em" }}
+                >
+                  <span
+                    className="inline-block w-1 h-4 rounded-full"
+                    style={{ background: "var(--mp-viridian)" }}
+                    aria-hidden
+                  />
+                  {t("sip5_label", lang)}
+                </h3>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-4 stagger">
+                  {topics
+                    .filter((tp) => VIENNA_EXAM_PARTS.sip5.includes(tp.topic))
+                    .map((tp, i) => (
+                      <TopicCard
+                        key={tp.topic}
+                        topic={tp.topic}
+                        count={tp.count}
+                        userId={user.id}
+                        lang={lang}
+                        delay={i * 50}
+                        examSource={examSource}
+                        accuracy={topicProgress[tp.topic]?.accuracy}
+                        answered={topicProgress[tp.topic]?.answered}
+                      />
+                    ))}
+                </div>
+              </>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-4 stagger">
+                {topics.map((tp, i) => (
+                  <TopicCard
+                    key={tp.topic}
+                    topic={tp.topic}
+                    count={tp.count}
+                    userId={user.id}
+                    lang={lang}
+                    delay={i * 50}
+                    examSource={examSource}
+                    accuracy={weakTopics.find(w => w.topic === tp.topic)?.accuracy}
+                    answered={weakTopics.find(w => w.topic === tp.topic)?.total}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* ─── VIEW FULL PROGRESS LINK ───────────────────────────────── */}
+          <Link
+            href="/progress"
+            className="mp-card rounded-2xl p-4 flex items-center justify-between cursor-pointer mp-focusable hover:border-[var(--mp-viridian)]/35 transition-colors group"
+          >
+            <span className="text-sm font-semibold text-[var(--mp-viridian)]">
+              {t("view_full_progress", lang)}
             </span>
-            <ChevronRight className="w-5 h-5 text-[var(--mp-fg-subtle)]" />
+            <ChevronRight className="w-5 h-5 text-[var(--mp-fg-subtle)] group-hover:text-[var(--mp-viridian)] group-hover:translate-x-0.5 transition-all" aria-hidden />
           </Link>
 
-          {/* Mini Stats Row (mobile only — 2x2 grid) */}
-          <div className="grid grid-cols-2 gap-3 lg:hidden mb-10 mt-4 stagger">
-            <div className="card rounded-xl">
-              <StatsCard icon={<Zap className="w-4 h-4" />} value={gam?.total_xp || 0} label="XP" color="text-[var(--mp-status-warning)]" delay={0} />
+          {/* ─── MINI STATS ROW (mobile only) ───────────────────────────
+             Uses gamification tokens — streak=orange, xp=amber, accuracy=
+             viridian, answered=viridian-muted. Colors come from tokens, not
+             inline hex. */}
+          <div className="grid grid-cols-2 gap-3 lg:hidden mb-6 mt-6 stagger">
+            <div className="mp-card rounded-2xl">
+              <StatsCard
+                icon={<Zap className="w-4 h-4" />}
+                value={gam?.total_xp || 0}
+                label="XP"
+                color="text-[var(--mp-warning-dk)]"
+                delay={0}
+              />
             </div>
-            <div className="card rounded-xl">
-              <StatsCard icon={<Flame className="w-4 h-4" />} value={gam?.current_streak || 0} label={t("streak", lang)} color="text-[var(--mp-error)]" delay={50} />
+            <div className="mp-card rounded-2xl">
+              <StatsCard
+                icon={<Flame className="w-4 h-4" />}
+                value={gam?.current_streak || 0}
+                label={t("streak", lang)}
+                color="text-[var(--mp-warning-dk)]"
+                delay={50}
+              />
             </div>
-            <div className="card rounded-xl">
-              <StatsCard icon={<CheckCircle className="w-4 h-4" />} value={`${accuracy}%`} label={t("accuracy", lang)} color="text-[var(--mp-accent-teal)]" delay={100} />
+            <div className="mp-card rounded-2xl">
+              <StatsCard
+                icon={<CheckCircle className="w-4 h-4" />}
+                value={`${accuracy}%`}
+                label={t("accuracy", lang)}
+                color="text-[var(--mp-viridian)]"
+                delay={100}
+              />
             </div>
-            <div className="card rounded-xl">
-              <StatsCard icon={<FileTextIcon className="w-4 h-4" />} value={gam?.total_questions_answered || 0} label={t("answered", lang)} color="text-[var(--mp-viridian)]" delay={150} />
+            <div className="mp-card rounded-2xl">
+              <StatsCard
+                icon={<FileTextIcon className="w-4 h-4" />}
+                value={gam?.total_questions_answered || 0}
+                label={t("answered", lang)}
+                color="text-[var(--mp-viridian)]"
+                delay={150}
+              />
             </div>
           </div>
         </div>
@@ -884,8 +1033,8 @@ export default function Home() {
       <OrientationModal />
       <UserSurveyModal />
       <ReferralShareFloater />
-      <WeaknessToast weakTopics={weakTopics} lang={lang} examSource={examSource} />
-      {showCohortConfetti && <CohortConfetti />}
+      <WeaknessToast weakTopics={weakTopics} lang={lang} />
+      {showCohortConfetti && <CohortWelcomeCheck />}
 
       <BottomNav lang={lang} userId={user.id} />
     </div>
@@ -893,52 +1042,28 @@ export default function Home() {
 }
 
 /**
- * Pure-CSS confetti burst for the Juni-26-Kohorte welcome handshake.
- * Same animation pattern as UserSurveyModal's step-4 celebration —
- * no new npm deps, scoped <style> tag, auto-cleans after 3s.
+ * Cohort welcome check — replaces the old confetti burst (Apr 23).
+ * A single viridian checkmark scales in, holds briefly, fades out.
+ * MPDS-aligned, no inline hex, respects prefers-reduced-motion via
+ * the `.mp-welcome-check` keyframe in globals.css.
  */
-function CohortConfetti() {
+function CohortWelcomeCheck() {
   return (
     <div
       className="pointer-events-none fixed inset-0 z-[95] flex items-center justify-center"
       aria-hidden
     >
-      <div className="relative">
-        {Array.from({ length: 24 }).map((_, i) => (
-          <span
-            key={i}
-            className="absolute w-2 h-2 rounded-full"
-            style={{
-              backgroundColor: [
-                "#007B5F",
-                "#00A896",
-                "#003A8C",
-                "#D68A3A",
-                "#D64545",
-              ][i % 5],
-              top: 0,
-              left: 0,
-              animation: `cohort-confetti-burst 2.4s cubic-bezier(0.22, 1, 0.36, 1) ${i * 0.03}s forwards`,
-              opacity: 0,
-              transform: `rotate(${(i * 15) % 360}deg) translateY(0)`,
-            }}
-          />
-        ))}
-      </div>
-      <style
-        dangerouslySetInnerHTML={{
-          __html: `
-          @keyframes cohort-confetti-burst {
-            0%   { opacity: 1; transform: rotate(var(--r, 0deg)) translateY(0) scale(1); }
-            70%  { opacity: 0.9; }
-            100% { opacity: 0; transform: rotate(var(--r, 0deg)) translateY(-220px) scale(0.4); }
-          }
-          @media (prefers-reduced-motion: reduce) {
-            [class*="cohort-confetti"] { animation: none !important; opacity: 0 !important; }
-          }
-        `,
+      <div
+        className="mp-welcome-check flex items-center justify-center rounded-full"
+        style={{
+          width: 96,
+          height: 96,
+          background: "var(--mp-viridian)",
+          boxShadow: "var(--mp-shadow-elev), 0 0 0 12px rgba(0, 123, 95, 0.15)",
         }}
-      />
+      >
+        <CheckCircle className="w-12 h-12 text-white" strokeWidth={2.5} aria-hidden />
+      </div>
     </div>
   );
 }

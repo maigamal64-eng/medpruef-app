@@ -201,6 +201,11 @@ export default function QuizSetup({ lang, examSource, initialTopic, onStart }: P
                   const v = parseInt(e.target.value, 10);
                   if (Number.isFinite(v) && v > 0) setTargetCount(v);
                 }}
+                aria-label={
+                  lang === "de"
+                    ? "Eigene Anzahl Fragen (1 bis 500)"
+                    : "Custom question count (1 to 500)"
+                }
                 className="w-20 px-3 py-2 rounded-xl text-sm font-mono text-center bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)] text-[var(--mp-fg)] focus:outline-none focus:border-[var(--mp-viridian)]"
               />
             </div>
@@ -251,10 +256,14 @@ export default function QuizSetup({ lang, examSource, initialTopic, onStart }: P
             {showAdvanced && (
               <div className="space-y-4 mt-3">
                 <div>
-                  <label className="text-[11px] uppercase tracking-wider text-[var(--mp-fg-subtle)] font-semibold mb-1.5 block">
+                  <label
+                    htmlFor="quiz-setup-tags"
+                    className="text-[11px] uppercase tracking-wider text-[var(--mp-fg-subtle)] font-semibold mb-1.5 block"
+                  >
                     {lang === "de" ? "Tags (durch Komma getrennt)" : "Tags (comma-separated)"}
                   </label>
                   <input
+                    id="quiz-setup-tags"
                     type="text"
                     value={tagInput}
                     onChange={(e) => setTagInput(e.target.value)}
@@ -264,11 +273,15 @@ export default function QuizSetup({ lang, examSource, initialTopic, onStart }: P
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-[11px] uppercase tracking-wider text-[var(--mp-fg-subtle)] font-semibold mb-1.5 flex items-center gap-1">
+                    <label
+                      htmlFor="quiz-setup-exam-from"
+                      className="text-[11px] uppercase tracking-wider text-[var(--mp-fg-subtle)] font-semibold mb-1.5 flex items-center gap-1"
+                    >
                       <Calendar className="w-3 h-3" />
                       {lang === "de" ? "Prüfung von" : "Exam from"}
                     </label>
                     <input
+                      id="quiz-setup-exam-from"
                       type="month"
                       value={examDateFrom}
                       onChange={(e) => setExamDateFrom(e.target.value)}
@@ -276,11 +289,15 @@ export default function QuizSetup({ lang, examSource, initialTopic, onStart }: P
                     />
                   </div>
                   <div>
-                    <label className="text-[11px] uppercase tracking-wider text-[var(--mp-fg-subtle)] font-semibold mb-1.5 flex items-center gap-1">
+                    <label
+                      htmlFor="quiz-setup-exam-to"
+                      className="text-[11px] uppercase tracking-wider text-[var(--mp-fg-subtle)] font-semibold mb-1.5 flex items-center gap-1"
+                    >
                       <Calendar className="w-3 h-3" />
                       {lang === "de" ? "Prüfung bis" : "Exam to"}
                     </label>
                     <input
+                      id="quiz-setup-exam-to"
                       type="month"
                       value={examDateTo}
                       onChange={(e) => setExamDateTo(e.target.value)}

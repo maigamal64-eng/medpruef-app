@@ -48,31 +48,63 @@ export default function TopicCard({ topic, count, userId, lang, accuracy, answer
   return (
     <Link
       href={href}
-      className="card-interactive block rounded-2xl p-6 group"
+      className="mp-card rounded-2xl p-5 block group cursor-pointer mp-focusable hover:border-[var(--mp-viridian)]/35 transition-colors"
       style={{ animationDelay: `${delay}ms` }}
       aria-label={ariaLabel}
     >
       {/* Icon — direct, no background */}
       <div className="flex items-start justify-between mb-3">
-        <TopicIcon name={config.icon} className="w-7 h-7 transition-transform duration-200 group-hover:scale-110" style={{ color: config.color }} />
+        <TopicIcon
+          name={config.icon}
+          className="w-7 h-7 transition-transform duration-200 group-hover:scale-110"
+          style={{ color: config.color }}
+        />
         {accuracy !== undefined && accuracy > 0 && (
           <div className="flex flex-col items-end gap-1">
             <span
-              className={`text-[11px] font-semibold font-mono px-2 py-0.5 rounded-lg ${
-                accuracy >= 70
-                  ? "bg-[var(--mp-accent-teal)]/12 text-[var(--mp-accent-teal)]"
-                  : accuracy >= 40
-                  ? "bg-[var(--mp-status-warning)]/12 text-[var(--mp-status-warning)]"
-                  : "bg-[var(--mp-error)]/12 text-[var(--mp-error)]"
-              }`}
+              className="text-[11px] font-semibold font-mono px-2 py-0.5 rounded-full"
+              style={{
+                background:
+                  accuracy >= 70
+                    ? "rgba(0,123,95,0.12)"
+                    : accuracy >= 40
+                    ? "rgba(244,162,97,0.14)"
+                    : "rgba(214,69,69,0.12)",
+                color:
+                  accuracy >= 70
+                    ? "var(--mp-viridian)"
+                    : accuracy >= 40
+                    ? "var(--mp-warning-dk)"
+                    : "var(--mp-error)",
+              }}
               title={`${lang === "de" ? "Dieses Thema zu verbessern erhöht deine Gesamtnote um" : "Improving this topic increases your overall score by"} ~${Math.round(100 / 10)}%`}
             >
               {Math.round(Math.min(accuracy, 100))}%
             </span>
             {/* Strength badge */}
             <div className="flex items-center gap-1.5">
-              <span className={`w-2 h-2 rounded-full ${accuracy >= 80 ? 'bg-[var(--mp-accent-teal)]' : accuracy >= 40 ? 'bg-[var(--mp-status-warning)]' : 'bg-[var(--mp-error)]'}`} />
-              <span className={`text-[10px] font-semibold ${accuracy >= 80 ? 'text-[var(--mp-accent-teal)]' : accuracy >= 40 ? 'text-[var(--mp-status-warning)]' : 'text-[var(--mp-error)]'}`}>
+              <span
+                className="w-2 h-2 rounded-full"
+                style={{
+                  background:
+                    accuracy >= 80
+                      ? "var(--mp-viridian)"
+                      : accuracy >= 40
+                      ? "var(--mp-warning-dk)"
+                      : "var(--mp-error)",
+                }}
+              />
+              <span
+                className="text-[10px] font-semibold"
+                style={{
+                  color:
+                    accuracy >= 80
+                      ? "var(--mp-viridian)"
+                      : accuracy >= 40
+                      ? "var(--mp-warning-dk)"
+                      : "var(--mp-error)",
+                }}
+              >
                 {accuracy >= 80
                   ? (lang === "de" ? "Stark" : "Strong")
                   : accuracy >= 40

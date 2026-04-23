@@ -99,12 +99,15 @@ function formatExamDate(iso: string, lang: Lang): string {
   });
 }
 
-/** Colors per focus tag. */
+/** Colors per focus tag. A calm ramp — "weak" gets warm orange, not
+    red. Weak topics are a signal to study, not a failure state; red
+    triggers the stress response the pass-until-you-pass guarantee is
+    explicitly trying to unwind. */
 function focusBadge(focus: "review" | "weak" | "new", lang: Lang) {
   if (focus === "weak") {
     return {
-      bg: "bg-[var(--mp-error)]/10",
-      text: "text-[var(--mp-error)]",
+      bg: "bg-[var(--mp-warning)]/12",
+      text: "text-[var(--mp-warning-dk,#D68A3A)]",
       label: lang === "de" ? "Schwach" : "Weak",
     };
   }
@@ -314,6 +317,35 @@ export default function StudyPlanPage() {
                       {lang === "de" ? "Tag" : "day"}
                     </span>
                   </div>
+                  {/* 70% new · 30% consolidation split bar — thin, just
+                      above the status line. Makes the plan's learning
+                      philosophy visible at a glance (front-load new
+                      material, back-load review). Hidden when the plan
+                      is tight (<=7 days) or in full-review mode. */}
+                  {plan.status !== "tight" && plan.status !== "expired" && (
+                    <div className="mt-4">
+                      <div className="h-1.5 rounded-full overflow-hidden bg-white/15 flex">
+                        <div
+                          className="h-full bg-[var(--mp-accent-teal)]"
+                          style={{ width: "70%" }}
+                          aria-hidden
+                        />
+                        <div
+                          className="h-full bg-white/40"
+                          style={{ width: "30%" }}
+                          aria-hidden
+                        />
+                      </div>
+                      <div className="flex items-center justify-between mt-1.5 text-[10px] font-mono uppercase tracking-wider text-white/70">
+                        <span>
+                          {lang === "de" ? "70% Neu" : "70% New"}
+                        </span>
+                        <span>
+                          {lang === "de" ? "30% Wiederholung" : "30% Review"}
+                        </span>
+                      </div>
+                    </div>
+                  )}
                   {plan.status === "tight" && (
                     <p className="text-xs text-[var(--mp-status-warning)] mt-3 flex items-center gap-1.5">
                       <AlertTriangle className="w-3.5 h-3.5" />

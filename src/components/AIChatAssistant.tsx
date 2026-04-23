@@ -71,20 +71,32 @@ export default function AIChatAssistant({
       : "bg-[var(--mp-border)] text-[var(--mp-fg)]";
     const blockquoteBorder = isUser ? "border-white/40" : "border-[var(--mp-viridian)]/40";
     return {
+      // Mapped to the MPDS type scale (mp-h3/h4/body) so the AI
+      // markdown output inherits the same display-font heading +
+      // Inter-body pairing as every other surface. Previously these
+      // used ad-hoc `text-sm font-display font-bold` classes which
+      // drifted from the canonical ramp.
       h1: ({ children }: { children?: ReactNode }) => (
-        <h3 className={`text-sm font-display font-bold mt-3 mb-1.5 first:mt-0 ${headingColor}`}>{children}</h3>
+        <h3 className={`mp-h3 mt-3 mb-1.5 first:mt-0 ${headingColor}`}>{children}</h3>
       ),
       h2: ({ children }: { children?: ReactNode }) => (
-        <h3 className={`text-sm font-display font-bold mt-3 mb-1.5 first:mt-0 ${headingColor}`}>{children}</h3>
+        <h3 className={`mp-h3 mt-3 mb-1.5 first:mt-0 ${headingColor}`}>{children}</h3>
       ),
       h3: ({ children }: { children?: ReactNode }) => (
-        <h4 className={`text-sm font-display font-semibold mt-3 mb-1.5 first:mt-0 ${headingColor}`}>{children}</h4>
+        // MPDS doesn't ship a dedicated mp-h4 yet; mp-ui (15px, semibold)
+        // is the closest rung below mp-h3 (20px). Using mp-ui + bold
+        // gives us a proper type-scale hop without introducing a new
+        // token.
+        <h4 className={`mp-ui font-bold mt-3 mb-1.5 first:mt-0 ${headingColor}`}>{children}</h4>
       ),
       h4: ({ children }: { children?: ReactNode }) => (
-        <h5 className={`text-[13px] font-semibold mt-2.5 mb-1 first:mt-0 ${headingColor}`}>{children}</h5>
+        <h5 className={`mp-small font-semibold mt-2.5 mb-1 first:mt-0 ${headingColor}`}>{children}</h5>
       ),
       p: ({ children }: { children?: ReactNode }) => (
-        <p className="my-1.5 first:mt-0 last:mb-0 leading-relaxed">{children}</p>
+        // Paragraphs inherit the wrapper's 14px + leading-relaxed so
+        // chat bubbles stay compact. We keep the MPDS font stack via
+        // mp-body-inline (font-family only), not the full 16px size.
+        <p className="my-1.5 first:mt-0 last:mb-0 leading-relaxed" style={{ fontFamily: "var(--mp-font-body)" }}>{children}</p>
       ),
       ul: ({ children }: { children?: ReactNode }) => (
         <ul className="my-1.5 pl-5 list-disc space-y-1 marker:text-[var(--mp-fg-subtle)]">{children}</ul>

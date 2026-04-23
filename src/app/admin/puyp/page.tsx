@@ -9,7 +9,8 @@
  *   - Approve → extends the subscription's expires_at (default: next
  *     exam cycle from `lib/exam-dates.ts`; override with a date input),
  *     increments puyp_extensions_used, mirrors users.tier_expires_at.
- *   - Reject → records a rejection_reason, marks verified.
+ *   - Reject → records a rejection_reason, marks verified. Canned
+ *     reasons available via a <Select> to keep wording consistent.
  *
  * Status filter tabs: pending | approved | rejected | all.
  *
@@ -17,13 +18,17 @@
  *   GET  /api/puyp/admin?status=<filter>  → queue
  *   POST /api/puyp/admin                  → approve/reject action
  *
- * This page is GATED by the `requireAdmin` server guard on the API.
- * The client also uses the `/admin/*` layout's session check to avoid
- * rendering a page full of 403s to non-admins. Neither is sufficient
- * alone — the API guard is the actual security boundary.
+ * NOTE: user-facing rejection emails are a TODO. The server currently
+ * records the rejection_reason in the DB but the email delivery path
+ * needs Zoho API wiring in a follow-up sprint.
+ *
+ * Polish pass (Apr 23):
+ *   - AdminPageShell + freshness
+ *   - Canned reason picker in reject dialog (pick-or-write)
+ *   - Queue sorted newest-first
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   Check,
@@ -40,10 +45,12 @@ import {
   Dialog,
   DialogFooter,
   EmptyState,
+  Select,
   TextField,
   Textarea,
   useToast,
 } from "@/components/ui";
+import { AdminPageShell } from "../_components/AdminPageShell";
 import { NEXT_EXAM_DATE } from "@/lib/exam-dates";
 
 type StatusFilter = "pending" | "approved" | "rejected" | "all";
@@ -81,6 +88,50 @@ interface PuypAttempt {
   subscriptions: AttemptSubscription | null;
 }
 
+const CANNED_REASONS: Array<{ value: string; label: string }> = [
+  { value: "", label: "— Pick a reason or write your own —" },
+  {
+    value: "proof_no_date",
+    label: "The proof doesn't show the attempt date",
+  },
+  {
+    value: "proof_name_mismatch",
+    label: "The name on the proof doesn't match the account",
+  },
+  {
+    value: "completion_below_70",
+    label: "Qbank completion is below the 70% gate",
+  },
+  {
+    value: "proof_unreadable",
+    label: "The uploaded file is unreadable (corrupt/blank)",
+  },
+  {
+    value: "wrong_exam_type",
+    label: "Proof is for a different exam than this subscription covers",
+  },
+  {
+    value: "already_used",
+    label: "PUYP extensions already used (2/2)",
+  },
+  { value: "custom", label: "Something else — write below" },
+];
+
+const CANNED_TEXT: Record<string, string> = {
+  proof_no_date:
+    "The uploaded document doesn't clearly show the exam date. Please resubmit a version where the attempt date is visible.",
+  proof_name_mismatch:
+    "The name on the proof doesn't match the name on your MedPrüf account. Please send a version that shows your full name matching your registered account, or contact support to correct your account name.",
+  completion_below_70:
+    "Your qbank completion is below the 70% threshold required to claim a Pass-Until-You-Pass extension. Please complete more questions across the exam's topics and resubmit after failing your next attempt.",
+  proof_unreadable:
+    "We couldn't read the file you uploaded — it may be corrupted or blank. Please resubmit a clearer scan or screenshot.",
+  wrong_exam_type:
+    "The proof uploaded is for a different exam than the one your subscription covers. Please upload the proof for the correct exam.",
+  already_used:
+    "You've already used both PUYP extensions on this subscription. The guarantee caps at two re-attempts. Please reach out if you'd like to discuss next steps.",
+};
+
 export default function AdminPuypPage() {
   const toast = useToast();
   const [items, setItems] = useState<PuypAttempt[]>([]);
@@ -95,6 +146,7 @@ export default function AdminPuypPage() {
 
   // Rejection dialog state
   const [rejectTarget, setRejectTarget] = useState<PuypAttempt | null>(null);
+  const [cannedKey, setCannedKey] = useState("");
   const [rejectReason, setRejectReason] = useState("");
 
   const fetchQueue = useCallback(
@@ -122,6 +174,22 @@ export default function AdminPuypPage() {
     void fetchQueue(status);
   }, [status, fetchQueue]);
 
+  // Sort queue: pending → newest first (submitted_date DESC).
+  // Non-pending filters use verified_at DESC.
+  const sorted = useMemo(() => {
+    const arr = [...items];
+    arr.sort((a, b) => {
+      const aTs = new Date(
+        status === "pending" ? a.created_at : a.verified_at || a.created_at
+      ).getTime();
+      const bTs = new Date(
+        status === "pending" ? b.created_at : b.verified_at || b.created_at
+      ).getTime();
+      return bTs - aTs;
+    });
+    return arr;
+  }, [items, status]);
+
   // When an admin opens the approval dialog, pre-fill new_expires_at
   // with the next exam date + ~2 weeks buffer for the attempt's exam type.
   useEffect(() => {
@@ -132,17 +200,24 @@ export default function AdminPuypPage() {
     const exam = approveTarget.exam_type as keyof typeof NEXT_EXAM_DATE;
     const iso = NEXT_EXAM_DATE[exam];
     if (iso) {
-      // Add 14 days buffer, format as datetime-local (browser input)
       const d = new Date(`${iso}T23:59:59Z`);
       d.setUTCDate(d.getUTCDate() + 14);
-      // datetime-local wants YYYY-MM-DDTHH:mm (no seconds, local tz).
-      // We present UTC but browsers will interpret as local. That's
-      // acceptable for admin UX — the submitted value round-trips to
-      // an ISO string via new Date() in the POST handler.
       const s = d.toISOString().slice(0, 16);
       setNewExpiresAt(s);
     }
   }, [approveTarget]);
+
+  // When canned reason changes, prefill the free-text with the
+  // canned text (admin can edit before submit).
+  useEffect(() => {
+    if (!cannedKey) return;
+    if (cannedKey === "custom") {
+      // leave whatever's in rejectReason
+      return;
+    }
+    const text = CANNED_TEXT[cannedKey];
+    if (text) setRejectReason(text);
+  }, [cannedKey]);
 
   async function submitApprove() {
     if (!approveTarget) return;
@@ -154,12 +229,17 @@ export default function AdminPuypPage() {
         body: JSON.stringify({
           attempt_id: approveTarget.id,
           action: "approve",
-          new_expires_at: newExpiresAt ? new Date(newExpiresAt).toISOString() : undefined,
+          new_expires_at: newExpiresAt
+            ? new Date(newExpiresAt).toISOString()
+            : undefined,
         }),
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body?.error || "Approval failed");
-      toast.success("Extension granted", `New expiry: ${formatDate(body.new_expires_at)}`);
+      toast.success(
+        "Extension granted",
+        `New expiry: ${formatDate(body.new_expires_at)}`
+      );
       setApproveTarget(null);
       await fetchQueue(status);
     } catch (e) {
@@ -184,9 +264,13 @@ export default function AdminPuypPage() {
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body?.error || "Rejection failed");
-      toast.success("Rejected", "The user will be emailed.");
+      // TODO: rejection email to user is NOT yet wired on the server —
+      // /api/puyp/admin records the reason but doesn't send mail yet.
+      // Follow-up sprint: plumb through Zoho Mail API.
+      toast.success("Rejection recorded", "User email is stubbed (TODO).");
       setRejectTarget(null);
       setRejectReason("");
+      setCannedKey("");
       await fetchQueue(status);
     } catch (e) {
       toast.error((e as Error).message || "Could not reject");
@@ -196,33 +280,40 @@ export default function AdminPuypPage() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h2 className="mp-h2 flex items-center gap-2">
-            <ShieldCheck size={18} className="text-[var(--mp-viridian)]" />
-            Pass-Until-You-Pass Queue
-          </h2>
-          <p className="text-xs text-[var(--mp-fg-muted)] mt-1">
-            Verify proof uploads and grant subscription extensions. Admin-only.
-          </p>
+    <AdminPageShell
+      title="Pass-Until-You-Pass"
+      description="Review proof uploads, grant or reject re-exam extensions. Admin-only."
+      freshness={loading ? "cached" : "live"}
+      onRefresh={() => fetchQueue(status)}
+      actions={
+        <div className="flex items-center gap-2">
+          <span className="inline-flex items-center gap-1.5 text-xs text-[var(--mp-fg-muted)]">
+            <ShieldCheck
+              size={12}
+              className="text-[var(--mp-viridian)]"
+              aria-hidden
+            />
+            {sorted.length} in queue
+          </span>
+          <div className="mp-tabs" role="tablist">
+            {(["pending", "approved", "rejected", "all"] as StatusFilter[]).map(
+              (s) => (
+                <button
+                  key={s}
+                  type="button"
+                  role="tab"
+                  aria-selected={status === s}
+                  onClick={() => setStatus(s)}
+                  className={`mp-tabs__tab ${status === s ? "mp-tabs__tab--active" : ""}`}
+                >
+                  {s.charAt(0).toUpperCase() + s.slice(1)}
+                </button>
+              )
+            )}
+          </div>
         </div>
-        <div className="mp-tabs" role="tablist">
-          {(["pending", "approved", "rejected", "all"] as StatusFilter[]).map((s) => (
-            <button
-              key={s}
-              type="button"
-              role="tab"
-              aria-selected={status === s}
-              onClick={() => setStatus(s)}
-              className={`mp-tabs__tab ${status === s ? "mp-tabs__tab--active" : ""}`}
-            >
-              {s.charAt(0).toUpperCase() + s.slice(1)}
-            </button>
-          ))}
-        </div>
-      </div>
-
+      }
+    >
       {error && (
         <Alert variant="error" title="Failed to load">
           {error}
@@ -233,11 +324,13 @@ export default function AdminPuypPage() {
         <div className="flex items-center justify-center py-12">
           <BrandedLoader size={60} label="Loading queue…" />
         </div>
-      ) : items.length === 0 ? (
+      ) : sorted.length === 0 ? (
         <EmptyState
           tone="success"
           icon={<CheckCircle2 className="w-10 h-10" aria-hidden />}
-          title={status === "pending" ? "No pending reviews" : "Nothing in this filter"}
+          title={
+            status === "pending" ? "No pending reviews" : "Nothing in this filter"
+          }
           body={
             status === "pending"
               ? "Inbox is clear. New PUYP submissions will appear here for verification."
@@ -246,12 +339,16 @@ export default function AdminPuypPage() {
         />
       ) : (
         <div className="space-y-3">
-          {items.map((item) => (
+          {sorted.map((item) => (
             <AttemptCard
               key={item.id}
               item={item}
               onApprove={() => setApproveTarget(item)}
-              onReject={() => setRejectTarget(item)}
+              onReject={() => {
+                setRejectTarget(item);
+                setCannedKey("");
+                setRejectReason("");
+              }}
             />
           ))}
         </div>
@@ -325,10 +422,11 @@ export default function AdminPuypPage() {
           if (!o) {
             setRejectTarget(null);
             setRejectReason("");
+            setCannedKey("");
           }
         }}
         title="Reject PUYP claim"
-        description="The user will be emailed with your reason."
+        description="Pick a canned reason or write your own. User gets a TODO-stubbed email."
         footer={
           <DialogFooter>
             <button
@@ -336,6 +434,7 @@ export default function AdminPuypPage() {
               onClick={() => {
                 setRejectTarget(null);
                 setRejectReason("");
+                setCannedKey("");
               }}
               disabled={processing}
             >
@@ -351,17 +450,30 @@ export default function AdminPuypPage() {
           </DialogFooter>
         }
       >
-        <Textarea
-          label="Reason"
-          required
-          rows={4}
-          value={rejectReason}
-          onChange={(e) => setRejectReason(e.target.value)}
-          helper="Be specific — this is what the user will see in the email."
-          placeholder="e.g. The uploaded document doesn't show the attempt date, or the name on the proof doesn't match the account."
-        />
+        <div className="space-y-3">
+          <Select
+            label="Canned reason"
+            value={cannedKey}
+            onChange={(e) => setCannedKey(e.target.value)}
+            options={CANNED_REASONS}
+          />
+          <Textarea
+            label="Reason (sent to user)"
+            required
+            rows={5}
+            value={rejectReason}
+            onChange={(e) => setRejectReason(e.target.value)}
+            helper="Be specific — this is what the user will see. Prefilled from the canned reason above; edit before submitting if needed."
+            placeholder="e.g. The uploaded document doesn't show the attempt date, or the name on the proof doesn't match the account."
+          />
+          <Alert variant="warning" title="Email delivery is stubbed">
+            The rejection reason lands in the DB immediately. The user-facing
+            email path is TODO — handle follow-up manually from Zoho until
+            the cron wires it up.
+          </Alert>
+        </div>
       </Dialog>
-    </div>
+    </AdminPageShell>
   );
 }
 
@@ -386,7 +498,7 @@ function AttemptCard({
 
   return (
     <div
-      className={`card rounded-xl p-4 border-l-4 ${
+      className={`rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] p-4 border-l-4 ${
         rejected
           ? "border-l-[var(--mp-error)]"
           : pending
@@ -516,7 +628,7 @@ function AttemptCard({
 function formatDate(iso: string | null | undefined): string {
   if (!iso) return "—";
   try {
-    return new Date(iso).toLocaleDateString("en-GB", {
+    return new Date(iso).toLocaleDateString("de-AT", {
       day: "2-digit",
       month: "short",
       year: "numeric",
@@ -529,7 +641,7 @@ function formatDate(iso: string | null | undefined): string {
 function formatDateTime(iso: string | null | undefined): string {
   if (!iso) return "—";
   try {
-    return new Date(iso).toLocaleString("en-GB", {
+    return new Date(iso).toLocaleString("de-AT", {
       day: "2-digit",
       month: "short",
       year: "numeric",

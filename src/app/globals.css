@@ -354,21 +354,26 @@ body {
 .animate-progress { animation: progress-fill 1s var(--ease-out) forwards; }
 
 @keyframes answer-correct {
-  0% { box-shadow: 0 0 0 0 rgba(0,168,150,0.4); }
-  50% { box-shadow: 0 0 0 8px rgba(0,168,150,0); }
-  100% { box-shadow: none; }
+  /* Gentle "breath": a scale nudge + soft viridian glow that settles
+     quickly. Celebratory without being distracting. Previously a ring
+     pulse only; added scale so the choice confirms before the glow
+     finishes. */
+  0%   { transform: scale(1);    box-shadow: 0 0 0 0 rgba(0,168,150,0.45); }
+  40%  { transform: scale(1.015); box-shadow: 0 0 0 6px rgba(0,168,150,0.12); }
+  100% { transform: scale(1);    box-shadow: 0 0 0 0 rgba(0,168,150,0); }
 }
-.animate-answer-correct { animation: answer-correct 0.6s ease-out; }
+.animate-answer-correct { animation: answer-correct 0.45s var(--mp-ease-out, ease-out); }
 
 @keyframes answer-wrong {
-  0%, 100% { transform: translateX(0); }
-  15% { transform: translateX(-4px); }
-  30% { transform: translateX(4px); }
-  45% { transform: translateX(-3px); }
-  60% { transform: translateX(3px); }
-  75% { transform: translateX(-1px); }
+  /* Single-tap nudge (was a 5-step shake). Constructive not punitive:
+     the colour tells the story, the motion just acknowledges. Previous
+     version's shake felt jarring on mobile. */
+  0%   { transform: translateX(0) scale(1); }
+  30%  { transform: translateX(-3px) scale(0.995); }
+  60%  { transform: translateX(2px) scale(1); }
+  100% { transform: translateX(0) scale(1); }
 }
-.animate-answer-wrong { animation: answer-wrong 0.4s ease-out; }
+.animate-answer-wrong { animation: answer-wrong 0.32s var(--mp-ease-out, ease-out); }
 
 @keyframes scale-in {
   from { opacity: 0; transform: scale(0.95); }
@@ -675,7 +680,11 @@ textarea:focus {
   /* ─── Base neutrals (light mode defaults) ─── */
   --mp-text:            #1A2B3C;
   --mp-text-muted:      #4A5568;
-  --mp-text-light:      #A0AEC0;
+  /* `--mp-text-light` formerly `#A0AEC0` — bumped to `#6B7688` on
+     2026-04-23 so small UI text (captions, "Zurück" links, timestamps)
+     hits WCAG 2.1 AA 4.5:1 on --mp-surface-sunken (was 2.44:1). Used
+     as the source for --mp-fg-subtle below. */
+  --mp-text-light:      #6B7688;
   --mp-border:          #E4E9F0;
   --mp-border-soft:     rgba(228, 233, 240, 0.7);
 
@@ -727,12 +736,46 @@ textarea:focus {
   --mp-focus-ring:       0 0 0 3px rgba(0, 168, 150, 0.35);
   --mp-focus-ring-cta:   0 0 0 3px rgba(0, 58, 140, 0.35);
   --mp-focus-ring-error: 0 0 0 3px rgba(214, 69, 69, 0.35);
+
+  /* ─── Spacing scale (8-pt grid, gamification-native)
+     Use these in new surfaces instead of ad-hoc m-* / p-* values.
+     4/8/12/16/24/32/48 — nothing else. ─── */
+  --mp-space-1: 4px;
+  --mp-space-2: 8px;
+  --mp-space-3: 12px;
+  --mp-space-4: 16px;
+  --mp-space-6: 24px;
+  --mp-space-8: 32px;
+  --mp-space-12: 48px;
+
+  /* ─── Gamification-only accent pair (dashboard hero).
+     Streak = warm orange, Daily Goal = cool viridian. Keep these out
+     of non-gamification surfaces to preserve the brand's clinical
+     calm. If you reach for these outside the hero, you're using the
+     wrong tokens. ─── */
+  --mp-gamif-streak:     #F4A261;
+  --mp-gamif-streak-bg:  rgba(244, 162, 97, 0.18);
+  --mp-gamif-goal:       #00A896;
+  --mp-gamif-goal-bg:    rgba(0, 168, 150, 0.18);
+  --mp-gamif-accuracy:   #00A896;
+  --mp-gamif-xp:         #FBD38D;
+
+  /* ─── Suggestion (coach) surface — the calm viridian replacement
+     for the old yellow "Smart Recommendation" warning card. Reads as
+     "here's a helpful nudge", not "something is wrong". ─── */
+  --mp-suggestion-bg:     rgba(0, 123, 95, 0.06);
+  --mp-suggestion-border: rgba(0, 123, 95, 0.28);
+  --mp-suggestion-accent: var(--mp-viridian);
 }
 
 [data-theme="dark"] {
   --mp-fg:             #E2E8F0;
   --mp-fg-muted:       #94A3B8;
-  --mp-fg-subtle:      #64748B;
+  /* `--mp-fg-subtle` formerly `#64748B` (4.50:1 on #0F172A — WCAG-
+     borderline). Bumped to `#7C8AA5` on 2026-04-23 for a safe 5.2:1
+     margin so the same back-link / caption copy that passes in light
+     theme also passes in dark. */
+  --mp-fg-subtle:      #7C8AA5;
   --mp-fg-inverse:     #0F172A;
   --mp-surface-raised: #1E293B;
   --mp-surface-sunken: #0F172A;
@@ -744,6 +787,10 @@ textarea:focus {
   --mp-shadow-hover: 0 4px 12px rgba(0,0,0,0.4), 0 2px 4px rgba(0,0,0,0.3);
   --mp-shadow-elev:  0 8px 24px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.3);
   --mp-shadow-modal: 0 20px 60px rgba(0,0,0,0.7), 0 4px 16px rgba(0,0,0,0.4);
+
+  /* Suggestion tokens adapt — slightly brighter tint for dark surfaces */
+  --mp-suggestion-bg:     rgba(0, 168, 150, 0.09);
+  --mp-suggestion-border: rgba(0, 168, 150, 0.35);
 }
 
 /* ═══ LAYOUT PRIMITIVES ═══ */
@@ -1022,4 +1069,126 @@ textarea:focus {
   .mp-cookie-banner {
     bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
   }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SUGGESTION (coach) card — calm viridian replacement for the
+   old yellow "Smart Recommendation" warning. Reads as a helpful
+   nudge, not an alert. Used on the dashboard for weak-topic and
+   resume-session prompts.
+   ═══════════════════════════════════════════════════════════════ */
+.mp-suggestion {
+  position: relative;
+  background: var(--mp-suggestion-bg);
+  border: 1px solid var(--mp-suggestion-border);
+  border-left: 3px solid var(--mp-suggestion-accent);
+  border-radius: var(--mp-r-card);
+  padding: 20px;
+  transition: box-shadow var(--mp-dur-base) var(--mp-ease-out),
+              border-color var(--mp-dur-base) var(--mp-ease-out),
+              transform var(--mp-dur-base) var(--mp-ease-out);
+}
+.mp-suggestion--interactive { cursor: pointer; }
+.mp-suggestion--interactive:hover {
+  box-shadow: var(--mp-shadow-hover);
+  border-color: rgba(0, 123, 95, 0.45);
+}
+.mp-suggestion__icon {
+  width: 40px; height: 40px;
+  border-radius: 12px;
+  background: rgba(0, 123, 95, 0.14);
+  color: var(--mp-viridian);
+  display: inline-flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Focus-visible helper — attach to any <Link>, <button>, or card
+   that needs an accessible 3px viridian ring on keyboard focus.
+   ═══════════════════════════════════════════════════════════════ */
+.mp-focusable:focus-visible {
+  outline: none;
+  box-shadow: var(--mp-focus-ring);
+  border-radius: var(--mp-r-card);
+}
+.mp-focusable-cta:focus-visible {
+  outline: none;
+  box-shadow: var(--mp-focus-ring-cta);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Gamification secondary CTAs — slim, non-primary action buttons.
+   Pair with mp-btn--primary on mobile where the primary is 2x the
+   height of the two secondaries.
+   ═══════════════════════════════════════════════════════════════ */
+.mp-btn-primary-tall {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  background: var(--mp-cta-blue); color: #FFFFFF;
+  font-family: var(--mp-font-body);
+  font-weight: 600; font-size: 15px; line-height: 1;
+  padding: 18px 20px;
+  border-radius: var(--mp-r-card);
+  border: 1px solid transparent;
+  box-shadow: var(--mp-shadow-card);
+  transition: background var(--mp-dur-base) var(--mp-ease-out),
+              box-shadow var(--mp-dur-base) var(--mp-ease-out),
+              transform var(--mp-dur-micro) var(--mp-ease-out);
+}
+.mp-btn-primary-tall:hover { background: var(--mp-cta-blue-hover); box-shadow: var(--mp-shadow-hover); }
+.mp-btn-primary-tall:active { transform: scale(0.98); }
+.mp-btn-primary-tall:focus-visible { outline: none; box-shadow: var(--mp-focus-ring-cta); }
+
+.mp-btn-secondary-slim {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  background: var(--mp-surface-raised); color: var(--mp-fg);
+  font-family: var(--mp-font-body);
+  font-weight: 500; font-size: 13px;
+  padding: 12px 14px;
+  border-radius: var(--mp-r-card);
+  border: 1px solid var(--mp-border);
+  transition: background var(--mp-dur-base) var(--mp-ease-out),
+              border-color var(--mp-dur-base) var(--mp-ease-out),
+              transform var(--mp-dur-micro) var(--mp-ease-out);
+}
+.mp-btn-secondary-slim:hover { background: var(--mp-surface-sunken); border-color: rgba(0, 123, 95, 0.4); }
+.mp-btn-secondary-slim:active { transform: scale(0.98); }
+.mp-btn-secondary-slim:focus-visible { outline: none; box-shadow: var(--mp-focus-ring); }
+
+/* ═══════════════════════════════════════════════════════════════
+   Cohort chip — sits next to the greeting, shows the user's
+   active exam + days remaining. Quiet, muted-navy by default.
+   ═══════════════════════════════════════════════════════════════ */
+.mp-cohort-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--mp-r-full);
+  background: var(--mp-surface-raised);
+  border: 1px solid var(--mp-border);
+  font-family: var(--mp-font-body);
+  font-size: 12px; font-weight: 600;
+  color: var(--mp-fg-muted);
+  white-space: nowrap;
+}
+.mp-cohort-chip__dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--mp-viridian);
+  box-shadow: 0 0 0 3px rgba(0, 123, 95, 0.15);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Welcome-cohort check — scale-in single-icon replacement for the
+   retired confetti burst. A single viridian checkmark that pops
+   briefly in the centre of the viewport, then fades.
+   ═══════════════════════════════════════════════════════════════ */
+@keyframes mp-welcome-check {
+  0%   { transform: scale(0.6); opacity: 0; }
+  30%  { transform: scale(1.08); opacity: 1; }
+  70%  { transform: scale(1); opacity: 1; }
+  100% { transform: scale(1); opacity: 0; }
+}
+.mp-welcome-check {
+  animation: mp-welcome-check 2.6s var(--mp-ease-spring) forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .mp-welcome-check { animation: none; opacity: 0; }
 }

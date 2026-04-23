@@ -9,7 +9,7 @@ export default function LanguageToggle({ lang, onChange }: { lang: Lang; onChang
         onClick={() => onChange("de")}
         className={`px-3 py-1.5 rounded font-medium transition-all duration-200 ${
           lang === "de"
-            ? "bg-[var(--mp-viridian)] text-[#003732]"
+            ? "bg-[var(--mp-viridian)] text-white"
             : "text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg-muted)]"
         }`}
       >
@@ -19,7 +19,7 @@ export default function LanguageToggle({ lang, onChange }: { lang: Lang; onChang
         onClick={() => onChange("en")}
         className={`px-3 py-1.5 rounded font-medium transition-all duration-200 ${
           lang === "en"
-            ? "bg-[var(--mp-viridian)] text-[#003732]"
+            ? "bg-[var(--mp-viridian)] text-white"
             : "text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg-muted)]"
         }`}
       >

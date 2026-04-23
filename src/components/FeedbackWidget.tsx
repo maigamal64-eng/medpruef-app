@@ -127,6 +127,7 @@ export default function FeedbackWidget() {
                   value={message}
                   onChange={e => setMessage(e.target.value)}
                   placeholder="Was ist Ihnen aufgefallen? / What did you notice?"
+                  aria-label="Feedback message"
                   className="w-full h-24 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 resize-none focus:outline-none focus:border-[var(--mp-cta-blue)]/50"
                   maxLength={2000}
                 />

@@ -12,6 +12,7 @@ import { useCallback, useEffect, useState } from "react";
 import { MessageSquarePlus } from "lucide-react";
 import { authFetch as fetch } from "@/lib/authFetch";
 import { EmptyState, BrandedLoader } from "@/components/ui";
+import { AdminPageShell } from "../_components/AdminPageShell";
 import type { FeedbackItem } from "../_components/types";
 
 export default function AdminFeedbackPage() {
@@ -39,9 +40,12 @@ export default function AdminFeedbackPage() {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <h2 className="mp-h2">User Feedback</h2>
+    <AdminPageShell
+      title="User Feedback"
+      description="Inbox of everything that came in via the floating widget."
+      freshness={loading ? "cached" : "live"}
+      onRefresh={() => fetchFeedback(statusFilter)}
+      actions={
         <div className="mp-tabs" role="tablist">
           {["all", "new", "reviewed", "resolved", "dismissed"].map((s) => (
             <button
@@ -56,7 +60,8 @@ export default function AdminFeedbackPage() {
             </button>
           ))}
         </div>
-      </div>
+      }
+    >
 
       {loading ? (
         <div className="flex items-center justify-center py-8">
@@ -117,6 +122,6 @@ export default function AdminFeedbackPage() {
           ))}
         </div>
       )}
-    </div>
+    </AdminPageShell>
   );
 }

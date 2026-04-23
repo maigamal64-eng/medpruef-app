@@ -2,7 +2,18 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, ChevronDown } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  ChevronDown,
+  Info,
+  ShieldCheck,
+  Gift,
+  Bitcoin,
+  BookOpen,
+  Layers,
+  Users,
+} from "lucide-react";
 import { getLang, setLang } from "@/lib/i18n";
 import { getStoredSession } from "@/lib/auth";
 import Sidebar from "@/components/Sidebar";
@@ -11,6 +22,64 @@ import LanguageToggle from "@/components/LanguageToggle";
 import ThemeToggle from "@/components/ThemeToggle";
 
 type Lang = "de" | "en";
+
+/* Sections that feed both the TOC and the main content.
+   Keeping them in one array avoids drift between the two. */
+type SectionDef = {
+  id: string;
+  icon: typeof Info;
+  title: { de: string; en: string };
+};
+const SECTIONS: SectionDef[] = [
+  {
+    id: "puyp",
+    icon: ShieldCheck,
+    title: {
+      de: "Pass-Until-You-Pass — wie funktioniert das?",
+      en: "Pass-Until-You-Pass — how it works",
+    },
+  },
+  {
+    id: "crypto-only",
+    icon: Bitcoin,
+    title: {
+      de: "Warum nur Krypto?",
+      en: "Why crypto-only?",
+    },
+  },
+  {
+    id: "referrals",
+    icon: Gift,
+    title: {
+      de: "Wie laufen Empfehlungszahlungen?",
+      en: "How do referral payouts work?",
+    },
+  },
+  {
+    id: "free-tier",
+    icon: BookOpen,
+    title: {
+      de: "Was ist im kostenlosen Tarif enthalten?",
+      en: "What's in the free tier?",
+    },
+  },
+  {
+    id: "per-exam",
+    icon: Layers,
+    title: {
+      de: "Gibt es Tarife pro Prüfung?",
+      en: "Is there per-exam pricing?",
+    },
+  },
+  {
+    id: "credentials",
+    icon: Users,
+    title: {
+      de: "Wer baut MedPrüf?",
+      en: "Who builds MedPrüf?",
+    },
+  },
+];
 
 /**
  * /faq — Häufig gestellte Fragen
@@ -69,7 +138,7 @@ export default function FaqPage() {
         </div>
 
         {/* Hero */}
-        <section className="max-w-3xl mx-auto px-4 lg:px-8 pt-10 pb-6 text-center">
+        <section className="max-w-5xl mx-auto px-4 lg:px-8 pt-10 pb-6 text-center">
           <h2 className="mp-h1 mb-3 leading-[1.1]">
             {lang === "de" ? "Häufig gestellte Fragen" : "Frequently asked questions"}
           </h2>
@@ -80,206 +149,246 @@ export default function FaqPage() {
           </p>
         </section>
 
-        {/* Table of contents */}
-        <section className="max-w-3xl mx-auto px-4 lg:px-8 pb-6">
-          <nav
-            className="rounded-[var(--mp-r-card)] p-4 md:p-5"
+        {/* Mobile TOC (collapsible details) */}
+        <section className="lg:hidden max-w-3xl mx-auto px-4 pb-6">
+          <details
+            className="rounded-[var(--mp-r-card)] group"
             style={{
               background: "var(--mp-surface-raised)",
               border: "1px solid var(--mp-border-subtle)",
             }}
-            aria-label={lang === "de" ? "Inhalt" : "Table of contents"}
           >
-            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
-              <li>
-                <a
-                  href="#puyp"
-                  className="text-[var(--mp-viridian)] hover:underline inline-flex items-center gap-1.5"
-                >
-                  <ArrowRight className="w-3 h-3" />
-                  {lang === "de"
-                    ? "Pass-Until-You-Pass — wie funktioniert das?"
-                    : "Pass-Until-You-Pass — how it works"}
-                </a>
-              </li>
-              <li>
-                <a
-                  href="#crypto-only"
-                  className="text-[var(--mp-viridian)] hover:underline inline-flex items-center gap-1.5"
-                >
-                  <ArrowRight className="w-3 h-3" />
-                  {lang === "de" ? "Warum nur Krypto?" : "Why crypto-only?"}
-                </a>
-              </li>
-              <li>
-                <a
-                  href="#referrals"
-                  className="text-[var(--mp-viridian)] hover:underline inline-flex items-center gap-1.5"
-                >
-                  <ArrowRight className="w-3 h-3" />
-                  {lang === "de"
-                    ? "Wie laufen Empfehlungszahlungen?"
-                    : "How do referral payouts work?"}
-                </a>
-              </li>
-              <li>
-                <a
-                  href="#free-tier"
-                  className="text-[var(--mp-viridian)] hover:underline inline-flex items-center gap-1.5"
-                >
-                  <ArrowRight className="w-3 h-3" />
-                  {lang === "de"
-                    ? "Was ist im kostenlosen Tarif enthalten?"
-                    : "What's in the free tier?"}
-                </a>
-              </li>
-              <li>
-                <a
-                  href="#per-exam"
-                  className="text-[var(--mp-viridian)] hover:underline inline-flex items-center gap-1.5"
-                >
-                  <ArrowRight className="w-3 h-3" />
-                  {lang === "de"
-                    ? "Gibt es Tarife pro Prüfung?"
-                    : "Is there per-exam pricing?"}
-                </a>
-              </li>
-              <li>
-                <a
-                  href="#credentials"
-                  className="text-[var(--mp-viridian)] hover:underline inline-flex items-center gap-1.5"
-                >
-                  <ArrowRight className="w-3 h-3" />
-                  {lang === "de" ? "Wer baut MedPrüf?" : "Who builds MedPrüf?"}
-                </a>
-              </li>
+            <summary
+              className="flex items-center justify-between gap-3 px-4 py-3 cursor-pointer list-none text-sm font-semibold text-[var(--mp-fg)]"
+              style={{ userSelect: "none" }}
+            >
+              <span>
+                {lang === "de" ? "Inhaltsverzeichnis" : "Table of contents"}
+              </span>
+              <ChevronDown
+                className="w-4 h-4 flex-shrink-0 text-[var(--mp-viridian)] transition-transform group-open:rotate-180"
+                aria-hidden
+              />
+            </summary>
+            <ul className="px-2 pb-3 space-y-0.5">
+              {SECTIONS.map((s) => {
+                const Icon = s.icon;
+                return (
+                  <li key={s.id}>
+                    <a
+                      href={`#${s.id}`}
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-[var(--mp-fg)] hover:bg-[var(--mp-surface-sunken)] transition-colors"
+                    >
+                      <Icon
+                        className="w-3.5 h-3.5 text-[var(--mp-viridian)] flex-shrink-0"
+                        aria-hidden
+                      />
+                      <span>{s.title[lang]}</span>
+                    </a>
+                  </li>
+                );
+              })}
             </ul>
-          </nav>
+          </details>
         </section>
 
-        {/* Sections */}
-        <section className="max-w-3xl mx-auto px-4 lg:px-8 pb-16 space-y-8">
-          {/* PUYP */}
-          <FaqSection id="puyp" title={copy.puyp.title[lang]}>
-            <p>{copy.puyp.intro[lang]}</p>
-            <ul className="list-disc pl-5 space-y-1.5 mt-3">
-              <li>{copy.puyp.b1[lang]}</li>
-              <li>{copy.puyp.b2[lang]}</li>
-              <li>{copy.puyp.b3[lang]}</li>
-              <li>{copy.puyp.b4[lang]}</li>
-              <li>{copy.puyp.b5[lang]}</li>
-            </ul>
-            <p className="mt-3">{copy.puyp.scope[lang]}</p>
-            <details
-              className="mt-4 rounded-lg"
+        {/* Main content — left rail TOC on desktop, single column on mobile */}
+        <div className="max-w-5xl mx-auto px-4 lg:px-8 pb-16 grid grid-cols-1 lg:grid-cols-[220px_minmax(0,1fr)] gap-6 lg:gap-8">
+          {/* Desktop sticky TOC */}
+          <aside
+            className="hidden lg:block"
+            aria-label={lang === "de" ? "Inhaltsverzeichnis" : "Table of contents"}
+          >
+            <nav
+              className="sticky top-6 rounded-[var(--mp-r-card)] p-3"
               style={{
-                background: "var(--mp-surface-sunken)",
+                background: "var(--mp-surface-raised)",
                 border: "1px solid var(--mp-border-subtle)",
               }}
             >
-              <summary
-                className="px-4 py-3 cursor-pointer list-none flex items-center justify-between gap-2 text-sm font-semibold text-[var(--mp-fg)]"
-                style={{ userSelect: "none" }}
+              <p
+                className="px-3 pt-1 pb-2 font-bold text-[var(--mp-fg-subtle)]"
+                style={{
+                  fontSize: "10px",
+                  letterSpacing: "0.12em",
+                  textTransform: "uppercase",
+                }}
               >
+                {lang === "de" ? "Inhalt" : "On this page"}
+              </p>
+              <ul className="space-y-0.5">
+                {SECTIONS.map((s) => {
+                  const Icon = s.icon;
+                  return (
+                    <li key={s.id}>
+                      <a
+                        href={`#${s.id}`}
+                        className="flex items-start gap-2 px-3 py-2 rounded-lg text-[13px] leading-snug text-[var(--mp-fg-muted)] hover:text-[var(--mp-fg)] hover:bg-[var(--mp-surface-sunken)] transition-colors"
+                      >
+                        <Icon
+                          className="w-3.5 h-3.5 mt-0.5 text-[var(--mp-viridian)] flex-shrink-0"
+                          aria-hidden
+                        />
+                        <span>{s.title[lang]}</span>
+                      </a>
+                    </li>
+                  );
+                })}
+              </ul>
+            </nav>
+          </aside>
+
+          {/* Main sections */}
+          <div className="space-y-6 min-w-0">
+            {/* PUYP */}
+            <FaqSection id="puyp" title={copy.puyp.title[lang]}>
+              <p>{copy.puyp.intro[lang]}</p>
+
+              <ul className="list-disc pl-5 space-y-1.5 mt-3">
+                <li>{copy.puyp.b1[lang]}</li>
+                <li>{copy.puyp.b2[lang]}</li>
+                <li>{copy.puyp.b3[lang]}</li>
+                <li>{copy.puyp.b4[lang]}</li>
+                <li>{copy.puyp.b5[lang]}</li>
+              </ul>
+
+              <Callout variant="info" lang={lang}>
+                <strong className="text-[var(--mp-fg)]">
+                  {lang === "de"
+                    ? "Wichtig: maximal zwei zusätzliche Zyklen."
+                    : "Important: up to two additional cycles."}
+                </strong>{" "}
+                {copy.puyp.scope[lang]}
+              </Callout>
+
+              <details
+                className="mt-4 rounded-lg group"
+                style={{
+                  background: "var(--mp-surface-sunken)",
+                  border: "1px solid var(--mp-border-subtle)",
+                }}
+              >
+                <summary
+                  className="px-4 py-3 cursor-pointer list-none flex items-center justify-between gap-2 text-sm font-semibold text-[var(--mp-fg)]"
+                  style={{ userSelect: "none" }}
+                >
+                  {lang === "de"
+                    ? "Warum keine Geld-zurück-Garantie?"
+                    : "Why no cash refund?"}
+                  <ChevronDown
+                    className="w-4 h-4 text-[var(--mp-viridian)] transition-transform group-open:rotate-180"
+                    aria-hidden
+                  />
+                </summary>
+                <div className="px-4 pb-4 text-sm leading-relaxed text-[var(--mp-fg-muted)]">
+                  {copy.puyp.noRefund[lang]}
+                </div>
+              </details>
+
+              <BackToPricing lang={lang} anchor="cohort" />
+            </FaqSection>
+
+            {/* Crypto only */}
+            <FaqSection id="crypto-only" title={copy.crypto.title[lang]}>
+              <p>{copy.crypto.p1[lang]}</p>
+              <p className="mt-3">{copy.crypto.p2[lang]}</p>
+
+              <Callout variant="info" lang={lang}>
+                <strong className="text-[var(--mp-fg)]">
+                  {lang === "de" ? "Sicher per Krypto zahlen." : "Paying with crypto safely."}
+                </strong>{" "}
                 {lang === "de"
-                  ? "Warum keine Geld-zurück-Garantie?"
-                  : "Why no cash refund?"}
-                <ChevronDown className="w-4 h-4 text-[var(--mp-viridian)] transition-transform group-open:rotate-180" />
-              </summary>
-              <div className="px-4 pb-4 text-sm leading-relaxed text-[var(--mp-fg-muted)]">
-                {copy.puyp.noRefund[lang]}
+                  ? "Wir nutzen NOWPayments als Treuhänder. Zahlungen in USDT oder USDC auf TRC-20 oder ERC-20 — bestätigt in Minuten, keine FX-Risiken."
+                  : "We use NOWPayments as escrow. Pay in USDT or USDC on TRC-20 or ERC-20 — settled in minutes, no FX risk."}
+              </Callout>
+            </FaqSection>
+
+            {/* Referrals */}
+            <FaqSection id="referrals" title={copy.ref.title[lang]}>
+              <p>{copy.ref.intro[lang]}</p>
+              <ul className="list-disc pl-5 space-y-1.5 mt-4">
+                <li>{copy.ref.b1[lang]}</li>
+                <li>{copy.ref.b2[lang]}</li>
+                <li>{copy.ref.b3[lang]}</li>
+                <li>{copy.ref.b4[lang]}</li>
+              </ul>
+
+              <Callout variant="neutral" lang={lang}>
+                {copy.ref.sepa[lang]}
+              </Callout>
+
+              <div className="mt-4 flex flex-col sm:flex-row gap-3">
+                <Link
+                  href="/referrals"
+                  className="mp-btn mp-btn--secondary inline-flex items-center gap-1.5"
+                >
+                  {lang === "de"
+                    ? "Alle Prämienstufen ansehen"
+                    : "See all payout tiers"}
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+                <BackToPricing lang={lang} inline />
               </div>
-            </details>
-          </FaqSection>
+            </FaqSection>
 
-          {/* Crypto only */}
-          <FaqSection id="crypto-only" title={copy.crypto.title[lang]}>
-            <p>{copy.crypto.p1[lang]}</p>
-            <p className="mt-3">{copy.crypto.p2[lang]}</p>
-          </FaqSection>
+            {/* Free tier */}
+            <FaqSection id="free-tier" title={copy.free.title[lang]}>
+              <p>{copy.free.intro[lang]}</p>
+              <ul className="list-disc pl-5 space-y-1.5 mt-3">
+                <li>{copy.free.b1[lang]}</li>
+                <li>{copy.free.b2[lang]}</li>
+                <li>{copy.free.b3[lang]}</li>
+                <li>{copy.free.b4[lang]}</li>
+              </ul>
+              <p className="mt-3">{copy.free.upgrade[lang]}</p>
+            </FaqSection>
 
-          {/* Referrals */}
-          <FaqSection id="referrals" title={copy.ref.title[lang]}>
-            <p>{copy.ref.intro[lang]}</p>
-            <ul className="list-disc pl-5 space-y-1.5 mt-4">
-              <li>{copy.ref.b1[lang]}</li>
-              <li>{copy.ref.b2[lang]}</li>
-              <li>{copy.ref.b3[lang]}</li>
-              <li>{copy.ref.b4[lang]}</li>
-            </ul>
-            <p className="mt-4 text-sm">
-              <Link
-                href="/referrals"
-                className="text-[var(--mp-viridian)] hover:underline inline-flex items-center gap-1"
-              >
+            {/* Per-exam */}
+            <FaqSection id="per-exam" title={copy.perExam.title[lang]}>
+              <p>{copy.perExam.p1[lang]}</p>
+              <p className="mt-3">{copy.perExam.p2[lang]}</p>
+            </FaqSection>
+
+            {/* Credentials */}
+            <FaqSection id="credentials" title={copy.who.title[lang]}>
+              <p>{copy.who.p1[lang]}</p>
+            </FaqSection>
+
+            {/* Final CTA */}
+            <div
+              className="rounded-[var(--mp-r-card)] p-6 md:p-7 text-center"
+              style={{
+                background: "var(--mp-surface-raised)",
+                border: "1px solid var(--mp-border-subtle)",
+              }}
+            >
+              <h3 className="mp-h3 mb-2">
+                {lang === "de" ? "Noch Fragen offen?" : "Still have questions?"}
+              </h3>
+              <p className="mp-body text-[var(--mp-fg-muted)] mb-4 text-sm">
                 {lang === "de"
-                  ? "Alle Prämienstufen und aktuelle Guthaben auf der Empfehlungsseite ansehen"
-                  : "See all payout tiers and current credits on the referrals page"}
-                <ArrowRight className="w-3 h-3" />
-              </Link>
-            </p>
-            <p className="mt-3 mp-small text-[var(--mp-fg-subtle)]">
-              {copy.ref.sepa[lang]}
-            </p>
-          </FaqSection>
-
-          {/* Free tier */}
-          <FaqSection id="free-tier" title={copy.free.title[lang]}>
-            <p>{copy.free.intro[lang]}</p>
-            <ul className="list-disc pl-5 space-y-1.5 mt-3">
-              <li>{copy.free.b1[lang]}</li>
-              <li>{copy.free.b2[lang]}</li>
-              <li>{copy.free.b3[lang]}</li>
-              <li>{copy.free.b4[lang]}</li>
-            </ul>
-            <p className="mt-3">{copy.free.upgrade[lang]}</p>
-          </FaqSection>
-
-          {/* Per-exam */}
-          <FaqSection id="per-exam" title={copy.perExam.title[lang]}>
-            <p>{copy.perExam.p1[lang]}</p>
-            <p className="mt-3">{copy.perExam.p2[lang]}</p>
-          </FaqSection>
-
-          {/* Credentials */}
-          <FaqSection id="credentials" title={copy.who.title[lang]}>
-            <p>{copy.who.p1[lang]}</p>
-          </FaqSection>
-
-          {/* Final CTA */}
-          <div
-            className="rounded-[var(--mp-r-card)] p-6 md:p-7 text-center"
-            style={{
-              background: "var(--mp-surface-raised)",
-              border: "1px solid var(--mp-border-subtle)",
-            }}
-          >
-            <h3 className="mp-h3 mb-2">
-              {lang === "de" ? "Noch Fragen offen?" : "Still have questions?"}
-            </h3>
-            <p className="mp-body text-[var(--mp-fg-muted)] mb-4 text-sm">
-              {lang === "de"
-                ? "Schreib uns direkt an user-b7e46e80@example.com. Wir antworten typisch in unter 24 Stunden."
-                : "Write to us directly at user-b7e46e80@example.com. We typically reply in under 24 hours."}
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3 items-center justify-center">
-              <a
-                href="mailto:user-b7e46e80@example.com"
-                className="mp-btn mp-btn--primary inline-flex items-center gap-1.5"
-              >
-                {lang === "de" ? "Per E-Mail antworten" : "Email us"}
-                <ArrowRight className="w-3.5 h-3.5" />
-              </a>
-              <Link
-                href="/pricing"
-                className="mp-btn mp-btn--secondary inline-flex items-center gap-1.5"
-              >
-                {lang === "de" ? "Zur Preisseite" : "Back to pricing"}
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
+                  ? "Schreib uns direkt an user-b7e46e80@example.com. Wir antworten typisch in unter 24 Stunden."
+                  : "Write to us directly at user-b7e46e80@example.com. We typically reply in under 24 hours."}
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3 items-center justify-center">
+                <a
+                  href="mailto:user-b7e46e80@example.com"
+                  className="mp-btn mp-btn--primary inline-flex items-center gap-1.5"
+                >
+                  {lang === "de" ? "Per E-Mail antworten" : "Email us"}
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </a>
+                <Link
+                  href="/pricing"
+                  className="mp-btn mp-btn--secondary inline-flex items-center gap-1.5"
+                >
+                  {lang === "de" ? "Zur Preisseite" : "Back to pricing"}
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
             </div>
           </div>
-        </section>
+        </div>
       </main>
 
       <BottomNav lang={lang} userId={user?.id} />
@@ -312,6 +421,93 @@ function FaqSection({
         {children}
       </div>
     </section>
+  );
+}
+
+/**
+ * Callout — a soft inline notice for critical info ("max 2 cycles",
+ * "no SEPA", etc.). Two variants:
+ *   - info    → viridian tint, use for rules/constraints
+ *   - neutral → surface-sunken, use for softer caveats
+ */
+function Callout({
+  variant = "info",
+  lang: _lang,
+  children,
+}: {
+  variant?: "info" | "neutral";
+  lang: Lang;
+  children: React.ReactNode;
+}) {
+  const styles =
+    variant === "info"
+      ? {
+          background: "var(--mp-success-bg)",
+          borderColor: "rgba(0,123,95,0.25)",
+          iconColor: "var(--mp-viridian)",
+        }
+      : {
+          background: "var(--mp-surface-sunken)",
+          borderColor: "var(--mp-border-subtle)",
+          iconColor: "var(--mp-fg-subtle)",
+        };
+  return (
+    <div
+      className="mt-4 rounded-lg p-3 md:p-4 flex items-start gap-3 text-sm leading-relaxed"
+      style={{
+        background: styles.background,
+        border: `1px solid ${styles.borderColor}`,
+      }}
+      role="note"
+    >
+      <Info
+        className="w-4 h-4 flex-shrink-0 mt-0.5"
+        style={{ color: styles.iconColor }}
+        aria-hidden
+      />
+      <div className="text-[var(--mp-fg-muted)] min-w-0">{children}</div>
+    </div>
+  );
+}
+
+/**
+ * BackToPricing — small inline CTA that links back to /pricing (optionally
+ * to a specific anchor on that page). Used at the end of high-conversion
+ * FAQ answers where the reader may be ready to act.
+ */
+function BackToPricing({
+  lang,
+  anchor,
+  inline = false,
+}: {
+  lang: Lang;
+  anchor?: string;
+  inline?: boolean;
+}) {
+  const href = anchor ? `/pricing#${anchor}` : "/pricing";
+  if (inline) {
+    return (
+      <Link
+        href={href}
+        className="mp-btn mp-btn--primary inline-flex items-center gap-1.5"
+      >
+        {lang === "de" ? "Zur Preisseite" : "Back to pricing"}
+        <ArrowRight className="w-3.5 h-3.5" aria-hidden />
+      </Link>
+    );
+  }
+  return (
+    <div className="mt-5 pt-4 border-t border-[var(--mp-border-subtle)]">
+      <Link
+        href={href}
+        className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--mp-viridian)] hover:underline focus:outline-none focus:ring-2 focus:ring-[var(--mp-viridian)] rounded"
+      >
+        {lang === "de"
+          ? "Zur Preisseite und Tarif wählen"
+          : "Back to pricing and pick a plan"}
+        <ArrowRight className="w-3.5 h-3.5" aria-hidden />
+      </Link>
+    </div>
   );
 }
 

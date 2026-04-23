@@ -101,6 +101,22 @@ function QuizContent() {
   const [quizFinished, setQuizFinished] = useState(false);
   const [topicTotal, setTopicTotal] = useState<number>(0);
 
+  // ─── Shortcuts hint — a one-time, dismissible rail at the bottom
+  // of the quiz surface. Persisted in localStorage so we don't nag
+  // returning users; hidden on mobile where on-screen actions already
+  // telegraph the same affordances. ───
+  const SHORTCUTS_HINT_KEY = "medpruef_quiz_shortcuts_dismissed";
+  const [shortcutsHintVisible, setShortcutsHintVisible] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const dismissed = localStorage.getItem(SHORTCUTS_HINT_KEY) === "1";
+    if (!dismissed) setShortcutsHintVisible(true);
+  }, []);
+  const dismissShortcutsHint = () => {
+    setShortcutsHintVisible(false);
+    try { localStorage.setItem(SHORTCUTS_HINT_KEY, "1"); } catch { /* non-fatal */ }
+  };
+
   // Time limit
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null); // seconds
 
@@ -776,6 +792,35 @@ function QuizContent() {
               : "Not signed in — progress will not be saved"}
           </p>
         )}
+
+        {/* Keyboard shortcut hint — desktop only, dismissible once. */}
+        {shortcutsHintVisible && !quizFinished && question && (
+          <div className="hidden md:flex items-center justify-center gap-2 px-4 pb-3 text-[11px] text-[var(--mp-fg-subtle)]">
+            <span className="flex items-center gap-1.5">
+              <kbd className="px-1.5 py-0.5 bg-[var(--mp-surface-raised)] border border-[var(--mp-border)] rounded text-[10px] font-mono">A</kbd>
+              <span>–</span>
+              <kbd className="px-1.5 py-0.5 bg-[var(--mp-surface-raised)] border border-[var(--mp-border)] rounded text-[10px] font-mono">E</kbd>
+              <span>{lang === "de" ? "auswählen" : "select"}</span>
+            </span>
+            <span aria-hidden className="text-[var(--mp-border)]">·</span>
+            <span className="flex items-center gap-1.5">
+              <kbd className="px-1.5 py-0.5 bg-[var(--mp-surface-raised)] border border-[var(--mp-border)] rounded text-[10px] font-mono">N</kbd>
+              <span>{lang === "de" ? "nächste" : "next"}</span>
+            </span>
+            <span aria-hidden className="text-[var(--mp-border)]">·</span>
+            <span className="flex items-center gap-1.5">
+              <kbd className="px-1.5 py-0.5 bg-[var(--mp-surface-raised)] border border-[var(--mp-border)] rounded text-[10px] font-mono">F</kbd>
+              <span>{lang === "de" ? "lesezeichen" : "bookmark"}</span>
+            </span>
+            <button
+              onClick={dismissShortcutsHint}
+              className="ml-2 px-1.5 text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg-muted)] transition-colors"
+              aria-label={lang === "de" ? "Tastenkürzel-Hinweis schließen" : "Dismiss shortcuts hint"}
+            >
+              ×
+            </button>
+          </div>
+        )}
       </main>
 
       {/* ─── Free-tier paywall (Lock 2026-04-23) ─── */}
@@ -861,6 +906,21 @@ function FinalCompletionCard({
 }) {
   const accuracy = questionCount > 0 ? Math.round((correctCount / questionCount) * 100) : 0;
 
+  // Tone-appropriate headline + subline. No red on partial-correct —
+  // the accuracy number carries the fact; the copy carries the vibe.
+  // Tiers: 100% celebrate, ≥80% strong, ≥60% solid, ≥40% encouraging,
+  // <40% constructive. Never punitive.
+  const headline = (() => {
+    if (accuracy === 100) return lang === "de" ? "Perfekt!" : "Perfect!";
+    if (accuracy >= 80) return lang === "de" ? "Starke Runde!" : "Strong round!";
+    if (accuracy >= 60) return lang === "de" ? "Solide Runde." : "Solid round.";
+    if (accuracy >= 40) return lang === "de" ? "Weiter dran." : "Keep going.";
+    return lang === "de" ? "Jeder Fehler zählt als Lernen." : "Every miss counts as learning.";
+  })();
+  const subline = lang === "de"
+    ? `${questionCount} von ${targetCount} Fragen bearbeitet`
+    : `${questionCount} of ${targetCount} questions answered`;
+
   return (
     <div className="card rounded-3xl p-8 md:p-10 text-center animate-scale-in">
       <div className="mb-5">
@@ -868,16 +928,15 @@ function FinalCompletionCard({
           <Trophy className="w-8 h-8 text-[var(--mp-viridian)]" />
         </div>
         <h2 className="text-2xl md:text-3xl font-bold text-[var(--mp-fg)] font-display">
-          {lang === "de" ? "Quiz abgeschlossen!" : "Quiz complete!"}
+          {headline}
         </h2>
         <p className="text-sm text-[var(--mp-fg-subtle)] mt-1">
-          {lang === "de"
-            ? `${questionCount} von ${targetCount} Fragen bearbeitet`
-            : `${questionCount} of ${targetCount} questions answered`}
+          {subline}
         </p>
       </div>
 
-      {/* Accuracy ring */}
+      {/* Accuracy ring — viridian regardless of score. The %-number is
+          factual; the colour is not a judgement. */}
       <div className="mb-5">
         <div className="text-6xl md:text-7xl font-black font-display text-[var(--mp-viridian)]">
           {accuracy}%

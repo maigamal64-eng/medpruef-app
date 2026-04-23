@@ -302,6 +302,32 @@ const translations = {
   'freeze_available': { de: 'Einfrierung verfügbar', en: 'Freeze available' },
   'freeze_used': { de: 'Serie eingefroren ✓', en: 'Streak frozen ✓' },
   'pro_feature': { de: 'Pro-Feature', en: 'Pro Feature' },
+
+  // Dashboard redesign (Apr 23) — premium/calm tone
+  'dashboard_greeting_morning': { de: 'Guten Morgen', en: 'Good morning' },
+  'dashboard_greeting_afternoon': { de: 'Guten Tag', en: 'Good afternoon' },
+  'dashboard_greeting_evening': { de: 'Guten Abend', en: 'Good evening' },
+  'dashboard_subtitle': { de: 'Bereit für die nächste Runde?', en: 'Ready for the next round?' },
+  'continue_studying_cta': { de: 'Weiterlernen', en: 'Continue' },
+  'next_question_cta': { de: 'Nächste Frage', en: 'Next question' },
+  'start_a_session': { de: 'Sitzung starten', en: 'Start a session' },
+  'coach_weak_topic_title': { de: 'Fokus-Empfehlung', en: 'Focus Recommendation' },
+  'coach_weak_topic_body': { de: '{topic} steht auf {acc}% — 10 gezielte Fragen können dich sichtbar voranbringen.', en: '{topic} is at {acc}% — 10 focused questions can move the needle.' },
+  'coach_practice_10': { de: '10 Fragen üben', en: 'Practice 10 questions' },
+  'ahead_of_cohort': { de: 'Du liegst vor {pct}% der Juni-26-Kohorte bei {topic}.', en: "You're ahead of {pct}% of June 26 Cohort on {topic}." },
+  'review_bookmarks': { de: 'Lesezeichen', en: 'Bookmarks' },
+  'review_mistakes': { de: 'Fehler wiederholen', en: 'Review mistakes' },
+  'review_bookmarks_hint': { de: 'Gespeicherte Fragen', en: 'Saved questions' },
+  'review_mistakes_hint': { de: 'Falsch beantwortet', en: 'Got wrong last time' },
+  'lernplan_title': { de: 'Dein Lernplan', en: 'Your Study Plan' },
+  'lernplan_subtitle': { de: 'Tagesplan bis zur Prüfung', en: 'Day-by-day to exam day' },
+  'sprache_wechseln': { de: 'Sprache wechseln', en: 'Switch language' },
+  'thema_wechseln': { de: 'Thema wechseln', en: 'Toggle theme' },
+  'suche_oeffnen': { de: 'Suche öffnen', en: 'Open search' },
+  'welcome_cohort_title': { de: 'Willkommen in der Juni-26-Kohorte', en: 'Welcome to the June 26 Cohort' },
+  'welcome_cohort_body': { de: 'Dein Vollzugang ist 6 Monate lang aktiv — inkl. Pass-Until-You-Pass.', en: 'Your full access is active for 6 months — with Pass-Until-You-Pass.' },
+  'view_full_progress': { de: 'Vollständigen Fortschritt ansehen', en: 'View full progress' },
+  'progress_to_next_rank': { de: 'Fortschritt zum nächsten Rang', en: 'Progress to next rank' },
 } as const
 
 export type TranslationKey = keyof typeof translations

@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Clock, ArrowRight, BookOpen } from "lucide-react";
 import { authFetch as fetch } from "@/lib/authFetch";
-import { t } from "@/lib/i18n";
 
 type Lang = "de" | "en";
 
@@ -82,12 +81,18 @@ export default function ResumeSessionCard({ userId, lang }: Props) {
 
   if (state.status === "loading") {
     return (
-      <div className="card rounded-2xl p-5 mb-6 animate-pulse">
+      <div
+        className="rounded-2xl p-5 mb-6 animate-pulse"
+        style={{
+          background: "var(--mp-surface-raised)",
+          border: "1px solid var(--mp-border-subtle)",
+        }}
+      >
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[var(--mp-border)]" />
+          <div className="w-10 h-10 rounded-xl" style={{ background: "var(--mp-border)" }} />
           <div className="flex-1">
-            <div className="h-4 w-2/3 bg-[var(--mp-border)] rounded mb-2" />
-            <div className="h-3 w-1/3 bg-[var(--mp-border)] rounded" />
+            <div className="h-4 w-2/3 rounded mb-2" style={{ background: "var(--mp-border)" }} />
+            <div className="h-3 w-1/3 rounded" style={{ background: "var(--mp-border)" }} />
           </div>
         </div>
       </div>
@@ -108,23 +113,31 @@ export default function ResumeSessionCard({ userId, lang }: Props) {
   return (
     <Link
       href={resumeHref}
-      className="block mb-6 card-interactive rounded-2xl p-5 border-l-4 border-l-[var(--mp-viridian)] bg-gradient-to-br from-[var(--mp-accent-teal)]/5 to-transparent hover:shadow-[var(--shadow-elevated)] transition-all group stagger-in"
+      className="mp-suggestion mp-suggestion--interactive mp-focusable mb-6 block group animate-slide-up"
+      aria-label={lang === "de" ? `Weiter mit ${session.topic}` : `Continue with ${session.topic}`}
     >
       <div className="flex items-center gap-4">
-        <div className="w-12 h-12 rounded-xl bg-[var(--mp-viridian)]/15 flex items-center justify-center flex-shrink-0">
-          <BookOpen className="w-6 h-6 text-[var(--mp-viridian)]" />
+        <div className="mp-suggestion__icon" aria-hidden>
+          <BookOpen className="w-5 h-5" />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <p className="text-sm font-bold text-[var(--mp-fg)] truncate">
               {lang === "de" ? `Weiter mit ${session.topic}` : `Continue ${session.topic}`}
             </p>
-            <span className="text-[10px] uppercase tracking-wider bg-[var(--mp-accent-teal)]/15 text-[var(--mp-viridian)] px-2 py-0.5 rounded-full font-semibold">
+            <span
+              className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full font-semibold"
+              style={{
+                background: "rgba(0, 123, 95, 0.14)",
+                color: "var(--mp-viridian)",
+                letterSpacing: "0.08em",
+              }}
+            >
               {lang === "de" ? "Fortsetzen" : "Resume"}
             </span>
           </div>
           <p className="text-xs text-[var(--mp-fg-subtle)] mt-1 flex items-center gap-1.5 flex-wrap">
-            <Clock className="w-3 h-3" />
+            <Clock className="w-3 h-3" aria-hidden />
             <span>{relTime}</span>
             <span>·</span>
             <span>
@@ -139,7 +152,10 @@ export default function ResumeSessionCard({ userId, lang }: Props) {
             </span>
           </p>
         </div>
-        <ArrowRight className="w-5 h-5 text-[var(--mp-viridian)] flex-shrink-0 group-hover:translate-x-0.5 transition-transform" />
+        <ArrowRight
+          className="w-5 h-5 text-[var(--mp-viridian)] flex-shrink-0 group-hover:translate-x-0.5 transition-transform"
+          aria-hidden
+        />
       </div>
     </Link>
   );

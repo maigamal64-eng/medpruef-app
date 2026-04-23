@@ -33,6 +33,7 @@ import {
   Select,
   EmptyState,
 } from "@/components/ui";
+import { AdminPageShell } from "../_components/AdminPageShell";
 import type {
   QuestionRow,
   QuestionStats,
@@ -151,7 +152,16 @@ export default function AdminQuestionsPage() {
   };
 
   return (
-    <div className="space-y-4">
+    <AdminPageShell
+      title="Questions"
+      description="Browse, edit, de-duplicate, and review user-flagged content."
+      freshness="cached"
+      onRefresh={() => {
+        fetchStats();
+        if (tab === "browse")
+          fetchQuestions(page, topicFilter, search, explFilter, activeFilter, examTypeFilter);
+      }}
+    >
       {/* Stats Cards — .mp-stat tight grid */}
       {stats && (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
@@ -692,6 +702,6 @@ export default function AdminQuestionsPage() {
           </div>
         </div>
       )}
-    </div>
+    </AdminPageShell>
   );
 }

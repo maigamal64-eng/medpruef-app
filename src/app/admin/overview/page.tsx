@@ -3,24 +3,26 @@
 /**
  * /admin/overview — mission-control landing page.
  *
- * §2.2 of the April 23 admin revamp sprint.
+ * §2.2 of the April 23 admin revamp sprint — polish pass.
  *
- * Renders 11 tiles in a responsive grid. Each tile:
- *  - hydrates from /api/admin/overview on mount,
- *  - subscribes to Supabase Realtime for its backing table via useAdminRealtime,
- *  - bumps its local counter in response to INSERT events,
- *  - flashes a "fresh" pulse when data changes.
+ * Grouping: the 11 tiles are split into three named sections so the
+ * operator's eye doesn't read the page as "wall of tiles":
  *
- * This sprint wires 6 tiles to real data:
- *  1) Revenue today (subscriptions)
- *  2) Active paid subs (subscriptions)
- *  3) New signups today (user_events / users)
- *  4) Paywall hits today (user_events)
- *  5) Referrals awaiting action (referrals)
- *  6) PUYP verifications pending (exam_attempts)
+ *   1. Revenue & Growth      (revenue, active subs, signups, conversion)
+ *   2. Operational Queues    (paywall, referrals, PUYP, flagged feedback)
+ *   3. Platform Health       (webhooks, crons, activity feed)
  *
- * The remaining 5 render a "Coming soon" scaffold with their realtime-ready
- * hooks already attached, so upgrading them in a follow-up is a one-file job.
+ * Within each section ONE tile is hero-sized (col-span-2). Every tile
+ * uses `tabular-nums`, every euro figure goes through
+ * `Intl.NumberFormat('de-AT', { currency: 'EUR' })` from
+ * `_components/primitives.tsx`.
+ *
+ * Live pulse animations are gated on `document.visibilityState ===
+ * 'visible'` so a backgrounded tab doesn't thrash.
+ *
+ * The activity feed renders as a narrow scrolling column on the
+ * right side of the Platform Health row on desktop, and a horizontal
+ * carousel row on mobile.
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -31,6 +33,8 @@ import {
   Clock,
   Gauge,
   GitBranch,
+  HeartPulse,
+  Layers,
   MessageSquare,
   ShieldAlert,
   ShieldCheck,
@@ -39,13 +43,33 @@ import {
   Wallet,
   Webhook,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { authFetch as fetch } from "@/lib/authFetch";
 import { useAdminRealtime } from "@/lib/admin/useAdminRealtime";
+import { AdminPageShell } from "../_components/AdminPageShell";
+import {
+  FormatEuro,
+  FormatInt,
+  SectionHeading,
+  Sparkline,
+  StatusDot,
+  TileEmptyLabel,
+  TileSkeleton,
+  useIsVisible,
+  formatInt,
+  formatEuroFromCents,
+  formatPct,
+} from "../_components/primitives";
 
 interface OverviewSnapshot {
   generated_at: string;
   tiles: {
-    revenue: { today_cents: number; mtd_cents: number };
+    revenue: {
+      today_cents: number;
+      mtd_cents: number;
+      /** Optional sparkline series — 7-day daily revenue in cents. */
+      series_7d?: number[];
+    };
     active_subs: { total: number; by_tier: Record<string, number> };
     signups_today: number;
     paywall_hits_today: number;
@@ -68,6 +92,7 @@ export default function AdminOverviewPage() {
   const [snapshot, setSnapshot] = useState<OverviewSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const isVisible = useIsVisible();
 
   const hydrate = useCallback(async () => {
     try {
@@ -87,28 +112,32 @@ export default function AdminOverviewPage() {
   }, [hydrate]);
 
   // Auto-refresh every 60s as a polling fallback in case Realtime drops.
+  // Only poll while the tab is visible — no reason to chat with Supabase
+  // when the operator is off doing something else.
   useEffect(() => {
+    if (!isVisible) return;
     const id = setInterval(hydrate, 60_000);
     return () => clearInterval(id);
-  }, [hydrate]);
+  }, [hydrate, isVisible]);
+
+  const freshness = loading ? "cached" : error ? "disconnected" : "live";
 
   return (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div>
-          <h1 className="text-xl font-semibold text-[var(--mp-fg)]">Overview</h1>
-          <p className="text-xs text-[var(--mp-fg-muted)] mt-0.5">
-            Live mission-control deck.{" "}
-            {snapshot && (
-              <span className="font-mono">
-                Snapshot: {new Date(snapshot.generated_at).toLocaleTimeString()}
-              </span>
-            )}
-          </p>
-        </div>
-        <FreshnessBadge state={loading ? "cached" : "live"} />
-      </div>
-
+    <AdminPageShell
+      title="Mission Control"
+      description={
+        <span>
+          Live ops view.{" "}
+          {snapshot && (
+            <span className="font-mono text-[var(--mp-fg-muted)]">
+              Snapshot {new Date(snapshot.generated_at).toLocaleTimeString()}
+            </span>
+          )}
+        </span>
+      }
+      freshness={freshness}
+      onRefresh={hydrate}
+    >
       {error && (
         <div className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-600 dark:text-red-400 flex items-center gap-2">
           <AlertCircle size={14} />
@@ -119,58 +148,123 @@ export default function AdminOverviewPage() {
       {/* Running-now ribbon — reads `jobs` Realtime + shows active jobs. */}
       <RunningNowRibbon />
 
-      {/* Tile grid. */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-        {/* 1. Revenue today */}
-        <RevenueTile
-          todayCents={snapshot?.tiles.revenue.today_cents ?? 0}
-          mtdCents={snapshot?.tiles.revenue.mtd_cents ?? 0}
+      {/* ─── SECTION 1: Revenue & Growth ─────────────────────────── */}
+      <section className="space-y-3">
+        <SectionHeading
+          title="Revenue & Growth"
+          icon={TrendingUp}
+          hint="Money in, users in, funnel health"
         />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {loading ? (
+            <>
+              <div className="sm:col-span-2">
+                <TileSkeleton />
+              </div>
+              <TileSkeleton />
+              <TileSkeleton />
+              <TileSkeleton />
+            </>
+          ) : (
+            <>
+              {/* Hero tile — Revenue today with sparkline */}
+              <div className="sm:col-span-2">
+                <RevenueHeroTile
+                  todayCents={snapshot?.tiles.revenue.today_cents ?? 0}
+                  mtdCents={snapshot?.tiles.revenue.mtd_cents ?? 0}
+                  series7d={snapshot?.tiles.revenue.series_7d ?? []}
+                  visible={isVisible}
+                />
+              </div>
+              <ActiveSubsTile
+                total={snapshot?.tiles.active_subs.total ?? 0}
+                byTier={snapshot?.tiles.active_subs.by_tier ?? {}}
+                visible={isVisible}
+              />
+              <SignupsTile
+                initial={snapshot?.tiles.signups_today ?? 0}
+                visible={isVisible}
+              />
+              <ConversionTile conversion7d={snapshot?.tiles.conversion_7d ?? null} />
+            </>
+          )}
+        </div>
+      </section>
 
-        {/* 2. Active paid subs */}
-        <ActiveSubsTile
-          total={snapshot?.tiles.active_subs.total ?? 0}
-          byTier={snapshot?.tiles.active_subs.by_tier ?? {}}
+      {/* ─── SECTION 2: Operational Queues ───────────────────────── */}
+      <section className="space-y-3">
+        <SectionHeading
+          title="Operational Queues"
+          icon={Layers}
+          hint="Work waiting on your review"
         />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {loading ? (
+            <>
+              <div className="sm:col-span-2">
+                <TileSkeleton />
+              </div>
+              <TileSkeleton />
+              <TileSkeleton />
+            </>
+          ) : (
+            <>
+              {/* Hero tile — Referrals payout queue */}
+              <div className="sm:col-span-2">
+                <ReferralsHeroTile
+                  initial={snapshot?.tiles.referrals_awaiting_action ?? 0}
+                  visible={isVisible}
+                />
+              </div>
+              <PaywallTile
+                initial={snapshot?.tiles.paywall_hits_today ?? 0}
+                visible={isVisible}
+              />
+              <PuypTile
+                initial={snapshot?.tiles.puyp_pending ?? 0}
+                visible={isVisible}
+              />
+              <FlaggedQuestionsTile
+                initial={snapshot?.tiles.flagged_open ?? 0}
+                visible={isVisible}
+              />
+            </>
+          )}
+        </div>
+      </section>
 
-        {/* 3. New signups today */}
-        <SignupsTile initial={snapshot?.tiles.signups_today ?? 0} />
-
-        {/* 4. Paywall hits today */}
-        <PaywallTile initial={snapshot?.tiles.paywall_hits_today ?? 0} />
-
-        {/* 5. Referrals awaiting action */}
-        <ReferralsTile initial={snapshot?.tiles.referrals_awaiting_action ?? 0} />
-
-        {/* 6. PUYP verifications pending */}
-        <PuypTile initial={snapshot?.tiles.puyp_pending ?? 0} />
-
-        {/* 7. Flagged questions — skeleton + realtime-ready */}
-        <FlaggedQuestionsTile initial={snapshot?.tiles.flagged_open ?? 0} />
-
-        {/* 8. Webhook failures — skeleton */}
-        <SkeletonTile
-          label="Webhook failures (24h)"
-          value={snapshot?.tiles.webhook_failures_24h ?? 0}
-          icon={Webhook}
-          href="/admin/webhooks"
-          comingSoon
+      {/* ─── SECTION 3: Platform Health ──────────────────────────── */}
+      <section className="space-y-3">
+        <SectionHeading
+          title="Platform Health"
+          icon={HeartPulse}
+          hint="Infra signals + live activity feed"
         />
-
-        {/* 9. Conversion — skeleton */}
-        <ConversionTile conversion7d={snapshot?.tiles.conversion_7d ?? null} />
-
-        {/* 10. Cron health — skeleton */}
-        <CronsTile crons={snapshot?.tiles.crons ?? {}} />
-
-        {/* 11. Live activity feed — skeleton */}
-        <LiveFeedTile events={snapshot?.tiles.recent_events ?? []} />
-      </div>
-    </div>
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr_320px] gap-3">
+          <WebhookFailuresTile
+            initial={snapshot?.tiles.webhook_failures_24h ?? 0}
+          />
+          <CronsTile crons={snapshot?.tiles.crons ?? {}} />
+          <LiveFeedTile events={snapshot?.tiles.recent_events ?? []} />
+        </div>
+      </section>
+    </AdminPageShell>
   );
 }
 
-// ─── Tiles ───────────────────────────────────────────────────────────────
+// ═══ Tile primitives ═══════════════════════════════════════════════
+
+interface TileProps {
+  label: string;
+  icon: LucideIcon;
+  children: React.ReactNode;
+  href?: string;
+  footer?: React.ReactNode;
+  tone?: "success" | "warn" | "danger" | "info" | "neutral";
+  pulse?: boolean;
+  /** When true, render a hero-sized tile (larger padding + typography). */
+  hero?: boolean;
+}
 
 function Tile({
   label,
@@ -178,63 +272,60 @@ function Tile({
   children,
   href,
   footer,
-  accent,
+  tone = "neutral",
   pulse,
-}: {
-  label: string;
-  icon: typeof Users;
-  children: React.ReactNode;
-  href?: string;
-  footer?: React.ReactNode;
-  accent?: "success" | "warn" | "danger" | "info";
-  pulse?: boolean;
-}) {
-  const accentClass =
-    accent === "success"
-      ? "before:bg-emerald-500"
-      : accent === "warn"
-        ? "before:bg-amber-500"
-        : accent === "danger"
-          ? "before:bg-red-500"
-          : "before:bg-sky-500";
+  hero,
+}: TileProps) {
+  const accentColor =
+    tone === "success"
+      ? "#10B981"
+      : tone === "warn"
+        ? "#F59E0B"
+        : tone === "danger"
+          ? "#EF4444"
+          : tone === "info"
+            ? "#3B82F6"
+            : "#64748B";
 
   const inner = (
     <div
-      className={`relative rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] p-4 min-h-[108px] flex flex-col transition-shadow hover:shadow-md before:absolute before:top-0 before:left-0 before:right-0 before:h-[2px] before:rounded-t-xl ${accentClass ?? ""} ${pulse ? "tile-pulse" : ""}`}
+      className={`relative rounded-2xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] flex flex-col transition-all duration-200 hover:shadow-md hover:border-[var(--mp-border-subtle)] ${
+        hero ? "p-5 min-h-[160px]" : "p-4 min-h-[128px]"
+      } ${pulse ? "tile-pulse" : ""}`}
+      style={{
+        boxShadow: pulse ? `0 0 0 4px ${accentColor}22` : undefined,
+      }}
     >
-      <div className="flex items-center gap-2 text-[11px] text-[var(--mp-fg-muted)] uppercase tracking-wider">
+      {/* Top accent stripe */}
+      <div
+        className="absolute top-0 left-0 right-0 h-[3px] rounded-t-2xl"
+        style={{ backgroundColor: accentColor, opacity: 0.85 }}
+        aria-hidden
+      />
+      <div className="flex items-center gap-2 text-[10px] text-[var(--mp-fg-muted)] uppercase tracking-[0.1em]">
         <Icon size={12} />
         <span>{label}</span>
+        <span className="flex-1" />
+        <StatusDot tone={tone} size={6} />
       </div>
-      <div className="mt-1 flex-1 flex flex-col justify-center tabular-nums">
+      <div className="mt-2 flex-1 flex flex-col justify-center tabular-nums">
         {children}
       </div>
       {footer && (
-        <div className="mt-2 pt-2 border-t border-[var(--mp-border-subtle)] text-[10px] text-[var(--mp-fg-muted)]">
+        <div className="mt-3 pt-2 border-t border-[var(--mp-border-subtle)] text-[10px] text-[var(--mp-fg-muted)]">
           {footer}
         </div>
       )}
       <style jsx>{`
         .tile-pulse {
-          animation: tile-pulse 0.6s ease-out;
-        }
-        @keyframes tile-pulse {
-          0% {
-            box-shadow: 0 0 0 0 rgba(0, 123, 95, 0);
-          }
-          30% {
-            box-shadow: 0 0 0 6px rgba(0, 123, 95, 0.22);
-          }
-          100% {
-            box-shadow: 0 0 0 0 rgba(0, 123, 95, 0);
-          }
+          transition: box-shadow 0.7s ease-out;
         }
       `}</style>
     </div>
   );
 
   return href ? (
-    <Link href={href} className="no-underline">
+    <Link href={href} className="no-underline block">
       {inner}
     </Link>
   ) : (
@@ -242,12 +333,18 @@ function Tile({
   );
 }
 
-function RevenueTile({
+// ═══ Revenue & Growth tiles ═══════════════════════════════════════
+
+function RevenueHeroTile({
   todayCents,
   mtdCents,
+  series7d,
+  visible,
 }: {
   todayCents: number;
   mtdCents: number;
+  series7d: number[];
+  visible: boolean;
 }) {
   const [pulse, setPulse] = useState(false);
   const [liveToday, setLiveToday] = useState(todayCents);
@@ -265,26 +362,57 @@ function RevenueTile({
       if (status !== "active") return;
       setLiveToday((v) => v + cents);
       setLiveMtd((v) => v + cents);
-      setPulse(true);
-      setTimeout(() => setPulse(false), 700);
+      if (visible) {
+        setPulse(true);
+        setTimeout(() => setPulse(false), 700);
+      }
     },
   });
+
+  const hasAny = liveToday > 0 || liveMtd > 0 || series7d.length > 0;
 
   return (
     <Tile
       label="Revenue today"
       icon={Wallet}
-      accent="success"
+      tone="success"
       href="/admin/subscriptions"
       pulse={pulse}
+      hero
       footer={
-        <>
-          MTD: <span className="text-[var(--mp-fg)] font-semibold">€{(liveMtd / 100).toFixed(2)}</span>
-        </>
+        <div className="flex items-center justify-between">
+          <span>
+            Month-to-date:{" "}
+            <strong className="text-[var(--mp-fg)]">
+              {formatEuroFromCents(liveMtd)}
+            </strong>
+          </span>
+          <StatusDot tone="success" size={6} pulse={pulse} />
+        </div>
       }
     >
-      <div className="text-2xl font-semibold text-[var(--mp-fg)]">
-        €{(liveToday / 100).toFixed(2)}
+      <div className="flex items-end justify-between gap-4">
+        <div>
+          <div className="text-[10px] uppercase tracking-wider text-[var(--mp-fg-muted)]">
+            Today
+          </div>
+          <div className="text-[32px] leading-none font-semibold text-[var(--mp-fg)]">
+            <FormatEuro cents={liveToday} />
+          </div>
+        </div>
+        <div className="flex flex-col items-end">
+          <div className="text-[10px] uppercase tracking-wider text-[var(--mp-fg-muted)] mb-1">
+            Last 7 days
+          </div>
+          <Sparkline
+            series={series7d}
+            width={140}
+            height={40}
+            ariaLabel={`7-day revenue. ${
+              hasAny ? "" : "No revenue recorded in the last 7 days."
+            }`}
+          />
+        </div>
       </div>
     </Tile>
   );
@@ -293,9 +421,11 @@ function RevenueTile({
 function ActiveSubsTile({
   total,
   byTier,
+  visible,
 }: {
   total: number;
   byTier: Record<string, number>;
+  visible: boolean;
 }) {
   const [pulse, setPulse] = useState(false);
   const [live, setLive] = useState({ total, byTier });
@@ -312,8 +442,10 @@ function ActiveSubsTile({
             total: p.total + 1,
             byTier: { ...p.byTier, [tier]: (p.byTier[tier] || 0) + 1 },
           }));
-          setPulse(true);
-          setTimeout(() => setPulse(false), 700);
+          if (visible) {
+            setPulse(true);
+            setTimeout(() => setPulse(false), 700);
+          }
         }
       }
     },
@@ -327,7 +459,7 @@ function ActiveSubsTile({
     <Tile
       label="Active paid subs"
       icon={Users}
-      accent="info"
+      tone="info"
       href="/admin/subscriptions"
       pulse={pulse}
       footer={
@@ -335,7 +467,8 @@ function ActiveSubsTile({
           <div className="flex gap-2 flex-wrap">
             {tiers.map(([tier, n]) => (
               <span key={tier} className="text-[var(--mp-fg)]">
-                {tier}: <strong>{n}</strong>
+                {tier}:{" "}
+                <strong className="tabular-nums">{formatInt(n)}</strong>
               </span>
             ))}
           </div>
@@ -344,26 +477,34 @@ function ActiveSubsTile({
         )
       }
     >
-      <div className="text-2xl font-semibold text-[var(--mp-fg)]">{live.total}</div>
+      <div className="text-2xl font-semibold text-[var(--mp-fg)]">
+        <FormatInt value={live.total} />
+      </div>
     </Tile>
   );
 }
 
-function SignupsTile({ initial }: { initial: number }) {
+function SignupsTile({
+  initial,
+  visible,
+}: {
+  initial: number;
+  visible: boolean;
+}) {
   const [pulse, setPulse] = useState(false);
   const [live, setLive] = useState(initial);
   useEffect(() => setLive(initial), [initial]);
 
-  // We can't subscribe to auth.users — instead we listen to user_events
-  // of type 'user_registered' which every signup path emits.
   useAdminRealtime("user_events", {
     onEvent: (payload) => {
       if (payload.eventType !== "INSERT") return;
       const row = payload.new as Record<string, unknown> | undefined;
       if (row?.event_type === "user_registered") {
         setLive((v) => v + 1);
-        setPulse(true);
-        setTimeout(() => setPulse(false), 700);
+        if (visible) {
+          setPulse(true);
+          setTimeout(() => setPulse(false), 700);
+        }
       }
     },
   });
@@ -372,46 +513,49 @@ function SignupsTile({ initial }: { initial: number }) {
     <Tile
       label="New signups today"
       icon={TrendingUp}
-      accent="success"
+      tone="success"
       href="/admin/users"
       pulse={pulse}
     >
-      <div className="text-2xl font-semibold text-[var(--mp-fg)]">{live}</div>
+      <div className="text-2xl font-semibold text-[var(--mp-fg)]">
+        <FormatInt value={live} />
+      </div>
     </Tile>
   );
 }
 
-function PaywallTile({ initial }: { initial: number }) {
-  const [pulse, setPulse] = useState(false);
-  const [live, setLive] = useState(initial);
-  useEffect(() => setLive(initial), [initial]);
-
-  useAdminRealtime("user_events", {
-    onEvent: (payload) => {
-      if (payload.eventType !== "INSERT") return;
-      const row = payload.new as Record<string, unknown> | undefined;
-      if (row?.event_type === "paywall_hit") {
-        setLive((v) => v + 1);
-        setPulse(true);
-        setTimeout(() => setPulse(false), 700);
-      }
-    },
-  });
-
+function ConversionTile({ conversion7d }: { conversion7d: number | null }) {
+  const ratio = conversion7d;
+  const pct = ratio != null ? ratio * 100 : null;
+  const tone = pct == null ? "neutral" : pct < 2 ? "danger" : "info";
   return (
     <Tile
-      label="Paywall hits today"
-      icon={ShieldAlert}
-      accent="warn"
-      href="/admin/subscriptions"
-      pulse={pulse}
+      label="Conversion (7d)"
+      icon={TrendingUp}
+      tone={tone}
+      href="/admin/funnels"
+      footer={
+        <span className="italic text-[var(--mp-fg-muted)]">
+          Paywall hit → purchase
+        </span>
+      }
     >
-      <div className="text-2xl font-semibold text-[var(--mp-fg)]">{live}</div>
+      <div className="text-2xl font-semibold text-[var(--mp-fg)]">
+        {ratio != null ? formatPct(ratio) : "—"}
+      </div>
     </Tile>
   );
 }
 
-function ReferralsTile({ initial }: { initial: number }) {
+// ═══ Operational Queues tiles ═════════════════════════════════════
+
+function ReferralsHeroTile({
+  initial,
+  visible,
+}: {
+  initial: number;
+  visible: boolean;
+}) {
   const [pulse, setPulse] = useState(false);
   const [live, setLive] = useState(initial);
   useEffect(() => setLive(initial), [initial]);
@@ -423,8 +567,10 @@ function ReferralsTile({ initial }: { initial: number }) {
         const oldRow = payload.old as Record<string, unknown> | undefined;
         if (oldRow?.status !== "qualified" && row?.status === "qualified") {
           setLive((v) => v + 1);
-          setPulse(true);
-          setTimeout(() => setPulse(false), 700);
+          if (visible) {
+            setPulse(true);
+            setTimeout(() => setPulse(false), 700);
+          }
         } else if (oldRow?.status === "qualified" && row?.status !== "qualified") {
           setLive((v) => Math.max(0, v - 1));
         }
@@ -434,20 +580,86 @@ function ReferralsTile({ initial }: { initial: number }) {
     },
   });
 
+  const tone = live > 0 ? "warn" : "success";
+
   return (
     <Tile
-      label="Referrals awaiting action"
+      label="Referrals awaiting payout"
       icon={GitBranch}
-      accent={live > 0 ? "warn" : "success"}
+      tone={tone}
       href="/admin/referrals"
       pulse={pulse}
+      hero
+      footer={
+        <div className="flex items-center justify-between">
+          <span>
+            {live > 0
+              ? "Oldest first. Mark paid after Wise/USDT transfer."
+              : "Queue clear. Qualified referrals show up here."}
+          </span>
+          <StatusDot tone={tone} size={6} pulse={pulse} />
+        </div>
+      }
     >
-      <div className="text-2xl font-semibold text-[var(--mp-fg)]">{live}</div>
+      <div className="flex items-end gap-3">
+        <div className="text-[32px] leading-none font-semibold text-[var(--mp-fg)]">
+          <FormatInt value={live} />
+        </div>
+        <span className="text-xs text-[var(--mp-fg-muted)] pb-1.5">
+          {live === 1 ? "referral" : "referrals"} qualified
+        </span>
+      </div>
     </Tile>
   );
 }
 
-function PuypTile({ initial }: { initial: number }) {
+function PaywallTile({
+  initial,
+  visible,
+}: {
+  initial: number;
+  visible: boolean;
+}) {
+  const [pulse, setPulse] = useState(false);
+  const [live, setLive] = useState(initial);
+  useEffect(() => setLive(initial), [initial]);
+
+  useAdminRealtime("user_events", {
+    onEvent: (payload) => {
+      if (payload.eventType !== "INSERT") return;
+      const row = payload.new as Record<string, unknown> | undefined;
+      if (row?.event_type === "paywall_hit") {
+        setLive((v) => v + 1);
+        if (visible) {
+          setPulse(true);
+          setTimeout(() => setPulse(false), 700);
+        }
+      }
+    },
+  });
+
+  return (
+    <Tile
+      label="Paywall hits today"
+      icon={ShieldAlert}
+      tone="warn"
+      href="/admin/subscriptions"
+      pulse={pulse}
+    >
+      <div className="text-2xl font-semibold text-[var(--mp-fg)]">
+        <FormatInt value={live} />
+      </div>
+    </Tile>
+  );
+}
+
+function PuypTile({
+  initial,
+  visible,
+}: {
+  initial: number;
+  visible: boolean;
+}) {
   const [pulse, setPulse] = useState(false);
   const [live, setLive] = useState(initial);
   useEffect(() => setLive(initial), [initial]);
@@ -457,8 +669,10 @@ function PuypTile({ initial }: { initial: number }) {
       const row = payload.new as Record<string, unknown> | undefined;
       if (payload.eventType === "INSERT" && row?.result === "fail" && !row?.verified_at) {
         setLive((v) => v + 1);
-        setPulse(true);
-        setTimeout(() => setPulse(false), 700);
+        if (visible) {
+          setPulse(true);
+          setTimeout(() => setPulse(false), 700);
+        }
       }
       if (payload.eventType === "UPDATE") {
         const oldRow = payload.old as Record<string, unknown> | undefined;
@@ -469,20 +683,30 @@ function PuypTile({ initial }: { initial: number }) {
     },
   });
 
+  const tone = live > 0 ? "warn" : "success";
+
   return (
     <Tile
       label="PUYP pending"
       icon={ShieldCheck}
-      accent={live > 0 ? "warn" : "success"}
+      tone={tone}
       href="/admin/puyp"
       pulse={pulse}
     >
-      <div className="text-2xl font-semibold text-[var(--mp-fg)]">{live}</div>
+      <div className="text-2xl font-semibold text-[var(--mp-fg)]">
+        <FormatInt value={live} />
+      </div>
     </Tile>
   );
 }
 
-function FlaggedQuestionsTile({ initial }: { initial: number }) {
+function FlaggedQuestionsTile({
+  initial,
+  visible,
+}: {
+  initial: number;
+  visible: boolean;
+}) {
   const [pulse, setPulse] = useState(false);
   const [live, setLive] = useState(initial);
   useEffect(() => setLive(initial), [initial]);
@@ -492,42 +716,67 @@ function FlaggedQuestionsTile({ initial }: { initial: number }) {
       const row = payload.new as Record<string, unknown> | undefined;
       if (payload.eventType === "INSERT" && row?.status === "new") {
         setLive((v) => v + 1);
-        setPulse(true);
-        setTimeout(() => setPulse(false), 700);
+        if (visible) {
+          setPulse(true);
+          setTimeout(() => setPulse(false), 700);
+        }
       }
     },
   });
+
+  const tone = live > 0 ? "warn" : "success";
 
   return (
     <Tile
       label="Open feedback"
       icon={MessageSquare}
-      accent={live > 0 ? "warn" : "success"}
+      tone={tone}
       href="/admin/feedback"
       pulse={pulse}
     >
-      <div className="text-2xl font-semibold text-[var(--mp-fg)]">{live}</div>
+      <div className="text-2xl font-semibold text-[var(--mp-fg)]">
+        <FormatInt value={live} />
+      </div>
     </Tile>
   );
 }
 
-function ConversionTile({ conversion7d }: { conversion7d: number | null }) {
-  const pct = conversion7d != null ? conversion7d * 100 : null;
-  const danger = pct != null && pct < 2;
+// ═══ Platform Health tiles ════════════════════════════════════════
+
+function WebhookFailuresTile({
+  initial,
+}: {
+  initial: number;
+}) {
+  // Not yet wired to Realtime (processed_webhook_events RT lands in a
+  // follow-up — until then the /api/admin/overview 60s refresh is
+  // good enough).
+  const [live, setLive] = useState(initial);
+  useEffect(() => setLive(initial), [initial]);
+
+  const tone = live > 0 ? "danger" : "success";
+
   return (
     <Tile
-      label="Conversion (7d)"
-      icon={TrendingUp}
-      accent={danger ? "danger" : "info"}
-      href="/admin/funnels"
+      label="Webhook failures (24h)"
+      icon={Webhook}
+      tone={tone}
+      href="/admin/webhooks"
       footer={
-        <span className="italic text-[var(--mp-fg-muted)]">
-          Deeper funnel view coming soon
-        </span>
+        live > 0 ? (
+          <span>
+            <StatusDot tone="danger" size={6} />{" "}
+            <span className="ml-1">Investigate retries — NOWPayments IPN.</span>
+          </span>
+        ) : (
+          <span className="italic text-[var(--mp-fg-muted)]">
+            All webhooks landed in the last 24h
+          </span>
+        )
       }
     >
       <div className="text-2xl font-semibold text-[var(--mp-fg)]">
-        {pct != null ? `${pct.toFixed(1)}%` : "—"}
+        <FormatInt value={live} />
       </div>
     </Tile>
   );
@@ -540,35 +789,56 @@ function CronsTile({
 }) {
   const entries = Object.entries(crons);
   const anyFail = entries.some(([, v]) => v.lastStatus === "failed");
+  const tone = anyFail ? "danger" : entries.length === 0 ? "warn" : "success";
+
+  const latestAt = entries
+    .map(([, v]) => (v.lastStartedAt ? new Date(v.lastStartedAt).getTime() : 0))
+    .reduce((max, t) => (t > max ? t : max), 0);
+  const latestDate = latestAt > 0 ? new Date(latestAt) : null;
+
   return (
     <Tile
       label="Cron health (24h)"
       icon={Gauge}
-      accent={anyFail ? "danger" : entries.length === 0 ? "warn" : "success"}
+      tone={tone}
       href="/admin/crons"
       footer={
-        entries.length === 0
-          ? "No cron runs seen in 24h"
-          : `${entries.length} jobs tracked`
+        entries.length === 0 ? (
+          <TileEmptyLabel updatedAt={null} tone="warn" />
+        ) : (
+          <div className="flex items-center justify-between">
+            <span>
+              {formatInt(entries.length)}{" "}
+              {entries.length === 1 ? "job tracked" : "jobs tracked"}
+            </span>
+            <TileEmptyLabel updatedAt={latestDate} tone={tone} />
+          </div>
+        )
       }
     >
-      <div className="flex flex-wrap gap-1">
+      <div className="flex flex-wrap gap-1.5 items-center">
         {entries.length === 0 && (
-          <span className="text-sm text-[var(--mp-fg-muted)]">—</span>
+          <span className="text-sm text-[var(--mp-fg-muted)]">
+            No cron runs yet
+          </span>
         )}
-        {entries.slice(0, 8).map(([name, v]) => (
-          <span
-            key={name}
-            title={`${name} — ${v.lastStatus}`}
-            className={`w-2 h-2 rounded-full ${
-              v.lastStatus === "succeeded"
-                ? "bg-emerald-500"
-                : v.lastStatus === "failed"
-                  ? "bg-red-500"
-                  : "bg-amber-500"
-            }`}
-          />
-        ))}
+        {entries.slice(0, 10).map(([name, v]) => {
+          const dotTone: "success" | "danger" | "warn" =
+            v.lastStatus === "succeeded"
+              ? "success"
+              : v.lastStatus === "failed"
+                ? "danger"
+                : "warn";
+          return (
+            <span
+              key={name}
+              title={`${name} — ${v.lastStatus}`}
+              className="inline-flex items-center"
+            >
+              <StatusDot tone={dotTone} size={9} />
+            </span>
+          );
+        })}
       </div>
     </Tile>
   );
@@ -585,64 +855,63 @@ function LiveFeedTile({
   }>;
 }) {
   return (
-    <Tile
-      label="Live activity"
-      icon={Activity}
-      accent="info"
-      href="/admin/audit"
-      footer={
-        <span className="italic text-[var(--mp-fg-muted)]">
-          Full feed lands in a follow-up
+    <div className="relative rounded-2xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] flex flex-col min-h-[240px] overflow-hidden">
+      <div
+        className="absolute top-0 left-0 right-0 h-[3px] rounded-t-2xl"
+        style={{ backgroundColor: "#3B82F6", opacity: 0.85 }}
+        aria-hidden
+      />
+      <div className="flex items-center gap-2 px-4 pt-3 pb-3 border-b border-[var(--mp-border-subtle)]">
+        <Activity size={12} className="text-[var(--mp-fg-muted)]" />
+        <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--mp-fg-muted)]">
+          Live activity
         </span>
-      }
-    >
-      {events.length === 0 ? (
-        <span className="text-sm text-[var(--mp-fg-muted)]">No recent events</span>
-      ) : (
-        <ul className="space-y-0.5 text-[11px] font-mono text-[var(--mp-fg-muted)]">
-          {events.slice(0, 5).map((e) => (
-            <li key={String(e.id)} className="truncate">
-              <span className="text-[var(--mp-fg)]">{e.event_type}</span>{" "}
-              {new Date(e.created_at).toLocaleTimeString()}
-            </li>
-          ))}
-        </ul>
-      )}
-    </Tile>
+        <span className="flex-1" />
+        <StatusDot tone="info" size={6} />
+      </div>
+      <div className="flex-1 overflow-y-auto overflow-x-auto max-h-[260px]">
+        {events.length === 0 ? (
+          <div className="px-4 py-6 text-center text-xs text-[var(--mp-fg-muted)]">
+            <Clock size={14} className="inline-block mb-1 opacity-50" />
+            <div>Waiting for events…</div>
+          </div>
+        ) : (
+          <ul className="flex lg:flex-col gap-0 px-2 py-1">
+            {events.slice(0, 40).map((e) => (
+              <li
+                key={String(e.id)}
+                className="flex-shrink-0 lg:flex-shrink flex items-center gap-2 px-2 py-1.5 text-[11px] font-mono text-[var(--mp-fg-muted)] border-b last:border-0 border-[var(--mp-border-subtle)]/40"
+              >
+                <StatusDot tone="info" size={6} />
+                <span className="text-[var(--mp-fg)] flex-shrink-0">
+                  {e.event_type}
+                </span>
+                <span className="tabular-nums text-[10px] text-[var(--mp-fg-subtle)] ml-auto flex-shrink-0">
+                  {new Date(e.created_at).toLocaleTimeString("de-AT", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    second: "2-digit",
+                  })}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+      <div className="px-4 py-2 border-t border-[var(--mp-border-subtle)] text-[10px] text-[var(--mp-fg-muted)] flex items-center justify-between">
+        <span>Last {events.slice(0, 40).length}</span>
+        <Link
+          href="/admin/audit"
+          className="text-[var(--mp-viridian)] hover:underline"
+        >
+          See full audit →
+        </Link>
+      </div>
+    </div>
   );
 }
 
-function SkeletonTile({
-  label,
-  value,
-  icon: Icon,
-  href,
-  comingSoon,
-}: {
-  label: string;
-  value: number;
-  icon: typeof Users;
-  href: string;
-  comingSoon?: boolean;
-}) {
-  return (
-    <Tile
-      label={label}
-      icon={Icon}
-      href={href}
-      accent={value > 0 ? "danger" : "info"}
-      footer={
-        comingSoon ? (
-          <span className="italic text-[var(--mp-fg-muted)]">
-            Auto-refresh in a follow-up
-          </span>
-        ) : undefined
-      }
-    >
-      <div className="text-2xl font-semibold text-[var(--mp-fg)]">{value}</div>
-    </Tile>
-  );
-}
+// ═══ Running-now ribbon ═══════════════════════════════════════════
 
 function RunningNowRibbon() {
   const [jobs, setJobs] = useState<Array<Record<string, unknown>>>([]);
@@ -662,7 +931,11 @@ function RunningNowRibbon() {
         if (idx >= 0) {
           const next = current.slice();
           next[idx] = row;
-          if (row.status === "succeeded" || row.status === "failed" || row.status === "cancelled") {
+          if (
+            row.status === "succeeded" ||
+            row.status === "failed" ||
+            row.status === "cancelled"
+          ) {
             return next.filter((j) => j.id !== row.id);
           }
           return next;
@@ -692,28 +965,11 @@ function RunningNowRibbon() {
               style={{ width: `${Number(j.progress_pct) || 0}%` }}
             />
           </div>
-          <span className="text-[10px] font-mono text-[var(--mp-fg-muted)]">
+          <span className="text-[10px] font-mono text-[var(--mp-fg-muted)] tabular-nums">
             {Number(j.progress_pct) || 0}%
           </span>
         </div>
       ))}
     </div>
-  );
-}
-
-function FreshnessBadge({ state }: { state: "live" | "cached" | "offline" }) {
-  const styles = {
-    live: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/40",
-    cached:
-      "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/40",
-    offline: "bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/40",
-  } as const;
-  const label = state === "live" ? "LIVE" : state === "cached" ? "CACHED" : "OFFLINE";
-  return (
-    <span
-      className={`text-[10px] font-mono font-semibold px-2 py-0.5 rounded border ${styles[state]}`}
-    >
-      {label}
-    </span>
   );
 }

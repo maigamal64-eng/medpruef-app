@@ -24,6 +24,30 @@ export interface ChangelogEntry {
 export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-04-23",
+    tag: "improvement",
+    title: {
+      de: "Startseite — Premium-Redesign",
+      en: "Dashboard — premium redesign",
+    },
+    description: {
+      de: "Die Startseite wurde von Grund auf überarbeitet: Gamification-Hero steht jetzt oben und bekommt den Platz, den er verdient — mit Streak (warmes Orange), Tagesziel-Ring (Viridian), Genauigkeit und einem neuen Fortschrittsbalken zum nächsten Rang. Warngelbe „Smart Recommendation\" ersetzt durch eine ruhige Viridian-Coach-Empfehlung („10 Fragen üben\"). Neue Begrüßung je nach Tageszeit („Guten Morgen/Tag/Abend\") + Kohorten-Chip mit Prüfungsdatum. Eine einzige klare Haupt-CTA (Weiterlernen) statt drei gleichgewichtiger Buttons. Konsistentes 8-Punkt-Raster, einheitliche 16px-Kartenradien, Tokens statt Inline-Hex.",
+      en: "The dashboard has been rebuilt end-to-end: the gamification hero now sits at the top and gets the room it deserves — with streak (warm orange), daily goal ring (viridian), accuracy, and a new progress bar to the next rank. Warning-yellow \"Smart Recommendation\" replaced by a calm viridian coach card (\"Practice 10 questions\"). New time-of-day greeting (\"Good morning/afternoon/evening\") + cohort chip showing your exam in days. One clear primary CTA (Continue) instead of three equal-weight buttons. Consistent 8-pt spacing grid, unified 16px card radius, tokens instead of inline hex throughout.",
+    },
+  },
+  {
+    date: "2026-04-23",
+    tag: "improvement",
+    title: {
+      de: "Landing, Preise & FAQ — Premium-Politur",
+      en: "Landing, Pricing & FAQ — premium polish",
+    },
+    description: {
+      de: "Öffentliche Flächen komplett überarbeitet. Landing: neues Mobile-Hamburger-Menü, Hero-CTAs stapeln sich jetzt sauber auf schmalen Screens, sichtbare Zahlenreihe (10.993 Fragen · 3 Prüfungen · 7 Sprachen · 1.806 Mehrfachantworten) schrumpft nicht mehr zusammen. Pricing: Mobile-Reihenfolge priorisiert 6 Monate („Beliebt\") vor 3/12/Monatlich, ruhigere Referral- und Pass-Until-You-Pass-Blöcke unter den Tarifkarten, Warteliste-Dialog in klar „du\"-freundlicher Tonalität. FAQ: sticky Inhaltsverzeichnis links am Desktop, aufklappbar am Handy, Info-Callouts für harte Regeln (max. 2 Zyklen, kein SEPA), „Zurück zu den Preisen\"-CTA am Ende der relevantesten Antworten.",
+      en: "Public-facing surfaces re-polished end-to-end. Landing: new mobile hamburger menu, hero CTAs stack cleanly on narrow screens, the stats strip (10,993 questions · 3 exam types · 7 languages · 1,806 multi-correct) now renders coherently on every viewport. Pricing: mobile tier order prioritises 6 months (\"Popular\") ahead of 3/12/monthly, referral and Pass-Until-You-Pass blocks subordinate visually to the tier cards above them, waitlist dialog rewritten in \"du\"-friendly tone. FAQ: sticky TOC on desktop, collapsible TOC on mobile, info callouts for hard constraints (max 2 cycles, no SEPA), \"Back to pricing\" CTA at the end of the highest-intent answers.",
+    },
+  },
+  {
+    date: "2026-04-23",
     tag: "feature",
     title: {
       de: "Empfehlungen — gestaffelte Prämien €25/€50/€75",

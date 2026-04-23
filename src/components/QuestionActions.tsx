@@ -170,13 +170,19 @@ export default function QuestionActions({
   if (layout === "row") {
     return (
       <>
-        <div className="flex items-center justify-around gap-2 w-full">
+        <div
+          className="flex items-center justify-around gap-2 w-full"
+          role="toolbar"
+          aria-label={lang === "de" ? "Frage-Aktionen" : "Question actions"}
+        >
           {buttons.map((b) => (
             <button
               key={b.key}
               onClick={b.onClick}
               disabled={b.locked}
               title={b.label}
+              aria-label={b.label}
+              aria-pressed={b.active}
               className={`${baseBtn} ${
                 b.active
                   ? b.activeClass
@@ -228,13 +234,20 @@ export default function QuestionActions({
   // Rail layout (vertical)
   return (
     <>
-      <div className="flex flex-col items-center gap-3 sticky top-24">
+      <div
+        className="flex flex-col items-center gap-3 sticky top-24"
+        role="toolbar"
+        aria-label={lang === "de" ? "Frage-Aktionen" : "Question actions"}
+        aria-orientation="vertical"
+      >
         {buttons.map((b) => (
           <button
             key={b.key}
             onClick={b.onClick}
             disabled={b.locked}
             title={b.label}
+            aria-label={b.label}
+            aria-pressed={b.active}
             className={`${baseBtn} ${
               b.active
                 ? b.activeClass
