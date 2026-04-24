@@ -3,61 +3,62 @@
 import { useEffect, useState } from 'react'
 import { Mountain, Pill, Calendar, Target, Star, MessageSquarePlus, WifiOff, Search, Languages } from 'lucide-react'
 import { Dialog } from '@/components/ui'
+import { t, useLang, type TranslationKey } from '@/lib/i18n'
 
 const CURRENT_VERSION = '2026-04-22'
 const STORAGE_KEY = 'medpruef_whats_new_seen'
 
 interface Feature {
   icon: React.ReactNode
-  title: string
-  description: string
+  titleKey: TranslationKey
+  bodyKey: TranslationKey
 }
 
 const FEATURES: Feature[] = [
   {
     icon: <WifiOff className="w-5 h-5 text-[var(--mp-cta-blue)]" />,
-    title: 'Offline-Modus ist live — Fragen vorab herunterladen',
-    description: 'Laden Sie 100–500 Fragen vorab in Einstellungen → Offline-Modus. Dann können Sie im Zug, im Flugzeug oder in der Kaffeepause lernen, auch ohne WLAN. Ihre Antworten werden synchronisiert, sobald Sie wieder online sind.',
+    titleKey: 'whatsnew_offline_title',
+    bodyKey: 'whatsnew_offline_body',
   },
   {
     icon: <Search className="w-5 h-5 text-[var(--mp-accent-teal)]" />,
-    title: 'Schnellsuche mit Cmd+K',
-    description: 'Drücken Sie Cmd+K (Mac) oder Strg+K (Windows), um sofort die Volltextsuche über alle 10.993 Fragen zu öffnen — ohne Mausklick, von jeder Seite aus.',
+    titleKey: 'whatsnew_search_title',
+    bodyKey: 'whatsnew_search_body',
   },
   {
     icon: <Languages className="w-5 h-5 text-[#8B5CF6]" />,
-    title: 'Erklärungen in 7 Sprachen',
-    description: 'Sie können jede Erklärung jetzt auf Russisch, Arabisch, Englisch, Französisch, Türkisch, Ukrainisch oder Serbisch lesen. Medizinische Fachbegriffe, Medikamentennamen und Leitlinien-Bezüge bleiben dabei erhalten.',
+    titleKey: 'whatsnew_translations_title',
+    bodyKey: 'whatsnew_translations_body',
   },
   {
     icon: <Mountain className="w-5 h-5 text-[var(--mp-cta-blue)]" />,
-    title: 'KMP Innsbruck — 3.091 neue Fragen',
-    description: 'Die Kumulative Modulprüfung (KMP) der Med Uni Innsbruck ist jetzt verfügbar. Wechseln Sie die Prüfung über die Seitenleiste.',
+    titleKey: 'whatsnew_kmp_title',
+    bodyKey: 'whatsnew_kmp_body',
   },
   {
     icon: <Pill className="w-5 h-5 text-[#8B5CF6]" />,
-    title: 'Pharmacology exam — 335 questions',
-    description: 'Short-answer pharmacology questions for Rezeptierkunde preparation.',
+    titleKey: 'whatsnew_pharma_title',
+    bodyKey: 'whatsnew_pharma_body',
   },
   {
     icon: <Calendar className="w-5 h-5 text-[var(--mp-accent-teal)]" />,
-    title: 'February 2026 SIP5a exam added',
-    description: '154 fresh questions from the latest Vienna exam, organized by specialty.',
+    titleKey: 'whatsnew_sip5a_title',
+    bodyKey: 'whatsnew_sip5a_body',
   },
   {
     icon: <Target className="w-5 h-5 text-[#D68A3A]" />,
-    title: 'Exam simulation redesigned',
-    description: 'Select answers freely, navigate between questions, and submit when ready — just like the real exam.',
+    titleKey: 'whatsnew_examsim_title',
+    bodyKey: 'whatsnew_examsim_body',
   },
   {
     icon: <Star className="w-5 h-5 text-[var(--mp-error)]" />,
-    title: 'Bookmarks & mistake review',
-    description: 'Quick access on the home page to your saved questions and questions you got wrong.',
+    titleKey: 'whatsnew_bookmarks_title',
+    bodyKey: 'whatsnew_bookmarks_body',
   },
   {
     icon: <MessageSquarePlus className="w-5 h-5 text-[var(--mp-cta-blue)]" />,
-    title: 'Feedback button',
-    description: 'See the blue button at the bottom-right? Use it to report issues or suggest improvements. We read every message.',
+    titleKey: 'whatsnew_feedback_title',
+    bodyKey: 'whatsnew_feedback_body',
   },
 ]
 
@@ -73,6 +74,7 @@ const FEATURES: Feature[] = [
  */
 export default function WhatsNewModal() {
   const [open, setOpen] = useState(false)
+  const lang = useLang()
 
   useEffect(() => {
     // Don't show if: no session, guest, or already seen this version
@@ -107,12 +109,12 @@ export default function WhatsNewModal() {
         if (!next) dismiss()
         else setOpen(true)
       }}
-      title="What's New in MedPrüf"
-      description="April 2026 Update"
+      title={t('whats_new_title', lang)}
+      description={t('whats_new_subtitle', lang)}
       maxWidth="480px"
       footer={
         <button onClick={dismiss} className="mp-btn mp-btn--primary mp-btn--lg" style={{ width: '100%' }}>
-          Got it — let&apos;s study
+          {t('whats_new_dismiss', lang)}
         </button>
       }
     >
@@ -123,8 +125,8 @@ export default function WhatsNewModal() {
               {f.icon}
             </div>
             <div>
-              <p className="text-sm font-semibold text-[var(--mp-fg)]">{f.title}</p>
-              <p className="text-xs text-[var(--mp-fg-subtle)] mt-0.5 leading-relaxed">{f.description}</p>
+              <p className="text-sm font-semibold text-[var(--mp-fg)]">{t(f.titleKey, lang)}</p>
+              <p className="text-xs text-[var(--mp-fg-subtle)] mt-0.5 leading-relaxed">{t(f.bodyKey, lang)}</p>
             </div>
           </div>
         ))}

@@ -16,6 +16,7 @@
  */
 
 import { CheckCircle2, AlertTriangle, Info, XCircle, X } from 'lucide-react'
+import { t, useLang } from '@/lib/i18n'
 
 type Variant = 'info' | 'success' | 'warning' | 'error'
 
@@ -43,6 +44,7 @@ export function Alert({
   className,
   role,
 }: AlertProps) {
+  const lang = useLang()
   const Icon = iconByVariant[variant]
   // "alert" role is appropriate for errors; "status" for informational
   const ariaRole = role ?? (variant === 'error' ? 'alert' : 'status')
@@ -57,7 +59,7 @@ export function Alert({
         <button
           type="button"
           onClick={onClose}
-          aria-label="Dismiss"
+          aria-label={t("close", lang)}
           className="flex-shrink-0 rounded-md p-1 opacity-70 hover:opacity-100 transition"
         >
           <X className="w-4 h-4" aria-hidden />

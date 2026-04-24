@@ -23,6 +23,30 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-04-24",
+    tag: "improvement",
+    title: {
+      de: "Englische Übersetzungen — Modals, Toasts, Onboarding",
+      en: "English translations — modals, toasts, onboarding",
+    },
+    description: {
+      de: "Wer MedPrüf auf Englisch nutzt, sah bisher an vielen Stellen — Onboarding, Modals, Toasts, Banner, PWA-Hinweise, Feedback-Widget — immer noch deutsche Texte. Jetzt sind die wichtigsten UI-Oberflächen durchgängig zweisprachig. Zusätzlich: Das Onboarding hat einen eigenen Sprach-Schalter oben rechts auf jedem Schritt bekommen, so dass du die Sprache auch mitten im Einrichten wechseln kannst.",
+      en: "If you used MedPrüf in English, many surfaces — onboarding, modals, toasts, banners, PWA prompts, the feedback widget — still showed German text. We went through the app and made every user-visible string fully bilingual. On top of that: the onboarding flow now has its own language switcher in the top-right of every step, so you can switch mid-setup.",
+    },
+  },
+  {
+    date: "2026-04-24",
+    tag: "fix",
+    title: {
+      de: "KI-Erklärung — ehrlichere Anzeige für kostenlose Nutzer",
+      en: "AI Explain — honest messaging for free users",
+    },
+    description: {
+      de: "Wenn für eine Frage noch keine zwischengespeicherte KI-Erklärung existiert, zeigte die KI für kostenlose Nutzer bisher „KI-Assistent ist momentan nicht verfügbar\" — was wie eine Serverstörung klang und zu Rückmeldungen wie „Die KI funktioniert überhaupt nicht\" führte. Neu: wir zeigen stattdessen die vorhandene Lehrbuch-Erklärung der Frage und erklären klar, dass automatische KI-Neugenerierung ein Pro-Feature ist, nicht ein Defekt. Wenn ein Pro-Nutzer die Erklärung später anfragt, wird sie auch für kostenlose Nutzer dauerhaft sichtbar.",
+      en: "When no AI explanation was cached for a question yet, free users used to see \"AI assistant is currently unavailable\" — which reads like an outage, and prompted feedback like \"the AI is completely broken.\" Now we render the question's existing textbook explanation instead, and clearly explain that automatic AI regeneration is a Pro feature, not a bug. Once any Pro user requests an explanation, it's cached and free for everyone to read.",
+    },
+  },
+  {
     date: "2026-04-23",
     tag: "improvement",
     title: {

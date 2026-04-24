@@ -33,6 +33,7 @@ import {
   useAnnouncementGate,
   type SurfaceKey,
 } from "@/lib/announcements/useAnnouncementGate";
+import { t, useLang } from "@/lib/i18n";
 
 const SURFACE: SurfaceKey = "referral_floater";
 const ALLOWED_PATHS = ["/", "/flashcards", "/quiz"];
@@ -40,6 +41,7 @@ const MOUNT_DELAY_MS = 6000;
 
 export default function ReferralShareFloater() {
   const pathname = usePathname();
+  const lang = useLang();
   const { activeSurface, markSeen } = useAnnouncementGate();
   const [mountedForLongEnough, setMountedForLongEnough] = useState(false);
 
@@ -63,7 +65,7 @@ export default function ReferralShareFloater() {
   return (
     <div
       role="region"
-      aria-label="Empfehlungsprogramm"
+      aria-label={t("ref_floater_region_label", lang)}
       className="fixed z-[55] right-4 max-w-sm animate-fade-in"
       style={{
         // Respect the iPhone 14 Pro Max home-indicator inset. On
@@ -78,7 +80,7 @@ export default function ReferralShareFloater() {
           type="button"
           onClick={handleDismiss}
           className="absolute top-2 right-2 text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg)] p-2 min-w-[44px] min-h-[44px] flex items-center justify-center"
-          aria-label="Hinweis schließen"
+          aria-label={t("ref_floater_close", lang)}
         >
           <X className="w-4 h-4" aria-hidden />
         </button>
@@ -89,11 +91,10 @@ export default function ReferralShareFloater() {
           </div>
           <div className="min-w-0">
             <p className="text-sm font-semibold text-[var(--mp-fg)] leading-snug">
-              Empfehle MedPrüf
+              {t("ref_floater_title", lang)}
             </p>
             <p className="text-xs text-[var(--mp-fg-subtle)] mt-1 leading-relaxed">
-              Hilf anderen Prüflingen — und verdien Cash-Belohnungen,
-              wenn sie ein Abo abschließen.
+              {t("ref_floater_body", lang)}
             </p>
             <div className="mt-3 flex items-center gap-2">
               <Link
@@ -101,14 +102,14 @@ export default function ReferralShareFloater() {
                 onClick={handleDismiss}
                 className="mp-btn mp-btn--primary text-xs px-3 py-1.5 min-h-[44px] flex items-center justify-center"
               >
-                Details ansehen
+                {t("ref_floater_cta_details", lang)}
               </Link>
               <button
                 type="button"
                 onClick={handleDismiss}
                 className="text-xs text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg)] px-2 py-1"
               >
-                Nicht jetzt
+                {t("ref_floater_cta_not_now", lang)}
               </button>
             </div>
           </div>

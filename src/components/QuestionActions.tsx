@@ -23,6 +23,11 @@ interface Props {
   question: Question;
   lang: Lang;
   userTier?: string;
+  /** Session `user.role` — must be passed alongside `userTier` so admins
+   * whose tier is `'free'` / `null` (they may not subscribe) still get
+   * Pro-level access to bookmarks, notes, translate, etc. Added 2026-04-24
+   * to fix admin being redirected to /pricing from the exam page. */
+  userRole?: string;
   /** "rail" = vertical icon column for desktop side panels; "row" = horizontal mobile bar */
   layout?: "rail" | "row";
   /** Disable AI / notes until question has been answered (matches old quiz behaviour) */
@@ -49,6 +54,7 @@ export default function QuestionActions({
   question,
   lang,
   userTier = "free",
+  userRole = "user",
   layout = "rail",
   unlockAfterAnswer = false,
   answered = true,
@@ -75,7 +81,11 @@ export default function QuestionActions({
   // Lock 2026-04-23: bookmarks + notes are Pro-only. The storage is
   // localStorage so there's no server gate — we just block the UI
   // action and send the user to /pricing on click.
-  const isPro = userTier === "pro" || userTier === "admin";
+  //
+  // 2026-04-24: also honour `userRole === 'admin'` — /admin/ operators
+  // may have `tier='free'` in the users row because they never
+  // subscribed. The admin role itself grants Pro-level access.
+  const isPro = userRole === "admin" || userTier === "pro" || userTier === "admin";
 
   const toggleFav = () => {
     if (!isPro) {
@@ -286,6 +296,7 @@ export default function QuestionActions({
         topic={question.topic}
         options={(question.options || []).map((o) => ({ text: o.text, correct: o.correct }))}
         userTier={userTier}
+        userRole={userRole}
       />
       <ReportQuestionModal
         open={showReport}

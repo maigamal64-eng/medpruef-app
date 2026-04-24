@@ -5,47 +5,48 @@ import { ChevronRight, ChevronLeft, Check, Sparkles } from 'lucide-react'
 import { getStoredSession } from '@/lib/auth'
 import { authFetch as fetch } from '@/lib/authFetch'
 import { Dialog, Textarea } from '@/components/ui'
+import { t, useLang, type TranslationKey } from '@/lib/i18n'
 
 const STORAGE_COMPLETED = 'medpruef_survey_v1_completed'
 const STORAGE_DISMISSED = 'medpruef_survey_v1_dismissed'
 
-/* ── Rating labels (emoji + text) ── */
-const RATING_LABELS = [
-  { emoji: '😞', label: 'Schlecht' },
-  { emoji: '😕', label: 'Geht so' },
-  { emoji: '😐', label: 'OK' },
-  { emoji: '🙂', label: 'Gut' },
-  { emoji: '🤩', label: 'Super' },
+/* ── Rating labels (emoji + translation key) ── */
+const RATING_LABELS: { emoji: string; key: TranslationKey }[] = [
+  { emoji: '😞', key: 'survey_rating_1' },
+  { emoji: '😕', key: 'survey_rating_2' },
+  { emoji: '😐', key: 'survey_rating_3' },
+  { emoji: '🙂', key: 'survey_rating_4' },
+  { emoji: '🤩', key: 'survey_rating_5' },
 ]
 
-/* ── Step 1 questions ── */
-const RATING_QUESTIONS = [
-  'Wie bewertest du die Qualität der Fragen?',
-  'Wie einfach ist die App zu benutzen?',
-  'Wie hilfreich sind die KI-Erklärungen?',
-  'Wie zufrieden bist du mit der Prüfungsvorbereitung insgesamt?',
-  'Wie wahrscheinlich empfiehlst du MedPrüf weiter?',
+const RATING_QUESTION_KEYS: TranslationKey[] = [
+  'survey_q_quality',
+  'survey_q_ease',
+  'survey_q_ai',
+  'survey_q_overall',
+  'survey_q_nps',
 ]
 
-/* ── Step 2 options ── */
-const BEST_FEATURES = [
-  'Große Fragenbank',
-  'Spaced Repetition',
-  'KI-Erklärungen',
-  'Prüfungssimulation',
-  'Fortschritts-Tracking',
-  'Mobile App (PWA)',
+const BEST_FEATURE_KEYS: TranslationKey[] = [
+  'survey_best_1',
+  'survey_best_2',
+  'survey_best_3',
+  'survey_best_4',
+  'survey_best_5',
+  'survey_best_6',
 ]
-const IMPROVE_OPTIONS = [
-  'Mehr Fragen',
-  'Bessere Erklärungen',
-  'Lernplan-Funktion',
-  'Gruppenlernen',
-  'Offline-Modus',
-  'Preisgestaltung',
+
+const IMPROVE_KEYS: TranslationKey[] = [
+  'survey_improve_1',
+  'survey_improve_2',
+  'survey_improve_3',
+  'survey_improve_4',
+  'survey_improve_5',
+  'survey_improve_6',
 ]
 
 export default function UserSurveyModal() {
+  const lang = useLang()
   const [show, setShow] = useState(false)
   const [step, setStep] = useState(1) // 1, 2, 3, or 4 (success)
   const [direction, setDirection] = useState<'forward' | 'back'>('forward')
@@ -54,7 +55,7 @@ export default function UserSurveyModal() {
   // Step 1: ratings (1-5, 0 = unrated)
   const [ratings, setRatings] = useState<number[]>([0, 0, 0, 0, 0])
 
-  // Step 2: multi-select
+  // Step 2: multi-select (store the DE key text for backend stability)
   const [bestFeatures, setBestFeatures] = useState<string[]>([])
   const [bestOther, setBestOther] = useState('')
   const [improvements, setImprovements] = useState<string[]>([])
@@ -119,6 +120,8 @@ export default function UserSurveyModal() {
     setSubmitting(true)
 
     try {
+      // Backend stores the canonical (DE) tokens so aggregations stay stable
+      // regardless of the user's UI language at submit time.
       const surveyPayload = {
         type: 'survey_v1',
         ratings: {
@@ -138,9 +141,11 @@ export default function UserSurveyModal() {
         ],
         open_text: openText.trim() || null,
         submitted_at: new Date().toISOString(),
+        lang,
       }
 
-      // Build a readable summary as the "message" field (the feedback API requires it)
+      // Build a readable summary — always in DE for operational consistency
+      // (the internal ops team reviews these)
       const ratingNames = [
         'Fragenqualität',
         'Bedienbarkeit',
@@ -191,8 +196,8 @@ export default function UserSurveyModal() {
 
   const step1Complete = ratings.every(r => r > 0)
 
-  const title = step === 4 ? 'Danke!' : 'Dein Feedback'
-  const description = step < 4 ? `Schritt ${step} von 3` : undefined
+  const title = step === 4 ? t('survey_success_title', lang) : t('survey_title', lang)
+  const description = step < 4 ? t('survey_step_label', lang).replace('{current}', String(step)) : undefined
 
   let footer: React.ReactNode = null
   if (step < 4) {
@@ -205,7 +210,7 @@ export default function UserSurveyModal() {
               onClick={dismiss}
               className="text-xs text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg-muted)] transition-colors"
             >
-              Später
+              {t('survey_later', lang)}
             </button>
           ) : (
             <button
@@ -214,7 +219,7 @@ export default function UserSurveyModal() {
               className="mp-btn mp-btn--secondary"
             >
               <ChevronLeft className="w-4 h-4" aria-hidden />
-              Zurück
+              {t('survey_back', lang)}
             </button>
           )}
         </div>
@@ -227,7 +232,7 @@ export default function UserSurveyModal() {
               disabled={step === 1 && !step1Complete}
               className="mp-btn mp-btn--primary"
             >
-              Weiter
+              {t('survey_next', lang)}
               <ChevronRight className="w-4 h-4" aria-hidden />
             </button>
           ) : (
@@ -239,7 +244,7 @@ export default function UserSurveyModal() {
                   disabled={submitting}
                   className="text-xs text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg-muted)] transition-colors disabled:opacity-40"
                 >
-                  Überspringen
+                  {t('survey_skip', lang)}
                 </button>
               )}
               <button
@@ -251,11 +256,11 @@ export default function UserSurveyModal() {
                 {submitting ? (
                   <span className="flex items-center gap-2">
                     <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Senden...
+                    {t('survey_sending', lang)}
                   </span>
                 ) : (
                   <>
-                    Absenden
+                    {t('survey_submit', lang)}
                     <Check className="w-4 h-4" aria-hidden />
                   </>
                 )}
@@ -266,6 +271,8 @@ export default function UserSurveyModal() {
       </div>
     )
   }
+
+  const greeting = t('survey_intro_greeting', lang).replace('{name}', firstName ? `, ${firstName}` : '')
 
   return (
     <Dialog
@@ -284,7 +291,7 @@ export default function UserSurveyModal() {
           <div className="flex items-center gap-1 mb-1">
             <Sparkles className="w-4 h-4 text-[var(--mp-warning)]" aria-hidden />
             <span className="text-[11px] uppercase tracking-wider text-[var(--mp-fg-subtle)] font-semibold">
-              Umfrage
+              {t('survey_badge', lang)}
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -315,19 +322,19 @@ export default function UserSurveyModal() {
           }`}
         >
           <p className="text-sm text-[var(--mp-fg-muted)] leading-relaxed">
-            Danke{firstName ? `, ${firstName}` : ''}! Dein Feedback hilft uns,
-            MedPrüf besser zu machen.
+            {greeting}
           </p>
 
-          {RATING_QUESTIONS.map((q, qi) => (
-            <div key={qi}>
+          {RATING_QUESTION_KEYS.map((qKey, qi) => (
+            <div key={qKey}>
               <p className="text-sm font-medium text-[var(--mp-fg)] mb-2">
-                {q}
+                {t(qKey, lang)}
               </p>
               <div className="flex gap-2">
                 {RATING_LABELS.map((rl, ri) => {
                   const value = ri + 1
                   const selected = ratings[qi] === value
+                  const labelText = t(rl.key, lang)
                   return (
                     <button
                       key={ri}
@@ -342,7 +349,7 @@ export default function UserSurveyModal() {
                             : 'bg-[var(--mp-surface-sunken)] hover:bg-[var(--mp-border)]'
                         }
                       `}
-                      aria-label={`${rl.label} (${value}/5)`}
+                      aria-label={`${labelText} (${value}/5)`}
                     >
                       <span className="text-xl leading-none">{rl.emoji}</span>
                       <span
@@ -352,7 +359,7 @@ export default function UserSurveyModal() {
                             : 'text-[var(--mp-fg-subtle)]'
                         }`}
                       >
-                        {rl.label}
+                        {labelText}
                       </span>
                     </button>
                   )
@@ -376,16 +383,17 @@ export default function UserSurveyModal() {
           {/* Best features */}
           <div>
             <p className="text-sm font-medium text-[var(--mp-fg)] mb-3">
-              Was findest du am besten an MedPrüf?
+              {t('survey_best_title', lang)}
             </p>
             <div className="grid grid-cols-2 gap-2">
-              {BEST_FEATURES.map(feat => {
-                const checked = bestFeatures.includes(feat)
+              {BEST_FEATURE_KEYS.map(featKey => {
+                const featDe = t(featKey, 'de')
+                const checked = bestFeatures.includes(featDe)
                 return (
                   <button
-                    key={feat}
+                    key={featKey}
                     type="button"
-                    onClick={() => toggleCheckbox(bestFeatures, setBestFeatures, feat)}
+                    onClick={() => toggleCheckbox(bestFeatures, setBestFeatures, featDe)}
                     className={`
                       text-left text-sm px-3 py-2.5 rounded-xl transition-all duration-150
                       ${
@@ -405,7 +413,7 @@ export default function UserSurveyModal() {
                       >
                         {checked && <Check className="w-3 h-3 text-white" aria-hidden />}
                       </span>
-                      {feat}
+                      {t(featKey, lang)}
                     </span>
                   </button>
                 )
@@ -413,28 +421,29 @@ export default function UserSurveyModal() {
             </div>
             <input
               type="text"
-              placeholder="Andere..."
+              placeholder={t('survey_other_placeholder', lang)}
               value={bestOther}
               onChange={e => setBestOther(e.target.value)}
               maxLength={200}
               className="mt-2 w-full text-sm bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)] rounded-xl px-3 py-2 focus:outline-none focus:border-[var(--mp-viridian)]/50 text-[var(--mp-fg)] placeholder:text-[var(--mp-fg-subtle)]"
-              aria-label="Andere Funktionen"
+              aria-label={t('survey_other_best_aria', lang)}
             />
           </div>
 
           {/* Improvements */}
           <div>
             <p className="text-sm font-medium text-[var(--mp-fg)] mb-3">
-              Was sollten wir als Nächstes verbessern?
+              {t('survey_improve_title', lang)}
             </p>
             <div className="grid grid-cols-2 gap-2">
-              {IMPROVE_OPTIONS.map(opt => {
-                const checked = improvements.includes(opt)
+              {IMPROVE_KEYS.map(optKey => {
+                const optDe = t(optKey, 'de')
+                const checked = improvements.includes(optDe)
                 return (
                   <button
-                    key={opt}
+                    key={optKey}
                     type="button"
-                    onClick={() => toggleCheckbox(improvements, setImprovements, opt)}
+                    onClick={() => toggleCheckbox(improvements, setImprovements, optDe)}
                     className={`
                       text-left text-sm px-3 py-2.5 rounded-xl transition-all duration-150
                       ${
@@ -454,7 +463,7 @@ export default function UserSurveyModal() {
                       >
                         {checked && <Check className="w-3 h-3 text-white" aria-hidden />}
                       </span>
-                      {opt}
+                      {t(optKey, lang)}
                     </span>
                   </button>
                 )
@@ -462,12 +471,12 @@ export default function UserSurveyModal() {
             </div>
             <input
               type="text"
-              placeholder="Andere..."
+              placeholder={t('survey_other_placeholder', lang)}
               value={improveOther}
               onChange={e => setImproveOther(e.target.value)}
               maxLength={200}
               className="mt-2 w-full text-sm bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)] rounded-xl px-3 py-2 focus:outline-none focus:border-[var(--mp-warning)]/50 text-[var(--mp-fg)] placeholder:text-[var(--mp-fg-subtle)]"
-              aria-label="Andere Verbesserungen"
+              aria-label={t('survey_other_improve_aria', lang)}
             />
           </div>
         </div>
@@ -484,15 +493,15 @@ export default function UserSurveyModal() {
           }`}
         >
           <p className="text-sm font-medium text-[var(--mp-fg)]">
-            Möchtest du noch etwas hinzufügen?
+            {t('survey_open_title', lang)}
           </p>
           <Textarea
-            label="Dein Kommentar"
+            label={t('survey_open_label', lang)}
             hideLabel
-            helper="Optional — alles was dir einfällt hilft uns weiter."
+            helper={t('survey_open_helper', lang)}
             value={openText}
             onChange={e => setOpenText(e.target.value)}
-            placeholder="Dein Kommentar..."
+            placeholder={t('survey_open_placeholder', lang)}
             maxLength={2000}
             rows={6}
           />
@@ -520,7 +529,7 @@ export default function UserSurveyModal() {
             ))}
           </div>
           <p className="text-sm text-[var(--mp-fg-subtle)]">
-            Dein Feedback macht MedPrüf besser.
+            {t('survey_success_body', lang)}
           </p>
         </div>
       )}

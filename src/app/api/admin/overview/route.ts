@@ -28,13 +28,15 @@ export const GET = adminRouteShell(
     const sevenDaysAgo = new Date(now.getTime() - 7 * 86400_000);
     const twentyFourHoursAgo = new Date(now.getTime() - 24 * 3600_000);
 
-    // 1. Revenue today (cents) + month-to-date (cents).
-    const [todayPaid, mtdPaid] = await Promise.all([
+    // 1. Revenue today (cents) + month-to-date (cents) + 7-day sparkline.
+    //    One select across the last 7 days powers today + sparkline; MTD
+    //    is a separate fetch since the month-window often exceeds 7 days.
+    const [recent7dRes, mtdPaidRes] = await Promise.all([
       sb
         .from("subscriptions")
         .select("amount_cents, started_at")
         .eq("status", "active")
-        .gte("started_at", startOfDay.toISOString()),
+        .gte("started_at", sevenDaysAgo.toISOString()),
       sb
         .from("subscriptions")
         .select("amount_cents, started_at")
@@ -42,16 +44,28 @@ export const GET = adminRouteShell(
         .gte("started_at", startOfMonth.toISOString()),
     ]);
 
-    const revenueTodayCents =
-      (todayPaid.data || []).reduce(
-        (sum, r) => sum + (Number(r.amount_cents) || 0),
-        0
-      );
-    const revenueMtdCents =
-      (mtdPaid.data || []).reduce(
-        (sum, r) => sum + (Number(r.amount_cents) || 0),
-        0
-      );
+    const revenueMtdCents = (mtdPaidRes.data || []).reduce(
+      (sum, r) => sum + (Number(r.amount_cents) || 0),
+      0
+    );
+
+    // Bucket the last-7-days revenue into per-day cents (oldest → newest).
+    // series_7d[0] = 6 days ago, series_7d[6] = today.
+    const series7d: number[] = new Array(7).fill(0);
+    let revenueTodayCents = 0;
+    const todayMs = startOfDay.getTime();
+    for (const row of recent7dRes.data || []) {
+      const startedAt = row.started_at ? new Date(row.started_at as string) : null;
+      if (!startedAt || isNaN(startedAt.getTime())) continue;
+      const amount = Number(row.amount_cents) || 0;
+      const daysAgo = Math.floor((todayMs - startedAt.getTime()) / 86400_000);
+      if (daysAgo >= 0 && daysAgo < 7) {
+        series7d[6 - daysAgo] += amount;
+      }
+      if (startedAt.getTime() >= todayMs) {
+        revenueTodayCents += amount;
+      }
+    }
 
     // 2. Active paid subscriptions (by tier).
     const { data: activeSubs } = await sb
@@ -162,6 +176,7 @@ export const GET = adminRouteShell(
         revenue: {
           today_cents: revenueTodayCents,
           mtd_cents: revenueMtdCents,
+          series_7d: series7d,
         },
         active_subs: {
           total: activeTotal,

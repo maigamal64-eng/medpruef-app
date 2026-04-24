@@ -379,6 +379,7 @@ export default function ProgressPage() {
   // on this tier so the empty state reads "upgrade to unlock"
   // instead of "nothing here".
   const [userTier, setUserTier] = useState<string>("free");
+  const [userRole, setUserRole] = useState<string>("user");
   const [totalXp, setTotalXp] = useState(0);
   const [streak, setStreak] = useState(0);
   const [totalAnswered, setTotalAnswered] = useState(0);
@@ -406,6 +407,7 @@ export default function ProgressPage() {
       setUserId(session.user.id);
       setUserName(session.user.first_name);
       setUserTier(session.user.tier || "free");
+      setUserRole(session.user.role || "user");
       // Guard against older / minimal sessions that don't embed a
       // gamification snapshot — the server will re-hydrate these after
       // the next /api/stats call. Previous code crashed with
@@ -908,7 +910,7 @@ export default function ProgressPage() {
                   // is a Pro feature" with an upsell, not a bare
                   // "nothing here" line. Pro users genuinely with no
                   // bookmarks get the neutral copy.
-                  userTier === "pro" || userTier === "admin" ? (
+                  userRole === "admin" || userTier === "pro" || userTier === "admin" ? (
                     <div className="text-center py-8">
                       <Star className="w-8 h-8 text-[var(--mp-border-subtle)] mx-auto mb-2" />
                       <p className="text-sm text-[var(--mp-fg-subtle)]">
@@ -1007,7 +1009,7 @@ export default function ProgressPage() {
                     <div className="w-6 h-6 border-2 border-[var(--mp-viridian)] border-t-transparent rounded-full animate-spin" />
                   </div>
                 ) : noteEntries.length === 0 ? (
-                  userTier === "pro" || userTier === "admin" ? (
+                  userRole === "admin" || userTier === "pro" || userTier === "admin" ? (
                     <div className="text-center py-8">
                       <StickyNote className="w-8 h-8 text-[var(--mp-border-subtle)] mx-auto mb-2" />
                       <p className="text-sm text-[var(--mp-fg-subtle)]">{t("no_notes", lang)}</p>

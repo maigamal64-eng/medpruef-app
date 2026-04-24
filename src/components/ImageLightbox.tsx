@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { t, useLang } from "@/lib/i18n";
 
 interface ImageLightboxProps {
   src: string;
@@ -8,7 +9,9 @@ interface ImageLightboxProps {
   onClose: () => void;
 }
 
-export default function ImageLightbox({ src, alt = "Bild", onClose }: ImageLightboxProps) {
+export default function ImageLightbox({ src, alt, onClose }: ImageLightboxProps) {
+  const lang = useLang();
+  const effectiveAlt = alt ?? (lang === "de" ? "Bild" : "Image");
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -31,7 +34,7 @@ export default function ImageLightbox({ src, alt = "Bild", onClose }: ImageLight
       <button
         className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-[var(--mp-fg)]/80 hover:text-[var(--mp-fg)] transition-colors"
         onClick={onClose}
-        aria-label="Schließen"
+        aria-label={t("close", lang)}
       >
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
           <path d="M12 4L4 12M4 4L12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
@@ -41,7 +44,7 @@ export default function ImageLightbox({ src, alt = "Bild", onClose }: ImageLight
       {/* Image — stop click propagation so clicking the image doesn't close */}
       <img
         src={src}
-        alt={alt}
+        alt={effectiveAlt}
         className="max-w-full max-h-[90vh] object-contain rounded select-none"
         style={{ touchAction: "pinch-zoom" }}
         onClick={(e) => e.stopPropagation()}

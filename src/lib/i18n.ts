@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react'
+
 type Lang = 'de' | 'en'
 
 const translations = {
@@ -328,6 +330,267 @@ const translations = {
   'welcome_cohort_body': { de: 'Dein Vollzugang ist 6 Monate lang aktiv — inkl. Pass-Until-You-Pass.', en: 'Your full access is active for 6 months — with Pass-Until-You-Pass.' },
   'view_full_progress': { de: 'Vollständigen Fortschritt ansehen', en: 'View full progress' },
   'progress_to_next_rank': { de: 'Fortschritt zum nächsten Rang', en: 'Progress to next rank' },
+
+  // Onboarding
+  'onb_step_label': { de: 'Schritt {current} von {total}', en: 'Step {current} of {total}' },
+  'onb_back': { de: 'Zurück', en: 'Back' },
+  'onb_next': { de: 'Weiter', en: 'Next' },
+  'onb_finish': { de: 'Los geht\'s!', en: "Let's go!" },
+  'onb_step1_title': { de: 'Welche Prüfung?', en: 'Which exam?' },
+  'onb_step1_subtitle': { de: 'Wähle dein Ziel', en: 'Choose your target' },
+  'onb_step2_title': { de: 'Wann ist deine Prüfung?', en: 'When is your exam?' },
+  'onb_step2_subtitle': { de: 'Für deinen persönlichen Lernplan', en: 'For your personalized study plan' },
+  'onb_step3_title': { de: 'Tägliches Lernziel', en: 'Daily study goal' },
+  'onb_step3_subtitle': { de: 'Wie viele Fragen pro Tag?', en: 'How many questions per day?' },
+  'onb_step4_title': { de: 'Dein Wissensstand', en: 'Your current level' },
+  'onb_step4_subtitle': { de: 'Damit wir den richtigen Start finden', en: 'So we find the right starting point' },
+  'onb_step5_title': { de: 'Personalisierung', en: 'Personalization' },
+  'onb_step5_subtitle': { de: 'Deine Einstellungen', en: 'Your preferences' },
+  'onb_exam_primary_desc': { de: 'Kenntnisprüfung Medizin (Wien, Österreich)', en: 'Medical Knowledge Exam (Vienna, Austria)' },
+  'onb_exam_questions_label': { de: 'Fragen', en: 'questions' },
+  'onb_exam_specialties_label': { de: 'Fachgebiete', en: 'specialties' },
+  'onb_more_exams': { de: 'Weitere Prüfungen', en: 'More exams' },
+  'onb_coming_soon': { de: 'Bald verfügbar', en: 'Coming soon' },
+  'onb_soon_badge': { de: 'Bald', en: 'Soon' },
+  'onb_date_1month': { de: 'In 1 Monat', en: 'In 1 month' },
+  'onb_date_3months': { de: 'In 3 Monaten', en: 'In 3 months' },
+  'onb_date_6months': { de: 'In 6 Monaten', en: 'In 6 months' },
+  'onb_date_not_planned': { de: 'Noch nicht geplant', en: 'Not planned yet' },
+  'onb_date_custom': { de: 'Anderes Datum', en: 'Custom date' },
+  'onb_goal_qpd': { de: 'Fragen pro Tag', en: 'questions per day' },
+  'onb_goal_relaxed': { de: '🌱 Entspannt — perfekt zum Anfangen', en: '🌱 Relaxed — perfect to start' },
+  'onb_goal_recommended': { de: '📚 Empfohlen — gute Balance', en: '📚 Recommended — good balance' },
+  'onb_goal_intense': { de: '🔥 Intensiv — schneller Fortschritt', en: '🔥 Intense — fast progress' },
+  'onb_goal_hardcore': { de: '⚡ Hardcore — maximaler Fortschritt', en: '⚡ Hardcore — maximum progress' },
+  'onb_level_beginner': { de: 'Anfänger', en: 'Beginner' },
+  'onb_level_beginner_desc': { de: 'Ich fange gerade an', en: 'Just starting my preparation' },
+  'onb_level_intermediate': { de: 'Mittelstufe', en: 'Intermediate' },
+  'onb_level_intermediate_desc': { de: 'Ich habe schon etwas gelernt', en: "I've done some studying already" },
+  'onb_level_advanced': { de: 'Fortgeschritten', en: 'Advanced' },
+  'onb_level_advanced_desc': { de: 'Will mich perfektionieren', en: 'Fine-tuning my knowledge' },
+  'onb_language_label': { de: 'Sprache', en: 'Language' },
+  'onb_dark_mode_title': { de: 'Dunkles Design', en: 'Dark Mode' },
+  'onb_dark_mode_desc': { de: 'Augen schonen beim Nachtlernen', en: 'Easy on eyes for night study' },
+  'onb_summary_label': { de: 'Zusammenfassung', en: 'Summary' },
+  'onb_summary_not_planned': { de: 'Noch nicht geplant', en: 'Not planned' },
+  'onb_summary_not_selected': { de: 'Nicht gewählt', en: 'Not selected' },
+  'onb_summary_qpd': { de: 'Fragen/Tag', en: 'questions/day' },
+
+  // Generic UI
+  'close': { de: 'Schließen', en: 'Close' },
+  'confirm': { de: 'Bestätigen', en: 'Confirm' },
+  'submit': { de: 'Absenden', en: 'Submit' },
+  'sending': { de: 'Wird gesendet…', en: 'Sending…' },
+  'retry': { de: 'Erneut versuchen', en: 'Retry' },
+  'ok': { de: 'OK', en: 'OK' },
+  'yes': { de: 'Ja', en: 'Yes' },
+  'no': { de: 'Nein', en: 'No' },
+  'copy': { de: 'Kopieren', en: 'Copy' },
+  'copied': { de: 'Kopiert', en: 'Copied' },
+  'share': { de: 'Teilen', en: 'Share' },
+  'continue': { de: 'Weiter', en: 'Continue' },
+  'something_went_wrong': { de: 'Etwas ist schiefgelaufen. Bitte versuche es erneut.', en: 'Something went wrong. Please try again.' },
+  'network_error': { de: 'Netzwerkfehler — bitte erneut versuchen.', en: 'Network error — please try again.' },
+
+  // Toast messages (common)
+  'toast_saved': { de: 'Gespeichert', en: 'Saved' },
+  'toast_copied_to_clipboard': { de: 'In die Zwischenablage kopiert', en: 'Copied to clipboard' },
+  'toast_feedback_sent': { de: 'Feedback gesendet — danke!', en: 'Feedback sent — thanks!' },
+  'toast_feedback_failed': { de: 'Feedback konnte nicht gesendet werden.', en: 'Could not send feedback.' },
+  'toast_report_sent': { de: 'Meldung gesendet', en: 'Report sent' },
+  'toast_report_failed': { de: 'Meldung fehlgeschlagen', en: 'Report failed' },
+
+  // Orientation modal
+  'orient_title': { de: 'Willkommen bei MedPrüf', en: 'Welcome to MedPrüf' },
+  'orient_subtitle': { de: 'Zwei Dinge, die du wissen solltest, bevor du loslegst.', en: 'Two things to know before you start.' },
+  'orient_item1_title': { de: 'Bestehe beim ersten Versuch — oder lerne kostenlos weiter, bis du bestehst.', en: 'Pass on your first try — or keep learning free until you do.' },
+  'orient_item1_body': { de: 'Wenn du in der Juni-26-Kohorte oder im Jahresabo nicht bestehst, verlängern wir deinen Zugang kostenlos bis zum nächsten Prüfungszyklus.', en: "If you're on the June 26 Cohort or annual plan and don't pass, we extend your access free until the next exam cycle." },
+  'orient_item1_link': { de: 'So funktioniert\'s', en: 'How it works' },
+  'orient_item2_title': { de: '150 kostenlose Fragen pro Prüfungstyp.', en: '150 free questions per exam type.' },
+  'orient_item2_body': { de: 'Keine Zahlungsmittel nötig. Voller Zugriff auf Erklärungen. Kein Zeitlimit — lerne in deinem Tempo.', en: 'No payment required. Full access to explanations. No time limit — learn at your own pace.' },
+  'orient_item2_link': { de: 'Jetzt üben', en: 'Start practicing' },
+  'orient_learn_more_link': { de: 'Mehr erfahren', en: 'Learn more' },
+  'orient_primary_cta': { de: 'Weiterlernen', en: 'Keep learning' },
+  'orient_secondary_cta': { de: 'Pläne später ansehen', en: 'View plans later' },
+
+  // Paywall modal
+  'paywall_title': { de: '150 Fragen erreicht', en: '150 questions reached' },
+  'paywall_body': { de: 'Dein Gratis-Kontingent ist aufgebraucht. Hol dir vollen Zugang — inkl. Pass-Until-You-Pass Garantie.', en: "You've used your free allowance. Unlock full access — with our Pass-Until-You-Pass guarantee." },
+  'paywall_cta': { de: 'Zugang freischalten', en: 'Unlock access' },
+  'paywall_later': { de: 'Später', en: 'Later' },
+
+  // WhatsNew modal
+  'whats_new_title': { de: 'Was ist neu bei MedPrüf', en: "What's New in MedPrüf" },
+  'whats_new_subtitle': { de: 'Update April 2026', en: 'April 2026 Update' },
+  'whats_new_dismiss': { de: 'Alles klar — los geht\'s', en: "Got it — let's study" },
+  'whats_new_view_all': { de: 'Alle Änderungen', en: 'View all changes' },
+  'whatsnew_offline_title': { de: 'Offline-Modus ist live — Fragen vorab herunterladen', en: 'Offline mode is live — download questions in advance' },
+  'whatsnew_offline_body': { de: 'Lade 100–500 Fragen vorab in Einstellungen → Offline-Modus. Dann kannst du im Zug, Flugzeug oder in der Kaffeepause lernen, auch ohne WLAN. Deine Antworten werden synchronisiert, sobald du wieder online bist.', en: 'Download 100–500 questions in advance in Settings → Offline mode. Then you can study on the train, on a plane, or on a coffee break, even without Wi-Fi. Your answers sync as soon as you\'re back online.' },
+  'whatsnew_search_title': { de: 'Schnellsuche mit Cmd+K', en: 'Quick search with Cmd+K' },
+  'whatsnew_search_body': { de: 'Drücke Cmd+K (Mac) oder Strg+K (Windows), um sofort die Volltextsuche über alle 10.993 Fragen zu öffnen — ohne Mausklick, von jeder Seite aus.', en: 'Press Cmd+K (Mac) or Ctrl+K (Windows) to open full-text search across all 10,993 questions instantly — no mouse click, from any page.' },
+  'whatsnew_translations_title': { de: 'Erklärungen in 7 Sprachen', en: 'Explanations in 7 languages' },
+  'whatsnew_translations_body': { de: 'Du kannst jede Erklärung jetzt auf Russisch, Arabisch, Englisch, Französisch, Türkisch, Ukrainisch oder Serbisch lesen. Medizinische Fachbegriffe, Medikamentennamen und Leitlinien-Bezüge bleiben dabei erhalten.', en: 'You can now read any explanation in Russian, Arabic, English, French, Turkish, Ukrainian, or Serbian. Medical terminology, drug names, and guideline references stay intact.' },
+  'whatsnew_kmp_title': { de: 'KMP Innsbruck — 3.091 neue Fragen', en: 'KMP Innsbruck — 3,091 new questions' },
+  'whatsnew_kmp_body': { de: 'Die Kumulative Modulprüfung (KMP) der Med Uni Innsbruck ist jetzt verfügbar. Wechsle die Prüfung über die Seitenleiste.', en: 'The Kumulative Modulprüfung (KMP) at Med Uni Innsbruck is now available. Switch exams from the sidebar.' },
+  'whatsnew_pharma_title': { de: 'Pharmakologie-Prüfung — 335 Fragen', en: 'Pharmacology exam — 335 questions' },
+  'whatsnew_pharma_body': { de: 'Kurzantworten zur Pharmakologie für die Rezeptierkunde-Vorbereitung.', en: 'Short-answer pharmacology questions for Rezeptierkunde preparation.' },
+  'whatsnew_sip5a_title': { de: 'SIP5a Februar 2026 hinzugefügt', en: 'February 2026 SIP5a exam added' },
+  'whatsnew_sip5a_body': { de: '154 frische Fragen aus der neuesten Wiener Prüfung, nach Fachgebiet geordnet.', en: '154 fresh questions from the latest Vienna exam, organized by specialty.' },
+  'whatsnew_examsim_title': { de: 'Prüfungssimulation neu gestaltet', en: 'Exam simulation redesigned' },
+  'whatsnew_examsim_body': { de: 'Wähle Antworten frei, navigiere zwischen Fragen und gib ab, wenn du bereit bist — wie in der echten Prüfung.', en: 'Select answers freely, navigate between questions, and submit when ready — just like the real exam.' },
+  'whatsnew_bookmarks_title': { de: 'Lesezeichen & Fehlerwiederholung', en: 'Bookmarks & mistake review' },
+  'whatsnew_bookmarks_body': { de: 'Schnellzugriff auf der Startseite zu gespeicherten Fragen und zu Fragen, die du falsch beantwortet hast.', en: 'Quick access on the home page to your saved questions and questions you got wrong.' },
+  'whatsnew_feedback_title': { de: 'Feedback-Button', en: 'Feedback button' },
+  'whatsnew_feedback_body': { de: 'Siehst du den blauen Button unten rechts? Nutze ihn, um Probleme zu melden oder Verbesserungen vorzuschlagen. Wir lesen jede Nachricht.', en: 'See the blue button at the bottom-right? Use it to report issues or suggest improvements. We read every message.' },
+
+  // Cookie banner
+  'cookie_body': { de: 'Wir nutzen Cookies und Analyse-Tools, um dir MedPrüf besser zu machen. Du kannst jederzeit widerrufen.', en: 'We use cookies and analytics to improve MedPrüf. You can opt out any time.' },
+  'cookie_more': { de: 'Mehr erfahren', en: 'Learn more' },
+
+  // Feedback widget
+  'feedback_title': { de: 'Feedback / Problem melden', en: 'Feedback / Report a problem' },
+  'feedback_button_title': { de: 'Feedback / Problem melden', en: 'Feedback / Report a problem' },
+  'feedback_placeholder': { de: 'Was ist dir aufgefallen?', en: 'What did you notice?' },
+  'feedback_send': { de: 'Senden', en: 'Send' },
+  'feedback_sending': { de: 'Senden...', en: 'Sending...' },
+  'feedback_thanks_title': { de: 'Danke!', en: 'Thank you!' },
+  'feedback_thanks_body': { de: 'Wir schauen uns das an.', en: "We'll take a look." },
+  'feedback_context_hint': { de: 'Seite & Kontext werden automatisch erfasst', en: 'Page & context are captured automatically' },
+  'feedback_textarea_aria': { de: 'Feedback-Nachricht', en: 'Feedback message' },
+  'feedback_close': { de: 'Schließen', en: 'Close' },
+
+  // Report question modal
+  'report_title': { de: 'Frage melden', en: 'Report question' },
+  'report_reason': { de: 'Grund', en: 'Reason' },
+  'report_reason_wrong_answer': { de: 'Falsche Antwort markiert', en: 'Wrong answer marked' },
+  'report_reason_typo': { de: 'Tippfehler / Rechtschreibung', en: 'Typo / spelling' },
+  'report_reason_unclear': { de: 'Unklar formuliert', en: 'Unclear wording' },
+  'report_reason_outdated': { de: 'Veraltete Information', en: 'Outdated information' },
+  'report_reason_other': { de: 'Anderer Grund', en: 'Other' },
+  'report_details': { de: 'Details (optional)', en: 'Details (optional)' },
+  'report_submit': { de: 'Meldung senden', en: 'Submit report' },
+  'report_suggest_edit': { de: 'Bearbeitung vorschlagen', en: 'Suggest edit' },
+  'report_success': { de: 'Danke — wir schauen uns das an.', en: 'Thanks — we\'ll review it.' },
+
+  // PWA banners
+  'pwa_update_title': { de: 'Neue Version verfügbar', en: 'New version available' },
+  'pwa_update_body': { de: 'Lade neu, um die neuesten Fragen und Fixes zu erhalten.', en: 'Reload to get the latest questions and fixes.' },
+  'pwa_update_cta': { de: 'Jetzt neu laden', en: 'Reload now' },
+  'pwa_install_title': { de: 'MedPrüf installieren', en: 'Install MedPrüf' },
+  'pwa_install_body': { de: 'Offline lernen — im Bus, in der U-Bahn, überall.', en: 'Study offline — on the bus, metro, anywhere.' },
+  'pwa_install_cta': { de: 'Installieren', en: 'Install' },
+  'pwa_not_now': { de: 'Nicht jetzt', en: 'Not now' },
+  'pwa_dismiss': { de: 'Schließen', en: 'Dismiss' },
+
+  // Guest migration banner
+  'guest_banner_body': { de: 'Du bist im Gast-Modus — dein Fortschritt wird nicht zwischen Geräten synchronisiert.', en: "You're in guest mode — your progress won't sync across devices." },
+  'guest_banner_cta': { de: 'Konto erstellen', en: 'Create Account' },
+  'guest_banner_dismiss': { de: 'Für diese Sitzung ausblenden', en: 'Dismiss for this session' },
+
+  // Referral floater
+  'ref_floater_region_label': { de: 'Empfehlungsprogramm', en: 'Referral program' },
+  'ref_floater_close': { de: 'Hinweis schließen', en: 'Dismiss notice' },
+  'ref_floater_title': { de: 'Empfehle MedPrüf', en: 'Recommend MedPrüf' },
+  'ref_floater_body': { de: 'Hilf anderen Prüflingen — und verdien Cash-Belohnungen, wenn sie ein Abo abschließen.', en: 'Help other test-takers — and earn cash rewards when they subscribe.' },
+  'ref_floater_cta_details': { de: 'Details ansehen', en: 'See details' },
+  'ref_floater_cta_not_now': { de: 'Nicht jetzt', en: 'Not now' },
+  'ref_copied': { de: 'Link kopiert!', en: 'Link copied!' },
+
+  // Cohort countdown banner
+  'cohort_banner_headline': { de: 'Juni-26-Kohorte', en: 'June 26 Cohort' },
+  'cohort_banner_body': { de: 'Starte jetzt — gemeinsam vorbereiten, gemeinsam bestehen.', en: 'Start now — prepare together, pass together.' },
+  'cohort_banner_cta': { de: 'Mehr erfahren', en: 'Learn more' },
+  'cohort_banner_dismiss': { de: 'Schließen', en: 'Dismiss' },
+
+  // Search modal
+  'search_close': { de: 'Schließen', en: 'Close' },
+  'search_empty_hint': { de: 'Tippe eine Frage, einen Begriff oder eine Diagnose ein.', en: 'Type a question, a term, or a diagnosis.' },
+  'search_n_results': { de: '{n} Ergebnisse', en: '{n} results' },
+  'search_one_result': { de: '1 Ergebnis', en: '1 result' },
+  'search_show_all': { de: 'Alle {n} Ergebnisse anzeigen', en: 'Show all {n} results' },
+
+  // Survey modal
+  'survey_title': { de: 'Dein Feedback', en: 'Your Feedback' },
+  'survey_success_title': { de: 'Danke!', en: 'Thank you!' },
+  'survey_step_label': { de: 'Schritt {current} von 3', en: 'Step {current} of 3' },
+  'survey_badge': { de: 'Umfrage', en: 'Survey' },
+  'survey_intro_greeting': { de: 'Danke{name}! Dein Feedback hilft uns, MedPrüf besser zu machen.', en: 'Thanks{name}! Your feedback helps us make MedPrüf better.' },
+  'survey_q_quality': { de: 'Wie bewertest du die Qualität der Fragen?', en: 'How do you rate the quality of the questions?' },
+  'survey_q_ease': { de: 'Wie einfach ist die App zu benutzen?', en: 'How easy is the app to use?' },
+  'survey_q_ai': { de: 'Wie hilfreich sind die KI-Erklärungen?', en: 'How helpful are the AI explanations?' },
+  'survey_q_overall': { de: 'Wie zufrieden bist du mit der Prüfungsvorbereitung insgesamt?', en: 'How satisfied are you with your exam prep overall?' },
+  'survey_q_nps': { de: 'Wie wahrscheinlich empfiehlst du MedPrüf weiter?', en: 'How likely are you to recommend MedPrüf?' },
+  'survey_rating_1': { de: 'Schlecht', en: 'Poor' },
+  'survey_rating_2': { de: 'Geht so', en: 'Meh' },
+  'survey_rating_3': { de: 'OK', en: 'OK' },
+  'survey_rating_4': { de: 'Gut', en: 'Good' },
+  'survey_rating_5': { de: 'Super', en: 'Great' },
+  'survey_best_title': { de: 'Was findest du am besten an MedPrüf?', en: 'What do you love most about MedPrüf?' },
+  'survey_best_1': { de: 'Große Fragenbank', en: 'Large question bank' },
+  'survey_best_2': { de: 'Spaced Repetition', en: 'Spaced repetition' },
+  'survey_best_3': { de: 'KI-Erklärungen', en: 'AI explanations' },
+  'survey_best_4': { de: 'Prüfungssimulation', en: 'Exam simulation' },
+  'survey_best_5': { de: 'Fortschritts-Tracking', en: 'Progress tracking' },
+  'survey_best_6': { de: 'Mobile App (PWA)', en: 'Mobile app (PWA)' },
+  'survey_improve_title': { de: 'Was sollten wir als Nächstes verbessern?', en: 'What should we improve next?' },
+  'survey_improve_1': { de: 'Mehr Fragen', en: 'More questions' },
+  'survey_improve_2': { de: 'Bessere Erklärungen', en: 'Better explanations' },
+  'survey_improve_3': { de: 'Lernplan-Funktion', en: 'Study plan feature' },
+  'survey_improve_4': { de: 'Gruppenlernen', en: 'Group study' },
+  'survey_improve_5': { de: 'Offline-Modus', en: 'Offline mode' },
+  'survey_improve_6': { de: 'Preisgestaltung', en: 'Pricing' },
+  'survey_other_placeholder': { de: 'Andere...', en: 'Other...' },
+  'survey_other_best_aria': { de: 'Andere Funktionen', en: 'Other features' },
+  'survey_other_improve_aria': { de: 'Andere Verbesserungen', en: 'Other improvements' },
+  'survey_open_title': { de: 'Möchtest du noch etwas hinzufügen?', en: 'Anything else you want to share?' },
+  'survey_open_label': { de: 'Dein Kommentar', en: 'Your comment' },
+  'survey_open_helper': { de: 'Optional — alles was dir einfällt hilft uns weiter.', en: 'Optional — anything you tell us helps.' },
+  'survey_open_placeholder': { de: 'Dein Kommentar...', en: 'Your comment...' },
+  'survey_later': { de: 'Später', en: 'Later' },
+  'survey_back': { de: 'Zurück', en: 'Back' },
+  'survey_next': { de: 'Weiter', en: 'Next' },
+  'survey_skip': { de: 'Überspringen', en: 'Skip' },
+  'survey_submit': { de: 'Absenden', en: 'Submit' },
+  'survey_sending': { de: 'Senden...', en: 'Sending...' },
+  'survey_success_body': { de: 'Dein Feedback macht MedPrüf besser.', en: 'Your feedback makes MedPrüf better.' },
+
+  // Empty states
+  'empty_no_results_title': { de: 'Keine Ergebnisse', en: 'No results' },
+  'empty_no_results_body': { de: 'Probier einen anderen Suchbegriff.', en: 'Try a different search term.' },
+  'empty_no_bookmarks_title': { de: 'Noch keine Lesezeichen', en: 'No bookmarks yet' },
+  'empty_no_bookmarks_body': { de: 'Markiere eine Frage mit ★ während du übst.', en: 'Star ★ a question while you practice.' },
+  'empty_no_notes_title': { de: 'Noch keine Notizen', en: 'No notes yet' },
+  'empty_no_notes_body': { de: 'Füge Notizen hinzu, während du Fragen überprüfst.', en: 'Add notes while you review answers.' },
+
+  // Email validation modal
+  'email_validation_title': { de: 'E-Mail-Adresse prüfen', en: 'Verify your email' },
+  'email_validation_subtitle': { de: 'Deine E-Mail-Adresse scheint nicht zu funktionieren.', en: 'Your email address doesn\'t seem to be working.' },
+  'email_validation_error_title': { de: 'Zustellung fehlgeschlagen', en: 'Delivery failed' },
+  'email_validation_error_body': { de: 'Nachrichten an {email} konnten nicht zugestellt werden. Bitte überprüfe die Adresse oder hinterlege eine neue, damit du wichtige Updates erhältst.', en: 'Messages to {email} could not be delivered. Please check the address or provide a new one so you receive important updates.' },
+  'email_validation_update_fail_title': { de: 'Aktualisierung nicht möglich', en: 'Update failed' },
+  'email_validation_new_label': { de: 'Neue E-Mail-Adresse', en: 'New email address' },
+  'email_validation_placeholder': { de: 'user-71248681@example.com', en: 'your.email@example.com' },
+  'email_validation_remind_later': { de: 'Später erinnern', en: 'Remind me later' },
+  'email_validation_submit': { de: 'E-Mail aktualisieren', en: 'Update email' },
+  'email_validation_submitting': { de: 'Wird aktualisiert…', en: 'Updating…' },
+  'email_validation_success': { de: 'E-Mail-Adresse aktualisiert!', en: 'Email updated!' },
+  'email_validation_invalid': { de: 'Bitte gib eine gültige E-Mail-Adresse ein.', en: 'Please enter a valid email address.' },
+  'email_validation_duplicate': { de: 'Diese E-Mail-Adresse wird bereits verwendet.', en: 'This email address is already in use.' },
+  'email_validation_generic_error': { de: 'Aktualisierung fehlgeschlagen.', en: 'Update failed.' },
+  'email_validation_network': { de: 'Verbindungsfehler. Bitte versuche es erneut.', en: 'Connection error. Please try again.' },
+
+  // Settings extras
+  'settings_account': { de: 'Konto', en: 'Account' },
+  'settings_section_about': { de: 'Über', en: 'About' },
+  'settings_section_support': { de: 'Support', en: 'Support' },
+  'settings_support_feedback': { de: 'Feedback geben', en: 'Give feedback' },
+  'settings_support_help': { de: 'Hilfe & FAQ', en: 'Help & FAQ' },
+  'settings_about_version': { de: 'Version', en: 'Version' },
+  'settings_about_changelog': { de: 'Was ist neu', en: "What's new" },
+  'settings_pricing_link': { de: 'Preise & Tarife', en: 'Pricing & plans' },
+  'settings_delete_account': { de: 'Konto löschen', en: 'Delete account' },
+  'settings_delete_confirm': { de: 'Konto wirklich löschen? Diese Aktion ist endgültig.', en: 'Really delete account? This is permanent.' },
+  'settings_account_deleted': { de: 'Konto gelöscht', en: 'Account deleted' },
 } as const
 
 export type TranslationKey = keyof typeof translations
@@ -343,8 +606,49 @@ export function getLang(): Lang {
   return 'de'
 }
 
+const LANG_EVENT = 'medpruef-lang-change'
+
 export function setLang(lang: Lang) {
   if (typeof window !== 'undefined') {
     localStorage.setItem('medpruef-lang', lang)
+    try {
+      window.dispatchEvent(new CustomEvent<Lang>(LANG_EVENT, { detail: lang }))
+    } catch {
+      /* noop */
+    }
   }
+}
+
+/**
+ * React hook that returns the current language and re-renders whenever
+ * setLang() is called anywhere in the app. Safe for SSR — returns 'de'
+ * until the client mounts. Use this in shared components (modals,
+ * toasts, floaters) so they honor the global language choice without
+ * each page having to prop-drill `lang` down.
+ */
+export function useLang(): Lang {
+  const [lang, setLangLocal] = useState<Lang>('de')
+  useEffect(() => {
+    setLangLocal(getLang())
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<Lang>).detail
+      if (detail === 'de' || detail === 'en') {
+        setLangLocal(detail)
+      } else {
+        setLangLocal(getLang())
+      }
+    }
+    const storageHandler = (e: StorageEvent) => {
+      if (e.key === 'medpruef-lang') {
+        setLangLocal(getLang())
+      }
+    }
+    window.addEventListener(LANG_EVENT, handler)
+    window.addEventListener('storage', storageHandler)
+    return () => {
+      window.removeEventListener(LANG_EVENT, handler)
+      window.removeEventListener('storage', storageHandler)
+    }
+  }, [])
+  return lang
 }

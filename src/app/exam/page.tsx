@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { getTopicConfig, VIENNA_EXAM_PARTS } from "@/lib/topics";
 import { t, getLang, setLang } from "@/lib/i18n";
-import { getStoredSession } from "@/lib/auth";
+import { getStoredSession, hasProAccess } from "@/lib/auth";
 import type { MCQOption } from "@/lib/mcq";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
@@ -148,8 +148,12 @@ function ExamContent() {
       // Lock 2026-04-23: the mock exam is Pro-only. Free users get
       // redirected to /pricing with a contextual ?gate= deep-link so
       // the upsell ties back to WHY they landed there.
-      const tier = session.user.tier || "free";
-      if (tier !== "pro" && tier !== "admin") {
+      //
+      // 2026-04-24 fix: use the canonical `hasProAccess` helper so we
+      // honour `role='admin'` even when a stale localStorage session
+      // has `tier=null`. Previously this page checked only `tier` and
+      // redirected admins whose session predated the tier catalogue.
+      if (!hasProAccess(session)) {
         window.location.href = "/pricing?gate=mock_exam";
       }
     }

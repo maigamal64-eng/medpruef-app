@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { Download, X, RefreshCw } from "lucide-react";
+import { t, useLang } from "@/lib/i18n";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
@@ -19,6 +20,7 @@ interface BeforeInstallPromptEvent extends Event {
  *     while the tab is hidden (user comes back to a fresh build).
  */
 export default function PWAInstall() {
+  const lang = useLang();
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showBanner, setShowBanner] = useState(false);
   const [dismissed, setDismissed] = useState(false);
@@ -143,13 +145,13 @@ export default function PWAInstall() {
               <RefreshCw className="w-5 h-5 text-[var(--mp-cta-blue)]" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-[var(--mp-fg)] mb-0.5">New version available</p>
-              <p className="text-xs text-[var(--mp-fg-subtle)] mb-3">Reload to get the latest questions and fixes.</p>
+              <p className="text-sm font-semibold text-[var(--mp-fg)] mb-0.5">{t("pwa_update_title", lang)}</p>
+              <p className="text-xs text-[var(--mp-fg-subtle)] mb-3">{t("pwa_update_body", lang)}</p>
               <button
                 onClick={handleUpdate}
                 className="btn-primary text-xs px-3 py-1.5 flex items-center gap-1.5"
               >
-                <RefreshCw className="w-3 h-3" /> Reload now
+                <RefreshCw className="w-3 h-3" /> {t("pwa_update_cta", lang)}
               </button>
             </div>
           </div>
@@ -168,18 +170,22 @@ export default function PWAInstall() {
             <Download className="w-5 h-5 text-[var(--mp-viridian)]" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-[var(--mp-fg)] mb-0.5">Install MedPrüf</p>
-            <p className="text-xs text-[var(--mp-fg-subtle)] mb-3">Study offline — on the bus, metro, anywhere.</p>
+            <p className="text-sm font-semibold text-[var(--mp-fg)] mb-0.5">{t("pwa_install_title", lang)}</p>
+            <p className="text-xs text-[var(--mp-fg-subtle)] mb-3">{t("pwa_install_body", lang)}</p>
             <div className="flex gap-2">
               <button onClick={handleInstall} className="btn-primary text-xs px-3 py-1.5">
-                Install
+                {t("pwa_install_cta", lang)}
               </button>
               <button onClick={handleDismiss} className="text-xs text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg-muted)]">
-                Not now
+                {t("pwa_not_now", lang)}
               </button>
             </div>
           </div>
-          <button onClick={handleDismiss} className="text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg-muted)]">
+          <button
+            onClick={handleDismiss}
+            className="text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg-muted)]"
+            aria-label={t("pwa_dismiss", lang)}
+          >
             <X className="w-4 h-4" />
           </button>
         </div>

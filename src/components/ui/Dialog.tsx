@@ -30,6 +30,7 @@
 import { useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
+import { t, useLang } from '@/lib/i18n'
 
 export interface DialogProps {
   open: boolean
@@ -74,6 +75,7 @@ export function Dialog({
 }: DialogProps) {
   const surfaceRef = useRef<HTMLDivElement>(null)
   const previousFocusRef = useRef<HTMLElement | null>(null)
+  const lang = useLang()
 
   // Dedicated focus-return effect (post-soft-launch §1.4.6.5).
   //
@@ -187,7 +189,7 @@ export function Dialog({
               type="button"
               className="mp-dialog__close"
               onClick={() => onOpenChange(false)}
-              aria-label="Close dialog"
+              aria-label={t("close", lang)}
             >
               <X className="w-4 h-4" aria-hidden />
             </button>

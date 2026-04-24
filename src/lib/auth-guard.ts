@@ -113,3 +113,31 @@ export async function requireAdmin(req: NextRequest): Promise<GuardResult> {
 export function isGuardFailure(g: GuardResult): g is GuardFailure {
   return "error" in g;
 }
+
+/**
+ * Server-side "does this guard have Pro-level access" check. Used by
+ * every API paywall (AI chat upstream, translate quota, free-slice
+ * gate, SR scheduling). Mirror of the client-side `hasProAccess` in
+ * `@/lib/auth`.
+ *
+ * Must honour BOTH:
+ *   - `role === 'admin'` — /admin/ operators always have access even
+ *     when `tier='free'` in the users table (they may not subscribe).
+ *   - `tier === 'pro'` or `tier === 'admin'` — a paid subscriber or a
+ *     tier-flagged admin.
+ *
+ * Returns `false` for free + any non-admin/non-paid combination.
+ *
+ * Added 2026-04-24 after [name] reported admin getting redirected from
+ * /exam to /pricing. The server-side half ensures /api/ai-chat,
+ * /api/translate, and the questions free-slice gate also honour role.
+ */
+export function isPaidAccess(g: GuardSuccess): boolean {
+  if (g.role === "admin") return true;
+  return g.tier === "pro" || g.tier === "admin";
+}
+
+/** Convenience negation of {@link isPaidAccess}. */
+export function isFreeAccess(g: GuardSuccess): boolean {
+  return !isPaidAccess(g);
+}

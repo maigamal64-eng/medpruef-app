@@ -84,7 +84,59 @@ export function clearSession(): void {
 }
 
 /** Check if the current user has admin role. */
-export function isAdmin(): boolean {
-  const session = getStoredSession();
-  return session?.user?.role === 'admin';
+export function isAdmin(session?: StoredSession | null): boolean {
+  const s = session === undefined ? getStoredSession() : session;
+  return s?.user?.role === 'admin';
+}
+
+/**
+ * Canonical client-side "does this user have Pro-level access" check.
+ *
+ * Used by every paywall gate on pages (mock exam, bookmarks, notes,
+ * SR review) and by the PaywallUpgradeModal trigger. Must honor ALL
+ * three access paths:
+ *
+ * 1. `role === 'admin'` — the /admin/ console operator. Always has
+ *    access regardless of tier (they may not be a paying customer).
+ * 2. `tier === 'pro'` or `tier === 'admin'` with either no expiry
+ *    or a future `tier_expires_at`.
+ * 3. Defence-in-depth: a stale localStorage session where `tier` is
+ *    missing/stale but `role='admin'` is persistent. Without this,
+ *    users whose session was cached before the April 23 tier catalogue
+ *    get redirected to /pricing even when their DB row says admin.
+ *    Logging out + back in refreshes tier from `/api/auth`, but we
+ *    should never punish a user for a stale client cache.
+ *
+ * Returns `false` for free + anonymous + bounced / expired paid users.
+ *
+ * Pass an explicit `null` to force-check against no session (useful
+ * for testing); pass `undefined` (default) to pull from localStorage.
+ */
+export function hasProAccess(session?: StoredSession | null): boolean {
+  const s = session === undefined ? getStoredSession() : session;
+  if (!s) return false;
+  // Admin role overrides tier — /admin/ operators may have tier='free'
+  // in the users table because they've never subscribed. That's fine.
+  if (s.user.role === 'admin') return true;
+  const tier = s.user.tier;
+  if (tier !== 'pro' && tier !== 'admin') return false;
+  const expires = s.user.tier_expires_at;
+  if (!expires) return true;
+  try {
+    return new Date(expires).getTime() > Date.now();
+  } catch {
+    // Unparseable expiry — treat as valid (defence-in-depth; the
+    // webhook is supposed to flip the tier back to 'free' on expiry,
+    // so an unparseable value is a data bug, not an attack).
+    return true;
+  }
+}
+
+/**
+ * Convenience negation of {@link hasProAccess}. Returns true for free,
+ * guest, anonymous, and expired paid users. Mirrors the server-side
+ * `isFreeTier` from `@/lib/free-tier`.
+ */
+export function isFreeAccess(session?: StoredSession | null): boolean {
+  return !hasProAccess(session);
 }

@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { calculateXP } from "@/lib/xp";
-import { requireUser } from "@/lib/auth-guard";
+import { requireUser, isFreeAccess } from "@/lib/auth-guard";
 import { captureServerError } from "@/lib/sentry-capture";
-import { isFreeTier } from "@/lib/free-tier";
 
 export const dynamic = "force-dynamic";
 
@@ -41,7 +40,13 @@ export async function POST(req: NextRequest) {
   // the Lock 2026-04-23 gating decision: bookmarks, notes, mock exam,
   // SR, and wrong-only practice are Pro-only. The questions route
   // already gates fetches; /api/answer only has to skip the SR write.
-  const isFreeUser = isFreeTier(guard.tier, null);
+  //
+  // 2026-04-24: switched from `isFreeTier(tier)` to `isFreeAccess(guard)`
+  // so admins (role='admin', tier='free' possible) retain full SR
+  // scheduling. Fixes the case where /admin/ operators testing the
+  // product lost their spaced-rep history because the system treated
+  // them as free.
+  const isFreeUser = isFreeAccess(guard);
 
   let body: { questionId?: number; isCorrect?: boolean; userAnswer?: string; timeSpentMs?: number };
   try {

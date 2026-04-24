@@ -19,15 +19,14 @@
 import { useEffect, useState } from "react";
 import { CloudOff } from "lucide-react";
 import { countQuestions } from "@/lib/offlineDb";
-import { getLang } from "@/lib/i18n";
+import { useLang } from "@/lib/i18n";
 
 export default function OfflineIndicator() {
+  const lang = useLang();
   const [online, setOnline] = useState(true);
   const [count, setCount] = useState<number>(0);
-  const [lang, setLangState] = useState<"de" | "en">("de");
 
   useEffect(() => {
-    setLangState(getLang());
     // Initial online state — guard against SSR.
     if (typeof navigator !== "undefined") {
       setOnline(navigator.onLine);

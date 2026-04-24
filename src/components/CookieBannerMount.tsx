@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import CookieBanner from "@/components/CookieBanner";
-import { getLang } from "@/lib/i18n";
+import { useLang } from "@/lib/i18n";
 
 /**
  * Thin client wrapper that reads the stored language and mounts
@@ -11,11 +10,11 @@ import { getLang } from "@/lib/i18n";
  *
  * Rendered from layout.tsx as part of the ePrivacy/TTDSG compliance
  * fix (2026-04-15 audit — the banner existed but was never mounted).
+ *
+ * Uses the `useLang` hook so that in-session language toggles update
+ * the banner copy immediately without a page reload.
  */
 export default function CookieBannerMount() {
-  const [lang, setLang] = useState<"de" | "en">("de");
-  useEffect(() => {
-    setLang(getLang());
-  }, []);
+  const lang = useLang();
   return <CookieBanner lang={lang} />;
 }

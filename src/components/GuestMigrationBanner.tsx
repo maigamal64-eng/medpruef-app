@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { getStoredSession } from '@/lib/auth'
 import { AlertTriangle, UserPlus } from 'lucide-react'
 import Link from 'next/link'
+import { t, useLang } from '@/lib/i18n'
 
 /**
  * Persistent banner shown to users logged in as guest_*.
@@ -21,6 +22,7 @@ export default function GuestMigrationBanner() {
   const [isGuest, setIsGuest] = useState(false)
   const [dismissed, setDismissed] = useState(false)
   const pathname = usePathname()
+  const lang = useLang()
 
   useEffect(() => {
     const session = getStoredSession()
@@ -45,7 +47,7 @@ export default function GuestMigrationBanner() {
         <div className="flex items-center gap-2 min-w-0">
           <AlertTriangle className="w-4 h-4 flex-shrink-0" />
           <p className="text-xs sm:text-sm font-medium truncate">
-            You&apos;re in guest mode — your progress won&apos;t sync across devices.
+            {t('guest_banner_body', lang)}
           </p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
@@ -54,12 +56,12 @@ export default function GuestMigrationBanner() {
             className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-[var(--mp-error)] rounded-lg text-xs font-bold hover:bg-white/90 transition-colors"
           >
             <UserPlus className="w-3.5 h-3.5" />
-            Create Account
+            {t('guest_banner_cta', lang)}
           </Link>
           <button
             onClick={handleDismiss}
             className="text-white/70 hover:text-white text-xs px-1.5"
-            title="Dismiss for this session"
+            title={t('guest_banner_dismiss', lang)}
           >
             ✕
           </button>

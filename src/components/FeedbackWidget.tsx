@@ -6,6 +6,7 @@ import { MessageSquarePlus, X, Send, Check } from 'lucide-react'
 import { getStoredSession } from '@/lib/auth'
 import { getStoredExamSource } from '@/lib/topics'
 import { authFetch as fetch } from '@/lib/authFetch'
+import { t, useLang } from '@/lib/i18n'
 
 /**
  * Global floating feedback button — visible on every page.
@@ -16,6 +17,7 @@ import { authFetch as fetch } from '@/lib/authFetch'
  * Hidden on /landing, /login, /admin pages.
  */
 export default function FeedbackWidget() {
+  const lang = useLang()
   const [open, setOpen] = useState(false)
   const [message, setMessage] = useState('')
   const [sent, setSent] = useState(false)
@@ -96,7 +98,8 @@ export default function FeedbackWidget() {
                      hover:bg-[var(--mp-cta-blue)]/90 hover:shadow-xl transition-all
                      flex items-center justify-center
                      active:scale-95"
-          title="Feedback / Problem melden"
+          title={t('feedback_button_title', lang)}
+          aria-label={t('feedback_button_title', lang)}
         >
           <MessageSquarePlus className="w-5 h-5" />
         </button>
@@ -108,8 +111,12 @@ export default function FeedbackWidget() {
           <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 bg-[var(--mp-cta-blue)] text-white">
-              <span className="text-sm font-semibold">Feedback / Problem melden</span>
-              <button onClick={() => setOpen(false)} className="hover:bg-white/20 rounded p-1 transition-colors">
+              <span className="text-sm font-semibold">{t('feedback_title', lang)}</span>
+              <button
+                onClick={() => setOpen(false)}
+                className="hover:bg-white/20 rounded p-1 transition-colors"
+                aria-label={t('feedback_close', lang)}
+              >
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -117,8 +124,8 @@ export default function FeedbackWidget() {
             {sent ? (
               <div className="p-6 text-center">
                 <Check className="w-8 h-8 text-[var(--mp-accent-teal)] mx-auto mb-2" />
-                <p className="text-sm font-medium text-[var(--mp-fg)]">Danke! / Thank you!</p>
-                <p className="text-xs text-[var(--mp-fg-subtle)] mt-1">Wir schauen uns das an.</p>
+                <p className="text-sm font-medium text-[var(--mp-fg)]">{t('feedback_thanks_title', lang)}</p>
+                <p className="text-xs text-[var(--mp-fg-subtle)] mt-1">{t('feedback_thanks_body', lang)}</p>
               </div>
             ) : (
               <div className="p-4">
@@ -126,14 +133,14 @@ export default function FeedbackWidget() {
                   ref={textRef}
                   value={message}
                   onChange={e => setMessage(e.target.value)}
-                  placeholder="Was ist Ihnen aufgefallen? / What did you notice?"
-                  aria-label="Feedback message"
+                  placeholder={t('feedback_placeholder', lang)}
+                  aria-label={t('feedback_textarea_aria', lang)}
                   className="w-full h-24 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 resize-none focus:outline-none focus:border-[var(--mp-cta-blue)]/50"
                   maxLength={2000}
                 />
                 <div className="flex items-center justify-between mt-2">
                   <span className="text-[10px] text-[var(--mp-fg-subtle)]">
-                    Seite & Kontext werden automatisch erfasst
+                    {t('feedback_context_hint', lang)}
                   </span>
                   <button
                     onClick={handleSubmit}
@@ -142,7 +149,7 @@ export default function FeedbackWidget() {
                                disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[var(--mp-cta-blue)]/90 transition-colors"
                   >
                     <Send className="w-3.5 h-3.5" />
-                    {sending ? '...' : 'Senden'}
+                    {sending ? t('feedback_sending', lang) : t('feedback_send', lang)}
                   </button>
                 </div>
               </div>

@@ -48,6 +48,10 @@ interface QuestionCardProps {
   hideExplanation?: boolean;
   /** User tier for feature gating */
   userTier?: string;
+  /** Session `user.role` — must be passed alongside `userTier` so admins
+   * whose tier is `'free'` / `null` still get Pro-level feature access
+   * (bookmarks, AI chat, translate). Added 2026-04-24. */
+  userRole?: string;
   /** Hide inline favorite/flag/note/report/AI buttons — used when an external QuestionActions rail is rendered */
   hideActions?: boolean;
   /** Controlled-mode: pre-populate selection on (re)mount or question change. */
@@ -119,6 +123,7 @@ export default function QuestionCard({
   imageUrl,
   hideExplanation = false,
   userTier = "free",
+  userRole = "user",
   hideActions = false,
   initialSelected,
   initiallyAnswered = false,
@@ -398,11 +403,11 @@ export default function QuestionCard({
           <button
             onClick={() => setLightboxSrc(effectiveImageUrl)}
             className="block w-full mb-4 rounded overflow-hidden border border-[var(--mp-border)] hover:border-[var(--mp-viridian)]/40 transition-colors group"
-            aria-label="Bild vergrößern"
+            aria-label={lang === "de" ? "Bild vergrößern" : "Enlarge image"}
           >
             <img
               src={effectiveImageUrl}
-              alt="Medizinische Abbildung"
+              alt={lang === "de" ? "Medizinische Abbildung" : "Medical illustration"}
               className="w-full max-h-64 object-contain bg-[var(--mp-surface-raised)] rounded-sm"
             />
             <p className="text-[10px] text-[var(--mp-fg-subtle)] text-center py-1 bg-[var(--mp-surface-raised)] group-hover:text-[var(--mp-fg-muted)] transition-colors">
@@ -748,6 +753,7 @@ export default function QuestionCard({
           topic={question.topic}
           options={options.map(o => ({ text: o.text, correct: o.correct }))}
           userTier={userTier}
+          userRole={userRole}
         />
       )}
 
@@ -755,7 +761,7 @@ export default function QuestionCard({
       {lightboxSrc && (
         <ImageLightbox
           src={lightboxSrc}
-          alt="Medizinische Abbildung"
+          alt={lang === "de" ? "Medizinische Abbildung" : "Medical illustration"}
           onClose={() => setLightboxSrc(null)}
         />
       )}

@@ -328,7 +328,7 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0 }: Sidebar
         <button
           onClick={toggleCollapse}
           className={`flex items-center ${collapsed ? "justify-center w-9 h-9 mx-auto" : "gap-2 w-full px-3 py-2"} rounded-xl text-[var(--mp-fg-subtle)]/60 hover:text-white hover:bg-white/5 transition-colors`}
-          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          title={collapsed ? (lang === "de" ? "Seitenleiste ausklappen" : "Expand sidebar") : (lang === "de" ? "Seitenleiste einklappen" : "Collapse sidebar")}
         >
           {collapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
           {!collapsed && <span className="text-xs">{lang === "de" ? "Einklappen" : "Collapse"}</span>}

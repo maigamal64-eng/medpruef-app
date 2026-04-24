@@ -436,8 +436,11 @@ export default function Home() {
   }
 
   if (showOnboarding) {
-    return <Onboarding lang={lang} onComplete={(data) => {
+    return <Onboarding lang={lang} onLangChange={switchLang} onComplete={(data) => {
       setShowOnboarding(false);
+      if (data.language && data.language !== lang) {
+        switchLang(data.language as Lang);
+      }
       setStoredExamSource(data.examSource as ExamSourceId);
       setExamSource(data.examSource as ExamSourceId);
       fetchTopics(data.examSource as ExamSourceId);

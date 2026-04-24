@@ -2,6 +2,10 @@
 import { useState } from "react";
 import { ArrowRight, ArrowLeft, Calendar, Target, BookOpen, CheckCircle2, Moon, Sun, Zap, GraduationCap } from "lucide-react";
 import { getStoredTheme, setStoredTheme } from "./ThemeProvider";
+import LanguageToggle from "./LanguageToggle";
+import { t as tr, setLang as persistLang } from "@/lib/i18n";
+
+type Lang = "de" | "en";
 
 interface OnboardingData {
   examSource: string;
@@ -15,55 +19,63 @@ interface OnboardingData {
 
 interface OnboardingProps {
   lang?: string;
+  onLangChange?: (l: Lang) => void;
   onComplete: (data: OnboardingData) => void;
 }
 
-const STEPS = [
-  { title: { de: "Welche Prüfung?", en: "Which exam?" }, subtitle: { de: "Wähle dein Ziel", en: "Choose your target" }, icon: GraduationCap },
-  { title: { de: "Wann ist deine Prüfung?", en: "When is your exam?" }, subtitle: { de: "Für deinen persönlichen Lernplan", en: "For your personalized study plan" }, icon: Calendar },
-  { title: { de: "Tägliches Lernziel", en: "Daily study goal" }, subtitle: { de: "Wie viele Fragen pro Tag?", en: "How many questions per day?" }, icon: Target },
-  { title: { de: "Dein Wissensstand", en: "Your current level" }, subtitle: { de: "Damit wir den richtigen Start finden", en: "So we find the right starting point" }, icon: BookOpen },
-  { title: { de: "Personalisierung", en: "Personalization" }, subtitle: { de: "Deine Einstellungen", en: "Your preferences" }, icon: Zap },
+const STEP_ICONS = [GraduationCap, Calendar, Target, BookOpen, Zap];
+const STEP_COUNT = 5;
+
+const examPresets: { value: string; key: "onb_date_1month" | "onb_date_3months" | "onb_date_6months" | "onb_date_not_planned" | "onb_date_custom" }[] = [
+  { value: "1month", key: "onb_date_1month" },
+  { value: "3months", key: "onb_date_3months" },
+  { value: "6months", key: "onb_date_6months" },
+  { value: "not_planned", key: "onb_date_not_planned" },
+  { value: "custom", key: "onb_date_custom" },
 ];
 
-const examPresets = [
-  { value: "1month", label: { de: "In 1 Monat", en: "In 1 month" } },
-  { value: "3months", label: { de: "In 3 Monaten", en: "In 3 months" } },
-  { value: "6months", label: { de: "In 6 Monaten", en: "In 6 months" } },
-  { value: "not_planned", label: { de: "Noch nicht geplant", en: "Not planned yet" } },
-  { value: "custom", label: { de: "Anderes Datum", en: "Custom date" } },
-];
-
-const levels = [
-  { value: "beginner", label: { de: "Anfänger", en: "Beginner" }, desc: { de: "Ich fange gerade an", en: "Just starting my preparation" }, emoji: "🌱" },
-  { value: "intermediate", label: { de: "Mittelstufe", en: "Intermediate" }, desc: { de: "Ich habe schon etwas gelernt", en: "I've done some studying already" }, emoji: "📚" },
-  { value: "advanced", label: { de: "Fortgeschritten", en: "Advanced" }, desc: { de: "Will mich perfektionieren", en: "Fine-tuning my knowledge" }, emoji: "🎯" },
+const levels: { value: string; labelKey: "onb_level_beginner" | "onb_level_intermediate" | "onb_level_advanced"; descKey: "onb_level_beginner_desc" | "onb_level_intermediate_desc" | "onb_level_advanced_desc"; emoji: string }[] = [
+  { value: "beginner", labelKey: "onb_level_beginner", descKey: "onb_level_beginner_desc", emoji: "🌱" },
+  { value: "intermediate", labelKey: "onb_level_intermediate", descKey: "onb_level_intermediate_desc", emoji: "📚" },
+  { value: "advanced", labelKey: "onb_level_advanced", descKey: "onb_level_advanced_desc", emoji: "🎯" },
 ];
 
 const goalPresets = [10, 20, 30, 50];
 
-export default function Onboarding({ lang = "de", onComplete }: OnboardingProps) {
-  const l = lang as "de" | "en";
+export default function Onboarding({ lang = "de", onLangChange, onComplete }: OnboardingProps) {
+  const [activeLang, setActiveLang] = useState<Lang>((lang as Lang) || "de");
+  const l = activeLang;
+  const t = (k: Parameters<typeof tr>[0]) => tr(k, l);
   const [step, setStep] = useState(0);
   const [data, setData] = useState<Partial<OnboardingData>>({
     examSource: "kenntnispruefung",
     dailyGoal: 20,
-    language: lang,
+    language: activeLang,
     darkMode: getStoredTheme() === "dark",
   });
   const [customDate, setCustomDate] = useState("");
 
-  const currentStep = STEPS[step];
-  const isLast = step === STEPS.length - 1;
-  const totalSteps = STEPS.length;
+  const StepIcon = STEP_ICONS[step];
+  const isLast = step === STEP_COUNT - 1;
+  const totalSteps = STEP_COUNT;
+
+  const titleKeys = ["onb_step1_title", "onb_step2_title", "onb_step3_title", "onb_step4_title", "onb_step5_title"] as const;
+  const subtitleKeys = ["onb_step1_subtitle", "onb_step2_subtitle", "onb_step3_subtitle", "onb_step4_subtitle", "onb_step5_subtitle"] as const;
+
+  const handleLangSwitch = (next: Lang) => {
+    setActiveLang(next);
+    setData((d) => ({ ...d, language: next }));
+    persistLang(next);
+    onLangChange?.(next);
+  };
 
   const canProceed = () => {
     switch (step) {
-      case 0: return true; // SIP auto-selected
+      case 0: return true;
       case 1: return data.examDate && (data.examDate !== "custom" || customDate);
       case 2: return (data.dailyGoal ?? 0) >= 5;
       case 3: return !!data.level;
-      case 4: return true; // preferences always valid
+      case 4: return true;
       default: return false;
     }
   };
@@ -77,19 +89,18 @@ export default function Onboarding({ lang = "de", onComplete }: OnboardingProps)
       examDate,
       level: data.level || "beginner",
       dailyGoal: data.dailyGoal || 20,
-      language: data.language || "de",
+      language: data.language || activeLang,
       darkMode: data.darkMode || false,
       completedAt: new Date().toISOString(),
     };
 
-    // Persist all settings
     localStorage.setItem("medpruef_onboarding", JSON.stringify(completed));
     localStorage.setItem("medpruef_profile", JSON.stringify({
       targetDate: examDate !== "not_planned" ? examDate : "",
       examSource: completed.examSource,
       level: completed.level,
     }));
-    if (data.language) localStorage.setItem("medpruef-lang", data.language);
+    if (completed.language) localStorage.setItem("medpruef-lang", completed.language);
     if (data.darkMode) {
       setStoredTheme("dark");
     } else {
@@ -107,13 +118,24 @@ export default function Onboarding({ lang = "de", onComplete }: OnboardingProps)
     }
   };
 
+  const stepLabel = t("onb_step_label")
+    .replace("{current}", String(step + 1))
+    .replace("{total}", String(totalSteps));
+
+  const selectedLevelLabel = levels.find((lv) => lv.value === data.level)?.labelKey;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--mp-oxford-blue)]/60 backdrop-blur-sm">
       <div className="bg-[var(--mp-surface-raised)] rounded-2xl shadow-[var(--shadow-modal)] max-w-lg w-full mx-4 max-h-[90vh] flex flex-col overflow-hidden">
+        {/* Language switcher (top-right) */}
+        <div className="flex items-center justify-end px-6 pt-4 shrink-0">
+          <LanguageToggle lang={activeLang} onChange={handleLangSwitch} />
+        </div>
+
         {/* Progress bar */}
-        <div className="px-6 pt-5 pb-3 shrink-0">
+        <div className="px-6 pt-3 pb-3 shrink-0">
           <div className="flex items-center justify-between mb-4">
-            {STEPS.map((_, i) => (
+            {Array.from({ length: STEP_COUNT }).map((_, i) => (
               <div key={i} className="flex items-center">
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-all ${
                   i < step ? "bg-[var(--mp-viridian)] text-white" : i === step ? "bg-[var(--mp-cta-blue)] text-white ring-4 ring-[var(--mp-cta-blue)]/20" : "bg-[var(--mp-border)] text-[var(--mp-fg-subtle)]"
@@ -126,19 +148,17 @@ export default function Onboarding({ lang = "de", onComplete }: OnboardingProps)
               </div>
             ))}
           </div>
-          <p className="text-[10px] text-[var(--mp-fg-subtle)] text-center">
-            {l === "de" ? `Schritt ${step + 1} von ${totalSteps}` : `Step ${step + 1} of ${totalSteps}`}
-          </p>
+          <p className="text-[10px] text-[var(--mp-fg-subtle)] text-center">{stepLabel}</p>
         </div>
 
         {/* Content */}
         <div className="px-6 flex-1 overflow-y-auto">
           <div className="text-center mb-6">
             <div className="w-14 h-14 rounded-2xl bg-[var(--mp-cta-blue)]/10 flex items-center justify-center mx-auto mb-3">
-              <currentStep.icon className="w-7 h-7 text-[var(--mp-cta-blue)]" />
+              <StepIcon className="w-7 h-7 text-[var(--mp-cta-blue)]" />
             </div>
-            <h2 className="text-xl font-bold text-[var(--mp-fg)] mb-1">{currentStep.title[l]}</h2>
-            <p className="text-sm text-[var(--mp-fg-subtle)]">{currentStep.subtitle[l]}</p>
+            <h2 className="text-xl font-bold text-[var(--mp-fg)] mb-1">{t(titleKeys[step])}</h2>
+            <p className="text-sm text-[var(--mp-fg-subtle)]">{t(subtitleKeys[step])}</p>
           </div>
 
           {/* Step 1: Exam */}
@@ -148,8 +168,8 @@ export default function Onboarding({ lang = "de", onComplete }: OnboardingProps)
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="font-semibold text-[var(--mp-fg)]">SIP Kenntnisprüfung</h3>
-                    <p className="text-sm text-[var(--mp-fg-subtle)]">{l === "de" ? "Kenntnisprüfung Medizin (Wien, Österreich)" : "Medical Knowledge Exam (Vienna, Austria)"}</p>
-                    <p className="text-xs text-[var(--mp-viridian)] font-mono mt-1">7.567 {l === "de" ? "Fragen" : "questions"} · 10 {l === "de" ? "Fachgebiete" : "specialties"}</p>
+                    <p className="text-sm text-[var(--mp-fg-subtle)]">{t("onb_exam_primary_desc")}</p>
+                    <p className="text-xs text-[var(--mp-viridian)] font-mono mt-1">7.567 {t("onb_exam_questions_label")} · 10 {t("onb_exam_specialties_label")}</p>
                   </div>
                   <CheckCircle2 className="w-6 h-6 text-[var(--mp-viridian)]" />
                 </div>
@@ -157,10 +177,10 @@ export default function Onboarding({ lang = "de", onComplete }: OnboardingProps)
               <div className="p-4 rounded-xl border border-[var(--mp-border)] bg-[var(--mp-surface-sunken)] opacity-50">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="font-semibold text-[var(--mp-fg-subtle)]">{l === "de" ? "Weitere Prüfungen" : "More exams"}</h3>
-                    <p className="text-sm text-[var(--mp-fg-subtle)]">{l === "de" ? "Bald verfügbar" : "Coming soon"}</p>
+                    <h3 className="font-semibold text-[var(--mp-fg-subtle)]">{t("onb_more_exams")}</h3>
+                    <p className="text-sm text-[var(--mp-fg-subtle)]">{t("onb_coming_soon")}</p>
                   </div>
-                  <span className="text-xs text-[var(--mp-fg-subtle)] bg-[var(--mp-border)] px-2 py-0.5 rounded">{l === "de" ? "Bald" : "Soon"}</span>
+                  <span className="text-xs text-[var(--mp-fg-subtle)] bg-[var(--mp-border)] px-2 py-0.5 rounded">{t("onb_soon_badge")}</span>
                 </div>
               </div>
             </div>
@@ -178,7 +198,7 @@ export default function Onboarding({ lang = "de", onComplete }: OnboardingProps)
                     onClick={() => setData({ ...data, examDate: preset.value })}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-medium text-sm">{preset.label[l]}</span>
+                      <span className="font-medium text-sm">{t(preset.key)}</span>
                       {data.examDate === preset.value && <CheckCircle2 className="w-5 h-5 text-[var(--mp-cta-blue)]" />}
                     </div>
                   </button>
@@ -200,7 +220,7 @@ export default function Onboarding({ lang = "de", onComplete }: OnboardingProps)
             <div className="space-y-6">
               <div className="text-center">
                 <span className="text-5xl font-black font-display text-[var(--mp-cta-blue)]">{data.dailyGoal || 20}</span>
-                <p className="text-sm text-[var(--mp-fg-subtle)] mt-1">{l === "de" ? "Fragen pro Tag" : "questions per day"}</p>
+                <p className="text-sm text-[var(--mp-fg-subtle)] mt-1">{t("onb_goal_qpd")}</p>
               </div>
               <input
                 type="range"
@@ -233,12 +253,12 @@ export default function Onboarding({ lang = "de", onComplete }: OnboardingProps)
               </div>
               <p className="text-xs text-[var(--mp-fg-subtle)] text-center">
                 {(data.dailyGoal || 20) <= 15
-                  ? (l === "de" ? "🌱 Entspannt — perfekt zum Anfangen" : "🌱 Relaxed — perfect to start")
+                  ? t("onb_goal_relaxed")
                   : (data.dailyGoal || 20) <= 30
-                  ? (l === "de" ? "📚 Empfohlen — gute Balance" : "📚 Recommended — good balance")
+                  ? t("onb_goal_recommended")
                   : (data.dailyGoal || 20) <= 50
-                  ? (l === "de" ? "🔥 Intensiv — schneller Fortschritt" : "🔥 Intense — fast progress")
-                  : (l === "de" ? "⚡ Hardcore — maximaler Fortschritt" : "⚡ Hardcore — maximum progress")}
+                  ? t("onb_goal_intense")
+                  : t("onb_goal_hardcore")}
               </p>
             </div>
           )}
@@ -257,8 +277,8 @@ export default function Onboarding({ lang = "de", onComplete }: OnboardingProps)
                   <div className="flex items-center gap-3">
                     <span className="text-2xl">{level.emoji}</span>
                     <div className="flex-1">
-                      <h3 className="font-semibold text-[var(--mp-fg)]">{level.label[l]}</h3>
-                      <p className="text-sm text-[var(--mp-fg-subtle)]">{level.desc[l]}</p>
+                      <h3 className="font-semibold text-[var(--mp-fg)]">{t(level.labelKey)}</h3>
+                      <p className="text-sm text-[var(--mp-fg-subtle)]">{t(level.descKey)}</p>
                     </div>
                     {data.level === level.value && <CheckCircle2 className="w-5 h-5 text-[var(--mp-cta-blue)]" />}
                   </div>
@@ -272,14 +292,14 @@ export default function Onboarding({ lang = "de", onComplete }: OnboardingProps)
             <div className="space-y-4">
               {/* Language */}
               <div className="p-4 rounded-xl border border-[var(--mp-border)]">
-                <p className="text-sm font-semibold text-[var(--mp-fg)] mb-3">{l === "de" ? "Sprache" : "Language"}</p>
+                <p className="text-sm font-semibold text-[var(--mp-fg)] mb-3">{t("onb_language_label")}</p>
                 <div className="grid grid-cols-2 gap-2">
-                  {[{ val: "de", label: "Deutsch 🇩🇪" }, { val: "en", label: "English 🇬🇧" }].map((opt) => (
+                  {[{ val: "de" as Lang, label: "Deutsch 🇩🇪" }, { val: "en" as Lang, label: "English 🇬🇧" }].map((opt) => (
                     <button
                       key={opt.val}
-                      onClick={() => setData({ ...data, language: opt.val })}
+                      onClick={() => handleLangSwitch(opt.val)}
                       className={`py-2.5 rounded-xl text-sm font-semibold border transition-all ${
-                        data.language === opt.val ? "bg-[var(--mp-cta-blue)] text-white border-[var(--mp-cta-blue)]" : "bg-[var(--mp-surface-raised)] border-[var(--mp-border)] text-[var(--mp-fg-muted)]"
+                        activeLang === opt.val ? "bg-[var(--mp-cta-blue)] text-white border-[var(--mp-cta-blue)]" : "bg-[var(--mp-surface-raised)] border-[var(--mp-border)] text-[var(--mp-fg-muted)]"
                       }`}
                     >
                       {opt.label}
@@ -292,8 +312,8 @@ export default function Onboarding({ lang = "de", onComplete }: OnboardingProps)
               <div className="p-4 rounded-xl border border-[var(--mp-border)]">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-semibold text-[var(--mp-fg)]">{l === "de" ? "Dunkles Design" : "Dark Mode"}</p>
-                    <p className="text-xs text-[var(--mp-fg-subtle)]">{l === "de" ? "Augen schonen beim Nachtlernen" : "Easy on eyes for night study"}</p>
+                    <p className="text-sm font-semibold text-[var(--mp-fg)]">{t("onb_dark_mode_title")}</p>
+                    <p className="text-xs text-[var(--mp-fg-subtle)]">{t("onb_dark_mode_desc")}</p>
                   </div>
                   <button
                     onClick={() => setData({ ...data, darkMode: !data.darkMode })}
@@ -312,12 +332,12 @@ export default function Onboarding({ lang = "de", onComplete }: OnboardingProps)
 
               {/* Summary */}
               <div className="p-4 rounded-xl bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)]">
-                <p className="text-xs font-semibold text-[var(--mp-fg-subtle)] uppercase tracking-wider mb-2">{l === "de" ? "Zusammenfassung" : "Summary"}</p>
+                <p className="text-xs font-semibold text-[var(--mp-fg-subtle)] uppercase tracking-wider mb-2">{t("onb_summary_label")}</p>
                 <div className="space-y-1 text-sm text-[var(--mp-fg-muted)]">
                   <p>📋 SIP Kenntnisprüfung (Wien)</p>
-                  <p>📅 {data.examDate === "not_planned" || !data.examDate ? (l === "de" ? "Noch nicht geplant" : "Not planned") : data.examDate}</p>
-                  <p>🎯 {data.dailyGoal || 20} {l === "de" ? "Fragen/Tag" : "questions/day"}</p>
-                  <p>📊 {levels.find(lv => lv.value === data.level)?.label[l] || (l === "de" ? "Nicht gewählt" : "Not selected")}</p>
+                  <p>📅 {data.examDate === "not_planned" || !data.examDate ? t("onb_summary_not_planned") : data.examDate}</p>
+                  <p>🎯 {data.dailyGoal || 20} {t("onb_summary_qpd")}</p>
+                  <p>📊 {selectedLevelLabel ? t(selectedLevelLabel) : t("onb_summary_not_selected")}</p>
                 </div>
               </div>
             </div>
@@ -336,7 +356,7 @@ export default function Onboarding({ lang = "de", onComplete }: OnboardingProps)
             }`}
           >
             <ArrowLeft className="w-4 h-4" />
-            {l === "de" ? "Zurück" : "Back"}
+            {t("onb_back")}
           </button>
 
           <button
@@ -344,7 +364,7 @@ export default function Onboarding({ lang = "de", onComplete }: OnboardingProps)
             disabled={!canProceed()}
             className="btn-primary px-6 py-2.5 rounded-xl text-sm flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            {isLast ? (l === "de" ? "Los geht's!" : "Let's go!") : (l === "de" ? "Weiter" : "Next")}
+            {isLast ? t("onb_finish") : t("onb_next")}
             <ArrowRight className="w-4 h-4" />
           </button>
         </div>

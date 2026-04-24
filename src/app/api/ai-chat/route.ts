@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
-import { requireUser } from "@/lib/auth-guard";
+import { requireUser, isFreeAccess } from "@/lib/auth-guard";
 import { captureServerError } from "@/lib/sentry-capture";
 import { checkRateLimit, rateKey, rateLimitHeaders } from "@/lib/rate-limit";
 
@@ -124,8 +124,11 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Tier gate — only pro + admin can trigger upstream calls.
-  if (tier === "free") {
+  // Tier gate — only pro + admin (tier OR role) can trigger upstream
+  // calls. 2026-04-24: switched from a bare `tier === "free"` check to
+  // the canonical `isFreeAccess(guard)` so /admin/ operators with
+  // `role='admin'` but `tier='free'` aren't locked out of AI chat.
+  if (isFreeAccess(guard)) {
     return NextResponse.json(
       {
         error:

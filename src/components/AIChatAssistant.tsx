@@ -25,6 +25,10 @@ interface AIChatAssistantProps {
   topic: string;
   options?: { text: string; correct: boolean }[];
   userTier?: string;
+  /** Session `user.role` — honoured alongside `userTier` so admins get
+   * Pro-level AI-chat access even when their tier is `'free'` / `null`.
+   * Added 2026-04-24. */
+  userRole?: string;
 }
 
 // Truncate question stem for the sheet description (fallback context).
@@ -45,6 +49,7 @@ export default function AIChatAssistant({
   topic,
   options,
   userTier = "free",
+  userRole = "user",
 }: AIChatAssistantProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -54,7 +59,8 @@ export default function AIChatAssistant({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const isPro = userTier === "pro" || userTier === "admin";
+  // Admin role overrides tier (2026-04-24 fix).
+  const isPro = userRole === "admin" || userTier === "pro" || userTier === "admin";
 
   // Markdown renderer — the project uses Tailwind v4 without the
   // @tailwindcss/typography plugin, so `prose` classes are no-ops.
@@ -200,8 +206,32 @@ Use **bold** for key terms, bullet points for clarity, and structured headings.`
             }
           }
         } catch {
-          // Cache read failed — fall through to generation.
+          // Cache read failed — fall through.
         }
+      }
+
+      // 2026-04-24 triage fix — feedback #33 ("Die KI funktioniert überhaupt nicht.")
+      //
+      // BEFORE: when no cache exists, free users hit POST /api/ai-chat,
+      // which returns 402. The old fallback read "KI-Assistent ist
+      // momentan nicht verfügbar." — that reads like a server outage,
+      // not a tier gate, and users filed "AI is broken" feedback.
+      //
+      // AFTER: for free users with no cached AI explanation, we show
+      // the question's static `explanation` (the one written into the
+      // DB at import time) as the assistant's opener, and let the
+      // Pro-upsell card in the footer carry the "ask your own question"
+      // pitch. No silent 402, no "unavailable" copy.
+      if (!isPro && !forceRegenerate) {
+        const fallback =
+          (explanation && explanation.trim().length > 0)
+            ? explanation
+            : lang === "de"
+              ? "Für diese Frage ist noch keine KI-Erklärung hinterlegt. Sobald ein Pro-Nutzer sie anfragt, ist sie auch für dich kostenlos sichtbar."
+              : "There is no AI explanation cached for this question yet. As soon as a Pro user requests one, it becomes free to read for you too.";
+        setCachedExplanation(fallback);
+        setMessages([{ role: "assistant", content: fallback }]);
+        return;
       }
 
       // Generate new explanation (or regenerate over an existing one for pro users)
@@ -222,11 +252,20 @@ Use **bold** for key terms, bullet points for clarity, and structured headings.`
       });
 
       if (!response.ok) {
+        // Distinguish tier/paywall (402) from outage (5xx) so the copy
+        // matches reality. 402 shouldn't normally hit after the isPro
+        // pre-check above, but we guard it anyway in case tier data
+        // drifts mid-session.
+        const is402 = response.status === 402;
         setMessages([{
           role: "assistant",
-          content: lang === "de"
-            ? "KI-Assistent ist momentan nicht verfügbar."
-            : "AI assistant is currently unavailable.",
+          content: is402
+            ? (lang === "de"
+                ? "Diese Erklärung ist noch nicht zwischengespeichert. Die automatische KI-Generierung ist ein Pro-Feature — du kannst aber weiter lernen, und sobald ein Pro-Nutzer sie anfragt, wird sie auch für dich kostenlos sichtbar."
+                : "This explanation isn't cached yet. Automatic AI generation is a Pro feature — but as soon as a Pro user requests one, it'll be free for you to read.")
+            : (lang === "de"
+                ? "KI-Assistent ist momentan nicht erreichbar. Die Frage und die statische Erklärung bleiben nutzbar — bitte später erneut versuchen."
+                : "AI assistant is momentarily unreachable. The question and its static explanation remain usable — please try again later."),
         }]);
         return;
       }

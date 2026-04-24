@@ -27,27 +27,33 @@ async function resolveTier(
   userId: string | null
   tier: 'free' | 'pro' | 'admin'
   tierExpiresAt: string | null
+  role: 'user' | 'admin'
 }> {
   const headerId = req.headers.get('x-user-id')
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
   if (!headerId || !UUID_RE.test(headerId)) {
-    return { userId: null, tier: 'free', tierExpiresAt: null }
+    return { userId: null, tier: 'free', tierExpiresAt: null, role: 'user' }
   }
   try {
+    // 2026-04-24: also select `role` so we can treat `role='admin'` as
+    // Pro-level access even when `tier` is `'free'`/null. The admin
+    // user (admin@medpruf.com) has tier='admin' in practice, but
+    // defence-in-depth: any admin-role row bypasses the free-tier gate.
     const { data } = await sb
       .from('users')
-      .select('id, tier, tier_expires_at')
+      .select('id, tier, tier_expires_at, role')
       .eq('id', headerId)
       .maybeSingle()
-    if (!data) return { userId: null, tier: 'free', tierExpiresAt: null }
+    if (!data) return { userId: null, tier: 'free', tierExpiresAt: null, role: 'user' }
     return {
       userId: data.id as string,
       tier: ((data.tier as string) || 'free') as 'free' | 'pro' | 'admin',
       tierExpiresAt:
         (data as { tier_expires_at?: string | null }).tier_expires_at ?? null,
+      role: ((data.role as string) || 'user') as 'user' | 'admin',
     }
   } catch {
-    return { userId: null, tier: 'free', tierExpiresAt: null }
+    return { userId: null, tier: 'free', tierExpiresAt: null, role: 'user' }
   }
 }
 
@@ -238,7 +244,10 @@ export async function GET(req: NextRequest) {
   //     { paywallHit: true, seen, limit } as a 200 so the client can
   //     render the upgrade prompt.
   const authed = await resolveTier(req, sb)
-  const free = isFreeTier(authed.tier, authed.tierExpiresAt)
+  // 2026-04-24: admin role overrides tier. /admin/ operators (role='admin'
+  // but possibly tier='free' if they never subscribed) bypass the 150Q
+  // free-slice gate so they can audit question content unconstrained.
+  const free = authed.role === 'admin' ? false : isFreeTier(authed.tier, authed.tierExpiresAt)
 
   if (free) {
     // Pro-only practice modes — respond 402 so the UI can upsell.

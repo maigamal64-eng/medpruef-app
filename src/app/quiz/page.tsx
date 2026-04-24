@@ -80,7 +80,13 @@ function QuizContent() {
   // Tier surfaces client-side gates on bookmarks/notes (both Pro-only
   // as of the 2026-04-23 Lock). Populated from the stored session
   // where available; defaults to 'free' so a missing tier fails-closed.
+  //
+  // 2026-04-24: also track `userRole` so admin operators (whose tier
+  // may be `'free'`/`null` because they never subscribed) still get
+  // Pro-level access. Passed alongside `userTier` to QuestionActions
+  // + QuestionCard + AIChatAssistant.
   const [userTier, setUserTier] = useState<string>("free");
+  const [userRole, setUserRole] = useState<string>("user");
   const [lang, setLangState] = useState<Lang>("de");
   const [config, setConfig] = useState<QuizConfig | null>(null);
 
@@ -167,6 +173,7 @@ function QuizContent() {
       const session = getStoredSession();
       setUserId(session?.user?.id || "");
       setUserTier(session?.user?.tier || "free");
+      setUserRole(session?.user?.role || "user");
     }
   }, [searchParams]);
 
@@ -708,6 +715,7 @@ function QuizContent() {
                       question={question}
                       lang={lang}
                       userTier={userTier}
+                      userRole={userRole}
                       layout="row"
                       unlockAfterAnswer
                       answered={answered}
@@ -775,6 +783,7 @@ function QuizContent() {
                   question={question}
                   lang={lang}
                   userTier={userTier}
+                  userRole={userRole}
                   layout="rail"
                   unlockAfterAnswer
                   answered={answered}

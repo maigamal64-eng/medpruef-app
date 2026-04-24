@@ -33,40 +33,12 @@ import {
   useAnnouncementGate,
   type SurfaceKey,
 } from "@/lib/announcements/useAnnouncementGate";
+import { t, useLang } from "@/lib/i18n";
 
 // Versioned key survives `v1` dismissals from the old SoftLaunchWelcomeModal.
 const LEGACY_KEY = "medpruef_soft_launch_welcome_seen";
 const STORAGE_KEY = "medpruef_orientation_modal_seen_v2";
 const SURFACE: SurfaceKey = "orientation_modal";
-
-interface Item {
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-  href?: string;
-  hrefLabel?: string;
-}
-
-// Exactly two items — PUYP and free tier. Everything else was dropped
-// in the rewrite. Links go to FAQ + /practice, NEVER to /pricing.
-const ITEMS: Item[] = [
-  {
-    icon: <ShieldCheck className="w-5 h-5 text-[var(--mp-accent-teal)]" />,
-    title: "Bestehe beim ersten Versuch — oder lerne kostenlos weiter, bis du bestehst.",
-    description:
-      "Wenn du in der Juni-26-Kohorte oder im Jahresabo nicht bestehst, verlängern wir deinen Zugang kostenlos bis zum nächsten Prüfungszyklus.",
-    href: "/faq#puyp",
-    hrefLabel: "So funktioniert's",
-  },
-  {
-    icon: <Gift className="w-5 h-5 text-[var(--mp-cta-blue)]" />,
-    title: "150 kostenlose Fragen pro Prüfungstyp.",
-    description:
-      "Keine Zahlungsmittel nötig. Voller Zugriff auf Erklärungen. Kein Zeitlimit — lerne in deinem Tempo.",
-    href: "/quiz?free=1",
-    hrefLabel: "Jetzt üben",
-  },
-];
 
 /**
  * Rendered from `app/layout.tsx`. Delegates visibility to the shared
@@ -75,6 +47,23 @@ const ITEMS: Item[] = [
  */
 export default function OrientationModal() {
   const { activeSurface, state, markSeen } = useAnnouncementGate();
+  const lang = useLang();
+  const items = [
+    {
+      icon: <ShieldCheck className="w-5 h-5 text-[var(--mp-accent-teal)]" />,
+      title: t("orient_item1_title", lang),
+      description: t("orient_item1_body", lang),
+      href: "/faq#puyp",
+      hrefLabel: t("orient_item1_link", lang),
+    },
+    {
+      icon: <Gift className="w-5 h-5 text-[var(--mp-cta-blue)]" />,
+      title: t("orient_item2_title", lang),
+      description: t("orient_item2_body", lang),
+      href: "/quiz?free=1",
+      hrefLabel: t("orient_item2_link", lang),
+    },
+  ];
 
   // Legacy carry-over: if the user saw the v1 modal in the soft launch,
   // we still want to show them the v2 retrim ONCE. The server-side gate
@@ -104,8 +93,8 @@ export default function OrientationModal() {
       onOpenChange={(next) => {
         if (!next) void dismiss();
       }}
-      title="Willkommen bei MedPrüf"
-      description="Zwei Dinge, die du wissen solltest, bevor du loslegst."
+      title={t("orient_title", lang)}
+      description={t("orient_subtitle", lang)}
       maxWidth="480px"
       footer={
         <div className="flex flex-col sm:flex-row gap-2 w-full">
@@ -114,20 +103,20 @@ export default function OrientationModal() {
             onClick={() => void dismiss()}
             className="mp-btn mp-btn--primary mp-btn--lg flex-1"
           >
-            Weiterlernen
+            {t("orient_primary_cta", lang)}
           </button>
           <button
             type="button"
             onClick={() => void dismiss()}
             className="mp-btn mp-btn--secondary mp-btn--lg flex-1"
           >
-            Pläne später ansehen
+            {t("orient_secondary_cta", lang)}
           </button>
         </div>
       }
     >
       <div className="space-y-4">
-        {ITEMS.map((item, i) => (
+        {items.map((item, i) => (
           <div key={i} className="flex gap-3">
             <div className="w-10 h-10 rounded-[var(--mp-r-card)] bg-[var(--mp-surface-sunken)] flex items-center justify-center flex-shrink-0">
               {item.icon}
@@ -145,7 +134,7 @@ export default function OrientationModal() {
                   onClick={() => void dismiss()}
                   className="text-xs font-medium text-[var(--mp-cta-blue)] mt-1 inline-block hover:underline"
                 >
-                  {item.hrefLabel ?? "Mehr erfahren"} →
+                  {item.hrefLabel ?? t("orient_learn_more_link", lang)} →
                 </Link>
               )}
             </div>

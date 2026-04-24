@@ -26,6 +26,7 @@
 
 import { createContext, useCallback, useContext, useMemo, useState, useRef, useEffect } from 'react'
 import { CheckCircle2, AlertTriangle, Info, X } from 'lucide-react'
+import { t, useLang } from '@/lib/i18n'
 
 type Variant = 'success' | 'error' | 'warning' | 'info'
 
@@ -110,6 +111,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 }
 
 function ToastViewport({ toasts, onDismiss }: { toasts: ToastItem[]; onDismiss: (id: number) => void }) {
+  const lang = useLang()
   // IMPORTANT: do NOT gate on `typeof document === 'undefined'` here.
   // This component renders on both server and client via ToastProvider,
   // and a null/div split triggers a hydration mismatch. The region is
@@ -119,7 +121,7 @@ function ToastViewport({ toasts, onDismiss }: { toasts: ToastItem[]; onDismiss: 
   return (
     <div
       role="region"
-      aria-label="Notifications"
+      aria-label={lang === 'de' ? 'Benachrichtigungen' : 'Notifications'}
       aria-live="polite"
       className="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none max-w-[calc(100vw-2rem)]"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0)' }}
@@ -133,6 +135,7 @@ function ToastViewport({ toasts, onDismiss }: { toasts: ToastItem[]; onDismiss: 
 
 function ToastView({ toast, onDismiss }: { toast: ToastItem; onDismiss: (id: number) => void }) {
   const [paused, setPaused] = useState(false)
+  const lang = useLang()
   useEffect(() => {
     if (toast.duration === 0 || paused) return
     const t = setTimeout(() => onDismiss(toast.id), toast.duration)
@@ -166,7 +169,7 @@ function ToastView({ toast, onDismiss }: { toast: ToastItem; onDismiss: (id: num
       <button
         type="button"
         onClick={() => onDismiss(toast.id)}
-        aria-label="Dismiss notification"
+        aria-label={t("close", lang)}
         className="flex-shrink-0 rounded-md p-1 hover:bg-white/10 transition"
       >
         <X className="w-3 h-3" aria-hidden />

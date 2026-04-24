@@ -39,6 +39,7 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
+import { t, useLang } from '@/lib/i18n'
 
 export type BottomSheetPosition = 'auto' | 'bottom' | 'right'
 
@@ -124,6 +125,7 @@ export function BottomSheet({
   const previousFocusRef = useRef<HTMLElement | null>(null)
   const anchor = useResolvedPosition(position)
   const titleId = useId()
+  const lang = useLang()
 
   // Swipe-down tracking (mobile only).
   const dragStartY = useRef<number | null>(null)
@@ -377,7 +379,7 @@ export function BottomSheet({
               <button
                 type="button"
                 onClick={() => onOpenChange(false)}
-                aria-label="Close"
+                aria-label={t("close", lang)}
                 style={{
                   width: '28px',
                   height: '28px',

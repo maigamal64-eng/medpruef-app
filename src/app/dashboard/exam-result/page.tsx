@@ -155,8 +155,11 @@ export default function ExamResultPage() {
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || "Failed to record pass");
-      toast.success("Congratulations!", "We've recorded your pass.");
+      if (!res.ok) throw new Error(data?.error || (lang === "de" ? "Konnte Bestehen nicht speichern" : "Failed to record pass"));
+      toast.success(
+        lang === "de" ? "Herzlichen Glückwunsch!" : "Congratulations!",
+        lang === "de" ? "Dein Bestehen ist gespeichert." : "We've recorded your pass."
+      );
       router.push("/stats?examPassed=1");
     } catch (err) {
       toast.error((err as Error).message);
@@ -166,11 +169,14 @@ export default function ExamResultPage() {
   async function submitFail(e: React.FormEvent) {
     e.preventDefault();
     if (!proofFile) {
-      toast.error("Please upload a proof file first.");
+      toast.error(lang === "de" ? "Bitte zuerst einen Nachweis hochladen." : "Please upload a proof file first.");
       return;
     }
     if (proofFile.size > 10 * 1024 * 1024) {
-      toast.error("File too large", "Maximum 10MB.");
+      toast.error(
+        lang === "de" ? "Datei zu groß" : "File too large",
+        lang === "de" ? "Maximal 10 MB." : "Maximum 10MB."
+      );
       return;
     }
 
@@ -187,12 +193,15 @@ export default function ExamResultPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data?.error || "Submission failed");
+        throw new Error(data?.error || (lang === "de" ? "Einreichung fehlgeschlagen" : "Submission failed"));
       }
       setView("submitted");
-      toast.success("Submitted!", "Admin will review within 72 hours.");
+      toast.success(
+        lang === "de" ? "Eingereicht!" : "Submitted!",
+        lang === "de" ? "Admin prüft innerhalb von 72 Stunden." : "Admin will review within 72 hours."
+      );
     } catch (err) {
-      toast.error((err as Error).message || "Could not submit — try again");
+      toast.error((err as Error).message || (lang === "de" ? "Konnte nicht einreichen — bitte erneut versuchen" : "Could not submit — try again"));
     } finally {
       setSubmitting(false);
     }

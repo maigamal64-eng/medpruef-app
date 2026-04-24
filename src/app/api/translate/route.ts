@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
-import { requireUser } from "@/lib/auth-guard";
+import { requireUser, isFreeAccess } from "@/lib/auth-guard";
 import { checkRateLimit, rateKey, rateLimitHeaders } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
@@ -171,7 +171,11 @@ export async function POST(req: NextRequest) {
   // 2. Quota check (free tier only). Counts today's translation events
   //    via user_events.event_type='translation'. Fails open on error
   //    so a DB hiccup doesn't block the user.
-  if (tier === "free") {
+  //
+  //    2026-04-24: switched from `tier === "free"` to `isFreeAccess(guard)`
+  //    so /admin/ operators (role='admin' but tier='free') aren't
+  //    quota-limited. Same fix pattern as /api/ai-chat.
+  if (isFreeAccess(guard)) {
     try {
       const since = new Date();
       since.setHours(0, 0, 0, 0);
