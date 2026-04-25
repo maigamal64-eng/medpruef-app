@@ -17,7 +17,7 @@
  * websocket footprint minimal and avoids N queries per insert.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type {
   RealtimeChannel,
   RealtimePostgresChangesPayload,
@@ -76,11 +76,32 @@ export function useAdminRealtime<T = unknown>(
     onEventRef.current = onEvent;
   }, [onEvent]);
 
+  // Per-instance unique id so two components calling
+  // `useAdminRealtime('subscriptions')` get TWO distinct channels.
+  // Without this, Supabase's `sb.channel(name)` returns the existing
+  // channel for an in-use name; the second caller's `.on()` then runs
+  // AFTER the first caller's `.subscribe()`, which Supabase Realtime
+  // forbids:
+  //
+  //   Error: cannot add `postgres_changes` callbacks for
+  //   realtime:admin:subscriptions:all after `subscribe()`.
+  //
+  // The /admin/overview crash was reproduced live (2026-04-24 prod
+  // tour) — every additional tile after the first one hit this error
+  // and bubbled into the page-level error boundary.
+  const instanceId = useId();
+
   useEffect(() => {
     const sb = getBrowserSupabase();
-    const channelKey = `admin:${table}:${filter ?? "all"}`;
+    // The instanceId guarantees the channel name is unique to THIS
+    // component invocation. We still encode the table + filter so the
+    // name is human-readable in dev tools.
+    const channelKey = `admin:${table}:${filter ?? "all"}:${instanceId}`;
     const channel: RealtimeChannel = sb.channel(channelKey);
 
+    // Order is sacred: every `.on()` MUST be called before
+    // `.subscribe()`. We attach the postgres_changes handler first,
+    // then call subscribe exactly once at the end.
     (channel as unknown as {
       on: (
         type: string,
@@ -113,7 +134,7 @@ export function useAdminRealtime<T = unknown>(
     };
     // onEvent is intentionally omitted — read via ref so swapping
     // callbacks doesn't tear down the subscription.
-  }, [table, filter]);
+  }, [table, filter, instanceId]);
 
   return { data, lastUpdated, isConnected, lastEvent };
 }

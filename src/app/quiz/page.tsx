@@ -11,7 +11,7 @@ import { authFetch as fetch } from "@/lib/authFetch";
 import Link from "next/link";
 import { t, getLang, setLang } from "@/lib/i18n";
 import { trackEvent, trackPageView } from "@/lib/tracker";
-import { getStoredSession } from "@/lib/auth";
+import { getStoredSession, storeSession } from "@/lib/auth";
 import { recordAnswer } from "@/lib/weakness";
 import { Inbox, Clock, Trophy, Sparkles, Gift } from "lucide-react";
 import LanguageToggle from "@/components/LanguageToggle";
@@ -494,13 +494,18 @@ function QuizContent() {
         setTotalXpSession((p) => p + (data.xp || 0));
         setShowXpFloat(true);
         setTimeout(() => setShowXpFloat(false), 1500);
-        // Update stored session with fresh gamification so home page reflects changes
+        // Update stored session with fresh gamification so home page reflects changes.
+        // Goes through `storeSession` so the `user` blob is re-sanitized against
+        // SAFE_USER_FIELDS — protects against a stale localStorage record that
+        // predates the password_hash strip.
         if (data.gamification) {
           try {
             const sess = JSON.parse(localStorage.getItem('medpruef_session') || '{}');
-            if (sess.gamification) {
-              sess.gamification = data.gamification;
-              localStorage.setItem('medpruef_session', JSON.stringify(sess));
+            if (sess.gamification && sess.user) {
+              storeSession({
+                user: sess.user,
+                gamification: { ...sess.gamification, ...data.gamification },
+              });
             }
           } catch {} // non-critical
         }

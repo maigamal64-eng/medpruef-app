@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { getLang, setLang } from "@/lib/i18n";
 import { getStoredSession } from "@/lib/auth";
+import { PreCheckoutTrustDialog } from "@/components/PreCheckoutTrustDialog";
 import { authFetch as fetch } from "@/lib/authFetch";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
@@ -88,6 +89,12 @@ export default function PricingPage() {
   const [examDate, setExamDate] = useState("");
   const [emailErr, setEmailErr] = useState<string | undefined>(undefined);
   const [submitting, setSubmitting] = useState(false);
+  // Pre-checkout trust dialog (rescue-sprint §1.2). Holds the tier the
+  // user clicked so the dialog renders the right plan summary. Open
+  // state is `null` when closed, otherwise the tier id.
+  const [trustDialogTier, setTrustDialogTier] = useState<
+    "premium_pass_guaranteed" | "first_month_19" | null
+  >(null);
   const toast = useToast();
 
   useEffect(() => {
@@ -176,6 +183,53 @@ export default function PricingPage() {
     setCheckoutLoading(null);
   };
 
+  /**
+   * Cohort + €19 CTAs route through the {@link PreCheckoutTrustDialog}
+   * (rescue-sprint §1.2) before firing the actual NOWPayments invoice.
+   * The dialog surfaces the company name, 7-day refund, PUYP badge,
+   * USDT explainer, and "Ich habe keine Krypto" escape — without it,
+   * users land on a stranger's payment page with zero trust signals.
+   *
+   * Logged-out users still bounce to /login first; the dialog only
+   * fires for authenticated users.
+   */
+  const openCohortDialog = () => {
+    if (!session?.user) {
+      const next = encodeURIComponent("/pricing?action=cohort-checkout");
+      window.location.href = `/login?next=${next}&action=cohort-checkout`;
+      return;
+    }
+    setTrustDialogTier("premium_pass_guaranteed");
+  };
+
+  const openFirstMonthDialog = () => {
+    if (!session?.user) {
+      const next = encodeURIComponent("/pricing?action=first-month-checkout");
+      window.location.href = `/login?next=${next}&action=first-month-checkout`;
+      return;
+    }
+    setTrustDialogTier("first_month_19");
+  };
+
+  // Confirmation handler — the dialog calls this when user clicks
+  // "Verstanden — weiter zur Zahlung". We then fire the actual
+  // NOWPayments invoice creation.
+  const handleTrustDialogConfirm = () => {
+    if (!trustDialogTier) return;
+    const slot: "cohort" | "first_month" =
+      trustDialogTier === "premium_pass_guaranteed" ? "cohort" : "first_month";
+    const actionHint =
+      trustDialogTier === "premium_pass_guaranteed"
+        ? "cohort-checkout"
+        : "first-month-checkout";
+    setTrustDialogTier(null);
+    void startCryptoCheckout(trustDialogTier, slot, actionHint);
+  };
+
+  // Legacy direct-fire entrypoints — preserved so any other call sites
+  // (the action-hint redirect post-login) continue to work without the
+  // dialog interrupt. The pricing-page CTAs now go through
+  // openCohortDialog / openFirstMonthDialog.
   const startCohortCheckout = () =>
     startCryptoCheckout(
       "premium_pass_guaranteed",
@@ -183,11 +237,6 @@ export default function PricingPage() {
       "cohort-checkout",
     );
 
-  /**
-   * €19 first-month trial checkout — ONE-TIME invoice, no auto-renewal.
-   * Lower-friction first ask than the €114 Cohort for users who want to
-   * try the product before committing.
-   */
   const startFirstMonthCheckout = () =>
     startCryptoCheckout(
       "first_month_19",
@@ -410,7 +459,7 @@ export default function PricingPage() {
         >
           <FirstMonthCard
             lang={lang}
-            onCheckout={startFirstMonthCheckout}
+            onCheckout={openFirstMonthDialog}
             loading={checkoutLoading === "first_month"}
           />
         </section>
@@ -420,7 +469,7 @@ export default function PricingPage() {
           <CohortFeaturedCard
             lang={lang}
             features={cohortFeatures}
-            onCheckout={startCohortCheckout}
+            onCheckout={openCohortDialog}
             loading={checkoutLoading === "cohort"}
           />
         </section>
@@ -550,7 +599,7 @@ export default function PricingPage() {
               </p>
               <button
                 type="button"
-                onClick={startCohortCheckout}
+                onClick={openCohortDialog}
                 disabled={checkoutLoading === "cohort"}
                 className="mp-btn mp-btn--lg inline-flex items-center gap-2"
                 style={{
@@ -686,6 +735,26 @@ export default function PricingPage() {
           </p>
         </div>
       </Dialog>
+
+      {/*
+        Pre-checkout trust dialog — interrupts the cohort + €19 CTAs
+        before the NOWPayments redirect so the user sees company name,
+        7-day refund, PUYP guarantee, USDT-TRC20 explainer, and the
+        "Ich habe keine Krypto" escape-hatch. The 5/5 invoice
+        abandonment in the 2026-04-23 audit was partly explained by
+        the previous 1-click jump to nowpayments.io with no trust
+        signals; this dialog is the rescue-sprint §1.2 fix.
+      */}
+      <PreCheckoutTrustDialog
+        open={trustDialogTier !== null}
+        onOpenChange={(open) => {
+          if (!open) setTrustDialogTier(null);
+        }}
+        tier={trustDialogTier ?? "first_month_19"}
+        userEmail={session?.user?.email}
+        lang={lang}
+        onConfirm={handleTrustDialogConfirm}
+      />
     </div>
   );
 }

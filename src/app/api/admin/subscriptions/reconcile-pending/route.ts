@@ -117,8 +117,23 @@ async function fetchWithKey<T>(
 
 /**
  * Resolve the most progressed payment state for a given invoice id.
- * Tries the invoice endpoint first; falls back to listing payments
- * when the invoice endpoint returns no payment_status of its own.
+ *
+ * NOWPayments removed the `/v1/invoice/{id}` direct path retrieval
+ * (returns 404 "Endpoint not found" as of Apr 2026). The supported
+ * lookup is the **payment list** endpoint with an `invoiceId` query
+ * filter — `GET /v1/payment/?invoiceId={id}&limit=10` — which returns
+ * `{ data: [...payments] }` ordered newest-first.
+ *
+ * Strategy:
+ *   1. Hit the list endpoint with the invoice id; if it returns one or
+ *      more payments, pick the most-progressed one by status rank.
+ *   2. Fall back to `GET /v1/payment/{id}` in case the stored
+ *      `provider_invoice_id` we have is actually a payment_id (legacy
+ *      rows where the create-invoice response shape was different).
+ *   3. Anything else → kind:'not_found' or kind:'error'.
+ *
+ * Reference: NOWPayments Postman collection,
+ *   https://documenter.getpostman.com/view/7907941/S1a32n38#0165ee5f-bace-4303-ac69-0ef70e0f1576
  */
 async function resolvePaymentState(
   invoiceId: string,
@@ -128,26 +143,23 @@ async function resolvePaymentState(
   | { kind: "not_found"; details: string }
   | { kind: "error"; details: string }
 > {
-  // 1. /v1/invoice/{id}
-  const inv = await fetchWithKey<UpstreamInvoice>(
-    `${NOWPAYMENTS_API}/v1/invoice/${encodeURIComponent(invoiceId)}`,
+  // 1. List payments tied to this invoice id.
+  const list = await fetchWithKey<{ data?: UpstreamPayment[] } | UpstreamPayment[]>(
+    `${NOWPAYMENTS_API}/v1/payment/?invoiceId=${encodeURIComponent(invoiceId)}&limit=10`,
     apiKey
   );
-  if (inv.ok) {
-    if (inv.data.payment_status) {
-      return {
-        kind: "found",
-        payment_status: inv.data.payment_status,
-        payment: inv.data.payments?.[0] ?? null,
-      };
-    }
-    if (Array.isArray(inv.data.payments) && inv.data.payments.length > 0) {
-      // Pick the most-progressed payment by status rank.
-      const best = inv.data.payments.reduce<UpstreamPayment>((acc, p) => {
+  if (list.ok) {
+    // Response shape can be { data: [...] } or a bare array depending
+    // on which API version we hit. Normalise both.
+    const arr: UpstreamPayment[] = Array.isArray(list.data)
+      ? (list.data as UpstreamPayment[])
+      : (list.data as { data?: UpstreamPayment[] }).data ?? [];
+    if (arr.length > 0) {
+      const best = arr.reduce<UpstreamPayment>((acc, p) => {
         const accRank = STATUS_RANK[acc.payment_status || ""] ?? -1;
         const pRank = STATUS_RANK[p.payment_status || ""] ?? -1;
         return pRank > accRank ? p : acc;
-      }, inv.data.payments[0]);
+      }, arr[0]);
       if (best.payment_status) {
         return {
           kind: "found",
@@ -158,9 +170,8 @@ async function resolvePaymentState(
     }
   }
 
-  // 2. /v1/payment/{id} as a last resort — sometimes our stored
-  //    `provider_invoice_id` is actually a payment_id (depends on which
-  //    NOWPayments API path created it).
+  // 2. Fall back to /v1/payment/{id} — works when the id we stored is
+  //    a payment_id rather than an invoice_id.
   const pay = await fetchWithKey<UpstreamPayment>(
     `${NOWPAYMENTS_API}/v1/payment/${encodeURIComponent(invoiceId)}`,
     apiKey
@@ -173,14 +184,22 @@ async function resolvePaymentState(
     };
   }
 
-  // Both endpoints came back empty.
-  if (!inv.ok && !pay.ok) {
+  // Neither path returned a payment. Distinguish "endpoint failed
+  // outright" (transport/auth error) from "endpoint OK but no payment
+  // exists" so the caller can decide the right outcome bucket.
+  if (!list.ok && !pay.ok) {
     return {
       kind: "error",
-      details: `invoice: HTTP ${inv.status} — ${inv.body}; payment: HTTP ${pay.status} — ${pay.body}`,
+      details: `list: HTTP ${list.status} — ${list.body}; payment: HTTP ${pay.status} — ${pay.body}`,
     };
   }
-  return { kind: "not_found", details: "no payment_status from either endpoint" };
+  return {
+    kind: "not_found",
+    details:
+      list.ok && (pay.ok || pay.status === 404)
+        ? "no payments tied to this invoice id"
+        : "neither endpoint returned a payment_status",
+  };
 }
 
 interface ReconcileOutcome {

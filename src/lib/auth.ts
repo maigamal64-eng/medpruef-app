@@ -67,12 +67,94 @@ export function getStoredSession(): StoredSession | null {
   }
 }
 
-/** Persist a session to localStorage. */
+/**
+ * Whitelist of `user` fields that are safe to keep in localStorage.
+ *
+ * The 2026-04-24 prod UX tour caught `password_hash` in
+ * `localStorage.medpruef_session.user` — every script loaded on a
+ * medpruef.com page (and every browser extension) could read the
+ * bcrypt hash. Even though `/api/auth` now sanitizes responses, defence
+ * in depth: every entry path into `storeSession` (login, register,
+ * Telegram exchange, settings update, EmailValidationModal, the
+ * `setItem` call in quiz/page.tsx that re-stamps the session) goes
+ * through this filter, so a stale or unsanitized server payload can't
+ * leak credentials to the client storage.
+ *
+ * Any field NOT in this list is dropped before persistence. To add a
+ * new public field, list it here. If you find yourself reaching for
+ * `role` or anything starting with `password_`, stop — those belong on
+ * the server.
+ */
+const SAFE_USER_FIELDS = new Set<string>([
+  'id',
+  'telegram_id',
+  'telegram_username',
+  'email',
+  'email_status',
+  'first_name',
+  'last_name',
+  'photo_url',
+  'language_code',
+  'active_exam',
+  'tier',
+  'tier_expires_at',
+  'role', // UI-only hint; every server route revalidates via requireAdmin
+  'xp_total',
+  'streak_count',
+  'longest_streak',
+  'level',
+  'daily_goal',
+  'exam_date',
+  'last_active_date',
+  'referral_code',
+  'created_at',
+  'updated_at',
+]);
+
+/**
+ * Strip every field that isn't in the whitelist before persisting.
+ * Returns a fresh object so callers can't mutate it post-store.
+ */
+function sanitizeUserForStorage(
+  user: Record<string, unknown> | null | undefined,
+): Record<string, unknown> {
+  if (!user || typeof user !== 'object') return {};
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(user)) {
+    // Hard-stop on anything matching `password_*` — `password_hash`,
+    // `password_salt`, `password_changed_at` etc. Never persist these.
+    if (key.startsWith('password_')) continue;
+    if (key === 'is_banned' || key === 'is_locked') continue; // server-only state
+    if (SAFE_USER_FIELDS.has(key)) {
+      out[key] = value;
+    }
+  }
+  return out;
+}
+
+/**
+ * Persist a session to localStorage. The user blob is filtered through
+ * the {@link SAFE_USER_FIELDS} whitelist so credentials and other
+ * server-only state can never reach the browser's storage.
+ */
 export function storeSession(session: StoredSession): void {
   if (typeof window === 'undefined') return;
   try {
-    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    const safe = {
+      ...session,
+      user: sanitizeUserForStorage(
+        session.user as unknown as Record<string, unknown>,
+      ) as StoredSession['user'],
+    };
+    localStorage.setItem(SESSION_KEY, JSON.stringify(safe));
   } catch {}
+}
+
+/** Exported only for unit tests — DO NOT call from product code. */
+export function __sanitizeUserForStorageForTests(
+  user: Record<string, unknown> | null | undefined,
+): Record<string, unknown> {
+  return sanitizeUserForStorage(user);
 }
 
 /** Remove stored session (logout). */

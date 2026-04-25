@@ -49,11 +49,16 @@ export const dynamic = "force-dynamic";
 export async function POST(req: NextRequest) {
   // Log EVERY inbound hit before any other work so webhook_attempts
   // captures reach-our-edge-at-all vs never-heard-from-NOWPayments.
-  // The result field gets marked "processed" optimistically here; the
-  // downstream exit points (sig_invalid / parse_error / dup / other_error)
-  // each record their OWN row with the correct classification. Reading
-  // both rows for the same received_at window gives admin full picture.
-  void logWebhookAttempt({
+  // We `await` rather than fire-and-forget so the row is persisted
+  // before any return path — the rescue-sprint self-test (§1.4) was
+  // failing because `void` left the insert in flight when the handler
+  // had already responded and the test queried `webhook_attempts`.
+  //
+  // The result is marked "received" here; the downstream exit points
+  // (sig_invalid / parse_error / dup / processed) each record their
+  // OWN row with the correct classification. Reading both rows for
+  // the same signature_header gives admin the full picture.
+  await logWebhookAttempt({
     req,
     provider: "nowpayments",
     path: "/api/webhooks/nowpayments",
