@@ -30,8 +30,8 @@ const content: ExamLandingContent = {
     en: "Pass the Vienna Kenntnisprüfung on your first try.",
   },
   heroSubtitle: {
-    de: "Strukturierte Vorbereitung auf die österreichische Kenntnisprüfung (SIP 4 + SIP 5) — 7.566 Fragen aus 10 Fachgebieten, klinisch kommentiert, gebaut von Ärzt:innen, die selbst in deiner Lage waren.",
-    en: "Structured prep for the Austrian Kenntnisprüfung (SIP 4 + SIP 5) — 7,566 questions across 10 specialties, clinically annotated, built by doctors who've been in your position.",
+    de: "Strukturierte Vorbereitung auf die österreichische Kenntnisprüfung (SIP 4 + SIP 5) — 7.566 Fragen aus 10 Fachgebieten, klinisch kommentiert, destilliert aus dokumentierten offiziellen Wiener Prüfungsmaterialien seit 2016.",
+    en: "Structured prep for the Austrian Kenntnisprüfung (SIP 4 + SIP 5) — 7,566 questions across 10 specialties, clinically annotated, distilled from documented official Vienna exam materials since 2016.",
   },
   primaryCtaHref: "/quiz?exam=kenntnispruefung&free=1",
   primaryCtaLabel: {

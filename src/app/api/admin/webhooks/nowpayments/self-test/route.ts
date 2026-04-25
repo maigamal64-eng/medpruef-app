@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { adminRouteShell } from "@/lib/admin/shell";
+import { logAdminAction } from "@/lib/admin/audit";
 import { computeNowpaymentsSignature } from "@/lib/nowpayments";
 import { captureServerError } from "@/lib/sentry-capture";
 
@@ -41,7 +42,7 @@ export const dynamic = "force-dynamic";
 const SELF_TEST_ORDER_ID = "00000000-0000-4000-a000-000000000000"; // sentinel UUID
 
 export const POST = adminRouteShell(
-  async ({ req }) => {
+  async ({ req, actor }) => {
     const startedAt = Date.now();
 
     try {
@@ -220,6 +221,30 @@ export const POST = adminRouteShell(
         (status === 200 || status === 404) &&
         Boolean(attemptRow);
       const ok = okHappy || okFallback;
+
+      // Audit-log the self-test run so admin_audit_log captures every
+      // operational probe (review-2026-04-25-A3). Includes the verdict
+      // and timing — useful when investigating "why was the webhook
+      // self-test green at 14:00 then red at 16:00?"
+      await logAdminAction({
+        req,
+        actorId: actor.userId,
+        actorEmail: actor.email,
+        action: "nowpayments_webhook_self_test",
+        targetType: "system",
+        payload: {
+          ok,
+          phase: ok
+            ? "complete"
+            : fetchError
+              ? "fetch_failed"
+              : "verification_failed",
+          status,
+          processedRowInserted: Boolean(processedRow),
+          webhookAttemptsRowLogged: Boolean(attemptRow),
+          durationMs,
+        },
+      });
 
       return NextResponse.json({
         ok,

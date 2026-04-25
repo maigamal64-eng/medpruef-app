@@ -32,6 +32,7 @@ import Link from "next/link";
 import { t, getLang, setLang } from "@/lib/i18n";
 import { getStoredSession } from "@/lib/auth";
 import { VIENNA_EXAM_PARTS, getStoredExamSource } from "@/lib/topics";
+import { QUESTIONS } from "@/lib/content-truth";
 import { getAllTopicStats, type TopicStats } from "@/lib/weakness";
 import LanguageToggle from "@/components/LanguageToggle";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -55,8 +56,8 @@ const TOPIC_TOTALS: Record<string, number> = {
   Augenheilkunde: 399,
 };
 
-// Catalog total across all 3 exam types (2026-04-15).
-const TOTAL_QUESTIONS = 10993;
+// Catalog total — sourced from content-truth.ts SSoT (review-2026-04-25-B11).
+const TOTAL_QUESTIONS = QUESTIONS.total;
 
 interface TopicData {
   topic: string;

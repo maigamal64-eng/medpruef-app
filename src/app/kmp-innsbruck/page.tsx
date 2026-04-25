@@ -28,8 +28,8 @@ const content: ExamLandingContent = {
     en: "Pass the KMP Innsbruck on your first try.",
   },
   heroSubtitle: {
-    de: "Strukturierte Vorbereitung auf die Kumulative Modulprüfung der Med Uni Innsbruck — 3.091 Fragen aus 12 Fachgebieten, klinisch kommentiert, gebaut von Ärzt:innen, die den Weg der Nostrifikation selbst gegangen sind.",
-    en: "Structured prep for the Med Uni Innsbruck Cumulative Module Exam — 3,091 questions across 12 specialties, clinically annotated, built by doctors who've walked the nostrification path themselves.",
+    de: "Strukturierte Vorbereitung auf die Kumulative Modulprüfung der Med Uni Innsbruck — 3.091 Fragen aus 12 Fachgebieten, klinisch kommentiert, destilliert aus dokumentierten offiziellen KoalaMed-Prüfungsmaterialien.",
+    en: "Structured prep for the Med Uni Innsbruck Cumulative Module Exam — 3,091 questions across 12 specialties, clinically annotated, distilled from documented official KoalaMed exam materials.",
   },
   primaryCtaHref: "/quiz?exam=kmp_innsbruck&free=1",
   primaryCtaLabel: {

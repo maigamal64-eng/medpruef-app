@@ -31,6 +31,7 @@ import {
   Activity,
   AlertCircle,
   Clock,
+  CreditCard,
   Gauge,
   GitBranch,
   HeartPulse,
@@ -77,6 +78,7 @@ interface OverviewSnapshot {
     puyp_pending: number;
     flagged_open: number;
     webhook_failures_24h: number;
+    stuck_pending_24h: number;
     conversion_7d: number | null;
     crons: Record<string, { lastStatus: string; lastStartedAt: string | null }>;
     recent_events: Array<{
@@ -250,6 +252,9 @@ export default function AdminOverviewPage() {
           />
           <CronsTile crons={snapshot?.tiles.crons ?? {}} />
           <LiveFeedTile events={snapshot?.tiles.recent_events ?? []} />
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+          <StuckPendingTile initial={snapshot?.tiles.stuck_pending_24h ?? 0} />
         </div>
       </section>
     </AdminPageShell>
@@ -753,6 +758,51 @@ function FlaggedQuestionsTile({
 }
 
 // ═══ Platform Health tiles ════════════════════════════════════════
+
+/**
+ * Stuck-pending NOWPayments subscriptions (>24h old).
+ *
+ * Should be 0 in steady state. Every entry is either a user who
+ * abandoned at the BTC checkout screen or a webhook that never
+ * delivered. Clicking the tile drops you on the reconcile route
+ * (/admin/subscriptions) — POST /api/admin/subscriptions/reconcile-pending
+ * either resolves them via NOWPayments JWT auth or, with
+ * `?force_cancel_older_than_hours=24`, force-cancels the lot.
+ *
+ * Added 2026-04-25 (review-2026-04-25-A2). The post-PR-#7 prod tour
+ * found 8 stuck rows — bulk-cancelled directly in DB during that sprint.
+ */
+function StuckPendingTile({ initial }: { initial: number }) {
+  const [live, setLive] = useState(initial);
+  useEffect(() => setLive(initial), [initial]);
+  const tone = live > 0 ? "warn" : "success";
+  return (
+    <Tile
+      label="Stuck pending >24h"
+      icon={CreditCard}
+      tone={tone}
+      href="/admin/subscriptions?status=pending"
+      footer={
+        live > 0 ? (
+          <span>
+            <StatusDot tone="warn" size={6} />{" "}
+            <span className="ml-1">
+              Run reconcile or force-cancel via /admin/subscriptions.
+            </span>
+          </span>
+        ) : (
+          <span className="italic text-[var(--mp-fg-muted)]">
+            All pending checkouts are fresh (&lt;24h)
+          </span>
+        )
+      }
+    >
+      <div className="text-2xl font-semibold text-[var(--mp-fg)]">
+        <FormatInt value={live} />
+      </div>
+    </Tile>
+  );
+}
 
 function WebhookFailuresTile({
   initial,

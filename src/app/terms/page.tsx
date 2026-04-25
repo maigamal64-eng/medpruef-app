@@ -90,8 +90,18 @@ export default function TermsPage() {
         <h2>5. {lang === "de" ? "Abonnement und Zahlung" : "Subscription and Payment"}</h2>
         <p>
           {lang === "de"
-            ? "Die kostenlose Version bietet eingeschränkten Zugang. Pro-Abonnements werden monatlich berechnet und können jederzeit gekündigt werden. Bereits bezahlte Zeiträume werden nicht erstattet."
-            : "The free version offers limited access. Pro subscriptions are billed monthly and can be cancelled at any time. Already paid periods are not refunded."}
+            ? "Die kostenlose Version bietet eingeschränkten Zugang (150 Fragen pro Prüfungstyp). Bezahlte Tarife (Erster Monat €19, Juni-26-Kohorte €114, sowie 3-, 6- und 12-Monats-Tarife sobald Stripe live ist) werden einmalig oder als Abonnement berechnet."
+            : "The free version offers limited access (150 questions per exam type). Paid tiers (First Month €19, June 26 Cohort €114, plus 3-, 6-, and 12-month plans once Stripe goes live) are charged once or on a subscription basis."}
+        </p>
+        <p>
+          {lang === "de"
+            ? "7-Tage-Geld-zurück-Garantie: Du kannst innerhalb von 7 Tagen nach Kauf eine vollständige Rückerstattung per E-Mail an user-b7e46e80@example.com beantragen — keine Begründung nötig. Anträge werden innerhalb von 72 Stunden bearbeitet."
+            : "7-day money-back guarantee: You can request a full refund within 7 days of purchase by emailing user-b7e46e80@example.com — no reason required. Requests are processed within 72 hours."}
+        </p>
+        <p>
+          {lang === "de"
+            ? "Pass-Until-You-Pass: Auf der Juni-26-Kohorte (€114) und dem 12-Monats-Tarif (€229) verlängern wir deinen Zugang kostenlos, wenn du nach mindestens 70 % bearbeiteter Fragenbank durchfällst und einen offiziellen Bescheid einreichst (max. zwei Verlängerungen). Details: /faq."
+            : "Pass-Until-You-Pass: On the June 26 Cohort (€114) and 12-month plan (€229), we extend your access free if you fail after working through at least 70 % of the question bank and submit an official result (max. two extensions). Details at /faq."}
         </p>
       </section>
 

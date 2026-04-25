@@ -24,8 +24,12 @@ interface OnboardingProps {
   onComplete: (data: OnboardingData) => void;
 }
 
-const STEP_ICONS = [GraduationCap, Calendar, Target, BookOpen, Zap];
-const STEP_COUNT = 5;
+// Onboarding step 4 (Level) removed 2026-04-25 (review-2026-04-25-B6).
+// The audit found `data.level` was written to localStorage but read by
+// nobody — pure friction with no downstream consumer. Step 4 is now
+// Preferences (was step 5). 4 steps total.
+const STEP_ICONS = [GraduationCap, Calendar, Target, Zap];
+const STEP_COUNT = 4;
 
 const examPresets: { value: string; key: "onb_date_1month" | "onb_date_3months" | "onb_date_6months" | "onb_date_not_planned" | "onb_date_custom" }[] = [
   { value: "1month", key: "onb_date_1month" },
@@ -33,12 +37,6 @@ const examPresets: { value: string; key: "onb_date_1month" | "onb_date_3months" 
   { value: "6months", key: "onb_date_6months" },
   { value: "not_planned", key: "onb_date_not_planned" },
   { value: "custom", key: "onb_date_custom" },
-];
-
-const levels: { value: string; labelKey: "onb_level_beginner" | "onb_level_intermediate" | "onb_level_advanced"; descKey: "onb_level_beginner_desc" | "onb_level_intermediate_desc" | "onb_level_advanced_desc"; emoji: string }[] = [
-  { value: "beginner", labelKey: "onb_level_beginner", descKey: "onb_level_beginner_desc", emoji: "🌱" },
-  { value: "intermediate", labelKey: "onb_level_intermediate", descKey: "onb_level_intermediate_desc", emoji: "📚" },
-  { value: "advanced", labelKey: "onb_level_advanced", descKey: "onb_level_advanced_desc", emoji: "🎯" },
 ];
 
 const goalPresets = [10, 20, 30, 50];
@@ -60,8 +58,16 @@ export default function Onboarding({ lang = "de", onLangChange, onComplete }: On
   const isLast = step === STEP_COUNT - 1;
   const totalSteps = STEP_COUNT;
 
-  const titleKeys = ["onb_step1_title", "onb_step2_title", "onb_step3_title", "onb_step4_title", "onb_step5_title"] as const;
-  const subtitleKeys = ["onb_step1_subtitle", "onb_step2_subtitle", "onb_step3_subtitle", "onb_step4_subtitle", "onb_step5_subtitle"] as const;
+  // Step indices after removing Level (review-2026-04-25-B6):
+  //   0 = Exam (was onb_step1_*)
+  //   1 = Exam date (was onb_step2_*)
+  //   2 = Daily goal (was onb_step3_*)
+  //   3 = Preferences (was onb_step5_*)
+  // We deliberately skip onb_step4_* (Level) i18n keys — they remain in
+  // the bundle for legacy clients that pulled the old JS but receive
+  // the new copy bundle.
+  const titleKeys = ["onb_step1_title", "onb_step2_title", "onb_step3_title", "onb_step5_title"] as const;
+  const subtitleKeys = ["onb_step1_subtitle", "onb_step2_subtitle", "onb_step3_subtitle", "onb_step5_subtitle"] as const;
 
   const handleLangSwitch = (next: Lang) => {
     setActiveLang(next);
@@ -75,8 +81,7 @@ export default function Onboarding({ lang = "de", onLangChange, onComplete }: On
       case 0: return true;
       case 1: return data.examDate && (data.examDate !== "custom" || customDate);
       case 2: return (data.dailyGoal ?? 0) >= 5;
-      case 3: return !!data.level;
-      case 4: return true;
+      case 3: return true; // Preferences — language + dark mode have defaults
       default: return false;
     }
   };
@@ -88,7 +93,11 @@ export default function Onboarding({ lang = "de", onLangChange, onComplete }: On
     const completed: OnboardingData = {
       examSource: data.examSource || "kenntnispruefung",
       examDate,
-      level: data.level || "beginner",
+      // Default to "intermediate" so OnboardingData type stays compatible
+      // with anything that ever reads `level` (currently nothing does —
+      // see review-2026-04-25-B6) but legacy localStorage entries don't
+      // crash on reload.
+      level: data.level || "intermediate",
       dailyGoal: data.dailyGoal || 20,
       language: data.language || activeLang,
       darkMode: data.darkMode || false,
@@ -99,7 +108,6 @@ export default function Onboarding({ lang = "de", onLangChange, onComplete }: On
     localStorage.setItem("medpruef_profile", JSON.stringify({
       targetDate: examDate !== "not_planned" ? examDate : "",
       examSource: completed.examSource,
-      level: completed.level,
     }));
     if (completed.language) localStorage.setItem("medpruef-lang", completed.language);
     if (data.darkMode) {
@@ -122,8 +130,6 @@ export default function Onboarding({ lang = "de", onLangChange, onComplete }: On
   const stepLabel = t("onb_step_label")
     .replace("{current}", String(step + 1))
     .replace("{total}", String(totalSteps));
-
-  const selectedLevelLabel = levels.find((lv) => lv.value === data.level)?.labelKey;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--mp-oxford-blue)]/60 backdrop-blur-sm">
@@ -289,32 +295,8 @@ export default function Onboarding({ lang = "de", onLangChange, onComplete }: On
             </div>
           )}
 
-          {/* Step 4: Level */}
+          {/* Step 4: Preferences (was step 5; level step removed B6) */}
           {step === 3 && (
-            <div className="space-y-3">
-              {levels.map((level) => (
-                <button
-                  key={level.value}
-                  className={`w-full p-4 rounded-xl border-2 text-left transition-all ${
-                    data.level === level.value ? "border-[var(--mp-cta-blue)] bg-[var(--mp-cta-blue)]/5" : "border-[var(--mp-border)] hover:border-[var(--mp-fg-subtle)]"
-                  }`}
-                  onClick={() => setData({ ...data, level: level.value })}
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl">{level.emoji}</span>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-[var(--mp-fg)]">{t(level.labelKey)}</h3>
-                      <p className="text-sm text-[var(--mp-fg-subtle)]">{t(level.descKey)}</p>
-                    </div>
-                    {data.level === level.value && <CheckCircle2 className="w-5 h-5 text-[var(--mp-cta-blue)]" />}
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
-
-          {/* Step 5: Preferences */}
-          {step === 4 && (
             <div className="space-y-4">
               {/* Language */}
               <div className="p-4 rounded-xl border border-[var(--mp-border)]">
@@ -363,7 +345,6 @@ export default function Onboarding({ lang = "de", onLangChange, onComplete }: On
                   <p>{(EXAM_SOURCES.find((e) => e.id === data.examSource)?.badge ?? "📋")} {EXAM_SOURCES.find((e) => e.id === data.examSource)?.fullName ?? "SIP Kenntnisprüfung (Wien)"}</p>
                   <p>📅 {data.examDate === "not_planned" || !data.examDate ? t("onb_summary_not_planned") : data.examDate}</p>
                   <p>🎯 {data.dailyGoal || 20} {t("onb_summary_qpd")}</p>
-                  <p>📊 {selectedLevelLabel ? t(selectedLevelLabel) : t("onb_summary_not_selected")}</p>
                 </div>
               </div>
             </div>

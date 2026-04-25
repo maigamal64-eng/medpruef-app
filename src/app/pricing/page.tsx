@@ -429,8 +429,8 @@ export default function PricingPage() {
           <span className="mp-caption inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--mp-success-bg)] text-[var(--mp-viridian)] mb-5 normal-case tracking-[0.08em]">
             <Sparkles className="w-3.5 h-3.5" />
             {lang === "de"
-              ? "Juni-26-Kohorte — Plätze offen"
-              : "June 26 Cohort — seats open"}
+              ? "Juni-26-Kohorte — Anmeldung bis 22. Juni"
+              : "June 26 Cohort — sign up by June 22"}
           </span>
           <h2 className="mp-h1 mb-4 leading-[1.05]">
             {lang === "de"
@@ -439,8 +439,8 @@ export default function PricingPage() {
           </h2>
           <p className="mp-body text-[var(--mp-fg-muted)] max-w-2xl mx-auto">
             {lang === "de"
-              ? "Die einzige Prüfungsvorbereitung, die speziell für die österreichische Kenntnisprüfung, KMP und Pharmakologie gebaut wurde. Gebaut von Ärzt:innen, die selbst in deiner Lage waren."
-              : "The only exam prep built specifically for Austria's Kenntnisprüfung, KMP & Pharmakologie. Built by doctors who've been in your position."}
+              ? "Die einzige Prüfungsvorbereitung, speziell für Österreichs Kenntnisprüfung, KMP und Pharmakologie. Destilliert aus 10.992 dokumentierten offiziellen Prüfungsfragen — Wien seit 2016, KMP Innsbruck und Pharmakologie."
+              : "The only exam prep built specifically for Austria's Kenntnisprüfung, KMP & Pharmakologie. Distilled from 10,992 documented official exam questions — Vienna since 2016, KMP Innsbruck and Pharmakologie."}
           </p>
         </section>
 
@@ -465,6 +465,46 @@ export default function PricingPage() {
             onCheckout={openFirstMonthDialog}
             loading={checkoutLoading === "first_month"}
           />
+        </section>
+
+        {/* ══════════ Cost-anchor strip ══════════
+            Anchors €114 against the real-world numbers a med doctor
+            already knows: ~€370 per Kenntnisprüfung re-sit fee + ~€5,000
+            forgone Assistenzarzt salary per delayed half-year (Funnel
+            agent §9, Conversion Psychology agent §1, review-2026-04-25-B2).
+
+            Numerical anchoring (Tversky/Kahneman): €114 next to
+            €370+€5,000 reads cheap; €114 against "textbook chapter"
+            reads as expense. This is the single biggest cheap-copy
+            lever in the funnel. Honest numbers — Kenntnisprüfung fee
+            is publicly listed by the Vienna Ärztekammer; salary range
+            is the standard Assistenzarzt-1 figure.
+          */}
+        <section className="max-w-5xl mx-auto px-4 lg:px-8 pb-3">
+          <div
+            className="rounded-xl px-5 py-4 text-sm md:text-[15px] leading-relaxed"
+            style={{
+              background: "var(--mp-warning-bg, rgba(244,162,97,0.08))",
+              border: "1px solid rgba(244,162,97,0.22)",
+              color: "var(--mp-fg-muted)",
+            }}
+          >
+            {lang === "de" ? (
+              <>
+                <strong className="text-[var(--mp-fg)]">Die Kenntnisprüfung kostet ~€370 pro Versuch.</strong>{" "}
+                Ein verlorenes halbes Jahr in Österreich:{" "}
+                <strong className="text-[var(--mp-fg)]">~€5.000 entgangenes Assistenzarzt-Gehalt.</strong>{" "}
+                Die Juni-26-Kohorte: <strong className="text-[var(--mp-viridian)]">114 € — einmalig.</strong>
+              </>
+            ) : (
+              <>
+                <strong className="text-[var(--mp-fg)]">The Kenntnisprüfung costs ~€370 per attempt.</strong>{" "}
+                Half a year delayed in Austria:{" "}
+                <strong className="text-[var(--mp-fg)]">~€5,000 in forgone Assistenzarzt salary.</strong>{" "}
+                The June 26 Cohort: <strong className="text-[var(--mp-viridian)]">114 € — one time.</strong>
+              </>
+            )}
+          </div>
         </section>
 
         {/* ══════════ Cohort featured card ══════════ */}
@@ -1078,8 +1118,8 @@ function CohortFeaturedCard({
           </h3>
           <p className="mp-body text-[var(--mp-fg-muted)] mb-5 max-w-xl">
             {lang === "de"
-              ? "Ein einmaliger Preis, sechs Monate Vollzugang auf Kenntnisprüfung, KMP und Pharmakologie. Wenn du durchfällst, verlängern wir kostenlos — ohne Cash-Refund, ohne Kleingedrucktes. Aktiviert in Minuten, keine Kreditkarte."
-              : "One upfront price, six months of full access across Kenntnisprüfung, KMP and Pharmakologie. If you fail, we extend your access free — no cash refund, no fine print. Activated in minutes, no credit card."}
+              ? "Ein einmaliger Preis, sechs Monate Vollzugang auf Kenntnisprüfung, KMP und Pharmakologie. Sieben Tage Geld-zurück-Garantie auf jede Bestellung. Wenn du nach 7 Tagen weiter lernst und dann durchfällst, verlängern wir deinen Zugang kostenlos — keine Cash-Rückerstattung in dem Fall, dafür Pass-Until-You-Pass. Aktiviert in Minuten, keine Kreditkarte."
+              : "One upfront price, six months of full access across Kenntnisprüfung, KMP and Pharmakologie. 7-day money-back guarantee on every purchase. If you keep studying past day 7 and later fail, we extend your access free — no cash refund at that point, but Pass-Until-You-Pass kicks in. Activated in minutes, no credit card."}
           </p>
 
           {/* PUYP badge — prominent */}
@@ -1174,8 +1214,8 @@ function CohortFeaturedCard({
 
           <p className="mp-small text-[var(--mp-fg-subtle)] text-center">
             {lang === "de"
-              ? "Sofort-Aktivierung. Pass-Until-You-Pass statt Geld-zurück."
-              : "Instant activation. Pass-Until-You-Pass instead of refund."}
+              ? "Sofort-Aktivierung · 7-Tage-Geld-zurück-Garantie · Pass-Until-You-Pass."
+              : "Instant activation · 7-day money-back guarantee · Pass-Until-You-Pass."}
           </p>
         </div>
       </div>
@@ -1383,8 +1423,8 @@ function PuypBlock({ lang }: { lang: Lang }) {
       </h3>
       <p className="text-sm text-[var(--mp-fg-muted)] mb-5 max-w-2xl leading-relaxed">
         {lang === "de"
-          ? "Keine Cash-Rückerstattung — wir investieren stattdessen in dein Bestehen. Gilt nur für die Juni-26-Kohorte und den 12-Monats-Tarif."
-          : "No cash refund — we invest in your pass instead. Applies to the June 26 Cohort and the 12-month plan only."}
+          ? "Zwei Schutz-Ebenen: 7-Tage-Geld-zurück-Garantie auf jede Bestellung — und wenn du nach 7 Tagen weiter lernst und dann beim ersten Versuch durchfällst, verlängern wir deinen Zugang kostenlos (Pass-Until-You-Pass). PUYP gilt für die Juni-26-Kohorte und den 12-Monats-Tarif."
+          : "Two layers of protection: 7-day money-back guarantee on every purchase — and if you keep studying past day 7 and later fail your first attempt, we extend your access free (Pass-Until-You-Pass). PUYP applies to the June 26 Cohort and the 12-month plan."}
       </p>
 
       <ul className="space-y-2 mb-5">

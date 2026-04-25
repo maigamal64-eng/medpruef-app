@@ -46,10 +46,53 @@ export interface PaywallCopyArgs {
    * future per-exam tuning; currently unused but kept in the signature so
    * callers don't have to churn when we do wire it. */
   examLabel?: string;
+  /**
+   * Per-user stats injected into the milestone intro to surface the
+   * endowment effect (review-2026-04-25-B4). When provided, the intro
+   * reads "Du hast 47 Fragen beantwortet · 71 % richtig" instead of the
+   * generic milestone line. Endowment effect (Thaler 1980): users
+   * value work-in-progress ~2× more than identical work they could
+   * have. The numbers are the user's own labour, served back to them
+   * at peak commitment cost. Source: conversion-psych audit critical #2.
+   *
+   * All fields optional — when undefined, the milestone intro falls
+   * back to the original copy. Pass an explicit `0` to suppress that
+   * stat from the rendered string.
+   */
+  stats?: {
+    answered?: number;
+    correct?: number;
+    accuracyPct?: number;
+    streakDays?: number;
+    topicsTouched?: number;
+  };
 }
 
-export function getPaywallCopy({ lang }: PaywallCopyArgs): PaywallCopy {
+export function getPaywallCopy({ lang, stats }: PaywallCopyArgs): PaywallCopy {
   const de = lang === "de";
+
+  // Build a stats line from whatever fields the caller passed. Skips
+  // any undefined or zero entry. If nothing usable, returns null and
+  // the milestone intro falls back to the generic copy.
+  const buildStatsLine = (): string | null => {
+    if (!stats) return null;
+    const parts: string[] = [];
+    if (stats.answered != null && stats.answered > 0) {
+      parts.push(de ? `${stats.answered} Fragen beantwortet` : `${stats.answered} questions answered`);
+    }
+    if (stats.accuracyPct != null && stats.accuracyPct > 0) {
+      parts.push(de ? `${stats.accuracyPct} % richtig` : `${stats.accuracyPct}% correct`);
+    }
+    if (stats.topicsTouched != null && stats.topicsTouched > 0) {
+      parts.push(de ? `${stats.topicsTouched} Themen` : `${stats.topicsTouched} topics`);
+    }
+    if (stats.streakDays != null && stats.streakDays > 0) {
+      parts.push(de ? `${stats.streakDays}-Tage-Streak` : `${stats.streakDays}-day streak`);
+    }
+    if (parts.length === 0) return null;
+    return parts.join(" · ");
+  };
+  const statsLine = buildStatsLine();
 
   return {
     title: de
@@ -81,12 +124,20 @@ export function getPaywallCopy({ lang }: PaywallCopyArgs): PaywallCopy {
       ? "Keine automatische Verlängerung ohne Ankündigung. Kündigung mit 1-Klick."
       : "No silent auto-renewal. Cancel with one click.",
 
-    milestoneIntro: de
-      ? "Du hast die 150 kostenlosen Fragen für diese Prüfung durchgearbeitet."
-      : "You finished the 150 free questions for this exam.",
+    milestoneIntro: statsLine
+      ? de
+        ? `Du hast es geschafft: ${statsLine}.`
+        : `You've made it: ${statsLine}.`
+      : de
+        ? "Du hast die 150 kostenlosen Fragen für diese Prüfung durchgearbeitet."
+        : "You finished the 150 free questions for this exam.",
 
-    milestoneFollowup: de
-      ? "Das ist ein Meilenstein — jetzt kommt der wichtige Teil."
-      : "That's a milestone — now comes the meaningful part.",
+    milestoneFollowup: statsLine
+      ? de
+        ? "Das ist deine Arbeit. Mit Pro behältst du alles und schaltest die restlichen Fragen frei."
+        : "That's your own work. With Pro you keep all of it and unlock the rest."
+      : de
+        ? "Das ist ein Meilenstein — jetzt kommt der wichtige Teil."
+        : "That's a milestone — now comes the meaningful part.",
   };
 }

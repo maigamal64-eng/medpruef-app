@@ -317,13 +317,13 @@ export default function ExamLandingShell({ content }: { content: ExamLandingCont
               <div>
                 <p className="font-display font-bold text-[var(--mp-fg)]">
                   {L === "de"
-                    ? "Gebaut von Ärzt:innen"
-                    : "Built by doctors"}
+                    ? "Aus offiziellen Prüfungen"
+                    : "From official exams"}
                 </p>
                 <p className="text-xs text-[var(--mp-fg-muted)]">
                   {L === "de"
-                    ? "die selbst in deiner Lage waren"
-                    : "who've been in your position"}
+                    ? "10.992 dokumentierte Fragen, nichts erfunden"
+                    : "10,992 documented questions, nothing invented"}
                 </p>
               </div>
             </div>

@@ -113,7 +113,7 @@ export default function QuestionExplanation({
           </p>
           <p className="text-xs text-[var(--mp-fg-subtle)]">
             {lang === "de"
-              ? "Tippen Sie auf „KI-Erklärung“ für eine KI-generierte Erklärung."
+              ? "Tippe auf „KI-Erklärung“ für eine KI-generierte Erklärung."
               : "Tap \u201cAI Explanation\u201d for an AI-generated explanation."}
           </p>
         </div>

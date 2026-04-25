@@ -1,9 +1,11 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Dialog } from '@/components/ui'
 import { Lock, ShieldCheck, Check } from 'lucide-react'
 import { getPaywallCopy } from '@/lib/paywall-copy'
+import { getStoredSession } from '@/lib/auth'
 
 /**
  * PaywallUpgradeModal — shown when a free-tier user hits the 150-question
@@ -40,7 +42,37 @@ export default function PaywallUpgradeModal({
   utmSource = 'paywall_modal',
   lang = 'de',
 }: PaywallUpgradeModalProps) {
-  const copy = getPaywallCopy({ lang, examLabel })
+  // Pull the user's own labour stats so the milestone intro reflects
+  // them at the friction moment (review-2026-04-25-B4 — endowment
+  // effect). Reads from the session blob (denormalized values stamped
+  // at last login) — no extra fetch needed. If the session is fresh
+  // and gam stats haven't propagated, falls back to the generic
+  // milestone copy in paywall-copy.
+  const [stats, setStats] = useState<
+    { answered?: number; accuracyPct?: number; streakDays?: number } | undefined
+  >(undefined)
+  useEffect(() => {
+    if (!open) return
+    try {
+      const s = getStoredSession()
+      const g = s?.gamification
+      if (!g) return
+      const answered = g.total_questions_answered ?? 0
+      const accuracyPct =
+        answered > 0 && (g.total_correct ?? 0) >= 0
+          ? Math.round(((g.total_correct ?? 0) / answered) * 100)
+          : 0
+      const streakDays = g.current_streak ?? 0
+      setStats({
+        answered: answered > 0 ? answered : undefined,
+        accuracyPct: accuracyPct > 0 ? accuracyPct : undefined,
+        streakDays: streakDays > 0 ? streakDays : undefined,
+      })
+    } catch {
+      /* fall back to generic copy */
+    }
+  }, [open])
+  const copy = getPaywallCopy({ lang, examLabel, stats })
   const pricingHref = `/pricing?utm_source=${encodeURIComponent(
     utmSource
   )}&utm_medium=modal&utm_campaign=paywall_v1${

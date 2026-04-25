@@ -122,6 +122,19 @@ export const GET = adminRouteShell(
     //    currently has no status column, so return 0.
     const webhookFailures24h = 0;
 
+    // 8b. Stuck pending subscriptions — pending NOWPayments rows older
+    //     than 24h. Surfaces operational debt: every entry here is either
+    //     a user who abandoned at the BTC checkout screen or a webhook
+    //     that never delivered. Should be 0 in steady state. The post-
+    //     PR-#7 audit (review-2026-04-25-A2) found 8; cancelling them is
+    //     handled by `/api/admin/subscriptions/reconcile-pending`.
+    const { count: stuckPending24h } = await sb
+      .from("subscriptions")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "pending")
+      .eq("payment_provider", "nowpayments")
+      .lt("created_at", twentyFourHoursAgo.toISOString());
+
     // 9. Free-to-paid conversion (rolling 7d) — signups vs active new subs.
     const [{ count: signups7d }, { count: newPaid7d }] = await Promise.all([
       sb
@@ -188,6 +201,7 @@ export const GET = adminRouteShell(
         puyp_pending: puypPending || 0,
         flagged_open: flaggedOpen || 0,
         webhook_failures_24h: webhookFailures24h,
+        stuck_pending_24h: stuckPending24h || 0,
         conversion_7d: conversion7d,
         crons: cronMap,
         recent_events: recentEvents || [],

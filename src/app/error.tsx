@@ -132,7 +132,7 @@ export default function AppErrorBoundary({ error, reset }: ErrorBoundaryProps) {
             Zur Startseite
           </Link>
           <a
-            href={`mailto:support@medpruf.com?subject=Fehlerbericht${
+            href={`mailto:user-b7e46e80@example.com?subject=Fehlerbericht${
               error.digest ? ` (Ref: ${error.digest})` : ""
             }&body=${encodeURIComponent(
               `Beschreibung: \n\nFehler: ${error.message}${

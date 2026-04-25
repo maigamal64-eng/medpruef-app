@@ -27,6 +27,7 @@ import { getTopicConfig } from "@/lib/topics";
 import { t, getLang, setLang } from "@/lib/i18n";
 import { getStoredSession } from "@/lib/auth";
 import { getStoredExamSource } from "@/lib/topics";
+import { QUESTIONS } from "@/lib/content-truth";
 import LanguageToggle from "@/components/LanguageToggle";
 import ThemeToggle from "@/components/ThemeToggle";
 import Sidebar from "@/components/Sidebar";
@@ -368,8 +369,11 @@ const TOPIC_TOTALS: Record<string, number> = {
   "Augenheilkunde": 399,
 };
 
-// Catalog total across all 3 exam types as of 2026-04-15
-const TOTAL_QUESTIONS = 10993;
+// Catalog total across all 3 exam types — sourced from content-truth.ts
+// SSoT (review-2026-04-25-B11). Replaces stale hard-coded 10993 that
+// missed PR #7's 10,993→10,992 sweep and slightly under-reported
+// completion percentages.
+const TOTAL_QUESTIONS = QUESTIONS.total;
 
 export default function ProgressPage() {
   const [lang, setLangState] = useState<Lang>("de");

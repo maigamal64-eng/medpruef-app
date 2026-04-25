@@ -24,10 +24,11 @@
  * confirmation copy — Stripe Atlas eta + user-b7e46e80@example.com escape.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Dialog, DialogFooter } from "@/components/ui";
-import { ShieldCheck, RefreshCw, Receipt, Mail, X } from "lucide-react";
+import { ShieldCheck, RefreshCw, Receipt, Mail, MessageCircle, X } from "lucide-react";
 import { authFetch as fetch } from "@/lib/authFetch";
+import { formatEuro } from "@/lib/content-truth";
 
 type Lang = "de" | "en";
 type TierKey =
@@ -66,7 +67,11 @@ function tierSummary(tier: TierKey, lang: Lang): TierSummary {
         lang === "de"
           ? "Juni-26-Kohorte — 6 Monate Vollzugriff mit PUYP-Garantie"
           : "June 26 Cohort — 6 months full access with PUYP guarantee",
-      priceLabel: "114 EUR",
+      // formatEuro from content-truth.ts emits the canonical "114 €" form
+      // (number + space + €). The pre-checkout dialog is the highest-stakes
+      // surface in the funnel — currency-format drift here is the worst place
+      // to break the COPY-BUNDLE rule (review-2026-04-25-B8).
+      priceLabel: formatEuro(11400),
       durationLabel: lang === "de" ? "einmalig (6 Monate Zugang)" : "one-time (6 months access)",
       inclusionLine:
         lang === "de"
@@ -78,7 +83,7 @@ function tierSummary(tier: TierKey, lang: Lang): TierSummary {
   if (tier === "first_month_19") {
     return {
       planLabel: lang === "de" ? "Erster Monat — MedPrüf Pro testen" : "First Month — try MedPrüf Pro",
-      priceLabel: "19 EUR",
+      priceLabel: formatEuro(1900),
       durationLabel:
         lang === "de"
           ? "einmalig · keine automatische Verlängerung"
@@ -112,13 +117,31 @@ export function PreCheckoutTrustDialog({
 }: PreCheckoutTrustDialogProps) {
   const summary = tierSummary(tier, lang);
   const [showNoCrypto, setShowNoCrypto] = useState(false);
+  // Double-click guard (review-2026-04-25-B8). The parent's onConfirm
+  // closes the dialog AND fires `POST /api/checkout/nowpayments` — that
+  // POST takes 5-10s. A user clicking twice in that window can hit the
+  // 5/10min rate limit and silently fail. We lock the button locally
+  // and show "Erstelle Rechnung..." until the dialog unmounts.
+  const [confirming, setConfirming] = useState(false);
+  const confirmingRef = useRef(false);
 
-  // Reset the "Ich habe keine Krypto" sub-state whenever the parent
-  // opens or closes. Prevents stale form fields surviving across
-  // dialog mounts.
+  // Reset the "Ich habe keine Krypto" sub-state + the confirming flag
+  // whenever the parent opens or closes. Prevents stale state surviving
+  // across dialog mounts.
   useEffect(() => {
-    if (!open) setShowNoCrypto(false);
+    if (!open) {
+      setShowNoCrypto(false);
+      setConfirming(false);
+      confirmingRef.current = false;
+    }
   }, [open]);
+
+  const handleConfirm = () => {
+    if (confirmingRef.current) return;
+    confirmingRef.current = true;
+    setConfirming(true);
+    onConfirm();
+  };
 
   const title =
     lang === "de"
@@ -286,11 +309,32 @@ export function PreCheckoutTrustDialog({
         </details>
       </div>
 
+      {/* Live human escape — Telegram-deep-link "Stuck? DM [name]" line.
+          Funnel agent finding §9: a first-time crypto buyer who sees
+          a real human is 5-10× more likely to push through. The
+          existing dialog has the email path; this adds the faster
+          Telegram channel. Renders quietly above the footer so it's
+          there if needed but doesn't dominate the trust signals. */}
+      <p className="text-xs text-[var(--mp-fg-muted)] mb-3">
+        <MessageCircle className="w-3.5 h-3.5 inline mr-1 align-text-bottom" />
+        {lang === "de" ? "Unsicher? Schreib [name] direkt: " : "Unsure? Message [name] directly: "}
+        <a
+          href="https://t.me/owner_at"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[var(--mp-cta-blue)] underline"
+        >
+          @owner_at
+        </a>
+        {lang === "de" ? " · Antwort meist <30 Min." : " · usually replies in <30 min"}
+      </p>
+
       <DialogFooter>
         <button
           type="button"
           onClick={() => setShowNoCrypto(true)}
-          className="text-sm text-[var(--mp-cta-blue)] underline mr-auto"
+          disabled={confirming}
+          className="text-sm text-[var(--mp-cta-blue)] underline mr-auto disabled:opacity-50"
         >
           <Mail className="w-4 h-4 inline mr-1" />
           {lang === "de" ? "Ich habe keine Krypto" : "I don't have crypto"}
@@ -298,18 +342,24 @@ export function PreCheckoutTrustDialog({
         <button
           type="button"
           onClick={() => onOpenChange(false)}
-          className="mp-btn mp-btn-secondary"
+          disabled={confirming}
+          className="mp-btn mp-btn-secondary disabled:opacity-50"
         >
           {lang === "de" ? "Abbrechen" : "Cancel"}
         </button>
         <button
           type="button"
-          onClick={onConfirm}
-          className="mp-btn mp-btn-primary"
+          onClick={handleConfirm}
+          disabled={confirming}
+          className="mp-btn mp-btn-primary disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          {lang === "de"
-            ? "Verstanden — weiter zur Zahlung"
-            : "Understood — continue to payment"}
+          {confirming
+            ? lang === "de"
+              ? "Erstelle Rechnung …"
+              : "Creating invoice …"
+            : lang === "de"
+              ? "Verstanden — weiter zur Zahlung"
+              : "Understood — continue to payment"}
         </button>
       </DialogFooter>
     </Dialog>

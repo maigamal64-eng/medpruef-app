@@ -1,8 +1,13 @@
 import { NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { adminRouteShell } from "@/lib/admin/shell";
+import { logAdminAction } from "@/lib/admin/audit";
 import { captureServerError } from "@/lib/sentry-capture";
 import { TIERS, computeExpiry, formatCryptoCurrency } from "@/lib/nowpayments";
+import {
+  clearNowPaymentsJwtCache,
+  getNowPaymentsJwt,
+} from "@/lib/nowpayments/auth";
 
 export const dynamic = "force-dynamic";
 
@@ -88,17 +93,14 @@ const STATUS_RANK: Record<string, number> = {
   refunded: 5,
 };
 
-async function fetchWithKey<T>(
+async function fetchUpstream<T>(
   url: string,
-  apiKey: string
+  headers: Record<string, string>,
 ): Promise<{ ok: true; data: T } | { ok: false; status: number; body: string }> {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 8000);
   try {
-    const res = await fetch(url, {
-      headers: { "x-api-key": apiKey },
-      signal: ctrl.signal,
-    });
+    const res = await fetch(url, { headers, signal: ctrl.signal });
     const text = await res.text();
     if (!res.ok) {
       return { ok: false, status: res.status, body: text.slice(0, 300) };
@@ -113,6 +115,32 @@ async function fetchWithKey<T>(
   } finally {
     clearTimeout(timer);
   }
+}
+
+async function fetchWithKey<T>(url: string, apiKey: string) {
+  return fetchUpstream<T>(url, { "x-api-key": apiKey });
+}
+
+/**
+ * Same as `fetchUpstream` but for endpoints that require a Bearer JWT
+ * minted via `/v1/auth`. NOWPayments returns HTTP 401
+ * "Authorization header is empty (Bearer JWTtoken is required)" on
+ * these without a token — see review-2026-04-25-A2.
+ *
+ * On a 401, we transparently retry once after clearing the JWT cache
+ * — covers the case where NOWPayments rotated the password mid-token-
+ * lifetime. After that single retry we return the 401 response so the
+ * caller can degrade gracefully.
+ */
+async function fetchWithJwt<T>(url: string) {
+  let token = await getNowPaymentsJwt();
+  let res = await fetchUpstream<T>(url, { Authorization: `Bearer ${token}` });
+  if (!res.ok && res.status === 401) {
+    clearNowPaymentsJwtCache();
+    token = await getNowPaymentsJwt();
+    res = await fetchUpstream<T>(url, { Authorization: `Bearer ${token}` });
+  }
+  return res;
 }
 
 /**
@@ -137,17 +165,33 @@ async function fetchWithKey<T>(
  */
 async function resolvePaymentState(
   invoiceId: string,
-  apiKey: string
+  apiKey: string,
 ): Promise<
   | { kind: "found"; payment_status: string; payment: UpstreamPayment | null }
   | { kind: "not_found"; details: string }
   | { kind: "error"; details: string }
 > {
   // 1. List payments tied to this invoice id.
-  const list = await fetchWithKey<{ data?: UpstreamPayment[] } | UpstreamPayment[]>(
-    `${NOWPAYMENTS_API}/v1/payment/?invoiceId=${encodeURIComponent(invoiceId)}&limit=10`,
-    apiKey
-  );
+  //
+  //    THIS endpoint is JWT-gated (review-2026-04-25-A2). x-api-key
+  //    fails with HTTP 401 "Authorization header is empty (Bearer
+  //    JWTtoken is required)". We mint a JWT lazily via
+  //    `getNowPaymentsJwt()` (cached 55 min in memory). If JWT auth
+  //    isn't configured (env vars missing), the caller logs the
+  //    degradation and we fall through to the fallback path below.
+  let list: Awaited<ReturnType<typeof fetchWithJwt<{ data?: UpstreamPayment[] } | UpstreamPayment[]>>>;
+  try {
+    list = await fetchWithJwt<{ data?: UpstreamPayment[] } | UpstreamPayment[]>(
+      `${NOWPAYMENTS_API}/v1/payment/?invoiceId=${encodeURIComponent(invoiceId)}&limit=10`,
+    );
+  } catch (err) {
+    // JWT mint itself failed (env missing or /v1/auth down). Degrade.
+    list = {
+      ok: false,
+      status: 0,
+      body: err instanceof Error ? err.message.slice(0, 300) : "jwt mint failed",
+    };
+  }
   if (list.ok) {
     // Response shape can be { data: [...] } or a bare array depending
     // on which API version we hit. Normalise both.
@@ -219,15 +263,32 @@ interface ReconcileOutcome {
 }
 
 export const POST = adminRouteShell(
-  async () => {
+  async ({ req, actor }) => {
     try {
       const apiKey = process.env.NOWPAYMENTS_API_KEY;
       if (!apiKey) {
         return NextResponse.json(
           { error: "NOWPAYMENTS_API_KEY not set" },
-          { status: 500 }
+          { status: 500 },
         );
       }
+
+      // Path B fallback (review-2026-04-25-A2). When the JWT path is
+      // misconfigured or NOWPayments is down, an admin can call:
+      //
+      //   POST /api/admin/subscriptions/reconcile-pending?force_cancel_older_than_hours=24
+      //
+      // to flip every pending row older than N hours to 'cancelled'
+      // with an audit-trail note. Useful for sweeping abandoned crypto
+      // checkouts that no upstream lookup will ever resolve. Default is
+      // 0 (disabled) so a normal reconcile run never auto-cancels.
+      const url = new URL(req.url);
+      const forceCancelHours = (() => {
+        const raw = url.searchParams.get("force_cancel_older_than_hours");
+        if (!raw) return 0;
+        const n = parseInt(raw, 10);
+        return Number.isFinite(n) && n > 0 && n < 24 * 365 ? n : 0;
+      })();
 
       const sb = getServiceClient();
 
@@ -266,6 +327,37 @@ export const POST = adminRouteShell(
             outcome: "skipped_no_invoice_id",
           });
           continue;
+        }
+
+        // Path B fast-path: if the admin asked to force-cancel anything
+        // older than N hours, do that BEFORE the upstream call. Saves a
+        // round-trip per row when sweeping a backlog of known-abandoned
+        // checkouts.
+        if (forceCancelHours > 0) {
+          const ageHours =
+            (Date.now() -
+              new Date((row.created_at as string) || new Date().toISOString()).getTime()) /
+            3_600_000;
+          if (ageHours >= forceCancelHours) {
+            await sb
+              .from("subscriptions")
+              .update({
+                status: "cancelled",
+                cancelled_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", subscriptionId)
+              .eq("status", "pending");
+            outcomes.push({
+              subscriptionId,
+              invoiceId,
+              tier,
+              amountCents: row.amount_cents as number | null,
+              upstreamStatus: "force_cancelled",
+              outcome: "cancelled",
+            });
+            continue;
+          }
         }
 
         const lookup = await resolvePaymentState(invoiceId, apiKey);
@@ -454,6 +546,26 @@ export const POST = adminRouteShell(
         ).length,
         error: outcomes.filter((o) => o.outcome === "error").length,
       };
+
+      // Audit-log the run so admin_audit_log gets a row per reconcile
+      // pass. Without this, the reconcile route was the single largest
+      // mutation route in the system that never wrote an audit row —
+      // exactly the gap that left admin_audit_log at 0 entries through
+      // PR #5/#6/#7 (review-2026-04-25-A3).
+      await logAdminAction({
+        req,
+        actorId: actor.userId,
+        actorEmail: actor.email,
+        action: "reconcile_pending_subscriptions",
+        targetType: "subscriptions",
+        payload: {
+          summary,
+          force_cancel_older_than_hours: forceCancelHours || null,
+          touched_subscription_ids: outcomes
+            .filter((o) => o.outcome === "activated" || o.outcome === "cancelled")
+            .map((o) => o.subscriptionId),
+        },
+      });
 
       return NextResponse.json({ ok: true, summary, outcomes });
     } catch (err) {

@@ -55,13 +55,47 @@ export function getMiniAppInitData(): string {
   return tg?.WebApp?.initData || '';
 }
 
-/** Retrieve stored session from localStorage (set after Login Widget auth). */
+/**
+ * Retrieve the stored session from localStorage (set after Login Widget auth).
+ *
+ * Defence-in-depth (review-2026-04-25-A1): the WRITE path
+ * (`storeSession` → `sanitizeUserForStorage`) strips secrets, but cached
+ * sessions persisted BEFORE that fix shipped (PR #6 / 2026-04-24) still
+ * carry `password_hash`, `password_salt`, etc. Until every existing user
+ * logs out + back in, those credentials leak to every script on
+ * medpruef.com (XSS, browser extensions, even ad-tech in dev).
+ *
+ * So the READ path now also runs the sanitizer. If the stored blob has
+ * any disallowed fields, we strip them AND write the cleaned version
+ * back to localStorage — so the next read is fast and the leak is
+ * permanently neutralized after a single page load. Idempotent: a
+ * blob that's already clean compares equal and we skip the write.
+ */
 export function getStoredSession(): StoredSession | null {
   if (typeof window === 'undefined') return null;
   try {
     const raw = localStorage.getItem(SESSION_KEY);
     if (!raw) return null;
-    return JSON.parse(raw) as StoredSession;
+    const parsed = JSON.parse(raw) as StoredSession;
+    if (!parsed?.user) return parsed;
+    const cleanUser = sanitizeUserForStorage(
+      parsed.user as unknown as Record<string, unknown>,
+    ) as StoredSession['user'];
+    // If the read blob had ANY disallowed field, persist the cleaned
+    // version so future scripts on this origin can't read it.
+    const originalKeys = Object.keys(parsed.user);
+    const cleanedKeys = Object.keys(cleanUser);
+    if (originalKeys.length !== cleanedKeys.length) {
+      const safe = { ...parsed, user: cleanUser };
+      try {
+        localStorage.setItem(SESSION_KEY, JSON.stringify(safe));
+      } catch {
+        // localStorage might be full / disabled; the in-memory return
+        // is still sanitized so the leak is closed for THIS render.
+      }
+      return safe;
+    }
+    return parsed;
   } catch {
     return null;
   }
@@ -122,9 +156,21 @@ function sanitizeUserForStorage(
   const out: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(user)) {
     // Hard-stop on anything matching `password_*` — `password_hash`,
-    // `password_salt`, `password_changed_at` etc. Never persist these.
+    // `password_salt`, `password_changed_at`, `password_reset_token`.
     if (key.startsWith('password_')) continue;
-    if (key === 'is_banned' || key === 'is_locked') continue; // server-only state
+    // Telegram bot HMAC secret and similar one-shot auth materials.
+    if (key === 'telegram_auth_secret' || key === 'telegram_login_token') continue;
+    // Server-only ban/lock state.
+    if (key === 'is_banned' || key === 'is_locked') continue;
+    // `role` is a deliberate carve-out: the audit denylist suggested
+    // stripping it, but every admin-gated route revalidates server-side
+    // via `requireAdmin()` (against the DB, not the request). Client
+    // `role` only controls UI affordances (sidebar entry, /admin
+    // redirect). Without it, admins see the public chrome until a
+    // round-trip resolves their role — degraded UX for zero security
+    // gain because the server wouldn't trust the client value anyway.
+    // Tracked as a session-refactor follow-up if we ever ship signed
+    // cookies; for now keep `role` and rely on server validation.
     if (SAFE_USER_FIELDS.has(key)) {
       out[key] = value;
     }

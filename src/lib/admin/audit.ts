@@ -84,6 +84,18 @@ export async function logAdminAction(args: LogAdminActionArgs): Promise<void> {
     });
 
     if (error) {
+      // Belt-and-braces visibility: Sentry catches the error AND we
+      // emit a console.error so it shows up in `vercel logs` even if
+      // Sentry's quota is exhausted or the integration is paused.
+      // Before adding console.error, an insert failure was silently
+      // swallowed and the only signal was admin_audit_log staying at
+      // 0 rows (review-2026-04-25-A3).
+      console.error("[admin/audit] insert failed", {
+        action: args.action,
+        actor: args.actorId,
+        message: error.message,
+        code: error.code,
+      });
       captureServerError(error, {
         route: "admin/audit",
         action: args.action,
@@ -93,6 +105,11 @@ export async function logAdminAction(args: LogAdminActionArgs): Promise<void> {
   } catch (err) {
     // Never let an audit write failure take down a request. The Sentry
     // capture above + this fallback means we get visibility either way.
+    console.error("[admin/audit] threw", {
+      action: args.action,
+      actor: args.actorId,
+      message: err instanceof Error ? err.message : String(err),
+    });
     captureServerError(err, {
       route: "admin/audit",
       action: args.action,

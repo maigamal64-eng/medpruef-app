@@ -4,6 +4,8 @@ import "./globals.css";
 import Script from "next/script";
 import TrackerInit from "@/components/TrackerInit";
 import ThemeProvider from "@/components/ThemeProvider";
+import LangAttributeSync from "@/components/LangAttributeSync";
+import LegalFooter from "@/components/LegalFooter";
 import PWAInstall from "@/components/PWAInstall";
 import FeedbackWidget from "@/components/FeedbackWidget";
 import GuestMigrationBanner from "@/components/GuestMigrationBanner";
@@ -244,6 +246,10 @@ export default function RootLayout({
         className={`${inter.className} ${plusJakarta.variable} bg-[var(--mp-surface-sunken)] text-[var(--mp-fg)] min-h-screen antialiased`}
       >
         <ThemeProvider />
+        {/* Keep <html lang> in sync with the user's chosen language. SSR
+            renders <html lang="de">; this client component flips it on
+            mount + on every setLang() event. review-2026-04-25-B9. */}
+        <LangAttributeSync />
         <TrackerInit />
         {/* TrackRouteChange uses useSearchParams; Suspense wrapper
             is required by Next.js 15 for components that read it. */}
@@ -264,6 +270,11 @@ export default function RootLayout({
           <ConsentGatedAnalytics />
           <OfflineIndicator />
           {children}
+          {/* LegalFooter — slim Impressum/Datenschutz/AGB/Kontakt strip
+              on authenticated pages. Auto-hides on /landing (full
+              footer), /login (pre-auth), /onboarding, and /admin/*
+              (own footer). review-2026-04-25-B13. */}
+          <LegalFooter />
         </ToastProvider>
       </body>
     </html>

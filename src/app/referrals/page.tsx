@@ -1136,13 +1136,13 @@ function SocialProofStrip({
       >
         <p className="text-sm font-semibold text-[var(--mp-fg)]">
           {lang === "de"
-            ? "Sei der erste! Die ersten 10 Empfehler bekommen einen Bonus."
-            : "Be the first! First 10 referrers get a bonus."}
+            ? "Du wärst die erste Empfehlung — der Code ist neu."
+            : "You'd be the first referral — the code is brand new."}
         </p>
         <p className="text-xs text-[var(--mp-fg-subtle)] mt-1">
           {lang === "de"
-            ? "Das Empfehlungsprogramm ist jung — jede geteilte Kopie zählt jetzt extra."
-            : "The referral program is young — every share counts extra right now."}
+            ? "Teile den Code mit einer Person aus deiner Lerngruppe — die Belohnung wird sofort nach Zahlung qualifiziert."
+            : "Share the code with one person from your study group — the reward qualifies immediately after they pay."}
         </p>
       </section>
     );

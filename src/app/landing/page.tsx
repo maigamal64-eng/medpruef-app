@@ -64,9 +64,14 @@ const COPY = {
       de: "oder kostenlos weiterlernen, bis du es schaffst.",
       en: "or study free until you do.",
     },
+    // Authority pivot (review-2026-04-25-B3): replaced "Gebaut von
+    // Ärzt:innen" — the founder is an Egyptian engineer, not a doctor;
+    // the audit found the claim falsifiable. Pivoted to data-as-credential
+    // (verifiable, doctor-respectable). Loss-frame line appended per
+    // review-2026-04-25-B2: anchors €19 to the €370 re-sit fee.
     subtitle: {
-      de: "Die einzige Prüfungsvorbereitung, die speziell für die österreichische Kenntnisprüfung, KMP und Pharmakologie gebaut wurde. Gebaut von Ärzt:innen, die selbst in deiner Lage waren.",
-      en: "The only exam prep built specifically for Austria's Kenntnisprüfung, KMP & Pharmakologie. Built by doctors who've been in your position.",
+      de: "Die einzige Prüfungsvorbereitung, speziell für Österreichs Kenntnisprüfung, KMP und Pharmakologie. Destilliert aus 7.566 Wien-Prüfungsfragen seit 2016, 3.091 KMP Innsbruck und 335 Pharmakologie. Eine Kenntnisprüfung kostet ~€370 pro Versuch — MedPrüf gibt es ab 19 €.",
+      en: "The only exam prep built specifically for Austria's Kenntnisprüfung, KMP and Pharmakologie. Distilled from 7,566 Vienna exam questions since 2016, 3,091 KMP Innsbruck and 335 Pharmakologie. A Kenntnisprüfung re-sit is ~€370 — MedPrüf starts at 19 €.",
     },
     cta_primary: {
       de: "Kostenlos starten",
@@ -773,8 +778,8 @@ function Hero({ lang, freeHref }: { lang: Lang; freeHref: string }) {
           style={{ fontSize: "13px" }}
         >
           {lang === "de"
-            ? "Gebaut von Ärzt:innen, die selbst in deiner Lage waren."
-            : "Built by doctors who've been in your position."}
+            ? "Aus 7.566 Wien-Prüfungsfragen seit 2016 destilliert."
+            : "Distilled from 7,566 Vienna exam questions since 2016."}
         </p>
         <span className="text-white/50 block" style={{ fontSize: "12px" }}>
           {COPY.hero.cta_note[lang]}
@@ -1368,8 +1373,8 @@ function Footer({ lang }: { lang: Lang }) {
           <p className="flex items-center gap-2">
             <span>medpruf.com</span>
             <span aria-hidden="true">·</span>
-            <a href="mailto:hello@medpruf.com" className="hover:text-white transition-colors">
-              hello@medpruf.com
+            <a href="mailto:user-b7e46e80@example.com" className="hover:text-white transition-colors">
+              user-b7e46e80@example.com
             </a>
             <span aria-hidden="true">·</span>
             <span className="inline-flex items-center gap-1">
