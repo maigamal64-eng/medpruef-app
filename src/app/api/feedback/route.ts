@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
 import { requireAdmin } from '@/lib/auth-guard'
 import { captureServerError } from '@/lib/sentry-capture'
+import { logAdminAction, resolveActorEmail } from '@/lib/admin/audit'
 
 export const dynamic = 'force-dynamic'
 
@@ -66,6 +67,22 @@ export async function PATCH(req: NextRequest) {
     if (admin_note !== undefined) update.admin_note = admin_note
     const { error } = await sb.from('user_feedback').update(update).eq('id', id)
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+    const actorEmail = await resolveActorEmail(guard.userId)
+    await logAdminAction({
+      req,
+      actorId: guard.userId,
+      actorEmail,
+      action: 'update_feedback_status',
+      targetType: 'user_feedback',
+      // user_feedback.id is bigserial, not UUID. Helper will stash it in payload.target_ref.
+      targetId: typeof id === 'number' ? id : String(id),
+      payload: {
+        new_status: status,
+        admin_note: admin_note ?? null,
+      },
+    })
+
     return NextResponse.json({ ok: true })
   } catch (err) {
     captureServerError(err, { route: '/api/feedback', method: 'PATCH', userId: guard.userId })

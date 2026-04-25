@@ -4,6 +4,7 @@ import { getServiceClient } from "@/lib/supabase";
 import { captureServerError } from "@/lib/sentry-capture";
 import { PUYP_MAX_EXTENSIONS } from "@/lib/puyp";
 import { suggestNextExpiresAt, type PuypExamType } from "@/lib/exam-dates";
+import { logAdminAction, resolveActorEmail } from "@/lib/admin/audit";
 
 export const dynamic = "force-dynamic";
 
@@ -239,6 +240,21 @@ export async function POST(req: NextRequest) {
         },
       });
 
+      const actorEmail = await resolveActorEmail(adminId);
+      await logAdminAction({
+        req,
+        actorId: adminId,
+        actorEmail,
+        action: "reject_puyp",
+        targetType: "exam_attempt",
+        targetId: attempt.id,
+        payload: {
+          reason,
+          exam_type: attempt.exam_type,
+          target_user_id: attempt.user_id,
+        },
+      });
+
       return NextResponse.json({
         ok: true,
         action: "rejected",
@@ -409,6 +425,25 @@ export async function POST(req: NextRequest) {
         previous_expires_at: previousExpiresAt,
         new_expires_at: newExpiresAt.toISOString(),
         extensions_used: used + 1,
+      },
+    });
+
+    const actorEmail = await resolveActorEmail(adminId);
+    await logAdminAction({
+      req,
+      actorId: adminId,
+      actorEmail,
+      action: "approve_puyp",
+      targetType: "exam_attempt",
+      targetId: attempt.id,
+      payload: {
+        via: "single",
+        subscription_id: sub.id,
+        target_user_id: sub.user_id,
+        previous_expires_at: previousExpiresAt,
+        new_expires_at: newExpiresAt.toISOString(),
+        extensions_used: used + 1,
+        exam_type: attempt.exam_type,
       },
     });
 

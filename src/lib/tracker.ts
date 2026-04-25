@@ -40,7 +40,19 @@ export type TrackEventType =
   | "scroll_depth"
   | "error"
   | "feature_use"
-  | "translation";
+  | "translation"
+  // Referral-funnel events (rescue-sprint §4, 2026-04-24).
+  // Dashboard card / /referrals page / post-quiz share chip all
+  // feed the same `referral_code_copied` bucket — `data.source` tells
+  // the analyst where the click originated.
+  | "referral_code_copied"
+  | "referral_share_prompt_shown"
+  | "referral_share_prompt_clicked"
+  // AI-chat paywall events (rescue-sprint §3, 2026-04-24).
+  // Fires when a free user hits /api/ai-chat and gets 402/tier-gated.
+  // Lets us measure paywall-hit rate per free user and verify the
+  // explicit "Pro feature" copy reduces "KI funktioniert nicht" feedback.
+  | "ai_chat_paywall_shown";
 
 interface QueuedEvent {
   type: TrackEventType;

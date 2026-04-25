@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { authFetch as fetch } from "@/lib/authFetch";
 import { t } from "@/lib/i18n";
 import { getLevelFromXP } from "@/lib/xp";
-import { Home, FileText, GraduationCap, BarChart3, TrendingUp, Map, Settings, Sparkles, PanelLeftClose, PanelLeftOpen, Layers, Crown, CalendarDays } from "lucide-react";
+import { Home, FileText, GraduationCap, BarChart3, TrendingUp, Map, Settings, Sparkles, PanelLeftClose, PanelLeftOpen, Layers, Crown, CalendarDays, Gift } from "lucide-react";
 import ExamSwitcherInline from "./ExamSwitcherInline";
 import {
   EXAM_SOURCES,
@@ -193,12 +193,42 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0 }: Sidebar
   const pathname = usePathname();
   const xpInfo = getLevelFromXP(totalXp);
   const [collapsed, setCollapsed] = useState(false);
+  // Rescue-sprint §4.7 (2026-04-24): amber nudge-dot on the
+  // Empfehlungen nav link until the user has copied their referral
+  // code at least once. `null` = unknown (don't show dot yet),
+  // `false` = NOT yet copied (show dot), `true` = copied (hide dot).
+  // Fetched from /api/referrals/status once per mount. Intentionally
+  // non-blocking — a failed fetch just hides the dot.
+  const [hasCopiedCode, setHasCopiedCode] = useState<boolean | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       setCollapsed(localStorage.getItem(COLLAPSE_KEY) === "1");
     }
   }, []);
+
+  // Fetch referral copy state — skipped for guests + when we have no
+  // userId at all (unauth surfaces borrow the sidebar too in theory).
+  useEffect(() => {
+    if (!userId || userId.startsWith("guest_")) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetch("/api/referrals/status", {
+          skipAuthRedirect: true,
+        });
+        if (!r.ok) return;
+        const data = await r.json();
+        if (cancelled) return;
+        setHasCopiedCode(Boolean(data?.referralCodeCopiedAt));
+      } catch {
+        /* non-critical — dot just stays hidden */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
 
   // Auto-hide on quiz/exam for distraction-free testing
   if (pathname.startsWith("/quiz") || pathname.startsWith("/exam")) {
@@ -211,7 +241,22 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0 }: Sidebar
     localStorage.setItem(COLLAPSE_KEY, next ? "1" : "0");
   };
 
-  const navItems = [
+  // Rescue-sprint §4.7: amber nudge-dot on Empfehlungen until the user
+  // has copied their code at least once. `hasCopiedCode === false`
+  // means we KNOW they haven't copied; `null` (still loading / guest)
+  // hides the dot. Only show dot for non-guest authed users.
+  const referralsDot: boolean = Boolean(
+    userId && !userId.startsWith("guest_") && hasCopiedCode === false
+  );
+
+  const navItems: Array<{
+    href: string;
+    icon: React.ReactNode;
+    label: string;
+    key: string;
+    dot?: boolean;
+    dotTooltip?: string;
+  }> = [
     { href: "/", icon: <Home className="w-5 h-5" />, label: t("home", lang), key: "home" },
     { href: userId ? `/quiz?topic=random&userId=${userId}` : "/quiz", icon: <FileText className="w-5 h-5" />, label: t("quiz", lang), key: "quiz" },
     { href: "/flashcards", icon: <Layers className="w-5 h-5" />, label: t("flashcards", lang), key: "flashcards" },
@@ -220,6 +265,14 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0 }: Sidebar
     { href: "/progress", icon: <TrendingUp className="w-5 h-5" />, label: t("progress", lang), key: "progress" },
     { href: "/curriculum", icon: <Map className="w-5 h-5" />, label: t("curriculum", lang), key: "curriculum" },
     { href: "/study-plan", icon: <CalendarDays className="w-5 h-5" />, label: lang === "de" ? "Lernplan" : "Study Plan", key: "study-plan" },
+    {
+      href: "/referrals",
+      icon: <Gift className="w-5 h-5" />,
+      label: lang === "de" ? "Empfehlungen" : "Referrals",
+      key: "referrals",
+      dot: referralsDot,
+      dotTooltip: lang === "de" ? "Dein Empfehlungscode wartet." : "Your referral code is waiting.",
+    },
     { href: "/pricing", icon: <Crown className="w-5 h-5" />, label: lang === "de" ? "Preise" : "Pricing", key: "pricing" },
   ];
 
@@ -299,14 +352,50 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0 }: Sidebar
 
       {/* Main Navigation */}
       <nav className={`${collapsed ? "px-2" : "px-3"} mt-3`}>
-        {navItems.map((item) => (
-          <Link key={item.key} href={item.href} className={navLinkClass(item.key)} title={collapsed ? item.label : undefined}>
-            <span className={isActive(item.key) ? "opacity-100" : "opacity-70"}>{item.icon}</span>
-            {!collapsed && (
-              <span className="text-[13px]">{item.label}</span>
-            )}
-          </Link>
-        ))}
+        {navItems.map((item) => {
+          // Compose the title: dot tooltip wins when present in collapsed
+          // mode, otherwise fall back to the label. Expanded sidebar
+          // shows the label inline so no title needed.
+          const titleAttr = collapsed
+            ? item.dot && item.dotTooltip
+              ? `${item.label} — ${item.dotTooltip}`
+              : item.label
+            : undefined;
+          return (
+            <Link
+              key={item.key}
+              href={item.href}
+              className={`${navLinkClass(item.key)} relative`}
+              title={titleAttr}
+              aria-describedby={item.dot ? `${item.key}-dot` : undefined}
+            >
+              <span className={`relative inline-flex ${isActive(item.key) ? "opacity-100" : "opacity-70"}`}>
+                {item.icon}
+                {/* Amber nudge-dot. Absolute-positioned on the icon so
+                    it follows in collapsed + expanded layouts. Uses the
+                    gamif-streak token (orange) to read as friendly-
+                    attention, not alert-red. */}
+                {item.dot && (
+                  <span
+                    id={`${item.key}-dot`}
+                    className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full ring-2 ring-[var(--mp-oxford-blue)]"
+                    style={{ background: "var(--mp-gamif-streak)" }}
+                    aria-hidden
+                  />
+                )}
+              </span>
+              {!collapsed && (
+                <span className="text-[13px]">{item.label}</span>
+              )}
+              {/* Screen-reader-only label for the dot. Avoids
+                  announcing it twice in collapsed mode (where the
+                  tooltip already carries the text). */}
+              {item.dot && item.dotTooltip && (
+                <span className="sr-only">— {item.dotTooltip}</span>
+              )}
+            </Link>
+          );
+        })}
       </nav>
 
       <div className="flex-1" />

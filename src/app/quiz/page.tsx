@@ -13,7 +13,7 @@ import { t, getLang, setLang } from "@/lib/i18n";
 import { trackEvent, trackPageView } from "@/lib/tracker";
 import { getStoredSession } from "@/lib/auth";
 import { recordAnswer } from "@/lib/weakness";
-import { Inbox, Clock, Trophy, Sparkles } from "lucide-react";
+import { Inbox, Clock, Trophy, Sparkles, Gift } from "lucide-react";
 import LanguageToggle from "@/components/LanguageToggle";
 import ThemeToggle from "@/components/ThemeToggle";
 import Sidebar from "@/components/Sidebar";
@@ -896,6 +896,135 @@ function QuizContent() {
 // Final completion card — replaces question card when quiz finishes
 // ───────────────────────────────────────────────────────────
 
+/**
+ * Post-quiz "Teile MedPrüf" chip. Rescue-sprint §4.6 (2026-04-24):
+ * a one-time, dismissible prompt at the bottom of the final-completion
+ * card that asks for a share — but only when it feels earned.
+ *
+ * Gates:
+ *   1. User answered ≥ 80% correct this session
+ *   2. User has NOT yet copied their referral code (checked via
+ *      /api/referrals/status — authoritative over localStorage)
+ *   3. We haven't shown this chip before on this device
+ *      (localStorage `medpruef_quiz_share_shown_v1`)
+ *
+ * Any of those failing → return null, no render.
+ *
+ * Analytics:
+ *   - `referral_share_prompt_shown` on first render
+ *   - `referral_share_prompt_clicked` when the user clicks "Teilen"
+ */
+function QuizSharePrompt({ lang }: { lang: Lang }) {
+  const LOCAL_STORAGE_KEY = "medpruef_quiz_share_shown_v1";
+  const [mounted, setMounted] = useState(false);
+  const [visible, setVisible] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    // Abort if we've shown this chip before on this device. Keeps the
+    // prompt from nagging users who already said "not now".
+    try {
+      if (localStorage.getItem(LOCAL_STORAGE_KEY) === "1") return;
+    } catch {
+      /* swallow quota errors */
+    }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await fetch("/api/referrals/status", {
+          skipAuthRedirect: true,
+        });
+        if (!r.ok) return;
+        const data = await r.json();
+        // Only show if the user has NOT yet copied their code. Once
+        // they've copied we assume they've started sharing already.
+        if (data?.referralCodeCopiedAt) return;
+        if (!cancelled) {
+          setVisible(true);
+          // Stamp localStorage and fire the shown event once.
+          try {
+            localStorage.setItem(LOCAL_STORAGE_KEY, "1");
+          } catch {
+            /* quota */
+          }
+          try {
+            trackEvent("referral_share_prompt_shown", {
+              source: "post_quiz",
+            });
+          } catch {
+            /* non-critical */
+          }
+        }
+      } catch {
+        /* non-critical */
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (!mounted || !visible || dismissed) return null;
+
+  const handleClick = () => {
+    try {
+      trackEvent("referral_share_prompt_clicked", { source: "post_quiz" });
+    } catch {
+      /* non-critical */
+    }
+  };
+
+  return (
+    <div
+      className="mt-4 rounded-2xl p-3 flex items-center gap-3 bg-[var(--mp-viridian)]/10 border border-[var(--mp-viridian)]/25 animate-fade-in"
+      role="region"
+      aria-label={
+        lang === "de"
+          ? "MedPrüf mit anderen teilen"
+          : "Share MedPrüf with others"
+      }
+    >
+      <div
+        className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+        style={{ background: "var(--mp-viridian)", color: "#FFFFFF" }}
+        aria-hidden
+      >
+        <Gift className="w-4 h-4" />
+      </div>
+      <div className="flex-1 min-w-0 text-left">
+        <p className="text-sm font-semibold text-[var(--mp-fg)] leading-snug">
+          {lang === "de"
+            ? "Gute Runde! Kennst du jemanden, der auch übt?"
+            : "Nice round! Know someone else prepping?"}
+        </p>
+        <p className="text-[11px] text-[var(--mp-fg-subtle)] mt-0.5">
+          {lang === "de"
+            ? "Teile deinen Empfehlungscode — wenn sie Pro werden, bekommt ihr beide einen Bonus."
+            : "Share your referral code — when they go Pro, you both get a bonus."}
+        </p>
+      </div>
+      <Link
+        href="/referrals"
+        onClick={handleClick}
+        className="mp-btn mp-btn--primary text-xs px-3 py-1.5 flex-shrink-0"
+      >
+        {lang === "de" ? "Teilen" : "Share"}
+      </Link>
+      <button
+        type="button"
+        onClick={() => setDismissed(true)}
+        className="text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg)] text-xs px-1 flex-shrink-0"
+        aria-label={lang === "de" ? "Schließen" : "Dismiss"}
+      >
+        ✕
+      </button>
+    </div>
+  );
+}
+
 function FinalCompletionCard({
   lang,
   correctCount,
@@ -984,6 +1113,12 @@ function FinalCompletionCard({
           {t("back_home", lang)}
         </Link>
       </div>
+
+      {/* Post-quiz share prompt — only appears at ≥80% accuracy AND
+          when the user hasn't yet copied their referral code AND we
+          haven't shown it on this device. Self-gating logic lives in
+          QuizSharePrompt. Rescue-sprint §4.6. */}
+      {accuracy >= 80 && <QuizSharePrompt lang={lang} />}
     </div>
   );
 }

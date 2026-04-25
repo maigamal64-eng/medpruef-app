@@ -252,21 +252,33 @@ Use **bold** for key terms, bullet points for clarity, and structured headings.`
       });
 
       if (!response.ok) {
-        // Distinguish tier/paywall (402) from outage (5xx) so the copy
-        // matches reality. 402 shouldn't normally hit after the isPro
-        // pre-check above, but we guard it anyway in case tier data
-        // drifts mid-session.
+        // Distinguish tier/paywall (402) from rate-limit (429) from a
+        // true outage (5xx) so the copy matches reality. The audit
+        // (2026-04-24) confirmed "nicht verfügbar" reads as a bug —
+        // each branch below must name the actual reason.
         const is402 = response.status === 402;
-        setMessages([{
-          role: "assistant",
-          content: is402
-            ? (lang === "de"
-                ? "Diese Erklärung ist noch nicht zwischengespeichert. Die automatische KI-Generierung ist ein Pro-Feature — du kannst aber weiter lernen, und sobald ein Pro-Nutzer sie anfragt, wird sie auch für dich kostenlos sichtbar."
-                : "This explanation isn't cached yet. Automatic AI generation is a Pro feature — but as soon as a Pro user requests one, it'll be free for you to read.")
-            : (lang === "de"
-                ? "KI-Assistent ist momentan nicht erreichbar. Die Frage und die statische Erklärung bleiben nutzbar — bitte später erneut versuchen."
-                : "AI assistant is momentarily unreachable. The question and its static explanation remain usable — please try again later."),
-        }]);
+        const is429 = response.status === 429;
+        let content: string;
+        if (is402) {
+          content = lang === "de"
+            ? "Diese Frage hat noch keine KI-Erklärung. Die automatische KI-Generierung ist Teil von MedPrüf Pro — sobald ein Pro-Nutzer sie anfragt, wird sie für dich kostenlos sichtbar. [Mehr erfahren](/pricing?gate=ai_chat)"
+            : "This question has no AI explanation yet. Automatic AI generation is part of MedPrüf Pro — as soon as a Pro user requests one, it becomes free for you to read. [Learn more](/pricing?gate=ai_chat)";
+          // Event — so we can measure paywall-hit rate per free user
+          // and verify the copy change actually reduces "KI funktioniert
+          // nicht" feedback.
+          try {
+            trackEvent("ai_chat_paywall_shown", { questionId, reason: "tier_gate" });
+          } catch {}
+        } else if (is429) {
+          content = lang === "de"
+            ? "Du hast das Tages-Limit für die KI-Erklärungen erreicht. Es wird nach Mitternacht UTC zurückgesetzt."
+            : "You've reached the daily limit for AI explanations. It resets after midnight UTC.";
+        } else {
+          content = lang === "de"
+            ? "Technisches Problem bei der KI-Generierung. Die Frage und die statische Erklärung funktionieren weiter — bitte melde den Fehler über das Feedback-Icon, falls er mehrfach auftritt."
+            : "Technical problem generating the AI answer. The question and its static explanation still work — please report via the feedback icon if the issue persists.";
+        }
+        setMessages([{ role: "assistant", content }]);
         return;
       }
 

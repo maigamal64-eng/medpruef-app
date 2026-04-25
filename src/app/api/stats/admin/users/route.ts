@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { requireAdmin } from "@/lib/auth-guard";
+import { logAdminAction, resolveActorEmail } from "@/lib/admin/audit";
 
 export const dynamic = "force-dynamic";
 
@@ -154,6 +155,22 @@ export async function PATCH(req: NextRequest) {
       }).eq("user_id", userId);
     }
 
+    const actorEmail = await resolveActorEmail(guard.userId);
+    await logAdminAction({
+      req,
+      actorId: guard.userId,
+      actorEmail,
+      action: updates.reset_gamification ? "reset_user_gamification" : "edit_user",
+      targetType: "user",
+      targetId: userId,
+      payload: {
+        applied_fields: Object.keys(userUpdates).filter((k) => k !== "updated_at"),
+        role: updates.role ?? null,
+        tier: updates.tier ?? null,
+        reset_gamification: !!updates.reset_gamification,
+      },
+    });
+
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("[admin/users PATCH]", err);
@@ -197,10 +214,34 @@ export async function DELETE(req: NextRequest) {
       const { error } = await db.from(t).delete().eq("user_id", userId);
       if (error) console.error(`[admin/users DELETE] clear ${t}:`, error);
     }
+    // Capture deleted user's email before the cascade wipes the row so
+    // the audit trail can reference who was erased.
+    const { data: deletedSnapshot } = await db
+      .from("users")
+      .select("email, role, tier")
+      .eq("id", userId)
+      .maybeSingle();
+
     // Delete user — remaining tables (answer_history, user_gamification,
     // user_question_progress) cascade from here.
     const { error } = await db.from("users").delete().eq("id", userId);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    const actorEmail = await resolveActorEmail(guard.userId);
+    await logAdminAction({
+      req,
+      actorId: guard.userId,
+      actorEmail,
+      action: "delete_user",
+      targetType: "user",
+      targetId: userId,
+      payload: {
+        deleted_email: deletedSnapshot?.email ?? null,
+        deleted_role: deletedSnapshot?.role ?? null,
+        deleted_tier: deletedSnapshot?.tier ?? null,
+        cascade_note: "GDPR erasure — cascading FKs handled cleanup",
+      },
+    });
 
     return NextResponse.json({ ok: true });
   } catch (err) {

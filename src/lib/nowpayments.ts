@@ -81,6 +81,31 @@ export const TIERS: Record<string, TierDefinition> = {
     puypEligible: true,
     referralPayoutCents: 7500, // €75 — lock #3 premium tier
   },
+  // ── €19 first-month trial — live on crypto rails (April 24 2026) ──
+  //
+  // ONE-TIME INVOICE, NO AUTO-RENEWAL. Every NOWPayments tier is a
+  // single invoice by design — we never bill a user twice off the
+  // same subscription row. On day 25 the /api/cron/trial-reminder cron
+  // emails the user to pick a longer tier; otherwise access simply
+  // lapses when expires_at passes.
+  //
+  // Rationale: €29/mo is too high a first ask with crypto friction +
+  // weak trust signals at launch. €19 one-time = "less than a
+  // textbook chapter" and matches the psychology of "try it for real
+  // for less than €20." Too short for PUYP — 30 days is not a prep
+  // window. Referral payout matches the monthly tier (€25) since the
+  // referee is at the bottom of the ladder.
+  first_month_19: {
+    id: "first_month_19",
+    priceCents: 1900, // €19
+    currency: "EUR",
+    durationMonths: 1,
+    humanName: "First month (one-time, no auto-renew)",
+    humanNameDe: "Erster Monat (einmalig, keine automatische Verlängerung)",
+    available: true, // LIVE for crypto checkout
+    puypEligible: false, // too short for PUYP
+    referralPayoutCents: 2500, // €25 — matches monthly tier
+  },
   // ── Four always-on tiers — waitlist until Stripe Atlas ──
   monthly: {
     id: "monthly",
@@ -223,7 +248,22 @@ export interface InvoicePayload {
   ipnCallbackUrl: string;
   successUrl: string;
   cancelUrl: string;
-  payCurrency?: string; // optional — if omitted, user picks on invoice page
+  /**
+   * Force the user to pay in the specified crypto. Defaults to
+   * `'usdttrc20'` (Tether on Tron — fastest + cheapest network).
+   * Pass `null` to let the user pick on the NOWPayments invoice page,
+   * but DON'T do this in production: a stable single-currency flow
+   * lets us pre-state the pay amount in the trust dialog and gives
+   * us a deterministic webhook + reconciliation path.
+   */
+  payCurrency?: string | null;
+  /**
+   * Lock the EUR↔crypto exchange rate at invoice creation time so the
+   * user sees the same number on our trust dialog and on the
+   * NOWPayments page (instead of seeing a "rate may change" disclaimer
+   * that erodes trust). Default true.
+   */
+  isFixedRate?: boolean;
 }
 
 export interface InvoiceResponse {
@@ -257,6 +297,18 @@ export async function createNowpaymentsInvoice(
     throw new Error("NOWPAYMENTS_API_KEY is not set");
   }
 
+  // Default pay_currency = USDT-TRC20 (Tether on Tron) — fastest +
+  // cheapest network, ~1 USD fee, ~30s confirm. Stable 1:1 to USD so
+  // the pre-checkout trust dialog can quote the exact amount the user
+  // will see on NOWPayments.
+  //
+  // is_fixed_rate=true locks the EUR→USDT rate at invoice creation
+  // so the user doesn't see a "rate may change" disclaimer mid-flow.
+  const payCurrency =
+    input.payCurrency === null
+      ? null
+      : (input.payCurrency || "usdttrc20");
+
   const body: Record<string, unknown> = {
     price_amount: input.priceAmount,
     price_currency: input.priceCurrency,
@@ -265,8 +317,9 @@ export async function createNowpaymentsInvoice(
     ipn_callback_url: input.ipnCallbackUrl,
     success_url: input.successUrl,
     cancel_url: input.cancelUrl,
+    is_fixed_rate: input.isFixedRate !== false,
   };
-  if (input.payCurrency) body.pay_currency = input.payCurrency;
+  if (payCurrency) body.pay_currency = payCurrency;
 
   const res = await fetch("https://api.nowpayments.io/v1/invoice", {
     method: "POST",

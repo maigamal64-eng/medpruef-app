@@ -141,6 +141,13 @@ export async function POST(req: NextRequest) {
     }
 
     // 2. Call NOWPayments to create the hosted invoice.
+    //
+    // We force `pay_currency='usdttrc20'` (Tether on Tron — fastest,
+    // cheapest network) and `is_fixed_rate=true` so the trust dialog
+    // can quote the exact USDT amount the user will see on NOWPayments
+    // without any "rate may change" disclaimer. The order_description
+    // includes "([name])" so the user sees our parent legal entity
+    // in the NOWPayments invoice header.
     let invoice;
     try {
       invoice = await createNowpaymentsInvoice(
@@ -148,10 +155,12 @@ export async function POST(req: NextRequest) {
           priceAmount: tier.priceCents / 100,
           priceCurrency: tier.currency,
           orderId: sub.id,
-          orderDescription: `MedPrüf ${tier.humanName} — paid access`,
+          orderDescription: `MedPrüf ([name]) — ${tier.humanName} — paid access`,
           ipnCallbackUrl,
           successUrl,
           cancelUrl,
+          payCurrency: "usdttrc20",
+          isFixedRate: true,
         },
         apiKey
       );

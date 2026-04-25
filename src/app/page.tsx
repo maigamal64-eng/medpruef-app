@@ -33,6 +33,7 @@ import Link from "next/link";
 import WhatsNewModal from "@/components/WhatsNewModal";
 import OrientationModal from "@/components/OrientationModal";
 import ReferralShareFloater from "@/components/ReferralShareFloater";
+import ReferralCodeCard from "@/components/ReferralCodeCard";
 import UserSurveyModal from "@/components/UserSurveyModal";
 import ResumeSessionCard from "@/components/ResumeSessionCard";
 import { useToast } from "@/components/ui";
@@ -666,6 +667,18 @@ export default function Home() {
 
           {/* ─── RESUME SESSION CARD (if any) ───────────────────────────── */}
           {!user.id.startsWith("guest_") && <ResumeSessionCard userId={user.id} lang={lang} />}
+
+          {/* ─── REFERRAL CODE CARD ─────────────────────────────────────
+             Rescue-sprint §4 (2026-04-24): show the code on day 1 so
+             users know the program exists. Passive card (not a floater),
+             no €-figures on first touch — the dollar numbers live on
+             /referrals where users land with intent. The card itself
+             self-gates against guests + against the announcement gate's
+             `referral_floater` surface; see ReferralCodeCard.tsx for
+             the coexistence rules with the gate. */}
+          {!user.id.startsWith("guest_") && (
+            <ReferralCodeCard userId={user.id} lang={lang} />
+          )}
 
           {/* ─── COACH SUGGESTION (calm viridian, replaces yellow warning)
              Rendered only when we have weak-topic signal. Content uses the

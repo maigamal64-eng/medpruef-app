@@ -55,6 +55,24 @@ export async function GET(req: NextRequest) {
       )
     }
 
+    // 1b) Fetch referral_code_copied_at from user_announcements. Drives
+    //     the amber nudge-dot on the sidebar and the "has the user
+    //     earned their first share yet?" copy on /referrals. Nullable
+    //     by design — a NULL means "never copied" and the nudge stays
+    //     lit. Non-fatal if the lookup fails (dot just defaults to lit).
+    let referralCodeCopiedAt: string | null = null
+    try {
+      const { data: ann } = await sb
+        .from('user_announcements')
+        .select('referral_code_copied_at')
+        .eq('user_id', userId)
+        .maybeSingle()
+      referralCodeCopiedAt =
+        (ann?.referral_code_copied_at as string | null | undefined) ?? null
+    } catch {
+      // Silently tolerate — the gate still works, the dot just stays lit.
+    }
+
     let code = (me.referral_code || '').toUpperCase()
     if (!code || !isValidReferralCodeFormat(code)) {
       let attempts = 0
@@ -309,6 +327,9 @@ export async function GET(req: NextRequest) {
       payoutWalletAddress: me.payout_wallet_address || null,
       payoutWalletChain: me.payout_wallet_chain || null,
       payoutWiseEmail: me.payout_wise_email || null,
+      // rescue-sprint §4: NULL → "never copied", lights the sidebar
+      // nudge-dot and gates the post-quiz share prompt.
+      referralCodeCopiedAt,
     })
   } catch (err) {
     console.error('[referrals/status]', err)

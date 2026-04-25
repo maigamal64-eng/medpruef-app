@@ -148,6 +148,10 @@ export default function AdminOverviewPage() {
       {/* Running-now ribbon — reads `jobs` Realtime + shows active jobs. */}
       <RunningNowRibbon />
 
+      {/* Admin-actions ribbon — confirms audit logging is healthy. Goes
+          amber if 0 rows have landed in 24h (possible silent breakage). */}
+      <AdminActionsRibbon />
+
       {/* ─── SECTION 1: Revenue & Growth ─────────────────────────── */}
       <section className="space-y-3">
         <SectionHeading
@@ -907,6 +911,159 @@ function LiveFeedTile({
           See full audit →
         </Link>
       </div>
+    </div>
+  );
+}
+
+// ═══ Admin-actions ribbon ═════════════════════════════════════════
+
+/**
+ * Audit-trail health indicator. Two values live in the header:
+ *   1. "Admin-Aktionen heute: N"  — count of admin_audit_log rows
+ *      created since local midnight.
+ *   2. "Letzte Aktion: vor Xm"   — how long ago the latest row landed.
+ *
+ * Goes amber + "Wird das Audit-Log geschrieben?" when N=0 for 24h — so
+ * [name] sees instantly if the audit pipe went quiet again (that's the
+ * regression that triggered the post-audit-rescue sprint).
+ *
+ * Hits /api/admin/audit-log/latest on mount + subscribes to
+ * admin_audit_log INSERT events for live updates.
+ */
+function AdminActionsRibbon() {
+  const [summary, setSummary] = useState<{
+    today_count: number;
+    last_action_at: string | null;
+    last_action: string | null;
+  } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [now, setNow] = useState(() => Date.now());
+
+  // Keep the relative timestamp fresh — re-render once a minute.
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+
+  // Initial fetch.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/admin/audit-log/latest?limit=1", {
+          cache: "no-store",
+        });
+        if (!res.ok) throw new Error(`audit-log ${res.status}`);
+        const body = (await res.json()) as {
+          today_count: number;
+          last_action_at: string | null;
+          last_action: string | null;
+        };
+        if (!cancelled) {
+          setSummary({
+            today_count: body.today_count || 0,
+            last_action_at: body.last_action_at,
+            last_action: body.last_action,
+          });
+          setLoading(false);
+        }
+      } catch {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Realtime bump on INSERT — every mutation landing in admin_audit_log
+  // triggers a local counter bump so the header stays live without
+  // polling.
+  useAdminRealtime("admin_audit_log", {
+    onEvent: (payload) => {
+      if (payload.eventType !== "INSERT") return;
+      const row = payload.new as Record<string, unknown> | undefined;
+      if (!row) return;
+      const createdAt = (row.created_at as string) || new Date().toISOString();
+      const action = (row.action as string) || "unknown";
+      // Rolling local count — we don't re-fetch the day bucket because
+      // the page refresh timer already keeps it honest every 60s.
+      setSummary((prev) => ({
+        today_count: (prev?.today_count ?? 0) + 1,
+        last_action_at: createdAt,
+        last_action: action,
+      }));
+      setNow(Date.now());
+    },
+  });
+
+  if (loading || !summary) return null;
+
+  const count = summary.today_count;
+  const latestAt = summary.last_action_at
+    ? new Date(summary.last_action_at).getTime()
+    : null;
+  const ageMinutes =
+    latestAt != null ? Math.max(0, Math.floor((now - latestAt) / 60_000)) : null;
+  const quietFor24h =
+    latestAt == null || now - latestAt > 24 * 60 * 60_000;
+
+  const tone: "warn" | "info" = quietFor24h && count === 0 ? "warn" : "info";
+  const toneColor = tone === "warn" ? "#F59E0B" : "#3B82F6";
+
+  const relativeLabel =
+    ageMinutes == null
+      ? "noch nichts geloggt"
+      : ageMinutes < 1
+        ? "vor <1 Min"
+        : ageMinutes < 60
+          ? `vor ${ageMinutes} Min`
+          : ageMinutes < 1440
+            ? `vor ${Math.floor(ageMinutes / 60)} Std`
+            : `vor ${Math.floor(ageMinutes / 1440)} Tag${
+                Math.floor(ageMinutes / 1440) === 1 ? "" : "en"
+              }`;
+
+  return (
+    <div
+      className="rounded-md border px-3 py-2 text-xs flex items-center gap-3 flex-wrap"
+      style={{
+        borderColor: `${toneColor}66`,
+        backgroundColor: `${toneColor}1a`,
+      }}
+      data-testid="admin-actions-ribbon"
+    >
+      <div
+        className="flex items-center gap-1.5 font-semibold"
+        style={{ color: toneColor }}
+      >
+        <Activity size={12} />
+        Admin-Aktionen heute
+      </div>
+      <div className="flex items-center gap-1 tabular-nums font-mono text-[var(--mp-fg)]">
+        <strong>{formatInt(count)}</strong>
+        <span className="text-[var(--mp-fg-muted)]">·</span>
+        <span>Letzte: {relativeLabel}</span>
+        {summary.last_action && (
+          <>
+            <span className="text-[var(--mp-fg-muted)]">·</span>
+            <span className="text-[var(--mp-fg-muted)]">
+              {summary.last_action}
+            </span>
+          </>
+        )}
+      </div>
+      {quietFor24h && count === 0 && (
+        <span className="ml-auto text-[var(--mp-warning)] italic">
+          Wird das Audit-Log geschrieben?
+        </span>
+      )}
+      <Link
+        href="/admin/audit"
+        className="ml-auto text-[var(--mp-viridian)] hover:underline"
+      >
+        Audit-Trail →
+      </Link>
     </div>
   );
 }

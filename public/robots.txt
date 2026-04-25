@@ -1,9 +1,11 @@
 User-agent: *
 Allow: /
-Allow: /landing
-Allow: /about
 
 Disallow: /api/
 Disallow: /admin/
+Disallow: /onboarding/
+Disallow: /dashboard/
+Disallow: /settings/
+Disallow: /profile/
 
 Sitemap: https://medpruf.com/sitemap.xml

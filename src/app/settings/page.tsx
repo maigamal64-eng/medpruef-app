@@ -32,6 +32,7 @@ import {
 } from "@/components/ui";
 import {
   ArrowRight,
+  Clock,
   CloudDownload,
   Crown,
   Database,
@@ -40,6 +41,7 @@ import {
   LogOut,
   Moon,
   Shield,
+  Sparkles,
   Sun,
   Target,
   Trash2,
@@ -103,6 +105,26 @@ export default function SettingsPage() {
   const [offlineDownloading, setOfflineDownloading] = useState(false);
   const [offlineClearOpen, setOfflineClearOpen] = useState(false);
 
+  // ── Active-subscription snapshot ─────────────────────────────────
+  // Populated from /api/user/subscription on mount. Drives the
+  // "Current plan" card in the Konto panel — specifically the €19
+  // first-month trial countdown and the day-25 "Pick your next plan"
+  // CTA. null = still loading, false = no active subscription, else
+  // the full snapshot.
+  const [activeSub, setActiveSub] = useState<
+    | null
+    | false
+    | {
+        tier: string;
+        tier_human_name: string;
+        tier_human_name_de: string;
+        expires_at: string | null;
+        days_remaining: number | null;
+        is_first_month_trial: boolean;
+        is_puyp_eligible_tier: boolean;
+      }
+  >(null);
+
   useEffect(() => {
     setLangState(getLang());
     setThemeState(getStoredTheme());
@@ -128,6 +150,29 @@ export default function SettingsPage() {
       .then(setOfflineCount)
       .catch(() => setOfflineCount(0));
     setOfflineLastSync(getLastSync(activeExam));
+
+    // Fetch active subscription snapshot — only for logged-in (non-
+    // guest) users, since guests have no server-side row. Failure modes
+    // here are non-critical (the settings page still works without a
+    // subscription card) so we silently fall back to "no active sub".
+    if (stored?.user?.id && !stored.user.id.startsWith("guest_")) {
+      authFetch("/api/user/subscription")
+        .then(async (r) => {
+          if (!r.ok) {
+            setActiveSub(false);
+            return;
+          }
+          const data = await r.json().catch(() => null);
+          if (data?.active && data.subscription) {
+            setActiveSub(data.subscription);
+          } else {
+            setActiveSub(false);
+          }
+        })
+        .catch(() => setActiveSub(false));
+    } else {
+      setActiveSub(false);
+    }
   }, []);
 
   /**
@@ -702,20 +747,29 @@ export default function SettingsPage() {
                   </div>
                 )}
 
-                {/* Current tier */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-semibold text-[var(--mp-fg)]">
-                      {lang === "de" ? "Aktueller Tarif" : "Current plan"}
-                    </p>
-                    <p className="text-xs text-[var(--mp-fg-subtle)] mt-0.5">
-                      {lang === "de" ? "Voller Zugang, kostenlos" : "Full access, free"}
-                    </p>
+                {/* Current tier / active subscription */}
+                {/* `activeSub` is null (loading), false (no sub), or
+                    the subscription object — the truthy check below is
+                    enough to narrow to the object branch. */}
+                {activeSub ? (
+                  <SubscriptionCard sub={activeSub} lang={lang} />
+                ) : (
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-[var(--mp-fg)]">
+                        {lang === "de" ? "Aktueller Tarif" : "Current plan"}
+                      </p>
+                      <p className="text-xs text-[var(--mp-fg-subtle)] mt-0.5">
+                        {lang === "de"
+                          ? "Voller Zugang, kostenlos"
+                          : "Full access, free"}
+                      </p>
+                    </div>
+                    <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-[var(--mp-success-bg)] text-[var(--mp-viridian)] text-xs font-semibold rounded-lg border border-[rgba(0,123,95,0.2)]">
+                      {tierLabel}
+                    </span>
                   </div>
-                  <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-[var(--mp-success-bg)] text-[var(--mp-viridian)] text-xs font-semibold rounded-lg border border-[rgba(0,123,95,0.2)]">
-                    {tierLabel}
-                  </span>
-                </div>
+                )}
 
                 {/* Pricing link */}
                 <Link
@@ -947,6 +1001,194 @@ export default function SettingsPage() {
             : "Any answers you recorded offline that have not yet been sent to the server will be deleted."}
         </Alert>
       </Dialog>
+    </div>
+  );
+}
+
+/* ═══════════════════════ SubscriptionCard ═══════════════════════ */
+
+/**
+ * Renders the user's active subscription inside the Konto panel.
+ *
+ * Special treatment for the €19 first-month trial (tier ==
+ * 'first_month_19'):
+ *   - Countdown chip showing days_remaining.
+ *   - At day 25+ OR when days_remaining <= 5, a prominent CTA invites
+ *     the user to pick a longer plan. "Pick your next plan" routes to
+ *     /pricing — we intentionally don't auto-redirect or pre-select, to
+ *     respect the "never auto-renew" promise.
+ *   - At any earlier point, a calmer "you're on the €19 trial" copy.
+ *
+ * Non-trial tiers (Cohort / Pro / etc.) show a simpler summary with
+ * the tier name, status, and expiry.
+ */
+function SubscriptionCard({
+  sub,
+  lang,
+}: {
+  sub: {
+    tier: string;
+    tier_human_name: string;
+    tier_human_name_de: string;
+    expires_at: string | null;
+    days_remaining: number | null;
+    is_first_month_trial: boolean;
+    is_puyp_eligible_tier: boolean;
+  };
+  lang: Lang;
+}) {
+  const humanName =
+    lang === "de" ? sub.tier_human_name_de : sub.tier_human_name;
+  const expiresLabel = sub.expires_at
+    ? new Date(sub.expires_at).toLocaleDateString(
+        lang === "de" ? "de-AT" : "en-GB",
+        { year: "numeric", month: "long", day: "numeric" },
+      )
+    : null;
+
+  const days = sub.days_remaining ?? 0;
+  // Day-25 reminder rule from the brief: at day 25+ of a 30-day trial
+  // (i.e. 5 or fewer days remaining), light up the "Pick your next
+  // plan" CTA. Defensive min(<=5, >0) so expired rows (0) don't flash
+  // the picker — that state should already have flipped via the cron.
+  const showTrialPicker =
+    sub.is_first_month_trial && days > 0 && days <= 5;
+
+  if (sub.is_first_month_trial) {
+    // ── €19 first-month trial card ──
+    return (
+      <div
+        className="rounded-[var(--mp-r-card)] p-5 flex flex-col gap-4"
+        style={{
+          background: "var(--mp-surface-sunken)",
+          border: `1px solid ${
+            showTrialPicker
+              ? "rgba(244,162,97,0.35)"
+              : "var(--mp-border-subtle)"
+          }`,
+        }}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold text-[var(--mp-fg-muted)] uppercase tracking-wide mb-1">
+              {lang === "de" ? "Aktueller Tarif" : "Current plan"}
+            </p>
+            <p className="text-base font-bold text-[var(--mp-fg)] flex items-center gap-2">
+              <Sparkles
+                className="w-4 h-4 text-[var(--mp-cta-blue)]"
+                aria-hidden
+              />
+              {humanName}
+            </p>
+            <p className="text-xs text-[var(--mp-fg-subtle)] mt-1">
+              {lang === "de"
+                ? "Einmalige Zahlung · keine automatische Verlängerung"
+                : "One-time payment · no auto-renewal"}
+            </p>
+          </div>
+          <span
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap"
+            style={{
+              background: showTrialPicker
+                ? "rgba(244,162,97,0.12)"
+                : "rgba(0,58,140,0.08)",
+              color: showTrialPicker
+                ? "var(--mp-warning)"
+                : "var(--mp-cta-blue)",
+              border: `1px solid ${
+                showTrialPicker
+                  ? "rgba(244,162,97,0.3)"
+                  : "rgba(0,58,140,0.22)"
+              }`,
+            }}
+          >
+            <Clock className="w-3 h-3" aria-hidden />
+            {days === 1
+              ? lang === "de"
+                ? "1 Tag übrig"
+                : "1 day left"
+              : lang === "de"
+                ? `${days} Tage übrig`
+                : `${days} days left`}
+          </span>
+        </div>
+
+        {expiresLabel && (
+          <p className="text-xs text-[var(--mp-fg-subtle)]">
+            {lang === "de"
+              ? `Zugang läuft am ${expiresLabel} aus.`
+              : `Access expires on ${expiresLabel}.`}
+          </p>
+        )}
+
+        {showTrialPicker ? (
+          <div
+            className="rounded-[var(--mp-r-input)] p-4 flex flex-col gap-3"
+            style={{
+              background: "var(--mp-surface-raised)",
+              border: "1px solid rgba(244,162,97,0.25)",
+            }}
+          >
+            <p className="text-sm font-semibold text-[var(--mp-fg)]">
+              {lang === "de"
+                ? "Wähle deinen nächsten Tarif"
+                : "Pick your next plan"}
+            </p>
+            <p className="text-xs text-[var(--mp-fg-muted)] leading-relaxed">
+              {lang === "de"
+                ? "Dein 1-Monats-Test läuft bald aus. Wir verlängern nichts automatisch — du entscheidest selbst, ob du weitermachst."
+                : "Your 1-month trial ends soon. Nothing will renew automatically — you decide whether to continue."}
+            </p>
+            <Link
+              href="/pricing"
+              className="mp-btn mp-btn--primary inline-flex items-center justify-center gap-2 self-start"
+            >
+              {lang === "de" ? "Tarife ansehen" : "See all plans"}
+              <ArrowRight className="w-3.5 h-3.5" aria-hidden />
+            </Link>
+          </div>
+        ) : (
+          <p className="text-xs text-[var(--mp-fg-muted)] leading-relaxed">
+            {lang === "de"
+              ? "Am Tag 25 schreiben wir dir. Wenn du vorher einen längeren Tarif wählst, aktiviert sich der beim Ende deines Tests automatisch."
+              : "We'll email you on day 25. If you pick a longer plan before then, it activates automatically when this trial ends."}
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  // ── Non-trial paid tier (Cohort / Pro) ──
+  return (
+    <div
+      className="flex items-center justify-between p-4 rounded-[var(--mp-r-input)] gap-3"
+      style={{
+        background: "var(--mp-success-bg)",
+        border: "1px solid rgba(0,123,95,0.2)",
+      }}
+    >
+      <div className="min-w-0">
+        <p className="text-xs font-semibold text-[var(--mp-viridian)] uppercase tracking-wide mb-1">
+          {lang === "de" ? "Aktueller Tarif" : "Current plan"}
+        </p>
+        <p className="text-sm font-bold text-[var(--mp-fg)] flex items-center gap-1.5">
+          <Crown
+            className="w-3.5 h-3.5 text-[var(--mp-viridian)] flex-shrink-0"
+            aria-hidden
+          />
+          {humanName}
+        </p>
+        {expiresLabel && (
+          <p className="text-xs text-[var(--mp-fg-subtle)] mt-0.5">
+            {lang === "de"
+              ? `Gültig bis ${expiresLabel}`
+              : `Valid until ${expiresLabel}`}
+          </p>
+        )}
+      </div>
+      <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-[var(--mp-surface-raised)] text-[var(--mp-viridian)] text-xs font-semibold rounded-lg border border-[rgba(0,123,95,0.25)] whitespace-nowrap">
+        {lang === "de" ? "Aktiv" : "Active"}
+      </span>
     </div>
   );
 }

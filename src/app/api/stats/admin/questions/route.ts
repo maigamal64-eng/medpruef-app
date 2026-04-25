@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { requireAdmin } from "@/lib/auth-guard";
+import { logAdminAction, resolveActorEmail } from "@/lib/admin/audit";
 
 export const dynamic = "force-dynamic";
 
@@ -123,6 +124,28 @@ export async function PATCH(req: NextRequest) {
 
     const { error } = await db.from("questions").update(safeUpdates).eq("id", questionId);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    const actorEmail = await resolveActorEmail(guard.userId);
+    const isActivityToggle =
+      typeof updates.is_active === "boolean" &&
+      Object.keys(safeUpdates).length === 1;
+    await logAdminAction({
+      req,
+      actorId: guard.userId,
+      actorEmail,
+      // question_id is an integer in the DB, so targetId goes to
+      // payload.target_ref via the helper's UUID check.
+      action: isActivityToggle
+        ? updates.is_active
+          ? "reactivate_question"
+          : "deactivate_question"
+        : "edit_question",
+      targetType: "question",
+      targetId: typeof questionId === "number" ? questionId : String(questionId),
+      payload: {
+        applied_fields: Object.keys(safeUpdates),
+      },
+    });
 
     return NextResponse.json({ ok: true });
   } catch (err) {

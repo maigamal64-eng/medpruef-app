@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { requireAdmin } from "@/lib/auth-guard";
 import { captureServerError } from "@/lib/sentry-capture";
+import { logAdminAction, resolveActorEmail } from "@/lib/admin/audit";
 
 export const dynamic = "force-dynamic";
 
@@ -247,6 +248,29 @@ export async function PATCH(req: NextRequest) {
     if (updateErr) {
       return NextResponse.json({ error: updateErr.message }, { status: 500 });
     }
+
+    const actorEmail = await resolveActorEmail(adminUserId);
+    await logAdminAction({
+      req,
+      actorId: adminUserId,
+      actorEmail,
+      action:
+        action === "approve"
+          ? suggestion.type === "edit"
+            ? "approve_question_edit"
+            : "approve_question_flag"
+          : action === "reject"
+            ? "reject_question_flag"
+            : "modify_question_flag",
+      targetType: "question_suggestion",
+      targetId: String(suggestionId),
+      payload: {
+        suggestion_type: suggestion.type,
+        question_id: suggestion.question_id,
+        admin_note: adminNote ?? null,
+        had_suggested_changes: !!suggestion.suggested_changes,
+      },
+    });
 
     return NextResponse.json({ ok: true, status });
   } catch (err) {

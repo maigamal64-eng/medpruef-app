@@ -487,11 +487,13 @@ const translations = {
   'guest_banner_cta': { de: 'Konto erstellen', en: 'Create Account' },
   'guest_banner_dismiss': { de: 'Für diese Sitzung ausblenden', en: 'Dismiss for this session' },
 
-  // Referral floater
+  // Referral floater — rescue-sprint §4.2 (2026-04-24): no €-figures
+  // on first-touch surfaces, frame the ask around community + code
+  // ownership rather than dollar bait.
   'ref_floater_region_label': { de: 'Empfehlungsprogramm', en: 'Referral program' },
   'ref_floater_close': { de: 'Hinweis schließen', en: 'Dismiss notice' },
-  'ref_floater_title': { de: 'Empfehle MedPrüf', en: 'Recommend MedPrüf' },
-  'ref_floater_body': { de: 'Hilf anderen Prüflingen — und verdien Cash-Belohnungen, wenn sie ein Abo abschließen.', en: 'Help other test-takers — and earn cash rewards when they subscribe.' },
+  'ref_floater_title': { de: 'Hast du jemanden, der auch die Prüfung macht?', en: 'Know someone else prepping for the exam?' },
+  'ref_floater_body': { de: 'Dein Empfehlungscode wartet. Teile ihn mit anderen Prüflingen — wenn sie Pro werden, bekommt ihr beide einen Bonus.', en: 'Your referral code is waiting. Share it with fellow candidates — when they go Pro, you both get a bonus.' },
   'ref_floater_cta_details': { de: 'Details ansehen', en: 'See details' },
   'ref_floater_cta_not_now': { de: 'Nicht jetzt', en: 'Not now' },
   'ref_copied': { de: 'Link kopiert!', en: 'Link copied!' },

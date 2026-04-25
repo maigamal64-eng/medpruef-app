@@ -286,7 +286,10 @@ export async function POST(req: NextRequest) {
 
   if (!reply) {
     return NextResponse.json(
-      { reply: "KI-Assistent ist derzeit nicht erreichbar. Bitte später versuchen." },
+      {
+        reply:
+          "Technisches Problem bei der KI-Generierung. Die Frage und die statische Erklärung funktionieren weiter — bitte später erneut versuchen oder den Fehler über das Feedback-Icon melden.",
+      },
       { status: 503 },
     );
   }

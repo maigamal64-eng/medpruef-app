@@ -26,6 +26,54 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-04-24",
     tag: "improvement",
     title: {
+      de: "Empfehlungen — Code ab Tag 1 sichtbar, Auszahlungsmethode später",
+      en: "Referrals — code visible from day 1, payout method set later",
+    },
+    description: {
+      de: "Wir haben den Empfehlungs-Flow umgebaut. Vorher mussten alle zuerst eine Auszahlungsmethode (Wallet oder Wise) eingeben, bevor irgendetwas passierte — Resultat: kaum jemand hat den Code je geteilt. Neu: dein Empfehlungscode erscheint sofort auf der Startseite, mit einem „Kopieren\"-Button und einer einzigen Zeile Kontext („Freund wird Pro → beide bekommen Bonus\"). Die Auszahlungsmethode wirst du erst dann gefragt, wenn dein erster Empfehlter tatsächlich bezahlt hat — per E-Mail, mit direktem Link zur Einrichtung. Dazu: subtiles oranges Signal in der Seitenleiste neben „Empfehlungen\", solange du den Code noch nicht kopiert hast. Kleine „Teile MedPrüf\"-Karte nach einem Quiz mit ≥80% Genauigkeit (einmalig, wegklickbar). Community-Zähler auf /empfehlungen („Empfehlungen diese Woche\") für ehrliche soziale Signale — die ersten 10 Empfehler bekommen einen extra Bonus.",
+      en: "We've reworked the referral flow. Before, everyone had to configure a payout method (crypto wallet or Wise) before anything happened — result: almost nobody ever shared their code. Now: your referral code appears on the home page from day 1, with a „Copy\" button and a single line of context („Friend goes Pro → both get a bonus\"). You're only asked for a payout method once your first referee actually pays — by email, with a direct setup link. Also: a small amber dot next to „Referrals\" in the sidebar until you've copied your code. A one-time „Share MedPrüf\" chip after a quiz with ≥80% accuracy (dismissible). Community counts on /referrals („Referrals this week\") for honest social proof — the first 10 referrers get a bonus on top.",
+    },
+  },
+  {
+    date: "2026-04-24",
+    tag: "feature",
+    title: {
+      de: "Prüfungs-Landingpages & Blog — SEO-Fundament",
+      en: "Exam landing pages & blog — SEO foundation",
+    },
+    description: {
+      de: "Drei eigenständige Landingpages für die Hauptprüfungstypen sind online: /kenntnispruefung-wien (7.567 Fragen, SIP 4 + SIP 5), /kmp-innsbruck (3.091 Fragen, 12 Module) und /pharmakologie-pruefung-wien (335 Fragen, inklusive sichtbarem Countdown zur Juni-26-Prüfung). Jede Seite hat eigene Meta-Tags, OpenGraph-Bilder (automatisch generiert via next/og), JSON-LD Course-Schema und 5-7 prüfungsspezifische FAQ-Einträge. Zusätzlich: /blog-Index + erster 1.800-Wörter-Guide „Kenntnisprüfung Wien — vollständiges Handbuch 2026\" (Nostrifikation, SIP-Struktur, Lernplan, häufige Fehler). Sitemap + robots.txt aktualisiert. Infrastruktur für organische Suchakquise steht — Content-Produktion folgt.",
+      en: "Three standalone landing pages for the main exam types are live: /kenntnispruefung-wien (7,567 questions, SIP 4 + SIP 5), /kmp-innsbruck (3,091 questions, 12 modules), and /pharmakologie-pruefung-wien (335 questions, including a visible countdown to the 26 June 2026 exam). Each page has its own meta tags, OpenGraph images (auto-generated via next/og), JSON-LD Course schema, and 5-7 exam-specific FAQ entries. Also: /blog index + first 1,800-word guide „Kenntnisprüfung Wien — vollständiges Handbuch 2026\" (nostrification, SIP structure, study plan, common mistakes). Sitemap + robots.txt updated. Organic-search acquisition infrastructure is now in place — content production follows.",
+    },
+  },
+  {
+    date: "2026-04-24",
+    tag: "feature",
+    title: {
+      de: "Neuer Einsteiger-Tarif — erster Monat für €19 (einmalig)",
+      en: "New entry tier — first month for €19 (one-time)",
+    },
+    description: {
+      de: "Ab sofort gibt es einen €19-Einsteiger-Tarif: 30 Tage Vollzugang auf alle drei Prüfungen (Kenntnisprüfung Wien, KMP Innsbruck, Pharmakologie), einmalig bezahlt in Krypto (USDT oder USDC). Es ist bewusst KEIN Abo — nichts verlängert sich automatisch, wir speichern keine Kreditkartendaten, der Zugang läuft nach 30 Tagen einfach aus. Am Tag 25 erinnern wir dich einmalig per E-Mail, falls du einen längeren Tarif wählen willst. Damit kostet „echt ausprobieren\" weniger als ein Lehrbuchkapitel. Der €114-Juni-26-Kohorten-Tarif bleibt unverändert der empfohlene Weg für alle, die auf die Juni-Prüfung hinarbeiten.",
+      en: "There's now a €19 entry tier: 30 days of full access to all three exam types (Kenntnisprüfung Wien, KMP Innsbruck, Pharmakologie), paid once in crypto (USDT or USDC). It is deliberately NOT a subscription — nothing auto-renews, we store no card details, access simply expires after 30 days. On day 25 we send a single reminder email in case you want to pick a longer plan. That brings \"try it for real\" below the price of a textbook chapter. The €114 June 26 Cohort tier remains the recommended path for anyone prepping for the June sitting.",
+    },
+  },
+  {
+    date: "2026-04-23",
+    tag: "admin",
+    title: {
+      de: "Admin — Audit-Log vollständig verdrahtet + Mission-Control-Indikator",
+      en: "Admin — audit log fully wired + mission-control indicator",
+    },
+    description: {
+      de: "Jede Admin-Mutation (Nutzer sperren, Fragen bearbeiten, PUYP genehmigen, Feedback-Status ändern, Referrals auszahlen, SQL-Runner, CSV-Exporte) schreibt jetzt eine Zeile in admin_audit_log mit actor_id, Aktion, Ziel, Payload, IP, User-Agent. Der Helper behandelt UUID- und Integer-Ziele richtig (Integer landen in payload.target_ref, damit der Insert nicht still scheitert). Neuer Indikator oben auf /admin/overview zeigt „Admin-Aktionen heute: N · Letzte: vor X Min\" live via Realtime. Integrationstest unter tests/e2e/admin/audit-log.spec.ts beweist end-to-end, dass eine Mutation tatsächlich eine Audit-Zeile schreibt.",
+      en: "Every admin mutation (lock user, edit question, approve PUYP, change feedback status, mark referral paid, SQL runner, CSV exports) now writes a row into admin_audit_log with actor_id, action, target, payload, IP, user-agent. The helper now handles UUID AND integer targets correctly (integers land in payload.target_ref so the insert never silently fails). A new indicator at the top of /admin/overview shows \"Admin actions today: N · Last: X min ago\" live via Realtime. An integration test at tests/e2e/admin/audit-log.spec.ts proves end-to-end that a mutation actually writes an audit row.",
+    },
+  },
+  {
+    date: "2026-04-24",
+    tag: "improvement",
+    title: {
       de: "Englische Übersetzungen — Modals, Toasts, Onboarding",
       en: "English translations — modals, toasts, onboarding",
     },

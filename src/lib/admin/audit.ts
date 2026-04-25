@@ -1,15 +1,27 @@
 /**
  * admin audit logging — insert a row into admin_audit_log for every
- * admin mutation. §2.7 of the April 23 admin revamp sprint.
+ * admin mutation. §2.7 of the April 23 admin revamp sprint + §5 of the
+ * post-audit-rescue sprint (April 23).
  *
  * Call from any /api/admin/* (or equivalent) route after you've already
  * passed the requireAdmin guard. Never throws — a failed audit write
  * won't fail the request, it'll be captured in Sentry.
+ *
+ * DB column `target_id` is `uuid` (see migration 20260423400000). If a
+ * caller passes a non-UUID identifier (e.g. an integer question_id, a
+ * bigserial waitlist id, a referral_code string), the raw value is
+ * stashed into `payload.target_ref` instead and `target_id` stays null.
+ * That keeps the column typed without losing the reference — admins can
+ * still filter by `target_type` and inspect `payload.target_ref` in the
+ * UI.
  */
 
 import type { NextRequest } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { captureServerError } from "@/lib/sentry-capture";
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export interface LogAdminActionArgs {
   /** The live request — used to extract IP + user agent. */
@@ -22,8 +34,12 @@ export interface LogAdminActionArgs {
   action: string;
   /** Optional: what kind of entity was touched. */
   targetType?: string;
-  /** Optional: UUID of the entity. */
-  targetId?: string;
+  /**
+   * Optional: identifier for the target. If a UUID, it lands in the
+   * `target_id` column; otherwise it's preserved in `payload.target_ref`.
+   * Accepts string or number for ergonomic integer-id callers.
+   */
+  targetId?: string | number | null;
   /** Optional: arbitrary structured data (inputs, deltas, etc.). */
   payload?: Record<string, unknown>;
 }
@@ -37,13 +53,32 @@ export async function logAdminAction(args: LogAdminActionArgs): Promise<void> {
       null;
     const userAgent = args.req.headers.get("user-agent") || null;
 
+    // Split a UUID targetId from anything else. DB column is `uuid`, so
+    // an int or freeform string would 22P02 (invalid input syntax for
+    // type uuid) and the whole insert would silently fail in the
+    // fire-and-forget wrapper.
+    let targetUuid: string | null = null;
+    let targetRef: string | number | null = null;
+    if (args.targetId != null) {
+      if (typeof args.targetId === "string" && UUID_RE.test(args.targetId)) {
+        targetUuid = args.targetId;
+      } else {
+        targetRef = args.targetId;
+      }
+    }
+
+    const payload = {
+      ...(args.payload ?? {}),
+      ...(targetRef != null ? { target_ref: targetRef } : {}),
+    };
+
     const { error } = await sb.from("admin_audit_log").insert({
       actor_id: args.actorId,
       actor_email: args.actorEmail,
       action: args.action,
       target_type: args.targetType ?? null,
-      target_id: args.targetId ?? null,
-      payload: args.payload ?? {},
+      target_id: targetUuid,
+      payload,
       ip_address: ip,
       user_agent: userAgent,
     });

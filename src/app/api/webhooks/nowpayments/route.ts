@@ -11,6 +11,7 @@ import {
   referralPayoutCents,
   type NowpaymentsPaymentStatus,
 } from "@/lib/nowpayments";
+import { logWebhookAttempt } from "@/lib/webhook-logger";
 
 export const dynamic = "force-dynamic";
 
@@ -46,6 +47,23 @@ export const dynamic = "force-dynamic";
  * a separate admin/cron job, not this webhook.
  */
 export async function POST(req: NextRequest) {
+  // Log EVERY inbound hit before any other work so webhook_attempts
+  // captures reach-our-edge-at-all vs never-heard-from-NOWPayments.
+  // The result field gets marked "processed" optimistically here; the
+  // downstream exit points (sig_invalid / parse_error / dup / other_error)
+  // each record their OWN row with the correct classification. Reading
+  // both rows for the same received_at window gives admin full picture.
+  void logWebhookAttempt({
+    req,
+    provider: "nowpayments",
+    path: "/api/webhooks/nowpayments",
+    signatureHeader: req.headers.get("x-nowpayments-sig"),
+    signatureValid: null,
+    body: null,
+    result: "other_error",
+    error: "arrived_but_not_yet_classified",
+  });
+
   // 1. Read the raw body ONCE. We need the exact bytes to hand to
   //    JSON.parse AND to recompute the signature over. Reading twice
   //    would either drain the stream or allow a canonicalisation
@@ -625,6 +643,87 @@ async function qualifyReferralIfApplicable(
         hold_reason: capped ? "annual_cap" : null,
       }
     );
+
+    // ── Rescue-sprint §4.9 (2026-04-24): first-qualify email stub ──
+    //
+    // If this is the referrer's FIRST-EVER qualifying referral, we
+    // want to kick off the "pick your payout method" flow by email.
+    // The old model asked users to configure the method upfront and
+    // ended up with 0 activations — this reversal (defer the ask
+    // until the money's real) is the heart of the rework.
+    //
+    // We count qualified/rewarded rows for this referrer, excluding
+    // the row we just wrote. If the prior count is zero, this is
+    // the first qualify and we fire the stubbed email.
+    try {
+      const { count: priorQualified } = await sb
+        .from("referrals")
+        .select("id", { head: true, count: "exact" })
+        .eq("referrer_user_id", referrer.id)
+        .in("status", ["qualified", "rewarded"])
+        .neq("referee_user_id", refereeUserId);
+
+      if ((priorQualified ?? 0) === 0) {
+        const { data: refUser } = await sb
+          .from("users")
+          .select("id, email, first_name, payout_method")
+          .eq("id", referrer.id)
+          .maybeSingle();
+
+        const referrerEmail = (refUser?.email as string | undefined) ?? null;
+        const hasPayoutMethod = Boolean(refUser?.payout_method);
+
+        // TODO: Zoho send — wire to user-b7e46e80@example.com transactional
+        // template when the Zoho refresh-token helper lands. Subject:
+        // "Dein erster Empfehlungs-Bonus wartet. Wähle, wie wir dich
+        //  bezahlen sollen." Body: short congrats + a CTA button
+        // pointing at https://medpruf.com/referrals?setup=payout
+        // (crypto wallet vs. Wise).
+        //
+        // Until the mailer helper exists this path is a no-op +
+        // telemetry so the funnel stays observable; the dispatch date
+        // can be back-filled once Zoho ships.
+        await recordEvent(
+          sb,
+          referrer.id,
+          "referral_first_qualify_email_sent",
+          {
+            referrer_user_id: referrer.id,
+            referee_user_id: refereeUserId,
+            subscription_id: subscriptionId,
+            reward_credit_cents: cappedPayout,
+            hold_expires_at: holdExpiresAt.toISOString(),
+            referrer_email: referrerEmail,
+            payout_method_already_set: hasPayoutMethod,
+            email_dispatched: false,
+            todo: "Zoho send — see qualifyReferralIfApplicable",
+          }
+        );
+
+        console.info(
+          "[webhooks/nowpayments] first-qualify email queued (stub)",
+          {
+            referrer_user_id: referrer.id,
+            referrer_email: referrerEmail,
+            payout_method_already_set: hasPayoutMethod,
+          }
+        );
+      }
+    } catch (emailErr) {
+      // First-qualify email is nice-to-have, never a blocker for
+      // the main activation path. Log + Sentry, continue.
+      console.error(
+        "[webhooks/nowpayments] first-qualify email stub failed",
+        emailErr
+      );
+      Sentry.captureException(emailErr, {
+        tags: {
+          route: "webhooks/nowpayments",
+          step: "first_qualify_email_stub",
+        },
+        extra: { referrer_user_id: referrer.id, refereeUserId },
+      });
+    }
   } catch (err) {
     // Referral qualification must never block activation.
     console.error(

@@ -75,6 +75,14 @@ const COPY = {
       de: "Juni-26-Kohorte ansehen",
       en: "See June 26 Cohort plans",
     },
+    cta_tertiary: {
+      de: "Für €19 testen",
+      en: "Try for €19",
+    },
+    cta_tertiary_sub: {
+      de: "1 Monat · keine automatische Verlängerung",
+      en: "1 month · no auto-renewal",
+    },
     cta_note: {
       de: "Keine Karte · Juni-26-Kohorte mit Pass-Until-You-Pass-Garantie",
       en: "No credit card · June 26 Cohort includes Pass-Until-You-Pass",
@@ -726,6 +734,27 @@ function Hero({ lang }: { lang: Lang }) {
           </Link>
         </div>
 
+        {/* Tertiary €19 trial link — small, text-only, reserved for users
+            not in the Cohort window who want a lower-friction first ask.
+            Routes into the /pricing page where the FirstMonthCard does
+            the heavy lifting. Kept deliberately below the primary CTA
+            stack so it never competes with "Start free" or the Cohort
+            button — it's a third-choice option for the indecisive. */}
+        <p className="mb-5 text-center sm:text-left">
+          <Link
+            href="/pricing#first-month"
+            className="inline-flex items-baseline gap-2 text-white/70 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white focus:ring-offset-[var(--mp-oxford-blue-dk)] rounded"
+            style={{ fontSize: "13px" }}
+          >
+            <span className="font-semibold underline underline-offset-4 decoration-white/30 hover:decoration-white/70">
+              {COPY.hero.cta_tertiary[lang]}
+            </span>
+            <span className="text-white/50" style={{ fontSize: "12px" }}>
+              — {COPY.hero.cta_tertiary_sub[lang]}
+            </span>
+          </Link>
+        </p>
+
         <p
           className="text-white/70 max-w-xl mb-3 font-medium"
           style={{ fontSize: "13px" }}
@@ -1201,8 +1230,8 @@ function Footer({ lang }: { lang: Lang }) {
   return (
     <footer className="bg-[var(--mp-oxford-blue)] text-white pt-14 md:pt-16 pb-8">
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-10">
-          <div className="md:col-span-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-8 mb-10">
+          <div className="md:col-span-2 sm:col-span-2">
             <div className="flex items-center gap-2.5 mb-3">
               <Image
                 src="/brand/logomark.svg"
@@ -1253,6 +1282,43 @@ function Footer({ lang }: { lang: Lang }) {
               <li>
                 <Link href="/about" className="hover:text-white transition-colors">
                   {lang === "de" ? "Über uns" : "About"}
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          <div>
+            <p className="text-xs uppercase tracking-wider text-white/50 font-bold mb-3">
+              {lang === "de" ? "Prüfungen" : "Exams"}
+            </p>
+            <ul className="space-y-2 text-sm text-white/80">
+              <li>
+                <Link
+                  href="/kenntnispruefung-wien"
+                  className="hover:text-white transition-colors"
+                >
+                  Kenntnisprüfung Wien
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/kmp-innsbruck"
+                  className="hover:text-white transition-colors"
+                >
+                  KMP Innsbruck
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/pharmakologie-pruefung-wien"
+                  className="hover:text-white transition-colors"
+                >
+                  Pharmakologie Wien
+                </Link>
+              </li>
+              <li>
+                <Link href="/blog" className="hover:text-white transition-colors">
+                  Blog
                 </Link>
               </li>
             </ul>

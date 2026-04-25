@@ -70,8 +70,15 @@ export default function PricingPage() {
   const [mounted, setMounted] = useState(false);
   const [session, setSession] = useState<ReturnType<typeof getStoredSession>>(null);
 
-  // Crypto checkout state
-  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  // Crypto checkout state.
+  // `checkoutLoading` tracks which tier is currently spinning its CTA —
+  // null means idle, "cohort" = €114 PUYP, "first_month" = €19 trial.
+  // Tracking the specific card lets us disable only that button while
+  // the NOWPayments invoice is being created, instead of freezing the
+  // entire page.
+  const [checkoutLoading, setCheckoutLoading] = useState<
+    null | "cohort" | "first_month"
+  >(null);
 
   // Waitlist dialog state
   const [waitOpen, setWaitOpen] = useState(false);
@@ -103,23 +110,33 @@ export default function PricingPage() {
   };
 
   /**
-   * June 26 Cohort crypto checkout. Logged-in users hit the NOWPayments
-   * endpoint directly; logged-out users get bounced to /login with a
-   * `next` + `action` hint so the post-login redirect lands them back
-   * here and auto-triggers the checkout.
+   * Start a NOWPayments crypto checkout for any live tier.
+   *
+   * Logged-in users hit the NOWPayments endpoint directly; logged-out
+   * users get bounced to /login with a `next` + `action` hint so the
+   * post-login redirect lands them back here and auto-triggers the
+   * checkout.
+   *
+   * `slot` controls which CTA spinner lights up — we track them
+   * individually so users can still click other cards while one
+   * invoice is mid-flight.
    */
-  const startCohortCheckout = async () => {
+  const startCryptoCheckout = async (
+    tier: "premium_pass_guaranteed" | "first_month_19",
+    slot: "cohort" | "first_month",
+    actionHint: string,
+  ) => {
     if (!session?.user) {
-      const next = encodeURIComponent("/pricing?action=cohort-checkout");
-      window.location.href = `/login?next=${next}&action=cohort-checkout`;
+      const next = encodeURIComponent(`/pricing?action=${actionHint}`);
+      window.location.href = `/login?next=${next}&action=${actionHint}`;
       return;
     }
-    setCheckoutLoading(true);
+    setCheckoutLoading(slot);
     try {
       const r = await fetch("/api/checkout/nowpayments", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ tier: "premium_pass_guaranteed" }),
+        body: JSON.stringify({ tier }),
       });
       if (r.ok) {
         const data = await r.json().catch(() => ({}));
@@ -156,8 +173,27 @@ export default function PricingPage() {
         lang === "de" ? "Keine Verbindung zum Server." : "No connection to server."
       );
     }
-    setCheckoutLoading(false);
+    setCheckoutLoading(null);
   };
+
+  const startCohortCheckout = () =>
+    startCryptoCheckout(
+      "premium_pass_guaranteed",
+      "cohort",
+      "cohort-checkout",
+    );
+
+  /**
+   * €19 first-month trial checkout — ONE-TIME invoice, no auto-renewal.
+   * Lower-friction first ask than the €114 Cohort for users who want to
+   * try the product before committing.
+   */
+  const startFirstMonthCheckout = () =>
+    startCryptoCheckout(
+      "first_month_19",
+      "first_month",
+      "first-month-checkout",
+    );
 
   const submitWaitlist = async () => {
     const e = email.trim();
@@ -361,13 +397,31 @@ export default function PricingPage() {
           <FreeTierCard lang={lang} />
         </section>
 
+        {/* ══════════ €19 first-month trial card ══════════ */}
+        {/* Entry-tier one-time invoice — sits between Free and the
+            Cohort to give users a lower-friction first ask than €114.
+            Visually subordinate to the Cohort card below (single-row
+            layout, no PUYP badge) so the Cohort stays the dominant
+            conversion surface. The `first-month` anchor lets the
+            landing-page tertiary CTA deep-link straight here. */}
+        <section
+          id="first-month"
+          className="max-w-5xl mx-auto px-4 lg:px-8 pb-4 scroll-mt-20"
+        >
+          <FirstMonthCard
+            lang={lang}
+            onCheckout={startFirstMonthCheckout}
+            loading={checkoutLoading === "first_month"}
+          />
+        </section>
+
         {/* ══════════ Cohort featured card ══════════ */}
         <section className="max-w-5xl mx-auto px-4 lg:px-8 pb-6">
           <CohortFeaturedCard
             lang={lang}
             features={cohortFeatures}
             onCheckout={startCohortCheckout}
-            loading={checkoutLoading}
+            loading={checkoutLoading === "cohort"}
           />
         </section>
 
@@ -497,16 +551,16 @@ export default function PricingPage() {
               <button
                 type="button"
                 onClick={startCohortCheckout}
-                disabled={checkoutLoading}
+                disabled={checkoutLoading === "cohort"}
                 className="mp-btn mp-btn--lg inline-flex items-center gap-2"
                 style={{
                   background: "var(--mp-accent-teal)",
                   color: "var(--mp-oxford-blue-dk)",
-                  opacity: checkoutLoading ? 0.6 : 1,
+                  opacity: checkoutLoading === "cohort" ? 0.6 : 1,
                 }}
               >
                 <Bitcoin className="w-4 h-4" />
-                {checkoutLoading
+                {checkoutLoading === "cohort"
                   ? lang === "de"
                     ? "Rechnung wird erstellt…"
                     : "Creating invoice…"
@@ -725,6 +779,147 @@ function FreeTierCard({ lang }: { lang: Lang }) {
           {lang === "de"
             ? "Keine Kreditkarte. Jederzeit upgradebar."
             : "No credit card. Upgrade any time."}
+        </p>
+      </div>
+    </article>
+  );
+}
+
+/* ═══════════════════════ €19 first-month trial card ═══════════════════════ */
+
+/**
+ * Entry-tier one-time invoice. Sits between Free and Cohort to give
+ * users a lower-friction first ask than €114. Intentionally visually
+ * subordinate to the Cohort card: single-row layout, mp-accent (CTA
+ * blue) styling instead of viridian glow, smaller price font, no PUYP
+ * badge. The "keine automatische Verlängerung" sublabel is the load-
+ * bearing trust signal — crypto users will not click this unless the
+ * no-auto-renew guarantee is front and centre.
+ */
+function FirstMonthCard({
+  lang,
+  onCheckout,
+  loading,
+}: {
+  lang: Lang;
+  onCheckout: () => void;
+  loading: boolean;
+}) {
+  return (
+    <article
+      className="rounded-[var(--mp-r-card)] overflow-hidden p-6 md:p-7 grid grid-cols-1 md:grid-cols-[1.4fr_1fr] gap-6 items-center"
+      style={{
+        background: "var(--mp-surface-raised)",
+        border: "1px solid var(--mp-border-subtle)",
+      }}
+    >
+      <div>
+        <div className="flex flex-wrap items-center gap-2 mb-2">
+          <span
+            className="mp-caption inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full normal-case tracking-[0.08em]"
+            style={{
+              background: "rgba(0,58,140,0.08)",
+              color: "var(--mp-cta-blue)",
+              border: "1px solid rgba(0,58,140,0.22)",
+              fontSize: "10px",
+              fontWeight: 700,
+            }}
+          >
+            {lang === "de" ? "Einsteiger-Tarif" : "Entry tier"}
+          </span>
+          <h3 className="mp-h3 text-[20px]">
+            {lang === "de"
+              ? "Erster Monat — einmalig €19"
+              : "First month — €19 one-time"}
+          </h3>
+        </div>
+        <p className="mp-body text-[var(--mp-fg-muted)] mb-4 text-sm leading-relaxed">
+          {lang === "de"
+            ? "30 Tage Vollzugang, einmalig bezahlt. Keine automatische Verlängerung, kein Abo, keine Kreditkartendaten gespeichert — einfach echt ausprobieren für weniger als ein Lehrbuchkapitel."
+            : "30 days of full access, paid once. No auto-renewal, no subscription, no saved card details — try it for real for less than a textbook chapter."}
+        </p>
+        <ul className="space-y-1.5 text-sm text-[var(--mp-fg)]">
+          <li className="flex items-start gap-2">
+            <Check
+              className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-[var(--mp-viridian)]"
+              strokeWidth={3}
+            />
+            {lang === "de"
+              ? "Vollzugang · alle 3 Prüfungen · alle Pro-Features"
+              : "Full access · all 3 exams · all Pro features"}
+          </li>
+          <li className="flex items-start gap-2">
+            <Check
+              className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-[var(--mp-viridian)]"
+              strokeWidth={3}
+            />
+            {lang === "de"
+              ? "30 Tage ab Zahlung · läuft automatisch aus"
+              : "30 days from payment · expires automatically"}
+          </li>
+          <li className="flex items-start gap-2">
+            <Check
+              className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-[var(--mp-viridian)]"
+              strokeWidth={3}
+            />
+            {lang === "de"
+              ? "Am Tag 25 schreiben wir dir — wähle dann selbst einen längeren Tarif"
+              : "We email you on day 25 — pick a longer plan yourself, if you want"}
+          </li>
+          <li className="flex items-start gap-2 text-[var(--mp-fg-subtle)]">
+            <Lock className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" aria-hidden />
+            {lang === "de"
+              ? "Keine Pass-Until-You-Pass-Garantie (nur bei 6-Monats- und 12-Monats-Tarifen)"
+              : "No Pass-Until-You-Pass guarantee (6- and 12-month plans only)"}
+          </li>
+        </ul>
+      </div>
+
+      <div className="flex flex-col gap-3 md:items-end">
+        <div className="flex flex-col md:items-end">
+          <div className="flex items-baseline gap-1.5 md:justify-end">
+            <span className="mp-num font-display font-black text-[var(--mp-fg)] text-[32px] leading-none">
+              €19
+            </span>
+            <span className="text-sm text-[var(--mp-fg-subtle)]">
+              {lang === "de" ? "einmalig" : "one-time"}
+            </span>
+          </div>
+          <p
+            className="mp-small mt-1 md:text-right"
+            style={{ color: "var(--mp-cta-blue)", fontWeight: 600 }}
+          >
+            {lang === "de"
+              ? "keine automatische Verlängerung"
+              : "no auto-renewal"}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onCheckout}
+          disabled={loading}
+          className="mp-btn mp-btn--primary inline-flex items-center justify-center gap-2 w-full md:w-auto whitespace-nowrap"
+          style={{ opacity: loading ? 0.7 : 1 }}
+        >
+          {loading ? (
+            <>
+              <BrandedLoader size={20} hideLabel />
+              {lang === "de" ? "Rechnung wird erstellt…" : "Creating invoice…"}
+            </>
+          ) : (
+            <>
+              <Bitcoin className="w-3.5 h-3.5" />
+              {lang === "de"
+                ? "Für €19 testen mit Krypto"
+                : "Try for €19 with crypto"}
+              <ArrowRight className="w-3.5 h-3.5" />
+            </>
+          )}
+        </button>
+        <p className="mp-small text-[var(--mp-fg-subtle)] md:text-right">
+          {lang === "de"
+            ? "USDT / USDC · aktiv in Minuten · läuft nach 30 Tagen aus"
+            : "USDT / USDC · active in minutes · expires after 30 days"}
         </p>
       </div>
     </article>

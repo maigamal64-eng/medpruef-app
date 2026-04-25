@@ -93,6 +93,18 @@ interface StatusResponse {
   payoutWalletAddress: string | null;
   payoutWalletChain: string | null;
   payoutWiseEmail: string | null;
+  /**
+   * Added 2026-04-24 (rescue-sprint §4): NULL means the user has
+   * never copied their code. Drives the sidebar nudge-dot + some
+   * micro-copy on this page.
+   */
+  referralCodeCopiedAt: string | null;
+}
+
+interface SocialProofResponse {
+  qualifiedLast7d: number;
+  qualifiedLast30d: number;
+  qualifiedAllTime: number;
 }
 
 function formatDate(iso: string | null, lang: Lang): string {
@@ -116,6 +128,9 @@ export default function ReferralsPage() {
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<StatusResponse | null>(null);
+  const [socialProof, setSocialProof] = useState<SocialProofResponse | null>(
+    null
+  );
   const [copied, setCopied] = useState(false);
   const [session, setSession] = useState<ReturnType<typeof getStoredSession>>(
     null
@@ -135,16 +150,36 @@ export default function ReferralsPage() {
 
   const loadData = useCallback(async () => {
     try {
-      const r = await authFetch("/api/referrals/status");
-      if (!r.ok) {
-        if (r.status === 401) {
-          window.location.href = "/login";
-          return;
+      const [statusRes, socialRes] = await Promise.allSettled([
+        authFetch("/api/referrals/status"),
+        authFetch("/api/referrals/social-proof", { skipAuthRedirect: true }),
+      ]);
+
+      if (statusRes.status === "fulfilled") {
+        const r = statusRes.value;
+        if (!r.ok) {
+          if (r.status === 401) {
+            window.location.href = "/login";
+            return;
+          }
+          throw new Error(`status ${r.status}`);
         }
-        throw new Error(`status ${r.status}`);
+        const json: StatusResponse = await r.json();
+        setData(json);
+      } else {
+        throw statusRes.reason;
       }
-      const json: StatusResponse = await r.json();
-      setData(json);
+
+      // Social proof is best-effort — a failed fetch just means we
+      // fall back to the "Sei der erste!" empty state.
+      if (socialRes.status === "fulfilled" && socialRes.value.ok) {
+        try {
+          const json: SocialProofResponse = await socialRes.value.json();
+          setSocialProof(json);
+        } catch {
+          /* non-critical */
+        }
+      }
     } catch (err) {
       console.error("[referrals] load", err);
       toast.error(
@@ -192,6 +227,26 @@ export default function ReferralsPage() {
           ? "Bitte manuell kopieren."
           : "Please copy manually."
       );
+    }
+
+    // Stamp referral_code_copied_at so the sidebar nudge-dot clears.
+    // Idempotent — safe to re-fire on every click. Rescue-sprint §4.
+    try {
+      await authFetch("/api/referrals/mark-copied", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        skipAuthRedirect: true,
+      });
+    } catch {
+      /* non-critical */
+    }
+
+    // Analytics
+    try {
+      const { trackEvent } = await import("@/lib/tracker");
+      trackEvent("referral_code_copied", { source: "referrals_page" });
+    } catch {
+      /* non-critical */
     }
   };
 
@@ -505,6 +560,9 @@ export default function ReferralsPage() {
               </>
             )}
           </section>
+
+          {/* ─────────── Social proof (aggregate) ─────────── */}
+          <SocialProofStrip lang={lang} proof={socialProof} />
 
           {/* ─────────── Stat strip ─────────── */}
           <section className="mp-card p-5 lg:p-7">
@@ -1015,5 +1073,125 @@ export default function ReferralsPage() {
         )}
       </Dialog>
     </div>
+  );
+}
+
+/**
+ * SocialProofStrip — the "N referrals this week" block.
+ *
+ * Rescue-sprint §4.5 (2026-04-24): pulls aggregate qualified-referral
+ * counts from /api/referrals/social-proof. Honest numbers — no
+ * invented totals. When all three windows are zero we flip to the
+ * motivational "Sei der erste!" empty state, which also doubles as
+ * gentle loss-aversion (the first 10 referrers get a small bonus).
+ *
+ * Behavior:
+ *  - While fetching: render a shimmer-strip so the layout doesn't jump
+ *  - All zeros: render the "first-mover" empty state
+ *  - Otherwise: render the three windowed counts side by side
+ */
+function SocialProofStrip({
+  lang,
+  proof,
+}: {
+  lang: Lang;
+  proof: SocialProofResponse | null;
+}) {
+  // Loading shimmer — until the first fetch returns.
+  if (proof === null) {
+    return (
+      <section
+        className="mp-card p-5 lg:p-7"
+        aria-busy="true"
+        aria-label={
+          lang === "de"
+            ? "Empfehlungsstatistik lädt"
+            : "Loading referral stats"
+        }
+      >
+        <div className="h-4 w-48 rounded bg-[var(--mp-surface-sunken)] animate-pulse mb-3" />
+        <div className="grid grid-cols-3 gap-3">
+          <div className="h-12 rounded-lg bg-[var(--mp-surface-sunken)] animate-pulse" />
+          <div className="h-12 rounded-lg bg-[var(--mp-surface-sunken)] animate-pulse" />
+          <div className="h-12 rounded-lg bg-[var(--mp-surface-sunken)] animate-pulse" />
+        </div>
+      </section>
+    );
+  }
+
+  const allZero =
+    proof.qualifiedLast7d === 0 &&
+    proof.qualifiedLast30d === 0 &&
+    proof.qualifiedAllTime === 0;
+
+  // First-mover motivational state. Honest, no invented numbers —
+  // empty is empty, but we make it feel like an opportunity.
+  if (allZero) {
+    return (
+      <section
+        className="mp-card p-5 lg:p-7"
+        aria-label={
+          lang === "de" ? "Empfehlungs-Community" : "Referral community"
+        }
+      >
+        <p className="text-sm font-semibold text-[var(--mp-fg)]">
+          {lang === "de"
+            ? "Sei der erste! Die ersten 10 Empfehler bekommen einen Bonus."
+            : "Be the first! First 10 referrers get a bonus."}
+        </p>
+        <p className="text-xs text-[var(--mp-fg-subtle)] mt-1">
+          {lang === "de"
+            ? "Das Empfehlungsprogramm ist jung — jede geteilte Kopie zählt jetzt extra."
+            : "The referral program is young — every share counts extra right now."}
+        </p>
+      </section>
+    );
+  }
+
+  const rows: Array<{ label: string; value: number }> = [
+    {
+      label:
+        lang === "de"
+          ? "Empfehlungen diese Woche"
+          : "Referrals this week",
+      value: proof.qualifiedLast7d,
+    },
+    {
+      label:
+        lang === "de" ? "Diesen Monat" : "This month",
+      value: proof.qualifiedLast30d,
+    },
+    {
+      label:
+        lang === "de"
+          ? "Insgesamt seit dem Launch"
+          : "Since launch",
+      value: proof.qualifiedAllTime,
+    },
+  ];
+
+  return (
+    <section
+      className="mp-card p-5 lg:p-7"
+      aria-label={
+        lang === "de" ? "Empfehlungs-Community" : "Referral community"
+      }
+    >
+      <p className="text-xs uppercase tracking-wider font-bold text-[var(--mp-fg-subtle)] mb-3">
+        {lang === "de" ? "Community" : "Community"}
+      </p>
+      <div className="grid grid-cols-3 gap-3">
+        {rows.map((row) => (
+          <div key={row.label}>
+            <div className="text-2xl font-display font-extrabold text-[var(--mp-viridian)] tabular-nums">
+              {row.value}
+            </div>
+            <div className="text-[11px] text-[var(--mp-fg-subtle)] mt-1 leading-tight">
+              {row.label}
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
