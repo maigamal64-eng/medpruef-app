@@ -130,7 +130,7 @@ export default function Image() {
               maxWidth: 980,
             }}
           >
-            7.567 Fragen · SIP 4 + SIP 5 · 10 Fachgebiete · Pass-Until-You-Pass
+            7.566 Fragen · SIP 4 + SIP 5 · 10 Fachgebiete · Pass-Until-You-Pass
           </div>
         </div>
 

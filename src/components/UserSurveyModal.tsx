@@ -513,15 +513,20 @@ export default function UserSurveyModal() {
         <div className="py-4 text-center animate-scale-in">
           <div className="relative inline-block mb-4">
             <span className="text-5xl">🎉</span>
+            {/* Confetti particles are decorative — wrapped in a class
+                that's only animated when motion is allowed (gated by the
+                @media (prefers-reduced-motion: no-preference) block in
+                the keyframe stylesheet below). */}
             {Array.from({ length: 12 }).map((_, i) => (
               <span
                 key={i}
-                className="absolute w-2 h-2 rounded-full"
+                className="absolute w-2 h-2 rounded-full mp-confetti-particle"
+                aria-hidden
                 style={{
                   backgroundColor: ['#007B5F', '#D68A3A', '#003A8C', '#00A896', '#D64545'][i % 5],
                   top: '50%',
                   left: '50%',
-                  animation: `confetti-burst 0.8s ease-out ${i * 0.04}s forwards`,
+                  animationDelay: `${i * 0.04}s`,
                   opacity: 0,
                   transform: `rotate(${i * 30}deg) translateY(0)`,
                 }}
@@ -536,9 +541,18 @@ export default function UserSurveyModal() {
 
       {/* Keyframe animations */}
       <style dangerouslySetInnerHTML={{ __html: `
-        @keyframes confetti-burst {
-          0% { opacity: 1; transform: rotate(var(--r, 0deg)) translateY(0) scale(1); }
-          100% { opacity: 0; transform: rotate(var(--r, 0deg)) translateY(-60px) scale(0.5); }
+        /* Confetti only fires when the user hasn't asked for reduced
+           motion. Reduced-motion users see the static 🎉 emoji + the
+           "Thanks for the feedback" body text — same celebratory tone,
+           no flying particles. */
+        @media (prefers-reduced-motion: no-preference) {
+          @keyframes confetti-burst {
+            0% { opacity: 1; transform: rotate(var(--r, 0deg)) translateY(0) scale(1); }
+            100% { opacity: 0; transform: rotate(var(--r, 0deg)) translateY(-60px) scale(0.5); }
+          }
+          .mp-confetti-particle {
+            animation: confetti-burst 0.8s ease-out forwards;
+          }
         }
         @keyframes survey-slide-left {
           from { opacity: 0; transform: translateX(30px); }

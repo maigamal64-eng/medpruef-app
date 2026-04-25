@@ -428,7 +428,7 @@ export default function LoginPage() {
                 <BookOpen className="w-5 h-5 text-[var(--mp-viridian)]" />
               </div>
               <p className="text-[11px] text-[var(--mp-fg-muted)] font-medium">
-                10.993 {lang === "de" ? "Fragen" : "Questions"}
+                10.992 {lang === "de" ? "Fragen" : "Questions"}
               </p>
             </div>
             <div className="text-center">

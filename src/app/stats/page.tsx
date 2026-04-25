@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useRef, useState, Suspense } from "react";
 import { BrandedLoader } from "@/components/Logo";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { getLevelFromXP } from "@/lib/xp";
 import { getTopicConfig, TOPIC_CONFIG } from "@/lib/topics";
@@ -13,7 +13,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import TopicIcon from "@/components/TopicIcon";
-import { BarChart3, Flame, GraduationCap } from "lucide-react";
+import { BarChart3, Flame, GraduationCap, Trophy, X } from "lucide-react";
 
 type Lang = "de" | "en";
 
@@ -57,14 +57,22 @@ function formatStudyTime(minutes: number): string {
 }
 
 function StatsContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const rawUserId = searchParams.get("userId") || "";
+  const examPassed = searchParams.get("examPassed") === "1";
   const [gam, setGam] = useState<Gamification | null>(null);
   const [topicStats, setTopicStats] = useState<Record<string, TopicStat>>({});
   const [loading, setLoading] = useState(true);
   const [lang, setLangState] = useState<Lang>("de");
   const [userId, setUserId] = useState(rawUserId);
   const [userName, setUserName] = useState("");
+  // Pass-Until-You-Pass celebration banner. Shown the first time a user lands
+  // on /stats?examPassed=1 (after submitting their pass on the PUYP page).
+  // Persists in this render only — clicking dismiss or refreshing strips
+  // the query param and hides it. Telegrams [name] via /api/track for KPI.
+  const [celebrate, setCelebrate] = useState(examPassed);
+  const trackedRef = useRef(false);
 
   useEffect(() => {
     setLangState(getLang());
@@ -76,6 +84,34 @@ function StatsContent() {
       setUserName(session.user.first_name);
     }
   }, [rawUserId]);
+
+  // When the user lands here from the PUYP "I passed" flow, fire a one-time
+  // tracking event and clean up the URL so a refresh doesn't re-celebrate.
+  useEffect(() => {
+    if (!examPassed || trackedRef.current) return;
+    trackedRef.current = true;
+    // Best-effort tracking — we don't block the render on this.
+    fetch("/api/track", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        events: [
+          {
+            event_type: "exam_passed",
+            timestamp: new Date().toISOString(),
+            metadata: { source: "puyp_result_page" },
+          },
+        ],
+      }),
+    }).catch(() => {});
+    // Strip the query param so the banner doesn't re-fire on refresh,
+    // without unmounting the page (replace, not push).
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("examPassed");
+      router.replace(url.pathname + (url.search ? url.search : "") + url.hash);
+    }
+  }, [examPassed, router]);
 
   const switchLang = (l: Lang) => {
     setLang(l);
@@ -161,6 +197,49 @@ function StatsContent() {
         </div>
 
         <div className="px-4 lg:px-8 py-5 max-w-2xl mx-auto space-y-6">
+
+          {/* PUYP pass celebration — shown once after /api/puyp/result success
+              (router.push to /stats?examPassed=1). Server-side flow already
+              cleared the user's tier_expires_at on the qualifying side; this
+              is purely the user-facing acknowledgement. Dismissable. */}
+          {celebrate && (
+            <div
+              className="card rounded-2xl p-5 border-2 border-[var(--mp-viridian)] bg-[var(--mp-viridian)]/5 relative"
+              role="status"
+              aria-live="polite"
+            >
+              <button
+                type="button"
+                onClick={() => setCelebrate(false)}
+                aria-label={lang === "de" ? "Banner schließen" : "Dismiss banner"}
+                className="absolute top-3 right-3 text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg)]"
+              >
+                <X className="w-4 h-4" />
+              </button>
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-[var(--mp-viridian)]/15 flex items-center justify-center shrink-0">
+                  <Trophy className="w-6 h-6 text-[var(--mp-viridian)]" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h2 className="font-display font-bold text-[var(--mp-fg)] text-lg leading-tight">
+                    {lang === "de"
+                      ? `Glückwunsch${userName ? `, ${userName}` : ""}! 🎉`
+                      : `Congratulations${userName ? `, ${userName}` : ""}! 🎉`}
+                  </h2>
+                  <p className="text-sm text-[var(--mp-fg-muted)] mt-1">
+                    {lang === "de"
+                      ? "Du hast deine Prüfung bestanden. Wir haben dein Ergebnis gespeichert."
+                      : "You passed your exam. We've recorded your result."}
+                  </p>
+                  <p className="text-xs text-[var(--mp-fg-subtle)] mt-2">
+                    {lang === "de"
+                      ? "Falls du jemanden eingeladen hast: deren Belohnung wird in Kürze verfügbar."
+                      : "If you've referred anyone, their payout will become available shortly."}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Overview Cards — mission-control numbers, not random greys.
               Uses the canonical gamification palette: XP gold, streak

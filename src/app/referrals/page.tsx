@@ -821,7 +821,7 @@ export default function ReferralsPage() {
                 </div>
                 <div>
                   <div className="text-sm font-semibold text-[var(--mp-fg)] mb-0.5">
-                    {lang === "de" ? "Sie zahlen ein Abo" : "Friend pays"}
+                    {lang === "de" ? "Dein Freund zahlt ein Abo" : "Friend pays"}
                   </div>
                   <p className="text-xs text-[var(--mp-fg-muted)] leading-relaxed">
                     {lang === "de"

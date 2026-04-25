@@ -75,7 +75,7 @@ export interface ExamLandingContent {
   secondaryCtaHref: string;
   secondaryCtaLabel: { de: string; en: string };
   /**
-   * "10 specialties" / "7,567 questions" row — key/value table that
+   * "10 specialties" / "7,566 questions" row — key/value table that
    * appears directly under the hero. Keep 2–6 rows.
    */
   breakdown: ExamLandingBreakdownRow[];
@@ -305,7 +305,7 @@ export default function ExamLandingShell({ content }: { content: ExamLandingCont
               <BookOpen className="w-5 h-5 text-[var(--mp-viridian)] flex-shrink-0" aria-hidden />
               <div>
                 <p className="font-display font-bold text-[var(--mp-fg)]">
-                  {L === "de" ? "10.993 Fragen" : "10,993 questions"}
+                  {L === "de" ? "10.992 Fragen" : "10.992 questions"}
                 </p>
                 <p className="text-xs text-[var(--mp-fg-muted)]">
                   {L === "de" ? "insgesamt im Qbank" : "in the Qbank"}

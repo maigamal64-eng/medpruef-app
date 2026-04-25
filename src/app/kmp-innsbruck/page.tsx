@@ -124,8 +124,8 @@ const content: ExamLandingContent = {
         en: "Why do MedPrüf questions differ between KMP and Vienna Kenntnisprüfung?",
       },
       a: {
-        de: "Die Prüfungsstrukturen sind unterschiedlich. Wien prüft in zwei Summative Integrierte Prüfungen (SIP 4 + SIP 5) mit einer festen Fächerstruktur. Innsbruck prüft modular — einzelne Module mit je eigenem Fokus. Wir halten die Fragenbanken deswegen strikt getrennt: wenn du „KMP Innsbruck\" als Prüfungstyp wählst, siehst du nur die 3.091 KMP-spezifisch kuratierten Fragen. Die Kenntnisprüfung-Wien-Bank (7.567 Fragen) bleibt für dich sichtbar, wenn du den Prüfungstyp wechselst.",
-        en: "Exam structures differ. Vienna tests via two Summative Integrated Exams (SIP 4 + SIP 5) with a fixed subject matrix. Innsbruck tests modularly — individual modules with their own focus. We keep the question banks strictly separate: if you pick \"KMP Innsbruck\" as your exam type, you only see the 3,091 KMP-specific questions. The Vienna Kenntnisprüfung bank (7,567 questions) stays available if you switch exam type.",
+        de: "Die Prüfungsstrukturen sind unterschiedlich. Wien prüft in zwei Summative Integrierte Prüfungen (SIP 4 + SIP 5) mit einer festen Fächerstruktur. Innsbruck prüft modular — einzelne Module mit je eigenem Fokus. Wir halten die Fragenbanken deswegen strikt getrennt: wenn du „KMP Innsbruck\" als Prüfungstyp wählst, siehst du nur die 3.091 KMP-spezifisch kuratierten Fragen. Die Kenntnisprüfung-Wien-Bank (7.566 Fragen) bleibt für dich sichtbar, wenn du den Prüfungstyp wechselst.",
+        en: "Exam structures differ. Vienna tests via two Summative Integrated Exams (SIP 4 + SIP 5) with a fixed subject matrix. Innsbruck tests modularly — individual modules with their own focus. We keep the question banks strictly separate: if you pick \"KMP Innsbruck\" as your exam type, you only see the 3,091 KMP-specific questions. The Vienna Kenntnisprüfung bank (7,566 questions) stays available if you switch exam type.",
       },
     },
     {

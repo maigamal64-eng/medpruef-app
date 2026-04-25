@@ -445,6 +445,20 @@ export default function Home() {
       setStoredExamSource(data.examSource as ExamSourceId);
       setExamSource(data.examSource as ExamSourceId);
       fetchTopics(data.examSource as ExamSourceId);
+      // Persist exam_source + exam_date + daily_goal to server so the user's
+      // active_exam stays in sync across devices and feeds /api/user/study-plan.
+      // Best-effort: don't block onboarding completion if the call fails.
+      if (user?.id && !user.id.startsWith("guest_")) {
+        const isISODate = typeof data.examDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(data.examDate);
+        const body: Record<string, string | number> = { activeExam: data.examSource };
+        if (data.dailyGoal && data.dailyGoal > 0) body.dailyGoal = data.dailyGoal;
+        if (isISODate) body.examDate = data.examDate;
+        fetch("/api/user/exam-preference", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        }).catch(() => {});
+      }
     }} />;
   }
 
@@ -1194,7 +1208,7 @@ function DemoHome({
           <div className="mt-6">
             <Link
               href={`/quiz?topic=random&examSource=${examSource}`}
-              className="btn-primary inline-flex items-center gap-3 px-7 py-3.5 text-base shadow-md pulse-glow active:scale-[0.98]"
+              className="btn-primary inline-flex items-center gap-3 px-7 py-3.5 text-base shadow-md hover:shadow-lg transition-shadow active:scale-[0.98]"
             >
               <Shuffle className="w-5 h-5" />
               {lang === "de" ? "Übung starten" : "Start Practice"}

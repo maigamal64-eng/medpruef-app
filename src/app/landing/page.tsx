@@ -1,9 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { getLang, setLang } from "@/lib/i18n";
+import { getStoredExamSource, type ExamSourceId } from "@/lib/topics";
+
+// Free-tier CTAs default to the user's stored exam preference. SSR returns
+// kenntnispruefung (the safest default — biggest cohort) so the link resolves
+// instantly; on hydration we re-read localStorage and adjust if different.
+function freeQuizHref(exam: ExamSourceId | null): string {
+  const e = exam ?? "kenntnispruefung";
+  return `/quiz?exam=${e}&free=1`;
+}
 import {
   ArrowRight,
   Baby,
@@ -90,8 +99,8 @@ const COPY = {
   },
   stats: [
     {
-      value: "10.993",
-      value_en: "10,993",
+      value: "10.992",
+      value_en: "10,992",
       label: { de: "Fragen", en: "Questions" },
     },
     {
@@ -255,8 +264,8 @@ const COPY = {
         price: "€114",
         period: { de: "6 Monate", en: "6 months" },
         pitch: {
-          de: "Alle 10.993 Fragen · Pass-Until-You-Pass · Krypto-Checkout live",
-          en: "All 10,993 questions · Pass-Until-You-Pass · live crypto checkout",
+          de: "Alle 10.992 Fragen · Pass-Until-You-Pass · Krypto-Checkout live",
+          en: "All 10,992 questions · Pass-Until-You-Pass · live crypto checkout",
         },
         status: "live",
         cta: { de: "Zur Kohorte", en: "See the Cohort" },
@@ -281,8 +290,8 @@ const COPY = {
   proof: {
     eyebrow: { de: "Inhalt & Qualität", en: "Content & quality" },
     title: {
-      de: "10.993 Fragen, kuratiert von Ärzt:innen für Ärzt:innen.",
-      en: "10,993 questions, curated by physicians for physicians.",
+      de: "10.992 Fragen, kuratiert von Ärzt:innen für Ärzt:innen.",
+      en: "10,992 questions, curated by physicians for physicians.",
     },
     quote: {
       de: "Jede Frage stammt aus einer dokumentierten offiziellen Prüfung — nichts erfunden, nichts geraten.",
@@ -290,8 +299,8 @@ const COPY = {
     },
     breakdown: [
       {
-        n: "7.567",
-        n_en: "7,567",
+        n: "7.566",
+        n_en: "7,566",
         label: { de: "Wien · seit 2016", en: "Vienna · since 2016" },
       },
       {
@@ -335,9 +344,11 @@ const COPY = {
 export default function LandingPage() {
   const [lang, setLangState] = useState<Lang>("de");
   const [mounted, setMounted] = useState(false);
+  const [examSource, setExamSource] = useState<ExamSourceId>("kenntnispruefung");
 
   useEffect(() => {
     setLangState(getLang());
+    setExamSource(getStoredExamSource());
     setMounted(true);
   }, []);
 
@@ -346,6 +357,8 @@ export default function LandingPage() {
     setLangState(l);
   };
 
+  const freeHref = useMemo(() => freeQuizHref(examSource), [examSource]);
+
   if (!mounted) {
     return <div className="min-h-screen bg-[var(--mp-surface-sunken)]" />;
   }
@@ -353,12 +366,12 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-[var(--mp-surface-raised)] text-[var(--mp-fg)]">
       <Nav lang={lang} onLangChange={switchLang} />
-      <Hero lang={lang} />
+      <Hero lang={lang} freeHref={freeHref} />
       <StatsStrip lang={lang} />
       <HowItWorks lang={lang} />
       <Features lang={lang} />
       <Subjects lang={lang} />
-      <PricingPreview lang={lang} />
+      <PricingPreview lang={lang} freeHref={freeHref} />
       <SocialProof lang={lang} />
       <FinalCTA lang={lang} />
       <Footer lang={lang} />
@@ -627,7 +640,7 @@ function Nav({ lang, onLangChange }: { lang: Lang; onLangChange: (l: Lang) => vo
 /* ─────────────────────────────────────────────────────────────
    Hero — dark editorial (Oxford Blue bg, white text, always dark)
    ───────────────────────────────────────────────────────────── */
-function Hero({ lang }: { lang: Lang }) {
+function Hero({ lang, freeHref }: { lang: Lang; freeHref: string }) {
   return (
     <section className="relative overflow-hidden text-white" style={{ background: "var(--mp-oxford-blue-dk)" }}>
       {/* Teal radial glow — top-right */}
@@ -709,7 +722,7 @@ function Hero({ lang }: { lang: Lang }) {
         {/* CTAs — stacked + full-width on mobile, inline on desktop */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-5 w-full sm:w-auto">
           <Link
-            href="/quiz?exam=pharma&free=1"
+            href={freeHref}
             className="cta-shimmer inline-flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 text-[var(--mp-oxford-blue-dk)] font-extrabold px-6 sm:px-7 py-3.5 sm:py-4 rounded-xl transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--mp-accent-teal)] focus:ring-offset-[var(--mp-oxford-blue-dk)] w-full sm:w-auto"
             style={{ fontSize: "15px" }}
             aria-label={COPY.hero.cta_primary_long[lang]}
@@ -1009,7 +1022,7 @@ function Subjects({ lang }: { lang: Lang }) {
 /* ─────────────────────────────────────────────────────────────
    Pricing preview — 3-tier brief, links to /pricing for detail
    ───────────────────────────────────────────────────────────── */
-function PricingPreview({ lang }: { lang: Lang }) {
+function PricingPreview({ lang, freeHref }: { lang: Lang; freeHref: string }) {
   return (
     <section id="pricing" className="py-20 md:py-24 bg-[var(--mp-surface-sunken)]">
       <div className="max-w-5xl mx-auto px-4 sm:px-6">
@@ -1075,7 +1088,7 @@ function PricingPreview({ lang }: { lang: Lang }) {
                   {t.pitch[lang]}
                 </p>
                 <Link
-                  href={t.href}
+                  href={t.price === "€0" ? freeHref : t.href}
                   className={`mp-btn ${isSoon ? "mp-btn--secondary" : "mp-btn--success"} w-full justify-center`}
                 >
                   {t.cta[lang]}

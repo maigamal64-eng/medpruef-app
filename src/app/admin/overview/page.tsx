@@ -280,16 +280,19 @@ function Tile({
   pulse,
   hero,
 }: TileProps) {
+  // MPDS palette — was hard-coded Tailwind defaults (#10B981, #F59E0B,
+  // #EF4444, #3B82F6, #64748B). Now reads from CSS vars so dark mode and
+  // any future palette tweaks flow through automatically.
   const accentColor =
     tone === "success"
-      ? "#10B981"
+      ? "var(--mp-viridian)"
       : tone === "warn"
-        ? "#F59E0B"
+        ? "var(--mp-warning)"
         : tone === "danger"
-          ? "#EF4444"
+          ? "var(--mp-error)"
           : tone === "info"
-            ? "#3B82F6"
-            : "#64748B";
+            ? "var(--mp-info)"
+            : "var(--mp-fg-muted)";
 
   const inner = (
     <div
@@ -297,7 +300,11 @@ function Tile({
         hero ? "p-5 min-h-[160px]" : "p-4 min-h-[128px]"
       } ${pulse ? "tile-pulse" : ""}`}
       style={{
-        boxShadow: pulse ? `0 0 0 4px ${accentColor}22` : undefined,
+        // 0x22 ≈ 13% alpha — render via color-mix so we get the right tint
+        // regardless of whether accentColor is a CSS var or a literal hex.
+        boxShadow: pulse
+          ? `0 0 0 4px color-mix(in srgb, ${accentColor} 13%, transparent)`
+          : undefined,
       }}
     >
       {/* Top accent stripe */}
@@ -862,7 +869,7 @@ function LiveFeedTile({
     <div className="relative rounded-2xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] flex flex-col min-h-[240px] overflow-hidden">
       <div
         className="absolute top-0 left-0 right-0 h-[3px] rounded-t-2xl"
-        style={{ backgroundColor: "#3B82F6", opacity: 0.85 }}
+        style={{ backgroundColor: "var(--mp-info)", opacity: 0.85 }}
         aria-hidden
       />
       <div className="flex items-center gap-2 px-4 pt-3 pb-3 border-b border-[var(--mp-border-subtle)]">
@@ -1009,7 +1016,9 @@ function AdminActionsRibbon() {
     latestAt == null || now - latestAt > 24 * 60 * 60_000;
 
   const tone: "warn" | "info" = quietFor24h && count === 0 ? "warn" : "info";
-  const toneColor = tone === "warn" ? "#F59E0B" : "#3B82F6";
+  // MPDS palette tokens — was hard-coded Tailwind amber/blue.
+  const toneColor =
+    tone === "warn" ? "var(--mp-warning)" : "var(--mp-info)";
 
   const relativeLabel =
     ageMinutes == null
@@ -1028,8 +1037,11 @@ function AdminActionsRibbon() {
     <div
       className="rounded-md border px-3 py-2 text-xs flex items-center gap-3 flex-wrap"
       style={{
-        borderColor: `${toneColor}66`,
-        backgroundColor: `${toneColor}1a`,
+        // 0x66 ≈ 40% alpha border, 0x1a ≈ 10% alpha fill — color-mix lets
+        // us derive these from the CSS-var token without falling back to
+        // hex string concatenation.
+        borderColor: `color-mix(in srgb, ${toneColor} 40%, transparent)`,
+        backgroundColor: `color-mix(in srgb, ${toneColor} 10%, transparent)`,
       }}
       data-testid="admin-actions-ribbon"
     >

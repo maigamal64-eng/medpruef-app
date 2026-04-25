@@ -42,8 +42,8 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "Exam landing pages & blog — SEO foundation",
     },
     description: {
-      de: "Drei eigenständige Landingpages für die Hauptprüfungstypen sind online: /kenntnispruefung-wien (7.567 Fragen, SIP 4 + SIP 5), /kmp-innsbruck (3.091 Fragen, 12 Module) und /pharmakologie-pruefung-wien (335 Fragen, inklusive sichtbarem Countdown zur Juni-26-Prüfung). Jede Seite hat eigene Meta-Tags, OpenGraph-Bilder (automatisch generiert via next/og), JSON-LD Course-Schema und 5-7 prüfungsspezifische FAQ-Einträge. Zusätzlich: /blog-Index + erster 1.800-Wörter-Guide „Kenntnisprüfung Wien — vollständiges Handbuch 2026\" (Nostrifikation, SIP-Struktur, Lernplan, häufige Fehler). Sitemap + robots.txt aktualisiert. Infrastruktur für organische Suchakquise steht — Content-Produktion folgt.",
-      en: "Three standalone landing pages for the main exam types are live: /kenntnispruefung-wien (7,567 questions, SIP 4 + SIP 5), /kmp-innsbruck (3,091 questions, 12 modules), and /pharmakologie-pruefung-wien (335 questions, including a visible countdown to the 26 June 2026 exam). Each page has its own meta tags, OpenGraph images (auto-generated via next/og), JSON-LD Course schema, and 5-7 exam-specific FAQ entries. Also: /blog index + first 1,800-word guide „Kenntnisprüfung Wien — vollständiges Handbuch 2026\" (nostrification, SIP structure, study plan, common mistakes). Sitemap + robots.txt updated. Organic-search acquisition infrastructure is now in place — content production follows.",
+      de: "Drei eigenständige Landingpages für die Hauptprüfungstypen sind online: /kenntnispruefung-wien (7.566 Fragen, SIP 4 + SIP 5), /kmp-innsbruck (3.091 Fragen, 12 Module) und /pharmakologie-pruefung-wien (335 Fragen, inklusive sichtbarem Countdown zur Juni-26-Prüfung). Jede Seite hat eigene Meta-Tags, OpenGraph-Bilder (automatisch generiert via next/og), JSON-LD Course-Schema und 5-7 prüfungsspezifische FAQ-Einträge. Zusätzlich: /blog-Index + erster 1.800-Wörter-Guide „Kenntnisprüfung Wien — vollständiges Handbuch 2026\" (Nostrifikation, SIP-Struktur, Lernplan, häufige Fehler). Sitemap + robots.txt aktualisiert. Infrastruktur für organische Suchakquise steht — Content-Produktion folgt.",
+      en: "Three standalone landing pages for the main exam types are live: /kenntnispruefung-wien (7,566 questions, SIP 4 + SIP 5), /kmp-innsbruck (3,091 questions, 12 modules), and /pharmakologie-pruefung-wien (335 questions, including a visible countdown to the 26 June 2026 exam). Each page has its own meta tags, OpenGraph images (auto-generated via next/og), JSON-LD Course schema, and 5-7 exam-specific FAQ entries. Also: /blog index + first 1,800-word guide „Kenntnisprüfung Wien — vollständiges Handbuch 2026\" (nostrification, SIP structure, study plan, common mistakes). Sitemap + robots.txt updated. Organic-search acquisition infrastructure is now in place — content production follows.",
     },
   },
   {
@@ -114,8 +114,8 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "Landing, Pricing & FAQ — premium polish",
     },
     description: {
-      de: "Öffentliche Flächen komplett überarbeitet. Landing: neues Mobile-Hamburger-Menü, Hero-CTAs stapeln sich jetzt sauber auf schmalen Screens, sichtbare Zahlenreihe (10.993 Fragen · 3 Prüfungen · 7 Sprachen · 1.806 Mehrfachantworten) schrumpft nicht mehr zusammen. Pricing: Mobile-Reihenfolge priorisiert 6 Monate („Beliebt\") vor 3/12/Monatlich, ruhigere Referral- und Pass-Until-You-Pass-Blöcke unter den Tarifkarten, Warteliste-Dialog in klar „du\"-freundlicher Tonalität. FAQ: sticky Inhaltsverzeichnis links am Desktop, aufklappbar am Handy, Info-Callouts für harte Regeln (max. 2 Zyklen, kein SEPA), „Zurück zu den Preisen\"-CTA am Ende der relevantesten Antworten.",
-      en: "Public-facing surfaces re-polished end-to-end. Landing: new mobile hamburger menu, hero CTAs stack cleanly on narrow screens, the stats strip (10,993 questions · 3 exam types · 7 languages · 1,806 multi-correct) now renders coherently on every viewport. Pricing: mobile tier order prioritises 6 months (\"Popular\") ahead of 3/12/monthly, referral and Pass-Until-You-Pass blocks subordinate visually to the tier cards above them, waitlist dialog rewritten in \"du\"-friendly tone. FAQ: sticky TOC on desktop, collapsible TOC on mobile, info callouts for hard constraints (max 2 cycles, no SEPA), \"Back to pricing\" CTA at the end of the highest-intent answers.",
+      de: "Öffentliche Flächen komplett überarbeitet. Landing: neues Mobile-Hamburger-Menü, Hero-CTAs stapeln sich jetzt sauber auf schmalen Screens, sichtbare Zahlenreihe (10.992 Fragen · 3 Prüfungen · 7 Sprachen · 1.806 Mehrfachantworten) schrumpft nicht mehr zusammen. Pricing: Mobile-Reihenfolge priorisiert 6 Monate („Beliebt\") vor 3/12/Monatlich, ruhigere Referral- und Pass-Until-You-Pass-Blöcke unter den Tarifkarten, Warteliste-Dialog in klar „du\"-freundlicher Tonalität. FAQ: sticky Inhaltsverzeichnis links am Desktop, aufklappbar am Handy, Info-Callouts für harte Regeln (max. 2 Zyklen, kein SEPA), „Zurück zu den Preisen\"-CTA am Ende der relevantesten Antworten.",
+      en: "Public-facing surfaces re-polished end-to-end. Landing: new mobile hamburger menu, hero CTAs stack cleanly on narrow screens, the stats strip (10,992 questions · 3 exam types · 7 languages · 1,806 multi-correct) now renders coherently on every viewport. Pricing: mobile tier order prioritises 6 months (\"Popular\") ahead of 3/12/monthly, referral and Pass-Until-You-Pass blocks subordinate visually to the tier cards above them, waitlist dialog rewritten in \"du\"-friendly tone. FAQ: sticky TOC on desktop, collapsible TOC on mobile, info callouts for hard constraints (max 2 cycles, no SEPA), \"Back to pricing\" CTA at the end of the highest-intent answers.",
     },
   },
   {
@@ -591,12 +591,12 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-04-15",
     tag: "improvement",
     title: {
-      de: "Alle Fragenzahlen im Produkt auf 10.993 aktualisiert",
-      en: "All question counts across the product updated to 10,993",
+      de: "Alle Fragenzahlen im Produkt auf 10.992 aktualisiert",
+      en: "All question counts across the product updated to 10,992",
     },
     description: {
-      de: "Mehrere Stellen im Produkt (Startseite, Login, Onboarding, Landingpage, Metadaten) zeigten noch „7.725 Fragen\" — den Stand vor der Erweiterung um KMP Innsbruck und Pharmakologie. Alle Zahlen wurden auf 10.993 aktualisiert und die Landingpage nennt jetzt alle drei Prüfungstypen korrekt.",
-      en: "Several places in the product (home, login, onboarding, landing, metadata) still showed \"7,725 questions\" — the count from before the KMP Innsbruck and Pharmakologie expansion. Updated to 10,993 everywhere, and the landing page now correctly names all three exam types.",
+      de: "Mehrere Stellen im Produkt (Startseite, Login, Onboarding, Landingpage, Metadaten) zeigten noch „7.725 Fragen\" — den Stand vor der Erweiterung um KMP Innsbruck und Pharmakologie. Alle Zahlen wurden auf 10.992 aktualisiert und die Landingpage nennt jetzt alle drei Prüfungstypen korrekt.",
+      en: "Several places in the product (home, login, onboarding, landing, metadata) still showed \"7,725 questions\" — the count from before the KMP Innsbruck and Pharmakologie expansion. Updated to 10,992 everywhere, and the landing page now correctly names all three exam types.",
     },
   },
   {

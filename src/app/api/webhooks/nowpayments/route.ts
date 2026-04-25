@@ -161,17 +161,53 @@ export async function POST(req: NextRequest) {
 
     const sb = getServiceClient();
 
-    // 4. Idempotency check — has this payment_id already been
-    //    processed? If yes, ack with 200 so NOWPayments stops
-    //    retrying.
-    const { data: existing } = await sb
+    // 4. Idempotency claim — atomically reserve this payment_id by
+    //    inserting into processed_webhook_events with ON CONFLICT
+    //    DO NOTHING. If RETURNING returns a row, we won the race and
+    //    we're the canonical processor. If it's empty, another worker
+    //    already claimed this event and we early-return as duplicate.
+    //
+    //    review-2026-04-24-D-2 — the previous SELECT-then-INSERT
+    //    pattern allowed two parallel webhook retries to both pass
+    //    the existence check and both run the activation path,
+    //    double-flipping `users.tier='pro'` and double-counting
+    //    referral bonuses. ON CONFLICT shifts the race resolution
+    //    into the DB layer where the (provider, event_id) primary
+    //    key serializes claims.
+    const { data: claim, error: claimErr } = await sb
       .from("processed_webhook_events")
+      .insert({
+        provider: "nowpayments",
+        event_id: paymentId,
+        // payload gets filled in later via recordProcessed when the
+        // status is final; for the claim we just write the marker.
+        payload: { claimed_at: new Date().toISOString(), payment_status: paymentStatusRaw },
+      })
       .select("event_id")
-      .eq("provider", "nowpayments")
-      .eq("event_id", paymentId)
       .maybeSingle();
 
-    if (existing) {
+    if (claimErr) {
+      // 23505 = unique_violation — the row already exists, this is
+      // the duplicate-retry case. Postgres returns this through the
+      // Supabase JS client as a non-null error with code='23505'.
+      if ((claimErr as { code?: string }).code === "23505") {
+        return NextResponse.json({
+          ok: true,
+          duplicate: true,
+          payment_status: paymentStatusRaw,
+        });
+      }
+      // Any other DB error — surface as 500 so NOWPayments retries.
+      console.error("[webhooks/nowpayments] claim insert failed", claimErr);
+      Sentry.captureException(claimErr, {
+        tags: { route: "webhooks/nowpayments", step: "claim" },
+      });
+      return NextResponse.json({ error: "DB error" }, { status: 500 });
+    }
+
+    if (!claim) {
+      // RETURNING was empty without throwing — also means the row
+      // already existed and ON CONFLICT silently skipped the insert.
       return NextResponse.json({
         ok: true,
         duplicate: true,

@@ -281,7 +281,7 @@ export default function SettingsPage() {
         toast.error(
           lang === "de" ? "Download fehlgeschlagen" : "Download failed",
           lang === "de"
-            ? "Bitte überprüfen Sie Ihre Verbindung und versuchen Sie es erneut."
+            ? "Bitte überprüfe deine Verbindung und versuche es erneut."
             : "Check your connection and try again.",
         );
         return;
@@ -305,7 +305,7 @@ export default function SettingsPage() {
           ? `${batch.length} Fragen heruntergeladen`
           : `${batch.length} questions downloaded`,
         lang === "de"
-          ? "Sie können jetzt offline weiterlernen."
+          ? "Du kannst jetzt offline weiterlernen."
           : "You can now keep studying offline.",
       );
     } catch (e) {
@@ -393,7 +393,7 @@ export default function SettingsPage() {
                 </h3>
                 <p className="mp-small mt-1">
                   {lang === "de"
-                    ? "Welche Prüfung Sie ablegen möchten und wann."
+                    ? "Welche Prüfung du ablegen möchtest und wann."
                     : "Which exam you plan to take and when."}
                 </p>
               </header>
@@ -412,7 +412,7 @@ export default function SettingsPage() {
                           { day: "numeric", month: "long", year: "numeric" },
                         )
                       : lang === "de"
-                      ? "Noch nicht gesetzt — legen Sie Ihren Prüfungstermin fest, um einen Lernplan zu erhalten."
+                      ? "Noch nicht gesetzt — leg deinen Prüfungstermin fest, um einen Lernplan zu erhalten."
                       : "Not set yet — pick your exam date to unlock the study plan."
                   }
                 />
@@ -592,7 +592,7 @@ export default function SettingsPage() {
                 </h3>
                 <p className="mp-small mt-1">
                   {lang === "de"
-                    ? "Laden Sie Fragen vorab herunter, um auch ohne Internet weiterzulernen."
+                    ? "Lade Fragen vorab herunter, um auch ohne Internet weiterzulernen."
                     : "Download questions ahead of time to keep studying without internet."}
                 </p>
               </header>
@@ -896,8 +896,8 @@ export default function SettingsPage() {
                   </div>
                   <p className="text-xs text-[var(--mp-fg-subtle)] mb-3">
                     {lang === "de"
-                      ? "Österreichische Medizinprüfungen — 10.993 Fragen"
-                      : "Austrian medical exams — 10,993 questions"}
+                      ? "Österreichische Medizinprüfungen — 10.992 Fragen"
+                      : "Austrian medical exams — 10,992 questions"}
                   </p>
                   <Link
                     href="/about"
@@ -997,7 +997,7 @@ export default function SettingsPage() {
           }
         >
           {lang === "de"
-            ? "Falls Sie Antworten offline gegeben haben, die noch nicht an den Server gesendet wurden, werden diese gelöscht."
+            ? "Falls du Antworten offline gegeben hast, die noch nicht an den Server gesendet wurden, werden diese gelöscht."
             : "Any answers you recorded offline that have not yet been sent to the server will be deleted."}
         </Alert>
       </Dialog>

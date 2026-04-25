@@ -147,7 +147,7 @@ export default function StreakWidget({ streak, lang }: StreakWidgetProps) {
     <div>
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <span className="text-2xl animate-fire">🔥</span>
+          <span className="text-2xl" aria-hidden>🔥</span>
           <div>
             <p className="text-3xl font-black text-[var(--mp-error)] font-mono">{streak}</p>
             <p className="text-xs text-[var(--mp-fg-muted)]">

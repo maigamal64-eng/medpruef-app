@@ -6,7 +6,7 @@ import ExamLandingShell, {
  * /kenntnispruefung-wien — Vienna Kenntnisprüfung landing page.
  *
  * Content numbers are authoritative as of 2026-04-24 per NOTES.md
- * §Content: 7,567 Kenntnisprüfung questions across 10 specialties,
+ * §Content: 7,566 Kenntnisprüfung questions across 10 specialties,
  * split into SIP 4 (surgery, internal medicine, dermatology) and
  * SIP 5 (7 subjects). See `src/lib/topics.ts#VIENNA_EXAM_PARTS`.
  *
@@ -30,8 +30,8 @@ const content: ExamLandingContent = {
     en: "Pass the Vienna Kenntnisprüfung on your first try.",
   },
   heroSubtitle: {
-    de: "Strukturierte Vorbereitung auf die österreichische Kenntnisprüfung (SIP 4 + SIP 5) — 7.567 Fragen aus 10 Fachgebieten, klinisch kommentiert, gebaut von Ärzt:innen, die selbst in deiner Lage waren.",
-    en: "Structured prep for the Austrian Kenntnisprüfung (SIP 4 + SIP 5) — 7,567 questions across 10 specialties, clinically annotated, built by doctors who've been in your position.",
+    de: "Strukturierte Vorbereitung auf die österreichische Kenntnisprüfung (SIP 4 + SIP 5) — 7.566 Fragen aus 10 Fachgebieten, klinisch kommentiert, gebaut von Ärzt:innen, die selbst in deiner Lage waren.",
+    en: "Structured prep for the Austrian Kenntnisprüfung (SIP 4 + SIP 5) — 7,566 questions across 10 specialties, clinically annotated, built by doctors who've been in your position.",
   },
   primaryCtaHref: "/quiz?exam=kenntnispruefung&free=1",
   primaryCtaLabel: {
@@ -46,7 +46,7 @@ const content: ExamLandingContent = {
   breakdown: [
     {
       label: { de: "Fragen", en: "Questions" },
-      value: "7.567",
+      value: "7,566",
       sub: {
         de: "Klinisch kuratiert · MCQ + Mehrfachauswahl",
         en: "Clinically curated · MCQ + multi-correct",

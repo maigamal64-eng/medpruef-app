@@ -27,6 +27,7 @@
  */
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { Dialog } from "@/components/ui";
 import { ShieldCheck, Gift } from "lucide-react";
 import {
@@ -34,6 +35,7 @@ import {
   type SurfaceKey,
 } from "@/lib/announcements/useAnnouncementGate";
 import { t, useLang } from "@/lib/i18n";
+import { getStoredExamSource, type ExamSourceId } from "@/lib/topics";
 
 // Versioned key survives `v1` dismissals from the old SoftLaunchWelcomeModal.
 const LEGACY_KEY = "medpruef_soft_launch_welcome_seen";
@@ -48,6 +50,14 @@ const SURFACE: SurfaceKey = "orientation_modal";
 export default function OrientationModal() {
   const { activeSurface, state, markSeen } = useAnnouncementGate();
   const lang = useLang();
+  // Resolve the user's stored exam preference so the "Free 150" CTA in the
+  // modal lands them in the right exam (not always pharma/Kenntnisprüfung
+  // by accident). SSR-safe: getStoredExamSource() returns the default during
+  // server render, then we re-read on mount.
+  const [examSource, setExamSource] = useState<ExamSourceId>("kenntnispruefung");
+  useEffect(() => {
+    setExamSource(getStoredExamSource());
+  }, []);
   const items = [
     {
       icon: <ShieldCheck className="w-5 h-5 text-[var(--mp-accent-teal)]" />,
@@ -60,7 +70,7 @@ export default function OrientationModal() {
       icon: <Gift className="w-5 h-5 text-[var(--mp-cta-blue)]" />,
       title: t("orient_item2_title", lang),
       description: t("orient_item2_body", lang),
-      href: "/quiz?free=1",
+      href: `/quiz?exam=${examSource}&free=1`,
       hrefLabel: t("orient_item2_link", lang),
     },
   ];

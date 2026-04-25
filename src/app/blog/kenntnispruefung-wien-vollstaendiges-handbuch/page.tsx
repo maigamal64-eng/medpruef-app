@@ -405,7 +405,7 @@ export default function KenntnispruefungHandbuchPost() {
                   Fragen.
                 </li>
                 <li>
-                  <strong>MedPrüf</strong> (wir): 7.567 kuratierte Fragen
+                  <strong>MedPrüf</strong> (wir): 7.566 kuratierte Fragen
                   speziell für die Kenntnisprüfung Wien, mit Guideline-
                   Referenzen und Schwächen-Radar. 150 Fragen sind kostenlos —
                   kein Kreditkartenzwang, keine Verpflichtung.
@@ -446,7 +446,7 @@ export default function KenntnispruefungHandbuchPost() {
             }}
           >
             <h3 className="mp-h3 text-[20px] mb-2">
-              Lernen mit 7.567 kuratierten Kenntnisprüfungs-Fragen
+              Lernen mit 7.566 kuratierten Kenntnisprüfungs-Fragen
             </h3>
             <p className="mp-body text-sm text-[var(--mp-fg-muted)] mb-4 max-w-xl mx-auto">
               150 Fragen kostenlos, ohne Kreditkarte, ohne Abo. Nur MCQ-Bank,

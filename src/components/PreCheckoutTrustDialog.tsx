@@ -70,8 +70,8 @@ function tierSummary(tier: TierKey, lang: Lang): TierSummary {
       durationLabel: lang === "de" ? "einmalig (6 Monate Zugang)" : "one-time (6 months access)",
       inclusionLine:
         lang === "de"
-          ? "alle drei Prüfungstypen, 10.993 Fragen, Wiederholungsplan, Mock-Prüfung, KI-Chat"
-          : "all three exam types, 10,993 questions, spaced repetition, mock exam, AI chat",
+          ? "alle drei Prüfungstypen, 10.992 Fragen, Wiederholungsplan, Mock-Prüfung, KI-Chat"
+          : "all three exam types, 10,992 questions, spaced repetition, mock exam, AI chat",
       hasPuyp: true,
     };
   }
@@ -85,8 +85,8 @@ function tierSummary(tier: TierKey, lang: Lang): TierSummary {
           : "one-time · no auto-renewal",
       inclusionLine:
         lang === "de"
-          ? "30 Tage Vollzugriff, alle drei Prüfungstypen, 10.993 Fragen, KI-Chat"
-          : "30 days full access, all three exam types, 10,993 questions, AI chat",
+          ? "30 Tage Vollzugriff, alle drei Prüfungstypen, 10.992 Fragen, KI-Chat"
+          : "30 days full access, all three exam types, 10,992 questions, AI chat",
       hasPuyp: false,
     };
   }

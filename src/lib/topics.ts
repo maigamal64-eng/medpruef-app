@@ -50,8 +50,17 @@ export const EXAM_SOURCES = [
     fullName: 'Österreichische Kenntnisprüfung (Wien)',
     shortLabel: 'KP',
     badge: '🇦🇹',
-    questions: 7661,
+    questions: 7566,
     description: { de: 'Wiener Kenntnisprüfung', en: 'Vienna Kenntnisprüfung' },
+  },
+  {
+    id: 'kmp_innsbruck',
+    label: 'KMP Innsbruck',
+    fullName: 'Kumulative Modulprüfung (Innsbruck)',
+    shortLabel: 'KMP',
+    badge: '🏔️',
+    questions: 3091,
+    description: { de: 'Kumulative Modulprüfung — Med Uni Innsbruck', en: 'Cumulative Module Exam — Med Uni Innsbruck' },
   },
   {
     id: 'pharma',
@@ -61,15 +70,6 @@ export const EXAM_SOURCES = [
     badge: '💊',
     questions: 335,
     description: { de: 'Rezeptierkunde / Stichpunkte', en: 'Prescription Studies' },
-  },
-  {
-    id: 'kmp_innsbruck',
-    label: 'KMP Innsbruck',
-    fullName: 'Kumulative Modulprüfung (Innsbruck)',
-    shortLabel: 'KMP',
-    badge: '🏔️',
-    questions: 0,
-    description: { de: 'Kumulative Modulprüfung — Med Uni Innsbruck (in Vorbereitung)', en: 'Cumulative Module Exam — Med Uni Innsbruck (coming soon)' },
   },
 ] as const
 

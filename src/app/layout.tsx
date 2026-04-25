@@ -204,7 +204,7 @@ export default function RootLayout({
               "@type": "WebApplication",
               "name": "MedPrüf",
               "url": "https://medpruf.com",
-              "description": "Austrian medical exam preparation platform with 10,993+ clinical questions across 16 specialties and 3 exam types.",
+              "description": "Austrian medical exam preparation platform with 10,992+ clinical questions across 16 specialties and 3 exam types.",
               "applicationCategory": "EducationalApplication",
               "operatingSystem": "Web",
               "offers": {

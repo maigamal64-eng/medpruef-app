@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { getLang, setLang } from "@/lib/i18n";
 import { getStoredSession } from "@/lib/auth";
+import { getStoredExamSource, type ExamSourceId } from "@/lib/topics";
 import { PreCheckoutTrustDialog } from "@/components/PreCheckoutTrustDialog";
 import { authFetch as fetch } from "@/lib/authFetch";
 import Sidebar from "@/components/Sidebar";
@@ -70,6 +71,7 @@ export default function PricingPage() {
   const [lang, setLangState] = useState<Lang>("de");
   const [mounted, setMounted] = useState(false);
   const [session, setSession] = useState<ReturnType<typeof getStoredSession>>(null);
+  const [storedExam, setStoredExam] = useState<ExamSourceId>("kenntnispruefung");
 
   // Crypto checkout state.
   // `checkoutLoading` tracks which tier is currently spinning its CTA —
@@ -102,6 +104,7 @@ export default function PricingPage() {
     const s = getStoredSession();
     setSession(s);
     if (s?.user?.email) setEmail(s.user.email);
+    setStoredExam(getStoredExamSource());
     setMounted(true);
   }, []);
 
@@ -269,7 +272,7 @@ export default function PricingPage() {
       if (r.ok) {
         toast.success(
           lang === "de"
-            ? "Sie stehen auf der Warteliste."
+            ? "Du stehst auf der Warteliste."
             : "You're on the waitlist.",
           lang === "de"
             ? "Wir melden uns, sobald Stripe live ist."
@@ -282,7 +285,7 @@ export default function PricingPage() {
             ? "Bereits eingetragen"
             : "Already on the waitlist",
           lang === "de"
-            ? "Sie sind bereits auf der Warteliste — wir halten Sie auf dem Laufenden."
+            ? "Du stehst bereits auf der Warteliste — wir halten dich auf dem Laufenden."
             : "You're already on the waitlist — we'll keep you posted."
         );
         setWaitOpen(false);
@@ -312,8 +315,8 @@ export default function PricingPage() {
   /* Cohort feature bullets — the dominant card */
   const cohortFeatures: Array<{ de: string; en: string }> = [
     {
-      de: "Alle 10.993 Fragen · Kenntnisprüfung + KMP + Pharma in einem Abo",
-      en: "All 10,993 questions · Kenntnisprüfung + KMP + Pharma bundled",
+      de: "Alle 10.992 Fragen · Kenntnisprüfung + KMP + Pharma in einem Abo",
+      en: "All 10,992 questions · Kenntnisprüfung + KMP + Pharma bundled",
     },
     {
       de: "Pass-Until-You-Pass: fällst du durch, verlängern wir kostenlos",
@@ -443,7 +446,7 @@ export default function PricingPage() {
 
         {/* ══════════ Free tier card ══════════ */}
         <section className="max-w-5xl mx-auto px-4 lg:px-8 pb-4">
-          <FreeTierCard lang={lang} />
+          <FreeTierCard lang={lang} examSource={storedExam} />
         </section>
 
         {/* ══════════ €19 first-month trial card ══════════ */}
@@ -761,7 +764,15 @@ export default function PricingPage() {
 
 /* ═══════════════════════ Free tier card ═══════════════════════ */
 
-function FreeTierCard({ lang }: { lang: Lang }) {
+function FreeTierCard({ lang, examSource }: { lang: Lang; examSource: ExamSourceId }) {
+  // The Free CTA used to hard-code Pharma. We now route to whichever exam the
+  // user last selected (or kenntnispruefung if they're brand new), so KMP and
+  // Kenntnisprüfung cohorts don't get parachuted into a Pharma quiz.
+  const examLabel = examSource === "kenntnispruefung"
+    ? (lang === "de" ? "Kenntnisprüfung-Fragen" : "Kenntnisprüfung questions")
+    : examSource === "kmp_innsbruck"
+    ? (lang === "de" ? "KMP-Innsbruck-Fragen" : "KMP-Innsbruck questions")
+    : (lang === "de" ? "Pharma-Fragen" : "Pharmakologie questions");
   return (
     <article
       className="rounded-[var(--mp-r-card)] overflow-hidden p-6 md:p-7 grid grid-cols-1 md:grid-cols-[1.4fr_1fr] gap-6 items-center"
@@ -836,12 +847,12 @@ function FreeTierCard({ lang }: { lang: Lang }) {
           </span>
         </div>
         <Link
-          href="/quiz?exam=pharma&free=1"
+          href={`/quiz?exam=${examSource}&free=1`}
           className="mp-btn mp-btn--primary inline-flex items-center justify-center gap-2 w-full md:w-auto whitespace-nowrap"
         >
           {lang === "de"
-            ? "Kostenlos starten — 150 Pharma-Fragen"
-            : "Start free — 150 Pharmakologie questions"}
+            ? `Kostenlos starten — 150 ${examLabel}`
+            : `Start free — 150 ${examLabel}`}
           <ArrowRight className="w-3.5 h-3.5" />
         </Link>
         <p className="mp-small text-[var(--mp-fg-subtle)] md:text-right">

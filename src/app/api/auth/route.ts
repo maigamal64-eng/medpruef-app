@@ -2,8 +2,28 @@ import { NextRequest, NextResponse } from "next/server";
 import { validateInitData, validateLoginWidget } from "@/lib/telegram";
 import { getServiceClient } from "@/lib/supabase";
 import bcrypt from "bcryptjs";
+import {
+  checkRateLimit,
+  callerIdentity,
+  rateKey,
+  rateLimitHeaders,
+} from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
+
+// Rate limits — review-2026-04-24-C-15. The auth endpoint had no
+// throttle of any kind, so a brute-force attempt against an 8-char
+// bcrypt password was bound only by Vercel's request concurrency.
+//
+// 10 attempts per minute per identity (header user-id when available,
+// else x-forwarded-for IP). The 10 covers a genuine user fat-fingering
+// their password three times + the legitimate retry pattern after a
+// browser autofill collision; the 11th onward returns 429.
+//
+// Register has its own bucket so a malicious registration loop doesn't
+// burn through the login bucket and lock out a real user.
+const LOGIN_RATE_LIMIT = { limit: 10, windowMs: 60_000 };
+const REGISTER_RATE_LIMIT = { limit: 5, windowMs: 60_000 };
 
 /**
  * /api/auth — the single auth endpoint for MedPrüf (email/password,
@@ -77,6 +97,28 @@ export async function POST(req: NextRequest) {
         );
       }
 
+      // Rate limit per IP (review-2026-04-24-C-15). Without this, an
+      // attacker could enumerate valid emails by brute-forcing the
+      // login route — the route returns "Invalid credentials" for
+      // both unknown email + wrong password, but timing differs.
+      const id = callerIdentity(req);
+      const gate = checkRateLimit({
+        key: rateKey("auth-login", id),
+        ...LOGIN_RATE_LIMIT,
+      });
+      if (!gate.allowed) {
+        return NextResponse.json(
+          {
+            error: "Too many login attempts — please wait before trying again.",
+            retryAfter: gate.retryAfterSec,
+          },
+          {
+            status: 429,
+            headers: rateLimitHeaders(gate, LOGIN_RATE_LIMIT),
+          },
+        );
+      }
+
       const { data: user, error } = await sb
         .from("users")
         .select("*")
@@ -143,6 +185,28 @@ export async function POST(req: NextRequest) {
         return NextResponse.json(
           { error: "Password must be at least 8 characters" },
           { status: 400 },
+        );
+      }
+
+      // Rate limit per IP — review-2026-04-24-C-15. Stricter than the
+      // login bucket because legitimate register attempts are rare
+      // (one per real user, ever). 5/min/IP catches automated signups
+      // without inconveniencing a person registering one account.
+      const id = callerIdentity(req);
+      const gate = checkRateLimit({
+        key: rateKey("auth-register", id),
+        ...REGISTER_RATE_LIMIT,
+      });
+      if (!gate.allowed) {
+        return NextResponse.json(
+          {
+            error: "Too many registration attempts — please wait before trying again.",
+            retryAfter: gate.retryAfterSec,
+          },
+          {
+            status: 429,
+            headers: rateLimitHeaders(gate, REGISTER_RATE_LIMIT),
+          },
         );
       }
 

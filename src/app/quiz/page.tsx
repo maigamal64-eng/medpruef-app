@@ -657,7 +657,7 @@ function QuizContent() {
                 </p>
                 <p className="text-[11px] opacity-90 mt-0.5">
                   {lang === "de"
-                    ? "Ihre Antworten werden gespeichert und automatisch synchronisiert, sobald Sie wieder online sind."
+                    ? "Deine Antworten werden gespeichert und automatisch synchronisiert, sobald du wieder online bist."
                     : "Your answers are saved and will sync automatically when you reconnect."}
                 </p>
               </div>
@@ -881,8 +881,8 @@ function QuizContent() {
         <div className="space-y-3">
           <p className="text-sm text-[var(--mp-fg)]">
             {lang === "de"
-              ? "Upgrade schaltet alle 10.993 Fragen, Spaced-Repetition-Wiederholung, Prüfungssimulation, Bookmarks und die Pass-Until-You-Pass-Garantie der Juni-26-Kohorte frei."
-              : "Upgrade unlocks all 10,993 questions, spaced-repetition review, mock exam, bookmarks, and the Pass-Until-You-Pass guarantee on the June 26 Cohort."}
+              ? "Upgrade schaltet alle 10.992 Fragen, Spaced-Repetition-Wiederholung, Prüfungssimulation, Bookmarks und die Pass-Until-You-Pass-Garantie der Juni-26-Kohorte frei."
+              : "Upgrade unlocks all 10,992 questions, spaced-repetition review, mock exam, bookmarks, and the Pass-Until-You-Pass guarantee on the June 26 Cohort."}
           </p>
           <Alert variant="info">
             {lang === "de"

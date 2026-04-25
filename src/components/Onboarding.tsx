@@ -4,6 +4,7 @@ import { ArrowRight, ArrowLeft, Calendar, Target, BookOpen, CheckCircle2, Moon, 
 import { getStoredTheme, setStoredTheme } from "./ThemeProvider";
 import LanguageToggle from "./LanguageToggle";
 import { t as tr, setLang as persistLang } from "@/lib/i18n";
+import { EXAM_SOURCES, type ExamSourceId } from "@/lib/topics";
 
 type Lang = "de" | "en";
 
@@ -161,28 +162,53 @@ export default function Onboarding({ lang = "de", onLangChange, onComplete }: On
             <p className="text-sm text-[var(--mp-fg-subtle)]">{t(subtitleKeys[step])}</p>
           </div>
 
-          {/* Step 1: Exam */}
+          {/* Step 1: Exam — pick one of three real options */}
           {step === 0 && (
             <div className="space-y-3">
-              <div className="p-4 rounded-xl border-2 border-[var(--mp-viridian)] bg-[var(--mp-viridian)]/5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-semibold text-[var(--mp-fg)]">SIP Kenntnisprüfung</h3>
-                    <p className="text-sm text-[var(--mp-fg-subtle)]">{t("onb_exam_primary_desc")}</p>
-                    <p className="text-xs text-[var(--mp-viridian)] font-mono mt-1">7.567 {t("onb_exam_questions_label")} · 10 {t("onb_exam_specialties_label")}</p>
-                  </div>
-                  <CheckCircle2 className="w-6 h-6 text-[var(--mp-viridian)]" />
-                </div>
-              </div>
-              <div className="p-4 rounded-xl border border-[var(--mp-border)] bg-[var(--mp-surface-sunken)] opacity-50">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-semibold text-[var(--mp-fg-subtle)]">{t("onb_more_exams")}</h3>
-                    <p className="text-sm text-[var(--mp-fg-subtle)]">{t("onb_coming_soon")}</p>
-                  </div>
-                  <span className="text-xs text-[var(--mp-fg-subtle)] bg-[var(--mp-border)] px-2 py-0.5 rounded">{t("onb_soon_badge")}</span>
-                </div>
-              </div>
+              {EXAM_SOURCES.map((exam) => {
+                const selected = data.examSource === exam.id;
+                const descKey: "onb_exam_primary_desc" | "onb_exam_kmp_desc" | "onb_exam_pharma_desc" =
+                  exam.id === "kenntnispruefung"
+                    ? "onb_exam_primary_desc"
+                    : exam.id === "kmp_innsbruck"
+                    ? "onb_exam_kmp_desc"
+                    : "onb_exam_pharma_desc";
+                const specialtyCount =
+                  exam.id === "kenntnispruefung" ? 10 : exam.id === "kmp_innsbruck" ? 12 : 1;
+                const formattedQuestions = activeLang === "de"
+                  ? exam.questions.toLocaleString("de-DE")
+                  : exam.questions.toLocaleString("en-US");
+                return (
+                  <button
+                    key={exam.id}
+                    type="button"
+                    onClick={() => setData({ ...data, examSource: exam.id as ExamSourceId })}
+                    className={`w-full p-4 rounded-xl border-2 text-left transition-all ${
+                      selected
+                        ? "border-[var(--mp-viridian)] bg-[var(--mp-viridian)]/5"
+                        : "border-[var(--mp-border)] hover:border-[var(--mp-fg-subtle)]"
+                    }`}
+                    aria-pressed={selected}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-start gap-3">
+                        <span className="text-2xl shrink-0" aria-hidden>{exam.badge}</span>
+                        <div>
+                          <h3 className="font-semibold text-[var(--mp-fg)]">{exam.fullName}</h3>
+                          <p className="text-sm text-[var(--mp-fg-subtle)] mt-0.5">{t(descKey)}</p>
+                          <p className="text-xs text-[var(--mp-viridian)] font-mono mt-1">
+                            {formattedQuestions} {t("onb_exam_questions_label")} · {specialtyCount} {t("onb_exam_specialties_label")}
+                          </p>
+                        </div>
+                      </div>
+                      {selected && <CheckCircle2 className="w-6 h-6 text-[var(--mp-viridian)] shrink-0" />}
+                    </div>
+                  </button>
+                );
+              })}
+              <p className="text-xs text-[var(--mp-fg-subtle)] text-center mt-2">
+                {t("onb_exam_change_later")}
+              </p>
             </div>
           )}
 
@@ -334,7 +360,7 @@ export default function Onboarding({ lang = "de", onLangChange, onComplete }: On
               <div className="p-4 rounded-xl bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)]">
                 <p className="text-xs font-semibold text-[var(--mp-fg-subtle)] uppercase tracking-wider mb-2">{t("onb_summary_label")}</p>
                 <div className="space-y-1 text-sm text-[var(--mp-fg-muted)]">
-                  <p>📋 SIP Kenntnisprüfung (Wien)</p>
+                  <p>{(EXAM_SOURCES.find((e) => e.id === data.examSource)?.badge ?? "📋")} {EXAM_SOURCES.find((e) => e.id === data.examSource)?.fullName ?? "SIP Kenntnisprüfung (Wien)"}</p>
                   <p>📅 {data.examDate === "not_planned" || !data.examDate ? t("onb_summary_not_planned") : data.examDate}</p>
                   <p>🎯 {data.dailyGoal || 20} {t("onb_summary_qpd")}</p>
                   <p>📊 {selectedLevelLabel ? t(selectedLevelLabel) : t("onb_summary_not_selected")}</p>

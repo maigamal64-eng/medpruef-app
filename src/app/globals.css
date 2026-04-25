@@ -326,11 +326,14 @@ body {
 }
 .xp-animation { animation: xp-pop 1.2s ease-out forwards; }
 
-@keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(0, 58, 140, 0.25); }
-  50% { box-shadow: 0 0 20px 6px rgba(0, 58, 140, 0.08); }
-}
-.pulse-glow { animation: pulse-glow 2.5s ease-in-out infinite; }
+/* `pulse-glow` (infinite-loop CTA glow) and `animate-fire` (infinite
+   streak-emoji pulse) were retired 2026-04-24 per accessibility audit
+   C-14. Persistent infinite-loop motion violates the spirit of
+   prefers-reduced-motion (we honor the media query, but always-on
+   motion is intrusive even for users who haven't set the preference)
+   and turns the streak counter into a pressure cue. Replaced with
+   static UI on the CTA + emoji. Keyframe defs removed from CSS so
+   they can't be reintroduced by accident. */
 
 @keyframes fade-in {
   from { opacity: 0; transform: translateY(8px); }
@@ -344,11 +347,8 @@ body {
 }
 .animate-slide-up { animation: slide-up 0.4s var(--ease-out) forwards; }
 
-@keyframes fire-pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.12); }
-}
-.animate-fire { animation: fire-pulse 1.5s ease-in-out infinite; }
+/* `fire-pulse` keyframe retired 2026-04-24 alongside .animate-fire.
+   See pulse-glow comment above for rationale. */
 
 @keyframes progress-fill { from { width: 0; } }
 .animate-progress { animation: progress-fill 1s var(--ease-out) forwards; }

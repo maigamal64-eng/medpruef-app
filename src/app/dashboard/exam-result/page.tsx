@@ -216,7 +216,7 @@ export default function ExamResultPage() {
             href="/"
             className="inline-flex items-center gap-1 text-sm text-[var(--mp-fg-muted)] hover:text-[var(--mp-viridian)] mb-4"
           >
-            <ArrowLeft size={14} /> Back to dashboard
+            <ArrowLeft size={14} /> {lang === "de" ? "Zurück zum Dashboard" : "Back to dashboard"}
           </Link>
 
           <div className="flex items-center gap-3 mb-6">
@@ -226,19 +226,20 @@ export default function ExamResultPage() {
             <div>
               <h1 className="mp-h1">Pass-Until-You-Pass</h1>
               <p className="text-sm text-[var(--mp-fg-muted)]">
-                Tell us how your exam went.
+                {lang === "de" ? "Wie lief deine Prüfung?" : "Tell us how your exam went."}
               </p>
             </div>
           </div>
 
           {loading && (
             <div className="flex justify-center py-16">
-              <BrandedLoader label="Loading your status…" />
+              <BrandedLoader label={lang === "de" ? "Status wird geladen …" : "Loading your status…"} />
             </div>
           )}
 
           {!loading && status && view === "choose" && (
             <ChooseView
+              lang={lang}
               status={status}
               onPass={submitPass}
               onFail={() => setView("fail-form")}
@@ -251,6 +252,7 @@ export default function ExamResultPage() {
 
           {!loading && status && view === "fail-form" && (
             <FailForm
+              lang={lang}
               status={status}
               examType={examType}
               setExamType={setExamType}
@@ -264,7 +266,7 @@ export default function ExamResultPage() {
             />
           )}
 
-          {!loading && view === "submitted" && <SubmittedView />}
+          {!loading && view === "submitted" && <SubmittedView lang={lang} />}
         </div>
       </main>
       <BottomNav lang={lang} userId={userId} />
@@ -275,6 +277,7 @@ export default function ExamResultPage() {
 // ═══ Views ══════════════════════════════════════════════════════════
 
 function ChooseView({
+  lang,
   status,
   onPass,
   onFail,
@@ -283,6 +286,7 @@ function ChooseView({
   attemptDate,
   setAttemptDate,
 }: {
+  lang: "de" | "en";
   status: PuypStatus;
   onPass: () => void;
   onFail: () => void;
@@ -291,36 +295,54 @@ function ChooseView({
   attemptDate: string;
   setAttemptDate: (v: string) => void;
 }) {
+  const examOptions = [
+    { value: "kenntnispruefung", label: lang === "de" ? "Kenntnisprüfung Wien" : "Kenntnisprüfung Vienna" },
+    { value: "kmp_innsbruck", label: "KMP Innsbruck" },
+    { value: "pharma", label: lang === "de" ? "Pharmakologie" : "Pharmacology" },
+  ];
+
   // Non-eligible branch — steer to /pricing.
   if (!status.eligible) {
     return (
       <div className="space-y-6">
-        <Alert variant="info" title="Pass-Until-You-Pass is a premium feature">
-          The guarantee applies to the <strong>June 26 Cohort</strong> and{" "}
-          <strong>12-month</strong> plans. You can still record your result
-          below, but there&apos;s no subscription extension on your current tier.
+        <Alert
+          variant="info"
+          title={lang === "de"
+            ? "Pass-Until-You-Pass ist eine Premium-Funktion"
+            : "Pass-Until-You-Pass is a premium feature"}
+        >
+          {lang === "de" ? (
+            <>
+              Die Garantie gilt für die <strong>Juni-26-Kohorte</strong> und das{" "}
+              <strong>12-Monats-Abo</strong>. Du kannst dein Ergebnis unten
+              trotzdem festhalten, aber es gibt keine Verlängerung auf deinem
+              aktuellen Tarif.
+            </>
+          ) : (
+            <>
+              The guarantee applies to the <strong>June 26 Cohort</strong> and{" "}
+              <strong>12-month</strong> plans. You can still record your result
+              below, but there&apos;s no subscription extension on your current tier.
+            </>
+          )}
         </Alert>
 
         <div className="mp-card p-5 space-y-4">
-          <h2 className="mp-h2">How did your exam go?</h2>
+          <h2 className="mp-h2">{lang === "de" ? "Wie lief deine Prüfung?" : "How did your exam go?"}</h2>
 
           <Select
-            label="Exam type"
+            label={lang === "de" ? "Prüfungstyp" : "Exam type"}
             value={examType}
             onChange={(e) => setExamType(e.target.value as ExamType)}
-            options={[
-              { value: "kenntnispruefung", label: "Kenntnisprüfung Wien" },
-              { value: "kmp_innsbruck", label: "KMP Innsbruck" },
-              { value: "pharma", label: "Pharmakologie" },
-            ]}
+            options={examOptions}
           />
 
           <TextField
-            label="Attempt date"
+            label={lang === "de" ? "Prüfungsdatum" : "Attempt date"}
             type="date"
             value={attemptDate}
             onChange={(e) => setAttemptDate(e.target.value)}
-            helper="The date of your real exam."
+            helper={lang === "de" ? "Das Datum deiner realen Prüfung." : "The date of your real exam."}
           />
 
           <div className="flex flex-col sm:flex-row gap-3 pt-2">
@@ -329,16 +351,18 @@ function ChooseView({
               className="mp-btn mp-btn--primary flex-1 justify-center"
               onClick={onPass}
             >
-              <CheckCircle2 size={16} /> I passed
+              <CheckCircle2 size={16} /> {lang === "de" ? "Bestanden" : "I passed"}
             </button>
             <button
               type="button"
               className="mp-btn mp-btn--secondary flex-1 justify-center"
               onClick={onFail}
               disabled
-              title="Upgrade to an eligible plan to submit a PUYP claim"
+              title={lang === "de"
+                ? "Upgrade auf einen berechtigten Tarif, um eine PUYP-Verlängerung zu beantragen"
+                : "Upgrade to an eligible plan to submit a PUYP claim"}
             >
-              <XCircle size={16} /> I failed
+              <XCircle size={16} /> {lang === "de" ? "Nicht bestanden" : "I failed"}
             </button>
           </div>
 
@@ -346,7 +370,9 @@ function ChooseView({
             href="/pricing"
             className="block text-center text-sm text-[var(--mp-cta-blue)] hover:underline pt-2"
           >
-            See the plans with Pass-Until-You-Pass
+            {lang === "de"
+              ? "Tarife mit Pass-Until-You-Pass ansehen"
+              : "See the plans with Pass-Until-You-Pass"}
             <ArrowRight size={14} className="inline ml-1" />
           </Link>
         </div>
@@ -362,21 +388,31 @@ function ChooseView({
     <div className="space-y-6">
       <div className="mp-card p-5 space-y-3">
         <div className="flex items-center gap-2 text-sm text-[var(--mp-viridian)]">
-          <Shield size={14} /> <span>Your plan includes Pass-Until-You-Pass</span>
+          <Shield size={14} />{" "}
+          <span>
+            {lang === "de"
+              ? "Dein Tarif enthält Pass-Until-You-Pass"
+              : "Your plan includes Pass-Until-You-Pass"}
+          </span>
         </div>
-        <h2 className="mp-h2">How did your exam go?</h2>
+        <h2 className="mp-h2">{lang === "de" ? "Wie lief deine Prüfung?" : "How did your exam go?"}</h2>
         <p className="text-sm text-[var(--mp-fg-muted)]">
-          If you failed on your first real attempt and have answered ≥70% of
-          the question bank, we&apos;ll extend your access through the next cycle
-          at no cost. {remaining > 0
-            ? `You have ${remaining} extension${remaining === 1 ? "" : "s"} remaining.`
-            : "You’ve already used the full 2 extensions on this subscription."}
+          {lang === "de"
+            ? "Wenn du beim ersten realen Versuch nicht bestanden hast und ≥70 % der Fragebank beantwortet hast, verlängern wir deinen Zugang kostenlos bis zum nächsten Zyklus."
+            : "If you failed on your first real attempt and have answered ≥70% of the question bank, we'll extend your access through the next cycle at no cost."}{" "}
+          {remaining > 0
+            ? lang === "de"
+              ? `Dir ${remaining === 1 ? "bleibt" : "bleiben"} noch ${remaining} Verlängerung${remaining === 1 ? "" : "en"}.`
+              : `You have ${remaining} extension${remaining === 1 ? "" : "s"} remaining.`
+            : lang === "de"
+              ? "Du hast bereits beide Verlängerungen für dieses Abo genutzt."
+              : "You've already used the full 2 extensions on this subscription."}
         </p>
 
         <div className="grid sm:grid-cols-2 gap-3 pt-2">
           <div className="mp-card p-3 text-xs">
             <div className="flex items-center justify-between text-[var(--mp-fg-muted)]">
-              <span>Qbank completion</span>
+              <span>{lang === "de" ? "Fragebank-Fortschritt" : "Qbank completion"}</span>
               <span
                 className={
                   status.meets_completion_gate
@@ -388,41 +424,42 @@ function ChooseView({
               </span>
             </div>
             <div className="text-[var(--mp-fg-subtle)] text-[11px] mt-1">
-              {status.qbank_answered.toLocaleString()} of{" "}
-              {status.qbank_total.toLocaleString()} questions answered
-              {!status.meets_completion_gate && " · need ≥70% to claim"}
+              {status.qbank_answered.toLocaleString()}{" "}
+              {lang === "de" ? "von" : "of"}{" "}
+              {status.qbank_total.toLocaleString()}{" "}
+              {lang === "de" ? "Fragen beantwortet" : "questions answered"}
+              {!status.meets_completion_gate &&
+                (lang === "de"
+                  ? " · ≥70 % nötig, um zu beantragen"
+                  : " · need ≥70% to claim")}
             </div>
           </div>
           <div className="mp-card p-3 text-xs">
             <div className="flex items-center justify-between text-[var(--mp-fg-muted)]">
-              <span>Subscription</span>
+              <span>{lang === "de" ? "Abo" : "Subscription"}</span>
               <span className="text-[var(--mp-fg)] font-semibold capitalize">
                 {status.subscription?.tier.replace(/_/g, " ")}
               </span>
             </div>
             <div className="text-[var(--mp-fg-subtle)] text-[11px] mt-1">
-              Extensions used: {used}/2
+              {lang === "de" ? "Verlängerungen genutzt" : "Extensions used"}: {used}/2
             </div>
           </div>
         </div>
 
         <div className="grid gap-3">
           <TextField
-            label="Attempt date"
+            label={lang === "de" ? "Prüfungsdatum" : "Attempt date"}
             type="date"
             value={attemptDate}
             onChange={(e) => setAttemptDate(e.target.value)}
-            helper="The date of your real exam."
+            helper={lang === "de" ? "Das Datum deiner realen Prüfung." : "The date of your real exam."}
           />
           <Select
-            label="Exam type"
+            label={lang === "de" ? "Prüfungstyp" : "Exam type"}
             value={examType}
             onChange={(e) => setExamType(e.target.value as ExamType)}
-            options={[
-              { value: "kenntnispruefung", label: "Kenntnisprüfung Wien" },
-              { value: "kmp_innsbruck", label: "KMP Innsbruck" },
-              { value: "pharma", label: "Pharmakologie" },
-            ]}
+            options={examOptions}
           />
         </div>
 
@@ -432,7 +469,7 @@ function ChooseView({
             className="mp-btn mp-btn--primary flex-1 justify-center"
             onClick={onPass}
           >
-            <CheckCircle2 size={16} /> I passed
+            <CheckCircle2 size={16} /> {lang === "de" ? "Bestanden" : "I passed"}
           </button>
           <button
             type="button"
@@ -441,21 +478,32 @@ function ChooseView({
             disabled={atCap || !status.meets_completion_gate}
             title={
               atCap
-                ? "You've used all 2 extensions on this subscription"
+                ? lang === "de"
+                  ? "Du hast bereits beide Verlängerungen genutzt"
+                  : "You've used all 2 extensions on this subscription"
                 : !status.meets_completion_gate
-                  ? "You need ≥70% Qbank completion to submit"
+                  ? lang === "de"
+                    ? "Du brauchst ≥70 % Fragebank-Fortschritt, um einzureichen"
+                    : "You need ≥70% Qbank completion to submit"
                   : undefined
             }
           >
-            <XCircle size={16} /> I failed — claim extension
+            <XCircle size={16} />{" "}
+            {lang === "de"
+              ? "Nicht bestanden — Verlängerung beantragen"
+              : "I failed — claim extension"}
           </button>
         </div>
 
         {(atCap || !status.meets_completion_gate) && (
           <p className="text-xs text-[var(--mp-fg-subtle)] pt-1">
             {atCap
-              ? "Extension cap reached. You can still record a fail — it won't trigger an extension."
-              : "Keep answering questions to reach the 70% completion threshold."}
+              ? lang === "de"
+                ? "Verlängerungslimit erreicht. Du kannst trotzdem ein Nicht-Bestehen festhalten — es löst aber keine Verlängerung aus."
+                : "Extension cap reached. You can still record a fail — it won't trigger an extension."
+              : lang === "de"
+                ? "Beantworte weiter Fragen, um die 70-%-Schwelle zu erreichen."
+                : "Keep answering questions to reach the 70% completion threshold."}
           </p>
         )}
       </div>
@@ -464,6 +512,7 @@ function ChooseView({
 }
 
 function FailForm({
+  lang,
   status,
   examType,
   setExamType,
@@ -475,6 +524,7 @@ function FailForm({
   onSubmit,
   onCancel,
 }: {
+  lang: "de" | "en";
   status: PuypStatus;
   examType: ExamType;
   setExamType: (v: ExamType) => void;
@@ -486,6 +536,12 @@ function FailForm({
   onSubmit: (e: React.FormEvent) => void;
   onCancel: () => void;
 }) {
+  const examOptions = [
+    { value: "kenntnispruefung", label: lang === "de" ? "Kenntnisprüfung Wien" : "Kenntnisprüfung Vienna" },
+    { value: "kmp_innsbruck", label: "KMP Innsbruck" },
+    { value: "pharma", label: lang === "de" ? "Pharmakologie" : "Pharmacology" },
+  ];
+
   return (
     <form
       onSubmit={onSubmit}
@@ -493,21 +549,22 @@ function FailForm({
       aria-labelledby="puyp-fail-title"
     >
       <h2 id="puyp-fail-title" className="mp-h2">
-        Submit proof of failed attempt
+        {lang === "de" ? "Nachweis für nicht bestandenen Versuch einreichen" : "Submit proof of failed attempt"}
       </h2>
       <p className="text-sm text-[var(--mp-fg-muted)]">
-        Upload your official exam result (PDF or photo). An admin will verify
-        within 72 hours and extend your subscription to cover the next
-        available cycle.
+        {lang === "de"
+          ? "Lade deinen offiziellen Prüfungsbescheid hoch (PDF oder Foto). Ein Admin prüft innerhalb von 72 Stunden und verlängert dein Abo bis zum nächsten verfügbaren Zyklus."
+          : "Upload your official exam result (PDF or photo). An admin will verify within 72 hours and extend your subscription to cover the next available cycle."}
       </p>
 
-      <Alert variant="info" title="What counts as proof?">
-        Any official document showing your name, exam type, attempt date, and
-        the failing result. Screenshots of an exam-board portal are fine.
+      <Alert variant="info" title={lang === "de" ? "Was zählt als Nachweis?" : "What counts as proof?"}>
+        {lang === "de"
+          ? "Jedes offizielle Dokument mit deinem Namen, Prüfungstyp, Versuchsdatum und dem nicht bestandenen Ergebnis. Screenshots aus dem Prüfungsportal sind in Ordnung."
+          : "Any official document showing your name, exam type, attempt date, and the failing result. Screenshots of an exam-board portal are fine."}
       </Alert>
 
       <TextField
-        label="Attempt date"
+        label={lang === "de" ? "Prüfungsdatum" : "Attempt date"}
         type="date"
         required
         value={attemptDate}
@@ -515,20 +572,16 @@ function FailForm({
       />
 
       <Select
-        label="Exam type"
+        label={lang === "de" ? "Prüfungstyp" : "Exam type"}
         required
         value={examType}
         onChange={(e) => setExamType(e.target.value as ExamType)}
-        options={[
-          { value: "kenntnispruefung", label: "Kenntnisprüfung Wien" },
-          { value: "kmp_innsbruck", label: "KMP Innsbruck" },
-          { value: "pharma", label: "Pharmakologie" },
-        ]}
+        options={examOptions}
       />
 
       <div className="mp-field">
         <label htmlFor="puyp-proof" className="mp-field__label mp-field__label--required">
-          Proof file
+          {lang === "de" ? "Nachweisdatei" : "Proof file"}
         </label>
         <div className="mp-card p-3 flex items-center gap-3">
           <div className="w-9 h-9 rounded-lg bg-[var(--mp-cta-blue)]/10 flex items-center justify-center flex-shrink-0">
@@ -546,7 +599,9 @@ function FailForm({
               </>
             ) : (
               <div className="text-[var(--mp-fg-subtle)]">
-                No file selected · max 10MB · PDF, JPG, PNG, WebP
+                {lang === "de"
+                  ? "Keine Datei ausgewählt · max. 10 MB · PDF, JPG, PNG, WebP"
+                  : "No file selected · max 10MB · PDF, JPG, PNG, WebP"}
               </div>
             )}
           </div>
@@ -554,7 +609,9 @@ function FailForm({
             htmlFor="puyp-proof"
             className="mp-btn mp-btn--secondary mp-btn--sm cursor-pointer"
           >
-            {proofFile ? "Change" : "Choose file"}
+            {proofFile
+              ? lang === "de" ? "Ändern" : "Change"
+              : lang === "de" ? "Datei wählen" : "Choose file"}
           </label>
           <input
             id="puyp-proof"
@@ -565,14 +622,16 @@ function FailForm({
           />
         </div>
         <p className="mp-field__helper">
-          Files are stored privately. Only admins can review them via a
-          short-lived signed URL.
+          {lang === "de"
+            ? "Dateien werden privat gespeichert. Nur Admins können sie über eine kurzlebige signierte URL einsehen."
+            : "Files are stored privately. Only admins can review them via a short-lived signed URL."}
         </p>
       </div>
 
       <div className="text-xs text-[var(--mp-fg-subtle)] border-t border-[var(--mp-border)] pt-3">
-        Submitting attaches a snapshot of your Qbank completion
-        ({status.qbank_completion_pct.toFixed(1)}%) to the claim.
+        {lang === "de"
+          ? `Beim Einreichen wird ein Snapshot deines Fragebank-Fortschritts (${status.qbank_completion_pct.toFixed(1)} %) an die Anfrage angehängt.`
+          : `Submitting attaches a snapshot of your Qbank completion (${status.qbank_completion_pct.toFixed(1)}%) to the claim.`}
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3 pt-2">
@@ -582,10 +641,10 @@ function FailForm({
           disabled={submitting || !proofFile || !attemptDate}
         >
           {submitting ? (
-            <>Submitting…</>
+            <>{lang === "de" ? "Wird gesendet …" : "Submitting…"}</>
           ) : (
             <>
-              Submit for review <ArrowRight size={14} />
+              {lang === "de" ? "Zur Prüfung einreichen" : "Submit for review"} <ArrowRight size={14} />
             </>
           )}
         </button>
@@ -595,23 +654,25 @@ function FailForm({
           onClick={onCancel}
           disabled={submitting}
         >
-          Cancel
+          {lang === "de" ? "Abbrechen" : "Cancel"}
         </button>
       </div>
     </form>
   );
 }
 
-function SubmittedView() {
+function SubmittedView({ lang }: { lang: "de" | "en" }) {
   return (
     <EmptyState
       tone="success"
       icon={<Clock className="w-10 h-10" aria-hidden />}
-      title="Submitted — admin is reviewing."
-      body="We'll email you within 72 hours. If approved, your subscription will extend automatically to cover the next exam cycle. You can close this page."
+      title={lang === "de" ? "Eingereicht — Admin prüft." : "Submitted — admin is reviewing."}
+      body={lang === "de"
+        ? "Wir mailen dir innerhalb von 72 Stunden. Bei Genehmigung wird dein Abo automatisch bis zum nächsten Prüfungszyklus verlängert. Du kannst diese Seite schließen."
+        : "We'll email you within 72 hours. If approved, your subscription will extend automatically to cover the next exam cycle. You can close this page."}
       action={
         <Link href="/" className="mp-btn mp-btn--primary mt-4">
-          <FileText size={14} /> Back to dashboard
+          <FileText size={14} /> {lang === "de" ? "Zurück zum Dashboard" : "Back to dashboard"}
         </Link>
       }
     />

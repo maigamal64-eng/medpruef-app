@@ -493,9 +493,9 @@ Use **bold** for key terms, bullet points for clarity, and structured headings.`
                   <p className="mp-body text-[13px] leading-snug text-[var(--mp-fg-muted)] mb-3">
                     {lang === "de" ? (
                       <>
-                        Diese Erklärung und alle anderen KI-Erklärungen sind für Sie kostenlos.
-                        Wenn Sie eine eigene Frage an die KI stellen wollen (z.&nbsp;B. „Warum ist Option C falsch?“),
-                        brauchen Sie Pro.
+                        Diese Erklärung und alle anderen KI-Erklärungen sind für dich kostenlos.
+                        Wenn du eine eigene Frage an die KI stellen willst (z.&nbsp;B. „Warum ist Option C falsch?“),
+                        brauchst du Pro.
                       </>
                     ) : (
                       <>
