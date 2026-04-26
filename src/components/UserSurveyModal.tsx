@@ -86,20 +86,35 @@ export default function UserSurveyModal() {
         const onboarding = JSON.parse(localStorage.getItem('medpruef_onboarding') || '{}')
         if (!onboarding?.completedAt) return
 
-        // Server-side cross-device gate (review-2026-04-26-A3): if any
-        // device has shown or dismissed the survey for this user, we
-        // skip. Avoids re-firing in incognito / fresh browsers.
+        // Server-side cross-device gate (review-2026-04-26-A3): enforce
+        // the cadence rule (session_count >= 3 AND qs_answered_total >= 25)
+        // AND check if any device has already shown or dismissed the survey.
+        // This is the authoritative gate — localStorage checks above are
+        // fast-path short-circuits only. Fresh users (session 1, 0 questions)
+        // must NEVER see this modal.
         try {
           const r = await fetch('/api/announcements/state')
           if (r.ok) {
-            const body = (await r.json()) as { state?: { feedbackSurveyShownAt?: string | null; feedbackSurveyDismissedAt?: string | null } }
-            const shown = body?.state?.feedbackSurveyShownAt
-            const dismissed = body?.state?.feedbackSurveyDismissedAt
-            if (shown || dismissed) {
-              // Mirror back into localStorage so future loads skip the
-              // network round-trip.
-              try { localStorage.setItem(STORAGE_DISMISSED, 'true') } catch {}
-              return
+            const body = (await r.json()) as {
+              state?: {
+                sessionCount?: number
+                qsAnsweredTotal?: number
+                feedbackSurveyShownAt?: string | null
+                feedbackSurveyDismissedAt?: string | null
+              }
+            }
+            const state = body?.state
+            if (state) {
+              // Already shown or dismissed cross-device — skip.
+              if (state.feedbackSurveyShownAt || state.feedbackSurveyDismissedAt) {
+                try { localStorage.setItem(STORAGE_DISMISSED, 'true') } catch {}
+                return
+              }
+              // Cadence gate: require at least 3 sessions AND 25 questions answered.
+              // This prevents the survey from ambushing brand-new users.
+              const sessions = state.sessionCount ?? 1
+              const qs = state.qsAnsweredTotal ?? 0
+              if (sessions < 3 || qs < 25) return
             }
           }
         } catch { /* network error — fall through to legacy behaviour */ }

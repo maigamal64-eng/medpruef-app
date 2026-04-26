@@ -26,6 +26,30 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-04-26",
     tag: "fix",
     title: {
+      de: "Tippen im Feedback-Dialog bleibt jetzt stabil — kein Fokusverlust mehr",
+      en: "Typing in feedback dialogs is now stable — no more focus loss",
+    },
+    description: {
+      de: "Beim Tippen in der Feedback- oder Frage-melden-Box verlor das Textfeld nach jedem Buchstaben den Fokus. Ursache war ein interner React-Fehler im Dialog-Baustein, der den Fokus bei jeder Eingabe auf den Schließen-Button zurückgesetzt hat. Behoben.",
+      en: "Typing in the feedback or report-question textarea was losing focus after every character. Root cause was an internal React issue in the Dialog primitive re-running its focus timer on every parent state change. Fixed.",
+    },
+  },
+  {
+    date: "2026-04-26",
+    tag: "improvement",
+    title: {
+      de: "Umfrage erscheint erst nach echtem Nutzungserlebnis",
+      en: "Survey now waits until you have real usage experience",
+    },
+    description: {
+      de: "Die kurze Nutzungsumfrage öffnet sich nun erst ab der 3. Sitzung und nach mindestens 25 beantworteten Fragen — nicht mehr für neue Nutzer beim ersten Besuch.",
+      en: "The short user survey now opens only from session 3+ and after at least 25 questions answered — no longer shown to brand-new users on first visit.",
+    },
+  },
+  {
+    date: "2026-04-26",
+    tag: "fix",
+    title: {
       de: "Telegram-Bot antwortet jetzt auf /start — plus 9 UX-Fixes",
       en: "Telegram bot now replies to /start — plus 9 UX fixes",
     },

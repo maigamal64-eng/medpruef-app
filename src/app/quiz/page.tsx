@@ -13,6 +13,7 @@ import Link from "next/link";
 import { t, getLang, setLang } from "@/lib/i18n";
 import { trackEvent, trackPageView } from "@/lib/tracker";
 import { getStoredSession, storeSession } from "@/lib/auth";
+import { useUserTier } from "@/lib/hooks/useUserTier";
 import { recordAnswer } from "@/lib/weakness";
 import { Inbox, Clock, Trophy, Sparkles, Gift } from "lucide-react";
 import LanguageToggle from "@/components/LanguageToggle";
@@ -78,16 +79,18 @@ function QuizContent() {
   const wantsSetup = searchParams.get("setup") === "1";
 
   const [userId, setUserId] = useState<string>("");
-  // Tier surfaces client-side gates on bookmarks/notes (both Pro-only
-  // as of the 2026-04-23 Lock). Populated from the stored session
-  // where available; defaults to 'free' so a missing tier fails-closed.
-  //
-  // 2026-04-24: also track `userRole` so admin operators (whose tier
-  // may be `'free'`/`null` because they never subscribed) still get
-  // Pro-level access. Passed alongside `userTier` to QuestionActions
-  // + QuestionCard + AIChatAssistant.
-  const [userTier, setUserTier] = useState<string>("free");
-  const [userRole, setUserRole] = useState<string>("user");
+  // Tier + role: sourced live from /api/auth/me via useUserTier so that
+  // server-side Pro grants (e.g. admin grant_pro) are reflected without
+  // requiring a full logout/login cycle. This fixed Obai's AI-card still
+  // showing "Pro required" after the session-invalidate fix in PR #10
+  // landed — quiz/page.tsx was the last surface still reading stale tier
+  // from the session blob. useUserTier seeds from localStorage for the
+  // initial paint (no flash) then updates within milliseconds.
+  const { tier: tierLive, role: roleLive } = useUserTier();
+  // Keep legacy setUserTier / setUserRole writeable for the paramId
+  // branch (userId from URL) which shouldn't override the live hook.
+  const userTier = tierLive;
+  const userRole = roleLive;
   const [lang, setLangState] = useState<Lang>("de");
   const [config, setConfig] = useState<QuizConfig | null>(null);
 
@@ -173,8 +176,8 @@ function QuizContent() {
     } else {
       const session = getStoredSession();
       setUserId(session?.user?.id || "");
-      setUserTier(session?.user?.tier || "free");
-      setUserRole(session?.user?.role || "user");
+      // tier + role are now sourced from useUserTier() (live /api/auth/me)
+      // rather than from the stale session blob, so we don't set them here.
     }
   }, [searchParams]);
 

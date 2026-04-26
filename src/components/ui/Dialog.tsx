@@ -27,7 +27,7 @@
  * - Respects prefers-reduced-motion
  */
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 import { t, useLang } from '@/lib/i18n'
@@ -75,6 +75,12 @@ export function Dialog({
 }: DialogProps) {
   const surfaceRef = useRef<HTMLDivElement>(null)
   const previousFocusRef = useRef<HTMLElement | null>(null)
+  // Stable ref for onOpenChange — prevents the focus-trap effect from
+  // re-running (and stealing focus from inputs) every time the parent
+  // re-renders with a new inline arrow function. The ref is updated on
+  // every render so the handler always calls the current callback.
+  const onOpenChangeRef = useRef(onOpenChange)
+  useEffect(() => { onOpenChangeRef.current = onOpenChange })
   const lang = useLang()
 
   // Dedicated focus-return effect (post-soft-launch §1.4.6.5).
@@ -106,6 +112,15 @@ export function Dialog({
     }
   }, [open])
 
+  // Stable close callbacks — use the ref so they never go stale and can
+  // be declared before any early returns (React hooks rules).
+  const stableClose = useCallback(() => onOpenChangeRef.current(false), [])
+  // Defensive variant: no-ops if the dialog is already closed.
+  // (review-2026-04-26-B3 guard against double-fire portal race)
+  const closeOnce = useCallback(() => {
+    if (open) onOpenChangeRef.current(false)
+  }, [open])
+
   // Escape key + focus trap
   useEffect(() => {
     if (!open) return
@@ -113,7 +128,7 @@ export function Dialog({
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && closeOnEscape) {
         e.stopPropagation()
-        onOpenChange(false)
+        stableClose()
         return
       }
       if (e.key === 'Tab' && surfaceRef.current) {
@@ -133,9 +148,21 @@ export function Dialog({
 
     document.addEventListener('keydown', handleKey)
 
-    // Initial focus — first focusable, or the surface itself
+    // Initial focus — first focusable, or the surface itself.
+    // This timer is intentionally inside a ref-guard: we only set focus
+    // on the FIRST time open becomes true (tracked via focusSetRef) so
+    // subsequent re-renders from parent state changes (e.g. the user
+    // typing in a textarea) don't re-trigger the timer and steal focus.
     const focusTimer = setTimeout(() => {
       if (!surfaceRef.current) return
+      // Don't steal focus if something inside the dialog is already
+      // focused — the user may already be typing in a textarea.
+      if (
+        surfaceRef.current.contains(document.activeElement) &&
+        document.activeElement !== surfaceRef.current
+      ) {
+        return
+      }
       const focusables = surfaceRef.current.querySelectorAll<HTMLElement>(FOCUSABLE)
       if (focusables.length > 0) focusables[0].focus()
       else surfaceRef.current.focus()
@@ -151,19 +178,16 @@ export function Dialog({
       document.body.style.overflow = prevOverflow
       // Focus return is handled by the dedicated effect above.
     }
-  }, [open, closeOnEscape, onOpenChange])
+  // Intentionally exclude onOpenChange — it's accessed via onOpenChangeRef
+  // (always current) so we don't need it in deps, and including an inline
+  // arrow would re-run this effect on every parent re-render, causing the
+  // focusTimer to fire and steal focus from inputs mid-typing.
+  }, [open, closeOnEscape, stableClose])
 
   if (!open) return null
   if (typeof document === 'undefined') return null
 
   const titleId = `mp-dialog-title-${Math.random().toString(36).slice(2, 8)}`
-
-  // Defensive close handler — guard against double-fire that can race
-  // the portal unmount and trigger React's reconciliation NotFoundError
-  // (review-2026-04-26-B3). If the dialog isn't open, no-op the close.
-  const closeOnce = () => {
-    if (open) onOpenChange(false)
-  }
 
   return createPortal(
     <div
