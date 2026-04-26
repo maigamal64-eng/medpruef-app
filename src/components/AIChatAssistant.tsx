@@ -470,12 +470,17 @@ Use **bold** for key terms, bullet points for clarity, and structured headings.`
             {/* Educational Pro card — explains the free vs. Pro split so
                 free users don't mistake the disabled input for a broken AI.
                 The cached KI-Erklärung they see ABOVE this card is free;
-                only interactive follow-ups require Pro. */}
+                only interactive follow-ups require Pro.
+
+                Dark-mode fix (review-2026-04-26-A1): --mp-success-bg now
+                resolves via globals.css to color-mix(viridian 14%) which
+                is a tinted-dark overlay in dark mode (was hard light
+                mint). Card body now reads as readable on either theme. */}
             <div
               className="mp-card p-4"
               style={{
                 background: "var(--mp-success-bg)",
-                borderColor: "rgba(0, 123, 95, 0.35)",
+                borderColor: "color-mix(in srgb, var(--mp-viridian) 35%, transparent)",
                 borderLeft: "4px solid var(--mp-viridian)",
               }}
               role="note"

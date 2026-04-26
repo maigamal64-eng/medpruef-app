@@ -374,12 +374,15 @@ export async function POST(req: NextRequest) {
     });
     // Record a failed-feature event so the admin overview tile catches
     // the drift even when no individual error gets escalated.
+    // NOTE (review-2026-04-26-A3): the column is `event_data`, NOT
+    // `metadata` — PR #9 used the wrong field name and these inserts
+    // silently failed for 24h (admin tile sat at 0/0 the whole time).
     try {
       const db = getServiceClient();
       await db.from("user_events").insert({
         user_id: userId,
         event_type: "ai_chat_failed",
-        metadata: { phase: "all_upstreams_failed", duration_ms: Date.now() - startedAt },
+        event_data: { phase: "all_upstreams_failed", duration_ms: Date.now() - startedAt },
       });
     } catch {
       /* swallow — telemetry must not block the user response */
@@ -458,12 +461,15 @@ export async function POST(req: NextRequest) {
   // 'ai_chat_message' is the daily-quota counter; we ALSO write
   // 'ai_chat_completed' here for an unambiguous success signal that
   // doesn't double-count quota reads.
+  // NOTE (review-2026-04-26-A3): column is `event_data`, NOT `metadata`.
+  // PR #9 used the wrong field name → admin tile read 0/0 for 24h
+  // because the inserts silently 22P02-errored.
   try {
     const db = getServiceClient();
     await db.from("user_events").insert({
       user_id: userId,
       event_type: "ai_chat_completed",
-      metadata: {
+      event_data: {
         provider: upstreamProvider,
         question_id: qidNum,
         reply_len: reply.length,

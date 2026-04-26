@@ -158,12 +158,19 @@ export function Dialog({
 
   const titleId = `mp-dialog-title-${Math.random().toString(36).slice(2, 8)}`
 
+  // Defensive close handler — guard against double-fire that can race
+  // the portal unmount and trigger React's reconciliation NotFoundError
+  // (review-2026-04-26-B3). If the dialog isn't open, no-op the close.
+  const closeOnce = () => {
+    if (open) onOpenChange(false)
+  }
+
   return createPortal(
     <div
       className="mp-dialog__overlay animate-scale-in"
       role="presentation"
       onClick={(e) => {
-        if (closeOnBackdrop && e.target === e.currentTarget) onOpenChange(false)
+        if (closeOnBackdrop && e.target === e.currentTarget) closeOnce()
       }}
     >
       <div
@@ -188,7 +195,7 @@ export function Dialog({
             <button
               type="button"
               className="mp-dialog__close"
-              onClick={() => onOpenChange(false)}
+              onClick={closeOnce}
               aria-label={t("close", lang)}
             >
               <X className="w-4 h-4" aria-hidden />

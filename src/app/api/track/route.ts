@@ -96,6 +96,16 @@ export async function POST(req: NextRequest) {
     // re-queue and retry. Previously the inserts were fire-and-
     // forget and silently dropped rows on failure (Analytics audit
     // P0-A2, Backend audit BE-P0-002).
+    //
+    // Update review-2026-04-26-B1: a small number of rows hit
+    // user_events_user_id_fkey because client-side trackers can
+    // POST events for a UUID that no longer exists (deleted
+    // accounts, guest IDs that never persisted). Those used to
+    // 500 the whole batch and ship to Sentry. Now we filter at
+    // insert time: 23503 (FK) and 22P02 (invalid uuid) are
+    // recorded as a breadcrumb + console.warn but the batch
+    // still returns 200 so the client doesn't infinite-retry
+    // a row that will never persist.
     if (events && events.length > 0) {
       // Original user_events table
       const rows = events.map((e) => ({
@@ -107,6 +117,19 @@ export async function POST(req: NextRequest) {
       }));
       const { error: eventsErr } = await db.from("user_events").insert(rows);
       if (eventsErr) {
+        const code = (eventsErr as { code?: string }).code;
+        if (code === "23503" || code === "22P02") {
+          // Orphan user / malformed uuid — swallow. The client tracker
+          // shouldn't infinite-retry these; respond 200 so the queue
+          // drains.
+          // eslint-disable-next-line no-console
+          console.warn(
+            `[/api/track] swallowed ${code} for user_id=${userId}`,
+            { batchSize: rows.length, message: eventsErr.message.slice(0, 150) },
+          );
+          // Skip the activity_log insert below too — same FK risk.
+          return NextResponse.json({ ok: true, recorded: 0, swallowed: code });
+        }
         captureServerError(eventsErr, {
           route: "/api/track",
           userId,

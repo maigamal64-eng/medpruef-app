@@ -644,6 +644,21 @@ textarea:focus {
 :root { --mp-viridian: #007B5F; }
 [data-theme="dark"] { --mp-viridian: #00A896; }
 
+/* Dark-mode tinted backgrounds (review-2026-04-26-A1).
+   The light-mode hex tints (`#E6F4F1` etc.) read as white-ish cards in
+   the dark modal/dialog tree; the AI-Pro upsell card on the AI chat
+   modal was the smoking-gun report from Obai 2026-04-26 01:05.
+   Using color-mix(in srgb, <accent> N%, transparent) gives a tinted
+   overlay that respects whatever dark surface sits beneath it without
+   needing a second hand-rolled hex. The 12% / 14% mix matches the
+   light-mode appearance against the page background. */
+[data-theme="dark"] {
+  --mp-success-bg: color-mix(in srgb, var(--mp-viridian) 14%, transparent);
+  --mp-warning-bg: color-mix(in srgb, var(--mp-warning) 14%, transparent);
+  --mp-info-bg:    color-mix(in srgb, var(--mp-info) 14%, transparent);
+  --mp-error-bg:   color-mix(in srgb, var(--mp-error) 14%, transparent);
+}
+
 /* ═══════════════════════════════════════════════════════════════
    MPDS v2 — Full token layer + component primitives
    Mirrors design-system/components_v2.css + colors_and_type.css.
@@ -672,6 +687,10 @@ textarea:focus {
   --mp-info:            #3A7CA5;
 
   /* ─── Tinted semantic backgrounds ─── */
+  /* Light-mode hex tints. Dark mode overrides below in
+     [data-theme="dark"] block use color-mix() with the dark surface so
+     the AI-Pro upsell card, alerts, and empty-states stay readable
+     instead of rendering near-white on a dark modal (review-2026-04-26-A1). */
   --mp-success-bg:      #E6F4F1;
   --mp-warning-bg:      #FFF4E6;
   --mp-info-bg:         #EAF3F9;

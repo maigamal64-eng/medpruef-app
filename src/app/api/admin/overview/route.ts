@@ -194,11 +194,15 @@ export const GET = adminRouteShell(
     // 10b. AI chat health — last 60 minutes of completed vs failed
     //      events. Tile shows {requests, completed, failed, avg_latency_ms}
     //      so drift surfaces before users complain (review-2026-04-26-A4).
+    // NOTE (review-2026-04-26-A3): user_events column is `event_data`,
+    // not `metadata`. PR #9 read the wrong field; 24h of "0/0" data
+    // came from this mismatch (the writes also used `metadata` and
+    // silently failed). Both halves fixed in the same commit.
     const oneHourAgoIso = new Date(now.getTime() - 60 * 60_000).toISOString();
-    const [{ data: aiCompleted }, { data: aiFailed }] = await Promise.all([
+    const [{ data: aiCompleted }, { count: aiFailedCountRaw }] = await Promise.all([
       sb
         .from("user_events")
-        .select("metadata, created_at")
+        .select("event_data, created_at")
         .eq("event_type", "ai_chat_completed")
         .gte("created_at", oneHourAgoIso),
       sb
@@ -208,13 +212,13 @@ export const GET = adminRouteShell(
         .gte("created_at", oneHourAgoIso),
     ]);
     const aiCompletedCount = aiCompleted?.length ?? 0;
-    const aiFailedCount = aiFailed?.length ?? 0;
+    const aiFailedCount = aiFailedCountRaw ?? 0;
     const aiAvgLatencyMs = (() => {
       if (!aiCompleted || aiCompleted.length === 0) return null;
       const lats = aiCompleted
         .map(
           (e) =>
-            ((e.metadata as Record<string, unknown> | null)?.duration_ms as
+            ((e.event_data as Record<string, unknown> | null)?.duration_ms as
               | number
               | undefined) ?? null,
         )

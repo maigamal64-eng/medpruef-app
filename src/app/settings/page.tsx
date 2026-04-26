@@ -20,6 +20,7 @@ import { getLang, setLang, t } from "@/lib/i18n";
 import { getStoredSession, clearSession, storeSession } from "@/lib/auth";
 import { getStoredTheme, setStoredTheme, type Theme } from "@/components/ThemeProvider";
 import { authFetch } from "@/lib/authFetch";
+import { useUserTier } from "@/lib/hooks/useUserTier";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import {
@@ -124,6 +125,16 @@ export default function SettingsPage() {
         is_puyp_eligible_tier: boolean;
       }
   >(null);
+
+  // Live-tier read (review-2026-04-26-A2). The settings page used to
+  // hard-code "Free" as the fallback when /api/user/subscription
+  // returned no active row. But admin-granted Pro (the 14 Tier-1
+  // grants on 2026-04-26) updates users.tier directly without
+  // creating a subscriptions row — so Obai's account showed "Free"
+  // despite tier='pro' in the DB. useUserTier hits /api/auth/me which
+  // is the canonical read.
+  const { tier: liveTier, tierExpiresAt: liveTierExpiresAt, isPaid: liveIsPaid } =
+    useUserTier();
 
   useEffect(() => {
     setLangState(getLang());
@@ -747,12 +758,39 @@ export default function SettingsPage() {
                   </div>
                 )}
 
-                {/* Current tier / active subscription */}
-                {/* `activeSub` is null (loading), false (no sub), or
-                    the subscription object — the truthy check below is
-                    enough to narrow to the object branch. */}
+                {/* Current tier / active subscription
+                    Three branches:
+                      1. activeSub object → /api/user/subscription found
+                         a real subscriptions row (NOWPayments-paid).
+                         Render the rich SubscriptionCard with countdown.
+                      2. !activeSub but liveIsPaid → admin-granted Pro
+                         (no subscriptions row exists; users.tier was
+                         updated directly by /api/admin/users/<id>/grant).
+                         Render a minimal Pro card with the expiry from
+                         /api/auth/me. review-2026-04-26-A2.
+                      3. !activeSub && !liveIsPaid → genuine free user. */}
                 {activeSub ? (
                   <SubscriptionCard sub={activeSub} lang={lang} />
+                ) : liveIsPaid ? (
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-[var(--mp-fg)]">
+                        {lang === "de" ? "Aktueller Tarif" : "Current plan"}
+                      </p>
+                      <p className="text-xs text-[var(--mp-fg-subtle)] mt-0.5">
+                        {liveTierExpiresAt
+                          ? lang === "de"
+                            ? `Pro · gültig bis ${new Date(liveTierExpiresAt).toLocaleDateString("de-AT", { day: "numeric", month: "long", year: "numeric" })}`
+                            : `Pro · valid until ${new Date(liveTierExpiresAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}`
+                          : lang === "de"
+                            ? "Pro · Vollzugriff aktiv"
+                            : "Pro · full access active"}
+                      </p>
+                    </div>
+                    <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-[var(--mp-success-bg)] text-[var(--mp-viridian)] text-xs font-semibold rounded-lg border border-[rgba(0,123,95,0.2)]">
+                      {liveTier === "admin" ? (lang === "de" ? "Admin" : "Admin") : "Pro"}
+                    </span>
+                  </div>
                 ) : (
                   <div className="flex items-center justify-between">
                     <div>

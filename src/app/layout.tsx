@@ -17,6 +17,7 @@ import OfflineIndicator from "@/components/OfflineIndicator";
 import TrackRouteChange from "@/components/TrackRouteChange";
 import SearchModalMount from "@/components/SearchModalMount";
 import { ToastProvider } from "@/components/ui";
+import RootErrorBoundary from "@/components/RootErrorBoundary";
 import { Suspense } from "react";
 
 const inter = Inter({
@@ -112,8 +113,22 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="de" dir="ltr" suppressHydrationWarning>
+    <html lang="de" dir="ltr" translate="no" suppressHydrationWarning>
       <head>
+        {/*
+          Tell Google Translate (and Edge / iOS Safari translate) to leave
+          the DOM alone. The in-app DE/EN toggle is the supported way to
+          switch language; when Translate rewrites text nodes mid-render,
+          React's reconciliation crashes with "NotFoundError: Failed to
+          execute 'removeChild' / 'insertBefore'" — see Sentry issue,
+          review-2026-04-26-B3.
+
+          This meta plus the `<html translate="no">` attribute below
+          (`translate="no"`) gives all modern browsers the right hint
+          without breaking i18n hreflang.
+        */}
+        <meta name="google" content="notranslate" />
+
         {/*
           Stale-SW kill-switch — MUST run before anything else.
 
@@ -256,26 +271,32 @@ export default function RootLayout({
         <Suspense fallback={null}>
           <TrackRouteChange />
         </Suspense>
-        {/* ToastProvider wraps the app so any component can call useToast()
-            to push a transient notification. Renders a single a11y-live
-            region for screen readers. See src/components/ui/Toast.tsx. */}
-        <ToastProvider>
-          <PWAInstall />
-          <GuestMigrationBanner />
-          <CohortCountdownBanner />
-          <EmailValidationModal />
-          <FeedbackWidget />
-          <SearchModalMount />
-          <CookieBannerMount />
-          <ConsentGatedAnalytics />
-          <OfflineIndicator />
-          {children}
-          {/* LegalFooter — slim Impressum/Datenschutz/AGB/Kontakt strip
-              on authenticated pages. Auto-hides on /landing (full
-              footer), /login (pre-auth), /onboarding, and /admin/*
-              (own footer). review-2026-04-25-B13. */}
-          <LegalFooter />
-        </ToastProvider>
+        {/* RootErrorBoundary catches NotFoundError-class crashes
+            (Translate-extension DOM mutations, portal cleanup races)
+            and renders a calm reload toast instead of a white screen.
+            review-2026-04-26-B3. */}
+        <RootErrorBoundary>
+          {/* ToastProvider wraps the app so any component can call useToast()
+              to push a transient notification. Renders a single a11y-live
+              region for screen readers. See src/components/ui/Toast.tsx. */}
+          <ToastProvider>
+            <PWAInstall />
+            <GuestMigrationBanner />
+            <CohortCountdownBanner />
+            <EmailValidationModal />
+            <FeedbackWidget />
+            <SearchModalMount />
+            <CookieBannerMount />
+            <ConsentGatedAnalytics />
+            <OfflineIndicator />
+            {children}
+            {/* LegalFooter — slim Impressum/Datenschutz/AGB/Kontakt strip
+                on authenticated pages. Auto-hides on /landing (full
+                footer), /login (pre-auth), /onboarding, and /admin/*
+                (own footer). review-2026-04-25-B13. */}
+            <LegalFooter />
+          </ToastProvider>
+        </RootErrorBoundary>
       </body>
     </html>
   );

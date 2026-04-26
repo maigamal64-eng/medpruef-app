@@ -28,6 +28,7 @@ import { t, getLang, setLang } from "@/lib/i18n";
 import { getStoredSession } from "@/lib/auth";
 import { getStoredExamSource } from "@/lib/topics";
 import { QUESTIONS } from "@/lib/content-truth";
+import { useUserTier } from "@/lib/hooks/useUserTier";
 import LanguageToggle from "@/components/LanguageToggle";
 import ThemeToggle from "@/components/ThemeToggle";
 import Sidebar from "@/components/Sidebar";
@@ -382,8 +383,20 @@ export default function ProgressPage() {
   // Bookmarks + notes are Pro-only (Lock 2026-04-23). We gate the UI
   // on this tier so the empty state reads "upgrade to unlock"
   // instead of "nothing here".
+  // Tier + role read live from /api/auth/me via useUserTier
+  // (review-2026-04-26-A2). Replaces the previous stale read from
+  // session.user.tier which didn't reflect admin grants until logout.
+  // The legacy local-state setters are kept as fallback for the
+  // initial render (avoids a free→pro flicker on slow networks).
+  const tierLive = useUserTier();
   const [userTier, setUserTier] = useState<string>("free");
   const [userRole, setUserRole] = useState<string>("user");
+  // Mirror live state into the local setters so the rest of the page
+  // (which reads userTier / userRole) reacts to admin grants.
+  useEffect(() => {
+    setUserTier(tierLive.tier);
+    setUserRole(tierLive.role);
+  }, [tierLive.tier, tierLive.role]);
   const [totalXp, setTotalXp] = useState(0);
   const [streak, setStreak] = useState(0);
   const [totalAnswered, setTotalAnswered] = useState(0);
