@@ -23,6 +23,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-04-26",
+    tag: "fix",
+    title: {
+      de: "Telegram-Bot antwortet jetzt auf /start — plus 9 UX-Fixes",
+      en: "Telegram bot now replies to /start — plus 9 UX fixes",
+    },
+    description: {
+      de: "Der Telegram-Bot hat auf einen leeren /start-Befehl bisher gar nicht reagiert — Nutzer sahen nur Stille. Jetzt antwortet er sofort mit einer Willkommensnachricht und zwei Buttons: „MedPrüf öffnen & anmelden\" und „Mini App öffnen\". Außerdem: Der Bot antwortet ab sofort in der Sprache, die du in der App verwendest (DE/EN), nicht mehr immer auf Englisch. Das PWA-Installationsbanner überlagert den Seiteninhalt nicht mehr — es sitzt jetzt als schmale Leiste oben. Der Feedback-Button überlappt nicht mehr die untere Navigation auf Mobilgeräten. Der \"Bot aktivieren\"-Banner wird innerhalb der Telegram-App selbst nicht mehr angezeigt. Der Preis in der Beschreibung wurde auf €79 für 3 Monate korrigiert (von fälschlich €19). Weitere kleinere Verbesserungen.",
+      en: "The Telegram bot was completely silent when you sent a bare /start command — users saw nothing. It now replies immediately with a welcome message and two buttons: \"Open MedPrüf & sign in\" and \"Open Mini App\". Also: the bot now replies in the language you're using in the app (DE/EN) instead of always defaulting to English. The PWA install banner no longer overlaps page content — it's now a slim bar pinned to the top. The feedback button no longer overlaps the bottom nav on mobile. The \"Activate bot\" banner is no longer shown when you're already inside the Telegram app. The price in the description was corrected to €79 for 3 months (was incorrectly €19). Plus other minor polish.",
+    },
+  },
+  {
     date: "2026-04-24",
     tag: "improvement",
     title: {

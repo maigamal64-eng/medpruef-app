@@ -1398,9 +1398,9 @@ function DemoHome({
           </p>
 
           <div className="flex flex-col sm:flex-row gap-3">
-            {/* Telegram login */}
+            {/* Telegram login — lang-suffixed so bot replies in the user's UI language (F10 fix) */}
             <a
-              href="https://t.me/MedPruefBot?start=web_login"
+              href={`https://t.me/MedPruefBot?start=web_login_${lang}`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex-1 flex items-center justify-center gap-3 bg-[#229ED9] hover:bg-[#1e8fc0] text-[var(--mp-fg)] px-5 py-3 rounded font-semibold text-sm transition-all active:scale-[0.98]"

@@ -201,6 +201,15 @@ export function storeSession(session: StoredSession): void {
       'medpruef_session_issued_at',
       new Date().toISOString(),
     );
+    // F6 fix (2026-04-26): stamp a short-lived cookie so the middleware
+    // can skip the /landing redirect for returning authenticated users.
+    // Expires in 30 days — a logged-out user has clearSession() called
+    // which removes this cookie.
+    try {
+      document.cookie = 'mp_skip_landing=1; path=/; max-age=2592000; SameSite=Lax';
+    } catch {
+      // Non-critical — the middleware falls through gracefully.
+    }
   } catch {}
 }
 
@@ -217,6 +226,9 @@ export function clearSession(): void {
   try {
     localStorage.removeItem(SESSION_KEY);
     localStorage.removeItem('medpruef_session_issued_at');
+    // Remove the skip-landing cookie so the middleware redirects them to
+    // /landing after logout (F6 fix companion).
+    document.cookie = 'mp_skip_landing=; path=/; max-age=0; SameSite=Lax';
   } catch {}
 }
 

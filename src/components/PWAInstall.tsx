@@ -135,26 +135,28 @@ export default function PWAInstall() {
     localStorage.setItem("medpruef_pwa_dismissed", "1");
   };
 
-  // Update banner takes priority over install banner
+  // Update banner takes priority over install banner (also moved to top — F8 fix)
   if (updateAvailable) {
     return (
-      <div className="fixed bottom-20 left-4 right-4 md:left-auto md:right-6 md:bottom-6 md:w-80 z-50 animate-slide-up">
-        <div className="card rounded-2xl p-4 shadow-[var(--shadow-elevated)] border border-[var(--mp-cta-blue)]/25 bg-[var(--mp-surface-raised)]">
-          <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[var(--mp-cta-blue)]/10 flex items-center justify-center flex-shrink-0">
-              <RefreshCw className="w-5 h-5 text-[var(--mp-cta-blue)]" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-[var(--mp-fg)] mb-0.5">{t("pwa_update_title", lang)}</p>
-              <p className="text-xs text-[var(--mp-fg-subtle)] mb-3">{t("pwa_update_body", lang)}</p>
-              <button
-                onClick={handleUpdate}
-                className="btn-primary text-xs px-3 py-1.5 flex items-center gap-1.5"
-              >
-                <RefreshCw className="w-3 h-3" /> {t("pwa_update_cta", lang)}
-              </button>
-            </div>
-          </div>
+      <div className="fixed top-0 left-0 right-0 z-50 animate-slide-down">
+        <div
+          className="flex items-center gap-3 px-4 py-2.5 border-b"
+          style={{
+            background: 'var(--mp-surface-raised)',
+            borderColor: 'color-mix(in srgb, var(--mp-cta-blue) 40%, transparent)',
+            boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+          }}
+        >
+          <RefreshCw className="w-4 h-4 text-[var(--mp-cta-blue)] shrink-0" aria-hidden />
+          <p className="flex-1 text-sm font-medium text-[var(--mp-fg)]">
+            {t("pwa_update_title", lang)}
+          </p>
+          <button
+            onClick={handleUpdate}
+            className="btn-primary text-xs px-3 py-1.5 flex items-center gap-1.5 shrink-0"
+          >
+            <RefreshCw className="w-3 h-3" aria-hidden /> {t("pwa_update_cta", lang)}
+          </button>
         </div>
       </div>
     );
@@ -162,33 +164,42 @@ export default function PWAInstall() {
 
   if (!showBanner || dismissed) return null;
 
+  // F7 fix (2026-04-26): Chrome fires beforeinstallprompt AND its own
+  // system-level install prompt, causing two stacked banners. We call
+  // e.preventDefault() above (which suppresses Chrome's native prompt),
+  // then surface our own slim TOP bar instead of a bottom-positioned
+  // card that collides with the bottom nav.
+  //
+  // F8 fix (2026-04-26): the previous bottom-20 position sat ON TOP of
+  // the hero copy on landing. Moving to a top-pinned slim bar keeps it
+  // above all content, never obscures the body, and is dismissible.
   return (
-    <div className="fixed bottom-20 left-4 right-4 md:left-auto md:right-6 md:bottom-6 md:w-80 z-40 animate-slide-up">
-      <div className="card rounded-2xl p-4 shadow-[var(--shadow-elevated)] border border-[var(--mp-viridian)]/20 bg-white">
-        <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[var(--mp-viridian)]/10 flex items-center justify-center flex-shrink-0">
-            <Download className="w-5 h-5 text-[var(--mp-viridian)]" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-[var(--mp-fg)] mb-0.5">{t("pwa_install_title", lang)}</p>
-            <p className="text-xs text-[var(--mp-fg-subtle)] mb-3">{t("pwa_install_body", lang)}</p>
-            <div className="flex gap-2">
-              <button onClick={handleInstall} className="btn-primary text-xs px-3 py-1.5">
-                {t("pwa_install_cta", lang)}
-              </button>
-              <button onClick={handleDismiss} className="text-xs text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg-muted)]">
-                {t("pwa_not_now", lang)}
-              </button>
-            </div>
-          </div>
-          <button
-            onClick={handleDismiss}
-            className="text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg-muted)]"
-            aria-label={t("pwa_dismiss", lang)}
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
+    <div className="fixed top-0 left-0 right-0 z-40 animate-slide-down">
+      <div
+        className="flex items-center gap-3 px-4 py-2.5 border-b"
+        style={{
+          background: 'var(--mp-surface-raised)',
+          borderColor: 'var(--mp-border-subtle)',
+          boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+        }}
+      >
+        <Download className="w-4 h-4 text-[var(--mp-viridian)] shrink-0" aria-hidden />
+        <p className="flex-1 text-sm font-medium text-[var(--mp-fg)]">
+          {t("pwa_install_title", lang)}
+        </p>
+        <button
+          onClick={handleInstall}
+          className="btn-primary text-xs px-3 py-1.5 shrink-0"
+        >
+          {t("pwa_install_cta", lang)}
+        </button>
+        <button
+          onClick={handleDismiss}
+          className="text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg-muted)] shrink-0 ml-1"
+          aria-label={t("pwa_dismiss", lang)}
+        >
+          <X className="w-4 h-4" />
+        </button>
       </div>
     </div>
   );

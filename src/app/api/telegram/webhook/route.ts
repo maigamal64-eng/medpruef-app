@@ -107,10 +107,61 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true })
   }
 
-  // Only handle web_login payloads here; other /start payloads can be wired up later.
-  if (payload !== 'web_login') return NextResponse.json({ ok: true })
-
+  // Detect language from payload suffix (web_login_de / web_login_en) then
+  // fall back to the Telegram client's language_code. This lets the landing
+  // page CTA pass the UI language via the deep-link so the bot reply matches
+  // the language the user was already reading. F10 fix (2026-04-26).
   const from = msg.from
+  let payloadLang: 'de' | 'en' | null = null
+  if (payload?.endsWith('_de')) payloadLang = 'de'
+  else if (payload?.endsWith('_en')) payloadLang = 'en'
+  const isDE =
+    payloadLang === 'de' ||
+    (!payloadLang && from.language_code?.startsWith('de'))
+
+  // Bare /start (payload empty/undefined) or unrecognised payload: send a
+  // welcome message with two inline buttons — one for the web app, one for
+  // the Mini App. F4 fix (2026-04-26).
+  const isWebLogin =
+    payload === 'web_login' ||
+    payload === 'web_login_de' ||
+    payload === 'web_login_en'
+
+  if (!isWebLogin) {
+    // Unknown or empty payload → send welcome reply
+    const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://medpruf.com').replace(/\/$/, '')
+    const welcomeText = isDE
+      ? 'Willkommen bei MedPrüf — 10.993 Prüfungsfragen für Kenntnisprüfung Wien, KMP Innsbruck und Pharmakologie.\n\nPass beim ersten Versuch — oder lerne kostenlos weiter, bis du es schaffst.'
+      : 'Welcome to MedPrüf — 10,993 exam questions for Kenntnisprüfung Wien, KMP Innsbruck and Pharmakologie.\n\nPass first try — or study free until you do.'
+    const webLabel = isDE ? 'MedPrüf öffnen & anmelden' : 'Open MedPrüf & sign in'
+    const miniAppLabel = isDE ? 'Mini App öffnen' : 'Open Mini App'
+    // Deep-link with language suffix so the subsequent token exchange also
+    // returns the right language.
+    const langSuffix = isDE ? '_de' : '_en'
+    const deepLinkUrl = `https://t.me/MedPruefBot?start=web_login${langSuffix}`
+    try {
+      await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: msg.chat.id,
+          text: welcomeText,
+          reply_markup: {
+            inline_keyboard: [
+              [
+                { text: webLabel, url: `${siteUrl}/?tg_start=1` },
+                { text: miniAppLabel, url: deepLinkUrl },
+              ],
+            ],
+          },
+        }),
+      })
+    } catch (e) {
+      console.error('welcome sendMessage failed:', e)
+    }
+    return NextResponse.json({ ok: true })
+  }
+
   const token = crypto.randomUUID()
   const expiresAt = new Date(Date.now() + TOKEN_TTL_MS).toISOString()
 
@@ -131,12 +182,10 @@ export async function POST(req: NextRequest) {
 
   const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://medpruf.com').replace(/\/$/, '')
   const loginUrl = `${siteUrl}/?tg_token=${encodeURIComponent(token)}`
-  const text =
-    from.language_code?.startsWith('de')
-      ? 'Tippe auf den Button, um MedPrüf zu öffnen und dich anzumelden:'
-      : 'Tap the button to open MedPrüf and sign in:'
-  const buttonLabel =
-    from.language_code?.startsWith('de') ? 'MedPrüf öffnen' : 'Open MedPrüf'
+  const text = isDE
+    ? 'Tippe auf den Button, um MedPrüf zu öffnen und dich anzumelden:'
+    : 'Tap the button to open MedPrüf and sign in:'
+  const buttonLabel = isDE ? 'MedPrüf öffnen' : 'Open MedPrüf'
 
   try {
     await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {

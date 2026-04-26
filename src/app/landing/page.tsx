@@ -67,11 +67,12 @@ const COPY = {
     // Authority pivot (review-2026-04-25-B3): replaced "Gebaut von
     // Ärzt:innen" — the founder is an Egyptian engineer, not a doctor;
     // the audit found the claim falsifiable. Pivoted to data-as-credential
-    // (verifiable, doctor-respectable). Loss-frame line appended per
-    // review-2026-04-25-B2: anchors €19 to the €370 re-sit fee.
+    // (verifiable, doctor-respectable). F8b fix (2026-04-26): updated
+    // price floor from €19 (stale, old monthly tier) to €79/3 Monate
+    // (=€26,33/mo) which matches the live pricing floor.
     subtitle: {
-      de: "Die einzige Prüfungsvorbereitung, speziell für Österreichs Kenntnisprüfung, KMP und Pharmakologie. Destilliert aus 7.566 Wien-Prüfungsfragen seit 2016, 3.091 KMP Innsbruck und 335 Pharmakologie. Eine Kenntnisprüfung kostet ~€370 pro Versuch — MedPrüf gibt es ab 19 €.",
-      en: "The only exam prep built specifically for Austria's Kenntnisprüfung, KMP and Pharmakologie. Distilled from 7,566 Vienna exam questions since 2016, 3,091 KMP Innsbruck and 335 Pharmakologie. A Kenntnisprüfung re-sit is ~€370 — MedPrüf starts at 19 €.",
+      de: "Die einzige Prüfungsvorbereitung, speziell für Österreichs Kenntnisprüfung, KMP und Pharmakologie. Destilliert aus 7.566 Wien-Prüfungsfragen seit 2016, 3.091 KMP Innsbruck und 335 Pharmakologie. Eine Kenntnisprüfung kostet ~€370 pro Versuch — MedPrüf gibt es ab €79 für 3 Monate.",
+      en: "The only exam prep built specifically for Austria's Kenntnisprüfung, KMP and Pharmakologie. Distilled from 7,566 Vienna exam questions since 2016, 3,091 KMP Innsbruck and 335 Pharmakologie. A Kenntnisprüfung re-sit is ~€370 — MedPrüf starts at €79 for 3 months.",
     },
     cta_primary: {
       de: "Kostenlos starten",
@@ -90,12 +91,12 @@ const COPY = {
       en: "See June 26 Cohort plans",
     },
     cta_tertiary: {
-      de: "Für €19 testen",
-      en: "Try for €19",
+      de: "Juni-26-Kohorte — €114",
+      en: "June 26 Cohort — €114",
     },
     cta_tertiary_sub: {
-      de: "1 Monat · keine automatische Verlängerung",
-      en: "1 month · no auto-renewal",
+      de: "6 Monate · Pass-Until-You-Pass-Garantie",
+      en: "6 months · Pass-Until-You-Pass guarantee",
     },
     cta_note: {
       de: "Keine Karte · Juni-26-Kohorte mit Pass-Until-You-Pass-Garantie",
@@ -104,8 +105,8 @@ const COPY = {
   },
   stats: [
     {
-      value: "10.992",
-      value_en: "10,992",
+      value: "10.993",
+      value_en: "10,993",
       label: { de: "Fragen", en: "Questions" },
     },
     {

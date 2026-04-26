@@ -89,11 +89,15 @@ export default function FeedbackWidget() {
 
   return (
     <>
-      {/* Floating trigger button */}
+      {/* Floating trigger button
+          F13 fix (2026-04-26): on mobile the bottom nav is ~64px + safe-area.
+          We push the button above that with bottom-24 (96px) on mobile so it
+          never overlaps the Quiz tab — including inside the Telegram WebApp
+          where the browser chrome eats additional vertical space. */}
       {!open && (
         <button
           onClick={() => setOpen(true)}
-          className="fixed bottom-20 right-4 md:bottom-6 md:right-6 z-50
+          className="fixed bottom-24 right-4 md:bottom-6 md:right-6 z-50
                      w-11 h-11 rounded-full bg-[var(--mp-cta-blue)] text-white shadow-lg
                      hover:bg-[var(--mp-cta-blue)]/90 hover:shadow-xl transition-all
                      flex items-center justify-center
@@ -105,9 +109,9 @@ export default function FeedbackWidget() {
         </button>
       )}
 
-      {/* Feedback panel */}
+      {/* Feedback panel — same upward shift as the trigger button */}
       {open && (
-        <div className="fixed bottom-20 right-4 md:bottom-6 md:right-6 z-50 w-80 max-w-[calc(100vw-2rem)]">
+        <div className="fixed bottom-24 right-4 md:bottom-6 md:right-6 z-50 w-80 max-w-[calc(100vw-2rem)]">
           <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 bg-[var(--mp-cta-blue)] text-white">

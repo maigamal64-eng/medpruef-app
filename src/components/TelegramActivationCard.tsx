@@ -48,6 +48,21 @@ export default function TelegramActivationCard() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      // F16 fix (2026-04-26): the card prompts users to "activate the bot"
+      // but if they are ALREADY IN the Telegram WebApp, the bot session is
+      // already live — the card is confusing and misleading. Hide it.
+      try {
+        const tgWin = window as Window & {
+          Telegram?: { WebApp?: { initData?: string } };
+        };
+        if (typeof window !== "undefined" && tgWin.Telegram?.WebApp?.initData) {
+          if (!cancelled) setState({ kind: "hidden" });
+          return;
+        }
+      } catch {
+        /* Telegram WebApp API may not be available */
+      }
+
       // Honor local dismissal — user shouldn't see it twice in a session.
       try {
         if (localStorage.getItem(DISMISS_KEY) === "1") {

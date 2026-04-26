@@ -21,7 +21,13 @@ type Lang = "de" | "en";
 type AuthMode = "login" | "register";
 
 // Telegram bot deep-link — keep as a single source of truth.
-const TELEGRAM_DEEP_LINK = "https://t.me/MedPruefBot?start=web_login";
+// F10 fix (2026-04-26): append language suffix so the bot replies in the
+// same language the user is already reading. The suffix is appended at
+// render time from the current lang state (see getTelegramDeepLink below).
+const TELEGRAM_DEEP_LINK_BASE = "https://t.me/MedPruefBot?start=web_login";
+function getTelegramDeepLink(lang: string): string {
+  return `${TELEGRAM_DEEP_LINK_BASE}_${lang === "de" ? "de" : "en"}`;
+}
 
 /**
  * Referral-code capture. We persist the `?ref=<code>` param in
@@ -237,9 +243,9 @@ export default function LoginPage() {
               </div>
             )}
 
-            {/* PRIMARY CTA: Telegram deep-link */}
+            {/* PRIMARY CTA: Telegram deep-link (lang-suffixed for F10 fix) */}
             <a
-              href={TELEGRAM_DEEP_LINK}
+              href={getTelegramDeepLink(lang)}
               target="_blank"
               rel="noopener noreferrer"
               className="w-full flex items-center justify-center gap-3 bg-[#229ED9] hover:bg-[#1e8fc0] text-white px-5 py-4 rounded-xl font-semibold text-[15px] transition-all active:scale-[0.98] shadow-sm"
