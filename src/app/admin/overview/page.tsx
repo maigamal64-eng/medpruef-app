@@ -80,6 +80,16 @@ interface OverviewSnapshot {
     webhook_failures_24h: number;
     stuck_pending_24h: number;
     conversion_7d: number | null;
+    ai_chat_1h: {
+      requests: number;
+      completed: number;
+      failed: number;
+      avg_latency_ms: number | null;
+    };
+    telegram_activation: {
+      registered: number;
+      confirmed: number;
+    };
     crons: Record<string, { lastStatus: string; lastStartedAt: string | null }>;
     recent_events: Array<{
       id: string | number;
@@ -255,9 +265,135 @@ export default function AdminOverviewPage() {
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
           <StuckPendingTile initial={snapshot?.tiles.stuck_pending_24h ?? 0} />
+          <AIChatHealthTile
+            initial={snapshot?.tiles.ai_chat_1h ?? {
+              requests: 0,
+              completed: 0,
+              failed: 0,
+              avg_latency_ms: null,
+            }}
+          />
+          <TelegramActivationTile
+            initial={snapshot?.tiles.telegram_activation ?? { registered: 0, confirmed: 0 }}
+          />
         </div>
       </section>
     </AdminPageShell>
+  );
+}
+
+// ═══ Telegram bot activation tile ══════════════════════════════════
+//
+// Shows X / Y where X = users with telegram_chat_id_confirmed, Y = total
+// telegram-registered users. Footer reads "{X}/{Y} bot-active" so we can
+// see the activation lift after the /dashboard CTA ships.
+// review-2026-04-26-B2.
+
+function TelegramActivationTile({
+  initial,
+}: {
+  initial: { registered: number; confirmed: number };
+}) {
+  const [live, setLive] = useState(initial);
+  useEffect(() => setLive(initial), [initial]);
+
+  const pct = live.registered > 0 ? live.confirmed / live.registered : 0;
+  const tone: "success" | "warn" | "danger" =
+    pct >= 0.5 ? "success" : pct >= 0.25 ? "warn" : "danger";
+
+  return (
+    <Tile
+      label="Telegram bot activation"
+      icon={Activity}
+      tone={tone}
+      href="/admin/users"
+      footer={
+        live.registered === 0 ? (
+          <span className="italic text-[var(--mp-fg-muted)]">
+            No Telegram-registered users yet
+          </span>
+        ) : (
+          <span>
+            <StatusDot tone={tone} size={6} />{" "}
+            <span className="ml-1">
+              {live.confirmed}/{live.registered} bot-active ({Math.round(pct * 100)}%)
+            </span>
+          </span>
+        )
+      }
+    >
+      <div className="text-2xl font-semibold text-[var(--mp-fg)]">
+        <FormatInt value={live.confirmed} />
+        <span className="text-sm text-[var(--mp-fg-muted)] ml-1">
+          / {live.registered}
+        </span>
+      </div>
+    </Tile>
+  );
+}
+
+// ═══ AI chat health tile ═══════════════════════════════════════════
+//
+// Surfaces last-60-minutes AI chat health: total requests, completed,
+// failed, average latency. Tone goes:
+//   - success when failure rate < 10% AND avg_latency < 8 s
+//   - warn when failure rate 10-25% OR avg_latency 8-12 s
+//   - danger when failure rate > 25% OR avg_latency > 12 s
+//
+// Refreshes via the parent /api/admin/overview poll. review-2026-04-26-A4.
+
+function AIChatHealthTile({
+  initial,
+}: {
+  initial: {
+    requests: number;
+    completed: number;
+    failed: number;
+    avg_latency_ms: number | null;
+  };
+}) {
+  const [live, setLive] = useState(initial);
+  useEffect(() => setLive(initial), [initial]);
+
+  const failureRate =
+    live.requests > 0 ? live.failed / live.requests : 0;
+  const tone: "success" | "warn" | "danger" =
+    failureRate > 0.25 || (live.avg_latency_ms ?? 0) > 12_000
+      ? "danger"
+      : failureRate > 0.1 || (live.avg_latency_ms ?? 0) > 8_000
+        ? "warn"
+        : "success";
+
+  const latencyLabel = live.avg_latency_ms == null
+    ? "—"
+    : `${Math.round(live.avg_latency_ms / 100) / 10}s`;
+
+  return (
+    <Tile
+      label="AI chat (60 min)"
+      icon={Activity}
+      tone={tone}
+      href="/admin/users"
+      footer={
+        live.requests === 0 ? (
+          <span className="italic text-[var(--mp-fg-muted)]">
+            No AI chat traffic in last 60 min
+          </span>
+        ) : (
+          <span>
+            <StatusDot tone={tone} size={6} />{" "}
+            <span className="ml-1">
+              {live.completed}/{live.requests} ok · avg {latencyLabel}
+              {live.failed > 0 ? ` · ${live.failed} failed` : ""}
+            </span>
+          </span>
+        )
+      }
+    >
+      <div className="text-2xl font-semibold text-[var(--mp-fg)]">
+        <FormatInt value={live.requests} />
+      </div>
+    </Tile>
   );
 }
 

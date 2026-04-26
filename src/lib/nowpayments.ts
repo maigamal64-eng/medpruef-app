@@ -104,7 +104,10 @@ export const TIERS: Record<string, TierDefinition> = {
     humanNameDe: "Erster Monat (einmalig, keine automatische Verlängerung)",
     available: true, // LIVE for crypto checkout
     puypEligible: false, // too short for PUYP
-    referralPayoutCents: 2500, // €25 — matches monthly tier
+    // €19 net is ~€16 after NOWPayments fees; €25 referral was margin-
+    // negative. Locked to €10 per [name]'s 2026-04-26 decision (review-
+    // 2026-04-26-D2). Keeps the share rewarded but the math positive.
+    referralPayoutCents: 1000, // €10
   },
   // ── Four always-on tiers — waitlist until Stripe Atlas ──
   monthly: {
@@ -137,7 +140,11 @@ export const TIERS: Record<string, TierDefinition> = {
     humanName: "6 months",
     humanNameDe: "6 Monate",
     available: false,
-    puypEligible: false,
+    // PUYP applies to 6mo tier per [name]'s 2026-04-26 decision (review-
+    // 2026-04-26-D1). Cohort + 6mo + 12mo all carry the guarantee;
+    // €19, €29, €79 do NOT. Aligns code with content-truth.ts +
+    // updated FAQ copy.
+    puypEligible: true,
     referralPayoutCents: 5000, // €50
   },
   twelve_month: {

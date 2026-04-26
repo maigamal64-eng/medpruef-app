@@ -96,6 +96,39 @@ export function captureServerError(err: unknown, ctx: SentryContext = {}): void 
 }
 
 /**
+ * Add a breadcrumb to the current Sentry scope. Used to leave a trace
+ * of the path a request took through a multi-step route (auth check,
+ * tier check, upstream call, cache write, etc.) so when an error fires
+ * later, Sentry's issue view shows the full sequence.
+ *
+ * Fire-and-forget; never throws. Returns immediately if Sentry isn't
+ * available (Edge runtime, dev without DSN, etc.).
+ *
+ * Usage:
+ *   addBreadcrumb({ category: "ai-chat", message: "tier_check", data: { tier } });
+ */
+export function addBreadcrumb(args: {
+  category: string;
+  message: string;
+  level?: "debug" | "info" | "warning" | "error";
+  data?: Record<string, unknown>;
+}): void {
+  (async () => {
+    try {
+      const Sentry = await import("@sentry/nextjs");
+      Sentry.addBreadcrumb({
+        category: args.category,
+        message: args.message,
+        level: args.level ?? "info",
+        data: args.data,
+      });
+    } catch {
+      /* noop */
+    }
+  })();
+}
+
+/**
  * Convenience helper for the common "log + capture + return 500" pattern.
  * Returns the error message (never the raw error) so callers can build
  * a JSON body without leaking stack traces to the client.

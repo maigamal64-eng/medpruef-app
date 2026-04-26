@@ -77,29 +77,58 @@ export default function WhatsNewModal() {
   const lang = useLang()
 
   useEffect(() => {
-    // Don't show if: no session, guest, or already seen this version
-    try {
-      const session = JSON.parse(localStorage.getItem('medpruef_session') || '{}')
-      const userId = session?.user?.id || ''
-      if (!userId || userId.startsWith('guest_')) return
+    let cancelled = false
+    let timer: ReturnType<typeof setTimeout> | undefined
 
-      const onboarding = JSON.parse(localStorage.getItem('medpruef_onboarding') || '{}')
-      if (!onboarding?.completedAt) return // don't show before onboarding
+    ;(async () => {
+      // Don't show if: no session, guest, already seen this version
+      // locally, OR (review-2026-04-26-A3) the cross-device gate says
+      // we already showed it on another device.
+      try {
+        const session = JSON.parse(localStorage.getItem('medpruef_session') || '{}')
+        const userId = session?.user?.id || ''
+        if (!userId || userId.startsWith('guest_')) return
 
-      const lastSeen = localStorage.getItem(STORAGE_KEY)
-      if (lastSeen === CURRENT_VERSION) return
+        const onboarding = JSON.parse(localStorage.getItem('medpruef_onboarding') || '{}')
+        if (!onboarding?.completedAt) return
 
-      // Small delay so it doesn't compete with page load
-      const timer = setTimeout(() => setOpen(true), 1500)
-      return () => clearTimeout(timer)
-    } catch {
-      // silent
+        const lastSeen = localStorage.getItem(STORAGE_KEY)
+        if (lastSeen === CURRENT_VERSION) return
+
+        try {
+          const r = await fetch('/api/announcements/state')
+          if (r.ok) {
+            const body = (await r.json()) as { state?: { whatsNewSeenAt?: string | null } }
+            if (body?.state?.whatsNewSeenAt) {
+              try { localStorage.setItem(STORAGE_KEY, CURRENT_VERSION) } catch {}
+              return
+            }
+          }
+        } catch { /* fall through to legacy behaviour */ }
+
+        if (cancelled) return
+        timer = setTimeout(() => {
+          if (!cancelled) setOpen(true)
+        }, 1500)
+      } catch {
+        // silent
+      }
+    })()
+
+    return () => {
+      cancelled = true
+      if (timer) clearTimeout(timer)
     }
   }, [])
 
   const dismiss = () => {
     setOpen(false)
     localStorage.setItem(STORAGE_KEY, CURRENT_VERSION)
+    fetch('/api/announcements/seen', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ surface: 'whats_new_seen' }),
+    }).catch(() => {})
   }
 
   return (

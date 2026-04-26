@@ -21,6 +21,7 @@ import BottomNav from "@/components/BottomNav";
 import TopicCard from "@/components/TopicCard";
 import StatsCard from "@/components/StatsCard";
 import GamificationHero from "@/components/GamificationHero";
+import TelegramActivationCard from "@/components/TelegramActivationCard";
 import ExamSelector from "@/components/ExamSelector";
 import ExamSwitcherInline from "@/components/ExamSwitcherInline";
 import Onboarding from "@/components/Onboarding";
@@ -310,12 +311,47 @@ export default function Home() {
         if (stored) {
           setUser(stored.user);
           setGam(stored.gamification);
-          // Show onboarding ONLY for logged-in users who haven't completed it
+          // Show onboarding ONLY for logged-in users who haven't
+          // completed it. Server-side state is the source of truth
+          // (review-2026-04-26-A2): localStorage clears on every fresh
+          // browser/incognito, which previously re-fired the flow for
+          // returning users (Aml, [name], Obai). We optimistically check
+          // localStorage first to avoid a flicker for the common case;
+          // if it's empty we hit /api/user/onboarding-state, and ONLY
+          // show the modal when the server confirms incomplete.
           try {
             const onboardingData = localStorage.getItem("medpruef_onboarding");
             const parsed = onboardingData ? JSON.parse(onboardingData) : null;
-            if (!parsed?.completedAt) {
-              setShowOnboarding(true);
+            if (parsed?.completedAt) {
+              // Already completed locally — no server call needed.
+            } else {
+              // localStorage doesn't say completed. Ask the server
+              // before showing the modal.
+              fetch("/api/user/onboarding-state")
+                .then((r) => (r.ok ? r.json() : null))
+                .then((s) => {
+                  if (s?.completed_at || s?.skipped_at) {
+                    // Server says we already finished. Mirror to
+                    // localStorage so future renders skip the network.
+                    try {
+                      localStorage.setItem(
+                        "medpruef_onboarding",
+                        JSON.stringify({
+                          completedAt: s.completed_at ?? s.skipped_at,
+                          ...(s.data ?? {}),
+                        }),
+                      );
+                    } catch {}
+                  } else {
+                    setShowOnboarding(true);
+                  }
+                })
+                .catch(() => {
+                  // Network failure — fall back to the localStorage
+                  // outcome (i.e. show the modal). Better to re-show
+                  // than to lose users to "no onboarding ever ran."
+                  setShowOnboarding(true);
+                });
             }
           } catch {}
         } else {
@@ -448,6 +484,11 @@ export default function Home() {
       // Persist exam_source + exam_date + daily_goal to server so the user's
       // active_exam stays in sync across devices and feeds /api/user/study-plan.
       // Best-effort: don't block onboarding completion if the call fails.
+      //
+      // ALSO stamp users.onboarding_completed_at via the dedicated
+      // endpoint so the next sign-in from a fresh browser doesn't
+      // re-fire onboarding (review-2026-04-26-A2). Parallel,
+      // fire-and-forget — neither call blocks the UI transition.
       if (user?.id && !user.id.startsWith("guest_")) {
         const isISODate = typeof data.examDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(data.examDate);
         const body: Record<string, string | number> = { activeExam: data.examSource };
@@ -457,6 +498,17 @@ export default function Home() {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),
+        }).catch(() => {});
+
+        fetch("/api/user/onboarding-complete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            examSource: data.examSource,
+            examDate: data.examDate,
+            dailyGoal: data.dailyGoal,
+            language: data.language,
+          }),
         }).catch(() => {});
       }
     }} />;
@@ -611,6 +663,12 @@ export default function Home() {
               </div>
             );
           })()}
+
+          {/* Telegram bot activation prompt — shown to users who
+             registered via Login Widget but never DM'd the bot.
+             Auto-hides via /api/user/telegram-activation-state.
+             review-2026-04-26-B2. */}
+          <TelegramActivationCard />
 
           {/* ─── GAMIFICATION HERO + COUNTDOWN ──────────────────────────
              2-col at md+ with equal widths and a consistent 24px gap. The

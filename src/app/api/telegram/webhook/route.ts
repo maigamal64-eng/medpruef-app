@@ -60,6 +60,53 @@ export async function POST(req: NextRequest) {
   if (!startMatch) return NextResponse.json({ ok: true })
   const payload = startMatch[1]
 
+  // Bot activation flow (review-2026-04-26-B2): the /dashboard
+  // TelegramActivationCard sends users to t.me/MedPruefBot?start=auth_<uuid>.
+  // The bot stamps users.telegram_chat_id_confirmed for the matching uuid
+  // so we know we can push messages to them. Confirms via a thank-you
+  // reply.
+  const authMatch = payload?.match(/^auth_([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i)
+  if (authMatch) {
+    const uuid = authMatch[1]
+    const sb = getServiceClient()
+    const { data: user, error: lookupErr } = await sb
+      .from('users')
+      .select('id, telegram_id, language_code')
+      .eq('id', uuid)
+      .maybeSingle()
+    if (!lookupErr && user) {
+      // Defensive: only confirm if the Telegram from-id matches the
+      // user's stored telegram_id (or the user has no telegram_id yet,
+      // in which case we link it). Prevents user A from confirming
+      // user B's bot via a leaked uuid.
+      const fromIdMatches =
+        !user.telegram_id || Number(user.telegram_id) === msg.from.id
+      if (fromIdMatches) {
+        const update: Record<string, unknown> = {
+          telegram_chat_id_confirmed: new Date().toISOString(),
+        }
+        if (!user.telegram_id) {
+          update.telegram_id = msg.from.id
+        }
+        await sb.from('users').update(update).eq('id', uuid)
+        const lang = (user.language_code as string | null) || msg.from.language_code || 'en'
+        const text = lang.startsWith('de')
+          ? 'Telegram-Benachrichtigungen aktiviert. Du bekommst hier MedPrüf-Updates und kannst direkt antworten — ich ([name]) lese mit.'
+          : 'Telegram notifications activated. You will receive MedPrüf updates here, and can reply directly — I ([name]) read every message.'
+        try {
+          await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ chat_id: msg.chat.id, text }),
+          })
+        } catch (e) {
+          console.error('telegram activation reply failed:', e)
+        }
+      }
+    }
+    return NextResponse.json({ ok: true })
+  }
+
   // Only handle web_login payloads here; other /start payloads can be wired up later.
   if (payload !== 'web_login') return NextResponse.json({ ok: true })
 

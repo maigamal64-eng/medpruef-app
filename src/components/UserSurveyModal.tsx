@@ -67,29 +67,77 @@ export default function UserSurveyModal() {
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
-    try {
-      // Already completed or not logged in
-      if (localStorage.getItem(STORAGE_COMPLETED) === 'true') return
+    let cancelled = false
+    let timer: ReturnType<typeof setTimeout> | undefined
 
-      const session = getStoredSession()
-      const userId = session?.user?.id || ''
-      if (!userId || userId.startsWith('guest_')) return
+    ;(async () => {
+      try {
+        // Already completed or dismissed locally — no work to do.
+        if (localStorage.getItem(STORAGE_COMPLETED) === 'true') return
+        if (localStorage.getItem(STORAGE_DISMISSED) === 'true') return
 
-      // Must have completed onboarding
-      const onboarding = JSON.parse(localStorage.getItem('medpruef_onboarding') || '{}')
-      if (!onboarding?.completedAt) return
+        const session = getStoredSession()
+        const userId = session?.user?.id || ''
+        if (!userId || userId.startsWith('guest_')) return
 
-      setFirstName(session?.user?.first_name || '')
+        // Must have completed onboarding (legacy localStorage check —
+        // the server-side onboarding gate from review-2026-04-26-A2
+        // is checked at the route level, not here).
+        const onboarding = JSON.parse(localStorage.getItem('medpruef_onboarding') || '{}')
+        if (!onboarding?.completedAt) return
 
-      // Delay so it doesn't fight with WhatsNewModal or page load
-      const timer = setTimeout(() => setShow(true), 3000)
-      return () => clearTimeout(timer)
-    } catch { /* silent */ }
+        // Server-side cross-device gate (review-2026-04-26-A3): if any
+        // device has shown or dismissed the survey for this user, we
+        // skip. Avoids re-firing in incognito / fresh browsers.
+        try {
+          const r = await fetch('/api/announcements/state')
+          if (r.ok) {
+            const body = (await r.json()) as { state?: { feedbackSurveyShownAt?: string | null; feedbackSurveyDismissedAt?: string | null } }
+            const shown = body?.state?.feedbackSurveyShownAt
+            const dismissed = body?.state?.feedbackSurveyDismissedAt
+            if (shown || dismissed) {
+              // Mirror back into localStorage so future loads skip the
+              // network round-trip.
+              try { localStorage.setItem(STORAGE_DISMISSED, 'true') } catch {}
+              return
+            }
+          }
+        } catch { /* network error — fall through to legacy behaviour */ }
+
+        if (cancelled) return
+        setFirstName(session?.user?.first_name || '')
+        // Delay so it doesn't fight with WhatsNewModal or page load
+        timer = setTimeout(() => {
+          if (cancelled) return
+          setShow(true)
+          // Stamp shown_at server-side as soon as we render. Fire-and-
+          // forget; if it fails the user just sees the modal once more
+          // on the next visit, which is fine.
+          fetch('/api/announcements/seen', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ surface: 'feedback_survey_shown' }),
+          }).catch(() => {})
+        }, 3000)
+      } catch { /* silent */ }
+    })()
+
+    return () => {
+      cancelled = true
+      if (timer) clearTimeout(timer)
+    }
   }, [])
 
   const dismiss = () => {
     setShow(false)
     localStorage.setItem(STORAGE_DISMISSED, 'true')
+    // Cross-device dismiss (review-2026-04-26-A3) so the next browser
+    // / incognito session doesn't re-fire the survey for this user.
+    fetch('/api/announcements/seen', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ surface: 'feedback_survey_dismissed' }),
+    }).catch(() => {})
   }
 
   const goStep = (target: number) => {

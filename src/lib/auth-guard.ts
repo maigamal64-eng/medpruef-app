@@ -76,7 +76,7 @@ export async function requireUser(req: NextRequest): Promise<GuardResult> {
   const sb = getServiceClient();
   const { data: user, error } = await sb
     .from("users")
-    .select("id, role, tier, is_banned")
+    .select("id, role, tier, is_banned, session_invalidated_at")
     .eq("id", headerId)
     .maybeSingle();
 
@@ -86,6 +86,31 @@ export async function requireUser(req: NextRequest): Promise<GuardResult> {
   }
   if (!user) return unauthorized("Unknown user");
   if (user.is_banned) return forbidden("Account suspended");
+
+  // Force-refresh-session check (review-2026-04-26-B1): if an admin
+  // stamped session_invalidated_at AFTER the client's session was
+  // issued, the client must clear caches + re-auth. We use the
+  // `x-session-issued-at` header (set by /api/auth on login) for the
+  // comparison; if missing (legacy clients before this commit), we
+  // treat any non-null invalidation as REFRESH_REQUIRED so they get
+  // bumped exactly once after a deploy.
+  if (user.session_invalidated_at) {
+    const invalidatedAt = new Date(user.session_invalidated_at as string).getTime();
+    const issuedAtHeader = req.headers.get("x-session-issued-at");
+    const issuedAt = issuedAtHeader ? new Date(issuedAtHeader).getTime() : 0;
+    if (!issuedAtHeader || (Number.isFinite(issuedAt) && issuedAt < invalidatedAt)) {
+      return {
+        error: NextResponse.json(
+          {
+            error: "Session has been invalidated. Please refresh.",
+            code: "REFRESH_REQUIRED",
+            invalidated_at: user.session_invalidated_at,
+          },
+          { status: 401 },
+        ),
+      };
+    }
+  }
 
   return {
     userId: user.id as string,

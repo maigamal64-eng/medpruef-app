@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { requireUser, isFreeAccess } from "@/lib/auth-guard";
-import { captureServerError } from "@/lib/sentry-capture";
+import { addBreadcrumb, captureServerError } from "@/lib/sentry-capture";
 import { checkRateLimit, rateKey, rateLimitHeaders } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
@@ -104,9 +104,28 @@ export async function GET(req: NextRequest) {
 
 // POST — Generate AI explanation (and cache it).
 export async function POST(req: NextRequest) {
+  // Breadcrumb chain (review-2026-04-26-A4) — every step leaves a trace
+  // so when a Pro user reports "AI doesn't work" we can pinpoint the
+  // failure point in Sentry instead of guessing. Fire-and-forget; never
+  // blocks the request.
+  const startedAt = Date.now();
+  addBreadcrumb({ category: "ai-chat", message: "request_received" });
+
   const guard = await requireUser(req);
-  if ("error" in guard) return guard.error;
+  if ("error" in guard) {
+    addBreadcrumb({
+      category: "ai-chat",
+      message: "auth_failed",
+      level: "warning",
+    });
+    return guard.error;
+  }
   const { userId, tier } = guard;
+  addBreadcrumb({
+    category: "ai-chat",
+    message: "auth_resolved",
+    data: { userId, tier },
+  });
 
   // Burst guard — stops a single Pro user from slamming the endpoint
   // and burning their daily quota in a programmatic loop.
@@ -115,6 +134,12 @@ export async function POST(req: NextRequest) {
     ...AI_CHAT_BURST_LIMIT,
   });
   if (!burstGate.allowed) {
+    addBreadcrumb({
+      category: "ai-chat",
+      message: "burst_limited",
+      level: "warning",
+      data: { retryAfter: burstGate.retryAfterSec },
+    });
     return NextResponse.json(
       {
         error: "AI chat burst limit reached — please pause a moment before asking again.",
@@ -129,6 +154,12 @@ export async function POST(req: NextRequest) {
   // the canonical `isFreeAccess(guard)` so /admin/ operators with
   // `role='admin'` but `tier='free'` aren't locked out of AI chat.
   if (isFreeAccess(guard)) {
+    addBreadcrumb({
+      category: "ai-chat",
+      message: "tier_gate_blocked",
+      level: "warning",
+      data: { tier },
+    });
     return NextResponse.json(
       {
         error:
@@ -137,6 +168,7 @@ export async function POST(req: NextRequest) {
       { status: 402 },
     );
   }
+  addBreadcrumb({ category: "ai-chat", message: "tier_check_passed" });
 
   // Per-user daily quota check. Uses user_events as a cheap counter.
   try {
@@ -150,6 +182,12 @@ export async function POST(req: NextRequest) {
       .eq("event_type", "ai_chat_message")
       .gte("created_at", since.toISOString());
     if (typeof count === "number" && count >= DAILY_QUOTA_PRO) {
+      addBreadcrumb({
+        category: "ai-chat",
+        message: "quota_exceeded",
+        level: "warning",
+        data: { used: count, limit: DAILY_QUOTA_PRO },
+      });
       return NextResponse.json(
         {
           error: `Daily AI chat quota reached (${DAILY_QUOTA_PRO}). Resets at midnight UTC.`,
@@ -157,6 +195,11 @@ export async function POST(req: NextRequest) {
         { status: 429 },
       );
     }
+    addBreadcrumb({
+      category: "ai-chat",
+      message: "quota_check_passed",
+      data: { used: count ?? 0, limit: DAILY_QUOTA_PRO },
+    });
   } catch (err) {
     // Fail-open is intentional — we don't want a flaky events table to
     // block Pro users from AI chat. But still ship it to Sentry so we
@@ -238,9 +281,16 @@ export async function POST(req: NextRequest) {
 
   let reply = "";
 
+  let upstreamProvider: "anthropic" | "openai" | "none" = "none";
+
   // Try Anthropic first.
   const anthropicKey = process.env.ANTHROPIC_API_KEY;
   if (anthropicKey) {
+    addBreadcrumb({
+      category: "ai-chat",
+      message: "upstream_request_started",
+      data: { provider: "anthropic" },
+    });
     const response = await fetchWithTimeout("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -258,6 +308,19 @@ export async function POST(req: NextRequest) {
     if (response?.ok) {
       const data = await response.json();
       reply = data.content?.[0]?.text || "";
+      addBreadcrumb({
+        category: "ai-chat",
+        message: "upstream_response",
+        data: { provider: "anthropic", status: response.status, replyLen: reply.length },
+      });
+      upstreamProvider = "anthropic";
+    } else {
+      addBreadcrumb({
+        category: "ai-chat",
+        message: "upstream_failed",
+        level: "error",
+        data: { provider: "anthropic", status: response?.status ?? null },
+      });
     }
   }
 
@@ -265,6 +328,11 @@ export async function POST(req: NextRequest) {
   if (!reply) {
     const openaiKey = process.env.OPENAI_API_KEY;
     if (openaiKey) {
+      addBreadcrumb({
+        category: "ai-chat",
+        message: "upstream_request_started",
+        data: { provider: "openai" },
+      });
       const response = await fetchWithTimeout("https://api.openai.com/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -280,11 +348,42 @@ export async function POST(req: NextRequest) {
       if (response?.ok) {
         const data = await response.json();
         reply = data.choices?.[0]?.message?.content || "";
+        addBreadcrumb({
+          category: "ai-chat",
+          message: "upstream_response",
+          data: { provider: "openai", status: response.status, replyLen: reply.length },
+        });
+        upstreamProvider = "openai";
+      } else {
+        addBreadcrumb({
+          category: "ai-chat",
+          message: "upstream_failed",
+          level: "error",
+          data: { provider: "openai", status: response?.status ?? null },
+        });
       }
     }
   }
 
   if (!reply) {
+    addBreadcrumb({
+      category: "ai-chat",
+      message: "all_upstreams_failed",
+      level: "error",
+      data: { durationMs: Date.now() - startedAt },
+    });
+    // Record a failed-feature event so the admin overview tile catches
+    // the drift even when no individual error gets escalated.
+    try {
+      const db = getServiceClient();
+      await db.from("user_events").insert({
+        user_id: userId,
+        event_type: "ai_chat_failed",
+        metadata: { phase: "all_upstreams_failed", duration_ms: Date.now() - startedAt },
+      });
+    } catch {
+      /* swallow — telemetry must not block the user response */
+    }
     return NextResponse.json(
       {
         reply:
@@ -322,7 +421,27 @@ export async function POST(req: NextRequest) {
           .from("questions")
           .update(update)
           .eq("id", qidNum);
-        if (cacheErr) console.error("[ai-chat] cache write:", cacheErr);
+        if (cacheErr) {
+          console.error("[ai-chat] cache write:", cacheErr);
+          addBreadcrumb({
+            category: "ai-chat",
+            message: "cache_write_failed",
+            level: "error",
+            data: { questionId: qidNum, code: cacheErr.code },
+          });
+        } else {
+          addBreadcrumb({
+            category: "ai-chat",
+            message: "cache_write_ok",
+            data: { questionId: qidNum, regenerate: forceRegenerate },
+          });
+        }
+      } else {
+        addBreadcrumb({
+          category: "ai-chat",
+          message: "cache_write_skipped",
+          data: { questionId: qidNum, reason: "existing_ai_explanation" },
+        });
       }
     } catch (err) {
       captureServerError(err, {
@@ -334,5 +453,35 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // Telemetry — log a success event so the admin overview tile can
+  // count successful AI chats per hour. user_events.event_type
+  // 'ai_chat_message' is the daily-quota counter; we ALSO write
+  // 'ai_chat_completed' here for an unambiguous success signal that
+  // doesn't double-count quota reads.
+  try {
+    const db = getServiceClient();
+    await db.from("user_events").insert({
+      user_id: userId,
+      event_type: "ai_chat_completed",
+      metadata: {
+        provider: upstreamProvider,
+        question_id: qidNum,
+        reply_len: reply.length,
+        duration_ms: Date.now() - startedAt,
+      },
+    });
+  } catch {
+    /* swallow — telemetry must not block the user response */
+  }
+
+  addBreadcrumb({
+    category: "ai-chat",
+    message: "response_sent",
+    data: {
+      provider: upstreamProvider,
+      durationMs: Date.now() - startedAt,
+      replyLen: reply.length,
+    },
+  });
   return NextResponse.json({ reply });
 }

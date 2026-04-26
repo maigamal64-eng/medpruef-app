@@ -175,6 +175,54 @@ export const GET = adminRouteShell(
       }
     }
 
+    // 10a. Telegram bot activation rate — how many of the users who
+    //      registered via the Telegram Login Widget have actually DM'd
+    //      the bot. Lower-bound for who we can push messages to. Should
+    //      trend up after the /dashboard activation card ships
+    //      (review-2026-04-26-B2).
+    const [{ count: tgRegistered }, { count: tgConfirmed }] = await Promise.all([
+      sb
+        .from("users")
+        .select("id", { count: "exact", head: true })
+        .not("telegram_id", "is", null),
+      sb
+        .from("users")
+        .select("id", { count: "exact", head: true })
+        .not("telegram_chat_id_confirmed", "is", null),
+    ]);
+
+    // 10b. AI chat health — last 60 minutes of completed vs failed
+    //      events. Tile shows {requests, completed, failed, avg_latency_ms}
+    //      so drift surfaces before users complain (review-2026-04-26-A4).
+    const oneHourAgoIso = new Date(now.getTime() - 60 * 60_000).toISOString();
+    const [{ data: aiCompleted }, { data: aiFailed }] = await Promise.all([
+      sb
+        .from("user_events")
+        .select("metadata, created_at")
+        .eq("event_type", "ai_chat_completed")
+        .gte("created_at", oneHourAgoIso),
+      sb
+        .from("user_events")
+        .select("id", { count: "exact", head: true })
+        .eq("event_type", "ai_chat_failed")
+        .gte("created_at", oneHourAgoIso),
+    ]);
+    const aiCompletedCount = aiCompleted?.length ?? 0;
+    const aiFailedCount = aiFailed?.length ?? 0;
+    const aiAvgLatencyMs = (() => {
+      if (!aiCompleted || aiCompleted.length === 0) return null;
+      const lats = aiCompleted
+        .map(
+          (e) =>
+            ((e.metadata as Record<string, unknown> | null)?.duration_ms as
+              | number
+              | undefined) ?? null,
+        )
+        .filter((n): n is number => typeof n === "number");
+      if (lats.length === 0) return null;
+      return Math.round(lats.reduce((a, b) => a + b, 0) / lats.length);
+    })();
+
     // 11. Live activity feed — recent significant events.
     const { data: recentEvents } = await sb
       .from("user_events")
@@ -203,6 +251,16 @@ export const GET = adminRouteShell(
         webhook_failures_24h: webhookFailures24h,
         stuck_pending_24h: stuckPending24h || 0,
         conversion_7d: conversion7d,
+        ai_chat_1h: {
+          requests: aiCompletedCount + aiFailedCount,
+          completed: aiCompletedCount,
+          failed: aiFailedCount,
+          avg_latency_ms: aiAvgLatencyMs,
+        },
+        telegram_activation: {
+          registered: tgRegistered ?? 0,
+          confirmed: tgConfirmed ?? 0,
+        },
         crons: cronMap,
         recent_events: recentEvents || [],
       },

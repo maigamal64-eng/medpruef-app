@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, type KeyboardEvent as ReactKeyboardEvent }
 import { authFetch as fetch } from "@/lib/authFetch";
 import { getTopicConfig } from "@/lib/topics";
 import { t } from "@/lib/i18n";
+import { shouldIgnoreGlobalKey } from "@/lib/keyboard-guard";
 import type { MCQOption } from "@/lib/mcq";
 import ImageLightbox from "@/components/ImageLightbox";
 import { trackEvent } from "@/lib/tracker";
@@ -186,8 +187,15 @@ export default function QuestionCard({
   // Keyboard shortcuts for answer selection
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't trigger when typing in an input/textarea
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      // Don't trigger when typing in an input/textarea OR anywhere
+      // inside a dialog overlay (FeedbackWidget, Flag modal, trust
+      // dialog, etc.). The previous narrow `instanceof` check missed
+      // portaled inputs and let typing in the FeedbackWidget close
+      // the dialog by accidentally selecting an answer (review-
+      // 2026-04-26-A1). The shared helper walks the DOM tree so a
+      // portaled input whose event target is a slot wrapper still
+      // resolves correctly.
+      if (shouldIgnoreGlobalKey(e)) return;
 
       const key = e.key.toLowerCase();
 

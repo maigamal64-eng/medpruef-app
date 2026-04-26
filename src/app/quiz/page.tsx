@@ -8,6 +8,7 @@ import { useSearchParams } from "next/navigation";
 // means the existing `fetch(...)` call sites in this file don't need
 // to be rewritten — they automatically get the header.
 import { authFetch as fetch } from "@/lib/authFetch";
+import { shouldIgnoreGlobalKey } from "@/lib/keyboard-guard";
 import Link from "next/link";
 import { t, getLang, setLang } from "@/lib/i18n";
 import { trackEvent, trackPageView } from "@/lib/tracker";
@@ -418,7 +419,12 @@ function QuizContent() {
   // ─── Keyboard: N / → for next ───
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      // Use shared keyboard guard — covers typing in inputs/textareas
+      // AND any key inside a dialog overlay. Closes the regression
+      // where typing "n" in the FeedbackWidget while on /quiz would
+      // advance to the next question and close the dialog
+      // (review-2026-04-26-A1).
+      if (shouldIgnoreGlobalKey(e)) return;
       if ((e.key === "n" || e.key === "ArrowRight") && answered && !quizFinished) {
         e.preventDefault();
         advance();

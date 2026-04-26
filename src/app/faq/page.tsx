@@ -548,8 +548,8 @@ const copy = {
       en: "Maximum of two additional cycles per user.",
     },
     scope: {
-      de: "PUYP gilt ausschließlich für die Juni-26-Kohorte (€114) und das Jahresabo (€229). Die Monats-, 3- und 6-Monats-Tarife enthalten die Garantie nicht.",
-      en: "PUYP applies only to the June 26 Cohort (€114) and the annual plan (€229). Monthly, 3-month and 6-month plans don't include the guarantee.",
+      de: "PUYP gilt für die Juni-26-Kohorte (€114), den 6-Monats-Tarif (€149) und das Jahresabo (€229). Die kürzeren Tarife (Monatlich, 3 Monate) und der Erste-Monat-Test (€19) enthalten die Garantie nicht.",
+      en: "PUYP applies to the June 26 Cohort (€114), the 6-month plan (€149) and the annual plan (€229). The shorter plans (monthly, 3-month) and the first-month trial (€19) don't include the guarantee.",
     },
     noRefund: {
       de: "Geld-zurück-Garantien laden zu Missbrauch ein und führen häufig dazu, dass Studierende aufgeben, sobald es hart wird. Pass-Until-You-Pass hält dich stattdessen im Spiel — wir investieren in dein Bestehen, nicht in eine Ausstiegsklausel. Wenn du ein sehr persönliches Problem hast (Krankheit, Trauerfall), schreib uns an user-b7e46e80@example.com — wir finden im Einzelfall eine faire Lösung.",

@@ -118,6 +118,13 @@ export async function GET(req: NextRequest) {
         orientationModalSeenAt: row.orientation_modal_seen_at as string | null,
         cohortBannerDismissedAt: row.cohort_banner_dismissed_at as string | null,
         referralFloaterDismissedAt: row.referral_floater_dismissed_at as string | null,
+        // Cross-device gates added 2026-04-26 (review-2026-04-26-A3)
+        // for the FeedbackWidget survey + WhatsNewModal so they don't
+        // re-fire on every fresh browser. Cosmetic state stays
+        // localStorage-only.
+        feedbackSurveyShownAt: row.feedback_survey_shown_at as string | null,
+        feedbackSurveyDismissedAt: row.feedback_survey_dismissed_at as string | null,
+        whatsNewSeenAt: row.whats_new_seen_at as string | null,
         lastSessionAt: row.last_session_at as string,
       },
     });

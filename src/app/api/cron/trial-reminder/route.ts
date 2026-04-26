@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
 import { getServiceClient } from "@/lib/supabase";
+import { sendZohoEmail } from "@/lib/email/zoho";
+import { renderTrialReminder } from "@/lib/email/templates";
 
 export const dynamic = "force-dynamic";
 
@@ -101,40 +103,88 @@ export async function GET(req: NextRequest) {
         const subId = trial.id as string;
         const userId = trial.user_id as string;
 
-        // Look up the user's email + first_name for the email template.
-        const { data: user, error: userErr } = await sb
-          .from("users")
-          .select("email, first_name, language_code")
-          .eq("id", userId)
-          .maybeSingle();
+        // Look up the user's email + first_name + endowment stats for
+        // the personalized template (review-2026-04-26-C1).
+        const [{ data: user, error: userErr }, { data: gam }] = await Promise.all([
+          sb
+            .from("users")
+            .select("email, first_name, language_code")
+            .eq("id", userId)
+            .maybeSingle(),
+          sb
+            .from("user_gamification")
+            .select("total_questions_answered, total_correct, current_streak")
+            .eq("user_id", userId)
+            .maybeSingle(),
+        ]);
 
         if (userErr) {
           errors.push(`user_lookup:${subId}: ${userErr.message}`);
           continue;
         }
+        if (!user?.email) {
+          // No email on file — record the pending event but skip the
+          // send. Still stamp so we don't retry forever.
+          await recordEvent(sb, userId, "trial_reminder_email_skipped_no_email", {
+            subscription_id: subId,
+            expires_at: trial.expires_at,
+            reason: "no_email",
+          });
+        } else {
+          const lang: "de" | "en" =
+            user.language_code?.startsWith("en") ? "en" : "de";
+          const answered = (gam?.total_questions_answered as number | null) ?? 0;
+          const correct = (gam?.total_correct as number | null) ?? 0;
+          const accuracyPct = answered > 0 ? Math.round((correct / answered) * 100) : 0;
+          const streakDays = (gam?.current_streak as number | null) ?? 0;
 
-        // TODO: wire Zoho here.
-        //
-        // Intended payload:
-        //   to:     user.email
-        //   from:   user-b7e46e80@example.com
-        //   subject: "Dein 1-Monats-Test läuft bald aus"
-        //            (DE if language_code starts with 'de', else EN)
-        //   body:   link to /pricing + explanation that nothing renews
-        //           automatically.
-        //
-        // For now we log a structured user_events row so the admin UI
-        // can drain the pending list manually. Safe to no-op on the
-        // send — we still stamp trial_reminder_sent_at below so the
-        // cron doesn't hammer the same rows every day.
-        await recordEvent(sb, userId, "trial_reminder_email_pending", {
-          subscription_id: subId,
-          expires_at: trial.expires_at,
-          user_email: user?.email ?? null,
-          user_first_name: user?.first_name ?? null,
-          language_code: user?.language_code ?? null,
-          reason: "day_25_reminder",
-        });
+          const tpl = renderTrialReminder({
+            firstName: (user.first_name as string | null) ?? null,
+            lang,
+            expiresAtIso: trial.expires_at as string,
+            qsAnswered: answered,
+            accuracyPct,
+            streakDays,
+          });
+
+          const sendResult = await sendZohoEmail({
+            to: user.email as string,
+            subject: tpl.subject,
+            htmlBody: tpl.htmlBody,
+          });
+
+          await recordEvent(
+            sb,
+            userId,
+            sendResult.ok
+              ? "trial_reminder_email_sent"
+              : "trial_reminder_email_failed",
+            {
+              subscription_id: subId,
+              expires_at: trial.expires_at,
+              user_email: user.email,
+              language_code: user.language_code ?? null,
+              reason: "day_25_reminder",
+              ok: sendResult.ok,
+              ...(!sendResult.ok
+                ? {
+                    failure_reason: sendResult.reason,
+                    failure_status: sendResult.status ?? null,
+                  }
+                : {}),
+            },
+          );
+
+          if (!sendResult.ok && sendResult.reason !== "not_configured") {
+            errors.push(
+              `send:${subId}: ${sendResult.reason}${sendResult.status ? ` (HTTP ${sendResult.status})` : ""}`,
+            );
+            // Don't stamp on a real send failure — let the cron retry
+            // tomorrow. Only "not_configured" (env vars missing) stamps,
+            // because retrying won't fix it.
+            continue;
+          }
+        }
 
         const { error: stampErr } = await sb
           .from("subscriptions")

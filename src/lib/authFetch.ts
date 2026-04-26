@@ -72,6 +72,19 @@ export async function authFetch(
 
   const headers = new Headers(rest.headers);
   if (userId) headers.set("x-user-id", userId);
+  // Send the session-issued-at stamp so the server can compare against
+  // users.session_invalidated_at and reject stale sessions with
+  // code:'REFRESH_REQUIRED' (review-2026-04-26-B1). The stamp lives in
+  // localStorage under medpruef_session_issued_at — set on /api/auth
+  // login and cleared on logout.
+  if (typeof window !== "undefined") {
+    try {
+      const issuedAt = window.localStorage.getItem("medpruef_session_issued_at");
+      if (issuedAt) headers.set("x-session-issued-at", issuedAt);
+    } catch {
+      /* localStorage may be disabled; fall through */
+    }
+  }
 
   // Build the abort signal. If the caller passed their own signal,
   // chain ours so either side can cancel. If timeoutMs is 0/undefined,
@@ -116,6 +129,22 @@ export async function authFetch(
     const isAuthRoute = urlStr.includes("/api/auth");
 
     if (!isAuthRoute && !isRedirectingToLogin) {
+      // Peek at the response body (clone first — body can only be read
+      // once) to detect the REFRESH_REQUIRED code from the new
+      // force-refresh-session flow (review-2026-04-26-B1). If found,
+      // we ALSO purge SW caches and reload in-place rather than just
+      // bouncing to /login.
+      let isRefreshRequired = false;
+      try {
+        const peek = response.clone();
+        const body = await peek.json();
+        if (body && body.code === "REFRESH_REQUIRED") {
+          isRefreshRequired = true;
+        }
+      } catch {
+        /* not JSON / no body — treat as a normal 401 */
+      }
+
       isRedirectingToLogin = true;
       // Drop the stale session so the login page renders cleanly
       // instead of bouncing the user back to /.
@@ -124,6 +153,28 @@ export async function authFetch(
       } catch {
         /* noop */
       }
+      try {
+        window.localStorage.removeItem("medpruef_session_issued_at");
+      } catch {
+        /* noop */
+      }
+
+      if (isRefreshRequired) {
+        // Force-refresh path: purge service-worker caches so a stale
+        // tier='free' snapshot can't render after re-login. Then
+        // reload in-place — the user goes through /login again with
+        // their cached credentials (Telegram or email autofill).
+        try {
+          if ("caches" in window) {
+            void caches.keys().then((keys) => Promise.all(keys.map((k) => caches.delete(k))));
+          }
+        } catch {
+          /* noop */
+        }
+        window.location.assign("/login?reason=refresh_required");
+        return response;
+      }
+
       // Only redirect if we're not already at /login — otherwise we
       // loop forever on a page that's legitimately 401-protected.
       const path = window.location.pathname;

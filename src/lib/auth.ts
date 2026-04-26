@@ -193,6 +193,14 @@ export function storeSession(session: StoredSession): void {
       ) as StoredSession['user'],
     };
     localStorage.setItem(SESSION_KEY, JSON.stringify(safe));
+    // Stamp issued-at so authFetch can send `x-session-issued-at` for
+    // the force-refresh-session check (review-2026-04-26-B1). Server
+    // compares this against users.session_invalidated_at; older
+    // session = REFRESH_REQUIRED.
+    localStorage.setItem(
+      'medpruef_session_issued_at',
+      new Date().toISOString(),
+    );
   } catch {}
 }
 
@@ -208,6 +216,7 @@ export function clearSession(): void {
   if (typeof window === 'undefined') return;
   try {
     localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem('medpruef_session_issued_at');
   } catch {}
 }
 

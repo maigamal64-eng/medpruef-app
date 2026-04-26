@@ -22,12 +22,24 @@ export const dynamic = "force-dynamic";
  * Response 400: { error: 'invalid surface' }
  */
 
-type Surface = "orientation_modal" | "cohort_banner" | "referral_floater";
+type Surface =
+  | "orientation_modal"
+  | "cohort_banner"
+  | "referral_floater"
+  // Cross-device gates added 2026-04-26 (review-2026-04-26-A3) so the
+  // FeedbackWidget survey + WhatsNewModal don't re-fire on every fresh
+  // browser. Cosmetic state stays localStorage-only.
+  | "feedback_survey_shown"
+  | "feedback_survey_dismissed"
+  | "whats_new_seen";
 
 const SURFACE_TO_COLUMN: Record<Surface, string> = {
   orientation_modal: "orientation_modal_seen_at",
   cohort_banner: "cohort_banner_dismissed_at",
   referral_floater: "referral_floater_dismissed_at",
+  feedback_survey_shown: "feedback_survey_shown_at",
+  feedback_survey_dismissed: "feedback_survey_dismissed_at",
+  whats_new_seen: "whats_new_seen_at",
 };
 
 export async function POST(req: NextRequest) {
@@ -45,7 +57,10 @@ export async function POST(req: NextRequest) {
   const surface = body?.surface as Surface | undefined;
   if (!surface || !(surface in SURFACE_TO_COLUMN)) {
     return NextResponse.json(
-      { error: "Invalid surface — expected one of 'orientation_modal' | 'cohort_banner' | 'referral_floater'" },
+      {
+        error:
+          "Invalid surface — expected one of 'orientation_modal' | 'cohort_banner' | 'referral_floater' | 'feedback_survey_shown' | 'feedback_survey_dismissed' | 'whats_new_seen'",
+      },
       { status: 400 }
     );
   }
@@ -110,6 +125,9 @@ export async function POST(req: NextRequest) {
             orientationModalSeenAt: row.orientation_modal_seen_at as string | null,
             cohortBannerDismissedAt: row.cohort_banner_dismissed_at as string | null,
             referralFloaterDismissedAt: row.referral_floater_dismissed_at as string | null,
+            feedbackSurveyShownAt: row.feedback_survey_shown_at as string | null,
+            feedbackSurveyDismissedAt: row.feedback_survey_dismissed_at as string | null,
+            whatsNewSeenAt: row.whats_new_seen_at as string | null,
             lastSessionAt: row.last_session_at as string,
           }
         : null,

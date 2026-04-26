@@ -30,6 +30,7 @@ import { BrandedLoader } from "@/components/Logo";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { authFetch as fetch } from "@/lib/authFetch";
+import { shouldIgnoreGlobalKey } from "@/lib/keyboard-guard";
 import { getLang, setLang, t } from "@/lib/i18n";
 import { getStoredSession } from "@/lib/auth";
 import { getStoredExamSource } from "@/lib/topics";
@@ -244,8 +245,10 @@ function FlashcardContent() {
   // Keyboard shortcuts (Space flip, 1-4 rate)
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement)
-        return;
+      // Shared keyboard guard — ignores typing in dialogs (Feedback,
+      // Flag, etc.) so Space/Enter inside a textarea doesn't flip
+      // the flashcard behind it (review-2026-04-26-A1).
+      if (shouldIgnoreGlobalKey(e)) return;
 
       if (e.key === " " || e.key === "Enter") {
         e.preventDefault();
