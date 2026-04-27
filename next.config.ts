@@ -31,6 +31,11 @@ const CSP = [
   "frame-ancestors 'self'",
   "base-uri 'self'",
   "form-action 'self'",
+  // Reporting — legacy report-uri for broad browser compatibility +
+  // modern report-to for browsers that support the Reporting API.
+  // Both point to the same /api/csp-report endpoint.
+  "report-uri /api/csp-report",
+  "report-to csp-endpoint",
 ].join("; ");
 
 // Global security headers. Apply to every route except the SW file
@@ -48,9 +53,18 @@ const SECURITY_HEADERS = [
     key: "Permissions-Policy",
     value: "camera=(), microphone=(), geolocation=(), interest-cohort=()",
   },
-  // Report-only while we bed in. Flip to `Content-Security-Policy`
-  // once the Vercel log drain (or Sentry, once installed) shows no
-  // violation reports for 1-2 weeks.
+  // Reporting-Endpoints: declares the named endpoint "csp-endpoint" used
+  // by the report-to CSP directive (modern Reporting API, RFC 7469 successor).
+  // Legacy browsers fall back to report-uri. Both point to the same handler.
+  {
+    key: "Reporting-Endpoints",
+    value: `csp-endpoint="/api/csp-report"`,
+  },
+  // Report-only while we bed in. Violations are stored in the csp_violations
+  // Supabase table via /api/csp-report. Scheduled task at
+  // ~/.claude/scheduled-tasks/csp-enforcement-check fires 2026-05-14:
+  // 0 violations across all directives → flip to Content-Security-Policy;
+  // any violations → extend another 2 weeks + create comms/csp-violations-*.md.
   { key: "Content-Security-Policy-Report-Only", value: CSP },
 ];
 
