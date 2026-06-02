@@ -104,10 +104,16 @@ export function isPaidTier(
   if (tier === 'admin') return true
   if (tier !== 'pro') return false
   if (!tierExpiresAt) return true // pro with no expiry → treat as paid
+  // Fail CLOSED on an unparseable/invalid expiry. `new Date(bad).getTime()`
+  // is NaN (no throw for a malformed string), so guard on Number.isFinite so
+  // the NaN case provably denies Pro. The `catch` keeps the same fail-closed
+  // default if a future parse path ever throws. A paywall gate must never
+  // grant paid access on corrupt data.
   try {
-    return new Date(tierExpiresAt).getTime() > Date.now()
+    const ts = new Date(tierExpiresAt).getTime()
+    return Number.isFinite(ts) && ts > Date.now()
   } catch {
-    return true
+    return false
   }
 }
 

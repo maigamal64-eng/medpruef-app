@@ -91,9 +91,13 @@ export async function POST(req: NextRequest) {
         }
         await sb.from('users').update(update).eq('id', uuid)
         const lang = (user.language_code as string | null) || msg.from.language_code || 'en'
+        // NOTE: this bot only handles /start* commands — free-text replies
+        // sent back here are NOT processed/forwarded, so the copy must not
+        // promise that every reply is read (C-7, 2026-06-02). Point feedback
+        // at the in-app channel instead.
         const text = lang.startsWith('de')
-          ? 'Telegram-Benachrichtigungen aktiviert. Du bekommst hier MedPrüf-Updates und kannst direkt antworten — ich ([name]) lese mit.'
-          : 'Telegram notifications activated. You will receive MedPrüf updates here, and can reply directly — I ([name]) read every message.'
+          ? 'Telegram-Benachrichtigungen aktiviert. Du bekommst hier wichtige MedPrüf-Updates. Feedback? Nutze am besten den Feedback-Button in der App — dort lese ich ([name]) mit.'
+          : 'Telegram notifications activated. You will receive important MedPrüf updates here. Got feedback? Best use the feedback button in the app — that\'s where I ([name]) read every message.'
         try {
           await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
             method: 'POST',

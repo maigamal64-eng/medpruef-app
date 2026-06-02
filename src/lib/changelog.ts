@@ -23,6 +23,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-06-02",
+    tag: "admin",
+    title: {
+      de: "Sicherheit: Pro-Zugang prüft fehlertolerant ab (fail-closed)",
+      en: "Security: Pro-access check now fails closed",
+    },
+    description: {
+      de: "Interne Härtung: Bei einem unlesbaren tier_expires_at verweigern hasProAccess/isPaidTier jetzt den Pro-Zugang, statt ihn zu gewähren. Gültige zukünftige Abläufe bleiben unverändert. Außerdem: Telegram-Aktivierungstext entspricht jetzt dem tatsächlichen Bot-Verhalten (Feedback über den In-App-Button).",
+      en: "Internal hardening: an unparseable tier_expires_at now denies Pro access in hasProAccess/isPaidTier instead of granting it; valid future expiries are unchanged. Also: the Telegram activation copy now matches actual bot behavior (feedback via the in-app button).",
+    },
+  },
+  {
     date: "2026-04-28",
     tag: "feature",
     title: {

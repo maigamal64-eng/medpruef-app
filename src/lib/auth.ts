@@ -271,13 +271,17 @@ export function hasProAccess(session?: StoredSession | null): boolean {
   if (tier !== 'pro' && tier !== 'admin') return false;
   const expires = s.user.tier_expires_at;
   if (!expires) return true;
+  // Fail CLOSED on an unparseable/invalid expiry. `new Date(bad).getTime()`
+  // yields NaN (it does not throw for a malformed string), so we guard on
+  // Number.isFinite to make the NaN case provably deny Pro rather than
+  // incidentally fall through the comparison. The defensive `catch` keeps
+  // the same fail-closed default if any future parse path ever throws.
+  // An entitlement gate must never grant Pro on corrupt data.
   try {
-    return new Date(expires).getTime() > Date.now();
+    const ts = new Date(expires).getTime();
+    return Number.isFinite(ts) && ts > Date.now();
   } catch {
-    // Unparseable expiry — treat as valid (defence-in-depth; the
-    // webhook is supposed to flip the tier back to 'free' on expiry,
-    // so an unparseable value is a data bug, not an attack).
-    return true;
+    return false;
   }
 }
 
