@@ -39,6 +39,16 @@ const TRANSLATE_BURST_LIMIT = { limit: 15, windowMs: 60_000 };
 const UPSTREAM_TIMEOUT_MS = 20_000;
 const FREE_DAILY_QUOTA = 5;
 
+// ────────────────────────────────────────────────────────────────────
+// AI kill switch — mirrors /api/ai-chat (GATE 1). Without this, translate
+// would call Anthropic/OpenAI even while AI_FEATURES_ENABLED=false, breaking
+// the documented "instantly disable all AI" guarantee and leaking spend.
+// ────────────────────────────────────────────────────────────────────
+const AI_FEATURES_ENABLED = (process.env.AI_FEATURES_ENABLED ?? "true") === "true";
+type ProviderMode = "auto" | "claude_oauth" | "openai" | "disabled";
+const AI_PROVIDER_MODE: ProviderMode =
+  (process.env.AI_PROVIDER_MODE as ProviderMode | undefined) ?? "auto";
+
 const SUPPORTED_LANGS = new Set([
   "ru", // Russian
   "ar", // Arabic
@@ -98,6 +108,17 @@ async function fetchWithTimeout(url: string, init: RequestInit): Promise<Respons
 }
 
 export async function POST(req: NextRequest) {
+  // GATE 1: hard kill switch (same contract as /api/ai-chat). When AI is
+  // disabled, return 503 before any auth or upstream call so "AI off" is
+  // honored for translate too. AI_PROVIDER_MODE === "disabled" is treated as
+  // off as well, matching ai-chat.
+  if (!AI_FEATURES_ENABLED || AI_PROVIDER_MODE === "disabled") {
+    return NextResponse.json(
+      { error: "ai_disabled", message: "AI features are temporarily paused." },
+      { status: 503 },
+    );
+  }
+
   const guard = await requireUser(req);
   if ("error" in guard) return guard.error;
   const { userId, tier } = guard;
