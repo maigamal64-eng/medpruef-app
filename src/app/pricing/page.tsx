@@ -13,6 +13,7 @@ import {
   Lock,
   ShieldCheck,
   Gift,
+  Share2,
 } from "lucide-react";
 import { getLang, setLang } from "@/lib/i18n";
 import { getStoredSession } from "@/lib/auth";
@@ -75,13 +76,19 @@ export default function PricingPage() {
 
   // Crypto checkout state.
   // `checkoutLoading` tracks which tier is currently spinning its CTA —
-  // null means idle, "cohort" = €114 PUYP, "first_month" = €19 trial.
-  // Tracking the specific card lets us disable only that button while
-  // the NOWPayments invoice is being created, instead of freezing the
-  // entire page.
+  // null means idle, "cohort" = €114 PUYP, "starter" = €27 / 3-month
+  // entry tier (€9 effective per month), "first_month" = €19 single-
+  // month fallback. Tracking the specific card lets us disable only
+  // that button while the NOWPayments invoice is being created,
+  // instead of freezing the entire page.
   const [checkoutLoading, setCheckoutLoading] = useState<
-    null | "cohort" | "first_month"
+    null | "cohort" | "starter" | "first_month"
   >(null);
+  // Whether to show the demoted "or just one more month — €19" tier
+  // under the starter card. Hidden by default — most new users should
+  // pick the €27 / 3-month entry; the single-month fallback is mainly
+  // for users whose 3-month entry expired and want to bridge.
+  const [showSingleMonth, setShowSingleMonth] = useState(false);
 
   // Waitlist dialog state
   const [waitOpen, setWaitOpen] = useState(false);
@@ -95,7 +102,10 @@ export default function PricingPage() {
   // user clicked so the dialog renders the right plan summary. Open
   // state is `null` when closed, otherwise the tier id.
   const [trustDialogTier, setTrustDialogTier] = useState<
-    "premium_pass_guaranteed" | "first_month_19" | null
+    | "premium_pass_guaranteed"
+    | "first_3mo_27"
+    | "first_month_19"
+    | null
   >(null);
   const toast = useToast();
 
@@ -132,8 +142,11 @@ export default function PricingPage() {
    * invoice is mid-flight.
    */
   const startCryptoCheckout = async (
-    tier: "premium_pass_guaranteed" | "first_month_19",
-    slot: "cohort" | "first_month",
+    tier:
+      | "premium_pass_guaranteed"
+      | "first_3mo_27"
+      | "first_month_19",
+    slot: "cohort" | "starter" | "first_month",
     actionHint: string,
   ) => {
     if (!session?.user) {
@@ -160,6 +173,40 @@ export default function PricingPage() {
             ? "Keine Rechnungs-URL erhalten."
             : "No invoice URL received."
         );
+      } else if (r.status === 400) {
+        // Try to parse the JSON body for the entry-tier eligibility
+        // signal — if the user already used `first_3mo_27`, we surface
+        // the friendly localised message and reveal the single-month
+        // fallback inline so they have a one-click recovery path.
+        const body = await r.json().catch(() => null) as
+          | {
+              error?: string;
+              message_de?: string;
+              message_en?: string;
+              next_options?: string[];
+            }
+          | null;
+        if (body?.error === "ENTRY_TIER_ALREADY_USED") {
+          setShowSingleMonth(true);
+          toast.info(
+            lang === "de"
+              ? "Einstieg bereits genutzt"
+              : "Entry tier already used",
+            lang === "de"
+              ? body.message_de ??
+                  "Du hast den 3-Monats-Einstieg bereits genutzt. Wähle die Juni-26-Kohorte oder den Einzelmonat."
+              : body.message_en ??
+                  "You've already used the 3-month starter. Pick Cohort or the single-month fallback."
+          );
+        } else {
+          toast.error(
+            lang === "de" ? "Checkout fehlgeschlagen" : "Checkout failed",
+            (body?.error ?? "").slice(0, 120) ||
+              (lang === "de"
+                ? "Bitte später erneut versuchen."
+                : "Please try again later.")
+          );
+        }
       } else if (r.status === 404) {
         toast.info(
           lang === "de" ? "Kurz noch Geduld" : "Almost ready",
@@ -205,6 +252,15 @@ export default function PricingPage() {
     setTrustDialogTier("premium_pass_guaranteed");
   };
 
+  const openStarter3moDialog = () => {
+    if (!session?.user) {
+      const next = encodeURIComponent("/pricing?action=starter-3mo-checkout");
+      window.location.href = `/login?next=${next}&action=starter-3mo-checkout`;
+      return;
+    }
+    setTrustDialogTier("first_3mo_27");
+  };
+
   const openFirstMonthDialog = () => {
     if (!session?.user) {
       const next = encodeURIComponent("/pricing?action=first-month-checkout");
@@ -219,12 +275,18 @@ export default function PricingPage() {
   // NOWPayments invoice creation.
   const handleTrustDialogConfirm = () => {
     if (!trustDialogTier) return;
-    const slot: "cohort" | "first_month" =
-      trustDialogTier === "premium_pass_guaranteed" ? "cohort" : "first_month";
+    const slot: "cohort" | "starter" | "first_month" =
+      trustDialogTier === "premium_pass_guaranteed"
+        ? "cohort"
+        : trustDialogTier === "first_3mo_27"
+          ? "starter"
+          : "first_month";
     const actionHint =
       trustDialogTier === "premium_pass_guaranteed"
         ? "cohort-checkout"
-        : "first-month-checkout";
+        : trustDialogTier === "first_3mo_27"
+          ? "starter-3mo-checkout"
+          : "first-month-checkout";
     setTrustDialogTier(null);
     void startCryptoCheckout(trustDialogTier, slot, actionHint);
   };
@@ -232,12 +294,19 @@ export default function PricingPage() {
   // Legacy direct-fire entrypoints — preserved so any other call sites
   // (the action-hint redirect post-login) continue to work without the
   // dialog interrupt. The pricing-page CTAs now go through
-  // openCohortDialog / openFirstMonthDialog.
+  // openCohortDialog / openStarter3moDialog / openFirstMonthDialog.
   const startCohortCheckout = () =>
     startCryptoCheckout(
       "premium_pass_guaranteed",
       "cohort",
       "cohort-checkout",
+    );
+
+  const startStarter3moCheckout = () =>
+    startCryptoCheckout(
+      "first_3mo_27",
+      "starter",
+      "starter-3mo-checkout",
     );
 
   const startFirstMonthCheckout = () =>
@@ -449,22 +518,48 @@ export default function PricingPage() {
           <FreeTierCard lang={lang} examSource={storedExam} />
         </section>
 
-        {/* ══════════ €19 first-month trial card ══════════ */}
-        {/* Entry-tier one-time invoice — sits between Free and the
-            Cohort to give users a lower-friction first ask than €114.
-            Visually subordinate to the Cohort card below (single-row
-            layout, no PUYP badge) so the Cohort stays the dominant
-            conversion surface. The `first-month` anchor lets the
-            landing-page tertiary CTA deep-link straight here. */}
+        {/* ══════════ €27 / 3-month entry tier card (primary) ══════════ */}
+        {/* Phase 1 of the 2026-04-28 pricing reset — replaces €19 single-
+            month as the dominant entry surface. Three months for €27
+            (~€9 per month) gives the prospect a real prep window without
+            committing to the full €114 Cohort price. The `first-month`
+            anchor stays on this section so the landing-page tertiary
+            CTA still deep-links here even after the rename. */}
         <section
           id="first-month"
           className="max-w-5xl mx-auto px-4 lg:px-8 pb-4 scroll-mt-20"
         >
-          <FirstMonthCard
+          <Starter3MoCard
             lang={lang}
-            onCheckout={openFirstMonthDialog}
-            loading={checkoutLoading === "first_month"}
+            onCheckout={openStarter3moDialog}
+            loading={checkoutLoading === "starter"}
           />
+
+          {/* Single-month fallback — collapsed by default. Reveals
+              automatically when the API rejects a duplicate
+              first_3mo_27 purchase (showSingleMonth flag), so users
+              whose 3-month entry already expired have a one-click
+              recovery path. Otherwise it's intentionally tucked away
+              to keep the funnel pointing at the 3-month entry. */}
+          <div className="mt-3">
+            {showSingleMonth ? (
+              <FirstMonthCard
+                lang={lang}
+                onCheckout={openFirstMonthDialog}
+                loading={checkoutLoading === "first_month"}
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowSingleMonth(true)}
+                className="text-xs text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg-muted)] underline-offset-2 hover:underline transition-colors"
+              >
+                {lang === "de"
+                  ? "Brauchst du nur einen Monat? Einzelmonat zu €19 anzeigen ›"
+                  : "Just need one month? Show single-month tier (€19) ›"}
+              </button>
+            )}
+          </div>
         </section>
 
         {/* ══════════ Cost-anchor strip ══════════
@@ -905,16 +1000,162 @@ function FreeTierCard({ lang, examSource }: { lang: Lang; examSource: ExamSource
   );
 }
 
-/* ═══════════════════════ €19 first-month trial card ═══════════════════════ */
+/* ═══════════════════════ €27 / 3-month starter card ═══════════════════════ */
 
 /**
- * Entry-tier one-time invoice. Sits between Free and Cohort to give
- * users a lower-friction first ask than €114. Intentionally visually
- * subordinate to the Cohort card: single-row layout, mp-accent (CTA
- * blue) styling instead of viridian glow, smaller price font, no PUYP
- * badge. The "keine automatische Verlängerung" sublabel is the load-
- * bearing trust signal — crypto users will not click this unless the
- * no-auto-renew guarantee is front and centre.
+ * Primary entry tier as of 2026-04-28. €9-effective per month for 3
+ * months, billed as a single €27 lump sum (NOWPayments has no
+ * recurring billing, and Stripe Atlas hasn't cleared yet).
+ *
+ * Capped at one purchase per user — eligibility enforced server-side
+ * in `/api/checkout/nowpayments` to prevent indefinite parking that
+ * would erode the €114 Cohort tier (Integrator audit 2026-04-28).
+ *
+ * Visual posture: more prominent than the demoted €19 single-month
+ * fallback (slightly larger price block, "Empfehlung für Einsteiger"
+ * pill, viridian highlight) but still subordinate to the Cohort card —
+ * Cohort keeps the 2px viridian border + glow, Starter uses a softer
+ * accent.
+ */
+function Starter3MoCard({
+  lang,
+  onCheckout,
+  loading,
+}: {
+  lang: Lang;
+  onCheckout: () => void;
+  loading: boolean;
+}) {
+  return (
+    <article
+      className="relative rounded-[var(--mp-r-card)] overflow-hidden p-6 md:p-7 grid grid-cols-1 md:grid-cols-[1.4fr_1fr] gap-6 items-center"
+      style={{
+        background: "var(--mp-surface-raised)",
+        border: "1px solid var(--mp-viridian-soft, rgba(0,123,95,0.35))",
+        boxShadow: "0 1px 0 rgba(0,123,95,0.05)",
+      }}
+    >
+      <div>
+        <div className="flex flex-wrap items-center gap-2 mb-2">
+          <span
+            className="mp-caption inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full normal-case tracking-[0.08em]"
+            style={{
+              background: "rgba(0,123,95,0.12)",
+              color: "var(--mp-viridian)",
+              border: "1px solid rgba(0,123,95,0.28)",
+              fontSize: "10px",
+              fontWeight: 700,
+            }}
+          >
+            {lang === "de" ? "Einstieg · Empfehlung" : "Starter · Recommended"}
+          </span>
+          <h3 className="mp-h3 text-[20px]">
+            {lang === "de"
+              ? "3-Monats-Einstieg — ~9 € pro Monat"
+              : "3-Month Starter — ~€9 per month"}
+          </h3>
+        </div>
+        <p className="mp-body text-[var(--mp-fg-muted)] mb-4 text-sm leading-relaxed">
+          {lang === "de"
+            ? "Drei Monate Vollzugang für eine einmalige Zahlung von 27 €. Genug Zeit für einen echten Lernlauf — und schmal genug, um zu testen, bevor du dich zur Kohorte committest. Pro Konto einmal verfügbar."
+            : "Three months of full access for one payment of €27. Long enough for a real prep run, narrow enough to test before committing to the Cohort. One purchase per account."}
+        </p>
+        <ul className="space-y-1.5 text-sm text-[var(--mp-fg)]">
+          <li className="flex items-start gap-2">
+            <Check
+              className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-[var(--mp-viridian)]"
+              strokeWidth={3}
+            />
+            {lang === "de"
+              ? "Vollzugang · alle 3 Prüfungen · alle Pro-Features"
+              : "Full access · all 3 exams · all Pro features"}
+          </li>
+          <li className="flex items-start gap-2">
+            <Check
+              className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-[var(--mp-viridian)]"
+              strokeWidth={3}
+            />
+            {lang === "de"
+              ? "90 Tage ab Zahlung · läuft automatisch aus, kein Abo"
+              : "90 days from payment · expires automatically, no subscription"}
+          </li>
+          <li className="flex items-start gap-2">
+            <Check
+              className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-[var(--mp-viridian)]"
+              strokeWidth={3}
+            />
+            {lang === "de"
+              ? "Empfiehl uns weiter — 15 € Gutschrift pro bezahltem Empfehlungs-Sign-up"
+              : "Refer others — €15 credit per paid referral sign-up"}
+          </li>
+          <li className="flex items-start gap-2 text-[var(--mp-fg-subtle)]">
+            <Lock className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" aria-hidden />
+            {lang === "de"
+              ? "Keine Pass-Until-You-Pass-Garantie (nur bei 6-Monats- und Kohorten-Tarifen)"
+              : "No Pass-Until-You-Pass guarantee (6-month and Cohort plans only)"}
+          </li>
+        </ul>
+      </div>
+
+      <div className="flex flex-col gap-3 md:items-end">
+        <div className="flex flex-col md:items-end">
+          <div className="flex items-baseline gap-1.5 md:justify-end">
+            <span className="mp-num font-display font-black text-[var(--mp-fg)] text-[36px] leading-none">
+              27 €
+            </span>
+            <span className="text-sm text-[var(--mp-fg-subtle)]">
+              {lang === "de" ? "einmalig" : "one-time"}
+            </span>
+          </div>
+          <p
+            className="mp-small mt-1 md:text-right"
+            style={{ color: "var(--mp-viridian)", fontWeight: 600 }}
+          >
+            {lang === "de"
+              ? "≈ 9 € pro Monat · keine Verlängerung"
+              : "≈ €9 per month · no renewal"}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onCheckout}
+          disabled={loading}
+          className="mp-btn mp-btn--success inline-flex items-center justify-center gap-2 w-full md:w-auto whitespace-nowrap"
+          style={{ opacity: loading ? 0.7 : 1 }}
+        >
+          {loading ? (
+            <>
+              <BrandedLoader size={20} hideLabel />
+              {lang === "de" ? "Rechnung wird erstellt…" : "Creating invoice…"}
+            </>
+          ) : (
+            <>
+              <Bitcoin className="w-3.5 h-3.5" />
+              {lang === "de"
+                ? "3 Monate für 27 € starten"
+                : "Start 3 months for €27"}
+              <ArrowRight className="w-3.5 h-3.5" />
+            </>
+          )}
+        </button>
+        <p className="mp-small text-[var(--mp-fg-subtle)] md:text-right">
+          {lang === "de"
+            ? "USDT / USDC · aktiv in Minuten · läuft nach 90 Tagen aus"
+            : "USDT / USDC · active in minutes · expires after 90 days"}
+        </p>
+      </div>
+    </article>
+  );
+}
+
+/* ═══════════════════════ €19 single-month fallback card ═══════════════════════ */
+
+/**
+ * Single-month fallback. Demoted from primary entry on 2026-04-28 in
+ * favour of the €27 / 3-month starter. Stays available so users whose
+ * 3-month entry expired (or who explicitly want a one-month bridge)
+ * can buy a single month before upgrading to Cohort. Auto-revealed in
+ * the UI when the checkout API rejects a duplicate first_3mo_27.
  */
 function FirstMonthCard({
   lang,
@@ -945,18 +1186,18 @@ function FirstMonthCard({
               fontWeight: 700,
             }}
           >
-            {lang === "de" ? "Einsteiger-Tarif" : "Entry tier"}
+            {lang === "de" ? "Einzelmonat · Fallback" : "Single month · fallback"}
           </span>
           <h3 className="mp-h3 text-[20px]">
             {lang === "de"
-              ? "Erster Monat — einmalig €19"
-              : "First month — €19 one-time"}
+              ? "Einzelmonat — einmalig 19 €"
+              : "Single month — €19 one-time"}
           </h3>
         </div>
         <p className="mp-body text-[var(--mp-fg-muted)] mb-4 text-sm leading-relaxed">
           {lang === "de"
-            ? "30 Tage Vollzugang, einmalig bezahlt. Keine automatische Verlängerung, kein Abo, keine Kreditkartendaten gespeichert — einfach echt ausprobieren für weniger als ein Lehrbuchkapitel."
-            : "30 days of full access, paid once. No auto-renewal, no subscription, no saved card details — try it for real for less than a textbook chapter."}
+            ? "30 Tage Vollzugang als Übergang — ideal, wenn dein 3-Monats-Einstieg ausgelaufen ist und du eine Brücke bis zur Kohorte brauchst, oder wenn du ganz gezielt nur einen Monat testen willst."
+            : "30 days of full access as a bridge — ideal if your 3-month starter has expired and you need a stop-gap before Cohort, or if you specifically want a one-month try."}
         </p>
         <ul className="space-y-1.5 text-sm text-[var(--mp-fg)]">
           <li className="flex items-start gap-2">
@@ -999,7 +1240,7 @@ function FirstMonthCard({
         <div className="flex flex-col md:items-end">
           <div className="flex items-baseline gap-1.5 md:justify-end">
             <span className="mp-num font-display font-black text-[var(--mp-fg)] text-[32px] leading-none">
-              €19
+              19 €
             </span>
             <span className="text-sm text-[var(--mp-fg-subtle)]">
               {lang === "de" ? "einmalig" : "one-time"}
@@ -1018,7 +1259,7 @@ function FirstMonthCard({
           type="button"
           onClick={onCheckout}
           disabled={loading}
-          className="mp-btn mp-btn--primary inline-flex items-center justify-center gap-2 w-full md:w-auto whitespace-nowrap"
+          className="mp-btn mp-btn--secondary inline-flex items-center justify-center gap-2 w-full md:w-auto whitespace-nowrap"
           style={{ opacity: loading ? 0.7 : 1 }}
         >
           {loading ? (
@@ -1030,8 +1271,8 @@ function FirstMonthCard({
             <>
               <Bitcoin className="w-3.5 h-3.5" />
               {lang === "de"
-                ? "Für €19 testen mit Krypto"
-                : "Try for €19 with crypto"}
+                ? "Einen Monat für 19 € testen"
+                : "Try one month for €19"}
               <ArrowRight className="w-3.5 h-3.5" />
             </>
           )}
@@ -1365,24 +1606,32 @@ function ReferralBlock({ lang }: { lang: Lang }) {
       </div>
       <h3 className="mp-h3 mb-2 text-[20px]">
         {lang === "de"
-          ? "Lade andere Prüflinge ein — gestaffelte Prämien pro Abschluss."
-          : "Invite fellow candidates — tiered rewards per signed-up referral."}
+          ? "Empfiehl uns auf Telegram, WhatsApp & Social — bis zu 75 € pro Abschluss."
+          : "Share on Telegram, WhatsApp & socials — up to €75 per signed-up referral."}
       </h3>
       <p className="text-sm text-[var(--mp-fg-muted)] mb-5 max-w-2xl leading-relaxed">
         {lang === "de"
-          ? "Die Prämienhöhe hängt vom gewählten Tarif deiner Empfehlung ab. Auszahlung in USDT oder über Wise, 30 Tage nach Zahlungseingang. Kein SEPA."
-          : "Reward scales with the plan your referral picks. Paid in USDT or via Wise, 30 days after their payment clears. No SEPA."}
+          ? "Du bist wahrscheinlich schon in den richtigen Telegram-Kanälen für die Kenntnisprüfung. Teile dort deinen Empfehlungslink — 15 € pro 3-Monats-Einstieg, 25 € pro Monatstarif, 50 € pro Halbjahr/Jahr, 75 € pro Kohorte. Auszahlung in USDT oder Wise, 30 Tage nach Zahlungseingang."
+          : "You're probably already in the right Telegram groups for the Kenntnisprüfung. Share your referral link there — €15 per 3-month starter, €25 per monthly, €50 per 6/12-month, €75 per Cohort sign-up. Paid in USDT or Wise, 30 days after their payment clears."}
       </p>
 
-      <Link
-        href="/referrals"
-        className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--mp-viridian)] hover:underline focus:outline-none focus:ring-2 focus:ring-[var(--mp-viridian)] rounded"
-      >
-        {lang === "de"
-          ? "Prämienstufen und Dashboard ansehen"
-          : "See payout tiers and dashboard"}
-        <ArrowRight className="w-3.5 h-3.5" aria-hidden />
-      </Link>
+      <div className="flex flex-wrap items-center gap-3">
+        <Link
+          href="/referrals"
+          className="mp-btn mp-btn--success inline-flex items-center gap-1.5 text-sm"
+        >
+          <Share2 className="w-3.5 h-3.5" aria-hidden />
+          {lang === "de"
+            ? "Empfehlungslink öffnen"
+            : "Open my referral link"}
+          <ArrowRight className="w-3.5 h-3.5" aria-hidden />
+        </Link>
+        <span className="text-xs text-[var(--mp-fg-subtle)]">
+          {lang === "de"
+            ? "Auf der nächsten Seite ein Klick zum Teilen via Telegram, WhatsApp oder Web Share."
+            : "Next page: one-click share via Telegram, WhatsApp or Web Share."}
+        </span>
+      </div>
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
+import { QUESTIONS } from '@/lib/content-truth'
 import crypto from 'crypto'
 
 export const dynamic = 'force-dynamic'
@@ -130,9 +131,12 @@ export async function POST(req: NextRequest) {
   if (!isWebLogin) {
     // Unknown or empty payload → send welcome reply
     const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://medpruf.com').replace(/\/$/, '')
+    // Question count sourced live from content-truth.ts SSoT — never hardcode
+    // it here (a stale hardcoded count drift was caught in this copy 2026-06-02).
+    // SOT-REF: medpruef_question_count@DB:medpruef.questions
     const welcomeText = isDE
-      ? 'Willkommen bei MedPrüf — 10.993 Prüfungsfragen für Kenntnisprüfung Wien, KMP Innsbruck und Pharmakologie.\n\nPass beim ersten Versuch — oder lerne kostenlos weiter, bis du es schaffst.'
-      : 'Welcome to MedPrüf — 10,993 exam questions for Kenntnisprüfung Wien, KMP Innsbruck and Pharmakologie.\n\nPass first try — or study free until you do.'
+      ? `Willkommen bei MedPrüf — ${QUESTIONS.total.toLocaleString('de-DE')} Prüfungsfragen für Kenntnisprüfung Wien, KMP Innsbruck und Pharmakologie.\n\nPass beim ersten Versuch — oder lerne kostenlos weiter, bis du es schaffst.`
+      : `Welcome to MedPrüf — ${QUESTIONS.total.toLocaleString('en-US')} exam questions for Kenntnisprüfung Wien, KMP Innsbruck and Pharmakologie.\n\nPass first try — or study free until you do.`
     const webLabel = isDE ? 'MedPrüf öffnen & anmelden' : 'Open MedPrüf & sign in'
     const miniAppLabel = isDE ? 'Mini App öffnen' : 'Open Mini App'
     // Deep-link with language suffix so the subsequent token exchange also

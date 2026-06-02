@@ -74,8 +74,12 @@ export async function GET(req: NextRequest) {
 
   const sb = getServiceClient();
   const nowIso = new Date().toISOString();
-  const fiveDaysIso = new Date(
-    Date.now() + 5 * 24 * 60 * 60 * 1000,
+  // 14-day window covers both tiers: `first_month_19` (30-day arc, fires
+  // around day 16+) and `first_3mo_27` (90-day arc, fires around day 76+).
+  // The `trial_reminder_sent_at` stamp ensures every user gets exactly
+  // one reminder regardless of cron retry cadence.
+  const fourteenDaysIso = new Date(
+    Date.now() + 14 * 24 * 60 * 60 * 1000,
   ).toISOString();
 
   const errors: string[] = [];
@@ -87,11 +91,11 @@ export async function GET(req: NextRequest) {
     const { data: dueTrials, error: dueErr } = await sb
       .from("subscriptions")
       .select("id, user_id, expires_at, tier")
-      .eq("tier", "first_month_19")
+      .in("tier", ["first_month_19", "first_3mo_27"])
       .eq("status", "active")
       .is("trial_reminder_sent_at", null)
       .gte("expires_at", nowIso)
-      .lte("expires_at", fiveDaysIso);
+      .lte("expires_at", fourteenDaysIso);
 
     if (dueErr) {
       errors.push(`due_query: ${dueErr.message}`);
@@ -270,7 +274,7 @@ export async function GET(req: NextRequest) {
         await recordEvent(
           sb,
           userId,
-          tier === "first_month_19"
+          tier === "first_month_19" || tier === "first_3mo_27"
             ? "trial_expired"
             : "subscription_expired",
           {

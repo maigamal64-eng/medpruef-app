@@ -48,6 +48,10 @@ export type TrackEventType =
   | "referral_code_copied"
   | "referral_share_prompt_shown"
   | "referral_share_prompt_clicked"
+  // Direct social-share deeplink clicks from /referrals (Telegram /
+  // WhatsApp / X) — added 2026-04-28 to measure which channel
+  // actually drives signed-up referrals after the pricing reset.
+  | "referral_share_clicked"
   // AI-chat paywall events (rescue-sprint §3, 2026-04-24).
   // Fires when a free user hits /api/ai-chat and gets 402/tier-gated.
   // Lets us measure paywall-hit rate per free user and verify the

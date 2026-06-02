@@ -28,6 +28,7 @@ export const dynamic = "force-dynamic";
  *       expires_at: string,
  *       days_remaining: number | null,   // null if no expiry
  *       is_first_month_trial: boolean,   // tier === 'first_month_19'
+ *       is_starter_3mo_trial: boolean,   // tier === 'first_3mo_27'
  *       is_puyp_eligible_tier: boolean,
  *       payment_provider: string | null,
  *       amount_cents: number | null,
@@ -97,6 +98,9 @@ export async function GET(req: NextRequest) {
         expires_at: sub.expires_at,
         days_remaining: daysRemaining,
         is_first_month_trial: tierKey === "first_month_19",
+        // 3-month entry tier (€27 lump, ~€9/month) — capped at one
+        // purchase per user, treated like the trial in UI countdowns.
+        is_starter_3mo_trial: tierKey === "first_3mo_27",
         is_puyp_eligible_tier: Boolean(tierDef?.puypEligible),
         payment_provider: sub.payment_provider,
         amount_cents: sub.amount_cents,

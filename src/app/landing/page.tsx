@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { getLang, setLang } from "@/lib/i18n";
 import { getStoredExamSource, type ExamSourceId } from "@/lib/topics";
+import { QUESTIONS } from "@/lib/content-truth";
 
 // Free-tier CTAs default to the user's stored exam preference. SSR returns
 // kenntnispruefung (the safest default — biggest cohort) so the link resolves
@@ -91,12 +92,12 @@ const COPY = {
       en: "See June 26 Cohort plans",
     },
     cta_tertiary: {
-      de: "Juni-26-Kohorte — €114",
-      en: "June 26 Cohort — €114",
+      de: "3-Monats-Einstieg — 27 € (≈ 9 €/Monat)",
+      en: "3-Month Starter — €27 (≈ €9/month)",
     },
     cta_tertiary_sub: {
-      de: "6 Monate · Pass-Until-You-Pass-Garantie",
-      en: "6 months · Pass-Until-You-Pass guarantee",
+      de: "Vollzugang · einmalig · keine Verlängerung",
+      en: "Full access · one-time · no renewal",
     },
     cta_note: {
       de: "Keine Karte · Juni-26-Kohorte mit Pass-Until-You-Pass-Garantie",
@@ -105,8 +106,12 @@ const COPY = {
   },
   stats: [
     {
-      value: "10.993",
-      value_en: "10,993",
+      // Question count sourced live from content-truth.ts SSoT (the same
+      // QUESTIONS.total the progress + curriculum pages use). Prevents the
+      // hero-vs-DB question-count drift caught 2026-06-02.
+      // SOT-REF: medpruef_question_count@DB:medpruef.questions
+      value: QUESTIONS.total.toLocaleString("de-DE"),
+      value_en: QUESTIONS.total.toLocaleString("en-US"),
       label: { de: "Fragen", en: "Questions" },
     },
     {

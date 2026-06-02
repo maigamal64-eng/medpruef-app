@@ -23,6 +23,30 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-04-28",
+    tag: "feature",
+    title: {
+      de: "Neuer 3-Monats-Einstieg: 27 € einmalig — ungefähr 9 € pro Monat",
+      en: "New 3-Month Starter: €27 one-time — about €9 per month",
+    },
+    description: {
+      de: "Der bisherige Erste-Monat-Test (19 €) wird zum Einzelmonat-Fallback. Neuer Standard-Einstieg: 90 Tage Vollzugang für 27 € — ein einmaliger Kauf, keine automatische Verlängerung. Limitiert auf einen Kauf pro Konto, danach geht es weiter mit der Juni-26-Kohorte oder einem einmaligen Bridging-Monat.",
+      en: "The former €19 first-month trial becomes the single-month fallback. New default entry: 90 days of full access for €27 — one-time purchase, no auto-renewal. Capped at one purchase per account; afterward upgrade to the June 26 Cohort or buy a single bridging month.",
+    },
+  },
+  {
+    date: "2026-04-28",
+    tag: "improvement",
+    title: {
+      de: "Empfehlungsprogramm sichtbarer — Telegram, WhatsApp & Social",
+      en: "Referral program more prominent — Telegram, WhatsApp & socials",
+    },
+    description: {
+      de: "Auf der Preise-Seite haben wir das Empfehlungsprogramm prominenter gemacht. Empfehlungslohn bleibt 25 € / 50 € / 75 € je nach Tarif — neu: 15 € pro 3-Monats-Einstieg. Der Empfehlungslink lässt sich direkt aus dem Empfehlungs-Dashboard auf Telegram/WhatsApp teilen.",
+      en: "Referrals are now more prominent on the pricing page. Payout stays €25 / €50 / €75 per tier — new: €15 per 3-month starter sign-up. Your referral link can be shared straight to Telegram/WhatsApp from the referrals dashboard.",
+    },
+  },
+  {
     date: "2026-04-26",
     tag: "fix",
     title: {

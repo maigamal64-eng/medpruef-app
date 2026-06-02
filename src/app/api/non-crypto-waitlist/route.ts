@@ -34,6 +34,7 @@ const ALLOWED_PROVIDERS = new Set([
   "none",
 ]);
 const ALLOWED_TIERS = new Set([
+  "first_3mo_27",
   "first_month_19",
   "monthly",
   "three_month",

@@ -30,6 +30,13 @@
 
 // ── 1. Question counts ─────────────────────────────────────────────
 //
+// This is a STATIC CACHE of a DB-owned fact. The authoritative count is
+// `select count(*) from questions where is_active` (verified 10992 live
+// on 2026-06-02). Every user-facing surface reads `QUESTIONS.total` from
+// here so the number can never drift again — update this one constant
+// after a content import, not the surfaces.
+// SOT-REF: medpruef_question_count@DB:medpruef.questions
+//
 // Post-correction baseline (2026-04-24). Was "10,993" through Apr 23;
 // the off-by-one came from a soft-deleted row that survived a partial
 // archive. Wien dropped 7,567 → 7,566 in the same sweep. KMP and
@@ -72,13 +79,36 @@ export const TIERS = {
     name: { de: "Kostenlos", en: "Free" },
     referral_payout_cents: 0,
   },
+  // ── €27 / 3-month entry tier — primary entry as of 2026-04-28 ──
+  // €9-effective per month, billed once. Cap: each user can buy this
+  // ONCE — eligibility enforced server-side in /api/checkout/nowpayments
+  // by checking whether the user already has a `first_3mo_27` row with
+  // started_at IS NOT NULL. This prevents indefinite parking on the
+  // entry tier, which would cannibalize Cohort sales (Integrator audit
+  // 2026-04-28). After expiry the upgrade path is Cohort €114 first;
+  // `first_month_19` stays live as a "just one more month" fallback.
+  first_3mo_27: {
+    id: "first_3mo_27",
+    price_cents: 2700, // €27 lump sum (= €9/month effective)
+    duration_months: 3,
+    puyp_eligible: false, // 90 days is short of a real prep arc; PUYP starts at 6mo
+    available: true,
+    name: { de: "3-Monats-Einstieg", en: "3-Month Starter" },
+    // Referral payout sized to encourage Telegram/social sharing while
+    // keeping margin positive after NOWPayments fees (€27 net ≈ €26 →
+    // €15 referral leaves ~€11 contribution).
+    referral_payout_cents: 1500, // €15
+  },
   first_month_19: {
     id: "first_month_19",
     price_cents: 1900,
     duration_months: 1,
     puyp_eligible: false, // 30 days is too short for PUYP
+    // Demoted to fallback as of 2026-04-28 — primary entry is now
+    // `first_3mo_27`. Stays available so users whose 3-month entry
+    // expired can buy a single bridging month before upgrading.
     available: true,
-    name: { de: "Erster Monat", en: "First Month" },
+    name: { de: "Einzelmonat", en: "Single Month" },
     referral_payout_cents: 1000, // €10 per COPY-BUNDLE §4
   },
   monthly: {
@@ -141,6 +171,7 @@ export const TIER_BY_ID = TIERS as Readonly<Record<string, Tier | undefined>>;
 // The annual cap is enforced server-side in `/api/webhooks/nowpayments`.
 
 export const REFERRAL_PAYOUTS = {
+  first_3mo_27: 1500, // €15 — primary entry tier, sized for social/Telegram sharing
   first_month_19: 1000, // €10
   monthly: 2500, // €25
   three_month: 2500, // €25

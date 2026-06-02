@@ -267,8 +267,8 @@ export default function ReferralsPage() {
             : "MedPrüf — Austrian medical exam prep",
         text:
           lang === "de"
-            ? "Lern mit mir für die Kenntnisprüfung auf MedPrüf — €25–€75 Gutschrift pro Empfehlung mit meinem Link:"
-            : "Prep with me for the Austrian medical exam on MedPrüf — €25–€75 per referral with my link:",
+            ? "Lern mit mir für die Kenntnisprüfung auf MedPrüf. 90 Tage Vollzugang für 27 € (≈ 9 €/Monat) oder die Juni-26-Kohorte mit Pass-Until-You-Pass-Garantie. Mein Empfehlungslink:"
+            : "Prep with me for the Austrian medical exam on MedPrüf. 90 days for €27 (≈ €9/month) or the June 26 Cohort with a Pass-Until-You-Pass guarantee. My referral link:",
         url: data.referralLink,
       });
     } catch {
@@ -550,6 +550,76 @@ export default function ReferralsPage() {
                     {lang === "de" ? "Teilen" : "Share"}
                   </button>
                 </div>
+
+                {/* Direct social-share deeplinks (Telegram / WhatsApp /
+                    X). Web Share API only fires native sheets on
+                    mobile; these explicit buttons let desktop users
+                    one-click into their group chats too. Pre-filled
+                    with referral copy that mentions the new
+                    €27 / 3-month entry tier. */}
+                {data?.referralLink && (
+                  <div className="mt-4 flex flex-wrap items-center gap-2">
+                    <span className="text-xs font-semibold text-[var(--mp-fg-muted)] uppercase tracking-wider mr-1">
+                      {lang === "de" ? "Direkt teilen" : "Share directly"}
+                    </span>
+                    {(() => {
+                      const shareTextDe = `MedPrüf — Österreichische Ärzteprüfung. 90 Tage Vollzugang für 27 € (≈ 9 €/Monat) oder die Juni-26-Kohorte mit Pass-Until-You-Pass-Garantie. Mein Empfehlungslink: ${data.referralLink}`;
+                      const shareTextEn = `MedPrüf — Austrian medical exam prep. 90 days full access for €27 (≈ €9/month) or the June 26 Cohort with a Pass-Until-You-Pass guarantee. My referral link: ${data.referralLink}`;
+                      const shareText = lang === "de" ? shareTextDe : shareTextEn;
+                      const tgUrl = `https://t.me/share/url?url=${encodeURIComponent(
+                        data.referralLink,
+                      )}&text=${encodeURIComponent(shareText)}`;
+                      const waUrl = `https://wa.me/?text=${encodeURIComponent(
+                        shareText,
+                      )}`;
+                      const xUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
+                        shareText,
+                      )}`;
+                      const trackShare = (channel: string) => {
+                        void import("@/lib/tracker").then(({ trackEvent }) => {
+                          trackEvent("referral_share_clicked", {
+                            channel,
+                            source: "referrals_page_deeplink",
+                          });
+                        }).catch(() => {});
+                      };
+                      return (
+                        <>
+                          <a
+                            href={tgUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={() => trackShare("telegram")}
+                            className="mp-btn mp-btn--secondary justify-center gap-2 text-sm"
+                          >
+                            <Share2 className="w-3.5 h-3.5" />
+                            Telegram
+                          </a>
+                          <a
+                            href={waUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={() => trackShare("whatsapp")}
+                            className="mp-btn mp-btn--secondary justify-center gap-2 text-sm"
+                          >
+                            <Share2 className="w-3.5 h-3.5" />
+                            WhatsApp
+                          </a>
+                          <a
+                            href={xUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={() => trackShare("x")}
+                            className="mp-btn mp-btn--secondary justify-center gap-2 text-sm"
+                          >
+                            <Share2 className="w-3.5 h-3.5" />
+                            X
+                          </a>
+                        </>
+                      );
+                    })()}
+                  </div>
+                )}
 
                 <p className="mt-3 text-xs text-[var(--mp-fg-subtle)]">
                   {lang === "de" ? "Dein Code: " : "Your code: "}

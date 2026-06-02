@@ -81,28 +81,62 @@ export const TIERS: Record<string, TierDefinition> = {
     puypEligible: true,
     referralPayoutCents: 7500, // €75 — lock #3 premium tier
   },
-  // ── €19 first-month trial — live on crypto rails (April 24 2026) ──
+  // ── €27 / 3-month entry tier — live on crypto rails (April 28 2026) ──
   //
-  // ONE-TIME INVOICE, NO AUTO-RENEWAL. Every NOWPayments tier is a
-  // single invoice by design — we never bill a user twice off the
-  // same subscription row. On day 25 the /api/cron/trial-reminder cron
-  // emails the user to pick a longer tier; otherwise access simply
-  // lapses when expires_at passes.
+  // €9-effective-per-month, billed once as a €27 lump sum. ONE-TIME
+  // INVOICE, NO AUTO-RENEWAL. Same payment-pattern as every other
+  // NOWPayments tier — single invoice, no rebill.
   //
-  // Rationale: €29/mo is too high a first ask with crypto friction +
-  // weak trust signals at launch. €19 one-time = "less than a
-  // textbook chapter" and matches the psychology of "try it for real
-  // for less than €20." Too short for PUYP — 30 days is not a prep
-  // window. Referral payout matches the monthly tier (€25) since the
-  // referee is at the bottom of the ladder.
+  // **Eligibility cap (anti-cannibalization):** each user can buy this
+  // tier only ONCE. Enforced server-side in
+  // `src/app/api/checkout/nowpayments/route.ts` by checking for any
+  // existing `subscriptions` row with `tier='first_3mo_27'` AND
+  // `started_at IS NOT NULL` (i.e. payment was confirmed). If yes →
+  // return 400 + nudge user toward Cohort or the single-month tier.
+  //
+  // Rationale (Integrator audit 2026-04-28): without the 3-month cap,
+  // a €9-effective monthly anchor would let users park indefinitely
+  // and erode the €114 Cohort tier (€9×12 = €108 ≈ €114). 3 months of
+  // entry pricing is enough to taste the product and short enough to
+  // force a step-up decision. After expiry the upgrade nudge is Cohort
+  // first; `first_month_19` (€19) stays available as a "just one more
+  // month" bridging fallback.
+  first_3mo_27: {
+    id: "first_3mo_27",
+    priceCents: 2700, // €27
+    currency: "EUR",
+    durationMonths: 3,
+    humanName: "3-month Starter (one-time, ~€9/month effective)",
+    humanNameDe: "3-Monats-Einstieg (einmalig, ~9 € pro Monat)",
+    available: true, // LIVE for crypto checkout
+    puypEligible: false, // 90 days is too short for PUYP — that needs 6mo+
+    // €27 net is ~€26 after NOWPayments fees; €15 referral keeps margin
+    // positive (~€11 contribution per referred user) while being
+    // attractive enough for Telegram/social sharing per the 2026-04-28
+    // referral-emphasis brief.
+    referralPayoutCents: 1500, // €15
+  },
+  // ── €19 first-month — fallback tier, demoted on UI 2026-04-28 ──
+  //
+  // Was the primary entry tier from April 24 to April 28. Demoted to
+  // a fallback after the €27/3-month entry shipped — kept available
+  // so users whose 3-month entry expired can buy a single bridging
+  // month before upgrading to Cohort. UI no longer surfaces it as
+  // the default entry; it's a small "or just one more month?" link
+  // under the starter card and on post-expiry upsell screens.
+  //
+  // ONE-TIME INVOICE, NO AUTO-RENEWAL. On day 25 the
+  // /api/cron/trial-reminder cron emails the user to pick a longer
+  // tier; otherwise access simply lapses when expires_at passes.
+  // Too short for PUYP — 30 days is not a prep window.
   first_month_19: {
     id: "first_month_19",
     priceCents: 1900, // €19
     currency: "EUR",
     durationMonths: 1,
-    humanName: "First month (one-time, no auto-renew)",
-    humanNameDe: "Erster Monat (einmalig, keine automatische Verlängerung)",
-    available: true, // LIVE for crypto checkout
+    humanName: "Single month (one-time, no auto-renew)",
+    humanNameDe: "Einzelmonat (einmalig, keine automatische Verlängerung)",
+    available: true, // LIVE for crypto checkout (fallback)
     puypEligible: false, // too short for PUYP
     // €19 net is ~€16 after NOWPayments fees; €25 referral was margin-
     // negative. Locked to €10 per [name]'s 2026-04-26 decision (review-

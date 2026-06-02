@@ -32,6 +32,7 @@ import { formatEuro } from "@/lib/content-truth";
 
 type Lang = "de" | "en";
 type TierKey =
+  | "first_3mo_27"
   | "first_month_19"
   | "premium_pass_guaranteed"
   | "monthly"
@@ -80,9 +81,30 @@ function tierSummary(tier: TierKey, lang: Lang): TierSummary {
       hasPuyp: true,
     };
   }
+  if (tier === "first_3mo_27") {
+    return {
+      planLabel:
+        lang === "de"
+          ? "3-Monats-Einstieg — MedPrüf Pro testen für ~9 € pro Monat"
+          : "3-Month Starter — try MedPrüf Pro for ~€9/month",
+      priceLabel: formatEuro(2700),
+      durationLabel:
+        lang === "de"
+          ? "einmalig · 3 Monate Zugang · keine automatische Verlängerung"
+          : "one-time · 3 months access · no auto-renewal",
+      inclusionLine:
+        lang === "de"
+          ? "90 Tage Vollzugriff, alle drei Prüfungstypen, 10.992 Fragen, KI-Chat. Einmal pro Konto verfügbar — danach Kohorte oder Einzelmonat."
+          : "90 days full access, all three exam types, 10,992 questions, AI chat. One-time per account — afterward upgrade to Cohort or buy a single month.",
+      hasPuyp: false,
+    };
+  }
   if (tier === "first_month_19") {
     return {
-      planLabel: lang === "de" ? "Erster Monat — MedPrüf Pro testen" : "First Month — try MedPrüf Pro",
+      planLabel:
+        lang === "de"
+          ? "Einzelmonat — MedPrüf Pro testen"
+          : "Single Month — try MedPrüf Pro",
       priceLabel: formatEuro(1900),
       durationLabel:
         lang === "de"

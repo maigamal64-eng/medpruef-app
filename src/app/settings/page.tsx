@@ -1071,6 +1071,7 @@ function SubscriptionCard({
     expires_at: string | null;
     days_remaining: number | null;
     is_first_month_trial: boolean;
+    is_starter_3mo_trial?: boolean;
     is_puyp_eligible_tier: boolean;
   };
   lang: Lang;
@@ -1089,10 +1090,22 @@ function SubscriptionCard({
   // (i.e. 5 or fewer days remaining), light up the "Pick your next
   // plan" CTA. Defensive min(<=5, >0) so expired rows (0) don't flash
   // the picker — that state should already have flipped via the cron.
+  // For the €27 / 3-month entry tier we use a wider 14-day window so
+  // the user has more lead-time to evaluate Cohort vs single-month
+  // before access lapses (90-day arc, not 30-day).
   const showTrialPicker =
-    sub.is_first_month_trial && days > 0 && days <= 5;
+    (sub.is_first_month_trial && days > 0 && days <= 5) ||
+    (sub.is_starter_3mo_trial === true && days > 0 && days <= 14);
+  // Both the €19 single-month and the €27 / 3-month entry tier render
+  // through the same compact trial-card layout — same trust signals,
+  // same countdown, same "Pick your next plan" CTA. The card body text
+  // already adapts to the live `humanName` so a `first_3mo_27` row
+  // reads "3-Monats-Einstieg" and a `first_month_19` row reads
+  // "Einzelmonat" without further branching.
+  const isTrialCard =
+    sub.is_first_month_trial || sub.is_starter_3mo_trial === true;
 
-  if (sub.is_first_month_trial) {
+  if (isTrialCard) {
     // ── €19 first-month trial card ──
     return (
       <div

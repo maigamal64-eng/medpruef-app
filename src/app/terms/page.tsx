@@ -90,8 +90,8 @@ export default function TermsPage() {
         <h2>5. {lang === "de" ? "Abonnement und Zahlung" : "Subscription and Payment"}</h2>
         <p>
           {lang === "de"
-            ? "Die kostenlose Version bietet eingeschränkten Zugang (150 Fragen pro Prüfungstyp). Bezahlte Tarife (Erster Monat €19, Juni-26-Kohorte €114, sowie 3-, 6- und 12-Monats-Tarife sobald Stripe live ist) werden einmalig oder als Abonnement berechnet."
-            : "The free version offers limited access (150 questions per exam type). Paid tiers (First Month €19, June 26 Cohort €114, plus 3-, 6-, and 12-month plans once Stripe goes live) are charged once or on a subscription basis."}
+            ? "Die kostenlose Version bietet eingeschränkten Zugang (150 Fragen pro Prüfungstyp). Bezahlte Tarife (3-Monats-Einstieg 27 €, Einzelmonat 19 €, Juni-26-Kohorte 114 €, sowie 3-, 6- und 12-Monats-Tarife sobald Stripe live ist) werden einmalig oder als Abonnement berechnet. Der 3-Monats-Einstieg ist auf einen Kauf pro Konto begrenzt."
+            : "The free version offers limited access (150 questions per exam type). Paid tiers (3-Month Starter €27, Single Month €19, June 26 Cohort €114, plus 3-, 6-, and 12-month plans once Stripe goes live) are charged once or on a subscription basis. The 3-Month Starter is capped at one purchase per account."}
         </p>
         <p>
           {lang === "de"

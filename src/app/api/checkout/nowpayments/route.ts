@@ -79,10 +79,62 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           error: "Tier not available for checkout yet",
-          hint: "Only the June 26 Cohort (premium_pass_guaranteed) is live on crypto rails right now. The four always-on tiers light up when Stripe Atlas clears.",
+          hint: "Only the June 26 Cohort (premium_pass_guaranteed), the 3-month starter (first_3mo_27), and the single-month fallback (first_month_19) are live on crypto rails right now. The four always-on tiers light up when Stripe Atlas clears.",
         },
         { status: 400 }
       );
+    }
+
+    // Anti-cannibalization cap on the €27 / 3-month entry tier
+    // (Integrator decision 2026-04-28 + manager 2026-04-28).
+    //
+    // Each user can buy `first_3mo_27` ONCE. We block when the user
+    // already has a confirmed (started_at IS NOT NULL) row on this
+    // tier — pending/failed rows are fine, the user should be able to
+    // retry a NOWPayments timeout. Without this cap, a user could
+    // park indefinitely at €9-effective/month and erode Cohort sales.
+    //
+    // Done BEFORE the pending-subscription insert so we don't pollute
+    // the table with rows that will never be paid.
+    const sb = getServiceClient();
+    if (tier.id === "first_3mo_27") {
+      const { data: priorEntries, error: priorErr } = await sb
+        .from("subscriptions")
+        .select("id, status, started_at, expires_at")
+        .eq("user_id", userId)
+        .eq("tier", "first_3mo_27")
+        .not("started_at", "is", null)
+        .limit(1);
+
+      if (priorErr) {
+        console.error(
+          "[checkout/nowpayments] eligibility lookup failed",
+          priorErr
+        );
+        Sentry.captureException(priorErr, {
+          tags: {
+            route: "checkout/nowpayments",
+            step: "first_3mo_27_eligibility",
+          },
+        });
+        return NextResponse.json(
+          { error: "Could not verify entry-tier eligibility" },
+          { status: 500 }
+        );
+      }
+      if (priorEntries && priorEntries.length > 0) {
+        return NextResponse.json(
+          {
+            error: "ENTRY_TIER_ALREADY_USED",
+            message_de:
+              "Du hast den 3-Monats-Einstieg bereits genutzt. Wähle die Juni-26-Kohorte (€114, 6 Monate) oder den Einzelmonat (€19).",
+            message_en:
+              "You've already used the 3-month starter. Pick the June 26 Cohort (€114, 6 months) or the single-month fallback (€19).",
+            next_options: ["premium_pass_guaranteed", "first_month_19"],
+          },
+          { status: 400 }
+        );
+      }
     }
 
     const apiKey = process.env.NOWPAYMENTS_API_KEY;
@@ -114,7 +166,7 @@ export async function POST(req: NextRequest) {
     // 1. Insert the pending subscription row FIRST — so that even if
     //    NOWPayments latency stretches, the IPN webhook will have
     //    a row to match against by `order_id = subscription.id`.
-    const sb = getServiceClient();
+    //    (`sb` already initialised above for the eligibility check.)
     const { data: sub, error: insertErr } = await sb
       .from("subscriptions")
       .insert({
