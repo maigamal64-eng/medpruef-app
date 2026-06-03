@@ -40,7 +40,8 @@ function isSessionExpiredError(error: Error): boolean {
   return (
     msg.includes("unauthorized") ||
     msg.includes("session expired") ||
-    msg.includes("missing x-user-id") ||
+    msg.includes("missing x-user-id") || // legacy pre-S-1 wording
+    msg.includes("missing or invalid session") ||
     msg.includes("unknown user") ||
     msg.includes("401")
   );

@@ -15,8 +15,7 @@
 import { test, expect } from "@playwright/test";
 import { seedSession } from "../fixtures/session";
 import { seedPreferences } from "../helpers/page-setup";
-
-const ADMIN_USER_ID = "7a9151a5-d032-4b48-b090-a71816235e7f";
+import { ADMIN_USER_ID } from "../fixtures/users";
 
 test.describe("session storage never carries secrets", () => {
   test.use({ viewport: { width: 1440, height: 900 } });
@@ -73,12 +72,12 @@ test.describe("session storage never carries secrets", () => {
     // password_hash + password_salt embedded in user. The read-side
     // sanitizer must remove them before any application code touches
     // the session.
-    await page.addInitScript(() => {
+    await page.addInitScript((adminId) => {
       localStorage.setItem(
         "medpruef_session",
         JSON.stringify({
           user: {
-            id: "7a9151a5-d032-4b48-b090-a71816235e7f",
+            id: adminId,
             email: "admin@medpruf.com",
             first_name: "Admin",
             role: "admin",
@@ -99,7 +98,7 @@ test.describe("session storage never carries secrets", () => {
           },
         }),
       );
-    });
+    }, ADMIN_USER_ID);
     await seedPreferences(page);
 
     await page.route("**/api/admin/overview**", (route) =>
@@ -138,7 +137,7 @@ test.describe("session storage never carries secrets", () => {
     expect(json).not.toContain("is_locked");
 
     // Public fields preserved.
-    expect(blob.user.id).toBe("7a9151a5-d032-4b48-b090-a71816235e7f");
+    expect(blob.user.id).toBe(ADMIN_USER_ID);
     expect(blob.user.email).toBe("admin@medpruf.com");
     expect(blob.user.role).toBe("admin");
   });

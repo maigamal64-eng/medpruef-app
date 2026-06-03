@@ -18,7 +18,7 @@ import {
   useToast,
 } from "@/components/ui";
 import { AdminPageShell } from "../_components/AdminPageShell";
-import { getStoredSession } from "@/lib/auth";
+import { getSessionToken } from "@/lib/auth";
 
 interface WaitlistRow {
   id: string;
@@ -70,10 +70,11 @@ export default function AdminWaitlistPage() {
     const params = new URLSearchParams({ format: "csv" });
     if (examType) params.set("exam_type", examType);
     if (source) params.set("source", source);
-    // Use the session header manually since <a href> can't add x-user-id.
-    const session = getStoredSession();
+    // Carry the auth credential manually — this blob download doesn't go
+    // through authFetch. Send the signed session token (S-1).
+    const token = getSessionToken();
     const res = await fetch(`/api/admin/waitlist?${params.toString()}`, {
-      headers: session?.user?.id ? { "x-user-id": session.user.id } : undefined,
+      headers: token ? { "x-session-token": token } : undefined,
     });
     if (!res.ok) {
       toast.error("CSV export failed");

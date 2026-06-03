@@ -20,7 +20,7 @@ export type Lang = "de" | "en";
  */
 export async function seedPreferences(
   page: Page,
-  { theme, lang }: { theme: Theme; lang: Lang },
+  { theme = "light", lang = "en" }: { theme?: Theme; lang?: Lang } = {},
 ): Promise<void> {
   await page.addInitScript(
     ({ theme, lang }) => {

@@ -20,11 +20,12 @@
 import { test, expect, type Page, type Route } from "@playwright/test";
 import { seedSession } from "../fixtures/session";
 import { seedPreferences } from "../helpers/page-setup";
+import { ADMIN_USER_ID } from "../fixtures/users";
 
-// Admin user id from NOTES.md. `seedSession` with role='admin' satisfies
-// the client-side bounce; server-side routes are mocked so the real user
-// never has to exist in the test DB.
-const ADMIN_USER_ID = "7a9151a5-d032-4b48-b090-a71816235e7f";
+// `seedSession` with role='admin' satisfies the client-side bounce;
+// server-side routes are mocked so the real user never has to exist in
+// the test DB. ADMIN_USER_ID is a synthetic non-prod UUID (S-1) unless
+// E2E_ADMIN_USER_ID is set — see fixtures/users.ts.
 
 /**
  * Only run this suite on one representative desktop viewport. The

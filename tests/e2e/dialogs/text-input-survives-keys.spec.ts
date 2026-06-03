@@ -18,8 +18,7 @@
 import { test, expect } from "@playwright/test";
 import { seedSession } from "../fixtures/session";
 import { seedPreferences } from "../helpers/page-setup";
-
-const SAMPLE_USER_ID = "7a9151a5-d032-4b48-b090-a71816235e7f";
+import { SAMPLE_USER_ID } from "../fixtures/users";
 
 test.describe("dialog text inputs survive multi-character typing", () => {
   test.use({ viewport: { width: 1440, height: 900 } });

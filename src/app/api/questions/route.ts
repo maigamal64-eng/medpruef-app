@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
+import { resolveOptionalUser } from '@/lib/auth-guard'
 import { generateWrongOptions, buildMCQOptions, buildMCQFromStored, buildMCQFromChoices } from '@/lib/mcq'
 import type { StoredChoice } from '@/lib/mcq'
 import { VIENNA_EXAM_PARTS, DEFAULT_EXAM_SOURCE, EXAM_SOURCE_IDS } from '@/lib/topics'
@@ -11,10 +12,11 @@ import {
 } from '@/lib/free-tier'
 
 /**
- * Resolve the caller's tier using the `x-user-id` header. Unlike
- * `requireUser`, this does NOT 401 on missing/unknown users — instead
- * it returns `{ tier: 'free', userId: null }` so guest traffic is
- * gated the same way as a logged-in free user.
+ * Resolve the caller's tier from the verified session token (S-1, via
+ * resolveOptionalUser). Unlike `requireUser`, this does NOT 401 on
+ * missing/unknown users — instead it returns `{ tier: 'free',
+ * userId: null }` so guest traffic is gated the same way as a logged-in
+ * free user.
  *
  * Runs ONE indexed lookup on `users.id`. For a 150ms-baseline route
  * that's acceptable overhead. If tier gating becomes a hot path we'd
@@ -29,9 +31,10 @@ async function resolveTier(
   tierExpiresAt: string | null
   role: 'user' | 'admin'
 }> {
-  const headerId = req.headers.get('x-user-id')
-  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-  if (!headerId || !UUID_RE.test(headerId)) {
+  // Verified session userId (signed token, S-1) — a forged x-user-id can
+  // no longer resolve another user's tier or leak their seen/wrong sets.
+  const sessionUserId = resolveOptionalUser(req)
+  if (!sessionUserId) {
     return { userId: null, tier: 'free', tierExpiresAt: null, role: 'user' }
   }
   try {
@@ -42,7 +45,7 @@ async function resolveTier(
     const { data } = await sb
       .from('users')
       .select('id, tier, tier_expires_at, role')
-      .eq('id', headerId)
+      .eq('id', sessionUserId)
       .maybeSingle()
     if (!data) return { userId: null, tier: 'free', tierExpiresAt: null, role: 'user' }
     return {
@@ -232,8 +235,9 @@ export async function GET(req: NextRequest) {
   }
 
   // ── Free-tier gating (Lock 2026-04-23) ───────────────────────────
-  // Resolve the caller's tier from `x-user-id`. Unauthenticated guests
-  // are treated as free. Admin + active-Pro pass through unchanged.
+  // Resolve the caller's tier from the verified session token (S-1).
+  // Unauthenticated guests are treated as free. Admin + active-Pro pass
+  // through unchanged.
   //
   // Free-tier rules:
   //   - practiceMode='review' (spaced repetition) → 402

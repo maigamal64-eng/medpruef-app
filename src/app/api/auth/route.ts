@@ -8,6 +8,7 @@ import {
   rateKey,
   rateLimitHeaders,
 } from "@/lib/rate-limit";
+import { signSession } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
@@ -168,7 +169,14 @@ export async function POST(req: NextRequest) {
           if (logErr) console.error("[auth] activity insert:", logErr);
         });
 
-      return NextResponse.json({ user: sanitizeUser(user), gamification });
+      // Mint a server-signed session token. This is the credential the
+    // client sends back on `x-session-token`; `requireUser` verifies the
+    // signature, so a forged `x-user-id` can no longer authenticate (S-1).
+    return NextResponse.json({
+      user: sanitizeUser(user),
+      gamification,
+      sessionToken: signSession(user.id as string),
+    });
     }
 
     // ── EMAIL/PASSWORD REGISTER ──
@@ -268,7 +276,14 @@ export async function POST(req: NextRequest) {
           if (logErr) console.error("[auth] activity insert:", logErr);
         });
 
-      return NextResponse.json({ user: sanitizeUser(user), gamification });
+      // Mint a server-signed session token. This is the credential the
+    // client sends back on `x-session-token`; `requireUser` verifies the
+    // signature, so a forged `x-user-id` can no longer authenticate (S-1).
+    return NextResponse.json({
+      user: sanitizeUser(user),
+      gamification,
+      sessionToken: signSession(user.id as string),
+    });
     }
 
     // ── TELEGRAM AUTH FLOWS ──
@@ -389,7 +404,14 @@ export async function POST(req: NextRequest) {
         if (logErr) console.error("[auth] activity insert:", logErr);
       });
 
-    return NextResponse.json({ user: sanitizeUser(user), gamification });
+    // Mint a server-signed session token. This is the credential the
+    // client sends back on `x-session-token`; `requireUser` verifies the
+    // signature, so a forged `x-user-id` can no longer authenticate (S-1).
+    return NextResponse.json({
+      user: sanitizeUser(user),
+      gamification,
+      sessionToken: signSession(user.id as string),
+    });
   } catch (e: unknown) {
     console.error("[auth] top-level error:", e);
     return NextResponse.json({ error: "Server error" }, { status: 500 });

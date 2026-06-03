@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
+import { resolveOptionalUser } from "@/lib/auth-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -24,9 +25,9 @@ export const dynamic = "force-dynamic";
  * clears and we actually mail these people, we parse the note server-
  * side to segment by exam and tier.
  *
- * User identity: mirrors /api/feedback — prefer the `x-user-id` header
- * (set by authFetch for logged-in users) over any body-supplied userId,
- * and only persist the link if the UUID actually exists in users.
+ * User identity: mirrors /api/feedback — derived ONLY from the verified
+ * session token (S-1, via resolveOptionalUser), and only persisted if
+ * the user row actually exists. Never a client-supplied header/body id.
  *
  * Rate-limit: if the same email + tier was submitted within the last
  * 24h we return 409 (so the UI can show "already on the waitlist")
@@ -45,7 +46,6 @@ export async function POST(req: NextRequest) {
       .trim();
     const explicitNote =
       typeof body?.note === "string" ? body.note.trim().slice(0, 500) : null;
-    const bodyUserId = typeof body?.userId === "string" ? body.userId : null;
 
     // Optional Stripe-pending metadata — folded into the `note` column.
     const examType = typeof body?.exam_type === "string" ? body.exam_type.trim() : null;
@@ -101,15 +101,9 @@ export async function POST(req: NextRequest) {
       : "";
     const note = ((explicitNote ?? "") + metaTail).trim().slice(0, 500) || null;
 
-    const uuidRe =
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    const headerId = req.headers.get("x-user-id");
-    const candidate =
-      headerId && uuidRe.test(headerId)
-        ? headerId
-        : bodyUserId && uuidRe.test(bodyUserId)
-          ? bodyUserId
-          : null;
+    // Optional user link from the verified session token (S-1) — never
+    // a client-supplied header/body id.
+    const candidate = resolveOptionalUser(req);
 
     const sb = getServiceClient();
 

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
-import { requireAdmin } from "@/lib/auth-guard";
+import { requireAdmin, resolveOptionalUser } from "@/lib/auth-guard";
 import { captureServerError } from "@/lib/sentry-capture";
 import { logAdminAction, resolveActorEmail } from "@/lib/admin/audit";
 
@@ -8,14 +8,11 @@ export const dynamic = "force-dynamic";
 
 // POST — User submits a flag or edit suggestion.
 //
-// User identity: prefers the `x-user-id` header set by authFetch
-// (which is verified against the users table via a lightweight check
-// below) over any body-supplied userId. Before this fix, the body
-// userId was the ONLY source — and all 45 existing rows in
-// question_suggestions had `user_id = null` because the flag forms
-// weren't consistently including it. The live DB audit on 2026-04-15
-// confirmed this. Anonymous submissions are still allowed (tracked
-// via the guest_id context field).
+// User identity (question_suggestions.user_id): derived ONLY from the
+// verified session token (S-1, via resolveOptionalUser), then confirmed
+// to exist in `users`. Never the header or a body-supplied userId, both
+// client-controlled. Anonymous submissions are still allowed and a
+// guest_* tracking id from the body is preserved in context.guest_id.
 export async function POST(req: NextRequest) {
   try {
     const db = getServiceClient();
@@ -29,22 +26,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "type must be 'flag' or 'edit'" }, { status: 400 });
     }
 
-    // Prefer header-provided identity; fall back to body for legacy
-    // clients that haven't migrated. Either way, validate as UUID and
-    // verify the row actually exists (prevents stuffing arbitrary
-    // UUIDs as user_id). Guest IDs (guest_*) are stored in context
-    // instead.
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    const headerId = req.headers.get("x-user-id");
+    // Authenticated identity (written to question_suggestions.user_id)
+    // comes ONLY from the verified session token (S-1) — never the
+    // header or a body-supplied userId, both client-controlled. A
+    // guest_* tracking id supplied in the body is still preserved in
+    // context.guest_id (non-privileged) for triage.
     const bodyId = (body.userId as string | undefined) || null;
     let validUserId: string | null = null;
     let rawId: string | null = null;
-    const candidate =
-      headerId && uuidRegex.test(headerId)
-        ? headerId
-        : bodyId && uuidRegex.test(bodyId)
-          ? bodyId
-          : null;
+    const candidate = resolveOptionalUser(req);
     if (candidate) {
       const { data: userRow } = await db
         .from("users")

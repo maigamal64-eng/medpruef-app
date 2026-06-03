@@ -37,6 +37,8 @@
  * `/api/checkout/nowpayments`).
  */
 
+import { verifySession } from "@/lib/session";
+
 type BucketKey = string;
 
 /**
@@ -158,7 +160,12 @@ export function rateKey(
 export function callerIdentity(req: {
   headers: { get: (k: string) => string | null };
 }): string {
-  const userId = req.headers.get("x-user-id");
+  // Prefer the VERIFIED session userId (signed token, S-1) so a forged
+  // header can't poison another user's bucket. verifySession returns
+  // null for missing/invalid/expired tokens (and pre-login requests),
+  // so we fall back to the forwarded IP — which is exactly what we want
+  // for throttling the unauthenticated /api/auth login+register path.
+  const userId = verifySession(req.headers.get("x-session-token"))?.userId;
   if (userId) return userId;
   const fwd = req.headers.get("x-forwarded-for");
   if (fwd) return fwd.split(",")[0].trim();

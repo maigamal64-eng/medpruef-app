@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
-import { requireAdmin } from '@/lib/auth-guard'
+import { requireAdmin, resolveOptionalUser } from '@/lib/auth-guard'
 import { captureServerError } from '@/lib/sentry-capture'
 import { logAdminAction, resolveActorEmail } from '@/lib/admin/audit'
 
@@ -8,24 +8,20 @@ export const dynamic = 'force-dynamic'
 
 /** POST — Submit user feedback with auto-captured context.
  *
- * User identity: prefers the `x-user-id` header (set by authFetch)
- * over body-supplied userId, mirroring /api/suggestions. Anonymous
- * submissions (no valid user id) are still accepted. */
+ * User identity: derived ONLY from the verified session token (S-1,
+ * via resolveOptionalUser) — never a client-supplied header or
+ * body userId. Anonymous submissions (no valid session) are still
+ * accepted. */
 export async function POST(req: NextRequest) {
   try {
-    const { message, context, userId: bodyUserId } = await req.json()
+    const { message, context } = await req.json()
     if (!message || typeof message !== 'string' || message.trim().length < 3) {
       return NextResponse.json({ error: 'Message too short' }, { status: 400 })
     }
 
-    const headerId = req.headers.get('x-user-id')
-    const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-    const candidate =
-      headerId && uuidRe.test(headerId)
-        ? headerId
-        : bodyUserId && uuidRe.test(bodyUserId)
-          ? bodyUserId
-          : null
+    // Identity comes ONLY from the verified session token (S-1) — never
+    // the header or a body-supplied userId, both client-controlled.
+    const candidate = resolveOptionalUser(req)
 
     const sb = getServiceClient()
     let userId: string | null = null

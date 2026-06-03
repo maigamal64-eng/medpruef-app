@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getLang, setLang } from "@/lib/i18n";
-import { getStoredSession, storeSession } from "@/lib/auth";
+import { getStoredSession, storeSession, setSessionToken, getSessionToken } from "@/lib/auth";
 import { BrandedLoader } from "@/components/Logo";
 import { TextField } from "@/components/ui";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -38,17 +38,21 @@ function getTelegramDeepLink(lang: string): string {
  */
 const REF_CODE_KEY = "medpruef_ref_code";
 
-async function claimStoredReferralCode(userId: string): Promise<void> {
+async function claimStoredReferralCode(): Promise<void> {
   if (typeof window === "undefined") return;
   const code = localStorage.getItem(REF_CODE_KEY);
   if (!code) return;
+  // The signed session token must already be stored (setSessionToken runs
+  // right after a successful /api/auth). /api/referrals/claim is
+  // requireUser-guarded, so it derives the userId from this token (S-1).
+  const token = getSessionToken();
+  if (!token) return; // no session yet — the home-page fallback retries
   try {
     const r = await fetch("/api/referrals/claim", {
       method: "POST",
       headers: {
         "content-type": "application/json",
-        // authFetch isn't available pre-session-store; send header manually.
-        "x-user-id": userId,
+        "x-session-token": token,
       },
       body: JSON.stringify({ referralCode: code }),
     });
@@ -151,11 +155,14 @@ export default function LoginPage() {
       }
 
       storeSession({ user: data.user, gamification: data.gamification });
+      // Persist the signed session token — THE auth credential authFetch
+      // sends on every subsequent request (S-1, 2026-06-02).
+      setSessionToken(data.sessionToken);
       // Best-effort referral claim — fire and forget. The home page
       // also has a fallback claim on mount so a failure here is not
       // user-visible.
       if (data.user?.id) {
-        await claimStoredReferralCode(data.user.id);
+        await claimStoredReferralCode();
       }
       window.location.href = "/";
     } catch {

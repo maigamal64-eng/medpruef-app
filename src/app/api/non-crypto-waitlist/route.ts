@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
+import { resolveOptionalUser } from "@/lib/auth-guard";
 import { captureServerError } from "@/lib/sentry-capture";
 import { checkRateLimit, rateKey, rateLimitHeaders } from "@/lib/rate-limit";
 
@@ -13,7 +14,8 @@ export const dynamic = "force-dynamic";
  * can email them with a Stripe link as soon as Atlas clears.
  *
  * Open endpoint (no auth required) — pricing page is reachable
- * logged-out. If `x-user-id` is present we link the row to the user.
+ * logged-out. If a valid session token is present (S-1, via
+ * resolveOptionalUser) we link the row to the user.
  *
  * Body: { email: string, tier_interest?: string,
  *         current_provider?: 'binance'|'kraken'|'coinbase'|'other'|'none',
@@ -44,7 +46,6 @@ const ALLOWED_TIERS = new Set([
   "unknown",
 ]);
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function POST(req: NextRequest) {
   const ip =
@@ -96,18 +97,18 @@ export async function POST(req: NextRequest) {
   const notes =
     typeof body.notes === "string" ? body.notes.trim().slice(0, 1000) : null;
 
-  // Optional user link — header takes precedence; if it's a valid uuid
-  // and the row exists, we set user_id.
-  const headerId = req.headers.get("x-user-id");
+  // Optional user link from the verified session token (S-1) — never a
+  // client-supplied header/body id. If the row exists, we set user_id.
+  const candidate = resolveOptionalUser(req);
   let userId: string | null = null;
-  if (headerId && UUID_RE.test(headerId)) {
+  if (candidate) {
     const sb = getServiceClient();
     const { data } = await sb
       .from("users")
       .select("id")
-      .eq("id", headerId)
+      .eq("id", candidate)
       .maybeSingle();
-    if (data) userId = headerId;
+    if (data) userId = candidate;
   }
 
   try {

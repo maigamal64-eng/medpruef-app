@@ -101,7 +101,9 @@ export const POST = adminRouteShell(
       // Look up the calling admin's user_id from the request — we use
       // it as the synthetic subscription's user_id so the activation
       // path doesn't NULL-FK out.
-      const adminUserId = req.headers.get("x-user-id") || null;
+      // Use the validated admin id from the guard (adminRouteShell →
+      // requireAdmin), not the client-controlled x-user-id header (S-1).
+      const adminUserId = actor.userId;
       if (adminUserId) {
         await sb.from("subscriptions").upsert(
           {

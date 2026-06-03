@@ -1,20 +1,22 @@
 "use client";
 
 /**
- * Client-side fetch wrapper that automatically adds the `x-user-id`
- * header that the server-side guards in `src/lib/auth-guard.ts` expect.
+ * Client-side fetch wrapper that automatically adds the signed
+ * `x-session-token` header that the server-side guards in
+ * `src/lib/auth-guard.ts` verify.
  *
  * Usage:
  *   import { authFetch } from "@/lib/authFetch";
  *   const r = await authFetch("/api/stats/admin/users");
  *
  * Signature mirrors `fetch()` — drop-in replacement. It reads the
- * user id from the stored session (same source the rest of the app
- * uses) and merges the header into whatever the caller passed.
+ * signed session token from localStorage (written at login by
+ * setSessionToken) and merges the header into whatever the caller
+ * passed.
  *
- * Context: this is the client half of the stopgap session layer the
- * 2026-04-15 audit introduced. See `src/lib/auth-guard.ts` for the
- * server half and the rationale.
+ * Context: this is the client half of the session layer. The S-1 fix
+ * (2026-06-02) replaced the forgeable `x-user-id` header with a
+ * server-signed token — see `src/lib/session.ts` + `src/lib/auth-guard.ts`.
  *
  * Added 2026-04-22 (launch-readiness sprint):
  * - **401 interceptor**: if the server-side guard rejects the request
@@ -31,7 +33,7 @@
  *   `timeoutMs: 0` to disable.
  */
 
-import { getStoredSession, clearSession } from "@/lib/auth";
+import { getSessionToken, clearSession } from "@/lib/auth";
 
 /** Default per-request client-side timeout. Long enough for slow mobile
  * networks on Austrian trains, short enough that a hung function doesn't
@@ -67,24 +69,16 @@ export async function authFetch(
     ...rest
   } = init;
 
-  const session = getStoredSession();
-  const userId = session?.user?.id;
+  // Attach the signed session token (S-1, 2026-06-02). This is THE auth
+  // credential the server-side guards verify. The token binds a signed
+  // issued-at, so the old client-controlled `x-user-id` +
+  // `x-session-issued-at` headers (both forgeable) are gone. The header
+  // name mirrors SESSION_HEADER in src/lib/session.ts — not imported
+  // here because that module pulls node:crypto (server-only).
+  const token = getSessionToken();
 
   const headers = new Headers(rest.headers);
-  if (userId) headers.set("x-user-id", userId);
-  // Send the session-issued-at stamp so the server can compare against
-  // users.session_invalidated_at and reject stale sessions with
-  // code:'REFRESH_REQUIRED' (review-2026-04-26-B1). The stamp lives in
-  // localStorage under medpruef_session_issued_at — set on /api/auth
-  // login and cleared on logout.
-  if (typeof window !== "undefined") {
-    try {
-      const issuedAt = window.localStorage.getItem("medpruef_session_issued_at");
-      if (issuedAt) headers.set("x-session-issued-at", issuedAt);
-    } catch {
-      /* localStorage may be disabled; fall through */
-    }
-  }
+  if (token) headers.set("x-session-token", token);
 
   // Build the abort signal. If the caller passed their own signal,
   // chain ours so either side can cancel. If timeoutMs is 0/undefined,

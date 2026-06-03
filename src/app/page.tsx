@@ -7,7 +7,7 @@ import { getTopicConfig } from "@/lib/topics";
 import { t, getLang, setLang } from "@/lib/i18n";
 import TopicIcon from "@/components/TopicIcon";
 import { Flame, FileText as FileTextIcon, Lightbulb, Shuffle, PlayCircle, ClipboardList, Zap, CheckCircle, User, ChevronRight, GraduationCap, CalendarDays, Search, Star, AlertCircle, Target, ArrowRight } from "lucide-react";
-import { isTelegramMiniApp, getMiniAppInitData, getStoredSession, storeSession } from "@/lib/auth";
+import { isTelegramMiniApp, getMiniAppInitData, getStoredSession, storeSession, setSessionToken } from "@/lib/auth";
 import {
   getStoredExamSource,
   hasSelectedExam,
@@ -238,6 +238,9 @@ export default function Home() {
         if (res.ok) {
           const data = await res.json();
           storeSession({ user: data.user, gamification: data.gamification });
+          // Persist the signed session token (S-1) before the reload so
+          // authFetch can authenticate the post-reload requests.
+          setSessionToken(data.sessionToken);
           // Remove the one-time token from the URL so a refresh can't replay it.
           url.searchParams.delete("tg_token");
           window.history.replaceState({}, "", url.toString());
@@ -301,6 +304,11 @@ export default function Home() {
         const data = await res.json();
         setUser(data.user);
         setGam(data.gamification);
+        // Persist the signed session token (S-1) so authFetch can
+        // authenticate the Mini App's subsequent API calls. Previously
+        // the Mini App set React state only — with no x-user-id in
+        // localStorage, authFetch sent nothing and guarded calls failed.
+        setSessionToken(data.sessionToken);
         // Mini App: auto-select exam if not set
         if (!hasSelectedExam()) {
           setStoredExamSource("kenntnispruefung");

@@ -6,6 +6,45 @@
 
 const SESSION_KEY = 'medpruef_session';
 
+/**
+ * Where the server-signed session token (S-1, 2026-06-02) is kept. This
+ * is the actual auth credential — `authFetch` sends it on the
+ * `x-session-token` header and `requireUser`/`requireAdmin` verify its
+ * HMAC signature server-side. Stored under a SEPARATE key from the
+ * session blob so the many `storeSession()` re-store call sites (tier
+ * refresh, re-sanitize) never clobber it; only login/register/Telegram
+ * mint flows write it via `setSessionToken`, and `clearSession` removes
+ * it. Header name is kept in sync with `SESSION_HEADER` in
+ * `src/lib/session.ts` (not imported here — that module pulls node:crypto
+ * and must stay out of the client bundle).
+ */
+const SESSION_TOKEN_KEY = 'medpruef_session_token';
+
+/** Read the stored signed session token (null when logged out). */
+export function getSessionToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    return localStorage.getItem(SESSION_TOKEN_KEY);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Persist the signed session token returned by `/api/auth`. Call this at
+ * every mint point (email login/register, Telegram deep-link exchange,
+ * Telegram Mini App initData) right after a successful auth response.
+ * No-ops on a falsy token so a re-store path can't wipe a live session.
+ */
+export function setSessionToken(token: string | null | undefined): void {
+  if (typeof window === 'undefined' || !token) return;
+  try {
+    localStorage.setItem(SESSION_TOKEN_KEY, token);
+  } catch {
+    /* localStorage may be disabled */
+  }
+}
+
 export interface TelegramWidgetUser {
   id: number;
   first_name: string;
@@ -193,14 +232,13 @@ export function storeSession(session: StoredSession): void {
       ) as StoredSession['user'],
     };
     localStorage.setItem(SESSION_KEY, JSON.stringify(safe));
-    // Stamp issued-at so authFetch can send `x-session-issued-at` for
-    // the force-refresh-session check (review-2026-04-26-B1). Server
-    // compares this against users.session_invalidated_at; older
-    // session = REFRESH_REQUIRED.
-    localStorage.setItem(
-      'medpruef_session_issued_at',
-      new Date().toISOString(),
-    );
+    // The auth credential is the signed token (see setSessionToken /
+    // src/lib/session.ts), persisted separately at the login mint points.
+    // We no longer stamp `medpruef_session_issued_at`: the token carries
+    // a SIGNED issued-at that the guard compares against
+    // users.session_invalidated_at. The old localStorage stamp was
+    // client-controlled (forgeable) and is obsolete — clearSession still
+    // purges any legacy value left from a pre-S-1 session.
     // F6 fix (2026-04-26): stamp a short-lived cookie so the middleware
     // can skip the /landing redirect for returning authenticated users.
     // Expires in 30 days — a logged-out user has clearSession() called
@@ -225,7 +263,8 @@ export function clearSession(): void {
   if (typeof window === 'undefined') return;
   try {
     localStorage.removeItem(SESSION_KEY);
-    localStorage.removeItem('medpruef_session_issued_at');
+    localStorage.removeItem(SESSION_TOKEN_KEY);
+    localStorage.removeItem('medpruef_session_issued_at'); // legacy pre-S-1 key
     // Remove the skip-landing cookie so the middleware redirects them to
     // /landing after logout (F6 fix companion).
     document.cookie = 'mp_skip_landing=; path=/; max-age=0; SameSite=Lax';
