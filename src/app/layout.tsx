@@ -73,12 +73,16 @@ export const metadata: Metadata = {
     googleBot: { index: true, follow: true },
   },
   alternates: {
-    canonical: "https://medpruf.com",
+    // Default canonical = the public homepage, which is /landing ("/"
+    // 307-redirects there). Child layouts override this per route. This
+    // keeps the redirect and the canonical in agreement so Google never
+    // canonicalises to the redirecting root. Brand-sweep 2026-06-04.
+    canonical: "https://medpruf.com/landing",
   },
   openGraph: {
     type: "website",
     locale: "de_AT",
-    url: "https://medpruf.com",
+    url: "https://medpruf.com/landing",
     siteName: "MedPrüf",
     title: "MedPrüf — Austrian Kenntnisprüfung Preparation (Vienna)",
     description:
@@ -211,7 +215,14 @@ export default function RootLayout({
           }}
         />
         <link rel="manifest" href="/manifest.json" />
-        <link rel="canonical" href="https://medpruf.com" />
+        {/*
+          Canonical is emitted via the Next.js Metadata API
+          (`alternates.canonical`), defaulting to /landing here and
+          overridden per-route in each child layout. Do NOT also hard-code a
+          <link rel="canonical"> here — a static one rendered on every page
+          (pointing at the redirecting "/" root) produced a DOUBLE canonical
+          on /landing and fought the metadata one. Brand-sweep 2026-06-04.
+        */}
         {/* Structured data — Organization + WebApplication */}
         <script
           type="application/ld+json"

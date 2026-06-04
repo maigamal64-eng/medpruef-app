@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { getLang, setLang } from "@/lib/i18n";
+import { QUESTIONS } from "@/lib/content-truth";
 import DocLayout from "@/components/DocLayout";
 import {
   FileText,
@@ -42,7 +43,7 @@ export default function AboutPage() {
           ? "Deine Lernplattform für die österreichische Kenntnisprüfung."
           : "Your learning platform for the Austrian Kenntnisprüfung."
       }
-      lastUpdated={lang === "de" ? "April 2026" : "April 2026"}
+      lastUpdated={lang === "de" ? "Juni 2026" : "June 2026"}
       backHref="/"
     >
       {/* Brand mark + seal — decorative, stays before the first TOC section */}
@@ -70,8 +71,12 @@ export default function AboutPage() {
         <h2>{lang === "de" ? "Was ist MedPrüf?" : "What is MedPrüf?"}</h2>
         <p>
           {lang === "de"
-            ? "MedPrüf ist eine spezialisierte Lernplattform für ausländische Ärztinnen und Ärzte, die sich auf die österreichische Kenntnisprüfung (Wien) vorbereiten. Mit über 7.000 Übungsfragen aus allen relevanten Fachgebieten helfen wir dir, die Prüfung erfolgreich zu bestehen."
-            : "MedPrüf is a specialized learning platform for foreign doctors preparing for the Austrian Kenntnisprüfung (Vienna). With over 7,000 practice questions across all relevant specialties, we help you pass the exam successfully."}
+            ? `MedPrüf ist eine spezialisierte Lernplattform für ausländische Ärztinnen und Ärzte, die sich auf die österreichischen Ärzteprüfungen vorbereiten — Kenntnisprüfung Wien, KMP Innsbruck und Pharmakologie. Mit ${QUESTIONS.total.toLocaleString(
+                "de-DE",
+              )} Übungsfragen aus 16 Fachgebieten helfen wir dir, die Prüfung erfolgreich zu bestehen.`
+            : `MedPrüf is a specialized learning platform for foreign doctors preparing for the Austrian medical exams — Kenntnisprüfung Wien, KMP Innsbruck and Pharmakologie. With ${QUESTIONS.total.toLocaleString(
+                "en-US",
+              )} practice questions across 16 specialties, we help you pass the exam successfully.`}
         </p>
       </section>
 
@@ -152,8 +157,8 @@ export default function AboutPage() {
               icon: <FileText className="w-4 h-4 text-white" />,
               label:
                 lang === "de"
-                  ? "7.000+ Übungsfragen"
-                  : "7,000+ Practice Questions",
+                  ? `${QUESTIONS.total.toLocaleString("de-DE")} Übungsfragen`
+                  : `${QUESTIONS.total.toLocaleString("en-US")} Practice Questions`,
             },
             {
               icon: <GraduationCap className="w-4 h-4 text-white" />,
@@ -170,7 +175,7 @@ export default function AboutPage() {
             },
             {
               icon: <Globe className="w-4 h-4 text-white" />,
-              label: lang === "de" ? "Deutsch & Englisch" : "German & English",
+              label: lang === "de" ? "7 Sprachen" : "7 languages",
             },
             {
               icon: <Smartphone className="w-4 h-4 text-white" />,

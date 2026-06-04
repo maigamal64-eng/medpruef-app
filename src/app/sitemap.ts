@@ -5,9 +5,16 @@ import { BLOG_POSTS } from "@/lib/blog";
  * Dynamic sitemap — takes precedence over /public/sitemap.xml in Next.js 15.
  *
  * Scope: only public-facing routes (no auth-gated pages, no /admin, no /api).
+ *
+ * NOTE: the bare "/" is intentionally NOT listed — it 307-redirects to
+ * /landing at the edge, and the canonical for the homepage is /landing
+ * (see src/app/layout.tsx). Listing both invited duplicate-content
+ * handling and let Google canonicalise to the redirecting root.
+ * Brand-sweep 2026-06-04.
+ *
  * Priorities per MedPrüf launch brief + Apr-24 SEO sprint:
- *   1.0  — canonical root (/)
- *   0.9  — primary conversion surfaces (/landing, /pricing)
+ *   1.0  — canonical homepage (/landing)
+ *   0.9  — primary conversion surface (/pricing)
  *   0.8  — exam-specific SEO landing pages (Kenntnisprüfung, KMP, Pharma)
  *   0.7  — secondary marketing (/about, /materials)
  *   0.6  — blog index
@@ -29,17 +36,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
   }));
 
   return [
-    {
-      url: `${base}`,
-      lastModified: now,
-      changeFrequency: "daily",
-      priority: 1.0,
-    },
+    // "/" omitted — it 307-redirects to /landing; /landing is the canonical
+    // homepage. See the header note above. Brand-sweep 2026-06-04.
     {
       url: `${base}/landing`,
       lastModified: now,
       changeFrequency: "weekly",
-      priority: 0.9,
+      priority: 1.0,
     },
     {
       url: `${base}/pricing`,
