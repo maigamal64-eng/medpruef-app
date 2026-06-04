@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Plus_Jakarta_Sans } from "next/font/google";
+import { Inter, Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import Script from "next/script";
 import TrackerInit from "@/components/TrackerInit";
@@ -31,6 +31,20 @@ const plusJakarta = Plus_Jakarta_Sans({
   weight: ["600", "700", "800"],
   display: "swap",
   variable: "--font-display",
+});
+
+// JetBrains Mono — the "lab-header" voice. Powers the landing's mono
+// eyebrows (.lp-eyebrow), the provenance stamp, exam-tab pills, and the
+// tabular metric numerals (--mp-font-mono / .font-mono). globals.css has
+// long referenced `--font-jetbrains-mono` but no loader ever defined it,
+// so those surfaces silently fell back to system mono (Menlo/Consolas) —
+// inconsistent across OSes. Loading it here makes the clinical-record
+// type system real and consistent. Two weights keep the payload small.
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  weight: ["500", "600"],
+  display: "swap",
+  variable: "--font-jetbrains-mono",
 });
 
 
@@ -343,7 +357,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${inter.className} ${plusJakarta.variable} bg-[var(--mp-surface-sunken)] text-[var(--mp-fg)] min-h-screen antialiased`}
+        className={`${inter.className} ${plusJakarta.variable} ${jetbrainsMono.variable} bg-[var(--mp-surface-sunken)] text-[var(--mp-fg)] min-h-screen antialiased`}
       >
         <ThemeProvider />
         {/* Keep <html lang> in sync with the user's chosen language. SSR

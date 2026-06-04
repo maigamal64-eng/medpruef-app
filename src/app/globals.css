@@ -1211,3 +1211,209 @@ textarea:focus {
 @media (prefers-reduced-motion: reduce) {
   .mp-welcome-check { animation: none; opacity: 0; }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   LANDING-ONLY LAYER  ·  scope: .lp-*  ·  added 2026-06-04 (brand sweep)
+   ──────────────────────────────────────────────────────────────
+   SELF-CONTAINED. Nothing here redefines an existing --mp-* token or
+   .mp-* primitive — these classes are consumed ONLY by
+   src/app/landing/page.tsx. Blast radius = the marketing landing.
+   Design language: "clinical exam-record" — hairline rules, a
+   mono lab-header eyebrow, tabular hero numerals, a provenance stamp,
+   precision cards with a corner tick, and quiet reveal-on-scroll.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Landing-scoped design tokens (read only by .lp-* + the page) */
+.lp-root {
+  --lp-ink:        #001028;   /* deepest navy — hero ground */
+  --lp-ink-2:      #001B3D;   /* oxford blue */
+  --lp-ink-3:      #06294f;   /* raised navy panel on dark */
+  --lp-paper:      #FBFCFE;   /* warm-cool off-white page */
+  --lp-paper-2:    #F2F6FB;   /* sunken band */
+  --lp-line:       #E2E9F2;   /* hairline on paper */
+  --lp-line-ink:   rgba(255,255,255,0.12); /* hairline on ink */
+  --lp-teal:       #00A896;
+  --lp-teal-br:    #1FC2A6;   /* brighter teal for dark grounds */
+  --lp-viridian:   #007B5F;
+  --lp-amber:      #F4A261;
+  --lp-fg:         #14233A;
+  --lp-fg-soft:    #46556B;
+  --lp-fg-faint:   #6B7A90;
+  --lp-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --lp-display: var(--mp-font-display, "Plus Jakarta Sans", sans-serif);
+}
+[data-theme="dark"] .lp-root {
+  --lp-paper:   #0F172A;
+  --lp-paper-2: #0B1220;
+  --lp-line:    rgba(148,163,184,0.16);
+  --lp-fg:      #E6ECF5;
+  --lp-fg-soft: #9FB0C7;
+  --lp-fg-faint:#7C8AA5;
+}
+
+/* ── Mono "lab-header" eyebrow ── a clinical record label ─────── */
+.lp-eyebrow {
+  font-family: var(--lp-mono);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6em;
+}
+.lp-eyebrow::before {
+  content: "";
+  width: 22px; height: 1px;
+  background: currentColor;
+  opacity: 0.55;
+  flex: none;
+}
+.lp-eyebrow--center { justify-content: center; }
+
+/* ── Provenance stamp ── the unrefutable "since 2016" credential ── */
+.lp-stamp {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-family: var(--lp-mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 0.42rem 0.72rem 0.42rem 0.6rem;
+  border: 1px solid var(--lp-line-ink);
+  border-radius: 8px;
+  color: rgba(255,255,255,0.82);
+  background: rgba(255,255,255,0.03);
+  backdrop-filter: blur(6px);
+}
+.lp-stamp__pulse {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--lp-teal-br);
+  box-shadow: 0 0 0 0 rgba(31,194,166,0.55);
+  animation: lp-pulse 2.6s var(--mp-ease-out, ease-out) infinite;
+}
+@keyframes lp-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(31,194,166,0.5); }
+  70%  { box-shadow: 0 0 0 8px rgba(31,194,166,0); }
+  100% { box-shadow: 0 0 0 0 rgba(31,194,166,0); }
+}
+
+/* ── Precision card ── hairline border + corner tick detail ───── */
+.lp-card {
+  position: relative;
+  background: var(--mp-surface-raised);
+  border: 1px solid var(--lp-line);
+  border-radius: 14px;
+  transition: border-color var(--mp-dur-base, 200ms) var(--mp-ease-out, ease),
+              transform var(--mp-dur-base, 200ms) var(--mp-ease-out, ease),
+              box-shadow var(--mp-dur-base, 200ms) var(--mp-ease-out, ease);
+}
+.lp-card::after {
+  /* top-right corner tick — a small clinical registration mark */
+  content: "";
+  position: absolute;
+  top: 14px; right: 14px;
+  width: 9px; height: 9px;
+  border-top: 1.5px solid var(--lp-teal);
+  border-right: 1.5px solid var(--lp-teal);
+  opacity: 0;
+  transition: opacity var(--mp-dur-base, 200ms) var(--mp-ease-out, ease);
+}
+.lp-card--tick:hover {
+  border-color: rgba(0,123,95,0.45);
+  transform: translateY(-3px);
+  box-shadow: var(--mp-shadow-hover, 0 8px 24px rgba(0,27,61,0.10));
+}
+.lp-card--tick:hover::after { opacity: 0.9; }
+
+/* ── Hero numeral ── oversized tabular figure ──────────────────── */
+.lp-figure {
+  font-family: var(--lp-display);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+  line-height: 0.9;
+}
+
+/* ── Section index ── faint oversized number behind headings ──── */
+.lp-index {
+  font-family: var(--lp-mono);
+  font-weight: 500;
+  color: var(--lp-teal);
+  font-size: 12px;
+  letter-spacing: 0.18em;
+}
+
+/* ── Underline-grow link ───────────────────────────────────────── */
+.lp-link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.lp-link::after {
+  content: "";
+  position: absolute;
+  left: 0; bottom: -2px;
+  width: 100%; height: 1.5px;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 320ms var(--mp-ease-out, ease);
+}
+.lp-link:hover::after { transform: scaleX(1); }
+
+/* ── Primary CTA ── teal, with a clean sheen sweep ─────────────── */
+.lp-cta {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.lp-cta::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, transparent 20%, rgba(255,255,255,0.38) 50%, transparent 80%);
+  transform: translateX(-130%);
+  z-index: -1;
+}
+.lp-cta:hover::before { animation: lp-sheen 0.9s var(--mp-ease-out, ease); }
+@keyframes lp-sheen { to { transform: translateX(130%); } }
+
+/* ── Reveal on scroll ── quiet rise + fade, JS toggles .is-in ──── */
+.lp-reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 0.7s var(--mp-ease-out, ease),
+              transform 0.7s var(--mp-ease-out, ease);
+  will-change: opacity, transform;
+}
+.lp-reveal.is-in { opacity: 1; transform: none; }
+
+/* ── Ticker rule ── animated dashed baseline under the hero ────── */
+.lp-ruler {
+  height: 1px;
+  background-image: repeating-linear-gradient(
+    90deg,
+    var(--lp-line-ink) 0,
+    var(--lp-line-ink) 6px,
+    transparent 6px,
+    transparent 14px
+  );
+}
+
+/* ── Exam tab pill (provenance segmented control, display-only) ── */
+.lp-examtab {
+  font-family: var(--lp-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* Honour reduced-motion: no reveals, no sheen, no pulse. */
+@media (prefers-reduced-motion: reduce) {
+  .lp-reveal { opacity: 1; transform: none; transition: none; }
+  .lp-cta::before { display: none; }
+  .lp-stamp__pulse { animation: none; }
+}
