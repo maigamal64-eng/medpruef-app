@@ -108,7 +108,11 @@ export const viewport: Viewport = {
   // (doctors reading dense German clinical text on mobile). Fixed
   // 2026-04-15 (Infra P2-INFRA-3 + UX audit, cross-referenced by
   // Frontend agent).
-  themeColor: "#F7F9FC",
+  //
+  // theme-color = Oxford navy to match manifest.json `theme_color`
+  // (#001B3D) — was #F7F9FC (the light surface), a mismatch the
+  // brand-sweep audit flagged. Single source: the dark brand surface.
+  themeColor: "#001B3D",
 };
 
 export default function RootLayout({
@@ -155,19 +159,6 @@ export default function RootLayout({
         <script
           dangerouslySetInnerHTML={{
             __html: `(function(){
-  // Stale-SW kill-switch — now time-bucketed instead of once-per-session
-  // (changed 2026-04-21 after Abobaker-case diagnosis). Previous guard
-  // used sessionStorage boolean 'medpruef_sw_reloaded' which NEVER
-  // cleared in the same browser session — if the reload cycle didn't
-  // actually purge the old SW (iOS Safari edge case), the user was
-  // trapped for the lifetime of that tab session. Now the flag is a
-  // timestamp; the kill-switch is allowed to re-try every 30 minutes.
-  //
-  // The YES/NO decision mirror lives at src/lib/sw-killswitch.ts as a
-  // pure function — see the matching unit test at
-  // tests/unit/lib/sw-killswitch.test.ts for the exhaustive case list.
-  // If you change the branches below, update the pure function + its
-  // tests in the SAME commit (post-soft-launch §1.4.8).
   if(!('serviceWorker' in navigator))return;
   var LAST_KILL_KEY='medpruef_sw_last_kill';
   var RETRY_MS=30*60*1000;
@@ -176,10 +167,6 @@ export default function RootLayout({
     if(last && (Date.now()-last)<RETRY_MS)return;
   }catch(e){}
   var EXPECTED=${JSON.stringify(process.env.NEXT_PUBLIC_BUILD_ID || "")};
-  // Dev-fallback sentinel — mirrors src/lib/sw-killswitch.ts.
-  // Rule 2: never reload when EXPECTED is empty or the literal 'dev-local'.
-  // Rule 1: reload when swBuild is null (SW silent past timeout).
-  // Rule 3: do NOT reload on empty swBuild — old SW may respond without an id.
   function shouldReload(swBuild){
     if(!EXPECTED||EXPECTED==='dev-local')return false;
     if(swBuild===null)return true;
@@ -192,11 +179,8 @@ export default function RootLayout({
     var p2=('caches' in window)?caches.keys().then(function(ks){return Promise.all(ks.map(function(k){return caches.delete(k);}));}).catch(function(){}):Promise.resolve();
     Promise.all([p1,p2]).then(function(){location.reload();});
   }
-  // Expose a user-invocable escape hatch so stuck users (like the
-  // Apr-21 Abobaker case on iOS Safari PWA) can force a rebuild even
-  // if the SW never responds with a build-id. PWAInstall.tsx already
-  // surfaces a "Reload now" banner when the SW posts an update event
-  // — this is the belt-and-suspenders fallback when it doesn't.
+  // Expose a user-invocable escape hatch so a stuck user can force a
+  // rebuild even if the SW never responds with a build-id.
   try{window.__medpruefForceRefresh=killStale;}catch(e){}
   if(!navigator.serviceWorker.controller)return;
   var responded=false;
@@ -223,33 +207,123 @@ export default function RootLayout({
           (pointing at the redirecting "/" root) produced a DOUBLE canonical
           on /landing and fought the metadata one. Brand-sweep 2026-06-04.
         */}
-        {/* Structured data — Organization + WebApplication */}
+        {/*
+          Structured data — one @graph so the entities interlink by @id
+          (MedPrüf Organization ⇄ WebApplication ⇄ parent [name]).
+
+          Honesty rules baked in (brand-sweep 2026-06-04):
+          - Offers list ONLY the tiers that are actually purchasable today:
+            the free tier (€0) + the three live crypto tiers (€19/€27/€114).
+            The four card tiers (€29/€79/€149/€229) are waitlist-only until
+            Stripe Atlas clears, so they are NOT asserted as buyable here —
+            re-add them with availability:InStock once card checkout is live.
+          - No aggregateRating / Review (removed 2026-04-22 — the hard-coded
+            4.8/156 didn't match real data; re-introduce only when wired to
+            real user_feedback).
+          - Question count is described qualitatively ("over 10,000"); the
+            exact figure is DB-owned and drifts, so it is not frozen here.
+        */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify({
               "@context": "https://schema.org",
-              "@type": "WebApplication",
-              "name": "MedPrüf",
-              "url": "https://medpruf.com",
-              "description": "Austrian medical exam preparation platform with 10,992+ clinical questions across 16 specialties and 3 exam types.",
-              "applicationCategory": "EducationalApplication",
-              "operatingSystem": "Web",
-              "offers": {
-                "@type": "Offer",
-                "price": "0",
-                "priceCurrency": "EUR",
-                "description": "Free tier with full question bank access"
-              },
-              "author": {
-                "@type": "Organization",
-                "name": "[name]",
-                "url": "https://example.com"
-              }
-              // aggregateRating removed 2026-04-22: hard-coded 4.8/156 did not
-              // match real user-data (23 surveys, avg 4.70). Google can penalize
-              // fabricated review metadata. Re-introduce when we have 100+ real
-              // reviews, ideally wired dynamically to user_feedback.
+              "@graph": [
+                {
+                  "@type": "Organization",
+                  "@id": "https://medpruf.com/#organization",
+                  "name": "MedPrüf",
+                  "url": "https://medpruf.com",
+                  "logo": "https://medpruf.com/brand/logomark.svg",
+                  "image": "https://medpruf.com/brand/og-image.png",
+                  "description":
+                    "Exam preparation for the Austrian medical licensing exams (Kenntnisprüfung Wien, KMP Innsbruck, Pharmakologie) for foreign-trained doctors. German-language questions, Austrian exam scope.",
+                  "areaServed": {
+                    "@type": "Country",
+                    "name": "Austria",
+                  },
+                  "knowsAbout": [
+                    "Kenntnisprüfung Wien",
+                    "KMP Innsbruck",
+                    "Pharmakologie",
+                    "Austrian medical licensing",
+                    "Nostrifikation",
+                  ],
+                  "parentOrganization": {
+                    "@id": "https://example.com/#organization",
+                  },
+                  "contactPoint": {
+                    "@type": "ContactPoint",
+                    "email": "user-b7e46e80@example.com",
+                    "contactType": "customer support",
+                    "availableLanguage": ["German", "English"],
+                  },
+                  "sameAs": [
+                    "https://example.com",
+                    "https://example.com",
+                    "https://t.me/MedPruefBot",
+                  ],
+                },
+                {
+                  "@type": "Organization",
+                  "@id": "https://example.com/#organization",
+                  "name": "[name]",
+                  "url": "https://example.com",
+                },
+                {
+                  "@type": "WebApplication",
+                  "@id": "https://medpruf.com/#webapp",
+                  "name": "MedPrüf",
+                  "url": "https://medpruf.com",
+                  "description":
+                    "Austrian medical exam preparation platform with over 10,000 clinical questions across 16 specialties and 3 exam types (Kenntnisprüfung Wien, KMP Innsbruck, Pharmakologie).",
+                  "applicationCategory": "EducationalApplication",
+                  "operatingSystem": "Web",
+                  "inLanguage": "de",
+                  "publisher": { "@id": "https://medpruf.com/#organization" },
+                  "author": { "@id": "https://example.com/#organization" },
+                  // Only purchasable tiers are listed. Free + the three live
+                  // crypto tiers (priced in EUR, paid in USDT/USDC).
+                  "offers": [
+                    {
+                      "@type": "Offer",
+                      "name": "Free tier",
+                      "price": "0",
+                      "priceCurrency": "EUR",
+                      "availability": "https://schema.org/InStock",
+                      "description":
+                        "150 questions per exam type with full clinical explanations — no credit card.",
+                    },
+                    {
+                      "@type": "Offer",
+                      "name": "Single month",
+                      "price": "19",
+                      "priceCurrency": "EUR",
+                      "availability": "https://schema.org/InStock",
+                      "description":
+                        "One-time single-month full access. Paid in crypto (USDT/USDC).",
+                    },
+                    {
+                      "@type": "Offer",
+                      "name": "3-month starter",
+                      "price": "27",
+                      "priceCurrency": "EUR",
+                      "availability": "https://schema.org/InStock",
+                      "description":
+                        "One-time 3-month full access. Paid in crypto (USDT/USDC).",
+                    },
+                    {
+                      "@type": "Offer",
+                      "name": "June 26 Cohort",
+                      "price": "114",
+                      "priceCurrency": "EUR",
+                      "availability": "https://schema.org/InStock",
+                      "description":
+                        "6 months of full access with the Pass-Until-You-Pass guarantee. Paid in crypto (USDT/USDC).",
+                    },
+                  ],
+                },
+              ],
             }),
           }}
         />

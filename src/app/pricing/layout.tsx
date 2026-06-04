@@ -24,6 +24,41 @@ export const metadata: Metadata = {
   },
 };
 
+/**
+ * BreadcrumbList JSON-LD for /pricing (Home → Pricing). Page-scoped —
+ * a breadcrumb must end on the current page, so it lives in this layout,
+ * never the root layout. Brand-sweep 2026-06-04.
+ */
+function buildBreadcrumbSchema() {
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "@id": "https://medpruf.com/pricing#breadcrumb",
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "Home",
+        item: "https://medpruf.com/landing",
+      },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: "Pricing",
+        item: "https://medpruf.com/pricing",
+      },
+    ],
+  };
+}
+
 export default function Layout({ children }: { children: React.ReactNode }) {
-  return children;
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(buildBreadcrumbSchema()) }}
+      />
+      {children}
+    </>
+  );
 }
