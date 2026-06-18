@@ -11,7 +11,7 @@ import {
   referralPayoutCents,
   type NowpaymentsPaymentStatus,
 } from "@/lib/nowpayments";
-import { logWebhookAttempt } from "@/lib/webhook-logger";
+import { logWebhookAttempt, type WebhookAttemptResult } from "@/lib/webhook-logger";
 
 export const dynamic = "force-dynamic";
 
@@ -47,27 +47,35 @@ export const dynamic = "force-dynamic";
  * a separate admin/cron job, not this webhook.
  */
 export async function POST(req: NextRequest) {
-  // Log EVERY inbound hit before any other work so webhook_attempts
-  // captures reach-our-edge-at-all vs never-heard-from-NOWPayments.
-  // We `await` rather than fire-and-forget so the row is persisted
-  // before any return path — the rescue-sprint self-test (§1.4) was
-  // failing because `void` left the insert in flight when the handler
-  // had already responded and the test queried `webhook_attempts`.
-  //
-  // The result is marked "received" here; the downstream exit points
-  // (sig_invalid / parse_error / dup / processed) each record their
-  // OWN row with the correct classification. Reading both rows for
-  // the same signature_header gives admin the full picture.
-  await logWebhookAttempt({
-    req,
-    provider: "nowpayments",
-    path: "/api/webhooks/nowpayments",
-    signatureHeader: req.headers.get("x-nowpayments-sig"),
-    signatureValid: null,
-    body: null,
-    result: "other_error",
-    error: "arrived_but_not_yet_classified",
-  });
+  // Every inbound hit writes EXACTLY ONE `webhook_attempts` row — at the
+  // exit path that handles it, with the correct classification. Prior
+  // code logged a single "arrived_but_not_yet_classified" row up front
+  // and never classified it downstream (the promised per-exit rows were
+  // never implemented), so the table read ~100% `other_error` / 0
+  // `sig_valid` regardless of outcome and was repeatedly misread as a
+  // payment/signature defect when the real cause was pure buyer
+  // abandonment. Each row is `await`ed before the response so the admin
+  // self-test can read it back by `signature_header`. `logWebhookAttempt`
+  // never throws, so logging can never block or fail webhook processing.
+  const signatureHeader = req.headers.get("x-nowpayments-sig");
+  const logAttempt = (
+    result: WebhookAttemptResult,
+    extra: {
+      signatureValid?: boolean | null;
+      body?: string | null;
+      error?: string | null;
+      eventId?: string | null;
+      subscriptionId?: string | null;
+    } = {}
+  ): Promise<void> =>
+    logWebhookAttempt({
+      req,
+      provider: "nowpayments",
+      path: "/api/webhooks/nowpayments",
+      signatureHeader,
+      result,
+      ...extra,
+    });
 
   // 1. Read the raw body ONCE. We need the exact bytes to hand to
   //    JSON.parse AND to recompute the signature over. Reading twice
@@ -79,6 +87,11 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     Sentry.captureException(err, {
       tags: { route: "webhooks/nowpayments", step: "read_body" },
+    });
+    await logAttempt("parse_error", {
+      signatureValid: null,
+      body: null,
+      error: "failed to read request body",
     });
     return NextResponse.json({ error: "Bad body" }, { status: 400 });
   }
@@ -92,10 +105,20 @@ export async function POST(req: NextRequest) {
       "[webhooks/nowpayments] non-JSON body",
       rawBody.slice(0, 200)
     );
+    await logAttempt("parse_error", {
+      signatureValid: null,
+      body: rawBody,
+      error: "non-JSON body",
+    });
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
   if (!payload || typeof payload !== "object") {
+    await logAttempt("parse_error", {
+      signatureValid: null,
+      body: rawBody,
+      error: "payload is not an object",
+    });
     return NextResponse.json(
       { error: "Invalid payload" },
       { status: 400 }
@@ -113,6 +136,11 @@ export async function POST(req: NextRequest) {
       "NOWPAYMENTS_IPN_SECRET not set — all IPNs will reject",
       "error"
     );
+    await logAttempt("other_error", {
+      signatureValid: null,
+      body: rawBody,
+      error: "NOWPAYMENTS_IPN_SECRET not configured",
+    });
     // 503 so NOWPayments retries once we fix the env, rather than
     // a 4xx that it would consider terminal.
     return NextResponse.json(
@@ -121,7 +149,6 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const signatureHeader = req.headers.get("x-nowpayments-sig");
   const valid = verifyNowpaymentsSignature(payload, signatureHeader, secret);
   if (!valid) {
     console.warn(
@@ -131,6 +158,12 @@ export async function POST(req: NextRequest) {
         paymentId: payload.payment_id,
       }
     );
+    await logAttempt("sig_invalid", {
+      signatureValid: false,
+      body: rawBody,
+      eventId: stringOrNull(payload.payment_id),
+      error: "signature mismatch",
+    });
     return NextResponse.json(
       { error: "Invalid signature" },
       { status: 401 }
@@ -153,6 +186,12 @@ export async function POST(req: NextRequest) {
         "[webhooks/nowpayments] missing payment_id/payment_status",
         { paymentId, paymentStatusRaw }
       );
+      await logAttempt("other_error", {
+        signatureValid: true,
+        body: rawBody,
+        eventId: paymentId,
+        error: "missing payment_id or payment_status",
+      });
       return NextResponse.json(
         { error: "Missing payment_id or payment_status" },
         { status: 400 }
@@ -191,6 +230,12 @@ export async function POST(req: NextRequest) {
       // the duplicate-retry case. Postgres returns this through the
       // Supabase JS client as a non-null error with code='23505'.
       if ((claimErr as { code?: string }).code === "23505") {
+        await logAttempt("dup", {
+          signatureValid: true,
+          body: rawBody,
+          eventId: paymentId,
+          error: "duplicate payment_id (claim conflict 23505)",
+        });
         return NextResponse.json({
           ok: true,
           duplicate: true,
@@ -202,12 +247,24 @@ export async function POST(req: NextRequest) {
       Sentry.captureException(claimErr, {
         tags: { route: "webhooks/nowpayments", step: "claim" },
       });
+      await logAttempt("other_error", {
+        signatureValid: true,
+        body: rawBody,
+        eventId: paymentId,
+        error: "claim insert DB error",
+      });
       return NextResponse.json({ error: "DB error" }, { status: 500 });
     }
 
     if (!claim) {
       // RETURNING was empty without throwing — also means the row
       // already existed and ON CONFLICT silently skipped the insert.
+      await logAttempt("dup", {
+        signatureValid: true,
+        body: rawBody,
+        eventId: paymentId,
+        error: "duplicate payment_id (empty claim)",
+      });
       return NextResponse.json({
         ok: true,
         duplicate: true,
@@ -224,6 +281,12 @@ export async function POST(req: NextRequest) {
       // 200 so NOWPayments doesn't retry an unrecoverable request;
       // we still record it as processed.
       await recordProcessed(sb, paymentId, payload);
+      await logAttempt("user_not_found", {
+        signatureValid: true,
+        body: rawBody,
+        eventId: paymentId,
+        error: "no order_id in payload",
+      });
       return NextResponse.json(
         { ok: false, error: "No order_id" },
         { status: 200 }
@@ -244,6 +307,13 @@ export async function POST(req: NextRequest) {
         tags: { route: "webhooks/nowpayments", step: "sub_lookup" },
         extra: { orderId, paymentId },
       });
+      await logAttempt("other_error", {
+        signatureValid: true,
+        body: rawBody,
+        eventId: paymentId,
+        subscriptionId: orderId,
+        error: "subscription lookup DB error",
+      });
       // 500 → retry.
       return NextResponse.json(
         { error: "DB error" },
@@ -257,6 +327,13 @@ export async function POST(req: NextRequest) {
       // (impossible) or we lost a subscription row (unlikely). We
       // record the processed event so we don't retry indefinitely.
       await recordProcessed(sb, paymentId, payload);
+      await logAttempt("user_not_found", {
+        signatureValid: true,
+        body: rawBody,
+        eventId: paymentId,
+        subscriptionId: orderId,
+        error: "no subscription matches order_id",
+      });
       return NextResponse.json(
         { ok: false, error: "Subscription not found" },
         { status: 404 }
@@ -289,6 +366,13 @@ export async function POST(req: NextRequest) {
     //    without touching the subscription row.
     if (decision.nextStatus === "pending") {
       await recordProcessed(sb, paymentId, payload);
+      await logAttempt("processed", {
+        signatureValid: true,
+        body: rawBody,
+        eventId: paymentId,
+        subscriptionId: sub.id as string,
+        error: `intermediate state: ${paymentStatusRaw}`,
+      });
       return NextResponse.json({
         ok: true,
         payment_status: paymentStatusRaw,
@@ -315,6 +399,14 @@ export async function POST(req: NextRequest) {
         .eq("id", sub.id);
 
       await recordProcessed(sb, paymentId, payload);
+
+      await logAttempt("processed", {
+        signatureValid: true,
+        body: rawBody,
+        eventId: paymentId,
+        subscriptionId: sub.id as string,
+        error: `terminal: ${paymentStatusRaw} -> ${decision.nextStatus}`,
+      });
 
       return NextResponse.json({
         ok: true,
@@ -372,6 +464,13 @@ export async function POST(req: NextRequest) {
         extra: { subId: sub.id, paymentId },
       });
       // DO NOT record processed — we want NOWPayments to retry.
+      await logAttempt("other_error", {
+        signatureValid: true,
+        body: rawBody,
+        eventId: paymentId,
+        subscriptionId: sub.id as string,
+        error: "activation subscription update failed",
+      });
       return NextResponse.json({ error: "DB update failed" }, { status: 500 });
     }
 
@@ -439,6 +538,14 @@ export async function POST(req: NextRequest) {
       }
     );
 
+    await logAttempt("processed", {
+      signatureValid: true,
+      body: rawBody,
+      eventId: paymentId,
+      subscriptionId: sub.id as string,
+      error: `activated: ${paymentStatusRaw}`,
+    });
+
     return NextResponse.json({
       ok: true,
       payment_status: paymentStatusRaw,
@@ -449,6 +556,13 @@ export async function POST(req: NextRequest) {
     console.error("[webhooks/nowpayments] unexpected", err);
     Sentry.captureException(err, {
       tags: { route: "webhooks/nowpayments", step: "unexpected" },
+    });
+    // Signature was already verified before this try-block, so a failure
+    // here is post-auth. paymentId may be out of scope, so omit eventId.
+    await logAttempt("other_error", {
+      signatureValid: true,
+      body: rawBody,
+      error: "unexpected handler error after signature verification",
     });
     // 500 → NOWPayments will retry.
     return NextResponse.json(

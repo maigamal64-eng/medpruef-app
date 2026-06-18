@@ -23,6 +23,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-06-19",
+    tag: "admin",
+    title: {
+      de: "Diagnose: Webhook-Versuche werden jetzt korrekt klassifiziert",
+      en: "Diagnostics: webhook attempts are now classified correctly",
+    },
+    description: {
+      de: "Interne Beobachtbarkeit: Der NOWPayments-IPN-Webhook schreibt jetzt pro Aufruf genau eine korrekt klassifizierte Zeile in webhook_attempts (sig_invalid, dup, processed, user_not_found, parse_error oder other_error) statt einer einzigen unklassifizierten Zeile. Dadurch zeigen die Admin-Webhook-Ansicht und der Tagesbericht echte Ergebnisse, und der frühere irreführende Wert (100 Prozent other_error) entfällt. Keine Änderung an der Zahlungslogik.",
+      en: "Internal observability: the NOWPayments IPN webhook now writes exactly one correctly-classified webhook_attempts row per call (sig_invalid, dup, processed, user_not_found, parse_error, or other_error) instead of a single unclassified row. The admin webhook view and the daily digest now show real outcomes, removing the misleading 100 percent other_error reading. No change to payment logic.",
+    },
+  },
+  {
     date: "2026-06-02",
     tag: "admin",
     title: {
