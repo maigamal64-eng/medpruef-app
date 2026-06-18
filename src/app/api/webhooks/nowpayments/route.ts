@@ -200,77 +200,20 @@ export async function POST(req: NextRequest) {
 
     const sb = getServiceClient();
 
-    // 4. Idempotency claim — atomically reserve this payment_id by
-    //    inserting into processed_webhook_events with ON CONFLICT
-    //    DO NOTHING. If RETURNING returns a row, we won the race and
-    //    we're the canonical processor. If it's empty, another worker
-    //    already claimed this event and we early-return as duplicate.
-    //
-    //    review-2026-04-24-D-2 — the previous SELECT-then-INSERT
-    //    pattern allowed two parallel webhook retries to both pass
-    //    the existence check and both run the activation path,
-    //    double-flipping `users.tier='pro'` and double-counting
-    //    referral bonuses. ON CONFLICT shifts the race resolution
-    //    into the DB layer where the (provider, event_id) primary
-    //    key serializes claims.
-    const { data: claim, error: claimErr } = await sb
-      .from("processed_webhook_events")
-      .insert({
-        provider: "nowpayments",
-        event_id: paymentId,
-        // payload gets filled in later via recordProcessed when the
-        // status is final; for the claim we just write the marker.
-        payload: { claimed_at: new Date().toISOString(), payment_status: paymentStatusRaw },
-      })
-      .select("event_id")
-      .maybeSingle();
-
-    if (claimErr) {
-      // 23505 = unique_violation — the row already exists, this is
-      // the duplicate-retry case. Postgres returns this through the
-      // Supabase JS client as a non-null error with code='23505'.
-      if ((claimErr as { code?: string }).code === "23505") {
-        await logAttempt("dup", {
-          signatureValid: true,
-          body: rawBody,
-          eventId: paymentId,
-          error: "duplicate payment_id (claim conflict 23505)",
-        });
-        return NextResponse.json({
-          ok: true,
-          duplicate: true,
-          payment_status: paymentStatusRaw,
-        });
-      }
-      // Any other DB error — surface as 500 so NOWPayments retries.
-      console.error("[webhooks/nowpayments] claim insert failed", claimErr);
-      Sentry.captureException(claimErr, {
-        tags: { route: "webhooks/nowpayments", step: "claim" },
-      });
-      await logAttempt("other_error", {
-        signatureValid: true,
-        body: rawBody,
-        eventId: paymentId,
-        error: "claim insert DB error",
-      });
-      return NextResponse.json({ error: "DB error" }, { status: 500 });
-    }
-
-    if (!claim) {
-      // RETURNING was empty without throwing — also means the row
-      // already existed and ON CONFLICT silently skipped the insert.
-      await logAttempt("dup", {
-        signatureValid: true,
-        body: rawBody,
-        eventId: paymentId,
-        error: "duplicate payment_id (empty claim)",
-      });
-      return NextResponse.json({
-        ok: true,
-        duplicate: true,
-        payment_status: paymentStatusRaw,
-      });
-    }
+    // NOTE on idempotency: the ON CONFLICT claim used to live HERE and
+    // ran for EVERY inbound IPN. That was a structural bug. NOWPayments
+    // sends one IPN per status change (waiting → confirming → finished),
+    // ALL sharing the same payment_id, so the first `waiting` IPN won the
+    // claim, ran the intermediate (no-op) branch, and every later IPN —
+    // including `finished` — hit the (provider, payment_id) PK and was
+    // rejected as a duplicate BEFORE it could activate the subscription.
+    // The claim now lives just before the state-changing branches (after
+    // the intermediate early-return): intermediate IPNs never consume the
+    // key, and the first finished/terminal IPN still wins atomically
+    // (keeping the review-2026-04-24-D-2 parallel-retry protection, and
+    // still keyed on payment_id so it collides with the row written by
+    // reconcile-pending — preventing a late webhook from double-crediting
+    // a manually-reconciled payment).
 
     // 5. Match order_id to a subscription row.
     if (!orderId) {
@@ -362,10 +305,12 @@ export async function POST(req: NextRequest) {
       telemetryTags
     );
 
-    // 7. Intermediate states: record the processed event and return
-    //    without touching the subscription row.
+    // 7. Intermediate states (waiting / confirming / sending): just
+    //    acknowledge and return. Do NOT claim and do NOT write a
+    //    processed_webhook_events row — these are no-ops and must not
+    //    consume the payment_id idempotency key, or the later `finished`
+    //    IPN would be deduped before it can activate the subscription.
     if (decision.nextStatus === "pending") {
-      await recordProcessed(sb, paymentId, payload);
       await logAttempt("processed", {
         signatureValid: true,
         body: rawBody,
@@ -377,6 +322,79 @@ export async function POST(req: NextRequest) {
         ok: true,
         payment_status: paymentStatusRaw,
         description: decision.description,
+      });
+    }
+
+    // ── Idempotency claim (state-changing IPNs only) ──
+    //    Atomically reserve this payment_id BEFORE we mutate anything,
+    //    by inserting into processed_webhook_events (PK provider,event_id)
+    //    with ON CONFLICT surfacing as 23505. The first finished/terminal
+    //    IPN wins and becomes the canonical processor; parallel retries
+    //    get the unique-violation and early-return as `dup`
+    //    (review-2026-04-24-D-2 — stops two parallel `finished` retries
+    //    from double-activating + double-counting referrals).
+    //
+    //    Keyed on payment_id alone (NOT payment_id+status) on purpose:
+    //    reconcile-pending writes event_id = payment_id when it manually
+    //    activates a payment, so a late real `finished` webhook MUST
+    //    collide here and dedup instead of re-activating.
+    const { data: claim, error: claimErr } = await sb
+      .from("processed_webhook_events")
+      .insert({
+        provider: "nowpayments",
+        event_id: paymentId,
+        payload: { claimed_at: new Date().toISOString(), payment_status: paymentStatusRaw },
+      })
+      .select("event_id")
+      .maybeSingle();
+
+    if (claimErr) {
+      // 23505 = unique_violation — already claimed (duplicate retry or a
+      // prior reconcile). Postgres surfaces it via the JS client as a
+      // non-null error with code='23505'.
+      if ((claimErr as { code?: string }).code === "23505") {
+        await logAttempt("dup", {
+          signatureValid: true,
+          body: rawBody,
+          eventId: paymentId,
+          subscriptionId: sub.id as string,
+          error: "duplicate payment_id (claim conflict 23505)",
+        });
+        return NextResponse.json({
+          ok: true,
+          duplicate: true,
+          payment_status: paymentStatusRaw,
+        });
+      }
+      // Any other DB error — surface as 500 so NOWPayments retries.
+      console.error("[webhooks/nowpayments] claim insert failed", claimErr);
+      Sentry.captureException(claimErr, {
+        tags: { route: "webhooks/nowpayments", step: "claim" },
+      });
+      await logAttempt("other_error", {
+        signatureValid: true,
+        body: rawBody,
+        eventId: paymentId,
+        subscriptionId: sub.id as string,
+        error: "claim insert DB error",
+      });
+      return NextResponse.json({ error: "DB error" }, { status: 500 });
+    }
+
+    if (!claim) {
+      // RETURNING empty without throwing — the row already existed and
+      // ON CONFLICT silently skipped the insert (also a duplicate).
+      await logAttempt("dup", {
+        signatureValid: true,
+        body: rawBody,
+        eventId: paymentId,
+        subscriptionId: sub.id as string,
+        error: "duplicate payment_id (empty claim)",
+      });
+      return NextResponse.json({
+        ok: true,
+        duplicate: true,
+        payment_status: paymentStatusRaw,
       });
     }
 

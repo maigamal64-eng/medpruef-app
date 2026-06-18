@@ -62,13 +62,15 @@ export const POST = adminRouteShell(
         process.env.NEXT_PUBLIC_SITE_URL || "https://medpruf.com";
       const webhookUrl = `${siteUrl.replace(/\/$/, "")}/api/webhooks/nowpayments`;
 
-      // Build a realistic "finished" payload. The sentinel payment_id
-      // is a string so the `processed_webhook_events` PK is unique per
-      // self-test run.
+      // Build the BASE payload (no payment_status). The sentinel
+      // payment_id is a string so the processed_webhook_events PK is
+      // unique per run, and it is SHARED across the waiting+finished IPNs
+      // below — NOWPayments reuses one payment_id across a payment's
+      // status changes, which is exactly the sequence the idempotency fix
+      // must survive.
       const sentinelPaymentId = `sst-${Date.now()}`;
-      const payload: Record<string, unknown> = {
+      const basePayload: Record<string, unknown> = {
         payment_id: sentinelPaymentId,
-        payment_status: "finished",
         pay_address: "0xSELFTEST",
         price_amount: 19,
         price_currency: "eur",
@@ -84,9 +86,6 @@ export const POST = adminRouteShell(
         outcome_currency: "usdt",
       };
 
-      const signature = computeNowpaymentsSignature(payload, ipnSecret);
-      const body = JSON.stringify(payload, Object.keys(payload).sort());
-
       // Insert a synthetic subscription row that the webhook handler
       // can resolve via `order_id`. Without this row the handler
       // returns 404 "Subscription not found" — the production rescue
@@ -98,9 +97,6 @@ export const POST = adminRouteShell(
       // user_id as the owner so RLS doesn't trip if anyone ever flips
       // it on for the table.
       const sb = getServiceClient();
-      // Look up the calling admin's user_id from the request — we use
-      // it as the synthetic subscription's user_id so the activation
-      // path doesn't NULL-FK out.
       // Use the validated admin id from the guard (adminRouteShell →
       // requireAdmin), not the client-controlled x-user-id header (S-1).
       const adminUserId = actor.userId;
@@ -122,32 +118,56 @@ export const POST = adminRouteShell(
         );
       }
 
-      // Fire at ourselves. Use a short timeout — the webhook should
-      // respond within 2s normally.
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 10_000);
-      let fetchError: string | null = null;
-      let status = 0;
-      let responseBody = "";
-      try {
-        const r = await fetch(webhookUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-nowpayments-sig": signature,
-            "user-agent": "medpruef-self-test/1",
-          },
-          body,
-          signal: controller.signal,
-        });
-        status = r.status;
-        responseBody = await r.text();
-      } catch (err) {
-        fetchError =
-          err instanceof Error ? err.message.slice(0, 300) : "fetch failed";
-      } finally {
-        clearTimeout(timer);
-      }
+      // Helper: sign a payload variant with the IPN secret and POST it at
+      // our own webhook exactly as NOWPayments would (sorted-keys JSON +
+      // HMAC-SHA512 in x-nowpayments-sig). Short timeout — the webhook
+      // should respond within ~2s.
+      const fireIpn = async (
+        paymentStatus: string
+      ): Promise<{ status: number; body: string; signature: string; fetchError: string | null }> => {
+        const p = { ...basePayload, payment_status: paymentStatus };
+        const sig = computeNowpaymentsSignature(p, ipnSecret);
+        const serialised = JSON.stringify(p, Object.keys(p).sort());
+        const ctrl = new AbortController();
+        const t = setTimeout(() => ctrl.abort(), 10_000);
+        try {
+          const r = await fetch(webhookUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-nowpayments-sig": sig,
+              "user-agent": "medpruef-self-test/1",
+            },
+            body: serialised,
+            signal: ctrl.signal,
+          });
+          return { status: r.status, body: await r.text(), signature: sig, fetchError: null };
+        } catch (err) {
+          return {
+            status: 0,
+            body: "",
+            signature: sig,
+            fetchError: err instanceof Error ? err.message.slice(0, 300) : "fetch failed",
+          };
+        } finally {
+          clearTimeout(t);
+        }
+      };
+
+      // Fire the REALISTIC sequence: an intermediate `waiting` IPN first
+      // (must be acknowledged but NOT activate, and must NOT consume the
+      // payment_id idempotency key), then the `finished` IPN (must
+      // activate). The old payment_id-keyed top claim broke exactly this:
+      // the `waiting` IPN consumed the key and `finished` was deduped.
+      const waiting = await fireIpn("waiting");
+      const finished = await fireIpn("finished");
+
+      // Back-compat aliases — the checks below all refer to the FINISHED
+      // call (the one that must activate).
+      const signature = finished.signature;
+      const status = finished.status;
+      const responseBody = finished.body;
+      const fetchError = waiting.fetchError || finished.fetchError;
 
       // Check whether the webhook actually inserted a
       // `processed_webhook_events` row for the sentinel event_id.
@@ -173,6 +193,19 @@ export const POST = adminRouteShell(
         .order("received_at", { ascending: false })
         .limit(5);
       const attemptRow = attemptRows?.[0] ?? null;
+
+      // The decisive assertion for the idempotency fix: after the
+      // waiting→finished sequence, did the synthetic sub actually flip to
+      // 'active'? Before the fix it stayed 'pending' (the `finished` IPN
+      // was deduped by the `waiting` IPN's claim). Read this BEFORE the
+      // cleanup below resets the row back to 'pending'.
+      const { data: subAfter } = await sb
+        .from("subscriptions")
+        .select("status")
+        .eq("id", SELF_TEST_ORDER_ID)
+        .maybeSingle();
+      const subscriptionActivated =
+        (subAfter as { status?: string } | null)?.status === "active";
 
       // Clean up the sentinel rows so repeated self-tests don't
       // clutter the audit trail. We leave `webhook_attempts` rows
@@ -205,7 +238,9 @@ export const POST = adminRouteShell(
 
       const durationMs = Date.now() - startedAt;
       // Two truthful flavours of "ok":
-      //   - happy path: webhook returned 200 (synthetic sub activated)
+      //   - happy path: BOTH IPNs returned 200, the signed `finished` IPN
+      //     was processed, AND the sub flipped to 'active' (proving the
+      //     waiting→finished idempotency sequence works end-to-end).
       //   - acceptable path: webhook returned 404 with
       //     `{error: "Subscription not found"}` because the synthetic
       //     sub couldn't be inserted (e.g. caller has no admin user_id
@@ -213,10 +248,12 @@ export const POST = adminRouteShell(
       //     processed row, just not the activation half.
       const okHappy =
         fetchError === null &&
+        waiting.status === 200 &&
         status === 200 &&
         Boolean(processedRow) &&
         Boolean(attemptRow) &&
-        attemptRow?.signature_valid === true;
+        attemptRow?.signature_valid === true &&
+        subscriptionActivated;
       const okFallback =
         !okHappy &&
         fetchError === null &&
@@ -241,7 +278,9 @@ export const POST = adminRouteShell(
             : fetchError
               ? "fetch_failed"
               : "verification_failed",
+          waitingStatus: waiting.status,
           status,
+          subscriptionActivated,
           processedRowInserted: Boolean(processedRow),
           webhookAttemptsRowLogged: Boolean(attemptRow),
           durationMs,
@@ -253,7 +292,10 @@ export const POST = adminRouteShell(
         phase: ok ? "complete" : fetchError ? "fetch_failed" : "verification_failed",
         fetchError,
         url: webhookUrl,
+        waitingStatus: waiting.status,
         status,
+        finishedStatus: finished.status,
+        subscriptionActivated,
         responseBody: responseBody.slice(0, 500),
         signatureSubmitted: signature.slice(0, 16) + "…",
         signatureLength: signature.length,

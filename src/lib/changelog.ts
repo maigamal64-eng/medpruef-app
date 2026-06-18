@@ -26,6 +26,18 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-06-19",
     tag: "admin",
     title: {
+      de: "Zahlung: Krypto-Zahlungen werden jetzt zuverlässig automatisch aktiviert",
+      en: "Payments: crypto payments now reliably auto-activate",
+    },
+    description: {
+      de: "Fehlerbehebung im NOWPayments-Webhook: Da NOWPayments pro Statuswechsel eine Benachrichtigung sendet (waiting, confirming, finished) und alle dieselbe payment_id teilen, hat die frühere Idempotenz-Sperre die erste waiting-Nachricht reserviert und die spätere finished-Nachricht als Duplikat verworfen, sodass eine echte Zahlung nie automatisch freigeschaltet wurde. Die Sperre greift jetzt erst beim tatsächlichen Aktivierungsschritt, der Schutz gegen doppelte Verarbeitung bleibt erhalten. Der Selbsttest prüft jetzt die echte Abfolge (waiting, dann finished).",
+      en: "Fix in the NOWPayments webhook: because NOWPayments sends one notification per status change (waiting, confirming, finished) all sharing the same payment_id, the previous idempotency lock was consumed by the first waiting notification and the later finished one was dropped as a duplicate, so a real payment never auto-activated. The lock now applies only at the actual activation step, and the double-processing protection is preserved. The self-test now exercises the real sequence (waiting then finished).",
+    },
+  },
+  {
+    date: "2026-06-19",
+    tag: "admin",
+    title: {
       de: "Diagnose: Webhook-Versuche werden jetzt korrekt klassifiziert",
       en: "Diagnostics: webhook attempts are now classified correctly",
     },
