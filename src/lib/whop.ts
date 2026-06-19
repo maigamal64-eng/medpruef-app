@@ -58,31 +58,43 @@ export function verifyWhopSignature(
     return false;
   }
 
-  const key = secret.startsWith("whsec_") ? secret.slice(6) : secret;
-  let secretBytes: Buffer;
-  try {
-    secretBytes = Buffer.from(key, "base64");
-  } catch {
-    return false;
+  // Whop's secret is `ws_<hex>` (classic Standard Webhooks uses
+  // `whsec_<base64>`). Don't hard-code the encoding: try the key as
+  // hex / base64 / utf8 and match the HMAC as base64 OR hex. Whichever
+  // scheme Whop actually uses will match; everything else fails closed.
+  const body = secret.replace(/^whsec_/, "").replace(/^ws_/, "");
+  const keyCandidates: Buffer[] = [];
+  if (/^[0-9a-fA-F]+$/.test(body) && body.length % 2 === 0) {
+    keyCandidates.push(Buffer.from(body, "hex"));
   }
-  if (secretBytes.length === 0) return false;
+  keyCandidates.push(Buffer.from(body, "base64"));
+  keyCandidates.push(Buffer.from(body, "utf8"));
+  keyCandidates.push(Buffer.from(secret, "utf8"));
 
-  const expected = crypto
-    .createHmac("sha256", secretBytes)
-    .update(`${id}.${timestamp}.${rawBody}`)
-    .digest("base64");
-  const expBuf = Buffer.from(expected);
+  const signedContent = `${id}.${timestamp}.${rawBody}`;
+  const provided = signature
+    .split(" ")
+    .map((p) => (p.includes(",") ? p.split(",")[1] : p))
+    .filter(Boolean);
 
-  // The header may carry several space-separated "v1,<base64sig>" entries.
-  return signature.split(" ").some((part) => {
-    const sig = part.includes(",") ? part.split(",")[1] : part;
+  const eq = (a: string, b: string): boolean => {
     try {
-      const b = Buffer.from(sig);
-      return b.length === expBuf.length && crypto.timingSafeEqual(b, expBuf);
+      const ba = Buffer.from(a);
+      const bb = Buffer.from(b);
+      return ba.length === bb.length && crypto.timingSafeEqual(ba, bb);
     } catch {
       return false;
     }
-  });
+  };
+
+  for (const keyBytes of keyCandidates) {
+    if (keyBytes.length === 0) continue;
+    const digest = crypto.createHmac("sha256", keyBytes).update(signedContent).digest();
+    const asB64 = digest.toString("base64");
+    const asHex = digest.toString("hex");
+    if (provided.some((sig) => eq(sig, asB64) || eq(sig, asHex))) return true;
+  }
+  return false;
 }
 
 // ── Defensive payload extraction ──────────────────────────────────
