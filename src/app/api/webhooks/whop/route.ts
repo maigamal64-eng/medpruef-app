@@ -49,6 +49,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Webhook secret not configured" }, { status: 503 });
   }
 
+  // A delivery that carries svix headers is a genuine Whop attempt; one that
+  // fails verification anyway is almost certainly a secret/scheme mismatch
+  // (not random noise). Flag THAT loudly so a real payment can never fail
+  // auth silently — the only signature-scheme risk we can't pre-verify
+  // without a live delivery. (advisor 2026-06-19)
+  const looksLikeWhopDelivery = Boolean(
+    req.headers.get("webhook-id") && req.headers.get("webhook-signature")
+  );
   const valid = verifyWhopSignature(
     rawBody,
     {
@@ -59,6 +67,12 @@ export async function POST(req: NextRequest) {
     secret
   );
   if (!valid) {
+    if (looksLikeWhopDelivery) {
+      Sentry.captureMessage(
+        "Whop webhook carried svix headers but FAILED signature verification — likely WHOP_WEBHOOK_SECRET / scheme mismatch; payments will not auto-grant",
+        "error"
+      );
+    }
     return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
   }
 
@@ -69,21 +83,59 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  // Whop carries the event name in `action` (current) or `type` (older).
+  // Whop v2 webhooks (api_version v2, confirmed on hook_zTfkVa4aTR7mJ) carry
+  // the event name in `action`; `type` is the older fallback.
   const event =
     (typeof payload.action === "string" && payload.action) ||
     (typeof payload.type === "string" && payload.type) ||
     "";
   const data = payload.data ?? payload;
+  const f = extractWhopPayment(data);
 
-  // Grant ONLY on the money signal; acknowledge everything else.
-  if (event !== "payment.succeeded" && event !== "payment_succeeded") {
+  // Log EVERY accepted delivery so the first real one self-documents Whop's
+  // envelope in the runtime logs without leaking the body. (advisor 2026-06-19)
+  console.info(`[whop webhook] event=${event || "(none)"} paymentId=${f.paymentId ?? "(none)"}`);
+
+  // The hook is subscribed only to payment.succeeded; these are the names we
+  // recognise as the money signal.
+  const SUCCESS_EVENTS = new Set(["payment.succeeded", "payment_succeeded"]);
+  // Payment-related events we intentionally never grant on (defense-in-depth;
+  // not currently subscribed). Quietly acked so Whop stops retrying.
+  const KNOWN_NONGRANT = new Set([
+    "payment.failed", "payment_failed", "payment.pending", "payment_pending",
+    "payment.created", "payment_created", "refund.created", "refund.updated",
+    "dispute.created", "dispute.updated", "dispute_alert.created",
+  ]);
+
+  if (!SUCCESS_EVENTS.has(event)) {
+    // A non-success event that STILL carries a payment id and isn't a known
+    // non-grant type means our envelope/name assumption may be wrong. Never
+    // silently ack that — record + Sentry-flag so a mis-shaped success can't
+    // cost a buyer without an alert. (advisor 2026-06-19)
+    if (f.paymentId && !KNOWN_NONGRANT.has(event)) {
+      Sentry.captureMessage(
+        `Whop sent an unrecognized payment-bearing event '${event}' (payment=${f.paymentId}) — verify the grant logic; a real buyer may be unprocessed`,
+        "warning"
+      );
+      try {
+        await recordEvent(getServiceClient(), null, "whop_unrecognized_payment_event", {
+          event, payment_id: f.paymentId, plan_id: f.planId, email: f.email,
+        });
+      } catch {
+        /* best effort */
+      }
+    }
     return NextResponse.json({ ok: true, ignored: event || "unknown" });
   }
 
   try {
-    const f = extractWhopPayment(data);
     if (!f.paymentId) {
+      // A success event with no extractable payment id = we got the money
+      // signal but can't process it. That is loud, not a quiet 200.
+      Sentry.captureMessage(
+        "Whop payment.succeeded with no extractable payment id — payload shape changed",
+        "error"
+      );
       return NextResponse.json({ ok: false, error: "no payment id" }, { status: 200 });
     }
 
@@ -109,8 +161,9 @@ export async function POST(req: NextRequest) {
     }
     if (!claim) return NextResponse.json({ ok: true, duplicate: true });
 
-    // Resolve tier: plan id → tier, else metadata.tier if recognised.
-    const tier = whopPlanToTier(f.planId) ?? (isKnownTier(f.metaTier) ? f.metaTier : null);
+    // Resolve tier: metadata.tier is PRIMARY (the v1 payment payload often
+    // omits plan_id); plan-id → tier is only a fallback.
+    const tier = (isKnownTier(f.metaTier) ? f.metaTier : null) ?? whopPlanToTier(f.planId);
 
     // Resolve user: metadata user id first, then email (case-insensitive).
     let userId: string | null = null;

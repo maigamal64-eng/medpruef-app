@@ -303,8 +303,8 @@ const COPY = {
         price: "114 €",
         period: { de: "6 Monate", en: "6 months" },
         pitch: {
-          de: "Alle 10.992 Fragen · Pass-Until-You-Pass · Krypto-Checkout live",
-          en: "All 10,992 questions · Pass-Until-You-Pass · live crypto checkout",
+          de: "Alle 10.992 Fragen · Pass-Until-You-Pass · Karten-Checkout live",
+          en: "All 10,992 questions · Pass-Until-You-Pass · live card checkout",
         },
         status: "live",
         cta: { de: "Zur Kohorte", en: "See the Cohort" },

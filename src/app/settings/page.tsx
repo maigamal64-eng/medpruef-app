@@ -761,7 +761,7 @@ export default function SettingsPage() {
                 {/* Current tier / active subscription
                     Three branches:
                       1. activeSub object → /api/user/subscription found
-                         a real subscriptions row (NOWPayments-paid).
+                         a real subscriptions row (card- or crypto-paid).
                          Render the rich SubscriptionCard with countdown.
                       2. !activeSub but liveIsPaid → admin-granted Pro
                          (no subscriptions row exists; users.tier was

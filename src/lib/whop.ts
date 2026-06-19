@@ -119,12 +119,19 @@ export interface WhopPaymentFields {
   paymentId: string | null;
   planId: string | null;
   email: string | null;
+  memberId: string | null;
   metaUserId: string | null;
   metaTier: string | null;
   amountCents: number | null;
   currency: string;
 }
 
+// The v1 payment.succeeded payload carries NO top-level user_id / plan_id /
+// email in the documented schema — only `data.id` (pay_), `data.member.id`
+// (mem_), `data.amount_after_fees` (net float), `data.currency`, and
+// `data.metadata` (our echoed checkout-session metadata). So the reliable
+// buyer→user map is `data.metadata.medpruef_user_id`; plan/email are
+// best-effort fallbacks only. (Verified via docs + a live checkout session.)
 export function extractWhopPayment(data: unknown): WhopPaymentFields {
   const d = rec(data);
   const user = rec(d.user);
@@ -136,10 +143,70 @@ export function extractWhopPayment(data: unknown): WhopPaymentFields {
     paymentId: str(d.id) ?? str(d.payment_id) ?? str(d.receipt_id),
     planId: str(planObj.id) ?? str(d.plan_id) ?? str(d.plan) ?? str(d.access_pass),
     email: str(user.email) ?? str(d.email) ?? str(d.user_email) ?? str(member.email),
+    memberId: str(member.id) ?? str(d.member_id),
     metaUserId: str(metadata.medpruef_user_id) ?? str(metadata.user_id),
     metaTier: str(metadata.tier),
     amountCents:
-      toCents(d.final_amount) ?? toCents(d.amount) ?? toCents(d.subtotal) ?? toCents(d.usd_amount),
+      toCents(d.amount_after_fees) ??
+      toCents(d.final_amount) ??
+      toCents(d.amount) ??
+      toCents(d.subtotal),
     currency: (str(d.currency) ?? "eur").toLowerCase(),
   };
+}
+
+// ── Server-side checkout (per-user metadata session) ──────────────
+// The buyer→user map relies on metadata, so every checkout must attach it via
+// a checkout-configuration session (ch_...). Verified: POST
+// /api/v1/checkout_configurations (NO company_id — inferred from the key)
+// returns { id: ch_..., purchase_url: ".../<plan>/?session=ch_..." }. The
+// scoped app key (WHOP_API_KEY) is authorized for this; the owner key is not
+// needed at runtime.
+export function tierToWhopPlan(tier: string): string | null {
+  const map: Record<string, string | undefined> = {
+    first_month_19: process.env.WHOP_PLAN_FIRST_MONTH_19,
+    first_3mo_27: process.env.WHOP_PLAN_FIRST_3MO_27,
+    premium_pass_guaranteed: process.env.WHOP_PLAN_PREMIUM_PASS,
+  };
+  return map[tier] ?? null;
+}
+
+export interface WhopCheckoutSession {
+  id: string;
+  purchaseUrl: string;
+  planId: string;
+}
+
+export async function createWhopCheckoutSession(args: {
+  planId: string;
+  metadata: Record<string, string>;
+  redirectUrl: string;
+}): Promise<WhopCheckoutSession> {
+  // Prod (Vercel) sets WHOP_API_KEY; the local .env.local stores the same
+  // scoped app key under WHOP_APP_API_KEY. Accept either so local dev + prod
+  // both resolve without a duplicated secret.
+  const apiKey = process.env.WHOP_API_KEY || process.env.WHOP_APP_API_KEY;
+  if (!apiKey) throw new Error("WHOP_API_KEY / WHOP_APP_API_KEY not set");
+  const res = await fetch("https://api.whop.com/api/v1/checkout_configurations", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify({
+      plan_id: args.planId,
+      metadata: args.metadata,
+      redirect_url: args.redirectUrl,
+    }),
+  });
+  const text = await res.text();
+  if (!res.ok) {
+    throw new Error(`Whop checkout_configurations HTTP ${res.status}: ${text.slice(0, 300)}`);
+  }
+  const d = JSON.parse(text) as { id?: string; purchase_url?: string };
+  if (!d.id || !d.purchase_url) {
+    throw new Error(`Whop checkout response missing id/purchase_url: ${text.slice(0, 200)}`);
+  }
+  return { id: d.id, purchaseUrl: d.purchase_url, planId: args.planId };
 }

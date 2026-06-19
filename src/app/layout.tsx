@@ -227,10 +227,11 @@ export default function RootLayout({
 
           Honesty rules baked in (brand-sweep 2026-06-04):
           - Offers list ONLY the tiers that are actually purchasable today:
-            the free tier (€0) + the three live crypto tiers (€19/€27/€114).
-            The four card tiers (€29/€79/€149/€229) are waitlist-only until
-            Stripe Atlas clears, so they are NOT asserted as buyable here —
-            re-add them with availability:InStock once card checkout is live.
+            the free tier (€0) + the three live tiers (€19/€27/€114), now
+            paid by card via Whop. The four recurring standard tiers
+            (€29/€79/€149/€229) still have no Whop plan, so they remain
+            waitlist-only and are NOT asserted as buyable here — add them
+            with availability:InStock once their Whop plans exist.
           - No aggregateRating / Review (removed 2026-04-22 — the hard-coded
             4.8/156 didn't match real data; re-introduce only when wired to
             real user_feedback).
@@ -297,7 +298,7 @@ export default function RootLayout({
                   "publisher": { "@id": "https://medpruf.com/#organization" },
                   "author": { "@id": "https://example.com/#organization" },
                   // Only purchasable tiers are listed. Free + the three live
-                  // crypto tiers (priced in EUR, paid in USDT/USDC).
+                  // paid tiers (priced in EUR, paid by card via Whop).
                   "offers": [
                     {
                       "@type": "Offer",
@@ -315,7 +316,7 @@ export default function RootLayout({
                       "priceCurrency": "EUR",
                       "availability": "https://schema.org/InStock",
                       "description":
-                        "One-time single-month full access. Paid in crypto (USDT/USDC).",
+                        "One-time single-month full access. Payable by card (Visa, Mastercard, Apple Pay).",
                     },
                     {
                       "@type": "Offer",
@@ -324,7 +325,7 @@ export default function RootLayout({
                       "priceCurrency": "EUR",
                       "availability": "https://schema.org/InStock",
                       "description":
-                        "One-time 3-month full access. Paid in crypto (USDT/USDC).",
+                        "One-time 3-month full access. Payable by card (Visa, Mastercard, Apple Pay).",
                     },
                     {
                       "@type": "Offer",
@@ -333,7 +334,7 @@ export default function RootLayout({
                       "priceCurrency": "EUR",
                       "availability": "https://schema.org/InStock",
                       "description":
-                        "6 months of full access with the Pass-Until-You-Pass guarantee. Paid in crypto (USDT/USDC).",
+                        "6 months of full access with the Pass-Until-You-Pass guarantee. Payable by card (Visa, Mastercard, Apple Pay).",
                     },
                   ],
                 },

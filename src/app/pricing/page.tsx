@@ -18,7 +18,6 @@ import {
 import { getLang, setLang } from "@/lib/i18n";
 import { getStoredSession } from "@/lib/auth";
 import { getStoredExamSource, type ExamSourceId } from "@/lib/topics";
-import { PreCheckoutTrustDialog } from "@/components/PreCheckoutTrustDialog";
 import { authFetch as fetch } from "@/lib/authFetch";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
@@ -98,15 +97,6 @@ export default function PricingPage() {
   const [examDate, setExamDate] = useState("");
   const [emailErr, setEmailErr] = useState<string | undefined>(undefined);
   const [submitting, setSubmitting] = useState(false);
-  // Pre-checkout trust dialog (rescue-sprint §1.2). Holds the tier the
-  // user clicked so the dialog renders the right plan summary. Open
-  // state is `null` when closed, otherwise the tier id.
-  const [trustDialogTier, setTrustDialogTier] = useState<
-    | "premium_pass_guaranteed"
-    | "first_3mo_27"
-    | "first_month_19"
-    | null
-  >(null);
   const toast = useToast();
 
   useEffect(() => {
@@ -130,16 +120,16 @@ export default function PricingPage() {
   };
 
   /**
-   * Start a NOWPayments crypto checkout for any live tier.
+   * Start a Whop CARD checkout for any live tier.
    *
-   * Logged-in users hit the NOWPayments endpoint directly; logged-out
-   * users get bounced to /login with a `next` + `action` hint so the
-   * post-login redirect lands them back here and auto-triggers the
-   * checkout.
+   * Logged-in users get a per-user Whop checkout-configuration session
+   * (POST /api/whop/checkout) carrying metadata.medpruef_user_id + tier,
+   * then redirect to its hosted purchase_url (card + Apple Pay, secure).
+   * The webhook (/api/webhooks/whop) grants Pro on payment.succeeded by
+   * reading that metadata. Logged-out users bounce to /login with a
+   * `next` + `action` hint so the post-login redirect auto-triggers it.
    *
-   * `slot` controls which CTA spinner lights up — we track them
-   * individually so users can still click other cards while one
-   * invoice is mid-flight.
+   * `slot` controls which CTA spinner lights up.
    */
   const startCryptoCheckout = async (
     tier:
@@ -156,74 +146,26 @@ export default function PricingPage() {
     }
     setCheckoutLoading(slot);
     try {
-      const r = await fetch("/api/checkout/nowpayments", {
+      const r = await fetch("/api/whop/checkout", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ tier }),
       });
-      if (r.ok) {
-        const data = await r.json().catch(() => ({}));
-        if (data?.invoice_url) {
-          window.location.href = data.invoice_url;
-          return;
-        }
-        toast.error(
-          lang === "de" ? "Checkout fehlgeschlagen" : "Checkout failed",
-          lang === "de"
-            ? "Keine Rechnungs-URL erhalten."
-            : "No invoice URL received."
-        );
-      } else if (r.status === 400) {
-        // Try to parse the JSON body for the entry-tier eligibility
-        // signal — if the user already used `first_3mo_27`, we surface
-        // the friendly localised message and reveal the single-month
-        // fallback inline so they have a one-click recovery path.
-        const body = await r.json().catch(() => null) as
-          | {
-              error?: string;
-              message_de?: string;
-              message_en?: string;
-              next_options?: string[];
-            }
-          | null;
-        if (body?.error === "ENTRY_TIER_ALREADY_USED") {
-          setShowSingleMonth(true);
-          toast.info(
-            lang === "de"
-              ? "Einstieg bereits genutzt"
-              : "Entry tier already used",
-            lang === "de"
-              ? body.message_de ??
-                  "Du hast den 3-Monats-Einstieg bereits genutzt. Wähle die Juni-26-Kohorte oder den Einzelmonat."
-              : body.message_en ??
-                  "You've already used the 3-month starter. Pick Cohort or the single-month fallback."
-          );
-        } else {
-          toast.error(
-            lang === "de" ? "Checkout fehlgeschlagen" : "Checkout failed",
-            (body?.error ?? "").slice(0, 120) ||
-              (lang === "de"
-                ? "Bitte später erneut versuchen."
-                : "Please try again later.")
-          );
-        }
-      } else if (r.status === 404) {
-        toast.info(
-          lang === "de" ? "Kurz noch Geduld" : "Almost ready",
-          lang === "de"
-            ? "Der Krypto-Checkout geht gleich live. Schreib an user-b7e46e80@example.com."
-            : "Crypto checkout launches in a moment. Email user-b7e46e80@example.com."
-        );
-      } else {
-        const msg = await r.text().catch(() => "");
-        toast.error(
-          lang === "de" ? "Checkout fehlgeschlagen" : "Checkout failed",
-          msg.slice(0, 120) ||
-            (lang === "de"
-              ? "Bitte später erneut versuchen."
-              : "Please try again later.")
-        );
+      const data = (await r.json().catch(() => ({}))) as {
+        purchaseUrl?: string;
+        error?: string;
+      };
+      if (r.ok && data?.purchaseUrl) {
+        window.location.href = data.purchaseUrl;
+        return;
       }
+      toast.error(
+        lang === "de" ? "Checkout fehlgeschlagen" : "Checkout failed",
+        (data?.error ?? "").slice(0, 140) ||
+          (lang === "de"
+            ? "Bitte später erneut versuchen."
+            : "Please try again later.")
+      );
     } catch {
       toast.error(
         lang === "de" ? "Netzwerkfehler" : "Network error",
@@ -234,14 +176,13 @@ export default function PricingPage() {
   };
 
   /**
-   * Cohort + €19 CTAs route through the {@link PreCheckoutTrustDialog}
-   * (rescue-sprint §1.2) before firing the actual NOWPayments invoice.
-   * The dialog surfaces the company name, 7-day refund, PUYP badge,
-   * USDT explainer, and "Ich habe keine Krypto" escape — without it,
-   * users land on a stranger's payment page with zero trust signals.
+   * Paid CTAs create a per-user Whop checkout session and redirect to the
+   * hosted card page (whop.com/checkout/...?session=ch_...). The session
+   * carries metadata.medpruef_user_id so the webhook maps the card payment
+   * back to this user. Card + Apple Pay both work with no extra setup.
    *
-   * Logged-out users still bounce to /login first; the dialog only
-   * fires for authenticated users.
+   * Logged-out users bounce to /login first, then the action-hint redirect
+   * re-fires the same checkout after they authenticate.
    */
   const openCohortDialog = () => {
     if (!session?.user) {
@@ -249,7 +190,7 @@ export default function PricingPage() {
       window.location.href = `/login?next=${next}&action=cohort-checkout`;
       return;
     }
-    setTrustDialogTier("premium_pass_guaranteed");
+    void startCryptoCheckout("premium_pass_guaranteed", "cohort", "cohort-checkout");
   };
 
   const openStarter3moDialog = () => {
@@ -258,7 +199,7 @@ export default function PricingPage() {
       window.location.href = `/login?next=${next}&action=starter-3mo-checkout`;
       return;
     }
-    setTrustDialogTier("first_3mo_27");
+    void startCryptoCheckout("first_3mo_27", "starter", "starter-3mo-checkout");
   };
 
   const openFirstMonthDialog = () => {
@@ -267,54 +208,8 @@ export default function PricingPage() {
       window.location.href = `/login?next=${next}&action=first-month-checkout`;
       return;
     }
-    setTrustDialogTier("first_month_19");
+    void startCryptoCheckout("first_month_19", "first_month", "first-month-checkout");
   };
-
-  // Confirmation handler — the dialog calls this when user clicks
-  // "Verstanden — weiter zur Zahlung". We then fire the actual
-  // NOWPayments invoice creation.
-  const handleTrustDialogConfirm = () => {
-    if (!trustDialogTier) return;
-    const slot: "cohort" | "starter" | "first_month" =
-      trustDialogTier === "premium_pass_guaranteed"
-        ? "cohort"
-        : trustDialogTier === "first_3mo_27"
-          ? "starter"
-          : "first_month";
-    const actionHint =
-      trustDialogTier === "premium_pass_guaranteed"
-        ? "cohort-checkout"
-        : trustDialogTier === "first_3mo_27"
-          ? "starter-3mo-checkout"
-          : "first-month-checkout";
-    setTrustDialogTier(null);
-    void startCryptoCheckout(trustDialogTier, slot, actionHint);
-  };
-
-  // Legacy direct-fire entrypoints — preserved so any other call sites
-  // (the action-hint redirect post-login) continue to work without the
-  // dialog interrupt. The pricing-page CTAs now go through
-  // openCohortDialog / openStarter3moDialog / openFirstMonthDialog.
-  const startCohortCheckout = () =>
-    startCryptoCheckout(
-      "premium_pass_guaranteed",
-      "cohort",
-      "cohort-checkout",
-    );
-
-  const startStarter3moCheckout = () =>
-    startCryptoCheckout(
-      "first_3mo_27",
-      "starter",
-      "starter-3mo-checkout",
-    );
-
-  const startFirstMonthCheckout = () =>
-    startCryptoCheckout(
-      "first_month_19",
-      "first_month",
-      "first-month-checkout",
-    );
 
   const submitWaitlist = async () => {
     const e = email.trim();
@@ -672,13 +567,13 @@ export default function PricingPage() {
             <FAQItem
               q={
                 lang === "de"
-                  ? "Warum nur Krypto-Zahlung für die Juni-26-Kohorte?"
-                  : "Why crypto-only for the June 26 Cohort?"
+                  ? "Wie kann ich bezahlen?"
+                  : "How can I pay?"
               }
               a={
                 lang === "de"
-                  ? "Unsere US-Merchant-Entity über Stripe Atlas ist noch in Bearbeitung. Solange sie läuft, ist die Kohorte ausschließlich per USDT/USDC zahlbar. Sobald Stripe live ist, schalten wir die Standardtarife frei — trag dich oben in die Warteliste ein."
-                  : "Our US merchant entity via Stripe Atlas is still in progress. Until then, the Cohort is crypto-only (USDT/USDC). When Stripe clears we open the standard tiers — join the waitlist above."
+                  ? "Du zahlst sicher mit Karte (auch Apple Pay), in wenigen Sekunden. Der Vollzugang wird sofort nach der Zahlung freigeschaltet."
+                  : "You pay securely by card (Apple Pay too), in seconds. Full access unlocks right after payment."
               }
             />
             <FAQItem
@@ -732,8 +627,8 @@ export default function PricingPage() {
               </h3>
               <p className="mp-body text-white/80 max-w-xl mx-auto mb-6">
                 {lang === "de"
-                  ? "6 Monate Vollzugang, €114, zahlbar in Krypto. Inklusive Pass-Until-You-Pass-Garantie."
-                  : "6 months of full access, €114, payable in crypto. Pass-Until-You-Pass guarantee included."}
+                  ? "6 Monate Vollzugang, €114, zahlbar mit Karte. Inklusive Pass-Until-You-Pass-Garantie."
+                  : "6 months of full access, €114, payable by card. Pass-Until-You-Pass guarantee included."}
               </p>
               <button
                 type="button"
@@ -752,8 +647,8 @@ export default function PricingPage() {
                     ? "Rechnung wird erstellt…"
                     : "Creating invoice…"
                   : lang === "de"
-                    ? "Jetzt zahlen mit Krypto"
-                    : "Pay with crypto"}
+                    ? "Jetzt mit Karte zahlen"
+                    : "Pay by card"}
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
@@ -868,31 +763,11 @@ export default function PricingPage() {
 
           <p className="text-[11px] text-[var(--mp-fg-subtle)] leading-relaxed pt-1">
             {lang === "de"
-              ? "Deine E-Mail wird ausschließlich für die Stripe-Benachrichtigung verwendet. Du kannst dich jederzeit austragen."
-              : "Your email is only used for the Stripe notification. You can unsubscribe any time."}
+              ? "Deine E-Mail wird ausschließlich verwendet, um dich zu benachrichtigen, sobald dieser Tarif startet. Du kannst dich jederzeit austragen."
+              : "Your email is only used to notify you when this plan opens. You can unsubscribe any time."}
           </p>
         </div>
       </Dialog>
-
-      {/*
-        Pre-checkout trust dialog — interrupts the cohort + €19 CTAs
-        before the NOWPayments redirect so the user sees company name,
-        7-day refund, PUYP guarantee, USDT-TRC20 explainer, and the
-        "Ich habe keine Krypto" escape-hatch. The 5/5 invoice
-        abandonment in the 2026-04-23 audit was partly explained by
-        the previous 1-click jump to nowpayments.io with no trust
-        signals; this dialog is the rescue-sprint §1.2 fix.
-      */}
-      <PreCheckoutTrustDialog
-        open={trustDialogTier !== null}
-        onOpenChange={(open) => {
-          if (!open) setTrustDialogTier(null);
-        }}
-        tier={trustDialogTier ?? "first_month_19"}
-        userEmail={session?.user?.email}
-        lang={lang}
-        onConfirm={handleTrustDialogConfirm}
-      />
     </div>
   );
 }
@@ -1140,8 +1015,8 @@ function Starter3MoCard({
         </button>
         <p className="mp-small text-[var(--mp-fg-subtle)] md:text-right">
           {lang === "de"
-            ? "USDT / USDC · aktiv in Minuten · läuft nach 90 Tagen aus"
-            : "USDT / USDC · active in minutes · expires after 90 days"}
+            ? "Karte · sofort aktiv · läuft nach 90 Tagen aus"
+            : "Card · active instantly · expires after 90 days"}
         </p>
       </div>
     </article>
@@ -1279,8 +1154,8 @@ function FirstMonthCard({
         </button>
         <p className="mp-small text-[var(--mp-fg-subtle)] md:text-right">
           {lang === "de"
-            ? "USDT / USDC · aktiv in Minuten · läuft nach 30 Tagen aus"
-            : "USDT / USDC · active in minutes · expires after 30 days"}
+            ? "Karte · sofort aktiv · läuft nach 30 Tagen aus"
+            : "Card · active instantly · expires after 30 days"}
         </p>
       </div>
     </article>
@@ -1428,8 +1303,8 @@ function CohortFeaturedCard({
             >
               <Bitcoin className="w-3.5 h-3.5" />
               {lang === "de"
-                ? "USDT oder USDC — kein Kursrisiko"
-                : "USDT or USDC — no FX risk"}
+                ? "Sichere Kartenzahlung, auch Apple Pay"
+                : "Secure card payment, Apple Pay too"}
             </p>
           </div>
 
@@ -1447,7 +1322,7 @@ function CohortFeaturedCard({
               </>
             ) : (
               <>
-                {lang === "de" ? "Jetzt zahlen mit Krypto" : "Pay with crypto"}
+                {lang === "de" ? "Jetzt mit Karte zahlen" : "Pay by card"}
                 <ArrowRight className="w-4 h-4" />
               </>
             )}

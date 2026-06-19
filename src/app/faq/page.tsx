@@ -9,7 +9,7 @@ import {
   Info,
   ShieldCheck,
   Gift,
-  Bitcoin,
+  CreditCard,
   BookOpen,
   Layers,
   Users,
@@ -41,10 +41,10 @@ const SECTIONS: SectionDef[] = [
   },
   {
     id: "crypto-only",
-    icon: Bitcoin,
+    icon: CreditCard,
     title: {
-      de: "Warum nur Krypto?",
-      en: "Why crypto-only?",
+      de: "Wie bezahle ich?",
+      en: "How do I pay?",
     },
   },
   {
@@ -295,11 +295,11 @@ export default function FaqPage() {
 
               <Callout variant="info" lang={lang}>
                 <strong className="text-[var(--mp-fg)]">
-                  {lang === "de" ? "Sicher per Krypto zahlen." : "Paying with crypto safely."}
+                  {lang === "de" ? "Sicher mit Karte zahlen." : "Paying by card safely."}
                 </strong>{" "}
                 {lang === "de"
-                  ? "Wir nutzen NOWPayments als Treuhänder. Zahlungen in USDT oder USDC auf TRC-20 oder ERC-20 — bestätigt in Minuten, keine FX-Risiken."
-                  : "We use NOWPayments as escrow. Pay in USDT or USDC on TRC-20 or ERC-20 — settled in minutes, no FX risk."}
+                  ? "Der Checkout läuft über Whop mit verschlüsselter Kartenzahlung. Wir speichern keine Kartendaten. Visa, Mastercard und Apple Pay werden akzeptiert, bestätigt in Sekunden."
+                  : "Checkout runs through Whop with encrypted card payment. We never store your card details. Visa, Mastercard and Apple Pay accepted, confirmed in seconds."}
               </Callout>
             </FaqSection>
 
@@ -558,16 +558,16 @@ const copy = {
   },
   crypto: {
     title: {
-      de: "Warum ist gerade nur Krypto-Zahlung möglich?",
-      en: "Why is payment crypto-only right now?",
+      de: "Wie kann ich bezahlen?",
+      en: "How can I pay?",
     },
     p1: {
-      de: "MedPrüf wird aus Österreich heraus für ausländische Ärzt:innen betrieben. Europäische Zahlungsanbieter (Stripe EU, Paddle, Whop) blockieren unsere Konten aktuell beim KYC wegen eines abgelaufenen Reisedokuments. Die praktische Alternative: wir registrieren über Stripe Atlas eine US-LLC + EIN, dann wird Stripe live. Der Antrag läuft.",
-      en: "MedPrüf is operated from Austria for foreign doctors. European payment processors (Stripe EU, Paddle, Whop) currently reject our accounts at KYC because of an expired travel document. The practical alternative: register a US LLC + EIN via Stripe Atlas, after which Stripe goes live. That filing is in progress.",
+      de: "Du zahlst sicher mit Karte (Visa, Mastercard, auch Apple Pay). Der Checkout läuft über Whop, unseren Zahlungsabwickler. Nach der Zahlung wird dein Vollzugang automatisch freigeschaltet, meist innerhalb einer Minute.",
+      en: "You pay securely by card (Visa, Mastercard, Apple Pay too). Checkout runs through Whop, our payment processor. After payment, your full access unlocks automatically, usually within a minute.",
     },
     p2: {
-      de: "Bis dahin sind die Juni-26-Kohorte (€114) und der kostenlose Tarif die einzigen live verfügbaren Optionen. Die Monats- und Jahres-Standardtarife sind bereits auf der Preisseite sichtbar und nehmen Warteliste-Einträge entgegen — sobald Stripe live ist, benachrichtigen wir jede:n persönlich.",
-      en: "Until then, the June 26 Cohort (€114) and the free tier are the only options live on the site. The monthly and annual standard tiers are already visible on pricing and accept waitlist sign-ups — when Stripe clears we personally notify everyone.",
+      de: "Live verfügbar sind die Juni-26-Kohorte (€114), der 3-Monats-Einstieg (€27), der Einzelmonat (€19) und der kostenlose Tarif. Es ist kein Abo: nichts verlängert sich automatisch, der Zugang läuft nach der gebuchten Laufzeit aus. Die wiederkehrenden Monats- und Jahrestarife sind auf der Preisseite sichtbar und nehmen Warteliste-Einträge entgegen.",
+      en: "Live right now: the June 26 Cohort (€114), the 3-month starter (€27), the single month (€19), and the free tier. It is not a subscription: nothing auto-renews, access simply ends when your term is up. The recurring monthly and annual tiers are visible on the pricing page and accept waitlist sign-ups.",
     },
   },
   ref: {

@@ -44,7 +44,7 @@ export default function AdminWebhooksPage() {
   return (
     <AdminPageShell
       title="Webhooks"
-      description="NOWPayments IPN + future Stripe callbacks, processed events."
+      description="Whop + NOWPayments IPN callbacks, processed events."
       freshness={loading ? "cached" : "live"}
       onRefresh={load}
     >
