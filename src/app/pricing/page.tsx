@@ -239,8 +239,8 @@ export default function PricingPage() {
             ? "Du stehst auf der Warteliste."
             : "You're on the waitlist.",
           lang === "de"
-            ? "Wir melden uns, sobald Stripe live ist."
-            : "We'll notify you when Stripe goes live."
+            ? "Wir melden uns, sobald dieser Tarif verfügbar ist."
+            : "We'll notify you when this plan is available."
         );
         setWaitOpen(false);
       } else if (r.status === 409) {
@@ -756,8 +756,8 @@ export default function PricingPage() {
             onChange={(e) => setExamDate(e.target.value)}
             helper={
               lang === "de"
-                ? "Hilft uns, dich zu priorisieren, sobald Stripe live ist."
-                : "Helps us prioritise you when Stripe goes live."
+                ? "Hilft uns, dich zu priorisieren, sobald dieser Tarif öffnet."
+                : "Helps us prioritise you when this plan opens."
             }
           />
 
@@ -1411,8 +1411,8 @@ function StandardTierRow({
           >
             <Lock className="w-2.5 h-2.5" aria-hidden />
             {lang === "de"
-              ? "Stripe startet bald"
-              : "Stripe launching soon"}
+              ? "Bald verfügbar"
+              : "Coming soon"}
           </span>
         </div>
         <p className="text-sm text-[var(--mp-fg-muted)] leading-relaxed">
