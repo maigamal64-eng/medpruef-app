@@ -8,10 +8,11 @@
  * path via @/lib/nowpayments (TIERS). Account/skill: ~/.claude/skills/whop;
  * decision memo: comms/payment-options-whop-vs-telegram-2026-06-19.md.
  *
- * Webhook auth = Standard Webhooks (svix) scheme:
- *   headers  webhook-id / webhook-timestamp / webhook-signature ("v1,<b64>")
- *   content  "{id}.{timestamp}.{rawBody}"
- *   sig      HMAC-SHA256(base64-decoded secret) -> base64  (strip "whsec_")
+ * Webhook auth (confirmed against a real delivery 2026-06-19): Whop's dashboard
+ * webhooks send the configured secret in a `webhook-secret` header — verify by
+ * constant-time equality (verifyWhopSecretHeader). The Standard-Webhooks/svix
+ * HMAC scheme (verifyWhopSignature) is kept ONLY as a fallback; the real v2
+ * deliveries carry no svix headers and do not use it.
  */
 import crypto from "crypto";
 import { TIERS, computeExpiry } from "@/lib/nowpayments";
