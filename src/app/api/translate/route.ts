@@ -38,6 +38,13 @@ const TRANSLATE_BURST_LIMIT = { limit: 15, windowMs: 60_000 };
 
 const UPSTREAM_TIMEOUT_MS = 20_000;
 const FREE_DAILY_QUOTA = 5;
+// Paid (Pro/admin) daily cap on NEW (upstream) translations. Generous for real
+// use (one click per question) but blocks programmatic cost runaway. Cache hits
+// are free and never counted. Overridable via env.
+const PAID_DAILY_QUOTA = (() => {
+  const raw = Number(process.env.AI_TRANSLATE_QUOTA_PAID);
+  return Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : 200;
+})();
 
 // ────────────────────────────────────────────────────────────────────
 // AI kill switch — mirrors /api/ai-chat (GATE 1). Without this, translate
@@ -121,7 +128,7 @@ export async function POST(req: NextRequest) {
 
   const guard = await requireUser(req);
   if ("error" in guard) return guard.error;
-  const { userId, tier } = guard;
+  const { userId } = guard;
 
   const burstGate = checkRateLimit({
     key: rateKey("translate", userId),
@@ -196,7 +203,9 @@ export async function POST(req: NextRequest) {
   //    2026-04-24: switched from `tier === "free"` to `isFreeAccess(guard)`
   //    so /admin/ operators (role='admin' but tier='free') aren't
   //    quota-limited. Same fix pattern as /api/ai-chat.
-  if (isFreeAccess(guard)) {
+  {
+    const free = isFreeAccess(guard);
+    const dailyCap = free ? FREE_DAILY_QUOTA : PAID_DAILY_QUOTA;
     try {
       const since = new Date();
       since.setHours(0, 0, 0, 0);
@@ -206,10 +215,12 @@ export async function POST(req: NextRequest) {
         .eq("user_id", userId)
         .eq("event_type", "translation")
         .gte("created_at", since.toISOString());
-      if (typeof count === "number" && count >= FREE_DAILY_QUOTA) {
+      if (typeof count === "number" && count >= dailyCap) {
         return NextResponse.json(
           {
-            error: `Daily translation quota reached (${FREE_DAILY_QUOTA}). Upgrade to Pro for unlimited translations.`,
+            error: free
+              ? `Daily translation quota reached (${FREE_DAILY_QUOTA}). Upgrade to Pro for more.`
+              : `Daily translation limit reached (${PAID_DAILY_QUOTA}). Resets at midnight CET.`,
             code: "QUOTA_EXCEEDED",
           },
           { status: 429 },
@@ -325,6 +336,18 @@ export async function POST(req: NextRequest) {
     }
   } catch (err) {
     console.error("[translate] cache insert:", err);
+  }
+
+  // Log the upstream (cost-incurring) translation so the per-tier daily cap
+  // above actually counts. Cache hits return earlier and are never logged.
+  try {
+    await db.from("user_events").insert({
+      user_id: userId,
+      event_type: "translation",
+      event_data: { question_id: questionId, lang, field, model: sourceModel || null },
+    });
+  } catch {
+    /* swallow — telemetry must not block the response */
   }
 
   return NextResponse.json({
