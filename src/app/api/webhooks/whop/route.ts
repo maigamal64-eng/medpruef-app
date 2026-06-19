@@ -73,23 +73,16 @@ export async function POST(req: NextRequest) {
       secret
     );
   if (!valid) {
-    // TEMP confirm-diagnostic (remove once green): how the webhook-secret header
-    // relates to our configured secret. No secret leak — booleans + lengths only.
-    const noPrefix = secret.replace(/^ws_/, "");
-    const diag = {
-      hasSecretHeader: Boolean(secretHeader),
-      eqConfigured: secretHeader === secret,
-      eqNoPrefix: secretHeader === noPrefix,
-      secretHeaderLen: secretHeader?.length ?? 0,
-      configuredLen: secret.length,
-      secretHeaderPrefix: secretHeader ? secretHeader.slice(0, 3) : null,
-      sawSvixSignature: Boolean(req.headers.get("webhook-signature")),
-    };
-    console.error("[whop webhook DIAG]", JSON.stringify(diag));
+    // A delivery that carries a webhook-secret (or svix) header but still fails
+    // verification is almost certainly a WHOP_WEBHOOK_SECRET mismatch, not noise
+    // — flag it loudly so a real payment can never fail auth silently.
     if (looksLikeWhopDelivery) {
-      Sentry.captureMessage("Whop webhook failed verification — diag: " + JSON.stringify(diag), "error");
+      Sentry.captureMessage(
+        "Whop webhook carried a webhook-secret/svix header but FAILED verification — likely WHOP_WEBHOOK_SECRET mismatch; payments will not auto-grant",
+        "error"
+      );
     }
-    return NextResponse.json({ error: "Invalid signature", diag }, { status: 401 });
+    return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
   }
 
   let payload: Record<string, unknown>;
