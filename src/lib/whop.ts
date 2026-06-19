@@ -42,7 +42,34 @@ export function isKnownTier(tier: string | null | undefined): tier is string {
   return Boolean(tier && TIERS[tier]);
 }
 
-// ── Standard Webhooks signature verification ──────────────────────
+// ── Whop v2 dashboard-webhook auth (the scheme Whop ACTUALLY uses) ──
+// Verified against a real delivery 2026-06-19: Whop's dashboard webhooks send
+// NO svix headers — they send the configured secret in a `webhook-secret`
+// header and you verify by constant-time equality. (The generic docs describe
+// Standard Webhooks / HMAC, which these deliveries do NOT use.)
+export function verifyWhopSecretHeader(
+  headerValue: string | null | undefined,
+  configuredSecret: string | undefined
+): boolean {
+  if (!headerValue || !configuredSecret) return false;
+  // Accept the secret verbatim or with the `ws_` prefix stripped on either side.
+  const candidates = [
+    configuredSecret,
+    configuredSecret.replace(/^ws_/, ""),
+  ];
+  const hv = headerValue.trim();
+  return candidates.some((c) => {
+    try {
+      const a = Buffer.from(hv);
+      const b = Buffer.from(c);
+      return a.length === b.length && crypto.timingSafeEqual(a, b);
+    } catch {
+      return false;
+    }
+  });
+}
+
+// ── Standard Webhooks signature verification (fallback) ─────────────
 export function verifyWhopSignature(
   rawBody: string,
   headers: { id?: string | null; timestamp?: string | null; signature?: string | null },
