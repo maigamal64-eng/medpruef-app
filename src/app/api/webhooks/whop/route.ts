@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import crypto from "crypto";
 import * as Sentry from "@sentry/nextjs";
 import { getServiceClient } from "@/lib/supabase";
 import {
@@ -67,13 +68,20 @@ export async function POST(req: NextRequest) {
     secret
   );
   if (!valid) {
+    // TEMP DIAGNOSTIC (2026-06-19): a real Whop test delivery 401s, so my
+    // verifier's scheme guess is wrong. Compute every plausible
+    // (key-encoding x signed-content) combo against Whop's ACTUAL signature
+    // and report which one matches — returned in the response body so the
+    // Whop "Test webhook" dialog shows it directly. REMOVE after the fix.
+    const diag = whopSigDiagnostic(rawBody, req, secret);
+    console.error("[whop webhook DIAG]", JSON.stringify(diag));
     if (looksLikeWhopDelivery) {
       Sentry.captureMessage(
-        "Whop webhook carried svix headers but FAILED signature verification — likely WHOP_WEBHOOK_SECRET / scheme mismatch; payments will not auto-grant",
+        "Whop webhook FAILED signature verification — diagnostic: " + JSON.stringify(diag.summary),
         "error"
       );
     }
-    return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
+    return NextResponse.json({ error: "Invalid signature", diag }, { status: 401 });
   }
 
   let payload: Record<string, unknown>;
@@ -257,4 +265,60 @@ async function recordEvent(
   } catch (err) {
     console.error(`[recordEvent:${eventType}]`, err);
   }
+}
+
+// TEMP DIAGNOSTIC (2026-06-19) — REMOVE after the signature scheme is fixed.
+// Given the real Whop delivery's headers + body, try every plausible
+// (key-encoding x signed-content x output-encoding) combination and report
+// which one reproduces Whop's signature. That tells us the exact scheme with
+// zero further guessing.
+function whopSigDiagnostic(rawBody: string, req: NextRequest, secret: string) {
+  const id = req.headers.get("webhook-id") || "";
+  const ts = req.headers.get("webhook-timestamp") || "";
+  const rawSig = req.headers.get("webhook-signature") || "";
+
+  // every header name present (so we learn the real header names if not svix)
+  const headersSeen: string[] = [];
+  req.headers.forEach((_v, k) => headersSeen.push(k));
+
+  const provided = rawSig
+    .split(/\s+/)
+    .map((p) => (p.includes(",") ? p.split(",")[1] : p))
+    .filter(Boolean);
+
+  const body = secret.replace(/^whsec_/, "").replace(/^ws_/, "");
+  const keys: Record<string, Buffer> = {};
+  if (/^[0-9a-fA-F]+$/.test(body) && body.length % 2 === 0) keys["hexdecode(body)"] = Buffer.from(body, "hex");
+  keys["base64decode(body)"] = Buffer.from(body, "base64");
+  keys["utf8(body)"] = Buffer.from(body, "utf8");
+  keys["utf8(secret)"] = Buffer.from(secret, "utf8");
+  try { keys["base64decode(secret)"] = Buffer.from(secret, "base64"); } catch { /* ignore */ }
+
+  const contents: Record<string, string> = {
+    "id.ts.body": `${id}.${ts}.${rawBody}`,
+    "ts.body": `${ts}.${rawBody}`,
+    "body": rawBody,
+  };
+
+  let matched: string | null = null;
+  const all: Record<string, string> = {};
+  for (const [kn, kb] of Object.entries(keys)) {
+    if (!kb.length) continue;
+    for (const [cn, cv] of Object.entries(contents)) {
+      const d = crypto.createHmac("sha256", kb).update(cv).digest();
+      const b64 = d.toString("base64");
+      const hex = d.toString("hex");
+      all[`${kn} | ${cn} | b64`] = b64;
+      all[`${kn} | ${cn} | hex`] = hex;
+      if (provided.some((p) => p === b64)) matched = matched || `${kn} | ${cn} | b64`;
+      if (provided.some((p) => p === hex)) matched = matched || `${kn} | ${cn} | hex`;
+    }
+  }
+
+  const tsNum = Number(ts);
+  const tsDelta = Number.isFinite(tsNum) ? Math.round(Date.now() / 1000 - tsNum) : null;
+  return {
+    summary: { matched, tsDelta, rawSig, headersSeen, bodyLen: rawBody.length, providedCount: provided.length },
+    all, // full table — visible in Vercel logs / Sentry if `matched` is null
+  };
 }
