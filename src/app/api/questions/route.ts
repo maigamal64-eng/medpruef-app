@@ -9,6 +9,9 @@ import {
   FREE_TIER_QUESTIONS_PER_EXAM,
   getFreeSliceIds,
   isFreeTier,
+  isFreeTierEnforced,
+  countDistinctAnsweredInExam,
+  getAnsweredSliceIds,
 } from '@/lib/free-tier'
 
 /**
@@ -281,18 +284,50 @@ export async function GET(req: NextRequest) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const withMcq = (q: any) => mcqOnly ? q.not('choices', 'is', null) : q
 
-  // Helper: intersect a candidate-id list with the free slice for the
-  // current exam. Used only when `free` is true. For callers that have
-  // no examSource (defensive — shouldn't happen), we fall back to the
-  // default exam so we never ship free users an unbounded result.
+  // The exam_type a free request resolves to. The free gate is always
+  // per-exam-type: a user at 150/150 on Kenntnisprüfung must still get
+  // Pharma. 'all'/unset falls back to the default exam so we never ship
+  // free users an unbounded cross-exam result.
+  const resolveFreeExam = (): string =>
+    filters.examSource && filters.examSource !== 'all'
+      ? filters.examSource === 'SIP'
+        ? 'kenntnispruefung'
+        : filters.examSource
+      : DEFAULT_EXAM_SOURCE
+
+  // Helper: the 150-question free slice for the current exam. Used only
+  // when `free` is true.
   const getFreeSliceForExam = async (): Promise<number[]> => {
-    const exam =
-      filters.examSource && filters.examSource !== 'all'
-        ? filters.examSource === 'SIP'
-          ? 'kenntnispruefung'
-          : filters.examSource
-        : DEFAULT_EXAM_SOURCE
-    return getFreeSliceIds(sb, exam)
+    return getFreeSliceIds(sb, resolveFreeExam())
+  }
+
+  // ── Durable free-tier cap (2026-06-20, behind FREE_TIER_ENFORCED) ──
+  // A free user who has ANSWERED ≥150 distinct questions in this exam
+  // type (counted cross-device from answer_history) is capped: NEW/unseen
+  // questions are walled. This is layered ON TOP of the slice — the slice
+  // still defines WHICH 150 they draw, this makes the wall fire durably
+  // (the client `seenIdsRef` was in-memory and reset on reload).
+  //
+  // Returns null when the cap does not apply (flag off, guest with no
+  // userId, not free, or under the cap). Returns { seen } when capped so
+  // the caller can emit a paywallHit with an honest count.
+  //
+  // Guests (userId === null) can't be cap-counted (no durable identity),
+  // so they keep the slice-only behaviour — the slice already bounds them
+  // to 150 questions and the landing demo must stay frictionless.
+  const checkDurableCap = async (): Promise<{ seen: number } | null> => {
+    if (!free) return null
+    if (!isFreeTierEnforced()) return null
+    if (!authed.userId) return null
+    const answered = await countDistinctAnsweredInExam(
+      sb,
+      authed.userId,
+      resolveFreeExam()
+    )
+    if (answered >= FREE_TIER_QUESTIONS_PER_EXAM) {
+      return { seen: Math.min(answered, FREE_TIER_QUESTIONS_PER_EXAM) }
+    }
+    return null
   }
 
   // countOnly short-circuit — returns { count } without question payloads.
@@ -307,6 +342,19 @@ export async function GET(req: NextRequest) {
       const slice = await getFreeSliceForExam()
       if (slice.length === 0) {
         return NextResponse.json({ count: 0, freeTier: true })
+      }
+      // Durable cap: a capped free user has consumed their allowance, so
+      // the available-NEW count is 0. Report it honestly (with capped:true)
+      // so the UI can render "150/150" rather than promising more.
+      const capped = await checkDurableCap()
+      if (capped) {
+        return NextResponse.json({
+          count: 0,
+          freeTier: true,
+          capped: true,
+          seen: capped.seen,
+          limit: FREE_TIER_QUESTIONS_PER_EXAM,
+        })
       }
       cq = cq.in('id', slice)
     }
@@ -329,6 +377,15 @@ export async function GET(req: NextRequest) {
       const slice = await getFreeSliceForExam()
       const sliceSet = new Set(slice)
       filters.ids = filters.ids.filter((id) => sliceSet.has(id))
+      // Durable cap: a capped free user keeps READ access to questions
+      // they've already answered (re-read + cached AI explanation), but
+      // a deep-link to an unseen slice id must NOT let them consume new
+      // content past the cap. So when capped, restrict to answered ids.
+      const capped = await checkDurableCap()
+      if (capped) {
+        const answered = await getAnsweredSliceIds(sb, authed.userId!, slice)
+        filters.ids = filters.ids.filter((id) => answered.has(id))
+      }
       if (filters.ids.length === 0) {
         return NextResponse.json({
           paywallHit: true,
@@ -356,9 +413,18 @@ export async function GET(req: NextRequest) {
     query = applyFilters(query, filters)
     query = withMcq(query)
     if (free) {
-      const slice = await getFreeSliceForExam()
+      let slice = await getFreeSliceForExam()
       if (slice.length === 0) {
         return NextResponse.json([])
+      }
+      // Durable cap: a capped free user can search only within what they
+      // already answered (re-find a question to re-read it), not surface
+      // new slice questions they haven't unlocked.
+      const capped = await checkDurableCap()
+      if (capped) {
+        const answered = await getAnsweredSliceIds(sb, authed.userId!, slice)
+        slice = slice.filter((id) => answered.has(id))
+        if (slice.length === 0) return NextResponse.json([])
       }
       query = query.in('id', slice)
     }
@@ -445,6 +511,19 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({
         paywallHit: true,
         seen: 0,
+        limit: FREE_TIER_QUESTIONS_PER_EXAM,
+      })
+    }
+    // Durable cap: a free user who has answered ≥150 distinct in this
+    // exam type is walled from NEW questions. The random path always
+    // serves a fresh/unseen question, so when capped we wall here. (A
+    // free user can still RE-READ an already-answered question via the
+    // explicit-ids path below — that branch serves answered ids.)
+    const capped = await checkDurableCap()
+    if (capped) {
+      return NextResponse.json({
+        paywallHit: true,
+        seen: capped.seen,
         limit: FREE_TIER_QUESTIONS_PER_EXAM,
       })
     }

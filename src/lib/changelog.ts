@@ -23,6 +23,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-06-20",
+    tag: "admin",
+    title: {
+      de: "Free-Tier wird jetzt durchgesetzt (150 Fragen pro Prüfungstyp)",
+      en: "Free tier is now enforced (150 questions per exam type)",
+    },
+    description: {
+      de: "Die beworbene Free-Tier-Grenze (150 Fragen pro Prüfungstyp) wird jetzt serverseitig und geräteübergreifend durchgesetzt. Gezählt werden die eindeutig beantworteten Fragen je Prüfungstyp aus answer_history. Sobald 150 erreicht sind, werden NEUE Fragen in diesem Prüfungstyp gesperrt und die Upgrade-Aufforderung erscheint. Bereits beantwortete Fragen und deren gespeicherte KI-Erklärungen bleiben für Free-Nutzer lesbar. Pro, aktive Abos und Admins sind nicht betroffen, jeder Prüfungstyp wird getrennt gezählt. Auch der Offline-Download respektiert die Grenze jetzt. Umkehrbar über das Flag FREE_TIER_ENFORCED.",
+      en: "The advertised free-tier limit (150 questions per exam type) is now enforced server-side and cross-device. It counts distinct answered questions per exam type from answer_history; once 150 is reached, NEW questions in that exam type are gated and the upgrade prompt appears. Questions a free user has already answered, and their cached AI explanations, stay readable. Pro, active subscriptions and admins are unaffected, and each exam type is counted separately. Offline download now respects the limit too. Reversible via the FREE_TIER_ENFORCED flag.",
+    },
+  },
+  {
     date: "2026-06-19",
     tag: "admin",
     title: {

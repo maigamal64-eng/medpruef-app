@@ -135,3 +135,139 @@ export type PaywallGate =
   | 'bookmarks'
   | 'notes'
   | 'qbank_limit'
+
+// ── Durable free-tier ENFORCEMENT (2026-06-20) ──────────────────────
+//
+// History of "the free tier" in this codebase:
+//   - The 150-question *slice* (above) caps WHICH questions a free user
+//     can ever draw to the 150 lowest-id active rows per exam_type. That
+//     has been live since Apr 2026 — but the paywall *trigger* in the
+//     quiz client (`seenIdsRef`) is in-memory and resets on reload, so a
+//     returning free user re-draws the same 150 forever and the upgrade
+//     prompt almost never fires. Plus `/api/offline/questions` bypassed
+//     the slice entirely (a free user could download up to 500/call into
+//     IndexedDB). Net effect: free access was effectively unlimited.
+//
+// This layer adds a DURABLE cap on top of the slice: count the DISTINCT
+// questions a (user, exam_type) has actually ANSWERED (from
+// `answer_history`, cross-device) and wall NEW/unseen questions once that
+// reaches FREE_TIER_QUESTIONS_PER_EXAM. The cap is on NEW questions only
+// — a free user keeps re-reading questions they've already answered (and
+// their cached AI explanations); see the caller logic in /api/questions.
+//
+// Reversibility: everything here is gated behind FREE_TIER_ENFORCED. With
+// the flag OFF, the durable cap is skipped and behaviour falls back to
+// exactly the pre-existing slice-only gate (today's live behaviour).
+
+/**
+ * Master kill-switch for durable free-tier enforcement.
+ *
+ * Default is ENABLED (`true`): the env var must be the explicit string
+ * `'false'` to turn it off. This means a missing/typo'd var fails *safe*
+ * (enforcement stays on) rather than silently re-opening the bank.
+ *
+ * Set `FREE_TIER_ENFORCED=false` on Vercel to instantly restore the old
+ * (slice-only, non-durable) behaviour without a code change.
+ */
+export function isFreeTierEnforced(): boolean {
+  return (process.env.FREE_TIER_ENFORCED ?? 'true').toLowerCase() !== 'false'
+}
+
+/**
+ * Count the DISTINCT active questions a user has answered within one
+ * exam_type, from `answer_history` joined to `questions` by exam_type.
+ *
+ * This is the durable cross-device signal (every answer is written to
+ * `answer_history` by /api/answer), so unlike the client `seenIdsRef`
+ * it survives reloads, new devices, and cleared local storage.
+ *
+ * Mirrors the fallback query in `puyp.ts#computeQbankCompletion`, but
+ * returns the RAW distinct count (not clamped to the exam total, not a
+ * percentage) so the caller can compare directly against the 150 cap.
+ *
+ * `is_active` is enforced via the embedded `questions!inner` filter so a
+ * question that was later deactivated does not consume the user's
+ * allowance. On any DB error we return 0 (fail OPEN on the *count* — a
+ * read outage should not wall a paying-intent user out of the product;
+ * the slice still bounds exposure to 150 questions regardless).
+ */
+export async function countDistinctAnsweredInExam(
+  sb: SupabaseClient,
+  userId: string,
+  examType: string
+): Promise<number> {
+  try {
+    const { data, error } = await sb
+      .from('answer_history')
+      .select('question_id, questions!inner(exam_type, is_active)')
+      .eq('user_id', userId)
+      .eq('questions.exam_type', examType)
+      .eq('questions.is_active', true)
+      .limit(50000)
+
+    if (error) {
+      console.error('[free-tier] countDistinctAnsweredInExam', {
+        userId,
+        examType,
+        error,
+      })
+      return 0
+    }
+    const seen = new Set<number>()
+    for (const r of data || []) {
+      const qid = (r as { question_id?: number }).question_id
+      if (typeof qid === 'number') seen.add(qid)
+    }
+    return seen.size
+  } catch (err) {
+    console.error('[free-tier] countDistinctAnsweredInExam unexpected', {
+      userId,
+      examType,
+      err,
+    })
+    return 0
+  }
+}
+
+/**
+ * Return the set of question ids (within the free slice for `examType`)
+ * that the user has ALREADY answered. Used so the cap walls only NEW
+ * questions: a free user at 150/150 can still be served a question they
+ * previously answered (to re-read it + its cached explanation), but no
+ * unseen one.
+ *
+ * We intersect with `sliceIds` up front so the `.in()` filter stays
+ * bounded to ≤150 ids regardless of how much history the user has.
+ * Empty `sliceIds` → empty set (nothing to re-serve).
+ */
+export async function getAnsweredSliceIds(
+  sb: SupabaseClient,
+  userId: string,
+  sliceIds: number[]
+): Promise<Set<number>> {
+  if (sliceIds.length === 0) return new Set()
+  try {
+    const { data, error } = await sb
+      .from('answer_history')
+      .select('question_id')
+      .eq('user_id', userId)
+      .in('question_id', sliceIds)
+      .limit(50000)
+    if (error) {
+      console.error('[free-tier] getAnsweredSliceIds', { userId, error })
+      return new Set()
+    }
+    const seen = new Set<number>()
+    for (const r of data || []) {
+      const qid = (r as { question_id?: number }).question_id
+      if (typeof qid === 'number') seen.add(qid)
+    }
+    return seen
+  } catch (err) {
+    console.error('[free-tier] getAnsweredSliceIds unexpected', {
+      userId,
+      err,
+    })
+    return new Set()
+  }
+}
