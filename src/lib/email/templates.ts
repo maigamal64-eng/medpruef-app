@@ -71,7 +71,7 @@ ${statsLine ? `<p><strong>Was du in dieser Zeit aufgebaut hast:</strong> ${stats
 <p>Es gibt <strong>keine automatische Verlängerung</strong> — du entscheidest aktiv. Vier Optionen:</p>
 
 <ul>
-  <li><strong>Juni-26-Kohorte</strong> (${cohort}, 6 Monate, Pass-Until-You-Pass-Garantie) — wenn deine Prüfung Juni-Juli ist.</li>
+  <li><strong>Kenntnisprüfung-Kohorte</strong> (${cohort}, 6 Monate, Pass-Until-You-Pass-Garantie), wenn deine Prüfung im September oder Oktober ist.</li>
   <li><strong>12 Monate</strong> (${twelveMo}) — wenn du den langen Weg gehst und PUYP brauchst.</li>
   <li><strong>6 Monate</strong> (${sixMo}, mit PUYP) — solider Mittelweg.</li>
   <li><strong>Monatlich</strong> (${monthly}/Monat, sobald Karten-Zahlung live ist) — nur einen Monat probieren.</li>
@@ -102,7 +102,7 @@ ${statsLine ? `<p><strong>What you've built so far:</strong> ${statsLine}.<br>Al
 <p>There is <strong>no auto-renewal</strong> — you actively decide. Four options:</p>
 
 <ul>
-  <li><strong>June 26 Cohort</strong> (${cohort}, 6 months, Pass-Until-You-Pass guarantee) — if your exam is June-July.</li>
+  <li><strong>Kenntnisprüfung Cohort</strong> (${cohort}, 6 months, Pass-Until-You-Pass guarantee), if your exam is in September or October.</li>
   <li><strong>12 months</strong> (${twelveMo}, with PUYP) — long road, full guarantee.</li>
   <li><strong>6 months</strong> (${sixMo}, with PUYP) — middle ground.</li>
   <li><strong>Monthly</strong> (${monthly}/mo, once card payment goes live) — just try one more month.</li>

@@ -70,7 +70,7 @@ export const metadata: Metadata = {
     template: "%s",
   },
   description:
-    "Specialized prep for the Austrian Kenntnisprüfung Wien, KMP Innsbruck, and Pharmakologie exams. 150 questions free — no credit card.",
+    "Specialized prep for the Austrian Kenntnisprüfung Wien, KMP Innsbruck, and Pharmakologie exams. 150 questions free, no credit card.",
   keywords: [
     "Kenntnisprüfung", "Austrian medical exam", "Vienna medical license",
     "SIP 4", "SIP 5", "medical exam preparation", "Ärztekammer Wien",
@@ -100,14 +100,14 @@ export const metadata: Metadata = {
     siteName: "MedPrüf",
     title: "MedPrüf — Austrian Kenntnisprüfung Preparation (Vienna)",
     description:
-      "Specialized prep for the Austrian Kenntnisprüfung Wien, KMP Innsbruck, and Pharmakologie exams. 150 questions free — no credit card.",
+      "Specialized prep for the Austrian Kenntnisprüfung Wien, KMP Innsbruck, and Pharmakologie exams. 150 questions free, no credit card.",
     images: [{ url: "/brand/og-image.png", width: 1200, height: 630, alt: "MedPrüf — Kenntnisprüfung Preparation" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "MedPrüf — Austrian Kenntnisprüfung Preparation (Vienna)",
     description:
-      "Specialized prep for the Austrian Kenntnisprüfung Wien, KMP Innsbruck, and Pharmakologie exams. 150 questions free — no credit card.",
+      "Specialized prep for the Austrian Kenntnisprüfung Wien, KMP Innsbruck, and Pharmakologie exams. 150 questions free, no credit card.",
     images: ["/brand/og-image.png"],
   },
 };
@@ -307,7 +307,7 @@ export default function RootLayout({
                       "priceCurrency": "EUR",
                       "availability": "https://schema.org/InStock",
                       "description":
-                        "150 questions per exam type with full clinical explanations — no credit card.",
+                        "150 questions per exam type, with clinical explanations where available, no credit card.",
                     },
                     {
                       "@type": "Offer",
@@ -329,7 +329,7 @@ export default function RootLayout({
                     },
                     {
                       "@type": "Offer",
-                      "name": "June 26 Cohort",
+                      "name": "Kenntnisprüfung Cohort",
                       "price": "114",
                       "priceCurrency": "EUR",
                       "availability": "https://schema.org/InStock",

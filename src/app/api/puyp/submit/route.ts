@@ -189,7 +189,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           error:
-            "You need an active subscription on the June 26 Cohort or 12-month plan to submit a Pass-Until-You-Pass claim.",
+            "You need an active subscription on the Kenntnisprüfung Cohort or 12-month plan to submit a Pass-Until-You-Pass claim.",
         },
         { status: 403 }
       );
@@ -199,7 +199,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           error:
-            "Your current tier is not eligible for Pass-Until-You-Pass. The guarantee applies to the June 26 Cohort and 12-month tiers only.",
+            "Your current tier is not eligible for Pass-Until-You-Pass. The guarantee applies to the Kenntnisprüfung Cohort and 12-month tiers only.",
         },
         { status: 403 }
       );

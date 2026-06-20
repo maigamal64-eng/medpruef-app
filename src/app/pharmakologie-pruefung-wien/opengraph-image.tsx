@@ -68,7 +68,7 @@ export default function Image() {
               fontWeight: 600,
             }}
           >
-            Prüfung · 26. Juni 2026
+            Kenntnisprüfung Wien · 28. September 2026
           </div>
         </div>
 
@@ -100,7 +100,7 @@ export default function Image() {
               maxWidth: 1040,
             }}
           >
-            Juni-26-Kohorte.
+            Kenntnisprüfung-Kohorte.
           </div>
           <div
             style={{

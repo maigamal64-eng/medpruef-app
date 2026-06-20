@@ -66,8 +66,8 @@ function tierSummary(tier: TierKey, lang: Lang): TierSummary {
     return {
       planLabel:
         lang === "de"
-          ? "Juni-26-Kohorte — 6 Monate Vollzugriff mit PUYP-Garantie"
-          : "June 26 Cohort — 6 months full access with PUYP guarantee",
+          ? "Kenntnisprüfung-Kohorte · 6 Monate Vollzugriff mit PUYP-Garantie"
+          : "Kenntnisprüfung Cohort · 6 months full access with PUYP guarantee",
       // formatEuro from content-truth.ts emits the canonical "114 €" form
       // (number + space + €). The pre-checkout dialog is the highest-stakes
       // surface in the funnel — currency-format drift here is the worst place

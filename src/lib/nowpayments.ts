@@ -75,8 +75,8 @@ export const TIERS: Record<string, TierDefinition> = {
     priceCents: 11400, // €114
     currency: "EUR",
     durationMonths: 6,
-    humanName: "June 26 Cohort (6 months, Pass-Until-You-Pass)",
-    humanNameDe: "Juni-26-Kohorte (6 Monate, Pass-Until-You-Pass)",
+    humanName: "Kenntnisprüfung Cohort (6 months, Pass-Until-You-Pass)",
+    humanNameDe: "Kenntnisprüfung-Kohorte (6 Monate, Pass-Until-You-Pass)",
     available: true,
     puypEligible: true,
     referralPayoutCents: 7500, // €75 — lock #3 premium tier

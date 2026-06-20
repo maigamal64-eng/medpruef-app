@@ -2,7 +2,8 @@
 
 /**
  * CohortCountdownBanner — informational strip counting down to the
- * next Pharmakologie exam date (Fri 2026-06-26).
+ * next in-market Kenntnisprüfung Wien exam date (Mon 2026-09-28),
+ * per MEDPRUF-SOT.md §1. (Was the stale 2026-06-26 Pharma date.)
  *
  * Post-soft-launch sprint §1.4.5 rewrite:
  *
@@ -33,7 +34,7 @@ import {
   type SurfaceKey,
 } from "@/lib/announcements/useAnnouncementGate";
 
-const COHORT_EXAM_ISO = "2026-06-26T09:00:00+02:00"; // Fri morning, Vienna time
+const COHORT_EXAM_ISO = "2026-09-28T09:00:00+02:00"; // Kenntnisprüfung Wien, Vienna time (SoT §1)
 const SURFACE: SurfaceKey = "cohort_banner";
 const HIDE_PATHS = [
   "/login",
@@ -90,8 +91,8 @@ export default function CohortCountdownBanner() {
         <div className="flex items-center gap-2 min-w-0">
           <Timer className="w-4 h-4 flex-shrink-0" aria-hidden />
           <p className="text-xs sm:text-sm font-medium truncate">
-            <span className="font-bold">Juni-26-Kohorte:</span>{" "}
-            {`Noch ${daysLeft} ${dayWord} bis zur Pharmakologie-Prüfung.`}
+            <span className="font-bold">Kenntnisprüfung-Kohorte:</span>{" "}
+            {`Noch ${daysLeft} ${dayWord} bis zur Kenntnisprüfung Wien am 28. September.`}
           </p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">

@@ -9,7 +9,7 @@ import {
   Crown,
   Sparkles,
   ChevronDown,
-  Bitcoin,
+  CreditCard,
   Lock,
   ShieldCheck,
   Gift,
@@ -249,8 +249,8 @@ export default function PricingPage() {
             ? "Bereits eingetragen"
             : "Already on the waitlist",
           lang === "de"
-            ? "Du stehst bereits auf der Warteliste — wir halten dich auf dem Laufenden."
-            : "You're already on the waitlist — we'll keep you posted."
+            ? "Du stehst bereits auf der Warteliste, wir halten dich auf dem Laufenden."
+            : "You're already on the waitlist, we'll keep you posted."
         );
         setWaitOpen(false);
       } else {
@@ -303,8 +303,8 @@ export default function PricingPage() {
       en: "Offline mode, quick search (Cmd+K), streak freeze",
     },
     {
-      de: "Gültig 6 Monate ab Zahlung — deine gesamte Prüfungsvorbereitung",
-      en: "Valid 6 months from payment — your entire exam prep window",
+      de: "Gültig 6 Monate ab Zahlung: deine gesamte Prüfungsvorbereitung",
+      en: "Valid 6 months from payment: your entire exam prep window",
     },
   ];
 
@@ -326,17 +326,17 @@ export default function PricingPage() {
   }> = [
     {
       id: "6mo",
-      price: "€149",
+      price: "149 €",
       cadence: { de: "für 6 Monate", en: "for 6 months" },
       desc: {
-        de: "Die Standard-Prüfungsphase — 6 Monate Vollzugang, alle 3 Prüfungstypen.",
-        en: "Standard prep window — 6 months of full access, all 3 exam types.",
+        de: "Die Standard-Prüfungsphase: 6 Monate Vollzugang, alle 3 Prüfungstypen.",
+        en: "Standard prep window: 6 months of full access, all 3 exam types.",
       },
       popular: true,
     },
     {
       id: "3mo",
-      price: "€79",
+      price: "79 €",
       cadence: { de: "für 3 Monate", en: "for 3 months" },
       desc: {
         de: "Endspurt vor der Prüfung. Vollzugang zu allen 3 Prüfungstypen.",
@@ -345,7 +345,7 @@ export default function PricingPage() {
     },
     {
       id: "12mo",
-      price: "€229",
+      price: "229 €",
       cadence: { de: "für 12 Monate", en: "for 12 months" },
       desc: {
         de: "Maximaler Puffer · inkl. Pass-Until-You-Pass-Garantie.",
@@ -355,11 +355,11 @@ export default function PricingPage() {
     },
     {
       id: "monthly",
-      price: "€29",
+      price: "29 €",
       cadence: { de: "/ Monat", en: "/ month" },
       desc: {
-        de: "Monatlich — kürzester Zugang, jederzeit kündbar, alle 3 Prüfungen.",
-        en: "Month-to-month — shortest commitment, cancel any time, all 3 exams.",
+        de: "Monatlich: kürzester Zugang, jederzeit kündbar, alle 3 Prüfungen.",
+        en: "Month-to-month: shortest commitment, cancel any time, all 3 exams.",
       },
     },
   ];
@@ -393,18 +393,18 @@ export default function PricingPage() {
           <span className="mp-caption inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--mp-success-bg)] text-[var(--mp-viridian)] mb-5 normal-case tracking-[0.08em]">
             <Sparkles className="w-3.5 h-3.5" />
             {lang === "de"
-              ? "Juni-26-Kohorte — Anmeldung bis 22. Juni"
-              : "June 26 Cohort — sign up by June 22"}
+              ? "Kenntnisprüfung Wien, 28. September · Anmeldung bis Ende Juli"
+              : "Kenntnisprüfung Wien, 28 September · register by end of July"}
           </span>
           <h2 className="mp-h1 mb-4 leading-[1.05]">
             {lang === "de"
-              ? "Beim ersten Versuch bestehen — oder kostenlos weiterlernen, bis du es schaffst."
-              : "Pass first try — or study free until you do."}
+              ? "Beim ersten Versuch bestehen, oder kostenlos weiterlernen, bis du es schaffst."
+              : "Pass first try, or study free until you do."}
           </h2>
           <p className="mp-body text-[var(--mp-fg-muted)] max-w-2xl mx-auto">
             {lang === "de"
-              ? "Die einzige Prüfungsvorbereitung, speziell für Österreichs Kenntnisprüfung, KMP und Pharmakologie. Destilliert aus 10.992 dokumentierten offiziellen Prüfungsfragen — Wien seit 2016, KMP Innsbruck und Pharmakologie."
-              : "The only exam prep built specifically for Austria's Kenntnisprüfung, KMP & Pharmakologie. Distilled from 10,992 documented official exam questions — Vienna since 2016, KMP Innsbruck and Pharmakologie."}
+              ? "Die einzige Prüfungsvorbereitung, speziell für Österreichs Kenntnisprüfung, KMP und Pharmakologie. Destilliert aus 10.992 dokumentierten offiziellen Prüfungsfragen: Wien seit 2016, KMP Innsbruck und Pharmakologie."
+              : "The only exam prep built specifically for Austria's Kenntnisprüfung, KMP & Pharmakologie. Distilled from 10,992 documented official exam questions: Vienna since 2016, KMP Innsbruck and Pharmakologie."}
           </p>
         </section>
 
@@ -450,8 +450,8 @@ export default function PricingPage() {
                 className="text-xs text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg-muted)] underline-offset-2 hover:underline transition-colors"
               >
                 {lang === "de"
-                  ? "Brauchst du nur einen Monat? Einzelmonat zu €19 anzeigen ›"
-                  : "Just need one month? Show single-month tier (€19) ›"}
+                  ? "Brauchst du nur einen Monat? Einzelmonat zu 19 € anzeigen ›"
+                  : "Just need one month? Show single-month tier (19 €) ›"}
               </button>
             )}
           </div>
@@ -481,17 +481,17 @@ export default function PricingPage() {
           >
             {lang === "de" ? (
               <>
-                <strong className="text-[var(--mp-fg)]">Die Kenntnisprüfung kostet ~€370 pro Versuch.</strong>{" "}
+                <strong className="text-[var(--mp-fg)]">Die Kenntnisprüfung kostet ~370 € pro Versuch.</strong>{" "}
                 Ein verlorenes halbes Jahr in Österreich:{" "}
-                <strong className="text-[var(--mp-fg)]">~€5.000 entgangenes Assistenzarzt-Gehalt.</strong>{" "}
-                Die Juni-26-Kohorte: <strong className="text-[var(--mp-viridian)]">114 € — einmalig.</strong>
+                <strong className="text-[var(--mp-fg)]">~5.000 € entgangenes Assistenzarzt-Gehalt.</strong>{" "}
+                Die Kenntnisprüfung-Kohorte: <strong className="text-[var(--mp-viridian)]">114 €, einmalig.</strong>
               </>
             ) : (
               <>
-                <strong className="text-[var(--mp-fg)]">The Kenntnisprüfung costs ~€370 per attempt.</strong>{" "}
+                <strong className="text-[var(--mp-fg)]">The Kenntnisprüfung costs ~370 € per attempt.</strong>{" "}
                 Half a year delayed in Austria:{" "}
-                <strong className="text-[var(--mp-fg)]">~€5,000 in forgone Assistenzarzt salary.</strong>{" "}
-                The June 26 Cohort: <strong className="text-[var(--mp-viridian)]">114 € — one time.</strong>
+                <strong className="text-[var(--mp-fg)]">~5,000 € in forgone Assistenzarzt salary.</strong>{" "}
+                The Kenntnisprüfung Cohort: <strong className="text-[var(--mp-viridian)]">114 €, one time.</strong>
               </>
             )}
           </div>
@@ -555,13 +555,13 @@ export default function PricingPage() {
             <FAQItem
               q={
                 lang === "de"
-                  ? "Wie funktioniert „Beim ersten Versuch bestehen — oder kostenlos weiterlernen\"?"
-                  : "How does \"Pass first try — or study free until you do\" work?"
+                  ? "Wie funktioniert „Beim ersten Versuch bestehen, oder kostenlos weiterlernen\"?"
+                  : "How does \"Pass first try, or study free until you do\" work?"
               }
               a={
                 lang === "de"
-                  ? "Wenn du die Juni-26-Kohorte oder das Jahresabo hast, mindestens 70 % der relevanten Fragenbank bearbeitet hast und dann durchfällst, lädst du deinen offiziellen Bescheid hoch. Wir verifizieren innerhalb von 72 Stunden und verlängern deinen Zugang kostenlos bis zum nächsten Prüfungstermin — maximal zwei zusätzliche Zyklen."
-                  : "If you're on the June 26 Cohort or the 12-month plan, completed ≥70 % of the relevant Qbank and fail the real exam, you upload your official result. We verify within 72 hours and extend your access free through the next exam cycle — up to two additional cycles."
+                  ? "Wenn du die Kenntnisprüfung-Kohorte oder das Jahresabo hast, mindestens 70 % der relevanten Fragenbank bearbeitet hast und dann durchfällst, lädst du deinen offiziellen Bescheid hoch. Wir verifizieren innerhalb von 72 Stunden und verlängern deinen Zugang kostenlos bis zum nächsten Prüfungstermin: maximal zwei zusätzliche Zyklen."
+                  : "If you're on the Kenntnisprüfung Cohort or the 12-month plan, completed ≥70 % of the relevant Qbank and fail the real exam, you upload your official result. We verify within 72 hours and extend your access free through the next exam cycle, up to two additional cycles."
               }
             />
             <FAQItem
@@ -584,8 +584,8 @@ export default function PricingPage() {
               }
               a={
                 lang === "de"
-                  ? "Nein — jeder bezahlte Tarif enthält alle drei Prüfungstypen (Kenntnisprüfung Wien, KMP Innsbruck, Pharmakologie). Wenn du nur eine Prüfung brauchst, gibt dir der kostenlose Tarif 150 Fragen pro Prüfungstyp."
-                  : "No — every paid tier unlocks all three exam types (Kenntnisprüfung Wien, KMP Innsbruck, Pharmakologie). If you only need one exam, the free tier gives you 150 questions per exam type."
+                  ? "Nein, jeder bezahlte Tarif enthält alle drei Prüfungstypen (Kenntnisprüfung Wien, KMP Innsbruck, Pharmakologie). Wenn du nur eine Prüfung brauchst, gibt dir der kostenlose Tarif 150 Fragen pro Prüfungstyp."
+                  : "No, every paid tier unlocks all three exam types (Kenntnisprüfung Wien, KMP Innsbruck, Pharmakologie). If you only need one exam, the free tier gives you 150 questions per exam type."
               }
             />
           </div>
@@ -622,13 +622,13 @@ export default function PricingPage() {
             <div className="relative">
               <h3 className="mp-h2 text-white mb-3">
                 {lang === "de"
-                  ? "Bereit für die Kenntnisprüfung am 26. Juni?"
-                  : "Ready for the June 26 Kenntnisprüfung?"}
+                  ? "Bereit für die Kenntnisprüfung am 28. September?"
+                  : "Ready for the 28 September Kenntnisprüfung?"}
               </h3>
               <p className="mp-body text-white/80 max-w-xl mx-auto mb-6">
                 {lang === "de"
-                  ? "6 Monate Vollzugang, €114, zahlbar mit Karte. Inklusive Pass-Until-You-Pass-Garantie."
-                  : "6 months of full access, €114, payable by card. Pass-Until-You-Pass guarantee included."}
+                  ? "6 Monate Vollzugang, 114 €, zahlbar mit Karte. Inklusive Pass-Until-You-Pass-Garantie."
+                  : "6 months of full access, 114 €, payable by card. Pass-Until-You-Pass guarantee included."}
               </p>
               <button
                 type="button"
@@ -641,11 +641,11 @@ export default function PricingPage() {
                   opacity: checkoutLoading === "cohort" ? 0.6 : 1,
                 }}
               >
-                <Bitcoin className="w-4 h-4" />
+                <CreditCard className="w-4 h-4" />
                 {checkoutLoading === "cohort"
                   ? lang === "de"
-                    ? "Rechnung wird erstellt…"
-                    : "Creating invoice…"
+                    ? "Weiterleitung zur Kartenzahlung…"
+                    : "Redirecting to card checkout…"
                   : lang === "de"
                     ? "Jetzt mit Karte zahlen"
                     : "Pay by card"}
@@ -807,14 +807,14 @@ function FreeTierCard({ lang, examSource }: { lang: Lang; examSource: ExamSource
           </span>
           <h3 className="mp-h3 text-[20px]">
             {lang === "de"
-              ? "Starte kostenlos — 150 Fragen pro Prüfungstyp"
-              : "Start free — 150 questions per exam type"}
+              ? "Starte kostenlos: 150 Fragen pro Prüfungstyp"
+              : "Start free: 150 questions per exam type"}
           </h3>
         </div>
         <p className="mp-body text-[var(--mp-fg-muted)] mb-4 text-sm leading-relaxed">
           {lang === "de"
-            ? "450 Fragen gesamt (Kenntnisprüfung Wien, KMP Innsbruck, Pharmakologie) mit vollständigen Erklärungen. Nur Qbank-Modus, kein Ablaufdatum."
-            : "450 questions total (Kenntnisprüfung Wien, KMP Innsbruck, Pharmakologie) with full explanations. Qbank-only, no expiry."}
+            ? "150 Fragen je Prüfungstyp (Kenntnisprüfung Wien, KMP Innsbruck, Pharmakologie), 450 gesamt, mit Erklärungen, wo vorhanden. Nur Qbank-Modus, kein Ablaufdatum."
+            : "150 questions per exam type (Kenntnisprüfung Wien, KMP Innsbruck, Pharmakologie), 450 in total, with explanations where available. Qbank-only, no expiry."}
         </p>
         <ul className="space-y-1.5 text-sm text-[var(--mp-fg)]">
           <li className="flex items-start gap-2">
@@ -823,8 +823,8 @@ function FreeTierCard({ lang, examSource }: { lang: Lang; examSource: ExamSource
               strokeWidth={3}
             />
             {lang === "de"
-              ? "Vollständige klinische Erklärungen"
-              : "Full clinical explanations"}
+              ? "Klinische Erklärungen, wo vorhanden"
+              : "Clinical explanations where available"}
           </li>
           <li className="flex items-start gap-2">
             <Check
@@ -850,7 +850,7 @@ function FreeTierCard({ lang, examSource }: { lang: Lang; examSource: ExamSource
       <div className="flex flex-col gap-3 md:items-end">
         <div className="flex items-baseline gap-1.5 md:justify-end">
           <span className="mp-num font-display font-black text-[var(--mp-fg)] text-[32px] leading-none">
-            €0
+            0 €
           </span>
           <span className="text-sm text-[var(--mp-fg-subtle)]">
             {lang === "de" ? "/ dauerhaft" : "/ forever"}
@@ -861,8 +861,8 @@ function FreeTierCard({ lang, examSource }: { lang: Lang; examSource: ExamSource
           className="mp-btn mp-btn--primary inline-flex items-center justify-center gap-2 w-full md:w-auto whitespace-nowrap"
         >
           {lang === "de"
-            ? `Kostenlos starten — 150 ${examLabel}`
-            : `Start free — 150 ${examLabel}`}
+            ? `Kostenlos starten: 150 ${examLabel}`
+            : `Start free: 150 ${examLabel}`}
           <ArrowRight className="w-3.5 h-3.5" />
         </Link>
         <p className="mp-small text-[var(--mp-fg-subtle)] md:text-right">
@@ -926,14 +926,14 @@ function Starter3MoCard({
           </span>
           <h3 className="mp-h3 text-[20px]">
             {lang === "de"
-              ? "3-Monats-Einstieg — ~9 € pro Monat"
-              : "3-Month Starter — ~€9 per month"}
+              ? "3-Monats-Einstieg · ~9 € pro Monat"
+              : "3-Month Starter · ~9 € per month"}
           </h3>
         </div>
         <p className="mp-body text-[var(--mp-fg-muted)] mb-4 text-sm leading-relaxed">
           {lang === "de"
-            ? "Drei Monate Vollzugang für eine einmalige Zahlung von 27 €. Genug Zeit für einen echten Lernlauf — und schmal genug, um zu testen, bevor du dich zur Kohorte committest. Pro Konto einmal verfügbar."
-            : "Three months of full access for one payment of €27. Long enough for a real prep run, narrow enough to test before committing to the Cohort. One purchase per account."}
+            ? "Drei Monate Vollzugang für eine einmalige Zahlung von 27 €. Genug Zeit für einen echten Lernlauf, und schmal genug, um zu testen, bevor du dich zur Kohorte committest. Pro Konto einmal verfügbar."
+            : "Three months of full access for one payment of 27 €. Long enough for a real prep run, narrow enough to test before committing to the Cohort. One purchase per account."}
         </p>
         <ul className="space-y-1.5 text-sm text-[var(--mp-fg)]">
           <li className="flex items-start gap-2">
@@ -960,8 +960,8 @@ function Starter3MoCard({
               strokeWidth={3}
             />
             {lang === "de"
-              ? "Empfiehl uns weiter — 15 € Gutschrift pro bezahltem Empfehlungs-Sign-up"
-              : "Refer others — €15 credit per paid referral sign-up"}
+              ? "Empfiehl uns weiter · 15 € Gutschrift pro bezahltem Empfehlungs-Sign-up"
+              : "Refer others · 15 € credit per paid referral sign-up"}
           </li>
           <li className="flex items-start gap-2 text-[var(--mp-fg-subtle)]">
             <Lock className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" aria-hidden />
@@ -988,7 +988,7 @@ function Starter3MoCard({
           >
             {lang === "de"
               ? "≈ 9 € pro Monat · keine Verlängerung"
-              : "≈ €9 per month · no renewal"}
+              : "≈ 9 € per month · no renewal"}
           </p>
         </div>
         <button
@@ -1001,14 +1001,14 @@ function Starter3MoCard({
           {loading ? (
             <>
               <BrandedLoader size={20} hideLabel />
-              {lang === "de" ? "Rechnung wird erstellt…" : "Creating invoice…"}
+              {lang === "de" ? "Weiterleitung zur Kartenzahlung…" : "Redirecting to card checkout…"}
             </>
           ) : (
             <>
-              <Bitcoin className="w-3.5 h-3.5" />
+              <CreditCard className="w-3.5 h-3.5" />
               {lang === "de"
                 ? "3 Monate für 27 € starten"
-                : "Start 3 months for €27"}
+                : "Start 3 months for 27 €"}
               <ArrowRight className="w-3.5 h-3.5" />
             </>
           )}
@@ -1065,14 +1065,14 @@ function FirstMonthCard({
           </span>
           <h3 className="mp-h3 text-[20px]">
             {lang === "de"
-              ? "Einzelmonat — einmalig 19 €"
-              : "Single month — €19 one-time"}
+              ? "Einzelmonat · einmalig 19 €"
+              : "Single month · 19 € one-time"}
           </h3>
         </div>
         <p className="mp-body text-[var(--mp-fg-muted)] mb-4 text-sm leading-relaxed">
           {lang === "de"
-            ? "30 Tage Vollzugang als Übergang — ideal, wenn dein 3-Monats-Einstieg ausgelaufen ist und du eine Brücke bis zur Kohorte brauchst, oder wenn du ganz gezielt nur einen Monat testen willst."
-            : "30 days of full access as a bridge — ideal if your 3-month starter has expired and you need a stop-gap before Cohort, or if you specifically want a one-month try."}
+            ? "30 Tage Vollzugang als Übergang, ideal, wenn dein 3-Monats-Einstieg ausgelaufen ist und du eine Brücke bis zur Kohorte brauchst, oder wenn du ganz gezielt nur einen Monat testen willst."
+            : "30 days of full access as a bridge, ideal if your 3-month starter has expired and you need a stop-gap before Cohort, or if you specifically want a one-month try."}
         </p>
         <ul className="space-y-1.5 text-sm text-[var(--mp-fg)]">
           <li className="flex items-start gap-2">
@@ -1099,8 +1099,8 @@ function FirstMonthCard({
               strokeWidth={3}
             />
             {lang === "de"
-              ? "Am Tag 25 schreiben wir dir — wähle dann selbst einen längeren Tarif"
-              : "We email you on day 25 — pick a longer plan yourself, if you want"}
+              ? "Am Tag 25 schreiben wir dir, wähle dann selbst einen längeren Tarif"
+              : "We email you on day 25, pick a longer plan yourself, if you want"}
           </li>
           <li className="flex items-start gap-2 text-[var(--mp-fg-subtle)]">
             <Lock className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" aria-hidden />
@@ -1140,14 +1140,14 @@ function FirstMonthCard({
           {loading ? (
             <>
               <BrandedLoader size={20} hideLabel />
-              {lang === "de" ? "Rechnung wird erstellt…" : "Creating invoice…"}
+              {lang === "de" ? "Weiterleitung zur Kartenzahlung…" : "Redirecting to card checkout…"}
             </>
           ) : (
             <>
-              <Bitcoin className="w-3.5 h-3.5" />
+              <CreditCard className="w-3.5 h-3.5" />
               {lang === "de"
                 ? "Einen Monat für 19 € testen"
-                : "Try one month for €19"}
+                : "Try one month for 19 €"}
               <ArrowRight className="w-3.5 h-3.5" />
             </>
           )}
@@ -1213,8 +1213,8 @@ function CohortFeaturedCard({
             aria-hidden
           />
           {lang === "de"
-            ? "Juni-26-Kohorte"
-            : "June 26 Cohort"}
+            ? "Kenntnisprüfung-Kohorte"
+            : "Kenntnisprüfung Cohort"}
         </span>
       </div>
 
@@ -1230,12 +1230,12 @@ function CohortFeaturedCard({
             </span>
           </div>
           <h3 className="mp-h2 mb-3">
-            {lang === "de" ? "Juni-26-Kohorte" : "June 26 Cohort"}
+            {lang === "de" ? "Kenntnisprüfung-Kohorte" : "Kenntnisprüfung Cohort"}
           </h3>
           <p className="mp-body text-[var(--mp-fg-muted)] mb-5 max-w-xl">
             {lang === "de"
-              ? "Ein einmaliger Preis, sechs Monate Vollzugang auf Kenntnisprüfung, KMP und Pharmakologie. Sieben Tage Geld-zurück-Garantie auf jede Bestellung. Wenn du nach 7 Tagen weiter lernst und dann durchfällst, verlängern wir deinen Zugang kostenlos — keine Cash-Rückerstattung in dem Fall, dafür Pass-Until-You-Pass. Aktiviert in Minuten, keine Kreditkarte."
-              : "One upfront price, six months of full access across Kenntnisprüfung, KMP and Pharmakologie. 7-day money-back guarantee on every purchase. If you keep studying past day 7 and later fail, we extend your access free — no cash refund at that point, but Pass-Until-You-Pass kicks in. Activated in minutes, no credit card."}
+              ? "Ein einmaliger Preis, sechs Monate Vollzugang auf Kenntnisprüfung, KMP und Pharmakologie. Sieben Tage Geld-zurück-Garantie auf jede Bestellung. Wenn du nach 7 Tagen weiter lernst und dann durchfällst, verlängern wir deinen Zugang kostenlos: keine Cash-Rückerstattung in dem Fall, dafür Pass-Until-You-Pass. Aktiviert in Minuten, keine Kreditkarte."
+              : "One upfront price, six months of full access across Kenntnisprüfung, KMP and Pharmakologie. 7-day money-back guarantee on every purchase. If you keep studying past day 7 and later fail, we extend your access free: no cash refund at that point, but Pass-Until-You-Pass kicks in. Activated in minutes, no credit card."}
           </p>
 
           {/* PUYP badge — prominent */}
@@ -1301,7 +1301,7 @@ function CohortFeaturedCard({
               className="mp-small mt-2 inline-flex items-center gap-1.5"
               style={{ color: "var(--mp-viridian)", fontWeight: 600 }}
             >
-              <Bitcoin className="w-3.5 h-3.5" />
+              <CreditCard className="w-3.5 h-3.5" />
               {lang === "de"
                 ? "Sichere Kartenzahlung, auch Apple Pay"
                 : "Secure card payment, Apple Pay too"}
@@ -1318,7 +1318,7 @@ function CohortFeaturedCard({
             {loading ? (
               <>
                 <BrandedLoader size={24} hideLabel />
-                {lang === "de" ? "Rechnung wird erstellt…" : "Creating invoice…"}
+                {lang === "de" ? "Weiterleitung zur Kartenzahlung…" : "Redirecting to card checkout…"}
               </>
             ) : (
               <>
@@ -1481,13 +1481,13 @@ function ReferralBlock({ lang }: { lang: Lang }) {
       </div>
       <h3 className="mp-h3 mb-2 text-[20px]">
         {lang === "de"
-          ? "Empfiehl uns auf Telegram, WhatsApp & Social — bis zu 75 € pro Abschluss."
-          : "Share on Telegram, WhatsApp & socials — up to €75 per signed-up referral."}
+          ? "Empfiehl uns auf Telegram, WhatsApp & Social: bis zu 75 € pro Abschluss."
+          : "Share on Telegram, WhatsApp & socials: up to 75 € per signed-up referral."}
       </h3>
       <p className="text-sm text-[var(--mp-fg-muted)] mb-5 max-w-2xl leading-relaxed">
         {lang === "de"
-          ? "Du bist wahrscheinlich schon in den richtigen Telegram-Kanälen für die Kenntnisprüfung. Teile dort deinen Empfehlungslink — 15 € pro 3-Monats-Einstieg, 25 € pro Monatstarif, 50 € pro Halbjahr/Jahr, 75 € pro Kohorte. Auszahlung in USDT oder Wise, 30 Tage nach Zahlungseingang."
-          : "You're probably already in the right Telegram groups for the Kenntnisprüfung. Share your referral link there — €15 per 3-month starter, €25 per monthly, €50 per 6/12-month, €75 per Cohort sign-up. Paid in USDT or Wise, 30 days after their payment clears."}
+          ? "Du bist wahrscheinlich schon in den richtigen Telegram-Kanälen für die Kenntnisprüfung. Teile dort deinen Empfehlungslink: 15 € pro 3-Monats-Einstieg, 25 € pro Monatstarif, 50 € pro Halbjahr/Jahr, 75 € pro Kohorte. Auszahlung in USDT oder Wise, 30 Tage nach Zahlungseingang."
+          : "You're probably already in the right Telegram groups for the Kenntnisprüfung. Share your referral link there: 15 € per 3-month starter, 25 € per monthly, 50 € per 6/12-month, 75 € per Cohort sign-up. Paid in USDT or Wise, 30 days after their payment clears."}
       </p>
 
       <div className="flex flex-wrap items-center gap-3">
@@ -1542,26 +1542,26 @@ function PuypBlock({ lang }: { lang: Lang }) {
       </div>
       <h3 className="mp-h3 mb-2 text-[20px]">
         {lang === "de"
-          ? "Du fällst durch? Wir verlängern — kostenlos."
-          : "Fail the exam? We extend — free."}
+          ? "Du fällst durch? Wir verlängern, kostenlos."
+          : "Fail the exam? We extend, free."}
       </h3>
       <p className="text-sm text-[var(--mp-fg-muted)] mb-5 max-w-2xl leading-relaxed">
         {lang === "de"
-          ? "Zwei Schutz-Ebenen: 7-Tage-Geld-zurück-Garantie auf jede Bestellung — und wenn du nach 7 Tagen weiter lernst und dann beim ersten Versuch durchfällst, verlängern wir deinen Zugang kostenlos (Pass-Until-You-Pass). PUYP gilt für die Juni-26-Kohorte und den 12-Monats-Tarif."
-          : "Two layers of protection: 7-day money-back guarantee on every purchase — and if you keep studying past day 7 and later fail your first attempt, we extend your access free (Pass-Until-You-Pass). PUYP applies to the June 26 Cohort and the 12-month plan."}
+          ? "Zwei Schutz-Ebenen: 7-Tage-Geld-zurück-Garantie auf jede Bestellung, und wenn du nach 7 Tagen weiter lernst und dann beim ersten Versuch durchfällst, verlängern wir deinen Zugang kostenlos (Pass-Until-You-Pass). PUYP gilt für die Kenntnisprüfung-Kohorte und den 12-Monats-Tarif."
+          : "Two layers of protection: 7-day money-back guarantee on every purchase, and if you keep studying past day 7 and later fail your first attempt, we extend your access free (Pass-Until-You-Pass). PUYP applies to the Kenntnisprüfung Cohort and the 12-month plan."}
       </p>
 
       <ul className="space-y-2 mb-5">
         {[
           lang === "de"
-            ? "Prüfungsergebnis (PDF oder Foto) hochladen — Admin prüft innerhalb 72 Stunden."
-            : "Upload your official result (PDF or photo) — admin verifies within 72 hours.",
+            ? "Prüfungsergebnis (PDF oder Foto) hochladen, Admin prüft innerhalb 72 Stunden."
+            : "Upload your official result (PDF or photo), admin verifies within 72 hours.",
           lang === "de"
             ? "Mindestens 70 % der relevanten Fragenbank müssen bearbeitet sein."
             : "At least 70 % of the relevant Qbank must be completed.",
           lang === "de"
-            ? "Bis zu zwei zusätzliche Zyklen — also bis zu 18 Monate Zugang aus einer €114-Zahlung."
-            : "Up to two additional cycles — up to 18 months of access from one €114 payment.",
+            ? "Bis zu zwei zusätzliche Zyklen, also bis zu 18 Monate Zugang aus einer 114-€-Zahlung."
+            : "Up to two additional cycles, up to 18 months of access from one 114 € payment.",
         ].map((line) => (
           <li
             key={line}
@@ -1620,10 +1620,10 @@ function FAQItem({ q, a }: { q: string; a: string }) {
 
 function tierLabel(tier: StandardTier, lang: Lang): string {
   const labels: Record<StandardTier, { de: string; en: string }> = {
-    monthly: { de: "Monatlich (€29/Mo)", en: "Monthly (€29/mo)" },
-    "3mo": { de: "3 Monate (€79)", en: "3 months (€79)" },
-    "6mo": { de: "6 Monate (€149)", en: "6 months (€149)" },
-    "12mo": { de: "12 Monate (€229)", en: "12 months (€229)" },
+    monthly: { de: "Monatlich (29 €/Mo)", en: "Monthly (29 €/mo)" },
+    "3mo": { de: "3 Monate (79 €)", en: "3 months (79 €)" },
+    "6mo": { de: "6 Monate (149 €)", en: "6 months (149 €)" },
+    "12mo": { de: "12 Monate (229 €)", en: "12 months (229 €)" },
   };
   return labels[tier][lang];
 }

@@ -9,14 +9,15 @@ import { NEXT_EXAM_DATE } from "@/lib/exam-dates";
  *   "Pharmakologie Ergänzungsprüfung"
  *
  * Content: 335 questions, single topic "Pharmakologie" per
- * NOTES.md §Content. Next exam: 2026-06-26 (the Juni-26-Kohorte —
- * this matches the Pass-Until-You-Pass cohort we sell on /pricing).
+ * NOTES.md §Content. Cohort anchor: the Kenntnisprüfung Wien sitting
+ * on 2026-09-28 (NEXT_EXAM_DATE, SoT §1). The exact Pharma date is
+ * nostrification-driven; the Course startDate tracks the Wien window.
  */
 
 const pageTitle =
   "Pharmakologie Prüfung Wien 2026 — Vorbereitung mit 335 Fragen | MedPrüf";
 const pageDesc =
-  "Vorbereitung auf die Pharmakologie- und Rezeptierkunde-Prüfung (Wien). 335 Fragen mit klinischen Begründungen, Guideline-Referenzen und Pass-Until-You-Pass-Garantie. Prüfung am 26. Juni 2026.";
+  "Vorbereitung auf die Pharmakologie- und Rezeptierkunde-Prüfung (Wien). 335 Fragen mit klinischen Begründungen, Guideline-Referenzen und Pass-Until-You-Pass-Garantie. Kenntnisprüfung Wien am 28. September 2026.";
 
 export const metadata: Metadata = {
   title: pageTitle,
@@ -26,7 +27,7 @@ export const metadata: Metadata = {
     "Rezeptierkunde",
     "Pharmakologie Ergänzungsprüfung",
     "Pharmakologie 2026",
-    "Juni 26 Kohorte",
+    "Kenntnisprüfung Kohorte",
     "Pharmakologie Vorbereitung",
     "Approbation Pharmakologie",
     "ausländische Ärzte Pharmakologie",
@@ -55,7 +56,7 @@ function buildCourseSchema() {
     "@type": "Course",
     name: "Pharmakologie-Prüfung Wien — Vorbereitung",
     description:
-      "Strukturierte Vorbereitung auf die Pharmakologie- und Rezeptierkunde-Prüfung (Wien) — 335 Fragen mit klinischen Begründungen, Dosierungen und Guideline-Referenzen.",
+      "Strukturierte Vorbereitung auf die Pharmakologie- und Rezeptierkunde-Prüfung (Wien): 335 Fragen mit klinischen Begründungen, Dosierungen und Guideline-Referenzen.",
     provider: {
       "@type": "Organization",
       name: "MedPrüf",
@@ -91,7 +92,7 @@ function buildCourseSchema() {
       priceCurrency: "EUR",
       availability: "https://schema.org/InStock",
       description:
-        "Free tier — 150 questions. Juni-26-Kohorte with Pass-Until-You-Pass available from /pricing.",
+        "Free tier: 150 questions. Kenntnisprüfung Cohort with Pass-Until-You-Pass available from /pricing.",
     },
   };
 }

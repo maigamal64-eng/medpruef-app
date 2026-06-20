@@ -195,11 +195,11 @@ export default function Home() {
       const lng = getLang();
       toast.success(
         lng === "de"
-          ? "Willkommen in der Juni-26-Kohorte."
-          : "Welcome to the June 26 Cohort.",
+          ? "Willkommen in der Kenntnisprüfung-Kohorte."
+          : "Welcome to the Kenntnisprüfung Cohort.",
         lng === "de"
-          ? "Dein Vollzugang ist 6 Monate lang aktiv — inkl. Pass-Until-You-Pass. Viel Erfolg bei der Prüfung."
-          : "Your full access is active for 6 months — with Pass-Until-You-Pass. Good luck with the exam."
+          ? "Dein Vollzugang ist 6 Monate lang aktiv, inkl. Pass-Until-You-Pass. Viel Erfolg bei der Prüfung."
+          : "Your full access is active for 6 months, with Pass-Until-You-Pass. Good luck with the exam."
       );
       setShowCohortConfetti(true);
       // Clean the URL so refresh doesn't retrigger.

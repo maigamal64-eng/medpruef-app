@@ -267,8 +267,8 @@ export default function ReferralsPage() {
             : "MedPrüf — Austrian medical exam prep",
         text:
           lang === "de"
-            ? "Lern mit mir für die Kenntnisprüfung auf MedPrüf. 90 Tage Vollzugang für 27 € (≈ 9 €/Monat) oder die Juni-26-Kohorte mit Pass-Until-You-Pass-Garantie. Mein Empfehlungslink:"
-            : "Prep with me for the Austrian medical exam on MedPrüf. 90 days for €27 (≈ €9/month) or the June 26 Cohort with a Pass-Until-You-Pass guarantee. My referral link:",
+            ? "Lern mit mir für die Kenntnisprüfung auf MedPrüf. 90 Tage Vollzugang für 27 € (≈ 9 €/Monat) oder die Kenntnisprüfung-Kohorte mit Pass-Until-You-Pass-Garantie. Mein Empfehlungslink:"
+            : "Prep with me for the Austrian medical exam on MedPrüf. 90 days for 27 € (≈ 9 €/month) or the Kenntnisprüfung Cohort with a Pass-Until-You-Pass guarantee. My referral link:",
         url: data.referralLink,
       });
     } catch {
@@ -563,8 +563,8 @@ export default function ReferralsPage() {
                       {lang === "de" ? "Direkt teilen" : "Share directly"}
                     </span>
                     {(() => {
-                      const shareTextDe = `MedPrüf — Österreichische Ärzteprüfung. 90 Tage Vollzugang für 27 € (≈ 9 €/Monat) oder die Juni-26-Kohorte mit Pass-Until-You-Pass-Garantie. Mein Empfehlungslink: ${data.referralLink}`;
-                      const shareTextEn = `MedPrüf — Austrian medical exam prep. 90 days full access for €27 (≈ €9/month) or the June 26 Cohort with a Pass-Until-You-Pass guarantee. My referral link: ${data.referralLink}`;
+                      const shareTextDe = `MedPrüf: Österreichische Ärzteprüfung. 90 Tage Vollzugang für 27 € (≈ 9 €/Monat) oder die Kenntnisprüfung-Kohorte mit Pass-Until-You-Pass-Garantie. Mein Empfehlungslink: ${data.referralLink}`;
+                      const shareTextEn = `MedPrüf: Austrian medical exam prep. 90 days full access for 27 € (≈ 9 €/month) or the Kenntnisprüfung Cohort with a Pass-Until-You-Pass guarantee. My referral link: ${data.referralLink}`;
                       const shareText = lang === "de" ? shareTextDe : shareTextEn;
                       const tgUrl = `https://t.me/share/url?url=${encodeURIComponent(
                         data.referralLink,
@@ -704,7 +704,7 @@ export default function ReferralsPage() {
                     { plan: "3 months", payoutEuros: 25 },
                     { plan: "6 months", payoutEuros: 50 },
                     { plan: "12 months", payoutEuros: 50 },
-                    { plan: "June 26 Cohort", payoutEuros: 75 },
+                    { plan: "Kenntnisprüfung Cohort", payoutEuros: 75 },
                   ]).map((row) => (
                     <tr key={row.plan}>
                       <td className="px-4 py-2.5 text-[var(--mp-fg)]">

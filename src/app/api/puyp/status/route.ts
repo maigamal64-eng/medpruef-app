@@ -80,10 +80,10 @@ export async function GET(req: NextRequest) {
 
     if (!activeSub) {
       reason =
-        "No active subscription. Pass-Until-You-Pass requires an active plan on the June 26 Cohort or 12-month tier.";
+        "No active subscription. Pass-Until-You-Pass requires an active plan on the Kenntnisprüfung Cohort or 12-month tier.";
     } else if (!isPuypEligibleTier(activeSub.tier as string | null)) {
       reason =
-        "Your current tier is not eligible for Pass-Until-You-Pass. Upgrade to the June 26 Cohort or 12-month plan to qualify.";
+        "Your current tier is not eligible for Pass-Until-You-Pass. Upgrade to the Kenntnisprüfung Cohort or 12-month plan to qualify.";
     } else if (
       (Number(activeSub.puyp_extensions_used) || 0) >= PUYP_MAX_EXTENSIONS
     ) {

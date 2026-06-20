@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "FAQ — MedPrüf",
   description:
-    "Häufig gestellte Fragen zu MedPrüf: Kenntnisprüfung Wien, KMP Innsbruck, Pharmakologie — Zahlung, Pass-Until-You-Pass, Übersetzungen, Datenschutz.",
+    "Häufig gestellte Fragen zu MedPrüf: Kenntnisprüfung Wien, KMP Innsbruck, Pharmakologie. Zahlung, Pass-Until-You-Pass, Übersetzungen, Datenschutz.",
   alternates: {
     canonical: "https://medpruf.com/faq",
   },
@@ -12,14 +12,14 @@ export const metadata: Metadata = {
     url: "https://medpruf.com/faq",
     title: "FAQ — MedPrüf",
     description:
-      "Häufig gestellte Fragen zu MedPrüf: Kenntnisprüfung Wien, KMP Innsbruck, Pharmakologie — Zahlung, Pass-Until-You-Pass, Übersetzungen, Datenschutz.",
+      "Häufig gestellte Fragen zu MedPrüf: Kenntnisprüfung Wien, KMP Innsbruck, Pharmakologie. Zahlung, Pass-Until-You-Pass, Übersetzungen, Datenschutz.",
     images: [{ url: "/brand/og-image.png", width: 1200, height: 630 }],
   },
   twitter: {
     card: "summary_large_image",
     title: "FAQ — MedPrüf",
     description:
-      "Häufig gestellte Fragen zu MedPrüf: Kenntnisprüfung Wien, KMP Innsbruck, Pharmakologie — Zahlung, Pass-Until-You-Pass, Übersetzungen, Datenschutz.",
+      "Häufig gestellte Fragen zu MedPrüf: Kenntnisprüfung Wien, KMP Innsbruck, Pharmakologie. Zahlung, Pass-Until-You-Pass, Übersetzungen, Datenschutz.",
     images: ["/brand/og-image.png"],
   },
 };
@@ -40,12 +40,12 @@ export const metadata: Metadata = {
 function buildFaqSchema() {
   const qa: Array<{ q: string; a: string }> = [
     {
-      q: 'Wie funktioniert „Beim ersten Versuch bestehen — oder kostenlos weiterlernen"?',
-      a: "Die Pass-Until-You-Pass-Garantie (PUYP) gilt für die Juni-26-Kohorte (114 €), den 6-Monats-Tarif (149 €) und das Jahresabo (229 €). Statt einer Cash-Rückerstattung verlängern wir deinen Zugang kostenlos bis zum nächsten Prüfungstermin, wenn du durchfällst: Du lädst dein offizielles Prüfungsergebnis hoch, musst mindestens 70 % der relevanten Fragenbank bearbeitet haben, ein Admin verifiziert innerhalb von 72 Stunden, und bei Bestätigung verlängert sich dein Abo automatisch — maximal zwei zusätzliche Zyklen pro Nutzer:in.",
+      q: 'Wie funktioniert „Beim ersten Versuch bestehen, oder kostenlos weiterlernen"?',
+      a: "Die Pass-Until-You-Pass-Garantie (PUYP) gilt für die Kenntnisprüfung-Kohorte (114 €), den 6-Monats-Tarif (149 €) und das Jahresabo (229 €). Statt einer Cash-Rückerstattung verlängern wir deinen Zugang kostenlos bis zum nächsten Prüfungstermin, wenn du durchfällst: Du lädst dein offizielles Prüfungsergebnis hoch, musst mindestens 70 % der relevanten Fragenbank bearbeitet haben, ein Admin verifiziert innerhalb von 72 Stunden, und bei Bestätigung verlängert sich dein Abo automatisch, maximal zwei zusätzliche Zyklen pro Nutzer:in.",
     },
     {
       q: "Wie kann ich bezahlen?",
-      a: "Du zahlst sicher mit Karte (Visa, Mastercard, auch Apple Pay). Der Checkout läuft über Whop, unseren Zahlungsabwickler; der Vollzugang wird automatisch innerhalb von etwa einer Minute nach der Zahlung freigeschaltet. Live verfügbar sind die Juni-26-Kohorte (114 €), der 3-Monats-Einstieg (27 €), der Einzelmonat (19 €) und der kostenlose Tarif. Es ist kein Abo: nichts verlängert sich automatisch, der Zugang läuft nach der gebuchten Laufzeit einfach aus.",
+      a: "Du zahlst sicher mit Karte (Visa, Mastercard, auch Apple Pay). Der Checkout läuft über Whop, unseren Zahlungsabwickler; der Vollzugang wird automatisch innerhalb von etwa einer Minute nach der Zahlung freigeschaltet. Live verfügbar sind die Kenntnisprüfung-Kohorte (114 €), der 3-Monats-Einstieg (27 €), der Einzelmonat (19 €) und der kostenlose Tarif. Es ist kein Abo: nichts verlängert sich automatisch, der Zugang läuft nach der gebuchten Laufzeit einfach aus.",
     },
     {
       q: "Wie laufen Empfehlungszahlungen?",
@@ -53,15 +53,15 @@ function buildFaqSchema() {
     },
     {
       q: "Was ist im kostenlosen Tarif enthalten?",
-      a: "Der kostenlose Tarif gibt dir 150 Fragen pro Prüfungstyp — 450 Fragen insgesamt über Kenntnisprüfung Wien, KMP Innsbruck und Pharmakologie, ohne Ablaufdatum. Enthalten sind vollständige klinische Erklärungen auf allen 450 Fragen (gleiche Tiefe wie im bezahlten Tarif). Nicht enthalten: Spaced Repetition, Prüfungssimulation, Lesezeichen, Notizen, geräteübergreifende Synchronisation und KI-Chat-Folgefragen.",
+      a: "Der kostenlose Tarif gibt dir 150 Fragen pro Prüfungstyp, 450 Fragen insgesamt über Kenntnisprüfung Wien, KMP Innsbruck und Pharmakologie, ohne Ablaufdatum. Klinische Erklärungen sind enthalten, wo sie vorhanden sind. Nicht enthalten: Spaced Repetition, Prüfungssimulation, Lesezeichen, Notizen, geräteübergreifende Synchronisation und KI-Chat-Folgefragen. Die KI-Erklärung zu jeder Frage ist den bezahlten Tarifen vorbehalten.",
     },
     {
       q: "Gibt es Tarife pro Prüfung?",
-      a: "Nein — jeder bezahlte Tarif enthält alle drei Prüfungstypen: Kenntnisprüfung Wien, KMP Innsbruck und Pharmakologie. Wenn du wirklich nur eine Prüfung vorbereitest, gibt dir der kostenlose Tarif 150 Fragen für genau diesen Prüfungstyp.",
+      a: "Nein, jeder bezahlte Tarif enthält alle drei Prüfungstypen: Kenntnisprüfung Wien, KMP Innsbruck und Pharmakologie. Wenn du wirklich nur eine Prüfung vorbereitest, gibt dir der kostenlose Tarif 150 Fragen für genau diesen Prüfungstyp.",
     },
     {
       q: "Wer baut MedPrüf?",
-      a: "MedPrüf wird von [name] ([name], Österreich) entwickelt — einem Solo-Engineer, der seinen Cousin durch die österreichische Nostrifikation begleitet hat. Jede Frage stammt aus einer dokumentierten offiziellen Prüfung (7.566 aus Wien seit 2016, 3.091 aus Innsbruck, 335 aus Pharmakologie) — nichts erfunden, nichts geraten.",
+      a: "MedPrüf wird von [name] ([name], Österreich) entwickelt, einem Solo-Engineer, der seinen Cousin durch die österreichische Nostrifikation begleitet hat. Jede Frage stammt aus einer dokumentierten offiziellen Prüfung (7.566 aus Wien seit 2016, 3.091 aus Innsbruck, 335 aus Pharmakologie), nichts erfunden, nichts geraten.",
     },
   ];
 

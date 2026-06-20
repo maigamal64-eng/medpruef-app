@@ -23,17 +23,24 @@ export type PuypExamType = "kenntnispruefung" | "kmp_innsbruck" | "pharma";
 /**
  * ISO-date (YYYY-MM-DD) of the next known exam for each type.
  *
- * Updated 2026-04-23:
- *   - Kenntnisprüfung Wien: next published ~18 May 2026 + autumn cycle.
- *   - KMP Innsbruck: 2026 dates are 4 Mar / 27 May / 17 Jun — we
- *     publish the nearest future date.
- *   - Pharmakologie: 26 Jun 2026. After that date passes the next
- *     cycle isn't public — admin overrides manually.
+ * Updated 2026-06-20 (Lektor, against MEDPRUF-SOT.md §1 — the prior
+ * May/June dates had all passed and were driving stale "next exam"
+ * suggestions):
+ *   - Kenntnisprüfung Wien: next sitting 28 Sep 2026 (registration
+ *     ~end of July via Landesärztekammer). SoT-owned.
+ *   - KMP Innsbruck: next ~late October 2026 (≈ week 44); confirm the
+ *     exact day with i-med.ac.at. 2026-10-30 used as a defensible
+ *     default — FLAG for [name]/Visite to pin the exact date.
+ *   - Pharmakologie: SoT §1 ties Pharma to the Kenntnisprüfung tracks
+ *     with no standalone published date, so it is anchored to the Wien
+ *     sitting (28 Sep 2026) rather than fabricating a precise date.
+ *     FLAG for [name]/Visite once a standalone Pharma date is published;
+ *     the admin UI override handles per-user accuracy meanwhile.
  */
 export const NEXT_EXAM_DATE: Record<PuypExamType, string> = {
-  kenntnispruefung: "2026-05-18",
-  kmp_innsbruck: "2026-05-27",
-  pharma: "2026-06-26",
+  kenntnispruefung: "2026-09-28",
+  kmp_innsbruck: "2026-10-30",
+  pharma: "2026-09-28",
 };
 
 /**

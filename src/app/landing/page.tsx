@@ -90,8 +90,8 @@ const COPY = {
     // which is available:false (waitlisted) — and contradicted the
     // 27 € CTA in the same viewport. Now both agree.
     subtitle: {
-      de: "Die einzige Prüfungsvorbereitung, speziell für Österreichs Kenntnisprüfung, KMP und Pharmakologie. Destilliert aus 7.566 Wien-Prüfungsfragen seit 2016, 3.091 KMP Innsbruck und 335 Pharmakologie. Eine Kenntnisprüfung kostet ~370 € pro Versuch — MedPrüf gibt es ab 27 € für 3 Monate.",
-      en: "The only exam prep built specifically for Austria's Kenntnisprüfung, KMP and Pharmakologie. Distilled from 7,566 Vienna exam questions since 2016, 3,091 KMP Innsbruck and 335 Pharmakologie. A Kenntnisprüfung re-sit is ~370 € — MedPrüf starts at 27 € for 3 months.",
+      de: "Die einzige Prüfungsvorbereitung, speziell für Österreichs Kenntnisprüfung, KMP und Pharmakologie. Destilliert aus 7.566 Wien-Prüfungsfragen seit 2016, 3.091 KMP Innsbruck und 335 Pharmakologie. Eine Kenntnisprüfung kostet ~370 € pro Versuch, MedPrüf gibt es ab 27 € für 3 Monate.",
+      en: "The only exam prep built specifically for Austria's Kenntnisprüfung, KMP and Pharmakologie. Distilled from 7,566 Vienna exam questions since 2016, 3,091 KMP Innsbruck and 335 Pharmakologie. A Kenntnisprüfung re-sit is ~370 €, and MedPrüf starts at 27 € for 3 months.",
     },
     cta_primary: { de: "Kostenlos starten", en: "Start free" },
     cta_primary_sub: {
@@ -99,24 +99,24 @@ const COPY = {
       en: "150 questions per exam · no card",
     },
     cta_primary_long: {
-      de: "Kostenlos starten — 150 Fragen je Prüfung",
-      en: "Start free — 150 questions per exam",
+      de: "Kostenlos starten: 150 Fragen je Prüfung",
+      en: "Start free: 150 questions per exam",
     },
     cta_secondary: {
-      de: "Juni-26-Kohorte ansehen",
-      en: "See the June 26 Cohort",
+      de: "Kenntnisprüfung-Kohorte ansehen",
+      en: "See the Kenntnisprüfung Cohort",
     },
     cta_tertiary: {
-      de: "3-Monats-Einstieg — 27 € (≈ 9 €/Monat)",
-      en: "3-Month Starter — 27 € (≈ 9 €/month)",
+      de: "3-Monats-Einstieg · 27 € (≈ 9 €/Monat)",
+      en: "3-Month Starter · 27 € (≈ 9 €/month)",
     },
     cta_tertiary_sub: {
       de: "Vollzugang · einmalig · keine Verlängerung",
       en: "Full access · one-time · no renewal",
     },
     cta_note: {
-      de: "Keine Karte · Juni-26-Kohorte mit Pass-Until-You-Pass-Garantie",
-      en: "No credit card · June 26 Cohort includes Pass-Until-You-Pass",
+      de: "Keine Karte · Kenntnisprüfung-Kohorte mit Pass-Until-You-Pass-Garantie",
+      en: "No credit card · Kenntnisprüfung Cohort includes Pass-Until-You-Pass",
     },
   },
   stats: [
@@ -158,8 +158,8 @@ const COPY = {
         n: "01",
         title: { de: "Prüfung wählen", en: "Choose your exam" },
         body: {
-          de: "Kenntnisprüfung Wien, KMP Innsbruck oder Pharmakologie — wir kennen die Gewichtung jeder Prüfung.",
-          en: "Kenntnisprüfung Wien, KMP Innsbruck or Pharmakologie — we know the weighting of each exam.",
+          de: "Kenntnisprüfung Wien, KMP Innsbruck oder Pharmakologie: wir kennen die Gewichtung jeder Prüfung.",
+          en: "Kenntnisprüfung Wien, KMP Innsbruck or Pharmakologie: we know the weighting of each exam.",
         },
       },
       {
@@ -174,8 +174,8 @@ const COPY = {
         n: "03",
         title: { de: "Simulieren", en: "Simulate" },
         body: {
-          de: "Volle Prüfungssimulation. 4 Stunden, Themen-Navigator, aufgeschobene Bewertung — wie am Prüfungstag.",
-          en: "Full exam simulation. 4 hours, topic navigator, deferred grading — just like exam day.",
+          de: "Volle Prüfungssimulation. 4 Stunden, Themen-Navigator, aufgeschobene Bewertung, wie am Prüfungstag.",
+          en: "Full exam simulation. 4 hours, topic navigator, deferred grading, just like exam day.",
         },
       },
     ],
@@ -197,8 +197,8 @@ const COPY = {
         tag: "AI",
         title: { de: "Klinische KI-Erklärungen", en: "Clinical AI explanations" },
         body: {
-          de: "TL;DR zuerst, dann Leitlinien-Referenzen: ERC 2021, ESC, ÖDG. Nicht Wikipedia — klinisch.",
-          en: "TL;DR first, then guideline references: ERC 2021, ESC, ÖDG. Not Wikipedia — clinical.",
+          de: "TL;DR zuerst, dann Leitlinien-Referenzen: ERC 2021, ESC, ÖDG. Nicht Wikipedia, sondern klinisch.",
+          en: "TL;DR first, then guideline references: ERC 2021, ESC, ÖDG. Not Wikipedia, clinical.",
         },
       },
       {
@@ -215,8 +215,8 @@ const COPY = {
         tag: "SM-2",
         title: { de: "Spaced Repetition", en: "Spaced repetition" },
         body: {
-          de: "Fragen tauchen genau dann auf, wenn du sie zu vergessen beginnst. Wie Anki — nur klinisch kuratiert.",
-          en: "Questions resurface right when you're about to forget. Like Anki — but clinically curated.",
+          de: "Fragen tauchen genau dann auf, wenn du sie zu vergessen beginnst. Wie Anki, nur klinisch kuratiert.",
+          en: "Questions resurface right when you're about to forget. Like Anki, but clinically curated.",
         },
       },
       {
@@ -255,8 +255,8 @@ const COPY = {
       en: "16 specialties. Real questions. Nothing invented.",
     },
     subtitle: {
-      de: "Jede Frage stammt aus einer dokumentierten offiziellen Prüfung — Kenntnisprüfung Wien (SIP 4 + SIP 5), KMP Innsbruck, Pharmakologie.",
-      en: "Every question comes from a documented official exam — Kenntnisprüfung Wien (SIP 4 + SIP 5), KMP Innsbruck, Pharmakologie.",
+      de: "Jede Frage stammt aus einer dokumentierten offiziellen Prüfung: Kenntnisprüfung Wien (SIP 4 + SIP 5), KMP Innsbruck, Pharmakologie.",
+      en: "Every question comes from a documented official exam: Kenntnisprüfung Wien (SIP 4 + SIP 5), KMP Innsbruck, Pharmakologie.",
     },
     items: [
       { icon: HeartPulse, name: { de: "Innere Medizin", en: "Internal Medicine" } },
@@ -277,8 +277,8 @@ const COPY = {
     index: "03 / 04",
     eyebrow: { de: "Preise", en: "Pricing" },
     title: {
-      de: "Starte kostenlos. Upgrade zur Juni-26-Kohorte.",
-      en: "Start free. Upgrade to the June 26 Cohort.",
+      de: "Starte kostenlos. Upgrade zur Kenntnisprüfung-Kohorte.",
+      en: "Start free. Upgrade to the Kenntnisprüfung Cohort.",
     },
     subtitle: {
       de: "Jeder bezahlte Tarif enthält alle drei Prüfungstypen. Pass-Until-You-Pass-Garantie auf der Kohorte und dem Jahresabo.",
@@ -290,8 +290,8 @@ const COPY = {
         price: "0 €",
         period: { de: "dauerhaft", en: "forever" },
         pitch: {
-          de: "150 Fragen × 3 Prüfungstypen · volle Erklärungen",
-          en: "150 questions × 3 exam types · full explanations",
+          de: "150 Fragen × 3 Prüfungstypen · Erklärungen, wo vorhanden",
+          en: "150 questions × 3 exam types · explanations where available",
         },
         status: "live",
         cta: { de: "Kostenlos starten", en: "Start free" },
@@ -299,7 +299,7 @@ const COPY = {
         featured: false,
       },
       {
-        name: { de: "Juni-26-Kohorte", en: "June 26 Cohort" },
+        name: { de: "Kenntnisprüfung-Kohorte", en: "Kenntnisprüfung Cohort" },
         price: "114 €",
         period: { de: "6 Monate", en: "6 months" },
         pitch: {
@@ -343,8 +343,8 @@ const COPY = {
       en: "10,992 questions, each from a documented exam.",
     },
     quote: {
-      de: "Nichts erfunden, nichts geraten. Jede Frage ist gegen ihre Quell-Prüfung referenziert — Wien-Tertials, KoalaMed Innsbruck, Rezeptierkunde Pharma.",
-      en: "Nothing invented, nothing guessed. Every question is referenced against its source exam — Vienna tertials, KoalaMed Innsbruck, Rezeptierkunde Pharma.",
+      de: "Nichts erfunden, nichts geraten. Jede Frage ist gegen ihre Quell-Prüfung referenziert: Wien-Tertials, KoalaMed Innsbruck, Rezeptierkunde Pharma.",
+      en: "Nothing invented, nothing guessed. Every question is referenced against its source exam: Vienna tertials, KoalaMed Innsbruck, Rezeptierkunde Pharma.",
     },
     breakdown: [
       {
@@ -386,8 +386,8 @@ const COPY = {
     // founder). "Für ausländische Ärzt:innen / for foreign doctors"
     // is true and stays.
     tagline: {
-      de: "Vorbereitung auf österreichische Ärzteprüfungen — für ausländische Ärzt:innen, aus dokumentierten offiziellen Prüfungen.",
-      en: "Austrian medical exam preparation — for foreign doctors, built from documented official exams.",
+      de: "Vorbereitung auf österreichische Ärzteprüfungen, für ausländische Ärzt:innen, aus dokumentierten offiziellen Prüfungen.",
+      en: "Austrian medical exam preparation for foreign doctors, built from documented official exams.",
     },
     product: { de: "Produkt", en: "Product" },
     legal: { de: "Rechtliches", en: "Legal" },

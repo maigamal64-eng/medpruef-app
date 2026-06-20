@@ -132,6 +132,16 @@ export default function ExamLandingShell({ content }: { content: ExamLandingCont
 
   const dayWord = daysLeft === 1 ? "Tag" : "Tage";
 
+  // Format the countdown target date from the ISO prop so the label can
+  // never drift from the actual target (the old hardcoded "26. Juni 2026"
+  // string went stale independently of the date the chip counted to).
+  const countdownDateLabel = content.countdownTargetIso
+    ? new Date(content.countdownTargetIso).toLocaleDateString(
+        L === "de" ? "de-AT" : "en-GB",
+        { day: "numeric", month: "long", year: "numeric" }
+      )
+    : "";
+
   return (
     <div className="min-h-screen bg-[var(--mp-surface-sunken)]">
       {/* Top bar — minimalist, no auth gating */}
@@ -202,8 +212,8 @@ export default function ExamLandingShell({ content }: { content: ExamLandingCont
               />
               <span className="text-xs font-semibold text-[var(--mp-cta-blue)]">
                 {L === "de"
-                  ? `Noch ${daysLeft} ${dayWord} bis zum 26. Juni 2026`
-                  : `${daysLeft} ${daysLeft === 1 ? "day" : "days"} until 26 June 2026`}
+                  ? `Noch ${daysLeft} ${dayWord} bis zum ${countdownDateLabel}`
+                  : `${daysLeft} ${daysLeft === 1 ? "day" : "days"} until ${countdownDateLabel}`}
               </span>
             </div>
           )}
@@ -338,8 +348,8 @@ export default function ExamLandingShell({ content }: { content: ExamLandingCont
                 </p>
                 <p className="text-xs text-[var(--mp-fg-muted)]">
                   {L === "de"
-                    ? "auf der Juni-26-Kohorte"
-                    : "on the June 26 Cohort"}
+                    ? "auf der Kenntnisprüfung-Kohorte"
+                    : "on the Kenntnisprüfung Cohort"}
                 </p>
               </div>
             </div>

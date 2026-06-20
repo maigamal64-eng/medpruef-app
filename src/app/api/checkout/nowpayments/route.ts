@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           error: "Tier not available for checkout yet",
-          hint: "Only the June 26 Cohort (premium_pass_guaranteed), the 3-month starter (first_3mo_27), and the single-month fallback (first_month_19) are live on crypto rails right now. The four always-on tiers light up when Stripe Atlas clears.",
+          hint: "Only the Kenntnisprüfung Cohort (premium_pass_guaranteed), the 3-month starter (first_3mo_27), and the single-month fallback (first_month_19) are live on crypto rails right now. The four always-on tiers light up when Stripe Atlas clears.",
         },
         { status: 400 }
       );
@@ -127,9 +127,9 @@ export async function POST(req: NextRequest) {
           {
             error: "ENTRY_TIER_ALREADY_USED",
             message_de:
-              "Du hast den 3-Monats-Einstieg bereits genutzt. Wähle die Juni-26-Kohorte (€114, 6 Monate) oder den Einzelmonat (€19).",
+              "Du hast den 3-Monats-Einstieg bereits genutzt. Wähle die Kenntnisprüfung-Kohorte (114 €, 6 Monate) oder den Einzelmonat (19 €).",
             message_en:
-              "You've already used the 3-month starter. Pick the June 26 Cohort (€114, 6 months) or the single-month fallback (€19).",
+              "You've already used the 3-month starter. Pick the Kenntnisprüfung Cohort (114 €, 6 months) or the single-month fallback (19 €).",
             next_options: ["premium_pass_guaranteed", "first_month_19"],
           },
           { status: 400 }

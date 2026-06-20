@@ -890,8 +890,8 @@ function QuizContent() {
         <div className="space-y-3">
           <p className="text-sm text-[var(--mp-fg)]">
             {lang === "de"
-              ? "Upgrade schaltet alle 10.992 Fragen, Spaced-Repetition-Wiederholung, Prüfungssimulation, Bookmarks und die Pass-Until-You-Pass-Garantie der Juni-26-Kohorte frei."
-              : "Upgrade unlocks all 10,992 questions, spaced-repetition review, mock exam, bookmarks, and the Pass-Until-You-Pass guarantee on the June 26 Cohort."}
+              ? "Upgrade schaltet alle 10.992 Fragen, Spaced-Repetition-Wiederholung, Prüfungssimulation, Bookmarks und die Pass-Until-You-Pass-Garantie der Kenntnisprüfung-Kohorte frei."
+              : "Upgrade unlocks all 10,992 questions, spaced-repetition review, mock exam, bookmarks, and the Pass-Until-You-Pass guarantee on the Kenntnisprüfung Cohort."}
           </p>
           <Alert variant="info">
             {lang === "de"

@@ -31,8 +31,8 @@ const content: ExamLandingContent = {
     en: "Pass the Vienna Pharmakologie exam on your first try.",
   },
   heroSubtitle: {
-    de: "Spezialisierte Vorbereitung auf die österreichische Pharmakologie- und Rezeptierkunde-Prüfung — 335 Fragen mit klinischen Begründungen, Dosierungsregeln und Wechselwirkungen. Juni-26-Kohorte inklusive Pass-Until-You-Pass-Garantie.",
-    en: "Specialized prep for the Austrian Pharmakologie and Rezeptierkunde exam — 335 questions with clinical reasoning, dosing rules, and interactions. The June 26 Cohort includes Pass-Until-You-Pass.",
+    de: "Spezialisierte Vorbereitung auf die österreichische Pharmakologie- und Rezeptierkunde-Prüfung: 335 Fragen mit klinischen Begründungen, Dosierungsregeln und Wechselwirkungen. Kenntnisprüfung-Kohorte inklusive Pass-Until-You-Pass-Garantie.",
+    en: "Specialized prep for the Austrian Pharmakologie and Rezeptierkunde exam: 335 questions with clinical reasoning, dosing rules, and interactions. The Kenntnisprüfung Cohort includes Pass-Until-You-Pass.",
   },
   primaryCtaHref: "/quiz?exam=pharma&free=1",
   primaryCtaLabel: {
@@ -41,13 +41,14 @@ const content: ExamLandingContent = {
   },
   secondaryCtaHref: "/pricing",
   secondaryCtaLabel: {
-    de: "Juni-26-Kohorte ansehen",
-    en: "See June 26 Cohort",
+    de: "Kenntnisprüfung-Kohorte ansehen",
+    en: "See Kenntnisprüfung Cohort",
   },
   // Countdown chip — Pharma-only. The global CohortCountdownBanner
   // also shows this date but can be dismissed; this chip stays.
+  // Anchored to the in-market Kenntnisprüfung Wien sitting (SoT §1).
   showCountdownChip: true,
-  countdownTargetIso: "2026-06-26T09:00:00+02:00",
+  countdownTargetIso: "2026-09-28T09:00:00+02:00",
   breakdown: [
     {
       label: { de: "Fragen", en: "Questions" },
@@ -59,15 +60,15 @@ const content: ExamLandingContent = {
     },
     {
       label: { de: "Prüfungstermin", en: "Exam date" },
-      value: "26. Juni",
+      value: "28. Sept",
       sub: {
-        de: "Freitag 2026 · Wien",
-        en: "Friday 2026 · Vienna",
+        de: "2026 · Kenntnisprüfung Wien",
+        en: "2026 · Kenntnisprüfung Wien",
       },
     },
     {
-      label: { de: "Juni-26-Kohorte", en: "June 26 Cohort" },
-      value: "€114",
+      label: { de: "Kenntnisprüfung-Kohorte", en: "Kenntnisprüfung Cohort" },
+      value: "114 €",
       sub: {
         de: "6 Monate · Pass-Until-You-Pass",
         en: "6 months · Pass-Until-You-Pass",
@@ -100,8 +101,8 @@ const content: ExamLandingContent = {
       en: "Clinical vignettes: \"Patient has X, takes Y, now starting Z — what do you do?\" — exactly the decision style the exam expects.",
     },
     {
-      de: "Pass-Until-You-Pass auf der Juni-26-Kohorte: wenn du durchfällst, verlängern wir deinen Zugang kostenlos bis zur nächsten Prüfung (maximal zwei zusätzliche Zyklen).",
-      en: "Pass-Until-You-Pass on the June 26 Cohort: if you fail, we extend your access free through the next exam cycle (max two additional cycles).",
+      de: "Pass-Until-You-Pass auf der Kenntnisprüfung-Kohorte: wenn du durchfällst, verlängern wir deinen Zugang kostenlos bis zur nächsten Prüfung (maximal zwei zusätzliche Zyklen).",
+      en: "Pass-Until-You-Pass on the Kenntnisprüfung Cohort: if you fail, we extend your access free through the next exam cycle (max two additional cycles).",
     },
   ],
   faq: [
@@ -121,8 +122,8 @@ const content: ExamLandingContent = {
         en: "When is the next Pharmakologie exam?",
       },
       a: {
-        de: "Der nächste uns bekannte Termin ist Freitag, der 26. Juni 2026 (Vormittag, Wien). Das ist der Fixpunkt für unsere Juni-26-Kohorte — wer auf dieses Datum lernt, bekommt den €114-Tarif mit Pass-Until-You-Pass-Garantie. Die Ärztekammer Wien aktualisiert die Prüfungstermine auf ihrer Webseite; wir aktualisieren den Datensatz parallel und passen den Kohort-Name entsprechend an, sobald ein neuer Termin bekannt wird.",
-        en: "The next date we know is Friday, 26 June 2026 (morning, Vienna). That's the anchor for our June 26 Cohort — students prepping for this date get the €114 plan with Pass-Until-You-Pass. The Ärztekammer Wien updates exam dates on their website; we update the dataset in parallel and retitle the cohort once a new date is announced.",
+        de: "Die Pharmakologie-Prüfung ist an die Nostrifikations-Termine deiner Medizinischen Universität und die Kenntnisprüfung-Zyklen gekoppelt; der nächste große Termin der Kenntnisprüfung Wien ist der 28. September 2026 (Anmeldung bis Ende Juli). Deinen genauen Pharma-Termin entnimmst du deinem Nostrifikationsbescheid und der Ärztekammer Wien. Unsere Kenntnisprüfung-Kohorte (114 €) gibt dir 6 Monate Vollzugang plus Pass-Until-You-Pass; wir aktualisieren die Termine, sobald die Ärztekammer Wien neue veröffentlicht.",
+        en: "The Pharmakologie exam is tied to your Medical University's nostrification dates and the Kenntnisprüfung cycles; the next major Kenntnisprüfung Wien sitting is 28 September 2026 (registration by end of July). For your exact Pharma date, check your nostrification decision letter and the Ärztekammer Wien. Our Kenntnisprüfung Cohort (114 €) gives you 6 months of full access plus Pass-Until-You-Pass; we update the dates as soon as the Ärztekammer Wien publishes new ones.",
       },
     },
     {
@@ -137,12 +138,12 @@ const content: ExamLandingContent = {
     },
     {
       q: {
-        de: "Was ist die Juni-26-Kohorte und wie funktioniert Pass-Until-You-Pass?",
-        en: "What is the June 26 Cohort and how does Pass-Until-You-Pass work?",
+        de: "Was ist die Kenntnisprüfung-Kohorte und wie funktioniert Pass-Until-You-Pass?",
+        en: "What is the Kenntnisprüfung Cohort and how does Pass-Until-You-Pass work?",
       },
       a: {
-        de: "Die Juni-26-Kohorte ist unser Lerngemeinschafts-Tarif für die Prüfung am 26. Juni 2026: €114 für 6 Monate Vollzugang plus die Pass-Until-You-Pass-Garantie. Bestehst du nicht, verlängern wir deinen Zugang kostenlos bis zum nächsten Prüfungstermin (max. 2 zusätzliche Zyklen) — vorausgesetzt, du hast mindestens 70% der Fragenbank bearbeitet und lädst dein offizielles Prüfungsergebnis hoch. Ein Admin verifiziert manuell innerhalb von 72 Stunden. Keine Bargeld-Erstattung — wir investieren in dein Bestehen, nicht in eine Ausstiegsklausel.",
-        en: "The June 26 Cohort is our study-group plan for the 26 June 2026 exam: €114 for 6 months full access plus the Pass-Until-You-Pass guarantee. If you fail, we extend your access free through the next exam date (max 2 additional cycles) — provided you completed at least 70% of the question bank and upload your official exam result. An admin verifies manually within 72 hours. No cash refunds — we invest in your pass, not in an exit clause.",
+        de: "Die Kenntnisprüfung-Kohorte ist unser Lerngemeinschafts-Tarif für die nächste Prüfungsphase (Kenntnisprüfung Wien am 28. September 2026): 114 € für 6 Monate Vollzugang plus die Pass-Until-You-Pass-Garantie. Bestehst du nicht, verlängern wir deinen Zugang kostenlos bis zum nächsten Prüfungstermin (max. 2 zusätzliche Zyklen), vorausgesetzt, du hast mindestens 70% der Fragenbank bearbeitet und lädst dein offizielles Prüfungsergebnis hoch. Ein Admin verifiziert manuell innerhalb von 72 Stunden. Keine Bargeld-Erstattung: wir investieren in dein Bestehen, nicht in eine Ausstiegsklausel.",
+        en: "The Kenntnisprüfung Cohort is our study-group plan for the next exam window (Kenntnisprüfung Wien on 28 September 2026): 114 € for 6 months full access plus the Pass-Until-You-Pass guarantee. If you fail, we extend your access free through the next exam date (max 2 additional cycles), provided you completed at least 70% of the question bank and upload your official exam result. An admin verifies manually within 72 hours. No cash refunds: we invest in your pass, not in an exit clause.",
       },
     },
     {

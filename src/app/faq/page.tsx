@@ -35,8 +35,8 @@ const SECTIONS: SectionDef[] = [
     id: "puyp",
     icon: ShieldCheck,
     title: {
-      de: "Pass-Until-You-Pass — wie funktioniert das?",
-      en: "Pass-Until-You-Pass — how it works",
+      de: "Pass-Until-You-Pass, wie funktioniert das?",
+      en: "Pass-Until-You-Pass, how it works",
     },
   },
   {
@@ -144,8 +144,8 @@ export default function FaqPage() {
           </h2>
           <p className="mp-body text-[var(--mp-fg-muted)] max-w-xl mx-auto">
             {lang === "de"
-              ? "Antworten auf die wichtigsten Fragen zum kostenlosen Tarif, zur Juni-26-Kohorte, zu Pass-Until-You-Pass und zum Empfehlungsprogramm."
-              : "Answers to the key questions about the free tier, the June 26 Cohort, Pass-Until-You-Pass, and the referral program."}
+              ? "Antworten auf die wichtigsten Fragen zum kostenlosen Tarif, zur Kenntnisprüfung-Kohorte, zu Pass-Until-You-Pass und zum Empfehlungsprogramm."
+              : "Answers to the key questions about the free tier, the Kenntnisprüfung Cohort, Pass-Until-You-Pass, and the referral program."}
           </p>
         </section>
 
@@ -520,12 +520,12 @@ function BackToPricing({
 const copy = {
   puyp: {
     title: {
-      de: "Wie funktioniert „Beim ersten Versuch bestehen — oder kostenlos weiterlernen\"?",
-      en: "How does \"Pass first try — or study free until you do\" work?",
+      de: "Wie funktioniert „Beim ersten Versuch bestehen, oder kostenlos weiterlernen\"?",
+      en: "How does \"Pass first try, or study free until you do\" work?",
     },
     intro: {
-      de: "Die Pass-Until-You-Pass-Garantie (PUYP) gilt für die Juni-26-Kohorte und das 12-Monats-Abo. Statt einer Cash-Rückerstattung verlängern wir deinen Zugang kostenlos bis zum nächsten Prüfungstermin, wenn du durchfällst.",
-      en: "The Pass-Until-You-Pass guarantee (PUYP) applies to the June 26 Cohort and the 12-month plan. Instead of a cash refund, we extend your access free through the next exam date if you fail.",
+      de: "Die Pass-Until-You-Pass-Garantie (PUYP) gilt für die Kenntnisprüfung-Kohorte und das 12-Monats-Abo. Statt einer Cash-Rückerstattung verlängern wir deinen Zugang kostenlos bis zum nächsten Prüfungstermin, wenn du durchfällst.",
+      en: "The Pass-Until-You-Pass guarantee (PUYP) applies to the Kenntnisprüfung Cohort and the 12-month plan. Instead of a cash refund, we extend your access free through the next exam date if you fail.",
     },
     b1: {
       de: "Lade dein offizielles Prüfungsergebnis als PDF oder Foto in deinem Dashboard hoch.",
@@ -548,12 +548,12 @@ const copy = {
       en: "Maximum of two additional cycles per user.",
     },
     scope: {
-      de: "PUYP gilt für die Juni-26-Kohorte (114 €), den 6-Monats-Tarif (149 €) und das Jahresabo (229 €). Die kürzeren Tarife (Monatlich, 3 Monate), der 3-Monats-Einstieg (27 €) und der Einzelmonat (19 €) enthalten die Garantie nicht.",
-      en: "PUYP applies to the June 26 Cohort (€114), the 6-month plan (€149) and the annual plan (€229). The shorter plans (monthly, 3-month), the 3-month starter (€27) and the single-month tier (€19) don't include the guarantee.",
+      de: "PUYP gilt für die Kenntnisprüfung-Kohorte (114 €), den 6-Monats-Tarif (149 €) und das Jahresabo (229 €). Die kürzeren Tarife (Monatlich, 3 Monate), der 3-Monats-Einstieg (27 €) und der Einzelmonat (19 €) enthalten die Garantie nicht.",
+      en: "PUYP applies to the Kenntnisprüfung Cohort (114 €), the 6-month plan (149 €) and the annual plan (229 €). The shorter plans (monthly, 3-month), the 3-month starter (27 €) and the single-month tier (19 €) don't include the guarantee.",
     },
     noRefund: {
-      de: "Geld-zurück-Garantien laden zu Missbrauch ein und führen häufig dazu, dass Studierende aufgeben, sobald es hart wird. Pass-Until-You-Pass hält dich stattdessen im Spiel — wir investieren in dein Bestehen, nicht in eine Ausstiegsklausel. Wenn du ein sehr persönliches Problem hast (Krankheit, Trauerfall), schreib uns an user-b7e46e80@example.com — wir finden im Einzelfall eine faire Lösung.",
-      en: "Money-back guarantees invite abuse and often push students to quit when the work gets hard. Pass-Until-You-Pass keeps you in the game instead — we invest in your pass, not in an exit clause. If you have a genuine personal situation (illness, bereavement), email user-b7e46e80@example.com — we find a fair solution case by case.",
+      de: "Geld-zurück-Garantien laden zu Missbrauch ein und führen häufig dazu, dass Studierende aufgeben, sobald es hart wird. Pass-Until-You-Pass hält dich stattdessen im Spiel: wir investieren in dein Bestehen, nicht in eine Ausstiegsklausel. Wenn du ein sehr persönliches Problem hast (Krankheit, Trauerfall), schreib uns an user-b7e46e80@example.com, wir finden im Einzelfall eine faire Lösung.",
+      en: "Money-back guarantees invite abuse and often push students to quit when the work gets hard. Pass-Until-You-Pass keeps you in the game instead: we invest in your pass, not in an exit clause. If you have a genuine personal situation (illness, bereavement), email user-b7e46e80@example.com and we find a fair solution case by case.",
     },
   },
   crypto: {
@@ -566,8 +566,8 @@ const copy = {
       en: "You pay securely by card (Visa, Mastercard, Apple Pay too). Checkout runs through Whop, our payment processor. After payment, your full access unlocks automatically, usually within a minute.",
     },
     p2: {
-      de: "Live verfügbar sind die Juni-26-Kohorte (€114), der 3-Monats-Einstieg (€27), der Einzelmonat (€19) und der kostenlose Tarif. Es ist kein Abo: nichts verlängert sich automatisch, der Zugang läuft nach der gebuchten Laufzeit aus. Die wiederkehrenden Monats- und Jahrestarife sind auf der Preisseite sichtbar und nehmen Warteliste-Einträge entgegen.",
-      en: "Live right now: the June 26 Cohort (€114), the 3-month starter (€27), the single month (€19), and the free tier. It is not a subscription: nothing auto-renews, access simply ends when your term is up. The recurring monthly and annual tiers are visible on the pricing page and accept waitlist sign-ups.",
+      de: "Live verfügbar sind die Kenntnisprüfung-Kohorte (114 €), der 3-Monats-Einstieg (27 €), der Einzelmonat (19 €) und der kostenlose Tarif. Es ist kein Abo: nichts verlängert sich automatisch, der Zugang läuft nach der gebuchten Laufzeit aus. Die wiederkehrenden Monats- und Jahrestarife sind auf der Preisseite sichtbar und nehmen Warteliste-Einträge entgegen.",
+      en: "Live right now: the Kenntnisprüfung Cohort (114 €), the 3-month starter (27 €), the single month (19 €), and the free tier. It is not a subscription: nothing auto-renews, access simply ends when your term is up. The recurring monthly and annual tiers are visible on the pricing page and accept waitlist sign-ups.",
     },
   },
   ref: {
@@ -577,23 +577,23 @@ const copy = {
     },
     intro: {
       de: "Jede:r Nutzer:in bekommt einen persönlichen Empfehlungscode. Sobald deine Empfehlung ein Abo abschließt, gehört eine abgestufte Auszahlung dir. Die Höhe hängt vom gebuchten Tarif ab:",
-      en: "Every user gets a personal referral code. Once your referral signs up, you earn a tiered payout — the amount depends on which plan they choose:",
+      en: "Every user gets a personal referral code. Once your referral signs up, you earn a tiered payout; the amount depends on which plan they choose:",
     },
     b1: {
-      de: "30-Tage-Sperrfrist ab dem Datum, an dem die Zahlung der Empfehlung eingegangen ist — schützt vor Missbrauch mit Rückerstattungen.",
-      en: "30-day hold from the date your referral's payment clears — protects against refund gaming.",
+      de: "30-Tage-Sperrfrist ab dem Datum, an dem die Zahlung der Empfehlung eingegangen ist, schützt vor Missbrauch mit Rückerstattungen.",
+      en: "30-day hold from the date your referral's payment clears, protects against refund gaming.",
     },
     b2: {
       de: "Auszahlung per USDT (TRC-20/ERC-20) oder über Wise auf dein Bankkonto.",
       en: "Payouts via USDT (TRC-20/ERC-20) or via Wise to your bank account.",
     },
     b3: {
-      de: "Jahresdeckel: €600 pro Kalenderjahr und Empfehlende:r.",
-      en: "Annual cap: €600 per referrer per calendar year.",
+      de: "Jahresdeckel: 600 € pro Kalenderjahr und Empfehlende:r.",
+      en: "Annual cap: 600 € per referrer per calendar year.",
     },
     b4: {
-      de: "Nur die erste Zahlung deiner Empfehlung löst den Bonus aus — keine Wiederholungen bei Verlängerung.",
-      en: "Only the referee's first paid subscription triggers the bonus — no repeat earnings on renewals.",
+      de: "Nur die erste Zahlung deiner Empfehlung löst den Bonus aus, keine Wiederholungen bei Verlängerung.",
+      en: "Only the referee's first paid subscription triggers the bonus, no repeat earnings on renewals.",
     },
     sepa: {
       de: "SEPA ist raus aus dem Programm. Wir haben das Modell aufs Wesentliche reduziert: Krypto oder Wise, beides ohne Schufa oder deutsche Bankkonten.",
@@ -606,16 +606,16 @@ const copy = {
       en: "What's included in the free tier?",
     },
     intro: {
-      de: "Der kostenlose Tarif gibt dir 150 Fragen pro Prüfungstyp — das sind 450 Fragen insgesamt über Kenntnisprüfung Wien, KMP Innsbruck und Pharmakologie. Es gibt kein Ablaufdatum; du kannst die Fragen in deinem Tempo durcharbeiten.",
-      en: "The free tier gives you 150 questions per exam type — 450 total across Kenntnisprüfung Wien, KMP Innsbruck and Pharmakologie. There's no expiry; you can work through them at your own pace.",
+      de: "Der kostenlose Tarif gibt dir 150 Fragen pro Prüfungstyp, das sind 450 Fragen insgesamt über Kenntnisprüfung Wien, KMP Innsbruck und Pharmakologie. Es gibt kein Ablaufdatum; du kannst die Fragen in deinem Tempo durcharbeiten.",
+      en: "The free tier gives you 150 questions per exam type, 450 total across Kenntnisprüfung Wien, KMP Innsbruck and Pharmakologie. There's no expiry; you can work through them at your own pace.",
     },
     b1: {
-      de: "Vollständige klinische Erklärungen auf allen 450 Fragen, gleiche Tiefe wie im Premium-Tarif.",
-      en: "Full clinical explanations on all 450 questions — same depth as the paid tier.",
+      de: "Klinische Erklärungen, wo vorhanden. Die KI-Erklärung zu jeder Frage ist den bezahlten Tarifen vorbehalten.",
+      en: "Clinical explanations where available. AI explanations for any question are reserved for the paid tiers.",
     },
     b2: {
-      de: "Nur Qbank-Modus — keine Spaced Repetition, keine Prüfungssimulation, keine Lesezeichen, keine Notizen.",
-      en: "Qbank-only — no spaced repetition, no mock exam, no bookmarks, no notes.",
+      de: "Nur Qbank-Modus: keine Spaced Repetition, keine Prüfungssimulation, keine Lesezeichen, keine Notizen.",
+      en: "Qbank-only: no spaced repetition, no mock exam, no bookmarks, no notes.",
     },
     b3: {
       de: "Keine geräteübergreifende Synchronisation über die aktuelle Sitzung hinaus.",
@@ -626,8 +626,8 @@ const copy = {
       en: "No AI-chat follow-ups (cached AI explanations are still readable).",
     },
     upgrade: {
-      de: "Sobald du bereit bist, kannst du jederzeit zur Juni-26-Kohorte oder zu einem der Standardtarife upgraden — dein Fortschritt und deine Antworten bleiben erhalten.",
-      en: "Whenever you're ready, upgrade to the June 26 Cohort or a standard tier — your progress and answers carry over.",
+      de: "Sobald du bereit bist, kannst du jederzeit zur Kenntnisprüfung-Kohorte oder zu einem der Standardtarife upgraden, dein Fortschritt und deine Antworten bleiben erhalten.",
+      en: "Whenever you're ready, upgrade to the Kenntnisprüfung Cohort or a standard tier, your progress and answers carry over.",
     },
   },
   perExam: {
@@ -636,12 +636,12 @@ const copy = {
       en: "Is there per-exam pricing?",
     },
     p1: {
-      de: "Nein — jeder bezahlte Tarif enthält alle drei Prüfungstypen: Kenntnisprüfung Wien, KMP Innsbruck und Pharmakologie. Wir haben uns gegen Pro-Prüfung-Tarife entschieden, weil die Vorbereitung für viele Kandidat:innen mehrere Prüfungstypen umfasst und die Fragebanken stark überlappen.",
-      en: "No — every paid tier unlocks all three exam types: Kenntnisprüfung Wien, KMP Innsbruck and Pharmakologie. We skipped per-exam pricing because many candidates prepare for multiple exam types and the question banks overlap heavily.",
+      de: "Nein, jeder bezahlte Tarif enthält alle drei Prüfungstypen: Kenntnisprüfung Wien, KMP Innsbruck und Pharmakologie. Wir haben uns gegen Pro-Prüfung-Tarife entschieden, weil die Vorbereitung für viele Kandidat:innen mehrere Prüfungstypen umfasst und die Fragebanken stark überlappen.",
+      en: "No, every paid tier unlocks all three exam types: Kenntnisprüfung Wien, KMP Innsbruck and Pharmakologie. We skipped per-exam pricing because many candidates prepare for multiple exam types and the question banks overlap heavily.",
     },
     p2: {
-      de: "Wenn du wirklich nur eine Prüfung vorbereitest, gibt dir der kostenlose Tarif 150 Fragen für genau diesen Prüfungstyp — oft ausreichend für einen ersten Einstieg.",
-      en: "If you truly only prepare for one exam, the free tier gives you 150 questions specifically for that exam type — often enough for a first pass.",
+      de: "Wenn du wirklich nur eine Prüfung vorbereitest, gibt dir der kostenlose Tarif 150 Fragen für genau diesen Prüfungstyp, oft ausreichend für einen ersten Einstieg.",
+      en: "If you truly only prepare for one exam, the free tier gives you 150 questions specifically for that exam type, often enough for a first pass.",
     },
   },
   who: {
@@ -650,8 +650,8 @@ const copy = {
       en: "Who builds MedPrüf?",
     },
     p1: {
-      de: "MedPrüf wird von [name] ([name], Österreich) entwickelt — einem Solo-Engineer, der seinen Cousin durch die österreichische Nostrifikation begleitet und dabei gesehen hat, wo öffentlich verfügbare Ressourcen versagen: verstreute Karteikarten, veraltete PDFs, keine österreichspezifische Abdeckung, keine Spaced Repetition. Jede Frage in MedPrüf stammt aus einer dokumentierten offiziellen Prüfung (7.566 aus Wien seit 2016, 3.091 aus Innsbruck, 335 aus Pharmakologie) — nichts erfunden, nichts geraten. Die Daten sind die Glaubwürdigkeit.",
-      en: "MedPrüf is built by [name] ([name], Austria) — a solo engineer who walked his cousin through Austrian nostrification and saw where the publicly available resources fall short: scattered flashcards, outdated PDFs, no Austria-specific coverage, no spaced repetition. Every question in MedPrüf comes from a documented official exam (7,566 from Vienna since 2016, 3,091 from Innsbruck, 335 from Pharmakologie) — nothing invented, nothing guessed. The data is the credential.",
+      de: "MedPrüf wird von [name] ([name], Österreich) entwickelt, einem Solo-Engineer, der seinen Cousin durch die österreichische Nostrifikation begleitet und dabei gesehen hat, wo öffentlich verfügbare Ressourcen versagen: verstreute Karteikarten, veraltete PDFs, keine österreichspezifische Abdeckung, keine Spaced Repetition. Jede Frage in MedPrüf stammt aus einer dokumentierten offiziellen Prüfung (7.566 aus Wien seit 2016, 3.091 aus Innsbruck, 335 aus Pharmakologie), nichts erfunden, nichts geraten. Die Daten sind die Glaubwürdigkeit.",
+      en: "MedPrüf is built by [name] ([name], Austria), a solo engineer who walked his cousin through Austrian nostrification and saw where the publicly available resources fall short: scattered flashcards, outdated PDFs, no Austria-specific coverage, no spaced repetition. Every question in MedPrüf comes from a documented official exam (7,566 from Vienna since 2016, 3,091 from Innsbruck, 335 from Pharmakologie), nothing invented, nothing guessed. The data is the credential.",
     },
   },
 };
