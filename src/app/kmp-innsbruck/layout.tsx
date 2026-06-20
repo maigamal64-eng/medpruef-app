@@ -2,34 +2,45 @@ import type { Metadata } from "next";
 import { getNextExamSitting } from "@/lib/exam-dates";
 
 /**
- * /kmp-innsbruck — SEO landing page for the Kumulative Modulprüfung
- * (KMP) at Med Uni Innsbruck. Primary queries:
- *   "KMP Innsbruck"
- *   "Kumulative Modulprüfung Innsbruck"
+ * /kmp-innsbruck — SEO landing page for the national Stichprobentest
+ * (the MedUni Nostrifizierung screening). Primary queries:
+ *   "Stichprobentest"
+ *   "Stichprobentest Innsbruck"
+ *   "Nostrifizierung Innsbruck"
  *   "MedUni Innsbruck Prüfung"
  *
+ * The DB key + URL slug stay `kmp_innsbruck` / /kmp-innsbruck (legacy
+ * key + route/provenance anchor). The display copy was corrected on
+ * 2026-06-21: the exam is the national Stichprobentest, NOT the
+ * domestic "Kumulative Modulprüfung" (that is Innsbruck's own
+ * end-of-semester exam for domestic students, not the foreign-doctor
+ * recognition test). The "KMP Innsbruck" keyword is kept below so the
+ * page still ranks for the term users historically searched.
+ *
  * Content numbers: 3,091 questions across 12 specialties per
- * NOTES.md §Content (imported from 17 KoalaMed PDFs). KoalaMed is
- * a third-party platform that publishes exam-style PDFs — we imported
- * from those sources but KoalaMed is NOT the exam and we don't
- * represent them. The real exam is the MedUni Innsbruck KMP.
+ * NOTES.md §Content (imported from 17 KoalaMed PDFs distilled from the
+ * Med Uni Innsbruck clinical curriculum). KoalaMed is a third-party
+ * platform that publishes exam-style PDFs; we imported from those
+ * materials but KoalaMed is NOT the exam, we don't represent them, and
+ * these are NOT official Stichprobentest items.
  */
 
-const pageTitle = "KMP Innsbruck 2026 — Vorbereitung mit 3.091 Fragen | MedPrüf";
+const pageTitle = "Stichprobentest (Innsbruck) 2026: Vorbereitung mit 3.091 Fragen | MedPrüf";
 const pageDesc =
-  "Strukturierte Vorbereitung auf die Kumulative Modulprüfung (KMP) der Med Uni Innsbruck. 3.091 Prüfungsfragen aus 12 Fachgebieten, klinische Erklärungen, 150 Fragen kostenlos.";
+  "Strukturierte Vorbereitung auf den nationalen Stichprobentest der Nostrifizierung. 3.091 Fragen aus 12 Fachgebieten, klinisch kommentiert, aus dem Curriculum der Med Uni Innsbruck. 150 Fragen kostenlos.";
 
 export const metadata: Metadata = {
   title: pageTitle,
   description: pageDesc,
   keywords: [
+    "Stichprobentest",
+    "Stichprobentest Innsbruck",
+    "Stichprobentest Nostrifizierung",
     "KMP Innsbruck",
-    "Kumulative Modulprüfung",
     "MedUni Innsbruck",
-    "KMP 2026",
     "Innsbruck Medizin Prüfung",
     "Approbation Österreich",
-    "Nostrifikation Innsbruck",
+    "Nostrifizierung Innsbruck",
     "ausländische Ärzte Tirol",
   ],
   alternates: {
@@ -76,9 +87,9 @@ function buildCourseSchema() {
   return {
     "@context": "https://schema.org",
     "@type": "Course",
-    name: "KMP Innsbruck — Vorbereitung",
+    name: "Stichprobentest (Innsbruck): Vorbereitung",
     description:
-      "Strukturierte Vorbereitung auf die Kumulative Modulprüfung (KMP) der Med Uni Innsbruck für ausländische Ärzt:innen — 12 Fachgebiete, 3.091 Prüfungsfragen mit klinischen Erklärungen.",
+      "Strukturierte Vorbereitung auf den nationalen Stichprobentest der Nostrifizierung für ausländische Ärzt:innen: 12 Fachgebiete, 3.091 Fragen aus dem klinischen Curriculum der Med Uni Innsbruck, mit klinischen Erklärungen.",
     provider: {
       "@type": "Organization",
       name: "MedPrüf",

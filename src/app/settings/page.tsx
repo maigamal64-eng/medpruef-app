@@ -483,8 +483,8 @@ export default function SettingsPage() {
                     </p>
                     <p className="text-xs text-[var(--mp-fg-subtle)] mt-0.5">
                       {lang === "de"
-                        ? "Kenntnisprüfung Wien · KMP Innsbruck · Pharmakologie"
-                        : "Kenntnisprüfung Vienna · KMP Innsbruck · Pharmacology"}
+                        ? "Kenntnisprüfung Wien · Stichprobentest (Innsbruck) · Pharmakologie"
+                        : "Kenntnisprüfung Vienna · Stichprobentest (Innsbruck) · Pharmacology"}
                     </p>
                   </div>
                   <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-[var(--mp-success-bg)] text-[var(--mp-viridian)] text-xs font-semibold rounded-lg border border-[rgba(0,123,95,0.2)]">

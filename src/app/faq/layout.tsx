@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "FAQ — MedPrüf",
   description:
-    "Häufig gestellte Fragen zu MedPrüf: Kenntnisprüfung Wien, KMP Innsbruck, Pharmakologie. Zahlung, Pass-Until-You-Pass, Übersetzungen, Datenschutz.",
+    "Häufig gestellte Fragen zu MedPrüf: Kenntnisprüfung Wien, Stichprobentest (Innsbruck), Pharmakologie. Zahlung, Pass-Until-You-Pass, Übersetzungen, Datenschutz.",
   alternates: {
     canonical: "https://medpruf.com/faq",
   },
@@ -12,14 +12,14 @@ export const metadata: Metadata = {
     url: "https://medpruf.com/faq",
     title: "FAQ — MedPrüf",
     description:
-      "Häufig gestellte Fragen zu MedPrüf: Kenntnisprüfung Wien, KMP Innsbruck, Pharmakologie. Zahlung, Pass-Until-You-Pass, Übersetzungen, Datenschutz.",
+      "Häufig gestellte Fragen zu MedPrüf: Kenntnisprüfung Wien, Stichprobentest (Innsbruck), Pharmakologie. Zahlung, Pass-Until-You-Pass, Übersetzungen, Datenschutz.",
     images: [{ url: "/brand/og-image.png", width: 1200, height: 630 }],
   },
   twitter: {
     card: "summary_large_image",
     title: "FAQ — MedPrüf",
     description:
-      "Häufig gestellte Fragen zu MedPrüf: Kenntnisprüfung Wien, KMP Innsbruck, Pharmakologie. Zahlung, Pass-Until-You-Pass, Übersetzungen, Datenschutz.",
+      "Häufig gestellte Fragen zu MedPrüf: Kenntnisprüfung Wien, Stichprobentest (Innsbruck), Pharmakologie. Zahlung, Pass-Until-You-Pass, Übersetzungen, Datenschutz.",
     images: ["/brand/og-image.png"],
   },
 };
@@ -53,11 +53,11 @@ function buildFaqSchema() {
     },
     {
       q: "Was ist im kostenlosen Tarif enthalten?",
-      a: "Der kostenlose Tarif gibt dir 150 Fragen pro Prüfungstyp, 450 Fragen insgesamt über Kenntnisprüfung Wien, KMP Innsbruck und Pharmakologie, ohne Ablaufdatum. Klinische Erklärungen sind enthalten, wo sie vorhanden sind. Nicht enthalten: Spaced Repetition, Prüfungssimulation, Lesezeichen, Notizen, geräteübergreifende Synchronisation und KI-Chat-Folgefragen. Die KI-Erklärung zu jeder Frage ist den bezahlten Tarifen vorbehalten.",
+      a: "Der kostenlose Tarif gibt dir 150 Fragen pro Prüfungstyp, 450 Fragen insgesamt über Kenntnisprüfung Wien, Stichprobentest (Innsbruck) und Pharmakologie, ohne Ablaufdatum. Klinische Erklärungen sind enthalten, wo sie vorhanden sind. Nicht enthalten: Spaced Repetition, Prüfungssimulation, Lesezeichen, Notizen, geräteübergreifende Synchronisation und KI-Chat-Folgefragen. Die KI-Erklärung zu jeder Frage ist den bezahlten Tarifen vorbehalten.",
     },
     {
       q: "Gibt es Tarife pro Prüfung?",
-      a: "Nein, jeder bezahlte Tarif enthält alle drei Prüfungstypen: Kenntnisprüfung Wien, KMP Innsbruck und Pharmakologie. Wenn du wirklich nur eine Prüfung vorbereitest, gibt dir der kostenlose Tarif 150 Fragen für genau diesen Prüfungstyp.",
+      a: "Nein, jeder bezahlte Tarif enthält alle drei Prüfungstypen: Kenntnisprüfung Wien, Stichprobentest (Innsbruck) und Pharmakologie. Wenn du wirklich nur eine Prüfung vorbereitest, gibt dir der kostenlose Tarif 150 Fragen für genau diesen Prüfungstyp.",
     },
     {
       q: "Wer baut MedPrüf?",

@@ -252,7 +252,7 @@ export default function AdminQuestionsPage() {
               options={[
                 { value: "all", label: "All Exams" },
                 { value: "kenntnispruefung", label: "Kenntnisprüfung" },
-                { value: "kmp_innsbruck", label: "KMP Innsbruck" },
+                { value: "kmp_innsbruck", label: "Stichprobentest (Innsbruck)" },
                 { value: "pharma", label: "Pharma" },
               ]}
             />

@@ -606,8 +606,8 @@ const copy = {
       en: "What's included in the free tier?",
     },
     intro: {
-      de: "Der kostenlose Tarif gibt dir 150 Fragen pro Prüfungstyp, das sind 450 Fragen insgesamt über Kenntnisprüfung Wien, KMP Innsbruck und Pharmakologie. Es gibt kein Ablaufdatum; du kannst die Fragen in deinem Tempo durcharbeiten.",
-      en: "The free tier gives you 150 questions per exam type, 450 total across Kenntnisprüfung Wien, KMP Innsbruck and Pharmakologie. There's no expiry; you can work through them at your own pace.",
+      de: "Der kostenlose Tarif gibt dir 150 Fragen pro Prüfungstyp, das sind 450 Fragen insgesamt über Kenntnisprüfung Wien, Stichprobentest (Innsbruck) und Pharmakologie. Es gibt kein Ablaufdatum; du kannst die Fragen in deinem Tempo durcharbeiten.",
+      en: "The free tier gives you 150 questions per exam type, 450 total across Kenntnisprüfung Wien, Stichprobentest (Innsbruck) and Pharmakologie. There's no expiry; you can work through them at your own pace.",
     },
     b1: {
       de: "Klinische Erklärungen, wo vorhanden. Die KI-Erklärung zu jeder Frage ist den bezahlten Tarifen vorbehalten.",
@@ -636,8 +636,8 @@ const copy = {
       en: "Is there per-exam pricing?",
     },
     p1: {
-      de: "Nein, jeder bezahlte Tarif enthält alle drei Prüfungstypen: Kenntnisprüfung Wien, KMP Innsbruck und Pharmakologie. Wir haben uns gegen Pro-Prüfung-Tarife entschieden, weil die Vorbereitung für viele Kandidat:innen mehrere Prüfungstypen umfasst und die Fragebanken stark überlappen.",
-      en: "No, every paid tier unlocks all three exam types: Kenntnisprüfung Wien, KMP Innsbruck and Pharmakologie. We skipped per-exam pricing because many candidates prepare for multiple exam types and the question banks overlap heavily.",
+      de: "Nein, jeder bezahlte Tarif enthält alle drei Prüfungstypen: Kenntnisprüfung Wien, Stichprobentest (Innsbruck) und Pharmakologie. Wir haben uns gegen Pro-Prüfung-Tarife entschieden, weil die Vorbereitung für viele Kandidat:innen mehrere Prüfungstypen umfasst und die Fragebanken stark überlappen.",
+      en: "No, every paid tier unlocks all three exam types: Kenntnisprüfung Wien, Stichprobentest (Innsbruck) and Pharmakologie. We skipped per-exam pricing because many candidates prepare for multiple exam types and the question banks overlap heavily.",
     },
     p2: {
       de: "Wenn du wirklich nur eine Prüfung vorbereitest, gibt dir der kostenlose Tarif 150 Fragen für genau diesen Prüfungstyp, oft ausreichend für einen ersten Einstieg.",

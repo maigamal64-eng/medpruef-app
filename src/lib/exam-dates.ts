@@ -12,7 +12,7 @@
  *
  * Verified 2026-06-20 against official Austrian sources:
  *   - Kenntnisprüfung (Arztprüfung Allgemeinmedizin): arztakademie.at
- *   - Stichprobentest (the "KMP Innsbruck" item): i-med.ac.at 2026 PDF
+ *   - Stichprobentest (DB key kmp_innsbruck; display "Stichprobentest (Innsbruck)"): i-med.ac.at 2026 PDF
  *   - Pharmakologie/Rezeptierkunde: meduniwien.ac.at Nostrifikation
  * Research dossier: research/exam-dates-2026-06-20.md.
  *
@@ -83,11 +83,14 @@ export const EXAM_SITTINGS: Record<PuypExamType, ExamSitting[]> = {
     // the university where you applied for Nostrifizierung. The 2026
     // sittings were Innsbruck (Feb, passed), Wien (May, passed) and
     // Graz (23 Sep, upcoming) — so the only remaining 2026 sitting is
-    // in GRAZ, not Innsbruck (kept as the familiar label per [name]'s
-    // pending decision medpruef-kmp-label-2026-06-20).
+    // in GRAZ, not Innsbruck. Display label was renamed "KMP Innsbruck"
+    // to "Stichprobentest (Innsbruck)" app-wide (2026-06-21); "Innsbruck"
+    // stays as the content-provenance/route anchor, the DB key
+    // kmp_innsbruck is legacy and unchanged. This dated-sitting label is
+    // plain "Stichprobentest" (it renders next to "in Graz").
     {
       examType: "kmp_innsbruck",
-      label: { de: "KMP / Stichprobentest", en: "KMP / Stichprobentest" },
+      label: { de: "Stichprobentest", en: "Stichprobentest" },
       date: "2026-09-23",
       registrationDeadline: "2026-08-26",
       location: "Graz",

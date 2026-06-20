@@ -71,10 +71,10 @@ export default function AboutPage() {
         <h2>{lang === "de" ? "Was ist MedPrüf?" : "What is MedPrüf?"}</h2>
         <p>
           {lang === "de"
-            ? `MedPrüf ist eine spezialisierte Lernplattform für ausländische Ärztinnen und Ärzte, die sich auf die österreichischen Ärzteprüfungen vorbereiten — Kenntnisprüfung Wien, KMP Innsbruck und Pharmakologie. Mit ${QUESTIONS.total.toLocaleString(
+            ? `MedPrüf ist eine spezialisierte Lernplattform für ausländische Ärztinnen und Ärzte, die sich auf die österreichischen Ärzteprüfungen vorbereiten: Kenntnisprüfung Wien, Stichprobentest (Innsbruck) und Pharmakologie. Mit ${QUESTIONS.total.toLocaleString(
                 "de-DE",
               )} Übungsfragen aus 16 Fachgebieten helfen wir dir, die Prüfung erfolgreich zu bestehen.`
-            : `MedPrüf is a specialized learning platform for foreign doctors preparing for the Austrian medical exams — Kenntnisprüfung Wien, KMP Innsbruck and Pharmakologie. With ${QUESTIONS.total.toLocaleString(
+            : `MedPrüf is a specialized learning platform for foreign doctors preparing for the Austrian medical exams: Kenntnisprüfung Wien, Stichprobentest (Innsbruck) and Pharmakologie. With ${QUESTIONS.total.toLocaleString(
                 "en-US",
               )} practice questions across 16 specialties, we help you pass the exam successfully.`}
         </p>

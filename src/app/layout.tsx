@@ -70,7 +70,7 @@ export const metadata: Metadata = {
     template: "%s",
   },
   description:
-    "Specialized prep for the Austrian Kenntnisprüfung Wien, KMP Innsbruck, and Pharmakologie exams. 150 questions free, no credit card.",
+    "Specialized prep for the Austrian Kenntnisprüfung Wien, Stichprobentest (Innsbruck), and Pharmakologie exams. 150 questions free, no credit card.",
   keywords: [
     "Kenntnisprüfung", "Austrian medical exam", "Vienna medical license",
     "SIP 4", "SIP 5", "medical exam preparation", "Ärztekammer Wien",
@@ -100,14 +100,14 @@ export const metadata: Metadata = {
     siteName: "MedPrüf",
     title: "MedPrüf — Austrian Kenntnisprüfung Preparation (Vienna)",
     description:
-      "Specialized prep for the Austrian Kenntnisprüfung Wien, KMP Innsbruck, and Pharmakologie exams. 150 questions free, no credit card.",
+      "Specialized prep for the Austrian Kenntnisprüfung Wien, Stichprobentest (Innsbruck), and Pharmakologie exams. 150 questions free, no credit card.",
     images: [{ url: "/brand/og-image.png", width: 1200, height: 630, alt: "MedPrüf — Kenntnisprüfung Preparation" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "MedPrüf — Austrian Kenntnisprüfung Preparation (Vienna)",
     description:
-      "Specialized prep for the Austrian Kenntnisprüfung Wien, KMP Innsbruck, and Pharmakologie exams. 150 questions free, no credit card.",
+      "Specialized prep for the Austrian Kenntnisprüfung Wien, Stichprobentest (Innsbruck), and Pharmakologie exams. 150 questions free, no credit card.",
     images: ["/brand/og-image.png"],
   },
 };
@@ -252,14 +252,15 @@ export default function RootLayout({
                   "logo": "https://medpruf.com/brand/logomark.svg",
                   "image": "https://medpruf.com/brand/og-image.png",
                   "description":
-                    "Exam preparation for the Austrian medical licensing exams (Kenntnisprüfung Wien, KMP Innsbruck, Pharmakologie) for foreign-trained doctors. German-language questions, Austrian exam scope.",
+                    "Exam preparation for the Austrian medical licensing exams (Kenntnisprüfung Wien, Stichprobentest (Innsbruck), Pharmakologie) for foreign-trained doctors. German-language questions, Austrian exam scope.",
                   "areaServed": {
                     "@type": "Country",
                     "name": "Austria",
                   },
                   "knowsAbout": [
                     "Kenntnisprüfung Wien",
-                    "KMP Innsbruck",
+                    "Stichprobentest",
+                    "Stichprobentest Innsbruck",
                     "Pharmakologie",
                     "Austrian medical licensing",
                     "Nostrifikation",
@@ -291,7 +292,7 @@ export default function RootLayout({
                   "name": "MedPrüf",
                   "url": "https://medpruf.com",
                   "description":
-                    "Austrian medical exam preparation platform with over 10,000 clinical questions across 16 specialties and 3 exam types (Kenntnisprüfung Wien, KMP Innsbruck, Pharmakologie).",
+                    "Austrian medical exam preparation platform with over 10,000 clinical questions across 16 specialties and 3 exam types (Kenntnisprüfung Wien, Stichprobentest (Innsbruck), Pharmakologie).",
                   "applicationCategory": "EducationalApplication",
                   "operatingSystem": "Web",
                   "inLanguage": "de",

@@ -130,7 +130,7 @@ export default function AdminWaitlistPage() {
           options={[
             { value: "", label: "All" },
             { value: "kenntnispruefung", label: "Kenntnisprüfung" },
-            { value: "kmp_innsbruck", label: "KMP Innsbruck" },
+            { value: "kmp_innsbruck", label: "Stichprobentest (Innsbruck)" },
             { value: "pharma", label: "Pharmakologie" },
           ]}
         />

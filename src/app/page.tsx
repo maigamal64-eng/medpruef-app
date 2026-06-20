@@ -140,7 +140,7 @@ function getGreeting(lang: "de" | "en"): string {
  *  greeting. Matches the ExamSwitcherInline naming. */
 function getExamLabel(examSource: string, lang: "de" | "en"): string {
   if (examSource === "kenntnispruefung") return lang === "de" ? "Kenntnisprüfung Wien" : "Kenntnisprüfung Vienna";
-  if (examSource === "kmp_innsbruck") return lang === "de" ? "KMP Innsbruck" : "KMP Innsbruck";
+  if (examSource === "kmp_innsbruck") return lang === "de" ? "Stichprobentest (Innsbruck)" : "Stichprobentest (Innsbruck)";
   if (examSource === "pharma") return lang === "de" ? "Pharmakologie" : "Pharmakologie";
   return examSource;
 }

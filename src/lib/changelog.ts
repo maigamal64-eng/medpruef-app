@@ -23,6 +23,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-06-21",
+    tag: "improvement",
+    title: {
+      de: "Prüfung umbenannt: aus „KMP Innsbruck\" wird „Stichprobentest (Innsbruck)\"",
+      en: "Exam renamed: \"KMP Innsbruck\" is now \"Stichprobentest (Innsbruck)\"",
+    },
+    description: {
+      de: "Wir haben den Prüfungstyp, der bisher „KMP Innsbruck\" hieß, in „Stichprobentest (Innsbruck)\" umbenannt. Das ist der Name, unter dem ausländische Ärzt:innen diese Prüfung tatsächlich kennen: der nationale Stichprobentest im Rahmen der Nostrifizierung an einer Medizinuniversität. „KMP\" (Kumulative Modulprüfung) bezeichnet eigentlich eine interne Semesterprüfung der Med Uni Innsbruck für reguläre Studierende, nicht diese Anerkennungsprüfung, deshalb die Korrektur. Deine Fragen, dein Fortschritt und der freie Zugang bleiben unverändert; nur die Bezeichnung ist jetzt korrekt. Unsere 3.091 Fragen sind weiterhin aus dem klinischen Curriculum der Med Uni Innsbruck destilliert.",
+      en: "We renamed the exam type formerly called \"KMP Innsbruck\" to \"Stichprobentest (Innsbruck)\". That is the name foreign doctors actually know it by: the national Stichprobentest within university nostrification. \"KMP\" (Kumulative Modulprüfung) is in fact Med Uni Innsbruck's internal end-of-semester exam for regular students, not this recognition test, hence the correction. Your questions, your progress and the free tier are unchanged; only the label is now accurate. Our 3,091 questions are still distilled from the Med Uni Innsbruck clinical curriculum.",
+    },
+  },
+  {
     date: "2026-06-20",
     tag: "feature",
     title: {

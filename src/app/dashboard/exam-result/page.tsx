@@ -297,7 +297,7 @@ function ChooseView({
 }) {
   const examOptions = [
     { value: "kenntnispruefung", label: lang === "de" ? "Kenntnisprüfung Wien" : "Kenntnisprüfung Vienna" },
-    { value: "kmp_innsbruck", label: "KMP Innsbruck" },
+    { value: "kmp_innsbruck", label: "Stichprobentest (Innsbruck)" },
     { value: "pharma", label: lang === "de" ? "Pharmakologie" : "Pharmacology" },
   ];
 
@@ -538,7 +538,7 @@ function FailForm({
 }) {
   const examOptions = [
     { value: "kenntnispruefung", label: lang === "de" ? "Kenntnisprüfung Wien" : "Kenntnisprüfung Vienna" },
-    { value: "kmp_innsbruck", label: "KMP Innsbruck" },
+    { value: "kmp_innsbruck", label: "Stichprobentest (Innsbruck)" },
     { value: "pharma", label: lang === "de" ? "Pharmakologie" : "Pharmacology" },
   ];
 

@@ -3,7 +3,10 @@
 // The app supports multiple exam types via questions.exam_type:
 //   - 'kenntnispruefung' (Vienna Austrian Kenntnisprüfung — the original product)
 //   - 'pharma'           (Pharmakologie Rezeptierkunde — 335 short-answer questions)
-//   - 'kmp_innsbruck'    (Kumulative Modulprüfung, Med Uni Innsbruck — importer pending)
+//   - 'kmp_innsbruck'    (legacy DB key; display label is "Stichprobentest (Innsbruck)":
+//                         the national MedUni Nostrifizierung screening test. NOT the
+//                         domestic "Kumulative Modulprüfung". Questions sourced from the
+//                         MedUni Innsbruck clinical curriculum via KoalaMed.)
 //
 // Every API call and every page respects a single "active exam" chosen via the
 // ExamSelector in the header. URL-level consistency is handled by the
@@ -23,7 +26,7 @@ export const TOPIC_CONFIG: Record<string, { icon: string; color: string }> = {
   'Notfall- und Intensivmedizin': { icon: 'Zap', color: '#D64545' },
   // Pharma exam (single topic)
   'Pharmakologie': { icon: 'Pill', color: '#8B5CF6' },
-  // KMP Innsbruck topic variants (kept for future)
+  // Stichprobentest (Innsbruck) topic variants (kept for future)
   'Dermatologie': { icon: 'Dna', color: '#007B5F' },
   'Gynäkologie und Geburtshilfe': { icon: 'Baby', color: '#EC4899' },
   'HNO': { icon: 'Ear', color: '#14B8A6' },
@@ -55,12 +58,12 @@ export const EXAM_SOURCES = [
   },
   {
     id: 'kmp_innsbruck',
-    label: 'KMP Innsbruck',
-    fullName: 'Kumulative Modulprüfung (Innsbruck)',
-    shortLabel: 'KMP',
+    label: 'Stichprobentest (Innsbruck)',
+    fullName: 'Stichprobentest (Nostrifizierung)',
+    shortLabel: 'STP',
     badge: '🏔️',
     questions: 3091,
-    description: { de: 'Kumulative Modulprüfung — Med Uni Innsbruck', en: 'Cumulative Module Exam — Med Uni Innsbruck' },
+    description: { de: 'Nationaler MedUni-Stichprobentest, Fragen aus dem Innsbruck-Curriculum', en: 'National MedUni Stichprobentest, questions from the Innsbruck curriculum' },
   },
   {
     id: 'pharma',

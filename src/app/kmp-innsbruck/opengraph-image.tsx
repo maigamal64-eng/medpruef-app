@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 
 export const runtime = "edge";
-export const alt = "KMP Innsbruck — Vorbereitung mit MedPrüf";
+export const alt = "Stichprobentest (Innsbruck): Vorbereitung mit MedPrüf";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -88,7 +88,7 @@ export default function Image() {
               textTransform: "uppercase",
             }}
           >
-            KMP Innsbruck
+            Stichprobentest (Innsbruck)
           </div>
           <div
             style={{
@@ -111,7 +111,7 @@ export default function Image() {
               maxWidth: 980,
             }}
           >
-            3.091 Fragen · 12 Module · Klinische Erklärungen
+            3.091 Fragen · 12 Fachgebiete · Klinische Erklärungen
           </div>
         </div>
 

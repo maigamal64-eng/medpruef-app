@@ -69,8 +69,8 @@ const COPY = {
   },
   hero: {
     eyebrow: {
-      de: "Österreich · Kenntnisprüfung · KMP · Pharmakologie",
-      en: "Austria · Kenntnisprüfung · KMP · Pharmakologie",
+      de: "Österreich · Kenntnisprüfung · Stichprobentest · Pharmakologie",
+      en: "Austria · Kenntnisprüfung · Stichprobentest · Pharmakologie",
     },
     // Provenance stamp — the unrefutable credential. The corpus is
     // built from documented official exams; "seit 2016" is sourced,
@@ -91,8 +91,8 @@ const COPY = {
     // which is available:false (waitlisted) — and contradicted the
     // 27 € CTA in the same viewport. Now both agree.
     subtitle: {
-      de: "Die einzige Prüfungsvorbereitung, speziell für Österreichs Kenntnisprüfung, KMP und Pharmakologie. Destilliert aus 7.566 Wien-Prüfungsfragen seit 2016, 3.091 KMP Innsbruck und 335 Pharmakologie. Eine Kenntnisprüfung kostet ~370 € pro Versuch, MedPrüf gibt es ab 27 € für 3 Monate.",
-      en: "The only exam prep built specifically for Austria's Kenntnisprüfung, KMP and Pharmakologie. Distilled from 7,566 Vienna exam questions since 2016, 3,091 KMP Innsbruck and 335 Pharmakologie. A Kenntnisprüfung re-sit is ~370 €, and MedPrüf starts at 27 € for 3 months.",
+      de: "Die einzige Prüfungsvorbereitung, speziell für Österreichs Kenntnisprüfung, Stichprobentest und Pharmakologie. Destilliert aus 7.566 Wien-Prüfungsfragen seit 2016, 3.091 Fragen aus dem Innsbruck-Curriculum (Stichprobentest) und 335 Pharmakologie. Eine Kenntnisprüfung kostet ~370 € pro Versuch, MedPrüf gibt es ab 27 € für 3 Monate.",
+      en: "The only exam prep built specifically for Austria's Kenntnisprüfung, Stichprobentest and Pharmakologie. Distilled from 7,566 Vienna exam questions since 2016, 3,091 questions from the Innsbruck curriculum (Stichprobentest) and 335 Pharmakologie. A Kenntnisprüfung re-sit is ~370 €, and MedPrüf starts at 27 € for 3 months.",
     },
     cta_primary: { de: "Kostenlos starten", en: "Start free" },
     cta_primary_sub: {
@@ -159,8 +159,8 @@ const COPY = {
         n: "01",
         title: { de: "Prüfung wählen", en: "Choose your exam" },
         body: {
-          de: "Kenntnisprüfung Wien, KMP Innsbruck oder Pharmakologie: wir kennen die Gewichtung jeder Prüfung.",
-          en: "Kenntnisprüfung Wien, KMP Innsbruck or Pharmakologie: we know the weighting of each exam.",
+          de: "Kenntnisprüfung Wien, Stichprobentest (Innsbruck) oder Pharmakologie: wir kennen die Gewichtung jeder Prüfung.",
+          en: "Kenntnisprüfung Wien, Stichprobentest (Innsbruck) or Pharmakologie: we know the weighting of each exam.",
         },
       },
       {
@@ -256,8 +256,8 @@ const COPY = {
       en: "16 specialties. Real questions. Nothing invented.",
     },
     subtitle: {
-      de: "Jede Frage stammt aus einer dokumentierten offiziellen Prüfung: Kenntnisprüfung Wien (SIP 4 + SIP 5), KMP Innsbruck, Pharmakologie.",
-      en: "Every question comes from a documented official exam: Kenntnisprüfung Wien (SIP 4 + SIP 5), KMP Innsbruck, Pharmakologie.",
+      de: "Jede Frage stammt aus dokumentierten offiziellen Prüfungsmaterialien: Kenntnisprüfung Wien (SIP 4 + SIP 5), Stichprobentest (Fragen aus dem Innsbruck-Curriculum), Pharmakologie.",
+      en: "Every question comes from documented official exam materials: Kenntnisprüfung Wien (SIP 4 + SIP 5), Stichprobentest (questions from the Innsbruck curriculum), Pharmakologie.",
     },
     items: [
       { icon: HeartPulse, name: { de: "Innere Medizin", en: "Internal Medicine" } },
@@ -357,8 +357,8 @@ const COPY = {
       {
         n: "3.091",
         n_en: "3,091",
-        label: { de: "KMP Innsbruck", en: "KMP Innsbruck" },
-        sub: { de: "KoalaMed", en: "KoalaMed" },
+        label: { de: "Stichprobentest", en: "Stichprobentest" },
+        sub: { de: "Innsbruck-Curriculum", en: "Innsbruck curriculum" },
       },
       {
         n: "335",
@@ -1563,7 +1563,7 @@ function Footer({ lang }: { lang: Lang }) {
               </li>
               <li>
                 <Link href="/kmp-innsbruck" className="hover:text-white transition-colors">
-                  KMP Innsbruck
+                  Stichprobentest (Innsbruck)
                 </Link>
               </li>
               <li>

@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Blog — MedPrüf",
   description:
-    "MedPrüf-Blog: ehrliche Guides für ausländische Ärzt:innen zur österreichischen Kenntnisprüfung, KMP Innsbruck, Pharmakologie-Prüfung und Nostrifikation.",
+    "MedPrüf-Blog: ehrliche Guides für ausländische Ärzt:innen zur österreichischen Kenntnisprüfung, Stichprobentest (Innsbruck), Pharmakologie-Prüfung und Nostrifikation.",
   alternates: {
     canonical: "https://medpruf.com/blog",
   },
@@ -13,13 +13,13 @@ export const metadata: Metadata = {
     siteName: "MedPrüf",
     title: "Blog — MedPrüf",
     description:
-      "Ehrliche Guides für ausländische Ärzt:innen zur österreichischen Kenntnisprüfung, KMP Innsbruck, Pharmakologie-Prüfung und Nostrifikation.",
+      "Ehrliche Guides für ausländische Ärzt:innen zur österreichischen Kenntnisprüfung, Stichprobentest (Innsbruck), Pharmakologie-Prüfung und Nostrifikation.",
   },
   twitter: {
     card: "summary_large_image",
     title: "Blog — MedPrüf",
     description:
-      "Ehrliche Guides für ausländische Ärzt:innen zur österreichischen Kenntnisprüfung, KMP Innsbruck, Pharmakologie-Prüfung und Nostrifikation.",
+      "Ehrliche Guides für ausländische Ärzt:innen zur österreichischen Kenntnisprüfung, Stichprobentest (Innsbruck), Pharmakologie-Prüfung und Nostrifikation.",
   },
 };
 

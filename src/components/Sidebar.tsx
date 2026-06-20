@@ -23,7 +23,7 @@ type Lang = "de" | "en";
  */
 const EXAM_ABBR: Record<ExamSourceId, string> = {
   kenntnispruefung: "SIP",
-  kmp_innsbruck: "KMP",
+  kmp_innsbruck: "STP",
   pharma: "PHA",
 };
 
@@ -40,7 +40,7 @@ const COLLAPSE_KEY = "medpruef_sidebar_collapsed";
 
 /**
  * Compact 40×40 exam chip shown ONLY in the collapsed sidebar rail.
- * Keeps users oriented which exam they're prepping for (SIP / KMP / PHA)
+ * Keeps users oriented which exam they're prepping for (SIP / STP / PHA)
  * when the expanded ExamSwitcherInline is hidden. Clicking the chip opens
  * a small dropdown — same switch semantics as the expanded switcher
  * (persist localStorage + server preference + soft reload).

@@ -28,7 +28,7 @@ function truncate(text: string, max: number): string {
 
 function sourceBadge(source_file?: string): string {
   if (!source_file) return "KP";
-  if (source_file.startsWith("KMP")) return "KMP";
+  if (source_file.startsWith("KMP")) return "STP"; // source_file prefix is data (unchanged); badge is the display label
   if (source_file.startsWith("VIENNA_2026")) return "2026";
   if (source_file.startsWith("PHARMA")) return "Pharma";
   return "KP";

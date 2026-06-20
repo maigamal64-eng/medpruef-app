@@ -280,8 +280,8 @@ export default function PricingPage() {
   /* Cohort feature bullets — the dominant card */
   const cohortFeatures: Array<{ de: string; en: string }> = [
     {
-      de: "Alle 10.992 Fragen · Kenntnisprüfung + KMP + Pharma in einem Abo",
-      en: "All 10,992 questions · Kenntnisprüfung + KMP + Pharma bundled",
+      de: "Alle 10.992 Fragen · Kenntnisprüfung + Stichprobentest + Pharma in einem Abo",
+      en: "All 10,992 questions · Kenntnisprüfung + Stichprobentest + Pharma bundled",
     },
     {
       de: "Pass-Until-You-Pass: fällst du durch, verlängern wir kostenlos",
@@ -404,8 +404,8 @@ export default function PricingPage() {
           </h2>
           <p className="mp-body text-[var(--mp-fg-muted)] max-w-2xl mx-auto">
             {lang === "de"
-              ? "Die einzige Prüfungsvorbereitung, speziell für Österreichs Kenntnisprüfung, KMP und Pharmakologie. Destilliert aus 10.992 dokumentierten offiziellen Prüfungsfragen: Wien seit 2016, KMP Innsbruck und Pharmakologie."
-              : "The only exam prep built specifically for Austria's Kenntnisprüfung, KMP & Pharmakologie. Distilled from 10,992 documented official exam questions: Vienna since 2016, KMP Innsbruck and Pharmakologie."}
+              ? "Die einzige Prüfungsvorbereitung, speziell für Österreichs Kenntnisprüfung, Stichprobentest und Pharmakologie. Destilliert aus 10.992 dokumentierten offiziellen Prüfungsfragen: Wien seit 2016, Stichprobentest (Innsbruck) und Pharmakologie."
+              : "The only exam prep built specifically for Austria's Kenntnisprüfung, Stichprobentest & Pharmakologie. Distilled from 10,992 documented official exam questions: Vienna since 2016, Stichprobentest (Innsbruck) and Pharmakologie."}
           </p>
         </section>
 
@@ -590,8 +590,8 @@ export default function PricingPage() {
               }
               a={
                 lang === "de"
-                  ? "Nein, jeder bezahlte Tarif enthält alle drei Prüfungstypen (Kenntnisprüfung Wien, KMP Innsbruck, Pharmakologie). Wenn du nur eine Prüfung brauchst, gibt dir der kostenlose Tarif 150 Fragen pro Prüfungstyp."
-                  : "No, every paid tier unlocks all three exam types (Kenntnisprüfung Wien, KMP Innsbruck, Pharmakologie). If you only need one exam, the free tier gives you 150 questions per exam type."
+                  ? "Nein, jeder bezahlte Tarif enthält alle drei Prüfungstypen (Kenntnisprüfung Wien, Stichprobentest (Innsbruck), Pharmakologie). Wenn du nur eine Prüfung brauchst, gibt dir der kostenlose Tarif 150 Fragen pro Prüfungstyp."
+                  : "No, every paid tier unlocks all three exam types (Kenntnisprüfung Wien, Stichprobentest (Innsbruck), Pharmakologie). If you only need one exam, the free tier gives you 150 questions per exam type."
               }
             />
           </div>
@@ -746,7 +746,7 @@ export default function PricingPage() {
                     ? "Kenntnisprüfung (Wien)"
                     : "Kenntnisprüfung (Vienna)",
               },
-              { value: "kmp_innsbruck", label: "KMP Innsbruck" },
+              { value: "kmp_innsbruck", label: "Stichprobentest (Innsbruck)" },
               { value: "pharma", label: "Pharmakologie" },
             ]}
           />
@@ -787,7 +787,7 @@ function FreeTierCard({ lang, examSource }: { lang: Lang; examSource: ExamSource
   const examLabel = examSource === "kenntnispruefung"
     ? (lang === "de" ? "Kenntnisprüfung-Fragen" : "Kenntnisprüfung questions")
     : examSource === "kmp_innsbruck"
-    ? (lang === "de" ? "KMP-Innsbruck-Fragen" : "KMP-Innsbruck questions")
+    ? (lang === "de" ? "Stichprobentest-Fragen" : "Stichprobentest questions")
     : (lang === "de" ? "Pharma-Fragen" : "Pharmakologie questions");
   return (
     <article
@@ -819,8 +819,8 @@ function FreeTierCard({ lang, examSource }: { lang: Lang; examSource: ExamSource
         </div>
         <p className="mp-body text-[var(--mp-fg-muted)] mb-4 text-sm leading-relaxed">
           {lang === "de"
-            ? "150 Fragen je Prüfungstyp (Kenntnisprüfung Wien, KMP Innsbruck, Pharmakologie), 450 gesamt, mit Erklärungen, wo vorhanden. Nur Qbank-Modus, kein Ablaufdatum."
-            : "150 questions per exam type (Kenntnisprüfung Wien, KMP Innsbruck, Pharmakologie), 450 in total, with explanations where available. Qbank-only, no expiry."}
+            ? "150 Fragen je Prüfungstyp (Kenntnisprüfung Wien, Stichprobentest (Innsbruck), Pharmakologie), 450 gesamt, mit Erklärungen, wo vorhanden. Nur Qbank-Modus, kein Ablaufdatum."
+            : "150 questions per exam type (Kenntnisprüfung Wien, Stichprobentest (Innsbruck), Pharmakologie), 450 in total, with explanations where available. Qbank-only, no expiry."}
         </p>
         <ul className="space-y-1.5 text-sm text-[var(--mp-fg)]">
           <li className="flex items-start gap-2">
@@ -1240,8 +1240,8 @@ function CohortFeaturedCard({
           </h3>
           <p className="mp-body text-[var(--mp-fg-muted)] mb-5 max-w-xl">
             {lang === "de"
-              ? "Ein einmaliger Preis, sechs Monate Vollzugang auf Kenntnisprüfung, KMP und Pharmakologie. Sieben Tage Geld-zurück-Garantie auf jede Bestellung. Wenn du nach 7 Tagen weiter lernst und dann durchfällst, verlängern wir deinen Zugang kostenlos: keine Cash-Rückerstattung in dem Fall, dafür Pass-Until-You-Pass. Aktiviert in Minuten, keine Kreditkarte."
-              : "One upfront price, six months of full access across Kenntnisprüfung, KMP and Pharmakologie. 7-day money-back guarantee on every purchase. If you keep studying past day 7 and later fail, we extend your access free: no cash refund at that point, but Pass-Until-You-Pass kicks in. Activated in minutes, no credit card."}
+              ? "Ein einmaliger Preis, sechs Monate Vollzugang auf Kenntnisprüfung, Stichprobentest und Pharmakologie. Sieben Tage Geld-zurück-Garantie auf jede Bestellung. Wenn du nach 7 Tagen weiter lernst und dann durchfällst, verlängern wir deinen Zugang kostenlos: keine Cash-Rückerstattung in dem Fall, dafür Pass-Until-You-Pass. Aktiviert in Minuten, keine Kreditkarte."
+              : "One upfront price, six months of full access across Kenntnisprüfung, Stichprobentest and Pharmakologie. 7-day money-back guarantee on every purchase. If you keep studying past day 7 and later fail, we extend your access free: no cash refund at that point, but Pass-Until-You-Pass kicks in. Activated in minutes, no credit card."}
           </p>
 
           {/* PUYP badge — prominent */}

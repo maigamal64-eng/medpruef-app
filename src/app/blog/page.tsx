@@ -34,8 +34,8 @@ export default function BlogIndexPage() {
             </h1>
             <p className="mp-body text-lg text-[var(--mp-fg-muted)] max-w-2xl">
               {L === "de"
-                ? "Nostrifikation, Kenntnisprüfung, KMP, Pharmakologie — geschrieben von Ärzt:innen, die den Weg selbst gegangen sind. Keine Werbung, keine unbegründeten Versprechen."
-                : "Nostrification, Kenntnisprüfung, KMP, Pharmakologie — written by doctors who've walked the path themselves. No hype, no unsubstantiated promises."}
+                ? "Nostrifikation, Kenntnisprüfung, Stichprobentest, Pharmakologie: geschrieben von Ärzt:innen, die den Weg selbst gegangen sind. Keine Werbung, keine unbegründeten Versprechen."
+                : "Nostrification, Kenntnisprüfung, Stichprobentest, Pharmakologie: written by doctors who've walked the path themselves. No hype, no unsubstantiated promises."}
             </p>
           </section>
 

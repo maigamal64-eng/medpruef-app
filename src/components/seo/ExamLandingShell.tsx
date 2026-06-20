@@ -60,7 +60,7 @@ export interface ExamLandingFaqItem {
 }
 
 export interface ExamLandingContent {
-  /** Human-readable exam name — "Kenntnisprüfung Wien", "KMP Innsbruck", etc. */
+  /** Human-readable exam name, e.g. "Kenntnisprüfung Wien", "Stichprobentest (Innsbruck)". */
   examName: { de: string; en: string };
   /** Short-form chip that sits above the hero title (e.g. "Österreich · Wien") */
   eyebrow: { de: string; en: string };
