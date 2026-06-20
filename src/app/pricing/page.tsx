@@ -1289,7 +1289,7 @@ function CohortFeaturedCard({
           <div>
             <div className="flex items-baseline gap-1.5">
               <span className="mp-num font-display font-black text-[var(--mp-fg)] text-[40px] leading-none">
-                €114
+                114 €
               </span>
             </div>
             <p className="text-sm text-[var(--mp-fg-muted)] mt-1.5">

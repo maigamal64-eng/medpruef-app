@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Prüfungsvorbereitung — MedPrüf",
   description:
-    "Specialized prep for the Austrian Kenntnisprüfung Wien, KMP Innsbruck, and Pharmakologie exams. 150 questions free — no credit card.",
+    "Specialized prep for the Austrian Kenntnisprüfung Wien, KMP Innsbruck, and Pharmakologie exams. 150 questions free, no credit card.",
   keywords: [
     "Kenntnisprüfung", "Kenntnisprüfung preparation", "Austrian medical exam",
     "Vienna medical license", "SIP 4", "SIP 5", "medical exam questions",
@@ -20,14 +20,14 @@ export const metadata: Metadata = {
     url: "https://medpruf.com/landing",
     title: "Prüfungsvorbereitung — MedPrüf",
     description:
-      "Specialized prep for the Austrian Kenntnisprüfung Wien, KMP Innsbruck, and Pharmakologie exams. 150 questions free — no credit card.",
+      "Specialized prep for the Austrian Kenntnisprüfung Wien, KMP Innsbruck, and Pharmakologie exams. 150 questions free, no credit card.",
     images: [{ url: "/brand/og-image.png", width: 1200, height: 630 }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Prüfungsvorbereitung — MedPrüf",
     description:
-      "Specialized prep for the Austrian Kenntnisprüfung Wien, KMP Innsbruck, and Pharmakologie exams. 150 questions free — no credit card.",
+      "Specialized prep for the Austrian Kenntnisprüfung Wien, KMP Innsbruck, and Pharmakologie exams. 150 questions free, no credit card.",
     images: ["/brand/og-image.png"],
   },
 };
