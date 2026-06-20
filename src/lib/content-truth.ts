@@ -153,13 +153,15 @@ export const TIERS = {
     duration_months: 6,
     puyp_eligible: true,
     available: true,
-    // Cohort name is date-agnostic on purpose. The old "Juni-26-Kohorte"
-    // framing drifted past its exam date (SoT §1 forbids it). This name
-    // stays correct as the Kenntnisprüfung sittings move (3x/year); the
-    // current exam date + soft deadline live on the surfaces (banner/CTA),
-    // not in the tier name. Display-only — payment/PUYP/webhook key off the
-    // `id` (premium_pass_guaranteed), never this string. (2026-06-20, Lektor)
-    name: { de: "Kenntnisprüfung-Kohorte", en: "Kenntnisprüfung Cohort" },
+    // Cohort name is EXAM-NEUTRAL on purpose (2026-06-20, [name]'s call).
+    // The old "Juni-26-Kohorte" drifted past its date; "Kenntnisprüfung-
+    // Kohorte" was still exam-specific and excluded KMP/Pharma buyers.
+    // "Prüfungs-Kohorte" / "Exam Cohort" stays correct as sittings move
+    // (3x/year) AND across all three exams. The current exam date + soft
+    // deadline live on the surfaces (banner/CTA + the exam calendar),
+    // not in the tier name. Display-only — payment/PUYP/webhook key off
+    // the `id` (premium_pass_guaranteed), never this string.
+    name: { de: "Prüfungs-Kohorte", en: "Exam Cohort" },
     referral_payout_cents: 7500, // €75 per COPY-BUNDLE §4
   },
 } as const satisfies Record<string, Tier>;

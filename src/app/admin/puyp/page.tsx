@@ -51,7 +51,7 @@ import {
   useToast,
 } from "@/components/ui";
 import { AdminPageShell } from "../_components/AdminPageShell";
-import { NEXT_EXAM_DATE } from "@/lib/exam-dates";
+import { getNextExamDate, type PuypExamType } from "@/lib/exam-dates";
 
 type StatusFilter = "pending" | "approved" | "rejected" | "all";
 
@@ -197,8 +197,8 @@ export default function AdminPuypPage() {
       setNewExpiresAt("");
       return;
     }
-    const exam = approveTarget.exam_type as keyof typeof NEXT_EXAM_DATE;
-    const iso = NEXT_EXAM_DATE[exam];
+    const exam = approveTarget.exam_type as PuypExamType;
+    const iso = getNextExamDate(exam);
     if (iso) {
       const d = new Date(`${iso}T23:59:59Z`);
       d.setUTCDate(d.getUTCDate() + 14);

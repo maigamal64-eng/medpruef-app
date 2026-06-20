@@ -288,7 +288,7 @@ export async function GET(req: NextRequest) {
       { plan: '3 months', payoutEuros: 25 },
       { plan: '6 months', payoutEuros: 50 },
       { plan: '12 months', payoutEuros: 50 },
-      { plan: 'Kenntnisprüfung Cohort', payoutEuros: 75 },
+      { plan: 'Exam Cohort', payoutEuros: 75 },
     ]
 
     return NextResponse.json({

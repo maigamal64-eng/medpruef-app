@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { NEXT_EXAM_DATE } from "@/lib/exam-dates";
+import { getNextExamSitting } from "@/lib/exam-dates";
 
 /**
  * /kmp-innsbruck — SEO landing page for the Kumulative Modulprüfung
@@ -51,6 +51,28 @@ export const metadata: Metadata = {
 };
 
 function buildCourseSchema() {
+  // The "KMP Innsbruck" exam is the national Stichprobentest — venue
+  // rotates each sitting (next: Graz, 23 Sep 2026). Use the real next
+  // sitting (computed at runtime, ages out) for both startDate and the
+  // CourseInstance location; omit startDate if none is published.
+  const sitting = getNextExamSitting("kmp_innsbruck");
+  const courseInstance: Record<string, unknown> = {
+    "@type": "CourseInstance",
+    courseMode: "online",
+    location: {
+      "@type": "Place",
+      name: sitting?.location
+        ? `Online · Stichprobentest ${sitting.location}`
+        : "Online · MedUni Nostrifizierung",
+      address: {
+        "@type": "PostalAddress",
+        addressLocality: sitting?.location ?? "Österreich",
+        addressCountry: "AT",
+      },
+    },
+  };
+  if (sitting?.date) courseInstance.startDate = sitting.date;
+
   return {
     "@context": "https://schema.org",
     "@type": "Course",
@@ -72,20 +94,7 @@ function buildCourseSchema() {
       "@type": "EducationalAudience",
       educationalRole: "Foreign-trained physician",
     },
-    hasCourseInstance: {
-      "@type": "CourseInstance",
-      courseMode: "online",
-      startDate: NEXT_EXAM_DATE.kmp_innsbruck,
-      location: {
-        "@type": "Place",
-        name: "Online · Med Uni Innsbruck",
-        address: {
-          "@type": "PostalAddress",
-          addressLocality: "Innsbruck",
-          addressCountry: "AT",
-        },
-      },
-    },
+    hasCourseInstance: courseInstance,
     offers: {
       "@type": "Offer",
       price: "0",

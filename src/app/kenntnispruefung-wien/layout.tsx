@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { NEXT_EXAM_DATE } from "@/lib/exam-dates";
+import { getNextExamDate } from "@/lib/exam-dates";
 
 /**
  * /kenntnispruefung-wien — SEO landing page for the Vienna
@@ -64,6 +64,25 @@ export const metadata: Metadata = {
  * re-licensing exam.
  */
 function buildCourseSchema() {
+  // Next Kenntnisprüfung Wien sitting, computed at runtime so it ages
+  // out (no hand-maintained date). Omit startDate if 2027 isn't yet
+  // published rather than ship a stale past date.
+  const start = getNextExamDate("kenntnispruefung");
+  const courseInstance: Record<string, unknown> = {
+    "@type": "CourseInstance",
+    courseMode: "online",
+    location: {
+      "@type": "Place",
+      name: "Online · Ärztekammer Wien",
+      address: {
+        "@type": "PostalAddress",
+        addressLocality: "Wien",
+        addressCountry: "AT",
+      },
+    },
+  };
+  if (start) courseInstance.startDate = start;
+
   return {
     "@context": "https://schema.org",
     "@type": "Course",
@@ -85,20 +104,7 @@ function buildCourseSchema() {
       "@type": "EducationalAudience",
       educationalRole: "Foreign-trained physician",
     },
-    hasCourseInstance: {
-      "@type": "CourseInstance",
-      courseMode: "online",
-      startDate: NEXT_EXAM_DATE.kenntnispruefung,
-      location: {
-        "@type": "Place",
-        name: "Online · Ärztekammer Wien",
-        address: {
-          "@type": "PostalAddress",
-          addressLocality: "Wien",
-          addressCountry: "AT",
-        },
-      },
-    },
+    hasCourseInstance: courseInstance,
     offers: {
       "@type": "Offer",
       price: "0",

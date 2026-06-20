@@ -1,65 +1,182 @@
 /**
- * Known upcoming Austrian medical-licensing exam dates.
+ * Austrian medical-licensing exam calendar — SELF-AGING.
  *
- * Used by the PUYP flow to suggest the next attempt date when an
- * admin approves an extension. The admin UI accepts an override, so
- * this map is a convenience default rather than a source of truth —
- * once a date passes, either update this file OR enter the new date
- * manually in the admin UI.
+ * This file is the CODE OWNER of exam-sitting dates (SoT §1 points
+ * here with a SOT-REF rather than restating dates in prose, so they
+ * cannot diverge). The whole point of the shape below is that copy,
+ * countdowns and the on-site calendar stay correct with ZERO manual
+ * edits as dates pass: each exam stores a SORTED LIST of known
+ * sittings, and the selector returns the first FUTURE one at runtime.
+ * Past sittings age out automatically; adding next year's dates is
+ * append-only.
  *
- * Source: `context/LAUNCH-BRIEF.md` (April 23 2026 B2B campaign kit)
- * and medprüf user-flow research. When a cycle passes, bump the entry
- * to the next known date. If the next date isn't announced, leave
- * the last-known value; the admin UI will flag it as stale.
+ * Verified 2026-06-20 against official Austrian sources:
+ *   - Kenntnisprüfung (Arztprüfung Allgemeinmedizin): arztakademie.at
+ *   - Stichprobentest (the "KMP Innsbruck" item): i-med.ac.at 2026 PDF
+ *   - Pharmakologie/Rezeptierkunde: meduniwien.ac.at Nostrifikation
+ * Research dossier: research/exam-dates-2026-06-20.md.
  *
- * The Date literal uses UTC midnight to avoid DST edge cases. When
- * building the subscription's new `expires_at`, add the cohort buffer
- * (~2 weeks past the exam date so the user can study until the day
- * OF the exam) at the call site.
+ * Re-verify cadence (SoT §0/§1): start of every campaign + monthly.
+ * The un-gameable check is "does the first FUTURE entry still match
+ * the official source URL?" — a 30-second check, not a prose re-audit.
+ *
+ * Used by: the PUYP flow (suggest the next attempt date when an admin
+ * approves an extension — admin UI accepts an override), the SEO
+ * layout JSON-LD, the CohortCountdownBanner, and the on-site
+ * `<UpcomingExams>` calendar.
+ *
+ * Dates use ISO YYYY-MM-DD. When building a subscription's new
+ * `expires_at`, add the cohort buffer (~2 weeks past the exam) at the
+ * call site so the user can study until the day OF the exam.
  */
 
 export type PuypExamType = "kenntnispruefung" | "kmp_innsbruck" | "pharma";
 
+export interface ExamSitting {
+  /** Which exam this sitting belongs to. */
+  examType: PuypExamType;
+  /** Short human label for the sitting (DE + EN). */
+  label: { de: string; en: string };
+  /** ISO date (YYYY-MM-DD) of the sitting. */
+  date: string;
+  /** ISO date (YYYY-MM-DD) of the registration deadline, or null if unknown/not-applicable. */
+  registrationDeadline: string | null;
+  /** Where the sitting is held (rotates for the Stichprobentest), or null. */
+  location: string | null;
+  /** Official source URL the date was taken from. */
+  sourceUrl: string;
+  /** "high" = confirmed on an official .at page; "estimated" = pattern-derived, not yet published. */
+  confidence: "high" | "estimated";
+  /** Optional human note shown in the calendar / admin (e.g. national-rotating model). */
+  note?: { de: string; en: string };
+}
+
 /**
- * ISO-date (YYYY-MM-DD) of the next known exam for each type.
- *
- * Updated 2026-06-20 (Lektor, against MEDPRUF-SOT.md §1 — the prior
- * May/June dates had all passed and were driving stale "next exam"
- * suggestions):
- *   - Kenntnisprüfung Wien: next sitting 28 Sep 2026 (registration
- *     ~end of July via Landesärztekammer). SoT-owned.
- *   - KMP Innsbruck: next ~late October 2026 (≈ week 44); confirm the
- *     exact day with i-med.ac.at. 2026-10-30 used as a defensible
- *     default — FLAG for [name]/Visite to pin the exact date.
- *   - Pharmakologie: SoT §1 ties Pharma to the Kenntnisprüfung tracks
- *     with no standalone published date, so it is anchored to the Wien
- *     sitting (28 Sep 2026) rather than fabricating a precise date.
- *     FLAG for [name]/Visite once a standalone Pharma date is published;
- *     the admin UI override handles per-user accuracy meanwhile.
+ * Sorted-ascending list of KNOWN sittings per exam type. Only add a
+ * date here once it appears on the official source. Past dates may
+ * stay (or be trimmed); the selector filters them out, so the list
+ * "ages out" automatically. NEVER fabricate or estimate a customer-
+ * facing date — leave the list short and let the UI say "next date
+ * not yet published."
  */
-export const NEXT_EXAM_DATE: Record<PuypExamType, string> = {
-  kenntnispruefung: "2026-09-28",
-  kmp_innsbruck: "2026-10-30",
-  pharma: "2026-09-28",
+export const EXAM_SITTINGS: Record<PuypExamType, ExamSitting[]> = {
+  kenntnispruefung: [
+    // 19 Jan 2026 + 18 May 2026 already passed — omitted.
+    {
+      examType: "kenntnispruefung",
+      label: { de: "Kenntnisprüfung Wien", en: "Kenntnisprüfung Vienna" },
+      date: "2026-09-28",
+      registrationDeadline: "2026-07-28",
+      location: "Wien",
+      sourceUrl: "https://www.arztakademie.at/allgemeinmedizin",
+      confidence: "high",
+      note: {
+        de: "Arztprüfung Allgemeinmedizin (Österr. Ärztekammer). Anmeldeschluss ausnahmslos 2 Monate vor dem Termin. Findet 3x pro Jahr statt.",
+        en: "Arztprüfung Allgemeinmedizin (Austrian Medical Chamber). Registration closes exactly 2 months before the date. Held 3x per year.",
+      },
+    },
+    // 2027 dates NOT yet published by arztakademie.at as of 2026-06-20.
+    // Do NOT add estimated 2027 dates to a customer-facing calendar.
+  ],
+  kmp_innsbruck: [
+    // National Stichprobentest — the location ROTATES; you register at
+    // the university where you applied for Nostrifizierung. The 2026
+    // sittings were Innsbruck (Feb, passed), Wien (May, passed) and
+    // Graz (23 Sep, upcoming) — so the only remaining 2026 sitting is
+    // in GRAZ, not Innsbruck (kept as the familiar label per [name]'s
+    // pending decision medpruef-kmp-label-2026-06-20).
+    {
+      examType: "kmp_innsbruck",
+      label: { de: "KMP / Stichprobentest", en: "KMP / Stichprobentest" },
+      date: "2026-09-23",
+      registrationDeadline: "2026-08-26",
+      location: "Graz",
+      sourceUrl:
+        "https://www.i-med.ac.at/studium/docs/termine-stichprobentest-2026.pdf",
+      confidence: "high",
+      note: {
+        de: "Nationaler Stichprobentest (Nostrifizierung): Standort wechselt je Termin, der nächste ist in Graz. Du meldest dich an der Universität an, an der du den Nostrifizierungs-Antrag gestellt hast.",
+        en: "National Stichprobentest (nostrification screening): the venue rotates each sitting, the next is in Graz. You register at the university where you filed your nostrification application.",
+      },
+    },
+    // 2027 Stichprobentest dates NOT yet published (only a 2026 Termine doc exists).
+  ],
+  pharma: [
+    // Rezeptierkunde/Pharmakologie has NO fixed annual date: it follows
+    // the regular MedUni Wien semester exam weeks (late Sept–Jan),
+    // registered per-semester. Intentionally EMPTY — represent it as
+    // rolling/term-based, never a fake countdown date.
+  ],
 };
 
 /**
+ * Source URL for the rolling Pharma scheduling info (no fixed date).
+ */
+export const PHARMA_INFO_URL =
+  "https://www.meduniwien.ac.at/web/studium-weiterbildung/nostrifizierung/pruefungen/";
+
+/**
+ * Returns the next FUTURE sitting for an exam type (date >= today,
+ * UTC-day granularity), or null if none is known/published. Pure,
+ * deterministic per calendar day — safe to call during render.
+ */
+export function getNextExamSitting(
+  examType: PuypExamType,
+  now: Date = new Date()
+): ExamSitting | null {
+  // Compare on calendar day to avoid an exam "disappearing" on the
+  // morning of the sitting; a sitting today still counts as upcoming.
+  const todayIso = now.toISOString().slice(0, 10);
+  const list = EXAM_SITTINGS[examType] ?? [];
+  const future = list
+    .filter((s) => s.date >= todayIso)
+    .sort((a, b) => a.date.localeCompare(b.date));
+  return future[0] ?? null;
+}
+
+/**
+ * Returns the ISO date of the next future sitting, or null if none is
+ * known. The self-aging replacement for the old hand-maintained
+ * `NEXT_EXAM_DATE[type]` scalar.
+ */
+export function getNextExamDate(
+  examType: PuypExamType,
+  now: Date = new Date()
+): string | null {
+  return getNextExamSitting(examType, now)?.date ?? null;
+}
+
+/**
+ * All known FUTURE sittings across every exam type, sorted ascending
+ * by date. Feeds the on-site `<UpcomingExams>` calendar. Pharma has no
+ * fixed date so it never appears here (the calendar shows it as a
+ * separate rolling/term-based note).
+ */
+export function getUpcomingSittings(now: Date = new Date()): ExamSitting[] {
+  const todayIso = now.toISOString().slice(0, 10);
+  return (Object.values(EXAM_SITTINGS).flat() as ExamSitting[])
+    .filter((s) => s.date >= todayIso)
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+/**
  * Suggested new `expires_at` for a PUYP extension covering the next
- * cycle. The user needs the subscription to stay live through at
- * least the exam date itself, plus a small buffer so they can study
- * the morning of the exam and check results afterwards.
+ * cycle. The user needs the subscription to stay live through at least
+ * the exam date itself, plus a small buffer so they can study the
+ * morning of the exam and check results afterwards.
  *
- * Default buffer is 14 days past the exam date — long enough to see
- * results come back for most Austrian exam boards.
+ * Default buffer is 14 days past the exam date. If no future sitting
+ * is known for the exam type (e.g. Pharma, which is term-based, or a
+ * year whose dates aren't published yet), falls back to 3 months from
+ * now so the user isn't locked out while the admin researches the
+ * next cycle — the admin UI override handles per-user accuracy.
  */
 export function suggestNextExpiresAt(
   examType: PuypExamType,
   bufferDays: number = 14
 ): Date {
-  const iso = NEXT_EXAM_DATE[examType];
+  const iso = getNextExamDate(examType);
   if (!iso) {
-    // Unknown exam_type — fall back to 3 months from now so the
-    // user isn't locked out while the admin researches the next cycle.
     const fallback = new Date();
     fallback.setUTCMonth(fallback.getUTCMonth() + 3);
     return fallback;

@@ -144,8 +144,8 @@ export default function FaqPage() {
           </h2>
           <p className="mp-body text-[var(--mp-fg-muted)] max-w-xl mx-auto">
             {lang === "de"
-              ? "Antworten auf die wichtigsten Fragen zum kostenlosen Tarif, zur Kenntnisprüfung-Kohorte, zu Pass-Until-You-Pass und zum Empfehlungsprogramm."
-              : "Answers to the key questions about the free tier, the Kenntnisprüfung Cohort, Pass-Until-You-Pass, and the referral program."}
+              ? "Antworten auf die wichtigsten Fragen zum kostenlosen Tarif, zur Prüfungs-Kohorte, zu Pass-Until-You-Pass und zum Empfehlungsprogramm."
+              : "Answers to the key questions about the free tier, the Exam Cohort, Pass-Until-You-Pass, and the referral program."}
           </p>
         </section>
 
@@ -524,8 +524,8 @@ const copy = {
       en: "How does \"Pass first try, or study free until you do\" work?",
     },
     intro: {
-      de: "Die Pass-Until-You-Pass-Garantie (PUYP) gilt für die Kenntnisprüfung-Kohorte und das 12-Monats-Abo. Statt einer Cash-Rückerstattung verlängern wir deinen Zugang kostenlos bis zum nächsten Prüfungstermin, wenn du durchfällst.",
-      en: "The Pass-Until-You-Pass guarantee (PUYP) applies to the Kenntnisprüfung Cohort and the 12-month plan. Instead of a cash refund, we extend your access free through the next exam date if you fail.",
+      de: "Die Pass-Until-You-Pass-Garantie (PUYP) gilt für die Prüfungs-Kohorte und das 12-Monats-Abo. Statt einer Cash-Rückerstattung verlängern wir deinen Zugang kostenlos bis zum nächsten Prüfungstermin, wenn du durchfällst.",
+      en: "The Pass-Until-You-Pass guarantee (PUYP) applies to the Exam Cohort and the 12-month plan. Instead of a cash refund, we extend your access free through the next exam date if you fail.",
     },
     b1: {
       de: "Lade dein offizielles Prüfungsergebnis als PDF oder Foto in deinem Dashboard hoch.",
@@ -548,8 +548,8 @@ const copy = {
       en: "Maximum of two additional cycles per user.",
     },
     scope: {
-      de: "PUYP gilt für die Kenntnisprüfung-Kohorte (114 €), den 6-Monats-Tarif (149 €) und das Jahresabo (229 €). Die kürzeren Tarife (Monatlich, 3 Monate), der 3-Monats-Einstieg (27 €) und der Einzelmonat (19 €) enthalten die Garantie nicht.",
-      en: "PUYP applies to the Kenntnisprüfung Cohort (114 €), the 6-month plan (149 €) and the annual plan (229 €). The shorter plans (monthly, 3-month), the 3-month starter (27 €) and the single-month tier (19 €) don't include the guarantee.",
+      de: "PUYP gilt für die Prüfungs-Kohorte (114 €), den 6-Monats-Tarif (149 €) und das Jahresabo (229 €). Die kürzeren Tarife (Monatlich, 3 Monate), der 3-Monats-Einstieg (27 €) und der Einzelmonat (19 €) enthalten die Garantie nicht.",
+      en: "PUYP applies to the Exam Cohort (114 €), the 6-month plan (149 €) and the annual plan (229 €). The shorter plans (monthly, 3-month), the 3-month starter (27 €) and the single-month tier (19 €) don't include the guarantee.",
     },
     noRefund: {
       de: "Geld-zurück-Garantien laden zu Missbrauch ein und führen häufig dazu, dass Studierende aufgeben, sobald es hart wird. Pass-Until-You-Pass hält dich stattdessen im Spiel: wir investieren in dein Bestehen, nicht in eine Ausstiegsklausel. Wenn du ein sehr persönliches Problem hast (Krankheit, Trauerfall), schreib uns an user-b7e46e80@example.com, wir finden im Einzelfall eine faire Lösung.",
@@ -566,8 +566,8 @@ const copy = {
       en: "You pay securely by card (Visa, Mastercard, Apple Pay too). Checkout runs through Whop, our payment processor. After payment, your full access unlocks automatically, usually within a minute.",
     },
     p2: {
-      de: "Live verfügbar sind die Kenntnisprüfung-Kohorte (114 €), der 3-Monats-Einstieg (27 €), der Einzelmonat (19 €) und der kostenlose Tarif. Es ist kein Abo: nichts verlängert sich automatisch, der Zugang läuft nach der gebuchten Laufzeit aus. Die wiederkehrenden Monats- und Jahrestarife sind auf der Preisseite sichtbar und nehmen Warteliste-Einträge entgegen.",
-      en: "Live right now: the Kenntnisprüfung Cohort (114 €), the 3-month starter (27 €), the single month (19 €), and the free tier. It is not a subscription: nothing auto-renews, access simply ends when your term is up. The recurring monthly and annual tiers are visible on the pricing page and accept waitlist sign-ups.",
+      de: "Live verfügbar sind die Prüfungs-Kohorte (114 €), der 3-Monats-Einstieg (27 €), der Einzelmonat (19 €) und der kostenlose Tarif. Es ist kein Abo: nichts verlängert sich automatisch, der Zugang läuft nach der gebuchten Laufzeit aus. Die wiederkehrenden Monats- und Jahrestarife sind auf der Preisseite sichtbar und nehmen Warteliste-Einträge entgegen.",
+      en: "Live right now: the Exam Cohort (114 €), the 3-month starter (27 €), the single month (19 €), and the free tier. It is not a subscription: nothing auto-renews, access simply ends when your term is up. The recurring monthly and annual tiers are visible on the pricing page and accept waitlist sign-ups.",
     },
   },
   ref: {
@@ -626,8 +626,8 @@ const copy = {
       en: "No AI-chat follow-ups (cached AI explanations are still readable).",
     },
     upgrade: {
-      de: "Sobald du bereit bist, kannst du jederzeit zur Kenntnisprüfung-Kohorte oder zu einem der Standardtarife upgraden, dein Fortschritt und deine Antworten bleiben erhalten.",
-      en: "Whenever you're ready, upgrade to the Kenntnisprüfung Cohort or a standard tier, your progress and answers carry over.",
+      de: "Sobald du bereit bist, kannst du jederzeit zur Prüfungs-Kohorte oder zu einem der Standardtarife upgraden, dein Fortschritt und deine Antworten bleiben erhalten.",
+      en: "Whenever you're ready, upgrade to the Exam Cohort or a standard tier, your progress and answers carry over.",
     },
   },
   perExam: {

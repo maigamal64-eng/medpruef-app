@@ -329,7 +329,7 @@ export default function RootLayout({
                     },
                     {
                       "@type": "Offer",
-                      "name": "Kenntnisprüfung Cohort",
+                      "name": "Exam Cohort",
                       "price": "114",
                       "priceCurrency": "EUR",
                       "availability": "https://schema.org/InStock",

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { NEXT_EXAM_DATE } from "@/lib/exam-dates";
+import { getNextExamDate } from "@/lib/exam-dates";
 
 /**
  * /pharmakologie-pruefung-wien — SEO landing page for the
@@ -9,9 +9,11 @@ import { NEXT_EXAM_DATE } from "@/lib/exam-dates";
  *   "Pharmakologie Ergänzungsprüfung"
  *
  * Content: 335 questions, single topic "Pharmakologie" per
- * NOTES.md §Content. Cohort anchor: the Kenntnisprüfung Wien sitting
- * on 2026-09-28 (NEXT_EXAM_DATE, SoT §1). The exact Pharma date is
- * nostrification-driven; the Course startDate tracks the Wien window.
+ * NOTES.md §Content. Pharma has NO fixed exam date (it is term-based,
+ * tied to MedUni nostrification semester exam weeks) — so we never
+ * fabricate a Pharma countdown. The Course startDate below anchors to
+ * the next Kenntnisprüfung Wien sitting (the in-market cohort window
+ * the page copy points buyers to), computed at runtime so it ages out.
  */
 
 const pageTitle =
@@ -27,7 +29,7 @@ export const metadata: Metadata = {
     "Rezeptierkunde",
     "Pharmakologie Ergänzungsprüfung",
     "Pharmakologie 2026",
-    "Kenntnisprüfung Kohorte",
+    "Prüfungs-Kohorte",
     "Pharmakologie Vorbereitung",
     "Approbation Pharmakologie",
     "ausländische Ärzte Pharmakologie",
@@ -51,6 +53,26 @@ export const metadata: Metadata = {
 };
 
 function buildCourseSchema() {
+  // Pharma has no fixed sitting; anchor the course instance to the next
+  // Kenntnisprüfung Wien window (computed at runtime, ages out). Omit
+  // startDate entirely if no future Wien sitting is published rather
+  // than emit a stale or fabricated date.
+  const cohortStart = getNextExamDate("kenntnispruefung");
+  const courseInstance: Record<string, unknown> = {
+    "@type": "CourseInstance",
+    courseMode: "online",
+    location: {
+      "@type": "Place",
+      name: "Online · Ärztekammer Wien",
+      address: {
+        "@type": "PostalAddress",
+        addressLocality: "Wien",
+        addressCountry: "AT",
+      },
+    },
+  };
+  if (cohortStart) courseInstance.startDate = cohortStart;
+
   return {
     "@context": "https://schema.org",
     "@type": "Course",
@@ -72,27 +94,14 @@ function buildCourseSchema() {
       "@type": "EducationalAudience",
       educationalRole: "Foreign-trained physician",
     },
-    hasCourseInstance: {
-      "@type": "CourseInstance",
-      courseMode: "online",
-      startDate: NEXT_EXAM_DATE.pharma,
-      location: {
-        "@type": "Place",
-        name: "Online · Ärztekammer Wien",
-        address: {
-          "@type": "PostalAddress",
-          addressLocality: "Wien",
-          addressCountry: "AT",
-        },
-      },
-    },
+    hasCourseInstance: courseInstance,
     offers: {
       "@type": "Offer",
       price: "0",
       priceCurrency: "EUR",
       availability: "https://schema.org/InStock",
       description:
-        "Free tier: 150 questions. Kenntnisprüfung Cohort with Pass-Until-You-Pass available from /pricing.",
+        "Free tier: 150 questions. Exam Cohort with Pass-Until-You-Pass available from /pricing.",
     },
   };
 }

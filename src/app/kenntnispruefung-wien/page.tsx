@@ -136,8 +136,8 @@ const content: ExamLandingContent = {
         en: "Can I retake the exam if I fail?",
       },
       a: {
-        de: "Ja, ein nicht bestandener SIP-Teil kann beim nächsten Prüfungstermin wiederholt werden. Grundsätzlich gibt es keine harte Obergrenze, aber jede Wiederholung kostet die volle Gebühr. Genau deshalb bauen wir MedPrüf: unsere Pass-Until-You-Pass-Garantie (auf der Kenntnisprüfung-Kohorte und dem Jahresabo) verlängert deinen Zugang kostenlos bis zur nächsten Prüfung, wenn du durchfällst, damit du nicht zusätzlich zur Prüfungsgebühr auch noch für das Lernmaterial erneut zahlst.",
-        en: "Yes, a failed SIP part can be retaken at the next exam date. There's no hard cap on attempts, but each retake costs the full exam fee. That's exactly why we built MedPrüf: our Pass-Until-You-Pass guarantee (on the Kenntnisprüfung Cohort and annual plan) extends your access free through the next exam cycle if you fail, so you don't pay for the study material twice on top of the exam fee.",
+        de: "Ja, ein nicht bestandener SIP-Teil kann beim nächsten Prüfungstermin wiederholt werden. Grundsätzlich gibt es keine harte Obergrenze, aber jede Wiederholung kostet die volle Gebühr. Genau deshalb bauen wir MedPrüf: unsere Pass-Until-You-Pass-Garantie (auf der Prüfungs-Kohorte und dem Jahresabo) verlängert deinen Zugang kostenlos bis zur nächsten Prüfung, wenn du durchfällst, damit du nicht zusätzlich zur Prüfungsgebühr auch noch für das Lernmaterial erneut zahlst.",
+        en: "Yes, a failed SIP part can be retaken at the next exam date. There's no hard cap on attempts, but each retake costs the full exam fee. That's exactly why we built MedPrüf: our Pass-Until-You-Pass guarantee (on the Exam Cohort and annual plan) extends your access free through the next exam cycle if you fail, so you don't pay for the study material twice on top of the exam fee.",
       },
     },
     {

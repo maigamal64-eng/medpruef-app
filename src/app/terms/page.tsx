@@ -90,8 +90,8 @@ export default function TermsPage() {
         <h2>5. {lang === "de" ? "Abonnement und Zahlung" : "Subscription and Payment"}</h2>
         <p>
           {lang === "de"
-            ? "Die kostenlose Version bietet eingeschränkten Zugang (150 Fragen pro Prüfungstyp). Bezahlte Tarife (3-Monats-Einstieg 27 €, Einzelmonat 19 €, Kenntnisprüfung-Kohorte 114 €, sowie 3-, 6- und 12-Monats-Tarife sobald Stripe live ist) werden einmalig oder als Abonnement berechnet. Der 3-Monats-Einstieg ist auf einen Kauf pro Konto begrenzt."
-            : "The free version offers limited access (150 questions per exam type). Paid tiers (3-Month Starter 27 €, Single Month 19 €, Kenntnisprüfung Cohort 114 €, plus 3-, 6-, and 12-month plans once Stripe goes live) are charged once or on a subscription basis. The 3-Month Starter is capped at one purchase per account."}
+            ? "Die kostenlose Version bietet eingeschränkten Zugang (150 Fragen pro Prüfungstyp). Bezahlte Tarife (3-Monats-Einstieg 27 €, Einzelmonat 19 €, Prüfungs-Kohorte 114 €, sowie 3-, 6- und 12-Monats-Tarife sobald Stripe live ist) werden einmalig oder als Abonnement berechnet. Der 3-Monats-Einstieg ist auf einen Kauf pro Konto begrenzt."
+            : "The free version offers limited access (150 questions per exam type). Paid tiers (3-Month Starter 27 €, Single Month 19 €, Exam Cohort 114 €, plus 3-, 6-, and 12-month plans once Stripe goes live) are charged once or on a subscription basis. The 3-Month Starter is capped at one purchase per account."}
         </p>
         <p>
           {lang === "de"
@@ -100,8 +100,8 @@ export default function TermsPage() {
         </p>
         <p>
           {lang === "de"
-            ? "Pass-Until-You-Pass: Auf der Kenntnisprüfung-Kohorte (114 €) und dem 12-Monats-Tarif (229 €) verlängern wir deinen Zugang kostenlos, wenn du nach mindestens 70 % bearbeiteter Fragenbank durchfällst und einen offiziellen Bescheid einreichst (max. zwei Verlängerungen). Details: /faq."
-            : "Pass-Until-You-Pass: On the Kenntnisprüfung Cohort (114 €) and 12-month plan (229 €), we extend your access free if you fail after working through at least 70 % of the question bank and submit an official result (max. two extensions). Details at /faq."}
+            ? "Pass-Until-You-Pass: Auf der Prüfungs-Kohorte (114 €) und dem 12-Monats-Tarif (229 €) verlängern wir deinen Zugang kostenlos, wenn du nach mindestens 70 % bearbeiteter Fragenbank durchfällst und einen offiziellen Bescheid einreichst (max. zwei Verlängerungen). Details: /faq."
+            : "Pass-Until-You-Pass: On the Exam Cohort (114 €) and 12-month plan (229 €), we extend your access free if you fail after working through at least 70 % of the question bank and submit an official result (max. two extensions). Details at /faq."}
         </p>
       </section>
 

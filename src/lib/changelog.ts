@@ -24,6 +24,30 @@ export interface ChangelogEntry {
 export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-06-20",
+    tag: "feature",
+    title: {
+      de: "Neuer Prüfungskalender, immer aktuell",
+      en: "New exam calendar, always current",
+    },
+    description: {
+      de: "Auf der Startseite und der Preisseite gibt es jetzt einen Prüfungskalender mit den nächsten Terminen: Kenntnisprüfung Wien am 28. September 2026 (Anmeldeschluss 28. Juli) und der nationale Stichprobentest (KMP) am 23. September 2026 in Graz (Anmeldeschluss 26. August). Die Pharmakologie-Prüfung hat keinen fixen Jahrestermin, sie folgt den Semesterwochen deiner Universität und wird entsprechend angezeigt. Der Kalender pflegt sich selbst: vergangene Termine fallen automatisch heraus, sobald sie vorbei sind, sodass die Daten immer stimmen.",
+      en: "The home page and the pricing page now show an exam calendar with the next dates: Kenntnisprüfung Vienna on 28 September 2026 (registration closes 28 July) and the national Stichprobentest (KMP) on 23 September 2026 in Graz (registration closes 26 August). The Pharmakologie exam has no fixed annual date, it follows your university's semester weeks and is shown that way. The calendar maintains itself: past dates drop off automatically once they pass, so the dates are always correct.",
+    },
+  },
+  {
+    date: "2026-06-20",
+    tag: "improvement",
+    title: {
+      de: "Tarif-Name jetzt prüfungsneutral: Prüfungs-Kohorte",
+      en: "Tier name is now exam-neutral: Exam Cohort",
+    },
+    description: {
+      de: "Unser Lerngemeinschafts-Tarif heißt jetzt Prüfungs-Kohorte statt Kenntnisprüfung-Kohorte. Der Name gilt damit für alle drei Prüfungen (Kenntnisprüfung Wien, KMP, Pharmakologie), nicht nur für eine. Preis, Laufzeit und die Pass-Until-You-Pass-Garantie bleiben unverändert.",
+      en: "Our study-group plan is now called the Exam Cohort instead of the Kenntnisprüfung Cohort. The name now covers all three exams (Kenntnisprüfung Vienna, KMP, Pharmakologie), not just one. Price, duration and the Pass-Until-You-Pass guarantee are unchanged.",
+    },
+  },
+  {
+    date: "2026-06-20",
     tag: "admin",
     title: {
       de: "Free-Tier wird jetzt durchgesetzt (150 Fragen pro Prüfungstyp)",

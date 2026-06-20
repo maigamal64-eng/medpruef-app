@@ -313,14 +313,14 @@ function ChooseView({
         >
           {lang === "de" ? (
             <>
-              Die Garantie gilt für die <strong>Kenntnisprüfung-Kohorte</strong> und das{" "}
+              Die Garantie gilt für die <strong>Prüfungs-Kohorte</strong> und das{" "}
               <strong>12-Monats-Abo</strong>. Du kannst dein Ergebnis unten
               trotzdem festhalten, aber es gibt keine Verlängerung auf deinem
               aktuellen Tarif.
             </>
           ) : (
             <>
-              The guarantee applies to the <strong>Kenntnisprüfung Cohort</strong> and{" "}
+              The guarantee applies to the <strong>Exam Cohort</strong> and{" "}
               <strong>12-month</strong> plans. You can still record your result
               below, but there&apos;s no subscription extension on your current tier.
             </>

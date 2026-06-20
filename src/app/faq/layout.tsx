@@ -41,11 +41,11 @@ function buildFaqSchema() {
   const qa: Array<{ q: string; a: string }> = [
     {
       q: 'Wie funktioniert „Beim ersten Versuch bestehen, oder kostenlos weiterlernen"?',
-      a: "Die Pass-Until-You-Pass-Garantie (PUYP) gilt für die Kenntnisprüfung-Kohorte (114 €), den 6-Monats-Tarif (149 €) und das Jahresabo (229 €). Statt einer Cash-Rückerstattung verlängern wir deinen Zugang kostenlos bis zum nächsten Prüfungstermin, wenn du durchfällst: Du lädst dein offizielles Prüfungsergebnis hoch, musst mindestens 70 % der relevanten Fragenbank bearbeitet haben, ein Admin verifiziert innerhalb von 72 Stunden, und bei Bestätigung verlängert sich dein Abo automatisch, maximal zwei zusätzliche Zyklen pro Nutzer:in.",
+      a: "Die Pass-Until-You-Pass-Garantie (PUYP) gilt für die Prüfungs-Kohorte (114 €), den 6-Monats-Tarif (149 €) und das Jahresabo (229 €). Statt einer Cash-Rückerstattung verlängern wir deinen Zugang kostenlos bis zum nächsten Prüfungstermin, wenn du durchfällst: Du lädst dein offizielles Prüfungsergebnis hoch, musst mindestens 70 % der relevanten Fragenbank bearbeitet haben, ein Admin verifiziert innerhalb von 72 Stunden, und bei Bestätigung verlängert sich dein Abo automatisch, maximal zwei zusätzliche Zyklen pro Nutzer:in.",
     },
     {
       q: "Wie kann ich bezahlen?",
-      a: "Du zahlst sicher mit Karte (Visa, Mastercard, auch Apple Pay). Der Checkout läuft über Whop, unseren Zahlungsabwickler; der Vollzugang wird automatisch innerhalb von etwa einer Minute nach der Zahlung freigeschaltet. Live verfügbar sind die Kenntnisprüfung-Kohorte (114 €), der 3-Monats-Einstieg (27 €), der Einzelmonat (19 €) und der kostenlose Tarif. Es ist kein Abo: nichts verlängert sich automatisch, der Zugang läuft nach der gebuchten Laufzeit einfach aus.",
+      a: "Du zahlst sicher mit Karte (Visa, Mastercard, auch Apple Pay). Der Checkout läuft über Whop, unseren Zahlungsabwickler; der Vollzugang wird automatisch innerhalb von etwa einer Minute nach der Zahlung freigeschaltet. Live verfügbar sind die Prüfungs-Kohorte (114 €), der 3-Monats-Einstieg (27 €), der Einzelmonat (19 €) und der kostenlose Tarif. Es ist kein Abo: nichts verlängert sich automatisch, der Zugang läuft nach der gebuchten Laufzeit einfach aus.",
     },
     {
       q: "Wie laufen Empfehlungszahlungen?",

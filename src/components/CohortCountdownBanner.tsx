@@ -2,8 +2,10 @@
 
 /**
  * CohortCountdownBanner — informational strip counting down to the
- * next in-market Kenntnisprüfung Wien exam date (Mon 2026-09-28),
- * per MEDPRUF-SOT.md §1. (Was the stale 2026-06-26 Pharma date.)
+ * next in-market Kenntnisprüfung Wien sitting. The date is pulled from
+ * the SELF-AGING calendar (`getNextExamSitting`, SoT §1) — never
+ * hardcoded — so the banner stays correct and hides itself once the
+ * sitting passes, with zero manual edits.
  *
  * Post-soft-launch sprint §1.4.5 rewrite:
  *
@@ -33,8 +35,8 @@ import {
   useAnnouncementGate,
   type SurfaceKey,
 } from "@/lib/announcements/useAnnouncementGate";
+import { getNextExamSitting } from "@/lib/exam-dates";
 
-const COHORT_EXAM_ISO = "2026-09-28T09:00:00+02:00"; // Kenntnisprüfung Wien, Vienna time (SoT §1)
 const SURFACE: SurfaceKey = "cohort_banner";
 const HIDE_PATHS = [
   "/login",
@@ -47,12 +49,20 @@ const HIDE_PATHS = [
   "/faq",
 ];
 
-function getDaysUntil(targetIso: string): number {
-  const now = Date.now();
-  const then = new Date(targetIso).getTime();
-  const ms = then - now;
+function getDaysUntil(iso: string): number {
+  const [y, m, d] = iso.split("-").map(Number);
+  const then = new Date(y, (m ?? 1) - 1, d ?? 1).getTime();
+  const ms = then - Date.now();
   if (ms <= 0) return 0;
   return Math.ceil(ms / (1000 * 60 * 60 * 24));
+}
+
+function formatGermanDate(iso: string): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, (m ?? 1) - 1, d ?? 1).toLocaleDateString("de-AT", {
+    day: "numeric",
+    month: "long",
+  });
 }
 
 export default function CohortCountdownBanner() {
@@ -60,17 +70,28 @@ export default function CohortCountdownBanner() {
   const { activeSurface, markSeen } = useAnnouncementGate();
   const [daysLeft, setDaysLeft] = useState<number | null>(null);
 
+  // Next Kenntnisprüfung Wien sitting, computed from the self-aging
+  // calendar (SoT §1) — NEVER a hardcoded date, so the banner can't go
+  // stale when a sitting passes. Falls back to null (banner hidden) if
+  // no future sitting is published yet.
+  const sitting = getNextExamSitting("kenntnispruefung");
+  const examIso = sitting?.date ?? null;
+
   // Compute days-until once per mount — banner doesn't need a live tick
   // (countdown is day-granularity, not seconds) and the tick animation
   // was flagged by prefers-reduced-motion.
   useEffect(() => {
-    const d = getDaysUntil(COHORT_EXAM_ISO);
+    if (!examIso) {
+      setDaysLeft(null);
+      return;
+    }
+    const d = getDaysUntil(examIso);
     setDaysLeft(d > 0 ? d : null);
-  }, []);
+  }, [examIso]);
 
   const hideOnPath = HIDE_PATHS.some((p) => pathname?.startsWith(p));
   if (hideOnPath) return null;
-  if (daysLeft === null) return null;
+  if (daysLeft === null || !examIso) return null;
   if (activeSurface !== SURFACE) return null;
 
   const handleDismiss = () => {
@@ -78,6 +99,7 @@ export default function CohortCountdownBanner() {
   };
 
   const dayWord = daysLeft === 1 ? "Tag" : "Tage";
+  const examDateLabel = formatGermanDate(examIso);
 
   return (
     <div
@@ -91,8 +113,8 @@ export default function CohortCountdownBanner() {
         <div className="flex items-center gap-2 min-w-0">
           <Timer className="w-4 h-4 flex-shrink-0" aria-hidden />
           <p className="text-xs sm:text-sm font-medium truncate">
-            <span className="font-bold">Kenntnisprüfung-Kohorte:</span>{" "}
-            {`Noch ${daysLeft} ${dayWord} bis zur Kenntnisprüfung Wien am 28. September.`}
+            <span className="font-bold">Prüfungs-Kohorte:</span>{" "}
+            {`Noch ${daysLeft} ${dayWord} bis zur Kenntnisprüfung Wien am ${examDateLabel}.`}
           </p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">

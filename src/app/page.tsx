@@ -195,8 +195,8 @@ export default function Home() {
       const lng = getLang();
       toast.success(
         lng === "de"
-          ? "Willkommen in der Kenntnisprüfung-Kohorte."
-          : "Welcome to the Kenntnisprüfung Cohort.",
+          ? "Willkommen in der Prüfungs-Kohorte."
+          : "Welcome to the Exam Cohort.",
         lng === "de"
           ? "Dein Vollzugang ist 6 Monate lang aktiv, inkl. Pass-Until-You-Pass. Viel Erfolg bei der Prüfung."
           : "Your full access is active for 6 months, with Pass-Until-You-Pass. Good luck with the exam."

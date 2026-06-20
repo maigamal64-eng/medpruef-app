@@ -6,6 +6,7 @@ import Link from "next/link";
 import { getLang, setLang } from "@/lib/i18n";
 import { getStoredExamSource, type ExamSourceId } from "@/lib/topics";
 import { QUESTIONS } from "@/lib/content-truth";
+import UpcomingExams from "@/components/UpcomingExams";
 
 // Free-tier CTAs default to the user's stored exam preference. SSR returns
 // kenntnispruefung (the safest default — biggest cohort) so the link resolves
@@ -103,8 +104,8 @@ const COPY = {
       en: "Start free: 150 questions per exam",
     },
     cta_secondary: {
-      de: "Kenntnisprüfung-Kohorte ansehen",
-      en: "See the Kenntnisprüfung Cohort",
+      de: "Prüfungs-Kohorte ansehen",
+      en: "See the Exam Cohort",
     },
     cta_tertiary: {
       de: "3-Monats-Einstieg · 27 € (≈ 9 €/Monat)",
@@ -115,8 +116,8 @@ const COPY = {
       en: "Full access · one-time · no renewal",
     },
     cta_note: {
-      de: "Keine Karte · Kenntnisprüfung-Kohorte mit Pass-Until-You-Pass-Garantie",
-      en: "No credit card · Kenntnisprüfung Cohort includes Pass-Until-You-Pass",
+      de: "Keine Karte · Prüfungs-Kohorte mit Pass-Until-You-Pass-Garantie",
+      en: "No credit card · Exam Cohort includes Pass-Until-You-Pass",
     },
   },
   stats: [
@@ -277,8 +278,8 @@ const COPY = {
     index: "03 / 04",
     eyebrow: { de: "Preise", en: "Pricing" },
     title: {
-      de: "Starte kostenlos. Upgrade zur Kenntnisprüfung-Kohorte.",
-      en: "Start free. Upgrade to the Kenntnisprüfung Cohort.",
+      de: "Starte kostenlos. Upgrade zur Prüfungs-Kohorte.",
+      en: "Start free. Upgrade to the Exam Cohort.",
     },
     subtitle: {
       de: "Jeder bezahlte Tarif enthält alle drei Prüfungstypen. Pass-Until-You-Pass-Garantie auf der Kohorte und dem Jahresabo.",
@@ -299,7 +300,7 @@ const COPY = {
         featured: false,
       },
       {
-        name: { de: "Kenntnisprüfung-Kohorte", en: "Kenntnisprüfung Cohort" },
+        name: { de: "Prüfungs-Kohorte", en: "Exam Cohort" },
         price: "114 €",
         period: { de: "6 Monate", en: "6 months" },
         pitch: {
@@ -519,6 +520,7 @@ export default function LandingPage() {
       <HowItWorks lang={lang} />
       <Features lang={lang} />
       <Subjects lang={lang} />
+      <UpcomingExams lang={lang} />
       <PricingPreview lang={lang} freeHref={freeHref} />
       <SourceProof lang={lang} />
       <FinalCTA lang={lang} freeHref={freeHref} />

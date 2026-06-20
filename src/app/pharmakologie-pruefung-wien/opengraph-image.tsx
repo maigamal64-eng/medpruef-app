@@ -100,7 +100,7 @@ export default function Image() {
               maxWidth: 1040,
             }}
           >
-            Kenntnisprüfung-Kohorte.
+            Prüfungs-Kohorte.
           </div>
           <div
             style={{

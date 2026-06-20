@@ -348,8 +348,8 @@ export default function ExamLandingShell({ content }: { content: ExamLandingCont
                 </p>
                 <p className="text-xs text-[var(--mp-fg-muted)]">
                   {L === "de"
-                    ? "auf der Kenntnisprüfung-Kohorte"
-                    : "on the Kenntnisprüfung Cohort"}
+                    ? "auf der Prüfungs-Kohorte"
+                    : "on the Exam Cohort"}
                 </p>
               </div>
             </div>

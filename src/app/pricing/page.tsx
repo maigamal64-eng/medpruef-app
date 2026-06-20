@@ -23,6 +23,7 @@ import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import LanguageToggle from "@/components/LanguageToggle";
 import ThemeToggle from "@/components/ThemeToggle";
+import UpcomingExams from "@/components/UpcomingExams";
 import {
   Dialog,
   TextField,
@@ -484,14 +485,14 @@ export default function PricingPage() {
                 <strong className="text-[var(--mp-fg)]">Die Kenntnisprüfung kostet ~370 € pro Versuch.</strong>{" "}
                 Ein verlorenes halbes Jahr in Österreich:{" "}
                 <strong className="text-[var(--mp-fg)]">~5.000 € entgangenes Assistenzarzt-Gehalt.</strong>{" "}
-                Die Kenntnisprüfung-Kohorte: <strong className="text-[var(--mp-viridian)]">114 €, einmalig.</strong>
+                Die Prüfungs-Kohorte: <strong className="text-[var(--mp-viridian)]">114 €, einmalig.</strong>
               </>
             ) : (
               <>
                 <strong className="text-[var(--mp-fg)]">The Kenntnisprüfung costs ~370 € per attempt.</strong>{" "}
                 Half a year delayed in Austria:{" "}
                 <strong className="text-[var(--mp-fg)]">~5,000 € in forgone Assistenzarzt salary.</strong>{" "}
-                The Kenntnisprüfung Cohort: <strong className="text-[var(--mp-viridian)]">114 €, one time.</strong>
+                The Exam Cohort: <strong className="text-[var(--mp-viridian)]">114 €, one time.</strong>
               </>
             )}
           </div>
@@ -541,6 +542,11 @@ export default function PricingPage() {
           <ReferralBlock lang={lang} />
         </section>
 
+        {/* ══════════ Exam calendar (self-aging) ══════════ */}
+        <section className="max-w-5xl mx-auto px-4 lg:px-8 pb-10">
+          <UpcomingExams lang={lang} variant="compact" />
+        </section>
+
         {/* ══════════ PUYP block ══════════ */}
         <section className="max-w-5xl mx-auto px-4 lg:px-8 pb-10">
           <PuypBlock lang={lang} />
@@ -560,8 +566,8 @@ export default function PricingPage() {
               }
               a={
                 lang === "de"
-                  ? "Wenn du die Kenntnisprüfung-Kohorte oder das Jahresabo hast, mindestens 70 % der relevanten Fragenbank bearbeitet hast und dann durchfällst, lädst du deinen offiziellen Bescheid hoch. Wir verifizieren innerhalb von 72 Stunden und verlängern deinen Zugang kostenlos bis zum nächsten Prüfungstermin: maximal zwei zusätzliche Zyklen."
-                  : "If you're on the Kenntnisprüfung Cohort or the 12-month plan, completed ≥70 % of the relevant Qbank and fail the real exam, you upload your official result. We verify within 72 hours and extend your access free through the next exam cycle, up to two additional cycles."
+                  ? "Wenn du die Prüfungs-Kohorte oder das Jahresabo hast, mindestens 70 % der relevanten Fragenbank bearbeitet hast und dann durchfällst, lädst du deinen offiziellen Bescheid hoch. Wir verifizieren innerhalb von 72 Stunden und verlängern deinen Zugang kostenlos bis zum nächsten Prüfungstermin: maximal zwei zusätzliche Zyklen."
+                  : "If you're on the Exam Cohort or the 12-month plan, completed ≥70 % of the relevant Qbank and fail the real exam, you upload your official result. We verify within 72 hours and extend your access free through the next exam cycle, up to two additional cycles."
               }
             />
             <FAQItem
@@ -1213,8 +1219,8 @@ function CohortFeaturedCard({
             aria-hidden
           />
           {lang === "de"
-            ? "Kenntnisprüfung-Kohorte"
-            : "Kenntnisprüfung Cohort"}
+            ? "Prüfungs-Kohorte"
+            : "Exam Cohort"}
         </span>
       </div>
 
@@ -1230,7 +1236,7 @@ function CohortFeaturedCard({
             </span>
           </div>
           <h3 className="mp-h2 mb-3">
-            {lang === "de" ? "Kenntnisprüfung-Kohorte" : "Kenntnisprüfung Cohort"}
+            {lang === "de" ? "Prüfungs-Kohorte" : "Exam Cohort"}
           </h3>
           <p className="mp-body text-[var(--mp-fg-muted)] mb-5 max-w-xl">
             {lang === "de"
@@ -1547,8 +1553,8 @@ function PuypBlock({ lang }: { lang: Lang }) {
       </h3>
       <p className="text-sm text-[var(--mp-fg-muted)] mb-5 max-w-2xl leading-relaxed">
         {lang === "de"
-          ? "Zwei Schutz-Ebenen: 7-Tage-Geld-zurück-Garantie auf jede Bestellung, und wenn du nach 7 Tagen weiter lernst und dann beim ersten Versuch durchfällst, verlängern wir deinen Zugang kostenlos (Pass-Until-You-Pass). PUYP gilt für die Kenntnisprüfung-Kohorte und den 12-Monats-Tarif."
-          : "Two layers of protection: 7-day money-back guarantee on every purchase, and if you keep studying past day 7 and later fail your first attempt, we extend your access free (Pass-Until-You-Pass). PUYP applies to the Kenntnisprüfung Cohort and the 12-month plan."}
+          ? "Zwei Schutz-Ebenen: 7-Tage-Geld-zurück-Garantie auf jede Bestellung, und wenn du nach 7 Tagen weiter lernst und dann beim ersten Versuch durchfällst, verlängern wir deinen Zugang kostenlos (Pass-Until-You-Pass). PUYP gilt für die Prüfungs-Kohorte und den 12-Monats-Tarif."
+          : "Two layers of protection: 7-day money-back guarantee on every purchase, and if you keep studying past day 7 and later fail your first attempt, we extend your access free (Pass-Until-You-Pass). PUYP applies to the Exam Cohort and the 12-month plan."}
       </p>
 
       <ul className="space-y-2 mb-5">
