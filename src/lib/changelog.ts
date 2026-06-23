@@ -23,6 +23,30 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-06-23",
+    tag: "improvement",
+    title: {
+      de: "Prüfung wird automatisch gespeichert",
+      en: "Your exam now auto-saves",
+    },
+    description: {
+      de: "Wenn du eine Prüfungssimulation läufst und die Seite neu lädt, der Browser abstürzt oder ein Update erscheint, geht dein Fortschritt nicht mehr verloren. Deine Antworten, markierten Fragen und der 4-Stunden-Timer werden laufend gespeichert. Beim Zurückkommen kannst du genau dort weitermachen, wo du aufgehört hast, und ein neues Update unterbricht eine laufende Prüfung nicht mehr.",
+      en: "If you are running an exam simulation and the page reloads, the browser crashes, or an update ships, your progress is no longer lost. Your answers, flagged questions and the 4-hour timer are saved as you go. When you come back you can resume exactly where you left off, and a new update no longer interrupts an exam in progress.",
+    },
+  },
+  {
+    date: "2026-06-23",
+    tag: "fix",
+    title: {
+      de: "Genauere Themen-Statistik bei sehr vielen Antworten",
+      en: "More accurate topic stats for heavy users",
+    },
+    description: {
+      de: "Wenn du sehr viele Fragen beantwortet hast (über 1.000), wurde deine Trefferquote pro Thema bisher nur aus einem Teil deiner Antworten berechnet. Jetzt zählen wir alle deine Antworten korrekt.",
+      en: "If you had answered very many questions (over 1,000), your per-topic accuracy was previously computed from only part of your answers. Now we count all of your answers correctly.",
+    },
+  },
+  {
     date: "2026-06-21",
     tag: "improvement",
     title: {

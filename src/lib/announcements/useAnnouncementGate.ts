@@ -51,6 +51,76 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { authFetch } from "@/lib/authFetch";
 
+// ── Shared deduped fetch ─────────────────────────────────────────
+//
+// B-09 fan-out fix (2026-06-23): six surfaces co-mount on `/`
+// (CohortCountdownBanner in layout + ReferralCodeCard / OrientationModal
+// / ReferralShareFloater via this hook, plus WhatsNewModal +
+// UserSurveyModal fetching directly) and each used to fire its own GET
+// /api/announcements/state — so one page load hit the row ~6 times.
+//
+// `fetchAnnouncementState()` collapses concurrent callers onto ONE
+// in-flight request: the first caller starts the fetch, everyone who
+// asks while it's still pending gets the SAME promise, and the cache is
+// cleared the instant it settles. This is an IN-FLIGHT dedupe, not a
+// permanent cache — a later navigation (or a same-tab return after the
+// 30-min session gap) re-fetches, so the server can still bump
+// session_count. The endpoint is still hit "every page load", just once
+// per load instead of six times.
+//
+// It returns the RAW parsed body (`{ state: {...} }` with every column,
+// including whatsNewSeenAt / feedbackSurveyShownAt / feedbackSurveyDismissedAt
+// that the two modals read but `AnnouncementState` doesn't model), so a
+// caller can pull whichever fields it needs. `null` on 401 (guest/anon)
+// or any error — same fall-through the individual callers had.
+
+/** Raw `/api/announcements/state` response, all columns. */
+export interface AnnouncementStateResponse {
+  state?: {
+    userId: string;
+    sessionCount: number;
+    qsAnsweredTotal: number;
+    orientationModalSeenAt: string | null;
+    cohortBannerDismissedAt: string | null;
+    referralFloaterDismissedAt: string | null;
+    feedbackSurveyShownAt?: string | null;
+    feedbackSurveyDismissedAt?: string | null;
+    whatsNewSeenAt?: string | null;
+    lastSessionAt: string;
+  } | null;
+}
+
+let inFlightStateFetch: Promise<AnnouncementStateResponse | null> | null = null;
+
+/**
+ * Fetch the caller's announcement-state row, deduping concurrent
+ * callers onto one in-flight request. Returns the raw parsed body, or
+ * `null` on 401 / non-OK / network error.
+ */
+export function fetchAnnouncementState(): Promise<AnnouncementStateResponse | null> {
+  if (inFlightStateFetch) return inFlightStateFetch;
+
+  inFlightStateFetch = authFetch("/api/announcements/state", {
+    // Skip the 401 redirect — unauthenticated callers shouldn't see
+    // announcements but they shouldn't be bounced to /login either.
+    skipAuthRedirect: true,
+  })
+    .then((r) => {
+      if (r.status === 401) return null; // anon / guest — no gate
+      if (!r.ok) return null;
+      return r.json() as Promise<AnnouncementStateResponse>;
+    })
+    .catch(() => null)
+    .finally(() => {
+      // Clear immediately on settle so the NEXT page load / navigation
+      // re-fetches (and the server can bump session_count again). Only
+      // the concurrent co-mounts of a single load share the promise.
+      inFlightStateFetch = null;
+    });
+
+  return inFlightStateFetch;
+}
+
 // ── Types ────────────────────────────────────────────────────────
 
 export type ActiveSurface =
@@ -165,16 +235,12 @@ export function useAnnouncementGate(): UseAnnouncementGateResult {
   useEffect(() => {
     let cancelled = false;
 
-    authFetch("/api/announcements/state", {
-      // Skip the 401 redirect — unauthenticated callers shouldn't
-      // see announcements but they shouldn't be bounced either.
-      skipAuthRedirect: true,
-    })
-      .then((r) => {
-        if (r.status === 401) return null; // anon / guest — no gate
-        if (!r.ok) return null;
-        return r.json();
-      })
+    // Shared, in-flight-deduped fetch (B-09): the ~4 hook consumers +
+    // the 2 direct-fetching modals that co-mount on `/` now collapse
+    // onto ONE GET. Each consumer still keeps its OWN `state` below, so
+    // a markSeen optimistic update on one surface doesn't re-gate the
+    // others mid-page (cadence behaviour preserved exactly).
+    fetchAnnouncementState()
       .then((data) => {
         if (cancelled) return;
         if (data && data.state) {

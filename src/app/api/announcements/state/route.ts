@@ -88,15 +88,39 @@ export async function GET(req: NextRequest) {
       const minutesSince = (Date.now() - lastSessionAt.getTime()) / 60_000;
 
       if (minutesSince >= SESSION_GAP_MINUTES) {
+        // ATOMIC + idempotent bump (B-09 race fix, 2026-06-23).
+        //
+        // The home page fires this GET ~6x concurrently on a single
+        // load. The old read-modify-write (`session_count + 1` written
+        // back unconditionally) let all 6 win the >=30-min check and
+        // each increment the counter — over-counting the session and
+        // flipping which announcement surface the gate elects.
+        //
+        // The fix is a single conditional UPDATE guarded by a TIME
+        // PREDICATE: only rows whose last_session_at is still older than
+        // the cutoff get updated. The first writer flips last_session_at
+        // to now(), which immediately fails the predicate for every
+        // other concurrent writer — so the losers match 0 rows and the
+        // stale `row.session_count + 1` literal can only ever be applied
+        // once. (Supabase JS can't express `col = col + 1` or an
+        // interval in the WHERE, but it doesn't need to: the predicate
+        // alone serialises the bump. Same pattern as questions/route.ts.)
+        const nowIso = new Date().toISOString();
+        const cutoffIso = new Date(
+          Date.now() - SESSION_GAP_MINUTES * 60_000,
+        ).toISOString();
+
         const { data: bumped, error: updErr } = await sb
           .from("user_announcements")
           .update({
             session_count: (row.session_count as number) + 1,
-            last_session_at: new Date().toISOString(),
+            last_session_at: nowIso,
           })
           .eq("user_id", userId)
+          .or(`last_session_at.is.null,last_session_at.lt.${cutoffIso}`)
           .select("*")
-          .single();
+          .maybeSingle();
+
         if (updErr) {
           captureServerError(updErr, {
             route: "/api/announcements/state",
@@ -105,7 +129,23 @@ export async function GET(req: NextRequest) {
           });
           // Fall through with the stale row — gate still works.
         } else if (bumped) {
+          // We won the race — `bumped` already has the incremented count.
           row = bumped;
+        } else {
+          // We lost the race: a concurrent request bumped first, so our
+          // conditional UPDATE matched 0 rows. Re-read the row so the
+          // returned sessionCount reflects the winner's value rather
+          // than our stale (off-by-one) snapshot.
+          const { data: fresh, error: reReadErr } = await sb
+            .from("user_announcements")
+            .select("*")
+            .eq("user_id", userId)
+            .maybeSingle();
+          if (!reReadErr && fresh) {
+            row = fresh;
+          }
+          // If the re-read fails, fall through with the stale row — the
+          // gate still works, just one session behind for this response.
         }
       }
     }

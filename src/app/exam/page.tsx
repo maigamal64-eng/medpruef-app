@@ -7,6 +7,12 @@ import Link from "next/link";
 import { getTopicConfig, VIENNA_EXAM_PARTS } from "@/lib/topics";
 import { t, getLang, setLang } from "@/lib/i18n";
 import { getStoredSession, hasProAccess } from "@/lib/auth";
+import {
+  saveExamSession,
+  loadExamSession,
+  clearExamSession,
+  remainingSeconds,
+} from "@/lib/examSession";
 import type { MCQOption } from "@/lib/mcq";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
@@ -136,6 +142,16 @@ function ExamContent() {
   const [customCount, setCustomCount] = useState<number | null>(null);
   const [customCounting, setCustomCounting] = useState(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  // B-01: a saved in-progress exam detected on mount → offer resume on the
+  // entry screen (instead of silent resume, so the user can still discard +
+  // start fresh, and the expired case has somewhere to land).
+  const [resumable, setResumable] = useState<ReturnType<typeof loadExamSession>>(null);
+  // Absolute exam start time (epoch ms). The persisted timer is derived from
+  // this, so the countdown stays honest across a refresh/crash gap.
+  const startedAtRef = useRef<number | null>(null);
+  // Guards the persistence effect so it doesn't write before a restore/start
+  // has populated startedAtRef (which would save a half-built exam).
+  const examReadyRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const minimapRef = useRef<HTMLDivElement | null>(null);
 
@@ -163,6 +179,44 @@ function ExamContent() {
     setLang(l);
     setLangState(l);
   };
+
+  // B-01: on mount, detect a saved in-progress exam and surface a resume
+  // affordance on the entry screen. We don't auto-resume so the user can
+  // still discard + start a different exam.
+  useEffect(() => {
+    const saved = loadExamSession();
+    if (saved) setResumable(saved);
+  }, []);
+
+  // B-01: restore a saved exam into live state and jump into the exam (or
+  // straight to results if it expired while the user was away).
+  const resumeExam = useCallback(() => {
+    const saved = loadExamSession();
+    if (!saved) {
+      setResumable(null);
+      return;
+    }
+    startedAtRef.current = saved.startedAt;
+    const left = remainingSeconds(saved.startedAt);
+    setQuestions(saved.questions as Question[]);
+    setAnswers(saved.answers || {});
+    setFlaggedIdxs(new Set(saved.flaggedIdxs || []));
+    setCurrentIdx(
+      Math.min(Math.max(0, saved.currentIdx || 0), Math.max(0, saved.questions.length - 1)),
+    );
+    setSelectedPart((saved.selectedPart as ExamPart) || "all");
+    setTimeLeft(left);
+    setResumable(null);
+    examReadyRef.current = true;
+    // Expired while away → restore the data but go straight to results.
+    setPhase(left <= 0 ? "results" : "exam");
+  }, []);
+
+  // B-01: discard the saved exam and clear the resume affordance.
+  const discardSavedExam = useCallback(() => {
+    clearExamSession();
+    setResumable(null);
+  }, []);
 
   /**
    * Build URLSearchParams from custom filter state.
@@ -228,6 +282,9 @@ function ExamContent() {
         params.set("mcqOnly", "1");
         if (ids !== null) {
           if (ids.length === 0) {
+            startedAtRef.current = Date.now();
+            examReadyRef.current = true;
+            clearExamSession();
             setQuestions([]);
             setAnswers({});
             setFlaggedIdxs(new Set());
@@ -330,6 +387,11 @@ function ExamContent() {
       grouped.push(...bucket);
     }
 
+    // Fresh exam → stamp the start time, clear any stale autosave, and arm
+    // persistence. startedAtRef drives the durable timer (B-01).
+    startedAtRef.current = Date.now();
+    examReadyRef.current = true;
+    clearExamSession();
     setQuestions(grouped);
     setAnswers({});
     setFlaggedIdxs(new Set());
@@ -360,6 +422,33 @@ function ExamContent() {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
+  }, [phase]);
+
+  // B-01: persist exam progress on every meaningful change while in the exam.
+  // The question array is stored verbatim (answers are keyed by position and
+  // the array is built non-deterministically — re-fetching would mis-map), and
+  // the timer is stored as the absolute startedAt so it survives a refresh.
+  useEffect(() => {
+    if (phase !== "exam" || !examReadyRef.current || startedAtRef.current === null) return;
+    saveExamSession({
+      startedAt: startedAtRef.current,
+      questions,
+      answers,
+      flaggedIdxs: [...flaggedIdxs],
+      currentIdx,
+      selectedPart,
+      examSource,
+    });
+  }, [phase, questions, answers, flaggedIdxs, currentIdx, selectedPart, examSource]);
+
+  // B-01: clear the saved exam on EVERY terminal path. Gating on the `results`
+  // phase covers both the submit button (handleSubmitExam) and the timer-hits-0
+  // branch, so neither can leak a stale autosave.
+  useEffect(() => {
+    if (phase === "results") {
+      clearExamSession();
+      examReadyRef.current = false;
+    }
   }, [phase]);
 
   const handleSubmitExam = () => {
@@ -446,6 +535,57 @@ function ExamContent() {
 
           <div className="flex flex-col items-center justify-center min-h-[calc(100vh-60px)] px-4 py-8">
             <div className="max-w-lg w-full">
+              {/* B-01: resume an in-progress exam saved before a refresh/crash */}
+              {resumable && (() => {
+                const savedAnswered = Object.keys(resumable.answers || {}).length;
+                const savedTotal = resumable.questions.length;
+                const left = remainingSeconds(resumable.startedAt);
+                const expired = left <= 0;
+                return (
+                  <div className="mb-8 rounded-2xl border border-[var(--mp-viridian)]/40 bg-[var(--mp-viridian)]/[0.06] p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-9 h-9 rounded-lg bg-[var(--mp-viridian)]/15 flex items-center justify-center flex-shrink-0">
+                        <Clock className="w-4.5 h-4.5 text-[var(--mp-viridian)]" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold text-[var(--mp-fg)] mb-0.5">
+                          {expired
+                            ? (lang === "de" ? "Frühere Prüfung gefunden" : "Earlier exam found")
+                            : (lang === "de" ? "Prüfung läuft noch" : "Exam in progress")}
+                        </p>
+                        <p className="text-xs text-[var(--mp-fg-muted)]">
+                          {expired
+                            ? (lang === "de"
+                                ? `Die Zeit ist abgelaufen. ${savedAnswered}/${savedTotal} beantwortet. Ergebnis ansehen?`
+                                : `Time has run out. ${savedAnswered}/${savedTotal} answered. View your result?`)
+                            : (lang === "de"
+                                ? `${savedAnswered}/${savedTotal} beantwortet, ${formatTime(left)} verbleibend.`
+                                : `${savedAnswered}/${savedTotal} answered, ${formatTime(left)} left.`)}
+                        </p>
+                        <div className="flex gap-2 mt-3">
+                          <button
+                            type="button"
+                            onClick={resumeExam}
+                            className="mp-btn mp-btn--primary mp-btn--sm"
+                          >
+                            {expired
+                              ? (lang === "de" ? "Ergebnis ansehen" : "View result")
+                              : (lang === "de" ? "Fortsetzen" : "Resume")}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={discardSavedExam}
+                            className="mp-btn mp-btn--ghost mp-btn--sm"
+                          >
+                            {lang === "de" ? "Verwerfen" : "Discard"}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
               <div className="bg-gradient-to-r from-[var(--mp-fg)]/[0.04] to-[var(--mp-viridian)]/[0.04] rounded-2xl p-6 text-center mb-8">
                 <div className="w-20 h-20 rounded-2xl border border-[var(--mp-status-warning)]/30 bg-[var(--mp-status-warning)]/10 flex items-center justify-center mx-auto mb-5">
                   <GraduationCap className="w-10 h-10 text-[var(--mp-status-warning)]" />

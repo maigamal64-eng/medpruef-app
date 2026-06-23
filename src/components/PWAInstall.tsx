@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { Download, X, RefreshCw } from "lucide-react";
 import { t, useLang } from "@/lib/i18n";
+import { isExamActive } from "@/lib/examSession";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
@@ -18,6 +19,14 @@ interface BeforeInstallPromptEvent extends Event {
  *  3. User clicks Update → post SKIP_WAITING → controllerchange → reload.
  *  4. As a safety net, hard-reload automatically if controllerchange fires
  *     while the tab is hidden (user comes back to a fresh build).
+ *
+ * B-02: an auto hard-reload mid-exam wipes hours of in-progress work (the exam
+ * lives in localStorage via examSession). So every auto-reload path below is
+ * gated on `isExamActive()`, read FRESH at reload time (the exam starts after
+ * this component mounts). The "Update available" banner stays visible; the
+ * deferred update applies on the next natural trigger once the exam finishes
+ * (the banner's button, or navigation), never by yanking the page out from
+ * under an active exam.
  */
 export default function PWAInstall() {
   const lang = useLang();
@@ -42,6 +51,10 @@ export default function PWAInstall() {
     let refreshing = false;
     const reloadOnControllerChange = () => {
       if (refreshing) return;
+      // B-02: never auto-reload mid-exam. The new SW is already in control; the
+      // page picks up the fresh build on the user's next reload/navigation,
+      // which the update banner still prompts for.
+      if (isExamActive()) return;
       refreshing = true;
       window.location.reload();
     };
@@ -52,7 +65,9 @@ export default function PWAInstall() {
       if (event.data?.type === "SW_UPDATED") {
         // Silent hard reload — background tabs reload immediately,
         // foreground tabs show the update banner first via updatefound flow.
-        if (document.visibilityState === "hidden") {
+        // B-02: but never while an exam is in progress (a backgrounded exam tab
+        // must not be wiped); it reloads on the next return/navigation instead.
+        if (document.visibilityState === "hidden" && !isExamActive()) {
           window.location.reload();
         }
       }
@@ -111,6 +126,12 @@ export default function PWAInstall() {
   }, []);
 
   const handleUpdate = () => {
+    // B-02: defer the update while an exam is in progress, even when the user
+    // taps the banner. SKIP_WAITING → controllerchange → reload would wipe the
+    // exam, and a bare fallback reload() the same. The banner stays up; the
+    // update applies once the exam finishes and the user taps again (or on the
+    // next navigation, when the already-waiting worker takes over cleanly).
+    if (isExamActive()) return;
     if (waitingWorker) {
       waitingWorker.postMessage({ type: "SKIP_WAITING" });
     } else {

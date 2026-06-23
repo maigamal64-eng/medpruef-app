@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { Mountain, Pill, Calendar, Target, Star, MessageSquarePlus, WifiOff, Search, Languages } from 'lucide-react'
 import { Dialog } from '@/components/ui'
 import { t, useLang, type TranslationKey } from '@/lib/i18n'
+import { fetchAnnouncementState } from '@/lib/announcements/useAnnouncementGate'
 
 const CURRENT_VERSION = '2026-04-22'
 const STORAGE_KEY = 'medpruef_whats_new_seen'
@@ -95,14 +96,16 @@ export default function WhatsNewModal() {
         const lastSeen = localStorage.getItem(STORAGE_KEY)
         if (lastSeen === CURRENT_VERSION) return
 
+        // Shared in-flight-deduped fetch (B-09) — was a bare
+        // `fetch('/api/announcements/state')` that carried no session
+        // token and so effectively always 401'd into the legacy path.
+        // Now it shares the one authenticated GET the gate already
+        // fires, so the cross-device whatsNewSeenAt check actually runs.
         try {
-          const r = await fetch('/api/announcements/state')
-          if (r.ok) {
-            const body = (await r.json()) as { state?: { whatsNewSeenAt?: string | null } }
-            if (body?.state?.whatsNewSeenAt) {
-              try { localStorage.setItem(STORAGE_KEY, CURRENT_VERSION) } catch {}
-              return
-            }
+          const body = await fetchAnnouncementState()
+          if (body?.state?.whatsNewSeenAt) {
+            try { localStorage.setItem(STORAGE_KEY, CURRENT_VERSION) } catch {}
+            return
           }
         } catch { /* fall through to legacy behaviour */ }
 

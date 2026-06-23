@@ -6,6 +6,7 @@ import { getStoredSession } from '@/lib/auth'
 import { authFetch as fetch } from '@/lib/authFetch'
 import { Dialog, Textarea } from '@/components/ui'
 import { t, useLang, type TranslationKey } from '@/lib/i18n'
+import { fetchAnnouncementState } from '@/lib/announcements/useAnnouncementGate'
 
 const STORAGE_COMPLETED = 'medpruef_survey_v1_completed'
 const STORAGE_DISMISSED = 'medpruef_survey_v1_dismissed'
@@ -92,30 +93,24 @@ export default function UserSurveyModal() {
         // This is the authoritative gate — localStorage checks above are
         // fast-path short-circuits only. Fresh users (session 1, 0 questions)
         // must NEVER see this modal.
+        // Shared in-flight-deduped GET (B-09) — collapses onto the one
+        // /api/announcements/state request the page already fires
+        // instead of adding a 6th. Same authenticated call as before
+        // (this modal already used authFetch), same fields read.
         try {
-          const r = await fetch('/api/announcements/state')
-          if (r.ok) {
-            const body = (await r.json()) as {
-              state?: {
-                sessionCount?: number
-                qsAnsweredTotal?: number
-                feedbackSurveyShownAt?: string | null
-                feedbackSurveyDismissedAt?: string | null
-              }
+          const body = await fetchAnnouncementState()
+          const state = body?.state
+          if (state) {
+            // Already shown or dismissed cross-device — skip.
+            if (state.feedbackSurveyShownAt || state.feedbackSurveyDismissedAt) {
+              try { localStorage.setItem(STORAGE_DISMISSED, 'true') } catch {}
+              return
             }
-            const state = body?.state
-            if (state) {
-              // Already shown or dismissed cross-device — skip.
-              if (state.feedbackSurveyShownAt || state.feedbackSurveyDismissedAt) {
-                try { localStorage.setItem(STORAGE_DISMISSED, 'true') } catch {}
-                return
-              }
-              // Cadence gate: require at least 3 sessions AND 25 questions answered.
-              // This prevents the survey from ambushing brand-new users.
-              const sessions = state.sessionCount ?? 1
-              const qs = state.qsAnsweredTotal ?? 0
-              if (sessions < 3 || qs < 25) return
-            }
+            // Cadence gate: require at least 3 sessions AND 25 questions answered.
+            // This prevents the survey from ambushing brand-new users.
+            const sessions = state.sessionCount ?? 1
+            const qs = state.qsAnsweredTotal ?? 0
+            if (sessions < 3 || qs < 25) return
           }
         } catch { /* network error — fall through to legacy behaviour */ }
 

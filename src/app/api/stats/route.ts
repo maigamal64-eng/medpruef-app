@@ -44,18 +44,21 @@ export async function GET(req: NextRequest) {
     // Get gamification
     const { data: gam } = await sb.from('user_gamification').select('*').eq('user_id', userId).single()
 
-    // Get per-topic stats
-    const { data: answers } = await sb
-      .from('answer_history')
-      .select('question_id, is_correct, questions(topic)')
-      .eq('user_id', userId)
+    // Get per-topic stats. Aggregated server-side via the
+    // get_user_topic_stats RPC (GROUP BY in Postgres) rather than
+    // SELECTing raw answer_history rows — the PostgREST client silently
+    // caps a SELECT at 1000 rows, so the old raw-row + JS-loop path gave
+    // WRONG per-topic counts for any user with >1000 answers (bug B-07,
+    // 2026-06-23). The RPC reproduces the prior counting semantics
+    // exactly: every answer row counted (not deduped by question), topic
+    // null/'' bucketed as 'Unknown'.
+    const { data: topicRows } = await sb.rpc('get_user_topic_stats', {
+      p_user_id: userId,
+    })
 
     const topicStats: Record<string, { total: number; correct: number }> = {}
-    answers?.forEach((a: Record<string, unknown>) => {
-      const topic = (a.questions as Record<string, string>)?.topic || 'Unknown'
-      if (!topicStats[topic]) topicStats[topic] = { total: 0, correct: 0 }
-      topicStats[topic].total++
-      if (a.is_correct) topicStats[topic].correct++
+    ;(topicRows as { topic: string; total: number; correct: number }[] | null)?.forEach((r) => {
+      topicStats[r.topic] = { total: r.total, correct: r.correct }
     })
 
     return NextResponse.json({
