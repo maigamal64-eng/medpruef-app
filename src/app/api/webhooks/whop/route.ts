@@ -9,6 +9,9 @@ import {
   isKnownTier,
   computeExpiry,
   extractWhopPayment,
+  classifyWhopRevoke,
+  extractWhopRevoke,
+  type WhopRevokeKind,
   TIERS,
 } from "@/lib/whop";
 
@@ -18,18 +21,25 @@ export const dynamic = "force-dynamic";
  * POST /api/webhooks/whop
  *
  * Whop IPN (Standard Webhooks). Grants MedPrüf Pro access when a card
- * payment succeeds. Built to mirror the HARDENED NOWPayments webhook so
- * it carries today's lessons:
+ * payment succeeds, AND revokes it when the money is taken back. Built to
+ * mirror the HARDENED NOWPayments webhook so it carries today's lessons:
  *   - verify signature first (svix scheme, WHOP_WEBHOOK_SECRET)
  *   - grant ONLY on payment.succeeded (the reliable money signal); ack
  *     all other events 200 so Whop stops retrying them
+ *   - REVOKE on refund.created / dispute.created / membership.deactivated
+ *     (B-08 revenue-leak fix): flip the subscription to refunded/cancelled,
+ *     drop the user to free if they have no OTHER active sub, and reverse
+ *     any referral reward earned off this referee's purchase
  *   - idempotency claim on processed_webhook_events(provider='whop',
  *     event_id=payment_id) at the GRANT step → a payment can't grant twice
- *     and Whop's at-least-once retries dedupe cleanly
+ *     and Whop's at-least-once retries dedupe cleanly. The REVOKE path uses
+ *     a NAMESPACED event_id (refund:/dispute:/cancel:<id>) so a refund of
+ *     pay_X never collides with the grant claim keyed on pay_X.
  *   - map buyer→user via metadata.medpruef_user_id, else email
  *   - an unmapped payment (concierge link w/o metadata, email mismatch,
  *     or unrecognised plan) is recorded + Sentry-flagged for MANUAL grant,
- *     never silently dropped
+ *     never silently dropped; an unmatched REVOKE is likewise loud, not a
+ *     quiet 200
  *
  * NOTE (go-live): confirm the exact event name + payload field names from
  * a real delivery (Whop dashboard "resend" or the first €1 test) and the
@@ -105,15 +115,26 @@ export async function POST(req: NextRequest) {
   // envelope in the runtime logs without leaking the body. (advisor 2026-06-19)
   console.info(`[whop webhook] event=${event || "(none)"} paymentId=${f.paymentId ?? "(none)"}`);
 
+  // ── REVOKE PATH (B-08): refund / chargeback / cancellation ──
+  // Handled BEFORE the grant gate. A refund/dispute reverses money →
+  // 'refunded'; a membership deactivation → 'cancelled'. Self-contained in
+  // handleRevoke (its own idempotency claim + Sentry-on-anomaly), so it can
+  // never interfere with the grant path below.
+  const revokeKind = classifyWhopRevoke(event);
+  if (revokeKind) {
+    return handleRevoke(event, revokeKind, data);
+  }
+
   // The hook is subscribed only to payment.succeeded; these are the names we
   // recognise as the money signal.
   const SUCCESS_EVENTS = new Set(["payment.succeeded", "payment_succeeded"]);
   // Payment-related events we intentionally never grant on (defense-in-depth;
-  // not currently subscribed). Quietly acked so Whop stops retrying.
+  // not currently subscribed). Quietly acked so Whop stops retrying. Refund /
+  // dispute / membership-deactivation are NOT here — they are actively handled
+  // by the revoke path above.
   const KNOWN_NONGRANT = new Set([
     "payment.failed", "payment_failed", "payment.pending", "payment_pending",
-    "payment.created", "payment_created", "refund.created", "refund.updated",
-    "dispute.created", "dispute.updated", "dispute_alert.created",
+    "payment.created", "payment_created",
   ]);
 
   if (!SUCCESS_EVENTS.has(event)) {
@@ -181,7 +202,11 @@ export async function POST(req: NextRequest) {
       userId = (u?.id as string | undefined) ?? null;
     }
     if (!userId && f.email) {
-      const { data: u } = await sb.from("users").select("id").ilike("email", f.email).maybeSingle();
+      const { data: u } = await sb
+        .from("users")
+        .select("id")
+        .ilike("email", escapeLike(f.email))
+        .maybeSingle();
       userId = (u?.id as string | undefined) ?? null;
     }
 
@@ -253,6 +278,307 @@ export async function POST(req: NextRequest) {
     Sentry.captureException(err, { tags: { route: "webhooks/whop", step: "unexpected" } });
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
+}
+
+/**
+ * REVOKE handler (B-08 revenue-leak fix).
+ *
+ * Fired for refund.created / dispute.created / membership.deactivated (+
+ * underscore/alias variants — see classifyWhopRevoke). Mirrors the grant
+ * path's discipline:
+ *   1. Namespaced idempotency claim (refund:/dispute:/cancel:<id>) so a
+ *      refund of pay_X is independent of the grant's pay_X claim, but
+ *      repeated deliveries of the SAME revoke dedupe.
+ *   2. Match the affected whop subscription(s) by provider_payment_id (refund/
+ *      dispute) or by the mapped user's active whop sub (membership event).
+ *   3. Flip subscription.status → 'refunded' | 'cancelled', stamp cancelled_at.
+ *   4. Revoke Pro ONLY if the user has no OTHER active, unexpired subscription.
+ *   5. Reverse any referral reward earned off this referee's purchase.
+ * An unmatched revoke is Sentry-flagged + recorded (never a silent 200) — a
+ * dropped revoke is the exact leak we are closing.
+ */
+async function handleRevoke(
+  event: string,
+  kind: WhopRevokeKind,
+  data: unknown
+): Promise<NextResponse> {
+  const r = extractWhopRevoke(data);
+  console.info(
+    `[whop webhook] REVOKE event=${event} kind=${kind} paymentId=${r.paymentId ?? "(none)"} membershipId=${r.membershipId ?? "(none)"}`
+  );
+
+  // A revoke event with NO usable identifier can't be matched to a sub at all.
+  // That is loud, not a quiet 200 — the payload shape changed.
+  if (!r.eventDedupeId) {
+    Sentry.captureMessage(
+      `Whop revoke '${event}' carried no usable id (payment/membership) — cannot revoke; payload shape changed`,
+      "error"
+    );
+    return NextResponse.json({ ok: false, error: "no revoke id" }, { status: 200 });
+  }
+
+  // Namespace the idempotency key so it can't collide with the grant claim
+  // (which is keyed on the bare payment id).
+  const claimKey = `${kind === "refunded" ? "refund" : "cancel"}:${r.eventDedupeId}`;
+
+  try {
+    const sb = getServiceClient();
+
+    // ── Find the affected whop subscription(s) ── (BEFORE the idempotency
+    // claim, deliberately — see nowpayments webhook §intermediate-states.
+    // If we can't match a sub yet, we must NOT consume the idempotency key,
+    // or a Whop retry after the row exists would dedupe and never revoke.)
+    // Refund/dispute: join on provider_payment_id (the grant stored the
+    // payment id there). Try the event's payment id first, then the explicit
+    // original/parent payment id.
+    const paymentCandidates = Array.from(
+      new Set([r.paymentId, r.originalPaymentId].filter((x): x is string => Boolean(x)))
+    );
+
+    let subs: Array<{ id: string; user_id: string; status: string }> = [];
+    if (paymentCandidates.length > 0) {
+      const { data: byPay, error: byPayErr } = await sb
+        .from("subscriptions")
+        .select("id, user_id, status")
+        .eq("payment_provider", "whop")
+        .in("provider_payment_id", paymentCandidates);
+      if (byPayErr) {
+        Sentry.captureException(byPayErr, { tags: { route: "webhooks/whop", step: "revoke_sub_lookup" } });
+        return NextResponse.json({ error: "DB error" }, { status: 500 });
+      }
+      subs = (byPay ?? []) as typeof subs;
+    }
+
+    // Resolve the affected user. From the matched sub if we have one; else map
+    // by metadata user id / email (membership.* events may carry no payment id).
+    let userId: string | null = subs[0]?.user_id ?? null;
+    if (!userId && r.metaUserId) {
+      const { data: u } = await sb.from("users").select("id").eq("id", r.metaUserId).maybeSingle();
+      userId = (u?.id as string | undefined) ?? null;
+    }
+    if (!userId && r.email) {
+      const { data: u } = await sb
+        .from("users")
+        .select("id")
+        .ilike("email", escapeLike(r.email))
+        .maybeSingle();
+      userId = (u?.id as string | undefined) ?? null;
+    }
+
+    // If we still matched no sub but DID resolve a user (membership event with
+    // no payment id), target that user's active whop subscription(s).
+    if (subs.length === 0 && userId) {
+      const { data: byUser } = await sb
+        .from("subscriptions")
+        .select("id, user_id, status")
+        .eq("payment_provider", "whop")
+        .eq("user_id", userId)
+        .eq("status", "active");
+      subs = (byUser ?? []) as typeof subs;
+    }
+
+    if (subs.length === 0 || !userId) {
+      // Nothing to revoke that we can identify. Loud, not silent — record +
+      // Sentry so a real refund that we failed to match gets manual attention.
+      Sentry.captureMessage(
+        `Whop revoke '${event}' matched no whop subscription (paymentCandidates=${paymentCandidates.join(",") || "none"} membership=${r.membershipId ?? "none"} user=${userId ?? "unmapped"}) — manual revoke may be needed`,
+        "warning"
+      );
+      await recordEvent(getServiceClient(), userId, "whop_revoke_unmatched", {
+        event,
+        kind,
+        payment_id: r.paymentId,
+        original_payment_id: r.originalPaymentId,
+        membership_id: r.membershipId,
+        email: r.email,
+      });
+      return NextResponse.json(
+        { ok: false, error: "revoke matched no subscription", event },
+        { status: 200 }
+      );
+    }
+
+    // ── Idempotency claim (only now that there IS a sub to revoke; same
+    // pattern as the grant path). First delivery wins; Whop retries dedupe. ──
+    const { data: claim, error: claimErr } = await sb
+      .from("processed_webhook_events")
+      .insert({
+        provider: "whop",
+        event_id: claimKey,
+        payload: { claimed_at: new Date().toISOString(), event, kind },
+      })
+      .select("event_id")
+      .maybeSingle();
+
+    if (claimErr) {
+      if ((claimErr as { code?: string }).code === "23505") {
+        return NextResponse.json({ ok: true, duplicate: true });
+      }
+      Sentry.captureException(claimErr, { tags: { route: "webhooks/whop", step: "revoke_claim" } });
+      return NextResponse.json({ error: "DB error" }, { status: 500 });
+    }
+    if (!claim) return NextResponse.json({ ok: true, duplicate: true });
+
+    const nowIso = new Date().toISOString();
+    const affectedSubIds = subs.map((s) => s.id);
+
+    // ── 1. Flip the matched subscription(s) → refunded / cancelled ──
+    const { error: subUpdErr } = await sb
+      .from("subscriptions")
+      .update({ status: kind, cancelled_at: nowIso, updated_at: nowIso })
+      .in("id", affectedSubIds);
+    if (subUpdErr) {
+      Sentry.captureException(subUpdErr, {
+        tags: { route: "webhooks/whop", step: "revoke_sub_update" },
+        extra: { affectedSubIds, kind },
+      });
+      return NextResponse.json({ error: "DB update failed" }, { status: 500 });
+    }
+
+    // ── 2. Revoke Pro ONLY if no OTHER active, unexpired subscription ──
+    // (Any provider — a user with a separate still-valid sub keeps access.)
+    // Read all of the user's active subs and exclude the just-revoked ones in
+    // JS (avoids a brittle interpolated PostgREST `not.in` filter).
+    const affectedSet = new Set(affectedSubIds);
+    const { data: activeRows, error: otherErr } = await sb
+      .from("subscriptions")
+      .select("id, expires_at")
+      .eq("user_id", userId)
+      .eq("status", "active");
+    if (otherErr) {
+      // Fail safe toward keeping access (don't wrongly downgrade a paying user
+      // on a transient read error); flag for reconciliation.
+      Sentry.captureException(otherErr, {
+        tags: { route: "webhooks/whop", step: "revoke_other_active_lookup" },
+        extra: { userId },
+      });
+    }
+    const nowMs = Date.now();
+    const hasOtherActive = (activeRows ?? []).some((s) => {
+      const row = s as { id: string; expires_at?: string | null };
+      if (affectedSet.has(row.id)) return false; // the sub we just revoked
+      return !row.expires_at || new Date(row.expires_at).getTime() > nowMs;
+    });
+
+    let proRevoked = false;
+    if (!otherErr && !hasOtherActive) {
+      const { error: userErr } = await sb
+        .from("users")
+        .update({ tier: "free", tier_expires_at: null, updated_at: nowIso })
+        .eq("id", userId);
+      if (userErr) {
+        Sentry.captureException(userErr, {
+          tags: { route: "webhooks/whop", step: "revoke_user_downgrade" },
+          extra: { userId },
+        });
+      } else {
+        proRevoked = true;
+      }
+    }
+
+    // ── 3. Reverse any referral reward earned off this referee's purchase ──
+    const referralReversed = await reverseRefereeReferral(sb, userId, event);
+
+    await recordEvent(sb, userId, "whop_subscription_revoked", {
+      event,
+      kind,
+      affected_subscription_ids: affectedSubIds,
+      pro_revoked: proRevoked,
+      had_other_active: hasOtherActive,
+      referral_reversed: referralReversed,
+      payment_id: r.paymentId,
+      membership_id: r.membershipId,
+    });
+
+    return NextResponse.json({
+      ok: true,
+      revoked: true,
+      kind,
+      subscriptions: affectedSubIds.length,
+      pro_revoked: proRevoked,
+      referral_reversed: referralReversed,
+    });
+  } catch (err) {
+    Sentry.captureException(err, { tags: { route: "webhooks/whop", step: "revoke_unexpected" } });
+    return NextResponse.json({ error: "Internal error" }, { status: 500 });
+  }
+}
+
+/**
+ * Reverse a referral reward that was credited off THIS referee's purchase.
+ * The reward is paid out manually/by cron only once status='rewarded' AND the
+ * 30-day hold passes, so a 'qualified' row reversed here was never paid — we
+ * flip it to 'reversed', zero the credit, clear qualified_at, and stamp the
+ * reason. A row already 'rewarded' MAY have paid cash → flip + Sentry-warn for
+ * a manual clawback decision. Returns true if a row was reversed.
+ *
+ * NOTE: the whop GRANT path does not (yet) qualify referrals, so today this is
+ * usually a no-op for whop-paid users. It is keyed on referee_user_id (not
+ * provider) so it is correct + future-proof if whop-side qualify is added.
+ */
+async function reverseRefereeReferral(
+  sb: ReturnType<typeof getServiceClient>,
+  refereeUserId: string,
+  event: string
+): Promise<boolean> {
+  try {
+    const { data: rows, error } = await sb
+      .from("referrals")
+      .select("id, status")
+      .eq("referee_user_id", refereeUserId)
+      .in("status", ["qualified", "rewarded"]);
+    if (error) {
+      Sentry.captureException(error, { tags: { route: "webhooks/whop", step: "referral_reverse_lookup" } });
+      return false;
+    }
+    if (!rows || rows.length === 0) return false;
+
+    const nowIso = new Date().toISOString();
+    let reversedAny = false;
+    for (const row of rows as Array<{ id: string; status: string }>) {
+      const { error: updErr } = await sb
+        .from("referrals")
+        .update({
+          status: "reversed",
+          reward_credit_cents: 0,
+          qualified_at: null,
+          hold_reason: "payment_refunded",
+        })
+        .eq("id", row.id);
+      if (updErr) {
+        Sentry.captureException(updErr, {
+          tags: { route: "webhooks/whop", step: "referral_reverse_update" },
+          extra: { referralId: row.id },
+        });
+        continue;
+      }
+      reversedAny = true;
+      if (row.status === "rewarded") {
+        // Money may already have been paid out — needs a human clawback call.
+        Sentry.captureMessage(
+          `Whop revoke '${event}' reversed an ALREADY-REWARDED referral (${row.id}) for referee ${refereeUserId} — verify whether the €reward was paid and claw back if so`,
+          "warning"
+        );
+      }
+    }
+    return reversedAny;
+  } catch (err) {
+    Sentry.captureException(err, {
+      tags: { route: "webhooks/whop", step: "referral_reverse_unexpected" },
+      extra: { refereeUserId },
+    });
+    return false;
+  }
+}
+
+/**
+ * Escape PostgREST/SQL LIKE wildcards so an email is matched LITERALLY (case-
+ * insensitively) by `.ilike`, not as a pattern. Without this, a stored email
+ * containing `_` or `%` (both legal in the local-part) would be a wildcard and
+ * could match the wrong user row. Backslash first so we don't double-escape.
+ */
+function escapeLike(value: string): string {
+  return value.replace(/\\/g, "\\\\").replace(/[%_]/g, (c) => `\\${c}`);
 }
 
 async function recordEvent(

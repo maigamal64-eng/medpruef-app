@@ -696,6 +696,16 @@ async function qualifyReferralIfApplicable(
       return;
     }
 
+    // Self-referral guard (abuse): a user cannot earn a referral reward by
+    // signing up with their OWN code. Drop silently — no row, no payout.
+    if (referrer.id === refereeUserId) {
+      console.warn(
+        "[webhooks/nowpayments] self-referral blocked (referrer == referee)",
+        { refereeUserId, code }
+      );
+      return;
+    }
+
     // Is there already a referrals row for this pair?
     const { data: existing } = await sb
       .from("referrals")
