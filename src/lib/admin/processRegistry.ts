@@ -58,7 +58,7 @@ export const CONTROL_PLANE_PROCESSES: ReadonlyArray<ProcessRow> = [
     owner: "Praxis",
     currentLevel: "L0",
     targetLevel: "L2",
-    successMetric: "paid conversion (today 2/113)",
+    successMetric: "paid conversion (today 2/114)",
     topGap: "B-06",
   },
   {

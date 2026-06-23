@@ -36,7 +36,7 @@ type Lang = "de" | "en";
 /**
  * Standard Stripe-pending tiers. `premium_pass_guaranteed` (the June 26
  * Cohort) is intentionally NOT in this union — it has its own live
- * crypto checkout and never opens the waitlist dialog.
+ * Whop card checkout and never opens the waitlist dialog.
  *
  * Wire-level tier_interest values sent to /api/waitlist stay as the
  * legacy strings (`'monthly' | '3mo' | '6mo' | '12mo'`) because
@@ -61,8 +61,8 @@ type ExamType = "kenntnispruefung" | "kmp_innsbruck" | "pharma";
  *   6. Drop Founders' branding — this file is wholesale-rewritten.
  *
  * Data flow:
- *   - Cohort CTA → POST /api/checkout/nowpayments {tier:'premium_pass_guaranteed'}
- *     → NOWPayments hosted invoice → /dashboard?welcome=cohort
+ *   - Cohort CTA → POST /api/whop/checkout {tier:'premium_pass_guaranteed'}
+ *     → Whop hosted card checkout (card + Apple Pay) → /dashboard?welcome=cohort
  *   - Standard-tier CTAs → waitlist dialog → POST /api/waitlist with
  *     `tier_interest` set to the legacy string.
  *   - Free tier CTA → /quiz?free=1 (the free-tier gate lives in
@@ -74,12 +74,12 @@ export default function PricingPage() {
   const [session, setSession] = useState<ReturnType<typeof getStoredSession>>(null);
   const [storedExam, setStoredExam] = useState<ExamSourceId>("kenntnispruefung");
 
-  // Crypto checkout state.
+  // Card checkout state.
   // `checkoutLoading` tracks which tier is currently spinning its CTA —
   // null means idle, "cohort" = €114 PUYP, "starter" = €27 / 3-month
   // entry tier (€9 effective per month), "first_month" = €19 single-
   // month fallback. Tracking the specific card lets us disable only
-  // that button while the NOWPayments invoice is being created,
+  // that button while the Whop card checkout session is being created,
   // instead of freezing the entire page.
   const [checkoutLoading, setCheckoutLoading] = useState<
     null | "cohort" | "starter" | "first_month"
@@ -132,7 +132,7 @@ export default function PricingPage() {
    *
    * `slot` controls which CTA spinner lights up.
    */
-  const startCryptoCheckout = async (
+  const startCardCheckout = async (
     tier:
       | "premium_pass_guaranteed"
       | "first_3mo_27"
@@ -191,7 +191,7 @@ export default function PricingPage() {
       window.location.href = `/login?next=${next}&action=cohort-checkout`;
       return;
     }
-    void startCryptoCheckout("premium_pass_guaranteed", "cohort", "cohort-checkout");
+    void startCardCheckout("premium_pass_guaranteed", "cohort", "cohort-checkout");
   };
 
   const openStarter3moDialog = () => {
@@ -200,7 +200,7 @@ export default function PricingPage() {
       window.location.href = `/login?next=${next}&action=starter-3mo-checkout`;
       return;
     }
-    void startCryptoCheckout("first_3mo_27", "starter", "starter-3mo-checkout");
+    void startCardCheckout("first_3mo_27", "starter", "starter-3mo-checkout");
   };
 
   const openFirstMonthDialog = () => {
@@ -209,7 +209,7 @@ export default function PricingPage() {
       window.location.href = `/login?next=${next}&action=first-month-checkout`;
       return;
     }
-    void startCryptoCheckout("first_month_19", "first_month", "first-month-checkout");
+    void startCardCheckout("first_month_19", "first_month", "first-month-checkout");
   };
 
   const submitWaitlist = async () => {
@@ -1284,7 +1284,7 @@ function CohortFeaturedCard({
           </ul>
         </div>
 
-        {/* RIGHT: Price + crypto CTA */}
+        {/* RIGHT: Price + card CTA */}
         <div
           className="rounded-[12px] p-5 lg:sticky lg:top-4 flex flex-col gap-3"
           style={{
