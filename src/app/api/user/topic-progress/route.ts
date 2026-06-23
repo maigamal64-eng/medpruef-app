@@ -30,16 +30,24 @@ export async function GET(req: NextRequest) {
       p_exam_type: examType,
     })
 
-    // Get per-topic answer stats from answer_history
-    // We join answer_history → questions to get the topic
-    const { data: answerStats } = await sb
-      .from('answer_history')
-      .select('question_id, is_correct, questions!inner(topic, exam_type)')
-      .eq('user_id', userId)
-      .eq('questions.exam_type' as string, examType)
-      .limit(50000)
+    // Get per-topic answer progress, aggregated server-side via the
+    // get_user_topic_progress RPC (GROUP BY + count(DISTINCT question_id)
+    // in Postgres) rather than SELECTing raw answer_history rows and
+    // deduping in JS — the PostgREST client silently caps a SELECT at
+    // 1000 rows (the old `.limit(50000)` did not override that ceiling),
+    // so the raw-row path gave WRONG per-topic counts for any user with
+    // >1000 answers (bug B-21, 2026-06-23; same class as B-07). The RPC
+    // reproduces the prior dedup semantics exactly: answered/correct/
+    // wrong are each a DISTINCT-question count keyed by question_id, so a
+    // question answered both right and wrong counts in both correct and
+    // wrong (i.e. wrong is NOT answered - correct), scoped by exam_type,
+    // inner-joined to questions with no is_active filter.
+    const { data: progressRows } = await sb.rpc('get_user_topic_progress', {
+      p_user_id: userId,
+      p_exam_type: examType,
+    })
 
-    if (!answerStats || !topicCounts) {
+    if (!progressRows || !topicCounts) {
       return NextResponse.json(
         (topicCounts || []).map((t: { topic: string; count: number }) => ({
           topic: t.topic,
@@ -52,26 +60,16 @@ export async function GET(req: NextRequest) {
       )
     }
 
-    // Aggregate per topic
-    const stats: Record<string, { answered: Set<number>; correct: Set<number>; wrong: Set<number> }> = {}
-    for (const row of answerStats) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const topic = (row as any).questions?.topic as string | undefined
-      if (!topic) continue
-      if (!stats[topic]) stats[topic] = { answered: new Set(), correct: new Set(), wrong: new Set() }
-      stats[topic].answered.add(row.question_id)
-      if (row.is_correct) {
-        stats[topic].correct.add(row.question_id)
-      } else {
-        stats[topic].wrong.add(row.question_id)
-      }
-    }
+    const stats: Record<string, { answered: number; correct: number; wrong: number }> = {}
+    ;(progressRows as { topic: string; answered: number; correct: number; wrong: number }[]).forEach(r => {
+      stats[r.topic] = { answered: r.answered, correct: r.correct, wrong: r.wrong }
+    })
 
     const result = (topicCounts as { topic: string; count: number }[]).map(tc => {
       const s = stats[tc.topic]
-      const answered = s ? s.answered.size : 0
-      const correct = s ? s.correct.size : 0
-      const wrong = s ? s.wrong.size : 0
+      const answered = s ? s.answered : 0
+      const correct = s ? s.correct : 0
+      const wrong = s ? s.wrong : 0
       return {
         topic: tc.topic,
         total: Number(tc.count),

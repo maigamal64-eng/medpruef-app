@@ -5,6 +5,12 @@ import { Mountain, Pill, Calendar, Target, Star, MessageSquarePlus, WifiOff, Sea
 import { Dialog } from '@/components/ui'
 import { t, useLang, type TranslationKey } from '@/lib/i18n'
 import { fetchAnnouncementState } from '@/lib/announcements/useAnnouncementGate'
+// authFetch (aliased to `fetch`) adds the signed `x-session-token` header
+// that the `requireUser`-guarded /api/announcements/seen endpoint verifies
+// (B-22). The bare `fetch` here silently 401'd, so whats_new_seen_at never
+// got written and the cross-device "already saw What's-New" suppression
+// (the whatsNewSeenAt check above) never worked.
+import { authFetch as fetch } from '@/lib/authFetch'
 
 const CURRENT_VERSION = '2026-04-22'
 const STORAGE_KEY = 'medpruef_whats_new_seen'
