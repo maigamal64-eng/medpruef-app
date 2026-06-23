@@ -52,6 +52,26 @@ anki_import.py
 scripts/__pycache__/
 *.pyc
 
+# user PII / outbound email ledgers — LOCAL ONLY, never commit (real user emails + replies)
+scripts/*.sent.log
+scripts/*.run.log
+scripts/replies*.json
+scripts/emails.json
+scripts/*_emails.json
+scripts/outbound_*.json
+scripts/founders_*.json
+scripts/recovery_*.json
+scripts/followups*.json
+scripts/*_apr27.json
+scripts/obai_*.json
+scripts/dhouha_*.json
+scripts/hassan_*.json
+scripts/fares_*.json
+scripts/ai_launch_*.json
+
+# agent run-logs (QUALITY-CONTROL.md §2) — may contain sensitive detail
+.agent-logs/
+
 # Large binary source materials — local only, ~530 MB
 source-files/
 
@@ -68,3 +88,9 @@ reports/
 /tests/e2e/.report/
 /playwright-report/
 /test-results/
+.ds-sync/
+ds-bundle/
+.design-sync/.cache/
+.design-sync/learnings/
+.design-sync/node_modules
+ds-dts/
