@@ -28,6 +28,7 @@ import {
   BellRing,
   ChevronDown,
   Command,
+  Cpu,
   Database,
   FileText,
   Flag,
@@ -59,7 +60,13 @@ import {
 import { clearSession, getStoredSession } from "@/lib/auth";
 import { ShortcutHint } from "./_components/primitives";
 
-type SectionKey = "overview" | "revenue" | "content" | "product" | "system";
+type SectionKey =
+  | "overview"
+  | "control-plane"
+  | "revenue"
+  | "content"
+  | "product"
+  | "system";
 
 interface NavItem {
   label: string;
@@ -87,6 +94,14 @@ const NAV: NavSection[] = [
     icon: LayoutDashboard,
     shortcut: "o",
     href: "/admin/overview",
+    items: [],
+  },
+  {
+    key: "control-plane",
+    label: "Control Plane",
+    icon: Cpu,
+    shortcut: "a",
+    href: "/admin/control-plane",
     items: [],
   },
   {
@@ -696,6 +711,7 @@ function ShortcutsDialog({ onClose }: { onClose: () => void }) {
         </div>
         <div className="p-4 text-xs text-[var(--mp-fg-muted)] grid grid-cols-2 gap-x-6 gap-y-2">
           <ShortcutRow keys="g o" label="Go to Overview" />
+          <ShortcutRow keys="g a" label="Go to Control Plane" />
           <ShortcutRow keys="g r" label="Go to Revenue" />
           <ShortcutRow keys="g c" label="Go to Content" />
           <ShortcutRow keys="g p" label="Go to Product" />
