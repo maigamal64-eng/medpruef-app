@@ -61,7 +61,8 @@ interface ControlPlaneMetrics {
   generated_at: string;
   mrr_cents: number;
   active_paid_users: number;
-  paid_conversion: { pro_users: number; total_users: number; ratio: number };
+  paid_conversion: { paying_users: number; total_users: number; ratio: number };
+  entitled_pro: { entitled_now: number; entitled_all_time: number };
   churn_30d: number;
   ltv_cents: number;
   basis: { mrr: string; ltv: string; conversion: string; churn: string };
@@ -148,7 +149,9 @@ function NorthStarBlock({
 }) {
   const conv = metrics?.paid_conversion;
   const convRatio = conv ? conv.ratio : null;
-  // Conversion is the named number to move (2/113). Danger-tone under 2%.
+  const entitled = metrics?.entitled_pro;
+  // Conversion = genuinely-paying customers ÷ real users (0/112 today, comped /
+  // admin / demo excluded). Danger-tone under 2%.
   const convTone = convRatio == null ? "neutral" : convRatio < 0.02 ? "danger" : "info";
 
   return (
@@ -190,15 +193,15 @@ function NorthStarBlock({
       </div>
 
       {/* Supporting euro tiles. */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
         <MetricTile
-          label="Active paid users"
+          label="Paying customers"
           icon={Users}
           tone="info"
           value={
             loading ? "—" : <FormatInt value={metrics?.active_paid_users ?? 0} />
           }
-          footer="Entitled to Pro right now"
+          footer="Genuinely paying right now (excl. comped)"
         />
         <MetricTile
           label="Paid conversion"
@@ -211,12 +214,32 @@ function NorthStarBlock({
             conv ? (
               <span>
                 <strong className="text-[var(--mp-fg)] tabular-nums">
-                  {formatInt(conv.pro_users)}
+                  {formatInt(conv.paying_users)}
                 </strong>{" "}
-                / {formatInt(conv.total_users)} users · the number to move
+                / {formatInt(conv.total_users)} real users · the number to move
               </span>
             ) : (
-              "pro ÷ total users"
+              "paying ÷ real users"
+            )
+          }
+        />
+        <MetricTile
+          label="Entitled Pro (incl. comped)"
+          icon={Users}
+          tone="neutral"
+          value={
+            loading ? "—" : <FormatInt value={entitled?.entitled_now ?? 0} />
+          }
+          footer={
+            entitled ? (
+              <span>
+                <strong className="text-[var(--mp-fg)] tabular-nums">
+                  {formatInt(entitled.entitled_all_time)}
+                </strong>{" "}
+                all-time · admin / comped / demo, not revenue
+              </span>
+            ) : (
+              "tier=pro incl. comped"
             )
           }
         />
@@ -231,14 +254,14 @@ function NorthStarBlock({
                 : "success"
           }
           value={loading ? "—" : <FormatInt value={metrics?.churn_30d ?? 0} />}
-          footer="Cancelled / refunded / expired"
+          footer="Activated subs lost (not abandoned checkouts)"
         />
         <MetricTile
           label="LTV (modeled)"
           icon={Coins}
           tone="info"
           value={loading ? "—" : <FormatEuro cents={metrics?.ltv_cents ?? 0} />}
-          footer="Per paying user"
+          footer="Per paying customer"
         />
       </div>
 

@@ -28,8 +28,11 @@ export const dynamic = "force-dynamic";
  *     all other events 200 so Whop stops retrying them
  *   - REVOKE on refund.created / dispute.created / membership.deactivated
  *     (B-08 revenue-leak fix): flip the subscription to refunded/cancelled,
- *     drop the user to free if they have no OTHER active sub, and reverse
- *     any referral reward earned off this referee's purchase
+ *     drop the user to free if they have no OTHER active sub, and — ONLY on a
+ *     refund-class revoke (refund/chargeback/dispute) — reverse the referrer's
+ *     reward earned off this referee's purchase. A voluntary cancel / benign
+ *     expiry (membership.deactivated) revokes access but the referrer KEEPS
+ *     their credit ([name]'s rule 2026-06-23).
  *   - idempotency claim on processed_webhook_events(provider='whop',
  *     event_id=payment_id) at the GRANT step → a payment can't grant twice
  *     and Whop's at-least-once retries dedupe cleanly. The REVOKE path uses
@@ -293,7 +296,11 @@ export async function POST(req: NextRequest) {
  *      dispute) or by the mapped user's active whop sub (membership event).
  *   3. Flip subscription.status → 'refunded' | 'cancelled', stamp cancelled_at.
  *   4. Revoke Pro ONLY if the user has no OTHER active, unexpired subscription.
- *   5. Reverse any referral reward earned off this referee's purchase.
+ *      (Both kinds — refund AND voluntary cancel/expiry — end Pro access.)
+ *   5. Reverse the referrer's reward earned off this referee's purchase ONLY on
+ *      a refund-class revoke (kind='refunded': refund / chargeback / dispute).
+ *      On a voluntary cancel / benign expiry (kind='cancelled') the referrer
+ *      KEEPS their credit ([name]'s rule 2026-06-23).
  * An unmatched revoke is Sentry-flagged + recorded (never a silent 200) — a
  * dropped revoke is the exact leak we are closing.
  */
@@ -477,7 +484,17 @@ async function handleRevoke(
     }
 
     // ── 3. Reverse any referral reward earned off this referee's purchase ──
-    const referralReversed = await reverseRefereeReferral(sb, userId, event);
+    // [name]'s rule (2026-06-23): reverse the referrer's cut ONLY on a refund-
+    // class revoke (refund / chargeback / dispute → kind='refunded'), where the
+    // money was actually taken back. On a VOLUNTARY cancel or benign expiry
+    // (membership.deactivated → kind='cancelled') the referrer KEEPS their
+    // credit — they delivered a genuine paying signup; a later cancel is not
+    // their fault. Pro access is still revoked on BOTH kinds above (the sub
+    // ends); only the referral reversal is gated here.
+    const referralReversed =
+      kind === "refunded"
+        ? await reverseRefereeReferral(sb, userId, event)
+        : false;
 
     await recordEvent(sb, userId, "whop_subscription_revoked", {
       event,
