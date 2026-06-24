@@ -40,6 +40,7 @@ import {
   LayoutDashboard,
   LifeBuoy,
   LogOut,
+  Map,
   MessageSquare,
   Moon,
   RefreshCw,
@@ -48,6 +49,7 @@ import {
   Shield,
   ShieldAlert,
   ShieldCheck,
+  Sprout,
   Sun,
   TerminalSquare,
   Ticket,
@@ -63,6 +65,8 @@ import { ShortcutHint } from "./_components/primitives";
 type SectionKey =
   | "overview"
   | "control-plane"
+  | "growth"
+  | "plan"
   | "revenue"
   | "content"
   | "product"
@@ -102,6 +106,22 @@ const NAV: NavSection[] = [
     icon: Cpu,
     shortcut: "a",
     href: "/admin/control-plane",
+    items: [],
+  },
+  {
+    key: "growth",
+    label: "Growth",
+    icon: Sprout,
+    shortcut: "w",
+    href: "/admin/growth",
+    items: [],
+  },
+  {
+    key: "plan",
+    label: "Plan",
+    icon: Map,
+    shortcut: "l",
+    href: "/admin/plan",
     items: [],
   },
   {
@@ -712,6 +732,8 @@ function ShortcutsDialog({ onClose }: { onClose: () => void }) {
         <div className="p-4 text-xs text-[var(--mp-fg-muted)] grid grid-cols-2 gap-x-6 gap-y-2">
           <ShortcutRow keys="g o" label="Go to Overview" />
           <ShortcutRow keys="g a" label="Go to Control Plane" />
+          <ShortcutRow keys="g w" label="Go to Growth" />
+          <ShortcutRow keys="g l" label="Go to Plan" />
           <ShortcutRow keys="g r" label="Go to Revenue" />
           <ShortcutRow keys="g c" label="Go to Content" />
           <ShortcutRow keys="g p" label="Go to Product" />
