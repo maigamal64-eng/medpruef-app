@@ -85,14 +85,17 @@ const COPY = {
       de: "oder kostenlos weiterlernen, bis du es schaffst.",
       en: "or study free until you do.",
     },
-    // Price floor reconciled 2026-06-04: the live, buyable entry is
-    // the 3-month starter at 27 € (first_3mo_27, available:true in
-    // content-truth). The old "ab 79 €" line quoted three_month,
-    // which is available:false (waitlisted) — and contradicted the
-    // 27 € CTA in the same viewport. Now both agree.
+    // Advertised entry repositioned 2026-06-24 ([name]'s call, decisions.json
+    // medpruef-landing-entry-price-19eur-2026-06-24): the advertised entry is
+    // now the 19 €/month single-month tier (first_month_19), un-hidden on
+    // /pricing in the same pass. All three live prices still exist
+    // (19/1mo, 27/3mo, 114/6mo Cohort); only the headline entry framing
+    // changed. The lead-with price below and the tertiary CTA both quote
+    // 19 €/month so they agree with /pricing. SoT §2 + §9. (Supersedes the
+    // 2026-06-04 floor reconciliation that pinned the entry to 27 €/3mo.)
     subtitle: {
-      de: "Die einzige Prüfungsvorbereitung, speziell für Österreichs Kenntnisprüfung, Stichprobentest und Pharmakologie. Destilliert aus 7.566 Wien-Prüfungsfragen seit 2016, 2.998 Fragen aus dem Innsbruck-Curriculum (Stichprobentest) und 335 Pharmakologie. Eine Kenntnisprüfung kostet ~795 € pro Versuch, MedPrüf gibt es ab 27 € für 3 Monate.",
-      en: "The only exam prep built specifically for Austria's Kenntnisprüfung, Stichprobentest and Pharmakologie. Distilled from 7,566 Vienna exam questions since 2016, 2,998 questions from the Innsbruck curriculum (Stichprobentest) and 335 Pharmakologie. A Kenntnisprüfung re-sit is ~795 €, and MedPrüf starts at 27 € for 3 months.",
+      de: "Die einzige Prüfungsvorbereitung, speziell für Österreichs Kenntnisprüfung, Stichprobentest und Pharmakologie. Destilliert aus 7.566 Wien-Prüfungsfragen seit 2016, 2.998 Fragen aus dem Innsbruck-Curriculum (Stichprobentest) und 335 Pharmakologie. Eine Kenntnisprüfung kostet ~795 € pro Versuch, MedPrüf gibt es ab 19 € im Monat.",
+      en: "The only exam prep built specifically for Austria's Kenntnisprüfung, Stichprobentest and Pharmakologie. Distilled from 7,566 Vienna exam questions since 2016, 2,998 questions from the Innsbruck curriculum (Stichprobentest) and 335 Pharmakologie. A Kenntnisprüfung re-sit is ~795 €, and MedPrüf starts at 19 € a month.",
     },
     cta_primary: { de: "Kostenlos starten", en: "Start free" },
     cta_primary_sub: {
@@ -108,8 +111,8 @@ const COPY = {
       en: "See the Exam Cohort",
     },
     cta_tertiary: {
-      de: "3-Monats-Einstieg · 27 € (≈ 9 €/Monat)",
-      en: "3-Month Starter · 27 € (≈ 9 €/month)",
+      de: "Einzelmonat · 19 € im Monat",
+      en: "Single month · 19 € a month",
     },
     cta_tertiary_sub: {
       de: "Vollzugang · einmalig · keine Verlängerung",
@@ -895,7 +898,7 @@ function Hero({ lang, freeHref }: { lang: Lang; freeHref: string }) {
               </Link>
             </div>
 
-            {/* Tertiary 27 € entry link */}
+            {/* Tertiary 19 €/month entry link */}
             <p className="mb-6">
               <Link
                 href="/pricing#first-month"

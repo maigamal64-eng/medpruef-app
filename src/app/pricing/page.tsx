@@ -76,19 +76,14 @@ export default function PricingPage() {
 
   // Card checkout state.
   // `checkoutLoading` tracks which tier is currently spinning its CTA —
-  // null means idle, "cohort" = €114 PUYP, "starter" = €27 / 3-month
-  // entry tier (€9 effective per month), "first_month" = €19 single-
-  // month fallback. Tracking the specific card lets us disable only
-  // that button while the Whop card checkout session is being created,
-  // instead of freezing the entire page.
+  // null means idle, "cohort" = €114 PUYP, "first_month" = €19 single-
+  // month (the advertised entry as of 2026-06-24), "starter" = €27 /
+  // 3-month middle step (€9 effective per month). Tracking the specific
+  // card lets us disable only that button while the Whop card checkout
+  // session is being created, instead of freezing the entire page.
   const [checkoutLoading, setCheckoutLoading] = useState<
     null | "cohort" | "starter" | "first_month"
   >(null);
-  // Whether to show the demoted "or just one more month — €19" tier
-  // under the starter card. Hidden by default — most new users should
-  // pick the €27 / 3-month entry; the single-month fallback is mainly
-  // for users whose 3-month entry expired and want to bridge.
-  const [showSingleMonth, setShowSingleMonth] = useState(false);
 
   // Waitlist dialog state
   const [waitOpen, setWaitOpen] = useState(false);
@@ -414,47 +409,36 @@ export default function PricingPage() {
           <FreeTierCard lang={lang} examSource={storedExam} />
         </section>
 
-        {/* ══════════ €27 / 3-month entry tier card (primary) ══════════ */}
-        {/* Phase 1 of the 2026-04-28 pricing reset — replaces €19 single-
-            month as the dominant entry surface. Three months for €27
-            (~€9 per month) gives the prospect a real prep window without
-            committing to the full €114 Cohort price. The `first-month`
-            anchor stays on this section so the landing-page tertiary
-            CTA still deep-links here even after the rename. */}
+        {/* ══════════ Entry tier cards: 19 €/month (entry) → 27 €/3mo (step) ══════════ */}
+        {/* Entry repositioned 2026-06-24 ([name]'s call, decisions.json
+            medpruef-landing-entry-price-19eur-2026-06-24): the advertised
+            entry is now the 19 €/month single-month tier, so it renders
+            FIRST and always-visible here, matching the landing-page
+            headline ("ab 19 € im Monat"). The 27 €/3-month starter stays
+            as the middle step directly beneath it; the 114 € Cohort below
+            remains the hero / best value. All three prices are unchanged,
+            only which one is presented as the entry. The `first-month`
+            anchor stays on this section so the landing-page tertiary CTA
+            still deep-links here. */}
         <section
           id="first-month"
           className="max-w-5xl mx-auto px-4 lg:px-8 pb-4 scroll-mt-20"
         >
-          <Starter3MoCard
+          <FirstMonthCard
             lang={lang}
-            onCheckout={openStarter3moDialog}
-            loading={checkoutLoading === "starter"}
+            onCheckout={openFirstMonthDialog}
+            loading={checkoutLoading === "first_month"}
           />
 
-          {/* Single-month fallback — collapsed by default. Reveals
-              automatically when the API rejects a duplicate
-              first_3mo_27 purchase (showSingleMonth flag), so users
-              whose 3-month entry already expired have a one-click
-              recovery path. Otherwise it's intentionally tucked away
-              to keep the funnel pointing at the 3-month entry. */}
+          {/* Middle step — 27 € / 3 months (~9 €/month). One step up from
+              the single-month entry for prospects who want a longer prep
+              window before committing to the Cohort. */}
           <div className="mt-3">
-            {showSingleMonth ? (
-              <FirstMonthCard
-                lang={lang}
-                onCheckout={openFirstMonthDialog}
-                loading={checkoutLoading === "first_month"}
-              />
-            ) : (
-              <button
-                type="button"
-                onClick={() => setShowSingleMonth(true)}
-                className="text-xs text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg-muted)] underline-offset-2 hover:underline transition-colors"
-              >
-                {lang === "de"
-                  ? "Brauchst du nur einen Monat? Einzelmonat zu 19 € anzeigen ›"
-                  : "Just need one month? Show single-month tier (19 €) ›"}
-              </button>
-            )}
+            <Starter3MoCard
+              lang={lang}
+              onCheckout={openStarter3moDialog}
+              loading={checkoutLoading === "starter"}
+            />
           </div>
         </section>
 
@@ -892,11 +876,10 @@ function FreeTierCard({ lang, examSource }: { lang: Lang; examSource: ExamSource
  * in `/api/checkout/nowpayments` to prevent indefinite parking that
  * would erode the €114 Cohort tier (Integrator audit 2026-04-28).
  *
- * Visual posture: more prominent than the demoted €19 single-month
- * fallback (slightly larger price block, "Empfehlung für Einsteiger"
- * pill, viridian highlight) but still subordinate to the Cohort card —
- * Cohort keeps the 2px viridian border + glow, Starter uses a softer
- * accent.
+ * Positioning (2026-06-24): the middle step between the 19 €/month
+ * single-month entry (rendered above it) and the 114 € Cohort hero
+ * below. Visual posture stays subordinate to the Cohort card — Cohort
+ * keeps the 2px viridian border + glow, Starter uses a softer accent.
  */
 function Starter3MoCard({
   lang,
@@ -1032,11 +1015,13 @@ function Starter3MoCard({
 /* ═══════════════════════ €19 single-month fallback card ═══════════════════════ */
 
 /**
- * Single-month fallback. Demoted from primary entry on 2026-04-28 in
- * favour of the €27 / 3-month starter. Stays available so users whose
- * 3-month entry expired (or who explicitly want a one-month bridge)
- * can buy a single month before upgrading to Cohort. Auto-revealed in
- * the UI when the checkout API rejects a duplicate first_3mo_27.
+ * Single-month tier — the advertised ENTRY as of 2026-06-24 ([name]'s
+ * call, decisions.json medpruef-landing-entry-price-19eur-2026-06-24).
+ * Rendered first + always-visible in the entry section, matching the
+ * landing headline ("ab 19 € im Monat"). 30 days of full access for a
+ * one-time 19 €; a prospect steps up from here to the 27 €/3-month
+ * starter or the 114 € Cohort. (Was a collapsed fallback from
+ * 2026-04-28 until this reposition.)
  */
 function FirstMonthCard({
   lang,
@@ -1067,18 +1052,18 @@ function FirstMonthCard({
               fontWeight: 700,
             }}
           >
-            {lang === "de" ? "Einzelmonat · Fallback" : "Single month · fallback"}
+            {lang === "de" ? "Einzelmonat · Einstieg" : "Single month · entry"}
           </span>
           <h3 className="mp-h3 text-[20px]">
             {lang === "de"
-              ? "Einzelmonat · einmalig 19 €"
-              : "Single month · 19 € one-time"}
+              ? "Einzelmonat · 19 € im Monat"
+              : "Single month · 19 € a month"}
           </h3>
         </div>
         <p className="mp-body text-[var(--mp-fg-muted)] mb-4 text-sm leading-relaxed">
           {lang === "de"
-            ? "30 Tage Vollzugang als Übergang, ideal, wenn dein 3-Monats-Einstieg ausgelaufen ist und du eine Brücke bis zur Kohorte brauchst, oder wenn du ganz gezielt nur einen Monat testen willst."
-            : "30 days of full access as a bridge, ideal if your 3-month starter has expired and you need a stop-gap before Cohort, or if you specifically want a one-month try."}
+            ? "30 Tage voller Zugang für einmalig 19 €. Der einfachste Einstieg: teste alles einen Monat lang, ohne Verpflichtung. Danach kannst du jederzeit auf den 3-Monats-Tarif oder die Prüfungs-Kohorte wechseln."
+            : "30 days of full access for a one-time 19 €. The easiest way in: try everything for a month, no commitment. Step up to the 3-month plan or the Exam Cohort whenever you like."}
         </p>
         <ul className="space-y-1.5 text-sm text-[var(--mp-fg)]">
           <li className="flex items-start gap-2">
