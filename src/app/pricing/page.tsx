@@ -280,8 +280,8 @@ export default function PricingPage() {
   /* Cohort feature bullets — the dominant card */
   const cohortFeatures: Array<{ de: string; en: string }> = [
     {
-      de: "Alle 10.992 Fragen · Kenntnisprüfung + Stichprobentest + Pharma in einem Abo",
-      en: "All 10,992 questions · Kenntnisprüfung + Stichprobentest + Pharma bundled",
+      de: "Über 10.000 Fragen · Kenntnisprüfung + Stichprobentest + Pharma in einem Abo",
+      en: "Over 10,000 questions · Kenntnisprüfung + Stichprobentest + Pharma bundled",
     },
     {
       de: "Pass-Until-You-Pass: fällst du durch, verlängern wir kostenlos",
@@ -404,8 +404,8 @@ export default function PricingPage() {
           </h2>
           <p className="mp-body text-[var(--mp-fg-muted)] max-w-2xl mx-auto">
             {lang === "de"
-              ? "Die einzige Prüfungsvorbereitung, speziell für Österreichs Kenntnisprüfung, Stichprobentest und Pharmakologie. Destilliert aus 10.992 dokumentierten offiziellen Prüfungsfragen: Wien seit 2016, Stichprobentest (Innsbruck) und Pharmakologie."
-              : "The only exam prep built specifically for Austria's Kenntnisprüfung, Stichprobentest & Pharmakologie. Distilled from 10,992 documented official exam questions: Vienna since 2016, Stichprobentest (Innsbruck) and Pharmakologie."}
+              ? "Die einzige Prüfungsvorbereitung, speziell für Österreichs Kenntnisprüfung, Stichprobentest und Pharmakologie. Destilliert aus über 10.000 dokumentierten offiziellen Prüfungsfragen: Wien seit 2016, Stichprobentest (Innsbruck) und Pharmakologie."
+              : "The only exam prep built specifically for Austria's Kenntnisprüfung, Stichprobentest & Pharmakologie. Distilled from over 10,000 documented official exam questions: Vienna since 2016, Stichprobentest (Innsbruck) and Pharmakologie."}
           </p>
         </section>
 
@@ -460,12 +460,12 @@ export default function PricingPage() {
 
         {/* ══════════ Cost-anchor strip ══════════
             Anchors €114 against the real-world numbers a med doctor
-            already knows: ~€370 per Kenntnisprüfung re-sit fee + ~€5,000
+            already knows: ~€795 per Kenntnisprüfung attempt fee + ~€5,000
             forgone Assistenzarzt salary per delayed half-year (Funnel
             agent §9, Conversion Psychology agent §1, review-2026-04-25-B2).
 
             Numerical anchoring (Tversky/Kahneman): €114 next to
-            €370+€5,000 reads cheap; €114 against "textbook chapter"
+            €795+€5,000 reads cheap; €114 against "textbook chapter"
             reads as expense. This is the single biggest cheap-copy
             lever in the funnel. Honest numbers — Kenntnisprüfung fee
             is publicly listed by the Vienna Ärztekammer; salary range
@@ -482,14 +482,14 @@ export default function PricingPage() {
           >
             {lang === "de" ? (
               <>
-                <strong className="text-[var(--mp-fg)]">Die Kenntnisprüfung kostet ~370 € pro Versuch.</strong>{" "}
+                <strong className="text-[var(--mp-fg)]">Die Kenntnisprüfung kostet ~795 € pro Versuch.</strong>{" "}
                 Ein verlorenes halbes Jahr in Österreich:{" "}
                 <strong className="text-[var(--mp-fg)]">~5.000 € entgangenes Assistenzarzt-Gehalt.</strong>{" "}
                 Die Prüfungs-Kohorte: <strong className="text-[var(--mp-viridian)]">114 €, einmalig.</strong>
               </>
             ) : (
               <>
-                <strong className="text-[var(--mp-fg)]">The Kenntnisprüfung costs ~370 € per attempt.</strong>{" "}
+                <strong className="text-[var(--mp-fg)]">The Kenntnisprüfung costs ~795 € per attempt.</strong>{" "}
                 Half a year delayed in Austria:{" "}
                 <strong className="text-[var(--mp-fg)]">~5,000 € in forgone Assistenzarzt salary.</strong>{" "}
                 The Exam Cohort: <strong className="text-[var(--mp-viridian)]">114 €, one time.</strong>

@@ -315,7 +315,7 @@ export default function ExamLandingShell({ content }: { content: ExamLandingCont
               <BookOpen className="w-5 h-5 text-[var(--mp-viridian)] flex-shrink-0" aria-hidden />
               <div>
                 <p className="font-display font-bold text-[var(--mp-fg)]">
-                  {L === "de" ? "10.992 Fragen" : "10.992 questions"}
+                  {L === "de" ? "über 10.000 Fragen" : "over 10,000 questions"}
                 </p>
                 <p className="text-xs text-[var(--mp-fg-muted)]">
                   {L === "de" ? "insgesamt im Qbank" : "in the Qbank"}
@@ -332,8 +332,8 @@ export default function ExamLandingShell({ content }: { content: ExamLandingCont
                 </p>
                 <p className="text-xs text-[var(--mp-fg-muted)]">
                   {L === "de"
-                    ? "10.992 dokumentierte Fragen, nichts erfunden"
-                    : "10,992 documented questions, nothing invented"}
+                    ? "über 10.000 dokumentierte Fragen, nichts erfunden"
+                    : "over 10,000 documented questions, nothing invented"}
                 </p>
               </div>
             </div>

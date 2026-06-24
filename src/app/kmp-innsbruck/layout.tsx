@@ -17,17 +17,17 @@ import { getNextExamSitting } from "@/lib/exam-dates";
  * recognition test). The "KMP Innsbruck" keyword is kept below so the
  * page still ranks for the term users historically searched.
  *
- * Content numbers: 3,091 questions across 12 specialties per
- * NOTES.md §Content (imported from 17 KoalaMed PDFs distilled from the
+ * Content numbers: 2,998 questions across 12 specialties (live DB count
+ * 2026-06-24; imported from 17 KoalaMed PDFs distilled from the
  * Med Uni Innsbruck clinical curriculum). KoalaMed is a third-party
  * platform that publishes exam-style PDFs; we imported from those
  * materials but KoalaMed is NOT the exam, we don't represent them, and
  * these are NOT official Stichprobentest items.
  */
 
-const pageTitle = "Stichprobentest (Innsbruck) 2026: Vorbereitung mit 3.091 Fragen | MedPrüf";
+const pageTitle = "Stichprobentest (Innsbruck) 2026: Vorbereitung mit 2.998 Fragen | MedPrüf";
 const pageDesc =
-  "Strukturierte Vorbereitung auf den nationalen Stichprobentest der Nostrifizierung. 3.091 Fragen aus 12 Fachgebieten, klinisch kommentiert, aus dem Curriculum der Med Uni Innsbruck. 150 Fragen kostenlos.";
+  "Strukturierte Vorbereitung auf den nationalen Stichprobentest der Nostrifizierung. 2.998 Fragen aus 12 Fachgebieten, klinisch kommentiert, aus dem Curriculum der Med Uni Innsbruck. 150 Fragen kostenlos.";
 
 export const metadata: Metadata = {
   title: pageTitle,
@@ -89,7 +89,7 @@ function buildCourseSchema() {
     "@type": "Course",
     name: "Stichprobentest (Innsbruck): Vorbereitung",
     description:
-      "Strukturierte Vorbereitung auf den nationalen Stichprobentest der Nostrifizierung für ausländische Ärzt:innen: 12 Fachgebiete, 3.091 Fragen aus dem klinischen Curriculum der Med Uni Innsbruck, mit klinischen Erklärungen.",
+      "Strukturierte Vorbereitung auf den nationalen Stichprobentest der Nostrifizierung für ausländische Ärzt:innen: 12 Fachgebiete, 2.998 Fragen aus dem klinischen Curriculum der Med Uni Innsbruck, mit klinischen Erklärungen.",
     provider: {
       "@type": "Organization",
       name: "MedPrüf",

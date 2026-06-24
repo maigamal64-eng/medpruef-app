@@ -12,7 +12,7 @@ import ExamLandingShell, {
  * slug stays /kmp-innsbruck (route + content-provenance anchor:
  * "Nostrifizierung Innsbruck"); only the display copy changed.
  *
- * Content numbers per NOTES.md §Content: 3,091 questions across
+ * Content numbers (live DB count 2026-06-24): 2,998 questions across
  * 12 specialties. Source: 17 KoalaMed PDFs distilled from the MedUni
  * Innsbruck clinical curriculum (`scripts/import_koalamed.py`).
  * KoalaMed is a third-party aggregator; we imported from those
@@ -40,8 +40,8 @@ const content: ExamLandingContent = {
     en: "Pass the Stichprobentest on your first try.",
   },
   heroSubtitle: {
-    de: "Strukturierte Vorbereitung auf den nationalen Stichprobentest der Nostrifizierung. 3.091 Fragen aus 12 Fachgebieten, klinisch kommentiert, destilliert aus dem klinischen Curriculum der Med Uni Innsbruck (KoalaMed-Materialien). Keine offiziellen Prüfungsfragen, sondern echtes Verständnis.",
-    en: "Structured prep for the national Stichprobentest of the nostrification process. 3,091 questions across 12 specialties, clinically annotated, distilled from the Med Uni Innsbruck clinical curriculum (KoalaMed materials). Not official exam items, real understanding.",
+    de: "Strukturierte Vorbereitung auf den nationalen Stichprobentest der Nostrifizierung. 2.998 Fragen aus 12 Fachgebieten, klinisch kommentiert, destilliert aus dem klinischen Curriculum der Med Uni Innsbruck (KoalaMed-Materialien). Keine offiziellen Prüfungsfragen, sondern echtes Verständnis.",
+    en: "Structured prep for the national Stichprobentest of the nostrification process. 2,998 questions across 12 specialties, clinically annotated, distilled from the Med Uni Innsbruck clinical curriculum (KoalaMed materials). Not official exam items, real understanding.",
   },
   primaryCtaHref: "/quiz?exam=kmp_innsbruck&free=1",
   primaryCtaLabel: {
@@ -56,7 +56,7 @@ const content: ExamLandingContent = {
   breakdown: [
     {
       label: { de: "Fragen", en: "Questions" },
-      value: "3.091",
+      value: "2.998",
       sub: {
         de: "Aus 17 Curriculum-PDFs strukturiert",
         en: "Structured from 17 curriculum PDFs",
@@ -136,8 +136,8 @@ const content: ExamLandingContent = {
         en: "Why do MedPrüf questions differ between the Stichprobentest and the Vienna Kenntnisprüfung?",
       },
       a: {
-        de: "Es sind zwei verschiedene Anerkennungswege. Die Kenntnisprüfung Wien ist die Arztprüfung der Österreichischen Ärztekammer (geprüft als SIP 4 + SIP 5). Der Stichprobentest gehört zum Universitäts-Nostrifizierungsweg. Wir halten die Fragenbanken deswegen getrennt: wählst du „Stichprobentest (Innsbruck)\" als Prüfungstyp, siehst du die 3.091 Fragen, die wir aus dem klinischen Curriculum der Med Uni Innsbruck strukturiert haben. Die Kenntnisprüfung-Wien-Bank (7.566 Fragen) bleibt für dich sichtbar, wenn du den Prüfungstyp wechselst.",
-        en: "They are two different recognition routes. The Vienna Kenntnisprüfung is the Austrian Medical Chamber's Arztprüfung (tested as SIP 4 + SIP 5). The Stichprobentest belongs to the university nostrification route. We keep the question banks separate: pick \"Stichprobentest (Innsbruck)\" as your exam type and you see the 3,091 questions we structured from the Med Uni Innsbruck clinical curriculum. The Vienna Kenntnisprüfung bank (7,566 questions) stays available if you switch exam type.",
+        de: "Es sind zwei verschiedene Anerkennungswege. Die Kenntnisprüfung Wien ist die Arztprüfung der Österreichischen Ärztekammer (geprüft als SIP 4 + SIP 5). Der Stichprobentest gehört zum Universitäts-Nostrifizierungsweg. Wir halten die Fragenbanken deswegen getrennt: wählst du „Stichprobentest (Innsbruck)\" als Prüfungstyp, siehst du die 2.998 Fragen, die wir aus dem klinischen Curriculum der Med Uni Innsbruck strukturiert haben. Die Kenntnisprüfung-Wien-Bank (7.566 Fragen) bleibt für dich sichtbar, wenn du den Prüfungstyp wechselst.",
+        en: "They are two different recognition routes. The Vienna Kenntnisprüfung is the Austrian Medical Chamber's Arztprüfung (tested as SIP 4 + SIP 5). The Stichprobentest belongs to the university nostrification route. We keep the question banks separate: pick \"Stichprobentest (Innsbruck)\" as your exam type and you see the 2,998 questions we structured from the Med Uni Innsbruck clinical curriculum. The Vienna Kenntnisprüfung bank (7,566 questions) stays available if you switch exam type.",
       },
     },
     {

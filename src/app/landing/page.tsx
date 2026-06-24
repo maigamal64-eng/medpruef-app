@@ -91,8 +91,8 @@ const COPY = {
     // which is available:false (waitlisted) — and contradicted the
     // 27 € CTA in the same viewport. Now both agree.
     subtitle: {
-      de: "Die einzige Prüfungsvorbereitung, speziell für Österreichs Kenntnisprüfung, Stichprobentest und Pharmakologie. Destilliert aus 7.566 Wien-Prüfungsfragen seit 2016, 3.091 Fragen aus dem Innsbruck-Curriculum (Stichprobentest) und 335 Pharmakologie. Eine Kenntnisprüfung kostet ~370 € pro Versuch, MedPrüf gibt es ab 27 € für 3 Monate.",
-      en: "The only exam prep built specifically for Austria's Kenntnisprüfung, Stichprobentest and Pharmakologie. Distilled from 7,566 Vienna exam questions since 2016, 3,091 questions from the Innsbruck curriculum (Stichprobentest) and 335 Pharmakologie. A Kenntnisprüfung re-sit is ~370 €, and MedPrüf starts at 27 € for 3 months.",
+      de: "Die einzige Prüfungsvorbereitung, speziell für Österreichs Kenntnisprüfung, Stichprobentest und Pharmakologie. Destilliert aus 7.566 Wien-Prüfungsfragen seit 2016, 2.998 Fragen aus dem Innsbruck-Curriculum (Stichprobentest) und 335 Pharmakologie. Eine Kenntnisprüfung kostet ~795 € pro Versuch, MedPrüf gibt es ab 27 € für 3 Monate.",
+      en: "The only exam prep built specifically for Austria's Kenntnisprüfung, Stichprobentest and Pharmakologie. Distilled from 7,566 Vienna exam questions since 2016, 2,998 questions from the Innsbruck curriculum (Stichprobentest) and 335 Pharmakologie. A Kenntnisprüfung re-sit is ~795 €, and MedPrüf starts at 27 € for 3 months.",
     },
     cta_primary: { de: "Kostenlos starten", en: "Start free" },
     cta_primary_sub: {
@@ -304,8 +304,8 @@ const COPY = {
         price: "114 €",
         period: { de: "6 Monate", en: "6 months" },
         pitch: {
-          de: "Alle 10.992 Fragen · Pass-Until-You-Pass · Karten-Checkout live",
-          en: "All 10,992 questions · Pass-Until-You-Pass · live card checkout",
+          de: "Über 10.000 Fragen · Pass-Until-You-Pass · Karten-Checkout live",
+          en: "Over 10,000 questions · Pass-Until-You-Pass · live card checkout",
         },
         status: "live",
         cta: { de: "Zur Kohorte", en: "See the Cohort" },
@@ -340,8 +340,8 @@ const COPY = {
     // traces to a documented official exam. We credit provenance, not
     // an invented curator.
     title: {
-      de: "10.992 Fragen, jede aus einer dokumentierten Prüfung.",
-      en: "10,992 questions, each from a documented exam.",
+      de: "Über 10.000 Fragen, jede aus einer dokumentierten Prüfung.",
+      en: "Over 10,000 questions, each from a documented exam.",
     },
     quote: {
       de: "Nichts erfunden, nichts geraten. Jede Frage ist gegen ihre Quell-Prüfung referenziert: Wien-Tertials, KoalaMed Innsbruck, Rezeptierkunde Pharma.",
@@ -355,8 +355,8 @@ const COPY = {
         sub: { de: "seit 2016", en: "since 2016" },
       },
       {
-        n: "3.091",
-        n_en: "3,091",
+        n: "2.998",
+        n_en: "2,998",
         label: { de: "Stichprobentest", en: "Stichprobentest" },
         sub: { de: "Innsbruck-Curriculum", en: "Innsbruck curriculum" },
       },

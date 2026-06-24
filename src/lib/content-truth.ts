@@ -31,22 +31,24 @@
 // ── 1. Question counts ─────────────────────────────────────────────
 //
 // This is a STATIC CACHE of a DB-owned fact. The authoritative count is
-// `select count(*) from questions where is_active` (verified 10992 live
-// on 2026-06-02). Every user-facing surface reads `QUESTIONS.total` from
+// `select count(*) from questions where is_active` (verified 10899 live
+// on 2026-06-24). Every user-facing surface reads `QUESTIONS.total` from
 // here so the number can never drift again — update this one constant
 // after a content import, not the surfaces.
 // SOT-REF: medpruef_question_count@DB:medpruef.questions
 //
-// Post-correction baseline (2026-04-24). Was "10,993" through Apr 23;
-// the off-by-one came from a soft-deleted row that survived a partial
-// archive. Wien dropped 7,567 → 7,566 in the same sweep. KMP and
-// Pharma counts are unchanged.
+// 2026-06-24 refresh: 93 Stichprobentest (kmp_innsbruck) questions were
+// deactivated; the bank dropped 3,091 → 2,998 and the total 10,992 →
+// 10,899. Kenntnisprüfung (7,566) and Pharma (335) unchanged.
+// Earlier baseline (2026-04-24): was "10,993" through Apr 23; an
+// off-by-one from a soft-deleted row that survived a partial archive,
+// and Wien dropped 7,567 → 7,566 in that sweep.
 
 export const QUESTIONS = {
-  total: 10992,
+  total: 10899,
   by_exam_type: {
     kenntnispruefung: 7566,
-    kmp_innsbruck: 3091,
+    kmp_innsbruck: 2998,
     pharma: 335,
   },
 } as const;

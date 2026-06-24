@@ -100,18 +100,18 @@ export function getPaywallCopy({ lang, stats }: PaywallCopyArgs): PaywallCopy {
       : "Free 150 done — continue with Pro",
 
     description: de
-      ? "Hol dir Zugriff auf den kompletten Fragenpool (10.992 Fragen) plus Wiederholungsplan, Mock-Prüfung und die Pass-Garantie."
-      : "Unlock the full 10,992-question bank, spaced repetition, mock exam, and the pass-or-study-free guarantee.",
+      ? "Hol dir Zugriff auf den kompletten Fragenpool (über 10.000 Fragen) plus Wiederholungsplan, Mock-Prüfung und die Pass-Garantie."
+      : "Unlock the full 10,000+-question bank, spaced repetition, mock exam, and the pass-or-study-free guarantee.",
 
     bullets: de
       ? [
-          "Voller Zugriff auf alle 10.992 Fragen über alle 3 Prüfungstypen",
+          "Voller Zugriff auf über 10.000 Fragen in allen 3 Prüfungstypen",
           "Pass first try — oder lerne kostenlos weiter bis zum Bestehen",
           "Wiederholungsplan, Mock-Prüfung und Leistungs-Dashboard",
           "7-Tage-Geld-zurück-Garantie — keine Fragen",
         ]
       : [
-          "Full access to all 10,992 questions across 3 exam types",
+          "Full access to all 10,000+ questions across 3 exam types",
           "Pass first try — or study free until you do",
           "Spaced repetition, mock exam, and performance dashboard",
           "7-day money-back guarantee — no questions asked",

@@ -23,8 +23,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Über uns — MedPrüf",
-    description:
-      "Warum wir MedPrüf gebaut haben: 64.000 ausländische Ärzt:innen suchen eine österreichische Lizenz. Wir bieten 10,992 Prüfungsfragen in 7 Sprachen mit klinischen KI-Erklärungen.",
+    description: ABOUT_DESCRIPTION,
     images: ["/brand/og-image.png"],
   },
 };

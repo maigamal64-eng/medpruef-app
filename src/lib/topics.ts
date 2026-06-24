@@ -62,7 +62,7 @@ export const EXAM_SOURCES = [
     fullName: 'Stichprobentest (Nostrifizierung)',
     shortLabel: 'STP',
     badge: '🏔️',
-    questions: 3091,
+    questions: 2998,
     description: { de: 'Nationaler MedUni-Stichprobentest, Fragen aus dem Innsbruck-Curriculum', en: 'National MedUni Stichprobentest, questions from the Innsbruck curriculum' },
   },
   {

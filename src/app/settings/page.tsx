@@ -934,8 +934,8 @@ export default function SettingsPage() {
                   </div>
                   <p className="text-xs text-[var(--mp-fg-subtle)] mb-3">
                     {lang === "de"
-                      ? "Österreichische Medizinprüfungen — 10.992 Fragen"
-                      : "Austrian medical exams — 10,992 questions"}
+                      ? "Österreichische Medizinprüfungen — über 10.000 Fragen"
+                      : "Austrian medical exams — over 10,000 questions"}
                   </p>
                   <Link
                     href="/about"
