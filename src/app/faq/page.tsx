@@ -650,8 +650,8 @@ const copy = {
       en: "Who builds MedPrüf?",
     },
     p1: {
-      de: "MedPrüf wird von [name] ([name], Österreich) entwickelt, einem Solo-Engineer, der seinen Cousin durch die österreichische Nostrifikation begleitet und dabei gesehen hat, wo öffentlich verfügbare Ressourcen versagen: verstreute Karteikarten, veraltete PDFs, keine österreichspezifische Abdeckung, keine Spaced Repetition. Jede Frage in MedPrüf stammt aus einer dokumentierten offiziellen Prüfung (7.566 aus Wien seit 2016, 2.998 aus Innsbruck, 335 aus Pharmakologie), nichts erfunden, nichts geraten. Die Daten sind die Glaubwürdigkeit.",
-      en: "MedPrüf is built by [name] ([name], Austria), a solo engineer who walked his cousin through Austrian nostrification and saw where the publicly available resources fall short: scattered flashcards, outdated PDFs, no Austria-specific coverage, no spaced repetition. Every question in MedPrüf comes from a documented official exam (7,566 from Vienna since 2016, 2,998 from Innsbruck, 335 from Pharmakologie), nothing invented, nothing guessed. The data is the credential.",
+      de: "MedPrüf wird von [name] ([name], Österreich) entwickelt, einem Solo-Engineer, der seinen Cousin durch die österreichische Nostrifikation begleitet und dabei gesehen hat, wo öffentlich verfügbare Ressourcen versagen: verstreute Karteikarten, veraltete PDFs, keine österreichspezifische Abdeckung, keine Spaced Repetition. Jede Frage in MedPrüf stammt aus einer dokumentierten offiziellen Prüfung (7.566 aus Wien seit 2016, 2.742 aus Innsbruck, 335 aus Pharmakologie), nichts erfunden, nichts geraten. Die Daten sind die Glaubwürdigkeit.",
+      en: "MedPrüf is built by [name] ([name], Austria), a solo engineer who walked his cousin through Austrian nostrification and saw where the publicly available resources fall short: scattered flashcards, outdated PDFs, no Austria-specific coverage, no spaced repetition. Every question in MedPrüf comes from a documented official exam (7,566 from Vienna since 2016, 2,742 from Innsbruck, 335 from Pharmakologie), nothing invented, nothing guessed. The data is the credential.",
     },
   },
 };

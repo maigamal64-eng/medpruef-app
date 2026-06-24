@@ -111,7 +111,7 @@ export default function Image() {
               maxWidth: 980,
             }}
           >
-            2.998 Fragen · 12 Fachgebiete · Klinische Erklärungen
+            2.742 Fragen · 12 Fachgebiete · Klinische Erklärungen
           </div>
         </div>
 

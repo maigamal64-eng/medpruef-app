@@ -51,7 +51,7 @@ export const PHASES: ReadonlyArray<PlanPhase> = [
     owner: "Visite 🔬",
     status: "now",
     state: [
-      "10,899 active questions: Kenntnisprüfung 7,566 · Stichprobentest 2,998 · Pharma 335.",
+      "10,643 active questions: Kenntnisprüfung 7,566 · Stichprobentest 2,742 · Pharma 335.",
       "93 KMP rows deactivated (the answer leaked into the choices), pending per-question repair, then reactivate or retire.",
       "4 user-submitted flags fixed; the review queue is being worked to zero.",
       "Known structural defects still open: 16 merged-F extraction bugs, 8 genuinely ambiguous multi-correct, 7 orphan KMP stems (image lost), 21 vignette questions missing their image, the kmp6a source-PDF cluster to spot-check, the importer that misses (N richtige Antworten) hints.",

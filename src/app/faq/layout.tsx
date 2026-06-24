@@ -61,7 +61,7 @@ function buildFaqSchema() {
     },
     {
       q: "Wer baut MedPrüf?",
-      a: "MedPrüf wird von [name] ([name], Österreich) entwickelt, einem Solo-Engineer, der seinen Cousin durch die österreichische Nostrifikation begleitet hat. Jede Frage stammt aus einer dokumentierten offiziellen Prüfung (7.566 aus Wien seit 2016, 2.998 aus Innsbruck, 335 aus Pharmakologie), nichts erfunden, nichts geraten.",
+      a: "MedPrüf wird von [name] ([name], Österreich) entwickelt, einem Solo-Engineer, der seinen Cousin durch die österreichische Nostrifikation begleitet hat. Jede Frage stammt aus einer dokumentierten offiziellen Prüfung (7.566 aus Wien seit 2016, 2.742 aus Innsbruck, 335 aus Pharmakologie), nichts erfunden, nichts geraten.",
     },
   ];
 

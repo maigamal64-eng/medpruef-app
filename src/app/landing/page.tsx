@@ -99,8 +99,8 @@ const COPY = {
     // 19 €/month so they agree with /pricing. SoT §2 + §9. (Supersedes the
     // 2026-06-04 floor reconciliation that pinned the entry to 27 €/3mo.)
     subtitle: {
-      de: "Die einzige Prüfungsvorbereitung, speziell für Österreichs Kenntnisprüfung, Stichprobentest und Pharmakologie. Für beide Anerkennungswege: die Arztprüfung Allgemeinmedizin der Ärztekammer und den Stichprobentest der universitären Nostrifizierung. Destilliert aus 7.566 Wien-Prüfungsfragen seit 2016, 2.998 Fragen aus dem Innsbruck-Curriculum (Stichprobentest) und 335 Pharmakologie. Eine Kenntnisprüfung kostet ~795 € pro Versuch, MedPrüf gibt es ab 19 € im Monat.",
-      en: "The only exam prep built specifically for Austria's Kenntnisprüfung, Stichprobentest and Pharmakologie. For both recognition routes: the Ärztekammer's Arztprüfung Allgemeinmedizin and the Stichprobentest of the university Nostrifizierung. Distilled from 7,566 Vienna exam questions since 2016, 2,998 questions from the Innsbruck curriculum (Stichprobentest) and 335 Pharmakologie. A Kenntnisprüfung re-sit is ~795 €, and MedPrüf starts at 19 € a month.",
+      de: "Die einzige Prüfungsvorbereitung, speziell für Österreichs Kenntnisprüfung, Stichprobentest und Pharmakologie. Für beide Anerkennungswege: die Arztprüfung Allgemeinmedizin der Ärztekammer und den Stichprobentest der universitären Nostrifizierung. Destilliert aus 7.566 Wien-Prüfungsfragen seit 2016, 2.742 Fragen aus dem Innsbruck-Curriculum (Stichprobentest) und 335 Pharmakologie. Eine Kenntnisprüfung kostet ~795 € pro Versuch, MedPrüf gibt es ab 19 € im Monat.",
+      en: "The only exam prep built specifically for Austria's Kenntnisprüfung, Stichprobentest and Pharmakologie. For both recognition routes: the Ärztekammer's Arztprüfung Allgemeinmedizin and the Stichprobentest of the university Nostrifizierung. Distilled from 7,566 Vienna exam questions since 2016, 2,742 questions from the Innsbruck curriculum (Stichprobentest) and 335 Pharmakologie. A Kenntnisprüfung re-sit is ~795 €, and MedPrüf starts at 19 € a month.",
     },
     cta_primary: { de: "Kostenlos starten", en: "Start free" },
     cta_primary_sub: {
@@ -363,8 +363,8 @@ const COPY = {
         sub: { de: "seit 2016", en: "since 2016" },
       },
       {
-        n: "2.998",
-        n_en: "2,998",
+        n: "2.742",
+        n_en: "2,742",
         label: { de: "Stichprobentest", en: "Stichprobentest" },
         sub: { de: "Innsbruck-Curriculum", en: "Innsbruck curriculum" },
       },

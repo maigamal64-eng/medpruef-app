@@ -31,7 +31,7 @@
 // ── 1. Question counts ─────────────────────────────────────────────
 //
 // This is a STATIC CACHE of a DB-owned fact. The authoritative count is
-// `select count(*) from questions where is_active` (verified 10899 live
+// `select count(*) from questions where is_active` (verified 10643 live
 // on 2026-06-24). Every user-facing surface reads `QUESTIONS.total` from
 // here so the number can never drift again — update this one constant
 // after a content import, not the surfaces.
@@ -45,10 +45,10 @@
 // and Wien dropped 7,567 → 7,566 in that sweep.
 
 export const QUESTIONS = {
-  total: 10899,
+  total: 10643,
   by_exam_type: {
     kenntnispruefung: 7566,
-    kmp_innsbruck: 2998,
+    kmp_innsbruck: 2742,
     pharma: 335,
   },
 } as const;
