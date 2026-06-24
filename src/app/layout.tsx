@@ -13,6 +13,7 @@ import CohortCountdownBanner from "@/components/CohortCountdownBanner";
 import EmailValidationModal from "@/components/EmailValidationModal";
 import CookieBannerMount from "@/components/CookieBannerMount";
 import ConsentGatedAnalytics from "@/components/ConsentGatedAnalytics";
+import ConsentGatedMetaPixel from "@/components/ConsentGatedMetaPixel";
 import OfflineIndicator from "@/components/OfflineIndicator";
 import TrackRouteChange from "@/components/TrackRouteChange";
 import SearchModalMount from "@/components/SearchModalMount";
@@ -389,6 +390,10 @@ export default function RootLayout({
             <SearchModalMount />
             <CookieBannerMount />
             <ConsentGatedAnalytics />
+            {/* Meta (Facebook) Pixel — same consent gate as GA4. No-ops
+                cleanly when NEXT_PUBLIC_META_PIXEL_ID is unset (paid-ads
+                test dormant). See marketing/campaigns/paid-ads-setup-2026-06-24.md. */}
+            <ConsentGatedMetaPixel />
             <OfflineIndicator />
             {children}
             {/* LegalFooter — slim Impressum/Datenschutz/AGB/Kontakt strip

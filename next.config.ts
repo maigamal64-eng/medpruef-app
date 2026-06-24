@@ -20,11 +20,15 @@ const IS_PRODUCTION = process.env.VERCEL_ENV === "production";
 // choice given the existing inline scripts.
 const CSP = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.clarity.ms https://telegram.org",
+  // connect.facebook.net serves fbevents.js (the Meta Pixel loader).
+  "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.clarity.ms https://telegram.org https://connect.facebook.net",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-  "img-src 'self' data: blob: https://[project].supabase.co https://www.googletagmanager.com https://www.google-analytics.com https://t.me",
+  // www.facebook.com receives the Pixel tracking beacon (/tr as a 1x1 img);
+  // connect.facebook.net is the loader origin.
+  "img-src 'self' data: blob: https://[project].supabase.co https://www.googletagmanager.com https://www.google-analytics.com https://t.me https://www.facebook.com https://connect.facebook.net",
   "font-src 'self' data: https://fonts.gstatic.com",
-  "connect-src 'self' https://[project].supabase.co https://www.google-analytics.com https://region1.google-analytics.com https://*.clarity.ms https://api.openai.com https://api.anthropic.com https://*.ingest.de.sentry.io https://o4511227511504896.ingest.de.sentry.io https://telegram.org",
+  // Pixel also POSTs events to www.facebook.com / connect.facebook.net (fetch/beacon).
+  "connect-src 'self' https://[project].supabase.co https://www.google-analytics.com https://region1.google-analytics.com https://*.clarity.ms https://api.openai.com https://api.anthropic.com https://*.ingest.de.sentry.io https://o4511227511504896.ingest.de.sentry.io https://telegram.org https://www.facebook.com https://connect.facebook.net",
   "frame-src 'self' https://oauth.telegram.org",
   "worker-src 'self'",
   "manifest-src 'self'",

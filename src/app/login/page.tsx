@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getLang, setLang } from "@/lib/i18n";
 import { getStoredSession, storeSession, setSessionToken, getSessionToken } from "@/lib/auth";
+import { trackRegistration } from "@/lib/conversion-events";
 import { BrandedLoader } from "@/components/Logo";
 import { TextField } from "@/components/ui";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -158,6 +159,15 @@ export default function LoginPage() {
       // Persist the signed session token — THE auth credential authFetch
       // sends on every subsequent request (S-1, 2026-06-02).
       setSessionToken(data.sessionToken);
+      // Paid-ads conversion signal — ONLY on a NEW free registration (not
+      // login). Fires fbq('track','CompleteRegistration') + gtag('event',
+      // 'sign_up'); both self-gate on cookie consent + tracker presence, so
+      // this is a no-op pre-consent or when the Pixel/GA env is unset. The
+      // consent-independent ground-truth count is the server register row
+      // (user_activity_log). See marketing/campaigns/paid-ads-setup-2026-06-24.md.
+      if (mode === "register") {
+        trackRegistration();
+      }
       // Best-effort referral claim — fire and forget. The home page
       // also has a fallback claim on mount so a failure here is not
       // user-visible.

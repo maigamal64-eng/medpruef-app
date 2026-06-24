@@ -23,6 +23,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-06-24",
+    tag: "improvement",
+    title: {
+      de: "Startseite nennt jetzt beide Anerkennungswege",
+      en: "Landing page now names both recognition routes",
+    },
+    description: {
+      de: "Die Startseite macht jetzt deutlich, dass MedPrüf beide österreichischen Anerkennungswege abdeckt: die Arztprüfung Allgemeinmedizin (Kenntnisprüfung) der Ärztekammer und den Stichprobentest der universitären Nostrifizierung. So findest du schneller den Weg, der zu deinem Verfahren passt.",
+      en: "The landing page now makes it clear that MedPrüf covers both Austrian recognition routes: the Ärztekammer's Arztprüfung Allgemeinmedizin (Kenntnisprüfung) and the Stichprobentest of the university Nostrifizierung. That makes it easier to find the route that matches your own process.",
+    },
+  },
+  {
     date: "2026-06-23",
     tag: "improvement",
     title: {

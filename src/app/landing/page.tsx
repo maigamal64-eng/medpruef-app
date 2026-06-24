@@ -68,9 +68,14 @@ const COPY = {
     start: { de: "Kostenlos starten", en: "Start free" },
   },
   hero: {
+    // Eyebrow names BOTH Austrian recognition routes by the terms doctors
+    // actually search (Step 3 ad-landing scent-match, paid-ads-setup-2026-06-24):
+    // Kenntnisprüfung = the Ärztekammer Arztprüfung, Stichprobentest = the
+    // university Nostrifizierung screening. Additive search terms, NOT a
+    // rename of the canonical exam names (SoT §1).
     eyebrow: {
-      de: "Österreich · Kenntnisprüfung · Stichprobentest · Pharmakologie",
-      en: "Austria · Kenntnisprüfung · Stichprobentest · Pharmakologie",
+      de: "Österreich · Kenntnisprüfung (Arztprüfung) · Stichprobentest (Nostrifizierung) · Pharmakologie",
+      en: "Austria · Kenntnisprüfung (Arztprüfung) · Stichprobentest (Nostrifizierung) · Pharmakologie",
     },
     // Provenance stamp — the unrefutable credential. The corpus is
     // built from documented official exams; "seit 2016" is sourced,
@@ -94,8 +99,8 @@ const COPY = {
     // 19 €/month so they agree with /pricing. SoT §2 + §9. (Supersedes the
     // 2026-06-04 floor reconciliation that pinned the entry to 27 €/3mo.)
     subtitle: {
-      de: "Die einzige Prüfungsvorbereitung, speziell für Österreichs Kenntnisprüfung, Stichprobentest und Pharmakologie. Destilliert aus 7.566 Wien-Prüfungsfragen seit 2016, 2.998 Fragen aus dem Innsbruck-Curriculum (Stichprobentest) und 335 Pharmakologie. Eine Kenntnisprüfung kostet ~795 € pro Versuch, MedPrüf gibt es ab 19 € im Monat.",
-      en: "The only exam prep built specifically for Austria's Kenntnisprüfung, Stichprobentest and Pharmakologie. Distilled from 7,566 Vienna exam questions since 2016, 2,998 questions from the Innsbruck curriculum (Stichprobentest) and 335 Pharmakologie. A Kenntnisprüfung re-sit is ~795 €, and MedPrüf starts at 19 € a month.",
+      de: "Die einzige Prüfungsvorbereitung, speziell für Österreichs Kenntnisprüfung, Stichprobentest und Pharmakologie. Für beide Anerkennungswege: die Arztprüfung Allgemeinmedizin der Ärztekammer und den Stichprobentest der universitären Nostrifizierung. Destilliert aus 7.566 Wien-Prüfungsfragen seit 2016, 2.998 Fragen aus dem Innsbruck-Curriculum (Stichprobentest) und 335 Pharmakologie. Eine Kenntnisprüfung kostet ~795 € pro Versuch, MedPrüf gibt es ab 19 € im Monat.",
+      en: "The only exam prep built specifically for Austria's Kenntnisprüfung, Stichprobentest and Pharmakologie. For both recognition routes: the Ärztekammer's Arztprüfung Allgemeinmedizin and the Stichprobentest of the university Nostrifizierung. Distilled from 7,566 Vienna exam questions since 2016, 2,998 questions from the Innsbruck curriculum (Stichprobentest) and 335 Pharmakologie. A Kenntnisprüfung re-sit is ~795 €, and MedPrüf starts at 19 € a month.",
     },
     cta_primary: { de: "Kostenlos starten", en: "Start free" },
     cta_primary_sub: {
