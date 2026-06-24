@@ -27,8 +27,10 @@ import {
   BarChart3,
   BellRing,
   ChevronDown,
+  ClipboardCheck,
   Command,
   Cpu,
+  CreditCard,
   Database,
   FileText,
   Flag,
@@ -65,6 +67,7 @@ import { ShortcutHint } from "./_components/primitives";
 type SectionKey =
   | "overview"
   | "control-plane"
+  | "actions"
   | "growth"
   | "plan"
   | "revenue"
@@ -109,6 +112,14 @@ const NAV: NavSection[] = [
     items: [],
   },
   {
+    key: "actions",
+    label: "Actions",
+    icon: ClipboardCheck,
+    shortcut: "x",
+    href: "/admin/actions",
+    items: [],
+  },
+  {
     key: "growth",
     label: "Growth",
     icon: Sprout,
@@ -131,6 +142,7 @@ const NAV: NavSection[] = [
     shortcut: "r",
     items: [
       { label: "Users", href: "/admin/users", icon: Users },
+      { label: "Payments", href: "/admin/payments", icon: CreditCard },
       { label: "Subscriptions", href: "/admin/subscriptions", icon: Ticket },
       { label: "Referrals", href: "/admin/referrals", icon: GitBranch },
       { label: "Waitlist", href: "/admin/waitlist", icon: BellRing },
@@ -732,6 +744,7 @@ function ShortcutsDialog({ onClose }: { onClose: () => void }) {
         <div className="p-4 text-xs text-[var(--mp-fg-muted)] grid grid-cols-2 gap-x-6 gap-y-2">
           <ShortcutRow keys="g o" label="Go to Overview" />
           <ShortcutRow keys="g a" label="Go to Control Plane" />
+          <ShortcutRow keys="g x" label="Go to Action Queue" />
           <ShortcutRow keys="g w" label="Go to Growth" />
           <ShortcutRow keys="g l" label="Go to Plan" />
           <ShortcutRow keys="g r" label="Go to Revenue" />

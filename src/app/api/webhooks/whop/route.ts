@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
 import { getServiceClient } from "@/lib/supabase";
+import { logWebhookAttempt } from "@/lib/webhook-logger";
+import { logPaymentEvent } from "@/lib/paymentEvents";
 import {
   verifyWhopSecretHeader,
   verifyWhopSignature,
@@ -57,9 +59,30 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Bad body" }, { status: 400 });
   }
 
+  // Service client (hoisted) — the funnel logger writes at every exit, incl.
+  // the pre-verify rejections that are the silent-grant-failure smoking gun.
+  const sbLog = getServiceClient();
+
   const secret = process.env.WHOP_WEBHOOK_SECRET;
   if (!secret) {
     Sentry.captureMessage("WHOP_WEBHOOK_SECRET not set — all Whop webhooks reject", "error");
+    // Record the delivery BEFORE returning: "received but secret unconfigured"
+    // is exactly the state that silently 503s every real payment. Loud, not lost.
+    await logWebhookAttempt({
+      req,
+      provider: "whop",
+      path: "/api/webhooks/whop",
+      signatureValid: null,
+      body: rawBody,
+      result: "other_error",
+      error: "WHOP_WEBHOOK_SECRET not configured",
+    });
+    await logPaymentEvent(sbLog, {
+      event: "webhook_received",
+      signatureValid: null,
+      reason: "signature_invalid",
+      metadata: { ok: false, cause: "secret_not_configured", status: 503 },
+    });
     return NextResponse.json({ error: "Webhook secret not configured" }, { status: 503 });
   }
 
@@ -95,6 +118,34 @@ export async function POST(req: NextRequest) {
         "error"
       );
     }
+    // Record the rejected delivery in BOTH the delivery-truth table and the
+    // funnel feed. "N received · N sig_invalid" with grants=0 is the exact
+    // signature of a secret mismatch — the headline alarm on /admin/payments.
+    // We have no parsed event name here (verify runs on the raw body pre-parse);
+    // that's fine — "a delivery was signature-rejected" is the load-bearing fact.
+    await logWebhookAttempt({
+      req,
+      provider: "whop",
+      path: "/api/webhooks/whop",
+      signatureValid: false,
+      body: rawBody,
+      result: "sig_invalid",
+      error: looksLikeWhopDelivery
+        ? "verification failed despite webhook-secret/svix header (likely WHOP_WEBHOOK_SECRET mismatch)"
+        : "no recognized auth header",
+    });
+    await logPaymentEvent(sbLog, {
+      event: "webhook_received",
+      signatureValid: false,
+      matched: false,
+      reason: "signature_invalid",
+      metadata: {
+        ok: false,
+        had_secret_header: Boolean(secretHeader),
+        looks_like_whop_delivery: looksLikeWhopDelivery,
+        status: 401,
+      },
+    });
     return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
   }
 
@@ -117,6 +168,27 @@ export async function POST(req: NextRequest) {
   // Log EVERY accepted delivery so the first real one self-documents Whop's
   // envelope in the runtime logs without leaking the body. (advisor 2026-06-19)
   console.info(`[whop webhook] event=${event || "(none)"} paymentId=${f.paymentId ?? "(none)"}`);
+
+  // FUNNEL: record EVERY signature-verified delivery once, here, before the
+  // revoke/grant branches diverge. `matched` reflects whether the payload
+  // carried a buyer reference (metadata user id / email) so the feed can flag
+  // a delivery we received but couldn't tie to a user. The delivery-truth row
+  // in webhook_attempts is written by the specific exit branch below (processed
+  // / dup / user_not_found), mirroring the nowpayments per-exit discipline.
+  await logPaymentEvent(sbLog, {
+    event: "webhook_received",
+    provider: "whop",
+    userId: null, // not yet resolved; grant_succeeded/grant_failed carry the user
+    email: f.email,
+    tier: isKnownTier(f.metaTier) ? f.metaTier : null,
+    planId: f.planId,
+    paymentId: f.paymentId,
+    amountCents: f.amountCents,
+    currency: f.currency,
+    signatureValid: true,
+    matched: Boolean(f.metaUserId || f.email),
+    metadata: { event: event || "(none)", whop_event: event },
+  });
 
   // ── REVOKE PATH (B-08): refund / chargeback / cancellation ──
   // Handled BEFORE the grant gate. A refund/dispute reverses money →
@@ -157,6 +229,16 @@ export async function POST(req: NextRequest) {
       } catch {
         /* best effort */
       }
+      // FUNNEL: a payment-bearing event we didn't grant on — a real buyer may
+      // be unprocessed, so this is a grant_failed with a named reason.
+      await logPaymentEvent(sbLog, {
+        event: "grant_failed",
+        email: f.email,
+        planId: f.planId,
+        paymentId: f.paymentId,
+        reason: "unrecognized_event",
+        metadata: { event, ok: false },
+      });
     }
     return NextResponse.json({ ok: true, ignored: event || "unknown" });
   }
@@ -169,6 +251,17 @@ export async function POST(req: NextRequest) {
         "Whop payment.succeeded with no extractable payment id — payload shape changed",
         "error"
       );
+      await logWebhookAttempt({
+        req, provider: "whop", path: "/api/webhooks/whop",
+        signatureValid: true, body: rawBody, result: "other_error",
+        error: "payment.succeeded with no extractable payment id",
+      });
+      await logPaymentEvent(sbLog, {
+        event: "grant_failed",
+        email: f.email,
+        reason: "no_payment_id",
+        metadata: { event, ok: false },
+      });
       return NextResponse.json({ ok: false, error: "no payment id" }, { status: 200 });
     }
 
@@ -187,12 +280,32 @@ export async function POST(req: NextRequest) {
 
     if (claimErr) {
       if ((claimErr as { code?: string }).code === "23505") {
+        await logWebhookAttempt({
+          req, provider: "whop", path: "/api/webhooks/whop",
+          signatureValid: true, body: rawBody, result: "dup", eventId: f.paymentId,
+        });
         return NextResponse.json({ ok: true, duplicate: true });
       }
       Sentry.captureException(claimErr, { tags: { route: "webhooks/whop", step: "claim" } });
+      await logWebhookAttempt({
+        req, provider: "whop", path: "/api/webhooks/whop",
+        signatureValid: true, body: rawBody, result: "other_error",
+        error: `idempotency claim failed: ${claimErr.message?.slice(0, 150)}`,
+        eventId: f.paymentId,
+      });
+      await logPaymentEvent(sbLog, {
+        event: "grant_failed", email: f.email, paymentId: f.paymentId,
+        reason: "db_error", metadata: { step: "claim", event, ok: false },
+      });
       return NextResponse.json({ error: "DB error" }, { status: 500 });
     }
-    if (!claim) return NextResponse.json({ ok: true, duplicate: true });
+    if (!claim) {
+      await logWebhookAttempt({
+        req, provider: "whop", path: "/api/webhooks/whop",
+        signatureValid: true, body: rawBody, result: "dup", eventId: f.paymentId,
+      });
+      return NextResponse.json({ ok: true, duplicate: true });
+    }
 
     // Resolve tier: metadata.tier is PRIMARY (the v1 payment payload often
     // omits plan_id); plan-id → tier is only a fallback.
@@ -226,6 +339,32 @@ export async function POST(req: NextRequest) {
         tier,
         event,
       });
+      // FUNNEL + delivery truth: money signal received, but we could not tie it
+      // to a user OR a tier → manual grant needed. The most expensive silent
+      // failure; recorded loudly with the payment id as the grant key.
+      await logWebhookAttempt({
+        req, provider: "whop", path: "/api/webhooks/whop",
+        signatureValid: true, body: rawBody, result: "user_not_found",
+        eventId: f.paymentId,
+        error: `unmapped: user=${userId ?? "none"} tier=${tier ?? "none"}`,
+      });
+      await logPaymentEvent(sbLog, {
+        event: "grant_failed",
+        userId,
+        email: f.email,
+        tier: tier ?? null,
+        planId: f.planId,
+        paymentId: f.paymentId,
+        amountCents: f.amountCents,
+        currency: f.currency,
+        reason: "unmapped",
+        matched: Boolean(userId),
+        metadata: {
+          event,
+          ok: false,
+          missing: !userId && !tier ? "user_and_tier" : !userId ? "user" : "tier",
+        },
+      });
       return NextResponse.json(
         { ok: false, error: "unmapped — needs manual grant", payment_id: f.paymentId },
         { status: 200 }
@@ -250,6 +389,27 @@ export async function POST(req: NextRequest) {
       Sentry.captureException(subErr, {
         tags: { route: "webhooks/whop", step: "sub_insert" },
         extra: { userId, tier },
+      });
+      // FUNNEL: user + tier resolved, but the subscription INSERT failed — a
+      // paying buyer who did NOT get Pro. db_error, the loudest grant failure.
+      await logWebhookAttempt({
+        req, provider: "whop", path: "/api/webhooks/whop",
+        signatureValid: true, body: rawBody, result: "other_error",
+        eventId: f.paymentId,
+        error: `subscriptions insert failed: ${subErr.message?.slice(0, 150)}`,
+      });
+      await logPaymentEvent(sbLog, {
+        event: "grant_failed",
+        userId,
+        email: f.email,
+        tier,
+        planId: f.planId,
+        paymentId: f.paymentId,
+        amountCents: f.amountCents,
+        currency: f.currency,
+        reason: "db_error",
+        matched: true,
+        metadata: { step: "sub_insert", event, ok: false },
       });
       return NextResponse.json({ error: "DB insert failed" }, { status: 500 });
     }
@@ -276,9 +436,38 @@ export async function POST(req: NextRequest) {
       expires_at: expiresAt.toISOString(),
     });
 
+    // FUNNEL: the terminal success. Pro granted on a real card payment — the
+    // event /admin/payments leads with when the funnel completes end-to-end.
+    await logWebhookAttempt({
+      req, provider: "whop", path: "/api/webhooks/whop",
+      signatureValid: true, body: rawBody, result: "processed",
+      eventId: f.paymentId, subscriptionId: null,
+    });
+    await logPaymentEvent(sbLog, {
+      event: "grant_succeeded",
+      userId,
+      email: f.email,
+      tier,
+      planId: f.planId,
+      paymentId: f.paymentId,
+      amountCents: f.amountCents ?? TIERS[tier]?.priceCents ?? null,
+      currency: (f.currency || "eur").toUpperCase(),
+      matched: true,
+      metadata: { event, expires_at: expiresAt.toISOString(), ok: true },
+    });
+
     return NextResponse.json({ ok: true, activated: true, tier, expires_at: expiresAt.toISOString() });
   } catch (err) {
     Sentry.captureException(err, { tags: { route: "webhooks/whop", step: "unexpected" } });
+    // FUNNEL: an unexpected throw inside the grant try — record it so an
+    // exception mid-grant can't vanish into a 500 with no funnel trace.
+    await logPaymentEvent(sbLog, {
+      event: "grant_failed",
+      email: f.email,
+      paymentId: f.paymentId,
+      reason: "db_error",
+      metadata: { step: "unexpected", message: (err as Error)?.message?.slice(0, 200), ok: false },
+    });
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 }

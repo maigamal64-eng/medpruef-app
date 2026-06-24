@@ -33,7 +33,7 @@ export type WebhookAttemptResult =
 
 export interface LogWebhookAttemptArgs {
   req: NextRequest;
-  provider: "nowpayments" | "stripe" | "paddle";
+  provider: "nowpayments" | "whop" | "stripe" | "paddle";
   path: string;
   signatureHeader?: string | null;
   signatureValid?: boolean | null;
