@@ -24,6 +24,10 @@ type IntercomIdentity = {
   name?: string;
   email?: string;
   created_at?: number;
+  // Custom attributes for Outbound segmentation.
+  tier?: string;
+  active_exam?: string;
+  exam_date?: number;
 };
 
 // Lift the launcher ~88px so it stacks above the FeedbackWidget button.
@@ -66,6 +70,9 @@ export default function IntercomMessenger() {
               name: d.name,
               email: d.email,
               created_at: d.created_at,
+              tier: d.tier,
+              active_exam: d.active_exam,
+              exam_date: d.exam_date,
             });
           } else {
             boot();

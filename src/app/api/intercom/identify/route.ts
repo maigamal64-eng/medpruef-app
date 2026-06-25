@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
     const sb = getServiceClient();
     const { data: user, error } = await sb
       .from("users")
-      .select("id, email, first_name, last_name, created_at")
+      .select("id, email, first_name, last_name, created_at, tier, active_exam, exam_date")
       .eq("id", userId)
       .single();
 
@@ -43,6 +43,9 @@ export async function POST(req: NextRequest) {
     const created_at = user.created_at
       ? Math.floor(new Date(user.created_at).getTime() / 1000)
       : undefined;
+    const exam_date = user.exam_date
+      ? Math.floor(new Date(user.exam_date).getTime() / 1000)
+      : undefined;
 
     return NextResponse.json({
       ok: true,
@@ -51,6 +54,10 @@ export async function POST(req: NextRequest) {
       email: user.email ?? undefined,
       name: name || undefined,
       created_at,
+      // Custom attributes for Outbound segmentation (sent to the Messenger boot).
+      tier: user.tier ?? undefined,
+      active_exam: user.active_exam ?? undefined,
+      exam_date,
     });
   } catch (err) {
     console.error("[intercom/identify] error:", err);
