@@ -68,6 +68,19 @@ const PROCESSORS: Processor[] = [
     policyLabel: "openai.com/policies/privacy-policy",
   },
   {
+    name: "Intercom",
+    purpose: {
+      de: "Kunden-Support-Messenger und In-App-Nachrichten (Name, E-Mail, Konto-ID, Nachrichtenverlauf, Seitenaufrufe).",
+      en: "Customer-support messenger and in-app messaging (name, email, account ID, conversation history, page views).",
+    },
+    jurisdiction: {
+      de: "Intercom R&D Unlimited Company, Irland (EU); Muttergesellschaft Intercom, Inc., USA. SCCs in Kraft.",
+      en: "Intercom R&D Unlimited Company, Ireland (EU); parent Intercom, Inc., USA. SCCs in place.",
+    },
+    policyUrl: "https://www.intercom.com/legal/privacy",
+    policyLabel: "intercom.com/legal/privacy",
+  },
+  {
     name: "Anthropic",
     purpose: {
       de: "KI-gestützte Erklärungen und Übersetzungen (primäres Modell für /api/ai-chat und /api/translate).",

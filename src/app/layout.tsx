@@ -14,6 +14,7 @@ import EmailValidationModal from "@/components/EmailValidationModal";
 import CookieBannerMount from "@/components/CookieBannerMount";
 import ConsentGatedAnalytics from "@/components/ConsentGatedAnalytics";
 import ConsentGatedMetaPixel from "@/components/ConsentGatedMetaPixel";
+import IntercomMessenger from "@/components/IntercomMessenger";
 import OfflineIndicator from "@/components/OfflineIndicator";
 import TrackRouteChange from "@/components/TrackRouteChange";
 import SearchModalMount from "@/components/SearchModalMount";
@@ -394,6 +395,11 @@ export default function RootLayout({
                 cleanly when NEXT_PUBLIC_META_PIXEL_ID is unset (paid-ads
                 test dormant). See marketing/campaigns/paid-ads-setup-2026-06-24.md. */}
             <ConsentGatedMetaPixel />
+            {/* Intercom Messenger — ALWAYS-ON (not consent-gated, [name] 2026-06-25):
+                boots anonymous, upgrades to an identity-verified session for
+                logged-in users via /api/intercom/identify. No-ops when
+                NEXT_PUBLIC_INTERCOM_APP_ID is unset. */}
+            <IntercomMessenger />
             <OfflineIndicator />
             {children}
             {/* LegalFooter — slim Impressum/Datenschutz/AGB/Kontakt strip

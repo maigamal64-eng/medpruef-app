@@ -23,6 +23,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-06-25",
+    tag: "feature",
+    title: {
+      de: "Direkter Support-Chat ist da",
+      en: "Live support chat is here",
+    },
+    description: {
+      de: "Unten rechts findest du jetzt einen Chat. Stell uns deine Fragen zur Prüfung, zu deinem Konto oder zur Plattform direkt im Fenster. Bei eingeloggten Konten sehen wir deinen Verlauf geräteübergreifend, sodass du nicht alles neu erklären musst.",
+      en: "You will now find a chat at the bottom right. Ask us anything about the exam, your account, or the platform right in the window. For logged-in accounts we keep your conversation history across devices, so you never have to repeat yourself.",
+    },
+  },
+  {
     date: "2026-06-24",
     tag: "improvement",
     title: {
