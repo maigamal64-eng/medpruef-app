@@ -273,11 +273,276 @@ Bespoke SVG glyph set for the 8 MedPrüf rank tiers (resolves DD-04). Replaces t
 
 ---
 
+---
+
+## B.1 primitives (2026-06-25) — extracted, not yet adopted
+
+These 10 primitives were added in Phase B.1 of the UI/UX overhaul. They wrap
+existing CSS classes and fix known drift points (6-radius Options, 18 inline
+style blocks in flashcards, zero `.mp-*` classes in nav). No surface imports
+them yet — that is B.2/B.3/B.4.
+
+**Radius note:** `design-system/README.md` lists "8/10/14/20" but the live
+tokens in globals.css are `--mp-r-input:8, --mp-r-button:12, --mp-r-card:16,
+--mp-r-modal:20`. These primitives use the live tokens. The README doc/token
+mismatch should be reconciled in B.5.
+
+---
+
+### Button — `<Button>`
+
+Wraps `.mp-btn` + variant modifiers. Replaces all hand-rolled `mp-btn mp-btn--primary` class chains.
+
+```tsx
+<Button variant="primary" onClick={handleSubmit}>Weiter</Button>
+<Button variant="secondary" size="sm" onClick={cancel}>Abbrechen</Button>
+<Button variant="ghost" loading loadingLabel="Speichere...">Speichern</Button>
+<Button variant="destructive" disabled>Löschen</Button>
+```
+
+**Props:** `variant?` (`primary` | `secondary` | `success` | `ghost` | `destructive`, default `primary`), `size?` (`sm` | `md` | `lg`), `loading?`, `loadingLabel?`, `disabled?`, `className?`. Forwards all native button props. `forwardRef`.
+
+**Consuming surfaces:** everywhere `.mp-btn` appears. Highest concentration: QuestionCard (submit), Dialog footers, settings page.
+
+---
+
+### Card — `<Card>`
+
+Wraps `.mp-card` (+ `.mp-card--interactive` when `interactive`). Enforces the ONE canonical radius (`--mp-r-card`, 16px).
+
+```tsx
+<Card>
+  <p>Stat content</p>
+</Card>
+
+<Card interactive onClick={handleClick} role="button" tabIndex={0}>
+  Klickbare Karte
+</Card>
+```
+
+**Props:** `interactive?` (adds `.mp-card--interactive` hover/active), `className?`, all `HTMLDivElement` props. `forwardRef`.
+
+**Consuming surfaces:** stats page stat tiles, progress page sections, home page summary cards. B.3: QuestionCard's option-image wrapper.
+
+---
+
+### StatTile — `<StatTile>`
+
+Wraps `.mp-stat` + `__label` + `__value` + `__trend`. Replaces hand-rolled stat tiles on the stats page.
+
+```tsx
+<StatTile label="Fragen gesamt" value={420} />
+<StatTile
+  label="Genauigkeit"
+  value="87%"
+  trend={{ direction: "up", text: "+5% diese Woche" }}
+/>
+```
+
+**Props:** `label` (string), `value` (string | number), `trend?` (`{ direction: "up" | "down" | "neutral", text: string }`), `className?`.
+
+**Consuming surfaces:** `src/app/stats/page.tsx` stat row (currently hand-rolled flex).
+
+---
+
+### RankBadge — `<RankBadge>`
+
+Composes `<AchievementRank>` with an optional rank-name label. NOT a second `.mp-rank` glyph primitive — delegates rendering to AchievementRank.
+
+```tsx
+<RankBadge tier={3} showLabel />           // glyph + "PJ-Student" below
+<RankBadge tier={userTier} size="lg" />   // large chip, no label
+```
+
+**Props:** `tier` (1–8), `size?` (`sm`=28px | `md`=40px | `lg`=56px, default `md`), `showLabel?`, `className?`.
+
+**Consuming surfaces:** Sidebar user card, leaderboard rows, GamificationHero.
+
+---
+
+### Option — `<Option>`
+
+Quiz/flashcard answer button. One radius (`--mp-r-card`), one state machine, zero radius drift. Fixes the 6 mixed radii (`rounded`, `rounded-sm`, `rounded-lg`, `rounded-xl`, `rounded-2xl`, `rounded-full`) in QuestionCard.tsx.
+
+State machine (prop-driven — parent owns grading):
+
+| state | meaning |
+|-------|---------|
+| `idle` | pre-answer, not selected |
+| `selected` | pre-answer, user tapped this option |
+| `correct` | post-answer, this option is correct |
+| `wrong` | post-answer, selected but wrong |
+| `disabled` | post-answer, not selected, not correct |
+
+```tsx
+<Option
+  state={answered ? (opt.correct ? "correct" : selectedIdxs.has(idx) ? "wrong" : "disabled")
+                   : (selectedIdxs.has(idx) ? "selected" : "idle")}
+  letter={String.fromCharCode(65 + idx)}
+  onClick={() => handleSelect(idx)}
+>
+  {opt.text}
+</Option>
+
+// Multi-correct
+<Option state={...} multiSelect checked={selectedIdxs.has(idx)} letter="B">
+  {opt.text}
+</Option>
+```
+
+**Props:** `state?` (default `idle`), `letter?`, `multiSelect?`, `checked?`, `className?`, all button props. `forwardRef`.
+
+**Consuming surfaces:** `src/components/QuestionCard.tsx` option list (highest traffic), `src/app/flashcards/page.tsx`.
+
+**B.3 flag:** Option replaces `getOptionStyle()` + the inline option `<button>` in QuestionCard. Parent keeps grading state; Option is purely presentational.
+
+---
+
+### AnswerReveal — `<AnswerReveal>`
+
+Post-answer feedback strip. Reproduces the live `bg-[var(--mp-surface-sunken)] rounded-xl` styling with canonical radius token + a left accent stripe (teal for correct, error red for wrong).
+
+```tsx
+<AnswerReveal correct={wasCorrect}>
+  <p>{question.explanation}</p>
+</AnswerReveal>
+
+// With tab panel:
+<AnswerReveal correct={wasCorrect}>
+  <ContextTabs tabs={tabs} activeTab={activeTab} onTabChange={setTab} />
+  <div>{tabContent}</div>
+</AnswerReveal>
+```
+
+**Props:** `correct` (boolean), `className?`, `children?`. Includes `role="status"` + `aria-live="polite"`.
+
+**Consuming surfaces:** `src/components/QuestionCard.tsx` post-answer strip (line ~528).
+
+---
+
+### RatingButton — `<RatingButton>`
+
+Flashcard SM-2 confidence button. Eliminates 18 inline `style={{}}` blocks in `src/app/flashcards/page.tsx`. Intensity maps to token color:
+
+| intensity | rating | color |
+|-----------|--------|-------|
+| 0 | again | `--mp-warning` (orange) |
+| 1 | hard | `--mp-status-warning` (amber) |
+| 2 | good | `--mp-viridian` (green) |
+| 3 | easy | `--mp-cta-blue` (blue) |
+
+```tsx
+<RatingButton intensity={0} sublabel="< 10 min" onClick={() => rate("again")}>
+  Nochmal
+</RatingButton>
+<RatingButton intensity={2} sublabel="4 Tage" onClick={() => rate("good")}>
+  Gut
+</RatingButton>
+```
+
+**Props:** `intensity` (0|1|2|3, required), `sublabel?`, `className?`, all button props except `style`. `forwardRef`.
+
+**Consuming surfaces:** `src/app/flashcards/page.tsx` confidence row (lines 610–704).
+
+---
+
+### NavItem — `<NavItem>`
+
+Unified nav item for Sidebar and BottomNav. Eliminates the private `navLinkClass` / `navItemClass` functions. Two contexts:
+
+- `context="sidebar"` — dark rail, left accent stripe when active, collapsed/expanded.
+- `context="bottom"` — glass bar, vertical icon+label.
+
+```tsx
+// Sidebar (expanded)
+<NavItem context="sidebar" href="/quiz" icon={<FileText className="w-5 h-5" />}
+  label="Quiz" active />
+
+// Sidebar (collapsed rail)
+<NavItem context="sidebar" href="/quiz" icon={<FileText className="w-5 h-5" />}
+  label="Quiz" active collapsed />
+
+// Bottom nav
+<NavItem context="bottom" href="/exam" icon={<GraduationCap className="w-5 h-5" />}
+  label="Prüfung" active={pathname.startsWith("/exam")} />
+
+// With nudge dot
+<NavItem context="sidebar" href="/referrals" icon={<Gift className="w-5 h-5" />}
+  label="Empfehlungen" dot dotTooltip="Dein Code wartet." />
+```
+
+**Props:** `context` (`"sidebar"` | `"bottom"`), `href`, `icon`, `label`, `active?`, `collapsed?` (sidebar only), `dot?`, `dotTooltip?`, `className?`.
+
+**Consuming surfaces:** `src/components/Sidebar.tsx`, `src/components/BottomNav.tsx`.
+
+---
+
+### AppLayout — `<AppLayout>`
+
+Thin wrapper around the `.app-layout` CSS shell (`display:flex; min-height:100dvh`). Keeps surfaces from repeating `<div className="app-layout">`. Sidebar auto-hide (on /quiz and /exam) stays inside Sidebar.tsx until B.2 decides to centralize it.
+
+```tsx
+<AppLayout
+  sidebar={<Sidebar lang={lang} userId={userId} totalXp={xp} />}
+  bottomNav={<BottomNav lang={lang} userId={userId} />}
+>
+  <main className="main-content safe-area-top safe-area-bottom bg-[var(--mp-surface-sunken)]">
+    {children}
+  </main>
+</AppLayout>
+```
+
+**Props:** `sidebar?`, `bottomNav?`, `children`, `className?`.
+
+**Consuming surfaces:** every page that renders `<div className="app-layout">` (stats, progress, home, settings, quiz, exam, flashcards, curriculum). Migration in B.2.
+
+---
+
+### ContextTabs — `<ContextTabs>`
+
+Tabbed context panel with two visual variants:
+
+- `variant="underline"` (default) — the live Quiz-B underline style from QuestionCard. B.3 migration is zero visual diff.
+- `variant="pill"` — wraps `.mp-tabs` pill container. Use for secondary page-level navigation.
+
+**IMPORTANT for B.3:** do NOT assume underline vs pill are interchangeable. The live Quiz-B tabs are underline; applying `variant="pill"` in B.3 is a deliberate visual change that must be approved.
+
+```tsx
+type PostAnswerTab = "erklaerung" | "ki" | "notizen" | "uebersetzen" | "quelle"
+
+<ContextTabs
+  tabs={[
+    { id: "erklaerung", label: "Erklärung", icon: <Lightbulb className="w-3.5 h-3.5" /> },
+    { id: "ki", label: "KI-Erklärung", icon: <Bot className="w-3.5 h-3.5" />, isAction: true,
+      hint: "KI-Erklärung für jede Frage — kostenlos." },
+    { id: "notizen", label: "Notizen", icon: <FileText className="w-3.5 h-3.5" /> },
+    { id: "uebersetzen", label: "Übersetzen", icon: <Languages className="w-3.5 h-3.5" /> },
+    { id: "quelle", label: "Quelle", icon: <BookOpen className="w-3.5 h-3.5" /> },
+  ]}
+  activeTab={activeTab}
+  onTabChange={(id) => setActiveTab(id as PostAnswerTab)}
+  onTabAction={(id) => { if (id === "ki") setShowAIChat(true) }}
+  ariaLabel="Zusatzinformationen"
+>
+  <div>{tabPanelContent}</div>
+</ContextTabs>
+
+// Pill variant (page-level sub-nav):
+<ContextTabs variant="pill" tabs={sections} activeTab={section} onTabChange={setSection}>
+  {panelContent}
+</ContextTabs>
+```
+
+**Props:** `tabs` (required, array of `ContextTab<TId>`), `activeTab`, `onTabChange`, `onTabAction?`, `variant?` (`"underline"` | `"pill"`, default `"underline"`), `ariaLabel?`, `children?`, `className?`. Generic over `TId extends string`.
+
+**Consuming surfaces:** `src/components/QuestionCard.tsx` Quiz-B tab bar (lines 609–645). B.3 migration replaces the inline tab bar with this primitive.
+
+---
+
 ## What's NOT in here yet
 
 Tracked in `design-system/DESIGN-DEBT.md`:
 
-- `<Tabs>` — React wrapper around `.mp-tabs` (CSS works fine without a wrapper for simple cases)
 - `<Sparkline>` chart primitive (blocked on chart palette being tokenized)
 
-When you need one of these, add it here, follow the pattern from existing primitives (forwardRef if appropriate, a11y-first, docstring with usage example), and update this README.
+When you need a new primitive, add it here, follow the pattern from existing ones (forwardRef if appropriate, a11y-first, docstring with usage example), and update this README.

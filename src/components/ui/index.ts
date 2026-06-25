@@ -29,3 +29,31 @@ export {
   rankFromName,
   type RankTier,
 } from './AchievementRank'
+
+// ── B.1 primitive layer (2026-06-25) ──────────────────────────────────────
+// These 10 primitives wrap existing .mp-* CSS classes. No surface imports
+// them yet — adoption happens in B.2 (nav/layout), B.3 (question surfaces),
+// and B.4 (login + thin surfaces).
+
+export { Button, type ButtonProps, type ButtonVariant, type ButtonSize } from './Button'
+export { Card, type CardProps } from './Card'
+export { StatTile, type StatTileProps, type StatTileTrend } from './StatTile'
+export { RankBadge, type RankBadgeProps } from './RankBadge'
+export {
+  Option,
+  type OptionProps,
+  type OptionState,
+} from './Option'
+export { AnswerReveal, type AnswerRevealProps } from './AnswerReveal'
+export {
+  RatingButton,
+  type RatingButtonProps,
+  type RatingIntensity,
+} from './RatingButton'
+export { NavItem, type NavItemProps } from './NavItem'
+export { AppLayout, type AppLayoutProps } from './AppLayout'
+export {
+  ContextTabs,
+  type ContextTabsProps,
+  type ContextTab,
+} from './ContextTabs'
