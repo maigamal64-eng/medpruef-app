@@ -227,6 +227,7 @@ export default function QuestionActions({
           topic={question.topic}
           options={(question.options || []).map((o) => ({ text: o.text, correct: o.correct }))}
           userTier={userTier}
+          userRole={userRole}
         />
         <ReportQuestionModal
           open={showReport}

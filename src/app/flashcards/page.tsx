@@ -359,7 +359,7 @@ function Flashcard({
             {!hasExplanation && (
               <p className="mt-4 text-xs text-[var(--mp-fg-subtle)] text-center font-mono italic">
                 {lang === "de"
-                  ? "Keine Erklarung vorhanden"
+                  ? "Keine Erklärung vorhanden"
                   : "No explanation available"}
               </p>
             )}
