@@ -38,6 +38,18 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-06-25",
     tag: "feature",
     title: {
+      de: "Übungs-Bereitschaft: ein ehrliches Signal statt Prozentzahl",
+      en: "Practice readiness: an honest signal, not a percentage",
+    },
+    description: {
+      de: "Auf der Fortschritts-Seite siehst du jetzt, wie bereit deine Übung aussieht: Abdeckung, Genauigkeit, Beständigkeit und Tempo, plus einen Trend und einen konkreten Tipp, was als Nächstes am meisten hilft. Es ist bewusst keine Vorhersage deines Prüfungsergebnisses, sondern ein ehrlicher Blick auf deinen Übungsstand.",
+      en: "On the Progress page you now see how ready your practice looks: coverage, accuracy, consistency, and pace, plus a trend and one concrete tip on what helps most next. It is deliberately not a prediction of your exam result, just an honest read on where your practice stands.",
+    },
+  },
+  {
+    date: "2026-06-25",
+    tag: "feature",
+    title: {
       de: "Direkter Support-Chat ist da",
       en: "Live support chat is here",
     },

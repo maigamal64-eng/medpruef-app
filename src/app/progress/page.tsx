@@ -34,6 +34,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import TopicIcon from "@/components/TopicIcon";
+import ReadinessSignal from "@/components/ReadinessSignal";
 import {
   TrendingUp,
   Star,
@@ -1107,9 +1108,12 @@ export default function ProgressPage() {
             )}
           </section>
 
-          {/* ═══ EXAM READINESS (countdown + weak topics + CTAs) ═══ */}
+          {/* ═══ EXAM READINESS (banded signal + countdown + weak topics + CTAs) ═══ */}
           <section className="mp-card p-5 space-y-4">
             <h3 className="mp-h3">{t("exam_readiness", lang)}</h3>
+
+            {/* A.2 — honest banded readiness signal (server-computed; no pass-%) */}
+            <ReadinessSignal lang={lang} />
 
             {daysUntilExam !== null && (
               <div className="flex items-center gap-4 p-4 rounded-xl bg-[var(--mp-cta-blue)]/[0.04] border border-[var(--mp-cta-blue)]/10">
