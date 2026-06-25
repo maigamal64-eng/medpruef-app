@@ -39,9 +39,12 @@ import {
   CloudDownload,
   Crown,
   Database,
+  Eye,
+  EyeOff,
   Globe,
   Info,
   LogOut,
+  Mail,
   Moon,
   Shield,
   Sparkles,
@@ -766,6 +769,13 @@ export default function SettingsPage() {
                   </div>
                 )}
 
+                {/* Email-linking card — Telegram-only users (no email yet)
+                    Gated on: telegram_id present AND email null.
+                    Linking is additive — never disrupts the live Telegram session. */}
+                {user?.telegram_id && !user?.email && (
+                  <EmailLinkCard lang={lang} />
+                )}
+
                 {/* Current tier / active subscription
                     Three branches:
                       1. activeSub object → /api/user/subscription found
@@ -1064,6 +1074,169 @@ export default function SettingsPage() {
         </Alert>
       </Dialog>
     </AppLayout>
+  );
+}
+
+/* ═══════════════════════ EmailLinkCard ══════════════════════════ */
+
+/**
+ * Shown inside the Konto section for Telegram-only users (no email yet).
+ * Starts the email-linking flow by calling POST /api/user/link-email/start.
+ *
+ * Auth guardrails enforced server-side:
+ *   - requireUser on the start route (userId from signed session token)
+ *   - email collision → 409 rejected, never merges accounts
+ *   - session_invalidated_at is never touched: the live Telegram session
+ *     keeps working throughout and after the linking
+ *   - credentials committed to users only after verify confirms the email
+ */
+function EmailLinkCard({ lang }: { lang: Lang }) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [err, setErr] = useState("");
+  const toast = useToast();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSending(true);
+    setErr("");
+
+    let res: Response;
+    try {
+      res = await authFetch("/api/user/link-email/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password, lang }),
+      });
+    } catch {
+      setSending(false);
+      setErr(lang === "de" ? "Verbindungsfehler" : "Connection error");
+      return;
+    }
+
+    setSending(false);
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      if (res.status === 409 && data.error === "email_taken") {
+        setErr(
+          lang === "de"
+            ? "Diese E-Mail-Adresse ist bereits einem anderen Konto zugeordnet."
+            : "This email address is already linked to another account.",
+        );
+      } else if (res.status === 409) {
+        setErr(
+          lang === "de"
+            ? "Eine Bestätigungs-E-Mail wurde bereits gesendet. Bitte prüfen Sie Ihren Posteingang."
+            : "A verification email was already sent. Please check your inbox.",
+        );
+      } else {
+        setErr(data.message ?? (lang === "de" ? "Fehler. Bitte erneut versuchen." : "Error. Please try again."));
+      }
+      return;
+    }
+
+    setSent(true);
+    toast.success(
+      lang === "de" ? "Bestätigungs-E-Mail gesendet" : "Verification email sent",
+      lang === "de"
+        ? `Wir haben eine E-Mail an ${email} gesendet.`
+        : `We sent an email to ${email}.`,
+    );
+  };
+
+  if (sent) {
+    return (
+      <div className="p-4 rounded-[var(--mp-r-input)] bg-[var(--mp-success-bg)] border border-[rgba(0,123,95,0.2)]">
+        <p className="text-sm font-semibold text-[var(--mp-viridian)] mb-1">
+          {lang === "de" ? "Bestätigungs-E-Mail gesendet" : "Verification email sent"}
+        </p>
+        <p className="text-xs text-[var(--mp-fg-muted)]">
+          {lang === "de"
+            ? `Bitte öffnen Sie den Link in der E-Mail an ${email}, um die Verknüpfung abzuschließen.`
+            : `Please open the link in the email we sent to ${email} to complete the linking.`}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-4 rounded-[var(--mp-r-input)] bg-[var(--mp-surface-sunken)] border border-[var(--mp-border-subtle)]">
+      <div className="flex items-start gap-3 mb-4">
+        <div className="w-9 h-9 rounded-lg bg-[var(--mp-viridian)]/10 flex items-center justify-center flex-shrink-0">
+          <Mail className="w-4 h-4 text-[var(--mp-viridian)]" aria-hidden />
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-[var(--mp-fg)]">
+            {lang === "de" ? "E-Mail-Adresse hinzufügen" : "Add email address"}
+          </p>
+          <p className="text-xs text-[var(--mp-fg-subtle)] mt-0.5">
+            {lang === "de"
+              ? "Damit können Sie sich auch per E-Mail und Passwort anmelden. Ihre Telegram-Anmeldung bleibt aktiv."
+              : "This lets you also sign in with email and password. Your Telegram login stays active."}
+          </p>
+        </div>
+      </div>
+
+      {err && (
+        <div className="mb-3 text-xs text-[var(--mp-error)] bg-[var(--mp-error)]/10 border border-[var(--mp-error)]/20 rounded-lg px-3 py-2">
+          {err}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-3">
+        <TextField
+          label={lang === "de" ? "E-Mail-Adresse" : "Email address"}
+          type="email"
+          required
+          autoComplete="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="name@example.com"
+        />
+        <div className="relative">
+          <TextField
+            label={lang === "de" ? "Neues Passwort" : "New password"}
+            type={showPassword ? "text" : "password"}
+            required
+            minLength={8}
+            autoComplete="new-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder={lang === "de" ? "Min. 8 Zeichen" : "Min. 8 characters"}
+            helper={lang === "de" ? "Mindestens 8 Zeichen." : "At least 8 characters."}
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword((v) => !v)}
+            aria-label={showPassword
+              ? (lang === "de" ? "Passwort verbergen" : "Hide password")
+              : (lang === "de" ? "Passwort anzeigen" : "Show password")}
+            className="absolute right-3 top-[34px] text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg-muted)] transition-colors"
+          >
+            {showPassword ? (
+              <EyeOff className="w-4 h-4" />
+            ) : (
+              <Eye className="w-4 h-4" />
+            )}
+          </button>
+        </div>
+        <button
+          type="submit"
+          disabled={sending}
+          className="mp-btn mp-btn--primary w-full justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <Mail className="w-4 h-4" aria-hidden />
+          {sending
+            ? (lang === "de" ? "Sende E-Mail..." : "Sending email...")
+            : (lang === "de" ? "Bestätigungs-E-Mail senden" : "Send verification email")}
+        </button>
+      </form>
+    </div>
   );
 }
 

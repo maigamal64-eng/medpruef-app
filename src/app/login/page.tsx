@@ -8,12 +8,12 @@ import { trackRegistration } from "@/lib/conversion-events";
 import { BrandedLoader } from "@/components/Logo";
 import { TextField } from "@/components/ui";
 import ThemeToggle from "@/components/ThemeToggle";
+import { QUESTIONS } from "@/lib/content-truth";
 import {
   ArrowLeft,
   Shield,
   Zap,
   BookOpen,
-  ChevronDown,
   Eye,
   EyeOff,
 } from "lucide-react";
@@ -76,7 +76,6 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [mode, setMode] = useState<AuthMode>("login");
   const [showPassword, setShowPassword] = useState(false);
-  const [emailOpen, setEmailOpen] = useState(false);
 
   // Form fields
   const [email, setEmail] = useState("");
@@ -94,6 +93,7 @@ export default function LoginPage() {
     // claim on mount.
     try {
       const params = new URLSearchParams(window.location.search);
+
       const ref = params.get("ref");
       if (ref) {
         const normalized = ref
@@ -103,6 +103,12 @@ export default function LoginPage() {
         if (normalized.length >= 4 && normalized.length <= 16) {
           localStorage.setItem(REF_CODE_KEY, normalized);
         }
+      }
+
+      // ?mode=register: pre-select the register tab so the guest-funnel
+      // deep-link lands on the correct form instead of dead-ending.
+      if (params.get("mode") === "register") {
+        setMode("register");
       }
     } catch {
       // localStorage may be blocked in private mode — non-fatal.
@@ -144,7 +150,9 @@ export default function LoginPage() {
             "Invalid credentials": "E-Mail oder Passwort falsch",
             "Email already registered": "E-Mail bereits registriert",
             "Password must be at least 6 characters":
-              "Passwort muss mindestens 6 Zeichen lang sein",
+              "Passwort muss mindestens 8 Zeichen lang sein",
+            "Password must be at least 8 characters":
+              "Passwort muss mindestens 8 Zeichen lang sein",
             "This account uses Telegram login":
               "Dieses Konto verwendet Telegram-Login",
           },
@@ -252,7 +260,7 @@ export default function LoginPage() {
             <p className="text-sm text-[var(--mp-fg-subtle)]">{tagline}</p>
           </div>
 
-          {/* Auth card — Telegram-primary */}
+          {/* Auth card — email-primary (B.4 login cleanup 2026-06-26) */}
           <div className="card rounded-2xl p-6 space-y-4">
             {error && (
               <div className="bg-[var(--mp-error)]/10 border border-[var(--mp-error)]/25 text-[var(--mp-error)] text-sm rounded-xl px-4 py-3 text-center animate-fade-in">
@@ -260,16 +268,151 @@ export default function LoginPage() {
               </div>
             )}
 
-            {/* PRIMARY CTA: Telegram deep-link (lang-suffixed for F10 fix) */}
+            {/* Login / Register segmented control */}
+            <div className="mp-tabs w-full" role="tablist" aria-label={lang === "de" ? "E-Mail-Anmeldung oder Registrierung" : "Email sign-in or register"}>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={mode === "login"}
+                className={`mp-tabs__tab flex-1 ${
+                  mode === "login" ? "mp-tabs__tab--active" : ""
+                }`}
+                onClick={() => {
+                  setMode("login");
+                  setError("");
+                }}
+              >
+                {lang === "de" ? "Anmelden" : "Sign in"}
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={mode === "register"}
+                className={`mp-tabs__tab flex-1 ${
+                  mode === "register" ? "mp-tabs__tab--active" : ""
+                }`}
+                onClick={() => {
+                  setMode("register");
+                  setError("");
+                }}
+              >
+                {lang === "de" ? "Registrieren" : "Register"}
+              </button>
+            </div>
+
+            {/* PRIMARY: Email/Password form — always visible */}
+            <form onSubmit={handleEmailAuth} className="space-y-3">
+              {mode === "register" && (
+                <div className="grid grid-cols-2 gap-3">
+                  <TextField
+                    label={lang === "de" ? "Vorname" : "First name"}
+                    type="text"
+                    required
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    placeholder={lang === "de" ? "Vorname" : "First name"}
+                  />
+                  <TextField
+                    label={lang === "de" ? "Nachname" : "Last name"}
+                    type="text"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    placeholder={lang === "de" ? "Nachname" : "Last name"}
+                  />
+                </div>
+              )}
+
+              <TextField
+                label={lang === "de" ? "E-Mail" : "Email"}
+                type="email"
+                required
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="name@example.com"
+              />
+
+              <div className="relative">
+                <TextField
+                  label={lang === "de" ? "Passwort" : "Password"}
+                  type={showPassword ? "text" : "password"}
+                  required
+                  minLength={8}
+                  autoComplete={
+                    mode === "login" ? "current-password" : "new-password"
+                  }
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder={
+                    mode === "register"
+                      ? lang === "de"
+                        ? "Min. 8 Zeichen"
+                        : "Min. 8 characters"
+                      : "••••••••"
+                  }
+                  helper={
+                    mode === "register"
+                      ? lang === "de"
+                        ? "Mindestens 8 Zeichen."
+                        : "At least 8 characters."
+                      : undefined
+                  }
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={
+                    showPassword
+                      ? lang === "de"
+                        ? "Passwort verbergen"
+                        : "Hide password"
+                      : lang === "de"
+                      ? "Passwort anzeigen"
+                      : "Show password"
+                  }
+                  className="absolute right-3 top-[34px] text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg-muted)] transition-colors"
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
+                </button>
+              </div>
+
+              <button
+                type="submit"
+                className="mp-btn mp-btn--primary w-full justify-center"
+              >
+                {mode === "login"
+                  ? lang === "de"
+                    ? "Mit E-Mail anmelden"
+                    : "Sign in with email"
+                  : lang === "de"
+                  ? "Konto erstellen"
+                  : "Create account"}
+              </button>
+            </form>
+
+            {/* Divider */}
+            <div className="flex items-center gap-3" aria-hidden="true">
+              <span className="flex-1 h-px bg-[var(--mp-border)]" />
+              <span className="text-xs text-[var(--mp-fg-subtle)]">
+                {lang === "de" ? "oder" : "or"}
+              </span>
+              <span className="flex-1 h-px bg-[var(--mp-border)]" />
+            </div>
+
+            {/* SECONDARY: Telegram deep-link — kept fully working, visually demoted */}
             <a
               href={getTelegramDeepLink(lang)}
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full flex items-center justify-center gap-3 bg-[#229ED9] hover:bg-[#1e8fc0] text-white px-5 py-4 rounded-xl font-semibold text-[15px] transition-all active:scale-[0.98] shadow-sm"
+              className="w-full flex items-center justify-center gap-2.5 mp-btn mp-btn--ghost text-[var(--mp-fg-muted)] hover:text-[var(--mp-fg)]"
             >
               <svg
                 viewBox="0 0 24 24"
-                className="w-6 h-6 fill-current"
+                className="w-5 h-5 fill-[#229ED9]"
                 aria-hidden="true"
               >
                 <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.12l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.833.941z" />
@@ -279,169 +422,12 @@ export default function LoginPage() {
                 : "Continue with Telegram"}
             </a>
 
+            {/* Telegram disclosure — Sie form (new security surface, first-touch) */}
             <p className="text-center text-xs text-[var(--mp-fg-subtle)] leading-snug">
               {lang === "de"
-                ? "Schnell, ohne Passwort. Wir nutzen deinen Telegram-Namen und dein Profilbild."
-                : "Fast, no password. We use your Telegram name and photo."}
+                ? "Telegram-Anmeldung: schnell, ohne Passwort. Wir verwenden Ihren Telegram-Namen und Ihr Profilbild."
+                : "Telegram sign-in: fast, no password. We use your Telegram name and profile photo."}
             </p>
-
-            {/* Email disclosure */}
-            <button
-              type="button"
-              onClick={() => {
-                setEmailOpen((v) => !v);
-                setError("");
-              }}
-              aria-expanded={emailOpen}
-              aria-controls="email-auth-panel"
-              className="w-full flex items-center justify-center gap-2 text-sm text-[var(--mp-fg-muted)] hover:text-[var(--mp-fg)] transition-colors py-2"
-            >
-              <span className="flex-1 h-px bg-[var(--mp-border)]" aria-hidden />
-              <span className="whitespace-nowrap">
-                {lang === "de" ? "oder mit E-Mail" : "or continue with email"}
-                <ChevronDown
-                  className={`inline w-4 h-4 ml-1 transition-transform ${
-                    emailOpen ? "rotate-180" : ""
-                  }`}
-                  aria-hidden
-                />
-              </span>
-              <span className="flex-1 h-px bg-[var(--mp-border)]" aria-hidden />
-            </button>
-
-            {/* Email/Password Form — collapsed by default */}
-            {emailOpen && (
-              <div id="email-auth-panel" className="pt-1 space-y-4 animate-fade-in">
-                {/* Login / Register segmented control */}
-                <div className="mp-tabs w-full" role="tablist" aria-label={lang === "de" ? "E-Mail-Anmeldung oder Registrierung" : "Email sign-in or register"}>
-                  <button
-                    type="button"
-                    role="tab"
-                    aria-selected={mode === "login"}
-                    className={`mp-tabs__tab flex-1 ${
-                      mode === "login" ? "mp-tabs__tab--active" : ""
-                    }`}
-                    onClick={() => {
-                      setMode("login");
-                      setError("");
-                    }}
-                  >
-                    {lang === "de" ? "Anmelden" : "Sign in"}
-                  </button>
-                  <button
-                    type="button"
-                    role="tab"
-                    aria-selected={mode === "register"}
-                    className={`mp-tabs__tab flex-1 ${
-                      mode === "register" ? "mp-tabs__tab--active" : ""
-                    }`}
-                    onClick={() => {
-                      setMode("register");
-                      setError("");
-                    }}
-                  >
-                    {lang === "de" ? "Registrieren" : "Register"}
-                  </button>
-                </div>
-
-                <form onSubmit={handleEmailAuth} className="space-y-3">
-                  {mode === "register" && (
-                    <div className="grid grid-cols-2 gap-3">
-                      <TextField
-                        label={lang === "de" ? "Vorname" : "First name"}
-                        type="text"
-                        required
-                        value={firstName}
-                        onChange={(e) => setFirstName(e.target.value)}
-                        placeholder={
-                          lang === "de" ? "Vorname" : "First name"
-                        }
-                      />
-                      <TextField
-                        label={lang === "de" ? "Nachname" : "Last name"}
-                        type="text"
-                        value={lastName}
-                        onChange={(e) => setLastName(e.target.value)}
-                        placeholder={
-                          lang === "de" ? "Nachname" : "Last name"
-                        }
-                      />
-                    </div>
-                  )}
-
-                  <TextField
-                    label={lang === "de" ? "E-Mail" : "Email"}
-                    type="email"
-                    required
-                    autoComplete="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="name@example.com"
-                  />
-
-                  <div className="relative">
-                    <TextField
-                      label={lang === "de" ? "Passwort" : "Password"}
-                      type={showPassword ? "text" : "password"}
-                      required
-                      minLength={6}
-                      autoComplete={
-                        mode === "login" ? "current-password" : "new-password"
-                      }
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder={
-                        mode === "register"
-                          ? lang === "de"
-                            ? "Min. 6 Zeichen"
-                            : "Min. 6 characters"
-                          : "••••••••"
-                      }
-                      helper={
-                        mode === "register"
-                          ? lang === "de"
-                            ? "Mindestens 6 Zeichen."
-                            : "At least 6 characters."
-                          : undefined
-                      }
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword((v) => !v)}
-                      aria-label={
-                        showPassword
-                          ? lang === "de"
-                            ? "Passwort verbergen"
-                            : "Hide password"
-                          : lang === "de"
-                          ? "Passwort anzeigen"
-                          : "Show password"
-                      }
-                      className="absolute right-3 top-[34px] text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg-muted)] transition-colors"
-                    >
-                      {showPassword ? (
-                        <EyeOff className="w-4 h-4" />
-                      ) : (
-                        <Eye className="w-4 h-4" />
-                      )}
-                    </button>
-                  </div>
-
-                  <button
-                    type="submit"
-                    className="mp-btn mp-btn--secondary w-full justify-center"
-                  >
-                    {mode === "login"
-                      ? lang === "de"
-                        ? "Mit E-Mail anmelden"
-                        : "Sign in with email"
-                      : lang === "de"
-                      ? "Konto erstellen"
-                      : "Create account"}
-                  </button>
-                </form>
-              </div>
-            )}
           </div>
 
           {/* Benefits */}
@@ -451,7 +437,7 @@ export default function LoginPage() {
                 <BookOpen className="w-5 h-5 text-[var(--mp-viridian)]" />
               </div>
               <p className="text-[11px] text-[var(--mp-fg-muted)] font-medium">
-                10.000+ {lang === "de" ? "Fragen" : "Questions"}
+                {QUESTIONS.total.toLocaleString(lang === "de" ? "de-AT" : "en-GB")}+ {lang === "de" ? "Fragen" : "Questions"}
               </p>
             </div>
             <div className="text-center">

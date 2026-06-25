@@ -23,6 +23,30 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-06-26",
+    tag: "feature",
+    title: {
+      de: "E-Mail-Adresse zum Konto hinzufügen",
+      en: "Add email address to account",
+    },
+    description: {
+      de: "Nutzer, die sich über Telegram angemeldet haben, können jetzt in den Einstellungen eine E-Mail-Adresse und ein Passwort hinzufügen. Die Telegram-Anmeldung bleibt dabei aktiv. Die E-Mail wird per Bestätigungslink verifiziert, bevor sie gespeichert wird.",
+      en: "Users who signed in via Telegram can now add an email address and password in Settings. Telegram login stays active. The email is verified via a one-time confirmation link before being saved.",
+    },
+  },
+  {
+    date: "2026-06-26",
+    tag: "improvement",
+    title: {
+      de: "Anmeldeseite: E-Mail als primäre Option",
+      en: "Login page: email as primary option",
+    },
+    description: {
+      de: "Die Anmeldung per E-Mail und Passwort ist jetzt die primäre Option auf der Anmeldeseite. Telegram-Anmeldung bleibt vollständig verfügbar, ist aber als sekundäre Option dargestellt. Die Fragenanzahl wird jetzt aus der zentralen content-truth.ts bezogen.",
+      en: "Email and password sign-in is now the primary option on the login page. Telegram login remains fully available but is shown as a secondary option. The question count is now sourced from the central content-truth.ts.",
+    },
+  },
+  {
     date: "2026-06-25",
     tag: "feature",
     title: {
