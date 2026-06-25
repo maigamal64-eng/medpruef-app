@@ -211,7 +211,7 @@ export function AchievementRank({
     borderRadius: radius,
     background:
       'linear-gradient(135deg, var(--mp-oxford-blue, #001B3D) 0%, var(--mp-cta-blue, #003A8C) 100%)',
-    color: '#FFFFFF',
+    color: 'white',
     flexShrink: 0,
   }
 

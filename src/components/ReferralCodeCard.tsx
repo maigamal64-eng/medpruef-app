@@ -230,7 +230,7 @@ export default function ReferralCodeCard({
           className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
           style={{
             background: "var(--mp-viridian)",
-            color: "#FFFFFF",
+            color: "white",
             boxShadow: "var(--mp-shadow-xs)",
           }}
           aria-hidden

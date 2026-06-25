@@ -581,7 +581,7 @@ export default function UserSurveyModal() {
                 className="absolute w-2 h-2 rounded-full mp-confetti-particle"
                 aria-hidden
                 style={{
-                  backgroundColor: ['#007B5F', '#D68A3A', '#003A8C', '#00A896', '#D64545'][i % 5],
+                  backgroundColor: ['var(--mp-viridian)', 'var(--mp-status-warning)', 'var(--mp-cta-blue)', 'var(--mp-accent-teal)', 'var(--mp-error)'][i % 5],
                   top: '50%',
                   left: '50%',
                   animationDelay: `${i * 0.04}s`,

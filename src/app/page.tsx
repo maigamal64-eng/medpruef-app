@@ -882,7 +882,7 @@ export default function Home() {
           >
             <div
               className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
-              style={{ background: "var(--mp-viridian)", color: "#FFFFFF", boxShadow: "var(--mp-shadow-xs)" }}
+              style={{ background: "var(--mp-viridian)", color: "white", boxShadow: "var(--mp-shadow-xs)" }}
               aria-hidden
             >
               <CalendarDays className="w-6 h-6" />

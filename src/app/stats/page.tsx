@@ -14,6 +14,7 @@ import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import TopicIcon from "@/components/TopicIcon";
 import { BarChart3, Flame, GraduationCap, Trophy, X } from "lucide-react";
+import { Card } from "@/components/ui";
 
 type Lang = "de" | "en";
 
@@ -246,34 +247,34 @@ function StatsContent() {
               warm orange (not red — streak is celebratory), accuracy
               viridian. Rank gets viridian too since it's a milestone. */}
           <div className="grid grid-cols-2 gap-3 stagger">
-            <div className="card rounded-2xl p-6 text-center">
+            <Card className="p-6 text-center">
               <div className="text-4xl font-black font-mono font-display tracking-tight text-[var(--mp-status-warning)] tabular-nums">{gam?.total_xp || 0}</div>
               <div className="mp-caption text-[var(--mp-fg-muted)] font-semibold mt-1.5">{t("total_xp", lang)}</div>
-            </div>
-            <div className="card rounded-2xl p-6 text-center">
+            </Card>
+            <Card className="p-6 text-center">
               <div className="text-4xl font-black font-mono font-display tracking-tight text-[var(--mp-viridian)] tabular-nums">Lv.{xpInfo.level}</div>
               <div className="mp-caption text-[var(--mp-fg-muted)] font-semibold mt-1.5">{xpInfo.rank}</div>
-            </div>
-            <div className="card rounded-2xl p-6 text-center">
+            </Card>
+            <Card className="p-6 text-center">
               <div className="text-4xl font-black font-mono font-display tracking-tight text-[var(--mp-warning,#F4A261)] flex items-center justify-center gap-1.5 tabular-nums"><Flame className="w-6 h-6" /> {gam?.current_streak || 0}</div>
               <div className="mp-caption text-[var(--mp-fg-muted)] font-semibold mt-1.5">{t("current_streak", lang)}</div>
-            </div>
-            <div className="card rounded-2xl p-6 text-center">
+            </Card>
+            <Card className="p-6 text-center">
               <div className="text-4xl font-black font-mono font-display tracking-tight text-[var(--mp-viridian)] tabular-nums">{accuracy}%</div>
               <div className="mp-caption text-[var(--mp-fg-muted)] font-semibold mt-1.5">{t("accuracy", lang)}</div>
-            </div>
+            </Card>
           </div>
 
           {/* Summary row */}
-          <div className="card rounded-2xl p-6 space-y-2.5">
+          <Card className="p-6 space-y-2.5">
             <StatRow label={t("total_answered", lang)} value={String(gam?.total_questions_answered || 0)} valueClass="text-[var(--mp-fg)]" />
             <StatRow label={t("correct", lang)} value={String(gam?.total_correct || 0)} valueClass="text-[var(--mp-accent-teal)]" />
             <StatRow label={t("longest_streak", lang)} value={`${gam?.longest_streak || 0} ${t("days", lang)}`} valueClass="text-[var(--mp-fg)]" />
             <StatRow label={t("study_time_est", lang)} value={formatStudyTime(studyMinutes)} valueClass="text-[var(--mp-viridian)]" />
-          </div>
+          </Card>
 
           {/* Overall progress */}
-          <div className="card rounded-2xl p-6">
+          <Card className="p-6">
             <div className="flex items-center justify-between mb-3">
               <span className="text-sm font-semibold text-[var(--mp-fg)]">{t("completion_pct", lang)}</span>
               <span className="text-sm font-bold font-mono text-[var(--mp-viridian)]">{overallCompletion}%</span>
@@ -287,11 +288,11 @@ function StatsContent() {
             <p className="text-[10px] text-[var(--mp-fg-subtle)] font-mono">
               {gam?.total_questions_answered || 0} / {TOTAL_AVAILABLE.toLocaleString("de-DE")} {t("questions", lang)}
             </p>
-          </div>
+          </Card>
 
           {/* Daily goal */}
           {gam?.daily_questions_today !== undefined && (
-            <div className="card rounded-2xl p-6">
+            <Card className="p-6">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-sm font-semibold text-[var(--mp-fg)]">
                   {lang === "de" ? "Tagesziel (heute)" : "Daily Goal (today)"}
@@ -305,11 +306,11 @@ function StatsContent() {
                   className="h-full rounded-full transition-all"
                   style={{
                     width: `${Math.min(100, Math.round((gam.daily_questions_today / 20) * 100))}%`,
-                    backgroundColor: gam.daily_questions_today >= 20 ? "#00A896" : "#D68A3A",
+                    backgroundColor: gam.daily_questions_today >= 20 ? "var(--mp-viridian)" : "var(--mp-status-warning)",
                   }}
                 />
               </div>
-            </div>
+            </Card>
           )}
 
           {/* Per-specialty accuracy — rendered as Strengths vs Focus
@@ -336,7 +337,7 @@ function StatsContent() {
             const renderRow = ({ topic, total, correct, acc }: typeof withAcc[number]) => {
               const config = getTopicConfig(topic);
               return (
-                <div key={topic} className="card rounded-xl p-4">
+                <Card key={topic} className="p-4">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2 min-w-0">
                       <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: config.color }} />
@@ -370,7 +371,7 @@ function StatsContent() {
                       {correct}/{total}
                     </span>
                   </div>
-                </div>
+                </Card>
               );
             };
 
@@ -428,7 +429,7 @@ function StatsContent() {
                 const total = TOPIC_TOTALS[topic] || 0;
                 const pct = total > 0 ? Math.min(100, Math.round((answered / total) * 100)) : 0;
                 return (
-                  <div key={topic} className="card p-3">
+                  <Card key={topic} className="p-3">
                     <div className="flex items-center justify-between mb-1.5">
                       <div className="flex items-center gap-2">
                         <TopicIcon name={config.icon} className="w-4 h-4" />
@@ -449,7 +450,7 @@ function StatsContent() {
                       </div>
                       <span className="text-[10px] text-[var(--mp-fg-subtle)] font-mono w-8 text-right">{pct}%</span>
                     </div>
-                  </div>
+                  </Card>
                 );
               })}
             </div>

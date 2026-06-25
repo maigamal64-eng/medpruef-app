@@ -167,7 +167,7 @@ export default function GamificationHero({
           style={{
             background: "rgba(244,162,97,0.22)",
             border: "1px solid rgba(244,162,97,0.4)",
-            color: "#FBD38D",
+            color: "var(--mp-gamif-xp)",
           }}
           aria-label={`${streak} ${lang === "de" ? "Tage Streak" : "day streak"}`}
         >
@@ -256,7 +256,7 @@ export default function GamificationHero({
                 <span className="inline-flex items-center gap-1.5">
                   <span
                     className="inline-block w-1.5 h-1.5 rounded-full"
-                    style={{ background: "#00A896" }}
+                    style={{ background: "var(--mp-viridian)" }}
                     aria-hidden
                   />
                   <span className="font-bold text-white">{Math.round(accuracy!)}%</span>

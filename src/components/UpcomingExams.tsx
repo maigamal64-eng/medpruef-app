@@ -118,7 +118,7 @@ function ExamCard({
             className="text-xs font-semibold tabular-nums whitespace-nowrap rounded-full px-2.5 py-1 flex-shrink-0"
             style={{
               background: "var(--mp-cta-blue)",
-              color: "#fff",
+              color: "white",
             }}
           >
             {`${days} ${dayWord}`}

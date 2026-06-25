@@ -1030,7 +1030,7 @@ function ExamContent() {
                             className="h-full rounded-full transition-all"
                             style={{
                               width: `${pct}%`,
-                              backgroundColor: topicPassed ? "#00A896" : pct >= 40 ? "#D68A3A" : "#D64545",
+                              backgroundColor: topicPassed ? "var(--mp-viridian)" : pct >= 40 ? "var(--mp-status-warning)" : "var(--mp-error)",
                             }}
                           />
                         </div>

@@ -1076,7 +1076,7 @@ function QuizSharePrompt({ lang }: { lang: Lang }) {
     >
       <div
         className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
-        style={{ background: "var(--mp-viridian)", color: "#FFFFFF" }}
+        style={{ background: "var(--mp-viridian)", color: "white" }}
         aria-hidden
       >
         <Gift className="w-4 h-4" />

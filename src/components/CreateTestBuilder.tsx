@@ -22,7 +22,6 @@ import {
   Bookmark,
   XCircle,
   Eye,
-  MinusCircle,
   GraduationCap,
   Flame,
   Calendar,
@@ -405,32 +404,6 @@ export default function CreateTestBuilder({ lang, examSource, onStart, onCancel 
                 );
               })}
 
-              {/* Omitted — disabled (no skip tracking in DB) */}
-              <button
-                type="button"
-                disabled
-                title={
-                  de
-                    ? "Noch nicht verfügbar: Es werden keine übersprungenen Fragen gespeichert."
-                    : "Not yet available: skipped questions are not tracked."
-                }
-                className="flex items-start gap-3 p-3 rounded-xl border border-[var(--mp-border)] text-left opacity-40 cursor-not-allowed"
-              >
-                <MinusCircle className="w-4 h-4 text-[var(--mp-fg-subtle)] mt-0.5 flex-shrink-0" />
-                <span className="flex-1 min-w-0">
-                  <span className="flex items-center gap-1.5">
-                    <span className="text-xs font-semibold text-[var(--mp-fg-muted)]">
-                      {de ? "Übersprungen" : "Omitted"}
-                    </span>
-                    <Info className="w-3 h-3 text-[var(--mp-fg-subtle)]" />
-                  </span>
-                  <span className="text-[10px] text-[var(--mp-fg-subtle)] leading-tight block mt-0.5">
-                    {de
-                      ? "Bald verfügbar"
-                      : "Coming soon"}
-                  </span>
-                </span>
-              </button>
             </div>
 
             {/* Bookmarks empty-state warning */}
