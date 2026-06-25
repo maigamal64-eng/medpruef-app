@@ -244,15 +244,21 @@ export async function POST(req: NextRequest) {
 
   // ──────────────────────────────────────────────────────────────────
   // Body parsing + sanitization.
+  // `system` is intentionally NOT accepted from the client — the output
+  // is cached globally and served free to all users, so a client-supplied
+  // prompt is a cache-poisoning vector. Context is built server-side from
+  // the question row fetched by questionId below.
   // ──────────────────────────────────────────────────────────────────
-  let parsed: { messages?: unknown; questionId?: unknown; regenerate?: unknown };
+  let parsed: { messages?: unknown; questionId?: unknown; regenerate?: unknown; lang?: unknown };
   try {
     parsed = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
-  const { messages, questionId, regenerate } = parsed;
+  const { messages, questionId, regenerate, lang } = parsed;
   const forceRegenerate = regenerate === true;
+  // Accept "de" or "en"; default to German.
+  const responseLang: "de" | "en" = lang === "en" ? "en" : "de";
 
   if (!Array.isArray(messages) || messages.length === 0) {
     return NextResponse.json({ error: "messages[] required" }, { status: 400 });
@@ -287,6 +293,84 @@ export async function POST(req: NextRequest) {
     typeof questionId === "number" && Number.isInteger(questionId) && questionId > 0
       ? questionId
       : null;
+
+  // ──────────────────────────────────────────────────────────────────
+  // Fetch question context server-side (fix 4A).
+  //
+  // When questionId is present, fetch the full row BEFORE the upstream
+  // provider calls so we can build an accurate system prompt. We also
+  // cache the fetched `ai_explanation` value here so the cache-write
+  // block below can reuse it without a second round-trip.
+  //
+  // Shape of `choices` JSONB is `{ text: string; correct: boolean }[]`
+  // (StoredChoice from src/lib/mcq.ts — same as the client's options prop).
+  // ──────────────────────────────────────────────────────────────────
+  type QuestionRow = {
+    question: string | null;
+    answer: string | null;
+    explanation: string | null;
+    topic: string | null;
+    choices: { text: string; correct: boolean }[] | null;
+    ai_explanation: string | null;
+  };
+  let questionRow: QuestionRow | null = null;
+  if (qidNum) {
+    try {
+      const db = getServiceClient();
+      const { data } = await db
+        .from("questions")
+        .select("question, answer, explanation, topic, choices, ai_explanation")
+        .eq("id", qidNum)
+        .maybeSingle();
+      questionRow = data as QuestionRow | null;
+    } catch (err) {
+      captureServerError(err, {
+        route: "/api/ai-chat",
+        userId,
+        phase: "question-fetch",
+        questionId: qidNum,
+      });
+      // Non-fatal: fall back to bare SYSTEM_PROMPT below.
+    }
+  }
+
+  // Build the composed system prompt from the fetched row. When no row is
+  // available (no questionId, fetch error, or missing row) we fall back to
+  // the bare SYSTEM_PROMPT so existing behaviour for question-less calls is
+  // unchanged.
+  function buildComposedPrompt(row: QuestionRow | null): string {
+    if (!row || !row.question) return SYSTEM_PROMPT;
+
+    const lines: string[] = [
+      SYSTEM_PROMPT,
+      "",
+      "--- QUESTION CONTEXT (use this; do not ask the user for it) ---",
+    ];
+    if (row.topic) lines.push(`TOPIC: ${row.topic}`);
+    lines.push(`QUESTION: ${row.question}`);
+
+    const choices = row.choices;
+    if (Array.isArray(choices) && choices.length > 0) {
+      lines.push("OPTIONS:");
+      choices.forEach((c, i) => {
+        const letter = String.fromCharCode(65 + i); // A, B, C, …
+        lines.push(`${letter}. ${c.text}${c.correct ? " (CORRECT)" : ""}`);
+      });
+    }
+
+    if (row.answer) lines.push(`CORRECT ANSWER: ${row.answer}`);
+    if (row.explanation && row.explanation.trim().length > 0) {
+      lines.push(`STATIC EXPLANATION: ${row.explanation}`);
+    }
+
+    lines.push(
+      responseLang === "en" ? "Respond in English." : "Respond in German.",
+    );
+
+    return lines.join("\n");
+  }
+
+  const composedSystemPrompt = buildComposedPrompt(questionRow);
 
   async function fetchWithTimeout(url: string, init: RequestInit): Promise<Response | null> {
     const controller = new AbortController();
@@ -352,7 +436,7 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({
         model: anthropicModel,
         max_tokens: 1024,
-        system: SYSTEM_PROMPT,
+        system: composedSystemPrompt,
         messages: sanitized,
       }),
     });
@@ -397,7 +481,7 @@ export async function POST(req: NextRequest) {
         body: JSON.stringify({
           model: openaiModel,
           max_tokens: 1024,
-          messages: [{ role: "system", content: SYSTEM_PROMPT }, ...sanitized],
+          messages: [{ role: "system", content: composedSystemPrompt }, ...sanitized],
         }),
       });
       if (response?.ok) {
@@ -482,12 +566,20 @@ export async function POST(req: NextRequest) {
   if (qidNum && sanitized.length === 1) {
     try {
       const db = getServiceClient();
-      const { data: existing } = await db
-        .from("questions")
-        .select("ai_explanation")
-        .eq("id", qidNum)
-        .maybeSingle();
-      const shouldWrite = !existing?.ai_explanation || forceRegenerate;
+      // Reuse the row fetched earlier for context-building — no second
+      // round-trip needed. `questionRow` is null only when the initial
+      // fetch errored; in that case we re-fetch so the cache write is
+      // still reliable.
+      let existingAiExplanation = questionRow?.ai_explanation ?? null;
+      if (questionRow === null) {
+        const { data: refetch } = await db
+          .from("questions")
+          .select("ai_explanation")
+          .eq("id", qidNum)
+          .maybeSingle();
+        existingAiExplanation = refetch?.ai_explanation ?? null;
+      }
+      const shouldWrite = !existingAiExplanation || forceRegenerate;
       if (shouldWrite) {
         const update: Record<string, unknown> = {
           ai_explanation: reply,

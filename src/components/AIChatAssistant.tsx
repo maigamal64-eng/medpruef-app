@@ -44,10 +44,13 @@ export default function AIChatAssistant({
   lang,
   questionId,
   questionText,
-  answerText,
+  // answerText and options were used by the former client-side buildSystemContext().
+  // Context is now built server-side from questionId, so they are accepted in the
+  // interface for callers' convenience but not consumed here.
+  answerText: _answerText,
   explanation,
   topic,
-  options,
+  options: _options,
   userTier = "free",
   userRole = "user",
 }: AIChatAssistantProps) {
@@ -170,25 +173,6 @@ export default function AIChatAssistant({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const buildSystemContext = () => {
-    const optionsText = options?.map((o, i) =>
-      `${String.fromCharCode(65 + i)}. ${o.text}${o.correct ? " (CORRECT)" : ""}`
-    ).join("\n") || "";
-
-    return `You are a medical exam tutor for the Austrian Kenntnisprüfung (Vienna).
-The student is studying this question:
-
-TOPIC: ${topic}
-QUESTION: ${questionText}
-${optionsText ? `OPTIONS:\n${optionsText}` : ""}
-CORRECT ANSWER: ${answerText}
-${explanation ? `EXPLANATION: ${explanation}` : ""}
-
-Provide clear, educational explanations in markdown format. Use medical terminology but explain it.
-Respond in ${lang === "de" ? "German" : "English"}.
-Use **bold** for key terms, bullet points for clarity, and structured headings.`;
-  };
-
   const loadOrGenerateExplanation = async (forceRegenerate = false) => {
     setLoading(true);
     try {
@@ -234,8 +218,10 @@ Use **bold** for key terms, bullet points for clarity, and structured headings.`
         return;
       }
 
-      // Generate new explanation (or regenerate over an existing one for pro users)
-      const systemPrompt = buildSystemContext();
+      // Generate new explanation (or regenerate over an existing one for pro users).
+      // Context (question stem, choices, correct answer) is built server-side from
+      // questionId — the client no longer sends a system prompt so it cannot
+      // poison the globally-cached explanation.
       const userPrompt = lang === "de"
         ? "Erkläre diese Frage und warum die richtige Antwort korrekt ist. Gehe auch kurz auf die falschen Antworten ein."
         : "Explain this question and why the correct answer is right. Briefly address why the other options are wrong.";
@@ -244,10 +230,10 @@ Use **bold** for key terms, bullet points for clarity, and structured headings.`
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          system: systemPrompt,
           messages: [{ role: "user", content: userPrompt }],
-          questionId, // For caching
-          regenerate: forceRegenerate, // Server gates to pro/admin
+          questionId,
+          lang,
+          regenerate: forceRegenerate,
         }),
       });
 
@@ -315,12 +301,15 @@ Use **bold** for key terms, bullet points for clarity, and structured headings.`
     trackEvent("ai_chat_message", { messageLength: text.length, topic, questionId });
 
     try {
+      // questionId lets the server fetch the question context for this follow-up.
+      // Cache-write is skipped server-side for multi-turn messages (sanitized.length > 1).
       const response = await fetch("/api/ai-chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          system: buildSystemContext(),
           messages: newMessages.map((m) => ({ role: m.role, content: m.content })),
+          questionId,
+          lang,
         }),
       });
 
