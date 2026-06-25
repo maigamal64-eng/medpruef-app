@@ -5,6 +5,7 @@ import { getStoredTheme, setStoredTheme } from "./ThemeProvider";
 import LanguageToggle from "./LanguageToggle";
 import { t as tr, setLang as persistLang } from "@/lib/i18n";
 import { EXAM_SOURCES, type ExamSourceId } from "@/lib/topics";
+import ExamSittingPicker from "./ExamSittingPicker";
 
 type Lang = "de" | "en";
 
@@ -31,14 +32,6 @@ interface OnboardingProps {
 const STEP_ICONS = [GraduationCap, Calendar, Target, Zap];
 const STEP_COUNT = 4;
 
-const examPresets: { value: string; key: "onb_date_1month" | "onb_date_3months" | "onb_date_6months" | "onb_date_not_planned" | "onb_date_custom" }[] = [
-  { value: "1month", key: "onb_date_1month" },
-  { value: "3months", key: "onb_date_3months" },
-  { value: "6months", key: "onb_date_6months" },
-  { value: "not_planned", key: "onb_date_not_planned" },
-  { value: "custom", key: "onb_date_custom" },
-];
-
 const goalPresets = [10, 20, 30, 50];
 
 export default function Onboarding({ lang = "de", onLangChange, onComplete }: OnboardingProps) {
@@ -51,8 +44,8 @@ export default function Onboarding({ lang = "de", onLangChange, onComplete }: On
     dailyGoal: 20,
     language: activeLang,
     darkMode: getStoredTheme() === "dark",
+    examDate: "",
   });
-  const [customDate, setCustomDate] = useState("");
 
   const StepIcon = STEP_ICONS[step];
   const isLast = step === STEP_COUNT - 1;
@@ -79,7 +72,7 @@ export default function Onboarding({ lang = "de", onLangChange, onComplete }: On
   const canProceed = () => {
     switch (step) {
       case 0: return true;
-      case 1: return data.examDate && (data.examDate !== "custom" || customDate);
+      case 1: return true; // Exam date is optional ("Not sure yet" is valid)
       case 2: return (data.dailyGoal ?? 0) >= 5;
       case 3: return true; // Preferences — language + dark mode have defaults
       default: return false;
@@ -87,8 +80,12 @@ export default function Onboarding({ lang = "de", onLangChange, onComplete }: On
   };
 
   const handleFinish = () => {
-    let examDate = data.examDate || "not_planned";
-    if (examDate === "custom" && customDate) examDate = customDate;
+    // ExamSittingPicker emits a real ISO date (YYYY-MM-DD) or "" for
+    // "not sure yet". Map "" to the "not_planned" sentinel the home
+    // handler + onboarding-complete already understand.
+    const examDate = data.examDate && /^\d{4}-\d{2}-\d{2}$/.test(data.examDate)
+      ? data.examDate
+      : "not_planned";
 
     const completed: OnboardingData = {
       examSource: data.examSource || "kenntnispruefung",
@@ -218,33 +215,18 @@ export default function Onboarding({ lang = "de", onLangChange, onComplete }: On
             </div>
           )}
 
-          {/* Step 2: Exam Date */}
+          {/* Step 2: Exam Date — anchored on the REAL Austrian sittings
+              (src/lib/exam-dates.ts) so a pick resolves to a concrete ISO
+              date that drives the study plan. Replaces the old presets
+              that the home handler dropped as non-ISO. */}
           {step === 1 && (
-            <div className="space-y-2.5">
-              {examPresets.map((preset) => (
-                <div key={preset.value}>
-                  <button
-                    className={`w-full p-3.5 rounded-xl border-2 text-left transition-all ${
-                      data.examDate === preset.value ? "border-[var(--mp-cta-blue)] bg-[var(--mp-cta-blue)]/5" : "border-[var(--mp-border)] hover:border-[var(--mp-fg-subtle)]"
-                    }`}
-                    onClick={() => setData({ ...data, examDate: preset.value })}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="font-medium text-sm">{t(preset.key)}</span>
-                      {data.examDate === preset.value && <CheckCircle2 className="w-5 h-5 text-[var(--mp-cta-blue)]" />}
-                    </div>
-                  </button>
-                  {preset.value === "custom" && data.examDate === "custom" && (
-                    <input
-                      type="date"
-                      value={customDate}
-                      onChange={(e) => setCustomDate(e.target.value)}
-                      className="mt-2 w-full px-3 py-2.5 border border-[var(--mp-border)] rounded-xl focus:outline-none focus:border-[var(--mp-cta-blue)] text-sm"
-                    />
-                  )}
-                </div>
-              ))}
-            </div>
+            <ExamSittingPicker
+              examType={data.examSource || "kenntnispruefung"}
+              value={data.examDate || ""}
+              onChange={(iso) => setData({ ...data, examDate: iso })}
+              lang={activeLang}
+              density="modal"
+            />
           )}
 
           {/* Step 3: Daily Goal */}
@@ -343,7 +325,9 @@ export default function Onboarding({ lang = "de", onLangChange, onComplete }: On
                 <p className="text-xs font-semibold text-[var(--mp-fg-subtle)] uppercase tracking-wider mb-2">{t("onb_summary_label")}</p>
                 <div className="space-y-1 text-sm text-[var(--mp-fg-muted)]">
                   <p>{(EXAM_SOURCES.find((e) => e.id === data.examSource)?.badge ?? "📋")} {EXAM_SOURCES.find((e) => e.id === data.examSource)?.fullName ?? "SIP Kenntnisprüfung (Wien)"}</p>
-                  <p>📅 {data.examDate === "not_planned" || !data.examDate ? t("onb_summary_not_planned") : data.examDate}</p>
+                  <p>📅 {data.examDate && /^\d{4}-\d{2}-\d{2}$/.test(data.examDate)
+                    ? new Date(data.examDate + "T00:00:00").toLocaleDateString(activeLang === "de" ? "de-AT" : "en-GB", { day: "numeric", month: "long", year: "numeric" })
+                    : t("onb_summary_not_planned")}</p>
                   <p>🎯 {data.dailyGoal || 20} {t("onb_summary_qpd")}</p>
                 </div>
               </div>

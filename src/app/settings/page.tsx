@@ -23,6 +23,7 @@ import { authFetch } from "@/lib/authFetch";
 import { useUserTier } from "@/lib/hooks/useUserTier";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
+import ExamSittingPicker from "@/components/ExamSittingPicker";
 import {
   Alert,
   Dialog,
@@ -410,23 +411,26 @@ export default function SettingsPage() {
               </header>
 
               <div className="space-y-5">
-                {/* Exam target date */}
-                <TextField
-                  type="date"
-                  label={t("exam_target_date", lang)}
-                  value={profile.targetDate}
-                  onChange={(e) => handleTargetDateChange(e.target.value)}
-                  helper={
-                    profile.targetDate
-                      ? new Date(profile.targetDate).toLocaleDateString(
-                          lang === "de" ? "de-AT" : "en-GB",
-                          { day: "numeric", month: "long", year: "numeric" },
-                        )
-                      : lang === "de"
-                      ? "Noch nicht gesetzt — leg deinen Prüfungstermin fest, um einen Lernplan zu erhalten."
-                      : "Not set yet — pick your exam date to unlock the study plan."
-                  }
-                />
+                {/* Exam target date — anchored on the real Austrian
+                    sittings via the shared ExamSittingPicker (same control
+                    as onboarding). Lets Telegram-only / preset-era users
+                    whose exam_date is still NULL anchor to a real sitting. */}
+                <div>
+                  <p className="text-sm font-semibold text-[var(--mp-fg)] mb-1">
+                    {t("exam_target_date", lang)}
+                  </p>
+                  <p className="text-xs text-[var(--mp-fg-subtle)] mb-3">
+                    {lang === "de"
+                      ? "Wähle deinen Prüfungstermin, um einen personalisierten Lernplan freizuschalten."
+                      : "Pick your exam date to unlock a personalized study plan."}
+                  </p>
+                  <ExamSittingPicker
+                    examType={(session?.user as { active_exam?: string } | undefined)?.active_exam || "kenntnispruefung"}
+                    value={profile.targetDate}
+                    onChange={handleTargetDateChange}
+                    lang={lang}
+                  />
+                </div>
 
                 {/* Daily goal */}
                 <div>

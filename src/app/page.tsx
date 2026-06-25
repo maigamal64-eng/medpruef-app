@@ -21,6 +21,7 @@ import BottomNav from "@/components/BottomNav";
 import TopicCard from "@/components/TopicCard";
 import StatsCard from "@/components/StatsCard";
 import GamificationHero from "@/components/GamificationHero";
+import GuidedPathCard from "@/components/GuidedPathCard";
 import TelegramActivationCard from "@/components/TelegramActivationCard";
 import ExamSelector from "@/components/ExamSelector";
 import ExamSwitcherInline from "@/components/ExamSwitcherInline";
@@ -423,14 +424,19 @@ export default function Home() {
       });
   }, [user?.id, examSource]);
 
-  // Load profile data (exam target date) from localStorage
+  // Load profile data (exam target date) from localStorage. Prefer
+  // `medpruef_profile.targetDate` — written by BOTH onboarding's
+  // handleFinish AND Settings — so re-anchoring the date in Settings (the
+  // path for the ~60 users still on exam_date=NULL) reflects on the home
+  // guided-path card. Fall back to the legacy `medpruef_onboarding.examDate`.
   useEffect(() => {
     try {
-      const raw = localStorage.getItem("medpruef_onboarding");
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        setProfileData({ targetDate: parsed?.examDate });
-      }
+      const profileRaw = localStorage.getItem("medpruef_profile");
+      const onbRaw = localStorage.getItem("medpruef_onboarding");
+      const profileDate = profileRaw ? JSON.parse(profileRaw)?.targetDate : undefined;
+      const onbDate = onbRaw ? JSON.parse(onbRaw)?.examDate : undefined;
+      const targetDate = profileDate || onbDate;
+      if (targetDate) setProfileData({ targetDate });
     } catch {}
   }, []);
 
@@ -686,14 +692,6 @@ export default function Home() {
             const target = profileData?.targetDate;
             const daysLeft = target ? Math.ceil((new Date(target).getTime() - Date.now()) / 86400000) : null;
             const showCountdown = daysLeft !== null && daysLeft > 0;
-            const urgencyColor =
-              daysLeft !== null
-                ? daysLeft <= 14
-                  ? "var(--mp-error)"
-                  : daysLeft <= 30
-                  ? "var(--mp-warning-dk)"
-                  : "var(--mp-viridian)"
-                : "var(--mp-viridian)";
 
             return (
               <div
@@ -709,37 +707,7 @@ export default function Home() {
                   totalAnswered={gam?.total_questions_answered}
                 />
                 {showCountdown && (
-                  <div
-                    className="rounded-2xl p-6 flex flex-col items-center justify-center text-center"
-                    style={{
-                      background: "var(--mp-surface-raised)",
-                      border: "1px solid var(--mp-border-subtle)",
-                      boxShadow: "var(--mp-shadow-card)",
-                    }}
-                    aria-label={lang === "de" ? "Prüfungs-Countdown" : "Exam countdown"}
-                  >
-                    <p
-                      className="mp-caption mb-3"
-                      style={{ color: urgencyColor, letterSpacing: "0.08em" }}
-                    >
-                      {t("exam_countdown", lang)}
-                    </p>
-                    <p
-                      className="mp-num"
-                      style={{
-                        fontFamily: "var(--mp-font-display)",
-                        fontWeight: 900,
-                        fontSize: 72,
-                        lineHeight: 1,
-                        color: urgencyColor,
-                      }}
-                    >
-                      {daysLeft}
-                    </p>
-                    <p className="text-sm text-[var(--mp-fg-muted)] mt-2">
-                      {t("days_until_exam", lang)}
-                    </p>
-                  </div>
+                  <GuidedPathCard examISO={target ?? ""} activeExam={examSource} lang={lang} />
                 )}
               </div>
             );

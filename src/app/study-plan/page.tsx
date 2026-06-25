@@ -13,6 +13,8 @@ import ThemeToggle from "@/components/ThemeToggle";
 import TopicIcon from "@/components/TopicIcon";
 import { getTopicConfig } from "@/lib/topics";
 import type { StudyPlan, StudyPlanDay } from "@/lib/studyPlan";
+import { buildStudyPath } from "@/lib/studyPath";
+import StudyPathTimeline from "@/components/StudyPathTimeline";
 import {
   Calendar,
   CheckCircle2,
@@ -186,6 +188,7 @@ export default function StudyPlanPage() {
   const dailyGoal = resp?.dailyGoal || user?.daily_goal || 20;
   const doneToday = gam?.daily_questions_today || 0;
   const activeExam = resp?.activeExam || "kenntnispruefung";
+  const studyPath = resp?.examDate ? buildStudyPath(resp.examDate, activeExam) : null;
 
   if (loading) {
     return (
@@ -371,6 +374,9 @@ export default function StudyPlanPage() {
                   )}
                 </div>
               </div>
+
+              {/* Path to exam day — milestone ladder + registration anchor (A.1) */}
+              {studyPath && <StudyPathTimeline path={studyPath} lang={lang} />}
 
               {/* Today's progress */}
               <div className="card rounded-2xl p-5">

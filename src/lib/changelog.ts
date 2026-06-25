@@ -26,6 +26,18 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-06-25",
     tag: "feature",
     title: {
+      de: "Dein Weg zur Prüfung: geführter Lernpfad",
+      en: "Your path to the exam: a guided study path",
+    },
+    description: {
+      de: "Beim Onboarding und in den Einstellungen wählst du deinen Prüfungstermin jetzt direkt aus dem österreichischen Prüfungskalender, inklusive Anmeldeschluss. Dein Lernplan zeigt dir dann einen klaren Weg bis zum Prüfungstag in vier Phasen (Grundlagen, Aufbau, Festigen, Endspurt), und auf der Startseite siehst du den Countdown und deine aktuelle Phase auf einen Blick.",
+      en: "During onboarding and in Settings you now pick your exam date straight from the Austrian exam calendar, including the registration deadline. Your study plan then shows a clear path to exam day in four phases (Foundation, Build, Consolidate, Taper), and the home screen shows your countdown and current phase at a glance.",
+    },
+  },
+  {
+    date: "2026-06-25",
+    tag: "feature",
+    title: {
       de: "Direkter Support-Chat ist da",
       en: "Live support chat is here",
     },
