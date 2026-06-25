@@ -26,6 +26,18 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-06-25",
     tag: "feature",
     title: {
+      de: "Österreichische Ressourcenbibliothek",
+      en: "Austrian Resource Library",
+    },
+    description: {
+      de: "Die Ressourcen-Seite zeigt jetzt geprüfte Links zu offiziellen österreichischen Quellen in drei Abschnitten: offizielle Anmeldestellen (mit Route-A/B-Kennzeichnung), klinische Leitlinien und Nachschlagewerke. Alle Links öffnen in einem neuen Tab.",
+      en: "The Resources page now shows verified links to official Austrian sources in three sections: official registration pages (with Route A/B labels), clinical guidelines, and reference tools. All links open in a new tab.",
+    },
+  },
+  {
+    date: "2026-06-25",
+    tag: "feature",
+    title: {
       de: "Dein Weg zur Prüfung: geführter Lernpfad",
       en: "Your path to the exam: a guided study path",
     },
