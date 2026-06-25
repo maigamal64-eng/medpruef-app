@@ -22,6 +22,7 @@ import { authFetch as fetch } from "@/lib/authFetch";
 import { useUserTier } from "@/lib/hooks/useUserTier";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
+import { AppLayout } from "@/components/ui";
 import LanguageToggle from "@/components/LanguageToggle";
 import ThemeToggle from "@/components/ThemeToggle";
 import UpcomingExams from "@/components/UpcomingExams";
@@ -202,9 +203,10 @@ export default function PricingPage() {
   ];
 
   return (
-    <div className="app-layout">
-      <Sidebar lang={lang} userId={user?.id} userName={user?.first_name} />
-
+    <AppLayout
+      sidebar={<Sidebar lang={lang} userId={user?.id} userName={user?.first_name} />}
+      bottomNav={<BottomNav lang={lang} userId={user?.id} />}
+    >
       <main className="main-content safe-area-top safe-area-bottom bg-[var(--mp-surface-sunken)]">
         {/* ══════════ Header ══════════ */}
         <div className="px-4 lg:px-8 pt-4 pb-2 flex items-center justify-between border-b border-[var(--mp-border)] bg-[var(--mp-surface-raised)]">
@@ -466,9 +468,7 @@ export default function PricingPage() {
           </div>
         </section>
       </main>
-
-      <BottomNav lang={lang} userId={user?.id} />
-    </div>
+    </AppLayout>
   );
 }
 

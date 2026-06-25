@@ -38,6 +38,7 @@ import LanguageToggle from "@/components/LanguageToggle";
 import ThemeToggle from "@/components/ThemeToggle";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
+import { AppLayout } from "@/components/ui";
 import { Map as MapIcon, GraduationCap, Shuffle } from "lucide-react";
 
 type Lang = "de" | "en";
@@ -437,15 +438,19 @@ export default function CurriculumPage() {
   }
 
   return (
-    <div className="app-layout">
-      <Sidebar
-        lang={lang}
-        userId={userId}
-        userName={userName}
-        totalXp={totalXp}
-        streak={streak}
-        accuracy={accuracy}
-      />
+    <AppLayout
+      sidebar={
+        <Sidebar
+          lang={lang}
+          userId={userId}
+          userName={userName}
+          totalXp={totalXp}
+          streak={streak}
+          accuracy={accuracy}
+        />
+      }
+      bottomNav={<BottomNav lang={lang} userId={userId} />}
+    >
 
       <main className="main-content safe-area-top safe-area-bottom bg-[var(--mp-surface-sunken)]">
         {/* Header */}
@@ -568,8 +573,6 @@ export default function CurriculumPage() {
           </div>
         </div>
       </main>
-
-      <BottomNav lang={lang} userId={userId} />
-    </div>
+    </AppLayout>
   );
 }

@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { authFetch as fetch } from "@/lib/authFetch";
 import { t } from "@/lib/i18n";
 import { getLevelFromXP } from "@/lib/xp";
 import { Home, FileText, GraduationCap, BarChart3, TrendingUp, Map, Settings, Sparkles, PanelLeftClose, PanelLeftOpen, Layers, Crown, CalendarDays, Gift } from "lucide-react";
 import ExamSwitcherInline from "./ExamSwitcherInline";
+import { NavItem } from "@/components/ui";
 import {
   EXAM_SOURCES,
   getStoredExamSource,
@@ -291,20 +291,6 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0 }: Sidebar
     return pathname.startsWith(`/${key === "stats" ? "stats" : key}`);
   };
 
-  const navLinkClass = (key: string) => {
-    const active = isActive(key);
-    const base = collapsed
-      ? "flex items-center justify-center w-9 h-9 mx-auto rounded-lg mb-0.5 transition-all duration-150"
-      : "flex items-center gap-3 px-3 py-2.5 rounded-r-xl mb-px transition-all duration-150";
-
-    if (active) {
-      return collapsed
-        ? `${base} bg-[var(--mp-viridian)]/20 text-[var(--mp-accent-teal)] font-semibold`
-        : `${base} bg-[var(--mp-viridian)]/20 text-[var(--mp-accent-teal)] font-semibold border-l-[3px] border-l-[var(--mp-accent-teal)]`;
-    }
-    return `${base} text-[var(--mp-fg-subtle)] hover:bg-white/5 hover:text-white`;
-  };
-
   return (
     <aside className={`sidebar flex flex-col transition-all duration-300 ease-out ${collapsed ? "!w-[68px]" : ""}`}>
       {/* Logo */}
@@ -357,50 +343,19 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0 }: Sidebar
 
       {/* Main Navigation */}
       <nav className={`${collapsed ? "px-2" : "px-3"} mt-3`}>
-        {navItems.map((item) => {
-          // Compose the title: dot tooltip wins when present in collapsed
-          // mode, otherwise fall back to the label. Expanded sidebar
-          // shows the label inline so no title needed.
-          const titleAttr = collapsed
-            ? item.dot && item.dotTooltip
-              ? `${item.label} — ${item.dotTooltip}`
-              : item.label
-            : undefined;
-          return (
-            <Link
-              key={item.key}
-              href={item.href}
-              className={`${navLinkClass(item.key)} relative`}
-              title={titleAttr}
-              aria-describedby={item.dot ? `${item.key}-dot` : undefined}
-            >
-              <span className={`relative inline-flex ${isActive(item.key) ? "opacity-100" : "opacity-70"}`}>
-                {item.icon}
-                {/* Amber nudge-dot. Absolute-positioned on the icon so
-                    it follows in collapsed + expanded layouts. Uses the
-                    gamif-streak token (orange) to read as friendly-
-                    attention, not alert-red. */}
-                {item.dot && (
-                  <span
-                    id={`${item.key}-dot`}
-                    className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full ring-2 ring-[var(--mp-oxford-blue)]"
-                    style={{ background: "var(--mp-gamif-streak)" }}
-                    aria-hidden
-                  />
-                )}
-              </span>
-              {!collapsed && (
-                <span className="text-[13px]">{item.label}</span>
-              )}
-              {/* Screen-reader-only label for the dot. Avoids
-                  announcing it twice in collapsed mode (where the
-                  tooltip already carries the text). */}
-              {item.dot && item.dotTooltip && (
-                <span className="sr-only">— {item.dotTooltip}</span>
-              )}
-            </Link>
-          );
-        })}
+        {navItems.map((item) => (
+          <NavItem
+            key={item.key}
+            context="sidebar"
+            href={item.href}
+            icon={item.icon}
+            label={item.label}
+            active={isActive(item.key)}
+            collapsed={collapsed}
+            dot={item.dot}
+            dotTooltip={item.dotTooltip}
+          />
+        ))}
       </nav>
 
       <div className="flex-1" />
@@ -408,12 +363,15 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0 }: Sidebar
       {/* Bottom items */}
       <nav className={`${collapsed ? "px-2" : "px-3"} mb-1`}>
         {bottomItems.map((item) => (
-          <Link key={item.key} href={item.href} className={navLinkClass(item.key)} title={collapsed ? item.label : undefined}>
-            <span className={isActive(item.key) ? "opacity-100" : "opacity-70"}>{item.icon}</span>
-            {!collapsed && (
-              <span className="text-[13px]">{item.label}</span>
-            )}
-          </Link>
+          <NavItem
+            key={item.key}
+            context="sidebar"
+            href={item.href}
+            icon={item.icon}
+            label={item.label}
+            active={isActive(item.key)}
+            collapsed={collapsed}
+          />
         ))}
       </nav>
 

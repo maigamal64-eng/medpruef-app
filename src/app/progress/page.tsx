@@ -33,6 +33,7 @@ import LanguageToggle from "@/components/LanguageToggle";
 import ThemeToggle from "@/components/ThemeToggle";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
+import { AppLayout } from "@/components/ui";
 import TopicIcon from "@/components/TopicIcon";
 import ReadinessSignal from "@/components/ReadinessSignal";
 import {
@@ -637,15 +638,19 @@ export default function ProgressPage() {
   const accuracyTrendUp = accuracy >= 65;
 
   return (
-    <div className="app-layout">
-      <Sidebar
-        lang={lang}
-        userId={userId}
-        userName={userName}
-        totalXp={totalXp}
-        streak={streak}
-        accuracy={accuracy}
-      />
+    <AppLayout
+      sidebar={
+        <Sidebar
+          lang={lang}
+          userId={userId}
+          userName={userName}
+          totalXp={totalXp}
+          streak={streak}
+          accuracy={accuracy}
+        />
+      }
+      bottomNav={<BottomNav lang={lang} userId={userId} />}
+    >
 
       <main className="main-content safe-area-top safe-area-bottom bg-[var(--mp-surface-sunken)]">
         {/* Header */}
@@ -1211,8 +1216,6 @@ export default function ProgressPage() {
           )}
         </div>
       </main>
-
-      <BottomNav lang={lang} userId={userId} />
-    </div>
+    </AppLayout>
   );
 }

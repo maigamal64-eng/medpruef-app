@@ -19,6 +19,7 @@ import {
 import LanguageToggle from "@/components/LanguageToggle";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
+import { AppLayout } from "@/components/ui";
 import TopicCard from "@/components/TopicCard";
 import StatsCard from "@/components/StatsCard";
 import GamificationHero from "@/components/GamificationHero";
@@ -586,16 +587,19 @@ export default function Home() {
       : 0;
 
   return (
-    <div className="app-layout">
-      <Sidebar
-        lang={lang}
-        userId={user.id}
-        userName={user.first_name}
-        totalXp={gam?.total_xp || 0}
-        streak={gam?.current_streak || 0}
-        accuracy={accuracy}
-      />
-
+    <AppLayout
+      sidebar={
+        <Sidebar
+          lang={lang}
+          userId={user.id}
+          userName={user.first_name}
+          totalXp={gam?.total_xp || 0}
+          streak={gam?.current_streak || 0}
+          accuracy={accuracy}
+        />
+      }
+      bottomNav={<BottomNav lang={lang} userId={user.id} />}
+    >
       <main className="main-content safe-area-top safe-area-bottom bg-[var(--mp-surface-sunken)]">
         {/*
           DASHBOARD LAYOUT — redesigned 2026-04-23 (visual-overhaul sprint).
@@ -1106,8 +1110,7 @@ export default function Home() {
       <WeaknessToast weakTopics={weakTopics} lang={lang} />
       {showCohortConfetti && <CohortWelcomeCheck />}
 
-      <BottomNav lang={lang} userId={user.id} />
-    </div>
+    </AppLayout>
   );
 }
 

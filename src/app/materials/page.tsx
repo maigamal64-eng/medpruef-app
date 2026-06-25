@@ -6,6 +6,7 @@ import { ExternalLink } from "lucide-react";
 import { getLang, setLang } from "@/lib/i18n";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
+import { AppLayout } from "@/components/ui";
 import LanguageToggle from "@/components/LanguageToggle";
 import ThemeToggle from "@/components/ThemeToggle";
 import { getStoredSession } from "@/lib/auth";
@@ -55,9 +56,10 @@ export default function MaterialsPage() {
   };
 
   return (
-    <div className="app-layout">
-      <Sidebar lang={lang} userId={userId} userName={userName} />
-
+    <AppLayout
+      sidebar={<Sidebar lang={lang} userId={userId} userName={userName} />}
+      bottomNav={<BottomNav lang={lang} userId={userId} />}
+    >
       <main className="main-content safe-area-top safe-area-bottom bg-[var(--mp-surface-sunken)]">
         {/* Page header */}
         <div className="px-4 lg:px-8 pt-4 pb-2 flex items-center justify-between border-b border-[var(--mp-border)]">
@@ -158,8 +160,6 @@ export default function MaterialsPage() {
           </p>
         </div>
       </main>
-
-      <BottomNav lang={lang} userId={userId} />
-    </div>
+    </AppLayout>
   );
 }

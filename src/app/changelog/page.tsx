@@ -7,6 +7,7 @@ import { getStoredSession } from "@/lib/auth";
 import { CHANGELOG, type ChangelogEntry, type ChangelogTag } from "@/lib/changelog";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
+import { AppLayout } from "@/components/ui";
 import LanguageToggle from "@/components/LanguageToggle";
 import ThemeToggle from "@/components/ThemeToggle";
 import { ArrowLeft, Sparkles, Wrench, Bug, Calendar } from "lucide-react";
@@ -76,9 +77,10 @@ export default function ChangelogPage() {
   const dates = Object.keys(grouped).sort((a, b) => b.localeCompare(a));
 
   return (
-    <div className="app-layout">
-      <Sidebar lang={lang} userId={userId} />
-
+    <AppLayout
+      sidebar={<Sidebar lang={lang} userId={userId} />}
+      bottomNav={<BottomNav lang={lang} userId={userId} />}
+    >
       <main className="main-content safe-area-top safe-area-bottom bg-[var(--mp-surface-sunken)]">
         {/* Header */}
         <div className="px-4 lg:px-8 pt-4 pb-2 flex items-center justify-between border-b border-[var(--mp-border)]">
@@ -164,8 +166,6 @@ export default function ChangelogPage() {
           </div>
         </div>
       </main>
-
-      <BottomNav lang={lang} userId={userId} />
-    </div>
+    </AppLayout>
   );
 }

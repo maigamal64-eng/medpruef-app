@@ -23,6 +23,7 @@ import { authFetch } from "@/lib/authFetch";
 import { useUserTier } from "@/lib/hooks/useUserTier";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
+import { AppLayout } from "@/components/ui";
 import ExamSittingPicker from "@/components/ExamSittingPicker";
 import {
   Alert,
@@ -358,16 +359,19 @@ export default function SettingsPage() {
   const tierLabel = lang === "de" ? "Kostenlos" : "Free";
 
   return (
-    <div className="app-layout">
-      <Sidebar
-        lang={lang}
-        userId={user?.id}
-        userName={user?.first_name}
-        totalXp={gam?.total_xp || 0}
-        streak={gam?.current_streak || 0}
-        accuracy={accuracy}
-      />
-
+    <AppLayout
+      sidebar={
+        <Sidebar
+          lang={lang}
+          userId={user?.id}
+          userName={user?.first_name}
+          totalXp={gam?.total_xp || 0}
+          streak={gam?.current_streak || 0}
+          accuracy={accuracy}
+        />
+      }
+      bottomNav={<BottomNav lang={lang} userId={user?.id} />}
+    >
       <main className="main-content safe-area-top safe-area-bottom bg-[var(--mp-surface-sunken)]">
         {/* Header */}
         <div className="px-4 lg:px-8 pt-4 pb-2 flex items-center justify-between border-b border-[var(--mp-border-subtle)]">
@@ -973,8 +977,6 @@ export default function SettingsPage() {
         </div>
       </main>
 
-      <BottomNav lang={lang} userId={user?.id} />
-
       {/* Destructive confirm dialog */}
       <Dialog
         open={clearDialogOpen}
@@ -1061,7 +1063,7 @@ export default function SettingsPage() {
             : "Any answers you recorded offline that have not yet been sent to the server will be deleted."}
         </Alert>
       </Dialog>
-    </div>
+    </AppLayout>
   );
 }
 

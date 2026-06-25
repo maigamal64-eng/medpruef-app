@@ -84,23 +84,37 @@ export function NavItem({
     return (
       <Link
         href={href}
-        className={[base, stateClasses, 'relative', className].filter(Boolean).join(' ')}
+        className={[base, stateClasses, className].filter(Boolean).join(' ')}
         aria-current={active ? 'page' : undefined}
         title={collapsed ? label : undefined}
       >
-        <span className="flex-shrink-0" aria-hidden>{icon}</span>
-        {!collapsed && <span className="text-sm truncate">{label}</span>}
-        {dot && (
-          <span
-            role="status"
-            aria-label={dotTooltip ?? label}
-            title={dotTooltip}
-            className={[
-              'absolute top-1 right-1 w-2 h-2 rounded-full',
-              'bg-[var(--mp-warning)] ring-1 ring-[var(--mp-surface-base)]',
-              collapsed ? 'top-0.5 right-0.5' : 'top-1.5 right-2',
-            ].join(' ')}
-          />
+        {/* Icon wrapper — relative so the nudge-dot anchors to the icon,
+            not the full row width. Inactive icons are 70% opacity per
+            the live Sidebar render. */}
+        <span
+          className={[
+            'relative inline-flex flex-shrink-0',
+            active ? 'opacity-100' : 'opacity-70',
+          ].join(' ')}
+          aria-hidden
+        >
+          {icon}
+          {dot && (
+            <span
+              role="status"
+              aria-label={dotTooltip ?? label}
+              title={dotTooltip}
+              className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full ring-2 ring-[var(--mp-oxford-blue)]"
+              style={{ background: 'var(--mp-gamif-streak)' }}
+            />
+          )}
+        </span>
+        {/* Label — text-[13px] matches the live Sidebar; no truncate to
+            preserve the live line-wrapping behaviour. */}
+        {!collapsed && <span className="text-[13px]">{label}</span>}
+        {/* Screen-reader-only dot announcement for expanded mode */}
+        {dot && dotTooltip && (
+          <span className="sr-only">— {dotTooltip}</span>
         )}
       </Link>
     )

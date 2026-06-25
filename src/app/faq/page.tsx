@@ -18,6 +18,7 @@ import { getLang, setLang } from "@/lib/i18n";
 import { getStoredSession } from "@/lib/auth";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
+import { AppLayout } from "@/components/ui";
 import LanguageToggle from "@/components/LanguageToggle";
 import ThemeToggle from "@/components/ThemeToggle";
 
@@ -115,9 +116,10 @@ export default function FaqPage() {
   const user = session?.user;
 
   return (
-    <div className="app-layout">
-      <Sidebar lang={lang} userId={user?.id} userName={user?.first_name} />
-
+    <AppLayout
+      sidebar={<Sidebar lang={lang} userId={user?.id} userName={user?.first_name} />}
+      bottomNav={<BottomNav lang={lang} userId={user?.id} />}
+    >
       <main className="main-content safe-area-top safe-area-bottom bg-[var(--mp-surface-sunken)]">
         {/* Header */}
         <div className="px-4 lg:px-8 pt-4 pb-2 flex items-center justify-between border-b border-[var(--mp-border)] bg-[var(--mp-surface-raised)]">
@@ -390,9 +392,7 @@ export default function FaqPage() {
           </div>
         </div>
       </main>
-
-      <BottomNav lang={lang} userId={user?.id} />
-    </div>
+    </AppLayout>
   );
 }
 

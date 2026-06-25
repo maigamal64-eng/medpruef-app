@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { t } from "@/lib/i18n";
 import { Home, FileText, GraduationCap, TrendingUp, User } from "lucide-react";
+import { NavItem } from "@/components/ui";
 
 type Lang = "de" | "en";
 
@@ -24,15 +25,6 @@ export default function BottomNav({ lang, userId }: BottomNavProps) {
     return false;
   };
 
-  const navItemClass = (key: string) => {
-    const active = isActive(key);
-    return `flex flex-col items-center gap-0.5 py-1.5 px-2 rounded-xl transition-all duration-200 ${
-      active
-        ? "text-[var(--mp-viridian)]"
-        : "text-[var(--mp-fg-subtle)] active:text-[var(--mp-fg-muted)]"
-    }`;
-  };
-
   const quizHref = userId ? `/quiz?topic=random&userId=${userId}` : "/quiz?topic=random";
   const quizActive = isActive("quiz");
 
@@ -41,25 +33,16 @@ export default function BottomNav({ lang, userId }: BottomNavProps) {
       <div className="glass border-t border-[var(--mp-border)] shadow-[var(--shadow-elevated)] mx-2 mb-2 rounded-2xl">
         <div className="flex items-end justify-around px-2 pt-2 pb-2.5 relative">
           {/* Home */}
-          <Link href="/" className={navItemClass("home")}>
-            <Home className="w-5 h-5" />
-            <span className={`text-[10px] ${isActive("home") ? "font-semibold text-[var(--mp-viridian)]" : "font-medium"}`}>
-              {t("home", lang)}
-            </span>
-          </Link>
+          <NavItem context="bottom" href="/" icon={<Home className="w-5 h-5" />} label={t("home", lang)} active={isActive("home")} />
 
           {/* Exam */}
-          <Link href="/exam" className={navItemClass("exam")}>
-            <GraduationCap className="w-5 h-5" />
-            <span className={`text-[10px] ${isActive("exam") ? "font-semibold text-[var(--mp-viridian)]" : "font-medium"}`}>
-              {t("exam", lang)}
-            </span>
-          </Link>
+          <NavItem context="bottom" href="/exam" icon={<GraduationCap className="w-5 h-5" />} label={t("exam", lang)} active={isActive("exam")} />
 
-          {/* CENTER: Quiz CTA — raised, prominent */}
+          {/* CENTER: Quiz CTA — raised, prominent. Bespoke — no NavItem
+              variant exists for a raised floating CTA. Preserved exactly. */}
           <Link
             href={quizHref}
-            className={`flex flex-col items-center -mt-5 transition-transform active:scale-95`}
+            className="flex flex-col items-center -mt-5 transition-transform active:scale-95"
           >
             <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg ${
               quizActive
@@ -74,20 +57,10 @@ export default function BottomNav({ lang, userId }: BottomNavProps) {
           </Link>
 
           {/* Progress */}
-          <Link href="/progress" className={navItemClass("progress")}>
-            <TrendingUp className="w-5 h-5" />
-            <span className={`text-[10px] ${isActive("progress") ? "font-semibold text-[var(--mp-viridian)]" : "font-medium"}`}>
-              {t("progress", lang)}
-            </span>
-          </Link>
+          <NavItem context="bottom" href="/progress" icon={<TrendingUp className="w-5 h-5" />} label={t("progress", lang)} active={isActive("progress")} />
 
           {/* Settings (was Profile) */}
-          <Link href="/settings" className={navItemClass("settings")}>
-            <User className="w-5 h-5" />
-            <span className={`text-[10px] ${isActive("settings") ? "font-semibold text-[var(--mp-viridian)]" : "font-medium"}`}>
-              {t("profile", lang)}
-            </span>
-          </Link>
+          <NavItem context="bottom" href="/settings" icon={<User className="w-5 h-5" />} label={t("profile", lang)} active={isActive("settings")} />
         </div>
       </div>
     </nav>
