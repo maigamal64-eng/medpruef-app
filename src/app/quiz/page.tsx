@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { BrandedLoader } from "@/components/Logo";
-import { useSearchParams } from "next/navigation";
 // Auth-aware fetch wrapper: adds the x-user-id header that server
 // routes expect under the 2026-04-15 auth-guard regime. Import alias
 // means the existing `fetch(...)` call sites in this file don't need
@@ -23,6 +23,7 @@ import BottomNav from "@/components/BottomNav";
 import QuestionCard from "@/components/QuestionCard";
 import QuestionActions from "@/components/QuestionActions";
 import QuizSetup, { type QuizConfig } from "@/components/QuizSetup";
+import CreateTestBuilder from "@/components/CreateTestBuilder";
 import { SkeletonCard } from "@/components/Skeleton";
 import { Alert, Dialog, DialogFooter } from "@/components/ui";
 import type { MCQOption } from "@/lib/mcq";
@@ -60,13 +61,41 @@ function buildQueryParams(config: QuizConfig, userId: string, excludeIds?: numbe
   if (excludeIds && excludeIds.length > 0) {
     p.set("excludeIds", excludeIds.join(","));
   }
-  if (practiceMode && practiceMode !== "all") {
+
+  // Phase C filter: builder-set filter takes precedence over URL practiceMode.
+  // Mapping: all=default, unused→practiceMode=unseen, incorrect→practiceMode=wrong,
+  // flagged→pass bookmark ids as the ids param (no practiceMode change).
+  if (config.filter && config.filter !== "all") {
+    if (config.filter === "unused") {
+      p.set("practiceMode", "unseen");
+    } else if (config.filter === "incorrect") {
+      p.set("practiceMode", "wrong");
+    } else if (config.filter === "flagged" && config.flaggedIds && config.flaggedIds.length > 0) {
+      // Serve only flagged IDs, minus already-seen ones in this session.
+      const unseenFlagged = config.flaggedIds.filter(
+        (id) => !(excludeIds ?? []).includes(id)
+      );
+      if (unseenFlagged.length > 0) {
+        p.set("ids", unseenFlagged.join(","));
+        // Clear the practiceMode param if set to avoid conflicting server logic.
+        p.delete("practiceMode");
+      }
+      // If all flagged Qs are already seen, the `ids` param stays unset and the
+      // quiz runner will naturally return null (no more questions in the pool).
+    }
+  } else if (practiceMode && practiceMode !== "all") {
+    // Fallback to URL-level practiceMode for non-builder paths.
     p.set("practiceMode", practiceMode);
   }
+
+  // Phase C: exam-year tag filter (YYYY, expands to all 12 months server-side).
+  if (config.examYear) p.set("examYear", config.examYear);
+
   return p;
 }
 
 function QuizContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const initialTopic = searchParams.get("topic");
   const initialQuestionId = searchParams.get("questionId");
@@ -220,6 +249,8 @@ function QuizContent() {
     if (config.tags.length > 0) p.set("tags", config.tags.join(","));
     if (config.examDateFrom) p.set("examDateFrom", config.examDateFrom);
     if (config.examDateTo) p.set("examDateTo", config.examDateTo);
+    // Phase C: exam year narrows the pool — reflect in the milestone count.
+    if (config.examYear) p.set("examYear", config.examYear);
     fetch(`/api/questions?${p}`)
       .then((r) => r.json())
       .then((d) => {
@@ -541,6 +572,9 @@ function QuizContent() {
   const sessionAccuracy = questionCount > 0 ? Math.round((correctCount / questionCount) * 100) : 0;
 
   // ─── Setup screen ───
+  // ?setup=1 → CreateTestBuilder (Phase C full customization flow).
+  // Legacy QuizSetup is kept for backward compat; it's no longer reachable
+  // via the normal ?setup=1 path but remains importable for any future use.
   if (!config) {
     return (
       <div className="app-layout">
@@ -558,12 +592,47 @@ function QuizContent() {
               <LanguageToggle lang={lang} onChange={switchLang} />
             </div>
           </div>
-          <QuizSetup
-            lang={lang}
-            examSource={examSource}
-            initialTopic={initialTopic}
-            onStart={(c) => setConfig(c)}
-          />
+          {wantsSetup ? (
+            // Phase C: full builder with mode/filter/year/name customization.
+            <CreateTestBuilder
+              lang={lang}
+              examSource={examSource}
+              onStart={(c) => {
+                // Timed mode routes to /exam (the existing deferred-grading
+                // simulator) rather than the tutor quiz player. Carry over
+                // the topic / count / filter state as URL params.
+                if (c.quizMode === "timed") {
+                  const p = new URLSearchParams({ examSource: c.examSource });
+                  if (c.topics.length > 0) p.set("topics", c.topics.join(","));
+                  if (c.targetCount && c.targetCount < 9999)
+                    p.set("limit", String(c.targetCount));
+                  if (c.filter && c.filter !== "all")
+                    p.set("practiceMode",
+                      c.filter === "unused"    ? "unseen"
+                      : c.filter === "incorrect" ? "wrong"
+                      : "all"
+                    );
+                  if (c.filter === "flagged" && c.flaggedIds && c.flaggedIds.length > 0)
+                    p.set("ids", c.flaggedIds.join(","));
+                  if (c.examYear) p.set("examYear", c.examYear);
+                  if (c.timeLimitMin) p.set("timeLimitMin", String(c.timeLimitMin));
+                  router.push(`/exam?${p.toString()}`);
+                  return;
+                }
+                setConfig(c);
+              }}
+              onCancel={() => window.history.back()}
+            />
+          ) : (
+            // Fallback: minimal QuizSetup (topic + count + time) for
+            // legacy entry points that land on the setup screen without ?setup=1.
+            <QuizSetup
+              lang={lang}
+              examSource={examSource}
+              initialTopic={initialTopic}
+              onStart={(c) => setConfig(c)}
+            />
+          )}
         </main>
         <BottomNav lang={lang} userId={userId} />
       </div>

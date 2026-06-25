@@ -6,7 +6,7 @@ import { authFetch as fetch } from "@/lib/authFetch";
 import { getTopicConfig } from "@/lib/topics";
 import { t, getLang, setLang } from "@/lib/i18n";
 import TopicIcon from "@/components/TopicIcon";
-import { Flame, FileText as FileTextIcon, Lightbulb, Shuffle, PlayCircle, ClipboardList, Zap, CheckCircle, User, ChevronRight, GraduationCap, CalendarDays, Search, Star, AlertCircle, Target, ArrowRight } from "lucide-react";
+import { Flame, FileText as FileTextIcon, Lightbulb, Shuffle, PlayCircle, ClipboardList, Zap, CheckCircle, User, ChevronRight, GraduationCap, CalendarDays, Search, Star, AlertCircle, Target, ArrowRight, PenSquare } from "lucide-react";
 import { isTelegramMiniApp, getMiniAppInitData, getStoredSession, storeSession, setSessionToken } from "@/lib/auth";
 import { useUserTier } from "@/lib/hooks/useUserTier";
 import {
@@ -810,6 +810,14 @@ export default function Home() {
             >
               <Shuffle className="w-4 h-4 text-[var(--mp-viridian)]" aria-hidden />
               <span>{t("random_quiz", lang)}</span>
+            </Link>
+            {/* Phase C: Create New Test — builder with full filter/mode customization */}
+            <Link
+              href={`/quiz?setup=1&examSource=${examSource}`}
+              className="mp-btn-secondary-slim"
+            >
+              <PenSquare className="w-4 h-4 text-[var(--mp-viridian)]" aria-hidden />
+              <span>{lang === "de" ? "Neuen Test" : "New test"}</span>
             </Link>
             <Link
               href={`/exam?examSource=${examSource}`}

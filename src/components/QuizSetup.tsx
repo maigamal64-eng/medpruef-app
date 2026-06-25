@@ -15,6 +15,13 @@ export interface QuizConfig {
   examDateFrom: string | null; // YYYY-MM
   examDateTo: string | null;
   examSource: string;
+  // Phase C fields (optional — auto-start path leaves these unset;
+  // CreateTestBuilder populates them when accessed via ?setup=1)
+  testName?: string;                                        // local label only
+  quizMode?: 'tutor' | 'timed';                           // tutor = immediate feedback; timed → routes to /exam
+  filter?: 'all' | 'unused' | 'incorrect' | 'flagged';   // maps to practiceMode or ids param
+  examYear?: string;                                       // YYYY — maps to examYear API param
+  flaggedIds?: number[];                                   // populated from localStorage when filter='flagged'
 }
 
 interface TopicCount {
