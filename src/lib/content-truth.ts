@@ -81,24 +81,23 @@ export const TIERS = {
     name: { de: "Kostenlos", en: "Free" },
     referral_payout_cents: 0,
   },
-  // ── €27 / 3-month entry tier — primary entry as of 2026-04-28 ──
-  // €9-effective per month, billed once. Cap: each user can buy this
-  // ONCE — eligibility enforced server-side in /api/checkout/nowpayments
-  // by checking whether the user already has a `first_3mo_27` row with
-  // started_at IS NOT NULL. This prevents indefinite parking on the
-  // entry tier, which would cannibalize Cohort sales (Integrator audit
-  // 2026-04-28). After expiry the upgrade path is Cohort €114 first;
-  // `first_month_19` stays live as a "just one more month" fallback.
+  // ── Tier hierarchy (2026-06-25 prices) ──────────────────────────
+  // €19 = advertised entry (first_month_19, unchanged); €49 = 3-month
+  // Starter (first_3mo_27, raised from €27); €129 = 6-month Cohort hero
+  // (premium_pass_guaranteed, raised from €114). Keys are frozen data —
+  // first_3mo_27 now displays €49. Cap: each user can buy first_3mo_27
+  // only ONCE — enforced server-side in /api/checkout/nowpayments.
+  // After expiry the upgrade path is Cohort €129; first_month_19
+  // stays live as a "just one more month" bridging fallback.
   first_3mo_27: {
     id: "first_3mo_27",
-    price_cents: 2700, // €27 lump sum (= €9/month effective)
+    price_cents: 4900, // €49 lump sum (raised from €27 on 2026-06-25)
     duration_months: 3,
     puyp_eligible: false, // 90 days is short of a real prep arc; PUYP starts at 6mo
     available: true,
     name: { de: "3-Monats-Einstieg", en: "3-Month Starter" },
     // Referral payout sized to encourage Telegram/social sharing while
-    // keeping margin positive after NOWPayments fees (€27 net ≈ €26 →
-    // €15 referral leaves ~€11 contribution).
+    // keeping margin positive (€49 at the new price; €15 payout is sound).
     referral_payout_cents: 1500, // €15
   },
   first_month_19: {
@@ -106,19 +105,21 @@ export const TIERS = {
     price_cents: 1900,
     duration_months: 1,
     puyp_eligible: false, // 30 days is too short for PUYP
-    // Demoted to fallback as of 2026-04-28 — primary entry is now
-    // `first_3mo_27`. Stays available so users whose 3-month entry
-    // expired can buy a single bridging month before upgrading.
+    // €19 is the advertised entry price (2026-06-25: price unchanged).
+    // Stays available as a single bridging month for users whose 3-month
+    // Starter has expired before they upgrade to the Cohort (€129).
     available: true,
     name: { de: "Einzelmonat", en: "Single Month" },
     referral_payout_cents: 1000, // €10 per COPY-BUNDLE §4
   },
+  // ── Phantom tiers — removed from all UI 2026-06-25; dead data pending deletion ──
+  // Keys kept: string literals in waitlist/non-crypto-waitlist APIs still reference them.
   monthly: {
     id: "monthly",
     price_cents: 2900,
     duration_months: 1,
     puyp_eligible: false,
-    available: false, // waitlist until Stripe Atlas
+    available: false, // removed from all UI 2026-06-25; dead data pending deletion
     name: { de: "Monatlich", en: "Monthly" },
     referral_payout_cents: 2500, // €25 per COPY-BUNDLE §4
   },
@@ -127,7 +128,7 @@ export const TIERS = {
     price_cents: 7900,
     duration_months: 3,
     puyp_eligible: false,
-    available: false,
+    available: false, // removed from all UI 2026-06-25; dead data pending deletion
     name: { de: "3 Monate", en: "3 Months" },
     referral_payout_cents: 2500, // €25 per COPY-BUNDLE §4
   },
@@ -136,7 +137,7 @@ export const TIERS = {
     price_cents: 14900,
     duration_months: 6,
     puyp_eligible: true,
-    available: false,
+    available: false, // removed from all UI 2026-06-25; dead data pending deletion
     name: { de: "6 Monate", en: "6 Months" },
     referral_payout_cents: 5000, // €50 per COPY-BUNDLE §4
   },
@@ -145,13 +146,13 @@ export const TIERS = {
     price_cents: 22900,
     duration_months: 12,
     puyp_eligible: true,
-    available: false,
+    available: false, // removed from all UI 2026-06-25; dead data pending deletion
     name: { de: "12 Monate", en: "12 Months" },
     referral_payout_cents: 5000, // €50 per COPY-BUNDLE §4
   },
   premium_pass_guaranteed: {
     id: "premium_pass_guaranteed",
-    price_cents: 11400,
+    price_cents: 12900, // €129 — raised from €114 on 2026-06-25
     duration_months: 6,
     puyp_eligible: true,
     available: true,
@@ -181,7 +182,7 @@ export const TIER_BY_ID = TIERS as Readonly<Record<string, Tier | undefined>>;
 // The annual cap is enforced server-side in `/api/webhooks/nowpayments`.
 
 export const REFERRAL_PAYOUTS = {
-  first_3mo_27: 1500, // €15 — primary entry tier, sized for social/Telegram sharing
+  first_3mo_27: 1500, // €15 — 3-month Starter, sized for social/Telegram sharing
   first_month_19: 1000, // €10
   monthly: 2500, // €25
   three_month: 2500, // €25
@@ -219,14 +220,15 @@ export const REFUND = {
 
 // ── 6. Pass-Until-You-Pass (PUYP) ──────────────────────────────────
 //
-// Eligible tiers per COPY-BUNDLE: 6mo + 12mo + cohort + premium-
-// pass-guaranteed. NEVER on €19 or €29 or 3mo. The TIERS ledger
-// above already encodes this; the array is here for places that need
-// a flat allow-list (tier-feature comparison tables, FAQ logic).
+// Eligible tiers (2026-06-25): Cohort (premium_pass_guaranteed) ONLY.
+// The 6mo and 12mo phantom tiers carried PUYP in the old ladder but
+// are now removed from all UI. NEVER on €19 or €49 or 3mo. The TIERS
+// ledger above encodes this; the array below is a flat allow-list for
+// comparison tables and FAQ logic.
 
 export const PUYP_ELIGIBLE_TIERS: ReadonlyArray<TierId> = [
-  "six_month",
-  "twelve_month",
+  // six_month and twelve_month phantom tiers removed from all UI 2026-06-25;
+  // Cohort (premium_pass_guaranteed) is the sole PUYP-eligible live tier.
   "premium_pass_guaranteed",
 ];
 

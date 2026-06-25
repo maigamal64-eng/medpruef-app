@@ -1,14 +1,64 @@
-import Link from "next/link";
+"use client";
 
-export const dynamic = "force-dynamic";
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { useUserTier } from "@/lib/hooks/useUserTier";
 
 /**
  * Whop checkout success landing (redirect target set on the checkout
  * configuration). Access is granted by the /api/webhooks/whop webhook on
- * `payment.succeeded`, not here — so this page only reassures + routes the
- * user back in. Tier flip usually lands within a minute.
+ * `payment.succeeded`, not here — so this page polls /api/auth/me until
+ * the tier flips to Pro, then routes the user home automatically.
+ *
+ * Polling is bounded at 30 s. If the webhook hasn't landed by then (rare),
+ * we surface a manual-continue button rather than spinning forever.
  */
+
+const POLL_INTERVAL_MS = 2_000;
+const POLL_TIMEOUT_MS = 30_000;
+
 export default function CheckoutSuccessPage() {
+  const router = useRouter();
+  const { isPaid, isLoading, refresh } = useUserTier();
+  const [timedOut, setTimedOut] = useState(false);
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Kick off an immediate refresh on mount so we don't wait for the
+  // 5-minute background interval in useUserTier. Then poll every 2 s
+  // so the tier flip registers as soon as the webhook lands.
+  useEffect(() => {
+    void refresh();
+
+    pollingRef.current = setInterval(() => {
+      void refresh();
+    }, POLL_INTERVAL_MS);
+
+    // Safety net: after 30 s stop polling and show a manual-continue
+    // button. The payment_events table will capture any drop for review.
+    timeoutRef.current = setTimeout(() => {
+      if (pollingRef.current) clearInterval(pollingRef.current);
+      setTimedOut(true);
+    }, POLL_TIMEOUT_MS);
+
+    return () => {
+      if (pollingRef.current) clearInterval(pollingRef.current);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, [refresh]);
+
+  // Once tier resolves to Pro (isPaid), stop polling and route home so
+  // the user lands on a screen that already reflects their new access.
+  useEffect(() => {
+    if (isLoading || !isPaid) return;
+    if (pollingRef.current) clearInterval(pollingRef.current);
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    router.push("/");
+  }, [isPaid, isLoading, router]);
+
+  const showSpinner = !timedOut && !isPaid;
+
   return (
     <main className="min-h-screen flex items-center justify-center px-6 bg-[#F7F9FC] dark:bg-[#0F172A]">
       <div className="w-full max-w-md text-center rounded-2xl border border-[#E4E9F0] dark:border-[#334155] bg-white dark:bg-[#1E293B] p-8 shadow-sm">
@@ -21,17 +71,37 @@ export default function CheckoutSuccessPage() {
           Zahlung erhalten, danke
         </h1>
         <p className="mt-3 text-[#4A5568] dark:text-[#A0AEC0]">
-          Wir schalten deinen MedPrüf-Pro-Zugang gerade frei. Das dauert meist unter einer Minute. Lade die Seite danach einmal neu, falls Pro noch nicht aktiv ist.
+          {showSpinner
+            ? "Wir schalten deinen MedPrüf-Pro-Zugang gerade frei. Einen Moment …"
+            : "Dein Pro-Zugang ist aktiv. Du wirst gleich weitergeleitet."}
         </p>
         <p className="mt-2 text-sm text-[#4A5568] dark:text-[#A0AEC0]">
-          Payment received. We are unlocking your MedPrüf Pro access now (usually under a minute). If it is not active yet, just refresh.
+          {showSpinner
+            ? "Activating your MedPrüf Pro access. Just a moment …"
+            : "Your Pro access is active. Redirecting you now."}
         </p>
-        <Link
-          href="/"
-          className="mt-6 inline-flex items-center justify-center rounded-xl bg-[#003A8C] px-6 py-3 font-semibold text-white transition hover:opacity-90"
-        >
-          Weiter zu MedPrüf
-        </Link>
+        {showSpinner && (
+          <div className="mt-6 flex justify-center" aria-label="Bitte warten" role="status">
+            <svg
+              className="animate-spin h-6 w-6 text-[#003A8C]"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+            </svg>
+          </div>
+        )}
+        {timedOut && (
+          <Link
+            href="/"
+            className="mt-6 inline-flex items-center justify-center rounded-xl bg-[#003A8C] px-6 py-3 font-semibold text-white transition hover:opacity-90"
+          >
+            Weiter zu MedPrüf
+          </Link>
+        )}
         <p className="mt-4 text-xs text-[#A0AEC0]">
           Eine Frage? Schreib an user-b7e46e80@example.com
         </p>

@@ -933,6 +933,9 @@ function QuizSharePrompt({ lang }: { lang: Lang }) {
   const [mounted, setMounted] = useState(false);
   const [visible, setVisible] = useState(false);
   const [dismissed, setDismissed] = useState(false);
+  // Invite-only gate (2026-06-25): suppress the share chip for accounts
+  // not enrolled in the referral program.
+  const { referralsEnabled } = useUserTier();
 
   useEffect(() => {
     setMounted(true);
@@ -982,6 +985,7 @@ function QuizSharePrompt({ lang }: { lang: Lang }) {
   }, []);
 
   if (!mounted || !visible || dismissed) return null;
+  if (!referralsEnabled) return null;
 
   const handleClick = () => {
     try {

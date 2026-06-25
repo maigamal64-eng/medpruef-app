@@ -53,6 +53,7 @@ import {
   PAYOUT_WALLET_CHAINS,
   type PayoutWalletChain,
 } from "@/lib/referrals";
+import { useUserTier } from "@/lib/hooks/useUserTier";
 
 type Lang = "de" | "en";
 type MethodChoice = "crypto_wallet" | "wise_account" | "";
@@ -127,6 +128,10 @@ export default function ReferralsPage() {
   const [lang, setLangState] = useState<Lang>("de");
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
+  // Invite-only gate (2026-06-25): the referral program is OFF by default.
+  // We wait for tierLoading=false before showing the gate message so that
+  // an enabled user never sees a flash of "not available" during the fetch.
+  const { referralsEnabled, isLoading: tierLoading } = useUserTier();
   const [data, setData] = useState<StatusResponse | null>(null);
   const [socialProof, setSocialProof] = useState<SocialProofResponse | null>(
     null
@@ -391,6 +396,44 @@ export default function ReferralsPage() {
 
   const user = session?.user;
   const stats = data?.stats;
+
+  // Invite-only gate: only enrolled accounts may open the referral dashboard.
+  // We wait for tierLoading=false so enabled users never see a flash of the
+  // "not available" screen while /api/auth/me is still in flight.
+  if (!tierLoading && !referralsEnabled) {
+    return (
+      <div className="app-layout">
+        <Sidebar
+          lang={lang}
+          userId={user?.id}
+          userName={user?.first_name}
+          totalXp={user?.xp_total ?? 0}
+          streak={user?.streak_count ?? 0}
+        />
+        <main className="main-content safe-area-top safe-area-bottom bg-[var(--mp-surface-sunken)]">
+          <div className="max-w-3xl mx-auto px-4 lg:px-8 py-16 flex flex-col items-center text-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-[var(--mp-surface-raised)] flex items-center justify-center">
+              <Gift className="w-6 h-6 text-[var(--mp-fg-muted)]" />
+            </div>
+            <h2 className="text-xl font-display font-bold text-[var(--mp-fg)]">
+              {lang === "de"
+                ? "Empfehlungsprogramm auf Einladung"
+                : "Referral program by invitation"}
+            </h2>
+            <p className="text-sm text-[var(--mp-fg-muted)] leading-relaxed max-w-sm">
+              {lang === "de"
+                ? "Das Empfehlungsprogramm ist derzeit auf ausgewählte Nutzer beschränkt. Kontaktiere den Support, wenn du teilnehmen möchtest."
+                : "The referral program is currently limited to selected users. Contact support if you would like to participate."}
+            </p>
+            <Link href="/" className="mp-btn mp-btn--secondary mt-2">
+              {lang === "de" ? "Zurück zum Dashboard" : "Back to dashboard"}
+            </Link>
+          </div>
+          <BottomNav lang={lang} />
+        </main>
+      </div>
+    );
+  }
 
   // Method-label helpers
   const methodLabel = (

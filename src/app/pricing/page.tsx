@@ -19,54 +19,27 @@ import { getLang, setLang } from "@/lib/i18n";
 import { getStoredSession } from "@/lib/auth";
 import { getStoredExamSource, type ExamSourceId } from "@/lib/topics";
 import { authFetch as fetch } from "@/lib/authFetch";
+import { useUserTier } from "@/lib/hooks/useUserTier";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import LanguageToggle from "@/components/LanguageToggle";
 import ThemeToggle from "@/components/ThemeToggle";
 import UpcomingExams from "@/components/UpcomingExams";
-import {
-  Dialog,
-  TextField,
-  Select,
-  useToast,
-  BrandedLoader,
-} from "@/components/ui";
+import { useToast, BrandedLoader } from "@/components/ui";
 
 type Lang = "de" | "en";
-/**
- * Standard Stripe-pending tiers. `premium_pass_guaranteed` (the June 26
- * Cohort) is intentionally NOT in this union — it has its own live
- * Whop card checkout and never opens the waitlist dialog.
- *
- * Wire-level tier_interest values sent to /api/waitlist stay as the
- * legacy strings (`'monthly' | '3mo' | '6mo' | '12mo'`) because
- * `/api/waitlist` whitelists those exact values. Don't rename without
- * also updating the waitlist route.
- */
-type StandardTier = "monthly" | "3mo" | "6mo" | "12mo";
-type ExamType = "kenntnispruefung" | "kmp_innsbruck" | "pharma";
 
 /**
- * /pricing — April 23 2026 positioning update.
+ * /pricing — 2026-06-25 pricing update.
  *
- * Six April 23 locks applied here:
- *   1. Pass-Until-You-Pass guarantee badge on the Cohort + 12mo cards,
- *      one PUYP explainer block before the FAQ.
- *   2. Free tier card — 150 Qs × 3 exams, Qbank-only, no expiry.
- *   3. Tiered referral payouts — €25 / €50 / €75 (monthly+3mo / 6mo+12mo
- *      / Cohort), 30-day hold, €600/year cap, USDT or Wise.
- *   4. Positioning — "Pass first try — or study free until you do." No
- *      "Founders'" string anywhere — replaced with "June 26 Cohort".
- *   5. All-access bundle — every paid tier unlocks all 3 exam types.
- *   6. Drop Founders' branding — this file is wholesale-rewritten.
+ * Live tiers: €19/1 month (first_month_19), €49/3 months (first_3mo_27),
+ * €129/6 months — Exam Cohort (premium_pass_guaranteed).
+ * Free tier: 150 Qs × 3 exam types (450 total), no expiry, Qbank-only.
  *
  * Data flow:
- *   - Cohort CTA → POST /api/whop/checkout {tier:'premium_pass_guaranteed'}
- *     → Whop hosted card checkout (card + Apple Pay) → /dashboard?welcome=cohort
- *   - Standard-tier CTAs → waitlist dialog → POST /api/waitlist with
- *     `tier_interest` set to the legacy string.
- *   - Free tier CTA → /quiz?free=1 (the free-tier gate lives in
- *     /api/questions — a separate agent owns that work).
+ *   - All paid CTAs: POST /api/whop/checkout {tier} → Whop hosted card
+ *     checkout (card + Apple Pay) → /dashboard?welcome=...
+ *   - Free tier CTA: /quiz?free=1
  */
 export default function PricingPage() {
   const [lang, setLangState] = useState<Lang>("de");
@@ -76,30 +49,19 @@ export default function PricingPage() {
 
   // Card checkout state.
   // `checkoutLoading` tracks which tier is currently spinning its CTA —
-  // null means idle, "cohort" = €114 PUYP, "first_month" = €19 single-
-  // month (the advertised entry as of 2026-06-24), "starter" = €27 /
-  // 3-month middle step (€9 effective per month). Tracking the specific
-  // card lets us disable only that button while the Whop card checkout
-  // session is being created, instead of freezing the entire page.
+  // null = idle; "cohort" = €129 Cohort PUYP; "first_month" = €19;
+  // "starter" = €49 / 3-month.
   const [checkoutLoading, setCheckoutLoading] = useState<
     null | "cohort" | "starter" | "first_month"
   >(null);
 
-  // Waitlist dialog state
-  const [waitOpen, setWaitOpen] = useState(false);
-  const [waitTier, setWaitTier] = useState<StandardTier>("monthly");
-  const [email, setEmail] = useState("");
-  const [examType, setExamType] = useState<ExamType>("kenntnispruefung");
-  const [examDate, setExamDate] = useState("");
-  const [emailErr, setEmailErr] = useState<string | undefined>(undefined);
-  const [submitting, setSubmitting] = useState(false);
   const toast = useToast();
+  const { isPaid, referralsEnabled } = useUserTier();
 
   useEffect(() => {
     setLangState(getLang());
     const s = getStoredSession();
     setSession(s);
-    if (s?.user?.email) setEmail(s.user.email);
     setStoredExam(getStoredExamSource());
     setMounted(true);
   }, []);
@@ -107,12 +69,6 @@ export default function PricingPage() {
   const switchLang = (l: Lang) => {
     setLang(l);
     setLangState(l);
-  };
-
-  const openWaitlist = (tier: StandardTier) => {
-    setWaitTier(tier);
-    setEmailErr(undefined);
-    setWaitOpen(true);
   };
 
   /**
@@ -207,65 +163,6 @@ export default function PricingPage() {
     void startCardCheckout("first_month_19", "first_month", "first-month-checkout");
   };
 
-  const submitWaitlist = async () => {
-    const e = email.trim();
-    if (!e || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) {
-      setEmailErr(
-        lang === "de" ? "Bitte gültige E-Mail eingeben." : "Please enter a valid email."
-      );
-      return;
-    }
-    setEmailErr(undefined);
-    setSubmitting(true);
-    try {
-      const r = await fetch("/api/waitlist", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          email: e,
-          tier_interest: waitTier,
-          exam_type: examType,
-          exam_date: examDate || undefined,
-          source: "stripe_pending",
-        }),
-      });
-      if (r.ok) {
-        toast.success(
-          lang === "de"
-            ? "Du stehst auf der Warteliste."
-            : "You're on the waitlist.",
-          lang === "de"
-            ? "Wir melden uns, sobald dieser Tarif verfügbar ist."
-            : "We'll notify you when this plan is available."
-        );
-        setWaitOpen(false);
-      } else if (r.status === 409) {
-        toast.info(
-          lang === "de"
-            ? "Bereits eingetragen"
-            : "Already on the waitlist",
-          lang === "de"
-            ? "Du stehst bereits auf der Warteliste, wir halten dich auf dem Laufenden."
-            : "You're already on the waitlist, we'll keep you posted."
-        );
-        setWaitOpen(false);
-      } else {
-        toast.error(
-          lang === "de" ? "Konnte nicht eintragen" : "Could not sign up",
-          lang === "de"
-            ? "Bitte versuche es später nochmal."
-            : "Please try again later."
-        );
-      }
-    } catch {
-      toast.error(
-        lang === "de" ? "Netzwerkfehler" : "Network error",
-        lang === "de" ? "Keine Verbindung zum Server." : "No connection to server."
-      );
-    }
-    setSubmitting(false);
-  };
-
   if (!mounted) {
     return <div className="min-h-screen bg-[var(--mp-surface-sunken)]" />;
   }
@@ -301,62 +198,6 @@ export default function PricingPage() {
     {
       de: "Gültig 6 Monate ab Zahlung: deine gesamte Prüfungsvorbereitung",
       en: "Valid 6 months from payment: your entire exam prep window",
-    },
-  ];
-
-  /**
-   * Standard Stripe-pending tiers — slim rows under the Cohort card.
-   *
-   * Ordered by ICP priority (6mo = "Core Prep" in the launch brief,
-   * the standard cohort length; 3mo = Final Sprint; 12mo carries PUYP;
-   * monthly is the indecisive fallback). On mobile the user scans the
-   * list top-to-bottom so we lead with 6mo rather than monthly.
-   */
-  const standardTiers: Array<{
-    id: StandardTier;
-    price: string;
-    cadence: { de: string; en: string };
-    desc: { de: string; en: string };
-    puyp?: boolean;
-    popular?: boolean;
-  }> = [
-    {
-      id: "6mo",
-      price: "149 €",
-      cadence: { de: "für 6 Monate", en: "for 6 months" },
-      desc: {
-        de: "Die Standard-Prüfungsphase: 6 Monate Vollzugang, alle 3 Prüfungstypen.",
-        en: "Standard prep window: 6 months of full access, all 3 exam types.",
-      },
-      popular: true,
-    },
-    {
-      id: "3mo",
-      price: "79 €",
-      cadence: { de: "für 3 Monate", en: "for 3 months" },
-      desc: {
-        de: "Endspurt vor der Prüfung. Vollzugang zu allen 3 Prüfungstypen.",
-        en: "Final sprint before exam day. All-access across all 3 exam types.",
-      },
-    },
-    {
-      id: "12mo",
-      price: "229 €",
-      cadence: { de: "für 12 Monate", en: "for 12 months" },
-      desc: {
-        de: "Maximaler Puffer · inkl. Pass-Until-You-Pass-Garantie.",
-        en: "Maximum buffer · includes Pass-Until-You-Pass guarantee.",
-      },
-      puyp: true,
-    },
-    {
-      id: "monthly",
-      price: "29 €",
-      cadence: { de: "/ Monat", en: "/ month" },
-      desc: {
-        de: "Monatlich: kürzester Zugang, jederzeit kündbar, alle 3 Prüfungen.",
-        en: "Month-to-month: shortest commitment, cancel any time, all 3 exams.",
-      },
     },
   ];
 
@@ -409,16 +250,11 @@ export default function PricingPage() {
           <FreeTierCard lang={lang} examSource={storedExam} />
         </section>
 
-        {/* ══════════ Entry tier cards: 19 €/month (entry) → 27 €/3mo (step) ══════════ */}
-        {/* Entry repositioned 2026-06-24 ([name]'s call, decisions.json
-            medpruef-landing-entry-price-19eur-2026-06-24): the advertised
-            entry is now the 19 €/month single-month tier, so it renders
-            FIRST and always-visible here, matching the landing-page
-            headline ("ab 19 € im Monat"). The 27 €/3-month starter stays
-            as the middle step directly beneath it; the 114 € Cohort below
-            remains the hero / best value. All three prices are unchanged,
-            only which one is presented as the entry. The `first-month`
-            anchor stays on this section so the landing-page tertiary CTA
+        {/* ══════════ Entry tier cards: 19 €/month (entry) → 49 €/3mo (step) ══════════ */}
+        {/* Entry: 19 €/month single-month tier renders first, matching the
+            landing-page headline ("ab 19 € im Monat"). The 49 €/3-month
+            starter is the middle step below; the 129 € Cohort is the hero.
+            The `first-month` anchor stays so the landing-page tertiary CTA
             still deep-links here. */}
         <section
           id="first-month"
@@ -428,9 +264,10 @@ export default function PricingPage() {
             lang={lang}
             onCheckout={openFirstMonthDialog}
             loading={checkoutLoading === "first_month"}
+            isPaid={isPaid}
           />
 
-          {/* Middle step — 27 € / 3 months (~9 €/month). One step up from
+          {/* Middle step: 49 € / 3 months (~16 €/month). One step up from
               the single-month entry for prospects who want a longer prep
               window before committing to the Cohort. */}
           <div className="mt-3">
@@ -438,22 +275,17 @@ export default function PricingPage() {
               lang={lang}
               onCheckout={openStarter3moDialog}
               loading={checkoutLoading === "starter"}
+              isPaid={isPaid}
             />
           </div>
         </section>
 
         {/* ══════════ Cost-anchor strip ══════════
-            Anchors €114 against the real-world numbers a med doctor
-            already knows: ~€795 per Kenntnisprüfung attempt fee + ~€5,000
-            forgone Assistenzarzt salary per delayed half-year (Funnel
-            agent §9, Conversion Psychology agent §1, review-2026-04-25-B2).
-
-            Numerical anchoring (Tversky/Kahneman): €114 next to
-            €795+€5,000 reads cheap; €114 against "textbook chapter"
-            reads as expense. This is the single biggest cheap-copy
-            lever in the funnel. Honest numbers — Kenntnisprüfung fee
-            is publicly listed by the Vienna Ärztekammer; salary range
-            is the standard Assistenzarzt-1 figure.
+            Anchors €129 against real-world costs a med doctor already
+            knows: ~€795 per Kenntnisprüfung attempt fee + ~€5,000 forgone
+            Assistenzarzt salary per delayed half-year.
+            Honest numbers: exam fee is publicly listed by Vienna Ärztekammer;
+            salary is the standard Assistenzarzt-1 range.
           */}
         <section className="max-w-5xl mx-auto px-4 lg:px-8 pb-3">
           <div
@@ -469,14 +301,14 @@ export default function PricingPage() {
                 <strong className="text-[var(--mp-fg)]">Die Kenntnisprüfung kostet ~795 € pro Versuch.</strong>{" "}
                 Ein verlorenes halbes Jahr in Österreich:{" "}
                 <strong className="text-[var(--mp-fg)]">~5.000 € entgangenes Assistenzarzt-Gehalt.</strong>{" "}
-                Die Prüfungs-Kohorte: <strong className="text-[var(--mp-viridian)]">114 €, einmalig.</strong>
+                Die Prüfungs-Kohorte: <strong className="text-[var(--mp-viridian)]">129 €, einmalig.</strong>
               </>
             ) : (
               <>
                 <strong className="text-[var(--mp-fg)]">The Kenntnisprüfung costs ~795 € per attempt.</strong>{" "}
                 Half a year delayed in Austria:{" "}
                 <strong className="text-[var(--mp-fg)]">~5,000 € in forgone Assistenzarzt salary.</strong>{" "}
-                The Exam Cohort: <strong className="text-[var(--mp-viridian)]">114 €, one time.</strong>
+                The Exam Cohort: <strong className="text-[var(--mp-viridian)]">129 €, one time.</strong>
               </>
             )}
           </div>
@@ -489,42 +321,25 @@ export default function PricingPage() {
             features={cohortFeatures}
             onCheckout={openCohortDialog}
             loading={checkoutLoading === "cohort"}
+            isPaid={isPaid}
           />
         </section>
 
-        {/* ══════════ Standard Stripe-pending tiers ══════════ */}
-        <section className="max-w-5xl mx-auto px-4 lg:px-8 pb-10 mt-2">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="h-px flex-1 bg-[var(--mp-border)]" />
-            <span className="mp-caption text-[var(--mp-fg-subtle)] normal-case tracking-[0.12em] text-[11px]">
-              {lang === "de" ? "Standardtarife · alle Prüfungen enthalten" : "Standard tiers · all exams included"}
-            </span>
-            <div className="h-px flex-1 bg-[var(--mp-border)]" />
-          </div>
-
-          <div className="space-y-3">
-            {standardTiers.map((tier) => (
-              <StandardTierRow
-                key={tier.id}
-                lang={lang}
-                tier={tier}
-                onWaitlist={() => openWaitlist(tier.id)}
-              />
-            ))}
-          </div>
-
-          {/* Fine print */}
-          <p className="text-center mp-small text-[var(--mp-fg-subtle)] mt-8">
+        {/* Fine print */}
+        <section className="max-w-5xl mx-auto px-4 lg:px-8 pb-6">
+          <p className="text-center mp-small text-[var(--mp-fg-subtle)]">
             {lang === "de"
               ? "Preise in Euro, inkl. österreichischer USt. wo anwendbar. Jeder bezahlte Tarif enthält alle drei Prüfungstypen. Keine versteckten Gebühren."
               : "Prices in Euro, incl. Austrian VAT where applicable. Every paid tier includes all three exam types. No hidden fees."}
           </p>
         </section>
 
-        {/* ══════════ Referral block ══════════ */}
-        <section className="max-w-5xl mx-auto px-4 lg:px-8 pb-10">
-          <ReferralBlock lang={lang} />
-        </section>
+        {/* ══════════ Referral block — invite-only, gated on referralsEnabled ══════════ */}
+        {referralsEnabled && (
+          <section className="max-w-5xl mx-auto px-4 lg:px-8 pb-10">
+            <ReferralBlock lang={lang} />
+          </section>
+        )}
 
         {/* ══════════ Exam calendar (self-aging) ══════════ */}
         <section className="max-w-5xl mx-auto px-4 lg:px-8 pb-10">
@@ -550,8 +365,8 @@ export default function PricingPage() {
               }
               a={
                 lang === "de"
-                  ? "Wenn du die Prüfungs-Kohorte oder das Jahresabo hast, mindestens 70 % der relevanten Fragenbank bearbeitet hast und dann durchfällst, lädst du deinen offiziellen Bescheid hoch. Wir verifizieren innerhalb von 72 Stunden und verlängern deinen Zugang kostenlos bis zum nächsten Prüfungstermin: maximal zwei zusätzliche Zyklen."
-                  : "If you're on the Exam Cohort or the 12-month plan, completed ≥70 % of the relevant Qbank and fail the real exam, you upload your official result. We verify within 72 hours and extend your access free through the next exam cycle, up to two additional cycles."
+                  ? "Wenn du die Prüfungs-Kohorte hast, mindestens 70 % der relevanten Fragenbank bearbeitet hast und dann durchfällst, lädst du deinen offiziellen Bescheid hoch. Wir verifizieren innerhalb von 72 Stunden und verlängern deinen Zugang kostenlos bis zum nächsten Prüfungstermin: maximal zwei zusätzliche Zyklen."
+                  : "If you're on the Exam Cohort, completed ≥70 % of the relevant Qbank and fail the real exam, you upload your official result. We verify within 72 hours and extend your access free through the next exam cycle, up to two additional cycles."
               }
             />
             <FAQItem
@@ -617,147 +432,42 @@ export default function PricingPage() {
               </h3>
               <p className="mp-body text-white/80 max-w-xl mx-auto mb-6">
                 {lang === "de"
-                  ? "6 Monate Vollzugang, 114 €, zahlbar mit Karte. Inklusive Pass-Until-You-Pass-Garantie."
-                  : "6 months of full access, 114 €, payable by card. Pass-Until-You-Pass guarantee included."}
+                  ? "6 Monate Vollzugang, 129 €, zahlbar mit Karte. Inklusive Pass-Until-You-Pass-Garantie."
+                  : "6 months of full access, 129 €, payable by card. Pass-Until-You-Pass guarantee included."}
               </p>
-              <button
-                type="button"
-                onClick={openCohortDialog}
-                disabled={checkoutLoading === "cohort"}
-                className="mp-btn mp-btn--lg inline-flex items-center gap-2"
-                style={{
-                  background: "var(--mp-accent-teal)",
-                  color: "var(--mp-oxford-blue-dk)",
-                  opacity: checkoutLoading === "cohort" ? 0.6 : 1,
-                }}
-              >
-                <CreditCard className="w-4 h-4" />
-                {checkoutLoading === "cohort"
-                  ? lang === "de"
-                    ? "Weiterleitung zur Kartenzahlung…"
-                    : "Redirecting to card checkout…"
-                  : lang === "de"
-                    ? "Jetzt mit Karte zahlen"
-                    : "Pay by card"}
-                <ArrowRight className="w-4 h-4" />
-              </button>
+              {isPaid ? (
+                <span className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold bg-white/10 text-white/70">
+                  {lang === "de" ? "Du bist bereits auf Pro" : "You're already on Pro"}
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={openCohortDialog}
+                  disabled={checkoutLoading === "cohort"}
+                  className="mp-btn mp-btn--lg inline-flex items-center gap-2"
+                  style={{
+                    background: "var(--mp-accent-teal)",
+                    color: "var(--mp-oxford-blue-dk)",
+                    opacity: checkoutLoading === "cohort" ? 0.6 : 1,
+                  }}
+                >
+                  <CreditCard className="w-4 h-4" />
+                  {checkoutLoading === "cohort"
+                    ? lang === "de"
+                      ? "Weiterleitung zur Kartenzahlung…"
+                      : "Redirecting to card checkout…"
+                    : lang === "de"
+                      ? "Jetzt mit Karte zahlen"
+                      : "Pay by card"}
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              )}
             </div>
           </div>
         </section>
       </main>
 
       <BottomNav lang={lang} userId={user?.id} />
-
-      {/* ══════════ Waitlist dialog (standard tiers only) ══════════ */}
-      <Dialog
-        open={waitOpen}
-        onOpenChange={setWaitOpen}
-        title={
-          lang === "de"
-            ? "Warteliste beitreten"
-            : "Join the waitlist"
-        }
-        description={
-          lang === "de"
-            ? "Wir melden uns persönlich, sobald die Kreditkarten-Zahlung live ist. Kein Spam, kein Newsletter."
-            : "We'll reach out personally when card payment goes live. No spam, no newsletter."
-        }
-        footer={
-          <>
-            <button
-              type="button"
-              className="mp-btn mp-btn--secondary"
-              onClick={() => setWaitOpen(false)}
-              disabled={submitting}
-            >
-              {lang === "de" ? "Abbrechen" : "Cancel"}
-            </button>
-            <button
-              type="button"
-              className="mp-btn mp-btn--success"
-              onClick={submitWaitlist}
-              disabled={submitting}
-            >
-              {submitting
-                ? lang === "de"
-                  ? "Wird gesendet…"
-                  : "Sending…"
-                : lang === "de"
-                  ? "Auf die Warteliste"
-                  : "Join waitlist"}
-            </button>
-          </>
-        }
-      >
-        <div className="space-y-4">
-          <div
-            className="rounded-lg px-3 py-2 text-xs flex items-center gap-2"
-            style={{
-              background: "var(--mp-success-bg)",
-              border: "1px solid rgba(0,123,95,0.22)",
-              color: "var(--mp-viridian)",
-            }}
-          >
-            <Lock className="w-3 h-3 flex-shrink-0" aria-hidden />
-            <span>
-              {lang === "de" ? "Gewünschter Tarif: " : "Tier of interest: "}
-              <span className="font-semibold">{tierLabel(waitTier, lang)}</span>
-            </span>
-          </div>
-
-          <TextField
-            label={lang === "de" ? "E-Mail-Adresse" : "Email address"}
-            type="email"
-            inputMode="email"
-            autoComplete="email"
-            required
-            placeholder="user-6e2c059a@example.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            error={emailErr}
-          />
-
-          <Select
-            label={lang === "de" ? "Welche Prüfung?" : "Which exam?"}
-            required
-            value={examType}
-            onChange={(e) => setExamType(e.target.value as ExamType)}
-            options={[
-              {
-                value: "kenntnispruefung",
-                label:
-                  lang === "de"
-                    ? "Kenntnisprüfung (Wien)"
-                    : "Kenntnisprüfung (Vienna)",
-              },
-              { value: "kmp_innsbruck", label: "Stichprobentest (Innsbruck)" },
-              { value: "pharma", label: "Pharmakologie" },
-            ]}
-          />
-
-          <TextField
-            label={
-              lang === "de"
-                ? "Prüfungsdatum (optional)"
-                : "Exam date (optional)"
-            }
-            type="date"
-            value={examDate}
-            onChange={(e) => setExamDate(e.target.value)}
-            helper={
-              lang === "de"
-                ? "Hilft uns, dich zu priorisieren, sobald dieser Tarif öffnet."
-                : "Helps us prioritise you when this plan opens."
-            }
-          />
-
-          <p className="text-[11px] text-[var(--mp-fg-subtle)] leading-relaxed pt-1">
-            {lang === "de"
-              ? "Deine E-Mail wird ausschließlich verwendet, um dich zu benachrichtigen, sobald dieser Tarif startet. Du kannst dich jederzeit austragen."
-              : "Your email is only used to notify you when this plan opens. You can unsubscribe any time."}
-          </p>
-        </div>
-      </Dialog>
     </div>
   );
 }
@@ -865,30 +575,26 @@ function FreeTierCard({ lang, examSource }: { lang: Lang; examSource: ExamSource
   );
 }
 
-/* ═══════════════════════ €27 / 3-month starter card ═══════════════════════ */
+/* ═══════════════════════ €49 / 3-month starter card ═══════════════════════ */
 
 /**
- * Primary entry tier as of 2026-04-28. €9-effective per month for 3
- * months, billed as a single €27 lump sum (NOWPayments has no
- * recurring billing, and Stripe Atlas hasn't cleared yet).
+ * 3-month starter tier. €16-effective per month, billed as a single
+ * €49 lump sum via Whop card checkout. Tier key: first_3mo_27 (never
+ * rename — data key, not a price key).
  *
- * Capped at one purchase per user — eligibility enforced server-side
- * in `/api/checkout/nowpayments` to prevent indefinite parking that
- * would erode the €114 Cohort tier (Integrator audit 2026-04-28).
- *
- * Positioning (2026-06-24): the middle step between the 19 €/month
- * single-month entry (rendered above it) and the 114 € Cohort hero
- * below. Visual posture stays subordinate to the Cohort card — Cohort
- * keeps the 2px viridian border + glow, Starter uses a softer accent.
+ * Capped at one purchase per user (server-side). Middle step between
+ * the 19 €/month entry and the 129 € Cohort hero.
  */
 function Starter3MoCard({
   lang,
   onCheckout,
   loading,
+  isPaid,
 }: {
   lang: Lang;
   onCheckout: () => void;
   loading: boolean;
+  isPaid: boolean;
 }) {
   return (
     <article
@@ -915,14 +621,14 @@ function Starter3MoCard({
           </span>
           <h3 className="mp-h3 text-[20px]">
             {lang === "de"
-              ? "3-Monats-Einstieg · ~9 € pro Monat"
-              : "3-Month Starter · ~9 € per month"}
+              ? "3-Monats-Einstieg · ~16 € pro Monat"
+              : "3-Month Starter · ~16 € per month"}
           </h3>
         </div>
         <p className="mp-body text-[var(--mp-fg-muted)] mb-4 text-sm leading-relaxed">
           {lang === "de"
-            ? "Drei Monate Vollzugang für eine einmalige Zahlung von 27 €. Genug Zeit für einen echten Lernlauf, und schmal genug, um zu testen, bevor du dich zur Kohorte committest. Pro Konto einmal verfügbar."
-            : "Three months of full access for one payment of 27 €. Long enough for a real prep run, narrow enough to test before committing to the Cohort. One purchase per account."}
+            ? "Drei Monate Vollzugang für eine einmalige Zahlung von 49 €. Genug Zeit für einen echten Lernlauf, und schmal genug, um zu testen, bevor du dich zur Kohorte committest. Pro Konto einmal verfügbar."
+            : "Three months of full access for one payment of 49 €. Long enough for a real prep run, narrow enough to test before committing to the Cohort. One purchase per account."}
         </p>
         <ul className="space-y-1.5 text-sm text-[var(--mp-fg)]">
           <li className="flex items-start gap-2">
@@ -955,8 +661,8 @@ function Starter3MoCard({
           <li className="flex items-start gap-2 text-[var(--mp-fg-subtle)]">
             <Lock className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" aria-hidden />
             {lang === "de"
-              ? "Keine Pass-Until-You-Pass-Garantie (nur bei 6-Monats- und Kohorten-Tarifen)"
-              : "No Pass-Until-You-Pass guarantee (6-month and Cohort plans only)"}
+              ? "Keine Pass-Until-You-Pass-Garantie (nur bei der Prüfungs-Kohorte)"
+              : "No Pass-Until-You-Pass guarantee (Exam Cohort only)"}
           </li>
         </ul>
       </div>
@@ -965,7 +671,7 @@ function Starter3MoCard({
         <div className="flex flex-col md:items-end">
           <div className="flex items-baseline gap-1.5 md:justify-end">
             <span className="mp-num font-display font-black text-[var(--mp-fg)] text-[36px] leading-none">
-              27 €
+              49 €
             </span>
             <span className="text-sm text-[var(--mp-fg-subtle)]">
               {lang === "de" ? "einmalig" : "one-time"}
@@ -976,32 +682,38 @@ function Starter3MoCard({
             style={{ color: "var(--mp-viridian)", fontWeight: 600 }}
           >
             {lang === "de"
-              ? "≈ 9 € pro Monat · keine Verlängerung"
-              : "≈ 9 € per month · no renewal"}
+              ? "≈ 16 € pro Monat · keine Verlängerung"
+              : "≈ 16 € per month · no renewal"}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={onCheckout}
-          disabled={loading}
-          className="mp-btn mp-btn--success inline-flex items-center justify-center gap-2 w-full md:w-auto whitespace-nowrap"
-          style={{ opacity: loading ? 0.7 : 1 }}
-        >
-          {loading ? (
-            <>
-              <BrandedLoader size={20} hideLabel />
-              {lang === "de" ? "Weiterleitung zur Kartenzahlung…" : "Redirecting to card checkout…"}
-            </>
-          ) : (
-            <>
-              <CreditCard className="w-3.5 h-3.5" />
-              {lang === "de"
-                ? "3 Monate für 27 € starten"
-                : "Start 3 months for 27 €"}
-              <ArrowRight className="w-3.5 h-3.5" />
-            </>
-          )}
-        </button>
+        {isPaid ? (
+          <span className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full text-sm font-semibold w-full md:w-auto bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-subtle)]">
+            {lang === "de" ? "Du bist auf Pro" : "You're on Pro"}
+          </span>
+        ) : (
+          <button
+            type="button"
+            onClick={onCheckout}
+            disabled={loading}
+            className="mp-btn mp-btn--success inline-flex items-center justify-center gap-2 w-full md:w-auto whitespace-nowrap"
+            style={{ opacity: loading ? 0.7 : 1 }}
+          >
+            {loading ? (
+              <>
+                <BrandedLoader size={20} hideLabel />
+                {lang === "de" ? "Weiterleitung zur Kartenzahlung…" : "Redirecting to card checkout…"}
+              </>
+            ) : (
+              <>
+                <CreditCard className="w-3.5 h-3.5" />
+                {lang === "de"
+                  ? "3 Monate für 49 € starten"
+                  : "Start 3 months for 49 €"}
+                <ArrowRight className="w-3.5 h-3.5" />
+              </>
+            )}
+          </button>
+        )}
         <p className="mp-small text-[var(--mp-fg-subtle)] md:text-right">
           {lang === "de"
             ? "Karte · sofort aktiv · läuft nach 90 Tagen aus"
@@ -1012,25 +724,23 @@ function Starter3MoCard({
   );
 }
 
-/* ═══════════════════════ €19 single-month fallback card ═══════════════════════ */
+/* ═══════════════════════ €19 single-month card ═══════════════════════ */
 
 /**
- * Single-month tier — the advertised ENTRY as of 2026-06-24 ([name]'s
- * call, decisions.json medpruef-landing-entry-price-19eur-2026-06-24).
- * Rendered first + always-visible in the entry section, matching the
- * landing headline ("ab 19 € im Monat"). 30 days of full access for a
- * one-time 19 €; a prospect steps up from here to the 27 €/3-month
- * starter or the 114 € Cohort. (Was a collapsed fallback from
- * 2026-04-28 until this reposition.)
+ * Single-month tier — advertised entry ("ab 19 € im Monat"). 30 days of
+ * full access for a one-time 19 €. Tier key: first_month_19. Prospect
+ * steps up to the 49 €/3-month starter or the 129 € Cohort from here.
  */
 function FirstMonthCard({
   lang,
   onCheckout,
   loading,
+  isPaid,
 }: {
   lang: Lang;
   onCheckout: () => void;
   loading: boolean;
+  isPaid: boolean;
 }) {
   return (
     <article
@@ -1096,8 +806,8 @@ function FirstMonthCard({
           <li className="flex items-start gap-2 text-[var(--mp-fg-subtle)]">
             <Lock className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" aria-hidden />
             {lang === "de"
-              ? "Keine Pass-Until-You-Pass-Garantie (nur bei 6-Monats- und 12-Monats-Tarifen)"
-              : "No Pass-Until-You-Pass guarantee (6- and 12-month plans only)"}
+              ? "Keine Pass-Until-You-Pass-Garantie (nur bei der Prüfungs-Kohorte)"
+              : "No Pass-Until-You-Pass guarantee (Exam Cohort only)"}
           </li>
         </ul>
       </div>
@@ -1121,28 +831,34 @@ function FirstMonthCard({
               : "no auto-renewal"}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={onCheckout}
-          disabled={loading}
-          className="mp-btn mp-btn--secondary inline-flex items-center justify-center gap-2 w-full md:w-auto whitespace-nowrap"
-          style={{ opacity: loading ? 0.7 : 1 }}
-        >
-          {loading ? (
-            <>
-              <BrandedLoader size={20} hideLabel />
-              {lang === "de" ? "Weiterleitung zur Kartenzahlung…" : "Redirecting to card checkout…"}
-            </>
-          ) : (
-            <>
-              <CreditCard className="w-3.5 h-3.5" />
-              {lang === "de"
-                ? "Einen Monat für 19 € testen"
-                : "Try one month for 19 €"}
-              <ArrowRight className="w-3.5 h-3.5" />
-            </>
-          )}
-        </button>
+        {isPaid ? (
+          <span className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full text-sm font-semibold w-full md:w-auto bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-subtle)]">
+            {lang === "de" ? "Du bist auf Pro" : "You're on Pro"}
+          </span>
+        ) : (
+          <button
+            type="button"
+            onClick={onCheckout}
+            disabled={loading}
+            className="mp-btn mp-btn--secondary inline-flex items-center justify-center gap-2 w-full md:w-auto whitespace-nowrap"
+            style={{ opacity: loading ? 0.7 : 1 }}
+          >
+            {loading ? (
+              <>
+                <BrandedLoader size={20} hideLabel />
+                {lang === "de" ? "Weiterleitung zur Kartenzahlung…" : "Redirecting to card checkout…"}
+              </>
+            ) : (
+              <>
+                <CreditCard className="w-3.5 h-3.5" />
+                {lang === "de"
+                  ? "Einen Monat für 19 € testen"
+                  : "Try one month for 19 €"}
+                <ArrowRight className="w-3.5 h-3.5" />
+              </>
+            )}
+          </button>
+        )}
         <p className="mp-small text-[var(--mp-fg-subtle)] md:text-right">
           {lang === "de"
             ? "Karte · sofort aktiv · läuft nach 30 Tagen aus"
@@ -1160,11 +876,13 @@ function CohortFeaturedCard({
   features,
   onCheckout,
   loading,
+  isPaid,
 }: {
   lang: Lang;
   features: Array<{ de: string; en: string }>;
   onCheckout: () => void;
   loading: boolean;
+  isPaid: boolean;
 }) {
   return (
     <article
@@ -1280,7 +998,7 @@ function CohortFeaturedCard({
           <div>
             <div className="flex items-baseline gap-1.5">
               <span className="mp-num font-display font-black text-[var(--mp-fg)] text-[40px] leading-none">
-                114 €
+                129 €
               </span>
             </div>
             <p className="text-sm text-[var(--mp-fg-muted)] mt-1.5">
@@ -1299,25 +1017,38 @@ function CohortFeaturedCard({
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={onCheckout}
-            disabled={loading}
-            className="mp-btn mp-btn--success mp-btn--lg w-full inline-flex items-center justify-center gap-2"
-            style={{ opacity: loading ? 0.7 : 1 }}
-          >
-            {loading ? (
-              <>
-                <BrandedLoader size={24} hideLabel />
-                {lang === "de" ? "Weiterleitung zur Kartenzahlung…" : "Redirecting to card checkout…"}
-              </>
-            ) : (
-              <>
-                {lang === "de" ? "Jetzt mit Karte zahlen" : "Pay by card"}
-                <ArrowRight className="w-4 h-4" />
-              </>
-            )}
-          </button>
+          {isPaid ? (
+            <div
+              className="w-full text-center px-4 py-3 rounded-lg text-sm font-semibold"
+              style={{
+                background: "var(--mp-success-bg)",
+                color: "var(--mp-viridian)",
+                border: "1px solid rgba(0,123,95,0.25)",
+              }}
+            >
+              {lang === "de" ? "Du bist bereits auf Pro" : "You're already on Pro"}
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={onCheckout}
+              disabled={loading}
+              className="mp-btn mp-btn--success mp-btn--lg w-full inline-flex items-center justify-center gap-2"
+              style={{ opacity: loading ? 0.7 : 1 }}
+            >
+              {loading ? (
+                <>
+                  <BrandedLoader size={24} hideLabel />
+                  {lang === "de" ? "Weiterleitung zur Kartenzahlung…" : "Redirecting to card checkout…"}
+                </>
+              ) : (
+                <>
+                  {lang === "de" ? "Jetzt mit Karte zahlen" : "Pay by card"}
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
+            </button>
+          )}
 
           <p className="mp-small text-[var(--mp-fg-subtle)] text-center">
             {lang === "de"
@@ -1330,125 +1061,12 @@ function CohortFeaturedCard({
   );
 }
 
-/* ═══════════════════════ Standard tier row (slim, disabled) ═══════════════════════ */
-
-function StandardTierRow({
-  lang,
-  tier,
-  onWaitlist,
-}: {
-  lang: Lang;
-  tier: {
-    id: StandardTier;
-    price: string;
-    cadence: { de: string; en: string };
-    desc: { de: string; en: string };
-    puyp?: boolean;
-    popular?: boolean;
-  };
-  onWaitlist: () => void;
-}) {
-  return (
-    <div
-      className="rounded-[var(--mp-r-card)] p-5 md:p-6 flex flex-col md:flex-row md:items-center gap-4 md:gap-6 transition-colors"
-      style={{
-        background: "var(--mp-surface-raised)",
-        border: `1px solid ${tier.popular ? "rgba(0,123,95,0.25)" : "var(--mp-border-subtle)"}`,
-      }}
-    >
-      <div className="flex-1 min-w-0">
-        <div className="flex flex-wrap items-center gap-2 mb-1.5">
-          <h4 className="mp-h3 text-[18px]">{tierLabel(tier.id, lang)}</h4>
-          {tier.popular && (
-            <span
-              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full"
-              style={{
-                background: "var(--mp-success-bg)",
-                color: "var(--mp-viridian)",
-                fontSize: "10px",
-                fontWeight: 700,
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-              }}
-            >
-              {lang === "de" ? "Beliebt" : "Popular"}
-            </span>
-          )}
-          {tier.puyp && (
-            <span
-              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full"
-              style={{
-                background: "var(--mp-success-bg)",
-                color: "var(--mp-viridian)",
-                fontSize: "10px",
-                fontWeight: 700,
-                letterSpacing: "0.08em",
-              }}
-            >
-              <ShieldCheck className="w-2.5 h-2.5" />
-              PUYP
-            </span>
-          )}
-          <span
-            className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full"
-            style={{
-              background: "var(--mp-surface-sunken)",
-              color: "var(--mp-fg-muted)",
-              border: "1px solid var(--mp-border-subtle)",
-              fontSize: "10px",
-              fontWeight: 600,
-              letterSpacing: "0.06em",
-            }}
-          >
-            <Lock className="w-2.5 h-2.5" aria-hidden />
-            {lang === "de"
-              ? "Bald verfügbar"
-              : "Coming soon"}
-          </span>
-        </div>
-        <p className="text-sm text-[var(--mp-fg-muted)] leading-relaxed">
-          {tier.desc[lang]}
-        </p>
-      </div>
-
-      <div className="flex items-center justify-between md:justify-end gap-3 md:gap-5 md:ml-auto">
-        <div className="text-left md:text-right">
-          <div className="mp-num font-display font-black text-[var(--mp-fg)] text-[22px] leading-none">
-            {tier.price}
-          </div>
-          <div className="mp-small text-[var(--mp-fg-subtle)]">
-            {tier.cadence[lang]}
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={onWaitlist}
-          className="mp-btn mp-btn--secondary inline-flex items-center gap-1.5 whitespace-nowrap"
-          aria-label={
-            lang === "de"
-              ? `Warteliste beitreten für ${tierLabel(tier.id, lang)}`
-              : `Join waitlist for ${tierLabel(tier.id, lang)}`
-          }
-        >
-          {lang === "de" ? "Warteliste" : "Waitlist"}
-          <ArrowRight className="w-3.5 h-3.5" />
-        </button>
-      </div>
-    </div>
-  );
-}
-
 /* ═══════════════════════ Referral block ═══════════════════════ */
 
 function ReferralBlock({ lang }: { lang: Lang }) {
-  // Post-soft-launch §1.4.9 trust audit: concrete per-tier payout amounts
-  // (€25 / €50 / €75) are strictly owned by /referrals. The pricing page
-  // only points users there — one source of truth for the exact figures
-  // avoids copy drift and keeps first-touch surfaces clean.
-  //
-  // Calm visual weight — surface-sunken background instead of raised,
-  // no borders on bullets, so it clearly subordinates to the tier cards
-  // above it without being buried.
+  // Payouts per REFERRAL_PAYOUTS in content-truth.ts:
+  //   first_month_19 = €10, first_3mo_27 = €15, premium_pass_guaranteed = €75
+  // Calm visual weight — surface-sunken background, no borders on bullets.
   return (
     <div
       className="rounded-[var(--mp-r-card)] overflow-hidden p-6 md:p-7"
@@ -1477,8 +1095,8 @@ function ReferralBlock({ lang }: { lang: Lang }) {
       </h3>
       <p className="text-sm text-[var(--mp-fg-muted)] mb-5 max-w-2xl leading-relaxed">
         {lang === "de"
-          ? "Du bist wahrscheinlich schon in den richtigen Telegram-Kanälen für die Kenntnisprüfung. Teile dort deinen Empfehlungslink: 15 € pro 3-Monats-Einstieg, 25 € pro Monatstarif, 50 € pro Halbjahr/Jahr, 75 € pro Kohorte. Auszahlung in USDT oder Wise, 30 Tage nach Zahlungseingang."
-          : "You're probably already in the right Telegram groups for the Kenntnisprüfung. Share your referral link there: 15 € per 3-month starter, 25 € per monthly, 50 € per 6/12-month, 75 € per Cohort sign-up. Paid in USDT or Wise, 30 days after their payment clears."}
+          ? "Du bist wahrscheinlich schon in den richtigen Telegram-Kanälen für die Kenntnisprüfung. Teile dort deinen Empfehlungslink: 10 € pro Einzelmonat, 15 € pro 3-Monats-Einstieg, 75 € pro Kohorte. Auszahlung in USDT oder Wise, 30 Tage nach Zahlungseingang."
+          : "You're probably already in the right Telegram groups for the Kenntnisprüfung. Share your referral link there: 10 € per single month, 15 € per 3-month starter, 75 € per Cohort sign-up. Paid in USDT or Wise, 30 days after their payment clears."}
       </p>
 
       <div className="flex flex-wrap items-center gap-3">
@@ -1538,8 +1156,8 @@ function PuypBlock({ lang }: { lang: Lang }) {
       </h3>
       <p className="text-sm text-[var(--mp-fg-muted)] mb-5 max-w-2xl leading-relaxed">
         {lang === "de"
-          ? "Zwei Schutz-Ebenen: 7-Tage-Geld-zurück-Garantie auf jede Bestellung, und wenn du nach 7 Tagen weiter lernst und dann beim ersten Versuch durchfällst, verlängern wir deinen Zugang kostenlos (Pass-Until-You-Pass). PUYP gilt für die Prüfungs-Kohorte und den 12-Monats-Tarif."
-          : "Two layers of protection: 7-day money-back guarantee on every purchase, and if you keep studying past day 7 and later fail your first attempt, we extend your access free (Pass-Until-You-Pass). PUYP applies to the Exam Cohort and the 12-month plan."}
+          ? "Zwei Schutz-Ebenen: 7-Tage-Geld-zurück-Garantie auf jede Bestellung, und wenn du nach 7 Tagen weiter lernst und dann beim ersten Versuch durchfällst, verlängern wir deinen Zugang kostenlos (Pass-Until-You-Pass). PUYP gilt für die Prüfungs-Kohorte."
+          : "Two layers of protection: 7-day money-back guarantee on every purchase, and if you keep studying past day 7 and later fail your first attempt, we extend your access free (Pass-Until-You-Pass). PUYP applies to the Exam Cohort."}
       </p>
 
       <ul className="space-y-2 mb-5">
@@ -1551,8 +1169,8 @@ function PuypBlock({ lang }: { lang: Lang }) {
             ? "Mindestens 70 % der relevanten Fragenbank müssen bearbeitet sein."
             : "At least 70 % of the relevant Qbank must be completed.",
           lang === "de"
-            ? "Bis zu zwei zusätzliche Zyklen, also bis zu 18 Monate Zugang aus einer 114-€-Zahlung."
-            : "Up to two additional cycles, up to 18 months of access from one 114 € payment.",
+            ? "Bis zu zwei zusätzliche Zyklen, also bis zu 18 Monate Zugang aus einer 129-€-Zahlung."
+            : "Up to two additional cycles, up to 18 months of access from one 129 € payment.",
         ].map((line) => (
           <li
             key={line}
@@ -1607,14 +1225,3 @@ function FAQItem({ q, a }: { q: string; a: string }) {
   );
 }
 
-/* ═══════════════════════ Helpers ═══════════════════════ */
-
-function tierLabel(tier: StandardTier, lang: Lang): string {
-  const labels: Record<StandardTier, { de: string; en: string }> = {
-    monthly: { de: "Monatlich (29 €/Mo)", en: "Monthly (29 €/mo)" },
-    "3mo": { de: "3 Monate (79 €)", en: "3 months (79 €)" },
-    "6mo": { de: "6 Monate (149 €)", en: "6 months (149 €)" },
-    "12mo": { de: "12 Monate (229 €)", en: "12 months (229 €)" },
-  };
-  return labels[tier][lang];
-}

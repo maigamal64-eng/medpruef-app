@@ -28,8 +28,14 @@
 // Constants
 // ─────────────────────────────────────────────────────────────────────
 
-/** Credit awarded per qualified referral, in euro-cents. €40 = 4000. */
-export const REFERRAL_REWARD_CENTS = 4000
+/**
+ * Credit awarded per qualified referral, in euro-cents. Default €40 = 4000.
+ * Override with the REFERRAL_REWARD_CENTS env var for A/B testing or price
+ * adjustments without a deploy. Note: the webhook qualification path uses
+ * tiered per-plan amounts from referralPayoutCents() in nowpayments.ts;
+ * this constant drives UI copy and any flat-reward display surfaces.
+ */
+export const REFERRAL_REWARD_CENTS = Number(process.env.REFERRAL_REWARD_CENTS) || 4000
 
 /** Maximum stacked credit across all referrals, in euro-cents. €400 = 40000. */
 export const REFERRAL_MAX_CREDIT_CENTS = 40_000

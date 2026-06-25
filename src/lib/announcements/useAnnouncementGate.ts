@@ -50,6 +50,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { authFetch } from "@/lib/authFetch";
+import { useUserTier } from "@/lib/hooks/useUserTier";
 
 // ── Shared deduped fetch ─────────────────────────────────────────
 //
@@ -165,8 +166,17 @@ const REFERRAL_FLOATER_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 // ── Gate computation ─────────────────────────────────────────────
 
-export function computeActiveSurface(state: AnnouncementState | null): ActiveSurface {
+export function computeActiveSurface(
+  state: AnnouncementState | null,
+  isPaid = false,
+  referralsEnabled = false,
+): ActiveSurface {
   if (!state) return null;
+
+  // Paying users (Pro/admin) never see upgrade banners, referral
+  // pitches, or orientation nudges — they are already in. Short-circuit
+  // before any cadence logic so the rule is unconditional.
+  if (isPaid) return null;
 
   const {
     sessionCount,
@@ -192,8 +202,10 @@ export function computeActiveSurface(state: AnnouncementState | null): ActiveSur
   // either they've started their third session OR they've answered at
   // least 25 questions cumulatively — AND they've already cleared the
   // orientation modal + dismissed the cohort banner once — AND they're
-  // outside the 7-day cooldown on the floater itself.
+  // outside the 7-day cooldown on the floater itself — AND the account
+  // has the invite-only referral program enabled (referralsEnabled).
   const referralFloaterEligible =
+    referralsEnabled &&
     (sessionCount >= MIN_SESSION_FOR_REFERRAL_FLOATER ||
       qsAnsweredTotal >= MIN_QS_FOR_REFERRAL_FLOATER) &&
     orientationModalSeenAt !== null &&
@@ -228,6 +240,10 @@ export function useAnnouncementGate(): UseAnnouncementGateResult {
   // Track in-flight markSeen requests so we don't fire the same POST
   // twice on a double-click.
   const inFlight = useRef<Set<SurfaceKey>>(new Set());
+
+  // Live tier read — used to short-circuit the gate for paid users and
+  // to restrict the referral floater to invite-only accounts.
+  const { isPaid, referralsEnabled } = useUserTier();
 
   // Fetch initial state on mount. The server also bumps session_count
   // if this is a new session, which is why we must hit it every page
@@ -301,7 +317,7 @@ export function useAnnouncementGate(): UseAnnouncementGateResult {
     }
   }, []);
 
-  const activeSurface = computeActiveSurface(state);
+  const activeSurface = computeActiveSurface(state, isPaid, referralsEnabled);
 
   return { activeSurface, state, loading, markSeen };
 }

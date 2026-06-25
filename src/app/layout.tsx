@@ -229,11 +229,8 @@ export default function RootLayout({
 
           Honesty rules baked in (brand-sweep 2026-06-04):
           - Offers list ONLY the tiers that are actually purchasable today:
-            the free tier (€0) + the three live tiers (€19/€27/€114), now
-            paid by card via Whop. The four recurring standard tiers
-            (€29/€79/€149/€229) still have no Whop plan, so they remain
-            waitlist-only and are NOT asserted as buyable here — add them
-            with availability:InStock once their Whop plans exist.
+            the free tier (€0) + the three live tiers (€19/€49/€129), all
+            paid by card via Whop.
           - No aggregateRating / Review (removed 2026-04-22 — the hard-coded
             4.8/156 didn't match real data; re-introduce only when wired to
             real user_feedback).
@@ -324,7 +321,7 @@ export default function RootLayout({
                     {
                       "@type": "Offer",
                       "name": "3-month starter",
-                      "price": "27",
+                      "price": "49",
                       "priceCurrency": "EUR",
                       "availability": "https://schema.org/InStock",
                       "description":
@@ -333,7 +330,7 @@ export default function RootLayout({
                     {
                       "@type": "Offer",
                       "name": "Exam Cohort",
-                      "price": "114",
+                      "price": "129",
                       "priceCurrency": "EUR",
                       "availability": "https://schema.org/InStock",
                       "description":

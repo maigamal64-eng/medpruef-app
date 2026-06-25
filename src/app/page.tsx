@@ -8,6 +8,7 @@ import { t, getLang, setLang } from "@/lib/i18n";
 import TopicIcon from "@/components/TopicIcon";
 import { Flame, FileText as FileTextIcon, Lightbulb, Shuffle, PlayCircle, ClipboardList, Zap, CheckCircle, User, ChevronRight, GraduationCap, CalendarDays, Search, Star, AlertCircle, Target, ArrowRight } from "lucide-react";
 import { isTelegramMiniApp, getMiniAppInitData, getStoredSession, storeSession, setSessionToken } from "@/lib/auth";
+import { useUserTier } from "@/lib/hooks/useUserTier";
 import {
   getStoredExamSource,
   hasSelectedExam,
@@ -147,6 +148,11 @@ function getExamLabel(examSource: string, lang: "de" | "en"): string {
 }
 
 export default function Home() {
+  // Live tier read: refreshes from /api/auth/me on mount so a just-paid
+  // buyer who lands here via the success page doesn't see a stale-free
+  // screen. referralsEnabled gates the referral card (invite-only).
+  const { referralsEnabled } = useUserTier();
+
   const [user, setUser] = useState<User | null>(null);
   const [gam, setGam] = useState<Gamification | null>(null);
   const [topics, setTopics] = useState<TopicCount[]>([]);
@@ -724,7 +730,7 @@ export default function Home() {
              self-gates against guests + against the announcement gate's
              `referral_floater` surface; see ReferralCodeCard.tsx for
              the coexistence rules with the gate. */}
-          {!user.id.startsWith("guest_") && (
+          {!user.id.startsWith("guest_") && referralsEnabled && (
             <ReferralCodeCard userId={user.id} lang={lang} />
           )}
 

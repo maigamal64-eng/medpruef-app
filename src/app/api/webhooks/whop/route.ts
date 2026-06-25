@@ -4,6 +4,10 @@ import { getServiceClient } from "@/lib/supabase";
 import { logWebhookAttempt } from "@/lib/webhook-logger";
 import { logPaymentEvent } from "@/lib/paymentEvents";
 import {
+  referralPayoutCents,
+  REFERRAL_ANNUAL_CAP_CENTS,
+} from "@/lib/nowpayments";
+import {
   verifyWhopSecretHeader,
   verifyWhopSignature,
   whopPlanToTier,
@@ -436,6 +440,11 @@ export async function POST(req: NextRequest) {
       expires_at: expiresAt.toISOString(),
     });
 
+    // Qualify any referral earned from this Whop payment. Best-effort —
+    // the subscription is already granted; a qualification failure never
+    // blocks or retries the webhook response.
+    await qualifyReferralOnWhopPayment(sb, userId, f.paymentId, tier);
+
     // FUNNEL: the terminal success. Pro granted on a real card payment — the
     // event /admin/payments leads with when the funnel completes end-to-end.
     await logWebhookAttempt({
@@ -772,6 +781,202 @@ async function reverseRefereeReferral(
     Sentry.captureException(err, {
       tags: { route: "webhooks/whop", step: "referral_reverse_unexpected" },
       extra: { refereeUserId },
+    });
+    return false;
+  }
+}
+
+/**
+ * Qualify a referral row when a Whop card payment activates a Pro sub.
+ * Mirrors qualifyReferralIfApplicable in the NOWPayments webhook exactly —
+ * same tiered payouts, same 30-day hold, same €600/year annual cap — with
+ * one extra gate: the invite-only program check on referrals_enabled.
+ *
+ * Invite-only guard (2026-06-25): the referral program is OFF by default.
+ * An admin must flip users.referrals_enabled=true for a referrer's code to
+ * earn rewards. If the referrer is not enabled we skip the reward and log at
+ * warning level (visible in Sentry, not a silent discard).
+ *
+ * Payout amounts (Lock #3, 2026-04-23):
+ *   monthly / 3-month    → €25
+ *   6-month / 12-month   → €50
+ *   premium_pass_g       → €75
+ *
+ * 30-day hold: qualified rows have hold_expires_at = now + 30d. The admin /
+ * payout cron picks up rows where hold_expires_at <= now.
+ *
+ * Annual cap: €600 per referrer per calendar year. Rows earned after the cap
+ * still flip to 'qualified' (they count in stats) but reward_credit_cents is 0
+ * and hold_reason='annual_cap'.
+ *
+ * This is best-effort — any DB error returns false without throwing so the
+ * caller's try/catch never catches it and the webhook always acks the payment.
+ */
+async function qualifyReferralOnWhopPayment(
+  sb: ReturnType<typeof getServiceClient>,
+  refereeUserId: string,
+  paymentId: string,
+  refereeTier: string | null | undefined
+): Promise<boolean> {
+  try {
+    // 1. Does this referee have a referred_by_code?
+    const { data: referee } = await sb
+      .from("users")
+      .select("id, referred_by_code")
+      .eq("id", refereeUserId)
+      .maybeSingle();
+
+    const code = referee?.referred_by_code as string | null | undefined;
+    if (!code) return false;
+
+    // 2. Find the referrer by their referral_code. Include referrals_enabled
+    //    so we can enforce the invite-only gate in the same query.
+    const { data: referrer } = await sb
+      .from("users")
+      .select("id, referrals_enabled")
+      .eq("referral_code", code)
+      .maybeSingle();
+
+    if (!referrer) {
+      console.warn(
+        "[webhooks/whop] referred_by_code matches no user",
+        { code, refereeUserId, paymentId }
+      );
+      return false;
+    }
+
+    // 3. Self-referral guard: a user cannot earn a reward off their own sign-up.
+    if (referrer.id === refereeUserId) {
+      console.warn(
+        "[webhooks/whop] self-referral blocked (referrer == referee)",
+        { refereeUserId, code, paymentId }
+      );
+      return false;
+    }
+
+    // 4. Invite-only gate: referrals_enabled must be true for the referrer
+    //    to earn a reward. If false, log at warning (not error — this is
+    //    expected for non-enrolled accounts) so it shows in Sentry without noise.
+    if (!referrer.referrals_enabled) {
+      Sentry.captureMessage(
+        `Whop referral skipped: referrer ${referrer.id} has referrals_enabled=false ` +
+          `for referee ${refereeUserId} (payment=${paymentId}) — invite-only program`,
+        "warning"
+      );
+      return false;
+    }
+
+    // 5. Is there already a referrals row for this (referrer, referee) pair?
+    const { data: existing } = await sb
+      .from("referrals")
+      .select("id, status")
+      .eq("referrer_user_id", referrer.id)
+      .eq("referee_user_id", refereeUserId)
+      .maybeSingle();
+
+    // Already qualified or paid out — idempotent, nothing to do.
+    if (existing && existing.status !== "pending") return false;
+
+    // 6. Compute tiered payout + enforce the €600/year annual cap.
+    const nowIso = new Date().toISOString();
+    const now = new Date();
+    const tieredPayout = referralPayoutCents(refereeTier);
+
+    const yearStart = new Date(Date.UTC(now.getUTCFullYear(), 0, 1));
+    const { data: yearRows, error: yearErr } = await sb
+      .from("referrals")
+      .select("reward_credit_cents, qualified_at, status")
+      .eq("referrer_user_id", referrer.id)
+      .in("status", ["qualified", "rewarded"])
+      .gte("qualified_at", yearStart.toISOString());
+
+    if (yearErr) {
+      console.error("[webhooks/whop] annual cap lookup failed", yearErr);
+      // Proceed with full payout rather than blocking activation on a
+      // flaky cap-sum query — a slight over-pay is better than a lost row.
+    }
+
+    const yearSumCents = (yearRows || []).reduce(
+      (acc, r) =>
+        acc + ((r as { reward_credit_cents?: number | null }).reward_credit_cents ?? 0),
+      0
+    );
+    const headroomCents = Math.max(0, REFERRAL_ANNUAL_CAP_CENTS - yearSumCents);
+    const cappedPayout = Math.min(tieredPayout, headroomCents);
+    const capped = cappedPayout < tieredPayout;
+
+    const holdExpiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+    const qualifyPayload: Record<string, unknown> = {
+      status: "qualified",
+      qualified_at: nowIso,
+      reward_credit_cents: cappedPayout,
+      hold_expires_at: holdExpiresAt.toISOString(),
+      hold_reason: capped ? "annual_cap" : null,
+    };
+
+    // 7. Upsert: flip a pending row to qualified, or create the row if it
+    //    never existed (some users pay without ever visiting /referrals first).
+    if (!existing) {
+      const { error } = await sb.from("referrals").insert({
+        referrer_user_id: referrer.id,
+        referee_user_id: refereeUserId,
+        referral_code: code,
+        ...qualifyPayload,
+      });
+      if (error) {
+        console.error("[webhooks/whop] referrals insert failed", error);
+        Sentry.captureException(error, {
+          tags: { route: "webhooks/whop", step: "referral_qualify_insert" },
+          extra: { refereeUserId, paymentId },
+        });
+        return false;
+      }
+    } else {
+      // existing.status === 'pending' — flip to qualified.
+      const { error } = await sb
+        .from("referrals")
+        .update(qualifyPayload)
+        .eq("id", (existing as { id: string }).id);
+      if (error) {
+        console.error("[webhooks/whop] referrals update failed", error);
+        Sentry.captureException(error, {
+          tags: { route: "webhooks/whop", step: "referral_qualify_update" },
+          extra: { referralId: (existing as { id: string }).id, refereeUserId, paymentId },
+        });
+        return false;
+      }
+    }
+
+    if (capped) {
+      console.warn("[webhooks/whop] referral capped at €600/yr", {
+        referrer_user_id: referrer.id,
+        referee_user_id: refereeUserId,
+        refereeTier,
+        tieredPayoutCents: tieredPayout,
+        cappedPayoutCents: cappedPayout,
+        yearSumCents,
+      });
+    }
+
+    await recordEvent(sb, refereeUserId, "whop_referral_qualified", {
+      referrer_user_id: referrer.id,
+      referee_user_id: refereeUserId,
+      payment_id: paymentId,
+      referral_code: code,
+      referee_tier: refereeTier ?? null,
+      reward_credit_cents: cappedPayout,
+      hold_expires_at: holdExpiresAt.toISOString(),
+      hold_reason: capped ? "annual_cap" : null,
+    });
+
+    return true;
+  } catch (err) {
+    // Referral qualification must never block activation.
+    console.error("[webhooks/whop] qualifyReferralOnWhopPayment failed", err);
+    Sentry.captureException(err, {
+      tags: { route: "webhooks/whop", step: "referral_qualify_unexpected" },
+      extra: { refereeUserId, paymentId },
     });
     return false;
   }

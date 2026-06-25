@@ -14,6 +14,7 @@ import {
   setStoredExamSource,
   type ExamSourceId,
 } from "@/lib/topics";
+import { useUserTier } from "@/lib/hooks/useUserTier";
 
 type Lang = "de" | "en";
 
@@ -193,6 +194,9 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0 }: Sidebar
   const pathname = usePathname();
   const xpInfo = getLevelFromXP(totalXp);
   const [collapsed, setCollapsed] = useState(false);
+  // Invite-only referral program gate (2026-06-25). The nudge-dot and
+  // any referral link text are suppressed for accounts not enrolled.
+  const { referralsEnabled } = useUserTier();
   // Rescue-sprint §4.7 (2026-04-24): amber nudge-dot on the
   // Empfehlungen nav link until the user has copied their referral
   // code at least once. `null` = unknown (don't show dot yet),
@@ -244,9 +248,10 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0 }: Sidebar
   // Rescue-sprint §4.7: amber nudge-dot on Empfehlungen until the user
   // has copied their code at least once. `hasCopiedCode === false`
   // means we KNOW they haven't copied; `null` (still loading / guest)
-  // hides the dot. Only show dot for non-guest authed users.
+  // hides the dot. Only show dot for non-guest authed users who are
+  // enrolled in the invite-only referral program (referralsEnabled).
   const referralsDot: boolean = Boolean(
-    userId && !userId.startsWith("guest_") && hasCopiedCode === false
+    userId && !userId.startsWith("guest_") && hasCopiedCode === false && referralsEnabled
   );
 
   const navItems: Array<{

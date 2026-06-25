@@ -36,6 +36,7 @@ import {
   type SurfaceKey,
 } from "@/lib/announcements/useAnnouncementGate";
 import { getNextExamSitting } from "@/lib/exam-dates";
+import { useUserTier } from "@/lib/hooks/useUserTier";
 
 const SURFACE: SurfaceKey = "cohort_banner";
 const HIDE_PATHS = [
@@ -68,6 +69,12 @@ function formatGermanDate(iso: string): string {
 export default function CohortCountdownBanner() {
   const pathname = usePathname();
   const { activeSurface, markSeen } = useAnnouncementGate();
+  // Belt-and-suspenders: the gate already short-circuits for paid users
+  // (computeActiveSurface returns null when isPaid). This guard adds a
+  // component-level safety net so the banner never flashes on first
+  // paint before the gate resolves — render nothing while the tier is
+  // still loading, and nothing once we know the user is paid.
+  const { isPaid, isLoading: tierLoading } = useUserTier();
   const [daysLeft, setDaysLeft] = useState<number | null>(null);
 
   // Next Kenntnisprüfung Wien sitting, computed from the self-aging
@@ -91,6 +98,7 @@ export default function CohortCountdownBanner() {
 
   const hideOnPath = HIDE_PATHS.some((p) => pathname?.startsWith(p));
   if (hideOnPath) return null;
+  if (tierLoading || isPaid) return null;
   if (daysLeft === null || !examIso) return null;
   if (activeSurface !== SURFACE) return null;
 

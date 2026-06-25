@@ -51,6 +51,7 @@ import { Check, Copy, Gift } from "lucide-react";
 import { authFetch } from "@/lib/authFetch";
 import { trackEvent } from "@/lib/tracker";
 import { useAnnouncementGate } from "@/lib/announcements/useAnnouncementGate";
+import { useUserTier } from "@/lib/hooks/useUserTier";
 
 type Lang = "de" | "en";
 
@@ -84,6 +85,11 @@ export default function ReferralCodeCard({
   const [copied, setCopied] = useState(false);
   const [copiedAt, setCopiedAt] = useState<string | null>(initialCopiedAt ?? null);
   const { activeSurface } = useAnnouncementGate();
+  // Invite-only gate (2026-06-25): only accounts an admin has enabled may
+  // see or interact with referral UI. Defaults false until /api/auth/me
+  // resolves — the card is invisible during the brief loading window rather
+  // than flashing and then hiding.
+  const { referralsEnabled } = useUserTier();
 
   // Skip entirely for guests — they don't have a persistent code.
   const isGuest = userId.startsWith("guest_");
@@ -174,6 +180,8 @@ export default function ReferralCodeCard({
   // ── Visibility gates ────────────────────────────────────────────
 
   if (isGuest) return null;
+  // Invite-only: hide for accounts not enrolled in the referral program.
+  if (!referralsEnabled) return null;
 
   // If the gate has elected the referral floater right now, skip the
   // dashboard card — the floater is the louder surface, no point

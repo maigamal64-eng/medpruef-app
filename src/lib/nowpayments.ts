@@ -72,7 +72,7 @@ export const TIERS: Record<string, TierDefinition> = {
   // ── The cohort tier — live now, PUYP-guaranteed ──
   premium_pass_guaranteed: {
     id: "premium_pass_guaranteed",
-    priceCents: 11400, // €114
+    priceCents: 12900, // €129 — raised from €114 on 2026-06-25
     currency: "EUR",
     durationMonths: 6,
     humanName: "Exam Cohort (6 months, Pass-Until-You-Pass)",
@@ -81,9 +81,9 @@ export const TIERS: Record<string, TierDefinition> = {
     puypEligible: true,
     referralPayoutCents: 7500, // €75 — lock #3 premium tier
   },
-  // ── €27 / 3-month entry tier — live on crypto rails (April 28 2026) ──
+  // ── €49 / 3-month Starter — live on Whop rails (raised 2026-06-25 from €27) ──
   //
-  // €9-effective-per-month, billed once as a €27 lump sum. ONE-TIME
+  // ~€16-effective-per-month, billed once as a €49 lump sum. ONE-TIME
   // INVOICE, NO AUTO-RENEWAL. Same payment-pattern as every other
   // NOWPayments tier — single invoice, no rebill.
   //
@@ -95,35 +95,30 @@ export const TIERS: Record<string, TierDefinition> = {
   // return 400 + nudge user toward Cohort or the single-month tier.
   //
   // Rationale (Integrator audit 2026-04-28): without the 3-month cap,
-  // a €9-effective monthly anchor would let users park indefinitely
-  // and erode the €114 Cohort tier (€9×12 = €108 ≈ €114). 3 months of
-  // entry pricing is enough to taste the product and short enough to
-  // force a step-up decision. After expiry the upgrade nudge is Cohort
-  // first; `first_month_19` (€19) stays available as a "just one more
-  // month" bridging fallback.
+  // users could park indefinitely on the entry tier. 3 months is enough
+  // to taste the product and short enough to force a step-up decision.
+  // After expiry the upgrade nudge is Cohort first; `first_month_19`
+  // (€19) stays available as a "just one more month" bridging fallback.
   first_3mo_27: {
     id: "first_3mo_27",
-    priceCents: 2700, // €27
+    priceCents: 4900, // €49 (raised from €27 on 2026-06-25)
     currency: "EUR",
     durationMonths: 3,
     humanName: "3-month Starter (one-time, ~€9/month effective)",
     humanNameDe: "3-Monats-Einstieg (einmalig, ~9 € pro Monat)",
     available: true, // LIVE for crypto checkout
     puypEligible: false, // 90 days is too short for PUYP — that needs 6mo+
-    // €27 net is ~€26 after NOWPayments fees; €15 referral keeps margin
-    // positive (~€11 contribution per referred user) while being
-    // attractive enough for Telegram/social sharing per the 2026-04-28
-    // referral-emphasis brief.
+    // €49 net is ~€47 after Whop fees; €15 referral keeps margin
+    // positive while still being attractive for Telegram/social sharing.
+    // Value locked — referral economics remain sound at the new price.
     referralPayoutCents: 1500, // €15
   },
-  // ── €19 first-month — fallback tier, demoted on UI 2026-04-28 ──
+  // ── €19 / 1-month — the advertised entry tier (price unchanged 2026-06-25) ──
   //
-  // Was the primary entry tier from April 24 to April 28. Demoted to
-  // a fallback after the €27/3-month entry shipped — kept available
-  // so users whose 3-month entry expired can buy a single bridging
-  // month before upgrading to Cohort. UI no longer surfaces it as
-  // the default entry; it's a small "or just one more month?" link
-  // under the starter card and on post-expiry upsell screens.
+  // The displayed entry price on all surfaces. Kept available as a
+  // single bridging month for users whose 3-month Starter has expired
+  // before they upgrade to the Cohort (€129). UI surfaces it as the
+  // entry-level / "one more month" option.
   //
   // ONE-TIME INVOICE, NO AUTO-RENEWAL. On day 25 the
   // /api/cron/trial-reminder cron emails the user to pick a longer
@@ -143,7 +138,8 @@ export const TIERS: Record<string, TierDefinition> = {
     // 2026-04-26-D2). Keeps the share rewarded but the math positive.
     referralPayoutCents: 1000, // €10
   },
-  // ── Four always-on tiers — waitlist until Stripe Atlas ──
+  // ── Phantom tiers — removed from all UI 2026-06-25; dead data pending deletion ──
+  // Keys kept: string literals in waitlist/non-crypto-waitlist routes still reference them.
   monthly: {
     id: "monthly",
     priceCents: 2900, // €29

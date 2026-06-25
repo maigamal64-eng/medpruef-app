@@ -803,39 +803,57 @@ export default function SettingsPage() {
                       </p>
                       <p className="text-xs text-[var(--mp-fg-subtle)] mt-0.5">
                         {lang === "de"
-                          ? "Voller Zugang, kostenlos"
-                          : "Full access, free"}
+                          ? "Kostenlos · 150 Fragen pro Prüfung"
+                          : "Free · 150 questions per exam"}
                       </p>
                     </div>
-                    <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-[var(--mp-success-bg)] text-[var(--mp-viridian)] text-xs font-semibold rounded-lg border border-[rgba(0,123,95,0.2)]">
+                    <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-muted)] text-xs font-semibold rounded-lg border border-[var(--mp-border-subtle)]">
                       {tierLabel}
                     </span>
                   </div>
                 )}
 
-                {/* Pricing link */}
-                <Link
-                  href="/pricing"
-                  className="flex items-center justify-between p-3 rounded-[var(--mp-r-input)] bg-[var(--mp-surface-sunken)] border border-[var(--mp-border-subtle)] hover:border-[rgba(0,123,95,0.3)] group transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <Crown className="w-4 h-4 text-[var(--mp-accent)]" aria-hidden />
-                    <div>
+                {/* Upgrade CTA for free users / neutral pricing link for Pro/admin */}
+                {liveIsPaid ? (
+                  <Link
+                    href="/pricing"
+                    className="flex items-center justify-between p-3 rounded-[var(--mp-r-input)] bg-[var(--mp-surface-sunken)] border border-[var(--mp-border-subtle)] hover:border-[rgba(0,123,95,0.3)] group transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Crown className="w-4 h-4 text-[var(--mp-accent)]" aria-hidden />
                       <p className="text-sm font-semibold text-[var(--mp-fg)]">
                         {lang === "de" ? "Preise & Tarife ansehen" : "See pricing & plans"}
                       </p>
-                      <p className="text-xs text-[var(--mp-fg-subtle)]">
-                        {lang === "de"
-                          ? "Free, Pro und Gruppentarife"
-                          : "Free, Pro and Group tiers"}
-                      </p>
                     </div>
-                  </div>
-                  <ArrowRight
-                    className="w-4 h-4 text-[var(--mp-fg-subtle)] group-hover:text-[var(--mp-viridian)] group-hover:translate-x-0.5 transition-all"
-                    aria-hidden
-                  />
-                </Link>
+                    <ArrowRight
+                      className="w-4 h-4 text-[var(--mp-fg-subtle)] group-hover:text-[var(--mp-viridian)] group-hover:translate-x-0.5 transition-all"
+                      aria-hidden
+                    />
+                  </Link>
+                ) : (
+                  <Link
+                    href="/pricing"
+                    className="flex items-center justify-between p-3 rounded-[var(--mp-r-input)] bg-[var(--mp-oxford-blue,#001B3D)] hover:opacity-90 group transition-opacity"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Sparkles className="w-4 h-4 text-white/80" aria-hidden />
+                      <div>
+                        <p className="text-sm font-semibold text-white">
+                          {lang === "de" ? "Auf Pro upgraden" : "Upgrade to Pro"}
+                        </p>
+                        <p className="text-xs text-white/70">
+                          {lang === "de"
+                            ? "Unbegrenzter Zugang ab 19 €"
+                            : "Unlimited access from 19 €"}
+                        </p>
+                      </div>
+                    </div>
+                    <ArrowRight
+                      className="w-4 h-4 text-white/60 group-hover:text-white group-hover:translate-x-0.5 transition-all"
+                      aria-hidden
+                    />
+                  </Link>
+                )}
 
                 {/* Clear study data */}
                 <div className="pt-2 border-t border-[var(--mp-border-subtle)]">

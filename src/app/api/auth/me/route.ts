@@ -58,7 +58,7 @@ export async function GET(req: NextRequest) {
     const { data, error } = await sb
       .from("users")
       .select(
-        "id, tier, tier_expires_at, role, email_status, language_code, onboarding_completed_at",
+        "id, tier, tier_expires_at, role, email_status, language_code, onboarding_completed_at, referrals_enabled",
       )
       .eq("id", guard.userId)
       .maybeSingle();
@@ -91,6 +91,9 @@ export async function GET(req: NextRequest) {
           language_code: (data.language_code as "de" | "en" | null) ?? null,
           onboarding_completed_at:
             (data.onboarding_completed_at as string | null) ?? null,
+          // Invite-only referral program (2026-06-25): only flagged
+          // accounts see/use the referral UI + can earn. Default false.
+          referrals_enabled: (data.referrals_enabled as boolean | null) ?? false,
         },
         fetched_at: new Date().toISOString(),
       },

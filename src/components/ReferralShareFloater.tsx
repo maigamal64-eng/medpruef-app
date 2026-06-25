@@ -34,6 +34,7 @@ import {
   type SurfaceKey,
 } from "@/lib/announcements/useAnnouncementGate";
 import { t, useLang } from "@/lib/i18n";
+import { useUserTier } from "@/lib/hooks/useUserTier";
 
 const SURFACE: SurfaceKey = "referral_floater";
 const ALLOWED_PATHS = ["/", "/flashcards", "/quiz"];
@@ -43,6 +44,12 @@ export default function ReferralShareFloater() {
   const pathname = usePathname();
   const lang = useLang();
   const { activeSurface, markSeen } = useAnnouncementGate();
+  // Invite-only gate (2026-06-25): belt-and-suspenders check alongside the
+  // announcement gate's own referralsEnabled guard in computeActiveSurface.
+  // Having both means the floater is hidden even if the gate evaluates
+  // referral_floater for any reason while referralsEnabled is still false
+  // (e.g. race on initial load).
+  const { referralsEnabled } = useUserTier();
   const [mountedForLongEnough, setMountedForLongEnough] = useState(false);
 
   // 6-second mount delay: don't greet the user with a referral pitch.
@@ -56,6 +63,8 @@ export default function ReferralShareFloater() {
 
   if (!pathname || !ALLOWED_PATHS.includes(pathname)) return null;
   if (activeSurface !== SURFACE) return null;
+  // Invite-only: hide for accounts not enrolled in the referral program.
+  if (!referralsEnabled) return null;
   if (!mountedForLongEnough) return null;
 
   const handleDismiss = () => {

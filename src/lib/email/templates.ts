@@ -3,7 +3,7 @@
  * functions return { subject, htmlBody } so callers can drop them
  * straight into sendZohoEmail().
  *
- * Voice: doctor-to-doctor `du` (per COPY-BUNDLE §10). Currency 114 €.
+ * Voice: doctor-to-doctor `du` (per COPY-BUNDLE §10). Currency 129 €.
  * No exclamation marks except on Glückwunsch / Willkommen.
  *
  * review-2026-04-26-C1.
@@ -53,10 +53,9 @@ export function renderTrialReminder(args: TrialReminderArgs): {
   }
   const statsLine = stats.length > 0 ? stats.join(" · ") : null;
 
-  const cohort = formatEuro(11400);
-  const sixMo = formatEuro(14900);
-  const twelveMo = formatEuro(22900);
-  const monthly = formatEuro(2900);
+  const cohort = formatEuro(12900);
+  const threeMonth = formatEuro(4900);
+  const singleMonth = formatEuro(1900);
 
   if (lang === "de") {
     const subject = "Dein MedPrüf Pro-Zugang endet in 5 Tagen";
@@ -71,10 +70,9 @@ ${statsLine ? `<p><strong>Was du in dieser Zeit aufgebaut hast:</strong> ${stats
 <p>Es gibt <strong>keine automatische Verlängerung</strong>, du entscheidest aktiv. Vier Optionen:</p>
 
 <ul>
-  <li><strong>Prüfungs-Kohorte</strong> (${cohort}, 6 Monate, Pass-Until-You-Pass-Garantie), wenn deine Prüfung im September oder Oktober ist.</li>
-  <li><strong>12 Monate</strong> (${twelveMo}): wenn du den langen Weg gehst und PUYP brauchst.</li>
-  <li><strong>6 Monate</strong> (${sixMo}, mit PUYP): solider Mittelweg.</li>
-  <li><strong>Monatlich</strong> (${monthly}/Monat, sobald Karten-Zahlung live ist): nur einen Monat probieren.</li>
+  <li><strong>Prüfungs-Kohorte</strong> (${cohort}, 6 Monate, Pass-Until-You-Pass-Garantie): Karten-Checkout über Whop, sofortiger Vollzugang.</li>
+  <li><strong>3-Monats-Einstieg</strong> (${threeMonth}): solider Einstieg, kein PUYP, einmalige Zahlung.</li>
+  <li><strong>Einzelmonat</strong> (${singleMonth}): nur einen Monat probieren.</li>
 </ul>
 
 <p><a href="https://medpruf.com/pricing" style="display:inline-block; background:#003a8c; color:white; padding:10px 18px; border-radius:8px; text-decoration:none; font-weight:600;">Tarife ansehen →</a></p>
@@ -102,10 +100,9 @@ ${statsLine ? `<p><strong>What you've built so far:</strong> ${statsLine}.<br>Al
 <p>There is <strong>no auto-renewal</strong>, you actively decide. Four options:</p>
 
 <ul>
-  <li><strong>Exam Cohort</strong> (${cohort}, 6 months, Pass-Until-You-Pass guarantee), if your exam is in September or October.</li>
-  <li><strong>12 months</strong> (${twelveMo}, with PUYP): long road, full guarantee.</li>
-  <li><strong>6 months</strong> (${sixMo}, with PUYP): middle ground.</li>
-  <li><strong>Monthly</strong> (${monthly}/mo, once card payment goes live): just try one more month.</li>
+  <li><strong>Exam Cohort</strong> (${cohort}, 6 months, Pass-Until-You-Pass guarantee): card checkout via Whop, instant full access.</li>
+  <li><strong>3-month starter</strong> (${threeMonth}): solid entry, no PUYP, one-time payment.</li>
+  <li><strong>Single month</strong> (${singleMonth}): just try one more month.</li>
 </ul>
 
 <p><a href="https://medpruf.com/pricing" style="display:inline-block; background:#003a8c; color:white; padding:10px 18px; border-radius:8px; text-decoration:none; font-weight:600;">See plans →</a></p>

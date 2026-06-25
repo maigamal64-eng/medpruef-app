@@ -44,6 +44,13 @@ export interface UserTierState {
   emailStatus: "valid" | "bounced" | "unverified" | null;
   isPaid: boolean;
   isAdmin: boolean;
+  /**
+   * Invite-only referral program (2026-06-25). True only for accounts an
+   * admin has flagged (`users.referrals_enabled`); default false. Gate all
+   * referral UI (blocks, floater) on this so the open, loss-making program
+   * is off by default. Live-read from /api/auth/me; false until resolved.
+   */
+  referralsEnabled: boolean;
   isLoading: boolean;
   error: string | null;
   refresh: () => void;
@@ -58,6 +65,7 @@ interface MeResponse {
     email_status: "valid" | "bounced" | "unverified" | null;
     language_code: "de" | "en" | null;
     onboarding_completed_at: string | null;
+    referrals_enabled?: boolean | null;
   };
   fetched_at?: string;
 }
@@ -86,6 +94,7 @@ export function useUserTier(): UserTierState {
   const [emailStatus, setEmailStatus] = useState<
     "valid" | "bounced" | "unverified" | null
   >(null);
+  const [referralsEnabled, setReferralsEnabled] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const inFlightRef = useRef<AbortController | null>(null);
@@ -145,6 +154,7 @@ export function useUserTier(): UserTierState {
       setTierExpiresAt(u.tier_expires_at);
       setRole(u.role);
       setEmailStatus(u.email_status);
+      setReferralsEnabled(u.referrals_enabled ?? false);
       setIsLoading(false);
 
       // Mirror back into the stored session blob so non-migrated
@@ -204,6 +214,7 @@ export function useUserTier(): UserTierState {
     emailStatus,
     isPaid: computeIsPaid(tier, tierExpiresAt, role),
     isAdmin: role === "admin",
+    referralsEnabled,
     isLoading,
     error,
     refresh: fetchNow,
