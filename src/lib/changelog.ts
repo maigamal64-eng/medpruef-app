@@ -26,6 +26,18 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-06-26",
     tag: "feature",
     title: {
+      de: "Eigene Tests zusammenstellen",
+      en: "Build your own tests",
+    },
+    description: {
+      de: "Neu: Stelle dir mit „Neuen Test erstellen\" deinen eigenen Test zusammen. Wähle Modus (Tutor oder Zeitlimit), Fragenpool (alle, ungesehen, falsch beantwortet oder gespeichert), Fachgebiete pro Prüfungstyp, Fragenanzahl und Prüfungsjahr. Schnellzugriffe für schwache Themen und den Wochenplan sind dabei.",
+      en: "New: build your own test with \"Create New Test\". Choose mode (Tutor or Timed), question pool (all, unseen, incorrect, or saved), subjects per exam type, question count, and exam year. Quick presets for weak topics and your weekly plan are included.",
+    },
+  },
+  {
+    date: "2026-06-26",
+    tag: "feature",
+    title: {
       de: "E-Mail-Adresse zum Konto hinzufügen",
       en: "Add email address to account",
     },
