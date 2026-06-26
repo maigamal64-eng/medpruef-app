@@ -270,14 +270,22 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0 }: Sidebar
     { href: "/progress", icon: <TrendingUp className="w-5 h-5" />, label: t("progress", lang), key: "progress" },
     { href: "/curriculum", icon: <Map className="w-5 h-5" />, label: t("curriculum", lang), key: "curriculum" },
     { href: "/study-plan", icon: <CalendarDays className="w-5 h-5" />, label: lang === "de" ? "Lernplan" : "Study Plan", key: "study-plan" },
-    {
-      href: "/referrals",
-      icon: <Gift className="w-5 h-5" />,
-      label: lang === "de" ? "Empfehlungen" : "Referrals",
-      key: "referrals",
-      dot: referralsDot,
-      dotTooltip: lang === "de" ? "Dein Empfehlungscode wartet." : "Your referral code is waiting.",
-    },
+    // Empfehlungen / Referrals is invite-only (2026-06-25): only accounts an
+    // admin has flagged (referralsEnabled) see the nav link at all. The
+    // /referrals page itself fails closed too, but a non-enrolled user must
+    // not even see the entry point.
+    ...(referralsEnabled
+      ? [
+          {
+            href: "/referrals",
+            icon: <Gift className="w-5 h-5" />,
+            label: lang === "de" ? "Empfehlungen" : "Referrals",
+            key: "referrals",
+            dot: referralsDot,
+            dotTooltip: lang === "de" ? "Dein Empfehlungscode wartet." : "Your referral code is waiting.",
+          },
+        ]
+      : []),
     { href: "/pricing", icon: <Crown className="w-5 h-5" />, label: lang === "de" ? "Preise" : "Pricing", key: "pricing" },
   ];
 

@@ -278,6 +278,7 @@ export default function PricingPage() {
               onCheckout={openStarter3moDialog}
               loading={checkoutLoading === "starter"}
               isPaid={isPaid}
+              referralsEnabled={referralsEnabled}
             />
           </div>
         </section>
@@ -590,11 +591,13 @@ function Starter3MoCard({
   onCheckout,
   loading,
   isPaid,
+  referralsEnabled,
 }: {
   lang: Lang;
   onCheckout: () => void;
   loading: boolean;
   isPaid: boolean;
+  referralsEnabled: boolean;
 }) {
   return (
     <article
@@ -649,15 +652,20 @@ function Starter3MoCard({
               ? "90 Tage ab Zahlung · läuft automatisch aus, kein Abo"
               : "90 days from payment · expires automatically, no subscription"}
           </li>
-          <li className="flex items-start gap-2">
-            <Check
-              className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-[var(--mp-viridian)]"
-              strokeWidth={3}
-            />
-            {lang === "de"
-              ? "Empfiehl uns weiter · 15 € Gutschrift pro bezahltem Empfehlungs-Sign-up"
-              : "Refer others · 15 € credit per paid referral sign-up"}
-          </li>
+          {/* Referral reward is invite-only (2026-06-25): only show this perk
+              to accounts enrolled in the program (referralsEnabled). A
+              non-enrolled visitor must not be promised a referral payout. */}
+          {referralsEnabled && (
+            <li className="flex items-start gap-2">
+              <Check
+                className="w-3.5 h-3.5 mt-0.5 flex-shrink-0 text-[var(--mp-viridian)]"
+                strokeWidth={3}
+              />
+              {lang === "de"
+                ? "Empfiehl uns weiter · 15 € Gutschrift pro bezahltem Empfehlungs-Sign-up"
+                : "Refer others · 15 € credit per paid referral sign-up"}
+            </li>
+          )}
           <li className="flex items-start gap-2 text-[var(--mp-fg-subtle)]">
             <Lock className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" aria-hidden />
             {lang === "de"
