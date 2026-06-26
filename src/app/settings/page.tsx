@@ -1,17 +1,30 @@
 "use client";
 
 /**
- * Settings — MPDS v2 "Settings-B" grouped-cards layout.
+ * Settings — "Clinical Nocturne" reimplementation (2026-06-26).
  *
- * 4 panels: Prüfung (exam setup), Lernen (learning/display), Konto
- * (account), Sprache (display language). Each card uses `.mp-card`
- * and semantic tokens (var(--mp-fg), var(--mp-surface-*) etc.) so
- * dark mode "just works" without hex overrides.
+ * Approved design: reviews/reimplementation-2026-06-26/design/
+ *   09-settings-materials.html + SPECS.md §7.
  *
- * Business logic is untouched: the page still PATCHes
- * `/api/user/exam-preference` with { examDate, dailyGoal } and still
- * writes the same localStorage profile. Only the shell + controls
- * were migrated to the MPDS primitives.
+ * Layout: a merged profile card (avatar / name+rank / email / live tier
+ * chip — the old /profile is folded in here) followed by grouped setting
+ * rows — Lernen (exam date, daily goal, active exam), Darstellung (theme
+ * segmented, language segmented, reminders switch) and Konto (subscription,
+ * data-reset, logout). Offline-Modus keeps its own card (a real feature
+ * with live IndexedDB data). Spark (teal) stays OFF this surface by design
+ * — there is no progress/active/live here, and that restraint is the
+ * premium signal (SPECS §"spark discipline").
+ *
+ * Data layer is UNCHANGED from the prior implementation: same useEffect
+ * hydration, same PATCH to /api/user/exam-preference with
+ * { examDate, dailyGoal }, same localStorage profile, same offline-mode
+ * handlers, the same SubscriptionCard + EmailLinkCard sub-components, and
+ * the same two confirm dialogs. Only the presentation was rebuilt onto the
+ * grouped-rows grammar + MPDS tokens.
+ *
+ * Gamification weave: the profile card surfaces the user's live rank +
+ * level from src/lib/xp.ts (getLevelFromXP) as a calm, earned sub-line —
+ * no XP bar, no confetti, no spark. Achievement-as-identity, not arcade.
  */
 
 import { useEffect, useState } from "react";
@@ -21,36 +34,38 @@ import { getStoredSession, clearSession, storeSession } from "@/lib/auth";
 import { getStoredTheme, setStoredTheme, type Theme } from "@/components/ThemeProvider";
 import { authFetch } from "@/lib/authFetch";
 import { useUserTier } from "@/lib/hooks/useUserTier";
+import { getLevelFromXP } from "@/lib/xp";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import { AppLayout } from "@/components/ui";
 import ExamSittingPicker from "@/components/ExamSittingPicker";
+import { EXAM_SOURCES } from "@/lib/topics";
 import {
   Alert,
   Dialog,
   DialogFooter,
-  Select,
   TextField,
   useToast,
 } from "@/components/ui";
 import {
   ArrowRight,
+  BookMarked,
+  Bell,
+  CalendarDays,
   Clock,
   CloudDownload,
   Crown,
   Database,
   Eye,
   EyeOff,
-  Globe,
-  Info,
+  Languages,
   LogOut,
   Mail,
   Moon,
-  Shield,
   Sparkles,
   Sun,
-  Target,
   Trash2,
+  Zap,
 } from "lucide-react";
 import {
   clearAllOffline,
@@ -88,6 +103,15 @@ function saveProfile(data: ProfileData) {
   localStorage.setItem(PROFILE_KEY, JSON.stringify(data));
 }
 
+/** Two-letter avatar initials from the user's name (or "MP" fallback). */
+function initialsOf(first?: string, last?: string): string {
+  const a = (first || "").trim();
+  const b = (last || "").trim();
+  if (a && b) return (a[0] + b[0]).toUpperCase();
+  if (a) return a.slice(0, 2).toUpperCase();
+  return "MP";
+}
+
 export default function SettingsPage() {
   const toast = useToast();
   const [lang, setLangState] = useState<Lang>("de");
@@ -99,6 +123,8 @@ export default function SettingsPage() {
     targetDate: "",
     dailyGoal: 20,
   });
+  const [examPickerOpen, setExamPickerOpen] = useState(false);
+  const [reminders, setReminders] = useState(false);
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
 
   // ── Offline-mode state ──
@@ -226,8 +252,7 @@ export default function SettingsPage() {
     setLangState(l);
   };
 
-  const handleThemeToggle = () => {
-    const next: Theme = theme === "dark" ? "light" : "dark";
+  const applyTheme = (next: Theme) => {
     setStoredTheme(next);
     setThemeState(next);
   };
@@ -359,7 +384,36 @@ export default function SettingsPage() {
       : 0;
 
   const isGuest = !user || user.id?.startsWith("guest_");
-  const tierLabel = lang === "de" ? "Kostenlos" : "Free";
+
+  // ── Profile-card derived values ──
+  const displayName =
+    [user?.first_name, user?.last_name].filter(Boolean).join(" ").trim() ||
+    (lang === "de" ? "Gast" : "Guest");
+  const avatarInitials = initialsOf(user?.first_name, user?.last_name);
+  const { level: rankLevel, rank: rankName } = getLevelFromXP(gam?.total_xp || 0);
+  // Calm tier label for the profile chip. Paid cohorts surface their human
+  // name; admin shows Admin; everyone else reads Kostenlos.
+  const tierChipLabel =
+    activeSub && (activeSub as { tier_human_name_de?: string }).tier_human_name_de
+      ? lang === "de"
+        ? (activeSub as { tier_human_name_de: string }).tier_human_name_de
+        : (activeSub as { tier_human_name: string }).tier_human_name
+      : liveTier === "admin"
+        ? "Admin"
+        : liveIsPaid
+          ? "Pro"
+          : lang === "de"
+            ? "Kostenlos"
+            : "Free";
+  const tierChipIsPaid = liveIsPaid || !!activeSub;
+
+  // Resolve the active-exam display label from the canonical source.
+  const activeExamId =
+    (user as { active_exam?: string } | undefined)?.active_exam ||
+    "kenntnispruefung";
+  const activeExamLabel =
+    EXAM_SOURCES.find((e) => e.id === activeExamId)?.label ||
+    "Kenntnisprüfung Wien";
 
   return (
     <AppLayout
@@ -375,98 +429,434 @@ export default function SettingsPage() {
       }
       bottomNav={<BottomNav lang={lang} userId={user?.id} />}
     >
-      <main className="main-content safe-area-top safe-area-bottom bg-[var(--mp-surface-sunken)]">
-        {/* Header */}
-        <div className="px-4 lg:px-8 pt-4 pb-2 flex items-center justify-between border-b border-[var(--mp-border-subtle)]">
-          <Link
-            href="/"
-            className="text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg)] text-sm transition-colors"
-          >
-            &larr; {t("back_home", lang)}
-          </Link>
-          <h1 className="text-base font-bold text-[var(--mp-fg)]">{t("settings", lang)}</h1>
-          <div className="w-16" />
-        </div>
+      <main className="main-content safe-area-top safe-area-bottom bg-[var(--mp-bg)]">
+        {/* Scoped presentation styles for the grouped-rows grammar.
+            Settings-only — no globals.css / shared-primitive edits. All
+            colors are MPDS tokens so light + dark + DE/EN "just work". */}
+        <style jsx>{`
+          .set-wrap {
+            max-width: 880px;
+            margin: 0 auto;
+            padding: 20px 16px 120px;
+          }
+          @media (min-width: 1024px) {
+            .set-wrap {
+              padding: 28px 32px 64px;
+            }
+          }
+          .set-pagehead h1 {
+            font-family: var(--mp-font-display);
+            font-weight: 800;
+            font-size: 22px;
+            color: var(--mp-fg);
+            letter-spacing: -0.01em;
+          }
+          .set-pagehead p {
+            font-size: 13px;
+            color: var(--mp-fg-subtle);
+            margin-top: 4px;
+          }
+          /* profile card (merged /profile) */
+          .profile-card {
+            margin-top: 18px;
+            background: var(--mp-surface);
+            border: 1px solid var(--mp-border-soft);
+            border-radius: var(--mp-r-card);
+            padding: 18px;
+            box-shadow: var(--mp-shadow-card);
+            display: flex;
+            align-items: center;
+            gap: 14px;
+          }
+          .pc-av {
+            width: 54px;
+            height: 54px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--mp-cta-blue), var(--mp-oxford-blue));
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--mp-font-display);
+            font-weight: 700;
+            font-size: 19px;
+            flex-shrink: 0;
+          }
+          .pc-body {
+            flex: 1;
+            min-width: 0;
+          }
+          .pc-name {
+            font-family: var(--mp-font-display);
+            font-weight: 800;
+            font-size: 17px;
+            color: var(--mp-fg);
+            line-height: 1.2;
+          }
+          .pc-rank {
+            font-size: 12px;
+            color: var(--mp-fg-muted);
+            margin-top: 3px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+          }
+          .pc-rank .pc-lvl {
+            font-family: var(--mp-font-mono);
+            font-weight: 700;
+            color: var(--mp-viridian);
+          }
+          .pc-mail {
+            font-size: 12px;
+            color: var(--mp-fg-subtle);
+            margin-top: 2px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+          }
+          .pc-tier {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            margin-top: 8px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            padding: 3px 9px;
+            border-radius: 9999px;
+          }
+          .pc-tier :global(svg) {
+            width: 12px;
+            height: 12px;
+          }
+          .pc-tier.paid {
+            color: var(--mp-viridian);
+            background: var(--mp-success-bg);
+          }
+          .pc-tier.free {
+            color: var(--mp-fg-muted);
+            background: var(--mp-surface-sunken);
+          }
+          /* grouped setting cards */
+          .set-group {
+            margin-top: 20px;
+          }
+          .set-label {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--mp-fg-subtle);
+            padding: 0 4px 9px;
+          }
+          .set-card {
+            background: var(--mp-surface);
+            border: 1px solid var(--mp-border-soft);
+            border-radius: var(--mp-r-card);
+            overflow: hidden;
+            box-shadow: var(--mp-shadow-card);
+          }
+          .set-row {
+            display: flex;
+            align-items: center;
+            gap: 13px;
+            padding: 14px 15px;
+            border-bottom: 1px solid var(--mp-border-soft);
+            text-align: left;
+            width: 100%;
+            background: transparent;
+          }
+          .set-row:last-child {
+            border-bottom: none;
+          }
+          button.set-row {
+            cursor: pointer;
+            transition: background var(--mp-dur-base);
+          }
+          button.set-row:hover {
+            background: var(--mp-surface-sunken);
+          }
+          .sr-ic {
+            width: 34px;
+            height: 34px;
+            border-radius: 9px;
+            background: var(--mp-surface-sunken);
+            color: var(--mp-fg-muted);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+          }
+          .sr-ic :global(svg) {
+            width: 18px;
+            height: 18px;
+          }
+          .sr-body {
+            flex: 1;
+            min-width: 0;
+          }
+          .sr-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--mp-fg);
+          }
+          .sr-sub {
+            font-size: 12px;
+            color: var(--mp-fg-subtle);
+            margin-top: 1px;
+          }
+          .sr-ctrl {
+            flex-shrink: 0;
+          }
+          .sr-val {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--mp-fg-muted);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+          }
+          .sr-val :global(svg) {
+            width: 15px;
+            height: 15px;
+            color: var(--mp-fg-subtle);
+          }
+          /* segmented control (theme / language) */
+          .seg {
+            display: flex;
+            background: var(--mp-surface-sunken);
+            border-radius: 9px;
+            padding: 3px;
+            gap: 3px;
+          }
+          .seg button {
+            padding: 6px 11px;
+            border-radius: 7px;
+            border: none;
+            background: transparent;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--mp-fg-muted);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            cursor: pointer;
+            transition: color var(--mp-dur-base);
+          }
+          .seg button :global(svg) {
+            width: 14px;
+            height: 14px;
+          }
+          .seg button.on {
+            background: var(--mp-surface-high);
+            color: var(--mp-fg);
+            box-shadow: var(--mp-shadow-xs);
+          }
+          /* viridian switch */
+          .sw {
+            width: 44px;
+            height: 26px;
+            border-radius: 9999px;
+            background: var(--mp-viridian);
+            position: relative;
+            cursor: pointer;
+            border: none;
+            flex-shrink: 0;
+            transition: background var(--mp-dur-base);
+          }
+          .sw::after {
+            content: "";
+            position: absolute;
+            top: 3px;
+            left: 21px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #fff;
+            transition: left var(--mp-dur-base);
+          }
+          .sw.off {
+            background: var(--mp-surface-sunken);
+            border: 1px solid var(--mp-border-soft);
+          }
+          .sw.off::after {
+            left: 3px;
+          }
+          .sw:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+          }
+          /* inline goal stepper (mono numeral) */
+          .gstep {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+          }
+          .gstep button {
+            width: 30px;
+            height: 30px;
+            border-radius: 8px;
+            border: 1px solid var(--mp-border-soft);
+            background: var(--mp-surface-sunken);
+            color: var(--mp-fg-muted);
+            font-size: 16px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: border-color var(--mp-dur-base), color var(--mp-dur-base);
+          }
+          .gstep button:hover:not(:disabled) {
+            border-color: var(--mp-viridian);
+            color: var(--mp-fg);
+          }
+          .gstep button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+          }
+          .gstep b {
+            font-family: var(--mp-font-mono);
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--mp-fg);
+            min-width: 30px;
+            text-align: center;
+          }
+          /* destructive row */
+          .set-row.danger .sr-ic {
+            background: var(--mp-error-bg);
+            color: var(--mp-error);
+          }
+          .set-row.danger .sr-title {
+            color: var(--mp-error);
+          }
+          /* desktop two-column grouping */
+          .set-2col {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+          }
+          @media (min-width: 1024px) {
+            .set-2col {
+              grid-template-columns: 1fr 1fr;
+              align-items: start;
+            }
+            .set-2col .set-group {
+              margin-top: 0;
+            }
+            .set-span2 {
+              grid-column: 1 / -1;
+            }
+          }
+        `}</style>
 
-        <div className="px-4 lg:px-8 py-6 max-w-5xl mx-auto pb-28">
-          {/* Page intro */}
-          <div className="mb-6">
-            <h2 className="mp-h2 text-[var(--mp-fg)]">
-              {lang === "de" ? "Einstellungen" : "Settings"}
-            </h2>
-            <p className="mp-small mt-1">
+        <div className="set-wrap">
+          <div className="set-pagehead">
+            <h1>{lang === "de" ? "Einstellungen" : "Settings"}</h1>
+            <p>
               {lang === "de"
                 ? "Änderungen werden automatisch gespeichert."
                 : "Changes are saved automatically."}
             </p>
           </div>
 
-          {/* 2-col grid on desktop, single column on mobile */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            {/* ═══ 1 · Prüfung ═══ */}
-            <section className="mp-card p-6">
-              <header className="mb-5">
-                <h3 className="mp-h3 flex items-center gap-2">
-                  <Target className="w-5 h-5 text-[var(--mp-viridian)]" aria-hidden />
-                  {lang === "de" ? "Prüfung" : "Exam"}
-                </h3>
-                <p className="mp-small mt-1">
-                  {lang === "de"
-                    ? "Welche Prüfung du ablegen möchtest und wann."
-                    : "Which exam you plan to take and when."}
-                </p>
-              </header>
-
-              <div className="space-y-5">
-                {/* Exam target date — anchored on the real Austrian
-                    sittings via the shared ExamSittingPicker (same control
-                    as onboarding). Lets Telegram-only / preset-era users
-                    whose exam_date is still NULL anchor to a real sitting. */}
-                <div>
-                  <p className="text-sm font-semibold text-[var(--mp-fg)] mb-1">
-                    {t("exam_target_date", lang)}
-                  </p>
-                  <p className="text-xs text-[var(--mp-fg-subtle)] mb-3">
-                    {lang === "de"
-                      ? "Wähle deinen Prüfungstermin, um einen personalisierten Lernplan freizuschalten."
-                      : "Pick your exam date to unlock a personalized study plan."}
-                  </p>
-                  <ExamSittingPicker
-                    examType={(session?.user as { active_exam?: string } | undefined)?.active_exam || "kenntnispruefung"}
-                    value={profile.targetDate}
-                    onChange={handleTargetDateChange}
-                    lang={lang}
-                  />
+          {/* ─── Profile card (merged /profile) ─── */}
+          <div className="profile-card">
+            <div className="pc-av">{avatarInitials}</div>
+            <div className="pc-body">
+              <div className="pc-name">{displayName}</div>
+              {!isGuest && (
+                <div className="pc-rank">
+                  {rankName}
+                  <span className="pc-lvl">
+                    {lang === "de" ? `Stufe ${rankLevel}` : `Level ${rankLevel}`}
+                  </span>
                 </div>
+              )}
+              {user?.email && <div className="pc-mail">{user.email}</div>}
+              <span className={`pc-tier ${tierChipIsPaid ? "paid" : "free"}`}>
+                {tierChipIsPaid ? (
+                  <Crown aria-hidden />
+                ) : (
+                  <Zap aria-hidden />
+                )}
+                {tierChipLabel}
+              </span>
+            </div>
+          </div>
 
-                {/* Daily goal */}
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <div>
-                      <p className="text-sm font-semibold text-[var(--mp-fg)]">
-                        {t("daily_goal_setting", lang)}
-                      </p>
-                      <p className="text-xs text-[var(--mp-fg-subtle)]">
-                        {lang === "de" ? "5–100 Fragen pro Tag" : "5–100 questions per day"}
-                      </p>
+          {/* Two columns on desktop: Lernen+Darstellung left, Konto right.
+              Single column on mobile in source order. */}
+          <div className="set-2col" style={{ marginTop: 20 }}>
+            {/* ═══ Lernen ═══ */}
+            <div className="set-group">
+              <div className="set-label">{lang === "de" ? "Lernen" : "Learning"}</div>
+              <div className="set-card">
+                {/* Exam date → opens the sitting picker dialog */}
+                <button
+                  type="button"
+                  className="set-row"
+                  onClick={() => setExamPickerOpen(true)}
+                >
+                  <div className="sr-ic">
+                    <CalendarDays aria-hidden />
+                  </div>
+                  <div className="sr-body">
+                    <div className="sr-title">{t("exam_target_date", lang)}</div>
+                    <div className="sr-sub">
+                      {lang === "de"
+                        ? "Steuert deinen Lernplan"
+                        : "Drives your study plan"}
                     </div>
-                    <div className="flex items-center gap-2">
+                  </div>
+                  <div className="sr-ctrl">
+                    <span className="sr-val">
+                      {profile.targetDate
+                        ? new Date(profile.targetDate).toLocaleDateString(
+                            lang === "de" ? "de-AT" : "en-GB",
+                            { day: "numeric", month: "short", year: "numeric" },
+                          )
+                        : lang === "de"
+                          ? "Festlegen"
+                          : "Set"}
+                      <ArrowRight aria-hidden />
+                    </span>
+                  </div>
+                </button>
+
+                {/* Daily goal — inline mono stepper */}
+                <div className="set-row">
+                  <div className="sr-ic">
+                    <span className="font-mono text-[15px] font-bold">
+                      {String(profile.dailyGoal)}
+                    </span>
+                  </div>
+                  <div className="sr-body">
+                    <div className="sr-title">
+                      {lang === "de" ? "Tagesziel" : "Daily goal"}
+                    </div>
+                    <div className="sr-sub">
+                      {lang === "de"
+                        ? "5–100 Fragen pro Tag"
+                        : "5–100 questions per day"}
+                    </div>
+                  </div>
+                  <div className="sr-ctrl">
+                    <div className="gstep">
                       <button
                         type="button"
                         onClick={() => handleDailyGoalChange(profile.dailyGoal - 5)}
-                        className="w-9 h-9 rounded-lg border border-[var(--mp-border)] flex items-center justify-center text-[var(--mp-fg-muted)] hover:bg-[var(--mp-surface-sunken)] transition-colors text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed"
                         disabled={profile.dailyGoal <= 5}
                         aria-label={lang === "de" ? "Ziel verringern" : "Decrease goal"}
                       >
                         −
                       </button>
-                      <span className="w-10 text-center text-lg font-bold text-[var(--mp-viridian)] font-mono tabular-nums">
-                        {profile.dailyGoal}
-                      </span>
+                      <b>{profile.dailyGoal}</b>
                       <button
                         type="button"
                         onClick={() => handleDailyGoalChange(profile.dailyGoal + 5)}
-                        className="w-9 h-9 rounded-lg border border-[var(--mp-border)] flex items-center justify-center text-[var(--mp-fg-muted)] hover:bg-[var(--mp-surface-sunken)] transition-colors text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed"
                         disabled={profile.dailyGoal >= 100}
                         aria-label={lang === "de" ? "Ziel erhöhen" : "Increase goal"}
                       >
@@ -474,228 +864,242 @@ export default function SettingsPage() {
                       </button>
                     </div>
                   </div>
-                  {/* Goal progress bar preview */}
-                  <div
-                    className="h-1.5 bg-[var(--mp-surface-sunken)] rounded-full overflow-hidden"
-                    role="presentation"
-                  >
-                    <div
-                      className="h-full bg-[var(--mp-viridian)] rounded-full transition-all duration-300"
-                      style={{ width: `${profile.dailyGoal}%` }}
-                    />
-                  </div>
                 </div>
 
-                {/* Exam source (read-only summary) */}
-                <div className="flex items-center justify-between pt-1">
-                  <div>
-                    <p className="text-sm font-semibold text-[var(--mp-fg)]">
-                      {t("exam_source_label", lang)}
-                    </p>
-                    <p className="text-xs text-[var(--mp-fg-subtle)] mt-0.5">
-                      {lang === "de"
-                        ? "Kenntnisprüfung Wien · Stichprobentest (Innsbruck) · Pharmakologie"
-                        : "Kenntnisprüfung Vienna · Stichprobentest (Innsbruck) · Pharmacology"}
-                    </p>
+                {/* Active exam — read-only summary */}
+                <div className="set-row">
+                  <div className="sr-ic">
+                    <BookMarked aria-hidden />
                   </div>
-                  <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-[var(--mp-success-bg)] text-[var(--mp-viridian)] text-xs font-semibold rounded-lg border border-[rgba(0,123,95,0.2)]">
-                    3 {lang === "de" ? "Prüfungen" : "exams"}
-                  </span>
+                  <div className="sr-body">
+                    <div className="sr-title">
+                      {lang === "de" ? "Aktive Prüfung" : "Active exam"}
+                    </div>
+                    <div className="sr-sub">{activeExamLabel}</div>
+                  </div>
                 </div>
               </div>
-            </section>
+            </div>
 
-            {/* ═══ 2 · Lernen ═══ */}
-            <section className="mp-card p-6">
-              <header className="mb-5">
-                <h3 className="mp-h3 flex items-center gap-2">
-                  {theme === "dark" ? (
-                    <Moon className="w-5 h-5 text-[var(--mp-info)]" aria-hidden />
-                  ) : (
-                    <Sun
-                      className="w-5 h-5"
-                      style={{ color: "var(--mp-status-warning)" }}
-                      aria-hidden
-                    />
-                  )}
-                  {lang === "de" ? "Lernen & Darstellung" : "Learning & Display"}
-                </h3>
-                <p className="mp-small mt-1">
-                  {lang === "de"
-                    ? "Farbschema und Lernvoreinstellungen."
-                    : "Color scheme and learning defaults."}
-                </p>
-              </header>
-
-              <div className="space-y-5">
-                {/* Dark mode toggle */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    {theme === "dark" ? (
-                      <Moon className="w-5 h-5 text-[var(--mp-info)]" aria-hidden />
-                    ) : (
-                      <Sun
-                        className="w-5 h-5"
-                        style={{ color: "var(--mp-status-warning)" }}
-                        aria-hidden
-                      />
-                    )}
-                    <div>
-                      <p className="text-sm font-semibold text-[var(--mp-fg)]">
-                        {t("dark_mode", lang)}
-                      </p>
-                      <p className="text-xs text-[var(--mp-fg-subtle)]">
-                        {theme === "dark"
-                          ? lang === "de"
-                            ? "Aktiviert"
-                            : "Enabled"
-                          : lang === "de"
-                          ? "Deaktiviert"
-                          : "Disabled"}
-                      </p>
+            {/* ═══ Darstellung ═══ */}
+            <div className="set-group">
+              <div className="set-label">
+                {lang === "de" ? "Darstellung" : "Display"}
+              </div>
+              <div className="set-card">
+                {/* Theme — segmented (sun / moon). The live ThemeProvider
+                    persists only light|dark, so we expose exactly those two
+                    rather than a 'system' button that could not be saved. */}
+                <div className="set-row">
+                  <div className="sr-ic">
+                    {theme === "dark" ? <Moon aria-hidden /> : <Sun aria-hidden />}
+                  </div>
+                  <div className="sr-body">
+                    <div className="sr-title">{lang === "de" ? "Design" : "Theme"}</div>
+                    <div className="sr-sub">
+                      {theme === "dark"
+                        ? lang === "de"
+                          ? "Dunkel"
+                          : "Dark"
+                        : lang === "de"
+                          ? "Hell"
+                          : "Light"}
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={handleThemeToggle}
-                    role="switch"
-                    aria-checked={theme === "dark"}
-                    aria-label={t("dark_mode", lang)}
-                    className={`relative w-12 h-7 rounded-full transition-colors duration-300 ${
-                      theme === "dark"
-                        ? "bg-[var(--mp-cta-blue)]"
-                        : "bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)]"
-                    }`}
-                  >
-                    <span
-                      className={`absolute top-0.5 left-0.5 w-6 h-6 rounded-full bg-white shadow-md transition-transform duration-300 flex items-center justify-center ${
-                        theme === "dark" ? "translate-x-5" : "translate-x-0"
-                      }`}
+                  <div className="sr-ctrl">
+                    <div
+                      className="seg"
+                      role="radiogroup"
+                      aria-label={lang === "de" ? "Design" : "Theme"}
                     >
-                      {theme === "dark" ? (
-                        <Moon className="w-3.5 h-3.5 text-[var(--mp-cta-blue)]" aria-hidden />
-                      ) : (
-                        <Sun
-                          className="w-3.5 h-3.5"
-                          style={{ color: "var(--mp-status-warning)" }}
-                          aria-hidden
-                        />
-                      )}
-                    </span>
-                  </button>
+                      <button
+                        type="button"
+                        role="radio"
+                        aria-checked={theme === "light"}
+                        className={theme === "light" ? "on" : ""}
+                        onClick={() => applyTheme("light")}
+                        aria-label={lang === "de" ? "Hell" : "Light"}
+                      >
+                        <Sun aria-hidden />
+                      </button>
+                      <button
+                        type="button"
+                        role="radio"
+                        aria-checked={theme === "dark"}
+                        className={theme === "dark" ? "on" : ""}
+                        onClick={() => applyTheme("dark")}
+                        aria-label={lang === "de" ? "Dunkel" : "Dark"}
+                      >
+                        <Moon aria-hidden />
+                      </button>
+                    </div>
+                  </div>
                 </div>
 
-                {/* Notifications (coming soon) inline alert */}
-                <Alert
-                  variant="info"
-                  title={`${t("notifications", lang)} · ${t("coming_soon_label", lang)}`}
-                >
-                  {lang === "de"
-                    ? "Tägliche Erinnerungen, Streak-Warnungen und wöchentliche Zusammenfassungen kommen bald."
-                    : "Daily reminders, streak warnings, and weekly summaries are coming soon."}
-                </Alert>
-              </div>
-            </section>
+                {/* Language — segmented DE / EN */}
+                <div className="set-row">
+                  <div className="sr-ic">
+                    <Languages aria-hidden />
+                  </div>
+                  <div className="sr-body">
+                    <div className="sr-title">{t("language", lang)}</div>
+                    <div className="sr-sub">
+                      {lang === "de"
+                        ? "Fragen bleiben auf Deutsch"
+                        : "Questions stay in German"}
+                    </div>
+                  </div>
+                  <div className="sr-ctrl">
+                    <div
+                      className="seg"
+                      role="radiogroup"
+                      aria-label={t("language", lang)}
+                    >
+                      <button
+                        type="button"
+                        role="radio"
+                        aria-checked={lang === "de"}
+                        className={lang === "de" ? "on" : ""}
+                        onClick={() => switchLang("de")}
+                      >
+                        DE
+                      </button>
+                      <button
+                        type="button"
+                        role="radio"
+                        aria-checked={lang === "en"}
+                        className={lang === "en" ? "on" : ""}
+                        onClick={() => switchLang("en")}
+                      >
+                        EN
+                      </button>
+                    </div>
+                  </div>
+                </div>
 
-            {/* ═══ 2.5 · Offline-Modus ═══
+                {/* Reminders — viridian switch. Notifications are not yet
+                    wired server-side, so the switch is disabled with a calm
+                    "coming soon" subtitle (honest, not a dead toggle). */}
+                <div className="set-row">
+                  <div className="sr-ic">
+                    <Bell aria-hidden />
+                  </div>
+                  <div className="sr-body">
+                    <div className="sr-title">
+                      {lang === "de" ? "Erinnerungen" : "Reminders"}
+                    </div>
+                    <div className="sr-sub">
+                      {lang === "de"
+                        ? "Tägliche Lern-Erinnerung · bald"
+                        : "Daily study reminder · soon"}
+                    </div>
+                  </div>
+                  <div className="sr-ctrl">
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={reminders}
+                      aria-label={lang === "de" ? "Erinnerungen" : "Reminders"}
+                      className={`sw ${reminders ? "" : "off"}`}
+                      disabled
+                      onClick={() => setReminders((v) => !v)}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* ═══ Offline-Modus ═══ (full-width — a real feature card)
                 Backlog #7 — 6/11 surveys rank this as the #1 improvement.
                 Lets the user pre-download a batch of questions into
                 IndexedDB so the quiz keeps working on trains / hospital
-                WiFi dead zones. Answers recorded offline queue locally
-                and auto-sync when `initOfflineSync` sees `online` fire. */}
-            <section className="mp-card p-6 lg:col-span-2">
-              <header className="mb-5">
-                <h3 className="mp-h3 flex items-center gap-2">
-                  <CloudDownload
-                    className="w-5 h-5 text-[var(--mp-viridian)]"
+                WiFi dead zones. */}
+            <div className="set-group set-span2">
+              <div className="set-label">
+                {lang === "de" ? "Offline-Modus" : "Offline mode"}
+              </div>
+              <div className="set-card" style={{ padding: 18 }}>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="sr-ic">
+                    <CloudDownload aria-hidden />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="sr-title">
+                      {lang === "de"
+                        ? "Fragen offline verfügbar machen"
+                        : "Make questions available offline"}
+                    </div>
+                    <div className="sr-sub">
+                      {lang === "de"
+                        ? "Lade Fragen vorab herunter, um auch ohne Internet weiterzulernen."
+                        : "Download questions ahead of time to keep studying without internet."}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Stat row — cached count + last sync */}
+                <div className="flex items-center gap-3 p-4 rounded-[var(--mp-r-input)] bg-[var(--mp-surface-sunken)] border border-[var(--mp-border-soft)] mb-4">
+                  <Database
+                    className="w-5 h-5 text-[var(--mp-fg-muted)] flex-shrink-0"
                     aria-hidden
                   />
-                  {lang === "de" ? "Offline-Modus" : "Offline mode"}
-                </h3>
-                <p className="mp-small mt-1">
-                  {lang === "de"
-                    ? "Lade Fragen vorab herunter, um auch ohne Internet weiterzulernen."
-                    : "Download questions ahead of time to keep studying without internet."}
-                </p>
-              </header>
-
-              <div className="space-y-5">
-                {/* Stat row — cached count + last sync */}
-                <div className="flex items-start justify-between gap-4 p-4 rounded-[var(--mp-r-input)] bg-[var(--mp-surface-sunken)] border border-[var(--mp-border-subtle)]">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <Database
-                      className="w-5 h-5 text-[var(--mp-viridian)] flex-shrink-0"
-                      aria-hidden
-                    />
-                    <div className="min-w-0">
-                      <p className="text-lg font-bold text-[var(--mp-fg)] font-mono tabular-nums">
-                        {offlineCount.toLocaleString(
-                          lang === "de" ? "de-DE" : "en-US",
-                        )}{" "}
-                        <span className="text-sm font-semibold text-[var(--mp-fg-muted)]">
-                          {lang === "de" ? "Fragen gespeichert" : "questions saved"}
-                        </span>
-                      </p>
-                      <p className="text-xs text-[var(--mp-fg-subtle)] mt-0.5">
-                        {offlineLastSync
-                          ? lang === "de"
-                            ? `Zuletzt aktualisiert: ${new Date(offlineLastSync).toLocaleString("de-AT", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`
-                            : `Last updated: ${new Date(offlineLastSync).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`
-                          : lang === "de"
-                            ? "Noch nicht heruntergeladen."
-                            : "Not yet downloaded."}
-                      </p>
-                    </div>
+                  <div className="min-w-0">
+                    <p className="text-lg font-bold text-[var(--mp-fg)] font-mono tabular-nums">
+                      {offlineCount.toLocaleString(
+                        lang === "de" ? "de-DE" : "en-US",
+                      )}{" "}
+                      <span className="text-sm font-semibold text-[var(--mp-fg-muted)]">
+                        {lang === "de" ? "Fragen gespeichert" : "questions saved"}
+                      </span>
+                    </p>
+                    <p className="text-xs text-[var(--mp-fg-subtle)] mt-0.5">
+                      {offlineLastSync
+                        ? lang === "de"
+                          ? `Zuletzt aktualisiert: ${new Date(offlineLastSync).toLocaleString("de-AT", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`
+                          : `Last updated: ${new Date(offlineLastSync).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`
+                        : lang === "de"
+                          ? "Noch nicht heruntergeladen."
+                          : "Not yet downloaded."}
+                    </p>
                   </div>
                 </div>
 
                 {/* Preset size chips */}
-                <div>
-                  <p className="text-sm font-semibold text-[var(--mp-fg)] mb-2">
-                    {lang === "de"
-                      ? "Wie viele Fragen herunterladen?"
-                      : "How many questions to download?"}
-                  </p>
-                  <div
-                    role="radiogroup"
-                    aria-label={
-                      lang === "de"
-                        ? "Anzahl der Fragen"
-                        : "Number of questions"
-                    }
-                    className="flex flex-wrap gap-2"
-                  >
-                    {[100, 250, 500].map((n) => {
-                      const active = offlineSize === n;
-                      return (
-                        <button
-                          key={n}
-                          type="button"
-                          role="radio"
-                          aria-checked={active}
-                          onClick={() => setOfflineSize(n as 100 | 250 | 500)}
-                          className={`px-4 py-2 rounded-full text-sm font-semibold border transition-colors ${
-                            active
-                              ? "bg-[var(--mp-viridian)] text-white border-[var(--mp-viridian)]"
-                              : "bg-[var(--mp-surface-raised)] text-[var(--mp-fg-muted)] border-[var(--mp-border)] hover:border-[var(--mp-viridian)] hover:text-[var(--mp-fg)]"
-                          }`}
-                        >
-                          {n.toLocaleString(
-                            lang === "de" ? "de-DE" : "en-US",
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <p className="text-xs text-[var(--mp-fg-subtle)] mt-2">
-                    {lang === "de"
-                      ? "Größere Pakete brauchen länger und mehr Speicher."
-                      : "Larger packs take longer and use more storage."}
-                  </p>
+                <p className="text-sm font-semibold text-[var(--mp-fg)] mb-2">
+                  {lang === "de"
+                    ? "Wie viele Fragen herunterladen?"
+                    : "How many questions to download?"}
+                </p>
+                <div
+                  role="radiogroup"
+                  aria-label={
+                    lang === "de" ? "Anzahl der Fragen" : "Number of questions"
+                  }
+                  className="flex flex-wrap gap-2 mb-4"
+                >
+                  {[100, 250, 500].map((n) => {
+                    const active = offlineSize === n;
+                    return (
+                      <button
+                        key={n}
+                        type="button"
+                        role="radio"
+                        aria-checked={active}
+                        onClick={() => setOfflineSize(n as 100 | 250 | 500)}
+                        className={`px-4 py-2 rounded-full text-sm font-semibold border transition-colors ${
+                          active
+                            ? "bg-[var(--mp-viridian)] text-white border-[var(--mp-viridian)]"
+                            : "bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-muted)] border-[var(--mp-border-soft)] hover:border-[var(--mp-viridian)] hover:text-[var(--mp-fg)]"
+                        }`}
+                      >
+                        {n.toLocaleString(lang === "de" ? "de-DE" : "en-US")}
+                      </button>
+                    );
+                  })}
                 </div>
 
-                {/* Action buttons — stacked on mobile, inline on desktop */}
-                <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                {/* Action buttons */}
+                <div className="flex flex-col sm:flex-row gap-2">
                   <button
                     type="button"
                     onClick={handleDownloadOffline}
@@ -718,274 +1122,215 @@ export default function SettingsPage() {
                     className="mp-btn mp-btn--ghost w-full sm:w-auto disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <Trash2 className="w-4 h-4" aria-hidden />
-                    {lang === "de"
-                      ? "Offline-Daten löschen"
-                      : "Clear offline data"}
+                    {lang === "de" ? "Offline-Daten löschen" : "Clear offline data"}
                   </button>
                 </div>
 
                 {/* Guest warning — offline requires a real user row for sync */}
                 {isGuest && (
-                  <Alert
-                    variant="info"
-                    title={
-                      lang === "de"
-                        ? "Anmeldung erforderlich"
-                        : "Sign-in required"
-                    }
-                  >
-                    {lang === "de"
-                      ? "Der Offline-Modus ist nur für angemeldete Nutzer verfügbar — nur so können beantwortete Fragen später synchronisiert werden."
-                      : "Offline mode is only available to signed-in users — so that answers recorded offline can sync back to your account."}
-                  </Alert>
+                  <div className="mt-4">
+                    <Alert
+                      variant="info"
+                      title={
+                        lang === "de" ? "Anmeldung erforderlich" : "Sign-in required"
+                      }
+                    >
+                      {lang === "de"
+                        ? "Der Offline-Modus ist nur für angemeldete Nutzer verfügbar — nur so können beantwortete Fragen später synchronisiert werden."
+                        : "Offline mode is only available to signed-in users — so that answers recorded offline can sync back to your account."}
+                    </Alert>
+                  </div>
                 )}
               </div>
-            </section>
+            </div>
 
-            {/* ═══ 3 · Konto ═══ */}
-            <section className="mp-card p-6">
-              <header className="mb-5">
-                <h3 className="mp-h3 flex items-center gap-2">
-                  <Crown className="w-5 h-5 text-[var(--mp-viridian)]" aria-hidden />
-                  {lang === "de" ? "Konto" : "Account"}
-                </h3>
-                <p className="mp-small mt-1">
-                  {lang === "de"
-                    ? "Abo, Anmeldung und Datenschutz."
-                    : "Plan, sign-in, and privacy."}
-                </p>
-              </header>
+            {/* ═══ Konto ═══ */}
+            <div className="set-group set-span2">
+              <div className="set-label">{lang === "de" ? "Konto" : "Account"}</div>
 
-              <div className="space-y-5">
-                {/* Email */}
-                {user?.email && (
-                  <div>
-                    <p className="text-xs font-semibold text-[var(--mp-fg-muted)] uppercase tracking-wide mb-1">
-                      {lang === "de" ? "E-Mail" : "Email"}
-                    </p>
-                    <p className="text-sm text-[var(--mp-fg)] font-mono break-all">
-                      {user.email}
-                    </p>
-                  </div>
-                )}
-
-                {/* Email-linking card — Telegram-only users (no email yet)
-                    Gated on: telegram_id present AND email null.
-                    Linking is additive — never disrupts the live Telegram session. */}
-                {user?.telegram_id && !user?.email && (
+              {/* Email-linking card — Telegram-only users (no email yet) */}
+              {user?.telegram_id && !user?.email && (
+                <div className="mb-4">
                   <EmailLinkCard lang={lang} />
-                )}
+                </div>
+              )}
 
-                {/* Current tier / active subscription
-                    Three branches:
-                      1. activeSub object → /api/user/subscription found
-                         a real subscriptions row (card- or crypto-paid).
-                         Render the rich SubscriptionCard with countdown.
-                      2. !activeSub but liveIsPaid → admin-granted Pro
-                         (no subscriptions row exists; users.tier was
-                         updated directly by /api/admin/users/<id>/grant).
-                         Render a minimal Pro card with the expiry from
-                         /api/auth/me. review-2026-04-26-A2.
-                      3. !activeSub && !liveIsPaid → genuine free user. */}
-                {activeSub ? (
+              {/* Active subscription / current plan — rich card branches */}
+              {activeSub ? (
+                <div className="mb-4">
                   <SubscriptionCard sub={activeSub} lang={lang} />
-                ) : liveIsPaid ? (
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-semibold text-[var(--mp-fg)]">
-                        {lang === "de" ? "Aktueller Tarif" : "Current plan"}
-                      </p>
-                      <p className="text-xs text-[var(--mp-fg-subtle)] mt-0.5">
-                        {liveTierExpiresAt
-                          ? lang === "de"
-                            ? `Pro · gültig bis ${new Date(liveTierExpiresAt).toLocaleDateString("de-AT", { day: "numeric", month: "long", year: "numeric" })}`
-                            : `Pro · valid until ${new Date(liveTierExpiresAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}`
-                          : lang === "de"
-                            ? "Pro · Vollzugriff aktiv"
-                            : "Pro · full access active"}
-                      </p>
-                    </div>
-                    <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-[var(--mp-success-bg)] text-[var(--mp-viridian)] text-xs font-semibold rounded-lg border border-[rgba(0,123,95,0.2)]">
-                      {liveTier === "admin" ? (lang === "de" ? "Admin" : "Admin") : "Pro"}
-                    </span>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-semibold text-[var(--mp-fg)]">
-                        {lang === "de" ? "Aktueller Tarif" : "Current plan"}
-                      </p>
-                      <p className="text-xs text-[var(--mp-fg-subtle)] mt-0.5">
-                        {lang === "de"
-                          ? "Kostenlos · 150 Fragen pro Prüfung"
-                          : "Free · 150 questions per exam"}
-                      </p>
-                    </div>
-                    <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-muted)] text-xs font-semibold rounded-lg border border-[var(--mp-border-subtle)]">
-                      {tierLabel}
-                    </span>
-                  </div>
-                )}
+                </div>
+              ) : null}
 
-                {/* Upgrade CTA for free users / neutral pricing link for Pro/admin */}
-                {liveIsPaid ? (
-                  <Link
-                    href="/pricing"
-                    className="flex items-center justify-between p-3 rounded-[var(--mp-r-input)] bg-[var(--mp-surface-sunken)] border border-[var(--mp-border-subtle)] hover:border-[rgba(0,123,95,0.3)] group transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Crown className="w-4 h-4 text-[var(--mp-accent)]" aria-hidden />
-                      <p className="text-sm font-semibold text-[var(--mp-fg)]">
-                        {lang === "de" ? "Preise & Tarife ansehen" : "See pricing & plans"}
-                      </p>
+              <div className="set-card">
+                {/* Plan summary row (only when there's no rich activeSub card) */}
+                {!activeSub && (
+                  <div className="set-row">
+                    <div className="sr-ic">
+                      <Crown aria-hidden />
                     </div>
-                    <ArrowRight
-                      className="w-4 h-4 text-[var(--mp-fg-subtle)] group-hover:text-[var(--mp-viridian)] group-hover:translate-x-0.5 transition-all"
-                      aria-hidden
-                    />
-                  </Link>
-                ) : (
-                  <Link
-                    href="/pricing"
-                    className="flex items-center justify-between p-3 rounded-[var(--mp-r-input)] bg-[var(--mp-oxford-blue,#001B3D)] hover:opacity-90 group transition-opacity"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Sparkles className="w-4 h-4 text-white/80" aria-hidden />
-                      <div>
-                        <p className="text-sm font-semibold text-white">
-                          {lang === "de" ? "Auf Pro upgraden" : "Upgrade to Pro"}
-                        </p>
-                        <p className="text-xs text-white/70">
-                          {lang === "de"
-                            ? "Unbegrenzter Zugang ab 19 €"
-                            : "Unlimited access from 19 €"}
-                        </p>
+                    <div className="sr-body">
+                      <div className="sr-title">
+                        {lang === "de" ? "Aktueller Tarif" : "Current plan"}
+                      </div>
+                      <div className="sr-sub">
+                        {liveIsPaid
+                          ? liveTierExpiresAt
+                            ? lang === "de"
+                              ? `Pro · gültig bis ${new Date(liveTierExpiresAt).toLocaleDateString("de-AT", { day: "numeric", month: "long", year: "numeric" })}`
+                              : `Pro · valid until ${new Date(liveTierExpiresAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}`
+                            : lang === "de"
+                              ? "Pro · Vollzugriff aktiv"
+                              : "Pro · full access active"
+                          : lang === "de"
+                            ? "Kostenlos · 200 Fragen pro Prüfung"
+                            : "Free · 200 questions per exam"}
                       </div>
                     </div>
-                    <ArrowRight
-                      className="w-4 h-4 text-white/60 group-hover:text-white group-hover:translate-x-0.5 transition-all"
-                      aria-hidden
-                    />
-                  </Link>
+                    <div className="sr-ctrl">
+                      <span
+                        className={`pc-tier ${liveIsPaid ? "paid" : "free"}`}
+                        style={{ marginTop: 0 }}
+                      >
+                        {liveTier === "admin"
+                          ? "Admin"
+                          : liveIsPaid
+                            ? "Pro"
+                            : lang === "de"
+                              ? "Kostenlos"
+                              : "Free"}
+                      </span>
+                    </div>
+                  </div>
                 )}
 
-                {/* Clear study data */}
-                <div className="pt-2 border-t border-[var(--mp-border-subtle)]">
-                  <p className="text-xs font-semibold text-[var(--mp-fg-muted)] uppercase tracking-wide mb-3 flex items-center gap-1.5">
-                    <Shield className="w-3.5 h-3.5" aria-hidden />
-                    {t("data_privacy", lang)}
-                  </p>
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-[var(--mp-fg)]">
-                        {t("clear_data", lang)}
-                      </p>
-                      <p className="text-xs text-[var(--mp-fg-subtle)]">
-                        {lang === "de"
-                          ? "Lesezeichen, Notizen und Quiz-Daten entfernen"
-                          : "Remove bookmarks, notes, and quiz data"}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setClearDialogOpen(true)}
-                      className="mp-btn mp-btn--destructive mp-btn--sm flex-shrink-0"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" aria-hidden />
-                      {t("clear_data", lang)}
-                    </button>
+                {/* Manage subscription / pricing */}
+                <Link href="/pricing" className="set-row" style={{ display: "flex" }}>
+                  <div className="sr-ic">
+                    <Sparkles aria-hidden />
                   </div>
-                </div>
+                  <div className="sr-body">
+                    <div className="sr-title">
+                      {liveIsPaid
+                        ? lang === "de"
+                          ? "Abo verwalten"
+                          : "Manage plan"
+                        : lang === "de"
+                          ? "Auf Pro upgraden"
+                          : "Upgrade to Pro"}
+                    </div>
+                    <div className="sr-sub">
+                      {liveIsPaid
+                        ? lang === "de"
+                          ? "Preise & Tarife ansehen"
+                          : "See pricing & plans"
+                        : lang === "de"
+                          ? "Unbegrenzter Zugang"
+                          : "Unlimited access"}
+                    </div>
+                  </div>
+                  <div className="sr-ctrl">
+                    <span className="sr-val">
+                      <ArrowRight aria-hidden />
+                    </span>
+                  </div>
+                </Link>
+
+                {/* Clear study data — destructive */}
+                <button
+                  type="button"
+                  className="set-row danger"
+                  onClick={() => setClearDialogOpen(true)}
+                >
+                  <div className="sr-ic">
+                    <Trash2 aria-hidden />
+                  </div>
+                  <div className="sr-body">
+                    <div className="sr-title">{t("clear_data", lang)}</div>
+                    <div className="sr-sub">
+                      {lang === "de"
+                        ? "Lesezeichen, Notizen und Quiz-Daten entfernen"
+                        : "Remove bookmarks, notes, and quiz data"}
+                    </div>
+                  </div>
+                  <div className="sr-ctrl">
+                    <span className="sr-val">
+                      <ArrowRight aria-hidden />
+                    </span>
+                  </div>
+                </button>
 
                 {/* Logout */}
                 {user && !isGuest && (
-                  <div className="flex items-center justify-between gap-3 pt-2 border-t border-[var(--mp-border-subtle)]">
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-[var(--mp-fg)]">
-                        {t("logout", lang)}
-                      </p>
-                      <p className="text-xs text-[var(--mp-fg-subtle)]">
+                  <button type="button" className="set-row" onClick={handleLogout}>
+                    <div className="sr-ic">
+                      <LogOut aria-hidden />
+                    </div>
+                    <div className="sr-body">
+                      <div className="sr-title">{t("logout", lang)}</div>
+                      <div className="sr-sub">
                         {user.first_name} ·{" "}
                         {lang === "de" ? "angemeldet" : "signed in"}
-                      </p>
+                      </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={handleLogout}
-                      className="mp-btn mp-btn--destructive mp-btn--sm flex-shrink-0"
-                    >
-                      <LogOut className="w-3.5 h-3.5" aria-hidden />
-                      {t("logout", lang)}
-                    </button>
-                  </div>
+                    <div className="sr-ctrl">
+                      <span className="sr-val">
+                        <ArrowRight aria-hidden />
+                      </span>
+                    </div>
+                  </button>
                 )}
               </div>
-            </section>
 
-            {/* ═══ 4 · Sprache ═══ */}
-            <section className="mp-card p-6">
-              <header className="mb-5">
-                <h3 className="mp-h3 flex items-center gap-2">
-                  <Globe className="w-5 h-5 text-[var(--mp-viridian)]" aria-hidden />
-                  {t("language", lang)}
-                </h3>
-                <p className="mp-small mt-1">
-                  {lang === "de"
-                    ? "Sprache der Benutzeroberfläche."
-                    : "Interface language."}
-                </p>
-              </header>
-
-              <div className="space-y-5">
-                <Select
-                  label={lang === "de" ? "Oberflächensprache" : "Interface language"}
-                  helper={
-                    lang === "de"
-                      ? "Die Prüfungsfragen bleiben in Deutsch."
-                      : "Exam questions remain in German."
-                  }
-                  value={lang}
-                  onChange={(e) => switchLang(e.target.value as Lang)}
-                  options={[
-                    { value: "de", label: "Deutsch" },
-                    { value: "en", label: "English" },
-                  ]}
-                />
-
-                {/* About */}
-                <div className="pt-3 border-t border-[var(--mp-border-subtle)]">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Info className="w-4 h-4 text-[var(--mp-info)]" aria-hidden />
-                    <p className="text-xs font-semibold text-[var(--mp-fg-muted)] uppercase tracking-wide">
-                      {t("about", lang)}
-                    </p>
-                  </div>
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-sm text-[var(--mp-fg-muted)]">
-                      {t("app_version", lang)}
-                    </p>
-                    <span className="text-sm font-mono text-[var(--mp-viridian)]">
-                      MedPr&uuml;f v1.0
-                    </span>
-                  </div>
-                  <p className="text-xs text-[var(--mp-fg-subtle)] mb-3">
-                    {lang === "de"
-                      ? "Österreichische Medizinprüfungen — über 10.000 Fragen"
-                      : "Austrian medical exams — over 10,000 questions"}
-                  </p>
-                  <Link
-                    href="/about"
-                    className="text-sm text-[var(--mp-viridian)] hover:text-[var(--mp-accent)] transition-colors font-semibold inline-flex items-center gap-1"
-                  >
-                    {lang === "de" ? "Mehr erfahren" : "Learn more"}
-                    <ArrowRight className="w-3.5 h-3.5" aria-hidden />
-                  </Link>
-                </div>
+              {/* About / version footer */}
+              <div className="flex items-center justify-between px-1 mt-4">
+                <Link
+                  href="/about"
+                  className="text-sm text-[var(--mp-fg-muted)] hover:text-[var(--mp-fg)] transition-colors font-semibold inline-flex items-center gap-1"
+                >
+                  {lang === "de" ? "Über MedPrüf" : "About MedPrüf"}
+                  <ArrowRight className="w-3.5 h-3.5" aria-hidden />
+                </Link>
+                <span className="text-xs font-mono text-[var(--mp-fg-subtle)]">
+                  MedPr&uuml;f v1.0
+                </span>
               </div>
-            </section>
+            </div>
           </div>
         </div>
       </main>
+
+      {/* Exam-date picker dialog — wraps the shared ExamSittingPicker
+          (same control as onboarding) so it stays anchored to the real
+          Austrian sittings. */}
+      <Dialog
+        open={examPickerOpen}
+        onOpenChange={setExamPickerOpen}
+        title={t("exam_target_date", lang)}
+        description={
+          lang === "de"
+            ? "Wähle deinen Prüfungstermin, um einen personalisierten Lernplan freizuschalten."
+            : "Pick your exam date to unlock a personalized study plan."
+        }
+        footer={
+          <DialogFooter>
+            <button
+              type="button"
+              className="mp-btn mp-btn--secondary"
+              onClick={() => setExamPickerOpen(false)}
+            >
+              {lang === "de" ? "Fertig" : "Done"}
+            </button>
+          </DialogFooter>
+        }
+      >
+        <ExamSittingPicker
+          examType={activeExamId}
+          value={profile.targetDate}
+          onChange={handleTargetDateChange}
+          lang={lang}
+        />
+      </Dialog>
 
       {/* Destructive confirm dialog */}
       <Dialog
@@ -1032,9 +1377,7 @@ export default function SettingsPage() {
       <Dialog
         open={offlineClearOpen}
         onOpenChange={setOfflineClearOpen}
-        title={
-          lang === "de" ? "Offline-Daten löschen?" : "Clear offline data?"
-        }
+        title={lang === "de" ? "Offline-Daten löschen?" : "Clear offline data?"}
         description={
           lang === "de"
             ? "Alle heruntergeladenen Fragen und nicht synchronisierte Antworten werden entfernt."
@@ -1151,7 +1494,7 @@ function EmailLinkCard({ lang }: { lang: Lang }) {
 
   if (sent) {
     return (
-      <div className="p-4 rounded-[var(--mp-r-input)] bg-[var(--mp-success-bg)] border border-[rgba(0,123,95,0.2)]">
+      <div className="p-4 rounded-[var(--mp-r-card)] bg-[var(--mp-success-bg)] border border-[rgba(0,123,95,0.2)]">
         <p className="text-sm font-semibold text-[var(--mp-viridian)] mb-1">
           {lang === "de" ? "Bestätigungs-E-Mail gesendet" : "Verification email sent"}
         </p>
@@ -1165,9 +1508,9 @@ function EmailLinkCard({ lang }: { lang: Lang }) {
   }
 
   return (
-    <div className="p-4 rounded-[var(--mp-r-input)] bg-[var(--mp-surface-sunken)] border border-[var(--mp-border-subtle)]">
+    <div className="p-4 rounded-[var(--mp-r-card)] bg-[var(--mp-surface)] border border-[var(--mp-border-soft)] shadow-[var(--mp-shadow-card)]">
       <div className="flex items-start gap-3 mb-4">
-        <div className="w-9 h-9 rounded-lg bg-[var(--mp-viridian)]/10 flex items-center justify-center flex-shrink-0">
+        <div className="w-9 h-9 rounded-lg bg-[var(--mp-surface-sunken)] flex items-center justify-center flex-shrink-0">
           <Mail className="w-4 h-4 text-[var(--mp-viridian)]" aria-hidden />
         </div>
         <div>
@@ -1183,7 +1526,7 @@ function EmailLinkCard({ lang }: { lang: Lang }) {
       </div>
 
       {err && (
-        <div className="mb-3 text-xs text-[var(--mp-error)] bg-[var(--mp-error)]/10 border border-[var(--mp-error)]/20 rounded-lg px-3 py-2">
+        <div className="mb-3 text-xs text-[var(--mp-error)] bg-[var(--mp-error-bg)] border border-[rgba(214,69,69,0.2)] rounded-lg px-3 py-2">
           {err}
         </div>
       )}
@@ -1306,13 +1649,13 @@ function SubscriptionCard({
     // ── €19 first-month trial card ──
     return (
       <div
-        className="rounded-[var(--mp-r-card)] p-5 flex flex-col gap-4"
+        className="rounded-[var(--mp-r-card)] p-5 flex flex-col gap-4 shadow-[var(--mp-shadow-card)]"
         style={{
-          background: "var(--mp-surface-sunken)",
+          background: "var(--mp-surface)",
           border: `1px solid ${
             showTrialPicker
               ? "rgba(244,162,97,0.35)"
-              : "var(--mp-border-subtle)"
+              : "var(--mp-border-soft)"
           }`,
         }}
       >
@@ -1339,14 +1682,14 @@ function SubscriptionCard({
             style={{
               background: showTrialPicker
                 ? "rgba(244,162,97,0.12)"
-                : "rgba(0,58,140,0.08)",
+                : "var(--mp-tint-brand)",
               color: showTrialPicker
                 ? "var(--mp-warning)"
                 : "var(--mp-cta-blue)",
               border: `1px solid ${
                 showTrialPicker
                   ? "rgba(244,162,97,0.3)"
-                  : "rgba(0,58,140,0.22)"
+                  : "rgba(77,141,240,0.22)"
               }`,
             }}
           >
@@ -1373,7 +1716,7 @@ function SubscriptionCard({
           <div
             className="rounded-[var(--mp-r-input)] p-4 flex flex-col gap-3"
             style={{
-              background: "var(--mp-surface-raised)",
+              background: "var(--mp-surface-sunken)",
               border: "1px solid rgba(244,162,97,0.25)",
             }}
           >
@@ -1409,7 +1752,7 @@ function SubscriptionCard({
   // ── Non-trial paid tier (Cohort / Pro) ──
   return (
     <div
-      className="flex items-center justify-between p-4 rounded-[var(--mp-r-input)] gap-3"
+      className="flex items-center justify-between p-4 rounded-[var(--mp-r-card)] gap-3 shadow-[var(--mp-shadow-card)]"
       style={{
         background: "var(--mp-success-bg)",
         border: "1px solid rgba(0,123,95,0.2)",
@@ -1434,7 +1777,7 @@ function SubscriptionCard({
           </p>
         )}
       </div>
-      <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-[var(--mp-surface-raised)] text-[var(--mp-viridian)] text-xs font-semibold rounded-lg border border-[rgba(0,123,95,0.25)] whitespace-nowrap">
+      <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-[var(--mp-surface)] text-[var(--mp-viridian)] text-xs font-semibold rounded-lg border border-[rgba(0,123,95,0.25)] whitespace-nowrap">
         {lang === "de" ? "Aktiv" : "Active"}
       </span>
     </div>

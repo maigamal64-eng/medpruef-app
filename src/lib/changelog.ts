@@ -24,6 +24,18 @@ export interface ChangelogEntry {
 export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-06-26",
+    tag: "improvement",
+    title: {
+      de: "Lesbarer Dunkelmodus, neue Ladeanimation und ein aufgeräumter Hilfe-Button",
+      en: "Readable dark mode, a new loading animation, and a tidier help button",
+    },
+    description: {
+      de: "Der Dunkelmodus ist jetzt durchgehend in unserem Oxford-Blau gehalten, mit klar lesbarem Text auf jeder Karte (kein Dunkel-auf-Dunkel mehr). Beim Laden begrüßt dich neu eine ruhige EKG-Herzschlag-Animation mit dem MedPrüf-Logo. Und die zwei schwebenden Buttons unten rechts sind am Handy zu einem einzigen Button zusammengefasst, der Chat und Feedback aufklappt, sauber über der unteren Navigation.",
+      en: "Dark mode is now consistently in our Oxford blue with clearly readable text on every card (no more dark-on-dark). A calm ECG heartbeat animation with the MedPrüf logo now greets you while pages load. And on mobile the two floating buttons in the bottom-right are merged into one button that fans up Chat and Feedback, cleanly above the bottom navigation.",
+    },
+  },
+  {
+    date: "2026-06-26",
     tag: "feature",
     title: {
       de: "Eigene Tests zusammenstellen",

@@ -35,45 +35,35 @@ export function LogoWordmark({ className = "h-8", white = false }: { className?:
   );
 }
 
-/** Branded loading spinner — logomark with bouncing ü dots. Auto-adapts to dark mode. */
+/**
+ * Branded loading spinner — the HEARTBEAT (v3, 2026-06-26).
+ *
+ * A compact ECG sinus trace draws left→right with a ü-dot pulsing on the
+ * R-peak — the fast 1.8s mini-loop, so route transitions never feel
+ * sluggish. Theme-aware via `--mp-spark` (teal, brighter on dark) and
+ * `prefers-reduced-motion`-safe — both handled by the `.mp-hb-mini`
+ * rules in globals.css. Replaces the bouncing-ü-dots loader.
+ *
+ * API preserved (`size: "sm"|"md"|"lg"`) so every call site keeps working.
+ */
 export function BrandedLoader({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
-  const sizes = { sm: 48, md: 80, lg: 112 };
-  const s = sizes[size];
+  const widths = { sm: 88, md: 120, lg: 168 };
+  const w = widths[size];
 
   return (
-    <div className="flex flex-col items-center justify-center">
-      <svg
-        width={s}
-        height={s}
-        viewBox="0 0 500 500"
-        xmlns="http://www.w3.org/2000/svg"
-        className="branded-loader"
-      >
-        {/* U-shape body — dark navy */}
-        <path
-          d="M251.6,339.9c11.2-.7,21.3-3.7,30.3-10.3,8.9-6.5,15.3-15.2,19.5-25.4,2.3-6.7,3.7-13,3.9-20.1v-61.8s18-20.8,18-20.8c1.1-1.2,1.6-2.7,3.8-3.6v88.6c-.6,18.1-7,34.5-18.8,48.1-14.4,16.4-34.5,26.1-56.7,26.4v-21.1Z"
-          fill="#082040"
-        />
-        <path
-          d="M248.3,360.8c-5.6.3-10.9-.8-16.6-1.9-4.7-1-9-2.8-13.6-4.7-6.3-3-11.7-6.5-17-10.6-5-4.5-9.5-9.2-13.6-14.5-9.5-13.5-14.7-29-14.7-45.9v-85.2c.9,0,1.4.8,2,1.4l19.8,22.8v61.1c.3,21.1,11.5,39.9,29.7,50,7.5,4,15.2,6.1,23.8,6.4l.2,21Z"
-          fill="#082040"
-        />
-        <path
-          d="M272.7,331.2c-7,3.3-13.6,5.3-21.1,5.1v-21.1c6-.5,11.3-2.2,15.9-5.6,8.3-6.1,12.8-15.4,12.6-25.7v-85.9c0,0,13,14.3,13,14.3l8.8,10.2v56.8c.3,9.9-1.1,19.1-5.6,28.1-5.2,10.4-13,18.5-23.6,23.8Z"
-          fill="#082040"
-        />
-        <path
-          d="M248.1,336.3c-11.6-.2-21.9-4.6-30.6-11.6-6.9-5.7-11.9-12.9-15.4-21.3-2.6-6-3.5-11.9-3.9-18.5v-62.4c0,0,13.7-15.9,13.7-15.9,2.7-2.9,4.6-6.1,8-8.8v83.8c0,5.2.7,9.8,2.4,14.5,2.7,6.7,7.5,11.9,13.6,15.5,3.7,2.1,7.7,2.9,12.1,3.6v21.1Z"
-          fill="#082040"
-        />
-        <polygon fill="#082040" points="303.6 219.3 287.4 201.2 282.7 194.9 324.7 195 303.6 219.3" />
-        <polygon fill="#082040" points="196.3 219.3 180.1 201.2 175.4 194.9 217.4 195 196.3 219.3" />
-
-        {/* Left ü dot — bouncing */}
-        <circle cx="198.6" cy="159.1" r="20.1" fill="#027c5f" className="loader-dot-left" />
-        {/* Right ü dot — bouncing with delay */}
-        <circle cx="300.9" cy="159.1" r="20.1" fill="#027c5f" className="loader-dot-right" />
-      </svg>
+    <div
+      className="flex items-center justify-center"
+      role="status"
+      aria-live="polite"
+      aria-label="Laden…"
+    >
+      <div className="mp-hb-mini" style={{ width: w }} aria-hidden>
+        <svg viewBox="0 0 300 100" xmlns="http://www.w3.org/2000/svg">
+          <path className="mp-hb-base" d="M0 50 H300" />
+          <path className="mp-hb-trace" d="M0 50 L60 50 L75 50 L90 22 L105 78 L120 32 L135 50 L300 50" />
+          <circle className="mp-hb-dot" cx="105" cy="78" r="5.5" />
+        </svg>
+      </div>
     </div>
   );
 }

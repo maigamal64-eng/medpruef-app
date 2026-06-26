@@ -1,23 +1,32 @@
 "use client";
 
 /**
- * Progress — MPDS v2 "Progress-A" dashboard multi-grid.
+ * Progress / Fortschritt - MedPrüf reimplementation v3 ("Clinical Nocturne").
  *
- * Layout bet: every metric visible at once, no clicks required.
- * Desktop = 2-col grid (radar left, accuracy/line right) with a
- * full-width heatmap + full-width topic rail below. Mobile stacks
- * single-column.
+ * Surface scope is SPECS §5 (Progress): pass-probability via the shared,
+ * honest <ReadinessSignal> (BAND + plain-language verdict, NEVER a pass-%),
+ * a spark-filled knowledge radar, a weekly performance chart, a viridian
+ * activity heatmap, a per-topic COVERAGE rail (answered/total - progress,
+ * not the §4 strength rail which lives on /stats), saved bookmarks/notes,
+ * and the exam-readiness CTA block. Built to mockup
+ * reviews/reimplementation-2026-06-26/design/05-progress-stats.html.
  *
- * All data sources preserved:
- *   - /api/stats?userId=… hydrates gamification + per-topic stats
- *   - /api/questions?ids=… hydrates bookmarked + noted questions
- *   - localStorage: medpruef_favorites, medpruef_notes_*,
- *     medpruef_quiz_results, medpruef_profile.targetDate
+ * THE DATA LAYER IS UNCHANGED - every source the old page read is read the
+ * same way here; only the presentation is rebuilt:
+ *   - /api/stats?userId=…     → gamification snapshot + per-topic stats
+ *   - /api/questions?ids=…    → bookmarked + noted questions
+ *   - <ReadinessSignal>       → self-fetches /api/user/readiness (consumed as-is)
+ *   - localStorage            → medpruef_favorites, medpruef_notes_*,
+ *                               medpruef_quiz_results, medpruef_profile.targetDate
+ *   - getLevelFromXP / getTopicConfig / getStoredExamSource / useUserTier
  *
- * Charts unchanged — recharts RadarChart + LineChart + calendar
- * heatmap grid are reused, just wrapped in `.mp-card` panels with
- * MPDS typography (.mp-h2 page, .mp-h3 card) and semantic tokens so
- * dark mode is a variable flip.
+ * Gamification: a calm continuity strip (XP/streak/accuracy + the rank from
+ * xp.ts, a viridian→spark XP bar), the spark radar, the viridian-ramp
+ * heatmap. No arcade - restraint is the premium (SPECS). The one celebration
+ * (milestone takeover) is a modal elsewhere, never embedded here.
+ *
+ * Mobile = single column stack; Desktop = sidebar shell + 2-col analytics
+ * grid (AppLayout supplies the shell). No em dashes in DE/EN copy. Austrian.
  */
 
 import { useEffect, useState, useCallback } from "react";
@@ -36,6 +45,7 @@ import BottomNav from "@/components/BottomNav";
 import { AppLayout } from "@/components/ui";
 import TopicIcon from "@/components/TopicIcon";
 import ReadinessSignal from "@/components/ReadinessSignal";
+import { AchievementRank } from "@/components/ui/AchievementRank";
 import {
   TrendingUp,
   Star,
@@ -44,6 +54,12 @@ import {
   AlertTriangle,
   ArrowUpRight,
   Flame,
+  CheckCircle2,
+  Radar as RadarIcon,
+  CalendarDays,
+  BarChart3,
+  Layers,
+  CalendarClock,
 } from "lucide-react";
 import { SkeletonCard } from "@/components/Skeleton";
 import {
@@ -53,22 +69,14 @@ import {
   PolarGrid,
   PolarAngleAxis,
   PolarRadiusAxis,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
 } from "recharts";
+import styles from "./progress.module.css";
 
 /* ─────────────────────────────────────────────────────────────
-   Chart components — data logic unchanged, visuals rely on
-   MPDS tokens via CSS vars so dark mode flips automatically.
+   Knowledge radar - data logic unchanged (accuracy by topic), but
+   the shape is now spark-filled (the one alive accent) per SPECS §5
+   "spark-filled Recharts". Labels shorten on narrow viewports.
    ───────────────────────────────────────────────────────────── */
-
-/** Spider chart showing accuracy by topic. Topic labels shortened to
- *  12 chars on narrow viewports so adjacent labels don't overlap at
- *  375px. Desktop keeps the longer slice. */
 function StudyRadar({
   topics,
   lang,
@@ -88,10 +96,10 @@ function StudyRadar({
   const labelLen = isNarrow ? 10 : 16;
 
   const data = topics
-    .filter((t) => t.answered > 0)
-    .map((t) => ({
-      subject: t.topic.split("/")[0].replace("- und ", "/").substring(0, labelLen),
-      accuracy: Math.round((t.correct / t.answered) * 100),
+    .filter((tp) => tp.answered > 0)
+    .map((tp) => ({
+      subject: tp.topic.split("/")[0].replace("- und ", "/").substring(0, labelLen),
+      accuracy: Math.round((tp.correct / tp.answered) * 100),
       fullMark: 100,
     }));
 
@@ -99,7 +107,7 @@ function StudyRadar({
     return (
       <p className="text-sm text-[var(--mp-fg-subtle)] text-center py-12">
         {lang === "de"
-          ? "Löse mehr Fragen für den Radar"
+          ? "Löse mehr Fragen, um den Radar zu sehen"
           : "Answer more questions to see the radar"}
       </p>
     );
@@ -108,7 +116,7 @@ function StudyRadar({
   return (
     <ResponsiveContainer width="100%" height={260}>
       <RadarChart data={data} outerRadius="72%">
-        <PolarGrid stroke="var(--mp-border-subtle)" />
+        <PolarGrid stroke="var(--mp-border)" />
         <PolarAngleAxis
           dataKey="subject"
           tick={{ fontSize: isNarrow ? 9 : 10, fill: "var(--mp-fg-muted)" }}
@@ -122,9 +130,9 @@ function StudyRadar({
         <Radar
           name="Accuracy"
           dataKey="accuracy"
-          stroke="var(--mp-viridian)"
-          fill="var(--mp-viridian)"
-          fillOpacity={0.22}
+          stroke="var(--mp-spark)"
+          fill="var(--mp-spark)"
+          fillOpacity={0.18}
           strokeWidth={2}
         />
       </RadarChart>
@@ -132,7 +140,11 @@ function StudyRadar({
   );
 }
 
-/** Weekly performance chart — reads quiz results from localStorage */
+/* ─────────────────────────────────────────────────────────────
+   Weekly performance - reads quiz results from localStorage (7-day
+   window UNCHANGED). Now a calm CSS bar chart (mockup .wchart),
+   cta-blue→teal gradient bars, mono day + value labels.
+   ───────────────────────────────────────────────────────────── */
 function WeeklyChart({ lang }: { lang: string }) {
   const [data, setData] = useState<{ day: string; accuracy: number; questions: number }[]>([]);
 
@@ -184,70 +196,34 @@ function WeeklyChart({ lang }: { lang: string }) {
     return (
       <p className="text-sm text-[var(--mp-fg-subtle)] text-center py-10">
         {lang === "de"
-          ? "Beginne zu lernen, um deinen Wochentrend zu sehen"
+          ? "Beginne zu üben, um deinen Wochentrend zu sehen"
           : "Start practicing to see your weekly trend"}
       </p>
     );
   }
 
   return (
-    <ResponsiveContainer width="100%" height={200}>
-      <LineChart data={data}>
-        <CartesianGrid strokeDasharray="3 3" stroke="var(--mp-border-subtle)" />
-        <XAxis
-          dataKey="day"
-          tick={{ fontSize: 11, fill: "var(--mp-fg-subtle)" }}
-          axisLine={false}
-          tickLine={false}
-        />
-        <YAxis
-          domain={[0, 100]}
-          tick={{ fontSize: 10, fill: "var(--mp-fg-subtle)" }}
-          axisLine={false}
-          tickLine={false}
-          width={30}
-        />
-        <Tooltip
-          contentStyle={{
-            background: "var(--mp-surface-raised)",
-            border: "1px solid var(--mp-border-subtle)",
-            borderRadius: 8,
-            fontSize: 12,
-            color: "var(--mp-fg)",
-          }}
-          formatter={(value: unknown, name: unknown) => [
-            `${value}${name === "accuracy" ? "%" : ""}`,
-            name === "accuracy"
-              ? lang === "de"
-                ? "Genauigkeit"
-                : "Accuracy"
-              : lang === "de"
-              ? "Fragen"
-              : "Questions",
-          ]}
-        />
-        <Line
-          type="monotone"
-          dataKey="accuracy"
-          stroke="var(--mp-viridian)"
-          strokeWidth={2}
-          dot={{ r: 4, fill: "var(--mp-viridian)" }}
-          activeDot={{ r: 6 }}
-        />
-        <Line
-          type="monotone"
-          dataKey="questions"
-          stroke="var(--mp-cta-blue)"
-          strokeWidth={1.5}
-          strokeDasharray="4 4"
-          dot={false}
-        />
-      </LineChart>
-    </ResponsiveContainer>
+    <div className={styles.wchart}>
+      {data.map((d, i) => (
+        <div key={i} className={styles.wcol}>
+          <span className={styles.wval}>{d.questions > 0 ? `${d.accuracy}%` : ""}</span>
+          <div className={styles.wbarTrack}>
+            <div
+              className={`${styles.wbar} ${d.questions === 0 ? styles.wbarEmpty : ""}`}
+              style={{ height: `${d.questions > 0 ? Math.max(6, d.accuracy) : 6}%` }}
+            />
+          </div>
+          <span className={styles.wd}>{d.day}</span>
+        </div>
+      ))}
+    </div>
   );
 }
 
-/** Activity heatmap — GitHub-style 4 rows × 7 columns */
+/* ─────────────────────────────────────────────────────────────
+   Activity heatmap - 4 weeks × 7 (28-day window UNCHANGED). Viridian
+   color-mix ramp (intensity = consistency), per SPECS §5.
+   ───────────────────────────────────────────────────────────── */
 function ActivityHeatmap({ lang }: { lang: string }) {
   const [cells, setCells] = useState<{ date: string; count: number; label: string }[]>([]);
 
@@ -281,15 +257,12 @@ function ActivityHeatmap({ lang }: { lang: string }) {
     }
   }, []);
 
-  const getColor = (count: number): string => {
-    // Dark mode: empty cells (`--mp-surface-sunken` #0F172A) nearly
-    // blend into the raised panel `#1E293B`. Adding a subtle border
-    // ensures cell-grid edges are always visible, light and dark.
-    if (count === 0) return "bg-[var(--mp-surface-sunken)] border border-[var(--mp-border-subtle)]";
-    if (count <= 5) return "bg-[var(--mp-viridian)]/20";
-    if (count <= 15) return "bg-[var(--mp-viridian)]/45";
-    if (count <= 30) return "bg-[var(--mp-viridian)]/70";
-    return "bg-[var(--mp-viridian)]";
+  const levelClass = (count: number): string => {
+    if (count === 0) return "";
+    if (count <= 5) return styles.l1;
+    if (count <= 15) return styles.l2;
+    if (count <= 30) return styles.l3;
+    return styles.l4;
   };
 
   if (cells.length === 0) return null;
@@ -304,40 +277,34 @@ function ActivityHeatmap({ lang }: { lang: string }) {
 
   return (
     <div>
-      <div className="grid grid-cols-7 gap-1 mb-1">
+      <div className={styles.heatDayRow}>
         {dayLabels.map((d) => (
-          <span key={d} className="text-[9px] text-[var(--mp-fg-subtle)] text-center font-mono">
+          <span key={d} className={styles.heatDayLbl}>
             {d}
           </span>
         ))}
       </div>
       <div className="space-y-1">
         {weeks.map((week, wi) => (
-          <div key={wi} className="grid grid-cols-7 gap-1">
+          <div key={wi} className={styles.heat}>
             {week.map((cell) => (
               <div
                 key={cell.date}
-                className={`calendar-cell ${getColor(cell.count)} rounded-sm transition-colors`}
-                title={`${cell.label}: ${cell.count} ${
-                  lang === "de" ? "Fragen" : "questions"
-                }`}
+                className={`${styles.cell} ${levelClass(cell.count)}`}
+                title={`${cell.label}: ${cell.count} ${lang === "de" ? "Fragen" : "questions"}`}
               />
             ))}
           </div>
         ))}
       </div>
-      <div className="flex items-center justify-end gap-1 mt-3">
-        <span className="text-[10px] text-[var(--mp-fg-subtle)] font-mono">
-          {lang === "de" ? "weniger" : "less"}
-        </span>
-        <div className="calendar-cell bg-[var(--mp-surface-sunken)] border border-[var(--mp-border-subtle)] rounded-sm" />
-        <div className="calendar-cell bg-[var(--mp-viridian)]/20 rounded-sm" />
-        <div className="calendar-cell bg-[var(--mp-viridian)]/45 rounded-sm" />
-        <div className="calendar-cell bg-[var(--mp-viridian)]/70 rounded-sm" />
-        <div className="calendar-cell bg-[var(--mp-viridian)] rounded-sm" />
-        <span className="text-[10px] text-[var(--mp-fg-subtle)] font-mono">
-          {lang === "de" ? "mehr" : "more"}
-        </span>
+      <div className={styles.heatLegend}>
+        <span>{lang === "de" ? "weniger" : "less"}</span>
+        <div className={`${styles.cell} ${styles.lcell}`} />
+        <div className={`${styles.cell} ${styles.l1} ${styles.lcell}`} />
+        <div className={`${styles.cell} ${styles.l2} ${styles.lcell}`} />
+        <div className={`${styles.cell} ${styles.l3} ${styles.lcell}`} />
+        <div className={`${styles.cell} ${styles.l4} ${styles.lcell}`} />
+        <span>{lang === "de" ? "mehr" : "more"}</span>
       </div>
     </div>
   );
@@ -358,7 +325,7 @@ interface QuestionItem {
   image_url?: string;
 }
 
-// Known totals per specialty for progress denominator
+// Known totals per specialty for the COVERAGE denominator (answered/total).
 const TOPIC_TOTALS: Record<string, number> = {
   "Innere Medizin": 1615,
   "Chirurgische Fächer": 1230,
@@ -372,29 +339,18 @@ const TOPIC_TOTALS: Record<string, number> = {
   "Augenheilkunde": 399,
 };
 
-// Catalog total across all 3 exam types — sourced from content-truth.ts
-// SSoT (review-2026-04-25-B11). Replaces stale hard-coded 10993 that
-// missed PR #7's 10,993→10,992 sweep and slightly under-reported
-// completion percentages.
+// Catalog total across all 3 exam types - sourced from content-truth.ts SSoT.
 const TOTAL_QUESTIONS = QUESTIONS.total;
 
 export default function ProgressPage() {
   const [lang, setLangState] = useState<Lang>("de");
   const [userId, setUserId] = useState("");
   const [userName, setUserName] = useState("");
-  // Bookmarks + notes are Pro-only (Lock 2026-04-23). We gate the UI
-  // on this tier so the empty state reads "upgrade to unlock"
-  // instead of "nothing here".
-  // Tier + role read live from /api/auth/me via useUserTier
-  // (review-2026-04-26-A2). Replaces the previous stale read from
-  // session.user.tier which didn't reflect admin grants until logout.
-  // The legacy local-state setters are kept as fallback for the
-  // initial render (avoids a free→pro flicker on slow networks).
+  // Tier + role read live from /api/auth/me via useUserTier; bookmarks +
+  // notes are Pro-only, so the empty state reads "upgrade to unlock".
   const tierLive = useUserTier();
   const [userTier, setUserTier] = useState<string>("free");
   const [userRole, setUserRole] = useState<string>("user");
-  // Mirror live state into the local setters so the rest of the page
-  // (which reads userTier / userRole) reacts to admin grants.
   useEffect(() => {
     setUserTier(tierLive.tier);
     setUserRole(tierLive.role);
@@ -427,10 +383,6 @@ export default function ProgressPage() {
       setUserName(session.user.first_name);
       setUserTier(session.user.tier || "free");
       setUserRole(session.user.role || "user");
-      // Guard against older / minimal sessions that don't embed a
-      // gamification snapshot — the server will re-hydrate these after
-      // the next /api/stats call. Previous code crashed with
-      // "Cannot read properties of undefined (reading 'total_xp')".
       const gm = session.gamification ?? {};
       setTotalXp(gm.total_xp || 0);
       setStreak(gm.current_streak || 0);
@@ -576,6 +528,7 @@ export default function ProgressPage() {
   );
 
   const xpInfo = getLevelFromXP(totalXp);
+  const rankTier = Math.min(8, Math.max(1, xpInfo.level)) as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
   const completionPct = Math.min(
     100,
     Math.round((totalAnswered / TOTAL_QUESTIONS) * 100),
@@ -594,7 +547,7 @@ export default function ProgressPage() {
       )
     : null;
 
-  /* ─── Topic rail data — all 10 specialties, sorted ─── */
+  /* ─── Topic coverage rail - all 10 specialties, sorted ─── */
   const allTopics = Object.entries(TOPIC_TOTALS).map(([topic, total]) => {
     const stat = topicStats.find((ts) => ts.topic === topic);
     return {
@@ -613,28 +566,45 @@ export default function ProgressPage() {
     return b.answered - a.answered;
   });
 
+  // The surface is "genuinely empty" only for a brand-new user with nothing
+  // at all (no session, or 0 answers AND 0 bookmarks AND 0 notes). Keying off
+  // "has anything" (not just answers) means a transient /api/stats failure
+  // (its fetch has a silent catch → totalAnswered stays 0) can NEVER collapse
+  // an established user to a blank page, and a user who starred questions
+  // without answering still sees their saved items (a real §5 state). The
+  // analytics sub-components carry their own calm "answer more" micro-empties
+  // inside the full layout. bookmarkIds/noteEntries are hydrated from
+  // localStorage in the mount effect before `loading` flips, so no flash.
+  const isGenuinelyEmpty =
+    !userId ||
+    (totalAnswered === 0 && bookmarkIds.length === 0 && noteEntries.length === 0);
+
   /* ─── Loading skeleton ─── */
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[var(--mp-surface-sunken)]">
-        <div className="w-full max-w-4xl px-4 space-y-4 animate-fade-in">
-          <div className="grid grid-cols-2 gap-3">
-            <SkeletonCard />
-            <SkeletonCard />
-            <SkeletonCard />
+      <AppLayout
+        sidebar={<Sidebar lang={lang} userId={userId} userName={userName} totalXp={totalXp} streak={streak} accuracy={accuracy} />}
+        bottomNav={<BottomNav lang={lang} userId={userId} />}
+      >
+        <main className="main-content safe-area-top safe-area-bottom bg-[var(--mp-bg)]">
+          <div className="px-4 lg:px-8 py-6 max-w-6xl mx-auto space-y-4 animate-fade-in">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <SkeletonCard />
+              <SkeletonCard />
+            </div>
             <SkeletonCard />
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-            <SkeletonCard />
-            <SkeletonCard />
-          </div>
-          <SkeletonCard />
-        </div>
-      </div>
+        </main>
+      </AppLayout>
     );
   }
 
-  /* ─── Accuracy trend label (compared to last week heuristic) ─── */
   const accuracyTrendUp = accuracy >= 65;
 
   return (
@@ -651,568 +621,538 @@ export default function ProgressPage() {
       }
       bottomNav={<BottomNav lang={lang} userId={userId} />}
     >
-
-      <main className="main-content safe-area-top safe-area-bottom bg-[var(--mp-surface-sunken)]">
-        {/* Header */}
-        <div className="px-4 lg:px-8 pt-4 pb-2 flex items-center justify-between border-b border-[var(--mp-border-subtle)]">
+      <main className="main-content safe-area-top safe-area-bottom bg-[var(--mp-bg)]">
+        {/* Top bar */}
+        <div className="px-4 lg:px-8 pt-4 pb-3 flex items-center justify-between border-b border-[var(--mp-border-subtle)]">
           <Link
             href="/"
             className="text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg)] text-sm transition-colors"
           >
             &larr; {t("back_home", lang)}
           </Link>
-          <h1 className="text-base font-bold text-[var(--mp-fg)]">{t("progress", lang)}</h1>
+          <h1 className="font-display text-base font-bold text-[var(--mp-fg)]">
+            {t("progress", lang)}
+          </h1>
           <div className="flex items-center gap-2">
             <ThemeToggle />
             <LanguageToggle lang={lang} onChange={switchLang} />
           </div>
         </div>
 
-        <div className="px-4 lg:px-8 py-6 max-w-6xl mx-auto pb-28">
+        <div className={`${styles.page} px-4 lg:px-8 py-6 pb-28`}>
           {/* Page intro */}
           <div className="mb-6">
-            <h2 className="mp-h2 text-[var(--mp-fg)]">
+            <h2 className="font-display text-[28px] leading-tight font-extrabold text-[var(--mp-fg)]">
               {lang === "de" ? "Fortschritt" : "Progress"}
             </h2>
             <p className="text-sm text-[var(--mp-fg-subtle)] mt-1">
               {lang === "de"
-                ? "Alle Kennzahlen auf einen Blick — Radar, Trend, Aktivität und Themen."
-                : "Every metric at a glance — radar, trend, activity and topics."}
+                ? "Dein Stand auf einen Blick: Wissensprofil, Wochentrend, Aktivität und Abdeckung je Fach."
+                : "Your standing at a glance: knowledge profile, weekly trend, activity and coverage by specialty."}
             </p>
           </div>
 
-          {/* ═══ STAT COUNTERS ROW (.mp-stat) ═══ */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-5 stagger">
-            {/* Questions Answered */}
-            <div className="mp-stat">
-              <span className="mp-stat__label">{t("questions_answered", lang)}</span>
-              <span className="mp-stat__value">{totalAnswered.toLocaleString("de-DE")}</span>
-              <span className="text-[10px] text-[var(--mp-fg-subtle)] font-mono">
+          {/* ═══ CONTINUITY STAT STRIP (gamification, calm) ═══ */}
+          <div className={`${styles.statStrip} mb-5`}>
+            {/* Questions answered + coverage % */}
+            <div className={styles.stat}>
+              <div className={`${styles.sTop} ${styles.sTopBlue}`}>
+                <CheckCircle2 />
+                <span>{t("questions_answered", lang)}</span>
+              </div>
+              <div className={styles.sVal}>{totalAnswered.toLocaleString("de-DE")}</div>
+              <div className={styles.sSub}>
                 / {TOTAL_QUESTIONS.toLocaleString("de-DE")} &middot; {completionPct}%
-              </span>
+              </div>
             </div>
 
-            {/* Overall Accuracy */}
-            <div className="mp-stat">
-              <span className="mp-stat__label">{t("overall_accuracy", lang)}</span>
-              <span
-                className="mp-stat__value"
-                style={{
-                  color:
-                    accuracy >= 70
-                      ? "var(--mp-viridian)"
-                      : accuracy >= 40
-                      ? "var(--mp-status-warning)"
-                      : accuracy > 0
-                      ? "var(--mp-error)"
-                      : "var(--mp-fg)",
-                }}
-              >
+            {/* Accuracy */}
+            <div className={styles.stat}>
+              <div className={`${styles.sTop} ${styles.sTopTeal}`}>
+                <TrendingUp />
+                <span>{t("overall_accuracy", lang)}</span>
+              </div>
+              <div className={styles.sVal}>
                 {accuracy}
-                <span style={{ fontSize: 20 }}>%</span>
-              </span>
-              <span
-                className={
-                  accuracyTrendUp ? "mp-stat__trend mp-stat__trend--up" : "mp-stat__trend"
-                }
-              >
-                {accuracyTrendUp ? <ArrowUpRight className="w-3 h-3" /> : null}
+                <small>%</small>
+              </div>
+              <div className={styles.sSub} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                {accuracyTrendUp ? (
+                  <ArrowUpRight className="w-3 h-3 text-[var(--mp-viridian)]" />
+                ) : null}
                 {totalCorrect} {t("correct_of", lang)} {totalAnswered}
-              </span>
+              </div>
             </div>
 
-            {/* Current Streak */}
-            <div className="mp-stat">
-              <span className="mp-stat__label">{t("current_streak_label", lang)}</span>
-              <span className="mp-stat__value flex items-baseline gap-1">
+            {/* Streak */}
+            <div className={styles.stat}>
+              <div className={`${styles.sTop} ${styles.sTopFire}`}>
+                <Flame />
+                <span>{t("current_streak_label", lang)}</span>
+              </div>
+              <div className={styles.sVal}>
                 {streak}
-                <span className="text-sm font-semibold text-[var(--mp-fg-subtle)]">
-                  {t("days", lang)}
-                </span>
-              </span>
-              <span className="mp-stat__trend" style={{ color: "var(--mp-error)" }}>
-                <Flame className="w-3 h-3" />
-                {lang === "de" ? "aktiv" : "active"}
-              </span>
+                <small>{lang === "de" ? "Tage" : "days"}</small>
+              </div>
+              <div className={styles.sSub}>{lang === "de" ? "aktiv" : "active"}</div>
             </div>
 
-            {/* Level & XP */}
-            <div className="mp-stat">
-              <span className="mp-stat__label">{t("level_and_xp", lang)}</span>
-              <span className="mp-stat__value text-lg">{xpInfo.rank}</span>
-              <div className="flex flex-col gap-1">
-                <div className="h-1.5 bg-[var(--mp-surface-sunken)] rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-[var(--mp-cta-blue)] rounded-full transition-all duration-700"
-                    style={{ width: `${xpInfo.progress}%` }}
-                  />
-                </div>
-                <span className="text-[10px] text-[var(--mp-fg-subtle)] font-mono">
-                  {totalXp.toLocaleString("de-DE")} XP &middot; Lv.{xpInfo.level}
-                </span>
+            {/* Rank + XP (xp.ts) */}
+            <div className={styles.stat}>
+              <div className={`${styles.sTop} ${styles.sTopGreen}`}>
+                <AchievementRank tier={rankTier} variant="inline" size={14} aria-hidden />
+                <span>{t("level_and_xp", lang)}</span>
+              </div>
+              <div className={styles.sVal} style={{ fontSize: 18 }}>
+                {xpInfo.rank}
+              </div>
+              <div className={styles.xpTrack}>
+                <div className={styles.xpFill} style={{ width: `${xpInfo.progress}%` }} />
+              </div>
+              <div className={styles.sSub}>
+                {totalXp.toLocaleString("de-DE")} XP &middot; {lang === "de" ? "Stufe" : "Level"}{" "}
+                {xpInfo.level} {lang === "de" ? "von" : "of"} 8
               </div>
             </div>
           </div>
 
-          {/* ═══ 2-COLUMN: RADAR + ACCURACY/WEEKLY TREND ═══ */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
-            {/* Radar card */}
-            <section className="mp-card p-5">
-              <header className="flex items-baseline justify-between mb-3">
-                <h3 className="mp-h3">
-                  {lang === "de" ? "Themen-Radar" : "Study Radar"}
+          {!isGenuinelyEmpty ? (
+            <>
+              {/* ═══ READINESS (passbox shell + the honest band signal) ═══ */}
+              <div className={styles.sectionHead}>
+                <h3>{t("exam_readiness", lang)}</h3>
+                <div className="ln" />
+              </div>
+              <div className={`${styles.passbox} mb-6`}>
+                {/* Shared, honest readiness - BAND + verdict, never a pass-%. */}
+                <ReadinessSignal lang={lang} />
+              </div>
+
+              {/* ═══ 2-COL: RADAR + WEEKLY ═══ */}
+              <div className={`${styles.grid2} mb-6`}>
+                <section className="mp-card p-5">
+                  <h3 className={styles.cardH}>
+                    <RadarIcon />
+                    {lang === "de" ? "Wissensprofil" : "Knowledge Profile"}
+                    <span className={`${styles.meta} ml-auto`}>
+                      {topicStats.filter((s) => s.answered > 0).length}{" "}
+                      {lang === "de" ? "Fächer" : "topics"}
+                    </span>
+                  </h3>
+                  <div className={styles.radarWrap}>
+                    <StudyRadar topics={topicStats} lang={lang} />
+                  </div>
+                </section>
+
+                <section className="mp-card p-5">
+                  <h3 className={styles.cardH}>
+                    <BarChart3 />
+                    {lang === "de" ? "Wochenleistung" : "Weekly Performance"}
+                    <span className={`${styles.meta} ml-auto`}>
+                      {lang === "de" ? "letzte 7 Tage" : "last 7 days"}
+                    </span>
+                  </h3>
+                  <WeeklyChart lang={lang} />
+                </section>
+              </div>
+
+              {/* ═══ ACTIVITY HEATMAP ═══ */}
+              <section className="mp-card p-5 mb-6">
+                <h3 className={styles.cardH}>
+                  <CalendarDays />
+                  {lang === "de" ? "Aktivität" : "Activity"}
+                  <span className={`${styles.meta} ml-auto`}>
+                    {lang === "de" ? "letzte 4 Wochen" : "last 4 weeks"}
+                  </span>
                 </h3>
-                <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--mp-fg-subtle)] font-bold">
-                  {topicStats.filter((s) => s.answered > 0).length}{" "}
-                  {lang === "de" ? "Bereiche" : "topics"}
-                </span>
-              </header>
-              <div className="flex justify-center">
-                <StudyRadar topics={topicStats} lang={lang} />
-              </div>
-            </section>
+                <ActivityHeatmap lang={lang} />
+              </section>
 
-            {/* Accuracy / Weekly trend card */}
-            <section className="mp-card p-5">
-              <header className="flex items-baseline justify-between mb-3">
-                <h3 className="mp-h3">
-                  {lang === "de" ? "Wochenleistung" : "Weekly Performance"}
-                </h3>
-                <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--mp-fg-subtle)] font-bold">
-                  {lang === "de" ? "letzte 7 Tage" : "last 7 days"}
-                </span>
-              </header>
-              <div className="font-display font-black text-[40px] leading-none tracking-tight text-[var(--mp-fg)] font-mono">
-                {accuracy}
-                <span className="text-lg text-[var(--mp-fg-muted)] font-bold ml-1">%</span>
-              </div>
-              <span
-                className={
-                  accuracyTrendUp ? "mp-stat__trend mp-stat__trend--up" : "mp-stat__trend"
-                }
-              >
-                {accuracyTrendUp ? <ArrowUpRight className="w-3 h-3" /> : null}
-                {lang === "de" ? "aktuelle Genauigkeit" : "current accuracy"}
-              </span>
-              <div className="mt-3">
-                <WeeklyChart lang={lang} />
-              </div>
-            </section>
-          </div>
-
-          {/* ═══ FULL-WIDTH ACTIVITY HEATMAP ═══ */}
-          <section className="mp-card p-5 mb-5">
-            <header className="flex items-baseline justify-between mb-4">
-              <h3 className="mp-h3">
-                {lang === "de" ? "Aktivitätskalender" : "Activity Calendar"}
-              </h3>
-              <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--mp-fg-subtle)] font-bold">
-                {lang === "de" ? "letzte 4 Wochen · 28 Tage" : "last 4 weeks · 28 days"}
-              </span>
-            </header>
-            <ActivityHeatmap lang={lang} />
-          </section>
-
-          {/* ═══ FULL-WIDTH TOPIC STRENGTH RAIL ═══ */}
-          <section className="mp-card p-5 mb-5">
-            <header className="flex items-center justify-between mb-4 flex-wrap gap-3">
-              <h3 className="mp-h3">{t("topic_progress", lang)}</h3>
-              <div className="mp-tabs" role="tablist">
-                <button
-                  role="tab"
-                  aria-selected={sortBy === "accuracy"}
-                  onClick={() => setSortBy("accuracy")}
-                  className={`mp-tabs__tab ${
-                    sortBy === "accuracy" ? "mp-tabs__tab--active" : ""
-                  }`}
-                >
-                  {t("sort_by_accuracy", lang)}
-                </button>
-                <button
-                  role="tab"
-                  aria-selected={sortBy === "count"}
-                  onClick={() => setSortBy("count")}
-                  className={`mp-tabs__tab ${
-                    sortBy === "count" ? "mp-tabs__tab--active" : ""
-                  }`}
-                >
-                  {t("sort_by_count", lang)}
-                </button>
-              </div>
-            </header>
-
-            <div className="space-y-3">
-              {sortedAllTopics.map(({ topic, total, answered, correct }) => {
-                const config = getTopicConfig(topic);
-                const progressPct = total > 0 ? Math.min(100, Math.round((answered / total) * 100)) : 0;
-                const acc = answered > 0 ? Math.round((correct / answered) * 100) : 0;
-                const barColor =
-                  acc >= 70
-                    ? "var(--mp-viridian)"
-                    : acc >= 40
-                    ? "var(--mp-status-warning)"
-                    : answered > 0
-                    ? "var(--mp-error)"
-                    : config.color;
-                return (
-                  <div key={topic} className="flex items-center gap-3">
-                    <div
-                      className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
-                      style={{ backgroundColor: `${config.color}15` }}
+              {/* ═══ TOPIC COVERAGE RAIL (answered/total - progress) ═══ */}
+              <section className="mp-card p-5 mb-6">
+                <header className="flex items-center justify-between mb-4 flex-wrap gap-3">
+                  <h3 className={styles.cardH} style={{ margin: 0 }}>
+                    <Layers />
+                    {t("topic_progress", lang)}
+                  </h3>
+                  <div className="mp-tabs" role="tablist">
+                    <button
+                      role="tab"
+                      aria-selected={sortBy === "count"}
+                      onClick={() => setSortBy("count")}
+                      className={`mp-tabs__tab ${sortBy === "count" ? "mp-tabs__tab--active" : ""}`}
                     >
-                      <TopicIcon name={config.icon} className="w-4 h-4" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-medium text-[var(--mp-fg)] truncate">
-                          {topic}
-                        </span>
-                        <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-                          <span
-                            className="text-xs font-bold font-mono px-1.5 py-0.5 rounded"
-                            style={{
-                              backgroundColor: answered > 0 ? `${barColor}15` : "var(--mp-border-subtle)",
-                              color: answered > 0 ? barColor : "var(--mp-fg-subtle)",
-                            }}
-                          >
-                            {answered > 0 ? `${acc}%` : "--"}
-                          </span>
-                          <span className="text-[10px] text-[var(--mp-fg-subtle)] font-mono w-14 text-right">
-                            {answered}/{total}
-                          </span>
+                      {t("sort_by_count", lang)}
+                    </button>
+                    <button
+                      role="tab"
+                      aria-selected={sortBy === "accuracy"}
+                      onClick={() => setSortBy("accuracy")}
+                      className={`mp-tabs__tab ${sortBy === "accuracy" ? "mp-tabs__tab--active" : ""}`}
+                    >
+                      {t("sort_by_accuracy", lang)}
+                    </button>
+                  </div>
+                </header>
+
+                <div className={styles.tcov}>
+                  {sortedAllTopics.map(({ topic, total, answered, correct }) => {
+                    const config = getTopicConfig(topic);
+                    const progressPct =
+                      total > 0 ? Math.min(100, Math.round((answered / total) * 100)) : 0;
+                    const acc = answered > 0 ? Math.round((correct / answered) * 100) : 0;
+                    return (
+                      <div key={topic} className={styles.tcRow} style={{ ["--sc" as string]: config.color }}>
+                        <div className={styles.tcIc}>
+                          <TopicIcon name={config.icon} className="w-[17px] h-[17px]" />
+                        </div>
+                        <div className={styles.tcBody}>
+                          <div className={styles.tcTop}>
+                            <span className={styles.tcName}>{topic}</span>
+                            <div className={styles.tcNums}>
+                              <span className={styles.tcPct}>
+                                {answered > 0 ? `${acc}%` : "--"}
+                              </span>
+                              <span className={styles.tcCount}>
+                                {answered}/{total}
+                              </span>
+                            </div>
+                          </div>
+                          <div className={styles.tcTrack}>
+                            <div className={styles.tcFill} style={{ width: `${progressPct}%` }} />
+                          </div>
                         </div>
                       </div>
+                    );
+                  })}
+                </div>
+              </section>
+
+              {/* ═══ SAVED ITEMS (Bookmarks / Notes) ═══ */}
+              <section className="mp-card p-5 mb-6">
+                <div className="mp-tabs mb-4" role="tablist" style={{ display: "flex", width: "100%" }}>
+                  <button
+                    role="tab"
+                    aria-selected={savedTab === "bookmarks"}
+                    onClick={() => setSavedTab("bookmarks")}
+                    className={`mp-tabs__tab flex-1 flex items-center justify-center gap-1.5 ${
+                      savedTab === "bookmarks" ? "mp-tabs__tab--active" : ""
+                    }`}
+                  >
+                    <Star className="w-3.5 h-3.5" />
+                    {t("bookmarked_questions", lang)} ({bookmarkIds.length})
+                  </button>
+                  <button
+                    role="tab"
+                    aria-selected={savedTab === "notes"}
+                    onClick={() => setSavedTab("notes")}
+                    className={`mp-tabs__tab flex-1 flex items-center justify-center gap-1.5 ${
+                      savedTab === "notes" ? "mp-tabs__tab--active" : ""
+                    }`}
+                  >
+                    <StickyNote className="w-3.5 h-3.5" />
+                    {t("my_notes", lang)} ({noteEntries.length})
+                  </button>
+                </div>
+
+                {savedTab === "bookmarks" && (
+                  <div>
+                    {bookmarksLoading ? (
+                      <div className="flex items-center justify-center py-8">
+                        <div className="w-6 h-6 border-2 border-[var(--mp-viridian)] border-t-transparent rounded-full animate-spin" />
+                      </div>
+                    ) : bookmarkQuestions.length === 0 ? (
+                      userRole === "admin" || userTier === "pro" || userTier === "admin" ? (
+                        <div className="text-center py-8">
+                          <Star className="w-8 h-8 text-[var(--mp-border-strong)] mx-auto mb-2" />
+                          <p className="text-sm text-[var(--mp-fg-subtle)]">{t("no_bookmarks", lang)}</p>
+                        </div>
+                      ) : (
+                        <div className="text-center py-8 px-4">
+                          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-[var(--mp-warning-bg)] mb-3">
+                            <Star className="w-6 h-6 text-[var(--mp-status-warning)]" />
+                          </div>
+                          <h4 className="text-sm font-semibold text-[var(--mp-fg)] mb-1">
+                            {lang === "de"
+                              ? "Lesezeichen sind ein Pro-Feature"
+                              : "Bookmarks are a Pro feature"}
+                          </h4>
+                          <p className="text-xs text-[var(--mp-fg-muted)] mb-4 max-w-sm mx-auto leading-relaxed">
+                            {lang === "de"
+                              ? "Markiere schwierige Fragen mit einem Klick und komm später gezielt zurück, inklusive für alle Pro-Nutzer:innen."
+                              : "Flag tricky questions with one click and jump back to them anytime, included with every Pro plan."}
+                          </p>
+                          <Link
+                            href="/pricing?gate=bookmarks&utm_source=progress_bookmarks_tab"
+                            className="mp-btn mp-btn--primary inline-flex items-center gap-1.5"
+                          >
+                            {lang === "de" ? "Pro ansehen" : "See Pro"}
+                          </Link>
+                        </div>
+                      )
+                    ) : (
+                      <div className="space-y-2">
+                        {bookmarkQuestions
+                          .slice(0, showAllBookmarks ? undefined : 20)
+                          .map((q) => {
+                            const config = getTopicConfig(q.topic);
+                            const examSource = getStoredExamSource();
+                            return (
+                              <div
+                                key={q.id}
+                                className={`${styles.savedRow} group`}
+                                style={{ ["--sc" as string]: config.color }}
+                              >
+                                <div className={styles.savedIc}>
+                                  <TopicIcon name={config.icon} className="w-3 h-3" />
+                                </div>
+                                {q.image_url && (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img
+                                    src={q.image_url}
+                                    alt=""
+                                    className="w-10 h-10 rounded object-cover flex-shrink-0 border border-[var(--mp-border-subtle)]"
+                                  />
+                                )}
+                                <Link
+                                  href={`/quiz?questionId=${q.id}&topic=${encodeURIComponent(q.topic)}&examSource=${examSource}`}
+                                  className="flex-1 min-w-0"
+                                >
+                                  <p className="text-sm text-[var(--mp-fg)] line-clamp-2">
+                                    {q.question.slice(0, 120)}
+                                    {q.question.length > 120 ? "..." : ""}
+                                  </p>
+                                  <p className="text-[10px] text-[var(--mp-fg-subtle)] mt-1 font-mono">
+                                    {q.topic}
+                                  </p>
+                                </Link>
+                                <button
+                                  onClick={() => removeBookmark(q.id)}
+                                  className="text-[var(--mp-status-warning)] hover:text-[var(--mp-error)] opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                                  title={lang === "de" ? "Entfernen" : "Remove"}
+                                >
+                                  <Star className="w-4 h-4 fill-current" />
+                                </button>
+                              </div>
+                            );
+                          })}
+                        {bookmarkQuestions.length > 20 && !showAllBookmarks && (
+                          <button
+                            onClick={() => setShowAllBookmarks(true)}
+                            className="w-full text-center text-sm text-[var(--mp-viridian)] font-medium py-2 hover:underline"
+                          >
+                            {lang === "de"
+                              ? `Alle ${bookmarkQuestions.length} anzeigen`
+                              : `Show all ${bookmarkQuestions.length}`}
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {savedTab === "notes" && (
+                  <div>
+                    {notesLoading ? (
+                      <div className="flex items-center justify-center py-8">
+                        <div className="w-6 h-6 border-2 border-[var(--mp-viridian)] border-t-transparent rounded-full animate-spin" />
+                      </div>
+                    ) : noteEntries.length === 0 ? (
+                      userRole === "admin" || userTier === "pro" || userTier === "admin" ? (
+                        <div className="text-center py-8">
+                          <StickyNote className="w-8 h-8 text-[var(--mp-border-strong)] mx-auto mb-2" />
+                          <p className="text-sm text-[var(--mp-fg-subtle)]">{t("no_notes", lang)}</p>
+                        </div>
+                      ) : (
+                        <div className="text-center py-8 px-4">
+                          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-[var(--mp-tint-teal)] mb-3">
+                            <StickyNote className="w-6 h-6 text-[var(--mp-accent-teal)]" />
+                          </div>
+                          <h4 className="text-sm font-semibold text-[var(--mp-fg)] mb-1">
+                            {lang === "de" ? "Notizen sind ein Pro-Feature" : "Notes are a Pro feature"}
+                          </h4>
+                          <p className="text-xs text-[var(--mp-fg-muted)] mb-4 max-w-sm mx-auto leading-relaxed">
+                            {lang === "de"
+                              ? "Schreib dir Merkhilfen zu einzelnen Fragen. Sie bleiben an der Frage hängen und kommen beim nächsten Versuch automatisch wieder hoch."
+                              : "Jot down memory aids per question. They stay attached and reappear the next time you see it."}
+                          </p>
+                          <Link
+                            href="/pricing?gate=notes&utm_source=progress_notes_tab"
+                            className="mp-btn mp-btn--primary inline-flex items-center gap-1.5"
+                          >
+                            {lang === "de" ? "Pro ansehen" : "See Pro"}
+                          </Link>
+                        </div>
+                      )
+                    ) : (
+                      <div className="space-y-2">
+                        {noteEntries.slice(0, showAllNotes ? undefined : 20).map((entry) => {
+                          const q = noteQuestions.find((nq) => nq.id === entry.id);
+                          const topic = q?.topic || "";
+                          const config = getTopicConfig(topic);
+                          const examSource = getStoredExamSource();
+                          return (
+                            <Link
+                              key={entry.id}
+                              href={`/quiz?questionId=${entry.id}&topic=${encodeURIComponent(topic)}&examSource=${examSource}`}
+                              className={styles.savedRow}
+                              style={{ ["--sc" as string]: config.color }}
+                            >
+                              <div className={styles.savedIc}>
+                                <TopicIcon name={config.icon} className="w-3 h-3" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                {q && (
+                                  <p className="text-sm text-[var(--mp-fg)] line-clamp-1">
+                                    {q.question.slice(0, 120)}
+                                  </p>
+                                )}
+                                <p className="text-xs text-[var(--mp-fg-subtle)] italic mt-1 line-clamp-1">
+                                  {entry.note.slice(0, 80)}
+                                </p>
+                                {topic && (
+                                  <p className="text-[10px] text-[var(--mp-fg-subtle)] mt-1 font-mono">
+                                    {topic}
+                                  </p>
+                                )}
+                              </div>
+                            </Link>
+                          );
+                        })}
+                        {noteEntries.length > 20 && !showAllNotes && (
+                          <button
+                            onClick={() => setShowAllNotes(true)}
+                            className="w-full text-center text-sm text-[var(--mp-viridian)] font-medium py-2 hover:underline"
+                          >
+                            {lang === "de"
+                              ? `Alle ${noteEntries.length} anzeigen`
+                              : `Show all ${noteEntries.length}`}
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </section>
+
+              {/* ═══ EXAM READINESS CTAs (countdown + weak topics + actions) ═══ */}
+              <section className="mp-card p-5 space-y-4">
+                {daysUntilExam !== null && (
+                  <div className="flex items-center gap-4 p-4 rounded-xl bg-[var(--mp-tint-brand)] border border-[var(--mp-border-soft)]">
+                    <div className="text-center">
+                      <span className="block font-display font-black text-[32px] leading-none tracking-tight text-[var(--mp-cta-blue)] font-mono">
+                        {daysUntilExam}
+                      </span>
+                      <p className="text-xs text-[var(--mp-fg-subtle)] mt-1 flex items-center gap-1 justify-center">
+                        <CalendarClock className="w-3 h-3" />
+                        {t("days_until_exam", lang)}
+                      </p>
+                    </div>
+                    <div className="flex-1">
                       <div className="h-2 bg-[var(--mp-surface-sunken)] rounded-full overflow-hidden">
                         <div
-                          className="h-full rounded-full transition-all duration-500"
-                          style={{ width: `${progressPct}%`, background: barColor }}
+                          className="h-full bg-[var(--mp-spark)] rounded-full transition-all"
+                          style={{
+                            width: `${Math.max(5, Math.min(100, 100 - (daysUntilExam / 180) * 100))}%`,
+                            boxShadow: "0 0 10px var(--mp-spark-glow)",
+                          }}
                         />
                       </div>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          </section>
+                )}
 
-          {/* ═══ SAVED ITEMS (Bookmarks / Notes) ═══ */}
-          <section className="mp-card p-5 mb-5">
-            <div className="mp-tabs mb-4" role="tablist" style={{ display: "flex", width: "100%" }}>
-              <button
-                role="tab"
-                aria-selected={savedTab === "bookmarks"}
-                onClick={() => setSavedTab("bookmarks")}
-                className={`mp-tabs__tab flex-1 flex items-center justify-center gap-1.5 ${
-                  savedTab === "bookmarks" ? "mp-tabs__tab--active" : ""
-                }`}
-              >
-                <Star className="w-3.5 h-3.5" />
-                {t("bookmarked_questions", lang)} ({bookmarkIds.length})
-              </button>
-              <button
-                role="tab"
-                aria-selected={savedTab === "notes"}
-                onClick={() => setSavedTab("notes")}
-                className={`mp-tabs__tab flex-1 flex items-center justify-center gap-1.5 ${
-                  savedTab === "notes" ? "mp-tabs__tab--active" : ""
-                }`}
-              >
-                <StickyNote className="w-3.5 h-3.5" />
-                {t("my_notes", lang)} ({noteEntries.length})
-              </button>
-            </div>
-
-            {savedTab === "bookmarks" && (
-              <div>
-                {bookmarksLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <div className="w-6 h-6 border-2 border-[var(--mp-viridian)] border-t-transparent rounded-full animate-spin" />
-                  </div>
-                ) : bookmarkQuestions.length === 0 ? (
-                  // Pro-gated empty state: free users should see "this
-                  // is a Pro feature" with an upsell, not a bare
-                  // "nothing here" line. Pro users genuinely with no
-                  // bookmarks get the neutral copy.
-                  userRole === "admin" || userTier === "pro" || userTier === "admin" ? (
-                    <div className="text-center py-8">
-                      <Star className="w-8 h-8 text-[var(--mp-border-subtle)] mx-auto mb-2" />
-                      <p className="text-sm text-[var(--mp-fg-subtle)]">
-                        {t("no_bookmarks", lang)}
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="text-center py-8 px-4">
-                      <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-[var(--mp-status-warning)]/12 mb-3">
-                        <Star className="w-6 h-6 text-[var(--mp-status-warning)]" />
+                {weakTopics.length > 0 && (
+                  <div className="p-3 rounded-xl bg-[var(--mp-warning-bg)] border border-[var(--mp-border-soft)]">
+                    <div className="flex items-start gap-2">
+                      <AlertTriangle className="w-4 h-4 text-[var(--mp-status-warning)] flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium text-[var(--mp-fg)] mb-1">
+                          {lang === "de"
+                            ? "Fächer unter 60% Genauigkeit"
+                            : "Topics below 60% accuracy"}
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {weakTopics.map((wt) => {
+                            const config = getTopicConfig(wt.topic);
+                            const acc = Math.round((wt.correct / wt.answered) * 100);
+                            return (
+                              <span
+                                key={wt.topic}
+                                className="inline-flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded-full border"
+                                style={{
+                                  borderColor: `color-mix(in srgb, ${config.color} 35%, transparent)`,
+                                  backgroundColor: `color-mix(in srgb, ${config.color} 10%, transparent)`,
+                                  color: config.color,
+                                }}
+                              >
+                                <TopicIcon name={config.icon} className="w-3 h-3" />
+                                {wt.topic.split("/")[0]} ({acc}%)
+                              </span>
+                            );
+                          })}
+                        </div>
                       </div>
-                      <h4 className="text-sm font-semibold text-[var(--mp-fg)] mb-1">
-                        {lang === "de"
-                          ? "Lesezeichen sind ein Pro-Feature"
-                          : "Bookmarks are a Pro feature"}
-                      </h4>
-                      <p className="text-xs text-[var(--mp-fg-muted)] mb-4 max-w-sm mx-auto leading-relaxed">
-                        {lang === "de"
-                          ? "Markiere schwierige Fragen mit einem Klick und komm später gezielt zurück — inklusive für alle Pro-Nutzer:innen."
-                          : "Flag tricky questions with one click and jump back to them anytime — included with every Pro plan."}
-                      </p>
-                      <Link
-                        href="/pricing?gate=bookmarks&utm_source=progress_bookmarks_tab"
-                        className="mp-btn mp-btn--primary inline-flex items-center gap-1.5"
-                      >
-                        {lang === "de" ? "Pro ansehen" : "See Pro"}
-                      </Link>
                     </div>
-                  )
-                ) : (
-                  <div className="space-y-2">
-                    {bookmarkQuestions
-                      .slice(0, showAllBookmarks ? undefined : 20)
-                      .map((q) => {
-                        const config = getTopicConfig(q.topic);
-                        const examSource = getStoredExamSource();
-                        return (
-                          <div
-                            key={q.id}
-                            className="flex items-start gap-3 p-3 rounded-lg bg-[var(--mp-surface-sunken)] hover:bg-[var(--mp-border-subtle)] transition-colors group"
-                          >
-                            <div
-                              className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
-                              style={{ backgroundColor: `${config.color}15` }}
-                            >
-                              <TopicIcon name={config.icon} className="w-3 h-3" />
-                            </div>
-                            {q.image_url && (
-                              <img
-                                src={q.image_url}
-                                alt=""
-                                className="w-10 h-10 rounded object-cover flex-shrink-0 border border-[var(--mp-border-subtle)]"
-                              />
-                            )}
-                            <Link
-                              href={`/quiz?questionId=${q.id}&topic=${encodeURIComponent(q.topic)}&examSource=${examSource}`}
-                              className="flex-1 min-w-0"
-                            >
-                              <p className="text-sm text-[var(--mp-fg)] line-clamp-2">
-                                {q.question.slice(0, 120)}
-                                {q.question.length > 120 ? "..." : ""}
-                              </p>
-                              <p className="text-[10px] text-[var(--mp-fg-subtle)] mt-1 font-mono">
-                                {q.topic}
-                              </p>
-                            </Link>
-                            <button
-                              onClick={() => removeBookmark(q.id)}
-                              className="text-[var(--mp-status-warning)] hover:text-[var(--mp-error)] opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
-                              title={lang === "de" ? "Entfernen" : "Remove"}
-                            >
-                              <Star className="w-4 h-4 fill-current" />
-                            </button>
-                          </div>
-                        );
-                      })}
-                    {bookmarkQuestions.length > 20 && !showAllBookmarks && (
-                      <button
-                        onClick={() => setShowAllBookmarks(true)}
-                        className="w-full text-center text-sm text-[var(--mp-viridian)] font-medium py-2 hover:underline"
-                      >
-                        {lang === "de"
-                          ? `Alle ${bookmarkQuestions.length} anzeigen`
-                          : `Show all ${bookmarkQuestions.length}`}
-                      </button>
-                    )}
                   </div>
                 )}
-              </div>
-            )}
 
-            {savedTab === "notes" && (
-              <div>
-                {notesLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <div className="w-6 h-6 border-2 border-[var(--mp-viridian)] border-t-transparent rounded-full animate-spin" />
-                  </div>
-                ) : noteEntries.length === 0 ? (
-                  userRole === "admin" || userTier === "pro" || userTier === "admin" ? (
-                    <div className="text-center py-8">
-                      <StickyNote className="w-8 h-8 text-[var(--mp-border-subtle)] mx-auto mb-2" />
-                      <p className="text-sm text-[var(--mp-fg-subtle)]">{t("no_notes", lang)}</p>
-                    </div>
-                  ) : (
-                    <div className="text-center py-8 px-4">
-                      <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-[var(--mp-accent-teal)]/12 mb-3">
-                        <StickyNote className="w-6 h-6 text-[var(--mp-accent-teal)]" />
-                      </div>
-                      <h4 className="text-sm font-semibold text-[var(--mp-fg)] mb-1">
-                        {lang === "de"
-                          ? "Notizen sind ein Pro-Feature"
-                          : "Notes are a Pro feature"}
-                      </h4>
-                      <p className="text-xs text-[var(--mp-fg-muted)] mb-4 max-w-sm mx-auto leading-relaxed">
-                        {lang === "de"
-                          ? "Schreib dir Merkhilfen zu einzelnen Fragen — sie bleiben an der Frage hängen und kommen beim nächsten Versuch automatisch wieder hoch."
-                          : "Jot down memory aids per question — they stay attached and reappear the next time you see it."}
-                      </p>
-                      <Link
-                        href="/pricing?gate=notes&utm_source=progress_notes_tab"
-                        className="mp-btn mp-btn--primary inline-flex items-center gap-1.5"
-                      >
-                        {lang === "de" ? "Pro ansehen" : "See Pro"}
-                      </Link>
-                    </div>
-                  )
-                ) : (
-                  <div className="space-y-2">
-                    {noteEntries.slice(0, showAllNotes ? undefined : 20).map((entry) => {
-                      const q = noteQuestions.find((nq) => nq.id === entry.id);
-                      const topic = q?.topic || "";
-                      const config = getTopicConfig(topic);
-                      const examSource = getStoredExamSource();
-                      return (
-                        <Link
-                          key={entry.id}
-                          href={`/quiz?questionId=${entry.id}&topic=${encodeURIComponent(topic)}&examSource=${examSource}`}
-                          className="flex items-start gap-3 p-3 rounded-lg bg-[var(--mp-surface-sunken)] hover:bg-[var(--mp-border-subtle)] transition-colors"
-                        >
-                          <div
-                            className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
-                            style={{ backgroundColor: `${config.color}15` }}
-                          >
-                            <TopicIcon name={config.icon} className="w-3 h-3" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            {q && (
-                              <p className="text-sm text-[var(--mp-fg)] line-clamp-1">
-                                {q.question.slice(0, 120)}
-                              </p>
-                            )}
-                            <p className="text-xs text-[var(--mp-fg-subtle)] italic mt-1 line-clamp-1">
-                              {entry.note.slice(0, 80)}
-                            </p>
-                            {topic && (
-                              <p className="text-[10px] text-[var(--mp-fg-subtle)] mt-1 font-mono">
-                                {topic}
-                              </p>
-                            )}
-                          </div>
-                        </Link>
-                      );
-                    })}
-                    {noteEntries.length > 20 && !showAllNotes && (
-                      <button
-                        onClick={() => setShowAllNotes(true)}
-                        className="w-full text-center text-sm text-[var(--mp-viridian)] font-medium py-2 hover:underline"
-                      >
-                        {lang === "de"
-                          ? `Alle ${noteEntries.length} anzeigen`
-                          : `Show all ${noteEntries.length}`}
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-            )}
-          </section>
-
-          {/* ═══ EXAM READINESS (banded signal + countdown + weak topics + CTAs) ═══ */}
-          <section className="mp-card p-5 space-y-4">
-            <h3 className="mp-h3">{t("exam_readiness", lang)}</h3>
-
-            {/* A.2 — honest banded readiness signal (server-computed; no pass-%) */}
-            <ReadinessSignal lang={lang} />
-
-            {daysUntilExam !== null && (
-              <div className="flex items-center gap-4 p-4 rounded-xl bg-[var(--mp-cta-blue)]/[0.04] border border-[var(--mp-cta-blue)]/10">
-                <div className="text-center">
-                  <span className="block font-display font-black text-[32px] leading-none tracking-tight text-[var(--mp-cta-blue)] font-mono">
-                    {daysUntilExam}
-                  </span>
-                  <p className="text-xs text-[var(--mp-fg-subtle)] mt-1">
-                    {t("days_until_exam", lang)}
-                  </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <Link href="/exam" className="mp-btn mp-btn--success mp-btn--lg justify-center">
+                    <GraduationCap className="w-5 h-5" />
+                    {lang === "de" ? "Prüfungssimulation starten" : "Start Exam Simulation"}
+                  </Link>
+                  {weakTopics.length > 0 && (
+                    <Link
+                      href={`/quiz?topic=${encodeURIComponent(weakTopics[0].topic)}&userId=${userId}`}
+                      className="mp-btn mp-btn--secondary mp-btn--lg justify-center"
+                      style={{ borderColor: "var(--mp-viridian)", color: "var(--mp-viridian)" }}
+                    >
+                      <TrendingUp className="w-5 h-5" />
+                      {t("practice_weak", lang)}
+                    </Link>
+                  )}
                 </div>
-                <div className="flex-1">
-                  <div className="h-2 bg-[var(--mp-border-subtle)] rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-[var(--mp-cta-blue)] rounded-full transition-all"
-                      style={{
-                        width: `${Math.max(5, Math.min(100, 100 - (daysUntilExam / 180) * 100))}%`,
-                      }}
-                    />
-                  </div>
-                </div>
+              </section>
+            </>
+          ) : (
+            /* ═══ EMPTY STATE - calm "not enough data yet" (no user OR 0 answers) ═══ */
+            <section className="mp-card p-8 text-center mt-2">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[var(--mp-tint-teal)] mb-4">
+                <TrendingUp className="w-8 h-8 text-[var(--mp-accent-teal)]" />
               </div>
-            )}
-
-            {weakTopics.length > 0 && (
-              <div className="p-3 rounded-xl bg-[var(--mp-status-warning)]/[0.06] border border-[var(--mp-status-warning)]/15">
-                <div className="flex items-start gap-2">
-                  <AlertTriangle className="w-4 h-4 text-[var(--mp-status-warning)] flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-medium text-[var(--mp-fg)] mb-1">
-                      {lang === "de"
-                        ? "Fachgebiete unter 60% Genauigkeit"
-                        : "Topics below 60% accuracy"}
-                    </p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {weakTopics.map((wt) => {
-                        const config = getTopicConfig(wt.topic);
-                        const acc = Math.round((wt.correct / wt.answered) * 100);
-                        return (
-                          <span
-                            key={wt.topic}
-                            className="inline-flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded-full border"
-                            style={{
-                              borderColor: `${config.color}30`,
-                              backgroundColor: `${config.color}08`,
-                              color: config.color,
-                            }}
-                          >
-                            <TopicIcon name={config.icon} className="w-3 h-3" />
-                            {wt.topic.split("/")[0]} ({acc}%)
-                          </span>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <h3 className="font-display text-lg font-bold text-[var(--mp-fg)] mb-2">
+                {userId
+                  ? lang === "de"
+                    ? "Noch nicht genug Daten"
+                    : "Not enough data yet"
+                  : lang === "de"
+                    ? "Melde dich an, um deinen Fortschritt zu sehen"
+                    : "Sign in to see your progress"}
+              </h3>
+              <p className="text-sm text-[var(--mp-fg-muted)] mb-5 max-w-md mx-auto leading-relaxed">
+                {userId
+                  ? lang === "de"
+                    ? "Sobald du ein paar Fragen gelöst hast, erscheinen hier dein Wissensprofil, der Wochentrend und deine Aktivität."
+                    : "Once you answer a few questions, your knowledge profile, weekly trend and activity show up here."
+                  : lang === "de"
+                    ? "Dein Wissensprofil, Wochentrend und deine Aktivität warten auf dich."
+                    : "Your knowledge profile, weekly trend and activity are waiting for you."}
+              </p>
               <Link
-                href="/exam"
-                className="mp-btn mp-btn--success mp-btn--lg justify-center"
+                href={userId ? `/quiz?topic=random&userId=${userId}` : "/login"}
+                className="mp-btn mp-btn--success mp-btn--lg inline-flex"
               >
                 <GraduationCap className="w-5 h-5" />
-                {lang === "de" ? "Prüfungssimulation starten" : "Start Exam Simulation"}
+                {userId
+                  ? lang === "de"
+                    ? "Erste Fragen lösen"
+                    : "Answer your first questions"
+                  : lang === "de"
+                    ? "Anmelden"
+                    : "Sign in"}
               </Link>
-              {weakTopics.length > 0 && (
-                <Link
-                  href={`/quiz?topic=${encodeURIComponent(weakTopics[0].topic)}&userId=${userId}`}
-                  className="mp-btn mp-btn--secondary mp-btn--lg justify-center"
-                  style={{
-                    borderColor: "var(--mp-viridian)",
-                    color: "var(--mp-viridian)",
-                  }}
-                >
-                  <TrendingUp className="w-5 h-5" />
-                  {t("practice_weak", lang)}
-                </Link>
-              )}
-            </div>
-          </section>
-
-          {/* No user fallback */}
-          {!userId && (
-            <div className="mp-card p-8 text-center mt-5">
-              <TrendingUp className="w-10 h-10 text-[var(--mp-border-subtle)] mx-auto mb-3" />
-              <p className="text-sm text-[var(--mp-fg-subtle)] mb-4">
-                {t("sign_in_for_stats", lang)}
-              </p>
-              <Link href="/" className="mp-btn mp-btn--success">
-                {t("back_home", lang)}
-              </Link>
-            </div>
+            </section>
           )}
         </div>
       </main>

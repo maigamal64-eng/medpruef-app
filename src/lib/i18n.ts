@@ -461,6 +461,11 @@ const translations = {
   'feedback_context_hint': { de: 'Seite & Kontext werden automatisch erfasst', en: 'Page & context are captured automatically' },
   'feedback_textarea_aria': { de: 'Feedback-Nachricht', en: 'Feedback message' },
   'feedback_close': { de: 'Schließen', en: 'Close' },
+  // Unified floating launcher (mobile: fans up chat + feedback)
+  'launcher_open': { de: 'Hilfe & Feedback öffnen', en: 'Open help & feedback' },
+  'launcher_close': { de: 'Menü schließen', en: 'Close menu' },
+  'launcher_chat': { de: 'Mit uns chatten', en: 'Chat with us' },
+  'launcher_feedback': { de: 'Feedback geben', en: 'Give feedback' },
 
   // Report question modal
   'report_title': { de: 'Frage melden', en: 'Report question' },

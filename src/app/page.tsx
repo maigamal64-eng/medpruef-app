@@ -6,7 +6,7 @@ import { authFetch as fetch } from "@/lib/authFetch";
 import { getTopicConfig } from "@/lib/topics";
 import { t, getLang, setLang } from "@/lib/i18n";
 import TopicIcon from "@/components/TopicIcon";
-import { Flame, FileText as FileTextIcon, Lightbulb, Shuffle, PlayCircle, ClipboardList, Zap, CheckCircle, User, ChevronRight, GraduationCap, CalendarDays, Search, Star, AlertCircle, Target, ArrowRight, PenSquare } from "lucide-react";
+import { Lightbulb, Shuffle, ClipboardList, CheckCircle, User, ChevronRight, Search, Target, ArrowRight } from "lucide-react";
 import { isTelegramMiniApp, getMiniAppInitData, getStoredSession, storeSession, setSessionToken } from "@/lib/auth";
 import { useUserTier } from "@/lib/hooks/useUserTier";
 import {
@@ -21,9 +21,8 @@ import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import { AppLayout } from "@/components/ui";
 import TopicCard from "@/components/TopicCard";
-import StatsCard from "@/components/StatsCard";
-import GamificationHero from "@/components/GamificationHero";
-import GuidedPathCard from "@/components/GuidedPathCard";
+import HomeHero from "@/components/HomeHero";
+import HomeStatStrip from "@/components/HomeStatStrip";
 import TelegramActivationCard from "@/components/TelegramActivationCard";
 import ExamSelector from "@/components/ExamSelector";
 import ExamSwitcherInline from "@/components/ExamSwitcherInline";
@@ -169,7 +168,6 @@ export default function Home() {
   // inside the modal itself.
   const [searchOpen, setSearchOpen] = useState(false);
   const [profileData, setProfileData] = useState<{ targetDate?: string } | null>(null);
-  const [lastSessionInfo, setLastSessionInfo] = useState<{ totalXpSession: number; questionCount: number } | null>(null);
   // Initialize synchronously on first render: if the URL already carries
   // `?tg_token=...`, we're in the middle of a Telegram bot deep-link
   // exchange. Setting the flag NOW (not in a useEffect, which runs AFTER
@@ -447,16 +445,6 @@ export default function Home() {
     } catch {}
   }, []);
 
-  // Load last session info from localStorage
-  useEffect(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem("medpruef_quiz_autosave") || "null");
-      if (saved && Date.now() - saved.timestamp < 86400000) {
-        setLastSessionInfo({ totalXpSession: saved.totalXpSession || 0, questionCount: saved.questionCount || 0 });
-      }
-    } catch { /* empty */ }
-  }, []);
-
   // Cmd+K / Ctrl+K to focus search
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -650,81 +638,72 @@ export default function Home() {
           <LanguageToggle lang={lang} onChange={switchLang} />
         </div>
 
-        <div className="px-4 sm:px-6 lg:px-10 pb-8">
-          {/* ─── GREETING + COHORT CHIP ─────────────────────────────────── */}
-          {(() => {
-            const target = profileData?.targetDate;
-            const daysLeft = target ? Math.ceil((new Date(target).getTime() - Date.now()) / 86400000) : null;
-            return (
-              <div className="pt-2 pb-6 lg:pt-4 lg:pb-8">
-                <div className="flex items-baseline gap-3 flex-wrap">
-                  <h1
-                    className="mp-h2 lg:mp-h1"
-                    style={{
-                      fontFamily: "var(--mp-font-display)",
-                      fontWeight: 800,
-                      letterSpacing: "-0.02em",
-                      color: "var(--mp-fg)",
-                    }}
-                  >
-                    {getGreeting(lang)}, {user.first_name}
-                  </h1>
-                  {daysLeft !== null && daysLeft > 0 && (
-                    <span className="mp-cohort-chip" aria-label={lang === "de" ? `${daysLeft} Tage bis zur Prüfung` : `${daysLeft} days until exam`}>
-                      <span className="mp-cohort-chip__dot" aria-hidden />
-                      {getExamLabel(examSource, lang)}
-                      <span className="font-mono">· {daysLeft}{lang === "de" ? "T" : "d"}</span>
-                    </span>
-                  )}
-                </div>
-                <p className="mt-1 text-sm text-[var(--mp-fg-subtle)]">
-                  {lastSessionInfo
-                    ? (lang === "de"
-                        ? `Letzte Sitzung: +${lastSessionInfo.totalXpSession} XP · ${lastSessionInfo.questionCount} Fragen`
-                        : `Last session: +${lastSessionInfo.totalXpSession} XP · ${lastSessionInfo.questionCount} questions`)
-                    : t("dashboard_subtitle", lang)}
-                </p>
-              </div>
-            );
-          })()}
-
+        <div className="px-4 sm:px-6 lg:px-10 pb-8 pt-2 lg:pt-4">
           {/* Telegram bot activation prompt — shown to users who
              registered via Login Widget but never DM'd the bot.
              Auto-hides via /api/user/telegram-activation-state.
              review-2026-04-26-B2. */}
           <TelegramActivationCard />
 
-          {/* ─── GAMIFICATION HERO + COUNTDOWN ──────────────────────────
-             2-col at md+ with equal widths and a consistent 24px gap. The
-             hero is visually dominant via its dark gradient; the countdown
-             card is a calm companion on a light surface. */}
+          {/* ─── HERO PROGRESS BANNER + STAT STRIP ───────────────────────
+             Reimplementation v3 (01-home.html, blessed). The hero is the one
+             sanctioned gradient: greeting + "Du bist X% näher am Bestehen 🇦🇹"
+             + active-exam answered/total bar (spark-glow fill) + two CTAs.
+             The XP/rank/streak/accuracy that the old GamificationHero showed
+             relocate into the 3-tile stat strip directly below. */}
           {(() => {
+            // active-exam total = sum of topic counts for the loaded exam.
+            // answered = gamification snapshot (questions answered overall).
+            const examTotal = topics.reduce((sum, tp) => sum + (tp.count || 0), 0);
+            const answeredCount = gam?.total_questions_answered || 0;
+            // days-left from users.exam_date (mirrored in localStorage profile).
             const target = profileData?.targetDate;
-            const daysLeft = target ? Math.ceil((new Date(target).getTime() - Date.now()) / 86400000) : null;
-            const showCountdown = daysLeft !== null && daysLeft > 0;
-
+            const daysLeft =
+              target && !isNaN(new Date(target).getTime())
+                ? Math.ceil((new Date(target).getTime() - Date.now()) / 86400000)
+                : null;
+            // resume-or-start: weakest topic first, else first topic, else random.
+            const studyHref =
+              weakTopics.length > 0
+                ? `/quiz?topic=${encodeURIComponent(weakTopics[0]?.topic || "random")}&userId=${user.id}&examSource=${examSource}&autoStart=1`
+                : topics.length > 0
+                ? `/quiz?topic=${encodeURIComponent(topics[0].topic)}&userId=${user.id}&examSource=${examSource}&autoStart=1`
+                : `/quiz?topic=random&userId=${user.id}&examSource=${examSource}`;
             return (
-              <div
-                className={`grid grid-cols-1 ${showCountdown ? "md:grid-cols-2" : ""} gap-6 mb-8`}
-              >
-                <GamificationHero
-                  streak={gam?.current_streak || 0}
-                  totalXp={gam?.total_xp || 0}
-                  dailyCurrent={gam?.daily_questions_today || 0}
-                  dailyGoal={user.daily_goal || 20}
+              <div className="mb-5">
+                <HomeHero
+                  greeting={getGreeting(lang)}
+                  userName={user.first_name}
+                  examLabel={getExamLabel(examSource, lang)}
+                  answered={answeredCount}
+                  total={examTotal}
+                  studyHref={studyHref}
+                  planHref="/study-plan"
                   lang={lang}
-                  accuracy={accuracy}
-                  totalAnswered={gam?.total_questions_answered}
+                  daysLeft={daysLeft}
                 />
-                {showCountdown && (
-                  <GuidedPathCard examISO={target ?? ""} activeExam={examSource} lang={lang} />
-                )}
+                <div className="mt-4">
+                  <HomeStatStrip
+                    streak={gam?.current_streak || 0}
+                    dailyCurrent={gam?.daily_questions_today || 0}
+                    dailyGoal={user.daily_goal || 20}
+                    accuracy={accuracy}
+                    lang={lang}
+                  />
+                </div>
               </div>
             );
           })()}
 
-          {/* ─── RESUME SESSION CARD (if any) ───────────────────────────── */}
-          {!user.id.startsWith("guest_") && <ResumeSessionCard userId={user.id} lang={lang} />}
+          {/* ─── RESUME SESSION CARD (if any) — "Weitermachen" ──────────── */}
+          {!user.id.startsWith("guest_") && (
+            <div className="mt-6">
+              <h2 className="mp-h3 mb-3" style={{ color: "var(--mp-fg)" }}>
+                {lang === "de" ? "Weitermachen" : "Continue"}
+              </h2>
+              <ResumeSessionCard userId={user.id} lang={lang} />
+            </div>
+          )}
 
           {/* ─── REFERRAL CODE CARD ─────────────────────────────────────
              Rescue-sprint §4 (2026-04-24): show the code on day 1 so
@@ -781,147 +760,6 @@ export default function Home() {
             );
           })()}
 
-          {/* ─── PRIMARY ACTION ROW ─────────────────────────────────────
-             Mobile: primary is 2x the visual weight of the secondaries
-             (a tall 56-64px block above a two-column row of 44px slims).
-             Desktop: one row with primary 2fr + two secondaries 1fr each. */}
-          <div className="grid grid-cols-1 sm:grid-cols-[2fr_1fr_1fr] gap-3 mb-8">
-            <Link
-              href={
-                weakTopics.length > 0
-                  ? `/quiz?topic=${encodeURIComponent(weakTopics[0]?.topic || "random")}&userId=${user.id}&examSource=${examSource}&autoStart=1`
-                  : topics.length > 0
-                  ? `/quiz?topic=${encodeURIComponent(topics[0].topic)}&userId=${user.id}&examSource=${examSource}&autoStart=1`
-                  : "#"
-              }
-              className="mp-btn-primary-tall sm:py-4"
-              aria-label={t("continue_studying_cta", lang)}
-            >
-              <PlayCircle className="w-5 h-5" aria-hidden />
-              <span>
-                {weakTopics.length > 0
-                  ? t("continue_studying_cta", lang)
-                  : t("continue_where_left", lang)}
-              </span>
-            </Link>
-            <Link
-              href={`/quiz?topic=random&userId=${user.id}&examSource=${examSource}`}
-              className="mp-btn-secondary-slim"
-            >
-              <Shuffle className="w-4 h-4 text-[var(--mp-viridian)]" aria-hidden />
-              <span>{t("random_quiz", lang)}</span>
-            </Link>
-            {/* Phase C: Create New Test — builder with full filter/mode customization */}
-            <Link
-              href={`/quiz?setup=1&examSource=${examSource}`}
-              className="mp-btn-secondary-slim"
-            >
-              <PenSquare className="w-4 h-4 text-[var(--mp-viridian)]" aria-hidden />
-              <span>{lang === "de" ? "Neuen Test" : "New test"}</span>
-            </Link>
-            <Link
-              href={`/exam?examSource=${examSource}`}
-              className="mp-btn-secondary-slim"
-            >
-              <GraduationCap className="w-4 h-4 text-[var(--mp-viridian)]" aria-hidden />
-              <span>{lang === "de" ? "Probeprüfung" : "Mock Exam"}</span>
-            </Link>
-          </div>
-
-          {/* ─── QUICK-REVIEW ROW (bookmarks + mistakes) ──────────────────
-             Two even tiles. Bookmarks uses warning-warm (earned to notice),
-             Mistakes uses error-muted (subdued, not alarming). */}
-          <div className="grid grid-cols-2 gap-3 mb-8">
-            <Link
-              href={`/progress?tab=bookmarks`}
-              className="mp-card rounded-2xl p-4 flex items-center gap-3 group mp-focusable hover:border-[var(--mp-viridian)]/35 transition-colors"
-            >
-              <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                style={{ background: "rgba(244,162,97,0.14)", color: "var(--mp-warning-dk)" }}
-                aria-hidden
-              >
-                <Star className="w-5 h-5" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-[var(--mp-fg)]">
-                  {t("review_bookmarks", lang)}
-                </p>
-                <p className="text-[11px] text-[var(--mp-fg-subtle)]">
-                  {t("review_bookmarks_hint", lang)}
-                </p>
-              </div>
-            </Link>
-            <Link
-              href={`/quiz?topic=random&userId=${user.id}&examSource=${examSource}&practiceMode=wrong&autoStart=1`}
-              className="mp-card rounded-2xl p-4 flex items-center gap-3 group mp-focusable hover:border-[var(--mp-viridian)]/35 transition-colors"
-            >
-              <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                style={{ background: "rgba(214,69,69,0.12)", color: "var(--mp-error)" }}
-                aria-hidden
-              >
-                <AlertCircle className="w-5 h-5" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-[var(--mp-fg)]">
-                  {t("review_mistakes", lang)}
-                </p>
-                <p className="text-[11px] text-[var(--mp-fg-subtle)]">
-                  {t("review_mistakes_hint", lang)}
-                </p>
-              </div>
-            </Link>
-          </div>
-
-          {/* ─── LERNPLAN CTA ────────────────────────────────────────────
-             Solid viridian icon tile (no more dual-gradient), clean layout. */}
-          <Link
-            href="/study-plan"
-            className="mp-card rounded-2xl p-5 mb-8 flex items-center gap-4 group cursor-pointer mp-focusable hover:border-[var(--mp-viridian)]/35 transition-colors"
-          >
-            <div
-              className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
-              style={{ background: "var(--mp-viridian)", color: "white", boxShadow: "var(--mp-shadow-xs)" }}
-              aria-hidden
-            >
-              <CalendarDays className="w-6 h-6" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-[var(--mp-fg)] flex items-center gap-2">
-                {t("lernplan_title", lang)}
-                {profileData?.targetDate && !isNaN(new Date(profileData.targetDate).getTime()) && (() => {
-                  const days = Math.ceil((new Date(profileData.targetDate).getTime() - Date.now()) / 86400000);
-                  return days > 0 ? (
-                    <span
-                      className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full"
-                      style={{ background: "rgba(0,123,95,0.12)", color: "var(--mp-viridian)" }}
-                    >
-                      {lang === "de" ? `${days} Tage` : `${days} days`}
-                    </span>
-                  ) : null;
-                })()}
-              </p>
-              <p className="text-xs text-[var(--mp-fg-subtle)] mt-0.5">
-                {t("lernplan_subtitle", lang)}
-              </p>
-            </div>
-            <ChevronRight className="w-5 h-5 text-[var(--mp-fg-subtle)] group-hover:text-[var(--mp-viridian)] group-hover:translate-x-0.5 transition-all flex-shrink-0" aria-hidden />
-          </Link>
-
-          {/* ─── MOBILE SEARCH TRIGGER ─────────────────────────────────── */}
-          <div className="mb-8 lg:hidden">
-            <button
-              onClick={() => setSearchOpen(true)}
-              className="mp-card w-full rounded-2xl p-3.5 flex items-center gap-3 text-[var(--mp-fg-subtle)] mp-focusable hover:border-[var(--mp-viridian)]/35 transition-colors"
-              aria-label={t("suche_oeffnen", lang)}
-            >
-              <Search className="w-5 h-5" aria-hidden />
-              <span className="text-sm">{lang === "de" ? "Frage suchen…" : "Search questions…"}</span>
-              <kbd className="ml-auto text-[10px] bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)] rounded px-1.5 py-0.5 font-mono">⌘K</kbd>
-            </button>
-          </div>
-
           {/* Search Modal */}
           <SearchModal
             open={searchOpen}
@@ -931,22 +769,32 @@ export default function Home() {
             userId={user.id}
           />
 
-          {/* ─── TOPICS GRID ────────────────────────────────────────────── */}
-          <div className="mb-8">
-            <h2
-              className="mp-h3 mb-4 flex items-center gap-2"
-              style={{ color: "var(--mp-fg)" }}
-            >
-              <span
-                className="inline-block w-1 h-6 rounded-full"
-                style={{ background: "var(--mp-viridian)" }}
-                aria-hidden
-              />
-              {t("specialties", lang)}
-              <span className="text-sm font-normal text-[var(--mp-fg-subtle)]">
-                ({topics.length})
-              </span>
-            </h2>
+          {/* ─── FACHGEBIETE GRID (01-home.html: section head + "Alle ansehen") ── */}
+          <div className="mb-8 mt-8">
+            <div className="flex items-center justify-between mb-4">
+              <h2
+                className="mp-h3 flex items-center gap-2"
+                style={{ color: "var(--mp-fg)" }}
+              >
+                <span
+                  className="inline-block w-1 h-6 rounded-full"
+                  style={{ background: "var(--mp-viridian)" }}
+                  aria-hidden
+                />
+                {t("specialties", lang)}
+                <span className="text-sm font-normal text-[var(--mp-fg-subtle)]">
+                  ({topics.length})
+                </span>
+              </h2>
+              <Link
+                href="/curriculum"
+                className="inline-flex items-center gap-0.5 text-xs font-semibold mp-focusable"
+                style={{ color: "var(--mp-cta-blue)" }}
+              >
+                {lang === "de" ? "Alle ansehen" : "View all"}
+                <ChevronRight className="w-3.5 h-3.5" aria-hidden />
+              </Link>
+            </div>
 
             {examSource === "kenntnispruefung" ? (
               <>
@@ -1063,49 +911,6 @@ export default function Home() {
             </span>
             <ChevronRight className="w-5 h-5 text-[var(--mp-fg-subtle)] group-hover:text-[var(--mp-viridian)] group-hover:translate-x-0.5 transition-all" aria-hidden />
           </Link>
-
-          {/* ─── MINI STATS ROW (mobile only) ───────────────────────────
-             Uses gamification tokens — streak=orange, xp=amber, accuracy=
-             viridian, answered=viridian-muted. Colors come from tokens, not
-             inline hex. */}
-          <div className="grid grid-cols-2 gap-3 lg:hidden mb-6 mt-6 stagger">
-            <div className="mp-card rounded-2xl">
-              <StatsCard
-                icon={<Zap className="w-4 h-4" />}
-                value={gam?.total_xp || 0}
-                label="XP"
-                color="text-[var(--mp-warning-dk)]"
-                delay={0}
-              />
-            </div>
-            <div className="mp-card rounded-2xl">
-              <StatsCard
-                icon={<Flame className="w-4 h-4" />}
-                value={gam?.current_streak || 0}
-                label={t("streak", lang)}
-                color="text-[var(--mp-warning-dk)]"
-                delay={50}
-              />
-            </div>
-            <div className="mp-card rounded-2xl">
-              <StatsCard
-                icon={<CheckCircle className="w-4 h-4" />}
-                value={`${accuracy}%`}
-                label={t("accuracy", lang)}
-                color="text-[var(--mp-viridian)]"
-                delay={100}
-              />
-            </div>
-            <div className="mp-card rounded-2xl">
-              <StatsCard
-                icon={<FileTextIcon className="w-4 h-4" />}
-                value={gam?.total_questions_answered || 0}
-                label={t("answered", lang)}
-                color="text-[var(--mp-viridian)]"
-                delay={150}
-              />
-            </div>
-          </div>
         </div>
       </main>
 

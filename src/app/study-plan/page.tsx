@@ -11,19 +11,21 @@ import BottomNav from "@/components/BottomNav";
 import LanguageToggle from "@/components/LanguageToggle";
 import ThemeToggle from "@/components/ThemeToggle";
 import TopicIcon from "@/components/TopicIcon";
+import { EmptyState } from "@/components/ui";
 import { getTopicConfig } from "@/lib/topics";
-import type { StudyPlan, StudyPlanDay } from "@/lib/studyPlan";
+import type { StudyPlan, StudyPlanDay, StudyFocus } from "@/lib/studyPlan";
 import { buildStudyPath } from "@/lib/studyPath";
 import StudyPathTimeline from "@/components/StudyPathTimeline";
 import {
   Calendar,
-  CheckCircle2,
-  ChevronLeft,
+  CalendarDays,
+  Check,
   ChevronRight,
-  PlayCircle,
+  ArrowRight,
   AlertTriangle,
-  Sparkles,
   Target,
+  Zap,
+  Flame,
 } from "lucide-react";
 
 type Lang = "de" | "en";
@@ -42,13 +44,8 @@ interface ApiResponse {
   activeExam?: string;
 }
 
-const WEEK_DAY_LABELS_DE = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
-const WEEK_DAY_LABELS_EN = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-
-/** YYYY-MM-DD comparison of two Dates regardless of hour/tz drift. */
-function sameISO(a: string, b: string) {
-  return a === b;
-}
+const WEEK_DAY_LABELS_DE = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
+const WEEK_DAY_LABELS_EN = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 /** Return ISO YYYY-MM-DD for a given date in local time. */
 function toLocalISO(d: Date) {
@@ -60,36 +57,8 @@ function toLocalISO(d: Date) {
 
 /** Parse a YYYY-MM-DD string into a local Date at midnight. */
 function parseISO(iso: string): Date {
-  const [y, m, d] = iso.split("-").map(n => parseInt(n, 10));
+  const [y, m, d] = iso.slice(0, 10).split("-").map(n => parseInt(n, 10));
   return new Date(y, (m || 1) - 1, d || 1);
-}
-
-/**
- * Produce a Monday-anchored 7-day window that contains the given day.
- * If `anchor` is a Sunday, the window is the 6 days before it + itself.
- */
-function getWeekWindow(anchor: Date): Date[] {
-  const day = anchor.getDay(); // 0=Sun..6=Sat
-  // Shift so Monday = 0
-  const fromMonday = (day + 6) % 7;
-  const start = new Date(anchor);
-  start.setDate(anchor.getDate() - fromMonday);
-  const out: Date[] = [];
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(start);
-    d.setDate(start.getDate() + i);
-    out.push(d);
-  }
-  return out;
-}
-
-function formatLongDate(iso: string, lang: Lang): string {
-  const d = parseISO(iso);
-  return d.toLocaleDateString(lang === "de" ? "de-AT" : "en-GB", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-  });
 }
 
 function formatExamDate(iso: string, lang: Lang): string {
@@ -101,31 +70,36 @@ function formatExamDate(iso: string, lang: Lang): string {
   });
 }
 
-/** Colors per focus tag. A calm ramp — "weak" gets warm orange, not
-    red. Weak topics are a signal to study, not a failure state; red
-    triggers the stress response the pass-until-you-pass guarantee is
-    explicitly trying to unwind. */
-function focusBadge(focus: "review" | "weak" | "new", lang: Lang) {
-  if (focus === "weak") {
-    return {
-      bg: "bg-[var(--mp-warning)]/12",
-      text: "text-[var(--mp-warning-dk,#D68A3A)]",
-      label: lang === "de" ? "Schwach" : "Weak",
-    };
-  }
+/** Whole days between two ISO dates (b - a), tolerant of time components. */
+function diffDays(aISO: string, bISO: string): number {
+  const a = parseISO(aISO).getTime();
+  const b = parseISO(bISO).getTime();
+  return Math.round((b - a) / 86_400_000);
+}
+
+/** Focus → tag styling. New + weak read CTA-blue ("new"); review reads
+    warm amber ("Festigung"). Same color grammar as the rest of the app:
+    weak is a study signal, never a red failure state. */
+function focusTag(focus: StudyFocus, lang: Lang) {
   if (focus === "review") {
     return {
-      bg: "bg-[var(--mp-status-warning)]/15",
-      text: "text-[var(--mp-status-warning)]",
-      label: lang === "de" ? "Wiederholen" : "Review",
+      cls: "bg-[var(--mp-warning-bg)] text-[var(--mp-warning-dk)]",
+      label: lang === "de" ? "Festigung" : "Consolidation",
+    };
+  }
+  if (focus === "weak") {
+    return {
+      cls: "bg-[var(--mp-tint-brand)] text-[var(--mp-cta-blue)]",
+      label: lang === "de" ? "Schwerpunkt" : "Focus",
     };
   }
   return {
-    bg: "bg-[var(--mp-viridian)]/10",
-    text: "text-[var(--mp-viridian)]",
+    cls: "bg-[var(--mp-tint-brand)] text-[var(--mp-cta-blue)]",
     label: lang === "de" ? "Neu" : "New",
   };
 }
+
+type BlockState = "done" | "live" | "upcoming";
 
 export default function StudyPlanPage() {
   const [lang, setLangState] = useState<Lang>("de");
@@ -133,7 +107,6 @@ export default function StudyPlanPage() {
   const [error, setError] = useState<string | null>(null);
   const [session, setSession] = useState<ReturnType<typeof getStoredSession>>(null);
   const [resp, setResp] = useState<ApiResponse | null>(null);
-  const [weekAnchor, setWeekAnchor] = useState<Date>(new Date());
 
   useEffect(() => {
     setLangState(getLang());
@@ -181,14 +154,59 @@ export default function StudyPlanPage() {
     return m;
   }, [plan]);
 
-  const weekDays = useMemo(() => getWeekWindow(weekAnchor), [weekAnchor]);
-
   const gam = session?.gamification as Gamification | undefined;
   const user = session?.user;
   const dailyGoal = resp?.dailyGoal || user?.daily_goal || 20;
   const doneToday = gam?.daily_questions_today || 0;
   const activeExam = resp?.activeExam || "kenntnispruefung";
   const studyPath = resp?.examDate ? buildStudyPath(resp.examDate, activeExam) : null;
+  const streak = user?.streak_count || 0;
+
+  // Today's schedule + the forward window (next ~6 days incl. today).
+  const todayPlan = daysByISO.get(todayISO) ?? null;
+  const upcomingDays = useMemo(() => {
+    if (!plan) return [] as StudyPlanDay[];
+    return (plan.dailySchedule || [])
+      .filter(d => d.day >= todayISO && d.totalQuestions > 0)
+      .slice(0, 6);
+  }, [plan, todayISO]);
+
+  // Per-block done/live derivation. The data contract gives ONE total
+  // (doneToday) + today's topics in order; there is no per-topic
+  // completion field. Walk the topics accumulating targetCount: a block
+  // is "done" once the cumulative target is covered by doneToday, the
+  // first uncovered block is "live", the rest are "upcoming". Deterministic.
+  const todayBlocks = useMemo(() => {
+    const topics = todayPlan?.topics ?? [];
+    let cumulative = 0;
+    let liveAssigned = false;
+    return topics.map(tt => {
+      cumulative += tt.targetCount;
+      let state: BlockState;
+      if (doneToday >= cumulative) {
+        state = "done";
+      } else if (!liveAssigned) {
+        state = "live";
+        liveAssigned = true;
+      } else {
+        state = "upcoming";
+      }
+      return { tt, state };
+    });
+  }, [todayPlan, doneToday]);
+
+  const doneCount = todayBlocks.filter(b => b.state === "done").length;
+  const totalBlocks = todayBlocks.length;
+
+  // Countdown ring: there is no honest "elapsed study" denominator
+  // (totalDays == daysLeft at generation), so the ARC encodes today's
+  // real daily-goal progress (doneToday/dailyGoal) and the numeral is the
+  // honest day-count to exam. Decorative-but-true.
+  const daysLeft = resp?.examDate ? Math.max(0, diffDays(todayISO, resp.examDate)) : 0;
+  const goalPct = Math.min(100, Math.round((doneToday / Math.max(1, dailyGoal)) * 100));
+  const RING_R = 32;
+  const RING_C = 2 * Math.PI * RING_R; // ~201
+  const ringOffset = RING_C * (1 - goalPct / 100);
 
   if (loading) {
     return (
@@ -204,19 +222,21 @@ export default function StudyPlanPage() {
       <div className="app-layout">
         <Sidebar lang={lang} />
         <main className="main-content safe-area-top safe-area-bottom bg-[var(--mp-surface-sunken)]">
-          <div className="px-6 py-16 flex flex-col items-center text-center max-w-md mx-auto">
-            <Target className="w-10 h-10 text-[var(--mp-fg-subtle)] mb-4" />
-            <h1 className="text-xl font-bold text-[var(--mp-fg)] mb-2">
-              {lang === "de" ? "Lernplan" : "Study Plan"}
-            </h1>
-            <p className="text-sm text-[var(--mp-fg-muted)] mb-6">
-              {lang === "de"
-                ? "Melde dich an, um deinen personalisierten Lernplan zu sehen."
-                : "Sign in to see your personalized study plan."}
-            </p>
-            <Link href="/login" className="btn-primary px-5 py-2.5 rounded-xl">
-              {lang === "de" ? "Anmelden" : "Sign in"}
-            </Link>
+          <div className="px-6 py-16 max-w-md mx-auto">
+            <EmptyState
+              icon={<Target className="w-10 h-10" aria-hidden />}
+              title={lang === "de" ? "Lernplan" : "Study Plan"}
+              body={
+                lang === "de"
+                  ? "Melde dich an, um deinen persönlichen Lernplan bis zur Prüfung zu sehen."
+                  : "Sign in to see your personal study plan all the way to exam day."
+              }
+              action={
+                <Link href="/login" className="mp-btn mp-btn--primary">
+                  {lang === "de" ? "Anmelden" : "Sign in"}
+                </Link>
+              }
+            />
           </div>
         </main>
         <BottomNav lang={lang} />
@@ -231,7 +251,7 @@ export default function StudyPlanPage() {
         userId={user.id}
         userName={user.first_name}
         totalXp={user.xp_total || 0}
-        streak={user.streak_count || 0}
+        streak={streak}
       />
 
       <main className="main-content safe-area-top safe-area-bottom bg-[var(--mp-surface-sunken)]">
@@ -243,8 +263,7 @@ export default function StudyPlanPage() {
           >
             &larr; {t("back_home", lang)}
           </Link>
-          <h1 className="text-base font-bold text-[var(--mp-fg)] flex items-center gap-2">
-            <Target className="w-4 h-4 text-[var(--mp-viridian)]" />
+          <h1 className="text-base font-bold font-display text-[var(--mp-fg)]">
             {lang === "de" ? "Lernplan" : "Study Plan"}
           </h1>
           <div className="flex items-center gap-2">
@@ -253,423 +272,494 @@ export default function StudyPlanPage() {
           </div>
         </div>
 
-        <div className="px-4 lg:px-8 py-5 max-w-4xl mx-auto pb-28 space-y-6">
+        <div className="px-4 lg:px-8 py-5 max-w-5xl mx-auto pb-28">
           {/* ===== No exam date → prompt ===== */}
           {resp && !resp.hasExamDate && (
-            <div className="card rounded-2xl p-6 md:p-10 text-center">
-              <Calendar className="w-12 h-12 mx-auto mb-4 text-[var(--mp-fg-subtle)]" />
-              <h2 className="text-lg md:text-xl font-bold text-[var(--mp-fg)] mb-2">
-                {lang === "de"
-                  ? "Kein Prüfungsdatum gesetzt"
-                  : "No exam date set"}
-              </h2>
-              <p className="text-sm text-[var(--mp-fg-muted)] mb-6 max-w-md mx-auto">
-                {lang === "de"
-                  ? "Setze dein Prüfungsdatum in den Einstellungen, um einen personalisierten Lernplan zu erhalten."
-                  : "Set your exam date in Settings to generate a personalized study plan."}
-              </p>
-              <Link
-                href="/settings"
-                className="btn-primary inline-flex items-center gap-2 px-5 py-2.5 rounded-xl"
-              >
-                <Calendar className="w-4 h-4" />
-                {lang === "de"
-                  ? "Prüfungsdatum setzen"
-                  : "Set exam date"}
-              </Link>
+            <div className="max-w-md mx-auto py-6">
+              <EmptyState
+                icon={<CalendarDays className="w-10 h-10" aria-hidden />}
+                title={
+                  lang === "de" ? "Noch kein Prüfungsdatum" : "No exam date yet"
+                }
+                body={
+                  lang === "de"
+                    ? "Setze dein Prüfungsdatum in den Einstellungen. Daraus bauen wir den ruhigen, Tag-für-Tag-Weg zur Prüfung, gewichtet nach deinen schwachen Themen."
+                    : "Set your exam date in Settings. From it we build the calm, day-by-day path to your exam, weighted by your weak topics."
+                }
+                action={
+                  <Link
+                    href="/settings"
+                    className="mp-btn mp-btn--primary inline-flex items-center gap-2"
+                  >
+                    <Calendar className="w-4 h-4" aria-hidden />
+                    {lang === "de" ? "Prüfungsdatum setzen" : "Set exam date"}
+                  </Link>
+                }
+              />
             </div>
           )}
 
           {/* ===== Plan ===== */}
           {plan && resp?.examDate && (
-            <>
-              {/* Hero */}
-              <div className="bg-gradient-to-r from-[var(--mp-fg)] to-[var(--mp-cta-blue)] rounded-2xl p-5 md:p-7 text-white relative overflow-hidden">
+            <div className="grid lg:grid-cols-[minmax(0,1fr)_320px] gap-5 lg:gap-6 items-start">
+              {/* ---- Main column ---- */}
+              <div className="space-y-5 min-w-0">
+                {/* Countdown hero */}
                 <div
-                  className="absolute inset-0 opacity-[0.04]"
+                  className="relative overflow-hidden rounded-[var(--mp-r-card)] p-5 text-white"
                   style={{
-                    backgroundImage:
-                      "radial-gradient(circle at 2px 2px, white 1px, transparent 0)",
-                    backgroundSize: "24px 24px",
+                    background:
+                      "linear-gradient(118deg, var(--mp-hero-from, var(--mp-fg)), var(--mp-hero-to, var(--mp-cta-blue)))",
+                    boxShadow: "var(--mp-shadow-hover)",
                   }}
-                />
-                <div className="relative">
-                  <p className="text-xs uppercase tracking-wider text-white/70 font-semibold mb-1">
-                    {lang === "de" ? "Dein Lernplan" : "Your Study Plan"}
-                  </p>
-                  <h2 className="text-xl md:text-2xl font-black font-display mb-2 leading-tight">
-                    {lang === "de"
-                      ? `Bis zur Prüfung am ${formatExamDate(resp.examDate, lang)}`
-                      : `Until your exam on ${formatExamDate(resp.examDate, lang)}`}
-                  </h2>
-                  <div className="flex flex-wrap gap-2 mt-3">
-                    <span className="inline-flex items-center gap-1.5 bg-white/15 backdrop-blur-sm text-white text-xs font-medium px-3 py-1.5 rounded-full">
-                      <Calendar className="w-3.5 h-3.5" />
-                      {plan.totalDays}{" "}
-                      {lang === "de" ? "Tage" : plan.totalDays === 1 ? "day" : "days"}
-                    </span>
-                    <span className="inline-flex items-center gap-1.5 bg-white/15 backdrop-blur-sm text-white text-xs font-medium px-3 py-1.5 rounded-full">
-                      <Sparkles className="w-3.5 h-3.5" />
-                      {plan.totalQuestions.toLocaleString(
-                        lang === "de" ? "de-DE" : "en-US"
-                      )}{" "}
-                      {lang === "de" ? "Fragen geplant" : "questions planned"}
-                    </span>
-                    <span className="inline-flex items-center gap-1.5 bg-[var(--mp-accent-teal)]/30 text-white text-xs font-medium px-3 py-1.5 rounded-full">
-                      <Target className="w-3.5 h-3.5" /> {dailyGoal}/
-                      {lang === "de" ? "Tag" : "day"}
-                    </span>
+                >
+                  <div
+                    className="pointer-events-none absolute inset-0"
+                    style={{
+                      background:
+                        "radial-gradient(130px 130px at 90% 10%, var(--mp-hero-glow, var(--mp-spark-glow)), transparent 70%)",
+                    }}
+                    aria-hidden
+                  />
+                  <div className="relative flex items-center gap-4">
+                    <div className="relative w-[74px] h-[74px] flex-shrink-0">
+                      <svg
+                        viewBox="0 0 74 74"
+                        className="w-[74px] h-[74px] -rotate-90"
+                        aria-hidden
+                      >
+                        <circle
+                          cx="37"
+                          cy="37"
+                          r={RING_R}
+                          fill="none"
+                          strokeWidth="6"
+                          stroke="rgba(255,255,255,0.16)"
+                        />
+                        <circle
+                          cx="37"
+                          cy="37"
+                          r={RING_R}
+                          fill="none"
+                          strokeWidth="6"
+                          strokeLinecap="round"
+                          stroke="var(--mp-spark)"
+                          strokeDasharray={RING_C}
+                          strokeDashoffset={ringOffset}
+                          style={{
+                            transition: "stroke-dashoffset 0.6s var(--mp-ease-out)",
+                            filter: "drop-shadow(0 0 4px var(--mp-spark-glow))",
+                          }}
+                        />
+                      </svg>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center">
+                        <b className="font-display font-black text-2xl leading-none text-white">
+                          {daysLeft}
+                        </b>
+                        <span className="text-[9px] uppercase tracking-wider text-white/70 mt-0.5">
+                          {lang === "de"
+                            ? daysLeft === 1
+                              ? "Tag"
+                              : "Tage"
+                            : daysLeft === 1
+                            ? "day"
+                            : "days"}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-[11px] font-semibold uppercase tracking-wider text-[var(--mp-spark)]">
+                        {lang === "de" ? "Bis zur Prüfung" : "Until your exam"}
+                      </div>
+                      <h2 className="font-display font-extrabold text-lg leading-tight text-white mt-1">
+                        {lang === "de"
+                          ? "Dein Weg zur Prüfung"
+                          : "Your path to the exam"}
+                      </h2>
+                      <div className="text-xs text-white/75 mt-1 flex items-center gap-1.5">
+                        <CalendarDays className="w-3.5 h-3.5" aria-hidden />
+                        {formatExamDate(resp.examDate, lang)}
+                      </div>
+                    </div>
                   </div>
-                  {/* 70% new · 30% consolidation split bar — thin, just
-                      above the status line. Makes the plan's learning
-                      philosophy visible at a glance (front-load new
-                      material, back-load review). Hidden when the plan
-                      is tight (<=7 days) or in full-review mode. */}
+
+                  {/* 70/30 split (the plan's learning philosophy, at a glance).
+                      Hidden when tight/expired (those go full-review). */}
                   {plan.status !== "tight" && plan.status !== "expired" && (
-                    <div className="mt-4">
+                    <div className="relative mt-4">
                       <div className="h-1.5 rounded-full overflow-hidden bg-white/15 flex">
-                        <div
-                          className="h-full bg-[var(--mp-accent-teal)]"
-                          style={{ width: "70%" }}
-                          aria-hidden
-                        />
-                        <div
-                          className="h-full bg-white/40"
-                          style={{ width: "30%" }}
-                          aria-hidden
-                        />
+                        <div className="h-full bg-[var(--mp-spark)]" style={{ width: "70%" }} aria-hidden />
+                        <div className="h-full bg-white/40" style={{ width: "30%" }} aria-hidden />
                       </div>
                       <div className="flex items-center justify-between mt-1.5 text-[10px] font-mono uppercase tracking-wider text-white/70">
-                        <span>
-                          {lang === "de" ? "70% Neu" : "70% New"}
-                        </span>
-                        <span>
-                          {lang === "de" ? "30% Wiederholung" : "30% Review"}
-                        </span>
+                        <span>{lang === "de" ? "70% Neu" : "70% New"}</span>
+                        <span>{lang === "de" ? "30% Festigung" : "30% Consolidation"}</span>
                       </div>
                     </div>
                   )}
                   {plan.status === "tight" && (
-                    <p className="text-xs text-[var(--mp-status-warning)] mt-3 flex items-center gap-1.5">
-                      <AlertTriangle className="w-3.5 h-3.5" />
+                    <p className="relative text-xs text-white/85 mt-3 flex items-center gap-1.5">
+                      <AlertTriangle className="w-3.5 h-3.5 shrink-0" aria-hidden />
                       {lang === "de"
-                        ? "Wenig Zeit — Fokus auf Wiederholung deiner Schwächen."
-                        : "Tight window — focusing on review of your weak topics."}
+                        ? "Wenig Zeit. Fokus auf die Wiederholung deiner Schwächen."
+                        : "Tight window. Focusing on review of your weak topics."}
                     </p>
                   )}
                   {plan.status === "expired" && (
-                    <p className="text-xs text-[var(--mp-status-warning)] mt-3 flex items-center gap-1.5">
-                      <AlertTriangle className="w-3.5 h-3.5" />
+                    <p className="relative text-xs text-white/85 mt-3 flex items-center gap-1.5">
+                      <AlertTriangle className="w-3.5 h-3.5 shrink-0" aria-hidden />
                       {lang === "de"
-                        ? "Prüfungstermin liegt in der Vergangenheit oder ist heute — aktualisiere ihn in den Einstellungen."
-                        : "Exam date is today or in the past — update it in Settings."}
+                        ? "Prüfungstermin ist heute oder vorbei. Aktualisiere ihn in den Einstellungen."
+                        : "Exam date is today or in the past. Update it in Settings."}
                     </p>
                   )}
                   {plan.status === "far_future" && (
-                    <p className="text-xs text-white/70 mt-3">
+                    <p className="relative text-xs text-white/70 mt-3">
                       {lang === "de"
-                        ? "Plan auf ein Jahr begrenzt — aktualisiere den Termin, wenn du näher dran bist."
-                        : "Plan capped at 1 year — update the date when it's closer."}
+                        ? "Plan auf ein Jahr begrenzt. Aktualisiere den Termin, wenn du näher dran bist."
+                        : "Plan capped at one year. Update the date when it is closer."}
                     </p>
                   )}
                 </div>
-              </div>
 
-              {/* Path to exam day — milestone ladder + registration anchor (A.1) */}
-              {studyPath && <StudyPathTimeline path={studyPath} lang={lang} />}
-
-              {/* Today's progress */}
-              <div className="card rounded-2xl p-5">
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="text-sm font-bold text-[var(--mp-fg)] flex items-center gap-2">
-                    <Target className="w-4 h-4 text-[var(--mp-viridian)]" />
-                    {lang === "de" ? "Heute" : "Today"}
-                  </h3>
-                  <span className="text-xs font-mono text-[var(--mp-fg-muted)]">
-                    {doneToday}/{dailyGoal}{" "}
-                    {lang === "de" ? "Fragen" : "questions"}
-                  </span>
-                </div>
-                <div className="h-2 bg-[var(--mp-surface-sunken)] rounded-full overflow-hidden">
+                {/* Today's focus (spark left edge) */}
+                <div className="relative overflow-hidden mp-card p-4">
                   <div
-                    className="h-full bg-[var(--mp-viridian)] rounded-full transition-all duration-300"
-                    style={{
-                      width: `${Math.min(100, Math.round((doneToday / Math.max(1, dailyGoal)) * 100))}%`,
-                    }}
+                    className="absolute left-0 top-0 bottom-0 w-[3px]"
+                    style={{ background: "var(--mp-spark)" }}
+                    aria-hidden
                   />
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2 font-display font-bold text-[15px] text-[var(--mp-fg)]">
+                      <span className="w-[26px] h-[26px] rounded-lg bg-[var(--mp-tint-teal)] text-[var(--mp-accent-teal)] flex items-center justify-center">
+                        <Target className="w-[15px] h-[15px]" aria-hidden />
+                      </span>
+                      {lang === "de" ? "Heute dran" : "Today's focus"}
+                    </div>
+                    {totalBlocks > 0 && (
+                      <div className="font-mono text-xs font-bold text-[var(--mp-accent-teal)]">
+                        {doneCount} / {totalBlocks} {lang === "de" ? "fertig" : "done"}
+                      </div>
+                    )}
+                  </div>
+
+                  {totalBlocks === 0 ? (
+                    <p className="text-xs text-[var(--mp-fg-subtle)]">
+                      {lang === "de"
+                        ? "Heute ist ein Ruhetag. Freiwilliges Üben ist jederzeit möglich."
+                        : "Today is a rest day. Optional practice is always available."}
+                    </p>
+                  ) : (
+                    <div className="flex flex-col gap-2.5">
+                      {todayBlocks.map(({ tt, state }) => {
+                        const tc = getTopicConfig(tt.topic);
+                        const practiceMode = tt.focus === "review" ? "wrong" : "all";
+                        const href = `/quiz?topic=${encodeURIComponent(
+                          tt.topic
+                        )}&userId=${user.id}&examSource=${activeExam}&practiceMode=${practiceMode}&autoStart=1`;
+                        const subText =
+                          state === "done"
+                            ? lang === "de"
+                              ? "erledigt"
+                              : "done"
+                            : `~${Math.max(1, Math.round(tt.targetCount * 1.2))} ${
+                                lang === "de" ? "Min." : "min"
+                              }`;
+                        const body = (
+                          <div className="flex items-center gap-3 p-2.5 rounded-[var(--mp-r-md)] bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)]">
+                            <span
+                              className="w-[34px] h-[34px] rounded-[9px] flex items-center justify-center flex-shrink-0"
+                              style={
+                                state === "done"
+                                  ? {
+                                      backgroundColor: "var(--mp-success-bg)",
+                                      color: "var(--mp-viridian)",
+                                    }
+                                  : {
+                                      backgroundColor: tc.color + "22",
+                                      color: tc.color,
+                                    }
+                              }
+                            >
+                              {state === "done" ? (
+                                <Check className="w-[18px] h-[18px]" aria-hidden />
+                              ) : (
+                                <TopicIcon
+                                  name={tc.icon}
+                                  className="w-[18px] h-[18px]"
+                                  style={{ color: tc.color }}
+                                />
+                              )}
+                            </span>
+                            <div className="flex-1 min-w-0">
+                              <div
+                                className={`text-[13.5px] font-semibold truncate ${
+                                  state === "done"
+                                    ? "text-[var(--mp-fg-muted)] line-through decoration-[var(--mp-border)]"
+                                    : "text-[var(--mp-fg)]"
+                                }`}
+                              >
+                                {tt.topic}
+                                <span className="font-normal text-[var(--mp-fg-subtle)]">
+                                  {" · "}
+                                  {tt.focus === "review"
+                                    ? lang === "de"
+                                      ? "Festigung"
+                                      : "Consolidation"
+                                    : lang === "de"
+                                    ? "Neu"
+                                    : "New"}
+                                </span>
+                              </div>
+                              <div className="text-[11px] text-[var(--mp-fg-subtle)] mt-0.5 font-mono tabular-nums">
+                                {tt.targetCount} {lang === "de" ? "Fragen" : "questions"}
+                                {" · "}
+                                {subText}
+                              </div>
+                            </div>
+                            <span
+                              className="w-[30px] h-[30px] rounded-lg flex items-center justify-center flex-shrink-0 text-white"
+                              style={{
+                                background:
+                                  state === "done"
+                                    ? "var(--mp-viridian)"
+                                    : "var(--mp-cta-blue)",
+                              }}
+                            >
+                              {state === "done" ? (
+                                <Check className="w-[15px] h-[15px]" aria-hidden />
+                              ) : (
+                                <ArrowRight className="w-[15px] h-[15px]" aria-hidden />
+                              )}
+                            </span>
+                          </div>
+                        );
+                        // Done blocks are non-interactive; live/upcoming link to the quiz.
+                        return state === "done" ? (
+                          <div key={tt.topic}>{body}</div>
+                        ) : (
+                          <Link
+                            key={tt.topic}
+                            href={href}
+                            className="block transition-transform active:scale-[0.99]"
+                          >
+                            {body}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Calm daily-goal reward line */}
+                  <div className="mt-3 pt-3 border-t border-[var(--mp-border)] flex items-center justify-between">
+                    <span className="text-[11px] text-[var(--mp-fg-subtle)] font-mono tabular-nums">
+                      {doneToday}/{dailyGoal} {lang === "de" ? "Fragen heute" : "questions today"}
+                    </span>
+                    {doneToday >= dailyGoal ? (
+                      <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[var(--mp-viridian)]">
+                        <Check className="w-3.5 h-3.5" aria-hidden />
+                        {lang === "de" ? "Tagesziel erreicht" : "Daily goal reached"}
+                      </span>
+                    ) : (
+                      <span className="text-[11px] text-[var(--mp-fg-muted)]">
+                        {lang === "de"
+                          ? `Noch ${Math.max(0, dailyGoal - doneToday)} bis zum Ziel`
+                          : `${Math.max(0, dailyGoal - doneToday)} to go`}
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <p className="text-xs text-[var(--mp-fg-subtle)] mt-2">
-                  {doneToday >= dailyGoal
-                    ? lang === "de"
-                      ? "Tagesziel erreicht — weiter so!"
-                      : "Daily goal reached — great job!"
-                    : lang === "de"
-                    ? `Noch ${Math.max(0, dailyGoal - doneToday)} Fragen bis zum Tagesziel`
-                    : `${Math.max(0, dailyGoal - doneToday)} more to hit today's goal`}
+
+                {/* Upcoming days timeline */}
+                <div>
+                  <div className="flex items-center justify-between mb-3 px-0.5">
+                    <h3 className="font-display font-bold text-base text-[var(--mp-fg)]">
+                      {lang === "de" ? "Kommende Tage" : "Upcoming days"}
+                    </h3>
+                    {plan.status !== "tight" && plan.status !== "expired" && (
+                      <div className="text-[11px] font-semibold flex items-center gap-1.5 text-[var(--mp-fg-subtle)]">
+                        <span className="text-[var(--mp-cta-blue)]">
+                          {lang === "de" ? "70% Neu" : "70% New"}
+                        </span>
+                        ·
+                        <span className="text-[var(--mp-warning-dk)]">
+                          {lang === "de" ? "30% Festigung" : "30% Consolidation"}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {upcomingDays.length === 0 ? (
+                    <div className="mp-card p-4 text-xs text-[var(--mp-fg-subtle)]">
+                      {lang === "de"
+                        ? "Keine weiteren geplanten Tage. Dein Plan ist abgeschlossen."
+                        : "No further planned days. Your plan is complete."}
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      {upcomingDays.map((d, i) => {
+                        const date = parseISO(d.day);
+                        const labels =
+                          lang === "de" ? WEEK_DAY_LABELS_DE : WEEK_DAY_LABELS_EN;
+                        const isActive = d.day === todayISO;
+                        const isLast = i === upcomingDays.length - 1;
+                        const tagTopics = d.topics.slice(0, 3);
+                        const title =
+                          d.topics.length > 0
+                            ? d.topics[0].topic +
+                              (d.topics.length > 1
+                                ? lang === "de"
+                                  ? " + Mix"
+                                  : " + mix"
+                                : "")
+                            : lang === "de"
+                            ? "Ruhetag"
+                            : "Rest day";
+                        return (
+                          <div key={d.day} className="flex gap-3.5 relative pb-3.5">
+                            {!isLast && (
+                              <span
+                                className="absolute left-[17px] top-9 bottom-0 w-0.5 bg-[var(--mp-border)]"
+                                aria-hidden
+                              />
+                            )}
+                            <div className="w-9 flex-shrink-0 flex flex-col items-center">
+                              <div
+                                className={`w-9 h-9 rounded-[11px] flex flex-col items-center justify-center relative z-[1] border ${
+                                  isActive
+                                    ? "text-white border-transparent"
+                                    : "bg-[var(--mp-surface)] border-[var(--mp-border)] text-[var(--mp-fg-muted)]"
+                                }`}
+                                style={
+                                  isActive
+                                    ? {
+                                        background: "var(--mp-spark)",
+                                        boxShadow: "0 0 0 4px var(--mp-spark-glow)",
+                                      }
+                                    : undefined
+                                }
+                              >
+                                <b className="font-mono font-bold text-[13px] leading-none">
+                                  {date.getDate()}
+                                </b>
+                                <span className="text-[8px] uppercase tracking-wide mt-0.5">
+                                  {labels[date.getDay()]}
+                                </span>
+                              </div>
+                            </div>
+                            <div
+                              className={`flex-1 min-w-0 mp-card p-3 ${
+                                isActive ? "border-[var(--mp-spark)]" : ""
+                              }`}
+                              style={
+                                isActive
+                                  ? { borderColor: "var(--mp-spark)" }
+                                  : undefined
+                              }
+                            >
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="text-[13.5px] font-bold text-[var(--mp-fg)] truncate">
+                                  {isActive
+                                    ? lang === "de"
+                                      ? "Heute"
+                                      : "Today"
+                                    : title}
+                                </span>
+                                <span className="font-mono text-[11px] font-semibold text-[var(--mp-fg-subtle)] shrink-0">
+                                  {d.totalQuestions} {lang === "de" ? "Fr." : "q"}
+                                </span>
+                              </div>
+                              {tagTopics.length > 0 && (
+                                <div className="flex gap-1.5 mt-2 flex-wrap">
+                                  {tagTopics.map(tt => {
+                                    const tag = focusTag(tt.focus, lang);
+                                    return (
+                                      <span
+                                        key={tt.topic}
+                                        className={`text-[10px] font-semibold px-2 py-[3px] rounded-full ${tag.cls}`}
+                                      >
+                                        {tt.topic}
+                                      </span>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                <p className="text-center text-xs text-[var(--mp-fg-subtle)] pt-1">
+                  {lang === "de"
+                    ? "Der Plan passt sich täglich an deinen Fortschritt an."
+                    : "The plan adapts daily to your progress."}
                 </p>
               </div>
 
-              {/* Weekly calendar */}
-              <div className="card rounded-2xl p-4 md:p-5">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-sm font-bold text-[var(--mp-fg)]">
-                    {lang === "de" ? "Woche im Überblick" : "Week Overview"}
-                  </h3>
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={() => {
-                        const d = new Date(weekAnchor);
-                        d.setDate(d.getDate() - 7);
-                        setWeekAnchor(d);
-                      }}
-                      className="w-8 h-8 rounded-lg border border-[var(--mp-border)] flex items-center justify-center text-[var(--mp-fg-muted)] hover:bg-[var(--mp-surface-sunken)] transition-colors"
-                      aria-label={lang === "de" ? "Vorige Woche" : "Previous week"}
-                    >
-                      <ChevronLeft className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => setWeekAnchor(new Date())}
-                      className="px-2.5 h-8 rounded-lg border border-[var(--mp-border)] text-xs text-[var(--mp-fg-muted)] hover:bg-[var(--mp-surface-sunken)] transition-colors"
-                    >
-                      {lang === "de" ? "Heute" : "Today"}
-                    </button>
-                    <button
-                      onClick={() => {
-                        const d = new Date(weekAnchor);
-                        d.setDate(d.getDate() + 7);
-                        setWeekAnchor(d);
-                      }}
-                      className="w-8 h-8 rounded-lg border border-[var(--mp-border)] flex items-center justify-center text-[var(--mp-fg-muted)] hover:bg-[var(--mp-surface-sunken)] transition-colors"
-                      aria-label={lang === "de" ? "Nächste Woche" : "Next week"}
-                    >
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
+              {/* ---- Side column (desktop) / stacked (mobile) ---- */}
+              <aside className="space-y-5 lg:sticky lg:top-5">
+                {/* Path to exam day (milestone ladder + registration anchor).
+                    Kept from the 06-25 ship (shared with home); not in the
+                    03 mockup. Integrator to rule on final placement. */}
+                {studyPath && <StudyPathTimeline path={studyPath} lang={lang} />}
+
+                {/* Streak + planned-questions stat tiles */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="mp-card p-3.5">
+                    <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--mp-fg-muted)]">
+                      <Flame className="w-3.5 h-3.5 text-[var(--mp-warning-dk)]" aria-hidden />
+                      {lang === "de" ? "Serie" : "Streak"}
+                    </div>
+                    <div className="font-mono font-black text-2xl text-[var(--mp-fg)] mt-1 tabular-nums">
+                      {streak}
+                    </div>
                   </div>
-                </div>
-
-                <div className="grid grid-cols-7 gap-1.5 md:gap-2">
-                  {weekDays.map((d, i) => {
-                    const iso = toLocalISO(d);
-                    const isToday = sameISO(iso, todayISO);
-                    const dayPlan = daysByISO.get(iso);
-                    const planned = dayPlan?.totalQuestions || 0;
-                    const isRest = planned === 0 && !!dayPlan;
-                    const outsidePlan = !dayPlan;
-                    const labels = lang === "de" ? WEEK_DAY_LABELS_DE : WEEK_DAY_LABELS_EN;
-                    const isDone =
-                      isToday && doneToday >= dailyGoal && planned > 0;
-                    return (
-                      <div
-                        key={iso}
-                        className={`rounded-xl border px-1 py-2 md:px-2 md:py-3 text-center transition-all ${
-                          isToday
-                            ? "bg-[var(--mp-viridian)]/10 border-[var(--mp-viridian)]/40 ring-2 ring-[var(--mp-viridian)]/30"
-                            : outsidePlan
-                            ? "bg-[var(--mp-surface-sunken)] border-[var(--mp-border)] opacity-50"
-                            : isRest
-                            ? "bg-[var(--mp-surface-sunken)] border-[var(--mp-border)]"
-                            : "bg-white border-[var(--mp-border)]"
-                        }`}
-                      >
-                        <p className="text-[10px] uppercase font-semibold text-[var(--mp-fg-subtle)] tracking-wider">
-                          {labels[i]}
-                        </p>
-                        <p
-                          className={`text-base md:text-lg font-display font-bold ${
-                            isToday ? "text-[var(--mp-viridian)]" : "text-[var(--mp-fg)]"
-                          }`}
-                        >
-                          {d.getDate()}
-                        </p>
-                        {isDone ? (
-                          <CheckCircle2 className="w-3.5 h-3.5 text-[var(--mp-accent-teal)] mx-auto mt-1" />
-                        ) : outsidePlan ? (
-                          <p className="text-[9px] text-[var(--mp-fg-subtle)] mt-0.5">—</p>
-                        ) : (
-                          <p className="text-[10px] text-[var(--mp-fg-muted)] font-mono mt-0.5">
-                            {planned}
-                          </p>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Day cards for the week */}
-              <div className="space-y-3">
-                <h3 className="text-sm font-bold text-[var(--mp-fg)] border-l-[3px] border-l-[var(--mp-viridian)] pl-3">
-                  {lang === "de" ? "Deine Tage" : "Your days"}
-                </h3>
-                {weekDays.map(d => {
-                  const iso = toLocalISO(d);
-                  const isToday = sameISO(iso, todayISO);
-                  const dayPlan = daysByISO.get(iso);
-                  if (!dayPlan) {
-                    return (
-                      <div
-                        key={iso}
-                        className="card rounded-2xl p-4 opacity-60 border border-dashed border-[var(--mp-border)]"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-xs uppercase tracking-wider font-semibold text-[var(--mp-fg-subtle)]">
-                              {formatLongDate(iso, lang)}
-                            </p>
-                            <p className="text-sm text-[var(--mp-fg-subtle)] mt-1">
-                              {lang === "de"
-                                ? "Außerhalb des Plans"
-                                : "Outside the plan window"}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  }
-
-                  const goalHit = isToday && doneToday >= dailyGoal;
-                  return (
-                    <div
-                      key={iso}
-                      className={`card rounded-2xl p-4 md:p-5 ${
-                        isToday ? "ring-2 ring-[var(--mp-viridian)]/30 border-[var(--mp-viridian)]/40" : ""
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-3 mb-3">
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <p className="text-xs uppercase tracking-wider font-semibold text-[var(--mp-viridian)]">
-                              {formatLongDate(iso, lang)}
-                            </p>
-                            {isToday && (
-                              <span className="inline-flex items-center gap-1 bg-[var(--mp-viridian)]/10 text-[var(--mp-viridian)] text-[10px] font-bold px-2 py-0.5 rounded-full">
-                                {lang === "de" ? "Heute" : "Today"}
-                              </span>
-                            )}
-                            {dayPlan.phase === "consolidation" && (
-                              <span className="inline-flex items-center gap-1 bg-[var(--mp-status-warning)]/15 text-[var(--mp-status-warning)] text-[10px] font-bold px-2 py-0.5 rounded-full">
-                                {lang === "de" ? "Festigen" : "Consolidate"}
-                              </span>
-                            )}
-                            {dayPlan.phase === "new" && (
-                              <span className="inline-flex items-center gap-1 bg-[var(--mp-cta-blue)]/10 text-[var(--mp-cta-blue)] text-[10px] font-bold px-2 py-0.5 rounded-full">
-                                {lang === "de" ? "Neues Material" : "New material"}
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-sm font-bold text-[var(--mp-fg)] mt-1 font-mono">
-                            {dayPlan.totalQuestions}{" "}
-                            <span className="font-normal text-[var(--mp-fg-muted)] text-xs">
-                              {lang === "de" ? "Fragen geplant" : "questions planned"}
-                            </span>
-                          </p>
-                        </div>
-                        {goalHit ? (
-                          <span className="inline-flex items-center gap-1 text-[var(--mp-accent-teal)] text-xs font-semibold shrink-0">
-                            <CheckCircle2 className="w-4 h-4" />{" "}
-                            {lang === "de" ? "Erledigt" : "Done"}
-                          </span>
-                        ) : null}
-                      </div>
-
-                      {dayPlan.topics.length === 0 ? (
-                        <p className="text-xs text-[var(--mp-fg-subtle)] italic">
-                          {lang === "de"
-                            ? "Ruhetag — freiwilliges Lernen möglich"
-                            : "Rest day — optional practice"}
-                        </p>
-                      ) : (
-                        <div className="space-y-2">
-                          {dayPlan.topics.map(tt => {
-                            const tc = getTopicConfig(tt.topic);
-                            const badge = focusBadge(tt.focus, lang);
-                            const practiceMode =
-                              tt.focus === "review" ? "wrong" : "all";
-                            const href = `/quiz?topic=${encodeURIComponent(
-                              tt.topic
-                            )}&userId=${user.id}&examSource=${activeExam}&practiceMode=${practiceMode}&autoStart=1`;
-                            return (
-                              <div
-                                key={tt.topic}
-                                className="flex items-center gap-3 p-2.5 rounded-xl bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)]"
-                              >
-                                <div
-                                  className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
-                                  style={{ backgroundColor: tc.color + "15" }}
-                                >
-                                  <TopicIcon
-                                    name={tc.icon}
-                                    className="w-4 h-4"
-                                    style={{ color: tc.color }}
-                                  />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-medium text-[var(--mp-fg)] truncate">
-                                    {tt.topic}
-                                  </p>
-                                  <div className="flex items-center gap-2 mt-0.5">
-                                    <span
-                                      className={`inline-flex items-center text-[10px] font-bold px-1.5 py-0.5 rounded ${badge.bg} ${badge.text}`}
-                                    >
-                                      {badge.label}
-                                    </span>
-                                    <span className="text-[11px] text-[var(--mp-fg-muted)] font-mono">
-                                      {tt.targetCount}{" "}
-                                      {lang === "de" ? "Fragen" : "q's"}
-                                    </span>
-                                  </div>
-                                </div>
-                                <Link
-                                  href={href}
-                                  className="btn-primary !py-1.5 !px-3 rounded-lg text-xs inline-flex items-center gap-1 shrink-0"
-                                >
-                                  <PlayCircle className="w-3.5 h-3.5" />
-                                  {lang === "de" ? "Start" : "Start"}
-                                </Link>
-                              </div>
-                            );
-                          })}
-                        </div>
+                  <div className="mp-card p-3.5">
+                    <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--mp-fg-muted)]">
+                      <Zap className="w-3.5 h-3.5 text-[var(--mp-cta-blue)]" aria-hidden />
+                      {lang === "de" ? "Geplant" : "Planned"}
+                    </div>
+                    <div className="font-mono font-black text-2xl text-[var(--mp-fg)] mt-1 tabular-nums">
+                      {plan.totalQuestions.toLocaleString(
+                        lang === "de" ? "de-DE" : "en-US"
                       )}
                     </div>
-                  );
-                })}
-              </div>
-
-              {/* Weak topics recap */}
-              {plan.weakTopics.length > 0 && (
-                <div className="bg-[var(--mp-warning-bg)] border border-[var(--mp-status-warning)]/25 border-l-4 border-l-[var(--mp-status-warning)] rounded-2xl p-5">
-                  <p className="font-bold text-[var(--mp-fg)] mb-2 flex items-center gap-2">
-                    <AlertTriangle className="w-4 h-4 text-[var(--mp-status-warning)]" />
-                    {lang === "de" ? "Deine Schwächen" : "Your weak topics"}
-                  </p>
-                  <p className="text-xs text-[var(--mp-fg-muted)] mb-3">
-                    {lang === "de"
-                      ? "Diese Fachgebiete bekommen im Plan mehr Gewicht."
-                      : "These specialties are weighted heavier in your plan."}
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {plan.weakTopics.map(topic => (
-                      <Link
-                        key={topic}
-                        href={`/quiz?topic=${encodeURIComponent(
-                          topic
-                        )}&userId=${user.id}&examSource=${activeExam}&practiceMode=wrong&autoStart=1`}
-                        className="inline-flex items-center gap-1.5 bg-white border border-[var(--mp-status-warning)]/30 text-[var(--mp-fg)] text-xs font-medium px-3 py-1.5 rounded-full hover:bg-[var(--mp-status-warning)]/10 transition-colors"
-                      >
-                        {topic}
-                      </Link>
-                    ))}
                   </div>
                 </div>
-              )}
 
-              <p className="text-center text-xs text-[var(--mp-fg-subtle)] pt-2">
-                {lang === "de"
-                  ? "Plan passt sich täglich an deinen Fortschritt an."
-                  : "Plan adapts daily to your progress."}
-              </p>
-            </>
+                {/* Weak topics recap */}
+                {plan.weakTopics.length > 0 && (
+                  <div className="mp-card p-4 border-l-4 border-l-[var(--mp-warning-dk)]">
+                    <p className="font-bold text-sm text-[var(--mp-fg)] mb-1 flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4 text-[var(--mp-warning-dk)]" aria-hidden />
+                      {lang === "de" ? "Deine Schwächen" : "Your weak topics"}
+                    </p>
+                    <p className="text-xs text-[var(--mp-fg-muted)] mb-3">
+                      {lang === "de"
+                        ? "Diese Fachgebiete bekommen im Plan mehr Gewicht."
+                        : "These specialties are weighted heavier in your plan."}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {plan.weakTopics.map(topic => (
+                        <Link
+                          key={topic}
+                          href={`/quiz?topic=${encodeURIComponent(
+                            topic
+                          )}&userId=${user.id}&examSource=${activeExam}&practiceMode=wrong&autoStart=1`}
+                          className="inline-flex items-center gap-1.5 bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)] text-[var(--mp-fg)] text-xs font-medium px-3 py-1.5 rounded-full hover:border-[var(--mp-warning-dk)] transition-colors"
+                        >
+                          {topic}
+                          <ChevronRight className="w-3 h-3 text-[var(--mp-fg-subtle)]" aria-hidden />
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </aside>
+            </div>
           )}
         </div>
       </main>

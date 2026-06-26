@@ -1,35 +1,45 @@
 "use client";
 
 /**
- * Flashcards — MPDS v2 "Flashcards-B" deck stack + history rail.
+ * Flashcards — MPDS v3 "Clinical Nocturne" single-card focus.
  *
- * Phase B.3 rebuild (2026-06-26):
- *   - MCQ-native recall→verify model: FRONT = stem as cue (with
- *     "(N richtige Antworten)" stripped to a format badge); BACK =
- *     correct choices from `options` array (never the legacy pipe-
- *     joined `answer` string) + explanation via <AnswerReveal> when
- *     present; graceful no-explanation state for the ~69% without one.
- *   - All 18 inline-style color blocks replaced: 4 confidence buttons
- *     → <RatingButton intensity>; rail dots/text, retention %, leaks
- *     value → Tailwind token classes; session pill → bg/text token.
- *   - Ghost-card transforms + topic-color chips + progress-bar width
- *     + history maxHeight remain inline (geometry/data-driven, not
- *     static color tokens).
- *   - <AppLayout> wrapper from Phase B.2 (commit 3635f7e) preserved.
+ * Reimplementation 2026-06-26 (build loop): rebuilt the PRESENTATION to the
+ * approved `reviews/reimplementation-2026-06-26/design/06-flashcards.html`
+ * mockup + SPECS §6. The data layer is unchanged — only the UI is new.
  *
- * Business logic unchanged:
- *   - `getStoredSession()` hydrates user/xp/streak/accuracy
- *   - `/api/questions?topic=…&limit=1&examSource=…&userId=…`
- *     fetches the next card (spaced-rep prioritization server-side)
- *   - `/api/answer` POST records answer with binary `isCorrect`
- *     mapping (again/hard=false, good/easy=true). SM-2 engine intact.
- *     NOTE: additive grade 0-3 (Option B, spec §4.2) would require
- *     a route change to /api/answer — flagged, not done here.
- *   - `medpruef_flashcard_daily` localStorage counter untouched
- *   - Keyboard shortcuts: Space/Enter flip, 1-4 rate
+ *   - One centered card, full focus (no deck-stack, no desktop history rail).
+ *     SPECS §6: "No XP/timer/streak here (calm review ritual)." The reward is
+ *     the 3D flip, the specialty-keyed card, the per-button next-interval
+ *     hints (transparency IS the reward), the shrinking queue, and the calm
+ *     "Alles wiederholt" completion — restraint is the premium. The history
+ *     rail + retention/leaks stats from the prior pass were DROPPED on purpose
+ *     because they are not in the approved direction.
+ *   - Top accent bar: viridian→spark on the FRONT, CTA-blue→teal on the BACK,
+ *     so flip state reads instantly (the one blessed spark on this surface).
+ *   - fbar: close (← Zurück), centered session progress, shuffle (re-fetch).
+ *     The mockup's "/30 fällige Karten" denominator + the per-card next-review
+ *     intervals are NOT in the data contract (the page fetches one card at a
+ *     time, limit=1, with no due-count endpoint and no SM-2 fields on the
+ *     Question type). Per "keep the data layer / no new network calls", the
+ *     denominator is dropped (we show the real session count) and the interval
+ *     sublabels are static/illustrative. Shuffle maps to the existing
+ *     fetchCard() re-fetch.
+ *   - 3D Y-flip via the existing `flip-card` CSS (reduced-motion → crossfade,
+ *     handled in globals.css).
  *
- * The history rail is purely client-side session state — no new
- * network calls, no new tracking events.
+ * Business logic unchanged (data CONTRACT preserved):
+ *   - `getStoredSession()` hydrates user (xp/streak/accuracy still read so the
+ *     Sidebar user card stays populated — they are NOT shown on the card).
+ *   - `/api/questions?topic=…&limit=1&examSource=…&userId=…` fetches the next
+ *     card (spaced-rep prioritization server-side).
+ *   - `/api/answer` POST records answer with binary `isCorrect` mapping
+ *     (again/hard=false, good/easy=true). SM-2 engine intact.
+ *   - `medpruef_flashcard_daily` localStorage counter untouched.
+ *   - Keyboard shortcuts: Space/Enter flip, 1-4 rate.
+ *   - Paywall (`paywallHit`) + "all caught up" empty state preserved.
+ *
+ * Scope: ONLY this file. Strings are inlined (de/en) rather than added to the
+ * shared i18n.ts so a parallel sibling-surface fleet can't merge-conflict.
  */
 
 import { useEffect, useState, useCallback, useRef, Suspense } from "react";
@@ -56,12 +66,17 @@ import ThemeToggle from "@/components/ThemeToggle";
 import TopicIcon from "@/components/TopicIcon";
 import {
   Layers,
+  RotateCw,
   RotateCcw,
-  History,
+  Shuffle,
+  X,
   Check,
   ShieldCheck,
   Lock,
   Sparkles,
+  MinusCircle,
+  CheckCircle2,
+  Zap,
 } from "lucide-react";
 import { getPaywallCopy } from "@/lib/paywall-copy";
 import type { MCQOption } from "@/lib/mcq";
@@ -84,28 +99,6 @@ interface Question {
   n_correct?: number;
 }
 
-interface HistoryEntry {
-  id: number;
-  topic: string;
-  question: string;
-  rating: Confidence;
-}
-
-/* ─── Rating colour class maps — replaces ratingColor() ─────────── */
-const RATING_DOT_BG: Record<Confidence, string> = {
-  again: "bg-[var(--mp-warning)]",
-  hard: "bg-[var(--mp-status-warning)]",
-  good: "bg-[var(--mp-viridian)]",
-  easy: "bg-[var(--mp-cta-blue)]",
-};
-
-const RATING_TEXT: Record<Confidence, string> = {
-  again: "text-[var(--mp-warning)]",
-  hard: "text-[var(--mp-status-warning)]",
-  good: "text-[var(--mp-viridian)]",
-  easy: "text-[var(--mp-cta-blue)]",
-};
-
 /** Maps Confidence to RatingButton intensity (0=again, 1=hard, 2=good, 3=easy). */
 const CONFIDENCE_INTENSITY: Record<Confidence, 0 | 1 | 2 | 3> = {
   again: 0,
@@ -127,15 +120,7 @@ function extractCorrectCount(q: string): number | null {
   return m ? parseInt(m[1], 10) : null;
 }
 
-function ratingLabel(r: Confidence, lang: Lang): string {
-  if (r === "again") return lang === "de" ? "Nochmal" : "Again";
-  if (r === "hard") return lang === "de" ? "Schwer" : "Hard";
-  if (r === "good") return lang === "de" ? "Gut" : "Good";
-  return lang === "de" ? "Einfach" : "Easy";
-}
-
 const FLASHCARD_COUNT_KEY = "medpruef_flashcard_daily";
-const HISTORY_CAP = 10;
 
 function getTodayKey(): string {
   return new Date().toISOString().split("T")[0];
@@ -175,12 +160,12 @@ interface FlashcardProps {
 }
 
 /**
- * <Flashcard> renders the 3D-flip card pair (front + back) for one
- * question. Front = stem as cue. Back = correct choices via <Option>
- * + explanation via <AnswerReveal> when present.
- *
- * Extracted from the 859-line monolith per Phase B.3 spec. Stays in
- * this file (scope is ONLY flashcards/page.tsx).
+ * <Flashcard> renders the centered 3D-flip card pair (front + back) for one
+ * question, matching 06-flashcards.html: a top accent bar (viridian→spark
+ * front, CTA→teal back), a specialty chip keyed on the fach's TOPIC_CONFIG
+ * color (via color-mix, dark-safe), a Vorderseite/Rückseite side label, the
+ * recall cue on the front, and the correct answer (viridian key emphasis) +
+ * optional explanation on the back. One card, full focus.
  */
 function Flashcard({
   question,
@@ -194,9 +179,9 @@ function Flashcard({
   const hintCount = extractCorrectCount(question.question);
   const isMulti = (question.n_correct ?? 1) > 1 || (hintCount ?? 0) > 1;
 
-  /* Correct options for the back. Prefer structured options; fall back
-   * to the pipe-joined answer string split into a list so the back
-   * is never blank even for open-answer cards. */
+  /* Correct options for the back. Prefer structured options; fall back to the
+   * pipe-joined answer string split into a list so the back is never blank
+   * even for open-answer cards. */
   const correctOptions: string[] = question.options
     ? question.options.filter((o) => o.correct).map((o) => o.text)
     : question.answer
@@ -204,160 +189,165 @@ function Flashcard({
         .map((s) => s.trim())
         .filter(Boolean);
 
-  /* Explanation — treat whitespace-only as absent (69% no-explanation
+  /* Explanation — treat whitespace-only as absent (the ~69% no-explanation
    * path must feel complete, not broken). */
-  const explanation = (
-    question.explanation?.trim() ||
-    question.ai_explanation?.trim() ||
-    ""
-  );
+  const explanation =
+    question.explanation?.trim() || question.ai_explanation?.trim() || "";
   const hasExplanation = explanation.length > 0;
+
+  /* Specialty color, lifted on dark via color-mix so it reads on the oxford
+   * canvas (the `--sc` contract from _kit.css / SPECS §"Specialty colors"). */
+  const sc = topicConfig.color;
+  const scTint = `color-mix(in srgb, ${sc} 14%, transparent)`;
 
   return (
     <div
-      className={`relative w-full h-full transition-all duration-300 ${
-        animatingOut ? "opacity-0 translate-x-8" : "opacity-100 translate-x-0"
+      className={`flip-card w-full h-full cursor-pointer transition-opacity duration-300 ${
+        animatingOut ? "opacity-0" : "opacity-100"
       }`}
-      style={{ zIndex: 3 }}
+      onClick={() => {
+        if (!flipped) onFlip();
+      }}
+      style={{ ["--sc" as string]: sc }}
     >
       <div
-        className="flip-card w-full h-full cursor-pointer"
-        onClick={() => {
-          if (!flipped) onFlip();
-        }}
+        className={`flip-card-inner w-full h-full ${flipped ? "flipped" : ""}`}
       >
+        {/* ── FRONT ──────────────────────────────────────────────── */}
         <div
-          className={`flip-card-inner w-full min-h-[340px] h-full ${
-            flipped ? "flipped" : ""
-          }`}
+          className="flip-card-front absolute inset-0 rounded-[var(--mp-r-modal)] bg-[var(--mp-surface)] border border-[var(--mp-border-soft)] shadow-[var(--mp-shadow-elev)] flex flex-col p-6 overflow-hidden"
+          aria-hidden={flipped}
         >
-          {/* ── FRONT ────────────────────────────────────────────── */}
-          <div
-            className="flip-card-front w-full min-h-[340px] mp-card p-6 flex flex-col"
-            aria-hidden={flipped}
-          >
-            {/* Topic chip */}
-            <div className="flex items-center gap-2 mb-4">
-              <div
-                className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0"
-                style={{ backgroundColor: `${topicConfig.color}15` }}
-              >
-                <TopicIcon name={topicConfig.icon} className="w-3.5 h-3.5" />
-              </div>
-              <span
-                className="text-[10px] font-mono uppercase tracking-wider font-bold px-2 py-0.5 rounded"
-                style={{
-                  backgroundColor: `${topicConfig.color}10`,
-                  color: topicConfig.color,
-                }}
-              >
-                {question.topic}
-              </span>
-              {/* Format badge — replaces the inline "(N richtige)" hint */}
-              {isMulti && (
-                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-[var(--mp-cta-blue)]/10 text-[var(--mp-cta-blue)]">
-                  {hintCount !== null
-                    ? lang === "de"
-                      ? `${hintCount} richtig`
-                      : `${hintCount} correct`
-                    : lang === "de"
-                      ? "Mehrfach"
-                      : "Multi"}
-                </span>
-              )}
-              {!isMulti && (
-                <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-[var(--mp-viridian)]/10 text-[var(--mp-viridian)]">
-                  {lang === "de" ? "Einfach" : "Single"}
-                </span>
-              )}
-            </div>
+          {/* Top accent bar — viridian → spark (front) */}
+          <span
+            className="absolute left-0 top-0 right-0 h-1"
+            style={{
+              background:
+                "linear-gradient(90deg, var(--mp-viridian), var(--mp-spark))",
+            }}
+            aria-hidden
+          />
 
-            {/* Stem */}
-            <div className="flex-1 flex items-center justify-center">
-              <p className="text-[var(--mp-fg)] text-base leading-relaxed text-center whitespace-pre-line font-display font-bold">
-                {stem}
-              </p>
-            </div>
-
-            {question.image_url && (
-              <div className="mt-4 flex justify-center">
-                <img
-                  src={question.image_url}
-                  alt=""
-                  className="max-h-40 rounded-lg object-contain"
-                />
-              </div>
-            )}
-
-            <div className="mt-4 text-center">
-              <p className="text-xs text-[var(--mp-fg-subtle)] flex items-center justify-center gap-1.5 font-mono">
-                <RotateCcw className="w-3.5 h-3.5" />
-                {t("tap_to_flip", lang)}
-              </p>
-            </div>
+          {/* Top row: specialty chip + side label */}
+          <div className="flex items-center justify-between mb-2">
+            <span
+              className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1.5 rounded-full"
+              style={{ color: sc, backgroundColor: scTint }}
+            >
+              <TopicIcon name={topicConfig.icon} className="w-3.5 h-3.5" />
+              {question.topic}
+            </span>
+            <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--mp-fg-subtle)] font-mono">
+              {lang === "de" ? "Vorderseite" : "Front"}
+            </span>
           </div>
 
-          {/* ── BACK ─────────────────────────────────────────────── */}
-          <div
-            className="flip-card-back w-full min-h-[340px] mp-card p-6 flex flex-col"
-            aria-hidden={!flipped}
-          >
-            {/* Topic chip (same as front for visual continuity) */}
-            <div className="flex items-center gap-2 mb-4">
-              <div
-                className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0"
-                style={{ backgroundColor: `${topicConfig.color}15` }}
-              >
-                <TopicIcon name={topicConfig.icon} className="w-3.5 h-3.5" />
-              </div>
-              <span className="text-[10px] font-mono uppercase tracking-wider font-bold text-[var(--mp-viridian)]">
-                {t("correct_answer", lang)}
+          {/* Format badge — replaces the inline "(N richtige)" stem hint */}
+          <div className="flex justify-center">
+            {isMulti ? (
+              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-[var(--mp-cta-blue)]/10 text-[var(--mp-cta-blue)]">
+                {hintCount !== null
+                  ? lang === "de"
+                    ? `${hintCount} richtige`
+                    : `${hintCount} correct`
+                  : lang === "de"
+                    ? "Mehrfachauswahl"
+                    : "Multi-select"}
               </span>
-            </div>
+            ) : (
+              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-[var(--mp-viridian)]/10 text-[var(--mp-viridian)]">
+                {lang === "de" ? "Einfachauswahl" : "Single"}
+              </span>
+            )}
+          </div>
 
-            {/* Correct choices via <Option state="correct"> */}
-            <div className="flex-1 flex flex-col gap-2">
-              {correctOptions.length > 0 ? (
-                correctOptions.map((text, idx) => (
-                  <Option
-                    key={idx}
-                    state="correct"
-                    letter={
-                      correctOptions.length > 1
-                        ? String.fromCharCode(65 + idx)
-                        : undefined
-                    }
-                  >
-                    {text}
-                  </Option>
-                ))
-              ) : (
-                /* Fallback: no structured options and no parseable answer */
-                <p className="text-[var(--mp-viridian)] text-lg font-bold whitespace-pre-line font-display">
-                  {question.answer}
-                </p>
-              )}
-            </div>
+          {/* Recall cue (stem) — centered, dominant */}
+          <div className="flex-1 flex flex-col items-center justify-center text-center gap-4 px-1">
+            <p className="font-display font-bold text-[var(--mp-fg)] text-[19px] sm:text-[21px] leading-[1.3] whitespace-pre-line">
+              {stem}
+            </p>
+            {question.image_url && (
+              <img
+                src={question.image_url}
+                alt=""
+                className="max-h-36 rounded-lg object-contain"
+              />
+            )}
+          </div>
 
-            {/* Explanation via <AnswerReveal> — only when non-empty */}
-            {hasExplanation && (
-              <div className="mt-4">
-                <AnswerReveal correct>
-                  <p className="text-xs font-semibold text-[var(--mp-fg-subtle)] uppercase tracking-wider mb-1 font-mono">
-                    {t("explanation", lang)}
-                  </p>
-                  <p className="text-sm text-[var(--mp-fg-muted)] leading-relaxed whitespace-pre-line">
-                    {explanation.length > 400
-                      ? explanation.slice(0, 400) + "..."
-                      : explanation}
-                  </p>
-                </AnswerReveal>
-              </div>
+          {/* Flip hint */}
+          <div className="flex items-center justify-center gap-2 text-xs text-[var(--mp-fg-subtle)] mt-2">
+            <RotateCw className="w-[15px] h-[15px]" />
+            {t("tap_to_flip", lang)}
+          </div>
+        </div>
+
+        {/* ── BACK ───────────────────────────────────────────────── */}
+        <div
+          className="flip-card-back rounded-[var(--mp-r-modal)] bg-[var(--mp-surface)] border border-[var(--mp-border-soft)] shadow-[var(--mp-shadow-elev)] flex flex-col p-6 overflow-hidden"
+          aria-hidden={!flipped}
+        >
+          {/* Top accent bar — CTA-blue → teal (back) */}
+          <span
+            className="absolute left-0 top-0 right-0 h-1"
+            style={{
+              background:
+                "linear-gradient(90deg, var(--mp-cta-blue), var(--mp-accent-teal))",
+            }}
+            aria-hidden
+          />
+
+          {/* Top row: specialty chip + side label */}
+          <div className="flex items-center justify-between mb-3">
+            <span
+              className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1.5 rounded-full"
+              style={{ color: sc, backgroundColor: scTint }}
+            >
+              <TopicIcon name={topicConfig.icon} className="w-3.5 h-3.5" />
+              {question.topic}
+            </span>
+            <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--mp-fg-subtle)] font-mono">
+              {lang === "de" ? "Rückseite" : "Back"}
+            </span>
+          </div>
+
+          {/* Answer — scrollable so long explanations never overflow the card */}
+          <div className="flex-1 flex flex-col gap-2.5 overflow-y-auto -mr-2 pr-2">
+            {correctOptions.length > 0 ? (
+              correctOptions.map((text, idx) => (
+                <Option
+                  key={idx}
+                  state="correct"
+                  letter={
+                    correctOptions.length > 1
+                      ? String.fromCharCode(65 + idx)
+                      : undefined
+                  }
+                >
+                  {text}
+                </Option>
+              ))
+            ) : (
+              <p className="text-[var(--mp-viridian)] text-lg font-bold whitespace-pre-line font-display">
+                {question.answer}
+              </p>
             )}
 
-            {/* No-explanation state — clean, not broken */}
+            {hasExplanation && (
+              <AnswerReveal correct>
+                <p className="text-[10px] font-semibold text-[var(--mp-fg-subtle)] uppercase tracking-wider mb-1 font-mono">
+                  {t("explanation", lang)}
+                </p>
+                <p className="text-sm text-[var(--mp-fg-muted)] leading-relaxed whitespace-pre-line">
+                  {explanation.length > 600
+                    ? explanation.slice(0, 600) + "…"
+                    : explanation}
+                </p>
+              </AnswerReveal>
+            )}
+
             {!hasExplanation && (
-              <p className="mt-4 text-xs text-[var(--mp-fg-subtle)] text-center font-mono italic">
+              <p className="text-xs text-[var(--mp-fg-subtle)] text-center font-mono italic mt-1">
                 {lang === "de"
                   ? "Keine Erklärung vorhanden"
                   : "No explanation available"}
@@ -368,6 +358,33 @@ function Flashcard({
       </div>
     </div>
   );
+}
+
+/* ─── Confidence tray ────────────────────────────────────────────── */
+
+/** Illustrative next-review intervals. STATIC — the real SM-2 interval needs
+ *  `ease_factor`/`interval_days`, which are not on the data contract here, so
+ *  per "keep the data layer" we show the canonical first-pass spacing rather
+ *  than fabricating a per-card value. Matches 06-flashcards.html. */
+const INTERVAL_HINT: Record<Confidence, { de: string; en: string }> = {
+  again: { de: "< 1 Min.", en: "< 1 min" },
+  hard: { de: "1 Tag", en: "1 day" },
+  good: { de: "4 Tage", en: "4 days" },
+  easy: { de: "9 Tage", en: "9 days" },
+};
+
+const CONF_ICON: Record<Confidence, typeof RotateCcw> = {
+  again: RotateCcw,
+  hard: MinusCircle,
+  good: CheckCircle2,
+  easy: Zap,
+};
+
+function confidenceLabel(c: Confidence, lang: Lang): string {
+  if (c === "again") return lang === "de" ? "Nochmal" : "Again";
+  if (c === "hard") return lang === "de" ? "Schwer" : "Hard";
+  if (c === "good") return lang === "de" ? "Gut" : "Good";
+  return lang === "de" ? "Einfach" : "Easy";
 }
 
 /* ─── Main page content ──────────────────────────────────────────── */
@@ -386,14 +403,11 @@ function FlashcardContent() {
   const [flipped, setFlipped] = useState(false);
   const [dailyCount, setDailyCount] = useState(0);
   const [animatingOut, setAnimatingOut] = useState(false);
-  // Set when the free-tier gate returns `paywallHit: true` — the API
-  // returned 200 with no question because the user has exhausted their
-  // 150-question free slice. We render an upgrade prompt instead of
-  // spinning forever on the loading state.
+  // Set when the free-tier gate returns `paywallHit: true` — the API returned
+  // 200 with no question because the user has exhausted their free slice. We
+  // render an upgrade prompt instead of spinning forever on the loading state.
   const [paywallHit, setPaywallHit] = useState(false);
 
-  // Session-only history rail (most recent first, capped)
-  const [history, setHistory] = useState<HistoryEntry[]>([]);
   // Current question reference for async rating calls
   const currentRef = useRef<Question | null>(null);
 
@@ -403,8 +417,8 @@ function FlashcardContent() {
     if (session) {
       setUserId(session.user.id);
       setUserName(session.user.first_name);
-      // Guard against sessions without a gamification snapshot — those
-      // crash here otherwise with "Cannot read properties of undefined".
+      // Guard against sessions without a gamification snapshot — those crash
+      // here otherwise with "Cannot read properties of undefined".
       const gm = session.gamification ?? {};
       setTotalXp(gm.total_xp || 0);
       setStreak(gm.current_streak || 0);
@@ -441,8 +455,8 @@ function FlashcardContent() {
         typeof data === "object" &&
         (data as { paywallHit?: boolean }).paywallHit
       ) {
-        // Free-tier slice exhausted for this exam. Surface the upgrade
-        // prompt rather than trapping the user in a loading spinner.
+        // Free-tier slice exhausted for this exam. Surface the upgrade prompt
+        // rather than trapping the user in a loading spinner.
         setPaywallHit(true);
         setQuestion(null);
         currentRef.current = null;
@@ -464,21 +478,15 @@ function FlashcardContent() {
       const q = currentRef.current;
       if (!q) return;
 
-      // Animate out + log history
+      // Animate out + bump the daily counter
       setAnimatingOut(true);
       incrementDailyCount();
       setDailyCount((c) => c + 1);
-      setHistory((prev) =>
-        [
-          { id: q.id, topic: q.topic, question: q.question, rating: level },
-          ...prev,
-        ].slice(0, HISTORY_CAP),
-      );
 
       // If logged in, report answer with binary confidence mapping.
-      // NOTE: the spec (§4.2, Option B) recommends extending this to
-      // pass a numeric `grade: 0|1|2|3` for real 4-grade SM-2. That
-      // requires a route change to /api/answer — flagged for the lead.
+      // (again/hard → wrong, good/easy → correct). SM-2 engine on the server
+      // takes it from here. A numeric 0-3 grade would need a /api/answer route
+      // change — out of scope for this UI-only pass.
       if (userId) {
         const isCorrect = level === "good" || level === "easy";
         try {
@@ -508,16 +516,13 @@ function FlashcardContent() {
   // Keyboard shortcuts (Space/Enter flip, 1-4 rate)
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
-      // Shared keyboard guard — ignores typing in dialogs (Feedback,
-      // Flag, etc.) so Space/Enter inside a textarea doesn't flip
-      // the flashcard behind it (review-2026-04-26-A1).
+      // Shared keyboard guard — ignores typing in dialogs (Feedback, Flag,
+      // etc.) so Space/Enter inside a textarea doesn't flip the card behind it.
       if (shouldIgnoreGlobalKey(e)) return;
 
       if (e.key === " " || e.key === "Enter") {
         e.preventDefault();
-        if (!flipped) {
-          setFlipped(true);
-        }
+        if (!flipped) setFlipped(true);
       }
       if (e.key === "1" && flipped) handleConfidence("again");
       if (e.key === "2" && flipped) handleConfidence("hard");
@@ -528,50 +533,24 @@ function FlashcardContent() {
     return () => window.removeEventListener("keydown", handleKey);
   }, [flipped, handleConfidence]);
 
-  /* ─── Session retention = (good + easy) / total rated × 100 ─── */
-  const retention =
-    history.length === 0
-      ? null
-      : Math.round(
-          (history.filter(
-            (h) => h.rating === "good" || h.rating === "easy",
-          ).length /
-            history.length) *
-            100,
-        );
-  const leaks = history.filter((h) => h.rating === "again").length;
-
-  /* ─── Retention colour class (Tailwind token) ─────────────────── */
-  const retentionClass =
-    retention === null
-      ? ""
-      : retention >= 70
-        ? "text-[var(--mp-viridian)]"
-        : retention >= 40
-          ? "text-[var(--mp-status-warning)]"
-          : "text-[var(--mp-warning)]";
-
   if (loading && !question) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[var(--mp-surface-sunken)]">
+      <div className="flex items-center justify-center min-h-screen bg-[var(--mp-bg)]">
         <BrandedLoader />
       </div>
     );
   }
 
   if (paywallHit) {
-    // Free user exhausted the 150-question slice for this exam. Nudge
-    // to /pricing instead of showing the generic "no questions" state
-    // — they didn't run out of content, they ran out of free tier.
-    //
-    // Copy pulled from src/lib/paywall-copy.ts so this surface and the
-    // `PaywallUpgradeModal` present the identical offer, same bullet
-    // order, same reassurance line (post-soft-launch §1.4.7).
+    // Free user exhausted their slice for this exam. Nudge to /pricing instead
+    // of the generic "no questions" state — they ran out of free tier, not
+    // content. Copy from src/lib/paywall-copy.ts so this surface and the
+    // PaywallUpgradeModal present the identical offer.
     const paywallCopy = getPaywallCopy({ lang });
     const pricingHref =
       "/pricing?utm_source=flashcards_paywall&utm_medium=fullbleed&utm_campaign=paywall_v1";
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen px-4 py-12 bg-[var(--mp-surface-sunken)]">
+      <div className="flex flex-col items-center justify-center min-h-screen px-4 py-12 bg-[var(--mp-bg)]">
         <div className="mp-card text-center animate-fade-in max-w-md w-full p-6 sm:p-8">
           <Layers
             className="w-12 h-12 text-[var(--mp-viridian)] mx-auto mb-4"
@@ -627,24 +606,22 @@ function FlashcardContent() {
   }
 
   if (!question) {
-    // "No questions" covers two real-world cases: (1) a new user with
-    // nothing in their SM-2 queue yet, (2) an existing user who's
-    // cleared every due card for the day. Both deserve a warm "all
-    // caught up" nudge, not a blank "no questions" verdict.
+    // "No questions" covers two real cases: (1) a new user with nothing in
+    // their SM-2 queue yet, (2) an existing user who's cleared every due card
+    // for the day. Both deserve a warm "all reviewed" nudge (SPECS §6:
+    // "Alles wiederholt"), not a blank verdict.
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen px-4 bg-[var(--mp-surface-sunken)]">
+      <div className="flex flex-col items-center justify-center min-h-screen px-4 bg-[var(--mp-bg)]">
         <div className="max-w-md w-full animate-fade-in">
           <EmptyState
             tone="success"
             icon={<Sparkles className="w-10 h-10" aria-hidden />}
             title={
-              lang === "de"
-                ? "Heute alles erledigt."
-                : "All caught up for today."
+              lang === "de" ? "Alles wiederholt." : "All reviewed."
             }
             body={
               lang === "de"
-                ? "Du hast alle falligen Karten durchgearbeitet. Neue Wiederholungen freischalten sich automatisch, oder starte ein kurzes Zufalls-Quiz, um weiter zu uben."
+                ? "Du hast alle fälligen Karten durchgearbeitet. Neue Wiederholungen schalten sich automatisch frei, oder starte ein kurzes Zufalls-Quiz, um weiter zu üben."
                 : "You've cleared every card due right now. New reviews unlock automatically, or start a quick random quiz to keep the momentum."
             }
             action={
@@ -679,306 +656,144 @@ function FlashcardContent() {
       }
       bottomNav={<BottomNav lang={lang} userId={userId} />}
     >
-      <main className="main-content safe-area-top safe-area-bottom flex flex-col min-h-screen bg-[var(--mp-surface-sunken)]">
-        {/* Header */}
-        <div className="px-4 lg:px-8 pt-4 pb-2 flex items-center justify-between flex-shrink-0 border-b border-[var(--mp-border-subtle)]">
+      <main className="main-content safe-area-top safe-area-bottom flex flex-col min-h-screen bg-[var(--mp-bg)]">
+        {/* ── fbar: close · session progress · shuffle ──────────────── */}
+        <div className="flex items-center gap-3 px-4 lg:px-8 pt-4 pb-3 flex-shrink-0">
           <Link
             href="/"
-            className="text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg)] text-sm transition-colors"
+            aria-label={t("back_home", lang)}
+            className="w-9 h-9 rounded-[10px] border border-[var(--mp-border-soft)] bg-[var(--mp-surface)] flex items-center justify-center text-[var(--mp-fg-muted)] hover:text-[var(--mp-fg)] transition-colors flex-shrink-0"
           >
-            &larr; {t("back_home", lang)}
+            <X className="w-[18px] h-[18px]" />
           </Link>
-          <div className="flex items-center gap-2">
-            <Layers className="w-4 h-4 text-[var(--mp-viridian)]" />
-            <h1 className="text-base font-bold text-[var(--mp-fg)]">
-              {t("flashcards", lang)}
-            </h1>
+
+          <div className="flex-1 text-center min-w-0">
+            <div className="font-mono text-[13px] font-bold text-[var(--mp-fg)] flex items-center justify-center gap-1.5">
+              <Layers className="w-3.5 h-3.5 text-[var(--mp-viridian)]" />
+              <span>
+                {t("flashcards", lang)} ·{" "}
+                <b className="text-[var(--mp-accent-teal)] tabular-nums">
+                  {dailyCount}
+                </b>
+              </span>
+            </div>
+            <div className="text-[11px] text-[var(--mp-fg-subtle)] mt-0.5 truncate flex items-center justify-center gap-1.5">
+              <span
+                className="inline-flex items-center gap-1"
+                style={{ color: topicConfig.color }}
+              >
+                <TopicIcon name={topicConfig.icon} className="w-3 h-3" />
+                {question.topic}
+              </span>
+              <span className="opacity-50">·</span>
+              <span>{lang === "de" ? "fällige Karten" : "due cards"}</span>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-[var(--mp-fg-subtle)] font-mono hidden sm:inline">
-              {dailyCount} {t("cards_today", lang)}
-            </span>
+
+          {/* Shuffle = skip to the next card (re-fetch; no new endpoint). */}
+          <button
+            type="button"
+            onClick={() => {
+              setAnimatingOut(true);
+              setTimeout(() => fetchCard(), 200);
+            }}
+            aria-label={lang === "de" ? "Karte überspringen" : "Skip card"}
+            className="w-9 h-9 rounded-[10px] border border-[var(--mp-border-soft)] bg-[var(--mp-surface)] flex items-center justify-center text-[var(--mp-fg-muted)] hover:text-[var(--mp-fg)] transition-colors flex-shrink-0"
+          >
+            <Shuffle className="w-[17px] h-[17px]" />
+          </button>
+
+          {/* Theme + language live next to the shuffle on wide screens. */}
+          <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
             <ThemeToggle />
             <LanguageToggle lang={lang} onChange={switchLang} />
           </div>
         </div>
 
-        {/* Card area + history rail */}
-        <div className="flex-1 px-4 lg:px-8 py-5">
-          <div className="max-w-[960px] mx-auto grid grid-cols-1 lg:grid-cols-[1fr_260px] gap-5 h-full">
-            {/* ═══ MAIN COLUMN: deck stack + rating buttons ═══ */}
-            <div className="flex flex-col gap-4 min-w-0">
-              {/* Compact rail for mobile (hidden on lg+) */}
-              {history.length > 0 && (
-                <div className="mp-card p-3 lg:hidden">
-                  <div className="flex items-center gap-2 overflow-x-auto">
-                    <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--mp-fg-subtle)] font-bold flex-shrink-0 flex items-center gap-1">
-                      <History className="w-3 h-3" />
-                      {lang === "de" ? "Verlauf" : "History"}
-                    </span>
-                    {retention !== null && (
-                      <span
-                        className={`text-[10px] font-mono font-bold flex-shrink-0 ${retentionClass}`}
-                      >
-                        {retention}%{" "}
-                        {lang === "de" ? "Retention" : "retention"}
-                      </span>
-                    )}
-                    <div className="flex items-center gap-1 overflow-x-auto">
-                      {history.map((h) => (
-                        <div
-                          key={`${h.id}-${h.rating}`}
-                          className={`w-2 h-2 rounded-full flex-shrink-0 ${RATING_DOT_BG[h.rating]}`}
-                          title={ratingLabel(h.rating, lang)}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Due/progress top bar */}
-              <div className="flex items-center justify-between text-[11px] font-mono text-[var(--mp-fg-muted)]">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-bold text-[10px] uppercase tracking-wider bg-[var(--mp-viridian)]/10 text-[var(--mp-viridian)]">
-                  <Layers className="w-3 h-3" />
-                  {lang === "de" ? "Session" : "Session"} · {dailyCount}
-                </span>
-                <div className="flex-1 mx-3 h-1 bg-[var(--mp-border-subtle)] rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-[var(--mp-viridian)] rounded-full transition-all"
-                    style={{
-                      width: `${Math.min(100, (dailyCount / 20) * 100)}%`,
-                    }}
-                  />
-                </div>
-                <span>
-                  {dailyCount} / 20 {t("cards_today", lang)}
-                </span>
-              </div>
-
-              {/* ═══ DECK STACK — 2 ghost cards fan behind front card ═══ */}
-              <div className="relative flex-1 min-h-[340px]">
-                {/* Ghost card 3 — furthest back */}
-                <div
-                  aria-hidden
-                  className="mp-card absolute pointer-events-none"
-                  style={{
-                    inset: 0,
-                    transform:
-                      "translate(14px, 14px) rotate(-1.6deg) scale(0.97)",
-                    opacity: 0.4,
-                    zIndex: 1,
-                  }}
-                />
-                {/* Ghost card 2 — middle layer */}
-                <div
-                  aria-hidden
-                  className="mp-card absolute pointer-events-none"
-                  style={{
-                    inset: 0,
-                    transform:
-                      "translate(7px, 7px) rotate(0.6deg) scale(0.985)",
-                    opacity: 0.7,
-                    zIndex: 2,
-                  }}
-                />
-
-                {/* Active (3D-flip) card — extracted as <Flashcard> */}
-                <Flashcard
-                  question={question}
-                  flipped={flipped}
-                  animatingOut={animatingOut}
-                  onFlip={() => setFlipped(true)}
-                  lang={lang}
-                  topicConfig={topicConfig}
-                />
-              </div>
-
-              {/* Confidence buttons — visible only when flipped */}
-              {flipped && (
-                <div className="animate-fade-in">
-                  <p className="text-xs text-[var(--mp-fg-subtle)] text-center mb-2">
-                    {t("flashcard_hint", lang)}
-                  </p>
-                  <div className="grid grid-cols-4 gap-2">
-                    <RatingButton
-                      intensity={CONFIDENCE_INTENSITY.again}
-                      sublabel={lang === "de" ? "< 10 Min." : "< 10 min"}
-                      onClick={() => handleConfidence("again")}
-                      aria-label={`${t("again", lang)}, < 10 ${lang === "de" ? "Minuten" : "minutes"}`}
-                    >
-                      {t("again", lang)}
-                    </RatingButton>
-                    <RatingButton
-                      intensity={CONFIDENCE_INTENSITY.hard}
-                      sublabel={lang === "de" ? "1 Tag" : "1 day"}
-                      onClick={() => handleConfidence("hard")}
-                      aria-label={`${t("hard", lang)}, 1 ${lang === "de" ? "Tag" : "day"}`}
-                    >
-                      {t("hard", lang)}
-                    </RatingButton>
-                    <RatingButton
-                      intensity={CONFIDENCE_INTENSITY.good}
-                      sublabel={lang === "de" ? "4 Tage" : "4 days"}
-                      onClick={() => handleConfidence("good")}
-                      aria-label={`${t("good", lang)}, 4 ${lang === "de" ? "Tage" : "days"}`}
-                    >
-                      {t("good", lang)}
-                    </RatingButton>
-                    <RatingButton
-                      intensity={CONFIDENCE_INTENSITY.easy}
-                      sublabel={lang === "de" ? "12 Tage" : "12 days"}
-                      onClick={() => handleConfidence("easy")}
-                      aria-label={`${t("easy", lang)}, 12 ${lang === "de" ? "Tage" : "days"}`}
-                    >
-                      {t("easy", lang)}
-                    </RatingButton>
-                  </div>
-
-                  {/* Keyboard shortcut hint */}
-                  <p className="text-[10px] text-[var(--mp-fg-subtle)] text-center mt-3 font-mono">
-                    <kbd className="px-1 py-0.5 bg-[var(--mp-surface-sunken)] border border-[var(--mp-border-subtle)] rounded text-[10px]">
-                      1
-                    </kbd>
-                    -
-                    <kbd className="px-1 py-0.5 bg-[var(--mp-surface-sunken)] border border-[var(--mp-border-subtle)] rounded text-[10px]">
-                      4
-                    </kbd>{" "}
-                    {lang === "de" ? "oder" : "or"}{" "}
-                    <kbd className="px-1 py-0.5 bg-[var(--mp-surface-sunken)] border border-[var(--mp-border-subtle)] rounded text-[10px]">
-                      Space
-                    </kbd>{" "}
-                    {lang === "de" ? "zum Umdrehen" : "to flip"}
-                  </p>
-                </div>
-              )}
+        {/* ── Card area: one centered card, full focus ──────────────── */}
+        <div className="flex-1 flex items-center justify-center px-5 lg:px-8 py-2">
+          <div className="w-full max-w-[340px] lg:max-w-[460px]">
+            <div className="aspect-[3/4] lg:aspect-[16/10] w-full">
+              <Flashcard
+                question={question}
+                flipped={flipped}
+                animatingOut={animatingOut}
+                onFlip={() => setFlipped(true)}
+                lang={lang}
+                topicConfig={topicConfig}
+              />
             </div>
-
-            {/* ═══ HISTORY RAIL (desktop) ═══ */}
-            <aside className="mp-card p-4 hidden lg:flex flex-col gap-4 h-fit sticky top-5">
-              {/* "Today" stats — mission-control tiles, not bottom-of-
-                  form greys. Big tabular-num values, 10px label below,
-                  two-column grid so they scan as data, not as prose. */}
-              <div>
-                <div className="text-[10px] font-mono uppercase tracking-wider text-[var(--mp-fg-subtle)] font-bold mb-2.5">
-                  {lang === "de" ? "Heute" : "Today"}
-                </div>
-                <div className="grid grid-cols-2 gap-2 mb-1">
-                  <div className="rounded-xl bg-[var(--mp-surface-sunken)] px-3 py-2.5">
-                    <div className="text-xl font-black font-mono font-display tabular-nums text-[var(--mp-fg)] leading-none">
-                      {dailyCount}
-                    </div>
-                    <div className="mt-1 text-[10px] font-mono uppercase tracking-wider text-[var(--mp-fg-subtle)]">
-                      {lang === "de" ? "Erledigt" : "Done"}
-                    </div>
-                  </div>
-                  <div className="rounded-xl bg-[var(--mp-surface-sunken)] px-3 py-2.5">
-                    <div className="text-xl font-black font-mono font-display tabular-nums text-[var(--mp-fg)] leading-none">
-                      {history.length}
-                    </div>
-                    <div className="mt-1 text-[10px] font-mono uppercase tracking-wider text-[var(--mp-fg-subtle)]">
-                      {lang === "de" ? "Session" : "Session"}
-                    </div>
-                  </div>
-                </div>
-                {leaks > 0 && (
-                  <div className="mt-2 rounded-xl bg-[var(--mp-surface-sunken)] px-3 py-2 flex items-baseline justify-between">
-                    <span className="text-[10px] font-mono uppercase tracking-wider text-[var(--mp-fg-subtle)]">
-                      Leaks ({lang === "de" ? "Nochmal" : "again"})
-                    </span>
-                    <span
-                      className={`font-mono font-black text-lg tabular-nums ${RATING_TEXT.again}`}
-                    >
-                      {leaks}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {/* Retention — only shown after at least one rating */}
-              {retention !== null && (
-                <div>
-                  <div className="text-[10px] font-mono uppercase tracking-wider text-[var(--mp-fg-subtle)] font-bold mb-2">
-                    {lang === "de"
-                      ? "Retention (Session)"
-                      : "Retention (session)"}
-                  </div>
-                  <div className="flex items-baseline gap-2">
-                    <span
-                      className={`font-display font-black text-[32px] leading-none tracking-tight font-mono ${retentionClass}`}
-                    >
-                      {retention}%
-                    </span>
-                    <span className="text-[10px] font-mono text-[var(--mp-fg-subtle)]">
-                      {
-                        history.filter(
-                          (h) =>
-                            h.rating === "good" || h.rating === "easy",
-                        ).length
-                      }
-                      /{history.length}{" "}
-                      {lang === "de" ? "korrekt" : "correct"}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {/* History list */}
-              <div>
-                <div className="text-[10px] font-mono uppercase tracking-wider text-[var(--mp-fg-subtle)] font-bold mb-2 flex items-center gap-1.5">
-                  <History className="w-3 h-3" />
-                  {lang === "de" ? "Verlauf" : "History"}
-                </div>
-                {history.length === 0 ? (
-                  <p className="text-xs text-[var(--mp-fg-subtle)] italic">
-                    {lang === "de"
-                      ? "Noch keine Karten bewertet"
-                      : "No cards rated yet"}
-                  </p>
-                ) : (
-                  <div
-                    className="flex flex-col gap-1.5 overflow-auto"
-                    style={{ maxHeight: 280 }}
-                  >
-                    {history.map((h, i) => (
-                      <div
-                        key={`${h.id}-${i}`}
-                        className="flex items-center gap-2 px-2 py-1.5 rounded-md text-[11px] bg-[var(--mp-surface-sunken)]"
-                      >
-                        <span
-                          className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${RATING_DOT_BG[h.rating]}`}
-                        />
-                        <span className="flex-1 min-w-0 truncate text-[var(--mp-fg-muted)]">
-                          {h.question.slice(0, 40)}
-                          {h.question.length > 40 ? "..." : ""}
-                        </span>
-                        <span
-                          className={`text-[9px] font-mono uppercase tracking-wider font-bold flex-shrink-0 ${RATING_TEXT[h.rating]}`}
-                        >
-                          {ratingLabel(h.rating, lang)}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </aside>
           </div>
         </div>
 
-        {/* Session bar */}
-        <div className="px-4 lg:px-8 py-3 border-t border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] flex-shrink-0">
-          <div className="max-w-[960px] mx-auto flex items-center justify-between text-sm">
-            <span className="text-[var(--mp-fg-muted)]">
-              <Layers className="w-4 h-4 inline mr-1 opacity-60" />
-              {dailyCount} {t("cards_today", lang)}
-            </span>
+        {/* ── Action tray: flip CTA (front) → SM-2 buttons (back) ────── */}
+        <div className="flex-shrink-0 px-5 lg:px-8 pt-3 pb-6 lg:pb-8">
+          <div className="w-full max-w-[340px] lg:max-w-[520px] mx-auto">
+            {!flipped ? (
+              <button
+                type="button"
+                onClick={() => setFlipped(true)}
+                className="mp-btn mp-btn--primary mp-btn--lg w-full inline-flex items-center justify-center gap-2"
+              >
+                <RotateCw className="w-[18px] h-[18px]" />
+                {t("show_answer", lang)}
+              </button>
+            ) : (
+              <div className="animate-fade-in">
+                <p className="text-center text-xs font-semibold text-[var(--mp-fg-muted)] mb-3">
+                  {lang === "de"
+                    ? "Wie gut wusstest du es?"
+                    : "How well did you know it?"}
+                </p>
+                <div className="grid grid-cols-4 gap-2">
+                  {(
+                    ["again", "hard", "good", "easy"] as Confidence[]
+                  ).map((level) => {
+                    const Icon = CONF_ICON[level];
+                    return (
+                      <RatingButton
+                        key={level}
+                        intensity={CONFIDENCE_INTENSITY[level]}
+                        sublabel={INTERVAL_HINT[level][lang]}
+                        onClick={() => handleConfidence(level)}
+                        className="!min-h-[64px]"
+                        aria-label={`${confidenceLabel(level, lang)}, ${INTERVAL_HINT[level][lang]}`}
+                      >
+                        <span className="flex flex-col items-center gap-1">
+                          <Icon className="w-[18px] h-[18px]" />
+                          <span className="text-[11.5px]">
+                            {confidenceLabel(level, lang)}
+                          </span>
+                        </span>
+                      </RatingButton>
+                    );
+                  })}
+                </div>
+
+                {/* Keyboard hint */}
+                <p className="text-[10px] text-[var(--mp-fg-subtle)] text-center mt-3 font-mono">
+                  <kbd className="px-1 py-0.5 bg-[var(--mp-surface-sunken)] border border-[var(--mp-border-subtle)] rounded text-[10px]">
+                    1
+                  </kbd>
+                  -
+                  <kbd className="px-1 py-0.5 bg-[var(--mp-surface-sunken)] border border-[var(--mp-border-subtle)] rounded text-[10px]">
+                    4
+                  </kbd>{" "}
+                  {lang === "de" ? "oder" : "or"}{" "}
+                  <kbd className="px-1 py-0.5 bg-[var(--mp-surface-sunken)] border border-[var(--mp-border-subtle)] rounded text-[10px]">
+                    Space
+                  </kbd>{" "}
+                  {lang === "de" ? "zum Umdrehen" : "to flip"}
+                </p>
+              </div>
+            )}
+
             {!userId && (
-              <span className="text-xs text-[var(--mp-fg-subtle)]">
+              <p className="text-center text-[11px] text-[var(--mp-fg-subtle)] mt-3">
                 {lang === "de"
                   ? "Nicht angemeldet, Fortschritt wird nicht gespeichert"
                   : "Not signed in, progress not saved"}
-              </span>
+              </p>
             )}
           </div>
         </div>
@@ -991,7 +806,7 @@ export default function FlashcardsPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex items-center justify-center min-h-screen bg-[var(--mp-surface-sunken)]">
+        <div className="flex items-center justify-center min-h-screen bg-[var(--mp-bg)]">
           <BrandedLoader />
         </div>
       }

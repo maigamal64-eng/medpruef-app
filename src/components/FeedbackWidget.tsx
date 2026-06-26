@@ -2,40 +2,74 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { usePathname } from 'next/navigation'
-import { MessageSquarePlus, X, Send, Check } from 'lucide-react'
+import { MessageSquarePlus, X, Send, Check, MessageCircle, Plus } from 'lucide-react'
 import { getStoredSession } from '@/lib/auth'
 import { getStoredExamSource } from '@/lib/topics'
 import { authFetch as fetch } from '@/lib/authFetch'
 import { t, useLang } from '@/lib/i18n'
 
 /**
- * Global floating feedback button — visible on every page.
- * Click opens a small non-disruptive panel that auto-captures context
- * (URL, user, exam, question if on quiz/exam page) and submits to
- * /api/feedback. User can continue their session undisturbed.
+ * FloatingLauncher (exported as FeedbackWidget for call-site stability).
  *
- * Hidden on /landing, /login, /admin pages.
+ * ONE bottom-right launcher, consolidated 2026-06-26. Previously two
+ * separate floating buttons (this FeedbackWidget + the Intercom Messenger
+ * launcher) stacked and fought the mobile bottom-nav.
+ *
+ *   - MOBILE (< 768px): a SINGLE FAB at bottom:96px (clear of the ~80px
+ *     bottom-nav + the raised center Quiz button), z-40. Tapping it fans up
+ *     two actions — "Chat" (opens the Intercom Messenger via Intercom('show'))
+ *     and "Feedback" (opens the first-party feedback panel). Intercom's own
+ *     launcher is hidden on mobile (IntercomMessenger toggles
+ *     hide_default_launcher by viewport), so there is exactly one button.
+ *   - DESKTOP (>= 768px): the feedback button renders standalone (bottom-right),
+ *     and Intercom shows its own launcher beside it — two distinct affordances.
+ *
+ * Hidden on /landing, /login, /admin, /privacy, /terms, /impressum (unchanged).
  */
+
+const MOBILE_MQ = '(max-width: 767px)'
+
+function openIntercom() {
+  try {
+    ;(window as unknown as { Intercom?: (cmd: string) => void }).Intercom?.('show')
+  } catch {
+    /* Messenger not booted (app_id unset) — no-op */
+  }
+}
+
 export default function FeedbackWidget() {
   const lang = useLang()
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(false) // feedback panel open
+  const [fanOpen, setFanOpen] = useState(false) // mobile action fan open
   const [message, setMessage] = useState('')
   const [sent, setSent] = useState(false)
   const [sending, setSending] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
   const textRef = useRef<HTMLTextAreaElement>(null)
-  // Reactive pathname — previously this read window.location.pathname
-  // inside render, which only re-evaluated when a parent re-rendered
-  // for unrelated reasons. After navigation from /quiz → /admin the
-  // widget would stay visible. usePathname from next/navigation fires
-  // on every App Router navigation. Fixed 2026-04-15 (Frontend P1-3).
+  // Reactive pathname — fires on every App Router navigation so the widget
+  // hides/shows correctly after navigation (Frontend P1-3, 2026-04-15).
   const pathname = usePathname()
 
   useEffect(() => { setMounted(true) }, [])
 
+  // Track viewport so the launcher knows whether to fan (mobile) or render
+  // the standalone feedback button (desktop, Intercom shows its own launcher).
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const mq = window.matchMedia(MOBILE_MQ)
+    const sync = () => setIsMobile(mq.matches)
+    sync()
+    mq.addEventListener('change', sync)
+    return () => mq.removeEventListener('change', sync)
+  }, [])
+
   useEffect(() => {
     if (open && textRef.current) textRef.current.focus()
   }, [open])
+
+  // Close the fan on navigation so it never lingers across routes.
+  useEffect(() => { setFanOpen(false) }, [pathname])
 
   if (!mounted) return null
 
@@ -87,80 +121,140 @@ export default function FeedbackWidget() {
     }
   }
 
-  return (
-    <>
-      {/* Floating trigger button
-          F13 fix (2026-04-26): on mobile the bottom nav is ~64px + safe-area.
-          We push the button above that with bottom-24 (96px) on mobile so it
-          never overlaps the Quiz tab — including inside the Telegram WebApp
-          where the browser chrome eats additional vertical space. */}
-      {!open && (
-        <button
-          onClick={() => setOpen(true)}
-          className="fixed bottom-24 right-4 md:bottom-6 md:right-6 z-50
-                     w-11 h-11 rounded-full bg-[var(--mp-cta-blue)] text-white shadow-lg
-                     hover:bg-[var(--mp-cta-blue)]/90 hover:shadow-xl transition-all
-                     flex items-center justify-center
-                     active:scale-95"
-          title={t('feedback_button_title', lang)}
-          aria-label={t('feedback_button_title', lang)}
-        >
-          <MessageSquarePlus className="w-5 h-5" />
-        </button>
-      )}
+  const openFeedback = () => {
+    setFanOpen(false)
+    setOpen(true)
+  }
 
-      {/* Feedback panel — same upward shift as the trigger button */}
-      {open && (
-        <div className="fixed bottom-24 right-4 md:bottom-6 md:right-6 z-50 w-80 max-w-[calc(100vw-2rem)]">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-            {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 bg-[var(--mp-cta-blue)] text-white">
-              <span className="text-sm font-semibold">{t('feedback_title', lang)}</span>
+  // The feedback panel — same upward shift as the launcher so it clears the
+  // mobile bottom-nav. Shared by both mobile + desktop.
+  const feedbackPanel = open && (
+    <div className="fixed bottom-24 right-4 md:bottom-6 md:right-6 z-50 w-80 max-w-[calc(100vw-2rem)]">
+      <div className="bg-[var(--mp-surface-raised)] rounded-2xl shadow-2xl border border-[var(--mp-border-subtle)] overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3 bg-[var(--mp-cta-blue)] text-white">
+          <span className="text-sm font-semibold">{t('feedback_title', lang)}</span>
+          <button
+            onClick={() => setOpen(false)}
+            className="hover:bg-white/20 rounded p-1 transition-colors"
+            aria-label={t('feedback_close', lang)}
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {sent ? (
+          <div className="p-6 text-center">
+            <Check className="w-8 h-8 text-[var(--mp-accent-teal)] mx-auto mb-2" />
+            <p className="text-sm font-medium text-[var(--mp-fg)]">{t('feedback_thanks_title', lang)}</p>
+            <p className="text-xs text-[var(--mp-fg-subtle)] mt-1">{t('feedback_thanks_body', lang)}</p>
+          </div>
+        ) : (
+          <div className="p-4">
+            <textarea
+              ref={textRef}
+              value={message}
+              onChange={e => setMessage(e.target.value)}
+              placeholder={t('feedback_placeholder', lang)}
+              aria-label={t('feedback_textarea_aria', lang)}
+              className="w-full h-24 text-sm bg-[var(--mp-surface-sunken)] text-[var(--mp-fg)] border border-[var(--mp-border-subtle)] rounded-xl px-3 py-2 resize-none focus:outline-none focus:border-[var(--mp-cta-blue)]/50"
+              maxLength={2000}
+            />
+            <div className="flex items-center justify-between mt-2">
+              <span className="text-[10px] text-[var(--mp-fg-subtle)]">
+                {t('feedback_context_hint', lang)}
+              </span>
               <button
-                onClick={() => setOpen(false)}
-                className="hover:bg-white/20 rounded p-1 transition-colors"
-                aria-label={t('feedback_close', lang)}
+                onClick={handleSubmit}
+                disabled={!message.trim() || sending}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--mp-cta-blue)] text-white rounded-lg text-xs font-medium
+                           disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[var(--mp-cta-blue)]/90 transition-colors"
               >
-                <X className="w-4 h-4" />
+                <Send className="w-3.5 h-3.5" />
+                {sending ? t('feedback_sending', lang) : t('feedback_send', lang)}
               </button>
             </div>
-
-            {sent ? (
-              <div className="p-6 text-center">
-                <Check className="w-8 h-8 text-[var(--mp-accent-teal)] mx-auto mb-2" />
-                <p className="text-sm font-medium text-[var(--mp-fg)]">{t('feedback_thanks_title', lang)}</p>
-                <p className="text-xs text-[var(--mp-fg-subtle)] mt-1">{t('feedback_thanks_body', lang)}</p>
-              </div>
-            ) : (
-              <div className="p-4">
-                <textarea
-                  ref={textRef}
-                  value={message}
-                  onChange={e => setMessage(e.target.value)}
-                  placeholder={t('feedback_placeholder', lang)}
-                  aria-label={t('feedback_textarea_aria', lang)}
-                  className="w-full h-24 text-sm bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 resize-none focus:outline-none focus:border-[var(--mp-cta-blue)]/50"
-                  maxLength={2000}
-                />
-                <div className="flex items-center justify-between mt-2">
-                  <span className="text-[10px] text-[var(--mp-fg-subtle)]">
-                    {t('feedback_context_hint', lang)}
-                  </span>
-                  <button
-                    onClick={handleSubmit}
-                    disabled={!message.trim() || sending}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--mp-cta-blue)] text-white rounded-lg text-xs font-medium
-                               disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[var(--mp-cta-blue)]/90 transition-colors"
-                  >
-                    <Send className="w-3.5 h-3.5" />
-                    {sending ? t('feedback_sending', lang) : t('feedback_send', lang)}
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
+        )}
+      </div>
+    </div>
+  )
+
+  // ─── DESKTOP: standalone feedback button (Intercom shows its own launcher) ───
+  if (!isMobile) {
+    return (
+      <>
+        {!open && (
+          <button
+            onClick={() => setOpen(true)}
+            className="fixed bottom-6 right-6 z-50
+                       w-11 h-11 rounded-full bg-[var(--mp-cta-blue)] text-white shadow-lg
+                       hover:bg-[var(--mp-cta-blue)]/90 hover:shadow-xl transition-all
+                       flex items-center justify-center active:scale-95"
+            title={t('feedback_button_title', lang)}
+            aria-label={t('feedback_button_title', lang)}
+          >
+            <MessageSquarePlus className="w-5 h-5" />
+          </button>
+        )}
+        {feedbackPanel}
+      </>
+    )
+  }
+
+  // ─── MOBILE: ONE launcher at bottom:96px that fans up Chat + Feedback ───
+  return (
+    <>
+      {!open && (
+        <div className="fixed bottom-24 right-4 z-40 flex flex-col items-end gap-3">
+          {/* Fanned actions — appear above the launcher when open */}
+          {fanOpen && (
+            <>
+              <button
+                onClick={() => { setFanOpen(false); openIntercom() }}
+                className="flex items-center gap-2 pl-3 pr-3.5 py-2 rounded-full
+                           bg-[var(--mp-surface-raised)] text-[var(--mp-fg)] shadow-lg
+                           border border-[var(--mp-border-subtle)] active:scale-95 transition-all
+                           animate-[fade-in_180ms_var(--mp-ease-out)]"
+                aria-label={t('launcher_chat', lang)}
+              >
+                <span className="text-xs font-medium">{t('launcher_chat', lang)}</span>
+                <span className="w-8 h-8 -mr-1 rounded-full bg-[var(--mp-accent-teal)] text-white flex items-center justify-center">
+                  <MessageCircle className="w-4 h-4" />
+                </span>
+              </button>
+              <button
+                onClick={openFeedback}
+                className="flex items-center gap-2 pl-3 pr-3.5 py-2 rounded-full
+                           bg-[var(--mp-surface-raised)] text-[var(--mp-fg)] shadow-lg
+                           border border-[var(--mp-border-subtle)] active:scale-95 transition-all
+                           animate-[fade-in_180ms_var(--mp-ease-out)]"
+                aria-label={t('launcher_feedback', lang)}
+              >
+                <span className="text-xs font-medium">{t('launcher_feedback', lang)}</span>
+                <span className="w-8 h-8 -mr-1 rounded-full bg-[var(--mp-cta-blue)] text-white flex items-center justify-center">
+                  <MessageSquarePlus className="w-4 h-4" />
+                </span>
+              </button>
+            </>
+          )}
+
+          {/* The single launcher button */}
+          <button
+            onClick={() => setFanOpen(v => !v)}
+            className="w-[52px] h-[52px] rounded-full bg-[var(--mp-cta-blue)] text-white shadow-lg
+                       hover:shadow-xl transition-all flex items-center justify-center active:scale-95"
+            title={fanOpen ? t('launcher_close', lang) : t('launcher_open', lang)}
+            aria-label={fanOpen ? t('launcher_close', lang) : t('launcher_open', lang)}
+            aria-expanded={fanOpen}
+          >
+            {fanOpen
+              ? <Plus className="w-6 h-6 rotate-45 transition-transform" />
+              : <MessageCircle className="w-5 h-5" />}
+          </button>
         </div>
       )}
+      {feedbackPanel}
     </>
   )
 }

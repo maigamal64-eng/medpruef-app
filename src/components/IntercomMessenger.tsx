@@ -14,8 +14,15 @@ import { authFetch } from "@/lib/authFetch";
  * resolved. The HMAC is computed server-side in /api/intercom/identify — no
  * secret ever reaches the browser.
  *
- * The launcher is lifted above the first-party FeedbackWidget (bottom-right) so
- * the two floating buttons don't overlap.
+ * Launcher visibility (2026-06-26): responsive.
+ *   - DESKTOP (>= 768px): Intercom shows its OWN default launcher (bottom-right);
+ *     the first-party FeedbackWidget renders its own separate button. Two
+ *     distinct affordances, no overlap.
+ *   - MOBILE (< 768px): Intercom's default launcher is HIDDEN. The single
+ *     first-party FloatingLauncher (the merged FeedbackWidget) owns the one
+ *     bottom-right button and opens this Messenger via `Intercom('show')`.
+ * `hide_default_launcher` is a GLOBAL setting (not responsive on its own), so
+ * we toggle it here on boot AND on viewport change via `Intercom('update', …)`.
  */
 
 type IntercomIdentity = {
@@ -30,8 +37,12 @@ type IntercomIdentity = {
   exam_date?: number;
 };
 
-// Lift the launcher ~88px so it stacks above the FeedbackWidget button.
-const LAUNCHER_VERTICAL_PADDING = 88;
+// On desktop the Intercom launcher sits a touch above the bottom edge so it
+// clears the slim LegalFooter strip.
+const LAUNCHER_VERTICAL_PADDING = 20;
+// Mobile breakpoint — matches Tailwind's `md` (768px). Below this the merged
+// FloatingLauncher owns the single button and Intercom's launcher is hidden.
+const MOBILE_MQ = "(max-width: 767px)";
 
 export default function IntercomMessenger() {
   useEffect(() => {
@@ -40,6 +51,10 @@ export default function IntercomMessenger() {
     if (typeof window === "undefined") return;
 
     let cancelled = false;
+    const mq = window.matchMedia(MOBILE_MQ);
+    // Hide Intercom's own launcher on mobile (the first-party FloatingLauncher
+    // takes over there); show it on desktop.
+    const isMobile = () => mq.matches;
 
     const boot = (identity?: IntercomIdentity) => {
       if (cancelled) return;
@@ -48,12 +63,29 @@ export default function IntercomMessenger() {
         Intercom({
           app_id: appId,
           vertical_padding: LAUNCHER_VERTICAL_PADDING,
+          hide_default_launcher: isMobile(),
           ...identity,
         });
       } catch (err) {
         console.error("[IntercomMessenger] boot failed:", err);
       }
     };
+
+    // Toggle launcher visibility when the viewport crosses the breakpoint —
+    // `hide_default_launcher` is global, so it must be re-pushed via update().
+    const syncLauncher = () => {
+      if (cancelled) return;
+      try {
+        (
+          window as unknown as {
+            Intercom?: (cmd: string, opts?: Record<string, unknown>) => void;
+          }
+        ).Intercom?.("update", { hide_default_launcher: isMobile() });
+      } catch {
+        /* noop */
+      }
+    };
+    mq.addEventListener("change", syncLauncher);
 
     // Boot identified for logged-in users (wait for the server hash so we never
     // boot anonymous-then-identify, which Intercom warns can merge records).
@@ -85,6 +117,7 @@ export default function IntercomMessenger() {
 
     return () => {
       cancelled = true;
+      mq.removeEventListener("change", syncLauncher);
       // Tear down on unmount to avoid duplicate boots (StrictMode / HMR).
       try {
         (window as unknown as { Intercom?: (cmd: string) => void }).Intercom?.(

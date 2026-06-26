@@ -16,7 +16,6 @@
 
 import { useState } from "react";
 import { authFetch as fetch } from "@/lib/authFetch";
-import { t } from "@/lib/i18n";
 import { trackEvent } from "@/lib/tracker";
 import { cleanExplanation } from "@/lib/explanation";
 import { Lightbulb, ThumbsUp, ThumbsDown } from "lucide-react";
@@ -70,39 +69,54 @@ export default function QuestionExplanation({
   return (
     <>
       {hasExplanation ? (
-        <div className="bg-[var(--mp-status-warning)]/6 border border-[var(--mp-status-warning)]/25 border-l-4 border-l-[var(--mp-viridian)] rounded p-4">
-          <p className="text-[10px] uppercase tracking-wider text-[var(--mp-status-warning)] font-semibold mb-2">
-            <Lightbulb className="w-4 h-4 inline" /> {t("explanation", lang)}
-          </p>
-          <p className="text-[var(--mp-fg-muted)] leading-relaxed text-sm">{cleanedExplanation}</p>
-          <div className="flex items-center gap-2 mt-3 pt-2 border-t border-[var(--mp-border)]">
-            <span className="text-[10px] text-[var(--mp-fg-subtle)]">
-              {lang === "de" ? "Hilfreich?" : "Helpful?"}
+        /* ── Approved 02-quiz explanation drawer ──
+           Clean surface card · viridian lightbulb badge · "Warum richtig"
+           title · TL;DR body · rating row. NOTE: no "KI" badge here — this
+           pane renders the static `explanation` source column, NOT AI text.
+           The AI-generated explanation is a separate surface behind the
+           "KI-Erklärung" tab (opens AIChatAssistant). Badging this as KI
+           would mislabel curated source text as AI, right next to the real
+           AI tab. The approved mockup's KI badge belongs on the AI surface. */
+        <div className="bg-[var(--mp-surface)] border border-[var(--mp-border-soft)] rounded-[var(--mp-r-card)] overflow-hidden shadow-[var(--mp-shadow-card)]">
+          <div className="flex items-center gap-2.5 px-4 py-3.5 border-b border-[var(--mp-border-soft)]">
+            <span className="w-[30px] h-[30px] rounded-[var(--mp-r-button)] bg-[var(--mp-viridian)]/12 text-[var(--mp-viridian)] flex items-center justify-center flex-shrink-0">
+              <Lightbulb className="w-[17px] h-[17px]" />
             </span>
-            <button
-              onClick={() => submitRating(1)}
-              className={`p-1 rounded transition-colors ${
-                rating === 1
-                  ? "text-[var(--mp-viridian)] bg-[var(--mp-viridian)]/10"
-                  : "text-[var(--mp-fg-subtle)] hover:text-[var(--mp-viridian)] hover:bg-[var(--mp-viridian)]/5"
-              }`}
-              title={lang === "de" ? "Hilfreich" : "Helpful"}
-              aria-label={lang === "de" ? "Hilfreich" : "Helpful"}
-            >
-              <ThumbsUp className="w-3.5 h-3.5" />
-            </button>
-            <button
-              onClick={() => submitRating(-1)}
-              className={`p-1 rounded transition-colors ${
-                rating === -1
-                  ? "text-[var(--mp-error)] bg-[var(--mp-error)]/10"
-                  : "text-[var(--mp-fg-subtle)] hover:text-[var(--mp-error)] hover:bg-[var(--mp-error)]/5"
-              }`}
-              title={lang === "de" ? "Nicht hilfreich" : "Not helpful"}
-              aria-label={lang === "de" ? "Nicht hilfreich" : "Not helpful"}
-            >
-              <ThumbsDown className="w-3.5 h-3.5" />
-            </button>
+            <span className="font-display font-bold text-sm text-[var(--mp-fg)]">
+              {lang === "de" ? "Warum richtig" : "Why correct"}
+            </span>
+          </div>
+          <div className="px-4 py-3.5">
+            <p className="text-[var(--mp-fg)] leading-relaxed text-sm">{cleanedExplanation}</p>
+            <div className="flex items-center gap-2 mt-3.5 pt-3 border-t border-dashed border-[var(--mp-border)]">
+              <span className="text-[11px] text-[var(--mp-fg-subtle)]">
+                {lang === "de" ? "Hilfreich?" : "Helpful?"}
+              </span>
+              <button
+                onClick={() => submitRating(1)}
+                className={`p-1.5 rounded-[var(--mp-r-sm)] transition-colors ${
+                  rating === 1
+                    ? "text-[var(--mp-viridian)] bg-[var(--mp-viridian)]/10"
+                    : "text-[var(--mp-fg-subtle)] hover:text-[var(--mp-viridian)] hover:bg-[var(--mp-viridian)]/5"
+                }`}
+                title={lang === "de" ? "Hilfreich" : "Helpful"}
+                aria-label={lang === "de" ? "Hilfreich" : "Helpful"}
+              >
+                <ThumbsUp className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => submitRating(-1)}
+                className={`p-1.5 rounded-[var(--mp-r-sm)] transition-colors ${
+                  rating === -1
+                    ? "text-[var(--mp-error)] bg-[var(--mp-error)]/10"
+                    : "text-[var(--mp-fg-subtle)] hover:text-[var(--mp-error)] hover:bg-[var(--mp-error)]/5"
+                }`}
+                title={lang === "de" ? "Nicht hilfreich" : "Not helpful"}
+                aria-label={lang === "de" ? "Nicht hilfreich" : "Not helpful"}
+              >
+                <ThumbsDown className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
         </div>
       ) : (

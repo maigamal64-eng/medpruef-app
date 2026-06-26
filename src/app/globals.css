@@ -76,16 +76,24 @@
 }
 
 [data-theme="dark"] {
-  --dm-bg: #0F172A;
-  --dm-surface: #1E293B;
-  --dm-surface-raised: #334155;
-  --dm-text: #E2E8F0;
-  --dm-text-secondary: #94A3B8;
-  --dm-text-muted: #64748B;
-  --dm-border: #334155;
-  --dm-border-subtle: rgba(51, 65, 85, 0.7);
-  --dm-shadow-card: 0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
-  --dm-input-bg: #1E293B;
+  /* 2026-06-26: legacy --dm-* dark values RE-POINTED to the v3 Oxford-Blue
+     ramp (was stock Tailwind slate #0F172A/#1E293B/#334155). The selectors +
+     the !important raw-hex override matrix below are UNCHANGED — only the
+     values move. This keeps the matrix (still load-bearing for raw-hex
+     utility classes + .card) in lock-step with the new --mp-* oxford tokens,
+     so the whole app renders ONE oxford dark instead of a two-tone
+     slate-vs-oxford fight. Mirrors --mp-bg/--mp-surface/--mp-surface-high/
+     --mp-text/--mp-border in the v3 dark block. Light values (above) untouched. */
+  --dm-bg: #081224;
+  --dm-surface: #11233E;
+  --dm-surface-raised: #1A3354;
+  --dm-text: #EAF1FB;
+  --dm-text-secondary: #A9B8CE;
+  --dm-text-muted: #8294AE;
+  --dm-border: #25406A;
+  --dm-border-subtle: rgba(37, 64, 106, 0.55);
+  --dm-shadow-card: 0 1px 2px rgba(0,0,0,0.30), inset 0 1px 0 rgba(255,255,255,0.05);
+  --dm-input-bg: #0B1A30;
 
   --shadow-card: var(--dm-shadow-card);
   --shadow-card-hover: 0 4px 12px rgba(0,0,0,0.4), 0 2px 4px rgba(0,0,0,0.3);
@@ -129,8 +137,8 @@
 }
 
 [data-theme="dark"] .glass {
-  background: rgba(15, 23, 42, 0.9) !important;
-  border-color: rgba(51, 65, 85, 0.4) !important;
+  background: rgba(8, 18, 36, 0.9) !important; /* oxford #081224 (was slate #0F172A) */
+  border-color: rgba(37, 64, 106, 0.4) !important; /* oxford border (was slate #334155) */
 }
 
 /* Dark mode: broad overrides for all common bg/text/border patterns */
@@ -167,7 +175,7 @@
 }
 
 /* Specific component overrides */
-[data-theme="dark"] .bg-\[\#F7F9FC\]\/50 { background-color: rgba(30, 41, 59, 0.5) !important; }
+[data-theme="dark"] .bg-\[\#F7F9FC\]\/50 { background-color: rgba(17, 35, 62, 0.5) !important; } /* oxford surface #11233E */
 [data-theme="dark"] .bg-\[\#EAF3F9\] { background-color: rgba(30, 58, 82, 0.3) !important; }
 [data-theme="dark"] .bg-\[\#FFF4E6\] { background-color: rgba(100, 60, 20, 0.3) !important; }
 [data-theme="dark"] .bg-\[\#E6F4F1\] { background-color: rgba(0, 80, 60, 0.2) !important; }
@@ -179,7 +187,7 @@
 [data-theme="dark"] .text-\[\#F4A261\] { color: #F4A261 !important; }
 [data-theme="dark"] .bg-\[\#F7F9FC\]\/50,
 [data-theme="dark"] .hover\:bg-\[\#F7F9FC\]:hover { background-color: var(--dm-surface-raised) !important; }
-[data-theme="dark"] .hover\:bg-\[\#E4E9F0\]\/50:hover { background-color: rgba(51, 65, 85, 0.5) !important; }
+[data-theme="dark"] .hover\:bg-\[\#E4E9F0\]\/50:hover { background-color: rgba(37, 64, 106, 0.5) !important; } /* oxford border-tone hover */
 [data-theme="dark"] .shadow-md { box-shadow: 0 4px 6px rgba(0,0,0,0.3) !important; }
 [data-theme="dark"] .hover\:text-\[\#1A2B3C\]:hover { color: var(--dm-text) !important; }
 [data-theme="dark"] .hover\:text-\[\#4A5568\]:hover { color: var(--dm-text-secondary) !important; }
@@ -196,7 +204,7 @@
 [data-theme="dark"] .bg-\[\#FFF4E6\] { background-color: rgba(100, 60, 20, 0.3) !important; }
 
 /* Scrollbar in dark mode */
-[data-theme="dark"] ::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.3) !important; }
+[data-theme="dark"] ::-webkit-scrollbar-thumb { background: rgba(130, 148, 174, 0.3) !important; } /* oxford-cool thumb (matches --mp-text-light) */
 [data-theme="dark"] ::-webkit-scrollbar-track { background: transparent !important; }
 
 * { box-sizing: border-box; }
@@ -512,29 +520,16 @@ textarea:focus {
   inset: 0;
 }
 
-/* ═══ BRANDED LOADER — bouncing ü dots ═══ */
-@keyframes loader-dot-bounce {
-  0%, 100% { transform: translateY(0); }
-  40% { transform: translateY(-18px); }
-  60% { transform: translateY(-18px); }
-}
-.loader-dot-left {
-  animation: loader-dot-bounce 1.2s ease-in-out infinite;
-  transform-origin: center;
-}
-.loader-dot-right {
-  animation: loader-dot-bounce 1.2s ease-in-out infinite 0.3s;
-  transform-origin: center;
-}
-/* Dark mode: make logo body visible on dark background */
-[data-theme="dark"] .branded-loader path,
-[data-theme="dark"] .branded-loader polygon {
-  fill: #E2E8F0 !important;
-}
+/* The legacy bouncing-ü-dots loader (`loader-dot-bounce`, `.loader-dot-*`)
+   and its `[data-theme="dark"] .branded-loader path/polygon { fill !important }`
+   override were removed 2026-06-26 — replaced by the HEARTBEAT loader
+   (`.mp-hb-*`, see below). The dark fill override is intentionally gone:
+   the new Logo loader themes its mark via per-class fills so the teal
+   ü-dots survive in dark instead of being forced monochrome. */
 
 /* Dark mode: bottom nav */
 [data-theme="dark"] .bottom-nav .glass {
-  background: rgba(15, 23, 42, 0.95) !important;
+  background: rgba(8, 18, 36, 0.95) !important; /* oxford #081224 (was slate #0F172A) */
   border-color: var(--dm-border) !important;
 }
 
@@ -639,10 +634,14 @@ textarea:focus {
   color: var(--dm-text, #1A2B3C);
 }
 
-/* Dark-mode viridian shift — slightly brighter for legibility on dark surfaces.
-   Used via `var(--mp-viridian)` in components that need the theme-aware value. */
+/* Dark-mode viridian shift — brighter along ITS OWN hue for legibility on
+   dark surfaces. Used via `var(--mp-viridian)` in components that need the
+   theme-aware value. 2026-06-26: dark viridian split to #2BC39A (greener)
+   so it NO LONGER collapses into --mp-accent-teal #34D0C0 — both stay two
+   distinct brand colors (the prod bug was both = #00A896). The canonical
+   dark value is re-declared in the v3 dark block below; this stays in sync. */
 :root { --mp-viridian: #007B5F; }
-[data-theme="dark"] { --mp-viridian: #00A896; }
+[data-theme="dark"] { --mp-viridian: #2BC39A; }
 
 /* Dark-mode tinted backgrounds (review-2026-04-26-A1).
    The light-mode hex tints (`#E6F4F1` etc.) read as white-ish cards in
@@ -717,6 +716,26 @@ textarea:focus {
   --mp-border-strong:   #CBD5E1;
   --mp-border-subtle:   var(--mp-border-soft);
 
+  /* ─── Net-new tokens from the v3 token set (2026-06-26).
+     Light values FROZEN at current prod (canvas #F7F9FC, white cards) so
+     light mode is byte-for-byte unchanged; the dark scope overrides give
+     the oxford ramp. These exist so the heartbeat loader + any v3 surface
+     can reach for --mp-bg/--mp-surface/--mp-spark (all absent before). ─── */
+  --mp-bg:              #F7F9FC; /* app canvas (light) */
+  --mp-surface:         #FFFFFF; /* default card (light) */
+  --mp-surface-high:    #FFFFFF; /* popovers/menus (light: white, elevation via shadow) */
+  --mp-ring-inset:      inset 0 1px 0 rgba(255, 255, 255, 0.6);
+
+  /* ─── Brand tints (light) — for hero/accents/soft fills ─── */
+  --mp-tint-brand:      #E8EFF8;
+  --mp-tint-viridian:   #E2F1ED;
+  --mp-tint-teal:       #E0F4F1;
+
+  /* ─── The signature SPARK: the ü-dots accent. A live brand spark on
+     active/focus/progress and the heartbeat trace. ─── */
+  --mp-spark:           var(--mp-accent-teal);
+  --mp-spark-glow:      rgba(0, 168, 150, 0.30);
+
   /* ─── Action semantics ─── */
   --mp-action-primary:       var(--mp-cta-blue);
   --mp-action-primary-hover: var(--mp-cta-blue-hover);
@@ -787,25 +806,88 @@ textarea:focus {
   --mp-suggestion-accent: var(--mp-viridian);
 }
 
-[data-theme="dark"] {
-  --mp-fg:             #E2E8F0;
-  --mp-fg-muted:       #94A3B8;
-  /* `--mp-fg-subtle` formerly `#64748B` (4.50:1 on #0F172A — WCAG-
-     borderline). Bumped to `#7C8AA5` on 2026-04-23 for a safe 5.2:1
-     margin so the same back-link / caption copy that passes in light
-     theme also passes in dark. */
-  --mp-fg-subtle:      #7C8AA5;
-  --mp-fg-inverse:     #0F172A;
-  --mp-surface-raised: #1E293B;
-  --mp-surface-sunken: #0F172A;
-  --mp-border:         #334155;
-  --mp-border-strong:  #475569;
-  --mp-border-subtle:  rgba(51, 65, 85, 0.6);
+/* ═══════════════════════════════════════════════════════════════
+   DARK MODE — rebuilt from Oxford Blue, NOT stock slate (2026-06-26).
+   Reimplementation v3 (Muse) — the approved dark ramp from
+   reviews/reimplementation-2026-06-26/design/tokens.css.
 
-  --mp-shadow-card:  0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
-  --mp-shadow-hover: 0 4px 12px rgba(0,0,0,0.4), 0 2px 4px rgba(0,0,0,0.3);
-  --mp-shadow-elev:  0 8px 24px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.3);
-  --mp-shadow-modal: 0 20px 60px rgba(0,0,0,0.7), 0 4px 16px rgba(0,0,0,0.4);
+   Root cause of the live dark-on-dark bug: a `var()` in a custom-property
+   DECLARATION substitutes at the element where it is declared. Aliases
+   defined only in :root resolve against the LIGHT base tokens and inherit
+   that frozen value down — overriding the base token here does NOT
+   retroactively re-resolve them. So every alias whose referent changes in
+   dark MUST be re-declared in this scope (confirmed empirically: an alias
+   left in :root rendered dark text on a dark card at ~1.4:1).
+   ═══════════════════════════════════════════════════════════════ */
+[data-theme="dark"] {
+  /* ─── SURFACE RAMP — deliberate oxford-blue lightness steps ─── */
+  --mp-bg:              #081224; /* app canvas — deep oxford */
+  --mp-surface:         #11233E; /* default card (step 1 lift) */
+  --mp-surface-high:    #1A3354; /* popovers/menus/hover (step 2) — DISTINCT from border */
+  --mp-surface-raised:  #11233E;
+  --mp-surface-sunken:  #0B1A30; /* wells, inset tracks, input fields */
+  --mp-border:          #25406A; /* a notch ABOVE surface-high so edges always read */
+  --mp-border-soft:     rgba(37, 64, 106, 0.55);
+  --mp-border-strong:   #345585;
+
+  /* ─── TEXT (dark) — verified AA on #11233E cards / #081224 shell ─── */
+  --mp-text:            #EAF1FB; /* ~15:1 — primary */
+  --mp-text-muted:      #A9B8CE; /* ~7.2:1 on #11233E */
+  --mp-text-light:      #8294AE; /* ~5:1 on #11233E — captions, still AA */
+
+  /* ─── BRAND COLORS shifted for the dark canvas ───
+     Viridian brightens along ITS OWN hue (greener); teal stays teal — the
+     two never collapse (prod bug: both were #00A896). CTA lifts off bg. */
+  --mp-viridian:        #2BC39A; /* success/correct/Pro — brighter, still GREEN */
+  --mp-viridian-dk:     #1E9E7C;
+  --mp-accent-teal:     #34D0C0; /* streak/secondary/spark — clearly TEAL */
+  --mp-cta-blue:        #4D8DF0; /* primary action — lifts off dark, AA on dark surfaces */
+  --mp-cta-blue-hover:  #6BA1F4;
+  --mp-warning-dk:      #F4A261; /* warning hue unchanged; amber text stays legible on low-alpha tint */
+
+  /* ─── CRITICAL: re-declare aliases INSIDE the dark scope ───
+     (see block header — re-substitutes against the dark base tokens above) */
+  --mp-fg:              var(--mp-text);
+  --mp-fg-muted:        var(--mp-text-muted);
+  --mp-fg-subtle:       var(--mp-text-light);
+  --mp-fg-inverse:      #081224;
+  --mp-border-subtle:   var(--mp-border-soft);
+  --mp-action-primary:       var(--mp-cta-blue);
+  --mp-action-primary-hover: var(--mp-cta-blue-hover);
+  --mp-action-success:       var(--mp-viridian);
+  --mp-action-success-hover: var(--mp-viridian-dk);
+  --mp-action-destructive:   var(--mp-error);
+  --mp-status-success: var(--mp-viridian);
+  --mp-status-warning: var(--mp-warning-dk);
+  --mp-status-error:   var(--mp-error);
+  --mp-status-info:    var(--mp-info);
+
+  /* ─── BRAND TINTS (dark) — translucent so they sit ON the surface ─── */
+  --mp-tint-brand:      rgba(77, 141, 240, 0.14);
+  --mp-tint-viridian:   rgba(43, 195, 154, 0.14);
+  --mp-tint-teal:       rgba(52, 208, 192, 0.14);
+
+  /* ─── ELEVATION (dark) — primary cue is the surface-lightness step plus
+     a 1px top-light inset; drop shadows still cast for floats only. ─── */
+  --mp-shadow-xs:    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  --mp-shadow-card:  inset 0 1px 0 rgba(255, 255, 255, 0.05),
+                     0 1px 2px rgba(0, 0, 0, 0.30);
+  --mp-shadow-hover: inset 0 1px 0 rgba(255, 255, 255, 0.07),
+                     0 8px 20px rgba(0, 0, 0, 0.40);
+  --mp-shadow-elev:  inset 0 1px 0 rgba(255, 255, 255, 0.08),
+                     0 16px 36px rgba(0, 0, 0, 0.50);
+  --mp-shadow-modal: inset 0 1px 0 rgba(255, 255, 255, 0.08),
+                     0 28px 70px rgba(0, 0, 0, 0.60);
+  --mp-ring-inset:   inset 0 1px 0 rgba(255, 255, 255, 0.06);
+
+  /* ─── FOCUS RING (dark) — brighter so it survives the dark canvas ─── */
+  --mp-focus-ring:       0 0 0 3px rgba(52, 208, 192, 0.45);
+  --mp-focus-ring-cta:   0 0 0 3px rgba(77, 141, 240, 0.45);
+  --mp-focus-ring-error: 0 0 0 3px rgba(242, 109, 109, 0.40);
+
+  /* ─── SIGNATURE SPARK (dark) — the ü-dots motif glows on the dark canvas ─── */
+  --mp-spark:          var(--mp-accent-teal);
+  --mp-spark-glow:     rgba(52, 208, 192, 0.40);
 
   /* Suggestion tokens adapt — slightly brighter tint for dark surfaces */
   --mp-suggestion-bg:     rgba(0, 168, 150, 0.09);
@@ -1040,19 +1122,159 @@ textarea:focus {
 .mp-stat__trend--up   { color: var(--mp-viridian); }
 .mp-stat__trend--down { color: var(--mp-error); }
 
-/* ═══ BRANDED LOADER (Loader-A: EKG sinus rhythm) ═══ */
-@keyframes mp-loader-ekg {
-  0%   { stroke-dashoffset: 300; }
-  55%  { stroke-dashoffset: 0; }
-  100% { stroke-dashoffset: -300; }
+/* ═══════════════════════════════════════════════════════════════
+   BRANDED LOADER — HEARTBEAT (2026-06-26, Muse v3)
+   An ECG sinus trace draws left→right; the brand's two ü-dots ARE the
+   two R-wave peaks and pulse on the beat with a spark halo; the trace
+   settles and the MedPrüf lockup resolves in beneath it. Reads like a
+   patient monitor coming alive. Lifted 1:1 from
+   reviews/reimplementation-2026-06-26/design/heartbeat.html.
+   Namespaced `mp-hb-*`. Replaces the old `mp-loader-ekg` + the legacy
+   `loader-dot-bounce` ü-dots loader. Uses --mp-spark (now present) and
+   the dark viridian≠teal split (now fixed).
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── FULLSCREEN / DEFAULT GLYPH — the ~3.6s draw→beat→resolve→hold loop ── */
+.mp-hb { width: 340px; max-width: 100%; position: relative; }
+.mp-hb svg { display: block; width: 100%; height: auto; overflow: visible; }
+.mp-hb .mp-hb-base {
+  stroke: var(--mp-fg-subtle); opacity: .18; stroke-width: 2; fill: none;
+  stroke-linecap: round; stroke-linejoin: round;
 }
-.mp-loader-ekg {
-  stroke-dasharray: 300;
-  stroke-dashoffset: 300;
-  animation: mp-loader-ekg 1.8s var(--mp-ease-out) infinite;
+.mp-hb .mp-hb-trace {
+  stroke: var(--mp-spark); stroke-width: 3.2; fill: none;
+  stroke-linecap: round; stroke-linejoin: round;
+  filter: drop-shadow(0 0 5px var(--mp-spark-glow));
+  stroke-dasharray: 680; stroke-dashoffset: 680;
+  animation: mp-hb-draw 3.6s var(--mp-ease-out) infinite;
 }
+@keyframes mp-hb-draw {
+  0%   { stroke-dashoffset: 680; }
+  46%  { stroke-dashoffset: 0; }
+  72%  { stroke-dashoffset: 0; opacity: 1; }
+  86%  { stroke-dashoffset: 0; opacity: .5; }
+  100% { stroke-dashoffset: 0; opacity: .5; }
+}
+/* the two ü-dots — they ARE the R-wave peaks; each pops as the trace reaches it */
+.mp-hb .mp-hb-dot {
+  fill: var(--mp-viridian); transform-box: fill-box; transform-origin: center;
+  opacity: 0; animation: mp-hb-dotpop1 3.6s var(--mp-ease-out) infinite;
+}
+.mp-hb .mp-hb-dot.d2 { animation: mp-hb-dotpop2 3.6s var(--mp-ease-out) infinite; }
+@keyframes mp-hb-dotpop1 {
+  0%,13% { opacity: 0; transform: scale(.2); }
+  16%    { opacity: 1; transform: scale(1.55); }
+  21%    { transform: scale(1); }
+  72%    { opacity: 1; transform: scale(1); }
+  86%,100% { opacity: .55; transform: scale(1); }
+}
+@keyframes mp-hb-dotpop2 {
+  0%,26% { opacity: 0; transform: scale(.2); }
+  29%    { opacity: 1; transform: scale(1.55); }
+  34%    { transform: scale(1); }
+  72%    { opacity: 1; transform: scale(1); }
+  86%,100% { opacity: .55; transform: scale(1); }
+}
+/* spark halo pings outward at each beat */
+.mp-hb .mp-hb-halo {
+  fill: none; stroke: var(--mp-spark); stroke-width: 2; opacity: 0;
+  transform-box: fill-box; transform-origin: center;
+  animation: mp-hb-halo1 3.6s var(--mp-ease-out) infinite;
+}
+.mp-hb .mp-hb-halo.h2 { animation: mp-hb-halo2 3.6s var(--mp-ease-out) infinite; }
+@keyframes mp-hb-halo1 {
+  0%,13% { opacity: 0; transform: scale(.4); }
+  16%    { opacity: .7; transform: scale(.6); }
+  30%    { opacity: 0; transform: scale(2.4); }
+  100%   { opacity: 0; transform: scale(2.4); }
+}
+@keyframes mp-hb-halo2 {
+  0%,26% { opacity: 0; transform: scale(.4); }
+  29%    { opacity: .7; transform: scale(.6); }
+  43%    { opacity: 0; transform: scale(2.4); }
+  100%   { opacity: 0; transform: scale(2.4); }
+}
+/* the lockup resolves in beneath the trace (fullscreen only) */
+.mp-hb-lockup {
+  display: flex; align-items: center; justify-content: center; gap: 11px;
+  margin-top: 26px; opacity: 0; transform: translateY(8px);
+  animation: mp-hb-lockin 3.6s var(--mp-ease-out) infinite;
+}
+@keyframes mp-hb-lockin {
+  0%,52% { opacity: 0; transform: translateY(8px); }
+  64%    { opacity: 1; transform: translateY(0); }
+  84%    { opacity: 1; transform: translateY(0); }
+  100%   { opacity: 0; transform: translateY(0); }
+}
+.mp-hb-lockup .mp-hb-mark { width: 34px; height: 34px; display: block; flex-shrink: 0; }
+.mp-hb-lockup .mp-hb-mark .u-body { fill: #082040; }
+.mp-hb-lockup .mp-hb-mark .u-dot  { fill: var(--mp-viridian); }
+[data-theme="dark"] .mp-hb-lockup .mp-hb-mark .u-body { fill: #EAF1FB; }
+[data-theme="dark"] .mp-hb-lockup .mp-hb-mark .u-dot  { fill: var(--mp-accent-teal); }
+.mp-hb-lockup .mp-hb-word { height: 21px; display: block; }
+.mp-hb-lockup .mp-hb-word .wm-med  { fill: #0a2041; }
+.mp-hb-lockup .mp-hb-word .wm-pruf { fill: var(--mp-viridian); }
+[data-theme="dark"] .mp-hb-lockup .mp-hb-word .wm-med  { fill: #FFFFFF; }
+[data-theme="dark"] .mp-hb-lockup .mp-hb-word .wm-pruf { fill: var(--mp-accent-teal); }
+/* the caption */
+.mp-hb-caption {
+  margin-top: 16px; text-align: center; opacity: 0;
+  animation: mp-hb-capin 3.6s var(--mp-ease-out) infinite;
+}
+.mp-hb-caption.static { opacity: 1; animation: none; }
+@keyframes mp-hb-capin { 0%,58% { opacity: 0; } 68% { opacity: 1; } 84% { opacity: 1; } 100% { opacity: 0; } }
+.mp-hb-caption .sub {
+  font-size: 11px; font-weight: 600; font-family: var(--mp-font-mono);
+  text-transform: uppercase; letter-spacing: .16em; color: var(--mp-fg-subtle);
+}
+
+/* ── COMPACT / INLINE GLYPH — fast 1.8s EKG loop kept verbatim (route transitions) ── */
+.mp-hb-mini { width: 120px; }
+.mp-hb-mini svg { display: block; width: 100%; height: auto; overflow: visible; }
+.mp-hb-mini .mp-hb-base {
+  stroke: var(--mp-fg-subtle); opacity: .4; stroke-width: 2.4; fill: none;
+  stroke-linecap: round; stroke-linejoin: round;
+}
+.mp-hb-mini .mp-hb-trace {
+  stroke: var(--mp-spark); stroke-width: 3.4; fill: none;
+  stroke-linecap: round; stroke-linejoin: round;
+  filter: drop-shadow(0 0 4px var(--mp-spark-glow));
+  stroke-dasharray: 300; stroke-dashoffset: 300;
+  animation: mp-hb-minidraw 1.8s var(--mp-ease-out) infinite;
+}
+@keyframes mp-hb-minidraw { 0% { stroke-dashoffset: 300; } 55% { stroke-dashoffset: 0; } 100% { stroke-dashoffset: -300; } }
+.mp-hb-mini .mp-hb-dot {
+  fill: var(--mp-spark); transform-box: fill-box; transform-origin: center;
+  opacity: 1; animation: mp-hb-minidot 1.8s var(--mp-ease-out) infinite;
+}
+@keyframes mp-hb-minidot {
+  0%,40% { transform: scale(.7); opacity: .5; }
+  52%    { transform: scale(1.35); opacity: 1; }
+  64%    { transform: scale(1); }
+  100%   { transform: scale(1); opacity: .8; }
+}
+
+/* ── BUTTON-PENDING micro-trace (manual, e.g. "Wird geprüft…") ── */
+.mp-hb-btn { width: 26px; height: 14px; display: inline-block; }
+.mp-hb-btn svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.mp-hb-btn .mp-hb-trace {
+  stroke: currentColor; stroke-width: 3; fill: none;
+  stroke-linecap: round; stroke-linejoin: round;
+  stroke-dasharray: 120; stroke-dashoffset: 120;
+  animation: mp-hb-btndraw 1.4s var(--mp-ease-out) infinite;
+}
+@keyframes mp-hb-btndraw { 0% { stroke-dashoffset: 120; } 55% { stroke-dashoffset: 0; } 100% { stroke-dashoffset: -120; } }
+
+/* ── REDUCED MOTION — settle fully drawn, dots static on peaks, lockup at rest ── */
 @media (prefers-reduced-motion: reduce) {
-  .mp-loader-ekg { animation: none; stroke-dashoffset: 0; }
+  .mp-hb .mp-hb-trace,
+  .mp-hb-mini .mp-hb-trace,
+  .mp-hb-btn .mp-hb-trace { animation: none; stroke-dashoffset: 0; opacity: 1; }
+  .mp-hb .mp-hb-dot,
+  .mp-hb-mini .mp-hb-dot { animation: none; opacity: 1; transform: scale(1); }
+  .mp-hb .mp-hb-halo { animation: none; opacity: 0; }
+  .mp-hb-lockup { animation: none; opacity: 1; transform: none; }
+  .mp-hb-caption { animation: none; opacity: 1; }
 }
 
 /* ═══ ACHIEVEMENT RANK GLYPH (.mp-rank) — emoji replacement ═══ */

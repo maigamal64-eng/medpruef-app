@@ -15,13 +15,14 @@ import { trackEvent, trackPageView } from "@/lib/tracker";
 import { getStoredSession, storeSession } from "@/lib/auth";
 import { useUserTier } from "@/lib/hooks/useUserTier";
 import { recordAnswer } from "@/lib/weakness";
-import { Inbox, Clock, Trophy, Sparkles, Gift } from "lucide-react";
+import { Inbox, Trophy, Sparkles, Gift } from "lucide-react";
 import LanguageToggle from "@/components/LanguageToggle";
 import ThemeToggle from "@/components/ThemeToggle";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import QuestionCard from "@/components/QuestionCard";
 import QuestionActions from "@/components/QuestionActions";
+import { QuizTopBar, QuizFooterAction, type QuizFooterMode } from "@/components/QuizChrome";
 import QuizSetup, { type QuizConfig } from "@/components/QuizSetup";
 import CreateTestBuilder from "@/components/CreateTestBuilder";
 import { SkeletonCard } from "@/components/Skeleton";
@@ -139,6 +140,42 @@ function QuizContent() {
   const [milestoneVisible, setMilestoneVisible] = useState(false);
   const [quizFinished, setQuizFinished] = useState(false);
   const [topicTotal, setTopicTotal] = useState<number>(0);
+  // Top-bar "mark for later" toggle. This is the SAME bookmark store the
+  // rest of the app uses (`medpruef_favorites` — the star in QuestionActions
+  // writes it, and the quiz "Gemerkte/flagged" filter in CreateTestBuilder
+  // reads it via readBookmarkIds()). So marking a question from the quiz
+  // top bar genuinely adds it to the set you can later drill into — it is
+  // NOT a private, orphaned key. Uses a Bookmark icon (not Flag) to stay
+  // distinct from QuestionActions' Flag = "report a problem".
+  const FAVORITES_KEY = "medpruef_favorites";
+  const [flaggedIds, setFlaggedIds] = useState<Set<number>>(new Set());
+  const readFavorites = (): number[] => {
+    if (typeof window === "undefined") return [];
+    try {
+      const raw = JSON.parse(localStorage.getItem(FAVORITES_KEY) || "[]");
+      return Array.isArray(raw) ? (raw as number[]) : [];
+    } catch { return []; }
+  };
+  useEffect(() => {
+    setFlaggedIds(new Set(readFavorites()));
+    // Keep in sync if another surface (e.g. the QuestionActions star)
+    // mutates the bookmark set while the quiz is open.
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === FAVORITES_KEY) setFlaggedIds(new Set(readFavorites()));
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+  const toggleFlag = useCallback((qid: number) => {
+    setFlaggedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(qid)) next.delete(qid);
+      else next.add(qid);
+      try { localStorage.setItem(FAVORITES_KEY, JSON.stringify([...next])); } catch { /* ignore */ }
+      return next;
+    });
+    trackEvent("bookmark", { questionId: qid, source: "quiz_topbar" });
+  }, []);
 
   // ─── Shortcuts hint — a one-time, dismissible rail at the bottom
   // of the quiz surface. Persisted in localStorage so we don't nag
@@ -649,67 +686,34 @@ function QuizContent() {
       <Sidebar lang={lang} userId={userId} />
 
       <main className="main-content safe-area-top safe-area-bottom flex flex-col min-h-screen bg-[var(--mp-surface-sunken)]">
-        {/* Header */}
-        <div className="px-4 lg:px-8 pt-4 pb-3 flex items-center justify-between flex-shrink-0 border-b border-[var(--mp-border)] bg-[var(--mp-surface-raised)]/60 backdrop-blur-sm">
-          {autoStarted ? (
-            <Link
-              href="/"
-              className="flex items-center gap-1.5 text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg)] transition-colors text-sm"
-            >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="opacity-60">
-                <path d="M10 12L6 8L10 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              ← {t("back_home", lang)}
-            </Link>
-          ) : (
-            <button
-              onClick={restart}
-              className="flex items-center gap-1.5 text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg)] transition-colors text-sm"
-              title={lang === "de" ? "Zurück zur Konfiguration" : "Back to setup"}
-            >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="opacity-60">
-                <path d="M10 12L6 8L10 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              {lang === "de" ? "Neue Konfiguration" : "New setup"}
-            </button>
+        {/* ── Distraction-free quiz top bar (approved 02-quiz design) ──
+            Close → home/setup · mono progress counter with teal current-
+            index · optional timer · flag. Theme/lang toggles deliberately
+            do NOT live on this focus surface. The fill is the one blessed
+            decorative spark here (viridian→teal + glow). */}
+        <QuizTopBar
+          lang={lang}
+          current={Math.min(
+            questionCount + (answered ? 0 : 1),
+            autoStarted && topicTotal > 0 ? topicTotal : config.targetCount,
           )}
-
-          <div className="flex items-center gap-3">
-            {timeRemaining !== null && (
-              <div className={`flex items-center gap-1.5 text-sm font-mono font-semibold ${
-                timeRemaining < 60 ? "text-[var(--mp-error)] animate-pulse" : "text-[var(--mp-fg-muted)]"
-              }`}>
-                <Clock className="w-4 h-4" />
-                {Math.floor(timeRemaining / 60)}:{String(timeRemaining % 60).padStart(2, "0")}
-              </div>
-            )}
-            {questionCount > 0 && (
-              <div className="flex items-center gap-1.5 text-sm font-mono">
-                <span className="text-[var(--mp-accent-teal)] font-semibold">{correctCount}✓</span>
-                <span className="text-[var(--mp-border)]">/</span>
-                <span className="text-[var(--mp-fg-muted)]">{questionCount}</span>
-              </div>
-            )}
-            <ThemeToggle />
-            <LanguageToggle lang={lang} onChange={switchLang} />
-          </div>
-        </div>
-
-        {/* Progress bar — precise reflection of custom quiz length */}
-        <div className="px-4 lg:px-8 pt-3 pb-2 flex-shrink-0">
-          <div className="flex items-center justify-between text-[10px] text-[var(--mp-fg-subtle)] mb-1.5 font-mono">
-            <span>
-              {questionCount} / {autoStarted && topicTotal > 0 ? topicTotal : config.targetCount} {lang === "de" ? "Fragen" : "questions"}
-            </span>
-            <span>{progressPct}%</span>
-          </div>
-          <div className="h-2 w-full bg-[var(--mp-border)] rounded-full overflow-hidden">
-            <div
-              className="h-full bg-gradient-to-r from-[var(--mp-viridian)] to-[var(--mp-accent-teal)] rounded-full transition-all duration-500 ease-out"
-              style={{ width: `${progressPct}%` }}
-            />
-          </div>
-        </div>
+          total={autoStarted && topicTotal > 0 ? topicTotal : config.targetCount}
+          progressPct={progressPct}
+          timeLabel={
+            timeRemaining !== null
+              ? `${Math.floor(timeRemaining / 60)}:${String(timeRemaining % 60).padStart(2, "0")}`
+              : null
+          }
+          timeUrgent={timeRemaining !== null && timeRemaining < 60}
+          flagged={!!question && flaggedIds.has(question.id)}
+          onClose={() => {
+            if (autoStarted) router.push("/");
+            else restart();
+          }}
+          onToggleFlag={
+            question && !quizFinished ? () => toggleFlag(question.id) : undefined
+          }
+        />
 
         {/* Offline banner — appears when navigator.onLine === false.
             Flags that answers queue locally until reconnect. */}
@@ -805,26 +809,38 @@ function QuizContent() {
                     />
                   </div>
 
-                  {/* Next button */}
-                  {answered && (
-                    <div className="mt-4 space-y-2 animate-fade-in">
-                      <button
-                        onClick={advance}
-                        className="w-full btn-primary py-4 text-base rounded-2xl"
-                      >
-                        {questionCount >= config.targetCount
-                          ? lang === "de"
-                            ? "Quiz beenden →"
-                            : "Finish quiz →"
-                          : `${t("next_question", lang)} →`}
-                      </button>
-                      <p className="text-[10px] text-[var(--mp-fg-subtle)] text-center">
-                        {lang === "de" ? "Drücke" : "Press"}{" "}
-                        <kbd className="px-1.5 py-0.5 bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)] rounded text-[10px] font-mono">N</kbd>{" "}
-                        {lang === "de" ? "für die nächste Frage" : "for the next question"}
-                      </p>
-                    </div>
-                  )}
+                  {/* ── Footer action — one full-width, state-swapping primary
+                      (approved 02-quiz design). After grading: CTA-blue
+                      "Nächste Frage" / "Quiz beenden". Before grading on a
+                      single-select question: a calm disabled "Antwort prüfen"
+                      affordance (picking an option IS the check). Multi-select
+                      keeps its own in-card check button, so we suppress the
+                      pre-answer footer there to avoid a double prüfen. ── */}
+                  {(() => {
+                    const nCorrect = (question.options ?? []).filter((o) => o.correct).length;
+                    const isMulti = nCorrect >= 2;
+                    const isFinish = questionCount >= config.targetCount;
+                    let mode: QuizFooterMode | null = null;
+                    if (answered) mode = isFinish ? "finish" : "next";
+                    else if (!isMulti && (question.options ?? []).length >= 2) mode = "locked";
+                    if (!mode) return null;
+                    return (
+                      <div className="mt-4 space-y-2 animate-fade-in">
+                        <QuizFooterAction
+                          lang={lang}
+                          mode={mode}
+                          onPress={advance}
+                        />
+                        {answered && (
+                          <p className="text-[10px] text-[var(--mp-fg-subtle)] text-center">
+                            {lang === "de" ? "Drücke" : "Press"}{" "}
+                            <kbd className="px-1.5 py-0.5 bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)] rounded text-[10px] font-mono">N</kbd>{" "}
+                            {lang === "de" ? "für die nächste Frage" : "for the next question"}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })()}
 
                   {/* Milestone card — appears BELOW, doesn't replace the quiz */}
                   {milestoneVisible && (

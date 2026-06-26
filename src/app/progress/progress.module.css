@@ -1,0 +1,397 @@
+/* ═══════════════════════════════════════════════════════════════
+   /progress - Fortschritt surface (co-located module, B-loop 2026-06-26)
+
+   Lifted 1:1 in spirit from reviews/reimplementation-2026-06-26/design/
+   05-progress-stats.html (the Fortschritt half) + _kit.css. Only the
+   STRUCTURE / SVG / animation that globals.css doesn't already own lives
+   here; all COLOR comes from --mp-* tokens so dark mode is a pure
+   variable flip. Dark-only overrides use :global([data-theme="dark"]).
+
+   Scope is the /progress surface ONLY (disjoint from other surfaces +
+   from globals.css / shared primitives). Class names are intentionally
+   plain - CSS-modules locally scopes them, so no collision risk.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Page scaffolding ───────────────────────────────────────────── */
+.page {
+  max-width: 1120px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* Section heading with a fading rule - the mockup's section-divider */
+.sectionHead {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 8px 0 14px;
+}
+.sectionHead h3 {
+  font-family: var(--mp-font-display);
+  font-weight: 800;
+  font-size: 15px;
+  color: var(--mp-fg);
+  white-space: nowrap;
+  margin: 0;
+}
+.sectionHead .ln {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, var(--mp-border), transparent);
+}
+.sectionHead .meta {
+  font-family: var(--mp-font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--mp-fg-subtle);
+  white-space: nowrap;
+}
+
+/* Card header (icon + title), mockup .card-h */
+.cardH {
+  font-family: var(--mp-font-display);
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--mp-fg);
+  margin: 0 0 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cardH svg {
+  width: 16px;
+  height: 16px;
+  color: var(--mp-fg-subtle);
+}
+
+/* ── Continuity stat strip (the s-top/s-val kit, not .mp-stat) ──────
+   Tighter than .mp-stat - used for the at-a-glance row. Label is pinned
+   to --mp-fg-muted (NEVER the icon accent - the dark cascade bug). The
+   accent colour lives ONLY on .sTop (the icon+micro-label), via a tone
+   class, so it cannot bleed onto the numeral or the caption. */
+.statStrip {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+@media (min-width: 1024px) {
+  .statStrip {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+.stat {
+  background: var(--mp-surface-raised);
+  border: 1px solid var(--mp-border-subtle);
+  border-radius: var(--mp-r-card);
+  padding: 14px 16px;
+  box-shadow: var(--mp-shadow-card);
+}
+.sTop {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.sTop svg {
+  width: 14px;
+  height: 14px;
+}
+.sTop span {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--mp-fg-muted);
+}
+.sTopFire svg  { color: var(--mp-warning); }
+.sTopGreen svg { color: var(--mp-viridian); }
+.sTopTeal svg  { color: var(--mp-accent-teal); }
+.sTopBlue svg  { color: var(--mp-cta-blue); }
+.sVal {
+  font-family: var(--mp-font-display);
+  font-weight: 900;
+  font-size: 26px;
+  color: var(--mp-fg);
+  margin-top: 6px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+}
+.sVal small {
+  font-size: 12px;
+  color: var(--mp-fg-subtle);
+  font-weight: 600;
+}
+.sSub {
+  font-family: var(--mp-font-mono);
+  font-size: 10px;
+  color: var(--mp-fg-subtle);
+  margin-top: 6px;
+}
+/* mini XP track inside the level tile */
+.xpTrack {
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--mp-surface-sunken);
+  overflow: hidden;
+  margin-top: 8px;
+}
+.xpFill {
+  height: 100%;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, var(--mp-viridian), var(--mp-spark));
+  box-shadow: 0 0 10px var(--mp-spark-glow);
+  transition: width 0.7s var(--mp-ease-out);
+}
+
+/* ── Pass-probability / readiness shell (mockup .passbox) ──────────
+   Holds the shared <ReadinessSignal>. The ring on the left is a calm
+   viridian band visual (NOT a pass-%). */
+.passbox {
+  background: var(--mp-surface);
+  border: 1px solid var(--mp-border-soft);
+  border-radius: var(--mp-r-card);
+  padding: 18px;
+  box-shadow: var(--mp-shadow-card);
+}
+
+/* ── Knowledge radar (recharts wrapper gets the glow via its own
+   stroke/fill props; this only sizes + centers it) ────────────────── */
+.radarWrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 240px;
+}
+
+/* ── Weekly bar chart (mockup .wchart) - pure CSS, fed by JS data ──── */
+.wchart {
+  height: 132px;
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 0 2px;
+}
+.wcol {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.wbarTrack {
+  width: 100%;
+  flex: 1;
+  display: flex;
+  align-items: flex-end;
+  border-radius: 6px 6px 0 0;
+}
+.wbar {
+  width: 100%;
+  border-radius: 6px 6px 0 0;
+  background: linear-gradient(to top, var(--mp-cta-blue), var(--mp-accent-teal));
+  min-height: 4px;
+  transition: height 0.6s var(--mp-ease-out);
+}
+.wbarEmpty {
+  background: var(--mp-surface-sunken);
+}
+.wd {
+  font-family: var(--mp-font-mono);
+  font-size: 9px;
+  color: var(--mp-fg-subtle);
+  font-weight: 600;
+}
+.wval {
+  font-family: var(--mp-font-mono);
+  font-size: 9px;
+  color: var(--mp-fg-muted);
+  font-weight: 700;
+}
+
+/* ── Activity heatmap (mockup .heat) - viridian color-mix ramp ─────── */
+.heat {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+.heatDayRow {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  margin-bottom: 5px;
+}
+.heatDayLbl {
+  font-family: var(--mp-font-mono);
+  font-size: 9px;
+  color: var(--mp-fg-subtle);
+  text-align: center;
+}
+.cell {
+  aspect-ratio: 1;
+  border-radius: 3px;
+  background: var(--mp-surface-sunken);
+  border: 1px solid var(--mp-border-soft);
+}
+.cell.l1 { background: color-mix(in srgb, var(--mp-viridian) 25%, var(--mp-surface-sunken)); border-color: transparent; }
+.cell.l2 { background: color-mix(in srgb, var(--mp-viridian) 50%, var(--mp-surface-sunken)); border-color: transparent; }
+.cell.l3 { background: color-mix(in srgb, var(--mp-viridian) 75%, var(--mp-surface-sunken)); border-color: transparent; }
+.cell.l4 { background: var(--mp-viridian); border-color: transparent; }
+.heatLegend {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  margin-top: 12px;
+}
+.heatLegend .lcell {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+.heatLegend span {
+  font-family: var(--mp-font-mono);
+  font-size: 10px;
+  color: var(--mp-fg-subtle);
+}
+
+/* ── Topic COVERAGE rail (answered/total + completion% - progress,
+   not the §4 strength rail). Edge + icon + fill read var(--sc). ───── */
+.tcov {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+.tcRow {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+.tcIc {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: color-mix(in srgb, var(--sc) 14%, transparent);
+  color: var(--sc);
+}
+.tcIc svg { width: 17px; height: 17px; }
+.tcBody { flex: 1; min-width: 0; }
+.tcTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+.tcName {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--mp-fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tcNums {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.tcPct {
+  font-family: var(--mp-font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--mp-fg-muted);
+}
+.tcCount {
+  font-family: var(--mp-font-mono);
+  font-size: 10px;
+  color: var(--mp-fg-subtle);
+  width: 64px;
+  text-align: right;
+}
+.tcTrack {
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--mp-surface-sunken);
+  overflow: hidden;
+}
+.tcFill {
+  height: 100%;
+  border-radius: 9999px;
+  background: var(--sc);
+  transition: width 0.5s var(--mp-ease-out);
+}
+
+/* ── Desktop analytics grid ───────────────────────────────────────── */
+.grid2 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+}
+@media (min-width: 1024px) {
+  .grid2 {
+    grid-template-columns: 1.05fr 1fr;
+  }
+}
+.colStack {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* ── Saved-item rows (bookmarks / notes) ──────────────────────────── */
+.savedRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  border-radius: var(--mp-r-md);
+  background: var(--mp-surface-sunken);
+  transition: background var(--mp-dur-base) var(--mp-ease-out);
+}
+.savedRow:hover { background: var(--mp-surface-high); }
+.savedIc {
+  width: 26px;
+  height: 26px;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+  background: color-mix(in srgb, var(--sc) 14%, transparent);
+  color: var(--sc);
+}
+.savedIc svg { width: 13px; height: 13px; }
+
+/* ── Dark mode: lift each specialty colour off the oxford canvas ────
+   SPECS §"specialty colors": dark mode lifts each --sc via
+   color-mix(in srgb, var(--sc) 62%, white) so the raw TOPIC_CONFIG hex
+   (tuned for light) reads on the dark canvas. --sc is set inline from
+   the hex; here we recompute the VISUAL colour off it for dark only, so
+   the data contract (one hex per specialty) stays single-sourced. */
+:global([data-theme="dark"]) .tcIc {
+  color: color-mix(in srgb, var(--sc) 62%, white);
+  background: color-mix(in srgb, var(--sc) 22%, transparent);
+}
+:global([data-theme="dark"]) .tcFill {
+  background: color-mix(in srgb, var(--sc) 62%, white);
+}
+:global([data-theme="dark"]) .savedIc {
+  color: color-mix(in srgb, var(--sc) 62%, white);
+  background: color-mix(in srgb, var(--sc) 22%, transparent);
+}
+
+/* ── Reduced motion ───────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .xpFill, .wbar, .tcFill { transition: none; }
+}

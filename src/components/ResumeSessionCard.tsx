@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Clock, ArrowRight, BookOpen } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { authFetch as fetch } from "@/lib/authFetch";
+import { getTopicConfig } from "@/lib/topics";
+import TopicIcon from "@/components/TopicIcon";
 
 type Lang = "de" | "en";
 
@@ -82,17 +84,19 @@ export default function ResumeSessionCard({ userId, lang }: Props) {
   if (state.status === "loading") {
     return (
       <div
-        className="rounded-2xl p-5 mb-6 animate-pulse"
-        style={{
-          background: "var(--mp-surface-raised)",
-          border: "1px solid var(--mp-border-subtle)",
-        }}
+        className="mp-card relative overflow-hidden p-3.5 mb-6 animate-pulse"
+        style={{ borderRadius: "var(--mp-r-card)" }}
       >
+        <span
+          aria-hidden
+          className="absolute left-0 top-0 bottom-0"
+          style={{ width: 3, background: "var(--mp-accent-teal)" }}
+        />
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl" style={{ background: "var(--mp-border)" }} />
+          <div className="w-[46px] h-[46px] rounded-[13px]" style={{ background: "var(--mp-surface-sunken)" }} />
           <div className="flex-1">
-            <div className="h-4 w-2/3 rounded mb-2" style={{ background: "var(--mp-border)" }} />
-            <div className="h-3 w-1/3 rounded" style={{ background: "var(--mp-border)" }} />
+            <div className="h-3.5 w-2/3 rounded mb-2" style={{ background: "var(--mp-surface-sunken)" }} />
+            <div className="h-3 w-1/3 rounded" style={{ background: "var(--mp-surface-sunken)" }} />
           </div>
         </div>
       </div>
@@ -110,52 +114,69 @@ export default function ResumeSessionCard({ userId, lang }: Props) {
     ? `/quiz?topic=${encodeURIComponent(session.topic)}&examSource=${session.examType}&questionId=${session.suggestedQuestionId}&autoStart=1`
     : `/quiz?topic=${encodeURIComponent(session.topic)}&examSource=${session.examType}&autoStart=1`;
 
+  const cfg = getTopicConfig(session.topic);
+  const lastLabel =
+    lang === "de"
+      ? `${session.questionsInSession} ${session.questionsInSession === 1 ? "Frage" : "Fragen"} · ${relTime}`
+      : `${session.questionsInSession} ${session.questionsInSession === 1 ? "question" : "questions"} · ${relTime}`;
+
+  // Blessed "Weitermachen" card (01-home.html): teal left-edge (the one
+  // sanctioned decorative spark), specialty-tinted icon tile, accent specialty
+  // tag, mono sub-line, CTA-blue go-button.
   return (
     <Link
       href={resumeHref}
-      className="mp-suggestion mp-suggestion--interactive mp-focusable mb-6 block group animate-slide-up"
+      className="mp-card mp-focusable relative overflow-hidden mb-6 block group animate-slide-up"
+      style={{ borderRadius: "var(--mp-r-card)", padding: 14 }}
       aria-label={lang === "de" ? `Weiter mit ${session.topic}` : `Continue with ${session.topic}`}
     >
-      <div className="flex items-center gap-4">
-        <div className="mp-suggestion__icon" aria-hidden>
-          <BookOpen className="w-5 h-5" />
+      <span
+        aria-hidden
+        className="absolute left-0 top-0 bottom-0"
+        style={{ width: 3, background: "var(--mp-accent-teal)" }}
+      />
+      <div className="flex items-center gap-3.5">
+        <div
+          className="flex items-center justify-center flex-shrink-0"
+          style={{
+            width: 46,
+            height: 46,
+            borderRadius: 13,
+            background: `color-mix(in srgb, ${cfg.color} 14%, transparent)`,
+            color: cfg.color,
+          }}
+          aria-hidden
+        >
+          <TopicIcon name={cfg.icon} className="w-[23px] h-[23px]" />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <p className="text-sm font-bold text-[var(--mp-fg)] truncate">
-              {lang === "de" ? `Weiter mit ${session.topic}` : `Continue ${session.topic}`}
-            </p>
-            <span
-              className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full font-semibold"
-              style={{
-                background: "rgba(0, 123, 95, 0.14)",
-                color: "var(--mp-viridian)",
-                letterSpacing: "0.08em",
-              }}
-            >
-              {lang === "de" ? "Fortsetzen" : "Resume"}
-            </span>
-          </div>
-          <p className="text-xs text-[var(--mp-fg-subtle)] mt-1 flex items-center gap-1.5 flex-wrap">
-            <Clock className="w-3 h-3" aria-hidden />
-            <span>{relTime}</span>
-            <span>·</span>
-            <span>
-              {session.questionsInSession}{" "}
-              {lang === "de"
-                ? session.questionsInSession === 1
-                  ? "Frage zuletzt"
-                  : "Fragen zuletzt"
-                : session.questionsInSession === 1
-                  ? "question last time"
-                  : "questions last time"}
-            </span>
+          <p
+            className="uppercase font-bold"
+            style={{ fontSize: 10, letterSpacing: "0.06em", color: "var(--mp-accent-text)" }}
+          >
+            {lang === "de" ? "Fortsetzen" : "Resume"}
+          </p>
+          <p
+            className="font-bold mt-0.5 truncate"
+            style={{ fontSize: 15, color: "var(--mp-fg)" }}
+            title={session.topic}
+          >
+            {session.topic}
+          </p>
+          <p
+            className="mt-1 font-mono"
+            style={{ fontSize: 12, color: "var(--mp-fg-muted)", fontVariantNumeric: "tabular-nums" }}
+          >
+            {lastLabel}
           </p>
         </div>
-        <ArrowRight
-          className="w-5 h-5 text-[var(--mp-viridian)] flex-shrink-0 group-hover:translate-x-0.5 transition-transform"
+        <div
+          className="flex items-center justify-center flex-shrink-0 group-hover:translate-x-0.5 transition-transform"
+          style={{ width: 38, height: 38, borderRadius: 11, background: "var(--mp-cta-blue)", color: "#fff" }}
           aria-hidden
-        />
+        >
+          <ArrowRight className="w-[18px] h-[18px]" />
+        </div>
       </div>
     </Link>
   );
