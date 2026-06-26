@@ -844,6 +844,14 @@ textarea:focus {
   --mp-cta-blue:        #4D8DF0; /* primary action — lifts off dark, AA on dark surfaces */
   --mp-cta-blue-hover:  #6BA1F4;
   --mp-warning-dk:      #F4A261; /* warning hue unchanged; amber text stays legible on low-alpha tint */
+  /* 2026-06-26 dark-contrast fix: error + info were the ONLY status text
+     colors never brightened for dark (viridian/teal/cta were). The :root
+     #D64545 / #3A7CA5 only reached ~3.4-3.6:1 as text on dark cards + tints.
+     Brightened along their own hue; both now clear AA (≥4.5:1) on BOTH the
+     bare #11233E card AND the translucent error/info tints below. The red
+     matches the existing --mp-focus-ring-error rgba(242,109,109). */
+  --mp-error:           #F26D6D; /* ~5.4:1 on #11233E, ~5.3:1 on error-tint */
+  --mp-info:            #5BA3CE; /* ~5.7:1 on #11233E, ~5.2:1 on info-tint */
 
   /* ─── CRITICAL: re-declare aliases INSIDE the dark scope ───
      (see block header — re-substitutes against the dark base tokens above) */
@@ -861,6 +869,21 @@ textarea:focus {
   --mp-status-warning: var(--mp-warning-dk);
   --mp-status-error:   var(--mp-error);
   --mp-status-info:    var(--mp-info);
+
+  /* ─── STATUS TINT BACKGROUNDS (dark) — 2026-06-26 dark-contrast fix ───
+     These four were hardcoded LIGHT in :root (#E6F4F1 / #FFF4E6 / #EAF3F9 /
+     #FDECEC) and NEVER re-declared for dark, so any card using
+     bg-[var(--mp-success-bg)] / -warning-bg / -info-bg / -error-bg rendered a
+     near-white cream/mint panel on the dark canvas — text on top fell to
+     ~1.05:1 (invisible). The literal-hex override matrix (.bg-[#FFF4E6] …
+     above) already maps these to dark translucent tints; we re-use THE SAME
+     values here so the token form and the class form render one consistent
+     tint. Once the bg goes dark, the viridian/amber/--mp-fg text on it reads
+     AA, so no text-color change is needed for these cards. */
+  --mp-success-bg:      rgba(0, 80, 60, 0.2);
+  --mp-warning-bg:      rgba(100, 60, 20, 0.3);
+  --mp-info-bg:         rgba(30, 58, 82, 0.3);
+  --mp-error-bg:        rgba(100, 30, 30, 0.2);
 
   /* ─── BRAND TINTS (dark) — translucent so they sit ON the surface ─── */
   --mp-tint-brand:      rgba(77, 141, 240, 0.14);
@@ -892,6 +915,21 @@ textarea:focus {
   /* Suggestion tokens adapt — slightly brighter tint for dark surfaces */
   --mp-suggestion-bg:     rgba(0, 168, 150, 0.09);
   --mp-suggestion-border: rgba(0, 168, 150, 0.35);
+}
+
+/* ─── TOPIC-COLOUR TEXT (theme-adaptive) — 2026-06-26 dark-contrast fix ───
+   Specialty/topic colours from topics.ts (#003A8C navy, #6366F1 indigo,
+   #8B5CF6 purple, #D64545 red, #0891B2 cyan, …) are dark by design so they
+   read on LIGHT surfaces. When used as TEXT on the dark canvas they fell to
+   1.3–4.0:1 (the cream-card bug above was masking them). Sites that render a
+   topic colour as a TEXT LABEL set `--topic-color` inline and add
+   `.topic-text`; in dark we mix 45% white into the hue so every specialty
+   clears AA (worst case navy ≈ 5.0:1 on a card) while staying recognisably
+   the same colour. Light mode = the raw hue, unchanged. Icon-only usages
+   (graphical, 3:1 bar) keep the raw colour and are intentionally untouched. */
+.topic-text { color: var(--topic-color); }
+[data-theme="dark"] .topic-text {
+  color: color-mix(in srgb, var(--topic-color) 50%, #FFFFFF);
 }
 
 /* ═══ LAYOUT PRIMITIVES ═══ */

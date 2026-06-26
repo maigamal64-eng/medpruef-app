@@ -1116,11 +1116,11 @@ export default function ProgressPage() {
                             return (
                               <span
                                 key={wt.topic}
-                                className="inline-flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded-full border"
+                                className="topic-text inline-flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded-full border"
                                 style={{
+                                  ["--topic-color" as string]: config.color,
                                   borderColor: `color-mix(in srgb, ${config.color} 35%, transparent)`,
                                   backgroundColor: `color-mix(in srgb, ${config.color} 10%, transparent)`,
-                                  color: config.color,
                                 }}
                               >
                                 <TopicIcon name={config.icon} className="w-3 h-3" />

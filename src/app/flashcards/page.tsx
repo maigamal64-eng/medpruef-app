@@ -231,8 +231,8 @@ function Flashcard({
           {/* Top row: specialty chip + side label */}
           <div className="flex items-center justify-between mb-2">
             <span
-              className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1.5 rounded-full"
-              style={{ color: sc, backgroundColor: scTint }}
+              className="topic-text inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1.5 rounded-full"
+              style={{ ["--topic-color" as string]: sc, backgroundColor: scTint }}
             >
               <TopicIcon name={topicConfig.icon} className="w-3.5 h-3.5" />
               {question.topic}
@@ -309,8 +309,8 @@ function Flashcard({
           {/* Top row: specialty chip + side label */}
           <div className="flex items-center justify-between mb-3">
             <span
-              className="inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1.5 rounded-full"
-              style={{ color: sc, backgroundColor: scTint }}
+              className="topic-text inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1.5 rounded-full"
+              style={{ ["--topic-color" as string]: sc, backgroundColor: scTint }}
             >
               <TopicIcon name={topicConfig.icon} className="w-3.5 h-3.5" />
               {question.topic}
@@ -688,8 +688,8 @@ function FlashcardContent() {
             </div>
             <div className="text-[11px] text-[var(--mp-fg-subtle)] mt-0.5 truncate flex items-center justify-center gap-1.5">
               <span
-                className="inline-flex items-center gap-1"
-                style={{ color: topicConfig.color }}
+                className="topic-text inline-flex items-center gap-1"
+                style={{ ["--topic-color" as string]: topicConfig.color }}
               >
                 <TopicIcon name={topicConfig.icon} className="w-3 h-3" />
                 {question.topic}

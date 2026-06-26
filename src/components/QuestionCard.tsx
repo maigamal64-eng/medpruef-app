@@ -329,8 +329,8 @@ export default function QuestionCard({
         {/* Top row: topic badge + question counter + bookmark */}
         <div className="flex items-center justify-between mb-4">
           <span
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--mp-r-button)] text-xs font-medium"
-            style={{ backgroundColor: `${config.color}18`, color: config.color }}
+            className="topic-text inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--mp-r-button)] text-xs font-medium"
+            style={{ backgroundColor: `${config.color}18`, ["--topic-color" as string]: config.color }}
           >
             <TopicIcon name={config.icon} className="w-4 h-4" />
             <span className="max-w-[140px] truncate">{question.topic}</span>
