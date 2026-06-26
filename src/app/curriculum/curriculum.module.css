@@ -1,0 +1,271 @@
+/* ═══════════════════════════════════════════════════════════════
+   /curriculum - Lehrplan surface (co-located module, B-loop 2026-06-26)
+
+   Lifted 1:1 in spirit from reviews/reimplementation-2026-06-26/design/
+   08-exam-curriculum.html (the Lehrplan/curriculum half) + _kit.css. Only
+   the STRUCTURE / SVG ring that globals.css doesn't already own lives
+   here; all COLOR comes from --mp-* tokens so dark mode is a pure
+   variable flip. Dark-only specialty lifts use :global([data-theme="dark"]).
+
+   Scope is the /curriculum surface ONLY (disjoint from other surfaces +
+   from globals.css / shared primitives). Class names are intentionally
+   plain - CSS-modules locally scopes them, so no collision risk.
+
+   DATA NOTE: the mockup shows expand-to-subtopics (Kardiologie 412/420,
+   etc.) but MedPrüf tracks per-TOPIC only (questions.topic) - there is no
+   per-subarea table/API. Per the data contract ("read the CONTRACT not the
+   old UI" + agent_honesty_drop_dont_fabricate), the subtopic expansion is
+   dropped: each fach card is a direct link to /quiz?topic=. The ring +
+   count are COVERAGE (geübt = answered/total), matching the mockup math
+   (1.520/1.840 = 83%).
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Page scaffolding ───────────────────────────────────────────── */
+.page {
+  max-width: 1120px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* Section heading with a fading rule - the mockup's section-divider */
+.sectionHead {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 4px 0 14px;
+}
+.sectionHead h2 {
+  font-family: var(--mp-font-display);
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--mp-fg);
+  white-space: nowrap;
+}
+.sectionHead .ln {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, var(--mp-border), transparent);
+}
+.sectionHead .count {
+  font-family: var(--mp-font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--mp-fg-subtle);
+  white-space: nowrap;
+}
+
+/* ── Overview strip (catalogue total · SIP4 · SIP5 · completion) ──── */
+.overview {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+@media (min-width: 640px) {
+  .overview { gap: 28px; }
+}
+.ovItem { text-align: center; }
+.ovNum {
+  font-family: var(--mp-font-mono);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  display: block;
+}
+.ovNumLg { font-size: 26px; color: var(--mp-fg); }
+.ovNumSip4 { font-size: 19px; color: var(--mp-warning-dk); }
+.ovNumSip5 { font-size: 19px; color: var(--mp-viridian); }
+.ovNumPct { font-size: 19px; color: var(--mp-cta-blue); }
+.ovLbl {
+  font-size: 11px;
+  color: var(--mp-fg-subtle);
+  margin-top: 2px;
+}
+.ovDivider {
+  width: 1px;
+  height: 40px;
+  background: var(--mp-border);
+}
+@media (max-width: 639px) {
+  .ovDivider { display: none; }
+}
+:global([data-theme="dark"]) .ovNumSip4 { color: var(--mp-warning); }
+
+/* ── Curriculum tree: fach cards ─────────────────────────────────── */
+.grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+@media (min-width: 768px) {
+  .grid { grid-template-columns: 1fr 1fr; }
+}
+
+/* The fach card - color edge + icon + completion ring + go affordance */
+.curtop {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--mp-surface);
+  border: 1px solid var(--mp-border-soft);
+  border-radius: var(--mp-r-card);
+  padding: 14px;
+  box-shadow: var(--mp-shadow-card);
+  position: relative;
+  overflow: hidden;
+  text-align: left;
+  width: 100%;
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.curtop:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--sc) 40%, var(--mp-border));
+  box-shadow: var(--mp-shadow-card-hover, var(--mp-shadow-card));
+}
+.curtop:active { transform: translateY(0); }
+.curtop:focus-visible {
+  outline: 2px solid var(--sc);
+  outline-offset: 2px;
+}
+
+/* Left color rail = TOPIC_CONFIG color */
+.edge {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--sc);
+}
+
+/* Specialty icon tile */
+.ctIc {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: color-mix(in srgb, var(--sc) 14%, transparent);
+  color: var(--sc);
+}
+.ctIc svg { width: 21px; height: 21px; }
+
+.ctBody { flex: 1; min-width: 0; }
+.ctName {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--mp-fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ctMeta {
+  font-size: 11.5px;
+  color: var(--mp-fg-subtle);
+  margin-top: 3px;
+  font-variant-numeric: tabular-nums;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ctMeta .go {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+  color: var(--mp-fg-subtle);
+  transition: transform 0.15s ease, color 0.15s ease;
+}
+.curtop:hover .ctMeta .go {
+  transform: translateX(2px);
+  color: var(--sc);
+}
+
+/* Completion ring (coverage %) */
+.ctRing {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  position: relative;
+}
+.ctRing svg {
+  width: 44px;
+  height: 44px;
+  transform: rotate(-90deg);
+}
+.ctRing .ringBg { stroke: var(--mp-surface-sunken); }
+.ctRing .ringFg {
+  stroke: var(--sc);
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.6s ease;
+}
+.ctRing .pc {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--mp-font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--mp-fg);
+}
+
+/* ── Dark mode: lift each specialty colour off the oxford canvas ────
+   SPECS §"specialty colors": dark mode lifts each --sc via
+   color-mix(in srgb, var(--sc) 62%, white) so the raw TOPIC_CONFIG hex
+   (tuned for light) reads on the dark canvas. --sc is set inline from
+   the hex; here we recompute the VISUAL colour off it for dark only, so
+   the data contract (one hex per specialty) stays single-sourced. */
+:global([data-theme="dark"]) .edge {
+  background: color-mix(in srgb, var(--sc) 62%, white);
+}
+:global([data-theme="dark"]) .ctIc {
+  color: color-mix(in srgb, var(--sc) 62%, white);
+  background: color-mix(in srgb, var(--sc) 22%, transparent);
+}
+:global([data-theme="dark"]) .ctRing .ringFg {
+  stroke: color-mix(in srgb, var(--sc) 62%, white);
+}
+:global([data-theme="dark"]) .curtop:hover {
+  border-color: color-mix(in srgb, var(--sc) 50%, var(--mp-border));
+}
+
+/* ── Legend (coverage buckets) ────────────────────────────────────── */
+.legend {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--mp-fg-muted);
+}
+.legendLbl {
+  font-family: var(--mp-font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--mp-fg-subtle);
+}
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.legendDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.dotFull { background: var(--mp-viridian); }
+.dotPart { background: var(--mp-warning); }
+.dotNone { background: var(--mp-border-strong); }
+
+/* ── Reduced motion ───────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .curtop, .ctMeta .go, .ctRing .ringFg { transition: none; }
+  .curtop:hover { transform: none; }
+}

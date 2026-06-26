@@ -796,7 +796,10 @@ function QuizContent() {
                     hideActions
                   />
 
-                  {/* Mobile/tablet action row — visible on screens without side rail */}
+                  {/* Mobile/tablet action row — visible on screens without side rail.
+                      metaOnly: bookmark + flag only. AI + Notes live in the
+                      QuestionCard ContextTabs below (FEEDBACK #4b/#4c/#4e/#6 — one
+                      home per action, no duplicate/dead buttons). */}
                   <div className="xl:hidden mt-3">
                     <QuestionActions
                       question={question}
@@ -806,6 +809,7 @@ function QuizContent() {
                       layout="row"
                       unlockAfterAnswer
                       answered={answered}
+                      metaOnly
                     />
                   </div>
 
@@ -886,6 +890,7 @@ function QuizContent() {
                   layout="rail"
                   unlockAfterAnswer
                   answered={answered}
+                  metaOnly
                 />
               </aside>
             )}

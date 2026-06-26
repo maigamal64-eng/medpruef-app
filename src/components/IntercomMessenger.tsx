@@ -15,9 +15,13 @@ import { authFetch } from "@/lib/authFetch";
  * secret ever reaches the browser.
  *
  * Launcher visibility (2026-06-26): responsive.
- *   - DESKTOP (>= 768px): Intercom shows its OWN default launcher (bottom-right);
- *     the first-party FeedbackWidget renders its own separate button. Two
- *     distinct affordances, no overlap.
+ *   - DESKTOP (>= 768px): Intercom shows its OWN default launcher at the
+ *     bottom-right corner (vertical_padding:20 → it sits ~20px up, ~60px tall).
+ *     The first-party FeedbackWidget renders its own separate button STACKED
+ *     directly ABOVE it (bottom:96px, same right column), so the two are
+ *     distinct affordances that never overlap. (FeedbackWidget previously sat
+ *     at bottom:24px, inside this launcher's footprint, and was hidden behind
+ *     the chat bubble — the desktop bug flagged in FEEDBACK-LOG #1.)
  *   - MOBILE (< 768px): Intercom's default launcher is HIDDEN. The single
  *     first-party FloatingLauncher (the merged FeedbackWidget) owns the one
  *     bottom-right button and opens this Messenger via `Intercom('show')`.

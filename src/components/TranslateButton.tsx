@@ -134,7 +134,10 @@ export default function TranslateButton({
       const res = await fetch("/api/translate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ questionId, field, targetLang: code }),
+        // The route reads `lang` (validated against SUPPORTED_LANGS) — sending
+        // `targetLang` left `lang` empty server-side, so every request 400'd
+        // and the UI showed the generic "Translation failed" (FEEDBACK #4d).
+        body: JSON.stringify({ questionId, field, lang: code }),
       });
       const data: TranslateResponse = await res.json().catch(() => ({}));
       if (res.ok && data.translatedText) {

@@ -4,6 +4,13 @@ import { useEffect, useState, useCallback, useRef, useMemo, Suspense } from "rea
 import { BrandedLoader } from "@/components/Logo";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+// authFetch sends the signed x-session-token. WITHOUT it, every /api/questions
+// call in this page was treated as a GUEST, so the route applied the free-tier
+// 150-cap paywall intersection and the per-topic loads returned near-empty —
+// collapsing the default 180-question exam to ~44 (defeated the #2a blueprint
+// fix). The whole app uses this alias for authed calls; the exam page had
+// silently been on the unauthenticated global fetch.
+import { authFetch as fetch } from "@/lib/authFetch";
 import { getTopicConfig, VIENNA_EXAM_PARTS } from "@/lib/topics";
 import { t, getLang, setLang } from "@/lib/i18n";
 import { getStoredSession, hasProAccess } from "@/lib/auth";
@@ -95,18 +102,59 @@ interface TopicResult {
   correct: number;
 }
 
-const EXAM_CONFIG = [
-  { topic: "Innere Medizin", count: 30 },
-  { topic: "Chirurgische Fächer", count: 30 },
-  { topic: "Kinder- und Jugendheilkunde", count: 30 },
-  { topic: "Neurologie", count: 25 },
-  { topic: "Dermatologie und Venerologie", count: 25 },
-  { topic: "Frauenheilkunde/Gynäkologie", count: 25 },
-  { topic: "Notfall- und Intensivmedizin", count: 25 },
-  { topic: "Hals-Nasen-Ohrenheilkunde", count: 20 },
-  { topic: "Psychiatrie", count: 20 },
-  { topic: "Augenheilkunde", count: 20 },
-];
+// ─── Real exam blueprints (per exam_type) ────────────────────────────────
+// Each blueprint mirrors the ACTUAL exam structure for that recognition
+// route, NOT an arbitrary fixed count. The `topic` strings MUST match the
+// `questions.topic` values EXACTLY (case-sensitive — the API filters on
+// them), or the per-topic fetch silently under-fills and the simulation
+// collapses to a fraction of its size (the "52-question" / "Augenheilkunde
+// 20, others 1-2" bug). Counts are weighted by the live DB topic
+// distribution and sum to a realistic full-exam length.
+//
+// SOT-REF: exam structure @ MEDPRUF-SOT.md §1
+//  - Kenntnisprüfung Wien: Arztprüfung Allgemeinmedizin, 10 SIP 4/5
+//    specialties, full mock ≈ 180 MCQ.
+//  - Stichprobentest (Innsbruck, DB key kmp_innsbruck): national
+//    Nostrifizierung screening, ~10-11 clinical blocks, pass ≈ 6/10 blocks
+//    at ≥60%. Topics from the MedUni Innsbruck curriculum (KoalaMed).
+//  - Pharmakologie: open-answer only (no MCQ) → no MCQ simulation.
+type ExamBlueprintEntry = { topic: string; count: number };
+
+const EXAM_BLUEPRINTS: Record<string, ExamBlueprintEntry[]> = {
+  // Kenntnisprüfung Wien — 180 MCQ across the 10 SIP 4/5 specialties.
+  kenntnispruefung: [
+    { topic: "Innere Medizin", count: 28 },
+    { topic: "Chirurgische Fächer", count: 28 },
+    { topic: "Notfall- und Intensivmedizin", count: 20 },
+    { topic: "Neurologie", count: 18 },
+    { topic: "Frauenheilkunde/Gynäkologie", count: 18 },
+    { topic: "Psychiatrie", count: 16 },
+    { topic: "Dermatologie und Venerologie", count: 14 },
+    { topic: "Kinder- und Jugendheilkunde", count: 14 },
+    { topic: "Hals-Nasen-Ohrenheilkunde", count: 12 },
+    { topic: "Augenheilkunde", count: 12 },
+  ],
+  // Stichprobentest (Innsbruck) — national Nostrifizierung screening, the
+  // real clinical blocks (DB topic casing is authoritative, incl. "Und").
+  kmp_innsbruck: [
+    { topic: "Neurologie", count: 20 },
+    { topic: "Innere Medizin", count: 18 },
+    { topic: "Psychiatrie", count: 16 },
+    { topic: "Chirurgische Spezialfächer Und Anästhesie", count: 14 },
+    { topic: "Augenheilkunde", count: 14 },
+    { topic: "Allgemeine Chirurgie", count: 12 },
+    { topic: "Frauenheilkunde/Gynäkologie", count: 12 },
+    { topic: "Kinder Und Jugendheilkunde", count: 12 },
+    { topic: "Dermatologie und Venerologie", count: 10 },
+    { topic: "Hals-Nasen-Ohrenheilkunde", count: 10 },
+    { topic: "Kinder Und Jugendpsychiatrie", count: 8 },
+  ],
+};
+
+/** The blueprint for the active exam source (falls back to Kenntnisprüfung). */
+function getExamBlueprint(examSource: string): ExamBlueprintEntry[] {
+  return EXAM_BLUEPRINTS[examSource] ?? EXAM_BLUEPRINTS.kenntnispruefung;
+}
 
 const EXAM_DURATION_S = 4 * 60 * 60; // 4 hours
 const PASS_THRESHOLD = 0.6;
@@ -121,6 +169,12 @@ function formatTime(seconds: number): string {
 function ExamContent() {
   const searchParams = useSearchParams();
   const examSource = searchParams.get("examSource") || "kenntnispruefung";
+  // The real exam blueprint for this exam source + its full length. Drives
+  // the entry info-cards, the default question count, and the load loop.
+  const examConfig = useMemo(() => getExamBlueprint(examSource), [examSource]);
+  const examTotal = useMemo(() => examConfig.reduce((s, c) => s + c.count, 0), [examConfig]);
+  // Pharma has no MCQ questions → a standard MCQ simulation cannot be built.
+  const mcqSimUnavailable = examSource === "pharma";
   const [lang, setLangState] = useState<Lang>("de");
   const [userId, setUserId] = useState("");
   const [userName, setUserName] = useState("");
@@ -306,8 +360,8 @@ function ExamContent() {
     } else {
       const partTopics = selectedPart !== "all" ? VIENNA_EXAM_PARTS[selectedPart] : null;
       const configToUse = partTopics
-        ? EXAM_CONFIG.filter((c) => partTopics.includes(c.topic))
-        : EXAM_CONFIG;
+        ? examConfig.filter((c) => partTopics.includes(c.topic))
+        : examConfig;
 
       for (let i = 0; i < configToUse.length; i++) {
         const { topic, count } = configToUse[i];
@@ -398,7 +452,7 @@ function ExamContent() {
     setCurrentIdx(0);
     setTimeLeft(EXAM_DURATION_S);
     setPhase("exam");
-  }, [examSource, selectedPart, customFilters, buildCustomParams]);
+  }, [examSource, selectedPart, customFilters, buildCustomParams, examConfig]);
 
   // Timer management
   useEffect(() => {
@@ -591,15 +645,60 @@ function ExamContent() {
                   <GraduationCap className="w-10 h-10 text-[var(--mp-status-warning)]" />
                 </div>
                 <h1 className="mp-h2 mb-2">{t("exam_sim_title", lang)}</h1>
-                <p className="text-[var(--mp-fg-subtle)] text-sm">{t("exam_sim_desc", lang)}</p>
+                {/* Dynamic summary — reflects the REAL exam length + structure
+                    for the active exam source / selected part (never a stale
+                    hardcoded "250"). Hidden in custom mode (count is the live
+                    filter preview) and when MCQ sim is unavailable. */}
+                {!mcqSimUnavailable && selectedPart !== "custom" && (() => {
+                  const shown =
+                    selectedPart === "sip4" || selectedPart === "sip5"
+                      ? examConfig.filter((c) => VIENNA_EXAM_PARTS[selectedPart].includes(c.topic))
+                      : examConfig;
+                  const count = shown.reduce((s, c) => s + c.count, 0);
+                  const specialties = shown.length;
+                  return (
+                    <p className="text-[var(--mp-fg-subtle)] text-sm">
+                      <span className="font-mono font-semibold text-[var(--mp-fg-muted)]">{count}</span>{" "}
+                      {t("questions", lang)} ·{" "}
+                      <span className="font-mono font-semibold text-[var(--mp-fg-muted)]">{specialties}</span>{" "}
+                      {lang === "de" ? "Fachgebiete" : "specialties"} ·{" "}
+                      {lang === "de" ? "4 Stunden" : "4 hours"}
+                    </p>
+                  );
+                })()}
+                {mcqSimUnavailable && (
+                  <p className="text-[var(--mp-fg-subtle)] text-sm">
+                    {lang === "de" ? "Pharmakologie / Rezeptierkunde" : "Pharmacology / prescribing"}
+                  </p>
+                )}
               </div>
 
+              {/* Pharma has open-answer questions only → no MCQ simulation.
+                  Offer the quiz instead of a broken 0-question exam. */}
+              {mcqSimUnavailable && (
+                <div className="card rounded-2xl p-5 mb-8 text-center">
+                  <p className="text-sm font-semibold text-[var(--mp-fg)] mb-1.5">
+                    {lang === "de"
+                      ? "Keine Prüfungssimulation für Pharmakologie"
+                      : "No exam simulation for Pharmacology"}
+                  </p>
+                  <p className="text-xs text-[var(--mp-fg-muted)] mb-4">
+                    {lang === "de"
+                      ? "Pharmakologie/Rezeptierkunde nutzt offene Antworten, keine Multiple-Choice-Fragen. Übe sie im Quiz-Modus."
+                      : "Pharmacology/prescribing uses open answers, not multiple-choice. Practise it in quiz mode."}
+                  </p>
+                  <Link href="/quiz?examSource=pharma" className="btn-primary inline-flex px-5 py-2.5 text-sm">
+                    {lang === "de" ? "Zum Quiz" : "Go to quiz"}
+                  </Link>
+                </div>
+              )}
+
               {/* Exam info cards — filtered by selected part (hidden in custom mode, replaced by filter panel) */}
-              {selectedPart !== "custom" && (() => {
+              {!mcqSimUnavailable && selectedPart !== "custom" && (() => {
                 const displayedConfig =
                   selectedPart === "sip4" || selectedPart === "sip5"
-                    ? EXAM_CONFIG.filter((c) => VIENNA_EXAM_PARTS[selectedPart].includes(c.topic))
-                    : EXAM_CONFIG;
+                    ? examConfig.filter((c) => VIENNA_EXAM_PARTS[selectedPart].includes(c.topic))
+                    : examConfig;
                 return (
                   <div className="grid grid-cols-2 gap-6 mb-10 stagger">
                     {displayedConfig.map(({ topic, count }) => {
@@ -652,7 +751,7 @@ function ExamContent() {
                     <p className="text-[10px] text-[var(--mp-fg-subtle)] text-center mt-2">
                       {selectedPart === "sip4" ? t("sip4_label", lang) : t("sip5_label", lang)}
                       {" · "}
-                      {EXAM_CONFIG.filter((c) =>
+                      {examConfig.filter((c) =>
                         VIENNA_EXAM_PARTS[selectedPart].includes(c.topic)
                       ).reduce((s, c) => s + c.count, 0)}{" "}
                       {t("questions", lang)}
@@ -674,7 +773,7 @@ function ExamContent() {
                       {t("custom_subjects", lang)}
                     </label>
                     <div className="grid grid-cols-2 gap-1.5">
-                      {EXAM_CONFIG.map(({ topic }) => {
+                      {examConfig.map(({ topic }) => {
                         const checked = customFilters.subjects.includes(topic);
                         return (
                           <label
@@ -812,22 +911,40 @@ function ExamContent() {
               )}
 
               {/* Pass threshold notice */}
-              <div className="bg-[var(--mp-status-warning)]/6 border border-[var(--mp-status-warning)]/25 rounded p-4 mb-6 text-center">
-                <p className="text-sm text-[var(--mp-status-warning)] flex items-center justify-center gap-1"><AlertTriangle className="w-4 h-4 inline" /> {t("pass_threshold", lang)}</p>
-              </div>
+              {!mcqSimUnavailable && (
+                <div className="bg-[var(--mp-status-warning)]/6 border border-[var(--mp-status-warning)]/25 rounded p-4 mb-6 text-center">
+                  <p className="text-sm text-[var(--mp-status-warning)] flex items-center justify-center gap-1"><AlertTriangle className="w-4 h-4 inline" /> {t("pass_threshold", lang)}</p>
+                </div>
+              )}
 
-              <button
-                onClick={loadExam}
-                disabled={selectedPart === "custom" && (customCount === null || customCount === 0)}
-                className="btn-primary w-full py-4 text-base disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                <GraduationCap className="w-5 h-5 inline" /> {t("start_exam", lang)}
-                {selectedPart === "custom" && customCount !== null && customCount > 0 && (
-                  <span className="ml-2 font-mono text-sm opacity-70">
-                    ({Math.min(customCount, customFilters.limit)})
-                  </span>
-                )}
-              </button>
+              {!mcqSimUnavailable && (() => {
+                // The real default length for the start button — full exam, or
+                // the selected SIP part, or the live custom count.
+                const defaultCount =
+                  selectedPart === "sip4" || selectedPart === "sip5"
+                    ? examConfig
+                        .filter((c) => VIENNA_EXAM_PARTS[selectedPart].includes(c.topic))
+                        .reduce((s, c) => s + c.count, 0)
+                    : examTotal;
+                return (
+                  <button
+                    onClick={loadExam}
+                    disabled={selectedPart === "custom" && (customCount === null || customCount === 0)}
+                    className="btn-primary w-full py-4 text-base disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <GraduationCap className="w-5 h-5 inline" /> {t("start_exam", lang)}
+                    {selectedPart === "custom" ? (
+                      customCount !== null && customCount > 0 && (
+                        <span className="ml-2 font-mono text-sm opacity-70">
+                          ({Math.min(customCount, customFilters.limit)})
+                        </span>
+                      )
+                    ) : (
+                      <span className="ml-2 font-mono text-sm opacity-70">· {defaultCount}</span>
+                    )}
+                  </button>
+                );
+              })()}
             </div>
           </div>
         </main>
@@ -922,7 +1039,11 @@ function ExamContent() {
               />
             </div>
 
-            {/* Action rail — favorite, AI explain, notes, report */}
+            {/* Action rail — bookmark + flag only (metaOnly). In review the
+                QuestionCard above is answered, so its ContextTabs own AI +
+                Notes + Translate; the rail keeps just the persistent meta
+                actions so there is no duplicate surface (matches the quiz IA,
+                FEEDBACK #4e). */}
             <div className="mb-4">
               <QuestionActions
                 question={{
@@ -936,6 +1057,7 @@ function ExamContent() {
                 lang={lang}
                 layout="row"
                 answered={true}
+                metaOnly
               />
             </div>
 
@@ -1089,7 +1211,20 @@ function ExamContent() {
   // Keyboard navigation on the minimap grid.
   // Arrow keys move focus to the next/prev/row-up/row-down cell. Enter/Space jumps.
   const handleMinimapKey = (e: React.KeyboardEvent<HTMLButtonElement>, idxInVisible: number) => {
-    const cols = 10;
+    // The grid is auto-fill, so the column count is layout-derived. Measure it
+    // live by counting the cells that share the first row's offsetTop (falls
+    // back to 10 if the grid isn't mounted), so Up/Down jump exactly one row.
+    let cols = 10;
+    const cells = minimapRef.current?.querySelectorAll<HTMLButtonElement>("[data-cell-idx]");
+    if (cells && cells.length > 0) {
+      const firstTop = cells[0].offsetTop;
+      let c = 0;
+      for (const cell of cells) {
+        if (cell.offsetTop === firstTop) c++;
+        else break;
+      }
+      if (c > 0) cols = c;
+    }
     let next = idxInVisible;
     if (e.key === "ArrowRight") next = Math.min(visibleIdxs.length - 1, idxInVisible + 1);
     else if (e.key === "ArrowLeft") next = Math.max(0, idxInVisible - 1);
@@ -1120,7 +1255,9 @@ function ExamContent() {
     const isAnswered = answers[idx] !== undefined;
     const isFlagged = flaggedIdxs.has(idx);
 
-    let cellClasses = "aspect-square w-full min-w-[32px] lg:min-w-[34px] rounded-md font-mono text-[10px] font-bold flex items-center justify-center transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mp-viridian)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--mp-surface-raised)]";
+    // No min-width — the auto-fill grid track already guarantees a sensible
+    // cell size; a min-width wider than the track is what caused the overlap.
+    let cellClasses = "aspect-square w-full rounded-md font-mono text-[10px] font-bold flex items-center justify-center transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mp-viridian)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--mp-surface-raised)]";
 
     if (isCurrent) {
       cellClasses += " bg-[var(--mp-viridian)]/15 text-[var(--mp-viridian)] border-2 border-[var(--mp-viridian)] shadow-[0_0_0_3px_rgba(0,168,150,0.2)]";
@@ -1305,10 +1442,14 @@ function ExamContent() {
           ref={minimapRef}
           role="grid"
           aria-label={lang === "de" ? "Frage-Navigation" : "Question navigation"}
-          className="grid grid-cols-10 gap-1 mb-3"
+          // auto-fill + minmax derives the column count from the available
+          // width, so cells never overflow their track (the overlap bug) and
+          // the grid scales cleanly to ANY question count (52 → 180+).
+          className="grid gap-1.5 mb-3"
+          style={{ gridTemplateColumns: "repeat(auto-fill, minmax(30px, 1fr))" }}
         >
           {visibleIdxs.length === 0 ? (
-            <p className="col-span-10 text-center text-xs text-[var(--mp-fg-subtle)] py-6">
+            <p className="text-center text-xs text-[var(--mp-fg-subtle)] py-6" style={{ gridColumn: "1 / -1" }}>
               {lang === "de" ? "Keine markierten Fragen" : "No flagged questions"}
             </p>
           ) : (

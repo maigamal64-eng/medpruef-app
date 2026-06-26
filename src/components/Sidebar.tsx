@@ -263,7 +263,7 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0 }: Sidebar
     dotTooltip?: string;
   }> = [
     { href: "/", icon: <Home className="w-5 h-5" />, label: t("home", lang), key: "home" },
-    { href: userId ? `/quiz?topic=random&userId=${userId}` : "/quiz", icon: <FileText className="w-5 h-5" />, label: t("quiz", lang), key: "quiz" },
+    { href: userId ? `/quiz?setup=1&userId=${userId}` : "/quiz?setup=1", icon: <FileText className="w-5 h-5" />, label: t("quiz", lang), key: "quiz" },
     { href: "/flashcards", icon: <Layers className="w-5 h-5" />, label: t("flashcards", lang), key: "flashcards" },
     { href: "/exam", icon: <GraduationCap className="w-5 h-5" />, label: t("exam", lang), key: "exam" },
     { href: userId ? `/stats?userId=${userId}` : "/stats", icon: <BarChart3 className="w-5 h-5" />, label: t("stats", lang), key: "stats" },

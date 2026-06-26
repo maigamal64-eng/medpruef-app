@@ -261,18 +261,27 @@ function Flashcard({
             )}
           </div>
 
-          {/* Recall cue (stem) — centered, dominant */}
-          <div className="flex-1 flex flex-col items-center justify-center text-center gap-4 px-1">
-            <p className="font-display font-bold text-[var(--mp-fg)] text-[19px] sm:text-[21px] leading-[1.3] whitespace-pre-line">
-              {stem}
-            </p>
-            {question.image_url && (
-              <img
-                src={question.image_url}
-                alt=""
-                className="max-h-36 rounded-lg object-contain"
-              />
-            )}
+          {/* Recall cue (stem). The card face is `overflow-hidden` with a
+              fixed aspect-ratio (esp. lg:16/10 on desktop), so a long stem
+              (e.g. the Kinder-/Jugendheilkunde ABO-vignette) was clipped /
+              faded at the bottom. Fix: this container SCROLLS.
+              NOTE: `justify-start` (not `justify-center`) + `my-auto` on the
+              inner block — a `justify-center` flex column with overflow makes
+              the TOP of tall content unreachable (flexbox bug); this way short
+              stems still center and long stems scroll fully from the top. */}
+          <div className="flex-1 min-h-0 flex flex-col items-center justify-start text-center gap-4 px-1 overflow-y-auto -mr-1 pr-1">
+            <div className="my-auto flex flex-col items-center gap-4 w-full">
+              <p className="font-display font-bold text-[var(--mp-fg)] text-[19px] sm:text-[21px] leading-[1.3] whitespace-pre-line">
+                {stem}
+              </p>
+              {question.image_url && (
+                <img
+                  src={question.image_url}
+                  alt=""
+                  className="max-h-36 rounded-lg object-contain"
+                />
+              )}
+            </div>
           </div>
 
           {/* Flip hint */}
@@ -711,9 +720,16 @@ function FlashcardContent() {
         </div>
 
         {/* ── Card area: one centered card, full focus ──────────────── */}
-        <div className="flex-1 flex items-center justify-center px-5 lg:px-8 py-2">
-          <div className="w-full max-w-[340px] lg:max-w-[460px]">
-            <div className="aspect-[3/4] lg:aspect-[16/10] w-full">
+        {/* Desktop sizing fix for #1: the old fixed `lg:aspect-[16/10]` (~460×287)
+            was too short for long stems, forcing heavy scroll/clip. Mobile keeps
+            the 3/4 ratio (it already reads fine there). On desktop the card now
+            GROWS to fill the available column height — clamp(420px, 62vh, 620px),
+            wider max-w-[560px] — so most long questions fit with little/no scroll,
+            and the front face still scrolls as the guaranteed never-clip backstop.
+            The 3D flip is unaffected (both faces fill inset-0 of whatever box). */}
+        <div className="flex-1 flex items-center justify-center px-5 lg:px-8 py-2 min-h-0">
+          <div className="w-full max-w-[340px] lg:max-w-[560px]">
+            <div className="aspect-[3/4] lg:aspect-auto lg:h-[clamp(420px,62vh,620px)] w-full">
               <Flashcard
                 question={question}
                 flipped={flipped}

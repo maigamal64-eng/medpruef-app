@@ -126,10 +126,13 @@ export default function FeedbackWidget() {
     setOpen(true)
   }
 
-  // The feedback panel — same upward shift as the launcher so it clears the
-  // mobile bottom-nav. Shared by both mobile + desktop.
+  // The feedback panel.
+  //   - Mobile: bottom:96px (clears the bottom-nav), shared with the launcher.
+  //   - Desktop: bottom:96px so the panel opens ABOVE Intercom's own launcher
+  //     (~60px tall at bottom:20px) instead of overlapping it. Was md:bottom-6
+  //     (24px) which collided with — and hid behind — the Intercom bubble.
   const feedbackPanel = open && (
-    <div className="fixed bottom-24 right-4 md:bottom-6 md:right-6 z-50 w-80 max-w-[calc(100vw-2rem)]">
+    <div className="fixed bottom-24 right-4 md:right-6 z-50 w-80 max-w-[calc(100vw-2rem)]">
       <div className="bg-[var(--mp-surface-raised)] rounded-2xl shadow-2xl border border-[var(--mp-border-subtle)] overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 bg-[var(--mp-cta-blue)] text-white">
@@ -180,14 +183,20 @@ export default function FeedbackWidget() {
     </div>
   )
 
-  // ─── DESKTOP: standalone feedback button (Intercom shows its own launcher) ───
+  // ─── DESKTOP: standalone feedback button, STACKED ABOVE Intercom's launcher ──
+  // Intercom shows its own default launcher bottom-right (~60px tall, sitting at
+  // bottom:20px via vertical_padding:20). Placing the feedback button at
+  // bottom:96px (bottom-24) puts it cleanly ABOVE that launcher in the same
+  // right column, so the two are separate + both visible (neither occludes the
+  // other). Previously bottom-6 (24px) sat INSIDE Intercom's footprint and was
+  // hidden behind the chat bubble — the bug flagged in FEEDBACK-LOG #1.
   if (!isMobile) {
     return (
       <>
         {!open && (
           <button
             onClick={() => setOpen(true)}
-            className="fixed bottom-6 right-6 z-50
+            className="fixed bottom-24 right-6 z-50
                        w-11 h-11 rounded-full bg-[var(--mp-cta-blue)] text-white shadow-lg
                        hover:bg-[var(--mp-cta-blue)]/90 hover:shadow-xl transition-all
                        flex items-center justify-center active:scale-95"

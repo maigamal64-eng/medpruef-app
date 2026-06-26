@@ -38,6 +38,13 @@ import { getStoredSession } from "@/lib/auth";
 import { getStoredExamSource } from "@/lib/topics";
 import { QUESTIONS } from "@/lib/content-truth";
 import { useUserTier } from "@/lib/hooks/useUserTier";
+import { readNoteText } from "@/lib/notes-store";
+// authFetch sends the signed session token. The bookmark/notes `/api/questions?ids=`
+// lookups (and /api/stats) must be authenticated, or the route treats them as a
+// guest and returns the free-tier paywall stub instead of the saved question —
+// which would re-break "bookmark counted but not shown" (FEEDBACK #5a) for users
+// drawing a question outside the free 150-slice.
+import { authFetch } from "@/lib/authFetch";
 import LanguageToggle from "@/components/LanguageToggle";
 import ThemeToggle from "@/components/ThemeToggle";
 import Sidebar from "@/components/Sidebar";
@@ -407,7 +414,10 @@ export default function ProgressPage() {
       if (key && key.startsWith("medpruef_notes_")) {
         const qId = parseInt(key.replace("medpruef_notes_", ""), 10);
         if (!isNaN(qId)) {
-          const noteText = localStorage.getItem(key) || "";
+          // readNoteText handles BOTH the legacy single-string value and the new
+          // multi-note JSON array (FEEDBACK #4c) — so the saved-notes list never
+          // shows raw JSON and reflects every note on a question.
+          const noteText = readNoteText(qId);
           if (noteText.trim()) notes.push({ id: qId, note: noteText });
         }
       }
@@ -428,7 +438,7 @@ export default function ProgressPage() {
       setLoading(false);
       return;
     }
-    fetch(`/api/stats?userId=${userId}`)
+    authFetch(`/api/stats?userId=${userId}`)
       .then((r) => r.json())
       .then((data) => {
         if (data.gamification) {
@@ -461,9 +471,13 @@ export default function ProgressPage() {
   useEffect(() => {
     if (bookmarkIds.length === 0) return;
     setBookmarksLoading(true);
-    const examSource = getStoredExamSource();
+    // examSource=all (NOT the stored exam): a saved item must surface
+    // regardless of which exam is currently active. With the per-exam
+    // filter, a bookmark made in Kenntnisprüfung vanished when the user
+    // switched to Stichprobentest - the count stayed 1 but the question
+    // never came back, so the list read "no bookmarks". See FEEDBACK #5.
     const idsParam = bookmarkIds.slice(0, 50).join(",");
-    fetch(`/api/questions?ids=${idsParam}&examSource=${examSource}`)
+    authFetch(`/api/questions?ids=${idsParam}&examSource=all`)
       .then((r) => r.json())
       .then((data) => {
         if (Array.isArray(data)) {
@@ -487,12 +501,13 @@ export default function ProgressPage() {
   useEffect(() => {
     if (noteEntries.length === 0) return;
     setNotesLoading(true);
-    const examSource = getStoredExamSource();
+    // examSource=all for the same cross-exam reason as bookmarks above: a
+    // saved note's question stem should show no matter which exam is active.
     const idsParam = noteEntries
       .slice(0, 50)
       .map((n) => n.id)
       .join(",");
-    fetch(`/api/questions?ids=${idsParam}&examSource=${examSource}`)
+    authFetch(`/api/questions?ids=${idsParam}&examSource=all`)
       .then((r) => r.json())
       .then((data) => {
         if (Array.isArray(data)) {
@@ -728,6 +743,235 @@ export default function ProgressPage() {
                 <ReadinessSignal lang={lang} />
               </div>
 
+              {/* ═══ SAVED ITEMS (Bookmarks / Notes) ═══
+                   Moved UP from the page bottom (was buried under the specialty
+                   coverage rail) so saved questions are a clear, reachable place
+                   near the top, not hidden. FEEDBACK #5 (discoverability). The
+                   anchor id lets other surfaces deep-link to it (/progress#saved). */}
+              <div className={styles.sectionHead}>
+                <h3 id="saved">{lang === "de" ? "Gespeichert" : "Saved"}</h3>
+                <div className="ln" />
+              </div>
+              <section className="mp-card p-5 mb-6 scroll-mt-24">
+                <div className="mp-tabs mb-4" role="tablist" style={{ display: "flex", width: "100%" }}>
+                  <button
+                    role="tab"
+                    aria-selected={savedTab === "bookmarks"}
+                    onClick={() => setSavedTab("bookmarks")}
+                    className={`mp-tabs__tab flex-1 flex items-center justify-center gap-1.5 ${
+                      savedTab === "bookmarks" ? "mp-tabs__tab--active" : ""
+                    }`}
+                  >
+                    <Star className="w-3.5 h-3.5" />
+                    {t("bookmarked_questions", lang)} ({bookmarkIds.length})
+                  </button>
+                  <button
+                    role="tab"
+                    aria-selected={savedTab === "notes"}
+                    onClick={() => setSavedTab("notes")}
+                    className={`mp-tabs__tab flex-1 flex items-center justify-center gap-1.5 ${
+                      savedTab === "notes" ? "mp-tabs__tab--active" : ""
+                    }`}
+                  >
+                    <StickyNote className="w-3.5 h-3.5" />
+                    {t("my_notes", lang)} ({noteEntries.length})
+                  </button>
+                </div>
+
+                {savedTab === "bookmarks" && (
+                  <div>
+                    {bookmarksLoading ? (
+                      <div className="flex items-center justify-center py-8">
+                        <div className="w-6 h-6 border-2 border-[var(--mp-viridian)] border-t-transparent rounded-full animate-spin" />
+                      </div>
+                    ) : bookmarkIds.length === 0 ? (
+                      userRole === "admin" || userTier === "pro" || userTier === "admin" ? (
+                        <div className="text-center py-8">
+                          <Star className="w-8 h-8 text-[var(--mp-border-strong)] mx-auto mb-2" />
+                          <p className="text-sm text-[var(--mp-fg-subtle)]">{t("no_bookmarks", lang)}</p>
+                        </div>
+                      ) : (
+                        <div className="text-center py-8 px-4">
+                          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-[var(--mp-warning-bg)] mb-3">
+                            <Star className="w-6 h-6 text-[var(--mp-status-warning)]" />
+                          </div>
+                          <h4 className="text-sm font-semibold text-[var(--mp-fg)] mb-1">
+                            {lang === "de"
+                              ? "Lesezeichen sind ein Pro-Feature"
+                              : "Bookmarks are a Pro feature"}
+                          </h4>
+                          <p className="text-xs text-[var(--mp-fg-muted)] mb-4 max-w-sm mx-auto leading-relaxed">
+                            {lang === "de"
+                              ? "Markiere schwierige Fragen mit einem Klick und komm später gezielt zurück, inklusive für alle Pro-Nutzer:innen."
+                              : "Flag tricky questions with one click and jump back to them anytime, included with every Pro plan."}
+                          </p>
+                          <Link
+                            href="/pricing?gate=bookmarks&utm_source=progress_bookmarks_tab"
+                            className="mp-btn mp-btn--primary inline-flex items-center gap-1.5"
+                          >
+                            {lang === "de" ? "Pro ansehen" : "See Pro"}
+                          </Link>
+                        </div>
+                      )
+                    ) : (
+                      /* Render off bookmarkIds (the localStorage truth that
+                         drives the count), enriching with the fetched
+                         question - mirrors the My-Notes path so the count and
+                         the list can never disagree. A bookmark whose question
+                         is still loading, deactivated, or otherwise unmatched
+                         shows a minimal row (id + topic) rather than vanishing.
+                         FEEDBACK #5. */
+                      <div className="space-y-2">
+                        {bookmarkIds
+                          .slice(0, showAllBookmarks ? undefined : 20)
+                          .map((id) => {
+                            const q = bookmarkQuestions.find((bq) => bq.id === id);
+                            const topic = q?.topic || "";
+                            const config = getTopicConfig(topic);
+                            const examSource = getStoredExamSource();
+                            return (
+                              <div
+                                key={id}
+                                className={`${styles.savedRow} group`}
+                                style={{ ["--sc" as string]: config.color }}
+                              >
+                                <div className={styles.savedIc}>
+                                  <TopicIcon name={config.icon} className="w-3 h-3" />
+                                </div>
+                                {q?.image_url && (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img
+                                    src={q.image_url}
+                                    alt=""
+                                    className="w-10 h-10 rounded object-cover flex-shrink-0 border border-[var(--mp-border-subtle)]"
+                                  />
+                                )}
+                                <Link
+                                  href={`/quiz?questionId=${id}&topic=${encodeURIComponent(topic)}&examSource=${examSource}`}
+                                  className="flex-1 min-w-0"
+                                >
+                                  <p className="text-sm text-[var(--mp-fg)] line-clamp-2">
+                                    {q
+                                      ? `${q.question.slice(0, 120)}${q.question.length > 120 ? "..." : ""}`
+                                      : lang === "de"
+                                        ? `Frage #${id}`
+                                        : `Question #${id}`}
+                                  </p>
+                                  {topic && (
+                                    <p className="text-[10px] text-[var(--mp-fg-subtle)] mt-1 font-mono">
+                                      {topic}
+                                    </p>
+                                  )}
+                                </Link>
+                                <button
+                                  onClick={() => removeBookmark(id)}
+                                  className="text-[var(--mp-status-warning)] hover:text-[var(--mp-error)] opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                                  title={lang === "de" ? "Entfernen" : "Remove"}
+                                >
+                                  <Star className="w-4 h-4 fill-current" />
+                                </button>
+                              </div>
+                            );
+                          })}
+                        {bookmarkIds.length > 20 && !showAllBookmarks && (
+                          <button
+                            onClick={() => setShowAllBookmarks(true)}
+                            className="w-full text-center text-sm text-[var(--mp-viridian)] font-medium py-2 hover:underline"
+                          >
+                            {lang === "de"
+                              ? `Alle ${bookmarkIds.length} anzeigen`
+                              : `Show all ${bookmarkIds.length}`}
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {savedTab === "notes" && (
+                  <div>
+                    {notesLoading ? (
+                      <div className="flex items-center justify-center py-8">
+                        <div className="w-6 h-6 border-2 border-[var(--mp-viridian)] border-t-transparent rounded-full animate-spin" />
+                      </div>
+                    ) : noteEntries.length === 0 ? (
+                      userRole === "admin" || userTier === "pro" || userTier === "admin" ? (
+                        <div className="text-center py-8">
+                          <StickyNote className="w-8 h-8 text-[var(--mp-border-strong)] mx-auto mb-2" />
+                          <p className="text-sm text-[var(--mp-fg-subtle)]">{t("no_notes", lang)}</p>
+                        </div>
+                      ) : (
+                        <div className="text-center py-8 px-4">
+                          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-[var(--mp-tint-teal)] mb-3">
+                            <StickyNote className="w-6 h-6 text-[var(--mp-accent-teal)]" />
+                          </div>
+                          <h4 className="text-sm font-semibold text-[var(--mp-fg)] mb-1">
+                            {lang === "de" ? "Notizen sind ein Pro-Feature" : "Notes are a Pro feature"}
+                          </h4>
+                          <p className="text-xs text-[var(--mp-fg-muted)] mb-4 max-w-sm mx-auto leading-relaxed">
+                            {lang === "de"
+                              ? "Schreib dir Merkhilfen zu einzelnen Fragen. Sie bleiben an der Frage hängen und kommen beim nächsten Versuch automatisch wieder hoch."
+                              : "Jot down memory aids per question. They stay attached and reappear the next time you see it."}
+                          </p>
+                          <Link
+                            href="/pricing?gate=notes&utm_source=progress_notes_tab"
+                            className="mp-btn mp-btn--primary inline-flex items-center gap-1.5"
+                          >
+                            {lang === "de" ? "Pro ansehen" : "See Pro"}
+                          </Link>
+                        </div>
+                      )
+                    ) : (
+                      <div className="space-y-2">
+                        {noteEntries.slice(0, showAllNotes ? undefined : 20).map((entry) => {
+                          const q = noteQuestions.find((nq) => nq.id === entry.id);
+                          const topic = q?.topic || "";
+                          const config = getTopicConfig(topic);
+                          const examSource = getStoredExamSource();
+                          return (
+                            <Link
+                              key={entry.id}
+                              href={`/quiz?questionId=${entry.id}&topic=${encodeURIComponent(topic)}&examSource=${examSource}`}
+                              className={styles.savedRow}
+                              style={{ ["--sc" as string]: config.color }}
+                            >
+                              <div className={styles.savedIc}>
+                                <TopicIcon name={config.icon} className="w-3 h-3" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                {q && (
+                                  <p className="text-sm text-[var(--mp-fg)] line-clamp-1">
+                                    {q.question.slice(0, 120)}
+                                  </p>
+                                )}
+                                <p className="text-xs text-[var(--mp-fg-subtle)] italic mt-1 line-clamp-1">
+                                  {entry.note.slice(0, 80)}
+                                </p>
+                                {topic && (
+                                  <p className="text-[10px] text-[var(--mp-fg-subtle)] mt-1 font-mono">
+                                    {topic}
+                                  </p>
+                                )}
+                              </div>
+                            </Link>
+                          );
+                        })}
+                        {noteEntries.length > 20 && !showAllNotes && (
+                          <button
+                            onClick={() => setShowAllNotes(true)}
+                            className="w-full text-center text-sm text-[var(--mp-viridian)] font-medium py-2 hover:underline"
+                          >
+                            {lang === "de"
+                              ? `Alle ${noteEntries.length} anzeigen`
+                              : `Show all ${noteEntries.length}`}
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </section>
+
               {/* ═══ 2-COL: RADAR + WEEKLY ═══ */}
               <div className={`${styles.grid2} mb-6`}>
                 <section className="mp-card p-5">
@@ -826,213 +1070,6 @@ export default function ProgressPage() {
                     );
                   })}
                 </div>
-              </section>
-
-              {/* ═══ SAVED ITEMS (Bookmarks / Notes) ═══ */}
-              <section className="mp-card p-5 mb-6">
-                <div className="mp-tabs mb-4" role="tablist" style={{ display: "flex", width: "100%" }}>
-                  <button
-                    role="tab"
-                    aria-selected={savedTab === "bookmarks"}
-                    onClick={() => setSavedTab("bookmarks")}
-                    className={`mp-tabs__tab flex-1 flex items-center justify-center gap-1.5 ${
-                      savedTab === "bookmarks" ? "mp-tabs__tab--active" : ""
-                    }`}
-                  >
-                    <Star className="w-3.5 h-3.5" />
-                    {t("bookmarked_questions", lang)} ({bookmarkIds.length})
-                  </button>
-                  <button
-                    role="tab"
-                    aria-selected={savedTab === "notes"}
-                    onClick={() => setSavedTab("notes")}
-                    className={`mp-tabs__tab flex-1 flex items-center justify-center gap-1.5 ${
-                      savedTab === "notes" ? "mp-tabs__tab--active" : ""
-                    }`}
-                  >
-                    <StickyNote className="w-3.5 h-3.5" />
-                    {t("my_notes", lang)} ({noteEntries.length})
-                  </button>
-                </div>
-
-                {savedTab === "bookmarks" && (
-                  <div>
-                    {bookmarksLoading ? (
-                      <div className="flex items-center justify-center py-8">
-                        <div className="w-6 h-6 border-2 border-[var(--mp-viridian)] border-t-transparent rounded-full animate-spin" />
-                      </div>
-                    ) : bookmarkQuestions.length === 0 ? (
-                      userRole === "admin" || userTier === "pro" || userTier === "admin" ? (
-                        <div className="text-center py-8">
-                          <Star className="w-8 h-8 text-[var(--mp-border-strong)] mx-auto mb-2" />
-                          <p className="text-sm text-[var(--mp-fg-subtle)]">{t("no_bookmarks", lang)}</p>
-                        </div>
-                      ) : (
-                        <div className="text-center py-8 px-4">
-                          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-[var(--mp-warning-bg)] mb-3">
-                            <Star className="w-6 h-6 text-[var(--mp-status-warning)]" />
-                          </div>
-                          <h4 className="text-sm font-semibold text-[var(--mp-fg)] mb-1">
-                            {lang === "de"
-                              ? "Lesezeichen sind ein Pro-Feature"
-                              : "Bookmarks are a Pro feature"}
-                          </h4>
-                          <p className="text-xs text-[var(--mp-fg-muted)] mb-4 max-w-sm mx-auto leading-relaxed">
-                            {lang === "de"
-                              ? "Markiere schwierige Fragen mit einem Klick und komm später gezielt zurück, inklusive für alle Pro-Nutzer:innen."
-                              : "Flag tricky questions with one click and jump back to them anytime, included with every Pro plan."}
-                          </p>
-                          <Link
-                            href="/pricing?gate=bookmarks&utm_source=progress_bookmarks_tab"
-                            className="mp-btn mp-btn--primary inline-flex items-center gap-1.5"
-                          >
-                            {lang === "de" ? "Pro ansehen" : "See Pro"}
-                          </Link>
-                        </div>
-                      )
-                    ) : (
-                      <div className="space-y-2">
-                        {bookmarkQuestions
-                          .slice(0, showAllBookmarks ? undefined : 20)
-                          .map((q) => {
-                            const config = getTopicConfig(q.topic);
-                            const examSource = getStoredExamSource();
-                            return (
-                              <div
-                                key={q.id}
-                                className={`${styles.savedRow} group`}
-                                style={{ ["--sc" as string]: config.color }}
-                              >
-                                <div className={styles.savedIc}>
-                                  <TopicIcon name={config.icon} className="w-3 h-3" />
-                                </div>
-                                {q.image_url && (
-                                  // eslint-disable-next-line @next/next/no-img-element
-                                  <img
-                                    src={q.image_url}
-                                    alt=""
-                                    className="w-10 h-10 rounded object-cover flex-shrink-0 border border-[var(--mp-border-subtle)]"
-                                  />
-                                )}
-                                <Link
-                                  href={`/quiz?questionId=${q.id}&topic=${encodeURIComponent(q.topic)}&examSource=${examSource}`}
-                                  className="flex-1 min-w-0"
-                                >
-                                  <p className="text-sm text-[var(--mp-fg)] line-clamp-2">
-                                    {q.question.slice(0, 120)}
-                                    {q.question.length > 120 ? "..." : ""}
-                                  </p>
-                                  <p className="text-[10px] text-[var(--mp-fg-subtle)] mt-1 font-mono">
-                                    {q.topic}
-                                  </p>
-                                </Link>
-                                <button
-                                  onClick={() => removeBookmark(q.id)}
-                                  className="text-[var(--mp-status-warning)] hover:text-[var(--mp-error)] opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
-                                  title={lang === "de" ? "Entfernen" : "Remove"}
-                                >
-                                  <Star className="w-4 h-4 fill-current" />
-                                </button>
-                              </div>
-                            );
-                          })}
-                        {bookmarkQuestions.length > 20 && !showAllBookmarks && (
-                          <button
-                            onClick={() => setShowAllBookmarks(true)}
-                            className="w-full text-center text-sm text-[var(--mp-viridian)] font-medium py-2 hover:underline"
-                          >
-                            {lang === "de"
-                              ? `Alle ${bookmarkQuestions.length} anzeigen`
-                              : `Show all ${bookmarkQuestions.length}`}
-                          </button>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {savedTab === "notes" && (
-                  <div>
-                    {notesLoading ? (
-                      <div className="flex items-center justify-center py-8">
-                        <div className="w-6 h-6 border-2 border-[var(--mp-viridian)] border-t-transparent rounded-full animate-spin" />
-                      </div>
-                    ) : noteEntries.length === 0 ? (
-                      userRole === "admin" || userTier === "pro" || userTier === "admin" ? (
-                        <div className="text-center py-8">
-                          <StickyNote className="w-8 h-8 text-[var(--mp-border-strong)] mx-auto mb-2" />
-                          <p className="text-sm text-[var(--mp-fg-subtle)]">{t("no_notes", lang)}</p>
-                        </div>
-                      ) : (
-                        <div className="text-center py-8 px-4">
-                          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-[var(--mp-tint-teal)] mb-3">
-                            <StickyNote className="w-6 h-6 text-[var(--mp-accent-teal)]" />
-                          </div>
-                          <h4 className="text-sm font-semibold text-[var(--mp-fg)] mb-1">
-                            {lang === "de" ? "Notizen sind ein Pro-Feature" : "Notes are a Pro feature"}
-                          </h4>
-                          <p className="text-xs text-[var(--mp-fg-muted)] mb-4 max-w-sm mx-auto leading-relaxed">
-                            {lang === "de"
-                              ? "Schreib dir Merkhilfen zu einzelnen Fragen. Sie bleiben an der Frage hängen und kommen beim nächsten Versuch automatisch wieder hoch."
-                              : "Jot down memory aids per question. They stay attached and reappear the next time you see it."}
-                          </p>
-                          <Link
-                            href="/pricing?gate=notes&utm_source=progress_notes_tab"
-                            className="mp-btn mp-btn--primary inline-flex items-center gap-1.5"
-                          >
-                            {lang === "de" ? "Pro ansehen" : "See Pro"}
-                          </Link>
-                        </div>
-                      )
-                    ) : (
-                      <div className="space-y-2">
-                        {noteEntries.slice(0, showAllNotes ? undefined : 20).map((entry) => {
-                          const q = noteQuestions.find((nq) => nq.id === entry.id);
-                          const topic = q?.topic || "";
-                          const config = getTopicConfig(topic);
-                          const examSource = getStoredExamSource();
-                          return (
-                            <Link
-                              key={entry.id}
-                              href={`/quiz?questionId=${entry.id}&topic=${encodeURIComponent(topic)}&examSource=${examSource}`}
-                              className={styles.savedRow}
-                              style={{ ["--sc" as string]: config.color }}
-                            >
-                              <div className={styles.savedIc}>
-                                <TopicIcon name={config.icon} className="w-3 h-3" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                {q && (
-                                  <p className="text-sm text-[var(--mp-fg)] line-clamp-1">
-                                    {q.question.slice(0, 120)}
-                                  </p>
-                                )}
-                                <p className="text-xs text-[var(--mp-fg-subtle)] italic mt-1 line-clamp-1">
-                                  {entry.note.slice(0, 80)}
-                                </p>
-                                {topic && (
-                                  <p className="text-[10px] text-[var(--mp-fg-subtle)] mt-1 font-mono">
-                                    {topic}
-                                  </p>
-                                )}
-                              </div>
-                            </Link>
-                          );
-                        })}
-                        {noteEntries.length > 20 && !showAllNotes && (
-                          <button
-                            onClick={() => setShowAllNotes(true)}
-                            className="w-full text-center text-sm text-[var(--mp-viridian)] font-medium py-2 hover:underline"
-                          >
-                            {lang === "de"
-                              ? `Alle ${noteEntries.length} anzeigen`
-                              : `Show all ${noteEntries.length}`}
-                          </button>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
               </section>
 
               {/* ═══ EXAM READINESS CTAs (countdown + weak topics + actions) ═══ */}

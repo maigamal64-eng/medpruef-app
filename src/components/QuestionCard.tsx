@@ -10,11 +10,11 @@ import ImageLightbox from "@/components/ImageLightbox";
 import { trackEvent } from "@/lib/tracker";
 import TopicIcon from "@/components/TopicIcon";
 import { cleanExplanation } from "@/lib/explanation";
-import { Lightbulb, FileText, Bot, Flag, CheckCircle2, BookOpen, Languages } from "lucide-react";
+import { Lightbulb, FileText, Bot, Flag, CheckCircle2, Languages } from "lucide-react";
 import AIChatAssistant from "@/components/AIChatAssistant";
 import TranslateButton from "@/components/TranslateButton";
 import QuestionReportForm from "@/components/question/QuestionReportForm";
-import QuestionNotesPanel, { getNoteKey, saveNoteToStorage } from "@/components/question/QuestionNotesPanel";
+import QuestionNotesPanel from "@/components/question/QuestionNotesPanel";
 import QuestionExplanation from "@/components/question/QuestionExplanation";
 import {
   useQuestionHighlights,
@@ -139,8 +139,9 @@ export default function QuestionCard({
   );
   const [submitted, setSubmitted] = useState(initiallyAnswered);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
-  const [note, setNote] = useState("");
-  const [noteSaved, setNoteSaved] = useState(false);
+  // Notes are owned entirely by QuestionNotesPanel via the shared notes-store
+  // now (FEEDBACK #4c — one synced, multi-note home); QuestionCard no longer
+  // holds note state.
   const [isFav, setIsFav] = useState(false);
 
   const [showAnswer, setShowAnswer] = useState(false);
@@ -153,8 +154,9 @@ export default function QuestionCard({
   // Text-selection → highlight layer (extracted to its own hook).
   const highlightApi = useQuestionHighlights(question.id);
 
-  // Quiz-B tabbed post-answer context. Tabs: erklaerung | ki | notizen | uebersetzen | quelle
-  type PostAnswerTab = "erklaerung" | "ki" | "notizen" | "uebersetzen" | "quelle";
+  // Quiz-B tabbed post-answer context. Tabs: erklaerung | ki | notizen | uebersetzen
+  // ("quelle"/Source dropped per IA plan — FEEDBACK #4e — until guideline refs exist).
+  type PostAnswerTab = "erklaerung" | "ki" | "notizen" | "uebersetzen";
   const [activeTab, setActiveTab] = useState<PostAnswerTab>("erklaerung");
   const answered = submitted || showAnswer;
   const isOpenAnswer = !question.options || question.options.length < 2;
@@ -168,14 +170,11 @@ export default function QuestionCard({
     setSubmitted(initiallyAnswered);
     setShowAnswer(false);
     setShowAIChat(false);
-    setNoteSaved(false);
     setShowReportForm(false);
     setSuggestionSubmitted(false);
     setExplanationRating(null);
     setActiveTab("erklaerung");
     if (typeof window !== "undefined") {
-      const saved = localStorage.getItem(getNoteKey(question.id)) || "";
-      setNote(saved);
       setIsFav(getFavorites().includes(question.id));
     }
     // initialSelected/initiallyAnswered are intentionally read at render time but
@@ -288,12 +287,6 @@ export default function QuestionCard({
       && [...selectedIdxs].every(i => correctIdxs.has(i));
     onAnswer?.(isCorrect);
     onCommit?.([...selectedIdxs].sort((a, b) => a - b), isCorrect);
-  };
-
-  const handleSaveNote = () => {
-    saveNoteToStorage(question.id, note);
-    setNoteSaved(true);
-    setTimeout(() => setNoteSaved(false), 2000);
   };
 
   const handleToggleFav = () => {
@@ -536,7 +529,9 @@ export default function QuestionCard({
             },
             { id: "notizen", label: lang === "de" ? "Notizen" : "Notes", icon: <FileText className="w-3.5 h-3.5" /> },
             { id: "uebersetzen", label: lang === "de" ? "Übersetzen" : "Translate", icon: <Languages className="w-3.5 h-3.5" /> },
-            { id: "quelle", label: lang === "de" ? "Quelle" : "Source", icon: <BookOpen className="w-3.5 h-3.5" /> },
+            // "Quelle" (Source) tab dropped per IA plan (FEEDBACK #4e): it was a
+            // permanent "no source references yet" placeholder. Re-add only once
+            // guideline references actually exist on the data contract.
           ];
           // Hide the Translate tab when there is nothing to translate
           const visibleTabs = tabs.filter((tab) => (tab.id === "uebersetzen" ? hasExplanation : true));
@@ -576,16 +571,11 @@ export default function QuestionCard({
                   </div>
                 )}
 
-                {/* Notizen pane */}
+                {/* Notizen pane — self-contained multi-note editor (the single
+                    notes home; FEEDBACK #4c). */}
                 {activeVisible === "notizen" && (
                   <div className="pt-4 animate-fade-in">
-                    <QuestionNotesPanel
-                      lang={lang}
-                      value={note}
-                      onChange={setNote}
-                      saved={noteSaved}
-                      onSave={handleSaveNote}
-                    />
+                    <QuestionNotesPanel lang={lang} questionId={question.id} />
                   </div>
                 )}
 
@@ -606,22 +596,6 @@ export default function QuestionCard({
                   </div>
                 )}
 
-                {/* Quelle pane — placeholder until guideline refs are parsed */}
-                {activeVisible === "quelle" && (
-                  <div className="pt-4 animate-fade-in">
-                    <div className="bg-[var(--mp-surface-sunken)] border border-dashed border-[var(--mp-border)] rounded-[var(--mp-r-card)] p-5 text-center">
-                      <BookOpen className="w-5 h-5 mx-auto mb-2 text-[var(--mp-fg-subtle)]" />
-                      <p className="text-sm text-[var(--mp-fg-muted)] mb-1">
-                        {lang === "de" ? "Noch keine Quellenangaben." : "No source references yet."}
-                      </p>
-                      <p className="text-xs text-[var(--mp-fg-subtle)]">
-                        {lang === "de"
-                          ? "Wir arbeiten daran, Leitlinien-Referenzen anzuhängen."
-                          : "We’re working on attaching guideline references."}
-                      </p>
-                    </div>
-                  </div>
-                )}
               </ContextTabs>
             </div>
           );
@@ -642,22 +616,26 @@ export default function QuestionCard({
         />
       )}
 
-      {/* AI Chat Assistant */}
-      {!hideActions && (
-        <AIChatAssistant
-          open={showAIChat}
-          onClose={() => setShowAIChat(false)}
-          lang={lang}
-          questionId={question.id}
-          questionText={question.question}
-          answerText={question.answer}
-          explanation={question.explanation}
-          topic={question.topic}
-          options={options.map(o => ({ text: o.text, correct: o.correct }))}
-          userTier={userTier}
-          userRole={userRole}
-        />
-      )}
+      {/* AI Chat Assistant.
+          Mounted whenever the post-answer ContextTabs can render (i.e. the
+          "KI-Erklärung" action tab is reachable), NOT gated on !hideActions.
+          The quiz renders QuestionCard with hideActions (the rail/row owns the
+          meta-actions), but the ContextTabs "ki" tab still fires setShowAIChat
+          — previously the assistant was unmounted there, so that tab was a DEAD
+          button (FEEDBACK #4b). It now opens the real, working panel. */}
+      <AIChatAssistant
+        open={showAIChat}
+        onClose={() => setShowAIChat(false)}
+        lang={lang}
+        questionId={question.id}
+        questionText={question.question}
+        answerText={question.answer}
+        explanation={question.explanation}
+        topic={question.topic}
+        options={options.map(o => ({ text: o.text, correct: o.correct }))}
+        userTier={userTier}
+        userRole={userRole}
+      />
 
       {/* Lightbox — opens for whichever image was clicked (question or extra) */}
       {lightboxSrc && (

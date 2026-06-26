@@ -1,49 +1,59 @@
 "use client";
 
 /**
- * Curriculum page — redesigned per MPDS alt Curriculum-B (2D heatmap matrix).
+ * Curriculum / Lehrplan — reimplemented to the approved "Clinical Nocturne"
+ * design (reviews/reimplementation-2026-06-26/design/08-exam-curriculum.html,
+ * the Lehrplan half).
  *
- * Data reality (2026-04-17): MedPrüf does not track per-subarea (sub-topic)
- * accuracy — only per-topic (`questions.topic`). So the "true" 2D matrix
- * would be mostly empty. Instead we build a meaningful 2-column heatmap per
- * topic, using derived signals we already have:
+ * GRAMMAR (per SPECS §13): each top-level fach is a card with its
+ * TOPIC_CONFIG color edge + a per-topic completion ring + a "geübt" coverage
+ * count. Desktop lays the same nodes in a 2-col grid; mobile is one column.
+ * Numbers are mono + dot-thousands.
  *
- *   Col 1: Accuracy       — % correct from /api/stats topicStats (the primary
- *                           mastery signal; also the color driver for the row).
- *   Col 2: Progress       — % of the topic's questions the user has answered
- *                           (coverage). Colored independently.
+ * DATA CONTRACT (kept, not the old UI):
+ *   - Topic set: VIENNA_EXAM_PARTS (SIP 4 + SIP 5) from src/lib/topics.ts.
+ *   - Per-topic denominators: TOPIC_TOTALS (known catalogue counts).
+ *   - Per-topic progress: localStorage getAllTopicStats() seeds instantly,
+ *     then /api/stats topicStats overrides for logged-in users (authFetch —
+ *     /api/stats is requireUser-gated, so plain fetch would 401; the old page
+ *     used plain fetch, a latent no-op refresh — fixed here).
+ *   - The ring + count are COVERAGE (answered/total), the design's signal
+ *     (mockup: 1.520/1.840 = 83%), NOT accuracy (which the old heatmap used).
  *
- * Plus a rightmost average column (Accuracy, the dominant KPI).
- * Rows = all specialties in the active exam (SIP 4 + SIP 5 for Kenntnisprüfung).
- *
- * If/when per-subarea tags (e.g. `subarea` column) ship, this file can swap
- * in a wider grid without touching the rest of the page.
- *
- * Interaction:
- *   - Row label click → /quiz?topic=... (practice that topic)
- *   - Cell hover → tooltip "Topic / Column — N/M answered — X% accuracy"
- *   - Cell click → same as row label
- *   - Mobile: horizontal-scroll inside the grid container
+ * SUBTOPICS DROPPED ON PURPOSE: the mockup shows expand-to-subtopics
+ * (Kardiologie etc.), but MedPrüf tracks per-TOPIC only — there is no
+ * per-subarea table or API. Rather than fabricate splits, each fach card is a
+ * direct link to /quiz?topic= (the live interaction). When a `subarea` signal
+ * ships, the card can grow an expand without touching the rest of the page.
  */
 
 import { useEffect, useState, useCallback, useMemo } from "react";
+import { authFetch as fetch } from "@/lib/authFetch";
 import { BrandedLoader } from "@/components/Logo";
 import Link from "next/link";
 import { t, getLang, setLang } from "@/lib/i18n";
 import { getStoredSession } from "@/lib/auth";
-import { VIENNA_EXAM_PARTS, getStoredExamSource } from "@/lib/topics";
+import {
+  VIENNA_EXAM_PARTS,
+  getStoredExamSource,
+  getTopicConfig,
+} from "@/lib/topics";
 import { QUESTIONS } from "@/lib/content-truth";
 import { getAllTopicStats, type TopicStats } from "@/lib/weakness";
+import TopicIcon from "@/components/TopicIcon";
 import LanguageToggle from "@/components/LanguageToggle";
 import ThemeToggle from "@/components/ThemeToggle";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import { AppLayout } from "@/components/ui";
-import { Map as MapIcon, GraduationCap, Shuffle } from "lucide-react";
+import { Map as MapIcon, GraduationCap, Shuffle, ChevronRight } from "lucide-react";
+import styles from "./curriculum.module.css";
 
 type Lang = "de" | "en";
 
-// Known totals per specialty
+// Known totals per specialty (catalogue denominators). NOTE: these are static
+// known counts; the live DB count is "moving" mid content-leak repair
+// (NOTES.md), so coverage % is approximate, not a live denominator.
 const TOPIC_TOTALS: Record<string, number> = {
   "Innere Medizin": 1615,
   "Chirurgische Fächer": 1230,
@@ -65,209 +75,110 @@ interface TopicData {
   total: number;
   answered: number;
   correct: number;
-  accuracy: number;
 }
 
-// Short-label map — heatmap rows need tight text.
-const TOPIC_SHORT: Record<string, { de: string; en: string }> = {
-  "Innere Medizin": { de: "Innere", en: "Internal" },
-  "Chirurgische Fächer": { de: "Chirurgie", en: "Surgery" },
-  "Dermatologie und Venerologie": { de: "Derma", en: "Derma" },
-  "Frauenheilkunde/Gynäkologie": { de: "Gyn", en: "Gyn" },
-  Neurologie: { de: "Neuro", en: "Neuro" },
-  Psychiatrie: { de: "Psych", en: "Psych" },
-  "Notfall- und Intensivmedizin": { de: "Notfall", en: "Emerg." },
-  "Kinder- und Jugendheilkunde": { de: "Päd", en: "Peds" },
-  "Hals-Nasen-Ohrenheilkunde": { de: "HNO", en: "ENT" },
-  Augenheilkunde: { de: "Augen", en: "Ophth." },
-};
+/** Ring SVG uses r=16 → circumference ~100, so dashoffset = 100 - pct. */
+const RING_CIRC = 100;
 
-function shortLabel(topic: string, lang: Lang) {
-  const map = TOPIC_SHORT[topic];
-  if (!map) return topic;
-  return lang === "de" ? map.de : map.en;
+/** Coverage dot bucket (full / part / none) from coverage %. */
+function coverageDot(answered: number, pct: number): "Full" | "Part" | "None" {
+  if (answered === 0 || pct === 0) return "None";
+  if (pct >= 80) return "Full";
+  return "Part";
 }
 
-/** Map an accuracy % to a bucket: unseen | low | mid | good | strong. */
-type Bucket = "unseen" | "low" | "mid" | "good" | "strong";
-function bucketAccuracy(answered: number, accuracy: number): Bucket {
-  if (answered === 0) return "unseen";
-  if (accuracy < 40) return "low";
-  if (accuracy < 70) return "mid";
-  if (accuracy < 90) return "good";
-  return "strong";
-}
-
-/** Map a coverage % (progress) to the same 5-bucket scale. */
-function bucketProgress(progressPct: number, total: number): Bucket {
-  if (total === 0) return "unseen";
-  if (progressPct === 0) return "unseen";
-  if (progressPct < 25) return "low";
-  if (progressPct < 50) return "mid";
-  if (progressPct < 80) return "good";
-  return "strong";
-}
-
-function Cell({
-  bucket,
-  value,
-  label,
-  tooltip,
+function FachCard({
+  td,
   href,
+  lang,
 }: {
-  bucket: Bucket;
-  value: string;
-  label: string;
-  tooltip: string;
+  td: TopicData;
   href: string;
+  lang: Lang;
 }) {
-  // Per-bucket tone. Uses MPDS semantic tokens.
-  const toneCls = {
-    unseen:
-      "bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-subtle)] border border-dashed border-[var(--mp-border)]",
-    low:
-      "bg-[var(--mp-error-bg)] text-[var(--mp-status-error)] border border-[var(--mp-error-bg)]",
-    mid:
-      "bg-[var(--mp-warning-bg)] text-[var(--mp-status-warning)] border border-[var(--mp-warning-bg)]",
-    good:
-      "bg-[var(--mp-viridian)]/30 text-[var(--mp-fg)] border border-[var(--mp-viridian)]/30",
-    strong:
-      "bg-[var(--mp-viridian)] text-white border border-[var(--mp-viridian)]",
-  }[bucket];
+  const config = getTopicConfig(td.topic);
+  const pct =
+    td.total > 0 ? Math.min(100, Math.round((td.answered / td.total) * 100)) : 0;
+  const dashoffset = RING_CIRC - (RING_CIRC * pct) / 100;
+
+  const geuebt = lang === "de" ? "geübt" : "practiced";
 
   return (
     <Link
       href={href}
-      title={tooltip}
-      aria-label={`${label}: ${tooltip}`}
-      className={`group relative flex items-center justify-center rounded-md font-mono text-[10px] md:text-[11px] font-bold transition-transform duration-150 hover:scale-105 active:scale-95 min-w-[44px] h-[36px] md:min-w-[52px] md:h-[40px] ${toneCls}`}
+      className={styles.curtop}
+      style={{ ["--sc" as string]: config.color }}
+      aria-label={`${td.topic}: ${td.answered.toLocaleString("de-DE")} / ${td.total.toLocaleString("de-DE")} ${geuebt} (${pct}%)`}
     >
-      {value}
+      <span className={styles.edge} />
+      <div className={styles.ctIc}>
+        <TopicIcon name={config.icon} className="w-[21px] h-[21px]" />
+      </div>
+      <div className={styles.ctBody}>
+        <div className={styles.ctName}>{td.topic}</div>
+        <div className={styles.ctMeta}>
+          <ChevronRight className={styles.go} aria-hidden="true" />
+          {td.total > 0
+            ? `${td.answered.toLocaleString("de-DE")} / ${td.total.toLocaleString("de-DE")} ${geuebt}`
+            : geuebt}
+        </div>
+      </div>
+      <div className={styles.ctRing}>
+        <svg viewBox="0 0 40 40" aria-hidden="true">
+          <circle
+            className={styles.ringBg}
+            cx="20"
+            cy="20"
+            r="16"
+            fill="none"
+            strokeWidth="4"
+          />
+          <circle
+            className={styles.ringFg}
+            cx="20"
+            cy="20"
+            r="16"
+            fill="none"
+            strokeWidth="4"
+            strokeDasharray={RING_CIRC}
+            strokeDashoffset={dashoffset}
+          />
+        </svg>
+        <div className={styles.pc}>{pct}%</div>
+      </div>
     </Link>
   );
 }
 
-function HeatmapRow({
-  td,
-  userId,
-  lang,
-  examSource,
-}: {
-  td: TopicData;
-  userId: string;
-  lang: Lang;
-  examSource: string;
-}) {
-  const qs = userId
-    ? `/quiz?topic=${encodeURIComponent(td.topic)}&userId=${userId}&examSource=${examSource}`
-    : `/quiz?topic=${encodeURIComponent(td.topic)}&examSource=${examSource}`;
-
-  const progressPct =
-    td.total > 0 ? Math.min(100, Math.round((td.answered / td.total) * 100)) : 0;
-
-  const accBucket = bucketAccuracy(td.answered, td.accuracy);
-  const progBucket = bucketProgress(progressPct, td.total);
-
-  // Tooltip format per spec: "Topic / Column — N/M answered — X% accuracy"
-  const accTooltip =
-    td.answered > 0
-      ? `${td.topic} / ${lang === "de" ? "Genauigkeit" : "Accuracy"} — ${td.correct}/${td.answered} ${lang === "de" ? "korrekt" : "correct"} — ${td.accuracy}%`
-      : `${td.topic} / ${lang === "de" ? "Genauigkeit" : "Accuracy"} — ${lang === "de" ? "noch keine Antworten" : "no answers yet"}`;
-  const progTooltip = `${td.topic} / ${lang === "de" ? "Fortschritt" : "Progress"} — ${td.answered}/${td.total} ${lang === "de" ? "bearbeitet" : "answered"} — ${progressPct}%`;
-
-  const avgColor =
-    td.answered === 0
-      ? "text-[var(--mp-fg-subtle)]"
-      : td.accuracy >= 70
-      ? "text-[var(--mp-viridian)]"
-      : td.accuracy >= 40
-      ? "text-[var(--mp-status-warning)]"
-      : "text-[var(--mp-status-error)]";
-
-  return (
-    <div className="grid grid-cols-[120px_1fr_1fr_52px] md:grid-cols-[160px_1fr_1fr_64px] gap-2 items-center py-1">
-      <Link
-        href={qs}
-        className="text-xs md:text-sm font-display font-bold text-[var(--mp-fg)] hover:text-[var(--mp-viridian)] truncate"
-        title={td.topic}
-      >
-        {shortLabel(td.topic, lang)}
-      </Link>
-      <Cell
-        bucket={accBucket}
-        value={td.answered > 0 ? `${td.accuracy}` : "—"}
-        label={lang === "de" ? "Genauigkeit" : "Accuracy"}
-        tooltip={accTooltip}
-        href={qs}
-      />
-      <Cell
-        bucket={progBucket}
-        value={progressPct > 0 ? `${progressPct}` : "—"}
-        label={lang === "de" ? "Fortschritt" : "Progress"}
-        tooltip={progTooltip}
-        href={qs}
-      />
-      <div
-        className={`text-right font-mono font-bold text-[11px] md:text-xs ${avgColor}`}
-        title={accTooltip}
-      >
-        {td.answered > 0 ? `${td.accuracy}` : "—"}
-      </div>
-    </div>
-  );
-}
-
-function HeatmapSection({
+function FachSection({
   title,
   topics,
-  userId,
+  buildHref,
   lang,
-  examSource,
-  accentVar,
 }: {
   title: string;
   topics: TopicData[];
-  userId: string;
+  buildHref: (topic: string) => string;
   lang: Lang;
-  examSource: string;
-  accentVar: string;
 }) {
   if (topics.length === 0) return null;
+  const sectionTotal = topics.reduce((s, td) => s + td.total, 0);
   return (
     <section>
-      <div className="flex items-center gap-3 mb-3">
-        <div className="w-1 h-7 rounded-full" style={{ background: accentVar }} />
-        <h2 className="text-lg font-bold text-[var(--mp-fg)]">{title}</h2>
-        <span className="text-xs text-[var(--mp-fg-subtle)] font-mono">
-          {topics.reduce((s, t2) => s + t2.total, 0).toLocaleString("de-DE")}{" "}
-          {t("questions", lang)}
+      <div className={styles.sectionHead}>
+        <h2>{title}</h2>
+        <span className={styles.ln} />
+        <span className={styles.count}>
+          {sectionTotal.toLocaleString("de-DE")} {t("questions", lang)}
         </span>
       </div>
-
-      <div className="mp-card p-3 md:p-4 overflow-x-auto">
-        {/* Header row */}
-        <div className="grid grid-cols-[120px_1fr_1fr_52px] md:grid-cols-[160px_1fr_1fr_64px] gap-2 items-center pb-2 mb-2 border-b border-[var(--mp-border)]">
-          <div className="mp-caption text-[var(--mp-fg-subtle)]">
-            {lang === "de" ? "Thema" : "Topic"}
-          </div>
-          <div className="mp-caption text-[var(--mp-fg-subtle)] text-center">
-            {lang === "de" ? "Genauigkeit" : "Accuracy"}
-          </div>
-          <div className="mp-caption text-[var(--mp-fg-subtle)] text-center">
-            {lang === "de" ? "Fortschritt" : "Progress"}
-          </div>
-          <div className="mp-caption text-[var(--mp-fg-subtle)] text-right">
-            ∅
-          </div>
-        </div>
-
+      <div className={styles.grid}>
         {topics.map((td) => (
-          <HeatmapRow
+          <FachCard
             key={td.topic}
             td={td}
-            userId={userId}
+            href={buildHref(td.topic)}
             lang={lang}
-            examSource={examSource}
           />
         ))}
       </div>
@@ -277,29 +188,21 @@ function HeatmapSection({
 
 function Legend({ lang }: { lang: Lang }) {
   return (
-    <div className="flex items-center flex-wrap gap-3 text-xs text-[var(--mp-fg-muted)]">
-      <span className="font-mono text-[10px] uppercase tracking-wider text-[var(--mp-fg-subtle)]">
-        {lang === "de" ? "Legende" : "Legend"}:
+    <div className={styles.legend}>
+      <span className={styles.legendLbl}>
+        {lang === "de" ? "Abdeckung" : "Coverage"}
       </span>
-      <span className="flex items-center gap-1.5">
-        <span className="inline-block w-4 h-4 rounded-sm bg-[var(--mp-surface-sunken)] border border-dashed border-[var(--mp-border)]" />
-        {lang === "de" ? "Noch nicht" : "Unseen"}
+      <span className={styles.legendItem}>
+        <span className={`${styles.legendDot} ${styles.dotFull}`} />
+        {lang === "de" ? "Fast fertig" : "Almost done"}
       </span>
-      <span className="flex items-center gap-1.5">
-        <span className="inline-block w-4 h-4 rounded-sm bg-[var(--mp-error-bg)]" />
-        &lt;40%
+      <span className={styles.legendItem}>
+        <span className={`${styles.legendDot} ${styles.dotPart}`} />
+        {lang === "de" ? "In Arbeit" : "In progress"}
       </span>
-      <span className="flex items-center gap-1.5">
-        <span className="inline-block w-4 h-4 rounded-sm bg-[var(--mp-warning-bg)]" />
-        40–70%
-      </span>
-      <span className="flex items-center gap-1.5">
-        <span className="inline-block w-4 h-4 rounded-sm bg-[var(--mp-viridian)]/30" />
-        70–90%
-      </span>
-      <span className="flex items-center gap-1.5">
-        <span className="inline-block w-4 h-4 rounded-sm bg-[var(--mp-viridian)]" />
-        &gt;90%
+      <span className={styles.legendItem}>
+        <span className={`${styles.legendDot} ${styles.dotNone}`} />
+        {lang === "de" ? "Noch nicht" : "Not yet"}
       </span>
     </div>
   );
@@ -323,7 +226,6 @@ export default function CurriculumPage() {
     if (session) {
       setUserId(session.user.id);
       setUserName(session.user.first_name);
-      // Guard against sessions without a gamification snapshot.
       const gm = session.gamification ?? {};
       setTotalXp(gm.total_xp || 0);
       setStreak(gm.current_streak || 0);
@@ -334,7 +236,7 @@ export default function CurriculumPage() {
     }
     setExamSource(getStoredExamSource());
 
-    // Build topic data from known totals + localStorage quiz results
+    // Seed topic data from known totals + localStorage quiz results.
     const localStats = getAllTopicStats();
     const statsMap = new Map<string, TopicStats>();
     for (const s of localStats) {
@@ -349,7 +251,6 @@ export default function CurriculumPage() {
           total,
           answered: stat?.total || 0,
           correct: stat?.correct || 0,
-          accuracy: stat ? Math.round(stat.accuracy) : 0,
         };
       }
     );
@@ -358,7 +259,7 @@ export default function CurriculumPage() {
     setLoading(false);
   }, []);
 
-  // Server-side stats for logged-in users
+  // Server-side stats override for logged-in users (authFetch — gated route).
   useEffect(() => {
     if (!userId) return;
     fetch(`/api/stats?userId=${userId}`)
@@ -386,10 +287,6 @@ export default function CurriculumPage() {
                   ...td,
                   answered: serverStat.total,
                   correct: serverStat.correct,
-                  accuracy:
-                    serverStat.total > 0
-                      ? Math.round((serverStat.correct / serverStat.total) * 100)
-                      : 0,
                 };
               }
               return td;
@@ -410,7 +307,14 @@ export default function CurriculumPage() {
     Math.round((totalAnswered / TOTAL_QUESTIONS) * 100)
   );
 
-  // Build SIP 4 and SIP 5 topic lists
+  const buildHref = useCallback(
+    (topic: string) =>
+      userId
+        ? `/quiz?topic=${encodeURIComponent(topic)}&userId=${userId}&examSource=${examSource}`
+        : `/quiz?topic=${encodeURIComponent(topic)}&examSource=${examSource}`,
+    [userId, examSource]
+  );
+
   const sip4Topics = useMemo(
     () =>
       VIENNA_EXAM_PARTS.sip4
@@ -431,7 +335,7 @@ export default function CurriculumPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[var(--mp-surface-sunken)]">
+      <div className="flex items-center justify-center min-h-screen bg-[var(--mp-bg)]">
         <BrandedLoader />
       </div>
     );
@@ -451,10 +355,9 @@ export default function CurriculumPage() {
       }
       bottomNav={<BottomNav lang={lang} userId={userId} />}
     >
-
-      <main className="main-content safe-area-top safe-area-bottom bg-[var(--mp-surface-sunken)]">
+      <main className="main-content safe-area-top safe-area-bottom bg-[var(--mp-bg)]">
         {/* Header */}
-        <div className="px-6 lg:px-10 pt-4 pb-2 flex items-center justify-between border-b border-[var(--mp-border)]">
+        <div className="px-6 lg:px-10 pt-4 pb-2 flex items-center justify-between border-b border-[var(--mp-border-soft)]">
           <Link
             href="/"
             className="text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg)] text-sm transition-colors"
@@ -471,90 +374,76 @@ export default function CurriculumPage() {
           </div>
         </div>
 
-        <div className="px-4 md:px-6 lg:px-10 py-5 max-w-5xl mx-auto space-y-6 pb-28">
-          {/* Overview bar */}
+        <div className={`${styles.page} px-4 md:px-6 lg:px-10 py-5 space-y-6 pb-28`}>
+          {/* Overview strip */}
           <div className="mp-card p-4 md:p-5">
-            <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6">
-              <div className="text-center">
-                <span className="text-2xl font-black font-mono text-[var(--mp-fg)]">
+            <div className={styles.overview}>
+              <div className={styles.ovItem}>
+                <span className={`${styles.ovNum} ${styles.ovNumLg}`}>
                   {TOTAL_QUESTIONS.toLocaleString("de-DE")}
                 </span>
-                <p className="text-xs text-[var(--mp-fg-subtle)] mt-0.5">
-                  {t("total_questions_label", lang)}
-                </p>
+                <p className={styles.ovLbl}>{t("total_questions_label", lang)}</p>
               </div>
-              <div className="w-px h-10 bg-[var(--mp-border)] hidden sm:block" />
-              <div className="text-center">
-                <span className="text-lg font-bold font-mono text-[var(--mp-status-warning)]">
+              <div className={styles.ovDivider} />
+              <div className={styles.ovItem}>
+                <span className={`${styles.ovNum} ${styles.ovNumSip4}`}>
                   {sip4Count.toLocaleString("de-DE")}
                 </span>
-                <p className="text-xs text-[var(--mp-fg-subtle)] mt-0.5">
-                  {t("sip4_label", lang)}
-                </p>
+                <p className={styles.ovLbl}>{t("sip4_label", lang)}</p>
               </div>
-              <div className="w-px h-10 bg-[var(--mp-border)] hidden sm:block" />
-              <div className="text-center">
-                <span className="text-lg font-bold font-mono text-[var(--mp-viridian)]">
+              <div className={styles.ovDivider} />
+              <div className={styles.ovItem}>
+                <span className={`${styles.ovNum} ${styles.ovNumSip5}`}>
                   {sip5Count.toLocaleString("de-DE")}
                 </span>
-                <p className="text-xs text-[var(--mp-fg-subtle)] mt-0.5">
-                  {t("sip5_label", lang)}
-                </p>
+                <p className={styles.ovLbl}>{t("sip5_label", lang)}</p>
               </div>
-              <div className="w-px h-10 bg-[var(--mp-border)] hidden sm:block" />
-              <div className="text-center">
-                <span className="text-lg font-bold font-mono text-[var(--mp-cta-blue)]">
+              <div className={styles.ovDivider} />
+              <div className={styles.ovItem}>
+                <span className={`${styles.ovNum} ${styles.ovNumPct}`}>
                   {completionPct}%
                 </span>
-                <p className="text-xs text-[var(--mp-fg-subtle)] mt-0.5">
-                  {t("completion", lang)}
-                </p>
+                <p className={styles.ovLbl}>{t("completion", lang)}</p>
               </div>
             </div>
           </div>
 
-          {/* Heatmap lede + legend */}
+          {/* Lede + legend */}
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
             <div>
               <h2 className="text-xl font-display font-black text-[var(--mp-fg)] tracking-tight">
-                {lang === "de"
-                  ? "Deine Stärken-Heatmap"
-                  : "Your Strengths Heatmap"}
+                {lang === "de" ? "Dein Lehrplan" : "Your Curriculum"}
               </h2>
               <p className="text-xs text-[var(--mp-fg-muted)] mt-1">
                 {lang === "de"
-                  ? `${sip4Topics.length + sip5Topics.length} Themen · Farbe = Genauigkeit · klicken zum Üben`
-                  : `${sip4Topics.length + sip5Topics.length} topics · color = accuracy · click to practice`}
+                  ? `${sip4Topics.length + sip5Topics.length} Fächer · Ring = Abdeckung · tippen zum Üben`
+                  : `${sip4Topics.length + sip5Topics.length} subjects · ring = coverage · tap to practice`}
               </p>
             </div>
             <Legend lang={lang} />
           </div>
 
-          {/* SIP 4 heatmap */}
-          <HeatmapSection
+          {/* SIP 4 tree */}
+          <FachSection
             title={t("sip4_label", lang)}
             topics={sip4Topics}
-            userId={userId}
+            buildHref={buildHref}
             lang={lang}
-            examSource={examSource}
-            accentVar="var(--mp-status-warning)"
           />
 
-          {/* SIP 5 heatmap */}
-          <HeatmapSection
+          {/* SIP 5 tree */}
+          <FachSection
             title={t("sip5_label", lang)}
             topics={sip5Topics}
-            userId={userId}
+            buildHref={buildHref}
             lang={lang}
-            examSource={examSource}
-            accentVar="var(--mp-viridian)"
           />
 
-          {/* Quick Actions */}
+          {/* Quick actions */}
           <div className="flex flex-col sm:flex-row gap-3">
             <Link
               href="/exam"
-              className="btn-primary flex-1 py-3.5 text-center text-sm rounded-xl"
+              className="mp-btn mp-btn--primary mp-btn--lg flex-1 inline-flex items-center justify-center gap-2"
             >
               <GraduationCap className="w-5 h-5" />
               {t("start_exam_simulation", lang)}
@@ -565,7 +454,7 @@ export default function CurriculumPage() {
                   ? `/quiz?topic=random&userId=${userId}`
                   : "/quiz?topic=random"
               }
-              className="btn-secondary flex-1 py-3.5 text-center text-sm rounded-xl"
+              className="mp-btn mp-btn--secondary mp-btn--lg flex-1 inline-flex items-center justify-center gap-2"
             >
               <Shuffle className="w-5 h-5" />
               {t("random_practice", lang)}

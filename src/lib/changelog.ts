@@ -26,6 +26,18 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-06-26",
     tag: "improvement",
     title: {
+      de: "Aufgeräumte Frageansicht, mehrere Notizen, KI-Erklärung in deiner Sprache und eine echte Prüfungssimulation",
+      en: "Tidier question view, multiple notes, AI explanation in your language, and a true exam simulation",
+    },
+    description: {
+      de: "Die Frageansicht hat jetzt nur noch eine Stelle pro Aktion: Erklärung, KI-Erklärung, Notizen und Übersetzen sitzen in den Reitern, Merken und Melden in der Leiste, keine doppelten oder toten Knöpfe mehr (auch am Handy). Du kannst jetzt mehrere Notizen pro Frage anlegen, und sie sind überall synchron. Die Übersetzung funktioniert wieder, und die KI-Erklärung erscheint in deiner Oberflächensprache (Englisch, wenn du Englisch eingestellt hast). Die Prüfungssimulation bildet jetzt die echte Prüfung ab (volle Fragenanzahl und Verteilung), und die Fragenübersicht überlappt nicht mehr. Gemerkte Fragen werden im Fortschritt jetzt richtig angezeigt, und die Karteikarten sind am Handy über die untere Navigation erreichbar.",
+      en: "The question view now has one home per action: Explanation, AI Explanation, Notes and Translate live in the tabs, Bookmark and Report in the bar, with no duplicate or dead buttons (on mobile too). You can now keep multiple notes per question, and they stay in sync everywhere. Translation works again, and the AI explanation appears in your interface language (English when you have English selected). The exam simulation now reflects the real exam (full question count and distribution), and the question navigator no longer overlaps. Bookmarked questions now show up correctly in Progress, and Flashcards are reachable on mobile via the bottom navigation.",
+    },
+  },
+  {
+    date: "2026-06-26",
+    tag: "improvement",
+    title: {
       de: "Lesbarer Dunkelmodus, neue Ladeanimation und ein aufgeräumter Hilfe-Button",
       en: "Readable dark mode, a new loading animation, and a tidier help button",
     },

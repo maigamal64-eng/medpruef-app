@@ -33,6 +33,14 @@ interface Props {
   /** Disable AI / notes until question has been answered (matches old quiz behaviour) */
   unlockAfterAnswer?: boolean;
   answered?: boolean;
+  /**
+   * Meta-only mode (FEEDBACK #4b/#4c/#4e/#6). When true, this rail renders ONLY
+   * the persistent meta-actions (bookmark + flag) and DROPS the AI + Notes
+   * buttons, because those now live in the QuestionCard ContextTabs (the single
+   * home per the IA plan). The quiz passes this; the exam REVIEW screen does
+   * NOT (there the in-card tabs aren't shown, so this rail keeps AI + notes).
+   */
+  metaOnly?: boolean;
 }
 
 const FAV_KEY = "medpruef_favorites";
@@ -58,6 +66,7 @@ export default function QuestionActions({
   layout = "rail",
   unlockAfterAnswer = false,
   answered = true,
+  metaOnly = false,
 }: Props) {
   const [isFav, setIsFav] = useState(false);
   const [showAIChat, setShowAIChat] = useState(false);
@@ -172,7 +181,7 @@ export default function QuestionActions({
       onClick: () => setShowReport(true),
       locked: false,
     },
-  ];
+  ].filter((b) => !(metaOnly && (b.key === "ai" || b.key === "note")));
 
   const baseBtn =
     "group relative flex items-center justify-center w-12 h-12 rounded-2xl border transition-all active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed";

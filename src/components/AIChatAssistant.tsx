@@ -6,6 +6,7 @@ import { trackEvent } from "@/lib/tracker";
 import ReactMarkdown from "react-markdown";
 import { authFetch as fetch } from "@/lib/authFetch";
 import { BottomSheet } from "@/components/ui";
+import { useUserTier } from "@/lib/hooks/useUserTier";
 
 type Lang = "de" | "en";
 
@@ -62,8 +63,16 @@ export default function AIChatAssistant({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Admin role overrides tier (2026-04-24 fix).
-  const isPro = userRole === "admin" || userTier === "pro" || userTier === "admin";
+  // Tier is sourced LIVE from /api/auth/me via useUserTier so a Pro/admin
+  // never sees the upsell (FEEDBACK #3a). The passed `userTier`/`userRole`
+  // props seed the first paint to avoid a flicker, but the live hook is
+  // authoritative. `tierResolving` is true until /api/auth/me answers — we
+  // must NOT render the upsell/lock during that window (that was the bug:
+  // the seed default 'free' flashed the upsell to an admin on a cold open).
+  const { isPaid: livePaid, isLoading: tierResolving } = useUserTier();
+  // Seed from props for the initial frame; once resolved, trust the hook.
+  const seedPro = userRole === "admin" || userTier === "pro" || userTier === "admin";
+  const isPro = tierResolving ? seedPro : livePaid;
 
   // Markdown renderer — the project uses Tailwind v4 without the
   // @tailwindcss/typography plugin, so `prose` classes are no-ops.
@@ -173,6 +182,33 @@ export default function AIChatAssistant({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // FEEDBACK #3c — when the UI is in English, translate a German-cached AI
+  // explanation into English via the existing /api/translate cache. Returns the
+  // German text unchanged on any failure (never blocks the panel). UI lang is
+  // currently de|en; for "en" we ask /api/translate for field=ai_explanation.
+  const maybeTranslateToUiLang = async (german: string): Promise<string> => {
+    if (lang === "de") return german;
+    // Only auto-translate for paid users. A free user has a 5/day translate
+    // quota; silently spending it on every cached-explanation view would drain
+    // it without the user asking. Free users still see the (German) explanation
+    // for free and can translate on demand via the Übersetzen tab.
+    if (!isPro) return german;
+    try {
+      const res = await fetch("/api/translate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ questionId, field: "ai_explanation", lang }),
+      });
+      if (res.ok) {
+        const d = await res.json();
+        if (d.translatedText && d.translatedText.trim()) return d.translatedText;
+      }
+    } catch {
+      // translation unavailable (quota / outage) — show the German prose.
+    }
+    return german;
+  };
+
   const loadOrGenerateExplanation = async (forceRegenerate = false) => {
     setLoading(true);
     try {
@@ -183,8 +219,16 @@ export default function AIChatAssistant({
           if (cacheRes.ok) {
             const cacheData = await cacheRes.json();
             if (cacheData.cached && cacheData.explanation) {
-              setCachedExplanation(cacheData.explanation);
-              setMessages([{ role: "assistant", content: cacheData.explanation }]);
+              // FEEDBACK #3c: most rows were cached from German requests, so an
+              // EN user reading a cache hit would get German prose. When the UI
+              // language is not German, translate the cached explanation through
+              // /api/translate (cached per-lang in question_translations — free
+              // after the first time). Only the AI PROSE is translated; the
+              // question/options stay German (that is the exam). Falls back to
+              // the German text if translation is unavailable.
+              const shown = await maybeTranslateToUiLang(cacheData.explanation);
+              setCachedExplanation(shown);
+              setMessages([{ role: "assistant", content: shown }]);
               setLoading(false);
               return;
             }
@@ -424,7 +468,15 @@ export default function AIChatAssistant({
         className="sticky bottom-0 px-4 py-3 border-t border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)]"
         style={{ paddingBottom: "max(12px, env(safe-area-inset-bottom))" }}
       >
-        {isPro ? (
+        {tierResolving && !seedPro ? (
+          // Tier not yet resolved for a non-seed-Pro user — render a calm
+          // neutral input placeholder, NEVER the upsell (FEEDBACK #3a: the
+          // upsell must not flash for a Pro/admin on a cold load).
+          <div className="flex items-center gap-2 opacity-50" aria-hidden>
+            <div className="flex-1 h-[42px] bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)] rounded-xl" />
+            <div className="w-10 h-10 rounded-xl bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)]" />
+          </div>
+        ) : isPro ? (
           <div className="flex items-center gap-2">
             <input
               ref={inputRef}
@@ -468,7 +520,12 @@ export default function AIChatAssistant({
             <div
               className="mp-card p-4"
               style={{
-                background: "var(--mp-success-bg)",
+                // Dark-contrast fix (FEEDBACK #3b): the card sits on a SOLID
+                // raised surface (guaranteed legible in both themes) with a
+                // viridian left-rail accent, instead of relying on the
+                // semi-transparent --mp-success-bg tint where muted body text
+                // failed AA in dark mode. Body text is now --mp-fg (not muted).
+                background: "var(--mp-surface-raised)",
                 borderColor: "color-mix(in srgb, var(--mp-viridian) 35%, transparent)",
                 borderLeft: "4px solid var(--mp-viridian)",
               }}
@@ -484,7 +541,7 @@ export default function AIChatAssistant({
                       ? "Interaktive Rückfragen mit Pro"
                       : "Interactive follow-ups with Pro"}
                   </h3>
-                  <p className="mp-body text-[13px] leading-snug text-[var(--mp-fg-muted)] mb-3">
+                  <p className="mp-body text-[13px] leading-snug text-[var(--mp-fg)] mb-3">
                     {lang === "de" ? (
                       <>
                         Diese Erklärung und alle anderen KI-Erklärungen sind für dich kostenlos.
