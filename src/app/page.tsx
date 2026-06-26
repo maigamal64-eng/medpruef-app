@@ -445,6 +445,61 @@ export default function Home() {
     } catch {}
   }, []);
 
+  // Post-auth sync for the public Find-Your-Path flow.
+  //
+  // The anon /find-your-path flow writes the lead's route + exam date +
+  // daily goal to localStorage (same keys as in-app onboarding) but it
+  // CANNOT PATCH the server (no session). So a lead who oriented before
+  // signing up lands with users.active_exam / exam_date still NULL, and
+  // the in-app study plan would be empty. On the first authenticated
+  // home load, if localStorage carries a path (examSource) but the
+  // server user has no active_exam, push it once: PATCH exam-preference
+  // (so /api/user/study-plan generates) + stamp onboarding-complete (so
+  // the modal does not re-fire). One-shot per browser via a guard flag.
+  useEffect(() => {
+    if (!user?.id || user.id.startsWith("guest_")) return;
+    try {
+      if (localStorage.getItem("medpruef_fyp_synced") === "1") return;
+      const onbRaw = localStorage.getItem("medpruef_onboarding");
+      const onb = onbRaw ? JSON.parse(onbRaw) : null;
+      // Only act on a Find-Your-Path payload that carries an exam source.
+      const examSource: string | undefined = onb?.examSource;
+      if (!examSource) return;
+      // If the server already knows the user's exam, nothing to sync.
+      const serverActiveExam = (user as { active_exam?: string | null }).active_exam;
+      if (serverActiveExam) {
+        localStorage.setItem("medpruef_fyp_synced", "1");
+        return;
+      }
+      const isISODate =
+        typeof onb?.examDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(onb.examDate);
+      const body: Record<string, string | number> = { activeExam: examSource };
+      if (onb?.dailyGoal && onb.dailyGoal > 0) body.dailyGoal = onb.dailyGoal;
+      if (isISODate) body.examDate = onb.examDate;
+
+      fetch("/api/user/exam-preference", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      }).catch(() => {});
+
+      fetch("/api/user/onboarding-complete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          examSource,
+          examDate: onb?.examDate,
+          dailyGoal: onb?.dailyGoal,
+          language: onb?.language,
+        }),
+      }).catch(() => {});
+
+      localStorage.setItem("medpruef_fyp_synced", "1");
+    } catch {
+      /* never block the home render on a best-effort sync */
+    }
+  }, [user]);
+
   // Cmd+K / Ctrl+K to focus search
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

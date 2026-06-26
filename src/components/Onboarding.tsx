@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
-import { ArrowRight, ArrowLeft, CheckCircle2, GraduationCap, Calendar, Target } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight, ArrowLeft, CheckCircle2, GraduationCap, Calendar, Target, Compass } from "lucide-react";
 import { getStoredTheme } from "./ThemeProvider";
 import LanguageToggle from "./LanguageToggle";
 import { t as tr, setLang as persistLang } from "@/lib/i18n";
@@ -233,6 +234,17 @@ export default function Onboarding({ lang = "de", onLangChange, onComplete }: On
               <p className="pt-1 text-center text-xs text-[var(--mp-fg-subtle)]">
                 {t("onb_exam_change_later")}
               </p>
+              {/* Entry point #2 — the confused (already logged-in) user who
+                  does not know which exam is theirs. This grid assumes they
+                  do; the orientation flow (/find-your-path) explains the two
+                  recognition routes and writes the choice back. */}
+              <Link
+                href="/find-your-path"
+                className="mt-1 flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold text-[var(--mp-cta-blue)] transition-colors hover:bg-[var(--mp-tint-brand)]"
+              >
+                <Compass className="h-3.5 w-3.5" aria-hidden />
+                {t("fyp_onb_unsure_link")}
+              </Link>
             </div>
           )}
 

@@ -590,6 +590,83 @@ const translations = {
   'email_validation_generic_error': { de: 'Aktualisierung fehlgeschlagen.', en: 'Update failed.' },
   'email_validation_network': { de: 'Verbindungsfehler. Bitte versuche es erneut.', en: 'Connection error. Please try again.' },
 
+  // Find Your Path — guided orientation flow (public, anon-safe). All
+  // strings em-dash-free ([name]'s rule); legacy keys carrying em dashes
+  // are intentionally NOT reused here.
+  'fyp_meta_title': { de: 'Finde deinen Weg', en: 'Find your path' },
+  // In-app onboarding affordance (entry point #2) — a confused logged-in
+  // user who does not yet know which exam is theirs jumps to the
+  // orientation flow instead of guessing on the exam grid.
+  'fyp_onb_unsure_link': { de: 'Nicht sicher, welche Prüfung deine ist? Finde deinen Weg', en: 'Not sure which exam is yours? Find your path' },
+  'fyp_eyebrow': { de: 'Orientierung', en: 'Get oriented' },
+  'fyp_intro_title': { de: 'Finde deinen Weg zur Anerkennung', en: 'Find your path to recognition' },
+  'fyp_intro_sub': { de: 'Drei kurze Fragen. Danach weißt du, welcher Prüfungsweg deiner ist, wann deine Fristen sind und wo du anfängst.', en: 'Three short questions. Then you will know which exam route is yours, when your deadlines are, and where to start.' },
+  'fyp_step_label': { de: 'Schritt {current} von {total}', en: 'Step {current} of {total}' },
+  'fyp_next': { de: 'Weiter', en: 'Next' },
+  'fyp_back': { de: 'Zurück', en: 'Back' },
+  'fyp_see_path': { de: 'Meinen Weg anzeigen', en: 'Show my path' },
+  'fyp_skip_step': { de: 'Diesen Schritt überspringen', en: 'Skip this step' },
+
+  // Step 1 — which route
+  'fyp_s1_title': { de: 'Welcher Weg ist deiner?', en: 'Which route are you on?' },
+  'fyp_s1_sub': { de: 'Es gibt zwei Anerkennungswege in Österreich. Wähle deinen, oder lass es dir kurz erklären.', en: 'There are two recognition routes in Austria. Pick yours, or let us explain them quickly.' },
+  'fyp_route_kp_name': { de: 'Kenntnisprüfung Wien', en: 'Kenntnisprüfung Vienna' },
+  'fyp_route_kp_desc': { de: 'Die Arztprüfung der Ärztekammer (Allgemeinmedizin)', en: "The Medical Chamber's Arztprüfung (general medicine)" },
+  'fyp_route_stp_name': { de: 'Stichprobentest', en: 'Stichprobentest' },
+  'fyp_route_stp_desc': { de: 'Das Screening der universitären Nostrifizierung', en: 'The university nostrification screening' },
+  'fyp_route_unsure_name': { de: 'Ich bin nicht sicher', en: "I'm not sure" },
+  'fyp_route_unsure_desc': { de: 'Zeig mir kurz den Unterschied', en: 'Show me the difference briefly' },
+
+  // Step 1 — the two-route explainer (facts sourced from SoT §1; dates
+  // pulled live from exam-dates.ts, never hardcoded here)
+  'fyp_explain_title': { de: 'Die zwei Anerkennungswege', en: 'The two recognition routes' },
+  'fyp_explain_sub': { de: 'Welcher gilt für dich, hängt davon ab, wie du in Österreich anerkannt wirst. Lies kurz und wähle dann.', en: 'Which one applies depends on how you are getting recognized in Austria. Read briefly, then choose.' },
+  'fyp_explain_kp_p': { de: 'Die Arztprüfung Allgemeinmedizin der Österreichischen Ärztekammer (Arztakademie). Fester Termin, 3x pro Jahr, Anmeldeschluss ausnahmslos 2 Monate vorher. Eine Wiederholung kostet rund 795 € pro Versuch.', en: 'The Arztprüfung Allgemeinmedizin of the Austrian Medical Chamber (Arztakademie). Fixed date, 3x per year, registration closes exactly 2 months before. A re-sit costs around 795 € per attempt.' },
+  'fyp_explain_stp_p': { de: 'Das nationale Stichprobentest-Screening der universitären Nostrifizierung (rechtlich keine Prüfung). Rund 10 bis 11 klinische Blöcke, du bestehst meist etwa 6 von 10 mit mindestens 60 %. Der Standort wechselt, du meldest dich an der Uni an, an der du deinen Nostrifizierungs-Antrag gestellt hast.', en: 'The national Stichprobentest screening of the university nostrification (legally not an exam). Around 10 to 11 clinical blocks, you usually pass about 6 of 10 at 60 % or more. The venue rotates, and you register at the university where you filed your nostrification application.' },
+  'fyp_explain_choose_kp': { de: 'Das ist mein Weg: Kenntnisprüfung', en: 'This is my route: Kenntnisprüfung' },
+  'fyp_explain_choose_stp': { de: 'Das ist mein Weg: Stichprobentest', en: 'This is my route: Stichprobentest' },
+  'fyp_explain_next_sitting': { de: 'Nächster Termin', en: 'Next sitting' },
+  'fyp_explain_reg_by': { de: 'Anmeldeschluss', en: 'Register by' },
+  'fyp_explain_rolling': { de: 'Kein fester Termin', en: 'No fixed date' },
+
+  // Step 2 — when is your exam (wraps ExamSittingPicker)
+  'fyp_s2_title': { de: 'Wann ist deine Prüfung?', en: 'When is your exam?' },
+  'fyp_s2_sub': { de: 'Wähle den echten Termin, oder sag uns, dass du noch nicht angemeldet bist. Daraus bauen wir deine Zeitleiste.', en: "Pick the real sitting, or tell us you're not registered yet. We build your timeline from it." },
+
+  // Step 3 — quick background (optional)
+  'fyp_s3_title': { de: 'Kurz zu dir (optional)', en: 'A little about you (optional)' },
+  'fyp_s3_sub': { de: 'Damit wir deinen Plan gewichten können. Du kannst das auch überspringen.', en: 'So we can weight your plan. You can also skip this.' },
+  'fyp_s3_weak_label': { de: 'Wo bist du am unsichersten? (optional)', en: 'Where are you least confident? (optional)' },
+  'fyp_s3_weak_hint': { de: 'Tippe alle an, die zutreffen.', en: 'Tap any that apply.' },
+  'fyp_s3_goal_label': { de: 'Wie viele Fragen pro Tag?', en: 'How many questions per day?' },
+  'fyp_s3_goal_qpd': { de: 'Fragen pro Tag', en: 'questions per day' },
+
+  // Output — Your Path
+  'fyp_out_eyebrow': { de: 'Dein Weg', en: 'Your path' },
+  'fyp_out_title_kp': { de: 'Dein Weg: Kenntnisprüfung Wien', en: 'Your path: Kenntnisprüfung Vienna' },
+  'fyp_out_title_stp': { de: 'Dein Weg: Stichprobentest', en: 'Your path: Stichprobentest' },
+  'fyp_out_route_kp_p': { de: 'Du bereitest dich auf die Kenntnisprüfung Wien vor, die Arztprüfung Allgemeinmedizin der Österreichischen Ärztekammer. Sie findet 3x pro Jahr zu festen Terminen statt, und der Anmeldeschluss ist ausnahmslos 2 Monate vorher. Wir richten alles auf diesen Termin aus.', en: 'You are preparing for the Kenntnisprüfung Vienna, the Arztprüfung Allgemeinmedizin of the Austrian Medical Chamber. It runs 3x per year on fixed dates, and registration closes exactly 2 months before. We line everything up to that date.' },
+  'fyp_out_route_stp_p': { de: 'Du bereitest dich auf den Stichprobentest vor, das nationale Screening der universitären Nostrifizierung. Rund 10 bis 11 klinische Blöcke, du bestehst meist etwa 6 von 10 mit mindestens 60 %. Der Standort wechselt je Termin. Wir richten deinen Plan auf deinen Termin aus.', en: 'You are preparing for the Stichprobentest, the national screening of the university nostrification. Around 10 to 11 clinical blocks, and you usually pass about 6 of 10 at 60 % or more. The venue rotates each sitting. We line your plan up to your date.' },
+  'fyp_out_timeline_title': { de: 'Deine Zeitleiste', en: 'Your timeline' },
+  'fyp_out_days_left': { de: 'Tage bis zur Prüfung', en: 'days until your exam' },
+  'fyp_out_register_cta': { de: 'Du bist noch nicht angemeldet. Melde dich bis zum {date} an.', en: 'You are not registered yet. Register by {date}.' },
+  'fyp_out_register_soft': { de: 'Anmeldeschluss ist rund {date}. Markiere ihn dir.', en: 'Registration closes around {date}. Mark it down.' },
+  'fyp_out_nodate_title': { de: 'Noch kein Termin gewählt', en: 'No date chosen yet' },
+  'fyp_out_nodate_body': { de: 'Kein Problem. Sobald du einen Termin setzt, bauen wir die Tag-für-Tag-Zeitleiste. Bis dahin fang einfach mit kostenlosem Üben an.', en: 'No problem. As soon as you set a date, we build the day-by-day timeline. Until then, just start with free practice.' },
+  'fyp_out_plan_title': { de: 'Dein Lernplan', en: 'Your study plan' },
+  'fyp_out_plan_days': { de: 'Tage Plan', en: 'days planned' },
+  'fyp_out_plan_qpd': { de: 'Fragen pro Tag', en: 'questions per day' },
+  'fyp_out_plan_split': { de: '70 % neuer Stoff, dann 30 % Festigung, gewichtet nach deinen Schwächen.', en: '70 % new material, then 30 % consolidation, weighted by your weak topics.' },
+  'fyp_out_plan_inapp': { de: 'Den genauen Tagesplan baut die App, sobald du übst und wir deinen Fortschritt kennen.', en: 'The app builds the exact day-by-day once you practice and we know your progress.' },
+  'fyp_out_start_title': { de: 'Fang hier an', en: 'Start here' },
+  'fyp_out_start_body': { de: 'Mach 150 kostenlose Fragen je Prüfung, ganz ohne Karte. So siehst du sofort, wo du stehst.', en: 'Take 150 free questions per exam, no card needed. You will see right away where you stand.' },
+  'fyp_out_cta_practice': { de: 'Kostenlos üben und Niveau einschätzen', en: 'Practice free and gauge your level' },
+  'fyp_out_cta_account': { de: 'Kostenloses Konto erstellen', en: 'Create a free account' },
+  'fyp_out_cta_account_sub': { de: 'Speichert deinen Weg und synchronisiert deinen Fortschritt', en: 'Saves your path and syncs your progress' },
+  'fyp_out_cta_studyplan': { de: 'Zu meinem Lernplan', en: 'Go to my study plan' },
+  'fyp_out_restart': { de: 'Von vorne beginnen', en: 'Start over' },
+  'fyp_out_price_note': { de: 'MedPrüf gibt es ab 19 € im Monat. Die Prüfungs-Kohorte enthält die Pass-Until-You-Pass-Garantie.', en: 'MedPrüf starts at 19 € a month. The Exam Cohort includes the Pass-Until-You-Pass guarantee.' },
+
   // Settings extras
   'settings_account': { de: 'Konto', en: 'Account' },
   'settings_section_about': { de: 'Über', en: 'About' },

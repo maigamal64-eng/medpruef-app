@@ -24,6 +24,18 @@ export interface ChangelogEntry {
 export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-06-26",
+    tag: "feature",
+    title: {
+      de: "Finde deinen Weg: kurze Orientierung für deinen Anerkennungsweg",
+      en: "Find your path: a short orientation for your recognition route",
+    },
+    description: {
+      de: "Neu und noch nicht sicher, welcher Prüfungsweg deiner ist? Beantworte drei kurze Fragen und du siehst, ob die Kenntnisprüfung Wien oder der Stichprobentest dein Weg ist, wann deine Anmeldefristen sind und wo du am besten anfängst. Du erreichst die Orientierung über die Startseite mit dem Hinweis Nicht sicher, wo du anfangen sollst. Kein Konto nötig: du kannst danach direkt kostenlos üben.",
+      en: "New and not sure which exam route is yours? Answer three short questions and see whether the Kenntnisprüfung Vienna or the Stichprobentest is your path, when your registration deadlines are, and where to begin. You can reach it from the landing page via Not sure where to start. No account needed: you can practice free right after.",
+    },
+  },
+  {
+    date: "2026-06-26",
     tag: "improvement",
     title: {
       de: "Aufgeräumte Frageansicht, mehrere Notizen, KI-Erklärung in deiner Sprache und eine echte Prüfungssimulation",

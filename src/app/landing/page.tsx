@@ -21,6 +21,7 @@ import {
   Brain,
   ChevronRight,
   Clock,
+  Compass,
   Dna,
   Ear,
   Eye,
@@ -125,6 +126,17 @@ const COPY = {
     cta_note: {
       de: "Keine Karte · Prüfungs-Kohorte mit Pass-Until-You-Pass-Garantie",
       en: "No credit card · Exam Cohort includes Pass-Until-You-Pass",
+    },
+    // Orientation entry for the confused lead (the Instagram DM who does
+    // not yet know which recognition route is theirs). Routes to the
+    // public /find-your-path flow. No em dashes.
+    find_path_label: {
+      de: "Nicht sicher, wo du anfangen sollst?",
+      en: "Not sure where to start?",
+    },
+    find_path_cta: {
+      de: "Finde deinen Weg",
+      en: "Find your path",
     },
   },
   stats: [
@@ -736,6 +748,14 @@ function Nav({ lang, onLangChange }: { lang: Lang; onLangChange: (l: Lang) => vo
                 {COPY.nav.pricing[lang]}
               </a>
               <Link
+                href="/find-your-path"
+                onClick={closeMenu}
+                className="flex items-center gap-3 px-3 py-3 rounded-xl text-[var(--mp-fg)] text-base font-semibold hover:bg-[var(--mp-surface-sunken)] transition-colors"
+              >
+                <Compass className="w-4 h-4 text-[var(--mp-viridian)]" aria-hidden="true" />
+                {COPY.hero.find_path_cta[lang]}
+              </Link>
+              <Link
                 href="/faq"
                 onClick={closeMenu}
                 className="flex items-center gap-3 px-3 py-3 rounded-xl text-[var(--mp-fg)] text-base font-semibold hover:bg-[var(--mp-surface-sunken)] transition-colors"
@@ -888,6 +908,34 @@ function Hero({ lang, freeHref }: { lang: Lang; freeHref: string }) {
                 <ChevronRight className="w-4 h-4" aria-hidden="true" />
               </Link>
             </div>
+
+            {/* Orientation entry — the confused lead (Instagram DM) who
+                does not yet know which recognition route is theirs.
+                Routes to the public /find-your-path flow. */}
+            <Link
+              href="/find-your-path"
+              className="group mb-5 inline-flex items-center gap-2.5 rounded-xl border border-white/20 bg-white/[0.06] px-4 py-2.5 transition-all hover:border-[var(--mp-accent-teal)]/60 hover:bg-white/[0.1] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--mp-accent-teal)] focus:ring-offset-[var(--mp-oxford-blue-dk)]"
+            >
+              <span
+                className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"
+                style={{ background: "rgba(0,168,150,0.16)" }}
+                aria-hidden="true"
+              >
+                <Compass className="h-4 w-4" style={{ color: "var(--lp-teal-br)" }} />
+              </span>
+              <span className="text-left leading-tight">
+                <span className="block text-white/60" style={{ fontSize: "11px" }}>
+                  {COPY.hero.find_path_label[lang]}
+                </span>
+                <span className="block font-semibold text-white" style={{ fontSize: "13.5px" }}>
+                  {COPY.hero.find_path_cta[lang]}
+                </span>
+              </span>
+              <ChevronRight
+                className="ml-1 h-4 w-4 text-white/40 transition-transform group-hover:translate-x-0.5"
+                aria-hidden="true"
+              />
+            </Link>
 
             {/* Tertiary 19 €/month entry link */}
             <p className="mb-6">
