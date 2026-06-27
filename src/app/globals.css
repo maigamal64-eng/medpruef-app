@@ -1013,6 +1013,43 @@ textarea:focus {
 .mp-field__helper { font-size: 12px; color: var(--mp-fg-subtle); }
 .mp-field__helper--error { color: var(--mp-error); }
 
+/* ═══ RANGE SLIDER (.mp-launch-range) ═══
+   Token-themed range input for the Launch funnel calculator. Native range
+   inputs ignore CSS vars and look broken in dark mode, so we style the track
+   + thumb explicitly for both engines. Used in /admin/launch. */
+.mp-launch-range {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: var(--mp-r-full);
+  background: var(--mp-surface-sunken);
+  border: 1px solid var(--mp-border-subtle);
+  outline: none;
+  cursor: pointer;
+}
+.mp-launch-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: var(--mp-r-full);
+  background: var(--mp-viridian);
+  border: 2px solid var(--mp-surface-raised);
+  box-shadow: var(--mp-shadow-xs);
+  transition: transform var(--mp-dur-micro) var(--mp-ease-out);
+}
+.mp-launch-range::-webkit-slider-thumb:hover { transform: scale(1.15); }
+.mp-launch-range::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: var(--mp-r-full);
+  background: var(--mp-viridian);
+  border: 2px solid var(--mp-surface-raised);
+  box-shadow: var(--mp-shadow-xs);
+  cursor: pointer;
+}
+.mp-launch-range:focus-visible { box-shadow: var(--mp-focus-ring); }
+
 /* ═══ ALERT / BANNER (.mp-alert) ═══ */
 .mp-alert {
   display: flex; align-items: flex-start; gap: 12px;

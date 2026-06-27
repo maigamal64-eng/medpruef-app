@@ -46,6 +46,7 @@ import {
   MessageSquare,
   Moon,
   RefreshCw,
+  Rocket,
   Search,
   Server,
   Shield,
@@ -70,6 +71,7 @@ type SectionKey =
   | "actions"
   | "growth"
   | "plan"
+  | "launch"
   | "revenue"
   | "content"
   | "product"
@@ -133,6 +135,14 @@ const NAV: NavSection[] = [
     icon: Map,
     shortcut: "l",
     href: "/admin/plan",
+    items: [],
+  },
+  {
+    key: "launch",
+    label: "Launch",
+    icon: Rocket,
+    shortcut: "n",
+    href: "/admin/launch",
     items: [],
   },
   {
@@ -747,6 +757,7 @@ function ShortcutsDialog({ onClose }: { onClose: () => void }) {
           <ShortcutRow keys="g x" label="Go to Action Queue" />
           <ShortcutRow keys="g w" label="Go to Growth" />
           <ShortcutRow keys="g l" label="Go to Plan" />
+          <ShortcutRow keys="g n" label="Go to Launch" />
           <ShortcutRow keys="g r" label="Go to Revenue" />
           <ShortcutRow keys="g c" label="Go to Content" />
           <ShortcutRow keys="g p" label="Go to Product" />
