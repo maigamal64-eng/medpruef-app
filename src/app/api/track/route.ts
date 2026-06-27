@@ -163,15 +163,30 @@ export async function POST(req: NextRequest) {
           .from("user_activity_log")
           .insert(activityRows);
         // Activity log failure is non-critical (user_events is the
-        // authoritative stream) but we still ship it to Sentry so a
+        // authoritative stream). An orphan-user FK violation (23503,
+        // user_activity_log_user_id_fkey) or a malformed uuid (22P02)
+        // is EXPECTED for a UUID that no longer exists (deleted account)
+        // and shouldn't ship to Sentry — mirror the user_events filter
+        // above: console.warn + drop the row silently. We fall THROUGH
+        // (no early return) so the pages_visited update below still runs.
+        // Any OTHER error is still a real defect → ship it to Sentry so a
         // sustained breakage shows up as a cluster.
         if (activityErr) {
-          captureServerError(activityErr, {
-            route: "/api/track",
-            userId,
-            phase: "activity_log-insert",
-            batchSize: activityRows.length,
-          });
+          const aCode = (activityErr as { code?: string }).code;
+          if (aCode === "23503" || aCode === "22P02") {
+            // eslint-disable-next-line no-console
+            console.warn(
+              `[/api/track] swallowed ${aCode} for activity_log user_id=${userId}`,
+              { batchSize: activityRows.length, message: activityErr.message.slice(0, 150) },
+            );
+          } else {
+            captureServerError(activityErr, {
+              route: "/api/track",
+              userId,
+              phase: "activity_log-insert",
+              batchSize: activityRows.length,
+            });
+          }
         }
       }
 
