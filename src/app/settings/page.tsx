@@ -1183,8 +1183,8 @@ export default function SettingsPage() {
                               ? "Pro · Vollzugriff aktiv"
                               : "Pro · full access active"
                           : lang === "de"
-                            ? "Kostenlos · 200 Fragen pro Prüfung"
-                            : "Free · 200 questions per exam"}
+                            ? "Kostenlos · 150 Fragen pro Prüfung"
+                            : "Free · 150 questions per exam"}
                       </div>
                     </div>
                     <div className="sr-ctrl">
