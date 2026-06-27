@@ -58,3 +58,50 @@ export function trackRegistration(): void {
     /* analytics must never break the signup flow */
   }
 }
+
+/**
+ * Fire the Purchase conversion on BOTH ad platforms at the checkout-success
+ * moment. Completes the conversion-tracking loop for paid ads (the signup
+ * event marks the lead; this marks the sale).
+ *
+ * - Meta: `fbq('track', 'Purchase', { value, currency })` — Meta's optimization
+ *   event for the Sales / value-based objective.
+ * - GA4:  `gtag('event', 'purchase', { value, currency, items })` — GA4 key
+ *   event imported into Google Ads as a value-tracked conversion.
+ *
+ * Self-gates on consent + tracker presence exactly like `trackRegistration`,
+ * so it only fires after cookie-accept (when the trackers are loaded). Pass
+ * `valueEur` in euros (whole or fractional) and the tier id as `tier`.
+ */
+export function trackPurchase({
+  tier,
+  valueEur,
+}: {
+  tier: string;
+  valueEur: number;
+}): void {
+  if (typeof window === "undefined") return;
+  if (getCookieConsent() !== "accepted") return;
+
+  try {
+    const fbq = (window as unknown as { fbq?: Fbq }).fbq;
+    if (typeof fbq === "function") {
+      fbq("track", "Purchase", { value: valueEur, currency: "EUR" });
+    }
+  } catch {
+    /* analytics must never break the post-purchase flow */
+  }
+
+  try {
+    const gtag = (window as unknown as { gtag?: Gtag }).gtag;
+    if (typeof gtag === "function") {
+      gtag("event", "purchase", {
+        value: valueEur,
+        currency: "EUR",
+        items: [{ item_id: tier }],
+      });
+    }
+  } catch {
+    /* analytics must never break the post-purchase flow */
+  }
+}

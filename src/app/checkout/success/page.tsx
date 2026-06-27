@@ -4,6 +4,12 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useUserTier } from "@/lib/hooks/useUserTier";
+import { trackPurchase } from "@/lib/conversion-events";
+import { TIER_BY_ID } from "@/lib/content-truth";
+
+// Best-known value (in euros) if the tier is missing/unknown in the URL —
+// the Cohort is the headline paid tier, so we report its price rather than 0.
+const FALLBACK_PURCHASE_VALUE_EUR = 129;
 
 /**
  * Whop checkout success landing (redirect target set on the checkout
@@ -24,6 +30,34 @@ export default function CheckoutSuccessPage() {
   const [timedOut, setTimedOut] = useState(false);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const purchaseFiredRef = useRef(false);
+
+  // Fire the Purchase conversion ONCE on mount. Landing on this page means
+  // Whop already charged, so we report the sale here (not gated on the tier
+  // flip, so the 30s-timeout path still records the conversion). Reads the
+  // tier from the redirect URL (?tier=...) without useSearchParams, so the
+  // page needs no Suspense boundary and next build stays clean. Value is
+  // derived from the canonical price ledger, never hardcoded per tier.
+  useEffect(() => {
+    if (purchaseFiredRef.current) return;
+    purchaseFiredRef.current = true;
+
+    const tier =
+      new URLSearchParams(window.location.search).get("tier") ?? "";
+    const priceCents = TIER_BY_ID[tier]?.price_cents;
+
+    if (typeof priceCents === "number") {
+      trackPurchase({ tier, valueEur: priceCents / 100 });
+    } else {
+      console.warn(
+        `[checkout/success] Unknown tier "${tier}" in redirect URL; firing Purchase with fallback value €${FALLBACK_PURCHASE_VALUE_EUR}.`
+      );
+      trackPurchase({
+        tier: tier || "unknown",
+        valueEur: FALLBACK_PURCHASE_VALUE_EUR,
+      });
+    }
+  }, []);
 
   // Kick off an immediate refresh on mount so we don't wait for the
   // 5-minute background interval in useUserTier. Then poll every 2 s

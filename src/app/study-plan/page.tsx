@@ -627,13 +627,18 @@ export default function StudyPlanPage() {
                               <div
                                 className={`w-9 h-9 rounded-[11px] flex flex-col items-center justify-center relative z-[1] border ${
                                   isActive
-                                    ? "text-white border-transparent"
+                                    ? "border-transparent"
                                     : "bg-[var(--mp-surface)] border-[var(--mp-border)] text-[var(--mp-fg-muted)]"
                                 }`}
                                 style={
                                   isActive
                                     ? {
                                         background: "var(--mp-spark)",
+                                        // Dark brand-ink (not white) on the teal spark fill:
+                                        // white scored ~1.92:1 in dark mode. Inline style (not a
+                                        // text-[#...] class) so the dark !important override matrix
+                                        // can't flip it. Oxford ink passes >=4.5:1 in both modes.
+                                        color: "var(--mp-oxford-blue)",
                                         boxShadow: "0 0 0 4px var(--mp-spark-glow)",
                                       }
                                     : undefined
