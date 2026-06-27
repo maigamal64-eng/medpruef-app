@@ -23,6 +23,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-06-27",
+    tag: "improvement",
+    title: {
+      de: "Aufgeräumte untere Navigation am Handy",
+      en: "Tidier bottom navigation on mobile",
+    },
+    description: {
+      de: "Die untere Leiste am Handy ist jetzt ausgewogen: Startseite, Prüfung, der hervorgehobene Quiz-Knopf in der Mitte, Karteikarten und Fortschritt. Profil und Einstellungen findest du jetzt oben rechts über dein Initial-Symbol, damit die Leiste links und rechts vom Quiz-Knopf gleichmäßig wirkt und nichts mehr gedrängt aussieht.",
+      en: "The bottom bar on mobile is now balanced: Home, Exam, the highlighted Quiz button in the middle, Flashcards and Progress. Profile and Settings now live top right behind your initial badge, so the bar sits evenly on both sides of the Quiz button and nothing looks cramped.",
+    },
+  },
+  {
     date: "2026-06-26",
     tag: "feature",
     title: {

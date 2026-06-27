@@ -674,6 +674,18 @@ export default function Home() {
             <ExamSwitcherInline variant="compact" />
             <ThemeToggle />
             <LanguageToggle lang={lang} onChange={switchLang} />
+            {/* Profile/Settings entry — moved here when Profile left the bottom
+               nav (which now carries a symmetric 5 slots). Mirrors the Sidebar
+               avatar (viridian, white initial). Keeps Settings reachable on
+               mobile, where the Sidebar is hidden below lg. */}
+            <Link
+              href="/settings"
+              aria-label={t("settings", lang)}
+              title={t("settings", lang)}
+              className="w-9 h-9 flex items-center justify-center rounded-full bg-[var(--mp-viridian)] text-white text-xs font-bold ring-2 ring-[var(--mp-accent-teal)]/30 hover:opacity-90 transition-opacity mp-focusable flex-shrink-0"
+            >
+              {(user.first_name || "M").charAt(0).toUpperCase()}
+            </Link>
           </div>
         </div>
 

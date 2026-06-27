@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { t } from "@/lib/i18n";
-import { Home, FileText, GraduationCap, TrendingUp, User, Layers } from "lucide-react";
+import { Home, FileText, GraduationCap, TrendingUp, Layers } from "lucide-react";
 import { NavItem } from "@/components/ui";
 
 type Lang = "de" | "en";
@@ -22,7 +22,6 @@ export default function BottomNav({ lang, userId }: BottomNavProps) {
     if (key === "exam") return pathname.startsWith("/exam");
     if (key === "flashcards") return pathname.startsWith("/flashcards");
     if (key === "progress") return pathname.startsWith("/progress") || pathname.startsWith("/stats");
-    if (key === "settings") return pathname.startsWith("/settings") || pathname.startsWith("/profile");
     return false;
   };
 
@@ -35,10 +34,10 @@ export default function BottomNav({ lang, userId }: BottomNavProps) {
   return (
     <nav className="bottom-nav fixed bottom-0 left-0 right-0 z-50 safe-area-bottom">
       <div className="glass border-t border-[var(--mp-border)] shadow-[var(--shadow-elevated)] mx-2 max-[340px]:mx-1 mb-2 rounded-2xl">
-        {/* px-1 + compact per-item padding: the bar now carries SIX flanking
-            slots + the raised center CTA, so it must stay un-crowded down to
-            360px. `whitespace-nowrap` keeps the longest label (Karteikarten)
-            on one line. */}
+        {/* px-1 + compact per-item padding: the bar carries FOUR flanking
+            slots (2 + 2) around the raised center CTA — a symmetric 5-slot
+            nav. `whitespace-nowrap` keeps the longest label (Karteikarten)
+            on one line; the max-[340px] guards stay as harmless headroom. */}
         <div className="flex items-end justify-around px-1 max-[340px]:px-0.5 pt-2 pb-2.5 relative">
           {/* Home */}
           <NavItem context="bottom" href="/" icon={<Home className="w-5 h-5" />} label={t("home", lang)} active={isActive("home")} className="!px-1 max-[340px]:!px-0.5 whitespace-nowrap" />
@@ -69,11 +68,10 @@ export default function BottomNav({ lang, userId }: BottomNavProps) {
               Layers icon to match the desktop rail + the flashcards fbar. */}
           <NavItem context="bottom" href="/flashcards" icon={<Layers className="w-5 h-5" />} label={t("flashcards", lang)} active={isActive("flashcards")} className="!px-1 max-[340px]:!px-0.5 whitespace-nowrap" />
 
-          {/* Progress */}
+          {/* Progress — rightmost flanking slot. Profile/Settings moved OFF
+              the bottom nav (it split 2-left vs 3-right around the raised CTA);
+              Settings is reachable via the home-header avatar → /settings. */}
           <NavItem context="bottom" href="/progress" icon={<TrendingUp className="w-5 h-5" />} label={t("progress", lang)} active={isActive("progress")} className="!px-1 max-[340px]:!px-0.5 whitespace-nowrap" />
-
-          {/* Settings (was Profile) */}
-          <NavItem context="bottom" href="/settings" icon={<User className="w-5 h-5" />} label={t("profile", lang)} active={isActive("settings")} className="!px-1 max-[340px]:!px-0.5 whitespace-nowrap" />
         </div>
       </div>
     </nav>
