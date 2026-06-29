@@ -168,6 +168,143 @@ export const ALREADY_SHIPPED: string[] = [
 ];
 
 /* ------------------------------------------------------------------ */
+/* DISTRIBUTION ARSENAL - the 4 newly-built distribution integrations   */
+/*                                                                      */
+/* Authored 2026-06-29 ([name]). These are the channels [name] can fire     */
+/* into the foreign-doctors-in-Austria niche (and across the portfolio).*/
+/* Three need a one-time activation by [name] to go live; demand-research */
+/* is already live. The activation steps mirror the Blink integrations  */
+/* ACTIVATION.md so the cockpit and the disk agree. No em dashes.       */
+/* ------------------------------------------------------------------ */
+
+export type IntegrationStatus = "live" | "partial" | "needs-creds";
+
+export interface IntegrationActivation {
+  /** What [name] hands over to fire this channel. */
+  provide: string;
+  /** What providing it switches on. */
+  unlocks: string;
+  /** The exact steps, in order. */
+  steps: string[];
+  /** Activation order in the "what I need now" panel (lower fires first). */
+  priority: number;
+}
+
+export interface Integration {
+  key: string;
+  name: string;
+  /** The channels this integration reaches, in one line. */
+  channels: string;
+  status: IntegrationStatus;
+  /** One line: what it does. */
+  does: string;
+  /** The concrete capabilities, each a bullet. */
+  functionality: string[];
+  /** One line: why it matters for MedPruf / the portfolio. */
+  value: string;
+  /** Null when nothing is required (already live). */
+  activation: IntegrationActivation | null;
+  /** Shown when activation is null (or as an aside): the optional note. */
+  activationNote?: string;
+}
+
+export const INTEGRATIONS: Integration[] = [
+  {
+    key: "demand-research",
+    name: "Demand Research",
+    channels: "Hacker News · Stack Exchange · GitHub · GDELT · Google News",
+    status: "live",
+    does: "Unified read-only demand, intent, and trend mining across five sources.",
+    functionality: [
+      "Cross-source pain-point clustering (painpoints)",
+      "Dev and founder pain mining (devdemand: HN + Stack Exchange + GitHub)",
+      "Trend volume and recency (trends: GDELT + Google News)",
+      "Strong-intent vs chatter separation",
+    ],
+    value:
+      "Validate demand and mine real pain-point language across the whole portfolio. Strongest for the dev and founder projects ([name], Blink). The MedPruf audience is not on these platforms, so Reddit carries MedPruf.",
+    activation: null,
+    activationNote:
+      "Already live. Optional only: a free Stack Exchange key + a GitHub token raise rate limits.",
+  },
+  {
+    key: "reddit",
+    name: "Reddit",
+    channels: "Reddit (research + governed reach)",
+    status: "needs-creds",
+    does: "Market research, warm-lead capture, and governed organic posting on Reddit.",
+    functionality: [
+      "Pain-point and intent mining + community mapping",
+      "Warm-lead MONITORING: watch keywords across subreddits; fresh relevant posts land in a triage inbox (never auto-replies)",
+      "Governed posting: draft to queue to your confirm",
+      "Post analytics + optimal-time scheduling",
+      "Vote and DM gated off; every call logged",
+    ],
+    value:
+      "MedPruf's load-bearing organic channel; its audience lives on Reddit. Warm-lead monitoring is the highest-leverage play: be the first genuinely helpful reply.",
+    activation: {
+      provide: "A Reddit script app + a posting account",
+      unlocks:
+        "client id/secret unlock research + monitoring; username/password unlock posting",
+      steps: [
+        "Create a script app at reddit.com/prefs/apps (type: script, redirect http://localhost:8080)",
+        "Send REDDIT_CLIENT_ID + REDDIT_CLIENT_SECRET (these alone unlock research + monitoring)",
+        "Send REDDIT_USERNAME + REDDIT_PASSWORD to unlock posting (or ask for the no-password refresh-token path)",
+        "Use a real-looking account that participates, not an obvious brand account",
+      ],
+      priority: 1,
+    },
+  },
+  {
+    key: "bluesky",
+    name: "Bluesky",
+    channels: "Bluesky (AT Protocol)",
+    status: "partial",
+    does: "Research (live now, no creds) + governed organic posting. The only open organic-reach channel left in 2026.",
+    functionality: [
+      "Creds-free research: search posts, actors, feeds (works today)",
+      "Governed posting: draft to queue to your confirm",
+      "Like, repost, follow gated off; logged",
+    ],
+    value:
+      "Net-new organic reach, free and open, where X and LinkedIn closed down.",
+    activation: {
+      provide: "A Bluesky handle + an app-password",
+      unlocks: "posting (research already runs)",
+      steps: [
+        "bsky.social > Settings > Privacy and security > App passwords > create one",
+        "Send BLUESKY_HANDLE + BLUESKY_APP_PASSWORD (the app-password, never the main password)",
+      ],
+      priority: 2,
+    },
+  },
+  {
+    key: "threads",
+    name: "Threads",
+    channels: "Threads (via our Meta rails)",
+    status: "needs-creds",
+    does: "Organic posting to Threads, riding the Meta integration we already own. Free, 250 posts/day.",
+    functionality: [
+      "Text and image posts through the same draft to queue to confirm cockpit gate as FB and IG",
+      "Reaches the consumer and edtech audiences (MedPruf, Harmonia, Blink)",
+      "FB and IG paths untouched (additive only)",
+    ],
+    value:
+      "Free reach on rails we already control; highest setup-ROI of the posting channels.",
+    activation: {
+      provide: "Threads scopes + token on the Blink Meta app",
+      unlocks: "Threads posting",
+      steps: [
+        "Add the Threads use-case + scopes threads_basic and threads_content_publish on the Blink Meta app",
+        "Connect each brand's Threads account, exchange for a long-lived token",
+        "Set THREADS_TOKEN in the Meta env + each brand's threads.user_id",
+      ],
+      priority: 3,
+    },
+  },
+];
+
+/* ------------------------------------------------------------------ */
 /* THE PHASES + [name]'S GUIDED TASKS                                    */
 /* ------------------------------------------------------------------ */
 

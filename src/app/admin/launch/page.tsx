@@ -35,6 +35,9 @@ import {
   ExternalLink,
   Flag,
   Gauge,
+  KeyRound,
+  Megaphone,
+  Radio,
   RefreshCw,
   Rocket,
   Sliders,
@@ -54,11 +57,15 @@ import {
 import {
   ALREADY_SHIPPED,
   FUNNEL_DEFAULTS,
+  INTEGRATIONS,
   LAUNCH_BASELINE,
   LAUNCH_PHASES,
   PRICE_POINTS,
   computeFunnel,
   type FunnelAssumptions,
+  type Integration,
+  type IntegrationActivation,
+  type IntegrationStatus,
   type LaunchPhase,
   type LaunchStep,
   type LaunchTask,
@@ -66,6 +73,7 @@ import {
 } from "@/lib/admin/launchPlan";
 
 const PROGRESS_KEY = "medpruef_launch_progress";
+const ACTIVATION_KEY = "medpruef_activation_progress";
 
 export default function AdminLaunchPage() {
   return (
@@ -82,6 +90,7 @@ export default function AdminLaunchPage() {
       }
     >
       <ReadinessHeader />
+      <DistributionArsenal />
       <FunnelCalculator />
       <PhasesSection />
     </AdminPageShell>
@@ -213,6 +222,351 @@ function ReadinessHeader() {
         </ul>
       </div>
     </section>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   1b. DISTRIBUTION ARSENAL
+   The 4 newly-built distribution integrations + the activation panel that
+   tells [name] exactly what to hand over to fire the three gated channels.
+   ══════════════════════════════════════════════════════════════════════ */
+
+const INTEGRATION_STATUS_META: Record<
+  IntegrationStatus,
+  { label: string; color: string; spark: boolean }
+> = {
+  live: { label: "Live now", color: "var(--mp-viridian)", spark: true },
+  partial: { label: "Research live", color: "var(--mp-warning)", spark: false },
+  "needs-creds": { label: "Needs setup", color: "var(--mp-fg-subtle)", spark: false },
+};
+
+function DistributionArsenal() {
+  // Independent localStorage block (does NOT touch the phases' PROGRESS_KEY).
+  // Load AFTER mount so SSR + first client render match (no hydration drift).
+  const [done, setDone] = useState<Record<string, boolean>>({});
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = window.localStorage.getItem(ACTIVATION_KEY);
+      if (raw) setDone(JSON.parse(raw) as Record<string, boolean>);
+    } catch {
+      // ignore corrupt/blocked storage; start from empty
+    }
+    setHydrated(true);
+  }, []);
+
+  const toggle = useCallback((key: string) => {
+    setDone((prev) => {
+      const next = { ...prev, [key]: !prev[key] };
+      try {
+        window.localStorage.setItem(ACTIVATION_KEY, JSON.stringify(next));
+      } catch {
+        // ignore write failures (private mode etc.)
+      }
+      return next;
+    });
+  }, []);
+
+  // Only the gated integrations have an activation; order them by priority.
+  // The predicate narrows `activation` to non-null so the sort is type-clean.
+  const activations = useMemo(
+    () =>
+      INTEGRATIONS.filter(
+        (i): i is Integration & { activation: IntegrationActivation } =>
+          i.activation !== null
+      ).sort((a, b) => a.activation.priority - b.activation.priority),
+    []
+  );
+
+  const totalToActivate = activations.length;
+  const activatedCount = hydrated
+    ? activations.filter((i) => done[i.key]).length
+    : 0;
+
+  return (
+    <section className="space-y-3">
+      <SectionHeading
+        title="Distribution Arsenal"
+        icon={Megaphone}
+        hint="four channels built; three need one hand-over to fire"
+      />
+
+      {/* The integration cards. */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        {INTEGRATIONS.map((it) => (
+          <IntegrationCard key={it.key} integration={it} />
+        ))}
+      </div>
+
+      {/* The activation panel — the prominent "what I need from you now". */}
+      <ActivationPanel
+        activations={activations}
+        done={done}
+        hydrated={hydrated}
+        activatedCount={activatedCount}
+        totalToActivate={totalToActivate}
+        onToggle={toggle}
+      />
+    </section>
+  );
+}
+
+function IntegrationStatusBadge({ status }: { status: IntegrationStatus }) {
+  const meta = INTEGRATION_STATUS_META[status];
+  return (
+    <span
+      className="inline-flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full border flex-shrink-0"
+      style={{
+        color: meta.color,
+        borderColor: "color-mix(in srgb, " + meta.color + " 40%, transparent)",
+        background: "color-mix(in srgb, " + meta.color + " 12%, transparent)",
+      }}
+    >
+      {meta.spark && (
+        <Sparkles size={9} style={{ color: meta.color }} aria-hidden />
+      )}
+      {meta.label}
+    </span>
+  );
+}
+
+function IntegrationCard({ integration: it }: { integration: Integration }) {
+  const meta = INTEGRATION_STATUS_META[it.status];
+  return (
+    <div className="relative rounded-2xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] p-4 overflow-hidden flex flex-col">
+      <div
+        className="absolute top-0 left-0 right-0 h-[3px]"
+        style={{ background: meta.color, opacity: 0.85 }}
+        aria-hidden
+      />
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="text-sm font-semibold text-[var(--mp-fg)] font-display">
+            {it.name}
+          </div>
+          <div className="mt-0.5 flex items-center gap-1.5 text-[10px] text-[var(--mp-fg-subtle)]">
+            <Radio size={10} className="flex-shrink-0" aria-hidden />
+            <span className="truncate">{it.channels}</span>
+          </div>
+        </div>
+        <IntegrationStatusBadge status={it.status} />
+      </div>
+
+      <p className="mt-2.5 text-[11px] text-[var(--mp-fg-muted)] leading-relaxed">
+        {it.does}
+      </p>
+
+      <ul className="mt-2.5 space-y-1.5">
+        {it.functionality.map((f, i) => (
+          <li key={i} className="flex items-start gap-2 text-[11px] leading-relaxed">
+            <CheckCircle2
+              size={13}
+              style={{ color: meta.color }}
+              className="mt-0.5 flex-shrink-0"
+              aria-hidden
+            />
+            <span className="text-[var(--mp-fg)]">{f}</span>
+          </li>
+        ))}
+      </ul>
+
+      <div className="mt-auto pt-3">
+        <div className="flex items-start gap-2 rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-sunken)] px-3 py-2">
+          <TrendingUp
+            size={12}
+            className="mt-0.5 flex-shrink-0 text-[var(--mp-fg-muted)]"
+            aria-hidden
+          />
+          <p className="text-[11px] text-[var(--mp-fg-muted)] leading-relaxed">
+            {it.value}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ActivationPanel({
+  activations,
+  done,
+  hydrated,
+  activatedCount,
+  totalToActivate,
+  onToggle,
+}: {
+  activations: Array<Integration & { activation: IntegrationActivation }>;
+  done: Record<string, boolean>;
+  hydrated: boolean;
+  activatedCount: number;
+  totalToActivate: number;
+  onToggle: (key: string) => void;
+}) {
+  return (
+    <div
+      className="rounded-2xl border p-4 sm:p-5"
+      style={{
+        borderColor: "color-mix(in srgb, var(--mp-cta-blue) 35%, transparent)",
+        background: "color-mix(in srgb, var(--mp-cta-blue) 8%, transparent)",
+      }}
+    >
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div className="flex items-start gap-3 min-w-0">
+          <KeyRound
+            size={18}
+            style={{ color: "var(--mp-cta-blue)" }}
+            className="mt-0.5 flex-shrink-0"
+            aria-hidden
+          />
+          <div className="min-w-0">
+            <h3 className="text-sm font-semibold text-[var(--mp-fg)] font-display">
+              What I need from you now
+            </h3>
+            <p className="mt-0.5 text-[11px] text-[var(--mp-fg-muted)] leading-relaxed">
+              Three one-time hand-overs unlock the gated channels, in this
+              order. Demand Research needs nothing; it is already live.
+            </p>
+          </div>
+        </div>
+        <span className="text-[11px] tabular-nums text-[var(--mp-fg-muted)] flex-shrink-0">
+          <span className="font-semibold text-[var(--mp-fg)]">
+            {activatedCount}
+          </span>{" "}
+          / {totalToActivate} handed over
+        </span>
+      </div>
+
+      <ol className="mt-4 space-y-3">
+        {activations.map((it, idx) => {
+          const checked = hydrated && !!done[it.key];
+          return (
+            <ActivationItem
+              key={it.key}
+              order={idx + 1}
+              integration={it}
+              checked={checked}
+              onToggle={() => onToggle(it.key)}
+            />
+          );
+        })}
+      </ol>
+
+      {/* The skip note. */}
+      <div className="mt-4 flex items-start gap-2 rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] px-3 py-2">
+        <Flag
+          size={12}
+          className="mt-0.5 flex-shrink-0 text-[var(--mp-fg-subtle)]"
+          aria-hidden
+        />
+        <p className="text-[11px] text-[var(--mp-fg-muted)] leading-relaxed">
+          Skip in 2026: X, LinkedIn, TikTok, Quora (paywalled or dead for
+          organic).
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function ActivationItem({
+  order,
+  integration: it,
+  checked,
+  onToggle,
+}: {
+  order: number;
+  integration: Integration & { activation: IntegrationActivation };
+  checked: boolean;
+  onToggle: () => void;
+}) {
+  const a = it.activation;
+  return (
+    <li
+      className={`rounded-xl border bg-[var(--mp-surface-raised)] border-[var(--mp-border-subtle)] transition-opacity ${
+        checked ? "opacity-60" : "opacity-100"
+      }`}
+    >
+      <div className="flex items-start gap-3 p-3">
+        {/* Checkbox — same pattern as the phase tasks. */}
+        <button
+          type="button"
+          onClick={onToggle}
+          role="checkbox"
+          aria-checked={checked}
+          aria-label={`Mark "${it.name}" handed over`}
+          title={checked ? "Mark not done" : "Mark handed over"}
+          className="mt-0.5 w-5 h-5 rounded-md border flex items-center justify-center flex-shrink-0 cursor-pointer transition-colors"
+          style={{
+            background: checked ? "var(--mp-viridian)" : "transparent",
+            borderColor: checked ? "var(--mp-viridian)" : "var(--mp-border-strong)",
+          }}
+        >
+          {checked && <CheckCircle2 size={14} className="text-white" aria-hidden />}
+        </button>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span
+              className="flex items-center justify-center w-5 h-5 rounded-full flex-shrink-0 text-[10px] font-semibold tabular-nums"
+              style={{
+                background: "color-mix(in srgb, var(--mp-cta-blue) 16%, transparent)",
+                color: "var(--mp-cta-blue)",
+              }}
+            >
+              {order}
+            </span>
+            <span
+              className={`text-sm font-semibold text-[var(--mp-fg)] ${
+                checked ? "line-through" : ""
+              }`}
+            >
+              {it.name}
+            </span>
+            <IntegrationStatusBadge status={it.status} />
+          </div>
+
+          {/* Provide + unlocks. */}
+          <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div className="rounded-lg border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-sunken)] px-2.5 py-1.5">
+              <div className="text-[9px] font-semibold uppercase tracking-[0.1em] text-[var(--mp-fg-subtle)]">
+                Provide
+              </div>
+              <div className="mt-0.5 text-[11px] text-[var(--mp-fg)] leading-relaxed">
+                {a.provide}
+              </div>
+            </div>
+            <div className="rounded-lg border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-sunken)] px-2.5 py-1.5">
+              <div className="text-[9px] font-semibold uppercase tracking-[0.1em] text-[var(--mp-fg-subtle)]">
+                Unlocks
+              </div>
+              <div className="mt-0.5 text-[11px] text-[var(--mp-fg)] leading-relaxed">
+                {a.unlocks}
+              </div>
+            </div>
+          </div>
+
+          {/* The steps. */}
+          <ol className="mt-2.5 space-y-2 border-l border-[var(--mp-border-subtle)] pl-3.5 ml-0.5">
+            {a.steps.map((step, i) => (
+              <li key={i} className="flex items-start gap-2.5">
+                <span
+                  className="flex items-center justify-center w-4 h-4 rounded-full flex-shrink-0 mt-0.5 text-[9px] font-semibold tabular-nums"
+                  style={{
+                    background: "color-mix(in srgb, var(--mp-viridian) 16%, transparent)",
+                    color: "var(--mp-viridian)",
+                  }}
+                >
+                  {i + 1}
+                </span>
+                <span className="min-w-0 text-[11px] text-[var(--mp-fg)] leading-relaxed">
+                  {step}
+                </span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </div>
+    </li>
   );
 }
 
