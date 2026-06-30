@@ -198,11 +198,11 @@ function NoteGridCard({
         )}
       </div>
 
-      <p className="font-display font-bold text-[var(--mp-fg)] leading-snug line-clamp-2">
+      <p dir="auto" className="font-display font-bold text-[var(--mp-fg)] leading-snug line-clamp-2">
         {note.title || (lang === "de" ? "Ohne Titel" : "Untitled")}
       </p>
       {previewText && (
-        <p className="text-[13px] text-[var(--mp-fg-muted)] leading-relaxed line-clamp-2 flex-1">
+        <p dir="auto" className="text-[13px] text-[var(--mp-fg-muted)] leading-relaxed line-clamp-2 flex-1">
           {previewText}
         </p>
       )}
@@ -348,7 +348,10 @@ function StudyOverlay({
               frontLabel={lang === "de" ? "Notiz" : "Note"}
               backLabel={lang === "de" ? "Inhalt" : "Content"}
               front={
-                <div className="flex-1 min-h-0 flex flex-col items-center justify-center text-center gap-4 px-1 overflow-y-auto">
+                <div
+                  dir="auto"
+                  className="flex-1 min-h-0 flex flex-col items-center justify-center text-center gap-4 px-1 overflow-y-auto"
+                >
                   <p className="font-display font-bold text-[var(--mp-fg)] text-[20px] sm:text-[22px] leading-[1.3] whitespace-pre-line">
                     {note.title || (lang === "de" ? "Ohne Titel" : "Untitled")}
                   </p>
@@ -364,7 +367,10 @@ function StudyOverlay({
                 </div>
               }
               back={
-                <div className="flex-1 flex flex-col gap-3 overflow-y-auto -mr-2 pr-2">
+                <div
+                  dir="auto"
+                  className="flex-1 flex flex-col gap-3 overflow-y-auto -mr-2 pr-2"
+                >
                   {blocks.map((b, i) => (
                     <BlockRow key={i} block={b} lang={lang} />
                   ))}
@@ -800,11 +806,11 @@ function PublicNoteCard({ note, lang }: { note: PublicNote; lang: Lang }) {
         <AlertTriangle className="w-3 h-3" />
         {de ? "Community · nicht verifiziert" : "Community · not verified"}
       </span>
-      <p className="font-display font-bold text-[var(--mp-fg)] leading-snug line-clamp-2">
+      <p dir="auto" className="font-display font-bold text-[var(--mp-fg)] leading-snug line-clamp-2">
         {note.title || (de ? "Ohne Titel" : "Untitled")}
       </p>
       {preview && (
-        <p className="text-[13px] text-[var(--mp-fg-muted)] line-clamp-3 flex-1">
+        <p dir="auto" className="text-[13px] text-[var(--mp-fg-muted)] line-clamp-3 flex-1">
           {preview}
         </p>
       )}
@@ -1125,7 +1131,9 @@ function LibraryContent() {
           <TrialActivation lang={lang} className="mx-4 lg:mx-8 mb-3" />
         )}
 
-        {/* Question-review entry (Library is the home for all revisable cards) */}
+        {/* Question-review entry (Library is the home for all revisable cards) —
+            only in "my notes" view. */}
+        {view === "mine" && (
         <div className="px-4 lg:px-8 pb-3">
           <Link
             href="/flashcards"
@@ -1147,6 +1155,7 @@ function LibraryContent() {
             <ArrowRight className="w-4 h-4 text-[var(--mp-fg-subtle)] flex-shrink-0" />
           </Link>
         </div>
+        )}
 
         {/* Controls */}
         <div className="px-4 lg:px-8 pb-3 flex flex-col gap-3">
@@ -1156,10 +1165,19 @@ function LibraryContent() {
               type="search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder={lang === "de" ? "Notizen durchsuchen…" : "Search notes…"}
+              placeholder={
+                view === "explore"
+                  ? lang === "de"
+                    ? "Explore durchsuchen…"
+                    : "Search Explore…"
+                  : lang === "de"
+                    ? "Notizen durchsuchen…"
+                    : "Search notes…"
+              }
               className="w-full pl-9 pr-3 py-2.5 rounded-[var(--mp-r-card)] bg-[var(--mp-surface)] border border-[var(--mp-border-soft)] text-[var(--mp-fg)] text-sm focus:outline-none focus:border-[var(--mp-viridian)]"
             />
           </div>
+          {view === "mine" && (
           <div className="flex items-center gap-2 overflow-x-auto -mx-1 px-1 pb-0.5">
             {SOURCE_FILTERS.map((f) => (
               <button
@@ -1188,6 +1206,7 @@ function LibraryContent() {
               <option value="exam">{lang === "de" ? "Prüfung" : "Exam"}</option>
             </select>
           </div>
+          )}
         </div>
 
         {/* Grid */}
