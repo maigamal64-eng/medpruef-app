@@ -448,12 +448,26 @@ export default function AIChatAssistant({
                 : <Bot className="w-4 h-4 text-[var(--mp-viridian)]" />
               }
             </div>
-            <div className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
-              msg.role === "user"
-                ? "bg-[var(--mp-cta-blue)] text-white rounded-tr-sm"
-                : "bg-[var(--mp-surface-sunken)] text-[var(--mp-fg)] rounded-tl-sm border border-[var(--mp-border)]"
-            }`}>
-              <ReactMarkdown components={markdownComponents(msg.role)}>{msg.content}</ReactMarkdown>
+            <div className={`flex flex-col gap-1.5 max-w-[85%] ${msg.role === "user" ? "items-end" : "items-start"}`}>
+              <div className={`rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+                msg.role === "user"
+                  ? "bg-[var(--mp-cta-blue)] text-white rounded-tr-sm"
+                  : "bg-[var(--mp-surface-sunken)] text-[var(--mp-fg)] rounded-tl-sm border border-[var(--mp-border)]"
+              }`}>
+                <ReactMarkdown components={markdownComponents(msg.role)}>{msg.content}</ReactMarkdown>
+              </div>
+              {/* Turn any real AI answer into a flash-note (skip placeholder / error copy). */}
+              {msg.role === "assistant" && hasRealExplanation && msg.content.length > 40 && (
+                <TurnIntoNoteButton
+                  kind="ai_explanation"
+                  lang={lang}
+                  sourceRef={{ question_id: questionId, message_id: String(i) }}
+                  text={msg.content}
+                  topic={topic}
+                  size="sm"
+                  allowCustomize={false}
+                />
+              )}
             </div>
           </div>
         ))}
@@ -466,19 +480,6 @@ export default function AIChatAssistant({
             <div className="bg-[var(--mp-surface-sunken)] rounded-2xl rounded-tl-sm px-4 py-3 border border-[var(--mp-border)]">
               <Loader2 className="w-4 h-4 text-[var(--mp-viridian)] animate-spin" />
             </div>
-          </div>
-        )}
-
-        {/* Turn this AI explanation into a structured flash-note (Haiku). */}
-        {hasRealExplanation && !loading && (
-          <div className="flex justify-center pt-1">
-            <TurnIntoNoteButton
-              kind="ai_explanation"
-              lang={lang}
-              sourceRef={{ question_id: questionId }}
-              text={cachedExplanation || undefined}
-              topic={topic}
-            />
           </div>
         )}
 

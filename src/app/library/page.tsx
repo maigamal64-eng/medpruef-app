@@ -55,6 +55,9 @@ import {
   AlertTriangle,
   Brain,
   BookOpen,
+  Link2,
+  ChevronDown,
+  ImageIcon,
 } from "lucide-react";
 
 type Lang = "de" | "en";
@@ -62,7 +65,13 @@ type Lang = "de" | "en";
 interface ServerNote {
   id: string;
   source_type: NoteSourceType;
-  source_ref: { question_id?: number; message_id?: string } | null;
+  source_ref: {
+    question_id?: number;
+    message_id?: string;
+    image_url?: string;
+    question_excerpt?: string;
+    message_excerpt?: string;
+  } | null;
   title: string;
   content: NoteContent;
   tags: string[];
@@ -226,12 +235,14 @@ function StudyOverlay({
 }) {
   const [flipped, setFlipped] = useState(false);
   const [rating, setRating] = useState(false);
+  const [showRefs, setShowRefs] = useState(false);
   const note = notes[index];
 
   // Reset to the front whenever the card changes.
   useEffect(() => {
     setFlipped(false);
     setRating(false);
+    setShowRefs(false);
   }, [index]);
 
   // Record an SM-2 review, then advance (or close on the last card). Best-effort:
@@ -278,6 +289,13 @@ function StudyOverlay({
   ) as Extract<NoteBlock, { type: "concept" }> | undefined;
   const refs = note.content?.refs ?? [];
   const blocks = note.content?.blocks ?? [];
+  const sr = note.source_ref ?? {};
+  const hasSources = !!(
+    sr.question_id ||
+    sr.question_excerpt ||
+    sr.message_excerpt ||
+    sr.image_url
+  );
 
   return (
     <div
@@ -348,6 +366,56 @@ function StudyOverlay({
                           {r.label}
                         </span>
                       ))}
+                    </div>
+                  )}
+                  {hasSources && (
+                    <div className="border-t border-[var(--mp-border-soft)] pt-2 mt-1">
+                      <button
+                        type="button"
+                        onClick={() => setShowRefs((s) => !s)}
+                        aria-expanded={showRefs}
+                        className="flex items-center gap-1.5 text-[11px] font-semibold text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg-muted)] transition-colors"
+                      >
+                        <Link2 className="w-3.5 h-3.5" />
+                        {lang === "de" ? "Quellen" : "Sources"}
+                        <ChevronDown
+                          className={`w-3 h-3 transition-transform ${showRefs ? "rotate-180" : ""}`}
+                        />
+                      </button>
+                      {showRefs && (
+                        <div className="mt-2 space-y-2">
+                          {(sr.question_id || sr.question_excerpt) && (
+                            <div className="text-xs text-[var(--mp-fg-muted)] leading-relaxed">
+                              <span className="font-semibold text-[var(--mp-fg-subtle)]">
+                                {lang === "de" ? "Aus Frage" : "From question"}
+                                {sr.question_id ? ` #${sr.question_id}` : ""}:
+                              </span>{" "}
+                              {sr.question_excerpt || ""}
+                            </div>
+                          )}
+                          {sr.message_excerpt && (
+                            <div className="text-xs text-[var(--mp-fg-muted)] leading-relaxed">
+                              <span className="font-semibold text-[var(--mp-fg-subtle)]">
+                                {lang === "de" ? "Aus KI-Erklärung" : "From AI explanation"}:
+                              </span>{" "}
+                              {sr.message_excerpt}
+                            </div>
+                          )}
+                          {sr.image_url && (
+                            <div>
+                              <p className="text-[10px] font-semibold text-[var(--mp-fg-subtle)] mb-1 flex items-center gap-1">
+                                <ImageIcon className="w-3 h-3" />{" "}
+                                {lang === "de" ? "Bild aus der Frage" : "Question image"}
+                              </p>
+                              <img
+                                src={sr.image_url}
+                                alt=""
+                                className="max-h-32 rounded-lg object-contain"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

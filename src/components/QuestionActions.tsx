@@ -6,7 +6,6 @@ import { t } from "@/lib/i18n";
 import { trackEvent } from "@/lib/tracker";
 import AIChatAssistant from "@/components/AIChatAssistant";
 import ReportQuestionModal from "@/components/ReportQuestionModal";
-import TurnIntoNoteButton from "@/components/TurnIntoNoteButton";
 import type { MCQOption } from "@/lib/mcq";
 
 type Lang = "de" | "en";
@@ -212,14 +211,6 @@ export default function QuestionActions({
               {b.icon}
             </button>
           ))}
-          <TurnIntoNoteButton
-            variant="icon"
-            kind="question"
-            lang={lang}
-            sourceRef={{ question_id: question.id }}
-            topic={question.topic}
-            className={`${baseBtn} border-[var(--mp-border)] text-[var(--mp-fg-muted)] hover:border-[var(--mp-viridian)]/40 hover:text-[var(--mp-viridian)]`}
-          />
         </div>
 
         {/* Inline note panel under the row when expanded */}
@@ -289,14 +280,6 @@ export default function QuestionActions({
             </span>
           </button>
         ))}
-        <TurnIntoNoteButton
-          variant="icon"
-          kind="question"
-          lang={lang}
-          sourceRef={{ question_id: question.id }}
-          topic={question.topic}
-          className={`${baseBtn} border-[var(--mp-border)] bg-[var(--mp-surface-raised)] text-[var(--mp-fg-muted)] hover:border-[var(--mp-viridian)]/40 hover:text-[var(--mp-viridian)] hover:shadow-[var(--shadow-card)]`}
-        />
 
         {showNotePanel && (
           <div className="absolute right-full mr-3 top-0 w-72">

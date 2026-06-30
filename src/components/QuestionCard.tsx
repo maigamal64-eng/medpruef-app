@@ -15,6 +15,7 @@ import AIChatAssistant from "@/components/AIChatAssistant";
 import TranslateButton from "@/components/TranslateButton";
 import QuestionReportForm from "@/components/question/QuestionReportForm";
 import QuestionNotesPanel from "@/components/question/QuestionNotesPanel";
+import TurnIntoNoteButton from "@/components/TurnIntoNoteButton";
 import QuestionExplanation from "@/components/question/QuestionExplanation";
 import {
   useQuestionHighlights,
@@ -309,6 +310,22 @@ export default function QuestionCard({
 
   const effectiveImageUrl = imageUrl ?? question.image_url;
 
+  // Answer context for "Save as flash-note" (isCorrect isn't stored, so derive
+  // it here from the selection vs the correct set).
+  const noteCorrectIdxs = options
+    .map((o, i) => (o.correct ? i : -1))
+    .filter((i) => i >= 0);
+  const userAnswerForNote = answered
+    ? [...selectedIdxs]
+        .map((i) => options[i]?.text)
+        .filter(Boolean)
+        .join(" | ")
+    : "";
+  const wasCorrectForNote: boolean | null = answered
+    ? selectedIdxs.size === noteCorrectIdxs.length &&
+      [...selectedIdxs].every((i) => noteCorrectIdxs.includes(i))
+    : null;
+
   // Per Mohamed: explanation images currently appear together with the question
   // image — they should only show up AFTER answering. The Anki importer dumps
   // question, explanation, and choice images all into `image_urls`, so the
@@ -501,6 +518,20 @@ export default function QuestionCard({
             </AnswerReveal>
           );
         })()}
+
+        {/* Save this question — with your answer context — as a flash-note. */}
+        {answered && !hideExplanation && (
+          <div className="mt-4">
+            <TurnIntoNoteButton
+              kind="question"
+              lang={lang}
+              sourceRef={{ question_id: question.id }}
+              topic={question.topic}
+              userAnswer={userAnswerForNote || undefined}
+              wasCorrect={wasCorrectForNote}
+            />
+          </div>
+        )}
 
         {/* ──────────────────────────────────────────────────────────
             Quiz-B: Tabbed post-answer context

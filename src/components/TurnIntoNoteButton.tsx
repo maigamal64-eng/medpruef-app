@@ -1,30 +1,48 @@
 "use client";
 
 /**
- * TurnIntoNoteButton — the ONE "Turn into note" control (Notes feature Phase 4b).
+ * TurnIntoNoteButton — the "Save as flash-note" control (Notes feature 4b, revamped).
  *
- * Dropped onto the three create surfaces (a bookmarked question, a per-question
- * note, an AI explanation) so each can become a structured flash-note via
- * POST /api/notes/transform (Haiku). Self-contained async state so it slots into
- * any surface without the parent tracking it:
- *   idle → loading → done (links to the Library) | cap (links to /pricing) | error (retry)
+ * One clear, LABELLED primary action ("Als Lernkarte speichern") with a success
+ * TOAST so the result is unmistakable (the old icon-only button read as
+ * unrecognisable + silent). An optional "Anpassen / Customize" panel lets the
+ * user pick the note's LANGUAGE and a FOCUS sentence; when an answer context is
+ * available (a question the user just answered) it is passed too, so the note
+ * targets their gaps. Sane one-tap default = current UI language, no focus,
+ * answer-context auto-attached.
  *
- * The 10-note free cap is enforced SERVER-SIDE (a 402 → the `cap` state surfaces
- * the upgrade), so this button is never client-gated by tier — that is the
- * conversion hook working as designed.
- *
- * Two variants: `full` (a labelled pill, for panels) and `icon` (a square icon,
- * for the question-actions toolbar — the parent passes the toolbar button class).
+ * POST /api/notes/transform. The 10-note free cap (402) surfaces the upgrade
+ * inline; AI-off (503) surfaces an error. Never tier-gated client-side.
  */
 
 import { useState } from "react";
 import Link from "next/link";
 import { authFetch as fetch } from "@/lib/authFetch";
-import { Sparkles, Loader2, Check, Crown, RotateCcw } from "lucide-react";
+import { useToast } from "@/components/ui";
+import {
+  Sparkles,
+  Loader2,
+  Check,
+  Crown,
+  RotateCcw,
+  Settings2,
+  ChevronDown,
+} from "lucide-react";
 
 type Lang = "de" | "en";
 type TransformKind = "question" | "user_note" | "ai_explanation";
-type State = "idle" | "loading" | "done" | "cap" | "error";
+type State = "idle" | "working" | "done" | "cap" | "error";
+
+const NOTE_LANG_OPTIONS: { code: string; de: string; en: string }[] = [
+  { code: "de", de: "Deutsch", en: "German" },
+  { code: "en", de: "Englisch", en: "English" },
+  { code: "ar", de: "Arabisch", en: "Arabic" },
+  { code: "ru", de: "Russisch", en: "Russian" },
+  { code: "fr", de: "Französisch", en: "French" },
+  { code: "tr", de: "Türkisch", en: "Turkish" },
+  { code: "uk", de: "Ukrainisch", en: "Ukrainian" },
+  { code: "sr", de: "Serbisch", en: "Serbian" },
+];
 
 interface Props {
   kind: TransformKind;
@@ -33,7 +51,11 @@ interface Props {
   text?: string;
   examType?: string;
   topic?: string;
-  variant?: "full" | "icon";
+  /** Answer context (for a question the user just answered) → sharper notes. */
+  userAnswer?: string;
+  wasCorrect?: boolean | null;
+  allowCustomize?: boolean;
+  size?: "sm" | "md";
   className?: string;
 }
 
@@ -44,14 +66,22 @@ export default function TurnIntoNoteButton({
   text,
   examType,
   topic,
-  variant = "full",
+  userAnswer,
+  wasCorrect,
+  allowCustomize = true,
+  size = "md",
   className = "",
 }: Props) {
+  const toast = useToast();
   const [state, setState] = useState<State>("idle");
+  const [open, setOpen] = useState(false);
+  const [noteLang, setNoteLang] = useState<string>(lang);
+  const [focus, setFocus] = useState("");
+  const de = lang === "de";
 
-  const run = async () => {
-    if (state === "loading") return;
-    setState("loading");
+  const create = async () => {
+    if (state === "working") return;
+    setState("working");
     try {
       const res = await fetch("/api/notes/transform", {
         method: "POST",
@@ -62,71 +92,36 @@ export default function TurnIntoNoteButton({
           text,
           exam_type: examType,
           topic,
+          lang: noteLang,
+          focus: focus.trim() || undefined,
+          user_answer: userAnswer || undefined,
+          was_correct: typeof wasCorrect === "boolean" ? wasCorrect : undefined,
         }),
       });
-      if (res.ok) setState("done");
-      else if (res.status === 402) setState("cap");
-      else setState("error");
+      if (res.ok) {
+        setState("done");
+        setOpen(false);
+        toast.success(
+          de ? "Lernkarte erstellt" : "Flash-note created",
+          de ? "In deiner Bibliothek gespeichert." : "Saved to your Library.",
+        );
+      } else if (res.status === 402) {
+        setState("cap");
+      } else {
+        setState("error");
+      }
     } catch {
       setState("error");
     }
   };
 
-  const L = {
-    idle: lang === "de" ? "Als Lernkarte speichern" : "Save as flash-note",
-    loading: lang === "de" ? "Erstelle…" : "Creating…",
-    done: lang === "de" ? "In Bibliothek" : "In Library",
-    cap: lang === "de" ? "Notiz-Limit erreicht" : "Note limit reached",
-    error: lang === "de" ? "Erneut versuchen" : "Try again",
-  };
-
-  // ── icon variant (toolbar) ──────────────────────────────────────────────
-  if (variant === "icon") {
-    if (state === "done") {
-      return (
-        <Link href="/library" title={L.done} aria-label={L.done} className={className}>
-          <Check className="w-5 h-5 text-[var(--mp-viridian)]" />
-        </Link>
-      );
-    }
-    if (state === "cap") {
-      return (
-        <Link
-          href="/pricing?gate=notes"
-          title={L.cap}
-          aria-label={L.cap}
-          className={className}
-        >
-          <Crown className="w-5 h-5 text-[var(--mp-status-warning)]" />
-        </Link>
-      );
-    }
-    return (
-      <button
-        type="button"
-        onClick={run}
-        disabled={state === "loading"}
-        title={state === "error" ? L.error : L.idle}
-        aria-label={L.idle}
-        className={className}
-      >
-        {state === "loading" ? (
-          <Loader2 className="w-5 h-5 animate-spin" />
-        ) : (
-          <Sparkles className="w-5 h-5" />
-        )}
-      </button>
-    );
-  }
-
-  // ── full variant (panels) ───────────────────────────────────────────────
   if (state === "done") {
     return (
       <Link
         href="/library"
-        className={`inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--mp-viridian)] ${className}`}
+        className={`inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--mp-viridian)] ${className}`}
       >
-        <Check className="w-3.5 h-3.5" /> {L.done} →
+        <Check className="w-4 h-4" /> {de ? "In Bibliothek ansehen" : "View in Library"} →
       </Link>
     );
   }
@@ -134,31 +129,105 @@ export default function TurnIntoNoteButton({
     return (
       <Link
         href="/pricing?gate=notes"
-        className={`inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--mp-status-warning)] ${className}`}
+        className={`inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--mp-status-warning)] ${className}`}
       >
-        <Crown className="w-3.5 h-3.5" /> {L.cap} →
+        <Crown className="w-4 h-4" />{" "}
+        {de ? "Notiz-Limit erreicht – Pro freischalten" : "Note limit reached – unlock Pro"} →
       </Link>
     );
   }
+
+  const btnSize = size === "sm" ? "text-xs px-3 py-1.5" : "text-sm px-4 py-2";
+
   return (
-    <button
-      type="button"
-      onClick={run}
-      disabled={state === "loading"}
-      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors disabled:opacity-60 ${
-        state === "error"
-          ? "border-[var(--mp-error)]/40 text-[var(--mp-error)] hover:bg-[var(--mp-error)]/10"
-          : "border-[var(--mp-viridian)]/30 bg-[var(--mp-viridian)]/10 text-[var(--mp-viridian)] hover:bg-[var(--mp-viridian)]/20"
-      } ${className}`}
-    >
-      {state === "loading" ? (
-        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-      ) : state === "error" ? (
-        <RotateCcw className="w-3.5 h-3.5" />
-      ) : (
-        <Sparkles className="w-3.5 h-3.5" />
+    <div className={className}>
+      <div className="flex items-center gap-2 flex-wrap">
+        <button
+          type="button"
+          onClick={create}
+          disabled={state === "working"}
+          className={`inline-flex items-center gap-1.5 ${btnSize} rounded-lg font-semibold border border-[var(--mp-viridian)]/30 bg-[var(--mp-viridian)]/10 text-[var(--mp-viridian)] hover:bg-[var(--mp-viridian)]/20 transition-colors disabled:opacity-60`}
+        >
+          {state === "working" ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : state === "error" ? (
+            <RotateCcw className="w-4 h-4" />
+          ) : (
+            <Sparkles className="w-4 h-4" />
+          )}
+          {state === "working"
+            ? de
+              ? "Erstelle…"
+              : "Creating…"
+            : state === "error"
+              ? de
+                ? "Erneut versuchen"
+                : "Try again"
+              : de
+                ? "Als Lernkarte speichern"
+                : "Save as flash-note"}
+        </button>
+
+        {allowCustomize && state !== "working" && (
+          <button
+            type="button"
+            onClick={() => setOpen((o) => !o)}
+            aria-expanded={open}
+            className="inline-flex items-center gap-1 text-xs text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg-muted)] transition-colors"
+          >
+            <Settings2 className="w-3.5 h-3.5" />
+            {de ? "Anpassen" : "Customize"}
+            <ChevronDown
+              className={`w-3 h-3 transition-transform ${open ? "rotate-180" : ""}`}
+            />
+          </button>
+        )}
+      </div>
+
+      {allowCustomize && open && (
+        <div className="mt-2 p-3 rounded-lg bg-[var(--mp-surface-sunken)] border border-[var(--mp-border-soft)] space-y-2 max-w-sm">
+          <label className="block text-[11px] font-semibold text-[var(--mp-fg-muted)]">
+            {de ? "Sprache der Notiz" : "Note language"}
+            <select
+              value={noteLang}
+              onChange={(e) => setNoteLang(e.target.value)}
+              className="mt-1 w-full text-sm px-2 py-1.5 rounded bg-[var(--mp-surface)] border border-[var(--mp-border-soft)] text-[var(--mp-fg)] focus:outline-none focus:border-[var(--mp-viridian)]"
+            >
+              {NOTE_LANG_OPTIONS.map((o) => (
+                <option key={o.code} value={o.code}>
+                  {de ? o.de : o.en}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block text-[11px] font-semibold text-[var(--mp-fg-muted)]">
+            {de ? "Fokus (optional)" : "Focus (optional)"}
+            <input
+              type="text"
+              value={focus}
+              onChange={(e) => setFocus(e.target.value)}
+              maxLength={300}
+              placeholder={
+                de ? "z. B. Nebenwirkungen betonen" : "e.g. emphasise side effects"
+              }
+              className="mt-1 w-full text-sm px-2 py-1.5 rounded bg-[var(--mp-surface)] border border-[var(--mp-border-soft)] text-[var(--mp-fg)] placeholder-[var(--mp-fg-subtle)] focus:outline-none focus:border-[var(--mp-viridian)]"
+            />
+          </label>
+          {userAnswer ? (
+            <p className="text-[10px] text-[var(--mp-fg-subtle)] leading-snug">
+              {de
+                ? "Deine Antwort wird einbezogen, damit die Notiz genau deine Lücken trifft."
+                : "Your answer is included so the note targets your gaps."}
+            </p>
+          ) : null}
+        </div>
       )}
-      {state === "loading" ? L.loading : state === "error" ? L.error : L.idle}
-    </button>
+
+      {state === "error" && (
+        <p className="text-xs text-[var(--mp-error)] mt-1">
+          {de ? "Etwas ist schiefgelaufen. Bitte erneut versuchen." : "Something went wrong. Please try again."}
+        </p>
+      )}
+    </div>
   );
 }

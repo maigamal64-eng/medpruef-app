@@ -53,6 +53,25 @@ const KIND_SOURCE_TYPE: Record<TransformKind, NoteSourceType> = {
   ai_explanation: "ai_explanation",
 };
 
+// Note output languages the user can pick (superset of the UI's de/en, matching
+// the translate route's supported set).
+const NOTE_LANGS: Record<string, string> = {
+  de: "German",
+  en: "English",
+  ru: "Russian",
+  ar: "Arabic",
+  fr: "French",
+  tr: "Turkish",
+  uk: "Ukrainian",
+  sr: "Serbian",
+};
+
+interface PromptOpts {
+  langLabel?: string | null;
+  focus?: string;
+  answerContext?: string;
+}
+
 async function fetchWithTimeout(
   url: string,
   init: RequestInit,
@@ -69,7 +88,10 @@ async function fetchWithTimeout(
   }
 }
 
-function buildPrompt(sourceText: string): string {
+function buildPrompt(sourceText: string, opts: PromptOpts = {}): string {
+  const langLine = opts.langLabel
+    ? `- Write the note ENTIRELY in ${opts.langLabel}. Keep medical terms (drug names, Latin anatomy, eponyms, guideline names, units) in their standard German/international form even when translating.`
+    : "- Write in the SAME language as the source (German stays German).";
   return [
     "You convert medical exam study content into structured flash-note cards for a doctor revising for the Austrian Kenntnisprüfung.",
     "",
@@ -80,13 +102,21 @@ function buildPrompt(sourceText: string): string {
     "- Usually return ONE note. Split into 2-4 linked notes ONLY when the source clearly covers several distinct concepts AND is long.",
     "- Each note: a short clear title and 2-6 blocks. Lead with a `concept` block (front = a recall question, back = the answer), then key facts / pitfalls / an optional mnemonic.",
     "- Block types are EXACTLY: concept (needs front+back), keyfact (needs text), pitfall (needs text), mnemonic (needs text). Use no other type.",
-    "- Write in the SAME language as the source (German stays German).",
+    langLine,
+    opts.focus
+      ? `- The user specifically wants this note to focus on: "${opts.focus}". Prioritise that angle.`
+      : "",
+    opts.answerContext
+      ? `- Learner context: ${opts.answerContext} Shape the note (especially the pitfall) to address exactly that.`
+      : "",
     "- PRESERVE medical terminology verbatim: drug names (Acetylsalicylsäure, Metoprolol), Latin anatomy (Arteria carotis), eponyms (Morbus Crohn), guideline names (ERC 2021, ESC, ÖDG), units (mg/dl, mmol/l).",
     "- NEVER invent facts that are not supported by the source. 3-6 tags, lowercase.",
     "",
     "SOURCE CONTENT:",
     sourceText.slice(0, MAX_INPUT_CHARS),
-  ].join("\n");
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
 
 /** Strip code fences and parse; return the notes array or null. */
@@ -182,6 +212,17 @@ export async function POST(req: NextRequest) {
         ? qidRaw
         : null;
     const clientText = typeof body?.text === "string" ? body.text.trim() : "";
+    // Optional creation controls (one-tap default = none of these set).
+    const noteLang =
+      typeof body?.lang === "string" && NOTE_LANGS[body.lang] ? body.lang : null;
+    const focus =
+      typeof body?.focus === "string" ? body.focus.trim().slice(0, 300) : "";
+    const userAnswer =
+      typeof body?.user_answer === "string"
+        ? body.user_answer.trim().slice(0, 500)
+        : "";
+    const wasCorrect =
+      typeof body?.was_correct === "boolean" ? body.was_correct : null;
 
     // ── Idempotency / cache: a question already turned into a note returns the
     //    existing note (no re-charge, no duplicate). ───────────────────────────
@@ -219,7 +260,7 @@ export async function POST(req: NextRequest) {
       }
       const { data: q, error: qErr } = await sb
         .from("questions")
-        .select("id, question, answer, explanation, ai_explanation, topic, exam_type")
+        .select("id, question, answer, explanation, ai_explanation, topic, exam_type, image_url")
         .eq("id", questionId)
         .maybeSingle();
       if (qErr) {
@@ -229,6 +270,10 @@ export async function POST(req: NextRequest) {
       if (!q) return NextResponse.json({ error: "Question not found" }, { status: 404 });
       examType = examType || (q.exam_type as string | null);
       topic = topic || (q.topic as string | null);
+      if (q.image_url) sourceRef.image_url = q.image_url as string;
+      // Keep a short excerpt of the question stem so the note's references can
+      // show what it came from without re-fetching.
+      if (q.question) sourceRef.question_excerpt = String(q.question).slice(0, 240);
       const expl =
         (q.explanation as string | null)?.trim() ||
         (q.ai_explanation as string | null)?.trim() ||
@@ -243,6 +288,7 @@ export async function POST(req: NextRequest) {
     } else if (kind === "ai_explanation") {
       if (clientText) {
         sourceText = clientText;
+        sourceRef.message_excerpt = clientText.slice(0, 240);
       } else if (questionId !== null) {
         const { data: q } = await sb
           .from("questions")
@@ -289,8 +335,23 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Learner context (only for a question, when the client passes the answer).
+    let answerContext = "";
+    if (kind === "question" && userAnswer) {
+      answerContext =
+        wasCorrect === false
+          ? `the student answered "${userAnswer}" and got it WRONG — make clear why that is wrong and why the correct answer is right.`
+          : wasCorrect === true
+            ? `the student answered "${userAnswer}" correctly — reinforce the key reasoning and the most testable details.`
+            : `the student's answer was "${userAnswer}".`;
+    }
+
     // ── Haiku transform with validate → repair → fallback ─────────────────────
-    const prompt = buildPrompt(sourceText);
+    const prompt = buildPrompt(sourceText, {
+      langLabel: noteLang ? NOTE_LANGS[noteLang] : null,
+      focus,
+      answerContext,
+    });
     let notesRaw = parseNotesJson(await callHaiku(prompt));
     if (!notesRaw || notesRaw.length === 0) {
       // one repair retry with an explicit nudge
@@ -315,7 +376,7 @@ export async function POST(req: NextRequest) {
             rawContent: n,
             exam_type: examType,
             topic,
-            metadata: { created_from: "haiku_transform", source_model: process.env.ANTHROPIC_NOTES_MODEL || "claude-haiku-4-5" },
+            metadata: { created_from: "haiku_transform", source_model: process.env.ANTHROPIC_NOTES_MODEL || "claude-haiku-4-5", note_lang: noteLang },
           }),
         )
         // drop any note that normalized to zero blocks
@@ -332,7 +393,7 @@ export async function POST(req: NextRequest) {
           rawContent: { blocks: [{ type: "keyfact", text: sourceText }] },
           exam_type: examType,
           topic,
-          metadata: { created_from: "haiku_transform_fallback" },
+          metadata: { created_from: "haiku_transform_fallback", note_lang: noteLang },
         }),
       ];
     }
