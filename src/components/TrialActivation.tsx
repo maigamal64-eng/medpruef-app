@@ -86,10 +86,13 @@ export default function TrialActivation({
     }
   };
 
-  // Render nothing unless there's a trial to offer.
+  // Render nothing unless there's a trial to offer. `eligible` already folds in
+  // the feature flag (GET returns eligible=false when the trial is disabled),
+  // Pro status, and already-trialed — but keep the explicit guards for clarity.
   if (!signedIn || loading || !state) return null;
   if (state.is_pro) return null;
   if (state.already_trialed && phase !== "done") return null;
+  if (!state.eligible && phase !== "done") return null;
 
   const de = lang === "de";
   const wrap =

@@ -32,6 +32,12 @@ export const dynamic = "force-dynamic";
 const TRIAL_DAYS = 7;
 const BOT_USERNAME = "MedPruefBot";
 
+// Feature flag — the trial stays OFF until NOTES_TRIAL_ENABLED='true' is set in
+// the environment, so it can be reviewed + tested before it goes live to every
+// eligible free user. Default OFF: fail-safe for a tier/revenue surface.
+const TRIAL_ENABLED =
+  (process.env.NOTES_TRIAL_ENABLED ?? "false").toLowerCase() === "true";
+
 function deepLink(userId: string): string {
   return `https://t.me/${BOT_USERNAME}?start=auth_${userId}`;
 }
@@ -83,10 +89,11 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    const eligible = !isPro && !alreadyTrialed;
+    const eligible = TRIAL_ENABLED && !isPro && !alreadyTrialed;
 
     return NextResponse.json({
       eligible,
+      trial_enabled: TRIAL_ENABLED,
       is_pro: isPro,
       telegram_linked: telegramLinked,
       already_trialed: alreadyTrialed,
@@ -105,6 +112,14 @@ export async function POST(req: NextRequest) {
   const guard = await requireUser(req);
   if ("error" in guard) return guard.error;
   const userId = guard.userId;
+
+  // Feature flag — fail closed when the trial is disabled.
+  if (!TRIAL_ENABLED) {
+    return NextResponse.json(
+      { error: "The free trial is not available right now.", code: "TRIAL_DISABLED" },
+      { status: 503 },
+    );
+  }
 
   const gate = checkRateLimit({
     key: rateKey("trial-activate", userId),
