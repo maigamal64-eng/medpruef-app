@@ -30,6 +30,7 @@ export default function BottomNav({ lang, userId }: BottomNavProps) {
   // bank). Topic cards still deep-link with ?topic=… and resume from there.
   const quizHref = userId ? `/quiz?setup=1&userId=${userId}` : "/quiz?setup=1";
   const quizActive = isActive("quiz");
+  const libraryActive = isActive("library");
 
   return (
     <nav className="bottom-nav fixed bottom-0 left-0 right-0 z-50 safe-area-bottom">
@@ -45,28 +46,30 @@ export default function BottomNav({ lang, userId }: BottomNavProps) {
           {/* Exam */}
           <NavItem context="bottom" href="/exam" icon={<GraduationCap className="w-5 h-5" />} label={t("exam", lang)} active={isActive("exam")} className="!px-1 max-[340px]:!px-0.5 whitespace-nowrap" />
 
-          {/* CENTER: Quiz CTA — raised, prominent. Bespoke — no NavItem
-              variant exists for a raised floating CTA. Preserved exactly. */}
+          {/* CENTER: Library CTA — raised, prominent. The personal study home
+              (flash-notes + question-flashcard review, reached from inside).
+              Promoted to the centerpiece per [name]; Quiz keeps a full flanking
+              slot so it stays equally reachable. Highlights on /library + /flashcards. */}
           <Link
-            href={quizHref}
+            href="/library"
+            aria-label={lang === "de" ? "Bibliothek" : "Library"}
             className="flex flex-col items-center -mt-5 transition-transform active:scale-95"
           >
             <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg ${
-              quizActive
+              libraryActive
                 ? "bg-[var(--mp-viridian)] ring-4 ring-[var(--mp-viridian)]/20"
                 : "bg-[var(--mp-cta-blue)] ring-4 ring-[var(--mp-cta-blue)]/15 hover:bg-[var(--mp-cta-blue-hover)]"
             }`}>
-              <FileText className="w-6 h-6 text-white" />
+              <Layers className="w-6 h-6 text-white" />
             </div>
-            <span className={`text-[10px] mt-1 ${quizActive ? "font-bold text-[var(--mp-viridian)]" : "font-semibold text-[var(--mp-cta-blue)]"}`}>
-              {t("quiz", lang)}
+            <span className={`text-[10px] mt-1 ${libraryActive ? "font-bold text-[var(--mp-viridian)]" : "font-semibold text-[var(--mp-cta-blue)]"}`}>
+              {lang === "de" ? "Bibliothek" : "Library"}
             </span>
           </Link>
 
-          {/* Library — the home for ALL revisable cards (flash-notes +
-              question-flashcard review, reached from inside). Replaces the old
-              Flashcards slot; Layers icon kept. Highlights on /library + /flashcards. */}
-          <NavItem context="bottom" href="/library" icon={<Layers className="w-5 h-5" />} label={lang === "de" ? "Bibliothek" : "Library"} active={isActive("library")} className="!px-1 max-[340px]:!px-0.5 whitespace-nowrap" />
+          {/* Quiz — flanking slot (moved off the center CTA so the Library is
+              the centerpiece; Quiz stays one tap away). */}
+          <NavItem context="bottom" href={quizHref} icon={<FileText className="w-5 h-5" />} label={t("quiz", lang)} active={quizActive} className="!px-1 max-[340px]:!px-0.5 whitespace-nowrap" />
 
           {/* Progress — rightmost flanking slot. Profile/Settings moved OFF
               the bottom nav (it split 2-left vs 3-right around the raised CTA);

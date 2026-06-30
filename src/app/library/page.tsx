@@ -491,6 +491,72 @@ function StudyOverlay({
   );
 }
 
+/* ─── Progressive onboarding tips (dismissible, localStorage-tracked) ─ */
+const LIB_TIPS: { id: string; min: number; de: string; en: string }[] = [
+  {
+    id: "review-v1",
+    min: 1,
+    de: "Tippe eine Karte an, decke sie auf und bewerte dich — so plant die App deine nächste Wiederholung (Spaced Repetition).",
+    en: "Tap a card, reveal it and rate yourself — the app schedules your next review (spaced repetition).",
+  },
+  {
+    id: "customize-v1",
+    min: 2,
+    de: 'Beim Speichern kannst du über „Anpassen“ die Sprache der Notiz wählen und einen Fokus angeben.',
+    en: 'When saving, use "Customize" to pick the note language and set a focus.',
+  },
+  {
+    id: "sources-v1",
+    min: 3,
+    de: 'Öffne „Quellen“ auf einer Karte, um zur Ursprungsfrage, KI-Erklärung oder dem Bild zu springen.',
+    en: 'Open "Sources" on a card to see the question, AI explanation or image it came from.',
+  },
+];
+
+function LibraryTips({ count, lang }: { count: number; lang: Lang }) {
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set());
+  const [loaded, setLoaded] = useState(false);
+  useEffect(() => {
+    const s = new Set<string>();
+    for (const tp of LIB_TIPS) {
+      try {
+        if (localStorage.getItem(`medpruef_lib_tip_${tp.id}`)) s.add(tp.id);
+      } catch {
+        /* ignore */
+      }
+    }
+    setDismissed(s);
+    setLoaded(true);
+  }, []);
+  if (!loaded) return null;
+  const tip = LIB_TIPS.find((tp) => count >= tp.min && !dismissed.has(tp.id));
+  if (!tip) return null;
+  const dismiss = () => {
+    try {
+      localStorage.setItem(`medpruef_lib_tip_${tip.id}`, "1");
+    } catch {
+      /* ignore */
+    }
+    setDismissed((d) => new Set(d).add(tip.id));
+  };
+  return (
+    <div className="mb-3 flex items-start gap-2.5 rounded-[var(--mp-r-card)] bg-[var(--mp-cta-blue)]/8 border border-[var(--mp-cta-blue)]/20 p-3 animate-fade-in">
+      <Lightbulb className="w-4 h-4 text-[var(--mp-cta-blue)] flex-shrink-0 mt-0.5" />
+      <p className="text-[13px] text-[var(--mp-fg-muted)] flex-1 leading-relaxed">
+        {lang === "de" ? tip.de : tip.en}
+      </p>
+      <button
+        type="button"
+        onClick={dismiss}
+        aria-label={lang === "de" ? "Tipp schließen" : "Dismiss tip"}
+        className="text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg-muted)] flex-shrink-0 transition-colors"
+      >
+        <X className="w-3.5 h-3.5" />
+      </button>
+    </div>
+  );
+}
+
 /* ─── Main content ───────────────────────────────────────────────── */
 function LibraryContent() {
   const [lang, setLangState] = useState<Lang>("de");
@@ -786,9 +852,40 @@ function LibraryContent() {
                   ) : undefined
                 }
               />
+              {notes.length === 0 && (
+                <div className="mt-6 grid gap-3">
+                  {[
+                    {
+                      n: 1,
+                      de: "Beantworte eine Übungsfrage",
+                      en: "Answer a practice question",
+                    },
+                    {
+                      n: 2,
+                      de: '„Als Lernkarte speichern“ tippen — die KI macht daraus eine Karteikarte',
+                      en: 'Tap "Save as flash-note" — the AI turns it into a card',
+                    },
+                    {
+                      n: 3,
+                      de: "Karten hier mit Spaced Repetition wiederholen",
+                      en: "Review your cards here with spaced repetition",
+                    },
+                  ].map((s) => (
+                    <div key={s.n} className="flex items-center gap-3 text-left">
+                      <span className="w-7 h-7 rounded-full bg-[var(--mp-viridian)]/12 text-[var(--mp-viridian)] text-sm font-bold flex items-center justify-center flex-shrink-0">
+                        {s.n}
+                      </span>
+                      <span className="text-sm text-[var(--mp-fg-muted)]">
+                        {lang === "de" ? s.de : s.en}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           ) : (
             <>
+              <LibraryTips count={notes.length} lang={lang} />
               <div className="flex items-center justify-between mb-3">
                 <span className="text-[13px] text-[var(--mp-fg-subtle)] font-mono">
                   {visible.length}{" "}
