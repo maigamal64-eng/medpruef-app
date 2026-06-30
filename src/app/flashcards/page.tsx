@@ -54,6 +54,7 @@ import { getStoredExamSource } from "@/lib/topics";
 import { getTopicConfig } from "@/lib/topics";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
+import { FlipCard } from "@/components/FlashCard";
 import {
   AppLayout,
   RatingButton,
@@ -195,53 +196,20 @@ function Flashcard({
     question.explanation?.trim() || question.ai_explanation?.trim() || "";
   const hasExplanation = explanation.length > 0;
 
-  /* Specialty color, lifted on dark via color-mix so it reads on the oxford
-   * canvas (the `--sc` contract from _kit.css / SPECS §"Specialty colors"). */
-  const sc = topicConfig.color;
-  const scTint = `color-mix(in srgb, ${sc} 14%, transparent)`;
-
   return (
-    <div
-      className={`flip-card w-full h-full cursor-pointer transition-opacity duration-300 ${
-        animatingOut ? "opacity-0" : "opacity-100"
-      }`}
-      onClick={() => {
-        if (!flipped) onFlip();
+    <FlipCard
+      flipped={flipped}
+      animatingOut={animatingOut}
+      onFlip={onFlip}
+      chip={{
+        color: topicConfig.color,
+        icon: topicConfig.icon,
+        label: question.topic,
       }}
-      style={{ ["--sc" as string]: sc }}
-    >
-      <div
-        className={`flip-card-inner w-full h-full ${flipped ? "flipped" : ""}`}
-      >
-        {/* ── FRONT ──────────────────────────────────────────────── */}
-        <div
-          className="flip-card-front absolute inset-0 rounded-[var(--mp-r-modal)] bg-[var(--mp-surface)] border border-[var(--mp-border-soft)] shadow-[var(--mp-shadow-elev)] flex flex-col p-6 overflow-hidden"
-          aria-hidden={flipped}
-        >
-          {/* Top accent bar — viridian → spark (front) */}
-          <span
-            className="absolute left-0 top-0 right-0 h-1"
-            style={{
-              background:
-                "linear-gradient(90deg, var(--mp-viridian), var(--mp-spark))",
-            }}
-            aria-hidden
-          />
-
-          {/* Top row: specialty chip + side label */}
-          <div className="flex items-center justify-between mb-2">
-            <span
-              className="topic-text inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1.5 rounded-full"
-              style={{ ["--topic-color" as string]: sc, backgroundColor: scTint }}
-            >
-              <TopicIcon name={topicConfig.icon} className="w-3.5 h-3.5" />
-              {question.topic}
-            </span>
-            <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--mp-fg-subtle)] font-mono">
-              {lang === "de" ? "Vorderseite" : "Front"}
-            </span>
-          </div>
-
+      frontLabel={lang === "de" ? "Vorderseite" : "Front"}
+      backLabel={lang === "de" ? "Rückseite" : "Back"}
+      front={
+        <>
           {/* Format badge — replaces the inline "(N richtige)" stem hint */}
           <div className="flex justify-center">
             {isMulti ? (
@@ -261,14 +229,9 @@ function Flashcard({
             )}
           </div>
 
-          {/* Recall cue (stem). The card face is `overflow-hidden` with a
-              fixed aspect-ratio (esp. lg:16/10 on desktop), so a long stem
-              (e.g. the Kinder-/Jugendheilkunde ABO-vignette) was clipped /
-              faded at the bottom. Fix: this container SCROLLS.
-              NOTE: `justify-start` (not `justify-center`) + `my-auto` on the
-              inner block — a `justify-center` flex column with overflow makes
-              the TOP of tall content unreachable (flexbox bug); this way short
-              stems still center and long stems scroll fully from the top. */}
+          {/* Recall cue (stem). Container SCROLLS so a long stem is never
+              clipped; `justify-start` + `my-auto` centers short stems yet keeps
+              tall ones reachable from the top (the flexbox-overflow gotcha). */}
           <div className="flex-1 min-h-0 flex flex-col items-center justify-start text-center gap-4 px-1 overflow-y-auto -mr-1 pr-1">
             <div className="my-auto flex flex-col items-center gap-4 w-full">
               <p className="font-display font-bold text-[var(--mp-fg)] text-[19px] sm:text-[21px] leading-[1.3] whitespace-pre-line">
@@ -289,37 +252,10 @@ function Flashcard({
             <RotateCw className="w-[15px] h-[15px]" />
             {t("tap_to_flip", lang)}
           </div>
-        </div>
-
-        {/* ── BACK ───────────────────────────────────────────────── */}
-        <div
-          className="flip-card-back rounded-[var(--mp-r-modal)] bg-[var(--mp-surface)] border border-[var(--mp-border-soft)] shadow-[var(--mp-shadow-elev)] flex flex-col p-6 overflow-hidden"
-          aria-hidden={!flipped}
-        >
-          {/* Top accent bar — CTA-blue → teal (back) */}
-          <span
-            className="absolute left-0 top-0 right-0 h-1"
-            style={{
-              background:
-                "linear-gradient(90deg, var(--mp-cta-blue), var(--mp-accent-teal))",
-            }}
-            aria-hidden
-          />
-
-          {/* Top row: specialty chip + side label */}
-          <div className="flex items-center justify-between mb-3">
-            <span
-              className="topic-text inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1.5 rounded-full"
-              style={{ ["--topic-color" as string]: sc, backgroundColor: scTint }}
-            >
-              <TopicIcon name={topicConfig.icon} className="w-3.5 h-3.5" />
-              {question.topic}
-            </span>
-            <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--mp-fg-subtle)] font-mono">
-              {lang === "de" ? "Rückseite" : "Back"}
-            </span>
-          </div>
-
+        </>
+      }
+      back={
+        <>
           {/* Answer — scrollable so long explanations never overflow the card */}
           <div className="flex-1 flex flex-col gap-2.5 overflow-y-auto -mr-2 pr-2">
             {correctOptions.length > 0 ? (
@@ -363,9 +299,9 @@ function Flashcard({
               </p>
             )}
           </div>
-        </div>
-      </div>
-    </div>
+        </>
+      }
+    />
   );
 }
 
