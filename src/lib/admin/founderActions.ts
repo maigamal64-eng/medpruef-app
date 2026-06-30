@@ -71,20 +71,6 @@ export interface FounderAction {
 
 export const ACTIONS: ReadonlyArray<FounderAction> = [
   {
-    id: "hand-sam-link",
-    title: "Hand Sam his grandfathered €114 link (the closest euro)",
-    why: "The single closest euro on the board. Sam advanced to a Whop checkout on 06-26 but on the WRONG €129 public plan, then stalled. Three emails got 0 reply. Send his grandfathered €114 Cohort link by hand via Telegram or DM, not a 4th email.",
-    category: "Revenue",
-    status: "ready",
-    needs: "Your own Telegram or DM to Sam, ~2 minutes. His grandfathered Cohort plan is plan_redacted1c2ca046 (auto-grants the €114 Cohort, NOT the €129 public plan he hit).",
-    steps: [
-      "Open your Telegram or DM thread with Sam (user-7660ac05@example.com); email is dead after 3 tries.",
-      "Send the grandfathered €114 checkout link for plan plan_redacted1c2ca046 (built via /api/whop/checkout, not the bare whop.com/medpruf link and not the €129 public plan).",
-      "Confirm he lands on the €114 Cohort plan, not the €129 one.",
-      "If he pays, the grant fires automatically; if he stalls again, hand it to Empfang for one concierge nudge.",
-    ],
-  },
-  {
     id: "post-community-seeds",
     title: "Post the community seed answers (the highest-leverage move)",
     why: "Top-of-funnel is the confirmed bottleneck (0 checkout attempts ever); these judged-ready, free, participate-only posts put real candidates into the funnel. learn-rx has a product but near-zero audience, so the window is open NOW.",
