@@ -7,6 +7,7 @@ import ReactMarkdown from "react-markdown";
 import { authFetch as fetch } from "@/lib/authFetch";
 import { BottomSheet } from "@/components/ui";
 import { useUserTier } from "@/lib/hooks/useUserTier";
+import TurnIntoNoteButton from "@/components/TurnIntoNoteButton";
 
 type Lang = "de" | "en";
 
@@ -60,6 +61,10 @@ export default function AIChatAssistant({
   const [loading, setLoading] = useState(false);
   const [initialized, setInitialized] = useState(false);
   const [cachedExplanation, setCachedExplanation] = useState<string | null>(null);
+  // True only when the displayed assistant content is a REAL explanation (cache
+  // hit or a successful generation) — never for the tier/placeholder/error copy.
+  // Gates the "save as flash-note" button so we never save a placeholder.
+  const [hasRealExplanation, setHasRealExplanation] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -175,6 +180,7 @@ export default function AIChatAssistant({
     setMessages([]);
     setInput("");
     setCachedExplanation(null);
+    setHasRealExplanation(false);
   }, [questionId]);
 
   // Scroll to bottom on new messages.
@@ -211,6 +217,7 @@ export default function AIChatAssistant({
 
   const loadOrGenerateExplanation = async (forceRegenerate = false) => {
     setLoading(true);
+    setHasRealExplanation(false);
     try {
       // Try to load cached explanation from DB first, unless regenerating
       if (!forceRegenerate) {
@@ -229,6 +236,7 @@ export default function AIChatAssistant({
               const shown = await maybeTranslateToUiLang(cacheData.explanation);
               setCachedExplanation(shown);
               setMessages([{ role: "assistant", content: shown }]);
+              setHasRealExplanation(true);
               setLoading(false);
               return;
             }
@@ -316,6 +324,7 @@ export default function AIChatAssistant({
       const reply = data.reply || data.content || "...";
       setCachedExplanation(reply);
       setMessages([{ role: "assistant", content: reply }]);
+      setHasRealExplanation(true);
     } catch {
       setMessages([{
         role: "assistant",
@@ -457,6 +466,19 @@ export default function AIChatAssistant({
             <div className="bg-[var(--mp-surface-sunken)] rounded-2xl rounded-tl-sm px-4 py-3 border border-[var(--mp-border)]">
               <Loader2 className="w-4 h-4 text-[var(--mp-viridian)] animate-spin" />
             </div>
+          </div>
+        )}
+
+        {/* Turn this AI explanation into a structured flash-note (Haiku). */}
+        {hasRealExplanation && !loading && (
+          <div className="flex justify-center pt-1">
+            <TurnIntoNoteButton
+              kind="ai_explanation"
+              lang={lang}
+              sourceRef={{ question_id: questionId }}
+              text={cachedExplanation || undefined}
+              topic={topic}
+            />
           </div>
         )}
 

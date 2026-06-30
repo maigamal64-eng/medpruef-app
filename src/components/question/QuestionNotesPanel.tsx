@@ -19,6 +19,7 @@ import { useState, useEffect, useCallback } from "react";
 import { FileText, Plus, Trash2, Check, X, Pencil } from "lucide-react";
 import { t } from "@/lib/i18n";
 import { Textarea } from "@/components/ui";
+import TurnIntoNoteButton from "@/components/TurnIntoNoteButton";
 import {
   readNotes,
   addNote,
@@ -199,6 +200,24 @@ export default function QuestionNotesPanel({ lang, questionId }: Props) {
           </span>
         )}
       </div>
+
+      {/* Turn the user's notes into a structured flash-note (Haiku). */}
+      {entries.length > 0 && (
+        <div className="mt-3 pt-3 border-t border-[var(--mp-border)] flex items-center justify-between gap-2">
+          <span className="text-[10px] text-[var(--mp-fg-subtle)] min-w-0">
+            {lang === "de"
+              ? "Aus deinen Notizen eine Lernkarte machen"
+              : "Turn your notes into a flash-note"}
+          </span>
+          <TurnIntoNoteButton
+            kind="user_note"
+            lang={lang}
+            sourceRef={{ question_id: questionId }}
+            text={entries.map((e) => e.text).join("\n\n")}
+            className="flex-shrink-0"
+          />
+        </div>
+      )}
     </div>
   );
 }
