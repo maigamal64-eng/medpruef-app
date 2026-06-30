@@ -20,7 +20,7 @@ export default function BottomNav({ lang, userId }: BottomNavProps) {
     if (key === "home") return pathname === "/";
     if (key === "quiz") return pathname.startsWith("/quiz");
     if (key === "exam") return pathname.startsWith("/exam");
-    if (key === "flashcards") return pathname.startsWith("/flashcards");
+    if (key === "library") return pathname.startsWith("/library") || pathname.startsWith("/flashcards");
     if (key === "progress") return pathname.startsWith("/progress") || pathname.startsWith("/stats");
     return false;
   };
@@ -63,10 +63,10 @@ export default function BottomNav({ lang, userId }: BottomNavProps) {
             </span>
           </Link>
 
-          {/* Flashcards — mobile entry point (no desktop bottom nav; this is
-              the ONLY way to reach Karteikarten on mobile). Plain visible item,
-              Layers icon to match the desktop rail + the flashcards fbar. */}
-          <NavItem context="bottom" href="/flashcards" icon={<Layers className="w-5 h-5" />} label={t("flashcards", lang)} active={isActive("flashcards")} className="!px-1 max-[340px]:!px-0.5 whitespace-nowrap" />
+          {/* Library — the home for ALL revisable cards (flash-notes +
+              question-flashcard review, reached from inside). Replaces the old
+              Flashcards slot; Layers icon kept. Highlights on /library + /flashcards. */}
+          <NavItem context="bottom" href="/library" icon={<Layers className="w-5 h-5" />} label={lang === "de" ? "Bibliothek" : "Library"} active={isActive("library")} className="!px-1 max-[340px]:!px-0.5 whitespace-nowrap" />
 
           {/* Progress — rightmost flanking slot. Profile/Settings moved OFF
               the bottom nav (it split 2-left vs 3-right around the raised CTA);
