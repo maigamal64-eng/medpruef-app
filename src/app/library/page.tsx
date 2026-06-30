@@ -37,6 +37,7 @@ import BottomNav from "@/components/BottomNav";
 import LanguageToggle from "@/components/LanguageToggle";
 import ThemeToggle from "@/components/ThemeToggle";
 import { FlipCard } from "@/components/FlashCard";
+import TrialActivation from "@/components/TrialActivation";
 import type { NoteContent, NoteBlock, NoteSourceType } from "@/lib/notes";
 import {
   Layers,
@@ -612,6 +613,9 @@ function LibraryContent() {
             <LanguageToggle lang={lang} onChange={switchLang} />
           </div>
         </div>
+
+        {/* Free → Pro: the Telegram-gated trial (renders only for eligible free users). */}
+        <TrialActivation lang={lang} className="mx-4 lg:mx-8 mb-3" />
 
         {/* Question-review entry (Library is the home for all revisable cards) */}
         <div className="px-4 lg:px-8 pb-3">
