@@ -74,6 +74,15 @@ interface ServerNote {
 }
 
 type SortKey = "recent" | "updated" | "source" | "exam";
+type Confidence = "again" | "hard" | "good" | "easy";
+
+/** Review rating buttons (same 4-level scale as the question flashcards). */
+const RATE_BUTTONS: { key: Confidence; de: string; en: string; color: string }[] = [
+  { key: "again", de: "Nochmal", en: "Again", color: "var(--mp-error)" },
+  { key: "hard", de: "Schwer", en: "Hard", color: "var(--mp-status-warning)" },
+  { key: "good", de: "Gut", en: "Good", color: "var(--mp-viridian)" },
+  { key: "easy", de: "Einfach", en: "Easy", color: "var(--mp-accent-teal)" },
+];
 
 /* ─── Source-type presentation ───────────────────────────────────── */
 const SOURCE_META: Record<
@@ -215,12 +224,32 @@ function StudyOverlay({
   onNavigate: (next: number) => void;
 }) {
   const [flipped, setFlipped] = useState(false);
+  const [rating, setRating] = useState(false);
   const note = notes[index];
 
   // Reset to the front whenever the card changes.
   useEffect(() => {
     setFlipped(false);
+    setRating(false);
   }, [index]);
+
+  // Record an SM-2 review, then advance (or close on the last card). Best-effort:
+  // a failed schedule never traps the user mid-review.
+  const rate = async (confidence: Confidence) => {
+    if (rating || !note) return;
+    setRating(true);
+    try {
+      await fetch(`/api/notes/${note.id}/review`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confidence }),
+      });
+    } catch {
+      /* non-blocking */
+    }
+    if (index < notes.length - 1) onNavigate(index + 1);
+    else onClose();
+  };
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -327,37 +356,67 @@ function StudyOverlay({
         </div>
       </div>
 
-      {/* Prev / next */}
+      {/* Controls: browse (front) → rate + auto-advance (back). */}
       <div
-        className="flex items-center justify-center gap-3 px-5 pb-6 pt-3 flex-shrink-0"
+        className="px-5 pb-6 pt-3 flex-shrink-0"
         onClick={(e) => e.stopPropagation()}
       >
-        <button
-          type="button"
-          disabled={index === 0}
-          onClick={() => onNavigate(index - 1)}
-          className="mp-btn mp-btn--ghost inline-flex items-center gap-1.5 disabled:opacity-40"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          {lang === "de" ? "Zurück" : "Prev"}
-        </button>
-        <button
-          type="button"
-          onClick={() => setFlipped((f) => !f)}
-          className="mp-btn mp-btn--primary inline-flex items-center gap-1.5"
-        >
-          <RotateCw className="w-4 h-4" />
-          {flipped ? (lang === "de" ? "Frage" : "Front") : lang === "de" ? "Inhalt" : "Reveal"}
-        </button>
-        <button
-          type="button"
-          disabled={index >= notes.length - 1}
-          onClick={() => onNavigate(index + 1)}
-          className="mp-btn mp-btn--ghost inline-flex items-center gap-1.5 disabled:opacity-40"
-        >
-          {lang === "de" ? "Weiter" : "Next"}
-          <ArrowRight className="w-4 h-4" />
-        </button>
+        {!flipped ? (
+          <div className="flex items-center justify-center gap-3">
+            <button
+              type="button"
+              disabled={index === 0}
+              onClick={() => onNavigate(index - 1)}
+              className="mp-btn mp-btn--ghost inline-flex items-center gap-1.5 disabled:opacity-40"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              {lang === "de" ? "Zurück" : "Prev"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setFlipped(true)}
+              className="mp-btn mp-btn--primary inline-flex items-center gap-1.5"
+            >
+              <RotateCw className="w-4 h-4" />
+              {lang === "de" ? "Aufdecken" : "Reveal"}
+            </button>
+            <button
+              type="button"
+              disabled={index >= notes.length - 1}
+              onClick={() => onNavigate(index + 1)}
+              className="mp-btn mp-btn--ghost inline-flex items-center gap-1.5 disabled:opacity-40"
+            >
+              {lang === "de" ? "Weiter" : "Next"}
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+        ) : (
+          <div className="max-w-[420px] mx-auto animate-fade-in">
+            <p className="text-center text-xs font-semibold text-[var(--mp-fg-muted)] mb-2">
+              {lang === "de"
+                ? "Wie gut wusstest du es?"
+                : "How well did you know it?"}
+            </p>
+            <div className="grid grid-cols-4 gap-2">
+              {RATE_BUTTONS.map((r) => (
+                <button
+                  key={r.key}
+                  type="button"
+                  disabled={rating}
+                  onClick={() => rate(r.key)}
+                  className="flex items-center justify-center min-h-[52px] rounded-xl border text-xs font-semibold transition-colors disabled:opacity-50"
+                  style={{
+                    borderColor: `color-mix(in srgb, ${r.color} 40%, transparent)`,
+                    color: r.color,
+                    backgroundColor: `color-mix(in srgb, ${r.color} 10%, transparent)`,
+                  }}
+                >
+                  {lang === "de" ? r.de : r.en}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
