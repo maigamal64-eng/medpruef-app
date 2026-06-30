@@ -264,7 +264,7 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0 }: Sidebar
   }> = [
     { href: "/", icon: <Home className="w-5 h-5" />, label: t("home", lang), key: "home" },
     { href: userId ? `/quiz?setup=1&userId=${userId}` : "/quiz?setup=1", icon: <FileText className="w-5 h-5" />, label: t("quiz", lang), key: "quiz" },
-    { href: "/flashcards", icon: <Layers className="w-5 h-5" />, label: t("flashcards", lang), key: "flashcards" },
+    { href: "/library", icon: <Layers className="w-5 h-5" />, label: lang === "de" ? "Bibliothek" : "Library", key: "library" },
     { href: "/exam", icon: <GraduationCap className="w-5 h-5" />, label: t("exam", lang), key: "exam" },
     { href: userId ? `/stats?userId=${userId}` : "/stats", icon: <BarChart3 className="w-5 h-5" />, label: t("stats", lang), key: "stats" },
     { href: "/progress", icon: <TrendingUp className="w-5 h-5" />, label: t("progress", lang), key: "progress" },
@@ -296,6 +296,7 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0 }: Sidebar
 
   const isActive = (key: string) => {
     if (key === "home") return pathname === "/";
+    if (key === "library") return pathname.startsWith("/library") || pathname.startsWith("/flashcards");
     return pathname.startsWith(`/${key === "stats" ? "stats" : key}`);
   };
 
