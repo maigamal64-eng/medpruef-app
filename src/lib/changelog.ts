@@ -24,6 +24,18 @@ export interface ChangelogEntry {
 export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-06-30",
+    tag: "feature",
+    title: {
+      de: "Neu: Lernkarten-Notizen + deine Bibliothek",
+      en: "New: flash-notes + your Library",
+    },
+    description: {
+      de: "Mach mit einem Tipp aus jeder Frage, jeder Notiz oder jeder KI-Erklärung eine Lernkarte. Du kannst die Sprache wählen und einen Fokus angeben, und deine Antwort fließt mit ein, damit die Karte genau deine Lücken trifft. Alle Karten leben in deiner neuen Bibliothek (jetzt der mittlere Knopf in der unteren Leiste) und lassen sich dort durchsuchen, sortieren und mit Spaced Repetition wiederholen. Jede Karte zeigt auch ihre Quellen (Ursprungsfrage, KI-Nachricht, Bild).",
+      en: "Turn any question, note, or AI explanation into a flash-note with one tap. Choose the language, add a focus, and your own answer is factored in so the card targets your gaps. Every card lives in your new Library (now the center button in the bottom bar), where you can search, sort, and review it with spaced repetition. Each card also shows its sources (the question, the AI message, the image).",
+    },
+  },
+  {
+    date: "2026-06-30",
     tag: "admin",
     title: {
       de: "Admin-Dashboard verschlankt",

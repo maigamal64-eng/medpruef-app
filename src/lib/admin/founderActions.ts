@@ -86,6 +86,36 @@ export const ACTIONS: ReadonlyArray<FounderAction> = [
     ],
   },
   {
+    id: "enable-notes-trial",
+    title: "Turn on the free Pro trial (the new conversion lever)",
+    why: "The flash-notes + personal Library feature shipped 2026-06-30, with a Telegram-gated 1-week FREE Pro trial — the strongest conversion mechanism the product has (a user builds a personal note library free for a week, then keeps Pro so they don't lose it). It is BUILT + deployed but flag-gated OFF. Flipping it on is a real revenue move once you've proven it grants + reverts correctly.",
+    category: "Revenue",
+    status: "ready",
+    needs: "Your own account + ~10 min. The trial only activates with NOTES_TRIAL_ENABLED=true in Vercel env (Production). Full checklist + ready promo copy (DE/EN; AR pending your sign-off) in reviews/notes-feature-2026-06-30/trial-launch-kit.md.",
+    steps: [
+      "Set NOTES_TRIAL_ENABLED=true in the Vercel project env (Production), then redeploy (or re-pull env).",
+      "As a real FREE test user with a linked Telegram, open the Library and tap 'Gratis-Woche starten' → confirm the tier flips to pro + a notes_free_trial row appears in the subscriptions table.",
+      "Confirm the day-7 revert path: the existing trial-reminder cron flips an expired active subscription back to tier=free, so you are not giving away permanent Pro.",
+      "Once proven, run the launch-kit copies for paid + organic promotion. The trial activation is a strong intermediate conversion to optimise toward.",
+      "If anything looks off, set NOTES_TRIAL_ENABLED=false to instantly disable it again (fail-safe default).",
+    ],
+  },
+  {
+    id: "review-notes-explore",
+    title: "Review + optionally turn on community notes (Explore)",
+    why: "The public-notes Explore surface + its full safety stack (pre-publish PII/quality scan, publish-confirm, report → admin takedown, 24h author grace, anonymous-by-default) is BUILT + deployed but flag-gated OFF. It needs your review before going live — public health-content + PII is the real risk, so the takedown queue must exist first (it does).",
+    category: "Content",
+    status: "optional",
+    needs: "~15 min. The admin moderation queue is live at /admin/note-reports. The flag is NOTES_EXPLORE_ENABLED (Vercel env). The rest of the notes feature works fully without this.",
+    steps: [
+      "Open /admin/note-reports — confirm the takedown queue renders (empty until a public note is reported).",
+      "Skim the safety design: reviews/notes-feature-2026-06-30/SPEC.md §7 (PII scan + 24h grace + report/takedown + the 'community, not verified' label).",
+      "Only if comfortable with moderation: set NOTES_EXPLORE_ENABLED=true (Production env). The 'Entdecken' toggle + 'Öffentlich teilen' then appear in the Library.",
+      "Publish one of your own notes, confirm it shows in Explore anonymously, then take it down from /admin/note-reports to test the loop end to end.",
+      "Prefer not to run community content yet? Leave it OFF — nothing else depends on it.",
+    ],
+  },
+  {
     id: "verify-whop-rail",
     title: "Prove the Whop card rail end to end",
     why: "Prove the 19 € card rail closes before any ad spend. The rail is wired and silent (0 attempts ever) — one real charge is the only honest proof the grant pipeline fires.",
@@ -157,4 +187,4 @@ export const ACTIONS: ReadonlyArray<FounderAction> = [
  * organic seeds; the warm IG paste is the closest open loop on our side of the net.
  */
 export const ACTIONS_INTRO_NOTE =
-  "These are the steps no agent can take for you: posting as yourself in a forum, a charge on your card, a Google Ads link, an Instagram DM the API can't send. The fleet runs everything else. Top-of-funnel is the bottleneck (0 checkout attempts ever), so the highest-leverage move is firing the loaded community seeds at the top — the rail and Google Ads link gate paid spend, not the free organic seeds.";
+  "These are the steps no agent can take for you: posting as yourself in a forum, a charge on your card, a Google Ads link, an Instagram DM the API can't send, flipping an env flag after you've tested it. The fleet runs everything else. Top-of-funnel is still the bottleneck (0 checkout attempts ever), so firing the loaded community seeds stays the highest-leverage reach move. NEW (2026-06-30): the flash-notes + personal Library feature shipped, and its two levers are built, deployed, and flag-OFF, waiting only on your test + flip — the Telegram-gated free Pro trial (NOTES_TRIAL_ENABLED, a direct conversion lever) and community Explore (NOTES_EXPLORE_ENABLED, optional). Both fail safe to OFF.";
