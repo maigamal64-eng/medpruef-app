@@ -6,11 +6,7 @@ import {
   NOTE_SELECT_COLUMNS,
   NOTE_SOURCE_TYPES,
   isNoteSourceType,
-  normalizeContent,
-  normalizeTags,
-  buildSearchText,
-  deriveTitle,
-  type NoteSourceType,
+  buildNoteRow,
 } from "@/lib/notes";
 
 export const dynamic = "force-dynamic";
@@ -83,50 +79,22 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Merge any top-level body.tags into the content tags, then normalize once
-    // so the stored content + denormalized columns are always consistent.
-    const mergedRawContent = {
-      ...(body?.content && typeof body.content === "object" ? body.content : {}),
-      tags: [
-        ...(Array.isArray(body?.content?.tags) ? body.content.tags : []),
-        ...(Array.isArray(body?.tags) ? body.tags : []),
-      ],
-      title:
-        typeof body?.title === "string"
-          ? body.title
-          : (body?.content?.title ?? ""),
-    };
-    const content = normalizeContent(mergedRawContent);
-    const title = deriveTitle(content);
-    content.title = title;
-    const tags = content.tags;
-    const searchText = buildSearchText(content);
-
-    const sourceRef =
-      body?.source_ref && typeof body.source_ref === "object"
-        ? body.source_ref
-        : null;
-    const metadata =
-      body?.metadata && typeof body.metadata === "object" ? body.metadata : {};
-    const examType =
-      typeof body?.exam_type === "string" ? body.exam_type.slice(0, 80) : null;
-    const topic =
-      typeof body?.topic === "string" ? body.topic.slice(0, 120) : null;
+    // Assemble the row through the shared builder so create / import / transform
+    // normalize content + derive title + fill search_text identically.
+    const row = buildNoteRow(userId, {
+      source_type: sourceType,
+      source_ref: body?.source_ref,
+      rawContent: body?.content,
+      title: body?.title,
+      tags: body?.tags,
+      exam_type: body?.exam_type,
+      topic: body?.topic,
+      metadata: body?.metadata,
+    });
 
     const { data, error } = await sb
       .from("notes")
-      .insert({
-        user_id: userId,
-        source_type: sourceType as NoteSourceType,
-        source_ref: sourceRef,
-        title,
-        content,
-        tags,
-        exam_type: examType,
-        topic,
-        metadata,
-        search_text: searchText,
-      })
+      .insert(row)
       .select(NOTE_SELECT_COLUMNS)
       .single();
 

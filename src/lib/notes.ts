@@ -212,3 +212,69 @@ export function deriveTitle(content: NoteContent): string {
   }
   return "";
 }
+
+export interface BuildNoteInput {
+  source_type: NoteSourceType;
+  /** {question_id, message_id?} — provenance. */
+  source_ref?: unknown;
+  /** Raw structured content (from a client, an import, or the Haiku transform);
+   *  normalized here so a malformed payload can never reach the column. */
+  rawContent?: unknown;
+  /** Optional explicit title (merged into content.title). */
+  title?: unknown;
+  /** Optional extra tags merged with content.tags. */
+  tags?: unknown;
+  exam_type?: unknown;
+  topic?: unknown;
+  metadata?: unknown;
+}
+
+/**
+ * Build the DB insert row for a note from arbitrary input — the ONE place note
+ * rows are assembled, so every create path (POST /api/notes, /api/notes/import,
+ * /api/notes/transform) normalizes content, derives the title, keeps the
+ * top-level title/tags in sync with content, and fills search_text identically.
+ * Pure (no DB) so it stays usable from any context.
+ */
+export function buildNoteRow(
+  userId: string,
+  input: BuildNoteInput,
+): Record<string, unknown> {
+  const rawObj =
+    input.rawContent && typeof input.rawContent === "object"
+      ? (input.rawContent as Record<string, unknown>)
+      : {};
+  const merged = {
+    ...rawObj,
+    tags: [
+      ...(Array.isArray(rawObj.tags) ? rawObj.tags : []),
+      ...(Array.isArray(input.tags) ? input.tags : []),
+    ],
+    title:
+      typeof input.title === "string"
+        ? input.title
+        : typeof rawObj.title === "string"
+          ? rawObj.title
+          : "",
+  };
+  const content = normalizeContent(merged);
+  content.title = deriveTitle(content);
+
+  return {
+    user_id: userId,
+    source_type: input.source_type,
+    source_ref:
+      input.source_ref && typeof input.source_ref === "object"
+        ? input.source_ref
+        : null,
+    title: content.title,
+    content,
+    tags: content.tags,
+    exam_type:
+      typeof input.exam_type === "string" ? input.exam_type.slice(0, 80) : null,
+    topic: typeof input.topic === "string" ? input.topic.slice(0, 120) : null,
+    metadata:
+      input.metadata && typeof input.metadata === "object" ? input.metadata : {},
+    search_text: buildSearchText(content),
+  };
+}
