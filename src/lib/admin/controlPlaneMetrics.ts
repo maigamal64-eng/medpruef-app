@@ -34,7 +34,7 @@
  *  itself on the first real card payment. users.tier is the WRONG basis for
  *  "paying" — it is exactly what counted admin/demo/comped as customers.
  *
- *  MRR = real-paying users × the monthly-equivalent of the live €114/6-month
+ *  MRR = real-paying users × the monthly-equivalent of the live €129/6-month
  *  pass (priceCents/durationMonths from the canonical TIERS catalogue). With
  *  0 real payers, MRR is honestly €0 — not the €19 a demo account would print.
  *
@@ -78,10 +78,10 @@ const HEADLINE_TIER_ID = "premium_pass_guaranteed";
 
 function headlineOffer(): { priceCents: number; durationMonths: number } {
   const def = TIERS[HEADLINE_TIER_ID];
-  // Defensive fallback to the documented €114/6-month pass if the catalogue
+  // Defensive fallback to the documented €129/6-month pass if the catalogue
   // entry is ever renamed — keeps the route from throwing on a config drift.
   return {
-    priceCents: def?.priceCents ?? 11400,
+    priceCents: def?.priceCents ?? 12900,
     durationMonths: def?.durationMonths ?? 6,
   };
 }
@@ -271,7 +271,7 @@ export async function computeControlPlaneMetrics(
   }
   const payingUsers = payingUserIds.size;
 
-  // MRR = REAL paying users × monthly-equivalent of the €114/6-mo pass.
+  // MRR = REAL paying users × monthly-equivalent of the €129/6-mo pass.
   // 0 payers ⇒ €0 (the honest figure; not the €19 a demo account would print).
   const monthlyEquivCents = Math.round(offer.priceCents / offer.durationMonths);
   const mrrCents = payingUsers * monthlyEquivCents;

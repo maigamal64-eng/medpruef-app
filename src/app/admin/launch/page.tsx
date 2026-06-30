@@ -71,6 +71,11 @@ import {
   type LaunchTask,
   type PhaseStatus,
 } from "@/lib/admin/launchPlan";
+import {
+  ACTIONS,
+  ACTIONS_INTRO_NOTE,
+  type FounderAction,
+} from "@/lib/admin/founderActions";
 
 const PROGRESS_KEY = "medpruef_launch_progress";
 const ACTIVATION_KEY = "medpruef_activation_progress";
@@ -78,7 +83,7 @@ const ACTIVATION_KEY = "medpruef_activation_progress";
 export default function AdminLaunchPage() {
   return (
     <AdminPageShell
-      title="Launch"
+      title="Plan & Actions"
       description={
         <span>
           The phased path to the first euro: what is ready, the funnel you can
@@ -89,11 +94,80 @@ export default function AdminLaunchPage() {
         </span>
       }
     >
+      <ActionQueue />
       <ReadinessHeader />
       <DistributionArsenal />
       <FunnelCalculator />
       <PhasesSection />
     </AdminPageShell>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   0. ACTION QUEUE — what needs [name]'s own hands (pinned on top)
+   ══════════════════════════════════════════════════════════════════════ */
+
+const ACTION_TONE: Record<
+  FounderAction["status"],
+  { label: string; cls: string }
+> = {
+  blocking: { label: "Blocking", cls: "bg-amber-500/15 text-amber-500" },
+  ready: { label: "Ready", cls: "bg-emerald-500/15 text-emerald-500" },
+  optional: { label: "Optional", cls: "bg-slate-500/15 text-slate-400" },
+};
+
+function ActionQueue() {
+  const blocking = ACTIONS.filter((a) => a.status === "blocking").length;
+  const ready = ACTIONS.filter((a) => a.status === "ready").length;
+  return (
+    <section className="mb-8">
+      <div className="flex items-center justify-between mb-2">
+        <h2 className="text-lg font-display font-bold text-[var(--mp-fg)]">
+          What needs you now
+        </h2>
+        <span className="text-xs font-mono text-[var(--mp-fg-muted)]">
+          {ready} ready · {blocking} blocking
+        </span>
+      </div>
+      <p className="text-sm text-[var(--mp-fg-muted)] mb-4 max-w-3xl">
+        {ACTIONS_INTRO_NOTE}
+      </p>
+      <div className="grid gap-3 md:grid-cols-2">
+        {ACTIONS.map((a) => {
+          const tone = ACTION_TONE[a.status];
+          return (
+            <div
+              key={a.id}
+              className="rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] p-4 flex flex-col gap-2"
+            >
+              <div className="flex items-center gap-2 flex-wrap">
+                <span
+                  className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${tone.cls}`}
+                >
+                  {tone.label}
+                </span>
+                <span className="text-[10px] uppercase tracking-wider text-[var(--mp-fg-muted)]">
+                  {a.category}
+                </span>
+              </div>
+              <h3 className="text-sm font-semibold text-[var(--mp-fg)]">
+                {a.title}
+              </h3>
+              <p className="text-xs text-[var(--mp-fg-muted)]">{a.why}</p>
+              <p className="text-xs text-[var(--mp-fg)]">
+                <span className="font-medium">Needs: </span>
+                {a.needs}
+              </p>
+              <ol className="text-xs text-[var(--mp-fg-muted)] list-decimal ml-4 space-y-1 mt-1">
+                {a.steps.map((s, i) => (
+                  <li key={i}>{s}</li>
+                ))}
+              </ol>
+            </div>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 

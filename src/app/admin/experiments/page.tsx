@@ -1,20 +1,13 @@
 "use client";
 
-import { AdminPageShell, ComingSoonCard } from "../_components/AdminPageShell";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
-export default function AdminExperimentsPage() {
-  return (
-    <AdminPageShell
-      title="Experiments"
-      description="A/B tests — assignment counts and results."
-      freshness="cached"
-    >
-      <ComingSoonCard title="Experiment console">
-        The <code>experiments</code> and <code>experiment_assignments</code>{" "}
-        tables are live. [name] can seed experiments via{" "}
-        <code>/admin/sql</code>. The in-UI create/start/stop + results panel
-        ships in a follow-up with the flags UI.
-      </ComingSoonCard>
-    </AdminPageShell>
-  );
+// Tab consolidated (admin nav refactor 2026-06-30) -> /admin/growth
+export default function RedirectPage() {
+  const router = useRouter();
+  useEffect(() => {
+    router.replace("/admin/growth");
+  }, [router]);
+  return null;
 }

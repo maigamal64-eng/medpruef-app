@@ -25,8 +25,8 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   AlertCircle,
-  FlaskConical,
   Radio,
+  Target,
   TrendingUp,
   UserCheck,
   UserPlus,
@@ -45,11 +45,16 @@ import {
 } from "../_components/primitives";
 import {
   PRESENCE_CHANNELS,
-  CAMPAIGNS,
-  EXPERIMENTS,
-  EXPERIMENTS_EMPTY_NOTE,
   type ChannelStatus,
 } from "@/lib/admin/growthChannels";
+import {
+  CHANNEL_STRATEGY,
+  PUBLISHED,
+  PUBLISHED_LAST_UPDATED,
+  CHANNEL_LABEL as PUB_CHANNEL_LABEL,
+  type TierStatus,
+  type PublishStatus,
+} from "@/lib/admin/publishedContent";
 
 // Mirror of the API response shape (the server type lives with the computation
 // in @/lib/admin/growthMetrics; duplicated minimally here to avoid pulling a
@@ -98,10 +103,10 @@ export default function AdminGrowthPage() {
 
   return (
     <AdminPageShell
-      title="Growth"
+      title="Channels & Published"
       description={
         <span>
-          Reach + funnel. Euros stay on the control plane.{" "}
+          The strategy, what we published per channel, and what it produced.{" "}
           {metrics && (
             <span className="font-mono text-[var(--mp-fg-muted)]">
               Snapshot {new Date(metrics.generated_at).toLocaleTimeString()}
@@ -122,14 +127,14 @@ export default function AdminGrowthPage() {
       {/* ─── GROWTH FUNNEL (live hero) ───────────────────────────────── */}
       <FunnelBlock metrics={metrics} loading={loading} />
 
+      {/* ─── CHANNEL STRATEGY (the fire-list) ────────────────────────── */}
+      <StrategySection />
+
+      {/* ─── PUBLISHED & RESULTS ─────────────────────────────────────── */}
+      <PublishedSection />
+
       {/* ─── PRESENCE CHANNELS (static) ──────────────────────────────── */}
       <PresenceSection />
-
-      {/* ─── CAMPAIGNS pipeline (static) ─────────────────────────────── */}
-      <CampaignsSection />
-
-      {/* ─── EXPERIMENTS (static, none yet) ──────────────────────────── */}
-      <ExperimentsSection />
     </AdminPageShell>
   );
 }
@@ -273,99 +278,142 @@ function PresenceSection() {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// Campaigns pipeline — static list
+// Channel strategy — the fire-list (from publishedContent.ts)
 // ═══════════════════════════════════════════════════════════════════
 
-const CAMPAIGN_TONE: Record<Campaign["status"], StatusTone> = {
-  live: "success",
-  queued: "warn",
-  drafted: "neutral",
+const TIER_TONE: Record<TierStatus, { label: string; tone: StatusTone }> = {
+  running: { label: "Running", tone: "success" },
+  ready: { label: "Ready", tone: "info" },
+  "pending-[name]": { label: "Needs you", tone: "warn" },
+  later: { label: "Later", tone: "neutral" },
 };
 
-const CAMPAIGN_LABEL: Record<Campaign["status"], string> = {
-  live: "Live",
-  queued: "Queued",
-  drafted: "Drafted",
-};
-
-type Campaign = (typeof CAMPAIGNS)[number];
-
-function CampaignsSection() {
+function StrategySection() {
   return (
     <section className="space-y-3">
       <SectionHeading
-        title="Campaigns"
-        icon={Megaphone}
-        hint="Community + own-channel queue · mirrors the campaigns log"
+        title="Channel strategy"
+        icon={Target}
+        hint="The fire-list: where the tight budget + effort go, best first"
       />
-      <div className="rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] overflow-hidden divide-y divide-[var(--mp-border-subtle)]">
-        {CAMPAIGNS.map((c, i) => (
-          <div
-            key={`${c.channel}-${i}`}
-            className="px-4 py-3 flex items-start gap-3 hover:bg-[var(--mp-surface-sunken)]/50"
-          >
-            <StatusDot tone={CAMPAIGN_TONE[c.status]} size={8} />
-            <div className="min-w-0 flex-1">
-              <div className="text-xs font-semibold text-[var(--mp-fg)]">
-                {c.channel}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        {CHANNEL_STRATEGY.map((t) => {
+          const tone = TIER_TONE[t.status];
+          return (
+            <div
+              key={t.tier}
+              className="rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] p-4 flex flex-col gap-2"
+            >
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[var(--mp-surface-sunken)] text-[var(--mp-fg)]">
+                  Tier {t.tier}
+                </span>
+                <span className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-[var(--mp-fg-muted)]">
+                  <StatusDot tone={tone.tone} size={7} />
+                  {tone.label}
+                </span>
+                <span className="ml-auto text-[10px] font-mono text-[var(--mp-fg-subtle)]">
+                  {t.cash}
+                </span>
               </div>
-              <div className="text-[11px] text-[var(--mp-fg-muted)]">
-                {c.angle}
+              <div className="text-sm font-semibold text-[var(--mp-fg)]">
+                {t.label}
               </div>
+              <ul className="text-[11px] text-[var(--mp-fg-muted)] list-disc ml-4 space-y-0.5">
+                {t.moves.map((m, i) => (
+                  <li key={i}>{m}</li>
+                ))}
+              </ul>
+              <p className="text-[11px] text-[var(--mp-fg-subtle)] mt-1">
+                {t.rationale}
+              </p>
             </div>
-            <span className="text-[10px] uppercase tracking-wider text-[var(--mp-fg-subtle)] flex-shrink-0">
-              {CAMPAIGN_LABEL[c.status]}
-            </span>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </section>
   );
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// Experiments — static (none running yet)
+// Published & results — what we put out + what it produced
 // ═══════════════════════════════════════════════════════════════════
 
-function ExperimentsSection() {
+const PUB_STATUS_TONE: Record<
+  PublishStatus,
+  { label: string; tone: StatusTone }
+> = {
+  published: { label: "Published", tone: "success" },
+  sent: { label: "Sent", tone: "success" },
+  queued: { label: "Queued", tone: "warn" },
+  drafted: { label: "Drafted", tone: "neutral" },
+};
+
+function PublishedSection() {
   return (
     <section className="space-y-3">
       <SectionHeading
-        title="Experiments"
-        icon={FlaskConical}
-        hint="A/B tests · revived Funnels + Experiments stubs"
+        title="Published & results"
+        icon={Megaphone}
+        hint={`What we put out + what it produced · updated ${PUBLISHED_LAST_UPDATED}`}
       />
-      {EXPERIMENTS.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] px-4 py-4 flex items-start gap-2 text-[11px] text-[var(--mp-fg-muted)]">
-          <FlaskConical size={13} className="mt-0.5 flex-shrink-0" />
-          <span>{EXPERIMENTS_EMPTY_NOTE}</span>
-        </div>
-      ) : (
-        <div className="rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] overflow-hidden divide-y divide-[var(--mp-border-subtle)]">
-          {EXPERIMENTS.map((e) => (
-            <div
-              key={e.name}
-              className="px-4 py-3 flex items-start gap-3"
-            >
-              <StatusDot
-                tone={e.status === "running" ? "success" : "neutral"}
-                size={8}
-              />
+      <div className="rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] overflow-hidden divide-y divide-[var(--mp-border-subtle)]">
+        {PUBLISHED.map((p) => {
+          const st = PUB_STATUS_TONE[p.status];
+          return (
+            <div key={p.id} className="px-4 py-3 flex items-start gap-3">
+              <StatusDot tone={st.tone} size={8} />
               <div className="min-w-0 flex-1">
-                <div className="text-xs font-semibold text-[var(--mp-fg)]">
-                  {e.name}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-[var(--mp-surface-sunken)] text-[var(--mp-fg)]">
+                    {PUB_CHANNEL_LABEL[p.channel]}
+                  </span>
+                  <span className="text-[10px] uppercase tracking-wider text-[var(--mp-fg-subtle)]">
+                    {p.kind}
+                  </span>
+                  <span className="text-[10px] font-mono text-[var(--mp-fg-subtle)]">
+                    {p.date}
+                  </span>
+                  <span className="ml-auto text-[10px] uppercase tracking-wider text-[var(--mp-fg-muted)]">
+                    {st.label}
+                  </span>
                 </div>
-                <div className="text-[11px] text-[var(--mp-fg-muted)]">
-                  {e.metric}
+                <div className="text-xs text-[var(--mp-fg)] mt-1">
+                  {p.summary}
                 </div>
+                <div className="text-[11px] text-[var(--mp-fg-muted)] mt-0.5">
+                  {p.results}
+                </div>
+                {p.metrics && p.metrics.length > 0 && (
+                  <div className="flex items-center gap-3 flex-wrap mt-1.5">
+                    {p.metrics.map((m, i) => (
+                      <span
+                        key={i}
+                        className="text-[10px] text-[var(--mp-fg-subtle)]"
+                      >
+                        <span className="font-semibold text-[var(--mp-fg)]">
+                          {m.value}
+                        </span>{" "}
+                        {m.label}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {p.link && (
+                  <a
+                    href={p.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[11px] text-[var(--mp-viridian)] hover:underline mt-1 inline-block"
+                  >
+                    View
+                  </a>
+                )}
               </div>
-              <span className="text-[10px] uppercase tracking-wider text-[var(--mp-fg-subtle)] flex-shrink-0">
-                {e.status}
-              </span>
             </div>
-          ))}
-        </div>
-      )}
+          );
+        })}
+      </div>
     </section>
   );
 }

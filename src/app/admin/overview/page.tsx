@@ -746,7 +746,7 @@ function ReferralsHeroTile({
         <div className="flex items-center justify-between">
           <span>
             {live > 0
-              ? "Oldest first. Mark paid after Wise/USDT transfer."
+              ? "Oldest first. Mark paid after the payout transfer."
               : "Queue clear. Qualified referrals show up here."}
           </span>
           <StatusDot tone={tone} size={6} pulse={pulse} />
@@ -963,7 +963,7 @@ function WebhookFailuresTile({
         live > 0 ? (
           <span>
             <StatusDot tone="danger" size={6} />{" "}
-            <span className="ml-1">Investigate retries — NOWPayments IPN.</span>
+            <span className="ml-1">Investigate Whop webhook deliveries.</span>
           </span>
         ) : (
           <span className="italic text-[var(--mp-fg-muted)]">

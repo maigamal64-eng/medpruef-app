@@ -76,7 +76,7 @@ export const PHASES: ReadonlyArray<PlanPhase> = [
     status: "done",
     state: [
       "Stichprobentest (Innsbruck) rename propagated across 27 source files (build green, prod verified).",
-      "/pricing copy corrected: now the Prüfungs-Kohorte (114 €, Whop card checkout), no stale cohort date, no em dashes, no €0 placeholder.",
+      "/pricing copy corrected: now the Prüfungs-Kohorte (129 €, Whop card checkout), no stale cohort date, no em dashes, no €0 placeholder.",
       "The campaign log's active angle synced to the Source of Truth exam date.",
       "One Lektor SoT-check pass confirms every surface matches the Source of Truth at once.",
     ],

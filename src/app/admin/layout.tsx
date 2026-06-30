@@ -27,14 +27,11 @@ import {
   BarChart3,
   BellRing,
   ChevronDown,
-  ClipboardCheck,
   Command,
-  Cpu,
   CreditCard,
   Database,
   FileText,
   Flag,
-  FlaskConical,
   Gauge,
   GitBranch,
   Image as ImageIcon,
@@ -42,7 +39,6 @@ import {
   LayoutDashboard,
   LifeBuoy,
   LogOut,
-  Map,
   MessageSquare,
   Moon,
   RefreshCw,
@@ -56,7 +52,6 @@ import {
   Sun,
   TerminalSquare,
   Ticket,
-  TrendingUp,
   Users,
   Wallet,
   Webhook,
@@ -67,11 +62,8 @@ import { ShortcutHint } from "./_components/primitives";
 
 type SectionKey =
   | "overview"
-  | "control-plane"
-  | "actions"
-  | "growth"
-  | "plan"
   | "launch"
+  | "growth"
   | "revenue"
   | "content"
   | "product"
@@ -106,43 +98,19 @@ const NAV: NavSection[] = [
     items: [],
   },
   {
-    key: "control-plane",
-    label: "Control Plane",
-    icon: Cpu,
-    shortcut: "a",
-    href: "/admin/control-plane",
-    items: [],
-  },
-  {
-    key: "actions",
-    label: "Actions",
-    icon: ClipboardCheck,
-    shortcut: "x",
-    href: "/admin/actions",
+    key: "launch",
+    label: "Plan & Actions",
+    icon: Rocket,
+    shortcut: "l",
+    href: "/admin/launch",
     items: [],
   },
   {
     key: "growth",
-    label: "Growth",
+    label: "Channels",
     icon: Sprout,
     shortcut: "w",
     href: "/admin/growth",
-    items: [],
-  },
-  {
-    key: "plan",
-    label: "Plan",
-    icon: Map,
-    shortcut: "l",
-    href: "/admin/plan",
-    items: [],
-  },
-  {
-    key: "launch",
-    label: "Launch",
-    icon: Rocket,
-    shortcut: "n",
-    href: "/admin/launch",
     items: [],
   },
   {
@@ -176,9 +144,7 @@ const NAV: NavSection[] = [
     shortcut: "p",
     items: [
       { label: "Feedback", href: "/admin/feedback", icon: MessageSquare },
-      { label: "Funnels", href: "/admin/funnels", icon: TrendingUp },
       { label: "Flags", href: "/admin/flags", icon: Flag },
-      { label: "Experiments", href: "/admin/experiments", icon: FlaskConical },
       { label: "PUYP", href: "/admin/puyp", icon: ShieldCheck },
     ],
   },
@@ -753,11 +719,8 @@ function ShortcutsDialog({ onClose }: { onClose: () => void }) {
         </div>
         <div className="p-4 text-xs text-[var(--mp-fg-muted)] grid grid-cols-2 gap-x-6 gap-y-2">
           <ShortcutRow keys="g o" label="Go to Overview" />
-          <ShortcutRow keys="g a" label="Go to Control Plane" />
-          <ShortcutRow keys="g x" label="Go to Action Queue" />
-          <ShortcutRow keys="g w" label="Go to Growth" />
-          <ShortcutRow keys="g l" label="Go to Plan" />
-          <ShortcutRow keys="g n" label="Go to Launch" />
+          <ShortcutRow keys="g l" label="Go to Plan & Actions" />
+          <ShortcutRow keys="g w" label="Go to Channels" />
           <ShortcutRow keys="g r" label="Go to Revenue" />
           <ShortcutRow keys="g c" label="Go to Content" />
           <ShortcutRow keys="g p" label="Go to Product" />

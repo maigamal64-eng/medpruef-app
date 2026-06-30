@@ -23,6 +23,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-06-30",
+    tag: "admin",
+    title: {
+      de: "Admin-Dashboard verschlankt",
+      en: "Admin dashboard consolidated",
+    },
+    description: {
+      de: "Die Ops-Tabs sind von sechs auf drei reduziert: Overview, Plan & Actions und Channels. Neu: ein Published-und-Results-Feed (was pro Kanal veröffentlicht wurde und was es gebracht hat) plus der Sam-Schritt ganz oben in der Aktionsliste. Veraltete Preis- und Krypto-Texte korrigiert (jetzt 129 €, Whop-Karte).",
+      en: "The ops tabs are down from six to three: Overview, Plan & Actions, and Channels. New: a Published and Results feed (what shipped per channel and what it produced) plus the Sam keystroke pinned at the top of the action queue. Stale price and crypto copy corrected (now 129 €, Whop card).",
+    },
+  },
+  {
     date: "2026-06-27",
     tag: "improvement",
     title: {
