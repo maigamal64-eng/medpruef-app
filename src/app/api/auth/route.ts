@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validateInitData, validateLoginWidget } from "@/lib/telegram";
 import { getServiceClient } from "@/lib/supabase";
+import { sendRedditConversion } from "@/lib/reddit-capi";
 import bcrypt from "bcryptjs";
 import {
   checkRateLimit,
@@ -283,6 +284,21 @@ export async function POST(req: NextRequest) {
         .then(({ error: logErr }) => {
           if (logErr) console.error("[auth] activity insert:", logErr);
         });
+
+      // Reddit Conversions API, server-side SignUp (the campaign's conversion
+      // goal). Dormant until REDDIT_CAPI_TOKEN is set; deduped against the
+      // client pixel SignUp on the user id. Fire-and-forget, never blocks.
+      void sendRedditConversion({
+        trackingType: "SignUp",
+        conversionId: user.id as string,
+        externalId: user.id as string,
+        email,
+        ip:
+          req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+          req.headers.get("x-real-ip") ||
+          null,
+        userAgent: req.headers.get("user-agent") || null,
+      });
 
       // Mint a server-signed session token. This is the credential the
     // client sends back on `x-session-token`; `requireUser` verifies the

@@ -24,6 +24,7 @@ import { getCookieConsent } from "@/components/CookieBanner";
 
 type Fbq = (...args: unknown[]) => void;
 type Gtag = (...args: unknown[]) => void;
+type Rdt = (...args: unknown[]) => void;
 
 /**
  * Fire the free-registration conversion on BOTH ad platforms.
@@ -36,7 +37,7 @@ type Gtag = (...args: unknown[]) => void;
  * Safe to call unconditionally at the register-success moment; it
  * self-gates on consent + tracker presence.
  */
-export function trackRegistration(): void {
+export function trackRegistration(conversionId?: string): void {
   if (typeof window === "undefined") return;
   if (getCookieConsent() !== "accepted") return;
 
@@ -53,6 +54,19 @@ export function trackRegistration(): void {
     const gtag = (window as unknown as { gtag?: Gtag }).gtag;
     if (typeof gtag === "function") {
       gtag("event", "sign_up", { method: "email" });
+    }
+  } catch {
+    /* analytics must never break the signup flow */
+  }
+
+  // Reddit Ads (2026-07-01 pivot): SignUp is Reddit's registration
+  // optimization event. Self-gates via rdt presence (loaded only post-consent).
+  try {
+    const rdt = (window as unknown as { rdt?: Rdt }).rdt;
+    if (typeof rdt === "function") {
+      // conversionId (the user id) dedupes this against the server-side CAPI
+      // SignUp for the same registration (src/lib/reddit-capi.ts).
+      rdt("track", "SignUp", conversionId ? { conversionId } : undefined);
     }
   } catch {
     /* analytics must never break the signup flow */
@@ -76,9 +90,12 @@ export function trackRegistration(): void {
 export function trackPurchase({
   tier,
   valueEur,
+  conversionId,
 }: {
   tier: string;
   valueEur: number;
+  /** Shared id for pixel <-> Conversions-API dedup (e.g. the Whop payment id). */
+  conversionId?: string;
 }): void {
   if (typeof window === "undefined") return;
   if (getCookieConsent() !== "accepted") return;
@@ -99,6 +116,22 @@ export function trackPurchase({
         value: valueEur,
         currency: "EUR",
         items: [{ item_id: tier }],
+      });
+    }
+  } catch {
+    /* analytics must never break the post-purchase flow */
+  }
+
+  // Reddit Ads (2026-07-01 pivot): Purchase is Reddit's value/sale event.
+  // conversionId (when passed) dedupes this pixel hit against the server-side
+  // Conversions-API event for the same transaction (src/lib/reddit-capi.ts).
+  try {
+    const rdt = (window as unknown as { rdt?: Rdt }).rdt;
+    if (typeof rdt === "function") {
+      rdt("track", "Purchase", {
+        currency: "EUR",
+        value: valueEur,
+        ...(conversionId ? { conversionId } : {}),
       });
     }
   } catch {

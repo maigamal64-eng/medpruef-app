@@ -185,7 +185,9 @@ export default function LoginPage() {
       // consent-independent ground-truth count is the server register row
       // (user_activity_log). See marketing/campaigns/paid-ads-setup-2026-06-24.md.
       if (mode === "register") {
-        trackRegistration();
+        // Pass the user id so the client pixel SignUp dedupes against the
+        // server-side Reddit CAPI SignUp for the same registration.
+        trackRegistration(data.user?.id);
       }
       // Best-effort referral claim — fire and forget. The home page
       // also has a fallback claim on mount so a failure here is not
