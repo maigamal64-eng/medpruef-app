@@ -43,6 +43,12 @@ export const PRESENCE_CHANNELS: ReadonlyArray<PresenceChannel> = [
   { name: "Instagram", handle: "@medprufeu", status: "live" },
   { name: "Whop store", handle: "whop.com/medpruf", status: "live" },
   { name: "LinkedIn Company Page", handle: "MedPrüf", status: "ready" },
+  // "ready" here = the BRAND profile (u/MedPruef · r/MedPruef) is not published yet.
+  // This is NOT the same as the Reddit organic RAIL, which is already LIVE: a
+  // value-first health-gated cycle runs on a separate stealth participate account
+  // (Desperate-Silver-624), deliberately not the brand account, and holds at
+  // Level-0 until karma clears (see launchPlan.ts reddit + FB-09). Do not read
+  // this "ready" as "Reddit needs setting up".
   { name: "Reddit", handle: "u/MedPruef · r/MedPruef", status: "ready" },
   { name: "Telegram channel", handle: "@MedPruef", status: "ready" },
   { name: "X / Twitter", handle: "@medpruef", status: "ready" },
@@ -77,7 +83,7 @@ export const CAMPAIGNS: ReadonlyArray<Campaign> = [
   },
   {
     channel: "FB Page + IG",
-    angle: "Austria is not Germany — why the prep differs",
+    angle: "Austria is not Germany, why the prep differs",
     status: "queued",
   },
   {

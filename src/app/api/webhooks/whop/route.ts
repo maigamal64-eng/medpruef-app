@@ -375,7 +375,27 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const expiresAt = computeExpiry(tierDurationMonths(tier), new Date());
+    // FB-03 (2026-07-01, money/access-leak fix): the €0 trial START must grant
+    // only the ~8-day trial window, NOT a full month. The trial plan
+    // (plan_redactedec56d4df) is a RENEWAL plan: trial_period_days=7, initial
+    // charge €0, then €19/month. Whop fires `payment.succeeded` at trial start
+    // with amount 0 (confirmed on the real delivery pay_redacted8cdd2725 —
+    // amount_cents=0, tier=notes_pro_trial), and again on each €19 renewal with
+    // a positive amount. Detect the start by tier + a €0/absent amount so a user
+    // who cancels mid-trial loses Pro in ~a week, not a month; a real €19 renewal
+    // carries a positive amount → falls through to the +1-month extension (today's
+    // behavior, unchanged). 8 days == trial/verify's `trialDays + 1` floor, so the
+    // two grant paths converge on the same window instead of racing (FB-03).
+    // ONLY notes_pro_trial is gated here; the one-time paid tiers (first_month_19
+    // / first_3mo_27 / premium_pass_guaranteed) always carry a positive amount and
+    // are never this tier, so they keep their full computeExpiry duration. The
+    // membership.went_invalid revoke path (already in handleRevoke) is the
+    // suspenders for an instant cancel-revoke; this 8-day cap is the belt.
+    const isTrialStart =
+      tier === "notes_pro_trial" && (f.amountCents === 0 || f.amountCents == null);
+    const expiresAt = isTrialStart
+      ? new Date(Date.now() + 8 * 86400_000)
+      : computeExpiry(tierDurationMonths(tier), new Date());
 
     const { error: subErr } = await sb.from("subscriptions").insert({
       user_id: userId,
@@ -462,7 +482,7 @@ export async function POST(req: NextRequest) {
       amountCents: f.amountCents ?? TIERS[tier]?.priceCents ?? null,
       currency: (f.currency || "eur").toUpperCase(),
       matched: true,
-      metadata: { event, expires_at: expiresAt.toISOString(), ok: true },
+      metadata: { event, expires_at: expiresAt.toISOString(), trial_start: isTrialStart, ok: true },
     });
 
     return NextResponse.json({ ok: true, activated: true, tier, expires_at: expiresAt.toISOString() });

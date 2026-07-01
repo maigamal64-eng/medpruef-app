@@ -16,7 +16,9 @@ import {
   BookOpen,
   Eye,
   EyeOff,
+  KeyRound,
 } from "lucide-react";
+import { extractLoginCode, looksLikeLoginCode } from "@/lib/telegram-login";
 
 type Lang = "de" | "en";
 type AuthMode = "login" | "register";
@@ -82,6 +84,15 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+
+  // Telegram sign-in code (FB-08 mobile-PWA hand-off). The bot hands the
+  // user a one-time code; pasting it here exchanges it in THIS storage
+  // context (the installed app), so the session persists where the user
+  // studies. Collapsed by default so it doesn't clutter the primary
+  // email/Telegram flows.
+  const [showCodeField, setShowCodeField] = useState(false);
+  const [tgCode, setTgCode] = useState("");
+  const [codeError, setCodeError] = useState("");
 
   useEffect(() => {
     setLangState(getLang());
@@ -186,6 +197,55 @@ export default function LoginPage() {
     } catch {
       setError(lang === "de" ? "Verbindungsfehler" : "Connection error");
     } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCodeAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCodeError("");
+    const code = extractLoginCode(tgCode);
+    if (!looksLikeLoginCode(code)) {
+      setCodeError(
+        lang === "de"
+          ? "Ungültiger Code. Kopiere den Code aus dem Telegram-Chat und füge ihn hier ein."
+          : "Invalid code. Copy the code from the Telegram chat and paste it here.",
+      );
+      return;
+    }
+    setLoading(true);
+    try {
+      // Exchange the one-time token in THIS context so the signed session
+      // token is written to this browser/app's localStorage (S-1). Reuses
+      // the audited /api/auth tokenExchange path — no new auth surface.
+      const res = await fetch("/api/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tokenExchange: code }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        const map: Record<string, string> = {
+          "Invalid token":
+            lang === "de" ? "Code ungültig oder nicht gefunden." : "Code invalid or not found.",
+          "Token already used":
+            lang === "de" ? "Dieser Code wurde bereits verwendet. Fordere im Bot einen neuen an." : "This code was already used. Request a new one from the bot.",
+          "Token expired":
+            lang === "de" ? "Code abgelaufen. Fordere im Bot einen neuen an." : "Code expired. Request a new one from the bot.",
+        };
+        const msg = data.error || "Error";
+        setCodeError(map[msg] || (lang === "de" ? "Anmeldung fehlgeschlagen." : "Sign-in failed."));
+        setLoading(false);
+        return;
+      }
+      storeSession({ user: data.user, gamification: data.gamification });
+      setSessionToken(data.sessionToken);
+      if (data.user?.id) {
+        await claimStoredReferralCode();
+      }
+      window.location.href = "/";
+    } catch {
+      setCodeError(lang === "de" ? "Verbindungsfehler" : "Connection error");
       setLoading(false);
     }
   };
@@ -428,6 +488,56 @@ export default function LoginPage() {
                 ? "Telegram-Anmeldung: schnell, ohne Passwort. Wir verwenden Ihren Telegram-Namen und Ihr Profilbild."
                 : "Telegram sign-in: fast, no password. We use your Telegram name and profile photo."}
             </p>
+
+            {/* Telegram sign-in code (FB-08 mobile-PWA hand-off). On a phone,
+               tapping the bot's login button opens Telegram's in-app browser,
+               so the session can't reach the installed app. The bot also
+               hands the user a code; pasting it HERE (inside the app) mints
+               the session in the right place. Collapsed by default. */}
+            <div className="pt-1">
+              {!showCodeField ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCodeField(true);
+                    setCodeError("");
+                  }}
+                  className="w-full flex items-center justify-center gap-2 text-xs font-semibold text-[var(--mp-cta-blue)] hover:opacity-80 transition-opacity py-1.5 mp-focusable"
+                >
+                  <KeyRound className="w-3.5 h-3.5" aria-hidden />
+                  {lang === "de" ? "Mit Telegram-Code anmelden" : "Sign in with Telegram code"}
+                </button>
+              ) : (
+                <form onSubmit={handleCodeAuth} className="space-y-2 animate-fade-in">
+                  <TextField
+                    label={lang === "de" ? "Telegram-Code" : "Telegram code"}
+                    type="text"
+                    inputMode="text"
+                    autoComplete="off"
+                    autoCapitalize="none"
+                    spellCheck={false}
+                    value={tgCode}
+                    onChange={(e) => {
+                      setTgCode(e.target.value);
+                      if (codeError) setCodeError("");
+                    }}
+                    placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                    helper={
+                      lang === "de"
+                        ? 'Öffne @MedPruefBot, tippe auf „MedPrüf öffnen“ und kopiere den Code aus dem Chat.'
+                        : 'Open @MedPruefBot, tap "Open MedPrüf" and copy the code from the chat.'
+                    }
+                    error={codeError || undefined}
+                  />
+                  <button
+                    type="submit"
+                    className="mp-btn mp-btn--secondary w-full justify-center"
+                  >
+                    {lang === "de" ? "Code einlösen & anmelden" : "Redeem code & sign in"}
+                  </button>
+                </form>
+              )}
+            </div>
           </div>
 
           {/* Benefits */}

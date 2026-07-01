@@ -38,6 +38,20 @@ interface TelegramUpdate {
 
 const TOKEN_TTL_MS = 10 * 60 * 1000 // 10 minutes
 
+/**
+ * Escape text for Telegram's MarkdownV2 parse mode. Every one of these
+ * characters is reserved and MUST be backslash-escaped in normal text,
+ * or Telegram rejects the whole sendMessage with 400. We use MarkdownV2
+ * so the login code can be wrapped in a backtick code span, which
+ * renders as a one-tap "copy" chip in the Telegram client (the load-
+ * bearing UX for the mobile-PWA hand-off — FB-08). Text INSIDE a code
+ * span is literal, so the UUID itself needs no escaping; only the
+ * surrounding prose does.
+ */
+function escapeMdV2(text: string): string {
+  return text.replace(/[_*\[\]()~`>#+\-=|{}.!\\]/g, (c) => `\\${c}`)
+}
+
 export async function POST(req: NextRequest) {
   // Validate secret header (set by Telegram if configured at setWebhook time)
   const secret = req.headers.get('x-telegram-bot-api-secret-token')
@@ -96,8 +110,8 @@ export async function POST(req: NextRequest) {
         // promise that every reply is read (C-7, 2026-06-02). Point feedback
         // at the in-app channel instead.
         const text = lang.startsWith('de')
-          ? 'Telegram-Benachrichtigungen aktiviert. Du bekommst hier wichtige MedPrüf-Updates. Feedback? Nutze am besten den Feedback-Button in der App — dort lese ich ([name]) mit.'
-          : 'Telegram notifications activated. You will receive important MedPrüf updates here. Got feedback? Best use the feedback button in the app — that\'s where I ([name]) read every message.'
+          ? 'Telegram-Benachrichtigungen aktiviert. Du bekommst hier wichtige MedPrüf-Updates. Feedback? Nutze am besten den Feedback-Button in der App, dort lese ich ([name]) mit.'
+          : 'Telegram notifications activated. You will receive important MedPrüf updates here. Got feedback? Best use the feedback button in the app. That\'s where I ([name]) read every message.'
         try {
           await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
             method: 'POST',
@@ -190,10 +204,42 @@ export async function POST(req: NextRequest) {
 
   const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://medpruf.com').replace(/\/$/, '')
   const loginUrl = `${siteUrl}/?tg_token=${encodeURIComponent(token)}`
-  const text = isDE
-    ? 'Tippe auf den Button, um MedPrüf zu öffnen und dich anzumelden:'
-    : 'Tap the button to open MedPrüf and sign in:'
   const buttonLabel = isDE ? 'MedPrüf öffnen' : 'Open MedPrüf'
+
+  // Two ways to sign in from ONE token (FB-08, mobile-PWA fix):
+  //   1) The button — works on desktop and in a real mobile browser,
+  //      where the exchanged session persists in the same context.
+  //   2) The copyable CODE below it — for phone users who study in the
+  //      INSTALLED APP. Tapping the button on mobile opens Telegram's
+  //      in-app browser (isolated storage), so the session would be
+  //      trapped there and never reach the app. Instead they open the
+  //      MedPrüf app and PASTE this code, and the session mints inside
+  //      the app. Same single-use, 10-min token either way — no new
+  //      security surface (the exchange runs through the audited
+  //      /api/auth tokenExchange path).
+  //
+  // The code is wrapped in a MarkdownV2 code span so Telegram renders it
+  // as a one-tap "copy" chip. The prose around it is escaped; the code
+  // itself is literal inside the span.
+  // Build each prose line through escapeMdV2 (so no reserved char can 400
+  // the send), then join with the raw code span. Only the code span is
+  // left un-escaped — its backticks must reach Telegram literally to form
+  // the copy chip, and a UUID contains nothing reserved inside a span.
+  const codeLine = '`' + token + '`'
+  const proseLines = isDE
+    ? [
+        'Am Computer oder im Browser? Tippe auf den Button, um MedPrüf zu öffnen und dich anzumelden.',
+        '',
+        'In der installierten MedPrüf-App am Handy?',
+        'Öffne die App, geh zur Anmeldung, tippe auf „Mit Telegram-Code anmelden“ und füge diesen Code ein (10 Min. gültig):',
+      ]
+    : [
+        'On a computer or in a browser? Tap the button to open MedPrüf and sign in.',
+        '',
+        'In the installed MedPrüf app on your phone?',
+        'Open the app, go to sign in, tap "Sign in with Telegram code" and paste this code (valid 10 min):',
+      ]
+  const text = [...proseLines.map(escapeMdV2), '', codeLine].join('\n')
 
   try {
     await fetch(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`, {
@@ -202,6 +248,7 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({
         chat_id: msg.chat.id,
         text,
+        parse_mode: 'MarkdownV2',
         reply_markup: {
           inline_keyboard: [[{ text: buttonLabel, url: loginUrl }]],
         },

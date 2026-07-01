@@ -25,6 +25,14 @@ export const dynamic = "force-dynamic";
 // burn through the login bucket and lock out a real user.
 const LOGIN_RATE_LIMIT = { limit: 10, windowMs: 60_000 };
 const REGISTER_RATE_LIMIT = { limit: 5, windowMs: 60_000 };
+// Telegram deep-link token exchange. Historically unthrottled — fine
+// when the token only arrived via a bot-issued deep-link URL. The
+// mobile-PWA fix (FB-08) also lets a user PASTE the code into the app,
+// so the branch is now reachable by hand. A full random UUIDv4 (122
+// bits) is not brute-forceable, but a light cap stops paste-field abuse
+// / token enumeration attempts cheaply. 20/min/IP is far above any real
+// user (who exchanges exactly one token, once).
+const TOKEN_EXCHANGE_RATE_LIMIT = { limit: 20, windowMs: 60_000 };
 
 /**
  * /api/auth — the single auth endpoint for MedPrüf (email/password,
@@ -110,7 +118,7 @@ export async function POST(req: NextRequest) {
       if (!gate.allowed) {
         return NextResponse.json(
           {
-            error: "Too many login attempts — please wait before trying again.",
+            error: "Too many login attempts. Please wait before trying again.",
             retryAfter: gate.retryAfterSec,
           },
           {
@@ -208,7 +216,7 @@ export async function POST(req: NextRequest) {
       if (!gate.allowed) {
         return NextResponse.json(
           {
-            error: "Too many registration attempts — please wait before trying again.",
+            error: "Too many registration attempts. Please wait before trying again.",
             retryAfter: gate.retryAfterSec,
           },
           {
@@ -320,6 +328,27 @@ export async function POST(req: NextRequest) {
         );
       }
     } else if (tokenExchange) {
+      // Rate-limit the exchange (FB-08): the token is now paste-able into
+      // the app, not only delivered via a bot-issued URL. Throttle per IP
+      // to stop enumeration/abuse of the exchange endpoint.
+      const id = callerIdentity(req);
+      const gate = checkRateLimit({
+        key: rateKey("auth-token-exchange", id),
+        ...TOKEN_EXCHANGE_RATE_LIMIT,
+      });
+      if (!gate.allowed) {
+        return NextResponse.json(
+          {
+            error: "Too many attempts. Please wait before trying again.",
+            retryAfter: gate.retryAfterSec,
+          },
+          {
+            status: 429,
+            headers: rateLimitHeaders(gate, TOKEN_EXCHANGE_RATE_LIMIT),
+          },
+        );
+      }
+
       const { data: row, error: e } = await sb
         .from("telegram_login_tokens")
         .select("*")

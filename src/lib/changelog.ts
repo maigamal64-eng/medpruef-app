@@ -24,6 +24,30 @@ export interface ChangelogEntry {
 export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-07-01",
+    tag: "fix",
+    title: {
+      de: "Telegram-Anmeldung am Handy in der installierten App",
+      en: "Telegram sign-in on mobile inside the installed app",
+    },
+    description: {
+      de: "Wer die App aufs Handy installiert hat, konnte sich per Telegram bisher nicht anmelden: Der Login-Link öffnete Telegrams internen Browser, und die Sitzung landete nicht in der App. Der Bot schickt jetzt zusätzlich einen Anmelde-Code zum Kopieren. In der App gibt es auf der Anmeldeseite „Mit Telegram-Code anmelden“, dort den Code einfügen und fertig. Die Anmeldung ist unverändert sicher (Code einmalig gültig, 10 Minuten).",
+      en: "If you installed the app on your phone, Telegram sign-in did not work: the login link opened Telegram's in-app browser, so the session never reached the app. The bot now also sends a copyable sign-in code. In the app, the sign-in screen has \"Sign in with Telegram code\": paste the code there and you're in. Sign-in stays just as secure (code is single-use, valid 10 minutes).",
+    },
+  },
+  {
+    date: "2026-07-01",
+    tag: "improvement",
+    title: {
+      de: "Hinweis auf die Gratis-Testwoche im Dashboard",
+      en: "Free trial reminder on the dashboard",
+    },
+    description: {
+      de: "Kostenlose Nutzer sehen beim Öffnen der App jetzt einen kurzen, schließbaren Hinweis auf die 7-tägige Pro-Testwoche direkt im Dashboard. Einmal geschlossen, erscheint er nicht erneut.",
+      en: "Free users now see a short, dismissible reminder about the 7-day Pro trial right on the dashboard when they open the app. Once closed, it won't reappear.",
+    },
+  },
+  {
+    date: "2026-07-01",
     tag: "feature",
     title: {
       de: "7 Tage MedPrüf Pro gratis testen",

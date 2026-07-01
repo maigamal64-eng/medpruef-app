@@ -8,6 +8,8 @@ import { t, getLang, setLang } from "@/lib/i18n";
 import TopicIcon from "@/components/TopicIcon";
 import { Lightbulb, Shuffle, ClipboardList, CheckCircle, User, ChevronRight, Search, Target, ArrowRight } from "lucide-react";
 import { isTelegramMiniApp, getMiniAppInitData, getStoredSession, storeSession, setSessionToken } from "@/lib/auth";
+import { isStandalonePWA, isTouchFirstDevice } from "@/lib/telegram-login";
+import TelegramCodeHandoff from "@/components/TelegramCodeHandoff";
 import { useUserTier } from "@/lib/hooks/useUserTier";
 import {
   getStoredExamSource,
@@ -24,6 +26,7 @@ import TopicCard from "@/components/TopicCard";
 import HomeHero from "@/components/HomeHero";
 import HomeStatStrip from "@/components/HomeStatStrip";
 import TelegramActivationCard from "@/components/TelegramActivationCard";
+import TrialAnnouncementCard from "@/components/TrialAnnouncementCard";
 import ExamSelector from "@/components/ExamSelector";
 import ExamSwitcherInline from "@/components/ExamSwitcherInline";
 import Onboarding from "@/components/Onboarding";
@@ -113,7 +116,7 @@ function WeaknessToast({ weakTopics, lang }: { weakTopics: TopicStats[]; lang: s
               {lang === "de" ? `Fokus: ${wt.topic}` : `Focus: ${wt.topic}`}
             </p>
             <p className="text-xs text-[var(--mp-fg-subtle)]">
-              {lang === "de" ? `${acc}% Genauigkeit — 10 Fragen gezielt üben?` : `${acc}% accuracy — practice 10 focused questions?`}
+              {lang === "de" ? `${acc}% Genauigkeit, 10 Fragen gezielt üben?` : `${acc}% accuracy, practice 10 focused questions?`}
             </p>
           </div>
           <button
@@ -174,12 +177,41 @@ export default function Home() {
   // first paint) prevents the early-return "redirect to /landing" branch
   // from firing before the exchange useEffect can claim the token.
   // Fixes C-3 Telegram deep-link race (was: commit `86caf6b` — unverified).
+  //
+  // FB-08 (mobile-PWA): we only auto-exchange here when the session will
+  // persist in the RIGHT storage context — the installed PWA (standalone)
+  // or a desktop browser. On a phone that is NOT the installed app (i.e.
+  // Telegram's in-app browser or a mobile browser tab), auto-exchanging
+  // would burn the single-use token in throwaway storage and the app
+  // would still be logged out. There we show the copy-code hand-off
+  // instead (see handoffToken below), so the user pastes the code into
+  // the app and the session mints where they actually study.
   const [processingTgToken, setProcessingTgToken] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     try {
-      return new URLSearchParams(window.location.search).has("tg_token");
+      const hasToken = new URLSearchParams(window.location.search).has("tg_token");
+      if (!hasToken) return false;
+      // Auto-exchange only where the session sticks: the installed PWA, or
+      // a fine-pointer (desktop) browser. A touch-first device that isn't
+      // the installed app gets the copy-code hand-off instead.
+      return isStandalonePWA() || !isTouchFirstDevice();
     } catch {
       return false;
+    }
+  });
+  // When set, render the copy-code hand-off screen instead of exchanging:
+  // the mobile-browser/WebView case where the session must be minted in
+  // the installed app, not here. Initialised synchronously (same reason
+  // as processingTgToken) so the /landing redirect branch never wins.
+  const [handoffToken, setHandoffToken] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const tok = new URLSearchParams(window.location.search).get("tg_token");
+      if (!tok) return null;
+      const autoExchange = isStandalonePWA() || !isTouchFirstDevice();
+      return autoExchange ? null : tok;
+    } catch {
+      return null;
     }
   });
   const [showCohortConfetti, setShowCohortConfetti] = useState(false);
@@ -228,11 +260,20 @@ export default function Home() {
 
   // Bot deep-link login: if URL carries ?tg_token=..., exchange it for a session.
   // This runs BEFORE the redirect-to-landing check so we don't lose the token.
+  //
+  // FB-08: in the mobile-browser/WebView case we do NOT exchange here —
+  // the token must be pasted into the installed app so the session mints
+  // in the right context. That case is handled by <TelegramCodeHandoff>
+  // (handoffToken is set synchronously above). Bailing before the
+  // exchange keeps the single-use token ALIVE for the app to claim.
   useEffect(() => {
     if (typeof window === "undefined") return;
     const url = new URL(window.location.href);
     const tgToken = url.searchParams.get("tg_token");
     if (!tgToken) return;
+    // Hand-off context: leave the token in the URL untouched, show the
+    // copy-code screen instead of burning it here.
+    if (!isStandalonePWA() && isTouchFirstDevice()) return;
     setProcessingTgToken(true);
     (async () => {
       try {
@@ -582,6 +623,52 @@ export default function Home() {
     return <ExamSelector lang={lang} onSelect={handleExamSelected} />;
   }
 
+  // FB-08 mobile-PWA hand-off: a phone opened the login link outside the
+  // installed app (Telegram's in-app browser or a mobile browser tab).
+  // Instead of burning the single-use token in throwaway storage, show
+  // the copy-code screen so the user pastes it into the app, where the
+  // session mints and persists. "Continue in this browser" is the escape
+  // hatch for users who actually study in the mobile browser — it runs
+  // the normal exchange right here.
+  if (handoffToken && !user) {
+    return (
+      <TelegramCodeHandoff
+        code={handoffToken}
+        lang={lang}
+        onContinueInBrowser={() => {
+          // Fall through to the standard exchange in THIS context.
+          setHandoffToken(null);
+          setProcessingTgToken(true);
+          (async () => {
+            try {
+              const res = await fetch("/api/auth", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ tokenExchange: handoffToken }),
+              });
+              if (res.ok) {
+                const data = await res.json();
+                storeSession({ user: data.user, gamification: data.gamification });
+                setSessionToken(data.sessionToken);
+                const url = new URL(window.location.href);
+                url.searchParams.delete("tg_token");
+                window.history.replaceState({}, "", url.toString());
+                window.location.reload();
+              } else {
+                const url = new URL(window.location.href);
+                url.searchParams.delete("tg_token");
+                window.history.replaceState({}, "", url.toString());
+                setProcessingTgToken(false);
+              }
+            } catch {
+              setProcessingTgToken(false);
+            }
+          })();
+        }}
+      />
+    );
+  }
+
   // If we're processing a Telegram bot token, show loader instead of redirecting
   if (processingTgToken) {
     return (
@@ -711,6 +798,23 @@ export default function Home() {
              Auto-hides via /api/user/telegram-activation-state.
              review-2026-04-26-B2. */}
           <TelegramActivationCard />
+
+          {/* ─── TRIAL ANNOUNCEMENT (FB-04, 2026-07-01) ──────────────────
+             Dismissible in-app announcement of the 7-day Pro trial for
+             returning FREE users. Self-gating (tier + /api/whop/trial
+             eligibility) and self-dismissing (per-user localStorage) —
+             renders nothing for guests, pro, trial, or admin accounts,
+             and nothing once the user has closed it once. Distinct from
+             <TrialRibbon> (logged-out /landing) and <TrialActivation>
+             (/library + /pricing, intent-driven surfaces).
+
+             No wrapper div here on purpose — the card self-nulls for the
+             majority of renders (pro/admin/dismissed/already-trialed/
+             trial-disabled), and a wrapper would leave a phantom `mb-6`
+             gap on every one of those renders. The `mb-6` margin is
+             passed straight to the card's own root so it only exists
+             when the card itself does. */}
+          <TrialAnnouncementCard userId={user.id} lang={lang} className="mb-6" />
 
           {/* ─── HERO PROGRESS BANNER + STAT STRIP ───────────────────────
              Reimplementation v3 (01-home.html, blessed). The hero is the one
@@ -1288,8 +1392,8 @@ function DemoHome({
 
           <p className="text-center text-[10px] text-[var(--mp-fg-subtle)]/60 mt-3">
             {lang === "de"
-              ? "Gastmodus speichert Fortschritt lokal – kein Konto nötig"
-              : "Guest mode saves progress locally — no account needed"}
+              ? "Gastmodus speichert Fortschritt lokal, kein Konto nötig"
+              : "Guest mode saves progress locally, no account needed"}
           </p>
         </div>
       </div>
