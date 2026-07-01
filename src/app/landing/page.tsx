@@ -67,6 +67,7 @@ const COPY = {
   nav: {
     features: { de: "Funktionen", en: "Features" },
     how: { de: "So funktioniert's", en: "How it works" },
+    why: { de: "Warum MedPrüf", en: "Why MedPrüf" },
     pricing: { de: "Preise", en: "Pricing" },
     login: { de: "Anmelden", en: "Sign in" },
     start: { de: "Gratis-Woche starten", en: "Start free week" },
@@ -645,6 +646,14 @@ function Nav({ lang, onLangChange }: { lang: Lang; onLangChange: (l: Lang) => vo
             }`}
           >
             <a
+              href="#warum"
+              className={`transition-colors ${
+                scrolled ? "hover:text-[var(--mp-oxford-blue)]" : "hover:text-white"
+              }`}
+            >
+              {COPY.nav.why[lang]}
+            </a>
+            <a
               href="#how"
               className={`transition-colors ${
                 scrolled ? "hover:text-[var(--mp-oxford-blue)]" : "hover:text-white"
@@ -778,6 +787,14 @@ function Nav({ lang, onLangChange }: { lang: Lang; onLangChange: (l: Lang) => vo
               </button>
             </div>
             <nav className="flex-1 overflow-y-auto px-2 py-3">
+              <a
+                href="#warum"
+                onClick={closeMenu}
+                className="flex items-center gap-3 px-3 py-3 rounded-xl text-[var(--mp-fg)] text-base font-semibold hover:bg-[var(--mp-surface-sunken)] transition-colors"
+              >
+                <ShieldCheck className="w-4 h-4 text-[var(--mp-viridian)]" aria-hidden="true" />
+                {COPY.nav.why[lang]}
+              </a>
               <a
                 href="#how"
                 onClick={closeMenu}
@@ -1011,7 +1028,7 @@ function Hero({ lang, freeHref }: { lang: Lang; freeHref: string }) {
               >
                 <span className="font-semibold">{COPY.hero.cta_tertiary[lang]}</span>
                 <span className="text-white/50" style={{ fontSize: "12px" }}>
-                  — {COPY.hero.cta_tertiary_sub[lang]}
+                  , {COPY.hero.cta_tertiary_sub[lang]}
                 </span>
               </Link>
             </p>
