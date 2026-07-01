@@ -519,6 +519,7 @@ export default function LandingPage() {
   return (
     <div
       ref={revealRoot as React.RefObject<HTMLDivElement>}
+      style={{ paddingTop: "var(--mp-ribbon-h, 0px)" }}
       className="lp-root min-h-screen bg-[var(--mp-surface-raised)] text-[var(--mp-fg)]"
     >
       <TrialRibbon lang={lang === "en" ? "en" : "de"} />
@@ -567,7 +568,8 @@ function Nav({ lang, onLangChange }: { lang: Lang; onLangChange: (l: Lang) => vo
   return (
     <>
       <nav
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+        style={{ top: "var(--mp-ribbon-h, 0px)" }}
+        className={`fixed left-0 right-0 z-50 transition-all duration-300 ${
           scrolled
             ? "bg-[var(--mp-surface-raised)]/92 backdrop-blur-xl border-b border-[var(--mp-border-subtle)] shadow-sm"
             : "bg-transparent"
