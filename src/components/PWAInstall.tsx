@@ -159,7 +159,7 @@ export default function PWAInstall() {
   // Update banner takes priority over install banner (also moved to top — F8 fix)
   if (updateAvailable) {
     return (
-      <div className="fixed top-0 left-0 right-0 z-50 animate-slide-down">
+      <div className="animate-slide-down">
         <div
           className="flex items-center gap-3 px-4 py-2.5 border-b"
           style={{
@@ -195,7 +195,7 @@ export default function PWAInstall() {
   // the hero copy on landing. Moving to a top-pinned slim bar keeps it
   // above all content, never obscures the body, and is dismissible.
   return (
-    <div className="fixed top-0 left-0 right-0 z-40 animate-slide-down">
+    <div className="animate-slide-down">
       <div
         className="flex items-center gap-3 px-4 py-2.5 border-b"
         style={{

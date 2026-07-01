@@ -35,6 +35,8 @@ import {
   Scissors,
   ShieldCheck,
   Sparkles,
+  Layers,
+  NotebookPen,
   Stethoscope,
   Target,
   Users,
@@ -67,7 +69,7 @@ const COPY = {
     how: { de: "So funktioniert's", en: "How it works" },
     pricing: { de: "Preise", en: "Pricing" },
     login: { de: "Anmelden", en: "Sign in" },
-    start: { de: "Kostenlos starten", en: "Start free" },
+    start: { de: "Gratis-Woche starten", en: "Start free week" },
   },
   hero: {
     // Eyebrow names BOTH Austrian recognition routes by the terms doctors
@@ -86,11 +88,15 @@ const COPY = {
       de: "Aus dokumentierten Prüfungen · seit 2016",
       en: "From documented exams · since 2016",
     },
-    title_pre: { de: "Beim ersten Versuch", en: "Pass first" },
-    title_mid: { de: "bestehen", en: "try" },
+    // Headline re-directed to [name]'s (WO! Studio) signature beat (2026-07-01):
+    // "you were never unqualified, only unproven". title_mid is the italic teal
+    // accent. title_line2 is now the scoped PUYP sub-headline (kept to the
+    // Cohort tier, NOT "everyone free forever").
+    title_pre: { de: "Du warst nie unqualifiziert.", en: "You were never unqualified." },
+    title_mid: { de: "Nur ungeprüft.", en: "Only unproven." },
     title_line2: {
-      de: "oder kostenlos weiterlernen, bis du es schaffst.",
-      en: "or study free until you do.",
+      de: "Beim ersten Versuch bestehen, oder in der Prüfungs-Kohorte weiterlernen, bis du es schaffst.",
+      en: "Pass on the first attempt, or keep learning in the Exam Cohort until you do.",
     },
     // Advertised entry repositioned 2026-06-24 ([name]'s call, decisions.json
     // medpruef-landing-entry-price-19eur-2026-06-24): the advertised entry is
@@ -139,6 +145,15 @@ const COPY = {
       de: "Finde deinen Weg",
       en: "Find your path",
     },
+    // Trial-first CTA ladder (2026-07-01): the free-week Pro trial is the
+    // primary hero CTA, the no-card free tier stays a strong visible secondary.
+    // Honest sub: card, 0 EUR today, then 19 EUR/month, cancel anytime.
+    cta_trial: { de: "Gratis-Woche starten", en: "Start free week" },
+    cta_trial_sub: {
+      de: "Karte, 0 € heute, dann 19 €/Monat",
+      en: "Card, €0 today, then €19/month",
+    },
+    cta_free: { de: "Kostenlos starten · keine Karte", en: "Start free · no card" },
   },
   stats: [
     {
@@ -209,10 +224,28 @@ const COPY = {
       en: "Not another flashcard app.",
     },
     subtitle: {
-      de: "Sechs Werkzeuge, die du in jeder anderen Prüfungs-App vermisst.",
-      en: "Six tools you miss in every other exam app.",
+      de: "Angeführt von Flash-Notes und deiner persönlichen Library, plus alles, was du in jeder anderen Prüfungs-App vermisst.",
+      en: "Led by flash-notes and your personal Library, plus everything you miss in every other exam app.",
     },
     items: [
+      {
+        icon: NotebookPen,
+        tag: "Neu",
+        title: { de: "Flash-Notes", en: "Flash-notes" },
+        body: {
+          de: "Mach aus jeder Frage mit einem Tipp eine strukturierte Lernkarte, in 8 Sprachen, zugeschnitten auf deine Lücken.",
+          en: "Turn any question into a structured study card with one tap, in 8 languages, tailored to your gaps.",
+        },
+      },
+      {
+        icon: Layers,
+        tag: "Neu",
+        title: { de: "Persönliche Library", en: "Personal Library" },
+        body: {
+          de: "Alle deine Lernkarten an einem Ort: durchsuchbar, mit Spaced-Repetition-Wiederholung und Quellen.",
+          en: "All your study cards in one place: searchable, with spaced-repetition review and sources.",
+        },
+      },
       {
         icon: Brain,
         tag: "AI",
@@ -311,13 +344,14 @@ const COPY = {
         price: "0 €",
         period: { de: "dauerhaft", en: "forever" },
         pitch: {
-          de: "150 Fragen × 3 Prüfungstypen · Erklärungen, wo vorhanden",
-          en: "150 questions × 3 exam types · explanations where available",
+          de: "150 Fragen × 3 Prüfungstypen · keine Karte",
+          en: "150 questions × 3 exam types · no card",
         },
         status: "live",
         cta: { de: "Kostenlos starten", en: "Start free" },
         href: "/quiz?exam=pharma&free=1",
         featured: false,
+        useFreeHref: true,
       },
       {
         name: { de: "Prüfungs-Kohorte", en: "Exam Cohort" },
@@ -331,6 +365,21 @@ const COPY = {
         cta: { de: "Zur Kohorte", en: "See the Cohort" },
         href: "/pricing",
         featured: true,
+        useFreeHref: false,
+      },
+      {
+        name: { de: "7 Tage Pro gratis", en: "7 days of Pro free" },
+        price: "0 €",
+        period: { de: "heute", en: "today" },
+        pitch: {
+          de: "Karte hinterlegen, 0 € heute, dann 19 €/Monat. Jederzeit in der Testphase kündbar.",
+          en: "Add a card, €0 today, then €19/month. Cancel anytime during the trial.",
+        },
+        status: "live",
+        cta: { de: "Gratis-Woche starten", en: "Start free week" },
+        href: "/login?intent=trial",
+        featured: false,
+        useFreeHref: false,
       },
     ],
     link: { de: "Alle Preise vergleichen", en: "Compare all plans" },
@@ -376,12 +425,13 @@ const COPY = {
     ],
   },
   cta: {
-    title: { de: "Bereit für deine Prüfung?", en: "Ready for your exam?" },
+    title: { de: "Bereit, es zu beweisen?", en: "Ready to prove it?" },
     subtitle: {
-      de: "Starte heute kostenlos. Kein Risiko, keine Kreditkarte.",
-      en: "Start free today. No risk, no credit card.",
+      de: "Starte deine Gratis-Woche Pro, oder üb kostenlos mit 150 Fragen je Prüfung.",
+      en: "Start your free week of Pro, or practise free with 150 questions per exam.",
     },
-    button: { de: "Kostenlos starten", en: "Start free" },
+    button: { de: "Gratis-Woche starten", en: "Start free week" },
+    button_free: { de: "Kostenlos starten · keine Karte", en: "Start free · no card" },
     trust: {
       de: "DSGVO-konform · Gehostet in der EU · Jederzeit kündbar",
       en: "GDPR compliant · Hosted in the EU · Cancel anytime",
@@ -525,6 +575,7 @@ export default function LandingPage() {
       <TrialRibbon lang={lang === "en" ? "en" : "de"} />
       <Nav lang={lang} onLangChange={switchLang} />
       <Hero lang={lang} freeHref={freeHref} />
+      <WhyMedPruef lang={lang} />
       <StatsStrip lang={lang} />
       <HowItWorks lang={lang} />
       <Features lang={lang} />
@@ -863,21 +914,32 @@ function Hero({ lang, freeHref }: { lang: Lang; freeHref: string }) {
                 letterSpacing: "-0.035em",
               }}
             >
-              {COPY.hero.title_pre[lang]}{" "}
+              {COPY.hero.title_pre[lang]}
+              <br />
               <em
                 className="font-black"
                 style={{ color: "var(--lp-teal-br)", fontStyle: "italic" }}
               >
                 {COPY.hero.title_mid[lang]}
-              </em>,
-              <br />
-              <span className="text-white/90">{COPY.hero.title_line2[lang]}</span>
+              </em>
             </h1>
 
+            {/* PUYP sub-headline, scoped to the Cohort tier (not free-forever) */}
             <p
-              className="text-white/75 mb-9 max-w-xl"
+              className="font-display font-semibold text-white/90 mb-5 max-w-xl"
               style={{
-                fontSize: "clamp(15px, 1.7vw, 18px)",
+                fontSize: "clamp(17px, 2.1vw, 22px)",
+                lineHeight: 1.3,
+                textWrap: "balance" as const,
+              }}
+            >
+              {COPY.hero.title_line2[lang]}
+            </p>
+
+            <p
+              className="text-white/70 mb-9 max-w-xl"
+              style={{
+                fontSize: "clamp(14px, 1.5vw, 16px)",
                 lineHeight: 1.6,
                 textWrap: "balance" as const,
               }}
@@ -885,29 +947,29 @@ function Hero({ lang, freeHref }: { lang: Lang; freeHref: string }) {
               {COPY.hero.subtitle[lang]}
             </p>
 
-            {/* CTAs */}
+            {/* CTAs, trial-first ([name] 2026-07-01): the free week of Pro is the
+                primary; the no-card free tier stays a strong visible secondary. */}
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-4 w-full sm:w-auto">
               <Link
-                href={freeHref}
-                className="lp-cta inline-flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 bg-[var(--mp-accent-teal)] hover:brightness-110 text-[var(--mp-oxford-blue-dk)] font-extrabold px-6 sm:px-7 py-3.5 sm:py-4 rounded-xl transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--mp-accent-teal)] focus:ring-offset-[var(--mp-oxford-blue-dk)] w-full sm:w-auto"
+                href="/login?intent=trial"
+                className="lp-cta inline-flex flex-col items-center justify-center gap-0.5 bg-[var(--mp-accent-teal)] hover:brightness-110 text-[var(--mp-oxford-blue-dk)] font-extrabold px-6 sm:px-7 py-3 sm:py-3.5 rounded-xl transition-all shadow-lg hover:shadow-xl hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--mp-accent-teal)] focus:ring-offset-[var(--mp-oxford-blue-dk)] w-full sm:w-auto"
                 style={{ fontSize: "15px" }}
-                aria-label={COPY.hero.cta_primary_long[lang]}
+                aria-label={COPY.hero.cta_trial[lang]}
               >
                 <span className="flex items-center gap-2 whitespace-nowrap">
-                  <span className="sm:hidden">{COPY.hero.cta_primary[lang]}</span>
-                  <span className="hidden sm:inline">{COPY.hero.cta_primary_long[lang]}</span>
+                  {COPY.hero.cta_trial[lang]}
                   <ArrowRight className="w-4 h-4" aria-hidden="true" />
                 </span>
-                <span className="sm:hidden text-[11px] font-semibold text-[var(--mp-oxford-blue-dk)]/70 whitespace-nowrap">
-                  {COPY.hero.cta_primary_sub[lang]}
+                <span className="text-[11px] font-semibold text-[var(--mp-oxford-blue-dk)]/70 whitespace-nowrap">
+                  {COPY.hero.cta_trial_sub[lang]}
                 </span>
               </Link>
               <Link
-                href="/pricing"
+                href={freeHref}
                 className="inline-flex items-center justify-center gap-2 bg-transparent text-white border border-white/25 hover:border-white/60 hover:bg-white/5 font-semibold px-6 sm:px-7 py-3.5 sm:py-4 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white focus:ring-offset-[var(--mp-oxford-blue-dk)] w-full sm:w-auto whitespace-nowrap"
                 style={{ fontSize: "15px" }}
               >
-                {COPY.hero.cta_secondary[lang]}
+                {COPY.hero.cta_free[lang]}
                 <ChevronRight className="w-4 h-4" aria-hidden="true" />
               </Link>
             </div>
@@ -1337,7 +1399,7 @@ function PricingPreview({ lang, freeHref }: { lang: Lang; freeHref: string }) {
           />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           {COPY.pricing.tiers.map((t, i) => {
             const planName = t.name[lang];
             const isSoon = t.status === "soon";
@@ -1393,7 +1455,7 @@ function PricingPreview({ lang, freeHref }: { lang: Lang; freeHref: string }) {
                   {t.pitch[lang]}
                 </p>
                 <Link
-                  href={t.price === "0 €" ? freeHref : t.href}
+                  href={t.useFreeHref ? freeHref : t.href}
                   className={`mp-btn ${
                     isSoon ? "mp-btn--secondary" : "mp-btn--success"
                   } w-full justify-center ${!isSoon ? "lp-cta" : ""}`}
@@ -1475,6 +1537,65 @@ function SourceProof({ lang }: { lang: Lang }) {
 /* ─────────────────────────────────────────────────────────────
    Final CTA — dark band to match hero
    ───────────────────────────────────────────────────────────── */
+/* ─────────────────────────────────────────────────────────────
+   ProofSeal — [name]'s "Proof, made into a stamp" motif. Inline SVG
+   so it themes + can animate. Pass-signal teal on any ground.
+   ───────────────────────────────────────────────────────────── */
+function ProofSeal({ className = "", size = 72 }: { className?: string; size?: number }) {
+  return (
+    <svg className={className} width={size} height={size} viewBox="0 0 72 72" fill="none" aria-hidden="true">
+      <circle cx="36" cy="36" r="34" stroke="var(--mp-pass-signal)" strokeWidth="2" />
+      <circle cx="36" cy="36" r="27" stroke="var(--mp-pass-signal)" strokeWidth="1" strokeOpacity="0.45" />
+      <path d="M25 36.5 l7.5 7.5 L47 29" stroke="var(--mp-pass-signal)" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────
+   WhyMedPruef — the [name] narrative band (S3). "They were never
+   unqualified, only unproven / paying to fail was the wall", with
+   the seal and one ~795 € figure. Type + seal + hairlines, no faces.
+   ───────────────────────────────────────────────────────────── */
+function WhyMedPruef({ lang }: { lang: Lang }) {
+  const de = lang === "de";
+  return (
+    <section id="warum" className="relative py-20 sm:py-28 overflow-hidden" style={{ background: "var(--mp-exam-navy)" }}>
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 opacity-[0.05] pointer-events-none"
+        style={{
+          backgroundImage:
+            "linear-gradient(rgba(255,255,255,1) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,1) 1px, transparent 1px)",
+          backgroundSize: "56px 56px",
+        }}
+      />
+      <div className="relative max-w-3xl mx-auto px-4 lg:px-8 text-center lp-reveal">
+        <ProofSeal className="mx-auto mb-7" />
+        <p className="lp-eyebrow lp-eyebrow--center mb-5" style={{ color: "var(--lp-teal-br)" }}>
+          {de ? "Warum MedPrüf" : "Why MedPrüf"}
+        </p>
+        <h2
+          className="font-display font-black text-white mb-6 leading-[1.08]"
+          style={{ fontSize: "clamp(28px, 4.4vw, 48px)", letterSpacing: "-0.025em", textWrap: "balance" as const }}
+        >
+          {de ? "Sie waren nie unqualifiziert. Nur ungeprüft." : "They were never unqualified. Only unproven."}
+        </h2>
+        <p
+          className="text-white/75 mb-7 max-w-2xl mx-auto"
+          style={{ fontSize: "clamp(16px, 1.9vw, 19px)", lineHeight: 1.55, textWrap: "balance" as const }}
+        >
+          {de
+            ? "Aleppo, Kyiv, Istanbul, Damaskus, nach Wien, nach Innsbruck. Die Prüfung war nie die Wand. Bezahlen, um durchzufallen, war es."
+            : "Aleppo, Kyiv, Istanbul, Damascus, to Vienna, to Innsbruck. The exam was never the wall. Paying to fail was."}
+        </p>
+        <p className="font-display font-semibold text-white/90" style={{ fontSize: "clamp(15px, 1.7vw, 18px)" }}>
+          {de ? "~795 € pro Versuch. MedPrüf ab 19 € im Monat." : "~795 € per attempt. MedPrüf from 19 € a month."}
+        </p>
+      </div>
+    </section>
+  );
+}
+
 function FinalCTA({ lang, freeHref }: { lang: Lang; freeHref: string }) {
   return (
     <section
@@ -1504,6 +1625,7 @@ function FinalCTA({ lang, freeHref }: { lang: Lang; freeHref: string }) {
         }}
       />
       <div className="relative max-w-3xl mx-auto px-4 sm:px-6 text-center lp-reveal">
+        <ProofSeal className="mx-auto mb-6" />
         <p className="lp-eyebrow lp-eyebrow--center mb-5" style={{ color: "var(--lp-teal-br)" }}>
           {COPY.hero.eyebrow[lang]}
         </p>
@@ -1516,14 +1638,23 @@ function FinalCTA({ lang, freeHref }: { lang: Lang; freeHref: string }) {
         <p className="text-white/75 mb-9" style={{ fontSize: "17px" }}>
           {COPY.cta.subtitle[lang]}
         </p>
-        <Link
-          href={freeHref}
-          className="lp-cta inline-flex items-center justify-center gap-2 bg-[var(--mp-accent-teal)] hover:brightness-110 text-[var(--mp-oxford-blue-dk)] font-extrabold px-8 py-4 rounded-xl transition-all shadow-xl hover:shadow-2xl hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--mp-accent-teal)] focus:ring-offset-[var(--mp-oxford-blue-dk)]"
-          style={{ fontSize: "16px" }}
-        >
-          {COPY.cta.button[lang]}
-          <ArrowRight className="w-4 h-4" aria-hidden="true" />
-        </Link>
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+          <Link
+            href="/login?intent=trial"
+            className="lp-cta inline-flex items-center justify-center gap-2 bg-[var(--mp-accent-teal)] hover:brightness-110 text-[var(--mp-oxford-blue-dk)] font-extrabold px-8 py-4 rounded-xl transition-all shadow-xl hover:shadow-2xl hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--mp-accent-teal)] focus:ring-offset-[var(--mp-oxford-blue-dk)]"
+            style={{ fontSize: "16px" }}
+          >
+            {COPY.cta.button[lang]}
+            <ArrowRight className="w-4 h-4" aria-hidden="true" />
+          </Link>
+          <Link
+            href={freeHref}
+            className="inline-flex items-center justify-center gap-2 bg-transparent text-white border border-white/25 hover:border-white/60 hover:bg-white/5 font-semibold px-8 py-4 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-white focus:ring-offset-[var(--mp-oxford-blue-dk)]"
+            style={{ fontSize: "16px" }}
+          >
+            {COPY.cta.button_free[lang]}
+          </Link>
+        </div>
         <p className="mt-5 text-xs text-white/50 flex items-center justify-center gap-2 flex-wrap">
           <Languages className="w-3.5 h-3.5" aria-hidden="true" />
           {COPY.cta.trust[lang]}

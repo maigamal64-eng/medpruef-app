@@ -397,6 +397,47 @@ export async function POST(req: NextRequest) {
       ? new Date(Date.now() + 8 * 86400_000)
       : computeExpiry(tierDurationMonths(tier), new Date());
 
+    // Dedupe the trial-START grant against /api/whop/trial/verify (P1). Both the
+    // €0 payment.succeeded (here) and the /checkout/success verify grant the
+    // trial, keyed on different ids (payment id vs membership id), so a
+    // verify-first ordering would otherwise leave TWO active notes_pro_trial
+    // rows. If an active trial sub already exists at trial start, verify already
+    // granted: skip the duplicate insert, ensure tier=pro, and ack. Renewals
+    // (isTrialStart=false) are unaffected and always insert/extend.
+    if (isTrialStart) {
+      const { data: existingTrial } = await sb
+        .from("subscriptions")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("tier", "notes_pro_trial")
+        .eq("status", "active")
+        .limit(1);
+      if (existingTrial && existingTrial.length > 0) {
+        await sb
+          .from("users")
+          .update({ tier: "pro", updated_at: new Date().toISOString() })
+          .eq("id", userId)
+          .neq("tier", "admin");
+        await recordEvent(sb, userId, "whop_trial_grant_deduped", {
+          payment_id: f.paymentId,
+          existing_subscription_id: (existingTrial[0] as { id: string }).id,
+        });
+        await logPaymentEvent(sbLog, {
+          event: "grant_succeeded",
+          userId,
+          email: f.email,
+          tier,
+          planId: f.planId,
+          paymentId: f.paymentId,
+          amountCents: f.amountCents ?? 0,
+          currency: (f.currency || "eur").toUpperCase(),
+          matched: true,
+          metadata: { event, dedup: "verify_already_granted", ok: true },
+        });
+        return NextResponse.json({ ok: true, activated: true, deduped: true, tier });
+      }
+    }
+
     const { error: subErr } = await sb.from("subscriptions").insert({
       user_id: userId,
       tier,

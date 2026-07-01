@@ -380,9 +380,16 @@ export default function RootLayout({
               to push a transient notification. Renders a single a11y-live
               region for screen readers. See src/components/ui/Toast.tsx. */}
           <ToastProvider>
-            <PWAInstall />
-            <GuestMigrationBanner />
-            <CohortCountdownBanner />
+            {/* Top-fixed banners share ONE fixed flex-col stack so they never
+                overlap each other when more than one is active (similar-sweep
+                P2, 2026-07-01). Each banner's own root is normal flow now; this
+                container owns the single fixed top-0 slot. Priority order top to
+                bottom: guest migration, cohort countdown, PWA install. */}
+            <div className="fixed top-0 left-0 right-0 z-[70] flex flex-col">
+              <GuestMigrationBanner />
+              <CohortCountdownBanner />
+              <PWAInstall />
+            </div>
             <EmailValidationModal />
             <FeedbackWidget />
             <SearchModalMount />

@@ -112,7 +112,7 @@ export default function CohortCountdownBanner() {
   return (
     <div
       role="status"
-      className="fixed top-0 left-0 right-0 z-[60] bg-gradient-to-r from-[var(--mp-cta-blue)] to-[var(--mp-accent-teal)] text-white px-4 py-2.5 shadow-lg"
+      className="bg-gradient-to-r from-[var(--mp-cta-blue)] to-[var(--mp-accent-teal)] text-white px-4 py-2.5 shadow-lg"
       // Reserve the height so the hero below doesn't jump when the
       // banner mounts — fixes the soft-launch CLS issue.
       style={{ minHeight: "44px" }}

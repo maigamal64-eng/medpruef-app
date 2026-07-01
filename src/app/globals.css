@@ -680,6 +680,12 @@ textarea:focus {
   --mp-cta-blue:        #003A8C;
   --mp-cta-blue-hover:  #002d6e;
   --mp-accent-teal:     #00A896;
+  /* [name] (WO! Studio) brand aliases (2026-07-01). One-owner-per-fact: point at
+     the existing tokens, never duplicate a hex. Exam-navy is the one new value. */
+  --mp-proof-green:     var(--mp-viridian);
+  --mp-pass-signal:     var(--mp-accent-teal);
+  --mp-clinic-paper:    var(--mp-surface-sunken);
+  --mp-exam-navy:       #0A2041;
   --mp-warning:         #F4A261;
   --mp-warning-dk:      #D68A3A; /* WCAG AA-safe on white */
   --mp-error:           #D64545;
