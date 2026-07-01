@@ -284,7 +284,7 @@ export async function fetchSentryIssues(
       status: res.status,
       reason:
         res.status === 401 || res.status === 403
-          ? "SENTRY_AUTH_TOKEN was rejected — it likely lacks the event:read / project:read scope (a source-map-upload token can't read issues)."
+          ? "SENTRY_AUTH_TOKEN was rejected: it likely lacks the event:read / project:read scope (a source-map-upload token can't read issues)."
           : `Sentry API returned HTTP ${res.status}.`,
     };
   }

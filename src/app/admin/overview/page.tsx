@@ -1029,7 +1029,7 @@ function CronsTile({
           return (
             <span
               key={name}
-              title={`${name} — ${v.lastStatus}`}
+              title={`${name}: ${v.lastStatus}`}
               className="inline-flex items-center"
             >
               <StatusDot tone={dotTone} size={9} />

@@ -869,8 +869,7 @@ function Hero({ lang, freeHref }: { lang: Lang; freeHref: string }) {
                 style={{ color: "var(--lp-teal-br)", fontStyle: "italic" }}
               >
                 {COPY.hero.title_mid[lang]}
-              </em>{" "}
-              —
+              </em>,
               <br />
               <span className="text-white/90">{COPY.hero.title_line2[lang]}</span>
             </h1>

@@ -209,7 +209,7 @@ export async function POST(req: NextRequest) {
     if (used >= PUYP_MAX_EXTENSIONS) {
       return NextResponse.json(
         {
-          error: `You've already used ${PUYP_MAX_EXTENSIONS} Pass-Until-You-Pass extensions on this subscription — the maximum.`,
+          error: `You've already used ${PUYP_MAX_EXTENSIONS} Pass-Until-You-Pass extensions on this subscription, the maximum.`,
         },
         { status: 409 }
       );
@@ -260,7 +260,7 @@ export async function POST(req: NextRequest) {
         step: "storage_upload",
       });
       return NextResponse.json(
-        { error: "Upload failed — please try again." },
+        { error: "Upload failed; please try again." },
         { status: 500 }
       );
     }
@@ -318,7 +318,7 @@ export async function POST(req: NextRequest) {
       attempt_id: inserted.id,
       qbank_completion_pct: completion.pct,
       message:
-        "Submitted — an admin will review your proof within 72 hours. We'll email you when it's done.",
+        "Submitted, an admin will review your proof within 72 hours. We'll email you when it's done.",
     });
   } catch (err) {
     captureServerError(err, { route: "/api/puyp/submit", userId });

@@ -38,7 +38,7 @@ export default function AdminEnvPage() {
   return (
     <AdminPageShell
       title="Environment"
-      description="Presence-only check — values are never shipped to the client."
+      description="Presence-only check: values are never shipped to the client."
       freshness={loading ? "cached" : "cached"}
       onRefresh={load}
     >

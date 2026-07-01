@@ -68,8 +68,8 @@ export default function ImpressumPage() {
         <h2>{lang === "de" ? "Unternehmensform" : "Business type"}</h2>
         <p>
           {lang === "de"
-            ? "Persönliches Projekt — kein eingetragenes Unternehmen. Keine UID-Nummer, keine Gewerbeberechtigung erforderlich (nicht-gewerbliche Bildungsplattform)."
-            : "Personal project — not a registered company. No VAT ID, no trade license required (non-commercial educational platform)."}
+            ? "Persönliches Projekt, kein eingetragenes Unternehmen. Keine UID-Nummer, keine Gewerbeberechtigung erforderlich (nicht-gewerbliche Bildungsplattform)."
+            : "Personal project, not a registered company. No VAT ID, no trade license required (non-commercial educational platform)."}
         </p>
       </section>
 

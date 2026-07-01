@@ -130,7 +130,7 @@ export default function ExamResultPage() {
       // same fallback as above
       setStatus({
         eligible: false,
-        reason: "Could not reach the server — check your connection and reload.",
+        reason: "Could not reach the server: check your connection and reload.",
         exam_type: "kenntnispruefung",
         exam_date: null,
         qbank_completion_pct: 0,
@@ -201,7 +201,7 @@ export default function ExamResultPage() {
         lang === "de" ? "Admin prüft innerhalb von 72 Stunden." : "Admin will review within 72 hours."
       );
     } catch (err) {
-      toast.error((err as Error).message || (lang === "de" ? "Konnte nicht einreichen — bitte erneut versuchen" : "Could not submit — try again"));
+      toast.error((err as Error).message || (lang === "de" ? "Konnte nicht einreichen, bitte erneut versuchen" : "Could not submit; try again"));
     } finally {
       setSubmitting(false);
     }
@@ -490,8 +490,8 @@ function ChooseView({
           >
             <XCircle size={16} />{" "}
             {lang === "de"
-              ? "Nicht bestanden — Verlängerung beantragen"
-              : "I failed — claim extension"}
+              ? "Nicht bestanden: Verlängerung beantragen"
+              : "I failed: claim extension"}
           </button>
         </div>
 
@@ -499,8 +499,8 @@ function ChooseView({
           <p className="text-xs text-[var(--mp-fg-subtle)] pt-1">
             {atCap
               ? lang === "de"
-                ? "Verlängerungslimit erreicht. Du kannst trotzdem ein Nicht-Bestehen festhalten — es löst aber keine Verlängerung aus."
-                : "Extension cap reached. You can still record a fail — it won't trigger an extension."
+                ? "Verlängerungslimit erreicht. Du kannst trotzdem ein Nicht-Bestehen festhalten, es löst aber keine Verlängerung aus."
+                : "Extension cap reached. You can still record a fail; it won't trigger an extension."
               : lang === "de"
                 ? "Beantworte weiter Fragen, um die 70-%-Schwelle zu erreichen."
                 : "Keep answering questions to reach the 70% completion threshold."}
@@ -666,7 +666,7 @@ function SubmittedView({ lang }: { lang: "de" | "en" }) {
     <EmptyState
       tone="success"
       icon={<Clock className="w-10 h-10" aria-hidden />}
-      title={lang === "de" ? "Eingereicht — Admin prüft." : "Submitted — admin is reviewing."}
+      title={lang === "de" ? "Eingereicht: Admin prüft." : "Submitted: admin is reviewing."}
       body={lang === "de"
         ? "Wir mailen dir innerhalb von 72 Stunden. Bei Genehmigung wird dein Abo automatisch bis zum nächsten Prüfungszyklus verlängert. Du kannst diese Seite schließen."
         : "We'll email you within 72 hours. If approved, your subscription will extend automatically to cover the next exam cycle. You can close this page."}

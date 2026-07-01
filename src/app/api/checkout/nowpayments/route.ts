@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
   if (!gate.allowed) {
     return NextResponse.json(
       {
-        error: "Too many checkout attempts — please wait before trying again",
+        error: "Too many checkout attempts, please wait before trying again",
         retryAfter: gate.retryAfterSec,
       },
       { status: 429, headers: rateLimitHeaders(gate, CHECKOUT_RATE_LIMIT) }
@@ -207,7 +207,7 @@ export async function POST(req: NextRequest) {
           priceAmount: tier.priceCents / 100,
           priceCurrency: tier.currency,
           orderId: sub.id,
-          orderDescription: `MedPrüf ([name]) — ${tier.humanName} — paid access`,
+          orderDescription: `MedPrüf ([name]): ${tier.humanName}, paid access`,
           ipnCallbackUrl,
           successUrl,
           cancelUrl,
@@ -230,7 +230,7 @@ export async function POST(req: NextRequest) {
         extra: { subscriptionId: sub.id, userId, tier: tier.id },
       });
       return NextResponse.json(
-        { error: "Payment provider unavailable — please try again" },
+        { error: "Payment provider unavailable, please try again" },
         { status: 502 }
       );
     }

@@ -61,7 +61,7 @@ export default function AdminMediaPage() {
       ) : (
         <div className="rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] p-3 text-xs text-[var(--mp-fg)]">
           {items.length} questions flagged. Full editing UI lands in a
-          follow-up — for now use <code>/admin/questions</code> with the
+          follow-up; for now use <code>/admin/questions</code> with the
           <em> missing_image</em> tag filter.
         </div>
       )}

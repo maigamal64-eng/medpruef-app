@@ -17,7 +17,7 @@ import { getNextExamDate } from "@/lib/exam-dates";
  * script from the layout to guarantee it's in HEAD of every variant.
  */
 
-const pageTitle = "Kenntnisprüfung Wien 2026 — Vorbereitung mit 7.566 Fragen | MedPrüf";
+const pageTitle = "Kenntnisprüfung Wien 2026: Vorbereitung mit 7.566 Fragen | MedPrüf";
 const pageDesc =
   "Vorbereitung auf die österreichische Kenntnisprüfung Wien (SIP 4 + SIP 5). 7.566 Prüfungsfragen aus 10 Fachgebieten, klinische KI-Erklärungen, Pass-Until-You-Pass-Garantie. 150 Fragen kostenlos.";
 
@@ -86,9 +86,9 @@ function buildCourseSchema() {
   return {
     "@context": "https://schema.org",
     "@type": "Course",
-    name: "Kenntnisprüfung Wien — Vorbereitung",
+    name: "Kenntnisprüfung Wien: Vorbereitung",
     description:
-      "Strukturierte Vorbereitung auf die österreichische Kenntnisprüfung (Wien) für ausländische Ärzt:innen — SIP 4 + SIP 5, 10 Fachgebiete, 7,566 Prüfungsfragen mit klinischen Erklärungen.",
+      "Strukturierte Vorbereitung auf die österreichische Kenntnisprüfung (Wien) für ausländische Ärzt:innen: SIP 4 + SIP 5, 10 Fachgebiete, 7,566 Prüfungsfragen mit klinischen Erklärungen.",
     provider: {
       "@type": "Organization",
       name: "MedPrüf",
@@ -110,7 +110,7 @@ function buildCourseSchema() {
       price: "0",
       priceCurrency: "EUR",
       availability: "https://schema.org/InStock",
-      description: "Free tier — 150 questions, no credit card required.",
+      description: "Free tier: 150 questions, no credit card required.",
     },
   };
 }

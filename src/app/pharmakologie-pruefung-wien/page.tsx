@@ -36,8 +36,8 @@ const content: ExamLandingContent = {
   },
   primaryCtaHref: "/quiz?exam=pharma&free=1",
   primaryCtaLabel: {
-    de: "Free starten — 150 Pharma Fragen",
-    en: "Start free — 150 Pharma questions",
+    de: "Free starten: 150 Pharma Fragen",
+    en: "Start free: 150 Pharma questions",
   },
   secondaryCtaHref: "/pricing",
   secondaryCtaLabel: {
@@ -85,8 +85,8 @@ const content: ExamLandingContent = {
   ],
   whatYouLearn: [
     {
-      de: "Österreichische Arzneiverordnung: Rezeptpflicht, Suchtgiftrezepte, Formvorschriften, Telemedizin-Rezepte — alles nach aktueller Rechtslage.",
-      en: "Austrian prescribing rules: prescription-required drugs, controlled-substance prescriptions, formal requirements, telemedicine scripts — per current legislation.",
+      de: "Österreichische Arzneiverordnung: Rezeptpflicht, Suchtgiftrezepte, Formvorschriften, Telemedizin-Rezepte, alles nach aktueller Rechtslage.",
+      en: "Austrian prescribing rules: prescription-required drugs, controlled-substance prescriptions, formal requirements, telemedicine scripts; per current legislation.",
     },
     {
       de: "Dosierungslogik: Gewicht-, Alters- und Nierenfunktion-adjustierte Dosen, pädiatrische Umrechnungen, geriatrische Anpassungen.",
@@ -97,8 +97,8 @@ const content: ExamLandingContent = {
       en: "Interactions + contraindications: CYP450 metabolism, inducer/inhibitor table, pregnancy/breastfeeding, classic pitfalls.",
     },
     {
-      de: "Klinische Vignetten: „Patient hat X, nimmt Y, jetzt neu Z — was tun?\" — genau der Entscheidungsstil, den die Prüfung verlangt.",
-      en: "Clinical vignettes: \"Patient has X, takes Y, now starting Z — what do you do?\" — exactly the decision style the exam expects.",
+      de: "Klinische Vignetten: „Patient hat X, nimmt Y, jetzt neu Z: was tun?\" Genau der Entscheidungsstil, den die Prüfung verlangt.",
+      en: "Clinical vignettes: \"Patient has X, takes Y, now starting Z: what do you do?\" Exactly the decision style the exam expects.",
     },
     {
       de: "Pass-Until-You-Pass auf der Prüfungs-Kohorte: wenn du durchfällst, verlängern wir deinen Zugang kostenlos bis zur nächsten Prüfung (maximal zwei zusätzliche Zyklen).",
@@ -112,8 +112,8 @@ const content: ExamLandingContent = {
         en: "What does the Vienna Pharmakologie exam actually test?",
       },
       a: {
-        de: "Die Prüfung kombiniert zwei Komponenten: klinische Pharmakologie (Wirkstoffe, Dosierungen, Kontraindikationen, Wechselwirkungen) und Rezeptierkunde (korrektes Ausstellen österreichischer Rezepte, inkl. Suchtgiftformulare). Es geht weniger um auswendig gelerntes Wissen und mehr um situatives Entscheiden: „Welches Medikament bei dieser Diagnose, in welcher Dosis, mit welchen Kontraindikationen, und auf welcher Rezeptform?\" Die österreichische Spezifität ist wichtig — Verordnungsregeln unterscheiden sich von Deutschland oder der Schweiz.",
-        en: "The exam combines two parts: clinical pharmacology (drugs, dosing, contraindications, interactions) and prescribing (correctly writing Austrian prescriptions, including controlled-substance forms). It's less about memorized knowledge and more about situated decision-making: \"Which drug for this diagnosis, what dose, what contraindications, which prescription form?\" The Austrian specificity matters — prescribing rules differ from Germany or Switzerland.",
+        de: "Die Prüfung kombiniert zwei Komponenten: klinische Pharmakologie (Wirkstoffe, Dosierungen, Kontraindikationen, Wechselwirkungen) und Rezeptierkunde (korrektes Ausstellen österreichischer Rezepte, inkl. Suchtgiftformulare). Es geht weniger um auswendig gelerntes Wissen und mehr um situatives Entscheiden: „Welches Medikament bei dieser Diagnose, in welcher Dosis, mit welchen Kontraindikationen, und auf welcher Rezeptform?\" Die österreichische Spezifität ist wichtig, Verordnungsregeln unterscheiden sich von Deutschland oder der Schweiz.",
+        en: "The exam combines two parts: clinical pharmacology (drugs, dosing, contraindications, interactions) and prescribing (correctly writing Austrian prescriptions, including controlled-substance forms). It's less about memorized knowledge and more about situated decision-making: \"Which drug for this diagnosis, what dose, what contraindications, which prescription form?\" The Austrian specificity matters; prescribing rules differ from Germany or Switzerland.",
       },
     },
     {
@@ -132,8 +132,8 @@ const content: ExamLandingContent = {
         en: "Why is Pharmakologie separate from the Kenntnisprüfung?",
       },
       a: {
-        de: "Die Nostrifikation der Medizinischen Universität entscheidet, welche Ergänzungsprüfungen du ablegen musst. Für viele Ärzt:innen aus Drittstaaten umfasst das sowohl die Kenntnisprüfung als auch eine eigenständige Pharmakologie-Prüfung. Die Ärztekammer Wien prüft Pharma als separaten Prüfungsteil, weil die Rezeptierkunde eine eigene Fachkompetenz mit österreichischer Rechtsnorm ist — nicht einfach ein Unterfach der Inneren Medizin. Ob du Pharma ablegen musst, steht in deinem Nostrifikationsbescheid.",
-        en: "Your Medical University's nostrification decision determines which supplementary exams you need. For many doctors from non-EU countries, that includes both the Kenntnisprüfung and a standalone Pharmakologie exam. The Ärztekammer Wien tests Pharma separately because Austrian prescribing law is a distinct domain — not simply a sub-topic of internal medicine. Whether you need to take Pharma is specified in your nostrification decision letter.",
+        de: "Die Nostrifikation der Medizinischen Universität entscheidet, welche Ergänzungsprüfungen du ablegen musst. Für viele Ärzt:innen aus Drittstaaten umfasst das sowohl die Kenntnisprüfung als auch eine eigenständige Pharmakologie-Prüfung. Die Ärztekammer Wien prüft Pharma als separaten Prüfungsteil, weil die Rezeptierkunde eine eigene Fachkompetenz mit österreichischer Rechtsnorm ist, nicht einfach ein Unterfach der Inneren Medizin. Ob du Pharma ablegen musst, steht in deinem Nostrifikationsbescheid.",
+        en: "Your Medical University's nostrification decision determines which supplementary exams you need. For many doctors from non-EU countries, that includes both the Kenntnisprüfung and a standalone Pharmakologie exam. The Ärztekammer Wien tests Pharma separately because Austrian prescribing law is a distinct domain, not simply a sub-topic of internal medicine. Whether you need to take Pharma is specified in your nostrification decision letter.",
       },
     },
     {
@@ -172,8 +172,8 @@ const content: ExamLandingContent = {
         en: "What sources do the questions and explanations use?",
       },
       a: {
-        de: "Die 335 Fragen stammen aus der aktuellen Rezeptierkunde-Sammlung 2026, kuratiert und typographisch bereinigt (siehe NOTES.md §OCR-Aufräumaktion). Die KI-Erklärungen greifen auf Standardreferenzen zurück: Herold („Innere Medizin\"), Austrian Drug Compendium (AMI), ESC/ÖDG/ERC-Guidelines für herzkreislauf- und metabolische Indikationen, Amboss für klinische Entscheidungslogik. Jede Erklärung nennt die Guideline oder Quelle beim Namen, wenn sie relevant ist — so kannst du Aussagen selbst nachprüfen.",
-        en: "The 335 questions come from the current Rezeptierkunde collection for 2026, curated and typographically cleaned (see NOTES.md §OCR cleanup). AI explanations draw on standard references: Herold (\"Innere Medizin\"), the Austrian Drug Compendium (AMI), ESC/ÖDG/ERC guidelines for cardiovascular and metabolic indications, Amboss for clinical decision logic. Every explanation cites the guideline or source by name when relevant — so you can check claims yourself.",
+        de: "Die 335 Fragen stammen aus der aktuellen Rezeptierkunde-Sammlung 2026, kuratiert und typographisch bereinigt (siehe NOTES.md §OCR-Aufräumaktion). Die KI-Erklärungen greifen auf Standardreferenzen zurück: Herold („Innere Medizin\"), Austrian Drug Compendium (AMI), ESC/ÖDG/ERC-Guidelines für herzkreislauf- und metabolische Indikationen, Amboss für klinische Entscheidungslogik. Jede Erklärung nennt die Guideline oder Quelle beim Namen, wenn sie relevant ist, so kannst du Aussagen selbst nachprüfen.",
+        en: "The 335 questions come from the current Rezeptierkunde collection for 2026, curated and typographically cleaned (see NOTES.md §OCR cleanup). AI explanations draw on standard references: Herold (\"Innere Medizin\"), the Austrian Drug Compendium (AMI), ESC/ÖDG/ERC guidelines for cardiovascular and metabolic indications, Amboss for clinical decision logic. Every explanation cites the guideline or source by name when relevant, so you can check claims yourself.",
       },
     },
   ],

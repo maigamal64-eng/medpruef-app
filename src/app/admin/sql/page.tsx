@@ -63,7 +63,7 @@ const ERROR_HINTS: Array<{
   },
   {
     pattern: /syntax error at or near/i,
-    hint: "Likely a typo or missing comma. Postgres tells you where — read the caret.",
+    hint: "Likely a typo or missing comma. Postgres tells you where: read the caret.",
     docs: "https://www.postgresql.org/docs/current/sql-syntax-lexical.html",
   },
   {
@@ -72,7 +72,7 @@ const ERROR_HINTS: Array<{
   },
   {
     pattern: /permission denied/i,
-    hint: "RLS is blocking the query. The admin runner uses the service role — if this fires, something in the policy is off.",
+    hint: "RLS is blocking the query. The admin runner uses the service role; if this fires, something in the policy is off.",
     docs: "https://supabase.com/docs/guides/database/postgres/row-level-security",
   },
   {
@@ -84,7 +84,7 @@ const ERROR_HINTS: Array<{
 export default function AdminSqlPage() {
   const toast = useToast();
   const [sql, setSql] = useState(
-    "-- SELECT-only runner — capped at 1000 rows.\nselect id, email, tier, created_at\nfrom users\norder by created_at desc\nlimit 50"
+    "-- SELECT-only runner, capped at 1000 rows.\nselect id, email, tier, created_at\nfrom users\norder by created_at desc\nlimit 50"
   );
   const [saveName, setSaveName] = useState("");
   const [running, setRunning] = useState(false);
@@ -229,7 +229,7 @@ export default function AdminSqlPage() {
             </div>
             {savedQueries.length === 0 ? (
               <p className="text-xs text-[var(--mp-fg-muted)]">
-                None yet — save one via the Save field.
+                None yet, save one via the Save field.
               </p>
             ) : (
               <ul className="space-y-0.5">

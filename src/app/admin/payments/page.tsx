@@ -487,7 +487,7 @@ function FeedSection({
       <SectionHeading
         title="Recent payment events"
         icon={Inbox}
-        hint="Newest first — the live funnel feed"
+        hint="Newest first: the live funnel feed"
       />
       <div className="rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] overflow-hidden">
         <div className="overflow-x-auto">

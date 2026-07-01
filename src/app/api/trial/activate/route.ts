@@ -131,7 +131,7 @@ export async function POST(req: NextRequest) {
   });
   if (!gate.allowed) {
     return NextResponse.json(
-      { error: "Too many requests — please wait a moment." },
+      { error: "Too many requests, please wait a moment." },
       { status: 429, headers: rateLimitHeaders(gate, { limit: 5 }) },
     );
   }

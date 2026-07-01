@@ -36,8 +36,8 @@ export const BLOG_POSTS: BlogPostMeta[] = [
   {
     slug: "kenntnispruefung-wien-vollstaendiges-handbuch",
     title: {
-      de: "Kenntnisprüfung Wien — vollständiges Handbuch 2026",
-      en: "Vienna Kenntnisprüfung — complete 2026 handbook",
+      de: "Kenntnisprüfung Wien: vollständiges Handbuch 2026",
+      en: "Vienna Kenntnisprüfung: complete 2026 handbook",
     },
     summary: {
       de: "Alles, was du 2026 zur Kenntnisprüfung Wien wissen musst: Zulassung, SIP-4-vs-SIP-5-Struktur, Prüfungsaufbau, typische Schwerpunkte, realistische Lernpläne und häufige Fehler. Ein ehrliches Handbuch von Ärzt:innen, die den Weg selbst gegangen sind.",

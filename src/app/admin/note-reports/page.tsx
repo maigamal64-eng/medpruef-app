@@ -89,7 +89,7 @@ export default function NoteReportsPage() {
     <div className="p-6 max-w-3xl mx-auto">
       <h1 className="mp-h1 flex items-center gap-2 mb-1">
         <ShieldAlert className="w-6 h-6 text-[var(--mp-status-warning)]" />
-        Öffentliche Notizen — Meldungen
+        Öffentliche Notizen: Meldungen
       </h1>
       <p className="text-sm text-[var(--mp-fg-muted)] mb-5">
         Offene Meldungen zu öffentlichen Lernkarten. „Entfernen“ deaktiviert die

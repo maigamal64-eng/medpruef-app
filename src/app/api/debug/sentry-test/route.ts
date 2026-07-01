@@ -47,7 +47,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       ok: true,
       kind: "message",
-      note: "captureMessage sent — check Sentry issues feed",
+      note: "captureMessage sent, check Sentry issues feed",
     });
   }
 
@@ -77,7 +77,7 @@ export async function GET(req: NextRequest) {
         ok: true,
         kind: "caught",
         eventId,
-        note: "captureException sent — check Sentry issues feed",
+        note: "captureException sent, check Sentry issues feed",
       },
       { status: 200 }
     );

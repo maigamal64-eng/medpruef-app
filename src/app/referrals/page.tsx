@@ -268,8 +268,8 @@ export default function ReferralsPage() {
       await nav.share({
         title:
           lang === "de"
-            ? "MedPrüf — Österreichische Ärzteprüfung"
-            : "MedPrüf — Austrian medical exam prep",
+            ? "MedPrüf: Österreichische Ärzteprüfung"
+            : "MedPrüf: Austrian medical exam prep",
         text:
           lang === "de"
             ? "Lern mit mir für die Kenntnisprüfung auf MedPrüf. 90 Tage Vollzugang für 27 € (≈ 9 €/Monat) oder die Prüfungs-Kohorte mit Pass-Until-You-Pass-Garantie. Mein Empfehlungslink:"
@@ -547,8 +547,8 @@ export default function ReferralsPage() {
                 </h2>
                 <p className="text-sm text-[var(--mp-fg-muted)] leading-relaxed">
                   {lang === "de"
-                    ? "Teile deinen Link. Sobald jemand ein Abo bezahlt, wird deine Prämie qualifiziert — nach einer 30-tägigen Sperrfrist kannst du sie in USDT oder per Wise abrufen."
-                    : "Share your link. Once someone pays for a plan, your reward is qualified — after a 30-day hold it becomes claimable in USDT or via Wise."}
+                    ? "Teile deinen Link. Sobald jemand ein Abo bezahlt, wird deine Prämie qualifiziert; nach einer 30-tägigen Sperrfrist kannst du sie in USDT oder per Wise abrufen."
+                    : "Share your link. Once someone pays for a plan, your reward is qualified; after a 30-day hold it becomes claimable in USDT or via Wise."}
                 </p>
               </div>
             </div>
@@ -865,8 +865,8 @@ export default function ReferralsPage() {
                         {r.hold_reason === "annual_cap" && (
                           <div className="text-[11px] text-[var(--mp-fg-subtle)] italic mt-0.5">
                             {lang === "de"
-                              ? "€600-Jahreslimit erreicht — zählt in deiner Statistik, keine Prämie mehr dieses Jahr."
-                              : "€600/year cap reached — counts toward your stats, no payout this year."}
+                              ? "€600-Jahreslimit erreicht: zählt in deiner Statistik, keine Prämie mehr dieses Jahr."
+                              : "€600/year cap reached: counts toward your stats, no payout this year."}
                           </div>
                         )}
                       </div>
@@ -890,8 +890,8 @@ export default function ReferralsPage() {
                 }
                 body={
                   lang === "de"
-                    ? "Teile deinen Link mit anderen Prüflingen — sobald jemand ein Abo bezahlt, startet die 30-Tage-Sperrfrist, danach zahlen wir dir €25–€75 aus."
-                    : "Share your link with fellow candidates — once someone pays, a 30-day hold starts, then we pay out €25–€75."
+                    ? "Teile deinen Link mit anderen Prüflingen, sobald jemand ein Abo bezahlt, startet die 30-Tage-Sperrfrist, danach zahlen wir dir €25–€75 aus."
+                    : "Share your link with fellow candidates; once someone pays, a 30-day hold starts, then we pay out €25–€75."
                 }
                 action={
                   <button
@@ -955,8 +955,8 @@ export default function ReferralsPage() {
                   </div>
                   <p className="text-xs text-[var(--mp-fg-muted)] leading-relaxed">
                     {lang === "de"
-                      ? "Nach 30 Tagen wird deine Prämie auszahlbar — wir überweisen per USDT (TRC20/ERC20/Polygon) oder Wise-E-Mail."
-                      : "After a 30-day hold, your reward becomes claimable — we pay via USDT (TRC20/ERC20/Polygon) or Wise email transfer."}
+                      ? "Nach 30 Tagen wird deine Prämie auszahlbar: wir überweisen per USDT (TRC20/ERC20/Polygon) oder Wise-E-Mail."
+                      : "After a 30-day hold, your reward becomes claimable: we pay via USDT (TRC20/ERC20/Polygon) or Wise email transfer."}
                   </p>
                   <p className="text-[11px] text-[var(--mp-fg-subtle)] mt-1">
                     <Link href="/faq#referrals" className="underline">
@@ -1127,7 +1127,7 @@ export default function ReferralsPage() {
                 value: c,
                 label:
                   c === "TRC20"
-                    ? `TRC20 (Tron) — ${
+                    ? `TRC20 (Tron), ${
                         lang === "de" ? "empfohlen" : "recommended"
                       }`
                     : c === "ERC20"
@@ -1249,13 +1249,13 @@ function SocialProofStrip({
       >
         <p className="text-sm font-semibold text-[var(--mp-fg)]">
           {lang === "de"
-            ? "Du wärst die erste Empfehlung — der Code ist neu."
-            : "You'd be the first referral — the code is brand new."}
+            ? "Du wärst die erste Empfehlung, der Code ist neu."
+            : "You'd be the first referral; the code is brand new."}
         </p>
         <p className="text-xs text-[var(--mp-fg-subtle)] mt-1">
           {lang === "de"
-            ? "Teile den Code mit einer Person aus deiner Lerngruppe — die Belohnung wird sofort nach Zahlung qualifiziert."
-            : "Share the code with one person from your study group — the reward qualifies immediately after they pay."}
+            ? "Teile den Code mit einer Person aus deiner Lerngruppe, die Belohnung wird sofort nach Zahlung qualifiziert."
+            : "Share the code with one person from your study group; the reward qualifies immediately after they pay."}
         </p>
       </section>
     );

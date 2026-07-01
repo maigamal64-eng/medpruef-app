@@ -205,7 +205,7 @@ export default function AdminReferralsPage() {
         `Marked ${formatInt(ok)} ${ok === 1 ? "referral" : "referrals"} paid`
       );
     } else {
-      toast.error(`${ok} paid · ${fail} failed — check audit log`);
+      toast.error(`${ok} paid · ${fail} failed, check audit log`);
     }
     load(status);
   }
@@ -233,7 +233,7 @@ export default function AdminReferralsPage() {
   return (
     <AdminPageShell
       title="Referrals"
-      description="Payout queue. Oldest holds first — mark paid after the Wise/USDT transfer lands."
+      description="Payout queue. Oldest holds first: mark paid after the Wise/USDT transfer lands."
       freshness={loading ? "cached" : "live"}
       onRefresh={() => load(status)}
       actions={
@@ -514,7 +514,7 @@ export default function AdminReferralsPage() {
               value={txid}
               onChange={(e) => setTxid(e.target.value)}
               placeholder="e.g. 0xabc… or Wise ref"
-              helper="Optional — but strongly recommended for audit trail."
+              helper="Optional, but strongly recommended for audit trail."
             />
             <Textarea
               label="Notes"
@@ -582,13 +582,13 @@ export default function AdminReferralsPage() {
             rows={3}
             value={bulkNotes}
             onChange={(e) => setBulkNotes(e.target.value)}
-            placeholder="e.g. April payout batch — Wise transfer ref 12345"
+            placeholder="e.g. April payout batch, Wise transfer ref 12345"
           />
           {bulkConfirming && (
             <Alert variant="warning" title="Batch destructive action">
               Every selected referral flips to <code>rewarded</code>. Each
               lands a separate <code>admin_audit_log</code> row. No txid
-              field on bulk — record the batch reference in Notes.
+              field on bulk: record the batch reference in Notes.
             </Alert>
           )}
         </div>

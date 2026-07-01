@@ -153,7 +153,7 @@ function formatDigest(n: DigestNumbers, dateLabel: string): string {
   // on unescaped underscores + parens (e.g. the post-soft-launch
   // Telegram send failed with "can't parse entities"). Keep it plain.
   const lines: string[] = [];
-  lines.push(`📊 MedPrüf — ${dateLabel}`);
+  lines.push(`📊 MedPrüf: ${dateLabel}`);
   lines.push("");
   lines.push("Growth:");
   lines.push(`• ${n.signups} signups`);
@@ -171,10 +171,10 @@ function formatDigest(n: DigestNumbers, dateLabel: string): string {
   lines.push("Webhook health:");
   lines.push(`• ${n.webhook_attempts_total} NOWPayments attempts`);
   if (n.webhook_attempts_sig_invalid > 0) {
-    lines.push(`• ⚠️ ${n.webhook_attempts_sig_invalid} sig_invalid — investigate`);
+    lines.push(`• ⚠️ ${n.webhook_attempts_sig_invalid} sig_invalid: investigate`);
   }
   if (n.webhook_attempts_total === 0 && n.checkout_initiated > 0) {
-    lines.push("• ⚠️ checkouts initiated but no webhook attempts — URL misconfig likely");
+    lines.push("• ⚠️ checkouts initiated but no webhook attempts: URL misconfig likely");
   }
   return lines.join("\n");
 }

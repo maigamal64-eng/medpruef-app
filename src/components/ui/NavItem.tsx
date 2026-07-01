@@ -114,7 +114,7 @@ export function NavItem({
         {!collapsed && <span className="text-[13px]">{label}</span>}
         {/* Screen-reader-only dot announcement for expanded mode */}
         {dot && dotTooltip && (
-          <span className="sr-only">— {dotTooltip}</span>
+          <span className="sr-only">{dotTooltip}</span>
         )}
       </Link>
     )

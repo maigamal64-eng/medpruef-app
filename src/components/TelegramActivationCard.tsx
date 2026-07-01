@@ -195,8 +195,8 @@ export default function TelegramActivationCard() {
           </p>
           <p className="text-xs text-[var(--mp-fg-muted)] mt-0.5 leading-relaxed">
             {lang === "de"
-              ? "Schalte den Bot mit einem Klick frei — antworte direkt, [name] liest mit."
-              : "Activate the bot in one tap — reply directly, [name] reads every message."}
+              ? "Schalte den Bot mit einem Klick frei, antworte direkt, [name] liest mit."
+              : "Activate the bot in one tap; reply directly, [name] reads every message."}
           </p>
           <a
             href={botUrl}

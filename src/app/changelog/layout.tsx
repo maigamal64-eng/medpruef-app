@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Neuerungen — MedPrüf",
+  title: "Neuerungen: MedPrüf",
   description:
     "Alle Produkt-Updates chronologisch: neue Prüfungstypen, verbesserte KI-Erklärungen, Übersetzungen, und mehr.",
   alternates: {
@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     url: "https://medpruf.com/changelog",
-    title: "Neuerungen — MedPrüf",
+    title: "Neuerungen: MedPrüf",
     description:
       "Alle Produkt-Updates chronologisch: neue Prüfungstypen, verbesserte KI-Erklärungen, Übersetzungen, und mehr.",
     images: [{ url: "/brand/og-image.png", width: 1200, height: 630 }],

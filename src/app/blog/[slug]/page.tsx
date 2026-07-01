@@ -33,11 +33,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const post = getPostBySlug(slug);
   if (!post) {
     return {
-      title: "Artikel nicht gefunden — MedPrüf Blog",
+      title: "Artikel nicht gefunden: MedPrüf Blog",
       robots: { index: false, follow: false },
     };
   }
-  const title = `${post.title.de} — MedPrüf Blog`;
+  const title = `${post.title.de}: MedPrüf Blog`;
   return {
     title,
     description: post.summary.de,

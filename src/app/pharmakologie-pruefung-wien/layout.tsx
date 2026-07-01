@@ -17,7 +17,7 @@ import { getNextExamDate } from "@/lib/exam-dates";
  */
 
 const pageTitle =
-  "Pharmakologie Prüfung Wien 2026 — Vorbereitung mit 335 Fragen | MedPrüf";
+  "Pharmakologie Prüfung Wien 2026: Vorbereitung mit 335 Fragen | MedPrüf";
 const pageDesc =
   "Vorbereitung auf die Pharmakologie- und Rezeptierkunde-Prüfung (Wien). 335 Fragen mit klinischen Begründungen, Guideline-Referenzen und Pass-Until-You-Pass-Garantie. Kenntnisprüfung Wien am 28. September 2026.";
 
@@ -76,7 +76,7 @@ function buildCourseSchema() {
   return {
     "@context": "https://schema.org",
     "@type": "Course",
-    name: "Pharmakologie-Prüfung Wien — Vorbereitung",
+    name: "Pharmakologie-Prüfung Wien: Vorbereitung",
     description:
       "Strukturierte Vorbereitung auf die Pharmakologie- und Rezeptierkunde-Prüfung (Wien): 335 Fragen mit klinischen Begründungen, Dosierungen und Guideline-Referenzen.",
     provider: {

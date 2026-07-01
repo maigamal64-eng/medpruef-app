@@ -206,18 +206,18 @@ export async function computePaymentFunnelMetrics(
   let diagnosis: string;
   if (sigInvalid > 0) {
     diagnosis =
-      `ALARM: ${sigInvalid} Whop webhook deliver${sigInvalid === 1 ? "y" : "ies"} were REJECTED for an invalid signature — ` +
+      `ALARM: ${sigInvalid} Whop webhook deliver${sigInvalid === 1 ? "y" : "ies"} were REJECTED for an invalid signature; ` +
       `this is the WHOP_WEBHOOK_SECRET-mismatch signature: real payments would arrive and never grant. Fix the secret, then re-deliver from the Whop dashboard.`;
   } else if (grantFailed > 0 || webhookUnmatched > 0) {
     diagnosis =
-      `${grantFailed} grant${grantFailed === 1 ? "" : "s"} failed and ${webhookUnmatched} webhook${webhookUnmatched === 1 ? "" : "s"} were unmatched in the last ${WINDOW_DAYS}d — ` +
+      `${grantFailed} grant${grantFailed === 1 ? "" : "s"} failed and ${webhookUnmatched} webhook${webhookUnmatched === 1 ? "" : "s"} were unmatched in the last ${WINDOW_DAYS}d; ` +
       `a payment may have arrived without granting Pro. Check the failure reasons + the feed below for the payment id, then grant manually.`;
   } else if (created === 0 && totalDeliveries === 0) {
     diagnosis =
-      `No checkout was started and no Whop webhook has ever been received. The "0 successful payments" is a 0-ATTEMPT story (a distribution problem), not a broken-payment story — instrumentation is live and will record the first real attempt.`;
+      `No checkout was started and no Whop webhook has ever been received. The "0 successful payments" is a 0-ATTEMPT story (a distribution problem), not a broken-payment story; instrumentation is live and will record the first real attempt.`;
   } else if (created > 0 && grantSucceeded === 0) {
     diagnosis =
-      `${created} checkout${created === 1 ? "" : "s"} started but 0 grants — buyers reached Whop and did not complete payment (or the webhook never arrived: ${totalDeliveries} delivered). No silent grant failure detected.`;
+      `${created} checkout${created === 1 ? "" : "s"} started but 0 grants: buyers reached Whop and did not complete payment (or the webhook never arrived: ${totalDeliveries} delivered). No silent grant failure detected.`;
   } else {
     diagnosis = `${grantSucceeded} successful grant${grantSucceeded === 1 ? "" : "s"} in the last ${WINDOW_DAYS}d. No failed grants or rejected webhooks detected.`;
   }

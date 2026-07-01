@@ -22,8 +22,8 @@ const PROCESSORS: Processor[] = [
       en: "Database (account and study-progress data), object storage (question images).",
     },
     jurisdiction: {
-      de: "Supabase Inc., USA — EU-Region (Frankfurt).",
-      en: "Supabase Inc., USA — EU region (Frankfurt).",
+      de: "Supabase Inc., USA, EU-Region (Frankfurt).",
+      en: "Supabase Inc., USA, EU region (Frankfurt).",
     },
     policyUrl: "https://supabase.com/privacy",
     policyLabel: "supabase.com/privacy",
@@ -35,8 +35,8 @@ const PROCESSORS: Processor[] = [
       en: "Hosting of the web application and API routes, edge caching.",
     },
     jurisdiction: {
-      de: "Vercel Inc., USA — EU-Edge-Knoten. SCCs in Kraft.",
-      en: "Vercel Inc., USA — EU edge nodes. SCCs in place.",
+      de: "Vercel Inc., USA, EU-Edge-Knoten. SCCs in Kraft.",
+      en: "Vercel Inc., USA, EU edge nodes. SCCs in place.",
     },
     policyUrl: "https://vercel.com/legal/privacy-policy",
     policyLabel: "vercel.com/legal/privacy-policy",
@@ -48,8 +48,8 @@ const PROCESSORS: Processor[] = [
       en: "Error and crash monitoring (stack traces, request context, hashed user ID).",
     },
     jurisdiction: {
-      de: "Functional Software, Inc. (Sentry), USA — EU-Ingest-Endpunkt (de.sentry.io).",
-      en: "Functional Software, Inc. (Sentry), USA — EU ingest endpoint (de.sentry.io).",
+      de: "Functional Software, Inc. (Sentry), USA, EU-Ingest-Endpunkt (de.sentry.io).",
+      en: "Functional Software, Inc. (Sentry), USA, EU ingest endpoint (de.sentry.io).",
     },
     policyUrl: "https://sentry.io/privacy/",
     policyLabel: "sentry.io/privacy",
@@ -122,8 +122,8 @@ const PROCESSORS: Processor[] = [
   {
     name: "Google Analytics 4",
     purpose: {
-      de: "Aggregierte Nutzungsanalyse (Seitenaufrufe, Sitzungsdauer) — lädt nur nach Einwilligung.",
-      en: "Aggregated usage analytics (page views, session duration) — loads only after consent.",
+      de: "Aggregierte Nutzungsanalyse (Seitenaufrufe, Sitzungsdauer); lädt nur nach Einwilligung.",
+      en: "Aggregated usage analytics (page views, session duration); loads only after consent.",
     },
     jurisdiction: {
       de: "Google LLC, USA (EU-Daten über Google Ireland Ltd.). SCCs + IP-Anonymisierung aktiv.",
@@ -135,8 +135,8 @@ const PROCESSORS: Processor[] = [
   {
     name: "Microsoft Clarity",
     purpose: {
-      de: "UX-Analyse (Heatmaps, Sitzungswiedergabe, Dead-Clicks) — lädt nur nach Einwilligung.",
-      en: "UX analytics (heatmaps, session replay, dead clicks) — loads only after consent.",
+      de: "UX-Analyse (Heatmaps, Sitzungswiedergabe, Dead-Clicks); lädt nur nach Einwilligung.",
+      en: "UX analytics (heatmaps, session replay, dead clicks); loads only after consent.",
     },
     jurisdiction: {
       de: "Microsoft Corporation, USA. SCCs in Kraft.",
@@ -188,8 +188,8 @@ export default function PrivacyPage() {
           <strong>
             [
             {t
-              ? "Vorläufig: MedPrüf / [name] — Rechtsform wird bei Registrierung der österreichischen Niederlassung finalisiert"
-              : "Provisional: MedPrüf / [name] — legal entity will be finalized upon registration of the Austrian branch"}
+              ? "Vorläufig: MedPrüf / [name], Rechtsform wird bei Registrierung der österreichischen Niederlassung finalisiert"
+              : "Provisional: MedPrüf / [name]; legal entity will be finalized upon registration of the Austrian branch"}
             ]
           </strong>
           <br />
@@ -255,8 +255,8 @@ export default function PrivacyPage() {
         <ul>
           <li>
             {t
-              ? "Bei kostenpflichtigen Tarifen (Pro, Group): Rechnungsname, -adresse und Transaktions-ID. Kartendaten verarbeiten wir niemals selbst; diese werden ausschließlich durch einen zertifizierten Zahlungsdienstleister (Stripe — Integration in Vorbereitung) entgegengenommen."
-              : "For paid tiers (Pro, Group): billing name, billing address, transaction ID. We never process card details ourselves; these are handled exclusively by a certified payment provider (Stripe — integration in preparation)."}
+              ? "Bei kostenpflichtigen Tarifen (Pro, Group): Rechnungsname, -adresse und Transaktions-ID. Kartendaten verarbeiten wir niemals selbst; diese werden ausschließlich durch einen zertifizierten Zahlungsdienstleister (Stripe, Integration in Vorbereitung) entgegengenommen."
+              : "For paid tiers (Pro, Group): billing name, billing address, transaction ID. We never process card details ourselves; these are handled exclusively by a certified payment provider (Stripe, integration in preparation)."}
           </li>
         </ul>
 
@@ -423,8 +423,8 @@ export default function PrivacyPage() {
         </h2>
         <p>
           {t
-            ? "Einige unserer Auftragsverarbeiter haben ihren Hauptsitz außerhalb des Europäischen Wirtschaftsraums (EWR) — insbesondere in den USA (OpenAI, Anthropic, Vercel, Google, Microsoft, Sentry), in den Vereinigten Arabischen Emiraten (Telegram) und in Indien (Zoho). Wir übermitteln personenbezogene Daten in diese Drittländer nur auf Grundlage geeigneter Garantien:"
-            : "Some of our processors are headquartered outside the European Economic Area (EEA) — in particular in the USA (OpenAI, Anthropic, Vercel, Google, Microsoft, Sentry), in the United Arab Emirates (Telegram), and in India (Zoho). We transfer personal data to these third countries only on the basis of appropriate safeguards:"}
+            ? "Einige unserer Auftragsverarbeiter haben ihren Hauptsitz außerhalb des Europäischen Wirtschaftsraums (EWR), insbesondere in den USA (OpenAI, Anthropic, Vercel, Google, Microsoft, Sentry), in den Vereinigten Arabischen Emiraten (Telegram) und in Indien (Zoho). Wir übermitteln personenbezogene Daten in diese Drittländer nur auf Grundlage geeigneter Garantien:"
+            : "Some of our processors are headquartered outside the European Economic Area (EEA), in particular in the USA (OpenAI, Anthropic, Vercel, Google, Microsoft, Sentry), in the United Arab Emirates (Telegram), and in India (Zoho). We transfer personal data to these third countries only on the basis of appropriate safeguards:"}
         </p>
         <ul>
           <li>
@@ -554,8 +554,8 @@ export default function PrivacyPage() {
               :
             </strong>{" "}
             {t
-              ? "Erteilte Einwilligungen (Analytics, Marketing) können Sie jederzeit mit Wirkung für die Zukunft widerrufen — über das Cookie-Banner, die Einstellungen oder formlos per E-Mail."
-              : "Given consents (analytics, marketing) can be withdrawn at any time with effect for the future — via the cookie banner, settings, or informally by email."}
+              ? "Erteilte Einwilligungen (Analytics, Marketing) können Sie jederzeit mit Wirkung für die Zukunft widerrufen: über das Cookie-Banner, die Einstellungen oder formlos per E-Mail."
+              : "Given consents (analytics, marketing) can be withdrawn at any time with effect for the future: via the cookie banner, settings, or informally by email."}
           </li>
           <li>
             <strong>
@@ -618,8 +618,8 @@ export default function PrivacyPage() {
         </p>
         <p>
           {t
-            ? "Alle Analyse- und Komfort-Tracker (Google Analytics 4, Microsoft Clarity) werden ausschließlich geladen, nachdem Sie im Cookie-Banner aktiv eingewilligt haben. Bis zur Einwilligung sind keine Tracking-Skripte aktiv — Sie können die Anwendung ohne Einwilligung vollständig nutzen. Die Einwilligung können Sie jederzeit widerrufen, indem Sie die Cookies Ihres Browsers löschen oder auf den Link „Cookie-Einstellungen“ im Seitenfuß klicken."
-            : "All analytics and convenience trackers (Google Analytics 4, Microsoft Clarity) load only after you have actively consented in the cookie banner. Until consent is given, no tracking scripts are active — you can use the application fully without consenting. You may revoke consent at any time by clearing your browser cookies or clicking the 'Cookie settings' link in the footer."}
+            ? "Alle Analyse- und Komfort-Tracker (Google Analytics 4, Microsoft Clarity) werden ausschließlich geladen, nachdem Sie im Cookie-Banner aktiv eingewilligt haben. Bis zur Einwilligung sind keine Tracking-Skripte aktiv, Sie können die Anwendung ohne Einwilligung vollständig nutzen. Die Einwilligung können Sie jederzeit widerrufen, indem Sie die Cookies Ihres Browsers löschen oder auf den Link „Cookie-Einstellungen“ im Seitenfuß klicken."
+            : "All analytics and convenience trackers (Google Analytics 4, Microsoft Clarity) load only after you have actively consented in the cookie banner. Until consent is given, no tracking scripts are active; you can use the application fully without consenting. You may revoke consent at any time by clearing your browser cookies or clicking the 'Cookie settings' link in the footer."}
         </p>
       </section>
 

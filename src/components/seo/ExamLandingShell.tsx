@@ -364,8 +364,8 @@ export default function ExamLandingShell({ content }: { content: ExamLandingCont
         </h2>
         <p className="mp-body text-[var(--mp-fg-muted)] mb-8 text-sm">
           {L === "de"
-            ? `Die wichtigsten Fragen zur ${content.examName.de} — kurz und faktenbasiert beantwortet.`
-            : `Key questions about the ${content.examName.en} — short, factual answers.`}
+            ? `Die wichtigsten Fragen zur ${content.examName.de}: kurz und faktenbasiert beantwortet.`
+            : `Key questions about the ${content.examName.en}: short, factual answers.`}
         </p>
         <div className="space-y-3">
           {content.faq.map((item, i) => (

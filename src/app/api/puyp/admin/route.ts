@@ -268,7 +268,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           error:
-            "Attempt has no linked subscription — cannot extend. Check the user's subscription history manually.",
+            "Attempt has no linked subscription, cannot extend. Check the user's subscription history manually.",
         },
         { status: 400 }
       );
@@ -309,7 +309,7 @@ export async function POST(req: NextRequest) {
         return NextResponse.json(
           {
             error:
-              "Invalid new_expires_at — expected ISO timestamp string.",
+              "Invalid new_expires_at: expected ISO timestamp string.",
           },
           { status: 400 }
         );

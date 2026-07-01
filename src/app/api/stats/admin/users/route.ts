@@ -239,7 +239,7 @@ export async function DELETE(req: NextRequest) {
         deleted_email: deletedSnapshot?.email ?? null,
         deleted_role: deletedSnapshot?.role ?? null,
         deleted_tier: deletedSnapshot?.tier ?? null,
-        cascade_note: "GDPR erasure — cascading FKs handled cleanup",
+        cascade_note: "GDPR erasure: cascading FKs handled cleanup",
       },
     });
 

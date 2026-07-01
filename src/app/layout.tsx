@@ -64,7 +64,7 @@ export const metadata: Metadata = {
     apple: "/apple-touch-icon.png",
   },
   title: {
-    default: "MedPrüf — Austrian Kenntnisprüfung Preparation (Vienna)",
+    default: "MedPrüf: Austrian Kenntnisprüfung Preparation (Vienna)",
     // Per-page titles are already formatted as "{Page} — MedPrüf" in
     // each route's metadata, so the template uses `%s` verbatim — we
     // do NOT want a trailing " | MedPrüf" on a value that already ends
@@ -100,14 +100,14 @@ export const metadata: Metadata = {
     locale: "de_AT",
     url: "https://medpruf.com/landing",
     siteName: "MedPrüf",
-    title: "MedPrüf — Austrian Kenntnisprüfung Preparation (Vienna)",
+    title: "MedPrüf: Austrian Kenntnisprüfung Preparation (Vienna)",
     description:
       "Specialized prep for the Austrian Kenntnisprüfung Wien, Stichprobentest (Innsbruck), and Pharmakologie exams. 150 questions free, no credit card.",
-    images: [{ url: "/brand/og-image.png", width: 1200, height: 630, alt: "MedPrüf — Kenntnisprüfung Preparation" }],
+    images: [{ url: "/brand/og-image.png", width: 1200, height: 630, alt: "MedPrüf: Kenntnisprüfung Preparation" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "MedPrüf — Austrian Kenntnisprüfung Preparation (Vienna)",
+    title: "MedPrüf: Austrian Kenntnisprüfung Preparation (Vienna)",
     description:
       "Specialized prep for the Austrian Kenntnisprüfung Wien, Stichprobentest (Innsbruck), and Pharmakologie exams. 150 questions free, no credit card.",
     images: ["/brand/og-image.png"],

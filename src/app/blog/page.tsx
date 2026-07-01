@@ -99,8 +99,8 @@ export default function BlogIndexPage() {
               >
                 <p className="mp-body text-[var(--mp-fg-muted)]">
                   {L === "de"
-                    ? "Erste Artikel kommen in Kürze — wir schreiben nicht schneller als wir können."
-                    : "First articles coming soon — we don't write faster than we can."}
+                    ? "Erste Artikel kommen in Kürze, wir schreiben nicht schneller als wir können."
+                    : "First articles coming soon; we don't write faster than we can."}
                 </p>
               </div>
             )}

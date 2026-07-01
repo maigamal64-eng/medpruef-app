@@ -45,8 +45,8 @@ const content: ExamLandingContent = {
   },
   primaryCtaHref: "/quiz?exam=kmp_innsbruck&free=1",
   primaryCtaLabel: {
-    de: "Free starten — 150 Fragen",
-    en: "Start free — 150 questions",
+    de: "Free starten: 150 Fragen",
+    en: "Start free: 150 questions",
   },
   secondaryCtaHref: "/pricing",
   secondaryCtaLabel: {

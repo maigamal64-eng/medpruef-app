@@ -142,7 +142,7 @@ export default function MentorPage() {
                 </div>
                 <div>
                   <h3 className="font-semibold text-[var(--mp-oxford-blue)] mb-1">Post-Answer Explanations</h3>
-                  <p className="text-gray-600 text-sm">Nach jeder Frage erhältst du detaillierte Erklärungen — auch bei richtigen Antworten.</p>
+                  <p className="text-gray-600 text-sm">Nach jeder Frage erhältst du detaillierte Erklärungen, auch bei richtigen Antworten.</p>
                 </div>
               </div>
               

@@ -157,8 +157,8 @@ export async function POST(req: NextRequest) {
       requestedAt: insertRow.requested_at,
       eligibleWithin7Days: within7Days,
       hint: within7Days
-        ? "Refund guaranteed within 7 days — [name] processes manually within 24-72h."
-        : "Subscription is >7 days old — refund at admin discretion.",
+        ? "Refund guaranteed within 7 days: [name] processes manually within 24-72h."
+        : "Subscription is >7 days old, refund at admin discretion.",
     });
   } catch (err) {
     captureServerError(err, {

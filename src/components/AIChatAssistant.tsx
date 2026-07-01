@@ -299,8 +299,8 @@ export default function AIChatAssistant({
         let content: string;
         if (is402) {
           content = lang === "de"
-            ? "Diese Frage hat noch keine KI-Erklärung. Die automatische KI-Generierung ist Teil von MedPrüf Pro — sobald ein Pro-Nutzer sie anfragt, wird sie für dich kostenlos sichtbar. [Mehr erfahren](/pricing?gate=ai_chat)"
-            : "This question has no AI explanation yet. Automatic AI generation is part of MedPrüf Pro — as soon as a Pro user requests one, it becomes free for you to read. [Learn more](/pricing?gate=ai_chat)";
+            ? "Diese Frage hat noch keine KI-Erklärung. Die automatische KI-Generierung ist Teil von MedPrüf Pro, sobald ein Pro-Nutzer sie anfragt, wird sie für dich kostenlos sichtbar. [Mehr erfahren](/pricing?gate=ai_chat)"
+            : "This question has no AI explanation yet. Automatic AI generation is part of MedPrüf Pro; as soon as a Pro user requests one, it becomes free for you to read. [Learn more](/pricing?gate=ai_chat)";
           // Event — so we can measure paywall-hit rate per free user
           // and verify the copy change actually reduces "KI funktioniert
           // nicht" feedback.
@@ -313,8 +313,8 @@ export default function AIChatAssistant({
             : "You've reached the daily limit for AI explanations. It resets after midnight UTC.";
         } else {
           content = lang === "de"
-            ? "Technisches Problem bei der KI-Generierung. Die Frage und die statische Erklärung funktionieren weiter — bitte melde den Fehler über das Feedback-Icon, falls er mehrfach auftritt."
-            : "Technical problem generating the AI answer. The question and its static explanation still work — please report via the feedback icon if the issue persists.";
+            ? "Technisches Problem bei der KI-Generierung. Die Frage und die statische Erklärung funktionieren weiter, bitte melde den Fehler über das Feedback-Icon, falls er mehrfach auftritt."
+            : "Technical problem generating the AI answer. The question and its static explanation still work; please report via the feedback icon if the issue persists.";
         }
         setMessages([{ role: "assistant", content }]);
         return;
@@ -598,14 +598,14 @@ export default function AIChatAssistant({
                 value=""
                 readOnly
                 placeholder={lang === "de" ? "Folgefrage stellen (Pro)…" : "Ask a follow-up question (Pro)…"}
-                aria-label={lang === "de" ? "Folgefrage stellen – Pro erforderlich" : "Ask a follow-up question – Pro required"}
+                aria-label={lang === "de" ? "Folgefrage stellen, Pro erforderlich" : "Ask a follow-up question, Pro required"}
                 disabled
                 className="flex-1 bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)] rounded-xl px-4 py-2.5 text-sm text-[var(--mp-fg-subtle)] placeholder-[var(--mp-fg-subtle)] cursor-not-allowed"
               />
               <button
                 type="button"
                 disabled
-                aria-label={lang === "de" ? "Gesperrt – Pro erforderlich" : "Locked – Pro required"}
+                aria-label={lang === "de" ? "Gesperrt, Pro erforderlich" : "Locked, Pro required"}
                 className="w-10 h-10 rounded-xl bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-subtle)] flex items-center justify-center cursor-not-allowed border border-[var(--mp-border)]"
               >
                 <Lock className="w-4 h-4" />

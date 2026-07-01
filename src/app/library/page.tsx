@@ -524,8 +524,8 @@ const LIB_TIPS: { id: string; min: number; de: string; en: string }[] = [
   {
     id: "review-v1",
     min: 1,
-    de: "Tippe eine Karte an, decke sie auf und bewerte dich — so plant die App deine nächste Wiederholung (Spaced Repetition).",
-    en: "Tap a card, reveal it and rate yourself — the app schedules your next review (spaced repetition).",
+    de: "Tippe eine Karte an, decke sie auf und bewerte dich, so plant die App deine nächste Wiederholung (Spaced Repetition).",
+    en: "Tap a card, reveal it and rate yourself: the app schedules your next review (spaced repetition).",
   },
   {
     id: "customize-v1",
@@ -1255,8 +1255,8 @@ function LibraryContent() {
                 body={
                   notes.length === 0
                     ? lang === "de"
-                      ? "Speichere eine Frage als Lesezeichen oder notiere etwas beim Üben — daraus wird deine erste Lernkarte."
-                      : "Bookmark a question or jot a note while practising — it becomes your first flash-note."
+                      ? "Speichere eine Frage als Lesezeichen oder notiere etwas beim Üben, daraus wird deine erste Lernkarte."
+                      : "Bookmark a question or jot a note while practising; it becomes your first flash-note."
                     : lang === "de"
                       ? "Passe Suche oder Filter an."
                       : "Try a different search or filter."
@@ -1279,8 +1279,8 @@ function LibraryContent() {
                     },
                     {
                       n: 2,
-                      de: '„Als Lernkarte speichern“ tippen — die KI macht daraus eine Karteikarte',
-                      en: 'Tap "Save as flash-note" — the AI turns it into a card',
+                      de: '„Als Lernkarte speichern“ tippen: die KI macht daraus eine Karteikarte',
+                      en: 'Tap "Save as flash-note": the AI turns it into a card',
                     },
                     {
                       n: 3,

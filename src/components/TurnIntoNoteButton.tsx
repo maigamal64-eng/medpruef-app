@@ -132,7 +132,7 @@ export default function TurnIntoNoteButton({
         className={`inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--mp-status-warning)] ${className}`}
       >
         <Crown className="w-4 h-4" />{" "}
-        {de ? "Notiz-Limit erreicht – Pro freischalten" : "Note limit reached – unlock Pro"} →
+        {de ? "Notiz-Limit erreicht: Pro freischalten" : "Note limit reached: unlock Pro"} →
       </Link>
     );
   }

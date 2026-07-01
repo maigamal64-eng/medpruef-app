@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "AGB — MedPrüf",
+  title: "AGB: MedPrüf",
   description:
     "Allgemeine Geschäftsbedingungen für die Nutzung von MedPrüf: Leistungsumfang, medizinischer Haftungsausschluss, Zahlungsbedingungen.",
   alternates: {
@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     url: "https://medpruf.com/terms",
-    title: "AGB — MedPrüf",
+    title: "AGB: MedPrüf",
     description:
       "Allgemeine Geschäftsbedingungen für die Nutzung von MedPrüf: Leistungsumfang, medizinischer Haftungsausschluss, Zahlungsbedingungen.",
     images: [{ url: "/brand/og-image.png", width: 1200, height: 630 }],

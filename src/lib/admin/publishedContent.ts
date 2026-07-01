@@ -87,10 +87,10 @@ export const CHANNEL_STRATEGY: StrategyTier[] = [
     cash: "€0",
     status: "pending-[name]",
     moves: [
-      "Framko (Telegram 5.7K) — partnership + buy-a-post-direct",
-      "AMGOE + Egyptian Medical Society Austria (FB) — referral/listing ask",
-      "NostriFIT (Vienna prep) — offer the free QBank",
-      "MedLicense Austria — partner/monitor",
+      "Framko (Telegram 5.7K): partnership + buy-a-post-direct",
+      "AMGOE + Egyptian Medical Society Austria (FB): referral/listing ask",
+      "NostriFIT (Vienna prep): offer the free QBank",
+      "MedLicense Austria: partner/monitor",
     ],
     rationale:
       "The warmest, highest-fit audiences (esp. the Arabic/Egyptian core) live in closed groups paid cannot reach. Outreach is the only key. Drafted + ready; needs [name]'s hand (and AR sign-off).",
@@ -114,7 +114,7 @@ export const CHANNEL_STRATEGY: StrategyTier[] = [
     cash: "€0",
     status: "running",
     moves: [
-      "Reddit bot — value-first, diversifying off r/approbation",
+      "Reddit bot: value-first, diversifying off r/approbation",
       "FB diaspora groups + Facharzt-JETZT Telegram folder",
     ],
     rationale:
@@ -122,7 +122,7 @@ export const CHANNEL_STRATEGY: StrategyTier[] = [
   },
   {
     tier: 4,
-    label: "Google Ads — thin capture sliver (later)",
+    label: "Google Ads: thin capture sliver (later)",
     cash: "small",
     status: "later",
     moves: ["Brand + the 3 exact-exam ad groups only, €5-10/day"],
@@ -147,7 +147,7 @@ export const PUBLISHED: PublishedItem[] = [
     link: "https://www.reddit.com/user/Desperate-Silver-624/",
     status: "published",
     results:
-      "All 8 verified live, 0 removed, health green. A user REPLY landed on r/approbation (warm continuation) — the topic (recognition logistics) is what works. Concentration risk flagged: 5/8 in r/approbation, now diversifying.",
+      "All 8 verified live, 0 removed, health green. A user REPLY landed on r/approbation (warm continuation): the topic (recognition logistics) is what works. Concentration risk flagged: 5/8 in r/approbation, now diversifying.",
     metrics: [
       { label: "Comments live", value: "8" },
       { label: "Replies received", value: "1" },
@@ -182,7 +182,7 @@ export const PUBLISHED: PublishedItem[] = [
     date: "2026-06-30",
     kind: "dm",
     summary:
-      "AMGOE (Arab Medical Association in Austria) referral/listing ask — add the free 450-Q Austrian bank to their recognition resources.",
+      "AMGOE (Arab Medical Association in Austria) referral/listing ask: add the free 450-Q Austrian bank to their recognition resources.",
     status: "drafted",
     results: "Drafted EN + Egyptian-Arabic. AR awaits [name]'s sign-off.",
   },
@@ -192,7 +192,7 @@ export const PUBLISHED: PublishedItem[] = [
     date: "2026-06-30",
     kind: "dm",
     summary:
-      "Egyptian Medical Society Austria (FB group) — value-first share to the Egyptian-doctor core, permission-first to the admin.",
+      "Egyptian Medical Society Austria (FB group): value-first share to the Egyptian-doctor core, permission-first to the admin.",
     status: "drafted",
     results: "Drafted Egyptian-Arabic + EN. AR awaits [name]'s sign-off. Highest cultural fit.",
   },
@@ -212,7 +212,7 @@ export const PUBLISHED: PublishedItem[] = [
     date: "ongoing",
     kind: "post",
     summary:
-      'Bluesky persona "Lina Karam" (@drlinakaram) — value-first MedPrüf-coach posting into the foreign-doctor / Austria-exam conversation.',
+      'Bluesky persona "Lina Karam" (@drlinakaram): value-first MedPrüf-coach posting into the foreign-doctor / Austria-exam conversation.',
     status: "published",
     results: "Account active. Engagement not yet instrumented into this dashboard.",
   },

@@ -89,7 +89,7 @@ interface PuypAttempt {
 }
 
 const CANNED_REASONS: Array<{ value: string; label: string }> = [
-  { value: "", label: "— Pick a reason or write your own —" },
+  { value: "", label: "Pick a reason or write your own" },
   {
     value: "proof_no_date",
     label: "The proof doesn't show the attempt date",
@@ -114,7 +114,7 @@ const CANNED_REASONS: Array<{ value: string; label: string }> = [
     value: "already_used",
     label: "PUYP extensions already used (2/2)",
   },
-  { value: "custom", label: "Something else — write below" },
+  { value: "custom", label: "Something else, write below" },
 ];
 
 const CANNED_TEXT: Record<string, string> = {
@@ -125,7 +125,7 @@ const CANNED_TEXT: Record<string, string> = {
   completion_below_70:
     "Your qbank completion is below the 70% threshold required to claim a Pass-Until-You-Pass extension. Please complete more questions across the exam's topics and resubmit after failing your next attempt.",
   proof_unreadable:
-    "We couldn't read the file you uploaded — it may be corrupted or blank. Please resubmit a clearer scan or screenshot.",
+    "We couldn't read the file you uploaded: it may be corrupted or blank. Please resubmit a clearer scan or screenshot.",
   wrong_exam_type:
     "The proof uploaded is for a different exam than the one your subscription covers. Please upload the proof for the correct exam.",
   already_used:
@@ -463,7 +463,7 @@ export default function AdminPuypPage() {
             rows={5}
             value={rejectReason}
             onChange={(e) => setRejectReason(e.target.value)}
-            helper="Be specific — this is what the user will see. Prefilled from the canned reason above; edit before submitting if needed."
+            helper="Be specific: this is what the user will see. Prefilled from the canned reason above; edit before submitting if needed."
             placeholder="e.g. The uploaded document doesn't show the attempt date, or the name on the proof doesn't match the account."
           />
           <Alert variant="warning" title="Email delivery is stubbed">
@@ -617,7 +617,7 @@ function AttemptCard({
       {!item.proof_signed_url && !rejected && (
         <div className="mt-2 text-[10px] text-[var(--mp-status-warning)] flex items-center gap-1">
           <AlertTriangle size={12} />
-          No proof file attached — refresh to regenerate the signed URL.
+          No proof file attached: refresh to regenerate the signed URL.
         </div>
       )}
     </div>

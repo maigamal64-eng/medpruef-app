@@ -301,17 +301,17 @@ export async function computeControlPlaneMetrics(
     basis: {
       mrr:
         payingUsers === 0
-          ? `€0 — no genuinely-paying customers yet. (Admin, the comped client, and the demo account are excluded; they hold Pro but never paid.) Rises automatically on the first real card payment, priced from the €${(offer.priceCents / 100).toFixed(0)} ${offer.durationMonths}-month pass.`
+          ? `€0: no genuinely-paying customers yet. (Admin, the comped client, and the demo account are excluded; they hold Pro but never paid.) Rises automatically on the first real card payment, priced from the €${(offer.priceCents / 100).toFixed(0)} ${offer.durationMonths}-month pass.`
           : `${payingUsers} real paying customer${payingUsers === 1 ? "" : "s"} × €${(monthlyEquivCents / 100).toFixed(0)}/mo (the €${(offer.priceCents / 100).toFixed(0)} ${offer.durationMonths}-month pass, monthly-equivalent). Comped / admin / demo accounts excluded.`,
       ltv: `Modeled at one full €${(offer.priceCents / 100).toFixed(0)} pass per paying customer (no completed paid subscriptions to average over yet).`,
-      conversion: `Genuinely-paying customers ÷ real users = ${payingUsers}/${realUsers}. Excludes the admin account, the comped client, and the demo user from both sides. ${proEntitled} account${proEntitled === 1 ? " is" : "s are"} entitled to Pro (incl. comped) — shown separately. The number to move.`,
+      conversion: `Genuinely-paying customers ÷ real users = ${payingUsers}/${realUsers}. Excludes the admin account, the comped client, and the demo user from both sides. ${proEntitled} account${proEntitled === 1 ? " is" : "s are"} entitled to Pro (incl. comped), shown separately. The number to move.`,
       churn: `Subscriptions that were activated (expires_at set) then cancelled / refunded / expired in the last 30 days. Abandoned crypto checkouts that never activated are not counted.`,
     },
     reconciliation: {
       active_subscription_rows: activeRows,
       note:
         payingUsers === 0
-          ? `Corrected definitions (2026-06-23): paid conversion = genuinely-paying customers ÷ real users = 0/${realUsers} (admin / comped client / demo excluded from both); MRR = €0 (no real payers — a demo account is not revenue); churn counts only activated subs lost in 30d, so abandoned crypto checkouts (the ${activeRows === 0 ? "pending/cancelled/expired" : "non-active"} NOWPayments rows) do NOT count as churn / active / MRR. Real paying is read from active subscription rows on a real rail (whop/stripe), which is ${activeRows} active today; ${proEntitled} account${proEntitled === 1 ? " is" : "s are"} entitled to Pro incl. comped. These figures tick up on their own with the first real card payment.`
+          ? `Corrected definitions (2026-06-23): paid conversion = genuinely-paying customers ÷ real users = 0/${realUsers} (admin / comped client / demo excluded from both); MRR = €0 (no real payers, a demo account is not revenue); churn counts only activated subs lost in 30d, so abandoned crypto checkouts (the ${activeRows === 0 ? "pending/cancelled/expired" : "non-active"} NOWPayments rows) do NOT count as churn / active / MRR. Real paying is read from active subscription rows on a real rail (whop/stripe), which is ${activeRows} active today; ${proEntitled} account${proEntitled === 1 ? " is" : "s are"} entitled to Pro incl. comped. These figures tick up on their own with the first real card payment.`
           : `${activeRows} active subscription row${activeRows === 1 ? "" : "s"}. Paid conversion, MRR, active-paid count only genuinely-paying customers (admin / comped / demo excluded); ${proEntitled} entitled to Pro incl. comped, shown separately. Churn counts only activated subs lost in the last 30 days.`,
     },
     automation_coverage: computeCoverage(),

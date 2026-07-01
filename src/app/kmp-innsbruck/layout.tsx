@@ -111,7 +111,7 @@ function buildCourseSchema() {
       price: "0",
       priceCurrency: "EUR",
       availability: "https://schema.org/InStock",
-      description: "Free tier — 150 questions, no credit card required.",
+      description: "Free tier: 150 questions, no credit card required.",
     },
   };
 }

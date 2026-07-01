@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
   const gate = checkRateLimit({ key: rateKey("whop-trial", userId), limit: 5, windowMs: 60_000 });
   if (!gate.allowed) {
     return NextResponse.json(
-      { error: "Too many requests — please wait a moment." },
+      { error: "Too many requests, please wait a moment." },
       { status: 429, headers: rateLimitHeaders(gate, { limit: 5 }) },
     );
   }

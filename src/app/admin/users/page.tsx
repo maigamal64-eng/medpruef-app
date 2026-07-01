@@ -729,7 +729,7 @@ export default function AdminUsersPage() {
                                 data-user-quickactions={u.id}
                               >
                                 <div className="text-[10px] text-[var(--mp-fg-muted)] uppercase tracking-wider">
-                                  Quick actions — Grant / Lock / Ban
+                                  Quick actions: Grant / Lock / Ban
                                 </div>
                                 <div className="flex items-center gap-2">
                                   <UserQuickActions

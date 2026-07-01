@@ -199,7 +199,7 @@ export default function AdminWaitlistPage() {
           </table>
           {items.length > 500 && (
             <div className="border-t border-[var(--mp-border-subtle)] p-2 text-center text-[10px] text-[var(--mp-fg-muted)]">
-              Showing first 500 rows — export CSV for the full list
+              Showing first 500 rows, export CSV for the full list
               ({items.length} total).
             </div>
           )}

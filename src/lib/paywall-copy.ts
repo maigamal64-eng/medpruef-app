@@ -96,8 +96,8 @@ export function getPaywallCopy({ lang, stats }: PaywallCopyArgs): PaywallCopy {
 
   return {
     title: de
-      ? "Freie 150 Fragen geschafft — weiter mit Pro"
-      : "Free 150 done — continue with Pro",
+      ? "Freie 150 Fragen geschafft: weiter mit Pro"
+      : "Free 150 done: continue with Pro",
 
     description: de
       ? "Hol dir Zugriff auf den kompletten Fragenpool (über 10.000 Fragen) plus Wiederholungsplan, Mock-Prüfung und die Pass-Garantie."
@@ -106,15 +106,15 @@ export function getPaywallCopy({ lang, stats }: PaywallCopyArgs): PaywallCopy {
     bullets: de
       ? [
           "Voller Zugriff auf über 10.000 Fragen in allen 3 Prüfungstypen",
-          "Pass first try — oder lerne kostenlos weiter bis zum Bestehen",
+          "Pass first try, oder lerne kostenlos weiter bis zum Bestehen",
           "Wiederholungsplan, Mock-Prüfung und Leistungs-Dashboard",
-          "7-Tage-Geld-zurück-Garantie — keine Fragen",
+          "7-Tage-Geld-zurück-Garantie, keine Fragen",
         ]
       : [
           "Full access to all 10,000+ questions across 3 exam types",
-          "Pass first try — or study free until you do",
+          "Pass first try, or study free until you do",
           "Spaced repetition, mock exam, and performance dashboard",
-          "7-day money-back guarantee — no questions asked",
+          "7-day money-back guarantee, no questions asked",
         ],
 
     primaryCta: de ? "Pläne ansehen" : "See plans",
@@ -137,7 +137,7 @@ export function getPaywallCopy({ lang, stats }: PaywallCopyArgs): PaywallCopy {
         ? "Das ist deine Arbeit. Mit Pro behältst du alles und schaltest die restlichen Fragen frei."
         : "That's your own work. With Pro you keep all of it and unlock the rest."
       : de
-        ? "Das ist ein Meilenstein — jetzt kommt der wichtige Teil."
-        : "That's a milestone — now comes the meaningful part.",
+        ? "Das ist ein Meilenstein: jetzt kommt der wichtige Teil."
+        : "That's a milestone: now comes the meaningful part.",
   };
 }

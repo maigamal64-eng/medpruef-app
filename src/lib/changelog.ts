@@ -338,32 +338,32 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-04-28",
     tag: "feature",
     title: {
-      de: "Neuer 3-Monats-Einstieg: 27 € einmalig — ungefähr 9 € pro Monat",
-      en: "New 3-Month Starter: €27 one-time — about €9 per month",
+      de: "Neuer 3-Monats-Einstieg: 27 € einmalig, ungefähr 9 € pro Monat",
+      en: "New 3-Month Starter: €27 one-time, about €9 per month",
     },
     description: {
-      de: "Der bisherige Erste-Monat-Test (19 €) wird zum Einzelmonat-Fallback. Neuer Standard-Einstieg: 90 Tage Vollzugang für 27 € — ein einmaliger Kauf, keine automatische Verlängerung. Limitiert auf einen Kauf pro Konto, danach geht es weiter mit der Juni-26-Kohorte oder einem einmaligen Bridging-Monat.",
-      en: "The former €19 first-month trial becomes the single-month fallback. New default entry: 90 days of full access for €27 — one-time purchase, no auto-renewal. Capped at one purchase per account; afterward upgrade to the June 26 Cohort or buy a single bridging month.",
+      de: "Der bisherige Erste-Monat-Test (19 €) wird zum Einzelmonat-Fallback. Neuer Standard-Einstieg: 90 Tage Vollzugang für 27 €: ein einmaliger Kauf, keine automatische Verlängerung. Limitiert auf einen Kauf pro Konto, danach geht es weiter mit der Juni-26-Kohorte oder einem einmaligen Bridging-Monat.",
+      en: "The former €19 first-month trial becomes the single-month fallback. New default entry: 90 days of full access for €27: one-time purchase, no auto-renewal. Capped at one purchase per account; afterward upgrade to the June 26 Cohort or buy a single bridging month.",
     },
   },
   {
     date: "2026-04-28",
     tag: "improvement",
     title: {
-      de: "Empfehlungsprogramm sichtbarer — Telegram, WhatsApp & Social",
-      en: "Referral program more prominent — Telegram, WhatsApp & socials",
+      de: "Empfehlungsprogramm sichtbarer: Telegram, WhatsApp & Social",
+      en: "Referral program more prominent: Telegram, WhatsApp & socials",
     },
     description: {
-      de: "Auf der Preise-Seite haben wir das Empfehlungsprogramm prominenter gemacht. Empfehlungslohn bleibt 25 € / 50 € / 75 € je nach Tarif — neu: 15 € pro 3-Monats-Einstieg. Der Empfehlungslink lässt sich direkt aus dem Empfehlungs-Dashboard auf Telegram/WhatsApp teilen.",
-      en: "Referrals are now more prominent on the pricing page. Payout stays €25 / €50 / €75 per tier — new: €15 per 3-month starter sign-up. Your referral link can be shared straight to Telegram/WhatsApp from the referrals dashboard.",
+      de: "Auf der Preise-Seite haben wir das Empfehlungsprogramm prominenter gemacht. Empfehlungslohn bleibt 25 € / 50 € / 75 € je nach Tarif, neu: 15 € pro 3-Monats-Einstieg. Der Empfehlungslink lässt sich direkt aus dem Empfehlungs-Dashboard auf Telegram/WhatsApp teilen.",
+      en: "Referrals are now more prominent on the pricing page. Payout stays €25 / €50 / €75 per tier, new: €15 per 3-month starter sign-up. Your referral link can be shared straight to Telegram/WhatsApp from the referrals dashboard.",
     },
   },
   {
     date: "2026-04-26",
     tag: "fix",
     title: {
-      de: "Tippen im Feedback-Dialog bleibt jetzt stabil — kein Fokusverlust mehr",
-      en: "Typing in feedback dialogs is now stable — no more focus loss",
+      de: "Tippen im Feedback-Dialog bleibt jetzt stabil: kein Fokusverlust mehr",
+      en: "Typing in feedback dialogs is now stable: no more focus loss",
     },
     description: {
       de: "Beim Tippen in der Feedback- oder Frage-melden-Box verlor das Textfeld nach jedem Buchstaben den Fokus. Ursache war ein interner React-Fehler im Dialog-Baustein, der den Fokus bei jeder Eingabe auf den Schließen-Button zurückgesetzt hat. Behoben.",
@@ -378,64 +378,64 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "Survey now waits until you have real usage experience",
     },
     description: {
-      de: "Die kurze Nutzungsumfrage öffnet sich nun erst ab der 3. Sitzung und nach mindestens 25 beantworteten Fragen — nicht mehr für neue Nutzer beim ersten Besuch.",
-      en: "The short user survey now opens only from session 3+ and after at least 25 questions answered — no longer shown to brand-new users on first visit.",
+      de: "Die kurze Nutzungsumfrage öffnet sich nun erst ab der 3. Sitzung und nach mindestens 25 beantworteten Fragen: nicht mehr für neue Nutzer beim ersten Besuch.",
+      en: "The short user survey now opens only from session 3+ and after at least 25 questions answered: no longer shown to brand-new users on first visit.",
     },
   },
   {
     date: "2026-04-26",
     tag: "fix",
     title: {
-      de: "Telegram-Bot antwortet jetzt auf /start — plus 9 UX-Fixes",
-      en: "Telegram bot now replies to /start — plus 9 UX fixes",
+      de: "Telegram-Bot antwortet jetzt auf /start, plus 9 UX-Fixes",
+      en: "Telegram bot now replies to /start, plus 9 UX fixes",
     },
     description: {
-      de: "Der Telegram-Bot hat auf einen leeren /start-Befehl bisher gar nicht reagiert — Nutzer sahen nur Stille. Jetzt antwortet er sofort mit einer Willkommensnachricht und zwei Buttons: „MedPrüf öffnen & anmelden\" und „Mini App öffnen\". Außerdem: Der Bot antwortet ab sofort in der Sprache, die du in der App verwendest (DE/EN), nicht mehr immer auf Englisch. Das PWA-Installationsbanner überlagert den Seiteninhalt nicht mehr — es sitzt jetzt als schmale Leiste oben. Der Feedback-Button überlappt nicht mehr die untere Navigation auf Mobilgeräten. Der \"Bot aktivieren\"-Banner wird innerhalb der Telegram-App selbst nicht mehr angezeigt. Der Preis in der Beschreibung wurde auf €79 für 3 Monate korrigiert (von fälschlich €19). Weitere kleinere Verbesserungen.",
-      en: "The Telegram bot was completely silent when you sent a bare /start command — users saw nothing. It now replies immediately with a welcome message and two buttons: \"Open MedPrüf & sign in\" and \"Open Mini App\". Also: the bot now replies in the language you're using in the app (DE/EN) instead of always defaulting to English. The PWA install banner no longer overlaps page content — it's now a slim bar pinned to the top. The feedback button no longer overlaps the bottom nav on mobile. The \"Activate bot\" banner is no longer shown when you're already inside the Telegram app. The price in the description was corrected to €79 for 3 months (was incorrectly €19). Plus other minor polish.",
+      de: "Der Telegram-Bot hat auf einen leeren /start-Befehl bisher gar nicht reagiert: Nutzer sahen nur Stille. Jetzt antwortet er sofort mit einer Willkommensnachricht und zwei Buttons: „MedPrüf öffnen & anmelden\" und „Mini App öffnen\". Außerdem: Der Bot antwortet ab sofort in der Sprache, die du in der App verwendest (DE/EN), nicht mehr immer auf Englisch. Das PWA-Installationsbanner überlagert den Seiteninhalt nicht mehr, es sitzt jetzt als schmale Leiste oben. Der Feedback-Button überlappt nicht mehr die untere Navigation auf Mobilgeräten. Der \"Bot aktivieren\"-Banner wird innerhalb der Telegram-App selbst nicht mehr angezeigt. Der Preis in der Beschreibung wurde auf €79 für 3 Monate korrigiert (von fälschlich €19). Weitere kleinere Verbesserungen.",
+      en: "The Telegram bot was completely silent when you sent a bare /start command: users saw nothing. It now replies immediately with a welcome message and two buttons: \"Open MedPrüf & sign in\" and \"Open Mini App\". Also: the bot now replies in the language you're using in the app (DE/EN) instead of always defaulting to English. The PWA install banner no longer overlaps page content; it's now a slim bar pinned to the top. The feedback button no longer overlaps the bottom nav on mobile. The \"Activate bot\" banner is no longer shown when you're already inside the Telegram app. The price in the description was corrected to €79 for 3 months (was incorrectly €19). Plus other minor polish.",
     },
   },
   {
     date: "2026-04-24",
     tag: "improvement",
     title: {
-      de: "Empfehlungen — Code ab Tag 1 sichtbar, Auszahlungsmethode später",
-      en: "Referrals — code visible from day 1, payout method set later",
+      de: "Empfehlungen: Code ab Tag 1 sichtbar, Auszahlungsmethode später",
+      en: "Referrals: code visible from day 1, payout method set later",
     },
     description: {
-      de: "Wir haben den Empfehlungs-Flow umgebaut. Vorher mussten alle zuerst eine Auszahlungsmethode (Wallet oder Wise) eingeben, bevor irgendetwas passierte — Resultat: kaum jemand hat den Code je geteilt. Neu: dein Empfehlungscode erscheint sofort auf der Startseite, mit einem „Kopieren\"-Button und einer einzigen Zeile Kontext („Freund wird Pro → beide bekommen Bonus\"). Die Auszahlungsmethode wirst du erst dann gefragt, wenn dein erster Empfehlter tatsächlich bezahlt hat — per E-Mail, mit direktem Link zur Einrichtung. Dazu: subtiles oranges Signal in der Seitenleiste neben „Empfehlungen\", solange du den Code noch nicht kopiert hast. Kleine „Teile MedPrüf\"-Karte nach einem Quiz mit ≥80% Genauigkeit (einmalig, wegklickbar). Community-Zähler auf /empfehlungen („Empfehlungen diese Woche\") für ehrliche soziale Signale — die ersten 10 Empfehler bekommen einen extra Bonus.",
-      en: "We've reworked the referral flow. Before, everyone had to configure a payout method (crypto wallet or Wise) before anything happened — result: almost nobody ever shared their code. Now: your referral code appears on the home page from day 1, with a „Copy\" button and a single line of context („Friend goes Pro → both get a bonus\"). You're only asked for a payout method once your first referee actually pays — by email, with a direct setup link. Also: a small amber dot next to „Referrals\" in the sidebar until you've copied your code. A one-time „Share MedPrüf\" chip after a quiz with ≥80% accuracy (dismissible). Community counts on /referrals („Referrals this week\") for honest social proof — the first 10 referrers get a bonus on top.",
+      de: "Wir haben den Empfehlungs-Flow umgebaut. Vorher mussten alle zuerst eine Auszahlungsmethode (Wallet oder Wise) eingeben, bevor irgendetwas passierte: Resultat, kaum jemand hat den Code je geteilt. Neu: dein Empfehlungscode erscheint sofort auf der Startseite, mit einem „Kopieren\"-Button und einer einzigen Zeile Kontext („Freund wird Pro → beide bekommen Bonus\"). Die Auszahlungsmethode wirst du erst dann gefragt, wenn dein erster Empfehlter tatsächlich bezahlt hat: per E-Mail, mit direktem Link zur Einrichtung. Dazu: subtiles oranges Signal in der Seitenleiste neben „Empfehlungen\", solange du den Code noch nicht kopiert hast. Kleine „Teile MedPrüf\"-Karte nach einem Quiz mit ≥80% Genauigkeit (einmalig, wegklickbar). Community-Zähler auf /empfehlungen („Empfehlungen diese Woche\") für ehrliche soziale Signale, die ersten 10 Empfehler bekommen einen extra Bonus.",
+      en: "We've reworked the referral flow. Before, everyone had to configure a payout method (crypto wallet or Wise) before anything happened: result, almost nobody ever shared their code. Now: your referral code appears on the home page from day 1, with a „Copy\" button and a single line of context („Friend goes Pro → both get a bonus\"). You're only asked for a payout method once your first referee actually pays: by email, with a direct setup link. Also: a small amber dot next to „Referrals\" in the sidebar until you've copied your code. A one-time „Share MedPrüf\" chip after a quiz with ≥80% accuracy (dismissible). Community counts on /referrals („Referrals this week\") for honest social proof, the first 10 referrers get a bonus on top.",
     },
   },
   {
     date: "2026-04-24",
     tag: "feature",
     title: {
-      de: "Prüfungs-Landingpages & Blog — SEO-Fundament",
-      en: "Exam landing pages & blog — SEO foundation",
+      de: "Prüfungs-Landingpages & Blog: SEO-Fundament",
+      en: "Exam landing pages & blog: SEO foundation",
     },
     description: {
-      de: "Drei eigenständige Landingpages für die Hauptprüfungstypen sind online: /kenntnispruefung-wien (7.566 Fragen, SIP 4 + SIP 5), /kmp-innsbruck (3.091 Fragen, 12 Module) und /pharmakologie-pruefung-wien (335 Fragen, inklusive sichtbarem Countdown zur Juni-26-Prüfung). Jede Seite hat eigene Meta-Tags, OpenGraph-Bilder (automatisch generiert via next/og), JSON-LD Course-Schema und 5-7 prüfungsspezifische FAQ-Einträge. Zusätzlich: /blog-Index + erster 1.800-Wörter-Guide „Kenntnisprüfung Wien — vollständiges Handbuch 2026\" (Nostrifikation, SIP-Struktur, Lernplan, häufige Fehler). Sitemap + robots.txt aktualisiert. Infrastruktur für organische Suchakquise steht — Content-Produktion folgt.",
-      en: "Three standalone landing pages for the main exam types are live: /kenntnispruefung-wien (7,566 questions, SIP 4 + SIP 5), /kmp-innsbruck (3,091 questions, 12 modules), and /pharmakologie-pruefung-wien (335 questions, including a visible countdown to the 26 June 2026 exam). Each page has its own meta tags, OpenGraph images (auto-generated via next/og), JSON-LD Course schema, and 5-7 exam-specific FAQ entries. Also: /blog index + first 1,800-word guide „Kenntnisprüfung Wien — vollständiges Handbuch 2026\" (nostrification, SIP structure, study plan, common mistakes). Sitemap + robots.txt updated. Organic-search acquisition infrastructure is now in place — content production follows.",
+      de: "Drei eigenständige Landingpages für die Hauptprüfungstypen sind online: /kenntnispruefung-wien (7.566 Fragen, SIP 4 + SIP 5), /kmp-innsbruck (3.091 Fragen, 12 Module) und /pharmakologie-pruefung-wien (335 Fragen, inklusive sichtbarem Countdown zur Juni-26-Prüfung). Jede Seite hat eigene Meta-Tags, OpenGraph-Bilder (automatisch generiert via next/og), JSON-LD Course-Schema und 5-7 prüfungsspezifische FAQ-Einträge. Zusätzlich: /blog-Index + erster 1.800-Wörter-Guide „Kenntnisprüfung Wien: vollständiges Handbuch 2026\" (Nostrifikation, SIP-Struktur, Lernplan, häufige Fehler). Sitemap + robots.txt aktualisiert. Infrastruktur für organische Suchakquise steht, Content-Produktion folgt.",
+      en: "Three standalone landing pages for the main exam types are live: /kenntnispruefung-wien (7,566 questions, SIP 4 + SIP 5), /kmp-innsbruck (3,091 questions, 12 modules), and /pharmakologie-pruefung-wien (335 questions, including a visible countdown to the 26 June 2026 exam). Each page has its own meta tags, OpenGraph images (auto-generated via next/og), JSON-LD Course schema, and 5-7 exam-specific FAQ entries. Also: /blog index + first 1,800-word guide „Kenntnisprüfung Wien: vollständiges Handbuch 2026\" (nostrification, SIP structure, study plan, common mistakes). Sitemap + robots.txt updated. Organic-search acquisition infrastructure is now in place, content production follows.",
     },
   },
   {
     date: "2026-04-24",
     tag: "feature",
     title: {
-      de: "Neuer Einsteiger-Tarif — erster Monat für €19 (einmalig)",
-      en: "New entry tier — first month for €19 (one-time)",
+      de: "Neuer Einsteiger-Tarif: erster Monat für €19 (einmalig)",
+      en: "New entry tier: first month for €19 (one-time)",
     },
     description: {
-      de: "Ab sofort gibt es einen €19-Einsteiger-Tarif: 30 Tage Vollzugang auf alle drei Prüfungen (Kenntnisprüfung Wien, KMP Innsbruck, Pharmakologie), einmalig bezahlt in Krypto (USDT oder USDC). Es ist bewusst KEIN Abo — nichts verlängert sich automatisch, wir speichern keine Kreditkartendaten, der Zugang läuft nach 30 Tagen einfach aus. Am Tag 25 erinnern wir dich einmalig per E-Mail, falls du einen längeren Tarif wählen willst. Damit kostet „echt ausprobieren\" weniger als ein Lehrbuchkapitel. Der €114-Juni-26-Kohorten-Tarif bleibt unverändert der empfohlene Weg für alle, die auf die Juni-Prüfung hinarbeiten.",
-      en: "There's now a €19 entry tier: 30 days of full access to all three exam types (Kenntnisprüfung Wien, KMP Innsbruck, Pharmakologie), paid once in crypto (USDT or USDC). It is deliberately NOT a subscription — nothing auto-renews, we store no card details, access simply expires after 30 days. On day 25 we send a single reminder email in case you want to pick a longer plan. That brings \"try it for real\" below the price of a textbook chapter. The €114 June 26 Cohort tier remains the recommended path for anyone prepping for the June sitting.",
+      de: "Ab sofort gibt es einen €19-Einsteiger-Tarif: 30 Tage Vollzugang auf alle drei Prüfungen (Kenntnisprüfung Wien, KMP Innsbruck, Pharmakologie), einmalig bezahlt in Krypto (USDT oder USDC). Es ist bewusst KEIN Abo: nichts verlängert sich automatisch, wir speichern keine Kreditkartendaten, der Zugang läuft nach 30 Tagen einfach aus. Am Tag 25 erinnern wir dich einmalig per E-Mail, falls du einen längeren Tarif wählen willst. Damit kostet „echt ausprobieren\" weniger als ein Lehrbuchkapitel. Der €114-Juni-26-Kohorten-Tarif bleibt unverändert der empfohlene Weg für alle, die auf die Juni-Prüfung hinarbeiten.",
+      en: "There's now a €19 entry tier: 30 days of full access to all three exam types (Kenntnisprüfung Wien, KMP Innsbruck, Pharmakologie), paid once in crypto (USDT or USDC). It is deliberately NOT a subscription: nothing auto-renews, we store no card details, access simply expires after 30 days. On day 25 we send a single reminder email in case you want to pick a longer plan. That brings \"try it for real\" below the price of a textbook chapter. The €114 June 26 Cohort tier remains the recommended path for anyone prepping for the June sitting.",
     },
   },
   {
     date: "2026-04-23",
     tag: "admin",
     title: {
-      de: "Admin — Audit-Log vollständig verdrahtet + Mission-Control-Indikator",
-      en: "Admin — audit log fully wired + mission-control indicator",
+      de: "Admin: Audit-Log vollständig verdrahtet + Mission-Control-Indikator",
+      en: "Admin: audit log fully wired + mission-control indicator",
     },
     description: {
       de: "Jede Admin-Mutation (Nutzer sperren, Fragen bearbeiten, PUYP genehmigen, Feedback-Status ändern, Referrals auszahlen, SQL-Runner, CSV-Exporte) schreibt jetzt eine Zeile in admin_audit_log mit actor_id, Aktion, Ziel, Payload, IP, User-Agent. Der Helper behandelt UUID- und Integer-Ziele richtig (Integer landen in payload.target_ref, damit der Insert nicht still scheitert). Neuer Indikator oben auf /admin/overview zeigt „Admin-Aktionen heute: N · Letzte: vor X Min\" live via Realtime. Integrationstest unter tests/e2e/admin/audit-log.spec.ts beweist end-to-end, dass eine Mutation tatsächlich eine Audit-Zeile schreibt.",
@@ -446,44 +446,44 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-04-24",
     tag: "improvement",
     title: {
-      de: "Englische Übersetzungen — Modals, Toasts, Onboarding",
-      en: "English translations — modals, toasts, onboarding",
+      de: "Englische Übersetzungen: Modals, Toasts, Onboarding",
+      en: "English translations: modals, toasts, onboarding",
     },
     description: {
-      de: "Wer MedPrüf auf Englisch nutzt, sah bisher an vielen Stellen — Onboarding, Modals, Toasts, Banner, PWA-Hinweise, Feedback-Widget — immer noch deutsche Texte. Jetzt sind die wichtigsten UI-Oberflächen durchgängig zweisprachig. Zusätzlich: Das Onboarding hat einen eigenen Sprach-Schalter oben rechts auf jedem Schritt bekommen, so dass du die Sprache auch mitten im Einrichten wechseln kannst.",
-      en: "If you used MedPrüf in English, many surfaces — onboarding, modals, toasts, banners, PWA prompts, the feedback widget — still showed German text. We went through the app and made every user-visible string fully bilingual. On top of that: the onboarding flow now has its own language switcher in the top-right of every step, so you can switch mid-setup.",
+      de: "Wer MedPrüf auf Englisch nutzt, sah bisher an vielen Stellen (Onboarding, Modals, Toasts, Banner, PWA-Hinweise, Feedback-Widget) immer noch deutsche Texte. Jetzt sind die wichtigsten UI-Oberflächen durchgängig zweisprachig. Zusätzlich: Das Onboarding hat einen eigenen Sprach-Schalter oben rechts auf jedem Schritt bekommen, so dass du die Sprache auch mitten im Einrichten wechseln kannst.",
+      en: "If you used MedPrüf in English, many surfaces (onboarding, modals, toasts, banners, PWA prompts, the feedback widget) still showed German text. We went through the app and made every user-visible string fully bilingual. On top of that: the onboarding flow now has its own language switcher in the top-right of every step, so you can switch mid-setup.",
     },
   },
   {
     date: "2026-04-24",
     tag: "fix",
     title: {
-      de: "KI-Erklärung — ehrlichere Anzeige für kostenlose Nutzer",
-      en: "AI Explain — honest messaging for free users",
+      de: "KI-Erklärung: ehrlichere Anzeige für kostenlose Nutzer",
+      en: "AI Explain: honest messaging for free users",
     },
     description: {
-      de: "Wenn für eine Frage noch keine zwischengespeicherte KI-Erklärung existiert, zeigte die KI für kostenlose Nutzer bisher „KI-Assistent ist momentan nicht verfügbar\" — was wie eine Serverstörung klang und zu Rückmeldungen wie „Die KI funktioniert überhaupt nicht\" führte. Neu: wir zeigen stattdessen die vorhandene Lehrbuch-Erklärung der Frage und erklären klar, dass automatische KI-Neugenerierung ein Pro-Feature ist, nicht ein Defekt. Wenn ein Pro-Nutzer die Erklärung später anfragt, wird sie auch für kostenlose Nutzer dauerhaft sichtbar.",
-      en: "When no AI explanation was cached for a question yet, free users used to see \"AI assistant is currently unavailable\" — which reads like an outage, and prompted feedback like \"the AI is completely broken.\" Now we render the question's existing textbook explanation instead, and clearly explain that automatic AI regeneration is a Pro feature, not a bug. Once any Pro user requests an explanation, it's cached and free for everyone to read.",
+      de: "Wenn für eine Frage noch keine zwischengespeicherte KI-Erklärung existiert, zeigte die KI für kostenlose Nutzer bisher „KI-Assistent ist momentan nicht verfügbar\" (was wie eine Serverstörung klang und zu Rückmeldungen wie „Die KI funktioniert überhaupt nicht\" führte). Neu: wir zeigen stattdessen die vorhandene Lehrbuch-Erklärung der Frage und erklären klar, dass automatische KI-Neugenerierung ein Pro-Feature ist, nicht ein Defekt. Wenn ein Pro-Nutzer die Erklärung später anfragt, wird sie auch für kostenlose Nutzer dauerhaft sichtbar.",
+      en: "When no AI explanation was cached for a question yet, free users used to see \"AI assistant is currently unavailable\" (which reads like an outage, and prompted feedback like \"the AI is completely broken\"). Now we render the question's existing textbook explanation instead, and clearly explain that automatic AI regeneration is a Pro feature, not a bug. Once any Pro user requests an explanation, it's cached and free for everyone to read.",
     },
   },
   {
     date: "2026-04-23",
     tag: "improvement",
     title: {
-      de: "Startseite — Premium-Redesign",
-      en: "Dashboard — premium redesign",
+      de: "Startseite: Premium-Redesign",
+      en: "Dashboard: premium redesign",
     },
     description: {
-      de: "Die Startseite wurde von Grund auf überarbeitet: Gamification-Hero steht jetzt oben und bekommt den Platz, den er verdient — mit Streak (warmes Orange), Tagesziel-Ring (Viridian), Genauigkeit und einem neuen Fortschrittsbalken zum nächsten Rang. Warngelbe „Smart Recommendation\" ersetzt durch eine ruhige Viridian-Coach-Empfehlung („10 Fragen üben\"). Neue Begrüßung je nach Tageszeit („Guten Morgen/Tag/Abend\") + Kohorten-Chip mit Prüfungsdatum. Eine einzige klare Haupt-CTA (Weiterlernen) statt drei gleichgewichtiger Buttons. Konsistentes 8-Punkt-Raster, einheitliche 16px-Kartenradien, Tokens statt Inline-Hex.",
-      en: "The dashboard has been rebuilt end-to-end: the gamification hero now sits at the top and gets the room it deserves — with streak (warm orange), daily goal ring (viridian), accuracy, and a new progress bar to the next rank. Warning-yellow \"Smart Recommendation\" replaced by a calm viridian coach card (\"Practice 10 questions\"). New time-of-day greeting (\"Good morning/afternoon/evening\") + cohort chip showing your exam in days. One clear primary CTA (Continue) instead of three equal-weight buttons. Consistent 8-pt spacing grid, unified 16px card radius, tokens instead of inline hex throughout.",
+      de: "Die Startseite wurde von Grund auf überarbeitet: Gamification-Hero steht jetzt oben und bekommt den Platz, den er verdient, mit Streak (warmes Orange), Tagesziel-Ring (Viridian), Genauigkeit und einem neuen Fortschrittsbalken zum nächsten Rang. Warngelbe „Smart Recommendation\" ersetzt durch eine ruhige Viridian-Coach-Empfehlung („10 Fragen üben\"). Neue Begrüßung je nach Tageszeit („Guten Morgen/Tag/Abend\") + Kohorten-Chip mit Prüfungsdatum. Eine einzige klare Haupt-CTA (Weiterlernen) statt drei gleichgewichtiger Buttons. Konsistentes 8-Punkt-Raster, einheitliche 16px-Kartenradien, Tokens statt Inline-Hex.",
+      en: "The dashboard has been rebuilt end-to-end: the gamification hero now sits at the top and gets the room it deserves, with streak (warm orange), daily goal ring (viridian), accuracy, and a new progress bar to the next rank. Warning-yellow \"Smart Recommendation\" replaced by a calm viridian coach card (\"Practice 10 questions\"). New time-of-day greeting (\"Good morning/afternoon/evening\") + cohort chip showing your exam in days. One clear primary CTA (Continue) instead of three equal-weight buttons. Consistent 8-pt spacing grid, unified 16px card radius, tokens instead of inline hex throughout.",
     },
   },
   {
     date: "2026-04-23",
     tag: "improvement",
     title: {
-      de: "Landing, Preise & FAQ — Premium-Politur",
-      en: "Landing, Pricing & FAQ — premium polish",
+      de: "Landing, Preise & FAQ: Premium-Politur",
+      en: "Landing, Pricing & FAQ: premium polish",
     },
     description: {
       de: "Öffentliche Flächen komplett überarbeitet. Landing: neues Mobile-Hamburger-Menü, Hero-CTAs stapeln sich jetzt sauber auf schmalen Screens, sichtbare Zahlenreihe (10.992 Fragen · 3 Prüfungen · 7 Sprachen · 1.806 Mehrfachantworten) schrumpft nicht mehr zusammen. Pricing: Mobile-Reihenfolge priorisiert 6 Monate („Beliebt\") vor 3/12/Monatlich, ruhigere Referral- und Pass-Until-You-Pass-Blöcke unter den Tarifkarten, Warteliste-Dialog in klar „du\"-freundlicher Tonalität. FAQ: sticky Inhaltsverzeichnis links am Desktop, aufklappbar am Handy, Info-Callouts für harte Regeln (max. 2 Zyklen, kein SEPA), „Zurück zu den Preisen\"-CTA am Ende der relevantesten Antworten.",
@@ -494,11 +494,11 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-04-23",
     tag: "feature",
     title: {
-      de: "Empfehlungen — gestaffelte Prämien €25/€50/€75",
-      en: "Referrals — tiered €25/€50/€75 payouts",
+      de: "Empfehlungen: gestaffelte Prämien €25/€50/€75",
+      en: "Referrals: tiered €25/€50/€75 payouts",
     },
     description: {
-      de: "Pro Abo-Typ deines Empfehlten: Monatlich & 3 Monate = €25, 6 Monate & 12 Monate = €50, Juni-26-Kohorte = €75. Nach Zahlungseingang startet eine 30-Tage-Sperrfrist, anschließend wird die Prämie auszahlbar (USDT oder Wise — kein SEPA). Jahreslimit: €600 pro Empfehlender. Neue Referral-Seite mit 4-Spalten-Statusleiste (gesamt · in Sperre · auszahlbar · verdient) + Prämientabelle nach Abo-Typ.",
+      de: "Pro Abo-Typ deines Empfehlten: Monatlich & 3 Monate = €25, 6 Monate & 12 Monate = €50, Juni-26-Kohorte = €75. Nach Zahlungseingang startet eine 30-Tage-Sperrfrist, anschließend wird die Prämie auszahlbar (USDT oder Wise, kein SEPA). Jahreslimit: €600 pro Empfehlender. Neue Referral-Seite mit 4-Spalten-Statusleiste (gesamt · in Sperre · auszahlbar · verdient) + Prämientabelle nach Abo-Typ.",
       en: "Payout per plan your referee picks: monthly & 3 months = €25, 6 months & 12 months = €50, June 26 Cohort = €75. A 30-day hold starts once they pay, then the reward becomes claimable in USDT or via Wise (no SEPA). Annual cap: €600 per referrer. New referral page with 4-stat strip (total · in hold · claimable · earned) and a per-plan payout table.",
     },
   },
@@ -506,8 +506,8 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-04-23",
     tag: "feature",
     title: {
-      de: "Kostenlose Stufe — 150 Fragen pro Prüfung",
-      en: "Free tier — 150 questions per exam",
+      de: "Kostenlose Stufe: 150 Fragen pro Prüfung",
+      en: "Free tier: 150 questions per exam",
     },
     description: {
       de: "Kostenlose Nutzer sehen ab sofort die ersten 150 aktiven Fragen pro Prüfungstyp (Kenntnisprüfung Wien, KMP Innsbruck, Pharmakologie). Spaced-Repetition, Mock-Exam, Bookmarks und Notizen bleiben der Pro-Stufe vorbehalten. Beim Wechsel zwischen Prüfungen gibt es erneut 150 kostenlose Fragen. Wer alle 150 durchgearbeitet hat, sieht einen Paywall-Dialog mit Link zu den Tarifen.",
@@ -518,8 +518,8 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-04-23",
     tag: "feature",
     title: {
-      de: "Pass-Until-You-Pass-Garantie — Nachweis-Upload + Verlängerung",
-      en: "Pass-Until-You-Pass guarantee — proof upload + extension flow",
+      de: "Pass-Until-You-Pass-Garantie: Nachweis-Upload + Verlängerung",
+      en: "Pass-Until-You-Pass guarantee: proof upload + extension flow",
     },
     description: {
       de: "Wer in der Juni-26-Kohorte oder im Jahresabo den ersten echten Prüfungsversuch nicht besteht und ≥70 % des Fragenkatalogs bearbeitet hat, bekommt den Zugang kostenlos bis zum nächsten Prüfungszyklus verlängert (maximal 2 zusätzliche Zyklen pro Abonnement, kein Bargeld-Rückerstattungs-Weg). Neue Seite `/dashboard/exam-result` zeigt nach dem konfigurierten Prüfungsdatum zwei Buttons: „Bestanden\" (wird sofort gespeichert) oder „Nicht bestanden\" (Datum + Prüfungstyp + Nachweis-Upload, PDF oder Bild, max. 10 MB). Admin-Queue unter `/admin/puyp` mit Signed-URL-Preview, Genehmigen/Ablehnen, Vorschlag für neues Ablaufdatum aus `lib/exam-dates.ts`. Audit-Tabelle `subscription_extensions` protokolliert jede Verlängerung. Eligibilität fällt zurück auf `isPuypEligibleTier` aus `src/lib/nowpayments.ts`.",
@@ -534,8 +534,8 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "April 23 positioning update",
     },
     description: {
-      de: "Die Juni-26-Kohorte ersetzt das Founders-Framing auf der Preis- und Landingpage. Kernversprechen: „Beim ersten Versuch bestehen — oder kostenlos weiterlernen, bis du es schaffst.\" Kostenloser Tarif (150 Fragen × 3 Prüfungstypen, volle Erklärungen, kein Ablaufdatum) bekommt eine eigene Karte. Pass-Until-You-Pass-Garantie auf der Juni-26-Kohorte (€114, 6 Monate) und dem Jahresabo. Gestaffelte Empfehlungsauszahlungen (€25 / €50 / €75 je nach Empfehlungs-Tarif, 30-Tage-Sperrfrist, €600/Jahr-Cap). Jeder bezahlte Tarif enthält jetzt alle drei Prüfungstypen. Neue `/faq` Seite mit PUYP-, Krypto-, Empfehlungs- und Free-Tier-FAQ. Jede „Founders\"-Referenz außerhalb historischer Changelogs wurde entfernt.",
-      en: "The June 26 Cohort replaces the Founders' framing on pricing + landing. Core promise: \"Pass first try — or study free until you do.\" Free tier (150 questions × 3 exam types, full explanations, no expiry) gets its own card. Pass-Until-You-Pass guarantee on the June 26 Cohort (€114, 6 months) and the annual plan. Tiered referral payouts (€25 / €50 / €75 depending on the referee's plan, 30-day hold, €600/year cap). Every paid tier now includes all three exam types. New `/faq` page with PUYP, crypto, referral and free-tier answers. Every \"Founders'\" string outside historical changelogs has been removed.",
+      de: "Die Juni-26-Kohorte ersetzt das Founders-Framing auf der Preis- und Landingpage. Kernversprechen: „Beim ersten Versuch bestehen, oder kostenlos weiterlernen, bis du es schaffst.\" Kostenloser Tarif (150 Fragen × 3 Prüfungstypen, volle Erklärungen, kein Ablaufdatum) bekommt eine eigene Karte. Pass-Until-You-Pass-Garantie auf der Juni-26-Kohorte (€114, 6 Monate) und dem Jahresabo. Gestaffelte Empfehlungsauszahlungen (€25 / €50 / €75 je nach Empfehlungs-Tarif, 30-Tage-Sperrfrist, €600/Jahr-Cap). Jeder bezahlte Tarif enthält jetzt alle drei Prüfungstypen. Neue `/faq` Seite mit PUYP-, Krypto-, Empfehlungs- und Free-Tier-FAQ. Jede „Founders\"-Referenz außerhalb historischer Changelogs wurde entfernt.",
+      en: "The June 26 Cohort replaces the Founders' framing on pricing + landing. Core promise: \"Pass first try, or study free until you do.\" Free tier (150 questions × 3 exam types, full explanations, no expiry) gets its own card. Pass-Until-You-Pass guarantee on the June 26 Cohort (€114, 6 months) and the annual plan. Tiered referral payouts (€25 / €50 / €75 depending on the referee's plan, 30-day hold, €600/year cap). Every paid tier now includes all three exam types. New `/faq` page with PUYP, crypto, referral and free-tier answers. Every \"Founders'\" string outside historical changelogs has been removed.",
     },
   },
   {
@@ -546,8 +546,8 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "Crypto payment rail (NOWPayments) + subscriptions schema live",
     },
     description: {
-      de: "Infrastruktur für den Founders'-Launch am 26. Juni: neue Migration `20260423000000_crypto_payments_and_referrals.sql` legt `subscriptions` (Audit-Tabelle + Source of Truth), `processed_webhook_events` (Idempotenz-Guard für IPN-Retries), `referrals` (€40/Empfehlung, bis zu €400 Prüfungsgebühr-Rückerstattung) und `waitlist` (Stripe-pending Non-Krypto-Signups) an. Neue Routes: `POST /api/checkout/nowpayments` (requireUser-geschützt, erzeugt eine NOWPayments-Rechnung nur für den Founders'-Tier — andere Tarife sind `available:false` bis Stripe Atlas klar ist) und `POST /api/webhooks/nowpayments` (keine Auth, HMAC-SHA512-Signatur über `x-nowpayments-sig` mit `JSON.stringify(body, Object.keys(body).sort())`, Idempotenz via `processed_webhook_events`-PK). Bei erfolgreicher Zahlung: Subscription auf `active`, `users.tier='pro'`, `users.tier_expires_at = jetzt + 6 Monate`, Empfehlungszeile qualifiziert. `partially_paid` innerhalb 0,5 %-Toleranz zählt als bezahlt (Netzwerkgebühr-Drift). Tests: `scripts/test_nowpayments_signature.mjs` (Node `--test`, 10 Cases für Signaturverifikation).",
-      en: "Infrastructure for the June 26 Founders' launch: new migration `20260423000000_crypto_payments_and_referrals.sql` adds `subscriptions` (audit table + source of truth), `processed_webhook_events` (idempotency guard for IPN retries), `referrals` (€40/referral, up to €400 exam-fee rebate) and `waitlist` (Stripe-pending non-crypto signups). New routes: `POST /api/checkout/nowpayments` (requireUser-guarded, creates a NOWPayments invoice only for the Founders' tier — other tiers are `available:false` until Stripe Atlas clears) and `POST /api/webhooks/nowpayments` (no auth, HMAC-SHA512 signature over `x-nowpayments-sig` using `JSON.stringify(body, Object.keys(body).sort())`, idempotency via `processed_webhook_events` PK). On successful payment: subscription → `active`, `users.tier='pro'`, `users.tier_expires_at = now + 6 months`, referral row qualified. `partially_paid` within 0.5% tolerance counts as paid (network-fee drift). Tests: `scripts/test_nowpayments_signature.mjs` (Node `--test`, 10 cases for signature verification).",
+      de: "Infrastruktur für den Founders'-Launch am 26. Juni: neue Migration `20260423000000_crypto_payments_and_referrals.sql` legt `subscriptions` (Audit-Tabelle + Source of Truth), `processed_webhook_events` (Idempotenz-Guard für IPN-Retries), `referrals` (€40/Empfehlung, bis zu €400 Prüfungsgebühr-Rückerstattung) und `waitlist` (Stripe-pending Non-Krypto-Signups) an. Neue Routes: `POST /api/checkout/nowpayments` (requireUser-geschützt, erzeugt eine NOWPayments-Rechnung nur für den Founders'-Tier; andere Tarife sind `available:false` bis Stripe Atlas klar ist) und `POST /api/webhooks/nowpayments` (keine Auth, HMAC-SHA512-Signatur über `x-nowpayments-sig` mit `JSON.stringify(body, Object.keys(body).sort())`, Idempotenz via `processed_webhook_events`-PK). Bei erfolgreicher Zahlung: Subscription auf `active`, `users.tier='pro'`, `users.tier_expires_at = jetzt + 6 Monate`, Empfehlungszeile qualifiziert. `partially_paid` innerhalb 0,5 %-Toleranz zählt als bezahlt (Netzwerkgebühr-Drift). Tests: `scripts/test_nowpayments_signature.mjs` (Node `--test`, 10 Cases für Signaturverifikation).",
+      en: "Infrastructure for the June 26 Founders' launch: new migration `20260423000000_crypto_payments_and_referrals.sql` adds `subscriptions` (audit table + source of truth), `processed_webhook_events` (idempotency guard for IPN retries), `referrals` (€40/referral, up to €400 exam-fee rebate) and `waitlist` (Stripe-pending non-crypto signups). New routes: `POST /api/checkout/nowpayments` (requireUser-guarded, creates a NOWPayments invoice only for the Founders' tier; other tiers are `available:false` until Stripe Atlas clears) and `POST /api/webhooks/nowpayments` (no auth, HMAC-SHA512 signature over `x-nowpayments-sig` using `JSON.stringify(body, Object.keys(body).sort())`, idempotency via `processed_webhook_events` PK). On successful payment: subscription → `active`, `users.tier='pro'`, `users.tier_expires_at = now + 6 months`, referral row qualified. `partially_paid` within 0.5% tolerance counts as paid (network-fee drift). Tests: `scripts/test_nowpayments_signature.mjs` (Node `--test`, 10 cases for signature verification).",
     },
   },
   {
@@ -558,8 +558,8 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "June 26 Cohort live: 6 months of full access for €114, payable in crypto",
     },
     description: {
-      de: "Neue Preisgestaltung auf `/pricing`: Founders-Tarif als dominante Karte mit Live-Krypto-Checkout (USDT/USDC über NOWPayments). Sechs Monate MedPrüf Pro zum einmaligen Frühbucher-Preis von €114 — €19/Monat-Äquivalent, nur 100 Plätze. Standardtarife (€29/Mo, €79 für 3 Mo, €149 für 6 Mo, €229 für 12 Mo) bleiben sichtbar mit Hinweis „Stripe kommt bald\" plus Warteliste-Dialog, der E-Mail, Prüfungstyp (Wien/Innsbruck/Pharma) und optional Prüfungsdatum erfasst. Nach erfolgreicher Krypto-Zahlung landet der Founder auf `/?welcome=founder` und erhält Konfetti + Willkommens-Toast. Referral-Mechanik im Footer: €40 pro Empfehlung, bis zu €400 Rückerstattung der Prüfungsgebühr bei Bestehen.",
-      en: "New pricing layout on `/pricing`: Founders' tier as the dominant card with live crypto checkout (USDT/USDC via NOWPayments). Six months of MedPrüf Pro for a one-time early-bird €114 — €19/mo equivalent, 100 seats only. Standard tiers (€29/mo, €79 for 3 mo, €149 for 6 mo, €229 for 12 mo) stay visible with a \"Stripe launching soon\" badge plus waitlist dialog capturing email, exam type (Vienna/Innsbruck/Pharma) and optional exam date. After a successful crypto payment the founder lands on `/?welcome=founder` and gets confetti + a welcome toast. Referral mechanic in the footer: €40 per referral, up to €400 exam-fee rebate on pass.",
+      de: "Neue Preisgestaltung auf `/pricing`: Founders-Tarif als dominante Karte mit Live-Krypto-Checkout (USDT/USDC über NOWPayments). Sechs Monate MedPrüf Pro zum einmaligen Frühbucher-Preis von €114, entspricht €19/Monat, nur 100 Plätze. Standardtarife (€29/Mo, €79 für 3 Mo, €149 für 6 Mo, €229 für 12 Mo) bleiben sichtbar mit Hinweis „Stripe kommt bald\" plus Warteliste-Dialog, der E-Mail, Prüfungstyp (Wien/Innsbruck/Pharma) und optional Prüfungsdatum erfasst. Nach erfolgreicher Krypto-Zahlung landet der Founder auf `/?welcome=founder` und erhält Konfetti + Willkommens-Toast. Referral-Mechanik im Footer: €40 pro Empfehlung, bis zu €400 Rückerstattung der Prüfungsgebühr bei Bestehen.",
+      en: "New pricing layout on `/pricing`: Founders' tier as the dominant card with live crypto checkout (USDT/USDC via NOWPayments). Six months of MedPrüf Pro for a one-time early-bird €114, a €19/mo equivalent, 100 seats only. Standard tiers (€29/mo, €79 for 3 mo, €149 for 6 mo, €229 for 12 mo) stay visible with a \"Stripe launching soon\" badge plus waitlist dialog capturing email, exam type (Vienna/Innsbruck/Pharma) and optional exam date. After a successful crypto payment the founder lands on `/?welcome=founder` and gets confetti + a welcome toast. Referral mechanic in the footer: €40 per referral, up to €400 exam-fee rebate on pass.",
     },
   },
   {
@@ -570,8 +570,8 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "KMP Innsbruck grading fixed (C-1): 46 historical answers retroactively regraded",
     },
     description: {
-      de: "Der KoalaMed-Importer schrieb jede `choices`-Zeile mit dem Schlüssel `is_correct`, während alle anderen Prüfungstypen (Kenntnisprüfung Wien, Pharma) und der Client-seitige MCQ-Builder den Schlüssel `correct` lesen. Folge: jede Auswahloption auf KMP-Fragen kam als `correct: undefined` beim Client an, der sie als `false` bewertete — 46 von 47 gespeicherten Antworten mit echter Textübereinstimmung gegen `questions.answer` waren fälschlich als falsch markiert (98 % False-Negative-Rate). Migration `20260422000000_kmp_grading_backfill.sql` normalisiert alle 3.091 KMP-Fragen so, dass beide Schlüssel gesetzt sind (idempotent), regradet die `answer_history`-Zeilen wo der Text übereinstimmt, und synchronisiert `user_gamification.total_correct` anhand der tatsächlichen Korrekt-Zählung. 3 Nutzer betroffen.",
-      en: "The KoalaMed importer wrote every `choices` row with key `is_correct`, while every other exam type (Kenntnisprüfung Wien, Pharma) and the client-side MCQ builder read the key `correct`. Consequence: every answer option on KMP questions arrived at the client as `correct: undefined`, graded as `false` — 46 of 47 stored answers with a genuine text match against `questions.answer` were wrongly flagged wrong (98% false-negative rate). Migration `20260422000000_kmp_grading_backfill.sql` normalizes all 3,091 KMP questions to carry both keys (idempotent), regrades matching `answer_history` rows, and syncs `user_gamification.total_correct` from the actual true-count. 3 users affected.",
+      de: "Der KoalaMed-Importer schrieb jede `choices`-Zeile mit dem Schlüssel `is_correct`, während alle anderen Prüfungstypen (Kenntnisprüfung Wien, Pharma) und der Client-seitige MCQ-Builder den Schlüssel `correct` lesen. Folge: jede Auswahloption auf KMP-Fragen kam als `correct: undefined` beim Client an, der sie als `false` bewertete: 46 von 47 gespeicherten Antworten mit echter Textübereinstimmung gegen `questions.answer` waren fälschlich als falsch markiert (98 % False-Negative-Rate). Migration `20260422000000_kmp_grading_backfill.sql` normalisiert alle 3.091 KMP-Fragen so, dass beide Schlüssel gesetzt sind (idempotent), regradet die `answer_history`-Zeilen wo der Text übereinstimmt, und synchronisiert `user_gamification.total_correct` anhand der tatsächlichen Korrekt-Zählung. 3 Nutzer betroffen.",
+      en: "The KoalaMed importer wrote every `choices` row with key `is_correct`, while every other exam type (Kenntnisprüfung Wien, Pharma) and the client-side MCQ builder read the key `correct`. Consequence: every answer option on KMP questions arrived at the client as `correct: undefined`, graded as `false`: 46 of 47 stored answers with a genuine text match against `questions.answer` were wrongly flagged wrong (98% false-negative rate). Migration `20260422000000_kmp_grading_backfill.sql` normalizes all 3,091 KMP questions to carry both keys (idempotent), regrades matching `answer_history` rows, and syncs `user_gamification.total_correct` from the actual true-count. 3 users affected.",
     },
   },
   {
@@ -582,8 +582,8 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "Streak counter fixed (C-2): day boundary now in Europe/Vienna, 33 user streaks recomputed",
     },
     description: {
-      de: "`/api/answer` verglich `last_study_date` mit der UTC-Tagesgrenze (`new Date().toISOString().split('T')[0]`). Wiener Nutzer, die nach 01:00 Ortszeit antworteten, wurden gegen den UTC-Vortag gewertet — dadurch blieben Streaks fälschlich stehen, obwohl ein Tag übersprungen wurde, oder wurden beim Tageswechsel nicht erhöht. Audit (2026-04-21): 40 von 59 Power-Nutzern hatten einen drift-behafteten `current_streak`. Fix: Intl.DateTimeFormat mit `timeZone: 'Europe/Vienna'` für Tagesbucketing (gleiches Muster wie `/api/stats/last7days`) plus Backfill-Script `scripts/backfill_current_streak.py`, das die gespeicherten Streaks gegen aufeinanderfolgende Wiener Kalendertage im `answer_history` neu berechnet. Post-Backfill: 0 Abweichung übrig. `longest_streak` wird nur nach oben korrigiert.",
-      en: "`/api/answer` compared `last_study_date` against a UTC day boundary (`new Date().toISOString().split('T')[0]`). Vienna users answering after 01:00 local time were scored against the previous UTC day — so streaks either stayed alive through a missed day or failed to increment on a new day. Audit (2026-04-21): 40 of 59 power users had drifted `current_streak`. Fix: `Intl.DateTimeFormat` with `timeZone: 'Europe/Vienna'` for day-bucketing (same pattern as `/api/stats/last7days`) plus backfill script `scripts/backfill_current_streak.py` that recomputes stored streaks against consecutive Vienna-local days in `answer_history`. Post-backfill: 0 drift remaining. `longest_streak` is only adjusted upward.",
+      de: "`/api/answer` verglich `last_study_date` mit der UTC-Tagesgrenze (`new Date().toISOString().split('T')[0]`). Wiener Nutzer, die nach 01:00 Ortszeit antworteten, wurden gegen den UTC-Vortag gewertet, dadurch blieben Streaks fälschlich stehen, obwohl ein Tag übersprungen wurde, oder wurden beim Tageswechsel nicht erhöht. Audit (2026-04-21): 40 von 59 Power-Nutzern hatten einen drift-behafteten `current_streak`. Fix: Intl.DateTimeFormat mit `timeZone: 'Europe/Vienna'` für Tagesbucketing (gleiches Muster wie `/api/stats/last7days`) plus Backfill-Script `scripts/backfill_current_streak.py`, das die gespeicherten Streaks gegen aufeinanderfolgende Wiener Kalendertage im `answer_history` neu berechnet. Post-Backfill: 0 Abweichung übrig. `longest_streak` wird nur nach oben korrigiert.",
+      en: "`/api/answer` compared `last_study_date` against a UTC day boundary (`new Date().toISOString().split('T')[0]`). Vienna users answering after 01:00 local time were scored against the previous UTC day, so streaks either stayed alive through a missed day or failed to increment on a new day. Audit (2026-04-21): 40 of 59 power users had drifted `current_streak`. Fix: `Intl.DateTimeFormat` with `timeZone: 'Europe/Vienna'` for day-bucketing (same pattern as `/api/stats/last7days`) plus backfill script `scripts/backfill_current_streak.py` that recomputes stored streaks against consecutive Vienna-local days in `answer_history`. Post-backfill: 0 drift remaining. `longest_streak` is only adjusted upward.",
     },
   },
   {
@@ -594,20 +594,20 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "What's New: offline mode, Cmd+K search, and 7-language translations announced",
     },
     description: {
-      de: "Der „Was ist neu\"-Dialog zeigt Bestandsnutzern jetzt drei zuletzt ausgelieferte Funktionen, die bisher unentdeckt blieben: den Offline-Modus (100–500 Fragen vorab laden in Einstellungen → Offline-Modus), die Schnellsuche mit Cmd+K von jeder Seite aus sowie die Übersetzung von Erklärungen in Russisch, Arabisch, Englisch, Französisch, Türkisch, Ukrainisch und Serbisch. `CURRENT_VERSION` auf `2026-04-22` gesetzt, damit der Dialog einmalig für alle eingeloggten Nicht-Gast-Accounts wieder erscheint.",
-      en: "The \"What's New\" dialog now surfaces three recently-shipped features that were previously invisible to existing users: offline mode (pre-download 100–500 questions in Settings → Offline mode), Cmd+K quick search from every page, and explanation translation into Russian, Arabic, English, French, Turkish, Ukrainian and Serbian. `CURRENT_VERSION` bumped to `2026-04-22` so the dialog re-shows once for every logged-in non-guest account.",
+      de: "Der „Was ist neu\"-Dialog zeigt Bestandsnutzern jetzt drei zuletzt ausgelieferte Funktionen, die bisher unentdeckt blieben: den Offline-Modus (100 bis 500 Fragen vorab laden in Einstellungen → Offline-Modus), die Schnellsuche mit Cmd+K von jeder Seite aus sowie die Übersetzung von Erklärungen in Russisch, Arabisch, Englisch, Französisch, Türkisch, Ukrainisch und Serbisch. `CURRENT_VERSION` auf `2026-04-22` gesetzt, damit der Dialog einmalig für alle eingeloggten Nicht-Gast-Accounts wieder erscheint.",
+      en: "The \"What's New\" dialog now surfaces three recently-shipped features that were previously invisible to existing users: offline mode (pre-download 100 to 500 questions in Settings → Offline mode), Cmd+K quick search from every page, and explanation translation into Russian, Arabic, English, French, Turkish, Ukrainian and Serbian. `CURRENT_VERSION` bumped to `2026-04-22` so the dialog re-shows once for every logged-in non-guest account.",
     },
   },
   {
     date: "2026-04-22",
     tag: "admin",
     title: {
-      de: "Sitemap aktualisiert — alle öffentlichen Routen erfasst",
-      en: "Sitemap refreshed — every public-facing route covered",
+      de: "Sitemap aktualisiert: alle öffentlichen Routen erfasst",
+      en: "Sitemap refreshed: every public-facing route covered",
     },
     description: {
-      de: "Neue dynamische Sitemap unter `src/app/sitemap.ts` (Next.js 15 MetadataRoute). Abdeckung erweitert um `/pricing`, `/impressum`, `/privacy`, `/terms` und `/changelog` — vorher fehlten sie in der statischen `public/sitemap.xml` (~2 Wochen stale). Prioritäten: `/` = 1.0, `/landing` + `/pricing` = 0.9, `/about` + `/materials` = 0.7, legale Seiten + `/changelog` = 0.5. `lastModified` wird bei jedem Build dynamisch auf das aktuelle Datum gesetzt.",
-      en: "New dynamic sitemap at `src/app/sitemap.ts` (Next.js 15 MetadataRoute). Coverage expanded to include `/pricing`, `/impressum`, `/privacy`, `/terms` and `/changelog` — previously missing from the static `public/sitemap.xml` (~2 weeks stale). Priorities: `/` = 1.0, `/landing` + `/pricing` = 0.9, `/about` + `/materials` = 0.7, legal pages + `/changelog` = 0.5. `lastModified` is set dynamically to the current date on each build.",
+      de: "Neue dynamische Sitemap unter `src/app/sitemap.ts` (Next.js 15 MetadataRoute). Abdeckung erweitert um `/pricing`, `/impressum`, `/privacy`, `/terms` und `/changelog` (vorher fehlten sie in der statischen `public/sitemap.xml`, ~2 Wochen stale). Prioritäten: `/` = 1.0, `/landing` + `/pricing` = 0.9, `/about` + `/materials` = 0.7, legale Seiten + `/changelog` = 0.5. `lastModified` wird bei jedem Build dynamisch auf das aktuelle Datum gesetzt.",
+      en: "New dynamic sitemap at `src/app/sitemap.ts` (Next.js 15 MetadataRoute). Coverage expanded to include `/pricing`, `/impressum`, `/privacy`, `/terms` and `/changelog` (previously missing from the static `public/sitemap.xml`, ~2 weeks stale). Priorities: `/` = 1.0, `/landing` + `/pricing` = 0.9, `/about` + `/materials` = 0.7, legal pages + `/changelog` = 0.5. `lastModified` is set dynamically to the current date on each build.",
     },
   },
   {
@@ -618,8 +618,8 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "JSON-LD: fake AggregateRating removed (schema policy)",
     },
     description: {
-      de: "Der JSON-LD-Strukturdaten-Block in `src/app/layout.tsx` enthielt ein hart kodiertes `aggregateRating` mit 4,8/156 Bewertungen — reale Daten aus der Nutzerumfrage: 23 Antworten, Durchschnitt 4,70. Google kann Websites mit fabrizierten Bewertungsdaten abstrafen, daher wurde der Block komplett entfernt. Wird wieder aufgenommen, sobald 100+ echte Bewertungen vorliegen, idealerweise dynamisch aus `user_feedback`.",
-      en: "The JSON-LD structured-data block in `src/app/layout.tsx` hard-coded an `aggregateRating` of 4.8/156 reviews — real user-data: 23 surveys, avg 4.70. Google can penalize sites with fabricated review metadata, so the block was deleted entirely. Will be re-introduced once there are 100+ real reviews, ideally wired dynamically from `user_feedback`.",
+      de: "Der JSON-LD-Strukturdaten-Block in `src/app/layout.tsx` enthielt ein hart kodiertes `aggregateRating` mit 4,8/156 Bewertungen: reale Daten aus der Nutzerumfrage zeigen 23 Antworten, Durchschnitt 4,70. Google kann Websites mit fabrizierten Bewertungsdaten abstrafen, daher wurde der Block komplett entfernt. Wird wieder aufgenommen, sobald 100+ echte Bewertungen vorliegen, idealerweise dynamisch aus `user_feedback`.",
+      en: "The JSON-LD structured-data block in `src/app/layout.tsx` hard-coded an `aggregateRating` of 4.8/156 reviews: real user data shows 23 surveys, avg 4.70. Google can penalize sites with fabricated review metadata, so the block was deleted entirely. Will be re-introduced once there are 100+ real reviews, ideally wired dynamically from `user_feedback`.",
     },
   },
   {
@@ -630,8 +630,8 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "KMP explanations generated (source text, not AI cache)",
     },
     description: {
-      de: "Neues Skript `scripts/generate_missing_kmp_explanations.py` füllt die `explanation`-Spalte (Quell-Text) für alle aktiven `kmp_innsbruck`-Fragen, bei denen die PDF-Import-Pipeline keine Erklärung mitliefern konnte (bisher ~3.091 Zeilen). 80–150 Wörter pro Erklärung in deutscher Sie-Form mit Bezug zu österreichischen/europäischen Leitlinien (ERC 2021, ESC, ÖDG, Österreichischer Impfplan), wo einschlägig. Klar getrennt vom AI-Chat-Cache (`ai_explanation`), der weiterhin über `/api/ai-chat` im strikten Apr-17-Format ausgeliefert wird. Provider: OpenAI gpt-4o-mini (Anthropic Haiku 4.5 als Primäroption, falls API-Key gesetzt). Gesamtkosten: ~$0,50. Idempotent — erneute Läufe überspringen bereits befüllte Zeilen automatisch.",
-      en: "New script `scripts/generate_missing_kmp_explanations.py` backfills the `explanation` column (source text) for every active `kmp_innsbruck` question where the PDF import pipeline couldn't carry a rationale through (~3,091 rows previously NULL). 80–150-word paragraphs in German Sie-form with Austrian/European guideline references (ERC 2021, ESC, ÖDG, Austrian Vaccination Schedule) where applicable. Strictly separate from the AI chat cache (`ai_explanation`), which continues to be served through `/api/ai-chat` in the Apr-17 strict format. Provider: OpenAI gpt-4o-mini (Anthropic Haiku 4.5 as primary when API key is set). Total cost: ~$0.50. Idempotent — re-running skips already-filled rows automatically.",
+      de: "Neues Skript `scripts/generate_missing_kmp_explanations.py` füllt die `explanation`-Spalte (Quell-Text) für alle aktiven `kmp_innsbruck`-Fragen, bei denen die PDF-Import-Pipeline keine Erklärung mitliefern konnte (bisher ~3.091 Zeilen). 80 bis 150 Wörter pro Erklärung in deutscher Sie-Form mit Bezug zu österreichischen/europäischen Leitlinien (ERC 2021, ESC, ÖDG, Österreichischer Impfplan), wo einschlägig. Klar getrennt vom AI-Chat-Cache (`ai_explanation`), der weiterhin über `/api/ai-chat` im strikten Apr-17-Format ausgeliefert wird. Provider: OpenAI gpt-4o-mini (Anthropic Haiku 4.5 als Primäroption, falls API-Key gesetzt). Gesamtkosten: ~$0,50. Idempotent: erneute Läufe überspringen bereits befüllte Zeilen automatisch.",
+      en: "New script `scripts/generate_missing_kmp_explanations.py` backfills the `explanation` column (source text) for every active `kmp_innsbruck` question where the PDF import pipeline couldn't carry a rationale through (~3,091 rows previously NULL). 80 to 150-word paragraphs in German Sie-form with Austrian/European guideline references (ERC 2021, ESC, ÖDG, Austrian Vaccination Schedule) where applicable. Strictly separate from the AI chat cache (`ai_explanation`), which continues to be served through `/api/ai-chat` in the Apr-17 strict format. Provider: OpenAI gpt-4o-mini (Anthropic Haiku 4.5 as primary when API key is set). Total cost: ~$0.50. Idempotent: re-running skips already-filled rows automatically.",
     },
   },
   {
@@ -642,8 +642,8 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "Exam-year contamination removed from 1 question",
     },
     description: {
-      de: "Regex-basierte Bereinigung der `question`-Spalte: Eine Frage (q71637, Thema Gerinnung / Beinvenenthrombose) endete mit einer verrutschten Tag-Kennung „SPT2025“ plus doppeltem „(3 richtige Antworten)“-Fragment aus dem PDF-Import. Strip-Logik beschränkt auf `kenntnispruefung` + `kmp_innsbruck`; der Pharma-Pool ist nicht betroffen. Insgesamt 1 Zeile bereinigt — die übrigen ~10k aktiven Fragen haben keine Jahres-Endkontamination mehr.",
-      en: "Regex-based cleanup of the `question` column: one question (q71637, coagulation / deep-vein thrombosis) ended with a stray tag fragment \"SPT2025\" plus a duplicate \"(3 richtige Antworten)\" remnant from the PDF import. Strip logic scoped to `kenntnispruefung` + `kmp_innsbruck`; the Pharma pool is unaffected. Total: 1 row cleaned — the remaining ~10k active questions carry no year-end contamination.",
+      de: "Regex-basierte Bereinigung der `question`-Spalte: Eine Frage (q71637, Thema Gerinnung / Beinvenenthrombose) endete mit einer verrutschten Tag-Kennung „SPT2025“ plus doppeltem „(3 richtige Antworten)“-Fragment aus dem PDF-Import. Strip-Logik beschränkt auf `kenntnispruefung` + `kmp_innsbruck`; der Pharma-Pool ist nicht betroffen. Insgesamt 1 Zeile bereinigt: die übrigen ~10k aktiven Fragen haben keine Jahres-Endkontamination mehr.",
+      en: "Regex-based cleanup of the `question` column: one question (q71637, coagulation / deep-vein thrombosis) ended with a stray tag fragment \"SPT2025\" plus a duplicate \"(3 richtige Antworten)\" remnant from the PDF import. Strip logic scoped to `kenntnispruefung` + `kmp_innsbruck`; the Pharma pool is unaffected. Total: 1 row cleaned, the remaining ~10k active questions carry no year-end contamination.",
     },
   },
   {
@@ -654,8 +654,8 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "Import pipelines now parse \"(N richtige Antworten)\" hints",
     },
     description: {
-      de: "`scripts/anki_reimport.py` und `scripts/import_vienna_2026.py` erkennen jetzt Multi-Correct-Hinweise im Frage-Stamm — explizit („(3 richtige Antworten)“, „(2 richtige)“) wie auch vage („Mehrere Antworten“, „Mehrfachauswahl“, flektierte Formen wie „mehreren richtigen“). Stimmt die im Stamm genannte Anzahl nicht mit den tatsächlich als `correct` geflaggten Auswahlmöglichkeiten überein, gibt der Import eine WARN-Meldung auf stderr aus (statt stillem Drop-in). Das verhindert die Wiedereinschleppung des Pre-Apr-18-Bugs, bei dem der PDF-Importer bei Mehrfach-Antworten oft nur die erste flaggte (siehe `reports/content-audit-2026-04-18/multi-correct-count-mismatch.md`).",
-      en: "`scripts/anki_reimport.py` and `scripts/import_vienna_2026.py` now detect multi-correct hints in the question stem — both explicit (\"(3 richtige Antworten)\", \"(2 richtige)\") and vague (\"Mehrere Antworten\", \"Mehrfachauswahl\", inflected forms like \"mehreren richtigen\"). If the count in the stem doesn't match the number of options actually flagged as `correct`, the import emits a WARN to stderr (instead of silent drop-in). This prevents re-introducing the pre-Apr-18 bug where the PDF importer frequently flagged only the first correct option on multi-correct questions (see `reports/content-audit-2026-04-18/multi-correct-count-mismatch.md`).",
+      de: "`scripts/anki_reimport.py` und `scripts/import_vienna_2026.py` erkennen jetzt Multi-Correct-Hinweise im Frage-Stamm: explizit („(3 richtige Antworten)“, „(2 richtige)“) wie auch vage („Mehrere Antworten“, „Mehrfachauswahl“, flektierte Formen wie „mehreren richtigen“). Stimmt die im Stamm genannte Anzahl nicht mit den tatsächlich als `correct` geflaggten Auswahlmöglichkeiten überein, gibt der Import eine WARN-Meldung auf stderr aus (statt stillem Drop-in). Das verhindert die Wiedereinschleppung des Pre-Apr-18-Bugs, bei dem der PDF-Importer bei Mehrfach-Antworten oft nur die erste flaggte (siehe `reports/content-audit-2026-04-18/multi-correct-count-mismatch.md`).",
+      en: "`scripts/anki_reimport.py` and `scripts/import_vienna_2026.py` now detect multi-correct hints in the question stem: both explicit (\"(3 richtige Antworten)\", \"(2 richtige)\") and vague (\"Mehrere Antworten\", \"Mehrfachauswahl\", inflected forms like \"mehreren richtigen\"). If the count in the stem doesn't match the number of options actually flagged as `correct`, the import emits a WARN to stderr (instead of silent drop-in). This prevents re-introducing the pre-Apr-18 bug where the PDF importer frequently flagged only the first correct option on multi-correct questions (see `reports/content-audit-2026-04-18/multi-correct-count-mismatch.md`).",
     },
   },
   {
@@ -666,8 +666,8 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "Cross-device strength analysis",
     },
     description: {
-      de: "Dein Fortschritt pro Fachgebiet ist jetzt geräteübergreifend synchron — Handy und Laptop zeigen die gleichen Schwächen und denselben Lernplan. Bisher wurden Genauigkeit und schwache Themen nur lokal pro Gerät gespeichert, sodass die Startseite und der Lernplan auf jedem Gerät eine andere „schwächste\u201C Empfehlung anzeigten. Jetzt landet jede beantwortete Frage in einer serverseitigen Tabelle, und alle Geräte greifen auf denselben Stand zu.",
-      en: "Your per-topic progress is now synchronized across devices — phone and laptop show the same weak topics and the same study plan. Previously, accuracy and weakness signals were stored in each device's local storage, so the home page and Lernplan showed a different \"weakest topic\" on each device. Now every answered question is recorded in a server-side table, and every device reads the same snapshot.",
+      de: "Dein Fortschritt pro Fachgebiet ist jetzt geräteübergreifend synchron: Handy und Laptop zeigen die gleichen Schwächen und denselben Lernplan. Bisher wurden Genauigkeit und schwache Themen nur lokal pro Gerät gespeichert, sodass die Startseite und der Lernplan auf jedem Gerät eine andere „schwächste\u201C Empfehlung anzeigten. Jetzt landet jede beantwortete Frage in einer serverseitigen Tabelle, und alle Geräte greifen auf denselben Stand zu.",
+      en: "Your per-topic progress is now synchronized across devices: phone and laptop show the same weak topics and the same study plan. Previously, accuracy and weakness signals were stored in each device's local storage, so the home page and Lernplan showed a different \"weakest topic\" on each device. Now every answered question is recorded in a server-side table, and every device reads the same snapshot.",
     },
   },
   {
@@ -678,8 +678,8 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "Offline mode: pre-download questions and keep studying without internet",
     },
     description: {
-      de: "Unter Einstellungen → Offline-Modus können Sie jetzt 100, 250 oder 500 Fragen auf Ihr Gerät laden. Wenn die Verbindung abbricht (U-Bahn, Krankenhaus-WLAN, Zug), zieht das Quiz nahtlos aus der lokalen IndexedDB. Antworten werden lokal in einer Warteschlange gespeichert und automatisch an den Server gesendet, sobald Sie wieder online sind — XP, Streak und Fortschritt bleiben also erhalten. Oben erscheint bei Offline-Betrieb eine dezente Statusanzeige („Offline · N Fragen verfügbar\u201C).",
-      en: "Under Settings → Offline mode you can now download 100, 250, or 500 questions to your device. If connectivity drops (metro, hospital WiFi, train), the quiz seamlessly pulls from your local IndexedDB instead of the server. Answers you record offline queue locally and auto-sync the moment you come back online — so XP, streak, and progress all catch up. A small pill at the top of the screen indicates offline state (\"Offline · N questions available\").",
+      de: "Unter Einstellungen → Offline-Modus können Sie jetzt 100, 250 oder 500 Fragen auf Ihr Gerät laden. Wenn die Verbindung abbricht (U-Bahn, Krankenhaus-WLAN, Zug), zieht das Quiz nahtlos aus der lokalen IndexedDB. Antworten werden lokal in einer Warteschlange gespeichert und automatisch an den Server gesendet, sobald Sie wieder online sind, XP, Streak und Fortschritt bleiben also erhalten. Oben erscheint bei Offline-Betrieb eine dezente Statusanzeige („Offline · N Fragen verfügbar\u201C).",
+      en: "Under Settings → Offline mode you can now download 100, 250, or 500 questions to your device. If connectivity drops (metro, hospital WiFi, train), the quiz seamlessly pulls from your local IndexedDB instead of the server. Answers you record offline queue locally and auto-sync the moment you come back online, so XP, streak, and progress all catch up. A small pill at the top of the screen indicates offline state (\"Offline · N questions available\").",
     },
   },
   {
@@ -690,8 +690,8 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "Quick search with Cmd+K",
     },
     description: {
-      de: "Drücke ⌘K (oder Ctrl+K auf Windows) überall im Produkt, um das neue Schnellsuche-Fenster zu öffnen. Finde Fragen, springe zu einem Fachgebiet, oder navigiere per Tastatur direkt zu einer Seite — mit den Pfeiltasten die Treffer durchwandern, Enter zum Öffnen, Esc zum Schließen. Alternativ funktioniert auch „/“, solange kein Eingabefeld aktiv ist.",
-      en: "Press ⌘K (or Ctrl+K on Windows) anywhere in the product to open the new quick-search palette. Find questions, jump to a specialty, or navigate to any page — arrow keys to walk the results, Enter to open, Esc to close. You can also press \u201C/\u201D when no input field is focused.",
+      de: "Drücke ⌘K (oder Ctrl+K auf Windows) überall im Produkt, um das neue Schnellsuche-Fenster zu öffnen. Finde Fragen, springe zu einem Fachgebiet, oder navigiere per Tastatur direkt zu einer Seite: mit den Pfeiltasten die Treffer durchwandern, Enter zum Öffnen, Esc zum Schließen. Alternativ funktioniert auch „/“, solange kein Eingabefeld aktiv ist.",
+      en: "Press ⌘K (or Ctrl+K on Windows) anywhere in the product to open the new quick-search palette. Find questions, jump to a specialty, or navigate to any page: arrow keys to walk the results, Enter to open, Esc to close. You can also press \u201C/\u201D when no input field is focused.",
     },
   },
   {
@@ -702,8 +702,8 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "AI Explanation vs. AI Chat: clearer naming",
     },
     description: {
-      de: "Der Tab unter jeder Frage heißt jetzt „KI-Erklärung“ statt „KI-Chat“, und eine kurze Info erklärt, dass KI-Erklärungen für alle kostenlos sind — nur eigene Rückfragen an die KI benötigen Pro. Frei-Nutzer:innen sehen beim Öffnen eine klare Erklär-Karte, damit sie nicht mehr glauben, die KI sei defekt.",
-      en: "The tab under every question is now called \u201cAI Explanation\u201d instead of \u201cAI Chat,\u201d and a short info tooltip clarifies that AI explanations are free for everyone — only your own follow-up questions to the AI require Pro. Free users now see a clear explainer card on open so they no longer think the AI is broken.",
+      de: "Der Tab unter jeder Frage heißt jetzt „KI-Erklärung“ statt „KI-Chat“, und eine kurze Info erklärt, dass KI-Erklärungen für alle kostenlos sind: nur eigene Rückfragen an die KI benötigen Pro. Frei-Nutzer:innen sehen beim Öffnen eine klare Erklär-Karte, damit sie nicht mehr glauben, die KI sei defekt.",
+      en: "The tab under every question is now called \u201cAI Explanation\u201d instead of \u201cAI Chat,\u201d and a short info tooltip clarifies that AI explanations are free for everyone: only your own follow-up questions to the AI require Pro. Free users now see a clear explainer card on open so they no longer think the AI is broken.",
     },
   },
   {
@@ -726,8 +726,8 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "All cached AI explanations regenerated in the new strict format",
     },
     description: {
-      de: "Seit 17.04. läuft ein neuer, strikter Prompt für die KI-Erklärungen: TL;DR → Begründung der richtigen Antwort → Distraktor-Analyse → Leitlinien-Referenzen (ERC 2021, ESC, ÖDG, Österreichischer Impfplan). Ältere Erklärungen mit dem alten, unstrukturierten Format wurden im Hintergrund aktualisiert, damit alle Nutzer (auch kostenlose) sofort die klarere Fassung sehen — ohne „Neu generieren\u201C zu klicken. Bewertungen wurden zurückgesetzt, damit die neuen Erklärungen auf ihren eigenen Beinen stehen.",
-      en: "Since Apr 17, a new strict prompt powers AI explanations: TL;DR → correct-answer reasoning → distractor-by-distractor breakdown → guideline citations (ERC 2021, ESC, ÖDG, Austrian immunization schedule). Older cached explanations from the pre-Apr-17 loose prompt were regenerated in the background so every user (including free) sees the crisper version immediately — no need to click \"Regenerate.\" Ratings were reset so the new explanations are judged on their own merits.",
+      de: "Seit 17.04. läuft ein neuer, strikter Prompt für die KI-Erklärungen: TL;DR → Begründung der richtigen Antwort → Distraktor-Analyse → Leitlinien-Referenzen (ERC 2021, ESC, ÖDG, Österreichischer Impfplan). Ältere Erklärungen mit dem alten, unstrukturierten Format wurden im Hintergrund aktualisiert, damit alle Nutzer (auch kostenlose) sofort die klarere Fassung sehen, ohne „Neu generieren\u201C zu klicken. Bewertungen wurden zurückgesetzt, damit die neuen Erklärungen auf ihren eigenen Beinen stehen.",
+      en: "Since Apr 17, a new strict prompt powers AI explanations: TL;DR → correct-answer reasoning → distractor-by-distractor breakdown → guideline citations (ERC 2021, ESC, ÖDG, Austrian immunization schedule). Older cached explanations from the pre-Apr-17 loose prompt were regenerated in the background so every user (including free) sees the crisper version immediately, no need to click \"Regenerate.\" Ratings were reset so the new explanations are judged on their own merits.",
     },
   },
   {
@@ -738,8 +738,8 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "39 questions with wrong correct-answer count detected and fixed (import pipeline bug)",
     },
     description: {
-      de: "Inhalts-Audit: 63 Fragen hatten im Stamm einen Hinweis wie „(3 richtige Antworten)\u201C, aber die choices-JSONB markierte eine abweichende Anzahl als correct. Ursache: der PDF-Import hat oft nur die erstgenannte richtige Option geflaggt. 39 eindeutige Fälle wurden medizinisch geprüft (ERC 2021, ESC 2023, ÖDG, Herold, Amboss) und korrigiert — fehlende richtige Optionen ergänzt oder falsch markierte entfernt. 24 Fälle wurden zur manuellen Prüfung geflaggt (16 mit Import-Textmerge-Bug „\\nF)\u201C, 8 mit medizinisch zweideutigem Stamm). Bericht in reports/content-audit-2026-04-18/multi-correct-count-mismatch.md.",
-      en: "Content audit: 63 questions had stem hints like \"(3 correct answers)\" but the choices JSONB marked a different count as correct. Root cause: the PDF importer often only flagged the first-listed correct option. 39 clear cases were medically reviewed (ERC 2021, ESC 2023, ÖDG, Herold, Amboss) and fixed — missing correct options added or wrong ones unmarked. 24 cases flagged for human review (16 with an import text-merge bug \"\\nF)\", 8 with medically ambiguous stems). Report at reports/content-audit-2026-04-18/multi-correct-count-mismatch.md.",
+      de: "Inhalts-Audit: 63 Fragen hatten im Stamm einen Hinweis wie „(3 richtige Antworten)\u201C, aber die choices-JSONB markierte eine abweichende Anzahl als correct. Ursache: der PDF-Import hat oft nur die erstgenannte richtige Option geflaggt. 39 eindeutige Fälle wurden medizinisch geprüft (ERC 2021, ESC 2023, ÖDG, Herold, Amboss) und korrigiert: fehlende richtige Optionen ergänzt oder falsch markierte entfernt. 24 Fälle wurden zur manuellen Prüfung geflaggt (16 mit Import-Textmerge-Bug „\\nF)\u201C, 8 mit medizinisch zweideutigem Stamm). Bericht in reports/content-audit-2026-04-18/multi-correct-count-mismatch.md.",
+      en: "Content audit: 63 questions had stem hints like \"(3 correct answers)\" but the choices JSONB marked a different count as correct. Root cause: the PDF importer often only flagged the first-listed correct option. 39 clear cases were medically reviewed (ERC 2021, ESC 2023, ÖDG, Herold, Amboss) and fixed: missing correct options added or wrong ones unmarked. 24 cases flagged for human review (16 with an import text-merge bug \"\\nF)\", 8 with medically ambiguous stems). Report at reports/content-audit-2026-04-18/multi-correct-count-mismatch.md.",
     },
   },
   {
@@ -750,8 +750,8 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "31 questions with missing images identified and tagged for admin review",
     },
     description: {
-      de: "Datenqualitäts-Audit: Fragen mit Text wie „auf dem Bild zu sehen\u201C, „folgendes EKG\u201C, „dieses Röntgenbild\u201C, die aber keine image_url haben (Bild verloren beim Import). 31 bestätigte Fälle (3 Kenntnisprüfung Wien, 28 KMP Innsbruck, 0 Pharma) mit dem Tag missing_image markiert. Neuer Admin-Endpoint /api/stats/admin/missing-images für Triage. Keine Fragen deaktiviert — [name] entscheidet pro Frage, ob umgeschrieben oder manuell beschafft wird.",
-      en: "Data-quality audit: questions with stems like \"auf dem Bild zu sehen\", \"folgendes EKG\", \"dieses Röntgenbild\" that have no image_url (image lost during import). 31 confirmed cases (3 Kenntnisprüfung Wien, 28 KMP Innsbruck, 0 Pharma) tagged with missing_image. New admin endpoint /api/stats/admin/missing-images for triage. No questions deactivated — [name] decides per question whether to rewrite the stem or source the image manually.",
+      de: "Datenqualitäts-Audit: Fragen mit Text wie „auf dem Bild zu sehen\u201C, „folgendes EKG\u201C, „dieses Röntgenbild\u201C, die aber keine image_url haben (Bild verloren beim Import). 31 bestätigte Fälle (3 Kenntnisprüfung Wien, 28 KMP Innsbruck, 0 Pharma) mit dem Tag missing_image markiert. Neuer Admin-Endpoint /api/stats/admin/missing-images für Triage. Keine Fragen deaktiviert: [name] entscheidet pro Frage, ob umgeschrieben oder manuell beschafft wird.",
+      en: "Data-quality audit: questions with stems like \"auf dem Bild zu sehen\", \"folgendes EKG\", \"dieses Röntgenbild\" that have no image_url (image lost during import). 31 confirmed cases (3 Kenntnisprüfung Wien, 28 KMP Innsbruck, 0 Pharma) tagged with missing_image. New admin endpoint /api/stats/admin/missing-images for triage. No questions deactivated: [name] decides per question whether to rewrite the stem or source the image manually.",
     },
   },
   {
@@ -762,8 +762,8 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "Translate explanations into your language",
     },
     description: {
-      de: "Neuer „🌐 In meiner Sprache\u201C-Button unter jeder Erklärung: übersetzt den Text in Russisch, Arabisch, Englisch, Französisch, Türkisch, Ukrainisch oder Serbisch — medizinische Fachbegriffe, Medikamentennamen und Leitlinien-Bezeichnungen (ERC 2021, ESC, ÖDG) bleiben im Original. Übersetzungen werden einmalig erstellt und dann für alle Nutzer:innen gecacht. Free-Tier: 5 Übersetzungen/Tag. Pro: unbegrenzt.",
-      en: "New \"🌐 In my language\" button beneath every explanation: translates the text into Russian, Arabic, English, French, Turkish, Ukrainian, or Serbian — medical terminology, drug names, and guideline references (ERC 2021, ESC, ÖDG) stay in the original. Translations are generated once and then cached for everyone. Free tier: 5 translations/day. Pro: unlimited.",
+      de: "Neuer „🌐 In meiner Sprache\u201C-Button unter jeder Erklärung: übersetzt den Text in Russisch, Arabisch, Englisch, Französisch, Türkisch, Ukrainisch oder Serbisch (medizinische Fachbegriffe, Medikamentennamen und Leitlinien-Bezeichnungen wie ERC 2021, ESC, ÖDG bleiben im Original). Übersetzungen werden einmalig erstellt und dann für alle Nutzer:innen gecacht. Free-Tier: 5 Übersetzungen/Tag. Pro: unbegrenzt.",
+      en: "New \"🌐 In my language\" button beneath every explanation: translates the text into Russian, Arabic, English, French, Turkish, Ukrainian, or Serbian (medical terminology, drug names, and guideline references like ERC 2021, ESC, ÖDG stay in the original). Translations are generated once and then cached for everyone. Free tier: 5 translations/day. Pro: unlimited.",
     },
   },
   {
@@ -774,8 +774,8 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "Audit: all questions with falsely all-correct marked answers resolved",
     },
     description: {
-      de: "Vollständiger Scan der Datenbank nach Fragen, bei denen durch einen Import-Fehler ALLE Antwortmöglichkeiten als richtig markiert waren. Ergebnis: 0 verbleibende Fälle — der Datenfehler aus den Anki/KMP-Innsbruck/Wien-2026-Importpipelines ist vollständig beseitigt (20 Fragen in früheren Sweeps korrigiert). Nur q71498 (Spannungspneumothorax-Zeichen) behält legitimerweise alle 5 korrekten Antworten.",
-      en: "Full DB sweep for questions where an import bug marked ALL choices as correct. Result: 0 remaining cases — the data corruption from the Anki/KMP-Innsbruck/Vienna-2026 import pipelines is fully cleared (20 questions fixed in prior sweeps). Only q71498 (tension pneumothorax signs) legitimately keeps all 5 correct.",
+      de: "Vollständiger Scan der Datenbank nach Fragen, bei denen durch einen Import-Fehler ALLE Antwortmöglichkeiten als richtig markiert waren. Ergebnis: 0 verbleibende Fälle, der Datenfehler aus den Anki/KMP-Innsbruck/Wien-2026-Importpipelines ist vollständig beseitigt (20 Fragen in früheren Sweeps korrigiert). Nur q71498 (Spannungspneumothorax-Zeichen) behält legitimerweise alle 5 korrekten Antworten.",
+      en: "Full DB sweep for questions where an import bug marked ALL choices as correct. Result: 0 remaining cases, the data corruption from the Anki/KMP-Innsbruck/Vienna-2026 import pipelines is fully cleared (20 questions fixed in prior sweeps). Only q71498 (tension pneumothorax signs) legitimately keeps all 5 correct.",
     },
   },
   {
@@ -786,8 +786,8 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "AI chat: markdown now renders correctly",
     },
     description: {
-      de: "KI-Erklärungen zeigen jetzt Fettdruck, Überschriften und Aufzählungen korrekt formatiert an — vorher erschien Markdown als Rohtext (**Fett** statt Fett, Bindestriche statt Bullet-Points). Die neue Darstellung passt sich automatisch an Hell-/Dunkelmodus an und nutzt die App-Farben für Fachbegriffe und Überschriften. Außerdem: klarere „Pro-Feature: Folgefragen stellen\u201C-Markierung für Gratis-Nutzer unter dem Chatfenster.",
-      en: "AI explanations now render bold text, headings, and bullet lists correctly — previously markdown appeared as raw text (**bold** instead of bold, dashes instead of bullet points). The new rendering adapts to light/dark mode and uses app brand colors for medical terms and headings. Also: clearer \"Pro feature: ask follow-up questions\" label for free users below the chat.",
+      de: "KI-Erklärungen zeigen jetzt Fettdruck, Überschriften und Aufzählungen korrekt formatiert an, vorher erschien Markdown als Rohtext (**Fett** statt Fett, Bindestriche statt Bullet-Points). Die neue Darstellung passt sich automatisch an Hell-/Dunkelmodus an und nutzt die App-Farben für Fachbegriffe und Überschriften. Außerdem: klarere „Pro-Feature: Folgefragen stellen\u201C-Markierung für Gratis-Nutzer unter dem Chatfenster.",
+      en: "AI explanations now render bold text, headings, and bullet lists correctly: previously markdown appeared as raw text (**bold** instead of bold, dashes instead of bullet points). The new rendering adapts to light/dark mode and uses app brand colors for medical terms and headings. Also: clearer \"Pro feature: ask follow-up questions\" label for free users below the chat.",
     },
   },
   {
@@ -810,8 +810,8 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "AI explanations: better structure, regeneratable (Pro)",
     },
     description: {
-      de: "Neues strengeres Format für KI-Erklärungen: TL;DR zuerst, dann „Warum die richtige Antwort\u201C mit Bullet-Points und Fettdruck für Fachbegriffe, dann Distraktor-für-Distraktor Begründung, mit Leitlinien-Referenzen (ERC 2021, ESC, ÖDG, AGES). Max. ~400 Wörter damit es auf das Handy passt. Pro-Nutzer können eine Erklärung jetzt neu generieren lassen (Refresh-Button oben im KI-Chat) — der neue Text überschreibt den alten und setzt die Bewertungen zurück. Thumbs-down landet jetzt außerdem im Feedback-Posteingang, damit schlechte Erklärungen systematisch verbessert werden.",
-      en: "Stricter format for AI explanations: TL;DR first, then \"Why the correct answer\" with bullet points and bold medical terms, then distractor-by-distractor reasoning with guideline references (ERC 2021, ESC, ÖDG, AGES). Capped at ~400 words so it fits on mobile. Pro users can now regenerate an explanation (Refresh button at the top of the AI chat) — the new text overwrites the old and resets the ratings. Thumbs-down now also drops into the feedback inbox so bad explanations get systematically improved.",
+      de: "Neues strengeres Format für KI-Erklärungen: TL;DR zuerst, dann „Warum die richtige Antwort\u201C mit Bullet-Points und Fettdruck für Fachbegriffe, dann Distraktor-für-Distraktor Begründung, mit Leitlinien-Referenzen (ERC 2021, ESC, ÖDG, AGES). Max. ~400 Wörter damit es auf das Handy passt. Pro-Nutzer können eine Erklärung jetzt neu generieren lassen (Refresh-Button oben im KI-Chat): der neue Text überschreibt den alten und setzt die Bewertungen zurück. Thumbs-down landet jetzt außerdem im Feedback-Posteingang, damit schlechte Erklärungen systematisch verbessert werden.",
+      en: "Stricter format for AI explanations: TL;DR first, then \"Why the correct answer\" with bullet points and bold medical terms, then distractor-by-distractor reasoning with guideline references (ERC 2021, ESC, ÖDG, AGES). Capped at ~400 words so it fits on mobile. Pro users can now regenerate an explanation (Refresh button at the top of the AI chat): the new text overwrites the old and resets the ratings. Thumbs-down now also drops into the feedback inbox so bad explanations get systematically improved.",
     },
   },
   {
@@ -831,11 +831,11 @@ export const CHANGELOG: ChangelogEntry[] = [
     tag: "feature",
     title: {
       de: "Preisseite: Free, Pro und Gruppentarife transparent",
-      en: "Pricing page: Free, Pro, and Group plans — transparent",
+      en: "Pricing page: Free, Pro, and Group plans, transparent",
     },
     description: {
-      de: "Neue Seite /pricing zeigt, was heute kostenlos ist, und welche Pro- und Gruppentarife bald verfügbar sind. Interesse anmelden per E-Mail — wir melden uns mit dem endgültigen Preis vor dem Launch. Erreichbar über die Seitenleiste (Preise), die Einstellungen (Konto) und die Startseiten-Fußzeile.",
-      en: "New /pricing page shows what's free today and which Pro + Group plans are coming soon. Sign up by email — we'll share final pricing before launch. Reachable from the sidebar (Pricing), settings (Account), and the landing-page footer.",
+      de: "Neue Seite /pricing zeigt, was heute kostenlos ist, und welche Pro- und Gruppentarife bald verfügbar sind. Interesse anmelden per E-Mail, wir melden uns mit dem endgültigen Preis vor dem Launch. Erreichbar über die Seitenleiste (Preise), die Einstellungen (Konto) und die Startseiten-Fußzeile.",
+      en: "New /pricing page shows what's free today and which Pro + Group plans are coming soon. Sign up by email, we'll share final pricing before launch. Reachable from the sidebar (Pricing), settings (Account), and the landing-page footer.",
     },
   },
   {
@@ -879,8 +879,8 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-04-15",
     tag: "improvement",
     title: {
-      de: "Cookie-Banner aktiv — GA4 und Clarity nur nach Zustimmung",
-      en: "Cookie banner active — GA4 and Clarity only after consent",
+      de: "Cookie-Banner aktiv: GA4 und Clarity nur nach Zustimmung",
+      en: "Cookie banner active: GA4 and Clarity only after consent",
     },
     description: {
       de: "Bisher wurden Google Analytics und Microsoft Clarity bei jedem Seitenaufruf sofort geladen, unabhängig von der Cookie-Entscheidung. Ein Cookie-Banner war im Code vorhanden, aber nicht aktiviert. Das haben wir jetzt korrekt zusammengeführt: beim ersten Besuch erscheint der Banner, und die Analyse-Tools werden erst nach dem Klick auf „Akzeptieren\" geladen. Dies entspricht der ePrivacy-Richtlinie und dem österreichischen TTDSG.",
@@ -891,11 +891,11 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-04-15",
     tag: "fix",
     title: {
-      de: "Alle bisherigen Fragen-Meldungen wurden anonym gespeichert — korrigiert",
-      en: "All previous question reports were stored anonymously — fixed",
+      de: "Alle bisherigen Fragen-Meldungen wurden anonym gespeichert: korrigiert",
+      en: "All previous question reports were stored anonymously: fixed",
     },
     description: {
-      de: "Eine Untersuchung hat gezeigt, dass alle 45 bisher gemeldeten Fragen ohne Nutzer-ID in der Datenbank landeten, obwohl eingeloggte Nutzer:innen gemeldet haben. Das Formular hat die ID einfach nicht mitgesendet. Ab jetzt wird die Nutzer-ID korrekt erfasst — bei beiden Meldungs-Wegen (inline und im Modal). Das heißt wir können ab jetzt gemeldete Fragen einer Person zuordnen und bei Bedarf nachfragen. Bereits gemeldete Fragen bleiben anonym, aber das Problem ist für die Zukunft behoben.",
+      de: "Eine Untersuchung hat gezeigt, dass alle 45 bisher gemeldeten Fragen ohne Nutzer-ID in der Datenbank landeten, obwohl eingeloggte Nutzer:innen gemeldet haben. Das Formular hat die ID einfach nicht mitgesendet. Ab jetzt wird die Nutzer-ID korrekt erfasst, bei beiden Meldungs-Wegen (inline und im Modal). Das heißt wir können ab jetzt gemeldete Fragen einer Person zuordnen und bei Bedarf nachfragen. Bereits gemeldete Fragen bleiben anonym, aber das Problem ist für die Zukunft behoben.",
       en: "An investigation revealed that all 45 previously reported questions landed in the database without a user ID, even when logged-in users submitted them. The form simply wasn't sending the ID. The user ID is now captured correctly through both report paths (inline form and modal). This means we can now attribute reports to specific users and follow up when needed. Previously submitted reports stay anonymous, but the problem is fixed going forward.",
     },
   },
@@ -907,8 +907,8 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "Pinch-to-zoom restored on mobile",
     },
     description: {
-      de: "Beim Lesen langer klinischer Fragentexte konnte man bisher auf dem Handy nicht zoomen. Das war ein Barrierefreiheits-Fehler (WCAG 2.1 1.4.4) und ist jetzt behoben — du kannst wieder mit zwei Fingern zoomen.",
-      en: "Reading long clinical question texts on mobile used to block pinch-zoom. This was an accessibility violation (WCAG 2.1 1.4.4) and is now fixed — two-finger zoom works again.",
+      de: "Beim Lesen langer klinischer Fragentexte konnte man bisher auf dem Handy nicht zoomen. Das war ein Barrierefreiheits-Fehler (WCAG 2.1 1.4.4) und ist jetzt behoben: du kannst wieder mit zwei Fingern zoomen.",
+      en: "Reading long clinical question texts on mobile used to block pinch-zoom. This was an accessibility violation (WCAG 2.1 1.4.4) and is now fixed: two-finger zoom works again.",
     },
   },
   {
@@ -919,20 +919,20 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "Streak widget now shows real activity only, no more invented days",
     },
     description: {
-      de: "Das 7-Tage-Streak-Widget zeigte bisher für Tage außerhalb deines aktuellen Streaks zufällig aktive/inaktive Zellen — das war Fake-Daten, die sich bei jedem Seitenaufruf geändert haben. Jetzt zeigt das Widget nur deinen tatsächlichen Streak; nicht-gestreakte Tage sind ausgegraut.",
-      en: "The 7-day streak widget used to randomly flip non-streak days active/inactive — that was fake data that changed on every page render. The widget now shows only your real streak; non-streak days are greyed out honestly.",
+      de: "Das 7-Tage-Streak-Widget zeigte bisher für Tage außerhalb deines aktuellen Streaks zufällig aktive/inaktive Zellen: das war Fake-Daten, die sich bei jedem Seitenaufruf geändert haben. Jetzt zeigt das Widget nur deinen tatsächlichen Streak; nicht-gestreakte Tage sind ausgegraut.",
+      en: "The 7-day streak widget used to randomly flip non-streak days active/inactive: that was fake data that changed on every page render. The widget now shows only your real streak; non-streak days are greyed out honestly.",
     },
   },
   {
     date: "2026-04-15",
     tag: "improvement",
     title: {
-      de: "Admin-Statistiken korrigiert — DAU/WAU/MAU zeigen jetzt die echten Zahlen",
-      en: "Admin statistics fixed — DAU/WAU/MAU now show real numbers",
+      de: "Admin-Statistiken korrigiert: DAU/WAU/MAU zeigen jetzt die echten Zahlen",
+      en: "Admin statistics fixed: DAU/WAU/MAU now show real numbers",
     },
     description: {
-      de: "Das Admin-Dashboard zählte tägliche/wöchentliche/monatliche aktive Nutzer:innen, indem es alle Events in den Browser lud und dort zählte — aber Supabase liefert nur die letzten 1000 Zeilen. Sobald mehr Events vorlagen, fing die Zahl an zu lügen. Die Berechnung läuft jetzt serverseitig in der Datenbank und ist bei jedem Volumen korrekt.",
-      en: "The admin dashboard counted daily/weekly/monthly active users by loading all events into the browser and counting there — but Supabase only returns the last 1000 rows. Once events crossed 1000 the number started lying. The computation now runs server-side in the database and stays correct at any volume.",
+      de: "Das Admin-Dashboard zählte tägliche/wöchentliche/monatliche aktive Nutzer:innen, indem es alle Events in den Browser lud und dort zählte, aber Supabase liefert nur die letzten 1000 Zeilen. Sobald mehr Events vorlagen, fing die Zahl an zu lügen. Die Berechnung läuft jetzt serverseitig in der Datenbank und ist bei jedem Volumen korrekt.",
+      en: "The admin dashboard counted daily/weekly/monthly active users by loading all events into the browser and counting there, but Supabase only returns the last 1000 rows. Once events crossed 1000 the number started lying. The computation now runs server-side in the database and stays correct at any volume.",
     },
   },
   {
@@ -955,8 +955,8 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "Session end now correctly recorded",
     },
     description: {
-      de: "Alle 1240 bisherigen Sitzungen in der Datenbank hatten kein Ende-Datum — die `endSession`-Funktion war vorhanden, wurde aber nie aufgerufen. Jetzt wird jede Sitzung beim Schließen des Tabs (mit 5 Minuten Karenzzeit beim Tab-Wechsel) korrekt beendet. Damit lassen sich erstmals echte Sitzungsdauern messen.",
-      en: "All 1,240 previous sessions in the database had no end timestamp — the `endSession` function existed but was never called. Sessions now terminate correctly on tab close (with a 5-minute grace window for tab-switching). Real session durations are now measurable for the first time.",
+      de: "Alle 1240 bisherigen Sitzungen in der Datenbank hatten kein Ende-Datum: die `endSession`-Funktion war vorhanden, wurde aber nie aufgerufen. Jetzt wird jede Sitzung beim Schließen des Tabs (mit 5 Minuten Karenzzeit beim Tab-Wechsel) korrekt beendet. Damit lassen sich erstmals echte Sitzungsdauern messen.",
+      en: "All 1,240 previous sessions in the database had no end timestamp: the `endSession` function existed but was never called. Sessions now terminate correctly on tab close (with a 5-minute grace window for tab-switching). Real session durations are now measurable for the first time.",
     },
   },
   {
@@ -967,20 +967,20 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "All question counts across the product updated to 10,992",
     },
     description: {
-      de: "Mehrere Stellen im Produkt (Startseite, Login, Onboarding, Landingpage, Metadaten) zeigten noch „7.725 Fragen\" — den Stand vor der Erweiterung um KMP Innsbruck und Pharmakologie. Alle Zahlen wurden auf 10.992 aktualisiert und die Landingpage nennt jetzt alle drei Prüfungstypen korrekt.",
-      en: "Several places in the product (home, login, onboarding, landing, metadata) still showed \"7,725 questions\" — the count from before the KMP Innsbruck and Pharmakologie expansion. Updated to 10,992 everywhere, and the landing page now correctly names all three exam types.",
+      de: "Mehrere Stellen im Produkt (Startseite, Login, Onboarding, Landingpage, Metadaten) zeigten noch „7.725 Fragen\", den Stand vor der Erweiterung um KMP Innsbruck und Pharmakologie. Alle Zahlen wurden auf 10.992 aktualisiert und die Landingpage nennt jetzt alle drei Prüfungstypen korrekt.",
+      en: "Several places in the product (home, login, onboarding, landing, metadata) still showed \"7,725 questions\", the count from before the KMP Innsbruck and Pharmakologie expansion. Updated to 10,992 everywhere, and the landing page now correctly names all three exam types.",
     },
   },
   {
     date: "2026-04-15",
     tag: "fix",
     title: {
-      de: "Themen-Übung startet wieder direkt – ohne Konfigurations-Umweg",
-      en: "Topic practice now starts directly — no more customize detour",
+      de: "Themen-Übung startet wieder direkt: ohne Konfigurations-Umweg",
+      en: "Topic practice now starts directly: no more customize detour",
     },
     description: {
-      de: "Wenn du ein Fach auf der Startseite oder im Curriculum antippst oder „Zufallsfragen\" wählst, springst du jetzt sofort in die Fragen – ohne den Umweg über den „Quiz konfigurieren\"-Bildschirm. Die Spaced-Repetition-Logik entscheidet im Hintergrund automatisch, welche Frage als nächstes dran ist, sodass du dort weitermachst, wo du aufgehört hast. Das Konfigurations-Menü bleibt für den expliziten „Quiz konfigurieren\"-Einstieg erhalten.",
-      en: "Tapping a subject on the home page or curriculum, or hitting \"Random questions\", now drops you straight into practice — no more detour through the \"Customize your quiz\" screen. The spaced-repetition engine picks the next question for you so you pick up where you left off. The customize screen is still available for explicit opt-in.",
+      de: "Wenn du ein Fach auf der Startseite oder im Curriculum antippst oder „Zufallsfragen\" wählst, springst du jetzt sofort in die Fragen, ohne den Umweg über den „Quiz konfigurieren\"-Bildschirm. Die Spaced-Repetition-Logik entscheidet im Hintergrund automatisch, welche Frage als nächstes dran ist, sodass du dort weitermachst, wo du aufgehört hast. Das Konfigurations-Menü bleibt für den expliziten „Quiz konfigurieren\"-Einstieg erhalten.",
+      en: "Tapping a subject on the home page or curriculum, or hitting \"Random questions\", now drops you straight into practice, no more detour through the \"Customize your quiz\" screen. The spaced-repetition engine picks the next question for you so you pick up where you left off. The customize screen is still available for explicit opt-in.",
     },
   },
   {
@@ -1003,8 +1003,8 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "Two incorrect questions fixed (Psychiatry + Pediatrics)",
     },
     description: {
-      de: "Die Frage zu Mydriasis und Intoxikation (Psychiatrie) hatte alle 5 Antworten als richtig markiert – jetzt sind nur noch Kokain, Amphetamin und Anticholinergika richtig (Opiate und Benzodiazepine verursachen dagegen Miosis). Die Frage zu Spastik bei Cerebralparese (Pädiatrie) hatte gar keinen echten Fragesatz – jetzt steht dort korrekt „Welche der folgenden Maßnahmen verbessern die Spastik bei Cerebralparese (CP)? (3 richtige Antworten)\". Beide Fragen mit medizinischer Erklärung versehen. Danke an die Nutzer, die diese Fehler gemeldet haben!",
-      en: "The mydriasis/intoxication question (Psychiatry) had all 5 choices marked correct — now only Cocaine, Amphetamine, and Anticholinergics are correct (Opiates and Benzodiazepines cause miosis instead). The spasticity in cerebral palsy question (Pediatrics) had no real question stem — now it correctly asks \"Which of the following measures improve spasticity in cerebral palsy (CP)? (3 correct answers)\". Both questions now include a medical explanation. Thanks to the users who reported these!",
+      de: "Die Frage zu Mydriasis und Intoxikation (Psychiatrie) hatte alle 5 Antworten als richtig markiert, jetzt sind nur noch Kokain, Amphetamin und Anticholinergika richtig (Opiate und Benzodiazepine verursachen dagegen Miosis). Die Frage zu Spastik bei Cerebralparese (Pädiatrie) hatte gar keinen echten Fragesatz, jetzt steht dort korrekt „Welche der folgenden Maßnahmen verbessern die Spastik bei Cerebralparese (CP)? (3 richtige Antworten)\". Beide Fragen mit medizinischer Erklärung versehen. Danke an die Nutzer, die diese Fehler gemeldet haben!",
+      en: "The mydriasis/intoxication question (Psychiatry) had all 5 choices marked correct; now only Cocaine, Amphetamine, and Anticholinergics are correct (Opiates and Benzodiazepines cause miosis instead). The spasticity in cerebral palsy question (Pediatrics) had no real question stem; now it correctly asks \"Which of the following measures improve spasticity in cerebral palsy (CP)? (3 correct answers)\". Both questions now include a medical explanation. Thanks to the users who reported these!",
     },
   },
   {
@@ -1015,8 +1015,8 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "Kill-switch for stuck old app versions",
     },
     description: {
-      de: "Beim ersten Laden jeder Seite prüft die App jetzt, ob ein alter Service Worker die Kontrolle hat. Falls ja, wird er automatisch abgemeldet, alle Caches geleert und die Seite neu geladen – damit Nutzer nicht in einer alten Version hängen bleiben, bis der Browser von selbst aktualisiert.",
-      en: "On every page load, the app now checks if an old service worker is still in control. If so, it automatically unregisters it, clears all caches, and reloads — so users don't stay stuck on an old version until the browser decides to refresh on its own.",
+      de: "Beim ersten Laden jeder Seite prüft die App jetzt, ob ein alter Service Worker die Kontrolle hat. Falls ja, wird er automatisch abgemeldet, alle Caches geleert und die Seite neu geladen, damit Nutzer nicht in einer alten Version hängen bleiben, bis der Browser von selbst aktualisiert.",
+      en: "On every page load, the app now checks if an old service worker is still in control. If so, it automatically unregisters it, clears all caches, and reloads, so users don't stay stuck on an old version until the browser decides to refresh on its own.",
     },
   },
   // ═══ 2026-04-14 ═══
@@ -1028,8 +1028,8 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "Automatic updates: new versions without manual reload",
     },
     description: {
-      de: 'Die App erkennt jetzt automatisch, wenn eine neue Version bereitsteht. Du siehst eine "Neue Version verfügbar"-Anzeige und kannst mit einem Klick neu laden. Der Cache wird bei jedem Deploy automatisch geleert – keine hängenden alten Versionen mehr.',
-      en: `The app now automatically detects when a new version is available. You'll see a "New version available" prompt and can reload with one click. The cache is purged automatically on every deploy — no more stale old versions.`,
+      de: 'Die App erkennt jetzt automatisch, wenn eine neue Version bereitsteht. Du siehst eine "Neue Version verfügbar"-Anzeige und kannst mit einem Klick neu laden. Der Cache wird bei jedem Deploy automatisch geleert: keine hängenden alten Versionen mehr.',
+      en: `The app now automatically detects when a new version is available. You'll see a "New version available" prompt and can reload with one click. The cache is purged automatically on every deploy: no more stale old versions.`,
     },
   },
   {
@@ -1040,8 +1040,8 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "Question reports now capture full context",
     },
     description: {
-      de: "Bei jeder gemeldeten Frage werden jetzt URL, Prüfungstyp, Gerät und Browser mitgespeichert – auch bei anonymen und Gast-Nutzern. Dadurch kann jede Meldung zuverlässig nachverfolgt werden.",
-      en: "Every question report now captures URL, exam type, device, and browser — even for anonymous and guest users. This makes every report traceable and triageable.",
+      de: "Bei jeder gemeldeten Frage werden jetzt URL, Prüfungstyp, Gerät und Browser mitgespeichert, auch bei anonymen und Gast-Nutzern. Dadurch kann jede Meldung zuverlässig nachverfolgt werden.",
+      en: "Every question report now captures URL, exam type, device, and browser, even for anonymous and guest users. This makes every report traceable and triageable.",
     },
   },
   {
@@ -1204,8 +1204,8 @@ export const CHANGELOG: ChangelogEntry[] = [
     tag: "feature",
     title: { de: "Live-Anmelde-Tracker im Admin", en: "Live new-users tracker in admin" },
     description: {
-      de: "Das Admin-Dashboard zeigt jetzt eine Echtzeit-Karte mit neuen Registrierungen (letzte Stunde, heute, 7/30 Tage) plus die letzten 10 Anmeldungen — automatische Aktualisierung alle 30 Sekunden.",
-      en: "The admin dashboard now shows a live card with new registrations (last hour, today, 7/30 days) plus the last 10 signups — auto-refreshing every 30 seconds.",
+      de: "Das Admin-Dashboard zeigt jetzt eine Echtzeit-Karte mit neuen Registrierungen (letzte Stunde, heute, 7/30 Tage) plus die letzten 10 Anmeldungen, automatische Aktualisierung alle 30 Sekunden.",
+      en: "The admin dashboard now shows a live card with new registrations (last hour, today, 7/30 days) plus the last 10 signups, auto-refreshing every 30 seconds.",
     },
   },
   {
@@ -1222,8 +1222,8 @@ export const CHANGELOG: ChangelogEntry[] = [
     tag: "improvement",
     title: { de: "Prüfungsfragen nach Fach gruppiert", en: "Exam questions grouped by subject" },
     description: {
-      de: "In der Prüfungssimulation kommen jetzt alle Fragen eines Fachs hintereinander, dann das nächste Fach — wie in der echten Wiener Kenntnisprüfung. SIP-4- und Vollprüfungen enthalten außerdem 2-3 garantierte EKG-Fragen.",
-      en: "Exam simulation now groups all questions of one subject consecutively before moving to the next — matching the real Vienna Kenntnisprüfung. SIP 4 and full exams now also include 2-3 guaranteed ECG questions.",
+      de: "In der Prüfungssimulation kommen jetzt alle Fragen eines Fachs hintereinander, dann das nächste Fach, wie in der echten Wiener Kenntnisprüfung. SIP-4- und Vollprüfungen enthalten außerdem 2-3 garantierte EKG-Fragen.",
+      en: "Exam simulation now groups all questions of one subject consecutively before moving to the next, matching the real Vienna Kenntnisprüfung. SIP 4 and full exams now also include 2-3 guaranteed ECG questions.",
     },
   },
   {
@@ -1240,8 +1240,8 @@ export const CHANGELOG: ChangelogEntry[] = [
     tag: "fix",
     title: { de: "Dark Mode synchronisiert", en: "Dark mode unified" },
     description: {
-      de: "Die automatische Dunkelmodus-Erkennung und der manuelle Schalter sind jetzt vollständig synchronisiert — keine gemischten Themes mehr.",
-      en: "Automatic dark mode detection and the manual toggle are now fully unified — no more mixed themes.",
+      de: "Die automatische Dunkelmodus-Erkennung und der manuelle Schalter sind jetzt vollständig synchronisiert: keine gemischten Themes mehr.",
+      en: "Automatic dark mode detection and the manual toggle are now fully unified: no more mixed themes.",
     },
   },
   {
@@ -1259,8 +1259,8 @@ export const CHANGELOG: ChangelogEntry[] = [
     tag: "improvement",
     title: { de: "Prüfung verwendet jetzt die neue Fragekarte", en: "Exam now uses the unified question card" },
     description: {
-      de: "Die Prüfung rendert Fragen jetzt mit derselben Karte wie das Quiz. Hervorhebungen, Bild-Lightbox, KI-Erklärung, Notizen, Favorit, Melden — alles funktioniert konsistent zwischen Quiz und Prüfung.",
-      en: "The exam now renders questions with the same card as the quiz. Highlights, image lightbox, AI explain, notes, favorite, report — everything works consistently between quiz and exam.",
+      de: "Die Prüfung rendert Fragen jetzt mit derselben Karte wie das Quiz. Hervorhebungen, Bild-Lightbox, KI-Erklärung, Notizen, Favorit, Melden: alles funktioniert konsistent zwischen Quiz und Prüfung.",
+      en: "The exam now renders questions with the same card as the quiz. Highlights, image lightbox, AI explain, notes, favorite, report: everything works consistently between quiz and exam.",
     },
   },
   {
@@ -1322,8 +1322,8 @@ export const CHANGELOG: ChangelogEntry[] = [
     tag: "improvement",
     title: { de: "KI-Erklärungen zwischengespeichert", en: "AI explanations cached" },
     description: {
-      de: "KI-Erklärungen werden jetzt einmal pro Frage generiert und für alle Nutzer zwischengespeichert — schneller und effizienter.",
-      en: "AI explanations are now generated once per question and cached for all users — faster and more efficient.",
+      de: "KI-Erklärungen werden jetzt einmal pro Frage generiert und für alle Nutzer zwischengespeichert: schneller und effizienter.",
+      en: "AI explanations are now generated once per question and cached for all users: faster and more efficient.",
     },
   },
   {
@@ -1403,8 +1403,8 @@ export const CHANGELOG: ChangelogEntry[] = [
     tag: "feature",
     title: { de: "Cookie-Banner", en: "Cookie banner" },
     description: {
-      de: "GDPR-konformer Cookie-Banner — akzeptiere oder lehne Analyse-Cookies ab.",
-      en: "GDPR-compliant cookie banner — accept or decline analytics cookies.",
+      de: "GDPR-konformer Cookie-Banner: akzeptiere oder lehne Analyse-Cookies ab.",
+      en: "GDPR-compliant cookie banner: accept or decline analytics cookies.",
     },
   },
   {
@@ -1432,8 +1432,8 @@ export const CHANGELOG: ChangelogEntry[] = [
     tag: "feature",
     title: { de: "E-Mail-Anmeldung", en: "Email login" },
     description: {
-      de: "Registriere und melde dich mit E-Mail und Passwort an — keine Telegram-Nutzung erforderlich.",
-      en: "Register and sign in with email and password — no Telegram required.",
+      de: "Registriere und melde dich mit E-Mail und Passwort an: keine Telegram-Nutzung erforderlich.",
+      en: "Register and sign in with email and password: no Telegram required.",
     },
   },
   {
@@ -1566,8 +1566,8 @@ export const CHANGELOG: ChangelogEntry[] = [
     tag: "feature",
     title: { de: "Telegram-Anmeldung", en: "Telegram login" },
     description: {
-      de: "Melde dich mit deinem Telegram-Konto an — schnell und sicher.",
-      en: "Sign in with your Telegram account — fast and secure.",
+      de: "Melde dich mit deinem Telegram-Konto an: schnell und sicher.",
+      en: "Sign in with your Telegram account: fast and secure.",
     },
   },
   {

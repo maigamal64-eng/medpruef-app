@@ -95,8 +95,8 @@ export default function TermsPage() {
         </p>
         <p>
           {lang === "de"
-            ? "7-Tage-Geld-zurück-Garantie: Du kannst innerhalb von 7 Tagen nach Kauf eine vollständige Rückerstattung per E-Mail an user-b7e46e80@example.com beantragen — keine Begründung nötig. Anträge werden innerhalb von 72 Stunden bearbeitet."
-            : "7-day money-back guarantee: You can request a full refund within 7 days of purchase by emailing user-b7e46e80@example.com — no reason required. Requests are processed within 72 hours."}
+            ? "7-Tage-Geld-zurück-Garantie: Du kannst innerhalb von 7 Tagen nach Kauf eine vollständige Rückerstattung per E-Mail an user-b7e46e80@example.com beantragen, keine Begründung nötig. Anträge werden innerhalb von 72 Stunden bearbeitet."
+            : "7-day money-back guarantee: You can request a full refund within 7 days of purchase by emailing user-b7e46e80@example.com, no reason required. Requests are processed within 72 hours."}
         </p>
         <p>
           {lang === "de"

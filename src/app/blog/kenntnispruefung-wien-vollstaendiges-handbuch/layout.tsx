@@ -10,7 +10,7 @@ const SLUG = "kenntnispruefung-wien-vollstaendiges-handbuch";
 const post = getPostBySlug(SLUG);
 
 const pageTitle =
-  "Kenntnisprüfung Wien — vollständiges Handbuch 2026 | MedPrüf Blog";
+  "Kenntnisprüfung Wien: vollständiges Handbuch 2026 | MedPrüf Blog";
 const pageDesc =
   "Alles zur Kenntnisprüfung Wien 2026: Zulassung (Nostrifikation), SIP 4 vs SIP 5, Prüfungsaufbau, typische Schwerpunkte, realistischer Lernplan und häufige Fehler. Ehrliches Handbuch von Ärzt:innen, die den Weg selbst gegangen sind.";
 
@@ -54,7 +54,7 @@ function buildArticleSchema() {
   return {
     "@context": "https://schema.org",
     "@type": "Article",
-    headline: "Kenntnisprüfung Wien — vollständiges Handbuch 2026",
+    headline: "Kenntnisprüfung Wien: vollständiges Handbuch 2026",
     description: pageDesc,
     url: `https://medpruf.com/blog/${SLUG}`,
     datePublished: post?.publishedAt,

@@ -144,7 +144,7 @@ export async function POST(req: NextRequest) {
     });
     return NextResponse.json(
       {
-        error: "AI chat burst limit reached — please pause a moment before asking again.",
+        error: "AI chat burst limit reached, please pause a moment before asking again.",
         retryAfter: burstGate.retryAfterSec,
       },
       { status: 429, headers: rateLimitHeaders(burstGate, AI_CHAT_BURST_LIMIT) },
@@ -553,7 +553,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         reply:
-          "Technisches Problem bei der KI-Generierung. Die Frage und die statische Erklärung funktionieren weiter — bitte später erneut versuchen oder den Fehler über das Feedback-Icon melden.",
+          "Technisches Problem bei der KI-Generierung. Die Frage und die statische Erklärung funktionieren weiter, bitte später erneut versuchen oder den Fehler über das Feedback-Icon melden.",
       },
       { status: 503 },
     );

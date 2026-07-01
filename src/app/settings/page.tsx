@@ -1136,8 +1136,8 @@ export default function SettingsPage() {
                       }
                     >
                       {lang === "de"
-                        ? "Der Offline-Modus ist nur für angemeldete Nutzer verfügbar — nur so können beantwortete Fragen später synchronisiert werden."
-                        : "Offline mode is only available to signed-in users — so that answers recorded offline can sync back to your account."}
+                        ? "Der Offline-Modus ist nur für angemeldete Nutzer verfügbar, nur so können beantwortete Fragen später synchronisiert werden."
+                        : "Offline mode is only available to signed-in users, so that answers recorded offline can sync back to your account."}
                     </Alert>
                   </div>
                 )}
@@ -1727,8 +1727,8 @@ function SubscriptionCard({
             </p>
             <p className="text-xs text-[var(--mp-fg-muted)] leading-relaxed">
               {lang === "de"
-                ? "Dein 1-Monats-Test läuft bald aus. Wir verlängern nichts automatisch — du entscheidest selbst, ob du weitermachst."
-                : "Your 1-month trial ends soon. Nothing will renew automatically — you decide whether to continue."}
+                ? "Dein 1-Monats-Test läuft bald aus. Wir verlängern nichts automatisch, du entscheidest selbst, ob du weitermachst."
+                : "Your 1-month trial ends soon. Nothing will renew automatically; you decide whether to continue."}
             </p>
             <Link
               href="/pricing"

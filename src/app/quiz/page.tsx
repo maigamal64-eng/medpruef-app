@@ -901,8 +901,8 @@ function QuizContent() {
         {!userId && !quizFinished && (
           <p className="px-4 pb-2 text-center text-xs text-[var(--mp-fg-subtle)]">
             {lang === "de"
-              ? "Nicht angemeldet — Fortschritt wird nicht gespeichert"
-              : "Not signed in — progress will not be saved"}
+              ? "Nicht angemeldet, Fortschritt wird nicht gespeichert"
+              : "Not signed in: progress will not be saved"}
           </p>
         )}
 
@@ -952,8 +952,8 @@ function QuizContent() {
               ? "Falsche wiederholen ist Pro"
               : "Wrong only is Pro"
             : lang === "de"
-            ? `Free-Kontingent verbraucht — 150/150 Fragen gesehen`
-            : `Free tier complete — 150/150 questions seen`
+            ? `Free-Kontingent verbraucht: 150/150 Fragen gesehen`
+            : `Free tier complete: 150/150 questions seen`
         }
         description={
           paywall?.kind === "qbank_limit"
@@ -985,8 +985,8 @@ function QuizContent() {
           </p>
           <Alert variant="info">
             {lang === "de"
-              ? "Wechsle zu einer anderen Prüfung, um weitere 150 kostenlose Fragen zu bekommen — klicke auf den Prüfungswechsler oben links."
-              : "Switch to a different exam for another 150 free questions — use the exam switcher in the top-left sidebar."}
+              ? "Wechsle zu einer anderen Prüfung, um weitere 150 kostenlose Fragen zu bekommen, klicke auf den Prüfungswechsler oben links."
+              : "Switch to a different exam for another 150 free questions: use the exam switcher in the top-left sidebar."}
           </Alert>
         </div>
       </Dialog>
@@ -1110,8 +1110,8 @@ function QuizSharePrompt({ lang }: { lang: Lang }) {
         </p>
         <p className="text-[11px] text-[var(--mp-fg-subtle)] mt-0.5">
           {lang === "de"
-            ? "Teile deinen Empfehlungscode — wenn sie Pro werden, bekommt ihr beide einen Bonus."
-            : "Share your referral code — when they go Pro, you both get a bonus."}
+            ? "Teile deinen Empfehlungscode, wenn sie Pro werden, bekommt ihr beide einen Bonus."
+            : "Share your referral code: when they go Pro, you both get a bonus."}
         </p>
       </div>
       <Link

@@ -137,7 +137,7 @@ export async function POST(req: NextRequest) {
   if (!burstGate.allowed) {
     return NextResponse.json(
       {
-        error: "Too many translation requests — please wait a moment.",
+        error: "Too many translation requests, please wait a moment.",
         retryAfter: burstGate.retryAfterSec,
       },
       { status: 429, headers: rateLimitHeaders(burstGate, TRANSLATE_BURST_LIMIT) }

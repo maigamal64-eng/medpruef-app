@@ -43,7 +43,7 @@ export default function GlobalError({
   return (
     <html lang="de">
       <head>
-        <title>Fehler — MedPrüf</title>
+        <title>Fehler: MedPrüf</title>
         <meta charSet="utf-8" />
         <meta
           name="viewport"

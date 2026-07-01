@@ -289,8 +289,8 @@ export default function ReferralCodeCard({
       {copiedAt && (
         <p className="text-[11px] text-[var(--mp-fg-subtle)] mt-2">
           {lang === "de"
-            ? "Teile ihn mit anderen Prüflingen — sobald sie Pro werden, bekommt ihr beide einen Bonus."
-            : "Share it with fellow candidates — once they go Pro, you both get a bonus."}
+            ? "Teile ihn mit anderen Prüflingen, sobald sie Pro werden, bekommt ihr beide einen Bonus."
+            : "Share it with fellow candidates: once they go Pro, you both get a bonus."}
         </p>
       )}
     </section>

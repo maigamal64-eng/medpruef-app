@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "FAQ — MedPrüf",
+  title: "FAQ: MedPrüf",
   description:
     "Häufig gestellte Fragen zu MedPrüf: Kenntnisprüfung Wien, Stichprobentest (Innsbruck), Pharmakologie. Zahlung, Pass-Until-You-Pass, Übersetzungen, Datenschutz.",
   alternates: {
@@ -10,14 +10,14 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     url: "https://medpruf.com/faq",
-    title: "FAQ — MedPrüf",
+    title: "FAQ: MedPrüf",
     description:
       "Häufig gestellte Fragen zu MedPrüf: Kenntnisprüfung Wien, Stichprobentest (Innsbruck), Pharmakologie. Zahlung, Pass-Until-You-Pass, Übersetzungen, Datenschutz.",
     images: [{ url: "/brand/og-image.png", width: 1200, height: 630 }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "FAQ — MedPrüf",
+    title: "FAQ: MedPrüf",
     description:
       "Häufig gestellte Fragen zu MedPrüf: Kenntnisprüfung Wien, Stichprobentest (Innsbruck), Pharmakologie. Zahlung, Pass-Until-You-Pass, Übersetzungen, Datenschutz.",
     images: ["/brand/og-image.png"],

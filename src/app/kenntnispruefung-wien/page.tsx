@@ -30,13 +30,13 @@ const content: ExamLandingContent = {
     en: "Pass the Vienna Kenntnisprüfung on your first try.",
   },
   heroSubtitle: {
-    de: "Strukturierte Vorbereitung auf die österreichische Kenntnisprüfung (SIP 4 + SIP 5) — 7.566 Fragen aus 10 Fachgebieten, klinisch kommentiert, destilliert aus dokumentierten offiziellen Wiener Prüfungsmaterialien seit 2016.",
-    en: "Structured prep for the Austrian Kenntnisprüfung (SIP 4 + SIP 5) — 7,566 questions across 10 specialties, clinically annotated, distilled from documented official Vienna exam materials since 2016.",
+    de: "Strukturierte Vorbereitung auf die österreichische Kenntnisprüfung (SIP 4 + SIP 5): 7.566 Fragen aus 10 Fachgebieten, klinisch kommentiert, destilliert aus dokumentierten offiziellen Wiener Prüfungsmaterialien seit 2016.",
+    en: "Structured prep for the Austrian Kenntnisprüfung (SIP 4 + SIP 5): 7,566 questions across 10 specialties, clinically annotated, distilled from documented official Vienna exam materials since 2016.",
   },
   primaryCtaHref: "/quiz?exam=kenntnispruefung&free=1",
   primaryCtaLabel: {
-    de: "Free starten — 150 Kenntnisprüfung Fragen",
-    en: "Start free — 150 Kenntnisprüfung questions",
+    de: "Free starten: 150 Kenntnisprüfung Fragen",
+    en: "Start free: 150 Kenntnisprüfung questions",
   },
   secondaryCtaHref: "/pricing",
   secondaryCtaLabel: {
@@ -79,24 +79,24 @@ const content: ExamLandingContent = {
   ],
   whatYouLearn: [
     {
-      de: "SIP 4: Chirurgische Fächer, Innere Medizin, Dermatologie und Venerologie — klinische Vignetten nach realem Prüfungsstil.",
-      en: "SIP 4: Surgery, Internal Medicine, Dermatology — clinical vignettes mirroring the real exam style.",
+      de: "SIP 4: Chirurgische Fächer, Innere Medizin, Dermatologie und Venerologie, klinische Vignetten nach realem Prüfungsstil.",
+      en: "SIP 4: Surgery, Internal Medicine, Dermatology; clinical vignettes mirroring the real exam style.",
     },
     {
-      de: "SIP 5: Augenheilkunde, HNO, Psychiatrie, Notfall-/Intensivmedizin, Gynäkologie, Pädiatrie, Neurologie — 7 Fachgebiete mit fachspezifischen Schwerpunkten.",
-      en: "SIP 5: Ophthalmology, ENT, Psychiatry, Emergency/Intensive Medicine, Gynecology, Pediatrics, Neurology — 7 specialties with subject-specific emphases.",
+      de: "SIP 5: Augenheilkunde, HNO, Psychiatrie, Notfall-/Intensivmedizin, Gynäkologie, Pädiatrie, Neurologie, 7 Fachgebiete mit fachspezifischen Schwerpunkten.",
+      en: "SIP 5: Ophthalmology, ENT, Psychiatry, Emergency/Intensive Medicine, Gynecology, Pediatrics, Neurology; 7 specialties with subject-specific emphases.",
     },
     {
-      de: "Mehrfachantwort-Fragen mit strikter Bewertung — genau wie in der echten Prüfung.",
-      en: "Multi-correct questions with strict grading — just like on the real exam.",
+      de: "Mehrfachantwort-Fragen mit strikter Bewertung, genau wie in der echten Prüfung.",
+      en: "Multi-correct questions with strict grading, just like on the real exam.",
     },
     {
-      de: "KI-Erklärungen zu Guidelines (ERC, ESC, ÖDG, Herold, Amboss) — nicht nur „richtig/falsch\", sondern Warum.",
-      en: "AI explanations citing guidelines (ERC, ESC, ÖDG, Herold, Amboss) — not just right/wrong, but why.",
+      de: "KI-Erklärungen zu Guidelines (ERC, ESC, ÖDG, Herold, Amboss): nicht nur „richtig/falsch\", sondern Warum.",
+      en: "AI explanations citing guidelines (ERC, ESC, ÖDG, Herold, Amboss): not just right/wrong, but why.",
     },
     {
-      de: "Spaced Repetition (SM-2), personalisierter Lernplan, Schwächen-Radar — damit du deine Zeit nicht auf Fächer verschwendest, die du bereits kannst.",
-      en: "Spaced repetition (SM-2), personalized study plan, weakness radar — so you don't waste time on subjects you already know.",
+      de: "Spaced Repetition (SM-2), personalisierter Lernplan, Schwächen-Radar, damit du deine Zeit nicht auf Fächer verschwendest, die du bereits kannst.",
+      en: "Spaced repetition (SM-2), personalized study plan, weakness radar, so you don't waste time on subjects you already know.",
     },
   ],
   faq: [
@@ -117,7 +117,7 @@ const content: ExamLandingContent = {
       },
       a: {
         de: "Die Kenntnisprüfung besteht aus zwei Teilen: SIP 4 (Summative Integrierte Prüfung 4) deckt die drei großen Fächer Innere Medizin, Chirurgische Fächer und Dermatologie/Venerologie ab. SIP 5 umfasst sieben kleinere Fachgebiete: Augenheilkunde, HNO, Neurologie, Psychiatrie, Gynäkologie, Kinder- und Jugendheilkunde sowie Notfall- und Intensivmedizin. Jeder Teil wird separat bewertet. In MedPrüf kannst du gezielt nach SIP-Teil filtern oder einen simulierten Prüfungsmodus mit Originalstruktur wählen.",
-        en: "The Kenntnisprüfung has two parts: SIP 4 (Summative Integrated Exam 4) covers the three major subjects — Internal Medicine, Surgery, Dermatology/Venereology. SIP 5 covers seven smaller specialties: Ophthalmology, ENT, Neurology, Psychiatry, Gynecology, Pediatrics, Emergency/Intensive Medicine. Each part is graded separately. In MedPrüf you can filter specifically by SIP part, or run a simulated exam mode with the original structure.",
+        en: "The Kenntnisprüfung has two parts: SIP 4 (Summative Integrated Exam 4) covers the three major subjects: Internal Medicine, Surgery, Dermatology/Venereology. SIP 5 covers seven smaller specialties: Ophthalmology, ENT, Neurology, Psychiatry, Gynecology, Pediatrics, Emergency/Intensive Medicine. Each part is graded separately. In MedPrüf you can filter specifically by SIP part, or run a simulated exam mode with the original structure.",
       },
     },
     {
@@ -126,8 +126,8 @@ const content: ExamLandingContent = {
         en: "What is the exam fee?",
       },
       a: {
-        de: "Die offizielle Prüfungsgebühr wird von der Ärztekammer Wien festgelegt und lag zuletzt im Bereich von ca. €400 pro Versuch. Die Gebühr wird pro SIP-Teil erhoben — wer beide Teile antritt, zahlt entsprechend für beide. Die aktuellen Gebühren findest du immer auf der offiziellen Seite der Ärztekammer Wien. MedPrüf ist eine davon unabhängige Lernplattform — wir haben keinen Einfluss auf die Prüfungsgebühr.",
-        en: "The official exam fee is set by the Ärztekammer Wien and was most recently around €400 per attempt. The fee is charged per SIP part — if you take both parts, you pay for both. Current fees are listed on the Ärztekammer Wien website. MedPrüf is an independent learning platform — we don't set or influence the exam fee.",
+        de: "Die offizielle Prüfungsgebühr wird von der Ärztekammer Wien festgelegt und lag zuletzt im Bereich von ca. €400 pro Versuch. Die Gebühr wird pro SIP-Teil erhoben, wer beide Teile antritt, zahlt entsprechend für beide. Die aktuellen Gebühren findest du immer auf der offiziellen Seite der Ärztekammer Wien. MedPrüf ist eine davon unabhängige Lernplattform, wir haben keinen Einfluss auf die Prüfungsgebühr.",
+        en: "The official exam fee is set by the Ärztekammer Wien and was most recently around €400 per attempt. The fee is charged per SIP part; if you take both parts, you pay for both. Current fees are listed on the Ärztekammer Wien website. MedPrüf is an independent learning platform; we don't set or influence the exam fee.",
       },
     },
     {
@@ -146,8 +146,8 @@ const content: ExamLandingContent = {
         en: "How long should I prepare for the Kenntnisprüfung?",
       },
       a: {
-        de: "Die Vorbereitungszeit hängt stark von deinem Ausgangsniveau ab. Ärzt:innen mit aktueller klinischer Praxis in einem EU-nahen System berichten typischerweise von 8-12 Wochen fokussierter Vorbereitung. Wer länger nicht klinisch tätig war oder das deutsche medizinische Vokabular noch aufbaut, plant realistisch 4-6 Monate. Der MedPrüf-Lernplan (im Dashboard) fragt dich nach deinem Prüfungsdatum und baut daraus einen tagesgenauen Plan — 70% neue Fragen, 30% Konsolidierung der Schwächen.",
-        en: "Preparation time depends heavily on your baseline. Doctors with current clinical practice in an EU-adjacent system typically report 8-12 weeks of focused prep. Those who haven't been clinically active for a while, or who are still building German medical vocabulary, realistically plan 4-6 months. The MedPrüf study plan (in the dashboard) asks for your exam date and builds a day-by-day plan — 70% new questions, 30% weakness consolidation.",
+        de: "Die Vorbereitungszeit hängt stark von deinem Ausgangsniveau ab. Ärzt:innen mit aktueller klinischer Praxis in einem EU-nahen System berichten typischerweise von 8-12 Wochen fokussierter Vorbereitung. Wer länger nicht klinisch tätig war oder das deutsche medizinische Vokabular noch aufbaut, plant realistisch 4-6 Monate. Der MedPrüf-Lernplan (im Dashboard) fragt dich nach deinem Prüfungsdatum und baut daraus einen tagesgenauen Plan: 70% neue Fragen, 30% Konsolidierung der Schwächen.",
+        en: "Preparation time depends heavily on your baseline. Doctors with current clinical practice in an EU-adjacent system typically report 8-12 weeks of focused prep. Those who haven't been clinically active for a while, or who are still building German medical vocabulary, realistically plan 4-6 months. The MedPrüf study plan (in the dashboard) asks for your exam date and builds a day-by-day plan: 70% new questions, 30% weakness consolidation.",
       },
     },
     {
@@ -156,8 +156,8 @@ const content: ExamLandingContent = {
         en: "What language is the exam in, and what about the platform?",
       },
       a: {
-        de: "Die Kenntnisprüfung wird auf Deutsch abgehalten — das ist nicht verhandelbar. Fragen, Fallvignetten und alle Antwortoptionen sind auf Deutsch, und medizinische Fachbegriffe folgen der österreichischen Konvention (z.B. „Magen-Darm-Trakt\" statt „Gastrointestinaltrakt\"). Die MedPrüf-Plattform ist primär auf Deutsch, aber Erklärungen können auf Knopfdruck ins Englische, Arabische, Russische, Französische, Türkische, Ukrainische und Serbische übersetzt werden — medizinisches Vokabular bleibt erhalten. So kannst du deutsch trainieren, ohne an einer Erklärung hängen zu bleiben.",
-        en: "The Kenntnisprüfung is held in German — that's non-negotiable. Questions, case vignettes, and all answer options are in German, and medical terminology follows Austrian convention (e.g. „Magen-Darm-Trakt\" instead of „Gastrointestinaltrakt\"). The MedPrüf platform is primarily German, but explanations can be translated on-demand into English, Arabic, Russian, French, Turkish, Ukrainian, and Serbian — medical vocabulary is preserved. So you can train in German without getting stuck on an explanation.",
+        de: "Die Kenntnisprüfung wird auf Deutsch abgehalten, das ist nicht verhandelbar. Fragen, Fallvignetten und alle Antwortoptionen sind auf Deutsch, und medizinische Fachbegriffe folgen der österreichischen Konvention (z.B. „Magen-Darm-Trakt\" statt „Gastrointestinaltrakt\"). Die MedPrüf-Plattform ist primär auf Deutsch, aber Erklärungen können auf Knopfdruck ins Englische, Arabische, Russische, Französische, Türkische, Ukrainische und Serbische übersetzt werden, medizinisches Vokabular bleibt erhalten. So kannst du deutsch trainieren, ohne an einer Erklärung hängen zu bleiben.",
+        en: "The Kenntnisprüfung is held in German; that's non-negotiable. Questions, case vignettes, and all answer options are in German, and medical terminology follows Austrian convention (e.g. „Magen-Darm-Trakt\" instead of „Gastrointestinaltrakt\"). The MedPrüf platform is primarily German, but explanations can be translated on-demand into English, Arabic, Russian, French, Turkish, Ukrainian, and Serbian; medical vocabulary is preserved. So you can train in German without getting stuck on an explanation.",
       },
     },
     {
@@ -166,8 +166,8 @@ const content: ExamLandingContent = {
         en: "What prerequisites do I need to be admitted to the exam?",
       },
       a: {
-        de: "Grundvoraussetzung ist ein abgeschlossenes Medizinstudium und ein Nostrifikationsverfahren der zuständigen Medizinischen Universität (in Wien die MedUni Wien). Die Nostrifikation bewertet dein ausländisches Diplom und bestimmt, welche Ergänzungsprüfungen du ablegen musst — typischerweise die Kenntnisprüfung, oft auch Pharmakologie. Ohne abgeschlossene Nostrifikation (oder zumindest laufendes Verfahren mit Bescheid über die zu absolvierenden Teile) kannst du nicht zur Kenntnisprüfung antreten. Infos zur Nostrifikation findest du bei der MedUni Wien.",
-        en: "The baseline requirement is a completed medical degree plus a nostrification process through the relevant Medical University (in Vienna: MedUni Wien). Nostrification evaluates your foreign diploma and determines which supplementary exams you need to take — typically the Kenntnisprüfung, often also Pharmakologie. Without a completed nostrification (or at least an active process with a formal decision on which parts you need), you cannot sit the Kenntnisprüfung. See MedUni Wien for nostrification information.",
+        de: "Grundvoraussetzung ist ein abgeschlossenes Medizinstudium und ein Nostrifikationsverfahren der zuständigen Medizinischen Universität (in Wien die MedUni Wien). Die Nostrifikation bewertet dein ausländisches Diplom und bestimmt, welche Ergänzungsprüfungen du ablegen musst, typischerweise die Kenntnisprüfung, oft auch Pharmakologie. Ohne abgeschlossene Nostrifikation (oder zumindest laufendes Verfahren mit Bescheid über die zu absolvierenden Teile) kannst du nicht zur Kenntnisprüfung antreten. Infos zur Nostrifikation findest du bei der MedUni Wien.",
+        en: "The baseline requirement is a completed medical degree plus a nostrification process through the relevant Medical University (in Vienna: MedUni Wien). Nostrification evaluates your foreign diploma and determines which supplementary exams you need to take, typically the Kenntnisprüfung, often also Pharmakologie. Without a completed nostrification (or at least an active process with a formal decision on which parts you need), you cannot sit the Kenntnisprüfung. See MedUni Wien for nostrification information.",
       },
     },
   ],

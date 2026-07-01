@@ -186,7 +186,7 @@ export async function POST(req: NextRequest) {
   });
   if (!burst.allowed) {
     return NextResponse.json(
-      { error: "Too many requests — please wait a moment.", retryAfter: burst.retryAfterSec },
+      { error: "Too many requests, please wait a moment.", retryAfter: burst.retryAfterSec },
       { status: 429, headers: rateLimitHeaders(burst, TRANSFORM_BURST_LIMIT) },
     );
   }
