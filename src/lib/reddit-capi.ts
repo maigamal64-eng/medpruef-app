@@ -21,8 +21,14 @@ import crypto from "crypto";
  *   1. Set REDDIT_CAPI_TOKEN (server-only) in Vercel.
  *   2. Set REDDIT_CAPI_TEST_MODE=true, fire a test signup, confirm it lands in
  *      Reddit Events Manager Test Events, then set it false.
- *   3. Confirm field hashing (email is SHA-256 here; verify Reddit's current
- *      requirement for ip_address raw-vs-hashed against Test Events).
+ *   3. If it does NOT appear, read the server logs for "[reddit-capi]" — the
+ *      visibility logging below prints Reddit's HTTP status + error body, which
+ *      names the offending field. This schema is the v2-native shape; if Reddit
+ *      has since changed it, the likely culprits to confirm against the current
+ *      docs are: the path id (pixel id `a2_...` vs an account id), `event_at`
+ *      (ISO-8601 here vs a Unix epoch), the dedup field (`event_metadata.
+ *      conversion_id` here vs a top-level `event_id`), and whether `ip_address`
+ *      must be raw (as here) or SHA-256 hashed. Email is SHA-256 lowercased.
  */
 
 const PIXEL_ID = process.env.NEXT_PUBLIC_REDDIT_PIXEL_ID;
@@ -89,15 +95,38 @@ export async function sendRedditConversion(input: RedditConversionInput): Promis
       ],
     };
 
-    await fetch(`https://ads-api.reddit.com/api/v2.0/conversions/events/${PIXEL_ID}`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${TOKEN}`,
-        "Content-Type": "application/json",
+    const res = await fetch(
+      `https://ads-api.reddit.com/api/v2.0/conversions/events/${PIXEL_ID}`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${TOKEN}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
       },
-      body: JSON.stringify(body),
-    });
-  } catch {
-    /* CAPI must never block the app flow */
+    );
+
+    // Fails-open (never throws), BUT a non-2xx must be VISIBLE. Otherwise a
+    // schema/endpoint mismatch is silent during token-time Test-Events
+    // validation: you register, nothing appears in Reddit, and you have zero
+    // diagnostics. Reddit's error body names the offending field — log it.
+    // In TEST mode, also log the accepted case so validation sees a positive.
+    if (!res.ok) {
+      const errBody = await res.text().catch(() => "<no body>");
+      console.error(
+        `[reddit-capi] ${input.trackingType} rejected: HTTP ${res.status} ${errBody}`,
+      );
+    } else if (TEST_MODE) {
+      console.log(
+        `[reddit-capi] TEST ${input.trackingType} accepted (HTTP ${res.status}) — confirm in Reddit Events Manager → Test Events`,
+      );
+    }
+  } catch (e) {
+    // Network-level reject only (DNS/timeout); still never blocks the flow.
+    console.error(
+      `[reddit-capi] ${input.trackingType} send failed:`,
+      e instanceof Error ? e.message : e,
+    );
   }
 }
