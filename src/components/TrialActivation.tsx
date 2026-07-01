@@ -1,34 +1,39 @@
 "use client";
 
 /**
- * TrialActivation — the Telegram-gated free Pro trial entry (Notes feature P5).
+ * TrialActivation — the Whop card-on-file Pro trial entry (Notes feature P5,
+ * 2026-07-01 pivot from the free Telegram-gated trial).
  *
- * Self-contained: fetches GET /api/trial/activate for eligibility and renders
- * nothing unless the caller is signed in, free, and has never trialed. The
- * activation flow is progressive — tapping "start" calls POST; if Telegram
- * isn't linked yet the card switches to the link step (deep-link to the bot),
- * then the user retries. On success it reloads so the new Pro tier takes effect
- * across the app.
+ * Self-contained: fetches GET /api/whop/trial for eligibility and renders
+ * nothing unless the caller is signed in, free, and hasn't trialed. Tapping
+ * "start" POSTs to create a Whop checkout session and redirects to the hosted
+ * purchase page, where the user links a card (€0 today) and starts 7 days of
+ * full Pro; Whop auto-charges €19/month afterwards unless they cancel in-trial.
+ * On return, /checkout/success grants access (via /api/whop/trial/verify).
+ *
+ * Honest by rule: the card + the €19/month auto-charge are stated up front (no
+ * dark-pattern surprise renewal). Gated OFF until NOTES_TRIAL_ENABLED — GET
+ * returns eligible:false while the flag is off, so the banner stays hidden.
  */
 
 import { useEffect, useState } from "react";
 import { authFetch as fetch } from "@/lib/authFetch";
 import { getStoredSession } from "@/lib/auth";
-import { Sparkles, Loader2, Check, Send, RotateCcw } from "lucide-react";
+import { Sparkles, Loader2, CreditCard } from "lucide-react";
 
 type Lang = "de" | "en";
 
 interface TrialState {
   eligible: boolean;
+  trial_enabled: boolean;
   is_pro: boolean;
-  telegram_linked: boolean;
   already_trialed: boolean;
-  trial_expires_at: string | null;
-  telegram_deep_link: string | null;
   trial_days: number;
+  price_after_cents: number;
+  currency: string;
 }
 
-type Phase = "idle" | "working" | "needs_telegram" | "done" | "error";
+type Phase = "idle" | "working" | "error";
 
 export default function TrialActivation({
   lang,
@@ -41,7 +46,6 @@ export default function TrialActivation({
   const [loading, setLoading] = useState(true);
   const [signedIn, setSignedIn] = useState(true);
   const [phase, setPhase] = useState<Phase>("idle");
-  const [deepLink, setDeepLink] = useState<string | null>(null);
 
   useEffect(() => {
     const session = getStoredSession();
@@ -50,89 +54,45 @@ export default function TrialActivation({
       setLoading(false);
       return;
     }
-    fetch("/api/trial/activate")
+    fetch("/api/whop/trial")
       .then((r) => (r.ok ? r.json() : null))
       .then((d: TrialState | null) => {
-        if (d) {
-          setState(d);
-          setDeepLink(d.telegram_deep_link);
-          if (!d.telegram_linked) setPhase("needs_telegram");
-        }
+        if (d) setState(d);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
 
-  const activate = async () => {
+  const start = async () => {
     setPhase("working");
     try {
-      const res = await fetch("/api/trial/activate", { method: "POST" });
+      const res = await fetch("/api/whop/trial", { method: "POST" });
       const d = await res.json().catch(() => ({}));
-      if (res.ok) {
-        setPhase("done");
+      if (res.ok && d?.purchaseUrl) {
+        // Redirect to Whop's hosted checkout to link the card.
+        window.location.href = d.purchaseUrl;
         return;
       }
-      if (d?.code === "TELEGRAM_REQUIRED") {
-        if (d.telegram_deep_link) setDeepLink(d.telegram_deep_link);
-        setPhase("needs_telegram");
-      } else if (d?.code === "ALREADY_TRIALED" || d?.code === "ALREADY_PRO") {
+      if (d?.code === "ALREADY_TRIALED" || d?.code === "ALREADY_PRO") {
         setState((s) => (s ? { ...s, eligible: false } : s));
         setPhase("idle");
-      } else {
-        setPhase("error");
+        return;
       }
+      setPhase("error");
     } catch {
       setPhase("error");
     }
   };
 
-  // Render nothing unless there's a trial to offer. `eligible` already folds in
-  // the feature flag (GET returns eligible=false when the trial is disabled),
-  // Pro status, and already-trialed — but keep the explicit guards for clarity.
   if (!signedIn || loading || !state) return null;
-  if (state.is_pro) return null;
-  if (state.already_trialed && phase !== "done") return null;
-  if (!state.eligible && phase !== "done") return null;
+  if (!state.eligible) return null;
 
   const de = lang === "de";
+  const price = `${(state.price_after_cents / 100).toFixed(0)} €`;
   const wrap =
-    "rounded-[var(--mp-r-card)] border p-4 sm:p-5 " +
-    (phase === "done"
-      ? "border-[var(--mp-viridian)]/40 bg-[var(--mp-viridian)]/8"
-      : "border-[var(--mp-viridian)]/30 bg-gradient-to-br from-[var(--mp-viridian)]/10 to-[var(--mp-accent-teal)]/5") +
-    " " +
+    "rounded-[var(--mp-r-card)] border p-4 sm:p-5 border-[var(--mp-viridian)]/30 " +
+    "bg-gradient-to-br from-[var(--mp-viridian)]/10 to-[var(--mp-accent-teal)]/5 " +
     className;
-
-  if (phase === "done") {
-    return (
-      <div className={wrap} role="status">
-        <div className="flex items-start gap-3">
-          <span className="w-9 h-9 rounded-xl bg-[var(--mp-viridian)]/15 flex items-center justify-center text-[var(--mp-viridian)] flex-shrink-0">
-            <Check className="w-5 h-5" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="font-display font-bold text-[var(--mp-fg)]">
-              {de
-                ? `Deine Gratis-Pro-Woche läuft!`
-                : `Your free week of Pro is live!`}
-            </p>
-            <p className="text-sm text-[var(--mp-fg-muted)] mt-0.5">
-              {de
-                ? "Alle Pro-Funktionen sind für 7 Tage freigeschaltet."
-                : "Every Pro feature is unlocked for 7 days."}
-            </p>
-            <button
-              type="button"
-              onClick={() => window.location.reload()}
-              className="mp-btn mp-btn--primary mp-btn--sm mt-3"
-            >
-              {de ? "Loslegen" : "Get started"}
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className={wrap}>
@@ -147,53 +107,34 @@ export default function TrialActivation({
               : `Free: ${state.trial_days} days of MedPrüf Pro`}
           </p>
           <p className="text-sm text-[var(--mp-fg-muted)] mt-0.5">
-            {phase === "needs_telegram"
-              ? de
-                ? "Verknüpfe dein Telegram, um die Gratis-Woche zu starten (so erreichen dich auch unsere Erinnerungen)."
-                : "Link your Telegram to start the free week (it's also how our reminders reach you)."
-              : de
-                ? "Unbegrenzte Notizen, KI-Erklärungen und mehr — kein Zahlungsmittel nötig."
-                : "Unlimited notes, AI explanations and more — no payment method needed."}
+            {de
+              ? `Unbegrenzte Notizen, KI-Erklärungen und mehr. Karte hinterlegen, heute 0 €. Danach ${price}/Monat, jederzeit in der Testphase kündbar.`
+              : `Unlimited notes, AI explanations and more. Add a card, €0 today. Then ${price}/month, cancel anytime during the trial.`}
           </p>
 
           <div className="flex flex-wrap items-center gap-2 mt-3">
-            {phase === "needs_telegram" ? (
-              <>
-                {deepLink && (
-                  <a
-                    href={deepLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mp-btn mp-btn--primary mp-btn--sm inline-flex items-center gap-1.5"
-                  >
-                    <Send className="w-4 h-4" />
-                    {de ? "Telegram verknüpfen" : "Link Telegram"}
-                  </a>
-                )}
-                <button
-                  type="button"
-                  onClick={activate}
-                  className="mp-btn mp-btn--ghost mp-btn--sm inline-flex items-center gap-1.5"
-                >
-                  <RotateCcw className="w-4 h-4" />
-                  {de ? "Verknüpft? Erneut versuchen" : "Linked? Try again"}
-                </button>
-              </>
-            ) : (
-              <button
-                type="button"
-                onClick={activate}
-                disabled={phase === "working"}
-                className="mp-btn mp-btn--primary mp-btn--sm inline-flex items-center gap-1.5 disabled:opacity-60"
-              >
-                {phase === "working" ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Sparkles className="w-4 h-4" />
-                )}
-                {de ? "Gratis-Woche starten" : "Start free week"}
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={start}
+              disabled={phase === "working"}
+              className="mp-btn mp-btn--primary mp-btn--sm inline-flex items-center gap-1.5 disabled:opacity-60"
+            >
+              {phase === "working" ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <CreditCard className="w-4 h-4" />
+              )}
+              {phase === "working"
+                ? de
+                  ? "Weiter zu Whop …"
+                  : "Redirecting …"
+                : de
+                  ? "Gratis-Woche starten"
+                  : "Start free week"}
+            </button>
+            <span className="text-xs text-[var(--mp-fg-light)]">
+              {de ? "Sichere Zahlung über Whop" : "Secure payment via Whop"}
+            </span>
           </div>
 
           {phase === "error" && (

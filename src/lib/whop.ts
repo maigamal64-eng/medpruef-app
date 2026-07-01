@@ -32,6 +32,7 @@ export function whopPlanToTier(planId: string | null | undefined): string | null
   add(process.env.WHOP_PLAN_FIRST_MONTH_19, "first_month_19");
   add(process.env.WHOP_PLAN_FIRST_3MO_27, "first_3mo_27");
   add(process.env.WHOP_PLAN_PREMIUM_PASS, "premium_pass_guaranteed");
+  add(process.env.WHOP_PLAN_NOTES_TRIAL, "notes_pro_trial");
   return map[planId] ?? null;
 }
 
@@ -320,6 +321,7 @@ export function tierToWhopPlan(tier: string): string | null {
     first_month_19: process.env.WHOP_PLAN_FIRST_MONTH_19,
     first_3mo_27: process.env.WHOP_PLAN_FIRST_3MO_27,
     premium_pass_guaranteed: process.env.WHOP_PLAN_PREMIUM_PASS,
+    notes_pro_trial: process.env.WHOP_PLAN_NOTES_TRIAL,
   };
   return map[tier] ?? null;
 }

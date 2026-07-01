@@ -138,6 +138,28 @@ export const TIERS: Record<string, TierDefinition> = {
     // 2026-04-26-D2). Keeps the share rewarded but the math positive.
     referralPayoutCents: 1000, // €10
   },
+  // ── Notes Pro trial — Whop card-on-file, €0 now → €19/mo after 7 days ──
+  //
+  // 2026-07-01. The Notes-feature conversion lever, moved onto a Whop RENEWAL
+  // plan (plan_redactedec56d4df: trial_period_days=7, initial_price=0,
+  // renewal_price=€19, billing_period=30d). The user links a working card at
+  // signup (€0 charged now), gets 7 days of full Pro, and Whop auto-charges
+  // €19/month afterwards unless they cancel in-trial. Each €19 charge fires
+  // payment.succeeded → the whop webhook extends Pro by durationMonths (=1).
+  // Distinct tier id (NOT first_month_19) so trial-sourced recurring revenue is
+  // reportable separately from a one-time €19 buy. Gated live by
+  // NOTES_TRIAL_ENABLED; plan id in env WHOP_PLAN_NOTES_TRIAL.
+  notes_pro_trial: {
+    id: "notes_pro_trial",
+    priceCents: 1900, // €19 — the post-trial recurring price
+    currency: "EUR",
+    durationMonths: 1, // each renewal charge grants one month
+    humanName: "Pro (7-day free trial, then €19/month)",
+    humanNameDe: "Pro (7 Tage gratis, dann 19 €/Monat)",
+    available: true,
+    puypEligible: false, // recurring monthly — no pass-until-you-pass guarantee
+    referralPayoutCents: 1000, // €10 — matches the €19 one-month economics
+  },
   // ── Phantom tiers — removed from all UI 2026-06-25; dead data pending deletion ──
   // Keys kept: string literals in waitlist/non-crypto-waitlist routes still reference them.
   monthly: {

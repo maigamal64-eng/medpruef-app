@@ -26,6 +26,7 @@ import { AppLayout } from "@/components/ui";
 import LanguageToggle from "@/components/LanguageToggle";
 import ThemeToggle from "@/components/ThemeToggle";
 import UpcomingExams from "@/components/UpcomingExams";
+import TrialActivation from "@/components/TrialActivation";
 import { useToast, BrandedLoader } from "@/components/ui";
 
 type Lang = "de" | "en";
@@ -245,6 +246,15 @@ export default function PricingPage() {
               ? "Die einzige Prüfungsvorbereitung, speziell für Österreichs Kenntnisprüfung, Stichprobentest und Pharmakologie. Destilliert aus über 10.000 dokumentierten offiziellen Prüfungsfragen: Wien seit 2016, Stichprobentest (Innsbruck) und Pharmakologie."
               : "The only exam prep built specifically for Austria's Kenntnisprüfung, Stichprobentest & Pharmakologie. Distilled from over 10,000 documented official exam questions: Vienna since 2016, Stichprobentest (Innsbruck) and Pharmakologie."}
           </p>
+        </section>
+
+        {/* ══════════ Pro trial banner (flag-gated, signed-in eligible free users) ══════════ */}
+        {/* Self-gating: TrialActivation renders nothing unless NOTES_TRIAL_ENABLED
+            is on AND the caller is a signed-in, not-yet-trialed free user. Placed
+            above the paid grid so the closest-to-convert audience sees the free
+            week first. Anonymous top-of-funnel announcement is staged separately. */}
+        <section className="max-w-5xl mx-auto px-4 lg:px-8 pb-4">
+          <TrialActivation lang={lang === "de" ? "de" : "en"} />
         </section>
 
         {/* ══════════ Free tier card ══════════ */}

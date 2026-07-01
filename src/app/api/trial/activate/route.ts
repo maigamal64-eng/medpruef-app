@@ -32,11 +32,14 @@ export const dynamic = "force-dynamic";
 const TRIAL_DAYS = 7;
 const BOT_USERNAME = "MedPruefBot";
 
-// Feature flag — the trial stays OFF until NOTES_TRIAL_ENABLED='true' is set in
-// the environment, so it can be reviewed + tested before it goes live to every
-// eligible free user. Default OFF: fail-safe for a tier/revenue surface.
-const TRIAL_ENABLED =
-  (process.env.NOTES_TRIAL_ENABLED ?? "false").toLowerCase() === "true";
+// SUPERSEDED 2026-07-01 — the free Telegram-gated trial was replaced by the Whop
+// CARD trial (/api/whop/trial + /api/whop/trial/verify): the user links a card
+// (€0 now) and Whop auto-charges €19/mo after 7 days. This route is HARD-DISABLED
+// (not just flag-gated) so flipping NOTES_TRIAL_ENABLED for the card trial cannot
+// reopen a free, no-card trial through this old path. GET returns not-eligible;
+// POST returns 503 (TRIAL_DISABLED). Kept for history / the trials-table wall
+// reference; delete once the card trial is proven live. Nothing calls it now.
+const TRIAL_ENABLED = false;
 
 function deepLink(userId: string): string {
   return `https://t.me/${BOT_USERNAME}?start=auth_${userId}`;

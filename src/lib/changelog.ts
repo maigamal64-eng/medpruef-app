@@ -23,6 +23,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-07-01",
+    tag: "feature",
+    title: {
+      de: "7 Tage MedPrüf Pro gratis testen",
+      en: "Try MedPrüf Pro free for 7 days",
+    },
+    description: {
+      de: "Teste eine Woche lang alles aus Pro: unbegrenzte Lernkarten-Notizen, KI-Erklärungen, Streak-Freeze und mehr. Du hinterlegst eine Karte, heute werden 0 € abgebucht. Danach 19 €/Monat, jederzeit während der Testphase kündbar. Sichere Zahlung über Whop.",
+      en: "Try everything in Pro for a week: unlimited flash-notes, AI explanations, streak freeze and more. You add a card, €0 is charged today. Then €19/month, cancel anytime during the trial. Secure payment via Whop.",
+    },
+  },
+  {
     date: "2026-06-30",
     tag: "feature",
     title: {

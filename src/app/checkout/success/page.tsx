@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useUserTier } from "@/lib/hooks/useUserTier";
 import { trackPurchase } from "@/lib/conversion-events";
 import { TIER_BY_ID } from "@/lib/content-truth";
+import { authFetch } from "@/lib/authFetch";
 
 // Best-known value (in euros) if the tier is missing/unknown in the URL —
 // the Cohort is the headline paid tier, so we report its price rather than 0.
@@ -42,10 +43,20 @@ export default function CheckoutSuccessPage() {
     if (purchaseFiredRef.current) return;
     purchaseFiredRef.current = true;
 
-    const tier =
-      new URLSearchParams(window.location.search).get("tier") ?? "";
-    const priceCents = TIER_BY_ID[tier]?.price_cents;
+    const params = new URLSearchParams(window.location.search);
+    const tier = params.get("tier") ?? "";
+    const isTrial = params.get("trial") === "1";
 
+    // A €0 trial start is NOT a purchase — reporting it at the paid fallback
+    // value (€129) would badly inflate conversion value. Record it at €0 so the
+    // trial-start conversion fires without polluting revenue signals; the real
+    // charge happens at day 7 (payment.succeeded → the webhook).
+    if (isTrial) {
+      trackPurchase({ tier: tier || "notes_pro_trial", valueEur: 0 });
+      return;
+    }
+
+    const priceCents = TIER_BY_ID[tier]?.price_cents;
     if (typeof priceCents === "number") {
       trackPurchase({ tier, valueEur: priceCents / 100 });
     } else {
@@ -58,6 +69,35 @@ export default function CheckoutSuccessPage() {
       });
     }
   }, []);
+
+  // Trial grant: a €0 trial start fires no `payment.succeeded`, so the payment
+  // webhook never grants at trial start. Verify the Whop membership server-side
+  // and flip to Pro here. Idempotent + best-effort; retried a few times to ride
+  // out membership-propagation lag, then the tier poll below takes over.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("trial") !== "1") return;
+    let cancelled = false;
+    let attempts = 0;
+    const tryVerify = async () => {
+      if (cancelled) return;
+      attempts += 1;
+      try {
+        const res = await authFetch("/api/whop/trial/verify", { method: "POST" });
+        const d = await res.json().catch(() => ({}));
+        if (d?.granted) {
+          void refresh();
+          return; // granted — the isPaid effect will route home
+        }
+      } catch {
+        /* keep retrying */
+      }
+      if (!cancelled && attempts < 6) setTimeout(tryVerify, 2_500);
+    };
+    void tryVerify();
+    return () => {
+      cancelled = true;
+    };
+  }, [refresh]);
 
   // Kick off an immediate refresh on mount so we don't wait for the
   // 5-minute background interval in useUserTier. Then poll every 2 s
