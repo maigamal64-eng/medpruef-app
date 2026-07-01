@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import TrialRibbon from "@/components/TrialRibbon";
 import Image from "next/image";
 import Link from "next/link";
 import { getLang, setLang } from "@/lib/i18n";
@@ -520,6 +521,7 @@ export default function LandingPage() {
       ref={revealRoot as React.RefObject<HTMLDivElement>}
       className="lp-root min-h-screen bg-[var(--mp-surface-raised)] text-[var(--mp-fg)]"
     >
+      <TrialRibbon lang={lang === "en" ? "en" : "de"} />
       <Nav lang={lang} onLangChange={switchLang} />
       <Hero lang={lang} freeHref={freeHref} />
       <StatsStrip lang={lang} />
