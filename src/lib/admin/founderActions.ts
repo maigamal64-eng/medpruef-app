@@ -86,19 +86,19 @@ export const ACTIONS: ReadonlyArray<FounderAction> = [
     ],
   },
   {
-    id: "enable-notes-trial",
-    title: "Test + turn on the Pro card-trial (the new conversion lever)",
-    why: "The flash-notes conversion lever, now on a Whop CARD trial (pivoted 2026-07-01): the user links a working card (0 € charged today), gets 7 days of full Pro, and Whop auto-charges 19 €/month afterwards unless they cancel in-trial. Card-on-file converts far better than a free trial (the payment method is already linked, so day-7 conversion is the default, not a fresh decision). BUILT + deployed, flag-gated OFF. Flipping it on is a real revenue move once you've run one trial end to end and confirmed the grant fires.",
+    id: "verify-notes-trial",
+    title: "Run the first card test on the LIVE Pro trial",
+    why: "The flash-notes conversion lever is a Whop CARD trial (2026-07-01): the user links a working card (0 € today), gets 7 days of full Pro, and Whop auto-charges 19 €/month afterwards unless they cancel in-trial. It is now LIVE — NOTES_TRIAL_ENABLED=true (flipped 2026-07-01, deploy d8fd16a): the 'Gratis-Woche starten' banner shows in the Library + on /pricing, and the announcement ribbon is on the landing for logged-out visitors. It has NOT yet been exercised on a real card, so run one trial end to end yourself as the inaugural test and confirm the grant fires. If anything is off, flip NOTES_TRIAL_ENABLED=false to pull it instantly.",
     category: "Revenue",
     status: "ready",
-    needs: "Your own account + a real card + ~10 min. 0 € is charged at trial start (the card is only captured); the 19 € charge is at day 7 unless you cancel in-trial. Only activates with NOTES_TRIAL_ENABLED=true in Vercel (Production). Plan: plan_redactedec56d4df. Ready promo copy (DE/EN; AR pending your sign-off) in reviews/notes-feature-2026-06-30/trial-launch-kit.md.",
+    needs: "Your own account + a real card + ~10 min. 0 € is charged at trial start (the card is only captured); the 19 € charge is at day 7 unless you cancel in-trial. Plan: plan_redactedec56d4df. Full test + promo copy in reviews/notes-feature-2026-06-30/TRIAL-STATUS-AND-REMAINING.md + trial-launch-kit.md.",
     steps: [
-      "Set NOTES_TRIAL_ENABLED=true in the Vercel project env (Production), then redeploy (or re-pull env).",
       "As a real FREE test user, open the Library (or /pricing) and tap 'Gratis-Woche starten' → you're sent to the Whop hosted checkout. Add a card and finish (0 € is charged now).",
       "You're redirected to /checkout/success → confirm your tier flips to pro (the page grants via /api/whop/trial/verify, which reads your Whop membership and flips access).",
       "Confirm the grant landed: a subscriptions row with tier=notes_pro_trial, payment_provider='whop', status='active'; and /admin/payments shows a grant_succeeded for the trial.",
-      "Confirm the auto-charge is set: in the Whop dashboard the membership shows a 19 € renewal at day 7. To avoid being charged during testing, cancel the membership before day 7 (or let it charge and refund).",
-      "Once proven, run the launch-kit copies for paid + organic promotion. If anything looks off, set NOTES_TRIAL_ENABLED=false to disable instantly (fail-safe default).",
+      "In the Whop dashboard, confirm the membership shows a 19 € renewal at day 7 AND note the event names it fired (esp. any membership.went_valid / experience_claimed) — send those to [name] so the webhook backstop branch can be finished.",
+      "To avoid the 19 € charge during testing, cancel the membership before day 7 (or let it charge and refund).",
+      "If anything looks off, set NOTES_TRIAL_ENABLED=false to pull the trial instantly (fail-safe default).",
     ],
   },
   {
@@ -188,4 +188,4 @@ export const ACTIONS: ReadonlyArray<FounderAction> = [
  * organic seeds; the warm IG paste is the closest open loop on our side of the net.
  */
 export const ACTIONS_INTRO_NOTE =
-  "These are the steps no agent can take for you: posting as yourself in a forum, a charge on your card, a Google Ads link, an Instagram DM the API can't send, flipping an env flag after you've tested it. The fleet runs everything else. Top-of-funnel is still the bottleneck (0 checkout attempts ever), so firing the loaded community seeds stays the highest-leverage reach move. NEW (2026-07-01): the flash-notes Pro trial is now a Whop CARD trial — the user links a card (0 € today), gets 7 days of Pro, and Whop auto-charges 19 €/month unless they cancel in-trial (card-on-file converts far better than a free trial). It is built, deployed, and flag-OFF (NOTES_TRIAL_ENABLED); test one trial end to end, then flip it on. Community Explore (NOTES_EXPLORE_ENABLED) stays optional. Both fail safe to OFF.";
+  "These are the steps no agent can take for you: posting as yourself in a forum, a charge on your card, a Google Ads link, an Instagram DM the API can't send, flipping an env flag after you've tested it. The fleet runs everything else. Top-of-funnel is still the bottleneck (0 checkout attempts ever), so firing the loaded community seeds stays the highest-leverage reach move. NEW (2026-07-01): the flash-notes Pro trial is now a Whop CARD trial — the user links a card (0 € today), gets 7 days of Pro, and Whop auto-charges 19 €/month unless they cancel in-trial (card-on-file converts far better than a free trial). It is now LIVE (NOTES_TRIAL_ENABLED=true): the banner shows in the Library + on /pricing + a ribbon on the landing. It has not yet been run on a real card, so the top revenue action is to test one trial end to end yourself. Community Explore (NOTES_EXPLORE_ENABLED) stays OFF + optional (public health content — your review first). The trial fails safe: flip NOTES_TRIAL_ENABLED=false to pull it instantly.";
