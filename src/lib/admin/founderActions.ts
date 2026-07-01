@@ -86,34 +86,16 @@ export const ACTIONS: ReadonlyArray<FounderAction> = [
     ],
   },
   {
-    id: "verify-notes-trial",
-    title: "Run the first card test on the LIVE Pro trial",
-    why: "The flash-notes conversion lever is a Whop CARD trial (2026-07-01): the user links a working card (0 € today), gets 7 days of full Pro, and Whop auto-charges 19 €/month afterwards unless they cancel in-trial. It is now LIVE — NOTES_TRIAL_ENABLED=true (flipped 2026-07-01, deploy d8fd16a): the 'Gratis-Woche starten' banner shows in the Library + on /pricing, and the announcement ribbon is on the landing for logged-out visitors. It has NOT yet been exercised on a real card, so run one trial end to end yourself as the inaugural test and confirm the grant fires. If anything is off, flip NOTES_TRIAL_ENABLED=false to pull it instantly.",
-    category: "Revenue",
-    status: "ready",
-    needs: "Your own account + a real card + ~10 min. 0 € is charged at trial start (the card is only captured); the 19 € charge is at day 7 unless you cancel in-trial. Plan: plan_redactedec56d4df. Full test + promo copy in reviews/notes-feature-2026-06-30/TRIAL-STATUS-AND-REMAINING.md + trial-launch-kit.md.",
-    steps: [
-      "As a real FREE test user, open the Library (or /pricing) and tap 'Gratis-Woche starten' → you're sent to the Whop hosted checkout. Add a card and finish (0 € is charged now).",
-      "You're redirected to /checkout/success → confirm your tier flips to pro (the page grants via /api/whop/trial/verify, which reads your Whop membership and flips access).",
-      "Confirm the grant landed: a subscriptions row with tier=notes_pro_trial, payment_provider='whop', status='active'; and /admin/payments shows a grant_succeeded for the trial.",
-      "In the Whop dashboard, confirm the membership shows a 19 € renewal at day 7 AND note the event names it fired (esp. any membership.went_valid / experience_claimed) — send those to [name] so the webhook backstop branch can be finished.",
-      "To avoid the 19 € charge during testing, cancel the membership before day 7 (or let it charge and refund).",
-      "If anything looks off, set NOTES_TRIAL_ENABLED=false to pull the trial instantly (fail-safe default).",
-    ],
-  },
-  {
-    id: "review-notes-explore",
-    title: "Review + optionally turn on community notes (Explore)",
-    why: "The public-notes Explore surface + its full safety stack (pre-publish PII/quality scan, publish-confirm, report → admin takedown, 24h author grace, anonymous-by-default) is BUILT + deployed but flag-gated OFF. It needs your review before going live — public health-content + PII is the real risk, so the takedown queue must exist first (it does).",
+    id: "monitor-notes-explore",
+    title: "Watch the Explore moderation queue (community notes are LIVE)",
+    why: "Community notes / Explore is now LIVE (NOTES_EXPLORE_ENABLED=true, 2026-07-01) — users can publish notes publicly (anonymous-by-default, behind a pre-publish PII/quality scan + the 'community, not verified' label). Public health content is the standing risk, so the one ongoing action is to watch the takedown queue.",
     category: "Content",
     status: "optional",
-    needs: "~15 min. The admin moderation queue is live at /admin/note-reports. The flag is NOTES_EXPLORE_ENABLED (Vercel env). The rest of the notes feature works fully without this.",
+    needs: "~5 min, periodically. The moderation queue is at /admin/note-reports; set NOTES_EXPLORE_ENABLED=false to pull ALL public notes instantly if needed.",
     steps: [
-      "Open /admin/note-reports — confirm the takedown queue renders (empty until a public note is reported).",
-      "Skim the safety design: reviews/notes-feature-2026-06-30/SPEC.md §7 (PII scan + 24h grace + report/takedown + the 'community, not verified' label).",
-      "Only if comfortable with moderation: set NOTES_EXPLORE_ENABLED=true (Production env). The 'Entdecken' toggle + 'Öffentlich teilen' then appear in the Library.",
-      "Publish one of your own notes, confirm it shows in Explore anonymously, then take it down from /admin/note-reports to test the loop end to end.",
-      "Prefer not to run community content yet? Leave it OFF — nothing else depends on it.",
+      "Open /admin/note-reports periodically — action any reported note (takedown / dismiss).",
+      "Spot-check the public Explore feed for anything off (medical misinformation, PII the scan missed).",
+      "If a real problem surfaces, set NOTES_EXPLORE_ENABLED=false to pull all public notes at once, then investigate.",
     ],
   },
   {
@@ -156,8 +138,7 @@ export const ACTIONS: ReadonlyArray<FounderAction> = [
     status: "blocking",
     needs: "Admin access to the GA4 property (G-DP4CQQPZWF) and the Google Ads account.",
     steps: [
-      "Open GA4 (G-DP4CQQPZWF), go to Admin then Events (Key events).",
-      "Mark sign_up as a key event.",
+      "DONE (2026-07-01): sign_up is marked as a key event in GA4 and is firing on the medpruf.com stream (you confirmed via the Events screen).",
       "Go to Admin then Product links then Google Ads links, and link the Google Ads account.",
       "Open Google Ads, go to Goals then Conversions, and import the sign_up conversion.",
       "Confirm the imported conversion shows as Eligible (not Inactive) before the probe runs.",
@@ -188,4 +169,4 @@ export const ACTIONS: ReadonlyArray<FounderAction> = [
  * organic seeds; the warm IG paste is the closest open loop on our side of the net.
  */
 export const ACTIONS_INTRO_NOTE =
-  "These are the steps no agent can take for you: posting as yourself in a forum, a charge on your card, a Google Ads link, an Instagram DM the API can't send, flipping an env flag after you've tested it. The fleet runs everything else. Top-of-funnel is still the bottleneck (0 checkout attempts ever), so firing the loaded community seeds stays the highest-leverage reach move. NEW (2026-07-01): the flash-notes Pro trial is now a Whop CARD trial — the user links a card (0 € today), gets 7 days of Pro, and Whop auto-charges 19 €/month unless they cancel in-trial (card-on-file converts far better than a free trial). It is now LIVE (NOTES_TRIAL_ENABLED=true): the banner shows in the Library + on /pricing + a ribbon on the landing. It has not yet been run on a real card, so the top revenue action is to test one trial end to end yourself. Community Explore (NOTES_EXPLORE_ENABLED) stays OFF + optional (public health content — your review first). The trial fails safe: flip NOTES_TRIAL_ENABLED=false to pull it instantly.";
+  "These are the steps no agent can take for you: posting as yourself in a forum, a charge on your card, a Google Ads link, an Instagram DM the API can't send, flipping an env flag after you've tested it. The fleet runs everything else. Top-of-funnel is still the bottleneck (0 checkout attempts ever), so firing the loaded community seeds stays the highest-leverage reach move. NEW (2026-07-01): the flash-notes Pro trial (Whop CARD trial — card, 0 € today, 7 days of Pro, then 19 €/month unless cancelled in-trial) is LIVE and TESTED end to end on a real card (grant fires correctly). Community notes / Explore is also LIVE now. Both fail safe: flip NOTES_TRIAL_ENABLED / NOTES_EXPLORE_ENABLED to false to pull them instantly. The one ongoing content action is to watch the Explore moderation queue at /admin/note-reports.";
