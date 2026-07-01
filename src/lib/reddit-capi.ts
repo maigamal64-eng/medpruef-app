@@ -1,40 +1,48 @@
 import crypto from "crypto";
 
 /**
- * Reddit Conversions API (CAPI) v2 sender, server-side (2026-07-01 Reddit pivot).
+ * Reddit Conversions API (CAPI) sender, server-side (2026-07-01 Reddit pivot).
  *
- * Endpoint: https://ads-api.reddit.com/api/v2.0/conversions/events/{PIXEL_ID}
- *   (the path id is the PIXEL id a2_j9ef7eziw829, NOT a separate account id).
- * Auth: `Authorization: Bearer [secret]`.
+ * Built to Reddit's CURRENT v3 spec (confirmed against Events Manager's own
+ * "Send to Developer" payload, 2026-07-01):
  *
- * DORMANT until REDDIT_CAPI_TOKEN is set (clean no-op, same discipline as the
- * pixel loaders). Fails-open, NEVER throws, so a CAPI hiccup can never break
- * signup or checkout. This is the consent-independent + ad-blocker-proof
- * complement to the client Reddit Pixel; the two are DEDUPED on a shared
- * `conversion_id` (Reddit drops the duplicate).
+ *   POST https://ads-api.reddit.com/api/v3/pixels/{PIXEL_ID}/conversion_events
+ *   Authorization: Bearer {REDDIT_CAPI_TOKEN}
+ *   {
+ *     "data": { "events": [ {
+ *       "event_at": <Unix epoch MILLISECONDS, <= 7 days old>,
+ *       "action_source": "website",
+ *       "type": { "tracking_type": "SignUp" },
+ *       "click_id": "<rdt_cid>",              // event-level, optional
+ *       "test_id": "<t2_...>",                // ONLY when validating; omit in prod
+ *       "user": { "email": <sha256 lower>, "external_id", "ip_address", "user_agent" },
+ *       "metadata": { "conversion_id": <dedup key>, "currency", "value", "item_count" }
+ *     } ] }
+ *   }
  *
- * Attribution: Reddit requires >= 1 signal per event. Strongest is the Reddit
- * click id (`rdt_cid`), captured from the ad landing URL; we also send hashed
- * email + ip + user_agent when available.
+ * DORMANT until REDDIT_CAPI_TOKEN is set (clean no-op). Fails-open, NEVER throws,
+ * so a CAPI hiccup can't break signup/checkout. It is the consent-independent +
+ * ad-blocker-proof complement to the client Reddit Pixel; the two are DEDUPED on
+ * a shared `metadata.conversion_id` == the pixel's `conversionId` (Reddit drops
+ * the duplicate within a 7-day window).
  *
- * REMAINING SETUP (when [name] provides the token, see the handoff):
- *   1. Set REDDIT_CAPI_TOKEN (server-only) in Vercel.
- *   2. Set REDDIT_CAPI_TEST_MODE=true, fire a test signup, confirm it lands in
- *      Reddit Events Manager Test Events, then set it false.
- *   3. If it does NOT appear, read the server logs for "[reddit-capi]" — the
- *      visibility logging below prints Reddit's HTTP status + error body, which
- *      names the offending field. This schema is the v2-native shape; if Reddit
- *      has since changed it, the likely culprits to confirm against the current
- *      docs are: the path id (pixel id `a2_...` vs an account id), `event_at`
- *      (ISO-8601 here vs a Unix epoch), the dedup field (`event_metadata.
- *      conversion_id` here vs a top-level `event_id`), and whether `ip_address`
- *      must be raw (as here) or SHA-256 hashed. Email is SHA-256 lowercased.
+ * TEST routing: set REDDIT_CAPI_TEST_ID to the id Reddit shows under Events
+ * Manager → "Send test events" (e.g. t2_...). While set, every event carries
+ * `test_id` and routes to Test Events instead of counting as a real conversion.
+ * DELETE that env var to go live in production.
+ *
+ * ⚠️ 2026-07-01 token note: the first token [name] generated returned 401
+ * UNAUTHORIZED on this exact endpoint AND on authenticated reads (verified via
+ * curl + python) — i.e. Reddit rejected the token itself, not the request shape
+ * (which matches the spec above). Fix is token-side: re-copy the FULL token
+ * (it's ~820 chars — easy to truncate) or regenerate it in Events Manager, then
+ * verify with the ready-to-run curl in the handoff before relying on it.
  */
 
 const PIXEL_ID = process.env.NEXT_PUBLIC_REDDIT_PIXEL_ID;
 const TOKEN = process.env.REDDIT_CAPI_TOKEN;
-const TEST_MODE =
-  (process.env.REDDIT_CAPI_TEST_MODE ?? "false").toLowerCase() === "true";
+/** When set (a t2_... test id from Events Manager), events route to Test Events. Unset in prod. */
+const TEST_ID = process.env.REDDIT_CAPI_TEST_ID || "";
 
 function sha256(value: string): string {
   return crypto.createHash("sha256").update(value.trim().toLowerCase()).digest("hex");
@@ -49,14 +57,15 @@ export type RedditTrackingType =
 
 export interface RedditConversionInput {
   trackingType: RedditTrackingType;
-  /** Dedup key shared with the client pixel (e.g. the user id or Whop payment id). */
+  /** Dedup key shared with the client pixel's `conversionId` (e.g. user id or Whop payment id). */
   conversionId: string;
   email?: string | null;
   ip?: string | null;
   userAgent?: string | null;
-  /** rdt_cid from the ad landing URL (strongest attribution signal). */
+  /** rdt_cid from the ad landing URL (strongest attribution signal); event-level. */
   clickId?: string | null;
   externalId?: string | null;
+  /** Maps to metadata.value (decimal), for Purchase events. */
   valueDecimal?: number | null;
   currency?: string;
   itemCount?: number | null;
@@ -76,48 +85,45 @@ export async function sendRedditConversion(input: RedditConversionInput): Promis
     if (input.externalId) user.external_id = input.externalId;
     if (input.ip) user.ip_address = input.ip;
     if (input.userAgent) user.user_agent = input.userAgent;
-    if (input.clickId) user.click_id = input.clickId;
 
-    const body = {
-      test_mode: TEST_MODE,
-      events: [
-        {
-          event_at: new Date().toISOString(),
-          event_type: { tracking_type: input.trackingType },
-          user,
-          event_metadata: {
-            conversion_id: input.conversionId,
-            ...(input.currency ? { currency: input.currency } : {}),
-            ...(input.valueDecimal != null ? { value_decimal: input.valueDecimal } : {}),
-            ...(input.itemCount != null ? { item_count: input.itemCount } : {}),
-          },
-        },
-      ],
+    const metadata: Record<string, unknown> = { conversion_id: input.conversionId };
+    if (input.currency) metadata.currency = input.currency;
+    if (input.valueDecimal != null) metadata.value = input.valueDecimal;
+    if (input.itemCount != null) metadata.item_count = input.itemCount;
+
+    const event: Record<string, unknown> = {
+      event_at: Date.now(), // Unix epoch MILLISECONDS (spec: must be <= 7 days old)
+      action_source: "website",
+      type: { tracking_type: input.trackingType },
+      user,
+      metadata,
     };
+    if (input.clickId) event.click_id = input.clickId; // event-level, not inside user
+    if (TEST_ID) event.test_id = TEST_ID; // routes to Test Events; omit in prod
 
     const res = await fetch(
-      `https://ads-api.reddit.com/api/v2.0/conversions/events/${PIXEL_ID}`,
+      `https://ads-api.reddit.com/api/v3/pixels/${PIXEL_ID}/conversion_events`,
       {
         method: "POST",
         headers: {
           Authorization: `Bearer ${TOKEN}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ data: { events: [event] } }),
       },
     );
 
     // Fails-open (never throws), BUT a non-2xx must be VISIBLE. Otherwise a
-    // schema/endpoint mismatch is silent during token-time Test-Events
-    // validation: you register, nothing appears in Reddit, and you have zero
-    // diagnostics. Reddit's error body names the offending field — log it.
-    // In TEST mode, also log the accepted case so validation sees a positive.
+    // schema/endpoint/token mismatch is silent during token-time validation:
+    // you register, nothing appears in Reddit, and you have zero diagnostics.
+    // Reddit's error body names the cause (e.g. UNAUTHORIZED = bad token) — log
+    // it. In TEST mode, also log the accepted case so validation sees a positive.
     if (!res.ok) {
       const errBody = await res.text().catch(() => "<no body>");
       console.error(
         `[reddit-capi] ${input.trackingType} rejected: HTTP ${res.status} ${errBody}`,
       );
-    } else if (TEST_MODE) {
+    } else if (TEST_ID) {
       console.log(
         `[reddit-capi] TEST ${input.trackingType} accepted (HTTP ${res.status}) — confirm in Reddit Events Manager → Test Events`,
       );
