@@ -15,6 +15,7 @@ import CookieBannerMount from "@/components/CookieBannerMount";
 import ConsentGatedAnalytics from "@/components/ConsentGatedAnalytics";
 import ConsentGatedMetaPixel from "@/components/ConsentGatedMetaPixel";
 import ConsentGatedRedditPixel from "@/components/ConsentGatedRedditPixel";
+import AttributionCapture from "@/components/AttributionCapture";
 import IntercomMessenger from "@/components/IntercomMessenger";
 import OfflineIndicator from "@/components/OfflineIndicator";
 import TrackRouteChange from "@/components/TrackRouteChange";
@@ -401,6 +402,10 @@ export default function RootLayout({
                 test dormant). See marketing/campaigns/paid-ads-setup-2026-06-24.md. */}
             <ConsentGatedMetaPixel />
             <ConsentGatedRedditPixel />
+            {/* First-touch campaign attribution (utm_* + rdt_cid) captured to
+                localStorage on landing, attached to the register call. Not a
+                tracker, no consent gate needed (first-party, no network). */}
+            <AttributionCapture />
             {/* Intercom Messenger — ALWAYS-ON (not consent-gated, [name] 2026-06-25):
                 boots anonymous, upgrades to an identity-verified session for
                 logged-in users via /api/intercom/identify. No-ops when

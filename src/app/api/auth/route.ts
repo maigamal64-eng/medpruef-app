@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { validateInitData, validateLoginWidget } from "@/lib/telegram";
 import { getServiceClient } from "@/lib/supabase";
 import { sendRedditConversion } from "@/lib/reddit-capi";
+import { sanitizeAttribution } from "@/lib/attribution";
 import bcrypt from "bcryptjs";
 import {
   checkRateLimit,
@@ -190,7 +191,8 @@ export async function POST(req: NextRequest) {
 
     // ── EMAIL/PASSWORD REGISTER ──
     if (emailRegister) {
-      const { email, password, firstName, lastName } = emailRegister;
+      const { email, password, firstName, lastName, attribution } = emailRegister;
+      const attr = sanitizeAttribution(attribution);
       if (!email || !password || !firstName) {
         return NextResponse.json(
           { error: "Email, password, and name required" },
@@ -274,7 +276,7 @@ export async function POST(req: NextRequest) {
           user_id: user.id,
           event_type: "register",
           action: "email_register",
-          metadata: { method: "email" },
+          metadata: { method: "email", ...(attr ? { attribution: attr } : {}) },
           ip_address:
             req.headers.get("x-forwarded-for") ||
             req.headers.get("x-real-ip") ||
@@ -298,6 +300,7 @@ export async function POST(req: NextRequest) {
           req.headers.get("x-real-ip") ||
           null,
         userAgent: req.headers.get("user-agent") || null,
+        clickId: attr?.rdt_cid ?? null,
       });
 
       // Mint a server-signed session token. This is the credential the

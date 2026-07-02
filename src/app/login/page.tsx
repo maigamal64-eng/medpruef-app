@@ -5,6 +5,7 @@ import Link from "next/link";
 import { getLang, setLang } from "@/lib/i18n";
 import { getStoredSession, storeSession, setSessionToken, getSessionToken } from "@/lib/auth";
 import { trackRegistration } from "@/lib/conversion-events";
+import { getStoredAttribution } from "@/lib/attribution";
 import { BrandedLoader } from "@/components/Logo";
 import { TextField } from "@/components/ui";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -145,7 +146,15 @@ export default function LoginPage() {
       const payload =
         mode === "login"
           ? { emailLogin: { email, password } }
-          : { emailRegister: { email, password, firstName, lastName } };
+          : {
+              emailRegister: {
+                email,
+                password,
+                firstName,
+                lastName,
+                attribution: getStoredAttribution() ?? undefined,
+              },
+            };
 
       const res = await fetch("/api/auth", {
         method: "POST",
