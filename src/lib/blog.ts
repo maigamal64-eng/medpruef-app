@@ -34,6 +34,22 @@ export interface BlogPostMeta {
 
 export const BLOG_POSTS: BlogPostMeta[] = [
   {
+    slug: "spaced-repetition-arztpruefungen-oesterreich",
+    title: {
+      de: "Spaced Repetition für die österreichischen Arztprüfungen (SM-2)",
+      en: "Spaced repetition for the Austrian medical exams (SM-2)",
+    },
+    summary: {
+      de: "Kenntnisprüfung Wien, Stichprobentest und Pharmakologie ziehen aus einem riesigen Fragenpool. So nutzt du Spaced Repetition (SM-2), aktives Erinnern und den 70-30-Rhythmus, um über 10.000 Fragen wirklich zu behalten.",
+      en: "The Kenntnisprüfung Wien, Stichprobentest and Pharmakologie exams draw from a huge question pool. Here is how to use spaced repetition (SM-2), active recall and the 70-30 rhythm to actually retain over 10,000 questions.",
+    },
+    publishedAt: "2026-07-02",
+    author: "MedPrüf Editorial",
+    readingMinutes: 9,
+    tags: ["Spaced Repetition", "SM-2", "Lernmethode", "Kenntnisprüfung", "Stichprobentest"],
+    hasOwnRoute: true,
+  },
+  {
     slug: "kenntnispruefung-wien-vollstaendiges-handbuch",
     title: {
       de: "Kenntnisprüfung Wien: vollständiges Handbuch 2026",

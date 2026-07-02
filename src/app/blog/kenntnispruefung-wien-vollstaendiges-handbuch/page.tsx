@@ -98,7 +98,7 @@ export default function KenntnispruefungHandbuchPost() {
                 Jahrgänge liegen je nach Zyklus zwischen 20 und 40 Prozent, mit
                 deutlicher Schwankung zwischen SIP 4 und SIP 5. Wer unvorbereitet
                 antritt, weil „man doch einen Medizinabschluss hat&rdquo;, verliert
-                durchschnittlich 400 Euro pro Fehlversuch plus mehrere Monate
+                rund 795 Euro pro Fehlversuch plus mehrere Monate
                 Berufsausübungs-Verzögerung. Das ist keine Prüfung, die man
                 „nebenbei&rdquo; abhandelt.
               </p>
