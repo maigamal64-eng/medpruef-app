@@ -34,6 +34,22 @@ export interface BlogPostMeta {
 
 export const BLOG_POSTS: BlogPostMeta[] = [
   {
+    slug: "medizinisches-deutsch-auslaendische-aerzte",
+    title: {
+      de: "Medizinisches Deutsch für ausländische Ärzt:innen: die Sprachlücke schließen",
+      en: "Medical German for foreign doctors: closing the language gap",
+    },
+    summary: {
+      de: "Bei den österreichischen Wissensprüfungen scheitert es oft an der deutschen Fachsprache, nicht am Wissen. So schließt du die Sprachlücke: zuerst verstehen, dann auf Deutsch üben, Terminologie im Kontext, echte deutsche Fragen.",
+      en: "On the Austrian knowledge exams the barrier is often the German medical language, not the knowledge. Close the gap: understand first, then practice in German, terminology in context, and real German questions.",
+    },
+    publishedAt: "2026-07-02",
+    author: "MedPrüf Editorial",
+    readingMinutes: 8,
+    tags: ["Medizinisches Deutsch", "Fachsprache", "Sprache", "Kenntnisprüfung", "Nostrifikation"],
+    hasOwnRoute: true,
+  },
+  {
     slug: "spaced-repetition-arztpruefungen-oesterreich",
     title: {
       de: "Spaced Repetition für die österreichischen Arztprüfungen (SM-2)",
