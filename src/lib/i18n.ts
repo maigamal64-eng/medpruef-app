@@ -1,6 +1,28 @@
 import { useEffect, useState } from 'react'
+import { EXTRA_TRANSLATIONS, RTL_LANGS } from './i18n-extra'
 
-type Lang = 'de' | 'en'
+/**
+ * Supported UI languages. `de`/`en` are the fully-authored base (every key
+ * present in the `translations` map below). The additional codes are served
+ * from the additive `EXTRA_TRANSLATIONS` overlay (src/lib/i18n-extra.ts):
+ * any key missing there falls back to English, then German, so a partial
+ * translation can never render a blank string. `ar` is RTL and, per [name]'s
+ * standing rule, stays behind LIVE_LANGS review before it appears in the
+ * public picker.
+ */
+export type Lang = 'de' | 'en' | 'ru' | 'uk' | 'tr' | 'ar'
+
+/** Languages shown in the public language picker (AR added only after [name] signs off). */
+export const LIVE_LANGS: readonly Lang[] = ['de', 'en', 'ru', 'uk', 'tr']
+
+export const LANG_LABELS: Record<Lang, string> = {
+  de: 'Deutsch',
+  en: 'English',
+  ru: 'Русский',
+  uk: 'Українська',
+  tr: 'Türkçe',
+  ar: 'العربية',
+}
 
 const translations = {
   // Home page
@@ -684,14 +706,43 @@ const translations = {
 export type TranslationKey = keyof typeof translations
 
 export function t(key: TranslationKey, lang: Lang = 'de'): string {
-  return translations[key]?.[lang] || key
+  const base = translations[key] as Record<string, string> | undefined
+  // de/en come from the fully-authored base map.
+  if (lang === 'de' || lang === 'en') return base?.[lang] || key
+  // Extra languages: overlay first, then en, then de, then the key.
+  return EXTRA_TRANSLATIONS[lang]?.[key] || base?.en || base?.de || key
 }
 
-export function getLang(): Lang {
+const KNOWN_LANGS: readonly Lang[] = ['de', 'en', 'ru', 'uk', 'tr', 'ar']
+function coerceLang(v: string | null): Lang {
+  return (KNOWN_LANGS as readonly string[]).includes(v || '') ? (v as Lang) : 'de'
+}
+
+/** True for right-to-left languages; drives the `dir` attribute. */
+export function isRtl(lang: Lang): boolean {
+  return RTL_LANGS.includes(lang)
+}
+
+/**
+ * Wide reader: the user's ACTUAL chosen language (de/en/ru/uk/tr/ar).
+ * Use this + `t()` in multilingual-aware chrome. SSR-safe (returns de).
+ */
+export function getUiLang(): Lang {
   if (typeof window !== 'undefined') {
-    return (localStorage.getItem('medpruef-lang') as Lang) || 'de'
+    return coerceLang(localStorage.getItem('medpruef-lang'))
   }
   return 'de'
+}
+
+/**
+ * Narrow reader (de/en only): for pages that still carry their own
+ * `{ de, en }` content maps (legal, landing marketing copy). Any language
+ * beyond German collapses to English here, so those pages render an English
+ * fallback while the shared UI strings (via `t()` + `getUiLang()`) still
+ * localize fully. Widen a page by switching it to `getUiLang()` + `t()`.
+ */
+export function getLang(): 'de' | 'en' {
+  return getUiLang() === 'de' ? 'de' : 'en'
 }
 
 const LANG_EVENT = 'medpruef-lang-change'
@@ -717,10 +768,10 @@ export function setLang(lang: Lang) {
 export function useLang(): Lang {
   const [lang, setLangLocal] = useState<Lang>('de')
   useEffect(() => {
-    setLangLocal(getLang())
+    setLangLocal(getUiLang())
     const handler = (e: Event) => {
       const detail = (e as CustomEvent<Lang>).detail
-      if (detail === 'de' || detail === 'en') {
+      if (detail && (KNOWN_LANGS as readonly string[]).includes(detail)) {
         setLangLocal(detail)
       } else {
         setLangLocal(getLang())

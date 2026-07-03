@@ -59,14 +59,14 @@ export default function LegalFooter() {
               href={l.href}
               className="hover:text-[var(--mp-viridian)] underline-offset-2 hover:underline"
             >
-              {l.label[lang]}
+              {l.label[lang === "de" ? "de" : "en"]}
             </a>
           ) : (
             <Link
               href={l.href}
               className="hover:text-[var(--mp-viridian)] underline-offset-2 hover:underline"
             >
-              {l.label[lang]}
+              {l.label[lang === "de" ? "de" : "en"]}
             </Link>
           )}
           {i < links.length - 1 && <span aria-hidden>·</span>}

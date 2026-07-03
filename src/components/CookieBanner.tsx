@@ -1,10 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { t } from "@/lib/i18n";
+import { t, type Lang } from "@/lib/i18n";
 import { Cookie } from "lucide-react";
-
-type Lang = "de" | "en";
 
 const COOKIE_KEY = "medpruef_cookies";
 
