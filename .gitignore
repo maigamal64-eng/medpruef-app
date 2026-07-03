@@ -94,3 +94,8 @@ ds-bundle/
 .design-sync/learnings/
 .design-sync/node_modules
 ds-dts/
+
+# question-formatting pipeline artifacts
+scripts/.format-checkpoint.jsonl
+scripts/.format-progress.json
+scripts/.format-run.log
