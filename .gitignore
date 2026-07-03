@@ -99,3 +99,4 @@ ds-dts/
 scripts/.format-checkpoint.jsonl
 scripts/.format-progress.json
 scripts/.format-run.log
+scripts/.facts-watch-report.json
