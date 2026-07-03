@@ -100,3 +100,8 @@ scripts/.format-checkpoint.jsonl
 scripts/.format-progress.json
 scripts/.format-run.log
 scripts/.facts-watch-report.json
+scripts/.format-catchup.log
+scripts/.notes-checkpoint.jsonl
+scripts/.notes-progress.json
+scripts/.notes-run.log
+scripts/.format-catchup.log
