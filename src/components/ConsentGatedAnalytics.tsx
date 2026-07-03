@@ -31,13 +31,19 @@ function loadGA4() {
   s1.src = `https://www.googletagmanager.com/gtag/js?id=${GA_ID}`;
   document.head.appendChild(s1);
 
+  // page_path MUST include the query string (fixed 2026-07-03): GA4 derives
+  // campaign attribution from the utm_* params in the page URL. The old
+  // pathname-only value stripped them, so every FIRST-visit accepter (i.e.
+  // every paid ad click that consented) was recorded as Direct instead of
+  // e.g. reddit/cpc. (Returning accepters were fine — TrackRouteChange
+  // re-fires config with the query on mount — but ad clicks are first visits.)
   const s2 = document.createElement("script");
   s2.id = "ga-init";
   s2.textContent =
     `window.dataLayer=window.dataLayer||[];` +
     `function gtag(){dataLayer.push(arguments);}` +
     `gtag('js',new Date());` +
-    `gtag('config','${GA_ID}',{page_path:window.location.pathname});`;
+    `gtag('config','${GA_ID}',{page_path:window.location.pathname+window.location.search});`;
   document.head.appendChild(s2);
 }
 
