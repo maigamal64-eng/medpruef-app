@@ -17,7 +17,7 @@ export type Lang = 'de' | 'en' | 'ru' | 'uk' | 'tr' | 'ar'
  * full translator overlays. uk is added the moment its overlay lands; ar only
  * after [name] signs off on the wording (standing rule).
  */
-export const LIVE_LANGS: readonly Lang[] = ['de', 'en', 'ru', 'tr']
+export const LIVE_LANGS: readonly Lang[] = ['de', 'en', 'ru', 'uk', 'tr']
 
 export const LANG_LABELS: Record<Lang, string> = {
   de: 'Deutsch',
