@@ -23,6 +23,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-07-03",
+    tag: "improvement",
+    title: {
+      de: "Transparenz: Analyse in der Beta",
+      en: "Transparency: analytics during beta",
+    },
+    description: {
+      de: "Während der Beta ist die anonyme Nutzungsanalyse standardmäßig aktiv, damit wir Probleme schneller finden und beheben. Du kannst jederzeit im Cookie-Banner ablehnen; deine Wahl wird dauerhaft gespeichert. Details in der Datenschutzerklärung (Abschnitt 2.5).",
+      en: "During beta, anonymous usage analytics are on by default so we can find and fix problems faster. You can decline anytime in the cookie banner; your choice is stored persistently. Details in the privacy policy (section 2.5).",
+    },
+  },
+  {
     date: "2026-07-01",
     tag: "fix",
     title: {

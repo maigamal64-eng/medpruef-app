@@ -122,8 +122,8 @@ const PROCESSORS: Processor[] = [
   {
     name: "Google Analytics 4",
     purpose: {
-      de: "Aggregierte Nutzungsanalyse (Seitenaufrufe, Sitzungsdauer); lädt nur nach Einwilligung.",
-      en: "Aggregated usage analytics (page views, session duration); loads only after consent.",
+      de: "Aggregierte Nutzungsanalyse (Seitenaufrufe, Sitzungsdauer); in der Beta standardmäßig aktiv, Widerspruch jederzeit über das Cookie-Banner (Ablehnen).",
+      en: "Aggregated usage analytics (page views, session duration); active by default during beta, opt out anytime via the cookie banner (Decline).",
     },
     jurisdiction: {
       de: "Google LLC, USA (EU-Daten über Google Ireland Ltd.). SCCs + IP-Anonymisierung aktiv.",
@@ -135,8 +135,8 @@ const PROCESSORS: Processor[] = [
   {
     name: "Microsoft Clarity",
     purpose: {
-      de: "UX-Analyse (Heatmaps, Sitzungswiedergabe, Dead-Clicks); lädt nur nach Einwilligung.",
-      en: "UX analytics (heatmaps, session replay, dead clicks); loads only after consent.",
+      de: "UX-Analyse (Heatmaps, Sitzungswiedergabe, Dead-Clicks); in der Beta standardmäßig aktiv, Widerspruch jederzeit über das Cookie-Banner (Ablehnen). Passwörter und Zahlungseingaben werden maskiert.",
+      en: "UX analytics (heatmaps, session replay, dead clicks); active by default during beta, opt out anytime via the cookie banner (Decline). Passwords and payment inputs are masked.",
     },
     jurisdiction: {
       de: "Microsoft Corporation, USA. SCCs in Kraft.",
@@ -274,12 +274,12 @@ export default function PrivacyPage() {
           </li>
         </ul>
 
-        <h3>{t ? "2.5 Analysedaten (einwilligungspflichtig)" : "2.5 Analytics data (consent-based)"}</h3>
+        <h3>{t ? "2.5 Analysedaten (Beta: aktiv mit Widerspruchsrecht)" : "2.5 Analytics data (beta: on by default with opt-out)"}</h3>
         <ul>
           <li>
             {t
-              ? "Nur nach Ihrer aktiven Zustimmung über das Cookie-Banner: aggregierte Seitenaufrufe, Sitzungsdauer, Klickpfade (Google Analytics 4) sowie Heatmaps und Sitzungswiedergaben ohne Erfassung von Passwörtern und Zahlungseingaben (Microsoft Clarity)."
-              : "Only after your active consent via the cookie banner: aggregated page views, session duration, click paths (Google Analytics 4) as well as heatmaps and session replays with passwords and payment inputs masked (Microsoft Clarity)."}
+              ? "Während der Beta-Phase auf Grundlage unseres berechtigten Interesses (Art. 6 Abs. 1 lit. f DSGVO, Produktverbesserung) standardmäßig aktiv: aggregierte Seitenaufrufe, Sitzungsdauer, Klickpfade (Google Analytics 4) sowie Heatmaps und Sitzungswiedergaben ohne Erfassung von Passwörtern und Zahlungseingaben (Microsoft Clarity). Sie können der Analyse jederzeit über das Cookie-Banner (Ablehnen) widersprechen; der Widerspruch wird dauerhaft gespeichert. Werbe-Pixel (z. B. Meta) laden weiterhin ausschließlich nach aktiver Einwilligung."
+              : "During the beta phase, active by default on the basis of our legitimate interest (Art. 6(1)(f) GDPR, product improvement): aggregated page views, session duration, click paths (Google Analytics 4) as well as heatmaps and session replays with passwords and payment inputs masked (Microsoft Clarity). You can object to analytics anytime via the cookie banner (Decline); your objection is stored persistently. Advertising pixels (e.g. Meta) still load only after active consent."}
           </li>
         </ul>
       </section>

@@ -284,7 +284,7 @@ const translations = {
   'privacy': { de: 'Datenschutz', en: 'Privacy' },
   'shortcut_guide': { de: 'Tastenkürzel', en: 'Keyboard Shortcuts' },
   'press_to_close': { de: 'Drücke Esc zum Schließen', en: 'Press Esc to close' },
-  'cookie_banner': { de: 'Wir verwenden Cookies für Analysen', en: 'We use cookies for analytics' },
+  'cookie_banner': { de: 'Wir nutzen anonyme Analysen, um MedPrüf in der Beta zu verbessern. Du kannst jederzeit ablehnen.', en: 'We use anonymous analytics to improve MedPrüf during beta. You can decline anytime.' },
   'cookie_accept': { de: 'Akzeptieren', en: 'Accept' },
   'cookie_decline': { de: 'Ablehnen', en: 'Decline' },
   'privacy_policy': { de: 'Datenschutz', en: 'Privacy Policy' },

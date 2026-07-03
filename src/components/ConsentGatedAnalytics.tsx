@@ -22,6 +22,24 @@ import { getCookieConsent } from "@/components/CookieBanner";
 const GA_ID = process.env.NEXT_PUBLIC_GA_ID;
 const CLARITY_ID = process.env.NEXT_PUBLIC_CLARITY_ID;
 
+/**
+ * BETA OPT-OUT MODE ([name]'s explicit decision, 2026-07-03): while the product
+ * is in beta and paid ads are off, analytics load BY DEFAULT and only a
+ * "declined" choice blocks them (opt-out), instead of requiring an explicit
+ * accept (opt-in). Decline is still honored immediately and persistently,
+ * and the banner remains the objection mechanism. The privacy page was
+ * updated to describe this honestly (legitimate-interest framing + opt-out).
+ * REVERT PATH: set NEXT_PUBLIC_TRACKING_OPTOUT=false (or remove it) in
+ * Vercel and redeploy; behavior returns to strict opt-in. The Meta/Reddit
+ * AD pixels are NOT included in opt-out mode; they stay strictly opt-in.
+ */
+const OPT_OUT_MODE = process.env.NEXT_PUBLIC_TRACKING_OPTOUT === "true";
+
+function analyticsAllowed(): boolean {
+  const consent = getCookieConsent();
+  return OPT_OUT_MODE ? consent !== "declined" : consent === "accepted";
+}
+
 function loadGA4() {
   if (!GA_ID) return;
   if (document.getElementById("ga-loader")) return; // already loaded
@@ -64,7 +82,7 @@ function loadClarity() {
 export default function ConsentGatedAnalytics() {
   useEffect(() => {
     const tryLoad = () => {
-      if (getCookieConsent() !== "accepted") return;
+      if (!analyticsAllowed()) return;
       loadGA4();
       loadClarity();
     };
