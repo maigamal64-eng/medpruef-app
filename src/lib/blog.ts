@@ -34,6 +34,38 @@ export interface BlogPostMeta {
 
 export const BLOG_POSTS: BlogPostMeta[] = [
   {
+    slug: "kenntnispruefung-zweiter-versuch",
+    title: {
+      de: "Der zweite Versuch: die Kenntnisprüfung Wien nach einem Fehlversuch bestehen",
+      en: "The second attempt: passing the Kenntnisprüfung Wien after failing once",
+    },
+    summary: {
+      de: "Die Kenntnisprüfung Wien ist ein offenes Kurzantwortformat mit kohortenrelativer Bestehensgrenze. Warum der erste Versuch selten am Wissen scheitert, welche drei Verschiebungen den zweiten Versuch tragen, und wie du freien Abruf und Format gezielt trainierst.",
+      en: "The Kenntnisprüfung Wien is an open short-answer exam with a cohort-relative pass mark. Why a first attempt rarely fails on knowledge, the three shifts that carry a second attempt, and how to train free recall and the format deliberately.",
+    },
+    publishedAt: "2026-07-03",
+    author: "MedPrüf Editorial",
+    readingMinutes: 9,
+    tags: ["Kenntnisprüfung", "Zweiter Versuch", "KAF", "Prüfungsformat", "Wien"],
+    hasOwnRoute: true,
+  },
+  {
+    slug: "medizin-lernen-in-deiner-sprache",
+    title: {
+      de: "Medizin lernen in deiner Sprache: die österreichische Arztprüfung mit mehrsprachigen Erklärungen",
+      en: "Study medicine in your language: the Austrian medical exam with multilingual explanations",
+    },
+    summary: {
+      de: "Die Prüfung läuft auf Deutsch, dein Verständnis darf in deiner Sprache entstehen: Erklärungen in sieben Sprachen (Russisch, Arabisch, Englisch, Französisch, Türkisch, Ukrainisch, Serbisch) zu über 10.000 echten Fragen, plus Oberfläche in fünf Sprachen.",
+      en: "The exam runs in German, but your understanding can grow in your language: explanations in seven languages (Russian, Arabic, English, French, Turkish, Ukrainian, Serbian) across over 10,000 real questions, plus a five-language interface.",
+    },
+    publishedAt: "2026-07-03",
+    author: "MedPrüf Editorial",
+    readingMinutes: 8,
+    tags: ["Mehrsprachig", "Erklärungen", "Sprache", "Kenntnisprüfung", "Stichprobentest"],
+    hasOwnRoute: true,
+  },
+  {
     slug: "medizinisches-deutsch-auslaendische-aerzte",
     title: {
       de: "Medizinisches Deutsch für ausländische Ärzt:innen: die Sprachlücke schließen",
