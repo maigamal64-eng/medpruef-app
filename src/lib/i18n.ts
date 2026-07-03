@@ -307,6 +307,18 @@ const translations = {
   'shortcut_guide': { de: 'Tastenkürzel', en: 'Keyboard Shortcuts' },
   'press_to_close': { de: 'Drücke Esc zum Schließen', en: 'Press Esc to close' },
   'cookie_banner': { de: 'Wir nutzen anonyme Analysen, um MedPrüf in der Beta zu verbessern. Du kannst jederzeit ablehnen.', en: 'We use anonymous analytics to improve MedPrüf during beta. You can decline anytime.' },
+
+  // Exam deadline reminder (lead magnet)
+  'reminder_title': { de: 'Verpass die Anmeldefrist nicht', en: 'Do not miss the registration deadline' },
+  'reminder_next': { de: 'Nächster Termin:', en: 'Next exam:' },
+  'reminder_deadline': { de: 'Anmeldeschluss', en: 'registration closes' },
+  'reminder_days_left': { de: 'Tage', en: 'days left' },
+  'reminder_email_placeholder': { de: 'Deine E-Mail-Adresse', en: 'Your email address' },
+  'reminder_cta': { de: 'Erinnere mich', en: 'Remind me' },
+  'reminder_sending': { de: 'Wird gesendet...', en: 'Sending...' },
+  'reminder_done': { de: 'Erledigt. Wir melden uns rechtzeitig vor der Frist.', en: 'Done. We will remind you in good time before the deadline.' },
+  'reminder_error': { de: 'Etwas ist schiefgelaufen. Bitte versuch es erneut.', en: 'Something went wrong. Please try again.' },
+  'reminder_privacy': { de: 'Nur Fristerinnerungen. Kein Spam, jederzeit abbestellbar.', en: 'Deadline reminders only. No spam, unsubscribe anytime.' },
   'cookie_accept': { de: 'Akzeptieren', en: 'Accept' },
   'cookie_decline': { de: 'Ablehnen', en: 'Decline' },
   'privacy_policy': { de: 'Datenschutz', en: 'Privacy Policy' },

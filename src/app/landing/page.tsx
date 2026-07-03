@@ -8,6 +8,7 @@ import { getLang, setLang } from "@/lib/i18n";
 import { getStoredExamSource, type ExamSourceId } from "@/lib/topics";
 import { QUESTIONS } from "@/lib/content-truth";
 import UpcomingExams from "@/components/UpcomingExams";
+import DeadlineReminder from "@/components/DeadlineReminder";
 
 // Free-tier CTAs default to the user's stored exam preference. SSR returns
 // kenntnispruefung (the safest default — biggest cohort) so the link resolves
@@ -582,6 +583,11 @@ export default function LandingPage() {
       <Features lang={lang} />
       <Subjects lang={lang} />
       <UpcomingExams lang={lang} />
+      <section className="py-8 md:py-10">
+        <div className="mx-auto max-w-2xl px-5">
+          <DeadlineReminder lang={lang} />
+        </div>
+      </section>
       <PricingPreview lang={lang} freeHref={freeHref} />
       <SourceProof lang={lang} />
       <FinalCTA lang={lang} freeHref={freeHref} />
