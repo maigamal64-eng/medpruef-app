@@ -124,6 +124,26 @@ function QuizContent() {
   const [lang, setLangState] = useState<Lang>("de");
   const [config, setConfig] = useState<QuizConfig | null>(null);
 
+  // KAF recall-first training (2026-07-03): only offered for the
+  // Kenntnisprüfung (the real exam asks open short-answer questions);
+  // persisted so the choice sticks across sessions.
+  const [kafMode, setKafMode] = useState(false);
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setKafMode(localStorage.getItem("medpruef-kaf-mode") === "1");
+    }
+  }, []);
+  const toggleKafMode = () => {
+    setKafMode((v) => {
+      const next = !v;
+      try {
+        localStorage.setItem("medpruef-kaf-mode", next ? "1" : "0");
+      } catch { /* noop */ }
+      return next;
+    });
+  };
+  const kafEligible = examSource === "kenntnispruefung";
+
   // Quiz state
   const seenIdsRef = useRef<number[]>([]);
   const [question, setQuestion] = useState<Question | null>(null);
@@ -786,6 +806,30 @@ function QuizContent() {
                 </div>
               ) : (
                 <>
+                  {/* KAF recall-first toggle: KP only (the real exam asks open
+                      short-answer questions). Persisted in localStorage. */}
+                  {kafEligible && (
+                    <div className="flex items-center justify-end gap-2 mb-2">
+                      <button
+                        onClick={toggleKafMode}
+                        role="switch"
+                        aria-checked={kafMode}
+                        title={t("kaf_toggle_hint", lang)}
+                        className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors ${
+                          kafMode
+                            ? "border-[var(--mp-viridian)] bg-[var(--mp-viridian)]/10 text-[var(--mp-viridian)]"
+                            : "border-[var(--mp-border)] text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg-muted)]"
+                        }`}
+                      >
+                        <span
+                          className={`inline-block h-2 w-2 rounded-full ${
+                            kafMode ? "bg-[var(--mp-viridian)]" : "bg-[var(--mp-border-strong)]"
+                          }`}
+                        />
+                        {t("kaf_toggle", lang)}
+                      </button>
+                    </div>
+                  )}
                   <QuestionCard
                     question={question}
                     questionNumber={questionCount + (answered ? 0 : 1)}
@@ -794,6 +838,7 @@ function QuizContent() {
                     onAnswer={handleAnswer}
                     imageUrl={question.image_url}
                     hideActions
+                    recallFirst={kafEligible && kafMode}
                   />
 
                   {/* Mobile/tablet action row — visible on screens without side rail.

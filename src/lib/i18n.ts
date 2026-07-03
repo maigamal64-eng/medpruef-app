@@ -312,6 +312,23 @@ const translations = {
   'press_to_close': { de: 'Drücke Esc zum Schließen', en: 'Press Esc to close' },
   'cookie_banner': { de: 'Wir nutzen anonyme Analysen, um MedPrüf in der Beta zu verbessern. Du kannst jederzeit ablehnen.', en: 'We use anonymous analytics to improve MedPrüf during beta. You can decline anytime.' },
 
+  // KAF recall-first training mode (the real Kenntnisprüfung asks open questions)
+  'kaf_toggle': { de: 'KAF-Modus', en: 'KAF mode' },
+  'kaf_toggle_hint': { de: 'Erst frei antworten, dann Optionen', en: 'Answer freely first, then options' },
+  'kaf_badge': { de: 'KAF-Training', en: 'KAF training' },
+  'kaf_hint': { de: 'Die echte Kenntnisprüfung fragt offen (Kurzantwortfragen). Formuliere deine Antwort zuerst frei, dann blende die Optionen ein.', en: 'The real Kenntnisprüfung asks open short-answer questions. Formulate your answer freely first, then reveal the options.' },
+  'kaf_scratch_placeholder': { de: 'Deine freie Antwort (optional, wird nicht bewertet)...', en: 'Your free answer (optional, not graded)...' },
+  'kaf_reveal': { de: 'Optionen einblenden', en: 'Reveal options' },
+
+  // Notes attached to a question (curated + community)
+  'qnotes_heading': { de: 'Notizen zu dieser Frage', en: 'Notes for this question' },
+  'qnotes_curated': { de: 'MedPrüf Team', en: 'MedPrüf Team' },
+  'qnotes_show': { de: 'Notizen anzeigen', en: 'Show notes' },
+  'qnotes_hide': { de: 'Notizen ausblenden', en: 'Hide notes' },
+  'qnotes_merke': { de: 'Merke', en: 'Key point' },
+  'qnotes_pitfall': { de: 'Falle', en: 'Pitfall' },
+  'qnotes_mnemonic': { de: 'Eselsbrücke', en: 'Mnemonic' },
+
   // Exam deadline reminder (lead magnet)
   'reminder_title': { de: 'Verpass die Anmeldefrist nicht', en: 'Do not miss the registration deadline' },
   'reminder_next': { de: 'Nächster Termin:', en: 'Next exam:' },

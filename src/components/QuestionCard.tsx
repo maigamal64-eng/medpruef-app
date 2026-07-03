@@ -15,6 +15,7 @@ import AIChatAssistant from "@/components/AIChatAssistant";
 import TranslateButton from "@/components/TranslateButton";
 import QuestionReportForm from "@/components/question/QuestionReportForm";
 import QuestionNotesPanel from "@/components/question/QuestionNotesPanel";
+import QuestionNotes from "@/components/QuestionNotes";
 import TurnIntoNoteButton from "@/components/TurnIntoNoteButton";
 import QuestionExplanation from "@/components/question/QuestionExplanation";
 import {
@@ -69,6 +70,11 @@ interface QuestionCardProps {
    *  Hides "Antwort prüfen" button, auto-commits on every toggle,
    *  and never reveals correct/wrong coloring. */
   examMode?: boolean;
+  /** KAF recall-first training (2026-07-03): the real Kenntnisprüfung asks
+   *  open short-answer questions (Kurzantwortfragen), so this hides the MCQ
+   *  options behind a free-recall step (optional ungraded scratch answer)
+   *  until the user reveals them. Grading/XP flow unchanged after reveal. */
+  recallFirst?: boolean;
 }
 
 const DE_MONTHS = [
@@ -133,6 +139,7 @@ export default function QuestionCard({
   onCommit,
   hideFeedbackStrip = false,
   examMode = false,
+  recallFirst = false,
 }: QuestionCardProps) {
   const config = getTopicConfig(question.topic);
   const [selectedIdxs, setSelectedIdxs] = useState<Set<number>>(
@@ -147,6 +154,9 @@ export default function QuestionCard({
 
   const [showAnswer, setShowAnswer] = useState(false);
   const [showAIChat, setShowAIChat] = useState(false);
+  // KAF recall-first: options stay covered until revealed (reset per question).
+  const [optionsRevealed, setOptionsRevealed] = useState(false);
+  const [recallScratch, setRecallScratch] = useState("");
   // Flag/edit report modal
   const [showReportForm, setShowReportForm] = useState(false);
   const [suggestionSubmitted, setSuggestionSubmitted] = useState(false);
@@ -171,6 +181,8 @@ export default function QuestionCard({
     setSubmitted(initiallyAnswered);
     setShowAnswer(false);
     setShowAIChat(false);
+    setOptionsRevealed(false);
+    setRecallScratch("");
     setShowReportForm(false);
     setSuggestionSubmitted(false);
     setExplanationRating(null);
@@ -461,12 +473,38 @@ export default function QuestionCard({
               <p className="text-[var(--mp-fg)] text-sm leading-relaxed">{question.answer}</p>
             </div>
           )}
-          {!isOpenAnswer && isMulti && !answered && (
+          {/* KAF recall-first cover: the real Kenntnisprüfung asks open
+              short-answer questions, so options stay hidden until the user
+              has tried a free recall (scratch answer is optional, ungraded). */}
+          {!isOpenAnswer && recallFirst && !optionsRevealed && !answered && (
+            <div className="p-4 rounded-[var(--mp-r-card)] border border-[var(--mp-info)]/30 bg-[var(--mp-info)]/5 space-y-3">
+              <p className="text-[11px] uppercase tracking-wider font-semibold text-[var(--mp-info)]">
+                {t("kaf_badge", lang)}
+              </p>
+              <p className="text-sm text-[var(--mp-fg-muted)] leading-relaxed">
+                {t("kaf_hint", lang)}
+              </p>
+              <textarea
+                value={recallScratch}
+                onChange={(e) => setRecallScratch(e.target.value)}
+                placeholder={t("kaf_scratch_placeholder", lang)}
+                rows={3}
+                className="w-full p-3 rounded-[var(--mp-r-input)] border border-[var(--mp-border)] bg-[var(--mp-surface)] text-sm text-[var(--mp-fg)] outline-none focus:border-[var(--mp-viridian)] resize-y"
+              />
+              <button
+                onClick={() => setOptionsRevealed(true)}
+                className="w-full py-3 bg-[var(--mp-viridian)] hover:opacity-90 text-white rounded-[var(--mp-r-button)] font-bold text-sm transition-all active:scale-[0.98]"
+              >
+                {t("kaf_reveal", lang)}
+              </button>
+            </div>
+          )}
+          {!isOpenAnswer && (!recallFirst || optionsRevealed || answered) && isMulti && !answered && (
             <p className="text-[11px] text-[var(--mp-status-warning)] font-semibold mb-1">
               ⓘ {lang === "de" ? `Mehrfachantwort (${nCorrect} richtig)` : `Multi-select (${nCorrect} correct)`}
             </p>
           )}
-          {!isOpenAnswer && options.map((opt, idx) => (
+          {!isOpenAnswer && (!recallFirst || optionsRevealed || answered) && options.map((opt, idx) => (
             <Option
               key={idx}
               state={getOptionState(idx, opt)}
@@ -483,7 +521,7 @@ export default function QuestionCard({
               </span>
             </Option>
           ))}
-          {!isOpenAnswer && isMulti && !answered && !examMode && (
+          {!isOpenAnswer && (!recallFirst || optionsRevealed) && isMulti && !answered && !examMode && (
             <button
               onClick={handleSubmitMulti}
               disabled={selectedIdxs.size === 0}
@@ -531,6 +569,13 @@ export default function QuestionCard({
               wasCorrect={wasCorrectForNote}
             />
           </div>
+        )}
+
+        {/* Curated + community flash-notes linked to this question (2026-07-03).
+            Flag-gated server-side (NOTES_EXPLORE_ENABLED); renders nothing when
+            off or when the question has no public notes. */}
+        {answered && !hideExplanation && (
+          <QuestionNotes questionId={question.id} lang={lang} />
         )}
 
         {/* ──────────────────────────────────────────────────────────

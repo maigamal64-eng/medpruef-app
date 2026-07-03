@@ -24,6 +24,66 @@ export interface ChangelogEntry {
 export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-07-03",
+    tag: "feature",
+    title: {
+      de: "KAF-Modus: erst frei antworten, wie in der echten Prüfung",
+      en: "KAF mode: answer freely first, like in the real exam",
+    },
+    description: {
+      de: "Die echte Kenntnisprüfung fragt offen (Kurzantwortfragen). Im Quiz gibt es jetzt den KAF-Modus: Die Antwortoptionen bleiben zunächst verdeckt, du formulierst deine Antwort frei und blendest die Optionen erst danach ein. Aktivierbar über den Schalter oberhalb der Frage (nur Kenntnisprüfung).",
+      en: "The real Kenntnisprüfung asks open short-answer questions. The quiz now has KAF mode: options stay hidden at first, you formulate your answer freely, then reveal the options. Toggle above the question (Kenntnisprüfung only).",
+    },
+  },
+  {
+    date: "2026-07-03",
+    tag: "feature",
+    title: {
+      de: "Kuratierte Notizen: Guides und Merkkarten zu Fragen",
+      en: "Curated notes: guides and key-point cards on questions",
+    },
+    description: {
+      de: "Das MedPrüf Team stellt jetzt kuratierte Lerninhalte bereit: Kompakt-Guides pro Fachgebiet und Merke-Karten zu den meistgeübten Fragen, alle aus unseren echten Prüfungsfragen und Erklärungen destilliert. Du findest sie im Entdecken-Bereich der Bibliothek und direkt unter beantworteten Fragen (\"Notizen zu dieser Frage\").",
+      en: "The MedPrüf team now provides curated study content: compact guides per specialty and key-point cards for the most-practiced questions, all distilled from our real exam questions and explanations. Find them in the Library's Explore section and directly under answered questions (\"Notes for this question\").",
+    },
+  },
+  {
+    date: "2026-07-03",
+    tag: "feature",
+    title: {
+      de: "Oberfläche auf Russisch, Ukrainisch und Türkisch",
+      en: "Interface in Russian, Ukrainian and Turkish",
+    },
+    description: {
+      de: "Die App-Oberfläche gibt es jetzt zusätzlich auf Русский, Українська und Türkçe (umschaltbar in den Einstellungen und auf der Startseite). Die Prüfungsfragen bleiben bewusst auf Deutsch, so wie in der echten Prüfung; Erklärungen kannst du weiterhin in 7 Sprachen übersetzen.",
+      en: "The app interface is now also available in Russian, Ukrainian and Turkish (switchable in Settings and on the home page). Exam questions deliberately stay in German, exactly like the real exam; explanations can still be translated into 7 languages.",
+    },
+  },
+  {
+    date: "2026-07-03",
+    tag: "feature",
+    title: {
+      de: "Fristerinnerung: verpass keine Anmeldung mehr",
+      en: "Deadline reminders: never miss a registration",
+    },
+    description: {
+      de: "Auf der Startseite kannst du jetzt deine E-Mail-Adresse hinterlassen und wir erinnern dich rechtzeitig, bevor die Anmeldefrist deiner Prüfung schließt (z. B. Kenntnisprüfung Wien: Anmeldeschluss 28. Juli 2026). Nur Fristerinnerungen, kein Spam, jederzeit abbestellbar.",
+      en: "On the landing page you can now leave your email and we will remind you in good time before your exam's registration deadline closes (e.g. Kenntnisprüfung Vienna: registration closes 28 July 2026). Deadline reminders only, no spam, unsubscribe anytime.",
+    },
+  },
+  {
+    date: "2026-07-03",
+    tag: "improvement",
+    title: {
+      de: "Tausende neue Erklärungen",
+      en: "Thousands of new explanations",
+    },
+    description: {
+      de: "Wir ergänzen gerade systematisch strukturierte deutsche Erklärungen für alle Fragen, die bisher keine hatten: warum die richtige Antwort stimmt und warum jede falsche Option nicht zutrifft. Tausende Fragen haben ihre Erklärung bereits erhalten, der Rest folgt laufend. Zusätzlich wurden Formatierungsfehler aus dem PDF-Import bereinigt.",
+      en: "We are systematically adding structured German explanations to every question that lacked one: why the correct answer is right and why each wrong option does not apply. Thousands of questions already have theirs, the rest are being filled continuously. PDF-import formatting artifacts were cleaned up as well.",
+    },
+  },
+  {
+    date: "2026-07-03",
     tag: "improvement",
     title: {
       de: "Transparenz: Analyse in der Beta",
