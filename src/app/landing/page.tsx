@@ -1066,6 +1066,34 @@ function ExamRecordCard({ lang }: { lang: Lang }) {
     { k: "C", t: { de: "Pneumothorax", en: "Pneumothorax" }, correct: false },
     { k: "D", t: { de: "Perikarditis", en: "Pericarditis" }, correct: false },
   ];
+
+  // Interactive language demo (2026-07-03): the STEM stays in German, as it
+  // is on exam day, while the AI explanation flips into the candidate's own
+  // language. This is the single most important differentiator for the
+  // immigrant-physician ICP, so we let the visitor feel it before signup.
+  // These are the demo's showcase strings only (one question); the live app
+  // translates on demand via /api/translate. Arabic wording is pending
+  // [name]'s sign-off (standing rule) but shown so persona #1 sees the value.
+  type DemoLang = "de" | "en" | "ar" | "ru" | "uk" | "tr";
+  const DEMO_LANGS: { code: DemoLang; label: string }[] = [
+    { code: "de", label: "DE" },
+    { code: "en", label: "EN" },
+    { code: "ar", label: "AR" },
+    { code: "ru", label: "RU" },
+    { code: "uk", label: "UK" },
+    { code: "tr", label: "TR" },
+  ];
+  const EXPLAIN: Record<DemoLang, string> = {
+    de: "Wells-Score hoch, daher CTPA. D-Dimer nur bei niedriger Vortestwahrscheinlichkeit. Ref: ESC 2019.",
+    en: "High Wells score, so CTPA. D-dimer only at low pretest probability. Ref: ESC 2019.",
+    ar: "درجة ويلز مرتفعة، لذلك يُجرى تصوير الأوعية الرئوية المقطعي المحوسب (CTPA). D-dimer فقط عند انخفاض احتمالية ما قبل الاختبار. المرجع: ESC 2019.",
+    ru: "Высокий балл Уэллса, поэтому КТ-ангиография (CTPA). D-димер только при низкой предтестовой вероятности. Ref: ESC 2019.",
+    uk: "Високий бал Уеллса, тому КТ-ангіографія (CTPA). D-димер лише за низької передтестової ймовірності. Ref: ESC 2019.",
+    tr: "Yüksek Wells skoru, bu yüzden CTPA. D-dimer yalnızca düşük ön test olasılığında. Ref: ESC 2019.",
+  };
+  const [explainLang, setExplainLang] = useState<DemoLang>(lang === "de" ? "de" : "en");
+  const rtl = explainLang === "ar";
+
   return (
     <div
       className="rounded-2xl border p-5 shadow-2xl"
@@ -1086,11 +1114,14 @@ function ExamRecordCard({ lang }: { lang: Lang }) {
         <span className="lp-examtab text-white/45">№ 4127</span>
       </div>
 
-      {/* Stem */}
-      <p className="text-white/90 mb-4" style={{ fontSize: "14px", lineHeight: 1.5 }}>
+      {/* Stem — always German, as on exam day */}
+      <p className="text-white/90 mb-1.5" style={{ fontSize: "14px", lineHeight: 1.5 }} dir="ltr">
+        Akute Dyspnoe, Tachykardie und einseitiger Pleuraschmerz nach Langstreckenflug. Wahrscheinlichste Diagnose?
+      </p>
+      <p className="text-white/40 mb-4" style={{ fontSize: "10.5px" }}>
         {lang === "de"
-          ? "Akute Dyspnoe, Tachykardie und einseitiger Pleuraschmerz nach Langstreckenflug. Wahrscheinlichste Diagnose?"
-          : "Acute dyspnea, tachycardia and unilateral pleuritic pain after a long-haul flight. Most likely diagnosis?"}
+          ? "Frage bleibt auf Deutsch, wie in der Prüfung."
+          : "Question stays in German, as on exam day."}
       </p>
 
       {/* Options */}
@@ -1119,7 +1150,7 @@ function ExamRecordCard({ lang }: { lang: Lang }) {
               className="text-white/85"
               style={{ fontSize: "13px", fontWeight: o.correct ? 600 : 400 }}
             >
-              {o.t[lang]}
+              {o.t[lang === "de" ? "de" : "en"]}
             </span>
             {o.correct && (
               <span
@@ -1133,21 +1164,47 @@ function ExamRecordCard({ lang }: { lang: Lang }) {
         ))}
       </div>
 
-      {/* AI explanation peek */}
+      {/* AI explanation peek — language flips live */}
       <div
         className="rounded-lg p-3 border"
         style={{ borderColor: "var(--lp-line-ink)", background: "rgba(255,255,255,0.02)" }}
       >
-        <div className="flex items-center gap-2 mb-1.5">
-          <Brain className="w-3.5 h-3.5" style={{ color: "var(--lp-teal-br)" }} aria-hidden="true" />
-          <span className="lp-examtab" style={{ color: "var(--lp-teal-br)" }}>
-            TL;DR
-          </span>
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <div className="flex items-center gap-2">
+            <Brain className="w-3.5 h-3.5" style={{ color: "var(--lp-teal-br)" }} aria-hidden="true" />
+            <span className="lp-examtab" style={{ color: "var(--lp-teal-br)" }}>
+              {lang === "de" ? "Erklärung in deiner Sprache" : "Explanation in your language"}
+            </span>
+          </div>
         </div>
-        <p className="text-white/60" style={{ fontSize: "11.5px", lineHeight: 1.5 }}>
-          {lang === "de"
-            ? "Wells-Score hoch → CTPA. D-Dimer nur bei niedriger Vortest­wahrscheinlichkeit. Ref: ESC 2019."
-            : "High Wells score → CTPA. D-dimer only at low pretest probability. Ref: ESC 2019."}
+        <div className="flex flex-wrap gap-1 mb-2.5">
+          {DEMO_LANGS.map((l) => {
+            const active = l.code === explainLang;
+            return (
+              <button
+                key={l.code}
+                type="button"
+                onClick={() => setExplainLang(l.code)}
+                aria-pressed={active}
+                className="lp-examtab rounded-md px-2 py-1 transition-colors"
+                style={{
+                  fontSize: "10px",
+                  color: active ? "var(--mp-oxford-blue-dk)" : "rgba(255,255,255,0.6)",
+                  background: active ? "var(--lp-teal-br)" : "rgba(255,255,255,0.06)",
+                }}
+              >
+                {l.label}
+              </button>
+            );
+          })}
+        </div>
+        <p
+          className="text-white/70"
+          style={{ fontSize: "11.5px", lineHeight: 1.6 }}
+          dir={rtl ? "rtl" : "ltr"}
+          lang={explainLang}
+        >
+          {EXPLAIN[explainLang]}
         </p>
       </div>
     </div>

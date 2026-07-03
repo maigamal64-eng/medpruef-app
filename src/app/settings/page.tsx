@@ -30,6 +30,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getLang, setLang, t } from "@/lib/i18n";
+import LanguagePicker from "@/components/LanguagePicker";
 import { getStoredSession, clearSession, storeSession } from "@/lib/auth";
 import { getStoredTheme, setStoredTheme, type Theme } from "@/components/ThemeProvider";
 import { authFetch } from "@/lib/authFetch";
@@ -974,6 +975,28 @@ export default function SettingsPage() {
                         EN
                       </button>
                     </div>
+                  </div>
+                </div>
+
+                {/* App language (beta): full UI localization beyond DE/EN.
+                    Questions stay in German (exam language); the interface +
+                    explanations follow this choice. RU/TR live, more coming. */}
+                <div className="set-row">
+                  <div className="sr-ic">
+                    <Languages aria-hidden />
+                  </div>
+                  <div className="sr-body">
+                    <div className="sr-title">
+                      {lang === "de" ? "App-Sprache (Beta)" : "App language (beta)"}
+                    </div>
+                    <div className="sr-sub">
+                      {lang === "de"
+                        ? "Oberfläche in deiner Sprache. Fragen bleiben auf Deutsch."
+                        : "Interface in your language. Questions stay in German."}
+                    </div>
+                  </div>
+                  <div className="sr-ctrl">
+                    <LanguagePicker />
                   </div>
                 </div>
 

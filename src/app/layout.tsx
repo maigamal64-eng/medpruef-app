@@ -12,6 +12,7 @@ import GuestMigrationBanner from "@/components/GuestMigrationBanner";
 import CohortCountdownBanner from "@/components/CohortCountdownBanner";
 import EmailValidationModal from "@/components/EmailValidationModal";
 import CookieBannerMount from "@/components/CookieBannerMount";
+import LangHtmlSync from "@/components/LangHtmlSync";
 import ConsentGatedAnalytics from "@/components/ConsentGatedAnalytics";
 import ConsentGatedMetaPixel from "@/components/ConsentGatedMetaPixel";
 import ConsentGatedRedditPixel from "@/components/ConsentGatedRedditPixel";
@@ -396,6 +397,7 @@ export default function RootLayout({
             <FeedbackWidget />
             <SearchModalMount />
             <CookieBannerMount />
+            <LangHtmlSync />
             <ConsentGatedAnalytics />
             {/* Meta (Facebook) Pixel — same consent gate as GA4. No-ops
                 cleanly when NEXT_PUBLIC_META_PIXEL_ID is unset (paid-ads

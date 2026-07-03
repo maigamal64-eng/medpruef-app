@@ -12,8 +12,12 @@ import { EXTRA_TRANSLATIONS, RTL_LANGS } from './i18n-extra'
  */
 export type Lang = 'de' | 'en' | 'ru' | 'uk' | 'tr' | 'ar'
 
-/** Languages shown in the public language picker (AR added only after [name] signs off). */
-export const LIVE_LANGS: readonly Lang[] = ['de', 'en', 'ru', 'uk', 'tr']
+/**
+ * Languages shown in the public language picker. de/en authored; ru/tr have
+ * full translator overlays. uk is added the moment its overlay lands; ar only
+ * after [name] signs off on the wording (standing rule).
+ */
+export const LIVE_LANGS: readonly Lang[] = ['de', 'en', 'ru', 'tr']
 
 export const LANG_LABELS: Record<Lang, string> = {
   de: 'Deutsch',
