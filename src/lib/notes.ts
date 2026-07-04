@@ -97,6 +97,78 @@ export function isNoteSourceType(v: unknown): v is NoteSourceType {
   );
 }
 
+// ── Public (Explore) note kind + safe projection ────────────────────────────
+
+/**
+ * The Explore browse "kind" facet — a DIFFERENT axis than source_type.
+ *   - guide     → a curated topic guide (metadata.guide === true)
+ *   - card      → a curated per-question "Merke" card (curated, not a guide)
+ *   - community → a genuine user note (NOT authored by the MedPrüf Team,
+ *                 no curated flag)
+ * "guide" and "card" are both curated MedPrüf-Team content and must be labeled
+ * as verified — NEVER "unverified". "community" is the only bucket that carries
+ * a "Community" label. (There are 0 community notes today; the bucket is wired
+ * for when real user notes go public.)
+ */
+export const NOTE_KINDS = ["guide", "card", "community"] as const;
+export type NoteKind = (typeof NOTE_KINDS)[number];
+
+export function isNoteKind(v: unknown): v is NoteKind {
+  return typeof v === "string" && (NOTE_KINDS as readonly string[]).includes(v);
+}
+
+/** The MedPrüf-Team system-user id — author of every curated public note. */
+export const MEDPRUF_TEAM_USER_ID = "8f7be9fd-02e9-47db-a222-2b4b2a032945";
+
+/**
+ * Derive the presentation kind + curated flag from a note's metadata, so the
+ * client never sees raw `metadata` (which carries import_key / cloned_from /
+ * source_model — leaky, and against Explore's anonymous posture). This is the
+ * single source of truth the explore + for-question routes both use.
+ */
+export function noteKindFromMetadata(
+  metadata: Record<string, unknown> | null | undefined,
+): { curated: boolean; guide: boolean; kind: NoteKind } {
+  const curated = Boolean(metadata?.curated);
+  const guide = Boolean(metadata?.guide);
+  const kind: NoteKind = guide ? "guide" : curated ? "card" : "community";
+  return { curated, guide, kind };
+}
+
+/**
+ * Shape the API returns for an Explore/public note — a privacy-safe projection
+ * with the curated/guide/source_type signals the card + reader need, and NO
+ * raw metadata / user_id / source_ref.
+ */
+export interface PublicNoteProjection {
+  id: string;
+  title: string;
+  content: NoteContent;
+  tags: string[];
+  exam_type: string | null;
+  topic: string | null;
+  source_type: NoteSourceType | null;
+  published_at: string | null;
+  curated: boolean;
+  guide: boolean;
+  kind: NoteKind;
+}
+
+// ── Collections (user lists) ────────────────────────────────────────────────
+
+export const MAX_COLLECTION_NAME = 80;
+/** Cap on lists per user — generous, just a runaway guard. */
+export const MAX_COLLECTIONS = 100;
+/** Default ("Saved") collection name per language. */
+export const DEFAULT_COLLECTION_NAME: Record<"de" | "en", string> = {
+  de: "Gespeichert",
+  en: "Saved",
+};
+
+export function normalizeCollectionName(raw: unknown): string {
+  return clamp(str(raw), MAX_COLLECTION_NAME);
+}
+
 // ── Normalization helpers ───────────────────────────────────────────────────
 
 function str(v: unknown): string {

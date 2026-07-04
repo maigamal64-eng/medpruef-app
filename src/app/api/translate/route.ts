@@ -78,6 +78,64 @@ const LANG_LABELS: Record<string, string> = {
 
 const SUPPORTED_FIELDS = new Set(["ai_explanation", "explanation"]);
 
+/**
+ * GET /api/translate?questionId=<int>&field=<explanation|ai_explanation>
+ *
+ * Read-only cache fetch (UX-6). Returns EVERY already-cached translation
+ * for a (question, field) in one shot as { translations: { <lang>: text } }
+ * so the Explanation surface can:
+ *   (a) auto-show the row matching the user's UI language on mount, at ZERO
+ *       cost — no upstream call, no quota spend, no `translation` event; and
+ *   (b) mark each language in the switcher as instant (cached) vs.
+ *       generate-on-first-view.
+ *
+ * Deliberately NOT behind the POST burst guard (that guard runs before the
+ * cache lookup, so sharing it would 429 a user browsing quickly). It never
+ * generates, so it is safe to call freely. `requireUser` still gates it so
+ * it is not an open endpoint. The AI kill switch does NOT apply — reading a
+ * cached row costs nothing and must keep working even while generation is
+ * paused.
+ */
+export async function GET(req: NextRequest) {
+  const guard = await requireUser(req);
+  if ("error" in guard) return guard.error;
+
+  const { searchParams } = new URL(req.url);
+  const qidRaw = Number(searchParams.get("questionId"));
+  const questionId = Number.isInteger(qidRaw) && qidRaw > 0 ? qidRaw : NaN;
+  const field = searchParams.get("field") || "";
+
+  if (!Number.isInteger(questionId) || questionId <= 0) {
+    return NextResponse.json({ error: "questionId required" }, { status: 400 });
+  }
+  if (!SUPPORTED_FIELDS.has(field)) {
+    return NextResponse.json(
+      { error: `Unsupported field. Allowed: ${[...SUPPORTED_FIELDS].join(", ")}` },
+      { status: 400 },
+    );
+  }
+
+  const db = getServiceClient();
+  const { data, error } = await db
+    .from("question_translations")
+    .select("lang, translated_text")
+    .eq("question_id", questionId)
+    .eq("field", field);
+
+  if (error) {
+    console.error("[translate:GET] cache read:", error);
+    // Fail soft — the surface just shows the German original + a manual
+    // switcher, no crash.
+    return NextResponse.json({ translations: {}, field });
+  }
+
+  const translations: Record<string, string> = {};
+  for (const row of data || []) {
+    if (row?.lang && row?.translated_text) translations[row.lang] = row.translated_text;
+  }
+  return NextResponse.json({ translations, field });
+}
+
 function buildPrompt(targetLangLabel: string, sourceText: string): string {
   return [
     `You are translating a medical exam explanation from German into ${targetLangLabel}.`,

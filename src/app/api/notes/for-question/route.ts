@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { requireUser } from "@/lib/auth-guard";
+import { noteKindFromMetadata } from "@/lib/notes";
 
 export const dynamic = "force-dynamic";
 
@@ -47,13 +48,22 @@ export async function GET(req: NextRequest) {
     }
     return NextResponse.json({
       enabled: true,
-      notes: (data ?? []).map((n) => ({
-        id: n.id,
-        title: n.title,
-        content: n.content,
-        tags: n.tags,
-        curated: Boolean((n.metadata as Record<string, unknown> | null)?.curated),
-      })),
+      notes: (data ?? []).map((n) => {
+        // Existing fields {id,title,content,tags,curated} are preserved verbatim
+        // (the QuestionNotes card consumes them). `kind` is ADDED for the shared
+        // reader; consumers that don't read it are unaffected.
+        const { curated, kind } = noteKindFromMetadata(
+          n.metadata as Record<string, unknown> | null,
+        );
+        return {
+          id: n.id,
+          title: n.title,
+          content: n.content,
+          tags: n.tags,
+          curated,
+          kind,
+        };
+      }),
     });
   } catch {
     return NextResponse.json({ error: "Failed to load notes" }, { status: 500 });

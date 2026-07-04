@@ -150,6 +150,12 @@ function QuizContent() {
   const [nextQuestion, setNextQuestion] = useState<Question | null>(null);
   const [loading, setLoading] = useState(false);
   const [answered, setAnswered] = useState(false);
+  // BUG-1 fix (2026-07-04): a monotonic nonce bumped on every advance(). It is
+  // folded into the QuestionCard `key` so the card ALWAYS remounts fresh when we
+  // move on, even if the fetched next question has the SAME id (a dedup gap in a
+  // filtered / KAF pool). Without this, an identical id meant QuestionCard's
+  // id-keyed reset never fired and the card stayed stuck in the answered state.
+  const [advanceNonce, setAdvanceNonce] = useState(0);
   const [questionCount, setQuestionCount] = useState(0); // answered count
   const [correctCount, setCorrectCount] = useState(0);
   const [totalXpSession, setTotalXpSession] = useState(0);
@@ -501,6 +507,8 @@ function QuizContent() {
         setLoading(false);
       });
     }
+    // Bump the nonce so QuestionCard remounts fresh even on a same-id repeat.
+    setAdvanceNonce((n) => n + 1);
     setAnswered(false);
     setXpEarned(null);
     setShowXpFloat(false);
@@ -831,6 +839,7 @@ function QuizContent() {
                     </div>
                   )}
                   <QuestionCard
+                    key={`q-${question.id}-${advanceNonce}`}
                     question={question}
                     questionNumber={questionCount + (answered ? 0 : 1)}
                     totalQuestions={autoStarted && topicTotal > 0 ? topicTotal : config.targetCount}

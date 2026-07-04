@@ -734,6 +734,22 @@ const translations = {
   'settings_delete_account': { de: 'Konto löschen', en: 'Delete account' },
   'settings_delete_confirm': { de: 'Konto wirklich löschen? Diese Aktion ist endgültig.', en: 'Really delete account? This is permanent.' },
   'settings_account_deleted': { de: 'Konto gelöscht', en: 'Account deleted' },
+
+  // Explanation translation switcher (UX-6) — auto-show a cached translation
+  // in the user's language, let them flip between saved languages, and
+  // generate-on-first-view. Every translation is cached so the next user
+  // reads it for free.
+  'xlate_original_de': { de: 'Deutsches Original', en: 'German original' },
+  'xlate_show_original': { de: 'Original anzeigen', en: 'Show original' },
+  'xlate_language_label': { de: 'Sprache', en: 'Language' },
+  'xlate_translating': { de: 'Übersetze…', en: 'Translating…' },
+  'xlate_generate_hint': { de: 'Wird bei der ersten Ansicht übersetzt, danach für alle gespeichert.', en: 'Translated on first view, then saved for everyone.' },
+  'xlate_translated_label': { de: 'Übersetzung', en: 'Translation' },
+  'xlate_failed': { de: 'Übersetzung fehlgeschlagen. Bitte versuche es später erneut.', en: 'Translation failed. Please try again later.' },
+  'xlate_network': { de: 'Netzwerkfehler. Bitte versuche es erneut.', en: 'Network error. Please try again.' },
+  'xlate_quota': { de: 'Kostenloses Tageskontingent (5 Übersetzungen) erreicht. ', en: 'Daily free quota (5 translations) reached. ' },
+  'xlate_see_pro': { de: 'Pro anzeigen', en: 'See Pro' },
+  'xlate_paused': { de: 'Übersetzungen sind vorübergehend pausiert.', en: 'Translations are temporarily paused.' },
 } as const
 
 export type TranslationKey = keyof typeof translations

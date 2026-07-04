@@ -19,6 +19,8 @@ import { authFetch as fetch } from "@/lib/authFetch";
 import { trackEvent } from "@/lib/tracker";
 import { cleanExplanation } from "@/lib/explanation";
 import { Lightbulb, ThumbsUp, ThumbsDown } from "lucide-react";
+import Markdown from "@/components/Markdown";
+import ExplanationTranslator from "@/components/ExplanationTranslator";
 
 type Lang = "de" | "en";
 
@@ -31,6 +33,10 @@ interface Props {
   /** Controlled rating — parent resets to null on question change. */
   rating: 1 | -1 | null;
   onRate: (rating: 1 | -1) => void;
+  /** Optional — user tier, forwarded to the inline translation switcher so
+   *  the free-tier quota copy is accurate. Defaults to "free" when omitted
+   *  (backward compatible — QuestionCard need not pass it). */
+  userTier?: string;
 }
 
 export default function QuestionExplanation({
@@ -41,6 +47,7 @@ export default function QuestionExplanation({
   onImageClick,
   rating,
   onRate,
+  userTier = "free",
 }: Props) {
   const cleanedExplanation = cleanExplanation(explanation);
   const hasExplanation = !!cleanedExplanation;
@@ -87,7 +94,27 @@ export default function QuestionExplanation({
             </span>
           </div>
           <div className="px-4 py-3.5">
-            <p className="text-[var(--mp-fg)] leading-relaxed text-sm">{cleanedExplanation}</p>
+            {/* Markdown render (BUG-3): the new AI-written explanations use
+                `**bold**`, lists, headings. Rendered plain-text before, so
+                users saw literal `**` markers. Shared <Markdown> maps every
+                element to MPDS tokens (Tailwind v4 here has no `prose`). */}
+            <Markdown className="text-[var(--mp-fg)] leading-relaxed text-sm">
+              {cleanedExplanation}
+            </Markdown>
+
+            {/* Inline translation (UX-6): auto-shows a saved translation in
+                the user's language, German original one tap away, switch
+                across the 7 saved languages, generate-on-first-view (then
+                cached for everyone). Free-tier 5/day limit surfaced, not
+                removed. */}
+            <ExplanationTranslator
+              questionId={questionId}
+              lang={lang}
+              field="explanation"
+              germanText={cleanedExplanation}
+              userTier={userTier}
+            />
+
             <div className="flex items-center gap-2 mt-3.5 pt-3 border-t border-dashed border-[var(--mp-border)]">
               <span className="text-[11px] text-[var(--mp-fg-subtle)]">
                 {lang === "de" ? "Hilfreich?" : "Helpful?"}
