@@ -6,13 +6,13 @@
 @custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
 
 @theme {
-  /* MedPrüf Brand Identity */
-  --color-background: #F7F9FC;
+  /* MedPrüf Brand Identity — canvas shifted to v3 #F4F7FB (2026-07-04) */
+  --color-background: #F4F7FB;
   --color-surface-lowest: #FFFFFF;
   --color-surface-low: #FFFFFF;
   --color-surface: #FFFFFF;
   --color-surface-high: #F7F9FC;
-  --color-surface-highest: #E4E9F0;
+  --color-surface-highest: #DCE3EC;
   --color-surface-bright: #FFFFFF;
 
   --color-primary: #001B3D;
@@ -62,14 +62,17 @@
   --surface-high: #F7F9FC;
   --border: #E4E9F0;
 
-  /* Semantic dark-mode tokens — overridden by [data-theme="dark"] */
-  --dm-bg: #F7F9FC;
+  /* Semantic dark-mode tokens — overridden by [data-theme="dark"].
+     Light canvas shifted to the v3 #F4F7FB (2026-07-04, [name]-approved) so
+     white cards lift off a slightly cooler page. --dm-bg is the actual
+     light page-canvas lever (body { background: var(--dm-bg) }). */
+  --dm-bg: #F4F7FB;
   --dm-surface: #FFFFFF;
   --dm-surface-raised: #FFFFFF;
-  --dm-text: #1A2B3C;
-  --dm-text-secondary: #4A5568;
-  --dm-text-muted: #A0AEC0;
-  --dm-border: #E4E9F0;
+  --dm-text: #142436;
+  --dm-text-secondary: #516073;
+  --dm-text-muted: #6B7888;
+  --dm-border: #DCE3EC;
   --dm-border-subtle: rgba(228, 233, 240, 0.7);
   --dm-shadow-card: 0 1px 3px rgba(0,27,61,0.05), 0 1px 2px rgba(0,27,61,0.03);
   --dm-input-bg: #FFFFFF;
@@ -701,16 +704,14 @@ textarea:focus {
   --mp-info-bg:         #EAF3F9;
   --mp-error-bg:        #FDECEC;
 
-  /* ─── Base neutrals (light mode defaults) ─── */
-  --mp-text:            #1A2B3C;
-  --mp-text-muted:      #4A5568;
-  /* `--mp-text-light` formerly `#A0AEC0` — bumped to `#6B7688` on
-     2026-04-23 so small UI text (captions, "Zurück" links, timestamps)
-     hits WCAG 2.1 AA 4.5:1 on --mp-surface-sunken (was 2.44:1). Used
-     as the source for --mp-fg-subtle below. */
-  --mp-text-light:      #6B7688;
-  --mp-border:          #E4E9F0;
-  --mp-border-soft:     rgba(228, 233, 240, 0.7);
+  /* ─── Base neutrals (light mode — v3 "Clinical Nocturne" refinement,
+     2026-07-04, [name]-approved: softer calmer canvas + borders, deeper text).
+     All AA+ on #F4F7FB / white per tokens-rationale.md. ─── */
+  --mp-text:            #142436; /* 14.0:1 on white (was #1A2B3C) */
+  --mp-text-muted:      #516073; /* 6.0:1 on white (was #4A5568) */
+  --mp-text-light:      #6B7888; /* 4.6:1 on white — captions still AA (was #6B7688) */
+  --mp-border:          #DCE3EC; /* softer edge (was #E4E9F0) */
+  --mp-border-soft:     rgba(220, 227, 236, 0.7);
 
   /* ─── Semantic aliases (theme-aware; prefer these in new code) ─── */
   --mp-fg:              var(--mp-text);
@@ -718,16 +719,16 @@ textarea:focus {
   --mp-fg-subtle:       var(--mp-text-light);
   --mp-fg-inverse:      #FFFFFF;
   --mp-surface-raised:  #FFFFFF;
-  --mp-surface-sunken:  #F7F9FC;
-  --mp-border-strong:   #CBD5E1;
+  --mp-surface-sunken:  #EDF1F7; /* v3: cooler well so white cards lift (was #F7F9FC) */
+  --mp-border-strong:   #C2CCD9; /* v3 softer strong border (was #CBD5E1) */
   --mp-border-subtle:   var(--mp-border-soft);
 
-  /* ─── Net-new tokens from the v3 token set (2026-06-26).
-     Light values FROZEN at current prod (canvas #F7F9FC, white cards) so
-     light mode is byte-for-byte unchanged; the dark scope overrides give
-     the oxford ramp. These exist so the heartbeat loader + any v3 surface
-     can reach for --mp-bg/--mp-surface/--mp-spark (all absent before). ─── */
-  --mp-bg:              #F7F9FC; /* app canvas (light) */
+  /* ─── Net-new tokens from the v3 token set (dark landed 2026-06-26;
+     LIGHT refinement landed 2026-07-04 on [name]'s redesign sign-off: the
+     canvas moved to the softer #F4F7FB and borders/text to the v3 ramp
+     above, so light + dark both now match the blessed design). These
+     drive the heartbeat loader + every v3 surface via --mp-bg/--mp-spark. ─── */
+  --mp-bg:              #F4F7FB; /* v3 app canvas — softer, calmer (was #F7F9FC), [name]-approved */
   --mp-surface:         #FFFFFF; /* default card (light) */
   --mp-surface-high:    #FFFFFF; /* popovers/menus (light: white, elevation via shadow) */
   --mp-ring-inset:      inset 0 1px 0 rgba(255, 255, 255, 0.6);
