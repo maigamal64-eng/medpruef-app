@@ -34,14 +34,14 @@
  * boolean — matches the lightweight pattern <TrialRibbon> already uses
  * for the same "dismiss and never bother again" behaviour.
  *
- * Honest copy, no dark patterns: card required, €0 today, €19/month
- * after the trial window, cancel anytime during the trial. Mirrors the
- * wording already reviewed/shipped in <TrialActivation> and <TrialRibbon>.
+ * Honest copy, no dark patterns (2026-07-04): the trial is now FREE and
+ * NO-CARD (one tap, no subscription, ends on its own). Repointed from the
+ * Whop card trial to /api/trial/activate, matching <TrialActivation>.
  */
 
 import { useEffect, useState } from "react";
 import { authFetch as fetch } from "@/lib/authFetch";
-import { Sparkles, X, CreditCard, Loader2 } from "lucide-react";
+import { Sparkles, X, Gift, Loader2 } from "lucide-react";
 
 type Lang = "de" | "en";
 
@@ -51,11 +51,9 @@ interface TrialEligibility {
   is_pro: boolean;
   already_trialed: boolean;
   trial_days: number;
-  price_after_cents: number;
-  currency: string;
 }
 
-type Phase = "idle" | "working" | "error";
+type Phase = "idle" | "working" | "done" | "error";
 
 function dismissKey(userId: string): string {
   return `mp_trial_announce_dismissed_v1_${userId}`;
@@ -93,7 +91,7 @@ export default function TrialAnnouncementCard({
       setDismissed(false);
     }
 
-    fetch("/api/whop/trial", { skipAuthRedirect: true })
+    fetch("/api/trial/activate", { skipAuthRedirect: true })
       .then((r) => (r.ok ? r.json() : null))
       .then((d: TrialEligibility | null) => {
         if (d) setState(d);
@@ -114,10 +112,11 @@ export default function TrialAnnouncementCard({
   const start = async () => {
     setPhase("working");
     try {
-      const res = await fetch("/api/whop/trial", { method: "POST" });
+      const res = await fetch("/api/trial/activate", { method: "POST" });
       const d = await res.json().catch(() => ({}));
-      if (res.ok && d?.purchaseUrl) {
-        window.location.href = d.purchaseUrl;
+      if (res.ok && d?.ok) {
+        setPhase("done");
+        setTimeout(() => window.location.reload(), 1400);
         return;
       }
       if (d?.code === "ALREADY_TRIALED" || d?.code === "ALREADY_PRO") {
@@ -132,10 +131,9 @@ export default function TrialAnnouncementCard({
   };
 
   if (isGuest || loading || dismissed || !state) return null;
-  if (!state.eligible) return null;
+  if (!state.eligible && phase !== "done") return null;
 
   const de = lang === "de";
-  const price = `${(state.price_after_cents / 100).toFixed(0)} €`;
 
   return (
     <div
@@ -160,32 +158,36 @@ export default function TrialAnnouncementCard({
         </p>
         <p className="text-sm text-[var(--mp-fg-muted)] mt-0.5">
           {de
-            ? `Karte hinterlegen, heute 0 €. Danach ${price}/Monat, jederzeit in der Testphase kündbar.`
-            : `Add a card, €0 today. Then ${price}/month, cancel anytime during the trial.`}
+            ? "Keine Karte nötig, kein Abo. Voller Zugang, endet einfach von selbst."
+            : "No card needed, no subscription. Full access, it simply ends on its own."}
         </p>
 
         <div className="flex flex-wrap items-center gap-2 mt-3">
           <button
             type="button"
             onClick={start}
-            disabled={phase === "working"}
+            disabled={phase === "working" || phase === "done"}
             className="mp-btn mp-btn--primary mp-btn--sm inline-flex items-center gap-1.5 disabled:opacity-60"
           >
             {phase === "working" ? (
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
-              <CreditCard className="w-4 h-4" />
+              <Gift className="w-4 h-4" />
             )}
             {phase === "working"
               ? de
-                ? "Weiter zu Whop …"
-                : "Redirecting …"
-              : de
-                ? "Gratis-Woche starten"
-                : "Start free week"}
+                ? "Wird aktiviert …"
+                : "Activating …"
+              : phase === "done"
+                ? de
+                  ? "Pro ist aktiv"
+                  : "Pro is active"
+                : de
+                  ? "Gratis-Woche starten"
+                  : "Start free week"}
           </button>
           <span className="text-xs text-[var(--mp-fg-light)]">
-            {de ? "Sichere Zahlung über Whop" : "Secure payment via Whop"}
+            {de ? "Ein Klick, sofort aktiv" : "One tap, active instantly"}
           </span>
         </div>
 

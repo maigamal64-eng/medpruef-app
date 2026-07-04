@@ -12,17 +12,16 @@ export const dynamic = "force-dynamic";
  * GET  → eligibility/state for the activation UI.
  * POST → activate: grants 7 days of Pro.
  *
- * The wall (signed): ONE telegram_id = ONE trial, EVER. The `trials` table
- * (telegram_id PRIMARY KEY) is the anti-abuse record; it OUTLIVES the user
- * account (user_id ON DELETE SET NULL), so deleting + re-creating an account
- * can't free the telegram to trial again.
+ * The wall: ONE account = ONE trial, EVER (users.id, via trials.user_id UNIQUE),
+ * AND one telegram = one trial when a telegram is linked (partial-unique
+ * trials.telegram_id) so delete+recreate can't free a telegram to trial again.
  *
- * Requirements to activate:
- *   - a linked + confirmed Telegram (users.telegram_id + telegram_chat_id_confirmed)
- *     — triple duty: anti-abuse, the bot notification channel, and "real person".
- *   - not already Pro, and that telegram has never trialed.
+ * Requirements to activate (2026-07-04 — NO CARD, EMAIL users welcome):
+ *   - signed in (email OR Telegram), not already Pro, and this account/telegram
+ *     has never trialed. Telegram is NO LONGER required — forcing it pushed
+ *     email users onto the leaky Whop card trial (the Sam funnel leak).
  *
- * Expiry: we set users.tier='pro' + tier_expires_at=now+7d AND insert a
+ * Grant: set users.tier='pro' + tier_expires_at=now+7d AND insert a
  * `subscriptions` row (tier='notes_free_trial', status='active', expires_at).
  * The existing trial-reminder cron's expiry sweep flips users.tier back to
  * 'free' for any expired active subscription — so the trial reverts through the
@@ -32,14 +31,13 @@ export const dynamic = "force-dynamic";
 const TRIAL_DAYS = 7;
 const BOT_USERNAME = "MedPruefBot";
 
-// SUPERSEDED 2026-07-01 — the free Telegram-gated trial was replaced by the Whop
-// CARD trial (/api/whop/trial + /api/whop/trial/verify): the user links a card
-// (€0 now) and Whop auto-charges €19/mo after 7 days. This route is HARD-DISABLED
-// (not just flag-gated) so flipping NOTES_TRIAL_ENABLED for the card trial cannot
-// reopen a free, no-card trial through this old path. GET returns not-eligible;
-// POST returns 503 (TRIAL_DISABLED). Kept for history / the trials-table wall
-// reference; delete once the card trial is proven live. Nothing calls it now.
-const TRIAL_ENABLED = false;
+// 2026-07-04: RE-ENABLED as the primary trial, now NO-CARD + email-friendly.
+// This replaces the Whop CARD trial (/api/whop/trial) as the default: a genuine
+// zero-friction 7-day Pro trial (no card, no Telegram requirement) removes the
+// card-wall that lost the only organic buyer (Sam). Gated by NOTES_TRIAL_ENABLED
+// (env, currently true). Paid upgrades still go through the Whop card checkout.
+const TRIAL_ENABLED =
+  (process.env.NOTES_TRIAL_ENABLED ?? "false").toLowerCase() === "true";
 
 function deepLink(userId: string): string {
   return `https://t.me/${BOT_USERNAME}?start=auth_${userId}`;
@@ -156,26 +154,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Telegram must be linked + confirmed (the wall + the bot channel).
+    // 2026-07-04: Telegram is NO LONGER required. Email users are welcome;
+    // telegram_id is stored when present (its partial-unique index still walls
+    // one-telegram-one-trial), and trials.user_id UNIQUE walls one-account-one-
+    // trial for everyone. telegramId may be null (email-only account).
     const telegramId = user.telegram_id as number | null;
-    if (telegramId == null || user.telegram_chat_id_confirmed == null) {
-      return NextResponse.json(
-        {
-          error: "Link your Telegram to start the free trial.",
-          code: "TELEGRAM_REQUIRED",
-          telegram_deep_link: deepLink(userId),
-        },
-        { status: 409 },
-      );
-    }
 
     const now = new Date();
     const expires = new Date(now.getTime() + TRIAL_DAYS * 86400_000);
     const nowIso = now.toISOString();
     const expiresIso = expires.toISOString();
 
-    // ── The wall FIRST: one telegram = one trial ever. A unique violation
-    //    (PK telegram_id, or UNIQUE user_id) means already trialed. ──────────
+    // ── The wall FIRST: one account (and one telegram, if linked) = one trial
+    //    ever. A unique violation (user_id UNIQUE, or the telegram_id partial
+    //    unique) means already trialed. ─────────────────────────────────────
     const { error: trialErr } = await sb.from("trials").insert({
       telegram_id: telegramId,
       user_id: userId,
@@ -186,7 +178,7 @@ export async function POST(req: NextRequest) {
       if ((trialErr as { code?: string }).code === "23505") {
         return NextResponse.json(
           {
-            error: "This Telegram has already used its free trial.",
+            error: "This account has already used its free trial.",
             code: "ALREADY_TRIALED",
           },
           { status: 409 },
@@ -210,7 +202,7 @@ export async function POST(req: NextRequest) {
     });
     if (subErr) {
       console.error("[trial/activate POST] subscription insert", subErr);
-      await sb.from("trials").delete().eq("telegram_id", telegramId);
+      await sb.from("trials").delete().eq("user_id", userId);
       return NextResponse.json({ error: "Failed to start trial" }, { status: 500 });
     }
 
@@ -221,7 +213,7 @@ export async function POST(req: NextRequest) {
     if (tierErr) {
       console.error("[trial/activate POST] tier update", tierErr);
       // Best-effort rollback of the wall + sub so a retry can succeed.
-      await sb.from("trials").delete().eq("telegram_id", telegramId);
+      await sb.from("trials").delete().eq("user_id", userId);
       await sb
         .from("subscriptions")
         .update({ status: "cancelled", cancelled_at: nowIso })

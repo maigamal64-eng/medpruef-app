@@ -147,13 +147,13 @@ const COPY = {
       de: "Finde deinen Weg",
       en: "Find your path",
     },
-    // Trial-first CTA ladder (2026-07-01): the free-week Pro trial is the
-    // primary hero CTA, the no-card free tier stays a strong visible secondary.
-    // Honest sub: card, 0 EUR today, then 19 EUR/month, cancel anytime.
+    // Trial-first CTA ladder (2026-07-04): the free-week Pro trial is the
+    // primary hero CTA. Now genuinely NO-CARD (one tap, no subscription), so
+    // the sub reflects that, and the free tier stays a strong secondary.
     cta_trial: { de: "Gratis-Woche starten", en: "Start free week" },
     cta_trial_sub: {
-      de: "Karte, 0 € heute, dann 19 €/Monat",
-      en: "Card, €0 today, then €19/month",
+      de: "7 Tage Pro, keine Karte nötig",
+      en: "7 days of Pro, no card needed",
     },
     cta_free: { de: "Kostenlos starten · keine Karte", en: "Start free · no card" },
   },
@@ -374,8 +374,8 @@ const COPY = {
         price: "0 €",
         period: { de: "heute", en: "today" },
         pitch: {
-          de: "Karte hinterlegen, 0 € heute, dann 19 €/Monat. Jederzeit in der Testphase kündbar.",
-          en: "Add a card, €0 today, then €19/month. Cancel anytime during the trial.",
+          de: "Voller Pro-Zugang, 7 Tage lang. Keine Karte, kein Abo, es endet einfach von selbst.",
+          en: "Full Pro access for 7 days. No card, no subscription, it simply ends on its own.",
         },
         status: "live",
         cta: { de: "Gratis-Woche starten", en: "Start free week" },

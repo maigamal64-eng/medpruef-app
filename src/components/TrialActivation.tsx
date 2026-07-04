@@ -1,25 +1,21 @@
 "use client";
 
 /**
- * TrialActivation — the Whop card-on-file Pro trial entry (Notes feature P5,
- * 2026-07-01 pivot from the free Telegram-gated trial).
+ * TrialActivation — the FREE, NO-CARD 7-day Pro trial entry (2026-07-04).
  *
- * Self-contained: fetches GET /api/whop/trial for eligibility and renders
- * nothing unless the caller is signed in, free, and hasn't trialed. Tapping
- * "start" POSTs to create a Whop checkout session and redirects to the hosted
- * purchase page, where the user links a card (€0 today) and starts 7 days of
- * full Pro; Whop auto-charges €19/month afterwards unless they cancel in-trial.
- * On return, /checkout/success grants access (via /api/whop/trial/verify).
- *
- * Honest by rule: the card + the €19/month auto-charge are stated up front (no
- * dark-pattern surprise renewal). Gated OFF until NOTES_TRIAL_ENABLED — GET
- * returns eligible:false while the flag is off, so the banner stays hidden.
+ * Reverted from the Whop card-on-file trial (which asked a scared candidate to
+ * link a card + commit to E19/mo auto-renew for a "free" trial and lost the only
+ * organic buyer, Sam). Now one tap, no card, no Telegram required: POSTs
+ * /api/trial/activate which grants 7 days of full Pro directly, then the page
+ * refreshes into Pro. Paid upgrades still go through the Whop card checkout on
+ * /pricing. Self-gating: renders nothing unless signed in, free, and not already
+ * trialed. Gated by NOTES_TRIAL_ENABLED (GET returns eligible:false while off).
  */
 
 import { useEffect, useState } from "react";
 import { authFetch as fetch } from "@/lib/authFetch";
 import { getStoredSession } from "@/lib/auth";
-import { Sparkles, Loader2, CreditCard } from "lucide-react";
+import { Sparkles, Loader2, Gift, CheckCircle2 } from "lucide-react";
 
 type Lang = "de" | "en";
 
@@ -29,11 +25,9 @@ interface TrialState {
   is_pro: boolean;
   already_trialed: boolean;
   trial_days: number;
-  price_after_cents: number;
-  currency: string;
 }
 
-type Phase = "idle" | "working" | "error";
+type Phase = "idle" | "working" | "done" | "error";
 
 export default function TrialActivation({
   lang,
@@ -54,7 +48,7 @@ export default function TrialActivation({
       setLoading(false);
       return;
     }
-    fetch("/api/whop/trial")
+    fetch("/api/trial/activate")
       .then((r) => (r.ok ? r.json() : null))
       .then((d: TrialState | null) => {
         if (d) setState(d);
@@ -66,11 +60,12 @@ export default function TrialActivation({
   const start = async () => {
     setPhase("working");
     try {
-      const res = await fetch("/api/whop/trial", { method: "POST" });
+      const res = await fetch("/api/trial/activate", { method: "POST" });
       const d = await res.json().catch(() => ({}));
-      if (res.ok && d?.purchaseUrl) {
-        // Redirect to Whop's hosted checkout to link the card.
-        window.location.href = d.purchaseUrl;
+      if (res.ok && d?.ok) {
+        setPhase("done");
+        // Reflect the new Pro tier everywhere (sidebar, gates, quiz).
+        setTimeout(() => window.location.reload(), 1400);
         return;
       }
       if (d?.code === "ALREADY_TRIALED" || d?.code === "ALREADY_PRO") {
@@ -85,14 +80,30 @@ export default function TrialActivation({
   };
 
   if (!signedIn || loading || !state) return null;
-  if (!state.eligible) return null;
+  if (!state.eligible && phase !== "done") return null;
 
   const de = lang === "de";
-  const price = `${(state.price_after_cents / 100).toFixed(0)} €`;
   const wrap =
     "rounded-[var(--mp-r-card)] border p-4 sm:p-5 border-[var(--mp-viridian)]/30 " +
     "bg-gradient-to-br from-[var(--mp-viridian)]/10 to-[var(--mp-accent-teal)]/5 " +
     className;
+
+  if (phase === "done") {
+    return (
+      <div className={wrap}>
+        <div className="flex items-center gap-3">
+          <span className="w-9 h-9 rounded-xl bg-[var(--mp-viridian)]/15 flex items-center justify-center text-[var(--mp-viridian)] flex-shrink-0">
+            <CheckCircle2 className="w-5 h-5" />
+          </span>
+          <p className="font-display font-bold text-[var(--mp-fg)]">
+            {de
+              ? `Pro ist aktiv. ${state.trial_days} Tage voller Zugang, viel Erfolg beim Lernen.`
+              : `Pro is active. ${state.trial_days} days of full access, happy studying.`}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={wrap}>
@@ -108,8 +119,8 @@ export default function TrialActivation({
           </p>
           <p className="text-sm text-[var(--mp-fg-muted)] mt-0.5">
             {de
-              ? `Unbegrenzte Notizen, KI-Erklärungen und mehr. Karte hinterlegen, heute 0 €. Danach ${price}/Monat, jederzeit in der Testphase kündbar.`
-              : `Unlimited notes, AI explanations and more. Add a card, €0 today. Then ${price}/month, cancel anytime during the trial.`}
+              ? "Unbegrenzte Fragen, KI-Erklärungen, Notizen und mehr. Keine Karte nötig, kein Abo, es endet einfach von selbst."
+              : "Unlimited questions, AI explanations, notes and more. No card needed, no subscription, it simply ends on its own."}
           </p>
 
           <div className="flex flex-wrap items-center gap-2 mt-3">
@@ -122,18 +133,18 @@ export default function TrialActivation({
               {phase === "working" ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
-                <CreditCard className="w-4 h-4" />
+                <Gift className="w-4 h-4" />
               )}
               {phase === "working"
                 ? de
-                  ? "Weiter zu Whop …"
-                  : "Redirecting …"
+                  ? "Wird aktiviert …"
+                  : "Activating …"
                 : de
                   ? "Gratis-Woche starten"
                   : "Start free week"}
             </button>
             <span className="text-xs text-[var(--mp-fg-light)]">
-              {de ? "Sichere Zahlung über Whop" : "Secure payment via Whop"}
+              {de ? "Ein Klick, sofort aktiv" : "One tap, active instantly"}
             </span>
           </div>
 
