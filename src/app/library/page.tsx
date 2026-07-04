@@ -41,6 +41,7 @@ import TrialActivation from "@/components/TrialActivation";
 import NoteExplore from "@/components/NoteExplore";
 import CollectionsPanel from "@/components/CollectionsPanel";
 import TurnIntoNoteButton from "@/components/TurnIntoNoteButton";
+import { AddToListControl } from "@/components/NoteReader";
 import type { NoteContent, NoteBlock, NoteSourceType } from "@/lib/notes";
 import {
   Layers,
@@ -444,15 +445,16 @@ function StudyOverlay({
         </div>
       </div>
 
-      {/* Owner publish / unpublish (Explore). Hidden unless Explore is enabled. */}
-      {exploreEnabled && (
-        <div
-          className="px-5 pb-1 flex justify-center flex-shrink-0"
-          onClick={(e) => e.stopPropagation()}
-        >
+      {/* Organize (add to a list) + owner publish (Explore, when enabled). */}
+      <div
+        className="px-5 pb-1 flex items-center justify-center gap-4 flex-shrink-0 flex-wrap"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <AddToListControl noteId={note.id} lang={lang} />
+        {exploreEnabled && (
           <PublishButton note={note} lang={lang} onPatch={onPatch} />
-        </div>
-      )}
+        )}
+      </div>
 
       {/* Controls: browse (front) → rate + auto-advance (back). */}
       <div

@@ -66,11 +66,11 @@ const KIND_LABELS: Record<Kind, { de: string; en: string }> = {
   community: { de: "Community", en: "Community" },
 };
 
-function examLabel(id: string | null, lang: Lang): string {
+function examLabel(id: string | null): string {
   if (!id) return "";
   const src = getExamSource(id);
-  if (!src) return id;
-  return lang === "de" ? src.label : src.label;
+  // EXAM_SOURCES.label is a single display label (not de/en-split), used as-is.
+  return src ? src.label : id;
 }
 
 /* ─── A single Explore note card (open-in-place, correct label) ─────── */
@@ -103,7 +103,7 @@ function ExploreCard({
         <SourceBadge curated={note.curated} kind={note.kind} lang={lang} />
         {note.exam_type && (
           <span className="text-[10px] font-mono text-[var(--mp-fg-subtle)] truncate max-w-[45%]">
-            {examLabel(note.exam_type, lang)}
+            {examLabel(note.exam_type)}
           </span>
         )}
       </div>
@@ -212,18 +212,22 @@ export default function NoteExplore({ lang }: { lang: Lang }) {
 
   const loadMore = async () => {
     if (loadingMore || notes.length >= count) return;
+    // Guard against a stale append: if a filter/search/sort change bumps reqId
+    // while this page is in flight, drop the result so page-2 of the OLD query
+    // never appends onto the NEW list.
+    const reqId = reqIdRef.current;
     setLoadingMore(true);
     const nextOffset = notes.length;
     try {
       const res = await fetch(`/api/notes/explore?${buildParams(nextOffset)}`);
       const d = res.ok ? await res.json() : null;
-      if (Array.isArray(d?.notes)) {
+      if (reqId === reqIdRef.current && Array.isArray(d?.notes)) {
         setNotes((prev) => [...prev, ...d.notes]);
       }
     } catch {
       /* ignore */
     } finally {
-      setLoadingMore(false);
+      if (reqId === reqIdRef.current) setLoadingMore(false);
     }
   };
 
@@ -340,7 +344,7 @@ export default function NoteExplore({ lang }: { lang: Lang }) {
                           : "bg-[var(--mp-surface)] border border-[var(--mp-border-soft)] text-[var(--mp-fg-muted)]"
                       }`}
                     >
-                      {examLabel(e.value, lang)}{" "}
+                      {examLabel(e.value)}{" "}
                       <span className="opacity-60">{e.count}</span>
                     </button>
                   ))}
