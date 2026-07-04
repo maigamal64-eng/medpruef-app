@@ -316,7 +316,9 @@ const translations = {
   'kaf_toggle': { de: 'KAF-Modus', en: 'KAF mode' },
   'kaf_toggle_hint': { de: 'Erst frei antworten, dann Optionen', en: 'Answer freely first, then options' },
   'kaf_badge': { de: 'KAF-Training', en: 'KAF training' },
-  'kaf_hint': { de: 'Die echte Kenntnisprüfung fragt offen (Kurzantwortfragen). Formuliere deine Antwort zuerst frei, dann blende die Optionen ein.', en: 'The real Kenntnisprüfung asks open short-answer questions. Formulate your answer freely first, then reveal the options.' },
+  'kaf_hint': { de: 'Die echte Kenntnisprüfung fragt offen (Kurzantwortfragen). Formuliere deine Antwort zuerst frei, dann blende die Optionen ein. So trainierst du aktives Erinnern statt Wiedererkennen.', en: 'The real Kenntnisprüfung asks open short-answer questions. Formulate your answer freely first, then reveal the options. This trains active recall instead of recognition.' },
+  'kaf_intro_title': { de: 'Was ist der KAF-Modus?', en: 'What is KAF mode?' },
+  'kaf_intro_ok': { de: 'Verstanden', en: 'Got it' },
   'kaf_scratch_placeholder': { de: 'Deine freie Antwort (optional, wird nicht bewertet)...', en: 'Your free answer (optional, not graded)...' },
   'kaf_reveal': { de: 'Optionen einblenden', en: 'Reveal options' },
 

@@ -67,6 +67,11 @@ export default function AIChatAssistant({
   const [hasRealExplanation, setHasRealExplanation] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  // BUG-2 latch: once we know the user is Pro, stay "can type" for the whole
+  // session even if a later useUserTier re-fetch transiently flips isLoading.
+  // Without this, tierResolving toggling true would disable/skeleton the input
+  // mid-session, which blurs the field and (via the questionId effect) wipes it.
+  const everProRef = useRef(false);
 
   // Tier is sourced LIVE from /api/auth/me via useUserTier so a Pro/admin
   // never sees the upsell (FEEDBACK #3a). The passed `userTier`/`userRole`
@@ -491,128 +496,106 @@ export default function AIChatAssistant({
         className="sticky bottom-0 px-4 py-3 border-t border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)]"
         style={{ paddingBottom: "max(12px, env(safe-area-inset-bottom))" }}
       >
-        {tierResolving && !seedPro ? (
-          // Tier not yet resolved for a non-seed-Pro user — render a calm
-          // neutral input placeholder, NEVER the upsell (FEEDBACK #3a: the
-          // upsell must not flash for a Pro/admin on a cold load).
-          <div className="flex items-center gap-2 opacity-50" aria-hidden>
-            <div className="flex-1 h-[42px] bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)] rounded-xl" />
-            <div className="w-10 h-10 rounded-xl bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)]" />
-          </div>
-        ) : isPro ? (
-          <div className="flex items-center gap-2">
-            <input
-              ref={inputRef}
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                const isSend =
-                  (e.key === "Enter" && !e.shiftKey) ||
-                  ((e.metaKey || e.ctrlKey) && e.key === "Enter");
-                if (isSend) {
-                  e.preventDefault();
-                  handleSend();
-                }
-              }}
-              placeholder={lang === "de" ? "Folgefrage stellen…" : "Ask a follow-up question…"}
-              aria-label={lang === "de" ? "Folgefrage stellen" : "Ask a follow-up question"}
-              className="flex-1 bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)] rounded-xl px-4 py-2.5 text-sm text-[var(--mp-fg)] placeholder-[var(--mp-fg-subtle)] focus:outline-none focus:border-[var(--mp-viridian)]/50"
-              disabled={loading}
-            />
-            <button
-              onClick={handleSend}
-              disabled={!input.trim() || loading}
-              aria-label={lang === "de" ? "Folgefrage senden" : "Send follow-up question"}
-              className="w-10 h-10 rounded-xl bg-[var(--mp-viridian)] text-white flex items-center justify-center hover:bg-[var(--mp-accent-teal)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              <Send className="w-4 h-4" />
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {/* Educational Pro card — explains the free vs. Pro split so
-                free users don't mistake the disabled input for a broken AI.
-                The cached KI-Erklärung they see ABOVE this card is free;
-                only interactive follow-ups require Pro.
-
-                Dark-mode fix (review-2026-04-26-A1): --mp-success-bg now
-                resolves via globals.css to color-mix(viridian 14%) which
-                is a tinted-dark overlay in dark mode (was hard light
-                mint). Card body now reads as readable on either theme. */}
-            <div
-              className="mp-card p-4"
-              style={{
-                // Dark-contrast fix (FEEDBACK #3b): the card sits on a SOLID
-                // raised surface (guaranteed legible in both themes) with a
-                // viridian left-rail accent, instead of relying on the
-                // semi-transparent --mp-success-bg tint where muted body text
-                // failed AA in dark mode. Body text is now --mp-fg (not muted).
-                background: "var(--mp-surface-raised)",
-                borderColor: "color-mix(in srgb, var(--mp-viridian) 35%, transparent)",
-                borderLeft: "4px solid var(--mp-viridian)",
-              }}
-              role="note"
-            >
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 rounded-lg bg-[var(--mp-viridian)]/15 flex items-center justify-center flex-shrink-0">
-                  <Lock className="w-4 h-4 text-[var(--mp-viridian)]" />
+        {/* BUG-2 fix (2026-07-04): ONE always-mounted input across every tier
+            state. Previously the render SWAPPED between a skeleton, the real
+            input, and a disabled upsell input keyed on tierResolving/isPro, so
+            any useUserTier re-fetch (mount / tab-return / 5-min poll) remounted
+            the input mid-typing, dropping focus AND wiping the text via the
+            questionId reset effect. A single, latched element means the node is
+            never replaced or disabled mid-session, so focus + text survive. */}
+        {(() => {
+          if (isPro) everProRef.current = true;
+          const knownPro = everProRef.current;
+          const resolving = tierResolving && !seedPro && !knownPro;
+          const canType = knownPro; // once Pro, always typeable this session
+          return (
+            <>
+              {!knownPro && !resolving && (
+                <div
+                  className="mp-card p-4 mb-3"
+                  style={{
+                    background: "var(--mp-surface-raised)",
+                    borderColor: "color-mix(in srgb, var(--mp-viridian) 35%, transparent)",
+                    borderLeft: "4px solid var(--mp-viridian)",
+                  }}
+                  role="note"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-[var(--mp-viridian)]/15 flex items-center justify-center flex-shrink-0">
+                      <Lock className="w-4 h-4 text-[var(--mp-viridian)]" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="mp-h3 text-[15px] leading-tight mb-1.5 text-[var(--mp-fg)]">
+                        {lang === "de" ? "Interaktive Rückfragen mit Pro" : "Interactive follow-ups with Pro"}
+                      </h3>
+                      <p className="mp-body text-[13px] leading-snug text-[var(--mp-fg)] mb-3">
+                        {lang === "de" ? (
+                          <>
+                            Diese Erklärung und alle anderen KI-Erklärungen sind für dich kostenlos.
+                            Wenn du eine eigene Frage an die KI stellen willst (z.&nbsp;B. „Warum ist Option C falsch?“),
+                            brauchst du Pro.
+                          </>
+                        ) : (
+                          <>
+                            This explanation and all other AI explanations are free for you.
+                            If you want to ask the AI your own question (e.g.&nbsp;&quot;Why is option C wrong?&quot;),
+                            you need Pro.
+                          </>
+                        )}
+                      </p>
+                      <a
+                        href="/pricing"
+                        className="mp-btn mp-btn--success mp-btn--sm"
+                        onClick={() => trackEvent("feature_use", { feature: "ai_chat_pro_upsell_click", questionId })}
+                      >
+                        {lang === "de" ? "Mehr über Pro →" : "Learn about Pro →"}
+                      </a>
+                    </div>
+                  </div>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <h3 className="mp-h3 text-[15px] leading-tight mb-1.5 text-[var(--mp-fg)]">
-                    {lang === "de"
-                      ? "Interaktive Rückfragen mit Pro"
-                      : "Interactive follow-ups with Pro"}
-                  </h3>
-                  <p className="mp-body text-[13px] leading-snug text-[var(--mp-fg)] mb-3">
-                    {lang === "de" ? (
-                      <>
-                        Diese Erklärung und alle anderen KI-Erklärungen sind für dich kostenlos.
-                        Wenn du eine eigene Frage an die KI stellen willst (z.&nbsp;B. „Warum ist Option C falsch?“),
-                        brauchst du Pro.
-                      </>
-                    ) : (
-                      <>
-                        This explanation and all other AI explanations are free for you.
-                        If you want to ask the AI your own question (e.g.&nbsp;&quot;Why is option C wrong?&quot;),
-                        you need Pro.
-                      </>
-                    )}
-                  </p>
-                  <a
-                    href="/pricing"
-                    className="mp-btn mp-btn--success mp-btn--sm"
-                    onClick={() => trackEvent("feature_use", { feature: "ai_chat_pro_upsell_click", questionId })}
-                  >
-                    {lang === "de" ? "Mehr über Pro →" : "Learn about Pro →"}
-                  </a>
-                </div>
+              )}
+              <div className={`flex items-center gap-2 ${canType ? "" : "opacity-70"}`}>
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    const isSend =
+                      (e.key === "Enter" && !e.shiftKey) ||
+                      ((e.metaKey || e.ctrlKey) && e.key === "Enter");
+                    if (isSend && canType) {
+                      e.preventDefault();
+                      handleSend();
+                    }
+                  }}
+                  placeholder={
+                    resolving
+                      ? "…"
+                      : canType
+                        ? (lang === "de" ? "Folgefrage stellen…" : "Ask a follow-up question…")
+                        : (lang === "de" ? "Folgefrage stellen (Pro)…" : "Ask a follow-up question (Pro)…")
+                  }
+                  aria-label={lang === "de" ? "Folgefrage stellen" : "Ask a follow-up question"}
+                  className="flex-1 bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)] rounded-xl px-4 py-2.5 text-sm text-[var(--mp-fg)] placeholder-[var(--mp-fg-subtle)] focus:outline-none focus:border-[var(--mp-viridian)]/50 disabled:cursor-not-allowed disabled:text-[var(--mp-fg-subtle)]"
+                  disabled={loading || !canType}
+                />
+                <button
+                  onClick={canType ? handleSend : undefined}
+                  disabled={!canType || !input.trim() || loading}
+                  aria-label={
+                    canType
+                      ? (lang === "de" ? "Folgefrage senden" : "Send follow-up question")
+                      : (lang === "de" ? "Gesperrt, Pro erforderlich" : "Locked, Pro required")
+                  }
+                  className="w-10 h-10 rounded-xl bg-[var(--mp-viridian)] text-white flex items-center justify-center hover:bg-[var(--mp-accent-teal)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:bg-[var(--mp-surface-sunken)] disabled:text-[var(--mp-fg-subtle)]"
+                >
+                  {canType ? <Send className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+                </button>
               </div>
-            </div>
-
-            {/* Existing disabled input — kept per spec so the chat surface still
-                reads as a chat, just locked. */}
-            <div className="flex items-center gap-2 opacity-60">
-              <input
-                type="text"
-                value=""
-                readOnly
-                placeholder={lang === "de" ? "Folgefrage stellen (Pro)…" : "Ask a follow-up question (Pro)…"}
-                aria-label={lang === "de" ? "Folgefrage stellen, Pro erforderlich" : "Ask a follow-up question, Pro required"}
-                disabled
-                className="flex-1 bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)] rounded-xl px-4 py-2.5 text-sm text-[var(--mp-fg-subtle)] placeholder-[var(--mp-fg-subtle)] cursor-not-allowed"
-              />
-              <button
-                type="button"
-                disabled
-                aria-label={lang === "de" ? "Gesperrt, Pro erforderlich" : "Locked, Pro required"}
-                className="w-10 h-10 rounded-xl bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-subtle)] flex items-center justify-center cursor-not-allowed border border-[var(--mp-border)]"
-              >
-                <Lock className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        )}
+            </>
+          );
+        })()}
       </div>
     </BottomSheet>
   );

@@ -128,6 +128,10 @@ function QuizContent() {
   // Kenntnisprüfung (the real exam asks open short-answer questions);
   // persisted so the choice sticks across sessions.
   const [kafMode, setKafMode] = useState(false);
+  // UX-1 (2026-07-04): first-run KAF explainer. Shown the first time a user
+  // turns KAF on (or opens it via the "?"), so the mode is introduced instead
+  // of appearing as an unexplained toggle.
+  const [kafIntroOpen, setKafIntroOpen] = useState(false);
   useEffect(() => {
     if (typeof window !== "undefined") {
       setKafMode(localStorage.getItem("medpruef-kaf-mode") === "1");
@@ -138,6 +142,11 @@ function QuizContent() {
       const next = !v;
       try {
         localStorage.setItem("medpruef-kaf-mode", next ? "1" : "0");
+        // On the FIRST activation ever, introduce the mode.
+        if (next && localStorage.getItem("medpruef-kaf-introduced") !== "1") {
+          localStorage.setItem("medpruef-kaf-introduced", "1");
+          setKafIntroOpen(true);
+        }
       } catch { /* noop */ }
       return next;
     });
@@ -173,35 +182,9 @@ function QuizContent() {
   // top bar genuinely adds it to the set you can later drill into — it is
   // NOT a private, orphaned key. Uses a Bookmark icon (not Flag) to stay
   // distinct from QuestionActions' Flag = "report a problem".
-  const FAVORITES_KEY = "medpruef_favorites";
-  const [flaggedIds, setFlaggedIds] = useState<Set<number>>(new Set());
-  const readFavorites = (): number[] => {
-    if (typeof window === "undefined") return [];
-    try {
-      const raw = JSON.parse(localStorage.getItem(FAVORITES_KEY) || "[]");
-      return Array.isArray(raw) ? (raw as number[]) : [];
-    } catch { return []; }
-  };
-  useEffect(() => {
-    setFlaggedIds(new Set(readFavorites()));
-    // Keep in sync if another surface (e.g. the QuestionActions star)
-    // mutates the bookmark set while the quiz is open.
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === FAVORITES_KEY) setFlaggedIds(new Set(readFavorites()));
-    };
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
-  }, []);
-  const toggleFlag = useCallback((qid: number) => {
-    setFlaggedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(qid)) next.delete(qid);
-      else next.add(qid);
-      try { localStorage.setItem(FAVORITES_KEY, JSON.stringify([...next])); } catch { /* ignore */ }
-      return next;
-    });
-    trackEvent("bookmark", { questionId: qid, source: "quiz_topbar" });
-  }, []);
+  // UX-2 (2026-07-04): the quiz's own top-bar bookmark state was removed with
+  // the duplicate button. Bookmarking now lives solely in the QuestionActions
+  // star (medpruef_favorites), present on both the mobile row and desktop rail.
 
   // ─── Shortcuts hint — a one-time, dismissible rail at the bottom
   // of the quiz surface. Persisted in localStorage so we don't nag
@@ -733,15 +716,15 @@ function QuizContent() {
               : null
           }
           timeUrgent={timeRemaining !== null && timeRemaining < 60}
-          flagged={!!question && flaggedIds.has(question.id)}
           onClose={() => {
             if (autoStarted) router.push("/");
             else restart();
           }}
-          onToggleFlag={
-            question && !quizFinished ? () => toggleFlag(question.id) : undefined
-          }
         />
+        {/* UX-2 (2026-07-04): the top-bar bookmark was removed as a duplicate of
+            the QuestionActions star (both wrote medpruef_favorites). The star,
+            grouped with the other per-question actions, is now the single
+            bookmark on both mobile and desktop. */}
 
         {/* Offline banner — appears when navigator.onLine === false.
             Flags that answers queue locally until reconnect. */}
@@ -817,7 +800,7 @@ function QuizContent() {
                   {/* KAF recall-first toggle: KP only (the real exam asks open
                       short-answer questions). Persisted in localStorage. */}
                   {kafEligible && (
-                    <div className="flex items-center justify-end gap-2 mb-2">
+                    <div className="flex items-center justify-end gap-1.5 mb-2">
                       <button
                         onClick={toggleKafMode}
                         role="switch"
@@ -836,6 +819,44 @@ function QuizContent() {
                         />
                         {t("kaf_toggle", lang)}
                       </button>
+                      <button
+                        onClick={() => setKafIntroOpen(true)}
+                        aria-label={t("kaf_intro_title", lang)}
+                        className="flex h-6 w-6 items-center justify-center rounded-full border border-[var(--mp-border)] text-[11px] font-bold text-[var(--mp-fg-subtle)] hover:text-[var(--mp-viridian)] hover:border-[var(--mp-viridian)] transition-colors"
+                      >
+                        ?
+                      </button>
+                    </div>
+                  )}
+                  {kafIntroOpen && (
+                    <div
+                      className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center bg-black/40 p-4"
+                      onClick={() => setKafIntroOpen(false)}
+                      role="dialog"
+                      aria-modal="true"
+                    >
+                      <div
+                        className="mp-card w-full max-w-md rounded-2xl p-5 bg-[var(--mp-surface-raised)] border border-[var(--mp-border)]"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div className="flex items-start gap-3">
+                          <span className="mt-0.5 inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-[var(--mp-viridian)]/10 text-[var(--mp-viridian)] text-sm font-bold">
+                            KAF
+                          </span>
+                          <div>
+                            <h3 className="mp-h3 text-[16px] text-[var(--mp-fg)]">{t("kaf_intro_title", lang)}</h3>
+                            <p className="mt-1.5 text-sm leading-relaxed text-[var(--mp-fg-muted)]">
+                              {t("kaf_hint", lang)}
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => setKafIntroOpen(false)}
+                          className="btn-primary mt-4 w-full rounded-xl py-2.5 text-sm font-semibold"
+                        >
+                          {t("kaf_intro_ok", lang)}
+                        </button>
+                      </div>
                     </div>
                   )}
                   <QuestionCard

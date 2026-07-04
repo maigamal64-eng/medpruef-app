@@ -16,7 +16,6 @@ import TranslateButton from "@/components/TranslateButton";
 import QuestionReportForm from "@/components/question/QuestionReportForm";
 import QuestionNotesPanel from "@/components/question/QuestionNotesPanel";
 import QuestionNotes from "@/components/QuestionNotes";
-import TurnIntoNoteButton from "@/components/TurnIntoNoteButton";
 import QuestionExplanation from "@/components/question/QuestionExplanation";
 import {
   useQuestionHighlights,
@@ -322,21 +321,6 @@ export default function QuestionCard({
 
   const effectiveImageUrl = imageUrl ?? question.image_url;
 
-  // Answer context for "Save as flash-note" (isCorrect isn't stored, so derive
-  // it here from the selection vs the correct set).
-  const noteCorrectIdxs = options
-    .map((o, i) => (o.correct ? i : -1))
-    .filter((i) => i >= 0);
-  const userAnswerForNote = answered
-    ? [...selectedIdxs]
-        .map((i) => options[i]?.text)
-        .filter(Boolean)
-        .join(" | ")
-    : "";
-  const wasCorrectForNote: boolean | null = answered
-    ? selectedIdxs.size === noteCorrectIdxs.length &&
-      [...selectedIdxs].every((i) => noteCorrectIdxs.includes(i))
-    : null;
 
   // Per Mohamed: explanation images currently appear together with the question
   // image — they should only show up AFTER answering. The Anki importer dumps
@@ -557,26 +541,17 @@ export default function QuestionCard({
           );
         })()}
 
-        {/* Save this question — with your answer context — as a flash-note. */}
-        {answered && !hideExplanation && (
-          <div className="mt-4">
-            <TurnIntoNoteButton
-              kind="question"
-              lang={lang}
-              sourceRef={{ question_id: question.id }}
-              topic={question.topic}
-              userAnswer={userAnswerForNote || undefined}
-              wasCorrect={wasCorrectForNote}
-            />
-          </div>
-        )}
+        {/* UX-5 (2026-07-04): the standalone "save this question as a flash-note"
+            button was removed from here. It repeated the note-creation that now
+            lives in the single Notizen tab (UX-3), so having it float after the
+            answer too was part of the "flash-note button is everywhere" problem.
+            Note creation for a question now has ONE home: the Notizen tab. */}
 
-        {/* Curated + community flash-notes linked to this question (2026-07-03).
-            Flag-gated server-side (NOTES_EXPLORE_ENABLED); renders nothing when
-            off or when the question has no public notes. */}
-        {answered && !hideExplanation && (
-          <QuestionNotes questionId={question.id} lang={lang} />
-        )}
+        {/* UX-3 (2026-07-04): the curated/community notes (QuestionNotes) used
+            to render as a SEPARATE collapsible section here, above the Notizen
+            tab — two homes for "notes on this question." They are now unified
+            INTO the Notizen tab below (personal + curated + community in one
+            place), so this standalone section was removed. */}
 
         {/* ──────────────────────────────────────────────────────────
             Quiz-B: Tabbed post-answer context
@@ -647,11 +622,14 @@ export default function QuestionCard({
                   </div>
                 )}
 
-                {/* Notizen pane — self-contained multi-note editor (the single
-                    notes home; FEEDBACK #4c). */}
+                {/* Notizen pane — the SINGLE notes home (UX-3, 2026-07-04):
+                    the user's own notes (QuestionNotesPanel) PLUS the curated
+                    "MedPrüf Team" + community notes for this question
+                    (QuestionNotes), unified in one place instead of two. */}
                 {activeVisible === "notizen" && (
-                  <div className="pt-4 animate-fade-in">
+                  <div className="pt-4 animate-fade-in space-y-3">
                     <QuestionNotesPanel lang={lang} questionId={question.id} />
+                    <QuestionNotes questionId={question.id} lang={lang} />
                   </div>
                 )}
 
