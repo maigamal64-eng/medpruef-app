@@ -24,6 +24,18 @@ export interface ChangelogEntry {
 export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-07-04",
+    tag: "fix",
+    title: {
+      de: "Quiz- und Notiz-Verbesserungen",
+      en: "Quiz and notes improvements",
+    },
+    description: {
+      de: "Mehrere Verbesserungen: Die KI-Rückfrage behält jetzt beim Tippen den Fokus. Der KAF-Modus wird beim ersten Aktivieren kurz erklärt (mit einem Fragezeichen zum Nachlesen). Das doppelte Lesezeichen wurde zu einem zusammengeführt. Notizen zu einer Frage (deine eigenen, kuratierte und Community-Notizen) leben jetzt an einem Ort im Notizen-Tab.",
+      en: "Several fixes: the AI follow-up input now keeps focus while typing. KAF mode is briefly explained on first activation (with a question mark to reread it). The duplicate bookmark was merged into one. Notes for a question (your own, curated, and community) now live in one place in the Notes tab.",
+    },
+  },
+  {
+    date: "2026-07-04",
     tag: "improvement",
     title: {
       de: "Gratis-Woche Pro: jetzt ohne Karte",
