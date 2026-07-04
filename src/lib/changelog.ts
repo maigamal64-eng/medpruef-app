@@ -24,6 +24,18 @@ export interface ChangelogEntry {
 export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-07-04",
+    tag: "improvement",
+    title: {
+      de: "KI-Erklärung direkt im Tab, keine Seitenleiste mehr",
+      en: "AI explanation right in the tab, no more side drawer",
+    },
+    description: {
+      de: "Die KI-Erklärung öffnet sich jetzt direkt dort, wo du klickst: im Tab unter der Frage, neben Erklärung und Notizen. Die seitliche Schublade ist weg, auch beim Lesen von Notizen aus Entdecken (jetzt ein zentriertes Fenster). Deine Unterhaltung bleibt beim Tab-Wechsel erhalten.",
+      en: "The AI explanation now opens right where you click: in the tab under the question, next to Explanation and Notes. The side drawer is gone, including when reading notes from Explore (now a centered window). Your conversation survives switching tabs.",
+    },
+  },
+  {
+    date: "2026-07-04",
     tag: "fix",
     title: {
       de: "Quiz- und Notiz-Verbesserungen",

@@ -152,7 +152,9 @@ export default function QuestionCard({
   const [isFav, setIsFav] = useState(false);
 
   const [showAnswer, setShowAnswer] = useState(false);
-  const [showAIChat, setShowAIChat] = useState(false);
+  // UX-4: the AI panel is an inline tab; once the ki tab has been visited it
+  // stays mounted (hidden) so the conversation survives tab switches.
+  const [aiEverOpened, setAiEverOpened] = useState(false);
   // KAF recall-first: options stay covered until revealed (reset per question).
   const [optionsRevealed, setOptionsRevealed] = useState(false);
   const [recallScratch, setRecallScratch] = useState("");
@@ -169,6 +171,25 @@ export default function QuestionCard({
   type PostAnswerTab = "erklaerung" | "ki" | "notizen" | "uebersetzen";
   const [activeTab, setActiveTab] = useState<PostAnswerTab>("erklaerung");
   const answered = submitted || showAnswer;
+
+  // UX-4: mark the AI panel as visited when the ki tab activates (keeps it
+  // mounted afterwards), and let the external QuestionActions rail focus the
+  // ki tab via a window event (its Bot button used to open a second, separate
+  // drawer instance — one AI home now).
+  useEffect(() => {
+    if (activeTab === "ki") setAiEverOpened(true);
+  }, [activeTab]);
+  useEffect(() => {
+    const openAiTab = () => {
+      if (!answered || hideExplanation) return;
+      setActiveTab("ki");
+      setAiEverOpened(true);
+      trackEvent("feature_use", { feature: "ai_chat_open", source: "rail", questionId: question.id });
+    };
+    window.addEventListener("medpruef-open-ai-tab", openAiTab);
+    return () => window.removeEventListener("medpruef-open-ai-tab", openAiTab);
+  }, [answered, hideExplanation, question.id]);
+
   const isOpenAnswer = !question.options || question.options.length < 2;
   const options: MCQOption[] = question.options || [];
   const nCorrect = question.n_correct ?? options.filter(o => o.correct).length;
@@ -179,7 +200,7 @@ export default function QuestionCard({
     setSelectedIdxs(new Set(initialSelected ?? []));
     setSubmitted(initiallyAnswered);
     setShowAnswer(false);
-    setShowAIChat(false);
+    setAiEverOpened(false);
     setOptionsRevealed(false);
     setRecallScratch("");
     setShowReportForm(false);
@@ -572,11 +593,10 @@ export default function QuestionCard({
               // so free users don't mistake this for a Pro-locked chat. The surface IS an
               // explanation; the Pro gate only applies to interactive follow-up questions.
               label: lang === "de" ? "KI-Erklärung" : "AI Explanation",
+              // UX-4 (2026-07-04): a REAL tab panel now — the AI explanation
+              // renders inline where the tab is (the desktop side-drawer was
+              // the rejected pattern; content appears where the user clicked).
               icon: <Bot className="w-3.5 h-3.5" />,
-              isAction: true,
-              hint: lang === "de"
-                ? "Jede Frage hat eine KI-Erklärung, kostenlos. Pro-Nutzer:innen können zusätzlich eigene Rückfragen stellen."
-                : "Every question has an AI explanation, free for everyone. Pro users can additionally ask their own follow-up questions.",
             },
             { id: "notizen", label: lang === "de" ? "Notizen" : "Notes", icon: <FileText className="w-3.5 h-3.5" /> },
             { id: "uebersetzen", label: lang === "de" ? "Übersetzen" : "Translate", icon: <Languages className="w-3.5 h-3.5" /> },
@@ -598,13 +618,6 @@ export default function QuestionCard({
                 tabs={visibleTabs}
                 activeTab={activeVisible}
                 onTabChange={setActiveTab}
-                onTabAction={(id) => {
-                  if (id === "ki") {
-                    // KI-Erklärung tab opens the AI chat modal rather than switching panes.
-                    setShowAIChat(true);
-                    trackEvent("feature_use", { feature: "ai_chat_open", source: "tab", questionId: question.id });
-                  }
-                }}
                 ariaLabel={lang === "de" ? "Zusatzinformationen" : "Additional information"}
               >
                 {/* Erklärung pane */}
@@ -618,6 +631,28 @@ export default function QuestionCard({
                       onImageClick={setLightboxSrc}
                       rating={explanationRating}
                       onRate={setExplanationRating}
+                    />
+                  </div>
+                )}
+
+                {/* KI-Erklärung pane (UX-4, 2026-07-04) — the AI assistant
+                    renders INLINE here (no overlay drawer). Kept mounted after
+                    the first visit (hidden on other tabs) so the conversation
+                    and a draft follow-up survive tab switches; it resets only
+                    when the question changes. */}
+                {aiEverOpened && (
+                  <div className={activeVisible === "ki" ? "pt-4 animate-fade-in" : "hidden"}>
+                    <AIChatAssistant
+                      active={activeVisible === "ki"}
+                      lang={lang}
+                      questionId={question.id}
+                      questionText={question.question}
+                      answerText={question.answer}
+                      explanation={question.explanation}
+                      topic={question.topic}
+                      options={options.map(o => ({ text: o.text, correct: o.correct }))}
+                      userTier={userTier}
+                      userRole={userRole}
                     />
                   </div>
                 )}
@@ -670,26 +705,9 @@ export default function QuestionCard({
         />
       )}
 
-      {/* AI Chat Assistant.
-          Mounted whenever the post-answer ContextTabs can render (i.e. the
-          "KI-Erklärung" action tab is reachable), NOT gated on !hideActions.
-          The quiz renders QuestionCard with hideActions (the rail/row owns the
-          meta-actions), but the ContextTabs "ki" tab still fires setShowAIChat
-          — previously the assistant was unmounted there, so that tab was a DEAD
-          button (FEEDBACK #4b). It now opens the real, working panel. */}
-      <AIChatAssistant
-        open={showAIChat}
-        onClose={() => setShowAIChat(false)}
-        lang={lang}
-        questionId={question.id}
-        questionText={question.question}
-        answerText={question.answer}
-        explanation={question.explanation}
-        topic={question.topic}
-        options={options.map(o => ({ text: o.text, correct: o.correct }))}
-        userTier={userTier}
-        userRole={userRole}
-      />
+      {/* UX-4 (2026-07-04): the overlay-drawer AIChatAssistant mount that
+          lived here was removed — the assistant now renders INLINE inside the
+          "KI-Erklärung" tab panel above, where the tab is. */}
 
       {/* Lightbox — opens for whichever image was clicked (question or extra) */}
       {lightboxSrc && (

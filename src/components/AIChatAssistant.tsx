@@ -5,7 +5,6 @@ import { Send, Bot, User, Loader2, Lock, RefreshCw } from "lucide-react";
 import { trackEvent } from "@/lib/tracker";
 import ReactMarkdown from "react-markdown";
 import { authFetch as fetch } from "@/lib/authFetch";
-import { BottomSheet } from "@/components/ui";
 import { useUserTier } from "@/lib/hooks/useUserTier";
 import TurnIntoNoteButton from "@/components/TurnIntoNoteButton";
 
@@ -17,8 +16,11 @@ interface Message {
 }
 
 interface AIChatAssistantProps {
-  open: boolean;
-  onClose: () => void;
+  /** UX-4 (2026-07-04): the assistant is now an INLINE tab panel, not an
+   * overlay drawer. `active` = the KI tab is currently selected; generation
+   * kicks off on first activation. The parent keeps the panel mounted (hidden)
+   * across tab switches so the chat survives; state resets on question change. */
+  active: boolean;
   lang: Lang;
   questionId: number;
   questionText: string;
@@ -33,16 +35,8 @@ interface AIChatAssistantProps {
   userRole?: string;
 }
 
-// Truncate question stem for the sheet description (fallback context).
-function truncate(s: string, max = 110) {
-  if (!s) return "";
-  const clean = s.replace(/\s+/g, " ").trim();
-  return clean.length > max ? `${clean.slice(0, max - 1)}…` : clean;
-}
-
 export default function AIChatAssistant({
-  open,
-  onClose,
+  active,
   lang,
   questionId,
   questionText,
@@ -157,29 +151,22 @@ export default function AIChatAssistant({
     };
   };
 
-  // Auto-generate or load cached explanation when opened.
+  // Auto-generate or load cached explanation on FIRST activation of the tab.
   useEffect(() => {
-    if (!open) return;
+    if (!active) return;
     if (initialized) return;
     setInitialized(true);
     setMessages([]);
     trackEvent("ai_chat_open", { topic, questionId });
     loadOrGenerateExplanation();
-  }, [open, questionId, initialized, topic]);  // eslint-disable-line react-hooks/exhaustive-deps
+  }, [active, questionId, initialized, topic]);  // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Reset when closed.
-  useEffect(() => {
-    if (!open) {
-      setInitialized(false);
-      setMessages([]);
-      setInput("");
-      setCachedExplanation(null);
-    }
-  }, [open]);
+  // NOTE (UX-4): no reset-on-close anymore — the parent keeps this panel
+  // mounted across tab switches so the conversation + draft input survive.
+  // State resets only when the QUESTION changes (below).
 
-  // Reset when the bound question changes mid-open (e.g. parent switches
-  // questionId without closing the sheet) — the next open will regenerate
-  // for the new question.
+  // Reset when the bound question changes (parent switches questionId) —
+  // the next activation regenerates for the new question.
   useEffect(() => {
     setInitialized(false);
     setMessages([]);
@@ -385,23 +372,14 @@ export default function AIChatAssistant({
     }
   };
 
-  const title = lang === "de" ? "KI-Erklärung" : "AI Explanation";
-  // Compact description — the user already sees the full question behind
-  // the sheet (that's the whole point of alt AI-chat-B), so we just show
-  // topic + a short preview so the surface is labeled correctly.
-  const description = `${topic} · ${truncate(questionText, 90)}`;
-
+  // UX-4 (2026-07-04): render as an INLINE tab panel where the KI tab is, not
+  // an overlay drawer (the desktop side-drawer was the rejected pattern). The
+  // question and the tabs stay visible; the chat lives in the normal page flow
+  // with its own internal scroll area.
   return (
-    <BottomSheet
-      open={open}
-      onOpenChange={(next) => {
-        if (!next) onClose();
-      }}
-      title={title}
-      description={description}
-    >
+    <div className="rounded-[var(--mp-r-card)] border border-[var(--mp-border)] bg-[var(--mp-surface-raised)] overflow-hidden flex flex-col max-h-[560px]">
       {/* Status strip + regenerate control */}
-      <div className="px-5 py-2.5 border-b border-[var(--mp-border-subtle)] flex items-center justify-between gap-3 bg-[var(--mp-surface-sunken)] sticky top-0 z-10">
+      <div className="px-5 py-2.5 border-b border-[var(--mp-border-subtle)] flex items-center justify-between gap-3 bg-[var(--mp-surface-sunken)] flex-shrink-0">
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[var(--mp-accent-teal)] to-[var(--mp-cta-blue)] flex items-center justify-center flex-shrink-0">
             <Bot className="w-4 h-4 text-white" />
@@ -441,8 +419,8 @@ export default function AIChatAssistant({
         )}
       </div>
 
-      {/* Messages */}
-      <div className="px-5 py-4 space-y-4">
+      {/* Messages — the panel's own scroll area (inline, so the page doesn't grow unbounded) */}
+      <div className="px-5 py-4 space-y-4 flex-1 min-h-[120px] overflow-y-auto">
         {messages.map((msg, i) => (
           <div key={i} className={`flex items-start gap-2.5 ${msg.role === "user" ? "flex-row-reverse" : ""}`}>
             <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${
@@ -491,11 +469,8 @@ export default function AIChatAssistant({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input pinned to the bottom of the scroll container */}
-      <div
-        className="sticky bottom-0 px-4 py-3 border-t border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)]"
-        style={{ paddingBottom: "max(12px, env(safe-area-inset-bottom))" }}
-      >
+      {/* Input row — a fixed footer of the inline panel (below the scroll area) */}
+      <div className="px-4 py-3 border-t border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] flex-shrink-0">
         {/* BUG-2 fix (2026-07-04): ONE always-mounted input across every tier
             state. Previously the render SWAPPED between a skeleton, the real
             input, and a disabled upsell input keyed on tierResolving/isPro, so
@@ -597,6 +572,6 @@ export default function AIChatAssistant({
           );
         })()}
       </div>
-    </BottomSheet>
+    </div>
   );
 }

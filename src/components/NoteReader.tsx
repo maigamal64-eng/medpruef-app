@@ -27,7 +27,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { authFetch as fetch } from "@/lib/authFetch";
-import { BottomSheet, useToast } from "@/components/ui";
+import { Dialog, useToast } from "@/components/ui";
 import type { NoteBlock } from "@/lib/notes";
 import {
   BadgeCheck,
@@ -43,6 +43,7 @@ import {
   Plus,
   Check,
   Crown,
+  FolderPlus,
 } from "lucide-react";
 
 type Lang = "de" | "en";
@@ -145,6 +146,183 @@ export function SourceBadge({
       <Users className="w-3 h-3" />
       {de ? "Community" : "Community"}
     </span>
+  );
+}
+
+/**
+ * AddToListControl — a compact, standalone "add to list" popover that reuses
+ * the same collection + save mechanics as the reader footer. Used where a full
+ * reader is not open (e.g. the Library study overlay for an OWN note), so a
+ * user can organize their own notes into lists too.
+ *
+ * Saving an OWN note is never Pro-gated (the API allows owns → always).
+ */
+export function AddToListControl({
+  noteId,
+  lang,
+}: {
+  noteId: string;
+  lang: Lang;
+}) {
+  const toast = useToast();
+  const de = lang === "de";
+  const [open, setOpen] = useState(false);
+  const [collections, setCollections] = useState<Collection[]>([]);
+  const [savedIn, setSavedIn] = useState<Set<string>>(new Set());
+  const [busy, setBusy] = useState<string | null>(null);
+  const [newListName, setNewListName] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+
+  const load = useCallback(async () => {
+    try {
+      const [colsRes, savedRes] = await Promise.all([
+        fetch("/api/notes/collections"),
+        fetch(`/api/notes/${noteId}/save`),
+      ]);
+      const colsData = colsRes.ok ? await colsRes.json() : null;
+      const savedData = savedRes.ok ? await savedRes.json() : null;
+      setCollections(Array.isArray(colsData?.collections) ? colsData.collections : []);
+      setSavedIn(new Set(Array.isArray(savedData?.collection_ids) ? savedData.collection_ids : []));
+      setLoaded(true);
+    } catch {
+      /* non-blocking */
+    }
+  }, [noteId]);
+
+  useEffect(() => {
+    if (open && !loaded) load();
+  }, [open, loaded, load]);
+
+  const toggle = async (collectionId: string) => {
+    if (busy) return;
+    setBusy(collectionId);
+    const isIn = savedIn.has(collectionId);
+    try {
+      if (isIn) {
+        const res = await fetch(`/api/notes/${noteId}/save?collection_id=${collectionId}`, { method: "DELETE" });
+        if (res.ok) {
+          setSavedIn((s) => {
+            const n = new Set(s);
+            n.delete(collectionId);
+            return n;
+          });
+        }
+      } else {
+        const res = await fetch(`/api/notes/${noteId}/save`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ collection_id: collectionId, lang }),
+        });
+        if (res.ok) setSavedIn((s) => new Set(s).add(collectionId));
+        else toast.error(de ? "Fehler" : "Error");
+      }
+    } catch {
+      toast.error(de ? "Fehler" : "Error");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const createList = async () => {
+    const name = newListName.trim();
+    if (!name || creating) return;
+    setCreating(true);
+    try {
+      const res = await fetch("/api/notes/collections", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      const d = await res.json().catch(() => ({}));
+      if (res.ok && d.collection?.id) {
+        setNewListName("");
+        setCollections((c) => [d.collection, ...c]);
+        await toggle(d.collection.id);
+      } else {
+        toast.error(de ? "Fehler" : "Error");
+      }
+    } catch {
+      toast.error(de ? "Fehler" : "Error");
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--mp-fg-muted)] hover:text-[var(--mp-fg)] transition-colors"
+      >
+        {savedIn.size > 0 ? (
+          <BookmarkCheck className="w-3.5 h-3.5 text-[var(--mp-viridian)]" />
+        ) : (
+          <FolderPlus className="w-3.5 h-3.5" />
+        )}
+        {de ? "Zu Liste hinzufügen" : "Add to list"}
+        <ChevronDown className={`w-3 h-3 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && (
+        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 w-56 rounded-[var(--mp-r-card)] border border-[var(--mp-border)] bg-[var(--mp-surface-raised)] shadow-[var(--mp-shadow-elev)] p-2 space-y-1 max-h-64 overflow-y-auto z-[70]">
+          {!loaded && (
+            <div className="flex justify-center py-2">
+              <Loader2 className="w-4 h-4 animate-spin text-[var(--mp-fg-subtle)]" />
+            </div>
+          )}
+          {loaded && collections.length === 0 && (
+            <p className="text-xs text-[var(--mp-fg-subtle)] px-1 py-1">
+              {de ? "Noch keine Listen." : "No lists yet."}
+            </p>
+          )}
+          {collections.map((c) => {
+            const inList = savedIn.has(c.id);
+            return (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => toggle(c.id)}
+                disabled={busy === c.id}
+                className="w-full flex items-center justify-between gap-2 text-left text-sm px-2 py-1.5 rounded-lg hover:bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-muted)] disabled:opacity-60"
+              >
+                <span className="truncate">{c.name}</span>
+                {busy === c.id ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin flex-shrink-0" />
+                ) : inList ? (
+                  <Check className="w-3.5 h-3.5 text-[var(--mp-viridian)] flex-shrink-0" />
+                ) : (
+                  <Plus className="w-3.5 h-3.5 text-[var(--mp-fg-subtle)] flex-shrink-0" />
+                )}
+              </button>
+            );
+          })}
+          <div className="flex items-center gap-1.5 pt-1">
+            <input
+              type="text"
+              value={newListName}
+              onChange={(e) => setNewListName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") createList();
+              }}
+              maxLength={80}
+              placeholder={de ? "Neue Liste…" : "New list…"}
+              className="flex-1 min-w-0 text-sm px-2 py-1.5 rounded-lg bg-[var(--mp-surface-sunken)] border border-[var(--mp-border-soft)] text-[var(--mp-fg)] placeholder-[var(--mp-fg-subtle)] focus:outline-none focus:border-[var(--mp-viridian)]"
+            />
+            <button
+              type="button"
+              onClick={createList}
+              disabled={creating || !newListName.trim()}
+              className="inline-flex items-center text-xs font-semibold px-2 py-1.5 rounded-lg bg-[var(--mp-viridian)]/12 text-[var(--mp-viridian)] disabled:opacity-50"
+              aria-label={de ? "Liste erstellen" : "Create list"}
+            >
+              {creating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -455,14 +633,18 @@ export default function NoteReader({
   );
 
   return (
-    <BottomSheet
+    // UX-4 sweep (2026-07-04): reading a note is a focused task — a CENTERED
+    // Dialog replaces the BottomSheet (whose desktop form was the rejected
+    // side-drawer pattern). Same a11y guarantees, proper reading width.
+    <Dialog
       open={open}
       onOpenChange={onOpenChange}
       title={note.title || (de ? "Ohne Titel" : "Untitled")}
       description={note.topic || note.exam_type || undefined}
       footer={footer}
+      maxWidth="640px"
     >
-      <div dir="auto" className="px-5 py-4 space-y-3">
+      <div dir="auto" className="px-1 py-1 space-y-3 max-h-[60vh] overflow-y-auto">
         <SourceBadge curated={note.curated} kind={note.kind} lang={lang} />
 
         {blocks.length === 0 && (
@@ -514,6 +696,6 @@ export default function NoteReader({
           </Link>
         )}
       </div>
-    </BottomSheet>
+    </Dialog>
   );
 }

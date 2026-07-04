@@ -15,7 +15,6 @@
  */
 
 export { Dialog, DialogFooter, type DialogProps } from './Dialog'
-export { BottomSheet, type BottomSheetProps, type BottomSheetPosition } from './BottomSheet'
 export { ToastProvider, useToast } from './Toast'
 export { TextField, Textarea, Select, type TextFieldProps, type TextareaProps, type SelectProps } from './Field'
 export { Alert } from './Alert'

@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { Star, Bot, FileText, Flag, Save, X } from "lucide-react";
 import { t } from "@/lib/i18n";
 import { trackEvent } from "@/lib/tracker";
-import AIChatAssistant from "@/components/AIChatAssistant";
 import ReportQuestionModal from "@/components/ReportQuestionModal";
 import type { MCQOption } from "@/lib/mcq";
 
@@ -69,7 +68,6 @@ export default function QuestionActions({
   metaOnly = false,
 }: Props) {
   const [isFav, setIsFav] = useState(false);
-  const [showAIChat, setShowAIChat] = useState(false);
   const [showReport, setShowReport] = useState(false);
   const [showNotePanel, setShowNotePanel] = useState(false);
   const [note, setNote] = useState("");
@@ -83,7 +81,6 @@ export default function QuestionActions({
     setNote(saved);
     setShowNotePanel(false);
     setNoteSaved(false);
-    setShowAIChat(false);
     setShowReport(false);
   }, [question.id]);
 
@@ -154,9 +151,17 @@ export default function QuestionActions({
       key: "ai",
       label: lang === "de" ? "KI-Erklärung" : "AI Explain",
       icon: <Bot className="w-5 h-5" />,
-      active: showAIChat,
+      active: false,
       activeClass: "border-[var(--mp-cta-blue)]/40 bg-[var(--mp-cta-blue)]/10 text-[var(--mp-cta-blue)]",
-      onClick: () => !aiLocked && setShowAIChat(true),
+      // UX-4 (2026-07-04): this button used to open its OWN drawer instance of
+      // the AI assistant (a second, disconnected surface). The assistant now
+      // has ONE home, the inline KI tab in QuestionCard; this focuses it.
+      onClick: () => {
+        if (aiLocked) return;
+        try {
+          window.dispatchEvent(new CustomEvent("medpruef-open-ai-tab"));
+        } catch { /* noop */ }
+      },
       locked: aiLocked,
     },
     {
@@ -225,19 +230,9 @@ export default function QuestionActions({
           />
         )}
 
-        <AIChatAssistant
-          open={showAIChat}
-          onClose={() => setShowAIChat(false)}
-          lang={lang}
-          questionId={question.id}
-          questionText={question.question}
-          answerText={question.answer}
-          explanation={question.explanation}
-          topic={question.topic}
-          options={(question.options || []).map((o) => ({ text: o.text, correct: o.correct }))}
-          userTier={userTier}
-          userRole={userRole}
-        />
+        {/* UX-4: the row layout's own AIChatAssistant drawer instance was
+            removed — the AI button dispatches medpruef-open-ai-tab and the
+            inline KI tab in QuestionCard is the single AI home. */}
         <ReportQuestionModal
           open={showReport}
           onClose={() => setShowReport(false)}
@@ -295,19 +290,9 @@ export default function QuestionActions({
         )}
       </div>
 
-      <AIChatAssistant
-        open={showAIChat}
-        onClose={() => setShowAIChat(false)}
-        lang={lang}
-        questionId={question.id}
-        questionText={question.question}
-        answerText={question.answer}
-        explanation={question.explanation}
-        topic={question.topic}
-        options={(question.options || []).map((o) => ({ text: o.text, correct: o.correct }))}
-        userTier={userTier}
-        userRole={userRole}
-      />
+      {/* UX-4: the rail layout's own AIChatAssistant drawer instance was
+          removed — the AI button dispatches medpruef-open-ai-tab and the
+          inline KI tab in QuestionCard is the single AI home. */}
       <ReportQuestionModal
         open={showReport}
         onClose={() => setShowReport(false)}
