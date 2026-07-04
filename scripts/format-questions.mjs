@@ -108,7 +108,9 @@ function classify(q) {
     /\n[A-F][).:]\s/.test(stem) ||
     stem.length > 1500;
   const isOpenAnswerPharma = q.exam_type === "pharma" && (!q.choices || !Array.isArray(q.choices) || !q.choices.length);
-  const needsExplanation = q.explanation == null;
+  // Treat NULL *and* empty/whitespace explanation as needing one (the first
+  // run only caught NULL, silently skipping ~910 empty-string rows).
+  const needsExplanation = !q.explanation || q.explanation.trim() === "";
   return { fmt, needsExplanation, isOpenAnswerPharma, target: fmt || needsExplanation };
 }
 
