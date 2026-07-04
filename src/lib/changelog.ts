@@ -24,6 +24,54 @@ export interface ChangelogEntry {
 export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-07-04",
+    tag: "improvement",
+    title: {
+      de: "Gratis-Woche Pro: jetzt ohne Karte",
+      en: "Free Pro week: now without a card",
+    },
+    description: {
+      de: "Die 7-tägige Pro-Testwoche braucht jetzt keine Kreditkarte und kein Telegram mehr. Ein Klick, sofort aktiv, kein Abo, sie endet einfach von selbst. Bezahlte Tarife laufen weiterhin über die sichere Kartenzahlung.",
+      en: "The 7-day Pro trial no longer needs a credit card or Telegram. One tap, active instantly, no subscription, it simply ends on its own. Paid plans still run through secure card checkout.",
+    },
+  },
+  {
+    date: "2026-07-04",
+    tag: "improvement",
+    title: {
+      de: "Erklärungen: schöner formatiert und in deiner Sprache",
+      en: "Explanations: better formatted and in your language",
+    },
+    description: {
+      de: "Erklärungen werden jetzt richtig formatiert (Fettdruck, Listen) statt mit rohen Zeichen. Und wenn eine Übersetzung in deiner Sprache schon vorhanden ist, siehst du sie sofort, ohne zu klicken, mit einem Umschalter zwischen den Sprachen. Jede erzeugte Übersetzung wird gespeichert, sodass sie für alle sofort da ist.",
+      en: "Explanations now render properly (bold, lists) instead of raw markers. And if a translation in your language already exists, you see it instantly without clicking, with a switcher between languages. Every generated translation is saved so it is instant for everyone.",
+    },
+  },
+  {
+    date: "2026-07-04",
+    tag: "improvement",
+    title: {
+      de: "Bibliothek und Entdecken überarbeitet",
+      en: "Library and Explore reworked",
+    },
+    description: {
+      de: "Der Entdecken-Bereich zeigt jetzt durchsuchbare, filterbare und sortierbare Notizen, die du direkt öffnen und lesen kannst, ohne sie zu importieren. Kuratierte Inhalte sind als „MedPrüf Team\" gekennzeichnet. Neu: eigene Listen (Sammlungen), um Notizen zu organisieren.",
+      en: "The Explore section now shows searchable, filterable and sortable notes you can open and read directly, without importing. Curated content is badged \"MedPrüf Team\". New: your own lists (collections) to organize notes.",
+    },
+  },
+  {
+    date: "2026-07-04",
+    tag: "fix",
+    title: {
+      de: "Quiz springt zuverlässig zur nächsten Frage",
+      en: "Quiz reliably advances to the next question",
+    },
+    description: {
+      de: "In seltenen Fällen blieb das Quiz nach dem Prüfen der Antwort auf derselben Frage stehen. Das ist behoben: Die nächste Frage wird jetzt immer sauber geladen.",
+      en: "In rare cases the quiz stayed on the same question after checking the answer. Fixed: the next question now always loads cleanly.",
+    },
+  },
+  {
+    date: "2026-07-04",
     tag: "feature",
     title: {
       de: "Oberfläche jetzt auch auf Arabisch",
