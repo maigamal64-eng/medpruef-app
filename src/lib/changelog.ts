@@ -23,6 +23,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-07-04",
+    tag: "feature",
+    title: {
+      de: "Oberfläche jetzt auch auf Arabisch",
+      en: "Interface now also in Arabic",
+    },
+    description: {
+      de: "Die App-Oberfläche gibt es jetzt auch auf Arabisch, mit vollständiger Rechts-nach-links-Darstellung. Umschaltbar in den Einstellungen und auf der Startseite. Die Prüfungsfragen bleiben auf Deutsch, wie in der echten Prüfung.",
+      en: "The app interface is now available in Arabic too, with full right-to-left layout. Switchable in Settings and on the home page. Exam questions stay in German, exactly like the real exam.",
+    },
+  },
+  {
     date: "2026-07-03",
     tag: "feature",
     title: {

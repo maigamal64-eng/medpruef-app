@@ -6,9 +6,9 @@ import { EXTRA_TRANSLATIONS, RTL_LANGS } from './i18n-extra'
  * present in the `translations` map below). The additional codes are served
  * from the additive `EXTRA_TRANSLATIONS` overlay (src/lib/i18n-extra.ts):
  * any key missing there falls back to English, then German, so a partial
- * translation can never render a blank string. `ar` is RTL and, per [name]'s
- * standing rule, stays behind LIVE_LANGS review before it appears in the
- * public picker.
+ * translation can never render a blank string. `ar` is RTL; it was published
+ * to the live picker 2026-07-04 on [name]'s explicit go ("publish all so we can
+ * test") for the pre-paying test phase. Wording may still be refined.
  */
 export type Lang = 'de' | 'en' | 'ru' | 'uk' | 'tr' | 'ar'
 
@@ -17,7 +17,7 @@ export type Lang = 'de' | 'en' | 'ru' | 'uk' | 'tr' | 'ar'
  * full translator overlays. uk is added the moment its overlay lands; ar only
  * after [name] signs off on the wording (standing rule).
  */
-export const LIVE_LANGS: readonly Lang[] = ['de', 'en', 'ru', 'uk', 'tr']
+export const LIVE_LANGS: readonly Lang[] = ['de', 'en', 'ru', 'uk', 'tr', 'ar']
 
 export const LANG_LABELS: Record<Lang, string> = {
   de: 'Deutsch',
