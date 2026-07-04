@@ -24,6 +24,18 @@ export interface ChangelogEntry {
 export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-07-04",
+    tag: "admin",
+    title: {
+      de: "Admin: Nutzer-Detailseite mit Aktivitäts-Timeline",
+      en: "Admin: per-user detail page with activity timeline",
+    },
+    description: {
+      de: "Jede Zeile der Nutzer-Tabelle öffnet jetzt eine eigene Profilseite: Identität, Statistik-Kacheln, Lern-Heatmap, Themen-Stärke und eine visuelle Aktivitäts-Timeline (Antworten, Sitzungen, Notizen, Zahlungen) mit genauen Details.",
+      en: "Each row in the users table now opens a dedicated profile page: identity, stat cards, study heatmap, topic mastery, and a visual activity timeline (answers, sessions, notes, payments) with exact details.",
+    },
+  },
+  {
+    date: "2026-07-04",
     tag: "improvement",
     title: {
       de: "KI-Erklärung direkt im Tab, keine Seitenleiste mehr",

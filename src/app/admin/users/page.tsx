@@ -17,6 +17,8 @@
  */
 
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Ban,
   ChevronDown,
@@ -27,6 +29,7 @@ import {
   Trash2,
   Users as UsersIcon,
   AlertTriangle,
+  ArrowUpRight,
 } from "lucide-react";
 import { authFetch as fetch } from "@/lib/authFetch";
 import {
@@ -53,6 +56,7 @@ type AuthFilter = "all" | "email" | "telegram";
 
 export default function AdminUsersPage() {
   const toast = useToast();
+  const router = useRouter();
   const [users, setUsers] = useState<UserRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -459,9 +463,14 @@ export default function AdminUsersPage() {
                               {u.name.charAt(0).toUpperCase()}
                             </div>
                           )}
-                          <span className="font-medium text-[var(--mp-fg)] truncate max-w-[160px]">
+                          <Link
+                            href={`/admin/users/${u.id}`}
+                            onClick={(e) => e.stopPropagation()}
+                            title="Open full profile"
+                            className="font-medium text-[var(--mp-fg)] truncate max-w-[160px] hover:text-[var(--mp-viridian)] hover:underline"
+                          >
                             {u.name}
-                          </span>
+                          </Link>
                         </div>
                       </td>
                       {/* Auth Badges */}
@@ -578,6 +587,12 @@ export default function AdminUsersPage() {
                         <KebabMenu
                           label={`Actions for ${u.name}`}
                           items={[
+                            {
+                              key: "open",
+                              label: "Open full profile",
+                              icon: ArrowUpRight,
+                              onSelect: () => router.push(`/admin/users/${u.id}`),
+                            },
                             {
                               key: "edit",
                               label: "Edit profile",
@@ -732,6 +747,12 @@ export default function AdminUsersPage() {
                                   Quick actions: Grant / Lock / Ban
                                 </div>
                                 <div className="flex items-center gap-2">
+                                  <Link
+                                    href={`/admin/users/${u.id}`}
+                                    className="mp-btn mp-btn--primary mp-btn--sm inline-flex items-center gap-1"
+                                  >
+                                    <ArrowUpRight size={12} /> Open full profile
+                                  </Link>
                                   <UserQuickActions
                                     userId={u.id}
                                     userEmail={u.email}
