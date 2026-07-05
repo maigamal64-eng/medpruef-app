@@ -21,6 +21,7 @@ import IntercomMessenger from "@/components/IntercomMessenger";
 import OfflineIndicator from "@/components/OfflineIndicator";
 import TrackRouteChange from "@/components/TrackRouteChange";
 import SearchModalMount from "@/components/SearchModalMount";
+import WebMCP from "@/components/WebMCP";
 import { ToastProvider } from "@/components/ui";
 import RootErrorBoundary from "@/components/RootErrorBoundary";
 import { Suspense } from "react";
@@ -414,6 +415,12 @@ export default function RootLayout({
                 NEXT_PUBLIC_INTERCOM_APP_ID is unset. */}
             <IntercomMessenger />
             <OfflineIndicator />
+            {/* WebMCP tool surface (agent-readiness) — registers read-only
+                exam-calendar tools with an in-browser AI agent via the
+                experimental navigator.modelContext API. Feature-detects and
+                no-ops on every browser that doesn't implement it yet
+                (expected — WebMCP is not yet standardized). Renders null. */}
+            <WebMCP />
             {children}
             {/* LegalFooter — slim Impressum/Datenschutz/AGB/Kontakt strip
                 on authenticated pages. Auto-hides on /landing (full

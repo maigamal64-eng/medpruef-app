@@ -46,6 +46,28 @@ const CSP = [
   "report-to csp-endpoint",
 ].join("; ");
 
+// Agent-discovery Link headers (RFC 8288 `Link` response header + the
+// api-catalog rel from RFC 9727 §3). Lets an agent crawling the homepage
+// discover the machine-readable surfaces (api-catalog, OpenAPI spec, human
+// API docs, agent-skills index, MCP server card) without guessing URLs.
+// `api-catalog` is the load-bearing rel per the originating issue.
+//
+// Applied to `/` AND `/landing`: the existing middleware (src/middleware.ts)
+// 302-redirects an unauthenticated bare `/` request to `/landing`, so an
+// agent/scanner that follows redirects lands on `/landing` — the header
+// must be there too or it's invisible post-redirect.
+//
+// Targets are frozen strings owned by sibling agents building those routes;
+// do not rename without checking .well-known/agent-skills, openapi.json,
+// docs/api, .well-known/mcp/server-card.json.
+const AGENT_LINK_HEADER = [
+  '</.well-known/api-catalog>; rel="api-catalog"',
+  '</openapi.json>; rel="service-desc"',
+  '</docs/api>; rel="service-doc"',
+  '</.well-known/agent-skills/index.json>; rel="agent-skills"',
+  '</.well-known/mcp/server-card.json>; rel="mcp-server-card"',
+].join(", ");
+
 // Global security headers. Apply to every route except the SW file
 // (which needs its own cache-control override, handled separately in
 // the headers() block below).
@@ -151,6 +173,16 @@ const nextConfig: NextConfig = {
         // of CSP / XFO / Referrer / Permissions headers).
         source: "/:path*",
         headers: SECURITY_HEADERS,
+      },
+      {
+        // Agent-discovery Link header — homepage + its unauthenticated
+        // redirect target (see AGENT_LINK_HEADER comment above).
+        source: "/",
+        headers: [{ key: "Link", value: AGENT_LINK_HEADER }],
+      },
+      {
+        source: "/landing",
+        headers: [{ key: "Link", value: AGENT_LINK_HEADER }],
       },
     ];
   },

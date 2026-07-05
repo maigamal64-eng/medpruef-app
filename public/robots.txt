@@ -1,4 +1,9 @@
+# Content-Signal declares AI content-usage preferences (contentsignals.org).
+# ai-train=no keeps our proprietary question bank out of AI training sets, search=yes
+# and ai-input=yes keep the site indexable and readable by search engines and AI agents/assistants.
+# Machine-readable capability list for agents: /.well-known/api-catalog
 User-agent: *
+Content-Signal: ai-train=no, search=yes, ai-input=yes
 Allow: /
 
 Disallow: /api/

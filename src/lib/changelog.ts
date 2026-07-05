@@ -23,6 +23,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-07-05",
+    tag: "improvement",
+    title: {
+      de: "MedPrüf ist jetzt für KI-Agenten auffindbar",
+      en: "MedPrüf is now discoverable by AI agents",
+    },
+    description: {
+      de: "Neue offene Metadaten (RFC 8288 Link-Header, robots Content-Signals, Markdown für Agenten, API-Katalog, Agent-Skills, MCP) lassen KI-Assistenten den Prüfungskalender und die Ressourcen finden. Deine Inhalte und der Fragenpool bleiben geschützt, nichts ändert sich für Nutzer.",
+      en: "New open metadata (RFC 8288 Link headers, robots Content-Signals, Markdown for agents, API catalog, Agent Skills, MCP) lets AI assistants discover the exam calendar and resources. Your content and the question bank stay protected, and nothing changes for users.",
+    },
+  },
+  {
     date: "2026-07-04",
     tag: "admin",
     title: {

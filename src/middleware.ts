@@ -1,6 +1,65 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 /**
+ * Markdown-for-Agents content negotiation (isitagentready.com spec +
+ * Cloudflare's "Markdown for Agents" convention). A GET whose `Accept`
+ * header EXPLICITLY includes `text/markdown` (not just a wildcard accept
+ * value — normal browser Accept strings never contain this substring, so
+ * human traffic is untouched) gets a concise markdown document instead of
+ * the HTML page. HTML stays the default for everyone else.
+ *
+ * Kept to a small, hand-written per-path map rather than importing
+ * content libs (topics.ts / exam-dates.ts) into the edge bundle — the
+ * edge runtime can technically import them (no Node-only APIs in either
+ * file), but topics.ts's EXAM_SOURCES carries hardcoded question counts
+ * that NOTES.md flags as stale/DB-owned, so pulling it in here would
+ * ship a number this file has no way to keep honest. Copy below states
+ * only stable facts (exam names, how to start, where to look for
+ * current numbers) and links out to /pricing for anything that moves.
+ */
+const MARKDOWN_DOCS: Record<string, string> = {
+  '/': `# MedPrüf
+
+MedPrüf is exam preparation for foreign-trained doctors sitting Austrian
+medical-licensing exams.
+
+## What it covers
+
+Three Austrian exams, all part of the licensing/nostrification path (this
+is Austrian medical law, not a German exam):
+
+- **Kenntnisprüfung (Wien)**: the Austrian Medical Chamber's
+  Arztprüfung Allgemeinmedizin, held in Vienna.
+- **Stichprobentest (Innsbruck)**: the national MedUni nostrification
+  screening test (venue rotates by sitting).
+- **Pharmakologie**: Rezeptierkunde / prescription-studies content.
+
+Practice questions, spaced-repetition review, flashcards, full exam
+simulation, and progress tracking across all three.
+
+## How to start
+
+- Create an account or log in: /login
+- See current plans and pricing: /pricing
+
+## For agents and integrators
+
+- Human-readable API docs: /docs/api
+- Machine-readable API catalog: /.well-known/api-catalog
+`,
+}
+
+function estimateTokens(body: string): number {
+  return Math.ceil(body.length / 4)
+}
+
+function wantsMarkdown(req: NextRequest): boolean {
+  if (req.method !== 'GET') return false
+  const accept = req.headers.get('accept') || ''
+  return accept.includes('text/markdown')
+}
+
+/**
  * Middleware — server-side routing before any React hydration.
  *
  * F6 fix (2026-04-26): unauthenticated requests to `/` previously did a
@@ -31,7 +90,26 @@ import { NextRequest, NextResponse } from 'next/server'
 export function middleware(req: NextRequest) {
   const { pathname, searchParams } = req.nextUrl
 
-  // Only intercept bare `/`
+  // Markdown-for-Agents FIRST, before the `/` → `/landing` redirect below.
+  // Order matters: an agent GETting `/` with `Accept: text/markdown` must
+  // get the markdown doc, not get swept into the unauthenticated-visitor
+  // redirect. This must stay ahead of the `pathname !== '/'` early-return
+  // too, so adding more paths to MARKDOWN_DOCS later doesn't require
+  // touching the redirect logic below at all.
+  const markdownDoc = MARKDOWN_DOCS[pathname]
+  if (markdownDoc && wantsMarkdown(req)) {
+    return new NextResponse(markdownDoc, {
+      status: 200,
+      headers: {
+        'Content-Type': 'text/markdown; charset=utf-8',
+        'Vary': 'Accept',
+        'x-markdown-tokens': String(estimateTokens(markdownDoc)),
+      },
+    })
+  }
+
+  // Only intercept bare `/` from here on (existing landing-redirect logic,
+  // untouched)
   if (pathname !== '/') return NextResponse.next()
 
   // Allow Telegram deep-link flows through unchanged
@@ -53,5 +131,9 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
+  // Explicit allow-list (not a negative-lookahead regex) so /api, /_next,
+  // /admin, and static assets are excluded by construction. Extend this
+  // list (and MARKDOWN_DOCS above) together when adding markdown support
+  // for /pricing, /about, /materials.
   matcher: ['/'],
 }
