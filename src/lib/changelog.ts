@@ -23,6 +23,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-07-09",
+    tag: "improvement",
+    title: {
+      de: "Pro-Testphase: 7 Tage gratis, Karte hinterlegen",
+      en: "Pro trial: 7 days free, card on file",
+    },
+    description: {
+      de: "Die Pro-Testphase läuft wieder über Whop mit hinterlegter Karte: heute 0 €, 7 Tage voller Pro-Zugang, danach 19 €/Monat, jederzeit in der Testphase kündbar. Alles klar angeschrieben, keine versteckte Verlängerung. Die Karte hält die Testphase ernst und deckt die echten KI-Kosten von Pro.",
+      en: "The Pro trial runs through Whop with a card on file again: €0 today, 7 days of full Pro, then €19/month, cancel anytime during the trial. All stated up front, no hidden renewal. The card keeps the trial serious and covers Pro's real AI costs.",
+    },
+  },
+  {
     date: "2026-07-05",
     tag: "improvement",
     title: {

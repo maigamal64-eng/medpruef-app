@@ -91,8 +91,8 @@ export default function TrialRibbon({ lang }: { lang: "de" | "en" }) {
           </span>{" "}
           <span className="text-white/85">
             {de
-              ? "Keine Karte nötig, kein Abo. Voller Zugang, endet einfach von selbst."
-              : "No card needed, no subscription. Full access, it simply ends on its own."}
+              ? "Karte hinterlegen, heute 0 €. Danach 19 €/Monat, jederzeit in der Testphase kündbar."
+              : "Add a card, €0 today. Then €19/month, cancel anytime during the trial."}
           </span>
         </p>
         <Link
