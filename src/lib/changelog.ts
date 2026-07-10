@@ -23,6 +23,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-07-11",
+    tag: "feature",
+    title: {
+      de: "Lad zwei Kolleg:innen ein, bekomm Pro kostenlos durchs Prüfungsfenster",
+      en: "Invite two colleagues, get Pro free through the exam window",
+    },
+    description: {
+      de: "Lad zwei Kolleginnen oder Kollegen ein, die wirklich mit dir lernen. Sobald beide aktiv üben, bekommst du MedPrüf Pro kostenlos durch dein Prüfungsfenster. Keine Karte, keine Zahlung nötig.",
+      en: "Invite two colleagues who really study with you. Once both are actively practising, you get MedPrüf Pro free through your exam window. No card, no payment needed.",
+    },
+  },
+  {
     date: "2026-07-09",
     tag: "improvement",
     title: {
