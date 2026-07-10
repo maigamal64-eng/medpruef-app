@@ -841,8 +841,8 @@ function SocialProofStrip({
         </p>
         <p className="text-xs text-[var(--mp-fg-subtle)] mt-1">
           {lang === "de"
-            ? "Teile den Code mit einer Person aus deiner Lerngruppe, die Belohnung wird sofort nach Zahlung qualifiziert."
-            : "Share the code with one person from your study group; the reward qualifies immediately after they pay."}
+            ? "Teile den Code mit jemandem aus deiner Lerngruppe, die Empfehlung zählt, sobald diese Person aktiv übt."
+            : "Share the code with someone from your study group; the referral counts once that person starts actively practising."}
         </p>
       </section>
     );

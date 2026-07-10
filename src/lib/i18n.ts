@@ -559,7 +559,7 @@ const translations = {
   'ref_floater_region_label': { de: 'Empfehlungsprogramm', en: 'Referral program' },
   'ref_floater_close': { de: 'Hinweis schließen', en: 'Dismiss notice' },
   'ref_floater_title': { de: 'Hast du jemanden, der auch die Prüfung macht?', en: 'Know someone else prepping for the exam?' },
-  'ref_floater_body': { de: 'Dein Empfehlungscode wartet. Teile ihn mit anderen Prüflingen: wenn sie Pro werden, bekommt ihr beide einen Bonus.', en: 'Your referral code is waiting. Share it with fellow candidates: when they go Pro, you both get a bonus.' },
+  'ref_floater_body': { de: 'Dein Empfehlungscode wartet. Teile ihn mit zwei Kolleg:innen: sobald beide aktiv üben, bekommst du Pro kostenlos durchs Prüfungsfenster.', en: 'Your referral code is waiting. Share it with two colleagues: once both are actively practising, you get Pro free through the exam window.' },
   'ref_floater_cta_details': { de: 'Details ansehen', en: 'See details' },
   'ref_floater_cta_not_now': { de: 'Nicht jetzt', en: 'Not now' },
   'ref_copied': { de: 'Link kopiert!', en: 'Link copied!' },
