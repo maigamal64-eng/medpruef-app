@@ -274,6 +274,42 @@ export async function flagReferrerForRewardReview(
 }
 
 /**
+ * Terminal-hold_reason values a queue entry can resolve to when a grant
+ * can never proceed for structural reasons (not a "try again later"
+ * state). Distinct from 'exam_reward_pending_review' (still awaiting
+ * admin action) so GET /api/admin/referrals/pending-exam-rewards can
+ * filter both cases correctly: show pending-review rows, hide resolved
+ * ones, without ever leaving a row permanently stuck in the queue with
+ * no path to clear it.
+ */
+type TerminalHoldReason = 'exam_reward_no_active_exam' | 'exam_reward_already_covered'
+
+/**
+ * Stamp every 'exam_reward_pending_review' row for this referrer with a
+ * terminal hold_reason, so a no-op grant result (referrer has no
+ * active_exam, or already has equal-or-later Pro access from elsewhere)
+ * resolves the admin queue entry instead of leaving it stuck forever.
+ * Best-effort — a failure here does not change the caller's grant
+ * result, it just means the stale queue entry needs a manual look.
+ */
+async function resolveQueueEntry(
+  sb: SupabaseClient,
+  referrerUserId: string,
+  reason: TerminalHoldReason
+): Promise<void> {
+  try {
+    await sb
+      .from('referrals')
+      .update({ hold_reason: reason })
+      .eq('referrer_user_id', referrerUserId)
+      .eq('reward_type', 'pro_until_exam')
+      .eq('hold_reason', 'exam_reward_pending_review')
+  } catch (err) {
+    console.error('[referral-exam-reward] resolveQueueEntry', err)
+  }
+}
+
+/**
  * The actual grant. ONLY ever called from POST
  * /api/admin/referrals/grant-exam-reward — this is the single place in
  * the codebase where a referrer's tier is mutated by this program.
@@ -291,6 +327,28 @@ export async function grantExamRewardToReferrer(
   }
 
   try {
+    // Re-check the threshold here, not just at enqueue time in
+    // flagReferrerForRewardReview. Fat-finger protection: the admin
+    // endpoint takes only a referrer_user_id in its POST body, so
+    // without this a manually-crafted (or mis-clicked) call could grant
+    // Pro to a referrer who was never actually enqueued, or whose
+    // qualifying rows regressed between enqueue and confirm (e.g. an
+    // admin manually reverted a qualified row). Uses the same
+    // meetsRewardThreshold() the enqueue path uses, so the bar is
+    // identical in both places.
+    const { data: qualifyingRows, error: qualifyingErr } = await sb
+      .from('referrals')
+      .select('id, status')
+      .eq('referrer_user_id', referrerUserId)
+      .eq('reward_type', 'pro_until_exam')
+      .in('status', ['qualified', 'rewarded'])
+    if (qualifyingErr) {
+      return { granted: false, reason: 'threshold_check_failed' }
+    }
+    if (!meetsRewardThreshold((qualifyingRows || []).length)) {
+      return { granted: false, reason: 'below_threshold' }
+    }
+
     const { data: referrer, error: referrerErr } = await sb
       .from('users')
       .select('id, active_exam, tier, tier_expires_at')
@@ -301,6 +359,13 @@ export async function grantExamRewardToReferrer(
     }
     const activeExam = referrer.active_exam as PuypExamType | null
     if (!activeExam) {
+      // Terminal no-op: this referrer can never be granted (no
+      // active_exam to derive an expiry from) until they set one. Resolve
+      // the queue entry now — otherwise hold_reason stays
+      // 'exam_reward_pending_review' forever and the admin queue
+      // (GET /api/admin/referrals/pending-exam-rewards) shows a stuck
+      // item with no way to clear it short of a direct DB edit.
+      await resolveQueueEntry(sb, referrerUserId, 'exam_reward_no_active_exam')
       return { granted: false, reason: 'no_active_exam' }
     }
 
@@ -315,6 +380,11 @@ export async function grantExamRewardToReferrer(
       currentExpiry &&
       currentExpiry.getTime() >= newExpiry.getTime()
     ) {
+      // Terminal no-op: the referrer already has equal-or-later Pro
+      // access from some other source, so this grant will never need to
+      // re-run for the current qualified rows. Resolve the queue entry
+      // (same rationale as the no_active_exam branch above).
+      await resolveQueueEntry(sb, referrerUserId, 'exam_reward_already_covered')
       return { granted: false, reason: 'already_covers_new_expiry' }
     }
 

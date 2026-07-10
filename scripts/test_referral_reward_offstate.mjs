@@ -33,8 +33,8 @@ import path from "node:path";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "..");
 
-function runOne(envFlag, caseName) {
-  const env = { ...process.env, TEST_CASE_NAME: caseName };
+function runOne(envFlag, caseName, extraEnv = {}) {
+  const env = { ...process.env, TEST_CASE_NAME: caseName, ...extraEnv };
   if (envFlag === undefined) {
     delete env.REFERRAL_EXAM_REWARD_ENABLED;
   } else {
@@ -119,6 +119,34 @@ if (onResult) {
       onResult.grantResult.granted === true &&
       typeof onResult.grantResult.newExpiry === "string",
     "ON: grant result reports granted=true with a real newExpiry ISO string"
+  );
+}
+
+console.log(
+  "\n=== Stuck-queue no-op case (ON, referrer has no active_exam) ==="
+);
+const stuckQueueResult = runOne("true", "stuck-queue-no-op", { NO_ACTIVE_EXAM: "1" });
+if (stuckQueueResult) {
+  assert(
+    stuckQueueResult.enqueued === true,
+    "STUCK-QUEUE: the 2nd qualifying referral still enqueues the grant for review"
+  );
+  assert(
+    stuckQueueResult.grantResult &&
+      stuckQueueResult.grantResult.granted === false &&
+      stuckQueueResult.grantResult.reason === "no_active_exam",
+    "STUCK-QUEUE: grant correctly no-ops with reason=no_active_exam (referrer has no active_exam)"
+  );
+  assert(
+    stuckQueueResult.tierGranted === false,
+    "STUCK-QUEUE: referrer tier was NOT granted (no-op, not a grant)"
+  );
+  assert(
+    stuckQueueResult.queueResolved === true,
+    "STUCK-QUEUE (the 2026-07-11 fix): the no-op grant RESOLVES the queue entry " +
+      "(hold_reason moves off 'exam_reward_pending_review') instead of leaving " +
+      "the referrer stuck in the admin queue forever with a Grant button that " +
+      "always no-ops"
   );
 }
 

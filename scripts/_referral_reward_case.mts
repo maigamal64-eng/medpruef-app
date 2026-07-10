@@ -9,6 +9,12 @@
  * itself (this file never touches that env var — the harness sets it
  * before spawning this process, proving the gate is read from real
  * process.env, not injected as a function argument).
+ *
+ * NO_ACTIVE_EXAM=1 selects the stuck-queue-no-op scenario (2026-07-11
+ * fix): the referrer fixture has active_exam=null, so
+ * grantExamRewardToReferrer's terminal no-op branch fires and must
+ * resolve the queue entry (stamp hold_reason away from
+ * 'exam_reward_pending_review') instead of leaving it stuck forever.
  */
 
 import {
@@ -41,6 +47,11 @@ const mutations: Array<{ table: string; type: string; patch: unknown; filters: u
 type Row = Record<string, unknown>;
 
 function makeMock() {
+  // NO_ACTIVE_EXAM=1 selects the stuck-queue-no-op scenario: the
+  // referrer has no active_exam, so grantExamRewardToReferrer's
+  // no_active_exam branch fires instead of a real grant.
+  const referrerActiveExam = process.env.NO_ACTIVE_EXAM === "1" ? null : "kenntnispruefung";
+
   const state: { users: Record<string, Row>; referrals: Record<string, Row> } = {
     users: {
       [REFEREE_ID]: {
@@ -50,7 +61,7 @@ function makeMock() {
       },
       [REFERRER_ID]: {
         id: REFERRER_ID,
-        active_exam: "kenntnispruefung",
+        active_exam: referrerActiveExam,
         tier: "free",
         tier_expires_at: null,
       },
@@ -181,6 +192,16 @@ async function runCase(caseName: string) {
   const referrerAfter = sb.state.users[REFERRER_ID];
   const tierGranted = referrerAfter.tier === "pro";
 
+  // Stuck-queue check (2026-07-11 fix): after a no-op grant attempt, no
+  // row for this referrer should still carry the LIVE
+  // 'exam_reward_pending_review' hold_reason — it must have resolved to
+  // a terminal value, or the admin queue would show this referrer
+  // forever with a Grant button that always no-ops.
+  const stillPendingReview =
+    pendingRowAfter.hold_reason === "exam_reward_pending_review" ||
+    sb.state.referrals[PRIOR_QUALIFIED_ROW_ID].hold_reason === "exam_reward_pending_review";
+  const queueResolved = enqueued && !stillPendingReview;
+
   console.log(
     JSON.stringify({
       case: caseName,
@@ -190,6 +211,7 @@ async function runCase(caseName: string) {
       enqueued,
       grantResult,
       tierGranted,
+      queueResolved,
       mutationCount: mutations.length,
     })
   );

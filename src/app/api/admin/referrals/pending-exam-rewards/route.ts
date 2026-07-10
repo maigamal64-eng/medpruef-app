@@ -20,13 +20,27 @@ export const dynamic = "force-dynamic";
  * confirming: per-referee signup method (email vs telegram), signup
  * timestamps, email domain, distinct-question count, distinct-day
  * span, and answer timing.
+ *
+ * Stuck-queue fix (2026-07-11): grantExamRewardToReferrer's terminal
+ * no-op branches (no active_exam / already covers a later expiry) call
+ * resolveQueueEntry() to stamp hold_reason to a value OTHER than
+ * 'exam_reward_pending_review' (e.g. 'exam_reward_no_active_exam',
+ * 'exam_reward_already_covered'). The exact-match filter below is what
+ * makes that resolution actually clear the row from this queue — a row
+ * whose hold_reason changed no longer matches and drops out
+ * automatically. Before this fix, those no-op branches returned without
+ * touching hold_reason at all, so the referrer stayed in this queue
+ * forever with a "Grant" button that would silently no-op every time an
+ * admin clicked it.
  */
 export const GET = adminRouteShell(
   async () => {
     const sb = getServiceClient();
 
     // 1. Find the trigger rows: qualified/rewarded pro_until_exam
-    //    referrals whose hold_reason marks them enqueued for review.
+    //    referrals whose hold_reason marks them enqueued for review
+    //    (exact match — anything resolved to a terminal hold_reason by
+    //    resolveQueueEntry() no longer matches and is excluded).
     const { data: triggerRows, error: triggerErr } = await sb
       .from("referrals")
       .select("id, referrer_user_id, hold_expires_at")
