@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { SESSION_HEADER, verifySession } from "@/lib/session";
+import { isPaidTier } from "@/lib/free-tier";
 
 /**
  * Server-side authorization guards for API routes.
@@ -33,6 +34,14 @@ export interface GuardSuccess {
   userId: string;
   role: "user" | "admin";
   tier: "free" | "pro" | "admin";
+  /**
+   * 2026-07-11 fix: previously not fetched, so `isPaidAccess` below
+   * could not honor an expired tier='pro' row — a lapsed referral
+   * exam-reward grant (or any other lapsed Pro) kept Notes clone/save
+   * access forever. Nullable: a permanent grant (no expiry) or a
+   * free/admin row both legitimately have no expiry.
+   */
+  tierExpiresAt: string | null;
 }
 
 export interface GuardFailure {
@@ -77,7 +86,7 @@ export async function requireUser(req: NextRequest): Promise<GuardResult> {
   const sb = getServiceClient();
   const { data: user, error } = await sb
     .from("users")
-    .select("id, role, tier, is_banned, session_invalidated_at")
+    .select("id, role, tier, tier_expires_at, is_banned, session_invalidated_at")
     .eq("id", session.userId)
     .maybeSingle();
 
@@ -116,6 +125,7 @@ export async function requireUser(req: NextRequest): Promise<GuardResult> {
     userId: user.id as string,
     role: (user.role || "user") as "user" | "admin",
     tier: (user.tier || "free") as "free" | "pro" | "admin",
+    tierExpiresAt: (user.tier_expires_at as string | null) ?? null,
   };
 }
 
@@ -168,14 +178,20 @@ export function isGuardFailure(g: GuardResult): g is GuardFailure {
  * Must honour BOTH:
  *   - `role === 'admin'` — /admin/ operators always have access even
  *     when `tier='free'` in the users table (they may not subscribe).
- *   - `tier === 'pro'` or `tier === 'admin'` — a paid subscriber or a
- *     tier-flagged admin.
+ *   - `tier === 'pro'` or `tier === 'admin'`, AND not expired — a paid
+ *     subscriber or a tier-flagged admin.
  *
- * Returns `false` for free + any non-admin/non-paid combination.
+ * 2026-07-11 fix: previously ignored `tier_expires_at` entirely, so a
+ * lapsed Pro grant (e.g. a referral exam-reward whose window ended)
+ * kept Notes clone/save access forever. Now delegates the expiry
+ * comparison to `isPaidTier` (src/lib/free-tier.ts), the single source
+ * of truth every other paywall already uses.
+ *
+ * Returns `false` for free + any non-admin/non-paid/expired combination.
  */
 export function isPaidAccess(g: GuardSuccess): boolean {
   if (g.role === "admin") return true;
-  return g.tier === "pro" || g.tier === "admin";
+  return isPaidTier(g.tier, g.tierExpiresAt);
 }
 
 /** Convenience negation of {@link isPaidAccess}. */
