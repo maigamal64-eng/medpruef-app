@@ -3,6 +3,7 @@ import { getServiceClient } from "@/lib/supabase";
 import { calculateXP } from "@/lib/xp";
 import { requireUser, isFreeAccess } from "@/lib/auth-guard";
 import { captureServerError } from "@/lib/sentry-capture";
+import { qualifyReferralOnActivity } from "@/lib/referral-exam-reward";
 
 export const dynamic = "force-dynamic";
 
@@ -107,6 +108,15 @@ export async function POST(req: NextRequest) {
   if (historyErr) {
     console.error("[answer] answer_history insert:", historyErr);
     return NextResponse.json({ error: "Failed to record answer" }, { status: 500 });
+  }
+
+  // 1a-ref. Referral exam-reward qualification (2026-07-11) — best-effort,
+  // never-throw, matches the swallow pattern below. No-ops immediately if
+  // REFERRAL_EXAM_REWARD_ENABLED is unset (see src/lib/referral-exam-reward.ts).
+  try {
+    await qualifyReferralOnActivity(sb, userId);
+  } catch (referralErr) {
+    console.error("[answer] referral exam-reward qualification:", referralErr);
   }
 
   // 1a. Bump user_announcements.qs_answered_total — the announcement
