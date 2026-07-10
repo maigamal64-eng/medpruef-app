@@ -126,8 +126,18 @@ export function middleware(req: NextRequest) {
   const skipLanding = req.cookies.get('mp_skip_landing')
   if (skipLanding) return NextResponse.next()
 
+  // Referral attribution fix (2026-07-11): a bare `medpruf.com/?ref=CODE`
+  // share link used to lose the query string on this redirect — visitors
+  // landed on /landing with no way to recover the code, so 0/126 users
+  // ever got `referred_by_code` populated. Forward `ref` onto /landing so
+  // landing/page.tsx's localStorage capture (mirrors login/page.tsx) can
+  // still pick it up before the visitor clicks through to Login/Register.
+  const landingUrl = new URL('/landing', req.url)
+  const ref = searchParams.get('ref')
+  if (ref) landingUrl.searchParams.set('ref', ref)
+
   // Redirect unauthenticated (or unknown) visitors to /landing
-  return NextResponse.redirect(new URL('/landing', req.url))
+  return NextResponse.redirect(landingUrl)
 }
 
 export const config = {

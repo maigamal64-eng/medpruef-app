@@ -542,6 +542,12 @@ function useReveal(active: boolean) {
   return ref;
 }
 
+// Same localStorage key login/page.tsx writes to, so a code captured
+// here on a bare `/?ref=CODE` → /landing redirect (middleware fix,
+// 2026-07-11) is still there when the visitor later reaches Login/
+// Register and claims it via /api/referrals/claim.
+const REF_CODE_KEY = "medpruef_ref_code";
+
 /* ─────────────────────────────────────────────────────────────
    Page
    ───────────────────────────────────────────────────────────── */
@@ -555,6 +561,26 @@ export default function LandingPage() {
     setLangState(getLang());
     setExamSource(getStoredExamSource());
     setMounted(true);
+
+    // Capture ?ref=<code> the same way login/page.tsx does, so a
+    // logged-out visitor who lands here via a bare `medpruf.com/?ref=`
+    // share link (forwarded by the middleware fix) still has the code
+    // stashed once they click through to Login/Register.
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const ref = params.get("ref");
+      if (ref) {
+        const normalized = ref
+          .trim()
+          .toUpperCase()
+          .replace(/[^A-Z0-9]/g, "");
+        if (normalized.length >= 4 && normalized.length <= 16) {
+          localStorage.setItem(REF_CODE_KEY, normalized);
+        }
+      }
+    } catch {
+      // localStorage may be blocked in private mode — non-fatal.
+    }
   }, []);
 
   const switchLang = (l: Lang) => {

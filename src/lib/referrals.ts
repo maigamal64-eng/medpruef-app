@@ -166,10 +166,19 @@ export function maskEmail(email: string): string {
 // Referral-link helpers
 // ─────────────────────────────────────────────────────────────────────
 
-/** Build the public referral link for a code. */
+/**
+ * Build the public referral link for a code.
+ *
+ * Points at `/login?ref=CODE` (2026-07-11 attribution fix), not the bare
+ * `/?ref=CODE` root — `/login` is the only path proven to capture the
+ * code into localStorage today (the root redirect previously dropped
+ * the query string entirely; the middleware now forwards it onto
+ * `/landing`, which also captures, but `/login` stays the direct,
+ * belt-and-suspenders target for freshly-generated links).
+ */
 export function buildReferralLink(code: string): string {
   const base =
     (typeof process !== 'undefined' && process.env?.NEXT_PUBLIC_SITE_URL) ||
     REFERRAL_SITE_URL
-  return `${base.replace(/\/$/, '')}/?ref=${encodeURIComponent(code)}`
+  return `${base.replace(/\/$/, '')}/login?ref=${encodeURIComponent(code)}`
 }
