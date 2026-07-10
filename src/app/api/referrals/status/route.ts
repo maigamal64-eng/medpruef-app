@@ -7,6 +7,7 @@ import {
   isValidReferralCodeFormat,
 } from '@/lib/referrals'
 import { REFERRAL_ANNUAL_CAP_CENTS, TIERS } from '@/lib/nowpayments'
+import { REFERRAL_EXAM_REWARD_THRESHOLD } from '@/lib/referral-exam-reward'
 
 export const dynamic = 'force-dynamic'
 
@@ -113,7 +114,7 @@ export async function GET(req: NextRequest) {
       .from('referrals')
       .select(
         `id, status, qualified_at, rewarded_at, created_at, reward_credit_cents,
-         referral_code, hold_expires_at, hold_reason, referee_user_id,
+         referral_code, hold_expires_at, hold_reason, referee_user_id, reward_type,
          referee:referee_user_id ( first_name )`
       )
       .eq('referrer_user_id', userId)
@@ -138,6 +139,7 @@ export async function GET(req: NextRequest) {
       hold_expires_at: string | null
       hold_reason: string | null
       referee_user_id: string | null
+      reward_type: 'cash' | 'pro_until_exam' | null
       referee:
         | { first_name: string | null }
         | Array<{ first_name: string | null }>
@@ -263,6 +265,7 @@ export async function GET(req: NextRequest) {
       id: r.id,
       status: r.status,
       reward_credit_cents: r.reward_credit_cents ?? 0,
+      reward_type: r.reward_type ?? 'cash',
       referral_code: r.referral_code,
       qualified_at: r.qualified_at,
       hold_expires_at: r.hold_expires_at,
@@ -283,6 +286,8 @@ export async function GET(req: NextRequest) {
 
     // Tiered payout reference table — drives the small table on the
     // referral page. Mirrors src/lib/nowpayments.ts TIERS[*].referralPayoutCents.
+    // Retained for legacy rows / any surface not yet migrated off it; the
+    // rewritten /referrals page (2026-07-11) no longer reads this.
     const tieredPayouts: Array<{ plan: string; payoutEuros: number }> = [
       { plan: 'monthly', payoutEuros: 25 },
       { plan: '3 months', payoutEuros: 25 },
@@ -290,6 +295,15 @@ export async function GET(req: NextRequest) {
       { plan: '12 months', payoutEuros: 50 },
       { plan: 'Exam Cohort', payoutEuros: 75 },
     ]
+
+    // ── Referral exam-reward (2026-07-11) — this referrer's progress
+    // toward the N=2 threshold + when their grant landed, if any.
+    const proUntilExamRows = refs.filter((r) => r.reward_type === 'pro_until_exam')
+    const qualifiedActivityCount = proUntilExamRows.filter(
+      (r) => r.status === 'qualified' || r.status === 'rewarded'
+    ).length
+    const proUntilExamGrantedAt =
+      proUntilExamRows.find((r) => r.status === 'rewarded')?.rewarded_at ?? null
 
     return NextResponse.json({
       referralCode: code,
@@ -319,6 +333,10 @@ export async function GET(req: NextRequest) {
         rewardPerReferralEuros: 25,
       },
       tieredPayouts,
+      // ── Referral exam-reward (2026-07-11) ──
+      qualifiedActivityCount,
+      thresholdN: REFERRAL_EXAM_REWARD_THRESHOLD,
+      proUntilExamGrantedAt,
       referrals,
       payoutMethod: (me.payout_method as
         | 'crypto_wallet'
