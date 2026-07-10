@@ -1,7 +1,9 @@
 "use client";
 
 /**
- * /admin/referrals — payout queue + mark-paid action.
+ * /admin/referrals — payout queue + mark-paid action, plus (2026-07-11)
+ * the pending exam-reward grants queue for the non-cash referral
+ * mechanic (src/lib/referral-exam-reward.ts).
  *
  * §2.4 — mark-paid with txid input + 2-step confirm + audit log.
  *
@@ -13,7 +15,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, GraduationCap } from "lucide-react";
 import { authFetch as fetch } from "@/lib/authFetch";
 import { useAdminRealtime } from "@/lib/admin/useAdminRealtime";
 import {
@@ -35,6 +37,29 @@ import {
 } from "../_components/primitives";
 
 type Status = "pending" | "qualified" | "rewarded" | "all";
+
+interface PendingExamRewardReferee {
+  referee_user_id: string | null;
+  email: string | null;
+  email_domain: string | null;
+  signup_method: "email" | "telegram";
+  signup_at: string | null;
+  distinct_question_count: number;
+  distinct_day_span: number;
+  first_answer_at: string | null;
+  last_answer_at: string | null;
+  qualified_at: string | null;
+  referral_row_status: string;
+}
+
+interface PendingExamRewardItem {
+  referrer_user_id: string;
+  referrer_email: string | null;
+  referrer_first_name: string | null;
+  referrer_active_exam: string | null;
+  qualified_referral_count: number;
+  referees: PendingExamRewardReferee[];
+}
 
 interface ReferralRow {
   id: string;
@@ -74,6 +99,63 @@ export default function AdminReferralsPage() {
   const [bulkOpen, setBulkOpen] = useState(false);
   const [bulkConfirming, setBulkConfirming] = useState(false);
   const [bulkNotes, setBulkNotes] = useState("");
+
+  // Pending exam-reward grants queue (2026-07-11)
+  const [examRewardItems, setExamRewardItems] = useState<PendingExamRewardItem[]>([]);
+  const [examRewardLoading, setExamRewardLoading] = useState(true);
+  const [examRewardTarget, setExamRewardTarget] = useState<PendingExamRewardItem | null>(null);
+  const [examRewardConfirming, setExamRewardConfirming] = useState(false);
+  const [examRewardProcessing, setExamRewardProcessing] = useState(false);
+
+  const loadExamRewards = useCallback(async () => {
+    setExamRewardLoading(true);
+    try {
+      const res = await fetch("/api/admin/referrals/pending-exam-rewards");
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setExamRewardItems(data.items || []);
+    } catch {
+      // non-fatal — the payout queue below still renders
+    } finally {
+      setExamRewardLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadExamRewards();
+  }, [loadExamRewards]);
+
+  async function submitExamRewardGrant() {
+    if (!examRewardTarget) return;
+    if (!examRewardConfirming) {
+      setExamRewardConfirming(true);
+      return;
+    }
+    setExamRewardProcessing(true);
+    try {
+      const res = await fetch("/api/admin/referrals/grant-exam-reward", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ referrer_user_id: examRewardTarget.referrer_user_id }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body?.error || "Grant failed");
+      if (body.granted) {
+        toast.success(
+          `Pro granted through ${body.new_expiry ? new Date(body.new_expiry).toLocaleDateString("de-AT") : "exam window"}`
+        );
+      } else {
+        toast.error(`Not granted: ${body.reason || "unknown reason"}`);
+      }
+      setExamRewardTarget(null);
+      setExamRewardConfirming(false);
+      loadExamRewards();
+    } catch (e) {
+      toast.error((e as Error).message || "Could not grant reward");
+    } finally {
+      setExamRewardProcessing(false);
+    }
+  }
 
   const load = useCallback(
     async (s: Status) => {
@@ -270,6 +352,112 @@ export default function AdminReferralsPage() {
         </div>
       }
     >
+      {/* ─── Pending exam-reward grants (2026-07-11) ───────────────── */}
+      <section className="mb-6">
+        <div className="flex items-center gap-2 mb-3">
+          <GraduationCap className="w-4 h-4 text-[var(--mp-viridian)]" aria-hidden />
+          <h2 className="text-sm font-semibold text-[var(--mp-fg)]">
+            Pending exam-reward grants
+          </h2>
+        </div>
+        {examRewardLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <BrandedLoader size={32} label="Loading pending grants…" />
+          </div>
+        ) : examRewardItems.length === 0 ? (
+          <EmptyState
+            tone="success"
+            icon={<GraduationCap className="w-8 h-8" aria-hidden />}
+            title="No pending exam-reward grants"
+            body="A referrer appears here once 2 of their referees qualify by activity (>=20 distinct questions across >=2 distinct days)."
+          />
+        ) : (
+          <div className="rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] overflow-hidden">
+            <table className="w-full text-xs tabular-nums">
+              <thead className="bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-muted)] uppercase text-[10px] tracking-wider">
+                <tr>
+                  <th className="text-left px-3 py-2">Referrer</th>
+                  <th className="text-left px-3 py-2">Active exam</th>
+                  <th className="text-left px-3 py-2">Qualified referees (farm signals)</th>
+                  <th className="text-right px-3 py-2">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {examRewardItems.map((item) => (
+                  <tr
+                    key={item.referrer_user_id}
+                    className="border-t border-[var(--mp-border-subtle)] text-[var(--mp-fg)] align-top"
+                  >
+                    <td className="px-3 py-2">
+                      <div className="font-medium">
+                        {item.referrer_first_name || "—"}
+                      </div>
+                      <div className="text-[var(--mp-fg-muted)]">
+                        {item.referrer_email || "—"}
+                      </div>
+                    </td>
+                    <td className="px-3 py-2 font-mono text-[10px]">
+                      {item.referrer_active_exam || (
+                        <span className="text-[var(--mp-status-warning)]">
+                          not set
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2">
+                      <ul className="space-y-1.5">
+                        {item.referees.map((r) => (
+                          <li
+                            key={r.referee_user_id || r.email || Math.random()}
+                            className="border border-[var(--mp-border-subtle)] rounded-lg px-2 py-1.5"
+                          >
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="font-medium">{r.email || "—"}</span>
+                              <span className="text-[var(--mp-fg-muted)]">
+                                ({r.email_domain || "—"})
+                              </span>
+                              <StatusDot
+                                tone={r.signup_method === "telegram" ? "neutral" : "success"}
+                                size={6}
+                              />
+                              <span className="text-[10px] text-[var(--mp-fg-muted)]">
+                                {r.signup_method}
+                              </span>
+                            </div>
+                            <div className="text-[var(--mp-fg-muted)] mt-0.5">
+                              signed up{" "}
+                              {r.signup_at
+                                ? new Date(r.signup_at).toLocaleDateString("de-AT")
+                                : "—"}{" "}
+                              · {r.distinct_question_count} distinct Qs across{" "}
+                              {r.distinct_day_span} days ·{" "}
+                              {r.first_answer_at && r.last_answer_at
+                                ? `${new Date(r.first_answer_at).toLocaleDateString("de-AT")} → ${new Date(r.last_answer_at).toLocaleDateString("de-AT")}`
+                                : "—"}
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      <button
+                        type="button"
+                        className="mp-btn mp-btn--primary mp-btn--sm"
+                        onClick={() => {
+                          setExamRewardTarget(item);
+                          setExamRewardConfirming(false);
+                        }}
+                      >
+                        Grant Pro through exam window
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
       {error && (
         <Alert variant="error" title="Failed to load">
           {error}
@@ -592,6 +780,57 @@ export default function AdminReferralsPage() {
             </Alert>
           )}
         </div>
+      </Dialog>
+
+      {/* ─── Exam-reward grant confirm dialog ──────────────────────── */}
+      <Dialog
+        open={!!examRewardTarget}
+        onOpenChange={(o) => {
+          if (!o) {
+            setExamRewardTarget(null);
+            setExamRewardConfirming(false);
+          }
+        }}
+        title={examRewardConfirming ? "Confirm grant" : "Grant Pro through exam window"}
+        description={
+          examRewardTarget
+            ? `Grants tier='pro' to ${examRewardTarget.referrer_email ?? "(unknown)"} through the next sitting of ${examRewardTarget.referrer_active_exam ?? "their active exam"} +14 days.`
+            : undefined
+        }
+        footer={
+          <DialogFooter>
+            <button
+              className="mp-btn mp-btn--secondary"
+              onClick={() => {
+                setExamRewardTarget(null);
+                setExamRewardConfirming(false);
+              }}
+              disabled={examRewardProcessing}
+            >
+              Cancel
+            </button>
+            <button
+              className="mp-btn mp-btn--primary"
+              onClick={submitExamRewardGrant}
+              disabled={examRewardProcessing}
+            >
+              {examRewardProcessing
+                ? "Granting…"
+                : examRewardConfirming
+                  ? "Confirm grant"
+                  : "Continue"}
+            </button>
+          </DialogFooter>
+        }
+      >
+        {examRewardTarget && examRewardConfirming && (
+          <Alert variant="warning" title="Grants free Pro access">
+            This is a non-cash reward: no payment is collected from anyone.
+            The referrer flips to <code>tier=&apos;pro&apos;</code> with{" "}
+            <code>tier_expires_at</code> set from their active_exam. Logged
+            in <code>admin_audit_log</code>. Click Confirm to proceed.
+          </Alert>
+        )}
       </Dialog>
     </AdminPageShell>
   );
