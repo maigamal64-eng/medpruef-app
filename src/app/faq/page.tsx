@@ -311,12 +311,10 @@ export default function FaqPage() {
               <ul className="list-disc pl-5 space-y-1.5 mt-4">
                 <li>{copy.ref.b1[lang]}</li>
                 <li>{copy.ref.b2[lang]}</li>
-                <li>{copy.ref.b3[lang]}</li>
-                <li>{copy.ref.b4[lang]}</li>
               </ul>
 
               <Callout variant="neutral" lang={lang}>
-                {copy.ref.sepa[lang]}
+                {copy.ref.b3[lang]}
               </Callout>
 
               <div className="mt-4 flex flex-col sm:flex-row gap-3">
@@ -325,8 +323,8 @@ export default function FaqPage() {
                   className="mp-btn mp-btn--secondary inline-flex items-center gap-1.5"
                 >
                   {lang === "de"
-                    ? "Alle Prämienstufen ansehen"
-                    : "See all payout tiers"}
+                    ? "Mein Empfehlungslink"
+                    : "My referral link"}
                   <ArrowRight className="w-3.5 h-3.5" />
                 </Link>
                 <BackToPricing lang={lang} inline />
@@ -572,32 +570,24 @@ const copy = {
   },
   ref: {
     title: {
-      de: "Wie laufen Empfehlungszahlungen?",
-      en: "How do referral payouts work?",
+      de: "Wie funktioniert das Empfehlungsprogramm?",
+      en: "How does the referral program work?",
     },
     intro: {
-      de: "Jede:r Nutzer:in bekommt einen persönlichen Empfehlungscode. Sobald deine Empfehlung ein Abo abschließt, gehört eine abgestufte Auszahlung dir. Die Höhe hängt vom gebuchten Tarif ab:",
-      en: "Every user gets a personal referral code. Once your referral signs up, you earn a tiered payout; the amount depends on which plan they choose:",
+      de: "Jede:r Nutzer:in bekommt einen persönlichen Empfehlungscode. Lad zwei Kolleginnen oder Kollegen ein, die wirklich mit dir für den Stichprobentest am 23. September in Graz lernen, und sobald beide aktiv sind, bekommst du MedPrüf Pro kostenlos durch das Prüfungsfenster. Keine Zahlung, von niemandem:",
+      en: "Every user gets a personal referral code. Invite two colleagues who really start studying with you for the Stichprobentest on 23 September in Graz, and once both are active you get MedPrüf Pro free through the exam window. No payment, from anyone:",
     },
     b1: {
-      de: "30-Tage-Sperrfrist ab dem Datum, an dem die Zahlung der Empfehlung eingegangen ist, schützt vor Missbrauch mit Rückerstattungen.",
-      en: "30-day hold from the date your referral's payment clears, protects against refund gaming.",
+      de: "Eine Empfehlung qualifiziert sich, sobald diese Person mindestens 20 verschiedene Fragen an mindestens 2 verschiedenen Tagen beantwortet hat.",
+      en: "A referral qualifies once that person answers at least 20 different questions across at least 2 different days.",
     },
     b2: {
-      de: "Auszahlung per USDT (TRC-20/ERC-20) oder über Wise auf dein Bankkonto.",
-      en: "Payouts via USDT (TRC-20/ERC-20) or via Wise to your bank account.",
+      de: "Nach der zweiten qualifizierten Empfehlung prüft unser Team kurz und schaltet Pro für dich frei, kostenlos bis zum Ende deines Prüfungsfensters (Prüfungstermin plus 14 Tage Puffer).",
+      en: "After your second qualified referral, our team does a quick review and unlocks Pro for you, free through the end of your exam window (exam date plus a 14-day buffer).",
     },
     b3: {
-      de: "Jahresdeckel: 600 € pro Kalenderjahr und Empfehlende:r.",
-      en: "Annual cap: 600 € per referrer per calendar year.",
-    },
-    b4: {
-      de: "Nur die erste Zahlung deiner Empfehlung löst den Bonus aus, keine Wiederholungen bei Verlängerung.",
-      en: "Only the referee's first paid subscription triggers the bonus, no repeat earnings on renewals.",
-    },
-    sepa: {
-      de: "SEPA ist raus aus dem Programm. Wir haben das Modell aufs Wesentliche reduziert: Krypto oder Wise, beides ohne Schufa oder deutsche Bankkonten.",
-      en: "SEPA is gone from the program. We've stripped it back to the essentials: crypto or Wise, neither requires a European bank account or Schufa.",
+      de: "Der frühere Bar-Auszahlungsplan ist für neue Empfehlungen pausiert. Diese Version zahlt in Pro-Zugang, nicht in Geld.",
+      en: "The earlier cash-payout plan is paused for new referrals. This version pays in Pro access, not money.",
     },
   },
   free: {

@@ -663,8 +663,9 @@ function Starter3MoCard({
               : "90 days from payment · expires automatically, no subscription"}
           </li>
           {/* Referral reward is invite-only (2026-06-25): only show this perk
-              to accounts enrolled in the program (referralsEnabled). A
-              non-enrolled visitor must not be promised a referral payout. */}
+              to accounts enrolled in the program (referralsEnabled). Reward
+              is a non-cash mechanic (2026-07-11): free Pro through the exam
+              window, not a payout, so no € figure here — see /referrals. */}
           {referralsEnabled && (
             <li className="flex items-start gap-2">
               <Check
@@ -672,8 +673,8 @@ function Starter3MoCard({
                 strokeWidth={3}
               />
               {lang === "de"
-                ? "Empfiehl uns weiter · 15 € Gutschrift pro bezahltem Empfehlungs-Sign-up"
-                : "Refer others · 15 € credit per paid referral sign-up"}
+                ? "Lad zwei Kolleg:innen ein · Pro kostenlos durchs Prüfungsfenster"
+                : "Invite two colleagues · Pro free through the exam window"}
             </li>
           )}
           <li className="flex items-start gap-2 text-[var(--mp-fg-subtle)]">
@@ -1082,9 +1083,11 @@ function CohortFeaturedCard({
 /* ═══════════════════════ Referral block ═══════════════════════ */
 
 function ReferralBlock({ lang }: { lang: Lang }) {
-  // Payouts per REFERRAL_PAYOUTS in content-truth.ts:
-  //   first_month_19 = €10, first_3mo_27 = €15, premium_pass_guaranteed = €75
-  // Calm visual weight — surface-sunken background, no borders on bullets.
+  // Non-cash referral mechanic (2026-07-11, supersedes the cash-tiered
+  // copy this block used to carry): invite 2 colleagues who actually
+  // study with you, both qualify by activity, you get Pro free through
+  // your exam window. No € figure anywhere in this block by design —
+  // MEDPRUF-SOT.md §2.x voice rules (referral copy never carries a price).
   return (
     <div
       className="rounded-[var(--mp-r-card)] overflow-hidden p-6 md:p-7"
@@ -1108,13 +1111,13 @@ function ReferralBlock({ lang }: { lang: Lang }) {
       </div>
       <h3 className="mp-h3 mb-2 text-[20px]">
         {lang === "de"
-          ? "Empfiehl uns auf Telegram, WhatsApp & Social: bis zu 75 € pro Abschluss."
-          : "Share on Telegram, WhatsApp & socials: up to 75 € per signed-up referral."}
+          ? "Lad zwei Kolleg:innen ein, bekomm Pro kostenlos durchs Prüfungsfenster."
+          : "Invite two colleagues, get Pro free through the exam window."}
       </h3>
       <p className="text-sm text-[var(--mp-fg-muted)] mb-5 max-w-2xl leading-relaxed">
         {lang === "de"
-          ? "Du bist wahrscheinlich schon in den richtigen Telegram-Kanälen für die Kenntnisprüfung. Teile dort deinen Empfehlungslink: 10 € pro Einzelmonat, 15 € pro 3-Monats-Einstieg, 75 € pro Kohorte. Auszahlung in USDT oder Wise, 30 Tage nach Zahlungseingang."
-          : "You're probably already in the right Telegram groups for the Kenntnisprüfung. Share your referral link there: 10 € per single month, 15 € per 3-month starter, 75 € per Cohort sign-up. Paid in USDT or Wise, 30 days after their payment clears."}
+          ? "Du bist wahrscheinlich schon in den richtigen Telegram- oder WhatsApp-Gruppen für den Stichprobentest am 23. September in Graz. Teile dort deinen Empfehlungslink: sobald zwei Kolleginnen oder Kollegen wirklich aktiv lernen, bekommst du MedPrüf Pro kostenlos durch dein Prüfungsfenster."
+          : "You're probably already in the right Telegram or WhatsApp groups for the Stichprobentest on 23 September in Graz. Share your referral link there: once two colleagues are actively studying, you get MedPrüf Pro free through your exam window."}
       </p>
 
       <div className="flex flex-wrap items-center gap-3">
