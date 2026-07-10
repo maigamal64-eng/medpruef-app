@@ -7,7 +7,18 @@ export const dynamic = "force-dynamic";
 /**
  * GET /api/admin/referrals?status=qualified|pending|rewarded
  *
- * Returns the referral queue with referrer + referee snapshots.
+ * Returns the CASH payout queue with referrer + referee snapshots.
+ *
+ * Excludes reward_type='pro_until_exam' rows (2026-07-11): those are
+ * the non-cash exam-reward mechanic (src/lib/referral-exam-reward.ts)
+ * and have their own review queue at GET
+ * /api/admin/referrals/pending-exam-rewards + confirm endpoint at
+ * POST /api/admin/referrals/grant-exam-reward. Without this filter, a
+ * qualified pro_until_exam row (reward_credit_cents=0) would render
+ * here with a live "Mark paid" button, and clicking it would flip
+ * status='rewarded' via the CASH mark-paid route -- which never grants
+ * Pro, just silently marks the row done and hides it from the real
+ * exam-reward queue. See mark-paid/route.ts for the matching guard.
  */
 export const GET = adminRouteShell(
   async ({ req }) => {
@@ -18,8 +29,9 @@ export const GET = adminRouteShell(
     const query = sb
       .from("referrals")
       .select(
-        "id, referrer_user_id, referee_user_id, referral_code, status, reward_credit_cents, qualified_at, rewarded_at, created_at, hold_expires_at, hold_reason"
+        "id, referrer_user_id, referee_user_id, referral_code, status, reward_credit_cents, qualified_at, rewarded_at, created_at, hold_expires_at, hold_reason, reward_type"
       )
+      .neq("reward_type", "pro_until_exam")
       .order("qualified_at", { ascending: false, nullsFirst: false })
       .limit(200);
 

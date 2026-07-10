@@ -33,7 +33,7 @@ export const POST = adminRouteShell(
     // Only allow transitions from qualified → rewarded.
     const { data: current, error: fetchErr } = await sb
       .from("referrals")
-      .select("id, status")
+      .select("id, status, reward_type")
       .eq("id", body.referral_id)
       .maybeSingle();
     if (fetchErr) {
@@ -48,6 +48,22 @@ export const POST = adminRouteShell(
     if (current.status !== "qualified") {
       return NextResponse.json(
         { error: `Cannot mark paid from status=${current.status}` },
+        { status: 409 }
+      );
+    }
+    // Defense-in-depth (2026-07-11): this route is for the CASH program
+    // only. A pro_until_exam row must go through
+    // POST /api/admin/referrals/grant-exam-reward instead, which
+    // actually grants Pro -- mark-paid would just silently flip status
+    // to rewarded without ever touching the referrer's tier. The GET
+    // queue at /api/admin/referrals already excludes these rows; this
+    // rejects a direct-call bypass too.
+    if (current.reward_type === "pro_until_exam") {
+      return NextResponse.json(
+        {
+          error:
+            "This is an exam-reward referral, not cash. Use POST /api/admin/referrals/grant-exam-reward instead.",
+        },
         { status: 409 }
       );
     }
