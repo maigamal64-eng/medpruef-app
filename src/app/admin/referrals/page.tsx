@@ -50,6 +50,9 @@ interface PendingExamRewardReferee {
   last_answer_at: string | null;
   qualified_at: string | null;
   referral_row_status: string;
+  card_trial_active: boolean;
+  card_trial_activated_at: string | null;
+  card_trial_tier: string | null;
 }
 
 interface PendingExamRewardItem {
@@ -433,6 +436,21 @@ export default function AdminReferralsPage() {
                               {r.first_answer_at && r.last_answer_at
                                 ? `${new Date(r.first_answer_at).toLocaleDateString("de-AT")} → ${new Date(r.last_answer_at).toLocaleDateString("de-AT")}`
                                 : "—"}
+                            </div>
+                            <div className="flex items-center gap-1.5 mt-1">
+                              <StatusDot
+                                tone={r.card_trial_active ? "success" : "danger"}
+                                size={6}
+                              />
+                              <span className="text-[10px] text-[var(--mp-fg-muted)]">
+                                {r.card_trial_active
+                                  ? `card linked (${r.card_trial_tier || "whop"}) ${
+                                      r.card_trial_activated_at
+                                        ? new Date(r.card_trial_activated_at).toLocaleDateString("de-AT")
+                                        : ""
+                                    }`
+                                  : "no card on file"}
+                              </span>
                             </div>
                           </li>
                         ))}

@@ -19,7 +19,15 @@ export const dynamic = "force-dynamic";
  * surfaces the farm signals so a human eyeballs the pattern before
  * confirming: per-referee signup method (email vs telegram), signup
  * timestamps, email domain, distinct-question count, distinct-day
- * span, and answer timing.
+ * span, answer timing, and (2026-07-11) card-trial status.
+ *
+ * Card-trial signal (2026-07-11): a row can only reach `qualified` at
+ * all once the referee has an active Whop card-rail subscription (see
+ * src/lib/referral-exam-reward.ts#hasActiveWhopCardSubscription), so in
+ * practice every referee surfaced here already has one — this field is
+ * shown anyway so the admin sees the activation timestamp (was it
+ * suspiciously close to the activity, suggesting a farmed sequence?)
+ * rather than just a boolean the gate already implies.
  *
  * Stuck-queue fix (2026-07-11): grantExamRewardToReferrer's terminal
  * no-op branches (no active_exam / already covers a later expiry) call
@@ -123,6 +131,32 @@ export const GET = adminRouteShell(
       .in("user_id", refereeIds)
       .limit(50000);
 
+    // 5b. Card-trial status (2026-07-11) — the same predicate as
+    // hasActiveWhopCardSubscription(): active Whop card-rail row,
+    // pinned on provider/method not tier. Earliest started_at wins if a
+    // referee somehow has more than one (trial then a paid conversion).
+    const { data: cardSubs } = await sb
+      .from("subscriptions")
+      .select("user_id, started_at, tier")
+      .in("user_id", refereeIds)
+      .eq("payment_provider", "whop")
+      .eq("payment_method", "card")
+      .eq("status", "active")
+      .order("started_at", { ascending: true });
+    const cardTrialByReferee = new Map<
+      string,
+      { activatedAt: string | null; tier: string | null }
+    >();
+    for (const s of cardSubs || []) {
+      const uid = s.user_id as string;
+      if (!cardTrialByReferee.has(uid)) {
+        cardTrialByReferee.set(uid, {
+          activatedAt: (s.started_at as string | null) || null,
+          tier: (s.tier as string | null) || null,
+        });
+      }
+    }
+
     const signalsByReferee = new Map<
       string,
       { distinctQuestions: Set<number>; days: Set<string>; timestamps: string[] }
@@ -157,6 +191,7 @@ export const GET = adminRouteShell(
         const refereeUser = refereeId ? userMap.get(refereeId) : null;
         const sig = refereeId ? signalsByReferee.get(refereeId) : undefined;
         const timestamps = sig ? [...sig.timestamps].sort() : [];
+        const cardTrial = refereeId ? cardTrialByReferee.get(refereeId) : undefined;
         return {
           referee_user_id: refereeId,
           email: refereeUser?.email || null,
@@ -171,6 +206,9 @@ export const GET = adminRouteShell(
           last_answer_at: timestamps[timestamps.length - 1] || null,
           qualified_at: r.qualified_at || null,
           referral_row_status: r.status,
+          card_trial_active: !!cardTrial,
+          card_trial_activated_at: cardTrial?.activatedAt || null,
+          card_trial_tier: cardTrial?.tier || null,
         };
       });
 
