@@ -217,6 +217,53 @@ if (legacyResult) {
   );
 }
 
+// ── Ordering-race scenario (2026-07-11 fix, orchestrator finding #1) ───
+// A pending row stamped reward_type='pro_until_exam' (the shape a real
+// claim creates once the exam-reward program is active) must NEVER be
+// touchable by the legacy cash qualifier, regardless of card+activity
+// state -- the cash program is paused and has no business flipping a
+// program row on a payment event. Two sub-cases: (e) card+activity met
+// -- exam qualifier still gates correctly AND the legacy qualifier
+// would not have touched the row; (f) no card -- neither qualifier
+// flips the row, for different reasons (exam: card gate fails; cash:
+// wrong reward_type).
+
+console.log(
+  "\n=== Card-gate case (e): pro_until_exam pending row, card+activity met -- legacy cash qualifier must not touch it ==="
+);
+const orderingQualifiedResult = runOne("true", "ordering-race-qualifies", {
+  PENDING_ROW_REWARD_TYPE: "pro_until_exam",
+  CARD_TRIAL_FIXTURE: "card",
+});
+if (orderingQualifiedResult) {
+  assert(
+    orderingQualifiedResult.legacyWouldTouchBeforeExamQualify === false,
+    "ORDERING (e): the legacy cash qualifier's guard clauses correctly refuse a pro_until_exam pending row (reward_type check) while the exam-reward program is active (flag check)"
+  );
+  assert(
+    orderingQualifiedResult.rowFlipped === true,
+    "ORDERING (e): the SAME row still flips to qualified via the real exam-reward path (card+activity gate unaffected by the ordering fix)"
+  );
+}
+
+console.log(
+  "\n=== Card-gate case (f): pro_until_exam pending row, no card -- neither qualifier flips it ==="
+);
+const orderingNoCardResult = runOne("true", "ordering-race-no-card", {
+  PENDING_ROW_REWARD_TYPE: "pro_until_exam",
+  CARD_TRIAL_FIXTURE: "none",
+});
+if (orderingNoCardResult) {
+  assert(
+    orderingNoCardResult.legacyWouldTouchBeforeExamQualify === false,
+    "ORDERING (f): the legacy cash qualifier still refuses the row (reward_type + flag checks, independent of the card gate)"
+  );
+  assert(
+    orderingNoCardResult.rowFlipped === false,
+    "ORDERING (f): the exam-reward qualifier also does not flip it (no card on file) -- the row stays correctly untouched by BOTH qualifiers, not silently claimed by either"
+  );
+}
+
 if (process.exitCode === 1) {
   console.error("\nFAILED — see FAIL lines above.");
   process.exit(1);

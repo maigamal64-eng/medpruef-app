@@ -5,6 +5,7 @@ import {
   isValidReferralCodeFormat,
   normalizeReferralCode,
 } from '@/lib/referrals'
+import { isReferralExamRewardEnabled } from '@/lib/referral-exam-reward'
 
 export const dynamic = 'force-dynamic'
 
@@ -113,18 +114,34 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Update failed' }, { status: 500 })
     }
 
-    // 5) Insert the referral row in pending state. Qualification
-    //    happens in the NOWPayments webhook when the referee pays
-    //    their first subscription. At THAT point the webhook stamps
-    //    `reward_credit_cents` based on the tier the referee picked
-    //    (€25/€50/€75 per Lock #3) — so we deliberately leave it at
-    //    0 for pending rows. The row still exists for tracking.
+    // 5) Insert the referral row in pending state.
+    //
+    // reward_type (2026-07-11, race fix): when the exam-reward program
+    // is the active mechanic, stamp reward_type='pro_until_exam' on
+    // INSERT rather than leaving the 'cash' column default. Without
+    // this, a pending row created under the active program was
+    // indistinguishable from a legacy cash row, so the legacy webhook
+    // qualifier (qualifyReferralOnWhopPayment, still wired for the
+    // paused cash program) could win a race against the new activity-
+    // based qualifier and flip the row to a cash 'qualified' state on
+    // first payment, silently bypassing the card+activity gate
+    // entirely. Rows created under the active program ARE program
+    // rows. If the exam-reward program is off, the row keeps the
+    // 'cash' default (the only mechanic that's actually live then).
+    //
+    // Qualification: pro_until_exam rows flip via
+    // qualifyReferralOnActivity (src/lib/referral-exam-reward.ts,
+    // card + activity gated); legacy 'cash' rows still flip in the
+    // NOWPayments/Whop webhooks when the referee pays (now additionally
+    // scoped to reward_type='cash' as defense-in-depth, see that
+    // route). reward_credit_cents stays 0 for pending rows either way.
     const { error: insErr } = await sb.from('referrals').insert({
       referrer_user_id: referrer.id,
       referee_user_id: userId,
       referral_code: code,
       status: 'pending',
       reward_credit_cents: 0,
+      reward_type: isReferralExamRewardEnabled() ? 'pro_until_exam' : 'cash',
     })
 
     if (insErr) {

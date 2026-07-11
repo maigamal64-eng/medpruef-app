@@ -7,7 +7,10 @@ import {
   referralPayoutCents,
   REFERRAL_ANNUAL_CAP_CENTS,
 } from "@/lib/nowpayments";
-import { qualifyReferralOnActivity } from "@/lib/referral-exam-reward";
+import {
+  qualifyReferralOnActivity,
+  isReferralExamRewardEnabled,
+} from "@/lib/referral-exam-reward";
 import {
   verifyWhopSecretHeader,
   verifyWhopSignature,
@@ -505,7 +508,10 @@ export async function POST(req: NextRequest) {
     // Qualify any referral earned from this Whop payment. Best-effort —
     // the subscription is already granted; a qualification failure never
     // blocks or retries the webhook response. (Legacy CASH referral
-    // program, src/lib/referrals.ts — reward_type='cash' rows only.)
+    // program — the function itself now no-ops when the exam-reward
+    // program is active, AND additionally scopes its lookup to
+    // reward_type='cash' rows as defense-in-depth; see its own header
+    // comment for the 2026-07-11 race this closes.)
     await qualifyReferralOnWhopPayment(sb, userId, f.paymentId, tier);
 
     // Referral exam-reward (2026-07-11): this webhook is the trial-start
@@ -869,6 +875,28 @@ async function reverseRefereeReferral(
  * same tiered payouts, same 30-day hold, same €600/year annual cap — with
  * one extra gate: the invite-only program check on referrals_enabled.
  *
+ * LEGACY CASH PROGRAM ONLY (paused per MEDPRUF-SOT.md §2.x for new/
+ * enrolled users as of 2026-07-11, code retained for legacy rows still
+ * in flight). Lives in this route file, not src/lib/referrals.ts.
+ *
+ * Race fix (2026-07-11): this function used to run unconditionally
+ * ahead of the exam-reward qualifier (qualifyReferralOnActivity, called
+ * later in the same webhook handler) and would flip ANY pending row —
+ * including one created under the ACTIVE exam-reward program — to a
+ * cash-qualified state on first payment, bypassing the card+activity
+ * gate entirely (the row lookup below had no reward_type filter, and
+ * every pending row defaults to reward_type='cash' at the DB column
+ * level unless the claim route explicitly stamps otherwise). Two belt-
+ * and-braces fixes: (1) this function now no-ops immediately when the
+ * exam-reward program is active — the cash program is paused, it has
+ * no business qualifying anything while the new mechanic owns
+ * qualification; (2) its row lookup is additionally scoped to
+ * reward_type='cash' as defense-in-depth, so even if this function
+ * were ever called with the flag on, it could not touch a program row.
+ * See src/app/api/referrals/claim/route.ts for the matching fix (rows
+ * created under the active program are stamped reward_type=
+ * 'pro_until_exam' on insert, not left at the 'cash' default).
+ *
  * Invite-only guard (2026-06-25): the referral program is OFF by default.
  * An admin must flip users.referrals_enabled=true for a referrer's code to
  * earn rewards. If the referrer is not enabled we skip the reward and log at
@@ -895,6 +923,11 @@ async function qualifyReferralOnWhopPayment(
   paymentId: string,
   refereeTier: string | null | undefined
 ): Promise<boolean> {
+  // The cash program is paused while the exam-reward program is active
+  // (MEDPRUF-SOT.md §2.x) — this function has no business qualifying
+  // anything in that state. No-op immediately, before any DB call.
+  if (isReferralExamRewardEnabled()) return false;
+
   try {
     // 1. Does this referee have a referred_by_code?
     const { data: referee } = await sb
@@ -946,13 +979,24 @@ async function qualifyReferralOnWhopPayment(
     // 5. Is there already a referrals row for this (referrer, referee) pair?
     const { data: existing } = await sb
       .from("referrals")
-      .select("id, status")
+      .select("id, status, reward_type")
       .eq("referrer_user_id", referrer.id)
       .eq("referee_user_id", refereeUserId)
       .maybeSingle();
 
     // Already qualified or paid out — idempotent, nothing to do.
     if (existing && existing.status !== "pending") return false;
+
+    // Defense-in-depth (2026-07-11): a pending row NOT stamped
+    // reward_type='cash' belongs to the exam-reward program (see the
+    // claim route) — this legacy function must never touch it. Skip
+    // rather than fall through to the "no existing row" insert branch
+    // below, which would otherwise create a SECOND, contradictory row
+    // for the same (referrer, referee) pair instead of correctly
+    // recognizing one already exists.
+    if (existing && existing.reward_type && existing.reward_type !== "cash") {
+      return false;
+    }
 
     // 6. Compute tiered payout + enforce the €600/year annual cap.
     const nowIso = new Date().toISOString();

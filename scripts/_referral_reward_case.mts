@@ -34,6 +34,7 @@ import {
   qualifyReferralOnActivity,
   flagReferrerForRewardReview,
   grantExamRewardToReferrer,
+  isReferralExamRewardEnabled,
 } from "@/lib/referral-exam-reward";
 
 const REFEREE_ID = "22222222-2222-2222-2222-222222222222";
@@ -89,7 +90,13 @@ function makeMock() {
         referrer_user_id: REFERRER_ID,
         referee_user_id: REFEREE_ID,
         status: "pending",
-        reward_type: "cash",
+        // PENDING_ROW_REWARD_TYPE (2026-07-11 ordering-race scenario):
+        // a row created under the active exam-reward program is
+        // stamped 'pro_until_exam' at claim time (src/app/api/
+        // referrals/claim/route.ts), not left at the 'cash' column
+        // default. Defaults to 'cash' so the pre-existing scenarios
+        // (which model a legacy row) keep passing unchanged.
+        reward_type: process.env.PENDING_ROW_REWARD_TYPE || "cash",
         hold_reason: null,
         created_at: "2026-06-25T00:00:00.000Z",
       },
@@ -221,9 +228,55 @@ function makeMock() {
   return { from: table, state };
 }
 
+/**
+ * Faithful port of the two guard clauses that close the 2026-07-11
+ * ordering race in qualifyReferralOnWhopPayment
+ * (src/app/api/webhooks/whop/route.ts). Not the full function (payout
+ * calc / annual cap / self-referral checks are irrelevant to the race
+ * this test proves) — only the two checks that decide whether the
+ * legacy cash qualifier is even allowed to touch a row:
+ *   1. no-op immediately if the exam-reward program is active
+ *   2. no-op if the pending row's reward_type isn't 'cash'
+ * The route file's function itself cannot be imported here (Next.js
+ * forbids arbitrary named exports from an app/api/*\/route.ts file —
+ * confirmed by tsc when this was attempted), so this port stands in;
+ * keeping it in the same file as the scenario that exercises it makes
+ * any future drift from the real function's guard logic visible in
+ * code review.
+ */
+async function legacyCashQualifierWouldTouchRow(
+  sb: any,
+  referrerId: string,
+  refereeId: string
+): Promise<boolean> {
+  if (isReferralExamRewardEnabled()) return false;
+  const { data: existing } = await sb
+    .from("referrals")
+    .select("id, status, reward_type")
+    .eq("referrer_user_id", referrerId)
+    .eq("referee_user_id", refereeId)
+    .maybeSingle();
+  if (!existing) return true; // would insert a new cash row
+  if (existing.status !== "pending") return false;
+  if (existing.reward_type && existing.reward_type !== "cash") return false;
+  return true;
+}
+
 async function runCase(caseName: string) {
   const sb: any = makeMock();
   mutations.length = 0;
+
+  // Ordering scenario (2026-07-11 race fix): mirrors the real webhook
+  // call order in src/app/api/webhooks/whop/route.ts — the legacy cash
+  // qualifier runs FIRST, then the exam-reward qualifier. Run the
+  // ported guard check here (read-only, does not mutate) so the result
+  // reflects whether the CURRENT state at this point in the sequence
+  // would have let the legacy function touch the row.
+  const legacyWouldTouchBeforeExamQualify = await legacyCashQualifierWouldTouchRow(
+    sb,
+    REFERRER_ID,
+    REFEREE_ID
+  );
 
   await qualifyReferralOnActivity(sb, REFEREE_ID);
 
@@ -261,6 +314,7 @@ async function runCase(caseName: string) {
       tierGranted,
       queueResolved,
       mutationCount: mutations.length,
+      legacyWouldTouchBeforeExamQualify,
     })
   );
 }
