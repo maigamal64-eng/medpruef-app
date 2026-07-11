@@ -200,7 +200,7 @@ const fallbackResult = runOne("true", "card-gate-fallback-off", {
 if (fallbackResult) {
   assert(
     fallbackResult.rowFlipped === true,
-    "CARD-GATE (c): with the card requirement explicitly OFF, activity-only (no card fixture) still qualifies — proves the fallback polarity is correct, not just that the gate exists"
+    "CARD-GATE (c): with the card requirement explicitly OFF, activity-only (no card fixture) still qualifies: proves the fallback polarity is correct, not just that the gate exists"
   );
 }
 
