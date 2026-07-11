@@ -109,6 +109,11 @@ export default function AdminReferralsPage() {
   const [examRewardTarget, setExamRewardTarget] = useState<PendingExamRewardItem | null>(null);
   const [examRewardConfirming, setExamRewardConfirming] = useState(false);
   const [examRewardProcessing, setExamRewardProcessing] = useState(false);
+  // Whether REFERRAL_REQUIRE_CARD_TRIAL is at its default (card
+  // required) or set to 'false' (activity-only fallback). Defaults
+  // true so the badge doesn't flash "not required" before the fetch
+  // lands, matching the flag's own default-ON polarity.
+  const [cardRequired, setCardRequired] = useState(true);
 
   const loadExamRewards = useCallback(async () => {
     setExamRewardLoading(true);
@@ -117,6 +122,7 @@ export default function AdminReferralsPage() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setExamRewardItems(data.items || []);
+      setCardRequired(data.card_required !== false);
     } catch {
       // non-fatal — the payout queue below still renders
     } finally {
@@ -439,7 +445,13 @@ export default function AdminReferralsPage() {
                             </div>
                             <div className="flex items-center gap-1.5 mt-1">
                               <StatusDot
-                                tone={r.card_trial_active ? "success" : "danger"}
+                                tone={
+                                  r.card_trial_active
+                                    ? "success"
+                                    : cardRequired
+                                      ? "danger"
+                                      : "neutral"
+                                }
                                 size={6}
                               />
                               <span className="text-[10px] text-[var(--mp-fg-muted)]">
@@ -449,7 +461,9 @@ export default function AdminReferralsPage() {
                                         ? new Date(r.card_trial_activated_at).toLocaleDateString("de-AT")
                                         : ""
                                     }`
-                                  : "no card on file"}
+                                  : cardRequired
+                                    ? "no card on file"
+                                    : "card not required (gate off)"}
                               </span>
                             </div>
                           </li>

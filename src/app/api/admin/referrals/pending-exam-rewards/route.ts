@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { adminRouteShell } from "@/lib/admin/shell";
+import { isCardTrialRequired } from "@/lib/referral-exam-reward";
 
 export const dynamic = "force-dynamic";
 
@@ -21,13 +22,19 @@ export const dynamic = "force-dynamic";
  * timestamps, email domain, distinct-question count, distinct-day
  * span, answer timing, and (2026-07-11) card-trial status.
  *
- * Card-trial signal (2026-07-11): a row can only reach `qualified` at
- * all once the referee has an active Whop card-rail subscription (see
- * src/lib/referral-exam-reward.ts#hasActiveWhopCardSubscription), so in
- * practice every referee surfaced here already has one — this field is
- * shown anyway so the admin sees the activation timestamp (was it
- * suspiciously close to the activity, suggesting a farmed sequence?)
- * rather than just a boolean the gate already implies.
+ * Card-trial signal (2026-07-11): ONLY TRUE WHEN REFERRAL_REQUIRE_CARD_
+ * TRIAL IS AT ITS DEFAULT (unset or 'true') — in that state, a row can
+ * only reach `qualified` once the referee has an active Whop card-rail
+ * subscription (see src/lib/referral-exam-reward.ts#
+ * hasActiveWhopCardSubscription), so every referee surfaced here has
+ * one. If the flag has been set to the literal string 'false' (the
+ * activity-only fallback), qualification no longer requires a card at
+ * all, so a referee here may legitimately have none — the response
+ * carries `card_required` (= isCardTrialRequired()) so the UI can
+ * render that state correctly instead of flagging an absent card as a
+ * problem. Either way this field shows the activation timestamp (was
+ * it suspiciously close to the activity, suggesting a farmed sequence?)
+ * rather than just a boolean.
  *
  * Stuck-queue fix (2026-07-11): grantExamRewardToReferrer's terminal
  * no-op branches (no active_exam / already covers a later expiry) call
@@ -222,7 +229,7 @@ export const GET = adminRouteShell(
       };
     });
 
-    return NextResponse.json({ items });
+    return NextResponse.json({ items, card_required: isCardTrialRequired() });
   },
   { route: "/api/admin/referrals/pending-exam-rewards" }
 );
