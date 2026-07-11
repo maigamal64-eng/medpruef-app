@@ -752,6 +752,21 @@ const translations = {
   'xlate_quota': { de: 'Kostenloses Tageskontingent (5 Übersetzungen) erreicht. ', en: 'Daily free quota (5 translations) reached. ' },
   'xlate_see_pro': { de: 'Pro anzeigen', en: 'See Pro' },
   'xlate_paused': { de: 'Übersetzungen sind vorübergehend pausiert.', en: 'Translations are temporarily paused.' },
+
+  // Checkout-stall feedback prompt (2026-07-11) — one-tap question for
+  // users who reached Whop checkout and never completed.
+  'checkout_stall_title': { de: 'Kurze Frage: beim Bezahlen hat etwas nicht geklappt?', en: 'Quick question: did something go wrong at checkout?' },
+  'checkout_stall_body': { de: 'Du warst auf der Bezahlseite, aber es kam nicht zum Abschluss. Woran lag es? Ein Tipp genügt, [name] liest jede Antwort.', en: 'You were on the checkout page, but it did not go through. What happened? One tap is enough, [name] reads every answer.' },
+  'checkout_stall_reason_card': { de: 'Meine Karte wurde nicht akzeptiert', en: 'My card was not accepted' },
+  'checkout_stall_reason_page_error': { de: 'Die Seite hat nicht funktioniert', en: 'The page did not work' },
+  'checkout_stall_reason_changed_mind': { de: 'Ich habe mich noch nicht entschieden', en: 'I have not decided yet' },
+  'checkout_stall_reason_price': { de: 'Der Preis passt nicht', en: 'The price does not fit' },
+  'checkout_stall_reason_other': { de: 'Anderes', en: 'Other' },
+  'checkout_stall_details_placeholder': { de: 'Magst du kurz erzählen, was passiert ist? (optional)', en: 'Want to tell us a bit more? (optional)' },
+  'checkout_stall_submit': { de: 'Senden', en: 'Send' },
+  'checkout_stall_thanks_title': { de: 'Danke dir! Das hilft wirklich.', en: 'Thank you! This really helps.' },
+  'checkout_stall_thanks_body': { de: 'Wenn wir es lösen können, meldet sich [name] persönlich.', en: 'If we can fix it, [name] will reach out personally.' },
+  'checkout_stall_dismiss': { de: 'Schließen', en: 'Dismiss' },
 } as const
 
 export type TranslationKey = keyof typeof translations

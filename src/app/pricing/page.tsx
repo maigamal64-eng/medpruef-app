@@ -27,6 +27,7 @@ import LanguageToggle from "@/components/LanguageToggle";
 import ThemeToggle from "@/components/ThemeToggle";
 import UpcomingExams from "@/components/UpcomingExams";
 import TrialActivation from "@/components/TrialActivation";
+import CheckoutStallPrompt from "@/components/CheckoutStallPrompt";
 import { useToast, BrandedLoader } from "@/components/ui";
 
 type Lang = "de" | "en";
@@ -261,6 +262,17 @@ export default function PricingPage() {
         <section className="max-w-5xl mx-auto px-4 lg:px-8 pb-4">
           <FreeTierCard lang={lang} examSource={storedExam} />
         </section>
+
+        {/* ══════════ Checkout-stall feedback prompt ══════════
+            2026-07-11: one-tap question for signed-in users who recently
+            reached Whop checkout and never completed. Self-gates via
+            /api/checkout-feedback/eligibility — renders nothing for
+            guests/anonymous or ineligible users. */}
+        {user && !user.id.startsWith("guest_") && (
+          <section className="max-w-5xl mx-auto px-4 lg:px-8 pb-4">
+            <CheckoutStallPrompt />
+          </section>
+        )}
 
         {/* ══════════ Entry tier cards: 19 €/month (entry) → 49 €/3mo (step) ══════════ */}
         {/* Entry: 19 €/month single-month tier renders first, matching the

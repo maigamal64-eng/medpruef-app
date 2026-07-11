@@ -40,6 +40,7 @@ import WhatsNewModal from "@/components/WhatsNewModal";
 import OrientationModal from "@/components/OrientationModal";
 import ReferralShareFloater from "@/components/ReferralShareFloater";
 import ReferralCodeCard from "@/components/ReferralCodeCard";
+import CheckoutStallPrompt from "@/components/CheckoutStallPrompt";
 import UserSurveyModal from "@/components/UserSurveyModal";
 import ResumeSessionCard from "@/components/ResumeSessionCard";
 import { useToast } from "@/components/ui";
@@ -887,6 +888,13 @@ export default function Home() {
           {!user.id.startsWith("guest_") && referralsEnabled && (
             <ReferralCodeCard userId={user.id} lang={lang} />
           )}
+
+          {/* ─── CHECKOUT-STALL FEEDBACK PROMPT ────────────────────────
+             2026-07-11: one-tap question for users who recently reached
+             Whop checkout and never completed. Self-gates against
+             ineligible/anonymous/already-answered users via
+             /api/checkout-feedback/eligibility — see CheckoutStallPrompt.tsx. */}
+          {!user.id.startsWith("guest_") && <CheckoutStallPrompt />}
 
           {/* ─── COACH SUGGESTION (calm viridian, replaces yellow warning)
              Rendered only when we have weak-topic signal. Content uses the
