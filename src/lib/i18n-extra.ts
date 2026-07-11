@@ -461,7 +461,7 @@ export const EXTRA_TRANSLATIONS: Partial<
     "ref_floater_region_label": "Реферальная программа",
     "ref_floater_close": "Закрыть уведомление",
     "ref_floater_title": "Есть кто-то ещё, кто тоже готовится к экзамену?",
-    "ref_floater_body": "Ваш реферальный код уже готов. Пригласите двух коллег: как только оба начнут активно заниматься, вы получите Pro бесплатно на весь экзаменационный период.",
+    "ref_floater_body": "Ваш реферальный код уже готов. Пригласите двух коллег: как только оба начнут бесплатный пробный период Pro (карта привязана, 0 € сегодня) и начнут активно заниматься, вы получите Pro бесплатно на весь экзаменационный период.",
     "ref_floater_cta_details": "Посмотреть подробности",
     "ref_floater_cta_not_now": "Не сейчас",
     "ref_copied": "Ссылка скопирована!",
@@ -1053,7 +1053,7 @@ export const EXTRA_TRANSLATIONS: Partial<
     "ref_floater_region_label": "Реферальна програма",
     "ref_floater_close": "Закрити повідомлення",
     "ref_floater_title": "Знаєте когось, хто теж готується до іспиту?",
-    "ref_floater_body": "Ваш реферальний код чекає на вас. Запросіть двох колег: щойно обидва почнуть активно займатися, ви отримаєте Pro безкоштовно на весь екзаменаційний період.",
+    "ref_floater_body": "Ваш реферальний код чекає на вас. Запросіть двох колег: щойно обидва розпочнуть безкоштовний пробний період Pro (картка прив'язана, 0 € сьогодні) і почнуть активно займатися, ви отримаєте Pro безкоштовно на весь екзаменаційний період.",
     "ref_floater_cta_details": "Переглянути деталі",
     "ref_floater_cta_not_now": "Не зараз",
     "ref_copied": "Посилання скопійовано!",
@@ -1645,7 +1645,7 @@ export const EXTRA_TRANSLATIONS: Partial<
     "ref_floater_region_label": "Tavsiye programı",
     "ref_floater_close": "Bildirimi kapat",
     "ref_floater_title": "Sınava giren birini tanıyor musunuz?",
-    "ref_floater_body": "Tavsiye kodunuz sizi bekliyor. İki meslektaşınızı davet edin: ikisi de aktif çalışmaya başladığında, sınav dönemi boyunca Pro'yu ücretsiz alırsınız.",
+    "ref_floater_body": "Tavsiye kodunuz sizi bekliyor. İki meslektaşınızı davet edin: ikisi de ücretsiz Pro deneme sürümünü başlattığında (kart kayıtlı, bugün 0 €) ve aktif çalışmaya başladığında, sınav dönemi boyunca Pro'yu ücretsiz alırsınız.",
     "ref_floater_cta_details": "Detayları görüntüle",
     "ref_floater_cta_not_now": "Şimdi değil",
     "ref_copied": "Bağlantı kopyalandı!",
@@ -2240,8 +2240,10 @@ export const EXTRA_TRANSLATIONS: Partial<
     // AR draft 2026-07-11: pending [name] sign-off (SoT §5.3). Corrected
     // from the prior false "you both get a bonus when they go Pro" cash
     // claim to the no-payment exam-window framing; plain honest wording,
-    // no em dashes. Flagged to [name] separately by the orchestrator.
-    "ref_floater_body": "رمز الإحالة الخاص بك بانتظارك. ادعُ زميلين اثنين: بمجرد أن يبدآ في المذاكرة الفعلية، تحصل على Pro مجانًا طوال فترة الامتحان.",
+    // no em dashes. Updated same day for the card-trial gate (state the
+    // trial terms honestly: card on file, 0 € today). Flagged to [name]
+    // separately by the orchestrator.
+    "ref_floater_body": "رمز الإحالة الخاص بك بانتظارك. ادعُ زميلين اثنين: بمجرد أن يبدآ الفترة التجريبية المجانية لـ Pro (بطاقة مسجلة، 0 € اليوم) ويذاكرا فعليًا، تحصل على Pro مجانًا طوال فترة الامتحان.",
     "ref_floater_cta_details": "عرض التفاصيل",
     "ref_floater_cta_not_now": "ليس الآن",
     "ref_copied": "تم نسخ الرابط!",

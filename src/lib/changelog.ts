@@ -24,6 +24,18 @@ export interface ChangelogEntry {
 export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-07-11",
+    tag: "improvement",
+    title: {
+      de: "Empfehlungen zählen jetzt erst nach dem kostenlosen Pro-Trial",
+      en: "Referrals now count only after the free Pro trial",
+    },
+    description: {
+      de: "Damit eine Empfehlung zählt, muss die eingeladene Person zusätzlich zum aktiven Üben jetzt auch den kostenlosen Pro-Trial starten: Karte hinterlegt, 0 € heute, jederzeit in der Testwoche kündbar, danach 19 €/Monat. Für dich als Empfehlenden bleibt alles kostenlos.",
+      en: "For a referral to count, the invited person must now also start the free Pro trial in addition to actively practising: card on file, 0 € today, cancel anytime during the trial week, then 19 €/month. Still completely free for you as the referrer.",
+    },
+  },
+  {
+    date: "2026-07-11",
     tag: "feature",
     title: {
       de: "Lad zwei Kolleg:innen ein, bekomm Pro kostenlos durchs Prüfungsfenster",

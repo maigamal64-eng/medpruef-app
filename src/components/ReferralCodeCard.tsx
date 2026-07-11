@@ -207,8 +207,8 @@ export default function ReferralCodeCard({
 
   const explainer =
     lang === "de"
-      ? "Lad zwei Kolleg:innen ein, die wirklich lernen, und bekomm Pro kostenlos durchs Prüfungsfenster."
-      : "Invite two colleagues who really study, and get Pro free through the exam window.";
+      ? "Lad zwei Kolleg:innen ein: Pro-Trial starten (Karte hinterlegt, 0 € heute) und wirklich lernen, dann bekommst du Pro kostenlos durchs Prüfungsfenster."
+      : "Invite two colleagues: start the Pro trial (card on file, 0 € today) and really study, then you get Pro free through the exam window.";
   const title =
     lang === "de"
       ? "Dein Empfehlungscode"
@@ -289,8 +289,8 @@ export default function ReferralCodeCard({
       {copiedAt && (
         <p className="text-[11px] text-[var(--mp-fg-subtle)] mt-2">
           {lang === "de"
-            ? "Teile ihn mit zwei Kolleg:innen, die wirklich lernen: sobald beide aktiv üben, bekommst du Pro kostenlos durchs Prüfungsfenster."
-            : "Share it with two colleagues who really study: once both are actively practising, you get Pro free through the exam window."}
+            ? "Teile ihn mit zwei Kolleg:innen: sobald beide den Pro-Trial starten (0 € heute) und aktiv üben, bekommst du Pro kostenlos durchs Prüfungsfenster."
+            : "Share it with two colleagues: once both start the Pro trial (0 € today) and are actively practising, you get Pro free through the exam window."}
         </p>
       )}
     </section>

@@ -310,6 +310,7 @@ export default function FaqPage() {
               <p>{copy.ref.intro[lang]}</p>
               <ul className="list-disc pl-5 space-y-1.5 mt-4">
                 <li>{copy.ref.b1[lang]}</li>
+                <li>{copy.ref.b1b[lang]}</li>
                 <li>{copy.ref.b2[lang]}</li>
               </ul>
 
@@ -574,12 +575,16 @@ const copy = {
       en: "How does the referral program work?",
     },
     intro: {
-      de: "Jede:r Nutzer:in bekommt einen persönlichen Empfehlungscode. Lad zwei Kolleginnen oder Kollegen ein, die wirklich mit dir für den Stichprobentest am 23. September in Graz lernen, und sobald beide aktiv sind, bekommst du MedPrüf Pro kostenlos durch das Prüfungsfenster. Keine Zahlung, von niemandem:",
-      en: "Every user gets a personal referral code. Invite two colleagues who really start studying with you for the Stichprobentest on 23 September in Graz, and once both are active you get MedPrüf Pro free through the exam window. No payment, from anyone:",
+      de: "Jede:r Nutzer:in bekommt einen persönlichen Empfehlungscode. Lad zwei Kolleginnen oder Kollegen ein, die wirklich mit dir für den Stichprobentest am 23. September in Graz lernen, und sobald beide qualifiziert sind, bekommst du MedPrüf Pro kostenlos durch das Prüfungsfenster. Für dich als Empfehlenden ist das komplett kostenlos:",
+      en: "Every user gets a personal referral code. Invite two colleagues who really start studying with you for the Stichprobentest on 23 September in Graz, and once both qualify you get MedPrüf Pro free through the exam window. Completely free for you as the referrer:",
     },
     b1: {
-      de: "Eine Empfehlung qualifiziert sich, sobald diese Person mindestens 20 verschiedene Fragen an mindestens 2 verschiedenen Tagen beantwortet hat.",
-      en: "A referral qualifies once that person answers at least 20 different questions across at least 2 different days.",
+      de: "Eine Empfehlung qualifiziert sich erst, wenn diese Person den kostenlosen Pro-Trial startet: Karte hinterlegt, 0 € heute, jederzeit in der Testwoche kündbar, danach 19 €/Monat.",
+      en: "A referral only qualifies once that person starts the free Pro trial: card on file, 0 € today, cancel anytime during the trial week, then 19 €/month.",
+    },
+    b1b: {
+      de: "Zusätzlich muss diese Person mindestens 20 verschiedene Fragen an mindestens 2 verschiedenen Tagen beantworten.",
+      en: "That person must also answer at least 20 different questions across at least 2 different days.",
     },
     b2: {
       de: "Nach der zweiten qualifizierten Empfehlung prüft unser Team kurz und schaltet Pro für dich frei, kostenlos bis zum Ende deines Prüfungsfensters (Prüfungstermin plus 14 Tage Puffer).",

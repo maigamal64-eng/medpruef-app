@@ -237,13 +237,19 @@ export default function ReferralsPage() {
   // Invite-message copy, one line, per user's UI language, exam-window
   // framed (MEDPRUF-SOT.md §2.x voice rules): lead with the exam+date,
   // "free through the exam window" never "until your exam date", no
-  // em dashes, no price. Code substituted at the end so the recipient
-  // has the exact link.
+  // em dashes, no price for the REFERRER's reward. Code substituted at
+  // the end so the recipient has the exact link.
+  //
+  // Card-trial gate (2026-07-11): the qualification terms must state the
+  // trial honestly per SoT §2 — card on file, 0 € today, 19 €/month
+  // after 7 days unless cancelled during the trial. This is the
+  // REFEREE's trial (the person clicking the link), not a charge on the
+  // referrer — stated plainly so nobody reads it as a hidden fee.
   const inviteMessage = (): string => {
     if (!data?.referralLink) return "";
     return lang === "de"
-      ? `Lad zwei Kolleginnen oder Kollegen ein, die wirklich mit dir für den Stichprobentest am 23. September in Graz lernen, und sobald beide aktiv sind, bekommst du MedPrüf Pro kostenlos durch das Prüfungsfenster: ${data.referralLink}`
-      : `Invite two colleagues who really start studying with you for the Stichprobentest on 23 September in Graz, and once both are active you get MedPrüf Pro free through the exam window: ${data.referralLink}`;
+      ? `Lad zwei Kolleg:innen ein: wenn beide den kostenlosen Pro-Trial starten (Karte hinterlegt, 0 € heute, jederzeit in der Testwoche kündbar) und wirklich mitlernen, bekommst du Pro kostenlos durchs Prüfungsfenster: ${data.referralLink}`
+      : `Invite two colleagues: once both start the free Pro trial (card on file, 0 € today, cancel anytime during the trial week) and really study along, you get Pro free through the exam window: ${data.referralLink}`;
   };
 
   const shareNative = async () => {
@@ -420,8 +426,8 @@ export default function ReferralsPage() {
                 </h2>
                 <p className="text-sm text-[var(--mp-fg-muted)] leading-relaxed">
                   {lang === "de"
-                    ? "Teile deinen Link. Sobald beide wirklich aktiv üben, bekommst du MedPrüf Pro kostenlos durch dein Prüfungsfenster. Keine Karte, keine Zahlung nötig."
-                    : "Share your link. Once both are actively practising, you get MedPrüf Pro free through your exam window. No card, no payment needed."}
+                    ? "Teile deinen Link. Sobald beide den kostenlosen Pro-Trial starten (Karte hinterlegt, 0 € heute) und wirklich aktiv üben, bekommst du MedPrüf Pro kostenlos durch dein Prüfungsfenster. Für dich als Empfehlenden komplett kostenlos."
+                    : "Share your link. Once both start the free Pro trial (card on file, 0 € today) and are actively practising, you get MedPrüf Pro free through your exam window. Completely free for you as the referrer."}
                 </p>
               </div>
             </div>
@@ -622,8 +628,8 @@ export default function ReferralsPage() {
                 </div>
                 <p className="text-xs text-[var(--mp-fg-muted)] mt-3 leading-relaxed">
                   {lang === "de"
-                    ? "Ein Kollege oder eine Kollegin zählt, sobald sie sich mit deinem Link anmelden und mindestens 20 verschiedene Fragen an mindestens 2 verschiedenen Tagen beantworten."
-                    : "A colleague counts once they sign up with your link and answer at least 20 different questions across at least 2 different days."}
+                    ? "Ein Kollege oder eine Kollegin zählt, sobald sie sich mit deinem Link anmelden, den kostenlosen Pro-Trial starten (Karte hinterlegt, 0 € heute, jederzeit in der Testwoche kündbar, danach 19 €/Monat) und mindestens 20 verschiedene Fragen an mindestens 2 verschiedenen Tagen beantworten."
+                    : "A colleague counts once they sign up with your link, start the free Pro trial (card on file, 0 € today, cancel anytime during the trial week, then 19 €/month), and answer at least 20 different questions across at least 2 different days."}
                 </p>
               </>
             )}
@@ -688,8 +694,8 @@ export default function ReferralsPage() {
                 }
                 body={
                   lang === "de"
-                    ? "Teile deinen Link mit anderen Prüflingen. Sobald zwei wirklich aktiv lernen, bekommst du Pro kostenlos durch dein Prüfungsfenster."
-                    : "Share your link with fellow candidates. Once two are actively studying, you get Pro free through your exam window."
+                    ? "Teile deinen Link mit anderen Prüflingen. Sobald zwei den kostenlosen Pro-Trial starten und wirklich aktiv lernen, bekommst du Pro kostenlos durch dein Prüfungsfenster."
+                    : "Share your link with fellow candidates. Once two start the free Pro trial and are actively studying, you get Pro free through your exam window."
                 }
                 action={
                   <button
@@ -732,12 +738,12 @@ export default function ReferralsPage() {
                 </div>
                 <div>
                   <div className="text-sm font-semibold text-[var(--mp-fg)] mb-0.5">
-                    {lang === "de" ? "Beide üben aktiv" : "Both start practising"}
+                    {lang === "de" ? "Beide starten den Pro-Trial" : "Both start the Pro trial"}
                   </div>
                   <p className="text-xs text-[var(--mp-fg-muted)] leading-relaxed">
                     {lang === "de"
-                      ? "Sobald jede Person mindestens 20 verschiedene Fragen an mindestens 2 verschiedenen Tagen beantwortet hat, qualifiziert sich die Empfehlung. Keine Zahlung nötig."
-                      : "Once each person answers at least 20 different questions across at least 2 different days, the referral qualifies. No payment needed."}
+                      ? "Jede Person hinterlegt eine Karte und startet den Pro-Trial: 0 € heute, jederzeit in der Testwoche kündbar, danach 19 €/Monat. Das ist der Trial deines Kollegen oder deiner Kollegin, dir wird nichts berechnet."
+                      : "Each person links a card and starts the Pro trial: 0 € today, cancel anytime during the trial week, then 19 €/month. This is your colleague's trial, you are never charged."}
                   </p>
                 </div>
               </li>
@@ -747,14 +753,29 @@ export default function ReferralsPage() {
                 </div>
                 <div>
                   <div className="text-sm font-semibold text-[var(--mp-fg)] mb-0.5">
+                    {lang === "de" ? "Beide üben aktiv" : "Both start practising"}
+                  </div>
+                  <p className="text-xs text-[var(--mp-fg-muted)] leading-relaxed">
+                    {lang === "de"
+                      ? "Sobald jede Person mindestens 20 verschiedene Fragen an mindestens 2 verschiedenen Tagen beantwortet hat, qualifiziert sich die Empfehlung."
+                      : "Once each person answers at least 20 different questions across at least 2 different days, the referral qualifies."}
+                  </p>
+                </div>
+              </li>
+              <li className="flex gap-3">
+                <div className="w-7 h-7 rounded-full bg-[var(--mp-viridian)]/10 text-[var(--mp-viridian)] text-xs font-bold flex items-center justify-center flex-shrink-0">
+                  4
+                </div>
+                <div>
+                  <div className="text-sm font-semibold text-[var(--mp-fg)] mb-0.5">
                     {lang === "de"
                       ? "Pro kostenlos durchs Prüfungsfenster"
                       : "Pro free through the exam window"}
                   </div>
                   <p className="text-xs text-[var(--mp-fg-muted)] leading-relaxed">
                     {lang === "de"
-                      ? "Nach der zweiten qualifizierten Empfehlung prüft unser Team kurz und schaltet MedPrüf Pro für dich frei, kostenlos bis zum Ende deines Prüfungsfensters."
-                      : "After your second qualified referral, our team does a quick review and unlocks MedPrüf Pro for you, free through the end of your exam window."}
+                      ? "Nach der zweiten qualifizierten Empfehlung prüft unser Team kurz und schaltet MedPrüf Pro für dich frei, kostenlos bis zum Ende deines Prüfungsfensters. Für dich als Empfehlenden ist das komplett kostenlos."
+                      : "After your second qualified referral, our team does a quick review and unlocks MedPrüf Pro for you, free through the end of your exam window. Completely free for you as the referrer."}
                   </p>
                   <p className="text-[11px] text-[var(--mp-fg-subtle)] mt-1">
                     <Link href="/faq#referrals" className="underline">
@@ -841,8 +862,8 @@ function SocialProofStrip({
         </p>
         <p className="text-xs text-[var(--mp-fg-subtle)] mt-1">
           {lang === "de"
-            ? "Teile den Code mit jemandem aus deiner Lerngruppe, die Empfehlung zählt, sobald diese Person aktiv übt."
-            : "Share the code with someone from your study group; the referral counts once that person starts actively practising."}
+            ? "Teile den Code mit jemandem aus deiner Lerngruppe, die Empfehlung zählt, sobald diese Person den kostenlosen Pro-Trial startet und aktiv übt."
+            : "Share the code with someone from your study group; the referral counts once that person starts the free Pro trial and is actively practising."}
         </p>
       </section>
     );

@@ -1185,8 +1185,8 @@ function QuizSharePrompt({ lang }: { lang: Lang }) {
         </p>
         <p className="text-[11px] text-[var(--mp-fg-subtle)] mt-0.5">
           {lang === "de"
-            ? "Teile deinen Empfehlungscode: wenn zwei Kolleg:innen aktiv üben, bekommst du Pro kostenlos durchs Prüfungsfenster."
-            : "Share your referral code: once two colleagues are actively practising, you get Pro free through the exam window."}
+            ? "Teile deinen Empfehlungscode: wenn zwei Kolleg:innen den Pro-Trial starten (0 € heute) und aktiv üben, bekommst du Pro kostenlos durchs Prüfungsfenster."
+            : "Share your referral code: once two colleagues start the Pro trial (0 € today) and are actively practising, you get Pro free through the exam window."}
         </p>
       </div>
       <Link
