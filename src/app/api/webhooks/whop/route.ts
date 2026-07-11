@@ -7,6 +7,7 @@ import {
   referralPayoutCents,
   REFERRAL_ANNUAL_CAP_CENTS,
 } from "@/lib/nowpayments";
+import { qualifyReferralOnActivity } from "@/lib/referral-exam-reward";
 import {
   verifyWhopSecretHeader,
   verifyWhopSignature,
@@ -503,8 +504,23 @@ export async function POST(req: NextRequest) {
 
     // Qualify any referral earned from this Whop payment. Best-effort —
     // the subscription is already granted; a qualification failure never
-    // blocks or retries the webhook response.
+    // blocks or retries the webhook response. (Legacy CASH referral
+    // program, src/lib/referrals.ts — reward_type='cash' rows only.)
     await qualifyReferralOnWhopPayment(sb, userId, f.paymentId, tier);
+
+    // Referral exam-reward (2026-07-11): this webhook is the trial-start
+    // BACKSTOP grant path (the primary path is /api/whop/trial/verify,
+    // called from /checkout/success — see that route's header comment).
+    // The subscriptions row just written above IS the card-trial signal
+    // (payment_provider='whop', payment_method='card'), so a referee
+    // whose activity already cleared the bar should qualify immediately
+    // here too, not only via the verify route. Best-effort, never-throw,
+    // matches qualifyReferralOnWhopPayment's swallow pattern just above.
+    try {
+      await qualifyReferralOnActivity(sb, userId);
+    } catch (referralErr) {
+      console.error("[webhooks/whop] referral exam-reward qualification:", referralErr);
+    }
 
     // FUNNEL: the terminal success. Pro granted on a real card payment — the
     // event /admin/payments leads with when the funnel completes end-to-end.

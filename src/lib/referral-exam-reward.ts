@@ -9,19 +9,40 @@
  * reviews/referral-exam-reward-2026-07-11/SPEC.md §2-3.
  *
  * Offer (one line): a referrer who gets N=2 colleagues to sign up with
- * their code AND each answer >=20 distinct questions across >=2
- * distinct UTC calendar days earns free Pro through the next sitting
- * of THEIR OWN active_exam (+14 day buffer). No payment, ever. The
- * Level-2 grant to the referrer is NOT auto-fired — it is enqueued for
- * a one-click admin confirmation (POST /api/admin/referrals/grant-
- * exam-reward) so a human eyeballs the farm signals before Pro ships.
+ * their code, EACH activate the Whop card-on-file Pro trial (or a paid
+ * Whop card subscription), AND EACH answer >=20 distinct questions
+ * across >=2 distinct UTC calendar days earns free Pro through the
+ * next sitting of THEIR OWN active_exam (+14 day buffer). No payment,
+ * ever, from the REFERRER — the card requirement is on the REFEREE,
+ * and it links a real card (0 € at trial start) but never charges the
+ * referrer anything. The Level-2 grant to the referrer is NOT
+ * auto-fired — it is enqueued for a one-click admin confirmation
+ * (POST /api/admin/referrals/grant-exam-reward) so a human eyeballs
+ * the farm signals before Pro ships.
  *
- * Two independent kill switches:
+ * Card-trial gate (2026-07-11, [name]-directed tightening): the card is
+ * the un-fakeable credibility signal a free-tier account cannot fake.
+ * A referee counts toward N=2 only once they have an ACTIVE Whop
+ * card-rail subscription row — see `hasActiveWhopCardSubscription()`
+ * below for the exact predicate + why it's pinned on
+ * provider/method, not tier (so a referee who converts straight to a
+ * paid card plan, a stronger signal than the trial, also counts).
+ * Gated independently by REFERRAL_REQUIRE_CARD_TRIAL (default TRUE —
+ * note the INVERTED polarity vs the other flags below, on purpose:
+ * this is a tightening, so its safe default is ON, not OFF).
+ *
+ * Three independent kill switches:
  *   - REFERRAL_EXAM_REWARD_ENABLED (env, default OFF) gates this
  *     entire module's binding code path (qualify + flag + grant). Every
  *     exported function below checks it FIRST and returns immediately
  *     when unset/false — not just the /api/answer call site — so there
  *     is no way to reach a row-flip or a grant with the flag off.
+ *   - REFERRAL_REQUIRE_CARD_TRIAL (env, default TRUE — read as
+ *     `!== 'false'`, the OPPOSITE default polarity of the flag above)
+ *     gates only the card-signal requirement inside qualification.
+ *     Setting it to the literal string 'false' falls back to
+ *     activity-only qualification (the pre-card-gate behavior); any
+ *     other value (unset, 'true', typo) keeps the card requirement ON.
  *   - users.referrals_enabled (DB, per-account) gates whether an
  *     account can see/use the referral UI at all. Checked upstream by
  *     the UI + /api/referrals/* routes; this module does not re-check
@@ -29,8 +50,9 @@
  *     because they have no pending referrals row to begin with, since
  *     /api/referrals/claim is itself gated by the invite-only UI).
  *
- * Flag OFF stops NEW qualifications and NEW grants. It does NOT claw
- * back Pro already granted (stated out loud, acceptable at this scale).
+ * REFERRAL_EXAM_REWARD_ENABLED=false stops NEW qualifications and NEW
+ * grants. It does NOT claw back Pro already granted (stated out loud,
+ * acceptable at this scale).
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
@@ -64,6 +86,19 @@ export const REFERRAL_EXAM_REWARD_BUFFER_DAYS = 14
  */
 export function isReferralExamRewardEnabled(): boolean {
   return process.env.REFERRAL_EXAM_REWARD_ENABLED === 'true'
+}
+
+/**
+ * Card-trial gate (2026-07-11). Default TRUE — deliberately the OPPOSITE
+ * polarity of `isReferralExamRewardEnabled()`. This flag is a
+ * TIGHTENING of an already-flag-gated mechanic, so its safe default is
+ * "require the card" (ON), not "skip the check" (OFF): a missing/typo'd
+ * var must never silently loosen the anti-abuse bar. Only the literal
+ * string 'false' disables the card requirement and falls back to
+ * activity-only qualification.
+ */
+export function isCardTrialRequired(): boolean {
+  return (process.env.REFERRAL_REQUIRE_CARD_TRIAL ?? 'true') !== 'false'
 }
 
 // ─────────────────────────────────────────────────────────────────────
@@ -131,6 +166,53 @@ interface PendingReferralRow {
 }
 
 /**
+ * Does this user have an active Whop CARD-rail subscription (the trial
+ * or a paid plan bought the same way)? This is the un-fakeable
+ * credibility signal [name] asked for — a real card was linked with Whop
+ * (KYC'd payment processor), even if the trial itself was €0.
+ *
+ * Predicate is pinned on `payment_provider='whop' AND
+ * payment_method='card'`, NOT on tier. That is the literal instruction
+ * (§ requirement 1: "pin the predicate on the provider/method that only
+ * the card flow writes") — the exclusion target is the legacy no-card
+ * regression row (tier='notes_free_trial', payment_provider='trial',
+ * payment_method='telegram_trial'; DB-verified 2026-07-11, 1 live row),
+ * which fails BOTH provider and method, not just tier. Restricting to
+ * tier='notes_pro_trial' would ALSO wrongly exclude a referee who skips
+ * the trial and converts straight to a paid card plan — a stronger
+ * signal than the €0 trial, not a weaker one — so this checks the rail,
+ * not the specific tier.
+ *
+ * `status='active'` means the signal is the CURRENT state, not
+ * "ever linked a card" — a referee who trialed, cleared the activity
+ * bar, then cancelled before this check ran would not (yet) satisfy
+ * the gate. Acceptable simplification: qualification is durable once
+ * flipped (the referrals row change is permanent), so this only
+ * affects the ordering where cancellation happens strictly before
+ * qualification is evaluated, not after.
+ */
+export async function hasActiveWhopCardSubscription(
+  sb: SupabaseClient,
+  userId: string
+): Promise<boolean> {
+  try {
+    const { data, error } = await sb
+      .from('subscriptions')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('payment_provider', 'whop')
+      .eq('payment_method', 'card')
+      .eq('status', 'active')
+      .limit(1)
+    if (error) return false
+    return (data || []).length > 0
+  } catch (err) {
+    console.error('[referral-exam-reward] hasActiveWhopCardSubscription', err)
+    return false
+  }
+}
+
+/**
  * Level 1 — flip a referee's `pending` referrals row to `qualified` once
  * their activity clears the bar. Called best-effort, never-throw, from
  * POST /api/answer after every answer write (src/app/api/answer/route.ts).
@@ -166,6 +248,17 @@ export async function qualifyReferralOnActivity(
       .maybeSingle()
     if (pendingErr || !pending) return
     const row = pending as PendingReferralRow
+
+    // 2b. Card-trial gate (2026-07-11): the referee must have activated
+    // the Whop card-on-file Pro trial (or a paid Whop card plan) before
+    // this row can qualify, on top of the activity bar below. Checked
+    // BEFORE the activity queries so a referee who hasn't linked a card
+    // yet short-circuits without the extra distinct-questions/distinct-
+    // days round-trips — cheap ordering, not a correctness requirement.
+    if (isCardTrialRequired()) {
+      const hasCard = await hasActiveWhopCardSubscription(sb, refereeUserId)
+      if (!hasCard) return
+    }
 
     // 3. Distinct questions — the audited helper, NOT raw answer_history
     //    row count (re-answering one question must not count twice,

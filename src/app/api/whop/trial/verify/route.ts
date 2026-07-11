@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/auth-guard";
 import { getServiceClient } from "@/lib/supabase";
 import { tierToWhopPlan } from "@/lib/whop";
 import { logPaymentEvent } from "@/lib/paymentEvents";
+import { qualifyReferralOnActivity } from "@/lib/referral-exam-reward";
 
 export const dynamic = "force-dynamic";
 
@@ -256,6 +257,17 @@ export async function POST(req: NextRequest) {
       });
     } catch {
       /* non-blocking */
+    }
+
+    // Referral exam-reward: the card just linked (this insert IS the
+    // card-trial signal), so a referee whose activity already cleared
+    // the bar before linking a card should qualify immediately, not
+    // wait for their next answer. Best-effort, never-throw, same
+    // swallow-log pattern as elsewhere in this route.
+    try {
+      await qualifyReferralOnActivity(sb, userId);
+    } catch (referralErr) {
+      console.error("[whop/trial/verify] referral exam-reward qualification:", referralErr);
     }
 
     await logPaymentEvent(sb, {
