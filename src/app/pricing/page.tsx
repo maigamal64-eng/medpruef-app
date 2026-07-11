@@ -1116,8 +1116,8 @@ function ReferralBlock({ lang }: { lang: Lang }) {
       </h3>
       <p className="text-sm text-[var(--mp-fg-muted)] mb-5 max-w-2xl leading-relaxed">
         {lang === "de"
-          ? "Du bist wahrscheinlich schon in den richtigen Telegram- oder WhatsApp-Gruppen für den Stichprobentest am 23. September in Graz. Teile dort deinen Empfehlungslink: sobald zwei Kolleginnen oder Kollegen den kostenlosen Pro-Trial starten (Karte hinterlegt, 0 € heute, jederzeit in der Testwoche kündbar) und wirklich aktiv lernen, bekommst du MedPrüf Pro kostenlos durch dein Prüfungsfenster."
-          : "You're probably already in the right Telegram or WhatsApp groups for the Stichprobentest on 23 September in Graz. Share your referral link there: once two colleagues start the free Pro trial (card on file, 0 € today, cancel anytime during the trial week) and are actively studying, you get MedPrüf Pro free through your exam window."}
+          ? "Du bist wahrscheinlich schon in den richtigen Telegram- oder WhatsApp-Gruppen für den Stichprobentest am 23. September in Graz. Teile dort deinen Empfehlungslink: sobald zwei Kolleginnen oder Kollegen den kostenlosen Pro-Trial starten (Karte hinterlegt, 0 € heute, danach 19 €/Monat, in der Testwoche jederzeit kündbar) und wirklich aktiv lernen, bekommst du MedPrüf Pro kostenlos durch dein Prüfungsfenster."
+          : "You're probably already in the right Telegram or WhatsApp groups for the Stichprobentest on 23 September in Graz. Share your referral link there: once two colleagues start the free Pro trial (card on file, 0 € today, then 19 €/month, cancel anytime during the trial week) and are actively studying, you get MedPrüf Pro free through your exam window."}
       </p>
 
       <div className="flex flex-wrap items-center gap-3">

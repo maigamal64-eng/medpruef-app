@@ -42,8 +42,8 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "Invite two colleagues, get Pro free through the exam window",
     },
     description: {
-      de: "Lad zwei Kolleginnen oder Kollegen ein, die wirklich mit dir lernen. Sobald beide aktiv üben, bekommst du MedPrüf Pro kostenlos durch dein Prüfungsfenster. Keine Karte, keine Zahlung nötig.",
-      en: "Invite two colleagues who really study with you. Once both are actively practising, you get MedPrüf Pro free through your exam window. No card, no payment needed.",
+      de: "Lad zwei Kolleginnen oder Kollegen ein, die wirklich mit dir lernen. Sobald beide den kostenlosen Pro-Trial starten (Karte hinterlegt, 0 € heute, danach 19 €/Monat) und aktiv üben, bekommst du MedPrüf Pro kostenlos durch dein Prüfungsfenster.",
+      en: "Invite two colleagues who really study with you. Once both start the free Pro trial (card on file, 0 € today, then 19 €/month) and are actively practising, you get MedPrüf Pro free through your exam window.",
     },
   },
   {

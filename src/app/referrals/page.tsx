@@ -248,8 +248,8 @@ export default function ReferralsPage() {
   const inviteMessage = (): string => {
     if (!data?.referralLink) return "";
     return lang === "de"
-      ? `Lad zwei Kolleg:innen ein: wenn beide den kostenlosen Pro-Trial starten (Karte hinterlegt, 0 € heute, jederzeit in der Testwoche kündbar) und wirklich mitlernen, bekommst du Pro kostenlos durchs Prüfungsfenster: ${data.referralLink}`
-      : `Invite two colleagues: once both start the free Pro trial (card on file, 0 € today, cancel anytime during the trial week) and really study along, you get Pro free through the exam window: ${data.referralLink}`;
+      ? `Lad zwei Kolleg:innen ein: wenn beide den kostenlosen Pro-Trial starten (Karte hinterlegt, 0 € heute, danach 19 €/Monat, in der Testwoche jederzeit kündbar) und wirklich mitlernen, bekommst du Pro kostenlos durchs Prüfungsfenster: ${data.referralLink}`
+      : `Invite two colleagues: once both start the free Pro trial (card on file, 0 € today, then 19 €/month, cancel anytime during the trial week) and really study along, you get Pro free through the exam window: ${data.referralLink}`;
   };
 
   const shareNative = async () => {
@@ -426,8 +426,8 @@ export default function ReferralsPage() {
                 </h2>
                 <p className="text-sm text-[var(--mp-fg-muted)] leading-relaxed">
                   {lang === "de"
-                    ? "Teile deinen Link. Sobald beide den kostenlosen Pro-Trial starten (Karte hinterlegt, 0 € heute) und wirklich aktiv üben, bekommst du MedPrüf Pro kostenlos durch dein Prüfungsfenster. Für dich als Empfehlenden komplett kostenlos."
-                    : "Share your link. Once both start the free Pro trial (card on file, 0 € today) and are actively practising, you get MedPrüf Pro free through your exam window. Completely free for you as the referrer."}
+                    ? "Teile deinen Link. Sobald beide den kostenlosen Pro-Trial starten (Karte hinterlegt, 0 € heute, danach 19 €/Monat) und wirklich aktiv üben, bekommst du MedPrüf Pro kostenlos durch dein Prüfungsfenster. Für dich als Empfehlenden komplett kostenlos."
+                    : "Share your link. Once both start the free Pro trial (card on file, 0 € today, then 19 €/month) and are actively practising, you get MedPrüf Pro free through your exam window. Completely free for you as the referrer."}
                 </p>
               </div>
             </div>
