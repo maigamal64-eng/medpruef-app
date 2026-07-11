@@ -14,8 +14,15 @@ export const dynamic = 'force-dynamic'
  *
  * Required env vars:
  *   - TELEGRAM_BOT_TOKEN
- *   - TELEGRAM_WEBHOOK_SECRET  (must match the secret_token used at registration)
- *   - NEXT_PUBLIC_SITE_URL     (used to build the deep-link URL sent back to the user)
+ *   - TELEGRAM_WEBHOOK_SECRET     (must match the secret_token used at registration)
+ *   - NEXT_PUBLIC_SITE_URL        (used to build the deep-link URL sent back to the user)
+ *
+ * Optional env var:
+ *   - TELEGRAM_OPS_FORWARD_TOKEN  (2026-07-11, OFF by default) — when set, an
+ *     internal ops bot token used to forward a short notification of every
+ *     inbound text message to chat 0 (the default [name] bot, per
+ *     workspace Telegram-routing rules). The telegram_inbound DB log below
+ *     is the primary fix and always fires regardless of this var.
  */
 
 interface TelegramFrom {
@@ -37,6 +44,75 @@ interface TelegramUpdate {
 }
 
 const TOKEN_TTL_MS = 10 * 60 * 1000 // 10 minutes
+
+/**
+ * Best-effort visibility log for an inbound TEXT message + optional forward
+ * to internal ops. ADDITIVE ONLY — this runs after the update has already
+ * been parsed and before the existing /start-only logic decides what (if
+ * anything) to reply. It must NEVER throw and must NEVER block or alter the
+ * existing auth/login/activation flow below it: every failure here is
+ * swallowed and logged to console, same never-throw contract as the
+ * sendMessage calls elsewhere in this file.
+ *
+ * Fixes the ops blind spot where a real user's free-text reply (anything
+ * that isn't "/start" or "/start <payload>") vanished with zero trace: the
+ * startMatch regex further down fails for it and the handler returns 200
+ * immediately, so previously nothing was recorded anywhere.
+ *
+ * Only called from the `!startMatch` branch (see POST below), so `from` and
+ * `text` are guaranteed present by the guard above it — this deliberately
+ * never sees /start login-token exchanges or bot-activation traffic.
+ */
+async function logTelegramInbound(msg: TelegramMessage): Promise<void> {
+  const from = msg.from
+  const text = msg.text
+  if (!from || !text) return // guaranteed by the caller's guard; satisfies TS narrowing only
+  try {
+    const sb = getServiceClient()
+    const { data: matchedUser } = await sb
+      .from('users')
+      .select('id')
+      .eq('telegram_id', from.id)
+      .maybeSingle()
+    const { error } = await sb.from('telegram_inbound').insert({
+      telegram_id: from.id,
+      chat_id: msg.chat.id,
+      username: from.username || null,
+      first_name: from.first_name || null,
+      message_text: text,
+      raw: msg as unknown as Record<string, unknown>,
+      matched_user_id: matchedUser?.id ?? null,
+    })
+    if (error) {
+      console.error('telegram_inbound insert failed:', error)
+    }
+
+    // Bonus: best-effort forward to internal ops ([name] bot, chat 0).
+    // OFF by default — TELEGRAM_OPS_FORWARD_TOKEN is not currently set in
+    // this project's env (only the customer-facing TELEGRAM_BOT_TOKEN for
+    // @MedPruefBot exists here; the internal [name]-bot token lives at the
+    // workspace level, not in medpruef-app). The DB row above is the
+    // primary fix and always fires regardless of this env var. Set
+    // TELEGRAM_OPS_FORWARD_TOKEN in Vercel to turn the forward on.
+    const opsToken = process.env.TELEGRAM_OPS_FORWARD_TOKEN
+    if (opsToken) {
+      const name = from.first_name || from.username || String(from.id)
+      const truncated = text.length > 300 ? `${text.slice(0, 300)}…` : text
+      const forwardText = `[MedPrüf][bot-inbound] ${name} (${from.id}): ${truncated}`
+      try {
+        await fetch(`https://api.telegram.org/bot${opsToken}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chat_id: 0, text: forwardText }),
+        })
+      } catch (e) {
+        console.error('telegram ops-forward sendMessage failed:', e)
+      }
+    }
+  } catch (e) {
+    console.error('logTelegramInbound failed:', e)
+  }
+}
 
 /**
  * Escape text for Telegram's MarkdownV2 parse mode. Every one of these
@@ -72,7 +148,20 @@ export async function POST(req: NextRequest) {
 
   // Match "/start" or "/start <payload>"
   const startMatch = msg.text.match(/^\/start(?:@\w+)?(?:\s+(\S+))?$/)
-  if (!startMatch) return NextResponse.json({ ok: true })
+  if (!startMatch) {
+    // Visibility log (2026-07-11): every inbound message that ISN'T a
+    // /start command falls through here today with zero trace — that's
+    // exactly the ops blind spot (a free-text reply to outreach). Scoped
+    // to this branch on purpose so it never logs our own /start login-token
+    // exchanges or bot-activation traffic (auth_<uuid> / web_login), only
+    // genuine free-text replies from a real user. Awaited (not fire-and-
+    // forget) because Vercel serverless functions can freeze/terminate the
+    // moment the response is returned, which would silently drop an
+    // un-awaited insert. The function itself is wrapped in try/catch and
+    // never throws, so this cannot fail or alter the response below.
+    await logTelegramInbound(msg)
+    return NextResponse.json({ ok: true })
+  }
   const payload = startMatch[1]
 
   // Bot activation flow (review-2026-04-26-B2): the /dashboard
