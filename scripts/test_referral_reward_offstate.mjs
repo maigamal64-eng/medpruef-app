@@ -150,6 +150,73 @@ if (stuckQueueResult) {
   );
 }
 
+// ── Card-trial gate scenarios (2026-07-11 tightening) ──────────────────
+// All four cases below run with REFERRAL_EXAM_REWARD_ENABLED='true' (the
+// master flag is ON) and vary ONLY the card-trial fixture + the
+// REFERRAL_REQUIRE_CARD_TRIAL flag, so any pass/fail difference is
+// attributable to the card gate specifically, not the master flag.
+
+console.log(
+  "\n=== Card-gate case (a): activity met, NO card trial → must NOT qualify ==="
+);
+const noCardResult = runOne("true", "card-gate-no-card", {
+  CARD_TRIAL_FIXTURE: "none",
+});
+if (noCardResult) {
+  assert(
+    noCardResult.rowFlipped === false,
+    "CARD-GATE (a): pending row did NOT flip despite 20 distinct Qs / 2 days (no card on file)"
+  );
+  assert(
+    noCardResult.anyMutationFiredAfterQualify === false,
+    "CARD-GATE (a): no mutation fired from qualifyReferralOnActivity (short-circuited before the activity check)"
+  );
+}
+
+console.log(
+  "\n=== Card-gate case (b): card trial + activity → qualifies ==="
+);
+const cardAndActivityResult = runOne("true", "card-gate-card-and-activity", {
+  CARD_TRIAL_FIXTURE: "card",
+});
+if (cardAndActivityResult) {
+  assert(
+    cardAndActivityResult.rowFlipped === true,
+    "CARD-GATE (b): pending row DID flip (active Whop card-rail subscription + 20 distinct Qs / 2 days)"
+  );
+  assert(
+    cardAndActivityResult.tierGranted === true,
+    "CARD-GATE (b): the full chain still completes end-to-end (referrer granted)"
+  );
+}
+
+console.log(
+  "\n=== Card-gate case (c): REFERRAL_REQUIRE_CARD_TRIAL='false' → activity-only fallback works ==="
+);
+const fallbackResult = runOne("true", "card-gate-fallback-off", {
+  CARD_TRIAL_FIXTURE: "none",
+  REFERRAL_REQUIRE_CARD_TRIAL: "false",
+});
+if (fallbackResult) {
+  assert(
+    fallbackResult.rowFlipped === true,
+    "CARD-GATE (c): with the card requirement explicitly OFF, activity-only (no card fixture) still qualifies — proves the fallback polarity is correct, not just that the gate exists"
+  );
+}
+
+console.log(
+  "\n=== Card-gate case (d): legacy no-card (telegram_trial) row does NOT satisfy the gate ==="
+);
+const legacyResult = runOne("true", "card-gate-legacy-row", {
+  CARD_TRIAL_FIXTURE: "legacy",
+});
+if (legacyResult) {
+  assert(
+    legacyResult.rowFlipped === false,
+    "CARD-GATE (d): a tier='notes_free_trial'/payment_provider='trial'/payment_method='telegram_trial' row does NOT satisfy hasActiveWhopCardSubscription (fails provider AND method, not just tier)"
+  );
+}
+
 if (process.exitCode === 1) {
   console.error("\nFAILED — see FAIL lines above.");
   process.exit(1);

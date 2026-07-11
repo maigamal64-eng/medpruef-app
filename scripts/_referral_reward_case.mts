@@ -4,17 +4,30 @@
  * (not a temp file), imported/spawned via `npx tsx` so it can resolve
  * the real `@/lib/referral-exam-reward` module + its `@/*` alias.
  *
- * Reads TEST_CASE_NAME from env (just an echo label in the output),
- * and REFERRAL_EXAM_REWARD_ENABLED is read by the module under test
- * itself (this file never touches that env var — the harness sets it
- * before spawning this process, proving the gate is read from real
- * process.env, not injected as a function argument).
+ * Reads TEST_CASE_NAME from env (just an echo label in the output).
+ * REFERRAL_EXAM_REWARD_ENABLED and REFERRAL_REQUIRE_CARD_TRIAL are read
+ * by the module under test itself (this file never touches them —
+ * the harness sets them before spawning this process, proving the
+ * gates are read from real process.env, not injected as arguments).
  *
  * NO_ACTIVE_EXAM=1 selects the stuck-queue-no-op scenario (2026-07-11
  * fix): the referrer fixture has active_exam=null, so
  * grantExamRewardToReferrer's terminal no-op branch fires and must
  * resolve the queue entry (stamp hold_reason away from
  * 'exam_reward_pending_review') instead of leaving it stuck forever.
+ *
+ * CARD_TRIAL_FIXTURE selects the referee's subscriptions-table fixture
+ * for the card-gate tests (2026-07-11 tightening):
+ *   'none'      — no subscriptions row at all (referee never trialed)
+ *   'card'      — active Whop card-rail row (payment_provider='whop',
+ *                 payment_method='card', status='active') — the real
+ *                 qualifying signal
+ *   'legacy'    — the legacy no-card regression row
+ *                 (tier='notes_free_trial', payment_provider='trial',
+ *                 payment_method='telegram_trial', status='active') —
+ *                 must NOT satisfy the gate on any axis
+ * Defaults to 'card' so the pre-existing ON/stuck-queue scenarios keep
+ * passing unchanged when this var isn't set.
  */
 
 import {
@@ -52,7 +65,11 @@ function makeMock() {
   // no_active_exam branch fires instead of a real grant.
   const referrerActiveExam = process.env.NO_ACTIVE_EXAM === "1" ? null : "kenntnispruefung";
 
-  const state: { users: Record<string, Row>; referrals: Record<string, Row> } = {
+  const state: {
+    users: Record<string, Row>;
+    referrals: Record<string, Row>;
+    subscriptions: Record<string, Row>;
+  } = {
     users: {
       [REFEREE_ID]: {
         id: REFEREE_ID,
@@ -87,9 +104,40 @@ function makeMock() {
         qualified_at: "2026-06-21T00:00:00.000Z",
       },
     },
+    subscriptions: {},
   };
 
-  function table(name: "users" | "referrals" | "answer_history") {
+  // Card-gate fixture (2026-07-11 tightening). Default 'card' so the
+  // pre-card-gate scenarios (ON, stuck-queue) keep exercising the real
+  // qualifying path unchanged when this var isn't explicitly set.
+  const cardFixture = process.env.CARD_TRIAL_FIXTURE || "card";
+  if (cardFixture === "card") {
+    state.subscriptions["sub-card-1"] = {
+      id: "sub-card-1",
+      user_id: REFEREE_ID,
+      tier: "notes_pro_trial",
+      status: "active",
+      payment_provider: "whop",
+      payment_method: "card",
+      started_at: "2026-07-01T08:00:00.000Z",
+    };
+  } else if (cardFixture === "legacy") {
+    // The legacy no-card regression row (2026-07-04..09 window,
+    // MEDPRUF-SOT.md §10.2): must fail the gate on provider AND method,
+    // not just tier.
+    state.subscriptions["sub-legacy-1"] = {
+      id: "sub-legacy-1",
+      user_id: REFEREE_ID,
+      tier: "notes_free_trial",
+      status: "active",
+      payment_provider: "trial",
+      payment_method: "telegram_trial",
+      started_at: "2026-07-04T08:00:00.000Z",
+    };
+  }
+  // cardFixture === "none": no subscriptions row at all.
+
+  function table(name: "users" | "referrals" | "answer_history" | "subscriptions") {
     return {
       select() {
         const filters: Array<[string, unknown]> = [];
