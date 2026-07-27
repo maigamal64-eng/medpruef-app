@@ -13,6 +13,7 @@ import Link from "next/link";
 import { t, getLang, setLang } from "@/lib/i18n";
 import { trackEvent, trackPageView } from "@/lib/tracker";
 import { getStoredSession, storeSession } from "@/lib/auth";
+import { getPaywallCopy } from "@/lib/paywall-copy";
 import { useUserTier } from "@/lib/hooks/useUserTier";
 import { recordAnswer } from "@/lib/weakness";
 import { Inbox, Trophy, Sparkles, Gift } from "lucide-react";
@@ -1063,6 +1064,12 @@ function QuizContent() {
               ? "Wechsle zu einer anderen Prüfung, um weitere 150 kostenlose Fragen zu bekommen, klicke auf den Prüfungswechsler oben links."
               : "Switch to a different exam for another 150 free questions: use the exam switcher in the top-left sidebar."}
           </Alert>
+          {paywall?.kind === "qbank_limit" && (
+            // Subtle, factual — must not compete with the upgrade CTA above.
+            <p className="text-xs text-[var(--mp-fg-subtle)] leading-snug">
+              {getPaywallCopy({ lang }).secondAccountNote}
+            </p>
+          )}
         </div>
       </Dialog>
 

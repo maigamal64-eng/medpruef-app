@@ -137,6 +137,11 @@ export default function PaywallUpgradeModal({
           />
           <span>{copy.reassurance}</span>
         </div>
+
+        {/* Subtle, factual — must not compete with the upgrade CTA above. */}
+        <p className="text-[11px] text-[var(--mp-fg-subtle)] leading-snug">
+          {copy.secondAccountNote}
+        </p>
       </div>
     </Dialog>
   )

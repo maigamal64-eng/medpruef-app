@@ -6,6 +6,7 @@ import { getLang, setLang } from "@/lib/i18n";
 import { getStoredSession, storeSession, setSessionToken, getSessionToken } from "@/lib/auth";
 import { trackRegistration } from "@/lib/conversion-events";
 import { getStoredAttribution } from "@/lib/attribution";
+import { getKnownAccounts, rememberKnownAccount, type KnownAccount } from "@/lib/known-accounts";
 import { BrandedLoader } from "@/components/Logo";
 import { TextField } from "@/components/ui";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -18,6 +19,7 @@ import {
   Eye,
   EyeOff,
   KeyRound,
+  Info,
 } from "lucide-react";
 import { extractLoginCode, looksLikeLoginCode } from "@/lib/telegram-login";
 
@@ -95,8 +97,16 @@ export default function LoginPage() {
   const [tgCode, setTgCode] = useState("");
   const [codeError, setCodeError] = useState("");
 
+  // "You've signed in on this device before" hint (2026-07-27). Purely
+  // local — read once on mount from localStorage via known-accounts.ts.
+  // Surfaced on the REGISTER tab when the typed email doesn't match a
+  // remembered one, so a returning user doesn't accidentally spin up a
+  // second free account instead of signing back into their real one.
+  const [knownAccounts, setKnownAccounts] = useState<KnownAccount[]>([]);
+
   useEffect(() => {
     setLangState(getLang());
+    setKnownAccounts(getKnownAccounts());
 
     // Capture ?ref=<code> and stash it for after signup. We do this
     // BEFORE the session-redirect check so even already-logged-in
@@ -187,6 +197,11 @@ export default function LoginPage() {
       // Persist the signed session token — THE auth credential authFetch
       // sends on every subsequent request (S-1, 2026-06-02).
       setSessionToken(data.sessionToken);
+      // Remember this email as "known on this device" (2026-07-27) so a
+      // returning visitor gets the register-tab hint instead of quietly
+      // creating a second free account. Device-local only, see
+      // src/lib/known-accounts.ts.
+      rememberKnownAccount(data.user?.email || email);
       // Paid-ads conversion signal — ONLY on a NEW free registration (not
       // login). Fires fbq('track','CompleteRegistration') + gtag('event',
       // 'sign_up'); both self-gate on cookie consent + tracker presence, so
@@ -251,6 +266,8 @@ export default function LoginPage() {
       }
       storeSession({ user: data.user, gamification: data.gamification });
       setSessionToken(data.sessionToken);
+      // No-ops for Telegram-only accounts with no email on file.
+      rememberKnownAccount(data.user?.email);
       if (data.user?.id) {
         await claimStoredReferralCode();
       }
@@ -273,6 +290,17 @@ export default function LoginPage() {
     lang === "de"
       ? "Österreichische Ärzteprüfung vorbereiten"
       : "Prepare for the Austrian medical exam";
+
+  // "You've signed in on this device before" hint (2026-07-27, see
+  // src/lib/known-accounts.ts). Only on the register tab, only when the
+  // typed email doesn't already match the most-recently-used known email
+  // (an empty field counts as "different", so the hint shows before the
+  // user has typed anything too).
+  const mostRecentKnownAccount = knownAccounts[0];
+  const showKnownAccountHint =
+    mode === "register" &&
+    !!mostRecentKnownAccount &&
+    mostRecentKnownAccount.email.toLowerCase() !== email.trim().toLowerCase();
 
   return (
     <div className="min-h-screen bg-[var(--mp-surface-sunken)] safe-area-top safe-area-bottom flex flex-col">
@@ -450,6 +478,48 @@ export default function LoginPage() {
                   )}
                 </button>
               </div>
+
+              {showKnownAccountHint && mostRecentKnownAccount && (
+                <div
+                  className="flex items-start gap-2.5 rounded-xl border px-3.5 py-3 text-sm animate-fade-in"
+                  style={{
+                    background: "var(--mp-info-bg)",
+                    borderColor: "rgba(58,124,165,.3)",
+                    color: "var(--mp-info)",
+                  }}
+                  role="status"
+                >
+                  <Info className="w-4 h-4 flex-shrink-0 mt-0.5" aria-hidden />
+                  <div className="flex-1 min-w-0">
+                    <p>
+                      {lang === "de" ? (
+                        <>
+                          Du hast dich auf diesem Gerät bereits mit{" "}
+                          <strong>{mostRecentKnownAccount.email}</strong> angemeldet.
+                        </>
+                      ) : (
+                        <>
+                          You have signed in on this device before as{" "}
+                          <strong>{mostRecentKnownAccount.email}</strong>.
+                        </>
+                      )}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMode("login");
+                        setEmail(mostRecentKnownAccount.email);
+                        setError("");
+                      }}
+                      className="mt-1.5 font-semibold underline underline-offset-2 hover:opacity-80 transition-opacity"
+                    >
+                      {lang === "de"
+                        ? "Stattdessen anmelden, um deinen Fortschritt zu behalten"
+                        : "Sign in instead to keep your progress"}
+                    </button>
+                  </div>
+                </div>
+              )}
 
               <button
                 type="submit"

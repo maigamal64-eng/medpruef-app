@@ -38,6 +38,14 @@ export interface PaywallCopy {
   milestoneIntro: string;
   /** Follow-on sentence: "now comes the meaningful part". */
   milestoneFollowup: string;
+  /**
+   * One factual, low-key line clarifying that a second free account does
+   * NOT unlock more questions (added 2026-07-27, after a paying user hit
+   * the cap on a free second account instead of signing back into their
+   * paid one — see the Hafez/dr.ataya case). Render as small muted text,
+   * never as a competing CTA.
+   */
+  secondAccountNote: string;
 }
 
 export interface PaywallCopyArgs {
@@ -139,5 +147,9 @@ export function getPaywallCopy({ lang, stats }: PaywallCopyArgs): PaywallCopy {
       : de
         ? "Das ist ein Meilenstein: jetzt kommt der wichtige Teil."
         : "That's a milestone: now comes the meaningful part.",
+
+    secondAccountNote: de
+      ? "Hinweis: Ein neues Konto schaltet keine weiteren Fragen frei. Die kostenlosen 150 Fragen pro Prüfung sind bei jedem Konto gleich."
+      : "Heads up: a new account will not unlock more questions. The free 150 per exam are the same for every account.",
   };
 }

@@ -545,6 +545,11 @@ function FlashcardContent() {
             />
             <span>{paywallCopy.reassurance}</span>
           </div>
+
+          {/* Subtle, factual — must not compete with the upgrade CTA above. */}
+          <p className="text-center text-[11px] text-[var(--mp-fg-subtle)] leading-snug pt-2">
+            {paywallCopy.secondAccountNote}
+          </p>
         </div>
       </div>
     );
