@@ -1,0 +1,23 @@
+-- 2026-07-31 security fix: `question_popularity` (added 20260703200000) was
+-- created without `security_invoker`, so Postgres ran it as its owner and it
+-- bypassed the deny-all RLS on `answer_history`. PostgREST had also granted
+-- anon/authenticated SELECT by default, so an anonymous caller holding the
+-- public anon key (which ships in the client bundle) could read per-question
+-- answer counts for the entire platform:
+--
+--   GET /rest/v1/question_popularity  ->  200 [{"question_id":54504,"n":11}, ...]
+--
+-- No PII is exposed (the view carries no user_id), but summing `n` leaks total
+-- platform usage, which is competitive intel we do not publish. Flagged
+-- ERROR-level by the Supabase security linter as 0010_security_definer_view.
+--
+-- The view's ONLY consumer is scripts/generate-notes.mjs, which authenticates
+-- with SUPABASE_SERVICE_ROLE_KEY; the original migration comment already
+-- declared it "Service-role read". Service role bypasses RLS, so both changes
+-- below are transparent to it. No app code reads this view (all data access
+-- goes through /api/* per the architecture rule).
+--
+-- Verified on prod after applying: anon -> HTTP 401 "permission denied for
+-- view question_popularity"; service_role -> HTTP 200 with rows.
+alter view public.question_popularity set (security_invoker = true);
+revoke all on public.question_popularity from anon, authenticated;

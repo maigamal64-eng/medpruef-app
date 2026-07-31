@@ -23,6 +23,30 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-07-31",
+    tag: "improvement",
+    title: {
+      de: "Klarer Hinweis: ein zweites Konto schaltet keine weiteren Gratis-Fragen frei",
+      en: "Clearer note: a second account does not unlock more free questions",
+    },
+    description: {
+      de: "Wer bereits ein Konto hat, sieht beim Anmelden jetzt einen Hinweis auf sein bekanntes Konto, damit der Lernfortschritt nicht versehentlich auf zwei Konten aufgeteilt wird. Am Limit der Gratis-Fragen steht jetzt außerdem offen dabei, dass die 150 kostenlosen Fragen pro Prüfung bei jedem Konto dieselben sind.",
+      en: "If you already have an account, the login screen now points you back to it so your progress does not get split across two accounts by accident. The free-question limit also now says openly that the 150 free questions per exam are the same on every account.",
+    },
+  },
+  {
+    date: "2026-07-31",
+    tag: "admin",
+    title: {
+      de: "Interne Härtung: Auswertungs-View nicht mehr öffentlich lesbar",
+      en: "Internal hardening: analytics view no longer publicly readable",
+    },
+    description: {
+      de: "Die interne View question_popularity lief ohne security_invoker und war über den öffentlichen API-Schlüssel lesbar, wodurch die Antwortzahlen pro Frage plattformweit abrufbar waren. Keine personenbezogenen Daten betroffen (die View enthält keine Nutzer-ID). Zugriff jetzt auf die Service-Rolle beschränkt.",
+      en: "The internal question_popularity view ran without security_invoker and was readable with the public API key, exposing platform-wide answer counts per question. No personal data was involved (the view carries no user id). Access is now restricted to the service role.",
+    },
+  },
+  {
     date: "2026-07-11",
     tag: "improvement",
     title: {
