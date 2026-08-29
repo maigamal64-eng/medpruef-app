@@ -37,35 +37,13 @@ const [open, setOpen] = useState(false)
 
 ---
 
-## BottomSheet — `<BottomSheet>`
+## BottomSheet — removed
 
-Anchored slide-in surface: bottom sheet on mobile (`< lg`), right-side drawer on desktop (`>= lg`). Use when the user should still see the context behind the surface — e.g. AI chat about a question while the question stays visible.
-
-```tsx
-<BottomSheet
-  open={open}
-  onOpenChange={setOpen}
-  title="KI-Erklärung"
-  description="Bezug: Frage 7 · Kardiologie"
-  footer={
-    <div className="flex gap-2 p-3">
-      <input className="mp-field__input flex-1" placeholder="Folgefrage stellen..." />
-      <button className="mp-btn mp-btn--primary">Senden</button>
-    </div>
-  }
->
-  <MessageList messages={messages} />
-</BottomSheet>
-```
-
-**Props:** `open`, `onOpenChange`, `title`, `description?`, `children?`, `footer?`, `position?` (`"auto" | "bottom" | "right"`, default `"auto"`), `width?` (desktop drawer width, default `"420px"`), `closeOnBackdrop?` (default true), `closeOnEscape?` (default true), `hideCloseButton?`, `ariaDescribedBy?`, `surfaceClassName?`.
-
-**Behavior:**
-- `"auto"` resolves to `"bottom"` below 1024px (Tailwind `lg`) and `"right"` at/above it. Responds live to viewport resizes.
-- Mobile: slides up from the bottom, max-height 85vh, rounded top corners, grab handle with swipe-down-to-close (threshold 120px).
-- Desktop: slides in from the right, full height, rounded left corners, default 420px wide (override with `width`).
-- Backdrop dims the surface behind but keeps it partially visible — unlike centered `<Dialog>` which opaquely overlays it.
-- Inherits every a11y guarantee from `<Dialog>`: focus trap, return focus, Esc closes, body scroll lock, `aria-modal`, `aria-labelledby`, reduced-motion respect.
+There is no `<BottomSheet>` primitive. It existed on the April 2026 feature
+branches but was never merged: `Dialog` replaced it because its desktop
+drawer form was the rejected direction (see the note in
+`src/components/NoteReader.tsx`). This heading is kept as a tombstone so the
+component is not "re-added" from an old branch by mistake. Use `<Dialog>`.
 
 ---
 
