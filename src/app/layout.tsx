@@ -16,6 +16,7 @@ import LangHtmlSync from "@/components/LangHtmlSync";
 import ConsentGatedAnalytics from "@/components/ConsentGatedAnalytics";
 import ConsentGatedMetaPixel from "@/components/ConsentGatedMetaPixel";
 import ConsentGatedRedditPixel from "@/components/ConsentGatedRedditPixel";
+import WhopPixel from "@/components/WhopPixel";
 import AttributionCapture from "@/components/AttributionCapture";
 import IntercomMessenger from "@/components/IntercomMessenger";
 import OfflineIndicator from "@/components/OfflineIndicator";
@@ -405,6 +406,12 @@ export default function RootLayout({
                 test dormant). See marketing/campaigns/paid-ads-setup-2026-06-24.md. */}
             <ConsentGatedMetaPixel />
             <ConsentGatedRedditPixel />
+            {/* Whop Pixel (biz_redacted912fd07f). Deliberately NOT behind
+                the cookie banner ([name]'s call 2026-08-29): it loads for
+                every visitor, unlike the Meta + Reddit pixels above.
+                NEXT_PUBLIC_WHOP_PIXEL_CONSENT_MODE=optin|optout re-gates it
+                without a code change. */}
+            <WhopPixel />
             {/* First-touch campaign attribution (utm_* + rdt_cid) captured to
                 localStorage on landing, attached to the register call. Not a
                 tracker, no consent gate needed (first-party, no network). */}

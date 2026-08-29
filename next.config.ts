@@ -22,17 +22,17 @@ const CSP = [
   "default-src 'self'",
   // connect.facebook.net serves fbevents.js (the Meta Pixel loader).
   // Intercom: app/widget loaders + the intercomcdn script bundle.
-  "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.clarity.ms https://telegram.org https://connect.facebook.net https://app.intercom.io https://widget.intercom.io https://js.intercomcdn.com",
+  "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.clarity.ms https://telegram.org https://connect.facebook.net https://app.intercom.io https://widget.intercom.io https://js.intercomcdn.com https://t.whop.tw https://m1.openfpcdn.io",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://js.intercomcdn.com",
   // www.facebook.com receives the Pixel tracking beacon (/tr as a 1x1 img);
   // connect.facebook.net is the loader origin. Intercom serves avatars,
   // uploads + messenger UI assets from its CDNs.
-  "img-src 'self' data: blob: https://[project].supabase.co https://www.googletagmanager.com https://www.google-analytics.com https://t.me https://www.facebook.com https://connect.facebook.net https://js.intercomcdn.com https://static.intercomassets.com https://downloads.intercomcdn.com https://uploads.intercomusercontent.com https://gifs.intercomcdn.com https://messenger-apps.intercom.io",
+  "img-src 'self' data: blob: https://[project].supabase.co https://www.googletagmanager.com https://www.google-analytics.com https://t.me https://www.facebook.com https://connect.facebook.net https://js.intercomcdn.com https://static.intercomassets.com https://downloads.intercomcdn.com https://uploads.intercomusercontent.com https://gifs.intercomcdn.com https://messenger-apps.intercom.io https://t.whop.tw",
   "font-src 'self' data: https://fonts.gstatic.com https://js.intercomcdn.com https://fonts.intercomcdn.com",
   "media-src 'self' https://js.intercomcdn.com",
   // Pixel also POSTs events to www.facebook.com / connect.facebook.net (fetch/beacon).
   // Intercom: regional REST APIs (US/EU/AU) + the realtime nexus websockets.
-  "connect-src 'self' https://[project].supabase.co https://www.google-analytics.com https://region1.google-analytics.com https://*.clarity.ms https://api.openai.com https://api.anthropic.com https://*.ingest.de.sentry.io https://o4511227511504896.ingest.de.sentry.io https://telegram.org https://www.facebook.com https://connect.facebook.net https://api-iam.intercom.io https://api-iam.eu.intercom.io https://api-iam.au.intercom.io https://api-ping.intercom.io https://nexus-websocket-a.intercom.io https://nexus-websocket-b.intercom.io wss://nexus-websocket-a.intercom.io wss://nexus-websocket-b.intercom.io https://nexus-europe-websocket.intercom.io wss://nexus-europe-websocket.intercom.io https://nexus-australia-websocket.intercom.io wss://nexus-australia-websocket.intercom.io https://uploads.intercomcdn.com https://uploads.intercomusercontent.com",
+  "connect-src 'self' https://[project].supabase.co https://www.google-analytics.com https://region1.google-analytics.com https://*.clarity.ms https://api.openai.com https://api.anthropic.com https://*.ingest.de.sentry.io https://o4511227511504896.ingest.de.sentry.io https://telegram.org https://www.facebook.com https://connect.facebook.net https://api-iam.intercom.io https://api-iam.eu.intercom.io https://api-iam.au.intercom.io https://api-ping.intercom.io https://nexus-websocket-a.intercom.io https://nexus-websocket-b.intercom.io wss://nexus-websocket-a.intercom.io wss://nexus-websocket-b.intercom.io https://nexus-europe-websocket.intercom.io wss://nexus-europe-websocket.intercom.io https://nexus-australia-websocket.intercom.io wss://nexus-australia-websocket.intercom.io https://uploads.intercomcdn.com https://uploads.intercomusercontent.com https://t.whop.tw https://m1.openfpcdn.io",
   "frame-src 'self' https://oauth.telegram.org https://intercom-sheets.com https://www.intercom-reCAPTCHA.com https://messenger-apps.intercom.io",
   "worker-src 'self'",
   "manifest-src 'self'",

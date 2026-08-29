@@ -24,6 +24,18 @@ export interface ChangelogEntry {
 export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-07-31",
+    tag: "admin",
+    title: {
+      de: "Whop-Pixel eingebunden (nur nach Einwilligung)",
+      en: "Whop pixel added (consent-gated)",
+    },
+    description: {
+      de: "Der Attributions-Pixel unseres Zahlungsanbieters Whop ist eingebunden, damit wir sehen, welche Inhalte zu einem Kauf führen. Er wird auf allen Seiten geladen, auf Grundlage unseres berechtigten Interesses an dieser Messung. Die Datenschutzerklärung nennt ihn jetzt ausdrücklich, inklusive des verwendeten Geräte-Erkennungsmerkmals und Ihres Widerspruchsrechts.",
+      en: "Our payment provider Whop's attribution pixel is now installed so we can see which content leads to a purchase. It loads on all pages on the basis of our legitimate interest in that measurement. The privacy policy now names it explicitly, including the device fingerprint it uses and your right to object.",
+    },
+  },
+  {
+    date: "2026-07-31",
     tag: "improvement",
     title: {
       de: "Klarer Hinweis: ein zweites Konto schaltet keine weiteren Gratis-Fragen frei",

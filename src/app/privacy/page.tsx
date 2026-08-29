@@ -621,6 +621,11 @@ export default function PrivacyPage() {
             ? "Alle Analyse- und Komfort-Tracker (Google Analytics 4, Microsoft Clarity) werden ausschließlich geladen, nachdem Sie im Cookie-Banner aktiv eingewilligt haben. Bis zur Einwilligung sind keine Tracking-Skripte aktiv, Sie können die Anwendung ohne Einwilligung vollständig nutzen. Die Einwilligung können Sie jederzeit widerrufen, indem Sie die Cookies Ihres Browsers löschen oder auf den Link „Cookie-Einstellungen“ im Seitenfuß klicken."
             : "All analytics and convenience trackers (Google Analytics 4, Microsoft Clarity) load only after you have actively consented in the cookie banner. Until consent is given, no tracking scripts are active; you can use the application fully without consenting. You may revoke consent at any time by clearing your browser cookies or clicking the 'Cookie settings' link in the footer."}
         </p>
+        <p>
+          {t
+            ? "Die Werbe-Pixel von Meta und Reddit laden ausschließlich nach Ihrer aktiven Einwilligung im Cookie-Banner. Abweichend davon wird der Attributions-Pixel unseres Zahlungsanbieters Whop derzeit auf allen Seiten geladen, damit wir nachvollziehen können, welche Inhalte zu einem Kauf führen. Grundlage ist unser berechtigtes Interesse an dieser Messung (Art. 6 Abs. 1 lit. f DSGVO), wie bei den Analysediensten in der Beta-Phase. Der Whop-Pixel verwendet ein Geräte-Erkennungsmerkmal (Device Fingerprint), um wiederkehrende Besuche auch ohne Cookies zu erkennen. Sie können dieser Verarbeitung jederzeit widersprechen, siehe Abschnitt 7 (Ihre Rechte)."
+            : "The Meta and Reddit advertising pixels load only after your active consent in the cookie banner. As an exception, the attribution pixel of our payment provider Whop is currently loaded on all pages so we can understand which content leads to a purchase. The basis is our legitimate interest in that measurement (Art. 6(1)(f) GDPR), as with the analytics services during the beta. The Whop pixel uses a device fingerprint to recognise returning visits even without cookies. You may object to this processing at any time, see section 7 (Your Rights)."}
+        </p>
       </section>
 
       {/* 10. Kinder */}
