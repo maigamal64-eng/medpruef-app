@@ -29,15 +29,22 @@ const AI_DAILY_QUOTA_PAID = (() => {
   const raw = Number(process.env.AI_DAILY_QUOTA_PAID);
   return Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : 15;
 })();
-const AI_PRIMARY_MODEL = process.env.AI_PRIMARY_MODEL || "claude-sonnet-4-6";
+const AI_PRIMARY_MODEL = process.env.AI_PRIMARY_MODEL || "claude-sonnet-5";
 const AI_FALLBACK_MODEL = process.env.AI_FALLBACK_MODEL || "gpt-4o-mini";
 
 // Token-cost rates per 1M tokens (USD). Approximate; used only for the
 // audit table's cost_usd column. Update when pricing changes.
 const COST_RATES_PER_M: Record<string, { in: number; out: number }> = {
+  // Current models. Sonnet 5 is BOTH newer and cheaper than Sonnet 4.6
+  // (2/10 vs 3/15), so the 2026-08-29 upgrade cut per-explanation cost ~33%.
+  "claude-sonnet-5": { in: 2.0, out: 10.0 },
+  "claude-haiku-4-5": { in: 1.0, out: 5.0 },
+  // Superseded models. KEPT ON PURPOSE: ai_call_log rows written before
+  // 2026-08-29 still carry these ids, and estimateCostUsd() is called when
+  // reading that history back. Deleting them would silently return null and
+  // blank out the cost column for every historical row.
   "claude-sonnet-4-6": { in: 3.0, out: 15.0 },
   "claude-sonnet-4-5": { in: 3.0, out: 15.0 },
-  "claude-haiku-4-5": { in: 0.8, out: 4.0 },
   "gpt-4o-mini": { in: 0.15, out: 0.6 },
   "gpt-4o": { in: 2.5, out: 10.0 },
 };
