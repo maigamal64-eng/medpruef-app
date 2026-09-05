@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
 import { resolveOptionalUser } from '@/lib/auth-guard'
-import { generateWrongOptions, buildMCQOptions, buildMCQFromStored, buildMCQFromChoices } from '@/lib/mcq'
+import { generateWrongOptions, buildMCQOptions, buildMCQFromStored, buildMCQFromChoices, filterDisplayableChoices } from '@/lib/mcq'
 import type { StoredChoice } from '@/lib/mcq'
 import { VIENNA_EXAM_PARTS, DEFAULT_EXAM_SOURCE, EXAM_SOURCE_IDS } from '@/lib/topics'
 import { captureServerError } from '@/lib/sentry-capture'
@@ -577,8 +577,12 @@ function attachOptions(questions: Record<string, unknown>[]) {
     let nCorrect = 0
     if (Array.isArray(storedChoices) && storedChoices.length >= 2) {
       // New path: structured choices from Anki re-import (preserves multi-correct)
+      // Placeholder options are hidden at render time (see filterDisplayableChoices).
+      // n_correct MUST be derived from the same filtered set the user actually
+      // sees, otherwise a multi-select question can demand more correct answers
+      // than there are options on screen and become unanswerable.
       options = buildMCQFromChoices(storedChoices)
-      nCorrect = storedChoices.filter(c => c.correct).length
+      nCorrect = filterDisplayableChoices(storedChoices).filter(c => c.correct).length
     } else if (storedDistractors.length >= 3) {
       // Legacy path: single correct + stored distractors
       options = buildMCQFromStored(answer, storedDistractors)
