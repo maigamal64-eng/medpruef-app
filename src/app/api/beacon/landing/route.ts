@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
+import { analyticsWritesDisabled } from "@/lib/supabase-resilience";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,10 @@ const cap = (v: unknown, n = 160): string | null =>
   typeof v === "string" && v.trim() ? v.trim().slice(0, n) : null;
 
 export async function POST(req: NextRequest) {
+  if (analyticsWritesDisabled()) {
+    return new NextResponse(null, { status: 204 });
+  }
+
   try {
     const b = (await req.json()) as Record<string, unknown>;
     const ua = req.headers.get("user-agent") || "";

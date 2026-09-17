@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { SESSION_HEADER, verifySession } from "@/lib/session";
 import { isPaidTier } from "@/lib/free-tier";
+import {
+  isSupabaseTimeout,
+  supabaseDegradedModeEnabled,
+} from "@/lib/supabase-resilience";
 
 /**
  * Server-side authorization guards for API routes.
@@ -50,6 +54,19 @@ export interface GuardFailure {
 
 export type GuardResult = GuardSuccess | GuardFailure;
 
+type GuardUserRow = {
+  id: string;
+  role: "user" | "admin" | null;
+  tier: "free" | "pro" | "admin" | null;
+  tier_expires_at: string | null;
+  is_banned: boolean | null;
+  session_invalidated_at: string | null;
+};
+
+const GUARD_CACHE_TTL_MS = 30_000;
+const guardUserCache = new Map<string, { value: GuardUserRow; expiresAt: number }>();
+const guardLookups = new Map<string, Promise<{ user: GuardUserRow | null; error: unknown }>>();
+
 function unauthorized(message: string): GuardFailure {
   return {
     error: NextResponse.json({ error: message }, { status: 401 }),
@@ -60,6 +77,37 @@ function forbidden(message: string): GuardFailure {
   return {
     error: NextResponse.json({ error: message }, { status: 403 }),
   };
+}
+
+function temporarilyUnavailable(): GuardFailure {
+  return {
+    error: NextResponse.json(
+      { error: "Service is temporarily unavailable. Please retry shortly.", code: "SUPABASE_DEGRADED" },
+      { status: 503, headers: { "Retry-After": "30" } },
+    ),
+  };
+}
+
+async function lookupGuardUser(userId: string): Promise<{ user: GuardUserRow | null; error: unknown }> {
+  const active = guardLookups.get(userId);
+  if (active) return active;
+
+  const lookup = (async () => {
+    try {
+      const { data, error } = await getServiceClient()
+        .from("users")
+        .select("id, role, tier, tier_expires_at, is_banned, session_invalidated_at")
+        .eq("id", userId)
+        .maybeSingle();
+      return { user: (data as GuardUserRow | null) ?? null, error };
+    } catch (error) {
+      return { user: null, error };
+    } finally {
+      guardLookups.delete(userId);
+    }
+  })();
+  guardLookups.set(userId, lookup);
+  return lookup;
 }
 
 /**
@@ -74,7 +122,10 @@ function forbidden(message: string): GuardFailure {
  *     if ("error" in guard) return guard.error;
  *     const { userId, role, tier } = guard;
  */
-export async function requireUser(req: NextRequest): Promise<GuardResult> {
+export async function requireUser(
+  req: NextRequest,
+  options: { allowCached?: boolean } = {},
+): Promise<GuardResult> {
   const token = req.headers.get(SESSION_HEADER);
   const session = verifySession(token);
   if (!session) {
@@ -83,15 +134,25 @@ export async function requireUser(req: NextRequest): Promise<GuardResult> {
     return unauthorized("Missing or invalid session");
   }
 
-  const sb = getServiceClient();
-  const { data: user, error } = await sb
-    .from("users")
-    .select("id, role, tier, tier_expires_at, is_banned, session_invalidated_at")
-    .eq("id", session.userId)
-    .maybeSingle();
+  const cached = guardUserCache.get(session.userId);
+  let user: GuardUserRow | null = null;
+  let error: unknown = null;
+  if (options.allowCached !== false && cached && cached.expiresAt > Date.now()) {
+    user = cached.value;
+  } else {
+    const lookup = await lookupGuardUser(session.userId);
+    user = lookup.user;
+    error = lookup.error;
+    if (user && !error) {
+      guardUserCache.set(session.userId, { value: user, expiresAt: Date.now() + GUARD_CACHE_TTL_MS });
+    }
+  }
 
   if (error) {
     console.error("[auth-guard] user lookup error:", error);
+    if (supabaseDegradedModeEnabled() && isSupabaseTimeout(error)) {
+      return temporarilyUnavailable();
+    }
     return unauthorized("Authentication lookup failed");
   }
   if (!user) return unauthorized("Unknown user");
@@ -135,7 +196,8 @@ export async function requireUser(req: NextRequest): Promise<GuardResult> {
  * GET/PATCH methods of /api/feedback and /api/suggestions.
  */
 export async function requireAdmin(req: NextRequest): Promise<GuardResult> {
-  const result = await requireUser(req);
+  // Never accept an outage fallback or a role cache for privileged access.
+  const result = await requireUser(req, { allowCached: false });
   if ("error" in result) return result;
   if (result.role !== "admin") return forbidden("Admin access required");
   return result;

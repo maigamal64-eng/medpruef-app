@@ -36,6 +36,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { addBreadcrumb } from "@/lib/sentry-capture";
+import { analyticsWritesDisabled } from "@/lib/supabase-resilience";
 
 export interface RecordEventArgs {
   userId: string | null;
@@ -58,6 +59,9 @@ export async function recordEventSafe(
   sb: SupabaseClient,
   args: RecordEventArgs,
 ): Promise<RecordEventResult> {
+  if (analyticsWritesDisabled()) {
+    return { ok: false, reason: "noop" };
+  }
   if (!args.userId) {
     return { ok: false, reason: "noop" };
   }

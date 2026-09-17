@@ -100,14 +100,18 @@ async function flushEvents(): Promise<void> {
   });
 
   try {
-    await fetch("/api/track", {
+    const response = await fetch("/api/track", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: payload,
     });
+    // Tracking is best-effort. Retrying a failed batch every five seconds
+    // amplified the 17 Sep Supabase outage and retained an ever-growing queue.
+    // A future event will be sent normally; this batch is intentionally lost.
+    if (!response.ok) return;
   } catch {
-    // Re-queue on failure (best-effort)
-    _queue = [...batch, ..._queue];
+    // Network failures are intentionally dropped. Never let analytics create a
+    // retry storm or consume memory while the database is unavailable.
   }
 }
 

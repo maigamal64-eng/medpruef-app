@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { captureServerError } from "@/lib/sentry-capture";
+import { analyticsWritesDisabled } from "@/lib/supabase-resilience";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +26,13 @@ interface TrackPayload {
 }
 
 export async function POST(req: NextRequest) {
+  // Telemetry is optional. During a Supabase incident this endpoint is hit by
+  // every active client, so it must become a cheap no-op before parsing a body
+  // or opening a database connection.
+  if (analyticsWritesDisabled()) {
+    return new NextResponse(null, { status: 204 });
+  }
+
   try {
     const body: TrackPayload = await req.json();
     const { sessionId, userId, events, createSession, endSession, deviceInfo } = body;

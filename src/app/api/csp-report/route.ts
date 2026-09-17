@@ -17,6 +17,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createHash } from "crypto";
+import { analyticsWritesDisabled } from "@/lib/supabase-resilience";
 
 // ---------------------------------------------------------------------------
 // Supabase service-role client (bypasses RLS)
@@ -132,6 +133,10 @@ function parseBody(ct: string, raw: unknown): ViolationRow[] {
 // Route handler
 // ---------------------------------------------------------------------------
 export async function POST(req: NextRequest) {
+  if (analyticsWritesDisabled()) {
+    return new NextResponse(null, { status: 204 });
+  }
+
   try {
     const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
     const ipHash = hashIp(ip);
