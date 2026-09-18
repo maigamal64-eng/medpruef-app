@@ -2,10 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { SESSION_HEADER, verifySession } from "@/lib/session";
 import { isPaidTier } from "@/lib/free-tier";
-import {
-  isSupabaseTimeout,
-  supabaseDegradedModeEnabled,
-} from "@/lib/supabase-resilience";
+import { supabaseDegradedModeEnabled } from "@/lib/supabase-resilience";
 
 /**
  * Server-side authorization guards for API routes.
@@ -29,9 +26,10 @@ import {
  * ~20 `/api/admin/*` routes and the AI/translate/answer routes did not
  * need rewrites — only the implementation swapped.
  *
- * Role/tier/ban/invalidation are still re-read from the DB on every
- * request (never trusted from the token), so demotions, bans, and
- * forced-refresh take effect immediately.
+ * Outside explicit degraded mode, role/tier/ban/invalidation are re-read
+ * from the DB on every request (never trusted from the token). Emergency
+ * mode permits a bounded 30-second cache for ordinary users only. Admin
+ * checks and privileged identities always require a fresh database read.
  */
 
 export interface GuardSuccess {
@@ -64,6 +62,7 @@ type GuardUserRow = {
 };
 
 const GUARD_CACHE_TTL_MS = 30_000;
+const GUARD_CACHE_MAX_ENTRIES = 1_000;
 const guardUserCache = new Map<string, { value: GuardUserRow; expiresAt: number }>();
 const guardLookups = new Map<string, Promise<{ user: GuardUserRow | null; error: unknown }>>();
 
@@ -102,12 +101,17 @@ async function lookupGuardUser(userId: string): Promise<{ user: GuardUserRow | n
       return { user: (data as GuardUserRow | null) ?? null, error };
     } catch (error) {
       return { user: null, error };
-    } finally {
-      guardLookups.delete(userId);
     }
   })();
   guardLookups.set(userId, lookup);
-  return lookup;
+  // Register before attaching cleanup: getServiceClient can throw before
+  // the first await. Cleaning up inside that IIFE would then run before
+  // set(), retaining a failed promise and poisoning subsequent requests.
+  try {
+    return await lookup;
+  } finally {
+    if (guardLookups.get(userId) === lookup) guardLookups.delete(userId);
+  }
 }
 
 /**
@@ -134,26 +138,30 @@ export async function requireUser(
     return unauthorized("Missing or invalid session");
   }
 
-  const cached = guardUserCache.get(session.userId);
+  const degradedMode = supabaseDegradedModeEnabled();
+  if (!degradedMode) guardUserCache.clear();
+  const allowCached = degradedMode && options.allowCached !== false;
+  const cached = allowCached ? guardUserCache.get(session.userId) : undefined;
+  const cacheHit = cached !== undefined && cached.expiresAt > Date.now();
   let user: GuardUserRow | null = null;
   let error: unknown = null;
-  if (options.allowCached !== false && cached && cached.expiresAt > Date.now()) {
+  if (cacheHit) {
     user = cached.value;
   } else {
+    // Any fresh lookup supersedes a prior cached authorization, including
+    // a deleted/banned account, invalidation, or an unavailable database.
+    guardUserCache.delete(session.userId);
     const lookup = await lookupGuardUser(session.userId);
     user = lookup.user;
     error = lookup.error;
-    if (user && !error) {
-      guardUserCache.set(session.userId, { value: user, expiresAt: Date.now() + GUARD_CACHE_TTL_MS });
-    }
   }
 
   if (error) {
     console.error("[auth-guard] user lookup error:", error);
-    if (supabaseDegradedModeEnabled() && isSupabaseTimeout(error)) {
-      return temporarilyUnavailable();
-    }
-    return unauthorized("Authentication lookup failed");
+    // A failed server-side lookup does not prove the signed session is
+    // invalid. Fail closed, but allow retry without falsely logging users
+    // out, even after the emergency-mode flag has been switched off.
+    return temporarilyUnavailable();
   }
   if (!user) return unauthorized("Unknown user");
   if (user.is_banned) return forbidden("Account suspended");
@@ -180,6 +188,19 @@ export async function requireUser(
         ),
       };
     }
+  }
+
+  if (allowCached && !cacheHit && user.role !== "admin" && user.tier !== "admin") {
+    const now = Date.now();
+    for (const [id, entry] of guardUserCache) {
+      if (entry.expiresAt <= now) guardUserCache.delete(id);
+    }
+    while (guardUserCache.size >= GUARD_CACHE_MAX_ENTRIES) {
+      const oldestId = guardUserCache.keys().next().value;
+      if (oldestId === undefined) break;
+      guardUserCache.delete(oldestId);
+    }
+    guardUserCache.set(session.userId, { value: user, expiresAt: now + GUARD_CACHE_TTL_MS });
   }
 
   return {
