@@ -23,6 +23,30 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-09-20",
+    tag: "improvement",
+    title: {
+      de: "Schnellere Pro-Aktivierung nach der Zahlung",
+      en: "Faster Pro activation after payment",
+    },
+    description: {
+      de: "Nach einer erfolgreichen Zahlung wird dein Pro-Zugang jetzt direkt beim Zurückkehren freigeschaltet, statt nur auf die Zahlungsbestätigung des Anbieters zu warten. Erworbene Zeiträume addieren sich außerdem korrekt: Wer erneut kauft, verliert keine bereits gebuchten Tage mehr.",
+      en: "After a successful payment, your Pro access now activates immediately when you return, instead of waiting for the payment notification. Purchased periods also now add up correctly, so buying again never costs you days you already had.",
+    },
+  },
+  {
+    date: "2026-09-20",
+    tag: "admin",
+    title: {
+      de: "Whop-Grant-Erweiterung + Rückkehr-Verifizierung + Cron-Heartbeat",
+      en: "Whop grant extension + return verify + cron heartbeat",
+    },
+    description: {
+      de: "Interne Zahlungshärting: Webhook-Grants erweitern jetzt ein aktives Whop-Abo (extend-or-insert) statt die Laufzeit zu überschreiben. Neue Route /api/whop/checkout/verify verifiziert bezahlte Rückkehrer serverseitig gegen das Whop-Ledger (der Auslöser war eine ~3h verspätete Webhook-Zustellung am 17.09., die einen Doppelkauf verursachte). Cross-Path-Idempotenz über die Payment-ID verhindert Doppel-Extensions. Cron-Heartbeat-Event für die Verifikation, ob der Vercel-Cron überhaupt feuert.",
+      en: "Internal payment hardening: webhook grants now extend an active Whop subscription in place (extend-or-insert). New route /api/whop/checkout/verify verifies paid returns server-side against the Whop ledger (trigger: a ~3h-late webhook delivery on 2026-09-17 caused a real double purchase). Cross-path idempotency keyed on the payment id prevents double extensions. Cron heartbeat event added to verify whether the Vercel cron actually fires.",
+    },
+  },
+  {
     date: "2026-07-31",
     tag: "admin",
     title: {

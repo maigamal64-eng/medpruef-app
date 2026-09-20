@@ -99,6 +99,43 @@ export default function CheckoutSuccessPage() {
     };
   }, [refresh]);
 
+  // Paid tiers: same deterministic treatment as the trial. Whop's webhook
+  // delivery can lag (documented retries up to 12h; a real 2026-09-17
+  // delivery landed ~3h late), and a buyer who returned and saw "free"
+  // paid a second time. Server-side verify against Whop's ledger grants
+  // immediately when the money is real; the webhook stays the backstop.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("trial") === "1") return;
+    const tier = params.get("tier") ?? "";
+    if (!tier) return;
+    let cancelled = false;
+    let attempts = 0;
+    const tryVerify = async () => {
+      if (cancelled) return;
+      attempts += 1;
+      try {
+        const res = await authFetch("/api/whop/checkout/verify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tier }),
+        });
+        const d = await res.json().catch(() => ({}));
+        if (d?.granted) {
+          void refresh();
+          return; // granted — the isPaid effect will route home
+        }
+      } catch {
+        /* keep retrying */
+      }
+      if (!cancelled && attempts < 6) setTimeout(tryVerify, 2_500);
+    };
+    void tryVerify();
+    return () => {
+      cancelled = true;
+    };
+  }, [refresh]);
+
   // Kick off an immediate refresh on mount so we don't wait for the
   // 5-minute background interval in useUserTier. Then poll every 2 s
   // so the tier flip registers as soon as the webhook lands.

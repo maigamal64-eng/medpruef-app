@@ -24,6 +24,10 @@ import {
   type WhopRevokeKind,
   TIERS,
 } from "@/lib/whop";
+import {
+  extendOrInsertWhopSubscription,
+  reconcileUserTierPro,
+} from "@/lib/whop-grant";
 
 export const dynamic = "force-dynamic";
 
@@ -397,9 +401,14 @@ export async function POST(req: NextRequest) {
     // suspenders for an instant cancel-revoke; this 8-day cap is the belt.
     const isTrialStart =
       tier === "notes_pro_trial" && (f.amountCents === 0 || f.amountCents == null);
-    const expiresAt = isTrialStart
+    // For trial START the window is 8 days (trial + 1). For paid/renewal
+    // grants the helper recomputes the expiry (extend-or-insert), so this
+    // default is only consumed by the trial-start branch below.
+    let expiresAt = isTrialStart
       ? new Date(Date.now() + 8 * 86400_000)
       : computeExpiry(tierDurationMonths(tier), new Date());
+    let grantMode: "extended" | "inserted" | null = null;
+    let grantPreviousExpires: string | null = null;
 
     // Dedupe the trial-START grant against /api/whop/trial/verify (P1). Both the
     // €0 payment.succeeded (here) and the /checkout/success verify grant the
@@ -442,61 +451,109 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const { error: subErr } = await sb.from("subscriptions").insert({
-      user_id: userId,
-      tier,
-      status: "active",
-      payment_provider: "whop",
-      payment_method: "card",
-      amount_cents: f.amountCents ?? TIERS[tier]?.priceCents ?? null,
-      currency: (f.currency || "eur").toUpperCase(),
-      provider_payment_id: f.paymentId,
-      started_at: new Date().toISOString(),
-      expires_at: expiresAt.toISOString(),
-    });
-    if (subErr) {
-      Sentry.captureException(subErr, {
-        tags: { route: "webhooks/whop", step: "sub_insert" },
-        extra: { userId, tier },
-      });
-      // FUNNEL: user + tier resolved, but the subscription INSERT failed — a
-      // paying buyer who did NOT get Pro. db_error, the loudest grant failure.
-      await logWebhookAttempt({
-        req, provider: "whop", path: "/api/webhooks/whop",
-        signatureValid: true, body: rawBody, result: "other_error",
-        eventId: f.paymentId,
-        error: `subscriptions insert failed: ${subErr.message?.slice(0, 150)}`,
-      });
-      await logPaymentEvent(sbLog, {
-        event: "grant_failed",
-        userId,
-        email: f.email,
+    // ── Grant: trial-START keeps its dedicated 8-day insert (FB-03 window,
+    // deduped against /api/whop/trial/verify above). Everything else — paid
+    // one-time tiers AND €19 trial renewals — goes through the shared
+    // EXTEND-or-INSERT helper (2026-09-20 Wave 1): a repeat payment extends
+    // the user's active whop window instead of stacking a row and resetting
+    // the clock (the 805082ec double-payment expiry loss).
+    if (isTrialStart) {
+      const { error: subErr } = await sb.from("subscriptions").insert({
+        user_id: userId,
         tier,
-        planId: f.planId,
+        status: "active",
+        payment_provider: "whop",
+        payment_method: "card",
+        amount_cents: f.amountCents ?? TIERS[tier]?.priceCents ?? null,
+        currency: (f.currency || "eur").toUpperCase(),
+        provider_payment_id: f.paymentId,
+        started_at: new Date().toISOString(),
+        expires_at: expiresAt.toISOString(),
+      });
+      if (subErr) {
+        Sentry.captureException(subErr, {
+          tags: { route: "webhooks/whop", step: "sub_insert" },
+          extra: { userId, tier },
+        });
+        await logWebhookAttempt({
+          req, provider: "whop", path: "/api/webhooks/whop",
+          signatureValid: true, body: rawBody, result: "other_error",
+          eventId: f.paymentId,
+          error: `subscriptions insert failed: ${subErr.message?.slice(0, 150)}`,
+        });
+        await logPaymentEvent(sbLog, {
+          event: "grant_failed",
+          userId,
+          email: f.email,
+          tier,
+          planId: f.planId,
+          paymentId: f.paymentId,
+          amountCents: f.amountCents,
+          currency: f.currency,
+          reason: "db_error",
+          matched: true,
+          metadata: { step: "sub_insert", event, ok: false },
+        });
+        return NextResponse.json({ error: "DB insert failed" }, { status: 500 });
+      }
+      // Trial-start user flip: the 8-day window never shortens a longer
+      // window (the trial dedupe above means the user had no active trial).
+      try {
+        await reconcileUserTierPro(sb, userId, expiresAt.toISOString());
+      } catch (userErr) {
+        Sentry.captureException(userErr, {
+          tags: { route: "webhooks/whop", step: "user_update" },
+          extra: { userId },
+        });
+      }
+      grantMode = "inserted";
+      grantPreviousExpires = null;
+    } else {
+      const grant = await extendOrInsertWhopSubscription(sb, {
+        userId,
+        tier,
         paymentId: f.paymentId,
-        amountCents: f.amountCents,
-        currency: f.currency,
-        reason: "db_error",
-        matched: true,
-        metadata: { step: "sub_insert", event, ok: false },
+        amountCents: f.amountCents ?? TIERS[tier]?.priceCents ?? null,
+        currency: (f.currency || "eur").toUpperCase(),
       });
-      return NextResponse.json({ error: "DB insert failed" }, { status: 500 });
-    }
-
-    const { error: userErr } = await sb
-      .from("users")
-      .update({
-        tier: "pro",
-        tier_expires_at: expiresAt.toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", userId);
-    if (userErr) {
-      // Subscription row is the source of truth; user.tier reconciles offline.
-      Sentry.captureException(userErr, {
-        tags: { route: "webhooks/whop", step: "user_update" },
-        extra: { userId },
-      });
+      if (grant.mode === "failed") {
+        Sentry.captureException(new Error(grant.error ?? "grant failed"), {
+          tags: { route: "webhooks/whop", step: "sub_extend_or_insert" },
+          extra: { userId, tier, paymentId: f.paymentId },
+        });
+        await logWebhookAttempt({
+          req, provider: "whop", path: "/api/webhooks/whop",
+          signatureValid: true, body: rawBody, result: "other_error",
+          eventId: f.paymentId,
+          error: `subscriptions grant failed: ${grant.error?.slice(0, 150)}`,
+        });
+        await logPaymentEvent(sbLog, {
+          event: "grant_failed",
+          userId,
+          email: f.email,
+          tier,
+          planId: f.planId,
+          paymentId: f.paymentId,
+          amountCents: f.amountCents,
+          currency: f.currency,
+          reason: "db_error",
+          matched: true,
+          metadata: { step: "extend_or_insert", event, ok: false },
+        });
+        return NextResponse.json({ error: "DB insert failed" }, { status: 500 });
+      }
+      grantMode = grant.mode;
+      grantPreviousExpires = grant.previousExpiresAt;
+      expiresAt = new Date(grant.expiresAt);
+      try {
+        await reconcileUserTierPro(sb, userId, grant.expiresAt);
+      } catch (userErr) {
+        // Subscription row is the source of truth; user.tier reconciles offline.
+        Sentry.captureException(userErr, {
+          tags: { route: "webhooks/whop", step: "user_update" },
+          extra: { userId },
+        });
+      }
     }
 
     await recordEvent(sb, userId, "whop_subscription_activated", {
@@ -545,10 +602,23 @@ export async function POST(req: NextRequest) {
       amountCents: f.amountCents ?? TIERS[tier]?.priceCents ?? null,
       currency: (f.currency || "eur").toUpperCase(),
       matched: true,
-      metadata: { event, expires_at: expiresAt.toISOString(), trial_start: isTrialStart, ok: true },
+      metadata: {
+        event,
+        expires_at: expiresAt.toISOString(),
+        trial_start: isTrialStart,
+        mode: grantMode,
+        previous_expires_at: grantPreviousExpires,
+        ok: true,
+      },
     });
 
-    return NextResponse.json({ ok: true, activated: true, tier, expires_at: expiresAt.toISOString() });
+    return NextResponse.json({
+      ok: true,
+      activated: true,
+      tier,
+      expires_at: expiresAt.toISOString(),
+      mode: grantMode,
+    });
   } catch (err) {
     Sentry.captureException(err, { tags: { route: "webhooks/whop", step: "unexpected" } });
     // FUNNEL: an unexpected throw inside the grant try — record it so an

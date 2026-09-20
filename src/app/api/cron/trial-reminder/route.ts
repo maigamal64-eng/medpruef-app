@@ -86,6 +86,20 @@ export async function GET(req: NextRequest) {
   let remindersMarked = 0;
   let expiriesProcessed = 0;
 
+  // ── 1b. Invocation heartbeat ──
+  // DIAGNOSTIC (2026-09-20): the sweep code was verified correct (the expiry
+  // pass is tier-agnostic) yet produced ZERO events ever — stale active rows
+  // sat unflipped for months, so either the Vercel cron never invoked this
+  // route or every invocation failed before the sweep. This heartbeat row is
+  // the first thing the route does on a SUCCESSFUL authenticated invocation,
+  // so `SELECT count(*) FROM user_events WHERE event_type='cron_trial_reminder_heartbeat'`
+  // answers "did it fire today?" without touching Vercel logs. Best-effort.
+  try {
+    await recordEvent(sb, "cron", "cron_trial_reminder_heartbeat", { at: nowIso });
+  } catch {
+    /* observability only */
+  }
+
   // ── 2. Day-25 reminder sweep ──
   try {
     const { data: dueTrials, error: dueErr } = await sb
