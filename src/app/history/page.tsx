@@ -607,9 +607,16 @@ function AnswerRow({ row, lang }: { row: AnswerRow; lang: Lang }) {
             </span>
             {!row.is_correct && (
               <>
-                {" · "}
-                <span className="font-semibold">{lang === "de" ? "Richtig:" : "Correct:"}</span>{" "}
-                <span className="text-[var(--mp-accent-teal)]">{q.answer}</span>
+                {/* Legacy rows stored the correct answer text as user_answer,
+                    which would render "your answer" == "correct" on a WRONG
+                    row — suppress the misleading field in that case. */}
+                {!(row.user_answer && row.user_answer.trim() === q.answer.trim()) && (
+                  <>
+                    {" · "}
+                    <span className="font-semibold">{lang === "de" ? "Richtig:" : "Correct:"}</span>{" "}
+                    <span className="text-[var(--mp-accent-teal)]">{q.answer}</span>
+                  </>
+                )}
               </>
             )}
           </div>
