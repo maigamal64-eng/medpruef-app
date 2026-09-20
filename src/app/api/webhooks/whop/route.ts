@@ -28,6 +28,7 @@ import {
   extendOrInsertWhopSubscription,
   reconcileUserTierPro,
 } from "@/lib/whop-grant";
+import { sendZohoEmail } from "@/lib/email/zoho";
 
 export const dynamic = "force-dynamic";
 
@@ -107,8 +108,14 @@ export async function POST(req: NextRequest) {
   // a `webhook-secret` header (confirmed against a real delivery 2026-06-19 — no
   // svix headers were present). Verify that first; fall back to the HMAC scheme
   // if a delivery ever carries svix headers instead.
+  // WAVE 2 (2026-09-20): the v1 Standard-Webhooks hook (hook on api_version v1,
+  // svix-signed) sends NO webhook-secret header. Its deliveries verify against
+  // WHOP_WEBHOOK_SECRET_V1 via the Standard Webhooks scheme. Both secrets are
+  // tried during the migration window (both hooks live); after the legacy hook
+  // is disabled, WHOP_WEBHOOK_SECRET is retired.
   const secretHeader = req.headers.get("webhook-secret");
   const looksLikeWhopDelivery = Boolean(secretHeader || req.headers.get("webhook-signature"));
+  const v1Secret = process.env.WHOP_WEBHOOK_SECRET_V1;
   const valid =
     verifyWhopSecretHeader(secretHeader, secret) ||
     verifyWhopSignature(
@@ -119,14 +126,25 @@ export async function POST(req: NextRequest) {
         signature: req.headers.get("webhook-signature"),
       },
       secret
-    );
+    ) ||
+    (v1Secret
+      ? verifyWhopSignature(
+          rawBody,
+          {
+            id: req.headers.get("webhook-id"),
+            timestamp: req.headers.get("webhook-timestamp"),
+            signature: req.headers.get("webhook-signature"),
+          },
+          v1Secret
+        )
+      : false);
   if (!valid) {
     // A delivery that carries a webhook-secret (or svix) header but still fails
     // verification is almost certainly a WHOP_WEBHOOK_SECRET mismatch, not noise
     // — flag it loudly so a real payment can never fail auth silently.
     if (looksLikeWhopDelivery) {
       Sentry.captureMessage(
-        "Whop webhook carried a webhook-secret/svix header but FAILED verification — likely WHOP_WEBHOOK_SECRET mismatch; payments will not auto-grant",
+        "Whop webhook carried a webhook-secret/svix header but FAILED verification — likely WHOP_WEBHOOK_SECRET(_V1) mismatch; payments will not auto-grant",
         "error"
       );
     }
@@ -210,6 +228,32 @@ export async function POST(req: NextRequest) {
   const revokeKind = classifyWhopRevoke(event);
   if (revokeKind) {
     return handleRevoke(event, revokeKind, data);
+  }
+
+  // ── DUNNING PATH (Wave 2, 2026-09-20): failed renewal / 3DS recovery ──
+  // Whop emits payment.requires_action when the bank wants the buyer to
+  // verify an off-session charge (3D Secure) and payment.failed when a
+  // charge fails; BOTH may carry data.recovery_url — a Whop link where the
+  // buyer signs in and completes verification, resuming the exact charge.
+  // Action: record + email the buyer the link (best-effort). A recovered
+  // payment re-fires payment.succeeded and the normal grant path runs.
+  const RECOVERY_EVENTS = new Set([
+    "payment.failed", "payment_failed",
+    "payment.requires_action", "payment_requires_action",
+  ]);
+  if (RECOVERY_EVENTS.has(event)) {
+    return handlePaymentRecovery(event, data, f);
+  }
+
+  // ── TRIAL-ENDING PATH (Wave 2): Whop's native reminder for the €0→€19
+  // card trial. Fires on the trial plan membership before the first
+  // renewal charge. Action: one honest reminder email (trial ending, the
+  // 19 €/month auto-charge, how to cancel), deduped per membership.
+  const TRIAL_ENDING_EVENTS = new Set([
+    "membership.trial_ending_soon", "membership_trial_ending_soon",
+  ]);
+  if (TRIAL_ENDING_EVENTS.has(event)) {
+    return handleTrialEndingSoon(event, data, f);
   }
 
   // The hook is subscribed only to payment.succeeded; these are the names we
@@ -873,6 +917,346 @@ async function handleRevoke(
 }
 
 /**
+ * DUNNING handler (Wave 2, 2026-09-20): payment.failed / payment.requires_action.
+ *
+ * Why this exists: a failed renewal was previously invisible to us (the legacy
+ * hook subscribed only payment.succeeded), so a card that declined on the
+ * €19/month trial renewal churned silently. Whop's current spec hands us the
+ * buyer's recovery link on both events when recovery is possible:
+ *   data.recovery_url — the buyer signs in to Whop, completes 3D Secure /
+ *   updates the card, and the SAME charge resumes (then fires
+ *   payment.succeeded → the normal grant path).
+ *
+ * Discipline (mirrors handleRevoke):
+ *   1. Idempotency claim `recover:<paymentId>` so Whop's retries don't spam
+ *      the buyer with repeated dunning emails.
+ *   2. Record the delivery truth (webhook_attempts) + funnel telemetry
+ *      (payment_events webhook_received with the decline reason metadata).
+ *   3. Resolve the buyer (metadata user id → users.email) and email them the
+ *      recovery link, DE copy honest about what happened. Best-effort: an
+ *      email failure never 5xxs (Whop would retry for 3 days).
+ *   4. An UNMAPPED failed payment (no user) is recorded + Sentry-flagged for
+ *      manual follow-up — never silently dropped.
+ */
+async function handlePaymentRecovery(
+  event: string,
+  data: unknown,
+  f: ReturnType<typeof extractWhopPayment>
+): Promise<NextResponse> {
+  const d = rec(data);
+  const declineCode = str(d.decline_code) ?? str(d.declineCode);
+  const failureMessage = str(d.failure_message) ?? str(d.failureMessage);
+  const recoveryUrl = str(d.recovery_url) ?? str(d.recoveryUrl);
+  const status = str(d.status);
+
+  console.info(
+    `[whop webhook] RECOVERY event=${event} paymentId=${f.paymentId ?? "(none)"} status=${status ?? "(none)"} hasRecoveryUrl=${Boolean(recoveryUrl)}`
+  );
+
+  // Dedupe the dunning email on the payment id (retries carry the same id).
+  if (f.paymentId) {
+    try {
+      const sb0 = getServiceClient();
+      const claim = await sb0
+        .from("processed_webhook_events")
+        .insert({
+          provider: "whop",
+          event_id: `recover:${f.paymentId}`,
+          payload: { claimed_at: new Date().toISOString(), event },
+        })
+        .select("event_id")
+        .maybeSingle();
+      if (!claim) {
+        return NextResponse.json({ ok: true, duplicate: true });
+      }
+    } catch (err) {
+      // A 23505 (duplicate) surfaces here as an error on some clients — if the
+      // row already exists we must still not re-email; treat insert errors as
+      // "already claimed" for safety of the mailbox, but keep the telemetry.
+      const code = (err as { code?: string }).code;
+      if (code === "23505") {
+        return NextResponse.json({ ok: true, duplicate: true });
+      }
+      Sentry.captureException(err, { tags: { route: "webhooks/whop", step: "recovery_claim" } });
+    }
+  }
+
+  const sb = getServiceClient();
+
+  await logPaymentEvent(sb, {
+    event: "webhook_received",
+    provider: "whop",
+    userId: null,
+    email: f.email,
+    planId: f.planId,
+    paymentId: f.paymentId,
+    amountCents: f.amountCents,
+    currency: f.currency,
+    signatureValid: true,
+    matched: Boolean(f.metaUserId || f.email),
+    metadata: {
+      event,
+      whop_event: event,
+      status: status ?? null,
+      decline_code: declineCode ?? null,
+      failure_message: failureMessage ?? null,
+      has_recovery_url: Boolean(recoveryUrl),
+    },
+  });
+
+  // Resolve the user for the dunning email. Metadata id first, email fallback.
+  let userId: string | null = null;
+  let email: string | null = null;
+  let firstName: string | null = null;
+  let languageCode: string | null = null;
+  if (f.metaUserId) {
+    const { data: u } = await sb
+      .from("users")
+      .select("id, email, first_name, language_code")
+      .eq("id", f.metaUserId)
+      .maybeSingle();
+    if (u) {
+      userId = u.id as string;
+      email = (u.email as string | null) ?? null;
+      firstName = (u.first_name as string | null) ?? null;
+      languageCode = (u.language_code as string | null) ?? null;
+    }
+  }
+  if (!userId && f.email) {
+    const { data: u } = await sb
+      .from("users")
+      .select("id, email, first_name, language_code")
+      .ilike("email", escapeLike(f.email))
+      .maybeSingle();
+    if (u) {
+      userId = u.id as string;
+      email = (u.email as string | null) ?? null;
+      firstName = (u.first_name as string | null) ?? null;
+      languageCode = (u.language_code as string | null) ?? null;
+    }
+  }
+
+  // Record the actionable signal regardless (ops can drain manually).
+  try {
+    await sb.from("user_events").insert({
+      user_id: userId ?? "whop-webhook",
+      event_type: "whop_payment_recovery_needed",
+      event_data: {
+        event,
+        payment_id: f.paymentId,
+        plan_id: f.planId,
+        status,
+        decline_code: declineCode,
+        failure_message: failureMessage,
+        recovery_url: recoveryUrl,
+        mapped_user_id: userId,
+      },
+    });
+  } catch (err) {
+    console.error("[webhooks/whop] recovery telemetry", err);
+  }
+
+  if (!userId || !email) {
+    Sentry.captureMessage(
+      `Whop ${event} unmapped (payment=${f.paymentId ?? "none"} email=${f.email ?? "none"}) — buyer may churn without dunning`,
+      "warning"
+    );
+    return NextResponse.json({ ok: true, ignored: "unmapped_recovery_event" });
+  }
+
+  // Email the buyer the recovery link (best-effort; never 5xx).
+  if (recoveryUrl) {
+    const isDe = !(languageCode ?? "").toLowerCase().startsWith("en");
+    const subject = isDe
+      ? "Aktion erforderlich: Ihre MedPrüf-Zahlung"
+      : "Action required: your MedPrüf payment";
+    const html = isDe
+      ? `<p>Hallo${firstName ? ` ${firstName}` : ""},</p>` +
+        `<p>die letzte Zahlung Ihrer MedPrüf-Mitgliedschaft konnte von Ihrer Bank nicht abgeschlossen werden${declineCode ? ` (Grund: ${declineCode})` : ""}. Ihr Pro-Zugang läuft sonst zum Ende der bezahlten Laufzeit aus.</p>` +
+        `<p>Sie können das in einer Minute beheben: öffnen Sie den untenstehenden Whop-Link, bestätigen Sie die Zahlung oder aktualisieren Sie Ihre Karte, und alles läuft automatisch weiter.</p>` +
+        `<p><a href="${recoveryUrl}">Zahlung jetzt abschließen</a></p>` +
+        `<p>Falls Sie das Abo stattdessen beenden möchten, ist dafür kein weiterer Schritt nötig.</p>` +
+        `<p>Mit freundlichen Grüßen<br>Das MedPrüf-Team</p>`
+      : `<p>Hi${firstName ? ` ${firstName}` : ""},</p>` +
+        `<p>The latest payment on your MedPrüf membership could not be completed${declineCode ? ` (reason: ${declineCode})` : ""}. Your Pro access runs until the end of the period you already paid for.</p>` +
+        `<p>You can fix this in one minute: open the Whop link below and confirm the payment or update your card.</p>` +
+        `<p><a href="${recoveryUrl}">Complete the payment now</a></p>` +
+        `<p>If you would rather end the membership, no action is needed.</p>` +
+        `<p>Best,<br>The MedPrüf Team</p>`;
+    try {
+      const res = await sendZohoEmail({ to: email, subject, htmlBody: html });
+      await recordEvent(sb, userId, "whop_dunning_email", {
+        event,
+        payment_id: f.paymentId,
+        to: email,
+        ok: res.ok,
+        reason: res.ok ? null : (res as { reason?: string }).reason ?? null,
+        has_recovery_url: Boolean(recoveryUrl),
+      });
+    } catch (err) {
+      console.error("[webhooks/whop] dunning email failed", err);
+      await recordEvent(sb, userId, "whop_dunning_email_failed", {
+        event, payment_id: f.paymentId, to: email,
+      });
+    }
+  }
+
+  return NextResponse.json({ ok: true, handled: event });
+}
+
+/**
+ * TRIAL-ENDING handler (Wave 2): membership.trial_ending_soon.
+ * Whop's native signal that the €0→€19 card trial is about to convert.
+ * One honest reminder email per membership: trial ending, the 19 €/month
+ * auto-charge that follows, and how to cancel. SoT trial-promo rule binds:
+ * the terms are stated, never hidden.
+ */
+async function handleTrialEndingSoon(
+  event: string,
+  data: unknown,
+  f: ReturnType<typeof extractWhopPayment>
+): Promise<NextResponse> {
+  const d = rec(data);
+  const member = rec(d.member) || rec(d.membership);
+  const membershipId =
+    str(d.membership_id) ?? str(member.id) ?? (str(d.id)?.startsWith("mem_") ? str(d.id) : null);
+  const metadata = rec(d.metadata);
+  const metaUserId = str(d.medpruef_user_id) ?? str(metadata.medpruef_user_id) ?? f.metaUserId;
+  const trialEndRaw = d.trial_end_date ?? d.trial_end ?? d.renewal_period_start ?? null;
+  const trialEnd =
+    typeof trialEndRaw === "number"
+      ? new Date(trialEndRaw > 1e12 ? trialEndRaw : trialEndRaw * 1000)
+      : typeof trialEndRaw === "string" && Number.isFinite(Date.parse(trialEndRaw))
+        ? new Date(trialEndRaw)
+        : null;
+
+  console.info(
+    `[whop webhook] TRIAL_ENDING event=${event} membership=${membershipId ?? "(none)"} user=${metaUserId ?? "(none)"}`
+  );
+
+  const sb = getServiceClient();
+
+  // One reminder per membership, ever.
+  if (membershipId) {
+    const claimKey = `trialssoon:${membershipId}`;
+    try {
+      const { data: claim } = await sb
+        .from("processed_webhook_events")
+        .insert({
+          provider: "whop",
+          event_id: claimKey,
+          payload: { claimed_at: new Date().toISOString(), event },
+        })
+        .select("event_id")
+        .maybeSingle();
+      if (!claim) return NextResponse.json({ ok: true, duplicate: true });
+    } catch (err) {
+      const code = (err as { code?: string }).code;
+      if (code === "23505") return NextResponse.json({ ok: true, duplicate: true });
+      Sentry.captureException(err, { tags: { route: "webhooks/whop", step: "trial_ending_claim" } });
+    }
+  }
+
+  // Resolve the user (metadata id, then the payment-level email fallback).
+  let userId = metaUserId;
+  let email: string | null = null;
+  let firstName: string | null = null;
+  let languageCode: string | null = null;
+  if (userId) {
+    const { data: u } = await sb
+      .from("users")
+      .select("id, email, first_name, language_code")
+      .eq("id", userId)
+      .maybeSingle();
+    if (u) {
+      email = (u.email as string | null) ?? null;
+      firstName = (u.first_name as string | null) ?? null;
+      languageCode = (u.language_code as string | null) ?? null;
+    }
+  }
+  if (!email && f.email) {
+    const { data: u } = await sb
+      .from("users")
+      .select("id, email, first_name, language_code")
+      .ilike("email", escapeLike(f.email))
+      .maybeSingle();
+    if (u) {
+      userId = u.id as string;
+      email = (u.email as string | null) ?? null;
+      firstName = (u.first_name as string | null) ?? null;
+      languageCode = (u.language_code as string | null) ?? null;
+    }
+  }
+
+  if (!userId || !email) {
+    Sentry.captureMessage(
+      `Whop ${event} unmapped (membership=${membershipId ?? "none"}) — trial-end reminder not sent`,
+      "warning"
+    );
+    return NextResponse.json({ ok: true, ignored: "unmapped_trial_ending" });
+  }
+
+  // Only remind when the card trial is the live access (don't nudge a paying
+  // Cohort buyer whose trial converted months ago).
+  const { data: activeTrial } = await sb
+    .from("subscriptions")
+    .select("id, expires_at")
+    .eq("user_id", userId)
+    .eq("tier", "notes_pro_trial")
+    .eq("status", "active")
+    .limit(1);
+  if (!activeTrial || activeTrial.length === 0) {
+    return NextResponse.json({ ok: true, skipped: "no_active_trial" });
+  }
+
+  await logPaymentEvent(sb, {
+    event: "webhook_received",
+    provider: "whop",
+    userId,
+    email,
+    tier: "notes_pro_trial",
+    paymentId: f.paymentId,
+    signatureValid: true,
+    matched: true,
+    metadata: { event, whop_event: event, membership_id: membershipId },
+  });
+
+  const isDe = !(languageCode ?? "").toLowerCase().startsWith("en");
+  const subject = isDe
+    ? "Dein MedPrüf Pro-Test endet bald"
+    : "Your MedPrüf Pro trial is ending soon";
+  const html = isDe
+    ? `<p>Hallo${firstName ? ` ${firstName}` : ""},</p>` +
+      `<p>dein 7-tägiger MedPrüf Pro-Test endet in Kürze. Wenn du nichts unternimmst, wird deine hinterlegte Karte automatisch mit <strong>19 € pro Monat</strong> belastet und dein Pro-Zugang läuft weiter.</p>` +
+      `<p>Möchtest du weitermachen, musst du nichts tun. Wenn nicht, kündige einfach in deinen Whop-Abrechnungseinstellungen, bevor der Test endet — dann wird nichts belastet.</p>` +
+      `<p><a href="https://whop.com/medpruf">Mitgliedschaft verwalten</a></p>` +
+      `<p>Mit freundlichen Grüßen<br>Das MedPrüf-Team</p>`
+    : `<p>Hi${firstName ? ` ${firstName}` : ""},</p>` +
+      `<p>Your 7-day MedPrüf Pro trial is ending soon. If you do nothing, the card on file is automatically charged <strong>19 € per month</strong> and your Pro access continues.</p>` +
+      `<p>Want to continue? Do nothing. If not, cancel in your Whop billing settings before the trial ends and you will not be charged.</p>` +
+      `<p><a href="https://whop.com/medpruf">Manage your membership</a></p>` +
+      `<p>Best,<br>The MedPrüf Team</p>`;
+
+  try {
+    const res = await sendZohoEmail({ to: email, subject, htmlBody: html });
+    await recordEvent(sb, userId, "whop_trial_ending_email", {
+      event,
+      membership_id: membershipId,
+      to: email,
+      ok: res.ok,
+      reason: res.ok ? null : (res as { reason?: string }).reason,
+    });
+  } catch (err) {
+    console.error("[webhooks/whop] trial-ending email failed", err);
+    await recordEvent(sb, userId, "whop_trial_ending_email_failed", {
+      event, membership_id: membershipId, to: email,
+    });
+  }
+
+  return NextResponse.json({ ok: true, handled: event });
+}
+
+/**
  * Reverse a referral reward that was credited off THIS referee's purchase.
  * The reward is paid out manually/by cron only once status='rewarded' AND the
  * 30-day hold passes, so a 'qualified' row reversed here was never paid — we
@@ -1181,6 +1565,17 @@ async function qualifyReferralOnWhopPayment(
  */
 function escapeLike(value: string): string {
   return value.replace(/\\/g, "\\\\").replace(/[%_]/g, (c) => `\\${c}`);
+}
+
+// Defensive payload readers for the dunning/trial paths (mirror whop.ts).
+function rec(v: unknown): Record<string, unknown> {
+  return v && typeof v === "object" ? (v as Record<string, unknown>) : {};
+}
+function str(v: unknown): string | null {
+  if (v === null || v === undefined) return null;
+  if (typeof v === "string") return v;
+  if (typeof v === "number") return String(v);
+  return null;
 }
 
 async function recordEvent(

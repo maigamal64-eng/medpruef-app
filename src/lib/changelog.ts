@@ -24,6 +24,18 @@ export interface ChangelogEntry {
 export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09-20",
+    tag: "admin",
+    title: {
+      de: "Zahlungs-Rückgewinnung und Testende-Erinnerung (Whop v1 Webhook)",
+      en: "Payment recovery and trial-ending reminder (Whop v1 webhook)",
+    },
+    description: {
+      de: "Interne Härtung: Ein neuer Whop-Webhook (Standard Webhooks, api_version v1) liefert jetzt auch fehlgeschlagene Zahlungen und Prüf-Anforderungen der Bank. Schlägt eine Verlängerung fehl oder will die Bank die Zahlung bestätigt haben, erhält der Käufer automatisch eine E-Mail mit einem Wiederherstellungs-Link, mit dem dieselbe Zahlung in einer Minute abgeschlossen werden kann. Zusätzlich sendet Whop jetzt sein eigenes Signal, bevor ein kostenloser 7-Tage-Test endet, und der Käufer bekommt eine Erinnerung mit den Konditionen (19 €/Monat danach) und dem Kündigungslink.",
+      en: "Internal hardening: a new Whop webhook (Standard Webhooks, api_version v1) also delivers failed payments and bank verification requests. If a renewal fails or the bank wants the buyer to confirm a charge, the buyer automatically receives an email with a recovery link that resumes the exact payment in one minute. Whop also now sends its own signal before a 7-day trial ends, and the buyer gets a reminder stating the 19 €/month terms and how to cancel.",
+    },
+  },
+  {
+    date: "2026-09-20",
     tag: "improvement",
     title: {
       de: "Schnellere Pro-Aktivierung nach der Zahlung",
