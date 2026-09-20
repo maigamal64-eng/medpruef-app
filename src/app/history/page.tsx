@@ -225,7 +225,7 @@ export default function HistoryPage() {
     if (!isPaid || tab !== "questions") return;
     void loadAnswers(answerOffset, false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isPaid, filterExam, filterCorrect, filterDays]);
+  }, [isPaid, tab, filterExam, filterCorrect, filterDays]);
 
   const openExam = useCallback(async (summary: AttemptSummary) => {
     try {
@@ -413,13 +413,13 @@ export default function HistoryPage() {
           <StatCard label={L("Prüfungen", "Exams")} value={attempts?.length ?? "–"} />
         </div>
 
-        {/* Tabs */}
+        {/* Tabs (MPDS .mp-tabs primitives) */}
         <div className="mp-tabs mb-4" role="tablist">
           <button
             role="tab"
             aria-selected={tab === "exams"}
             onClick={() => setTab("exams")}
-            className={`mp-tab ${tab === "exams" ? "mp-tabs__tab--active" : ""}`}
+            className={`mp-tabs__tab ${tab === "exams" ? "mp-tabs__tab--active" : ""}`}
           >
             {L("Prüfungen", "Exams")}
           </button>
@@ -427,7 +427,7 @@ export default function HistoryPage() {
             role="tab"
             aria-selected={tab === "questions"}
             onClick={() => setTab("questions")}
-            className={`mp-tabs__tab--active-${tab === "questions"}`}
+            className={`mp-tabs__tab ${tab === "questions" ? "mp-tabs__tab--active" : ""}`}
           >
             {L("Fragen-Verlauf", "Question history")}
           </button>
@@ -560,9 +560,9 @@ export default function HistoryPage() {
 
 function StatCard({ label, value, valueTone }: { label: string; value: string | number; valueTone?: "accent" }) {
   return (
-    <div className="mp-stat rounded-2xl border border-[var(--mp-border-subtle)] bg-white p-4">
-      <div className="text-xs text-[var(--mp-fg-subtle)] mb-1">{label}</div>
-      <div className={`text-xl font-black font-mono ${valueTone === "accent" ? "text-[var(--mp-accent-teal)]" : "text-[var(--mp-fg)]"}`}>
+    <div className="mp-stat">
+      <div className="mp-stat__label">{label}</div>
+      <div className={`text-2xl font-black font-mono ${valueTone === "accent" ? "text-[var(--mp-accent-teal)]" : "text-[var(--mp-fg)]"}`}>
         {value}
       </div>
     </div>
