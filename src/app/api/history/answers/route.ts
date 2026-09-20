@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
   let q = sb
     .from("answer_history")
     .select(
-      "id, question_id, user_answer, is_correct, time_spent_ms, created_at, questions!left(id, topic, question, answer, explanation, ai_explanation, choices, image_url, is_active, exam_type)",
+      "id, question_id, user_answer, is_correct, time_spent_ms, created_at, question:questions!left(id, topic, question, answer, explanation, ai_explanation, choices, image_url, is_active, exam_type)",
       { count: "exact" }
     )
     .eq("user_id", userId);
