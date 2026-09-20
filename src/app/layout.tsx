@@ -10,6 +10,7 @@ import PWAInstall from "@/components/PWAInstall";
 import FeedbackWidget from "@/components/FeedbackWidget";
 import GuestMigrationBanner from "@/components/GuestMigrationBanner";
 import CohortCountdownBanner from "@/components/CohortCountdownBanner";
+import RenewalPrompt from "@/components/RenewalPrompt";
 import EmailValidationModal from "@/components/EmailValidationModal";
 import CookieBannerMount from "@/components/CookieBannerMount";
 import LangHtmlSync from "@/components/LangHtmlSync";
@@ -77,7 +78,7 @@ export const metadata: Metadata = {
     template: "%s",
   },
   description:
-    "Specialized prep for the Austrian Kenntnisprüfung Wien, Stichprobentest (Innsbruck), and Pharmakologie exams. 150 questions free, no credit card.",
+    "Vorbereitung auf die österreichischen Ärzteprüfungen: Kenntnisprüfung Wien, Stichprobentest und Pharmakologie. Über 10.000 Fragen mit klinischen Erklärungen. 450 Fragen kostenlos, ohne Kreditkarte.",
   keywords: [
     "Kenntnisprüfung", "Austrian medical exam", "Vienna medical license",
     "SIP 4", "SIP 5", "medical exam preparation", "Ärztekammer Wien",
@@ -107,14 +108,14 @@ export const metadata: Metadata = {
     siteName: "MedPrüf",
     title: "MedPrüf: Austrian Kenntnisprüfung Preparation (Vienna)",
     description:
-      "Specialized prep for the Austrian Kenntnisprüfung Wien, Stichprobentest (Innsbruck), and Pharmakologie exams. 150 questions free, no credit card.",
+      "Vorbereitung auf die österreichischen Ärzteprüfungen: Kenntnisprüfung Wien, Stichprobentest und Pharmakologie. Über 10.000 Fragen mit klinischen Erklärungen. 450 Fragen kostenlos, ohne Kreditkarte.",
     images: [{ url: "/brand/og-image.png", width: 1200, height: 630, alt: "MedPrüf: Kenntnisprüfung Preparation" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "MedPrüf: Austrian Kenntnisprüfung Preparation (Vienna)",
     description:
-      "Specialized prep for the Austrian Kenntnisprüfung Wien, Stichprobentest (Innsbruck), and Pharmakologie exams. 150 questions free, no credit card.",
+      "Vorbereitung auf die österreichischen Ärzteprüfungen: Kenntnisprüfung Wien, Stichprobentest und Pharmakologie. Über 10.000 Fragen mit klinischen Erklärungen. 450 Fragen kostenlos, ohne Kreditkarte.",
     images: ["/brand/og-image.png"],
   },
 };
@@ -389,9 +390,14 @@ export default function RootLayout({
                 overlap each other when more than one is active (similar-sweep
                 P2, 2026-07-01). Each banner's own root is normal flow now; this
                 container owns the single fixed top-0 slot. Priority order top to
-                bottom: guest migration, cohort countdown, PWA install. */}
+                bottom: guest migration, renewal prompt, cohort countdown,
+                PWA install. The renewal prompt sits high because it is the
+                only one of these that a PAYING user ever sees (the cohort
+                banner and the announcement gate both suppress themselves
+                for paid accounts), so the two can never compete. */}
             <div className="fixed top-0 left-0 right-0 z-[70] flex flex-col">
               <GuestMigrationBanner />
+              <RenewalPrompt />
               <CohortCountdownBanner />
               <PWAInstall />
             </div>

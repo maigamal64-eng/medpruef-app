@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Prüfungsvorbereitung: MedPrüf",
+  title: "MedPrüf: Kenntnisprüfung & Stichprobentest",
   description:
-    "Specialized prep for the Austrian Kenntnisprüfung Wien, Stichprobentest (Innsbruck), and Pharmakologie exams. 150 questions free, no credit card.",
+    "Vorbereitung auf die österreichischen Ärzteprüfungen: Kenntnisprüfung Wien, Stichprobentest und Pharmakologie. Über 10.000 Fragen mit klinischen Erklärungen. 450 Fragen kostenlos, ohne Kreditkarte.",
   keywords: [
     "Kenntnisprüfung", "Kenntnisprüfung preparation", "Austrian medical exam",
     "Vienna medical license", "SIP 4", "SIP 5", "medical exam questions",
@@ -13,21 +13,21 @@ export const metadata: Metadata = {
     "Austrian medical licensure", "clinical questions",
   ],
   alternates: {
-    canonical: "https://medpruf.com/landing",
+    canonical: "https://medpruf.com/",
   },
   openGraph: {
     type: "website",
-    url: "https://medpruf.com/landing",
-    title: "Prüfungsvorbereitung: MedPrüf",
+    url: "https://medpruf.com/",
+    title: "MedPrüf: Kenntnisprüfung & Stichprobentest",
     description:
-      "Specialized prep for the Austrian Kenntnisprüfung Wien, Stichprobentest (Innsbruck), and Pharmakologie exams. 150 questions free, no credit card.",
+      "Vorbereitung auf die österreichischen Ärzteprüfungen: Kenntnisprüfung Wien, Stichprobentest und Pharmakologie. Über 10.000 Fragen mit klinischen Erklärungen. 450 Fragen kostenlos, ohne Kreditkarte.",
     images: [{ url: "/brand/og-image.png", width: 1200, height: 630 }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Prüfungsvorbereitung: MedPrüf",
+    title: "MedPrüf: Kenntnisprüfung & Stichprobentest",
     description:
-      "Specialized prep for the Austrian Kenntnisprüfung Wien, Stichprobentest (Innsbruck), and Pharmakologie exams. 150 questions free, no credit card.",
+      "Vorbereitung auf die österreichischen Ärzteprüfungen: Kenntnisprüfung Wien, Stichprobentest und Pharmakologie. Über 10.000 Fragen mit klinischen Erklärungen. 450 Fragen kostenlos, ohne Kreditkarte.",
     images: ["/brand/og-image.png"],
   },
 };

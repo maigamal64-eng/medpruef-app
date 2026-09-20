@@ -767,6 +767,17 @@ const translations = {
   'checkout_stall_thanks_title': { de: 'Danke dir! Das hilft wirklich.', en: 'Thank you! This really helps.' },
   'checkout_stall_thanks_body': { de: 'Wenn wir es lösen können, meldet sich [name] persönlich.', en: 'If we can fix it, [name] will reach out personally.' },
   'checkout_stall_dismiss': { de: 'Schließen', en: 'Dismiss' },
+
+  // In-product renewal prompt (2026-09-07) — a small non-blocking banner
+  // for Pro users inside the 7-day-before / 14-day-after expiry window.
+  // Register is `du`, matching every other in-product surface (the formal
+  // Sie register belongs to the outbound email lane, not here).
+  'renewal_ends_label': { de: 'Dein Pro-Zugang endet am', en: 'Your Pro access ends on' },
+  'renewal_ended_label': { de: 'Dein Pro-Zugang ist abgelaufen am', en: 'Your Pro access ended on' },
+  'renewal_cta': { de: '3 Monate verlängern', en: 'Renew for 3 months' },
+  'renewal_cta_loading': { de: 'Einen Moment', en: 'One moment' },
+  'renewal_dismiss': { de: 'Hinweis schließen', en: 'Dismiss notice' },
+  'renewal_error': { de: 'Checkout hat nicht geklappt. Bitte später erneut versuchen.', en: 'Checkout did not work. Please try again later.' },
 } as const
 
 export type TranslationKey = keyof typeof translations

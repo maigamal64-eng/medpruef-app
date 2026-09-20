@@ -17,9 +17,9 @@ import { getNextExamDate } from "@/lib/exam-dates";
  * script from the layout to guarantee it's in HEAD of every variant.
  */
 
-const pageTitle = "Kenntnisprüfung Wien 2026: Vorbereitung mit 7.566 Fragen | MedPrüf";
+const pageTitle = "Kenntnisprüfung Wien 2026: 450 Fragen gratis üben | MedPrüf";
 const pageDesc =
-  "Vorbereitung auf die österreichische Kenntnisprüfung Wien (SIP 4 + SIP 5). 7.566 Prüfungsfragen aus 10 Fachgebieten, klinische KI-Erklärungen, Pass-Until-You-Pass-Garantie. 150 Fragen kostenlos.";
+  "450 Fragen kostenlos üben, Pass-Until-You-Pass-Garantie. Vorbereitung auf die Kenntnisprüfung Wien (SIP 4 + SIP 5) im Rahmen der Nostrifizierung: 7.566 Prüfungsfragen aus 10 Fachgebieten mit klinischen Erklärungen.";
 
 export const metadata: Metadata = {
   title: pageTitle,

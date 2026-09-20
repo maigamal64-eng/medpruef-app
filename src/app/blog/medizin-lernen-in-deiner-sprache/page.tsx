@@ -110,7 +110,7 @@ export default function MedizinLernenInDeinerSprachePost() {
                     Fragen aus österreichischen Quellen: für die
                     Kenntnisprüfung Wien aus dokumentierten
                     Prüfungsmaterialien, für den Stichprobentest aus dem
-                    klinischen Curriculum der MedUni Innsbruck, bewusst nicht
+                    klinischen Curriculum, bewusst nicht
                     aus geleakten oder inoffiziellen Altfragen-Sammlungen, die
                     die Universitäten selbst als ungültig einstufen. Diese
                     saubere Herkunft ist uns wichtiger als ein
@@ -290,7 +290,7 @@ export default function MedizinLernenInDeinerSprachePost() {
                     MedPrüf runs on over 10,000 real, documented questions from
                     Austrian sources: for the Kenntnisprüfung Wien from
                     documented exam materials, for the Stichprobentest from the
-                    MedUni Innsbruck clinical curriculum, deliberately not from
+                    clinical curriculum, deliberately not from
                     leaked or unofficial Altfragen collections that the
                     universities themselves treat as invalid. That clean
                     provenance matters more to us than a marketing claim that

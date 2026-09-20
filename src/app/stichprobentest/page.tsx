@@ -3,16 +3,16 @@ import ExamLandingShell, {
 } from "@/components/seo/ExamLandingShell";
 
 /**
- * /kmp-innsbruck — Stichprobentest (Innsbruck) landing page.
+ * /stichprobentest — Stichprobentest (Innsbruck) landing page.
  *
  * IMPORTANT (2026-06-21 rename + fact reconciliation): the exam this
  * page covers is the national **Stichprobentest** (the MedUni
  * Nostrifizierung screening), NOT the domestic "Kumulative
  * Modulprüfung". The DB key stays `kmp_innsbruck` (legacy) and the URL
- * slug stays /kmp-innsbruck (route + content-provenance anchor:
+ * slug stays /stichprobentest (route + content-provenance anchor:
  * "Nostrifizierung Innsbruck"); only the display copy changed.
  *
- * Content numbers (live DB count 2026-06-24): 2,742 questions across
+ * Content numbers (live DB count 2026-06-24): 2,785 questions across
  * 12 specialties. Source: 17 KoalaMed PDFs distilled from the MedUni
  * Innsbruck clinical curriculum (`scripts/import_koalamed.py`).
  * KoalaMed is a third-party aggregator; we imported from those
@@ -40,8 +40,8 @@ const content: ExamLandingContent = {
     en: "Pass the Stichprobentest on your first try.",
   },
   heroSubtitle: {
-    de: "Strukturierte Vorbereitung auf den nationalen Stichprobentest der Nostrifizierung. 2.742 Fragen aus 12 Fachgebieten, klinisch kommentiert, destilliert aus dem klinischen Curriculum der Med Uni Innsbruck (KoalaMed-Materialien). Keine offiziellen Prüfungsfragen, sondern echtes Verständnis.",
-    en: "Structured prep for the national Stichprobentest of the nostrification process. 2,742 questions across 12 specialties, clinically annotated, distilled from the Med Uni Innsbruck clinical curriculum (KoalaMed materials). Not official exam items, real understanding.",
+    de: "Strukturierte Vorbereitung auf den nationalen Stichprobentest der Nostrifizierung. 2.785 Fragen aus 12 Fachgebieten, klinisch kommentiert und kuratiert. Keine offiziellen und keine rekonstruierten Prüfungsfragen, sondern echtes Verständnis.",
+    en: "Structured prep for the national Stichprobentest of the nostrification process. 2,785 questions across 12 specialties, clinically annotated and curated. Not official exam items and not recalled ones, real understanding.",
   },
   primaryCtaHref: "/quiz?exam=kmp_innsbruck&free=1",
   primaryCtaLabel: {
@@ -53,10 +53,14 @@ const content: ExamLandingContent = {
     de: "Alle Pläne ansehen",
     en: "See all plans",
   },
+  // Renders the venue-rotation table from the self-aging calendar
+  // (src/lib/exam-dates.ts). This is the one exam whose venue moves
+  // every sitting, so the rotation is a real reader question.
+  sittingsExamType: "kmp_innsbruck",
   breakdown: [
     {
       label: { de: "Fragen", en: "Questions" },
-      value: "2.742",
+      value: "2.785",
       sub: {
         de: "Aus 17 Curriculum-PDFs strukturiert",
         en: "Structured from 17 curriculum PDFs",
@@ -136,8 +140,8 @@ const content: ExamLandingContent = {
         en: "Why do MedPrüf questions differ between the Stichprobentest and the Vienna Kenntnisprüfung?",
       },
       a: {
-        de: "Es sind zwei verschiedene Anerkennungswege. Die Kenntnisprüfung Wien ist die Arztprüfung der Österreichischen Ärztekammer (geprüft als SIP 4 + SIP 5). Der Stichprobentest gehört zum Universitäts-Nostrifizierungsweg. Wir halten die Fragenbanken deswegen getrennt: wählst du „Stichprobentest (Innsbruck)\" als Prüfungstyp, siehst du die 2.742 Fragen, die wir aus dem klinischen Curriculum der Med Uni Innsbruck strukturiert haben. Die Kenntnisprüfung-Wien-Bank (7.566 Fragen) bleibt für dich sichtbar, wenn du den Prüfungstyp wechselst.",
-        en: "They are two different recognition routes. The Vienna Kenntnisprüfung is the Austrian Medical Chamber's Arztprüfung (tested as SIP 4 + SIP 5). The Stichprobentest belongs to the university nostrification route. We keep the question banks separate: pick \"Stichprobentest (Innsbruck)\" as your exam type and you see the 2,742 questions we structured from the Med Uni Innsbruck clinical curriculum. The Vienna Kenntnisprüfung bank (7,566 questions) stays available if you switch exam type.",
+        de: "Es sind zwei verschiedene Anerkennungswege. Die Kenntnisprüfung Wien ist die Arztprüfung der Österreichischen Ärztekammer (geprüft als SIP 4 + SIP 5). Der Stichprobentest gehört zum Universitäts-Nostrifizierungsweg. Wir halten die Fragenbanken deswegen getrennt: wählst du „Stichprobentest (Innsbruck)\" als Prüfungstyp, siehst du die 2.785 Fragen, die wir für diesen Prüfungsweg strukturiert haben. Die Kenntnisprüfung-Wien-Bank (7.566 Fragen) bleibt für dich sichtbar, wenn du den Prüfungstyp wechselst.",
+        en: "They are two different recognition routes. The Vienna Kenntnisprüfung is the Austrian Medical Chamber's Arztprüfung (tested as SIP 4 + SIP 5). The Stichprobentest belongs to the university nostrification route. We keep the question banks separate: pick \"Stichprobentest\" as your exam type and you see the 2,785 questions we structured for this recognition route. The Vienna Kenntnisprüfung bank (7,566 questions) stays available if you switch exam type.",
       },
     },
     {
@@ -147,7 +151,7 @@ const content: ExamLandingContent = {
       },
       a: {
         de: "Ja. Nach der Wahl „Stichprobentest (Innsbruck)\" als Prüfungstyp kannst du im Quiz-Modus und im Prüfungs-Builder nach Fachgebiet filtern. So übst du z. B. nur HNO oder nur Augenheilkunde. Der Studienplan (Lernplan) berücksichtigt automatisch, welche Fachgebiete du bisher bearbeitet hast und welche noch offen sind.",
-        en: "Yes. After selecting \"Stichprobentest (Innsbruck)\" as your exam type, you can filter by specialty in both Quiz mode and the Exam Builder, e.g. practice ENT only, or ophthalmology only. The study plan automatically tracks which specialties you've covered and which are still open.",
+        en: "Yes. After selecting \"Stichprobentest\" as your exam type, you can filter by specialty in both Quiz mode and the Exam Builder, e.g. practice ENT only, or ophthalmology only. The study plan automatically tracks which specialties you've covered and which are still open.",
       },
     },
     {
@@ -176,8 +180,8 @@ const content: ExamLandingContent = {
         en: "Are MedPrüf's questions identical to the real exam questions?",
       },
       a: {
-        de: "Nein. Die von uns importierten Fragen stammen aus öffentlich zugänglichen Curriculum-PDFs der Med Uni Innsbruck (KoalaMed-Materialien) und sind im klinischen MCQ-Stil gehalten: Fallvignetten, MCQ-Format, teilweise Mehrfachantworten. Wir haben jede Frage auf Unicode-Artefakte geprüft und typografische Fehler aus der PDF-Extraktion behoben. Was wir NICHT versprechen: identische oder offizielle Prüfungsfragen. Die Fragenbank wird laufend erweitert, und der Zweck von MedPrüf ist Verständnis aufbauen, nicht Auswendiglernen.",
-        en: "No. The questions we imported come from publicly available Med Uni Innsbruck curriculum PDFs (KoalaMed materials) and are in a clinical MCQ style: case vignettes, MCQ format, some multi-correct. We've checked every question for Unicode artifacts and fixed typographic issues from the PDF extraction. What we DON'T promise: identical or official exam questions. The question base keeps growing, and MedPrüf's purpose is building understanding, not memorization.",
+        de: "Nein. Unsere Fragen sind curriculumsnahe Übungsfragen im klinischen MCQ-Stil: Fallvignetten, MCQ-Format, teilweise Mehrfachantworten. Wir haben jede Frage auf Unicode-Artefakte geprüft und typografische Fehler aus der PDF-Extraktion behoben. Was wir NICHT versprechen: identische oder offizielle Prüfungsfragen. Die Fragenbank wird laufend erweitert, und der Zweck von MedPrüf ist Verständnis aufbauen, nicht Auswendiglernen.",
+        en: "No. Our questions are curriculum-aligned practice items in a clinical MCQ style: case vignettes, MCQ format, some multi-correct. We've checked every question for Unicode artifacts and fixed typographic issues from the PDF extraction. What we DON'T promise: identical or official exam questions. The question base keeps growing, and MedPrüf's purpose is building understanding, not memorization.",
       },
     },
   ],

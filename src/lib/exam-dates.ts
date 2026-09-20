@@ -16,6 +16,11 @@
  *   - Pharmakologie/Rezeptierkunde: meduniwien.ac.at Nostrifikation
  * Research dossier: research/exam-dates-2026-06-20.md.
  *
+ * Amended 2026-09-07: the three 2027 Stichprobentest sittings were
+ * added from the AST Infoblatt (Stand September 2026), which is the
+ * first document to publish them. Kenntnisprüfung 2027 dates are still
+ * unpublished by arztakademie.at, so that list stays 2026-only.
+ *
  * Re-verify cadence (SoT §0/§1): start of every campaign + monthly.
  * The un-gameable check is "does the first FUTURE entry still match
  * the official source URL?" — a 30-second check, not a prose re-audit.
@@ -45,6 +50,14 @@ export interface ExamSitting {
   location: string | null;
   /** Official source URL the date was taken from. */
   sourceUrl: string;
+  /**
+   * Human-readable name + version of the source document, when the
+   * document itself is versioned and the URL alone does not identify
+   * which edition the date came from (e.g. "AST Infoblatt, Stand
+   * September 2026"). Rendered next to the source link where present.
+   * Optional: older entries whose URL IS the identifier omit it.
+   */
+  sourceLabel?: string;
   /** "high" = confirmed on an official .at page; "estimated" = pattern-derived, not yet published. */
   confidence: "high" | "estimated";
   /** Optional human note shown in the calendar / admin (e.g. national-rotating model). */
@@ -102,7 +115,68 @@ export const EXAM_SITTINGS: Record<PuypExamType, ExamSitting[]> = {
         en: "National Stichprobentest (nostrification screening): the venue rotates each sitting, the next is in Graz. You register at the university where you filed your nostrification application.",
       },
     },
-    // 2027 Stichprobentest dates NOT yet published (only a 2026 Termine doc exists).
+    // 2027 sittings — published in the AST Infoblatt ("Stand: September
+    // 2026"), the first document to carry them. VERIFIED 2026-09-07 by
+    // fetching the PDF itself (HTTP 200, Last-Modified 2026-09-04) and
+    // reading it: "Für 2027 sind folgende Stichprobentesttermine geplant
+    // ... 03.02.2027 an der Medizinischen Universität Innsbruck,
+    // 04.05.2027 an der Medizinischen Universität Wien, 22.09.2027 an der
+    // Medizinischen Universität Graz." The English edition of the same
+    // document says the same. The venue keeps rotating Innsbruck → Wien →
+    // Graz.
+    //
+    // Registration deadlines are deliberately null: the document states
+    // none per sitting and says participation depends on the deadline
+    // "vorgegeben durch die jeweilige Med Uni". Pattern-deriving one would
+    // put a wrong date on a customer surface. Re-pull i-med.ac.at when its
+    // 2027 Termine PDF appears and fill them in then. The document says
+    // "geplant" (planned), so re-verify before any campaign that leads
+    // with a 2027 date.
+    {
+      examType: "kmp_innsbruck",
+      label: { de: "Stichprobentest", en: "Stichprobentest" },
+      date: "2027-02-03",
+      registrationDeadline: null,
+      location: "Innsbruck",
+      sourceUrl:
+        "https://media.anlaufstelle-anerkennung.at/Infoblatt_Nostrifizierung_Humanmedizin.pdf",
+      sourceLabel: "AST Infoblatt, Stand September 2026",
+      confidence: "high",
+      note: {
+        de: "Nationaler Stichprobentest (Nostrifizierung): Standort wechselt je Termin. Die verbindliche Anmeldefrist erfährst du an der Universität, an der du den Nostrifizierungs-Antrag gestellt hast.",
+        en: "National Stichprobentest (nostrification screening): the venue rotates each sitting. The binding registration deadline comes from the university where you filed your nostrification application.",
+      },
+    },
+    {
+      examType: "kmp_innsbruck",
+      label: { de: "Stichprobentest", en: "Stichprobentest" },
+      date: "2027-05-04",
+      registrationDeadline: null,
+      location: "Wien",
+      sourceUrl:
+        "https://media.anlaufstelle-anerkennung.at/Infoblatt_Nostrifizierung_Humanmedizin.pdf",
+      sourceLabel: "AST Infoblatt, Stand September 2026",
+      confidence: "high",
+      note: {
+        de: "Nationaler Stichprobentest (Nostrifizierung): Standort wechselt je Termin. Die verbindliche Anmeldefrist erfährst du an der Universität, an der du den Nostrifizierungs-Antrag gestellt hast.",
+        en: "National Stichprobentest (nostrification screening): the venue rotates each sitting. The binding registration deadline comes from the university where you filed your nostrification application.",
+      },
+    },
+    {
+      examType: "kmp_innsbruck",
+      label: { de: "Stichprobentest", en: "Stichprobentest" },
+      date: "2027-09-22",
+      registrationDeadline: null,
+      location: "Graz",
+      sourceUrl:
+        "https://media.anlaufstelle-anerkennung.at/Infoblatt_Nostrifizierung_Humanmedizin.pdf",
+      sourceLabel: "AST Infoblatt, Stand September 2026",
+      confidence: "high",
+      note: {
+        de: "Nationaler Stichprobentest (Nostrifizierung): Standort wechselt je Termin. Die verbindliche Anmeldefrist erfährst du an der Universität, an der du den Nostrifizierungs-Antrag gestellt hast.",
+        en: "National Stichprobentest (nostrification screening): the venue rotates each sitting. The binding registration deadline comes from the university where you filed your nostrification application.",
+      },
+    },
   ],
   pharma: [
     // Rezeptierkunde/Pharmakologie has NO fixed annual date: it follows
@@ -147,6 +221,26 @@ export function getNextExamDate(
   now: Date = new Date()
 ): string | null {
   return getNextExamSitting(examType, now)?.date ?? null;
+}
+
+/**
+ * Every known FUTURE sitting for ONE exam type, sorted ascending.
+ * Powers the per-exam venue-rotation table on the exam landing pages
+ * (`/stichprobentest`), where the point is showing the ROTATION across
+ * the next several sittings, not just the single next one.
+ *
+ * Future-only on purpose: re-listing passed sittings to make a rotation
+ * look complete would put stale dates back on a customer surface and
+ * break the self-aging invariant this whole file exists to hold.
+ */
+export function getFutureSittings(
+  examType: PuypExamType,
+  now: Date = new Date()
+): ExamSitting[] {
+  const todayIso = now.toISOString().slice(0, 10);
+  return (EXAM_SITTINGS[examType] ?? [])
+    .filter((s) => s.date >= todayIso)
+    .sort((a, b) => a.date.localeCompare(b.date));
 }
 
 /**

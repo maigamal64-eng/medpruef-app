@@ -1844,7 +1844,7 @@ function Footer({ lang }: { lang: Lang }) {
                 </Link>
               </li>
               <li>
-                <Link href="/kmp-innsbruck" className="hover:text-white transition-colors">
+                <Link href="/stichprobentest" className="hover:text-white transition-colors">
                   Stichprobentest (Innsbruck)
                 </Link>
               </li>

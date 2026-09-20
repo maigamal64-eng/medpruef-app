@@ -7,10 +7,15 @@ Content-Signal: ai-train=no, search=yes, ai-input=yes
 Allow: /
 
 Disallow: /api/
-Disallow: /admin/
+Disallow: /admin
 Disallow: /onboarding/
 Disallow: /dashboard/
-Disallow: /settings/
-Disallow: /profile/
+
+# /settings, /profile, /exam, /progress, /stats, /flashcards and /library are
+# login-gated app surfaces that got indexed anyway: the old rules here carried
+# TRAILING SLASHES ("Disallow: /settings/"), which never match "/settings".
+# They now serve <meta name="robots" content="noindex">, and they are left
+# crawlable ON PURPOSE, because Googlebot has to fetch a page to read its
+# noindex. Add Disallow lines only after Search Console shows them dropped.
 
 Sitemap: https://medpruf.com/sitemap.xml

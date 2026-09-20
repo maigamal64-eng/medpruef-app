@@ -125,7 +125,7 @@ export default function Image() {
             fontWeight: 500,
           }}
         >
-          <span>medpruf.com/kmp-innsbruck</span>
+          <span>medpruf.com/stichprobentest</span>
           <span style={{ color: "rgba(255,255,255,0.35)" }}>·</span>
           <span>150 Fragen kostenlos</span>
         </div>

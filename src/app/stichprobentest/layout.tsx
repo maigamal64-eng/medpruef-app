@@ -2,12 +2,19 @@ import type { Metadata } from "next";
 import { getNextExamSitting } from "@/lib/exam-dates";
 
 /**
- * /kmp-innsbruck — SEO landing page for the national Stichprobentest
- * (the MedUni Nostrifizierung screening). Primary queries:
- *   "Stichprobentest"
- *   "Stichprobentest Innsbruck"
- *   "Nostrifizierung Innsbruck"
- *   "MedUni Innsbruck Prüfung"
+ * /stichprobentest — SEO landing page for the national Stichprobentest
+ * (the Nostrifizierung screening exam). Primary queries, measured on live
+ * google.at/google.de SERPs 2026-09-05:
+ *   "Stichprobentest Österreich"   (we ranked #7 AT / #6 DE on the bare homepage)
+ *   "Stichprobentest Vorbereitung" (#7 AT / #3 DE)
+ *   "Stichprobentest Medizin"      (#9 AT / #7 DE)
+ * Those SERPs carry ZERO ads and ZERO People-Also-Ask, and no commercial
+ * competitor for this exam exists on either geo. Every page above us is a
+ * university or ministry procedural page; none offers preparation.
+ *
+ * Renamed from /kmp-innsbruck on 2026-09-05. The venue ROTATES every sitting
+ * (2026: Innsbruck-Feb, Wien-May, Graz-Sep), so it must never be baked into
+ * the URL, the title, or the H1. The DB key stays `kmp_innsbruck` (legacy).
  *
  * The DB key + URL slug stay `kmp_innsbruck` / /kmp-innsbruck (legacy
  * key + route/provenance anchor). The display copy was corrected on
@@ -17,17 +24,19 @@ import { getNextExamSitting } from "@/lib/exam-dates";
  * recognition test). The "KMP Innsbruck" keyword is kept below so the
  * page still ranks for the term users historically searched.
  *
- * Content numbers: 2,742 questions across 12 specialties (live DB count
- * 2026-06-24; imported from 17 KoalaMed PDFs distilled from the
- * Med Uni Innsbruck clinical curriculum). KoalaMed is a third-party
- * platform that publishes exam-style PDFs; we imported from those
- * materials but KoalaMed is NOT the exam, we don't represent them, and
- * these are NOT official Stichprobentest items.
+ * Content numbers: 2,785 active questions across 12 specialties (live DB
+ * count 2026-09-05). We do NOT name a source institution in customer-facing
+ * copy (removed 2026-09-05, [name]'s call): naming one creates institutional
+ * exposure for zero commercial benefit, and a competitor selling recalled
+ * exam content was stopped in Feb 2026 over a dispute with a Universitäts-
+ * leitung. What we DO say, because it is both true and the differentiator:
+ * these are curriculum-derived practice questions, explicitly NOT official
+ * or recalled exam items.
  */
 
-const pageTitle = "Stichprobentest (Innsbruck) 2026: Vorbereitung mit 2.742 Fragen | MedPrüf";
+const pageTitle = "Stichprobentest 2026: Vorbereitung mit 2.785 Fragen | MedPrüf";
 const pageDesc =
-  "Strukturierte Vorbereitung auf den nationalen Stichprobentest der Nostrifizierung. 2.742 Fragen aus 12 Fachgebieten, klinisch kommentiert, aus dem Curriculum der Med Uni Innsbruck. 150 Fragen kostenlos.";
+  "Strukturierte Vorbereitung auf den nationalen Stichprobentest der Nostrifizierung. 2.785 klinisch kommentierte Fragen aus 12 Fachgebieten. Nächster Termin: 23. September 2026 in Graz. 150 Fragen kostenlos.";
 
 export const metadata: Metadata = {
   title: pageTitle,
@@ -36,19 +45,21 @@ export const metadata: Metadata = {
     "Stichprobentest",
     "Stichprobentest Innsbruck",
     "Stichprobentest Nostrifizierung",
+    "Stichprobentest Graz",
+    "Stichprobentest Fragen",
+    "Stichprobentest üben",
+    "Stichprobentest Vorbereitung",
     "KMP Innsbruck",
-    "MedUni Innsbruck",
-    "Innsbruck Medizin Prüfung",
+    "Nostrifizierung Österreich",
+    "Nostrifizierung Arzt",
     "Approbation Österreich",
-    "Nostrifizierung Innsbruck",
-    "ausländische Ärzte Tirol",
   ],
   alternates: {
-    canonical: "https://medpruf.com/kmp-innsbruck",
+    canonical: "https://medpruf.com/stichprobentest",
   },
   openGraph: {
     type: "article",
-    url: "https://medpruf.com/kmp-innsbruck",
+    url: "https://medpruf.com/stichprobentest",
     siteName: "MedPrüf",
     title: pageTitle,
     description: pageDesc,
@@ -74,7 +85,7 @@ function buildCourseSchema() {
       "@type": "Place",
       name: sitting?.location
         ? `Online · Stichprobentest ${sitting.location}`
-        : "Online · MedUni Nostrifizierung",
+        : "Online · Stichprobentest Österreich",
       address: {
         "@type": "PostalAddress",
         addressLocality: sitting?.location ?? "Österreich",
@@ -87,9 +98,9 @@ function buildCourseSchema() {
   return {
     "@context": "https://schema.org",
     "@type": "Course",
-    name: "Stichprobentest (Innsbruck): Vorbereitung",
+    name: "Stichprobentest: Vorbereitung",
     description:
-      "Strukturierte Vorbereitung auf den nationalen Stichprobentest der Nostrifizierung für ausländische Ärzt:innen: 12 Fachgebiete, 2.742 Fragen aus dem klinischen Curriculum der Med Uni Innsbruck, mit klinischen Erklärungen.",
+      "Strukturierte Vorbereitung auf den nationalen Stichprobentest der Nostrifizierung für ausländische Ärzt:innen: 12 Fachgebiete, 2.785 kuratierte Übungsfragen mit klinischen Erklärungen.",
     provider: {
       "@type": "Organization",
       name: "MedPrüf",

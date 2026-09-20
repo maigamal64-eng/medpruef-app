@@ -113,6 +113,14 @@ const nextConfig: NextConfig = {
   },
 
   async redirects() {
+    // 2026-09-05: /kmp-innsbruck -> /stichprobentest. The exam's venue rotates
+    // every sitting (Innsbruck-Feb, Wien-May, Graz-Sep 2026), so the venue must
+    // not live in the URL. Permanent: the old slug carried the page's only
+    // rankings, so the equity has to pass through.
+    const stichprobentestRedirect = [
+      { source: "/kmp-innsbruck", destination: "/stichprobentest", permanent: true },
+    ];
+
     // Admin IA revamp (2026-04-23 §2.1) — legacy /admin/* routes → new homes.
     // Temporary for one release cycle so bookmarked URLs don't 404; remove
     // these once [name] confirms no-one is hitting them in logs.
@@ -123,9 +131,10 @@ const nextConfig: NextConfig = {
       { source: "/admin/changelog", destination: "/admin/overview" },
     ].map((r) => ({ ...r, permanent: false }));
 
-    if (!IS_PRODUCTION) return adminLegacyRedirects;
+    if (!IS_PRODUCTION) return [...stichprobentestRedirect, ...adminLegacyRedirects];
 
     return [
+      ...stichprobentestRedirect,
       ...adminLegacyRedirects,
       // Catch-all: any .vercel.app host (old project name, stale preview
       // aliases, the old `medpruef-git-main-*.vercel.app` branch alias) →

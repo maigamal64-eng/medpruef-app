@@ -1,0 +1,225 @@
+"use client";
+
+/**
+ * RenewalPrompt — a small, non-blocking banner telling a Pro user that
+ * their access ends (or just ended) on a specific date, with one button
+ * to the standard 3-month plan and one to dismiss.
+ *
+ * Where it lives: the shared fixed banner stack in the ROOT layout, so
+ * it reaches the user on whatever page they happen to open, not only on
+ * /pricing. It never blocks the quiz — it is a 44px strip at the top of
+ * the same flex column as the guest-migration and cohort banners, and
+ * the quiz keeps its own scroll and focus.
+ *
+ * Why it is NOT routed through useAnnouncementGate: that gate exists to
+ * suppress marketing surfaces for paying users (computeActiveSurface
+ * returns null when isPaid). This banner's entire audience is paying
+ * users, so the gate would silence it permanently. Frequency is capped
+ * locally instead: one appearance per calendar day per browser, via a
+ * localStorage date stamp.
+ *
+ * Decision logic lives in `@/lib/renewal-prompt` (pure, unit-tested,
+ * including the production account whose access ends 2026-09-08).
+ *
+ * Language: `useLang()` + `t()`, so the banner speaks de/en plus the
+ * ru/uk/tr overlay, exactly like the rest of the app chrome. Arabic is
+ * deliberately not authored (standing rule: [name] signs off on all
+ * Arabic before it goes live); `t()` falls back to English for `ar`.
+ *
+ * Checkout: POST /api/whop/checkout { tier } then follow the returned
+ * purchaseUrl, mirroring the proven /pricing call site. No whop.com URL
+ * is ever constructed here.
+ */
+
+import { useCallback, useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
+import { CalendarClock } from "lucide-react";
+import { useUserTier } from "@/lib/hooks/useUserTier";
+import { useLang, t, type Lang } from "@/lib/i18n";
+import { getStoredSession } from "@/lib/auth";
+import { TIERS } from "@/lib/content-truth";
+import {
+  evaluateRenewalPrompt,
+  RENEWAL_TIER,
+  type RenewalPromptDecision,
+} from "@/lib/renewal-prompt";
+
+/** One appearance per calendar day per browser. Value is a YYYY-MM-DD stamp. */
+const SEEN_KEY = "medpruef_renewal_prompt_seen_on";
+
+/**
+ * Paths where a payment nudge would be noise or actively unhelpful:
+ * the auth screens, the checkout return page, and /pricing (which is
+ * already a wall of plans). It stays visible on /quiz on purpose — that
+ * is where the lapsing user actually is.
+ */
+const HIDE_PATHS = ["/login", "/checkout", "/pricing", "/privacy", "/terms", "/impressum"];
+
+const DATE_LOCALE: Record<Lang, string> = {
+  de: "de-AT",
+  en: "en-GB",
+  ru: "ru-RU",
+  uk: "uk-UA",
+  tr: "tr-TR",
+  ar: "en-GB",
+};
+
+function todayStamp(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+/** Local-calendar date label, so the day never shifts by time zone. */
+function formatDate(iso: string, lang: Lang): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, (m ?? 1) - 1, d ?? 1).toLocaleDateString(
+    DATE_LOCALE[lang] ?? "de-AT",
+    { day: "numeric", month: "long" }
+  );
+}
+
+export default function RenewalPrompt() {
+  const pathname = usePathname();
+  const lang = useLang();
+  const { tier, tierExpiresAt, role, isLoading } = useUserTier();
+
+  // `null` until the localStorage read has run on the client, so the
+  // banner never flashes during hydration.
+  const [allowedToday, setAllowedToday] = useState<boolean | null>(null);
+  const [dismissed, setDismissed] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    try {
+      setAllowedToday(localStorage.getItem(SEEN_KEY) !== todayStamp());
+    } catch {
+      // localStorage disabled (private mode, blocked site data). Showing
+      // the banner is the safe failure: the user can still dismiss it
+      // for this page view.
+      setAllowedToday(true);
+    }
+  }, []);
+
+  const stampSeen = useCallback(() => {
+    try {
+      localStorage.setItem(SEEN_KEY, todayStamp());
+    } catch {
+      /* non-fatal */
+    }
+  }, []);
+
+  const decision: RenewalPromptDecision | null = evaluateRenewalPrompt({
+    tier,
+    tierExpiresAt,
+    role,
+  });
+
+  const hidden =
+    isLoading ||
+    dismissed ||
+    allowedToday !== true ||
+    decision === null ||
+    HIDE_PATHS.some((p) => pathname?.startsWith(p));
+
+  // Stamp the day the FIRST time the banner is actually rendered, so a
+  // user who simply navigates away still only sees it once per day.
+  useEffect(() => {
+    if (!hidden) stampSeen();
+  }, [hidden, stampSeen]);
+
+  if (hidden || !decision) return null;
+
+  const handleDismiss = () => {
+    stampSeen();
+    setDismissed(true);
+  };
+
+  const startCheckout = async () => {
+    setError(false);
+    const session = getStoredSession();
+    if (!session?.user) {
+      const next = encodeURIComponent("/pricing?action=renew");
+      window.location.href = `/login?next=${next}&action=renew`;
+      return;
+    }
+    setBusy(true);
+    try {
+      const r = await fetch("/api/whop/checkout", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ tier: RENEWAL_TIER }),
+      });
+      const data = (await r.json().catch(() => ({}))) as {
+        purchaseUrl?: string;
+      };
+      if (r.ok && data?.purchaseUrl) {
+        window.location.href = data.purchaseUrl;
+        return;
+      }
+      setError(true);
+    } catch {
+      setError(true);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const label = decision.lapsed
+    ? t("renewal_ended_label", lang)
+    : t("renewal_ends_label", lang);
+  // Currency format per the content-truth voice guardrail: "49 €".
+  const price = `${Math.round((TIERS.first_3mo_27.price_cents ?? 0) / 100)} €`;
+
+  return (
+    <div
+      role="status"
+      className="bg-[var(--mp-surface-raised)] border-b border-[var(--mp-border-subtle)] px-4 py-2.5 shadow-sm"
+      style={{ minHeight: "44px" }}
+    >
+      <div className="max-w-5xl mx-auto flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 min-w-0">
+          <CalendarClock
+            className="w-4 h-4 flex-shrink-0 text-[var(--mp-cta-blue)]"
+            aria-hidden
+          />
+          <p className="text-xs sm:text-sm text-[var(--mp-fg)] truncate">
+            {error ? (
+              <span className="text-[var(--mp-fg-muted)]">
+                {t("renewal_error", lang)}
+              </span>
+            ) : (
+              <>
+                {label}{" "}
+                <span className="font-semibold">
+                  {formatDate(decision.endsOn, lang)}
+                </span>
+                .
+              </>
+            )}
+          </p>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <button
+            type="button"
+            onClick={() => void startCheckout()}
+            disabled={busy}
+            className="mp-btn mp-btn--primary text-xs px-3 min-h-[32px] whitespace-nowrap disabled:opacity-60"
+          >
+            {busy
+              ? t("renewal_cta_loading", lang)
+              : `${t("renewal_cta", lang)}, ${price}`}
+          </button>
+          <button
+            type="button"
+            onClick={handleDismiss}
+            className="text-[var(--mp-fg-muted)] hover:text-[var(--mp-fg)] text-xs px-2 py-1 min-w-[44px] min-h-[24px]"
+            aria-label={t("renewal_dismiss", lang)}
+            title={t("renewal_dismiss", lang)}
+          >
+            ✕
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

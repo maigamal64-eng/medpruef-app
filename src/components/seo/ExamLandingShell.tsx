@@ -4,7 +4,7 @@
  * ExamLandingShell — shared hero/breakdown/FAQ/CTA surface for the
  * three SEO landing pages:
  *   /kenntnispruefung-wien
- *   /kmp-innsbruck
+ *   /stichprobentest
  *   /pharmakologie-pruefung-wien
  *
  * Each route passes its own content (title, sub-copy, breakdown rows,
@@ -43,6 +43,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { getLang, setLang } from "@/lib/i18n";
+import { getFutureSittings, type PuypExamType } from "@/lib/exam-dates";
 import LanguageToggle from "@/components/LanguageToggle";
 import ThemeToggle from "@/components/ThemeToggle";
 
@@ -88,6 +89,14 @@ export interface ExamLandingContent {
   showCountdownChip?: boolean;
   /** ISO date for the countdown chip ("2026-06-26T09:00:00+02:00"). */
   countdownTargetIso?: string;
+  /**
+   * When set, renders the venue-rotation table for this exam type
+   * directly from `EXAM_SITTINGS` (the code owner of exam dates). The
+   * Stichprobentest rotates its venue every sitting, so seeing the next
+   * several dates + cities together is the fact readers actually want.
+   * Future-only, so it self-ages exactly like the rest of the calendar.
+   */
+  sittingsExamType?: PuypExamType;
   /** What's this exam going to cover? 3–5 bullets, DE/EN. */
   whatYouLearn: Array<{ de: string; en: string }>;
   /** FAQ — 5 to 8 exam-specific questions. */
@@ -97,6 +106,19 @@ export interface ExamLandingContent {
    * route's layout. Not rendered here — used for debug only.
    */
   __debugSchema?: Record<string, unknown>;
+}
+
+/**
+ * Day-precise date label for the sittings table. Parses the ISO date as
+ * a LOCAL calendar date so the day never shifts across time zones (the
+ * same trick <UpcomingExams> uses).
+ */
+function formatSittingDate(iso: string, lang: Lang): string {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, (m ?? 1) - 1, d ?? 1).toLocaleDateString(
+    lang === "de" ? "de-AT" : "en-GB",
+    { day: "numeric", month: "long", year: "numeric" }
+  );
 }
 
 function getDaysUntil(targetIso: string): number {
@@ -131,6 +153,13 @@ export default function ExamLandingShell({ content }: { content: ExamLandingCont
   const L: Lang = mounted ? lang : "de";
 
   const dayWord = daysLeft === 1 ? "Tag" : "Tage";
+
+  // Future-only sittings for the optional venue-rotation table. Computed
+  // during render (pure, day-granularity) exactly like the rest of the
+  // calendar surfaces.
+  const sittings = content.sittingsExamType
+    ? getFutureSittings(content.sittingsExamType)
+    : [];
 
   // Format the countdown target date from the ISO prop so the label can
   // never drift from the actual target (the old hardcoded "26. Juni 2026"
@@ -277,6 +306,101 @@ export default function ExamLandingShell({ content }: { content: ExamLandingCont
           </dl>
         </div>
       </section>
+
+      {/* Venue rotation / upcoming sittings — opt-in per page, read
+          straight from the self-aging calendar so it can never go stale. */}
+      {sittings.length > 0 && (
+        <section className="max-w-6xl mx-auto px-4 lg:px-8 pb-12">
+          <div
+            className="rounded-[var(--mp-r-card)] p-6 md:p-8 mp-card"
+            style={{ border: "1px solid var(--mp-border-subtle)" }}
+          >
+            <h2 className="mp-h2 text-[24px] mb-1">
+              {L === "de" ? "Termine und Standorte" : "Dates and venues"}
+            </h2>
+            <p className="mp-body text-[var(--mp-fg-muted)] mb-6 text-sm">
+              {L === "de"
+                ? "Der Standort wechselt bei jedem Termin. Vergangene Termine fallen automatisch heraus."
+                : "The venue rotates with every sitting. Past dates drop off automatically."}
+            </p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm border-collapse">
+                <caption className="sr-only">
+                  {L === "de"
+                    ? `Kommende Termine: ${content.examName.de}`
+                    : `Upcoming sittings: ${content.examName.en}`}
+                </caption>
+                <thead>
+                  <tr className="text-left">
+                    <th
+                      scope="col"
+                      className="py-2 pr-4 text-xs font-semibold uppercase tracking-wide text-[var(--mp-fg-subtle)] whitespace-nowrap"
+                    >
+                      {L === "de" ? "Termin" : "Date"}
+                    </th>
+                    <th
+                      scope="col"
+                      className="py-2 pr-4 text-xs font-semibold uppercase tracking-wide text-[var(--mp-fg-subtle)] whitespace-nowrap"
+                    >
+                      {L === "de" ? "Standort" : "Venue"}
+                    </th>
+                    <th
+                      scope="col"
+                      className="py-2 pr-4 text-xs font-semibold uppercase tracking-wide text-[var(--mp-fg-subtle)] whitespace-nowrap"
+                    >
+                      {L === "de" ? "Anmeldeschluss" : "Registration deadline"}
+                    </th>
+                    <th
+                      scope="col"
+                      className="py-2 text-xs font-semibold uppercase tracking-wide text-[var(--mp-fg-subtle)] whitespace-nowrap"
+                    >
+                      {L === "de" ? "Quelle" : "Source"}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sittings.map((s) => (
+                    <tr
+                      key={s.date}
+                      className="border-t border-[var(--mp-border-subtle)] align-top"
+                    >
+                      <td className="py-3 pr-4 font-semibold text-[var(--mp-fg)] whitespace-nowrap tabular-nums">
+                        {formatSittingDate(s.date, L)}
+                      </td>
+                      <td className="py-3 pr-4 text-[var(--mp-fg)] whitespace-nowrap">
+                        {s.location ?? "—"}
+                      </td>
+                      <td className="py-3 pr-4 text-[var(--mp-fg-muted)] whitespace-nowrap">
+                        {s.registrationDeadline
+                          ? formatSittingDate(s.registrationDeadline, L)
+                          : L === "de"
+                            ? "über deine Universität"
+                            : "via your university"}
+                      </td>
+                      <td className="py-3">
+                        <a
+                          href={s.sourceUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[var(--mp-viridian)] hover:underline underline-offset-2"
+                        >
+                          {s.sourceLabel ??
+                            (L === "de" ? "Offizielle Quelle" : "Official source")}
+                        </a>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-xs text-[var(--mp-fg-muted)] mt-4 leading-relaxed">
+              {L === "de"
+                ? "Verbindlich sind immer der Bescheid und die Seite deiner Nostrifizierungs-Universität. Wo kein Anmeldeschluss steht, ist er für diesen Termin noch nicht veröffentlicht."
+                : "Your decision letter and your nostrification university's page are always the binding reference. Where no deadline is listed, it has not been published for that sitting yet."}
+            </p>
+          </div>
+        </section>
+      )}
 
       {/* What you'll learn */}
       <section className="max-w-6xl mx-auto px-4 lg:px-8 pb-12">
