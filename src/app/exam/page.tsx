@@ -196,6 +196,7 @@ function ExamContent() {
   const [customCount, setCustomCount] = useState<number | null>(null);
   const [customCounting, setCustomCounting] = useState(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+  const [savedAttemptId, setSavedAttemptId] = useState<string | null>(null);
   // B-01: a saved in-progress exam detected on mount → offer resume on the
   // entry screen (instead of silent resume, so the user can still discard +
   // start fresh, and the expired case has somewhere to land).
@@ -500,9 +501,62 @@ function ExamContent() {
   // branch, so neither can leak a stale autosave.
   useEffect(() => {
     if (phase === "results") {
+      // Persist the attempt to the durable History ledger (best-effort,
+      // fire-and-forget: the local result screen must never wait on the
+      // network). Recorded for ANY signed-in tier; viewing it is Pro-only.
+      const snapshotQuestions = questions;
+      const snapshotAnswers = answers;
+      const startedAt = startedAtRef.current;
+      if (snapshotQuestions.length > 0) {
+        // Store SELECTED OPTION TEXTS, not indices: /api/questions shuffles
+        // the options per load (buildMCQFromChoices), so client indices are
+        // meaningless against the DB's choices. Texts are stable, display
+        // order-independent, and re-gradeable server-side.
+        const answersByQid: Record<string, string[]> = {};
+        snapshotQuestions.forEach((q, idx) => {
+          const sel = answers[idx];
+          if (Array.isArray(sel) && sel.length > 0 && q.options) {
+            const texts = sel
+              .map((i) => q.options?.[i]?.text)
+              .filter((t): t is string => typeof t === "string");
+            if (texts.length > 0) answersByQid[String(q.id)] = texts;
+          }
+        });
+        const attemptBody = {
+          exam_type: examSource,
+          title:
+            selectedPart === "custom"
+              ? lang === "de" ? "Eigene Prüfung" : "Custom exam"
+              : selectedPart === "sip4"
+                ? lang === "de" ? "SIP 4 Teilprüfung" : "SIP 4 part exam"
+                : selectedPart === "sip5"
+                  ? lang === "de" ? "SIP 5 Teilprüfung" : "SIP 5 part exam"
+                  : lang === "de" ? "Prüfungssimulation" : "Exam simulation",
+          config: {
+            part: selectedPart,
+            subjects: customFilters.subjects,
+            count: snapshotQuestions.length,
+          },
+          question_ids: snapshotQuestions.map((q) => q.id),
+          answers: answersByQid,
+          duration_ms: startedAt !== null ? Date.now() - startedAt : null,
+          started_at: startedAt !== null ? new Date(startedAt).toISOString() : null,
+        };
+        fetch("/api/history/exams", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(attemptBody),
+        })
+          .then((res) => (res.ok ? res.json() : null))
+          .then((d) => {
+            if (d?.attempt?.id) setSavedAttemptId(d.attempt.id);
+          })
+          .catch(() => {});
+      }
       clearExamSession();
       examReadyRef.current = false;
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
 
   const handleSubmitExam = () => {
@@ -1125,6 +1179,21 @@ function ExamContent() {
                 {totalCorrect} / {questions.length} {t("correct", lang)} · {t("pass_threshold", lang)}
               </p>
             </div>
+
+            {/* History ledger link: the attempt is saved server-side and can
+                be reviewed any time under Verlauf (Pro). */}
+            {savedAttemptId && (
+              <div className="mb-6 flex justify-center">
+                <Link
+                  href="/history"
+                  className="mp-btn mp-btn--secondary text-sm"
+                >
+                  {lang === "de"
+                    ? "Im Verlauf ansehen (gespeichert)"
+                    : "View in your history (saved)"}
+                </Link>
+              </div>
+            )}
 
             {/* Specialty breakdown */}
             <h2 className="text-base font-semibold text-[var(--mp-fg)] mb-3">{t("specialty_results", lang)}</h2>

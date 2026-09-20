@@ -24,6 +24,18 @@ export interface ChangelogEntry {
 export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09-20",
+    tag: "feature",
+    title: {
+      de: "Neu: Dein Verlauf (Pro)",
+      en: "New: Your History (Pro)",
+    },
+    description: {
+      de: "Jede gespeicherte Prüfungssimulation bleibt jetzt dauerhaft erhalten: öffne sie jederzeit wieder, Frage für Frage, mit deiner Auswahl, der richtigen Antwort und der Erklärung dazu. Außerdem findest du unter „Verlauf“ deinen kompletten Fragen-Verlauf (filterbar nach Prüfung, Fachgebiet, richtig/falsch und Zeitraum) und eine Übersicht über deinen Fortschritt. Verlauf ist ein Pro-Feature; gespeicherte Prüfungen bleiben auch für dich gespeichert, wenn du später upgradest.",
+      en: "Every exam simulation you submit is now saved for good: reopen it any time, question by question, with your answer, the correct answer and the explanation. The question history tab lets you browse every question you ever answered, filterable by exam, specialty, correct/wrong and time window, alongside a progress overview. History is a Pro feature; your attempts keep saving either way.",
+    },
+  },
+  {
+    date: "2026-09-20",
     tag: "admin",
     title: {
       de: "Zahlungs-Rückgewinnung und Testende-Erinnerung (Whop v1 Webhook)",

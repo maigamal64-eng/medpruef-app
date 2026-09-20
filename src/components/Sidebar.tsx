@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { authFetch as fetch } from "@/lib/authFetch";
 import { t } from "@/lib/i18n";
 import { getLevelFromXP } from "@/lib/xp";
-import { Home, FileText, GraduationCap, BarChart3, TrendingUp, Map, Settings, Sparkles, PanelLeftClose, PanelLeftOpen, Layers, Crown, CalendarDays, Gift } from "lucide-react";
+import { Home, FileText, GraduationCap, BarChart3, TrendingUp, Map, Settings, Sparkles, PanelLeftClose, PanelLeftOpen, Layers, Crown, CalendarDays, Gift, History } from "lucide-react";
 import ExamSwitcherInline from "./ExamSwitcherInline";
 import { NavItem } from "@/components/ui";
 import {
@@ -268,6 +268,7 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0 }: Sidebar
     { href: "/exam", icon: <GraduationCap className="w-5 h-5" />, label: t("exam", lang), key: "exam" },
     { href: userId ? `/stats?userId=${userId}` : "/stats", icon: <BarChart3 className="w-5 h-5" />, label: t("stats", lang), key: "stats" },
     { href: "/progress", icon: <TrendingUp className="w-5 h-5" />, label: t("progress", lang), key: "progress" },
+    { href: "/history", icon: <History className="w-5 h-5" />, label: lang === "de" ? "Verlauf" : "History", key: "history" },
     { href: "/curriculum", icon: <Map className="w-5 h-5" />, label: t("curriculum", lang), key: "curriculum" },
     { href: "/study-plan", icon: <CalendarDays className="w-5 h-5" />, label: lang === "de" ? "Lernplan" : "Study Plan", key: "study-plan" },
     // Empfehlungen / Referrals is invite-only (2026-06-25): only accounts an
@@ -297,6 +298,7 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0 }: Sidebar
   const isActive = (key: string) => {
     if (key === "home") return pathname === "/";
     if (key === "library") return pathname.startsWith("/library") || pathname.startsWith("/flashcards");
+    if (key === "history") return pathname.startsWith("/history");
     return pathname.startsWith(`/${key === "stats" ? "stats" : key}`);
   };
 
