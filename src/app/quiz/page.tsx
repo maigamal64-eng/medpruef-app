@@ -563,7 +563,11 @@ function QuizContent() {
     return () => {
       cancelled = true;
     };
-  }, [config, fetchQuestion, initialQuestionId, question, quizFinished]);
+    // resumeGate IS load-bearing here: the gate starts "checking" while the
+    // resume offer is evaluated and only flips to "cleared" after config is
+    // set. Without it in deps this effect would never re-run post-flip and
+    // the first question would never load (the 09-20 no-questions outage).
+  }, [config, fetchQuestion, initialQuestionId, question, quizFinished, resumeGate]);
 
   // Preload the NEXT question as soon as the current one is answered
   useEffect(() => {
@@ -946,7 +950,7 @@ function QuizContent() {
                     </div>
                   </div>
                 </div>
-              ) : loading ? (
+              ) : loading || resumeGate === "checking" ? (
                 <div className="space-y-4">
                   <SkeletonCard />
                   <SkeletonCard />
