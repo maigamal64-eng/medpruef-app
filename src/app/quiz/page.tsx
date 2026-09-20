@@ -52,6 +52,65 @@ interface Question {
   image_url?: string;
 }
 
+// ─── Quiz session trail (resume after reload / break) ───────────────────
+const QUIZ_SESSION_KEY = "medpruef_quiz_session_v2";
+const QUIZ_SESSION_TTL_MS = 12 * 60 * 60 * 1000; // 12h
+const QUIZ_SESSION_MAX_TRAIL = 400;
+
+interface SavedQuizSession {
+  v: 2;
+  savedAt: number;
+  examSource: string;
+  topics: string[];
+  targetCount: number;
+  answered: Array<{ id: number; correct: boolean }>;
+}
+
+/** Only sessions for the SAME exam source + topic filter and fresher than
+ * the TTL are resumable. Anything malformed fails closed to null. */
+function loadSavedQuizSession(config: QuizConfig): SavedQuizSession | null {
+  try {
+    const raw = localStorage.getItem(QUIZ_SESSION_KEY);
+    if (!raw) return null;
+    const s = JSON.parse(raw) as SavedQuizSession;
+    if (!s || s.v !== 2 || !Array.isArray(s.answered) || s.answered.length === 0) return null;
+    if (s.examSource !== config.examSource) return null;
+    const sameTopics =
+      JSON.stringify((s.topics ?? []).slice().sort()) ===
+      JSON.stringify((config.topics ?? []).slice().sort());
+    if (!sameTopics) return null;
+    if (Date.now() - (s.savedAt ?? 0) > QUIZ_SESSION_TTL_MS) return null;
+    return s;
+  } catch {
+    return null;
+  }
+}
+
+function clearSavedQuizSession(): void {
+  try {
+    localStorage.removeItem(QUIZ_SESSION_KEY);
+  } catch {
+    /* non-fatal */
+  }
+}
+
+function saveQuizSessionNow(config: QuizConfig | null, trail: Array<{ id: number; correct: boolean }>): void {
+  if (!config) return;
+  try {
+    const payload: SavedQuizSession = {
+      v: 2,
+      savedAt: Date.now(),
+      examSource: config.examSource,
+      topics: config.topics ?? [],
+      targetCount: config.targetCount,
+      answered: trail.slice(-QUIZ_SESSION_MAX_TRAIL),
+    };
+    localStorage.setItem(QUIZ_SESSION_KEY, JSON.stringify(payload));
+  } catch {
+    /* non-fatal */
+  }
+}
+
 function buildQueryParams(config: QuizConfig, userId: string, excludeIds?: number[], practiceMode?: string): URLSearchParams {
   const p = new URLSearchParams({ limit: "1", examSource: config.examSource });
   if (userId) p.set("userId", userId);
@@ -156,6 +215,17 @@ function QuizContent() {
 
   // Quiz state
   const seenIdsRef = useRef<number[]>([]);
+  // ── Quiz session trail (2026-09-20, customer feedback: progress reset) ──
+  // /quiz streams one question at a time and kept NO state across reloads,
+  // so a deploy-triggered service-worker reload, a mobile tab eviction or a
+  // simple break restarted the quiz from question 1 (verified in Munir's
+  // answer_history: the same spaced-rep batch answered twice in identical
+  // order 35 minutes apart). The trail persists per-answer and seeds a
+  // resume offer on return.
+  const answeredTrailRef = useRef<Array<{ id: number; correct: boolean }>>([]);
+  const resumeDecidedRef = useRef(false);
+  const [resumeOffer, setResumeOffer] = useState<SavedQuizSession | null>(null);
+  const [resumeGate, setResumeGate] = useState<"checking" | "offered" | "cleared">("checking");
   const [question, setQuestion] = useState<Question | null>(null);
   const [nextQuestion, setNextQuestion] = useState<Question | null>(null);
   const [loading, setLoading] = useState(false);
@@ -417,8 +487,61 @@ function QuizContent() {
   }, [config, userId, offlineToQuestion, practiceMode]);
 
   // Initial question load (or specific id from search deep-link)
+  // ── Resume offer check: runs once per config identity, BEFORE the initial
+  // fetch (the initial-load effect below stays gated until this resolves).
+  // resumeDecidedRef: once the user picked (resume/fresh), later config
+  // identity changes (e.g. the targetCount restore in resumeSession) must
+  // not re-offer the same session.
   useEffect(() => {
-    if (!config || question || quizFinished) return;
+    if (!config) return;
+    if (resumeDecidedRef.current) {
+      setResumeGate("cleared");
+      return;
+    }
+    const s = initialQuestionId ? null : loadSavedQuizSession(config);
+    if (s) {
+      setResumeOffer(s);
+      setResumeGate("offered");
+    } else {
+      setResumeGate("cleared");
+    }
+  }, [config, initialQuestionId]);
+
+  const resumeSession = useCallback(() => {
+    if (!resumeOffer || !config) return;
+    resumeDecidedRef.current = true;
+    seenIdsRef.current = resumeOffer.answered.map((a) => a.id);
+    answeredTrailRef.current = resumeOffer.answered.slice();
+    setQuestionCount(resumeOffer.answered.length);
+    setCorrectCount(resumeOffer.answered.filter((a) => a.correct).length);
+    setSessionHistory(resumeOffer.answered.map((a) => ({ correct: a.correct })));
+    const target = resumeOffer.targetCount ?? config.targetCount;
+    if (resumeOffer.answered.length >= target) {
+      // The saved session already reached its goal — show the terminal card.
+      clearSavedQuizSession();
+      setResumeOffer(null);
+      setResumeGate("cleared");
+      setQuizFinished(true);
+      return;
+    }
+    if (target !== config.targetCount) setConfig({ ...config, targetCount: target });
+    setResumeOffer(null);
+    setResumeGate("cleared");
+    // The initial-load effect now fires with seeded excludeIds and serves
+    // the next FRESH question — the learner continues, not restarts.
+  }, [resumeOffer, config]);
+
+  const startFresh = useCallback(() => {
+    resumeDecidedRef.current = true;
+    clearSavedQuizSession();
+    answeredTrailRef.current = [];
+    setResumeOffer(null);
+    setResumeGate("cleared");
+  }, []);
+
+  // Initial question load (or specific id from search deep-link)
+  useEffect(() => {
+    if (!config || question || quizFinished || resumeGate !== "cleared") return;
     let cancelled = false;
     setLoading(true);
     (async () => {
@@ -453,6 +576,12 @@ function QuizContent() {
       cancelled = true;
     };
   }, [answered, nextQuestion, fetchQuestion, config, quizFinished]);
+
+  // Clear the saved trail once the run is over (finished or timed out) so a
+  // finished session is never offered again.
+  useEffect(() => {
+    if (quizFinished) clearSavedQuizSession();
+  }, [quizFinished]);
 
   // ─── Time limit countdown ───
   useEffect(() => {
@@ -527,6 +656,10 @@ function QuizContent() {
       if (isCorrect) setCorrectCount((c) => c + 1);
       setSessionHistory((prev) => [...prev, { correct: isCorrect }]);
       recordAnswer(question.topic, isCorrect);
+      // Persist the answered trail so a reload/break resumes instead of
+      // restarting from question 1 (the exact bug Munir reported).
+      answeredTrailRef.current.push({ id: question.id, correct: isCorrect });
+      saveQuizSessionNow(config, answeredTrailRef.current);
       trackEvent("question_answer", {
         questionId: question.id,
         topic: question.topic,
@@ -615,6 +748,8 @@ function QuizContent() {
     setSessionHistory([]);
     setQuizFinished(false);
     setMilestoneVisible(false);
+    answeredTrailRef.current = [];
+    seenIdsRef.current = [];
     setConfig(null); // back to setup
   };
 
@@ -786,6 +921,31 @@ function QuizContent() {
                   topicTotal={topicTotal}
                   onRestart={restart}
                 />
+              ) : resumeGate === "offered" && resumeOffer ? (
+                // Resume prompt: a saved session for this exam + filter exists.
+                <div className="card p-5 mb-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div>
+                      <p className="font-semibold text-[var(--mp-fg)] text-sm mb-0.5">
+                        {lang === "de" ? "Sitzung fortsetzen?" : "Resume your session?"}
+                      </p>
+                      <p className="text-xs text-[var(--mp-fg-subtle)]">
+                        {resumeOffer.answered.length}{" "}
+                        {lang === "de"
+                          ? "Fragen in dieser Sitzung bereits beantwortet. Du machst dort weiter, wo du aufgehört hast."
+                          : "questions already answered in this session. You continue where you left off."}
+                      </p>
+                    </div>
+                    <div className="flex gap-2 shrink-0">
+                      <button onClick={resumeSession} className="mp-btn mp-btn--primary text-sm">
+                        {lang === "de" ? "Fortsetzen" : "Resume"}
+                      </button>
+                      <button onClick={startFresh} className="mp-btn mp-btn--secondary text-sm">
+                        {lang === "de" ? "Neu starten" : "Start fresh"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
               ) : loading ? (
                 <div className="space-y-4">
                   <SkeletonCard />

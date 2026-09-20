@@ -24,6 +24,18 @@ export interface ChangelogEntry {
 export const CHANGELOG: ChangelogEntry[] = [
   {
     date: "2026-09-20",
+    tag: "fix",
+    title: {
+      de: "Quiz-Fortschritt bleibt erhalten",
+      en: "Quiz progress is now kept",
+    },
+    description: {
+      de: "Bis jetzt wurde eine laufende Quiz-Sitzung nicht gespeichert: nach einer Pause, einem App-Update oder einem Browser-Neustart ging es wieder bei Frage 1 los. Deine Sitzung wird jetzt laufend gespeichert und beim nächsten Öffnen kannst du genau dort weitermachen, wo du aufgehört hast.",
+      en: "Until now, an in-progress quiz was lost on any reload, app update or browser restart, and you started over at question 1. Your session is now saved continuously and offered for resumption, so you continue exactly where you stopped.",
+    },
+  },
+  {
+    date: "2026-09-20",
     tag: "feature",
     title: {
       de: "Neu: Dein Verlauf (Pro)",
