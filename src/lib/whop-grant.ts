@@ -20,6 +20,7 @@
  * both paths produce identical rows and the same extension math.
  */
 import { computeExpiry, tierDurationMonths } from "@/lib/whop";
+import { logPaymentEvent } from "@/lib/paymentEvents";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 export interface WhopGrantOutcome {
@@ -28,6 +29,21 @@ export interface WhopGrantOutcome {
   expiresAt: string;
   previousExpiresAt: string | null;
   error?: string;
+}
+
+/**
+ * One grant = one entry in subscriptions.granted_payment_ids. The array is
+ * the full payment history of the row (Fix 6, 2026-09-21): provider_payment_id
+ * stays the LATEST-payment view (existing readers unchanged), while the array
+ * lets a later refund/dispute revoke match ANY payment that contributed time
+ * and recompute the surviving window (extension semantics, no refund math on
+ * money, only on time).
+ */
+export interface GrantedPaymentEntry {
+  payment_id: string;
+  amount_cents: number | null;
+  added_months: number;
+  granted_at: string;
 }
 
 interface GrantArgs {
@@ -46,6 +62,7 @@ interface ActiveSubRow {
   expires_at: string | null;
   amount_cents: number | null;
   currency: string | null;
+  granted_payment_ids: GrantedPaymentEntry[] | null;
 }
 
 function laterOf(aIso: string | null | undefined, b: Date): Date {
@@ -71,7 +88,7 @@ export async function extendOrInsertWhopSubscription(
 
   const { data: actives, error } = await sb
     .from("subscriptions")
-    .select("id, tier, expires_at, amount_cents, currency")
+    .select("id, tier, expires_at, amount_cents, currency, granted_payment_ids")
     .eq("user_id", userId)
     .eq("payment_provider", "whop")
     .eq("status", "active")
@@ -96,6 +113,16 @@ export async function extendOrInsertWhopSubscription(
   if (live?.id) {
     const base = laterOf(live.expires_at, now);
     const newExpiry = computeExpiry(tierDurationMonths(tier), base);
+    // Fix 6: append this payment to the row's granted_payment_ids history.
+    const history: GrantedPaymentEntry[] = Array.isArray(live.granted_payment_ids)
+      ? live.granted_payment_ids
+      : [];
+    const entry: GrantedPaymentEntry = {
+      payment_id: paymentId,
+      amount_cents: amountCents,
+      added_months: tierDurationMonths(tier),
+      granted_at: now.toISOString(),
+    };
     const { error: updErr } = await sb
       .from("subscriptions")
       .update({
@@ -103,6 +130,7 @@ export async function extendOrInsertWhopSubscription(
         provider_payment_id: paymentId,
         amount_cents: amountCents ?? live.amount_cents ?? null,
         currency: currency || live.currency || "EUR",
+        granted_payment_ids: [...history, entry],
         updated_at: now.toISOString(),
       })
       .eq("id", live.id);
@@ -124,6 +152,12 @@ export async function extendOrInsertWhopSubscription(
   }
 
   const newExpiry = computeExpiry(tierDurationMonths(tier), now);
+  const insertEntry: GrantedPaymentEntry = {
+    payment_id: paymentId,
+    amount_cents: amountCents,
+    added_months: tierDurationMonths(tier),
+    granted_at: now.toISOString(),
+  };
   const { data: inserted, error: insErr } = await sb
     .from("subscriptions")
     .insert({
@@ -135,6 +169,7 @@ export async function extendOrInsertWhopSubscription(
       amount_cents: amountCents,
       currency,
       provider_payment_id: paymentId,
+      granted_payment_ids: [insertEntry],
       started_at: now.toISOString(),
       expires_at: newExpiry.toISOString(),
     })
@@ -194,5 +229,52 @@ export async function reconcileUserTierPro(
   if (updErr) {
     // The subscription row is the source of truth; tier reconciles offline.
     throw updErr;
+  }
+}
+/**
+ * Fix 2 (2026-09-21): release the idempotency claim on a payment id when the
+ * grant failed at the DB/write step AFTER the claim was taken. Without this
+ * the payment id stays burned: the webhook's own retry dedupes against the
+ * stale claim and a real paid buyer never gets granted (the money arrived,
+ * the claim just blocks reprocessing).
+ *
+ * Deletes processed_webhook_events(provider='whop', event_id=paymentId),
+ * best-effort. When the deletion happened, logs a payment_events
+ * grant_failed row with metadata {claim_released:true} so the release is
+ * visible in /admin/payments.
+ *
+ * Call it ONLY on DB/write failures after the claim was taken. NEVER on
+ * validation failures (unmapped, unknown_tier, membership_not_found,
+ * payment_not_found): those claims stay burned until an admin maps them,
+ * so an unmapped payment can never double-grant after a manual fix.
+ */
+export async function releaseWhopClaim(
+  sb: Db,
+  paymentId: string
+): Promise<boolean> {
+  try {
+    const { error } = await sb
+      .from("processed_webhook_events")
+      .delete()
+      .eq("provider", "whop")
+      .eq("event_id", paymentId);
+    if (error) {
+      console.error("[whop-grant] releaseWhopClaim delete failed", {
+        paymentId,
+        code: (error as { code?: string }).code,
+        message: error.message?.slice(0, 200),
+      });
+      return false;
+    }
+    await logPaymentEvent(sb, {
+      event: "grant_failed",
+      paymentId,
+      reason: "db_error",
+      metadata: { claim_released: true, step: "release_claim", ok: false },
+    });
+    return true;
+  } catch (err) {
+    console.error("[whop-grant] releaseWhopClaim unexpected", { paymentId, err });
+    return false;
   }
 }

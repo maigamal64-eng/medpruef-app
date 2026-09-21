@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/auth-guard";
 import { getServiceClient } from "@/lib/supabase";
 import { tierToWhopPlan } from "@/lib/whop";
 import { logPaymentEvent } from "@/lib/paymentEvents";
+import { releaseWhopClaim } from "@/lib/whop-grant";
 import { qualifyReferralOnActivity } from "@/lib/referral-exam-reward";
 
 export const dynamic = "force-dynamic";
@@ -234,6 +235,10 @@ export async function POST(req: NextRequest) {
         matched: true,
         metadata: { step: "sub_insert", source: "trial_verify", ok: false },
       });
+      // Fix 2: the insert failed after the membership-id claim was taken —
+      // release it so the webhook backstop can grant instead of deduping
+      // against a stale claim.
+      await releaseWhopClaim(sb, mine.id);
       return NextResponse.json({ granted: false, reason: "db_error" }, { status: 200 });
     }
 

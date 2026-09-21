@@ -27,6 +27,7 @@ import {
 import {
   extendOrInsertWhopSubscription,
   reconcileUserTierPro,
+  releaseWhopClaim,
 } from "@/lib/whop-grant";
 import { sendZohoEmail } from "@/lib/email/zoho";
 
@@ -538,6 +539,9 @@ export async function POST(req: NextRequest) {
           matched: true,
           metadata: { step: "sub_insert", event, ok: false },
         });
+        // Fix 2: the write failed after the claim was taken — release it so
+        // Whop's retry can reprocess instead of deduping against a stale claim.
+        await releaseWhopClaim(sb, f.paymentId);
         return NextResponse.json({ error: "DB insert failed" }, { status: 500 });
       }
       // Trial-start user flip: the 8-day window never shortens a longer
@@ -584,6 +588,9 @@ export async function POST(req: NextRequest) {
           matched: true,
           metadata: { step: "extend_or_insert", event, ok: false },
         });
+        // Fix 2: write failed after the claim — release it so the retry path
+        // (webhook redelivery or /api/whop/checkout/verify) can re-grant.
+        await releaseWhopClaim(sb, f.paymentId);
         return NextResponse.json({ error: "DB insert failed" }, { status: 500 });
       }
       grantMode = grant.mode;
@@ -679,6 +686,29 @@ export async function POST(req: NextRequest) {
 }
 
 /**
+ * Fix 6: recompute a subscription's remaining expiry from its SURVIVING
+ * granted_payment_ids entries. Walks the entries chronologically with the
+ * same extension math the grant used: each payment's window starts at
+ * max(current end, that payment's granted_at) and adds its added_months.
+ * An empty survivor list collapses to the epoch (no window remains).
+ */
+function recomputeExpiryFromEntries(
+  startedAt: string | null,
+  surviving: Array<{ payment_id: string; added_months: number; granted_at: string }>
+): Date {
+  let end = startedAt && Number.isFinite(Date.parse(startedAt)) ? new Date(startedAt) : new Date(0);
+  const sorted = [...surviving].sort(
+    (a, b) => Date.parse(a.granted_at) - Date.parse(b.granted_at)
+  );
+  for (const e of sorted) {
+    const grantedMs = Date.parse(e.granted_at);
+    const base = Number.isFinite(grantedMs) && grantedMs > end.getTime() ? new Date(grantedMs) : end;
+    end = computeExpiry(Math.max(1, e.added_months || 1), base);
+  }
+  return end;
+}
+
+/**
  * REVOKE handler (B-08 revenue-leak fix).
  *
  * Fired for refund.created / dispute.created / membership.deactivated (+
@@ -731,24 +761,69 @@ async function handleRevoke(
     // If we can't match a sub yet, we must NOT consume the idempotency key,
     // or a Whop retry after the row exists would dedupe and never revoke.)
     // Refund/dispute: join on provider_payment_id (the grant stored the
-    // payment id there). Try the event's payment id first, then the explicit
-    // original/parent payment id.
+    // payment id there) — Fix 6 (2026-09-21) ALSO matches any entry in the
+    // row's granted_payment_ids history, because with extend semantics the
+    // latest payment overwrites provider_payment_id while OLDER payments
+    // contributed windows on the same row. Try the event's payment id first,
+    // then the explicit original/parent payment id.
     const paymentCandidates = Array.from(
       new Set([r.paymentId, r.originalPaymentId].filter((x): x is string => Boolean(x)))
     );
 
-    let subs: Array<{ id: string; user_id: string; status: string }> = [];
+    interface RevokeSub {
+      id: string;
+      user_id: string;
+      tier: string;
+      status: string;
+      expires_at: string | null;
+      started_at: string | null;
+      provider_payment_id: string | null;
+      granted_payment_ids: Array<{
+        payment_id: string;
+        amount_cents: number | null;
+        added_months: number;
+        granted_at: string;
+      }> | null;
+    }
+
+    let subs: RevokeSub[] = [];
     if (paymentCandidates.length > 0) {
       const { data: byPay, error: byPayErr } = await sb
         .from("subscriptions")
-        .select("id, user_id, status")
+        .select(
+          "id, user_id, tier, status, expires_at, started_at, provider_payment_id, granted_payment_ids"
+        )
         .eq("payment_provider", "whop")
         .in("provider_payment_id", paymentCandidates);
       if (byPayErr) {
         Sentry.captureException(byPayErr, { tags: { route: "webhooks/whop", step: "revoke_sub_lookup" } });
         return NextResponse.json({ error: "DB error" }, { status: 500 });
       }
-      subs = (byPay ?? []) as typeof subs;
+      subs = (byPay ?? []) as RevokeSub[];
+
+      if (subs.length === 0) {
+        // Fix 6: scan the user's active whop rows for a granted_payment_ids
+        // entry carrying one of the payment candidates (the refunded payment
+        // is an OLDER payment on an extended row). The active-whop set is
+        // small (real payers), so a scan is cheap and avoids jsonb queries
+        // PostgREST can't express cleanly.
+        const { data: allActive, error: scanErr } = await sb
+          .from("subscriptions")
+          .select(
+            "id, user_id, tier, status, expires_at, started_at, provider_payment_id, granted_payment_ids"
+          )
+          .eq("payment_provider", "whop")
+          .eq("status", "active");
+        if (scanErr) {
+          Sentry.captureException(scanErr, { tags: { route: "webhooks/whop", step: "revoke_granted_ids_scan" } });
+        } else {
+          subs = ((allActive ?? []) as RevokeSub[]).filter((s) =>
+            (s.granted_payment_ids ?? []).some(
+              (e) => e.payment_id && paymentCandidates.includes(e.payment_id)
+            )
+          );
+        }
+      }
     }
 
     // Resolve the affected user. From the matched sub if we have one; else map
@@ -822,26 +897,133 @@ async function handleRevoke(
     if (!claim) return NextResponse.json({ ok: true, duplicate: true });
 
     const nowIso = new Date().toISOString();
-    const affectedSubIds = subs.map((s) => s.id);
 
-    // ── 1. Flip the matched subscription(s) → refunded / cancelled ──
-    const { error: subUpdErr } = await sb
-      .from("subscriptions")
-      .update({ status: kind, cancelled_at: nowIso, updated_at: nowIso })
-      .in("id", affectedSubIds);
-    if (subUpdErr) {
-      Sentry.captureException(subUpdErr, {
-        tags: { route: "webhooks/whop", step: "revoke_sub_update" },
-        extra: { affectedSubIds, kind },
-      });
-      return NextResponse.json({ error: "DB update failed" }, { status: 500 });
+    // ── 1. Revoke the matched subscription(s), Fix 6-aware (2026-09-21) ──
+    // For each matched sub, resolve the payment entry the event points at:
+    //   - a granted_payment_ids entry matching a payment candidate, or
+    //   - legacy rows with no entries: a synthetic entry from
+    //     provider_payment_id + the tier's duration (reproduces the old
+    //     full-flip behavior exactly).
+    // If SURVIVING entries still cover a live window (recomputed expiry in
+    // the future), the row STAYS ACTIVE with the recomputed expiry, the
+    // refunded payment's entry is dropped, and provider_payment_id moves to
+    // the latest surviving payment. Only when no window remains does the row
+    // flip to refunded/cancelled. This reflects REFUNDS accurately on the
+    // ledger — it never refunds anyone (no money moves here).
+    const nowMs = Date.now();
+    const keptActiveIds: string[] = [];
+    const flipIds: string[] = [];
+    for (const sub of subs) {
+      const entries = Array.isArray(sub.granted_payment_ids)
+        ? sub.granted_payment_ids.filter((e) => e && e.payment_id)
+        : [];
+      const matchedEntry =
+        entries.find(
+          (e) => e.payment_id && paymentCandidates.includes(e.payment_id)
+        ) ??
+        (entries.length === 0 &&
+        sub.provider_payment_id &&
+        paymentCandidates.includes(sub.provider_payment_id)
+          ? {
+              payment_id: sub.provider_payment_id,
+              amount_cents: null,
+              added_months: tierDurationMonths(sub.tier),
+              granted_at: sub.started_at ?? nowIso,
+            }
+          : null);
+      if (!matchedEntry) {
+        flipIds.push(sub.id);
+        continue;
+      }
+      // Drop every entry for the refunded payment id (also handles the
+      // pre-Fix-1 duplicate-payment artifacts honestly).
+      const surviving = entries.filter((e) => e.payment_id !== matchedEntry.payment_id);
+      let reExpiry: Date | null = null;
+      try {
+        reExpiry = recomputeExpiryFromEntries(sub.started_at, surviving);
+      } catch (reErr) {
+        Sentry.captureException(reErr, {
+          tags: { route: "webhooks/whop", step: "revoke_recompute_window" },
+          extra: { subId: sub.id },
+        });
+      }
+      if (surviving.length > 0 && reExpiry && reExpiry.getTime() > nowMs) {
+        const latestSurviving = surviving[surviving.length - 1];
+        const { error: keepErr } = await sb
+          .from("subscriptions")
+          .update({
+            expires_at: reExpiry.toISOString(),
+            provider_payment_id: latestSurviving.payment_id,
+            granted_payment_ids: surviving,
+            updated_at: nowIso,
+          })
+          .eq("id", sub.id);
+        if (keepErr) {
+          Sentry.captureException(keepErr, {
+            tags: { route: "webhooks/whop", step: "revoke_partial_update" },
+            extra: { subId: sub.id, kind },
+          });
+          flipIds.push(sub.id); // fail safe toward the full revoke
+        } else {
+          keptActiveIds.push(sub.id);
+        }
+      } else {
+        flipIds.push(sub.id);
+      }
     }
+
+    if (flipIds.length > 0) {
+      const { error: subUpdErr } = await sb
+        .from("subscriptions")
+        .update({ status: kind, cancelled_at: nowIso, updated_at: nowIso })
+        .in("id", flipIds);
+      if (subUpdErr) {
+        Sentry.captureException(subUpdErr, {
+          tags: { route: "webhooks/whop", step: "revoke_sub_update" },
+          extra: { flipIds, kind },
+        });
+        return NextResponse.json({ error: "DB update failed" }, { status: 500 });
+      }
+    }
+
+    // Partial keep: the surviving window may still be LONGER than what
+    // users.tier_expires_at shows elsewhere (or shorter than a stale grant).
+    // Reconcile the user's tier_expires_at to the max live window across the
+    // surviving active rows (this one may legitimately SHORTEN: the refunded
+    // window is gone). Tier itself stays Pro while any window survives.
+    if (keptActiveIds.length > 0) {
+      try {
+        const { data: activeAfter } = await sb
+          .from("subscriptions")
+          .select("id, expires_at")
+          .eq("user_id", userId)
+          .eq("status", "active");
+        const maxExpiry = (activeAfter ?? [])
+          .map((row) => Date.parse((row as { expires_at?: string | null }).expires_at ?? ""))
+          .filter((ms) => Number.isFinite(ms) && ms > nowMs)
+          .reduce<number | null>((acc, ms) => (acc === null || ms > acc ? ms : acc), null);
+        await sb
+          .from("users")
+          .update({
+            tier_expires_at: maxExpiry !== null ? new Date(maxExpiry).toISOString() : null,
+            updated_at: nowIso,
+          })
+          .eq("id", userId)
+          .neq("tier", "admin");
+      } catch (reconErr) {
+        Sentry.captureException(reconErr, {
+          tags: { route: "webhooks/whop", step: "revoke_partial_user_reconcile" },
+          extra: { userId },
+        });
+      }
+    }
+    const affectedSubIds = [...flipIds, ...keptActiveIds];
 
     // ── 2. Revoke Pro ONLY if no OTHER active, unexpired subscription ──
     // (Any provider — a user with a separate still-valid sub keeps access.)
     // Read all of the user's active subs and exclude the just-revoked ones in
     // JS (avoids a brittle interpolated PostgREST `not.in` filter).
-    const affectedSet = new Set(affectedSubIds);
+    const affectedSet = new Set(flipIds);
     const { data: activeRows, error: otherErr } = await sb
       .from("subscriptions")
       .select("id, expires_at")
@@ -855,7 +1037,6 @@ async function handleRevoke(
         extra: { userId },
       });
     }
-    const nowMs = Date.now();
     const hasOtherActive = (activeRows ?? []).some((s) => {
       const row = s as { id: string; expires_at?: string | null };
       if (affectedSet.has(row.id)) return false; // the sub we just revoked
@@ -864,17 +1045,59 @@ async function handleRevoke(
 
     let proRevoked = false;
     if (!otherErr && !hasOtherActive) {
-      const { error: userErr } = await sb
-        .from("users")
-        .update({ tier: "free", tier_expires_at: null, updated_at: nowIso })
-        .eq("id", userId);
-      if (userErr) {
-        Sentry.captureException(userErr, {
-          tags: { route: "webhooks/whop", step: "revoke_user_downgrade" },
+      // Fix 5 (2026-09-21): DUNNING GRACE GUARD. If a dunning recovery claim
+      // (recover:<paymentId>) was recorded within the last
+      // WHOP_DUNNING_GRACE_DAYS days (default 7), the buyer is mid-recovery
+      // on a failed renewal. A membership.deactivated that arrives inside
+      // that window is the SAME dunning sequence seen from Whop's side, so
+      // downgrading the user now would lock a paying buyer out while they
+      // are literally completing the recovery link we emailed them. Skip
+      // ONLY the user downgrade (the sub row flip above still happened:
+      // that is bookkeeping, and a later succeeded payment re-activates).
+      let dunningInFlight = false;
+      try {
+        const graceDays = Number(
+          (process.env.WHOP_DUNNING_GRACE_DAYS ?? "7").trim() || "7"
+        );
+        const graceSince = new Date(
+          Date.now() - (Number.isFinite(graceDays) && graceDays > 0 ? graceDays : 7) * 86400_000
+        ).toISOString();
+        const { data: recoveryClaims } = await sb
+          .from("processed_webhook_events")
+          .select("event_id")
+          .like("event_id", "recover:%")
+          .gte("processed_at", graceSince)
+          .limit(1);
+        dunningInFlight = (recoveryClaims ?? []).length > 0;
+      } catch (graceErr) {
+        // Fail safe toward keeping access; flag for reconciliation.
+        Sentry.captureException(graceErr, {
+          tags: { route: "webhooks/whop", step: "revoke_dunning_grace" },
           extra: { userId },
         });
+      }
+      if (dunningInFlight) {
+        proRevoked = false;
+        await recordEvent(sb, userId, "whop_revoke_deferred_dunning", {
+          event,
+          event_id: r.eventDedupeId,
+          kind,
+          affected_subscription_ids: affectedSubIds,
+          note: "user downgrade skipped: dunning recovery in flight",
+        });
       } else {
-        proRevoked = true;
+        const { error: userErr } = await sb
+          .from("users")
+          .update({ tier: "free", tier_expires_at: null, updated_at: nowIso })
+          .eq("id", userId);
+        if (userErr) {
+          Sentry.captureException(userErr, {
+            tags: { route: "webhooks/whop", step: "revoke_user_downgrade" },
+            extra: { userId },
+          });
+        } else {
+          proRevoked = true;
+        }
       }
     }
 
@@ -895,6 +1118,8 @@ async function handleRevoke(
       event,
       kind,
       affected_subscription_ids: affectedSubIds,
+      flipped_ids: flipIds,
+      partial_kept_active_ids: keptActiveIds,
       pro_revoked: proRevoked,
       had_other_active: hasOtherActive,
       referral_reversed: referralReversed,
@@ -907,6 +1132,7 @@ async function handleRevoke(
       revoked: true,
       kind,
       subscriptions: affectedSubIds.length,
+      partial_kept: keptActiveIds.length,
       pro_revoked: proRevoked,
       referral_reversed: referralReversed,
     });

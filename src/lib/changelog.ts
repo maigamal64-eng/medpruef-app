@@ -26,6 +26,18 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-09-21",
     tag: "improvement",
     title: {
+      de: "Klarere Zahlungsbestätigung",
+      en: "Clearer payment confirmation",
+    },
+    description: {
+      de: "Die Seite nach dem Kauf bestätigt deine Zahlung jetzt ehrlich und in Echtzeit: Solange die Freischaltung läuft, siehst du genau das, und die Seite prüft bis zu fünf Minuten lang weiter, auch wenn eine Kartenzahlung etwas länger dauert. Ab zehn Sekunden siehst du den Status und kannst in der Zwischenzeit direkt weiterlernen; falls etwas nicht automatisch zugeordnet werden kann, melden wir uns per E-Mail und schalten dich frei. Niemand muss mehr zweimal zahlen, weil die Seite einen Status angezeigt hat, der noch nicht stimmte.",
+      en: "The page after checkout now confirms your payment honestly and in real time: while activation is still running, it says exactly that, and it keeps checking for up to five minutes, even when a card payment takes a little longer. After ten seconds you see the status and can keep learning right away in the meantime; if a payment cannot be tied to your account automatically, we will email you and unlock your access. Nobody has to pay twice because the page showed a status that was not true yet.",
+    },
+  },
+  {
+    date: "2026-09-21",
+    tag: "improvement",
+    title: {
       de: "Empfehlungshinweise ausblendbar",
       en: "Referral prompts can be dismissed",
     },

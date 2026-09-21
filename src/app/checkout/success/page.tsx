@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useUserTier } from "@/lib/hooks/useUserTier";
@@ -8,167 +8,299 @@ import { trackPurchase } from "@/lib/conversion-events";
 import { TIER_BY_ID } from "@/lib/content-truth";
 import { authFetch } from "@/lib/authFetch";
 
-// Best-known value (in euros) if the tier is missing/unknown in the URL —
-// the Cohort is the headline paid tier, so we report its price rather than 0.
-const FALLBACK_PURCHASE_VALUE_EUR = 129;
-
 /**
  * Whop checkout success landing (redirect target set on the checkout
  * configuration). Access is granted by the /api/webhooks/whop webhook on
- * `payment.succeeded`, not here — so this page polls /api/auth/me until
- * the tier flips to Pro, then routes the user home automatically.
+ * `payment.succeeded` OR by POST /api/whop/checkout/verify (server-side read
+ * of Whop's ledger), not here.
  *
- * Polling is bounded at 30 s. If the webhook hasn't landed by then (rare),
- * we surface a manual-continue button rather than spinning forever.
+ * HONESTY CONTRACT (2026-09-21, after the double-payment incident): this page
+ * may NEVER claim access is active until isPaid is actually true. The buyer
+ * below (Munir) saw a false "aktiv" line at the 30s timeout, concluded the
+ * payment failed, and paid again. So:
+ *   - The verify schedule rides a single backoff array (mount, 2.5s, 5s, 10s,
+ *     20s, 40s, 60s, then every 60s) up to a 5-minute ceiling, plus one extra
+ *     check when the tab becomes visible again. Whop's webhook delivery can
+ *     lag by hours, so we do NOT give up at 12.5s or print a dead end.
+ *   - Every state keeps a "weiterlernen" path; nothing dead-ends.
+ *   - trackPurchase fires ONLY on a real grant signal (verify granted /
+ *     isPaid flip / explicit ?paid=1), never on mount, and never with a
+ *     fallback amount (the old €129 guess inflated conversion value).
  */
 
-const POLL_INTERVAL_MS = 2_000;
-const POLL_TIMEOUT_MS = 30_000;
+const VERIFY_RETRIES_MS = [2_500, 5_000, 10_000, 20_000, 40_000, 60_000];
+const VERIFY_STEADY_MS = 60_000;
+const VERIFY_CEILING_MS = 5 * 60 * 1000;
+const TIER_POLL_MS = 5_000;
+const GRANTED_REDIRECT_MS = 1_200;
+
+type Outcome = "pending" | "granted" | "unmatched";
+
+interface VerifyPayload {
+  granted?: boolean;
+  already?: boolean;
+  reason?: string;
+  payment_ref?: string | null;
+  amount_cents?: number | null;
+  tier_expires_at?: string | null;
+}
 
 export default function CheckoutSuccessPage() {
   const router = useRouter();
   const { isPaid, isLoading, refresh } = useUserTier();
-  const [timedOut, setTimedOut] = useState(false);
-  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [outcome, setOutcome] = useState<Outcome>("pending");
+  const [paymentRef, setPaymentRef] = useState<string | null>(null);
+  const [elapsedSec, setElapsedSec] = useState(0);
   const purchaseFiredRef = useRef(false);
+  const grantedRedirectRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Fire the Purchase conversion ONCE on mount. Landing on this page means
-  // Whop already charged, so we report the sale here (not gated on the tier
-  // flip, so the 30s-timeout path still records the conversion). Reads the
-  // tier from the redirect URL (?tier=...) without useSearchParams, so the
-  // page needs no Suspense boundary and next build stays clean. Value is
-  // derived from the canonical price ledger, never hardcoded per tier.
-  useEffect(() => {
-    if (purchaseFiredRef.current) return;
-    purchaseFiredRef.current = true;
-
-    const params = new URLSearchParams(window.location.search);
-    const tier = params.get("tier") ?? "";
-    const isTrial = params.get("trial") === "1";
-
-    // A €0 trial start is NOT a purchase — reporting it at the paid fallback
-    // value (€129) would badly inflate conversion value. Record it at €0 so the
-    // trial-start conversion fires without polluting revenue signals; the real
-    // charge happens at day 7 (payment.succeeded → the webhook).
-    if (isTrial) {
-      trackPurchase({ tier: tier || "notes_pro_trial", valueEur: 0 });
-      return;
+  const paramsRef = useRef<URLSearchParams | null>(null);
+  const getParams = useCallback(() => {
+    if (!paramsRef.current) {
+      // SSR/prerender safe: no window there, empty params render fine.
+      paramsRef.current =
+        typeof window === "undefined"
+          ? new URLSearchParams()
+          : new URLSearchParams(window.location.search);
     }
-
-    const priceCents = TIER_BY_ID[tier]?.price_cents;
-    if (typeof priceCents === "number") {
-      trackPurchase({ tier, valueEur: priceCents / 100 });
-    } else {
-      console.warn(
-        `[checkout/success] Unknown tier "${tier}" in redirect URL; firing Purchase with fallback value €${FALLBACK_PURCHASE_VALUE_EUR}.`
-      );
-      trackPurchase({
-        tier: tier || "unknown",
-        valueEur: FALLBACK_PURCHASE_VALUE_EUR,
-      });
-    }
+    return paramsRef.current;
   }, []);
 
-  // Trial grant: a €0 trial start fires no `payment.succeeded`, so the payment
-  // webhook never grants at trial start. Verify the Whop membership server-side
-  // and flip to Pro here. Idempotent + best-effort; retried a few times to ride
-  // out membership-propagation lag, then the tier poll below takes over.
-  useEffect(() => {
-    if (new URLSearchParams(window.location.search).get("trial") !== "1") return;
-    let cancelled = false;
-    let attempts = 0;
-    const tryVerify = async () => {
-      if (cancelled) return;
-      attempts += 1;
-      try {
-        const res = await authFetch("/api/whop/trial/verify", { method: "POST" });
-        const d = await res.json().catch(() => ({}));
-        if (d?.granted) {
-          void refresh();
-          return; // granted — the isPaid effect will route home
-        }
-      } catch {
-        /* keep retrying */
+  const firePurchase = useCallback(
+    (tier: string, amountCents: number | null, paymentId: string | null, explicitPaid: boolean) => {
+      if (purchaseFiredRef.current) return;
+      purchaseFiredRef.current = true;
+      // No fallback amount: without a real value signal we do not fire.
+      let valueEur: number | null = null;
+      if (typeof amountCents === "number" && amountCents > 0) {
+        valueEur = amountCents / 100;
+      } else {
+        const priceCents = TIER_BY_ID[tier]?.price_cents;
+        if (typeof priceCents === "number") valueEur = priceCents / 100;
       }
-      if (!cancelled && attempts < 6) setTimeout(tryVerify, 2_500);
-    };
-    void tryVerify();
-    return () => {
-      cancelled = true;
-    };
-  }, [refresh]);
+      if (valueEur === null && !explicitPaid) return;
+      trackPurchase({
+        tier: tier || "unknown",
+        valueEur: valueEur ?? 0,
+        conversionId: paymentId ?? undefined,
+      });
+    },
+    []
+  );
 
-  // Paid tiers: same deterministic treatment as the trial. Whop's webhook
-  // delivery can lag (documented retries up to 12h; a real 2026-09-17
-  // delivery landed ~3h late), and a buyer who returned and saw "free"
-  // paid a second time. Server-side verify against Whop's ledger grants
-  // immediately when the money is real; the webhook stays the backstop.
+  // ── Verify schedule (paid tiers): backoff array, granted or 5-min ceiling ──
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("trial") === "1") return;
+    const params = getParams();
+    const isTrial = params.get("trial") === "1";
     const tier = params.get("tier") ?? "";
-    if (!tier) return;
+    if (isTrial || !tier) return;
+
     let cancelled = false;
-    let attempts = 0;
-    const tryVerify = async () => {
-      if (cancelled) return;
-      attempts += 1;
+    let inFlight = false;
+    let idx = 0;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const startedAt = Date.now();
+
+    const run = async () => {
+      if (cancelled || inFlight) return;
+      inFlight = true;
       try {
         const res = await authFetch("/api/whop/checkout/verify", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ tier }),
         });
-        const d = await res.json().catch(() => ({}));
+        const d = (await res.json().catch(() => ({}))) as VerifyPayload;
+        if (cancelled) return;
         if (d?.granted) {
+          setOutcome("granted");
+          setPaymentRef(d.payment_ref ?? null);
+          firePurchase(tier, d.amount_cents ?? null, d.payment_ref ?? null, false);
           void refresh();
-          return; // granted — the isPaid effect will route home
+          return; // granted: stop the schedule
+        }
+        if (d?.reason === "payment_unmatched") {
+          setOutcome("unmatched");
+          setPaymentRef(d.payment_ref ?? null);
+          // Keep polling: the webhook may still tie it later.
         }
       } catch {
         /* keep retrying */
       }
-      if (!cancelled && attempts < 6) setTimeout(tryVerify, 2_500);
+      inFlight = false;
+      scheduleNext();
     };
-    void tryVerify();
+
+    const scheduleNext = () => {
+      if (cancelled) return;
+      const elapsed = Date.now() - startedAt;
+      if (elapsed >= VERIFY_CEILING_MS) return; // ceiling: page shows the 60s+ state
+      const delay =
+        idx < VERIFY_RETRIES_MS.length ? VERIFY_RETRIES_MS[idx] : VERIFY_STEADY_MS;
+      idx += 1;
+      timer = setTimeout(() => void run(), delay);
+    };
+
+    // One extra check when the buyer returns to this tab (e.g. after opening
+    // their bank app or the Whop receipt mail).
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void run();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+
+    void run();
     return () => {
       cancelled = true;
+      if (timer) clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [refresh]);
+  }, [getParams, firePurchase, refresh]);
 
-  // Kick off an immediate refresh on mount so we don't wait for the
-  // 5-minute background interval in useUserTier. Then poll every 2 s
-  // so the tier flip registers as soon as the webhook lands.
+  // ── Trial grant path: same deterministic verify, same backoff shape ──
+  useEffect(() => {
+    const params = getParams();
+    if (params.get("trial") !== "1") return;
+    const tier = params.get("tier") ?? "";
+
+    let cancelled = false;
+    let inFlight = false;
+    let idx = 0;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const startedAt = Date.now();
+
+    const run = async () => {
+      if (cancelled || inFlight) return;
+      inFlight = true;
+      try {
+        const res = await authFetch("/api/whop/trial/verify", { method: "POST" });
+        const d = (await res.json().catch(() => ({}))) as VerifyPayload;
+        if (cancelled) return;
+        if (d?.granted) {
+          setOutcome("granted");
+          firePurchase(tier || "notes_pro_trial", 0, null, false);
+          void refresh();
+          return;
+        }
+      } catch {
+        /* keep retrying */
+      }
+      inFlight = false;
+      scheduleNext();
+    };
+
+    const scheduleNext = () => {
+      if (cancelled) return;
+      const elapsed = Date.now() - startedAt;
+      if (elapsed >= VERIFY_CEILING_MS) return;
+      const delay =
+        idx < VERIFY_RETRIES_MS.length ? VERIFY_RETRIES_MS[idx] : VERIFY_STEADY_MS;
+      idx += 1;
+      timer = setTimeout(() => void run(), delay);
+    };
+
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void run();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+
+    void run();
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [getParams, firePurchase, refresh]);
+
+  // ── Tier poll: refresh every 5s so the grant registers fast (webhook or
+  //    a parallel verify), for the full 5-minute window. Also drives the
+  //    phase copy via elapsedSec. ──
   useEffect(() => {
     void refresh();
-
-    pollingRef.current = setInterval(() => {
+    const interval = setInterval(() => {
+      setElapsedSec((s) => s + TIER_POLL_MS / 1000);
       void refresh();
-    }, POLL_INTERVAL_MS);
-
-    // Safety net: after 30 s stop polling and show a manual-continue
-    // button. The payment_events table will capture any drop for review.
-    timeoutRef.current = setTimeout(() => {
-      if (pollingRef.current) clearInterval(pollingRef.current);
-      setTimedOut(true);
-    }, POLL_TIMEOUT_MS);
-
-    return () => {
-      if (pollingRef.current) clearInterval(pollingRef.current);
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    };
+    }, TIER_POLL_MS);
+    return () => clearInterval(interval);
   }, [refresh]);
 
-  // Once tier resolves to Pro (isPaid), stop polling and route home so
-  // the user lands on a screen that already reflects their new access.
+  // ── Explicit ?paid=1 (ops/DeepLink escape hatch) still gates on the tier ──
+  useEffect(() => {
+    const params = getParams();
+    if (params.get("paid") === "1") {
+      const tier = params.get("tier") ?? "";
+      firePurchase(tier, null, null, true);
+    }
+  }, [getParams, firePurchase]);
+
+  // ── Webhook-side grant: isPaid flips without verify (webhook won the race).
+  //     Purchase fires here too (real grant signal), then we route home. ──
   useEffect(() => {
     if (isLoading || !isPaid) return;
-    if (pollingRef.current) clearInterval(pollingRef.current);
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    router.push("/");
-  }, [isPaid, isLoading, router]);
+    if (!purchaseFiredRef.current) {
+      const params = getParams();
+      firePurchase(params.get("tier") ?? "", null, null, false);
+    }
+    setOutcome("granted");
+    grantedRedirectRef.current = setTimeout(() => router.push("/"), GRANTED_REDIRECT_MS);
+    return () => {
+      if (grantedRedirectRef.current) clearTimeout(grantedRedirectRef.current);
+    };
+  }, [isPaid, isLoading, getParams, firePurchase, router]);
 
-  const showSpinner = !timedOut && !isPaid;
+  const granted = outcome === "granted" || isPaid;
+  const unmatched = outcome === "unmatched" && !granted;
+  const showSpinner = !granted && !unmatched;
+
+  // Honest phase copy while unconfirmed. NOTHING here says "aktiv".
+  let de = "";
+  let en = "";
+  if (showSpinner) {
+    if (elapsedSec < 10) {
+      de = "Wir prüfen deine Zahlung gerade. Das dauert meist nur wenige Sekunden.";
+      en = "We are verifying your payment. This usually takes only a few seconds.";
+    } else if (elapsedSec < 30) {
+      de = "Deine Zahlung wird noch bestätigt. Bei Kartenzahlung kann das ein paar Minuten dauern.";
+      en = "Your payment is still being confirmed. Card payments can take a few minutes.";
+    } else if (elapsedSec < 60) {
+      de = "Wir haben deine Zahlung erhalten. Die Freischaltung dauert länger als üblich.";
+      en = "We received your payment. Activation is taking longer than usual.";
+    } else {
+      de = "Deine Zahlung ist eingegangen. Die Bestätigung läuft noch. Du wirst automatisch freigeschaltet.";
+      en = "Your payment arrived. Confirmation is still running. You will be unlocked automatically.";
+    }
+  } else if (unmatched) {
+    de =
+      "Deine Zahlung ist bei uns eingegangen, aber die Zuordnung hat noch nicht geklappt. Wir melden uns per E-Mail und schalten dich frei.";
+    en =
+      "We received your payment but could not tie it to your account yet. We will email you and unlock your access.";
+  } else {
+    de = "Dein Pro-Zugang ist aktiv. Du wirst weitergeleitet.";
+    en = "Your Pro access is active. Redirecting you now.";
+  }
+
+  // Support mail: tier, the ch_ session id from the URL, and any pay_ ref
+  // returned by verify, so [name] can trace the payment immediately.
+  const supportMailto = (() => {
+    const params = getParams();
+    const tier = params.get("tier") ?? "";
+    let sessionId = params.get("session");
+    if (!sessionId) {
+      for (const v of params.values()) {
+        if (v.startsWith("ch_")) {
+          sessionId = v;
+          break;
+        }
+      }
+    }
+    const lines = [
+      `tier: ${tier || "unbekannt"}`,
+      sessionId ? `checkout_session: ${sessionId}` : null,
+      paymentRef ? `payment_ref: ${paymentRef}` : null,
+    ].filter(Boolean);
+    return `mailto:user-b7e46e80@example.com?subject=${encodeURIComponent(
+      "MedPrüf Zahlung prüfen"
+    )}&body=${encodeURIComponent(lines.join("\n"))}`;
+  })();
 
   return (
     <main className="min-h-screen flex items-center justify-center px-6 bg-[#F7F9FC] dark:bg-[#0F172A]">
@@ -181,16 +313,8 @@ export default function CheckoutSuccessPage() {
         <h1 className="font-display text-2xl font-bold text-[#1A2B3C] dark:text-[#E2E8F0]">
           Zahlung erhalten, danke
         </h1>
-        <p className="mt-3 text-[#4A5568] dark:text-[#A0AEC0]">
-          {showSpinner
-            ? "Wir schalten deinen MedPrüf-Pro-Zugang gerade frei. Einen Moment …"
-            : "Dein Pro-Zugang ist aktiv. Du wirst gleich weitergeleitet."}
-        </p>
-        <p className="mt-2 text-sm text-[#4A5568] dark:text-[#A0AEC0]">
-          {showSpinner
-            ? "Activating your MedPrüf Pro access. Just a moment …"
-            : "Your Pro access is active. Redirecting you now."}
-        </p>
+        <p className="mt-3 text-[#4A5568] dark:text-[#A0AEC0]">{de}</p>
+        <p className="mt-2 text-sm text-[#4A5568] dark:text-[#A0AEC0]">{en}</p>
         {showSpinner && (
           <div className="mt-6 flex justify-center" aria-label="Bitte warten" role="status">
             <svg
@@ -205,13 +329,27 @@ export default function CheckoutSuccessPage() {
             </svg>
           </div>
         )}
-        {timedOut && (
-          <Link
-            href="/"
-            className="mt-6 inline-flex items-center justify-center rounded-xl bg-[#003A8C] px-6 py-3 font-semibold text-white transition hover:opacity-90"
-          >
-            Weiter zu MedPrüf
-          </Link>
+        {!granted && (
+          <div className="mt-6 flex flex-col items-center gap-3">
+            <Link
+              href="/"
+              className={
+                elapsedSec >= 60 || unmatched
+                  ? "inline-flex items-center justify-center rounded-xl bg-[#003A8C] px-6 py-3 font-semibold text-white transition hover:opacity-90"
+                  : "text-sm font-medium text-[#003A8C] underline underline-offset-2 hover:opacity-80"
+              }
+            >
+              {unmatched ? "Kostenlos weiterlernen" : elapsedSec >= 60 ? "Jetzt weiterlernen" : "In der Zwischenzeit weiterlernen"}
+            </Link>
+            {(elapsedSec >= 60 || unmatched) && (
+              <a
+                href={supportMailto}
+                className="text-sm text-[#003A8C] underline underline-offset-2 hover:opacity-80"
+              >
+                Das stimmt nicht?
+              </a>
+            )}
+          </div>
         )}
         <p className="mt-4 text-xs text-[#A0AEC0]">
           Eine Frage? Schreib an user-b7e46e80@example.com
