@@ -23,6 +23,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-09-21",
+    tag: "improvement",
+    title: {
+      de: "Empfehlungshinweise ausblendbar",
+      en: "Referral prompts can be dismissed",
+    },
+    description: {
+      de: "Der schwebende Empfehlungshinweis und die Empfehlungskarte auf dem Dashboard haben jetzt ein X zum Schließen. Nach dem Ausblenden bleiben beide mindestens 30 Tage ruhig, auch nach einem Neuladen.",
+      en: "The floating referral prompt and the referral card on the dashboard now have an X to close them. After dismissing, both stay quiet for at least 30 days, even after a reload.",
+    },
+  },
+  {
     date: "2026-09-20",
     tag: "fix",
     title: {

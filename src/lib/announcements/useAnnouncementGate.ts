@@ -23,7 +23,7 @@
  *   Session 3+ OR ≥25 Qs answered            → 'referral_floater'
  *     AND orientation_modal seen
  *     AND cohort_banner dismissed
- *     AND (7-day cooldown respected)
+ *     AND (30-day post-dismissal cooldown respected)
  *   Else                                     → 'cohort_banner' (if not dismissed)
  *                                              OR null
  *
@@ -162,7 +162,23 @@ export interface UseAnnouncementGateResult {
 const MIN_QS_FOR_COHORT_BANNER = 5;
 const MIN_QS_FOR_REFERRAL_FLOATER = 25;
 const MIN_SESSION_FOR_REFERRAL_FLOATER = 3;
-const REFERRAL_FLOATER_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+// 30 days (2026-09-21): the cooldown only ever applies to a DISMISSAL
+// (referralFloaterDismissedAt), so a user who never dismissed stays
+// re-eligible exactly as before. Raised from 7 days so a dismissed
+// referral nag stays quiet for at least a month.
+const REFERRAL_FLOATER_COOLDOWN_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+
+/**
+ * True while a referral-floater DISMISSAL is still inside its 30-day
+ * cooldown window. Never-dismissed users (null) are always eligible.
+ * Exported so the dashboard ReferralCodeCard can honour the exact same
+ * window as the gate's floater election.
+ */
+export function isReferralDismissalCooldownActive(
+  dismissedAtIso: string | null,
+): boolean {
+  return !cooldownElapsed(dismissedAtIso, REFERRAL_FLOATER_COOLDOWN_MS);
+}
 
 // ── Gate computation ─────────────────────────────────────────────
 
@@ -202,8 +218,9 @@ export function computeActiveSurface(
   // either they've started their third session OR they've answered at
   // least 25 questions cumulatively — AND they've already cleared the
   // orientation modal + dismissed the cohort banner once — AND they're
-  // outside the 7-day cooldown on the floater itself — AND the account
-  // has the invite-only referral program enabled (referralsEnabled).
+  // outside the 30-day post-dismissal cooldown on the floater itself —
+  // AND the account has the invite-only referral program enabled
+  // (referralsEnabled).
   const referralFloaterEligible =
     referralsEnabled &&
     (sessionCount >= MIN_SESSION_FOR_REFERRAL_FLOATER ||

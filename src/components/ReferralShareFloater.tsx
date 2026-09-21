@@ -17,7 +17,9 @@
  *     intent. Here we say "Empfehle MedPrüf" without a price anchor.
  *   - Safe-area inset on iPhone 14 Pro Max home indicator fixed via
  *     `env(safe-area-inset-bottom)`.
- *   - 7-day cooldown after dismiss preserved, enforced server-side.
+ *   - 30-day post-dismissal cooldown preserved, enforced server-side
+ *     (raised from 7 days on 2026-09-21 so a dismissed nag stays
+ *     quiet for at least a month).
  *   - 6s mount delay preserved so we don't greet the user with a nag.
  *
  * Still renders only on active-study paths (`/`, `/flashcards`,

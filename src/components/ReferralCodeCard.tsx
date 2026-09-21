@@ -36,6 +36,12 @@
  *     conflict visually — different regions, different intent — but
  *     the floater DOES so we defer to it.
  *
+ *   - Dismissable (2026-09-21): an X control stamps
+ *     `referral_floater_dismissed_at` via POST /api/announcements/seen
+ *     (same surface key as the floater) and hides the card. Both the
+ *     card and the floater stay hidden for the 30-day post-dismissal
+ *     cooldown window (`isReferralDismissalCooldownActive`).
+ *
  *   - Guest accounts (id starts with "guest_") never see this card
  *     because they don't have a persistent referral code.
  *
@@ -47,10 +53,14 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Check, Copy, Gift } from "lucide-react";
+import { Check, Copy, Gift, X } from "lucide-react";
 import { authFetch } from "@/lib/authFetch";
 import { trackEvent } from "@/lib/tracker";
-import { useAnnouncementGate } from "@/lib/announcements/useAnnouncementGate";
+import {
+  useAnnouncementGate,
+  isReferralDismissalCooldownActive,
+} from "@/lib/announcements/useAnnouncementGate";
+import { t as translate } from "@/lib/i18n";
 import { useUserTier } from "@/lib/hooks/useUserTier";
 
 type Lang = "de" | "en";
@@ -84,7 +94,11 @@ export default function ReferralCodeCard({
   const [loading, setLoading] = useState(!initialReferralCode);
   const [copied, setCopied] = useState(false);
   const [copiedAt, setCopiedAt] = useState<string | null>(initialCopiedAt ?? null);
-  const { activeSurface } = useAnnouncementGate();
+  const { activeSurface, state: gateState, markSeen } = useAnnouncementGate();
+  // Optimistic local hide (2026-09-21): flipping this before the POST
+  // lands means the card vanishes on the very click, not on the next
+  // render cycle that re-reads gate state.
+  const [dismissed, setDismissed] = useState(false);
   // Invite-only gate (2026-06-25): only accounts an admin has enabled may
   // see or interact with referral UI. Defaults false until /api/auth/me
   // resolves — the card is invisible during the brief loading window rather
@@ -177,11 +191,27 @@ export default function ReferralCodeCard({
     }
   }, [code, userId]);
 
+  const handleDismiss = useCallback(() => {
+    setDismissed(true);
+    void markSeen("referral_floater");
+  }, [markSeen]);
+
   // ── Visibility gates ────────────────────────────────────────────
 
   if (isGuest) return null;
   // Invite-only: hide for accounts not enrolled in the referral program.
   if (!referralsEnabled) return null;
+
+  // Dismissed (2026-09-21): the card honours the referral_floater
+  // dismissal. `dismissed` is the same-click optimistic hide;
+  // `isReferralDismissalCooldownActive` re-hides after every reload for
+  // the 30-day window while the dismissal is fresh (the gate uses the
+  // identical window to elect the floater). Dismissing stamps
+  // referral_floater_dismissed_at via POST /api/announcements/seen.
+  if (dismissed) return null;
+  if (gateState && isReferralDismissalCooldownActive(gateState.referralFloaterDismissedAt)) {
+    return null;
+  }
 
   // If the gate has elected the referral floater right now, skip the
   // dashboard card — the floater is the louder surface, no point
@@ -222,10 +252,18 @@ export default function ReferralCodeCard({
 
   return (
     <section
-      className="mp-card rounded-2xl p-5 mb-8"
+      className="mp-card rounded-2xl p-5 mb-8 relative"
       aria-label={title}
     >
-      <div className="flex items-start gap-3 mb-4">
+      <button
+        type="button"
+        onClick={handleDismiss}
+        className="absolute top-2 right-2 text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg)] p-2 min-w-[44px] min-h-[44px] flex items-center justify-center"
+        aria-label={translate("ref_code_card_dismiss", lang)}
+      >
+        <X className="w-4 h-4" aria-hidden />
+      </button>
+      <div className="flex items-start gap-3 mb-4 pr-10">
         <div
           className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
           style={{
