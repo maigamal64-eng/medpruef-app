@@ -322,7 +322,7 @@ export default function RootLayout({
                       "priceCurrency": "EUR",
                       "availability": "https://schema.org/InStock",
                       "description":
-                        "One-time single-month full access. Payable by card (Visa, Mastercard, Apple Pay).",
+                        "Monthly recurring full access at €19. Renews every 30 days. Cancel anytime before renewal. Payable by card (Visa, Mastercard, Apple Pay).",
                     },
                     {
                       "@type": "Offer",
@@ -331,7 +331,7 @@ export default function RootLayout({
                       "priceCurrency": "EUR",
                       "availability": "https://schema.org/InStock",
                       "description":
-                        "One-time 3-month full access. Payable by card (Visa, Mastercard, Apple Pay).",
+                        "Quarterly recurring full access at €49 every 90 days. Cancel anytime before renewal. Payable by card (Visa, Mastercard, Apple Pay).",
                     },
                     {
                       "@type": "Offer",
