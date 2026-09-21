@@ -652,8 +652,8 @@ function Starter3MoCard({
         </div>
         <p className="mp-body text-[var(--mp-fg-muted)] mb-4 text-sm leading-relaxed">
           {lang === "de"
-            ? "Drei Monate Vollzugang für eine einmalige Zahlung von 49 €. Genug Zeit für einen echten Lernlauf, und schmal genug, um zu testen, bevor du dich zur Kohorte committest. Pro Konto einmal verfügbar."
-            : "Three months of full access for one payment of 49 €. Long enough for a real prep run, narrow enough to test before committing to the Cohort. One purchase per account."}
+            ? "Drei Monate Vollzugang für 49 € pro Quartal. Genug Zeit für einen echten Lernlauf, und schmal genug, um zu testen, bevor du dich zur Kohorte committest. Das Abo verlängert sich automatisch, du kannst jederzeit kündigen."
+            : "Three months of full access for 49 € per quarter. Long enough for a real prep run, narrow enough to test before committing to the Cohort. Auto-renews, cancel anytime."}
         </p>
         <ul className="space-y-1.5 text-sm text-[var(--mp-fg)]">
           <li className="flex items-start gap-2">
@@ -671,8 +671,8 @@ function Starter3MoCard({
               strokeWidth={3}
             />
             {lang === "de"
-              ? "90 Tage ab Zahlung · läuft automatisch aus, kein Abo"
-              : "90 days from payment · expires automatically, no subscription"}
+              ? "90 Tage · automatische Verlängerung, jederzeit kündbar"
+              : "90 days · auto-renews, cancel anytime"}
           </li>
           {/* Referral reward is invite-only (2026-06-25): only show this perk
               to accounts enrolled in the program (referralsEnabled). Reward
@@ -705,7 +705,7 @@ function Starter3MoCard({
               49 €
             </span>
             <span className="text-sm text-[var(--mp-fg-subtle)]">
-              {lang === "de" ? "einmalig" : "one-time"}
+              {lang === "de" ? "pro Quartal" : "per quarter"}
             </span>
           </div>
           <p
@@ -713,8 +713,8 @@ function Starter3MoCard({
             style={{ color: "var(--mp-viridian)", fontWeight: 600 }}
           >
             {lang === "de"
-              ? "≈ 16 € pro Monat · keine Verlängerung"
-              : "≈ 16 € per month · no renewal"}
+              ? "≈ 16 € pro Monat · monatlich kündbar"
+              : "≈ 16 € per month · cancel anytime"}
           </p>
         </div>
         {isPaid ? (
@@ -759,7 +759,7 @@ function Starter3MoCard({
 
 /**
  * Single-month tier — advertised entry ("ab 19 € im Monat"). 30 days of
- * full access for a one-time 19 €. Tier key: first_month_19. Prospect
+ * 19 EUR per month recurring. Tier key: first_month_19. Prospect steps up to the 49 EUR/quarter or the 129 EUR Cohort from here.
  * steps up to the 49 €/3-month starter or the 129 € Cohort from here.
  */
 function FirstMonthCard({
@@ -803,8 +803,8 @@ function FirstMonthCard({
         </div>
         <p className="mp-body text-[var(--mp-fg-muted)] mb-4 text-sm leading-relaxed">
           {lang === "de"
-            ? "30 Tage voller Zugang für einmalig 19 €. Der einfachste Einstieg: teste alles einen Monat lang, ohne Verpflichtung. Danach kannst du jederzeit auf den 3-Monats-Tarif oder die Prüfungs-Kohorte wechseln."
-            : "30 days of full access for a one-time 19 €. The easiest way in: try everything for a month, no commitment. Step up to the 3-month plan or the Exam Cohort whenever you like."}
+            ? "30 Tage voller Zugang für 19 € pro Monat. Der einfachste Einstieg: teste alles einen Monat lang. Das Abo verlängert sich monatlich, du kannst jederzeit kündigen."
+            : "30 days of full access for 19 € per month. The easiest way in: try everything for a month. Auto-renews monthly, cancel anytime."}
         </p>
         <ul className="space-y-1.5 text-sm text-[var(--mp-fg)]">
           <li className="flex items-start gap-2">
@@ -850,7 +850,7 @@ function FirstMonthCard({
               19 €
             </span>
             <span className="text-sm text-[var(--mp-fg-subtle)]">
-              {lang === "de" ? "einmalig" : "one-time"}
+              {lang === "de" ? "pro Monat" : "per month"}
             </span>
           </div>
           <p

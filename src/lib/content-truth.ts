@@ -82,10 +82,10 @@ export const TIERS = {
     referral_payout_cents: 0,
   },
   // ── Tier hierarchy (2026-06-25 prices) ──────────────────────────
-  // €19 = advertised entry (first_month_19, unchanged); €49 = 3-month
-  // Starter (first_3mo_27, raised from €27); €129 = 6-month Cohort hero
+  // €19/month recurring entry (first_month_19); €49/quarter recurring
+  // Starter (first_3mo_27); €129 = 6-month Cohort hero
   // (premium_pass_guaranteed, raised from €114). Keys are frozen data —
-  // first_3mo_27 now displays €49. Cap: each user can buy first_3mo_27
+  // first_3mo_27 now displays €49. Cap: each user can subscribe to first_3mo_27
   // only ONCE — enforced server-side in /api/checkout/nowpayments.
   // After expiry the upgrade path is Cohort €129; first_month_19
   // stays live as a "just one more month" bridging fallback.

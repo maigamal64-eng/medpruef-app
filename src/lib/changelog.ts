@@ -26,6 +26,18 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-09-21",
     tag: "improvement",
     title: {
+      de: "Monatliche und vierteljährliche Pro-Tarife",
+      en: "Monthly and quarterly Pro plans",
+    },
+    description: {
+      de: "Der Pro-Zugang ist jetzt monatlich für 19 € oder vierteljährlich für 49 € erhältlich. Beide Tarife verlängern sich automatisch und können jederzeit vor der nächsten Verlängerung gekündigt werden. Die Prüfungs-Kohorte für 129 € bleibt ein einmaliger Tarif mit Pass-Until-You-Pass.",
+      en: "Pro is now available monthly for €19 or quarterly for €49. Both plans renew automatically and can be cancelled before the next renewal. The €129 Exam Cohort remains a one-time plan with Pass-Until-You-Pass.",
+    },
+  },
+  {
+    date: "2026-09-21",
+    tag: "improvement",
+    title: {
       de: "Klarere Zahlungsbestätigung",
       en: "Clearer payment confirmation",
     },
