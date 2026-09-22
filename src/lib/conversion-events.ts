@@ -27,6 +27,52 @@ type Gtag = (...args: unknown[]) => void;
 type Rdt = (...args: unknown[]) => void;
 
 /**
+ * Fire the funnel-intent (Lead) conversion on every CTA click that
+ * precedes a real SignUp — used by the high-intent landing pages so
+ * the ad-platform optimizers (Reddit + Google Ads) see the click signal
+ * even when the visitor bounces before completing registration.
+ *
+ * - Meta: `fbq('track', 'Lead')` — standard Leads objective.
+ * - GA4:  `gtag('event', 'generate_lead')` — key event importable into
+ *        Google Ads as a conversion.
+ * - Reddit: `rdt('track', 'Lead')` — Reddit Ads Lead event.
+ *
+ * Self-gates on consent + tracker presence exactly like the other
+ * helpers, so a single call is safe from any component.
+ */
+export function trackFunnelIntent(source: string): void {
+  if (typeof window === "undefined") return;
+  if (getCookieConsent() !== "accepted") return;
+
+  try {
+    const fbq = (window as unknown as { fbq?: Fbq }).fbq;
+    if (typeof fbq === "function") {
+      fbq("track", "Lead", { content_name: source });
+    }
+  } catch {
+    /* analytics must never break the CTA flow */
+  }
+
+  try {
+    const gtag = (window as unknown as { gtag?: Gtag }).gtag;
+    if (typeof gtag === "function") {
+      gtag("event", "generate_lead", { source });
+    }
+  } catch {
+    /* analytics must never break the CTA flow */
+  }
+
+  try {
+    const rdt = (window as unknown as { rdt?: Rdt }).rdt;
+    if (typeof rdt === "function") {
+      rdt("track", "Lead", { source });
+    }
+  } catch {
+    /* analytics must never break the CTA flow */
+  }
+}
+
+/**
  * Fire the free-registration conversion on BOTH ad platforms.
  *
  * - Meta: `fbq('track', 'CompleteRegistration')` — Meta's optimization
