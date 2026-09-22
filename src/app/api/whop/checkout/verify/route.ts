@@ -376,6 +376,7 @@ export async function POST(req: NextRequest) {
       paymentId,
       amountCents: tierDef?.priceCents ?? null,
       currency: "EUR",
+      membershipId: mine.id,
     });
     if (grant.mode === "failed") {
       Sentry.captureException(new Error(grant.error ?? "grant failed"), {
@@ -718,6 +719,7 @@ async function grantFromPaymentEventRow(
     paymentId: args.paymentId,
     amountCents: tierDef?.priceCents ?? null,
     currency: "EUR",
+    membershipId: null,
   });
   if (grant.mode === "failed") {
     Sentry.captureException(new Error(grant.error ?? "grant failed"), {

@@ -52,6 +52,7 @@ interface GrantArgs {
   paymentId: string;
   amountCents: number | null;
   currency: string;
+  membershipId?: string | null;
 }
 
 type Db = SupabaseClient;
@@ -63,6 +64,7 @@ interface ActiveSubRow {
   amount_cents: number | null;
   currency: string | null;
   granted_payment_ids: GrantedPaymentEntry[] | null;
+  whop_membership_id: string | null;
 }
 
 function laterOf(aIso: string | null | undefined, b: Date): Date {
@@ -88,7 +90,7 @@ export async function extendOrInsertWhopSubscription(
 
   const { data: actives, error } = await sb
     .from("subscriptions")
-    .select("id, tier, expires_at, amount_cents, currency, granted_payment_ids")
+    .select("id, tier, expires_at, amount_cents, currency, granted_payment_ids, whop_membership_id")
     .eq("user_id", userId)
     .eq("payment_provider", "whop")
     .eq("status", "active")
@@ -131,6 +133,7 @@ export async function extendOrInsertWhopSubscription(
         amount_cents: amountCents ?? live.amount_cents ?? null,
         currency: currency || live.currency || "EUR",
         granted_payment_ids: [...history, entry],
+        ...(args.membershipId ? { whop_membership_id: args.membershipId } : {}),
         updated_at: now.toISOString(),
       })
       .eq("id", live.id);
@@ -170,6 +173,7 @@ export async function extendOrInsertWhopSubscription(
       currency,
       provider_payment_id: paymentId,
       granted_payment_ids: [insertEntry],
+      whop_membership_id: args.membershipId ?? null,
       started_at: now.toISOString(),
       expires_at: newExpiry.toISOString(),
     })

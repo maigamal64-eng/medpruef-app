@@ -450,12 +450,12 @@ export default function PricingPage() {
               aria-hidden
             />
             <div className="relative">
-              <h3 className="mp-h2 text-white mb-3">
+              <h3 className="mp-h2 mb-3" style={{ color: "#ffffff" }}>
                 {lang === "de"
                   ? "Bereit für die Kenntnisprüfung am 28. September?"
                   : "Ready for the 28 September Kenntnisprüfung?"}
               </h3>
-              <p className="mp-body text-white/80 max-w-xl mx-auto mb-6">
+              <p className="mp-body max-w-xl mx-auto mb-6" style={{ color: "rgba(255,255,255,0.82)" }}>
                 {lang === "de"
                   ? "6 Monate Vollzugang, 129 €, zahlbar mit Karte. Inklusive Pass-Until-You-Pass-Garantie."
                   : "6 months of full access, 129 €, payable by card. Pass-Until-You-Pass guarantee included."}
@@ -713,8 +713,8 @@ function Starter3MoCard({
             style={{ color: "var(--mp-viridian)", fontWeight: 600 }}
           >
             {lang === "de"
-              ? "≈ 16 € pro Monat · monatlich kündbar"
-              : "≈ 16 € per month · cancel anytime"}
+              ? "≈ 16 € pro Monat · verlängert sich automatisch"
+              : "≈ 16 € per month · renews automatically"}
           </p>
         </div>
         {isPaid ? (
@@ -747,8 +747,8 @@ function Starter3MoCard({
         )}
         <p className="mp-small text-[var(--mp-fg-subtle)] md:text-right">
           {lang === "de"
-            ? "Karte · sofort aktiv · läuft nach 90 Tagen aus"
-            : "Card · active instantly · expires after 90 days"}
+            ? "Karte · sofort aktiv · jederzeit kündbar"
+            : "Card · active instantly · cancel anytime"}
         </p>
       </div>
     </article>
@@ -822,8 +822,8 @@ function FirstMonthCard({
               strokeWidth={3}
             />
             {lang === "de"
-              ? "30 Tage ab Zahlung · läuft automatisch aus"
-              : "30 days from payment · expires automatically"}
+              ? "30 Tage ab Zahlung · verlängert sich automatisch"
+              : "30 days from payment · renews automatically"}
           </li>
           <li className="flex items-start gap-2">
             <Check
@@ -831,8 +831,8 @@ function FirstMonthCard({
               strokeWidth={3}
             />
             {lang === "de"
-              ? "Am Tag 25 schreiben wir dir, wähle dann selbst einen längeren Tarif"
-              : "We email you on day 25, pick a longer plan yourself, if you want"}
+              ? "Verlängert sich monatlich · jederzeit kündbar"
+              : "Renews monthly · cancel anytime"}
           </li>
           <li className="flex items-start gap-2 text-[var(--mp-fg-subtle)]">
             <Lock className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" aria-hidden />
@@ -858,8 +858,8 @@ function FirstMonthCard({
             style={{ color: "var(--mp-cta-blue)", fontWeight: 600 }}
           >
             {lang === "de"
-              ? "keine automatische Verlängerung"
-              : "no auto-renewal"}
+              ? "automatische Verlängerung · jederzeit kündbar"
+              : "auto-renews · cancel anytime"}
           </p>
         </div>
         {isPaid ? (
@@ -892,8 +892,8 @@ function FirstMonthCard({
         )}
         <p className="mp-small text-[var(--mp-fg-subtle)] md:text-right">
           {lang === "de"
-            ? "Karte · sofort aktiv · läuft nach 30 Tagen aus"
-            : "Card · active instantly · expires after 30 days"}
+            ? "Karte · sofort aktiv · jederzeit kündbar"
+            : "Card · active instantly · cancel anytime"}
         </p>
       </div>
     </article>
@@ -974,8 +974,8 @@ function CohortFeaturedCard({
           </h3>
           <p className="mp-body text-[var(--mp-fg-muted)] mb-5 max-w-xl">
             {lang === "de"
-              ? "Ein einmaliger Preis, sechs Monate Vollzugang auf Kenntnisprüfung, Stichprobentest und Pharmakologie. Sieben Tage Geld-zurück-Garantie auf jede Bestellung. Wenn du nach 7 Tagen weiter lernst und dann durchfällst, verlängern wir deinen Zugang kostenlos: keine Cash-Rückerstattung in dem Fall, dafür Pass-Until-You-Pass. Aktiviert in Minuten, keine Kreditkarte."
-              : "One upfront price, six months of full access across Kenntnisprüfung, Stichprobentest and Pharmakologie. 7-day money-back guarantee on every purchase. If you keep studying past day 7 and later fail, we extend your access free: no cash refund at that point, but Pass-Until-You-Pass kicks in. Activated in minutes, no credit card."}
+              ? "Ein einmaliger Preis, sechs Monate Vollzugang auf Kenntnisprüfung, Stichprobentest und Pharmakologie. Sieben Tage Geld-zurück-Garantie auf jede Bestellung. Wenn du nach 7 Tagen weiter lernst und dann durchfällst, verlängern wir deinen Zugang kostenlos: keine Cash-Rückerstattung in dem Fall, dafür Pass-Until-You-Pass. Aktiviert in Minuten per sicherer Kartenzahlung."
+              : "One upfront price, six months of full access across Kenntnisprüfung, Stichprobentest and Pharmakologie. 7-day money-back guarantee on every purchase. If you keep studying past day 7 and later fail, we extend your access free: no cash refund at that point, but Pass-Until-You-Pass kicks in. Activated in minutes through secure card checkout."}
           </p>
 
           {/* PUYP badge — prominent */}

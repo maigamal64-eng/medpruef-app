@@ -45,7 +45,7 @@ interface QuestionCardProps {
   questionNumber: number;
   totalQuestions: number;
   lang: Lang;
-  onAnswer?: (isCorrect: boolean) => void;
+  onAnswer?: (isCorrect: boolean, selected?: number[]) => void;
   imageUrl?: string;
   /** Hide inline explanation (used when split-view shows explanation separately) */
   hideExplanation?: boolean;
@@ -306,7 +306,7 @@ export default function QuestionCard({
       // Radio behavior: select + immediately grade
       setSelectedIdxs(new Set([idx]));
       setSubmitted(true);
-      onAnswer?.(options[idx].correct);
+      onAnswer?.(options[idx].correct, [idx]);
       onCommit?.([idx], options[idx].correct);
     }
   };
@@ -318,8 +318,9 @@ export default function QuestionCard({
     const correctIdxs = new Set(options.map((o, i) => o.correct ? i : -1).filter(i => i >= 0));
     const isCorrect = selectedIdxs.size === correctIdxs.size
       && [...selectedIdxs].every(i => correctIdxs.has(i));
-    onAnswer?.(isCorrect);
-    onCommit?.([...selectedIdxs].sort((a, b) => a - b), isCorrect);
+    const selected = [...selectedIdxs].sort((a, b) => a - b);
+    onAnswer?.(isCorrect, selected);
+    onCommit?.(selected, isCorrect);
   };
 
   const handleToggleFav = () => {

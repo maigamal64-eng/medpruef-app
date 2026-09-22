@@ -564,6 +564,7 @@ export async function POST(req: NextRequest) {
         paymentId: f.paymentId,
         amountCents: f.amountCents ?? TIERS[tier]?.priceCents ?? null,
         currency: (f.currency || "eur").toUpperCase(),
+        membershipId: f.memberId,
       });
       if (grant.mode === "failed") {
         Sentry.captureException(new Error(grant.error ?? "grant failed"), {
@@ -790,6 +791,7 @@ async function handleRevoke(
       expires_at: string | null;
       started_at: string | null;
       provider_payment_id: string | null;
+      whop_membership_id: string | null;
       granted_payment_ids: Array<{
         payment_id: string;
         amount_cents: number | null;
@@ -803,7 +805,7 @@ async function handleRevoke(
       const { data: byPay, error: byPayErr } = await sb
         .from("subscriptions")
         .select(
-          "id, user_id, tier, status, expires_at, started_at, provider_payment_id, granted_payment_ids"
+          "id, user_id, tier, status, expires_at, started_at, provider_payment_id, granted_payment_ids, whop_membership_id"
         )
         .eq("payment_provider", "whop")
         .in("provider_payment_id", paymentCandidates);
@@ -822,7 +824,7 @@ async function handleRevoke(
         const { data: allActive, error: scanErr } = await sb
           .from("subscriptions")
           .select(
-            "id, user_id, tier, status, expires_at, started_at, provider_payment_id, granted_payment_ids"
+            "id, user_id, tier, status, expires_at, started_at, provider_payment_id, granted_payment_ids, whop_membership_id"
           )
           .eq("payment_provider", "whop")
           .eq("status", "active");
@@ -835,6 +837,23 @@ async function handleRevoke(
             )
           );
         }
+      }
+    }
+
+    if (subs.length === 0 && r.membershipId) {
+      const { data: byMembership, error: membershipErr } = await sb
+        .from("subscriptions")
+        .select(
+          "id, user_id, tier, status, expires_at, started_at, provider_payment_id, granted_payment_ids, whop_membership_id"
+        )
+        .eq("payment_provider", "whop")
+        .eq("whop_membership_id", r.membershipId);
+      if (membershipErr) {
+        Sentry.captureException(membershipErr, {
+          tags: { route: "webhooks/whop", step: "revoke_membership_lookup" },
+        });
+      } else {
+        subs = (byMembership ?? []) as RevokeSub[];
       }
     }
 

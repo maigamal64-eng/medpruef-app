@@ -19,7 +19,7 @@ import { getNextExamDate } from "@/lib/exam-dates";
 
 const pageTitle = "Kenntnisprüfung Wien 2026: 450 Fragen gratis üben | MedPrüf";
 const pageDesc =
-  "450 Fragen kostenlos üben, Pass-Until-You-Pass-Garantie. Vorbereitung auf die Kenntnisprüfung Wien (SIP 4 + SIP 5) im Rahmen der Nostrifizierung: 7.566 Prüfungsfragen aus 10 Fachgebieten mit klinischen Erklärungen.";
+  "450 Fragen kostenlos üben. Vorbereitung auf die Kenntnisprüfung Wien mit 7.566 klinischen MCQs und Erklärungen. Die echte Prüfung arbeitet mit offenen Kurzantwortfragen.";
 
 export const metadata: Metadata = {
   title: pageTitle,
@@ -88,7 +88,7 @@ function buildCourseSchema() {
     "@type": "Course",
     name: "Kenntnisprüfung Wien: Vorbereitung",
     description:
-      "Strukturierte Vorbereitung auf die österreichische Kenntnisprüfung (Wien) für ausländische Ärzt:innen: SIP 4 + SIP 5, 10 Fachgebiete, 7,566 Prüfungsfragen mit klinischen Erklärungen.",
+      "Strukturierte Wissensvorbereitung auf die österreichische Kenntnisprüfung Wien für ausländische Ärzt:innen: 7.566 klinische MCQs mit Erklärungen als Ergänzung zur offiziellen offenen Kurzantwortprüfung.",
     provider: {
       "@type": "Organization",
       name: "MedPrüf",

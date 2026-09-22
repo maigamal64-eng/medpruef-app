@@ -652,7 +652,7 @@ function QuizContent() {
 
   // ─── Answer handler ───
   const handleAnswer = useCallback(
-    async (isCorrect: boolean) => {
+    async (isCorrect: boolean, selectedIndexes: number[] = []) => {
       if (!question || answered) return;
       setAnswered(true);
       const newCount = questionCount + 1;
@@ -693,7 +693,10 @@ function QuizContent() {
         try {
           await queuePendingAnswer({
             questionId: question.id,
-            userAnswer: question.answer,
+            userAnswer: selectedIndexes
+              .map((index) => question.options?.[index]?.text)
+              .filter((text): text is string => Boolean(text))
+              .join(" | ") || "",
             isCorrect,
             timeSpentMs: Date.now() - startTime,
           });
@@ -711,7 +714,10 @@ function QuizContent() {
             userId,
             questionId: question.id,
             isCorrect,
-            userAnswer: question.answer,
+            userAnswer: selectedIndexes
+              .map((index) => question.options?.[index]?.text)
+              .filter((text): text is string => Boolean(text))
+              .join(" | ") || null,
             timeSpentMs: Date.now() - startTime,
           }),
         });
