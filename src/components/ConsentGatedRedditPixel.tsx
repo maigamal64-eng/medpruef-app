@@ -9,9 +9,9 @@ import { getCookieConsent } from "@/components/CookieBanner";
  * (`ConsentGatedAnalytics.tsx`) and the Meta Pixel
  * (`ConsentGatedMetaPixel.tsx`) (ePrivacy Directive / Austrian TTDSG).
  *
- * Reddit Ads pivot (2026-07-01): the Reddit Ads campaign (account
- * Desperate-Silver-624) optimizes on this pixel's SignUp + Purchase
- * conversion events. Pixel id lives in NEXT_PUBLIC_REDDIT_PIXEL_ID.
+ * The active test pixel is selected by NEXT_PUBLIC_REDDIT_PIXEL_ID. Only one
+ * Reddit pixel is loaded so events cannot be accidentally attributed to both
+ * the retired campaign pixel and the current test pixel.
  *
  * Behaviour (identical discipline to the Meta pixel):
  *   - If NEXT_PUBLIC_REDDIT_PIXEL_ID is absent/empty, clean no-op: nothing
@@ -51,7 +51,7 @@ function loadRedditPixel() {
     `!function(w,d){if(!w.rdt){var p=w.rdt=function(){` +
     `p.sendEvent?p.sendEvent.apply(p,arguments):p.callQueue.push(arguments)};` +
     `p.callQueue=[];var t=d.createElement("script");` +
-    `t.src="https://www.redditstatic.com/ads/pixel.js",t.async=!0;` +
+    `t.src="https://www.redditstatic.com/ads/pixel.js?pixel_id=${REDDIT_PIXEL_ID}",t.async=!0;` +
     `var s=d.getElementsByTagName("script")[0];` +
     `s.parentNode.insertBefore(t,s)}}(window,document);` +
     `rdt('init','${REDDIT_PIXEL_ID}');` +

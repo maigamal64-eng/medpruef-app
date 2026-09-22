@@ -7,6 +7,7 @@ import { extendOrInsertWhopSubscription, reconcileUserTierPro, releaseWhopClaim 
 import { logPaymentEvent, hashEmail } from "@/lib/paymentEvents";
 import { checkRateLimit, rateKey, rateLimitHeaders } from "@/lib/rate-limit";
 import { qualifyReferralOnActivity } from "@/lib/referral-exam-reward";
+import { sendRedditConversion } from "@/lib/reddit-capi";
 
 export const dynamic = "force-dynamic";
 
@@ -452,6 +453,17 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    if (tierDef?.priceCents != null && tierDef.priceCents > 0) {
+      void sendRedditConversion({
+        trackingType: "Purchase",
+        conversionId: paymentId,
+        email: buyerEmail,
+        valueDecimal: tierDef.priceCents / 100,
+        currency: "EUR",
+        externalId: userId,
+      });
+    }
+
     return NextResponse.json({
       granted: true,
       tier,
@@ -765,6 +777,16 @@ async function grantFromPaymentEventRow(
       ok: true,
     },
   });
+  if (tierDef?.priceCents != null && tierDef.priceCents > 0) {
+    void sendRedditConversion({
+      trackingType: "Purchase",
+      conversionId: args.paymentId,
+      email: args.buyerEmail,
+      valueDecimal: tierDef.priceCents / 100,
+      currency: "EUR",
+      externalId: args.userId,
+    });
+  }
   if (args.eventRowId) {
     try {
       await sb.from("payment_events").update({ user_id: args.userId }).eq("id", args.eventRowId);

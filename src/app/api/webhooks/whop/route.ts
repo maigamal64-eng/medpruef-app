@@ -30,6 +30,7 @@ import {
   releaseWhopClaim,
 } from "@/lib/whop-grant";
 import { sendZohoEmail } from "@/lib/email/zoho";
+import { sendRedditConversion } from "@/lib/reddit-capi";
 
 export const dynamic = "force-dynamic";
 
@@ -662,6 +663,17 @@ export async function POST(req: NextRequest) {
         ok: true,
       },
     });
+
+    if (f.amountCents != null && f.amountCents > 0) {
+      void sendRedditConversion({
+        trackingType: "Purchase",
+        conversionId: f.paymentId,
+        email: f.email,
+        valueDecimal: f.amountCents / 100,
+        currency: (f.currency || "eur").toUpperCase(),
+        externalId: userId,
+      });
+    }
 
     return NextResponse.json({
       ok: true,
