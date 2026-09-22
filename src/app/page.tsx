@@ -834,13 +834,10 @@ export default function Home() {
               target && !isNaN(new Date(target).getTime())
                 ? Math.ceil((new Date(target).getTime() - Date.now()) / 86400000)
                 : null;
-            // resume-or-start: weakest topic first, else first topic, else random.
-            const studyHref =
-              weakTopics.length > 0
-                ? `/quiz?topic=${encodeURIComponent(weakTopics[0]?.topic || "random")}&userId=${user.id}&examSource=${examSource}&autoStart=1`
-                : topics.length > 0
-                ? `/quiz?topic=${encodeURIComponent(topics[0].topic)}&userId=${user.id}&examSource=${examSource}&autoStart=1`
-                : `/quiz?topic=random&userId=${user.id}&examSource=${examSource}`;
+            // Study now means new questions across the selected exam. Topic
+            // cards provide the topic-scoped version; review modes live in the
+            // practice builder below rather than silently changing this CTA.
+            const studyHref = `/quiz?topic=random&userId=${user.id}&examSource=${examSource}&practiceMode=unseen`;
             return (
               <div className="mb-5">
                 <HomeHero
@@ -854,6 +851,16 @@ export default function Home() {
                   lang={lang}
                   daysLeft={daysLeft}
                 />
+                <div className="mt-2 text-center">
+                  <Link
+                    href={`/quiz?setup=1&examSource=${encodeURIComponent(examSource)}`}
+                    className="text-xs font-semibold text-[var(--mp-viridian)] hover:underline underline-offset-2"
+                  >
+                    {lang === "de"
+                      ? "Andere Modi: falsch beantwortet oder gespeichert üben"
+                      : "Other modes: practice incorrect or saved questions"}
+                  </Link>
+                </div>
                 <div className="mt-4">
                   <HomeStatStrip
                     streak={gam?.current_streak || 0}
@@ -1242,7 +1249,7 @@ function DemoHome({
           {/* Primary CTA */}
           <div className="mt-6">
             <Link
-              href={`/quiz?topic=random&examSource=${examSource}`}
+              href={`/quiz?topic=random&examSource=${examSource}&practiceMode=unseen`}
               className="btn-primary inline-flex items-center gap-3 px-7 py-3.5 text-base shadow-md hover:shadow-lg transition-shadow active:scale-[0.98]"
             >
               <Shuffle className="w-5 h-5" />
@@ -1301,7 +1308,7 @@ function DemoHome({
                   return (
                     <Link
                       key={tp.topic}
-                      href={`/quiz?topic=${encodeURIComponent(tp.topic)}&examSource=${examSource}`}
+                      href={`/quiz?topic=${encodeURIComponent(tp.topic)}&examSource=${examSource}&practiceMode=unseen`}
                       className="card-interactive rounded-2xl p-6 active:scale-[0.98] group"
                       style={{ animationDelay: `${i * 50}ms` }}
                     >
@@ -1323,7 +1330,7 @@ function DemoHome({
                   return (
                     <Link
                       key={tp.topic}
-                      href={`/quiz?topic=${encodeURIComponent(tp.topic)}&examSource=${examSource}`}
+                      href={`/quiz?topic=${encodeURIComponent(tp.topic)}&examSource=${examSource}&practiceMode=unseen`}
                       className="card-interactive rounded-2xl p-6 active:scale-[0.98] group"
                       style={{ animationDelay: `${i * 50}ms` }}
                     >
@@ -1342,7 +1349,7 @@ function DemoHome({
                 return (
                   <Link
                     key={tp.topic}
-                    href={`/quiz?topic=${encodeURIComponent(tp.topic)}&examSource=${examSource}`}
+                    href={`/quiz?topic=${encodeURIComponent(tp.topic)}&examSource=${examSource}&practiceMode=unseen`}
                     className="card-interactive rounded-2xl p-6 active:scale-[0.98] group"
                     style={{ animationDelay: `${i * 50}ms` }}
                   >

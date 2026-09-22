@@ -32,6 +32,10 @@ export default function TopicCard({ topic, count, userId, lang, accuracy, answer
   const params = new URLSearchParams({ topic });
   if (userId) params.set('userId', userId);
   if (examSource) params.set('examSource', examSource);
+  // Topic cards are the dashboard's Study now entry point. New questions are
+  // the safe default; review modes remain available through the practice-mode
+  // builder and the dedicated resume card.
+  params.set('practiceMode', 'unseen');
   const href = `/quiz?${params.toString()}`;
 
   // Compose an accessible label — screen readers get topic + count + accuracy at once.

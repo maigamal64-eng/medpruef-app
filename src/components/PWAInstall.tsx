@@ -138,6 +138,13 @@ export default function PWAInstall() {
       // Fallback: just hard-reload
       window.location.reload();
     }
+    // Some installed iOS PWAs do not deliver controllerchange after a
+    // waiting worker receives SKIP_WAITING. Keep the button useful there:
+    // reload after a short grace period, while still allowing the normal
+    // controllerchange path to win first.
+    window.setTimeout(() => {
+      if (!isExamActive()) window.location.reload();
+    }, 1500);
   };
 
   const handleInstall = async () => {
