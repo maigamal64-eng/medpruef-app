@@ -11,12 +11,12 @@ import crypto from "crypto";
  *   {
  *     "data": { "events": [ {
  *       "event_at": <Unix epoch MILLISECONDS, <= 7 days old>,
- *       "action_source": "website",
- *       "type": { "tracking_type": "SignUp" },
+ *       "action_source": "WEBSITE",
+ *       "type": { "tracking_type": "SIGN_UP" },
  *       "click_id": "<rdt_cid>",              // event-level, optional
  *       "test_id": "<t2_...>",                // ONLY when validating; omit in prod
  *       "user": { "email": <sha256 lower>, "external_id", "ip_address", "user_agent" },
- *       "metadata": { "conversion_id": <dedup key>, "currency", "value", "item_count" }
+ *       "metadata": { "conversion_id": <dedup key> }
  *     } ] }
  *   }
  *
@@ -53,7 +53,21 @@ export type RedditTrackingType =
   | "Purchase"
   | "Lead"
   | "ViewContent"
-  | "PageVisit";
+  | "PageVisit"
+  | "Search"
+  | "AddToCart"
+  | "AddToWishlist";
+
+const REDDIT_TRACKING_TYPES: Record<RedditTrackingType, string> = {
+  PageVisit: "PAGE_VISIT",
+  ViewContent: "VIEW_CONTENT",
+  Search: "SEARCH",
+  AddToCart: "ADD_TO_CART",
+  AddToWishlist: "ADD_TO_WISHLIST",
+  Purchase: "PURCHASE",
+  Lead: "LEAD",
+  SignUp: "SIGN_UP",
+};
 
 export interface RedditConversionInput {
   trackingType: RedditTrackingType;
@@ -87,14 +101,30 @@ export async function sendRedditConversion(input: RedditConversionInput): Promis
     if (input.userAgent) user.user_agent = input.userAgent;
 
     const metadata: Record<string, unknown> = { conversion_id: input.conversionId };
-    if (input.currency) metadata.currency = input.currency;
-    if (input.valueDecimal != null) metadata.value = input.valueDecimal;
-    if (input.itemCount != null) metadata.item_count = input.itemCount;
+    const supportsCommerceMetadata = new Set([
+      "AddToCart",
+      "AddToWishlist",
+      "Purchase",
+    ]);
+    const supportsValueMetadata = new Set([
+      "AddToCart",
+      "AddToWishlist",
+      "Purchase",
+      "Lead",
+      "SignUp",
+    ]);
+    if (supportsValueMetadata.has(input.trackingType)) {
+      if (input.currency) metadata.currency = input.currency;
+      if (input.valueDecimal != null) metadata.value = input.valueDecimal;
+    }
+    if (supportsCommerceMetadata.has(input.trackingType) && input.itemCount != null) {
+      metadata.item_count = input.itemCount;
+    }
 
     const event: Record<string, unknown> = {
       event_at: Date.now(), // Unix epoch MILLISECONDS (spec: must be <= 7 days old)
-      action_source: "website",
-      type: { tracking_type: input.trackingType },
+      action_source: "WEBSITE",
+      type: { tracking_type: REDDIT_TRACKING_TYPES[input.trackingType] },
       user,
       metadata,
     };
