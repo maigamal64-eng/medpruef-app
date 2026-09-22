@@ -17,9 +17,9 @@ import { getNextExamDate } from "@/lib/exam-dates";
  * script from the layout to guarantee it's in HEAD of every variant.
  */
 
-const pageTitle = "Kenntnisprüfung Wien 2026: 450 Fragen gratis üben | MedPrüf";
+const pageTitle = "Kenntnisprüfung Wien 2026: 150 Fragen gratis üben | MedPrüf";
 const pageDesc =
-  "450 Fragen kostenlos üben. Vorbereitung auf die Kenntnisprüfung Wien mit 7.566 klinischen MCQs und Erklärungen. Die echte Prüfung arbeitet mit offenen Kurzantwortfragen.";
+  "150 Fragen kostenlos üben. Vorbereitung auf die Kenntnisprüfung Wien mit 7.566 klinischen MCQs und Erklärungen. Die echte Prüfung arbeitet mit offenen Kurzantwortfragen.";
 
 export const metadata: Metadata = {
   title: pageTitle,
