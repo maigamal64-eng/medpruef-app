@@ -5,6 +5,7 @@ import Link from "next/link";
 import { getLang, setLang } from "@/lib/i18n";
 import { getStoredSession, storeSession, setSessionToken, getSessionToken } from "@/lib/auth";
 import { trackRegistration } from "@/lib/conversion-events";
+import { trackFunnelEvent } from "@/lib/funnel-events";
 import { getStoredAttribution } from "@/lib/attribution";
 import { getKnownAccounts, rememberKnownAccount, type KnownAccount } from "@/lib/known-accounts";
 import { BrandedLoader } from "@/components/Logo";
@@ -131,6 +132,7 @@ export default function LoginPage() {
       // deep-link lands on the correct form instead of dead-ending.
       if (params.get("mode") === "register") {
         setMode("register");
+        trackFunnelEvent("registration_view", { source: "kenntnispruefung-wien" }, { once: true });
       }
     } catch {
       // localStorage may be blocked in private mode — non-fatal.
@@ -212,6 +214,7 @@ export default function LoginPage() {
         // Pass the user id so the client pixel SignUp dedupes against the
         // server-side Reddit CAPI SignUp for the same registration.
         trackRegistration(data.user?.id);
+        trackFunnelEvent("registration_success", { source: "kenntnispruefung-wien" }, { once: true });
       }
       // Best-effort referral claim — fire and forget. The home page
       // also has a fallback claim on mount so a failure here is not

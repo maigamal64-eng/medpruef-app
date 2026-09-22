@@ -12,6 +12,7 @@ import { shouldIgnoreGlobalKey } from "@/lib/keyboard-guard";
 import Link from "next/link";
 import { t, getLang, setLang } from "@/lib/i18n";
 import { trackEvent, trackPageView } from "@/lib/tracker";
+import { trackFunnelEvent } from "@/lib/funnel-events";
 import { getStoredSession, storeSession } from "@/lib/auth";
 import { getPaywallCopy } from "@/lib/paywall-copy";
 import { useUserTier } from "@/lib/hooks/useUserTier";
@@ -676,6 +677,7 @@ function QuizContent() {
         timeSpent: Date.now() - startTime,
         examSource: config?.examSource,
       });
+      trackFunnelEvent("first_answer", { exam: config?.examSource || "unknown" }, { once: true });
 
       // Trigger milestone card every 20 questions (unless this is also the final)
       if (config && newCount % 20 === 0 && newCount < config.targetCount) {

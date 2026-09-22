@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { ArrowRight, Check, Globe, ShieldCheck, Sparkles } from "lucide-react";
 import { getLang, setLang } from "@/lib/i18n";
 import { trackFunnelIntent } from "@/lib/conversion-events";
+import { trackFunnelEvent } from "@/lib/funnel-events";
 
 /**
  * /kenntnispruefung-wien — high-intent paid-acquisition magnet.
@@ -193,12 +194,17 @@ export default function KenntnispruefungFunnel() {
     return () => window.removeEventListener("medpruef-lang-change", onLang);
   }, []);
 
+  useEffect(() => {
+    trackFunnelEvent("landing_view", { exam: "kenntnispruefung" }, { once: true });
+  }, []);
+
   function switchLang(next: Lang) {
     setLang(next);
     setLangState(next);
   }
 
   function fireIntent() {
+    trackFunnelEvent("cta_click", { exam: "kenntnispruefung", cta: "register" });
     trackFunnelIntent("kenntnispruefung-wien-cta");
   }
 
