@@ -498,14 +498,19 @@ function QuizContent() {
       setResumeGate("cleared");
       return;
     }
-    const s = initialQuestionId ? null : loadSavedQuizSession(config);
+    // Study now explicitly means unseen questions. Do not let the generic
+    // resume trail override that choice; the separate Continue card remains
+    // the deliberate resume entry point.
+    const s = initialQuestionId || practiceMode === "unseen"
+      ? null
+      : loadSavedQuizSession(config);
     if (s) {
       setResumeOffer(s);
       setResumeGate("offered");
     } else {
       setResumeGate("cleared");
     }
-  }, [config, initialQuestionId]);
+  }, [config, initialQuestionId, practiceMode]);
 
   const resumeSession = useCallback(() => {
     if (!resumeOffer || !config) return;
