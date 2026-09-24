@@ -86,24 +86,28 @@ function FachCard({
   td,
   href,
   lang,
+  trackingAvailable,
 }: {
   td: TopicData;
   href: string;
   lang: Lang;
+  trackingAvailable: boolean;
 }) {
   const config = getTopicConfig(td.topic);
   const pct =
     td.total > 0 ? Math.min(100, Math.round((td.answered / td.total) * 100)) : 0;
   const dashoffset = RING_CIRC - (RING_CIRC * pct) / 100;
 
-  const geuebt = lang === "de" ? "geübt" : "practiced";
+  const geuebt = lang === "de" ? "einzigartige Fragen gesehen" : "unique questions seen";
 
   return (
     <Link
       href={href}
       className={styles.curtop}
       style={{ ["--sc" as string]: config.color }}
-      aria-label={`${td.topic}: ${td.answered.toLocaleString("de-DE")} / ${td.total.toLocaleString("de-DE")} ${geuebt} (${pct}%)`}
+      aria-label={trackingAvailable
+        ? `${td.topic}: ${td.answered.toLocaleString("de-DE")} / ${td.total.toLocaleString("de-DE")} ${geuebt} (${pct}%)`
+        : `${td.topic}: ${td.answered.toLocaleString("de-DE")} ${lang === "de" ? "Antwortversuche auf diesem Gerät" : "answer attempts on this device"}`}
     >
       <span className={styles.edge} />
       <div className={styles.ctIc}>
@@ -113,12 +117,12 @@ function FachCard({
         <div className={styles.ctName}>{td.topic}</div>
         <div className={styles.ctMeta}>
           <ChevronRight className={styles.go} aria-hidden="true" />
-          {td.total > 0
+          {trackingAvailable
             ? `${td.answered.toLocaleString("de-DE")} / ${td.total.toLocaleString("de-DE")} ${geuebt}`
-            : geuebt}
+            : `${td.answered.toLocaleString("de-DE")} ${lang === "de" ? "Antwortversuche auf diesem Gerät" : "answer attempts on this device"}`}
         </div>
       </div>
-      <div className={styles.ctRing}>
+      {trackingAvailable && <div className={styles.ctRing}>
         <svg viewBox="0 0 40 40" aria-hidden="true">
           <circle
             className={styles.ringBg}
@@ -140,7 +144,7 @@ function FachCard({
           />
         </svg>
         <div className={styles.pc}>{pct}%</div>
-      </div>
+      </div>}
     </Link>
   );
 }
@@ -150,11 +154,13 @@ function FachSection({
   topics,
   buildHref,
   lang,
+  trackingAvailable,
 }: {
   title: string;
   topics: TopicData[];
   buildHref: (topic: string) => string;
   lang: Lang;
+  trackingAvailable: boolean;
 }) {
   if (topics.length === 0) return null;
   const sectionTotal = topics.reduce((s, td) => s + td.total, 0);
@@ -174,6 +180,7 @@ function FachSection({
             td={td}
             href={buildHref(td.topic)}
             lang={lang}
+            trackingAvailable={trackingAvailable}
           />
         ))}
       </div>
@@ -286,6 +293,25 @@ export default function CurriculumPage() {
       .catch(() => {});
   }, [userId, examSource]);
 
+  useEffect(() => {
+    if (userId && !userId.startsWith("guest_")) return;
+    fetch("/api/questions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "topics", examSource }),
+    })
+      .then((r) => r.json())
+      .then((rows: Array<{ topic: string; count: number }>) => {
+        if (!Array.isArray(rows)) return;
+        const totals = new Map(rows.map((row) => [row.topic, Number(row.count)]));
+        setTopicData((current) => current.map((row) => ({
+          ...row,
+          total: totals.get(row.topic) ?? 0,
+        })));
+      })
+      .catch(() => {});
+  }, [userId, examSource]);
+
   const switchLang = useCallback((l: Lang) => {
     setLang(l);
     setLangState(l);
@@ -296,6 +322,7 @@ export default function CurriculumPage() {
   const completionPct = examQuestionTotal > 0
     ? Math.min(100, Math.round((uniqueQuestionCount / examQuestionTotal) * 100))
     : 0;
+  const trackingAvailable = Boolean(userId && !userId.startsWith("guest_"));
 
   const buildHref = useCallback(
     (topic: string) =>
@@ -391,9 +418,11 @@ export default function CurriculumPage() {
               <div className={styles.ovDivider} />
               <div className={styles.ovItem}>
                 <span className={`${styles.ovNum} ${styles.ovNumPct}`}>
-                  {completionPct}%
+                  {trackingAvailable ? `${completionPct}%` : "↗"}
                 </span>
-                <p className={styles.ovLbl}>{t("completion", lang)}</p>
+                <p className={styles.ovLbl}>{trackingAvailable
+                  ? lang === "de" ? "Einzigartige Fragen gesehen" : "Unique questions seen"
+                  : lang === "de" ? "Anmelden, um Abdeckung zu speichern" : "Sign in to track coverage"}</p>
               </div>
             </div>
           </div>
@@ -405,12 +434,16 @@ export default function CurriculumPage() {
                 {lang === "de" ? "Dein Lehrplan" : "Your Curriculum"}
               </h2>
               <p className="text-xs text-[var(--mp-fg-muted)] mt-1">
-                {lang === "de"
-                  ? `${sip4Topics.length + sip5Topics.length} Fächer · Ring = Abdeckung · tippen zum Üben`
-                  : `${sip4Topics.length + sip5Topics.length} subjects · ring = coverage · tap to practice`}
+                {trackingAvailable
+                  ? lang === "de"
+                    ? `${sip4Topics.length + sip5Topics.length} Fächer · Ring = einzigartige Fragen gesehen`
+                    : `${sip4Topics.length + sip5Topics.length} subjects · ring = unique questions seen`
+                  : lang === "de"
+                    ? `${sip4Topics.length + sip5Topics.length} Fächer · Versuche nur auf diesem Gerät`
+                    : `${sip4Topics.length + sip5Topics.length} subjects · attempts stored on this device only`}
               </p>
             </div>
-            <Legend lang={lang} />
+            {trackingAvailable && <Legend lang={lang} />}
           </div>
 
           {/* SIP 4 tree */}
@@ -419,6 +452,7 @@ export default function CurriculumPage() {
             topics={sip4Topics}
             buildHref={buildHref}
             lang={lang}
+            trackingAvailable={trackingAvailable}
           />
 
           {/* SIP 5 tree */}
@@ -427,6 +461,7 @@ export default function CurriculumPage() {
             topics={sip5Topics}
             buildHref={buildHref}
             lang={lang}
+            trackingAvailable={trackingAvailable}
           />
 
           {/* Quick actions */}
