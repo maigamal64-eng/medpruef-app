@@ -25,10 +25,19 @@ export async function GET(req: NextRequest) {
 
     const sb = getServiceClient()
 
-    // Get total questions per topic for this exam type
-    const { data: topicCounts } = await sb.rpc('get_topic_counts', {
-      p_exam_type: examType,
-    })
+    const [countsResult, progressResult, attemptsResult] = await Promise.all([
+      sb.rpc('get_topic_counts', { p_exam_type: examType }),
+      sb.rpc('get_user_topic_progress', { p_user_id: userId, p_exam_type: examType }),
+      sb.rpc('get_user_topic_attempt_stats', { p_user_id: userId, p_exam_type: examType }),
+    ])
+    const topicCounts = countsResult.data
+    const progressRows = progressResult.data
+    const attemptRows = attemptsResult.data
+    const queryError = countsResult.error || progressResult.error || attemptsResult.error
+    if (queryError) {
+      console.error('[topic-progress RPC]', queryError)
+      return NextResponse.json({ error: 'Could not load topic progress' }, { status: 503 })
+    }
 
     // Get per-topic answer progress, aggregated server-side via the
     // get_user_topic_progress RPC (GROUP BY + count(DISTINCT question_id)
@@ -42,12 +51,7 @@ export async function GET(req: NextRequest) {
     // question answered both right and wrong counts in both correct and
     // wrong (i.e. wrong is NOT answered - correct), scoped by exam_type,
     // inner-joined to questions with no is_active filter.
-    const { data: progressRows } = await sb.rpc('get_user_topic_progress', {
-      p_user_id: userId,
-      p_exam_type: examType,
-    })
-
-    if (!progressRows || !topicCounts) {
+    if (!progressRows || !topicCounts || !attemptRows) {
       return NextResponse.json(
         (topicCounts || []).map((t: { topic: string; count: number }) => ({
           topic: t.topic,
@@ -65,18 +69,27 @@ export async function GET(req: NextRequest) {
       stats[r.topic] = { answered: r.answered, correct: r.correct, wrong: r.wrong }
     })
 
+    const attemptsByTopic: Record<string, { attempts: number; correctAttempts: number }> = {}
+    ;(attemptRows as { topic: string; attempts: number; correct_attempts: number }[] | null)?.forEach((r) => {
+      attemptsByTopic[r.topic] = { attempts: r.attempts, correctAttempts: r.correct_attempts }
+    })
+
     const result = (topicCounts as { topic: string; count: number }[]).map(tc => {
       const s = stats[tc.topic]
       const answered = s ? s.answered : 0
       const correct = s ? s.correct : 0
       const wrong = s ? s.wrong : 0
+      const attempts = attemptsByTopic[tc.topic]
       return {
         topic: tc.topic,
         total: Number(tc.count),
         answered,
         correct,
         wrong,
-        accuracy: answered > 0 ? Math.round((correct / answered) * 100) : 0,
+        attempts: attempts?.attempts || 0,
+        accuracy: attempts && attempts.attempts > 0
+          ? Math.round((attempts.correctAttempts / attempts.attempts) * 100)
+          : 0,
       }
     })
 

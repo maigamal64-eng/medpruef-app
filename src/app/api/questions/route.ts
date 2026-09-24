@@ -215,7 +215,6 @@ export async function GET(req: NextRequest) {
   const rawLimit = sp.get('limit')
   const limit = rawLimit ? parseInt(rawLimit) : 1
   const limitExplicit = rawLimit !== null
-  const userId = sp.get('userId')
   const countOnlyRaw = sp.get('countOnly')
   const countOnly = countOnlyRaw === '1' || countOnlyRaw === 'true'
 
@@ -251,6 +250,7 @@ export async function GET(req: NextRequest) {
   //     { paywallHit: true, seen, limit } as a 200 so the client can
   //     render the upgrade prompt.
   const authed = await resolveTier(req, sb)
+  const userId = authed.userId
   // 2026-04-24: admin role overrides tier. /admin/ operators (role='admin'
   // but possibly tier='free' if they never subscribed) bypass the 150Q
   // free-slice gate so they can audit question content unconstrained.
@@ -407,40 +407,82 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(attachOptions(data || []))
   }
 
-  // Search mode: text search across question + answer columns
-  if (filters.search) {
-    let query = sb.from('questions').select('*').eq('is_active', true)
-    query = applyFilters(query, filters)
-    query = withMcq(query)
+  // New-question mode selects from the learner's distinct unseen pool in
+  // Postgres. Do not serialize the full answer history into a REST filter:
+  // deep histories otherwise exceed URL limits and old questions return.
+  if (filters.practiceMode === 'unseen' && userId && !userId.startsWith('guest_')) {
+    let topics = filters.topics.length > 0
+      ? filters.topics
+      : filters.topic && filters.topic !== 'random'
+        ? [filters.topic]
+        : null
+    if (filters.part && VIENNA_EXAM_PARTS[filters.part]) {
+      const partTopics = VIENNA_EXAM_PARTS[filters.part]
+      topics = topics ? topics.filter((topic) => partTopics.includes(topic)) : partTopics
+    }
+    const tags = filters.tags.length > 0 ? filters.tags : filters.tag ? [filters.tag] : null
+    const examDates = filters.examDateFrom || filters.examDateTo
+      ? buildMonthRange(filters.examDateFrom, filters.examDateTo)
+      : null
+    const examYear = filters.examYear && /^\d{4}$/.test(filters.examYear)
+      ? [...Array.from({ length: 12 }, (_, i) => `${filters.examYear}-${String(i + 1).padStart(2, '0')}`), filters.examYear]
+      : null
+    const normalizedExam = filters.examSource === 'SIP' ? 'kenntnispruefung' : filters.examSource
+    const examTypes = free
+      ? [resolveFreeExam()]
+      : !normalizedExam || normalizedExam === 'all'
+        ? EXAM_SOURCE_IDS
+        : [EXAM_SOURCE_IDS.includes(normalizedExam as (typeof EXAM_SOURCE_IDS)[number]) ? normalizedExam : DEFAULT_EXAM_SOURCE]
+    let allowedIds: number[] | null = null
     if (free) {
-      let slice = await getFreeSliceForExam()
-      if (slice.length === 0) {
-        return NextResponse.json([])
-      }
-      // Durable cap: a capped free user can search only within what they
-      // already answered (re-find a question to re-read it), not surface
-      // new slice questions they haven't unlocked.
+      allowedIds = await getFreeSliceForExam()
+      if (allowedIds.length === 0) return NextResponse.json({ paywallHit: true, seen: 0, limit: FREE_TIER_QUESTIONS_PER_EXAM })
       const capped = await checkDurableCap()
-      if (capped) {
-        const answered = await getAnsweredSliceIds(sb, authed.userId!, slice)
-        slice = slice.filter((id) => answered.has(id))
-        if (slice.length === 0) return NextResponse.json([])
-      }
-      query = query.in('id', slice)
+      if (capped) return NextResponse.json({ paywallHit: true, seen: capped.seen, limit: FREE_TIER_QUESTIONS_PER_EXAM })
     }
-    const { data, error } = await query.limit(Math.min(limit, 30))
+
+    const { data: candidateRows, error: candidateError } = await sb.rpc(
+      'get_random_unseen_question_ids',
+      {
+        p_user_id: userId,
+        p_exam_types: examTypes,
+        p_topics: topics,
+        p_tags: tags,
+        p_exam_dates: examDates,
+        p_exam_year: examYear,
+        p_search: filters.search,
+        p_mcq_only: mcqOnly,
+        p_exclude_ids: filters.excludeIds,
+        p_allowed_ids: allowedIds,
+        p_limit: Math.min(Math.max(limit * 20, 20), 200),
+      },
+    )
+    if (candidateError) {
+      captureServerError(candidateError, { route: '/api/questions', phase: 'unseen-history' })
+      return NextResponse.json({ error: 'Could not load your question history. Please retry.' }, { status: 503 })
+    }
+    const candidateIds: number[] = ((candidateRows || []) as { question_id: number }[])
+      .map((row) => Number(row.question_id))
+    if (candidateIds.length === 0) {
+      return NextResponse.json([])
+    }
+    let unseenQuery = sb.from('questions').select('*').in('id', candidateIds)
+    unseenQuery = applyFilters(unseenQuery, filters)
+    unseenQuery = withMcq(unseenQuery)
+    const { data, error } = await unseenQuery.limit(Math.min(limit, 30))
     if (error) {
-      captureServerError(error, { route: '/api/questions', phase: 'select' })
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      captureServerError(error, { route: '/api/questions', phase: 'unseen-select' })
+      return NextResponse.json({ error: 'Could not load an unseen question. Please retry.' }, { status: 503 })
     }
-    return NextResponse.json(attachOptions(data || []))
+    const order = new Map(candidateIds.map((id, index) => [id, index]))
+    const orderedData = (data || []).sort(
+      (a, b) => (order.get(Number(a.id)) ?? 0) - (order.get(Number(b.id)) ?? 0),
+    )
+    return NextResponse.json(attachOptions(orderedData))
   }
 
-  // ── Practice mode: unseen / wrong ──
-  // These modes query answer_history to build inclusion/exclusion lists,
-  // then fall through to the normal random-fetch below.
-  if (filters.practiceMode !== 'all' && userId && !userId.startsWith('guest_')) {
-    if (filters.practiceMode === 'wrong') {
+  // Wrong-answer practice is intentionally repeatable.
+  if (filters.practiceMode === 'wrong' && userId && !userId.startsWith('guest_')) {
       // Fetch question IDs the user answered incorrectly (ever)
       const { data: wrongRows } = await sb
         .from('answer_history')
@@ -455,20 +497,32 @@ export async function GET(req: NextRequest) {
       } else {
         return NextResponse.json([]) // no wrong answers yet
       }
-    } else if (filters.practiceMode === 'unseen') {
-      // Fetch question IDs the user has already answered (any result)
-      const { data: seenRows } = await sb
-        .from('answer_history')
-        .select('question_id')
-        .eq('user_id', userId)
-        .limit(50000)
-      if (seenRows && seenRows.length > 0) {
-        const seenIds = [...new Set(seenRows.map(r => r.question_id))]
-        // Add to excludeIds so only unseen questions are returned
-        filters.excludeIds = [...filters.excludeIds, ...seenIds]
+  }
+
+  // Search mode: text search across question + answer columns. This follows
+  // practice-mode filtering so unseen + search and wrong + search retain the
+  // requested history rule.
+  if (filters.search) {
+    let query = sb.from('questions').select('*').eq('is_active', true)
+    query = applyFilters(query, filters)
+    query = withMcq(query)
+    if (free) {
+      let slice = await getFreeSliceForExam()
+      if (slice.length === 0) return NextResponse.json([])
+      const capped = await checkDurableCap()
+      if (capped) {
+        const answered = await getAnsweredSliceIds(sb, authed.userId!, slice)
+        slice = slice.filter((id) => answered.has(id))
+        if (slice.length === 0) return NextResponse.json([])
       }
+      query = query.in('id', slice)
     }
-    // Fall through to normal fetch with the updated filters
+    const { data, error } = await query.limit(Math.min(limit, 30))
+    if (error) {
+      captureServerError(error, { route: '/api/questions', phase: 'select' })
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+    return NextResponse.json(attachOptions(data || []))
   }
 
   // If real user (not guest) AND Pro, prioritize spaced-repetition review

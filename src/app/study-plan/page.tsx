@@ -453,10 +453,10 @@ export default function StudyPlanPage() {
                     <div className="flex flex-col gap-2.5">
                       {todayBlocks.map(({ tt, state }) => {
                         const tc = getTopicConfig(tt.topic);
-                        const practiceMode = tt.focus === "review" ? "wrong" : "all";
+                        const practiceMode = tt.focus === "review" ? "wrong" : "unseen";
                         const href = `/quiz?topic=${encodeURIComponent(
                           tt.topic
-                        )}&userId=${user.id}&examSource=${activeExam}&practiceMode=${practiceMode}&autoStart=1`;
+                        )}&userId=${user.id}&examSource=${activeExam}&practiceMode=${practiceMode}&limit=${tt.targetCount}&autoStart=1`;
                         const subText =
                           state === "done"
                             ? lang === "de"

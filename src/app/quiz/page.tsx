@@ -345,18 +345,23 @@ function QuizContent() {
   useEffect(() => {
     if (config) return;
     if (wantsSetup) return; // Explicit opt-in to customize screen
+    const requestedLimit = Number.parseInt(searchParams.get("limit") || "", 10);
+    const storedDailyGoal = getStoredSession()?.user?.daily_goal || 20;
+    const targetCount = Number.isFinite(requestedLimit) && requestedLimit > 0
+      ? Math.min(requestedLimit, 200)
+      : Math.min(Math.max(storedDailyGoal, 1), 200);
     // Auto-start — skips QuizSetup, jumps straight into questions
     setAutoStarted(true);
     setConfig({
       topics: initialTopic && initialTopic !== "random" ? [initialTopic] : [],
       tags: [],
-      targetCount: 9999,
+      targetCount,
       timeLimitMin: null,
       examDateFrom: null,
       examDateTo: null,
       examSource,
     });
-  }, [wantsSetup, initialTopic, config, examSource]);
+  }, [wantsSetup, initialTopic, config, examSource, searchParams]);
 
   // Once config exists, fetch total available pool size for the milestone card
   useEffect(() => {

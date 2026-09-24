@@ -23,6 +23,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-09-24",
+    tag: "improvement",
+    title: {
+      de: "Klarer Lernfortschritt ohne wiederholte neue Fragen",
+      en: "Clearer progress with no repeated new questions",
+    },
+    description: {
+      de: "Neue-Fragen-Sitzungen merken sich beantwortete Fragen fach- und examensbezogen über mehrere Tage. Eine Sitzung endet nach deinem Tagesziel oder dem Ziel des Lernplans. Dein Fortschritt zählt jetzt einzigartige Fragen im gewählten Examen; Antwortversuche und Trefferquote bleiben separat sichtbar.",
+      en: "New-question sessions remember answered questions by specialty and exam across study days. Each session ends at your daily goal or the study-plan target. Progress now counts unique questions in your selected exam, while answer attempts and accuracy remain separate.",
+    },
+  },
+  {
     date: "2026-09-21",
     tag: "improvement",
     title: {

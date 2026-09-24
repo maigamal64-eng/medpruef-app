@@ -16,8 +16,7 @@
  *  - greeting: time-of-day (computed by the caller, passed in)
  *  - userName: users.first_name
  *  - examLabel: human label for the active exam
- *  - answered / total: progress toward the active exam (answered = gamification
- *    total_questions_answered; total = sum of topic counts for the active exam)
+ *  - answered / total: distinct questions seen in the selected exam bank
  *  - studyHref / planHref: the two CTAs (resume-or-random quiz, and /study-plan)
  *
  * Copy: Austrian register, Sie/du = du (the live home voice), dot-thousands via
@@ -35,6 +34,7 @@ export interface HomeHeroProps {
   examLabel: string;
   answered: number;
   total: number;
+  trackingAvailable?: boolean;
   studyHref: string;
   planHref: string;
   lang: Lang;
@@ -48,16 +48,17 @@ export default function HomeHero({
   examLabel,
   answered,
   total,
+  trackingAvailable = true,
   studyHref,
   planHref,
   lang,
   daysLeft,
 }: HomeHeroProps) {
   const locale = lang === "de" ? "de-DE" : "en-US";
-  const pct = total > 0 ? Math.min(100, Math.round((answered / total) * 100)) : 0;
+  const pct = trackingAvailable && total > 0 ? Math.min(100, Math.round((answered / total) * 100)) : 0;
   // The fill never reads as a literal 0-width sliver for brand-new users —
   // it shows a hairline so the track looks alive, but the % label stays honest.
-  const fillWidth = total > 0 ? Math.max(2, (answered / total) * 100) : 2;
+  const fillWidth = trackingAvailable && total > 0 ? Math.max(2, (answered / total) * 100) : 2;
 
   return (
     <div
@@ -114,15 +115,15 @@ export default function HomeHero({
           className="mt-1.5 font-display font-extrabold leading-tight"
           style={{ fontSize: 22, color: "#fff", letterSpacing: "-0.01em" }}
         >
-          {lang === "de" ? (
+          {!trackingAvailable ? (
+            lang === "de" ? "Starte mit dieser Fragenbank" : "Start exploring this question bank"
+          ) : lang === "de" ? (
             <>
-              Du bist <span style={{ color: "var(--mp-spark)" }}>{pct}%</span> näher am Bestehen
-              {" "}🇦🇹
+              Du hast <span style={{ color: "var(--mp-spark)" }}>{pct}%</span> der Fragenbank gesehen
             </>
           ) : (
             <>
-              You are <span style={{ color: "var(--mp-spark)" }}>{pct}%</span> closer to passing
-              {" "}🇦🇹
+              You have seen <span style={{ color: "var(--mp-spark)" }}>{pct}%</span> of this question bank
             </>
           )}
         </h2>
@@ -135,7 +136,9 @@ export default function HomeHero({
           >
             <span className="truncate pr-2">{examLabel}</span>
             <span className="font-mono flex-shrink-0" style={{ color: "#fff", fontWeight: 700 }}>
-              {answered.toLocaleString(locale)} / {total.toLocaleString(locale)}
+              {trackingAvailable
+                ? `${answered.toLocaleString(locale)} / ${total.toLocaleString(locale)}`
+                : lang === "de" ? "Fortschritt nach Anmeldung" : "Sign in to track progress"}
             </span>
           </div>
           <div

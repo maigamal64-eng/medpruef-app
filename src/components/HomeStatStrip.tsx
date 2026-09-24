@@ -89,7 +89,7 @@ export default function HomeStatStrip({
       <Stat
         accent="var(--mp-viridian)"
         icon={<Target className="w-3.5 h-3.5" />}
-        label={lang === "de" ? "Heute" : "Today"}
+        label={lang === "de" ? "Antworten heute" : "Answers today"}
         value={dailyCurrent}
         suffix={`/${dailyGoal}`}
       />

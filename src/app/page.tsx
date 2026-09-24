@@ -824,10 +824,13 @@ export default function Home() {
              The XP/rank/streak/accuracy that the old GamificationHero showed
              relocate into the 3-tile stat strip directly below. */}
           {(() => {
-            // active-exam total = sum of topic counts for the loaded exam.
-            // answered = gamification snapshot (questions answered overall).
+            // Both values use the selected exam scope. The numerator is the
+            // distinct-question count from topic-progress, never answer attempts.
             const examTotal = topics.reduce((sum, tp) => sum + (tp.count || 0), 0);
-            const answeredCount = gam?.total_questions_answered || 0;
+            const trackingAvailable = !user.id.startsWith('guest_');
+            const answeredCount = trackingAvailable
+              ? Object.values(topicProgress).reduce((sum, tp) => sum + tp.answered, 0)
+              : 0;
             // days-left from users.exam_date (mirrored in localStorage profile).
             const target = profileData?.targetDate;
             const daysLeft =
@@ -846,6 +849,7 @@ export default function Home() {
                   examLabel={getExamLabel(examSource, lang)}
                   answered={answeredCount}
                   total={examTotal}
+                  trackingAvailable={trackingAvailable}
                   studyHref={studyHref}
                   planHref="/study-plan"
                   lang={lang}

@@ -59,7 +59,7 @@ import Link from "next/link";
 // not a contract change; /api/track is resolveOptional so it's unaffected.
 import { authFetch as fetch } from "@/lib/authFetch";
 import { getLevelFromXP } from "@/lib/xp";
-import { getTopicConfig } from "@/lib/topics";
+import { getStoredExamSource, getTopicConfig } from "@/lib/topics";
 import { getLang, setLang } from "@/lib/i18n";
 import { getStoredSession } from "@/lib/auth";
 import LanguageToggle from "@/components/LanguageToggle";
@@ -481,7 +481,7 @@ function StatsContent() {
                 }
                 action={
                   <Link
-                    href={userId ? `/quiz?topic=random&userId=${userId}` : "/quiz"}
+                    href={userId ? `/quiz?topic=random&userId=${userId}&examSource=${getStoredExamSource()}&practiceMode=unseen` : "/quiz?practiceMode=unseen"}
                     className="mp-btn mp-btn--primary gap-2"
                   >
                     <GraduationCap className="w-5 h-5" />

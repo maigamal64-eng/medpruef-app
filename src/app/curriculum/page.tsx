@@ -38,7 +38,6 @@ import {
   getStoredExamSource,
   getTopicConfig,
 } from "@/lib/topics";
-import { QUESTIONS } from "@/lib/content-truth";
 import { getAllTopicStats, type TopicStats } from "@/lib/weakness";
 import TopicIcon from "@/components/TopicIcon";
 import LanguageToggle from "@/components/LanguageToggle";
@@ -51,10 +50,9 @@ import styles from "./curriculum.module.css";
 
 type Lang = "de" | "en";
 
-// Known totals per specialty (catalogue denominators). NOTE: these are static
-// known counts; the live DB count is "moving" mid content-leak repair
-// (NOTES.md), so coverage % is approximate, not a live denominator.
-const TOPIC_TOTALS: Record<string, number> = {
+// Guest-only fallback. Signed-in learners receive live counts and coverage
+// from /api/user/topic-progress for the currently selected exam.
+const TOPIC_TOTALS_FALLBACK: Record<string, number> = {
   "Innere Medizin": 1615,
   "Chirurgische Fächer": 1230,
   "Dermatologie und Venerologie": 746,
@@ -66,9 +64,6 @@ const TOPIC_TOTALS: Record<string, number> = {
   "Hals-Nasen-Ohrenheilkunde": 405,
   Augenheilkunde: 399,
 };
-
-// Catalog total — sourced from content-truth.ts SSoT (review-2026-04-25-B11).
-const TOTAL_QUESTIONS = QUESTIONS.total;
 
 interface TopicData {
   topic: string;
@@ -215,7 +210,6 @@ export default function CurriculumPage() {
   const [totalXp, setTotalXp] = useState(0);
   const [streak, setStreak] = useState(0);
   const [accuracy, setAccuracy] = useState(0);
-  const [totalAnswered, setTotalAnswered] = useState(0);
   const [topicData, setTopicData] = useState<TopicData[]>([]);
   const [loading, setLoading] = useState(true);
   const [examSource, setExamSource] = useState("kenntnispruefung");
@@ -231,7 +225,6 @@ export default function CurriculumPage() {
       setStreak(gm.current_streak || 0);
       const ans = gm.total_questions_answered || 0;
       const cor = gm.total_correct || 0;
-      setTotalAnswered(ans);
       setAccuracy(ans > 0 ? Math.round((cor / ans) * 100) : 0);
     }
     setExamSource(getStoredExamSource());
@@ -243,7 +236,7 @@ export default function CurriculumPage() {
       statsMap.set(s.topic, s);
     }
 
-    const data: TopicData[] = Object.entries(TOPIC_TOTALS).map(
+    const data: TopicData[] = Object.entries(TOPIC_TOTALS_FALLBACK).map(
       ([topic, total]) => {
         const stat = statsMap.get(topic);
         return {
@@ -259,7 +252,8 @@ export default function CurriculumPage() {
     setLoading(false);
   }, []);
 
-  // Server-side stats override for logged-in users (authFetch — gated route).
+  // Keep engagement accuracy from answer attempts, but load actual catalogue
+  // size and unique coverage for this exam from the dedicated progress route.
   useEffect(() => {
     if (!userId) return;
     fetch(`/api/stats?userId=${userId}`)
@@ -270,48 +264,44 @@ export default function CurriculumPage() {
           setStreak(data.gamification.current_streak || 0);
           const ans = data.gamification.total_questions_answered || 0;
           const cor = data.gamification.total_correct || 0;
-          setTotalAnswered(ans);
           setAccuracy(ans > 0 ? Math.round((cor / ans) * 100) : 0);
-        }
-        if (data.topicStats) {
-          setTopicData((prev) =>
-            prev.map((td) => {
-              const serverStat = (
-                data.topicStats as Record<
-                  string,
-                  { total: number; correct: number }
-                >
-              )[td.topic];
-              if (serverStat) {
-                return {
-                  ...td,
-                  answered: serverStat.total,
-                  correct: serverStat.correct,
-                };
-              }
-              return td;
-            })
-          );
         }
       })
       .catch(() => {});
   }, [userId]);
+
+  useEffect(() => {
+    if (!userId) return;
+    fetch(`/api/user/topic-progress?examType=${encodeURIComponent(examSource)}`)
+      .then((r) => r.json())
+      .then((data: Array<{ topic: string; total: number; answered: number; correct: number }>) => {
+        if (!Array.isArray(data)) return;
+        setTopicData(data.map((row) => ({
+          topic: row.topic,
+          total: row.total,
+          answered: row.answered,
+          correct: row.correct,
+        })));
+      })
+      .catch(() => {});
+  }, [userId, examSource]);
 
   const switchLang = useCallback((l: Lang) => {
     setLang(l);
     setLangState(l);
   }, []);
 
-  const completionPct = Math.min(
-    100,
-    Math.round((totalAnswered / TOTAL_QUESTIONS) * 100)
-  );
+  const examQuestionTotal = topicData.reduce((sum, td) => sum + td.total, 0);
+  const uniqueQuestionCount = topicData.reduce((sum, td) => sum + td.answered, 0);
+  const completionPct = examQuestionTotal > 0
+    ? Math.min(100, Math.round((uniqueQuestionCount / examQuestionTotal) * 100))
+    : 0;
 
   const buildHref = useCallback(
     (topic: string) =>
       userId
-        ? `/quiz?topic=${encodeURIComponent(topic)}&userId=${userId}&examSource=${examSource}`
-        : `/quiz?topic=${encodeURIComponent(topic)}&examSource=${examSource}`,
+        ? `/quiz?topic=${encodeURIComponent(topic)}&userId=${userId}&examSource=${examSource}&practiceMode=unseen`
+        : `/quiz?topic=${encodeURIComponent(topic)}&examSource=${examSource}&practiceMode=unseen`,
     [userId, examSource]
   );
 
@@ -380,9 +370,9 @@ export default function CurriculumPage() {
             <div className={styles.overview}>
               <div className={styles.ovItem}>
                 <span className={`${styles.ovNum} ${styles.ovNumLg}`}>
-                  {TOTAL_QUESTIONS.toLocaleString("de-DE")}
+                  {examQuestionTotal.toLocaleString("de-DE")}
                 </span>
-                <p className={styles.ovLbl}>{t("total_questions_label", lang)}</p>
+                <p className={styles.ovLbl}>{lang === "de" ? "Fragen im gewählten Examen" : "Questions in selected exam"}</p>
               </div>
               <div className={styles.ovDivider} />
               <div className={styles.ovItem}>
@@ -451,8 +441,8 @@ export default function CurriculumPage() {
             <Link
               href={
                 userId
-                  ? `/quiz?topic=random&userId=${userId}`
-                  : "/quiz?topic=random"
+                  ? `/quiz?topic=random&userId=${userId}&examSource=${examSource}&practiceMode=unseen`
+                  : `/quiz?topic=random&examSource=${examSource}&practiceMode=unseen`
               }
               className="mp-btn mp-btn--secondary mp-btn--lg flex-1 inline-flex items-center justify-center gap-2"
             >

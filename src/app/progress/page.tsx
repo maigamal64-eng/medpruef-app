@@ -36,7 +36,6 @@ import { getTopicConfig } from "@/lib/topics";
 import { t, getLang, setLang } from "@/lib/i18n";
 import { getStoredSession } from "@/lib/auth";
 import { getStoredExamSource } from "@/lib/topics";
-import { QUESTIONS } from "@/lib/content-truth";
 import { useUserTier } from "@/lib/hooks/useUserTier";
 import { readNoteText } from "@/lib/notes-store";
 // authFetch sends the signed session token. The bookmark/notes `/api/questions?ids=`
@@ -332,23 +331,6 @@ interface QuestionItem {
   image_url?: string;
 }
 
-// Known totals per specialty for the COVERAGE denominator (answered/total).
-const TOPIC_TOTALS: Record<string, number> = {
-  "Innere Medizin": 1615,
-  "Chirurgische Fächer": 1230,
-  "Dermatologie und Venerologie": 746,
-  "Frauenheilkunde/Gynäkologie": 745,
-  "Neurologie": 725,
-  "Psychiatrie": 685,
-  "Notfall- und Intensivmedizin": 672,
-  "Kinder- und Jugendheilkunde": 503,
-  "Hals-Nasen-Ohrenheilkunde": 405,
-  "Augenheilkunde": 399,
-};
-
-// Catalog total across all 3 exam types - sourced from content-truth.ts SSoT.
-const TOTAL_QUESTIONS = QUESTIONS.total;
-
 export default function ProgressPage() {
   const [lang, setLangState] = useState<Lang>("de");
   const [userId, setUserId] = useState("");
@@ -367,6 +349,8 @@ export default function ProgressPage() {
   const [totalAnswered, setTotalAnswered] = useState(0);
   const [totalCorrect, setTotalCorrect] = useState(0);
   const [topicStats, setTopicStats] = useState<TopicStat[]>([]);
+  const [examSource, setExamSource] = useState("kenntnispruefung");
+  const [coverageTopics, setCoverageTopics] = useState<Array<{ topic: string; total: number; answered: number; accuracy: number }>>([]);
   const [sortBy, setSortBy] = useState<"accuracy" | "count">("count");
   const [savedTab, setSavedTab] = useState<"bookmarks" | "notes">("bookmarks");
   const [bookmarkIds, setBookmarkIds] = useState<number[]>([]);
@@ -384,6 +368,7 @@ export default function ProgressPage() {
   /* ─── Init: load session, lang, localStorage data ─── */
   useEffect(() => {
     setLangState(getLang());
+    setExamSource(getStoredExamSource());
     const session = getStoredSession();
     if (session) {
       setUserId(session.user.id);
@@ -431,6 +416,16 @@ export default function ProgressPage() {
       /* empty */
     }
   }, []);
+
+  useEffect(() => {
+    if (!userId) return;
+    authFetch(`/api/user/topic-progress?examType=${encodeURIComponent(examSource)}`)
+      .then((r) => r.json())
+      .then((rows: Array<{ topic: string; total: number; answered: number; accuracy: number }>) => {
+        if (Array.isArray(rows)) setCoverageTopics(rows);
+      })
+      .catch(() => {});
+  }, [userId, examSource]);
 
   /* ─── Fetch per-topic stats from API ─── */
   useEffect(() => {
@@ -544,10 +539,11 @@ export default function ProgressPage() {
 
   const xpInfo = getLevelFromXP(totalXp);
   const rankTier = Math.min(8, Math.max(1, xpInfo.level)) as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
-  const completionPct = Math.min(
-    100,
-    Math.round((totalAnswered / TOTAL_QUESTIONS) * 100),
-  );
+  const examQuestionTotal = coverageTopics.reduce((sum, topic) => sum + topic.total, 0);
+  const uniqueAnswered = coverageTopics.reduce((sum, topic) => sum + topic.answered, 0);
+  const completionPct = examQuestionTotal > 0
+    ? Math.min(100, Math.round((uniqueAnswered / examQuestionTotal) * 100))
+    : 0;
 
   /* ─── Weak topics (accuracy < 60%, at least 5 answered) ─── */
   const weakTopics = topicStats.filter((ts) => {
@@ -563,19 +559,18 @@ export default function ProgressPage() {
     : null;
 
   /* ─── Topic coverage rail - all 10 specialties, sorted ─── */
-  const allTopics = Object.entries(TOPIC_TOTALS).map(([topic, total]) => {
-    const stat = topicStats.find((ts) => ts.topic === topic);
+  const allTopics = coverageTopics.map(({ topic, total, answered, accuracy }) => {
     return {
       topic,
       total,
-      answered: stat?.answered || 0,
-      correct: stat?.correct || 0,
+      answered,
+      accuracy,
     };
   });
   const sortedAllTopics = [...allTopics].sort((a, b) => {
     if (sortBy === "accuracy") {
-      const accA = a.answered > 0 ? a.correct / a.answered : 0;
-      const accB = b.answered > 0 ? b.correct / b.answered : 0;
+      const accA = a.accuracy / 100;
+      const accB = b.accuracy / 100;
       return accB - accA;
     }
     return b.answered - a.answered;
@@ -673,11 +668,13 @@ export default function ProgressPage() {
             <div className={styles.stat}>
               <div className={`${styles.sTop} ${styles.sTopBlue}`}>
                 <CheckCircle2 />
-                <span>{t("questions_answered", lang)}</span>
+                <span>{lang === "de" ? "Einzigartige Fragen gesehen" : "Unique questions seen"}</span>
               </div>
-              <div className={styles.sVal}>{totalAnswered.toLocaleString("de-DE")}</div>
+              <div className={styles.sVal}>{uniqueAnswered.toLocaleString("de-DE")}</div>
               <div className={styles.sSub}>
-                / {TOTAL_QUESTIONS.toLocaleString("de-DE")} &middot; {completionPct}%
+                / {examQuestionTotal.toLocaleString("de-DE")} {lang === "de" ? "im gewählten Examen" : "in selected exam"} · {completionPct}%
+                <br />
+                {lang === "de" ? "Antwortversuche" : "Answer attempts"}: {totalAnswered.toLocaleString("de-DE")}
               </div>
             </div>
 
@@ -685,7 +682,7 @@ export default function ProgressPage() {
             <div className={styles.stat}>
               <div className={`${styles.sTop} ${styles.sTopTeal}`}>
                 <TrendingUp />
-                <span>{t("overall_accuracy", lang)}</span>
+                <span>{lang === "de" ? "Trefferquote aller Versuche" : "Accuracy across attempts"}</span>
               </div>
               <div className={styles.sVal}>
                 {accuracy}
@@ -1040,11 +1037,11 @@ export default function ProgressPage() {
                 </header>
 
                 <div className={styles.tcov}>
-                  {sortedAllTopics.map(({ topic, total, answered, correct }) => {
+                  {sortedAllTopics.map(({ topic, total, answered, accuracy }) => {
                     const config = getTopicConfig(topic);
                     const progressPct =
                       total > 0 ? Math.min(100, Math.round((answered / total) * 100)) : 0;
-                    const acc = answered > 0 ? Math.round((correct / answered) * 100) : 0;
+                    const acc = accuracy;
                     return (
                       <div key={topic} className={styles.tcRow} style={{ ["--sc" as string]: config.color }}>
                         <div className={styles.tcIc}>
@@ -1141,7 +1138,7 @@ export default function ProgressPage() {
                   </Link>
                   {weakTopics.length > 0 && (
                     <Link
-                      href={`/quiz?topic=${encodeURIComponent(weakTopics[0].topic)}&userId=${userId}`}
+                      href={`/quiz?topic=${encodeURIComponent(weakTopics[0].topic)}&userId=${userId}&examSource=${examSource}&practiceMode=wrong`}
                       className="mp-btn mp-btn--secondary mp-btn--lg justify-center"
                       style={{ borderColor: "var(--mp-viridian)", color: "var(--mp-viridian)" }}
                     >
@@ -1177,7 +1174,7 @@ export default function ProgressPage() {
                     : "Your knowledge profile, weekly trend and activity are waiting for you."}
               </p>
               <Link
-                href={userId ? `/quiz?topic=random&userId=${userId}` : "/login"}
+                href={userId ? `/quiz?topic=random&userId=${userId}&examSource=${examSource}&practiceMode=unseen` : "/login"}
                 className="mp-btn mp-btn--success mp-btn--lg inline-flex"
               >
                 <GraduationCap className="w-5 h-5" />

@@ -91,7 +91,7 @@ const translations = {
   'xp': { de: 'XP', en: 'XP' },
   'level_progress': { de: 'Level-Fortschritt', en: 'Level Progress' },
   'session_complete': { de: 'Sitzung abgeschlossen!', en: 'Session Complete!' },
-  'questions_answered': { de: 'Fragen beantwortet', en: 'Questions Answered' },
+  'questions_answered': { de: 'Antwortversuche', en: 'Answer attempts' },
   'session_accuracy': { de: 'Genauigkeit in dieser Sitzung', en: 'Session Accuracy' },
   'xp_earned_total': { de: 'XP verdient', en: 'XP Earned' },
   'continue_studying': { de: 'Weitermachen', en: 'Continue Studying' },

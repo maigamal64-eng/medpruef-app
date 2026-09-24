@@ -202,7 +202,7 @@ export default function SearchModal({
           ? `/quiz?topic=${encodeURIComponent(q.topic)}&questionId=${q.id}&userId=${userId}&examSource=${examSource}`
           : `/quiz?topic=${encodeURIComponent(q.topic)}&questionId=${q.id}&examSource=${examSource}`;
       } else if (item.kind === "topic") {
-        href = `/quiz?topic=${encodeURIComponent(item.topic)}&examSource=${examSource}`;
+        href = `/quiz?topic=${encodeURIComponent(item.topic)}&examSource=${examSource}&practiceMode=unseen${userId ? `&userId=${userId}` : ""}`;
       } else {
         href = item.href;
       }
