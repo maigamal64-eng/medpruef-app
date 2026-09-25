@@ -1,0 +1,2 @@
+# Local pre-build snapshots can be very large and are never part of a deploy.
+.next.pre-*/
