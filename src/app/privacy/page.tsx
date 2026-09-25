@@ -302,14 +302,14 @@ export default function PrivacyPage() {
         <h2>
           3.{" "}
           {t
-            ? "Zu welchen Zwecken wir Ihre Daten verarbeiten (Art. 6 DSGVO)"
-            : "Processing Purposes and Legal Bases (Art. 6 GDPR)"}
+            ? "Wofür wir Daten verwenden"
+            : "How we use data"}
         </h2>
 
         <h3>
           {t
-            ? "3.1 Vertragserfüllung (Art. 6 Abs. 1 lit. b DSGVO)"
-            : "3.1 Contract fulfillment (Art. 6(1)(b) GDPR)"}
+            ? "3.1 Konto und Nutzung des Dienstes"
+            : "3.1 Account and use of the service"}
         </h3>
         <ul>
           <li>
@@ -326,8 +326,8 @@ export default function PrivacyPage() {
 
         <h3>
           {t
-            ? "3.2 Berechtigtes Interesse (Art. 6 Abs. 1 lit. f DSGVO)"
-            : "3.2 Legitimate interest (Art. 6(1)(f) GDPR)"}
+            ? "3.2 Sicherheit und Produktbetrieb"
+            : "3.2 Security and service operation"}
         </h3>
         <ul>
           <li>
@@ -349,15 +349,10 @@ export default function PrivacyPage() {
 
         <h3>
           {t
-            ? "3.3 Einwilligung (Art. 6 Abs. 1 lit. a DSGVO)"
-            : "3.3 Consent (Art. 6(1)(a) GDPR)"}
+            ? "3.3 Einwilligung für Marketing-E-Mails"
+            : "3.3 Consent for marketing emails"}
         </h3>
         <ul>
-          <li>
-            {t
-              ? "Google Analytics 4 und Microsoft Clarity sind standardmäßig aktiv, sofern Sie im Cookie-Banner nicht „Ablehnen“ gewählt haben."
-              : "Google Analytics 4 and Microsoft Clarity are active by default unless you chose “Decline” in the cookie banner."}
-          </li>
           <li>
             {t
               ? "Versand von Marketing- oder Produkt-News-E-Mails (Opt-In, jederzeit widerrufbar)."
@@ -367,14 +362,14 @@ export default function PrivacyPage() {
 
         <h3>
           {t
-            ? "3.4 Rechtliche Verpflichtung (Art. 6 Abs. 1 lit. c DSGVO)"
-            : "3.4 Legal obligation (Art. 6(1)(c) GDPR)"}
+            ? "3.4 Gesetzliche Pflichten"
+            : "3.4 Legal obligations"}
         </h3>
         <ul>
           <li>
             {t
-              ? "Aufbewahrung von Rechnungs- und Buchhaltungsdaten gem. § 132 BAO (österreichische Bundesabgabenordnung, 7 Jahre; vorsorglich 10 Jahre)."
-              : "Retention of invoicing and bookkeeping data pursuant to § 132 BAO (Austrian Federal Fiscal Code, 7 years; 10 years as a precaution)."}
+              ? "Erfüllung gesetzlicher Aufbewahrungspflichten für Rechnungsdaten, soweit diese anwendbar sind."
+              : "Meeting legal retention requirements for invoice data where applicable."}
           </li>
           <li>
             {t
@@ -466,42 +461,11 @@ export default function PrivacyPage() {
       {/* 6. Speicherdauer */}
       <section>
         <h2>6. {t ? "Speicherdauer" : "Retention Periods"}</h2>
-        <ul>
-          <li>
-            <strong>{t ? "Kontodaten" : "Account data"}:</strong>{" "}
-            {t
-              ? "3 Jahre ab letztem Login, danach automatische Löschung bzw. vollständige Anonymisierung. Eine Löschung auf Anfrage ist jederzeit möglich."
-              : "3 years from last login, then automatic deletion or full anonymization. Deletion on request is possible at any time."}
-          </li>
-          <li>
-            <strong>{t ? "Lern- und Antwortverlauf" : "Study and answer history"}:</strong>{" "}
-            {t
-              ? "Solange das Konto aktiv ist; wird zusammen mit dem Konto gelöscht."
-              : "As long as the account is active; deleted together with the account."}
-          </li>
-          <li>
-            <strong>{t ? "Zahlungs- und Rechnungsdaten" : "Payment and invoicing data"}:</strong>{" "}
-            {t
-              ? "10 Jahre gem. § 132 BAO (Österreich), unabhängig von einer Kontolöschung."
-              : "10 years pursuant to § 132 BAO (Austria), regardless of account deletion."}
-          </li>
-          <li>
-            <strong>{t ? "Fehlerprotokolle (Sentry)" : "Error logs (Sentry)"}:</strong>{" "}
-            {t ? "90 Tage, danach automatische Löschung." : "90 days, then automatic deletion."}
-          </li>
-          <li>
-            <strong>{t ? "Analytics (GA4, Clarity)" : "Analytics (GA4, Clarity)"}:</strong>{" "}
-            {t
-              ? "Google Analytics 4: 14 Monate. Microsoft Clarity: 1 Jahr. Beides nur bei Einwilligung."
-              : "Google Analytics 4: 14 months. Microsoft Clarity: 1 year. Both only with consent."}
-          </li>
-          <li>
-            <strong>{t ? "E-Mail-Korrespondenz" : "Email correspondence"}:</strong>{" "}
-            {t
-              ? "3 Jahre ab letzter Kommunikation, sofern keine längere gesetzliche Aufbewahrungspflicht greift."
-              : "3 years from last communication, unless a longer statutory retention obligation applies."}
-          </li>
-        </ul>
+        <p>
+          {t
+            ? "Feste Aufbewahrungsfristen für alle Datenkategorien konnten wir nicht verifizieren. Für Auskunft zu einer bestimmten Datenkategorie oder eine Löschanfrage kontaktieren Sie user-ad61df73@example.com."
+            : "We could not verify fixed retention periods for every data category. To ask about a specific category or request deletion, contact user-ad61df73@example.com."}
+        </p>
       </section>
 
       {/* 7. Ihre Rechte */}

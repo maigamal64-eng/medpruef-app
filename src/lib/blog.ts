@@ -56,7 +56,7 @@ export const BLOG_POSTS: BlogPostMeta[] = [
       en: "Study medicine in your language: the Austrian medical exam with multilingual explanations",
     },
     summary: {
-      de: "Die Prüfung läuft auf Deutsch, dein Verständnis darf in deiner Sprache entstehen: Erklärungen in sieben Sprachen (Russisch, Arabisch, Englisch, Französisch, Türkisch, Ukrainisch, Serbisch) zu über 10.000 echten Fragen, plus Oberfläche in fünf Sprachen.",
+      de: "Die Prüfung läuft auf Deutsch, dein Verständnis darf in deiner Sprache entstehen: Erklärungen in sieben Sprachen (Russisch, Arabisch, Englisch, Französisch, Türkisch, Ukrainisch, Serbisch) zu über 10.000 kuratierten Übungsfragen, plus Oberfläche in fünf Sprachen.",
       en: "The exam runs in German, but your understanding can grow in your language: explanations in seven languages (Russian, Arabic, English, French, Turkish, Ukrainian, Serbian) across over 10,000 curated practice questions, plus a five-language interface.",
     },
     publishedAt: "2026-07-03",
@@ -88,8 +88,8 @@ export const BLOG_POSTS: BlogPostMeta[] = [
       en: "Spaced repetition for the Austrian medical exams (SM-2)",
     },
     summary: {
-      de: "Kenntnisprüfung Wien, Stichprobentest und Pharmakologie ziehen aus einem riesigen Fragenpool. So nutzt du Spaced Repetition (SM-2), aktives Erinnern und den 70-30-Rhythmus, um über 10.000 Fragen wirklich zu behalten.",
-      en: "The Kenntnisprüfung Wien, Stichprobentest and Pharmakologie exams draw from a huge question pool. Here is how to use spaced repetition (SM-2), active recall and the 70-30 rhythm to actually retain over 10,000 questions.",
+      de: "Kenntnisprüfung Wien, Stichprobentest und Pharmakologie haben kuratierte Übungsfragenpools. So nutzt du Spaced Repetition (SM-2), aktives Erinnern und den 70-30-Rhythmus, um Übungsstoff besser zu behalten.",
+      en: "The Kenntnisprüfung Wien, Stichprobentest and Pharmakologie have curated practice question banks. Here is how to use spaced repetition (SM-2), active recall and the 70-30 rhythm to retain what you study.",
     },
     publishedAt: "2026-07-02",
     author: "MedPrüf Editorial",

@@ -13,7 +13,7 @@ const post = getPostBySlug(SLUG);
 const pageTitle =
   "Spaced Repetition für die Arztprüfung in Österreich (SM-2) | MedPrüf Blog";
 const pageDesc =
-  "Kenntnisprüfung Wien, Stichprobentest und Pharmakologie ziehen aus einem riesigen Fragenpool. So nutzt du Spaced Repetition (SM-2), aktives Erinnern und den 70-30-Rhythmus, um über 10.000 Fragen wirklich zu behalten.";
+  "Kenntnisprüfung Wien, Stichprobentest und Pharmakologie ziehen aus einem riesigen Fragenpool. So nutzt du Spaced Repetition (SM-2), aktives Erinnern und den 70-30-Rhythmus, um über 10.000 kuratierte Übungsfragen zu behalten.";
 
 export const metadata: Metadata = {
   title: pageTitle,
@@ -54,7 +54,7 @@ function buildArticleSchema() {
     "@context": "https://schema.org",
     "@type": "Article",
     headline:
-      "Spaced Repetition für die österreichischen Arztprüfungen: über 10.000 Fragen wirklich behalten",
+      "Spaced Repetition für die österreichischen Arztprüfungen: über 10.000 kuratierte Übungsfragen behalten",
     description: pageDesc,
     url: `https://medpruf.com/blog/${SLUG}`,
     datePublished: post?.publishedAt,

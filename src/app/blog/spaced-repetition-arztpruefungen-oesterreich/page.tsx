@@ -21,7 +21,7 @@ import { getPostBySlug } from "@/lib/blog";
  * for the Austrian physician-licensing exams. Deliberately claim-safe:
  * no external fees, no legal citations, no pass-rate statistics, no
  * clinical drug-guideline claims. Every product fact is SoT-verified
- * (over 10,000 questions, 150/exam free sample, 7-language explanations,
+ * (over 10,000 curated practice questions, 150/exam free sample, 7-language explanations,
  * SM-2, 70/30 plan, exam simulation). Austrian framing, no em dashes.
  */
 
@@ -49,8 +49,8 @@ export default function SpacedRepetitionPost() {
             </div>
             <h1 className="mp-h1 text-[32px] sm:text-[42px] leading-[1.1] mb-4">
               {L === "de"
-                ? "Spaced Repetition für die österreichischen Arztprüfungen: über 10.000 Fragen wirklich behalten"
-                : "Spaced repetition for the Austrian medical exams: how to actually retain over 10,000 questions"}
+                ? "Spaced Repetition für die österreichischen Arztprüfungen: über 10.000 kuratierte Übungsfragen behalten"
+                : "Spaced repetition for Austrian medical exams: how to retain 10,000+ curated practice questions"}
             </h1>
             <p className="mp-body text-lg text-[var(--mp-fg-muted)] leading-relaxed">
               {L === "de"
@@ -345,8 +345,8 @@ export default function SpacedRepetitionPost() {
           >
             <h3 className="mp-h3 text-[20px] mb-2">
               {L === "de"
-                ? "Übe mit über 10.000 echten Fragen und eingebautem SM-2"
-                : "Practice with over 10,000 curated questions and built-in SM-2"}
+                ? "Übe mit über 10.000 kuratierten Übungsfragen und eingebautem SM-2"
+                : "Practice with 10,000+ curated questions and built-in SM-2"}
             </h3>
             <p className="mp-body text-sm text-[var(--mp-fg-muted)] mb-4 max-w-xl mx-auto">
               {L === "de"

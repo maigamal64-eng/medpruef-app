@@ -350,8 +350,8 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "Curated notes: guides and key-point cards on questions",
     },
     description: {
-      de: "Das MedPrüf Team stellt jetzt kuratierte Lerninhalte bereit: Kompakt-Guides pro Fachgebiet und Merke-Karten zu den meistgeübten Fragen, alle aus unseren echten Prüfungsfragen und Erklärungen destilliert. Du findest sie im Entdecken-Bereich der Bibliothek und direkt unter beantworteten Fragen (\"Notizen zu dieser Frage\").",
-      en: "The MedPrüf team now provides curated study content: compact guides per specialty and key-point cards for the most-practiced questions, all distilled from our real exam questions and explanations. Find them in the Library's Explore section and directly under answered questions (\"Notes for this question\").",
+      de: "Das MedPrüf-Team stellt jetzt kuratierte Lerninhalte bereit: kompakte Guides nach Themen und Merkkarten, die dich beim Üben unterstützen. Du findest sie im Entdecken-Bereich der Bibliothek und direkt unter beantworteten Fragen (\"Notizen zu dieser Frage\").",
+      en: "The MedPrüf team now provides curated study content: compact guides by topic and key-point cards to support your practice. Find them in the Library's Explore section and directly under answered questions (\"Notes for this question\").",
     },
   },
   {
@@ -668,14 +668,14 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   {
     date: "2026-06-20",
-    tag: "admin",
+    tag: "improvement",
     title: {
-      de: "Free-Tier wird jetzt durchgesetzt (150 Fragen pro Prüfungstyp)",
-      en: "Free tier is now enforced (150 questions per exam type)",
+      de: "Kostenlos üben: 150 Fragen pro Prüfungstyp",
+      en: "Free practice: 150 questions per exam type",
     },
     description: {
-      de: "Die beworbene Free-Tier-Grenze (150 Fragen pro Prüfungstyp) wird jetzt serverseitig und geräteübergreifend durchgesetzt. Gezählt werden die eindeutig beantworteten Fragen je Prüfungstyp aus answer_history. Sobald 150 erreicht sind, werden NEUE Fragen in diesem Prüfungstyp gesperrt und die Upgrade-Aufforderung erscheint. Bereits beantwortete Fragen und deren gespeicherte KI-Erklärungen bleiben für Free-Nutzer lesbar. Pro, aktive Abos und Admins sind nicht betroffen, jeder Prüfungstyp wird getrennt gezählt. Auch der Offline-Download respektiert die Grenze jetzt. Umkehrbar über das Flag FREE_TIER_ENFORCED.",
-      en: "The advertised free-tier limit (150 questions per exam type) is now enforced server-side and cross-device. It counts distinct answered questions per exam type from answer_history; once 150 is reached, NEW questions in that exam type are gated and the upgrade prompt appears. Questions a free user has already answered, and their cached AI explanations, stay readable. Pro, active subscriptions and admins are unaffected, and each exam type is counted separately. Offline download now respects the limit too. Reversible via the FREE_TIER_ENFORCED flag.",
+      de: "Mit dem kostenlosen Zugang kannst du bis zu 150 Fragen pro Prüfungstyp bearbeiten. Bereits beantwortete Fragen und verfügbare Erklärungen bleiben zugänglich. Wenn du weiterüben möchtest, kannst du Pro wählen.",
+      en: "With free access, you can practise up to 150 questions per exam type. Questions you have already answered and available explanations remain accessible. Choose Pro if you want to continue practising.",
     },
   },
   {
@@ -746,8 +746,8 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "Typing in feedback dialogs is now stable: no more focus loss",
     },
     description: {
-      de: "Beim Tippen in der Feedback- oder Frage-melden-Box verlor das Textfeld nach jedem Buchstaben den Fokus. Ursache war ein interner React-Fehler im Dialog-Baustein, der den Fokus bei jeder Eingabe auf den Schließen-Button zurückgesetzt hat. Behoben.",
-      en: "Typing in the feedback or report-question textarea was losing focus after every character. Root cause was an internal React issue in the Dialog primitive re-running its focus timer on every parent state change. Fixed.",
+      de: "Das Eingabefeld in Feedback und Fragenmeldungen behält beim Schreiben jetzt den Fokus.",
+      en: "Feedback and question-report text fields now keep focus while you type.",
     },
   },
   {
@@ -1371,8 +1371,8 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "\"New version available\" loop stopped",
     },
     description: {
-      de: "Der Service Worker bekam außerhalb der Produktion bei jeder Abfrage eine neue Build-ID (auf Basis von Date.now()), wodurch der Browser alle 60 Sekunden einen „neuen\" Service Worker erkannte und den „Reload jetzt\"-Hinweis anzeigte. Die Build-ID ist jetzt stabil, wenn keine Vercel-Commit-SHA verfügbar ist, sodass der Hinweis nur noch bei echten Deployments erscheint.",
-      en: "Outside production, the service worker got a new build ID on every fetch (driven by Date.now()), so the browser saw a \"new\" worker every 60 seconds and kept popping the \"Reload now\" banner. The build ID is now stable when no Vercel commit SHA is present, so the banner only appears when there's actually a new deploy.",
+      de: "Der Hinweis auf eine neue App-Version erscheint jetzt nur bei einem tatsächlichen Update.",
+      en: "The new-version notice now appears only when an app update is available.",
     },
   },
   {
@@ -1541,8 +1541,8 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "Question quality improved",
     },
     description: {
-      de: "Alle Fragen wurden gegen offizielle Prüfungsunterlagen abgeglichen. Falsch zugeordnete Fragen wurden korrigiert und Duplikate entfernt. Insgesamt jetzt fast 11.000 aktive Fragen.",
-      en: "All questions were validated against official exam sources. Mis-assigned questions were corrected and duplicates removed. Nearly 11,000 active questions total.",
+      de: "Die Fragenbank wurde überarbeitet: falsch zugeordnete Fragen wurden korrigiert und doppelte Einträge entfernt. Dieser Eintrag beschreibt den damaligen Stand.",
+      en: "The question bank was revised: misassigned items were corrected and duplicate entries removed. This entry describes the state at that time.",
     },
   },
   {

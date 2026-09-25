@@ -19,7 +19,7 @@ import { getPostBySlug } from "@/lib/blog";
  * Bilingual (DE + EN) guide for candidates preparing a SECOND attempt at
  * the Kenntnisprüfung Wien after one failed sitting. Claim-safe: no pass
  * rates, no legal citations, no competitor names. Every product fact is
- * SoT-verified (over 10,000 real documented questions, 150/exam free
+ * SoT-verified (10,000+ curated practice questions, 150/exam free
  * sample, 7-language explanations, KAF-Modus, SM-2, Prüfungs-Kohorte
  * 129 EUR with Pass-Until-You-Pass, entry 19 EUR/month). Exam facts per
  * SoT: sitting 28 Sep 2026, registration closes 28 Jul 2026, fee
@@ -183,10 +183,10 @@ export default function KenntnispruefungZweiterVersuchPost() {
                   </h2>
                   <p className="mp-body text-[var(--mp-fg)] leading-relaxed">
                     Damit keine falsche Erwartung entsteht: MedPrüf trainiert
-                    dich mit über 10.000 echten, dokumentierten Prüfungsfragen
-                    auf die Inhalte und die vollständige Themenabdeckung der
-                    Kenntnisprüfung Wien. Die Fragen liegen als Multiple Choice
-                    vor, nicht im exakten Kurzantwortformat der echten Prüfung.
+                    dich mit über 10.000 kuratierten Übungsfragen zu
+                    Kenntnisprüfungs-Themen. Die Bank basiert auf Anki-Material
+                    und liegt im Multiple-Choice-Format vor, nicht im offenen
+                    Kurzantwortformat der echten Prüfung.
                     Das sagen wir offen, weil ein Anbieter, der verspricht, die
                     Prüfung eins zu eins nachzubilden, dir am Prüfungstag mehr
                     schadet als einer, der ehrlich sagt, wofür er gut ist.
@@ -376,10 +376,10 @@ export default function KenntnispruefungZweiterVersuchPost() {
                   </h2>
                   <p className="mp-body text-[var(--mp-fg)] leading-relaxed">
                     One honesty note that matters here: MedPrüf trains you with
-                    over 10,000 curated practice questions covering topics
-                    and the full topic coverage of the Kenntnisprüfung Wien. The
-                    questions come in a multiple-choice format, not in the exact
-                    short-answer format of the real exam. We say this openly,
+                    over 10,000 curated practice questions on Kenntnisprüfung
+                    topics. The bank is based on Anki material and uses a
+                    multiple-choice format, not the open short-answer format of
+                    the real exam. We say this openly,
                     because a platform that promises to replicate the exam one
                     to one does you more harm on exam day than one that is
                     upfront about what it is actually built for.

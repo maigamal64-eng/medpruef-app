@@ -20,7 +20,7 @@ import { getPostBySlug } from "@/lib/blog";
  * Bilingual (DE + EN) post for internationally trained physicians who sit
  * the German-language Austrian exams but did not learn medicine in German.
  * Claim-safe: no pass rates, no legal citations, no competitor names.
- * Every product fact is SoT-verified (over 10,000 real documented
+ * Every product fact is SoT-verified (10,000+ curated practice
  * questions, explanations in 7 languages RU/AR/EN/FR/TR/UK/SR, UI in
  * DE/EN/RU/UK/TR, 150/exam free sample, KAF-Modus, SM-2, flash-notes,
  * Prüfungs-Kohorte 129 EUR with Pass-Until-You-Pass, entry 19 EUR/month).
@@ -106,16 +106,16 @@ export default function MedizinLernenInDeinerSprachePost() {
                     Frage auf Deutsch, Erklärung in deiner Sprache
                   </h2>
                   <p className="mp-body text-[var(--mp-fg)] leading-relaxed">
-                    MedPrüf arbeitet mit über 10.000 echten, dokumentierten
-                    Fragen aus österreichischen Quellen: für die
-                    Kenntnisprüfung Wien aus dokumentierten
-                    Prüfungsmaterialien, für den Stichprobentest aus dem
-                    klinischen Curriculum, bewusst nicht
-                    aus geleakten oder inoffiziellen Altfragen-Sammlungen, die
-                    die Universitäten selbst als ungültig einstufen. Diese
-                    saubere Herkunft ist uns wichtiger als ein
-                    Marketing-Versprechen, das nicht hält. Die Fragen bleiben
-                    auf Deutsch, exakt wie am Prüfungstag. Dazu bekommst du
+                    MedPrüf bietet über 10.000 kuratierte Übungsfragen aus
+                    unterschiedlichen Quellen. Die Kenntnisprüfungsbank
+                    basiert auf Anki-Material und besteht aus
+                    Multiple-Choice-Fragen. Sie bildet nicht das offene
+                    Kurzantwortformat der echten Prüfung nach. Der
+                    Stichprobentest-Fragenpool basiert
+                    auf dem klinischen Curriculum in Innsbruck. Er enthält
+                    keine offiziellen oder erinnerten Prüfungsfragen. Die
+                    Fragen sind auf Deutsch, damit du medizinische Fachsprache
+                    im Prüfungskontext übst. Dazu bekommst du
                     KI-gestützte Erklärungen, die du dir in sieben Sprachen
                     anzeigen lassen kannst: Russisch, Arabisch, Englisch,
                     Französisch, Türkisch, Ukrainisch und Serbisch.
@@ -143,11 +143,12 @@ export default function MedizinLernenInDeinerSprachePost() {
                     Kenntnisprüfung Wien ist keine Multiple-Choice-Prüfung. Sie
                     läuft als offenes Kurzantwortformat, bei dem du frei aus
                     dem Gedächtnis antwortest. Unsere Fragenbank trainiert dich
-                    auf echten österreichischen Inhalten und der vollständigen
-                    Themenabdeckung, im Multiple-Choice-Format. Der
-                    Stichprobentest dagegen ist tatsächlich ein
-                    Multiple-Choice-Test, dort entspricht unser Format dem
-                    echten Prüfungsablauf.
+                    auf Anki-basiertem Lernmaterial in Multiple-Choice-Form,
+                    nicht im offenen Kurzantwortformat der echten Prüfung. Der
+                    Stichprobentest-Fragenpool basiert auf dem klinischen
+                    Curriculum in Innsbruck, nicht auf offiziellen oder
+                    erinnerten Prüfungsfragen. Beide Fragenbanken unterstützen
+                    das Lernen, ersetzen aber keine offiziellen Prüfungsmaterialien.
                   </p>
                   <p className="mp-body text-[var(--mp-fg)] leading-relaxed mt-3">
                     Für die Formatlücke bei der Kenntnisprüfung gibt es den
@@ -291,8 +292,9 @@ export default function MedizinLernenInDeinerSprachePost() {
                     sources. They are study materials, not a collection of
                     official or leaked exam questions. The question banks are
                     designed to support learning, while the official exam
-                    format and sources vary by exam route. The questions stay in German, exactly as
-                    they will appear on exam day. What you get on top is
+                    format and sources vary by exam route. The questions stay
+                    in German so you can practise medical terminology in the
+                    exam language. What you get on top is
                     AI-generated explanations you can pull up in seven
                     languages: Russian, Arabic, English, French, Turkish,
                     Ukrainian and Serbian.
@@ -318,11 +320,12 @@ export default function MedizinLernenInDeinerSprachePost() {
                     One honesty note that matters here: the real
                     Kenntnisprüfung Wien is not a multiple-choice exam. It runs
                     as an open short-answer format where you write your answer
-                    from memory. Our question bank trains you on real Austrian
-                    content and full topic coverage, in a multiple-choice
-                    format. The Stichprobentest, by contrast, genuinely is a
-                    multiple-choice test, so our format mirrors the real exam
-                    mechanics there.
+                    from memory. Our Kenntnisprüfung bank is Anki-sourced
+                    multiple-choice practice, not a reproduction of the open
+                    exam format. The Stichprobentest bank is based on the
+                    clinical curriculum in Innsbruck, not official or recalled
+                    exam questions. Both banks support study but do not replace
+                    official exam materials.
                   </p>
                   <p className="mp-body text-[var(--mp-fg)] leading-relaxed mt-3">
                     For the format gap on the Kenntnisprüfung there is KAF
@@ -435,7 +438,7 @@ export default function MedizinLernenInDeinerSprachePost() {
             </h3>
             <p className="mp-body text-sm text-[var(--mp-fg-muted)] mb-4 max-w-xl mx-auto">
               {L === "de"
-                ? "150 Fragen pro Prüfung gratis testen, ohne Kreditkarte. Frage auf Deutsch, Erklärung auf Russisch, Arabisch, Englisch, Französisch, Türkisch, Ukrainisch oder Serbisch, aus über 10.000 echten Fragen."
+                ? "150 Fragen pro Prüfung gratis testen, ohne Kreditkarte. Frage auf Deutsch, Erklärung auf Russisch, Arabisch, Englisch, Französisch, Türkisch, Ukrainisch oder Serbisch, aus über 10.000 kuratierten Übungsfragen."
                 : "Try 150 questions per exam for free, no credit card. The question in German, the explanation in Russian, Arabic, English, French, Turkish, Ukrainian or Serbian, from over 10,000 curated practice questions."}
             </p>
             <div className="flex flex-col sm:flex-row gap-3 items-center justify-center">
