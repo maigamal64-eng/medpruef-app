@@ -28,7 +28,8 @@ export function whopPlanToTier(planId: string | null | undefined): string | null
   if (!planId) return null;
   const map: Record<string, string> = {};
   const add = (env: string | undefined, tier: string) => {
-    if (env) map[env] = tier;
+    const normalized = env?.trim();
+    if (normalized) map[normalized] = tier;
   };
   add(process.env.WHOP_PLAN_FIRST_MONTH_19, "first_month_19");
   add(process.env.WHOP_PLAN_FIRST_3MO_27, "first_3mo_27");
@@ -433,7 +434,10 @@ export function tierToWhopPlan(tier: string): string | null {
     premium_pass_guaranteed: process.env.WHOP_PLAN_PREMIUM_PASS,
     notes_pro_trial: process.env.WHOP_PLAN_NOTES_TRIAL,
   };
-  return map[tier] ?? null;
+  // Environment values can acquire trailing whitespace when copied through a
+  // dashboard or shell. Whop treats that as part of the plan ID and returns
+  // 404, so normalize it at the boundary before the checkout route uses it.
+  return map[tier]?.trim() || null;
 }
 
 export interface WhopCheckoutSession {
@@ -452,6 +456,8 @@ export async function createWhopCheckoutSession(args: {
   // both resolve without a duplicated secret.
   const apiKey = process.env.WHOP_API_KEY || process.env.WHOP_APP_API_KEY;
   if (!apiKey) throw new Error("WHOP_API_KEY / WHOP_APP_API_KEY not set");
+  const planId = args.planId.trim();
+  if (!planId) throw new Error("Whop plan ID is empty");
   const res = await fetch("https://api.whop.com/api/v1/checkout_configurations", {
     method: "POST",
     headers: {
@@ -460,7 +466,7 @@ export async function createWhopCheckoutSession(args: {
       Accept: "application/json",
     },
     body: JSON.stringify({
-      plan_id: args.planId,
+      plan_id: planId,
       metadata: args.metadata,
       redirect_url: args.redirectUrl,
     }),
@@ -473,5 +479,5 @@ export async function createWhopCheckoutSession(args: {
   if (!d.id || !d.purchase_url) {
     throw new Error(`Whop checkout response missing id/purchase_url: ${text.slice(0, 200)}`);
   }
-  return { id: d.id, purchaseUrl: d.purchase_url, planId: args.planId };
+  return { id: d.id, purchaseUrl: d.purchase_url, planId };
 }
