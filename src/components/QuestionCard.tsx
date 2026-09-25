@@ -261,7 +261,7 @@ export default function QuestionCard({
             // Single select — immediately select and grade
             setSelectedIdxs(new Set([idx]));
             setSubmitted(true);
-            onAnswer?.(options[idx].correct);
+            onAnswer?.(options[idx].correct, [idx]);
             onCommit?.([idx], options[idx].correct);
           }
         }

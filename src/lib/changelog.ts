@@ -23,6 +23,14 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-09-25", tag: "fix",
+    title: { de: "Neue Fragen und Wiederholungen klar getrennt", en: "New questions and reviews clearly separated" },
+    description: {
+      de: "Wähle im Quiz zwischen neuen Fragen, Fehlern, fälligen Wiederholungen und gemischtem Lernen. Neue Fragen werden der Reihe nach ohne bereits beantwortete Fragen geladen. Deine Fehlerliste ist direkt am Thema erreichbar. Antworten zählen erst nach bestätigtem Speichern; bei Verbindungsproblemen kannst du das Speichern erneut versuchen.",
+      en: "Choose new questions, mistakes, due reviews or mixed practice in the quiz. New questions load in order without already-answered questions. Your mistake list is accessible from each topic. Answers count only after saving is confirmed, with a retry option for connection problems.",
+    },
+  },
+  {
     date: "2026-09-25",
     tag: "improvement",
     title: {

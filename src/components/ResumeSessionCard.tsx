@@ -110,9 +110,8 @@ export default function ResumeSessionCard({ userId, lang }: Props) {
   if (session.staleDays > 7) return null;
 
   const relTime = formatRelative(session.lastActiveAt, lang);
-  const resumeHref = session.suggestedQuestionId
-    ? `/quiz?topic=${encodeURIComponent(session.topic)}&examSource=${session.examType}&questionId=${session.suggestedQuestionId}&autoStart=1`
-    : `/quiz?topic=${encodeURIComponent(session.topic)}&examSource=${session.examType}&autoStart=1`;
+  // History suggests the topic, never a specific previously answered item.
+  const resumeHref = `/quiz?topic=${encodeURIComponent(session.topic)}&examSource=${session.examType}`;
 
   const cfg = getTopicConfig(session.topic);
   const lastLabel =

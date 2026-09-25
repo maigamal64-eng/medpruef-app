@@ -213,7 +213,10 @@ export async function GET(req: NextRequest) {
   const sp = req.nextUrl.searchParams
 
   const rawLimit = sp.get('limit')
-  const limit = rawLimit ? parseInt(rawLimit) : 1
+  const parsedLimit = Number.parseInt(rawLimit || '1', 10)
+  const limit = Number.isFinite(parsedLimit) ? Math.max(1, Math.min(parsedLimit, 200)) : 1
+  const listMode = sp.get('list') === '1'
+  const listOffset = Math.max(0, Number.parseInt(sp.get('offset') || '0', 10) || 0)
   const limitExplicit = rawLimit !== null
   const countOnlyRaw = sp.get('countOnly')
   const countOnly = countOnlyRaw === '1' || countOnlyRaw === 'true'
@@ -278,6 +281,12 @@ export async function GET(req: NextRequest) {
         { status: 402 }
       )
     }
+  }
+
+  // Personal modes must never degrade to random questions when identity or
+  // history is unavailable. resolveTier fails closed during DB/auth errors.
+  if (['unseen', 'wrong', 'review'].includes(filters.practiceMode) && !authed.userId) {
+    return NextResponse.json({ error: 'Your study history could not be verified. Please retry.' }, { status: 503 });
   }
 
   // Helper: apply mcqOnly filter (questions must have structured choices JSONB, not null)
@@ -410,7 +419,7 @@ export async function GET(req: NextRequest) {
   // New-question mode selects from the learner's distinct unseen pool in
   // Postgres. Do not serialize the full answer history into a REST filter:
   // deep histories otherwise exceed URL limits and old questions return.
-  if (filters.practiceMode === 'unseen' && userId && !userId.startsWith('guest_')) {
+  if (['unseen', 'wrong', 'review'].includes(filters.practiceMode) && userId && !userId.startsWith('guest_')) {
     let topics = filters.topics.length > 0
       ? filters.topics
       : filters.topic && filters.topic !== 'random'
@@ -442,9 +451,11 @@ export async function GET(req: NextRequest) {
     }
 
     const { data: candidateRows, error: candidateError } = await sb.rpc(
-      'get_random_unseen_question_ids',
+      'get_study_question_ids',
       {
         p_user_id: userId,
+        p_mode: filters.practiceMode,
+        p_offset: listMode ? listOffset : 0,
         p_exam_types: examTypes,
         p_topics: topics,
         p_tags: tags,
@@ -454,7 +465,7 @@ export async function GET(req: NextRequest) {
         p_mcq_only: mcqOnly,
         p_exclude_ids: filters.excludeIds,
         p_allowed_ids: allowedIds,
-        p_limit: Math.min(Math.max(limit * 20, 20), 200),
+        p_limit: Math.min(limit, 200),
       },
     )
     if (candidateError) {
@@ -469,7 +480,7 @@ export async function GET(req: NextRequest) {
     let unseenQuery = sb.from('questions').select('*').in('id', candidateIds)
     unseenQuery = applyFilters(unseenQuery, filters)
     unseenQuery = withMcq(unseenQuery)
-    const { data, error } = await unseenQuery.limit(Math.min(limit, 30))
+    const { data, error } = await unseenQuery.limit(Math.min(limit, 200))
     if (error) {
       captureServerError(error, { route: '/api/questions', phase: 'unseen-select' })
       return NextResponse.json({ error: 'Could not load an unseen question. Please retry.' }, { status: 503 })
@@ -479,24 +490,6 @@ export async function GET(req: NextRequest) {
       (a, b) => (order.get(Number(a.id)) ?? 0) - (order.get(Number(b.id)) ?? 0),
     )
     return NextResponse.json(attachOptions(orderedData))
-  }
-
-  // Wrong-answer practice is intentionally repeatable.
-  if (filters.practiceMode === 'wrong' && userId && !userId.startsWith('guest_')) {
-      // Fetch question IDs the user answered incorrectly (ever)
-      const { data: wrongRows } = await sb
-        .from('answer_history')
-        .select('question_id')
-        .eq('user_id', userId)
-        .eq('is_correct', false)
-        .limit(5000)
-      if (wrongRows && wrongRows.length > 0) {
-        const wrongIds = [...new Set(wrongRows.map(r => r.question_id))]
-        // Override filters to only include these IDs
-        filters.ids = wrongIds
-      } else {
-        return NextResponse.json([]) // no wrong answers yet
-      }
   }
 
   // Search mode: text search across question + answer columns. This follows
@@ -533,7 +526,7 @@ export async function GET(req: NextRequest) {
   // already 402'd above; for practiceMode='all' we don't interject with
   // SR-due questions because the spaced-rep scheduler is itself a Pro
   // feature.
-  if (userId && !userId.startsWith('guest_') && !free) {
+  if (filters.practiceMode === 'all' && userId && !userId.startsWith('guest_') && !free) {
     const reviewQuery = sb
       .from('user_question_progress')
       .select('question_id')

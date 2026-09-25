@@ -50,6 +50,7 @@ export default function TopicCard({ topic, count, userId, lang, accuracy, answer
   const ariaLabel = `${topic}, ${count.toLocaleString("de-DE")} ${t("questions", lang)}${accuracyPart}${answeredPart}`;
 
   return (
+    <div className="relative">
     <Link
       href={href}
       className="mp-card rounded-2xl p-5 block group cursor-pointer mp-focusable hover:border-[var(--mp-viridian)]/35 transition-colors"
@@ -134,7 +135,7 @@ export default function TopicCard({ topic, count, userId, lang, accuracy, answer
       )}
       {answered !== undefined && answered > 0 && (
         <p className="text-[10px] text-[var(--mp-fg-subtle)]/70 mb-0.5 font-mono">
-          {answered}/{count} {lang === "de" ? "bearbeitet" : "practiced"}
+          {answered}/{count} {lang === "de" ? "aktive Fragen bearbeitet" : "active questions covered"}
         </p>
       )}
 
@@ -156,6 +157,11 @@ export default function TopicCard({ topic, count, userId, lang, accuracy, answer
           }}
         />
       </div>
+      <p className="text-xs font-semibold mt-3">{lang === "de" ? "Neue Fragen lernen" : "Study new questions"} →</p>
     </Link>
+    <Link href={`/mistakes?examSource=${encodeURIComponent(examSource || "kenntnispruefung")}&topic=${encodeURIComponent(topic)}`} className="block text-xs underline px-5 py-3" aria-label={lang === "de" ? `Fehlerliste: ${topic}` : `Mistake list: ${topic}`}>
+      {lang === "de" ? "Fehlerliste ansehen" : "View mistake list"}
+    </Link>
+    </div>
   );
 }

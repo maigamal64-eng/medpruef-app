@@ -3,10 +3,8 @@
 import { useEffect, useState, useCallback, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { BrandedLoader } from "@/components/Logo";
-// Auth-aware fetch wrapper: adds the x-user-id header that server
-// routes expect under the 2026-04-15 auth-guard regime. Import alias
-// means the existing `fetch(...)` call sites in this file don't need
-// to be rewritten — they automatically get the header.
+// Auth-aware fetch wrapper: attaches the signed session token required by
+// server-side route guards. The alias keeps all request paths authenticated.
 import { authFetch as fetch } from "@/lib/authFetch";
 import { shouldIgnoreGlobalKey } from "@/lib/keyboard-guard";
 import Link from "next/link";
@@ -53,64 +51,8 @@ interface Question {
   image_url?: string;
 }
 
-// ─── Quiz session trail (resume after reload / break) ───────────────────
-const QUIZ_SESSION_KEY = "medpruef_quiz_session_v2";
-const QUIZ_SESSION_TTL_MS = 12 * 60 * 60 * 1000; // 12h
-const QUIZ_SESSION_MAX_TRAIL = 400;
-
-interface SavedQuizSession {
-  v: 2;
-  savedAt: number;
-  examSource: string;
-  topics: string[];
-  targetCount: number;
-  answered: Array<{ id: number; correct: boolean }>;
-}
-
-/** Only sessions for the SAME exam source + topic filter and fresher than
- * the TTL are resumable. Anything malformed fails closed to null. */
-function loadSavedQuizSession(config: QuizConfig): SavedQuizSession | null {
-  try {
-    const raw = localStorage.getItem(QUIZ_SESSION_KEY);
-    if (!raw) return null;
-    const s = JSON.parse(raw) as SavedQuizSession;
-    if (!s || s.v !== 2 || !Array.isArray(s.answered) || s.answered.length === 0) return null;
-    if (s.examSource !== config.examSource) return null;
-    const sameTopics =
-      JSON.stringify((s.topics ?? []).slice().sort()) ===
-      JSON.stringify((config.topics ?? []).slice().sort());
-    if (!sameTopics) return null;
-    if (Date.now() - (s.savedAt ?? 0) > QUIZ_SESSION_TTL_MS) return null;
-    return s;
-  } catch {
-    return null;
-  }
-}
-
-function clearSavedQuizSession(): void {
-  try {
-    localStorage.removeItem(QUIZ_SESSION_KEY);
-  } catch {
-    /* non-fatal */
-  }
-}
-
-function saveQuizSessionNow(config: QuizConfig | null, trail: Array<{ id: number; correct: boolean }>): void {
-  if (!config) return;
-  try {
-    const payload: SavedQuizSession = {
-      v: 2,
-      savedAt: Date.now(),
-      examSource: config.examSource,
-      topics: config.topics ?? [],
-      targetCount: config.targetCount,
-      answered: trail.slice(-QUIZ_SESSION_MAX_TRAIL),
-    };
-    localStorage.setItem(QUIZ_SESSION_KEY, JSON.stringify(payload));
-  } catch {
-    /* non-fatal */
-  }
-}
+// Resume keys include account, exam, mode and every question filter.
+import { studyScope, readStudySession, writeStudySession, clearStudySession, type SavedQuizSession, type PracticeMode, resolvePracticeMode } from "@/lib/study-session";
 
 function buildQueryParams(config: QuizConfig, userId: string, excludeIds?: number[], practiceMode?: string): URLSearchParams {
   const p = new URLSearchParams({ limit: "1", examSource: config.examSource });
@@ -145,7 +87,7 @@ function buildQueryParams(config: QuizConfig, userId: string, excludeIds?: numbe
       // If all flagged Qs are already seen, the `ids` param stays unset and the
       // quiz runner will naturally return null (no more questions in the pool).
     }
-  } else if (practiceMode && practiceMode !== "all") {
+  } else if (config.filter !== "all" && practiceMode && practiceMode !== "all") {
     // Fallback to URL-level practiceMode for non-builder paths.
     p.set("practiceMode", practiceMode);
   }
@@ -162,14 +104,29 @@ function QuizContent() {
   const initialTopic = searchParams.get("topic");
   const initialQuestionId = searchParams.get("questionId");
   const examSource = searchParams.get("examSource") || "kenntnispruefung";
-  const practiceMode = searchParams.get("practiceMode") || "all";
+  const [userId, setUserId] = useState<string>("");
+  const [practiceMode, setPracticeMode] = useState<PracticeMode>("unseen");
+  const [modeReady, setModeReady] = useState(false);
+  useEffect(() => {
+    // Resolve the account before loading its saved preference. This effect is
+    // declared before auth hydration below, so reading localStorage here
+    // without waiting for userId would otherwise use the empty-account key.
+    if (!userId) return;
+    const account = userId;
+    let stored: string | null = null;
+    try { stored = localStorage.getItem(`medpruef-study-mode:${account}:${examSource}`); } catch {}
+    const mode = resolvePracticeMode(searchParams.get("practiceMode"), stored);
+    setPracticeMode(mode);
+    setModeReady(true);
+    try { localStorage.removeItem("medpruef_quiz_session_v2"); } catch {}
+    try { localStorage.setItem(`medpruef-study-mode:${account}:${examSource}`, mode); } catch {}
+  }, [searchParams, examSource, userId]);
   // Explicit opt-in for the customize-quiz screen. Default is auto-start so
   // topic cards, practice-mode buttons, and random-practice links go straight
   // into questions — customize is a separate, explicit flow, not the default.
   // Old links carrying `autoStart=1` still work since auto-start is default.
   const wantsSetup = searchParams.get("setup") === "1";
 
-  const [userId, setUserId] = useState<string>("");
   // Tier + role: sourced live from /api/auth/me via useUserTier so that
   // server-side Pro grants (e.g. admin grant_pro) are reflected without
   // requiring a full logout/login cycle. This fixed Obai's AI-card still
@@ -227,6 +184,13 @@ function QuizContent() {
   const resumeDecidedRef = useRef(false);
   const [resumeOffer, setResumeOffer] = useState<SavedQuizSession | null>(null);
   const [resumeGate, setResumeGate] = useState<"checking" | "offered" | "cleared">("checking");
+  const [loadError, setLoadError] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState(false);
+  const pendingAnswer = useRef<{ correct: boolean; selected: number[]; requestId: string } | null>(null);
+  const saveInFlight = useRef(false);
+  const effectiveMode: PracticeMode = config?.filter === "unused" ? "unseen" : config?.filter === "incorrect" ? "wrong" : config?.filter === "all" || config?.filter === "flagged" ? "all" : practiceMode;
+  const scope = config ? studyScope(userId, config, effectiveMode) : "";
   const [question, setQuestion] = useState<Question | null>(null);
   const [nextQuestion, setNextQuestion] = useState<Question | null>(null);
   const [loading, setLoading] = useState(false);
@@ -317,16 +281,17 @@ function QuizContent() {
   useEffect(() => {
     setLangState(getLang());
     trackPageView("quiz");
-    const paramId = searchParams.get("userId") || "";
+    const paramId = ""; // Account identity always comes from the signed session.
     if (paramId) {
       setUserId(paramId);
     } else {
       const session = getStoredSession();
       setUserId(session?.user?.id || "");
+      if (!session?.user?.id) router.replace("/login");
       // tier + role are now sourced from useUserTier() (live /api/auth/me)
       // rather than from the stale session blob, so we don't set them here.
     }
-  }, [searchParams]);
+  }, [searchParams, router]);
 
   // Track whether the quiz was auto-started from a topic link (instant practice)
   // vs manually configured via the QuizSetup screen
@@ -344,14 +309,23 @@ function QuizContent() {
   // still work — they just hit the same default auto-start branch.
   useEffect(() => {
     if (config) return;
+    if (!modeReady || !userId) return;
     if (wantsSetup) return; // Explicit opt-in to customize screen
     const requestedLimit = Number.parseInt(searchParams.get("limit") || "", 10);
     const storedDailyGoal = getStoredSession()?.user?.daily_goal || 20;
     const targetCount = Number.isFinite(requestedLimit) && requestedLimit > 0
       ? Math.min(requestedLimit, 200)
       : Math.min(Math.max(storedDailyGoal, 1), 200);
-    // Auto-start — skips QuizSetup, jumps straight into questions
     setAutoStarted(true);
+    if (searchParams.get("configured") === "1") {
+      try {
+        const preserved = JSON.parse(sessionStorage.getItem(`medpruef-study-config:${userId}`) || "null") as QuizConfig | null;
+        if (preserved && preserved.examSource === examSource && Array.isArray(preserved.topics) && Array.isArray(preserved.tags)) {
+          setConfig(preserved);
+          return;
+        }
+      } catch {}
+    }
     setConfig({
       topics: initialTopic && initialTopic !== "random" ? [initialTopic] : [],
       tags: [],
@@ -361,7 +335,11 @@ function QuizContent() {
       examDateTo: null,
       examSource,
     });
-  }, [wantsSetup, initialTopic, config, examSource, searchParams]);
+  }, [wantsSetup, initialTopic, config, examSource, searchParams, modeReady, userId]);
+
+  useEffect(() => {
+    if (config && modeReady && userId) trackEvent("quiz_start", { practiceMode: effectiveMode, examSource: config.examSource, topics: config.topics, targetCount: config.targetCount, entryPoint: initialQuestionId ? "question-link" : wantsSetup ? "builder" : "practice" });
+  }, [config, modeReady, userId, effectiveMode, initialQuestionId, wantsSetup]);
 
   // Once config exists, fetch total available pool size for the milestone card
   useEffect(() => {
@@ -417,44 +395,20 @@ function QuizContent() {
   // ─── Question fetching ───
   const fetchQuestion = useCallback(async (): Promise<Question | null> => {
     if (!config) return null;
+    setLoadError(false);
+    if (config.filter === "flagged" && !(config.flaggedIds || []).some(id => !seenIdsRef.current.includes(id))) return null;
 
     // Offline branch — pull from IndexedDB instead of hitting the
     // network. If the pool is empty, top it up from IDB filtered by
     // examSource + (optionally) the first selected topic. We shuffle
     // in place so each draw is a different question.
     if (typeof navigator !== "undefined" && navigator.onLine === false) {
-      try {
-        if (offlinePoolRef.current.length === 0) {
-          const exam = config.examSource;
-          const topic =
-            config.topics.length === 1 ? config.topics[0] : null;
-          const rows: OfflineQuestion[] = topic
-            ? await getQuestionsByTopic(exam, topic)
-            : await getAllQuestions(exam);
-          const fresh = rows.filter((r) => !offlineServedRef.current.has(r.id));
-          // Fisher-Yates shuffle so each session order differs.
-          for (let i = fresh.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [fresh[i], fresh[j]] = [fresh[j], fresh[i]];
-          }
-          offlinePoolRef.current = fresh;
-        }
-        while (offlinePoolRef.current.length > 0) {
-          const next = offlinePoolRef.current.shift()!;
-          const q = offlineToQuestion(next);
-          if (!q) continue;
-          offlineServedRef.current.add(next.id);
-          seenIdsRef.current.push(next.id);
-          return q;
-        }
-      } catch (e) {
-        console.error("[quiz] offline fetch failed", e);
-      }
+      setLoadError(true);
       return null;
     }
 
     try {
-      const params = buildQueryParams(config, userId, seenIdsRef.current, practiceMode);
+      const params = buildQueryParams(config, userId, seenIdsRef.current, effectiveMode);
       const res = await fetch(`/api/questions?${params}`);
       // Free-tier gate: 402 → pro-only practice mode. Client can't recover,
       // only upsell.
@@ -471,6 +425,7 @@ function QuizContent() {
         });
         return null;
       }
+      if (!res.ok) throw new Error("Question load failed");
       const data = await res.json();
       // Free-tier gate: 200 with paywallHit → user has seen all 150.
       if (data && data.paywallHit === true) {
@@ -488,9 +443,10 @@ function QuizContent() {
       }
     } catch (e) {
       console.error(e);
+      setLoadError(true);
     }
     return null;
-  }, [config, userId, offlineToQuestion, practiceMode]);
+  }, [config, userId, offlineToQuestion, practiceMode, effectiveMode]);
 
   // Initial question load (or specific id from search deep-link)
   // ── Resume offer check: runs once per config identity, BEFORE the initial
@@ -507,16 +463,14 @@ function QuizContent() {
     // Study now explicitly means unseen questions. Do not let the generic
     // resume trail override that choice; the separate Continue card remains
     // the deliberate resume entry point.
-    const s = initialQuestionId || practiceMode === "unseen"
-      ? null
-      : loadSavedQuizSession(config);
+    const s = initialQuestionId ? null : readStudySession(scope);
     if (s) {
       setResumeOffer(s);
       setResumeGate("offered");
     } else {
       setResumeGate("cleared");
     }
-  }, [config, initialQuestionId, practiceMode]);
+  }, [config, initialQuestionId, scope]);
 
   const resumeSession = useCallback(() => {
     if (!resumeOffer || !config) return;
@@ -529,7 +483,7 @@ function QuizContent() {
     const target = resumeOffer.targetCount ?? config.targetCount;
     if (resumeOffer.answered.length >= target) {
       // The saved session already reached its goal — show the terminal card.
-      clearSavedQuizSession();
+      clearStudySession(scope);
       setResumeOffer(null);
       setResumeGate("cleared");
       setQuizFinished(true);
@@ -540,15 +494,15 @@ function QuizContent() {
     setResumeGate("cleared");
     // The initial-load effect now fires with seeded excludeIds and serves
     // the next FRESH question — the learner continues, not restarts.
-  }, [resumeOffer, config]);
+  }, [resumeOffer, config, scope]);
 
   const startFresh = useCallback(() => {
     resumeDecidedRef.current = true;
-    clearSavedQuizSession();
+    clearStudySession(scope);
     answeredTrailRef.current = [];
     setResumeOffer(null);
     setResumeGate("cleared");
-  }, []);
+  }, [scope]);
 
   // Initial question load (or specific id from search deep-link)
   useEffect(() => {
@@ -562,10 +516,13 @@ function QuizContent() {
           const params = new URLSearchParams({ ids: initialQuestionId, examSource: config.examSource });
           const res = await fetch(`/api/questions?${params}`);
           const data = await res.json();
-          if (Array.isArray(data) && data.length > 0) q = data[0];
-        } catch {}
-      }
-      if (!q) q = await fetchQuestion();
+          if (!res.ok) throw new Error("Question unavailable");
+          if (Array.isArray(data) && data.length > 0) {
+            q = data[0];
+            if (q) seenIdsRef.current.push(q.id);
+          } else setLoadError(true);
+        } catch { setLoadError(true); }
+      } else q = await fetchQuestion();
       if (cancelled) return;
       setQuestion(q);
       setLoading(false);
@@ -580,28 +537,16 @@ function QuizContent() {
     // the first question would never load (the 09-20 no-questions outage).
   }, [config, fetchQuestion, initialQuestionId, question, quizFinished, resumeGate]);
 
-  // Preload the NEXT question as soon as the current one is answered
-  useEffect(() => {
-    if (!answered || nextQuestion || !config || quizFinished) return;
-    let cancelled = false;
-    fetchQuestion().then((q) => {
-      if (!cancelled) setNextQuestion(q);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [answered, nextQuestion, fetchQuestion, config, quizFinished]);
-
   // Clear the saved trail once the run is over (finished or timed out) so a
   // finished session is never offered again.
   useEffect(() => {
-    if (quizFinished) clearSavedQuizSession();
-  }, [quizFinished]);
+    if (quizFinished) clearStudySession(scope);
+  }, [quizFinished, scope]);
 
   // ─── Time limit countdown ───
   useEffect(() => {
-    if (!config?.timeLimitMin) return;
-    setTimeRemaining(config.timeLimitMin * 60);
+    if (!config?.timeLimitMin || saving || saveError) return;
+    setTimeRemaining(prev => prev ?? config.timeLimitMin! * 60);
     const interval = setInterval(() => {
       setTimeRemaining((prev) => {
         if (prev === null) return null;
@@ -614,11 +559,12 @@ function QuizContent() {
       });
     }, 1000);
     return () => clearInterval(interval);
-  }, [config?.timeLimitMin]);
+  }, [config?.timeLimitMin, saving, saveError]);
 
   // ─── Advance to next question ───
   const advance = useCallback(() => {
-    if (!config) return;
+    if (!config || saving || saveError || !answered) return;
+    pendingAnswer.current = null;
     // If we've hit the target, show terminal completion card
     if (questionCount >= config.targetCount) {
       setQuizFinished(true);
@@ -641,7 +587,7 @@ function QuizContent() {
     setXpEarned(null);
     setShowXpFloat(false);
     setStartTime(Date.now());
-  }, [nextQuestion, fetchQuestion, questionCount, config]);
+  }, [nextQuestion, fetchQuestion, questionCount, config, saving, saveError, answered]);
 
   // ─── Keyboard: N / → for next ───
   useEffect(() => {
@@ -665,65 +611,18 @@ function QuizContent() {
   const handleAnswer = useCallback(
     async (isCorrect: boolean, selectedIndexes: number[] = []) => {
       if (!question || answered) return;
-      setAnswered(true);
-      const newCount = questionCount + 1;
-      setQuestionCount(newCount);
-      if (isCorrect) setCorrectCount((c) => c + 1);
-      setSessionHistory((prev) => [...prev, { correct: isCorrect }]);
-      recordAnswer(question.topic, isCorrect);
-      // Persist the answered trail so a reload/break resumes instead of
-      // restarting from question 1 (the exact bug Munir reported).
-      answeredTrailRef.current.push({ id: question.id, correct: isCorrect });
-      saveQuizSessionNow(config, answeredTrailRef.current);
-      trackEvent("question_answer", {
-        questionId: question.id,
-        topic: question.topic,
-        isCorrect,
-        timeSpent: Date.now() - startTime,
-        examSource: config?.examSource,
-      });
-      trackFunnelEvent("first_answer", { exam: config?.examSource || "unknown" }, { once: true });
-
-      // Trigger milestone card every 20 questions (unless this is also the final)
-      if (config && newCount % 20 === 0 && newCount < config.targetCount) {
-        setMilestoneVisible(true);
-        setTimeout(() => setMilestoneVisible(false), 8000);
-      }
-      // Mark finished if this answer hit the target
-      if (config && newCount >= config.targetCount) {
-        // Give the user a beat to see their answer feedback before showing terminal card
-        setTimeout(() => setQuizFinished(true), 1200);
-      }
-
-      if (!userId) return;
-
-      // Offline branch — queue the answer in IndexedDB. The auto-sync
-      // handler in src/lib/offlineSync.ts drains the queue to
-      // /api/answer when `online` fires, so XP + streak will settle as
-      // soon as the network comes back.
-      if (typeof navigator !== "undefined" && navigator.onLine === false) {
-        try {
-          await queuePendingAnswer({
-            questionId: question.id,
-            userAnswer: selectedIndexes
-              .map((index) => question.options?.[index]?.text)
-              .filter((text): text is string => Boolean(text))
-              .join(" | ") || "",
-            isCorrect,
-            timeSpentMs: Date.now() - startTime,
-          });
-        } catch (e) {
-          console.error("[quiz] queuePendingAnswer failed", e);
-        }
-        return;
-      }
-
+      if (saveInFlight.current) return;
+      saveInFlight.current = true;
+      setSaving(true);
+      setSaveError(false);
+      if (!pendingAnswer.current) pendingAnswer.current = { correct: isCorrect, selected: selectedIndexes, requestId: crypto.randomUUID() };
       try {
         const res = await fetch("/api/answer", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             userId,
+            requestId: pendingAnswer.current.requestId,
             questionId: question.id,
             isCorrect,
             userAnswer: selectedIndexes
@@ -733,7 +632,35 @@ function QuizContent() {
             timeSpentMs: Date.now() - startTime,
           }),
         });
+        if (!res.ok) throw new Error("Answer was not confirmed saved");
         const data = await res.json();
+        if (data?.saved !== true) throw new Error("Answer save was not confirmed");
+        setAnswered(true);
+      const newCount = questionCount + 1;
+      setQuestionCount(newCount);
+      if (isCorrect) setCorrectCount((c) => c + 1);
+      setSessionHistory((prev) => [...prev, { correct: isCorrect }]);
+      recordAnswer(question.topic, isCorrect);
+      // Persist the answered trail so a reload/break resumes instead of
+      // restarting from question 1 (the exact bug Munir reported).
+      answeredTrailRef.current.push({ id: question.id, correct: isCorrect });
+      writeStudySession(scope, config!.targetCount, answeredTrailRef.current);
+      trackEvent("question_answer", {
+        questionId: question.id,
+        topic: question.topic,
+        isCorrect,
+        timeSpent: Date.now() - startTime,
+        examSource: config?.examSource,
+        practiceMode: effectiveMode,
+        entryPoint: initialQuestionId ? "question-link" : wantsSetup ? "builder" : "practice",
+      });
+      trackFunnelEvent("first_answer", { exam: config?.examSource || "unknown" }, { once: true });
+
+      // Trigger milestone card every 20 questions (unless this is also the final)
+      if (config && newCount % 20 === 0 && newCount < config.targetCount) {
+        setMilestoneVisible(true);
+        setTimeout(() => setMilestoneVisible(false), 8000);
+      }
         setXpEarned(data.xp);
         setTotalXpSession((p) => p + (data.xp || 0));
         setShowXpFloat(true);
@@ -755,10 +682,25 @@ function QuizContent() {
         }
       } catch (e) {
         console.error(e);
+        setSaveError(true);
+      } finally {
+        saveInFlight.current = false;
+        setSaving(false);
       }
     },
-    [question, answered, userId, startTime, config, questionCount]
+    [question, answered, userId, startTime, config, questionCount, scope, effectiveMode, initialQuestionId, wantsSetup]
   );
+
+  useEffect(() => {
+    if (!saving && !saveError) return;
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
+    const blockNavigation = (event: MouseEvent) => {
+      if ((event.target as Element)?.closest('a[href]')) { event.preventDefault(); event.stopPropagation(); }
+    };
+    window.addEventListener("beforeunload", warn);
+    document.addEventListener("click", blockNavigation, true);
+    return () => { window.removeEventListener("beforeunload", warn); document.removeEventListener("click", blockNavigation, true); };
+  }, [saving, saveError]);
 
   const restart = () => {
     setQuestion(null);
@@ -772,6 +714,8 @@ function QuizContent() {
     setMilestoneVisible(false);
     answeredTrailRef.current = [];
     seenIdsRef.current = [];
+    clearStudySession(scope);
+    resumeDecidedRef.current = true;
     setConfig(null); // back to setup
   };
 
@@ -875,6 +819,7 @@ function QuizContent() {
           }
           timeUrgent={timeRemaining !== null && timeRemaining < 60}
           onClose={() => {
+            if (saving || saveError) return;
             if (autoStarted) router.push("/");
             else restart();
           }}
@@ -883,6 +828,41 @@ function QuizContent() {
             the QuestionActions star (both wrote medpruef_favorites). The star,
             grouped with the other per-question actions, is now the single
             bookmark on both mobile and desktop. */}
+
+        <section className="px-4 lg:px-8 py-3 border-b border-[var(--mp-border)]" aria-label={lang === "de" ? "Lernmodus" : "Study mode"}>
+          <div className="max-w-3xl mx-auto space-y-2">
+            <label className="text-xs font-semibold flex items-center gap-3">
+              {lang === "de" ? "Lernmodus" : "Study mode"}
+              <select className="rounded-lg border border-[var(--mp-border)] bg-[var(--mp-surface)] p-2 text-sm max-w-full" value={effectiveMode}
+                disabled={saving || saveError}
+                onChange={(event) => {
+                  const mode = event.target.value as PracticeMode;
+                  try { localStorage.setItem(`medpruef-study-mode:${userId}:${examSource}`, mode); } catch {}
+                  const nextConfig = { ...config, filter: undefined, flaggedIds: undefined };
+                  try { sessionStorage.setItem(`medpruef-study-config:${userId}`, JSON.stringify(nextConfig)); } catch {}
+                  const params = new URLSearchParams({ examSource: config.examSource, practiceMode: mode, configured: "1" });
+                  if (config.topics.length === 1) params.set("topic", config.topics[0]);
+                  params.set("limit", String(config.targetCount));
+                  window.location.assign(`/quiz?${params}`);
+                }}>
+                <option value="unseen">{lang === "de" ? "Nur neue Fragen" : "New questions only"}</option>
+                <option value="wrong">{lang === "de" ? "Fehler wiederholen" : "Review mistakes"}</option>
+                <option value="review">{lang === "de" ? "Fällige Wiederholungen" : "Due reviews"}</option>
+                <option value="all">{lang === "de" ? "Gemischt (mit Wiederholungen)" : "Mixed (includes repeats)"}</option>
+              </select>
+            </label>
+            <p className="text-xs text-[var(--mp-fg-muted)]">
+              {effectiveMode === "unseen"
+                ? lang === "de" ? "Noch nie beantwortete Fragen, der Reihe nach. Dein Fortschritt bleibt über Sitzungen und Geräte erhalten." : "Never-answered questions, in order. Your progress carries across sessions and devices."
+                : lang === "de" ? "Wiederholungen sind in diesem Modus beabsichtigt. Wechsel jederzeit zu neuen Fragen." : "Repeats are intentional in this mode. Switch to new questions whenever you choose."}
+              {" "}{lang === "de" ? "Die Moduswahl wird für dieses Konto auf diesem Gerät gespeichert." : "Your mode preference is saved for this account on this device."}
+            </p>
+            <p className="text-xs text-[var(--mp-fg-subtle)]">{lang === "de" ? `Sitzungsziel: ${config.targetCount} Antworten. Tagesziel zählt Antworten inklusive Wiederholungen; Themenfortschritt zählt jede aktive Frage nur einmal.` : `Session goal: ${config.targetCount} answers. The daily goal includes repeats; topic coverage counts each active question once.`}</p>
+            <Link className="text-xs underline" href={`/mistakes?examSource=${encodeURIComponent(config.examSource)}${config.topics.length === 1 ? `&topic=${encodeURIComponent(config.topics[0])}` : ""}`}>
+              {lang === "de" ? "Fehlerliste ansehen" : "View mistake list"}
+            </Link>
+          </div>
+        </section>
 
         {/* Offline banner — appears when navigator.onLine === false.
             Flags that answers queue locally until reconnect. */}
@@ -908,8 +888,8 @@ function QuizContent() {
                 </p>
                 <p className="text-[11px] opacity-90 mt-0.5">
                   {lang === "de"
-                    ? "Deine Antworten werden gespeichert und automatisch synchronisiert, sobald du wieder online bist."
-                    : "Your answers are saved and will sync automatically when you reconnect."}
+                    ? "Bitte verbinde dich mit dem Internet. Antworten werden erst nach bestätigtem Speichern gezählt."
+                    : "Please reconnect to the internet. Answers count only after saving is confirmed."}
                 </p>
               </div>
             </div>
@@ -933,6 +913,10 @@ function QuizContent() {
                 </div>
               )}
 
+              {(saving || saveError) && <div role="status" className="card p-4 mb-4 text-sm">
+                {saving ? (lang === "de" ? "Antwort wird gespeichert…" : "Saving your answer…") : (lang === "de" ? "Antwort noch nicht als gespeichert bestätigt. Bitte erneut versuchen, bevor du weitergehst." : "Your answer has not been confirmed saved. Retry before continuing.")}
+                {saveError && <button className="mp-btn mp-btn--primary mt-2" onClick={() => { const pending = pendingAnswer.current; if (pending) void handleAnswer(pending.correct, pending.selected); }}>{lang === "de" ? "Speichern erneut versuchen" : "Retry saving"}</button>}
+              </div>}
               {quizFinished ? (
                 <FinalCompletionCard
                   lang={lang}
@@ -941,6 +925,7 @@ function QuizContent() {
                   targetCount={config.targetCount}
                   totalXp={totalXpSession}
                   topicTotal={topicTotal}
+                  practiceMode={effectiveMode}
                   onRestart={restart}
                 />
               ) : resumeGate === "offered" && resumeOffer ? (
@@ -976,7 +961,24 @@ function QuizContent() {
               ) : !question ? (
                 <div className="text-center py-12">
                   <Inbox className="w-12 h-12 text-[var(--mp-fg-subtle)] mx-auto mb-4" />
-                  <p className="text-[var(--mp-fg-muted)]">{t("no_questions", lang)}</p>
+                  <p className="text-[var(--mp-fg-muted)]">{loadError ? (lang === "de" ? "Fragen konnten nicht geladen werden. Bitte prüfe deine Verbindung und versuche es erneut." : "Questions could not be loaded. Check your connection and retry.") : effectiveMode === "unseen" ? (lang === "de" ? "Alle verfügbaren Fragen in dieser Auswahl sind bearbeitet. Wiederhole nur, wenn du möchtest." : "You have covered all available questions in this selection. Review only when you choose.") : effectiveMode === "review" ? (lang === "de" ? "Keine fälligen Wiederholungen in dieser Auswahl." : "No due reviews in this selection.") : t("no_questions", lang)}</p>
+                  {loadError && <button className="mp-btn mp-btn--primary mt-4" onClick={() => {
+                    setLoading(true);
+                    setLoadError(false);
+                    const load = initialQuestionId
+                      ? fetch(`/api/questions?${new URLSearchParams({ ids: initialQuestionId, examSource: config.examSource })}`).then(async response => {
+                          if (!response.ok) throw new Error("Question unavailable");
+                          const rows = await response.json();
+                          const item = Array.isArray(rows) ? rows[0] as Question | undefined : undefined;
+                          if (!item) throw new Error("Question unavailable");
+                          return item;
+                        })
+                      : fetchQuestion();
+                    void load.then(q => {
+                      setQuestion(q);
+                      if (q && !seenIdsRef.current.includes(q.id)) seenIdsRef.current.push(q.id);
+                    }).catch(() => setLoadError(true)).finally(() => setLoading(false));
+                  }}>{lang === "de" ? "Erneut versuchen" : "Retry"}</button>}
                 </div>
               ) : (
                 <>
@@ -1046,7 +1048,7 @@ function QuizContent() {
                     key={`q-${question.id}-${advanceNonce}`}
                     question={question}
                     questionNumber={questionCount + (answered ? 0 : 1)}
-                    totalQuestions={autoStarted && topicTotal > 0 ? topicTotal : config.targetCount}
+                    totalQuestions={config.targetCount}
                     lang={lang}
                     onAnswer={handleAnswer}
                     imageUrl={question.image_url}
@@ -1119,8 +1121,8 @@ function QuizContent() {
                           </p>
                           <p className="text-xs text-[var(--mp-fg-subtle)] mt-0.5">
                             {lang === "de"
-                              ? `${sessionAccuracy}% Genauigkeit · ${topicTotal.toLocaleString("de-DE")}+ Fragen verfügbar`
-                              : `${sessionAccuracy}% accuracy · ${topicTotal.toLocaleString("en-US")}+ questions available`}
+                              ? `${sessionAccuracy}% Genauigkeit · ${topicTotal.toLocaleString("de-DE")} aktive Fragen insgesamt`
+                              : `${sessionAccuracy}% accuracy · ${topicTotal.toLocaleString("en-US")} active questions in total`}
                           </p>
                         </div>
                         <button
@@ -1404,6 +1406,7 @@ function FinalCompletionCard({
   targetCount,
   totalXp,
   topicTotal,
+  practiceMode,
   onRestart,
 }: {
   lang: Lang;
@@ -1412,6 +1415,7 @@ function FinalCompletionCard({
   targetCount: number;
   totalXp: number;
   topicTotal: number;
+  practiceMode: PracticeMode;
   onRestart: () => void;
 }) {
   const accuracy = questionCount > 0 ? Math.round((correctCount / questionCount) * 100) : 0;
@@ -1471,7 +1475,7 @@ function FinalCompletionCard({
         </div>
         <div className="card rounded-xl p-3 text-center">
           <p className="text-xl font-bold font-mono text-[var(--mp-fg)]">
-            {topicTotal > 0 ? `${topicTotal.toLocaleString("de-DE")}+` : "—"}
+            {topicTotal > 0 ? `${topicTotal.toLocaleString("de-DE")}` : "—"}
           </p>
           <p className="text-[11px] text-[var(--mp-fg-subtle)]">{lang === "de" ? "Verfügbar" : "Available"}</p>
         </div>
