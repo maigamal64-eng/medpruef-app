@@ -196,13 +196,14 @@ export async function POST(req: NextRequest) {
     }
 
     // ── Expiry: cover the trial window + a buffer past the first charge so a
-    //    renewal webhook has time to land. Prefer the membership's real period
-    //    end (+2d); else now + (trial_days + 1). ──
+    //    renewal webhook has time to land. Keep exactly one day after the
+    //    membership's real period end; else now + (trial_days + 1). ──
     const now = Date.now();
     const trialDays = 7;
     const fallback = now + (trialDays + 1) * 86400_000;
-    const bufferedPeriodEnd = mine.periodEnd ? mine.periodEnd + 2 * 86400_000 : 0;
-    const expiresMs = Math.max(fallback, bufferedPeriodEnd);
+    const expiresMs = mine.periodEnd
+      ? mine.periodEnd + 1 * 86400_000
+      : fallback;
     const expiresIso = new Date(expiresMs).toISOString();
     const nowIso = new Date(now).toISOString();
 

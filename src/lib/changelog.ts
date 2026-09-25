@@ -23,6 +23,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-09-25",
+    tag: "improvement",
+    title: {
+      de: "Ein klarer Tag Kulanz nach dem Pro-Testzeitraum",
+      en: "One clear grace day after the Pro trial",
+    },
+    description: {
+      de: "Wenn die erste Zahlung nach dem 7-tägigen Pro-Testzeitraum nicht eingeht, bleibt Pro noch einen Tag aktiv. Danach wird der Zugang auf Free umgestellt.",
+      en: "If the first payment does not go through after the 7-day Pro trial, Pro stays active for one extra day. Access then moves to Free.",
+    },
+  },
+  {
     date: "2026-09-24",
     tag: "improvement",
     title: {

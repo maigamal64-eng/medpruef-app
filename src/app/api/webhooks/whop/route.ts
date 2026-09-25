@@ -436,15 +436,16 @@ export async function POST(req: NextRequest) {
     // with amount 0 (confirmed on the real delivery pay_redacted8cdd2725 —
     // amount_cents=0, tier=notes_pro_trial), and again on each €19 renewal with
     // a positive amount. Detect the start by tier + a €0/absent amount so a user
-    // who cancels mid-trial loses Pro in ~a week, not a month; a real €19 renewal
+    // who cancels mid-trial keeps Pro through the trial plus its one-day grace,
+    // not a month; a real €19 renewal
     // carries a positive amount → falls through to the +1-month extension (today's
     // behavior, unchanged). 8 days == trial/verify's `trialDays + 1` floor, so the
     // two grant paths converge on the same window instead of racing (FB-03).
-    // ONLY notes_pro_trial is gated here; the one-time paid tiers (first_month_19
+    // ONLY notes_pro_trial is gated here; paid tiers (first_month_19
     // / first_3mo_27 / premium_pass_guaranteed) always carry a positive amount and
     // are never this tier, so they keep their full computeExpiry duration. The
-    // membership.went_invalid revoke path (already in handleRevoke) is the
-    // suspenders for an instant cancel-revoke; this 8-day cap is the belt.
+    // membership.went_invalid revoke path preserves this stored window for
+    // unpaid trials; this 8-day cap is the fallback when period end is unknown.
     const isTrialStart =
       tier === "notes_pro_trial" && (f.amountCents === 0 || f.amountCents == null);
     // For trial START the window is 8 days (trial + 1). For paid/renewal
@@ -789,6 +790,7 @@ async function handleRevoke(
       tier: string;
       status: string;
       expires_at: string | null;
+      amount_cents: number | null;
       started_at: string | null;
       provider_payment_id: string | null;
       whop_membership_id: string | null;
@@ -805,7 +807,7 @@ async function handleRevoke(
       const { data: byPay, error: byPayErr } = await sb
         .from("subscriptions")
         .select(
-          "id, user_id, tier, status, expires_at, started_at, provider_payment_id, granted_payment_ids, whop_membership_id"
+          "id, user_id, tier, status, expires_at, amount_cents, started_at, provider_payment_id, granted_payment_ids, whop_membership_id"
         )
         .eq("payment_provider", "whop")
         .in("provider_payment_id", paymentCandidates);
@@ -824,7 +826,7 @@ async function handleRevoke(
         const { data: allActive, error: scanErr } = await sb
           .from("subscriptions")
           .select(
-            "id, user_id, tier, status, expires_at, started_at, provider_payment_id, granted_payment_ids, whop_membership_id"
+            "id, user_id, tier, status, expires_at, amount_cents, started_at, provider_payment_id, granted_payment_ids, whop_membership_id"
           )
           .eq("payment_provider", "whop")
           .eq("status", "active");
@@ -844,7 +846,7 @@ async function handleRevoke(
       const { data: byMembership, error: membershipErr } = await sb
         .from("subscriptions")
         .select(
-          "id, user_id, tier, status, expires_at, started_at, provider_payment_id, granted_payment_ids, whop_membership_id"
+          "id, user_id, tier, status, expires_at, amount_cents, started_at, provider_payment_id, granted_payment_ids, whop_membership_id"
         )
         .eq("payment_provider", "whop")
         .eq("whop_membership_id", r.membershipId);
@@ -878,7 +880,7 @@ async function handleRevoke(
     if (subs.length === 0 && userId) {
       const { data: byUser } = await sb
         .from("subscriptions")
-        .select("id, user_id, status")
+        .select("id, user_id, tier, status, expires_at, amount_cents, started_at, provider_payment_id, granted_payment_ids, whop_membership_id")
         .eq("payment_provider", "whop")
         .eq("user_id", userId)
         .eq("status", "active");
@@ -945,6 +947,21 @@ async function handleRevoke(
     const keptActiveIds: string[] = [];
     const flipIds: string[] = [];
     for (const sub of subs) {
+      // A cancellation or failed first charge must not end the card trial
+      // early. Keep the unpaid €0 trial row active through its stored expiry
+      // (trial end + one day); the daily expiry sweep then downgrades access.
+      // Refunds/disputes and paid subscriptions never receive this grace.
+      if (
+        kind === "cancelled" &&
+        sub.tier === "notes_pro_trial" &&
+        Number(sub.amount_cents ?? 0) === 0 &&
+        sub.expires_at &&
+        Date.parse(sub.expires_at) > nowMs
+      ) {
+        keptActiveIds.push(sub.id);
+        continue;
+      }
+
       const entries = Array.isArray(sub.granted_payment_ids)
         ? sub.granted_payment_ids.filter((e) => e && e.payment_id)
         : [];

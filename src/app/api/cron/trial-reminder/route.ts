@@ -27,7 +27,9 @@ export const dynamic = "force-dynamic";
  *      'free' and clear tier_expires_at so downstream paywalls kick
  *      back in — but only if the user has no OTHER active
  *      subscription (defensive; shouldn't happen in practice since
- *      NOWPayments tiers don't overlap, but better to check).
+ *      NOWPayments tiers don't overlap, but better to check). Whop
+ *      `notes_pro_trial` expires at the actual 7-day trial end plus one day;
+ *      this sweep cleans up the ledger after that deadline.
  *
  * Auth: Bearer token equal to `process.env.CRON_SECRET`. Vercel adds
  * this header automatically to cron invocations when the env var is
