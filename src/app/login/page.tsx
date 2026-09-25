@@ -11,7 +11,6 @@ import { getKnownAccounts, rememberKnownAccount, type KnownAccount } from "@/lib
 import { BrandedLoader } from "@/components/Logo";
 import { TextField } from "@/components/ui";
 import ThemeToggle from "@/components/ThemeToggle";
-import { QUESTIONS } from "@/lib/content-truth";
 import {
   ArrowLeft,
   Shield,
@@ -650,7 +649,7 @@ export default function LoginPage() {
                 <BookOpen className="w-5 h-5 text-[var(--mp-viridian)]" />
               </div>
               <p className="text-[11px] text-[var(--mp-fg-muted)] font-medium">
-                {QUESTIONS.total.toLocaleString(lang === "de" ? "de-AT" : "en-GB")}+ {lang === "de" ? "Fragen" : "Questions"}
+                {lang === "de" ? "10.000+ Fragen" : "10,000+ Questions"}
               </p>
             </div>
             <div className="text-center">

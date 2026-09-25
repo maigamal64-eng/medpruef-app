@@ -60,8 +60,8 @@ export default function MedizinLernenInDeinerSprachePost() {
             </h1>
             <p className="mp-body text-lg text-[var(--mp-fg-muted)] leading-relaxed">
               {L === "de"
-                ? "Kenntnisprüfung Wien am 28. September 2026 (Anmeldeschluss 28. Juli 2026, 795 € pro Versuch). Stichprobentest am 23. September 2026 in Graz (Anmeldung bis 26. August 2026 über deine Nostrifizierungs-Universität). Zwei Prüfungen, ein gemeinsames Problem: Sie laufen auf Deutsch, aber du hast Medizin nicht auf Deutsch gelernt."
-                : "Kenntnisprüfung Wien on 28 September 2026 (registration closes 28 July 2026, 795 € per attempt). Stichprobentest on 23 September 2026 in Graz (registration by 26 August 2026, filed through your Nostrifizierung university). Two exams, one shared problem: they run in German, but you did not learn medicine in German."}
+                ? "Die Kenntnisprüfung und der Stichprobentest laufen auf Deutsch. Prüfungstermine und Anmeldefristen variieren nach Prüfungsweg und können sich ändern. Zwei Prüfungen, ein gemeinsames Problem: Sie laufen auf Deutsch, aber du hast Medizin nicht auf Deutsch gelernt."
+                : "The Kenntnisprüfung and Stichprobentest are conducted in German. Dates and registration deadlines vary by exam route and can change. Two exams, one shared problem: they run in German, but you did not learn medicine in German."}
             </p>
           </header>
 
@@ -287,14 +287,11 @@ export default function MedizinLernenInDeinerSprachePost() {
                     The question stays in German, the explanation comes in your language
                   </h2>
                   <p className="mp-body text-[var(--mp-fg)] leading-relaxed">
-                    MedPrüf runs on over 10,000 real, documented questions from
-                    Austrian sources: for the Kenntnisprüfung Wien from
-                    documented exam materials, for the Stichprobentest from the
-                    clinical curriculum, deliberately not from
-                    leaked or unofficial Altfragen collections that the
-                    universities themselves treat as invalid. That clean
-                    provenance matters more to us than a marketing claim that
-                    does not hold up. The questions stay in German, exactly as
+                    MedPrüf offers over 10,000 curated practice questions from different
+                    sources. They are study materials, not a collection of
+                    official or leaked exam questions. The question banks are
+                    designed to support learning, while the official exam
+                    format and sources vary by exam route. The questions stay in German, exactly as
                     they will appear on exam day. What you get on top is
                     AI-generated explanations you can pull up in seven
                     languages: Russian, Arabic, English, French, Turkish,
@@ -439,7 +436,7 @@ export default function MedizinLernenInDeinerSprachePost() {
             <p className="mp-body text-sm text-[var(--mp-fg-muted)] mb-4 max-w-xl mx-auto">
               {L === "de"
                 ? "150 Fragen pro Prüfung gratis testen, ohne Kreditkarte. Frage auf Deutsch, Erklärung auf Russisch, Arabisch, Englisch, Französisch, Türkisch, Ukrainisch oder Serbisch, aus über 10.000 echten Fragen."
-                : "Try 150 questions per exam for free, no credit card. The question in German, the explanation in Russian, Arabic, English, French, Turkish, Ukrainian or Serbian, from over 10,000 real questions."}
+                : "Try 150 questions per exam for free, no credit card. The question in German, the explanation in Russian, Arabic, English, French, Turkish, Ukrainian or Serbian, from over 10,000 curated practice questions."}
             </p>
             <div className="flex flex-col sm:flex-row gap-3 items-center justify-center">
               <Link

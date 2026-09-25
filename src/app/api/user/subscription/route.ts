@@ -97,11 +97,12 @@ export async function GET(req: NextRequest) {
         started_at: sub.started_at,
         expires_at: sub.expires_at,
         days_remaining: daysRemaining,
-        is_first_month_trial: tierKey === "first_month_19",
+        is_first_month_trial: false, // Legacy tier key is shared by recurring and one-time plans.
         // 3-month entry tier (€27 lump, ~€9/month) — capped at one
         // purchase per user, treated like the trial in UI countdowns.
-        is_starter_3mo_trial: tierKey === "first_3mo_27",
+        is_starter_3mo_trial: false, // Legacy tier key does not identify billing cadence.
         is_puyp_eligible_tier: Boolean(tierDef?.puypEligible),
+        billing_cadence_unknown: tierKey === "first_month_19" || tierKey === "first_3mo_27",
         payment_provider: sub.payment_provider,
         amount_cents: sub.amount_cents,
         currency: sub.currency,

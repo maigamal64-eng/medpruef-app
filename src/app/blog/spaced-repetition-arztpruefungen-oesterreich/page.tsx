@@ -346,7 +346,7 @@ export default function SpacedRepetitionPost() {
             <h3 className="mp-h3 text-[20px] mb-2">
               {L === "de"
                 ? "Übe mit über 10.000 echten Fragen und eingebautem SM-2"
-                : "Practice with over 10,000 real questions and built-in SM-2"}
+                : "Practice with over 10,000 curated questions and built-in SM-2"}
             </h3>
             <p className="mp-body text-sm text-[var(--mp-fg-muted)] mb-4 max-w-xl mx-auto">
               {L === "de"

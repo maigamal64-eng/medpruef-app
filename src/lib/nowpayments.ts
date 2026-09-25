@@ -77,7 +77,7 @@ export const TIERS: Record<string, TierDefinition> = {
     durationMonths: 6,
     humanName: "Exam Cohort (6 months, Pass-Until-You-Pass)",
     humanNameDe: "Prüfungs-Kohorte (6 Monate, Pass-Until-You-Pass)",
-    available: true,
+    available: false,
     puypEligible: true,
     referralPayoutCents: 7500, // €75 — lock #3 premium tier
   },
@@ -106,7 +106,7 @@ export const TIERS: Record<string, TierDefinition> = {
     durationMonths: 3,
     humanName: "3-month Starter (one-time, ~€9/month effective)",
     humanNameDe: "3-Monats-Einstieg (einmalig, ~9 € pro Monat)",
-    available: true, // LIVE for crypto checkout
+    available: false, // Retired customer checkout rail. Keep tier data for old entitlements/webhooks.
     puypEligible: false, // 90 days is too short for PUYP — that needs 6mo+
     // €49 net is ~€47 after Whop fees; €15 referral keeps margin
     // positive while still being attractive for Telegram/social sharing.
@@ -131,7 +131,7 @@ export const TIERS: Record<string, TierDefinition> = {
     durationMonths: 1,
     humanName: "Single month (one-time, no auto-renew)",
     humanNameDe: "Einzelmonat (einmalig, keine automatische Verlängerung)",
-    available: true, // LIVE for crypto checkout (fallback)
+    available: false, // Retired customer checkout rail. Keep tier data for old entitlements/webhooks.
     puypEligible: false, // too short for PUYP
     // €19 net is ~€16 after NOWPayments fees; €25 referral was margin-
     // negative. Locked to €10 per [name]'s 2026-04-26 decision (review-

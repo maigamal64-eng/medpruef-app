@@ -224,7 +224,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   {
     date: "2026-07-05",
-    tag: "improvement",
+    tag: "admin",
     title: {
       de: "MedPrüf ist jetzt für KI-Agenten auffindbar",
       en: "MedPrüf is now discoverable by AI agents",
@@ -698,8 +698,8 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "Diagnostics: webhook attempts are now classified correctly",
     },
     description: {
-      de: "Interne Beobachtbarkeit: Der NOWPayments-IPN-Webhook schreibt jetzt pro Aufruf genau eine korrekt klassifizierte Zeile in webhook_attempts (sig_invalid, dup, processed, user_not_found, parse_error oder other_error) statt einer einzigen unklassifizierten Zeile. Dadurch zeigen die Admin-Webhook-Ansicht und der Tagesbericht echte Ergebnisse, und der frühere irreführende Wert (100 Prozent other_error) entfällt. Keine Änderung an der Zahlungslogik.",
-      en: "Internal observability: the NOWPayments IPN webhook now writes exactly one correctly-classified webhook_attempts row per call (sig_invalid, dup, processed, user_not_found, parse_error, or other_error) instead of a single unclassified row. The admin webhook view and the daily digest now show real outcomes, removing the misleading 100 percent other_error reading. No change to payment logic.",
+      de: "Interne Diagnose zur Zahlungsabwicklung; keine Änderung der Funktionen für Kundinnen und Kunden.",
+      en: "Internal payment diagnostics; no customer-facing behavior changed.",
     },
   },
   {
@@ -716,7 +716,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   {
     date: "2026-04-28",
-    tag: "feature",
+    tag: "admin",
     title: {
       de: "Neuer 3-Monats-Einstieg: 27 € einmalig, ungefähr 9 € pro Monat",
       en: "New 3-Month Starter: €27 one-time, about €9 per month",
@@ -728,7 +728,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   {
     date: "2026-04-28",
-    tag: "improvement",
+    tag: "admin",
     title: {
       de: "Empfehlungsprogramm sichtbarer: Telegram, WhatsApp & Social",
       en: "Referral program more prominent: Telegram, WhatsApp & socials",
@@ -776,7 +776,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   {
     date: "2026-04-24",
-    tag: "improvement",
+    tag: "admin",
     title: {
       de: "Empfehlungen: Code ab Tag 1 sichtbar, Auszahlungsmethode später",
       en: "Referrals: code visible from day 1, payout method set later",
@@ -788,7 +788,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   {
     date: "2026-04-24",
-    tag: "feature",
+    tag: "admin",
     title: {
       de: "Prüfungs-Landingpages & Blog: SEO-Fundament",
       en: "Exam landing pages & blog: SEO foundation",
@@ -800,7 +800,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   {
     date: "2026-04-24",
-    tag: "feature",
+    tag: "admin",
     title: {
       de: "Neuer Einsteiger-Tarif: erster Monat für €19 (einmalig)",
       en: "New entry tier: first month for €19 (one-time)",
@@ -872,7 +872,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   {
     date: "2026-04-23",
-    tag: "feature",
+    tag: "admin",
     title: {
       de: "Empfehlungen: gestaffelte Prämien €25/€50/€75",
       en: "Referrals: tiered €25/€50/€75 payouts",
@@ -908,7 +908,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   {
     date: "2026-04-23",
-    tag: "improvement",
+    tag: "admin",
     title: {
       de: "Positionierungs-Update 23. April",
       en: "April 23 positioning update",
@@ -932,7 +932,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   {
     date: "2026-04-23",
-    tag: "feature",
+    tag: "admin",
     title: {
       de: "Juni-26-Kohorte live: 6 Monate Vollzugang für €114, zahlbar in Krypto",
       en: "June 26 Cohort live: 6 months of full access for €114, payable in crypto",
@@ -950,8 +950,8 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "KMP Innsbruck grading fixed (C-1): 46 historical answers retroactively regraded",
     },
     description: {
-      de: "Der KoalaMed-Importer schrieb jede `choices`-Zeile mit dem Schlüssel `is_correct`, während alle anderen Prüfungstypen (Kenntnisprüfung Wien, Pharma) und der Client-seitige MCQ-Builder den Schlüssel `correct` lesen. Folge: jede Auswahloption auf KMP-Fragen kam als `correct: undefined` beim Client an, der sie als `false` bewertete: 46 von 47 gespeicherten Antworten mit echter Textübereinstimmung gegen `questions.answer` waren fälschlich als falsch markiert (98 % False-Negative-Rate). Migration `20260422000000_kmp_grading_backfill.sql` normalisiert alle 3.091 KMP-Fragen so, dass beide Schlüssel gesetzt sind (idempotent), regradet die `answer_history`-Zeilen wo der Text übereinstimmt, und synchronisiert `user_gamification.total_correct` anhand der tatsächlichen Korrekt-Zählung. 3 Nutzer betroffen.",
-      en: "The KoalaMed importer wrote every `choices` row with key `is_correct`, while every other exam type (Kenntnisprüfung Wien, Pharma) and the client-side MCQ builder read the key `correct`. Consequence: every answer option on KMP questions arrived at the client as `correct: undefined`, graded as `false`: 46 of 47 stored answers with a genuine text match against `questions.answer` were wrongly flagged wrong (98% false-negative rate). Migration `20260422000000_kmp_grading_backfill.sql` normalizes all 3,091 KMP questions to carry both keys (idempotent), regrades matching `answer_history` rows, and syncs `user_gamification.total_correct` from the actual true-count. 3 users affected.",
+      de: "Eine Bewertungsabweichung bei Stichprobentest-Fragen wurde korrigiert. Betroffene frühere Antworten wurden überprüft und angepasst.",
+      en: "A grading issue affecting Stichprobentest questions was corrected. Affected previous answers were reviewed and adjusted.",
     },
   },
   {
@@ -974,8 +974,8 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "What's New: offline mode, Cmd+K search, and 7-language translations announced",
     },
     description: {
-      de: "Der „Was ist neu\"-Dialog zeigt Bestandsnutzern jetzt drei zuletzt ausgelieferte Funktionen, die bisher unentdeckt blieben: den Offline-Modus (100 bis 500 Fragen vorab laden in Einstellungen → Offline-Modus), die Schnellsuche mit Cmd+K von jeder Seite aus sowie die Übersetzung von Erklärungen in Russisch, Arabisch, Englisch, Französisch, Türkisch, Ukrainisch und Serbisch. `CURRENT_VERSION` auf `2026-04-22` gesetzt, damit der Dialog einmalig für alle eingeloggten Nicht-Gast-Accounts wieder erscheint.",
-      en: "The \"What's New\" dialog now surfaces three recently-shipped features that were previously invisible to existing users: offline mode (pre-download 100 to 500 questions in Settings → Offline mode), Cmd+K quick search from every page, and explanation translation into Russian, Arabic, English, French, Turkish, Ukrainian and Serbian. `CURRENT_VERSION` bumped to `2026-04-22` so the dialog re-shows once for every logged-in non-guest account.",
+      de: "Die Neuigkeiten zeigen jetzt drei Funktionen, die bisher leicht zu übersehen waren: Fragen für die Offline-Nutzung herunterladen, die Schnellsuche mit Cmd+K und mehrsprachige Erklärungen.",
+      en: "The What's New panel now highlights three features that were easy to miss: downloading questions for offline use, quick search with Cmd+K, and explanations in multiple languages.",
     },
   },
   {
@@ -1046,8 +1046,8 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "Cross-device strength analysis",
     },
     description: {
-      de: "Dein Fortschritt pro Fachgebiet ist jetzt geräteübergreifend synchron: Handy und Laptop zeigen die gleichen Schwächen und denselben Lernplan. Bisher wurden Genauigkeit und schwache Themen nur lokal pro Gerät gespeichert, sodass die Startseite und der Lernplan auf jedem Gerät eine andere „schwächste\u201C Empfehlung anzeigten. Jetzt landet jede beantwortete Frage in einer serverseitigen Tabelle, und alle Geräte greifen auf denselben Stand zu.",
-      en: "Your per-topic progress is now synchronized across devices: phone and laptop show the same weak topics and the same study plan. Previously, accuracy and weakness signals were stored in each device's local storage, so the home page and Lernplan showed a different \"weakest topic\" on each device. Now every answered question is recorded in a server-side table, and every device reads the same snapshot.",
+      de: "Dein Fortschritt pro Fachgebiet ist jetzt geräteübergreifend synchron. Handy und Laptop zeigen dieselben Schwächen und denselben Lernplan.",
+      en: "Your progress by specialty now syncs across devices. Your phone and laptop show the same weak topics and study plan.",
     },
   },
   {
@@ -1251,8 +1251,8 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "Security overhaul: admin panel protected, new access controls",
     },
     description: {
-      de: "Eine umfassende Sicherheitsüberprüfung deckte mehrere Wege auf, wie externe Angreifer private Benutzerdaten lesen oder verändern konnten. Das ist jetzt geschlossen: alle Admin-Endpunkte verlangen jetzt eine Admin-Anmeldung, alle Datenbank-Tabellen haben strenge Zeilenebene-Sicherheit (RLS) erhalten, das Login akzeptiert keine gefälschten Telegram-Signaturen mehr, und bcrypt-Passwort-Hashes werden nicht mehr an den Client gesendet. Eine bekannte Next.js-Schwachstelle (HIGH) wurde gepatcht. Für Nutzer:innen ändert sich nichts außer mehr Sicherheit.",
-      en: "A comprehensive security audit uncovered multiple paths for external attackers to read or modify private user data. Closed: all admin endpoints now require admin authentication, every database table has strict row-level security, login no longer accepts forged Telegram signatures, and bcrypt password hashes are no longer sent to the client. A known Next.js HIGH CVE was patched. Nothing changes for users except more safety.",
+      de: "Wir haben die Sicherheitsvorkehrungen für Konten und private Daten verstärkt.",
+      en: "We strengthened protections for accounts and private data.",
     },
   },
   {
@@ -1275,8 +1275,8 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "All previous question reports were stored anonymously: fixed",
     },
     description: {
-      de: "Eine Untersuchung hat gezeigt, dass alle 45 bisher gemeldeten Fragen ohne Nutzer-ID in der Datenbank landeten, obwohl eingeloggte Nutzer:innen gemeldet haben. Das Formular hat die ID einfach nicht mitgesendet. Ab jetzt wird die Nutzer-ID korrekt erfasst, bei beiden Meldungs-Wegen (inline und im Modal). Das heißt wir können ab jetzt gemeldete Fragen einer Person zuordnen und bei Bedarf nachfragen. Bereits gemeldete Fragen bleiben anonym, aber das Problem ist für die Zukunft behoben.",
-      en: "An investigation revealed that all 45 previously reported questions landed in the database without a user ID, even when logged-in users submitted them. The form simply wasn't sending the ID. The user ID is now captured correctly through both report paths (inline form and modal). This means we can now attribute reports to specific users and follow up when needed. Previously submitted reports stay anonymous, but the problem is fixed going forward.",
+      de: "Wir haben die Bearbeitung gemeldeter Fragen verbessert. Neue Meldungen können jetzt bei Bedarf gezielter nachverfolgt werden.",
+      en: "We improved how question reports are handled. New reports can now be followed up more effectively when needed.",
     },
   },
   {
@@ -1305,7 +1305,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   {
     date: "2026-04-15",
-    tag: "improvement",
+    tag: "admin",
     title: {
       de: "Admin-Statistiken korrigiert: DAU/WAU/MAU zeigen jetzt die echten Zahlen",
       en: "Admin statistics fixed: DAU/WAU/MAU now show real numbers",
@@ -1581,7 +1581,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   {
     date: "2026-04-11",
-    tag: "feature",
+    tag: "admin",
     title: { de: "Live-Anmelde-Tracker im Admin", en: "Live new-users tracker in admin" },
     description: {
       de: "Das Admin-Dashboard zeigt jetzt eine Echtzeit-Karte mit neuen Registrierungen (letzte Stunde, heute, 7/30 Tage) plus die letzten 10 Anmeldungen, automatische Aktualisierung alle 30 Sekunden.",
@@ -1818,7 +1818,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   {
     date: "2026-04-09",
-    tag: "feature",
+    tag: "admin",
     title: { de: "Umfassendes Admin-Dashboard", en: "Comprehensive admin dashboard" },
     description: {
       de: "Admin-Panel mit 5 Bereichen: Dashboard, Nutzer, Fragen, Analysen, System.",

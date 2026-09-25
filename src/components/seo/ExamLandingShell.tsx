@@ -51,7 +51,7 @@ type Lang = "de" | "en";
 
 export interface ExamLandingBreakdownRow {
   label: { de: string; en: string };
-  value: string;
+  value: string | { de: string; en: string };
   sub?: { de: string; en: string };
 }
 
@@ -294,7 +294,7 @@ export default function ExamLandingShell({ content }: { content: ExamLandingCont
                   {row.label[L]}
                 </dt>
                 <dd className="text-2xl font-display font-bold text-[var(--mp-fg)] leading-none">
-                  {row.value}
+                  {typeof row.value === "string" ? row.value : row.value[L]}
                 </dd>
                 {row.sub && (
                   <p className="text-xs text-[var(--mp-fg-muted)] mt-1.5">
@@ -451,13 +451,13 @@ export default function ExamLandingShell({ content }: { content: ExamLandingCont
               <div>
                 <p className="font-display font-bold text-[var(--mp-fg)]">
                   {L === "de"
-                    ? "Aus offiziellen Prüfungen"
-                    : "From official exams"}
+                    ? "Kuratierte Übungsfragen"
+                    : "Curated practice questions"}
                 </p>
                 <p className="text-xs text-[var(--mp-fg-muted)]">
                   {L === "de"
-                    ? "über 10.000 dokumentierte Fragen, nichts erfunden"
-                    : "over 10,000 documented questions, nothing invented"}
+                    ? "Quellen und Formate je nach Prüfungsbank"
+                    : "Sources and formats vary by question bank"}
                 </p>
               </div>
             </div>

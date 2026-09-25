@@ -24,8 +24,7 @@ import { getNextExamSitting } from "@/lib/exam-dates";
  * recognition test). The "KMP Innsbruck" keyword is kept below so the
  * page still ranks for the term users historically searched.
  *
- * Content numbers: 2,785 active questions across 12 specialties (live DB
- * count 2026-09-05). We do NOT name a source institution in customer-facing
+ * Public copy uses a rounded question count to avoid stale snapshots. We do NOT name a source institution in customer-facing
  * copy (removed 2026-09-05, [name]'s call): naming one creates institutional
  * exposure for zero commercial benefit, and a competitor selling recalled
  * exam content was stopped in Feb 2026 over a dispute with a Universitäts-
@@ -34,9 +33,9 @@ import { getNextExamSitting } from "@/lib/exam-dates";
  * or recalled exam items.
  */
 
-const pageTitle = "Stichprobentest 2026: Vorbereitung mit 2.785 Fragen | MedPrüf";
+const pageTitle = "Stichprobentest: Vorbereitung mit 2.700+ Übungsfragen | MedPrüf";
 const pageDesc =
-  "Strukturierte Vorbereitung auf den nationalen Stichprobentest der Nostrifizierung. 2.785 klinisch kommentierte Fragen aus 12 Fachgebieten. Nächster Termin: 23. September 2026 in Graz. 150 Fragen kostenlos.";
+  "Strukturierte Vorbereitung auf den nationalen Stichprobentest der Nostrifizierung mit über 2.700 kuratierten klinischen Übungsfragen. Keine offiziellen oder erinnerten Prüfungsfragen. 150 Fragen kostenlos.";
 
 export const metadata: Metadata = {
   title: pageTitle,
@@ -45,7 +44,6 @@ export const metadata: Metadata = {
     "Stichprobentest",
     "Stichprobentest Innsbruck",
     "Stichprobentest Nostrifizierung",
-    "Stichprobentest Graz",
     "Stichprobentest Fragen",
     "Stichprobentest üben",
     "Stichprobentest Vorbereitung",
@@ -100,7 +98,7 @@ function buildCourseSchema() {
     "@type": "Course",
     name: "Stichprobentest: Vorbereitung",
     description:
-      "Strukturierte Vorbereitung auf den nationalen Stichprobentest der Nostrifizierung für ausländische Ärzt:innen: 12 Fachgebiete, 2.785 kuratierte Übungsfragen mit klinischen Erklärungen.",
+      "Vorbereitung auf den nationalen Stichprobentest der Nostrifizierung mit über 2.700 kuratierten Übungsfragen und klinischen Erklärungen. Keine offiziellen Prüfungsfragen.",
     provider: {
       "@type": "Organization",
       name: "MedPrüf",

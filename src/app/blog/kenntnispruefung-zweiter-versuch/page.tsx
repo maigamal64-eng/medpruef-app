@@ -58,8 +58,8 @@ export default function KenntnispruefungZweiterVersuchPost() {
             </h1>
             <p className="mp-body text-lg text-[var(--mp-fg-muted)] leading-relaxed">
               {L === "de"
-                ? "Kenntnisprüfung Wien am 28. September 2026, Anmeldeschluss 28. Juli 2026 (ausnahmslos zwei Monate vorher), Gebühr 795 € pro Versuch. Wer diese Zahlen aus eigener Erfahrung kennt, braucht keinen Neuanfang, sondern eine andere Vorbereitung. Ein zweiter Versuch ist eine zweite Chance mit weniger Spielraum, und er verdient es, aus dem ersten zu lernen."
-                : "Kenntnisprüfung Wien on 28 September 2026, registration closes 28 July 2026 (always exactly two months prior), fee 795 € per attempt. If you know these numbers from experience, you do not need a fresh start, you need a different kind of preparation. A second attempt is a second chance with less room for error, and it deserves to learn from the first."}
+                ? "Prüfungstermine, Anmeldefristen und Gebühren können sich ändern. Prüfe die aktuellen Angaben bei der Ärztekammer Wien. Wer diese Zahlen aus eigener Erfahrung kennt, braucht keinen Neuanfang, sondern eine andere Vorbereitung. Ein zweiter Versuch ist eine zweite Chance mit weniger Spielraum, und er verdient es, aus dem ersten zu lernen."
+                : "Exam dates, registration deadlines and fees can change. Check current details with the Ärztekammer Wien. If you know these numbers from experience, you do not need a fresh start, you need a different kind of preparation. A second attempt is a second chance with less room for error, and it deserves to learn from the first."}
             </p>
           </header>
 
@@ -149,7 +149,7 @@ export default function KenntnispruefungZweiterVersuchPost() {
                 <section>
                   <h2 className="mp-h2 text-[26px] flex items-center gap-2 mb-3">
                     <CalendarClock className="w-5 h-5 text-[var(--mp-viridian)]" aria-hidden />
-                    Drei Phasen bis zum 28. September
+                    Drei Phasen für deinen nächsten Prüfungstermin
                   </h2>
                   <p className="mp-body text-[var(--mp-fg)] leading-relaxed">
                     Struktur statt Intelligenz heißt in der Praxis: weniger
@@ -255,7 +255,7 @@ export default function KenntnispruefungZweiterVersuchPost() {
                     <li>Die Bestehensgrenze ist kohortenrelativ (90 Prozent des Mittelwerts, Untergrenze 51 Prozent).</li>
                     <li>Erst Lücken analysieren, dann gezielt wiederholen, zuletzt das Format trainieren.</li>
                     <li>Freien Abruf mit dem KAF-Modus üben, das echte Format mit der offiziellen Musterprüfung.</li>
-                    <li>Anmeldeschluss für den 28. September 2026 ist der 28. Juli 2026.</li>
+                    <li>Prüfe Prüfungstermine und Anmeldefristen immer bei der Ärztekammer Wien.</li>
                     <li>150 Fragen pro Prüfung gratis testen, bevor du dich entscheidest.</li>
                   </ul>
                 </section>
@@ -342,7 +342,7 @@ export default function KenntnispruefungZweiterVersuchPost() {
                 <section>
                   <h2 className="mp-h2 text-[26px] flex items-center gap-2 mb-3">
                     <CalendarClock className="w-5 h-5 text-[var(--mp-viridian)]" aria-hidden />
-                    Three phases until 28 September
+                    Three phases for your next exam date
                   </h2>
                   <p className="mp-body text-[var(--mp-fg)] leading-relaxed">
                     Structure instead of intelligence means, in practice: less
@@ -376,7 +376,7 @@ export default function KenntnispruefungZweiterVersuchPost() {
                   </h2>
                   <p className="mp-body text-[var(--mp-fg)] leading-relaxed">
                     One honesty note that matters here: MedPrüf trains you with
-                    over 10,000 real, documented exam questions on the content
+                    over 10,000 curated practice questions covering topics
                     and the full topic coverage of the Kenntnisprüfung Wien. The
                     questions come in a multiple-choice format, not in the exact
                     short-answer format of the real exam. We say this openly,
@@ -445,7 +445,7 @@ export default function KenntnispruefungZweiterVersuchPost() {
                     <li>The pass mark is cohort-relative (90 percent of the mean, hard floor 51 percent).</li>
                     <li>Analyze the gaps first, then review with a target, train the format last.</li>
                     <li>Practice free recall with KAF mode, and the real format with the official Musterprüfung.</li>
-                    <li>Registration for the 28 September 2026 sitting closes on 28 July 2026.</li>
+                    <li>Always verify exam dates and registration deadlines with the Ärztekammer Wien.</li>
                     <li>Try 150 questions per exam for free before you decide anything.</li>
                   </ul>
                 </section>
@@ -460,13 +460,13 @@ export default function KenntnispruefungZweiterVersuchPost() {
           >
             <h3 className="mp-h3 text-[20px] mb-2">
               {L === "de"
-                ? "Bereite den zweiten Versuch mit über 10.000 echten Prüfungsfragen vor"
-                : "Prepare the second attempt with over 10,000 real exam questions"}
+                ? "Bereite den zweiten Versuch mit über 10.000 kuratierten Übungsfragen vor"
+                : "Prepare for the second attempt with over 10,000 curated practice questions"}
             </h3>
             <p className="mp-body text-sm text-[var(--mp-fg-muted)] mb-4 max-w-xl mx-auto">
               {L === "de"
-                ? "150 Fragen pro Prüfung gratis testen, ohne Kreditkarte. Echte dokumentierte Fragen, KAF-Modus für den freien Abruf, Erklärungen in sieben Sprachen und ein Lernplan, der auf den 28. September hinarbeitet."
-                : "Try 150 questions per exam for free, no credit card. Real documented questions, KAF mode for free recall, explanations in seven languages, and a study plan that works toward 28 September."}
+                ? "150 Fragen pro Prüfung gratis testen, ohne Kreditkarte. Kuratierte Übungsfragen, ein recall-first KAF-Modus und Erklärungen in sieben Sprachen. KAF unterstützt den freien Abruf, ersetzt aber nicht die offizielle Musterprüfung."
+                : "Try 150 questions per exam for free, no credit card. Curated practice questions, recall-first KAF practice and explanations in seven languages. KAF supports free recall but does not replace the official sample exam."}
             </p>
             <div className="flex flex-col sm:flex-row gap-3 items-center justify-center">
               <Link

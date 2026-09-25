@@ -13,7 +13,7 @@ const post = getPostBySlug(SLUG);
 const pageTitle =
   "Kenntnisprüfung Wien: der zweite Versuch nach einem Fehlversuch | MedPrüf Blog";
 const pageDesc =
-  "Nächster Termin 28. September 2026, Anmeldeschluss 28. Juli, 795 € pro Versuch. Warum der erste Versuch selten am Wissen scheitert, was beim zweiten anders sein muss, und wie du das offene Kurzantwortformat (KAF) gezielt trainierst.";
+  "Was nach einem Fehlversuch helfen kann, warum gezielte Lückenanalyse wichtig ist und wie du das offene Kurzantwortformat der Kenntnisprüfung übst. Termine und Fristen können sich ändern, prüfe aktuelle Angaben bei der Ärztekammer Wien.";
 
 export const metadata: Metadata = {
   title: pageTitle,
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     "Kenntnisprüfung wiederholen",
     "Kurzantwortfragen KAF",
     "Kenntnisprüfung Wien Vorbereitung",
-    "Kenntnisprüfung Anmeldeschluss 2026",
+    "Kenntnisprüfung Anmeldefrist",
     "ausländischer Arzt Österreich",
     "Nostrifikation",
   ],

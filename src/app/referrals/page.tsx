@@ -421,8 +421,8 @@ export default function ReferralsPage() {
               <div className="flex-1">
                 <h2 className="text-xl lg:text-2xl font-display font-extrabold text-[var(--mp-fg)] mb-1">
                   {lang === "de"
-                    ? "Lad zwei Kolleg:innen ein, die für den Stichprobentest am 23. September in Graz lernen."
-                    : "Invite two colleagues studying for the Stichprobentest on 23 September in Graz."}
+                    ? "Lade Kolleg:innen ein, die sich auf eine österreichische Prüfung vorbereiten."
+                    : "Invite colleagues preparing for an Austrian medical exam."}
                 </h2>
                 <p className="text-sm text-[var(--mp-fg-muted)] leading-relaxed">
                   {lang === "de"
@@ -727,8 +727,8 @@ export default function ReferralsPage() {
                   </div>
                   <p className="text-xs text-[var(--mp-fg-muted)] leading-relaxed">
                     {lang === "de"
-                      ? "Sende deinen Link an zwei Kolleginnen oder Kollegen, die wirklich mit dir für den Stichprobentest am 23. September in Graz lernen."
-                      : "Send your link to two colleagues who really start studying with you for the Stichprobentest on 23 September in Graz."}
+                      ? "Teile deinen Link mit Kolleginnen und Kollegen, die sich auf eine österreichische Prüfung vorbereiten."
+                      : "Share your link with colleagues preparing for an Austrian medical exam."}
                   </p>
                 </div>
               </li>

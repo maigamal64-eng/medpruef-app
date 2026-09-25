@@ -130,7 +130,7 @@ export default function Image() {
               maxWidth: 980,
             }}
           >
-             7.566 Fragen · offene Kurzantwortprüfung · klinische Erklärungen
+             7.500+ Übungsfragen · offene Kurzantwortprüfung · Erklärungen
           </div>
         </div>
 

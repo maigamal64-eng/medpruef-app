@@ -139,11 +139,8 @@ export default function SettingsPage() {
   const [offlineClearOpen, setOfflineClearOpen] = useState(false);
 
   // ── Active-subscription snapshot ─────────────────────────────────
-  // Populated from /api/user/subscription on mount. Drives the
-  // "Current plan" card in the Konto panel — specifically the €19
-  // first-month trial countdown and the day-25 "Pick your next plan"
-  // CTA. null = still loading, false = no active subscription, else
-  // the full snapshot.
+  // Populated from /api/user/subscription on mount. null = loading,
+  // false = no active subscription, otherwise the provider snapshot.
   const [activeSub, setActiveSub] = useState<
     | null
     | false
@@ -154,6 +151,7 @@ export default function SettingsPage() {
         expires_at: string | null;
         days_remaining: number | null;
         is_first_month_trial: boolean;
+        billing_cadence_unknown?: boolean;
         is_puyp_eligible_tier: boolean;
       }
   >(null);
@@ -1611,17 +1609,9 @@ function EmailLinkCard({ lang }: { lang: Lang }) {
 /**
  * Renders the user's active subscription inside the Konto panel.
  *
- * Special treatment for the €19 first-month trial (tier ==
- * 'first_month_19'):
- *   - Countdown chip showing days_remaining.
- *   - At day 25+ OR when days_remaining <= 5, a prominent CTA invites
- *     the user to pick a longer plan. "Pick your next plan" routes to
- *     /pricing — we intentionally don't auto-redirect or pre-select, to
- *     respect the "never auto-renew" promise.
- *   - At any earlier point, a calmer "you're on the €19 trial" copy.
- *
- * Non-trial tiers (Cohort / Pro / etc.) show a simpler summary with
- * the tier name, status, and expiry.
+ * Trial status and renewal cadence must come from trustworthy provider
+ * data. Legacy tier keys alone cannot distinguish old one-time plans
+ * from current recurring plans, so those rows use a neutral summary.
  */
 function SubscriptionCard({
   sub,
@@ -1634,6 +1624,7 @@ function SubscriptionCard({
     expires_at: string | null;
     days_remaining: number | null;
     is_first_month_trial: boolean;
+    billing_cadence_unknown?: boolean;
     is_starter_3mo_trial?: boolean;
     is_puyp_eligible_tier: boolean;
   };
@@ -1659,12 +1650,8 @@ function SubscriptionCard({
   const showTrialPicker =
     (sub.is_first_month_trial && days > 0 && days <= 5) ||
     (sub.is_starter_3mo_trial === true && days > 0 && days <= 14);
-  // Both the €19 single-month and the €27 / 3-month entry tier render
-  // through the same compact trial-card layout — same trust signals,
-  // same countdown, same "Pick your next plan" CTA. The card body text
-  // already adapts to the live `humanName` so a `first_3mo_27` row
-  // reads "3-Monats-Einstieg" and a `first_month_19` row reads
-  // "Einzelmonat" without further branching.
+  // Do not infer trial status from legacy tier labels. The API leaves
+  // these flags false when the stored provider plan identity is ambiguous.
   const isTrialCard =
     sub.is_first_month_trial || sub.is_starter_3mo_trial === true;
 
@@ -1795,8 +1782,15 @@ function SubscriptionCard({
         {expiresLabel && (
           <p className="text-xs text-[var(--mp-fg-subtle)] mt-0.5">
             {lang === "de"
-              ? `Gültig bis ${expiresLabel}`
-              : `Valid until ${expiresLabel}`}
+              ? `Zugang aktiv bis ${expiresLabel}`
+              : `Access active through ${expiresLabel}`}
+          </p>
+        )}
+        {sub.billing_cadence_unknown && (
+          <p className="text-xs text-[var(--mp-fg-muted)] mt-2">
+            {lang === "de"
+              ? "Dein Zugang ist aktiv. Ob und wann abgerechnet oder verlängert wird, siehst du bei deinem Zahlungsanbieter."
+              : "Your access is active. Check your payment provider for billing and renewal dates."}
           </p>
         )}
       </div>

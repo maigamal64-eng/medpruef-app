@@ -68,7 +68,7 @@ export default function Image() {
               fontWeight: 600,
             }}
           >
-            Kenntnisprüfung Wien · 28. September 2026
+            Termingebundene Universitätsprüfung
           </div>
         </div>
 
@@ -127,7 +127,7 @@ export default function Image() {
         >
           <span>medpruf.com/pharmakologie-pruefung-wien</span>
           <span style={{ color: "rgba(255,255,255,0.35)" }}>·</span>
-          <span>€114 für 6 Monate</span>
+          <span>€129 für 6 Monate</span>
         </div>
       </div>
     ),

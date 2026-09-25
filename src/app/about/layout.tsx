@@ -1,11 +1,6 @@
 import type { Metadata } from "next";
-import { QUESTIONS } from "@/lib/content-truth";
-
-// SOT-driven count so the meta description can never drift from the
-// live DB-owned question count. Brand-sweep 2026-06-04.
-const ABOUT_DESCRIPTION = `Warum wir MedPrüf gebaut haben: 64.000 ausländische Ärzt:innen suchen eine österreichische Lizenz. Wir bieten ${QUESTIONS.total.toLocaleString(
-  "de-DE",
-)} Prüfungsfragen in 7 Sprachen mit klinischen KI-Erklärungen.`;
+const ABOUT_DESCRIPTION =
+  "MedPrüf prepares doctors for the Austrian Kenntnisprüfung, Stichprobentest and Pharmakologie with over 10,000 curated practice questions.";
 
 export const metadata: Metadata = {
   title: "Über uns: MedPrüf",

@@ -6,12 +6,8 @@ import ExamLandingShell, {
  * /pharmakologie-pruefung-wien — Pharmakologie landing page.
  *
  * Unique to this page:
- *   - Always-visible countdown chip to 26 June 2026 (the next known
- *     Pharmakologie exam date — matches NEXT_EXAM_DATE.pharma and the
- *     Juni-26-Kohorte sold on /pricing).
- *   - Global CohortCountdownBanner is also visible, but this chip is
- *     non-dismissible so stays on the page even after the banner is
- *     dismissed.
+ *   - No fixed exam date is shown because Pharma dates depend on the
+ *     student's university and term.
  *
  * Content: 335 questions, single topic "Pharmakologie" per NOTES.md
  * §Content (source: Rezeptierkunde 2026 PDF).
@@ -31,8 +27,8 @@ const content: ExamLandingContent = {
     en: "Pass the Vienna Pharmakologie exam on your first try.",
   },
   heroSubtitle: {
-    de: "Spezialisierte Vorbereitung auf die österreichische Pharmakologie- und Rezeptierkunde-Prüfung: 335 Fragen mit klinischen Begründungen, Dosierungsregeln und Wechselwirkungen. Prüfungs-Kohorte inklusive Pass-Until-You-Pass-Garantie.",
-    en: "Specialized prep for the Austrian Pharmakologie and Rezeptierkunde exam: 335 questions with clinical reasoning, dosing rules, and interactions. The Exam Cohort includes Pass-Until-You-Pass.",
+    de: "Spezialisierte Vorbereitung auf Pharmakologie und Rezeptierkunde mit kuratierten klinischen Übungsfragen zu Dosierungen und Wechselwirkungen.",
+    en: "Specialized preparation for Pharmakologie and prescribing with curated clinical practice questions on dosing and interactions.",
   },
   primaryCtaHref: "/quiz?exam=pharma&free=1",
   primaryCtaLabel: {
@@ -44,11 +40,7 @@ const content: ExamLandingContent = {
     de: "Prüfungs-Kohorte ansehen",
     en: "See Exam Cohort",
   },
-  // Countdown chip — Pharma-only. The global CohortCountdownBanner
-  // also shows this date but can be dismissed; this chip stays.
-  // Anchored to the in-market Kenntnisprüfung Wien sitting (SoT §1).
-  showCountdownChip: true,
-  countdownTargetIso: "2026-09-28T09:00:00+02:00",
+  // Pharma has no fixed annual exam date; timing is set by each university.
   breakdown: [
     {
       label: { de: "Fragen", en: "Questions" },
@@ -60,15 +52,15 @@ const content: ExamLandingContent = {
     },
     {
       label: { de: "Prüfungstermin", en: "Exam date" },
-      value: "28. Sept",
+      value: { de: "kein Fixtermin", en: "term-based" },
       sub: {
-        de: "2026 · Kenntnisprüfung Wien",
-        en: "2026 · Kenntnisprüfung Wien",
+        de: "Termin laut Universität",
+        en: "Date set by your university",
       },
     },
     {
       label: { de: "Prüfungs-Kohorte", en: "Exam Cohort" },
-      value: "114 €",
+      value: "129 €",
       sub: {
         de: "6 Monate · Pass-Until-You-Pass",
         en: "6 months · Pass-Until-You-Pass",
@@ -122,8 +114,8 @@ const content: ExamLandingContent = {
         en: "When is the next Pharmakologie exam?",
       },
       a: {
-        de: "Die Pharmakologie-Prüfung ist an die Nostrifikations-Termine deiner Medizinischen Universität und die Kenntnisprüfung-Zyklen gekoppelt; der nächste große Termin der Kenntnisprüfung Wien ist der 28. September 2026 (Anmeldung bis Ende Juli). Deinen genauen Pharma-Termin entnimmst du deinem Nostrifikationsbescheid und der Ärztekammer Wien. Unsere Prüfungs-Kohorte (114 €) gibt dir 6 Monate Vollzugang plus Pass-Until-You-Pass; wir aktualisieren die Termine, sobald die Ärztekammer Wien neue veröffentlicht.",
-        en: "The Pharmakologie exam is tied to your Medical University's nostrification dates and the Kenntnisprüfung cycles; the next major Kenntnisprüfung Wien sitting is 28 September 2026 (registration by end of July). For your exact Pharma date, check your nostrification decision letter and the Ärztekammer Wien. Our Exam Cohort (114 €) gives you 6 months of full access plus Pass-Until-You-Pass; we update the dates as soon as the Ärztekammer Wien publishes new ones.",
+        de: "Pharma-Prüfungstermine hängen von deiner Medizinischen Universität und deinem Studienplan ab. Prüfe deinen Nostrifikationsbescheid oder frage deine Universität nach dem nächsten Termin. MedPrüf zeigt keinen allgemeinen jährlichen Pharma-Termin an. Die Prüfungs-Kohorte kostet 129 € für sechs Monate.",
+        en: "Pharma exam dates depend on your Medical University and study plan. Check your nostrification decision or ask your university for the next date. MedPrüf does not show one general annual Pharma date. The Exam Cohort costs €129 for six months.",
       },
     },
     {
@@ -142,8 +134,8 @@ const content: ExamLandingContent = {
         en: "What is the Exam Cohort and how does Pass-Until-You-Pass work?",
       },
       a: {
-        de: "Die Prüfungs-Kohorte ist unser Lerngemeinschafts-Tarif für die nächste Prüfungsphase (Kenntnisprüfung Wien am 28. September 2026): 114 € für 6 Monate Vollzugang plus die Pass-Until-You-Pass-Garantie. Bestehst du nicht, verlängern wir deinen Zugang kostenlos bis zum nächsten Prüfungstermin (max. 2 zusätzliche Zyklen), vorausgesetzt, du hast mindestens 70% der Fragenbank bearbeitet und lädst dein offizielles Prüfungsergebnis hoch. Ein Admin verifiziert manuell innerhalb von 72 Stunden. Keine Bargeld-Erstattung: wir investieren in dein Bestehen, nicht in eine Ausstiegsklausel.",
-        en: "The Exam Cohort is our study-group plan for the next exam window (Kenntnisprüfung Wien on 28 September 2026): 114 € for 6 months full access plus the Pass-Until-You-Pass guarantee. If you fail, we extend your access free through the next exam date (max 2 additional cycles), provided you completed at least 70% of the question bank and upload your official exam result. An admin verifies manually within 72 hours. No cash refunds: we invest in your pass, not in an exit clause.",
+        de: "Die Prüfungs-Kohorte bietet sechs Monate Zugang für 129 €. Bestehst du nicht, verlängern wir deinen Zugang kostenlos bis zum nächsten Prüfungstermin (max. 2 zusätzliche Zyklen), vorausgesetzt, du hast mindestens 70% der Fragenbank bearbeitet und lädst dein offizielles Prüfungsergebnis hoch. Ein Admin verifiziert manuell innerhalb von 72 Stunden. Die separate 7-Tage-Rückerstattung nach einem Kauf bleibt davon unberührt. Nach Ablauf dieser Frist sieht die Pass-Until-You-Pass-Garantie eine Zugangsverlängerung statt einer Rückerstattung vor.",
+        en: "The Exam Cohort provides six months of access for €129. If you fail, we extend your access free through the next exam date (max 2 additional cycles), provided you completed at least 70% of the question bank and upload your official exam result. An admin verifies manually within 72 hours. The separate 7-day purchase-refund window still applies. After that window, the Pass-Until-You-Pass guarantee provides an access extension rather than a refund.",
       },
     },
     {

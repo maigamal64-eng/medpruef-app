@@ -42,6 +42,19 @@ const PROCESSORS: Processor[] = [
     policyLabel: "vercel.com/legal/privacy-policy",
   },
   {
+    name: "Whop",
+    purpose: {
+      de: "Checkout und Abwicklung von Kartenzahlungen und wiederkehrenden Mitgliedschaften. Vollständige Kartennummern werden im Whop-Checkout eingegeben.",
+      en: "Checkout and handling of card payments and recurring memberships. Full card numbers are entered in Whop checkout.",
+    },
+    jurisdiction: {
+      de: "Whop, Inc. Siehe die Datenschutzinformationen von Whop für weitere Angaben.",
+      en: "Whop, Inc. See Whop's privacy information for further details.",
+    },
+    policyUrl: "https://whop.com/privacy",
+    policyLabel: "whop.com/privacy",
+  },
+  {
     name: "Sentry",
     purpose: {
       de: "Fehler- und Absturzüberwachung (Stack-Traces, Anfrage-Kontext, User-ID als Hash).",
@@ -170,10 +183,10 @@ export default function PrivacyPage() {
       compactTitle={t ? "Datenschutz" : "Privacy"}
       lede={
         t
-          ? "Diese Erklärung beschreibt, welche personenbezogenen Daten MedPrüf erhebt, auf welcher Rechtsgrundlage wir sie verarbeiten, mit welchen Auftragsverarbeitern wir sie teilen und welche Rechte Sie nach der DSGVO und dem österreichischen DSG haben."
-          : "This policy describes which personal data MedPrüf collects, on which legal basis we process it, with which processors we share it, and which rights you have under the GDPR and the Austrian Data Protection Act (DSG)."
+          ? "Diese Erklärung beschreibt, welche personenbezogenen Daten MedPrüf erhebt und verarbeitet, welche Anbieter einzelne Funktionen unterstützen und welche Rechte Sie nach der DSGVO und dem österreichischen DSG haben."
+          : "This policy describes which personal data MedPrüf collects and processes, which providers support individual features, and your rights under the GDPR and the Austrian Data Protection Act (DSG)."
       }
-      lastUpdated={t ? "22. April 2026" : "22 April 2026"}
+      lastUpdated={t ? "25. September 2026" : "25 September 2026"}
       backHref="/"
     >
       {/* 1. Verantwortlicher */}
@@ -255,8 +268,8 @@ export default function PrivacyPage() {
         <ul>
           <li>
             {t
-              ? "Bei kostenpflichtigen Tarifen (Pro, Group): Rechnungsname, -adresse und Transaktions-ID. Kartendaten verarbeiten wir niemals selbst; diese werden ausschließlich durch einen zertifizierten Zahlungsdienstleister (Stripe, Integration in Vorbereitung) entgegengenommen."
-              : "For paid tiers (Pro, Group): billing name, billing address, transaction ID. We never process card details ourselves; these are handled exclusively by a certified payment provider (Stripe, integration in preparation)."}
+              ? "Bei kostenpflichtigen Tarifen werden Rechnungsvorgang und Zahlung über den Whop-Checkout abgewickelt. Kartendaten gibst du direkt im Whop-Checkout ein; MedPrüf speichert keine vollständigen Kartennummern."
+              : "For paid plans, checkout and payment run through Whop. You enter card details directly in Whop checkout; MedPrüf does not store full card numbers."}
           </li>
         </ul>
 
@@ -274,12 +287,12 @@ export default function PrivacyPage() {
           </li>
         </ul>
 
-        <h3>{t ? "2.5 Analysedaten (Beta: aktiv mit Widerspruchsrecht)" : "2.5 Analytics data (beta: on by default with opt-out)"}</h3>
+        <h3>{t ? "2.5 Analysedaten (Beta: standardmäßig aktiv, Widerspruch jederzeit möglich)" : "2.5 Analytics data (beta: on by default, opt out anytime)"}</h3>
         <ul>
           <li>
             {t
-              ? "Während der Beta-Phase auf Grundlage unseres berechtigten Interesses (Art. 6 Abs. 1 lit. f DSGVO, Produktverbesserung) standardmäßig aktiv: aggregierte Seitenaufrufe, Sitzungsdauer, Klickpfade (Google Analytics 4) sowie Heatmaps und Sitzungswiedergaben ohne Erfassung von Passwörtern und Zahlungseingaben (Microsoft Clarity). Sie können der Analyse jederzeit über das Cookie-Banner (Ablehnen) widersprechen; der Widerspruch wird dauerhaft gespeichert. Werbe-Pixel (z. B. Meta) laden weiterhin ausschließlich nach aktiver Einwilligung."
-              : "During the beta phase, active by default on the basis of our legitimate interest (Art. 6(1)(f) GDPR, product improvement): aggregated page views, session duration, click paths (Google Analytics 4) as well as heatmaps and session replays with passwords and payment inputs masked (Microsoft Clarity). You can object to analytics anytime via the cookie banner (Decline); your objection is stored persistently. Advertising pixels (e.g. Meta) still load only after active consent."}
+              ? "Während der Beta-Phase sind Google Analytics 4 und Microsoft Clarity standardmäßig aktiv, sofern du im Cookie-Banner nicht „Ablehnen“ gewählt hast. Deine Auswahl wird gespeichert. Werbe-Pixel von Meta und Reddit laden ausschließlich nach aktiver Einwilligung."
+              : "During the beta phase, Google Analytics 4 and Microsoft Clarity are active by default unless you chose “Decline” in the cookie banner. Your choice is saved. Meta and Reddit advertising pixels load only after active consent."}
           </li>
         </ul>
       </section>
@@ -342,8 +355,8 @@ export default function PrivacyPage() {
         <ul>
           <li>
             {t
-              ? "Ausspielen von Google Analytics 4 und Microsoft Clarity erst nach Bestätigung des Cookie-Banners."
-              : "Loading Google Analytics 4 and Microsoft Clarity only after confirmation of the cookie banner."}
+              ? "Google Analytics 4 und Microsoft Clarity sind standardmäßig aktiv, sofern Sie im Cookie-Banner nicht „Ablehnen“ gewählt haben."
+              : "Google Analytics 4 and Microsoft Clarity are active by default unless you chose “Decline” in the cookie banner."}
           </li>
           <li>
             {t
@@ -371,15 +384,15 @@ export default function PrivacyPage() {
         </ul>
       </section>
 
-      {/* 4. Empfänger / Auftragsverarbeiter */}
+      {/* 4. Anbieter */}
       <section>
         <h2>
-          4. {t ? "Mit wem wir Daten teilen" : "Who We Share Data With"}
+          4. {t ? "Anbieter, die MedPrüf unterstützen" : "Providers that support MedPrüf"}
         </h2>
         <p>
           {t
-            ? "Wir verkaufen oder vermieten Ihre Daten nicht. Wir setzen ausschließlich die folgenden Auftragsverarbeiter und Sub-Prozessoren ein. Mit allen Anbietern bestehen Auftragsverarbeitungsverträge (AVV) gemäß Art. 28 DSGVO, und bei Anbietern außerhalb des EWR zusätzlich Standardvertragsklauseln (SCCs) nach Art. 46 DSGVO."
-            : "We do not sell or rent your data. We only engage the following processors and sub-processors. Data processing agreements (DPAs) pursuant to Art. 28 GDPR are in place with all providers, and for providers outside the EEA, additionally Standard Contractual Clauses (SCCs) under Art. 46 GDPR."}
+            ? "Wir verkaufen oder vermieten Ihre Daten nicht. Die folgenden Anbieter unterstützen den Betrieb und die Funktionen von MedPrüf. Welche Daten bei einer Funktion verarbeitet werden, hängt von Ihrer Nutzung ab. Weitere Informationen finden Sie in den Datenschutzinformationen der jeweiligen Anbieter."
+            : "We do not sell or rent your data. The following providers support MedPrüf's operation and features. Which data they process depends on how you use each feature. See each provider's privacy information for further details."}
         </p>
 
         <div style={{ display: "grid", gap: "12px", margin: "16px 0" }}>
@@ -618,13 +631,13 @@ export default function PrivacyPage() {
         </p>
         <p>
           {t
-            ? "Alle Analyse- und Komfort-Tracker (Google Analytics 4, Microsoft Clarity) werden ausschließlich geladen, nachdem Sie im Cookie-Banner aktiv eingewilligt haben. Bis zur Einwilligung sind keine Tracking-Skripte aktiv, Sie können die Anwendung ohne Einwilligung vollständig nutzen. Die Einwilligung können Sie jederzeit widerrufen, indem Sie die Cookies Ihres Browsers löschen oder auf den Link „Cookie-Einstellungen“ im Seitenfuß klicken."
-            : "All analytics and convenience trackers (Google Analytics 4, Microsoft Clarity) load only after you have actively consented in the cookie banner. Until consent is given, no tracking scripts are active; you can use the application fully without consenting. You may revoke consent at any time by clearing your browser cookies or clicking the 'Cookie settings' link in the footer."}
+            ? "Während der Beta-Phase sind Google Analytics 4 und Microsoft Clarity standardmäßig aktiv. Wenn Sie im Cookie-Banner „Ablehnen“ wählen, werden sie deaktiviert; Ihre Auswahl wird gespeichert. Sie können die Anwendung auch dann vollständig nutzen. Werbe-Pixel von Meta und Reddit laden nur nach aktiver Einwilligung."
+            : "During the beta phase, Google Analytics 4 and Microsoft Clarity are active by default. Choosing “Decline” in the cookie banner disables them, and your choice is saved. You can use the application fully either way. Meta and Reddit advertising pixels load only after active consent."}
         </p>
         <p>
           {t
-            ? "Die Werbe-Pixel von Meta und Reddit laden ausschließlich nach Ihrer aktiven Einwilligung im Cookie-Banner. Abweichend davon wird der Attributions-Pixel unseres Zahlungsanbieters Whop derzeit auf allen Seiten geladen, damit wir nachvollziehen können, welche Inhalte zu einem Kauf führen. Grundlage ist unser berechtigtes Interesse an dieser Messung (Art. 6 Abs. 1 lit. f DSGVO), wie bei den Analysediensten in der Beta-Phase. Der Whop-Pixel verwendet ein Geräte-Erkennungsmerkmal (Device Fingerprint), um wiederkehrende Besuche auch ohne Cookies zu erkennen. Sie können dieser Verarbeitung jederzeit widersprechen, siehe Abschnitt 7 (Ihre Rechte)."
-            : "The Meta and Reddit advertising pixels load only after your active consent in the cookie banner. As an exception, the attribution pixel of our payment provider Whop is currently loaded on all pages so we can understand which content leads to a purchase. The basis is our legitimate interest in that measurement (Art. 6(1)(f) GDPR), as with the analytics services during the beta. The Whop pixel uses a device fingerprint to recognise returning visits even without cookies. You may object to this processing at any time, see section 7 (Your Rights)."}
+            ? "Die Werbe-Pixel von Meta und Reddit laden ausschließlich nach Ihrer aktiven Einwilligung im Cookie-Banner. Wenn es aktiviert ist, kann das Whop-Attributions-Pixel Besuche mit Checkout-Aktivitäten verknüpfen und dafür eine Gerätekennung verwenden. Informationen zu Ihren Rechten finden Sie in Abschnitt 7."
+            : "The Meta and Reddit advertising pixels load only after your active consent in the cookie banner. When enabled, the Whop attribution pixel can link visits with checkout activity and may use a device identifier for this purpose. See section 7 for information about your rights."}
         </p>
       </section>
 
@@ -676,8 +689,8 @@ export default function PrivacyPage() {
         <p>
           <em>
             {t
-              ? "Diese Datenschutzerklärung wurde sorgfältig vorbereitet, ersetzt jedoch keine individuelle Rechtsberatung. Letzte Aktualisierung: 22. April 2026."
-              : "This privacy policy has been prepared with care but does not replace individual legal advice. Last updated: 22 April 2026."}
+              ? "Diese Datenschutzerklärung wurde sorgfältig vorbereitet, ersetzt jedoch keine individuelle Rechtsberatung. Letzte Aktualisierung: 25. September 2026."
+            : "This privacy policy has been prepared with care but does not replace individual legal advice. Last updated: 25 September 2026."}
           </em>
         </p>
       </section>

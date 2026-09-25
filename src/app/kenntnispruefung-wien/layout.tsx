@@ -17,9 +17,9 @@ import { getNextExamDate } from "@/lib/exam-dates";
  * script from the layout to guarantee it's in HEAD of every variant.
  */
 
-const pageTitle = "Kenntnisprüfung Wien 2026: 150 Fragen gratis üben | MedPrüf";
+const pageTitle = "Kenntnisprüfung Wien: 150 Fragen gratis üben | MedPrüf";
 const pageDesc =
-  "150 Fragen kostenlos üben. Vorbereitung auf die Kenntnisprüfung Wien mit 7.566 klinischen MCQs und Erklärungen. Die echte Prüfung arbeitet mit offenen Kurzantwortfragen.";
+  "150 Fragen kostenlos üben. Vorbereitung auf die Kenntnisprüfung Wien mit über 7.500 kuratierten Multiple-Choice-Übungen und Erklärungen. Die echte Prüfung arbeitet mit offenen Kurzantwortfragen.";
 
 export const metadata: Metadata = {
   title: pageTitle,
@@ -32,7 +32,7 @@ export const metadata: Metadata = {
     "Ärztekammer Wien",
     "Approbation Österreich",
     "Nostrifikation",
-    "Kenntnisprüfung 2026",
+    "Kenntnisprüfung Vorbereitung",
     "ausländische Ärzte Österreich",
     "medizinische Lizenz Wien",
   ],
@@ -88,7 +88,7 @@ function buildCourseSchema() {
     "@type": "Course",
     name: "Kenntnisprüfung Wien: Vorbereitung",
     description:
-      "Strukturierte Wissensvorbereitung auf die österreichische Kenntnisprüfung Wien für ausländische Ärzt:innen: 7.566 klinische MCQs mit Erklärungen als Ergänzung zur offiziellen offenen Kurzantwortprüfung.",
+      "Vorbereitung auf die österreichische Kenntnisprüfung Wien mit über 7.500 kuratierten Multiple-Choice-Übungen und Erklärungen als Ergänzung zur offenen Kurzantwortprüfung.",
     provider: {
       "@type": "Organization",
       name: "MedPrüf",

@@ -234,8 +234,8 @@ export default function PricingPage() {
           <span className="mp-caption inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--mp-success-bg)] text-[var(--mp-viridian)] mb-5 normal-case tracking-[0.08em]">
             <Sparkles className="w-3.5 h-3.5" />
             {lang === "de"
-              ? "Kenntnisprüfung Wien, 28. September · Anmeldung bis Ende Juli"
-              : "Kenntnisprüfung Wien, 28 September · register by end of July"}
+              ? "Vorbereitung für Österreichs medizinische Prüfungen"
+              : "Preparation for Austria's medical exams"}
           </span>
           <h2 className="mp-h1 mb-4 leading-[1.05]">
             {lang === "de"
@@ -244,8 +244,8 @@ export default function PricingPage() {
           </h2>
           <p className="mp-body text-[var(--mp-fg-muted)] max-w-2xl mx-auto">
             {lang === "de"
-              ? "Die einzige Prüfungsvorbereitung, speziell für Österreichs Kenntnisprüfung, Stichprobentest und Pharmakologie. Destilliert aus über 10.000 dokumentierten offiziellen Prüfungsfragen: Wien seit 2016, Stichprobentest (Innsbruck) und Pharmakologie."
-              : "The only exam prep built specifically for Austria's Kenntnisprüfung, Stichprobentest & Pharmakologie. Distilled from over 10,000 documented official exam questions: Vienna since 2016, Stichprobentest (Innsbruck) and Pharmakologie."}
+              ? "Prüfungsvorbereitung für Kenntnisprüfung Wien, Stichprobentest und Pharmakologie. Über 10.000 kuratierte Übungsfragen aus unterschiedlichen Quellen. Die Kenntnisprüfung-Bank nutzt Multiple-Choice-Fragen zur Wissensübung; die echte Kenntnisprüfung besteht aus offenen Kurzantwortfragen."
+              : "Preparation for the Kenntnisprüfung Wien, Stichprobentest and Pharmakologie. Over 10,000 curated practice questions from different sources. The Kenntnisprüfung bank uses multiple-choice questions for knowledge practice; the real Kenntnisprüfung uses open short-answer questions."}
           </p>
         </section>
 
@@ -452,8 +452,8 @@ export default function PricingPage() {
             <div className="relative">
               <h3 className="mp-h2 mb-3" style={{ color: "#ffffff" }}>
                 {lang === "de"
-                  ? "Bereit für die Kenntnisprüfung am 28. September?"
-                  : "Ready for the 28 September Kenntnisprüfung?"}
+                  ? "Bereit für deine nächste Prüfung?"
+                  : "Ready for your next exam?"}
               </h3>
               <p className="mp-body max-w-xl mx-auto mb-6" style={{ color: "rgba(255,255,255,0.82)" }}>
                 {lang === "de"
@@ -1128,8 +1128,8 @@ function ReferralBlock({ lang }: { lang: Lang }) {
       </h3>
       <p className="text-sm text-[var(--mp-fg-muted)] mb-5 max-w-2xl leading-relaxed">
         {lang === "de"
-          ? "Du bist wahrscheinlich schon in den richtigen Telegram- oder WhatsApp-Gruppen für den Stichprobentest am 23. September in Graz. Teile dort deinen Empfehlungslink: sobald zwei Kolleginnen oder Kollegen den kostenlosen Pro-Trial starten (Karte hinterlegt, 0 € heute, danach 19 €/Monat, in der Testwoche jederzeit kündbar) und wirklich aktiv lernen, bekommst du MedPrüf Pro kostenlos durch dein Prüfungsfenster."
-          : "You're probably already in the right Telegram or WhatsApp groups for the Stichprobentest on 23 September in Graz. Share your referral link there: once two colleagues start the free Pro trial (card on file, 0 € today, then 19 €/month, cancel anytime during the trial week) and are actively studying, you get MedPrüf Pro free through your exam window."}
+          ? "Nur freigeschaltete Konten können teilnehmen. Teile deinen Empfehlungslink: Sobald zwei Kolleg:innen den Pro-Trial mit Karte starten (0 € heute, danach 19 €/Monat, sofern nicht während der Testwoche gekündigt) und die Aktivitätsbedingungen erfüllen, kannst du Pro bis zu deinem nächsten Prüfungsfenster erhalten."
+          : "Only enabled accounts can participate. Share your referral link: once two colleagues start the card-based Pro trial (0 € today, then 19 €/month unless cancelled during the trial week) and meet the activity requirements, you can receive Pro through your next exam window."}
       </p>
 
       <div className="flex flex-wrap items-center gap-3">
@@ -1257,4 +1257,3 @@ function FAQItem({ q, a }: { q: string; a: string }) {
     </details>
   );
 }
-

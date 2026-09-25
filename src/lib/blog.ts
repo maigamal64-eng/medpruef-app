@@ -57,7 +57,7 @@ export const BLOG_POSTS: BlogPostMeta[] = [
     },
     summary: {
       de: "Die Prüfung läuft auf Deutsch, dein Verständnis darf in deiner Sprache entstehen: Erklärungen in sieben Sprachen (Russisch, Arabisch, Englisch, Französisch, Türkisch, Ukrainisch, Serbisch) zu über 10.000 echten Fragen, plus Oberfläche in fünf Sprachen.",
-      en: "The exam runs in German, but your understanding can grow in your language: explanations in seven languages (Russian, Arabic, English, French, Turkish, Ukrainian, Serbian) across over 10,000 real questions, plus a five-language interface.",
+      en: "The exam runs in German, but your understanding can grow in your language: explanations in seven languages (Russian, Arabic, English, French, Turkish, Ukrainian, Serbian) across over 10,000 curated practice questions, plus a five-language interface.",
     },
     publishedAt: "2026-07-03",
     author: "MedPrüf Editorial",

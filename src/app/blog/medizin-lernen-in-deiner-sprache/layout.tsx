@@ -13,7 +13,7 @@ const post = getPostBySlug(SLUG);
 const pageTitle =
   "Medizin lernen in deiner Sprache: Erklärungen in 7 Sprachen | MedPrüf Blog";
 const pageDesc =
-  "Kenntnisprüfung Wien (28. September 2026) und Stichprobentest (23. September 2026, Graz) laufen auf Deutsch. Verstehen darfst du in deiner Sprache: Erklärungen auf Russisch, Arabisch, Englisch, Französisch, Türkisch, Ukrainisch und Serbisch zu über 10.000 echten Fragen.";
+  "Kenntnisprüfung und Stichprobentest laufen auf Deutsch. Verstehen darfst du in deiner Sprache: mehrsprachige Erklärungen zu über 10.000 kuratierten Übungsfragen. Termine und Fristen variieren nach Prüfungsweg.";
 
 export const metadata: Metadata = {
   title: pageTitle,

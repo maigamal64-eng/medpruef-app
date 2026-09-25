@@ -6,7 +6,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { getLang, setLang } from "@/lib/i18n";
 import { getStoredExamSource, type ExamSourceId } from "@/lib/topics";
-import { QUESTIONS } from "@/lib/content-truth";
 import UpcomingExams from "@/components/UpcomingExams";
 import DeadlineReminder from "@/components/DeadlineReminder";
 
@@ -57,12 +56,8 @@ type Lang = "de" | "en";
    single `.lp-root` scope. The two-tone wordmark SVGs replace the
    old logomark + invert-filter pattern.
 
-   Copy is product-first and recalibrated-honest: confident on the
-   product, every number sourced from content-truth.ts, no metric
-   pinned to a refutable named claim. Currency is "X €" throughout
-   (content-truth voice guardrail). Founder is an engineer, so the
-   credential is the DATA — documented official exams since 2016,
-   never "built by doctors."
+   Customer-facing claims describe curated practice content and clearly
+   distinguish question banks from official exam formats.
    ───────────────────────────────────────────────────────────── */
 const COPY = {
   nav: {
@@ -83,12 +78,9 @@ const COPY = {
       de: "Österreich · Kenntnisprüfung (Arztprüfung) · Stichprobentest (Nostrifizierung) · Pharmakologie",
       en: "Austria · Kenntnisprüfung (Arztprüfung) · Stichprobentest (Nostrifizierung) · Pharmakologie",
     },
-    // Provenance stamp — the unrefutable credential. The corpus is
-    // built from documented official exams; "seit 2016" is sourced,
-    // not a metric pinned to a named customer.
     stamp: {
-      de: "Aus dokumentierten Prüfungen · seit 2016",
-      en: "From documented exams · since 2016",
+      de: "Kuratierte Übungsfragen für Österreichs Prüfungen",
+      en: "Curated practice questions for Austrian exams",
     },
     // Headline re-directed to [name]'s (WO! Studio) signature beat (2026-07-01):
     // "you were never unqualified, only unproven". title_mid is the italic teal
@@ -108,8 +100,8 @@ const COPY = {
     // The lead-with price below and the tertiary CTA both quote 19 €/month.
     // SoT §2 + §9.
     subtitle: {
-      de: "Die einzige Prüfungsvorbereitung, speziell für Österreichs Kenntnisprüfung, Stichprobentest und Pharmakologie. Für beide Anerkennungswege: die Arztprüfung Allgemeinmedizin der Ärztekammer und den Stichprobentest der universitären Nostrifizierung. Destilliert aus 7.566 Wien-Prüfungsfragen seit 2016, 2.742 Fragen aus dem Innsbruck-Curriculum (Stichprobentest) und 335 Pharmakologie. Eine Kenntnisprüfung kostet ~795 € pro Versuch, MedPrüf gibt es ab 19 € im Monat.",
-      en: "The only exam prep built specifically for Austria's Kenntnisprüfung, Stichprobentest and Pharmakologie. For both recognition routes: the Ärztekammer's Arztprüfung Allgemeinmedizin and the Stichprobentest of the university Nostrifizierung. Distilled from 7,566 Vienna exam questions since 2016, 2,742 questions from the Innsbruck curriculum (Stichprobentest) and 335 Pharmakologie. A Kenntnisprüfung re-sit is ~795 €, and MedPrüf starts at 19 € a month.",
+      de: "Vorbereitung auf Österreichs Kenntnisprüfung, Stichprobentest und Pharmakologie, für die Anerkennungswege über Ärztekammer und Universität. MedPrüf bietet über 10.000 kuratierte Übungsfragen. Die Kenntnisprüfung-Fragenbank enthält Multiple-Choice-Übungen; die echte Prüfung verwendet offene Kurzantwort-Fallvignetten. MedPrüf gibt es ab 19 € im Monat.",
+      en: "Preparation for Austria's Kenntnisprüfung, Stichprobentest and Pharmakologie, covering the Ärztekammer and university recognition routes. MedPrüf offers over 10,000 curated practice questions. The Kenntnisprüfung bank contains multiple-choice practice; the real exam uses open short-answer case vignettes. Plans start at €19 per month.",
     },
     cta_primary: { de: "Kostenlos starten", en: "Start free" },
     cta_primary_sub: {
@@ -159,12 +151,9 @@ const COPY = {
   },
   stats: [
     {
-      // Question count sourced live from content-truth.ts SSoT (the same
-      // QUESTIONS.total the progress + curriculum pages use). Prevents the
-      // hero-vs-DB question-count drift caught 2026-06-02.
-      // SOT-REF: medpruef_question_count@DB:medpruef.questions
-      value: QUESTIONS.total.toLocaleString("de-DE"),
-      value_en: QUESTIONS.total.toLocaleString("en-US"),
+      // Use a durable rounded public count to avoid stale snapshots.
+      value: "10.000+",
+      value_en: "10,000+",
       label: { de: "Fragen", en: "Questions" },
       sub: { de: "alle aktiv", en: "all active" },
     },
@@ -307,12 +296,12 @@ const COPY = {
   subjects: {
     eyebrow: { de: "Fachgebiete", en: "Specialties" },
     title: {
-      de: "16 Fachgebiete. Echte Fragen. Nichts erfunden.",
-      en: "16 specialties. Real questions. Nothing invented.",
+      de: "Übungsfragen für drei österreichische Prüfungswege.",
+      en: "Practice questions for three Austrian exam pathways.",
     },
     subtitle: {
-      de: "Jede Frage stammt aus dokumentierten offiziellen Prüfungsmaterialien: Kenntnisprüfung Wien (SIP 4 + SIP 5), Stichprobentest (Fragen aus dem Innsbruck-Curriculum), Pharmakologie.",
-      en: "Every question comes from documented official exam materials: Kenntnisprüfung Wien (SIP 4 + SIP 5), Stichprobentest (questions from the Innsbruck curriculum), Pharmakologie.",
+      de: "Die Fragebanken enthalten kuratierte Übungsfragen aus unterschiedlichen Quellen. Sie sind keine Sammlung offizieller oder geleakter Prüfungsfragen. Die Kenntnisprüfung verwendet offene Kurzantwort-Fallvignetten; unsere Fragenbank dafür besteht aus Multiple-Choice-Übungen.",
+      en: "The banks contain curated practice questions from different sources. They are not a collection of official or leaked exam questions. The Kenntnisprüfung uses open short-answer case vignettes; our bank for it consists of multiple-choice practice questions.",
     },
     items: [
       { icon: HeartPulse, name: { de: "Innere Medizin", en: "Internal Medicine" } },
@@ -391,36 +380,30 @@ const COPY = {
   proof: {
     index: "04 / 04",
     eyebrow: { de: "Inhalt & Qualität", en: "Content & quality" },
-    // Reframed 2026-06-04: the prior "kuratiert von Ärzt:innen für
-    // Ärzt:innen / curated by physicians for physicians" claim is
-    // falsifiable (the founder is an engineer, not a doctor). The
-    // honest, equally strong credential is the SOURCE: every question
-    // traces to a documented official exam. We credit provenance, not
-    // an invented curator.
     title: {
-      de: "Über 10.000 Fragen, jede aus einer dokumentierten Prüfung.",
-      en: "Over 10,000 questions, each from a documented exam.",
+      de: "Über 10.000 kuratierte Übungsfragen.",
+      en: "Over 10,000 curated practice questions.",
     },
     quote: {
-      de: "Nichts erfunden, nichts geraten. Jede Frage ist gegen ihre Quell-Prüfung referenziert: Wien-Tertials, KoalaMed Innsbruck, Rezeptierkunde Pharma.",
-      en: "Nothing invented, nothing guessed. Every question is referenced against its source exam: Vienna tertials, KoalaMed Innsbruck, Rezeptierkunde Pharma.",
+      de: "Die Fragebanken dienen der Vorbereitung. Ihre Quellen und Formate unterscheiden sich je nach Prüfungsweg; sie versprechen keine identischen Prüfungsfragen.",
+      en: "The question banks are for preparation. Their sources and formats differ by exam pathway; they do not promise identical exam questions.",
     },
     breakdown: [
       {
-        n: "7.566",
-        n_en: "7,566",
+        n: "7.500+",
+        n_en: "7,500+",
         label: { de: "Wien", en: "Vienna" },
         sub: { de: "seit 2016", en: "since 2016" },
       },
       {
-        n: "2.742",
-        n_en: "2,742",
+        n: "2.700+",
+        n_en: "2,700+",
         label: { de: "Stichprobentest", en: "Stichprobentest" },
         sub: { de: "Innsbruck-Curriculum", en: "Innsbruck curriculum" },
       },
       {
-        n: "335",
-        n_en: "335",
+        n: "300+",
+        n_en: "300+",
         label: { de: "Pharmakologie", en: "Pharmacology" },
         sub: { de: "Rezeptierkunde", en: "Rezeptierkunde" },
       },
@@ -446,8 +429,8 @@ const COPY = {
     // founder). "Für ausländische Ärzt:innen / for foreign doctors"
     // is true and stays.
     tagline: {
-      de: "Vorbereitung auf österreichische Ärzteprüfungen, für ausländische Ärzt:innen, aus dokumentierten offiziellen Prüfungen.",
-      en: "Austrian medical exam preparation for foreign doctors, built from documented official exams.",
+      de: "Vorbereitung auf österreichische Ärzteprüfungen mit kuratierten Übungsfragen.",
+      en: "Austrian medical exam preparation with curated practice questions.",
     },
     product: { de: "Produkt", en: "Product" },
     legal: { de: "Rechtliches", en: "Legal" },

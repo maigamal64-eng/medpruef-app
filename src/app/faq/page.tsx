@@ -275,8 +275,8 @@ export default function FaqPage() {
                   style={{ userSelect: "none" }}
                 >
                   {lang === "de"
-                    ? "Warum keine Geld-zurück-Garantie?"
-                    : "Why no cash refund?"}
+                    ? "Warum gibt es bei PUYP eine Verlängerung statt Geld zurück?"
+                    : "Why does PUYP extend access instead of refunding?"}
                   <ChevronDown
                     className="w-4 h-4 text-[var(--mp-viridian)] transition-transform group-open:rotate-180"
                     aria-hidden
@@ -551,8 +551,8 @@ const copy = {
       en: "PUYP applies to the Exam Cohort (129 €). The 3-month starter (49 €) and the single-month tier (19 €) don't include the guarantee.",
     },
     noRefund: {
-      de: "Geld-zurück-Garantien laden zu Missbrauch ein und führen häufig dazu, dass Studierende aufgeben, sobald es hart wird. Pass-Until-You-Pass hält dich stattdessen im Spiel: wir investieren in dein Bestehen, nicht in eine Ausstiegsklausel. Wenn du ein sehr persönliches Problem hast (Krankheit, Trauerfall), schreib uns an user-b7e46e80@example.com, wir finden im Einzelfall eine faire Lösung.",
-      en: "Money-back guarantees invite abuse and often push students to quit when the work gets hard. Pass-Until-You-Pass keeps you in the game instead: we invest in your pass, not in an exit clause. If you have a genuine personal situation (illness, bereavement), email user-b7e46e80@example.com and we find a fair solution case by case.",
+      de: "Die PUYP-Verlängerung gilt, wenn du die Bedingungen der Prüfungs-Kohorte erfüllst und beim ersten Versuch nicht bestehst. Sie ist eine zusätzliche Leistung und ersetzt nicht dein Recht, innerhalb von 7 Tagen nach dem Kauf eine Rückerstattung zu beantragen. Nach Ablauf dieser 7 Tage verlängert PUYP den Zugang statt den Kaufpreis zurückzuzahlen.",
+      en: "The PUYP extension applies if you meet the Exam Cohort conditions and do not pass your first attempt. It is an additional benefit and does not replace your right to request a refund within 7 days of purchase. After that 7-day period, PUYP extends access instead of refunding the purchase price.",
     },
   },
   crypto: {
@@ -565,8 +565,8 @@ const copy = {
       en: "You pay securely by card (Visa, Mastercard, Apple Pay too). Checkout runs through Whop, our payment processor. After payment, your full access unlocks automatically, usually within a minute.",
     },
     p2: {
-      de: "Live verfügbar sind die Prüfungs-Kohorte (129 €), der 3-Monats-Einstieg (49 €), der Einzelmonat (19 €) und der kostenlose Tarif. Es ist kein Abo: nichts verlängert sich automatisch, der Zugang läuft nach der gebuchten Laufzeit aus.",
-      en: "Live right now: the Exam Cohort (129 €), the 3-month starter (49 €), the single month (19 €), and the free tier. It is not a subscription: nothing auto-renews, access simply ends when your term is up.",
+      de: "Verfügbar sind die Prüfungs-Kohorte (129 € einmalig für 6 Monate), der 3-Monats-Tarif (49 € pro Quartal) und der Einzelmonat (19 € pro Monat). Der Einzelmonat verlängert sich monatlich und der 3-Monats-Tarif quartalsweise automatisch, sofern du nicht vorher kündigst. Die Prüfungs-Kohorte verlängert sich nicht automatisch. Die kostenlose Version umfasst bis zu 150 Fragen pro Prüfungstyp.",
+      en: "Available plans are the Exam Cohort (129 € once for 6 months), the 3-Month plan (49 € per quarter), and the Single Month plan (19 € per month). The Single Month renews monthly and the 3-Month plan quarterly unless you cancel before renewal. The Exam Cohort does not auto-renew. The free tier includes up to 150 questions per exam type.",
     },
   },
   ref: {
@@ -575,8 +575,8 @@ const copy = {
       en: "How does the referral program work?",
     },
     intro: {
-      de: "Jede:r Nutzer:in bekommt einen persönlichen Empfehlungscode. Lad zwei Kolleginnen oder Kollegen ein, die wirklich mit dir für den Stichprobentest am 23. September in Graz lernen, und sobald beide qualifiziert sind, bekommst du MedPrüf Pro kostenlos durch das Prüfungsfenster. Für dich als Empfehlenden ist das komplett kostenlos:",
-      en: "Every user gets a personal referral code. Invite two colleagues who really start studying with you for the Stichprobentest on 23 September in Graz, and once both qualify you get MedPrüf Pro free through the exam window. Completely free for you as the referrer:",
+      de: "Das Empfehlungsprogramm ist nur für eingeladene und freigeschaltete Konten verfügbar. Wenn du freigeschaltet bist, kannst du zwei Kolleg:innen einladen. Sobald beide die Teilnahmebedingungen erfüllen, erhältst du Pro kostenlos bis zum nächsten Prüfungsfenster. Für dich als Empfehlenden ist das kostenlos:",
+      en: "The referral program is available only to invited, enabled accounts. If you are enabled, you can invite two colleagues. Once both meet the eligibility requirements, you receive Pro free through your next exam window. There is no charge to you as the referrer:",
     },
     b1: {
       de: "Eine Empfehlung qualifiziert sich erst, wenn diese Person den kostenlosen Pro-Trial startet: Karte hinterlegt, 0 € heute, jederzeit in der Testwoche kündbar, danach 19 €/Monat.",
@@ -601,24 +601,24 @@ const copy = {
       en: "What's included in the free tier?",
     },
     intro: {
-      de: "Der kostenlose Tarif gibt dir 150 Fragen pro Prüfungstyp, das sind 450 Fragen insgesamt über Kenntnisprüfung Wien, Stichprobentest (Innsbruck) und Pharmakologie. Es gibt kein Ablaufdatum; du kannst die Fragen in deinem Tempo durcharbeiten.",
-      en: "The free tier gives you 150 questions per exam type, 450 total across Kenntnisprüfung Wien, Stichprobentest (Innsbruck) and Pharmakologie. There's no expiry; you can work through them at your own pace.",
+      de: "Der kostenlose Tarif umfasst bis zu 150 Fragen pro Prüfungstyp, insgesamt bis zu 450 über Kenntnisprüfung Wien, Stichprobentest (Innsbruck) und Pharmakologie. Er läuft nicht ab. Deine gespeicherten Antworten und dein Themenfortschritt werden mit deinem Konto synchronisiert.",
+      en: "The free tier includes up to 150 questions per exam type, up to 450 across Kenntnisprüfung Wien, Stichprobentest (Innsbruck) and Pharmakologie. It does not expire. Your saved answers and topic progress sync with your account.",
     },
     b1: {
-      de: "Klinische Erklärungen, wo vorhanden. Die KI-Erklärung zu jeder Frage ist den bezahlten Tarifen vorbehalten.",
-      en: "Clinical explanations where available. AI explanations for any question are reserved for the paid tiers.",
+      de: "Vorhandene klinische Erklärungen sind enthalten. Eine neue KI-Erklärung oder KI-Chat-Folgefrage kannst du mit einem bezahlten Tarif anfordern; gespeicherte Erklärungen bleiben lesbar.",
+      en: "Existing clinical explanations are included. Requesting a new AI explanation or an AI chat follow-up requires a paid plan; saved explanations remain readable.",
     },
     b2: {
-      de: "Nur Qbank-Modus: keine Spaced Repetition, keine Prüfungssimulation, keine Lesezeichen, keine Notizen.",
-      en: "Qbank-only: no spaced repetition, no mock exam, no bookmarks, no notes.",
+      de: "Weitere Werkzeuge wie Wiederholungsplanung, Prüfungssimulation, Lesezeichen und Notizen können je nach Tarif eingeschränkt sein. Die App zeigt die jeweilige Freischaltung direkt am Werkzeug an.",
+      en: "Additional tools such as spaced repetition, exam simulation, bookmarks and notes may be plan-limited. The app shows the access requirement beside each tool.",
     },
     b3: {
-      de: "Keine geräteübergreifende Synchronisation über die aktuelle Sitzung hinaus.",
-      en: "No cross-device sync beyond your current session.",
+      de: "Offline heruntergeladene Fragen benötigen eine Internetverbindung, um Antworten und Fortschritt mit deinem Konto abzugleichen.",
+      en: "Downloaded offline questions need an internet connection to sync answers and progress with your account.",
     },
     b4: {
-      de: "Keine KI-Chat-Folgefragen (cached AI-Erklärungen sind trotzdem lesbar).",
-      en: "No AI-chat follow-ups (cached AI explanations are still readable).",
+      de: "Neue KI-Erklärungen und KI-Chat-Folgefragen sind bezahlten Tarifen vorbehalten; bereits gespeicherte Erklärungen bleiben lesbar.",
+      en: "New AI explanations and AI chat follow-ups are reserved for paid plans; explanations already saved remain readable.",
     },
     upgrade: {
       de: "Sobald du bereit bist, kannst du jederzeit zur Prüfungs-Kohorte oder zu einem der Standardtarife upgraden, dein Fortschritt und deine Antworten bleiben erhalten.",
@@ -645,8 +645,8 @@ const copy = {
       en: "Who builds MedPrüf?",
     },
     p1: {
-      de: "MedPrüf wird von [name] ([name], Österreich) entwickelt, einem Solo-Engineer, der seinen Cousin durch die österreichische Nostrifikation begleitet und dabei gesehen hat, wo öffentlich verfügbare Ressourcen versagen: verstreute Karteikarten, veraltete PDFs, keine österreichspezifische Abdeckung, keine Spaced Repetition. Jede Frage in MedPrüf stammt aus einer dokumentierten offiziellen Prüfung (7.566 aus Wien seit 2016, 2.742 aus Innsbruck, 335 aus Pharmakologie), nichts erfunden, nichts geraten. Die Daten sind die Glaubwürdigkeit.",
-      en: "MedPrüf is built by [name] ([name], Austria), a solo engineer who walked his cousin through Austrian nostrification and saw where the publicly available resources fall short: scattered flashcards, outdated PDFs, no Austria-specific coverage, no spaced repetition. Every question in MedPrüf comes from a documented official exam (7,566 from Vienna since 2016, 2,742 from Innsbruck, 335 from Pharmakologie), nothing invented, nothing guessed. The data is the credential.",
+      de: "MedPrüf wird von [name] ([name], Österreich) entwickelt. Die drei Fragenbanken haben unterschiedliche Quellen und Formate: Die Kenntnisprüfung-Bank enthält Anki-basierte Multiple-Choice-Übungsfragen, die Stichprobentest-Bank curriculum-basierte Übungsfragen, und die Pharmakologie-Bank Lernfragen zur Pharmakologie und Rezeptierkunde. Sie sind keine offiziellen oder rekonstruierten Prüfungsfragen. Die reale Kenntnisprüfung verwendet offene Kurzantwortfragen.",
+      en: "MedPrüf is built by [name] ([name], Austria). The three question banks use different sources and formats: the Kenntnisprüfung bank contains Anki-based multiple-choice practice questions, the Stichprobentest bank contains curriculum-based practice questions, and the Pharmakologie bank contains pharmacology and prescribing study questions. They are not official or reconstructed exam questions. The real Kenntnisprüfung uses open short-answer questions.",
     },
   },
 };

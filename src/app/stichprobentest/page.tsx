@@ -12,7 +12,7 @@ import ExamLandingShell, {
  * slug stays /stichprobentest (route + content-provenance anchor:
  * "Nostrifizierung Innsbruck"); only the display copy changed.
  *
- * Content numbers (live DB count 2026-06-24): 2,785 questions across
+ * Content numbers use a durable rounded count to avoid stale snapshots.
  * 12 specialties. Source: 17 KoalaMed PDFs distilled from the MedUni
  * Innsbruck clinical curriculum (`scripts/import_koalamed.py`).
  * KoalaMed is a third-party aggregator; we imported from those
@@ -40,8 +40,8 @@ const content: ExamLandingContent = {
     en: "Pass the Stichprobentest on your first try.",
   },
   heroSubtitle: {
-    de: "Strukturierte Vorbereitung auf den nationalen Stichprobentest der Nostrifizierung. 2.785 Fragen aus 12 Fachgebieten, klinisch kommentiert und kuratiert. Keine offiziellen und keine rekonstruierten Prüfungsfragen, sondern echtes Verständnis.",
-    en: "Structured prep for the national Stichprobentest of the nostrification process. 2,785 questions across 12 specialties, clinically annotated and curated. Not official exam items and not recalled ones, real understanding.",
+    de: "Strukturierte Vorbereitung auf den nationalen Stichprobentest der Nostrifizierung. Über 2.700 kuratierte klinische Übungsfragen. Keine offiziellen oder erinnerten Prüfungsfragen.",
+    en: "Structured preparation for Austria's national Stichprobentest. Over 2,700 curated clinical practice questions. These are not official or recalled exam items.",
   },
   primaryCtaHref: "/quiz?exam=kmp_innsbruck&free=1",
   primaryCtaLabel: {
@@ -60,18 +60,18 @@ const content: ExamLandingContent = {
   breakdown: [
     {
       label: { de: "Fragen", en: "Questions" },
-      value: "2.785",
+      value: "2.700+",
       sub: {
-        de: "Aus 17 Curriculum-PDFs strukturiert",
-        en: "Structured from 17 curriculum PDFs",
+        de: "Kuratierte klinische Übungen",
+        en: "Curated clinical practice",
       },
     },
     {
       label: { de: "Fachgebiete", en: "Specialties" },
       value: "12",
       sub: {
-        de: "Klinische Breite des Innsbruck-Curriculums",
-        en: "Clinical breadth of the Innsbruck curriculum",
+        de: "Fragenbank-Kategorien, nicht Prüfungsformat",
+        en: "Bank categories, not exam format",
       },
     },
     {
@@ -140,8 +140,8 @@ const content: ExamLandingContent = {
         en: "Why do MedPrüf questions differ between the Stichprobentest and the Vienna Kenntnisprüfung?",
       },
       a: {
-        de: "Es sind zwei verschiedene Anerkennungswege. Die Kenntnisprüfung Wien ist die Arztprüfung der Österreichischen Ärztekammer (geprüft als SIP 4 + SIP 5). Der Stichprobentest gehört zum Universitäts-Nostrifizierungsweg. Wir halten die Fragenbanken deswegen getrennt: wählst du „Stichprobentest (Innsbruck)\" als Prüfungstyp, siehst du die 2.785 Fragen, die wir für diesen Prüfungsweg strukturiert haben. Die Kenntnisprüfung-Wien-Bank (7.566 Fragen) bleibt für dich sichtbar, wenn du den Prüfungstyp wechselst.",
-        en: "They are two different recognition routes. The Vienna Kenntnisprüfung is the Austrian Medical Chamber's Arztprüfung (tested as SIP 4 + SIP 5). The Stichprobentest belongs to the university nostrification route. We keep the question banks separate: pick \"Stichprobentest\" as your exam type and you see the 2,785 questions we structured for this recognition route. The Vienna Kenntnisprüfung bank (7,566 questions) stays available if you switch exam type.",
+        de: "Es sind zwei verschiedene Anerkennungswege. Die Kenntnisprüfung Wien ist die Arztprüfung der Österreichischen Ärztekammer. Der Stichprobentest gehört zum Universitäts-Nostrifizierungsweg. Wir halten die Fragenbanken getrennt: Wählst du „Stichprobentest“ als Prüfungstyp, siehst du über 2.700 kuratierte Übungsfragen für diesen Weg.",
+        en: "They are two different recognition routes. The Vienna Kenntnisprüfung is the Austrian Medical Chamber's Arztprüfung, while the Stichprobentest belongs to the university nostrification route. We keep the question banks separate. Choose \"Stichprobentest\" as your exam type to see over 2,700 curated practice questions for this pathway.",
       },
     },
     {

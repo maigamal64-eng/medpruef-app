@@ -107,9 +107,12 @@ export default function ChangelogPage() {
             </h2>
             <p className="text-sm text-[var(--mp-fg-subtle)]">
               {lang === "de"
-                ? "Wir arbeiten ständig daran, MedPrüf zu verbessern. Hier sind alle Updates."
-                : "We're constantly working to improve MedPrüf. Here are all the updates."}
+                ? "Ein datiertes Änderungsarchiv. Einträge beschreiben den damaligen Stand und können inzwischen überholt sein. Aktuelle Preise und verfügbare Angebote findest du unter Preise."
+                : "A dated change archive. Entries describe what applied at the time and may have been superseded. Check Pricing for current prices and available plans."}
             </p>
+            <Link href="/pricing" className="inline-flex mt-3 text-sm text-[var(--mp-viridian)] hover:underline">
+              {lang === "de" ? "Aktuelle Preise ansehen" : "See current pricing"}
+            </Link>
           </div>
 
           {/* Timeline */}

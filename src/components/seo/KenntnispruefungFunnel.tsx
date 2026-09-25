@@ -52,7 +52,7 @@ const COPY = {
     { de: "Sofortiger Zugang", en: "Instant access" },
   ],
   stats: [
-    ["7.566", { de: "klinische Fragen", en: "clinical questions" }],
+    ["7.500+", { de: "kuratierte Übungsfragen", en: "curated practice questions" }],
     ["10", { de: "Fachgebiete", en: "specialties" }],
     ["7+", { de: "Sprachen", en: "languages" }],
     ["24/7", { de: "verfügbar", en: "available" }],
@@ -109,8 +109,8 @@ const COPY = {
         en: "Questions that match the Vienna exam",
       },
       detail: {
-        de: "7.566 klinische MCQs aus den 10 prüfungsrelevanten Fachgebieten — nicht irgendein Medizin-Allgemein-Pool.",
-        en: "7,566 clinical MCQs across the 10 exam-relevant specialties — not a generic medicine pool.",
+        de: "Über 7.500 kuratierte Multiple-Choice-Übungen als Ergänzung zum offenen Kurzantwortformat der Prüfung.",
+        en: "Over 7,500 curated multiple-choice exercises to supplement the exam's open short-answer format.",
       },
     },
     {

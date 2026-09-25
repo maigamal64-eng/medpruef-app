@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { getLang, setLang } from "@/lib/i18n";
-import { QUESTIONS } from "@/lib/content-truth";
 import DocLayout from "@/components/DocLayout";
 import {
   FileText,
@@ -12,8 +11,6 @@ import {
   Globe,
   Smartphone,
   Send,
-  Share2,
-  Camera,
   Check,
 } from "lucide-react";
 
@@ -40,13 +37,13 @@ export default function AboutPage() {
       compactTitle={lang === "de" ? "Über" : "About"}
       lede={
         lang === "de"
-          ? "Deine Lernplattform für die österreichische Kenntnisprüfung."
-          : "Your learning platform for the Austrian Kenntnisprüfung."
+          ? "Deine Lernplattform für österreichische Ärzteprüfungen."
+          : "Your learning platform for Austrian medical exams."
       }
-      lastUpdated={lang === "de" ? "Juni 2026" : "June 2026"}
+      lastUpdated={lang === "de" ? "25. September 2026" : "25 September 2026"}
       backHref="/"
     >
-      {/* Brand mark + seal — decorative, stays before the first TOC section */}
+      {/* Brand marks */}
       <div className="flex flex-col items-center gap-4 py-2 mb-4 not-prose">
         <div className="w-20 h-20 rounded-2xl border border-[var(--mp-viridian)]/30 bg-[var(--mp-viridian)]/10 flex items-center justify-center">
           <img
@@ -60,23 +57,14 @@ export default function AboutPage() {
           alt="MedPrüf"
           className="h-10"
         />
-        <img
-          src="/brand/seal.png"
-          alt="MedPrüf Official Seal"
-          className="w-28 mt-2"
-        />
       </div>
 
       <section>
         <h2>{lang === "de" ? "Was ist MedPrüf?" : "What is MedPrüf?"}</h2>
         <p>
           {lang === "de"
-            ? `MedPrüf ist eine spezialisierte Lernplattform für ausländische Ärztinnen und Ärzte, die sich auf die österreichischen Ärzteprüfungen vorbereiten: Kenntnisprüfung Wien, Stichprobentest (Innsbruck) und Pharmakologie. Mit ${QUESTIONS.total.toLocaleString(
-                "de-DE",
-              )} Übungsfragen aus 16 Fachgebieten helfen wir dir, die Prüfung erfolgreich zu bestehen.`
-            : `MedPrüf is a specialized learning platform for foreign doctors preparing for the Austrian medical exams: Kenntnisprüfung Wien, Stichprobentest (Innsbruck) and Pharmakologie. With ${QUESTIONS.total.toLocaleString(
-                "en-US",
-              )} practice questions across 16 specialties, we help you pass the exam successfully.`}
+            ? "MedPrüf ist eine Lernplattform für Ärztinnen und Ärzte, die sich auf österreichische Prüfungswege vorbereiten: Kenntnisprüfung, Stichprobentest und Pharmakologie. Die Plattform bietet über 10.000 kuratierte Übungsfragen. Die Fragebanken sind Lernmaterial und bilden das jeweilige Prüfungsformat nicht in jedem Fall ab."
+            : "MedPrüf is a learning platform for doctors preparing for Austrian exam pathways: the Kenntnisprüfung, Stichprobentest and Pharmakologie. The platform offers over 10,000 curated practice questions. The question banks are study materials and do not necessarily reproduce each exam's format."}
         </p>
       </section>
 
@@ -118,20 +106,20 @@ export default function AboutPage() {
         <div className="not-prose grid grid-cols-2 gap-3 mt-4">
           {[
             {
-              label: lang === "de" ? "Fragen gesamt" : "Total questions",
-              value: "250",
+              label: lang === "de" ? "Fallvignetten (ca.)" : "Case vignettes (approx.)",
+              value: "24–26",
             },
             {
               label: lang === "de" ? "Bestehensschwelle" : "Pass threshold",
-              value: "60%",
+              value: lang === "de" ? "abhängig, mind. 51 %" : "cohort-based, min. 51%",
             },
             {
               label: lang === "de" ? "Prüfungsdauer" : "Exam duration",
               value: "4h",
             },
             {
-              label: lang === "de" ? "Fachgebiete" : "Specialties",
-              value: "10",
+              label: lang === "de" ? "Problemorientierte Themen" : "Problem-based categories",
+              value: "16",
             },
           ].map((stat) => (
             <div
@@ -147,6 +135,11 @@ export default function AboutPage() {
             </div>
           ))}
         </div>
+        <p className="text-sm text-[var(--mp-fg-muted)] mt-3">
+          {lang === "de"
+            ? "Die Prüfung umfasst ungefähr 24–26 offene Kurzantwort-Fallvignetten. Die Bestehensgrenze hängt vom Durchschnitt des Prüfungstermins ab (90 % davon, mindestens 51 %). MedPrüfs Kenntnisprüfung-Fragenbank enthält Multiple-Choice-Übungsfragen und bildet das offene Prüfungsformat nicht nach."
+            : "The exam has approximately 24–26 open short-answer case vignettes. The pass threshold depends on the sitting's average (90% of that average, with a 51% minimum). MedPrüf's Kenntnisprüfung bank contains multiple-choice practice and does not reproduce the open-answer exam format."}
+        </p>
       </section>
 
       <section>
@@ -157,8 +150,8 @@ export default function AboutPage() {
               icon: <FileText className="w-4 h-4 text-white" />,
               label:
                 lang === "de"
-                  ? `${QUESTIONS.total.toLocaleString("de-DE")} Übungsfragen`
-                  : `${QUESTIONS.total.toLocaleString("en-US")} Practice Questions`,
+                  ? "10.000+ kuratierte Übungsfragen"
+                  : "10,000+ curated practice questions",
             },
             {
               icon: <GraduationCap className="w-4 h-4 text-white" />,
@@ -224,40 +217,6 @@ export default function AboutPage() {
         </div>
       </section>
 
-      <section>
-        <h2>{lang === "de" ? "Social Media" : "Social Media"}</h2>
-        <div className="not-prose flex flex-wrap gap-2 mt-2">
-          {[
-            {
-              icon: <Smartphone className="w-4 h-4" />,
-              label: "Telegram Bot",
-              href: "#",
-            },
-            {
-              icon: <Share2 className="w-4 h-4" />,
-              label: "Twitter / X",
-              href: "#",
-            },
-            {
-              icon: <Camera className="w-4 h-4" />,
-              label: "Instagram",
-              href: "#",
-            },
-          ].map((s) => (
-            <a
-              key={s.label}
-              href={s.href}
-              className="flex items-center gap-2 px-3 py-2 bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)] rounded text-sm text-[var(--mp-fg-subtle)] cursor-pointer"
-            >
-              {s.icon}
-              <span>{s.label}</span>
-              <span className="text-[9px] bg-[var(--mp-status-warning)]/10 text-[var(--mp-status-warning)] px-1 rounded border border-[var(--mp-status-warning)]/20">
-                {lang === "de" ? "Bald" : "Soon"}
-              </span>
-            </a>
-          ))}
-        </div>
-      </section>
     </DocLayout>
   );
 }

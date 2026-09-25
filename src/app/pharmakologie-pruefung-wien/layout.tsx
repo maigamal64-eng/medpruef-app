@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { getNextExamDate } from "@/lib/exam-dates";
 
 /**
  * /pharmakologie-pruefung-wien — SEO landing page for the
@@ -9,17 +8,14 @@ import { getNextExamDate } from "@/lib/exam-dates";
  *   "Pharmakologie Ergänzungsprüfung"
  *
  * Content: 335 questions, single topic "Pharmakologie" per
- * NOTES.md §Content. Pharma has NO fixed exam date (it is term-based,
- * tied to MedUni nostrification semester exam weeks) — so we never
- * fabricate a Pharma countdown. The Course startDate below anchors to
- * the next Kenntnisprüfung Wien sitting (the in-market cohort window
- * the page copy points buyers to), computed at runtime so it ages out.
+ * NOTES.md §Content. Pharma has no fixed annual exam date. Do not
+ * borrow dates from other exam types in its metadata or course schema.
  */
 
 const pageTitle =
-  "Pharmakologie Prüfung Wien 2026: Vorbereitung mit 335 Fragen | MedPrüf";
+  "Pharmakologie Prüfung Wien: Vorbereitung | MedPrüf";
 const pageDesc =
-  "Vorbereitung auf die Pharmakologie- und Rezeptierkunde-Prüfung (Wien). 335 Fragen mit klinischen Begründungen, Guideline-Referenzen und Pass-Until-You-Pass-Garantie. Kenntnisprüfung Wien am 28. September 2026.";
+  "Vorbereitung auf Pharmakologie und Rezeptierkunde mit kuratierten klinischen Übungsfragen. Prüfungstermine hängen von deiner Universität und deinem Studienplan ab.";
 
 export const metadata: Metadata = {
   title: pageTitle,
@@ -28,7 +24,7 @@ export const metadata: Metadata = {
     "Pharmakologie Prüfung Wien",
     "Rezeptierkunde",
     "Pharmakologie Ergänzungsprüfung",
-    "Pharmakologie 2026",
+    "Pharmakologie Vorbereitung",
     "Prüfungs-Kohorte",
     "Pharmakologie Vorbereitung",
     "Approbation Pharmakologie",
@@ -53,11 +49,6 @@ export const metadata: Metadata = {
 };
 
 function buildCourseSchema() {
-  // Pharma has no fixed sitting; anchor the course instance to the next
-  // Kenntnisprüfung Wien window (computed at runtime, ages out). Omit
-  // startDate entirely if no future Wien sitting is published rather
-  // than emit a stale or fabricated date.
-  const cohortStart = getNextExamDate("kenntnispruefung");
   const courseInstance: Record<string, unknown> = {
     "@type": "CourseInstance",
     courseMode: "online",
@@ -71,14 +62,13 @@ function buildCourseSchema() {
       },
     },
   };
-  if (cohortStart) courseInstance.startDate = cohortStart;
 
   return {
     "@context": "https://schema.org",
     "@type": "Course",
     name: "Pharmakologie-Prüfung Wien: Vorbereitung",
     description:
-      "Strukturierte Vorbereitung auf die Pharmakologie- und Rezeptierkunde-Prüfung (Wien): 335 Fragen mit klinischen Begründungen, Dosierungen und Guideline-Referenzen.",
+      "Vorbereitung auf Pharmakologie und Rezeptierkunde mit kuratierten klinischen Übungsfragen. Termine variieren je nach Universität und Studienplan.",
     provider: {
       "@type": "Organization",
       name: "MedPrüf",
@@ -101,7 +91,7 @@ function buildCourseSchema() {
       priceCurrency: "EUR",
       availability: "https://schema.org/InStock",
       description:
-        "Free tier: 150 questions. Exam Cohort with Pass-Until-You-Pass available from /pricing.",
+        "Free tier: 150 questions. Exam Cohort: €129 one-time for six months. See /pricing for current plans.",
     },
   };
 }

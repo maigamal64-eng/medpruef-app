@@ -310,7 +310,7 @@ const translations = {
   'privacy': { de: 'Datenschutz', en: 'Privacy' },
   'shortcut_guide': { de: 'Tastenkürzel', en: 'Keyboard Shortcuts' },
   'press_to_close': { de: 'Drücke Esc zum Schließen', en: 'Press Esc to close' },
-  'cookie_banner': { de: 'Wir nutzen anonyme Analysen, um MedPrüf in der Beta zu verbessern. Du kannst jederzeit ablehnen.', en: 'We use anonymous analytics to improve MedPrüf during beta. You can decline anytime.' },
+  'cookie_banner': { de: 'Wir verwenden Analyse-Dienste, um MedPrüf in der Beta zu verbessern. Sie sind standardmäßig aktiv. Du kannst jederzeit ablehnen.', en: 'We use analytics services to improve MedPrüf during beta. They are active by default. You can decline anytime.' },
 
   // KAF recall-first training mode (the real Kenntnisprüfung asks open questions)
   'kaf_toggle': { de: 'KAF-Modus', en: 'KAF mode' },
@@ -491,7 +491,7 @@ const translations = {
   'whatsnew_search_body': { de: 'Drücke Cmd+K (Mac) oder Strg+K (Windows), um sofort die Volltextsuche über mehr als 10.000 Fragen zu öffnen, ohne Mausklick, von jeder Seite aus.', en: 'Press Cmd+K (Mac) or Ctrl+K (Windows) to open full-text search across more than 10,000 questions instantly, no mouse click, from any page.' },
   'whatsnew_translations_title': { de: 'Erklärungen in 7 Sprachen', en: 'Explanations in 7 languages' },
   'whatsnew_translations_body': { de: 'Du kannst jede Erklärung jetzt auf Russisch, Arabisch, Englisch, Französisch, Türkisch, Ukrainisch oder Serbisch lesen. Medizinische Fachbegriffe, Medikamentennamen und Leitlinien-Bezüge bleiben dabei erhalten.', en: 'You can now read any explanation in Russian, Arabic, English, French, Turkish, Ukrainian, or Serbian. Medical terminology, drug names, and guideline references stay intact.' },
-  'whatsnew_kmp_title': { de: 'Stichprobentest (Innsbruck): 2.742 neue Fragen', en: 'Stichprobentest (Innsbruck): 2,742 new questions' },
+  'whatsnew_kmp_title': { de: 'Stichprobentest: über 2.700 Fragen', en: 'Stichprobentest: over 2,700 questions' },
   'whatsnew_kmp_body': { de: 'Der nationale Stichprobentest (Nostrifizierung) ist jetzt verfügbar, mit Fragen aus dem klinischen Curriculum der Med Uni Innsbruck. Wechsle die Prüfung über die Seitenleiste.', en: 'The national Stichprobentest (nostrification screening) is now available, with questions from the Med Uni Innsbruck clinical curriculum. Switch exams from the sidebar.' },
   'whatsnew_pharma_title': { de: 'Pharmakologie-Prüfung: 335 Fragen', en: 'Pharmacology exam: 335 questions' },
   'whatsnew_pharma_body': { de: 'Kurzantworten zur Pharmakologie für die Rezeptierkunde-Vorbereitung.', en: 'Short-answer pharmacology questions for Rezeptierkunde preparation.' },
