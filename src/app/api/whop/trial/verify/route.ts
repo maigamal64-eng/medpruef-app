@@ -67,7 +67,6 @@ function parseMembership(m: unknown): Membership {
     d.expires_at ??
     d.valid_until ??
     d.current_period_end ??
-    d.renewal_period_start ??
     null;
   let periodEnd: number | null = null;
   if (typeof endRaw === "number" && Number.isFinite(endRaw)) {
