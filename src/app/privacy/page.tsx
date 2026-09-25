@@ -431,30 +431,13 @@ export default function PrivacyPage() {
         </h2>
         <p>
           {t
-            ? "Einige unserer Auftragsverarbeiter haben ihren Hauptsitz außerhalb des Europäischen Wirtschaftsraums (EWR), insbesondere in den USA (OpenAI, Anthropic, Vercel, Google, Microsoft, Sentry), in den Vereinigten Arabischen Emiraten (Telegram) und in Indien (Zoho). Wir übermitteln personenbezogene Daten in diese Drittländer nur auf Grundlage geeigneter Garantien:"
-            : "Some of our processors are headquartered outside the European Economic Area (EEA), in particular in the USA (OpenAI, Anthropic, Vercel, Google, Microsoft, Sentry), in the United Arab Emirates (Telegram), and in India (Zoho). We transfer personal data to these third countries only on the basis of appropriate safeguards:"}
+            ? "Whop unterstützt unseren Checkout. Einige Anbieter, die MedPrüf unterstützen, können Daten außerhalb des EWR verarbeiten oder darauf zugreifen. Die genauen Empfänger, Verarbeitungsorte und vertraglichen Übermittlungsmaßnahmen werden derzeit überprüft."
+            : "Whop supports our checkout. Some providers that support MedPrüf may process or access data outside the EEA. The exact recipients, processing locations, and contractual transfer measures are being reviewed."}
         </p>
-        <ul>
-          <li>
-            {t
-              ? "Für US-Anbieter: EU-US Data Privacy Framework (DPF) soweit zertifiziert, ergänzend Standardvertragsklauseln (SCCs) der EU-Kommission gem. Art. 46 Abs. 2 lit. c DSGVO."
-              : "For US providers: EU-US Data Privacy Framework (DPF) where certified, supplemented by Standard Contractual Clauses (SCCs) issued by the EU Commission pursuant to Art. 46(2)(c) GDPR."}
-          </li>
-          <li>
-            {t
-              ? "Für Telegram und Zoho: Standardvertragsklauseln (SCCs) und technische Schutzmaßnahmen (Transportverschlüsselung, Datenminimierung)."
-              : "For Telegram and Zoho: Standard Contractual Clauses (SCCs) and technical safeguards (transport encryption, data minimization)."}
-          </li>
-          <li>
-            {t
-              ? "Bei allen KI-Anbietern (OpenAI, Anthropic): Deaktivierung des Modelltrainings über API-Eingaben vertraglich zugesichert."
-              : "For all AI providers (OpenAI, Anthropic): model training on API inputs is contractually disabled."}
-          </li>
-        </ul>
         <p>
           {t
-            ? "Eine Kopie der SCCs stellen wir Ihnen auf Anfrage an user-ad61df73@example.com zur Verfügung."
-            : "A copy of the SCCs will be provided on request to user-ad61df73@example.com."}
+            ? "Wir ergänzen diese Angaben, sobald die aktuellen Anbieter- und Vertragsunterlagen geprüft sind. Für Fragen zu einer Übermittlung kontaktieren Sie user-ad61df73@example.com."
+            : "We will update these details after reviewing current provider and contract records. For questions about a transfer, contact user-ad61df73@example.com."}
         </p>
       </section>
 

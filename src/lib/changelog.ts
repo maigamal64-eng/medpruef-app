@@ -190,24 +190,24 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-07-11",
     tag: "improvement",
     title: {
-      de: "Empfehlungen zählen jetzt erst nach dem kostenlosen Pro-Trial",
-      en: "Referrals now count only after the free Pro trial",
+      de: "Für freigeschaltete Konten: Empfehlungen zählen nach dem Pro-Trial",
+      en: "For eligible accounts: referrals count after the Pro trial",
     },
     description: {
-      de: "Damit eine Empfehlung zählt, muss die eingeladene Person zusätzlich zum aktiven Üben jetzt auch den kostenlosen Pro-Trial starten: Karte hinterlegt, 0 € heute, jederzeit in der Testwoche kündbar, danach 19 €/Monat. Für dich als Empfehlenden bleibt alles kostenlos.",
-      en: "For a referral to count, the invited person must now also start the free Pro trial in addition to actively practising: card on file, 0 € today, cancel anytime during the trial week, then 19 €/month. Still completely free for you as the referrer.",
+      de: "Damit eine Empfehlung zählt, muss die eingeladene Person zusätzlich zum aktiven Üben den Pro-Trial starten: Karte hinterlegt, 0 € heute, jederzeit in der Testwoche kündbar, danach 19 €/Monat. Das Empfehlungsprogramm ist nur für ausgewählte Konten freigeschaltet.",
+      en: "For a referral to count, the invited person must start the Pro trial as well as actively practise: card on file, 0 € today, cancel anytime during the trial week, then 19 €/month. The referral program is enabled only for selected accounts.",
     },
   },
   {
     date: "2026-07-11",
     tag: "feature",
     title: {
-      de: "Lad zwei Kolleg:innen ein, bekomm Pro kostenlos durchs Prüfungsfenster",
-      en: "Invite two colleagues, get Pro free through the exam window",
+      de: "Empfehlungs-Bonus für ausgewählte Konten",
+      en: "Referral reward for selected accounts",
     },
     description: {
-      de: "Lad zwei Kolleginnen oder Kollegen ein, die wirklich mit dir lernen. Sobald beide den kostenlosen Pro-Trial starten (Karte hinterlegt, 0 € heute, danach 19 €/Monat) und aktiv üben, bekommst du MedPrüf Pro kostenlos durch dein Prüfungsfenster.",
-      en: "Invite two colleagues who really study with you. Once both start the free Pro trial (card on file, 0 € today, then 19 €/month) and are actively practising, you get MedPrüf Pro free through your exam window.",
+      de: "Wenn dein Konto für das Empfehlungsprogramm freigeschaltet ist, kannst du Kolleginnen und Kollegen einladen. Wenn zwei Einladungen die Teilnahmebedingungen erfüllen, erhältst du MedPrüf Pro kostenlos durch dein Prüfungsfenster. Das Programm ist nicht für alle Konten verfügbar.",
+      en: "If your account is enabled for the referral program, you can invite colleagues. When two referrals meet the participation requirements, you receive MedPrüf Pro free through your exam window. The program is not available to every account.",
     },
   },
   {
@@ -272,14 +272,14 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   {
     date: "2026-07-04",
-    tag: "improvement",
+    tag: "admin",
     title: {
-      de: "Gratis-Woche Pro: jetzt ohne Karte",
-      en: "Free Pro week: now without a card",
+      de: "Archiv: frühere Pro-Testwoche ohne Karte",
+      en: "Archive: previous no-card Pro trial",
     },
     description: {
-      de: "Die 7-tägige Pro-Testwoche braucht jetzt keine Kreditkarte und kein Telegram mehr. Ein Klick, sofort aktiv, kein Abo, sie endet einfach von selbst. Bezahlte Tarife laufen weiterhin über die sichere Kartenzahlung.",
-      en: "The 7-day Pro trial no longer needs a credit card or Telegram. One tap, active instantly, no subscription, it simply ends on its own. Paid plans still run through secure card checkout.",
+      de: "Diese frühere Testwoche ist beendet und kein aktuelles Angebot. Die heutigen Testbedingungen findest du auf der Preisseite.",
+      en: "This previous trial has ended and is not a current offer. See the pricing page for current trial terms.",
     },
   },
   {
@@ -638,8 +638,8 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "Exam renamed: \"KMP Innsbruck\" is now \"Stichprobentest (Innsbruck)\"",
     },
     description: {
-      de: "Wir haben den Prüfungstyp, der bisher „KMP Innsbruck\" hieß, in „Stichprobentest (Innsbruck)\" umbenannt. Das ist der Name, unter dem ausländische Ärzt:innen diese Prüfung tatsächlich kennen: der nationale Stichprobentest im Rahmen der Nostrifizierung an einer Medizinuniversität. „KMP\" (Kumulative Modulprüfung) bezeichnet eigentlich eine interne Semesterprüfung der Med Uni Innsbruck für reguläre Studierende, nicht diese Anerkennungsprüfung, deshalb die Korrektur. Deine Fragen, dein Fortschritt und der freie Zugang bleiben unverändert; nur die Bezeichnung ist jetzt korrekt. Unsere 3.091 Fragen sind weiterhin aus dem klinischen Curriculum der Med Uni Innsbruck destilliert.",
-      en: "We renamed the exam type formerly called \"KMP Innsbruck\" to \"Stichprobentest (Innsbruck)\". That is the name foreign doctors actually know it by: the national Stichprobentest within university nostrification. \"KMP\" (Kumulative Modulprüfung) is in fact Med Uni Innsbruck's internal end-of-semester exam for regular students, not this recognition test, hence the correction. Your questions, your progress and the free tier are unchanged; only the label is now accurate. Our 3,091 questions are still distilled from the Med Uni Innsbruck clinical curriculum.",
+      de: "Der frühere Anzeigename wurde zu „Stichprobentest (Innsbruck)“ geändert, damit der Lernbereich den Nostrifizierungsweg klarer bezeichnet. Der Fragenpool bietet Übung auf Grundlage des klinischen Curriculums der Med Uni Innsbruck. Fragen, Fortschritt und Zugang blieben bei der Umbenennung unverändert.",
+      en: "The previous display name changed to “Stichprobentest (Innsbruck)” to make the nostrification pathway clearer. The question bank provides practice based on the Med Uni Innsbruck clinical curriculum. Questions, progress and access were unchanged by the rename.",
     },
   },
   {
@@ -1991,3 +1991,9 @@ export const CHANGELOG: ChangelogEntry[] = [
     },
   },
 ];
+
+export function getPublicChangelogEntries(
+  entries: ChangelogEntry[] = CHANGELOG,
+): ChangelogEntry[] {
+  return entries.filter((entry) => entry.tag !== "admin");
+}

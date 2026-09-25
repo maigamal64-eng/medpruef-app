@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getLang, setLang } from "@/lib/i18n";
 import { getStoredSession } from "@/lib/auth";
-import { CHANGELOG, type ChangelogEntry, type ChangelogTag } from "@/lib/changelog";
+import { getPublicChangelogEntries, type ChangelogEntry, type ChangelogTag } from "@/lib/changelog";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import { AppLayout } from "@/components/ui";
@@ -65,8 +65,8 @@ export default function ChangelogPage() {
     setLangState(l);
   };
 
-  // Filter out admin-only entries for user changelog
-  const userEntries = CHANGELOG.filter((e) => e.tag !== "admin");
+  // Keep admin-only operational changes out of the customer-facing history.
+  const userEntries = getPublicChangelogEntries();
 
   // Group by date
   const grouped: Record<string, ChangelogEntry[]> = {};

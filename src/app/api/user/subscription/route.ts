@@ -26,7 +26,7 @@ export const dynamic = "force-dynamic";
  *       tier_human_name_de: string,
  *       status: string,
  *       started_at: string,
- *       expires_at: string,
+ *       expires_at: string | null,    // null if there is no expiry
  *       days_remaining: number | null,   // null if no expiry
  *       is_first_month_trial: boolean,   // true only when provider data verifies a trial
  *       is_starter_3mo_trial: boolean,   // true only when provider data verifies this tier
