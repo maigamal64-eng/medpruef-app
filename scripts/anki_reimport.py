@@ -1229,6 +1229,8 @@ def db_bulk_upsert(all_rows: list):
 
     Returns (n_matched_ids_set, n_upserted).
     """
+    from importers.visual_guard import quarantine_missing_visual
+
     CHUNK = 100
     upsert_headers = {
         **HEADERS,
@@ -1244,7 +1246,7 @@ def db_bulk_upsert(all_rows: list):
         r = http_with_retry(
             "POST",
             f"{SUPABASE_URL}/rest/v1/questions?on_conflict=anki_note_id",
-            json=clean, headers=upsert_headers, timeout=120)
+            json=[quarantine_missing_visual(row) for row in clean], headers=upsert_headers, timeout=120)
         if r.status_code in (200, 201):
             n += len(batch)
             try:

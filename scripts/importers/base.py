@@ -10,6 +10,8 @@ import sys
 from pathlib import Path
 from typing import Optional
 
+from .visual_guard import quarantine_missing_visual
+
 try:
     import requests
 except ImportError:
@@ -72,7 +74,7 @@ def insert_questions(rows: list[dict], chunk: int = 200) -> int:
         return 0
     written = 0
     for i in range(0, len(rows), chunk):
-        batch = rows[i:i + chunk]
+        batch = [quarantine_missing_visual(row) for row in rows[i:i + chunk]]
         r = requests.post(
             f"{REST}/questions",
             headers={**HEADERS, "Prefer": "return=minimal"},
@@ -125,4 +127,4 @@ def build_question_row(
         row["image_url"] = image_url
     if image_urls:
         row["image_urls"] = image_urls
-    return row
+    return quarantine_missing_visual(row)
