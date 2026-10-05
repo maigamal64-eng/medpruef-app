@@ -26,6 +26,7 @@
   "exclude": [
     "node_modules",
     "tests/unit/**",
-    "vitest.config.ts"
+    "vitest.config.ts",
+    "services/ops-mcp/**"
   ]
 }

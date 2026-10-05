@@ -23,6 +23,14 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-10-05", tag: "admin",
+    title: { de: "Vorbereitete Ops-Aktionen prüfen", en: "Review prepared Ops actions" },
+    description: {
+      de: "Neue geschützte Owner-Ansicht für exakt vorbereitete Zugangsänderungen. Freigabe und Ausführung sind getrennt; APIs und Schreibfunktionen bleiben bis zur Einrichtung deaktiviert.",
+      en: "A protected owner view reviews exact prepared access changes. Approval and execution are separate; APIs and writes stay disabled until provisioning is complete.",
+    },
+  },
+  {
     date: "2026-10-05",
     tag: "feature",
     title: {

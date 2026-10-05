@@ -1,0 +1,86 @@
+-- Disposable PostgreSQL database only. Production never runs these fixtures.
+BEGIN;
+CREATE FUNCTION pg_temp.assert_denied(p_sql text,p_state text) RETURNS void LANGUAGE plpgsql AS $$
+BEGIN EXECUTE p_sql; RAISE EXCEPTION 'Expected denial: %',p_sql;
+EXCEPTION WHEN OTHERS THEN IF SQLSTATE<>p_state THEN RAISE; END IF; END $$;
+DO $$ DECLARE
+ owner_id uuid:='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'; target_id uuid:='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+ principal uuid:='cccccccc-cccc-4ccc-8ccc-cccccccccccc'; credential uuid:='dddddddd-dddd-4ddd-8ddd-dddddddddddd';
+ token text:=repeat('a',64); fb bigint; a jsonb; b jsonb; result jsonb; expiry timestamptz; old_expiry timestamptz;
+BEGIN
+ INSERT INTO public.users(id,email,first_name,last_name,role,tier,is_banned) VALUES(owner_id,'ops-owner@invalid.local','Owner','Fixture','admin','free',false),(target_id,'ops-target@invalid.local','Target','Fixture','user','free',false);
+ INSERT INTO public.admin_user_roles(user_id,role_id) SELECT owner_id,id FROM public.admin_roles WHERE role_key='owner';
+ INSERT INTO public.ops_principals(id,name,project,environment,audience,delegating_user_id) VALUES(principal,'Ops test','medpruf','development','test-ops',owner_id);
+ INSERT INTO public.ops_credentials(id,principal_id,token_hash,scopes,expires_at) VALUES(credential,principal,token,ARRAY['users.read','feedback.read','feedback.manage','users.entitlements.write'],now()+interval '1 day');
+ INSERT INTO public.ops_grants SELECT principal,unnest(ARRAY['users.read','feedback.read','feedback.manage','users.entitlements.write']);
+ INSERT INTO public.user_feedback(user_id,message,context,status) VALUES(target_id,'Customer support text',jsonb_build_object('email','PRIVATE','session_token','PRIVATE'),'new') RETURNING id INTO fb;
+ IF has_table_privilege('medpruf_ops_mcp','public.users','SELECT') OR has_table_privilege('medpruf_ops_mcp','public.ops_credentials','SELECT') OR has_function_privilege('medpruf_ops_mcp','public.ops_admin_approve_action(uuid,uuid,text)','EXECUTE') OR has_function_privilege('medpruf_ops_mcp','public.admin_grant_entitlement(uuid,uuid,integer,text,jsonb)','EXECUTE') OR has_function_privilege('medpruf_ops_mcp','public.ops_require(text,text,text,text)','EXECUTE') THEN RAISE EXCEPTION 'Ops boundary privileges leaked'; END IF;
+ PERFORM pg_temp.assert_denied(format('SELECT public.ops_authenticate(%L,%L,%L)',repeat('b',64),'development','test-ops'),'28000');
+ PERFORM pg_temp.assert_denied(format('SELECT public.ops_authenticate(%L,%L,%L)',token,'production','test-ops'),'28000');
+ PERFORM pg_temp.assert_denied(format('SELECT public.ops_authenticate(%L,%L,%L)',token,'development','other'),'28000');
+ UPDATE public.ops_credentials SET expires_at=now()-interval '1 second' WHERE id=credential;
+ PERFORM pg_temp.assert_denied(format('SELECT public.ops_authenticate(%L,%L,%L)',token,'development','test-ops'),'28000');
+ UPDATE public.ops_credentials SET expires_at=now()+interval '1 day',revoked_at=now() WHERE id=credential;
+ PERFORM pg_temp.assert_denied(format('SELECT public.ops_authenticate(%L,%L,%L)',token,'development','test-ops'),'28000');
+ UPDATE public.ops_credentials SET revoked_at=NULL,scopes=ARRAY['users.read'] WHERE id=credential;
+ PERFORM pg_temp.assert_denied(format('SELECT public.ops_feedback_list(%L,%L,%L)',token,'development','test-ops'),'42501');
+ UPDATE public.ops_credentials SET scopes=ARRAY['users.read','feedback.read','feedback.manage','users.entitlements.write'] WHERE id=credential;
+ DELETE FROM public.ops_grants WHERE principal_id=principal AND permission='feedback.read';
+ PERFORM pg_temp.assert_denied(format('SELECT public.ops_feedback_list(%L,%L,%L)',token,'development','test-ops'),'42501');
+ INSERT INTO public.ops_grants VALUES(principal,'feedback.read');
+ UPDATE public.users SET is_banned=true WHERE id=owner_id;
+ PERFORM pg_temp.assert_denied(format('SELECT public.ops_authenticate(%L,%L,%L)',token,'development','test-ops'),'28000');
+ UPDATE public.users SET is_banned=false WHERE id=owner_id;
+ UPDATE public.admin_roles SET is_active=false WHERE role_key='owner';
+ PERFORM pg_temp.assert_denied(format('SELECT public.ops_feedback_list(%L,%L,%L)',token,'development','test-ops'),'42501');
+ UPDATE public.admin_roles SET is_active=true WHERE role_key='owner';
+ PERFORM pg_temp.assert_denied(format('SELECT public.ops_users_search(%L,%L,%L,NULL,51,0)',token,'development','test-ops'),'22023');
+ result:=public.ops_user_get(token,'development','test-ops',target_id);
+ IF result ?| ARRAY['email','telegram_id','telegram_username','password_hash','last_name','first_name','notes','events','tier','tier_expires_at'] OR result->>'name'<>'T***' THEN RAISE EXCEPTION 'User projection leaks'; END IF;
+ result:=public.ops_feedback_get(token,'development','test-ops',fb);
+ IF result ? 'context' OR result ? 'admin_note' OR (result->>'context_redacted')::boolean IS NOT TRUE THEN RAISE EXCEPTION 'Feedback context leaks'; END IF;
+ a:=public.ops_prepare_feedback(token,'development','test-ops',fb,'reviewed','Test note','feedback-key-1');
+ b:=public.ops_prepare_feedback(token,'development','test-ops',fb,'reviewed','Test note','feedback-key-1');
+ IF a->>'id'<>b->>'id' THEN RAISE EXCEPTION 'Preparation duplicated'; END IF;
+ PERFORM pg_temp.assert_denied(format('SELECT public.ops_prepare_feedback(%L,%L,%L,%s,%L,%L,%L)',token,'development','test-ops',fb,'resolved','Changed note','feedback-key-1'),'40001');
+ PERFORM pg_temp.assert_denied(format('SELECT public.ops_execute_action(%L,%L,%L,%L)',token,'development','test-ops',a->>'id'),'55000');
+ UPDATE public.ops_settings SET enabled=true WHERE capability='feedback.triage';
+ UPDATE public.user_feedback SET status='resolved' WHERE id=fb;
+ PERFORM pg_temp.assert_denied(format('SELECT public.ops_execute_action(%L,%L,%L,%L)',token,'development','test-ops',a->>'id'),'40001');
+ UPDATE public.user_feedback SET status='new' WHERE id=fb;
+ b:=public.ops_execute_action(token,'development','test-ops',(a->>'id')::uuid);
+ result:=public.ops_execute_action(token,'development','test-ops',(a->>'id')::uuid);
+ IF b<>result OR (SELECT count(*) FROM public.ops_executions WHERE action_id=(a->>'id')::uuid)<>1 THEN RAISE EXCEPTION 'Execution replay duplicated'; END IF;
+ -- Preserve longer existing access and add once, never overwrite using a tier shortcut.
+ old_expiry:=now()+interval '50 days'; UPDATE public.users SET tier='pro',tier_expires_at=old_expiry WHERE id=target_id;
+ a:=public.ops_prepare_entitlement(token,'development','test-ops',target_id,7,'Test grant reason','grant-key-1');
+ UPDATE public.ops_settings SET enabled=true WHERE capability='entitlement.grant';
+ PERFORM pg_temp.assert_denied(format('SELECT public.ops_execute_action(%L,%L,%L,%L)',token,'development','test-ops',a->>'id'),'42501');
+ PERFORM pg_temp.assert_denied(format('SELECT public.ops_admin_approve_action(%L,%L,%L)',target_id,a->>'id',a->>'payload_hash'),'42501');
+ PERFORM pg_temp.assert_denied(format('SELECT public.ops_admin_approve_action(%L,%L,%L)',owner_id,a->>'id','forged-hash'),'40001');
+ PERFORM public.ops_admin_approve_action(owner_id,(a->>'id')::uuid,a->>'payload_hash');
+ UPDATE public.users SET tier_expires_at=old_expiry+interval '1 day' WHERE id=target_id;
+ PERFORM pg_temp.assert_denied(format('SELECT public.ops_execute_action(%L,%L,%L,%L)',token,'development','test-ops',a->>'id'),'40001');
+ UPDATE public.users SET tier_expires_at=old_expiry WHERE id=target_id;
+ UPDATE public.ops_approvals SET expires_at=now()-interval '1 second' WHERE action_id=(a->>'id')::uuid;
+ PERFORM pg_temp.assert_denied(format('SELECT public.ops_execute_action(%L,%L,%L,%L)',token,'development','test-ops',a->>'id'),'42501');
+ UPDATE public.ops_approvals SET expires_at=now()+interval '5 minutes' WHERE action_id=(a->>'id')::uuid;
+ b:=public.ops_execute_action(token,'development','test-ops',(a->>'id')::uuid);
+ result:=public.ops_execute_action(token,'development','test-ops',(a->>'id')::uuid);
+ SELECT tier_expires_at INTO expiry FROM public.users WHERE id=target_id;
+ IF expiry<>old_expiry+interval '7 days' OR b<>result OR (SELECT count(*) FROM public.admin_audit_log WHERE payload->>'ops_action_id'=a->>'id')<>1 THEN RAISE EXCEPTION 'Grant parity/replay failed'; END IF;
+ PERFORM pg_temp.assert_denied(format('SELECT public.ops_prepare_entitlement(%L,%L,%L,%L,7,%L,%L)',token,'development','test-ops',owner_id,'Test reason','admin-key'),'42501');
+ UPDATE public.ops_rate_limits SET requests=120 WHERE credential_id=credential;
+ PERFORM pg_temp.assert_denied(format('SELECT public.ops_authenticate(%L,%L,%L)',token,'development','test-ops'),'P0429');
+END $$;
+-- Audit write failure must abort the entire effect transaction.
+CREATE FUNCTION pg_temp.reject_ops_audit() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN IF NEW.event='action.succeeded' THEN RAISE EXCEPTION 'Injected durable audit failure' USING ERRCODE='23514'; END IF; RETURN NEW; END $$;
+CREATE TRIGGER ops_test_audit_failure BEFORE INSERT ON public.ops_audit FOR EACH ROW EXECUTE FUNCTION pg_temp.reject_ops_audit();
+DO $$ DECLARE a jsonb; fb bigint; BEGIN
+ UPDATE public.ops_rate_limits SET requests=1;
+ INSERT INTO public.user_feedback(message,status) VALUES('Rollback fixture','new') RETURNING id INTO fb;
+ a:=public.ops_prepare_feedback(repeat('a',64),'development','test-ops',fb,'resolved',NULL,'rollback-key');
+ PERFORM pg_temp.assert_denied(format('SELECT public.ops_execute_action(%L,%L,%L,%L)',repeat('a',64),'development','test-ops',a->>'id'),'23514');
+ IF (SELECT status FROM public.user_feedback WHERE id=fb)<>'new' OR EXISTS(SELECT FROM public.ops_executions WHERE action_id=(a->>'id')::uuid) THEN RAISE EXCEPTION 'Audit failure committed effect'; END IF;
+END $$;
+ROLLBACK;

@@ -75,6 +75,7 @@ interface NavItem {
   description?: string;
   /** Reserved for future gating (e.g., pay-wall specific routes). */
   experimental?: boolean;
+  ownerOnly?: boolean;
 }
 
 interface NavSection {
@@ -164,6 +165,7 @@ const NAV: NavSection[] = [
       { label: "Audit", href: "/admin/audit", icon: BarChart3, permission: "system.read" },
       { label: "Env", href: "/admin/env", icon: Database, permission: "system.read" },
       { label: "Admins & roles", href: "/admin/access", icon: ShieldCheck, permission: "access.manage" },
+      { label: "Ops approvals", href: "/admin/ops", icon: ShieldCheck, permission: "users.entitlements.write", ownerOnly: true },
     ],
   },
 ];
@@ -195,7 +197,8 @@ export default function AdminLayout({
 function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { can, loading: permissionsLoading, error: permissionsError } = useAdminPermissions();
+  const { can, roles, loading: permissionsLoading, error: permissionsError } = useAdminPermissions();
+  const actorIsOwner = roles.some((role) => role.key === "owner");
   const [authChecked, setAuthChecked] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [adminNavOpen, setAdminNavOpen] = useState(false);
@@ -406,11 +409,11 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
     if (permissionsLoading || permissionsError) return [];
     return NAV.map((section) => {
       if (section.permission && !can(section.permission)) return null;
-      const items = section.items.filter((item) => can(item.permission));
+      const items = section.items.filter((item) => can(item.permission) && (!item.ownerOnly || actorIsOwner));
       if (!section.href && items.length === 0) return null;
       return { ...section, items };
     }).filter((section): section is NavSection => section !== null);
-  }, [can, permissionsError, permissionsLoading]);
+  }, [actorIsOwner, can, permissionsError, permissionsLoading]);
 
   if (!authChecked) {
     return (
