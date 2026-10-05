@@ -34,6 +34,22 @@ export interface BlogPostMeta {
 
 export const BLOG_POSTS: BlogPostMeta[] = [
   {
+    slug: "ukrainian-refugee-physicians-austria",
+    title: {
+      de: "Ukrainische Flüchtlingsärzt:innen: Arztpraxis in Österreich",
+      en: "Ukrainian Refugee Physicians: Practicing Medicine in Austria",
+    },
+    summary: {
+      de: "Was ukrainische Flüchtlingsärzt:innen brauchen, um in Österreich Medizin zu praktizieren: Nostrifizierung, Sprachprüfung, Stichprobentest und der Weg zur Eintragung in die Ärzteliste. Mit Behörden, Kosten, Fristen und Sofort-Schritten.",
+      en: "What Ukrainian refugee physicians need to practice medicine in Austria: nostrification, language exams, the Stichprobentest, and how to start working faster.",
+    },
+    publishedAt: "2026-10-05",
+    author: "MedPrüf Editorial",
+    readingMinutes: 12,
+    tags: ["Ukraine", "Nostrifizierung", "Stichprobentest", "Flüchtlingsärzte", "Ärztliche Anerkennung"],
+    hasOwnRoute: true,
+  },
+  {
     slug: "kenntnispruefung-zweiter-versuch",
     title: {
       de: "Der zweite Versuch: die Kenntnisprüfung Wien nach einem Fehlversuch bestehen",

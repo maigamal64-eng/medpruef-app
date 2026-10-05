@@ -23,6 +23,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-10-05",
+    tag: "feature",
+    title: {
+      de: "Neuer Blogartikel: Ukrainische Flüchtlingsärzt:innen in Österreich",
+      en: "New blog post: Ukrainian refugee physicians in Austria",
+    },
+    description: {
+      de: "Veröffentlicht: Der vollständige Weg für ukrainische Ärzt:innen zur österreichischen Approbation – Nostrifizierung, Sprachprüfung, Stichprobentest (240 Fragen), Kosten, Fristen und Sofort-Schritte. EN-first (W1-B Gate), keine AR-Gate. Alle Zahlen SoT-verifiziert.",
+      en: "Published: The complete pathway for Ukrainian physicians to Austrian medical licensure – nostrification, language exam, Stichprobentest (240 questions), costs, deadlines, and immediate next steps. EN-first (W1-B gate), no AR gate. All figures SoT-verified.",
+    },
+  },
+  {
     date: "2026-09-25", tag: "fix",
     title: { de: "Neue Fragen und Wiederholungen klar getrennt", en: "New questions and reviews clearly separated" },
     description: {
