@@ -13,6 +13,7 @@ import {
   countDistinctAnsweredInExam,
   getAnsweredSliceIds,
 } from '@/lib/free-tier'
+import { logFreeCapHit } from '@/lib/free-access'
 
 /**
  * Resolve the caller's tier from the verified session token (S-1, via
@@ -304,6 +305,19 @@ export async function GET(req: NextRequest) {
         : filters.examSource
       : DEFAULT_EXAM_SOURCE
 
+  // 2026-10-02: every free-quota wall now leaves a server event
+  // (`free_quota_cap_hit`, throttled per user/exam/hour); it was invisible.
+  const capHitResponse = async (body: Record<string, unknown>) => {
+    await logFreeCapHit(sb, {
+      userId: authed.userId,
+      gate: 'qbank_limit',
+      route: '/api/questions',
+      examType: resolveFreeExam(),
+      seen: typeof body.seen === 'number' ? body.seen : null,
+    })
+    return NextResponse.json(body)
+  }
+
   // Helper: the 150-question free slice for the current exam. Used only
   // when `free` is true.
   const getFreeSliceForExam = async (): Promise<number[]> => {
@@ -357,7 +371,7 @@ export async function GET(req: NextRequest) {
       // so the UI can render "150/150" rather than promising more.
       const capped = await checkDurableCap()
       if (capped) {
-        return NextResponse.json({
+        return capHitResponse({
           count: 0,
           freeTier: true,
           capped: true,
@@ -396,7 +410,7 @@ export async function GET(req: NextRequest) {
         filters.ids = filters.ids.filter((id) => answered.has(id))
       }
       if (filters.ids.length === 0) {
-        return NextResponse.json({
+        return capHitResponse({
           paywallHit: true,
           seen: 0,
           limit: FREE_TIER_QUESTIONS_PER_EXAM,
@@ -445,9 +459,9 @@ export async function GET(req: NextRequest) {
     let allowedIds: number[] | null = null
     if (free) {
       allowedIds = await getFreeSliceForExam()
-      if (allowedIds.length === 0) return NextResponse.json({ paywallHit: true, seen: 0, limit: FREE_TIER_QUESTIONS_PER_EXAM })
+      if (allowedIds.length === 0) return capHitResponse({ paywallHit: true, seen: 0, limit: FREE_TIER_QUESTIONS_PER_EXAM })
       const capped = await checkDurableCap()
-      if (capped) return NextResponse.json({ paywallHit: true, seen: capped.seen, limit: FREE_TIER_QUESTIONS_PER_EXAM })
+      if (capped) return capHitResponse({ paywallHit: true, seen: capped.seen, limit: FREE_TIER_QUESTIONS_PER_EXAM })
     }
 
     const { data: candidateRows, error: candidateError } = await sb.rpc(
@@ -555,7 +569,7 @@ export async function GET(req: NextRequest) {
   if (free) {
     freeSliceIds = await getFreeSliceForExam()
     if (freeSliceIds.length === 0) {
-      return NextResponse.json({
+      return capHitResponse({
         paywallHit: true,
         seen: 0,
         limit: FREE_TIER_QUESTIONS_PER_EXAM,
@@ -568,7 +582,7 @@ export async function GET(req: NextRequest) {
     // explicit-ids path below — that branch serves answered ids.)
     const capped = await checkDurableCap()
     if (capped) {
-      return NextResponse.json({
+      return capHitResponse({
         paywallHit: true,
         seen: capped.seen,
         limit: FREE_TIER_QUESTIONS_PER_EXAM,
@@ -588,7 +602,7 @@ export async function GET(req: NextRequest) {
       const excludedInSlice = filters.excludeIds.filter((id) =>
         freeSliceIds!.includes(id)
       ).length
-      return NextResponse.json({
+      return capHitResponse({
         paywallHit: true,
         seen: Math.min(excludedInSlice, FREE_TIER_QUESTIONS_PER_EXAM),
         limit: FREE_TIER_QUESTIONS_PER_EXAM,

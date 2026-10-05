@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { requireUser, isFreeAccess } from "@/lib/auth-guard";
+import { canFreeUserReadQuestion, logFreeCapHit } from "@/lib/free-access";
 import { checkRateLimit, rateKey, rateLimitHeaders } from "@/lib/rate-limit";
 import {
   FREE_NOTE_LIMIT,
@@ -249,6 +250,27 @@ export async function POST(req: NextRequest) {
     if (questionId !== null) sourceRef.question_id = questionId;
     if (typeof (sourceRefIn as Record<string, unknown>).message_id === "string") {
       sourceRef.message_id = (sourceRefIn as Record<string, unknown>).message_id;
+    }
+
+    // 2026-10-02 paywall: building a note from a question reads its full
+    // stem + answer + explanation server-side, so a free caller may only do
+    // it for questions inside their free allowance.
+    if (
+      isFreeAccess(guard) &&
+      questionId !== null &&
+      (kind === "question" || (kind === "ai_explanation" && !clientText)) &&
+      !(await canFreeUserReadQuestion(sb, userId, questionId))
+    ) {
+      await logFreeCapHit(sb, {
+        userId,
+        gate: "qbank_limit",
+        route: "/api/notes/transform",
+        questionId,
+      });
+      return NextResponse.json(
+        { error: "upgrade_required", upgradeRequired: true, gate: "qbank_limit" },
+        { status: 402 },
+      );
     }
 
     if (kind === "question") {

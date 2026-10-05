@@ -35,6 +35,25 @@ export const CHANGELOG: ChangelogEntry[] = [
     },
   },
   {
+    date: "2026-10-02", tag: "admin",
+    title: {
+      de: "Zahlungen und Freikontingent serverseitig gehärtet",
+      en: "Payments and free quota hardened server-side",
+    },
+    description: {
+      de: "Verlängerungszahlungen werden jetzt über die Whop-Mitgliedschaft dem richtigen Konto zugeordnet (nicht mehr über die E-Mail des Zahlers). Abgelehnte Karten lösen genau eine Hinweis-Mail mit dem Whop-Abrechnungslink aus; die Kulanzfrist gilt nur noch für das betroffene Konto. Der tägliche Ablauf-Cron läuft wieder. Das Freikontingent wird auf allen Inhalts-Endpunkten serverseitig durchgesetzt, inklusive KI-Erklärungen, Übersetzungen, Prüfungsauswertung und Notizen; der öffentliche Datenbank-Schlüssel kann keine Fragentexte mehr lesen.",
+      en: "Renewal payments now map to the right account via the Whop membership (no longer via the payer's email). A declined card triggers exactly one notice email with the Whop billing link; the dunning grace now applies only to the affected account. The daily expiry cron runs again. The free quota is enforced server-side on every content endpoint, including AI explanations, translations, exam grading and notes; the public database key can no longer read question content.",
+    },
+  },
+  {
+    date: "2026-10-02", tag: "fix",
+    title: { de: "Klarstellung: Verlängerung und Kündigung", en: "Clarification: renewal and cancellation" },
+    description: {
+      de: "FAQ, AGB, Preise und Einstellungen sagen jetzt klar: Einzelmonat (19 € pro Monat) und 3-Monats-Tarif (49 € pro Quartal) verlängern sich automatisch, bis du kündigst. Die Prüfungs-Kohorte (129 €) ist eine Einmalzahlung. Kündigen kannst du jederzeit bei Whop unter whop.com/@me/settings/memberships. Frühere Hinweise wie „kein Abo“ trafen auf diese beiden Tarife nicht zu.",
+      en: "FAQ, Terms, Pricing and Settings now say it plainly: the Single Month (19 € per month) and 3-Month plan (49 € per quarter) renew automatically until you cancel. The Exam Cohort (129 €) is a one-time payment. You can cancel anytime at Whop via whop.com/@me/settings/memberships. Earlier statements such as \"not a subscription\" did not apply to those two plans.",
+    },
+  },
+  {
     date: "2026-09-27", tag: "fix",
     title: { de: "Direkt ins gewählte Lernen", en: "Go straight to the study mode you chose" },
     description: {

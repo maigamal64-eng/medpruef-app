@@ -64,7 +64,8 @@ export type PaymentFailureReason =
   | "unmapped" // no user OR no tier resolvable from the payload
   | "db_error"
   | "unrecognized_event"
-  | "duplicate";
+  | "duplicate"
+  | "trial_reuse"; // 2026-10-02: EUR 0 trial start on an account that already trialed
 
 export interface PaymentEventInput {
   event: PaymentFunnelEvent;

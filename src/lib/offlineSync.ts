@@ -63,6 +63,11 @@ async function flushQueue(): Promise<void> {
           // Auth gone — leave queued; user may be in a session-expired
           // state. Next online event or manual login + retry will drain.
           break;
+        } else if (res.status === 402) {
+          // Free allowance exhausted (2026-10-02 server-side paywall): the
+          // answer will never be accepted on this tier, so drop it rather
+          // than retrying forever.
+          await removePendingAnswer(p.id);
         } else if (res.status === 404) {
           // Question was deleted server-side — drop the orphan so it
           // doesn't loop. 4xx for bad data is permanent, not flaky.

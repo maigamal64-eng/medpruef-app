@@ -142,8 +142,14 @@ const nextConfig: NextConfig = {
       // production alias too, but since this only runs when VERCEL_ENV is
       // "production" AND the host matches .vercel.app, it catches only stale
       // hosts that users still have bookmarked.
+      //
+      // 2026-10-02: EXCEPT /api/cron/*. Vercel Cron invokes the production
+      // DEPLOYMENT host (<deployment>.vercel.app, per the project's cron
+      // definitions) and does not follow redirects, so this catch-all turned
+      // every scheduled run into a 308 and the daily trial/expiry sweep never
+      // executed (zero heartbeats ever). Cron routes stay CRON_SECRET-gated.
       {
-        source: "/:path*",
+        source: "/:path((?!api/cron/).*)",
         has: [{ type: "host", value: "(?<vhost>.+)\\.vercel\\.app" }],
         destination: `https://${CANONICAL_HOST}/:path*`,
         permanent: true,

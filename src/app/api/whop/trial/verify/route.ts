@@ -6,6 +6,7 @@ import { tierToWhopPlan } from "@/lib/whop";
 import { logPaymentEvent } from "@/lib/paymentEvents";
 import { releaseWhopClaim } from "@/lib/whop-grant";
 import { qualifyReferralOnActivity } from "@/lib/referral-exam-reward";
+import { isPaidTier } from "@/lib/free-tier";
 
 export const dynamic = "force-dynamic";
 
@@ -121,7 +122,9 @@ export async function POST(req: NextRequest) {
       .select("tier, tier_expires_at, email")
       .eq("id", userId)
       .maybeSingle();
-    if (user && (user.tier === "pro" || user.tier === "admin")) {
+    // Expiry-aware (2026-10-02): a stale tier='pro' whose tier_expires_at
+    // passed is NOT paid, so it must not short-circuit as "already granted".
+    if (user && isPaidTier(user.tier as string | null, user.tier_expires_at as string | null)) {
       return NextResponse.json({
         granted: true,
         already: true,
@@ -162,6 +165,53 @@ export async function POST(req: NextRequest) {
         `[whop/trial/verify] no valid membership for user=${userId} plan=${planId} (scanned ${list.length})`,
       );
       return NextResponse.json({ granted: false, reason: "membership_not_found" }, { status: 200 });
+    }
+
+    // ── Trial-reuse guard (2026-10-02): one free trial window per ACCOUNT,
+    //    ever. /api/whop/trial already refuses a second checkout, but a reused
+    //    or second membership on the plan must not re-grant a free window
+    //    here either. A paid start (Whop charges a repeat payer EUR 19 at
+    //    subscription_create) is granted by the payment.succeeded webhook. ──
+    const { data: priorTrials } = await sb
+      .from("subscriptions")
+      .select("id, status, expires_at, whop_membership_id, provider_payment_id")
+      .eq("user_id", userId)
+      .eq("tier", TRIAL_TIER)
+      .limit(5);
+    const priorRows = (priorTrials ?? []) as Array<{
+      id: string;
+      status: string;
+      expires_at: string | null;
+      whop_membership_id: string | null;
+      provider_payment_id: string | null;
+    }>;
+    const sameMembership = priorRows.some(
+      (r) => r.whop_membership_id === mine.id || r.provider_payment_id === mine.id
+    );
+    if (priorRows.length > 0 && !sameMembership) {
+      const live = priorRows.find(
+        (r) => r.status === "active" && r.expires_at && Date.parse(r.expires_at) > Date.now()
+      );
+      if (live) {
+        // The webhook backstop already granted this trial; report it.
+        return NextResponse.json({ granted: true, already: true, tier_expires_at: live.expires_at });
+      }
+      Sentry.captureMessage(
+        `trial_verify: account ${userId} already used its trial; membership ${mine.id} gets no second free window`,
+        "warning"
+      );
+      await logPaymentEvent(sb, {
+        event: "grant_failed",
+        userId,
+        email: user?.email ?? null,
+        tier: TRIAL_TIER,
+        planId,
+        paymentId: mine.id,
+        reason: "trial_reuse",
+        matched: true,
+        metadata: { source: "trial_verify", ok: false },
+      });
+      return NextResponse.json({ granted: false, reason: "trial_already_used" }, { status: 200 });
     }
 
     // ── Idempotency claim on the membership id (shared with the future
@@ -216,6 +266,7 @@ export async function POST(req: NextRequest) {
       amount_cents: 0, // €0 at trial start; the €19 renewals log their own rows
       currency: "EUR",
       provider_payment_id: mine.id, // membership id — the grant/idempotency key
+      whop_membership_id: mine.id, // 2026-10-02: the renewal routing pin (fix A)
       started_at: nowIso,
       expires_at: expiresIso,
     });

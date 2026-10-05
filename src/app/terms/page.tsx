@@ -3,6 +3,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { getLang, setLang } from "@/lib/i18n";
 import DocLayout from "@/components/DocLayout";
+import {
+  BILLING_SUPPORT_EMAIL,
+  WHOP_MANAGE_TEXT,
+  WHOP_MANAGE_URL,
+  billingTrialSummary,
+} from "@/lib/billing-copy";
 
 type Lang = "de" | "en";
 
@@ -30,7 +36,7 @@ export default function TermsPage() {
           ? "Diese Nutzungsbedingungen regeln die Verwendung von MedPrüf."
           : "These terms govern your use of MedPrüf."
       }
-      lastUpdated={lang === "de" ? "April 2026" : "April 2026"}
+      lastUpdated={lang === "de" ? "Oktober 2026" : "October 2026"}
       backHref="/"
     >
       <section>
@@ -90,8 +96,23 @@ export default function TermsPage() {
         <h2>5. {lang === "de" ? "Abonnement und Zahlung" : "Subscription and Payment"}</h2>
         <p>
           {lang === "de"
-            ? "Die kostenlose Version umfasst bis zu 150 Fragen pro Prüfungstyp. Der Einzelmonat kostet 19 € pro Monat und verlängert sich automatisch monatlich, sofern du nicht vor der nächsten Abrechnung kündigst. Der 3-Monats-Tarif kostet 49 € pro Quartal und verlängert sich automatisch quartalsweise, sofern du nicht vor der nächsten Abrechnung kündigst. Die Prüfungs-Kohorte kostet einmalig 129 € für sechs Monate und verlängert sich nicht automatisch. Der 3-Monats-Tarif ist auf einen Kauf pro Konto begrenzt."
-            : "The free version includes up to 150 questions per exam type. The Single Month plan costs 19 € per month and renews monthly unless cancelled before the next billing date. The 3-Month plan costs 49 € per quarter and renews quarterly unless cancelled before the next billing date. The Exam Cohort costs 129 € once for six months and does not auto-renew. The 3-Month plan is capped at one purchase per account."}
+            ? "Die kostenlose Version umfasst bis zu 150 Fragen pro Prüfungstyp. Der Einzelmonat kostet 19 € pro Monat und verlängert sich automatisch alle 30 Tage. Der 3-Monats-Tarif kostet 49 € pro Quartal und verlängert sich automatisch alle 90 Tage. Beide Abos werden zum jeweiligen Verlängerungsdatum über Whop abgebucht, bis du kündigst. Die Prüfungs-Kohorte kostet einmalig 129 € für sechs Monate und verlängert sich nicht automatisch. Der 3-Monats-Tarif ist auf einen Kauf pro Konto begrenzt."
+            : "The free version includes up to 150 questions per exam type. The Single Month plan costs 19 € per month and renews automatically every 30 days. The 3-Month plan costs 49 € per quarter and renews automatically every 90 days. Both subscriptions are charged through Whop on each renewal date until you cancel. The Exam Cohort costs 129 € once for six months and does not renew automatically. The 3-Month plan is capped at one purchase per account."}
+        </p>
+        <p>
+          {billingTrialSummary(lang)}
+        </p>
+        <p>
+          {lang === "de" ? "Kündigung: " : "Cancellation: "}
+          {lang === "de"
+            ? "Du kannst jederzeit bei Whop kündigen, unter "
+            : "You can cancel anytime at Whop, at "}
+          <a href={WHOP_MANAGE_URL} target="_blank" rel="noopener noreferrer">
+            {WHOP_MANAGE_TEXT}
+          </a>
+          {lang === "de"
+            ? ` (Mitgliedschaft auswählen, dann „Cancel membership“). Kündige vor dem nächsten Verlängerungsdatum, damit nicht erneut abgebucht wird. Hilfe: ${BILLING_SUPPORT_EMAIL}.`
+            : ` (select your membership, then "Cancel membership"). Cancel before the next renewal date so you are not charged again. Help: ${BILLING_SUPPORT_EMAIL}.`}
         </p>
         <p>
           {lang === "de"

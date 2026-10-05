@@ -105,14 +105,19 @@ export default function ChangelogPage() {
             <h2 className="text-2xl md:text-3xl font-black text-[var(--mp-fg)] font-display mb-2">
               {lang === "de" ? "Was ist neu in MedPrüf?" : "What's new in MedPrüf?"}
             </h2>
-            <p className="text-sm text-[var(--mp-fg-subtle)]">
-              {lang === "de"
-                ? "Ein datiertes Änderungsarchiv. Einträge beschreiben den damaligen Stand und können inzwischen überholt sein. Aktuelle Preise und verfügbare Angebote findest du unter Preise."
-                : "A dated change archive. Entries describe what applied at the time and may have been superseded. Check Pricing for current prices and available plans."}
-            </p>
-            <Link href="/pricing" className="inline-flex mt-3 text-sm text-[var(--mp-viridian)] hover:underline">
-              {lang === "de" ? "Aktuelle Preise ansehen" : "See current pricing"}
-            </Link>
+<p className="text-sm text-[var(--mp-fg-subtle)]">
+                {lang === "de"
+                  ? "Ein datiertes Änderungsarchiv. Einträge beschreiben den damaligen Stand und können inzwischen überholt sein. Aktuelle Preise und verfügbare Angebote findest du unter Preise."
+                  : "A dated change archive. Entries describe what applied at the time and may have been superseded. Check Pricing for current prices and available plans."}
+              </p>
+              <Link href="/pricing" className="inline-flex mt-3 text-sm text-[var(--mp-viridian)] hover:underline">
+                {lang === "de" ? "Aktuelle Preise ansehen" : "See current pricing"}
+              </Link>
+              <p className="text-xs text-[var(--mp-fg-subtle)] mt-3 max-w-xl mx-auto leading-relaxed">
+                {lang === "de"
+                  ? "Hinweis: Ältere Einträge beschreiben den damaligen Stand. Aussagen wie „einmalig“, „kein Abo“ oder „keine automatische Verlängerung“ zu Einzelmonat und 3-Monats-Tarif sind überholt: Beide Tarife verlängern sich seit September 2026 automatisch, bis du kündigst. Aktuelle Bedingungen: Preise und AGB."
+                  : "Note: older entries describe what applied at the time. Statements such as \"one-time\", \"not a subscription\" or \"no auto-renewal\" about the Single Month and 3-Month plans are superseded: both plans have renewed automatically until cancelled since September 2026. Current terms: Pricing and Terms."}
+              </p>
           </div>
 
           {/* Timeline */}

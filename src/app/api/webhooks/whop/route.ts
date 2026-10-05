@@ -24,6 +24,7 @@ import {
   type WhopRevokeKind,
   TIERS,
 } from "@/lib/whop";
+import { resolveWhopBuyer } from "@/lib/whop-buyer";
 import {
   extendOrInsertWhopSubscription,
   reconcileUserTierPro,
@@ -301,6 +302,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, ignored: event || "unknown" });
   }
 
+  // Review fix (2026-10-02): if anything throws after the claim is taken but
+  // before the grant lands, release the claim so Whop's retry can grant.
+  let claimSb: ReturnType<typeof getServiceClient> | null = null;
+  let claimSettled = false;
   try {
     if (!f.paymentId) {
       // A success event with no extractable payment id = we got the money
@@ -326,6 +331,7 @@ export async function POST(req: NextRequest) {
     const sb = getServiceClient();
 
     // Idempotency claim — first delivery wins; retries / multi-event dup.
+    claimSb = sb;
     const { data: claim, error: claimErr } = await sb
       .from("processed_webhook_events")
       .insert({
@@ -369,20 +375,36 @@ export async function POST(req: NextRequest) {
     // omits plan_id); plan-id → tier is only a fallback.
     const tier = (isKnownTier(f.metaTier) ? f.metaTier : null) ?? whopPlanToTier(f.planId);
 
-    // Resolve user: metadata user id first, then email (case-insensitive).
-    let userId: string | null = null;
-    if (f.metaUserId) {
-      const { data: u } = await sb.from("users").select("id").eq("id", f.metaUserId).maybeSingle();
-      userId = (u?.id as string | undefined) ?? null;
+    // Resolve user (2026-10-02 fix A): membership-bound evidence first
+    // (DB pin, metadata, checkout session, Whop membership API), email LAST.
+    // Renewal charges carry metadata=null; the old metadata-then-email order
+    // credited the Whop payer's email account instead of the subscriber.
+    const buyer = await resolveWhopBuyer(sb, {
+      membershipId: f.membershipId,
+      metaUserId: f.metaUserId,
+      membershipMetaUserId: f.membershipMetaUserId,
+      checkoutConfigId: f.checkoutConfigId,
+      email: f.email,
+    });
+    if (buyer.kind === "provider_unavailable") {
+      // Never guess by email while the membership lookup is down: release
+      // the claim and 503 so Whop redelivers.
+      Sentry.captureMessage(
+        `Whop grant deferred: buyer lookup unavailable (status ${buyer.status}) payment=${f.paymentId}; Whop will retry`,
+        "warning"
+      );
+      claimSettled = true;
+      await releaseWhopClaim(sb, f.paymentId);
+      await logWebhookAttempt({
+        req, provider: "whop", path: "/api/webhooks/whop",
+        signatureValid: true, body: rawBody, result: "other_error",
+        eventId: f.paymentId,
+        error: `membership lookup unavailable (HTTP ${buyer.status}); retry`,
+      });
+      return NextResponse.json({ error: "membership lookup unavailable, retry" }, { status: 503 });
     }
-    if (!userId && f.email) {
-      const { data: u } = await sb
-        .from("users")
-        .select("id")
-        .ilike("email", escapeLike(f.email))
-        .maybeSingle();
-      userId = (u?.id as string | undefined) ?? null;
-    }
+    const userId: string | null = buyer.kind === "resolved" ? buyer.userId : null;
+    const resolvedVia = buyer.kind === "resolved" ? buyer.source : null;
 
     if (!userId || !tier) {
       // Don't drop it — flag for manual grant + record telemetry.
@@ -446,8 +468,26 @@ export async function POST(req: NextRequest) {
     // are never this tier, so they keep their full computeExpiry duration. The
     // membership.went_invalid revoke path preserves this stored window for
     // unpaid trials; this 8-day cap is the fallback when period end is unknown.
-    const isTrialStart =
-      tier === "notes_pro_trial" && (f.amountCents === 0 || f.amountCents == null);
+    // Review fix (2026-10-02): ONLY an explicit EUR 0 is a trial start. A
+    // notes_pro_trial payment with NO readable amount is ambiguous (trial
+    // start vs EUR 19 renewal): flag it for a manual grant instead of guessing
+    // either way (the new reuse guard would otherwise refuse a paid renewal).
+    if (tier === "notes_pro_trial" && f.amountCents == null) {
+      Sentry.captureMessage(
+        `Whop notes_pro_trial payment with no readable amount (payment=${f.paymentId} user=${userId}): manual review needed`,
+        "warning"
+      );
+      await recordEvent(sb, userId, "whop_payment_unmapped", {
+        payment_id: f.paymentId, plan_id: f.planId, tier, event, missing: "amount",
+      });
+      await logPaymentEvent(sbLog, {
+        event: "grant_failed", userId, email: f.email, tier, planId: f.planId,
+        paymentId: f.paymentId, reason: "unmapped", matched: true,
+        metadata: { event, ok: false, missing: "amount" },
+      });
+      return NextResponse.json({ ok: false, error: "amount unreadable, manual review", payment_id: f.paymentId }, { status: 200 });
+    }
+    const isTrialStart = tier === "notes_pro_trial" && f.amountCents === 0;
     // For trial START the window is 8 days (trial + 1). For paid/renewal
     // grants the helper recomputes the expiry (extend-or-insert), so this
     // default is only consumed by the trial-start branch below.
@@ -498,6 +538,49 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Trial-reuse guard (2026-10-02): an account that already used its
+    // trial (any prior notes_pro_trial row, any status) gets NO second free
+    // window from a EUR 0 trial start. Whop itself charges a repeat payer
+    // immediately (verified: pay_ptzCH… was a EUR 19 subscription_create);
+    // this closes the account side. Recorded + Sentry, never silent.
+    if (isTrialStart) {
+      const { data: priorTrials } = await sb
+        .from("subscriptions")
+        .select("id, status")
+        .eq("user_id", userId)
+        .eq("tier", "notes_pro_trial")
+        .limit(1);
+      if (priorTrials && priorTrials.length > 0) {
+        Sentry.captureMessage(
+          `Whop EUR 0 trial start for an account that already trialed (user=${userId} payment=${f.paymentId} membership=${f.membershipId ?? "none"}): no second free window granted`,
+          "warning"
+        );
+        await recordEvent(sb, userId, "whop_trial_reuse_refused", {
+          payment_id: f.paymentId,
+          membership_id: f.membershipId,
+          prior_subscription_id: (priorTrials[0] as { id: string }).id,
+        });
+        await logWebhookAttempt({
+          req, provider: "whop", path: "/api/webhooks/whop",
+          signatureValid: true, body: rawBody, result: "processed",
+          eventId: f.paymentId, error: "trial_reuse_refused",
+        });
+        await logPaymentEvent(sbLog, {
+          event: "grant_failed",
+          userId,
+          email: f.email,
+          tier,
+          planId: f.planId,
+          paymentId: f.paymentId,
+          amountCents: 0,
+          reason: "trial_reuse",
+          matched: true,
+          metadata: { event, ok: false },
+        });
+        return NextResponse.json({ ok: true, activated: false, reason: "trial_already_used" });
+      }
+    }
+
     // ── Grant: trial-START keeps its dedicated 8-day insert (FB-03 window,
     // deduped against /api/whop/trial/verify above). Everything else — paid
     // one-time tiers AND €19 trial renewals — goes through the shared
@@ -514,6 +597,15 @@ export async function POST(req: NextRequest) {
         amount_cents: f.amountCents ?? TIERS[tier]?.priceCents ?? null,
         currency: (f.currency || "eur").toUpperCase(),
         provider_payment_id: f.paymentId,
+        whop_membership_id: f.membershipId,
+        granted_payment_ids: [
+          {
+            payment_id: f.paymentId,
+            amount_cents: f.amountCents ?? 0,
+            added_months: 0,
+            granted_at: new Date().toISOString(),
+          },
+        ],
         started_at: new Date().toISOString(),
         expires_at: expiresAt.toISOString(),
       });
@@ -565,7 +657,7 @@ export async function POST(req: NextRequest) {
         paymentId: f.paymentId,
         amountCents: f.amountCents ?? TIERS[tier]?.priceCents ?? null,
         currency: (f.currency || "eur").toUpperCase(),
-        membershipId: f.memberId,
+        membershipId: f.membershipId,
       });
       if (grant.mode === "failed") {
         Sentry.captureException(new Error(grant.error ?? "grant failed"), {
@@ -610,8 +702,11 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    claimSettled = true; // the grant is written; never release past this point
     await recordEvent(sb, userId, "whop_subscription_activated", {
       payment_id: f.paymentId,
+      membership_id: f.membershipId,
+      resolved_via: resolvedVia,
       tier,
       expires_at: expiresAt.toISOString(),
     });
@@ -661,6 +756,8 @@ export async function POST(req: NextRequest) {
         expires_at: expiresAt.toISOString(),
         trial_start: isTrialStart,
         mode: grantMode,
+        resolved_via: resolvedVia,
+        membership_id: f.membershipId,
         previous_expires_at: grantPreviousExpires,
         ok: true,
       },
@@ -686,6 +783,9 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     Sentry.captureException(err, { tags: { route: "webhooks/whop", step: "unexpected" } });
+    if (claimSb && !claimSettled && f.paymentId) {
+      await releaseWhopClaim(claimSb, f.paymentId);
+    }
     // FUNNEL: an unexpected throw inside the grant try — record it so an
     // exception mid-grant can't vanish into a 500 with no funnel trace.
     await logPaymentEvent(sbLog, {
@@ -859,20 +959,27 @@ async function handleRevoke(
       }
     }
 
-    // Resolve the affected user. From the matched sub if we have one; else map
-    // by metadata user id / email (membership.* events may carry no payment id).
+    // Resolve the affected user. From the matched sub if we have one; else via
+    // the shared buyer resolver (fix A: membership pin / metadata / checkout
+    // session / Whop membership API, email last).
     let userId: string | null = subs[0]?.user_id ?? null;
-    if (!userId && r.metaUserId) {
-      const { data: u } = await sb.from("users").select("id").eq("id", r.metaUserId).maybeSingle();
-      userId = (u?.id as string | undefined) ?? null;
-    }
-    if (!userId && r.email) {
-      const { data: u } = await sb
-        .from("users")
-        .select("id")
-        .ilike("email", escapeLike(r.email))
-        .maybeSingle();
-      userId = (u?.id as string | undefined) ?? null;
+    if (!userId) {
+      const buyer = await resolveWhopBuyer(sb, {
+        membershipId: r.membershipId,
+        metaUserId: r.metaUserId,
+        checkoutConfigId: r.checkoutConfigId,
+        email: r.email,
+      });
+      if (buyer.kind === "provider_unavailable") {
+        return NextResponse.json({ error: "membership lookup unavailable, retry" }, { status: 503 });
+      }
+      // Review fix: an email-only match for a MEMBERSHIP event is the payer's
+      // email account, not necessarily the subscriber (Mezoo case). Never
+      // revoke on that; fall to the loud unmatched branch below.
+      userId =
+        buyer.kind === "resolved" && !(buyer.source === "email" && r.membershipId)
+          ? buyer.userId
+          : null;
     }
 
     // If we still matched no sub but DID resolve a user (membership event with
@@ -1110,10 +1217,16 @@ async function handleRevoke(
         const graceSince = new Date(
           Date.now() - (Number.isFinite(graceDays) && graceDays > 0 ? graceDays : 7) * 86400_000
         ).toISOString();
+        // FIX (2026-10-02): scope the grace to THIS user's dunning claims.
+        // Without the user filter, any one buyer's failed payment deferred
+        // every other user's revoke for 7 days. Claims written before this
+        // fix carry no user_id and therefore defer nobody.
         const { data: recoveryClaims } = await sb
           .from("processed_webhook_events")
           .select("event_id")
+          .eq("provider", "whop")
           .like("event_id", "recover:%")
+          .eq("payload->>user_id", userId)
           .gte("processed_at", graceSince)
           .limit(1);
         dunningInFlight = (recoveryClaims ?? []).length > 0;
@@ -1220,54 +1333,75 @@ async function handlePaymentRecovery(
   const d = rec(data);
   const declineCode = str(d.decline_code) ?? str(d.declineCode);
   const failureMessage = str(d.failure_message) ?? str(d.failureMessage);
-  const recoveryUrl = str(d.recovery_url) ?? str(d.recoveryUrl);
+  const rawRecoveryUrl = str(d.recovery_url) ?? str(d.recoveryUrl);
+  // Only ever link the buyer to an https Whop URL.
+  const recoveryUrl =
+    rawRecoveryUrl && /^https:\/\/([a-z0-9-]+\.)*whop\.com\//i.test(rawRecoveryUrl) ? rawRecoveryUrl : null;
   const status = str(d.status);
 
   console.info(
     `[whop webhook] RECOVERY event=${event} paymentId=${f.paymentId ?? "(none)"} status=${status ?? "(none)"} hasRecoveryUrl=${Boolean(recoveryUrl)}`
   );
 
-  // Dedupe the dunning email on the payment id (retries carry the same id).
-  if (f.paymentId) {
-    try {
-      const sb0 = getServiceClient();
-      const claim = await sb0
-        .from("processed_webhook_events")
-        .insert({
-          provider: "whop",
-          event_id: `recover:${f.paymentId}`,
-          payload: { claimed_at: new Date().toISOString(), event },
-        })
-        .select("event_id")
-        .maybeSingle();
-      if (!claim) {
-        return NextResponse.json({ ok: true, duplicate: true });
-      }
-    } catch (err) {
-      // A 23505 (duplicate) surfaces here as an error on some clients — if the
-      // row already exists we must still not re-email; treat insert errors as
-      // "already claimed" for safety of the mailbox, but keep the telemetry.
-      const code = (err as { code?: string }).code;
-      if (code === "23505") {
-        return NextResponse.json({ ok: true, duplicate: true });
-      }
-      Sentry.captureException(err, { tags: { route: "webhooks/whop", step: "recovery_claim" } });
-    }
-  }
-
   const sb = getServiceClient();
+
+  // ── Resolve the subscriber FIRST (fix A), so the claim can record whose
+  // dunning this is and the grace guard can filter by user (fix B). The old
+  // metadata-then-email order emailed the Whop payer's email account. ──
+  const buyer = await resolveWhopBuyer(sb, {
+    membershipId: f.membershipId,
+    metaUserId: f.metaUserId,
+    membershipMetaUserId: f.membershipMetaUserId,
+    checkoutConfigId: f.checkoutConfigId,
+    email: f.email,
+  });
+  if (buyer.kind === "provider_unavailable") {
+    return NextResponse.json({ error: "membership lookup unavailable, retry" }, { status: 503 });
+  }
+  const userId: string | null = buyer.kind === "resolved" ? buyer.userId : null;
+
+  // ── Dedupe: one dunning claim (and at most one email) per failed payment.
+  // FIX (2026-10-02): the old code checked `if (!claim)` on the whole
+  // supabase response object, which is always truthy, and supabase-js never
+  // throws on 23505, so retries were never deduped (pay_5iKl… recorded 4x). ──
+  if (f.paymentId) {
+    const { data: claim, error: claimErr } = await sb
+      .from("processed_webhook_events")
+      .insert({
+        provider: "whop",
+        event_id: `recover:${f.paymentId}`,
+        payload: {
+          claimed_at: new Date().toISOString(),
+          event,
+          user_id: userId,
+          membership_id: f.membershipId,
+        },
+      })
+      .select("event_id")
+      .maybeSingle();
+    if (claimErr) {
+      if ((claimErr as { code?: string }).code === "23505") {
+        return NextResponse.json({ ok: true, duplicate: true });
+      }
+      Sentry.captureException(claimErr, { tags: { route: "webhooks/whop", step: "recovery_claim" } });
+      // Unknown DB error: do not email (we could not record the claim, so a
+      // retry could double-send). Let Whop redeliver.
+      return NextResponse.json({ error: "DB error" }, { status: 500 });
+    }
+    if (!claim) return NextResponse.json({ ok: true, duplicate: true });
+  }
 
   await logPaymentEvent(sb, {
     event: "webhook_received",
     provider: "whop",
-    userId: null,
+    userId,
     email: f.email,
     planId: f.planId,
     paymentId: f.paymentId,
     amountCents: f.amountCents,
     currency: f.currency,
     signatureValid: true,
-    matched: Boolean(f.metaUserId || f.email),
+    matched: Boolean(userId),
     metadata: {
       event,
       whop_event: event,
@@ -1275,42 +1409,37 @@ async function handlePaymentRecovery(
       decline_code: declineCode ?? null,
       failure_message: failureMessage ?? null,
       has_recovery_url: Boolean(recoveryUrl),
+      membership_id: f.membershipId,
+      resolved_via: buyer.kind === "resolved" ? buyer.source : null,
     },
   });
 
-  // Resolve the user for the dunning email. Metadata id first, email fallback.
-  let userId: string | null = null;
   let email: string | null = null;
   let firstName: string | null = null;
   let languageCode: string | null = null;
-  if (f.metaUserId) {
+  if (userId) {
     const { data: u } = await sb
       .from("users")
       .select("id, email, first_name, language_code")
-      .eq("id", f.metaUserId)
+      .eq("id", userId)
       .maybeSingle();
     if (u) {
-      userId = u.id as string;
-      email = (u.email as string | null) ?? null;
-      firstName = (u.first_name as string | null) ?? null;
-      languageCode = (u.language_code as string | null) ?? null;
-    }
-  }
-  if (!userId && f.email) {
-    const { data: u } = await sb
-      .from("users")
-      .select("id, email, first_name, language_code")
-      .ilike("email", escapeLike(f.email))
-      .maybeSingle();
-    if (u) {
-      userId = u.id as string;
       email = (u.email as string | null) ?? null;
       firstName = (u.first_name as string | null) ?? null;
       languageCode = (u.language_code as string | null) ?? null;
     }
   }
 
-  // Record the actionable signal regardless (ops can drain manually).
+  // The link the buyer uses to fix the card. Whop's recovery_url resumes the
+  // exact charge; when Whop sends none (the common case on declines), fall
+  // back to the member's Whop billing page (membership.manage_url, or the
+  // documented /billing/manage/<mber_> form), then the company page.
+  const manageUrl =
+    buyer.manageUrl ??
+    (f.memberId ? `https://whop.com/billing/manage/${f.memberId}` : null) ??
+    "https://whop.com/medpruf";
+  const actionUrl = recoveryUrl ?? manageUrl;
+
   try {
     await sb.from("user_events").insert({
       user_id: userId ?? "whop-webhook",
@@ -1319,10 +1448,12 @@ async function handlePaymentRecovery(
         event,
         payment_id: f.paymentId,
         plan_id: f.planId,
+        membership_id: f.membershipId,
         status,
         decline_code: declineCode,
         failure_message: failureMessage,
         recovery_url: recoveryUrl,
+        action_url: actionUrl,
         mapped_user_id: userId,
       },
     });
@@ -1332,47 +1463,54 @@ async function handlePaymentRecovery(
 
   if (!userId || !email) {
     Sentry.captureMessage(
-      `Whop ${event} unmapped (payment=${f.paymentId ?? "none"} email=${f.email ?? "none"}) — buyer may churn without dunning`,
+      `Whop ${event} unmapped (payment=${f.paymentId ?? "none"} membership=${f.membershipId ?? "none"}): buyer may churn without dunning`,
       "warning"
     );
     return NextResponse.json({ ok: true, ignored: "unmapped_recovery_event" });
   }
 
-  // Email the buyer the recovery link (best-effort; never 5xx).
-  if (recoveryUrl) {
-    const isDe = !(languageCode ?? "").toLowerCase().startsWith("en");
-    const subject = isDe
-      ? "Aktion erforderlich: Ihre MedPrüf-Zahlung"
-      : "Action required: your MedPrüf payment";
-    const html = isDe
-      ? `<p>Hallo${firstName ? ` ${firstName}` : ""},</p>` +
-        `<p>die letzte Zahlung Ihrer MedPrüf-Mitgliedschaft konnte von Ihrer Bank nicht abgeschlossen werden${declineCode ? ` (Grund: ${declineCode})` : ""}. Ihr Pro-Zugang läuft sonst zum Ende der bezahlten Laufzeit aus.</p>` +
-        `<p>Sie können das in einer Minute beheben: öffnen Sie den untenstehenden Whop-Link, bestätigen Sie die Zahlung oder aktualisieren Sie Ihre Karte, und alles läuft automatisch weiter.</p>` +
-        `<p><a href="${recoveryUrl}">Zahlung jetzt abschließen</a></p>` +
-        `<p>Falls Sie das Abo stattdessen beenden möchten, ist dafür kein weiterer Schritt nötig.</p>` +
-        `<p>Mit freundlichen Grüßen<br>Das MedPrüf-Team</p>`
-      : `<p>Hi${firstName ? ` ${firstName}` : ""},</p>` +
-        `<p>The latest payment on your MedPrüf membership could not be completed${declineCode ? ` (reason: ${declineCode})` : ""}. Your Pro access runs until the end of the period you already paid for.</p>` +
-        `<p>You can fix this in one minute: open the Whop link below and confirm the payment or update your card.</p>` +
-        `<p><a href="${recoveryUrl}">Complete the payment now</a></p>` +
-        `<p>If you would rather end the membership, no action is needed.</p>` +
-        `<p>Best,<br>The MedPrüf Team</p>`;
-    try {
-      const res = await sendZohoEmail({ to: email, subject, htmlBody: html });
-      await recordEvent(sb, userId, "whop_dunning_email", {
-        event,
-        payment_id: f.paymentId,
-        to: email,
-        ok: res.ok,
-        reason: res.ok ? null : (res as { reason?: string }).reason ?? null,
-        has_recovery_url: Boolean(recoveryUrl),
-      });
-    } catch (err) {
-      console.error("[webhooks/whop] dunning email failed", err);
-      await recordEvent(sb, userId, "whop_dunning_email_failed", {
-        event, payment_id: f.paymentId, to: email,
-      });
-    }
+  const isDe = !(languageCode ?? "").toLowerCase().startsWith("en");
+  const href = escapeHtml(actionUrl);
+  const reason = declineCode ? escapeHtml(declineCode) : null;
+  const subject = isDe
+    ? "Aktion erforderlich: Ihre MedPrüf-Zahlung"
+    : "Action required: your MedPrüf payment";
+  const html = isDe
+    ? `<p>Hallo${firstName ? ` ${escapeHtml(firstName)}` : ""},</p>` +
+      `<p>die letzte Zahlung Ihrer MedPrüf-Mitgliedschaft konnte von Ihrer Bank nicht abgeschlossen werden${reason ? ` (Grund: ${reason})` : ""}. Ihr Pro-Zugang läuft sonst zum Ende der bezahlten Laufzeit aus.</p>` +
+      (recoveryUrl
+        ? `<p>Sie können das in einer Minute beheben: öffnen Sie den untenstehenden Whop-Link, bestätigen Sie die Zahlung oder aktualisieren Sie Ihre Karte, und alles läuft automatisch weiter.</p>` +
+          `<p><a href="${href}">Zahlung jetzt abschließen</a></p>`
+        : `<p>Sie können das in einer Minute beheben: öffnen Sie Ihre Whop-Abrechnung über den untenstehenden Link und hinterlegen Sie eine gültige Karte. Whop versucht die Zahlung danach automatisch erneut.</p>` +
+          `<p><a href="${href}">Karte in Whop aktualisieren</a></p>`) +
+      `<p>Falls Sie das Abo stattdessen beenden möchten, ist dafür kein weiterer Schritt nötig.</p>` +
+      `<p>Mit freundlichen Grüßen<br>Das MedPrüf-Team</p>`
+    : `<p>Hi${firstName ? ` ${escapeHtml(firstName)}` : ""},</p>` +
+      `<p>The latest payment on your MedPrüf membership could not be completed${reason ? ` (reason: ${reason})` : ""}. Your Pro access runs until the end of the period you already paid for.</p>` +
+      (recoveryUrl
+        ? `<p>You can fix this in one minute: open the Whop link below and confirm the payment or update your card.</p>` +
+          `<p><a href="${href}">Complete the payment now</a></p>`
+        : `<p>You can fix this in one minute: open your Whop billing page below and add a working card. Whop then retries the payment automatically.</p>` +
+          `<p><a href="${href}">Update your card on Whop</a></p>`) +
+      `<p>If you would rather end the membership, no action is needed.</p>` +
+      `<p>Best,<br>The MedPrüf Team</p>`;
+  try {
+    const res = await sendZohoEmail({ to: email, subject, htmlBody: html });
+    await recordEvent(sb, userId, "whop_dunning_email", {
+      event,
+      payment_id: f.paymentId,
+      membership_id: f.membershipId,
+      to: email,
+      ok: res.ok,
+      reason: res.ok ? null : (res as { reason?: string }).reason ?? null,
+      has_recovery_url: Boolean(recoveryUrl),
+      link_kind: recoveryUrl ? "recovery_url" : "manage_url",
+    });
+  } catch (err) {
+    console.error("[webhooks/whop] dunning email failed", err);
+    await recordEvent(sb, userId, "whop_dunning_email_failed", {
+      event, payment_id: f.paymentId, to: email,
+    });
   }
 
   return NextResponse.json({ ok: true, handled: event });
@@ -1410,29 +1548,42 @@ async function handleTrialEndingSoon(
 
   const sb = getServiceClient();
 
-  // One reminder per membership, ever.
-  if (membershipId) {
-    const claimKey = `trialssoon:${membershipId}`;
-    try {
-      const { data: claim } = await sb
-        .from("processed_webhook_events")
-        .insert({
-          provider: "whop",
-          event_id: claimKey,
-          payload: { claimed_at: new Date().toISOString(), event },
-        })
-        .select("event_id")
-        .maybeSingle();
-      if (!claim) return NextResponse.json({ ok: true, duplicate: true });
-    } catch (err) {
-      const code = (err as { code?: string }).code;
-      if (code === "23505") return NextResponse.json({ ok: true, duplicate: true });
-      Sentry.captureException(err, { tags: { route: "webhooks/whop", step: "trial_ending_claim" } });
-    }
+  // Resolve the subscriber through the shared resolver (fix A).
+  const buyer = await resolveWhopBuyer(sb, {
+    membershipId,
+    metaUserId,
+    checkoutConfigId: str(d.checkout_configuration_id) ?? f.checkoutConfigId,
+    email: f.email,
+  });
+  if (buyer.kind === "provider_unavailable") {
+    return NextResponse.json({ error: "membership lookup unavailable, retry" }, { status: 503 });
   }
 
-  // Resolve the user (metadata id, then the payment-level email fallback).
-  let userId = metaUserId;
+  // One reminder per membership, ever. (Destructure the response: the old
+  // pattern relied on the error case only; a non-23505 DB error now stops
+  // the send instead of risking a duplicate email.)
+  if (membershipId) {
+    const claimKey = `trialssoon:${membershipId}`;
+    const { data: claim, error: claimErr } = await sb
+      .from("processed_webhook_events")
+      .insert({
+        provider: "whop",
+        event_id: claimKey,
+        payload: { claimed_at: new Date().toISOString(), event },
+      })
+      .select("event_id")
+      .maybeSingle();
+    if (claimErr) {
+      if ((claimErr as { code?: string }).code === "23505") {
+        return NextResponse.json({ ok: true, duplicate: true });
+      }
+      Sentry.captureException(claimErr, { tags: { route: "webhooks/whop", step: "trial_ending_claim" } });
+      return NextResponse.json({ error: "DB error" }, { status: 500 });
+    }
+    if (!claim) return NextResponse.json({ ok: true, duplicate: true });
+  }
+
+  let userId: string | null = buyer.kind === "resolved" ? buyer.userId : null;
   let email: string | null = null;
   let firstName: string | null = null;
   let languageCode: string | null = null;
@@ -1446,19 +1597,8 @@ async function handleTrialEndingSoon(
       email = (u.email as string | null) ?? null;
       firstName = (u.first_name as string | null) ?? null;
       languageCode = (u.language_code as string | null) ?? null;
-    }
-  }
-  if (!email && f.email) {
-    const { data: u } = await sb
-      .from("users")
-      .select("id, email, first_name, language_code")
-      .ilike("email", escapeLike(f.email))
-      .maybeSingle();
-    if (u) {
-      userId = u.id as string;
-      email = (u.email as string | null) ?? null;
-      firstName = (u.first_name as string | null) ?? null;
-      languageCode = (u.language_code as string | null) ?? null;
+    } else {
+      userId = null;
     }
   }
 
@@ -1500,12 +1640,12 @@ async function handleTrialEndingSoon(
     ? "Dein MedPrüf Pro-Test endet bald"
     : "Your MedPrüf Pro trial is ending soon";
   const html = isDe
-    ? `<p>Hallo${firstName ? ` ${firstName}` : ""},</p>` +
+    ? `<p>Hallo${firstName ? ` ${escapeHtml(firstName)}` : ""},</p>` +
       `<p>dein 7-tägiger MedPrüf Pro-Test endet in Kürze. Wenn du nichts unternimmst, wird deine hinterlegte Karte automatisch mit <strong>19 € pro Monat</strong> belastet und dein Pro-Zugang läuft weiter.</p>` +
-      `<p>Möchtest du weitermachen, musst du nichts tun. Wenn nicht, kündige einfach in deinen Whop-Abrechnungseinstellungen, bevor der Test endet — dann wird nichts belastet.</p>` +
+      `<p>Möchtest du weitermachen, musst du nichts tun. Wenn nicht, kündige einfach in deinen Whop-Abrechnungseinstellungen, bevor der Test endet, dann wird nichts belastet.</p>` +
       `<p><a href="https://whop.com/medpruf">Mitgliedschaft verwalten</a></p>` +
       `<p>Mit freundlichen Grüßen<br>Das MedPrüf-Team</p>`
-    : `<p>Hi${firstName ? ` ${firstName}` : ""},</p>` +
+    : `<p>Hi${firstName ? ` ${escapeHtml(firstName)}` : ""},</p>` +
       `<p>Your 7-day MedPrüf Pro trial is ending soon. If you do nothing, the card on file is automatically charged <strong>19 € per month</strong> and your Pro access continues.</p>` +
       `<p>Want to continue? Do nothing. If not, cancel in your Whop billing settings before the trial ends and you will not be charged.</p>` +
       `<p><a href="https://whop.com/medpruf">Manage your membership</a></p>` +
@@ -1831,16 +1971,6 @@ async function qualifyReferralOnWhopPayment(
   }
 }
 
-/**
- * Escape PostgREST/SQL LIKE wildcards so an email is matched LITERALLY (case-
- * insensitively) by `.ilike`, not as a pattern. Without this, a stored email
- * containing `_` or `%` (both legal in the local-part) would be a wildcard and
- * could match the wrong user row. Backslash first so we don't double-escape.
- */
-function escapeLike(value: string): string {
-  return value.replace(/\\/g, "\\\\").replace(/[%_]/g, (c) => `\\${c}`);
-}
-
 // Defensive payload readers for the dunning/trial paths (mirror whop.ts).
 function rec(v: unknown): Record<string, unknown> {
   return v && typeof v === "object" ? (v as Record<string, unknown>) : {};
@@ -1850,6 +1980,14 @@ function str(v: unknown): string | null {
   if (typeof v === "string") return v;
   if (typeof v === "number") return String(v);
   return null;
+}
+function escapeHtml(v: string): string {
+  return v
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 async function recordEvent(

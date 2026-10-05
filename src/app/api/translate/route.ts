@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { requireUser, isFreeAccess } from "@/lib/auth-guard";
+import { canFreeUserReadQuestion, logFreeCapHit } from "@/lib/free-access";
 import { checkRateLimit, rateKey, rateLimitHeaders } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
@@ -116,6 +117,19 @@ export async function GET(req: NextRequest) {
   }
 
   const db = getServiceClient();
+
+  // 2026-10-02 paywall: translations carry the stem/explanation, so free
+  // callers only get them for questions inside their free allowance.
+  if (isFreeAccess(guard) && !(await canFreeUserReadQuestion(db, guard.userId, questionId))) {
+    await logFreeCapHit(db, {
+      userId: guard.userId,
+      gate: "qbank_limit",
+      route: "/api/translate GET",
+      questionId,
+    });
+    return NextResponse.json({ translations: {}, field, locked: true, upgradeRequired: true });
+  }
+
   const { data, error } = await db
     .from("question_translations")
     .select("lang, translated_text")
@@ -232,6 +246,21 @@ export async function POST(req: NextRequest) {
   }
 
   const db = getServiceClient();
+
+  // 0. Paywall (2026-10-02): free callers may only translate questions inside
+  //    their free allowance (cache hits included; they carry the content).
+  if (isFreeAccess(guard) && !(await canFreeUserReadQuestion(db, userId, questionId))) {
+    await logFreeCapHit(db, {
+      userId,
+      gate: "qbank_limit",
+      route: "/api/translate POST",
+      questionId,
+    });
+    return NextResponse.json(
+      { error: "upgrade_required", upgradeRequired: true, gate: "qbank_limit" },
+      { status: 402 },
+    );
+  }
 
   // 1. Cache lookup — if this translation already exists, serve it
   //    and log the event for analytics without any upstream cost.

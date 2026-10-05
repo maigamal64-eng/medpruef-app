@@ -245,6 +245,7 @@ export async function POST(req: NextRequest) {
         apiKey,
         planId,
         tier,
+        userId,
         buyerEmail,
         parsed,
         membershipsTruncated: list.truncated,
@@ -496,6 +497,7 @@ async function resolveMembershipByEmailMatch(
     apiKey: string;
     planId: string;
     tier: string;
+    userId: string;
     buyerEmail: string | null;
     parsed: PlanMembership[];
     membershipsTruncated: boolean;
@@ -516,6 +518,10 @@ async function resolveMembershipByEmailMatch(
       (m) =>
         m.email &&
         m.email.trim().toLowerCase() === args.buyerEmail?.trim().toLowerCase() &&
+        // 2026-10-02: never claim a membership whose metadata names ANOTHER
+        // MedPrüf account (the Whop payer email can belong to a different
+        // account than the subscriber, e.g. the Mezoo/Bader case).
+        (!m.metaUserId || m.metaUserId === args.userId) &&
         (m.valid || (m.status ? VALID_STATUSES.has(m.status) : true))
     );
     if (emailCandidates.length === 1 && userCount <= 1) {

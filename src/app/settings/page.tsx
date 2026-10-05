@@ -42,6 +42,11 @@ import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import { AppLayout } from "@/components/ui";
 import ExamSittingPicker from "@/components/ExamSittingPicker";
+import {
+  WHOP_MANAGE_TEXT,
+  WHOP_MANAGE_URL,
+  billingNeutralLine,
+} from "@/lib/billing-copy";
 import { EXAM_SOURCES, setStoredExamSource, type ExamSourceId } from "@/lib/topics";
 import {
   Alert,
@@ -152,8 +157,11 @@ export default function SettingsPage() {
   const [offlineClearOpen, setOfflineClearOpen] = useState(false);
 
   // ── Active-subscription snapshot ─────────────────────────────────
-  // Populated from /api/user/subscription on mount. null = loading,
-  // false = no active subscription, otherwise the provider snapshot.
+  // Populated from /api/user/subscription on mount. Drives the
+  // "Current plan" card in the Konto panel — specifically the €19
+  // first-month trial countdown and the day-25 "Pick your next plan"
+  // CTA. null = still loading, false = no active subscription, else
+  // the full snapshot.
   const [activeSub, setActiveSub] = useState<
     | null
     | false
@@ -164,7 +172,6 @@ export default function SettingsPage() {
         expires_at: string | null;
         days_remaining: number | null;
         is_first_month_trial: boolean;
-        billing_cadence_unknown?: boolean;
         is_puyp_eligible_tier: boolean;
       }
   >(null);
@@ -1776,11 +1783,46 @@ function EmailLinkCard({ lang }: { lang: Lang }) {
 /* ═══════════════════════ SubscriptionCard ═══════════════════════ */
 
 /**
+ * One-line, plan-agnostic billing note: renewal depends on the plan the
+ * user bought (monthly and 3-month renew, Cohort and legacy one-time do
+ * not), so this line states the rule and points to Whop for the actual
+ * renewal date and cancellation. Wording: src/lib/billing-copy.ts.
+ */
+function BillingManageLine({ lang }: { lang: Lang }) {
+  return (
+    <p className="text-xs text-[var(--mp-fg-muted)] leading-relaxed mt-2">
+      {billingNeutralLine(lang)}{" "}
+      {lang === "de"
+        ? "Verlängerungsdatum und Kündigung findest du bei Whop: "
+        : "Your renewal date and cancellation are at Whop: "}
+      <a
+        href={WHOP_MANAGE_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="underline"
+      >
+        {WHOP_MANAGE_TEXT}
+      </a>
+    </p>
+  );
+}
+
+/**
  * Renders the user's active subscription inside the Konto panel.
  *
- * Trial status and renewal cadence must come from trustworthy provider
- * data. Legacy tier keys alone cannot distinguish old one-time plans
- * from current recurring plans, so those rows use a neutral summary.
+ * Special treatment for the €19 first-month trial (tier ==
+ * 'first_month_19'):
+ *   - Countdown chip showing days_remaining.
+ *   - At day 25+ OR when days_remaining <= 5, a prominent CTA invites
+ *     the user to pick a longer plan. "Pick your next plan" routes to
+ *     /pricing — we intentionally don't auto-redirect or pre-select.
+ *     NOTE: monthly and 3-month plans DO auto-renew (2026-09); this card
+ *     shows plan-agnostic billing copy until renewal cadence is read from
+ *     the provider plan (MP-TRUTH-19, code follow-up).
+ *   - At any earlier point, a calmer "you're on the €19 trial" copy.
+ *
+ * Non-trial tiers (Cohort / Pro / etc.) show a simpler summary with
+ * the tier name, status, and expiry.
  */
 function SubscriptionCard({
   sub,
@@ -1793,7 +1835,6 @@ function SubscriptionCard({
     expires_at: string | null;
     days_remaining: number | null;
     is_first_month_trial: boolean;
-    billing_cadence_unknown?: boolean;
     is_starter_3mo_trial?: boolean;
     is_puyp_eligible_tier: boolean;
   };
@@ -1819,8 +1860,12 @@ function SubscriptionCard({
   const showTrialPicker =
     (sub.is_first_month_trial && days > 0 && days <= 5) ||
     (sub.is_starter_3mo_trial === true && days > 0 && days <= 14);
-  // Do not infer trial status from legacy tier labels. The API leaves
-  // these flags false when the stored provider plan identity is ambiguous.
+  // Both the €19 single-month and the €27 / 3-month entry tier render
+  // through the same compact trial-card layout — same trust signals,
+  // same countdown, same "Pick your next plan" CTA. The card body text
+  // already adapts to the live `humanName` so a `first_3mo_27` row
+  // reads "3-Monats-Einstieg" and a `first_month_19` row reads
+  // "Einzelmonat" without further branching.
   const isTrialCard =
     sub.is_first_month_trial || sub.is_starter_3mo_trial === true;
 
@@ -1852,8 +1897,8 @@ function SubscriptionCard({
             </p>
             <p className="text-xs text-[var(--mp-fg-subtle)] mt-1">
               {lang === "de"
-                ? "Einmalige Zahlung · keine automatische Verlängerung"
-                : "One-time payment · no auto-renewal"}
+                ? "Monats- und 3-Monats-Tarif verlängern sich bis zur Kündigung"
+                : "Monthly and 3-month plans renew until you cancel"}
             </p>
           </div>
           <span
@@ -1886,8 +1931,8 @@ function SubscriptionCard({
         {expiresLabel && (
           <p className="text-xs text-[var(--mp-fg-subtle)]">
             {lang === "de"
-              ? `Zugang läuft am ${expiresLabel} aus.`
-              : `Access expires on ${expiresLabel}.`}
+              ? `Aktueller Zeitraum bis ${expiresLabel}.`
+              : `Current period through ${expiresLabel}.`}
           </p>
         )}
 
@@ -1901,14 +1946,15 @@ function SubscriptionCard({
           >
             <p className="text-sm font-semibold text-[var(--mp-fg)]">
               {lang === "de"
-                ? "Wähle deinen nächsten Tarif"
-                : "Pick your next plan"}
+                ? "Dein aktueller Zeitraum endet bald"
+                : "Your current period ends soon"}
             </p>
             <p className="text-xs text-[var(--mp-fg-muted)] leading-relaxed">
               {lang === "de"
-                ? "Dein 1-Monats-Test läuft bald aus. Wir verlängern nichts automatisch, du entscheidest selbst, ob du weitermachst."
-                : "Your 1-month trial ends soon. Nothing will renew automatically; you decide whether to continue."}
+                ? "Einzelmonat und 3-Monats-Tarif sind Abos: Sie verlängern sich automatisch, solange du nicht kündigst. Nur ältere Einmalzahlungen und die Prüfungs-Kohorte enden an diesem Datum."
+                : "The Single Month and 3-Month plans are subscriptions: they renew automatically unless you cancel. Only older one-time purchases and the Exam Cohort end on this date."}
             </p>
+            <BillingManageLine lang={lang} />
             <Link
               href="/pricing"
               className="mp-btn mp-btn--primary inline-flex items-center justify-center gap-2 self-start"
@@ -1918,11 +1964,7 @@ function SubscriptionCard({
             </Link>
           </div>
         ) : (
-          <p className="text-xs text-[var(--mp-fg-muted)] leading-relaxed">
-            {lang === "de"
-              ? "Am Tag 25 schreiben wir dir. Wenn du vorher einen längeren Tarif wählst, aktiviert sich der beim Ende deines Tests automatisch."
-              : "We'll email you on day 25. If you pick a longer plan before then, it activates automatically when this trial ends."}
-          </p>
+          <BillingManageLine lang={lang} />
         )}
       </div>
     );
@@ -1951,17 +1993,11 @@ function SubscriptionCard({
         {expiresLabel && (
           <p className="text-xs text-[var(--mp-fg-subtle)] mt-0.5">
             {lang === "de"
-              ? `Zugang aktiv bis ${expiresLabel}`
-              : `Access active through ${expiresLabel}`}
+              ? `Aktueller Zeitraum bis ${expiresLabel}`
+              : `Current period through ${expiresLabel}`}
           </p>
         )}
-        {sub.billing_cadence_unknown && (
-          <p className="text-xs text-[var(--mp-fg-muted)] mt-2">
-            {lang === "de"
-              ? "Dein Zugang ist aktiv. Ob und wann abgerechnet oder verlängert wird, siehst du bei deinem Zahlungsanbieter."
-              : "Your access is active. Check your payment provider for billing and renewal dates."}
-          </p>
-        )}
+        <BillingManageLine lang={lang} />
       </div>
       <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-[var(--mp-surface)] text-[var(--mp-viridian)] text-xs font-semibold rounded-lg border border-[rgba(0,123,95,0.25)] whitespace-nowrap">
         {lang === "de" ? "Aktiv" : "Active"}

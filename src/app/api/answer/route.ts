@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { requireUser, isFreeAccess } from "@/lib/auth-guard";
+import { canFreeUserReadQuestion, logFreeCapHit } from "@/lib/free-access";
 import { captureServerError } from "@/lib/sentry-capture";
 import { qualifyReferralOnActivity } from "@/lib/referral-exam-reward";
 
@@ -81,6 +82,24 @@ export async function POST(req: NextRequest) {
   if (!question) {
     return NextResponse.json({ error: "Unknown question" }, { status: 404 });
   }
+  // 2026-10-02 paywall: a free caller may only record answers for questions
+  // inside their free allowance. Without this, a blind POST on an unseen
+  // slice id marked it "answered" and so unlocked it past the cap. A repeat
+  // answer on an already-answered question stays allowed.
+  if (isFreeUser && !(await canFreeUserReadQuestion(sb, userId, questionId))) {
+    await logFreeCapHit(sb, {
+      userId,
+      gate: "qbank_limit",
+      route: "/api/answer",
+      examType: (question as { exam_type?: string | null }).exam_type ?? null,
+      questionId,
+    });
+    return NextResponse.json(
+      { error: "Pro only", upgradeRequired: true, gate: "qbank_limit" },
+      { status: 402 }
+    );
+  }
+
   const { data: recorded, error: recordErr } = await sb.rpc("record_quiz_answer", {
     p_user_id: userId,
     p_question_id: questionId,

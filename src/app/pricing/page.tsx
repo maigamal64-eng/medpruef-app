@@ -20,6 +20,11 @@ import { getStoredSession } from "@/lib/auth";
 import { getStoredExamSource, type ExamSourceId } from "@/lib/topics";
 import { authFetch as fetch } from "@/lib/authFetch";
 import { useUserTier } from "@/lib/hooks/useUserTier";
+import {
+  BILLING_SUPPORT_EMAIL,
+  WHOP_MANAGE_TEXT,
+  WHOP_MANAGE_URL,
+} from "@/lib/billing-copy";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import { AppLayout } from "@/components/ui";
@@ -332,6 +337,25 @@ export default function PricingPage() {
               referralsEnabled={referralsEnabled}
             />
           </div>
+
+          {/* Billing truth: which plans renew, and how to cancel. Shared
+              wording lives in src/lib/billing-copy.ts (FAQ + terms). */}
+          <p className="mp-small text-[var(--mp-fg-muted)] mt-4 leading-relaxed">
+            {lang === "de"
+              ? "Einzelmonat und 3-Monats-Tarif sind Abos und verlängern sich automatisch alle 30 bzw. 90 Tage, bis du kündigst. Die Prüfungs-Kohorte ist eine Einmalzahlung. Kündigen kannst du bei Whop unter "
+              : "The Single Month and 3-Month plans are subscriptions and renew automatically every 30 or 90 days until you cancel. The Exam Cohort is a one-time payment. You can cancel at Whop via "}
+            <a
+              href={WHOP_MANAGE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline"
+            >
+              {WHOP_MANAGE_TEXT}
+            </a>
+            {lang === "de"
+              ? ` oder per E-Mail an ${BILLING_SUPPORT_EMAIL}.`
+              : ` or by email to ${BILLING_SUPPORT_EMAIL}.`}
+          </p>
         </section>
 
         {/* ══════════ Cost-anchor strip ══════════

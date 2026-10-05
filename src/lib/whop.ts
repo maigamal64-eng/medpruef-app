@@ -150,7 +150,14 @@ export interface WhopPaymentFields {
   paymentId: string | null;
   planId: string | null;
   email: string | null;
+  /** Whop MEMBER id (mber_…): the buyer's per-company member record. NOT the membership. */
   memberId: string | null;
+  /** Whop MEMBERSHIP id (mem_…): the subscription. The stable key a renewal shares with its trial/first payment. */
+  membershipId: string | null;
+  /** The checkout configuration (ch_…) the membership was created from; round-trips on renewals. */
+  checkoutConfigId: string | null;
+  /** medpruef_user_id echoed on the embedded membership object (v2 envelopes), if present. */
+  membershipMetaUserId: string | null;
   metaUserId: string | null;
   metaTier: string | null;
   amountCents: number | null;
@@ -169,12 +176,32 @@ export function extractWhopPayment(data: unknown): WhopPaymentFields {
   const member = rec(d.member);
   const metadata = rec(d.metadata);
   const planObj = rec(d.plan);
+  const membership = rec(d.membership);
+  const membershipMeta = rec(membership.metadata);
+  // A bare string `membership` (some envelopes) is the id itself.
+  const membershipStr = typeof d.membership === "string" ? d.membership : null;
+  const memberRaw = str(member.id) ?? str(d.member_id);
 
   return {
     paymentId: str(d.id) ?? str(d.payment_id) ?? str(d.receipt_id),
     planId: str(planObj.id) ?? str(d.plan_id) ?? str(d.plan) ?? str(d.access_pass),
-    email: str(user.email) ?? str(d.email) ?? str(d.user_email) ?? str(member.email),
-    memberId: str(member.id) ?? str(d.member_id),
+    email:
+      str(user.email) ?? str(d.email) ?? str(d.user_email) ?? str(member.email) ?? str(membership.email),
+    // 2026-10-02: member.id is the mber_ record; older code stored it as the
+    // membership id, so nothing membership-keyed ever matched. Keep only a
+    // real mber_ here and read the membership separately.
+    memberId: memberRaw && !memberRaw.startsWith("mem_") ? memberRaw : null,
+    membershipId:
+      str(membership.id) ??
+      membershipStr ??
+      str(d.membership_id) ??
+      (memberRaw && memberRaw.startsWith("mem_") ? memberRaw : null),
+    checkoutConfigId:
+      str(d.checkout_configuration_id) ??
+      str(membership.checkout_configuration_id) ??
+      str(d.checkout_session_id),
+    membershipMetaUserId:
+      str(membershipMeta.medpruef_user_id) ?? str(membershipMeta.user_id),
     metaUserId: str(metadata.medpruef_user_id) ?? str(metadata.user_id),
     metaTier: str(metadata.tier),
     amountCents:
@@ -252,6 +279,8 @@ export interface WhopRevokeFields {
   metaUserId: string | null;
   /** Buyer email, best-effort fallback. */
   email: string | null;
+  /** Checkout configuration (ch_…) if the payload carries it. */
+  checkoutConfigId: string | null;
   /** A stable per-event id used to namespace the idempotency claim (so a
    * refund of pay_X never collides with the grant claim keyed on pay_X). */
   eventDedupeId: string | null;
@@ -265,8 +294,9 @@ export interface WhopRevokeFields {
 export function extractWhopRevoke(data: unknown): WhopRevokeFields {
   const d = rec(data);
   const user = rec(d.user);
-  const member = rec(d.member) || rec(d.membership);
   const membership = rec(d.membership);
+  // `rec()` returns {} (truthy) for a missing key, so `a || b` never fell back.
+  const member = d.member && typeof d.member === "object" ? rec(d.member) : membership;
   const metadata = rec(d.metadata);
   const payment = rec(d.payment);
   const receipt = rec(d.receipt);
@@ -294,7 +324,8 @@ export function extractWhopRevoke(data: unknown): WhopRevokeFields {
   const membershipId =
     str(d.membership_id) ??
     str(membership.id) ??
-    str(member.id) ??
+    (typeof d.membership === "string" ? d.membership : null) ??
+    (str(member.id)?.startsWith("mem_") ? str(member.id) : null) ??
     (typeof str(d.id) === "string" && (str(d.id) as string).startsWith("mem_")
       ? str(d.id)
       : null);
@@ -303,8 +334,13 @@ export function extractWhopRevoke(data: unknown): WhopRevokeFields {
     paymentId,
     originalPaymentId,
     membershipId,
-    metaUserId: str(metadata.medpruef_user_id) ?? str(metadata.user_id),
+    metaUserId:
+      str(metadata.medpruef_user_id) ??
+      str(metadata.user_id) ??
+      str(rec(membership.metadata).medpruef_user_id),
     email: str(user.email) ?? str(d.email) ?? str(d.user_email) ?? str(member.email),
+    checkoutConfigId:
+      str(d.checkout_configuration_id) ?? str(membership.checkout_configuration_id),
     // Prefer the event's own id (refund/dispute/membership id); fall back to
     // the payment id so repeated deliveries of the SAME revoke still dedupe.
     eventDedupeId: ownId ?? membershipId ?? paymentId,

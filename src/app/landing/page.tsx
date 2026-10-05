@@ -121,8 +121,8 @@ const COPY = {
       en: "Single month · 19 € a month",
     },
     cta_tertiary_sub: {
-      de: "Vollzugang · einmalig · keine Verlängerung",
-      en: "Full access · one-time · no renewal",
+      de: "Vollzugang · verlängert sich monatlich · jederzeit kündbar",
+      en: "Full access · renews monthly · cancel anytime",
     },
     cta_note: {
       de: "Keine Karte · Prüfungs-Kohorte mit Pass-Until-You-Pass-Garantie",

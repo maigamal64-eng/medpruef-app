@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 
+import { billingCancelSummary, billingPlansSummary, billingTrialSummary } from "@/lib/billing-copy";
+
 export const metadata: Metadata = {
   title: "FAQ: MedPrüf",
   description:
@@ -45,15 +47,15 @@ function buildFaqSchema() {
     },
     {
       q: "Wie kann ich bezahlen?",
-      a: "Du zahlst sicher mit Karte (Visa, Mastercard, auch Apple Pay). Der Checkout läuft über Whop. Verfügbar sind die Prüfungs-Kohorte (129 € einmalig für 6 Monate), der 3-Monats-Tarif (49 € pro Quartal) und der Einzelmonat (19 € pro Monat). Der Einzelmonat verlängert sich monatlich und der 3-Monats-Tarif quartalsweise automatisch, sofern du nicht vorher kündigst. Die Prüfungs-Kohorte verlängert sich nicht automatisch.",
+      a: `Du zahlst sicher mit Karte (Visa, Mastercard, auch Apple Pay). Der Checkout läuft über Whop, unseren Zahlungsabwickler; der Vollzugang wird automatisch innerhalb von etwa einer Minute nach der Zahlung freigeschaltet. Verfügbar sind der Einzelmonat (19 € pro Monat), der 3-Monats-Tarif (49 € pro Quartal), die Prüfungs-Kohorte (129 € einmalig für 6 Monate) und der kostenlose Tarif. ${billingPlansSummary("de")} ${billingTrialSummary("de")} ${billingCancelSummary("de")}`,
     },
     {
       q: "Wie laufen Empfehlungszahlungen?",
-      a: "Das Empfehlungsprogramm ist nur für eingeladene und freigeschaltete Konten verfügbar. Wenn du freigeschaltet bist, kannst du zwei Kolleg:innen einladen. Beide müssen den Pro-Test mit Karte starten (0 € heute, danach 19 €/Monat, wenn nicht während der Testwoche gekündigt) und mindestens 20 verschiedene Fragen an mindestens 2 Tagen beantworten. Nach Prüfung wird Pro bis zum nächsten Prüfungsfenster gutgeschrieben. Es gibt keine Barauszahlung.",
+      a: "Jede:r Nutzer:in bekommt einen persönlichen Empfehlungscode. Sobald deine Empfehlung ein Abo abschließt, gehört eine abgestufte Auszahlung dir. Es gilt eine 30-Tage-Sperrfrist ab Zahlungseingang, Auszahlung per USDT (TRC-20/ERC-20) oder über Wise, ein Jahresdeckel von 600 € pro Empfehlende:r, und nur die erste Zahlung deiner Empfehlung löst den Bonus aus. SEPA ist nicht Teil des Programms.",
     },
     {
       q: "Was ist im kostenlosen Tarif enthalten?",
-      a: "Der kostenlose Tarif umfasst bis zu 150 Fragen pro Prüfungstyp und läuft nicht ab. Gespeicherte Antworten und Themenfortschritt werden mit deinem Konto synchronisiert. Vorhandene klinische Erklärungen und bereits gespeicherte KI-Erklärungen bleiben lesbar. Neue KI-Erklärungen und KI-Chat-Folgefragen erfordern einen bezahlten Tarif. Weitere Werkzeuge zeigen ihre Tarifvoraussetzungen direkt in der App.",
+      a: "Der kostenlose Tarif gibt dir 150 Fragen pro Prüfungstyp, 450 Fragen insgesamt über Kenntnisprüfung Wien, Stichprobentest (Innsbruck) und Pharmakologie, ohne Ablaufdatum. Klinische Erklärungen sind enthalten, wo sie vorhanden sind. Nicht enthalten: Spaced Repetition, Prüfungssimulation, Lesezeichen, Notizen, geräteübergreifende Synchronisation und KI-Chat-Folgefragen. Die KI-Erklärung zu jeder Frage ist den bezahlten Tarifen vorbehalten.",
     },
     {
       q: "Gibt es Tarife pro Prüfung?",
@@ -61,7 +63,7 @@ function buildFaqSchema() {
     },
     {
       q: "Wer baut MedPrüf?",
-      a: "MedPrüf wird von [name] ([name], Österreich) entwickelt. Die Fragenbanken nutzen unterschiedliche Quellen und Formate: Anki-basierte Multiple-Choice-Übungsfragen für die Kenntnisprüfung, curriculum-basierte Übungsfragen für den Stichprobentest und Lernfragen für Pharmakologie und Rezeptierkunde. Sie sind keine offiziellen oder rekonstruierten Prüfungsfragen. Die reale Kenntnisprüfung verwendet offene Kurzantwortfragen.",
+      a: "MedPrüf wird von [name] ([name], Österreich) entwickelt, einem Solo-Engineer, der seinen Cousin durch die österreichische Nostrifikation begleitet hat. Jede Frage stammt aus einer dokumentierten offiziellen Prüfung (7.566 aus Wien seit 2016, 2.742 aus Innsbruck, 335 aus Pharmakologie), nichts erfunden, nichts geraten.",
     },
   ];
 

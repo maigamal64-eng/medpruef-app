@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
-import { requireUser, isFreeAccess } from "@/lib/auth-guard";
+import { requireUser, isFreeAccess, isPaidAccess } from "@/lib/auth-guard";
+import { canFreeUserReadQuestion, logFreeCapHit } from "@/lib/free-access";
 import { addBreadcrumb, captureServerError } from "@/lib/sentry-capture";
 import { checkRateLimit, rateKey, rateLimitHeaders } from "@/lib/rate-limit";
 
@@ -87,9 +88,8 @@ function isMissingExplanationLocaleColumn(error: unknown): boolean {
 }
 
 // GET — Check for cached AI explanation for a question.
-// Open to anyone (free + pro + anon) because reading cached content is
-// not a cost-runaway vector and the app shows the cached text under
-// the normal quiz flow.
+// Paid/admin: any question. Free/anon: only questions inside the free
+// allowance (free slice, and not past the cap unless already answered).
 export async function GET(req: NextRequest) {
   try {
     const url = new URL(req.url);
@@ -100,6 +100,29 @@ export async function GET(req: NextRequest) {
     }
 
     const db = getServiceClient();
+
+    // 2026-10-02 paywall: the cached explanation reveals the answer, so it is
+    // served only for questions inside the caller's free allowance unless
+    // they have paid access. (This GET used to answer for ANY id, even anon.)
+    let callerId: string | null = null;
+    let paid = false;
+    if (req.headers.get("x-session-token")) {
+      const guard = await requireUser(req);
+      if (!("error" in guard)) {
+        callerId = guard.userId;
+        paid = isPaidAccess(guard);
+      }
+    }
+    if (!paid && !(await canFreeUserReadQuestion(db, callerId, questionId))) {
+      await logFreeCapHit(db, {
+        userId: callerId,
+        gate: "qbank_limit",
+        route: "/api/ai-chat GET",
+        questionId,
+      });
+      return NextResponse.json({ cached: false, locked: true, upgradeRequired: true });
+    }
+
     let { data, error } = await db
       .from("questions")
       .select("ai_explanation, ai_explanation_generated_at, ai_explanation_lang")

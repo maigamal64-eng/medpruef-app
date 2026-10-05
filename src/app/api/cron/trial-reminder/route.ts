@@ -103,7 +103,14 @@ export async function GET(req: NextRequest) {
   }
 
   // ── 2. Day-25 reminder sweep ──
-  try {
+  // 2026-10-02: customer emails from this sweep are OFF unless
+  // TRIAL_REMINDER_EMAILS_ENABLED === 'true'. The cron never ran before the
+  // redirect fix, so the first working run would otherwise email several
+  // paying customers at once (incl. one whose row ends before their real,
+  // extended access). [name] decides when reminders go live.
+  const remindersEnabled =
+    (process.env.TRIAL_REMINDER_EMAILS_ENABLED ?? "false").toLowerCase() === "true";
+  if (remindersEnabled) try {
     const { data: dueTrials, error: dueErr } = await sb
       .from("subscriptions")
       .select("id, user_id, expires_at, tier")
@@ -276,15 +283,31 @@ export async function GET(req: NextRequest) {
           .eq("status", "active")
           .limit(1);
 
+        // 2026-10-02: never downgrade a user whose denormalized
+        // users.tier_expires_at is still in the future (a manual grant or an
+        // ops extension that did not touch this row). The paywall reads
+        // tier + tier_expires_at, so that user loses access on their own
+        // date anyway; the sweep must not cut it short.
         if (!others || others.length === 0) {
-          await sb
+          const { data: owner } = await sb
             .from("users")
-            .update({
-              tier: "free",
-              tier_expires_at: null,
-              updated_at: nowIso,
-            })
-            .eq("id", userId);
+            .select("tier, tier_expires_at")
+            .eq("id", userId)
+            .maybeSingle();
+          const ownerExp = owner?.tier_expires_at
+            ? Date.parse(owner.tier_expires_at as string)
+            : NaN;
+          const stillCovered = Number.isFinite(ownerExp) && ownerExp > Date.now();
+          if (owner?.tier !== "admin" && !stillCovered) {
+            await sb
+              .from("users")
+              .update({
+                tier: "free",
+                tier_expires_at: null,
+                updated_at: nowIso,
+              })
+              .eq("id", userId);
+          }
         }
 
         await recordEvent(

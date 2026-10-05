@@ -731,6 +731,13 @@ function QuizContent() {
               timeSpentMs: Date.now() - startTime,
             }),
           });
+          if (res.status === 402) {
+            // Server-side free allowance reached (e.g. a trial ended mid-
+            // session): show the upgrade prompt instead of a save error.
+            pendingAnswer.current = null;
+            setPaywall({ kind: "qbank_limit", limit: 150 });
+            return;
+          }
           if (!res.ok) throw new Error("Answer was not confirmed saved");
           data = await res.json();
           if (data?.saved !== true) throw new Error("Answer save was not confirmed");

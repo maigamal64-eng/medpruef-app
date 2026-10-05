@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 import * as Sentry from "@sentry/nextjs";
 import { requireUser, isPaidAccess } from "@/lib/auth-guard";
+import { filterFreeAccessibleQuestions, logFreeCapHit } from "@/lib/free-access";
 import { getServiceClient } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
@@ -95,6 +96,26 @@ export async function POST(req: NextRequest) {
   );
   if (questionIds.length === 0 || questionIds.length > MAX_QUESTIONS) {
     return NextResponse.json({ error: "Invalid question_ids" }, { status: 400 });
+  }
+
+  // 2026-10-02 paywall: the response carries the correct option texts, so a
+  // free caller may only submit questions inside their free allowance (the
+  // same set /api/questions would have served them). Otherwise this POST was
+  // an answer-key oracle for any question id.
+  if (!isPaidAccess(guard)) {
+    const access = await filterFreeAccessibleQuestions(sb, userId, questionIds);
+    if (access.denied.length > 0) {
+      await logFreeCapHit(sb, {
+        userId,
+        gate: "mock_exam",
+        route: "/api/history/exams POST",
+        examType: examType,
+      });
+      return NextResponse.json(
+        { error: "Pro required", code: "PRO_REQUIRED", upgradeRequired: true, gate: "qbank_limit" },
+        { status: 402 }
+      );
+    }
   }
 
   // Buyer input keyed by question id → selected OPTION TEXTS (strings).

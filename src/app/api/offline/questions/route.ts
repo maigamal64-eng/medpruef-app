@@ -12,6 +12,7 @@ import {
   getAnsweredSliceIds,
   FREE_TIER_QUESTIONS_PER_EXAM,
 } from "@/lib/free-tier";
+import { logFreeCapHit } from "@/lib/free-access";
 
 export const dynamic = "force-dynamic";
 
@@ -111,6 +112,13 @@ export async function GET(req: NextRequest) {
         examType,
       );
       if (answered >= FREE_TIER_QUESTIONS_PER_EXAM) {
+        await logFreeCapHit(sb, {
+          userId: guard.userId,
+          gate: "qbank_limit",
+          route: "/api/offline/questions",
+          examType,
+          seen: answered,
+        });
         const answeredSet = await getAnsweredSliceIds(sb, guard.userId, allowed);
         allowed = allowed.filter((id) => answeredSet.has(id));
         if (allowed.length === 0) {
