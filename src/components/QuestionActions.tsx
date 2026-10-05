@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import { Star, Bot, FileText, Flag, Save, X } from "lucide-react";
 import { t } from "@/lib/i18n";
 import { trackEvent } from "@/lib/tracker";
+import { getStoredSession } from "@/lib/auth";
+import { BOOKMARK_EVENT, loadBookmarks, readCachedBookmarks, setBookmark } from "@/lib/bookmarks";
+import { addNote, readNotes, updateNote } from "@/lib/notes-store";
 import ReportQuestionModal from "@/components/ReportQuestionModal";
 import type { MCQOption } from "@/lib/mcq";
 
@@ -42,21 +45,6 @@ interface Props {
   metaOnly?: boolean;
 }
 
-const FAV_KEY = "medpruef_favorites";
-
-function readFavs(): number[] {
-  if (typeof window === "undefined") return [];
-  try {
-    return JSON.parse(localStorage.getItem(FAV_KEY) || "[]");
-  } catch {
-    return [];
-  }
-}
-
-function noteKey(id: number) {
-  return `medpruef_notes_${id}`;
-}
-
 export default function QuestionActions({
   question,
   lang,
@@ -68,32 +56,64 @@ export default function QuestionActions({
   metaOnly = false,
 }: Props) {
   const [isFav, setIsFav] = useState(false);
+  const [bookmarkBusy, setBookmarkBusy] = useState(false);
   const [showReport, setShowReport] = useState(false);
   const [showNotePanel, setShowNotePanel] = useState(false);
   const [note, setNote] = useState("");
   const [noteSaved, setNoteSaved] = useState(false);
+  const userId = getStoredSession()?.user?.id || null;
+  const accountFavKey = userId;
 
   // Sync state with current question
   useEffect(() => {
     if (typeof window === "undefined") return;
-    setIsFav(readFavs().includes(question.id));
-    const saved = localStorage.getItem(noteKey(question.id)) || "";
+    let cancelled = false;
+    const syncIsFav = () => setIsFav(userId ? readCachedBookmarks(userId).includes(question.id) : false);
+    syncIsFav();
+    window.addEventListener(BOOKMARK_EVENT, syncIsFav);
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === `medpruef_favorites:${accountFavKey}`) syncIsFav();
+    };
+    window.addEventListener("storage", onStorage);
+
+    // Authenticated state is always loaded from the per-user server ledger.
+    // The old unscoped key is intentionally never imported into an account.
+    if (userId) {
+      void loadBookmarks(userId).then((ids) => {
+        if (cancelled || !ids) return;
+        setIsFav(ids.includes(question.id));
+      });
+    }
+    const onOnline = () => {
+      if (!userId) return;
+      void loadBookmarks(userId).then((ids) => {
+        if (cancelled || !ids) return;
+        setIsFav(ids.includes(question.id));
+      });
+    };
+    window.addEventListener("online", onOnline);
+    const saved = readNotes(question.id, userId || undefined)[0]?.text || "";
     setNote(saved);
     setShowNotePanel(false);
     setNoteSaved(false);
     setShowReport(false);
-  }, [question.id]);
+    return () => {
+      cancelled = true;
+      window.removeEventListener(BOOKMARK_EVENT, syncIsFav);
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("online", onOnline);
+    };
+  }, [question.id, userId, accountFavKey]);
 
-  // Lock 2026-04-23: bookmarks + notes are Pro-only. The storage is
-  // localStorage so there's no server gate — we just block the UI
-  // action and send the user to /pricing on click.
+  // Lock 2026-04-23: bookmarks + notes are Pro-only. The server re-checks
+  // bookmark access, while the UI sends free users to /pricing on click.
   //
   // 2026-04-24: also honour `userRole === 'admin'` — /admin/ operators
   // may have `tier='free'` in the users row because they never
   // subscribed. The admin role itself grants Pro-level access.
   const isPro = userRole === "admin" || userTier === "pro" || userTier === "admin";
 
-  const toggleFav = () => {
+  const toggleFav = async () => {
     if (!isPro) {
       // Redirect to pricing with a deep-link gate so the upsell is
       // contextual ("you tried to bookmark").
@@ -102,13 +122,25 @@ export default function QuestionActions({
       } catch {}
       return;
     }
-    const favs = readFavs();
-    const idx = favs.indexOf(question.id);
-    if (idx === -1) favs.push(question.id);
-    else favs.splice(idx, 1);
-    localStorage.setItem(FAV_KEY, JSON.stringify(favs));
-    setIsFav(idx === -1);
+    if (!userId) {
+      window.location.href = "/login";
+      return;
+    }
+    const nextState = !isFav;
+    setIsFav(nextState);
     trackEvent("bookmark", { questionId: question.id, topic: question.topic });
+
+    if (userId) {
+      setBookmarkBusy(true);
+      try {
+        const savedIds = await setBookmark(userId, question.id, nextState);
+        setIsFav(savedIds.includes(question.id));
+      } catch {
+        setIsFav(!nextState);
+      } finally {
+        setBookmarkBusy(false);
+      }
+    }
   };
 
   const openNote = () => {
@@ -122,7 +154,10 @@ export default function QuestionActions({
   };
 
   const saveNote = () => {
-    localStorage.setItem(noteKey(question.id), note);
+    if (!userId) return;
+    const firstNote = readNotes(question.id, userId)[0];
+    if (firstNote) updateNote(question.id, firstNote.id, note, userId);
+    else addNote(question.id, note, userId);
     setNoteSaved(true);
     setTimeout(() => setNoteSaved(false), 1600);
   };
@@ -145,7 +180,7 @@ export default function QuestionActions({
       active: isFav,
       activeClass: "border-[var(--mp-status-warning)]/40 bg-[var(--mp-status-warning)]/10 text-[var(--mp-status-warning)]",
       onClick: toggleFav,
-      locked: false,
+      locked: bookmarkBusy,
     },
     {
       key: "ai",

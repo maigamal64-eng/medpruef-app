@@ -123,9 +123,10 @@ test.describe("Admin smoke — every /admin/* route renders without crashing", (
     { path: "/admin/flagged", title: "Flagged questions" },
     { path: "/admin/media", title: "Media audit" },
     { path: "/admin/feedback", title: "User Feedback" },
-    { path: "/admin/funnels", title: "Funnels" },
+    // These legacy entry paths intentionally redirect to their consolidated destinations.
+    { path: "/admin/funnels", expectFinalUrl: /\/admin\/overview/ },
     { path: "/admin/flags", title: "Feature flags" },
-    { path: "/admin/experiments", title: "Experiments" },
+    { path: "/admin/experiments", expectFinalUrl: /\/admin\/growth/ },
     { path: "/admin/puyp", title: "Pass-Until-You-Pass" },
     { path: "/admin/crons", title: "Cron health" },
     { path: "/admin/deploys", title: "Deploys" },
@@ -212,6 +213,29 @@ test.describe("Admin smoke — every /admin/* route renders without crashing", (
 // ────────────────────────────────────────────────────────────────────────
 
 async function stubAdminApis(page: Page): Promise<void> {
+  // Admin shell routes can mount the live tier hook after redirecting from a
+  // legacy URL. Keep synthetic admin sessions hermetic instead of allowing
+  // the built app to validate their fixture token against production data.
+  await page.route("**/api/auth/me**", async (route: Route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        user: {
+          id: ADMIN_USER_ID,
+          tier: "admin",
+          tier_expires_at: null,
+          role: "admin",
+          email_status: "valid",
+          language_code: "en",
+          onboarding_completed_at: "2026-01-01T00:00:00.000Z",
+          referrals_enabled: false,
+        },
+        fetched_at: new Date().toISOString(),
+      }),
+    });
+  });
+
   // /api/admin/overview — 11 tiles
   await page.route("**/api/admin/overview", async (route: Route) => {
     await route.fulfill({
@@ -399,6 +423,14 @@ async function stubAdminApis(page: Page): Promise<void> {
       contentType: "application/json",
       body: JSON.stringify({ items: [] }),
     });
+  });
+
+  // Read-only integration pages degrade to their configured-off state in this synthetic suite.
+  await page.route("**/api/admin/deploys", async (route: Route) => {
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ configured: false, missing: "VERCEL_TOKEN" }) });
+  });
+  await page.route("**/api/admin/errors", async (route: Route) => {
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ configured: false, missing: "SENTRY_AUTH_TOKEN" }) });
   });
 
   // /api/admin/audit

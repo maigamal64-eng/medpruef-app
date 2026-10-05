@@ -32,6 +32,8 @@ import Link from "next/link";
 import { getLang, setLang, t } from "@/lib/i18n";
 import LanguagePicker from "@/components/LanguagePicker";
 import { getStoredSession, clearSession, storeSession } from "@/lib/auth";
+import { listNoteQuestionIds, noteStorageKey } from "@/lib/notes-store";
+import { clearAccountBookmarks, bookmarkStorageKey } from "@/lib/bookmarks";
 import { getStoredTheme, setStoredTheme, type Theme } from "@/components/ThemeProvider";
 import { authFetch } from "@/lib/authFetch";
 import { useUserTier } from "@/lib/hooks/useUserTier";
@@ -40,7 +42,7 @@ import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import { AppLayout } from "@/components/ui";
 import ExamSittingPicker from "@/components/ExamSittingPicker";
-import { EXAM_SOURCES } from "@/lib/topics";
+import { EXAM_SOURCES, setStoredExamSource, type ExamSourceId } from "@/lib/topics";
 import {
   Alert,
   Dialog,
@@ -69,7 +71,11 @@ import {
   Zap,
 } from "lucide-react";
 import {
-  clearAllOffline,
+  clearOfflineQuestions,
+  clearLastSync,
+  claimUnownedPendingAnswersForUser,
+  countPendingAnswers,
+  countUnownedPendingAnswers,
   countQuestions,
   getLastSync,
   putQuestions,
@@ -118,6 +124,8 @@ export default function SettingsPage() {
   const [lang, setLangState] = useState<Lang>("de");
   const [theme, setThemeState] = useState<Theme>("light");
   const [session, setSession] = useState<ReturnType<typeof getStoredSession>>(null);
+  const [serverActiveExam, setServerActiveExam] = useState<ExamSourceId | null>(null);
+  const [serverExamDate, setServerExamDate] = useState<string | null | undefined>(undefined);
   const [profile, setProfile] = useState<ProfileData>({
     university: "",
     country: "",
@@ -133,6 +141,11 @@ export default function SettingsPage() {
   // timestamp, a "downloading" flag for button disabled state, and a
   // confirm dialog for the destructive "clear offline data" action.
   const [offlineCount, setOfflineCount] = useState<number>(0);
+  const [offlinePendingCount, setOfflinePendingCount] = useState<number>(0);
+  const [offlineLegacyPendingCount, setOfflineLegacyPendingCount] = useState<number>(0);
+  const [legacyRecoveryOpen, setLegacyRecoveryOpen] = useState(false);
+  const [legacyRecoveryUserId, setLegacyRecoveryUserId] = useState<string | null>(null);
+  const [legacyRecoveryBusy, setLegacyRecoveryBusy] = useState(false);
   const [offlineSize, setOfflineSize] = useState<100 | 250 | 500>(250);
   const [offlineLastSync, setOfflineLastSync] = useState<string | null>(null);
   const [offlineDownloading, setOfflineDownloading] = useState(false);
@@ -190,7 +203,42 @@ export default function SettingsPage() {
     countQuestions()
       .then(setOfflineCount)
       .catch(() => setOfflineCount(0));
+    countPendingAnswers(stored?.user?.id).then(setOfflinePendingCount).catch(() => setOfflinePendingCount(0));
+    countUnownedPendingAnswers()
+      .then(setOfflineLegacyPendingCount)
+      .catch(() => setOfflineLegacyPendingCount(0));
     setOfflineLastSync(getLastSync(activeExam));
+
+    // The cached session can survive an exam-preference change on another
+    // device. Settings reads the authenticated server value so its summary
+    // and date agree with the study plan. The cached values remain the
+    // fallback while offline or before the request resolves.
+    if (stored?.user?.id && !stored.user.id.startsWith("guest_")) {
+      const userId = stored.user.id;
+      authFetch("/api/user/exam-preference")
+        .then(async (response) => {
+          if (!response.ok) return;
+          const data = await response.json().catch(() => null);
+          if (getStoredSession()?.user?.id !== userId) return;
+          const validExam = EXAM_SOURCES.some((source) => source.id === data?.activeExam);
+          if (validExam) {
+            const canonicalExam = data.activeExam as ExamSourceId;
+            setServerActiveExam(canonicalExam);
+            setStoredExamSource(canonicalExam);
+            setOfflineLastSync(getLastSync(canonicalExam));
+            const fresh = getStoredSession();
+            if (fresh?.user) {
+              const updated = { ...fresh, user: { ...fresh.user, active_exam: canonicalExam } };
+              storeSession(updated);
+              setSession(updated);
+            }
+          }
+          setServerExamDate(typeof data?.examDate === "string" ? data.examDate : null);
+        })
+        .catch(() => { /* cached settings remain available offline */ });
+    } else {
+      setServerExamDate(null);
+    }
 
     // Fetch active subscription snapshot — only for logged-in (non-
     // guest) users, since guests have no server-side row. Failure modes
@@ -270,6 +318,7 @@ export default function SettingsPage() {
   const handleTargetDateChange = (value: string) => {
     const updated = { ...profile, targetDate: value };
     setProfile(updated);
+    setServerExamDate(value || null);
     saveProfile(updated);
     // Empty string → clear. Otherwise send as YYYY-MM-DD.
     void persistToServer({ examDate: value || null });
@@ -281,14 +330,23 @@ export default function SettingsPage() {
   };
 
   const handleClearData = () => {
+    // Clear this account's notes and bookmark cache only. Ownerless legacy
+    // favorites and other account caches may belong to another browser user.
+    const userId = getStoredSession()?.user?.id || null;
+    if (userId) {
+      for (const questionId of listNoteQuestionIds(userId)) {
+        const noteKey = noteStorageKey(questionId, userId);
+        if (noteKey) localStorage.removeItem(noteKey);
+      }
+      void clearAccountBookmarks(userId);
+    }
     // Clear quiz-related localStorage keys
     const keysToRemove: string[] = [];
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
       if (
         key &&
-        (key.startsWith("medpruef_notes_") ||
-          key === "medpruef_favorites" ||
+        ((userId && key === bookmarkStorageKey(userId)) ||
           key === "medpruef_quiz_autosave" ||
           key === "medpruef_weakness")
       ) {
@@ -360,18 +418,52 @@ export default function SettingsPage() {
 
   const handleClearOffline = async () => {
     try {
-      await clearAllOffline();
+      await clearOfflineQuestions();
       setOfflineCount(0);
       setOfflineLastSync(null);
+      const activeExam =
+        (getStoredSession()?.user as { active_exam?: string } | undefined)?.active_exam ||
+        "kenntnispruefung";
+      clearLastSync(activeExam);
       setOfflineClearOpen(false);
-      toast.success(
-        lang === "de" ? "Offline-Daten gelöscht" : "Offline data cleared",
-      );
+      toast.success(lang === "de" ? "Heruntergeladene Fragen gelöscht" : "Downloaded questions cleared");
     } catch (e) {
       console.error("[settings] clear offline", e);
       toast.error(
         lang === "de" ? "Löschen fehlgeschlagen" : "Could not clear offline data",
       );
+    }
+  };
+
+  const handleClaimLegacyOfflineAnswers = async () => {
+    const currentUserId = getStoredSession()?.user?.id;
+    if (!legacyRecoveryUserId || currentUserId !== legacyRecoveryUserId || isGuest || currentUserId?.startsWith("guest_")) {
+      setLegacyRecoveryOpen(false);
+      toast.error(lang === "de" ? "Konto geändert. Bitte erneut prüfen." : "Account changed. Please review again.");
+      return;
+    }
+    setLegacyRecoveryBusy(true);
+    try {
+      const claimed = await claimUnownedPendingAnswersForUser(currentUserId);
+      const [legacyCount, accountCount] = await Promise.all([
+        countUnownedPendingAnswers(),
+        countPendingAnswers(currentUserId),
+      ]);
+      setOfflineLegacyPendingCount(legacyCount);
+      setOfflinePendingCount(accountCount);
+      setLegacyRecoveryOpen(false);
+      setLegacyRecoveryUserId(null);
+      toast.success(lang === "de"
+        ? `${claimed} ältere Antworten diesem Konto zugeordnet.`
+        : `${claimed} older answers assigned to this account.`);
+      if (typeof navigator !== "undefined" && navigator.onLine) {
+        window.dispatchEvent(new Event("online"));
+      }
+    } catch (error) {
+      console.error("[settings] recover legacy offline answers", error);
+      toast.error(lang === "de" ? "Antworten konnten nicht übernommen werden" : "Could not recover answers");
+    } finally {
+      setLegacyRecoveryBusy(false);
     }
   };
 
@@ -408,11 +500,14 @@ export default function SettingsPage() {
 
   // Resolve the active-exam display label from the canonical source.
   const activeExamId =
+    serverActiveExam ||
     (user as { active_exam?: string } | undefined)?.active_exam ||
     "kenntnispruefung";
   const activeExamLabel =
     EXAM_SOURCES.find((e) => e.id === activeExamId)?.label ||
     "Kenntnisprüfung Wien";
+  const preferenceTargetDate =
+    serverExamDate === undefined ? profile.targetDate : serverExamDate || "";
 
   return (
     <AppLayout
@@ -812,8 +907,8 @@ export default function SettingsPage() {
                   </div>
                   <div className="sr-ctrl">
                     <span className="sr-val">
-                      {profile.targetDate
-                        ? new Date(profile.targetDate).toLocaleDateString(
+                      {preferenceTargetDate
+                        ? new Date(preferenceTargetDate).toLocaleDateString(
                             lang === "de" ? "de-AT" : "en-GB",
                             { day: "numeric", month: "short", year: "numeric" },
                           )
@@ -1148,6 +1243,34 @@ export default function SettingsPage() {
                 </div>
 
                 {/* Guest warning — offline requires a real user row for sync */}
+                {offlinePendingCount > 0 && (
+                  <p className="mt-3 text-sm text-amber-800" role="status">
+                    {lang === "de"
+                      ? `${offlinePendingCount} Antworten warten auf Synchronisierung. Sie bleiben erhalten, wenn du die heruntergeladenen Fragen löschst.`
+                      : `${offlinePendingCount} answers are waiting to sync. They stay queued when you clear downloaded questions.`}
+                  </p>
+                )}
+                {offlineLegacyPendingCount > 0 && (
+                  <div className="mt-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950" role="status">
+                    <p>
+                      {lang === "de"
+                        ? `${offlineLegacyPendingCount} ältere Offline-Antworten sind auf diesem Gerät erhalten. Das zugehörige Konto ist nicht gespeichert, deshalb werden sie nicht automatisch synchronisiert.`
+                        : `${offlineLegacyPendingCount} older offline answers are preserved on this device. Their account was not recorded, so they are not synced automatically.`}
+                    </p>
+                    {!isGuest && session?.user?.id && (
+                      <button
+                        type="button"
+                        className="mp-btn mp-btn--secondary mt-3"
+                        onClick={() => {
+                          setLegacyRecoveryUserId(session.user.id);
+                          setLegacyRecoveryOpen(true);
+                        }}
+                      >
+                        {lang === "de" ? "Diesem Konto zuordnen…" : "Assign to this account…"}
+                      </button>
+                    )}
+                  </div>
+                )}
                 {isGuest && (
                   <div className="mt-4">
                     <Alert
@@ -1347,7 +1470,7 @@ export default function SettingsPage() {
       >
         <ExamSittingPicker
           examType={activeExamId}
-          value={profile.targetDate}
+          value={preferenceTargetDate}
           onChange={handleTargetDateChange}
           lang={lang}
         />
@@ -1396,13 +1519,59 @@ export default function SettingsPage() {
           pending-answer queue. Queued answers will be lost if the user
           clears before they sync. */}
       <Dialog
+        open={legacyRecoveryOpen}
+        onOpenChange={(open) => {
+          if (!legacyRecoveryBusy) setLegacyRecoveryOpen(open);
+          if (!open && !legacyRecoveryBusy) setLegacyRecoveryUserId(null);
+        }}
+        title={lang === "de" ? "Offline-Antworten übernehmen?" : "Recover offline answers?"}
+        description={lang === "de"
+          ? "Nur fortfahren, wenn diese älteren Antworten in diesem Browser von dir und für dieses Konto gegeben wurden."
+          : "Continue only if you recorded these older answers in this browser and they belong to this account."}
+        footer={
+          <DialogFooter>
+            <button
+              type="button"
+              className="mp-btn mp-btn--secondary"
+              disabled={legacyRecoveryBusy}
+              onClick={() => {
+                setLegacyRecoveryOpen(false);
+                setLegacyRecoveryUserId(null);
+              }}
+            >
+              {lang === "de" ? "Abbrechen" : "Cancel"}
+            </button>
+            <button
+              type="button"
+              className="mp-btn mp-btn--primary"
+              disabled={legacyRecoveryBusy}
+              onClick={handleClaimLegacyOfflineAnswers}
+            >
+              {legacyRecoveryBusy
+                ? (lang === "de" ? "Wird übernommen…" : "Recovering…")
+                : (lang === "de" ? "Ja, diesem Konto zuordnen" : "Yes, assign to this account")}
+            </button>
+          </DialogFooter>
+        }
+      >
+        <Alert
+          variant="warning"
+          title={lang === "de" ? "Danach können sie synchronisiert werden" : "They may sync after this"}
+        >
+          {lang === "de"
+            ? "Nach deiner Bestätigung werden nur Antworten ohne gespeicherte Konto-ID diesem Konto zugeordnet. Sobald eine Verbindung besteht, werden sie an dein Konto gesendet. Die Zuordnung lässt sich hier nicht rückgängig machen. Bei Abbrechen bleiben alle Antworten unverändert auf diesem Gerät."
+            : "After confirmation, only answers with no stored account ID will be assigned to this account. They will sync to it when a connection is available. This assignment cannot be undone here. Cancel leaves every answer unchanged on this device."}
+        </Alert>
+      </Dialog>
+
+      <Dialog
         open={offlineClearOpen}
         onOpenChange={setOfflineClearOpen}
-        title={lang === "de" ? "Offline-Daten löschen?" : "Clear offline data?"}
+        title={lang === "de" ? "Offline-Fragen löschen?" : "Clear offline questions?"}
         description={
           lang === "de"
-            ? "Alle heruntergeladenen Fragen und nicht synchronisierte Antworten werden entfernt."
-            : "All downloaded questions and unsynced answers will be removed."
+          ? "Heruntergeladene Fragen werden entfernt. Nicht synchronisierte Antworten bleiben erhalten."
+            : "Downloaded questions will be removed. Unsynced answers will be kept."
         }
         footer={
           <DialogFooter>
@@ -1428,13 +1597,13 @@ export default function SettingsPage() {
           variant="warning"
           title={
             lang === "de"
-              ? "Nicht synchronisierte Antworten gehen verloren"
-              : "Unsynced answers will be lost"
+              ? "Antworten bleiben erhalten"
+              : "Answers will be kept"
           }
         >
           {lang === "de"
-            ? "Falls du Antworten offline gegeben hast, die noch nicht an den Server gesendet wurden, werden diese gelöscht."
-            : "Any answers you recorded offline that have not yet been sent to the server will be deleted."}
+            ? "Nur heruntergeladene Fragen werden entfernt. Nicht synchronisierte Antworten bleiben auf diesem Gerät erhalten."
+            : "Only downloaded questions will be removed. Unsynced answers will remain on this device."}
         </Alert>
       </Dialog>
     </AppLayout>

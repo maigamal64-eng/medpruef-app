@@ -123,7 +123,7 @@ function ToastViewport({ toasts, onDismiss }: { toasts: ToastItem[]; onDismiss: 
       role="region"
       aria-label={lang === 'de' ? 'Benachrichtigungen' : 'Notifications'}
       aria-live="polite"
-      className="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none max-w-[calc(100vw-2rem)]"
+      className="mp-toast-viewport fixed bottom-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none max-w-[calc(100vw-2rem)]"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0)' }}
     >
       {toasts.map((t) => (

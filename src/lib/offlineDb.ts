@@ -43,11 +43,44 @@ export interface OfflineQuestion {
 
 export interface PendingAnswer {
   id: string;
+  /**
+   * Account that answered, so queued rows cannot leak into a later login.
+   * Optional only for legacy v1 rows created before account ownership was
+   * stored. New rows always require a userId in queuePendingAnswer.
+   */
+  userId?: string;
   questionId: number;
   userAnswer: string;
   isCorrect: boolean;
   timeSpentMs: number;
   createdAt: string;
+}
+
+/** Select only answers owned by the currently authenticated account. */
+export function pendingAnswersForUser(
+  pending: PendingAnswer[],
+  userId: string | null | undefined,
+): PendingAnswer[] {
+  if (!userId) return [];
+  return pending.filter((answer) => answer.userId === userId);
+}
+
+/** Keep pre-ownership rows visible for recovery, but never infer their owner. */
+export function unownedPendingAnswers(pending: PendingAnswer[]): PendingAnswer[] {
+  return pending.filter((answer) => !answer.userId);
+}
+
+/** Explicitly adopt only ownerless legacy rows after a user confirms ownership. */
+export function claimUnownedPendingAnswers(
+  pending: PendingAnswer[],
+  userId: string | null | undefined,
+): PendingAnswer[] {
+  if (!userId) return pending;
+  return pending.map((answer) => {
+    if (answer.userId) return answer;
+    const id = isUuidRequestId(answer.id) ? answer.id : createRequestId();
+    return { ...answer, id, userId };
+  });
 }
 
 const DB_NAME = "medpruef-offline";
@@ -56,6 +89,21 @@ const QUESTIONS_STORE = "questions";
 const PENDING_STORE = "pending_answers";
 
 let dbPromise: Promise<IDBDatabase> | null = null;
+
+function createRequestId(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  // Keep the UUID format accepted by /api/answer even in older WebViews.
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (char) => {
+    const random = Math.floor(Math.random() * 16);
+    return (char === "x" ? random : (random & 0x3) | 0x8).toString(16);
+  });
+}
+
+function isUuidRequestId(id: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
+}
 
 function isIndexedDbAvailable(): boolean {
   return typeof window !== "undefined" && typeof window.indexedDB !== "undefined";
@@ -212,21 +260,21 @@ export async function countQuestions(examType?: string): Promise<number> {
  * timestamp so the caller doesn't have to.
  */
 export async function queuePendingAnswer(
-  p: Omit<PendingAnswer, "id" | "createdAt">,
-): Promise<void> {
+  p: Omit<PendingAnswer, "id" | "createdAt" | "userId"> & {
+    userId: string;
+    id?: string;
+  },
+): Promise<string> {
   const db = await openDb();
   const row: PendingAnswer = {
     ...p,
-    id:
-      typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
-        ? crypto.randomUUID()
-        : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
+    id: p.id || createRequestId(),
     createdAt: new Date().toISOString(),
   };
-  return new Promise<void>((resolve, reject) => {
+  return new Promise<string>((resolve, reject) => {
     const transaction = db.transaction(PENDING_STORE, "readwrite");
     transaction.objectStore(PENDING_STORE).put(row);
-    transaction.oncomplete = () => resolve();
+    transaction.oncomplete = () => resolve(row.id);
     transaction.onerror = () =>
       reject(transaction.error ?? new Error("queuePendingAnswer failed"));
   });
@@ -251,6 +299,74 @@ export async function drainPendingAnswers(): Promise<PendingAnswer[]> {
   } catch {
     return [];
   }
+}
+
+export async function countPendingAnswers(userId?: string | null): Promise<number> {
+  if (!userId) return 0;
+  if (!isIndexedDbAvailable()) return 0;
+  try {
+    const db = await openDb();
+    return await new Promise<number>((resolve, reject) => {
+      const req = tx(db, PENDING_STORE, "readonly").getAll();
+      req.onsuccess = () => resolve(
+        pendingAnswersForUser((req.result as PendingAnswer[]) ?? [], userId).length,
+      );
+      req.onerror = () => reject(req.error ?? new Error("countPendingAnswers failed"));
+    });
+  } catch {
+    return 0;
+  }
+}
+
+/** Count legacy rows separately so Settings can explain they are preserved. */
+export async function countUnownedPendingAnswers(): Promise<number> {
+  if (!isIndexedDbAvailable()) return 0;
+  try {
+    const db = await openDb();
+    return await new Promise<number>((resolve, reject) => {
+      const req = tx(db, PENDING_STORE, "readonly").getAll();
+      req.onsuccess = () => resolve(
+        unownedPendingAnswers((req.result as PendingAnswer[]) ?? []).length,
+      );
+      req.onerror = () => reject(req.error ?? new Error("countUnownedPendingAnswers failed"));
+    });
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * Attach legacy rows to the account only after an explicit user confirmation.
+ * Existing account-owned rows are never changed. This keeps rows on-device
+ * until the owner confirms and allows the normal account-filtered sync to run.
+ */
+export async function claimUnownedPendingAnswersForUser(userId: string): Promise<number> {
+  if (!userId || !isIndexedDbAvailable()) return 0;
+  const db = await openDb();
+  return new Promise<number>((resolve, reject) => {
+    const transaction = db.transaction(PENDING_STORE, "readwrite");
+    const store = transaction.objectStore(PENDING_STORE);
+    const request = store.getAll();
+    let claimedCount = 0;
+    request.onsuccess = () => {
+      const rows = (request.result as PendingAnswer[]) ?? [];
+      const claimedRows = claimUnownedPendingAnswers(rows, userId);
+      for (let index = 0; index < claimedRows.length; index += 1) {
+        const row = claimedRows[index];
+        if (!row.userId) continue;
+        const original = rows[index];
+        if (original && !original.userId) {
+          if (original.id !== row.id) store.delete(original.id);
+          store.put(row);
+          claimedCount += 1;
+        }
+      }
+    };
+    request.onerror = () => transaction.abort();
+    transaction.oncomplete = () => resolve(claimedCount);
+    transaction.onerror = () => reject(transaction.error ?? new Error("claimUnownedPendingAnswers failed"));
+    transaction.onabort = () => reject(transaction.error ?? request.error ?? new Error("claimUnownedPendingAnswers aborted"));
+  });
 }
 
 /**
@@ -287,6 +403,17 @@ export async function clearAllOffline(): Promise<void> {
   });
 }
 
+/** Remove downloaded question content without discarding unsynced answers. */
+export async function clearOfflineQuestions(): Promise<void> {
+  const db = await openDb();
+  return new Promise<void>((resolve, reject) => {
+    const transaction = db.transaction(QUESTIONS_STORE, "readwrite");
+    transaction.objectStore(QUESTIONS_STORE).clear();
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error ?? new Error("clearOfflineQuestions failed"));
+  });
+}
+
 /**
  * Last-download timestamp helpers. Stored in localStorage (not IDB) so
  * Settings can show it without opening a transaction. Key is per-exam
@@ -309,5 +436,14 @@ export function setLastSync(examType: string, iso: string): void {
     window.localStorage.setItem(LAST_SYNC_KEY(examType), iso);
   } catch {
     // quota / privacy mode — silently ignore
+  }
+}
+
+export function clearLastSync(examType: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(LAST_SYNC_KEY(examType));
+  } catch {
+    // storage may be disabled
   }
 }

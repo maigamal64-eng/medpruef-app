@@ -71,7 +71,7 @@
   --dm-surface-raised: #FFFFFF;
   --dm-text: #142436;
   --dm-text-secondary: #516073;
-  --dm-text-muted: #6B7888;
+  --dm-text-muted: #5D6979;
   --dm-border: #DCE3EC;
   --dm-border-subtle: rgba(228, 233, 240, 0.7);
   --dm-shadow-card: 0 1px 3px rgba(0,27,61,0.05), 0 1px 2px rgba(0,27,61,0.03);
@@ -483,13 +483,45 @@ body {
 
 .main-content { flex: 1; min-width: 0; padding-bottom: 0; }
 
+/* Keep page content clear of the floating mobile study navigation, including
+   the device's home-indicator inset. The bar itself is taller than its visual
+   row because of the lifted Library action and outer margin. */
+:root { --mobile-nav-clearance: calc(6.25rem + env(safe-area-inset-bottom, 0px)); }
+.bottom-nav { padding-bottom: env(safe-area-inset-bottom, 0px); }
+.bottom-nav > div { margin-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px)); }
+
+/* Keep transient notifications above the floating learner navigation. The
+   viewport offset follows the same safe-area-aware clearance as page content. */
+@media (max-width: 1024px) {
+  .mp-toast-viewport { bottom: calc(var(--mobile-nav-clearance) + 1rem); }
+}
+
 @media (max-width: 1024px) {
   .sidebar { display: none; }
-  .main-content { padding-bottom: 80px; }
+  .main-content { padding-bottom: var(--mobile-nav-clearance); }
 }
 
 @media (min-width: 1025px) {
   .bottom-nav { display: none; }
+}
+
+/* Content at the end of a scrollable page should not sit under the fixed
+   navigation. Feedback and chat launchers use the same breakpoint below. */
+@media (max-width: 1024px) {
+  .main-content { scroll-padding-bottom: var(--mobile-nav-clearance); }
+}
+
+/* Pricing has tall plan cards and conversion controls near their bottoms.
+   Give this route its own scrollport that ends above the persistent mobile
+   navigation, so the bar never overlays card copy or checkout buttons. */
+@media (max-width: 1024px) {
+  .pricing-layout .main-content {
+    height: calc(100dvh - var(--mobile-nav-clearance));
+    box-sizing: border-box;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    padding-bottom: 1rem;
+  }
 }
 
 .topic-card-border { border-left-width: 3px; border-left-style: solid; border-radius: var(--radius-lg); }
@@ -643,8 +675,16 @@ textarea:focus {
    so it NO LONGER collapses into --mp-accent-teal #34D0C0 — both stay two
    distinct brand colors (the prod bug was both = #00A896). The canonical
    dark value is re-declared in the v3 dark block below; this stays in sync. */
-:root { --mp-viridian: #007B5F; }
+:root { --mp-viridian: #006B52; }
 [data-theme="dark"] { --mp-viridian: #2BC39A; }
+:root { --mp-fg-on-viridian: #FFFFFF; }
+[data-theme="dark"] { --mp-fg-on-viridian: #00271E; }
+:root { --mp-fg-on-cta-blue: #FFFFFF; }
+[data-theme="dark"] { --mp-fg-on-cta-blue: #001B3D; }
+:root {
+  --mp-sidebar-fg-muted: #A9B8CE;
+  --mp-sidebar-fg-active: #65DECA;
+}
 
 /* Dark-mode tinted backgrounds (review-2026-04-26-A1).
    The light-mode hex tints (`#E6F4F1` etc.) read as white-ish cards in
@@ -709,7 +749,7 @@ textarea:focus {
      All AA+ on #F4F7FB / white per tokens-rationale.md. ─── */
   --mp-text:            #142436; /* 14.0:1 on white (was #1A2B3C) */
   --mp-text-muted:      #516073; /* 6.0:1 on white (was #4A5568) */
-  --mp-text-light:      #6B7888; /* 4.6:1 on white — captions still AA (was #6B7688) */
+  --mp-text-light:      #5D6979; /* AA on white and the cooler sunken surface */
   --mp-border:          #DCE3EC; /* softer edge (was #E4E9F0) */
   --mp-border-soft:     rgba(220, 227, 236, 0.7);
 
@@ -979,6 +1019,7 @@ textarea:focus {
 .mp-btn--primary:focus-visible { box-shadow: var(--mp-focus-ring-cta); }
 .mp-btn--success { background: var(--mp-viridian); color: #FFFFFF; }
 .mp-btn--success:hover { background: var(--mp-viridian-dk); }
+[data-theme="dark"] .mp-btn--success { color: var(--mp-oxford-blue-dk); }
 .mp-btn--secondary {
   background: var(--mp-surface-raised); color: var(--mp-fg);
   border-color: var(--mp-border);

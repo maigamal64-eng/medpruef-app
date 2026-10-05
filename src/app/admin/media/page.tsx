@@ -8,10 +8,15 @@
 import { useCallback, useEffect, useState } from "react";
 import { ImageOff } from "lucide-react";
 import { authFetch as fetch } from "@/lib/authFetch";
+import { AdminPermissionGate } from "../_components/AdminPermissionGate";
 import { Alert, BrandedLoader, EmptyState } from "@/components/ui";
 import { AdminPageShell, ComingSoonCard } from "../_components/AdminPageShell";
 
 export default function AdminMediaPage() {
+  return <AdminPermissionGate permission="content.read"><AdminMediaPageContent /></AdminPermissionGate>;
+}
+
+function AdminMediaPageContent() {
   const [items, setItems] = useState<Array<Record<string, unknown>>>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

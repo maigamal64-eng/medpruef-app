@@ -5,6 +5,25 @@ import { requireUser } from '@/lib/auth-guard'
 
 export const dynamic = 'force-dynamic'
 
+/** GET — read the authenticated account's canonical exam selection. */
+export async function GET(req: NextRequest) {
+  const guard = await requireUser(req)
+  if ('error' in guard) return guard.error
+  const { data, error } = await getServiceClient()
+    .from('users')
+    .select('active_exam, exam_date')
+    .eq('id', guard.userId)
+    .maybeSingle()
+  if (error) return NextResponse.json({ error: 'Failed to load exam preference' }, { status: 500 })
+  const activeExam = typeof data?.active_exam === 'string' && (EXAM_SOURCE_IDS as string[]).includes(data.active_exam)
+    ? data.active_exam
+    : 'kenntnispruefung'
+  const examDate = typeof data?.exam_date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(data.exam_date)
+    ? data.exam_date
+    : null
+  return NextResponse.json({ activeExam, examDate })
+}
+
 /**
  * PATCH — Update the current user's active_exam preference and/or
  * exam_date / daily_goal. All three fields are optional; the handler

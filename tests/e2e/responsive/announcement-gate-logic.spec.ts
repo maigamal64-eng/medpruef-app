@@ -98,11 +98,13 @@ test.describe("computeActiveSurface — §1.4.2 cadence table", () => {
         cohortBannerDismissedAt: new Date(Date.now() - 43_200_000).toISOString(),
         referralFloaterDismissedAt: null,
       }),
+      false,
+      true,
     );
     expect(result).toBe("referral_floater");
   });
 
-  test("Session 3, 25 Qs, floater dismissed within 7d → suppressed (cooldown)", () => {
+  test("Session 3, 25 Qs, floater dismissed within 30d → suppressed (cooldown)", () => {
     const result = computeActiveSurface(
       makeState({
         sessionCount: 3,
@@ -111,20 +113,24 @@ test.describe("computeActiveSurface — §1.4.2 cadence table", () => {
         cohortBannerDismissedAt: new Date(Date.now() - 43_200_000).toISOString(),
         referralFloaterDismissedAt: new Date(Date.now() - 2 * 86_400_000).toISOString(),
       }),
+      false,
+      true,
     );
     // Should fall through to banner (dismissed) → null.
     expect(result).toBeNull();
   });
 
-  test("Session 3, 25 Qs, floater dismissed > 7d ago → re-eligible", () => {
+  test("Session 3, 25 Qs, floater dismissed > 30d ago → re-eligible", () => {
     const result = computeActiveSurface(
       makeState({
         sessionCount: 3,
         qsAnsweredTotal: 25,
         orientationModalSeenAt: new Date(Date.now() - 30 * 86_400_000).toISOString(),
         cohortBannerDismissedAt: new Date(Date.now() - 30 * 86_400_000).toISOString(),
-        referralFloaterDismissedAt: new Date(Date.now() - 8 * 86_400_000).toISOString(),
+        referralFloaterDismissedAt: new Date(Date.now() - 31 * 86_400_000).toISOString(),
       }),
+      false,
+      true,
     );
     expect(result).toBe("referral_floater");
   });

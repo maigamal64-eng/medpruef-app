@@ -32,6 +32,13 @@
 
 export type StudyFocus = "review" | "weak" | "new";
 
+/** Resolve a plan focus to a resilient quiz pool mode. Review prioritizes due
+ * cards via `all`, which falls back to the topic pool when no due review rows
+ * are available. */
+export function getStudyPlanPracticeMode(focus: StudyFocus): "all" | "unseen" {
+  return focus === "review" ? "all" : "unseen";
+}
+
 export interface TopicProgress {
   topic: string;
   total: number;

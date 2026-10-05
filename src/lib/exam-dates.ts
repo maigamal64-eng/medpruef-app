@@ -16,10 +16,9 @@
  *   - Pharmakologie/Rezeptierkunde: meduniwien.ac.at Nostrifikation
  * Research dossier: research/exam-dates-2026-06-20.md.
  *
- * Amended 2026-09-07: the three 2027 Stichprobentest sittings were
- * added from the AST Infoblatt (Stand September 2026), which is the
- * first document to publish them. Kenntnisprüfung 2027 dates are still
- * unpublished by arztakademie.at, so that list stays 2026-only.
+ * Amended 2026-09-27: the three 2027 Kenntnisprüfung sittings and
+ * deadlines were added from arztakademie.at after publication. The 2027
+ * Stichprobentest sittings remain sourced from the AST Infoblatt.
  *
  * Re-verify cadence (SoT §0/§1): start of every campaign + monthly.
  * The un-gameable check is "does the first FUTURE entry still match
@@ -88,8 +87,35 @@ export const EXAM_SITTINGS: Record<PuypExamType, ExamSitting[]> = {
         en: "Arztprüfung Allgemeinmedizin (Austrian Medical Chamber). Registration closes exactly 2 months before the date. Held 3x per year.",
       },
     },
-    // 2027 dates NOT yet published by arztakademie.at as of 2026-06-20.
-    // Do NOT add estimated 2027 dates to a customer-facing calendar.
+    // 2027 dates and registration deadlines verified 2026-09-27 against
+    // the official calendar at arztakademie.at/allgemeinmedizin.
+    {
+      examType: "kenntnispruefung",
+      label: { de: "Kenntnisprüfung Wien", en: "Kenntnisprüfung Vienna" },
+      date: "2027-01-18",
+      registrationDeadline: "2026-11-18",
+      location: "Wien",
+      sourceUrl: "https://www.arztakademie.at/allgemeinmedizin",
+      confidence: "high",
+    },
+    {
+      examType: "kenntnispruefung",
+      label: { de: "Kenntnisprüfung Wien", en: "Kenntnisprüfung Vienna" },
+      date: "2027-05-10",
+      registrationDeadline: "2027-03-10",
+      location: "Wien",
+      sourceUrl: "https://www.arztakademie.at/allgemeinmedizin",
+      confidence: "high",
+    },
+    {
+      examType: "kenntnispruefung",
+      label: { de: "Kenntnisprüfung Wien", en: "Kenntnisprüfung Vienna" },
+      date: "2027-09-27",
+      registrationDeadline: "2027-07-27",
+      location: "Wien",
+      sourceUrl: "https://www.arztakademie.at/allgemeinmedizin",
+      confidence: "high",
+    },
   ],
   kmp_innsbruck: [
     // National Stichprobentest — the location ROTATES; you register at
@@ -254,6 +280,30 @@ export function getUpcomingSittings(now: Date = new Date()): ExamSitting[] {
   return (Object.values(EXAM_SITTINGS).flat() as ExamSitting[])
     .filter((s) => s.date >= todayIso)
     .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+/**
+ * The nearest sitting with a published registration deadline that has
+ * not passed yet. A sitting with an unknown deadline must not be shown
+ * as if its exam date were its registration deadline.
+ */
+export function getNextRegistrationDeadlineSitting(
+  now: Date = new Date()
+): ExamSitting | null {
+  const todayIso = now.toISOString().slice(0, 10);
+  return (Object.values(EXAM_SITTINGS).flat() as ExamSitting[])
+    .filter(
+      (s) =>
+        s.date >= todayIso &&
+        s.registrationDeadline !== null &&
+        s.registrationDeadline >= todayIso
+    )
+    .sort((a, b) => {
+      const deadlineOrder = a.registrationDeadline!.localeCompare(
+        b.registrationDeadline!
+      );
+      return deadlineOrder || a.date.localeCompare(b.date);
+    })[0] ?? null;
 }
 
 /**

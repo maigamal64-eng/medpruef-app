@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { randomUUID } from "node:crypto";
 import * as Sentry from "@sentry/nextjs";
 import { requireUser, isPaidAccess } from "@/lib/auth-guard";
 import { getServiceClient } from "@/lib/supabase";
@@ -24,6 +25,7 @@ export const dynamic = "force-dynamic";
  */
 
 interface SubmitBody {
+  attempt_id?: string;
   exam_type?: string;
   title?: string;
   config?: Record<string, unknown>;
@@ -65,6 +67,27 @@ export async function POST(req: NextRequest) {
   const examType = String(body.exam_type ?? "");
   if (!VALID_EXAM_TYPES.has(examType)) {
     return NextResponse.json({ error: "Unknown exam type" }, { status: 400 });
+  }
+
+  const attemptId = body.attempt_id === undefined ? randomUUID() : body.attempt_id;
+  if (typeof attemptId !== "string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(attemptId)) {
+    return NextResponse.json({ error: "Valid attempt_id required" }, { status: 400 });
+  }
+
+  // The client uses this stable UUID as the row's existing primary key. If a
+  // response was lost after insert, retry returns the original saved record.
+  const { data: priorAttempt, error: priorErr } = await sb
+    .from("exam_simulations")
+    .select("id, correct_count, total_count, score_pct")
+    .eq("id", attemptId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (priorErr) {
+    Sentry.captureException(priorErr, { tags: { route: "history/exams", step: "idempotency_lookup" } });
+    return NextResponse.json({ error: "Could not confirm prior attempt" }, { status: 500 });
+  }
+  if (priorAttempt) {
+    return NextResponse.json({ ok: true, attempt: { ...priorAttempt, attempt_id: priorAttempt.id } });
   }
 
   const questionIds = Array.from(
@@ -142,6 +165,7 @@ export async function POST(req: NextRequest) {
   const { data: inserted, error: insErr } = await sb
     .from("exam_simulations")
     .insert({
+      id: attemptId,
       user_id: userId,
       exam_type: examType,
       title:
@@ -170,6 +194,19 @@ export async function POST(req: NextRequest) {
     .maybeSingle();
 
   if (insErr || !inserted) {
+    // A parallel retry may have won the same primary-key insert. Confirm its
+    // ownership before acknowledging it, and never create a second row.
+    if (insErr?.code === "23505") {
+      const { data: racedAttempt } = await sb
+        .from("exam_simulations")
+        .select("id, correct_count, total_count, score_pct")
+        .eq("id", attemptId)
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (racedAttempt) {
+        return NextResponse.json({ ok: true, attempt: { ...racedAttempt, attempt_id: racedAttempt.id } });
+      }
+    }
     Sentry.captureException(insErr ?? new Error("insert returned no row"), {
       tags: { route: "history/exams", step: "insert" },
     });
@@ -196,6 +233,7 @@ export async function POST(req: NextRequest) {
     ok: true,
     attempt: {
       id: inserted.id,
+      attempt_id: inserted.id,
       correct_count: inserted.correct_count,
       total_count: inserted.total_count,
       score_pct: inserted.score_pct,

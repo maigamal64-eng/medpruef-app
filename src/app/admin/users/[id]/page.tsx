@@ -37,8 +37,8 @@ import {
   Ban,
 } from "lucide-react";
 import { authFetch as fetch } from "@/lib/authFetch";
+import { useAdminPermissions } from "@/lib/admin/useAdminPermissions";
 import { getExamSource } from "@/lib/topics";
-import { AdminPageShell } from "../../_components/AdminPageShell";
 import { UserQuickActions } from "../../_components/UserQuickActions";
 import { TileSkeleton } from "../../_components/primitives";
 import type { UserDetail } from "./_parts/types";
@@ -81,12 +81,20 @@ function statusOf(lastActivity: string | null): {
 export default function AdminUserDetailPage() {
   const params = useParams();
   const id = String(params?.id || "");
+  const { can, loading: accessLoading } = useAdminPermissions();
+  const canRead = can("users.read");
+  const canReadSessions = can("users.sessions.read");
+  const canReadNotes = can("users.notes.read");
+  const canReadContent = can("content.read");
+  const canReadFeedback = can("feedback.read");
+  const canReadRevenue = can("revenue.read");
   const [data, setData] = useState<UserDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [tab, setTab] = useState<Tab>("timeline");
 
   const load = useCallback(async () => {
+    if (!can("users.read")) return;
     try {
       setLoading(true);
       setError("");
@@ -99,11 +107,20 @@ export default function AdminUserDetailPage() {
     } finally {
       setLoading(false);
     }
-  }, [id]);
+  }, [can, id]);
 
   useEffect(() => {
-    if (id) load();
-  }, [id, load]);
+    if (accessLoading) return;
+    if (id && canRead) void load();
+    else setLoading(false);
+  }, [accessLoading, canRead, id, load]);
+
+  useEffect(() => {
+    if (tab === "sessions" && !canReadSessions) setTab("timeline");
+    else if (tab === "notes" && !canReadNotes) setTab("timeline");
+    else if (tab === "money" && !canReadRevenue) setTab("timeline");
+    else if (tab === "voice" && !canReadFeedback && !canReadContent) setTab("timeline");
+  }, [tab, canReadSessions, canReadNotes, canReadRevenue, canReadFeedback, canReadContent]);
 
   const backLink = (
     <Link
@@ -114,7 +131,7 @@ export default function AdminUserDetailPage() {
     </Link>
   );
 
-  if (loading && !data) {
+  if (accessLoading || (loading && !data)) {
     return (
       <div className="space-y-5">
         {backLink}
@@ -127,16 +144,16 @@ export default function AdminUserDetailPage() {
     );
   }
 
-  if (error || !data) {
+  if (!canRead || !data) {
     return (
       <div className="space-y-4">
         {backLink}
         <div className="rounded-xl border border-[var(--mp-error)]/25 bg-[var(--mp-error-bg)] text-[var(--mp-error)] text-sm px-4 py-3 flex items-center gap-2">
           <AlertTriangle size={16} />
-          <span className="flex-1">{error || "No data."}</span>
-          <button onClick={load} className="mp-btn mp-btn--ghost mp-btn--sm">
+          <span className="flex-1">{!canRead ? "You do not have permission to view this user record." : error || "No data."}</span>
+          {canRead && <button onClick={load} className="mp-btn mp-btn--ghost mp-btn--sm">
             Retry
-          </button>
+          </button>}
         </div>
       </div>
     );
@@ -159,15 +176,27 @@ export default function AdminUserDetailPage() {
   const tabs: { key: Tab; label: string; count?: number }[] = [
     { key: "timeline", label: "Timeline", count: data.timelineTotal },
     { key: "answers", label: "Answers", count: data.answersTotal },
-    { key: "sessions", label: "Sessions", count: s.sessionsCount },
-    { key: "notes", label: "Notes", count: s.notesCount },
-    { key: "money", label: "Money", count: money.subscriptions.length },
-    { key: "voice", label: "Feedback", count: data.feedback.length + data.flags.length },
+    ...(canReadSessions ? [{ key: "sessions" as const, label: "Sessions", count: s.sessionsCount ?? 0 }] : []),
+    ...(canReadNotes ? [{ key: "notes" as const, label: "Notes", count: s.notesCount ?? 0 }] : []),
+    ...(canReadRevenue && money ? [{ key: "money" as const, label: "Money", count: money.subscriptions.length }] : []),
+    ...(canReadFeedback || canReadContent ? [{
+      key: "voice" as const,
+      label: "Feedback & reports",
+      count: (canReadFeedback ? data.feedback?.length ?? 0 : 0) + (canReadContent ? data.flags?.length ?? 0 : 0),
+    }] : []),
   ];
 
   return (
     <div className="space-y-5">
       {backLink}
+
+      {error && (
+        <div role="status" className="rounded-xl border border-[var(--mp-status-warning)]/30 bg-[var(--mp-status-warning)]/10 text-sm px-4 py-3 flex items-center gap-2">
+          <AlertTriangle size={16} />
+          <span className="flex-1">Showing the last loaded user record. Refresh failed: {error}</span>
+          <button type="button" onClick={load} className="mp-btn mp-btn--ghost mp-btn--sm" disabled={loading}>Retry</button>
+        </div>
+      )}
 
       {/* ── Identity header ─────────────────────────────────────────── */}
       <div className="rounded-2xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] p-5">
@@ -191,13 +220,13 @@ export default function AdminUserDetailPage() {
               <h1 className="text-xl font-semibold text-[var(--mp-fg)] truncate">
                 {p.name}
               </h1>
-              <span
+              {canReadRevenue && p.tier && <span
                 className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full border"
                 style={{ color: tierTone, borderColor: tierTone }}
               >
                 {p.tier}
-              </span>
-              {p.role === "admin" && (
+              </span>}
+              {can("access.manage") && p.role === "admin" && (
                 <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full border border-[var(--mp-error)] text-[var(--mp-error)]">
                   admin
                 </span>
@@ -267,7 +296,7 @@ export default function AdminUserDetailPage() {
                     : `Exam date passed`}
                 </span>
               )}
-              {p.referral_code && (
+              {canReadRevenue && p.referral_code && (
                 <span className="font-mono">ref: {p.referral_code}</span>
               )}
             </div>
@@ -276,10 +305,11 @@ export default function AdminUserDetailPage() {
           {/* quick actions */}
           <div className="flex-shrink-0">
             <UserQuickActions
-              userId={p.id}
-              userEmail={p.email}
-              isBanned={p.is_banned}
-              onChanged={load}
+            userId={p.id}
+            userEmail={p.email}
+            isBanned={p.is_banned}
+            isAdmin={p.role === "admin"}
+            onChanged={load}
             />
           </div>
         </div>
@@ -331,22 +361,22 @@ export default function AdminUserDetailPage() {
           icon={Clock3}
           accent="var(--mp-cta-blue)"
         />
-        <StatCard
+        {canReadSessions && <StatCard
           label="Sessions"
-          value={fmtInt(s.sessionsCount)}
+          value={fmtInt(s.sessionsCount ?? 0)}
           sub={`${fmtInt(s.pageViewsCount)} page views`}
           icon={MonitorSmartphone}
           accent="var(--mp-fg)"
-        />
-        <StatCard
+        />}
+        {canReadNotes && <StatCard
           label="Flash-notes"
-          value={fmtInt(s.notesCount)}
+          value={fmtInt(s.notesCount ?? 0)}
           sub={`${fmtInt(s.aiChatsCount)} AI chats`}
           icon={StickyNote}
           accent="var(--mp-viridian)"
           tint="rgba(0,123,95,0.10)"
-        />
-        <StatCard
+        />}
+        {canReadRevenue && money && <StatCard
           label="Money"
           value={money.isPayer ? "Payer" : "—"}
           sub={
@@ -362,7 +392,7 @@ export default function AdminUserDetailPage() {
           icon={CalendarCheck}
           accent={money.isPayer ? "var(--mp-viridian)" : "var(--mp-fg-muted)"}
           tint="rgba(0,123,95,0.10)"
-        />
+        />}
       </div>
 
       {/* behavior strip */}
@@ -370,7 +400,7 @@ export default function AdminUserDetailPage() {
         <BehaviorChip icon={Eye} label="page views" value={s.pageViewsCount} />
         <BehaviorChip icon={SearchIcon} label="searches" value={s.searchesCount} />
         <BehaviorChip icon={Star} label="bookmarks" value={s.bookmarksCount} />
-        <BehaviorChip icon={Sparkles} label="AI chats" value={s.aiChatsCount} />
+        {canReadNotes && <BehaviorChip icon={Sparkles} label="AI chats" value={s.aiChatsCount} />}
         {s.firstActivity && (
           <span className="text-[10px] text-[var(--mp-fg-subtle)] ml-auto">
             First answer {fmtDateTime(s.firstActivity)}
@@ -406,6 +436,12 @@ export default function AdminUserDetailPage() {
         <TopicBars topics={data.topics} />
       </VizCard>
 
+      {data.restricted_sections.length > 0 && (
+        <div role="status" className="rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-sunken)] px-4 py-3 text-xs text-[var(--mp-fg-muted)]">
+          Some dossier sections are hidden because your role does not include those permissions.
+        </div>
+      )}
+
       {/* ── Tabbed detail section ───────────────────────────────────── */}
       <div className="rounded-2xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] overflow-hidden">
         <div className="flex items-center gap-1 px-3 pt-3 overflow-x-auto border-b border-[var(--mp-border-subtle)]">
@@ -436,11 +472,18 @@ export default function AdminUserDetailPage() {
           {tab === "answers" && (
             <AnswersPanel answers={data.answers} total={data.answersTotal} />
           )}
-          {tab === "sessions" && <SessionsPanel sessions={data.sessions} />}
-          {tab === "notes" && <NotesPanel notes={data.notes} />}
-          {tab === "money" && <MoneyPanel money={money} />}
-          {tab === "voice" && (
-            <FeedbackFlagsPanel feedback={data.feedback} flags={data.flags} />
+          {tab === "sessions" && canReadSessions && <SessionsPanel sessions={data.sessions ?? []} />}
+          {tab === "notes" && canReadNotes && <NotesPanel notes={data.notes ?? []} />}
+          {tab === "money" && canReadRevenue && money && <MoneyPanel money={money} />}
+          {tab === "voice" && (canReadFeedback || canReadContent) && (
+            <FeedbackFlagsPanel
+              feedback={canReadFeedback ? data.feedback ?? [] : []}
+              flags={canReadContent ? data.flags ?? [] : []}
+              hasRestrictedSections={
+                (data.restricted_sections.includes("feedback") && !canReadFeedback) ||
+                (data.restricted_sections.includes("content_reports") && !canReadContent)
+              }
+            />
           )}
         </div>
       </div>

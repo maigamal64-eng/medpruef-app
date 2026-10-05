@@ -4,7 +4,7 @@
  * QuestionNotesPanel — the ONE notes UI (FEEDBACK #4c).
  *
  * Self-contained multi-note editor backed by the shared `notes-store` (single
- * source of truth keyed `medpruef_notes_<id>`). Supports MULTIPLE notes per
+ * source of truth keyed by account and question. Supports MULTIPLE notes per
  * question (add / edit / delete) and stays in sync with any other mounted notes
  * surface in the same tab via the `medpruef:notes-changed` event (and across
  * tabs via the native `storage` event).
@@ -20,7 +20,10 @@ import { FileText, Plus, Trash2, Check, X, Pencil } from "lucide-react";
 import { t } from "@/lib/i18n";
 import { Textarea } from "@/components/ui";
 import TurnIntoNoteButton from "@/components/TurnIntoNoteButton";
+import { getStoredSession } from "@/lib/auth";
 import {
+  currentNotesUserId,
+  noteStorageKey,
   readNotes,
   addNote,
   updateNote,
@@ -39,14 +42,16 @@ interface Props {
 // imported by QuestionCard's older code paths. Keep thin shims so nothing breaks
 // while the store is the real owner.
 export function getNoteKey(id: number) {
-  return `medpruef_notes_${id}`;
+  return noteStorageKey(id);
 }
 export function saveNoteToStorage(id: number, value: string) {
   // Single-string legacy save → route through the multi-note store as one entry
   // (replacing any existing notes is NOT done here; this only appends if empty).
   if (typeof window === "undefined") return;
-  const existing = readNotes(id);
-  if (existing.length === 0 && value.trim()) addNote(id, value);
+  const userId = currentNotesUserId();
+  if (!userId) return;
+  const existing = readNotes(id, userId);
+  if (existing.length === 0 && value.trim()) addNote(id, value, userId);
 }
 
 export default function QuestionNotesPanel({ lang, questionId }: Props) {
@@ -54,10 +59,11 @@ export default function QuestionNotesPanel({ lang, questionId }: Props) {
   const [draft, setDraft] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
+  const userId = getStoredSession()?.user?.id || null;
 
   const reload = useCallback(() => {
-    setEntries(readNotes(questionId));
-  }, [questionId]);
+    setEntries(userId ? readNotes(questionId, userId) : []);
+  }, [questionId, userId]);
 
   // Load on mount / question change, and stay in sync with other surfaces.
   useEffect(() => {
@@ -69,7 +75,7 @@ export default function QuestionNotesPanel({ lang, questionId }: Props) {
       if (!detail || detail.questionId === questionId) reload();
     };
     const onStorage = (e: StorageEvent) => {
-      if (e.key === getNoteKey(questionId)) reload();
+      if (e.key === noteStorageKey(questionId, userId)) reload();
     };
     window.addEventListener("medpruef:notes-changed", onLocal);
     window.addEventListener("storage", onStorage);
@@ -77,11 +83,12 @@ export default function QuestionNotesPanel({ lang, questionId }: Props) {
       window.removeEventListener("medpruef:notes-changed", onLocal);
       window.removeEventListener("storage", onStorage);
     };
-  }, [questionId, reload]);
+  }, [questionId, reload, userId]);
 
   const handleAdd = () => {
     if (!draft.trim()) return;
-    setEntries(addNote(questionId, draft));
+    if (!userId) return;
+    setEntries(addNote(questionId, draft, userId));
     setDraft("");
   };
 
@@ -92,13 +99,15 @@ export default function QuestionNotesPanel({ lang, questionId }: Props) {
 
   const saveEdit = () => {
     if (editingId == null) return;
-    setEntries(updateNote(questionId, editingId, editText));
+    if (!userId) return;
+    setEntries(updateNote(questionId, editingId, editText, userId));
     setEditingId(null);
     setEditText("");
   };
 
   const handleDelete = (id: string) => {
-    setEntries(deleteNote(questionId, id));
+    if (!userId) return;
+    setEntries(deleteNote(questionId, id, userId));
     if (editingId === id) setEditingId(null);
   };
 

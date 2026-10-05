@@ -99,9 +99,28 @@ test.describe("Announcement gate — no stacking, earned cadence (sprint §1.4)"
         `Dev server unhealthy (status=${health?.status() ?? "unreachable"}). See pure-logic tests for the canonical regression guard.`,
       );
     }
+    await page.context().addCookies([{
+      name: "mp_skip_landing",
+      value: "1",
+      url: baseURL || "http://localhost:3000",
+    }]);
     await seedPreferences(page, { theme: "light", lang: "de" });
     await seedSession(page, { userId: TEST_USER_ID });
     await stubHomePageApis(page);
+    await page.route("**/api/auth/me**", (route) => route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ user: {
+        id: TEST_USER_ID,
+        tier: "free",
+        tier_expires_at: null,
+        role: "user",
+        email_status: "valid",
+        language_code: "de",
+        onboarding_completed_at: null,
+        referrals_enabled: true,
+      } }),
+    }));
   });
 
   test("Session 1, 0 Qs answered → no banner, no modal, no floater", async ({ page }) => {

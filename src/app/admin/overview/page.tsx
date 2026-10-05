@@ -46,6 +46,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { authFetch as fetch } from "@/lib/authFetch";
+import { useAdminPermissions } from "@/lib/admin/useAdminPermissions";
 import { useAdminRealtime } from "@/lib/admin/useAdminRealtime";
 import { AdminPageShell } from "../_components/AdminPageShell";
 import {
@@ -77,20 +78,20 @@ interface OverviewSnapshot {
     referrals_awaiting_action: number;
     puyp_pending: number;
     flagged_open: number;
-    webhook_failures_24h: number;
-    stuck_pending_24h: number;
+    webhook_failures_24h: number | null;
+    stuck_pending_24h: number | null;
     conversion_7d: number | null;
     ai_chat_1h: {
       requests: number;
       completed: number;
       failed: number;
       avg_latency_ms: number | null;
-    };
+    } | null;
     telegram_activation: {
       registered: number;
       confirmed: number;
-    };
-    crons: Record<string, { lastStatus: string; lastStartedAt: string | null }>;
+    } | null;
+    crons: Record<string, { lastStatus: string; lastStartedAt: string | null }> | null;
     recent_events: Array<{
       id: string | number;
       event_type: string;
@@ -101,6 +102,7 @@ interface OverviewSnapshot {
 }
 
 export default function AdminOverviewPage() {
+  const { can, loading: accessLoading } = useAdminPermissions();
   const [snapshot, setSnapshot] = useState<OverviewSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -120,19 +122,22 @@ export default function AdminOverviewPage() {
   }, []);
 
   useEffect(() => {
-    hydrate();
-  }, [hydrate]);
+    if (!accessLoading && can("overview.read")) void hydrate();
+  }, [accessLoading, can, hydrate]);
 
   // Auto-refresh every 60s as a polling fallback in case Realtime drops.
   // Only poll while the tab is visible — no reason to chat with Supabase
   // when the operator is off doing something else.
   useEffect(() => {
-    if (!isVisible) return;
+    if (!isVisible || !can("overview.read")) return;
     const id = setInterval(hydrate, 60_000);
     return () => clearInterval(id);
-  }, [hydrate, isVisible]);
+  }, [can, hydrate, isVisible]);
 
   const freshness = loading ? "cached" : error ? "disconnected" : "live";
+
+  if (accessLoading) return <div className="p-6"><TileSkeleton /></div>;
+  if (!can("overview.read")) return <div className="p-6"><div className="rounded-lg border border-red-500/40 bg-red-500/10 p-4 text-sm">Your admin role does not include access to the overview.</div></div>;
 
   return (
     <AdminPageShell
@@ -157,24 +162,23 @@ export default function AdminOverviewPage() {
         </div>
       )}
 
-      {/* Running-now ribbon — reads `jobs` Realtime + shows active jobs. */}
-      <RunningNowRibbon />
+      {can("system.read") && <>
+        <RunningNowRibbon />
+        <AdminActionsRibbon />
+      </>}
 
-      {/* Admin-actions ribbon — confirms audit logging is healthy. Goes
-          amber if 0 rows have landed in 24h (possible silent breakage). */}
-      <AdminActionsRibbon />
-
-      {/* ─── SECTION 1: Revenue & Growth ─────────────────────────── */}
+      {/* Revenue figures are withheld from roles without revenue.read. */}
+      {can("revenue.read") && <>
       <section className="space-y-3">
         <SectionHeading
           title="Revenue & Growth"
           icon={TrendingUp}
           hint="Money in, users in, funnel health"
         />
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           {loading ? (
             <>
-              <div className="sm:col-span-2">
+              <div className="sm:col-span-2" data-testid="overview-revenue-hero">
                 <TileSkeleton />
               </div>
               <TileSkeleton />
@@ -184,7 +188,7 @@ export default function AdminOverviewPage() {
           ) : (
             <>
               {/* Hero tile — Revenue today with sparkline */}
-              <div className="sm:col-span-2">
+              <div className="sm:col-span-2" data-testid="overview-revenue-hero">
                 <RevenueHeroTile
                   todayCents={snapshot?.tiles.revenue.today_cents ?? 0}
                   mtdCents={snapshot?.tiles.revenue.mtd_cents ?? 0}
@@ -201,32 +205,36 @@ export default function AdminOverviewPage() {
                 initial={snapshot?.tiles.signups_today ?? 0}
                 visible={isVisible}
               />
-              <ConversionTile conversion7d={snapshot?.tiles.conversion_7d ?? null} />
+              <div className="sm:col-span-2 lg:col-span-1" data-testid="overview-conversion-tile">
+                <ConversionTile conversion7d={snapshot?.tiles.conversion_7d ?? null} />
+              </div>
             </>
           )}
         </div>
       </section>
+      </>}
 
       {/* ─── SECTION 2: Operational Queues ───────────────────────── */}
-      <section className="space-y-3">
+      {can("revenue.read") && <section className="space-y-3">
         <SectionHeading
           title="Operational Queues"
           icon={Layers}
           hint="Work waiting on your review"
         />
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           {loading ? (
             <>
-              <div className="sm:col-span-2">
+              <div className="sm:col-span-2" data-testid="overview-referrals-hero">
                 <TileSkeleton />
               </div>
+              <TileSkeleton />
               <TileSkeleton />
               <TileSkeleton />
             </>
           ) : (
             <>
               {/* Hero tile — Referrals payout queue */}
-              <div className="sm:col-span-2">
+              <div className="sm:col-span-2" data-testid="overview-referrals-hero">
                 <ReferralsHeroTile
                   initial={snapshot?.tiles.referrals_awaiting_action ?? 0}
                   visible={isVisible}
@@ -240,17 +248,20 @@ export default function AdminOverviewPage() {
                 initial={snapshot?.tiles.puyp_pending ?? 0}
                 visible={isVisible}
               />
-              <FlaggedQuestionsTile
-                initial={snapshot?.tiles.flagged_open ?? 0}
-                visible={isVisible}
-              />
+              <div className="sm:col-span-2 lg:col-span-1" data-testid="overview-flagged-tile">
+                <FlaggedQuestionsTile
+                  initial={snapshot?.tiles.flagged_open ?? 0}
+                  visible={isVisible}
+                />
+              </div>
             </>
           )}
         </div>
       </section>
+      }
 
       {/* ─── SECTION 3: Platform Health ──────────────────────────── */}
-      <section className="space-y-3">
+      {can("system.read") && <section className="space-y-3">
         <SectionHeading
           title="Platform Health"
           icon={HeartPulse}
@@ -261,10 +272,12 @@ export default function AdminOverviewPage() {
             initial={snapshot?.tiles.webhook_failures_24h ?? 0}
           />
           <CronsTile crons={snapshot?.tiles.crons ?? {}} />
-          <LiveFeedTile events={snapshot?.tiles.recent_events ?? []} />
+          {can("users.read") && <LiveFeedTile events={snapshot?.tiles.recent_events ?? []} />}
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-          <StuckPendingTile initial={snapshot?.tiles.stuck_pending_24h ?? 0} />
+          {can("revenue.read") && snapshot && snapshot.tiles.stuck_pending_24h !== null && (
+            <StuckPendingTile initial={snapshot.tiles.stuck_pending_24h} />
+          )}
           <AIChatHealthTile
             initial={snapshot?.tiles.ai_chat_1h ?? {
               requests: 0,
@@ -277,7 +290,7 @@ export default function AdminOverviewPage() {
             initial={snapshot?.tiles.telegram_activation ?? { registered: 0, confirmed: 0 }}
           />
         </div>
-      </section>
+      </section>}
     </AdminPageShell>
   );
 }
@@ -1112,11 +1125,11 @@ function LiveFeedTile({
 
 /**
  * Audit-trail health indicator. Two values live in the header:
- *   1. "Admin-Aktionen heute: N"  — count of admin_audit_log rows
+ *   1. "Admin actions today: N"  — count of admin_audit_log rows
  *      created since local midnight.
- *   2. "Letzte Aktion: vor Xm"   — how long ago the latest row landed.
+ *   2. "Last action: Xm ago"   — how long ago the latest row landed.
  *
- * Goes amber + "Wird das Audit-Log geschrieben?" when N=0 for 24h — so
+ * Goes amber + "Is the audit log being written?" when N=0 for 24h — so
  * [name] sees instantly if the audit pipe went quiet again (that's the
  * regression that triggered the post-audit-rescue sprint).
  *
@@ -1208,15 +1221,15 @@ function AdminActionsRibbon() {
 
   const relativeLabel =
     ageMinutes == null
-      ? "noch nichts geloggt"
+      ? "not logged yet"
       : ageMinutes < 1
-        ? "vor <1 Min"
+        ? "less than a minute ago"
         : ageMinutes < 60
-          ? `vor ${ageMinutes} Min`
+          ? `${ageMinutes} min ago`
           : ageMinutes < 1440
-            ? `vor ${Math.floor(ageMinutes / 60)} Std`
-            : `vor ${Math.floor(ageMinutes / 1440)} Tag${
-                Math.floor(ageMinutes / 1440) === 1 ? "" : "en"
+            ? `${Math.floor(ageMinutes / 60)} hr ago`
+            : `${Math.floor(ageMinutes / 1440)} day${
+                Math.floor(ageMinutes / 1440) === 1 ? "" : "s"
               }`;
 
   return (
@@ -1236,12 +1249,12 @@ function AdminActionsRibbon() {
         style={{ color: toneColor }}
       >
         <Activity size={12} />
-        Admin-Aktionen heute
+        Admin actions today
       </div>
       <div className="flex items-center gap-1 tabular-nums font-mono text-[var(--mp-fg)]">
         <strong>{formatInt(count)}</strong>
         <span className="text-[var(--mp-fg-muted)]">·</span>
-        <span>Letzte: {relativeLabel}</span>
+        <span>Last action: {relativeLabel}</span>
         {summary.last_action && (
           <>
             <span className="text-[var(--mp-fg-muted)]">·</span>
@@ -1253,14 +1266,14 @@ function AdminActionsRibbon() {
       </div>
       {quietFor24h && count === 0 && (
         <span className="ml-auto text-[var(--mp-warning)] italic">
-          Wird das Audit-Log geschrieben?
+          Is the audit log being written?
         </span>
       )}
       <Link
         href="/admin/audit"
         className="ml-auto text-[var(--mp-viridian)] hover:underline"
       >
-        Audit-Trail →
+        Audit trail →
       </Link>
     </div>
   );

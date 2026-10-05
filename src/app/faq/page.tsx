@@ -499,7 +499,7 @@ function BackToPricing({
     <div className="mt-5 pt-4 border-t border-[var(--mp-border-subtle)]">
       <Link
         href={href}
-        className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--mp-viridian)] hover:underline focus:outline-none focus:ring-2 focus:ring-[var(--mp-viridian)] rounded"
+                  className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--mp-viridian)] hover:underline focus:outline-none focus:ring-2 focus:ring-[var(--mp-viridian)] rounded"
       >
         {lang === "de"
           ? "Zur Preisseite und Tarif wählen"

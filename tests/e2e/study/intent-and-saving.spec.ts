@@ -7,6 +7,15 @@ import { seedPreferences, expectNoHorizontalScroll } from '../helpers/page-setup
 test.use({ serviceWorkers: 'block' });
 
 async function setup(page: Page, lang: 'de'|'en', failFirst = false) {
+  // Keep this suite fully local even when analytics or support scripts load.
+  await page.route('**/*', async route => {
+    const url = new URL(route.request().url());
+    if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
+      await route.continue();
+    } else {
+      await route.abort();
+    }
+  });
   await seedSession(page, {userId:'study-ui-test',tier:'pro'});
   await page.addInitScript(() => localStorage.setItem('medpruef_session_token', 'e2e-signed-session-token'));
   await seedPreferences(page,{lang});
@@ -46,6 +55,18 @@ async function setup(page: Page, lang: 'de'|'en', failFirst = false) {
 async function submitAnswer(page: Page, option: RegExp) {
   await page.getByRole('radio', {name:option}).click();
 }
+async function expectSavedTrail(page: Page, answeredCount: number) {
+  await expect.poll(() => page.evaluate((count) => {
+    return Object.keys(localStorage)
+      .filter((key) => key.startsWith('medpruef-quiz-v4:'))
+      .some((key) => {
+        try {
+          const session = JSON.parse(localStorage.getItem(key) || 'null');
+          return Array.isArray(session?.answered) && session.answered.length === count;
+        } catch { return false; }
+      });
+  }, answeredCount)).toBe(true);
+}
 for (const lang of ['de','en'] as const) {
   test(`new questions persist, resume and exhaust without repeats (${lang})`, async ({page}) => {
     const {saved,authHeaders} = await setup(page,lang);
@@ -55,6 +76,7 @@ for (const lang of ['de','en'] as const) {
     await expect.poll(() => authHeaders.some(value => value === 'e2e-signed-session-token')).toBe(true);
     await submitAnswer(page,/Correct option/);
     await expect.poll(()=>saved.size).toBe(1);
+    await expectSavedTrail(page, 1);
     expect(authHeaders).toContain('e2e-signed-session-token');
     await page.reload({ waitUntil: 'domcontentloaded' });
     await page.getByRole('button',{name:lang==='de'?'Fortsetzen':'Resume',exact:true}).click();
@@ -63,6 +85,7 @@ for (const lang of ['de','en'] as const) {
     await page.getByRole('button',{name:lang==='de'?'Nächste Frage':'Next question',exact:false}).click();
     await expect(page.locator('[data-question-text]')).toHaveText('Study fixture 3');
     await submitAnswer(page,/Correct option/);
+    await expectSavedTrail(page, 3);
     await page.getByRole('button',{name:lang==='de'?'Quiz beenden':'Finish quiz',exact:false}).click();
     await expect.poll(()=>saved.size).toBe(3);
     await page.goto('/quiz?topic=Neurologie&examSource=kmp_innsbruck&limit=3', { waitUntil: 'domcontentloaded' });

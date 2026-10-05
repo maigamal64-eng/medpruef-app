@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -57,6 +57,7 @@ export default function PricingPage() {
   const [checkoutLoading, setCheckoutLoading] = useState<
     null | "cohort" | "starter" | "first_month"
   >(null);
+  const checkoutActionHandled = useRef(false);
 
   const toast = useToast();
   const { isPaid, referralsEnabled } = useUserTier();
@@ -129,6 +130,33 @@ export default function PricingPage() {
     }
     setCheckoutLoading(null);
   };
+
+  // Login preserves the requested plan in `next`. Resume that one deliberate
+  // checkout action after the session is present, and remove the query first
+  // so refresh/back navigation cannot submit it a second time.
+  useEffect(() => {
+    if (!mounted || !session?.user || checkoutActionHandled.current) return;
+    const action = new URLSearchParams(window.location.search).get("action");
+    const checkoutActions = {
+      "cohort-checkout": {
+        tier: "premium_pass_guaranteed",
+        slot: "cohort",
+      },
+      "starter-3mo-checkout": { tier: "first_3mo_27", slot: "starter" },
+      "first-month-checkout": {
+        tier: "first_month_19",
+        slot: "first_month",
+      },
+    } as const;
+    if (!action || !(action in checkoutActions)) return;
+
+    const checkout = checkoutActions[action as keyof typeof checkoutActions];
+    checkoutActionHandled.current = true;
+    const url = new URL(window.location.href);
+    url.searchParams.delete("action");
+    window.history.replaceState(window.history.state, "", url.toString());
+    void startCardCheckout(checkout.tier, checkout.slot, action);
+  }, [mounted, session, startCardCheckout]);
 
   /**
    * Paid CTAs create a per-user Whop checkout session and redirect to the
@@ -206,6 +234,7 @@ export default function PricingPage() {
 
   return (
     <AppLayout
+      className="pricing-layout"
       sidebar={<Sidebar lang={lang} userId={user?.id} userName={user?.first_name} />}
       bottomNav={<BottomNav lang={lang} userId={user?.id} />}
     >
@@ -234,8 +263,8 @@ export default function PricingPage() {
           <span className="mp-caption inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--mp-success-bg)] text-[var(--mp-viridian)] mb-5 normal-case tracking-[0.08em]">
             <Sparkles className="w-3.5 h-3.5" />
             {lang === "de"
-              ? "Vorbereitung für Österreichs medizinische Prüfungen"
-              : "Preparation for Austria's medical exams"}
+              ? "Prüfungsvorbereitung für Österreich · alle drei Prüfungswege"
+              : "Exam preparation for Austria · all three exam tracks"}
           </span>
           <h2 className="mp-h1 mb-4 leading-[1.05]">
             {lang === "de"

@@ -35,6 +35,7 @@ import {
   Megaphone,
 } from "lucide-react";
 import { authFetch as fetch } from "@/lib/authFetch";
+import { AdminPermissionGate } from "../_components/AdminPermissionGate";
 import { AdminPageShell } from "../_components/AdminPageShell";
 import {
   SectionHeading,
@@ -78,6 +79,10 @@ interface GrowthMetrics {
 }
 
 export default function AdminGrowthPage() {
+  return <AdminPermissionGate permission="overview.read"><AdminGrowthPageContent /></AdminPermissionGate>;
+}
+
+function AdminGrowthPageContent() {
   const [metrics, setMetrics] = useState<GrowthMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

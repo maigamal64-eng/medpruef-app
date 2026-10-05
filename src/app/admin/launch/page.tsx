@@ -46,6 +46,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { AdminPageShell } from "../_components/AdminPageShell";
+import { AdminPermissionGate } from "../_components/AdminPermissionGate";
 import {
   SectionHeading,
   StatusDot,
@@ -81,6 +82,10 @@ const PROGRESS_KEY = "medpruef_launch_progress";
 const ACTIVATION_KEY = "medpruef_activation_progress";
 
 export default function AdminLaunchPage() {
+  return <AdminPermissionGate permission="overview.read"><AdminLaunchPageContent /></AdminPermissionGate>;
+}
+
+function AdminLaunchPageContent() {
   return (
     <AdminPageShell
       title="Plan & Actions"

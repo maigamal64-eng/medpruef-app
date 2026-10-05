@@ -11,16 +11,23 @@ import Link from "next/link";
 // fix). The whole app uses this alias for authed calls; the exam page had
 // silently been on the unauthenticated global fetch.
 import { authFetch as fetch } from "@/lib/authFetch";
-import { getTopicConfig, VIENNA_EXAM_PARTS } from "@/lib/topics";
+import { getStoredExamSource, getTopicConfig, VIENNA_EXAM_PARTS } from "@/lib/topics";
 import { t, getLang, setLang } from "@/lib/i18n";
 import { getStoredSession, hasProAccess } from "@/lib/auth";
+import { listNoteQuestionIds } from "@/lib/notes-store";
+import { BOOKMARK_EVENT, loadBookmarks, readCachedBookmarks } from "@/lib/bookmarks";
 import {
   saveExamSession,
   loadExamSession,
+  loadLegacyExamSession,
+  claimLegacyExamSession,
+  discardLegacyExamSession,
   clearExamSession,
   remainingSeconds,
+  type SavedExamSession,
 } from "@/lib/examSession";
 import type { MCQOption } from "@/lib/mcq";
+import { isExamBatchComplete } from "@/lib/examLoad";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import LanguageToggle from "@/components/LanguageToggle";
@@ -57,30 +64,8 @@ const DEFAULT_CUSTOM_FILTERS: CustomFilters = {
   limit: 50,
 };
 
-function readBookmarkIds(): number[] {
-  if (typeof window === "undefined") return [];
-  const raw = localStorage.getItem("medpruef_favorites");
-  if (!raw) return [];
-  try {
-    const arr = JSON.parse(raw);
-    if (!Array.isArray(arr)) return [];
-    return arr.map((x) => (typeof x === "number" ? x : parseInt(String(x), 10))).filter((n) => Number.isFinite(n));
-  } catch {
-    return [];
-  }
-}
-
 function readNoteIds(): number[] {
-  if (typeof window === "undefined") return [];
-  const out: number[] = [];
-  for (let i = 0; i < localStorage.length; i++) {
-    const k = localStorage.key(i);
-    if (k?.startsWith("medpruef_notes_")) {
-      const id = parseInt(k.replace("medpruef_notes_", ""), 10);
-      if (Number.isFinite(id)) out.push(id);
-    }
-  }
-  return out;
+  return listNoteQuestionIds();
 }
 
 interface Question {
@@ -168,7 +153,23 @@ function formatTime(seconds: number): string {
 
 function ExamContent() {
   const searchParams = useSearchParams();
-  const examSource = searchParams.get("examSource") || "kenntnispruefung";
+  const [storedExamSource, setStoredExamSourceState] = useState("kenntnispruefung");
+  const [examPreferenceReady, setExamPreferenceReady] = useState(false);
+  const examSource = searchParams.get("examSource") || storedExamSource;
+  useEffect(() => {
+    setStoredExamSourceState(getStoredExamSource());
+    let alive = true;
+    const session = getStoredSession();
+    if (session?.user?.id && !session.user.id.startsWith("guest_")) {
+      fetch("/api/user/exam-preference").then(async (res) => {
+        if (!res.ok) throw new Error("Preference unavailable");
+        return res.json();
+      }).then((data) => {
+        if (alive && typeof data?.activeExam === "string" && !searchParams.get("examSource")) setStoredExamSourceState(data.activeExam);
+      }).catch(() => {}).finally(() => { if (alive) setExamPreferenceReady(true); });
+    } else setExamPreferenceReady(true);
+    return () => { alive = false; };
+  }, [searchParams]);
   // The real exam blueprint for this exam source + its full length. Drives
   // the entry info-cards, the default question count, and the load loop.
   const examConfig = useMemo(() => getExamBlueprint(examSource), [examSource]);
@@ -177,6 +178,8 @@ function ExamContent() {
   const mcqSimUnavailable = examSource === "pharma";
   const [lang, setLangState] = useState<Lang>("de");
   const [userId, setUserId] = useState("");
+  const [bookmarkIds, setBookmarkIds] = useState<number[]>([]);
+  const [bookmarksReady, setBookmarksReady] = useState(false);
   const [userName, setUserName] = useState("");
   const [selectedPart, setSelectedPart] = useState<ExamPart>(
     (searchParams.get("part") as ExamPart) || "all"
@@ -184,6 +187,7 @@ function ExamContent() {
   const [phase, setPhase] = useState<ExamPhase>("entry");
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loadProgress, setLoadProgress] = useState(0);
+  const [loadFailure, setLoadFailure] = useState<string | null>(null);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [answers, setAnswers] = useState<Record<number, number[]>>({}); // questionIndex → selected option indices (multi-select)
   const [flaggedIdxs, setFlaggedIdxs] = useState<Set<number>>(new Set()); // session-only flag state for minimap
@@ -197,10 +201,14 @@ function ExamContent() {
   const [customCounting, setCustomCounting] = useState(false);
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
   const [savedAttemptId, setSavedAttemptId] = useState<string | null>(null);
+  const [examAttemptId, setExamAttemptId] = useState<string | null>(null);
+  const [historySaveState, setHistorySaveState] = useState<"idle" | "saving" | "saved" | "failed">("idle");
+  const [historySaveRetry, setHistorySaveRetry] = useState(0);
   // B-01: a saved in-progress exam detected on mount → offer resume on the
   // entry screen (instead of silent resume, so the user can still discard +
   // start fresh, and the expired case has somewhere to land).
   const [resumable, setResumable] = useState<ReturnType<typeof loadExamSession>>(null);
+  const [legacyResumable, setLegacyResumable] = useState<ReturnType<typeof loadLegacyExamSession>>(null);
   // Absolute exam start time (epoch ms). The persisted timer is derived from
   // this, so the countdown stays honest across a refresh/crash gap.
   const startedAtRef = useRef<number | null>(null);
@@ -230,6 +238,31 @@ function ExamContent() {
     }
   }, []);
 
+  useEffect(() => {
+    if (!userId) {
+      setBookmarksReady(true);
+      return;
+    }
+    let cancelled = false;
+    const syncCached = () => setBookmarkIds(readCachedBookmarks(userId));
+    syncCached();
+    const refresh = () => {
+      void loadBookmarks(userId).then((ids) => {
+        if (cancelled) return;
+        if (ids) setBookmarkIds(ids);
+        setBookmarksReady(true);
+      });
+    };
+    window.addEventListener(BOOKMARK_EVENT, syncCached);
+    window.addEventListener("online", refresh);
+    refresh();
+    return () => {
+      cancelled = true;
+      window.removeEventListener(BOOKMARK_EVENT, syncCached);
+      window.removeEventListener("online", refresh);
+    };
+  }, [userId]);
+
   const switchLang = (l: Lang) => {
     setLang(l);
     setLangState(l);
@@ -239,19 +272,22 @@ function ExamContent() {
   // affordance on the entry screen. We don't auto-resume so the user can
   // still discard + start a different exam.
   useEffect(() => {
-    const saved = loadExamSession();
-    if (saved) setResumable(saved);
-  }, []);
+    if (!userId) {
+      setResumable(null);
+      setLegacyResumable(null);
+      return;
+    }
+    const saved = loadExamSession(userId);
+    setResumable(saved);
+    setLegacyResumable(saved ? null : loadLegacyExamSession());
+  }, [userId]);
 
   // B-01: restore a saved exam into live state and jump into the exam (or
   // straight to results if it expired while the user was away).
-  const resumeExam = useCallback(() => {
-    const saved = loadExamSession();
-    if (!saved) {
-      setResumable(null);
-      return;
-    }
+  const restoreExam = useCallback((saved: SavedExamSession) => {
+    if (!userId) return;
     startedAtRef.current = saved.startedAt;
+    setExamAttemptId(saved.attemptId || crypto.randomUUID());
     const left = remainingSeconds(saved.startedAt);
     setQuestions(saved.questions as Question[]);
     setAnswers(saved.answers || {});
@@ -262,16 +298,38 @@ function ExamContent() {
     setSelectedPart((saved.selectedPart as ExamPart) || "all");
     setTimeLeft(left);
     setResumable(null);
+    setLegacyResumable(null);
     examReadyRef.current = true;
-    // Expired while away → restore the data but go straight to results.
     setPhase(left <= 0 ? "results" : "exam");
+  }, [userId]);
+
+  const resumeExam = useCallback(() => {
+    const saved = userId ? loadExamSession(userId) : null;
+    if (!saved) {
+      setResumable(null);
+      return;
+    }
+    restoreExam(saved);
+  }, [userId, restoreExam]);
+
+  const claimAndResumeLegacyExam = useCallback(() => {
+    if (!userId) return;
+    const claimed = claimLegacyExamSession(userId);
+    setLegacyResumable(null);
+    if (claimed) restoreExam(claimed);
+    else setResumable(loadExamSession(userId));
+  }, [userId, restoreExam]);
+
+  const discardLegacyExam = useCallback(() => {
+    discardLegacyExamSession();
+    setLegacyResumable(null);
   }, []);
 
   // B-01: discard the saved exam and clear the resume affordance.
   const discardSavedExam = useCallback(() => {
-    clearExamSession();
+    if (userId) clearExamSession(userId);
     setResumable(null);
-  }, []);
+  }, [userId]);
 
   /**
    * Build URLSearchParams from custom filter state.
@@ -288,13 +346,13 @@ function ExamContent() {
     if (f.search.trim()) p.set("search", f.search.trim());
     // Client-only filters: intersect bookmark & note ID lists
     let ids: number[] | null = null;
-    if (f.bookmarksOnly) ids = readBookmarkIds();
+    if (f.bookmarksOnly) ids = bookmarkIds;
     if (f.notesOnly) {
       const noteIds = readNoteIds();
       ids = ids ? ids.filter((x) => noteIds.includes(x)) : noteIds;
     }
     return { params: p, ids };
-  }, [examSource]);
+  }, [examSource, bookmarkIds]);
 
   // Debounced live count preview for custom exam builder
   useEffect(() => {
@@ -302,6 +360,7 @@ function ExamContent() {
       setCustomCount(null);
       return;
     }
+    if (customFilters.bookmarksOnly && !bookmarksReady) return;
     setCustomCounting(true);
     const handle = setTimeout(async () => {
       try {
@@ -322,12 +381,15 @@ function ExamContent() {
       }
     }, 300);
     return () => clearTimeout(handle);
-  }, [selectedPart, customFilters, buildCustomParams]);
+  }, [selectedPart, customFilters, buildCustomParams, bookmarksReady]);
 
   const loadExam = useCallback(async () => {
+    if (!examPreferenceReady) return;
+    setLoadFailure(null);
     setPhase("loading");
     setLoadProgress(0);
     const allQuestions: Question[] = [];
+    const topicFailures: string[] = [];
 
     if (selectedPart === "custom") {
       // Single filtered fetch
@@ -337,26 +399,23 @@ function ExamContent() {
         params.set("mcqOnly", "1");
         if (ids !== null) {
           if (ids.length === 0) {
-            startedAtRef.current = Date.now();
-            examReadyRef.current = true;
-            clearExamSession();
-            setQuestions([]);
-            setAnswers({});
-            setFlaggedIdxs(new Set());
-            setCurrentIdx(0);
-            setTimeLeft(EXAM_DURATION_S);
-            setPhase("exam");
+            setLoadFailure(lang === "de" ? "Für diese Filter gibt es keine passenden Fragen. Passe die Auswahl an und versuche es erneut." : "No questions match these filters. Adjust the selection and try again.");
+            setPhase("entry");
             return;
           }
           params.set("ids", ids.join(","));
         }
         setLoadProgress(40);
         const res = await fetch(`/api/questions?${params}`);
+        if (!res.ok) throw new Error(`Fragen konnten nicht geladen werden (${res.status}).`);
         const data: Question[] = await res.json();
-        if (Array.isArray(data)) allQuestions.push(...data);
+        if (!Array.isArray(data)) throw new Error("Die Fragenantwort war ungültig.");
+        allQuestions.push(...data);
         setLoadProgress(90);
-      } catch {
-        // swallow — proceed with empty set
+        const expected = Math.min(customCount ?? customFilters.limit, customFilters.limit);
+        if (!isExamBatchComplete(data.length, expected)) topicFailures.push(`Eigene Prüfung: ${data.length}/${expected}`);
+      } catch (error) {
+        topicFailures.push(error instanceof Error ? error.message : "Eigene Prüfung: Laden fehlgeschlagen");
       }
     } else {
       const partTopics = selectedPart !== "all" ? VIENNA_EXAM_PARTS[selectedPart] : null;
@@ -369,13 +428,29 @@ function ExamContent() {
         try {
           const params = new URLSearchParams({ topic, limit: String(count), examSource, mcqOnly: "1" });
           const res = await fetch(`/api/questions?${params}`);
+          if (!res.ok) throw new Error(`${topic}: HTTP ${res.status}`);
           const data: Question[] = await res.json();
+          if (!Array.isArray(data)) throw new Error(`${topic}: ungültige Antwort`);
           allQuestions.push(...data);
-        } catch {
-          // If a topic fails, continue with others
+          if (!isExamBatchComplete(data.length, count)) topicFailures.push(`${topic}: ${data.length}/${count}`);
+        } catch (error) {
+          topicFailures.push(error instanceof Error ? error.message : `${topic}: Laden fehlgeschlagen`);
         }
         setLoadProgress(Math.round(((i + 1) / configToUse.length) * 100));
       }
+    }
+
+    // A partial blueprint must never look like a completed full simulation.
+    // Keep the selected configuration so the learner can retry or choose a
+    // smaller custom exam after seeing which topic loads failed.
+    if (topicFailures.length > 0 || allQuestions.length === 0) {
+      setLoadFailure(
+        (lang === "de" ? "Die Prüfungssimulation wurde unvollständig geladen. " : "The exam simulation loaded incomplete. ") +
+        topicFailures.slice(0, 5).join(" · ") +
+        (topicFailures.length > 5 ? (lang === "de" ? " · weitere Themen fehlen" : " · more topics missing") : "")
+      );
+      setPhase("entry");
+      return;
     }
 
     // ─── EKG quota (per Mohamed) ─────────────────────────────────────────
@@ -409,12 +484,20 @@ function ExamContent() {
                 (q) => q.topic === ekgQ.topic && !isEkg(q)
               );
               if (replaceIdx >= 0) allQuestions[replaceIdx] = ekgQ;
-              else allQuestions.push(ekgQ);
+              // Keep the requested blueprint length exact. If every loaded
+              // row is already an EKG question, do not silently exceed it.
             }
           }
         } catch {
           /* swallow — best effort */
         }
+      }
+      if (allQuestions.filter(isEkg).length < target) {
+        setLoadFailure(lang === "de"
+          ? "Die Prüfung enthält nicht die erforderlichen EKG-Fragen und wurde nicht gestartet. Bitte versuche es erneut."
+          : "The exam is missing its required ECG questions and was not started. Please try again.");
+        setPhase("entry");
+        return;
       }
     }
 
@@ -445,15 +528,16 @@ function ExamContent() {
     // Fresh exam → stamp the start time, clear any stale autosave, and arm
     // persistence. startedAtRef drives the durable timer (B-01).
     startedAtRef.current = Date.now();
+    setExamAttemptId(crypto.randomUUID());
     examReadyRef.current = true;
-    clearExamSession();
+    if (userId) clearExamSession(userId);
     setQuestions(grouped);
     setAnswers({});
     setFlaggedIdxs(new Set());
     setCurrentIdx(0);
     setTimeLeft(EXAM_DURATION_S);
     setPhase("exam");
-  }, [examSource, selectedPart, customFilters, buildCustomParams, examConfig]);
+  }, [examSource, selectedPart, customFilters, buildCustomParams, examConfig, customCount, lang, examPreferenceReady, userId]);
 
   // Timer management
   useEffect(() => {
@@ -484,8 +568,8 @@ function ExamContent() {
   // the array is built non-deterministically — re-fetching would mis-map), and
   // the timer is stored as the absolute startedAt so it survives a refresh.
   useEffect(() => {
-    if (phase !== "exam" || !examReadyRef.current || startedAtRef.current === null) return;
-    saveExamSession({
+    if (phase !== "exam" || !userId || !examReadyRef.current || startedAtRef.current === null) return;
+    saveExamSession(userId, {
       startedAt: startedAtRef.current,
       questions,
       answers,
@@ -493,17 +577,18 @@ function ExamContent() {
       currentIdx,
       selectedPart,
       examSource,
+      attemptId: examAttemptId || crypto.randomUUID(),
     });
-  }, [phase, questions, answers, flaggedIdxs, currentIdx, selectedPart, examSource]);
+  }, [phase, userId, questions, answers, flaggedIdxs, currentIdx, selectedPart, examSource, examAttemptId]);
 
   // B-01: clear the saved exam on EVERY terminal path. Gating on the `results`
   // phase covers both the submit button (handleSubmitExam) and the timer-hits-0
   // branch, so neither can leak a stale autosave.
   useEffect(() => {
     if (phase === "results") {
-      // Persist the attempt to the durable History ledger (best-effort,
-      // fire-and-forget: the local result screen must never wait on the
-      // network). Recorded for ANY signed-in tier; viewing it is Pro-only.
+      // Persist the attempt to the durable History ledger and acknowledge
+      // success before clearing the only local copy. A failed request leaves
+      // the autosave available and exposes an explicit retry on the result.
       const snapshotQuestions = questions;
       const snapshotAnswers = answers;
       const startedAt = startedAtRef.current;
@@ -541,23 +626,35 @@ function ExamContent() {
           answers: answersByQid,
           duration_ms: startedAt !== null ? Date.now() - startedAt : null,
           started_at: startedAt !== null ? new Date(startedAt).toISOString() : null,
+          attempt_id: examAttemptId,
         };
-        fetch("/api/history/exams", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(attemptBody),
-        })
-          .then((res) => (res.ok ? res.json() : null))
-          .then((d) => {
-            if (d?.attempt?.id) setSavedAttemptId(d.attempt.id);
-          })
-          .catch(() => {});
+        let cancelled = false;
+        setHistorySaveState("saving");
+        void (async () => {
+          try {
+            const res = await fetch("/api/history/exams", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(attemptBody),
+            });
+            if (!res.ok) throw new Error(`History save failed (${res.status})`);
+            const data = await res.json();
+            if (!data?.attempt?.id || data?.attempt?.attempt_id !== examAttemptId) throw new Error("History save was not acknowledged");
+            if (cancelled) return;
+            setSavedAttemptId(data.attempt.id);
+            setHistorySaveState("saved");
+            if (userId) clearExamSession(userId);
+            examReadyRef.current = false;
+          } catch (error) {
+            console.error("[exam] history save failed", error);
+            if (!cancelled) setHistorySaveState("failed");
+          }
+        })();
+        return () => { cancelled = true; };
       }
-      clearExamSession();
-      examReadyRef.current = false;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase]);
+  }, [phase, historySaveRetry]);
 
   const handleSubmitExam = () => {
     setShowSubmitConfirm(false);
@@ -644,6 +741,30 @@ function ExamContent() {
           <div className="flex flex-col items-center justify-center min-h-[calc(100vh-60px)] px-4 py-8">
             <div className="max-w-lg w-full">
               {/* B-01: resume an in-progress exam saved before a refresh/crash */}
+              {legacyResumable && !resumable && (() => {
+                const savedAnswered = Object.keys(legacyResumable.answers || {}).length;
+                const savedTotal = legacyResumable.questions.length;
+                return (
+                  <div className="mb-8 rounded-2xl border border-[var(--mp-status-warning)]/40 bg-[var(--mp-status-warning)]/[0.06] p-4">
+                    <p className="text-sm font-semibold text-[var(--mp-fg)] mb-1">
+                      {lang === "de" ? "Ungespeicherte Prüfung auf diesem Gerät" : "An unsaved exam was found on this device"}
+                    </p>
+                    <p className="text-xs text-[var(--mp-fg-muted)]">
+                      {lang === "de"
+                        ? `${savedAnswered}/${savedTotal} beantwortet. Diese ältere Sicherung ist keinem Konto zugeordnet. Nur fortfahren, wenn du sie selbst gestartet hast.`
+                        : `${savedAnswered}/${savedTotal} answered. This older save is not linked to an account. Continue only if you started it.`}
+                    </p>
+                    <div className="flex gap-2 mt-3">
+                      <button type="button" onClick={claimAndResumeLegacyExam} className="mp-btn mp-btn--primary mp-btn--sm">
+                        {lang === "de" ? "Meine Prüfung fortsetzen" : "Resume my exam"}
+                      </button>
+                      <button type="button" onClick={discardLegacyExam} className="mp-btn mp-btn--ghost mp-btn--sm">
+                        {lang === "de" ? "Verwerfen" : "Discard"}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
               {resumable && (() => {
                 const savedAnswered = Object.keys(resumable.answers || {}).length;
                 const savedTotal = resumable.questions.length;
@@ -764,7 +885,7 @@ function ExamContent() {
                         >
                           <TopicIcon name={cfg.icon} className="w-5 h-5" />
                           <div className="min-w-0">
-                            <p className="text-xs font-medium text-[var(--mp-fg)] truncate">{topic}</p>
+                            <p className="text-xs font-medium text-[var(--mp-fg)] leading-tight line-clamp-2 break-words">{topic}</p>
                             <p className="text-[10px] text-[var(--mp-fg-subtle)] font-mono">{count} {t("questions", lang)}</p>
                           </div>
                         </div>
@@ -965,6 +1086,14 @@ function ExamContent() {
               )}
 
               {/* Pass threshold notice */}
+              {loadFailure && (
+                <div role="alert" className="mb-5 rounded-xl border border-[var(--mp-error)]/30 bg-[var(--mp-error-bg)] p-4 text-sm text-[var(--mp-error)]">
+                  <p className="font-semibold">{loadFailure}</p>
+                  <button type="button" onClick={loadExam} disabled={!examPreferenceReady || (customFilters.bookmarksOnly && !bookmarksReady)} className="mt-3 underline underline-offset-2 disabled:opacity-50">
+                    {lang === "de" ? "Erneut versuchen" : "Try again"}
+                  </button>
+                </div>
+              )}
               {!mcqSimUnavailable && (
                 <div className="bg-[var(--mp-status-warning)]/6 border border-[var(--mp-status-warning)]/25 rounded p-4 mb-6 text-center">
                   <p className="text-sm text-[var(--mp-status-warning)] flex items-center justify-center gap-1"><AlertTriangle className="w-4 h-4 inline" /> {t("pass_threshold", lang)}</p>
@@ -983,7 +1112,7 @@ function ExamContent() {
                 return (
                   <button
                     onClick={loadExam}
-                    disabled={selectedPart === "custom" && (customCount === null || customCount === 0)}
+                    disabled={Boolean(loadFailure) || !examPreferenceReady || (selectedPart === "custom" && (customFilters.bookmarksOnly && !bookmarksReady || customCount === null || customCount === 0))}
                     className="btn-primary w-full py-4 text-base disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <GraduationCap className="w-5 h-5 inline" /> {t("start_exam", lang)}
@@ -1182,6 +1311,19 @@ function ExamContent() {
 
             {/* History ledger link: the attempt is saved server-side and can
                 be reviewed any time under Verlauf (Pro). */}
+            {historySaveState === "saving" && (
+              <p role="status" className="mb-4 text-center text-sm text-[var(--mp-fg-subtle)]">
+                {lang === "de" ? "Ergebnis wird im Verlauf gespeichert …" : "Saving your result to history …"}
+              </p>
+            )}
+            {historySaveState === "failed" && (
+              <div role="alert" className="mb-5 rounded-xl border border-[var(--mp-error)]/30 bg-[var(--mp-error-bg)] p-4 text-sm text-[var(--mp-error)] text-center">
+                <p>{lang === "de" ? "Dein Ergebnis ist noch nicht im Verlauf gespeichert. Diese Seite offen lassen und erneut versuchen." : "Your result has not been saved to history yet. Keep this page open and retry."}</p>
+                <button type="button" onClick={() => setHistorySaveRetry((n) => n + 1)} className="mt-2 font-semibold underline underline-offset-2">
+                  {lang === "de" ? "Speichern erneut versuchen" : "Retry saving"}
+                </button>
+              </div>
+            )}
             {savedAttemptId && (
               <div className="mb-6 flex justify-center">
                 <Link

@@ -16,8 +16,8 @@
  *   - /api/stats?userId=…     → gamification snapshot + per-topic stats
  *   - /api/questions?ids=…    → bookmarked + noted questions
  *   - <ReadinessSignal>       → self-fetches /api/user/readiness (consumed as-is)
- *   - localStorage            → medpruef_favorites, medpruef_notes_*,
- *                               medpruef_quiz_results, medpruef_profile.targetDate
+ *   - account-scoped bookmark API/cache and notes; legacy quiz/profile
+ *     data is read only before sign-in because it has no trustworthy owner
  *   - getLevelFromXP / getTopicConfig / getStoredExamSource / useUserTier
  *
  * Gamification: a calm continuity strip (XP/streak/accuracy + the rank from
@@ -32,18 +32,19 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { getLevelFromXP } from "@/lib/xp";
-import { getTopicConfig } from "@/lib/topics";
+import { EXAM_SOURCES, getTopicConfig, setStoredExamSource, type ExamSourceId } from "@/lib/topics";
 import { t, getLang, setLang } from "@/lib/i18n";
 import { getStoredSession } from "@/lib/auth";
 import { getStoredExamSource } from "@/lib/topics";
 import { useUserTier } from "@/lib/hooks/useUserTier";
-import { readNoteText } from "@/lib/notes-store";
+import { listNoteQuestionIds, readNoteText } from "@/lib/notes-store";
 // authFetch sends the signed session token. The bookmark/notes `/api/questions?ids=`
 // lookups (and /api/stats) must be authenticated, or the route treats them as a
 // guest and returns the free-tier paywall stub instead of the saved question —
 // which would re-break "bookmark counted but not shown" (FEEDBACK #5a) for users
 // drawing a question outside the free 150-slice.
 import { authFetch } from "@/lib/authFetch";
+import { BOOKMARK_EVENT, hasLegacyBookmarks, importLegacyBookmarks, loadBookmarks, readCachedBookmarks, setBookmark } from "@/lib/bookmarks";
 import LanguageToggle from "@/components/LanguageToggle";
 import ThemeToggle from "@/components/ThemeToggle";
 import Sidebar from "@/components/Sidebar";
@@ -152,77 +153,12 @@ function StudyRadar({
    cta-blue→teal gradient bars, mono day + value labels.
    ───────────────────────────────────────────────────────────── */
 function WeeklyChart({ lang }: { lang: string }) {
-  const [data, setData] = useState<{ day: string; accuracy: number; questions: number }[]>([]);
-
-  useEffect(() => {
-    try {
-      const raw = JSON.parse(localStorage.getItem("medpruef_quiz_results") || "[]");
-      if (!Array.isArray(raw) || raw.length === 0) {
-        setData([]);
-        return;
-      }
-      const now = new Date();
-      const days: Record<string, { correct: number; total: number }> = {};
-      const dayNames =
-        lang === "de"
-          ? ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"]
-          : ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
-      for (let i = 6; i >= 0; i--) {
-        const d = new Date(now);
-        d.setDate(d.getDate() - i);
-        const key = d.toISOString().split("T")[0];
-        days[key] = { correct: 0, total: 0 };
-      }
-
-      for (const r of raw) {
-        if (!r.timestamp) continue;
-        const key = new Date(r.timestamp).toISOString().split("T")[0];
-        if (days[key]) {
-          days[key].total += 1;
-          if (r.correct) days[key].correct += 1;
-        }
-      }
-
-      const chartData = Object.entries(days).map(([dateStr, stats]) => {
-        const d = new Date(dateStr);
-        return {
-          day: dayNames[d.getDay()],
-          accuracy: stats.total > 0 ? Math.round((stats.correct / stats.total) * 100) : 0,
-          questions: stats.total,
-        };
-      });
-      setData(chartData);
-    } catch {
-      setData([]);
-    }
-  }, [lang]);
-
-  if (data.length === 0 || data.every((d) => d.questions === 0)) {
-    return (
-      <p className="text-sm text-[var(--mp-fg-subtle)] text-center py-10">
-        {lang === "de"
-          ? "Beginne zu üben, um deinen Wochentrend zu sehen"
-          : "Start practicing to see your weekly trend"}
-      </p>
-    );
-  }
-
   return (
-    <div className={styles.wchart}>
-      {data.map((d, i) => (
-        <div key={i} className={styles.wcol}>
-          <span className={styles.wval}>{d.questions > 0 ? `${d.accuracy}%` : ""}</span>
-          <div className={styles.wbarTrack}>
-            <div
-              className={`${styles.wbar} ${d.questions === 0 ? styles.wbarEmpty : ""}`}
-              style={{ height: `${d.questions > 0 ? Math.max(6, d.accuracy) : 6}%` }}
-            />
-          </div>
-          <span className={styles.wd}>{d.day}</span>
-        </div>
-      ))}
-    </div>
+    <p className="text-sm text-[var(--mp-fg-subtle)] text-center py-10">
+      {lang === "de"
+        ? "Der Wochentrend erscheint, sobald die Aktivität einem Konto zugeordnet werden kann."
+        : "Your weekly trend will appear when activity can be linked to an account."}
+    </p>
   );
 }
 
@@ -230,90 +166,10 @@ function WeeklyChart({ lang }: { lang: string }) {
    Activity heatmap - 4 weeks × 7 (28-day window UNCHANGED). Viridian
    color-mix ramp (intensity = consistency), per SPECS §5.
    ───────────────────────────────────────────────────────────── */
-function ActivityHeatmap({ lang }: { lang: string }) {
-  const [cells, setCells] = useState<{ date: string; count: number; label: string }[]>([]);
-
-  useEffect(() => {
-    try {
-      const raw = JSON.parse(localStorage.getItem("medpruef_quiz_results") || "[]");
-      const countByDate: Record<string, number> = {};
-      if (Array.isArray(raw)) {
-        for (const r of raw) {
-          if (!r.timestamp) continue;
-          const key = new Date(r.timestamp).toISOString().split("T")[0];
-          countByDate[key] = (countByDate[key] || 0) + 1;
-        }
-      }
-
-      const now = new Date();
-      const result: { date: string; count: number; label: string }[] = [];
-      for (let i = 27; i >= 0; i--) {
-        const d = new Date(now);
-        d.setDate(d.getDate() - i);
-        const key = d.toISOString().split("T")[0];
-        result.push({
-          date: key,
-          count: countByDate[key] || 0,
-          label: `${d.getDate()}.${d.getMonth() + 1}`,
-        });
-      }
-      setCells(result);
-    } catch {
-      setCells([]);
-    }
-  }, []);
-
-  const levelClass = (count: number): string => {
-    if (count === 0) return "";
-    if (count <= 5) return styles.l1;
-    if (count <= 15) return styles.l2;
-    if (count <= 30) return styles.l3;
-    return styles.l4;
-  };
-
-  if (cells.length === 0) return null;
-
-  const weeks: typeof cells[] = [];
-  for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
-
-  const dayLabels =
-    lang === "de"
-      ? ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
-      : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-
-  return (
-    <div>
-      <div className={styles.heatDayRow}>
-        {dayLabels.map((d) => (
-          <span key={d} className={styles.heatDayLbl}>
-            {d}
-          </span>
-        ))}
-      </div>
-      <div className="space-y-1">
-        {weeks.map((week, wi) => (
-          <div key={wi} className={styles.heat}>
-            {week.map((cell) => (
-              <div
-                key={cell.date}
-                className={`${styles.cell} ${levelClass(cell.count)}`}
-                title={`${cell.label}: ${cell.count} ${lang === "de" ? "Fragen" : "questions"}`}
-              />
-            ))}
-          </div>
-        ))}
-      </div>
-      <div className={styles.heatLegend}>
-        <span>{lang === "de" ? "weniger" : "less"}</span>
-        <div className={`${styles.cell} ${styles.lcell}`} />
-        <div className={`${styles.cell} ${styles.l1} ${styles.lcell}`} />
-        <div className={`${styles.cell} ${styles.l2} ${styles.lcell}`} />
-        <div className={`${styles.cell} ${styles.l3} ${styles.lcell}`} />
-        <div className={`${styles.cell} ${styles.l4} ${styles.lcell}`} />
-        <span>{lang === "de" ? "mehr" : "more"}</span>
-      </div>
-    </div>
-  );
+function ActivityHeatmap() {
+  // This browser-wide history has no trustworthy account owner, so no
+  // visitor receives an attributed heatmap from the legacy key.
+  return null;
 }
 
 type Lang = "de" | "en";
@@ -334,6 +190,7 @@ interface QuestionItem {
 export default function ProgressPage() {
   const [lang, setLangState] = useState<Lang>("de");
   const [userId, setUserId] = useState("");
+  const [sessionReady, setSessionReady] = useState(false);
   const [userName, setUserName] = useState("");
   // Tier + role read live from /api/auth/me via useUserTier; bookmarks +
   // notes are Pro-only, so the empty state reads "upgrade to unlock".
@@ -349,15 +206,18 @@ export default function ProgressPage() {
   const [totalAnswered, setTotalAnswered] = useState(0);
   const [totalCorrect, setTotalCorrect] = useState(0);
   const [topicStats, setTopicStats] = useState<TopicStat[]>([]);
-  const [examSource, setExamSource] = useState("kenntnispruefung");
+  const [examSource, setExamSource] = useState<ExamSourceId>("kenntnispruefung");
+  const [examPreferenceReady, setExamPreferenceReady] = useState(false);
   const [coverageTopics, setCoverageTopics] = useState<Array<{ topic: string; total: number; answered: number; accuracy: number }>>([]);
   const [sortBy, setSortBy] = useState<"accuracy" | "count">("count");
   const [savedTab, setSavedTab] = useState<"bookmarks" | "notes">("bookmarks");
   const [bookmarkIds, setBookmarkIds] = useState<number[]>([]);
+  const [legacyBookmarksAvailable, setLegacyBookmarksAvailable] = useState(false);
+  const [legacyImportBusy, setLegacyImportBusy] = useState(false);
+  const [legacyImportMessage, setLegacyImportMessage] = useState("");
   const [bookmarkQuestions, setBookmarkQuestions] = useState<QuestionItem[]>([]);
   const [noteEntries, setNoteEntries] = useState<{ id: number; note: string }[]>([]);
   const [noteQuestions, setNoteQuestions] = useState<QuestionItem[]>([]);
-  const [targetDate, setTargetDate] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [bookmarksLoading, setBookmarksLoading] = useState(false);
   const [notesLoading, setNotesLoading] = useState(false);
@@ -370,6 +230,7 @@ export default function ProgressPage() {
     setLangState(getLang());
     setExamSource(getStoredExamSource());
     const session = getStoredSession();
+    setLegacyBookmarksAvailable(!!session && hasLegacyBookmarks());
     if (session) {
       setUserId(session.user.id);
       setUserName(session.user.first_name);
@@ -383,52 +244,82 @@ export default function ProgressPage() {
       const ans = gm.total_questions_answered || 0;
       const cor = gm.total_correct || 0;
       setAccuracy(ans > 0 ? Math.round((cor / ans) * 100) : 0);
-    }
-
-    try {
-      const favs = JSON.parse(localStorage.getItem("medpruef_favorites") || "[]");
-      if (Array.isArray(favs))
-        setBookmarkIds(favs.map((id: number | string) => Number(id)));
-    } catch {
-      /* empty */
-    }
-
-    const notes: { id: number; note: string }[] = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && key.startsWith("medpruef_notes_")) {
-        const qId = parseInt(key.replace("medpruef_notes_", ""), 10);
-        if (!isNaN(qId)) {
-          // readNoteText handles BOTH the legacy single-string value and the new
-          // multi-note JSON array (FEEDBACK #4c) — so the saved-notes list never
-          // shows raw JSON and reflects every note on a question.
-          const noteText = readNoteText(qId);
-          if (noteText.trim()) notes.push({ id: qId, note: noteText });
-        }
+      if (session.user.id.startsWith("guest_")) {
+        setExamPreferenceReady(true);
+      } else {
+        const sessionUserId = session.user.id;
+        // The server owns the selected exam. A stale browser cache can
+        // otherwise show coverage for Vienna after the learner selected
+        // Innsbruck or Pharma on another device. Keep the cached value as
+        // the offline fallback, but don't fetch a mismatched denominator.
+        void authFetch("/api/user/exam-preference")
+          .then(async (response) => {
+            if (!response.ok) return;
+            const data = await response.json().catch(() => null);
+            if (getStoredSession()?.user?.id !== sessionUserId) return;
+            if (EXAM_SOURCES.some((source) => source.id === data?.activeExam)) {
+              const canonicalExam = data.activeExam as ExamSourceId;
+              setStoredExamSource(canonicalExam);
+              setExamSource(canonicalExam);
+            }
+          })
+          .catch(() => {
+            // Keep the local exam selection when the network is unavailable.
+          })
+          .finally(() => setExamPreferenceReady(true));
       }
+    } else {
+      setExamPreferenceReady(true);
     }
+
+    const notes: { id: number; note: string }[] = session
+      ? listNoteQuestionIds(session.user.id)
+          .map((id) => ({ id, note: readNoteText(id, "\n\n", session.user.id) }))
+          .filter((entry) => entry.note.trim())
+      : [];
     setNoteEntries(notes);
 
-    try {
-      const profile = JSON.parse(localStorage.getItem("medpruef_profile") || "{}");
-      if (profile.targetDate) setTargetDate(profile.targetDate);
-    } catch {
-      /* empty */
-    }
+    // This legacy browser-wide date has no reliable owner. Never show it to
+    // either signed-in or signed-out visitors on a shared browser.
+    setSessionReady(true);
   }, []);
 
   useEffect(() => {
-    if (!userId) return;
+    if (!sessionReady || !userId) {
+      setBookmarkIds([]);
+      return;
+    }
+    let cancelled = false;
+    const syncCached = () => setBookmarkIds(readCachedBookmarks(userId));
+    const refresh = () => {
+      void loadBookmarks(userId).then((ids) => {
+        if (!cancelled && ids) setBookmarkIds(ids);
+      });
+    };
+    syncCached();
+    window.addEventListener(BOOKMARK_EVENT, syncCached);
+    window.addEventListener("online", refresh);
+    refresh();
+    return () => {
+      cancelled = true;
+      window.removeEventListener(BOOKMARK_EVENT, syncCached);
+      window.removeEventListener("online", refresh);
+    };
+  }, [sessionReady, userId]);
+
+  useEffect(() => {
+    if (!sessionReady || !userId || !examPreferenceReady) return;
     authFetch(`/api/user/topic-progress?examType=${encodeURIComponent(examSource)}`)
       .then((r) => r.json())
       .then((rows: Array<{ topic: string; total: number; answered: number; accuracy: number }>) => {
         if (Array.isArray(rows)) setCoverageTopics(rows);
       })
       .catch(() => {});
-  }, [userId, examSource]);
+  }, [sessionReady, userId, examPreferenceReady, examSource]);
 
   /* ─── Fetch per-topic stats from API ─── */
   useEffect(() => {
+    if (!sessionReady) return;
     if (!userId) {
       setLoading(false);
       return;
@@ -460,11 +351,15 @@ export default function ProgressPage() {
         /* silent */
       })
       .finally(() => setLoading(false));
-  }, [userId]);
+  }, [sessionReady, userId]);
 
   /* ─── Fetch bookmarked questions ─── */
   useEffect(() => {
-    if (bookmarkIds.length === 0) return;
+    if (bookmarkIds.length === 0) {
+      setBookmarkQuestions([]);
+      setBookmarksLoading(false);
+      return;
+    }
     setBookmarksLoading(true);
     // examSource=all (NOT the stored exam): a saved item must surface
     // regardless of which exam is currently active. With the per-exam
@@ -532,10 +427,30 @@ export default function ProgressPage() {
       const updated = bookmarkIds.filter((bId) => bId !== id);
       setBookmarkIds(updated);
       setBookmarkQuestions((prev) => prev.filter((q) => q.id !== id));
-      localStorage.setItem("medpruef_favorites", JSON.stringify(updated));
+      if (userId) void setBookmark(userId, id, false).then(setBookmarkIds);
     },
-    [bookmarkIds],
+    [bookmarkIds, userId],
   );
+
+  const confirmLegacyBookmarkImport = useCallback(() => {
+    if (!userId || legacyImportBusy) return;
+    const confirmed = window.confirm(lang === "de"
+      ? "Unzugeordnete Lesezeichen aus diesem Browser in dein aktuelles Konto importieren? Bereits gespeicherte Fragen bleiben erhalten. Die ursprünglichen Browserdaten werden nicht verändert."
+      : "Import unassigned bookmarks from this browser into your current account? Existing saved questions will stay. The original browser data will remain unchanged.");
+    if (!confirmed) return;
+    setLegacyImportBusy(true);
+    setLegacyImportMessage("");
+    void importLegacyBookmarks(userId)
+      .then((count) => {
+        setBookmarkIds(readCachedBookmarks(userId));
+        setLegacyBookmarksAvailable(false);
+        setLegacyImportMessage(count > 0
+          ? (lang === "de" ? `${count} Lesezeichen importiert.` : `${count} bookmarks imported.`)
+          : (lang === "de" ? "Keine neuen Lesezeichen zum Importieren." : "There were no new bookmarks to import."));
+      })
+      .catch(() => setLegacyImportMessage(lang === "de" ? "Import fehlgeschlagen. Bitte versuche es erneut." : "Import failed. Please try again."))
+      .finally(() => setLegacyImportBusy(false));
+  }, [userId, legacyImportBusy, lang]);
 
   const xpInfo = getLevelFromXP(totalXp);
   const rankTier = Math.min(8, Math.max(1, xpInfo.level)) as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
@@ -551,12 +466,7 @@ export default function ProgressPage() {
     return ts.answered > 0 && Math.round((ts.correct / ts.answered) * 100) < 60;
   });
 
-  const daysUntilExam = targetDate
-    ? Math.max(
-        0,
-        Math.ceil((new Date(targetDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)),
-      )
-    : null;
+  const daysUntilExam: number | null = null;
 
   /* ─── Topic coverage rail - all 10 specialties, sorted ─── */
   const allTopics = coverageTopics.map(({ topic, total, answered, accuracy }) => {
@@ -587,7 +497,7 @@ export default function ProgressPage() {
   // localStorage in the mount effect before `loading` flips, so no flash.
   const isGenuinelyEmpty =
     !userId ||
-    (totalAnswered === 0 && bookmarkIds.length === 0 && noteEntries.length === 0);
+    (totalAnswered === 0 && bookmarkIds.length === 0 && noteEntries.length === 0 && !legacyBookmarksAvailable);
 
   /* ─── Loading skeleton ─── */
   if (loading) {
@@ -777,6 +687,24 @@ export default function ProgressPage() {
 
                 {savedTab === "bookmarks" && (
                   <div>
+                    {userId && legacyBookmarksAvailable && (userRole === "admin" || userTier === "pro" || userTier === "admin") && (
+                      <div className="rounded-xl border border-[var(--mp-status-warning)]/30 bg-[var(--mp-warning-bg)] p-4 mb-4">
+                        <p className="text-sm font-semibold text-[var(--mp-fg)]">
+                          {lang === "de" ? "Nicht zugeordnete Browser-Lesezeichen" : "Unassigned browser bookmarks"}
+                        </p>
+                        <p className="text-xs text-[var(--mp-fg-muted)] mt-1 mb-3">
+                          {lang === "de"
+                            ? "Diese älteren Lesezeichen gehören keinem Konto. Sie werden erst nach deiner Bestätigung diesem Konto hinzugefügt."
+                            : "These older bookmarks are not linked to an account. They are added to this account only after you confirm."}
+                        </p>
+                        <button type="button" className="mp-btn mp-btn--secondary" onClick={confirmLegacyBookmarkImport} disabled={legacyImportBusy}>
+                          {legacyImportBusy
+                            ? (lang === "de" ? "Import läuft …" : "Importing…")
+                            : (lang === "de" ? "Ältere Lesezeichen prüfen und importieren" : "Review and import older bookmarks")}
+                        </button>
+                      </div>
+                    )}
+                    {legacyImportMessage && <p role="status" className="text-xs text-[var(--mp-fg-muted)] mb-3">{legacyImportMessage}</p>}
                     {bookmarksLoading ? (
                       <div className="flex items-center justify-center py-8">
                         <div className="w-6 h-6 border-2 border-[var(--mp-viridian)] border-t-transparent rounded-full animate-spin" />
@@ -1006,7 +934,7 @@ export default function ProgressPage() {
                     {lang === "de" ? "letzte 4 Wochen" : "last 4 weeks"}
                   </span>
                 </h3>
-                <ActivityHeatmap lang={lang} />
+                <ActivityHeatmap />
               </section>
 
               {/* ═══ TOPIC COVERAGE RAIL (answered/total - progress) ═══ */}

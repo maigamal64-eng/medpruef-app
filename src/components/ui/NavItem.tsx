@@ -77,9 +77,9 @@ export function NavItem({
 
     const stateClasses = active
       ? collapsed
-        ? 'bg-[var(--mp-viridian)]/20 text-[var(--mp-accent-teal)] font-semibold'
-        : 'bg-[var(--mp-viridian)]/20 text-[var(--mp-accent-teal)] font-semibold border-l-[3px] border-l-[var(--mp-accent-teal)]'
-      : 'text-[var(--mp-fg-subtle)] hover:bg-white/5 hover:text-white'
+        ? 'bg-[var(--mp-viridian)]/20 text-[var(--mp-sidebar-fg-active)] font-semibold'
+        : 'bg-[var(--mp-viridian)]/20 text-[var(--mp-sidebar-fg-active)] font-semibold border-l-[3px] border-l-[var(--mp-accent-teal)]'
+      : 'text-[var(--mp-sidebar-fg-muted)] hover:bg-white/5 hover:text-white'
 
     return (
       <Link

@@ -17,6 +17,26 @@ import { seedSession } from "../fixtures/session";
 import { seedPreferences } from "../helpers/page-setup";
 import { ADMIN_USER_ID } from "../fixtures/users";
 
+const emptyAdminOverview = () => ({
+  generated_at: new Date().toISOString(),
+  tiles: {
+    revenue: { today_cents: 0, mtd_cents: 0, series_7d: [0, 0, 0, 0, 0, 0, 0] },
+    active_subs: { total: 0, by_tier: {} },
+    signups_today: 0,
+    paywall_hits_today: 0,
+    referrals_awaiting_action: 0,
+    puyp_pending: 0,
+    flagged_open: 0,
+    webhook_failures_24h: 0,
+    stuck_pending_24h: 0,
+    conversion_7d: null,
+    ai_chat_1h: { requests: 0, completed: 0, failed: 0, avg_latency_ms: null },
+    telegram_activation: { registered: 0, confirmed: 0 },
+    crons: {},
+    recent_events: [],
+  },
+});
+
 test.describe("session storage never carries secrets", () => {
   test.use({ viewport: { width: 1440, height: 900 } });
 
@@ -36,11 +56,7 @@ test.describe("session storage never carries secrets", () => {
       route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({
-          summary: { last_action_at: null, count_24h: 0 },
-          tiles: [],
-          recent: [],
-        }),
+        body: JSON.stringify(emptyAdminOverview()),
       }),
     );
     await page.route("**/api/admin/audit-log**", (route) =>
@@ -105,11 +121,7 @@ test.describe("session storage never carries secrets", () => {
       route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: JSON.stringify({
-          summary: { last_action_at: null, count_24h: 0 },
-          tiles: [],
-          recent: [],
-        }),
+        body: JSON.stringify(emptyAdminOverview()),
       }),
     );
     await page.route("**/api/admin/audit-log**", (route) =>
@@ -121,8 +133,13 @@ test.describe("session storage never carries secrets", () => {
     );
 
     await page.goto("/admin/overview");
-    // Give the layout's getStoredSession() call a tick to run + write back.
-    await page.waitForTimeout(200);
+    // Wait for the authenticated shell and the layout's real read-path
+    // sanitizer instead of assuming hydration finishes within 200 ms.
+    await expect(page.locator('[data-admin="1"]')).toBeVisible();
+    await page.waitForFunction(() => {
+      const raw = localStorage.getItem("medpruef_session") || "";
+      return !/password_|telegram_(auth_secret|login_token)|is_banned|is_locked/i.test(raw);
+    });
 
     const blob = await page.evaluate(() =>
       JSON.parse(localStorage.getItem("medpruef_session") || "null"),

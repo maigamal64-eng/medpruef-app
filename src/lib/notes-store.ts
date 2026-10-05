@@ -1,127 +1,155 @@
-/**
- * notes-store — the ONE per-question notes model (FEEDBACK #4c).
- *
- * Before this, two UIs (QuestionActions' NotePanel + QuestionCard's ContextTabs
- * Notizen pane) wrote the same localStorage key `medpruef_notes_<id>` as two
- * separate React states, so they never synced live, and the key held a single
- * string (one note, no "add more"). This module is the single source of truth:
- *
- *  - Storage key stays `medpruef_notes_<id>` (so existence-based readers — the
- *    progress count, the exam `readNoteIds` scanner, the bookmarks/notes filter
- *    — keep working unchanged).
- *  - The value is now a JSON array of note entries. A LEGACY plain string is
- *    read transparently as a single-entry list, so nothing breaks on upgrade.
- *  - All writers go through here, so every surface reflects the same notes.
- *
- * Notes live in localStorage only (no server table for user notes yet), matching
- * the prior behaviour — this is a client-side model, not a schema change.
- */
+/** Account-scoped storage for per-question notes. */
+
+import { getStoredSession } from "@/lib/auth";
 
 export interface NoteEntry {
-  /** Stable id for the entry (timestamp-based; unique enough for a single user). */
   id: string;
   text: string;
   /** epoch ms */
   updatedAt: number;
 }
 
-function key(questionId: number): string {
-  return `medpruef_notes_${questionId}`;
+const ACCOUNT_PREFIX = "medpruef_notes_account_";
+const LEGACY_PATTERN = /^medpruef_notes_(\d+)$/;
+
+export function currentNotesUserId(): string | null {
+  return getStoredSession()?.user?.id || null;
+}
+
+export function noteStorageKey(questionId: number, userId = currentNotesUserId()): string | null {
+  if (!userId || !Number.isSafeInteger(questionId) || questionId <= 0) return null;
+  return `${ACCOUNT_PREFIX}${encodeURIComponent(userId)}_${questionId}`;
+}
+
+export function noteQuestionIdFromKey(storageKey: string | null, userId = currentNotesUserId()): number | null {
+  if (!storageKey || !userId) return null;
+  const prefix = `${ACCOUNT_PREFIX}${encodeURIComponent(userId)}_`;
+  if (!storageKey.startsWith(prefix)) return null;
+  const suffix = storageKey.slice(prefix.length);
+  if (!/^\d+$/.test(suffix)) return null;
+  const id = Number(suffix);
+  return Number.isSafeInteger(id) && id > 0 ? id : null;
+}
+
+export function listNoteQuestionIds(userId = currentNotesUserId()): number[] {
+  if (typeof window === "undefined" || !userId) return [];
+  const ids = new Set<number>();
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const id = noteQuestionIdFromKey(localStorage.key(i), userId);
+      if (id !== null) ids.add(id);
+    }
+  } catch {
+    return [];
+  }
+  return Array.from(ids);
 }
 
 function newId(): string {
   return `n_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 }
 
-/** Read all note entries for a question. Transparently upgrades a legacy
- *  single-string value into a one-entry list. Never throws. */
-export function readNotes(questionId: number): NoteEntry[] {
-  if (typeof window === "undefined") return [];
-  let raw: string | null = null;
-  try {
-    raw = localStorage.getItem(key(questionId));
-  } catch {
-    return [];
-  }
-  if (!raw) return [];
+function parseEntries(raw: string): NoteEntry[] {
   const trimmed = raw.trim();
   if (!trimmed) return [];
-  // New format: JSON array of entries.
   if (trimmed.startsWith("[")) {
     try {
-      const arr = JSON.parse(trimmed);
+      const arr: unknown = JSON.parse(trimmed);
       if (Array.isArray(arr)) {
         return arr
-          .filter((e) => e && typeof e.text === "string")
+          .filter((e): e is Record<string, unknown> => !!e && typeof e === "object" && typeof (e as Record<string, unknown>).text === "string")
           .map((e) => ({
             id: typeof e.id === "string" ? e.id : newId(),
-            text: e.text,
+            text: e.text as string,
             updatedAt: typeof e.updatedAt === "number" ? e.updatedAt : Date.now(),
           }));
       }
     } catch {
-      // fall through — treat as a legacy string
+      // A malformed JSON value remains visible as its original text in legacy import only.
     }
   }
-  // Legacy format: a single plain-string note.
   return [{ id: "legacy", text: raw, updatedAt: Date.now() }];
 }
 
-/** Persist the full entry list. Removes the key entirely when the list is empty
- *  (so the question stops being counted as "has a note"). Never throws. */
-function writeNotes(questionId: number, entries: NoteEntry[]): void {
-  if (typeof window === "undefined") return;
+/** Reads only this account's notes. Global legacy keys are deliberately excluded. */
+export function readNotes(questionId: number, userId = currentNotesUserId()): NoteEntry[] {
+  if (typeof window === "undefined") return [];
+  const storageKey = noteStorageKey(questionId, userId);
+  if (!storageKey) return [];
   try {
-    const nonEmpty = entries.filter((e) => e.text.trim().length > 0);
-    if (nonEmpty.length === 0) {
-      localStorage.removeItem(key(questionId));
-    } else {
-      localStorage.setItem(key(questionId), JSON.stringify(nonEmpty));
-    }
-    // Notify other mounted surfaces in THIS tab (the native `storage` event only
-    // fires in OTHER tabs). Both QuestionActions and the ContextTabs pane listen
-    // for this so notes stay in sync live.
-    window.dispatchEvent(new CustomEvent("medpruef:notes-changed", { detail: { questionId } }));
+    const raw = localStorage.getItem(storageKey);
+    return raw ? parseEntries(raw) : [];
   } catch {
-    /* localStorage may be unavailable — non-fatal */
+    return [];
   }
 }
 
-/** Add a new note. Returns the updated list. */
-export function addNote(questionId: number, text: string): NoteEntry[] {
-  const t = text.trim();
-  if (!t) return readNotes(questionId);
-  const entries = readNotes(questionId);
-  // A "legacy" single entry gets a real id once it is part of a managed list.
-  const normalised = entries.map((e) =>
-    e.id === "legacy" ? { ...e, id: newId() } : e,
-  );
-  normalised.push({ id: newId(), text: t, updatedAt: Date.now() });
-  writeNotes(questionId, normalised);
-  return normalised;
+/** Legacy notes are exposed only to the explicit, warned import action. */
+export function readLegacyNotes(): { question_id: number; entries: NoteEntry[] }[] {
+  if (typeof window === "undefined") return [];
+  const items: { question_id: number; entries: NoteEntry[] }[] = [];
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const storageKey = localStorage.key(i);
+      const match = storageKey?.match(LEGACY_PATTERN);
+      if (!match) continue;
+      const questionId = Number(match[1]);
+      if (!Number.isSafeInteger(questionId) || questionId <= 0) continue;
+      const raw = localStorage.getItem(storageKey!);
+      if (!raw) continue;
+      const entries = parseEntries(raw).filter((entry) => entry.text.trim().length > 0);
+      if (entries.length) items.push({ question_id: questionId, entries });
+    }
+  } catch {
+    return [];
+  }
+  return items;
 }
 
-/** Update one entry by id. Returns the updated list. */
-export function updateNote(questionId: number, id: string, text: string): NoteEntry[] {
-  const entries = readNotes(questionId).map((e) =>
-    e.id === id ? { ...e, text, updatedAt: Date.now() } : e,
+function writeNotes(questionId: number, entries: NoteEntry[], userId = currentNotesUserId()): void {
+  if (typeof window === "undefined") return;
+  const storageKey = noteStorageKey(questionId, userId);
+  if (!storageKey) return;
+  try {
+    const nonEmpty = entries.filter((entry) => entry.text.trim().length > 0);
+    if (nonEmpty.length === 0) localStorage.removeItem(storageKey);
+    else localStorage.setItem(storageKey, JSON.stringify(nonEmpty));
+    window.dispatchEvent(new CustomEvent("medpruef:notes-changed", { detail: { questionId, userId } }));
+  } catch {
+    /* localStorage may be unavailable. */
+  }
+}
+
+export function addNote(questionId: number, text: string, userId = currentNotesUserId()): NoteEntry[] {
+  const trimmed = text.trim();
+  if (!trimmed || !userId) return readNotes(questionId, userId);
+  const entries = readNotes(questionId, userId).map((entry) =>
+    entry.id === "legacy" ? { ...entry, id: newId() } : entry,
   );
-  writeNotes(questionId, entries);
+  entries.push({ id: newId(), text: trimmed, updatedAt: Date.now() });
+  writeNotes(questionId, entries, userId);
   return entries;
 }
 
-/** Delete one entry by id. Returns the updated list. */
-export function deleteNote(questionId: number, id: string): NoteEntry[] {
-  const entries = readNotes(questionId).filter((e) => e.id !== id);
-  writeNotes(questionId, entries);
+export function updateNote(questionId: number, id: string, text: string, userId = currentNotesUserId()): NoteEntry[] {
+  if (!userId) return [];
+  const entries = readNotes(questionId, userId).map((entry) =>
+    entry.id === id ? { ...entry, text, updatedAt: Date.now() } : entry,
+  );
+  writeNotes(questionId, entries, userId);
   return entries;
 }
 
-/** Joined plain-text of all notes for a question — used by read-only surfaces
- *  (progress list preview, exports) that just need the text. */
-export function readNoteText(questionId: number, separator = "\n\n"): string {
-  return readNotes(questionId)
-    .map((e) => e.text)
-    .filter((t) => t.trim().length > 0)
+export function deleteNote(questionId: number, id: string, userId = currentNotesUserId()): NoteEntry[] {
+  if (!userId) return [];
+  const entries = readNotes(questionId, userId).filter((entry) => entry.id !== id);
+  writeNotes(questionId, entries, userId);
+  return entries;
+}
+
+export function readNoteText(questionId: number, separator = "\n\n", userId = currentNotesUserId()): string {
+  return readNotes(questionId, userId)
+    .map((entry) => entry.text)
+    .filter((text) => text.trim().length > 0)
     .join(separator);
 }

@@ -57,6 +57,7 @@ interface Props {
   allowCustomize?: boolean;
   size?: "sm" | "md";
   className?: string;
+  onCreated?: () => void;
 }
 
 export default function TurnIntoNoteButton({
@@ -71,6 +72,7 @@ export default function TurnIntoNoteButton({
   allowCustomize = true,
   size = "md",
   className = "",
+  onCreated,
 }: Props) {
   const toast = useToast();
   const [state, setState] = useState<State>("idle");
@@ -101,6 +103,7 @@ export default function TurnIntoNoteButton({
       if (res.ok) {
         setState("done");
         setOpen(false);
+        onCreated?.();
         toast.success(
           de ? "Lernkarte erstellt" : "Flash-note created",
           de ? "In deiner Bibliothek gespeichert." : "Saved to your Library.",

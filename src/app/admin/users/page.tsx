@@ -3,10 +3,8 @@
 /**
  * Admin / Users tab.
  *
- * Searchable sortable user table + kebab menu per row + expandable
- * per-user detail row (edit first/last/email, Grant days, Lock). All
- * mutations go through `/api/stats/admin/users` PATCH/DELETE and
- * `/api/admin/users/{grant,lock}` which audit-log server-side.
+ * Searchable, server-paginated user directory with per-user detail rows.
+ * Profile and entitlement actions are permission-gated and audited by their APIs.
  *
  * Polish pass (Apr 23):
  *   - AdminPageShell title + freshness badge
@@ -16,7 +14,7 @@
  *   - Skeleton rows instead of a full-page spinner
  */
 
-import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -26,14 +24,16 @@ import {
   Gift,
   RotateCcw,
   Search,
-  Trash2,
   Users as UsersIcon,
   AlertTriangle,
+  ArrowLeftRight,
   ArrowUpRight,
 } from "lucide-react";
 import { authFetch as fetch } from "@/lib/authFetch";
+import { useAdminPermissions } from "@/lib/admin/useAdminPermissions";
 import {
   Dialog,
+  DialogFooter,
   useToast,
   TextField,
   EmptyState,
@@ -41,7 +41,6 @@ import {
 import { AdminPageShell } from "../_components/AdminPageShell";
 import {
   FilterChip,
-  FormatInt,
   KebabMenu,
   RowSkeleton,
   StatusDot,
@@ -53,77 +52,79 @@ import { UserQuickActions } from "../_components/UserQuickActions";
 
 type TierFilter = "all" | "free" | "pro" | "admin";
 type AuthFilter = "all" | "email" | "telegram";
+type UsersResponse = { items: UserRow[]; total: number; page: number; limit: number; totalPages: number };
+const PAGE_SIZE = 25;
 
 export default function AdminUsersPage() {
   const toast = useToast();
   const router = useRouter();
+  const { can, loading: accessLoading } = useAdminPermissions();
+  const canRead = can("users.read");
+  const canReadRevenue = can("revenue.read");
   const [users, setUsers] = useState<UserRow[]>([]);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
+  const [query, setQuery] = useState("");
+  const [page, setPage] = useState(1);
   const [tierFilter, setTierFilter] = useState<TierFilter>("all");
   const [authFilter, setAuthFilter] = useState<AuthFilter>("all");
   const [expandedUser, setExpandedUser] = useState<string | null>(null);
   const [editingUser, setEditingUser] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Record<string, string>>({});
-  const [deletingUser, setDeletingUser] = useState<string | null>(null);
+  const [resetTarget, setResetTarget] = useState<UserRow | null>(null);
   const [sort, setSort] = useState<{ col: string; asc: boolean }>({
     col: "last_active",
     asc: false,
   });
 
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const trimmed = search.trim();
+      setQuery(trimmed.length >= 2 ? trimmed : "");
+      setPage(1);
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [search]);
+
   const fetchUsers = useCallback(async () => {
+    if (!can("users.read")) return;
     try {
       setLoading(true);
-      const res = await fetch("/api/stats/admin/users");
+      const params = new URLSearchParams({
+        page: String(page),
+        limit: String(PAGE_SIZE),
+        sort: !canReadRevenue && sort.col === "tier" ? "last_active" : sort.col,
+        order: sort.asc ? "asc" : "desc",
+      });
+      if (query) params.set("q", query);
+      if (canReadRevenue && tierFilter !== "all") params.set("tier", tierFilter);
+      if (authFilter !== "all") params.set("auth", authFilter);
+      const res = await fetch(`/api/stats/admin/users?${params.toString()}`);
       if (!res.ok) throw new Error("Failed to load users");
-      setUsers(await res.json());
+      const data = (await res.json()) as UsersResponse;
+      setUsers(data.items);
+      setTotal(data.total);
+      setTotalPages(data.totalPages);
+      setError("");
     } catch (e) {
       setError((e as Error).message);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [authFilter, can, canReadRevenue, page, query, sort, tierFilter]);
 
   useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
+    if (accessLoading) return;
+    if (canRead) void fetchUsers();
+    else setLoading(false);
+  }, [accessLoading, canRead, fetchUsers]);
 
   // ── Actions ─────────────────────────────────────────────────────
-  const handleRoleChange = async (userId: string, newRole: string) => {
-    try {
-      const res = await fetch("/api/stats/admin/users", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, updates: { role: newRole } }),
-      });
-      if (!res.ok) throw new Error("Failed");
-      setUsers((prev) =>
-        prev.map((u) => (u.id === userId ? { ...u, role: newRole } : u))
-      );
-      toast.success(`Role updated to ${newRole}`);
-    } catch {
-      toast.error("Failed to update role");
-    }
-  };
-
-  const handleTierChange = async (userId: string, newTier: string) => {
-    try {
-      const res = await fetch("/api/stats/admin/users", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, updates: { tier: newTier } }),
-      });
-      if (!res.ok) throw new Error("Failed");
-      setUsers((prev) =>
-        prev.map((u) => (u.id === userId ? { ...u, tier: newTier } : u))
-      );
-    } catch {
-      toast.error("Failed to update tier");
-    }
-  };
-
   const handleEdit = async (userId: string) => {
+    if (!can("users.write")) return;
     try {
       const res = await fetch("/api/stats/admin/users", {
         method: "PATCH",
@@ -140,6 +141,7 @@ export default function AdminUsersPage() {
   };
 
   const handleResetGamification = async (userId: string) => {
+    if (!can("users.write")) return;
     try {
       const res = await fetch("/api/stats/admin/users", {
         method: "PATCH",
@@ -151,23 +153,10 @@ export default function AdminUsersPage() {
       });
       if (!res.ok) throw new Error("Failed");
       await fetchUsers();
+      setResetTarget(null);
       toast.success("Gamification reset");
     } catch {
       toast.error("Failed to reset gamification");
-    }
-  };
-
-  const handleDelete = async (userId: string) => {
-    try {
-      const res = await fetch(`/api/stats/admin/users?id=${userId}`, {
-        method: "DELETE",
-      });
-      if (!res.ok) throw new Error("Failed");
-      setDeletingUser(null);
-      setUsers((prev) => prev.filter((u) => u.id !== userId));
-      toast.success("User deleted");
-    } catch {
-      toast.error("Failed to delete user");
     }
   };
 
@@ -181,65 +170,18 @@ export default function AdminUsersPage() {
     });
   };
 
-  // ── Counts by tier/auth (used for chip labels) ──────────────────
-  const tierCounts = useMemo(() => {
-    const by: Record<TierFilter, number> = { all: users.length, free: 0, pro: 0, admin: 0 };
-    for (const u of users) {
-      const t = (u.tier || "free") as TierFilter;
-      if (by[t] != null) by[t]++;
-    }
-    return by;
-  }, [users]);
-
-  const authCounts = useMemo(() => {
-    const email = users.filter((u) => !!u.email).length;
-    const telegram = users.filter((u) => !!u.telegram_id).length;
-    return { all: users.length, email, telegram };
-  }, [users]);
-
-  // ── Filtered & Sorted ────────────────────────────────────────────
-  const filtered = useMemo(() => {
-    let result = users;
-    if (tierFilter !== "all") {
-      result = result.filter((u) => (u.tier || "free") === tierFilter);
-    }
-    if (authFilter === "email") result = result.filter((u) => !!u.email);
-    if (authFilter === "telegram") result = result.filter((u) => !!u.telegram_id);
-
-    if (search) {
-      const q = search.toLowerCase();
-      result = result.filter(
-        (u) =>
-          u.name.toLowerCase().includes(q) ||
-          u.email?.toLowerCase().includes(q) ||
-          u.username?.toLowerCase().includes(q) ||
-          u.id.includes(q)
-      );
-    }
-    return [...result].sort((a, b) => {
-      const col = sort.col as keyof UserRow;
-      const aVal = a[col] ?? "";
-      const bVal = b[col] ?? "";
-      if (typeof aVal === "number" && typeof bVal === "number") {
-        return sort.asc ? aVal - bVal : bVal - aVal;
-      }
-      return sort.asc
-        ? String(aVal).localeCompare(String(bVal))
-        : String(bVal).localeCompare(String(aVal));
-    });
-  }, [users, search, tierFilter, authFilter, sort]);
-
-  const deletingUserRow = deletingUser
-    ? users.find((u) => u.id === deletingUser)
-    : null;
-
   return (
     <AdminPageShell
       title="Users"
-      description={`${formatInt(users.length)} total · search by name, email, username, ID`}
-      freshness={loading ? "cached" : "live"}
+      description={loading && users.length === 0 ? "Loading user directory…" : error ? `Showing a saved snapshot of ${formatInt(users.length)} users. The latest request failed.` : `Showing ${formatInt(users.length)} of ${formatInt(total)} matching users`}
+      freshness={error ? (users.length ? "cached" : "disconnected") : loading ? "cached" : "live"}
       onRefresh={fetchUsers}
     >
+      {!accessLoading && !canRead && (
+        <div role="alert" className="rounded-xl border border-[var(--mp-error)]/30 bg-[var(--mp-error-bg)] px-4 py-3 text-sm text-[var(--mp-error)]">
+          You do not have permission to view user records.
+        </div>
+      )}
       {error && (
         <div
           className="bg-[var(--mp-error-bg)] border border-[var(--mp-error)]/25 text-[var(--mp-error)] text-sm rounded-xl px-4 py-3 flex items-center gap-2"
@@ -248,19 +190,27 @@ export default function AdminUsersPage() {
           <AlertTriangle size={16} />
           <span className="flex-1">{error}</span>
           <button
-            onClick={() => setError("")}
+            onClick={() => void fetchUsers()}
             className="mp-btn mp-btn--ghost mp-btn--sm"
-            aria-label="Dismiss error"
+            aria-label="Retry loading users"
+            disabled={loading}
           >
-            Dismiss
+            Retry
           </button>
         </div>
       )}
 
+      {accessLoading && (
+        <div role="status" className="rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] px-4 py-8 text-center text-sm text-[var(--mp-fg-muted)]">
+          Checking your admin access…
+        </div>
+      )}
+
+      {canRead && <>
       {/* Sticky filter row */}
-      <div className="sticky top-[52px] z-20 -mx-4 sm:-mx-6 px-4 sm:px-6 py-3 bg-[var(--mp-surface-sunken)]/90 backdrop-blur border-b border-[var(--mp-border-subtle)]">
+      <div className="sticky top-[52px] z-20 -mx-3 sm:-mx-6 px-3 sm:px-6 py-3 bg-[var(--mp-surface-sunken)]/90 backdrop-blur border-b border-[var(--mp-border-subtle)]">
         <div className="flex items-center gap-3 flex-wrap">
-          <div className="relative flex-1 min-w-[240px] max-w-[440px]">
+          <div className="relative w-full max-w-[440px] min-w-0 flex-none sm:flex-1 sm:min-w-[240px]">
             <Search
               size={14}
               className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--mp-fg-subtle)] pointer-events-none"
@@ -274,9 +224,12 @@ export default function AdminUsersPage() {
               aria-label="Search users"
               className="w-full pl-9 pr-3 h-9 rounded-lg border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] text-sm text-[var(--mp-fg)] placeholder:text-[var(--mp-fg-subtle)] focus:outline-none focus:border-[var(--mp-viridian)]/40"
             />
+            {search.trim().length === 1 && (
+              <p className="mt-1 text-[10px] text-[var(--mp-fg-muted)]">Enter at least 2 characters to search. Showing the unfiltered directory until then.</p>
+            )}
           </div>
 
-          <div className="flex items-center gap-1.5 flex-wrap">
+          {canReadRevenue && <div className="flex items-center gap-1.5 flex-wrap">
             <span className="text-[10px] uppercase tracking-wider text-[var(--mp-fg-muted)] mr-1">
               Tier
             </span>
@@ -284,13 +237,12 @@ export default function AdminUsersPage() {
               <FilterChip
                 key={t}
                 active={tierFilter === t}
-                onClick={() => setTierFilter(t)}
-                count={tierCounts[t]}
+                onClick={() => { setPage(1); setTierFilter(t); }}
               >
                 {t === "all" ? "All" : t}
               </FilterChip>
             ))}
-          </div>
+          </div>}
 
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="text-[10px] uppercase tracking-wider text-[var(--mp-fg-muted)] mr-1">
@@ -300,8 +252,7 @@ export default function AdminUsersPage() {
               <FilterChip
                 key={a}
                 active={authFilter === a}
-                onClick={() => setAuthFilter(a)}
-                count={authCounts[a]}
+                onClick={() => { setPage(1); setAuthFilter(a); }}
               >
                 {a === "all" ? "All" : a === "email" ? "Email" : "Telegram"}
               </FilterChip>
@@ -310,40 +261,30 @@ export default function AdminUsersPage() {
         </div>
       </div>
 
-      {/* Delete Confirmation Dialog */}
       <Dialog
-        open={!!deletingUser}
-        onOpenChange={(open) => {
-          if (!open) setDeletingUser(null);
-        }}
-        title="Delete user?"
-        description={
-          deletingUserRow
-            ? `This will permanently delete ${deletingUserRow.name}. This action cannot be undone.`
-            : undefined
-        }
-        footer={
-          <>
-            <button
-              className="mp-btn mp-btn--secondary"
-              onClick={() => setDeletingUser(null)}
-            >
-              Cancel
-            </button>
-            <button
-              className="mp-btn mp-btn--destructive"
-              onClick={() => deletingUser && handleDelete(deletingUser)}
-            >
-              Delete user
-            </button>
-          </>
-        }
-      />
+        open={!!resetTarget}
+        onOpenChange={(open) => { if (!open) setResetTarget(null); }}
+        title="Reset learner progress counters?"
+        description={resetTarget ? `This resets XP, streak, and answered-question counters for ${resetTarget.name}.` : undefined}
+        footer={(
+          <DialogFooter>
+            <button type="button" className="mp-btn mp-btn--secondary" onClick={() => setResetTarget(null)}>Cancel</button>
+            <button type="button" className="mp-btn mp-btn--destructive" disabled={!resetTarget || !can("users.write")} onClick={() => resetTarget && void handleResetGamification(resetTarget.id)}>Reset counters</button>
+          </DialogFooter>
+        )}
+      >
+        <p className="text-sm text-[var(--mp-fg-muted)]">This is an irreversible support operation. It does not erase answer history or subscription records.</p>
+      </Dialog>
 
       {/* User Table */}
       <div className="rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] overflow-hidden">
+        <div className="hidden lg:block">
+        <div className="flex items-center gap-1.5 border-b border-[var(--mp-border-subtle)] px-3 py-2 text-xs text-[var(--mp-fg-muted)] lg:hidden">
+          <ArrowLeftRight size={14} aria-hidden="true" />
+          <span>Scroll horizontally to see all columns</span>
+        </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full min-w-[1050px] text-sm">
             <thead>
               <tr className="bg-[var(--mp-surface-sunken)] border-b border-[var(--mp-border-subtle)] text-[10px] uppercase tracking-wider">
                 {(
@@ -351,7 +292,7 @@ export default function AdminUsersPage() {
                     { key: "name", label: "User", align: "left" },
                     { key: "auth", label: "Auth", align: "left" },
                     { key: "role", label: "Role", align: "left" },
-                    { key: "tier", label: "Tier", align: "left" },
+                    ...(canReadRevenue ? [{ key: "tier", label: "Tier", align: "left" as const }] : []),
                     { key: "status", label: "Status", align: "left" },
                     { key: "xp", label: "XP", align: "right" },
                     { key: "streak", label: "Streak", align: "right" },
@@ -377,35 +318,32 @@ export default function AdminUsersPage() {
                     label: string;
                     align: "left" | "right" | "center";
                   }>
-                ).map((col) => (
+                ).filter((col) => col.key !== "tier" || canReadRevenue).map((col) => (
                   <th
                     key={col.key}
+                    aria-sort={sort.col === col.key ? (sort.asc ? "ascending" : "descending") : "none"}
                     className={`px-3 py-2.5 text-[var(--mp-fg-muted)] font-medium whitespace-nowrap ${
                       col.align === "right"
                         ? "text-right"
                         : col.align === "center"
                           ? "text-center"
                           : "text-left"
-                    } ${
-                      col.key !== "auth" && col.key !== "actions"
-                        ? "cursor-pointer hover:text-[var(--mp-fg)]"
-                        : ""
                     }`}
-                    onClick={() =>
-                      col.key !== "auth" &&
-                      col.key !== "actions" &&
-                      setSort((prev) => ({
-                        col: col.key,
-                        asc: prev.col === col.key ? !prev.asc : false,
-                      }))
-                    }
                   >
-                    {col.label}
-                    {sort.col === col.key && (
-                      <ChevronDown
-                        size={10}
-                        className={`inline ml-1 transition-transform ${sort.asc ? "rotate-180" : ""}`}
-                      />
+                    {col.key === "auth" || col.key === "actions" ? col.label : (
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1 hover:text-[var(--mp-fg)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--mp-viridian)]"
+                        onClick={() => {
+                          setPage(1);
+                          setSort((prev) => ({ col: col.key, asc: prev.col === col.key ? !prev.asc : false }));
+                        }}
+                      >
+                        {col.label}
+                        {sort.col === col.key && (
+                          <ChevronDown size={10} className={`transition-transform ${sort.asc ? "rotate-180" : ""}`} aria-hidden="true" />
+                        )}
+                      </button>
                     )}
                   </th>
                 ))}
@@ -414,35 +352,36 @@ export default function AdminUsersPage() {
             <tbody>
               {loading && users.length === 0 ? (
                 Array.from({ length: 6 }).map((_, i) => (
-                  <RowSkeleton key={i} cols={12} />
+                  <RowSkeleton key={i} cols={canReadRevenue ? 12 : 11} />
                 ))
-              ) : filtered.length === 0 ? (
+              ) : users.length === 0 ? (
                 <tr>
-                  <td colSpan={12} className="px-4 py-8">
-                    <EmptyState
-                      tone="neutral"
-                      icon={<UsersIcon className="w-10 h-10" aria-hidden />}
-                      title={
-                        search || tierFilter !== "all" || authFilter !== "all"
-                          ? "No users match your filters"
-                          : "No users yet"
-                      }
-                      body={
-                        search || tierFilter !== "all" || authFilter !== "all"
-                          ? "Try a broader filter, or clear the search."
-                          : "Users will appear here as they register."
-                      }
-                    />
+                  <td colSpan={canReadRevenue ? 12 : 11} className="px-4 py-8">
+                    {error ? (
+                      <p className="text-center text-sm text-[var(--mp-fg-muted)]">The user directory could not be loaded. Retry the request before treating this as an empty result.</p>
+                    ) : (
+                      <EmptyState
+                        tone="neutral"
+                        icon={<UsersIcon className="w-10 h-10" aria-hidden />}
+                        title={
+                          query || tierFilter !== "all" || authFilter !== "all"
+                            ? "No users match your filters"
+                            : "No users yet"
+                        }
+                        body={
+                          query || tierFilter !== "all" || authFilter !== "all"
+                            ? "Try a broader filter, or clear the search."
+                            : "Users will appear here as they register."
+                        }
+                      />
+                    )}
                   </td>
                 </tr>
               ) : (
-                filtered.map((u) => (
+                users.map((u) => (
                   <Fragment key={u.id}>
                     <tr
-                      onClick={() =>
-                        setExpandedUser(u.id === expandedUser ? null : u.id)
-                      }
-                      className={`border-b border-[var(--mp-border-subtle)]/50 cursor-pointer transition-colors ${
+                      className={`border-b border-[var(--mp-border-subtle)]/50 transition-colors ${
                         expandedUser === u.id
                           ? "bg-[var(--mp-viridian)]/5"
                           : "hover:bg-[var(--mp-surface-sunken)]"
@@ -488,45 +427,24 @@ export default function AdminUsersPage() {
                           )}
                         </div>
                       </td>
-                      {/* Role dropdown */}
-                      <td
-                        className="px-3 py-2.5"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <select
-                          value={u.role}
-                          onChange={(e) =>
-                            handleRoleChange(u.id, e.target.value)
-                          }
-                          className="text-xs border border-[var(--mp-border-subtle)] rounded px-2 py-1 bg-[var(--mp-surface-raised)] text-[var(--mp-fg)] focus:outline-none focus:border-[var(--mp-viridian)]/50"
-                        >
-                          <option value="user">User</option>
-                          <option value="admin">Admin</option>
-                        </select>
+                      {/* Access role assignment is managed in the dedicated access console. */}
+                      <td className="px-3 py-2.5">
+                        <span className="inline-flex rounded-full border border-[var(--mp-border-subtle)] px-2 py-0.5 text-[10px] text-[var(--mp-fg-muted)]">
+                          {u.role === "admin" ? "Admin account" : "Learner"}
+                        </span>
                       </td>
-                      {/* Tier dropdown */}
-                      <td
-                        className="px-3 py-2.5"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <select
-                          value={u.tier || "free"}
-                          onChange={(e) =>
-                            handleTierChange(u.id, e.target.value)
-                          }
-                          className={`text-[10px] border rounded px-2 py-1 font-semibold focus:outline-none ${
-                            (u.tier || "free") === "pro"
-                              ? "border-[var(--mp-status-warning)] text-[var(--mp-status-warning)] bg-[var(--mp-status-warning)]/5"
-                              : (u.tier || "free") === "admin"
-                                ? "border-[var(--mp-error)] text-[var(--mp-error)] bg-[var(--mp-error)]/5"
-                                : "border-[var(--mp-border-subtle)] text-[var(--mp-fg-muted)] bg-[var(--mp-surface-raised)]"
-                          }`}
-                        >
-                          <option value="free">Free</option>
-                          <option value="pro">Pro</option>
-                          <option value="admin">Admin</option>
-                        </select>
-                      </td>
+                      {/* Entitlements are visible only to revenue readers. */}
+                      {canReadRevenue && <td className="px-3 py-2.5">
+                        <span className={`inline-flex rounded-full border px-2 py-0.5 text-[10px] font-semibold ${
+                          (u.tier || "free") === "pro"
+                            ? "border-[var(--mp-status-warning)] text-[var(--mp-status-warning)] bg-[var(--mp-status-warning)]/5"
+                            : (u.tier || "free") === "admin"
+                              ? "border-[var(--mp-error)] text-[var(--mp-error)] bg-[var(--mp-error)]/5"
+                              : "border-[var(--mp-border-subtle)] text-[var(--mp-fg-muted)] bg-[var(--mp-surface-raised)]"
+                        }`}>
+                          {u.tier || "free"}
+                        </span>
+                      </td>}
                       {/* Status */}
                       <td className="px-3 py-2.5">
                         <span className="inline-flex items-center gap-1.5">
@@ -582,7 +500,6 @@ export default function AdminUsersPage() {
                       {/* Actions kebab */}
                       <td
                         className="px-3 py-2.5 text-center"
-                        onClick={(e) => e.stopPropagation()}
                       >
                         <KebabMenu
                           label={`Actions for ${u.name}`}
@@ -593,31 +510,24 @@ export default function AdminUsersPage() {
                               icon: ArrowUpRight,
                               onSelect: () => router.push(`/admin/users/${u.id}`),
                             },
-                            {
+                            ...(can("users.write") ? [{
                               key: "edit",
                               label: "Edit profile",
                               icon: Edit3,
                               onSelect: () => startEdit(u),
-                            },
-                            {
+                            }] : []),
+                            ...((can("users.entitlements.write") || can("users.sessions.write")) ? [{
                               key: "actions",
-                              label: "Grant / Lock / Ban…",
+                              label: "Account actions…",
                               icon: Gift,
                               onSelect: () => setExpandedUser(u.id),
-                            },
-                            {
+                            }] : []),
+                            ...(can("users.write") ? [{
                               key: "reset",
                               label: "Reset gamification",
                               icon: RotateCcw,
-                              onSelect: () => handleResetGamification(u.id),
-                            },
-                            {
-                              key: "delete",
-                              label: "Delete user",
-                              icon: Trash2,
-                              tone: "danger",
-                              onSelect: () => setDeletingUser(u.id),
-                            },
+                              onSelect: () => setResetTarget(u),
+                            }] : []),
                           ]}
                         />
                       </td>
@@ -627,7 +537,7 @@ export default function AdminUsersPage() {
                     {expandedUser === u.id && (
                       <tr>
                         <td
-                          colSpan={12}
+                          colSpan={canReadRevenue ? 12 : 11}
                           className="px-4 py-4 bg-[var(--mp-surface-sunken)]/50 border-b border-[var(--mp-border-subtle)]"
                         >
                           {editingUser === u.id ? (
@@ -744,7 +654,7 @@ export default function AdminUsersPage() {
                                 data-user-quickactions={u.id}
                               >
                                 <div className="text-[10px] text-[var(--mp-fg-muted)] uppercase tracking-wider">
-                                  Quick actions: Grant / Lock / Ban
+                                  Available actions are limited by your permissions.
                                 </div>
                                 <div className="flex items-center gap-2">
                                   <Link
@@ -756,15 +666,16 @@ export default function AdminUsersPage() {
                                   <UserQuickActions
                                     userId={u.id}
                                     userEmail={u.email}
+                                    isAdmin={u.role === "admin"}
                                     onChanged={fetchUsers}
                                   />
-                                  <button
+                                  {can("users.write") && <button
                                     type="button"
                                     onClick={() => startEdit(u)}
                                     className="mp-btn mp-btn--ghost mp-btn--sm inline-flex items-center gap-1"
                                   >
                                     <Edit3 size={12} /> Edit profile
-                                  </button>
+                                  </button>}
                                 </div>
                               </div>
                               {u.status === "dormant" && (
@@ -784,7 +695,56 @@ export default function AdminUsersPage() {
             </tbody>
           </table>
         </div>
+        </div>
+        <div className="divide-y divide-[var(--mp-border-subtle)] lg:hidden">
+          {loading && users.length === 0 ? (
+            <div role="status" className="px-4 py-8 text-center text-sm text-[var(--mp-fg-muted)]">Loading users…</div>
+          ) : users.length === 0 ? (
+            <div className="px-4 py-8 text-center text-sm text-[var(--mp-fg-muted)]">{error ? "The user directory could not be loaded. Retry the request before treating this as empty." : query || tierFilter !== "all" || authFilter !== "all" ? "No users match your filters." : "No users yet."}</div>
+          ) : users.map((u) => (
+            <article key={u.id} className="p-4 space-y-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <Link href={`/admin/users/${u.id}`} className="font-semibold text-sm text-[var(--mp-fg)] hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--mp-viridian)]">
+                    {u.name}
+                  </Link>
+                  <p className="mt-0.5 text-xs text-[var(--mp-fg-muted)] break-all">{u.email || (u.username ? `@${u.username}` : u.id)}</p>
+                </div>
+                <span className="inline-flex items-center gap-1.5 text-[10px] text-[var(--mp-fg-muted)] whitespace-nowrap">
+                  <StatusDot tone={u.status === "active" ? "success" : u.status === "recent" ? "warn" : "neutral"} size={6} />
+                  {u.status}
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                <span className="rounded-full border border-[var(--mp-border-subtle)] px-2 py-0.5 text-[10px] text-[var(--mp-fg-muted)]">{u.role === "admin" ? "Admin account" : "Learner"}</span>
+                {canReadRevenue && <span className="rounded-full border border-[var(--mp-border-subtle)] px-2 py-0.5 text-[10px] text-[var(--mp-fg-muted)]">{u.tier || "free"}</span>}
+                {u.telegram_id && <span className="rounded-full bg-[#229ED9]/10 px-2 py-0.5 text-[10px] text-[#229ED9]">Telegram</span>}
+                {u.email && <span className="rounded-full bg-[var(--mp-viridian)]/10 px-2 py-0.5 text-[10px] text-[var(--mp-viridian)]">Email</span>}
+              </div>
+              <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                <div><dt className="text-[10px] text-[var(--mp-fg-subtle)]">Questions answered</dt><dd className="font-mono tabular-nums">{formatInt(u.questions_answered)}</dd></div>
+                <div><dt className="text-[10px] text-[var(--mp-fg-subtle)]">Accuracy</dt><dd className="font-mono tabular-nums">{u.accuracy > 0 ? `${u.accuracy}%` : "—"}</dd></div>
+                <div><dt className="text-[10px] text-[var(--mp-fg-subtle)]">XP · streak</dt><dd className="font-mono tabular-nums">{formatInt(u.xp)} · {u.streak > 0 ? `${u.streak}d` : "—"}</dd></div>
+                <div><dt className="text-[10px] text-[var(--mp-fg-subtle)]">Last active</dt><dd>{timeAgo(u.last_active)}</dd></div>
+              </dl>
+              <div className="flex flex-wrap items-center gap-2 border-t border-[var(--mp-border-subtle)] pt-3">
+                <Link href={`/admin/users/${u.id}`} className="mp-btn mp-btn--secondary mp-btn--sm">Open profile</Link>
+                {(can("users.entitlements.write") || can("users.sessions.write")) && <UserQuickActions userId={u.id} userEmail={u.email} isAdmin={u.role === "admin"} onChanged={fetchUsers} />}
+                {can("users.write") && <button type="button" className="mp-btn mp-btn--ghost mp-btn--sm" onClick={() => setResetTarget(u)}>Reset progress…</button>}
+              </div>
+            </article>
+          ))}
+        </div>
+        <div className="flex items-center justify-between gap-3 border-t border-[var(--mp-border-subtle)] px-3 py-2 text-xs text-[var(--mp-fg-muted)]">
+          <span aria-live="polite">Page {totalPages === 0 ? 0 : page} of {totalPages} · {formatInt(total)} matching users</span>
+          <div className="flex items-center gap-2">
+            {loading && <span role="status">Updating…</span>}
+            <button type="button" className="mp-btn mp-btn--secondary mp-btn--sm" disabled={loading || page <= 1} onClick={() => setPage((value) => Math.max(1, value - 1))}>Previous</button>
+            <button type="button" className="mp-btn mp-btn--secondary mp-btn--sm" disabled={loading || page >= totalPages} onClick={() => setPage((value) => Math.min(totalPages, value + 1))}>Next</button>
+          </div>
+        </div>
       </div>
+      </>}
     </AdminPageShell>
   );
 }

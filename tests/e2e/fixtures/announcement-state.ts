@@ -95,6 +95,19 @@ export async function mockAnnouncementGate(
  * call them on mount.
  */
 export async function stubHomePageApis(page: Page): Promise<void> {
+  // The authenticated home shell makes several unrelated background API
+  // calls. A seeded UI-only session has no server-valid signature, so any
+  // unmocked guarded request would return 401 and the global auth handler
+  // would clear the fixture session, redirecting away from `/`. Provide a
+  // neutral default first; the endpoint-specific mocks below take priority.
+  await page.route("**/api/**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ ok: true }),
+    });
+  });
+
   // /api/stats — returns empty stats so the dashboard UI can render.
   await page.route("**/api/stats**", async (route) => {
     if (route.request().method() !== "GET") return route.continue();
@@ -111,6 +124,14 @@ export async function stubHomePageApis(page: Page): Promise<void> {
   });
   // /api/questions — returns empty list so topic cards show zero counts.
   await page.route("**/api/questions**", async (route) => {
+    if (route.request().method() === "POST") {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify([{ topic: "Fixture", count: 0 }]),
+      });
+      return;
+    }
     if (route.request().method() !== "GET") return route.continue();
     await route.fulfill({
       status: 200,
@@ -123,7 +144,7 @@ export async function stubHomePageApis(page: Page): Promise<void> {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
-      body: JSON.stringify({ progress: [] }),
+      body: JSON.stringify([]),
     });
   });
   // /api/user/exam-preference — echo success.

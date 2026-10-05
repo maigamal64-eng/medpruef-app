@@ -52,6 +52,7 @@ import { getLang, setLang, t } from "@/lib/i18n";
 import { getStoredSession } from "@/lib/auth";
 import { getStoredExamSource } from "@/lib/topics";
 import { getTopicConfig } from "@/lib/topics";
+import { addExcludedQuestionIds, rememberReviewedQuestion } from "@/lib/flashcardQueue";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import { FlipCard } from "@/components/FlashCard";
@@ -252,6 +253,9 @@ function Flashcard({
             <RotateCw className="w-[15px] h-[15px]" />
             {t("tap_to_flip", lang)}
           </div>
+          <p className="text-[10px] text-center text-[var(--mp-fg-subtle)] mt-1">
+            {lang === "de" ? "Lange Fragen kannst du hier scrollen." : "Scroll inside the card to read long questions."}
+          </p>
         </>
       }
       back={
@@ -355,6 +359,8 @@ function FlashcardContent() {
 
   // Current question reference for async rating calls
   const currentRef = useRef<Question | null>(null);
+  const seenQuestionIdsRef = useRef<number[]>([]);
+  const seenScopeRef = useRef("");
 
   useEffect(() => {
     setLangState(getLang());
@@ -389,8 +395,15 @@ function FlashcardContent() {
       const examSource = getStoredExamSource();
       const topic = searchParams.get("topic") || "random";
       const params = new URLSearchParams({ topic, limit: "1", examSource });
+      const scope = `${examSource}:${topic}`;
+      if (seenScopeRef.current !== scope) {
+        seenScopeRef.current = scope;
+        seenQuestionIdsRef.current = [];
+      }
+      addExcludedQuestionIds(params, seenQuestionIdsRef.current);
       if (userId) params.set("userId", userId);
       const res = await fetch(`/api/questions?${params}`);
+      if (!res.ok) throw new Error(`Question request failed (${res.status})`);
       const data = await res.json();
       if (Array.isArray(data) && data.length > 0) {
         setQuestion(data[0]);
@@ -403,6 +416,9 @@ function FlashcardContent() {
         // Free-tier slice exhausted for this exam. Surface the upgrade prompt
         // rather than trapping the user in a loading spinner.
         setPaywallHit(true);
+        setQuestion(null);
+        currentRef.current = null;
+      } else {
         setQuestion(null);
         currentRef.current = null;
       }
@@ -422,6 +438,7 @@ function FlashcardContent() {
     async (level: Confidence) => {
       const q = currentRef.current;
       if (!q) return;
+      seenQuestionIdsRef.current = rememberReviewedQuestion(seenQuestionIdsRef.current, q.id);
 
       // Animate out + bump the daily counter
       setAnimatingOut(true);
@@ -576,6 +593,18 @@ function FlashcardContent() {
             }
             action={
               <div className="flex flex-col sm:flex-row gap-2 justify-center mt-2">
+                {seenQuestionIdsRef.current.length > 0 && (
+                  <button
+                    type="button"
+                    className="mp-btn mp-btn--primary"
+                    onClick={() => {
+                      seenQuestionIdsRef.current = [];
+                      void fetchCard();
+                    }}
+                  >
+                    {lang === "de" ? "Karten erneut starten" : "Restart flashcards"}
+                  </button>
+                )}
                 <Link href="/quiz" className="mp-btn mp-btn--primary">
                   {lang === "de" ? "Zufalls-Quiz starten" : "Start random quiz"}
                 </Link>
@@ -636,7 +665,7 @@ function FlashcardContent() {
                 {question.topic}
               </span>
               <span className="opacity-50">·</span>
-              <span>{lang === "de" ? "fällige Karten" : "due cards"}</span>
+              <span>{lang === "de" ? "heute wiederholt" : "reviewed today"}</span>
             </div>
           </div>
 
@@ -644,6 +673,9 @@ function FlashcardContent() {
           <button
             type="button"
             onClick={() => {
+              if (question) {
+                seenQuestionIdsRef.current = rememberReviewedQuestion(seenQuestionIdsRef.current, question.id);
+              }
               setAnimatingOut(true);
               setTimeout(() => fetchCard(), 200);
             }}

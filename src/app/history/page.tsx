@@ -299,12 +299,12 @@ export default function HistoryPage() {
             <LanguageToggle lang={lang} onChange={setLang} />
           </div>
         </div>
-        <div className="px-4 lg:px-8 py-6 max-w-3xl mx-auto">
+        <div className="px-4 lg:px-8 py-6 max-w-6xl mx-auto">
           <h1 className="mp-h2 mb-1">{a.title ?? EXAM_LABELS[a.exam_type]?.[lang] ?? a.exam_type}</h1>
           <p className="text-[var(--mp-fg-subtle)] text-sm mb-6">
             {fmtDate(a.completed_at, lang)} · {a.correct_count}/{a.total_count} {L("richtig", "correct")} · {Math.round(a.score_pct)}%
           </p>
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
             {openAttempt.questions.map((q, i) => (
               <div key={`${q.question_id}-${i}`} className="card p-4">
                 <div className="flex items-start justify-between gap-3 mb-2">
@@ -392,7 +392,7 @@ export default function HistoryPage() {
         </div>
       </div>
 
-      <div className="px-4 lg:px-8 py-6 max-w-3xl mx-auto">
+      <div className="px-4 lg:px-8 py-6 max-w-6xl mx-auto">
         <div className="flex items-center gap-3 mb-6">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--mp-accent-teal)]/10 text-[var(--mp-accent-teal)]">
             <HistoryIcon className="w-5 h-5" />
@@ -588,7 +588,7 @@ function AnswerRow({ row, lang }: { row: AnswerRow; lang: Lang }) {
       </div>
       {q ? (
         <>
-          <p className="text-sm text-[var(--mp-fg)] mb-1 line-clamp-2">{q.question}</p>
+          <p className="text-sm text-[var(--mp-fg)] mb-1 whitespace-pre-wrap break-words">{q.question}</p>
           <div className="flex items-center gap-2 text-xs text-[var(--mp-fg-subtle)] mb-1.5 flex-wrap">
             <span className="px-2 py-0.5 rounded-full bg-[var(--mp-border-subtle)]">{q.topic}</span>
             {typeof row.time_spent_ms === "number" && row.time_spent_ms > 0 && (
@@ -602,7 +602,7 @@ function AnswerRow({ row, lang }: { row: AnswerRow; lang: Lang }) {
           </div>
           <div className="text-xs text-[var(--mp-fg-subtle)]">
             <span className="font-semibold">{lang === "de" ? "Deine Antwort:" : "Your answer:"}</span>{" "}
-            <span className={row.is_correct ? "text-[var(--mp-accent-teal)]" : "text-[var(--mp-error)]"}>
+            <span className={`min-w-0 break-words ${row.is_correct ? "text-[var(--mp-accent-teal)]" : "text-[var(--mp-error)]"}`}>
               {row.user_answer ?? "–"}
             </span>
             {!row.is_correct && (

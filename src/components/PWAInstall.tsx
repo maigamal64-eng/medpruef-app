@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { Download, X, RefreshCw } from "lucide-react";
 import { t, useLang } from "@/lib/i18n";
 import { isExamActive } from "@/lib/examSession";
@@ -30,11 +31,13 @@ interface BeforeInstallPromptEvent extends Event {
  */
 export default function PWAInstall() {
   const lang = useLang();
+  const pathname = usePathname();
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showBanner, setShowBanner] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const [waitingWorker, setWaitingWorker] = useState<ServiceWorker | null>(null);
   const [updateAvailable, setUpdateAvailable] = useState(false);
+  const studyInProgress = isStudyRoute(pathname);
 
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return;
@@ -51,10 +54,9 @@ export default function PWAInstall() {
     let refreshing = false;
     const reloadOnControllerChange = () => {
       if (refreshing) return;
-      // B-02: never auto-reload mid-exam. The new SW is already in control; the
-      // page picks up the fresh build on the user's next reload/navigation,
-      // which the update banner still prompts for.
-      if (isExamActive()) return;
+      // Keep both timed exams and active practice routes in place. The user
+      // can navigate away and apply the waiting update afterward.
+      if (isStudyRoute(window.location.pathname)) return;
       refreshing = true;
       window.location.reload();
     };
@@ -63,11 +65,9 @@ export default function PWAInstall() {
     // Listen for SW_UPDATED broadcast from activate handler
     const onMessage = (event: MessageEvent) => {
       if (event.data?.type === "SW_UPDATED") {
-        // Silent hard reload — background tabs reload immediately,
-        // foreground tabs show the update banner first via updatefound flow.
-        // B-02: but never while an exam is in progress (a backgrounded exam tab
-        // must not be wiped); it reloads on the next return/navigation instead.
-        if (document.visibilityState === "hidden" && !isExamActive()) {
+        // Background tabs can take the update after activation, but never while
+        // they are on a learning route or have a timed exam in progress.
+        if (document.visibilityState === "hidden" && !isStudyRoute(window.location.pathname)) {
           window.location.reload();
         }
       }
@@ -127,11 +127,9 @@ export default function PWAInstall() {
 
   const handleUpdate = () => {
     // B-02: defer the update while an exam is in progress, even when the user
-    // taps the banner. SKIP_WAITING → controllerchange → reload would wipe the
-    // exam, and a bare fallback reload() the same. The banner stays up; the
-    // update applies once the exam finishes and the user taps again (or on the
-    // next navigation, when the already-waiting worker takes over cleanly).
-    if (isExamActive()) return;
+    // taps the banner. Applying it reloads the document, so keep the current
+    // quiz, exam, or flashcard session in place until the learner leaves it.
+    if (isStudyRoute(window.location.pathname)) return;
     if (waitingWorker) {
       waitingWorker.postMessage({ type: "SKIP_WAITING" });
     } else {
@@ -143,7 +141,7 @@ export default function PWAInstall() {
     // reload after a short grace period, while still allowing the normal
     // controllerchange path to win first.
     window.setTimeout(() => {
-      if (!isExamActive()) window.location.reload();
+      if (!isStudyRoute(window.location.pathname)) window.location.reload();
     }, 1500);
   };
 
@@ -179,9 +177,18 @@ export default function PWAInstall() {
           <p className="flex-1 text-sm font-medium text-[var(--mp-fg)]">
             {t("pwa_update_title", lang)}
           </p>
+          {studyInProgress && (
+            <p className="hidden sm:block max-w-64 text-xs text-[var(--mp-fg-muted)]">
+              {lang === "de"
+                ? "Das Update wartet, bis du deine Lerneinheit beendet hast."
+                : "The update will wait until you finish this study session."}
+            </p>
+          )}
           <button
             onClick={handleUpdate}
-            className="btn-primary text-xs px-3 py-1.5 flex items-center gap-1.5 shrink-0"
+            disabled={studyInProgress}
+            aria-disabled={studyInProgress}
+            className="btn-primary text-xs px-3 py-1.5 flex items-center gap-1.5 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <RefreshCw className="w-3 h-3" aria-hidden /> {t("pwa_update_cta", lang)}
           </button>
@@ -231,4 +238,12 @@ export default function PWAInstall() {
       </div>
     </div>
   );
+}
+
+function isStudyRoute(pathname: string | null): boolean {
+  if (typeof window === "undefined") return false;
+  if (isExamActive()) return true;
+  return pathname === "/quiz" || pathname?.startsWith("/quiz/") === true ||
+    pathname === "/exam" || pathname?.startsWith("/exam/") === true ||
+    pathname === "/flashcards" || pathname?.startsWith("/flashcards/") === true;
 }

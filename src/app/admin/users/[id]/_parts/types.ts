@@ -20,7 +20,7 @@ export interface UserDetailProfile {
   name: string;
   photo_url: string | null;
   role: string;
-  tier: string;
+  tier: string | null;
   is_banned: boolean;
   language_code: string | null;
   active_exam: string | null;
@@ -57,8 +57,8 @@ export interface UserDetailStats {
   activeDays: number;
   firstActivity: string | null;
   lastActivity: string | null;
-  sessionsCount: number;
-  notesCount: number;
+  sessionsCount: number | null;
+  notesCount: number | null;
   bookmarksCount: number;
   aiChatsCount: number;
   searchesCount: number;
@@ -223,10 +223,11 @@ export interface UserDetail {
   timelineTotal: number;
   answers: AnswerDetail[];
   answersTotal: number;
-  sessions: SessionDetail[];
-  notes: NoteDetail[];
-  feedback: FeedbackDetail[];
-  flags: FlagDetail[];
-  money: UserMoney;
+  sessions?: SessionDetail[];
+  notes?: NoteDetail[];
+  feedback?: FeedbackDetail[];
+  flags?: FlagDetail[];
+  money: UserMoney | null;
+  restricted_sections: string[];
   generatedAt: string;
 }

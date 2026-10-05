@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Webhook } from "lucide-react";
 import { authFetch as fetch } from "@/lib/authFetch";
+import { AdminPermissionGate } from "../_components/AdminPermissionGate";
 import { useAdminRealtime } from "@/lib/admin/useAdminRealtime";
 import { Alert, BrandedLoader, EmptyState } from "@/components/ui";
 import { AdminPageShell } from "../_components/AdminPageShell";
@@ -15,6 +16,10 @@ interface WebhookEvent {
 }
 
 export default function AdminWebhooksPage() {
+  return <AdminPermissionGate permission="system.read"><AdminWebhooksPageContent /></AdminPermissionGate>;
+}
+
+function AdminWebhooksPageContent() {
   const [items, setItems] = useState<WebhookEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

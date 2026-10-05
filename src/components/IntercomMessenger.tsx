@@ -14,15 +14,15 @@ import { authFetch } from "@/lib/authFetch";
  * resolved. The HMAC is computed server-side in /api/intercom/identify — no
  * secret ever reaches the browser.
  *
- * Launcher visibility (2026-06-26): responsive.
- *   - DESKTOP (>= 768px): Intercom shows its OWN default launcher at the
+ * Launcher visibility (2026-09-26): responsive to the app shell.
+ *   - DESKTOP (>= 1025px): Intercom shows its OWN default launcher at the
  *     bottom-right corner (vertical_padding:20 → it sits ~20px up, ~60px tall).
  *     The first-party FeedbackWidget renders its own separate button STACKED
  *     directly ABOVE it (bottom:96px, same right column), so the two are
  *     distinct affordances that never overlap. (FeedbackWidget previously sat
  *     at bottom:24px, inside this launcher's footprint, and was hidden behind
  *     the chat bubble — the desktop bug flagged in FEEDBACK-LOG #1.)
- *   - MOBILE (< 768px): Intercom's default launcher is HIDDEN. The single
+ *   - MOBILE AND TABLET (<= 1024px): Intercom's default launcher is HIDDEN. The single
  *     first-party FloatingLauncher (the merged FeedbackWidget) owns the one
  *     bottom-right button and opens this Messenger via `Intercom('show')`.
  * `hide_default_launcher` is a GLOBAL setting (not responsive on its own), so
@@ -44,9 +44,9 @@ type IntercomIdentity = {
 // On desktop the Intercom launcher sits a touch above the bottom edge so it
 // clears the slim LegalFooter strip.
 const LAUNCHER_VERTICAL_PADDING = 20;
-// Mobile breakpoint — matches Tailwind's `md` (768px). Below this the merged
-// FloatingLauncher owns the single button and Intercom's launcher is hidden.
-const MOBILE_MQ = "(max-width: 767px)";
+// Through 1024px the learner shell still uses a fixed bottom navigation.
+// Below 1025px the merged FloatingLauncher owns the single button.
+const MOBILE_MQ = "(max-width: 1024px)";
 
 export default function IntercomMessenger() {
   useEffect(() => {

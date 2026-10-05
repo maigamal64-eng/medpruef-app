@@ -79,6 +79,13 @@ const MAX_MESSAGES = 20;
 const MAX_MESSAGE_CHARS = 4000;
 const UPSTREAM_TIMEOUT_MS = 20_000;
 
+function isMissingExplanationLocaleColumn(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const e = error as { code?: unknown; message?: unknown; details?: unknown };
+  const message = `${String(e.message ?? "")} ${String(e.details ?? "")}`;
+  return e.code === "42703" || e.code === "PGRST204" || /ai_explanation_lang.*(does not exist|schema cache|column)/i.test(message);
+}
+
 // GET — Check for cached AI explanation for a question.
 // Open to anyone (free + pro + anon) because reading cached content is
 // not a cost-runaway vector and the app shows the cached text under
@@ -93,14 +100,25 @@ export async function GET(req: NextRequest) {
     }
 
     const db = getServiceClient();
-    const { data } = await db
+    let { data, error } = await db
       .from("questions")
-      .select("ai_explanation, ai_explanation_generated_at")
+      .select("ai_explanation, ai_explanation_generated_at, ai_explanation_lang")
       .eq("id", questionId)
       .maybeSingle();
+    // During rolling deployment the API can briefly run before its additive
+    // migration. Keep legacy cache reads available during that window.
+    if (error && isMissingExplanationLocaleColumn(error)) {
+      const legacy = await db.from("questions")
+        .select("ai_explanation, ai_explanation_generated_at")
+        .eq("id", questionId)
+        .maybeSingle();
+      data = legacy.data as typeof data;
+      error = legacy.error;
+    }
+    if (error) throw error;
 
     if (data?.ai_explanation) {
-      return NextResponse.json({ cached: true, explanation: data.ai_explanation });
+      return NextResponse.json({ cached: true, explanation: data.ai_explanation, lang: data.ai_explanation_lang ?? "de" });
     }
     return NextResponse.json({ cached: false });
   } catch {
@@ -319,16 +337,26 @@ export async function POST(req: NextRequest) {
     topic: string | null;
     choices: { text: string; correct: boolean }[] | null;
     ai_explanation: string | null;
+    ai_explanation_lang: "de" | "en" | null;
   };
   let questionRow: QuestionRow | null = null;
   if (qidNum) {
     try {
       const db = getServiceClient();
-      const { data } = await db
+      let { data, error } = await db
         .from("questions")
-        .select("question, answer, explanation, topic, choices, ai_explanation")
+        .select("question, answer, explanation, topic, choices, ai_explanation, ai_explanation_lang")
         .eq("id", qidNum)
         .maybeSingle();
+      if (error && isMissingExplanationLocaleColumn(error)) {
+        const legacy = await db.from("questions")
+          .select("question, answer, explanation, topic, choices, ai_explanation")
+          .eq("id", qidNum)
+          .maybeSingle();
+        data = legacy.data as typeof data;
+        error = legacy.error;
+      }
+      if (error) throw error;
       questionRow = data as QuestionRow | null;
     } catch (err) {
       captureServerError(err, {
@@ -358,11 +386,11 @@ export async function POST(req: NextRequest) {
 
     const choices = row.choices;
     if (Array.isArray(choices) && choices.length > 0) {
-      lines.push("OPTIONS:");
-      choices.forEach((c, i) => {
-        const letter = String.fromCharCode(65 + i); // A, B, C, …
-        lines.push(`${letter}. ${c.text}${c.correct ? " (CORRECT)" : ""}`);
+      lines.push("ANSWER CHOICES (the interface shuffles their display order):");
+      choices.forEach((c) => {
+        lines.push(`- ${JSON.stringify(c.text)}${c.correct ? " (CORRECT)" : ""}`);
       });
+      lines.push("Refer to each choice by its exact wording. Never use A/B/C letters or positional labels, because learners see a shuffled order.");
     }
 
     if (row.answer) lines.push(`CORRECT ANSWER: ${row.answer}`);
@@ -591,16 +619,38 @@ export async function POST(req: NextRequest) {
         const update: Record<string, unknown> = {
           ai_explanation: reply,
           ai_explanation_generated_at: new Date().toISOString(),
+          ai_explanation_lang: responseLang,
         };
         if (forceRegenerate) {
           update.explanation_rating_sum = 0;
           update.explanation_rating_count = 0;
         }
-        const { error: cacheErr } = await db
+        let { error: cacheErr } = await db
           .from("questions")
           .update(update)
           .eq("id", qidNum);
-        if (cacheErr) {
+        let skippedLocaleAmbiguousWrite = false;
+        if (cacheErr && isMissingExplanationLocaleColumn(cacheErr)) {
+          if (responseLang === "en") {
+            // Without the locale column, GET must assume legacy cache rows are
+            // German. Never write an English response into that shared slot.
+            skippedLocaleAmbiguousWrite = true;
+            cacheErr = null;
+          } else {
+            // Preserve the historical German fallback while the additive
+            // locale migration is not yet present in every environment.
+            delete update.ai_explanation_lang;
+            const legacyWrite = await db.from("questions").update(update).eq("id", qidNum);
+            cacheErr = legacyWrite.error;
+          }
+        }
+        if (skippedLocaleAmbiguousWrite) {
+          addBreadcrumb({
+            category: "ai-chat",
+            message: "cache_write_skipped",
+            data: { questionId: qidNum, reason: "missing_locale_column_for_english_response" },
+          });
+        } else if (cacheErr) {
           console.error("[ai-chat] cache write:", cacheErr);
           addBreadcrumb({
             category: "ai-chat",

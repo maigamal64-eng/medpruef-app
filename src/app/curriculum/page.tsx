@@ -114,7 +114,7 @@ function FachCard({
         <TopicIcon name={config.icon} className="w-[21px] h-[21px]" />
       </div>
       <div className={styles.ctBody}>
-        <div className={styles.ctName}>{td.topic}</div>
+        <div className={styles.ctName} title={td.topic} style={{ whiteSpace: "normal", overflow: "visible", textOverflow: "clip", overflowWrap: "anywhere" }}>{td.topic}</div>
         <div className={styles.ctMeta}>
           <ChevronRight className={styles.go} aria-hidden="true" />
           {trackingAvailable
@@ -219,6 +219,8 @@ export default function CurriculumPage() {
   const [accuracy, setAccuracy] = useState(0);
   const [topicData, setTopicData] = useState<TopicData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sessionReady, setSessionReady] = useState(false);
+  const [catalogueUnavailable, setCatalogueUnavailable] = useState(false);
   const [examSource, setExamSource] = useState("kenntnispruefung");
 
   useEffect(() => {
@@ -243,12 +245,13 @@ export default function CurriculumPage() {
       statsMap.set(s.topic, s);
     }
 
-    const data: TopicData[] = Object.entries(TOPIC_TOTALS_FALLBACK).map(
-      ([topic, total]) => {
+    const data: TopicData[] = Object.keys(TOPIC_TOTALS_FALLBACK).map(
+      (topic) => {
         const stat = statsMap.get(topic);
         return {
           topic,
-          total,
+          // Do not show stale static catalogue totals while live counts load.
+          total: 0,
           answered: stat?.total || 0,
           correct: stat?.correct || 0,
         };
@@ -256,13 +259,13 @@ export default function CurriculumPage() {
     );
 
     setTopicData(data);
-    setLoading(false);
+    setSessionReady(true);
   }, []);
 
   // Keep engagement accuracy from answer attempts, but load actual catalogue
   // size and unique coverage for this exam from the dedicated progress route.
   useEffect(() => {
-    if (!userId) return;
+    if (!sessionReady || !userId) return;
     fetch(`/api/stats?userId=${userId}`)
       .then((r) => r.json())
       .then((data) => {
@@ -275,42 +278,46 @@ export default function CurriculumPage() {
         }
       })
       .catch(() => {});
-  }, [userId]);
+  }, [sessionReady, userId]);
 
   useEffect(() => {
-    if (!userId) return;
-    fetch(`/api/user/topic-progress?examType=${encodeURIComponent(examSource)}`)
-      .then((r) => r.json())
-      .then((data: Array<{ topic: string; total: number; answered: number; correct: number }>) => {
-        if (!Array.isArray(data)) return;
-        setTopicData(data.map((row) => ({
-          topic: row.topic,
-          total: row.total,
-          answered: row.answered,
-          correct: row.correct,
-        })));
-      })
-      .catch(() => {});
-  }, [userId, examSource]);
-
-  useEffect(() => {
-    if (userId && !userId.startsWith("guest_")) return;
-    fetch("/api/questions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "topics", examSource }),
-    })
-      .then((r) => r.json())
-      .then((rows: Array<{ topic: string; count: number }>) => {
-        if (!Array.isArray(rows)) return;
-        const totals = new Map(rows.map((row) => [row.topic, Number(row.count)]));
-        setTopicData((current) => current.map((row) => ({
-          ...row,
-          total: totals.get(row.topic) ?? 0,
-        })));
-      })
-      .catch(() => {});
-  }, [userId, examSource]);
+    if (!sessionReady) return;
+    const loadCatalogue = async () => {
+      setLoading(true);
+      setCatalogueUnavailable(false);
+      try {
+        if (userId && !userId.startsWith("guest_")) {
+          const response = await fetch(`/api/user/topic-progress?examType=${encodeURIComponent(examSource)}`);
+          if (!response.ok) throw new Error("Topic progress request failed");
+          const rows = await response.json() as Array<{ topic: string; total: number; answered: number; correct: number }>;
+          if (!Array.isArray(rows)) throw new Error("Topic progress response was invalid");
+          setTopicData(rows.map((row) => ({
+            topic: row.topic,
+            total: row.total,
+            answered: row.answered,
+            correct: row.correct,
+          })));
+        } else {
+          const response = await fetch("/api/questions", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "topics", examSource }),
+          });
+          if (!response.ok) throw new Error("Question catalogue request failed");
+          const rows = await response.json() as Array<{ topic: string; count: number }>;
+          if (!Array.isArray(rows)) throw new Error("Question catalogue response was invalid");
+          const totals = new Map(rows.map((row) => [row.topic, Number(row.count)]));
+          setTopicData((current) => current.map((row) => ({ ...row, total: totals.get(row.topic) ?? 0 })));
+        }
+        setCatalogueUnavailable(false);
+      } catch {
+        setCatalogueUnavailable(true);
+      } finally {
+        setLoading(false);
+      }
+    };
+    void loadCatalogue();
+  }, [sessionReady, userId, examSource]);
 
   const switchLang = useCallback((l: Lang) => {
     setLang(l);
@@ -374,24 +381,29 @@ export default function CurriculumPage() {
     >
       <main className="main-content safe-area-top safe-area-bottom bg-[var(--mp-bg)]">
         {/* Header */}
-        <div className="px-6 lg:px-10 pt-4 pb-2 flex items-center justify-between border-b border-[var(--mp-border-soft)]">
+        <div className="px-4 sm:px-6 lg:px-10 pt-4 pb-3 grid grid-cols-[1fr_auto] items-center gap-x-2 gap-y-2 border-b border-[var(--mp-border-soft)] sm:flex sm:justify-between">
           <Link
             href="/"
             className="text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg)] text-sm transition-colors"
           >
             &larr; {t("back_home", lang)}
           </Link>
-          <h1 className="text-base font-bold text-[var(--mp-fg)] flex items-center gap-2">
+          <h1 className="col-span-2 justify-self-center text-center text-base font-bold text-[var(--mp-fg)] flex items-center gap-2 sm:col-auto">
             <MapIcon className="w-4 h-4 text-[var(--mp-viridian)]" />
             {t("curriculum_title", lang)}
           </h1>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center justify-self-end gap-2 sm:justify-self-auto">
             <ThemeToggle />
             <LanguageToggle lang={lang} onChange={switchLang} />
           </div>
         </div>
 
         <div className={`${styles.page} px-4 md:px-6 lg:px-10 py-5 space-y-6 pb-28`}>
+          {catalogueUnavailable && (
+            <p role="status" className="rounded-xl border border-[var(--mp-warning)]/30 bg-[var(--mp-warning-bg)] p-3 text-sm text-[var(--mp-fg)]">
+              {lang === "de" ? "Die aktuellen Fragenzahlen konnten nicht geladen werden." : "Current question totals could not be loaded."}
+            </p>
+          )}
           {/* Overview strip */}
           <div className="mp-card p-4 md:p-5">
             <div className={styles.overview}>

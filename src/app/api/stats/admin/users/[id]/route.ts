@@ -30,6 +30,7 @@
 import { NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { adminRouteShell } from "@/lib/admin/shell";
+import { canAccessAdminPermission, loadAdminPermissionSnapshot } from "@/lib/admin/permissions";
 import { getExamSource } from "@/lib/topics";
 import type {
   UserDetail,
@@ -74,7 +75,7 @@ function browserFromUA(ua: string | null | undefined): string | null {
 }
 
 export const GET = adminRouteShell(
-  async ({ req }) => {
+  async ({ req, actor }) => {
     const url = new URL(req.url);
     const segments = url.pathname.split("/");
     const id = segments[segments.length - 1];
@@ -83,6 +84,12 @@ export const GET = adminRouteShell(
     }
 
     const db = getServiceClient();
+    const permissionSnapshot = await loadAdminPermissionSnapshot(actor.userId);
+    const canReadRevenue = canAccessAdminPermission(permissionSnapshot, "revenue.read");
+    const canReadFeedback = canAccessAdminPermission(permissionSnapshot, "feedback.read");
+    const canReadContentReports = canAccessAdminPermission(permissionSnapshot, "content.read");
+    const canReadSessions = canAccessAdminPermission(permissionSnapshot, "users.sessions.read");
+    const canReadNotes = canAccessAdminPermission(permissionSnapshot, "users.notes.read");
 
     // ── Profile ──────────────────────────────────────────────────────
     const { data: user, error: userErr } = await db
@@ -145,57 +152,57 @@ export const GET = adminRouteShell(
         .eq("user_id", id)
         .order("created_at", { ascending: false })
         .limit(EVENT_FETCH_CAP),
-      db
+      canReadSessions ? db
         .from("user_sessions")
         .select(
           "started_at, ended_at, duration_seconds, pages_visited, device_info, exam_source"
         )
         .eq("user_id", id)
         .order("started_at", { ascending: false })
-        .limit(60),
-      db
+        .limit(60) : Promise.resolve({ data: [] as never[] }),
+      canReadNotes ? db
         .from("notes")
         .select(
           "id, title, topic, exam_type, visibility, is_active, source_type, created_at"
         )
         .eq("user_id", id)
         .order("created_at", { ascending: false })
-        .limit(100),
-      db
+        .limit(100) : Promise.resolve({ data: [] as never[] }),
+      canReadFeedback ? db
         .from("user_feedback")
         .select("id, message, status, admin_note, created_at")
         .eq("user_id", id)
         .order("created_at", { ascending: false })
-        .limit(50),
-      db
+        .limit(50) : Promise.resolve({ data: [] as never[] }),
+      canReadContentReports ? db
         .from("question_suggestions")
         .select("id, question_id, type, reason, details, status, created_at")
         .eq("user_id", id)
         .order("created_at", { ascending: false })
-        .limit(50),
-      db
+        .limit(50) : Promise.resolve({ data: [] as never[] }),
+      canReadRevenue ? db
         .from("subscriptions")
         .select(
           "tier, status, payment_provider, payment_method, amount_cents, currency, started_at, expires_at, created_at"
         )
         .eq("user_id", id)
-        .order("created_at", { ascending: false }),
-      db
+        .order("created_at", { ascending: false }) : Promise.resolve({ data: [] as never[] }),
+      canReadRevenue ? db
         .from("payment_events")
         .select("event, provider, tier, amount_cents, currency, reason, created_at")
         .eq("user_id", id)
         .order("created_at", { ascending: false })
-        .limit(60),
-      db
+        .limit(60) : Promise.resolve({ data: [] as never[] }),
+      canReadRevenue ? db
         .from("trials")
         .select("started_at, expires_at, created_at")
         .eq("user_id", id)
         .order("created_at", { ascending: false })
-        .limit(1),
-      db
+        .limit(1) : Promise.resolve({ data: [] as never[] }),
+      canReadRevenue ? db
         .from("referrals")
         .select("status, reward_credit_cents, created_at, qualified_at")
-        .eq("referrer_user_id", id),
+        .eq("referrer_user_id", id) : Promise.resolve({ data: [] as never[] }),
     ]);
 
     const gam = gamRes.data;
@@ -554,8 +561,16 @@ export const GET = adminRouteShell(
     }
 
     timeline.sort((a, b) => new Date(b.ts).getTime() - new Date(a.ts).getTime());
-    const timelineTotal = timeline.length;
-    const timelineTop = timeline.slice(0, TIMELINE_CAP);
+    const visibleTimeline = timeline.filter((item) => {
+      if (item.kind === "note_created") return canReadNotes;
+      if (item.kind === "feedback") return canReadFeedback;
+      if (item.kind === "flag") return canReadContentReports;
+      if (["session_start", "session_end"].includes(item.kind)) return canReadSessions;
+      if (["payment", "subscription", "trial", "referral", "waitlist"].includes(item.kind)) return canReadRevenue;
+      return true;
+    });
+    const timelineTotal = visibleTimeline.length;
+    const timelineTop = visibleTimeline.slice(0, TIMELINE_CAP);
 
     // ── Money verdict (subscriptions canonical) ──────────────────────
     const activeSub = subs.find((s) => s.status === "active");
@@ -593,15 +608,15 @@ export const GET = adminRouteShell(
           "Anonymous",
         photo_url: (user.photo_url as string) ?? null,
         role: (user.role as string) || "user",
-        tier: (user.tier as string) || "free",
+        tier: canReadRevenue ? (user.tier as string) || "free" : null,
         is_banned: !!user.is_banned,
         language_code: (user.language_code as string) ?? null,
         active_exam: (user.active_exam as string) ?? null,
         exam_date: (user.exam_date as string) ?? null,
         daily_goal: (user.daily_goal as number) ?? null,
-        referral_code: (user.referral_code as string) ?? null,
-        referred_by_code: (user.referred_by_code as string) ?? null,
-        tier_expires_at: (user.tier_expires_at as string) ?? null,
+        referral_code: canReadRevenue ? (user.referral_code as string) ?? null : null,
+        referred_by_code: canReadRevenue ? (user.referred_by_code as string) ?? null : null,
+        tier_expires_at: canReadRevenue ? (user.tier_expires_at as string) ?? null : null,
         onboarding_completed_at: (user.onboarding_completed_at as string) ?? null,
         created_at: user.created_at as string,
         updated_at: (user.updated_at as string) ?? null,
@@ -632,8 +647,8 @@ export const GET = adminRouteShell(
         activeDays: activeDaySet.size,
         firstActivity,
         lastActivity,
-        sessionsCount: sessions.length,
-        notesCount: notes.length,
+        sessionsCount: canReadSessions ? sessions.length : null,
+        notesCount: canReadNotes ? notes.length : null,
         bookmarksCount: behavior.bookmark,
         aiChatsCount: behavior.ai_chat,
         searchesCount: behavior.search,
@@ -647,7 +662,7 @@ export const GET = adminRouteShell(
       timelineTotal,
       answers: answerDetails,
       answersTotal: answers.length,
-      sessions: sessions.map((s) => {
+      ...(canReadSessions ? { sessions: sessions.map((s) => {
         const dev = (s.device_info || {}) as Record<string, unknown>;
         return {
           startedAt: s.started_at as string,
@@ -666,8 +681,8 @@ export const GET = adminRouteShell(
             ? (s.pages_visited as string[])
             : [],
         };
-      }),
-      notes: notes.map((n) => ({
+      }) } : {}),
+      ...(canReadNotes ? { notes: notes.map((n) => ({
         id: n.id as string,
         title: (n.title as string) ?? null,
         topic: (n.topic as string) ?? null,
@@ -676,15 +691,15 @@ export const GET = adminRouteShell(
         isActive: n.is_active !== false,
         sourceType: (n.source_type as string) ?? null,
         createdAt: n.created_at as string,
-      })),
-      feedback: feedback.map((f) => ({
+      })) } : {}),
+      ...(canReadFeedback ? { feedback: feedback.map((f) => ({
         id: f.id as number,
         message: (f.message as string) || "",
         status: (f.status as string) || "new",
         adminNote: (f.admin_note as string) ?? null,
         createdAt: f.created_at as string,
-      })),
-      flags: flags.map((fl) => ({
+      })) } : {}),
+      ...(canReadContentReports ? { flags: flags.map((fl) => ({
         id: fl.id as number,
         questionId: (fl.question_id as number) ?? null,
         type: (fl.type as string) || "flag",
@@ -692,8 +707,8 @@ export const GET = adminRouteShell(
         details: (fl.details as string) ?? null,
         status: (fl.status as string) || "pending",
         createdAt: fl.created_at as string,
-      })),
-      money: {
+      })) } : {}),
+      money: canReadRevenue ? {
         isPayer: !!activeSub || paidTotalCents > 0,
         paidTotalCents,
         currency:
@@ -726,7 +741,14 @@ export const GET = adminRouteShell(
           (r) => r.status === "qualified" || r.status === "rewarded"
         ).length,
         referredByCode: (user.referred_by_code as string) ?? null,
-      },
+      } : null,
+      restricted_sections: [
+        ...(!canReadSessions ? ["sessions"] : []),
+        ...(!canReadNotes ? ["notes"] : []),
+        ...(!canReadFeedback ? ["feedback"] : []),
+        ...(!canReadContentReports ? ["content_reports"] : []),
+        ...(!canReadRevenue ? ["revenue"] : []),
+      ],
       generatedAt: new Date().toISOString(),
     };
 

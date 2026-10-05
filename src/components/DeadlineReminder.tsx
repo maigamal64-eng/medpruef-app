@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { BellRing, CheckCircle2 } from "lucide-react";
 import { t, type Lang } from "@/lib/i18n";
-import { getUpcomingSittings } from "@/lib/exam-dates";
+import { getNextRegistrationDeadlineSitting } from "@/lib/exam-dates";
 import { getStoredAttribution } from "@/lib/attribution";
 
 /**
@@ -17,10 +17,13 @@ export default function DeadlineReminder({ lang }: { lang: Lang }) {
   const [state, setState] = useState<"idle" | "loading" | "done" | "error">("idle");
 
   const next = useMemo(() => {
-    const s = getUpcomingSittings()[0];
+    const s = getNextRegistrationDeadlineSitting();
     if (!s) return null;
-    const d = new Date(`${s.registrationDeadline ?? s.date}T00:00:00Z`);
-    const days = Math.max(0, Math.ceil((d.getTime() - Date.now()) / 86400000));
+    const deadline = s.registrationDeadline!;
+    const d = new Date(`${deadline}T00:00:00Z`);
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+    const days = Math.round((d.getTime() - today.getTime()) / 86400000);
     const dateStr = d.toLocaleDateString(lang === "de" ? "de-AT" : lang, {
       day: "numeric",
       month: "long",

@@ -7,6 +7,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { BarChart3 } from "lucide-react";
 import { authFetch as fetch } from "@/lib/authFetch";
+import { AdminPermissionGate } from "../_components/AdminPermissionGate";
 import { useAdminRealtime } from "@/lib/admin/useAdminRealtime";
 import { Alert, BrandedLoader, EmptyState } from "@/components/ui";
 import { AdminPageShell } from "../_components/AdminPageShell";
@@ -23,6 +24,10 @@ interface AuditRow {
 }
 
 export default function AdminAuditPage() {
+  return <AdminPermissionGate permission="system.read"><AdminAuditPageContent /></AdminPermissionGate>;
+}
+
+function AdminAuditPageContent() {
   const [items, setItems] = useState<AuditRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

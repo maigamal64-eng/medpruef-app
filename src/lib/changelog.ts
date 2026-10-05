@@ -30,8 +30,32 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "New blog post: Ukrainian refugee physicians in Austria",
     },
     description: {
-      de: "Veröffentlicht: Der vollständige Weg für ukrainische Ärzt:innen zur österreichischen Approbation – Nostrifizierung, Sprachprüfung, Stichprobentest (240 Fragen), Kosten, Fristen und Sofort-Schritte. EN-first (W1-B Gate), keine AR-Gate. Alle Zahlen SoT-verifiziert.",
-      en: "Published: The complete pathway for Ukrainian physicians to Austrian medical licensure – nostrification, language exam, Stichprobentest (240 questions), costs, deadlines, and immediate next steps. EN-first (W1-B gate), no AR gate. All figures SoT-verified.",
+      de: "Veröffentlicht: Der vollständige Weg für ukrainische Ärzt:innen zur österreichischen Approbation – Nostrifizierung, Sprachprüfung, Stichprobentest (250 Fragen), Kosten, Fristen und Sofort-Schritte. EN-first (W1-B Gate), keine AR-Gate. Alle Zahlen SoT-verifiziert.",
+      en: "Published: The complete pathway for Ukrainian physicians to Austrian medical licensure – nostrification, language exam, Stichprobentest (250 questions), costs, deadlines, and immediate next steps. EN-first (W1-B gate), no AR gate. All figures SoT-verified.",
+    },
+  },
+  {
+    date: "2026-09-27", tag: "fix",
+    title: { de: "Direkt ins gewählte Lernen", en: "Go straight to the study mode you chose" },
+    description: {
+      de: "Jetzt lernen und Themenkarten starten direkt mit neuen Fragen. Eine frühere Sitzung wird nur über Weitermachen fortgesetzt. Der Test-Builder erscheint nur, wenn du ihn öffnest.",
+      en: "Study now and topic cards start directly with new questions. A previous session resumes only through Continue. The test builder appears only when you open it.",
+    },
+  },
+  {
+    date: "2026-09-27", tag: "fix",
+    title: { de: "Prüfungsinfos bleiben aktuell und lesbar", en: "Exam information stays current and readable" },
+    description: {
+      de: "Prüfung und Prüfungstermin in den Einstellungen werden mit deinem Konto abgeglichen. Prüfungstermine und Anmeldefristen bleiben aktuell, und Prüfungsnamen passen besser auf kleine Bildschirme.",
+      en: "Exam track and date in Settings now match your account and study plan. Exam dates stay current, and long exam names are easier to read on small screens.",
+    },
+  },
+  {
+    date: "2026-09-27", tag: "improvement",
+    title: { de: "Lernen auf jedem Bildschirm verlässlicher", en: "More reliable study on every screen" },
+    description: {
+      de: "Lesezeichen und Notizen sind deinem Konto zugeordnet. Quizfortschritt lässt sich zuverlässiger fortsetzen, und offline gespeicherte Antworten werden bei erneuter Verbindung synchronisiert. Die Lernansichten passen sich besser an Handy, Tablet und Desktop an.",
+      en: "Bookmarks and notes are linked to your account. Quiz progress is more reliable to resume, and answers saved offline sync when you reconnect. Study screens adapt better to phones, tablets, and desktop.",
     },
   },
   {

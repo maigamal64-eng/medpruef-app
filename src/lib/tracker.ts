@@ -64,7 +64,6 @@ interface QueuedEvent {
   timestamp: string;
 }
 
-const SESSION_KEY = "medpruef_session_id";
 const FLUSH_INTERVAL_MS = 5000;
 
 let _userId: string = "";
@@ -78,15 +77,6 @@ function generateId(): string {
     return crypto.randomUUID();
   }
   return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-}
-
-function getOrCreateSessionId(): string {
-  if (typeof sessionStorage === "undefined") return generateId();
-  const stored = sessionStorage.getItem(SESSION_KEY);
-  if (stored) return stored;
-  const newId = generateId();
-  sessionStorage.setItem(SESSION_KEY, newId);
-  return newId;
 }
 
 async function flushEvents(): Promise<void> {
@@ -130,9 +120,11 @@ function flushBeacon(): void {
 
 export function initTracker(userId: string): void {
   if (typeof window === "undefined") return;
+  if (_initialized && _userId === userId) return;
 
   _userId = userId;
-  _sessionId = getOrCreateSessionId();
+  // A page reload starts a new visit. Soft navigation keeps this in-memory ID.
+  _sessionId = generateId();
   _initialized = true;
 
   // Create session record
@@ -153,8 +145,14 @@ export function initTracker(userId: string): void {
         viewportHeight: window.innerHeight,
         devicePixelRatio: window.devicePixelRatio,
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        referrer: document.referrer || null,
-        url: window.location.href,
+        // Store only an origin and route, never query parameters or URL tokens.
+        referrer: (() => {
+          try {
+            const referrer = new URL(document.referrer);
+            return `${referrer.origin}${referrer.pathname}`.slice(0, 300);
+          } catch { return null; }
+        })(),
+        path: window.location.pathname,
       },
     }),
   }).catch(() => {});

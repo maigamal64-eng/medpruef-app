@@ -31,7 +31,7 @@ export interface UserRow {
   username: string | null;
   photo_url: string | null;
   role: string;
-  tier: string;
+  tier: string | null;
   status: string;
   created_at: string;
   xp: number;
@@ -123,7 +123,7 @@ export interface FeedbackItem {
   id: number;
   user_id: string | null;
   message: string;
-  context: Record<string, unknown>;
+  context: Record<string, unknown> | null;
   status: string;
   admin_note: string | null;
   created_at: string;

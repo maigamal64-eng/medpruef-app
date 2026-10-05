@@ -10,8 +10,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { Flag as FlagIcon } from "lucide-react";
 import { authFetch as fetch } from "@/lib/authFetch";
+import { useAdminPermissions } from "@/lib/admin/useAdminPermissions";
 import { Alert, BrandedLoader, EmptyState } from "@/components/ui";
-import { AdminPageShell, ComingSoonCard } from "../_components/AdminPageShell";
+import { AdminPageShell } from "../_components/AdminPageShell";
 
 interface FlagRow {
   key: string;
@@ -23,6 +24,7 @@ interface FlagRow {
 }
 
 export default function AdminFlagsPage() {
+  const { can, loading: accessLoading } = useAdminPermissions();
   const [items, setItems] = useState<FlagRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -42,14 +44,17 @@ export default function AdminFlagsPage() {
   }, []);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    if (!accessLoading && can("system.read")) void load();
+  }, [accessLoading, can, load]);
+
+  if (accessLoading) return <div className="p-6"><BrandedLoader size={40} label="Checking access…" /></div>;
+  if (!can("system.read")) return <div className="p-6"><Alert variant="error" title="Access not available">Your admin role does not include permission to view feature-flag configuration.</Alert></div>;
 
   return (
     <AdminPageShell
       title="Feature flags"
-      description="Read-only list for this sprint. Toggle UI lands next."
-      freshness="cached"
+      description="Current feature-flag records. This view is read-only because code-level consumers and rollout safety are not yet tied to a controlled change workflow."
+      freshness={loading ? "cached" : error ? "disconnected" : "live"}
       onRefresh={load}
     >
       {error && (
@@ -66,7 +71,7 @@ export default function AdminFlagsPage() {
           tone="neutral"
           icon={<FlagIcon className="w-10 h-10" aria-hidden />}
           title="No flags yet"
-          body="INSERT a row into public.flags via /admin/sql to create one."
+          body="No feature-flag records are configured. This empty state does not imply that all application features are disabled."
         />
       ) : (
         <div className="rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] overflow-hidden">
@@ -111,10 +116,6 @@ export default function AdminFlagsPage() {
           </table>
         </div>
       )}
-      <ComingSoonCard title="Toggle + rollout editor">
-        In-place toggles, rollout% slider, and per-env controls land next
-        sprint. For now create/edit flags via <code>/admin/sql</code>.
-      </ComingSoonCard>
     </AdminPageShell>
   );
 }

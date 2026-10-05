@@ -180,18 +180,25 @@ export default function AIChatAssistant({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // FEEDBACK #3c — when the UI is in English, translate a German-cached AI
-  // explanation into English via the existing /api/translate cache. Returns the
-  // German text unchanged on any failure (never blocks the panel). UI lang is
-  // currently de|en; for "en" we ask /api/translate for field=ai_explanation.
-  const maybeTranslateToUiLang = async (german: string): Promise<string> => {
-    if (lang === "de") return german;
-    // Only auto-translate for paid users. A free user has a 5/day translate
-    // quota; silently spending it on every cached-explanation view would drain
-    // it without the user asking. Free users still see the (German) explanation
-    // for free and can translate on demand via the Übersetzen tab.
-    if (!isPro) return german;
+  // Explanation cache entries now carry their source locale. Translate only
+  // when a cache hit differs from the selected UI language, in either
+  // direction. On failure, show the original text instead of blocking chat.
+  const maybeTranslateToUiLang = async (text: string, sourceLang: Lang): Promise<string> => {
+    if (sourceLang === lang) return text;
     try {
+      // Read an existing translation first. This is free for every tier and
+      // avoids showing a stale-language explanation when its translation is
+      // already cached.
+      const cacheRes = await fetch(`/api/translate?questionId=${questionId}&field=ai_explanation`);
+      if (cacheRes.ok) {
+        const cache = await cacheRes.json();
+        const translated = cache.translations?.[lang];
+        if (typeof translated === "string" && translated.trim()) return translated;
+      }
+      // Creating a new translation consumes the free user's daily allowance,
+      // so only Pro accounts generate it automatically. Free users can use
+      // the explicit translation action.
+      if (!isPro) return text;
       const res = await fetch("/api/translate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -202,9 +209,9 @@ export default function AIChatAssistant({
         if (d.translatedText && d.translatedText.trim()) return d.translatedText;
       }
     } catch {
-      // translation unavailable (quota / outage) — show the German prose.
+      // Translation unavailable (quota / outage): keep the original text.
     }
-    return german;
+    return text;
   };
 
   const loadOrGenerateExplanation = async (forceRegenerate = false) => {
@@ -225,7 +232,8 @@ export default function AIChatAssistant({
               // after the first time). Only the AI PROSE is translated; the
               // question/options stay German (that is the exam). Falls back to
               // the German text if translation is unavailable.
-              const shown = await maybeTranslateToUiLang(cacheData.explanation);
+              const sourceLang: Lang = cacheData.lang === "en" ? "en" : "de";
+              const shown = await maybeTranslateToUiLang(cacheData.explanation, sourceLang);
               setCachedExplanation(shown);
               setMessages([{ role: "assistant", content: shown }]);
               setHasRealExplanation(true);

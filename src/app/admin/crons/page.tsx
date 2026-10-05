@@ -7,6 +7,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Gauge } from "lucide-react";
 import { authFetch as fetch } from "@/lib/authFetch";
+import { AdminPermissionGate } from "../_components/AdminPermissionGate";
 import { useAdminRealtime } from "@/lib/admin/useAdminRealtime";
 import { Alert, BrandedLoader, EmptyState } from "@/components/ui";
 import { AdminPageShell } from "../_components/AdminPageShell";
@@ -22,6 +23,10 @@ interface CronRow {
 }
 
 export default function AdminCronsPage() {
+  return <AdminPermissionGate permission="system.read"><AdminCronsPageContent /></AdminPermissionGate>;
+}
+
+function AdminCronsPageContent() {
   const [items, setItems] = useState<CronRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

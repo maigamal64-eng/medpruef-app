@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { analyticsWritesDisabled } from "@/lib/supabase-resilience";
+import { normalizeTrackedPath } from "@/lib/telemetry-normalize";
 
 export const dynamic = "force-dynamic";
 
@@ -36,7 +37,7 @@ export async function POST(req: NextRequest) {
     const body = (await req.json()) as Record<string, unknown>;
     const sessionId = stringValue(body.sessionId, 80);
     const eventName = stringValue(body.eventName, 40);
-    const path = stringValue(body.path, 500);
+    const path = normalizeTrackedPath(body.path);
     if (!sessionId || !eventName || !path || !EVENTS.has(eventName)) {
       return NextResponse.json({ error: "Invalid funnel event" }, { status: 400 });
     }

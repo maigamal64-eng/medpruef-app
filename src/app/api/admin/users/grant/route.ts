@@ -1,13 +1,12 @@
 import { NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { adminRouteShell } from "@/lib/admin/shell";
-import { logAdminAction } from "@/lib/admin/audit";
 
 export const dynamic = "force-dynamic";
 
 /**
  * POST /api/admin/users/grant
- * Body: { user_id: string, days?: number }
+ * Body: { user_id: string, days?: number, reason: string }
  *
  * Grants N days (default 30) of Pro access to the target user. Bumps
  * users.tier='pro' and extends users.tier_expires_at to max(current, now+days).
@@ -15,73 +14,40 @@ export const dynamic = "force-dynamic";
  */
 export const POST = adminRouteShell(
   async ({ req, actor }) => {
-    let body: { user_id?: string; days?: number };
+    let body: { user_id?: string; days?: number; reason?: string };
     try {
       body = await req.json();
     } catch {
       return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
     }
-    if (!body.user_id) {
-      return NextResponse.json({ error: "user_id required" }, { status: 400 });
+    const reason = typeof body.reason === "string" ? body.reason.trim() : "";
+    if (!body.user_id || reason.length < 5 || reason.length > 500) {
+      return NextResponse.json({ error: "user_id and a reason between 5 and 500 characters are required" }, { status: 400 });
     }
-    const days = Math.max(
-      1,
-      Math.min(365, Math.floor(Number(body.days) || 30))
-    );
-
-    const sb = getServiceClient();
-    const { data: current, error: fetchErr } = await sb
-      .from("users")
-      .select("id, tier, tier_expires_at, email")
-      .eq("id", body.user_id)
-      .maybeSingle();
-    if (fetchErr) {
-      return NextResponse.json({ error: fetchErr.message }, { status: 500 });
-    }
-    if (!current) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    const days = body.days === undefined ? 30 : Number(body.days);
+    if (!Number.isInteger(days) || days < 1 || days > 365) {
+      return NextResponse.json({ error: "days must be a whole number between 1 and 365" }, { status: 400 });
     }
 
-    const now = new Date();
-    const existingExpiry = current.tier_expires_at
-      ? new Date(current.tier_expires_at as string)
-      : null;
-    const base =
-      existingExpiry && existingExpiry.getTime() > now.getTime()
-        ? existingExpiry
-        : now;
-    const newExpiry = new Date(base.getTime() + days * 86400_000);
-
-    const { error: updErr } = await sb
-      .from("users")
-      .update({
-        tier: "pro",
-        tier_expires_at: newExpiry.toISOString(),
-      })
-      .eq("id", body.user_id);
-    if (updErr) {
-      return NextResponse.json({ error: updErr.message }, { status: 500 });
-    }
-
-    await logAdminAction({
-      req,
-      actorId: actor.userId,
-      actorEmail: actor.email,
-      action: "grant_free_access",
-      targetType: "user",
-      targetId: body.user_id,
-      payload: {
-        days,
-        new_expiry: newExpiry.toISOString(),
-        previous_expiry: current.tier_expires_at,
-        previous_tier: current.tier,
-        target_email: current.email,
+    const { data: newExpiry, error } = await getServiceClient().rpc("admin_grant_entitlement", {
+      p_actor_id: actor.userId,
+      p_target_user_id: body.user_id,
+      p_days: days,
+      p_reason: reason,
+      p_audit_context: {
+        ip: req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null,
+        user_agent: req.headers.get("user-agent") ?? null,
       },
     });
+    if (error) {
+      const status = error.code === "42501" ? 403 : error.code === "P0002" ? 404
+        : error.code === "23514" ? 409 : error.code === "22023" ? 400 : 500;
+      return NextResponse.json({ error: status === 500 ? "Failed to grant access" : error.message }, { status });
+    }
 
     return NextResponse.json({
       ok: true,
-      new_expiry: newExpiry.toISOString(),
+      new_expiry: new Date(newExpiry as string).toISOString(),
     });
   },
   { route: "/api/admin/users/grant", rateLimit: { limit: 20, windowMs: 60_000 } }

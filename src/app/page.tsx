@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { BrandedLoader } from "@/components/Logo";
 import { authFetch as fetch } from "@/lib/authFetch";
 import { getTopicConfig } from "@/lib/topics";
@@ -152,6 +153,7 @@ function getExamLabel(examSource: string, lang: "de" | "en"): string {
 }
 
 export default function Home() {
+  const router = useRouter();
   // Live tier read: refreshes from /api/auth/me on mount so a just-paid
   // buyer who lands here via the success page doesn't see a stale-free
   // screen. referralsEnabled gates the referral card (invite-only).
@@ -586,7 +588,9 @@ export default function Home() {
       }
       setStoredExamSource(data.examSource as ExamSourceId);
       setExamSource(data.examSource as ExamSourceId);
-      fetchTopics(data.examSource as ExamSourceId);
+      // Finish onboarding at the first useful action so the learner can answer
+      // immediately instead of returning to a dashboard and having to find a quiz.
+      router.push(`/quiz?topic=random&examSource=${encodeURIComponent(data.examSource)}&practiceMode=unseen`);
       // Persist exam_source + exam_date + daily_goal to server so the user's
       // active_exam stays in sync across devices and feeds /api/user/study-plan.
       // Best-effort: don't block onboarding completion if the call fails.

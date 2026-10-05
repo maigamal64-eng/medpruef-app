@@ -7,6 +7,7 @@ import { getStoredSession, storeSession, setSessionToken, getSessionToken } from
 import { trackRegistration } from "@/lib/conversion-events";
 import { trackFunnelEvent } from "@/lib/funnel-events";
 import { getStoredAttribution } from "@/lib/attribution";
+import { getStoredExamSource } from "@/lib/topics";
 import { getKnownAccounts, rememberKnownAccount, type KnownAccount } from "@/lib/known-accounts";
 import { BrandedLoader } from "@/components/Logo";
 import { TextField } from "@/components/ui";
@@ -128,10 +129,11 @@ export default function LoginPage() {
       }
 
       // ?mode=register: pre-select the register tab so the guest-funnel
-      // deep-link lands on the correct form instead of dead-ending.
+      // deep-link lands on the correct form instead of dead-ending. The
+      // registration-view event is tied to visible mode below, so ordinary
+      // tab clicks and this deep-link share one definition.
       if (params.get("mode") === "register") {
         setMode("register");
-        trackFunnelEvent("registration_view", { source: "kenntnispruefung-wien" }, { once: true });
       }
     } catch {
       // localStorage may be blocked in private mode — non-fatal.
@@ -142,6 +144,12 @@ export default function LoginPage() {
       window.location.href = "/";
     }
   }, []);
+
+  useEffect(() => {
+    if (mode === "register") {
+      trackFunnelEvent("registration_view", { source: getStoredExamSource() }, { once: true });
+    }
+  }, [mode]);
 
   const switchLang = (l: Lang) => {
     setLang(l);
@@ -213,7 +221,7 @@ export default function LoginPage() {
         // Pass the user id so the client pixel SignUp dedupes against the
         // server-side Reddit CAPI SignUp for the same registration.
         trackRegistration(data.user?.id);
-        trackFunnelEvent("registration_success", { source: "kenntnispruefung-wien" }, { once: true });
+        trackFunnelEvent("registration_success", { source: getStoredExamSource() }, { once: true });
       }
       // Best-effort referral claim — fire and forget. The home page
       // also has a fallback claim on mount so a failure here is not
@@ -324,7 +332,7 @@ export default function LoginPage() {
               onClick={() => switchLang("de")}
               className={`px-2 py-1 rounded-l font-medium transition-all ${
                 lang === "de"
-                  ? "bg-[var(--mp-viridian)] text-white"
+                  ? "bg-[var(--mp-viridian)] text-[var(--mp-fg-on-viridian)]"
                   : "text-[var(--mp-fg-subtle)] bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)]"
               }`}
             >
@@ -334,7 +342,7 @@ export default function LoginPage() {
               onClick={() => switchLang("en")}
               className={`px-2 py-1 rounded-r font-medium transition-all ${
                 lang === "en"
-                  ? "bg-[var(--mp-viridian)] text-white"
+                  ? "bg-[var(--mp-viridian)] text-[var(--mp-fg-on-viridian)]"
                   : "text-[var(--mp-fg-subtle)] bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)]"
               }`}
             >
@@ -364,7 +372,7 @@ export default function LoginPage() {
           </div>
 
           {/* Auth card — email-primary (B.4 login cleanup 2026-06-26) */}
-          <div className="card rounded-2xl p-6 space-y-4">
+          <div className="card rounded-2xl p-4 sm:p-6 space-y-3 sm:space-y-4">
             {error && (
               <div className="bg-[var(--mp-error)]/10 border border-[var(--mp-error)]/25 text-[var(--mp-error)] text-sm rounded-xl px-4 py-3 text-center animate-fade-in">
                 {error}
@@ -403,11 +411,11 @@ export default function LoginPage() {
               </button>
             </div>
 
-            <div className="rounded-xl border border-[var(--mp-viridian)]/25 bg-[var(--mp-viridian)]/5 px-3.5 py-3 text-sm text-[var(--mp-fg-muted)]">
+            <div className="rounded-xl border border-[var(--mp-viridian)]/25 bg-[var(--mp-viridian)]/5 px-3.5 py-2.5 text-sm text-[var(--mp-fg-muted)]">
               <p className="font-semibold text-[var(--mp-fg)]">
                 {lang === "de" ? "Empfohlen: mit E-Mail anmelden" : "Recommended: sign in with email"}
               </p>
-              <p className="mt-1 text-xs leading-relaxed">
+              <p className="mt-1 text-sm leading-snug text-[var(--mp-fg-muted)]">
                 {lang === "de"
                   ? "Dein Fortschritt bleibt sicher mit einem Konto verbunden, auch wenn du Telegram später nicht öffnest."
                   : "Your progress stays safely connected to one account, even if you do not open Telegram later."}
@@ -417,7 +425,7 @@ export default function LoginPage() {
             {/* PRIMARY: Email/Password form — always visible */}
             <form onSubmit={handleEmailAuth} className="space-y-3">
               {mode === "register" && (
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 min-[430px]:grid-cols-2 gap-3">
                   <TextField
                     label={lang === "de" ? "Vorname" : "First name"}
                     type="text"
@@ -559,12 +567,6 @@ export default function LoginPage() {
               <span className="flex-1 h-px bg-[var(--mp-border)]" />
             </div>
 
-            <p className="text-center text-xs text-[var(--mp-fg-subtle)] leading-snug">
-              {lang === "de"
-                ? "Tipp: E-Mail ist unsere empfohlene Anmeldung. So bleibt dein Lernfortschritt auch ohne Telegram erhalten."
-                : "Tip: Email is our recommended sign-in. Your learning progress stays available even without Telegram."}
-            </p>
-
             {/* SECONDARY: Telegram remains available, but is not the primary account path. */}
             <a
               href={getTelegramDeepLink(lang)}
@@ -585,7 +587,7 @@ export default function LoginPage() {
             </a>
 
             {/* Telegram disclosure — Sie form (new security surface, first-touch) */}
-            <p className="text-center text-xs text-[var(--mp-fg-subtle)] leading-snug">
+            <p className="text-center text-xs text-[var(--mp-fg-muted)] leading-snug">
               {lang === "de"
                 ? "Telegram-Anmeldung: schnell, ohne Passwort. Wir verwenden Ihren Telegram-Namen und Ihr Profilbild."
                 : "Telegram sign-in: fast, no password. We use your Telegram name and profile photo."}

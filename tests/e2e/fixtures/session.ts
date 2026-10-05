@@ -69,9 +69,15 @@ export async function seedSession(
   await page.addInitScript((sess) => {
     try {
       localStorage.setItem("medpruef_session", JSON.stringify(sess));
+      // Current signed-session clients check this key before treating the
+      // cached session as authenticated. API calls remain mocked in UI tests.
+      localStorage.setItem("medpruef_session_token", "local-test-session-token");
       // Mark onboarding as complete so we don't bounce through the
       // first-run flow.
-      localStorage.setItem("medpruef_onboarding", "1");
+      localStorage.setItem(
+        "medpruef_onboarding",
+        JSON.stringify({ completedAt: "2026-01-01T00:00:00.000Z", examSource: "kenntnispruefung" }),
+      );
     } catch {
       /* localStorage may be unavailable */
     }

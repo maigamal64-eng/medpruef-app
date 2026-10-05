@@ -259,7 +259,10 @@ export default function SearchModal({
       maxWidth="640px"
       hideCloseButton
     >
-      <div className="-mx-5 -mb-5 flex flex-col max-h-[min(72vh,640px)]">
+      <div
+        className="-mx-5 -mb-5 flex min-h-0 flex-col overflow-hidden"
+        style={{ maxHeight: "min(calc(85vh - 64px), 640px)" }}
+      >
         {/* Input row */}
         <div className="flex items-center gap-3 px-4 sm:px-5 py-3.5 border-b border-[var(--mp-border)]">
           <Search
@@ -301,7 +304,7 @@ export default function SearchModal({
         {/* Results body */}
         <div
           ref={listRef}
-          className="flex-1 overflow-y-auto"
+          className="min-h-0 flex-1 overflow-y-auto overscroll-contain"
           role="listbox"
           aria-label={lang === "de" ? "Suchergebnisse" : "Search results"}
         >

@@ -89,16 +89,18 @@ export async function GET(req: NextRequest) {
     const db = getServiceClient();
     const url = new URL(req.url);
     const status = url.searchParams.get("status");
+    const type = url.searchParams.get("type");
     const limit = Math.min(parseInt(url.searchParams.get("limit") || "50"), 200);
     const offset = parseInt(url.searchParams.get("offset") || "0");
 
     let query = db
       .from("question_suggestions")
-      .select("*", { count: "exact" })
+      .select("id, question_id, user_id, type, reason, details, suggested_changes, status, created_at", { count: "exact" })
       .order("created_at", { ascending: false })
       .range(offset, offset + limit - 1);
 
     if (status) query = query.eq("status", status);
+    if (type === "flag" || type === "edit") query = query.eq("type", type);
 
     const { data: suggestions, count, error } = await query;
     if (error) {
@@ -134,13 +136,16 @@ export async function GET(req: NextRequest) {
       userMap[u.id] = [u.first_name, u.last_name].filter(Boolean).join(" ") || u.telegram_username || u.email || "Anonymous";
     }
 
-    const enriched = (suggestions || []).map((s: Record<string, unknown>) => ({
-      ...s,
-      question_text: questionMap[s.question_id as number]?.question?.slice(0, 200) || "",
-      question_topic: questionMap[s.question_id as number]?.topic || "",
-      question_choices: questionMap[s.question_id as number]?.choices || null,
-      user_name: s.user_id ? (userMap[s.user_id as string] || "Unknown") : "Anonymous",
-    }));
+    const enriched = (suggestions || []).map((s: Record<string, unknown>) => {
+      const { user_id, ...safeSuggestion } = s;
+      return {
+        ...safeSuggestion,
+        question_text: questionMap[s.question_id as number]?.question?.slice(0, 200) || "",
+        question_topic: questionMap[s.question_id as number]?.topic || "",
+        question_choices: questionMap[s.question_id as number]?.choices || null,
+        user_name: user_id ? (userMap[user_id as string] || "Unknown") : "Anonymous",
+      };
+    });
 
     // Counts by status
     const [pendingRes, approvedRes, rejectedRes] = await Promise.all([

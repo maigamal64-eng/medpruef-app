@@ -305,14 +305,27 @@ export function MoneyPanel({ money }: { money: UserMoney }) {
 export function FeedbackFlagsPanel({
   feedback,
   flags,
+  hasRestrictedSections = false,
 }: {
   feedback: FeedbackDetail[];
   flags: FlagDetail[];
+  hasRestrictedSections?: boolean;
 }) {
   if (!feedback.length && !flags.length)
-    return <EmptyPanel>No feedback or question flags from this user.</EmptyPanel>;
+    return (
+      <EmptyPanel>
+        {hasRestrictedSections
+          ? "No records in the feedback and reports your role can view. Other report sections are hidden by permission."
+          : "No feedback or question flags from this user."}
+      </EmptyPanel>
+    );
   return (
     <div className="space-y-4">
+      {hasRestrictedSections && (
+        <div role="status" className="rounded-lg border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-sunken)] px-3 py-2 text-xs text-[var(--mp-fg-muted)]">
+          Some feedback or report entries are hidden because your role does not include those permissions.
+        </div>
+      )}
       {feedback.length > 0 && (
         <div>
           <h4 className="text-[10px] font-semibold uppercase tracking-wider text-[var(--mp-fg-muted)] mb-2">

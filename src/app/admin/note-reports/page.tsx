@@ -11,7 +11,10 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { authFetch as fetch } from "@/lib/authFetch";
-import { ShieldAlert, Trash2, Check, Loader2 } from "lucide-react";
+import { useAdminPermissions } from "@/lib/admin/useAdminPermissions";
+import { Trash2, Check, Loader2 } from "lucide-react";
+import { Alert, BrandedLoader } from "@/components/ui";
+import { AdminPageShell } from "../_components/AdminPageShell";
 
 interface ReportNote {
   id: string;
@@ -49,62 +52,69 @@ function flatten(content: ReportNote["content"]): string {
 }
 
 export default function NoteReportsPage() {
+  const { can, loading: accessLoading } = useAdminPermissions();
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
   const [acting, setActing] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const res = await fetch("/api/admin/note-reports");
       const d = await res.json().catch(() => ({}));
-      setReports(Array.isArray(d?.reports) ? d.reports : []);
-    } catch {
-      setReports([]);
+      if (!res.ok) throw new Error(d?.error || `Could not load note reports (HTTP ${res.status})`);
+      if (!Array.isArray(d?.reports)) throw new Error("Note report response was not a list");
+      setReports(d.reports);
+    } catch (e) {
+      setError((e as Error).message || "Could not load note reports");
     } finally {
       setLoading(false);
     }
   }, []);
   useEffect(() => {
-    load();
-  }, [load]);
+    if (!accessLoading && can("content.read")) void load();
+  }, [accessLoading, can, load]);
 
   const act = async (reportId: string, action: "takedown" | "dismiss") => {
+    if (!can("content.moderate")) return;
     setActing(reportId);
     try {
-      await fetch("/api/admin/note-reports", {
+      const res = await fetch("/api/admin/note-reports", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ report_id: reportId, action }),
       });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(payload?.error || `Action failed (HTTP ${res.status})`);
       await load();
-    } catch {
-      /* ignore */
+    } catch (e) {
+      setError((e as Error).message || "Action failed");
     } finally {
       setActing(null);
     }
   };
 
+  if (accessLoading) return <div className="p-6"><BrandedLoader size={40} label="Checking access…" /></div>;
+  if (!can("content.read")) return <div className="p-6"><Alert variant="error" title="Access not available">Your admin role does not include permission to read note reports.</Alert></div>;
+
   return (
-    <div className="p-6 max-w-3xl mx-auto">
-      <h1 className="mp-h1 flex items-center gap-2 mb-1">
-        <ShieldAlert className="w-6 h-6 text-[var(--mp-status-warning)]" />
-        Öffentliche Notizen: Meldungen
-      </h1>
+    <AdminPageShell title="Community note reports" description="Review learner reports about public study notes. Takedown hides a note from Explore; dismissal closes only the report." freshness={loading ? "cached" : error ? "disconnected" : "live"} onRefresh={() => void load()}>
+      {error && <Alert variant="error" title="Could not complete the request">{error}<button type="button" className="ml-3 underline" onClick={() => void load()}>Retry</button></Alert>}
       <p className="text-sm text-[var(--mp-fg-muted)] mb-5">
-        Offene Meldungen zu öffentlichen Lernkarten. „Entfernen“ deaktiviert die
-        Notiz sofort und nimmt sie aus Explore.
+        Offene Meldungen zu öffentlichen Lernkarten. „Entfernen“ deaktiviert die Notiz sofort und nimmt sie aus Explore.
       </p>
 
       {loading ? (
         <div className="flex items-center gap-2 text-[var(--mp-fg-muted)] py-10">
           <Loader2 className="w-5 h-5 animate-spin" /> Lädt…
         </div>
-      ) : reports.length === 0 ? (
+      ) : !error && reports.length === 0 ? (
         <div className="rounded-xl border border-[var(--mp-border-soft)] bg-[var(--mp-surface)] p-6 text-center text-[var(--mp-fg-muted)]">
           Keine offenen Meldungen.
         </div>
-      ) : (
+      ) : !error ? (
         <div className="space-y-3">
           {reports.map((r) => (
             <div
@@ -135,7 +145,7 @@ export default function NoteReportsPage() {
                   Bereits deaktiviert.
                 </p>
               )}
-              <div className="flex gap-2 mt-3">
+              {can("content.moderate") && <div className="flex flex-wrap gap-2 mt-3">
                 <button
                   type="button"
                   onClick={() => act(r.id, "takedown")}
@@ -158,11 +168,11 @@ export default function NoteReportsPage() {
                   <Check className="w-4 h-4" />
                   Verwerfen
                 </button>
-              </div>
+              </div>}
             </div>
           ))}
         </div>
-      )}
-    </div>
+      ) : null}
+    </AdminPageShell>
   );
 }

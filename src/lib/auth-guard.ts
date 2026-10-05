@@ -3,6 +3,10 @@ import { getServiceClient } from "@/lib/supabase";
 import { SESSION_HEADER, verifySession } from "@/lib/session";
 import { isPaidTier } from "@/lib/free-tier";
 import { supabaseDegradedModeEnabled } from "@/lib/supabase-resilience";
+import {
+  canAuthorizeAdminRequest,
+  loadAdminPermissionSnapshot,
+} from "@/lib/admin/permissions";
 
 /**
  * Server-side authorization guards for API routes.
@@ -221,6 +225,16 @@ export async function requireAdmin(req: NextRequest): Promise<GuardResult> {
   const result = await requireUser(req, { allowCached: false });
   if ("error" in result) return result;
   if (result.role !== "admin") return forbidden("Admin access required");
+
+  try {
+    const snapshot = await loadAdminPermissionSnapshot(result.userId);
+    if (!canAuthorizeAdminRequest(result.role, snapshot, req.nextUrl.pathname, req.method)) {
+      return forbidden("You do not have permission to perform this action");
+    }
+  } catch (error) {
+    console.error("[auth-guard] admin permission lookup failed", error);
+    return temporarilyUnavailable();
+  }
   return result;
 }
 

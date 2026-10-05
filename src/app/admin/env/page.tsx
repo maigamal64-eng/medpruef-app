@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { authFetch as fetch } from "@/lib/authFetch";
+import { useAdminPermissions } from "@/lib/admin/useAdminPermissions";
 import { Alert, BrandedLoader } from "@/components/ui";
 import { AdminPageShell } from "../_components/AdminPageShell";
 
@@ -13,6 +14,7 @@ interface EnvStatus {
 }
 
 export default function AdminEnvPage() {
+  const { can, loading: accessLoading } = useAdminPermissions();
   const [items, setItems] = useState<EnvStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -32,14 +34,17 @@ export default function AdminEnvPage() {
   }, []);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    if (!accessLoading && can("system.read")) void load();
+  }, [accessLoading, can, load]);
+
+  if (accessLoading) return <div className="p-6"><BrandedLoader size={40} label="Checking access…" /></div>;
+  if (!can("system.read")) return <div className="p-6"><Alert variant="error" title="Access not available">Your admin role does not include permission to view system configuration status.</Alert></div>;
 
   return (
     <AdminPageShell
       title="Environment"
       description="Presence-only check: values are never shipped to the client."
-      freshness={loading ? "cached" : "cached"}
+      freshness={loading ? "cached" : error ? "disconnected" : "cached"}
       onRefresh={load}
     >
       {error && (
@@ -58,7 +63,7 @@ export default function AdminEnvPage() {
               <tr>
                 <th className="text-left px-3 py-2">Variable</th>
                 <th className="text-left px-3 py-2">Status</th>
-                <th className="text-left px-3 py-2">Hint</th>
+                <th className="text-left px-3 py-2">Value handling</th>
               </tr>
             </thead>
             <tbody>
@@ -79,8 +84,8 @@ export default function AdminEnvPage() {
                       {v.present ? "set" : "MISSING"}
                     </span>
                   </td>
-                  <td className="px-3 py-2 font-mono text-[10px] text-[var(--mp-fg-muted)]">
-                    {v.masked || ""}
+                  <td className="px-3 py-2 text-[10px] text-[var(--mp-fg-muted)]">
+                    Values are never displayed
                   </td>
                 </tr>
               ))}

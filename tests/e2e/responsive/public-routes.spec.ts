@@ -16,7 +16,7 @@
  * in a11y tests is enough). Expansion is a follow-up task.
  */
 
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect } from "@playwright/test";
 import {
   seedPreferences,
   expectNoHorizontalScroll,
@@ -59,10 +59,14 @@ const REPRESENTATIVE_PROJECTS = new Set([
   "Desktop",
 ]);
 
-test.beforeEach(async ({ request, baseURL }, testInfo) => {
+test.beforeEach(async ({ request, baseURL, page }, testInfo) => {
   if (!REPRESENTATIVE_PROJECTS.has(testInfo.project.name)) {
     test.skip(true, `Skipped on ${testInfo.project.name} — shipped slice covers iPhone SE + iPad portrait + Desktop.`);
   }
+  // These visual/a11y checks should never create analytics records or call
+  // third-party measurement services, even when BASE_URL points at a live host.
+  await page.route(/\/(api\/(track|funnel-events|beacon\/landing)|analytics)(\?|$)/, (route) => route.abort());
+  await page.route(/(google-analytics\.com|clarity\.ms|whop\.com\/pixel)/, (route) => route.abort());
   // Dev-server health gate: skip rather than cascade-fail when the
   // local dev server's webpack cache is corrupted.
   const health = await request.get(baseURL || "http://localhost:3000/").catch(() => null);

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { captureServerError } from "@/lib/sentry-capture";
 import { analyticsWritesDisabled } from "@/lib/supabase-resilience";
+import { normalizeEventTimestamp, normalizeTrackedPath } from "@/lib/telemetry-normalize";
 
 export const dynamic = "force-dynamic";
 
@@ -53,29 +54,27 @@ export async function POST(req: NextRequest) {
 
     // Create a new session record
     if (createSession) {
+      const safeDeviceInfo = {
+        userAgent: typeof deviceInfo?.userAgent === "string" ? deviceInfo.userAgent.slice(0, 300) : null,
+        language: typeof deviceInfo?.language === "string" ? deviceInfo.language.slice(0, 24) : null,
+        platform: typeof deviceInfo?.platform === "string" ? deviceInfo.platform.slice(0, 100) : null,
+        screenWidth: Number.isFinite(deviceInfo?.screenWidth) ? deviceInfo?.screenWidth : null,
+        screenHeight: Number.isFinite(deviceInfo?.screenHeight) ? deviceInfo?.screenHeight : null,
+        viewportWidth: Number.isFinite(deviceInfo?.viewportWidth) ? deviceInfo?.viewportWidth : null,
+        viewportHeight: Number.isFinite(deviceInfo?.viewportHeight) ? deviceInfo?.viewportHeight : null,
+        devicePixelRatio: Number.isFinite(deviceInfo?.devicePixelRatio) ? deviceInfo?.devicePixelRatio : null,
+        timezone: typeof deviceInfo?.timezone === "string" ? deviceInfo.timezone.slice(0, 80) : null,
+      };
       await db.from("user_sessions").upsert(
         {
           id: sessionId,
           user_id: userId,
-          device_info: deviceInfo || {},
+          device_info: safeDeviceInfo,
           started_at: new Date().toISOString(),
         },
         { onConflict: "id" }
       );
 
-      // Log session start in activity log
-      const isUuid = /^[0-9a-f]{8}-/.test(userId);
-      if (isUuid) {
-        await db.from("user_activity_log").insert({
-          user_id: userId,
-          session_id: sessionId,
-          event_type: "session_start",
-          action: "create_session",
-          metadata: { device_info: deviceInfo || {} },
-          ip_address: ip,
-          user_agent: ua,
-        }).then(() => {});
-      }
     }
 
     // Mark session as ended
@@ -116,7 +115,16 @@ export async function POST(req: NextRequest) {
     // a row that will never persist.
     if (events && events.length > 0) {
       // Original user_events table
-      const rows = events.map((e) => ({
+      const normalizedEvents = events.map((e) => {
+        const data = { ...(e.data || {}) };
+        if (typeof data.page === "string") {
+          const safePage = normalizeTrackedPath(data.page);
+          if (safePage) data.page = safePage;
+          else delete data.page;
+        }
+        return { ...e, data, timestamp: normalizeEventTimestamp(e.timestamp) };
+      });
+      const rows = normalizedEvents.map((e) => ({
         user_id: userId,
         session_id: sessionId,
         event_type: e.type,
@@ -153,7 +161,7 @@ export async function POST(req: NextRequest) {
       // Enhanced activity log (only for real UUID users, not guest_xxx)
       const isUuid = /^[0-9a-f]{8}-/.test(userId);
       if (isUuid) {
-        const activityRows = events.map((e) => ({
+      const activityRows = normalizedEvents.map((e) => ({
           user_id: userId,
           session_id: sessionId,
           event_type: e.type,
@@ -199,7 +207,7 @@ export async function POST(req: NextRequest) {
       }
 
       // Track pages_visited on page_view events
-      const pageViews = events
+      const pageViews = normalizedEvents
         .filter((e) => e.type === "page_view" && e.data?.page)
         .map((e) => e.data.page as string);
 

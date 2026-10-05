@@ -39,6 +39,7 @@ import {
   X,
 } from "lucide-react";
 import { authFetch as fetch } from "@/lib/authFetch";
+import { useAdminPermissions } from "@/lib/admin/useAdminPermissions";
 import {
   Alert,
   BrandedLoader,
@@ -134,6 +135,7 @@ const CANNED_TEXT: Record<string, string> = {
 
 export default function AdminPuypPage() {
   const toast = useToast();
+  const { can, loading: accessLoading } = useAdminPermissions();
   const [items, setItems] = useState<PuypAttempt[]>([]);
   const [status, setStatus] = useState<StatusFilter>("pending");
   const [loading, setLoading] = useState(true);
@@ -171,8 +173,8 @@ export default function AdminPuypPage() {
   );
 
   useEffect(() => {
-    void fetchQueue(status);
-  }, [status, fetchQueue]);
+    if (!accessLoading && can("revenue.read")) void fetchQueue(status);
+  }, [accessLoading, can, status, fetchQueue]);
 
   // Sort queue: pending → newest first (submitted_date DESC).
   // Non-pending filters use verified_at DESC.
@@ -220,7 +222,7 @@ export default function AdminPuypPage() {
   }, [cannedKey]);
 
   async function submitApprove() {
-    if (!approveTarget) return;
+    if (!approveTarget || !can("revenue.manage")) return;
     setProcessing(true);
     try {
       const res = await fetch("/api/puyp/admin", {
@@ -250,7 +252,7 @@ export default function AdminPuypPage() {
   }
 
   async function submitReject() {
-    if (!rejectTarget || !rejectReason.trim()) return;
+    if (!rejectTarget || !rejectReason.trim() || !can("revenue.manage")) return;
     setProcessing(true);
     try {
       const res = await fetch("/api/puyp/admin", {
@@ -278,6 +280,9 @@ export default function AdminPuypPage() {
       setProcessing(false);
     }
   }
+
+  if (accessLoading) return <div className="p-6"><BrandedLoader size={40} label="Checking access…" /></div>;
+  if (!can("revenue.read")) return <div className="p-6"><Alert variant="error" title="Access not available">Your admin role does not include permission to view payment verification requests.</Alert></div>;
 
   return (
     <AdminPageShell
@@ -343,19 +348,19 @@ export default function AdminPuypPage() {
             <AttemptCard
               key={item.id}
               item={item}
-              onApprove={() => setApproveTarget(item)}
-              onReject={() => {
+              onApprove={can("revenue.manage") ? () => setApproveTarget(item) : undefined}
+              onReject={can("revenue.manage") ? () => {
                 setRejectTarget(item);
                 setCannedKey("");
                 setRejectReason("");
-              }}
+              } : undefined}
             />
           ))}
         </div>
       )}
 
       {/* ── Approve dialog ── */}
-      <Dialog
+      {can("revenue.manage") && <Dialog
         open={!!approveTarget}
         onOpenChange={(o) => !o && setApproveTarget(null)}
         title="Approve PUYP extension"
@@ -413,10 +418,10 @@ export default function AdminPuypPage() {
             />
           </div>
         )}
-      </Dialog>
+      </Dialog>}
 
       {/* ── Reject dialog ── */}
-      <Dialog
+      {can("revenue.manage") && <Dialog
         open={!!rejectTarget}
         onOpenChange={(o) => {
           if (!o) {
@@ -472,7 +477,7 @@ export default function AdminPuypPage() {
             the cron wires it up.
           </Alert>
         </div>
-      </Dialog>
+      </Dialog>}
     </AdminPageShell>
   );
 }
@@ -484,8 +489,8 @@ function AttemptCard({
   onReject,
 }: {
   item: PuypAttempt;
-  onApprove: () => void;
-  onReject: () => void;
+  onApprove?: () => void;
+  onReject?: () => void;
 }) {
   const name =
     [item.users?.first_name, item.users?.last_name]
@@ -588,22 +593,22 @@ function AttemptCard({
               No proof file
             </span>
           )}
-          {pending && (
+          {pending && (onApprove || onReject) && (
             <>
-              <button
+              {onApprove && <button
                 type="button"
                 className="mp-btn mp-btn--primary mp-btn--sm justify-center"
                 onClick={onApprove}
               >
                 <Check size={14} /> Approve
-              </button>
-              <button
+              </button>}
+              {onReject && <button
                 type="button"
                 className="mp-btn mp-btn--destructive mp-btn--sm justify-center"
                 onClick={onReject}
               >
                 <X size={14} /> Reject
-              </button>
+              </button>}
             </>
           )}
           {!pending && item.verified_at && (

@@ -49,7 +49,7 @@ export function QuizTopBar({
   /** 1-based index of the question currently shown. */
   current: number;
   /** Total questions in this run (pool size or target). */
-  total: number;
+  total: number | null;
   /** 0–100 progress fill. */
   progressPct: number;
   /** Pre-formatted "MM:SS" (countdown) or "MM:SS" elapsed. Omit to hide. */
@@ -78,8 +78,14 @@ export function QuizTopBar({
         <div className="flex items-center justify-between mb-1.5">
           <span className="font-mono text-xs font-bold text-[var(--mp-fg)] tabular-nums">
             {/* Current index is the teal spark — "you are here, live". */}
-            <span className="text-[var(--mp-accent-teal)]">{current}</span>
-            <span className="text-[var(--mp-fg-subtle)]"> / {total}</span>
+            {total === null ? (
+              <span className="text-[var(--mp-accent-teal)]">{lang === "de" ? `Frage ${current}` : `Q${current}`}</span>
+            ) : (
+              <>
+                <span className="text-[var(--mp-accent-teal)]">{current}</span>
+                <span className="text-[var(--mp-fg-subtle)]"> / {total}</span>
+              </>
+            )}
           </span>
           {timeLabel && (
             <span

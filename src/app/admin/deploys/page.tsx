@@ -17,6 +17,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { ExternalLink, Zap } from "lucide-react";
 import { authFetch as fetch } from "@/lib/authFetch";
+import { AdminPermissionGate } from "../_components/AdminPermissionGate";
 import { Alert, BrandedLoader, EmptyState } from "@/components/ui";
 import { AdminPageShell } from "../_components/AdminPageShell";
 import { StatusDot, type StatusTone } from "../_components/primitives";
@@ -26,6 +27,10 @@ const VERCEL_PROJECT_URL =
   "https://vercel.com/team/medpruef/deployments";
 
 export default function AdminDeploysPage() {
+  return <AdminPermissionGate permission="system.read"><AdminDeploysPageContent /></AdminPermissionGate>;
+}
+
+function AdminDeploysPageContent() {
   const [result, setResult] = useState<DeploysResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

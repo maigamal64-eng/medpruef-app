@@ -23,7 +23,9 @@
  *  - Naming mirrors the existing `medpruef_quiz_autosave` precedent.
  */
 
-const EXAM_SESSION_KEY = "medpruef_exam_autosave";
+/** Historical ownerless key. Never read this from a normal account load. */
+const LEGACY_EXAM_SESSION_KEY = "medpruef_exam_autosave";
+const EXAM_SESSION_KEY_PREFIX = "medpruef_exam_autosave:v1:";
 const EXAM_SESSION_VERSION = 1 as const;
 
 // Mirror of the exam page's exam duration so a restored timer can be bounded
@@ -59,6 +61,8 @@ export interface SavedExamSession {
   selectedPart: string;
   /** The exam source (kenntnispruefung | kmp_innsbruck | pharma). */
   examSource: string;
+  /** Stable idempotency key for the completed-history write. */
+  attemptId?: string;
   /** When this blob was last written, epoch ms (staleness diagnostics). */
   savedAt: number;
 }
@@ -67,22 +71,43 @@ function isBrowser(): boolean {
   return typeof window !== "undefined";
 }
 
+function examSessionKey(accountId: string): string | null {
+  const normalized = accountId.trim();
+  return normalized ? `${EXAM_SESSION_KEY_PREFIX}${encodeURIComponent(normalized)}` : null;
+}
+
+function parseExamSession(raw: string | null): SavedExamSession | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as SavedExamSession;
+    if (!parsed || parsed.v !== EXAM_SESSION_VERSION) return null;
+    if (!Array.isArray(parsed.questions) || parsed.questions.length === 0) return null;
+    if (typeof parsed.startedAt !== "number" || !Number.isFinite(parsed.startedAt)) return null;
+    if (!parsed.answers || typeof parsed.answers !== "object" || Array.isArray(parsed.answers)) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Persist the in-progress exam. Best-effort: a serialisation/quota failure
  * never throws into the exam UI (the worst case is losing autosave, not the
  * live in-memory exam).
  */
 export function saveExamSession(
+  accountId: string,
   data: Omit<SavedExamSession, "v" | "savedAt">,
 ): void {
-  if (!isBrowser()) return;
+  const key = examSessionKey(accountId);
+  if (!isBrowser() || !key) return;
   try {
     const blob: SavedExamSession = {
       ...data,
       v: EXAM_SESSION_VERSION,
       savedAt: Date.now(),
     };
-    localStorage.setItem(EXAM_SESSION_KEY, JSON.stringify(blob));
+    localStorage.setItem(key, JSON.stringify(blob));
   } catch {
     /* swallow — quota or serialisation failure must not break the exam */
   }
@@ -92,26 +117,66 @@ export function saveExamSession(
  * Read the saved exam, or null if none / incompatible / unparseable.
  * Validates the shape just enough to trust `questions`/`answers` downstream.
  */
-export function loadExamSession(): SavedExamSession | null {
-  if (!isBrowser()) return null;
+export function loadExamSession(accountId: string): SavedExamSession | null {
+  const key = examSessionKey(accountId);
+  if (!isBrowser() || !key) return null;
   try {
-    const raw = localStorage.getItem(EXAM_SESSION_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as SavedExamSession;
-    if (!parsed || parsed.v !== EXAM_SESSION_VERSION) return null;
-    if (!Array.isArray(parsed.questions) || parsed.questions.length === 0) return null;
-    if (typeof parsed.startedAt !== "number") return null;
-    return parsed;
+    return parseExamSession(localStorage.getItem(key));
   } catch {
     return null;
   }
 }
 
-/** Remove the saved exam (called on every terminal path: submit + timer-zero). */
-export function clearExamSession(): void {
+/**
+ * Inspect the pre-account-scoped autosave for an explicit ownership prompt.
+ * This does not copy or delete the data. Callers must not resume it directly.
+ */
+export function loadLegacyExamSession(): SavedExamSession | null {
+  if (!isBrowser()) return null;
+  try {
+    return parseExamSession(localStorage.getItem(LEGACY_EXAM_SESSION_KEY));
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Claim the ownerless legacy exam only after the signed-in learner explicitly
+ * confirms ownership. The legacy copy is removed only after the scoped copy
+ * has been persisted successfully.
+ */
+export function claimLegacyExamSession(accountId: string): SavedExamSession | null {
+  const key = examSessionKey(accountId);
+  if (!isBrowser() || !key) return null;
+  try {
+    // Never replace an account's existing exam with the ownerless legacy blob.
+    if (parseExamSession(localStorage.getItem(key))) return null;
+    const legacy = parseExamSession(localStorage.getItem(LEGACY_EXAM_SESSION_KEY));
+    if (!legacy) return null;
+    localStorage.setItem(key, JSON.stringify(legacy));
+    localStorage.removeItem(LEGACY_EXAM_SESSION_KEY);
+    return legacy;
+  } catch {
+    return null;
+  }
+}
+
+/** Explicitly discard the ownerless legacy exam after the learner declines it. */
+export function discardLegacyExamSession(): void {
   if (!isBrowser()) return;
   try {
-    localStorage.removeItem(EXAM_SESSION_KEY);
+    localStorage.removeItem(LEGACY_EXAM_SESSION_KEY);
+  } catch {
+    /* swallow */
+  }
+}
+
+/** Remove the saved exam (called on every terminal path: submit + timer-zero). */
+export function clearExamSession(accountId: string): void {
+  const key = examSessionKey(accountId);
+  if (!isBrowser() || !key) return;
+  try {
+    localStorage.removeItem(key);
   } catch {
     /* swallow */
   }
@@ -122,8 +187,21 @@ export function clearExamSession(): void {
  * time (PWAInstall mounts before any exam starts, so a mount snapshot would be
  * stale). Powers B-02: PWAInstall defers its auto-reload while this is true.
  */
-export function isExamActive(): boolean {
-  return loadExamSession() !== null;
+export function isExamActive(accountId?: string): boolean {
+  if (accountId !== undefined) return loadExamSession(accountId) !== null;
+  // PWAInstall may only need to defer a reload, and can do so without knowing
+  // the signed-in identity. This reports presence only; it never returns or
+  // exposes session contents without an explicit accountId.
+  if (!isBrowser()) return false;
+  try {
+    for (let index = 0; index < localStorage.length; index += 1) {
+      const key = localStorage.key(index);
+      if (key?.startsWith(EXAM_SESSION_KEY_PREFIX) && parseExamSession(localStorage.getItem(key))) return true;
+    }
+  } catch {
+    return false;
+  }
+  return false;
 }
 
 /**

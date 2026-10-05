@@ -63,6 +63,10 @@ const T = {
     en: "Always current: past dates drop off automatically once they pass.",
   },
   registration: { de: "Anmeldeschluss", en: "Registration deadline" },
+  registrationPassed: {
+    de: "Anmeldeschluss vorbei",
+    en: "Registration deadline passed",
+  },
   daysLeft: { de: "Tage", en: "days" },
   dayLeft: { de: "Tag", en: "day" },
   source: { de: "Offizielle Quelle", en: "Official source" },
@@ -118,7 +122,7 @@ function ExamCard({
             className="text-xs font-semibold tabular-nums whitespace-nowrap rounded-full px-2.5 py-1 flex-shrink-0"
             style={{
               background: "var(--mp-cta-blue)",
-              color: "white",
+              color: "var(--mp-fg-on-cta-blue, white)",
             }}
           >
             {`${days} ${dayWord}`}
@@ -144,7 +148,11 @@ function ExamCard({
           <div className="flex items-center gap-2">
             <Clock className="w-4 h-4 flex-shrink-0 opacity-70" aria-hidden="true" />
             <dd>
-              <span className="opacity-80">{T.registration[lang]}: </span>
+              <span>{
+                mounted && sitting.registrationDeadline < new Date().toISOString().slice(0, 10)
+                  ? T.registrationPassed[lang]
+                  : T.registration[lang]
+              }: </span>
               {formatLongDate(sitting.registrationDeadline, lang)}
             </dd>
           </div>
@@ -154,7 +162,6 @@ function ExamCard({
       {sitting.note && (
         <p
           className="text-xs leading-relaxed mb-4 mt-auto text-[var(--mp-fg-muted)]"
-          style={{ opacity: 0.85 }}
         >
           {sitting.note[lang]}
         </p>

@@ -83,6 +83,22 @@ const TREND_META: Record<Trend, { de: string; en: string; Icon: typeof TrendingU
   down: { de: "fallend", en: "falling", Icon: TrendingDown, color: "var(--mp-status-warning)" },
 };
 
+export function isReadinessResponse(value: unknown): value is ReadinessResponse {
+  if (!value || typeof value !== "object") return false;
+  const data = value as Partial<ReadinessResponse>;
+  const factors = data.factors;
+  const validFactor = (n: unknown) => n === null || (typeof n === "number" && Number.isFinite(n) && n >= 0 && n <= 1);
+  return (
+    typeof data.band === "string" && Object.prototype.hasOwnProperty.call(BAND_META, data.band) &&
+    !!factors && typeof factors === "object" &&
+    validFactor(factors.coverage) && validFactor(factors.accuracy) &&
+    validFactor(factors.consistency) && validFactor(factors.pace) &&
+    typeof data.trend === "string" && Object.prototype.hasOwnProperty.call(TREND_META, data.trend) &&
+    typeof data.lowestFactor === "string" && Object.prototype.hasOwnProperty.call(FACTOR_TIP, data.lowestFactor) &&
+    typeof data.hasExamDate === "boolean"
+  );
+}
+
 export default function ReadinessSignal({ lang = "de" }: { lang?: Lang }) {
   const [data, setData] = useState<ReadinessResponse | null>(null);
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
@@ -93,6 +109,7 @@ export default function ReadinessSignal({ lang = "de" }: { lang?: Lang }) {
       .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
       .then((d) => {
         if (!alive) return;
+        if (!isReadinessResponse(d)) throw new Error("Invalid readiness response");
         setData(d);
         setState("ready");
       })

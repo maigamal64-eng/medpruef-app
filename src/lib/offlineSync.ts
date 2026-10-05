@@ -21,8 +21,10 @@
  */
 
 import { authFetch } from "@/lib/authFetch";
+import { getStoredSession } from "@/lib/auth";
 import {
   drainPendingAnswers,
+  pendingAnswersForUser,
   removePendingAnswer,
   type PendingAnswer,
 } from "@/lib/offlineDb";
@@ -33,16 +35,23 @@ let draining = false;
 async function flushQueue(): Promise<void> {
   if (draining) return;
   if (typeof navigator !== "undefined" && navigator.onLine === false) return;
+  const userId = getStoredSession()?.user?.id;
+  // Never drain a local queue into an account that did not create it.
+  if (!userId) return;
   draining = true;
   try {
-    const queue: PendingAnswer[] = await drainPendingAnswers();
+    const queue: PendingAnswer[] = pendingAnswersForUser(await drainPendingAnswers(), userId);
     for (const p of queue) {
       try {
+        // The account can change while this queue is being drained. Check
+        // immediately before each request so later rows never cross sessions.
+        if (getStoredSession()?.user?.id !== userId) break;
         const res = await authFetch("/api/answer", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             questionId: p.questionId,
+            requestId: p.id,
             userAnswer: p.userAnswer,
             isCorrect: p.isCorrect,
             timeSpentMs: p.timeSpentMs,

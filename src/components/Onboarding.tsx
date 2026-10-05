@@ -321,7 +321,10 @@ export default function Onboarding({ lang = "de", onLangChange, onComplete }: On
         </div>
 
         {/* Sticky bottom action: full-width primary + Back affordance */}
-        <div className="shrink-0 space-y-2 px-5 pb-6 pt-3">
+        <div
+          className="shrink-0 space-y-2 px-5 pt-3"
+          style={{ paddingBottom: "max(1.5rem, env(safe-area-inset-bottom))" }}
+        >
           <button
             onClick={handleNext}
             disabled={!canProceed()}

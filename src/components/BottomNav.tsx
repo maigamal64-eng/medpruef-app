@@ -53,16 +53,17 @@ export default function BottomNav({ lang, userId }: BottomNavProps) {
           <Link
             href="/library"
             aria-label={lang === "de" ? "Bibliothek" : "Library"}
+            aria-current={libraryActive ? "page" : undefined}
             className="flex flex-col items-center -mt-5 transition-transform active:scale-95"
           >
-            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg ${
+            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center border transition-colors ${
               libraryActive
                 ? "bg-[var(--mp-viridian)] ring-4 ring-[var(--mp-viridian)]/20"
-                : "bg-[var(--mp-cta-blue)] ring-4 ring-[var(--mp-cta-blue)]/15 hover:bg-[var(--mp-cta-blue-hover)]"
+                : "bg-transparent border-transparent text-[var(--mp-fg-muted)] hover:bg-[var(--mp-surface-sunken)] hover:text-[var(--mp-cta-blue)]"
             }`}>
-              <Layers className="w-6 h-6 text-white" />
+              <Layers className={`w-6 h-6 ${libraryActive ? "text-white" : "text-current"}`} />
             </div>
-            <span className={`text-[10px] mt-1 ${libraryActive ? "font-bold text-[var(--mp-viridian)]" : "font-semibold text-[var(--mp-cta-blue)]"}`}>
+            <span className={`text-[10px] mt-1 ${libraryActive ? "font-bold text-[var(--mp-viridian)]" : "font-medium text-[var(--mp-fg-muted)]"}`}>
               {lang === "de" ? "Bibliothek" : "Library"}
             </span>
           </Link>

@@ -581,7 +581,7 @@ export default function LandingPage() {
     <div
       ref={revealRoot as React.RefObject<HTMLDivElement>}
       style={{ paddingTop: "var(--mp-ribbon-h, 0px)" }}
-      className="lp-root min-h-screen bg-[var(--mp-surface-raised)] text-[var(--mp-fg)]"
+      className="lp-root min-h-screen overflow-x-clip bg-[var(--mp-surface-raised)] text-[var(--mp-fg)]"
     >
       <TrialRibbon lang={lang === "en" ? "en" : "de"} />
       <Nav lang={lang} onLangChange={switchLang} />
@@ -642,7 +642,7 @@ function Nav({ lang, onLangChange }: { lang: Lang; onLangChange: (l: Lang) => vo
             : "bg-transparent"
         }`}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-2">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-1 sm:gap-2">
           <Link
             href="/landing"
             className="flex items-center shrink-0"
@@ -650,13 +650,13 @@ function Nav({ lang, onLangChange }: { lang: Lang; onLangChange: (l: Lang) => vo
           >
             {/* Wordmark swaps dark→light on scroll. Two nodes, one
                 visible at a time, so there's no filter flash. */}
-            <Wordmark variant="dark" height={22} className={scrolled ? "hidden" : "block"} />
-            <Wordmark variant="light" height={22} className={scrolled ? "block" : "hidden"} />
+            <Wordmark variant="dark" height={22} className={`max-[380px]:!h-[18px] ${scrolled ? "hidden" : "block"}`} />
+            <Wordmark variant="light" height={22} className={`max-[380px]:!h-[18px] ${scrolled ? "block" : "hidden"}`} />
           </Link>
 
           {/* Desktop inline links */}
           <div
-            className={`hidden md:flex items-center gap-7 text-sm font-medium ${
+            className={`hidden lg:flex items-center gap-5 xl:gap-7 text-sm font-medium ${
               scrolled ? "text-[var(--mp-fg-muted)]" : "text-white/70"
             }`}
           >
@@ -715,7 +715,7 @@ function Nav({ lang, onLangChange }: { lang: Lang; onLangChange: (l: Lang) => vo
                     aria-label={l === "de" ? "Deutsch" : "English"}
                     className={`px-2.5 py-1 rounded font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-[var(--mp-accent-teal)] ${
                       active
-                        ? "bg-[var(--mp-viridian)] text-white"
+                        ? "bg-[var(--mp-viridian)] text-[var(--mp-fg-on-viridian)]"
                         : scrolled
                           ? "text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg-muted)]"
                           : "text-white/60 hover:text-white"
@@ -730,7 +730,7 @@ function Nav({ lang, onLangChange }: { lang: Lang; onLangChange: (l: Lang) => vo
             {/* Sign in (desktop only) */}
             <Link
               href="/login"
-              className={`hidden md:inline-flex items-center gap-1.5 text-sm font-semibold transition-colors px-3 py-2 ${
+              className={`hidden lg:inline-flex items-center gap-1.5 text-sm font-semibold transition-colors px-3 py-2 ${
                 scrolled
                   ? "text-[var(--mp-fg-muted)] hover:text-[var(--mp-oxford-blue)]"
                   : "text-white/80 hover:text-white"
@@ -742,14 +742,16 @@ function Nav({ lang, onLangChange }: { lang: Lang; onLangChange: (l: Lang) => vo
             {/* Start CTA — always visible */}
             <Link
               href="/login"
-              className={`lp-cta inline-flex items-center gap-1.5 text-sm font-bold px-3 sm:px-4 py-2 rounded-xl transition-all shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--mp-accent-teal)] ${
+              aria-label={COPY.nav.start[lang]}
+              className={`lp-cta inline-flex items-center gap-1.5 text-sm max-[380px]:text-xs font-bold px-3 max-[380px]:px-2 sm:px-4 py-2 rounded-xl transition-all shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--mp-accent-teal)] ${
                 scrolled
                   ? "bg-[var(--mp-oxford-blue)] hover:bg-[var(--mp-cta-blue)] text-white"
                   : "bg-[var(--mp-accent-teal)] hover:brightness-110 text-[var(--mp-oxford-blue-dk)]"
               }`}
             >
-              {COPY.nav.start[lang]}
-              <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
+              <span className="hidden min-[401px]:inline">{COPY.nav.start[lang]}</span>
+              <span className="inline min-[401px]:hidden">{lang === "de" ? "Start" : "Start"}</span>
+              <ArrowRight className="w-3.5 h-3.5 max-[340px]:w-4 max-[340px]:h-4" aria-hidden="true" />
             </Link>
 
             {/* Hamburger — mobile only */}
@@ -759,7 +761,7 @@ function Nav({ lang, onLangChange }: { lang: Lang; onLangChange: (l: Lang) => vo
               aria-label={lang === "de" ? "Menü öffnen" : "Open menu"}
               aria-expanded={menuOpen}
               aria-controls="mobile-landing-nav"
-              className={`md:hidden inline-flex items-center justify-center rounded-lg p-2 transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--mp-accent-teal)] ${
+              className={`lg:hidden inline-flex items-center justify-center rounded-lg p-2 transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--mp-accent-teal)] ${
                 scrolled
                   ? "text-[var(--mp-fg)] hover:bg-[var(--mp-surface-sunken)]"
                   : "text-white hover:bg-white/10"
@@ -774,7 +776,7 @@ function Nav({ lang, onLangChange }: { lang: Lang; onLangChange: (l: Lang) => vo
       {/* Mobile menu sheet */}
       {menuOpen && (
         <div
-          className="fixed inset-0 z-[60] md:hidden"
+          className="fixed inset-0 z-[60] lg:hidden"
           role="dialog"
           aria-modal="true"
           id="mobile-landing-nav"
@@ -1127,7 +1129,7 @@ function ExamRecordCard({ lang }: { lang: Lang }) {
       <p className="text-white/90 mb-1.5" style={{ fontSize: "14px", lineHeight: 1.5 }} dir="ltr">
         Akute Dyspnoe, Tachykardie und einseitiger Pleuraschmerz nach Langstreckenflug. Wahrscheinlichste Diagnose?
       </p>
-      <p className="text-white/40 mb-4" style={{ fontSize: "10.5px" }}>
+      <p className="text-white/70 mb-4" style={{ fontSize: "10.5px" }}>
         {lang === "de"
           ? "Frage bleibt auf Deutsch, wie in der Prüfung."
           : "Question stays in German, as on exam day."}
@@ -1256,7 +1258,7 @@ function StatsStrip({ lang }: { lang: Lang }) {
                 </div>
                 {s.sub && (
                   <div
-                    className="mt-1 text-white/40 leading-snug"
+                    className="mt-1 text-white/70 leading-snug"
                     style={{
                       fontSize: "10.5px",
                       fontFamily: "var(--lp-mono)",
@@ -1508,7 +1510,7 @@ function PricingPreview({ lang, freeHref }: { lang: Lang; freeHref: string }) {
               >
                 {featured && (
                   <span
-                    className="absolute -top-2.5 left-6 lp-examtab px-2 py-0.5 rounded-full text-white"
+                    className="absolute -top-2.5 left-6 lp-examtab px-2 py-0.5 rounded-full text-[var(--mp-fg-on-viridian)]"
                     style={{ background: "var(--mp-viridian)", fontSize: "10px" }}
                   >
                     {COPY.pricing.featuredTag[lang]}

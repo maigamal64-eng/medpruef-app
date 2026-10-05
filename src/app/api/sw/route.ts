@@ -31,14 +31,15 @@ export async function GET() {
   const cacheName = `medpruef-${buildId}`;
 
   const body = `// MedPrüf Service Worker — dynamically versioned (build ${buildId})
-// Network-first for HTML + Next.js chunks to prevent stale JS after deploys.
-// Only brand/icon static assets are cache-first.
+// Cache static assets and build-hashed chunks. User pages and API responses
+// are kept out of Cache Storage because they may contain account data.
 const BUILD_ID = ${JSON.stringify(buildId)};
 const CACHE_NAME = ${JSON.stringify(cacheName)};
-const OFFLINE_URL = "/";
+const OFFLINE_URL = "/offline.html";
 
 const PRECACHE_URLS = [
   "/manifest.json",
+  "/offline.html",
   "/brand/logo-mark.png",
   "/brand/logo-full.png",
   "/brand/wordmark-twotone.png",
@@ -60,7 +61,9 @@ self.addEventListener("install", (event) => {
       )
     )
   );
-  self.skipWaiting();
+  // Do not replace the active worker automatically. PWAInstall exposes the
+  // waiting worker as an explicit update action so an in-progress learner can
+  // finish before the client changes versions.
 });
 
 self.addEventListener("activate", (event) => {
@@ -105,23 +108,15 @@ self.addEventListener("fetch", (event) => {
   // Never cache the SW file itself or its rewrite target
   if (url.pathname === "/sw.js" || url.pathname === "/api/sw") return;
 
-  // Network-first: HTML navigations
+  // Never persist rendered pages. They can include a signed-in user's state.
+  // The standalone offline page is precached and contains no account data.
   if (
     event.request.mode === "navigate" ||
     (event.request.headers.get("accept") || "").includes("text/html")
   ) {
     event.respondWith(
       fetch(event.request)
-        .then((response) => {
-          if (response.ok) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-          }
-          return response;
-        })
-        .catch(() =>
-          caches.match(event.request).then((c) => c || caches.match(OFFLINE_URL))
-        )
+        .catch(async () => (await caches.match(OFFLINE_URL)) || Response.error())
     );
     return;
   }
@@ -142,22 +137,9 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Network-first: API calls
+  // API responses can be account-specific, so the service worker never
+  // stores them. Offline study uses the explicit IndexedDB question store.
   if (url.pathname.startsWith("/api/")) {
-    event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          if (
-            response.ok &&
-            (url.pathname.includes("/questions") || url.pathname.includes("/stats"))
-          ) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-          }
-          return response;
-        })
-        .catch(() => caches.match(event.request))
-    );
     return;
   }
 
@@ -167,7 +149,15 @@ self.addEventListener("fetch", (event) => {
       caches.match(event.request).then((cached) => {
         if (cached) return cached;
         return fetch(event.request).then((response) => {
-          if (response.ok) {
+          const cacheControl = response.headers.get("cache-control") || "";
+          const vary = response.headers.get("vary") || "";
+          if (
+            response.ok &&
+            /(?:^|,)\\s*public\\b/i.test(cacheControl) &&
+            !/private|no-store|no-cache|max-age=0/i.test(cacheControl) &&
+            vary.trim() !== "*" &&
+            !/cookie|authorization|x-session-token/i.test(vary)
+          ) {
             const clone = response.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
           }

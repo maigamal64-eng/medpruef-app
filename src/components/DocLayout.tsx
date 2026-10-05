@@ -243,7 +243,7 @@ export default function DocLayout({
           {/* Content column */}
           <article ref={contentRef} className="max-w-[720px] doc-prose">
             {kicker && (
-              <div className="mp-caption text-[var(--mp-viridian)] mb-2">
+              <div className="mp-caption mb-2" style={{ color: "var(--mp-viridian)" }}>
                 {kicker}
               </div>
             )}

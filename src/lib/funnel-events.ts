@@ -66,7 +66,7 @@ export function trackFunnelEvent(
   const body = JSON.stringify({
     sessionId: sessionId(),
     eventName,
-    path: `${window.location.pathname}${window.location.search}`.slice(0, 500),
+    path: window.location.pathname.slice(0, 300),
     eventData: data,
     attribution: attribution(),
     lang: document.documentElement.lang || navigator.language.slice(0, 24),

@@ -32,6 +32,8 @@ import {
 import TopicIcon from "@/components/TopicIcon";
 import { getTopicConfig } from "@/lib/topics";
 import { type QuizConfig } from "@/components/QuizSetup";
+import { getStoredSession } from "@/lib/auth";
+import { authFetch } from "@/lib/authFetch";
 
 type Lang = "de" | "en";
 
@@ -56,14 +58,23 @@ const COUNT_PRESETS = [10, 20, 30, 50, 100];
 // Extend when new exam cohorts are added to the DB.
 const EXAM_YEARS = ["2025", "2024", "2023", "2022", "2021", "2020"];
 
-function readBookmarkIds(): number[] {
+function bookmarkCacheKey(userId: string) {
+  return `medpruef_favorites:${userId}`;
+}
+
+function isPositiveInteger(value: unknown): value is number {
+  return typeof value === "number" && Number.isSafeInteger(value) && value > 0;
+}
+
+function readBookmarkIds(userId: string | null): number[] {
+  if (!userId) return [];
   if (typeof window === "undefined") return [];
   try {
-    const raw = localStorage.getItem("medpruef_favorites");
+    const raw = localStorage.getItem(bookmarkCacheKey(userId));
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter((x): x is number => typeof x === "number");
+    return parsed.filter(isPositiveInteger);
   } catch {
     return [];
   }
@@ -124,31 +135,90 @@ export default function CreateTestBuilder({ lang, examSource, onStart, onCancel 
   // Topic fetch state
   const [topicCounts, setTopicCounts] = useState<TopicCount[]>([]);
   const [topicsLoading, setTopicsLoading] = useState(true);
+  const [topicsError, setTopicsError] = useState(false);
+  const [topicsRetry, setTopicsRetry] = useState(0);
 
   // Pro gate info for incorrect filter
   const [bookmarkCount, setBookmarkCount] = useState<number>(0);
+  const [bookmarkIds, setBookmarkIds] = useState<number[]>([]);
+  const userId = getStoredSession()?.user?.id || null;
 
   // Fetch topics on mount / exam source change
   useEffect(() => {
+    let cancelled = false;
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 10_000);
     setTopicsLoading(true);
+    setTopicsError(false);
     setTopicCounts([]);
-    fetch("/api/questions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "topics", examSource }),
-    })
-      .then((r) => r.json())
-      .then((data) => {
-        if (Array.isArray(data)) setTopicCounts(data);
-      })
-      .catch(() => {})
-      .finally(() => setTopicsLoading(false));
-  }, [examSource]);
+    void (async () => {
+      try {
+        const response = await fetch("/api/questions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "topics", examSource }),
+          signal: controller.signal,
+        });
+        if (!response.ok) throw new Error("Topic request failed");
+        const data: unknown = await response.json();
+        if (!Array.isArray(data)) throw new Error("Invalid topic response");
+        if (!cancelled) setTopicCounts(data as TopicCount[]);
+      } catch {
+        if (!cancelled) setTopicsError(true);
+      } finally {
+        window.clearTimeout(timeoutId);
+        if (!cancelled) setTopicsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+      controller.abort();
+    };
+  }, [examSource, topicsRetry]);
 
-  // Read bookmarks from localStorage once for count display
+  // Read the account's server-backed bookmark list. The old global key is
+  // deliberately ignored for signed-in users to prevent account crossover.
   useEffect(() => {
-    setBookmarkCount(readBookmarkIds().length);
-  }, []);
+    let cancelled = false;
+    const cacheKey = userId ? bookmarkCacheKey(userId) : null;
+    const applyOfflineFallback = () => {
+      const fallback = readBookmarkIds(userId);
+      if (!cancelled) {
+        setBookmarkIds(fallback);
+        setBookmarkCount(fallback.length);
+      }
+    };
+    if (!userId) {
+      setBookmarkIds([]);
+      setBookmarkCount(0);
+      return () => { cancelled = true; };
+    }
+    void (async () => {
+      try {
+        const response = await authFetch("/api/bookmarks", { cache: "no-store" });
+        if (response.status === 401 || response.status === 403) {
+          if (!cancelled) {
+            setBookmarkIds([]);
+            setBookmarkCount(0);
+          }
+          return;
+        }
+        if (!response.ok) throw new Error("Bookmark fetch failed");
+        const payload = await response.json() as { questionIds?: unknown };
+        if (!Array.isArray(payload.questionIds)) throw new Error("Invalid bookmark response");
+        const ids = payload.questionIds.filter(isPositiveInteger);
+        if (cancelled) return;
+        setBookmarkIds(ids);
+        setBookmarkCount(ids.length);
+        try { localStorage.setItem(cacheKey!, JSON.stringify(ids)); } catch { /* storage may be unavailable */ }
+      } catch {
+        // Offline fallback is explicitly per-account. No legacy global data is read.
+        applyOfflineFallback();
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [userId]);
 
   const toggleTopic = (topic: string) => {
     setSelectedTopics((prev) => {
@@ -173,7 +243,7 @@ export default function CreateTestBuilder({ lang, examSource, onStart, onCancel 
     }
 
     // Tutor mode: pass full config to the quiz runner.
-    const flaggedIds = filter === "flagged" ? readBookmarkIds() : undefined;
+    const flaggedIds = filter === "flagged" ? bookmarkIds : undefined;
     onStart({
       topics: Array.from(selectedTopics),
       tags: [],
@@ -443,6 +513,21 @@ export default function CreateTestBuilder({ lang, examSource, onStart, onCancel 
               <div className="text-xs text-[var(--mp-fg-subtle)] animate-pulse">
                 {de ? "Lade Fachgebiete…" : "Loading topics…"}
               </div>
+            ) : topicsError ? (
+              <div role="alert" className="rounded-xl border border-[var(--mp-warning)]/30 bg-[var(--mp-warning)]/10 p-3">
+                <p className="text-xs text-[var(--mp-fg)]">
+                  {de
+                    ? "Fachgebiete konnten nicht geladen werden. Deine Prüfungsauswahl bleibt erhalten. Bitte versuche es erneut."
+                    : "Topics could not be loaded. Your exam selection is unchanged. Please try again."}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setTopicsRetry((attempt) => attempt + 1)}
+                  className="mt-2 rounded-lg px-3 py-2 text-xs font-semibold text-[var(--mp-viridian)] hover:bg-[var(--mp-viridian)]/10"
+                >
+                  {de ? "Erneut versuchen" : "Try again"}
+                </button>
+              </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {topicCounts.map((t) => {
@@ -550,7 +635,7 @@ export default function CreateTestBuilder({ lang, examSource, onStart, onCancel 
           <button
             type="button"
             onClick={handleStart}
-            disabled={topicsLoading || (quizMode === "tutor" && filter === "flagged" && bookmarkCount === 0)}
+            disabled={topicsLoading || topicsError || (quizMode === "tutor" && filter === "flagged" && bookmarkCount === 0)}
             className="w-full btn-primary py-4 text-base rounded-2xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Play className="w-5 h-5" />
@@ -577,4 +662,3 @@ export default function CreateTestBuilder({ lang, examSource, onStart, onCancel 
     </div>
   );
 }
-

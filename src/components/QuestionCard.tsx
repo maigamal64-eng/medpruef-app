@@ -1,13 +1,14 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { authFetch as fetch } from "@/lib/authFetch";
+import { useState, useEffect, useRef } from "react";
 import { getTopicConfig } from "@/lib/topics";
 import { t } from "@/lib/i18n";
 import { shouldIgnoreGlobalKey } from "@/lib/keyboard-guard";
 import type { MCQOption } from "@/lib/mcq";
 import ImageLightbox from "@/components/ImageLightbox";
 import { trackEvent } from "@/lib/tracker";
+import { getStoredSession } from "@/lib/auth";
+import { BOOKMARK_EVENT, loadBookmarks, readCachedBookmarks, setBookmark } from "@/lib/bookmarks";
 import TopicIcon from "@/components/TopicIcon";
 import { cleanExplanation } from "@/lib/explanation";
 import { Lightbulb, FileText, Bot, Flag, CheckCircle2, Languages } from "lucide-react";
@@ -43,7 +44,7 @@ interface Question {
 interface QuestionCardProps {
   question: Question;
   questionNumber: number;
-  totalQuestions: number;
+  totalQuestions: number | null;
   lang: Lang;
   onAnswer?: (isCorrect: boolean, selected?: number[]) => void;
   imageUrl?: string;
@@ -61,6 +62,8 @@ interface QuestionCardProps {
   initialSelected?: number[];
   /** Controlled-mode: render in answered/result state from the start (used for review). */
   initiallyAnswered?: boolean;
+  /** True when this response is only queued locally and not server-confirmed. */
+  offlineAnswerPending?: boolean;
   /** Controlled-mode: fired alongside onAnswer when the user finalizes a selection — gives the parent the actual indices so external state (e.g. an exam answers dict) can be updated. */
   onCommit?: (selected: number[], isCorrect: boolean) => void;
   /** Hide the "+10 XP · Correct!" feedback strip (used by exam mode where there is no XP per-question). */
@@ -95,33 +98,6 @@ function formatExamDate(d: string, lang: Lang): string {
   return `${monthName} ${year}`;
 }
 
-function getFavoritesKey() {
-  return "medpruef_favorites";
-}
-
-function getFavorites(): number[] {
-  if (typeof window === "undefined") return [];
-  try {
-    return JSON.parse(localStorage.getItem(getFavoritesKey()) || "[]");
-  } catch {
-    return [];
-  }
-}
-
-function toggleFavorite(id: number): boolean {
-  const favs = getFavorites();
-  const idx = favs.indexOf(id);
-  if (idx === -1) {
-    favs.push(id);
-    localStorage.setItem(getFavoritesKey(), JSON.stringify(favs));
-    return true;
-  } else {
-    favs.splice(idx, 1);
-    localStorage.setItem(getFavoritesKey(), JSON.stringify(favs));
-    return false;
-  }
-}
-
 export default function QuestionCard({
   question,
   questionNumber,
@@ -135,11 +111,13 @@ export default function QuestionCard({
   hideActions = false,
   initialSelected,
   initiallyAnswered = false,
+  offlineAnswerPending = false,
   onCommit,
   hideFeedbackStrip = false,
   examMode = false,
   recallFirst = false,
 }: QuestionCardProps) {
+  const userId = getStoredSession()?.user?.id || "";
   const config = getTopicConfig(question.topic);
   const [selectedIdxs, setSelectedIdxs] = useState<Set<number>>(
     () => new Set(initialSelected ?? [])
@@ -150,6 +128,7 @@ export default function QuestionCard({
   // now (FEEDBACK #4c — one synced, multi-note home); QuestionCard no longer
   // holds note state.
   const [isFav, setIsFav] = useState(false);
+  const handleToggleFavRef = useRef<() => void>(() => {});
 
   const [showAnswer, setShowAnswer] = useState(false);
   // UX-4: the AI panel is an inline tab; once the ki tab has been visited it
@@ -170,7 +149,10 @@ export default function QuestionCard({
   // ("quelle"/Source dropped per IA plan — FEEDBACK #4e — until guideline refs exist).
   type PostAnswerTab = "erklaerung" | "ki" | "notizen" | "uebersetzen";
   const [activeTab, setActiveTab] = useState<PostAnswerTab>("erklaerung");
-  const answered = submitted || showAnswer;
+  const isOpenAnswer = !question.options || question.options.length < 2;
+  // Revealing an open-answer prompt completes the card for navigation, but it
+  // is not a correct response and must never award answer XP.
+  const answered = submitted || (showAnswer && isOpenAnswer);
 
   // UX-4: mark the AI panel as visited when the ki tab activates (keeps it
   // mounted afterwards), and let the external QuestionActions rail focus the
@@ -190,7 +172,6 @@ export default function QuestionCard({
     return () => window.removeEventListener("medpruef-open-ai-tab", openAiTab);
   }, [answered, hideExplanation, question.id]);
 
-  const isOpenAnswer = !question.options || question.options.length < 2;
   const options: MCQOption[] = question.options || [];
   const nCorrect = question.n_correct ?? options.filter(o => o.correct).length;
   const isMulti = nCorrect >= 2;
@@ -207,14 +188,41 @@ export default function QuestionCard({
     setSuggestionSubmitted(false);
     setExplanationRating(null);
     setActiveTab("erklaerung");
-    if (typeof window !== "undefined") {
-      setIsFav(getFavorites().includes(question.id));
-    }
     // initialSelected/initiallyAnswered are intentionally read at render time but
     // only re-applied on question change — adding them as deps would wipe user
     // interactions on every parent re-render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [question.id]);
+
+  useEffect(() => {
+    if (!userId) {
+      setIsFav(false);
+      return;
+    }
+    let cancelled = false;
+    const sync = () => setIsFav(readCachedBookmarks(userId).includes(question.id));
+    sync();
+    window.addEventListener(BOOKMARK_EVENT, sync);
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === `medpruef_favorites:${userId}`) sync();
+    };
+    const onOnline = () => {
+      void loadBookmarks(userId).then((ids) => {
+        if (!cancelled && ids) setIsFav(ids.includes(question.id));
+      });
+    };
+    window.addEventListener("storage", onStorage);
+    window.addEventListener("online", onOnline);
+    void loadBookmarks(userId).then((ids) => {
+      if (!cancelled && ids) setIsFav(ids.includes(question.id));
+    });
+    return () => {
+      cancelled = true;
+      window.removeEventListener(BOOKMARK_EVENT, sync);
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("online", onOnline);
+    };
+  }, [question.id, userId]);
 
   // Keyboard shortcuts for answer selection
   useEffect(() => {
@@ -270,13 +278,13 @@ export default function QuestionCard({
       // F to toggle bookmark
       if (key === 'f' && !e.metaKey && !e.ctrlKey) {
         e.preventDefault();
-        handleToggleFav();
+        handleToggleFavRef.current();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [answered, options, isMulti, onAnswer, onCommit]);
+  }, [answered, examMode, options, isMulti, onAnswer, onCommit]);
 
   const handleSelect = (idx: number) => {
     if (answered) return;
@@ -324,9 +332,23 @@ export default function QuestionCard({
   };
 
   const handleToggleFav = () => {
-    setIsFav(toggleFavorite(question.id));
+    const isPro = userRole === "admin" || userTier === "pro" || userTier === "admin";
+    if (!isPro) {
+      window.location.href = "/pricing?gate=bookmarks";
+      return;
+    }
+    if (!userId) {
+      window.location.href = "/login";
+      return;
+    }
+    const nextState = !isFav;
+    setIsFav(nextState);
     trackEvent("bookmark", { questionId: question.id, topic: question.topic });
+    void setBookmark(userId, question.id, nextState).then((ids) => {
+      setIsFav(ids.includes(question.id));
+    });
   };
+  handleToggleFavRef.current = handleToggleFav;
 
   // Map the parent-owned selection/grading state to the <Option> primitive's
   // `state` prop. Parent still decides everything; Option is presentational.
@@ -360,7 +382,7 @@ export default function QuestionCard({
 
   return (
     <>
-      <div className="card rounded-[var(--mp-r-card)] p-6 md:p-8 animate-slide-up">
+      <div className="card rounded-[var(--mp-r-card)] p-6 md:p-8 animate-slide-up" data-question-id={question.id}>
         {/* Top row: topic badge + question counter + bookmark */}
         <div className="flex items-center justify-between mb-4">
           <span
@@ -393,7 +415,7 @@ export default function QuestionCard({
               </button>
             )}
             <span className="text-xs text-[var(--mp-fg-subtle)] font-mono">
-              {t("q", lang)}{questionNumber} / {totalQuestions}
+              {t("q", lang)}{questionNumber}{totalQuestions === null ? "" : ` / ${totalQuestions}`}
             </span>
           </div>
         </div>
@@ -462,7 +484,7 @@ export default function QuestionCard({
             <button
               onClick={() => {
                 setShowAnswer(true);
-                onAnswer?.(true);
+                onAnswer?.(false);
               }}
               className="w-full p-4 rounded-[var(--mp-r-button)] border border-[var(--mp-viridian)]/30 bg-[var(--mp-viridian)]/5 hover:bg-[var(--mp-viridian)]/10 transition-all text-center"
             >
@@ -548,10 +570,26 @@ export default function QuestionCard({
               className="mt-3 flex items-center justify-between text-sm animate-fade-in border-l-0"
             >
               <div className="flex items-center gap-3">
-                <span className="font-semibold text-[var(--mp-viridian)]">+10 XP</span>
-                <span className="text-[var(--mp-fg-subtle)]">&middot;</span>
+                {offlineAnswerPending ? (
+                  <span className="font-semibold text-[var(--mp-status-warning)]">
+                    {lang === "de" ? "Auf diesem Gerät vorgemerkt" : "Queued on this device"}
+                  </span>
+                ) : isOpenAnswer && showAnswer && !submitted ? (
+                  <span className="font-semibold text-[var(--mp-fg-muted)]">
+                    {lang === "de" ? "Kein Versuch gewertet" : "Not scored as an attempt"}
+                  </span>
+                ) : (
+                  <>
+                    <span className="font-semibold text-[var(--mp-viridian)]">+10 XP</span>
+                    <span className="text-[var(--mp-fg-subtle)]">&middot;</span>
+                  </>
+                )}
                 <span className="text-[var(--mp-fg-muted)]">
-                  {answeredCorrectly
+                  {offlineAnswerPending
+                    ? (lang === "de" ? "Wird beim Verbinden synchronisiert" : "Will sync when you reconnect")
+                    : isOpenAnswer && showAnswer && !submitted
+                    ? (lang === "de" ? "Antwort angesehen" : "Answer revealed")
+                    : answeredCorrectly
                     ? (lang === "de" ? "Richtig!" : "Correct!")
                     : (lang === "de" ? "Netter Versuch!" : "Nice try!")}
                 </span>

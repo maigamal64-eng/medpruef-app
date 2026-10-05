@@ -30,6 +30,11 @@ export interface HomeStatStripProps {
   lang: Lang;
 }
 
+export function getStreakSuffix(streak: number, lang: Lang): string {
+  if (lang === "de") return streak === 1 ? " Tag" : " Tage";
+  return streak === 1 ? " day" : " days";
+}
+
 function Stat({
   accent,
   icon,
@@ -51,7 +56,7 @@ function Stat({
         </span>
         {/* label pinned to muted — NEVER the icon accent (the fixed cascade bug) */}
         <span
-          className="uppercase font-semibold truncate"
+          className="uppercase whitespace-normal break-words font-semibold leading-tight"
           style={{ fontSize: 10, letterSpacing: "0.04em", color: "var(--mp-fg-muted)" }}
         >
           {label}
@@ -84,7 +89,7 @@ export default function HomeStatStrip({
         icon={<Flame className="w-3.5 h-3.5" />}
         label={lang === "de" ? "Serie" : "Streak"}
         value={streak}
-        suffix={lang === "de" ? " Tage" : streak === 1 ? " day" : " days"}
+        suffix={getStreakSuffix(streak, lang)}
       />
       <Stat
         accent="var(--mp-viridian)"

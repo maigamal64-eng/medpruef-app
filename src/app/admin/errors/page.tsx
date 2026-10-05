@@ -17,6 +17,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { AlertTriangle, ExternalLink } from "lucide-react";
 import { authFetch as fetch } from "@/lib/authFetch";
+import { AdminPermissionGate } from "../_components/AdminPermissionGate";
 import { Alert, BrandedLoader, EmptyState } from "@/components/ui";
 import { AdminPageShell } from "../_components/AdminPageShell";
 import { StatusDot, type StatusTone } from "../_components/primitives";
@@ -28,6 +29,10 @@ const SENTRY_PROJECT_URL =
   "https://medpruf.sentry.io/organizations/medpruf/issues/?project=javascript-nextjs";
 
 export default function AdminErrorsPage() {
+  return <AdminPermissionGate permission="system.read"><AdminErrorsPageContent /></AdminPermissionGate>;
+}
+
+function AdminErrorsPageContent() {
   const [result, setResult] = useState<ErrorsResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

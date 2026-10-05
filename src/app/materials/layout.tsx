@@ -9,7 +9,7 @@ import type { Metadata } from "next";
  */
 const pageTitle = "Anerkennung als Ärztin oder Arzt in Österreich | MedPrüf";
 const pageDesc =
-  "Kostenlose Leitfäden zu beiden Anerkennungswegen: Kenntnisprüfung Wien und Nostrifizierung mit Stichprobentest. Ablauf, Anmeldung, Termine und worauf es in der Vorbereitung ankommt.";
+  "Geprüfte Links zu offiziellen österreichischen Quellen, klinischen Leitlinien und Referenzmaterialien für die Kenntnisprüfung Wien und die Nostrifizierung mit Stichprobentest. Eigene MedPrüf-Leitfäden folgen.";
 
 export const metadata: Metadata = {
   title: pageTitle,

@@ -18,6 +18,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { CheckCircle2, GraduationCap } from "lucide-react";
 import { authFetch as fetch } from "@/lib/authFetch";
 import { useAdminRealtime } from "@/lib/admin/useAdminRealtime";
+import { useAdminPermissions } from "@/lib/admin/useAdminPermissions";
 import {
   Alert,
   BrandedLoader,
@@ -85,6 +86,9 @@ interface ReferralRow {
 }
 
 export default function AdminReferralsPage() {
+  const { can, loading: accessLoading } = useAdminPermissions();
+  const canRead = can("revenue.read");
+  const canManage = can("revenue.manage");
   const toast = useToast();
   const [status, setStatus] = useState<Status>("qualified");
   const [items, setItems] = useState<ReferralRow[]>([]);
@@ -106,6 +110,7 @@ export default function AdminReferralsPage() {
   // Pending exam-reward grants queue (2026-07-11)
   const [examRewardItems, setExamRewardItems] = useState<PendingExamRewardItem[]>([]);
   const [examRewardLoading, setExamRewardLoading] = useState(true);
+  const [examRewardError, setExamRewardError] = useState<string | null>(null);
   const [examRewardTarget, setExamRewardTarget] = useState<PendingExamRewardItem | null>(null);
   const [examRewardConfirming, setExamRewardConfirming] = useState(false);
   const [examRewardProcessing, setExamRewardProcessing] = useState(false);
@@ -116,26 +121,30 @@ export default function AdminReferralsPage() {
   const [cardRequired, setCardRequired] = useState(true);
 
   const loadExamRewards = useCallback(async () => {
+    if (!can("revenue.read")) return;
     setExamRewardLoading(true);
+    setExamRewardError(null);
     try {
       const res = await fetch("/api/admin/referrals/pending-exam-rewards");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setExamRewardItems(data.items || []);
       setCardRequired(data.card_required !== false);
-    } catch {
-      // non-fatal — the payout queue below still renders
+    } catch (e) {
+      setExamRewardError((e as Error).message || "Failed to load pending rewards.");
     } finally {
       setExamRewardLoading(false);
     }
-  }, []);
+  }, [can]);
 
   useEffect(() => {
-    loadExamRewards();
-  }, [loadExamRewards]);
+    if (accessLoading) return;
+    if (canRead) void loadExamRewards();
+    else setExamRewardLoading(false);
+  }, [accessLoading, canRead, loadExamRewards]);
 
   async function submitExamRewardGrant() {
-    if (!examRewardTarget) return;
+    if (!examRewardTarget || !canManage) return;
     if (!examRewardConfirming) {
       setExamRewardConfirming(true);
       return;
@@ -168,6 +177,7 @@ export default function AdminReferralsPage() {
 
   const load = useCallback(
     async (s: Status) => {
+      if (!can("revenue.read")) return;
       setLoading(true);
       setError(null);
       try {
@@ -181,12 +191,14 @@ export default function AdminReferralsPage() {
         setLoading(false);
       }
     },
-    []
+    [can]
   );
 
   useEffect(() => {
-    load(status);
-  }, [status, load]);
+    if (accessLoading) return;
+    if (canRead) void load(status);
+    else setLoading(false);
+  }, [accessLoading, canRead, status, load]);
 
   useAdminRealtime("referrals", {
     onEvent: () => load(status),
@@ -225,7 +237,7 @@ export default function AdminReferralsPage() {
   );
 
   async function submitMarkPaid() {
-    if (!target) return;
+    if (!target || !canManage) return;
     if (!confirming) {
       setConfirming(true);
       return;
@@ -262,6 +274,7 @@ export default function AdminReferralsPage() {
   }
 
   async function submitBulk() {
+    if (!canManage) return;
     if (!bulkConfirming) {
       setBulkConfirming(true);
       return;
@@ -324,12 +337,12 @@ export default function AdminReferralsPage() {
   return (
     <AdminPageShell
       title="Referrals"
-      description="Payout queue. Oldest holds first: mark paid after the Wise/USDT transfer lands."
-      freshness={loading ? "cached" : "live"}
+      description="Referral payout list returns up to 200 records and is not paginated. Verify the transfer in its provider before recording a payout."
+      freshness={error || examRewardError ? (items.length || examRewardItems.length ? "cached" : "disconnected") : loading || examRewardLoading ? "cached" : "live"}
       onRefresh={() => load(status)}
       actions={
         <div className="flex items-center gap-2">
-          {payableSelected.length > 0 && (
+          {canManage && payableSelected.length > 0 && (
             <button
               type="button"
               onClick={() => {
@@ -361,6 +374,12 @@ export default function AdminReferralsPage() {
         </div>
       }
     >
+      {!accessLoading && !canRead && (
+        <Alert variant="error" title="Access restricted">
+          You do not have permission to view referral operations.
+        </Alert>
+      )}
+      {canRead && <>
       {/* ─── Pending exam-reward grants (2026-07-11) ───────────────── */}
       <section className="mb-6">
         <div className="flex items-center gap-2 mb-3">
@@ -369,9 +388,18 @@ export default function AdminReferralsPage() {
             Pending exam-reward grants
           </h2>
         </div>
-        {examRewardLoading ? (
+        {examRewardError && (
+          <Alert variant="error" title={examRewardItems.length ? "Showing saved reward results" : "Could not load reward queue"}>
+            {examRewardError}
+          </Alert>
+        )}
+        {examRewardLoading && examRewardItems.length === 0 ? (
           <div className="flex items-center justify-center py-8">
             <BrandedLoader size={32} label="Loading pending grants…" />
+          </div>
+        ) : examRewardError && examRewardItems.length === 0 ? (
+          <div role="status" className="rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] px-4 py-6 text-sm text-[var(--mp-fg-muted)]">
+            Pending reward queue is unavailable. The empty queue cannot be confirmed until the request succeeds.
           </div>
         ) : examRewardItems.length === 0 ? (
           <EmptyState
@@ -382,6 +410,7 @@ export default function AdminReferralsPage() {
           />
         ) : (
           <div className="rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] overflow-hidden">
+            <div className="overflow-x-auto">
             <table className="w-full text-xs tabular-nums">
               <thead className="bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-muted)] uppercase text-[10px] tracking-wider">
                 <tr>
@@ -471,7 +500,7 @@ export default function AdminReferralsPage() {
                       </ul>
                     </td>
                     <td className="px-3 py-2 text-right">
-                      <button
+                      {canManage && <button
                         type="button"
                         className="mp-btn mp-btn--primary mp-btn--sm"
                         onClick={() => {
@@ -480,39 +509,47 @@ export default function AdminReferralsPage() {
                         }}
                       >
                         Grant Pro through exam window
-                      </button>
+                      </button>}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         )}
       </section>
 
       {error && (
-        <Alert variant="error" title="Failed to load">
+        <Alert variant="error" title={items.length ? "Showing saved payout results" : "Could not load payout queue"}>
           {error}
         </Alert>
       )}
 
-      {loading ? (
+      {loading && items.length === 0 ? (
         <div className="flex items-center justify-center py-12">
           <BrandedLoader size={48} label="Loading referrals…" />
         </div>
       ) : sorted.length === 0 ? (
-        <EmptyState
-          tone="success"
-          icon={<CheckCircle2 className="w-10 h-10" aria-hidden />}
-          title={
-            status === "qualified"
-              ? "No referrals awaiting payout"
-              : "No referrals in this filter"
-          }
-          body="Qualified referrals appear here once the referee's first subscription activates."
-        />
+        error ? (
+          <div role="status" className="rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] px-4 py-6 text-sm text-[var(--mp-fg-muted)]">
+            The payout queue is unavailable. No matching referrals cannot be confirmed until the request succeeds.
+          </div>
+        ) : (
+          <EmptyState
+            tone="success"
+            icon={<CheckCircle2 className="w-10 h-10" aria-hidden />}
+            title={
+              status === "qualified"
+                ? "No referrals awaiting payout"
+                : "No referrals in this filter"
+            }
+            body="Qualified referrals appear here once the referee's first subscription activates."
+          />
+        )
       ) : (
-        <div className="rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] overflow-hidden">
+          <div className="rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] overflow-hidden">
+          <div className="overflow-x-auto">
           <table className="w-full text-xs tabular-nums">
             <thead className="bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-muted)] uppercase text-[10px] tracking-wider">
               <tr>
@@ -526,7 +563,7 @@ export default function AdminReferralsPage() {
                         sorted.filter((r) => r.status === "qualified").length
                     }
                     onChange={toggleSelectAll}
-                    disabled={
+                    disabled={!canManage ||
                       sorted.filter((r) => r.status === "qualified").length ===
                       0
                     }
@@ -567,7 +604,7 @@ export default function AdminReferralsPage() {
                         aria-label={`Select referral ${r.id}`}
                         checked={selected.has(r.id)}
                         onChange={() => toggleSelect(r.id)}
-                        disabled={r.status !== "qualified"}
+                        disabled={!canManage || r.status !== "qualified"}
                       />
                     </td>
                     <td className="px-3 py-2 text-[var(--mp-fg-muted)] font-mono text-[10px]">
@@ -653,7 +690,7 @@ export default function AdminReferralsPage() {
                       </span>
                     </td>
                     <td className="px-3 py-2 text-right">
-                      {r.status === "qualified" ? (
+                      {r.status === "qualified" && canManage ? (
                         <button
                           type="button"
                           className="mp-btn mp-btn--primary mp-btn--sm"
@@ -681,6 +718,7 @@ export default function AdminReferralsPage() {
               })}
             </tbody>
           </table>
+          </div>
         </div>
       )}
 
@@ -716,7 +754,7 @@ export default function AdminReferralsPage() {
             <button
               className="mp-btn mp-btn--primary"
               onClick={submitMarkPaid}
-              disabled={processing}
+              disabled={processing || !canManage}
             >
               {processing
                 ? "Recording…"
@@ -753,6 +791,7 @@ export default function AdminReferralsPage() {
           </div>
         )}
       </Dialog>
+      </>}
 
       {/* ─── Bulk Mark-Paid Dialog ──────────────────────────────── */}
       <Dialog
@@ -785,7 +824,7 @@ export default function AdminReferralsPage() {
             <button
               className="mp-btn mp-btn--primary"
               onClick={submitBulk}
-              disabled={processing || payableSelected.length === 0}
+              disabled={processing || !canManage || payableSelected.length === 0}
             >
               {processing
                 ? "Processing…"
@@ -844,7 +883,7 @@ export default function AdminReferralsPage() {
             <button
               className="mp-btn mp-btn--primary"
               onClick={submitExamRewardGrant}
-              disabled={examRewardProcessing}
+              disabled={examRewardProcessing || !canManage}
             >
               {examRewardProcessing
                 ? "Granting…"

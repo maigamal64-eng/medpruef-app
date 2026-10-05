@@ -10,6 +10,7 @@
 import { useState } from "react";
 import { Gift, Lock, Unlock } from "lucide-react";
 import { authFetch as fetch } from "@/lib/authFetch";
+import { useAdminPermissions } from "@/lib/admin/useAdminPermissions";
 import {
   Alert,
   Dialog,
@@ -23,6 +24,7 @@ interface UserQuickActionsProps {
   userId: string;
   userEmail: string | null;
   isBanned?: boolean;
+  isAdmin?: boolean;
   onChanged?: () => void;
 }
 
@@ -30,17 +32,33 @@ export function UserQuickActions({
   userId,
   userEmail,
   isBanned,
+  isAdmin = false,
   onChanged,
 }: UserQuickActionsProps) {
+  const { can } = useAdminPermissions();
+  const canGrant = can("users.entitlements.write") && !isAdmin;
+  const canLock = can("users.sessions.write") && !isAdmin;
   const toast = useToast();
   const [grantOpen, setGrantOpen] = useState(false);
   const [lockOpen, setLockOpen] = useState(false);
   const [days, setDays] = useState("30");
+  const [grantReason, setGrantReason] = useState("");
   const [reason, setReason] = useState("");
   const [confirming, setConfirming] = useState(false);
   const [processing, setProcessing] = useState(false);
 
   async function submitGrant() {
+    if (!canGrant) {
+      setGrantOpen(false);
+      setConfirming(false);
+      toast.error("You do not have permission to grant Pro access.");
+      return;
+    }
+    const grantDays = Number(days);
+    if (!Number.isInteger(grantDays) || grantDays < 1 || grantDays > 365 || grantReason.trim().length < 5 || grantReason.trim().length > 500) {
+      toast.error("Enter 1 to 365 days and a reason between 5 and 500 characters.");
+      return;
+    }
     if (!confirming) {
       setConfirming(true);
       return;
@@ -50,7 +68,7 @@ export function UserQuickActions({
       const res = await fetch("/api/admin/users/grant", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: userId, days: Number(days) }),
+        body: JSON.stringify({ user_id: userId, days: grantDays, reason: grantReason.trim() }),
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body?.error || "Grant failed");
@@ -58,6 +76,7 @@ export function UserQuickActions({
       setGrantOpen(false);
       setConfirming(false);
       setDays("30");
+      setGrantReason("");
       onChanged?.();
     } catch (e) {
       toast.error((e as Error).message || "Grant failed");
@@ -67,6 +86,12 @@ export function UserQuickActions({
   }
 
   async function submitLock() {
+    if (!canLock) {
+      setLockOpen(false);
+      setConfirming(false);
+      toast.error("You do not have permission to change account access.");
+      return;
+    }
     if (!confirming) {
       setConfirming(true);
       return;
@@ -99,7 +124,8 @@ export function UserQuickActions({
   return (
     <>
       <div className="flex flex-wrap gap-2">
-        <button
+        {canGrant && (
+          <button
           type="button"
           onClick={() => {
             setConfirming(false);
@@ -110,8 +136,10 @@ export function UserQuickActions({
         >
           <Gift size={12} />
           Grant free days
-        </button>
-        <button
+          </button>
+        )}
+        {canLock && (
+          <button
           type="button"
           onClick={() => {
             setConfirming(false);
@@ -123,7 +151,8 @@ export function UserQuickActions({
         >
           {isBanned ? <Unlock size={12} /> : <Lock size={12} />}
           {isBanned ? "Unlock" : "Lock"}
-        </button>
+          </button>
+        )}
       </div>
 
       <Dialog
@@ -132,6 +161,7 @@ export function UserQuickActions({
           if (!o) {
             setGrantOpen(false);
             setConfirming(false);
+            setGrantReason("");
           }
         }}
         title={confirming ? "Confirm grant" : "Grant free Pro access"}
@@ -145,6 +175,7 @@ export function UserQuickActions({
               onClick={() => {
                 setGrantOpen(false);
                 setConfirming(false);
+                setGrantReason("");
               }}
               disabled={processing}
             >
@@ -153,7 +184,7 @@ export function UserQuickActions({
             <button
               className="mp-btn mp-btn--primary"
               onClick={submitGrant}
-              disabled={processing || !days || Number(days) <= 0}
+              disabled={processing || !Number.isInteger(Number(days)) || Number(days) < 1 || Number(days) > 365 || grantReason.trim().length < 5 || grantReason.trim().length > 500 || !canGrant}
             >
               {processing
                 ? "Granting…"
@@ -165,6 +196,15 @@ export function UserQuickActions({
         }
       >
         <div className="space-y-3">
+          <Textarea
+            label="Reason for granting access"
+            rows={3}
+            value={grantReason}
+            onChange={(e) => setGrantReason(e.target.value)}
+            maxLength={500}
+            placeholder="Explain why this access change is needed"
+            helper="Required for the audit record. Enter at least 5 characters."
+          />
           <TextField
             label="Days to grant"
             type="number"
@@ -177,7 +217,7 @@ export function UserQuickActions({
           {confirming && (
             <Alert variant="info" title="Confirm action">
               This bumps <code>users.tier_expires_at</code> and flips{" "}
-              <code>users.tier=&apos;pro&apos;</code>. Action recorded to{" "}
+              <code>users.tier=&apos;pro&apos;</code> for this learner. Reason: {grantReason.trim()}. Action recorded to{" "}
               <code>admin_audit_log</code>.
             </Alert>
           )}

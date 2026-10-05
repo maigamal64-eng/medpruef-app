@@ -32,6 +32,7 @@ export default function ExamSwitcherInline({ variant = 'header', className = '' 
   const [active, setActive] = useState<ExamSourceId>('kenntnispruefung')
   const [mounted, setMounted] = useState(false)
   const [open, setOpen] = useState(false)
+  const [saveError, setSaveError] = useState(false)
   const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null)
   const rootRef = useRef<HTMLDivElement>(null)
   const btnRef = useRef<HTMLButtonElement>(null)
@@ -39,6 +40,27 @@ export default function ExamSwitcherInline({ variant = 'header', className = '' 
   useEffect(() => {
     setActive(getStoredExamSource())
     setMounted(true)
+    let alive = true
+    try {
+      const session = localStorage.getItem('medpruef_session')
+      const parsed = session ? JSON.parse(session) : null
+      const userId = parsed?.user?.id
+      if (userId && !userId.startsWith('guest_')) {
+        fetch('/api/user/exam-preference')
+          .then(async (res) => {
+            if (!res.ok) throw new Error('Could not read preference')
+            return res.json()
+          })
+          .then((data) => {
+            if (!alive || !EXAM_SOURCES.some((item) => item.id === data?.activeExam)) return
+            const serverValue = data.activeExam as ExamSourceId
+            setActive(serverValue)
+            setStoredExamSource(serverValue)
+          })
+          .catch(() => { /* local preference remains the offline fallback */ })
+      }
+    } catch { /* storage may be unavailable in restricted browser contexts */ }
+    return () => { alive = false }
   }, [])
 
   useEffect(() => {
@@ -60,11 +82,13 @@ export default function ExamSwitcherInline({ variant = 'header', className = '' 
     return <div className={`h-9 ${className}`} aria-hidden />
   }
 
-  const switchTo = (id: ExamSourceId) => {
+  const switchTo = async (id: ExamSourceId) => {
     if (id === active) {
       setOpen(false)
       return
     }
+    const previous = active
+    setSaveError(false)
     setActive(id)
     setStoredExamSource(id)
     setOpen(false)
@@ -75,13 +99,19 @@ export default function ExamSwitcherInline({ variant = 'header', className = '' 
       const parsed = session ? JSON.parse(session) : null
       const userId = parsed?.user?.id
       if (userId && !userId.startsWith('guest_')) {
-        fetch('/api/user/exam-preference', {
+        const res = await fetch('/api/user/exam-preference', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId, activeExam: id }),
-        }).catch(() => {}) // non-blocking
+        })
+        if (!res.ok) throw new Error('Could not save exam preference')
       }
-    } catch {} // localStorage read can fail in some contexts
+    } catch {
+      setSaveError(true)
+      setActive(previous)
+      setStoredExamSource(previous)
+      return
+    }
 
     window.dispatchEvent(new CustomEvent('medpruef:examChanged', { detail: { examSource: id } }))
     setTimeout(() => window.location.reload(), 50)
@@ -127,6 +157,11 @@ export default function ExamSwitcherInline({ variant = 'header', className = '' 
           <path d="M5 7l5 5 5-5H5z" />
         </svg>
       </button>
+      {saveError && (
+        <span role="alert" className="absolute right-0 top-full z-50 mt-1 w-56 rounded-lg border border-[var(--mp-error)]/30 bg-[var(--mp-surface-raised)] p-2 text-xs text-[var(--mp-error)] shadow-lg">
+          Prüfungsauswahl konnte nicht gespeichert werden. Bitte erneut versuchen.
+        </span>
+      )}
 
       {open && dropdownPos && (
         <div

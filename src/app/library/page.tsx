@@ -30,7 +30,7 @@ import { authFetch as fetch } from "@/lib/authFetch";
 import { getLang, setLang } from "@/lib/i18n";
 import { getStoredSession } from "@/lib/auth";
 import { getTopicConfig } from "@/lib/topics";
-import { readNotes } from "@/lib/notes-store";
+import { listNoteQuestionIds, readLegacyNotes, readNotes } from "@/lib/notes-store";
 import { AppLayout, EmptyState } from "@/components/ui";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
@@ -61,6 +61,7 @@ import {
   BookOpen,
   Link2,
   ChevronDown,
+  ChevronRight,
   ImageIcon,
   Globe,
   Loader2,
@@ -69,6 +70,7 @@ import {
   FolderHeart,
 } from "lucide-react";
 import { useToast } from "@/components/ui";
+import { filterAndSortLibraryNotes } from "@/lib/libraryNotes";
 
 type Lang = "de" | "en";
 
@@ -112,7 +114,7 @@ const SOURCE_META: Record<
   bookmark: { de: "Frage", en: "Question", Icon: Bookmark, color: "var(--mp-cta-blue)" },
   user_note: { de: "Notiz", en: "Note", Icon: StickyNote, color: "var(--mp-viridian)" },
   ai_explanation: { de: "KI", en: "AI", Icon: Sparkles, color: "var(--mp-accent-teal)" },
-  manual: { de: "Eigen", en: "Manual", Icon: PenLine, color: "var(--mp-spark)" },
+  manual: { de: "Manuell erstellt", en: "Manually created", Icon: PenLine, color: "var(--mp-spark)" },
 };
 
 /* ─── Block rendering (back of the card) ─────────────────────────── */
@@ -222,9 +224,13 @@ function NoteGridCard({
         </div>
         <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--mp-viridian)] flex-shrink-0">
           <Layers className="w-3.5 h-3.5" />
-          {blockCount}
+          {blockCount} {lang === "de" ? "Blöcke" : "blocks"}
         </span>
       </div>
+      <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--mp-cta-blue)] pt-1">
+        {lang === "de" ? "Vollständige Notiz öffnen" : "Open full note"}
+        <ChevronRight className="w-3.5 h-3.5" aria-hidden="true" />
+      </span>
     </button>
   );
 }
@@ -726,7 +732,7 @@ function PublishButton({
 }
 
 /* ─── New-note composer (a clear "add your own note" entry) ──────────── */
-function NewNoteCard({ lang }: { lang: Lang }) {
+function NewNoteCard({ lang, onNoteCreated }: { lang: Lang; onNoteCreated: () => void }) {
   const [openComposer, setOpenComposer] = useState(false);
   const [text, setText] = useState("");
   const de = lang === "de";
@@ -793,6 +799,7 @@ function NewNoteCard({ lang }: { lang: Lang }) {
               text={text.trim()}
               allowCustomize
               size="sm"
+              onCreated={onNoteCreated}
             />
           )}
         </div>
@@ -812,6 +819,9 @@ function LibraryContent() {
   const [authResolved, setAuthResolved] = useState(false);
 
   const [notes, setNotes] = useState<ServerNote[]>([]);
+  const [legacyNotesCount, setLegacyNotesCount] = useState(0);
+  const [legacyImporting, setLegacyImporting] = useState(false);
+  const [legacyImportDone, setLegacyImportDone] = useState(false);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [sourceFilter, setSourceFilter] = useState<NoteSourceType | "">("");
@@ -864,7 +874,9 @@ function LibraryContent() {
     setNotes((ns) => ns.map((n) => (n.id === id ? { ...n, ...patch } : n)));
   }, []);
 
-  // One-time localStorage -> server import, then load notes.
+  // Migrate only notes already scoped to this authenticated account. Global
+  // legacy keys are never auto-imported because a shared browser cannot tell
+  // which account created them.
   useEffect(() => {
     if (!authResolved) return;
     if (!userId) {
@@ -876,15 +888,12 @@ function LibraryContent() {
 
     const run = async () => {
       try {
-        const migrated = localStorage.getItem("medpruef_notes_migrated");
+        const migratedKey = `medpruef_notes_account_migrated_${encodeURIComponent(userId)}`;
+        const migrated = localStorage.getItem(migratedKey);
         if (!migrated) {
           const items: { question_id: number; entries: ReturnType<typeof readNotes> }[] = [];
-          for (let i = 0; i < localStorage.length; i++) {
-            const k = localStorage.key(i);
-            const m = k?.match(/^medpruef_notes_(\d+)$/);
-            if (!m) continue;
-            const qid = parseInt(m[1], 10);
-            const entries = readNotes(qid);
+          for (const qid of listNoteQuestionIds(userId)) {
+            const entries = readNotes(qid, userId);
             if (entries.length) items.push({ question_id: qid, entries });
           }
           if (items.length > 0) {
@@ -896,11 +905,13 @@ function LibraryContent() {
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ items }),
             }).catch(() => null);
-            if (res && res.ok) localStorage.setItem("medpruef_notes_migrated", "1");
+            if (res && res.ok) localStorage.setItem(migratedKey, "1");
           } else {
-            localStorage.setItem("medpruef_notes_migrated", "1");
+            localStorage.setItem(migratedKey, "1");
           }
         }
+        setLegacyNotesCount(readLegacyNotes().reduce((sum, item) => sum + item.entries.length, 0));
+        setLegacyImportDone(!!localStorage.getItem(`medpruef_notes_legacy_imported_${encodeURIComponent(userId)}`));
       } finally {
         await fetchNotes();
       }
@@ -908,31 +919,37 @@ function LibraryContent() {
     run();
   }, [authResolved, userId, fetchNotes]);
 
-  // Client-side search / filter / sort over the loaded set (<=200).
-  const visible = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    let list = notes;
-    if (sourceFilter) list = list.filter((n) => n.source_type === sourceFilter);
-    if (q) {
-      list = list.filter((n) => {
-        if (n.title.toLowerCase().includes(q)) return true;
-        if (n.tags.some((t) => t.includes(q))) return true;
-        return (n.content?.blocks ?? []).some((b) =>
-          (b.type === "concept" ? `${b.front} ${b.back}` : b.text)
-            .toLowerCase()
-            .includes(q),
-        );
-      });
+  const importLegacyNotes = async () => {
+    if (!userId || legacyImporting || legacyImportDone) return;
+    const confirmed = window.confirm(lang === "de"
+      ? "Diese alten Notizen liegen ungeschützt auf diesem Browser und könnten von einer anderen Person stammen. Nur fortfahren, wenn du sicher bist, dass sie zu deinem Konto gehören. Die Originale bleiben im Browser gespeichert."
+      : "These old notes are stored globally in this browser and may belong to someone else who used it. Continue only if you are sure they belong to your account. The originals will remain in the browser.");
+    if (!confirmed) return;
+    const items = readLegacyNotes();
+    if (!items.length) {
+      setLegacyNotesCount(0);
+      return;
     }
-    const sorted = [...list];
-    if (sort === "updated")
-      sorted.sort((a, b) => b.updated_at.localeCompare(a.updated_at));
-    else if (sort === "source")
-      sorted.sort((a, b) => a.source_type.localeCompare(b.source_type));
-    else if (sort === "exam")
-      sorted.sort((a, b) => (a.exam_type || "").localeCompare(b.exam_type || ""));
-    else sorted.sort((a, b) => b.created_at.localeCompare(a.created_at));
-    return sorted;
+    setLegacyImporting(true);
+    try {
+      const response = await fetch("/api/notes/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items }),
+      }).catch(() => null);
+      if (!response?.ok) return;
+      localStorage.setItem(`medpruef_notes_legacy_imported_${encodeURIComponent(userId)}`, "1");
+      setLegacyImportDone(true);
+      setLegacyNotesCount(0);
+      await fetchNotes();
+    } finally {
+      setLegacyImporting(false);
+    }
+  };
+
+  // Search / filter / sort the loaded set (the API caps this at 200 notes).
+  const visible = useMemo(() => {
+    return filterAndSortLibraryNotes(notes, search, sourceFilter, sort);
   }, [notes, search, sourceFilter, sort]);
 
   // Is Explore on? A cheap probe; the Explore tab is hidden when off.
@@ -988,7 +1005,7 @@ function LibraryContent() {
     { key: "bookmark", de: "Fragen", en: "Questions" },
     { key: "user_note", de: "Notizen", en: "Notes" },
     { key: "ai_explanation", de: "KI", en: "AI" },
-    { key: "manual", de: "Eigene", en: "Manual" },
+    { key: "manual", de: "Manuell erstellt", en: "Manually created" },
   ];
 
   return (
@@ -1062,11 +1079,39 @@ function LibraryContent() {
           <TrialActivation lang={lang} className="mx-4 lg:mx-8 mb-3" />
         )}
 
+        {view === "mine" && legacyNotesCount > 0 && !legacyImportDone && (
+          <section className="mx-4 lg:mx-8 mb-3 rounded-[var(--mp-r-card)] border border-[var(--mp-status-warning)]/35 bg-[var(--mp-status-warning)]/8 p-3.5">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[var(--mp-status-warning)]" aria-hidden />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-[var(--mp-fg)]">
+                  {lang === "de" ? "Alte Notizen in diesem Browser" : "Older notes in this browser"}
+                </p>
+                <p className="mt-1 text-xs leading-relaxed text-[var(--mp-fg-muted)]">
+                  {lang === "de"
+                    ? `${legacyNotesCount} Notizen sind nicht einem Konto zugeordnet. Auf einem gemeinsam genutzten Gerät können sie einer anderen Person gehören.`
+                    : `${legacyNotesCount} notes are not linked to an account. On a shared device, they may belong to someone else.`}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => void importLegacyNotes()}
+                  disabled={legacyImporting}
+                  className="mt-2 text-xs font-semibold text-[var(--mp-cta-blue)] underline underline-offset-2 disabled:opacity-60"
+                >
+                  {legacyImporting
+                    ? (lang === "de" ? "Import läuft…" : "Importing…")
+                    : (lang === "de" ? "Als meine Notizen importieren…" : "Import as my notes…")}
+                </button>
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* Entries — only in "my notes" view: a "new note" composer + the
             flashcards review entry. */}
         {view === "mine" && (
         <div className="px-4 lg:px-8 pb-3 grid grid-cols-1 lg:grid-cols-2 gap-3">
-          <NewNoteCard lang={lang} />
+          <NewNoteCard lang={lang} onNoteCreated={() => void fetchNotes()} />
           <Link
             href="/flashcards"
             className="flex items-center gap-3 rounded-[var(--mp-r-card)] bg-[var(--mp-surface)] border border-[var(--mp-border-soft)] hover:border-[var(--mp-border)] shadow-[var(--mp-shadow-card)] transition-all p-3.5"
@@ -1102,12 +1147,17 @@ function LibraryContent() {
               className="w-full pl-9 pr-3 py-2.5 rounded-[var(--mp-r-card)] bg-[var(--mp-surface)] border border-[var(--mp-border-soft)] text-[var(--mp-fg)] text-sm focus:outline-none focus:border-[var(--mp-viridian)]"
             />
           </div>
-          <div className="flex items-center gap-2 overflow-x-auto -mx-1 px-1 pb-0.5">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2 gap-1.5">
+            <span className="text-[11px] font-semibold text-[var(--mp-fg-subtle)] sm:sr-only">
+              {lang === "de" ? "Quelle" : "Source"}
+            </span>
+            <div className="flex items-center gap-2 overflow-x-auto -mx-1 px-1 pb-0.5 min-w-0">
             {SOURCE_FILTERS.map((f) => (
               <button
                 key={f.key || "all"}
                 type="button"
                 onClick={() => setSourceFilter(f.key)}
+                aria-pressed={sourceFilter === f.key}
                 className={`text-xs font-semibold px-3 py-1.5 rounded-full whitespace-nowrap transition-colors flex-shrink-0 ${
                   sourceFilter === f.key
                     ? "bg-[var(--mp-viridian)] text-white"
@@ -1118,6 +1168,7 @@ function LibraryContent() {
               </button>
             ))}
             <div className="flex-1" />
+            </div>
             <select
               value={sort}
               onChange={(e) => setSort(e.target.value as SortKey)}

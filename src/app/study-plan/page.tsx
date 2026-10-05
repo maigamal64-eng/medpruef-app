@@ -13,7 +13,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import TopicIcon from "@/components/TopicIcon";
 import { EmptyState } from "@/components/ui";
 import { getTopicConfig } from "@/lib/topics";
-import type { StudyPlan, StudyPlanDay, StudyFocus } from "@/lib/studyPlan";
+import { getStudyPlanPracticeMode, type StudyPlan, type StudyPlanDay, type StudyFocus } from "@/lib/studyPlan";
 import { buildStudyPath } from "@/lib/studyPath";
 import StudyPathTimeline from "@/components/StudyPathTimeline";
 import {
@@ -453,7 +453,11 @@ export default function StudyPlanPage() {
                     <div className="flex flex-col gap-2.5">
                       {todayBlocks.map(({ tt, state }) => {
                         const tc = getTopicConfig(tt.topic);
-                        const practiceMode = tt.focus === "review" ? "wrong" : "unseen";
+                        // Review tasks are a consolidation goal, not a promise
+                        // that this learner has a wrong-answer pool. `all`
+                        // prioritizes due review when available, then falls
+                        // back to the topic pool so every planned block can run.
+                        const practiceMode = getStudyPlanPracticeMode(tt.focus);
                         const href = `/quiz?topic=${encodeURIComponent(
                           tt.topic
                         )}&userId=${user.id}&examSource=${activeExam}&practiceMode=${practiceMode}&limit=${tt.targetCount}&autoStart=1`;

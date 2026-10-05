@@ -32,6 +32,7 @@ import {
   Webhook,
 } from "lucide-react";
 import { authFetch as fetch } from "@/lib/authFetch";
+import { useAdminPermissions } from "@/lib/admin/useAdminPermissions";
 import { AdminPageShell } from "../_components/AdminPageShell";
 import {
   FormatInt,
@@ -94,28 +95,34 @@ interface PaymentFunnelMetrics {
 }
 
 export default function AdminPaymentsPage() {
+  const { can, loading: accessLoading } = useAdminPermissions();
   const [metrics, setMetrics] = useState<PaymentFunnelMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [updatedAt, setUpdatedAt] = useState<string | null>(null);
 
   const hydrate = useCallback(async () => {
+    if (!can("revenue.read")) return;
     try {
       const res = await fetch("/api/stats/admin/payments", { cache: "no-store" });
       if (!res.ok) throw new Error(`payments ${res.status}`);
       setMetrics((await res.json()) as PaymentFunnelMetrics);
+      setUpdatedAt(new Date().toISOString());
       setError(null);
     } catch (e) {
       setError((e as Error).message || "Failed to load payment funnel");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [can]);
 
   useEffect(() => {
-    hydrate();
-  }, [hydrate]);
+    if (accessLoading) return;
+    if (can("revenue.read")) void hydrate();
+    else setLoading(false);
+  }, [accessLoading, can, hydrate]);
 
-  const freshness = loading ? "cached" : error ? "disconnected" : "live";
+  const freshness = error ? (metrics ? "cached" : "disconnected") : loading ? "cached" : "live";
   const sigAlarm = (metrics?.webhook_deliveries.sig_invalid ?? 0) > 0;
   const hasFailures =
     (metrics?.totals.grant_failed ?? 0) > 0 ||
@@ -139,27 +146,40 @@ export default function AdminPaymentsPage() {
       freshness={freshness}
       onRefresh={hydrate}
     >
+      {!accessLoading && !can("revenue.read") && (
+        <div role="alert" className="rounded-xl border border-[var(--mp-error)]/30 bg-[var(--mp-error-bg)] px-4 py-3 text-sm text-[var(--mp-error)]">
+          You do not have permission to view payment operations.
+        </div>
+      )}
+      {can("revenue.read") && <>
       {error && (
-        <div className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-600 dark:text-red-400 flex items-center gap-2">
+        <div role="alert" className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-600 dark:text-red-400 flex items-center gap-2">
           <AlertCircle size={14} />
-          {error}
+          <span>{error}{metrics && updatedAt ? ` Showing the snapshot from ${new Date(updatedAt).toLocaleString()}.` : ""}</span>
+        </div>
+      )}
+
+      {!metrics && !loading && (
+        <div role="status" className="rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] px-4 py-8 text-center text-sm text-[var(--mp-fg-muted)]">
+          Payment funnel data is unavailable. Retry the request before treating missing activity as zero.
         </div>
       )}
 
       {/* ─── Headline diagnosis ───────────────────────────────────────── */}
-      <DiagnosisBanner metrics={metrics} loading={loading} alarm={sigAlarm} />
+      {(metrics || loading) && <DiagnosisBanner metrics={metrics} loading={loading} alarm={sigAlarm} />}
 
       {/* ─── The funnel ───────────────────────────────────────────────── */}
-      <FunnelSection metrics={metrics} loading={loading} />
+      {(metrics || loading) && <FunnelSection metrics={metrics} loading={loading} />}
 
       {/* ─── Failures + unmatched (prominent) ─────────────────────────── */}
-      <FailuresSection metrics={metrics} loading={loading} hasFailures={hasFailures} />
+      {(metrics || loading) && <FailuresSection metrics={metrics} loading={loading} hasFailures={hasFailures} />}
 
       {/* ─── Webhook delivery truth ───────────────────────────────────── */}
-      <DeliveriesSection metrics={metrics} loading={loading} />
+      {(metrics || loading) && <DeliveriesSection metrics={metrics} loading={loading} />}
 
       {/* ─── Recent payment-events feed ───────────────────────────────── */}
-      <FeedSection metrics={metrics} loading={loading} />
+      {(metrics || loading) && <FeedSection metrics={metrics} loading={loading} />}
+      </>}
     </AdminPageShell>
   );
 }
@@ -487,7 +507,7 @@ function FeedSection({
       <SectionHeading
         title="Recent payment events"
         icon={Inbox}
-        hint="Newest first: the live funnel feed"
+        hint="Newest first, latest 50 payment events"
       />
       <div className="rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] overflow-hidden">
         <div className="overflow-x-auto">

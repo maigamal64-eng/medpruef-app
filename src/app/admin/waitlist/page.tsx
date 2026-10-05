@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * /admin/waitlist — non-crypto waitlist (Stripe-pending cohort).
+ * /admin/waitlist — recorded pricing and exam-intent signups.
  *
  * §2.4 — CSV export button (audit-logged).
  */
@@ -19,6 +19,7 @@ import {
 } from "@/components/ui";
 import { AdminPageShell } from "../_components/AdminPageShell";
 import { getSessionToken } from "@/lib/auth";
+import { useAdminPermissions } from "@/lib/admin/useAdminPermissions";
 
 interface WaitlistRow {
   id: string;
@@ -33,14 +34,17 @@ interface WaitlistRow {
 }
 
 export default function AdminWaitlistPage() {
+  const { can, loading: accessLoading } = useAdminPermissions();
   const toast = useToast();
   const [items, setItems] = useState<WaitlistRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [examType, setExamType] = useState("");
   const [source, setSource] = useState("");
+  const [updatedAt, setUpdatedAt] = useState<string | null>(null);
 
   const load = useCallback(async () => {
+    if (!can("revenue.read")) return;
     setLoading(true);
     setError(null);
     try {
@@ -51,22 +55,26 @@ export default function AdminWaitlistPage() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setItems(data.items || []);
+      setUpdatedAt(new Date().toISOString());
     } catch (e) {
       setError((e as Error).message || "Failed to load waitlist");
     } finally {
       setLoading(false);
     }
-  }, [examType, source]);
+  }, [can, examType, source]);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    if (accessLoading) return;
+    if (can("revenue.read")) void load();
+    else setLoading(false);
+  }, [accessLoading, can, load]);
 
   useAdminRealtime("waitlist", {
     onEvent: () => load(),
   });
 
   async function exportCsv() {
+    if (!can("revenue.read")) return;
     const params = new URLSearchParams({ format: "csv" });
     if (examType) params.set("exam_type", examType);
     if (source) params.set("source", source);
@@ -101,11 +109,11 @@ export default function AdminWaitlistPage() {
   return (
     <AdminPageShell
       title="Waitlist"
-      description="Stripe-pending tier signups waiting for Stripe Atlas cutover."
-      freshness={loading ? "cached" : "live"}
+      description="Pricing and exam-intent signups recorded by the waitlist source."
+      freshness={error ? (items.length ? "cached" : "disconnected") : loading ? "cached" : "live"}
       onRefresh={load}
       actions={
-        <button
+        can("revenue.read") ? <button
           type="button"
           onClick={exportCsv}
           disabled={items.length === 0}
@@ -113,12 +121,18 @@ export default function AdminWaitlistPage() {
         >
           <Download size={12} />
           Export CSV
-        </button>
+        </button> : null
       }
     >
+      {!accessLoading && !can("revenue.read") && (
+        <Alert variant="error" title="Access restricted">
+          You do not have permission to view waitlist records.
+        </Alert>
+      )}
+      {can("revenue.read") && <>
       {error && (
-        <Alert variant="error" title="Failed to load">
-          {error}
+        <Alert variant="error" title={items.length ? "Showing saved results" : "Could not load waitlist"}>
+          {error}{items.length > 0 && updatedAt ? ` Last successful load: ${new Date(updatedAt).toLocaleString()}.` : ""}
         </Alert>
       )}
 
@@ -145,20 +159,21 @@ export default function AdminWaitlistPage() {
         />
       </div>
 
-      {loading ? (
+      {loading && items.length === 0 ? (
         <div className="flex items-center justify-center py-12">
           <BrandedLoader size={48} label="Loading waitlist…" />
         </div>
-      ) : items.length === 0 ? (
+      ) : !loading && !error && items.length === 0 ? (
         <EmptyState
           tone="neutral"
           icon={<Inbox className="w-10 h-10" aria-hidden />}
-          title="No waitlist signups yet"
-          body="Waitlist entries appear here once the /pricing or Stripe-pending CTAs go live."
+          title="No matching signups"
+          body="No waitlist records match the selected filters. Clear a filter or check again later."
         />
-      ) : (
+      ) : items.length > 0 ? (
         <div className="rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] overflow-hidden">
-          <table className="w-full text-xs">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[760px] text-xs">
             <thead className="bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-muted)] uppercase text-[10px] tracking-wider">
               <tr>
                 <th className="text-left px-3 py-2">Created</th>
@@ -197,14 +212,15 @@ export default function AdminWaitlistPage() {
               ))}
             </tbody>
           </table>
+          </div>
           {items.length > 500 && (
             <div className="border-t border-[var(--mp-border-subtle)] p-2 text-center text-[10px] text-[var(--mp-fg-muted)]">
-              Showing first 500 rows, export CSV for the full list
-              ({items.length} total).
+              Showing the first 500 rows. The source returns up to 5,000 rows, and CSV export has the same 5,000-row cap ({items.length} returned).
             </div>
           )}
         </div>
-      )}
+      ) : null}
+      </>}
     </AdminPageShell>
   );
 }

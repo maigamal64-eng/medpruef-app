@@ -15,6 +15,7 @@
 
 import { Fragment, useCallback, useEffect, useState } from "react";
 import {
+  ArrowLeftRight,
   Search,
   Edit3,
   RotateCcw,
@@ -26,12 +27,16 @@ import {
   FileText,
 } from "lucide-react";
 import { authFetch as fetch } from "@/lib/authFetch";
+import { useAdminPermissions } from "@/lib/admin/useAdminPermissions";
+import { useSearchParams } from "next/navigation";
 import {
   useToast,
   TextField,
   Textarea,
   Select,
   EmptyState,
+  Alert,
+  BrandedLoader,
 } from "@/components/ui";
 import { AdminPageShell } from "../_components/AdminPageShell";
 import type {
@@ -45,6 +50,8 @@ type SubTab = "browse" | "duplicates" | "reviews";
 
 export default function AdminQuestionsPage() {
   const toast = useToast();
+  const { can, loading: accessLoading } = useAdminPermissions();
+  const searchParams = useSearchParams();
 
   // Browse state
   const [stats, setStats] = useState<QuestionStats | null>(null);
@@ -65,13 +72,19 @@ export default function AdminQuestionsPage() {
   const [tab, setTab] = useState<SubTab>("browse");
   const [duplicates, setDuplicates] = useState<DuplicateData | null>(null);
   const [suggestions, setSuggestions] = useState<SuggestionsResponse | null>(null);
+  const [readErrors, setReadErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (searchParams.get("tab") === "reviews") setTab("reviews");
+  }, [searchParams]);
 
   const fetchStats = useCallback(async () => {
     try {
       const res = await fetch("/api/stats/admin/questions");
       if (!res.ok) throw new Error("Failed to load question stats");
       setStats(await res.json());
-    } catch { /* optional */ }
+      setReadErrors((current) => ({ ...current, stats: "" }));
+    } catch (e) { setReadErrors((current) => ({ ...current, stats: (e as Error).message })); }
   }, []);
 
   const fetchQuestions = useCallback(
@@ -91,9 +104,10 @@ export default function AdminQuestionsPage() {
         setQuestions(data.questions || []);
         setTotal(data.total || 0);
         setTotalPages(data.totalPages || 0);
-      } catch (e) { toast.error((e as Error).message); }
+        setReadErrors((current) => ({ ...current, questions: "" }));
+      } catch (e) { setReadErrors((current) => ({ ...current, questions: (e as Error).message })); }
     },
-    [toast]
+    []
   );
 
   const fetchDuplicates = useCallback(async () => {
@@ -101,7 +115,8 @@ export default function AdminQuestionsPage() {
       const res = await fetch("/api/stats/admin/duplicates");
       if (!res.ok) throw new Error("Failed");
       setDuplicates(await res.json());
-    } catch { /* optional */ }
+      setReadErrors((current) => ({ ...current, duplicates: "" }));
+    } catch (e) { setReadErrors((current) => ({ ...current, duplicates: (e as Error).message })); }
   }, []);
 
   const fetchSuggestions = useCallback(async () => {
@@ -109,13 +124,16 @@ export default function AdminQuestionsPage() {
       const res = await fetch("/api/suggestions?limit=100");
       if (!res.ok) throw new Error("Failed");
       setSuggestions(await res.json());
-    } catch { /* optional */ }
+      setReadErrors((current) => ({ ...current, reviews: "" }));
+    } catch (e) { setReadErrors((current) => ({ ...current, reviews: (e as Error).message })); }
   }, []);
 
   useEffect(() => {
-    fetchStats();
-    fetchQuestions(1);
-  }, [fetchStats, fetchQuestions]);
+    if (!accessLoading && can("content.read")) {
+      fetchStats();
+      fetchQuestions(1);
+    }
+  }, [accessLoading, can, fetchStats, fetchQuestions]);
 
   useEffect(() => {
     if (tab === "duplicates" && !duplicates) fetchDuplicates();
@@ -133,6 +151,7 @@ export default function AdminQuestionsPage() {
   };
 
   const handleEdit = async (questionId: number) => {
+    if (!can("content.moderate")) return;
     try {
       const res = await fetch("/api/stats/admin/questions", {
         method: "PATCH",
@@ -147,9 +166,30 @@ export default function AdminQuestionsPage() {
   };
 
   const startEdit = (q: QuestionRow) => {
+    if (!can("content.moderate")) return;
     setEditingQuestion(q.id);
     setQuestionEditForm({ explanation: q.explanation || "", topic: q.topic, is_active: q.is_active });
   };
+
+  const resolveSuggestion = async (suggestionId: string, action: "approve" | "reject") => {
+    if (!can("content.moderate")) return;
+    try {
+      const res = await fetch("/api/suggestions", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ suggestionId, action }),
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(payload?.error || `Could not ${action} this report (HTTP ${res.status})`);
+      toast.success(action === "approve" ? "Report confirmed" : "Report dismissed");
+      await fetchSuggestions();
+    } catch (e) {
+      toast.error((e as Error).message || "Could not update report");
+    }
+  };
+
+  if (accessLoading) return <div className="p-6"><BrandedLoader size={40} label="Checking access…" /></div>;
+  if (!can("content.read")) return <div className="p-6"><Alert variant="error" title="Access not available">Your admin role does not include permission to view study content.</Alert></div>;
 
   return (
     <AdminPageShell
@@ -160,8 +200,14 @@ export default function AdminQuestionsPage() {
         fetchStats();
         if (tab === "browse")
           fetchQuestions(page, topicFilter, search, explFilter, activeFilter, examTypeFilter);
+        if (tab === "reviews") fetchSuggestions();
+        if (tab === "duplicates") fetchDuplicates();
       }}
     >
+      {readErrors.stats && <Alert variant="error" title="Question metrics unavailable">{readErrors.stats}</Alert>}
+      {readErrors.questions && tab === "browse" && <Alert variant="error" title="Questions could not be loaded">{readErrors.questions}</Alert>}
+      {readErrors.duplicates && tab === "duplicates" && <Alert variant="error" title="Duplicate scan unavailable">{readErrors.duplicates}</Alert>}
+      {readErrors.reviews && tab === "reviews" && <Alert variant="error" title="Review queue unavailable">{readErrors.reviews}</Alert>}
       {/* Stats Cards — .mp-stat tight grid */}
       {stats && (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
@@ -298,6 +344,10 @@ export default function AdminQuestionsPage() {
 
           {/* Questions Table */}
           <div className="card rounded-xl overflow-hidden">
+            <div className="flex items-center gap-1.5 border-b border-[var(--mp-border-subtle)] px-3 py-2 text-xs text-[var(--mp-fg-muted)] lg:hidden">
+              <ArrowLeftRight size={14} aria-hidden="true" />
+              <span>Scroll horizontally to see all columns</span>
+            </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -345,13 +395,13 @@ export default function AdminQuestionsPage() {
                           {q.exam_dates?.length ? q.exam_dates.slice(0, 2).join(", ") + (q.exam_dates.length > 2 ? ` +${q.exam_dates.length - 2}` : "") : "---"}
                         </td>
                         <td className="px-3 py-2.5 text-center" onClick={(e) => e.stopPropagation()}>
-                          <button
+                          {can("content.moderate") && <button
                             onClick={() => startEdit(q)}
                             className="p-1.5 rounded-md hover:bg-[var(--mp-viridian)]/10 text-[var(--mp-fg-muted)] hover:text-[var(--mp-viridian)] transition-colors"
                             title="Edit"
                           >
                             <Edit3 size={13} />
-                          </button>
+                          </button>}
                         </td>
                       </tr>
 
@@ -664,33 +714,19 @@ export default function AdminQuestionsPage() {
                       </div>
 
                       {/* Actions */}
-                      {s.status === "pending" && (
+                      {s.status === "pending" && can("content.moderate") && (
                         <div className="flex gap-1.5 flex-shrink-0">
                           <button
-                            onClick={async () => {
-                              await fetch("/api/suggestions", {
-                                method: "PATCH",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({ suggestionId: s.id, action: "approve" }),
-                              });
-                              fetchSuggestions();
-                            }}
+                            onClick={() => void resolveSuggestion(String(s.id), "approve")}
                             className="text-[10px] bg-[var(--mp-accent-teal)] text-white px-2.5 py-1 rounded-lg font-medium hover:bg-[var(--mp-viridian-dk)]"
                           >
-                            Approve
+                            Confirm report
                           </button>
                           <button
-                            onClick={async () => {
-                              await fetch("/api/suggestions", {
-                                method: "PATCH",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({ suggestionId: s.id, action: "reject" }),
-                              });
-                              fetchSuggestions();
-                            }}
+                            onClick={() => void resolveSuggestion(String(s.id), "reject")}
                             className="text-[10px] bg-[var(--mp-error)]/10 text-[var(--mp-error)] px-2.5 py-1 rounded-lg font-medium hover:bg-[var(--mp-error)]/20"
                           >
-                            Reject
+                            Dismiss report
                           </button>
                         </div>
                       )}

@@ -9,9 +9,10 @@ import { authFetch as fetch } from "@/lib/authFetch";
 import { shouldIgnoreGlobalKey } from "@/lib/keyboard-guard";
 import Link from "next/link";
 import { t, getLang, setLang } from "@/lib/i18n";
-import { trackEvent, trackPageView } from "@/lib/tracker";
+import { trackEvent } from "@/lib/tracker";
 import { trackFunnelEvent } from "@/lib/funnel-events";
 import { getStoredSession, storeSession } from "@/lib/auth";
+import { getStoredExamSource } from "@/lib/topics";
 import { getPaywallCopy } from "@/lib/paywall-copy";
 import { useUserTier } from "@/lib/hooks/useUserTier";
 import { recordAnswer } from "@/lib/weakness";
@@ -35,6 +36,7 @@ import {
   type OfflineQuestion,
 } from "@/lib/offlineDb";
 import { buildMCQFromChoices, type StoredChoice } from "@/lib/mcq";
+import { isUnscoredAnswerReveal } from "@/lib/quizAnswer";
 import { CloudOff } from "lucide-react";
 
 type Lang = "de" | "en";
@@ -52,7 +54,7 @@ interface Question {
 }
 
 // Resume keys include account, exam, mode and every question filter.
-import { studyScope, readStudySession, writeStudySession, clearStudySession, type SavedQuizSession, type PracticeMode, resolvePracticeMode } from "@/lib/study-session";
+import { studyScope, readStudySession, writeStudySession, clearStudySession, getQuizAttemptStats, type SavedQuizSession, type PracticeMode, resolvePracticeMode } from "@/lib/study-session";
 
 function buildQueryParams(config: QuizConfig, userId: string, excludeIds?: number[], practiceMode?: string): URLSearchParams {
   const p = new URLSearchParams({ limit: "1", examSource: config.examSource });
@@ -103,7 +105,9 @@ function QuizContent() {
   const searchParams = useSearchParams();
   const initialTopic = searchParams.get("topic");
   const initialQuestionId = searchParams.get("questionId");
-  const examSource = searchParams.get("examSource") || "kenntnispruefung";
+  const [storedExamSource, setStoredExamSourceState] = useState("kenntnispruefung");
+  const examSource = searchParams.get("examSource") || storedExamSource;
+  const [examPreferenceReady, setExamPreferenceReady] = useState(false);
   const [userId, setUserId] = useState<string>("");
   const [practiceMode, setPracticeMode] = useState<PracticeMode>("unseen");
   const [modeReady, setModeReady] = useState(false);
@@ -112,6 +116,7 @@ function QuizContent() {
     // declared before auth hydration below, so reading localStorage here
     // without waiting for userId would otherwise use the empty-account key.
     if (!userId) return;
+    if (!examPreferenceReady) return;
     const account = userId;
     let stored: string | null = null;
     try { stored = localStorage.getItem(`medpruef-study-mode:${account}:${examSource}`); } catch {}
@@ -120,7 +125,7 @@ function QuizContent() {
     setModeReady(true);
     try { localStorage.removeItem("medpruef_quiz_session_v2"); } catch {}
     try { localStorage.setItem(`medpruef-study-mode:${account}:${examSource}`, mode); } catch {}
-  }, [searchParams, examSource, userId]);
+  }, [searchParams, examSource, userId, examPreferenceReady]);
   // Explicit opt-in for the customize-quiz screen. Default is auto-start so
   // topic cards, practice-mode buttons, and random-practice links go straight
   // into questions — customize is a separate, explicit flow, not the default.
@@ -180,16 +185,27 @@ function QuizContent() {
   // answer_history: the same spaced-rep batch answered twice in identical
   // order 35 minutes apart). The trail persists per-answer and seeds a
   // resume offer on return.
-  const answeredTrailRef = useRef<Array<{ id: number; correct: boolean }>>([]);
+  const answeredTrailRef = useRef<Array<{ id: number; correct: boolean; revealed?: boolean }>>([]);
   const resumeDecidedRef = useRef(false);
   const [resumeOffer, setResumeOffer] = useState<SavedQuizSession | null>(null);
   const [resumeGate, setResumeGate] = useState<"checking" | "offered" | "cleared">("checking");
   const [loadError, setLoadError] = useState(false);
+  const [loadErrorReason, setLoadErrorReason] = useState<string | null>(null);
+  const [answerQueuedOffline, setAnswerQueuedOffline] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(false);
+  // True only when we entered the question player directly, without opening
+  // the explicit quiz builder.
+  const [autoStarted, setAutoStarted] = useState(false);
   const pendingAnswer = useRef<{ correct: boolean; selected: number[]; requestId: string } | null>(null);
   const saveInFlight = useRef(false);
   const effectiveMode: PracticeMode = config?.filter === "unused" ? "unseen" : config?.filter === "incorrect" ? "wrong" : config?.filter === "all" || config?.filter === "flagged" ? "all" : practiceMode;
+  // Dashboard Study now and topic links pass unseen mode without a limit.
+  // In that path the daily goal is progress guidance, not a quiz length.
+  // Explicit limits and the quiz builder remain bounded sessions.
+  const continuousPractice = autoStarted && !wantsSetup
+    && effectiveMode === "unseen"
+    && !searchParams.has("limit");
   const scope = config ? studyScope(userId, config, effectiveMode) : "";
   const [question, setQuestion] = useState<Question | null>(null);
   const [nextQuestion, setNextQuestion] = useState<Question | null>(null);
@@ -202,6 +218,7 @@ function QuizContent() {
   // id-keyed reset never fired and the card stayed stuck in the answered state.
   const [advanceNonce, setAdvanceNonce] = useState(0);
   const [questionCount, setQuestionCount] = useState(0); // answered count
+  const [attemptCount, setAttemptCount] = useState(0);
   const [correctCount, setCorrectCount] = useState(0);
   const [totalXpSession, setTotalXpSession] = useState(0);
   const [xpEarned, setXpEarned] = useState<number | null>(null);
@@ -280,7 +297,7 @@ function QuizContent() {
   // ─── Init ───
   useEffect(() => {
     setLangState(getLang());
-    trackPageView("quiz");
+    setStoredExamSourceState(getStoredExamSource());
     const paramId = ""; // Account identity always comes from the signed session.
     if (paramId) {
       setUserId(paramId);
@@ -288,14 +305,19 @@ function QuizContent() {
       const session = getStoredSession();
       setUserId(session?.user?.id || "");
       if (!session?.user?.id) router.replace("/login");
+      const accountId = session?.user?.id || "";
+      if (accountId && !accountId.startsWith("guest_")) {
+        fetch("/api/user/exam-preference").then(async (res) => {
+          if (!res.ok) throw new Error("Preference unavailable");
+          return res.json();
+        }).then((data) => {
+          if (typeof data?.activeExam === "string") setStoredExamSourceState(data.activeExam);
+        }).catch(() => {}).finally(() => setExamPreferenceReady(true));
+      } else setExamPreferenceReady(true);
       // tier + role are now sourced from useUserTier() (live /api/auth/me)
       // rather than from the stale session blob, so we don't set them here.
     }
   }, [searchParams, router]);
-
-  // Track whether the quiz was auto-started from a topic link (instant practice)
-  // vs manually configured via the QuizSetup screen
-  const [autoStarted, setAutoStarted] = useState(false);
 
   // DEFAULT: auto-start. Every entry to /quiz is a practice session — topic
   // cards, random-practice, practice modes (unseen/wrong/review), deep-links
@@ -309,7 +331,7 @@ function QuizContent() {
   // still work — they just hit the same default auto-start branch.
   useEffect(() => {
     if (config) return;
-    if (!modeReady || !userId) return;
+    if (!modeReady || !userId || !examPreferenceReady) return;
     if (wantsSetup) return; // Explicit opt-in to customize screen
     const requestedLimit = Number.parseInt(searchParams.get("limit") || "", 10);
     const storedDailyGoal = getStoredSession()?.user?.daily_goal || 20;
@@ -335,7 +357,7 @@ function QuizContent() {
       examDateTo: null,
       examSource,
     });
-  }, [wantsSetup, initialTopic, config, examSource, searchParams, modeReady, userId]);
+  }, [wantsSetup, initialTopic, config, examSource, searchParams, modeReady, userId, examPreferenceReady]);
 
   useEffect(() => {
     if (config && modeReady && userId) trackEvent("quiz_start", { practiceMode: effectiveMode, examSource: config.examSource, topics: config.topics, targetCount: config.targetCount, entryPoint: initialQuestionId ? "question-link" : wantsSetup ? "builder" : "practice" });
@@ -396,15 +418,64 @@ function QuizContent() {
   const fetchQuestion = useCallback(async (): Promise<Question | null> => {
     if (!config) return null;
     setLoadError(false);
+    setLoadErrorReason(null);
     if (config.filter === "flagged" && !(config.flaggedIds || []).some(id => !seenIdsRef.current.includes(id))) return null;
 
-    // Offline branch — pull from IndexedDB instead of hitting the
-    // network. If the pool is empty, top it up from IDB filtered by
-    // examSource + (optionally) the first selected topic. We shuffle
-    // in place so each draw is a different question.
+    // Offline branch reads only content explicitly downloaded to this device.
+    // History-dependent modes cannot be reconstructed from this content cache.
     if (typeof navigator !== "undefined" && navigator.onLine === false) {
-      setLoadError(true);
-      return null;
+      if (effectiveMode === "wrong" || effectiveMode === "review" || config.filter === "unused") {
+        setLoadError(true);
+        setLoadErrorReason(lang === "de"
+          ? "Falsche und fällige Fragen brauchen deine Online-Lernhistorie. Verbinde dich erneut, um diesen Modus zu nutzen."
+          : "Wrong-answer and due-review queues need your online study history. Reconnect to use this mode.");
+        return null;
+      }
+      try {
+        const rows = config.topics.length === 1
+          ? await getQuestionsByTopic(config.examSource, config.topics[0])
+          : await getAllQuestions(config.examSource);
+        const allowedIds = config.filter === "flagged" ? new Set(config.flaggedIds || []) : null;
+        const candidates = rows.filter((row) => {
+          if (row.exam_type !== config.examSource) return false;
+          if (!Array.isArray(row.choices) || row.choices.length < 2) return false;
+          if (config.topics.length > 1 && !config.topics.includes(row.topic)) return false;
+          if (config.tags.length && !config.tags.some((tag) => row.tags?.includes(tag))) return false;
+          if (config.examDateFrom && !row.exam_dates?.some((date) => date >= config.examDateFrom!)) return false;
+          if (config.examDateTo && !row.exam_dates?.some((date) => date <= config.examDateTo!)) return false;
+          if (config.examYear && !row.exam_dates?.some((date) => date.startsWith(config.examYear!))) return false;
+          if (allowedIds && !allowedIds.has(row.id)) return false;
+          if (seenIdsRef.current.includes(row.id) || offlineServedRef.current.has(row.id)) return false;
+          return true;
+        });
+        if (!candidates.length) {
+          if (rows.length > 0 && rows.every((row) => !Array.isArray(row.choices) || row.choices.length < 2)) {
+            setLoadError(true);
+            setLoadErrorReason(lang === "de"
+              ? "Die gespeicherten Fragen haben keine offline nutzbaren Antwortoptionen. Lade Fragen mit Antwortoptionen in den Einstellungen herunter."
+              : "The cached questions have no offline-ready choices. Download questions with answer options in Settings.");
+          }
+          return null;
+        }
+        const index = Math.floor(Math.random() * candidates.length);
+        const selected = candidates[index];
+        offlineServedRef.current.add(selected.id);
+        seenIdsRef.current.push(selected.id);
+        const offlineQuestion = offlineToQuestion(selected);
+        if (!offlineQuestion) {
+          setLoadError(true);
+          setLoadErrorReason(lang === "de"
+            ? "Die gespeicherten Fragen enthalten keine offline nutzbaren Antwortoptionen. Lade Fragen mit Antwortoptionen in den Einstellungen herunter."
+            : "The cached question has no offline-ready choices. Download questions with answer options in Settings.");
+        }
+        return offlineQuestion;
+      } catch {
+        setLoadError(true);
+        setLoadErrorReason(lang === "de"
+          ? "Keine gespeicherten Fragen gefunden. Lade zuerst Fragen in den Einstellungen herunter."
+          : "No cached questions found. Download questions in Settings first.");
+        return null;
+      }
     }
 
     try {
@@ -446,7 +517,7 @@ function QuizContent() {
       setLoadError(true);
     }
     return null;
-  }, [config, userId, offlineToQuestion, practiceMode, effectiveMode]);
+  }, [config, userId, offlineToQuestion, practiceMode, effectiveMode, lang]);
 
   // Initial question load (or specific id from search deep-link)
   // ── Resume offer check: runs once per config identity, BEFORE the initial
@@ -463,7 +534,8 @@ function QuizContent() {
     // Study now explicitly means unseen questions. Do not let the generic
     // resume trail override that choice; the separate Continue card remains
     // the deliberate resume entry point.
-    const s = initialQuestionId ? null : readStudySession(scope);
+    const startsFreshUnseenPractice = searchParams.get("practiceMode") === "unseen";
+    const s = initialQuestionId || startsFreshUnseenPractice ? null : readStudySession(scope);
     if (s) {
       setResumeOffer(s);
       setResumeGate("offered");
@@ -478,12 +550,14 @@ function QuizContent() {
     seenIdsRef.current = resumeOffer.answered.map((a) => a.id);
     answeredTrailRef.current = resumeOffer.answered.slice();
     setQuestionCount(resumeOffer.answered.length);
-    setCorrectCount(resumeOffer.answered.filter((a) => a.correct).length);
-    setSessionHistory(resumeOffer.answered.map((a) => ({ correct: a.correct })));
+    const resumedStats = getQuizAttemptStats(resumeOffer.answered);
+    setCorrectCount(resumedStats.correct);
+    setAttemptCount(resumedStats.attempts);
+    setSessionHistory(resumeOffer.answered.filter((a) => !a.revealed).map((a) => ({ correct: a.correct })));
     const target = resumeOffer.targetCount ?? config.targetCount;
     if (resumeOffer.answered.length >= target) {
       // The saved session already reached its goal — show the terminal card.
-      clearStudySession(scope);
+      clearStudySession(scope, target);
       setResumeOffer(null);
       setResumeGate("cleared");
       setQuizFinished(true);
@@ -498,11 +572,11 @@ function QuizContent() {
 
   const startFresh = useCallback(() => {
     resumeDecidedRef.current = true;
-    clearStudySession(scope);
+    clearStudySession(scope, resumeOffer?.targetCount);
     answeredTrailRef.current = [];
     setResumeOffer(null);
     setResumeGate("cleared");
-  }, [scope]);
+  }, [scope, resumeOffer]);
 
   // Initial question load (or specific id from search deep-link)
   useEffect(() => {
@@ -565,8 +639,9 @@ function QuizContent() {
   const advance = useCallback(() => {
     if (!config || saving || saveError || !answered) return;
     pendingAnswer.current = null;
+    setAnswerQueuedOffline(false);
     // If we've hit the target, show terminal completion card
-    if (questionCount >= config.targetCount) {
+    if (!continuousPractice && questionCount >= config.targetCount) {
       setQuizFinished(true);
       return;
     }
@@ -587,7 +662,7 @@ function QuizContent() {
     setXpEarned(null);
     setShowXpFloat(false);
     setStartTime(Date.now());
-  }, [nextQuestion, fetchQuestion, questionCount, config, saving, saveError, answered]);
+  }, [nextQuestion, fetchQuestion, questionCount, config, saving, saveError, answered, continuousPractice]);
 
   // ─── Keyboard: N / → for next ───
   useEffect(() => {
@@ -617,35 +692,63 @@ function QuizContent() {
       setSaveError(false);
       if (!pendingAnswer.current) pendingAnswer.current = { correct: isCorrect, selected: selectedIndexes, requestId: crypto.randomUUID() };
       try {
-        const res = await fetch("/api/answer", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
+        // Open-answer reveal is navigation progress, not an answer attempt.
+        // Keep it out of answer_history and the XP ledger instead of sending
+        // isCorrect=true with an empty response to the authoritative RPC.
+        const revealedWithoutAttempt = isUnscoredAnswerReveal(isCorrect, selectedIndexes);
+        let data: { saved: boolean; xp: number; gamification?: Record<string, unknown> | null };
+        if (revealedWithoutAttempt) {
+          data = { saved: true, xp: 0 };
+        } else if (typeof navigator !== "undefined" && !navigator.onLine) {
+          const userAnswer = selectedIndexes
+            .map((index) => question.options?.[index]?.text)
+            .filter((text): text is string => Boolean(text))
+            .join(" | ");
+          if (!userId || !userAnswer) throw new Error("Cannot queue an anonymous or empty offline answer");
+          await queuePendingAnswer({
+            id: pendingAnswer.current.requestId,
             userId,
-            requestId: pendingAnswer.current.requestId,
             questionId: question.id,
+            userAnswer,
             isCorrect,
-            userAnswer: selectedIndexes
-              .map((index) => question.options?.[index]?.text)
-              .filter((text): text is string => Boolean(text))
-              .join(" | ") || null,
             timeSpentMs: Date.now() - startTime,
-          }),
-        });
-        if (!res.ok) throw new Error("Answer was not confirmed saved");
-        const data = await res.json();
-        if (data?.saved !== true) throw new Error("Answer save was not confirmed");
-        setAnswered(true);
+          });
+          data = { saved: false, xp: 0 };
+          setAnswerQueuedOffline(true);
+        } else {
+          const res = await fetch("/api/answer", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              userId,
+              requestId: pendingAnswer.current.requestId,
+              questionId: question.id,
+              isCorrect,
+              userAnswer: selectedIndexes
+                .map((index) => question.options?.[index]?.text)
+                .filter((text): text is string => Boolean(text))
+                .join(" | ") || null,
+              timeSpentMs: Date.now() - startTime,
+            }),
+          });
+          if (!res.ok) throw new Error("Answer was not confirmed saved");
+          data = await res.json();
+          if (data?.saved !== true) throw new Error("Answer save was not confirmed");
+        }
+      setAnswered(true);
       const newCount = questionCount + 1;
       setQuestionCount(newCount);
-      if (isCorrect) setCorrectCount((c) => c + 1);
-      setSessionHistory((prev) => [...prev, { correct: isCorrect }]);
-      recordAnswer(question.topic, isCorrect);
+      if (!revealedWithoutAttempt) {
+        setAttemptCount((count) => count + 1);
+        if (isCorrect) setCorrectCount((c) => c + 1);
+        setSessionHistory((prev) => [...prev, { correct: isCorrect }]);
+        recordAnswer(question.topic, isCorrect);
+      }
       // Persist the answered trail so a reload/break resumes instead of
       // restarting from question 1 (the exact bug Munir reported).
-      answeredTrailRef.current.push({ id: question.id, correct: isCorrect });
+      answeredTrailRef.current.push({ id: question.id, correct: isCorrect, ...(revealedWithoutAttempt ? { revealed: true } : {}) });
       writeStudySession(scope, config!.targetCount, answeredTrailRef.current);
-      trackEvent("question_answer", {
+      if (!revealedWithoutAttempt) trackEvent("question_answer", {
         questionId: question.id,
         topic: question.topic,
         isCorrect,
@@ -654,22 +757,24 @@ function QuizContent() {
         practiceMode: effectiveMode,
         entryPoint: initialQuestionId ? "question-link" : wantsSetup ? "builder" : "practice",
       });
-      trackFunnelEvent("first_answer", { exam: config?.examSource || "unknown" }, { once: true });
+      if (!revealedWithoutAttempt) trackFunnelEvent("first_answer", { exam: config?.examSource || "unknown" }, { once: true });
 
       // Trigger milestone card every 20 questions (unless this is also the final)
-      if (config && newCount % 20 === 0 && newCount < config.targetCount) {
+      if (config && newCount % 20 === 0 && (continuousPractice || newCount < config.targetCount)) {
         setMilestoneVisible(true);
         setTimeout(() => setMilestoneVisible(false), 8000);
       }
-        setXpEarned(data.xp);
-        setTotalXpSession((p) => p + (data.xp || 0));
-        setShowXpFloat(true);
-        setTimeout(() => setShowXpFloat(false), 1500);
+        if (data.xp > 0) {
+          setXpEarned(data.xp);
+          setTotalXpSession((p) => p + data.xp);
+          setShowXpFloat(true);
+          setTimeout(() => setShowXpFloat(false), 1500);
+        }
         // Update stored session with fresh gamification so home page reflects changes.
         // Goes through `storeSession` so the `user` blob is re-sanitized against
         // SAFE_USER_FIELDS — protects against a stale localStorage record that
         // predates the password_hash strip.
-        if (data.gamification) {
+      if (data.gamification) {
           try {
             const sess = JSON.parse(localStorage.getItem('medpruef_session') || '{}');
             if (sess.gamification && sess.user) {
@@ -680,6 +785,7 @@ function QuizContent() {
             }
           } catch {} // non-critical
         }
+        pendingAnswer.current = null;
       } catch (e) {
         console.error(e);
         setSaveError(true);
@@ -688,7 +794,7 @@ function QuizContent() {
         setSaving(false);
       }
     },
-    [question, answered, userId, startTime, config, questionCount, scope, effectiveMode, initialQuestionId, wantsSetup]
+    [question, answered, userId, startTime, config, questionCount, scope, effectiveMode, initialQuestionId, wantsSetup, continuousPractice]
   );
 
   useEffect(() => {
@@ -707,7 +813,9 @@ function QuizContent() {
     setNextQuestion(null);
     setAnswered(false);
     setQuestionCount(0);
+    setAttemptCount(0);
     setCorrectCount(0);
+    setAnswerQueuedOffline(false);
     setTotalXpSession(0);
     setSessionHistory([]);
     setQuizFinished(false);
@@ -719,13 +827,30 @@ function QuizContent() {
     setConfig(null); // back to setup
   };
 
-  const sessionAccuracy = questionCount > 0 ? Math.round((correctCount / questionCount) * 100) : 0;
+  const sessionAccuracy = attemptCount > 0 ? Math.round((correctCount / attemptCount) * 100) : 0;
 
   // ─── Setup screen ───
   // ?setup=1 → CreateTestBuilder (Phase C full customization flow).
   // Legacy QuizSetup is kept for backward compat; it's no longer reachable
   // via the normal ?setup=1 path but remains importable for any future use.
   if (!config) {
+    // Deep links from Study now, topic cards, and other instant-practice
+    // entry points resolve auth and the saved exam preference before building
+    // their config. Do not briefly show the quiz builder while those requests
+    // are pending. The builder is only an explicit `?setup=1` destination.
+    if (!wantsSetup) {
+      return (
+        <div
+          className="flex min-h-screen items-center justify-center bg-[var(--mp-surface-sunken)] px-4"
+          data-quiz-initializing="true"
+          role="status"
+          aria-label={lang === "de" ? "Lernsitzung wird vorbereitet" : "Preparing your study session"}
+        >
+          <BrandedLoader />
+          <span className="sr-only">{lang === "de" ? "Lernsitzung wird vorbereitet" : "Preparing your study session"}</span>
+        </div>
+      );
+    }
     return (
       <div className="app-layout">
         <Sidebar lang={lang} userId={userId} />
@@ -806,11 +931,10 @@ function QuizContent() {
             decorative spark here (viridian→teal + glow). */}
         <QuizTopBar
           lang={lang}
-          current={Math.min(
-            questionCount + (answered ? 0 : 1),
-            autoStarted && topicTotal > 0 ? topicTotal : config.targetCount,
-          )}
-          total={autoStarted && topicTotal > 0 ? topicTotal : config.targetCount}
+          current={continuousPractice
+            ? questionCount + (answered ? 0 : 1)
+            : Math.min(questionCount + (answered ? 0 : 1), config.targetCount)}
+          total={continuousPractice ? null : config.targetCount}
           progressPct={progressPct}
           timeLabel={
             timeRemaining !== null
@@ -842,7 +966,9 @@ function QuizContent() {
                   try { sessionStorage.setItem(`medpruef-study-config:${userId}`, JSON.stringify(nextConfig)); } catch {}
                   const params = new URLSearchParams({ examSource: config.examSource, practiceMode: mode, configured: "1" });
                   if (config.topics.length === 1) params.set("topic", config.topics[0]);
-                  params.set("limit", String(config.targetCount));
+                  if (mode !== "unseen" || searchParams.has("limit") || !autoStarted) {
+                    params.set("limit", String(config.targetCount));
+                  }
                   window.location.assign(`/quiz?${params}`);
                 }}>
                 <option value="unseen">{lang === "de" ? "Nur neue Fragen" : "New questions only"}</option>
@@ -857,7 +983,13 @@ function QuizContent() {
                 : lang === "de" ? "Wiederholungen sind in diesem Modus beabsichtigt. Wechsel jederzeit zu neuen Fragen." : "Repeats are intentional in this mode. Switch to new questions whenever you choose."}
               {" "}{lang === "de" ? "Die Moduswahl wird für dieses Konto auf diesem Gerät gespeichert." : "Your mode preference is saved for this account on this device."}
             </p>
-            <p className="text-xs text-[var(--mp-fg-subtle)]">{lang === "de" ? `Sitzungsziel: ${config.targetCount} Antworten. Tagesziel zählt Antworten inklusive Wiederholungen; Themenfortschritt zählt jede aktive Frage nur einmal.` : `Session goal: ${config.targetCount} answers. The daily goal includes repeats; topic coverage counts each active question once.`}</p>
+            <p className="text-xs text-[var(--mp-fg-subtle)]">{continuousPractice
+              ? lang === "de"
+                ? `Offenes Lernen: Beantworte neue Fragen in deinem Tempo. Die Anzeige orientiert sich an ${config.targetCount} Antworten, begrenzt deine Sitzung aber nicht.`
+                : `Open practice: answer new questions at your pace. Progress is shown against ${config.targetCount} answers, but your session will continue beyond that.`
+              : lang === "de"
+                ? `Sitzungsziel: ${config.targetCount} Antworten. Tagesziel zählt Antworten inklusive Wiederholungen; Themenfortschritt zählt jede aktive Frage nur einmal.`
+                : `Session goal: ${config.targetCount} answers. The daily goal includes repeats; topic coverage counts each active question once.`}</p>
             <Link className="text-xs underline" href={`/mistakes?examSource=${encodeURIComponent(config.examSource)}${config.topics.length === 1 ? `&topic=${encodeURIComponent(config.topics[0])}` : ""}`}>
               {lang === "de" ? "Fehlerliste ansehen" : "View mistake list"}
             </Link>
@@ -921,7 +1053,7 @@ function QuizContent() {
                 <FinalCompletionCard
                   lang={lang}
                   correctCount={correctCount}
-                  questionCount={questionCount}
+                  questionCount={attemptCount}
                   targetCount={config.targetCount}
                   totalXp={totalXpSession}
                   topicTotal={topicTotal}
@@ -1048,9 +1180,10 @@ function QuizContent() {
                     key={`q-${question.id}-${advanceNonce}`}
                     question={question}
                     questionNumber={questionCount + (answered ? 0 : 1)}
-                    totalQuestions={config.targetCount}
+                    totalQuestions={continuousPractice ? null : config.targetCount}
                     lang={lang}
                     onAnswer={handleAnswer}
+                    offlineAnswerPending={answerQueuedOffline}
                     imageUrl={question.image_url}
                     hideActions
                     recallFirst={kafEligible && kafMode}
@@ -1083,7 +1216,7 @@ function QuizContent() {
                   {(() => {
                     const nCorrect = (question.options ?? []).filter((o) => o.correct).length;
                     const isMulti = nCorrect >= 2;
-                    const isFinish = questionCount >= config.targetCount;
+                    const isFinish = !continuousPractice && questionCount >= config.targetCount;
                     let mode: QuizFooterMode | null = null;
                     if (answered) mode = isFinish ? "finish" : "next";
                     else if (!isMulti && (question.options ?? []).length >= 2) mode = "locked";

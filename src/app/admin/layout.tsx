@@ -7,7 +7,7 @@
  *
  * Structure:
  *  - Collapsible sidebar (Overview · Revenue · Content · Product · System)
- *  - Top bar with connection indicator, Cmd+K global search, user menu
+ *  - Top bar with route refresh and browser-offline notice
  *  - Keyboard shortcuts: g o/r/c/p/s, /, ?, Esc
  *  - Dark-mode first: the admin subtree gets data-theme='dark' applied to
  *    the <html> element unless localStorage('medpruef_admin_theme') overrides.
@@ -20,14 +20,13 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity,
   AlertTriangle,
   BarChart3,
   BellRing,
   ChevronDown,
-  Command,
   CreditCard,
   Database,
   FileText,
@@ -37,20 +36,18 @@ import {
   Image as ImageIcon,
   Keyboard,
   LayoutDashboard,
-  LifeBuoy,
   LogOut,
+  Menu,
   MessageSquare,
   Moon,
   RefreshCw,
   Rocket,
-  Search,
   Server,
   Shield,
   ShieldAlert,
   ShieldCheck,
   Sprout,
   Sun,
-  TerminalSquare,
   Ticket,
   Users,
   Wallet,
@@ -58,6 +55,7 @@ import {
   Zap,
 } from "lucide-react";
 import { clearSession, getStoredSession } from "@/lib/auth";
+import { AdminAccessProvider, useAdminPermissions, type AdminPermission } from "@/lib/admin/useAdminPermissions";
 import { ShortcutHint } from "./_components/primitives";
 
 type SectionKey =
@@ -73,6 +71,7 @@ interface NavItem {
   label: string;
   href: string;
   icon: typeof Users;
+  permission: AdminPermission;
   description?: string;
   /** Reserved for future gating (e.g., pay-wall specific routes). */
   experimental?: boolean;
@@ -84,6 +83,7 @@ interface NavSection {
   icon: typeof LayoutDashboard;
   shortcut: string;
   items: NavItem[];
+  permission?: AdminPermission;
   /** For sections with a single "landing" href (Overview). */
   href?: string;
 }
@@ -94,6 +94,7 @@ const NAV: NavSection[] = [
     label: "Overview",
     icon: LayoutDashboard,
     shortcut: "o",
+    permission: "overview.read",
     href: "/admin/overview",
     items: [],
   },
@@ -102,6 +103,7 @@ const NAV: NavSection[] = [
     label: "Plan & Actions",
     icon: Rocket,
     shortcut: "l",
+    permission: "overview.read",
     href: "/admin/launch",
     items: [],
   },
@@ -110,6 +112,7 @@ const NAV: NavSection[] = [
     label: "Channels",
     icon: Sprout,
     shortcut: "w",
+    permission: "overview.read",
     href: "/admin/growth",
     items: [],
   },
@@ -119,11 +122,11 @@ const NAV: NavSection[] = [
     icon: Wallet,
     shortcut: "r",
     items: [
-      { label: "Users", href: "/admin/users", icon: Users },
-      { label: "Payments", href: "/admin/payments", icon: CreditCard },
-      { label: "Subscriptions", href: "/admin/subscriptions", icon: Ticket },
-      { label: "Referrals", href: "/admin/referrals", icon: GitBranch },
-      { label: "Waitlist", href: "/admin/waitlist", icon: BellRing },
+      { label: "Users", href: "/admin/users", icon: Users, permission: "users.read" },
+      { label: "Payments", href: "/admin/payments", icon: CreditCard, permission: "revenue.read" },
+      { label: "Subscriptions", href: "/admin/subscriptions", icon: Ticket, permission: "revenue.read" },
+      { label: "Referrals", href: "/admin/referrals", icon: GitBranch, permission: "revenue.read" },
+      { label: "Waitlist", href: "/admin/waitlist", icon: BellRing, permission: "revenue.read" },
     ],
   },
   {
@@ -132,9 +135,9 @@ const NAV: NavSection[] = [
     icon: FileText,
     shortcut: "c",
     items: [
-      { label: "Questions", href: "/admin/questions", icon: FileText },
-      { label: "Flagged", href: "/admin/flagged", icon: ShieldAlert },
-      { label: "Media", href: "/admin/media", icon: ImageIcon },
+      { label: "Questions", href: "/admin/questions", icon: FileText, permission: "content.read" },
+      { label: "Question reports", href: "/admin/flagged", icon: ShieldAlert, permission: "content.read" },
+      { label: "Media", href: "/admin/media", icon: ImageIcon, permission: "content.read" },
     ],
   },
   {
@@ -143,9 +146,9 @@ const NAV: NavSection[] = [
     icon: Activity,
     shortcut: "p",
     items: [
-      { label: "Feedback", href: "/admin/feedback", icon: MessageSquare },
-      { label: "Flags", href: "/admin/flags", icon: Flag },
-      { label: "PUYP", href: "/admin/puyp", icon: ShieldCheck },
+      { label: "Feedback", href: "/admin/feedback", icon: MessageSquare, permission: "feedback.read" },
+      { label: "Flags", href: "/admin/flags", icon: Flag, permission: "system.read" },
+      { label: "PUYP", href: "/admin/puyp", icon: ShieldCheck, permission: "revenue.read" },
     ],
   },
   {
@@ -154,13 +157,13 @@ const NAV: NavSection[] = [
     icon: Server,
     shortcut: "s",
     items: [
-      { label: "Crons", href: "/admin/crons", icon: Gauge },
-      { label: "Deploys", href: "/admin/deploys", icon: Zap },
-      { label: "Webhooks", href: "/admin/webhooks", icon: Webhook },
-      { label: "Errors", href: "/admin/errors", icon: AlertTriangle },
-      { label: "Audit", href: "/admin/audit", icon: BarChart3 },
-      { label: "SQL", href: "/admin/sql", icon: TerminalSquare },
-      { label: "Env", href: "/admin/env", icon: Database },
+      { label: "Crons", href: "/admin/crons", icon: Gauge, permission: "system.read" },
+      { label: "Deploys", href: "/admin/deploys", icon: Zap, permission: "system.read" },
+      { label: "Webhooks", href: "/admin/webhooks", icon: Webhook, permission: "system.read" },
+      { label: "Errors", href: "/admin/errors", icon: AlertTriangle, permission: "system.read" },
+      { label: "Audit", href: "/admin/audit", icon: BarChart3, permission: "system.read" },
+      { label: "Env", href: "/admin/env", icon: Database, permission: "system.read" },
+      { label: "Admins & roles", href: "/admin/access", icon: ShieldCheck, permission: "access.manage" },
     ],
   },
 ];
@@ -182,17 +185,52 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
+  return (
+    <AdminAccessProvider>
+      <AdminLayoutContent>{children}</AdminLayoutContent>
+    </AdminAccessProvider>
+  );
+}
+
+function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { can, loading: permissionsLoading, error: permissionsError } = useAdminPermissions();
   const [authChecked, setAuthChecked] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [adminNavOpen, setAdminNavOpen] = useState(false);
+  const [compactAdmin, setCompactAdmin] = useState(false);
   const [activeSection, setActiveSection] = useState<SectionKey | null>(null);
-  const [searchOpen, setSearchOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [theme, setTheme] = useState<Theme>("dark");
-  const [connectionState, setConnectionState] =
-    useState<"connected" | "connecting" | "offline">("connecting");
-  const [lastEventAt, setLastEventAt] = useState<Date>(new Date());
+  const [browserOffline, setBrowserOffline] = useState(false);
+  const openNavButtonRef = useRef<HTMLButtonElement>(null);
+  const closeNavButtonRef = useRef<HTMLButtonElement>(null);
+  const navAsideRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    setAdminNavOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 1023px)");
+    const sync = () => setCompactAdmin(media.matches);
+    sync();
+    media.addEventListener("change", sync);
+    return () => media.removeEventListener("change", sync);
+  }, []);
+
+  useEffect(() => {
+    if (!adminNavOpen) return;
+    closeNavButtonRef.current?.focus();
+    const trigger = openNavButtonRef.current;
+    const oldOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = oldOverflow;
+      if (compactAdmin) trigger?.focus();
+    };
+  }, [adminNavOpen, compactAdmin]);
 
   // Auth gate. requireAdmin on every /api/admin/* route is the real gate;
   // this is the cosmetic bounce so non-admins don't see a shell of 403s.
@@ -232,7 +270,6 @@ export default function AdminLayout({
       }
     };
     // Run once on mount.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function toggleTheme() {
@@ -260,35 +297,31 @@ export default function AdminLayout({
     setActiveSection(null);
   }, [pathname]);
 
-  // Heartbeat: the app doesn't have a global realtime connection signal
-  // yet (each `useAdminRealtime` runs its own channel). For the header
-  // we simulate a "connecting → connected" status by listening to the
-  // browser's online/offline events and stamping a heartbeat on visibility.
+  // Report browser connectivity only when offline. A green server or
+  // realtime health signal is not available to this shell.
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const onOnline = () => setConnectionState("connected");
-    const onOffline = () => setConnectionState("offline");
+    const sync = () => setBrowserOffline(!navigator.onLine);
+    const onOnline = () => sync();
+    const onOffline = () => sync();
     window.addEventListener("online", onOnline);
     window.addEventListener("offline", onOffline);
-    setConnectionState(navigator.onLine ? "connected" : "offline");
-
-    const tick = setInterval(() => setLastEventAt(new Date()), 30_000);
+    sync();
     return () => {
       window.removeEventListener("online", onOnline);
       window.removeEventListener("offline", onOffline);
-      clearInterval(tick);
     };
   }, []);
 
   // Keyboard shortcuts.
   const goTo = useCallback(
     (section: SectionKey) => {
-      const target = NAV.find((s) => s.key === section);
+      const target = NAV.find((s) => s.key === section && (!s.permission || can(s.permission)));
       if (!target) return;
-      const href = target.href ?? target.items[0]?.href;
+      const href = target.href ?? target.items.find((item) => can(item.permission))?.href;
       if (href) router.push(href);
     },
-    [router]
+    [can, router]
   );
 
   useEffect(() => {
@@ -300,22 +333,11 @@ export default function AdminLayout({
       const target = e.target as HTMLElement | null;
       const tag = target?.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA" || target?.isContentEditable) {
-        // Only allow the universal shortcuts in fields.
-        if ((e.metaKey || e.ctrlKey) && e.key === "k") {
-          e.preventDefault();
-          setSearchOpen(true);
-        }
-        return;
-      }
-
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
-        e.preventDefault();
-        setSearchOpen(true);
         return;
       }
 
       if (e.key === "Escape") {
-        if (searchOpen) setSearchOpen(false);
+        if (adminNavOpen) setAdminNavOpen(false);
         if (shortcutsOpen) setShortcutsOpen(false);
         return;
       }
@@ -323,12 +345,6 @@ export default function AdminLayout({
       if (e.key === "?" && !e.metaKey && !e.ctrlKey) {
         e.preventDefault();
         setShortcutsOpen(true);
-        return;
-      }
-
-      if (e.key === "/" && !e.metaKey && !e.ctrlKey) {
-        e.preventDefault();
-        setSearchOpen(true);
         return;
       }
 
@@ -355,12 +371,46 @@ export default function AdminLayout({
 
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [goTo, searchOpen, shortcutsOpen]);
+  }, [adminNavOpen, goTo, shortcutsOpen]);
+
+  useEffect(() => {
+    if (!adminNavOpen || !compactAdmin) return;
+    const aside = navAsideRef.current;
+    if (!aside) return;
+    function keepFocusInside(event: KeyboardEvent) {
+      if (event.key !== "Tab" || !aside) return;
+      const focusable = Array.from(aside.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      )).filter((element) => element.offsetParent !== null);
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+    aside.addEventListener("keydown", keepFocusInside);
+    return () => aside.removeEventListener("keydown", keepFocusInside);
+  }, [adminNavOpen, compactAdmin]);
 
   const navExpandedByDefault = useMemo<Set<SectionKey>>(() => {
     if (activeSection) return new Set([activeSection]);
     return new Set();
   }, [activeSection]);
+
+  const visibleNav = useMemo(() => {
+    if (permissionsLoading || permissionsError) return [];
+    return NAV.map((section) => {
+      if (section.permission && !can(section.permission)) return null;
+      const items = section.items.filter((item) => can(item.permission));
+      if (!section.href && items.length === 0) return null;
+      return { ...section, items };
+    }).filter((section): section is NavSection => section !== null);
+  }, [can, permissionsError, permissionsLoading]);
 
   if (!authChecked) {
     return (
@@ -394,11 +444,24 @@ export default function AdminLayout({
         }}
       />
       {/* ═══ SIDEBAR ═══ */}
+      {compactAdmin && adminNavOpen && (
+        <button
+          type="button"
+          className="fixed inset-0 z-40 bg-black/55 lg:hidden"
+          aria-label="Dismiss admin navigation backdrop"
+          onClick={() => setAdminNavOpen(false)}
+        />
+      )}
       <aside
-        className={`${sidebarCollapsed ? "w-[64px]" : "w-[240px]"} flex-shrink-0 border-r border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] transition-all duration-200`}
+        ref={navAsideRef}
+        aria-hidden={compactAdmin && !adminNavOpen}
+        inert={compactAdmin && !adminNavOpen}
+        role={compactAdmin ? "dialog" : undefined}
+        aria-modal={compactAdmin && adminNavOpen ? true : undefined}
+        className={`${compactAdmin ? "fixed z-50 w-[min(320px,88vw)] transition-transform" : `static z-auto ${sidebarCollapsed ? "w-[64px]" : "w-[240px]"} transition-[width]`} inset-y-0 left-0 flex-shrink-0 border-r border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] duration-200 ${compactAdmin && !adminNavOpen ? "-translate-x-full" : "translate-x-0"}`}
         aria-label="Admin navigation"
       >
-        <div className="sticky top-0 flex flex-col h-screen">
+        <div className="sticky top-0 flex flex-col h-dvh">
           <div className="flex items-center gap-2 px-3 py-3 border-b border-[var(--mp-border-subtle)]">
             <div className="w-8 h-8 rounded-lg bg-[var(--mp-viridian)] flex items-center justify-center flex-shrink-0">
               <Shield size={14} className="text-white" />
@@ -413,10 +476,21 @@ export default function AdminLayout({
                 </div>
               </div>
             )}
+            {compactAdmin && (
+              <button
+                ref={closeNavButtonRef}
+                type="button"
+                onClick={() => setAdminNavOpen(false)}
+                className="ml-auto inline-flex h-9 w-9 items-center justify-center rounded-lg text-[var(--mp-fg-muted)] hover:bg-[var(--mp-surface-sunken)]"
+                aria-label="Close admin navigation"
+              >
+                <span aria-hidden="true">×</span>
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setSidebarCollapsed((v) => !v)}
-              className="p-1 rounded hover:bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-muted)]"
+              className="hidden lg:inline-flex p-1 rounded hover:bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-muted)]"
               aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
               title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
             >
@@ -427,16 +501,24 @@ export default function AdminLayout({
             </button>
           </div>
 
-          <nav className="flex-1 overflow-y-auto py-2" role="navigation">
-            {NAV.map((section) => (
+          <nav className="flex-1 overflow-y-auto py-2" role="navigation" aria-label="Admin navigation">
+            {visibleNav.map((section) => (
               <NavSectionView
                 key={section.key}
                 section={section}
-                collapsed={sidebarCollapsed}
+                collapsed={sidebarCollapsed && !compactAdmin}
                 activePath={pathname}
                 initiallyOpen={navExpandedByDefault.has(section.key)}
               />
             ))}
+            {permissionsLoading && (
+              <p className="px-4 py-3 text-xs text-[var(--mp-fg-muted)]" role="status">Loading admin access…</p>
+            )}
+            {!permissionsLoading && permissionsError && (
+              <p className="mx-3 my-2 rounded border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200" role="alert">
+                Admin access could not be verified. Navigation is hidden until access is available.
+              </p>
+            )}
           </nav>
 
           <div className="border-t border-[var(--mp-border-subtle)] px-2 py-2 flex flex-col gap-1">
@@ -478,25 +560,22 @@ export default function AdminLayout({
       {/* ═══ MAIN ═══ */}
       <div className="flex-1 min-w-0 flex flex-col">
         <header className="sticky top-0 z-30 bg-[var(--mp-surface-raised)] border-b border-[var(--mp-border-subtle)]">
-          <div className="flex items-center gap-3 px-4 h-[52px]">
-            <ConnectionIndicator state={connectionState} lastEventAt={lastEventAt} />
+          <div className="flex items-center gap-2 sm:gap-3 px-2 sm:px-4 h-[52px] min-w-0">
             <button
+              ref={openNavButtonRef}
               type="button"
-              onClick={() => setSearchOpen(true)}
-              className="flex items-center gap-2 px-2 py-1.5 text-xs rounded-md border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-muted)] hover:text-[var(--mp-fg)] min-w-[240px]"
-              aria-label="Global search"
+              onClick={() => setAdminNavOpen(true)}
+              className="lg:hidden inline-flex items-center justify-center w-9 h-9 rounded-lg text-[var(--mp-fg-muted)] hover:bg-[var(--mp-surface-sunken)] shrink-0"
+              aria-label="Open admin navigation"
             >
-              <Search size={13} />
-              <span className="flex-1 text-left">Search admins, users, questions…</span>
-              <kbd className="font-mono text-[10px] bg-[var(--mp-surface-raised)] border border-[var(--mp-border-subtle)] rounded px-1 py-0.5">
-                ⌘K
-              </kbd>
+              <Menu size={18} />
             </button>
-            <div className="flex-1" />
+            {browserOffline && <BrowserOfflineStatus />}
+            <div className="flex-1 min-w-0" />
             <button
               type="button"
               onClick={() => router.refresh()}
-              className="mp-btn mp-btn--secondary mp-btn--sm flex items-center gap-1.5"
+              className="mp-btn mp-btn--secondary mp-btn--sm flex items-center gap-1.5 shrink-0"
               title="Refresh current view"
             >
               <RefreshCw size={12} />
@@ -504,19 +583,18 @@ export default function AdminLayout({
             </button>
             <Link
               href="/"
-              className="text-xs text-[var(--mp-fg-muted)] hover:text-[var(--mp-fg)] px-2 py-1"
+              className="text-xs text-[var(--mp-fg-muted)] hover:text-[var(--mp-fg)] px-1 sm:px-2 py-1 shrink-0"
             >
               Exit admin
             </Link>
           </div>
         </header>
 
-        <main className="flex-1 min-w-0 p-4 sm:p-6 bg-[var(--mp-surface-sunken)]">
+        <main className="flex-1 min-w-0 p-3 sm:p-6 bg-[var(--mp-surface-sunken)]">
           {children}
         </main>
       </div>
 
-      {searchOpen && <GlobalSearchDialog onClose={() => setSearchOpen(false)} />}
       {shortcutsOpen && <ShortcutsDialog onClose={() => setShortcutsOpen(false)} />}
     </div>
   );
@@ -607,10 +685,11 @@ function NavSectionView({
             const ItemIcon = item.icon;
             const active = activePath?.startsWith(item.href) ?? false;
             return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex items-center gap-2 px-2 py-1.5 rounded text-xs transition-colors ${
+            <Link
+              key={item.href}
+              href={item.href}
+              aria-current={active ? "page" : undefined}
+              className={`flex items-center gap-2 px-2 py-1.5 rounded text-xs transition-colors ${
                   active
                     ? "bg-[var(--mp-viridian)]/12 text-[var(--mp-viridian)]"
                     : "text-[var(--mp-fg-muted)] hover:text-[var(--mp-fg)] hover:bg-[var(--mp-surface-sunken)]"
@@ -627,65 +706,11 @@ function NavSectionView({
   );
 }
 
-function ConnectionIndicator({
-  state,
-  lastEventAt,
-}: {
-  state: "connected" | "connecting" | "offline";
-  lastEventAt: Date;
-}) {
-  const color =
-    state === "connected"
-      ? "bg-emerald-500"
-      : state === "connecting"
-        ? "bg-amber-500"
-        : "bg-red-500";
-  const label =
-    state === "connected"
-      ? "Live"
-      : state === "connecting"
-        ? "Connecting"
-        : "Offline";
+function BrowserOfflineStatus() {
   return (
-    <div
-      className="flex items-center gap-1.5 text-[11px] text-[var(--mp-fg-muted)] font-mono"
-      title={`Last heartbeat ${lastEventAt.toLocaleTimeString()}`}
-    >
-      <span className={`w-2 h-2 rounded-full ${color} ${state === "connected" ? "animate-pulse" : ""}`} />
-      <span>{label}</span>
-    </div>
-  );
-}
-
-function GlobalSearchDialog({ onClose }: { onClose: () => void }) {
-  // Minimal scaffold. The full search endpoint lands in a follow-up sprint.
-  // This modal at least gives Cmd+K a visible destination.
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-start justify-center pt-[10vh] bg-black/40 backdrop-blur-sm"
-      role="dialog"
-      aria-modal="true"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-lg mx-4 rounded-xl bg-[var(--mp-surface-raised)] border border-[var(--mp-border-subtle)] shadow-2xl overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center gap-2 px-3 py-3 border-b border-[var(--mp-border-subtle)]">
-          <Command size={14} className="text-[var(--mp-fg-muted)]" />
-          <input
-            autoFocus
-            placeholder="Search users, questions, referrals, feedback…"
-            className="flex-1 bg-transparent text-sm outline-none text-[var(--mp-fg)] placeholder:text-[var(--mp-fg-muted)]"
-          />
-          <kbd className="font-mono text-[10px] text-[var(--mp-fg-muted)]">Esc</kbd>
-        </div>
-        <div className="p-6 text-center text-xs text-[var(--mp-fg-muted)]">
-          <LifeBuoy size={24} className="mx-auto mb-2 opacity-60" />
-          Global admin search ships in a follow-up sprint. Use the per-tab
-          filter for now.
-        </div>
-      </div>
+    <div role="status" className="flex shrink-0 items-center gap-1.5 text-[11px] text-amber-300">
+      <span className="h-2 w-2 rounded-full bg-amber-400" />
+      <span>Browser offline</span>
     </div>
   );
 }
@@ -725,8 +750,6 @@ function ShortcutsDialog({ onClose }: { onClose: () => void }) {
           <ShortcutRow keys="g c" label="Go to Content" />
           <ShortcutRow keys="g p" label="Go to Product" />
           <ShortcutRow keys="g s" label="Go to System" />
-          <ShortcutRow keys="⌘K" label="Global search" />
-          <ShortcutRow keys="/" label="Focus search" />
           <ShortcutRow keys="?" label="This dialog" />
           <ShortcutRow keys="Esc" label="Close dialogs" />
         </div>

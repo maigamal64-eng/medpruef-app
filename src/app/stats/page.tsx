@@ -150,6 +150,7 @@ function StatsContent() {
   const [loading, setLoading] = useState(true);
   const [lang, setLangState] = useState<Lang>("de");
   const [userId, setUserId] = useState(rawUserId);
+  const [sessionReady, setSessionReady] = useState(Boolean(rawUserId));
   const [userName, setUserName] = useState("");
   // Pass-Until-You-Pass celebration banner. Shown the first time a user lands
   // on /stats?examPassed=1 (after submitting their pass on the PUYP page).
@@ -167,6 +168,7 @@ function StatsContent() {
     } else if (session) {
       setUserName(session.user.first_name);
     }
+    setSessionReady(true);
   }, [rawUserId]);
 
   // When the user lands here from the PUYP "I passed" flow, fire a one-time
@@ -204,6 +206,7 @@ function StatsContent() {
 
   useEffect(() => {
     const uid = userId || rawUserId;
+    if (!uid && !sessionReady) return;
     if (!uid) {
       setLoading(false);
       return;
@@ -214,8 +217,12 @@ function StatsContent() {
         setGam(data.gamification);
         setTopicStats(data.topicStats || {});
       })
+      .catch(() => {
+        setGam(null);
+        setTopicStats({});
+      })
       .finally(() => setLoading(false));
-  }, [userId, rawUserId]);
+  }, [userId, rawUserId, sessionReady]);
 
   if (loading) {
     return (
@@ -407,7 +414,7 @@ function StatsContent() {
                 <StatTileLocal
                   tone="green"
                   icon={<CheckCircle2 className="w-[18px] h-[18px]" />}
-                  label={lang === "de" ? "Gelöst" : "Solved"}
+                  label={lang === "de" ? "Antwortversuche" : "Answer attempts"}
                   value={nf(totalAnswered, lang)}
                 />
                 <StatTileLocal
@@ -446,7 +453,7 @@ function StatsContent() {
                 />
                 <SummaryRow
                   label={lang === "de" ? "Längste Serie" : "Longest streak"}
-                  value={`${gam?.longest_streak || 0} ${lang === "de" ? "Tage" : "days"}`}
+                  value={`${gam?.longest_streak || 0} ${lang === "de" ? ((gam?.longest_streak || 0) === 1 ? "Tag" : "Tage") : ((gam?.longest_streak || 0) === 1 ? "day" : "days")}`}
                 />
               </div>
 
@@ -619,8 +626,8 @@ function TopicStrengthRow({
         <TopicIcon name={config.icon} className="w-[17px] h-[17px]" />
       </span>
       <div className="tarow__body">
-        <div className="tarow__topline">
-          <span className="tarow__name">{row.topic}</span>
+      <div className="tarow__topline">
+          <span className="tarow__name" title={row.topic} style={{ whiteSpace: "normal", overflow: "visible", textOverflow: "clip", overflowWrap: "anywhere" }}>{row.topic}</span>
           <span className="tarow__pct">{row.acc}%</span>
         </div>
         <div className="tarow__track">

@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { usePathname } from 'next/navigation'
 import { MessageSquarePlus, X, Send, Check, MessageCircle, Plus } from 'lucide-react'
-import { getStoredSession } from '@/lib/auth'
 import { getStoredExamSource } from '@/lib/topics'
 import { authFetch as fetch } from '@/lib/authFetch'
 import { t, useLang } from '@/lib/i18n'
@@ -15,19 +14,19 @@ import { t, useLang } from '@/lib/i18n'
  * separate floating buttons (this FeedbackWidget + the Intercom Messenger
  * launcher) stacked and fought the mobile bottom-nav.
  *
- *   - MOBILE (< 768px): a SINGLE FAB at bottom:96px (clear of the ~80px
- *     bottom-nav + the raised center Quiz button), z-40. Tapping it fans up
+ *   - MOBILE AND TABLET (<= 1024px): a SINGLE FAB above the fixed bottom nav.
+ *     Tapping it fans up
  *     two actions — "Chat" (opens the Intercom Messenger via Intercom('show'))
  *     and "Feedback" (opens the first-party feedback panel). Intercom's own
  *     launcher is hidden on mobile (IntercomMessenger toggles
  *     hide_default_launcher by viewport), so there is exactly one button.
- *   - DESKTOP (>= 768px): the feedback button renders standalone (bottom-right),
+ *   - DESKTOP (>= 1025px): the feedback button renders standalone (bottom-right),
  *     and Intercom shows its own launcher beside it — two distinct affordances.
  *
  * Hidden on /landing, /login, /admin, /privacy, /terms, /impressum (unchanged).
  */
 
-const MOBILE_MQ = '(max-width: 767px)'
+const MOBILE_MQ = '(max-width: 1024px)'
 
 function openIntercom() {
   try {
@@ -43,10 +42,12 @@ export default function FeedbackWidget() {
   const [fanOpen, setFanOpen] = useState(false) // mobile action fan open
   const [message, setMessage] = useState('')
   const [sent, setSent] = useState(false)
+  const [submitError, setSubmitError] = useState(false)
   const [sending, setSending] = useState(false)
   const [mounted, setMounted] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const textRef = useRef<HTMLTextAreaElement>(null)
+  const lastPathnameRef = useRef<string | null>(null)
   // Reactive pathname — fires on every App Router navigation so the widget
   // hides/shows correctly after navigation (Frontend P1-3, 2026-04-15).
   const pathname = usePathname()
@@ -68,8 +69,15 @@ export default function FeedbackWidget() {
     if (open && textRef.current) textRef.current.focus()
   }, [open])
 
-  // Close the fan on navigation so it never lingers across routes.
-  useEffect(() => { setFanOpen(false) }, [pathname])
+  // Close the fan and form on route changes, but keep the initial mount from
+  // racing with a user's first click on the launcher.
+  useEffect(() => {
+    if (lastPathnameRef.current && lastPathnameRef.current !== pathname) {
+      setFanOpen(false)
+      setOpen(false)
+    }
+    lastPathnameRef.current = pathname ?? null
+  }, [pathname])
 
   if (!mounted) return null
 
@@ -78,16 +86,18 @@ export default function FeedbackWidget() {
     return null
   }
 
+  // The floating launcher can cover interactive controls on narrow pricing
+  // cards and the Settings language picker. Keep the FAB out of those
+  // phone/tablet layouts; it remains available on learner study screens.
+  if ((pathname?.startsWith('/pricing') || pathname?.startsWith('/settings') || pathname?.startsWith('/mistakes')) && isMobile) return null
+
   const handleSubmit = async () => {
     if (!message.trim() || sending) return
     setSending(true)
+    setSubmitError(false)
     try {
-      const session = getStoredSession()
-      const userId = session?.user?.id || null
-
       // Auto-capture context
       const context = {
-        url: window.location.href,
         pathname: window.location.pathname,
         examType: getStoredExamSource(),
         userAgent: navigator.userAgent.slice(0, 200),
@@ -102,11 +112,12 @@ export default function FeedbackWidget() {
         })(),
       }
 
-      await fetch('/api/feedback', {
+      const response = await fetch('/api/feedback', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: message.trim(), context, userId }),
+        body: JSON.stringify({ message: message.trim(), context }),
       })
+      if (!response.ok) throw new Error('Feedback submission failed')
 
       setSent(true)
       setMessage('')
@@ -115,7 +126,7 @@ export default function FeedbackWidget() {
         setOpen(false)
       }, 2000)
     } catch {
-      // Silently fail — don't disrupt the user
+      setSubmitError(true)
     } finally {
       setSending(false)
     }
@@ -131,8 +142,9 @@ export default function FeedbackWidget() {
   //   - Desktop: bottom:96px so the panel opens ABOVE Intercom's own launcher
   //     (~60px tall at bottom:20px) instead of overlapping it. Was md:bottom-6
   //     (24px) which collided with — and hid behind — the Intercom bubble.
+  const mobileOffset = 'bottom-[calc(var(--mobile-nav-clearance)+0.75rem)]'
   const feedbackPanel = open && (
-    <div className="fixed bottom-24 right-4 md:right-6 z-50 w-80 max-w-[calc(100vw-2rem)]">
+    <div className={`fixed z-50 w-80 max-w-[calc(100vw-2rem)] max-h-[min(70dvh,32rem)] overflow-y-auto ${isMobile ? `${mobileOffset} right-4` : 'bottom-24 right-6'}`}>
       <div className="bg-[var(--mp-surface-raised)] rounded-2xl shadow-2xl border border-[var(--mp-border-subtle)] overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 bg-[var(--mp-cta-blue)] text-white">
@@ -157,12 +169,19 @@ export default function FeedbackWidget() {
             <textarea
               ref={textRef}
               value={message}
-              onChange={e => setMessage(e.target.value)}
+              onChange={e => { setMessage(e.target.value); setSubmitError(false) }}
               placeholder={t('feedback_placeholder', lang)}
               aria-label={t('feedback_textarea_aria', lang)}
               className="w-full h-24 text-sm bg-[var(--mp-surface-sunken)] text-[var(--mp-fg)] border border-[var(--mp-border-subtle)] rounded-xl px-3 py-2 resize-none focus:outline-none focus:border-[var(--mp-cta-blue)]/50"
               maxLength={2000}
             />
+            {submitError && (
+              <p role="alert" className="mt-2 text-xs text-[var(--mp-error)]">
+                {lang === 'de'
+                  ? 'Feedback konnte nicht gesendet werden. Bitte versuche es erneut.'
+                  : 'Feedback could not be sent. Please try again.'}
+              </p>
+            )}
             <div className="flex items-center justify-between mt-2">
               <span className="text-[10px] text-[var(--mp-fg-subtle)]">
                 {t('feedback_context_hint', lang)}
@@ -215,7 +234,7 @@ export default function FeedbackWidget() {
   return (
     <>
       {!open && (
-        <div className="fixed bottom-24 right-4 z-40 flex flex-col items-end gap-3">
+        <div className={`fixed ${mobileOffset} right-4 z-40 flex flex-col items-end gap-3`}>
           {/* Fanned actions — appear above the launcher when open */}
           {fanOpen && (
             <>
