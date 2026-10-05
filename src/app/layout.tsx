@@ -19,7 +19,6 @@ import ConsentGatedMetaPixel from "@/components/ConsentGatedMetaPixel";
 import ConsentGatedRedditPixel from "@/components/ConsentGatedRedditPixel";
 import WhopPixel from "@/components/WhopPixel";
 import AttributionCapture from "@/components/AttributionCapture";
-import IntercomMessenger from "@/components/IntercomMessenger";
 import OfflineIndicator from "@/components/OfflineIndicator";
 import TrackRouteChange from "@/components/TrackRouteChange";
 import SearchModalMount from "@/components/SearchModalMount";
@@ -422,11 +421,6 @@ export default function RootLayout({
                 localStorage on landing, attached to the register call. Not a
                 tracker, no consent gate needed (first-party, no network). */}
             <AttributionCapture />
-            {/* Intercom Messenger — ALWAYS-ON (not consent-gated, [name] 2026-06-25):
-                boots anonymous, upgrades to an identity-verified session for
-                logged-in users via /api/intercom/identify. No-ops when
-                NEXT_PUBLIC_INTERCOM_APP_ID is unset. */}
-            <IntercomMessenger />
             <OfflineIndicator />
             {/* WebMCP tool surface (agent-readiness) — registers read-only
                 exam-calendar tools with an in-browser AI agent via the

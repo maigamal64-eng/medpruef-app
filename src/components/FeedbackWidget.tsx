@@ -2,44 +2,23 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { usePathname } from 'next/navigation'
-import { MessageSquarePlus, X, Send, Check, MessageCircle, Plus } from 'lucide-react'
+import { MessageSquarePlus, X, Send, Check } from 'lucide-react'
 import { getStoredExamSource } from '@/lib/topics'
 import { authFetch as fetch } from '@/lib/authFetch'
 import { t, useLang } from '@/lib/i18n'
 
 /**
- * FloatingLauncher (exported as FeedbackWidget for call-site stability).
- *
- * ONE bottom-right launcher, consolidated 2026-06-26. Previously two
- * separate floating buttons (this FeedbackWidget + the Intercom Messenger
- * launcher) stacked and fought the mobile bottom-nav.
- *
- *   - MOBILE AND TABLET (<= 1024px): a SINGLE FAB above the fixed bottom nav.
- *     Tapping it fans up
- *     two actions — "Chat" (opens the Intercom Messenger via Intercom('show'))
- *     and "Feedback" (opens the first-party feedback panel). Intercom's own
- *     launcher is hidden on mobile (IntercomMessenger toggles
- *     hide_default_launcher by viewport), so there is exactly one button.
- *   - DESKTOP (>= 1025px): the feedback button renders standalone (bottom-right),
- *     and Intercom shows its own launcher beside it — two distinct affordances.
+ * First-party feedback launcher. The same form is available on desktop and
+ * mobile, above the mobile navigation when necessary.
  *
  * Hidden on /landing, /login, /admin, /privacy, /terms, /impressum (unchanged).
  */
 
 const MOBILE_MQ = '(max-width: 1024px)'
 
-function openIntercom() {
-  try {
-    ;(window as unknown as { Intercom?: (cmd: string) => void }).Intercom?.('show')
-  } catch {
-    /* Messenger not booted (app_id unset) — no-op */
-  }
-}
-
 export default function FeedbackWidget() {
   const lang = useLang()
   const [open, setOpen] = useState(false) // feedback panel open
-  const [fanOpen, setFanOpen] = useState(false) // mobile action fan open
   const [message, setMessage] = useState('')
   const [sent, setSent] = useState(false)
   const [submitError, setSubmitError] = useState(false)
@@ -54,8 +33,7 @@ export default function FeedbackWidget() {
 
   useEffect(() => { setMounted(true) }, [])
 
-  // Track viewport so the launcher knows whether to fan (mobile) or render
-  // the standalone feedback button (desktop, Intercom shows its own launcher).
+  // Keep the launcher above the fixed bottom navigation on smaller screens.
   useEffect(() => {
     if (typeof window === 'undefined') return
     const mq = window.matchMedia(MOBILE_MQ)
@@ -69,11 +47,10 @@ export default function FeedbackWidget() {
     if (open && textRef.current) textRef.current.focus()
   }, [open])
 
-  // Close the fan and form on route changes, but keep the initial mount from
+  // Close the form on route changes, but keep the initial mount from
   // racing with a user's first click on the launcher.
   useEffect(() => {
     if (lastPathnameRef.current && lastPathnameRef.current !== pathname) {
-      setFanOpen(false)
       setOpen(false)
     }
     lastPathnameRef.current = pathname ?? null
@@ -133,18 +110,14 @@ export default function FeedbackWidget() {
   }
 
   const openFeedback = () => {
-    setFanOpen(false)
     setOpen(true)
   }
 
   // The feedback panel.
   //   - Mobile: bottom:96px (clears the bottom-nav), shared with the launcher.
-  //   - Desktop: bottom:96px so the panel opens ABOVE Intercom's own launcher
-  //     (~60px tall at bottom:20px) instead of overlapping it. Was md:bottom-6
-  //     (24px) which collided with — and hid behind — the Intercom bubble.
   const mobileOffset = 'bottom-[calc(var(--mobile-nav-clearance)+0.75rem)]'
   const feedbackPanel = open && (
-    <div className={`fixed z-50 w-80 max-w-[calc(100vw-2rem)] max-h-[min(70dvh,32rem)] overflow-y-auto ${isMobile ? `${mobileOffset} right-4` : 'bottom-24 right-6'}`}>
+    <div className={`fixed z-50 w-80 max-w-[calc(100vw-2rem)] max-h-[min(70dvh,32rem)] overflow-y-auto ${isMobile ? `${mobileOffset} right-4` : 'bottom-6 right-6'}`}>
       <div className="bg-[var(--mp-surface-raised)] rounded-2xl shadow-2xl border border-[var(--mp-border-subtle)] overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 bg-[var(--mp-cta-blue)] text-white">
@@ -202,85 +175,17 @@ export default function FeedbackWidget() {
     </div>
   )
 
-  // ─── DESKTOP: standalone feedback button, STACKED ABOVE Intercom's launcher ──
-  // Intercom shows its own default launcher bottom-right (~60px tall, sitting at
-  // bottom:20px via vertical_padding:20). Placing the feedback button at
-  // bottom:96px (bottom-24) puts it cleanly ABOVE that launcher in the same
-  // right column, so the two are separate + both visible (neither occludes the
-  // other). Previously bottom-6 (24px) sat INSIDE Intercom's footprint and was
-  // hidden behind the chat bubble — the bug flagged in FEEDBACK-LOG #1.
-  if (!isMobile) {
-    return (
-      <>
-        {!open && (
-          <button
-            onClick={() => setOpen(true)}
-            className="fixed bottom-24 right-6 z-50
-                       w-11 h-11 rounded-full bg-[var(--mp-cta-blue)] text-white shadow-lg
-                       hover:bg-[var(--mp-cta-blue)]/90 hover:shadow-xl transition-all
-                       flex items-center justify-center active:scale-95"
-            title={t('feedback_button_title', lang)}
-            aria-label={t('feedback_button_title', lang)}
-          >
-            <MessageSquarePlus className="w-5 h-5" />
-          </button>
-        )}
-        {feedbackPanel}
-      </>
-    )
-  }
-
-  // ─── MOBILE: ONE launcher at bottom:96px that fans up Chat + Feedback ───
   return (
     <>
       {!open && (
-        <div className={`fixed ${mobileOffset} right-4 z-40 flex flex-col items-end gap-3`}>
-          {/* Fanned actions — appear above the launcher when open */}
-          {fanOpen && (
-            <>
-              <button
-                onClick={() => { setFanOpen(false); openIntercom() }}
-                className="flex items-center gap-2 pl-3 pr-3.5 py-2 rounded-full
-                           bg-[var(--mp-surface-raised)] text-[var(--mp-fg)] shadow-lg
-                           border border-[var(--mp-border-subtle)] active:scale-95 transition-all
-                           animate-[fade-in_180ms_var(--mp-ease-out)]"
-                aria-label={t('launcher_chat', lang)}
-              >
-                <span className="text-xs font-medium">{t('launcher_chat', lang)}</span>
-                <span className="w-8 h-8 -mr-1 rounded-full bg-[var(--mp-accent-teal)] text-white flex items-center justify-center">
-                  <MessageCircle className="w-4 h-4" />
-                </span>
-              </button>
-              <button
-                onClick={openFeedback}
-                className="flex items-center gap-2 pl-3 pr-3.5 py-2 rounded-full
-                           bg-[var(--mp-surface-raised)] text-[var(--mp-fg)] shadow-lg
-                           border border-[var(--mp-border-subtle)] active:scale-95 transition-all
-                           animate-[fade-in_180ms_var(--mp-ease-out)]"
-                aria-label={t('launcher_feedback', lang)}
-              >
-                <span className="text-xs font-medium">{t('launcher_feedback', lang)}</span>
-                <span className="w-8 h-8 -mr-1 rounded-full bg-[var(--mp-cta-blue)] text-white flex items-center justify-center">
-                  <MessageSquarePlus className="w-4 h-4" />
-                </span>
-              </button>
-            </>
-          )}
-
-          {/* The single launcher button */}
-          <button
-            onClick={() => setFanOpen(v => !v)}
-            className="w-[52px] h-[52px] rounded-full bg-[var(--mp-cta-blue)] text-white shadow-lg
-                       hover:shadow-xl transition-all flex items-center justify-center active:scale-95"
-            title={fanOpen ? t('launcher_close', lang) : t('launcher_open', lang)}
-            aria-label={fanOpen ? t('launcher_close', lang) : t('launcher_open', lang)}
-            aria-expanded={fanOpen}
-          >
-            {fanOpen
-              ? <Plus className="w-6 h-6 rotate-45 transition-transform" />
-              : <MessageCircle className="w-5 h-5" />}
-          </button>
-        </div>
+        <button
+          onClick={openFeedback}
+          className={`fixed ${isMobile ? `${mobileOffset} right-4 w-[52px] h-[52px]` : 'bottom-6 right-6 w-11 h-11'} z-40 rounded-full bg-[var(--mp-cta-blue)] text-white shadow-lg hover:shadow-xl transition-all flex items-center justify-center active:scale-95`}
+          title={t('feedback_button_title', lang)}
+          aria-label={t('feedback_button_title', lang)}
+        >
+          <MessageSquarePlus className="w-5 h-5" />
+        </button>
       )}
       {feedbackPanel}
     </>

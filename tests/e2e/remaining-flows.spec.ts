@@ -420,7 +420,7 @@ test("Settings replaces stale cached exam and date with the server preference", 
     await page.goto("/settings", { waitUntil: "domcontentloaded" });
     await expect(page.getByText("Kenntnisprüfung", { exact: true })).toBeVisible();
     await expect(page.getByText("15 Jun 2026", { exact: true })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Open help & feedback" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Feedback / Report a problem" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Language" })).toBeVisible();
     await page.screenshot({ path: shot("settings-language-picker-phone", 390, 844), fullPage: true });
     const cachedSession = await page.evaluate(() => JSON.parse(localStorage.getItem("medpruef_session") || "{}"));
@@ -742,12 +742,8 @@ test("flashcard rating advances the queue and feedback submits without external 
       expect(state.answerWrites[0]).toMatchObject({ questionId: RANDOM_QID, isCorrect: true });
       await page.screenshot({ path: shot("flashcard-next-after-rating", viewport.width, viewport.height), fullPage: true });
 
-      if (viewport.width < 600) {
-        await page.getByRole("button", { name: "Open help & feedback" }).click();
-        await page.getByRole("button", { name: "Give feedback" }).click();
-      } else {
-        await page.getByRole("button", { name: "Feedback / Report a problem" }).click();
-      }
+      await expect(page.getByRole("button", { name: "Chat with us" })).toHaveCount(0);
+      await page.getByRole("button", { name: "Feedback / Report a problem" }).click();
       await expect(page.getByRole("textbox", { name: "Feedback message" })).toBeVisible();
       await page.screenshot({ path: shot("feedback-form", viewport.width, viewport.height), fullPage: true });
       await page.getByRole("textbox", { name: "Feedback message" }).fill("Synthetic UX review feedback.");

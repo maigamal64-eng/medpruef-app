@@ -17,7 +17,6 @@
     "test:e2e:announcement-gate": "playwright test tests/e2e/responsive/announcement-gate.spec.ts"
   },
   "dependencies": {
-    "@intercom/messenger-js-sdk": "^0.0.19",
     "@sentry/nextjs": "^10.49.0",
     "@supabase/ssr": "^0.10.2",
     "@supabase/supabase-js": "^2.104.0",

@@ -421,7 +421,7 @@ export const LAUNCH_PHASES: LaunchPhase[] = [
         owner: "[name]",
         est: "as it comes",
         steps: [
-          { do: "Watch the Intercom inbox + the support@medpruf.com mailbox." },
+          { do: "Review first-party feedback submissions and the support@medpruf.com mailbox." },
           { do: "Reply within hours. Answer the real question (which exam, when, how to prep), then drop the Whop checkout link if they are ready." },
         ],
       },

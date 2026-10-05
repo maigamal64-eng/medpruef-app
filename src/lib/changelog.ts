@@ -35,6 +35,14 @@ export const CHANGELOG: ChangelogEntry[] = [
     },
   },
   {
+    date: "2026-10-03", tag: "improvement",
+    title: { de: "Feedback direkt an MedPrüf senden", en: "Send feedback directly to MedPrüf" },
+    description: {
+      de: "Der Feedback-Button öffnet jetzt auf Handy und Desktop direkt das Formular in der App. Nachrichten und Fehlermeldungen landen wie gewohnt bei unserem Support-Team.",
+      en: "The feedback button now opens the in-app form directly on phone and desktop. Messages and problem reports continue to reach our support team.",
+    },
+  },
+  {
     date: "2026-10-02", tag: "admin",
     title: {
       de: "Zahlungen und Freikontingent serverseitig gehärtet",
