@@ -37,16 +37,34 @@ export const BLOG_POSTS: BlogPostMeta[] = [
     slug: "ukrainian-refugee-physicians-austria",
     title: {
       de: "Ukrainische Flüchtlingsärzt:innen: Arztpraxis in Österreich",
-      en: "Ukrainian Refugee Physicians: Practicing Medicine in Austria",
+      en: "How Ukrainian Doctors Can Practice Medicine in Austria: 2026 Guide",
     },
     summary: {
       de: "Was ukrainische Flüchtlingsärzt:innen brauchen, um in Österreich Medizin zu praktizieren: Nostrifizierung, Sprachprüfung, Stichprobentest und der Weg zur Eintragung in die Ärzteliste. Mit Behörden, Kosten, Fristen und Sofort-Schritten.",
-      en: "What Ukrainian refugee physicians need to practice medicine in Austria: nostrification, language exams, the Stichprobentest, and how to start working faster.",
+      en: "Step-by-step 2026 guide for Ukrainian doctors in Austria: nostrification, German requirements, Stichprobentest, Ärzteliste, costs and next steps.",
     },
     publishedAt: "2026-10-05",
+    updatedAt: "2026-10-05",
     author: "MedPrüf Editorial",
     readingMinutes: 12,
     tags: ["Ukraine", "Nostrifizierung", "Stichprobentest", "Flüchtlingsärzte", "Ärztliche Anerkennung"],
+    hasOwnRoute: true,
+  },
+  {
+    slug: "ukrainische-aerzte-oesterreich-anerkennung",
+    title: {
+      de: "Wie ukrainische Ärzt:innen in Österreich Medizin praktizieren können: 2026 Leitfaden",
+      en: "How Ukrainian Doctors Can Practice Medicine in Austria: 2026 Guide",
+    },
+    summary: {
+      de: "Schritt-für-Schritt 2026 Leitfaden für ukrainische Ärzt:innen in Österreich: Nostrifizierung, Deutsch-Anforderungen, Stichprobentest, Ärzteliste, Kosten und nächste Schritte.",
+      en: "Step-by-step 2026 guide for Ukrainian doctors in Austria: nostrification, German requirements, Stichprobentest, Ärzteliste, costs and next steps.",
+    },
+    publishedAt: "2026-10-05",
+    updatedAt: "2026-10-05",
+    author: "MedPrüf Editorial",
+    readingMinutes: 12,
+    tags: ["Ukraine", "Nostrifizierung", "Stichprobentest", "Flüchtlingsärzte", "Ärztliche Anerkennung", "Deutsch"],
     hasOwnRoute: true,
   },
   {

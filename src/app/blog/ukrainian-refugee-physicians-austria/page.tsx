@@ -17,7 +17,7 @@ import { getPostBySlug } from "@/lib/blog";
 const SLUG = "ukrainian-refugee-physicians-austria";
 const post = getPostBySlug(SLUG);
 
-const articleHTML = `<p>What do Ukrainian refugee physicians need to practice medicine in Austria? The path runs through credential recognition, a German language exam, a high-stakes written knowledge test, and Austrian Medical Chamber registration. Many Ukrainian physicians fled to Austria after 2022, bringing years of clinical training, specialty experience, and an urgent need to contribute to a country that faces a serious physician shortage. But Austria's medical licensing system doesn't pause for displacement, and temporary protection gives you a right to live here, not a right to practice medicine. None of those steps is optional, and none of them overlap in the way newcomers hope. This guide maps each one in sequence, with the responsible authorities, required documents, realistic costs, and timelines you need to plan around. The process is long. Starting today still beats starting next month.</p>
+const articleHTML = `<p>What do Ukrainian refugee physicians need to practice medicine in Austria? The path runs through credential recognition, a German language exam, a high-stakes written knowledge test, and Austrian Medical Chamber registration. Many Ukrainian physicians fled to Austria after 2022, bringing years of clinical training, specialty experience, and an urgent need to contribute to a country that faces a serious physician shortage. But Austria's medical licensing system doesn't pause for displacement, and temporary protection gives you a right to live here, not a right to practice medicine. Several steps can run in parallel, but none replaces the others. This guide maps each one in sequence, with the responsible authorities, required documents, realistic costs, and timelines you need to plan around. The process is long. Starting today still beats starting next month.</p>
 
 <h2>What Your Temporary Protection Status Actually Covers</h2>
 
@@ -29,7 +29,7 @@ const articleHTML = `<p>What do Ukrainian refugee physicians need to practice me
 
 <h2>What Do Ukrainian Refugee Physicians Need to Practice Medicine in Austria: Nostrification (Nostrifizierung)</h2>
 
-<p>The formal recognition of a non-EU medical degree in Austria is called Nostrifizierung, sometimes referred to as <a href="https://www.sozialministerium.gv.at/Themen/Gesundheit/Medizin-und-Gesundheitsberufe/Anerkennung-(Berufe).html" target="_blank" rel="nofollow">Anerkennung Arzt Österreich</a>, and it is handled by one of three Austrian medical universities: the Medical University of Vienna, the Medical University of Graz, and the Medical University of Innsbruck. Before you contact any of those universities, your first stop is the <a href="https://www.aerztekammer.at/documents/261766/417644/Infosheet+-+Information+on+taking+up+medical+activities+in+Austria.pdf/33093069-3f68-fb11-eb09-3235222d3816?t=1623838105010" target="_blank" rel="nofollow">Austrian Medical Chamber</a> (Österreichische Ärztekammer). You need an "indispensability" certificate from the Chamber confirming that nostrification is the required route for your specific credential. This certificate must be less than one year old when you submit your university application.</p>
+<p>The formal recognition of a non-EU medical degree in Austria is called Nostrifizierung, sometimes referred to as <a href="https://www.aerztekammer.at/berufsausuebung/approbation-anerkennung/auslaendische-approbation/" target="_blank" rel="nofollow">Anerkennung Arzt Österreich</a>, and it is handled by one of <strong>four</strong> Austrian medical universities: the Medical University of Vienna, the Medical University of Graz, the Medical University of Innsbruck, and the Johannes Kepler University Linz. Before you contact any of those universities, your first stop is the <a href="https://www.aerztekammer.at/documents/261766/417644/Infosheet+-+Information+on+taking+up+medical+activities+in+Austria.pdf/33093069-3f68-fb11-eb09-3235222d3816?t=1623838105010" target="_blank" rel="nofollow">Austrian Medical Chamber</a> (Österreichische Ärztekammer). You need an "indispensability" certificate from the Chamber confirming that nostrification is the required route for your specific credential. This certificate must be less than one year old when you submit your university application.</p>
 
 <h3>What Documents You Need to Gather</h3>
 
@@ -60,7 +60,7 @@ const articleHTML = `<p>What do Ukrainian refugee physicians need to practice me
 
 <h3>The Two-Stage Language Threshold</h3>
 
-<p>The Austrian Medical Chamber requires proof of German proficiency before granting medical registration. B2 CEFR is the threshold required to register for the Chamber's <a href="https://medpruf.com/blog/medizinisches-deutsch-auslaendische-aerzte" target="_blank">medical language examination</a>. The examination itself tests medical communication at a professional level and is conducted through the Austrian Academy of Physicians on behalf of the Chamber. The exam is both written and oral, focused entirely on professionally relevant medical language: clinical history-taking, patient communication, documentation, and collegial exchange. The 2026 fee is €1,179.65 for a first attempt and €589.83 for a repeat attempt. The resulting certificate is valid for ten years. There is no mandatory waiting period between attempts.</p>
+<p>The Austrian Medical Chamber requires proof of German proficiency before granting medical registration. B2 CEFR is the threshold required to register for the Chamber's <a href="https://medpruf.com/blog/medizinisches-deutsch-auslaendische-aerzte" target="_blank">medical language examination</a>. The examination itself tests medical communication at a professional level and is conducted through the Austrian Academy of Physicians on behalf of the Chamber. The exam is both written and oral, focused entirely on professionally relevant medical language: clinical history-taking, patient communication, documentation, and collegial exchange. The 2026 fee is €1,179.65 for a first attempt and €589.83 for a repeat attempt. <strong>The B2 language certificate submitted to register for the ÖÄK medical language exam must not be older than ten years.</strong> (It is the B2 certificate, not the passed ÖÄK exam certificate, that carries this validity limit.) There is no mandatory waiting period between attempts.</p>
 
 <h3>Possible Exemptions and Who Actually Qualifies</h3>
 
@@ -68,19 +68,23 @@ const articleHTML = `<p>What do Ukrainian refugee physicians need to practice me
 
 <p>The practical advice here is direct: <strong>do not wait until your nostrification application is submitted to start German preparation.</strong> Running language training in parallel with document gathering may save several months of total timeline. The <a href="https://www.integrationsfonds.at/en/services/integration-measures/finding-a-job/professional-recognition/" target="_blank" rel="nofollow">ÖIF (Austrian Integration Fund)</a> currently provides subsidies for the medical language examination fee and free or subsidized German courses up to C1 level for eligible displaced persons from Ukraine. Contact them early to confirm your eligibility before you spend money on a private course.</p>
 
-<h2>The Stichprobentest: Austria's Hardest Licensing Hurdle Explained</h2>
+<h3>University-Specific Language Requirements</h3>
+
+<p><strong>Vienna currently requires C1; JKU currently asks for at least B2 for the Stichprobentest. Requirements are university-specific.</strong> Confirm the exact requirement with the university where you file your nostrification application.</p>
+
+<h2>The Stichprobentest: Key Knowledge Assessment in the Nostrification Process</h2>
 
 <h3>How the Sample Test Actually Works</h3>
 
-<p>As part of the nostrification procedure, all three Austrian medical universities use a joint written multiple-choice sample test, the Stichprobentest, to assess clinical knowledge. It covers ten disciplines: internal medicine, pediatrics and adolescent medicine, neurology, surgery, gynecology, dermatology, otorhinolaryngology, psychiatry, ophthalmology, and emergency and intensive medicine. The test runs to 240 questions, with a minimum of 60% correct answers required in each subject area.</p>
+<p>As part of the nostrification procedure, all three Austrian medical universities (Vienna, Graz, Innsbruck) use a joint written multiple-choice sample test, the Stichprobentest, to assess clinical knowledge. It covers exactly ten disciplines: internal medicine, surgery, pediatrics and adolescent medicine, neurology, gynecology, dermatology, otorhinolaryngology, psychiatry, ophthalmology, and emergency and intensive medicine. The test runs to <strong>250 questions</strong> (Innere/Chirurgie/Kinder = 30 each; Neuro/Gyn/Derma/Notfall = 25 each; HNO/Psychiatrie/Auge = 20 each; total 250), with a minimum of 60% correct answers required in each subject area. <strong>The Stichprobentest can only be taken once.</strong></p>
 
-<p>The result is not a binary pass or fail for the whole examination. It determines which university examinations you must subsequently complete. Pass six or more of the ten subjects, and you typically retake only the failed areas as university examinations. Pass five or fewer, and you may face examinations across all ten areas, with the university potentially requiring additional work such as a scientific paper. Pharmacology and forensic medicine can be prescribed as additional examinations regardless of your sample test result, depending on the university's curriculum assessment.</p>
+<p>The result is not a binary pass or fail for the whole examination. It determines which university examinations you must subsequently complete. <strong>Because the Stichprobentest can only be taken once, its result determines which supplementary university examinations are imposed. If six or more disciplines are passed, examinations are generally prescribed for the failed disciplines; if five or fewer are passed, examinations from the regular medical curriculum may be imposed instead.</strong> <strong>Rezeptierkunde/Pharmacology and Gerichtliche Medizin are prescribed regardless of Stichprobentest outcome, because of country-specific differences.</strong></p>
 
 <h3>Why Exam-Specific Preparation Pays Off</h3>
 
 <p>The Austrian doctors' examination costs €795 per attempt. The medical language examination costs €1,179.65. Failing the Stichprobentest doesn't just mean resitting one exam: it extends your entire nostrification timeline, delays your entry into paid clinical work, and pushes back every subsequent step by months.</p>
 
-<p>This is exactly where exam-specific preparation matters. MedPrüf is built entirely around Austria's physician recognition pathways, with a question bank drawn from Austrian licensing exam materials. The platform's AI-generated clinical explanations are available in Ukrainian, which means you can absorb clinical reasoning in your native language while training yourself to answer questions in German. That combination, native-language comprehension alongside German-language practice, is precisely the kind of bilingual fluency the Stichprobentest demands. The free tier offers questions with no credit card required, so you can assess the platform's fit before committing to a paid plan.</p>
+<p>This is exactly where exam-specific preparation matters. MedPrüf is built entirely around Austria's physician recognition pathways, with curriculum-aligned practice questions designed around the Austrian Stichprobentest and its clinical subject areas. The platform's AI-generated clinical explanations are available in Ukrainian, which means you can absorb clinical reasoning in your native language while training yourself to answer questions in German. <strong>Ukrainian-language explanations can make the underlying clinical reasoning easier to understand while you continue practising the German-language medical terminology needed for the assessment.</strong> The free tier offers questions with no credit card required, so you can assess the platform's fit before committing to a paid plan.</p>
 
 <h2>Working in Austria While Your Recognition Is Still Pending</h2>
 
@@ -88,7 +92,7 @@ const articleHTML = `<p>What do Ukrainian refugee physicians need to practice me
 
 <p>Austria has no general right to treat patients while nostrification is in progress. The COVID-era supervised-work exception under § 36b ÄrzteG ended for new applicants in 2024, and § 250 ÄrzteG, as covered earlier, is closed to anyone who wasn't already covered by 31 July 2024. Two legitimate clinical-adjacent pathways do exist, but neither constitutes a license to practice.</p>
 
-<p>Observerships (Hospitationen) allow non-hands-on departmental exposure at institutions including MedUni Innsbruck, AKH Vienna, and various university hospital departments. These placements are useful for German practice, building clinical orientation, and establishing professional references. They are not a substitute for authorization, and they do not permit diagnosis, prescription, or procedures. Once nostrification is complete and Chamber registration follows, the entry point into paid clinical work is an Assistenzarzt position beginning with the Austrian Basisausbildung. Tirol Kliniken in Innsbruck has listed Basisausbildung openings with 2026 entry dates; AKH Vienna and MedUni Vienna list active Facharztausbildung vacancies in multiple specialties. Search each hospital's career portal directly using "Assistenzarzt," "Basisausbildung," and "Turnusarzt."</p>
+<p>Observerships (Hospitationen) allow non-hands-on departmental exposure at institutions including MedUni Innsbruck, AKH Vienna, and various university hospital departments. These placements are useful for German practice, building clinical orientation, and establishing professional references. They are not a substitute for authorization, and they do not permit diagnosis, prescription, or procedures. <strong>There is no general authorization for ordinary patient care merely because nostrification is pending. Austria has narrow statutory temporary/special-activity routes (§36 ÄrzteG), although they are not a general employment workaround for Ukrainian applicants.</strong> Once nostrification is complete and Chamber registration follows, the entry point into paid clinical work is an Assistenzarzt position beginning with the Austrian Basisausbildung. Tirol Kliniken in Innsbruck has listed Basisausbildung openings with 2026 entry dates; AKH Vienna and MedUni Vienna list active Facharztausbildung vacancies in multiple specialties. Search each hospital's career portal directly using "Assistenzarzt," "Basisausbildung," and "Turnusarzt."</p>
 
 <h3>Non-Clinical Roles and the Support Organizations Worth Contacting Now</h3>
 
@@ -114,11 +118,83 @@ const articleHTML = `<p>What do Ukrainian refugee physicians need to practice me
 <ol>
   <li>Request the indispensability certificate from the Austrian Medical Chamber. This unlocks every subsequent step.</li>
   <li>Begin B2-level German preparation today. Don't wait for the Chamber letter to arrive.</li>
-  <li>Contact MedUni Vienna, Graz, or Innsbruck directly to request the nostrification checklist specific to Ukrainian applicants.</li>
+  <li>Contact MedUni Vienna, Graz, Innsbruck, or JKU Linz directly to request the nostrification checklist specific to Ukrainian applicants.</li>
   <li>Start practicing Stichprobentest questions, prioritizing the subject areas where your clinical exposure is weakest.</li>
 </ol>
 
-<p>For step four, MedPrüf covers all ten Stichprobentest disciplines with exam-focused questions, Ukrainian-language AI explanations, and a spaced repetition study plan calibrated to your target exam date. The Stichprobentest, one key element of what Ukrainian refugee physicians need to practice medicine in Austria, is a critical knowledge barrier between you and a full Austrian medical career. Preparation built specifically for that exam format, rather than generic medical study tools designed for other countries and other systems, is what moves the needle. <a href="https://medpruf.com/" target="_blank">Start with the free questions</a>, build your weak areas into a study plan, and treat the exam as what it is: the barrier you actually control.</p>
+<p>For step four, MedPrüf covers all ten Stichprobentest disciplines with exam-focused questions, Ukrainian-language AI explanations, and a spaced repetition study plan calibrated to your target exam date. The Stichprobentest, one key element of what Ukrainian refugee physicians need to practice medicine in Austria, is a critical knowledge barrier between you and a full Austrian medical career. Preparation built specifically for that exam format, rather than generic medical study tools designed for other countries and other systems, is what moves the needle. <a href="https://medpruf.com/stichprobentest" target="_blank">Start with 150 free Stichprobentest questions</a>, build your weak areas into a study plan, and treat the exam as what it is: the barrier you actually control.</p>
+
+<h2>At a Glance: Ukrainian Doctors → Austrian Practice</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Step</th>
+      <th>What You Need</th>
+      <th>Authority</th>
+      <th>Cost (2026)</th>
+      <th>Timeline</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>1. Indispensability Certificate</td>
+      <td>Diploma, passport, CV, Meldezettel</td>
+      <td>ÖÄK (Austrian Medical Chamber)</td>
+      <td>Free</td>
+      <td>Weeks</td>
+    </tr>
+    <tr>
+      <td>2. German B2 Certificate</td>
+      <td>ÖIF/Goethe/TELC exam (≤10 yrs old)</td>
+      <td>ÖIF, Goethe, TELC</td>
+      <td>~€150–200</td>
+      <td>Months (parallel)</td>
+    </tr>
+    <tr>
+      <td>3. Nostrification Application</td>
+      <td>Full Ukrainian docs + C1 cert + translations</td>
+      <td>MedUni Vienna / Graz / Innsbruck / JKU Linz</td>
+      <td>€150 application fee</td>
+      <td>6–18 months</td>
+    </tr>
+    <tr>
+      <td>4. ÖÄK Medical Language Exam</td>
+      <td>B2 cert (≤10 yrs), registration</td>
+      <td>ÖÄK / Austrian Academy of Physicians</td>
+      <td>€1,179.65 (1st attempt)</td>
+      <td>Book early, runs monthly</td>
+    </tr>
+    <tr>
+      <td>5. Stichprobentest</td>
+      <td>Nostrification admission, registration via your uni</td>
+      <td>MedUni Vienna/Graz/Innsbruck (joint)</td>
+      <td>€150 (statutory)</td>
+      <td>Next: 23 Sep 2026 (Graz), reg. by 26 Aug</td>
+    </tr>
+    <tr>
+      <td>6. Supplementary Exams</td>
+      <td>Per Stichprobentest result + mandatory Pharma/Forensics</td>
+      <td>Your nostrification university</td>
+      <td>€388.56/sem (once admitted)</td>
+      <td>Months</td>
+    </tr>
+    <tr>
+      <td>7. Chamber Registration (Ärzteliste)</td>
+      <td>Nostrification cert + language exam + insurance</td>
+      <td>ÖÄK</td>
+      <td>Annual membership fee</td>
+      <td>Weeks after recognition</td>
+    </tr>
+    <tr>
+      <td>8. Assistenzarzt / Basisausbildung</td>
+      <td>Chamber registration, job application</td>
+      <td>Hospitals (AKH, Tirol Kliniken, etc.)</td>
+      <td>Salary €48–70k/yr</td>
+      <td>Ongoing</td>
+    </tr>
+  </tbody>
+</table>
 
 <h2>Quick-Reference Checklist: Key Steps for Ukrainian Refugee Physicians in Austria</h2>
 
@@ -126,7 +202,7 @@ const articleHTML = `<p>What do Ukrainian refugee physicians need to practice me
   <li>Obtain indispensability certificate from the Austrian Medical Chamber</li>
   <li>Begin German language preparation at B2 level (aim for C1)</li>
   <li>Gather and translate all Ukrainian medical documents (diploma, transcripts, rotation records)</li>
-  <li>Submit nostrification application to MedUni Vienna, Graz, or Innsbruck</li>
+  <li>Submit nostrification application to MedUni Vienna, Graz, Innsbruck, or JKU Linz</li>
   <li>Register for and pass the Chamber's medical language examination</li>
   <li>Prepare for and sit the Stichprobentest (the written sample test within nostrification)</li>
   <li>Complete any required supplementary university examinations</li>
@@ -140,13 +216,19 @@ const articleHTML = `<p>What do Ukrainian refugee physicians need to practice me
 <p>From initial application to final recognition, the typical range is six to eighteen months. Cases with significant curriculum differences between your Ukrainian program and the Austrian curriculum can take two to three years. Submitting a complete application the first time is the single most effective way to avoid delays.</p>
 
 <h3>What German level do Ukrainian refugee physicians need to practice medicine in Austria?</h3>
-<p>You need B2 CEFR to register for the Austrian Medical Chamber's language examination. The examination itself assesses professional medical communication. A C1-level certificate is required for the nostrification application at the medical universities.</p>
+<p>You need B2 CEFR to register for the Austrian Medical Chamber's language examination. The examination itself assesses professional medical communication. A C1-level certificate is required for the nostrification application at the medical universities (Vienna currently requires C1; JKU currently asks for at least B2 for the Stichprobentest; requirements are university-specific).</p>
 
 <h3>Can Ukrainian physicians work clinically while nostrification is pending?</h3>
-<p>No. There is currently no legal pathway to treat patients while your recognition is in progress. Observerships (Hospitationen) are available at some institutions for non-hands-on exposure, but they do not authorize clinical practice.</p>
+<p>No. There is no general authorization for ordinary patient care merely because nostrification is pending. Austria has narrow statutory temporary/special-activity routes (§36 ÄrzteG), although they are not a general employment workaround for Ukrainian applicants. Observerships (Hospitationen) are available at some institutions for non-hands-on exposure, but they do not authorize clinical practice.</p>
 
 <h3>What is the Stichprobentest?</h3>
-<p>The Stichprobentest is a 240-question written multiple-choice examination covering ten medical disciplines, used by all three Austrian medical universities to assess clinical knowledge as part of the nostrification procedure. A minimum of 60% correct answers is required in each subject area.</p>`;
+<p>The Stichprobentest is a 250-question written multiple-choice examination covering exactly ten medical disciplines (internal medicine, surgery, pediatrics, neurology, gynecology, dermatology, otorhinolaryngology, psychiatry, ophthalmology, emergency and intensive medicine), used by all three Austrian medical universities to assess clinical knowledge as part of the nostrification procedure. A minimum of 60% correct answers is required in each subject area. <strong>The Stichprobentest can only be taken once.</strong></p>
+
+<h3>Can I repeat the Stichprobentest if I fail?</h3>
+<p>No. The Stichprobentest can only be taken once. Its result determines which supplementary university examinations are imposed. If six or more disciplines are passed at ≥60% each, examinations are generally prescribed for the failed disciplines only. If five or fewer are passed, examinations from the regular medical curriculum may be imposed instead. Rezeptierkunde/Pharmacology and Gerichtliche Medizin are always prescribed regardless of the Stichprobentest outcome.</p>
+
+<h3>Which universities accept medical nostrification applications in Austria?</h3>
+<p>Four Austrian medical universities handle medical nostrification: Medical University of Vienna, Medical University of Graz, Medical University of Innsbruck, and Johannes Kepler University Linz.</p>`;
 
 export default function UkrainianRefugeePhysiciansPost() {
   return (
@@ -173,12 +255,12 @@ export default function UkrainianRefugeePhysiciansPost() {
             <h1 className="mp-h1 text-[32px] sm:text-[42px] leading-[1.1] mb-4">
               {L === "de"
                 ? "Ukrainische Flüchtlingsärzt:innen: Arztpraxis in Österreich"
-                : "Ukrainian Refugee Physicians: Practicing Medicine in Austria"}
+                : "How Ukrainian Doctors Can Practice Medicine in Austria: 2026 Guide"}
             </h1>
             <p className="mp-body text-lg text-[var(--mp-fg-muted)] leading-relaxed">
               {L === "de"
                 ? "Was ukrainische Flüchtlingsärzt:innen brauchen, um in Österreich Medizin zu praktizieren: Nostrifizierung, Sprachprüfung, Stichprobentest und der Weg zur Eintragung in die Ärzteliste. Mit Behörden, Kosten, Fristen und Sofort-Schritten."
-                : "What Ukrainian refugee physicians need to practice medicine in Austria: nostrification, language exams, the Stichprobentest, and how to start working faster."}
+                : "Step-by-step 2026 guide for Ukrainian doctors in Austria: nostrification, German requirements, Stichprobentest, Ärzteliste, costs and next steps."}
             </p>
           </header>
 
@@ -186,6 +268,25 @@ export default function UkrainianRefugeePhysiciansPost() {
             className="prose-mp space-y-6"
             dangerouslySetInnerHTML={{ __html: articleHTML }}
           />
+
+          <p className="text-xs text-[var(--mp-fg-subtle)] italic">
+            Last reviewed: 5 October 2026
+          </p>
+          <p className="text-xs text-[var(--mp-fg-subtle)] italic">
+            Sources checked: Austrian Medical Chamber, Austrian Academy of Physicians, MedUni Vienna, MedUni Graz, JKU Linz, Austrian government.
+          </p>
+
+          <h2 id="sources">Official Sources</h2>
+          <ul className="prose-mp space-y-2">
+            <li><a href="https://www.aerztekammer.at/berufsausuebung/approbation-anerkennung/auslaendische-approbation/" target="_blank" rel="nofollow">Austrian Medical Chamber — Recognition of Foreign Medical Qualifications</a></li>
+            <li><a href="https://www.meduniwien.ac.at/web/en/international-affairs/information-for-students-with-ukrainian-refugee-status/" target="_blank" rel="nofollow">MedUni Vienna — Information for Students with Ukrainian Refugee Status</a></li>
+            <li><a href="https://www.medunigraz.at/studium/studienrichtungen/humanmedizin/nostrifizierung/" target="_blank" rel="nofollow">MedUni Graz — Nostrifizierung Humanmedizin</a></li>
+            <li><a href="https://i-med.ac.at/studium/studienrichtungen/humanmedizin/nostrifizierung/" target="_blank" rel="nofollow">MedUni Innsbruck — Nostrifizierung Humanmedizin</a></li>
+            <li><a href="https://www.jku.at/en/medicine/study/nostrification/" target="_blank" rel="nofollow">JKU Linz — Medical Nostrification</a></li>
+            <li><a href="https://www.sozialministerium.gv.at/Themen/Gesundheit/Medizin-und-Gesundheitsberufe/Anerkennung-(Berufe).html" target="_blank" rel="nofollow">Federal Ministry of Social Affairs — Professional Recognition</a></li>
+            <li><a href="https://www.arztakademie.at/allgemeinmedizin" target="_blank" rel="nofollow">Austrian Academy of Physicians — Kenntnisprüfung Allgemeinmedizin</a></li>
+            <li><a href="https://www.integrationsfonds.at/en/services/integration-measures/finding-a-job/professional-recognition/" target="_blank" rel="nofollow">ÖIF — Professional Recognition Support for Displaced Persons</a></li>
+          </ul>
 
           <div
             className="rounded-[var(--mp-r-card)] p-6 md:p-8 mt-10 text-center"
@@ -203,18 +304,18 @@ export default function UkrainianRefugeePhysiciansPost() {
             </p>
             <div className="flex flex-col sm:flex-row gap-3 items-center justify-center">
               <Link
-                href="/pricing"
+                href="/stichprobentest"
                 className="mp-btn mp-btn--primary inline-flex items-center gap-1.5 min-h-[44px] px-5"
               >
                 {L === "de" ? "Kostenlos starten" : "Start for free"}
                 <ArrowRight className="w-4 h-4" aria-hidden />
               </Link>
               <Link
-                href="/blog"
+                href="/pricing"
                 className="mp-btn mp-btn--secondary inline-flex items-center gap-1.5 min-h-[44px] px-5"
               >
                 <ArrowLeft className="w-4 h-4" aria-hidden />
-                {L === "de" ? "Weitere Artikel" : "More articles"}
+                {L === "de" ? "Preise ansehen" : "View pricing"}
               </Link>
             </div>
           </div>
