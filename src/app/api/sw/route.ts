@@ -100,6 +100,7 @@ self.addEventListener("fetch", (event) => {
 
   if (event.request.method !== "GET") return;
 
+
   const isSameOrigin = url.origin === self.location.origin;
   const isSupabaseStorage =
     url.hostname.includes("supabase.co") && url.pathname.includes("/storage/");

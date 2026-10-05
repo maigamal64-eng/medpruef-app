@@ -102,6 +102,9 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
 
+  outputFileTracingIncludes: {
+  },
+
   async rewrites() {
     return [
       // Dynamic, build-versioned service worker.
