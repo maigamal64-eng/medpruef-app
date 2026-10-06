@@ -5,7 +5,13 @@ DO $$ BEGIN
     CREATE ROLE medpruf_ops_mcp NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS NOREPLICATION;
   END IF;
 END $$;
-ALTER ROLE medpruf_ops_mcp NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOBYPASSRLS NOREPLICATION;
+-- Managed Postgres administrators cannot alter SUPERUSER/BYPASSRLS flags.
+-- Verify existing roles fail closed rather than attempting privileged downgrades.
+DO $$ BEGIN
+ IF EXISTS(SELECT FROM pg_roles WHERE rolname='medpruf_ops_mcp' AND (rolsuper OR rolbypassrls OR rolcreaterole OR rolcreatedb OR rolreplication))
+ THEN RAISE EXCEPTION 'Unsafe existing Ops role' USING ERRCODE='42501'; END IF;
+END $$;
+ALTER ROLE medpruf_ops_mcp NOLOGIN NOINHERIT;
 GRANT USAGE ON SCHEMA public TO medpruf_ops_mcp;
 
 CREATE TABLE public.ops_principals (
@@ -281,7 +287,7 @@ DECLARE allowed oid[]:=ARRAY[
  ]; BEGIN
  IF current_user<>'medpruf_ops_mcp' OR EXISTS(SELECT FROM pg_roles WHERE rolname=current_user AND (rolsuper OR rolbypassrls OR rolcreaterole OR rolcreatedb OR rolreplication)) THEN RAISE EXCEPTION 'Unsafe runtime role' USING ERRCODE='42501'; END IF;
  IF EXISTS(SELECT FROM pg_namespace WHERE nspname NOT IN ('pg_catalog','information_schema') AND nspname !~ '^pg_' AND has_schema_privilege(current_user,oid,'CREATE')) THEN RAISE EXCEPTION 'Runtime has schema CREATE privilege' USING ERRCODE='42501'; END IF;
- IF EXISTS(SELECT FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname NOT IN ('pg_catalog','information_schema') AND n.nspname !~ '^pg_toast' AND c.relkind IN ('r','p','v','m','f','S') AND (has_table_privilege(current_user,c.oid,'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER') OR (c.relkind<>'S' AND has_any_column_privilege(current_user,c.oid,'SELECT,INSERT,UPDATE,REFERENCES')) OR (c.relkind='S' AND has_sequence_privilege(current_user,c.oid,'USAGE,SELECT,UPDATE')))) THEN RAISE EXCEPTION 'Runtime has direct relation privileges' USING ERRCODE='42501'; END IF;
+ IF EXISTS(SELECT FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname NOT IN ('pg_catalog','information_schema') AND n.nspname !~ '^pg_toast' AND c.relkind IN ('r','p','v','m','f','S') AND NOT (n.nspname='extensions' AND c.relname IN ('pg_stat_statements','pg_stat_statements_info') AND c.relkind='v' AND NOT has_schema_privilege(current_user,n.oid,'USAGE') AND EXISTS(SELECT FROM pg_depend d JOIN pg_extension e ON e.oid=d.refobjid WHERE d.classid='pg_class'::regclass AND d.objid=c.oid AND d.refclassid='pg_extension'::regclass AND d.deptype='e' AND e.extname='pg_stat_statements')) AND (has_table_privilege(current_user,c.oid,'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER') OR (c.relkind<>'S' AND has_any_column_privilege(current_user,c.oid,'SELECT,INSERT,UPDATE,REFERENCES')) OR (c.relkind='S' AND has_sequence_privilege(current_user,c.oid,'USAGE,SELECT,UPDATE')))) THEN RAISE EXCEPTION 'Runtime has direct relation privileges' USING ERRCODE='42501'; END IF;
  IF EXISTS(SELECT FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname NOT IN ('pg_catalog','information_schema') AND has_function_privilege(current_user,p.oid,'EXECUTE') AND p.prosecdef AND NOT (p.oid=ANY(allowed))) THEN RAISE EXCEPTION 'Runtime can execute unapproved SECURITY DEFINER function' USING ERRCODE='42501'; END IF;
  IF EXISTS(SELECT FROM pg_auth_members m WHERE m.member=(SELECT oid FROM pg_roles WHERE rolname=current_user)) THEN RAISE EXCEPTION 'Runtime inherits another role' USING ERRCODE='42501'; END IF;
  RETURN jsonb_build_object('ok',true,'role',current_user,'project','medpruf');

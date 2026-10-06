@@ -23,6 +23,14 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-10-06", tag: "admin",
+    title: { de: "Support-Chat zur Einrichtung vorbereitet", en: "Support chat prepared for configuration" },
+    description: {
+      de: "Intercom ist hinter einer standardmäßig deaktivierten Einstellung wieder integriert. Die Identität wird serverseitig geprüft; das Feedback-Formular bleibt verfügbar.",
+      en: "Intercom is integrated behind a default-off setting. Identity is verified server-side; the feedback form remains available.",
+    },
+  },
+  {
     date: "2026-10-05", tag: "admin",
     title: { de: "Vorbereitete Ops-Aktionen prüfen", en: "Review prepared Ops actions" },
     description: {

@@ -33,8 +33,10 @@ export function permissionForAdminRequest(
   const verb = method.toUpperCase();
 
   if (path === "/api/admin/access/me") return null;
-  if (path === "/api/admin/ops/actions") return verb === "GET" ? "users.entitlements.write" : null;
-  if (/^\/api\/admin\/ops\/actions\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/(approve|reject)$/i.test(path)) return verb === "POST" ? "users.entitlements.write" : null;
+  if (path === "/api/admin/ops/oauth/interaction") return verb === "GET" ? "access.manage" : null;
+  if (path === "/api/admin/ops/oauth/consent") return verb === "POST" ? "access.manage" : null;
+  if (path === "/api/admin/ops/actions") return verb === "GET" ? "access.manage" : null;
+  if (/^\/api\/admin\/ops\/actions\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/(approve|reject)$/i.test(path)) return verb === "POST" ? "access.manage" : null;
   if (path === "/api/admin/access/roles") return ["GET", "POST", "PUT"].includes(verb) ? "access.manage" : null;
   if (path === "/api/admin/access/memberships") return verb === "GET" ? "access.manage" : null;
   if (path === "/api/admin/access/candidates") return verb === "GET" ? "access.manage" : null;

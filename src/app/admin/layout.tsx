@@ -165,7 +165,7 @@ const NAV: NavSection[] = [
       { label: "Audit", href: "/admin/audit", icon: BarChart3, permission: "system.read" },
       { label: "Env", href: "/admin/env", icon: Database, permission: "system.read" },
       { label: "Admins & roles", href: "/admin/access", icon: ShieldCheck, permission: "access.manage" },
-      { label: "Ops approvals", href: "/admin/ops", icon: ShieldCheck, permission: "users.entitlements.write", ownerOnly: true },
+      { label: "Ops approvals", href: "/admin/ops", icon: ShieldCheck, permission: "access.manage", ownerOnly: true },
     ],
   },
 ];

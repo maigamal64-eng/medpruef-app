@@ -83,9 +83,9 @@ describe("admin permissions", () => {
 
   it("classifies only the bounded Ops owner API methods", () => {
     const id = "f29a7642-2eca-1b68-1586-8619a24589ef";
-    expect(permissionForAdminRequest("/api/admin/ops/actions", "GET")).toBe("users.entitlements.write");
-    expect(permissionForAdminRequest(`/api/admin/ops/actions/${id}/approve`, "POST")).toBe("users.entitlements.write");
-    expect(permissionForAdminRequest(`/api/admin/ops/actions/${id}/reject`, "POST")).toBe("users.entitlements.write");
+    expect(permissionForAdminRequest("/api/admin/ops/actions", "GET")).toBe("access.manage");
+    expect(permissionForAdminRequest(`/api/admin/ops/actions/${id}/approve`, "POST")).toBe("access.manage");
+    expect(permissionForAdminRequest(`/api/admin/ops/actions/${id}/reject`, "POST")).toBe("access.manage");
     expect(permissionForAdminRequest(`/api/admin/ops/actions/${id}/execute`, "POST")).toBeNull();
     expect(permissionForAdminRequest(`/api/admin/ops/actions/${id}/approve`, "GET")).toBeNull();
     expect(permissionForAdminRequest("/api/admin/ops/actions", "POST")).toBeNull();

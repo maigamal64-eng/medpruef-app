@@ -21,20 +21,21 @@ const IS_PRODUCTION = process.env.VERCEL_ENV === "production";
 const CSP = [
   "default-src 'self'",
   // connect.facebook.net serves fbevents.js (the Meta Pixel loader).
-  "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.clarity.ms https://telegram.org https://connect.facebook.net https://t.whop.tw https://m1.openfpcdn.io",
+  "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.clarity.ms https://telegram.org https://connect.facebook.net https://t.whop.tw https://m1.openfpcdn.io https://app.intercom.io https://widget.intercom.io https://js.intercomcdn.com",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   // www.facebook.com receives the Pixel tracking beacon (/tr as a 1x1 img);
   // connect.facebook.net is the loader origin.
-  "img-src 'self' data: blob: https://[project].supabase.co https://www.googletagmanager.com https://www.google-analytics.com https://t.me https://www.facebook.com https://connect.facebook.net https://t.whop.tw",
-  "font-src 'self' data: https://fonts.gstatic.com",
+  "img-src 'self' data: blob: https://[project].supabase.co https://www.googletagmanager.com https://www.google-analytics.com https://t.me https://www.facebook.com https://connect.facebook.net https://t.whop.tw https://js.intercomcdn.com https://static.intercomassets.com https://downloads.intercomcdn.com https://uploads.intercomusercontent.com https://gifs.intercomcdn.com https://video-messages.intercomcdn.com https://messenger-apps.intercom.io https://*.intercom-attachments-1.com https://*.intercom-attachments-2.com https://*.intercom-attachments-3.com https://*.intercom-attachments-4.com https://*.intercom-attachments-5.com https://*.intercom-attachments-6.com https://*.intercom-attachments-7.com https://*.intercom-attachments-8.com https://*.intercom-attachments-9.com https://static.intercomassets.eu https://static.au.intercomassets.com https://downloads.intercomcdn.eu https://downloads.au.intercomcdn.com https://messenger-apps.eu.intercom.io https://messenger-apps.au.intercom.io https://*.intercom-attachments.eu https://*.au.intercom-attachments.com",
+  "font-src 'self' data: https://fonts.gstatic.com https://js.intercomcdn.com https://fonts.intercomcdn.com",
+  "media-src 'self' https://js.intercomcdn.com https://downloads.intercomcdn.com https://downloads.intercomcdn.eu https://downloads.au.intercomcdn.com",
   // Pixel also POSTs events to www.facebook.com / connect.facebook.net (fetch/beacon).
-  "connect-src 'self' https://[project].supabase.co https://www.google-analytics.com https://region1.google-analytics.com https://*.clarity.ms https://api.openai.com https://api.anthropic.com https://*.ingest.de.sentry.io https://o4511227511504896.ingest.de.sentry.io https://telegram.org https://www.facebook.com https://connect.facebook.net https://t.whop.tw https://m1.openfpcdn.io",
-  "frame-src 'self' https://oauth.telegram.org",
+  "connect-src 'self' https://[project].supabase.co https://www.google-analytics.com https://region1.google-analytics.com https://*.clarity.ms https://api.openai.com https://api.anthropic.com https://*.ingest.de.sentry.io https://o4511227511504896.ingest.de.sentry.io https://telegram.org https://www.facebook.com https://connect.facebook.net https://t.whop.tw https://m1.openfpcdn.io https://via.intercom.io https://api.intercom.io https://api.eu.intercom.io https://api.au.intercom.io https://api-iam.intercom.io https://api-iam.eu.intercom.io https://api-iam.au.intercom.io https://api-ping.intercom.io https://*.intercom-messenger.com wss://*.intercom-messenger.com https://nexus-websocket-a.intercom.io wss://nexus-websocket-a.intercom.io https://nexus-websocket-b.intercom.io wss://nexus-websocket-b.intercom.io https://nexus-europe-websocket.intercom.io wss://nexus-europe-websocket.intercom.io https://nexus-australia-websocket.intercom.io wss://nexus-australia-websocket.intercom.io https://uploads.intercomcdn.com https://uploads.intercomcdn.eu https://uploads.au.intercomcdn.com https://uploads.eu.intercomcdn.com https://uploads.intercomusercontent.com",
+  "frame-src 'self' https://oauth.telegram.org https://intercom-sheets.com https://messenger-apps.intercom.io https://messenger-apps.eu.intercom.io https://messenger-apps.au.intercom.io https://www.intercom-reporting.com",
   "worker-src 'self'",
   "manifest-src 'self'",
   "frame-ancestors 'self'",
   "base-uri 'self'",
-  "form-action 'self'",
+  "form-action 'self' https://intercom.help https://api-iam.intercom.io https://api-iam.eu.intercom.io https://api-iam.au.intercom.io",
   // Reporting — legacy report-uri for broad browser compatibility +
   // modern report-to for browsers that support the Reporting API.
   // Both point to the same /api/csp-report endpoint.

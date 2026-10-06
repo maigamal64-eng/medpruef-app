@@ -40,6 +40,7 @@ export function setSessionToken(token: string | null | undefined): void {
   if (typeof window === 'undefined' || !token) return;
   try {
     localStorage.setItem(SESSION_TOKEN_KEY, token);
+    window.dispatchEvent(new Event('medpruef:session-changed'));
   } catch {
     /* localStorage may be disabled */
   }
@@ -269,6 +270,7 @@ export function clearSession(): void {
     // /landing after logout (F6 fix companion).
     document.cookie = 'mp_skip_landing=; path=/; max-age=0; SameSite=Lax';
   } catch {}
+  window.dispatchEvent(new Event('medpruef:session-changed'));
 }
 
 /** Check if the current user has admin role. */

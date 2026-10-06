@@ -8,6 +8,7 @@ import LangAttributeSync from "@/components/LangAttributeSync";
 import LegalFooter from "@/components/LegalFooter";
 import PWAInstall from "@/components/PWAInstall";
 import FeedbackWidget from "@/components/FeedbackWidget";
+import IntercomMessenger from "@/components/IntercomMessenger";
 import GuestMigrationBanner from "@/components/GuestMigrationBanner";
 import CohortCountdownBanner from "@/components/CohortCountdownBanner";
 import RenewalPrompt from "@/components/RenewalPrompt";
@@ -402,6 +403,7 @@ export default function RootLayout({
             </div>
             <EmailValidationModal />
             <FeedbackWidget />
+            <IntercomMessenger />
             <SearchModalMount />
             <CookieBannerMount />
             <LangHtmlSync />

@@ -22,7 +22,7 @@ interface OpsAction {
 export default function OpsApprovalsPage() {
   const access = useAdminPermissions();
   const isOwner = access.roles.some((role) => role.key === "owner");
-  const allowed = !access.loading && !access.error && isOwner && access.can("users.entitlements.write");
+  const allowed = !access.loading && !access.error && isOwner && access.can("access.manage");
   const [actions, setActions] = useState<OpsAction[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -72,13 +72,13 @@ export default function OpsApprovalsPage() {
   }
 
   return (
-    <AdminPageShell title="Ops approvals" description="Review the exact entitlement change prepared by a registered agent." freshness={error || !allowed ? "disconnected" : "near-live"} onRefresh={allowed && !busy ? () => void load() : undefined}>
+    <AdminPageShell title="Ops approvals" description="Review the exact access or moderation change prepared by a registered agent." freshness={error || !allowed ? "disconnected" : "near-live"} onRefresh={allowed && !busy ? () => void load() : undefined}>
       <div className="rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] p-4 flex gap-3">
         <ShieldCheck size={22} className="shrink-0 text-[var(--mp-viridian)]" />
         <p className="text-sm text-[var(--mp-fg-muted)]">Only a current owner can approve. Approval covers this immutable payload until its expiry. It authorizes one execution and does not immediately change learner access.</p>
       </div>
       {access.loading && <p role="status" className="text-sm text-[var(--mp-fg-muted)]">Checking owner access…</p>}
-      {!access.loading && !allowed && <p role="alert" className="text-sm text-[var(--mp-fg-muted)]">{access.error ?? "Owner role and entitlement permission are required."}</p>}
+      {!access.loading && !allowed && <p role="alert" className="text-sm text-[var(--mp-fg-muted)]">{access.error ?? "Owner role and operations approval access are required."}</p>}
       {error && <p role="alert" className="rounded-lg border border-red-500/30 p-3 text-sm text-[var(--mp-fg)]">{error}</p>}
       {notice && <p role="status" className="rounded-lg border border-[var(--mp-viridian)] p-3 text-sm text-[var(--mp-fg)]">{notice}</p>}
       {loading && <p role="status" className="text-sm text-[var(--mp-fg-muted)]">Loading review queue…</p>}
@@ -94,8 +94,9 @@ export default function OpsApprovalsPage() {
                 <span className="rounded border border-[var(--mp-border-subtle)] px-2 py-1 text-xs text-[var(--mp-fg)]">{action.status}{expires <= now ? " · expired" : ""}</span>
               </div>
               <dl className="grid gap-3 text-sm sm:grid-cols-2 text-[var(--mp-fg)]">
-                <Field label="Target learner" value={String(action.payload.user_id ?? action.payload.feedback_id ?? "Unavailable")} />
+                <Field label="Target" value={String(action.payload.user_id ?? action.payload.feedback_id ?? action.payload.question_suggestion_id ?? action.payload.report_id ?? "Unavailable")} />
                 <Field label="Access days to add" value={String(action.payload.days ?? "Not applicable")} />
+                <Field label="Decision" value={String(action.payload.status ?? action.payload.decision ?? "Access extension")} />
                 <Field label="Reason" value={String(action.payload.reason ?? "Not provided")} />
                 <Field label="Expires at" value={formatDate(action.expires_at)} />
                 <Field label="Prepared at" value={formatDate(action.created_at)} />
