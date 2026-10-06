@@ -240,7 +240,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const session = getStoredSession();
     if (!session?.user?.id) {
-      router.replace(`/login?next=${encodeURIComponent(pathname || "/admin")}`);
+      router.replace(`/login?next=${encodeURIComponent((pathname || "/admin") + window.location.search)}`);
       return;
     }
     setAuthChecked(true);
