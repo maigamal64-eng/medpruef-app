@@ -126,6 +126,49 @@ def main():
             cluster.sql('ALTER ROLE service_role BYPASSRLS; GRANT SELECT,INSERT,UPDATE ON users,subscriptions TO service_role;')
             cluster.sql(f"SET ROLE service_role; SELECT * FROM grant_whop_paid_subscription('{USER}','first_month_19','service-role',1900,'EUR',1,NULL); RESET ROLE;")
             check('service role can execute atomic subscription plus receipt transaction', "SELECT count(*)=1 FROM whop_paid_grant_receipts;")
+            reset()
+            cluster.sql(f"SELECT * FROM repair_whop_user_access('{USER}');")
+            check('atomic repair adopts exact existing window without ledger/time changes', "SELECT s.expires_at='2040-01-31T12:34:56.123Z' AND s.granted_payment_ids='[]'::jsonb AND u.tier='pro' AND u.tier_expires_at=s.expires_at FROM subscriptions s JOIN users u ON u.id=s.user_id;")
+            check('repair never inserts payment receipts', "SELECT count(*)=0 FROM whop_paid_grant_receipts;")
+            reset()
+            cluster.sql('UPDATE subscriptions SET expires_at=NULL;')
+            cluster.sql(f"SELECT * FROM repair_whop_user_access('{USER}');")
+            check('non-expiring active Whop repair preserves null access window', "SELECT tier='pro' AND tier_expires_at IS NULL FROM users;")
+            for tier, expiry, role in [('pro','NULL','user'),('pro',"'2050-01-01Z'",'user'),('admin','NULL','user'),('free','NULL','admin')]:
+                reset(tier, expiry, role)
+                before = scalar("SELECT tier||'|'||coalesce(tier_expires_at::text,'null') FROM users;")
+                cluster.sql(f"SELECT * FROM repair_whop_user_access('{USER}');")
+                assert before == scalar("SELECT tier||'|'||coalesce(tier_expires_at::text,'null') FROM users;"), 'repair changed protected entitlement'
+            results.append('atomic repair preserves manual null/future and role/tier admins')
+            for status in ('refunded','cancelled','expired'):
+                reset()
+                cluster.sql(f"UPDATE subscriptions SET status='{status}';")
+                check('repair ignores '+status+' subscription', f"SELECT NOT granted FROM repair_whop_user_access('{USER}');")
+                check(status+' repair does not resurrect user', "SELECT tier='free' AND tier_expires_at IS NULL FROM users;")
+            # Both serialized orderings leave refund authoritative. Explicit
+            # user locks model a transaction, not a live provider operation.
+            for first in ('refund', 'repair'):
+                reset()
+                refund = f"BEGIN; SELECT id FROM users WHERE id='{USER}' FOR UPDATE; SELECT pg_sleep(0.2); UPDATE subscriptions SET status='refunded'; UPDATE users SET tier='free',tier_expires_at=NULL; COMMIT;"
+                repair = f"BEGIN; SELECT id FROM users WHERE id='{USER}' FOR UPDATE; SELECT pg_sleep(0.2); SELECT * FROM repair_whop_user_access('{USER}'); COMMIT;"
+                winner, follower = (refund,repair) if first=='refund' else (repair,refund)
+                with ThreadPoolExecutor(max_workers=2) as pool:
+                    leading=pool.submit(cluster.sql,winner)
+                    # Inspect this disposable cluster's pg_locks only. Once
+                    # the leading transaction has its users RowShareLock, the
+                    # following function must queue behind its user row lock.
+                    import time
+                    for _ in range(200):
+                        if scalar("SELECT EXISTS(SELECT 1 FROM pg_locks WHERE relation='users'::regclass AND mode='RowShareLock' AND granted);")=='t':
+                            break
+                        time.sleep(0.005)
+                    else:
+                        raise AssertionError('Synthetic lock barrier was not reached')
+                    following=pool.submit(cluster.sql,follower)
+                    leading.result(timeout=15)
+                    following.result(timeout=15)
+                check('serialized '+first+' first repair/refund never resurrects access', "SELECT (SELECT status='refunded' FROM subscriptions) AND (SELECT tier='free' AND tier_expires_at IS NULL FROM users);")
+            check('public roles cannot execute repair RPC', "SELECT NOT has_function_privilege('anon','repair_whop_user_access(uuid)','EXECUTE') AND NOT has_function_privilege('authenticated','repair_whop_user_access(uuid)','EXECUTE');")
         finally:
             cluster.stop()
     print(json.dumps({'tests':results,'server_stopped':True},indent=2))

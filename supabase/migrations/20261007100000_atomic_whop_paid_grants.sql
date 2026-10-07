@@ -137,3 +137,50 @@ REVOKE EXECUTE ON FUNCTION public.grant_whop_paid_subscription(uuid,text,text,in
   FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.grant_whop_paid_subscription(uuid,text,text,integer,text,integer,text)
   TO service_role;
+
+-- Access repair shares the user-first row-lock order with atomic grants.
+-- It only adopts existing valid windows, never alters a subscription or receipt.
+CREATE FUNCTION public.repair_whop_user_access(p_user_id uuid)
+RETURNS TABLE(granted boolean, tier_expires_at timestamptz)
+LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  u public.users%ROWTYPE;
+  s public.subscriptions%ROWTYPE;
+  latest_expiry timestamptz;
+  non_expiring boolean := false;
+  check_time timestamptz;
+BEGIN
+  SELECT * INTO STRICT u FROM public.users usr WHERE usr.id = p_user_id FOR UPDATE;
+  check_time := clock_timestamp();
+  IF u.role = 'admin' OR u.tier = 'admin' OR (u.tier = 'pro' AND u.tier_expires_at IS NULL) THEN
+    RETURN QUERY SELECT true, u.tier_expires_at;
+    RETURN;
+  END IF;
+  -- Lock qualifying rows before copying their window into users. A concurrent
+  -- committed refund/cancellation makes the WHERE condition fail on recheck.
+  FOR s IN SELECT * FROM public.subscriptions sub
+      WHERE sub.user_id = p_user_id AND sub.payment_provider = 'whop' AND sub.status = 'active'
+        AND (sub.expires_at IS NULL OR sub.expires_at > check_time)
+      ORDER BY sub.id FOR UPDATE
+  LOOP
+    IF s.expires_at IS NULL THEN
+      non_expiring := true;
+    ELSE
+      latest_expiry := greatest(latest_expiry, s.expires_at);
+    END IF;
+  END LOOP;
+  IF non_expiring OR latest_expiry IS NOT NULL THEN
+    UPDATE public.users usr SET tier = 'pro',
+      tier_expires_at = CASE WHEN non_expiring THEN NULL ELSE greatest(u.tier_expires_at, latest_expiry) END,
+      updated_at = check_time WHERE usr.id = p_user_id
+      RETURNING * INTO u;
+  END IF;
+  RETURN QUERY SELECT coalesce(u.tier = 'pro' AND
+    (u.tier_expires_at IS NULL OR u.tier_expires_at > check_time), false), u.tier_expires_at;
+END;
+$$;
+REVOKE EXECUTE ON FUNCTION public.repair_whop_user_access(uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.repair_whop_user_access(uuid) TO service_role;
