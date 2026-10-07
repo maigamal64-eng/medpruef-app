@@ -130,7 +130,7 @@ export default function Image() {
               maxWidth: 980,
             }}
           >
-             7.500+ Übungsfragen · offene Kurzantwortprüfung · Erklärungen
+             7.500+ MCQ-Übungen · SIP4a/SIP5a-Quellen · Erklärungen
           </div>
         </div>
 

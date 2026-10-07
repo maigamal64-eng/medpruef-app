@@ -268,8 +268,8 @@ export default function PricingPage() {
           <span className="mp-caption inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[var(--mp-success-bg)] text-[var(--mp-viridian)] mb-5 normal-case tracking-[0.08em]">
             <Sparkles className="w-3.5 h-3.5" />
             {lang === "de"
-              ? "Prüfungsvorbereitung für Österreich · alle drei Prüfungswege"
-              : "Exam preparation for Austria · all three exam tracks"}
+              ? "Klinisches Wissen üben · alle drei Fragenbanken"
+              : "Clinical knowledge practice · all three question banks"}
           </span>
           <h2 className="mp-h1 mb-4 leading-[1.05]">
             {lang === "de"
@@ -278,8 +278,8 @@ export default function PricingPage() {
           </h2>
           <p className="mp-body text-[var(--mp-fg-muted)] max-w-2xl mx-auto">
             {lang === "de"
-              ? "Prüfungsvorbereitung für Kenntnisprüfung Wien, Stichprobentest und Pharmakologie. Über 10.000 kuratierte Übungsfragen aus unterschiedlichen Quellen. Die Kenntnisprüfung-Bank nutzt Multiple-Choice-Fragen zur Wissensübung; die echte Kenntnisprüfung besteht aus offenen Kurzantwortfragen."
-              : "Preparation for the Kenntnisprüfung Wien, Stichprobentest and Pharmakologie. Over 10,000 curated practice questions from different sources. The Kenntnisprüfung bank uses multiple-choice questions for knowledge practice; the real Kenntnisprüfung uses open short-answer questions."}
+              ? "Übe mit den Fragenbanken Kenntnisprüfung Wien, Stichprobentest und Pharmakologie. Über 10.000 kuratierte Übungsfragen aus unterschiedlichen Quellen. Die Wiener Bank enthält SIP4a/SIP5a-basierte MCQ-Übungen, keine Simulation der postgradualen ÖÄK-Arztprüfung Allgemeinmedizin."
+              : "Practise with the Kenntnisprüfung Vienna, Stichprobentest and Pharmakologie question banks. Over 10,000 curated practice questions from different sources. The Vienna bank contains SIP4a/SIP5a-based MCQ exercises, not a simulation of the postgraduate ÖÄK general medicine exam."}
           </p>
         </section>
 
@@ -358,13 +358,7 @@ export default function PricingPage() {
           </p>
         </section>
 
-        {/* ══════════ Cost-anchor strip ══════════
-            Anchors €129 against real-world costs a med doctor already
-            knows: ~€795 per Kenntnisprüfung attempt fee + ~€5,000 forgone
-            Assistenzarzt salary per delayed half-year.
-            Honest numbers: exam fee is publicly listed by Vienna Ärztekammer;
-            salary is the standard Assistenzarzt-1 range.
-          */}
+        {/* Existing Cohort offer, without unrelated exam-fee or salary comparisons. */}
         <section className="max-w-5xl mx-auto px-4 lg:px-8 pb-3">
           <div
             className="rounded-xl px-5 py-4 text-sm md:text-[15px] leading-relaxed"
@@ -376,17 +370,13 @@ export default function PricingPage() {
           >
             {lang === "de" ? (
               <>
-                <strong className="text-[var(--mp-fg)]">Die Kenntnisprüfung kostet ~795 € pro Versuch.</strong>{" "}
-                Ein verlorenes halbes Jahr in Österreich:{" "}
-                <strong className="text-[var(--mp-fg)]">~5.000 € entgangenes Assistenzarzt-Gehalt.</strong>{" "}
-                Die Prüfungs-Kohorte: <strong className="text-[var(--mp-viridian)]">129 €, einmalig.</strong>
+                <strong className="text-[var(--mp-fg)]">Drei Fragenbanken in einem Lernzugang.</strong>{" "}
+                Die Prüfungs-Kohorte: 129 €, einmalig.
               </>
             ) : (
               <>
-                <strong className="text-[var(--mp-fg)]">The Kenntnisprüfung costs ~795 € per attempt.</strong>{" "}
-                Half a year delayed in Austria:{" "}
-                <strong className="text-[var(--mp-fg)]">~5,000 € in forgone Assistenzarzt salary.</strong>{" "}
-                The Exam Cohort: <strong className="text-[var(--mp-viridian)]">129 €, one time.</strong>
+                <strong className="text-[var(--mp-fg)]">Three question banks in one study plan.</strong>{" "}
+                The Exam Cohort: 129 €, one time.
               </>
             )}
           </div>

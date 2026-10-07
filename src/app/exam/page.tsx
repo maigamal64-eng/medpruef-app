@@ -97,8 +97,8 @@ interface TopicResult {
 // distribution and sum to a realistic full-exam length.
 //
 // SOT-REF: exam structure @ MEDPRUF-SOT.md §1
-//  - Kenntnisprüfung Wien: Arztprüfung Allgemeinmedizin, 10 SIP 4/5
-//    specialties, full mock ≈ 180 MCQ.
+//  - Kenntnisprüfung Wien: SIP4a/SIP5a-derived clinical MCQ practice,
+//    10 bank specialties, 180-item practice configuration. Not the ÖÄK exam.
 //  - Stichprobentest (Innsbruck, DB key kmp_innsbruck): national
 //    Nostrifizierung screening, ~10-11 clinical blocks, pass ≈ 6/10 blocks
 //    at ≥60%. Topics from the MedUni Innsbruck curriculum (KoalaMed).

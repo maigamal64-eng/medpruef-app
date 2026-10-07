@@ -78,10 +78,10 @@ export const metadata: Metadata = {
     template: "%s",
   },
   description:
-    "Vorbereitung auf die österreichischen Ärzteprüfungen: Kenntnisprüfung Wien, Stichprobentest und Pharmakologie. Über 10.000 Fragen mit klinischen Erklärungen. 450 Fragen kostenlos, ohne Kreditkarte.",
+    "Klinisches Wissen üben mit den Fragenbanken Kenntnisprüfung Wien, Stichprobentest und Pharmakologie. Über 10.000 kuratierte Übungsfragen. 450 Fragen kostenlos, ohne Kreditkarte.",
   keywords: [
     "Kenntnisprüfung", "Austrian medical exam", "Vienna medical license",
-    "SIP 4", "SIP 5", "medical exam preparation", "Ärztekammer Wien",
+    "SIP 4", "SIP 5", "medical exam preparation",
     "Kenntnisprüfung Vorbereitung", "Prüfungsvorbereitung Medizin",
     "foreign doctor Austria", "Approbation Österreich",
     "medical MCQ", "clinical questions", "exam simulation",
@@ -108,14 +108,14 @@ export const metadata: Metadata = {
     siteName: "MedPrüf",
     title: "MedPrüf: Austrian Kenntnisprüfung Preparation (Vienna)",
     description:
-      "Vorbereitung auf die österreichischen Ärzteprüfungen: Kenntnisprüfung Wien, Stichprobentest und Pharmakologie. Über 10.000 Fragen mit klinischen Erklärungen. 450 Fragen kostenlos, ohne Kreditkarte.",
+      "Klinisches Wissen üben mit den Fragenbanken Kenntnisprüfung Wien, Stichprobentest und Pharmakologie. Über 10.000 kuratierte Übungsfragen. 450 Fragen kostenlos, ohne Kreditkarte.",
     images: [{ url: "/brand/og-image.png", width: 1200, height: 630, alt: "MedPrüf: Kenntnisprüfung Preparation" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "MedPrüf: Austrian Kenntnisprüfung Preparation (Vienna)",
     description:
-      "Vorbereitung auf die österreichischen Ärzteprüfungen: Kenntnisprüfung Wien, Stichprobentest und Pharmakologie. Über 10.000 Fragen mit klinischen Erklärungen. 450 Fragen kostenlos, ohne Kreditkarte.",
+      "Klinisches Wissen üben mit den Fragenbanken Kenntnisprüfung Wien, Stichprobentest und Pharmakologie. Über 10.000 kuratierte Übungsfragen. 450 Fragen kostenlos, ohne Kreditkarte.",
     images: ["/brand/og-image.png"],
   },
 };

@@ -140,8 +140,8 @@ const content: ExamLandingContent = {
         en: "Why do MedPrüf questions differ between the Stichprobentest and the Vienna Kenntnisprüfung?",
       },
       a: {
-        de: "Es sind zwei verschiedene Anerkennungswege. Die Kenntnisprüfung Wien ist die Arztprüfung der Österreichischen Ärztekammer. Der Stichprobentest gehört zum Universitäts-Nostrifizierungsweg. Wir halten die Fragenbanken getrennt: Wählst du „Stichprobentest“ als Prüfungstyp, siehst du über 2.700 kuratierte Übungsfragen für diesen Weg.",
-        en: "They are two different recognition routes. The Vienna Kenntnisprüfung is the Austrian Medical Chamber's Arztprüfung, while the Stichprobentest belongs to the university nostrification route. We keep the question banks separate. Choose \"Stichprobentest\" as your exam type to see over 2,700 curated practice questions for this pathway.",
+        de: "Die Banken haben unterschiedliche Quellen: Die Wiener Bank enthält SIP4a/SIP5a-basierte MCQ-Übungen; die Stichprobentest-Bank enthält klinische Übungen aus dem Innsbrucker Curriculum. Die Wiener Bank ist keine Simulation der postgradualen ÖÄK-Arztprüfung Allgemeinmedizin. Wählst du „Stichprobentest“ als Prüfungstyp, siehst du über 2.700 kuratierte Übungsfragen, keine offiziellen Prüfungsfragen.",
+        en: "The banks have different sources: the Vienna bank contains SIP4a/SIP5a-based MCQ exercises; the Stichprobentest bank contains clinical exercises from the Innsbruck curriculum. The Vienna bank is not a simulation of the postgraduate ÖÄK general medicine exam. Choose \"Stichprobentest\" as your exam type to see over 2,700 curated practice questions, not official exam questions.",
       },
     },
     {

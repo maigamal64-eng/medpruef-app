@@ -21,7 +21,6 @@
  */
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { CalendarDays, MapPin, Clock, ArrowRight } from "lucide-react";
 import {
   getUpcomingSittings,
@@ -240,10 +239,23 @@ export default function UpcomingExams({
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
-  const sittings = getUpcomingSittings();
+  // Public marketing must not label postgraduate ÖÄK dates as Vienna bank dates.
+  // Shared operational dates and extension policies are unchanged.
+  const sittings = getUpcomingSittings().filter(s => s.examType !== "kenntnispruefung");
   // Show Pharma's rolling note only if its calendar is empty (the
   // honest representation — never a fake countdown).
   const showPharma = EXAM_SITTINGS.pharma.length === 0;
+
+  const viennaNote = (
+    <p className="mt-4 text-sm text-[var(--mp-fg-muted)]">
+      {lang === "de"
+        ? "SIP4a/SIP5a: Termine und Anmeldung findest du bei der MedUni Wien. Die Wiener Fragenbank ist keine Simulation der postgradualen ÖÄK-Arztprüfung."
+        : "SIP4a/SIP5a: check MedUni Vienna for dates and registration. The Vienna question bank is not a simulation of the postgraduate ÖÄK exam."}{" "}
+      <a href="https://www.meduniwien.ac.at/web/en/studium-weiterbildung/nostrifizierung/pruefungen/" target="_blank" rel="noopener noreferrer" className="text-[var(--mp-viridian)] hover:underline">
+        {lang === "de" ? "Universitäre Prüfungsinformationen" : "University exam information"}
+      </a>
+    </p>
+  );
 
   const cards = (
     <div
@@ -273,14 +285,16 @@ export default function UpcomingExams({
           >
             {T.title[lang]}
           </h2>
-          <Link
-            href="/kenntnispruefung-wien"
+          <a
+            href="https://www.meduniwien.ac.at/web/en/studium-weiterbildung/nostrifizierung/pruefungen/"
+            target="_blank" rel="noopener noreferrer"
             className="text-xs font-medium text-[var(--mp-viridian)] hover:underline underline-offset-2"
           >
-            {lang === "de" ? "Mehr zur Prüfung" : "About the exam"}
-          </Link>
+            {lang === "de" ? "Universitäre Prüfungsinformationen" : "University exam information"}
+          </a>
         </div>
         {cards}
+        {viennaNote}
       </div>
     );
   }
@@ -313,6 +327,7 @@ export default function UpcomingExams({
           </p>
         </div>
         {cards}
+        {viennaNote}
       </div>
     </section>
   );

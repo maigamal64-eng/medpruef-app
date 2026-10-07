@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
-import { getNextExamDate } from "@/lib/exam-dates";
 
 /**
  * /kenntnispruefung-wien — SEO landing page for the Vienna
- * Kenntnisprüfung (SIP 4 + SIP 5). Target primary query:
+ * existing Kenntnisprüfung bank (SIP4a/SIP5a sources). Target primary query:
  *   "Kenntnisprüfung Wien"
  *   "Kenntnisprüfung Vorbereitung"
  *   "Austrian medical license Vienna"
@@ -19,7 +18,7 @@ import { getNextExamDate } from "@/lib/exam-dates";
 
 const pageTitle = "Kenntnisprüfung Wien: 150 Fragen gratis üben | MedPrüf";
 const pageDesc =
-  "150 Fragen kostenlos üben. Vorbereitung auf die Kenntnisprüfung Wien mit über 7.500 kuratierten Multiple-Choice-Übungen und Erklärungen. Die echte Prüfung arbeitet mit offenen Kurzantwortfragen.";
+  "Kenntnisprüfung Wien: über 7.500 kuratierte MCQ-Übungen mit SIP4a/SIP5a-Quellen und Erklärungen. Keine Simulation der postgradualen ÖÄK-Arztprüfung. 150 Fragen gratis.";
 
 export const metadata: Metadata = {
   title: pageTitle,
@@ -29,8 +28,6 @@ export const metadata: Metadata = {
     "Kenntnisprüfung Vorbereitung",
     "SIP 4",
     "SIP 5",
-    "Ärztekammer Wien",
-    "Approbation Österreich",
     "Nostrifikation",
     "Kenntnisprüfung Vorbereitung",
     "ausländische Ärzte Österreich",
@@ -60,20 +57,16 @@ export const metadata: Metadata = {
  * is still hydrating.
  *
  * educationalLevel is not an enum in schema.org but the spec accepts
- * free text. We use "Postgraduate medical" — accurate for a
- * re-licensing exam.
+ * free text. This course offers clinical knowledge practice.
  */
 function buildCourseSchema() {
-  // Next Kenntnisprüfung Wien sitting, computed at runtime so it ages
-  // out (no hand-maintained date). Omit startDate if 2027 isn't yet
-  // published rather than ship a stale past date.
-  const start = getNextExamDate("kenntnispruefung");
+  // Practice course, not an official exam sitting or provider affiliation.
   const courseInstance: Record<string, unknown> = {
     "@type": "CourseInstance",
     courseMode: "online",
     location: {
       "@type": "Place",
-      name: "Online · Ärztekammer Wien",
+      name: "Online · MedPrüf",
       address: {
         "@type": "PostalAddress",
         addressLocality: "Wien",
@@ -81,21 +74,21 @@ function buildCourseSchema() {
       },
     },
   };
-  if (start) courseInstance.startDate = start;
 
   return {
     "@context": "https://schema.org",
     "@type": "Course",
     name: "Kenntnisprüfung Wien: Vorbereitung",
     description:
-      "Vorbereitung auf die österreichische Kenntnisprüfung Wien mit über 7.500 kuratierten Multiple-Choice-Übungen und Erklärungen als Ergänzung zur offenen Kurzantwortprüfung.",
+      "Klinisches Wissen üben mit über 7.500 kuratierten Multiple-Choice-Übungen mit SIP4a/SIP5a-Quellen und Erklärungen. Keine Simulation der postgradualen ÖÄK-Arztprüfung Allgemeinmedizin.",
     provider: {
       "@type": "Organization",
       name: "MedPrüf",
       sameAs: "https://medpruf.com",
       url: "https://medpruf.com",
     },
-    educationalLevel: "Postgraduate medical",
+    citation: "https://www.meduniwien.ac.at/web/en/studium-weiterbildung/nostrifizierung/pruefungen/",
+    educationalLevel: "Clinical medical knowledge practice",
     inLanguage: ["de", "en", "ar", "ru", "fr", "tr", "uk", "sr"],
     courseMode: "online",
     teaches:

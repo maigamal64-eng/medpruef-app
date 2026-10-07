@@ -31,8 +31,8 @@ const COPY = {
   navLogin: { de: "Einloggen", en: "Sign in" },
   eyebrow: { de: "Österreich · Wien · Kenntnisprüfung", en: "Austria · Vienna · Kenntnisprüfung" },
   heroTitle: {
-    de: "Bestehe die Kenntnisprüfung Wien mit einem klaren Plan.",
-    en: "Pass the Vienna Kenntnisprüfung with a clear plan.",
+    de: "Kenntnisprüfung Wien: klinisches Wissen üben.",
+    en: "Kenntnisprüfung Vienna: practise clinical knowledge.",
   },
   heroSub: {
     de: "Trainiere klinisches Wissen, erkenne deine Lücken und lerne jeden Tag genau das, was dich der Prüfung näher bringt. Starte in unter 60 Sekunden — kostenlos und ohne Kreditkarte.",
@@ -105,12 +105,12 @@ const COPY = {
   features: [
     {
       title: {
-        de: "Fragen, die zur Wiener Prüfung passen",
-        en: "Questions that match the Vienna exam",
+        de: "Klinische MCQ-Übungen aus der Wiener Bank",
+        en: "Clinical MCQ practice from the Vienna bank",
       },
       detail: {
-        de: "Über 7.500 kuratierte Multiple-Choice-Übungen als Ergänzung zum offenen Kurzantwortformat der Prüfung.",
-        en: "Over 7,500 curated multiple-choice exercises to supplement the exam's open short-answer format.",
+        de: "Über 7.500 kuratierte Multiple-Choice-Übungen mit SIP4a/SIP5a-Quellen. Keine Simulation der postgradualen ÖÄK-Arztprüfung Allgemeinmedizin.",
+        en: "Over 7,500 curated multiple-choice exercises with SIP4a/SIP5a sources. Not a simulation of the postgraduate ÖÄK general medicine exam.",
       },
     },
     {
@@ -149,12 +149,12 @@ const COPY = {
     },
     {
       q: {
-        de: "Bereitet mich MedPrüf auf die echte Prüfung vor?",
-        en: "Does MedPrüf actually prepare me for the real exam?",
+        de: "Was übe ich in der Wiener Fragenbank?",
+        en: "What do I practise in the Vienna question bank?",
       },
       a: {
-        de: "Die Kenntnisprüfung Wien ist problemorientiert und arbeitet mit offenen Kurzantwortfragen. Wir trainieren dein klinisches Wissen dafür — und sagen das transparent, statt eine 1:1-Prüfungssimulation vorzuspielen.",
-        en: "The Vienna Kenntnisprüfung is problem-oriented and uses open short-answer questions. We train your clinical knowledge for it — and we say so transparently, instead of pretending to be a 1:1 exam simulator.",
+        de: "Du übst klinisches Wissen mit SIP4a/SIP5a-basierten Multiple-Choice-Fragen. Diese universitären Quellen sind von der postgradualen ÖÄK-Arztprüfung Allgemeinmedizin zu unterscheiden. MedPrüf bildet offizielle Prüfungsformate und Bewertung nicht vollständig nach.",
+        en: "You practise clinical knowledge with SIP4a/SIP5a-based multiple-choice questions. These university sources are distinct from the postgraduate ÖÄK general medicine exam. MedPrüf does not reproduce official exam formats and scoring in full.",
       },
     },
     {
@@ -396,6 +396,9 @@ export default function KenntnispruefungFunnel() {
             </details>
           ))}
         </div>
+        <a href="https://www.meduniwien.ac.at/web/en/studium-weiterbildung/nostrifizierung/pruefungen/" target="_blank" rel="noopener noreferrer" className="mt-5 inline-block text-sm text-[var(--mp-viridian)] hover:underline">
+          {L === "de" ? "MedUni Wien: universitäre Prüfungsinformationen" : "MedUni Vienna: university exam information"}
+        </a>
       </section>
 
       <section className="mx-auto max-w-4xl px-4 pb-24 text-center lg:px-8">

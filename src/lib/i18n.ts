@@ -119,7 +119,7 @@ const translations = {
 
   // Exam simulation
   'exam_sim_title': { de: 'Prüfungssimulation', en: 'Exam Simulation' },
-  'exam_sim_desc': { de: 'Vollständige Prüfungssimulation · 4 Stunden', en: 'Full exam simulation · 4 hours' },
+  'exam_sim_desc': { de: 'MCQ-Übung mit Timer · 4 Stunden. Vollständig richtig: ein Punkt, sonst null. Offizielle Formate und Bewertung werden nicht vollständig nachgebildet.', en: 'Timed MCQ practice · 4 hours. Fully correct: one point, otherwise zero. Official formats and scoring are not reproduced in full.' },
   'start_exam': { de: 'Prüfung starten', en: 'Start Exam' },
   'time_remaining': { de: 'Verbleibende Zeit', en: 'Time Remaining' },
   'exam_submit': { de: 'Prüfung abgeben', en: 'Submit Exam' },
@@ -498,7 +498,7 @@ const translations = {
   'whatsnew_sip5a_title': { de: 'SIP5a Februar 2026 hinzugefügt', en: 'February 2026 SIP5a exam added' },
   'whatsnew_sip5a_body': { de: '154 frische Fragen aus der neuesten Wiener Prüfung, nach Fachgebiet geordnet.', en: '154 fresh questions from the latest Vienna exam, organized by specialty.' },
   'whatsnew_examsim_title': { de: 'Prüfungssimulation neu gestaltet', en: 'Exam simulation redesigned' },
-  'whatsnew_examsim_body': { de: 'Wähle Antworten frei, navigiere zwischen Fragen und gib ab, wenn du bereit bist, wie in der echten Prüfung.', en: 'Select answers freely, navigate between questions, and submit when ready, just like the real exam.' },
+  'whatsnew_examsim_body': { de: 'MCQ-Übung mit Timer, Fragen-Navigation und Bewertung am Ende. Vollständig richtig: ein Punkt, sonst null. Offizielle Formate und Bewertung werden nicht vollständig nachgebildet.', en: 'Timed MCQ practice with question navigation and grading at the end. Fully correct: one point, otherwise zero. Official formats and scoring are not reproduced in full.' },
   'whatsnew_bookmarks_title': { de: 'Lesezeichen & Fehlerwiederholung', en: 'Bookmarks & mistake review' },
   'whatsnew_bookmarks_body': { de: 'Schnellzugriff auf der Startseite zu gespeicherten Fragen und zu Fragen, die du falsch beantwortet hast.', en: 'Quick access on the home page to your saved questions and questions you got wrong.' },
   'whatsnew_feedback_title': { de: 'Feedback-Button', en: 'Feedback button' },

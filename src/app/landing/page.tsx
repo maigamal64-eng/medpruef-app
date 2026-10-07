@@ -69,14 +69,10 @@ const COPY = {
     start: { de: "Gratis-Woche starten", en: "Start free week" },
   },
   hero: {
-    // Eyebrow names BOTH Austrian recognition routes by the terms doctors
-    // actually search (Step 3 ad-landing scent-match, paid-ads-setup-2026-06-24):
-    // Kenntnisprüfung = the Ärztekammer Arztprüfung, Stichprobentest = the
-    // university Nostrifizierung screening. Additive search terms, NOT a
-    // rename of the canonical exam names (SoT §1).
+    // Existing bank labels, without assigning them to recognition routes.
     eyebrow: {
-      de: "Österreich · Kenntnisprüfung (Arztprüfung) · Stichprobentest (Nostrifizierung) · Pharmakologie",
-      en: "Austria · Kenntnisprüfung (Arztprüfung) · Stichprobentest (Nostrifizierung) · Pharmakologie",
+      de: "Österreich · Kenntnisprüfung Wien · Stichprobentest · Pharmakologie",
+      en: "Austria · Kenntnisprüfung Vienna · Stichprobentest · Pharmakologie",
     },
     stamp: {
       de: "Kuratierte Übungsfragen für Österreichs Prüfungen",
@@ -100,8 +96,8 @@ const COPY = {
     // The lead-with price below and the tertiary CTA both quote 19 €/month.
     // SoT §2 + §9.
     subtitle: {
-      de: "Vorbereitung auf Österreichs Kenntnisprüfung, Stichprobentest und Pharmakologie, für die Anerkennungswege über Ärztekammer und Universität. MedPrüf bietet über 10.000 kuratierte Übungsfragen. Die Kenntnisprüfung-Fragenbank enthält Multiple-Choice-Übungen; die echte Prüfung verwendet offene Kurzantwort-Fallvignetten. MedPrüf gibt es ab 19 € im Monat.",
-      en: "Preparation for Austria's Kenntnisprüfung, Stichprobentest and Pharmakologie, covering the Ärztekammer and university recognition routes. MedPrüf offers over 10,000 curated practice questions. The Kenntnisprüfung bank contains multiple-choice practice; the real exam uses open short-answer case vignettes. Plans start at €19 per month.",
+      de: "Klinisches Wissen üben mit den Fragenbanken Kenntnisprüfung Wien, Stichprobentest und Pharmakologie. MedPrüf bietet über 10.000 kuratierte Übungsfragen. Die Wiener Bank enthält SIP4a/SIP5a-basierte Multiple-Choice-Übungen, keine Simulation der postgradualen ÖÄK-Arztprüfung Allgemeinmedizin. MedPrüf gibt es ab 19 € im Monat.",
+      en: "Practise clinical knowledge with the Kenntnisprüfung Vienna, Stichprobentest and Pharmakologie question banks. MedPrüf offers over 10,000 curated practice questions. The Vienna bank contains SIP4a/SIP5a-based multiple-choice exercises, not a simulation of the postgraduate ÖÄK general medicine exam. Plans start at €19 per month.",
     },
     cta_primary: { de: "Kostenlos starten", en: "Start free" },
     cta_primary_sub: {
@@ -185,8 +181,8 @@ const COPY = {
         n: "01",
         title: { de: "Prüfung wählen", en: "Choose your exam" },
         body: {
-          de: "Kenntnisprüfung Wien, Stichprobentest (Innsbruck) oder Pharmakologie: wir kennen die Gewichtung jeder Prüfung.",
-          en: "Kenntnisprüfung Wien, Stichprobentest (Innsbruck) or Pharmakologie: we know the weighting of each exam.",
+          de: "Wähle Kenntnisprüfung Wien, Stichprobentest (Innsbruck) oder Pharmakologie und übe nach den Fachgebieten der jeweiligen Fragenbank.",
+          en: "Choose Kenntnisprüfung Vienna, Stichprobentest (Innsbruck) or Pharmakologie and practise by the topics in that question bank.",
         },
       },
       {
@@ -201,8 +197,8 @@ const COPY = {
         n: "03",
         title: { de: "Simulieren", en: "Simulate" },
         body: {
-          de: "Volle Prüfungssimulation. 4 Stunden, Themen-Navigator, aufgeschobene Bewertung, wie am Prüfungstag.",
-          en: "Full exam simulation. 4 hours, topic navigator, deferred grading, just like exam day.",
+          de: "MCQ-Übung mit Timer, Themen-Navigator und Bewertung am Ende. Nur vollständig richtige Antworten erhalten einen Punkt, sonst null. Offizielle Formate und Bewertung werden nicht vollständig nachgebildet.",
+          en: "Timed MCQ practice with a topic navigator and grading at the end. Fully correct answers earn one point, otherwise zero. Official formats and scoring are not reproduced in full.",
         },
       },
     ],
@@ -296,12 +292,12 @@ const COPY = {
   subjects: {
     eyebrow: { de: "Fachgebiete", en: "Specialties" },
     title: {
-      de: "Übungsfragen für drei österreichische Prüfungswege.",
-      en: "Practice questions for three Austrian exam pathways.",
+      de: "Klinisches Wissen in drei Fragenbanken üben.",
+      en: "Practise clinical knowledge across three question banks.",
     },
     subtitle: {
-      de: "Die Fragebanken enthalten kuratierte Übungsfragen aus unterschiedlichen Quellen. Sie sind keine Sammlung offizieller oder geleakter Prüfungsfragen. Die Kenntnisprüfung verwendet offene Kurzantwort-Fallvignetten; unsere Fragenbank dafür besteht aus Multiple-Choice-Übungen.",
-      en: "The banks contain curated practice questions from different sources. They are not a collection of official or leaked exam questions. The Kenntnisprüfung uses open short-answer case vignettes; our bank for it consists of multiple-choice practice questions.",
+      de: "Die Fragenbanken enthalten kuratierte Übungen aus unterschiedlichen Quellen, keine Sammlung offizieller oder geleakter Prüfungsfragen. Die Wiener Bank enthält SIP4a/SIP5a-basierte MCQ-Übungen. Diese universitären Quellen sind von der postgradualen ÖÄK-Arztprüfung Allgemeinmedizin zu unterscheiden.",
+      en: "The banks contain curated exercises from different sources, not a collection of official or leaked exam questions. The Vienna bank contains SIP4a/SIP5a-based MCQ exercises. These university sources are distinct from the postgraduate ÖÄK general medicine exam.",
     },
     items: [
       { icon: HeartPulse, name: { de: "Innere Medizin", en: "Internal Medicine" } },
@@ -1645,7 +1641,7 @@ function ProofSeal({ className = "", size = 72 }: { className?: string; size?: n
 /* ─────────────────────────────────────────────────────────────
    WhyMedPruef — the [name] narrative band (S3). "They were never
    unqualified, only unproven / paying to fail was the wall", with
-   the seal and one ~795 € figure. Type + seal + hairlines, no faces.
+   the seal and the existing entry price. Type + seal + hairlines, no faces.
    ───────────────────────────────────────────────────────────── */
 function WhyMedPruef({ lang }: { lang: Lang }) {
   const de = lang === "de";
@@ -1676,11 +1672,11 @@ function WhyMedPruef({ lang }: { lang: Lang }) {
           style={{ fontSize: "clamp(16px, 1.9vw, 19px)", lineHeight: 1.55, textWrap: "balance" as const }}
         >
           {de
-            ? "Aleppo, Kyiv, Istanbul, Damaskus, nach Wien, nach Innsbruck. Die Prüfung war nie die Wand. Bezahlen, um durchzufallen, war es."
-            : "Aleppo, Kyiv, Istanbul, Damascus, to Vienna, to Innsbruck. The exam was never the wall. Paying to fail was."}
+            ? "Aleppo, Kyiv, Istanbul, Damaskus, nach Wien, nach Innsbruck. Trainiere klinisches Wissen und behalte deinen Lernfortschritt im Blick."
+            : "Aleppo, Kyiv, Istanbul, Damascus, to Vienna, to Innsbruck. Practise clinical knowledge and keep track of your study progress."}
         </p>
         <p className="font-display font-semibold text-white/90" style={{ fontSize: "clamp(15px, 1.7vw, 18px)" }}>
-          {de ? "~795 € pro Versuch. MedPrüf ab 19 € im Monat." : "~795 € per attempt. MedPrüf from 19 € a month."}
+          {de ? "Klinisches Wissen üben. MedPrüf ab 19 € im Monat." : "Practise clinical knowledge. MedPrüf from 19 € a month."}
         </p>
       </div>
     </section>
