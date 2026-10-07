@@ -39,7 +39,7 @@ export default function UkrainianRefugeePhysiciansPost() {
                 EN
               </span>
             </div>
-            <h1 className="mp-h1 text-[32px] sm:text-[42px] leading-[1.1] mb-4">
+            <h1 className="mp-h1 text-[32px] sm:text-[42px] leading-[1.1] mb-4 [overflow-wrap:anywhere]">
               {L === "de"
                 ? "Ukrainische Flüchtlingsärzt:innen: Arztpraxis in Österreich"
                 : "How Ukrainian Doctors Can Practice Medicine in Austria: 2026 Guide"}
