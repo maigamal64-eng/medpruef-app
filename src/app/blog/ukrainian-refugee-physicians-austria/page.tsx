@@ -208,8 +208,8 @@ export default function UkrainianRefugeePhysiciansPost() {
 
               <h3 className="mp-h3 text-[18px] mt-6 mb-3">Why Exam-Specific Preparation Pays Off</h3>
               <p className="mp-body text-[var(--mp-fg)] leading-relaxed">
-                The Austrian doctors&apos; examination costs €795 per attempt. The medical language examination costs €1,179.65. Failing the Stichprobentest doesn&apos;t just mean resitting one exam: it extends your entire nostrification timeline, delays your entry into paid clinical work, and pushes back every subsequent step by months.
-              </p>
+                    The Stichprobentest result informs university supplementary requirements. It does not establish a repeat opportunity here. Confirm fees, timelines and specific examinations with your university.
+                  </p>
               <p className="mp-body text-[var(--mp-fg)] leading-relaxed mt-3">
                 This is exactly where exam-specific preparation matters. MedPrüf is built entirely around Austria&apos;s physician recognition pathways, with curriculum-aligned practice questions designed around the Austrian Stichprobentest and its clinical subject areas. The platform&apos;s AI-generated clinical explanations are available in Ukrainian, which means you can absorb clinical reasoning in your native language while training yourself to answer questions in German. <strong>Ukrainian-language explanations can make the underlying clinical reasoning easier to understand while you continue practising the German-language medical terminology needed for the assessment.</strong> The free tier offers questions with no credit card required, so you can assess the platform&apos;s fit before committing to a paid plan.
               </p>
@@ -275,8 +275,8 @@ export default function UkrainianRefugeePhysiciansPost() {
                 <li>Start practicing Stichprobentest questions, prioritizing the subject areas where your clinical exposure is weakest.</li>
               </ol>
               <p className="mp-body text-[var(--mp-fg)] leading-relaxed mt-4">
-                For step four, MedPrüf covers all ten Stichprobentest disciplines with exam-focused questions, Ukrainian-language AI explanations, and a spaced repetition study plan calibrated to your target exam date. The Stichprobentest, one key element of what Ukrainian refugee physicians need to practice medicine in Austria, is a critical knowledge barrier between you and a full Austrian medical career. Preparation built specifically for that exam format, rather than generic medical study tools designed for other countries and other systems, is what moves the needle.
-                <Link
+The Vienna bank contains SIP4a/SIP5a-based MCQ exercises. These university sources are distinct from the postgraduate ÖÄK Allgemeinmedizin examination. The Stichprobentest bank contains clinical exercises from the Innsbruck curriculum. MedPrüf does not reproduce official examination formats and scoring in full. Clinical knowledge practice and Ukrainian explanations can supplement your study plan.
+<Link
                   href="/stichprobentest"
                   className="text-[var(--mp-viridian)] hover:underline inline-flex items-center gap-1 ml-1"
                 >

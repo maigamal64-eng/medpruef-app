@@ -206,8 +206,8 @@ export default function UkrainischeAerzteOesterreichAnerkennungPost() {
 
               <h3 className="mp-h3 text-[18px] mt-6 mb-3">Warum prüfungsspezifische Vorbereitung sich auszahlt</h3>
               <p className="mp-body text-[var(--mp-fg)] leading-relaxed">
-                Die österreichische Ärzteprüfung kostet 795 € pro Versuch. Die ärztliche Sprachprüfung kostet 1.179,65 €. Ein negatives Ergebnis im Stichprobentest bedeutet nicht nur das Wiederholen einer Prüfung: Es verlängert den gesamten Nostrifizierungszeitplan, verzögert den Einstieg in bezahlte klinische Tätigkeit und schiebt jeden nachfolgenden Schritt um Monate hinaus.
-              </p>
+                    Das Ergebnis des Stichprobentests beeinflusst die universitären Ergänzungsanforderungen. Es bedeutet keine hier bestätigte Wiederholungsmöglichkeit. Gebühren, Zeitplan und konkrete Prüfungen musst du mit deiner Universität klären.
+                  </p>
               <p className="mp-body text-[var(--mp-fg)] leading-relaxed mt-3">
                 Genau hier zahlt sich prüfungsspezifische Vorbereitung aus. MedPrüf ist vollständig auf Österreichs Ärzte-Anerkennungswege ausgerichtet, mit lehrplanbasierten Übungsfragen, die sich am österreichischen Stichprobentest und seinen klinischen Fachbereichen orientieren. Die KI-generierten klinischen Erklärungen der Plattform sind auf Ukrainisch verfügbar, was bedeutet, dass Sie klinisches Denken in Ihrer Muttersprache erfassen können, während Sie sich gleichzeitig darauf trainieren, Fragen auf Deutsch zu beantworten. <strong>Ukrainischsprachige Erklärungen können das zugrunde liegende klinische Denken leichter verständlich machen, während Sie weiterhin die deutsche medizinische Fachterminologie trainieren, die für die Überprüfung benötigt wird.</strong> Der kostenlose Tarif bietet Fragen ohne Kreditkarte an, damit Sie die Passung der Plattform prüfen können, bevor Sie sich für einen kostenpflichtigen Plan entscheiden.
               </p>
@@ -273,8 +273,8 @@ export default function UkrainischeAerzteOesterreichAnerkennungPost() {
                 <li>Beginnen Sie mit dem Üben von Stichprobentest-Fragen, priorisieren Sie die Fachbereiche, in denen Ihre klinische Erfahrung am schwächsten ist.</li>
               </ol>
               <p className="mp-body text-[var(--mp-fg)] leading-relaxed mt-4">
-                Für Schritt vier deckt MedPrüf alle zehn Stichprobentest-Fachbereiche mit prüfungsfokussierten Fragen, ukrainischsprachigen KI-Erklärungen und einem Spaced-Repetition-Lernplan ab, kalibriert auf Ihren Prüfungstermin. Der Stichprobentest, ein zentrales Element dessen, was ukrainische Ärzt:innen für die ärztliche Tätigkeit in Österreich brauchen, ist eine kritische Wissenshürde zwischen Ihnen und einer vollständigen österreichischen Ärzt:innenkarriere. Vorbereitung, die spezifisch für dieses Prüfungsformat gebaut ist, statt generischer Medizinstudien-Tools für andere Länder und Systeme, ist es, was den Unterschied macht.
-                <Link
+Die Wiener Bank enthält SIP4a/SIP5a-basierte MCQ-Übungen. Diese universitären Quellen sind von der postgradualen ÖÄK-Arztprüfung Allgemeinmedizin zu unterscheiden. Die Stichprobentest-Bank enthält klinische Übungen aus dem Innsbrucker Curriculum. MedPrüf bildet offizielle Prüfungsformate und Bewertung nicht vollständig nach. Mit klinischer Wissenspraxis und Erklärungen auf Ukrainisch kannst du deinen Lernplan ergänzen.
+<Link
                   href="/stichprobentest"
                   className="text-[var(--mp-viridian)] hover:underline inline-flex items-center gap-1 ml-1"
                 >

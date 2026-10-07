@@ -54,7 +54,7 @@ function buildCourseSchema() {
     courseMode: "online",
     location: {
       "@type": "Place",
-      name: "Online · Ärztekammer Wien",
+      name: "Online · MedPrüf",
       address: {
         "@type": "PostalAddress",
         addressLocality: "Wien",

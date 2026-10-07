@@ -131,16 +131,10 @@ export default function MedicalGermanPost() {
                 <section>
                   <h2 className="mp-h2 text-[26px] flex items-center gap-2 mb-3">
                     <ListChecks className="w-5 h-5 text-[var(--mp-viridian)]" aria-hidden />
-                    An echten deutschen Prüfungsfragen üben
+                    An kuratierten deutschen Übungsfragen lernen
                   </h2>
                   <p className="mp-body text-[var(--mp-fg)] leading-relaxed">
-                    Lehrbücher in deiner Muttersprache oder auf Englisch bauen dein
-                    Wissen auf, trainieren aber nicht das, was am Prüfungstag zählt:
-                    eine deutsche Fallvignette schnell zu erfassen und die richtige
-                    Entscheidung zu treffen. Deshalb übst du am besten direkt an
-                    echten, deutschsprachigen Fragen im Prüfungsformat. Genau das ist
-                    der Kern von MedPrüf: über 10.000 kuratierte Fragen für die drei
-                    österreichischen Prüfungen, mit Erklärung zu jeder Antwort.
+                    Lehrbücher bauen medizinisches Wissen auf. Kuratierte deutschsprachige MCQ-Übungen können zusätzlich klinisches Verständnis und Fachsprache trainieren. MedPrüf bietet über 10.000 kuratierte Übungsfragen mit Erklärungen. Sie sind keine offiziellen Prüfungsfragen und bilden offizielle Prüfungsformate nicht vollständig nach.
                   </p>
                 </section>
 
@@ -233,16 +227,10 @@ export default function MedicalGermanPost() {
                 <section>
                   <h2 className="mp-h2 text-[26px] flex items-center gap-2 mb-3">
                     <ListChecks className="w-5 h-5 text-[var(--mp-viridian)]" aria-hidden />
-                    Practice on real German exam questions
+                    Practice with curated German exercises
                   </h2>
                   <p className="mp-body text-[var(--mp-fg)] leading-relaxed">
-                    Textbooks in your native language or in English build your
-                    knowledge, but they do not train what matters on exam day: reading
-                    a German case vignette quickly and making the right decision. So the
-                    best practice is directly on real German-language questions in the
-                    exam format. That is the core of MedPrüf: over 10,000 curated
-                    questions for the three Austrian exams, with an explanation for
-                    every answer.
+                    Textbooks build medical knowledge. Curated German-language MCQ exercises can also support clinical understanding and medical terminology. MedPrüf offers over 10,000 curated practice questions with explanations. They are not official exam questions and do not fully reproduce official exam formats.
                   </p>
                 </section>
 

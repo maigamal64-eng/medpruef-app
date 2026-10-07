@@ -368,6 +368,9 @@ export default function FindYourPath({ initialLang = "de" }: { initialLang?: Lan
           {/* ── Step 2: exam date (reuses ExamSittingPicker) ── */}
           {step === 1 && examType && (
             <div className="pb-2">
+              <p className="mb-3 text-xs leading-relaxed text-[var(--mp-fg-muted)]" role="note">
+                {t(examType === "kenntnispruefung" ? "fyp_calendar_notice" : "fyp_university_notice")}
+              </p>
               <ExamSittingPicker
                 examType={examType}
                 value={examDate}
@@ -566,6 +569,7 @@ function RouteExplainer({
         <p className="mt-2 text-xs leading-relaxed text-[var(--mp-fg-muted)]">
           {t("fyp_explain_kp_p")}
         </p>
+        <p className="mt-2 text-xs leading-relaxed text-[var(--mp-fg-muted)]" role="note">{t("fyp_calendar_notice")}</p>
         {kpSitting && (
           <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] font-mono text-[var(--mp-fg-subtle)]">
             <span>
@@ -701,6 +705,10 @@ function YourPath({
         {/* Route paragraph */}
         <p className="mt-3 text-[14px] leading-relaxed text-[var(--mp-fg-muted)]">
           {isKP ? t("fyp_out_route_kp_p") : t("fyp_out_route_stp_p")}
+        </p>
+
+        <p className="mt-3 text-xs leading-relaxed text-[var(--mp-fg-muted)]" role="note">
+          {t(isKP ? "fyp_calendar_notice" : "fyp_university_notice")}
         </p>
 
         {/* Timeline */}
@@ -847,7 +855,7 @@ function YourPath({
           <a
             href={
               isKP
-                ? "https://www.arztakademie.at/allgemeinmedizin"
+                ? "https://www.meduniwien.ac.at/web/en/studium-weiterbildung/nostrifizierung/pruefungen/"
                 : "https://www.i-med.ac.at/studium/"
             }
             target="_blank"

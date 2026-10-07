@@ -13,7 +13,7 @@ const post = getPostBySlug(SLUG);
 const pageTitle =
   "Medizinisches Deutsch für ausländische Ärzt:innen | MedPrüf Blog";
 const pageDesc =
-  "Bei den österreichischen Wissensprüfungen scheitert es oft an der deutschen Fachsprache, nicht am Wissen. So schließt du die Sprachlücke: zuerst verstehen, dann auf Deutsch üben, Terminologie im Kontext und echte deutsche Prüfungsfragen.";
+  "Bei den österreichischen Wissensprüfungen scheitert es oft an der deutschen Fachsprache, nicht am Wissen. So schließt du die Sprachlücke: zuerst verstehen, dann auf Deutsch üben, Terminologie im Kontext und kuratierte deutschsprachige Übungsfragen.";
 
 export const metadata: Metadata = {
   title: pageTitle,

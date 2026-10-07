@@ -13,7 +13,7 @@ const post = getPostBySlug(SLUG);
 const pageTitle =
   "Kenntnisprüfung Wien: der zweite Versuch nach einem Fehlversuch | MedPrüf Blog";
 const pageDesc =
-  "Was nach einem Fehlversuch helfen kann, warum gezielte Lückenanalyse wichtig ist und wie du das offene Kurzantwortformat der Kenntnisprüfung übst. Termine und Fristen können sich ändern, prüfe aktuelle Angaben bei der Ärztekammer Wien.";
+  "Lernen nach einem Fehlversuch: Wissenslücken analysieren und aktives Erinnern üben. Die SIP4a/SIP5a-basierte Wiener Bank ist keine Nachbildung der postgradualen ÖÄK-Prüfung.";
 
 export const metadata: Metadata = {
   title: pageTitle,

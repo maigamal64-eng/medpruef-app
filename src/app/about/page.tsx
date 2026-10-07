@@ -75,13 +75,13 @@ export default function AboutPage() {
             ? [
                 "Ärztinnen und Ärzte mit ausländischem Abschluss",
                 "Approbationssuchende in Österreich (Wien)",
-                "Mediziner, die die Kenntnisprüfung ablegen müssen",
+                "Mediziner, die mit der Wiener Fragenbank üben möchten",
                 "Alle, die ihr medizinisches Wissen auffrischen möchten",
               ]
             : [
                 "Doctors with foreign medical degrees",
                 "Those seeking medical licensure (Approbation) in Austria (Vienna)",
-                "Physicians required to take the Kenntnisprüfung",
+                "Physicians who want to practice with the Vienna bank",
                 "Anyone looking to refresh their medical knowledge",
               ]
           ).map((item, i) => (
@@ -97,48 +97,19 @@ export default function AboutPage() {
       </section>
 
       <section>
-        <h2>{lang === "de" ? "Die Kenntnisprüfung" : "The Kenntnisprüfung"}</h2>
+        <h2>{lang === "de" ? "Die Wiener Fragenbank" : "The Vienna practice bank"}</h2>
         <p>
           {lang === "de"
-            ? "Die Kenntnisprüfung ist eine staatliche Prüfung für Ärzte mit ausländischer Ausbildung. Sie prüft, ob die medizinischen Kenntnisse dem Stand der österreichischen Ärzteausbildungsordnung (ÄAO) entsprechen."
-            : "The Kenntnisprüfung is a state examination for doctors with foreign training. It tests whether medical knowledge meets the standards of the Austrian Ärzteausbildungsordnung (ÄAO)."}
+            ? "Die Fragenbank mit dem Namen Kenntnisprüfung Wien basiert auf SIP4a/SIP5a-Lernmaterial. Sie ist nicht die postgraduale Arztprüfung Allgemeinmedizin der Österreichischen Ärztekammer. MedPrüf bietet kuratierte Multiple-Choice-Übungen und aktives Erinnern, keine vollständige Nachbildung einer offiziellen Prüfung."
+            : "The bank named Kenntnisprüfung Vienna is based on SIP4a/SIP5a study material. It is distinct from the Austrian Medical Chamber's postgraduate Allgemeinmedizin examination. MedPrüf offers curated multiple-choice practice and active recall, not a complete reproduction of an official examination."}
         </p>
-        <div className="not-prose grid grid-cols-2 gap-3 mt-4">
-          {[
-            {
-              label: lang === "de" ? "Fallvignetten (ca.)" : "Case vignettes (approx.)",
-              value: "24–26",
-            },
-            {
-              label: lang === "de" ? "Bestehensschwelle" : "Pass threshold",
-              value: lang === "de" ? "abhängig, mind. 51 %" : "cohort-based, min. 51%",
-            },
-            {
-              label: lang === "de" ? "Prüfungsdauer" : "Exam duration",
-              value: "4h",
-            },
-            {
-              label: lang === "de" ? "Problemorientierte Themen" : "Problem-based categories",
-              value: "16",
-            },
-          ].map((stat) => (
-            <div
-              key={stat.label}
-              className="mp-card p-4 text-center"
-            >
-              <p className="text-2xl font-black text-[var(--mp-viridian)] font-mono">
-                {stat.value}
-              </p>
-              <p className="text-[10px] text-[var(--mp-fg-subtle)] mt-1">
-                {stat.label}
-              </p>
-            </div>
-          ))}
-        </div>
-        <p className="text-sm text-[var(--mp-fg-muted)] mt-3">
+        <p>
           {lang === "de"
-            ? "Die Prüfung umfasst ungefähr 24–26 offene Kurzantwort-Fallvignetten. Die Bestehensgrenze hängt vom Durchschnitt des Prüfungstermins ab (90 % davon, mindestens 51 %). MedPrüfs Kenntnisprüfung-Fragenbank enthält Multiple-Choice-Übungsfragen und bildet das offene Prüfungsformat nicht nach."
-            : "The exam has approximately 24–26 open short-answer case vignettes. The pass threshold depends on the sitting's average (90% of that average, with a 51% minimum). MedPrüf's Kenntnisprüfung bank contains multiple-choice practice and does not reproduce the open-answer exam format."}
+            ? "Welche Prüfungen du ablegen musst, welche Formate gelten und wann du dich anmelden kannst, klärst du mit deiner Universität anhand deines Bescheids."
+            : "Confirm your required examinations, formats and registration dates with your university and your individual decision."}{" "}
+          <a href="https://www.meduniwien.ac.at/web/en/studium-weiterbildung/nostrifizierung/pruefungen/" target="_blank" rel="noopener noreferrer">
+            {lang === "de" ? "Informationen der MedUni Wien" : "MedUni Vienna information"}
+          </a>
         </p>
       </section>
 

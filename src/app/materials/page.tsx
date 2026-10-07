@@ -96,8 +96,8 @@ const OWN_GUIDES: OwnGuide[] = [
   {
     id: "kenntnispruefung",
     icon: Compass,
-    de: { title: "Die Kenntnisprüfung Wien, ehrlich erklärt", sub: "Route A · Ablauf, Anmeldung, Bestehen" },
-    en: { title: "The Kenntnisprüfung Wien, honestly explained", sub: "Route A · format, registration, passing" },
+    de: { title: "Die Kenntnisprüfung Wien, ehrlich erklärt", sub: "Wiener Fragenbank · Lernmaterial, keine Zulassungsberatung" },
+    en: { title: "The Kenntnisprüfung Wien, honestly explained", sub: "Vienna practice bank · study material, not admission advice" },
   },
   {
     id: "nostrifizierung",
@@ -159,10 +159,10 @@ function resourceIcon(resource: AustrianResource): LucideIcon {
 }
 
 function routeLabel(route: ResourceRoute, lang: Lang): string {
-  if (route === "A") return "Route A: Kenntnisprüfung";
+  if (route === "A") return lang === "de" ? "ÖÄK-Informationen, Geltungsbereich prüfen" : "ÖÄK information, check applicability";
   if (route === "B")
-    return lang === "de" ? "Route B: Nostrifizierung" : "Route B: Nostrification";
-  return lang === "de" ? "Beide Wege" : "Both routes";
+    return lang === "de" ? "Universitäre Informationen" : "University information";
+  return lang === "de" ? "Übergreifende Informationen" : "General information";
 }
 
 function routeBadgeClass(route: ResourceRoute): string {

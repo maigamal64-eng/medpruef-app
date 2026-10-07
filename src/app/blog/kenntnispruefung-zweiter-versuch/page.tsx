@@ -58,8 +58,8 @@ export default function KenntnispruefungZweiterVersuchPost() {
             </h1>
             <p className="mp-body text-lg text-[var(--mp-fg-muted)] leading-relaxed">
               {L === "de"
-                ? "Prüfungstermine, Anmeldefristen und Gebühren können sich ändern. Prüfe die aktuellen Angaben bei der Ärztekammer Wien. Wer diese Zahlen aus eigener Erfahrung kennt, braucht keinen Neuanfang, sondern eine andere Vorbereitung. Ein zweiter Versuch ist eine zweite Chance mit weniger Spielraum, und er verdient es, aus dem ersten zu lernen."
-                : "Exam dates, registration deadlines and fees can change. Check current details with the Ärztekammer Wien. If you know these numbers from experience, you do not need a fresh start, you need a different kind of preparation. A second attempt is a second chance with less room for error, and it deserves to learn from the first."}
+                ? "Prüfungstermine, Anmeldefristen und Gebühren können sich ändern. Prüfe die aktuellen Angaben bei deiner Universität. Wer diese Zahlen aus eigener Erfahrung kennt, braucht keinen Neuanfang, sondern eine andere Vorbereitung. Ein zweiter Versuch ist eine zweite Chance mit weniger Spielraum, und er verdient es, aus dem ersten zu lernen."
+                : "Exam dates, registration deadlines and fees can change. Check current details with your university. If you know these numbers from experience, you do not need a fresh start, you need a different kind of preparation. A second attempt is a second chance with less room for error, and it deserves to learn from the first."}
             </p>
           </header>
 
@@ -69,40 +69,16 @@ export default function KenntnispruefungZweiterVersuchPost() {
                 <section>
                   <h2 className="mp-h2 text-[26px] flex items-center gap-2 mb-3">
                     <FileQuestion className="w-5 h-5 text-[var(--mp-viridian)]" aria-hidden />
-                    Warum der erste Versuch scheitert, ist selten ein Wissensproblem
+                    Nach einem Fehlversuch gezielt weiterlernen
                   </h2>
                   <p className="mp-body text-[var(--mp-fg)] leading-relaxed">
-                    Die Kenntnisprüfung Wien ist keine Multiple-Choice-Prüfung.
-                    Sie läuft im Kurzantwortformat (KAF): rund 24 bis 26
-                    Patientenfälle, zu jedem Fall ein bis sechs offene
-                    Unterfragen zu Anamnese, Diagnose und Therapie, die du frei
-                    aus dem Gedächtnis beantwortest, nicht aus einer Liste
-                    auswählst. Vier Stunden Zeit. Bewertet wird punktweise gegen
-                    eine Liste akzeptierter Antworten.
+                    Die Wiener Bank enthält SIP4a/SIP5a-basierte MCQ-Übungen. Diese universitären Quellen sind von der postgradualen ÖÄK-Arztprüfung Allgemeinmedizin zu unterscheiden. Die Stichprobentest-Bank enthält klinische Übungen aus dem Innsbrucker Curriculum. MedPrüf bildet offizielle Prüfungsformate und Bewertung nicht vollständig nach.
                   </p>
                   <p className="mp-body text-[var(--mp-fg)] leading-relaxed mt-3">
-                    Die Fälle sind nicht nach Fachgebiet sortiert, sondern
-                    problemorientiert: 16 Kategorien wie Bauchraum, Brustraum
-                    und Herz-Kreislauf oder Gehirn und Nervensystem, quer durch
-                    die Fachgebiete. Und die Bestehensgrenze ist nicht fix. Sie
-                    liegt bei 90 Prozent des Mittelwerts aller Kandidatinnen und
-                    Kandidaten desselben Prüfungstermins, mit einer festen
-                    Untergrenze von 51 Prozent der Gesamtpunktzahl. Du wirst
-                    also nicht gegen eine feste Zahl geprüft, sondern relativ zu
-                    allen anderen, die am selben Tag antreten.
+                    Welche Aufgabenarten, Bewertung und Wiederholungsregeln für deine universitäre Prüfung gelten, ist hier nicht verifiziert. Frage deine Universität und nutze deren aktuelle Informationen, bevor du deinen nächsten Versuch planst.
                   </p>
                   <p className="mp-body text-[var(--mp-fg)] leading-relaxed mt-3">
-                    Diese zwei Fakten, offener Abruf statt Wiedererkennen plus
-                    eine kohortenrelative statt fixe Grenze, erklären einen
-                    großen Teil der ersten Fehlversuche, die nichts mit
-                    fehlendem medizinischem Wissen zu tun haben. Du kannst eine
-                    Diagnose im Kopf haben und trotzdem Punkte verlieren: weil
-                    die schriftliche Antwort nicht präzise genug formuliert war,
-                    weil eine Teilantwort fehlte, oder weil die Zeit bei einem
-                    der Fälle knapp wurde und die letzten Unterfragen hastig
-                    beantwortet wurden. Das ist kein Vorwurf. Es ist ein
-                    Strukturproblem, kein Intelligenzproblem, und Struktur lässt
-                    sich gezielt trainieren.
+                    Ein Lernplan nach einem Fehlversuch sollte Wissenslücken, Antwortpräzision und Zeitmanagement getrennt betrachten. Dieses Vorgehen ist ein Lernvorschlag und keine Aussage zu Ursachen oder Durchfallquoten einer konkreten Prüfung.
                   </p>
                 </section>
 
@@ -117,32 +93,13 @@ export default function KenntnispruefungZweiterVersuchPost() {
                     Drei praktische Verschiebungen machen den Unterschied.
                   </p>
                   <p className="mp-body text-[var(--mp-fg)] leading-relaxed mt-3">
-                    <strong>Vom Wiedererkennen zum freien Formulieren.</strong>{" "}
-                    In einem offenen Format reicht es nicht, die richtige
-                    Antwort zu erkennen. Du musst sie in den vier Stunden selbst
-                    produzieren, unter Zeitdruck, ohne Auswahlliste als
-                    Gedächtnisstütze. Das ist eine andere Fertigkeit als
-                    Multiple-Choice-Übung, und sie muss separat trainiert
-                    werden, nicht nebenbei.
+                    <strong>Vom Wiedererkennen zum freien Formulieren.</strong> Aktives Erinnern ergänzt MCQ-Übung. Kläre zunächst, welches Antwortformat in deiner konkreten Prüfung verlangt wird.
                   </p>
                   <p className="mp-body text-[var(--mp-fg)] leading-relaxed mt-3">
-                    <strong>Von alles wiederholen zu Lücken gezielt schließen.</strong>{" "}
-                    Nach einem Fehlversuch weißt du meist schon ungefähr, wo es
-                    gehakt hat. Ein zweiter Anlauf ohne klaren Fokus verliert
-                    wertvolle Zeit in Bereichen, die beim ersten Mal schon
-                    gesessen sind. Systematische Abdeckung der 16
-                    problemorientierten Kategorien schlägt zufälliges
-                    Wiederholen.
+                    <strong>Von alles wiederholen zu Lücken gezielt schließen.</strong> Nutze deine Erfahrungen aus dem ersten Versuch, um klinische Wissenslücken gezielt zu bearbeiten. Die App-Themen sind kein verifizierter offizieller Prüfungsplan.
                   </p>
                   <p className="mp-body text-[var(--mp-fg)] leading-relaxed mt-3">
-                    <strong>Von Wissen auffrischen zu unter echten Bedingungen üben.</strong>{" "}
-                    Die offizielle Musterprüfung der Arztakademie, ein
-                    vollständiger, selbst korrigierter Test mit 25 Fällen,
-                    Vier-Stunden-Timer und Bestehensgrenze bei 135 von 242
-                    Punkten, ist genau dafür gemacht und kostenlos verfügbar.
-                    Sie zeigt dir ehrlich, wie sich das echte Format anfühlt,
-                    bevor der eigentliche Termin kommt. Wir empfehlen sie
-                    ausdrücklich als Formattraining.
+                    <strong>Offizielles Format separat prüfen.</strong> Nutze Materialien deiner Universität für deine konkrete Prüfung. Die Musterprüfung der Arztakademie gehört zur postgradualen Allgemeinmedizin-Prüfung und ist kein bestätigter SIP4a/SIP5a-Probetest.
                   </p>
                 </section>
 
@@ -152,19 +109,7 @@ export default function KenntnispruefungZweiterVersuchPost() {
                     Drei Phasen für deinen nächsten Prüfungstermin
                   </h2>
                   <p className="mp-body text-[var(--mp-fg)] leading-relaxed">
-                    Struktur statt Intelligenz heißt in der Praxis: weniger
-                    irgendwas lernen, mehr gezielte Reihenfolge. Zuerst die
-                    Lückenanalyse: Welche der 16 problemorientierten Kategorien
-                    saßen beim ersten Versuch, und welche waren wackelig? Das
-                    lässt sich oft schon aus dem eigenen Prüfungsgefühl grob
-                    einschätzen, auch ohne offizielles Einzelfeedback. Danach
-                    die gezielte Wiederholung genau dieser Kategorien,
-                    fallbasiert und mit Erklärungen in der Sprache, in der dein
-                    klinisches Denken am schnellsten arbeitet, nicht
-                    zwangsläufig auf Deutsch. Und erst am Ende, in den letzten
-                    Wochen vor dem Termin, der Wechsel auf reines Formattraining
-                    unter echten Vier-Stunden-Bedingungen, damit das Schreiben
-                    unter Zeitdruck am Prüfungstag keine Überraschung mehr ist.
+                    Beginne mit einer Lückenanalyse, wiederhole gezielt und übe anschließend unter den von deiner Universität bestätigten Bedingungen. Dauer, Themengewichtung und Bewertung sind hier nicht verifiziert.
                   </p>
                   <p className="mp-body text-[var(--mp-fg)] leading-relaxed mt-3">
                     Diese Reihenfolge klingt banal, wird aber beim zweiten
@@ -182,30 +127,10 @@ export default function KenntnispruefungZweiterVersuchPost() {
                     Was MedPrüf ehrlich leisten kann, und was nicht
                   </h2>
                   <p className="mp-body text-[var(--mp-fg)] leading-relaxed">
-                    Damit keine falsche Erwartung entsteht: MedPrüf trainiert
-                    dich mit über 10.000 kuratierten Übungsfragen zu
-                    Kenntnisprüfungs-Themen. Die Bank basiert auf Anki-Material
-                    und liegt im Multiple-Choice-Format vor, nicht im offenen
-                    Kurzantwortformat der echten Prüfung.
-                    Das sagen wir offen, weil ein Anbieter, der verspricht, die
-                    Prüfung eins zu eins nachzubilden, dir am Prüfungstag mehr
-                    schadet als einer, der ehrlich sagt, wofür er gut ist.
+                    Die Wiener Bank enthält SIP4a/SIP5a-basierte MCQ-Übungen. Diese universitären Quellen sind von der postgradualen ÖÄK-Arztprüfung Allgemeinmedizin zu unterscheiden. Die Stichprobentest-Bank enthält klinische Übungen aus dem Innsbrucker Curriculum. MedPrüf bildet offizielle Prüfungsformate und Bewertung nicht vollständig nach.
                   </p>
                   <p className="mp-body text-[var(--mp-fg)] leading-relaxed mt-3">
-                    Genau für diese Formatlücke gibt es den KAF-Modus: Die
-                    Antwortoptionen bleiben zunächst verdeckt, du formulierst
-                    deine Antwort zuerst frei aus dem Gedächtnis und blendest
-                    die Optionen erst danach ein. So übst du an jedem einzelnen
-                    Fall den freien Abruf, den das echte Kurzantwortformat
-                    verlangt. Dazu kommen Erklärungen, die du dir in sieben
-                    Sprachen anzeigen lassen kannst (Russisch, Arabisch,
-                    Englisch, Französisch, Türkisch, Ukrainisch, Serbisch), und
-                    ein Spaced-Repetition-System (SM-2), das dich genau dann
-                    wieder abfragt, wenn du kurz davor bist, etwas zu vergessen.
-                    Die offizielle Musterprüfung ergänzt das um das echte
-                    Antwortformat. Beides zusammen deckt ab, was ein zweiter
-                    Versuch wirklich braucht: solides Wissen, freien Abruf und
-                    Formatgewöhnung.
+                    Im KAF-Lernmodus bleiben die Antwortoptionen zunächst verdeckt. Du formulierst deine Antwort frei und blendest dann die MCQ-Optionen ein. Das trainiert aktives Erinnern, bildet aber kein offizielles Kurzantwortformat oder dessen Bewertung vollständig nach. Erklärungen in mehreren Sprachen und Spaced Repetition unterstützen das Lernen zusätzlich.
                   </p>
                 </section>
 
@@ -215,31 +140,10 @@ export default function KenntnispruefungZweiterVersuchPost() {
                     Der Punkt, an dem der zweite Versuch am meisten zählt
                   </h2>
                   <p className="mp-body text-[var(--mp-fg)] leading-relaxed">
-                    Ein Fehlversuch kostet nicht nur 795 €. Er kostet Wochen
-                    oder Monate, in denen du nicht praktizieren darfst, und die
-                    Unsicherheit, wie oft du das noch wiederholen kannst. Zur
-                    Einordnung, ganz ohne das als drohendes Szenario zu
-                    behandeln: Die Kenntnisprüfung erlaubt mehrere
-                    Wiederholungen, und erst der fünfte und letzte
-                    Wiederholungsversuch läuft anders, als strukturierte
-                    mündliche Prüfung vor drei Prüferinnen und Prüfern. Für die
-                    überwiegende Mehrheit wird das nie relevant. Aber es zeigt,
-                    warum es sich lohnt, den zweiten Versuch so vorzubereiten,
-                    dass ein dritter oder vierter gar nicht erst nötig wird.
+                    Kosten, Wiederholungsmöglichkeiten und berufliche Folgen hängen von deinem konkreten Verfahren ab. Die Gebühren und Wiederholungsregeln einer postgradualen ÖÄK-Prüfung sind keine bestätigten Regeln für universitäre SIP-Prüfungen.
                   </p>
                   <p className="mp-body text-[var(--mp-fg)] leading-relaxed mt-3">
-                    Genau darauf zielt das Pass-Until-You-Pass-Prinzip der
-                    6-monatigen Prüfungs-Kohorte: Du lernst weiter, bis du
-                    bestehst, ohne bei jedem Blick auf den Kalender neu zu
-                    rechnen, ob sich ein weiterer Monat noch lohnt. Der
-                    Vergleich, der für einen zweiten Versuch zählt, ist nicht
-                    kostenlos gegen 19 € im Monat. Er ist 795 € pro Fehlversuch
-                    gegen einen Bruchteil davon für eine Vorbereitung, die
-                    gezielt auf deine tatsächlichen Lücken zielt. Der Einstieg
-                    beginnt bei 19 € im Monat, die Prüfungs-Kohorte für sechs
-                    Monate kostet 129 €. Und der allererste Schritt kostet
-                    nichts: 150 Fragen pro Prüfung kannst du gratis testen, ohne
-                    Kreditkarte.
+                    Der Einstieg beginnt bei 19 € im Monat, die Prüfungs-Kohorte für sechs Monate kostet 129 €. Für eine Verlängerung gelten die veröffentlichten Pass-Until-You-Pass-Bedingungen. 150 Fragen pro Prüfung kannst du gratis testen, ohne Kreditkarte.
                   </p>
                   <p className="mp-body text-[var(--mp-fg)] leading-relaxed mt-3">
                     Ein Fehlversuch ist kein Urteil über deine Fähigkeiten. Er
@@ -251,11 +155,11 @@ export default function KenntnispruefungZweiterVersuchPost() {
                 <section>
                   <h2 className="mp-h2 text-[26px] mb-3">Kurz zusammengefasst</h2>
                   <ul className="list-disc pl-6 space-y-2 mp-body text-[var(--mp-fg)] leading-relaxed">
-                    <li>Die Kenntnisprüfung Wien ist ein offenes Kurzantwortformat: freier Abruf, nicht Wiedererkennen.</li>
-                    <li>Die Bestehensgrenze ist kohortenrelativ (90 Prozent des Mittelwerts, Untergrenze 51 Prozent).</li>
+                    <li>Die Wiener Fragenbank basiert auf SIP4a/SIP5a-Lernmaterial.</li>
+                    <li>Offizielle Bestehensgrenzen und Wiederholungsregeln sind hier nicht verifiziert.</li>
                     <li>Erst Lücken analysieren, dann gezielt wiederholen, zuletzt das Format trainieren.</li>
-                    <li>Freien Abruf mit dem KAF-Modus üben, das echte Format mit der offiziellen Musterprüfung.</li>
-                    <li>Prüfe Prüfungstermine und Anmeldefristen immer bei der Ärztekammer Wien.</li>
+                    <li>Freien Abruf mit dem KAF-Lernmodus üben, offizielle Formate bei der Universität prüfen.</li>
+                    <li>Prüfe Prüfungstermine und Anmeldefristen immer bei deiner Universität.</li>
                     <li>150 Fragen pro Prüfung gratis testen, bevor du dich entscheidest.</li>
                   </ul>
                 </section>
@@ -265,39 +169,16 @@ export default function KenntnispruefungZweiterVersuchPost() {
                 <section>
                   <h2 className="mp-h2 text-[26px] flex items-center gap-2 mb-3">
                     <FileQuestion className="w-5 h-5 text-[var(--mp-viridian)]" aria-hidden />
-                    Why a first attempt fails is rarely a knowledge problem
+                    Study deliberately after an unsuccessful attempt
                   </h2>
                   <p className="mp-body text-[var(--mp-fg)] leading-relaxed">
-                    The Kenntnisprüfung Wien is not a multiple-choice exam. It
-                    runs in an open short-answer format (KAF): roughly 24 to 26
-                    patient cases, each with one to six open sub-questions on
-                    history, diagnosis and therapy, which you answer from
-                    memory, not by selecting from a list. Four hours total.
-                    Grading happens point by point against a list of acceptable
-                    answers.
+                    The Vienna bank contains SIP4a/SIP5a-based MCQ exercises. These university sources are distinct from the postgraduate ÖÄK Allgemeinmedizin examination. The Stichprobentest bank contains clinical exercises from the Innsbruck curriculum. MedPrüf does not reproduce official examination formats and scoring in full.
                   </p>
                   <p className="mp-body text-[var(--mp-fg)] leading-relaxed mt-3">
-                    The cases are not organized by specialty. They are
-                    problem-based: 16 categories such as abdomen, chest and
-                    cardiovascular, or brain and nervous system, cutting across
-                    specialties. And the pass mark is not fixed. It sits at 90
-                    percent of the average score across every candidate sitting
-                    that exam date, with a hard floor of 51 percent of total
-                    points. In other words, you are not graded against a static
-                    number, you are graded relative to everyone else sitting the
-                    same exam that day.
+                    The task types, grading and repeat rules for your university examination are not verified here. Ask your university and use its current information before planning another attempt.
                   </p>
                   <p className="mp-body text-[var(--mp-fg)] leading-relaxed mt-3">
-                    Those two facts, open recall instead of recognition plus a
-                    cohort-relative rather than fixed threshold, explain a large
-                    share of first-attempt failures that have nothing to do with
-                    missing medical knowledge. You can know the right diagnosis
-                    in your head and still lose points: because the written
-                    answer was not precise enough, because a partial sub-answer
-                    was missing, or because time ran short on one of the cases
-                    and the last sub-questions got rushed. That is not a knock
-                    on you. It is a structure problem, not an intelligence
-                    problem, and structure can be deliberately trained.
+                    A study plan after an unsuccessful attempt should consider knowledge gaps, answer precision and time management separately. This is a study suggestion, not a claim about the causes or failure rates of a specific examination.
                   </p>
                 </section>
 
@@ -312,30 +193,13 @@ export default function KenntnispruefungZweiterVersuchPost() {
                     shifts make the difference.
                   </p>
                   <p className="mp-body text-[var(--mp-fg)] leading-relaxed mt-3">
-                    <strong>From recognizing the answer to producing it in writing.</strong>{" "}
-                    In an open-recall format, recognition is not enough. You
-                    have to produce the answer yourself within the four-hour
-                    window, under time pressure, with no answer list to jog your
-                    memory. That is a different skill from multiple-choice
-                    practice, and it needs to be trained separately, not as an
-                    afterthought.
+                    <strong>From recognizing to recalling.</strong> Active recall complements MCQ practice. First confirm which answer format your specific examination requires.
                   </p>
                   <p className="mp-body text-[var(--mp-fg)] leading-relaxed mt-3">
-                    <strong>From reviewing everything to closing specific gaps.</strong>{" "}
-                    After one failed attempt, you usually already have a rough
-                    sense of where the gaps were. A second run without a clear
-                    focus wastes valuable time on areas that were already solid
-                    the first time. Systematic coverage of the 16 problem-based
-                    categories beats random repetition.
+                    <strong>From reviewing everything to closing gaps.</strong> Use your first-attempt experience to target clinical knowledge gaps. App topics are not a verified official examination blueprint.
                   </p>
                   <p className="mp-body text-[var(--mp-fg)] leading-relaxed mt-3">
-                    <strong>From refreshing knowledge to practicing under real conditions.</strong>{" "}
-                    The official Musterprüfung from the Arztakademie, a
-                    complete, self-graded mock exam with 25 cases, a four-hour
-                    timer and a pass mark of 135 out of 242 points, is built
-                    exactly for this and is free. It shows you honestly what the
-                    real format feels like before the actual sitting. We
-                    recommend it explicitly as format practice.
+                    <strong>Confirm the official format separately.</strong> Use university materials for your specific examination. The Arztakademie sample exam belongs to the postgraduate Allgemeinmedizin examination, not a confirmed SIP4a/SIP5a mock.
                   </p>
                 </section>
 
@@ -345,19 +209,7 @@ export default function KenntnispruefungZweiterVersuchPost() {
                     Three phases for your next exam date
                   </h2>
                   <p className="mp-body text-[var(--mp-fg)] leading-relaxed">
-                    Structure instead of intelligence means, in practice: less
-                    studying whatever comes next, more deliberate sequencing.
-                    First, a gap analysis: which of the 16 problem-based
-                    categories held up on the first attempt, and which felt
-                    shaky? You can usually get a rough sense of this from your
-                    own exam-day impression alone, even without official
-                    per-question feedback. Next, targeted review of exactly
-                    those categories, case by case, with explanations in
-                    whichever language your clinical reasoning moves fastest in,
-                    not necessarily German. And only at the end, in the final
-                    weeks before the sitting, the switch to pure format practice
-                    under real four-hour conditions, so that writing under time
-                    pressure is no longer a surprise on exam day.
+                    Start with a gap analysis, review deliberately and then practice under conditions confirmed by your university. Duration, topic weighting and grading are not verified here.
                   </p>
                   <p className="mp-body text-[var(--mp-fg)] leading-relaxed mt-3">
                     This sequence sounds obvious, but it is often skipped on a
@@ -375,28 +227,10 @@ export default function KenntnispruefungZweiterVersuchPost() {
                     What MedPrüf can honestly do, and what it cannot
                   </h2>
                   <p className="mp-body text-[var(--mp-fg)] leading-relaxed">
-                    One honesty note that matters here: MedPrüf trains you with
-                    over 10,000 curated practice questions on Kenntnisprüfung
-                    topics. The bank is based on Anki material and uses a
-                    multiple-choice format, not the open short-answer format of
-                    the real exam. We say this openly,
-                    because a platform that promises to replicate the exam one
-                    to one does you more harm on exam day than one that is
-                    upfront about what it is actually built for.
+                    The Vienna bank contains SIP4a/SIP5a-based MCQ exercises. These university sources are distinct from the postgraduate ÖÄK Allgemeinmedizin examination. The Stichprobentest bank contains clinical exercises from the Innsbruck curriculum. MedPrüf does not reproduce official examination formats and scoring in full.
                   </p>
                   <p className="mp-body text-[var(--mp-fg)] leading-relaxed mt-3">
-                    This exact format gap is what KAF mode is for: the answer
-                    options stay hidden at first, you formulate your answer
-                    freely from memory, and only then reveal the options. That
-                    way you practice, on every single case, the free recall the
-                    real short-answer format demands. On top of that come
-                    explanations you can pull up in seven languages (Russian,
-                    Arabic, English, French, Turkish, Ukrainian, Serbian) and a
-                    spaced-repetition engine (SM-2) that resurfaces material
-                    right before you are likely to forget it. The official
-                    Musterprüfung adds practice in the real answer format.
-                    Together they cover what a second attempt actually needs:
-                    solid knowledge, free recall and format familiarity.
+                    In KAF study mode, answer options stay hidden initially. You formulate an answer freely and then reveal the MCQ options. This trains active recall but does not fully reproduce an official short-answer format or scoring. Multilingual explanations and spaced repetition also support study.
                   </p>
                 </section>
 
@@ -406,30 +240,10 @@ export default function KenntnispruefungZweiterVersuchPost() {
                     Where the second attempt counts most
                   </h2>
                   <p className="mp-body text-[var(--mp-fg)] leading-relaxed">
-                    A failed attempt does not just cost 795 €. It costs weeks or
-                    months you cannot spend practicing, plus the uncertainty of
-                    how many more times you can afford to try. For context, and
-                    without treating this as a looming threat: the
-                    Kenntnisprüfung allows several repeat attempts, and only the
-                    fifth and final repeat attempt runs differently, as a
-                    structured oral exam before three examiners. For the
-                    overwhelming majority this never becomes relevant. But it is
-                    exactly why it is worth preparing the second attempt well
-                    enough that a third or fourth is never needed in the first
-                    place.
+                    Costs, repeat options and professional consequences depend on your specific procedure. Fees and repeat rules for a postgraduate ÖÄK examination are not confirmed rules for university SIP examinations.
                   </p>
                   <p className="mp-body text-[var(--mp-fg)] leading-relaxed mt-3">
-                    This is precisely where the pass-until-you-pass principle of
-                    the 6-month Exam Cohort earns its keep: you keep studying
-                    until you pass, without redoing the math every time you
-                    glance at the calendar on whether another month is still
-                    worth it. The comparison that matters for a second attempt
-                    is not free versus 19 € a month. It is 795 € per failed
-                    attempt versus a fraction of that for preparation aimed
-                    squarely at your actual gaps. Entry starts at 19 € a month,
-                    the six-month Exam Cohort costs 129 €. And the very first
-                    step costs nothing: you can try 150 questions per exam for
-                    free, no credit card.
+                    Entry starts at 19 € a month, and the six-month Exam Cohort costs 129 €. Access extensions follow the published Pass-Until-You-Pass conditions. You can try 150 questions per exam free, no credit card.
                   </p>
                   <p className="mp-body text-[var(--mp-fg)] leading-relaxed mt-3">
                     A failed attempt is not a verdict on your ability. It is
@@ -441,11 +255,11 @@ export default function KenntnispruefungZweiterVersuchPost() {
                 <section>
                   <h2 className="mp-h2 text-[26px] mb-3">In short</h2>
                   <ul className="list-disc pl-6 space-y-2 mp-body text-[var(--mp-fg)] leading-relaxed">
-                    <li>The Kenntnisprüfung Wien is an open short-answer format: free recall, not recognition.</li>
-                    <li>The pass mark is cohort-relative (90 percent of the mean, hard floor 51 percent).</li>
+                    <li>The Vienna bank is based on SIP4a/SIP5a study material.</li>
+                    <li>Official pass marks and repeat rules are not verified here.</li>
                     <li>Analyze the gaps first, then review with a target, train the format last.</li>
-                    <li>Practice free recall with KAF mode, and the real format with the official Musterprüfung.</li>
-                    <li>Always verify exam dates and registration deadlines with the Ärztekammer Wien.</li>
+                    <li>Practice active recall with KAF study mode, and confirm official formats with your university.</li>
+                    <li>Always verify exam dates and registration deadlines with your university.</li>
                     <li>Try 150 questions per exam for free before you decide anything.</li>
                   </ul>
                 </section>
@@ -465,8 +279,8 @@ export default function KenntnispruefungZweiterVersuchPost() {
             </h3>
             <p className="mp-body text-sm text-[var(--mp-fg-muted)] mb-4 max-w-xl mx-auto">
               {L === "de"
-                ? "150 Fragen pro Prüfung gratis testen, ohne Kreditkarte. Kuratierte Übungsfragen, ein recall-first KAF-Modus und Erklärungen in sieben Sprachen. KAF unterstützt den freien Abruf, ersetzt aber nicht die offizielle Musterprüfung."
-                : "Try 150 questions per exam for free, no credit card. Curated practice questions, recall-first KAF practice and explanations in seven languages. KAF supports free recall but does not replace the official sample exam."}
+                ? "150 Fragen pro Prüfung gratis testen, ohne Kreditkarte. Kuratierte Übungsfragen, ein recall-first KAF-Modus und Erklärungen in sieben Sprachen. KAF übt aktives Erinnern und bildet kein offizielles Prüfungsformat vollständig nach."
+                : "Try 150 questions per exam for free, no credit card. Curated practice questions, recall-first KAF practice and explanations in seven languages. KAF practices active recall and does not fully reproduce an official examination format."}
             </p>
             <div className="flex flex-col sm:flex-row gap-3 items-center justify-center">
               <Link

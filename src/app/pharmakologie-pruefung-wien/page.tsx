@@ -124,8 +124,8 @@ const content: ExamLandingContent = {
         en: "Why is Pharmakologie separate from the Kenntnisprüfung?",
       },
       a: {
-        de: "Die Nostrifikation der Medizinischen Universität entscheidet, welche Ergänzungsprüfungen du ablegen musst. Für viele Ärzt:innen aus Drittstaaten umfasst das sowohl die Kenntnisprüfung als auch eine eigenständige Pharmakologie-Prüfung. Die Ärztekammer Wien prüft Pharma als separaten Prüfungsteil, weil die Rezeptierkunde eine eigene Fachkompetenz mit österreichischer Rechtsnorm ist, nicht einfach ein Unterfach der Inneren Medizin. Ob du Pharma ablegen musst, steht in deinem Nostrifikationsbescheid.",
-        en: "Your Medical University's nostrification decision determines which supplementary exams you need. For many doctors from non-EU countries, that includes both the Kenntnisprüfung and a standalone Pharmakologie exam. The Ärztekammer Wien tests Pharma separately because Austrian prescribing law is a distinct domain, not simply a sub-topic of internal medicine. Whether you need to take Pharma is specified in your nostrification decision letter.",
+        de: "Welche Ergänzungsprüfungen du ablegen musst, ergibt sich aus deinem Bescheid und den Anforderungen deiner Universität. MedUni Wien führt Rezeptierkunde im universitären Nostrifikationsverfahren auf. MedPrüfs Pharma-Fragenbank ist Lernmaterial, keine Prüfung der Ärztekammer Wien.",
+        en: "Your decision and university requirements determine which supplementary examinations you need. MedUni Vienna lists prescribing within its university nostrification process. MedPrüf’s Pharma bank is study material, not an examination run by the Vienna Medical Chamber.",
       },
     },
     {
@@ -144,8 +144,8 @@ const content: ExamLandingContent = {
         en: "Does the Vienna Pharmakologie exam differ from Innsbruck?",
       },
       a: {
-        de: "Ja. Die Wiener Pharmakologie-Prüfung ist ein separater Prüfungsteil der Ärztekammer Wien, der speziell auf österreichische Rezeptierkunde fokussiert. Über den Universitäts-Nostrifizierungsweg (z. B. Innsbruck) wird Pharmakologie/Rezeptierkunde dagegen als ein einzelnes Fach im Rahmen der Nostrifizierung geprüft, terminlich an die Semesterwochen der Universität gebunden. Wenn dein Nostrifikationsbescheid Pharma als separate Ärztekammer-Prüfung nennt, geht es meist über Wien; taucht es als Universitätsfach auf, läuft es über die jeweilige MedUni. Die fachlichen Inhalte überschneiden sich stark, die Prüfungsform unterscheidet sich.",
-        en: "Yes. The Vienna Pharmakologie exam is a standalone test by the Ärztekammer Wien, specifically focused on Austrian prescribing rules. On the university nostrification route (e.g. Innsbruck), by contrast, pharmacology/prescribing is examined as a single subject within nostrification, tied to the university's semester exam weeks. If your nostrification decision lists Pharma as a separate Ärztekammer exam, it's usually Vienna; if it appears as a university subject, it goes through that MedUni. The subject content overlaps significantly; the exam format differs.",
+        de: "Formate, Inhalte und Termine sind institutionenspezifisch. Eine Zuordnung zu einer eigenständigen Ärztekammer-Prüfung ist hier nicht belegt. Kläre die genaue Prüfung mit deiner Universität anhand deines Bescheids.",
+        en: "Formats, content and dates are institution-specific. A mapping to a separate Medical Chamber examination is not established here. Confirm your exact examination with your university and your decision.",
       },
     },
     {
@@ -154,8 +154,8 @@ const content: ExamLandingContent = {
         en: "Can I take the Pharma exam without the Kenntnisprüfung?",
       },
       a: {
-        de: "Das hängt von deinem Nostrifikationsbescheid ab. Die Prüfungen sind organisatorisch unabhängig: du kannst Pharma allein absolvieren, wenn dein Bescheid nur Pharma verlangt. Du kannst auch Kenntnisprüfung und Pharma auf unterschiedliche Termine verteilen, solange du die Anmeldefristen der Ärztekammer einhältst. MedPrüf erlaubt dir im Dashboard, zwischen den drei Prüfungstypen (Kenntnisprüfung, Stichprobentest (Innsbruck), Pharma) jederzeit zu wechseln, ohne etwas zu verlieren.",
-        en: "That depends on your nostrification decision. The exams are administratively independent: you can take Pharma alone if your decision letter only requires Pharma. You can also split Kenntnisprüfung and Pharma across different dates, as long as you respect the Ärztekammer's registration deadlines. MedPrüf lets you switch between the three exam types (Kenntnisprüfung, Stichprobentest (Innsbruck), Pharma) at any time in the dashboard without losing progress.",
+        de: "Welche Prüfungen du benötigst und ob du sie getrennt anmelden kannst, bestätigt deine Universität anhand deines Bescheids. Die Auswahl einer MedPrüf-Fragenbank ersetzt diese Bestätigung nicht. Du kannst zwischen den Fragenbanken wechseln, ohne deinen Lernfortschritt zu verlieren.",
+        en: "Your university confirms which examinations you need and whether you can register for them separately, based on your decision. Selecting a MedPrüf bank does not replace that confirmation. You can switch between banks without losing your study progress.",
       },
     },
     {

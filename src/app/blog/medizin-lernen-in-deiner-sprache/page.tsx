@@ -94,9 +94,7 @@ export default function MedizinLernenInDeinerSprachePost() {
                     Ärztinnen und Ärzte scheitern beim ersten Versuch nicht an
                     der Medizin, sondern daran, dass die Begründung zur
                     richtigen Antwort in einer Sprache kommt, in der ihr
-                    klinisches Denken noch nicht zu Hause ist. Und ein
-                    Fehlversuch bei der Kenntnisprüfung kostet nicht nur 795 €,
-                    er kostet Monate, in denen du nicht praktizieren darfst.
+                    klinisches Denken noch nicht zu Hause ist.
                   </p>
                 </section>
 
@@ -106,19 +104,7 @@ export default function MedizinLernenInDeinerSprachePost() {
                     Frage auf Deutsch, Erklärung in deiner Sprache
                   </h2>
                   <p className="mp-body text-[var(--mp-fg)] leading-relaxed">
-                    MedPrüf bietet über 10.000 kuratierte Übungsfragen aus
-                    unterschiedlichen Quellen. Die Kenntnisprüfungsbank
-                    basiert auf Anki-Material und besteht aus
-                    Multiple-Choice-Fragen. Sie bildet nicht das offene
-                    Kurzantwortformat der echten Prüfung nach. Der
-                    Stichprobentest-Fragenpool basiert
-                    auf dem klinischen Curriculum in Innsbruck. Er enthält
-                    keine offiziellen oder erinnerten Prüfungsfragen. Die
-                    Fragen sind auf Deutsch, damit du medizinische Fachsprache
-                    im Prüfungskontext übst. Dazu bekommst du
-                    KI-gestützte Erklärungen, die du dir in sieben Sprachen
-                    anzeigen lassen kannst: Russisch, Arabisch, Englisch,
-                    Französisch, Türkisch, Ukrainisch und Serbisch.
+                    Die Wiener Bank enthält SIP4a/SIP5a-basierte MCQ-Übungen. Diese universitären Quellen sind von der postgradualen ÖÄK-Arztprüfung Allgemeinmedizin zu unterscheiden. Die Stichprobentest-Bank enthält klinische Übungen aus dem Innsbrucker Curriculum. MedPrüf bildet offizielle Prüfungsformate und Bewertung nicht vollständig nach. Die Fragen stehen auf Deutsch; KI-gestützte Erklärungen in mehreren Sprachen unterstützen das Verständnis.
                   </p>
                   <p className="mp-body text-[var(--mp-fg)] leading-relaxed mt-3">
                     In der Praxis heißt das: Du liest die Frage auf Deutsch, so
@@ -139,26 +125,10 @@ export default function MedizinLernenInDeinerSprachePost() {
                     Ehrlich zum Format: was die Fragenbank ist, und was nicht
                   </h2>
                   <p className="mp-body text-[var(--mp-fg)] leading-relaxed">
-                    Damit keine falsche Erwartung entsteht: Die echte
-                    Kenntnisprüfung Wien ist keine Multiple-Choice-Prüfung. Sie
-                    läuft als offenes Kurzantwortformat, bei dem du frei aus
-                    dem Gedächtnis antwortest. Unsere Fragenbank trainiert dich
-                    auf Anki-basiertem Lernmaterial in Multiple-Choice-Form,
-                    nicht im offenen Kurzantwortformat der echten Prüfung. Der
-                    Stichprobentest-Fragenpool basiert auf dem klinischen
-                    Curriculum in Innsbruck, nicht auf offiziellen oder
-                    erinnerten Prüfungsfragen. Beide Fragenbanken unterstützen
-                    das Lernen, ersetzen aber keine offiziellen Prüfungsmaterialien.
+                    Die Wiener Bank enthält SIP4a/SIP5a-basierte MCQ-Übungen. Diese universitären Quellen sind von der postgradualen ÖÄK-Arztprüfung Allgemeinmedizin zu unterscheiden. Die Stichprobentest-Bank enthält klinische Übungen aus dem Innsbrucker Curriculum. MedPrüf bildet offizielle Prüfungsformate und Bewertung nicht vollständig nach.
                   </p>
                   <p className="mp-body text-[var(--mp-fg)] leading-relaxed mt-3">
-                    Für die Formatlücke bei der Kenntnisprüfung gibt es den
-                    KAF-Modus: Die Antwortoptionen bleiben zunächst verdeckt,
-                    du formulierst deine Antwort zuerst frei und blendest die
-                    Optionen erst danach ein. So übst du genau den freien
-                    Abruf, den das echte Format verlangt. Diese Unterscheidung
-                    sprechen wir offen an, weil Ehrlichkeit über das, was ein
-                    Produkt kann, am Prüfungstag mehr wert ist als ein
-                    Versprechen, das dort nicht hält.
+                    Im KAF-Lernmodus bleiben Antwortoptionen zunächst verdeckt. Du formulierst eine Antwort frei und blendest anschließend die MCQ-Optionen ein. Das übt aktives Erinnern, bildet aber kein offizielles Prüfungsformat oder dessen Bewertung vollständig nach.
                   </p>
                 </section>
 
@@ -217,18 +187,7 @@ export default function MedizinLernenInDeinerSprachePost() {
                     Die Absicherung, wenn ein Termin nicht reicht
                   </h2>
                   <p className="mp-body text-[var(--mp-fg)] leading-relaxed">
-                    795 € pro Kenntnisprüfung-Versuch plus Monate ohne
-                    Berufsausübung: Das ist das Risiko, das ohne Vorbereitung
-                    offen bleibt. Für alle, die sich mit der 6-monatigen
-                    Prüfungs-Kohorte (129 €) auf den September-Termin
-                    vorbereiten, gilt deshalb das Pass-Until-You-Pass-Prinzip:
-                    Schaffst du die Prüfung im Zeitraum nicht, lernst du mit
-                    MedPrüf weiter, ohne erneut zu zahlen. Das nimmt genau den
-                    Druck, der sonst dazu führt, dass man sich am Prüfungstag
-                    an Auswendiggelerntes klammert statt an das, was man
-                    wirklich verstanden hat. Der Einstieg beginnt bei 19 € im
-                    Monat, und 150 Fragen pro Prüfung kannst du vorher gratis
-                    testen, ohne Kreditkarte.
+                    Die sechsmonatige Prüfungs-Kohorte kostet 129 €. Verlängerungen richten sich nach den veröffentlichten Pass-Until-You-Pass-Bedingungen. Der Einstieg beginnt bei 19 € im Monat, und 150 Fragen pro Prüfung kannst du vorher gratis testen, ohne Kreditkarte.
                   </p>
                   <p className="mp-body text-[var(--mp-fg)] leading-relaxed mt-3">
                     Dein Nostrifizierungsweg dauert oft zwölf bis achtzehn
@@ -245,7 +204,7 @@ export default function MedizinLernenInDeinerSprachePost() {
                     <li>Erklärungen gibt es in sieben Sprachen: Russisch, Arabisch, Englisch, Französisch, Türkisch, Ukrainisch, Serbisch.</li>
                     <li>Die Oberfläche gibt es auf Deutsch, Englisch, Russisch, Ukrainisch und Türkisch.</li>
                     <li>Übersetzung ersetzt keine Erklärung: Fachbegriffe müssen fachlich korrekt erhalten bleiben.</li>
-                    <li>Die Kenntnisprüfung ist ein offenes Kurzantwortformat (mit dem KAF-Modus üben), der Stichprobentest ist Multiple Choice.</li>
+                    <li>Die Wiener Bank ist SIP4a/SIP5a-basiertes Lernmaterial. KAF übt aktives Erinnern, kein vollständiges offizielles Format.</li>
                     <li>150 Fragen pro Prüfung gratis testen, bevor du dich entscheidest.</li>
                   </ul>
                 </section>
@@ -276,9 +235,7 @@ export default function MedizinLernenInDeinerSprachePost() {
                     physicians fail a first attempt not because they do not
                     know the medicine, but because the reasoning behind the
                     correct answer arrives in a language their clinical
-                    thinking has not fully moved into yet. And a failed
-                    Kenntnisprüfung attempt does not just cost 795 €, it costs
-                    months you cannot spend practicing.
+                    thinking has not fully moved into yet.
                   </p>
                 </section>
 
@@ -317,25 +274,10 @@ export default function MedizinLernenInDeinerSprachePost() {
                     Honest about the format: what the question bank is, and what it is not
                   </h2>
                   <p className="mp-body text-[var(--mp-fg)] leading-relaxed">
-                    One honesty note that matters here: the real
-                    Kenntnisprüfung Wien is not a multiple-choice exam. It runs
-                    as an open short-answer format where you write your answer
-                    from memory. Our Kenntnisprüfung bank is Anki-sourced
-                    multiple-choice practice, not a reproduction of the open
-                    exam format. The Stichprobentest bank is based on the
-                    clinical curriculum in Innsbruck, not official or recalled
-                    exam questions. Both banks support study but do not replace
-                    official exam materials.
+                    The Vienna bank contains SIP4a/SIP5a-based MCQ exercises. These university sources are distinct from the postgraduate ÖÄK Allgemeinmedizin examination. The Stichprobentest bank contains clinical exercises from the Innsbruck curriculum. MedPrüf does not reproduce official examination formats and scoring in full.
                   </p>
                   <p className="mp-body text-[var(--mp-fg)] leading-relaxed mt-3">
-                    For the format gap on the Kenntnisprüfung there is KAF
-                    mode: the answer options stay hidden at first, you
-                    formulate your answer freely, and only then reveal the
-                    options. That way you practice exactly the free recall the
-                    real format demands. We raise this distinction openly,
-                    because being upfront about what a product actually does is
-                    worth more on exam day than a promise that does not hold up
-                    there.
+                    In KAF study mode, options stay hidden initially. You formulate an answer freely and then reveal the MCQ options. This practices active recall but does not fully reproduce an official exam format or scoring.
                   </p>
                 </section>
 
@@ -390,18 +332,7 @@ export default function MedizinLernenInDeinerSprachePost() {
                     The safety net if one sitting is not enough
                   </h2>
                   <p className="mp-body text-[var(--mp-fg)] leading-relaxed">
-                    795 € per Kenntnisprüfung attempt, plus months without a
-                    license to practice: that is the risk that sits there
-                    unaddressed without real preparation. That is why the
-                    6-month Exam Cohort (129 €), built around the September
-                    sitting, carries the pass-until-you-pass principle: if you
-                    prepare through the Cohort and still do not pass in that
-                    window, you keep going with MedPrüf without paying again.
-                    That takes away the exact pressure that makes people cling
-                    to memorized German phrasing on exam day instead of the
-                    clinical reasoning they actually understood. Entry starts
-                    at 19 € a month, and you can try 150 questions per exam for
-                    free first, no credit card.
+                    The six-month Exam Cohort costs 129 €. Extensions follow the published Pass-Until-You-Pass conditions. Entry starts at 19 € a month, and you can try 150 questions per exam free, no credit card.
                   </p>
                   <p className="mp-body text-[var(--mp-fg)] leading-relaxed mt-3">
                     Your nostrification path often takes twelve to eighteen
@@ -418,7 +349,7 @@ export default function MedizinLernenInDeinerSprachePost() {
                     <li>Explanations come in seven languages: Russian, Arabic, English, French, Turkish, Ukrainian, Serbian.</li>
                     <li>The interface is available in German, English, Russian, Ukrainian and Turkish.</li>
                     <li>Translation is not explanation: medical terms must be preserved correctly.</li>
-                    <li>The Kenntnisprüfung is an open short-answer format (practice with KAF mode), the Stichprobentest is multiple choice.</li>
+                    <li>The Vienna bank is SIP4a/SIP5a-based study material. KAF practices active recall, not a complete official format.</li>
                     <li>Try 150 questions per exam for free before you decide anything.</li>
                   </ul>
                 </section>

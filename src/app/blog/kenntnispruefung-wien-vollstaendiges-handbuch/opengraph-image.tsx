@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 
 export const runtime = "edge";
-export const alt = "Kenntnisprüfung Wien: vollständiges Handbuch 2026 | MedPrüf Blog";
+export const alt = "Kenntnisprüfung Wien: Lernleitfaden 2026 | MedPrüf Blog";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -69,7 +69,7 @@ export default function Image() {
               fontWeight: 600,
             }}
           >
-            Handbuch · 10 Min.
+            Lernleitfaden · 10 Min.
           </div>
         </div>
 
@@ -101,7 +101,7 @@ export default function Image() {
               maxWidth: 1040,
             }}
           >
-            Das vollständige Handbuch.
+            Die Wiener Fragenbank.
           </div>
           <div
             style={{
@@ -112,7 +112,7 @@ export default function Image() {
               maxWidth: 980,
             }}
           >
-            Nostrifikation · SIP 4 vs SIP 5 · Lernplan · häufige Fehler
+            SIP4a/SIP5a-Lernmaterial · MCQ-Übung · Lernplan
           </div>
         </div>
 

@@ -74,8 +74,8 @@ export const BLOG_POSTS: BlogPostMeta[] = [
       en: "The second attempt: passing the Kenntnisprüfung Wien after failing once",
     },
     summary: {
-      de: "Die Kenntnisprüfung Wien ist ein offenes Kurzantwortformat mit kohortenrelativer Bestehensgrenze. Warum der erste Versuch selten am Wissen scheitert, welche drei Verschiebungen den zweiten Versuch tragen, und wie du freien Abruf und Format gezielt trainierst.",
-      en: "The Kenntnisprüfung Wien is an open short-answer exam with a cohort-relative pass mark. Why a first attempt rarely fails on knowledge, the three shifts that carry a second attempt, and how to train free recall and the format deliberately.",
+      de: "Lernen nach einem Fehlversuch: Wissenslücken analysieren und aktives Erinnern üben. Die Wiener Bank ist SIP4a/SIP5a-basiertes Lernmaterial, nicht die postgraduale ÖÄK-Prüfung.",
+      en: "Study after an unsuccessful attempt: identify knowledge gaps and practice active recall. The Vienna bank is SIP4a/SIP5a-based study material, distinct from the postgraduate ÖÄK exam.",
     },
     publishedAt: "2026-07-03",
     author: "MedPrüf Editorial",
@@ -134,12 +134,12 @@ export const BLOG_POSTS: BlogPostMeta[] = [
   {
     slug: "kenntnispruefung-wien-vollstaendiges-handbuch",
     title: {
-      de: "Kenntnisprüfung Wien: vollständiges Handbuch 2026",
-      en: "Vienna Kenntnisprüfung: complete 2026 handbook",
+      de: "Kenntnisprüfung Wien: Lernleitfaden 2026",
+      en: "Vienna Kenntnisprüfung: 2026 practice guide",
     },
     summary: {
-      de: "Alles, was du 2026 zur Kenntnisprüfung Wien wissen musst: Zulassung, SIP-4-vs-SIP-5-Struktur, Prüfungsaufbau, typische Schwerpunkte, realistische Lernpläne und häufige Fehler. Ein ehrliches Handbuch von Ärzt:innen, die den Weg selbst gegangen sind.",
-      en: "Everything you need to know about the 2026 Vienna Kenntnisprüfung: admission, SIP 4 vs SIP 5 structure, exam format, typical focus areas, realistic study plans, and common mistakes. An honest handbook from doctors who've walked the path themselves.",
+      de: "Lernleitfaden zur SIP4a/SIP5a-basierten Wiener Fragenbank. Lernplanung und Formatgrenzen, keine Zulassungsberatung. Offizielle Anforderungen und Termine bestätigt die Universität.",
+      en: "A study guide for the SIP4a/SIP5a-based Vienna practice bank. Study planning and format limitations, not admission advice. Your university confirms official requirements and dates.",
     },
     publishedAt: "2026-04-24",
     author: "MedPrüf Editorial",

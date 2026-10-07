@@ -286,7 +286,7 @@ const translations = {
   'landing_feature_arabic': { de: 'Zweisprachige Erklärungen', en: 'Bilingual Explanations' },
   'landing_feature_arabic_desc': { de: 'Jede Erklärung auf Deutsch und Englisch, damit du die Konzepte wirklich verstehst', en: 'Every explanation in German and English so you truly understand the concepts' },
   'landing_feature_realistic': { de: 'Prüfungsnahe Fragen', en: 'Exam-Realistic Questions' },
-  'landing_feature_realistic_desc': { de: 'Fragen im Stil der echten Kenntnisprüfung mit allen Formaten', en: 'Questions matching the real exam format and difficulty' },
+  'landing_feature_realistic_desc': { de: 'Kuratierte Übungsfragen für medizinisches Wissen, keine vollständige Nachbildung offizieller Prüfungsformate', en: 'Curated medical practice questions, not a complete reproduction of official exam formats' },
   'landing_feature_analytics': { de: 'Leistungsanalyse', en: 'Performance Analytics' },
   'landing_feature_analytics_desc': { de: 'Verfolge deinen Fortschritt und erkenne Schwächen', en: 'Track your progress and identify weak areas' },
   'landing_feature_mobile': { de: 'Überall lernen', en: 'Study Anywhere' },
@@ -316,7 +316,7 @@ const translations = {
   'kaf_toggle': { de: 'KAF-Modus', en: 'KAF mode' },
   'kaf_toggle_hint': { de: 'Erst frei antworten, dann Optionen', en: 'Answer freely first, then options' },
   'kaf_badge': { de: 'KAF-Training', en: 'KAF training' },
-  'kaf_hint': { de: 'Die echte Kenntnisprüfung fragt offen (Kurzantwortfragen). Formuliere deine Antwort zuerst frei, dann blende die Optionen ein. So trainierst du aktives Erinnern statt Wiedererkennen.', en: 'The real Kenntnisprüfung asks open short-answer questions. Formulate your answer freely first, then reveal the options. This trains active recall instead of recognition.' },
+  'kaf_hint': { de: 'Formuliere deine Antwort zuerst frei, dann blende die Optionen ein. Das trainiert aktives Erinnern. Dieser Lernmodus bildet kein offizielles Prüfungsformat vollständig nach.', en: 'Formulate your answer freely first, then reveal the options. This trains active recall. This study mode does not fully reproduce an official exam format.' },
   'kaf_intro_title': { de: 'Was ist der KAF-Modus?', en: 'What is KAF mode?' },
   'kaf_intro_ok': { de: 'Verstanden', en: 'Got it' },
   'kaf_scratch_placeholder': { de: 'Deine freie Antwort (optional, wird nicht bewertet)...', en: 'Your free answer (optional, not graded)...' },
@@ -646,14 +646,16 @@ const translations = {
   // Find Your Path — guided orientation flow (public, anon-safe). All
   // strings em-dash-free ([name]'s rule); legacy keys carrying em dashes
   // are intentionally NOT reused here.
+  'fyp_calendar_notice': { de: 'Achtung: Die Wiener Kalenderauswahl enthält Termine der postgradualen ÖÄK-Arztprüfung, keine verifizierten SIP4a/SIP5a-Termine. Verwende sie nicht als Anmeldeauskunft für deine Universität. Auch berechnete Fristen und Zeitleisten sind dafür nicht verifiziert.', en: 'Caution: the Vienna calendar lists ÖÄK postgraduate exam dates, not verified SIP4a/SIP5a dates. Do not use them as university registration advice. Calculated deadlines and timelines are also unverified for that purpose.' },
+  'fyp_university_notice': { de: 'Prüfe Datum, Anforderungen und Anmeldung direkt bei deiner Universität. Diese Zeitleiste ist ein Lernvorschlag, keine bestätigte Prüfungsanmeldung.', en: 'Confirm dates, requirements and registration directly with your university. This timeline is a study suggestion, not confirmed exam registration.' },
   'fyp_meta_title': { de: 'Finde deinen Weg', en: 'Find your path' },
   // In-app onboarding affordance (entry point #2) — a confused logged-in
   // user who does not yet know which exam is theirs jumps to the
   // orientation flow instead of guessing on the exam grid.
   'fyp_onb_unsure_link': { de: 'Nicht sicher, welche Prüfung deine ist? Finde deinen Weg', en: 'Not sure which exam is yours? Find your path' },
   'fyp_eyebrow': { de: 'Orientierung', en: 'Get oriented' },
-  'fyp_intro_title': { de: 'Finde deinen Weg zur Anerkennung', en: 'Find your path to recognition' },
-  'fyp_intro_sub': { de: 'Drei kurze Fragen. Danach weißt du, welcher Prüfungsweg deiner ist, wann deine Fristen sind und wo du anfängst.', en: 'Three short questions. Then you will know which exam route is yours, when your deadlines are, and where to start.' },
+  'fyp_intro_title': { de: 'Finde deine Fragenbank', en: 'Find your practice bank' },
+  'fyp_intro_sub': { de: 'Drei kurze Fragen für deine Lernplanung. Welche Prüfungen, Zulassung und Termine für dich gelten, bestätigt deine Universität.', en: 'Three short questions for study planning. Your university confirms the examinations, eligibility and dates that apply to you.' },
   'fyp_step_label': { de: 'Schritt {current} von {total}', en: 'Step {current} of {total}' },
   'fyp_next': { de: 'Weiter', en: 'Next' },
   'fyp_back': { de: 'Zurück', en: 'Back' },
@@ -661,10 +663,10 @@ const translations = {
   'fyp_skip_step': { de: 'Diesen Schritt überspringen', en: 'Skip this step' },
 
   // Step 1 — which route
-  'fyp_s1_title': { de: 'Welcher Weg ist deiner?', en: 'Which route are you on?' },
-  'fyp_s1_sub': { de: 'Es gibt zwei Anerkennungswege in Österreich. Wähle deinen, oder lass es dir kurz erklären.', en: 'There are two recognition routes in Austria. Pick yours, or let us explain them quickly.' },
+  'fyp_s1_title': { de: 'Mit welcher Fragenbank möchtest du üben?', en: 'Which bank would you like to practice with?' },
+  'fyp_s1_sub': { de: 'Wähle Lernmaterial. Diese Auswahl bestimmt keinen rechtlichen Anerkennungsweg.', en: 'Choose study material. This selection does not determine your legal recognition route.' },
   'fyp_route_kp_name': { de: 'Kenntnisprüfung Wien', en: 'Kenntnisprüfung Vienna' },
-  'fyp_route_kp_desc': { de: 'Die Arztprüfung der Ärztekammer (Allgemeinmedizin)', en: "The Medical Chamber's Arztprüfung (general medicine)" },
+  'fyp_route_kp_desc': { de: 'SIP4a/SIP5a-basiertes Lernmaterial, keine ÖÄK-Arztprüfung', en: 'SIP4a/SIP5a-based study material, distinct from the ÖÄK postgraduate exam' },
   'fyp_route_stp_name': { de: 'Stichprobentest', en: 'Stichprobentest' },
   'fyp_route_stp_desc': { de: 'Das Screening der universitären Nostrifizierung', en: 'The university nostrification screening' },
   'fyp_route_unsure_name': { de: 'Ich bin nicht sicher', en: "I'm not sure" },
@@ -672,19 +674,19 @@ const translations = {
 
   // Step 1 — the two-route explainer (facts sourced from SoT §1; dates
   // pulled live from exam-dates.ts, never hardcoded here)
-  'fyp_explain_title': { de: 'Die zwei Anerkennungswege', en: 'The two recognition routes' },
-  'fyp_explain_sub': { de: 'Welcher gilt für dich, hängt davon ab, wie du in Österreich anerkannt wirst. Lies kurz und wähle dann.', en: 'Which one applies depends on how you are getting recognized in Austria. Read briefly, then choose.' },
-  'fyp_explain_kp_p': { de: 'Die Arztprüfung Allgemeinmedizin der Österreichischen Ärztekammer (Arztakademie). Fester Termin, 3x pro Jahr, Anmeldeschluss ausnahmslos 2 Monate vorher. Eine Wiederholung kostet rund 795 € pro Versuch.', en: 'The Arztprüfung Allgemeinmedizin of the Austrian Medical Chamber (Arztakademie). Fixed date, 3x per year, registration closes exactly 2 months before. A re-sit costs around 795 € per attempt.' },
-  'fyp_explain_stp_p': { de: 'Das nationale Stichprobentest-Screening der universitären Nostrifizierung (rechtlich keine Prüfung). Rund 10 bis 11 klinische Blöcke, du bestehst meist etwa 6 von 10 mit mindestens 60 %. Der Standort wechselt, du meldest dich an der Uni an, an der du deinen Nostrifizierungs-Antrag gestellt hast.', en: 'The national Stichprobentest screening of the university nostrification (legally not an exam). Around 10 to 11 clinical blocks, you usually pass about 6 of 10 at 60 % or more. The venue rotates, and you register at the university where you filed your nostrification application.' },
-  'fyp_explain_choose_kp': { de: 'Das ist mein Weg: Kenntnisprüfung', en: 'This is my route: Kenntnisprüfung' },
-  'fyp_explain_choose_stp': { de: 'Das ist mein Weg: Stichprobentest', en: 'This is my route: Stichprobentest' },
+  'fyp_explain_title': { de: 'Die Fragenbanken einordnen', en: 'Understanding the practice banks' },
+  'fyp_explain_sub': { de: 'Lernmaterial und offizielle Prüfungsanforderungen sind verschieden. Kläre deinen Bescheid und Termine mit deiner Universität.', en: 'Study material and official examination requirements differ. Confirm your decision and dates with your university.' },
+  'fyp_explain_kp_p': { de: 'Die Wiener Fragenbank basiert auf SIP4a/SIP5a-Lernmaterial. Die postgraduale Arztprüfung Allgemeinmedizin der ÖÄK ist eine andere Prüfung. Ihre Gebühren und Termine gelten nicht automatisch für universitäre Ergänzungsprüfungen.', en: 'The Vienna bank is based on SIP4a/SIP5a study material. The ÖÄK postgraduate Allgemeinmedizin examination is a different examination. Its fees and dates do not automatically apply to university supplementary examinations.' },
+  'fyp_explain_stp_p': { de: 'Diese Fragenbank bietet klinische Übung für den universitären Stichprobentest. Sie ist kein offizieller Fragenkatalog. Anforderungen, Bewertung und Anmeldung musst du mit der zuständigen Universität prüfen.', en: 'This bank offers clinical practice for the university Stichprobentest. It is not an official question catalog. Confirm requirements, grading and registration with the responsible university.' },
+  'fyp_explain_choose_kp': { de: 'Diese Fragenbank wählen: Wien', en: 'Choose this bank: Vienna' },
+  'fyp_explain_choose_stp': { de: 'Diese Fragenbank wählen: Stichprobentest', en: 'Choose this bank: Stichprobentest' },
   'fyp_explain_next_sitting': { de: 'Nächster Termin', en: 'Next sitting' },
   'fyp_explain_reg_by': { de: 'Anmeldeschluss', en: 'Register by' },
   'fyp_explain_rolling': { de: 'Kein fester Termin', en: 'No fixed date' },
 
   // Step 2 — when is your exam (wraps ExamSittingPicker)
-  'fyp_s2_title': { de: 'Wann ist deine Prüfung?', en: 'When is your exam?' },
-  'fyp_s2_sub': { de: 'Wähle den echten Termin, oder sag uns, dass du noch nicht angemeldet bist. Daraus bauen wir deine Zeitleiste.', en: "Pick the real sitting, or tell us you're not registered yet. We build your timeline from it." },
+  'fyp_s2_title': { de: 'Welches Datum möchtest du für deinen Lernplan verwenden?', en: 'Which date would you like to use for your study plan?' },
+  'fyp_s2_sub': { de: 'Verwende einen von deiner Universität bestätigten Termin. Der App-Kalender bestätigt weder Zulassung noch Anmeldung.', en: 'Use a date confirmed by your university. The app calendar does not confirm eligibility or registration.' },
 
   // Step 3 — quick background (optional)
   'fyp_s3_title': { de: 'Kurz zu dir (optional)', en: 'A little about you (optional)' },
@@ -696,14 +698,14 @@ const translations = {
 
   // Output — Your Path
   'fyp_out_eyebrow': { de: 'Dein Weg', en: 'Your path' },
-  'fyp_out_title_kp': { de: 'Dein Weg: Kenntnisprüfung Wien', en: 'Your path: Kenntnisprüfung Vienna' },
-  'fyp_out_title_stp': { de: 'Dein Weg: Stichprobentest', en: 'Your path: Stichprobentest' },
-  'fyp_out_route_kp_p': { de: 'Du bereitest dich auf die Kenntnisprüfung Wien vor, die Arztprüfung Allgemeinmedizin der Österreichischen Ärztekammer. Sie findet 3x pro Jahr zu festen Terminen statt, und der Anmeldeschluss ist ausnahmslos 2 Monate vorher. Wir richten alles auf diesen Termin aus.', en: 'You are preparing for the Kenntnisprüfung Vienna, the Arztprüfung Allgemeinmedizin of the Austrian Medical Chamber. It runs 3x per year on fixed dates, and registration closes exactly 2 months before. We line everything up to that date.' },
-  'fyp_out_route_stp_p': { de: 'Du bereitest dich auf den Stichprobentest vor, das nationale Screening der universitären Nostrifizierung. Rund 10 bis 11 klinische Blöcke, du bestehst meist etwa 6 von 10 mit mindestens 60 %. Der Standort wechselt je Termin. Wir richten deinen Plan auf deinen Termin aus.', en: 'You are preparing for the Stichprobentest, the national screening of the university nostrification. Around 10 to 11 clinical blocks, and you usually pass about 6 of 10 at 60 % or more. The venue rotates each sitting. We line your plan up to your date.' },
+  'fyp_out_title_kp': { de: 'Deine Fragenbank: Kenntnisprüfung Wien', en: 'Your practice bank: Kenntnisprüfung Vienna' },
+  'fyp_out_title_stp': { de: 'Deine Fragenbank: Stichprobentest', en: 'Your practice bank: Stichprobentest' },
+  'fyp_out_route_kp_p': { de: 'Du hast die SIP4a/SIP5a-basierte Wiener Fragenbank gewählt. Sie ist nicht die postgraduale ÖÄK-Arztprüfung Allgemeinmedizin. Welche universitären Prüfungen du benötigst und wann sie stattfinden, ist hier nicht verifiziert.', en: 'You selected the SIP4a/SIP5a-based Vienna bank. It is distinct from the ÖÄK postgraduate Allgemeinmedizin examination. Your required university examinations and their dates are not verified here.' },
+  'fyp_out_route_stp_p': { de: 'Du hast die Stichprobentest-Fragenbank gewählt. Dein Lernplan verwendet das gewählte Datum. Anforderungen, Bewertung und Fristen bestätigt deine Universität.', en: 'You selected the Stichprobentest bank. Your study plan uses your selected date. Your university confirms requirements, grading and deadlines.' },
   'fyp_out_timeline_title': { de: 'Deine Zeitleiste', en: 'Your timeline' },
-  'fyp_out_days_left': { de: 'Tage bis zur Prüfung', en: 'days until your exam' },
-  'fyp_out_register_cta': { de: 'Du bist noch nicht angemeldet. Melde dich bis zum {date} an.', en: 'You are not registered yet. Register by {date}.' },
-  'fyp_out_register_soft': { de: 'Anmeldeschluss ist rund {date}. Markiere ihn dir.', en: 'Registration closes around {date}. Mark it down.' },
+  'fyp_out_days_left': { de: 'Tage bis zum gewählten Lernziel', en: 'days until your selected study target' },
+  'fyp_out_register_cta': { de: 'Die App berechnet den {date} als Frist. Verifiziere die tatsächliche Anmeldung bei deiner Universität.', en: 'The app calculates {date} as a deadline. Verify actual registration with your university.' },
+  'fyp_out_register_soft': { de: 'Die App berechnet rund {date}. Die tatsächliche Frist ist hier nicht verifiziert.', en: 'The app calculates around {date}. The actual deadline is not verified here.' },
   'fyp_out_nodate_title': { de: 'Noch kein Termin gewählt', en: 'No date chosen yet' },
   'fyp_out_nodate_body': { de: 'Kein Problem. Sobald du einen Termin setzt, bauen wir die Tag-für-Tag-Zeitleiste. Bis dahin fang einfach mit kostenlosem Üben an.', en: 'No problem. As soon as you set a date, we build the day-by-day timeline. Until then, just start with free practice.' },
   'fyp_out_plan_title': { de: 'Dein Lernplan', en: 'Your study plan' },

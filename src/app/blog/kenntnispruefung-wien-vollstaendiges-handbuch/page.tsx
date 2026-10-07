@@ -66,14 +66,11 @@ export default function KenntnispruefungHandbuchPost() {
               <span>MedPrüf Editorial</span>
             </div>
             <h1 className="mp-h1 text-[34px] sm:text-[44px] leading-[1.08] mb-4">
-              Kenntnisprüfung Wien: vollständiges Handbuch 2026
+              Kenntnisprüfung Wien: Lernleitfaden 2026
             </h1>
             <p className="mp-body text-lg text-[var(--mp-fg-muted)] leading-relaxed">
-              Ein ehrliches Handbuch für Ärzt:innen mit ausländischem Diplom, die
-              die österreichische Kenntnisprüfung vor sich haben. Keine
-              Werbesprache, keine Versprechen ohne Deckung, nur die Regeln,
-              Strukturen und Fallstricke, die wir selbst durchlaufen haben.
-            </p>
+                    Ein Leitfaden zum Lernen mit der Wiener Fragenbank. Offizielle Zulassung, Prüfungsformate und Termine musst du separat mit deiner Universität klären.
+                  </p>
           </header>
 
           <div className="prose-mp space-y-6">
@@ -84,24 +81,11 @@ export default function KenntnispruefungHandbuchPost() {
                 Was ist die Kenntnisprüfung eigentlich?
               </h2>
               <p className="mp-body text-[var(--mp-fg)] leading-relaxed">
-                Die Kenntnisprüfung ist eine Ergänzungsprüfung, die ausländisch
-                ausgebildete Ärzt:innen in Österreich ablegen müssen, um die
-                ärztliche Approbation zu erhalten. Sie wird von der
-                Ärztekammer Wien organisiert und besteht aus zwei großen Teilen,
-                SIP 4 und SIP 5, die auch reguläre Studierende der Medizinischen
-                Universität Wien als Teil des Diplomstudiums absolvieren: du
-                legst also dieselbe Prüfung wie ein regulärer Absolvent ab, nur
-                eben nachträglich und als Einzelleistung.
-              </p>
+                    Die MedPrüf-Bank mit dem Namen Kenntnisprüfung Wien basiert auf SIP4a/SIP5a-Lernmaterial. MedUni Wien führt SIP4a/SIP5a im universitären Nostrifikationsverfahren auf. Die postgraduale ÖÄK-Arztprüfung Allgemeinmedizin ist eine andere Prüfung. Diese Seite ist ein Lernleitfaden, keine Zulassungsberatung.
+                  </p>
               <p className="mp-body text-[var(--mp-fg)] leading-relaxed mt-3">
-                Die Prüfung ist kein Formalakt: Durchfallquoten über alle
-                Jahrgänge liegen je nach Zyklus zwischen 20 und 40 Prozent, mit
-                deutlicher Schwankung zwischen SIP 4 und SIP 5. Wer unvorbereitet
-                antritt, weil „man doch einen Medizinabschluss hat&rdquo;, verliert
-                rund 795 Euro pro Fehlversuch plus mehrere Monate
-                Berufsausübungs-Verzögerung. Das ist keine Prüfung, die man
-                „nebenbei&rdquo; abhandelt.
-              </p>
+                    Für die Wiener Bank sind weder pauschale Durchfallquoten noch die Gebühren der postgradualen ÖÄK-Arztprüfung ein verlässlicher Maßstab. Kläre Kosten und Anforderungen direkt mit deiner Universität.
+                  </p>
             </section>
 
             {/* Zulassungsvoraussetzungen */}
@@ -114,105 +98,49 @@ export default function KenntnispruefungHandbuchPost() {
                 Zulassung: der Weg über die Nostrifikation
               </h2>
               <p className="mp-body text-[var(--mp-fg)] leading-relaxed">
-                Bevor du überhaupt zur Kenntnisprüfung antreten darfst, brauchst
-                du eine abgeschlossene Nostrifikation deines ausländischen
-                Medizindiploms. Das ist ein Verfahren der Medizinischen
-                Universität Wien, das dein Diplom mit dem österreichischen
-                Curriculum vergleicht. Am Ende steht ein Bescheid, der auflistet,
-                welche Ergänzungsprüfungen du ablegen musst, um formal auf
-                österreichisches Niveau „aufzufüllen&rdquo;.
-              </p>
+                    Welche Ergänzungsprüfungen und Nachweise du benötigst, hängt vom universitären Verfahren und deinem individuellen Bescheid ab. Dieser Lernleitfaden verifiziert deine Zulassung nicht. Ergänzungsprüfungen gehören zum Nostrifikationsverfahren; ein abgeschlossener Abschluss dieses Verfahrens ist hier nicht als Voraussetzung behauptet.
+                  </p>
               <h3 className="mp-h3 text-[18px] mt-5 mb-2">
-                Was du für die Nostrifikation brauchst
-              </h3>
-              <ul className="list-disc pl-6 space-y-2 mp-body text-[var(--mp-fg)] leading-relaxed">
-                <li>
-                  Beglaubigtes Diplom mit Übersetzung (Gerichtsdolmetscher:in)
-                </li>
-                <li>
-                  Vollständiges Studienzeugnis mit Fächern, Stunden, Noten,
-                  ebenfalls beglaubigt übersetzt
-                </li>
-                <li>
-                  Nachweis von Deutschkenntnissen auf B2-Niveau (ÖIF,
-                  ÖSD oder vergleichbar)
-                </li>
-                <li>
-                  Ggf. Aufenthaltsnachweis und Identifikationsdokumente
-                </li>
-                <li>
-                  Verfahrensgebühr der MedUni Wien (Stand 2026: im
-                  dreistelligen Bereich pro Antrag; bitte immer aktuell prüfen)
-                </li>
-              </ul>
+                Offizielle Anforderungen prüfen</h3>
               <p className="mp-body text-[var(--mp-fg)] leading-relaxed mt-4">
-                Die reine Nostrifikationsbearbeitung dauert in der Regel sechs
-                bis zwölf Monate. Plane diesen Zeitraum ein, bevor du überhaupt
-                einen Lernplan für die Kenntnisprüfung baust: ohne den Bescheid
-                kannst du dich nicht zur Prüfung anmelden.
-              </p>
+                    Fristen, Unterlagen, Sprachvoraussetzungen und Bearbeitungszeiten sind hier nicht institutionenspezifisch verifiziert. Nutze die aktuellen Informationen deiner Universität und frage dort nach, bevor du Prüfungen oder Reisepläne buchst.
+                  </p>
             </section>
 
             {/* SIP 4 vs SIP 5 */}
             <section>
               <h2 className="mp-h2 text-[26px] flex items-center gap-2 mb-3">
                 <Layers className="w-5 h-5 text-[var(--mp-viridian)]" aria-hidden />
-                SIP 4 vs SIP 5: die zwei Prüfungsteile
+                SIP4a/SIP5a: Herkunft des Lernmaterials
               </h2>
               <p className="mp-body text-[var(--mp-fg)] leading-relaxed">
-                Die Kenntnisprüfung ist in zwei getrennte Summative Integrierte
-                Prüfungen (SIP) aufgeteilt, die unabhängig voneinander bestanden
-                werden müssen. Beide Teile testen klinisches Entscheiden in
-                MCQ-Format, Multiple-Choice mit einer oder mehreren korrekten
-                Antworten.
-              </p>
+                    SIP4a/SIP5a bezeichnet die Herkunft des Wiener Lernmaterials. Die App bietet MCQ-Übungen mit binärer Bewertung. Daraus folgen keine offiziellen Regeln zu Prüfungsteilen, Bestehen oder Wiederholung.
+                  </p>
 
-              <h3 className="mp-h3 text-[18px] mt-5 mb-2">SIP 4: die drei großen Fächer</h3>
+              <h3 className="mp-h3 text-[18px] mt-5 mb-2">Klinische Lernanker</h3>
               <p className="mp-body text-[var(--mp-fg)] leading-relaxed">
-                SIP 4 prüft Innere Medizin, Chirurgische Fächer und Dermatologie
-                mit Venerologie. Der Schwerpunkt liegt auf Diagnostik,
-                Differenzialdiagnose und erstlinienhafter Therapie, nicht auf
-                spezialisierter Subspecialty-Medizin. Typische Fragen: EKG-
-                Interpretation, Sepsis-Management nach SSC-Guidelines, akutes
-                Abdomen, Hauttumor-Kategorisierung.
-              </p>
+                    Die folgenden klinischen Themen dienen als Lernanker, nicht als verifizierter offizieller Prüfungsplan: Innere Medizin, chirurgische Fächer und Dermatologie. Beispiele aus der bisherigen Lernübersicht sind EKG-Interpretation, Sepsis-Management nach SSC-Guidelines, akutes Abdomen und Hauttumor-Kategorisierung.
+                  </p>
 
-              <h3 className="mp-h3 text-[18px] mt-5 mb-2">SIP 5: sieben Fachgebiete</h3>
+              <h3 className="mp-h3 text-[18px] mt-5 mb-2">Weitere klinische Lernbereiche</h3>
               <p className="mp-body text-[var(--mp-fg)] leading-relaxed">
-                SIP 5 umfasst Augenheilkunde, HNO, Psychiatrie, Notfall- und
-                Intensivmedizin, Frauenheilkunde/Gynäkologie, Kinder- und
-                Jugendheilkunde sowie Neurologie. Das klingt nach viel und ist
-                es auch, der Vorteil: jedes Fachgebiet prüft weniger in die
-                Tiefe als SIP 4 und konzentriert sich auf klinisch hochrelevante
-                Entscheidungen („Welches Antibiotikum bei Pyelonephritis?&rdquo;,
-                „Wann CT beim Schlaganfall?&rdquo;).
-              </p>
+                    Weitere klinische Lernbereiche sind Augenheilkunde, HNO, Psychiatrie, Notfall- und Intensivmedizin, Frauenheilkunde/Gynäkologie, Kinder- und Jugendheilkunde sowie Neurologie. Diese Lernübersicht bestätigt weder die Gewichtung noch die Tiefe deiner konkreten Prüfung.
+                  </p>
 
               <p className="mp-body text-[var(--mp-fg)] leading-relaxed mt-4">
-                Beide SIPs werden getrennt bewertet. Wer nur einen Teil besteht,
-                muss den anderen wiederholen, aber nicht den bestandenen Teil.
-                Die Bestehensgrenze liegt typischerweise bei 60 Prozent
-                korrekter Antworten, wobei die Ärztekammer Wien die exakte
-                Grenze pro Zyklus festlegt.
-              </p>
+                    Offizielle Bewertung, Bestehensgrenzen und Wiederholungsregeln sind hier nicht verifiziert. Die MCQ-Bewertung in MedPrüf darfst du nicht mit universitärer Prüfungsbewertung gleichsetzen.
+                  </p>
             </section>
 
             {/* Prüfungsaufbau */}
             <section>
               <h2 className="mp-h2 text-[26px] flex items-center gap-2 mb-3">
                 <Gauge className="w-5 h-5 text-[var(--mp-viridian)]" aria-hidden />
-                Prüfungsaufbau im Detail
+                Übungsformat und Grenzen
               </h2>
               <p className="mp-body text-[var(--mp-fg)] leading-relaxed">
-                Beide SIPs werden als schriftliche Prüfungen am PC in
-                Prüfungszentren der MedUni Wien abgehalten. Du bekommst pro SIP
-                einen Fragenblock mit ca. 100-150 Aufgaben und rund drei bis
-                vier Stunden Zeit. Die Fragen mischen Single-Choice („genau eine
-                richtig&rdquo;) und Multiple-Choice („eine oder mehrere richtig&rdquo;):
-                beim Multiple-Choice-Format gilt strikte Bewertung: nur wenn
-                alle korrekten Antworten markiert und alle falschen weggelassen
-                sind, gibt es den vollen Punkt.
-              </p>
+                    MedPrüfs zeitbegrenzte MCQ-Übung ist ein Lernmodus. Offizielle Aufgabenarten, Dauer, Umfang und Teilpunkte werden nicht vollständig nachgebildet. Prüfe das konkrete Format bei deiner Universität.
+                  </p>
               <p className="mp-body text-[var(--mp-fg)] leading-relaxed mt-3">
                 Die Fragen sind überwiegend fallbasiert: ein kurzer
                 Patientenkasus („62-jähriger Mann, seit drei Tagen...&rdquo;), dann
@@ -232,11 +160,8 @@ export default function KenntnispruefungHandbuchPost() {
                 Typische Schwerpunkte pro Fach
               </h2>
               <p className="mp-body text-[var(--mp-fg)] leading-relaxed mb-3">
-                Jedes Fach hat Themen, die in fast jedem Zyklus auftauchen. Die
-                folgende Liste ist keine Garantie für die nächste Prüfung (die
-                Ärztekammer Wien variiert gezielt), aber sie sind verlässliche
-                Lernanker:
-              </p>
+                    Die folgende Liste bietet klinische Lernanker. Sie ist keine Vorhersage für eine Prüfung und kein verifizierter offizieller Themenkatalog:
+                  </p>
               <ul className="list-disc pl-6 space-y-2 mp-body text-[var(--mp-fg)] leading-relaxed">
                 <li>
                   <strong>Innere Medizin</strong>: Sepsis nach SSC-Bundle,
@@ -306,7 +231,7 @@ export default function KenntnispruefungHandbuchPost() {
               <p className="mp-body text-[var(--mp-fg)] leading-relaxed">
                 Jetzt kommen die SIP-5-Fächer systematisch dran (Neuro,
                 Psychiatrie, Gyn, Pädiatrie, Notfall/ITS, HNO, Augen).
-                Parallel: erste vollständige SIP-4-Probeprüfungen unter
+                Parallel: erste zeitbegrenzte MCQ-Übungen unter
                 Zeitbedingungen. Nach jeder Probeprüfung die falsch
                 beantworteten Fragen auf eigene Liste, das ist dein späteres
                 Wiederholungsmaterial. Spaced Repetition (SM-2 oder Anki)
@@ -323,13 +248,8 @@ export default function KenntnispruefungHandbuchPost() {
               </p>
               <h3 className="mp-h3 text-[18px] mt-5 mb-2">Woche 11-12: Simulation</h3>
               <p className="mp-body text-[var(--mp-fg)] leading-relaxed">
-                Mindestens zwei vollständige Simulationen pro SIP-Teil, unter
-                realistischen Zeitbedingungen, ohne Unterbrechungen. Der größte
-                Prüfungsfehler ist nicht Wissensmangel: es ist
-                Zeitmanagement-Panik. Wer nie eine komplette Prüfung unter
-                Zeitstress geübt hat, verliert in der echten Prüfung die
-                Nerven.
-              </p>
+                    Übe mit zeitbegrenzten MCQ-Sitzungen und analysiere anschließend deine Fehler. Diese Übung bildet keine vollständige offizielle SIP-Prüfung nach. Offizielle Dauer und Aufgabenarten musst du bei deiner Universität prüfen.
+                  </p>
             </section>
 
             {/* Häufige Fehler */}
@@ -344,7 +264,7 @@ export default function KenntnispruefungHandbuchPost() {
               <ul className="list-disc pl-6 space-y-3 mp-body text-[var(--mp-fg)] leading-relaxed">
                 <li>
                   <strong>Zu früh Prüfungssimulationen</strong>. Wer in Woche 3
-                  eine volle SIP-4-Simulation macht und mit 35 Prozent scheitert,
+                  eine umfangreiche MCQ-Übung macht und mit 35 Prozent scheitert,
                   verliert Motivation ohne Erkenntnisgewinn. Erst Fundamente,
                   dann Simulation.
                 </li>
@@ -383,7 +303,7 @@ export default function KenntnispruefungHandbuchPost() {
               <h2 className="mp-h2 text-[26px] mb-3">Ressourcen</h2>
               <ul className="list-disc pl-6 space-y-2 mp-body text-[var(--mp-fg)] leading-relaxed">
                 <li>
-                  <strong>Ärztekammer Wien</strong>: offizielle Prüfungs-
+                  <strong>zuständige Universität</strong>: offizielle Prüfungs-
                   beschreibung, aktuelle Termine und Gebühren. Immer zuerst
                   dort nachsehen: wir (und alle anderen Drittanbieter) können
                   nur so aktuell sein wie die letzte offizielle Veröffentlichung.
@@ -426,14 +346,8 @@ export default function KenntnispruefungHandbuchPost() {
                 drei lässt sich üben.
               </p>
               <p className="mp-body text-[var(--mp-fg)] leading-relaxed mt-3">
-                Wenn dich dieses Handbuch nicht enttäuscht hat, dann
-                wahrscheinlich weil du selbst schon gemerkt hast, wie viel
-                Halbwissen im Umlauf ist. Wir schreiben hier nur, was wir
-                selbst bewiesen oder mehrfach bestätigt haben. Für konkrete
-                Fragen zur Nostrifikation und Prüfung: die Ärztekammer Wien
-                ist die einzige verbindliche Quelle, und unsere Fragen-
-                Datenbank (falls du sie brauchst) ist medpruf.com/kenntnispruefung-wien.
-              </p>
+                    Dieser Leitfaden enthält Lernvorschläge zur Wiener Fragenbank. Für konkrete Anforderungen, Zulassung, Bewertung und Termine sind dein Bescheid und die aktuelle Auskunft deiner Universität maßgeblich.
+                  </p>
             </section>
           </div>
 

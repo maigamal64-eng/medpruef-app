@@ -53,7 +53,7 @@ export const AUSTRIAN_RESOURCES: AustrianResource[] = [
   },
   {
     id: 2,
-    title: "Arztakademie: Prüfung Ärztin/Arzt für Allgemeinmedizin (Kenntnisprüfung)",
+    title: "Arztakademie: Postgraduale Prüfung Ärztin/Arzt für Allgemeinmedizin",
     url: "https://www.arztakademie.at/allgemeinmedizin",
     deOneLiner:
       "Die offizielle Akademie-der-Ärzte-Seite zur Arztprüfung Allgemeinmedizin: Ablauf, Termine, Anmeldung und Prüfungsgebühr.",
