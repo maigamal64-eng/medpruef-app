@@ -4,7 +4,8 @@ import { requireUser } from "@/lib/auth-guard";
 import { getServiceClient } from "@/lib/supabase";
 import { tierToWhopPlan } from "@/lib/whop";
 import { logPaymentEvent } from "@/lib/paymentEvents";
-import { releaseWhopClaim } from "@/lib/whop-grant";
+import { repairWhopUserAccess } from "@/lib/whop-entitlement";
+import { releaseWhopClaim, reconcileUserTierPro } from "@/lib/whop-grant";
 import { qualifyReferralOnActivity } from "@/lib/referral-exam-reward";
 import { isPaidTier } from "@/lib/free-tier";
 
@@ -116,6 +117,8 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    const repaired = await repairWhopUserAccess(sb, userId);
+    if (repaired.granted) return NextResponse.json({ ...repaired, already: true });
     // Already Pro? Nothing to do — report success so the UI proceeds.
     const { data: user } = await sb
       .from("users")
@@ -238,7 +241,7 @@ export async function POST(req: NextRequest) {
         .eq("id", userId)
         .maybeSingle();
       return NextResponse.json({
-        granted: u2?.tier === "pro" || u2?.tier === "admin",
+        granted: isPaidTier(u2?.tier, u2?.tier_expires_at),
         already: true,
         tier_expires_at: u2?.tier_expires_at ?? null,
       });
@@ -293,16 +296,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ granted: false, reason: "db_error" }, { status: 200 });
     }
 
-    const { error: userErr } = await sb
-      .from("users")
-      .update({ tier: "pro", tier_expires_at: expiresIso, updated_at: nowIso })
-      .eq("id", userId);
-    if (userErr) {
-      // The subscription row is the source of truth; tier reconciles offline.
-      Sentry.captureException(userErr, {
-        tags: { route: "whop/trial/verify", step: "user_update" },
-        extra: { userId },
-      });
+    try {
+      await reconcileUserTierPro(sb, userId, expiresIso);
+    } catch (userErr) {
+      Sentry.captureException(userErr, { tags: { route: "whop/trial/verify", step: "user_update" }, extra: { userId } });
+      // Subscription already landed. Keep the claim, then retry repairs only
+      // the existing access window via repairWhopUserAccess above.
+      return NextResponse.json({ granted: false, reason: "entitlement_pending" }, { status: 200 });
     }
 
     try {

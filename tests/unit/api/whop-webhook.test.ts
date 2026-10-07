@@ -141,6 +141,38 @@ describe("POST /api/webhooks/whop: renewal mapping (fix A)", () => {
   });
 });
 
+describe("POST /api/webhooks/whop: retry repairs entitlement", () => {
+  it("retries a failed user update without buying a second subscription window", async () => {
+    let sub: Record<string, unknown> | null = null;
+    let owner = { id: MEZOO, tier: "free", tier_expires_at: null as string | null };
+    let failWrite = true;
+    h.handler = baseHandler(c => {
+      if (c.table === "subscriptions" && c.op === "insert") {
+        sub = { ...(c.payload as Record<string, unknown>), id: "sub_repair" };
+        return { data: { id: "sub_repair" } };
+      }
+      if (c.table === "subscriptions" && c.op === "select") return { data: sub ? [sub] : [] };
+      if (c.table === "users" && c.op === "select" && eqVal(c, "id") === MEZOO) return { data: owner };
+      if (c.table === "users" && c.op === "update") {
+        if (failWrite) return { error: { message: "temporary write failure" } };
+        owner = { ...owner, ...(c.payload as typeof owner) };
+        return { data: { id: MEZOO } };
+      }
+      return undefined;
+    }) as (call: unknown) => unknown;
+    const first = await deliver("payment.succeeded", renewal);
+    expect(first.status).toBe(503);
+    expect(owner.tier).toBe("free");
+    failWrite = false;
+    const second = await deliver("payment.succeeded", renewal);
+    expect(second.status).toBe(200);
+    expect(owner.tier).toBe("pro");
+    expect(allCalls().filter(c => c.table === "subscriptions" && c.op === "insert")).toHaveLength(1);
+    expect(allCalls().some(c => c.table === "subscriptions" && c.op === "update")).toBe(false);
+    expect(allCalls().some(c => c.table === "processed_webhook_events" && c.op === "delete")).toBe(false);
+  });
+});
+
 describe("POST /api/webhooks/whop: dunning (fix B)", () => {
   const failed = { ...renewal, id: "pay_FAIL1", status: "open", decline_code: "insufficient_funds", recovery_url: null };
 
@@ -174,13 +206,19 @@ describe("POST /api/webhooks/whop: dunning (fix B)", () => {
 
 describe("POST /api/webhooks/whop: dunning grace is per-user (fix B)", () => {
   it("filters the recover:% grace lookup by the revoked user's id", async () => {
+    const subscriptionExpiry = new Date(Date.now() + 86400_000).toISOString();
     h.handler = baseHandler((c) => {
+      // Both rows represent the same grant, not two Date.now() snapshots
+      // that can look like an independent override a millisecond apart.
+      if (c.table === "users" && c.op === "select" && eqVal(c, "id") === MEZOO) {
+        return { data: { id: MEZOO, tier: "pro", tier_expires_at: subscriptionExpiry } };
+      }
       if (c.table === "subscriptions" && c.op === "select" && eqVal(c, "whop_membership_id") === "mem_GONE") {
         return {
           data: [
             {
               id: "sub_1", user_id: MEZOO, tier: "first_month_19", status: "active",
-              expires_at: new Date(Date.now() + 86400_000).toISOString(), amount_cents: 1900,
+              expires_at: subscriptionExpiry, amount_cents: 1900,
               started_at: new Date().toISOString(), provider_payment_id: "pay_x", granted_payment_ids: [],
               whop_membership_id: "mem_GONE",
             },

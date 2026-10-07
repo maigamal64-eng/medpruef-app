@@ -1,5 +1,7 @@
 "use client";
 
+import { startTopicProgressRequest } from "@/lib/topic-progress-request";
+
 /**
  * Progress / Fortschritt - MedPrüf reimplementation v3 ("Clinical Nocturne").
  *
@@ -208,6 +210,9 @@ export default function ProgressPage() {
   const [topicStats, setTopicStats] = useState<TopicStat[]>([]);
   const [examSource, setExamSource] = useState<ExamSourceId>("kenntnispruefung");
   const [examPreferenceReady, setExamPreferenceReady] = useState(false);
+  const [coverageError, setCoverageError] = useState(false);
+  const [coverageLoading, setCoverageLoading] = useState(true);
+  const [coverageRetry, setCoverageRetry] = useState(0);
   const [coverageTopics, setCoverageTopics] = useState<Array<{ topic: string; total: number; answered: number; accuracy: number }>>([]);
   const [sortBy, setSortBy] = useState<"accuracy" | "count">("count");
   const [savedTab, setSavedTab] = useState<"bookmarks" | "notes">("bookmarks");
@@ -308,14 +313,19 @@ export default function ProgressPage() {
   }, [sessionReady, userId]);
 
   useEffect(() => {
+    setCoverageTopics([]);
+    setCoverageError(false);
+    setCoverageLoading(true);
     if (!sessionReady || !userId || !examPreferenceReady) return;
-    authFetch(`/api/user/topic-progress?examType=${encodeURIComponent(examSource)}`)
-      .then((r) => r.json())
-      .then((rows: Array<{ topic: string; total: number; answered: number; accuracy: number }>) => {
-        if (Array.isArray(rows)) setCoverageTopics(rows);
-      })
-      .catch(() => {});
-  }, [sessionReady, userId, examPreferenceReady, examSource]);
+    const request = startTopicProgressRequest(examSource, authFetch, rows => {
+      setCoverageTopics(rows);
+      setCoverageLoading(false);
+    }, () => {
+      setCoverageError(true);
+      setCoverageLoading(false);
+    });
+    return request.cancel;
+  }, [sessionReady, userId, examPreferenceReady, examSource, coverageRetry]);
 
   /* ─── Fetch per-topic stats from API ─── */
   useEffect(() => {
@@ -572,6 +582,10 @@ export default function ProgressPage() {
             </p>
           </div>
 
+          {coverageError && <div role="status" className="mp-card p-4 mb-5">
+            <p>{lang === "de" ? "Der Fortschritt für dieses Examen konnte nicht geladen werden." : "Progress for this exam could not be loaded."}</p>
+            <button className="mp-btn mp-btn--secondary mt-2" onClick={() => setCoverageRetry(n => n + 1)}>{lang === "de" ? "Erneut versuchen" : "Retry"}</button>
+          </div>}
           {/* ═══ CONTINUITY STAT STRIP (gamification, calm) ═══ */}
           <div className={`${styles.statStrip} mb-5`}>
             {/* Questions answered + coverage % */}
@@ -580,9 +594,9 @@ export default function ProgressPage() {
                 <CheckCircle2 />
                 <span>{lang === "de" ? "Einzigartige Fragen gesehen" : "Unique questions seen"}</span>
               </div>
-              <div className={styles.sVal}>{uniqueAnswered.toLocaleString("de-DE")}</div>
+              <div className={styles.sVal}>{coverageError ? "?" : coverageLoading ? "…" : uniqueAnswered.toLocaleString("de-DE")}</div>
               <div className={styles.sSub}>
-                / {examQuestionTotal.toLocaleString("de-DE")} {lang === "de" ? "im gewählten Examen" : "in selected exam"} · {completionPct}%
+                {!coverageError && !coverageLoading && <>/ {examQuestionTotal.toLocaleString("de-DE")} {lang === "de" ? "im gewählten Examen" : "in selected exam"} · {completionPct}%</>}
                 <br />
                 {lang === "de" ? "Antwortversuche" : "Answer attempts"}: {totalAnswered.toLocaleString("de-DE")}
               </div>

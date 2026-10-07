@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useUserTier } from "@/lib/hooks/useUserTier";
 import { trackPurchase } from "@/lib/conversion-events";
-import { TIER_BY_ID } from "@/lib/content-truth";
 import { authFetch } from "@/lib/authFetch";
 
 /**
@@ -23,9 +22,8 @@ import { authFetch } from "@/lib/authFetch";
  *     check when the tab becomes visible again. Whop's webhook delivery can
  *     lag by hours, so we do NOT give up at 12.5s or print a dead end.
  *   - Every state keeps a "weiterlernen" path; nothing dead-ends.
- *   - trackPurchase fires ONLY on a real grant signal (verify granted /
- *     isPaid flip / explicit ?paid=1), never on mount, and never with a
- *     fallback amount (the old €129 guess inflated conversion value).
+ *   - trackPurchase requires a verified paid receipt and amount. Existing
+ *     access, a free trial, or a query string cannot prove a purchase.
  */
 
 const VERIFY_RETRIES_MS = [2_500, 5_000, 10_000, 20_000, 40_000, 60_000];
@@ -47,7 +45,7 @@ interface VerifyPayload {
 
 export default function CheckoutSuccessPage() {
   const router = useRouter();
-  const { isPaid, isLoading, refresh } = useUserTier();
+  const { isPaid, isLoading, error: tierError, refresh } = useUserTier();
   const [outcome, setOutcome] = useState<Outcome>("pending");
   const [paymentRef, setPaymentRef] = useState<string | null>(null);
   const [elapsedSec, setElapsedSec] = useState(0);
@@ -67,22 +65,14 @@ export default function CheckoutSuccessPage() {
   }, []);
 
   const firePurchase = useCallback(
-    (tier: string, amountCents: number | null, paymentId: string | null, explicitPaid: boolean) => {
+    (tier: string, amountCents: number | null, paymentId: string | null) => {
       if (purchaseFiredRef.current) return;
+      if (!paymentId || typeof amountCents !== "number" || !Number.isFinite(amountCents) || amountCents <= 0) return;
       purchaseFiredRef.current = true;
-      // No fallback amount: without a real value signal we do not fire.
-      let valueEur: number | null = null;
-      if (typeof amountCents === "number" && amountCents > 0) {
-        valueEur = amountCents / 100;
-      } else {
-        const priceCents = TIER_BY_ID[tier]?.price_cents;
-        if (typeof priceCents === "number") valueEur = priceCents / 100;
-      }
-      if (valueEur === null && !explicitPaid) return;
       trackPurchase({
         tier: tier || "unknown",
-        valueEur: valueEur ?? 0,
-        conversionId: paymentId ?? undefined,
+        valueEur: amountCents / 100,
+        conversionId: paymentId,
       });
     },
     []
@@ -112,10 +102,10 @@ export default function CheckoutSuccessPage() {
         });
         const d = (await res.json().catch(() => ({}))) as VerifyPayload;
         if (cancelled) return;
-        if (d?.granted) {
+        if (res.ok && d?.granted) {
           setOutcome("granted");
           setPaymentRef(d.payment_ref ?? null);
-          firePurchase(tier, d.amount_cents ?? null, d.payment_ref ?? null, false);
+          if (!d.already) firePurchase(tier, d.amount_cents ?? null, d.payment_ref ?? null);
           void refresh();
           return; // granted: stop the schedule
         }
@@ -160,7 +150,6 @@ export default function CheckoutSuccessPage() {
   useEffect(() => {
     const params = getParams();
     if (params.get("trial") !== "1") return;
-    const tier = params.get("tier") ?? "";
 
     let cancelled = false;
     let inFlight = false;
@@ -175,9 +164,8 @@ export default function CheckoutSuccessPage() {
         const res = await authFetch("/api/whop/trial/verify", { method: "POST" });
         const d = (await res.json().catch(() => ({}))) as VerifyPayload;
         if (cancelled) return;
-        if (d?.granted) {
+        if (res.ok && d?.granted) {
           setOutcome("granted");
-          firePurchase(tier || "notes_pro_trial", 0, null, false);
           void refresh();
           return;
         }
@@ -223,31 +211,18 @@ export default function CheckoutSuccessPage() {
     return () => clearInterval(interval);
   }, [refresh]);
 
-  // ── Explicit ?paid=1 (ops/DeepLink escape hatch) still gates on the tier ──
+  // Existing access or a webhook-side grant can redirect without proving
+  // that this page visit represents a new payment.
   useEffect(() => {
-    const params = getParams();
-    if (params.get("paid") === "1") {
-      const tier = params.get("tier") ?? "";
-      firePurchase(tier, null, null, true);
-    }
-  }, [getParams, firePurchase]);
-
-  // ── Webhook-side grant: isPaid flips without verify (webhook won the race).
-  //     Purchase fires here too (real grant signal), then we route home. ──
-  useEffect(() => {
-    if (isLoading || !isPaid) return;
-    if (!purchaseFiredRef.current) {
-      const params = getParams();
-      firePurchase(params.get("tier") ?? "", null, null, false);
-    }
+    if (isLoading || tierError || !isPaid) return;
     setOutcome("granted");
     grantedRedirectRef.current = setTimeout(() => router.push("/"), GRANTED_REDIRECT_MS);
     return () => {
       if (grantedRedirectRef.current) clearTimeout(grantedRedirectRef.current);
     };
-  }, [isPaid, isLoading, getParams, firePurchase, router]);
+  }, [isPaid, isLoading, tierError, router]);
 
-  const granted = outcome === "granted" || isPaid;
+  const granted = outcome === "granted" || (!isLoading && !tierError && isPaid);
   const unmatched = outcome === "unmatched" && !granted;
   const showSpinner = !granted && !unmatched;
 
@@ -262,11 +237,11 @@ export default function CheckoutSuccessPage() {
       de = "Deine Zahlung wird noch bestätigt. Bei Kartenzahlung kann das ein paar Minuten dauern.";
       en = "Your payment is still being confirmed. Card payments can take a few minutes.";
     } else if (elapsedSec < 60) {
-      de = "Wir haben deine Zahlung erhalten. Die Freischaltung dauert länger als üblich.";
-      en = "We received your payment. Activation is taking longer than usual.";
+      de = "Die Zahlungsbestätigung dauert länger als üblich. Wir prüfen weiter.";
+      en = "Payment confirmation is taking longer than usual. We are still checking.";
     } else {
-      de = "Deine Zahlung ist eingegangen. Die Bestätigung läuft noch. Du wirst automatisch freigeschaltet.";
-      en = "Your payment arrived. Confirmation is still running. You will be unlocked automatically.";
+      de = "Deine Zahlung ist noch nicht bestätigt. Wir prüfen weiter. Du kannst inzwischen weiterlernen oder uns kontaktieren.";
+      en = "Your payment has not been confirmed yet. We are still checking. You can keep learning or contact us.";
     }
   } else if (unmatched) {
     de =
@@ -311,7 +286,7 @@ export default function CheckoutSuccessPage() {
           </svg>
         </div>
         <h1 className="font-display text-2xl font-bold text-[#1A2B3C] dark:text-[#E2E8F0]">
-          Zahlung erhalten, danke
+          {granted ? "Dein Pro-Zugang ist aktiv" : "Zahlung wird geprüft"}
         </h1>
         <p className="mt-3 text-[#4A5568] dark:text-[#A0AEC0]">{de}</p>
         <p className="mt-2 text-sm text-[#4A5568] dark:text-[#A0AEC0]">{en}</p>

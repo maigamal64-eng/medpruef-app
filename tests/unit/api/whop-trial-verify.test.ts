@@ -6,6 +6,7 @@ const USER = "22222222-2222-4222-8222-222222222222";
 const h = vi.hoisted(() => ({
   priorTrials: [] as unknown[],
   calls: [] as unknown[],
+  failUserWrite: false,
 }));
 
 vi.mock("@sentry/nextjs", () => ({ captureMessage: vi.fn(), captureException: vi.fn() }));
@@ -22,6 +23,7 @@ vi.mock("@/lib/supabase", () => ({
         return { data: { tier: "pro", tier_expires_at: "2026-01-01T00:00:00Z", email: "t@example.com" } };
       }
       if (c.table === "subscriptions" && c.op === "select") return { data: h.priorTrials };
+      if (c.table === "users" && c.op === "update" && h.failUserWrite) return { error: { message: "write unavailable" } };
       if (c.table === "processed_webhook_events" && c.op === "insert") return { data: { event_id: "mem_NEW" } };
       return {};
     });
@@ -40,6 +42,7 @@ async function load() {
 
 beforeEach(() => {
   h.priorTrials = [];
+  h.failUserWrite = false;
   vi.stubGlobal(
     "fetch",
     vi.fn(async () =>
@@ -82,4 +85,13 @@ describe("/api/whop/trial/verify", () => {
     expect(body.reason).toBe("trial_already_used");
     expect((h.calls as FakeCall[]).some((c) => c.table === "subscriptions" && c.op === "insert")).toBe(false);
   });
+  it("keeps verification pending if the subscription writes but Pro access does not", async () => {
+    h.failUserWrite = true;
+    const POST = await load();
+    const body = await (await POST(req())).json();
+    expect(body.granted).toBe(false);
+    expect(body.reason).toBe("entitlement_pending");
+    expect((h.calls as FakeCall[]).some(c => c.table === "processed_webhook_events" && c.op === "delete")).toBe(false);
+  });
+
 });

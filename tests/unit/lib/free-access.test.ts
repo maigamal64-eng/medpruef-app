@@ -19,7 +19,8 @@ function world(answered: number[]) {
     }
     if (c.table === "answer_history") {
       const inIds = c.filters.find((f) => f.kind === "in")?.value as number[] | undefined;
-      const rows = (inIds ? answered.filter((q) => inIds.includes(q)) : answered).map((q) => ({ question_id: q }));
+      const after = Number(c.filters.find((f) => f.kind === "gt" && f.column === "question_id")?.value ?? 0);
+      const rows = (inIds ? answered.filter((q) => inIds.includes(q)) : answered).filter((q) => q > after).sort((a,b) => a-b).map((q) => ({ question_id: q }));
       return { data: rows };
     }
     if (c.table === "user_events") return {};

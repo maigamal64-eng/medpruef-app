@@ -76,6 +76,7 @@ export function createFakeSupabase(handler: FakeHandler) {
       eq: filter("eq"),
       neq: filter("neq"),
       in: filter("in"),
+      contains: filter("contains"),
       like: filter("like"),
       ilike: filter("ilike"),
       gte: filter("gte"),

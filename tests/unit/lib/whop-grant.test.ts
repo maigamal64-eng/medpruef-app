@@ -6,6 +6,11 @@ import { reconcileUserTierPro } from "@/lib/whop-grant";
 
 const expiry = "2030-01-01T00:00:00Z";
 describe("reconcileUserTierPro", () => {
+  it("preserves admin-role accounts whose billing tier is free", async () => {
+    const { sb, calls } = createFakeSupabase(() => ({ data: { role: "admin", tier: "free", tier_expires_at: null } }));
+    await reconcileUserTierPro(sb as unknown as SupabaseClient, "synthetic-admin", expiry);
+    expect(calls.filter(c => c.op === "update")).toHaveLength(0);
+  });
   it("preserves a non-expiring manual Pro grant after a finite purchase", async () => {
     const { sb, calls } = createFakeSupabase(() => ({ data: { tier: "pro", tier_expires_at: null } }));
     await reconcileUserTierPro(sb as unknown as SupabaseClient, "synthetic-user", expiry);

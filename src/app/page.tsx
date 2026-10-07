@@ -1,5 +1,7 @@
 "use client";
 
+import { startTopicProgressRequest } from "@/lib/topic-progress-request";
+
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { BrandedLoader } from "@/components/Logo";
@@ -447,31 +449,29 @@ export default function Home() {
   }, [user?.id]);
 
   // Fetch server-side per-topic progress once user and examSource are known
+  const [topicProgressError, setTopicProgressError] = useState(false);
+  const [topicProgressRetry, setTopicProgressRetry] = useState(0);
   const [topicProgress, setTopicProgress] = useState<Record<string, { answered: number; correct: number; wrong: number; accuracy: number }>>({});
   useEffect(() => {
+    setTopicProgress({});
+    setWeakTopics([]);
+    setTopicProgressError(false);
     if (!user?.id || user.id.startsWith('guest_')) {
-      // For guests, fall back to localStorage weakness detection
       setWeakTopics(getWeakTopics());
       return;
     }
-    fetch(`/api/user/topic-progress?userId=${user.id}&examType=${examSource}`)
-      .then(r => r.json())
-      .then((data: Array<{ topic: string; answered: number; correct: number; wrong: number; accuracy: number }>) => {
-        const map: typeof topicProgress = {};
-        const weak: TopicStats[] = [];
-        for (const tp of data) {
-          map[tp.topic] = { answered: tp.answered, correct: tp.correct, wrong: tp.wrong, accuracy: tp.accuracy };
-          if (tp.answered > 0) {
-            weak.push({ topic: tp.topic, correct: tp.correct, total: tp.answered, accuracy: tp.accuracy });
-          }
-        }
-        setTopicProgress(map);
-        setWeakTopics(weak.filter(w => w.accuracy < 80).sort((a, b) => a.accuracy - b.accuracy));
-      })
-      .catch(() => {
-        setWeakTopics(getWeakTopics());
-      });
-  }, [user?.id, examSource]);
+    const request = startTopicProgressRequest(examSource, fetch, data => {
+      const map: typeof topicProgress = {};
+      const weak: TopicStats[] = [];
+      for (const tp of data) {
+        map[tp.topic] = { answered: tp.answered, correct: tp.correct, wrong: tp.wrong, accuracy: tp.accuracy };
+        if (tp.answered > 0) weak.push({ topic: tp.topic, correct: tp.correct, total: tp.answered, accuracy: tp.accuracy });
+      }
+      setTopicProgress(map);
+      setWeakTopics(weak.filter(w => w.accuracy < 80).sort((a, b) => a.accuracy - b.accuracy));
+    }, () => setTopicProgressError(true));
+    return request.cancel;
+  }, [user?.id, examSource, topicProgressRetry]);
 
   // Load profile data (exam target date) from localStorage. Prefer
   // `medpruef_profile.targetDate` — written by BOTH onboarding's
@@ -954,6 +954,10 @@ export default function Home() {
             );
           })()}
 
+          {topicProgressError && <div role="status" className="mp-card p-4 mb-5">
+            <p>{lang === "de" ? "Der Fortschritt für dieses Examen konnte nicht geladen werden." : "Progress for this exam could not be loaded."}</p>
+            <button className="mp-btn mp-btn--secondary mt-2" onClick={() => setTopicProgressRetry(n => n + 1)}>{lang === "de" ? "Erneut versuchen" : "Retry"}</button>
+          </div>}
           {/* Search Modal */}
           <SearchModal
             open={searchOpen}

@@ -1,3 +1,5 @@
+import { repairWhopUserAccess } from "@/lib/whop-entitlement";
+import { isPaidTier } from "@/lib/free-tier";
 import { NextRequest, NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
 import { requireUser } from "@/lib/auth-guard";
@@ -190,13 +192,17 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    // A subscription may have landed before a failed denormalized-user write.
+    // Repair that same window before querying the provider or claiming again.
+    const repaired = await repairWhopUserAccess(sb, userId);
+    if (repaired.granted) return NextResponse.json({ ...repaired, already: true });
     // Already Pro? Report success so the UI proceeds.
     const { data: user } = await sb
       .from("users")
       .select("tier, tier_expires_at, email")
       .eq("id", userId)
       .maybeSingle();
-    if (user && (user.tier === "pro" || user.tier === "admin")) {
+    if (user && (isPaidTier(user.tier, user.tier_expires_at))) {
       return NextResponse.json({
         granted: true,
         already: true,
@@ -363,7 +369,7 @@ export async function POST(req: NextRequest) {
         .eq("id", userId)
         .maybeSingle();
       return NextResponse.json({
-        granted: u2?.tier === "pro" || u2?.tier === "admin",
+        granted: isPaidTier(u2?.tier, u2?.tier_expires_at),
         already: true,
         tier_expires_at: (u2?.tier_expires_at as string | null) ?? null,
       });
@@ -403,10 +409,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ granted: false, reason: "db_error" }, { status: 200 });
     }
 
+    if (grant.replayed) {
+      const repaired = await repairWhopUserAccess(sb, userId);
+      return NextResponse.json({ ...repaired, already: true });
+    }
     try {
-      await reconcileUserTierPro(sb, userId, grant.expiresAt);
+      if (!grant.entitlementReconciled) await reconcileUserTierPro(sb, userId, grant.expiresAt);
     } catch (userErr) {
       Sentry.captureException(userErr, { tags: { route: "whop/checkout/verify", step: "user_update" } });
+      return NextResponse.json({ granted: false, reason: "entitlement_pending" }, { status: 200 });
     }
 
     try {
@@ -664,6 +675,7 @@ async function grantFromPaymentEventRow(
   }
 ): Promise<{
   granted: boolean;
+  already?: boolean;
   reason?: string;
   payment_ref?: string | null;
   tier_expires_at?: string | null;
@@ -713,7 +725,8 @@ async function grantFromPaymentEventRow(
       .eq("id", args.userId)
       .maybeSingle();
     return {
-      granted: u2?.tier === "pro" || u2?.tier === "admin",
+      granted: isPaidTier(u2?.tier, u2?.tier_expires_at),
+      already: true,
       payment_ref: args.paymentId,
       tier_expires_at: (u2?.tier_expires_at as string | null) ?? null,
     };
@@ -748,10 +761,12 @@ async function grantFromPaymentEventRow(
     await releaseWhopClaim(sb, args.paymentId);
     return { granted: false, reason: "db_error" };
   }
+  if (grant.replayed) return { ...(await repairWhopUserAccess(sb, args.userId)), already: true, payment_ref: args.paymentId };
   try {
-    await reconcileUserTierPro(sb, args.userId, grant.expiresAt);
+    if (!grant.entitlementReconciled) await reconcileUserTierPro(sb, args.userId, grant.expiresAt);
   } catch (userErr) {
     Sentry.captureException(userErr, { tags: { route: "whop/checkout/verify", step: "user_update_payment_events_fallback" } });
+    return { granted: false, reason: "entitlement_pending", payment_ref: args.paymentId };
   }
   try {
     await sb.from("user_events").insert({

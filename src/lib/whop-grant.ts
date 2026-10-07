@@ -249,7 +249,7 @@ export async function reconcileUserTierPro(
 ): Promise<void> {
   const { data: user, error: lookupError } = await sb
     .from("users")
-    .select("tier, tier_expires_at")
+    .select("tier, role, tier_expires_at")
     .eq("id", userId)
     .maybeSingle();
   if (lookupError) throw lookupError;
@@ -257,7 +257,7 @@ export async function reconcileUserTierPro(
   // A null expiry on Pro is an explicit non-expiring grant.
   if (user.tier === "pro" && user.tier_expires_at == null) return;
   // Never touch an admin account's tier.
-  if (user?.tier === "admin") return;
+  if (user.tier === "admin" || user.role === "admin") return;
 
   const newMs = Date.parse(expiresAtIso);
   const curIso = (user?.tier_expires_at as string | null) ?? null;

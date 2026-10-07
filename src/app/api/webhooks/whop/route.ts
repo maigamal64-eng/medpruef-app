@@ -1,3 +1,4 @@
+import { repairWhopPaymentAccess } from "@/lib/whop-entitlement";
 import { NextRequest, NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
 import { getServiceClient } from "@/lib/supabase";
@@ -348,6 +349,12 @@ export async function POST(req: NextRequest) {
           req, provider: "whop", path: "/api/webhooks/whop",
           signatureValid: true, body: rawBody, result: "dup", eventId: f.paymentId,
         });
+        try {
+          await repairWhopPaymentAccess(sb, f.paymentId);
+        } catch (repairError) {
+          Sentry.captureException(repairError, { tags: { route: "webhooks/whop", step: "duplicate_entitlement_repair" } });
+          return NextResponse.json({ error: "Entitlement reconciliation pending" }, { status: 503 });
+        }
         return NextResponse.json({ ok: true, duplicate: true });
       }
       Sentry.captureException(claimErr, { tags: { route: "webhooks/whop", step: "claim" } });
@@ -647,6 +654,9 @@ export async function POST(req: NextRequest) {
           tags: { route: "webhooks/whop", step: "user_update" },
           extra: { userId },
         });
+        // Keep the settled payment claim: retry repairs access, never duration.
+        claimSettled = true;
+        return NextResponse.json({ error: "Entitlement reconciliation pending" }, { status: 503 });
       }
       grantMode = "inserted";
       grantPreviousExpires = null;
@@ -690,15 +700,22 @@ export async function POST(req: NextRequest) {
       }
       grantMode = grant.mode;
       grantPreviousExpires = grant.previousExpiresAt;
+      if (grant.replayed) {
+        claimSettled = true;
+        return NextResponse.json({ ok: true, duplicate: true });
+      }
       expiresAt = new Date(grant.expiresAt);
       try {
-        await reconcileUserTierPro(sb, userId, grant.expiresAt);
+        if (!grant.entitlementReconciled) await reconcileUserTierPro(sb, userId, grant.expiresAt);
       } catch (userErr) {
         // Subscription row is the source of truth; user.tier reconciles offline.
         Sentry.captureException(userErr, {
           tags: { route: "webhooks/whop", step: "user_update" },
           extra: { userId },
         });
+        // Keep the settled payment claim: retry repairs access, never duration.
+        claimSettled = true;
+        return NextResponse.json({ error: "Entitlement reconciliation pending" }, { status: 503 });
       }
     }
 

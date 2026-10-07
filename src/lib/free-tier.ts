@@ -197,28 +197,8 @@ export async function countDistinctAnsweredInExam(
   examType: string
 ): Promise<number> {
   try {
-    const { data, error } = await sb
-      .from('answer_history')
-      .select('question_id, questions!inner(exam_type, is_active)')
-      .eq('user_id', userId)
-      .eq('questions.exam_type', examType)
-      .eq('questions.is_active', true)
-      .limit(50000)
+    return (await readDistinctHistoryIds(sb, userId, { examType })).size
 
-    if (error) {
-      console.error('[free-tier] countDistinctAnsweredInExam', {
-        userId,
-        examType,
-        error,
-      })
-      return 0
-    }
-    const seen = new Set<number>()
-    for (const r of data || []) {
-      const qid = (r as { question_id?: number }).question_id
-      if (typeof qid === 'number') seen.add(qid)
-    }
-    return seen.size
   } catch (err) {
     console.error('[free-tier] countDistinctAnsweredInExam unexpected', {
       userId,
@@ -247,27 +227,56 @@ export async function getAnsweredSliceIds(
 ): Promise<Set<number>> {
   if (sliceIds.length === 0) return new Set()
   try {
-    const { data, error } = await sb
-      .from('answer_history')
-      .select('question_id')
-      .eq('user_id', userId)
-      .in('question_id', sliceIds)
-      .limit(50000)
-    if (error) {
-      console.error('[free-tier] getAnsweredSliceIds', { userId, error })
-      return new Set()
-    }
-    const seen = new Set<number>()
-    for (const r of data || []) {
-      const qid = (r as { question_id?: number }).question_id
-      if (typeof qid === 'number') seen.add(qid)
-    }
-    return seen
+    return await readDistinctHistoryIds(sb, userId, { sliceIds })
+
   } catch (err) {
     console.error('[free-tier] getAnsweredSliceIds unexpected', {
       userId,
       err,
     })
     return new Set()
+  }
+}
+
+/**
+ * Keyset through question IDs, skipping duplicate attempts after each batch.
+ * A requested limit cannot override PostgREST's max_rows. Even a short batch
+ * may be capped, so continue until an empty response, not until batch < limit.
+ * The (user_id, question_id) index bounds each next lookup. No offset or giant
+ * list of history IDs is serialized, and repeated attempts cannot hide IDs.
+ */
+async function readDistinctHistoryIds(
+  sb: SupabaseClient,
+  userId: string,
+  scope: { examType?: string; sliceIds?: number[] },
+): Promise<Set<number>> {
+  const seen = new Set<number>()
+  let cursor = 0
+  while (true) {
+    let query = sb.from('answer_history')
+      .select(scope.examType ? 'question_id, questions!inner(exam_type, is_active)' : 'question_id')
+      .eq('user_id', userId)
+      .gt('question_id', cursor)
+      .order('question_id', { ascending: true })
+      .limit(1000)
+    if (scope.examType) {
+      query = query.eq('questions.exam_type', scope.examType).eq('questions.is_active', true)
+    }
+    if (scope.sliceIds) query = query.in('question_id', scope.sliceIds)
+    const { data, error } = await query
+    // Once the cap is proven, a later unavailable page cannot erase it.
+    if (error && scope.examType && seen.size >= FREE_TIER_QUESTIONS_PER_EXAM) return seen
+    if (error) throw error
+    if (!data?.length) return seen
+    let next = cursor
+    for (const row of data) {
+      const id = (row as { question_id?: number }).question_id
+      if (typeof id === 'number' && Number.isInteger(id) && id > cursor) {
+        seen.add(id)
+        next = Math.max(next, id)
+      }
+    }
+    if (next === cursor) throw new Error('History pagination did not advance')
+    cursor = next
   }
 }
