@@ -29,6 +29,7 @@ CREATE TABLE public.whop_paid_grant_receipts (
 CREATE INDEX whop_paid_grant_receipts_owner_idx ON public.whop_paid_grant_receipts(subscription_id,user_id);
 ALTER TABLE public.whop_paid_grant_receipts ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.whop_paid_grant_receipts FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON public.whop_paid_grant_receipts FROM service_role;
 GRANT SELECT, INSERT ON public.whop_paid_grant_receipts TO service_role;
 
 CREATE FUNCTION public.grant_whop_paid_subscription(
