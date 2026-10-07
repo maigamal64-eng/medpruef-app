@@ -646,8 +646,11 @@ const translations = {
   // Find Your Path — guided orientation flow (public, anon-safe). All
   // strings em-dash-free ([name]'s rule); legacy keys carrying em dashes
   // are intentionally NOT reused here.
-  'fyp_calendar_notice': { de: 'Achtung: Die Wiener Kalenderauswahl enthält Termine der postgradualen ÖÄK-Arztprüfung, keine verifizierten SIP4a/SIP5a-Termine. Verwende sie nicht als Anmeldeauskunft für deine Universität. Auch berechnete Fristen und Zeitleisten sind dafür nicht verifiziert.', en: 'Caution: the Vienna calendar lists ÖÄK postgraduate exam dates, not verified SIP4a/SIP5a dates. Do not use them as university registration advice. Calculated deadlines and timelines are also unverified for that purpose.' },
-  'fyp_university_notice': { de: 'Prüfe Datum, Anforderungen und Anmeldung direkt bei deiner Universität. Diese Zeitleiste ist ein Lernvorschlag, keine bestätigte Prüfungsanmeldung.', en: 'Confirm dates, requirements and registration directly with your university. This timeline is a study suggestion, not confirmed exam registration.' },
+  'fyp_calendar_notice': { de: "Prüfe die offiziellen Termine, Anforderungen und Anmeldung direkt bei deiner Universität. MedPrüf zeigt hier keine verifizierten universitären Prüfungstermine oder Anmeldefristen. Ein selbst eingegebenes Datum dient nur deiner Lernplanung.", en: "Check official dates, requirements and registration directly with your university. MedPrüf does not show verified university exam dates or registration deadlines here. A date you enter is only a study-planning target." },
+  'fyp_university_notice': { de: "Prüfe die offiziellen Termine, Anforderungen und Anmeldung direkt bei deiner Universität. Ein selbst eingegebenes Datum dient nur deiner Lernplanung; es bestätigt weder Zulassung noch Anmeldung.", en: "Check official dates, requirements and registration directly with your university. A date you enter is only a study-planning target; it does not confirm eligibility or registration." },
+  'fyp_study_target_label': { de: "Optionales Lernziel-Datum", en: "Optional study target date" },
+  'fyp_study_target_clear': { de: "Ohne Datum weiterlernen", en: "Continue studying without a date" },
+  'fyp_university_link': { de: "Offizielle Informationen deiner Universität prüfen", en: "Check your university’s official information" },
   'fyp_meta_title': { de: 'Finde deinen Weg', en: 'Find your path' },
   // In-app onboarding affordance (entry point #2) — a confused logged-in
   // user who does not yet know which exam is theirs jumps to the

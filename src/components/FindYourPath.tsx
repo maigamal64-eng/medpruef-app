@@ -14,9 +14,9 @@
  * Onboarding.tsx + /api/user/study-plan are requireUser-gated. This
  * component MIRRORS the approved v3 look (shell-breaking step flow,
  * spark progress, sticky bottom action, MPDS tokens/primitives) and
- * REUSES the pure pieces: ExamSittingPicker (the real self-aging
- * sittings), buildStudyPath/registrationFor + StudyPathTimeline (the
- * "register by <date>" + phase ladder), and generateStudyPlan (the
+ * REUSES buildStudyPath + StudyPathTimeline for study phases only,
+ * suppressing unverified registration advice on this public flow,
+ * and generateStudyPlan (the
  * plan SHAPE only — see the topic-data note below).
  *
  * Persistence: writes the SAME localStorage keys the in-app onboarding
@@ -34,8 +34,8 @@
  * once they are in the app.
  *
  * Austrian, not German. No em dashes in user copy ([name]'s rule). Exam
- * dates are pulled from exam-dates.ts (the self-aging SOT-REF owner),
- * never hardcoded; the prose facts come from SoT §1.
+ * dates are entered by the learner as study targets, never suggested
+ * from an unverified institutional mapping; prose follows SoT §§0.1–0.2.
  */
 
 import { useEffect, useMemo, useState } from "react";
@@ -62,10 +62,9 @@ import { LogoMark } from "./Logo";
 import { t as tr } from "@/lib/i18n";
 import { getStoredSession } from "@/lib/auth";
 import { authFetch } from "@/lib/authFetch";
-import { getNextExamSitting, type PuypExamType } from "@/lib/exam-dates";
+import { type PuypExamType } from "@/lib/exam-dates";
 import { generateStudyPlan, type TopicProgress } from "@/lib/studyPlan";
 import { buildStudyPath } from "@/lib/studyPath";
-import ExamSittingPicker from "./ExamSittingPicker";
 import StudyPathTimeline from "./StudyPathTimeline";
 
 type Lang = "de" | "en";
@@ -371,13 +370,32 @@ export default function FindYourPath({ initialLang = "de" }: { initialLang?: Lan
               <p className="mb-3 text-xs leading-relaxed text-[var(--mp-fg-muted)]" role="note">
                 {t(examType === "kenntnispruefung" ? "fyp_calendar_notice" : "fyp_university_notice")}
               </p>
-              <ExamSittingPicker
-                examType={examType}
-                value={examDate}
-                onChange={setExamDate}
-                lang={lang}
-                density="modal"
-              />
+              <label className="block text-sm font-medium text-[var(--mp-fg)]">
+                {t("fyp_study_target_label")}
+                <input
+                  type="date"
+                  value={examDate}
+                  onChange={(e) => setExamDate(e.target.value)}
+                  className="mt-2 w-full rounded-xl border border-[var(--mp-border)] bg-[var(--mp-surface-raised)] px-3 py-2.5 text-sm text-[var(--mp-fg)]"
+                />
+              </label>
+              <button
+                type="button"
+                onClick={() => setExamDate("")}
+                className="mt-3 text-xs font-semibold text-[var(--mp-cta-blue)] hover:underline"
+              >
+                {t("fyp_study_target_clear")}
+              </button>
+              <a
+                href={examType === "kenntnispruefung"
+                  ? "https://www.meduniwien.ac.at/web/en/studium-weiterbildung/nostrifizierung/pruefungen/"
+                  : "https://www.i-med.ac.at/studium/"}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 block text-xs text-[var(--mp-viridian)] hover:underline"
+              >
+                {t("fyp_university_link")}
+              </a>
             </div>
           )}
 
@@ -548,8 +566,6 @@ function RouteExplainer({
   onChoose: (r: RouteChoice) => void;
 }) {
   const t = (k: Parameters<typeof tr>[0]) => tr(k, lang);
-  const kpSitting = getNextExamSitting("kenntnispruefung");
-  const stpSitting = getNextExamSitting("kmp_innsbruck");
 
   return (
     <div className="mt-2 rounded-2xl border border-[var(--mp-border)] bg-[var(--mp-surface)] p-4">
@@ -570,18 +586,6 @@ function RouteExplainer({
           {t("fyp_explain_kp_p")}
         </p>
         <p className="mt-2 text-xs leading-relaxed text-[var(--mp-fg-muted)]" role="note">{t("fyp_calendar_notice")}</p>
-        {kpSitting && (
-          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] font-mono text-[var(--mp-fg-subtle)]">
-            <span>
-              {t("fyp_explain_next_sitting")}: {formatDate(kpSitting.date, lang)}
-            </span>
-            {kpSitting.registrationDeadline && (
-              <span>
-                {t("fyp_explain_reg_by")}: {formatDate(kpSitting.registrationDeadline, lang)}
-              </span>
-            )}
-          </div>
-        )}
         <button
           type="button"
           onClick={() => onChoose("kenntnispruefung")}
@@ -603,19 +607,6 @@ function RouteExplainer({
         <p className="mt-2 text-xs leading-relaxed text-[var(--mp-fg-muted)]">
           {t("fyp_explain_stp_p")}
         </p>
-        {stpSitting && (
-          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] font-mono text-[var(--mp-fg-subtle)]">
-            <span>
-              {t("fyp_explain_next_sitting")}: {formatDate(stpSitting.date, lang)}
-              {stpSitting.location ? ` (${stpSitting.location})` : ""}
-            </span>
-            {stpSitting.registrationDeadline && (
-              <span>
-                {t("fyp_explain_reg_by")}: {formatDate(stpSitting.registrationDeadline, lang)}
-              </span>
-            )}
-          </div>
-        )}
         <button
           type="button"
           onClick={() => onChoose("kmp_innsbruck")}
@@ -736,7 +727,7 @@ function YourPath({
               </div>
 
               {/* Register-by anchor + phase ladder (shared component) */}
-              <StudyPathTimeline path={studyPath} lang={lang} />
+              <StudyPathTimeline path={{ ...studyPath, registration: null }} lang={lang} />
             </div>
           ) : (
             <div className="mp-card p-4">
