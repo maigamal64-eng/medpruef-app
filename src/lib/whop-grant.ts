@@ -28,6 +28,10 @@ export interface WhopGrantOutcome {
   subscriptionId: string | null;
   expiresAt: string;
   previousExpiresAt: string | null;
+  /** True only when the gated SQL transaction also handled user entitlements. */
+  entitlementReconciled?: boolean;
+  /** This payment was already granted; do not report a new purchase window. */
+  replayed?: boolean;
   error?: string;
 }
 
@@ -86,6 +90,43 @@ export async function extendOrInsertWhopSubscription(
   args: GrantArgs
 ): Promise<WhopGrantOutcome> {
   const { userId, tier, paymentId, amountCents, currency } = args;
+  // Rollout gate defaults OFF until the SQL migration is approved/applied.
+  // When enabled, missing RPCs and errors fail closed: never silently lose
+  // atomicity by falling through to the historical read/update implementation.
+  if (process.env.WHOP_ATOMIC_GRANTS_ENABLED === "true") {
+    try {
+      const { data, error } = await sb.rpc("grant_whop_paid_subscription", {
+        p_user_id: userId,
+        p_tier: tier,
+        p_payment_id: paymentId,
+        p_amount_cents: amountCents,
+        p_currency: currency,
+        p_duration_months: tierDurationMonths(tier),
+        p_membership_id: args.membershipId ?? null,
+      });
+      if (error) throw new Error(error.message);
+      const row = Array.isArray(data) ? data[0] : null;
+      if (!row || !["extended", "inserted"].includes(row.mode) ||
+          typeof row.subscription_id !== "string" ||
+          (row.expires_at !== null && (typeof row.expires_at !== "string" || !Number.isFinite(Date.parse(row.expires_at)))) ||
+          row.entitlement_reconciled !== true) {
+        throw new Error("Atomic grant returned an invalid result");
+      }
+      return {
+        mode: row.mode,
+        subscriptionId: row.subscription_id,
+        expiresAt: row.expires_at ?? "",
+        previousExpiresAt: row.previous_expires_at ?? null,
+        entitlementReconciled: true,
+        replayed: row.replayed === true,
+      };
+    } catch (error) {
+      return {
+        mode: "failed", subscriptionId: null, expiresAt: "", previousExpiresAt: null,
+        error: error instanceof Error ? error.message : "Atomic grant failed",
+      };
+    }
+  }
   const now = new Date();
 
   const { data: actives, error } = await sb
