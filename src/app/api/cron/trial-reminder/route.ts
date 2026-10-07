@@ -262,15 +262,21 @@ export async function GET(req: NextRequest) {
         const tier = row.tier as string;
 
         // Flip the subscription row.
-        const { error: flipErr } = await sb
+        const { data: flipped, error: flipErr } = await sb
           .from("subscriptions")
           .update({ status: "expired", updated_at: nowIso })
-          .eq("id", subId);
+          .eq("id", subId)
+          .eq("status", "active")
+          .eq("expires_at", row.expires_at)
+          .select("id");
 
         if (flipErr) {
           errors.push(`flip:${subId}: ${flipErr.message}`);
           continue;
         }
+
+        // A renewal/refund changed this snapshot. Do not expire or downgrade it.
+        if (!flipped || flipped.length === 0) continue;
 
         // If the user has NO OTHER active subscription, clear tier +
         // tier_expires_at so downstream paywalls take effect. We do
@@ -296,7 +302,7 @@ export async function GET(req: NextRequest) {
         if (!others || others.length === 0) {
           const { data: owner, error: ownerError } = await sb
             .from("users")
-            .select("tier, tier_expires_at")
+            .select("tier, role, tier_expires_at")
             .eq("id", userId)
             .maybeSingle();
           if (ownerError || !owner) {
@@ -309,7 +315,7 @@ export async function GET(req: NextRequest) {
           const stillCovered =
             (owner.tier === "pro" && owner.tier_expires_at == null) ||
             (Number.isFinite(ownerExp) && ownerExp > Date.now());
-          if (owner?.tier !== "admin" && !stillCovered) {
+          if (owner.role !== "admin" && owner.tier !== "admin" && !stillCovered) {
             await sb
               .from("users")
               .update({
@@ -319,6 +325,7 @@ export async function GET(req: NextRequest) {
               })
               .eq("id", userId)
               .eq("tier", owner.tier)
+              .eq("role", owner.role)
               .eq("tier_expires_at", owner.tier_expires_at);
           }
         }

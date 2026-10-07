@@ -5,7 +5,7 @@ import { isPaidTier } from "@/lib/free-tier";
 export async function repairWhopUserAccess(sb: SupabaseClient, userId: string): Promise<{
   granted: boolean; tier_expires_at: string | null;
 }> {
-  if ((process.env.WHOP_ATOMIC_GRANTS_ENABLED ?? "false").toLowerCase() === "true") {
+  if (process.env.WHOP_ATOMIC_GRANTS_ENABLED === "true") {
     const { data, error } = await sb.rpc("repair_whop_user_access", { p_user_id: userId });
     if (error) throw error;
     const result = Array.isArray(data) ? data[0] : data;

@@ -103,6 +103,7 @@ beforeEach(() => {
   process.env.WHOP_PLAN_NOTES_TRIAL = "plan_trial";
   (globalThis as { __fakeCalls?: unknown[][] }).__fakeCalls = [];
   claimed = new Set();
+  delete process.env.WHOP_ATOMIC_GRANTS_ENABLED;
   h.sendZohoEmail.mockReset();
   h.sendZohoEmail.mockResolvedValue({ ok: true });
   // The membership API is never needed when the checkout tie resolves; make
@@ -113,6 +114,7 @@ beforeEach(() => {
 afterEach(() => {
   vi.unstubAllGlobals();
   delete process.env.WHOP_API_KEY;
+  delete process.env.WHOP_ATOMIC_GRANTS_ENABLED;
 });
 
 describe("POST /api/webhooks/whop: renewal mapping (fix A)", () => {
@@ -310,5 +312,26 @@ describe("POST /api/webhooks/whop: review fixes", () => {
     const body = await res.json();
     expect(body.ok).toBe(false);
     expect(allCalls().some((c) => c.table === "subscriptions" && (c.op === "insert" || c.op === "update"))).toBe(false);
+  });
+});
+
+
+describe("atomic revoke routing", () => {
+  const sub = { id: "sub_atomic", user_id: MEZOO, tier: "first_month_19", status: "active",
+    expires_at: "2030-01-01T00:00:00Z", amount_cents: 1900, started_at: "2029-12-01T00:00:00Z",
+    provider_payment_id: "pay_atomic", granted_payment_ids: [], whop_membership_id: "mem_ATOMIC" };
+  it.each([true,false])("uses one transaction without legacy writes, success=%s", async (success) => {
+    process.env.WHOP_ATOMIC_GRANTS_ENABLED = "true";
+    h.handler = baseHandler(c => {
+      if (c.table === "subscriptions" && c.op === "select" && eqVal(c,"whop_membership_id") === "mem_ATOMIC") return { data:[sub] };
+      if (c.table === "rpc:commit_whop_revoke") return success ? { data:[{ kept_active_ids:[],flipped_ids:[sub.id],pro_revoked:true,had_other_active:false,dunning_deferred:false,replayed:false }] } : { error:{ code:"40001",message:"changed" } };
+      return undefined;
+    }) as (call:unknown)=>unknown;
+    const res = await deliver("membership.deactivated", { id:"mem_ATOMIC" });
+    expect(res.status).toBe(success ? 200 : 503);
+    const calls=allCalls();
+    expect(calls.filter(c=>c.table==="rpc:commit_whop_revoke")).toHaveLength(1);
+    expect(calls.some(c=>["subscriptions","users"].includes(c.table)&&c.op==="update")).toBe(false);
+    expect(calls.some(c=>c.table==="processed_webhook_events"&&c.op==="insert")).toBe(false);
   });
 });

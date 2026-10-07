@@ -23,11 +23,11 @@ describe("stored Whop access repair", () => {
     expect(write.filters).toContainEqual({ kind: "eq", column: "tier", value: "free" });
     expect(write.filters).toContainEqual({ kind: "is", column: "tier_expires_at", value: null });
   });
-  it("uses only the atomic repair RPC when enabled", async () => {
-    process.env.WHOP_ATOMIC_GRANTS_ENABLED = "true";
-    const { sb, calls } = createFakeSupabase(c => c.table === "rpc:repair_whop_user_access" ? { data: [{ granted: false, tier_expires_at: null }] } : {});
+  it.each(["true", "TRUE"])("uses the same literal gate as grants and revokes: %s", async (value) => {
+    process.env.WHOP_ATOMIC_GRANTS_ENABLED = value;
+    const { sb, calls } = createFakeSupabase(c => c.table === "rpc:repair_whop_user_access" ? { data: [{ granted: false, tier_expires_at: null }] } : c.table === "users" ? { data: { tier: "free", tier_expires_at: null } } : { data: [] });
     expect((await repairWhopUserAccess(sb as unknown as SupabaseClient, "synthetic")).granted).toBe(false);
-    expect(calls).toHaveLength(1);
+    expect(calls.some(c => c.table === "rpc:repair_whop_user_access")).toBe(value === "true");
   });
   it("does not fall back to unsafe repair if the enabled RPC is unavailable", async () => {
     process.env.WHOP_ATOMIC_GRANTS_ENABLED = "true";

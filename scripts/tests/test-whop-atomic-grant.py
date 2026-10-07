@@ -18,10 +18,10 @@ USER = '00000000-0000-0000-0000-000000000001'
 FIXTURE = """
 CREATE ROLE anon; CREATE ROLE authenticated; CREATE ROLE service_role;
 CREATE TABLE users(id uuid PRIMARY KEY, role text DEFAULT 'user', tier text DEFAULT 'free', tier_expires_at timestamptz, updated_at timestamptz DEFAULT now());
-CREATE TABLE subscriptions(id uuid PRIMARY KEY DEFAULT gen_random_uuid(), user_id uuid REFERENCES users(id), tier text, status text,
+CREATE TABLE subscriptions(id uuid PRIMARY KEY DEFAULT gen_random_uuid(), user_id uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE, tier text, status text,
  payment_provider text, payment_method text, amount_cents integer, currency text, provider_payment_id text,
  granted_payment_ids jsonb DEFAULT '[]', whop_membership_id text, started_at timestamptz DEFAULT now(), expires_at timestamptz,
- created_at timestamptz DEFAULT now(), updated_at timestamptz DEFAULT now());
+ created_at timestamptz DEFAULT now(), updated_at timestamptz DEFAULT now(), cancelled_at timestamptz);
 CREATE FUNCTION legacy_synthetic_grant(p_payment text) RETURNS void LANGUAGE plpgsql AS $$
 DECLARE old_expiry timestamptz; old_history jsonb;
 BEGIN

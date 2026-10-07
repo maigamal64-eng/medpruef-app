@@ -1032,6 +1032,37 @@ async function handleRevoke(
       );
     }
 
+    if (process.env.WHOP_ATOMIC_GRANTS_ENABLED === "true") {
+      const graceValue = Number((process.env.WHOP_DUNNING_GRACE_DAYS ?? "7").trim() || "7");
+      const { data: committed, error: commitError } = await sb.rpc("commit_whop_revoke", {
+        p_user_id: userId, p_claim_key: claimKey, p_kind: kind, p_event: event,
+        p_expected_subscriptions: subs, p_payment_candidates: paymentCandidates,
+        p_grace_days: Number.isFinite(graceValue) && graceValue > 0 ? graceValue : 7,
+      });
+      const result = Array.isArray(committed) ? committed[0] : null;
+      if (commitError || !result || !Array.isArray(result.kept_active_ids) || !Array.isArray(result.flipped_ids) ||
+          typeof result.pro_revoked !== "boolean" || typeof result.replayed !== "boolean") {
+        Sentry.captureException(commitError ?? new Error("Invalid atomic revoke result"), {
+          tags: { route: "webhooks/whop", step: "atomic_revoke" },
+        });
+        return NextResponse.json({ error: "Revoke pending; retry from fresh subscription state" }, { status: 503 });
+      }
+      // Referral reversal is independently idempotent (already-reversed rows
+      // are excluded). A duplicate retries that best-effort side effect.
+      const referralReversed = kind === "refunded" ? await reverseRefereeReferral(sb, userId, event) : false;
+      if (result.replayed) return NextResponse.json({ ok: true, duplicate: true, referral_reversed: referralReversed });
+      await recordEvent(sb, userId, "whop_subscription_revoked", {
+        event, kind, affected_subscription_ids: [...result.flipped_ids, ...result.kept_active_ids],
+        flipped_ids: result.flipped_ids, partial_kept_active_ids: result.kept_active_ids,
+        pro_revoked: result.pro_revoked, had_other_active: result.had_other_active,
+        referral_reversed: referralReversed, atomic: true,
+      });
+      return NextResponse.json({ ok: true, revoked: true, kind,
+        subscriptions: result.flipped_ids.length + result.kept_active_ids.length,
+        partial_kept: result.kept_active_ids.length, pro_revoked: result.pro_revoked,
+        referral_reversed: referralReversed });
+    }
+
     // Read coverage before claiming or mutating: an independent manual grant
     // is not owned by the membership being revoked. Read failures must retry.
     const { data: coverageOwner, error: coverageError } = await sb

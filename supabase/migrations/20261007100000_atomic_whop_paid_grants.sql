@@ -1,15 +1,32 @@
 -- UNAPPLIED: enable WHOP_ATOMIC_GRANTS_ENABLED only after this migration and
 -- an approved deployment/readback. The application never falls back on RPC errors.
 -- This ledger is an idempotency receipt, not a revenue/accounting replacement.
+-- Composite ownership FK uses the existing validated subscription->user FK.
+-- No new users-table FK lock. Schema installation takes subscription-only
+-- SHARE ROW EXCLUSIVE; apply fail-fast with bounded transaction timeouts.
+DO $preflight$
+BEGIN
+ IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conrelid='public.subscriptions'::regclass
+   AND confrelid='public.users'::regclass AND contype='f' AND convalidated AND confdeltype='c'
+   AND conkey=ARRAY[(SELECT attnum FROM pg_attribute WHERE attrelid=conrelid AND attname='user_id')]
+   AND confkey=ARRAY[(SELECT attnum FROM pg_attribute WHERE attrelid=confrelid AND attname='id')]) THEN
+  RAISE EXCEPTION 'Validated cascading subscription owner FK required';
+ END IF;
+END;
+$preflight$;
+CREATE UNIQUE INDEX subscriptions_receipt_owner_key ON public.subscriptions(id,user_id);
 CREATE TABLE public.whop_paid_grant_receipts (
   payment_id text PRIMARY KEY,
-  user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
-  subscription_id uuid NOT NULL REFERENCES public.subscriptions(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL,
+  subscription_id uuid NOT NULL,
   grant_mode text NOT NULL CHECK (grant_mode IN ('extended', 'inserted')),
   granted_expires_at timestamptz NOT NULL,
   previous_expires_at timestamptz,
-  created_at timestamptz NOT NULL DEFAULT now()
+  created_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT whop_paid_grant_receipts_owner_fkey FOREIGN KEY(subscription_id,user_id)
+    REFERENCES public.subscriptions(id,user_id) ON DELETE CASCADE
 );
+CREATE INDEX whop_paid_grant_receipts_owner_idx ON public.whop_paid_grant_receipts(subscription_id,user_id);
 ALTER TABLE public.whop_paid_grant_receipts ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.whop_paid_grant_receipts FROM PUBLIC, anon, authenticated;
 GRANT SELECT, INSERT ON public.whop_paid_grant_receipts TO service_role;
@@ -31,13 +48,17 @@ DECLARE
   u public.users%ROWTYPE;
   s public.subscriptions%ROWTYPE;
   receipt public.whop_paid_grant_receipts%ROWTYPE;
-  current_time_utc timestamptz := now();
+  current_time_utc timestamptz;
   base_utc timestamp;
   final_expiry timestamptz;
   previous_expiry timestamptz;
   grant_mode text;
   is_replay boolean := false;
 BEGIN
+  PERFORM set_config('lock_timeout','200ms',true);
+  IF current_setting('transaction_timeout',true) IS NOT NULL THEN
+    PERFORM set_config('transaction_timeout','2s',true);
+  END IF;
   IF p_payment_id IS NULL OR btrim(p_payment_id) = '' OR
      p_duration_months IS NULL OR p_duration_months < 1 OR p_duration_months > 120 THEN
     RAISE EXCEPTION 'Invalid paid grant arguments' USING ERRCODE = '22023';
@@ -45,6 +66,7 @@ BEGIN
   -- Same payment across users and different payments for one user serialize.
   PERFORM pg_advisory_xact_lock(hashtextextended('whop-paid:' || p_payment_id, 0));
   SELECT * INTO STRICT u FROM public.users WHERE id = p_user_id FOR UPDATE;
+  current_time_utc := clock_timestamp();
 
   SELECT * INTO receipt FROM public.whop_paid_grant_receipts r WHERE r.payment_id = p_payment_id;
   IF FOUND THEN
@@ -153,6 +175,10 @@ DECLARE
   non_expiring boolean := false;
   check_time timestamptz;
 BEGIN
+  PERFORM set_config('lock_timeout','200ms',true);
+  IF current_setting('transaction_timeout',true) IS NOT NULL THEN
+    PERFORM set_config('transaction_timeout','2s',true);
+  END IF;
   SELECT * INTO STRICT u FROM public.users usr WHERE usr.id = p_user_id FOR UPDATE;
   check_time := clock_timestamp();
   IF u.role = 'admin' OR u.tier = 'admin' OR (u.tier = 'pro' AND u.tier_expires_at IS NULL) THEN

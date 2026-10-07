@@ -8,6 +8,8 @@ const h = vi.hoisted(() => ({
   ownerExpiry: null as string | null,
   failCoverage: false,
   failOwner: false,
+  renewalWon: false,
+  ownerRole: "user",
 }));
 
 vi.mock("@sentry/nextjs", () => ({ captureMessage: vi.fn(), captureException: vi.fn() }));
@@ -25,8 +27,9 @@ vi.mock("@/lib/supabase", () => ({
       if (c.table === "subscriptions" && c.op === "select") return h.failCoverage ? { error: { message: "coverage unavailable" } } : { data: [] }; // no other active sub
       if (c.table === "users" && c.op === "select") {
         if (h.failOwner) return { error: { message: "owner unavailable" } };
-        return { data: { tier: "pro", tier_expires_at: h.ownerExpiry, email: "u@example.com", first_name: "U", language_code: "de" } };
+        return { data: { tier: "pro", role: h.ownerRole, tier_expires_at: h.ownerExpiry, email: "u@example.com", first_name: "U", language_code: "de" } };
       }
+      if (c.table === "subscriptions" && c.op === "update" && eqVal(c,"id") === "sub_exp") return { data: h.renewalWon ? [] : [{ id:"sub_exp" }] };
       return {};
     });
     h.calls = calls;
@@ -46,9 +49,26 @@ beforeEach(() => {
   h.ownerExpiry = "2026-09-01T00:00:00Z";
   h.failCoverage = false;
   h.failOwner = false;
+  h.renewalWon = false;
+  h.ownerRole = "user";
 });
 
 describe("cron trial-reminder", () => {
+  it("preserves role-admin access even with an expired denormalized window", async () => {
+    h.ownerRole = "admin";
+    await run();
+    expect((h.calls as FakeCall[]).some(c => c.table === "users" && c.op === "update")).toBe(false);
+  });
+  it("does not expire or downgrade a subscription renewed after the sweep read", async () => {
+    h.renewalWon = true;
+    const res = await run();
+    expect((await res.json()).expiries_processed).toBe(0);
+    const calls = h.calls as FakeCall[];
+    const flip = calls.find(c => c.table === "subscriptions" && c.op === "update" && eqVal(c,"id") === "sub_exp")!;
+    expect(eqVal(flip,"status")).toBe("active");
+    expect(eqVal(flip,"expires_at")).toBe("2026-09-01T00:00:00Z");
+    expect(calls.some(c => c.table === "users" && c.op === "update")).toBe(false);
+  });
   it("rejects calls without the cron secret", async () => {
     const res = await GET(new NextRequest("https://x/api/cron/trial-reminder"));
     expect(res.status).toBe(401);
