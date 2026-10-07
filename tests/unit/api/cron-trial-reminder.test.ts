@@ -6,6 +6,8 @@ const h = vi.hoisted(() => ({
   calls: [] as unknown[],
   sendZohoEmail: vi.fn(async () => ({ ok: true })),
   ownerExpiry: null as string | null,
+  failCoverage: false,
+  failOwner: false,
 }));
 
 vi.mock("@sentry/nextjs", () => ({ captureMessage: vi.fn(), captureException: vi.fn() }));
@@ -20,8 +22,9 @@ vi.mock("@/lib/supabase", () => ({
       if (c.table === "subscriptions" && c.op === "select" && c.filters.some((f) => f.kind === "lte")) {
         return { data: [{ id: "sub_due", user_id: "u2", tier: "first_month_19", expires_at: new Date(Date.now() + 3 * 86400_000).toISOString() }] };
       }
-      if (c.table === "subscriptions" && c.op === "select") return { data: [] }; // no other active sub
+      if (c.table === "subscriptions" && c.op === "select") return h.failCoverage ? { error: { message: "coverage unavailable" } } : { data: [] }; // no other active sub
       if (c.table === "users" && c.op === "select") {
+        if (h.failOwner) return { error: { message: "owner unavailable" } };
         return { data: { tier: "pro", tier_expires_at: h.ownerExpiry, email: "u@example.com", first_name: "U", language_code: "de" } };
       }
       return {};
@@ -40,7 +43,9 @@ beforeEach(() => {
   process.env.CRON_SECRET = "cron_s";
   delete process.env.TRIAL_REMINDER_EMAILS_ENABLED;
   h.sendZohoEmail.mockClear();
-  h.ownerExpiry = null;
+  h.ownerExpiry = "2026-09-01T00:00:00Z";
+  h.failCoverage = false;
+  h.failOwner = false;
 });
 
 describe("cron trial-reminder", () => {
@@ -68,4 +73,17 @@ describe("cron trial-reminder", () => {
     const calls = h.calls as FakeCall[];
     expect(calls.some((c) => c.table === "users" && c.op === "update")).toBe(false);
   });
+  it("preserves a non-expiring manual Pro grant when a paid row expires", async () => {
+    h.ownerExpiry = null;
+    await run();
+    const calls = h.calls as FakeCall[];
+    expect(calls.some((c) => c.table === "users" && c.op === "update")).toBe(false);
+  });
+
+  it.each(["failCoverage", "failOwner"] as const)("does not downgrade when %s read fails", async (failure) => {
+    h[failure] = true;
+    await run();
+    expect((h.calls as FakeCall[]).some((c) => c.table === "users" && c.op === "update")).toBe(false);
+  });
+
 });

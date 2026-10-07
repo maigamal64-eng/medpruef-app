@@ -23,6 +23,14 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-10-07", tag: "fix",
+    title: { de: "Manuell gewährten Pro-Zugang bewahren", en: "Preserve manually granted Pro access" },
+    description: {
+      de: "Ein unbefristeter Pro-Zugang bleibt bei einer zusätzlichen Zahlung oder beim Ablauf eines älteren Abonnements erhalten. Ein separat gewährter längerer Zugang wird durch die Deaktivierung einer kürzeren Mitgliedschaft nicht gekürzt.",
+      en: "Non-expiring Pro access is preserved when an additional payment arrives or an older subscription expires. Deactivating a shorter membership preserves separately granted longer access.",
+    },
+  },
+  {
     date: "2026-10-06", tag: "admin",
     title: { de: "Support-Chat zur Einrichtung vorbereitet", en: "Support chat prepared for configuration" },
     description: {

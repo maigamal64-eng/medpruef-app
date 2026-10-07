@@ -87,7 +87,7 @@ function baseHandler(extra?: (c: FakeCall) => FakeResult | undefined) {
     }
     if (c.table === "users" && c.op === "select") {
       const id = eqVal(c, "id") as string | undefined;
-      if (id === MEZOO) return { data: { id, email: "mezoo@example.com", first_name: "M", language_code: "de", tier: "pro", tier_expires_at: null } };
+      if (id === MEZOO) return { data: { id, email: "mezoo@example.com", first_name: "M", language_code: "de", tier: "pro", tier_expires_at: new Date(Date.now() + 86400_000).toISOString() } };
       if (id === PAYER_EMAIL_OWNER) return { data: { id } };
       if (c.filters.some((f) => f.kind === "ilike")) return { data: [{ id: PAYER_EMAIL_OWNER }] };
       return { data: null };
@@ -196,6 +196,25 @@ describe("POST /api/webhooks/whop: dunning grace is per-user (fix B)", () => {
     );
     expect(grace).toBeTruthy();
     expect(eqVal(grace!, "payload->>user_id")).toBe(MEZOO);
+  });
+});
+
+describe("POST /api/webhooks/whop: independent manual coverage", () => {
+  it.each([null, "2031-01-01T00:00:00Z"])("preserves manual Pro expiry %s when a shorter membership deactivates", async (manualExpiry) => {
+    h.handler = baseHandler((c) => {
+      if (c.table === "users" && c.op === "select" && eqVal(c, "id") === MEZOO) {
+        return { data: { id: MEZOO, tier: "pro", tier_expires_at: manualExpiry } };
+      }
+      if (c.table === "subscriptions" && c.op === "select" && eqVal(c, "whop_membership_id") === "mem_MANUAL") {
+        return { data: [{ id: "sub_paid", user_id: MEZOO, tier: "first_month_19", status: "active",
+          expires_at: "2030-01-01T00:00:00Z", amount_cents: 1900, started_at: "2029-12-01T00:00:00Z",
+          provider_payment_id: "pay_manual_test", granted_payment_ids: [], whop_membership_id: "mem_MANUAL" }] };
+      }
+      return undefined;
+    }) as (call: unknown) => unknown;
+    const res = await deliver("membership.deactivated", { id: "mem_MANUAL" });
+    expect(res.status).toBe(200);
+    expect(allCalls().some((c) => c.table === "users" && c.op === "update")).toBe(false);
   });
 });
 

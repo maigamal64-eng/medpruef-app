@@ -206,11 +206,15 @@ export async function reconcileUserTierPro(
   userId: string,
   expiresAtIso: string
 ): Promise<void> {
-  const { data: user } = await sb
+  const { data: user, error: lookupError } = await sb
     .from("users")
     .select("tier, tier_expires_at")
     .eq("id", userId)
     .maybeSingle();
+  if (lookupError) throw lookupError;
+  if (!user) throw new Error("User not found during entitlement reconciliation");
+  // A null expiry on Pro is an explicit non-expiring grant.
+  if (user.tier === "pro" && user.tier_expires_at == null) return;
   // Never touch an admin account's tier.
   if (user?.tier === "admin") return;
 

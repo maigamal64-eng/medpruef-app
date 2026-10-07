@@ -276,12 +276,17 @@ export async function GET(req: NextRequest) {
         // tier_expires_at so downstream paywalls take effect. We do
         // this as a second read because `subscriptions.status` was
         // just changed by us, so the query is now stable.
-        const { data: others } = await sb
+        const { data: others, error: othersError } = await sb
           .from("subscriptions")
           .select("id")
           .eq("user_id", userId)
           .eq("status", "active")
           .limit(1);
+
+        if (othersError) {
+          errors.push(`coverage:${subId}: ${othersError.message}`);
+          continue;
+        }
 
         // 2026-10-02: never downgrade a user whose denormalized
         // users.tier_expires_at is still in the future (a manual grant or an
@@ -289,15 +294,21 @@ export async function GET(req: NextRequest) {
         // tier + tier_expires_at, so that user loses access on their own
         // date anyway; the sweep must not cut it short.
         if (!others || others.length === 0) {
-          const { data: owner } = await sb
+          const { data: owner, error: ownerError } = await sb
             .from("users")
             .select("tier, tier_expires_at")
             .eq("id", userId)
             .maybeSingle();
+          if (ownerError || !owner) {
+            errors.push(`owner:${subId}: ${ownerError?.message ?? "User not found"}`);
+            continue;
+          }
           const ownerExp = owner?.tier_expires_at
             ? Date.parse(owner.tier_expires_at as string)
             : NaN;
-          const stillCovered = Number.isFinite(ownerExp) && ownerExp > Date.now();
+          const stillCovered =
+            (owner.tier === "pro" && owner.tier_expires_at == null) ||
+            (Number.isFinite(ownerExp) && ownerExp > Date.now());
           if (owner?.tier !== "admin" && !stillCovered) {
             await sb
               .from("users")
@@ -306,7 +317,9 @@ export async function GET(req: NextRequest) {
                 tier_expires_at: null,
                 updated_at: nowIso,
               })
-              .eq("id", userId);
+              .eq("id", userId)
+              .eq("tier", owner.tier)
+              .eq("tier_expires_at", owner.tier_expires_at);
           }
         }
 

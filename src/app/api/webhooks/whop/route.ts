@@ -1015,6 +1015,22 @@ async function handleRevoke(
       );
     }
 
+    // Read coverage before claiming or mutating: an independent manual grant
+    // is not owned by the membership being revoked. Read failures must retry.
+    const { data: coverageOwner, error: coverageError } = await sb
+      .from("users")
+      .select("tier, role, tier_expires_at")
+      .eq("id", userId)
+      .maybeSingle();
+    if (coverageError || !coverageOwner) {
+      return NextResponse.json({ error: "Could not verify account coverage" }, { status: 503 });
+    }
+    const ownerExpiryMs = Date.parse(coverageOwner.tier_expires_at ?? "");
+    const affectedExpiryMs = Math.max(...subs.map((sub) => Date.parse(sub.expires_at ?? "")).filter(Number.isFinite));
+    const independentCoverage = coverageOwner.role === "admin" || coverageOwner.tier === "admin" ||
+      (coverageOwner.tier === "pro" && (coverageOwner.tier_expires_at == null ||
+        (Number.isFinite(ownerExpiryMs) && ownerExpiryMs > Date.now() && ownerExpiryMs > affectedExpiryMs)));
+
     // ── Idempotency claim (only now that there IS a sub to revoke; same
     // pattern as the grant path). First delivery wins; Whop retries dedupe. ──
     const { data: claim, error: claimErr } = await sb
@@ -1146,7 +1162,7 @@ async function handleRevoke(
     // Reconcile the user's tier_expires_at to the max live window across the
     // surviving active rows (this one may legitimately SHORTEN: the refunded
     // window is gone). Tier itself stays Pro while any window survives.
-    if (keptActiveIds.length > 0) {
+    if (keptActiveIds.length > 0 && !independentCoverage) {
       try {
         const { data: activeAfter } = await sb
           .from("subscriptions")
@@ -1199,7 +1215,7 @@ async function handleRevoke(
     });
 
     let proRevoked = false;
-    if (!otherErr && !hasOtherActive) {
+    if (!otherErr && !hasOtherActive && !independentCoverage) {
       // Fix 5 (2026-09-21): DUNNING GRACE GUARD. If a dunning recovery claim
       // (recover:<paymentId>) was recorded within the last
       // WHOP_DUNNING_GRACE_DAYS days (default 7), the buyer is mid-recovery
