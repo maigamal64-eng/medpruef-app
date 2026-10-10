@@ -884,8 +884,8 @@ export interface TrimUnaskedInput {
  *    did not ask relative to it ("after", "next") and a sitting of that month
  *    was retrieved. Dates that belong to the asked sitting's own facts stay.
  *
- * The fee and pass-mark rules run for de and en only (the word lists are
- * de/en; for other languages nothing is trimmed). When trimming would leave
+ * All three rules run for de and en only (the word lists are de/en; for
+ * other languages nothing is trimmed). When trimming would leave
  * nothing the answer is returned unchanged. A refusal goes through
  * trimRefusalValues instead (no amount, percentage or date in a refusal).
  */
@@ -900,7 +900,8 @@ export function trimUnaskedValues(v: ValidatedAnswer, t: TrimUnaskedInput): Vali
   // Sittings the learner named by month, and the dates that belong to them.
   const retrieved = [...new Set(t.retrievedIds)];
   const sittingDates = new Set(retrieved.map(sittingDateOfId).filter((d): d is string => d !== null));
-  const months = ASKS_RELATIVE_RE.test(q) ? [] : askedMonths(q);
+  // Relative words are known for de/en only, so the sitting rule runs for de/en only too.
+  const months = !wordRules || ASKS_RELATIVE_RE.test(q) ? [] : askedMonths(q);
   const isTarget = (iso: string) => months.some((m) => iso.slice(5, 7) === m.month && (m.year === null || iso.startsWith(m.year)));
   const targets = [...sittingDates].filter(isTarget);
   const otherSitting = new Set<string>();

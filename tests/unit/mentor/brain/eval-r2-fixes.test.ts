@@ -288,6 +288,11 @@ describe("trim: no other sittings when one sitting month was asked (dl-stp-may-e
     expect(JSON.stringify(out.blocks)).not.toContain("3 February");
   });
 
+  it("does not trim the sitting rule for other languages (relative words are de/en only)", () => {
+    const a = v();
+    expect(trimUnaskedValues(a, { question: "Quelle est la session après celle de mai 2099 ?", lang: "fr", resolve, retrievedIds: retrieved })).toBe(a);
+  });
+
   it("askedMonths ignores a sentence-initial 'May I' and reads German months", () => {
     expect(askedMonths("May I ask something?")).toEqual([]);
     expect(askedMonths("Frist für den Stichprobentest im Mai 2099?")).toEqual([{ month: "05", year: "2099" }]);
