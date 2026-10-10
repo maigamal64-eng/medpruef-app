@@ -474,49 +474,49 @@ The Vienna bank contains SIP4a/SIP5a-based MCQ exercises. These university sourc
               <ul className="list-disc pl-6 space-y-2 mp-body text-[var(--mp-fg)] leading-relaxed mt-3">
                 <li>
                   <a href="https://www.aerztekammer.at/berufsausuebung/approbation-anerkennung/auslaendische-approbation/" target="_blank" rel="noopener noreferrer" className="text-[var(--mp-viridian)] hover:underline inline-flex items-center gap-1">
-                    Austrian Medical Chamber — Recognition of Foreign Medical Qualifications
+                    Austrian Medical Chamber: Recognition of Foreign Medical Qualifications
                     <ExternalLink className="w-3 h-3" aria-hidden />
                   </a>
                 </li>
                 <li>
                   <a href="https://www.meduniwien.ac.at/web/en/international-affairs/information-for-students-with-ukrainian-refugee-status/" target="_blank" rel="noopener noreferrer" className="text-[var(--mp-viridian)] hover:underline inline-flex items-center gap-1">
-                    MedUni Vienna — Information for Students with Ukrainian Refugee Status
+                    MedUni Vienna: Information for Students with Ukrainian Refugee Status
                     <ExternalLink className="w-3 h-3" aria-hidden />
                   </a>
                 </li>
                 <li>
                   <a href="https://www.medunigraz.at/studium/studienrichtungen/humanmedizin/nostrifizierung/" target="_blank" rel="noopener noreferrer" className="text-[var(--mp-viridian)] hover:underline inline-flex items-center gap-1">
-                    MedUni Graz — Nostrifizierung Humanmedizin
+                    MedUni Graz: Nostrifizierung Humanmedizin
                     <ExternalLink className="w-3 h-3" aria-hidden />
                   </a>
                 </li>
                 <li>
                   <a href="https://i-med.ac.at/studium/studienrichtungen/humanmedizin/nostrifizierung/" target="_blank" rel="noopener noreferrer" className="text-[var(--mp-viridian)] hover:underline inline-flex items-center gap-1">
-                    MedUni Innsbruck — Nostrifizierung Humanmedizin
+                    MedUni Innsbruck: Nostrifizierung Humanmedizin
                     <ExternalLink className="w-3 h-3" aria-hidden />
                   </a>
                 </li>
                 <li>
                   <a href="https://www.jku.at/en/medicine/study/nostrification/" target="_blank" rel="noopener noreferrer" className="text-[var(--mp-viridian)] hover:underline inline-flex items-center gap-1">
-                    JKU Linz — Medical Nostrification
+                    JKU Linz: Medical Nostrification
                     <ExternalLink className="w-3 h-3" aria-hidden />
                   </a>
                 </li>
                 <li>
                   <a href="https://www.sozialministerium.gv.at/Themen/Gesundheit/Medizin-und-Gesundheitsberufe/Anerkennung-(Berufe).html" target="_blank" rel="noopener noreferrer" className="text-[var(--mp-viridian)] hover:underline inline-flex items-center gap-1">
-                    Federal Ministry of Social Affairs — Professional Recognition
+                    Federal Ministry of Social Affairs: Professional Recognition
                     <ExternalLink className="w-3 h-3" aria-hidden />
                   </a>
                 </li>
                 <li>
                   <a href="https://www.arztakademie.at/allgemeinmedizin" target="_blank" rel="noopener noreferrer" className="text-[var(--mp-viridian)] hover:underline inline-flex items-center gap-1">
-                    Austrian Academy of Physicians — Kenntnisprüfung Allgemeinmedizin
+                    Austrian Academy of Physicians: Kenntnisprüfung Allgemeinmedizin
                     <ExternalLink className="w-3 h-3" aria-hidden />
                   </a>
                 </li>
                 <li>
                   <a href="https://www.integrationsfonds.at/en/services/integration-measures/finding-a-job/professional-recognition/" target="_blank" rel="noopener noreferrer" className="text-[var(--mp-viridian)] hover:underline inline-flex items-center gap-1">
-                    ÖIF — Professional Recognition Support for Displaced Persons
+                    ÖIF: Professional Recognition Support for Displaced Persons
                     <ExternalLink className="w-3 h-3" aria-hidden />
                   </a>
                 </li>

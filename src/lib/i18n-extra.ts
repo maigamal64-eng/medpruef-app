@@ -262,7 +262,7 @@ export const EXTRA_TRANSLATIONS: Partial<
     "privacy": "Конфиденциальность",
     "shortcut_guide": "Горячие клавиши",
     "press_to_close": "Нажмите Esc, чтобы закрыть",
-    "cookie_banner": "Мы используем анонимную аналитику, чтобы улучшать MedPrüf во время бета-тестирования. Вы можете отказаться в любой момент.",
+    "cookie_banner": "Мы используем аналитические сервисы, чтобы улучшать MedPrüf во время бета-тестирования. Они включены по умолчанию. Вы можете отказаться в любой момент.",
     "reminder_title": "Не пропустите срок регистрации",
     "reminder_next": "Ближайший экзамен:",
     "reminder_deadline": "регистрация закрывается",
@@ -386,7 +386,7 @@ export const EXTRA_TRANSLATIONS: Partial<
     "orient_title": "Добро пожаловать в MedPrüf",
     "orient_subtitle": "Две вещи, которые стоит знать перед началом.",
     "orient_item1_title": "Сдайте с первой попытки, или продолжайте учиться бесплатно, пока не сдадите.",
-    "orient_item1_body": "Если вы участвуете в экзаменационной когорте или на годовом тарифе и не сдаёте экзамен, мы бесплатно продлеваем ваш доступ до следующего экзаменационного цикла.",
+    "orient_item1_body": "Если вы участвуете в экзаменационной когорте и не сдаёте экзамен, мы бесплатно продлеваем ваш доступ до следующего экзаменационного цикла.",
     "orient_item1_link": "Как это работает",
     "orient_item2_title": "150 бесплатных вопросов на каждый тип экзамена.",
     "orient_item2_body": "Оплата не требуется. Полный доступ к объяснениям. Без ограничения по времени: учитесь в своём темпе.",
@@ -868,7 +868,7 @@ export const EXTRA_TRANSLATIONS: Partial<
     "privacy": "Конфіденційність",
     "shortcut_guide": "Комбінації клавіш",
     "press_to_close": "Натисніть Esc, щоб закрити",
-    "cookie_banner": "Ми використовуємо анонімну аналітику, щоб покращувати MedPrüf у бета-версії. Ви можете відмовитись у будь-який момент.",
+    "cookie_banner": "Ми використовуємо аналітичні сервіси, щоб покращувати MedPrüf у бета-версії. Вони ввімкнені за замовчуванням. Ви можете відмовитися в будь-який момент.",
     "reminder_title": "Не пропустіть кінцевий термін реєстрації",
     "reminder_next": "Найближчий іспит:",
     "reminder_deadline": "реєстрація закривається",
@@ -992,7 +992,7 @@ export const EXTRA_TRANSLATIONS: Partial<
     "orient_title": "Ласкаво просимо до MedPrüf",
     "orient_subtitle": "Дві речі, які варто знати перед початком.",
     "orient_item1_title": "Складіть з першої спроби, або навчайтесь безкоштовно, доки не складете.",
-    "orient_item1_body": "Якщо ви в Екзаменаційній когорті або на річному плані та не склали іспит, ми безкоштовно продовжуємо ваш доступ до наступного циклу іспитів.",
+    "orient_item1_body": "Якщо ви в Екзаменаційній когорті та не склали іспит, ми безкоштовно продовжуємо ваш доступ до наступного циклу іспитів.",
     "orient_item1_link": "Як це працює",
     "orient_item2_title": "150 безкоштовних питань на кожен тип іспиту.",
     "orient_item2_body": "Без потреби у платіжних даних. Повний доступ до пояснень. Без обмеження часу: навчайтесь у своєму темпі.",
@@ -1462,7 +1462,7 @@ export const EXTRA_TRANSLATIONS: Partial<
     "privacy": "Gizlilik",
     "shortcut_guide": "Klavye Kısayolları",
     "press_to_close": "Kapatmak için Esc’e basın",
-    "cookie_banner": "Beta sürecinde MedPrüf’ü geliştirmek için anonim analiz kullanıyoruz. İstediğiniz zaman reddedebilirsiniz.",
+    "cookie_banner": "Beta sürecinde MedPrüf’ü geliştirmek için analiz hizmetleri kullanıyoruz. Varsayılan olarak etkindirler. İstediğiniz zaman reddedebilirsiniz.",
     "reminder_title": "Başvuru son tarihini kaçırmayın",
     "reminder_next": "Sonraki sınav:",
     "reminder_deadline": "başvuru bitiş tarihi",
@@ -1586,7 +1586,7 @@ export const EXTRA_TRANSLATIONS: Partial<
     "orient_title": "MedPrüf’e Hoş Geldiniz",
     "orient_subtitle": "Başlamadan önce bilmeniz gereken iki şey.",
     "orient_item1_title": "İlk denemede geçin, ya da geçene kadar ücretsiz öğrenmeye devam edin.",
-    "orient_item1_body": "Sınav Kohortunda veya yıllık planda olup geçemezseniz, erişiminizi bir sonraki sınav dönemine kadar ücretsiz olarak uzatıyoruz.",
+    "orient_item1_body": "Sınav Kohortunda olup geçemezseniz, erişiminizi bir sonraki sınav dönemine kadar ücretsiz olarak uzatıyoruz.",
     "orient_item1_link": "Nasıl çalışır",
     "orient_item2_title": "Sınav türü başına 150 ücretsiz soru.",
     "orient_item2_body": "Ödeme yöntemi gerekmez. Açıklamalara tam erişim. Zaman sınırı yok: kendi hızınızda öğrenin.",
@@ -2056,7 +2056,7 @@ export const EXTRA_TRANSLATIONS: Partial<
     "privacy": "الخصوصية",
     "shortcut_guide": "اختصارات لوحة المفاتيح",
     "press_to_close": "اضغط Esc للإغلاق",
-    "cookie_banner": "نستخدم تحليلات مجهولة الهوية لتحسين MedPrüf أثناء مرحلة البيتا. يمكنك الرفض في أي وقت.",
+    "cookie_banner": "بنستخدم أدوات تحليل عشان نحسّن MedPrüf في فترة البيتا. شغّالة تلقائيًا، وتقدر ترفضها في أي وقت.",
     "reminder_title": "لا تفوّت موعد التسجيل",
     "reminder_next": "الامتحان القادم:",
     "reminder_deadline": "إغلاق التسجيل",
@@ -2180,7 +2180,7 @@ export const EXTRA_TRANSLATIONS: Partial<
     "orient_title": "مرحبًا بك في MedPrüf",
     "orient_subtitle": "أمران عليك معرفتهما قبل البدء.",
     "orient_item1_title": "انجح من المحاولة الأولى، أو استمر بالتعلّم مجانًا حتى تنجح.",
-    "orient_item1_body": "إن لم تنجح وأنت ضمن مجموعة الامتحان أو الاشتراك السنوي، نمدّد وصولك مجانًا حتى دورة الامتحان التالية.",
+    "orient_item1_body": "إن لم تنجح وأنت ضمن مجموعة الامتحان، نمدّد وصولك مجانًا حتى دورة الامتحان التالية.",
     "orient_item1_link": "كيف يعمل هذا",
     "orient_item2_title": "150 سؤالًا مجانيًا لكل نوع امتحان.",
     "orient_item2_body": "لا حاجة لوسيلة دفع. وصول كامل للشروح. لا حدّ زمني: تعلّم بالسرعة التي تناسبك.",
@@ -2251,13 +2251,9 @@ export const EXTRA_TRANSLATIONS: Partial<
     "ref_floater_region_label": "برنامج الإحالة",
     "ref_floater_close": "إغلاق الإشعار",
     "ref_floater_title": "هل تعرف شخصًا آخر يحضّر لنفس الامتحان؟",
-    // AR draft 2026-07-11: pending [name] sign-off (SoT §5.3). Corrected
-    // from the prior false "you both get a bonus when they go Pro" cash
-    // claim to the no-payment exam-window framing; plain honest wording,
-    // no em dashes. Updated same day for the card-trial gate (state the
-    // trial terms honestly: card on file, 0 € today, then 19 €/month
-    // unless cancelled during the trial, per the SoT §2 trial-promo
-    // rule). Flagged to [name] separately by the orchestrator.
+    // AR referral copy: no-payment exam-window framing; card-trial terms
+    // stated honestly (card on file, 0 € today, then 19 €/month unless
+    // cancelled during the trial). Approved by [name] 2026-10-10.
     "ref_floater_body": "رمز الإحالة الخاص بك بانتظارك. ادعُ زميلين اثنين: بمجرد أن يبدآ الفترة التجريبية المجانية لـ Pro (بطاقة مسجلة، 0 € اليوم، ثم 19 €/شهريًا، يمكن الإلغاء في أي وقت خلال أسبوع التجربة) ويذاكرا فعليًا، تحصل على Pro مجانًا طوال فترة الامتحان.",
     "ref_floater_cta_details": "عرض التفاصيل",
     "ref_floater_cta_not_now": "ليس الآن",

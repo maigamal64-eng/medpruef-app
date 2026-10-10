@@ -48,8 +48,8 @@ const PROCESSORS: Processor[] = [
       en: "Hosting of the web application and API routes, edge caching.",
     },
     jurisdiction: {
-      de: "Vercel Inc., USA, EU-Edge-Knoten. SCCs in Kraft.",
-      en: "Vercel Inc., USA, EU edge nodes. SCCs in place.",
+      de: "Vercel Inc., USA, EU-Edge-Knoten. Übermittlungsgrundlage wird derzeit geprüft.",
+      en: "Vercel Inc., USA, EU edge nodes. Transfer basis under review.",
     },
     policyUrl: "https://vercel.com/legal/privacy-policy",
     policyLabel: "vercel.com/legal/privacy-policy",
@@ -87,8 +87,8 @@ const PROCESSORS: Processor[] = [
       en: "AI-generated explanations and translations (fallback model for /api/ai-chat and /api/translate).",
     },
     jurisdiction: {
-      de: "OpenAI OpCo, LLC, USA. SCCs in Kraft; API-Eingaben werden nicht für Modelltraining verwendet.",
-      en: "OpenAI OpCo, LLC, USA. SCCs in place; API inputs are not used for model training.",
+      de: "OpenAI OpCo, LLC, USA. Übermittlungsgrundlage wird derzeit geprüft; API-Eingaben werden nicht für Modelltraining verwendet.",
+      en: "OpenAI OpCo, LLC, USA. Transfer basis under review; API inputs are not used for model training.",
     },
     policyUrl: "https://openai.com/policies/privacy-policy",
     policyLabel: "openai.com/policies/privacy-policy",
@@ -100,8 +100,8 @@ const PROCESSORS: Processor[] = [
       en: "AI-generated explanations and translations (primary model for /api/ai-chat and /api/translate).",
     },
     jurisdiction: {
-      de: "Anthropic PBC, USA. SCCs in Kraft; API-Eingaben werden nicht für Modelltraining verwendet.",
-      en: "Anthropic PBC, USA. SCCs in place; API inputs are not used for model training.",
+      de: "Anthropic PBC, USA. Übermittlungsgrundlage wird derzeit geprüft; API-Eingaben werden nicht für Modelltraining verwendet.",
+      en: "Anthropic PBC, USA. Transfer basis under review; API inputs are not used for model training.",
     },
     policyUrl: "https://www.anthropic.com/legal/privacy",
     policyLabel: "anthropic.com/legal/privacy",
@@ -139,8 +139,8 @@ const PROCESSORS: Processor[] = [
       en: "Aggregated usage analytics (page views, session duration); active by default during beta, opt out anytime via the cookie banner (Decline).",
     },
     jurisdiction: {
-      de: "Google LLC, USA (EU-Daten über Google Ireland Ltd.). SCCs + IP-Anonymisierung aktiv.",
-      en: "Google LLC, USA (EU data via Google Ireland Ltd.). SCCs + IP anonymization enabled.",
+      de: "Google LLC, USA (EU-Daten über Google Ireland Ltd.). IP-Anonymisierung aktiv; Übermittlungsgrundlage wird derzeit geprüft.",
+      en: "Google LLC, USA (EU data via Google Ireland Ltd.). IP anonymization enabled; transfer basis under review.",
     },
     policyUrl: "https://policies.google.com/privacy",
     policyLabel: "policies.google.com/privacy",
@@ -152,8 +152,8 @@ const PROCESSORS: Processor[] = [
       en: "UX analytics (heatmaps, session replay, dead clicks); active by default during beta, opt out anytime via the cookie banner (Decline). Passwords and payment inputs are masked.",
     },
     jurisdiction: {
-      de: "Microsoft Corporation, USA. SCCs in Kraft.",
-      en: "Microsoft Corporation, USA. SCCs in place.",
+      de: "Microsoft Corporation, USA. Übermittlungsgrundlage wird derzeit geprüft.",
+      en: "Microsoft Corporation, USA. Transfer basis under review.",
     },
     policyUrl: "https://privacy.microsoft.com/privacystatement",
     policyLabel: "privacy.microsoft.com/privacystatement",
@@ -198,18 +198,12 @@ export default function PrivacyPage() {
             : "The controller within the meaning of Art. 4(7) GDPR is:"}
         </p>
         <p>
-          <strong>
-            [
-            {t
-              ? "Vorläufig: MedPrüf / [name], Rechtsform wird bei Registrierung der österreichischen Niederlassung finalisiert"
-              : "Provisional: MedPrüf / [name]; legal entity will be finalized upon registration of the Austrian branch"}
-            ]
-          </strong>
+          <strong>MedPrüf</strong>
           <br />
           {t ? "Inhaber" : "Operator"}: [name]
           <br />
           {t ? "Anschrift" : "Address"}:{" "}
-          {t ? "wird bei Launch finalisiert" : "to be finalized at launch"} (
+          {t ? "Kairo, Ägypten" : "Cairo, Egypt"} (
           {t ? "siehe" : "see"} /impressum)
           <br />
           E-Mail:{" "}

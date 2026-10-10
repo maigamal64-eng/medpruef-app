@@ -414,8 +414,8 @@ const COPY = {
     button: { de: "Gratis-Woche starten", en: "Start free week" },
     button_free: { de: "Kostenlos starten · keine Karte", en: "Start free · no card" },
     trust: {
-      de: "DSGVO-konform · Gehostet in der EU · Jederzeit kündbar",
-      en: "GDPR compliant · Hosted in the EU · Cancel anytime",
+      de: "Konto- und Lerndaten in Frankfurt (EU) gespeichert · Jederzeit kündbar",
+      en: "Account and study data stored in Frankfurt (EU) · Cancel anytime",
     },
   },
   footer: {

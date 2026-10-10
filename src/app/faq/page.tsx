@@ -59,8 +59,8 @@ const SECTIONS: SectionDef[] = [
     id: "referrals",
     icon: Gift,
     title: {
-      de: "Wie laufen Empfehlungszahlungen?",
-      en: "How do referral payouts work?",
+      de: "Wie funktioniert das Empfehlungsprogramm?",
+      en: "How does the referral program work?",
     },
   },
   {
@@ -282,8 +282,8 @@ export default function FaqPage() {
                   style={{ userSelect: "none" }}
                 >
                   {lang === "de"
-                    ? "Warum keine Geld-zurück-Garantie?"
-                    : "Why no cash refund?"}
+                    ? "Warum verlängert ihr den Zugang, statt nach einem Nichtbestehen Geld zurückzuzahlen?"
+                    : "Why extend access instead of refunding money after a failed exam?"}
                   <ChevronDown
                     className="w-4 h-4 text-[var(--mp-viridian)] transition-transform group-open:rotate-180"
                     aria-hidden
@@ -576,8 +576,8 @@ const copy = {
       en: "PUYP applies to the Exam Cohort (129 €). The 3-month starter (49 €) and the single-month tier (19 €) don't include the guarantee.",
     },
     noRefund: {
-      de: "Geld-zurück-Garantien laden zu Missbrauch ein und führen häufig dazu, dass Studierende aufgeben, sobald es hart wird. Pass-Until-You-Pass hält dich stattdessen im Spiel: wir investieren in dein Bestehen, nicht in eine Ausstiegsklausel. Wenn du ein sehr persönliches Problem hast (Krankheit, Trauerfall), schreib uns an user-b7e46e80@example.com, wir finden im Einzelfall eine faire Lösung.",
-      en: "Money-back guarantees invite abuse and often push students to quit when the work gets hard. Pass-Until-You-Pass keeps you in the game instead: we invest in your pass, not in an exit clause. If you have a genuine personal situation (illness, bereavement), email user-b7e46e80@example.com and we find a fair solution case by case.",
+      de: "Wenn du die Prüfung nicht bestehst, zahlen wir kein Geld zurück, sondern verlängern deinen Zugang: Pass-Until-You-Pass hält dich im Spiel, wir investieren in dein Bestehen, nicht in eine Ausstiegsklausel. Unabhängig davon gilt die 7-Tage-Geld-zurück-Garantie: Innerhalb von 7 Tagen nach Kauf kannst du per E-Mail an user-b7e46e80@example.com eine vollständige Rückerstattung beantragen, ohne Begründung. Bei einem sehr persönlichen Problem (Krankheit, Trauerfall) schreib uns ebenfalls, wir finden im Einzelfall eine faire Lösung.",
+      en: "If you do not pass the exam, we do not refund money, we extend your access: Pass-Until-You-Pass keeps you in the game, we invest in your pass, not in an exit clause. Separately, the 7-day money-back guarantee applies: within 7 days of purchase you can request a full refund by emailing user-b7e46e80@example.com, no reason required. If you have a genuine personal situation (illness, bereavement), email us as well and we find a fair solution case by case.",
     },
   },
   crypto: {
@@ -608,8 +608,8 @@ const copy = {
       en: "How does the referral program work?",
     },
     intro: {
-      de: "Jede:r Nutzer:in bekommt einen persönlichen Empfehlungscode. Lad zwei Kolleginnen oder Kollegen ein, die wirklich mit dir für den Stichprobentest am 23. September in Graz lernen, und sobald beide qualifiziert sind, bekommst du MedPrüf Pro kostenlos durch das Prüfungsfenster. Für dich als Empfehlenden ist das komplett kostenlos:",
-      en: "Every user gets a personal referral code. Invite two colleagues who really start studying with you for the Stichprobentest on 23 September in Graz, and once both qualify you get MedPrüf Pro free through the exam window. Completely free for you as the referrer:",
+      de: "Jede:r Nutzer:in bekommt einen persönlichen Empfehlungscode. Lad zwei Kolleginnen oder Kollegen ein, die wirklich mit dir für deine Prüfung lernen, und sobald beide qualifiziert sind, bekommst du MedPrüf Pro kostenlos durch das Prüfungsfenster. Für dich als Empfehlenden ist das komplett kostenlos:",
+      en: "Every user gets a personal referral code. Invite two colleagues who really start studying with you for your exam, and once both qualify you get MedPrüf Pro free through the exam window. Completely free for you as the referrer:",
     },
     b1: {
       de: "Eine Empfehlung qualifiziert sich erst, wenn diese Person den kostenlosen Pro-Trial startet: Karte hinterlegt, 0 € heute, jederzeit in der Testwoche kündbar, danach 19 €/Monat.",
@@ -642,12 +642,12 @@ const copy = {
       en: "Clinical explanations where available. AI explanations for any question are reserved for the paid tiers.",
     },
     b2: {
-      de: "Nur Qbank-Modus: keine Spaced Repetition, keine Prüfungssimulation, keine Lesezeichen, keine Notizen.",
-      en: "Qbank-only: no spaced repetition, no mock exam, no bookmarks, no notes.",
+      de: "Qbank-Modus: keine Spaced Repetition, keine Prüfungssimulation, keine Lesezeichen. Du kannst bis zu 10 Flash-Notes kostenlos anlegen.",
+      en: "Qbank mode: no spaced repetition, no mock exam, no bookmarks. You can create up to 10 flash-notes for free.",
     },
     b3: {
-      de: "Keine geräteübergreifende Synchronisation über die aktuelle Sitzung hinaus.",
-      en: "No cross-device sync beyond your current session.",
+      de: "Deine Antworten werden auf deinen Geräten synchronisiert, wenn du angemeldet bist.",
+      en: "Your answers are synced across your devices when you are signed in.",
     },
     b4: {
       de: "Keine KI-Chat-Folgefragen (cached AI-Erklärungen sind trotzdem lesbar).",
@@ -678,8 +678,8 @@ const copy = {
       en: "Who builds MedPrüf?",
     },
     p1: {
-      de: "MedPrüf wird von [name] ([name], Österreich) entwickelt, einem Solo-Engineer, der seinen Cousin durch die österreichische Nostrifikation begleitet und dabei gesehen hat, wo öffentlich verfügbare Ressourcen versagen: verstreute Karteikarten, veraltete PDFs, keine österreichspezifische Abdeckung, keine Spaced Repetition. Jede Frage in MedPrüf stammt aus einer dokumentierten offiziellen Prüfung (7.566 aus Wien seit 2016, 2.742 aus Innsbruck, 335 aus Pharmakologie), nichts erfunden, nichts geraten. Die Daten sind die Glaubwürdigkeit.",
-      en: "MedPrüf is built by [name] ([name], Austria), a solo engineer who walked his cousin through Austrian nostrification and saw where the publicly available resources fall short: scattered flashcards, outdated PDFs, no Austria-specific coverage, no spaced repetition. Every question in MedPrüf comes from a documented official exam (7,566 from Vienna since 2016, 2,742 from Innsbruck, 335 from Pharmakologie), nothing invented, nothing guessed. The data is the credential.",
+      de: "MedPrüf wird von [name] ([name], Österreich) entwickelt, einem Solo-Engineer, der seinen Cousin durch die österreichische Nostrifikation begleitet und dabei gesehen hat, wo öffentlich verfügbare Ressourcen versagen: verstreute Karteikarten, veraltete PDFs, keine österreichspezifische Abdeckung, keine Spaced Repetition. Die Fragenbank ist nach Prüfungstyp geordnet, und Fehler kannst du direkt in der App melden.",
+      en: "MedPrüf is built by [name] ([name], Austria), a solo engineer who walked his cousin through Austrian nostrification and saw where the publicly available resources fall short: scattered flashcards, outdated PDFs, no Austria-specific coverage, no spaced repetition. The question bank is organized by exam type, and you can report errors directly in the app.",
     },
   },
 };

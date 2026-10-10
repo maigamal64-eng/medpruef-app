@@ -30,7 +30,7 @@ export default function ImpressumPage() {
           ? "Angaben gemäß § 5 E-Commerce-Gesetz (ECG) und Mediengesetz."
           : "Legal disclosure pursuant to § 5 Austrian E-Commerce Act (ECG) and Media Act."
       }
-      lastUpdated={lang === "de" ? "April 2026" : "April 2026"}
+      lastUpdated={lang === "de" ? "Oktober 2026" : "October 2026"}
       backHref="/"
     >
       <section>
@@ -48,12 +48,8 @@ export default function ImpressumPage() {
           E-Mail: <a href="mailto:user-0a1d478f@example.com">user-0a1d478f@example.com</a>
           <br />
           {lang === "de"
-            ? "Adresse auf Anfrage"
-            : "Address available on request"}
-          <br />
-          {lang === "de"
-            ? "Ägypten (Betrieb für Nutzer in Österreich)"
-            : "Egypt (operated for users in Austria)"}
+            ? "Kairo, Ägypten (Betrieb für Nutzer in Österreich)"
+            : "Cairo, Egypt (operated for users in Austria)"}
         </p>
       </section>
 
@@ -68,8 +64,8 @@ export default function ImpressumPage() {
         <h2>{lang === "de" ? "Unternehmensform" : "Business type"}</h2>
         <p>
           {lang === "de"
-            ? "Persönliches Projekt, kein eingetragenes Unternehmen. Keine UID-Nummer, keine Gewerbeberechtigung erforderlich (nicht-gewerbliche Bildungsplattform)."
-            : "Personal project, not a registered company. No VAT ID, no trade license required (non-commercial educational platform)."}
+            ? "Betrieben von einer Einzelperson, derzeit kein eingetragenes Unternehmen und keine UID-Nummer."
+            : "Operated by an individual, currently not a registered company and without a VAT ID."}
         </p>
       </section>
 

@@ -504,8 +504,8 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "Transparency: analytics during beta",
     },
     description: {
-      de: "Während der Beta ist die anonyme Nutzungsanalyse standardmäßig aktiv, damit wir Probleme schneller finden und beheben. Du kannst jederzeit im Cookie-Banner ablehnen; deine Wahl wird dauerhaft gespeichert. Details in der Datenschutzerklärung (Abschnitt 2.5).",
-      en: "During beta, anonymous usage analytics are on by default so we can find and fix problems faster. You can decline anytime in the cookie banner; your choice is stored persistently. Details in the privacy policy (section 2.5).",
+      de: "Während der Beta ist die Nutzungsanalyse standardmäßig aktiv, damit wir Probleme schneller finden und beheben. Du kannst jederzeit im Cookie-Banner ablehnen; deine Wahl wird dauerhaft gespeichert. Details in der Datenschutzerklärung (Abschnitt 2.5).",
+      en: "During beta, usage analytics are on by default so we can find and fix problems faster. You can decline anytime in the cookie banner; your choice is stored persistently. Details in the privacy policy (section 2.5).",
     },
   },
   {
@@ -686,18 +686,6 @@ export const CHANGELOG: ChangelogEntry[] = [
     description: {
       de: "Auf der Fortschritts-Seite siehst du jetzt, wie bereit deine Übung aussieht: Abdeckung, Genauigkeit, Beständigkeit und Tempo, plus einen Trend und einen konkreten Tipp, was als Nächstes am meisten hilft. Es ist bewusst keine Vorhersage deines Prüfungsergebnisses, sondern ein ehrlicher Blick auf deinen Übungsstand.",
       en: "On the Progress page you now see how ready your practice looks: coverage, accuracy, consistency, and pace, plus a trend and one concrete tip on what helps most next. It is deliberately not a prediction of your exam result, just an honest read on where your practice stands.",
-    },
-  },
-  {
-    date: "2026-06-25",
-    tag: "feature",
-    title: {
-      de: "Direkter Support-Chat ist da",
-      en: "Live support chat is here",
-    },
-    description: {
-      de: "Unten rechts findest du jetzt einen Chat. Stell uns deine Fragen zur Prüfung, zu deinem Konto oder zur Plattform direkt im Fenster. Bei eingeloggten Konten sehen wir deinen Verlauf geräteübergreifend, sodass du nicht alles neu erklären musst.",
-      en: "You will now find a chat at the bottom right. Ask us anything about the exam, your account, or the platform right in the window. For logged-in accounts we keep your conversation history across devices, so you never have to repeat yourself.",
     },
   },
   {
@@ -1008,8 +996,8 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "Pass-Until-You-Pass guarantee: proof upload + extension flow",
     },
     description: {
-      de: "Wer in der Juni-26-Kohorte oder im Jahresabo den ersten echten Prüfungsversuch nicht besteht und ≥70 % des Fragenkatalogs bearbeitet hat, bekommt den Zugang kostenlos bis zum nächsten Prüfungszyklus verlängert (maximal 2 zusätzliche Zyklen pro Abonnement, kein Bargeld-Rückerstattungs-Weg). Neue Seite `/dashboard/exam-result` zeigt nach dem konfigurierten Prüfungsdatum zwei Buttons: „Bestanden\" (wird sofort gespeichert) oder „Nicht bestanden\" (Datum + Prüfungstyp + Nachweis-Upload, PDF oder Bild, max. 10 MB). Admin-Queue unter `/admin/puyp` mit Signed-URL-Preview, Genehmigen/Ablehnen, Vorschlag für neues Ablaufdatum aus `lib/exam-dates.ts`. Audit-Tabelle `subscription_extensions` protokolliert jede Verlängerung. Eligibilität fällt zurück auf `isPuypEligibleTier` aus `src/lib/nowpayments.ts`.",
-      en: "June 26 Cohort and 12-month subscribers who fail their first real attempt and have ≥70% Qbank completion get their access extended free through the next exam cycle (max 2 extra cycles per subscription, no cash-refund surface). New `/dashboard/exam-result` page surfaces two buttons after the configured exam date: \"I passed\" (self-recorded) or \"I failed\" (date + exam type + proof upload, PDF or image, max 10MB). Admin queue at `/admin/puyp` with signed-URL proof preview, approve/reject actions, and a next-exam-date suggestion from `lib/exam-dates.ts`. Audit table `subscription_extensions` logs every grant. Eligibility defers to `isPuypEligibleTier` from `src/lib/nowpayments.ts`.",
+      de: "Wer in der Juni-26-Kohorte oder im Jahresabo den ersten echten Prüfungsversuch nicht besteht und ≥70 % des Fragenkatalogs bearbeitet hat, bekommt den Zugang kostenlos bis zum nächsten Prüfungszyklus verlängert (maximal 2 zusätzliche Zyklen pro Abonnement, kein Bargeld-Rückerstattungs-Weg). Nach dem konfigurierten Prüfungsdatum erscheinen im Dashboard zwei Buttons: „Bestanden\" (wird sofort gespeichert) oder „Nicht bestanden\" (Datum + Prüfungstyp + Nachweis-Upload, PDF oder Bild, max. 10 MB). Ein Admin prüft den Nachweis und genehmigt oder lehnt ab; jede Verlängerung wird protokolliert.",
+      en: "June 26 Cohort and 12-month subscribers who fail their first real attempt and have ≥70% Qbank completion get their access extended free through the next exam cycle (max 2 extra cycles per subscription, no cash-refund surface). After the configured exam date the dashboard shows two buttons: \"I passed\" (self-recorded) or \"I failed\" (date + exam type + proof upload, PDF or image, max 10MB). An admin reviews the proof and approves or rejects; every extension is logged.",
     },
   },
   {
@@ -1369,8 +1357,8 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "Cookie banner active: GA4 and Clarity only after consent",
     },
     description: {
-      de: "Bisher wurden Google Analytics und Microsoft Clarity bei jedem Seitenaufruf sofort geladen, unabhängig von der Cookie-Entscheidung. Ein Cookie-Banner war im Code vorhanden, aber nicht aktiviert. Das haben wir jetzt korrekt zusammengeführt: beim ersten Besuch erscheint der Banner, und die Analyse-Tools werden erst nach dem Klick auf „Akzeptieren\" geladen. Dies entspricht der ePrivacy-Richtlinie und dem österreichischen TTDSG.",
-      en: "Until now, Google Analytics and Microsoft Clarity loaded on every page visit regardless of the cookie choice. A cookie banner existed in the code but was never mounted. Now wired up correctly: first visit shows the banner, and analytics tools only load after clicking \"Accept\". This complies with the ePrivacy Directive and Austrian TTDSG.",
+      de: "Bisher wurden Google Analytics und Microsoft Clarity bei jedem Seitenaufruf sofort geladen, unabhängig von der Cookie-Entscheidung. Ein Cookie-Banner war im Code vorhanden, aber nicht aktiviert. Das haben wir jetzt korrekt zusammengeführt: beim ersten Besuch erscheint der Banner, und die Analyse-Tools werden erst nach dem Klick auf „Akzeptieren\" geladen.",
+      en: "Until now, Google Analytics and Microsoft Clarity loaded on every page visit regardless of the cookie choice. A cookie banner existed in the code but was never mounted. Now wired up correctly: first visit shows the banner, and analytics tools only load after clicking \"Accept\".",
     },
   },
   {
@@ -1571,12 +1559,12 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-04-12",
     tag: "feature",
     title: {
-      de: "Neue Prüfung: KMP Innsbruck (3.091 Fragen)",
-      en: "New exam: KMP Innsbruck (3,091 questions)",
+      de: "Neue Prüfung: KMP Innsbruck",
+      en: "New exam: KMP Innsbruck",
     },
     description: {
-      de: "Die Kumulative Modulprüfung (KMP) der Medizinischen Universität Innsbruck ist jetzt verfügbar. 3.091 Fragen in 12 Fachgebieten. Wählen Sie im Prüfungs-Umschalter in der Seitenleiste zwischen Kenntnisprüfung Wien, KMP Innsbruck und Pharmakologie.",
-      en: "The Cumulative Module Exam (KMP) from the Medical University of Innsbruck is now available. 3,091 questions across 12 specialties. Use the exam switcher in the sidebar to choose between Vienna Kenntnisprüfung, KMP Innsbruck, and Pharmacology.",
+      de: "Die Vorbereitung für Innsbruck ist jetzt verfügbar. Wählen Sie im Prüfungs-Umschalter in der Seitenleiste zwischen Kenntnisprüfung Wien, KMP Innsbruck und Pharmakologie.",
+      en: "Preparation for Innsbruck is now available. Use the exam switcher in the sidebar to choose between Vienna Kenntnisprüfung, KMP Innsbruck, and Pharmacology.",
     },
   },
   {
@@ -1880,8 +1868,8 @@ export const CHANGELOG: ChangelogEntry[] = [
     tag: "feature",
     title: { de: "Rechtliche Seiten hinzugefügt", en: "Legal pages added" },
     description: {
-      de: "Datenschutz, Nutzungsbedingungen und Impressum sind jetzt verfügbar (gesetzlich erforderlich).",
-      en: "Privacy policy, terms of service, and legal notice are now available (legally required).",
+      de: "Datenschutz, Nutzungsbedingungen und Impressum sind jetzt verfügbar.",
+      en: "Privacy policy, terms of service, and legal notice are now available.",
     },
   },
   {
@@ -1889,8 +1877,8 @@ export const CHANGELOG: ChangelogEntry[] = [
     tag: "feature",
     title: { de: "Cookie-Banner", en: "Cookie banner" },
     description: {
-      de: "GDPR-konformer Cookie-Banner: akzeptiere oder lehne Analyse-Cookies ab.",
-      en: "GDPR-compliant cookie banner: accept or decline analytics cookies.",
+      de: "Cookie-Banner: akzeptiere oder lehne Analyse-Cookies ab.",
+      en: "Cookie banner: accept or decline analytics cookies.",
     },
   },
   {

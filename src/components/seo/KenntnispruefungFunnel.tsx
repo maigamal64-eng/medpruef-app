@@ -9,18 +9,18 @@ import { trackFunnelIntent } from "@/lib/conversion-events";
 import { trackFunnelEvent } from "@/lib/funnel-events";
 
 /**
- * /kenntnispruefung-wien — high-intent paid-acquisition magnet.
+ * /kenntnispruefung-wien: high-intent paid-acquisition magnet.
  *
  * Single goal: send every visitor to the free registration flow
  * (`/login?mode=register`). The "free trial" in this product is the
- * free tier — no card, no Whop checkout — so the CTA is pure
+ * free tier: no card, no Whop checkout: so the CTA is pure
  * registration, not a payment step.
  *
  * Bilingual DE/EN: every string has a DE + EN variant. The header
  * language toggle uses the same `setLang()` rail the rest of the app
  * uses and re-renders on the broadcast `medpruef-lang-change` event,
  * so the choice persists across navigation. The toggle NEVER
- * navigates — it stays on `/kenntnispruefung-wien` and only swaps the
+ * navigates, it stays on `/kenntnispruefung-wien` and only swaps the
  * visible strings.
  */
 
@@ -35,8 +35,8 @@ const COPY = {
     en: "Kenntnisprüfung Vienna: practise clinical knowledge.",
   },
   heroSub: {
-    de: "Trainiere klinisches Wissen, erkenne deine Lücken und lerne jeden Tag genau das, was dich der Prüfung näher bringt. Starte in unter 60 Sekunden — kostenlos und ohne Kreditkarte.",
-    en: "Train your clinical knowledge, spot your weak spots, and study exactly what moves you closer to the exam every day. Start in under 60 seconds — free, no credit card.",
+    de: "Trainiere klinisches Wissen, erkenne deine Lücken und lerne jeden Tag genau das, was dich der Prüfung näher bringt. Starte in unter 60 Sekunden: kostenlos und ohne Kreditkarte.",
+    en: "Train your clinical knowledge, spot your weak spots, and study exactly what moves you closer to the exam every day. Start in under 60 seconds: free, no credit card.",
   },
   heroCta: {
     de: "Kostenlos registrieren und starten",
@@ -63,8 +63,8 @@ const COPY = {
     en: "Three steps. No all-nighter cramming.",
   },
   howLead: {
-    de: "Wir wissen, wie groß der Berg wirkt. Deshalb führen wir dich vom ersten Login bis zum Prüfungstag — ohne Entscheidungsstress, ohne Marketing-Fallen.",
-    en: "We know how big the mountain looks. So we guide you from first login to exam day — no decision fatigue, no marketing traps.",
+    de: "Wir wissen, wie groß der Berg wirkt. Deshalb führen wir dich vom ersten Login bis zum Prüfungstag, ohne Entscheidungsstress, ohne Marketing-Fallen.",
+    en: "We know how big the mountain looks. So we guide you from first login to exam day, no decision fatigue, no marketing traps.",
   },
   steps: [
     {
@@ -129,8 +129,8 @@ const COPY = {
         en: "Spaced repetition + a personal study plan",
       },
       detail: {
-        de: "Du siehst täglich genau das, was du noch nicht sicher kannst — kein Stoff, den du schon beherrschst.",
-        en: "You see exactly what you're not sure about every day — no re-drilling material you already know.",
+        de: "Du siehst täglich genau das, was du noch nicht sicher kannst, kein Stoff, den du schon beherrschst.",
+        en: "You see exactly what you're not sure about every day, no re-drilling material you already know.",
       },
     },
   ],

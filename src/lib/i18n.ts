@@ -465,7 +465,7 @@ const translations = {
   'orient_title': { de: 'Willkommen bei MedPrüf', en: 'Welcome to MedPrüf' },
   'orient_subtitle': { de: 'Zwei Dinge, die du wissen solltest, bevor du loslegst.', en: 'Two things to know before you start.' },
   'orient_item1_title': { de: 'Bestehe beim ersten Versuch, oder lerne kostenlos weiter, bis du bestehst.', en: 'Pass on your first try, or keep learning free until you do.' },
-  'orient_item1_body': { de: 'Wenn du in der Prüfungs-Kohorte oder im Jahresabo nicht bestehst, verlängern wir deinen Zugang kostenlos bis zum nächsten Prüfungszyklus.', en: "If you're on the Exam Cohort or annual plan and don't pass, we extend your access free until the next exam cycle." },
+  'orient_item1_body': { de: 'Wenn du in der Prüfungs-Kohorte nicht bestehst, verlängern wir deinen Zugang kostenlos bis zum nächsten Prüfungszyklus.', en: "If you're on the Exam Cohort and don't pass, we extend your access free until the next exam cycle." },
   'orient_item1_link': { de: 'So funktioniert\'s', en: 'How it works' },
   'orient_item2_title': { de: '150 kostenlose Fragen pro Prüfungstyp.', en: '150 free questions per exam type.' },
   'orient_item2_body': { de: 'Keine Zahlungsmittel nötig. Voller Zugriff auf Erklärungen. Kein Zeitlimit: lerne in deinem Tempo.', en: 'No payment required. Full access to explanations. No time limit: learn at your own pace.' },

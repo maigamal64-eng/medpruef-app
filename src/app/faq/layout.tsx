@@ -50,12 +50,12 @@ function buildFaqSchema() {
       a: `Du zahlst sicher mit Karte (Visa, Mastercard, auch Apple Pay). Der Checkout läuft über Whop, unseren Zahlungsabwickler; der Vollzugang wird automatisch innerhalb von etwa einer Minute nach der Zahlung freigeschaltet. Verfügbar sind der Einzelmonat (19 € pro Monat), der 3-Monats-Tarif (49 € pro Quartal), die Prüfungs-Kohorte (129 € einmalig für 6 Monate) und der kostenlose Tarif. ${billingPlansSummary("de")} ${billingTrialSummary("de")} ${billingCancelSummary("de")}`,
     },
     {
-      q: "Wie laufen Empfehlungszahlungen?",
-      a: "Jede:r Nutzer:in bekommt einen persönlichen Empfehlungscode. Sobald deine Empfehlung ein Abo abschließt, gehört eine abgestufte Auszahlung dir. Es gilt eine 30-Tage-Sperrfrist ab Zahlungseingang, Auszahlung per USDT (TRC-20/ERC-20) oder über Wise, ein Jahresdeckel von 600 € pro Empfehlende:r, und nur die erste Zahlung deiner Empfehlung löst den Bonus aus. SEPA ist nicht Teil des Programms.",
+      q: "Wie funktioniert das Empfehlungsprogramm?",
+      a: "Jede:r Nutzer:in bekommt einen persönlichen Empfehlungscode. Lad zwei Kolleginnen oder Kollegen ein, die wirklich mit dir für deine Prüfung lernen, und sobald beide qualifiziert sind, bekommst du MedPrüf Pro kostenlos durch das Prüfungsfenster. Eine Empfehlung qualifiziert sich erst, wenn diese Person den kostenlosen Pro-Trial startet (Karte hinterlegt, 0 € heute, jederzeit in der Testwoche kündbar, danach 19 € pro Monat) und mindestens 20 verschiedene Fragen an mindestens 2 verschiedenen Tagen beantwortet. Die Belohnung ist Pro-Zugang, keine Geldzahlung.",
     },
     {
       q: "Was ist im kostenlosen Tarif enthalten?",
-      a: "Der kostenlose Tarif gibt dir 150 Fragen pro Prüfungstyp, 450 Fragen insgesamt über Kenntnisprüfung Wien, Stichprobentest (Innsbruck) und Pharmakologie, ohne Ablaufdatum. Klinische Erklärungen sind enthalten, wo sie vorhanden sind. Nicht enthalten: Spaced Repetition, Prüfungssimulation, Lesezeichen, Notizen, geräteübergreifende Synchronisation und KI-Chat-Folgefragen. Die KI-Erklärung zu jeder Frage ist den bezahlten Tarifen vorbehalten.",
+      a: "Der kostenlose Tarif gibt dir 150 Fragen pro Prüfungstyp, 450 Fragen insgesamt über Kenntnisprüfung Wien, Stichprobentest (Innsbruck) und Pharmakologie, ohne Ablaufdatum. Klinische Erklärungen sind enthalten, wo sie vorhanden sind. Nicht enthalten: Spaced Repetition, Prüfungssimulation, Lesezeichen und KI-Chat-Folgefragen. Deine Antworten werden geräteübergreifend synchronisiert, und du kannst bis zu 10 Flash-Notes kostenlos anlegen. Die KI-Erklärung zu jeder Frage ist den bezahlten Tarifen vorbehalten.",
     },
     {
       q: "Gibt es Tarife pro Prüfung?",
@@ -63,7 +63,7 @@ function buildFaqSchema() {
     },
     {
       q: "Wer baut MedPrüf?",
-      a: "MedPrüf wird von [name] ([name], Österreich) entwickelt, einem Solo-Engineer, der seinen Cousin durch die österreichische Nostrifikation begleitet hat. Jede Frage stammt aus einer dokumentierten offiziellen Prüfung (7.566 aus Wien seit 2016, 2.742 aus Innsbruck, 335 aus Pharmakologie), nichts erfunden, nichts geraten.",
+      a: "MedPrüf wird von [name] ([name], Österreich) entwickelt, einem Solo-Engineer, der seinen Cousin durch die österreichische Nostrifikation begleitet hat. Die Fragenbank ist nach Prüfungstyp geordnet, und Fehler kannst du direkt in der App melden.",
     },
   ];
 

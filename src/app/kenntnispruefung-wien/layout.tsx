@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 /**
- * /kenntnispruefung-wien — SEO landing page for the Vienna
+ * /kenntnispruefung-wien: SEO landing page for the Vienna
  * existing Kenntnisprüfung bank (SIP4a/SIP5a sources). Target primary query:
  *   "Kenntnisprüfung Wien"
  *   "Kenntnisprüfung Vorbereitung"
@@ -10,7 +10,7 @@ import type { Metadata } from "next";
  * The layout owns the static <title>, meta description, OpenGraph
  * (via opengraph-image.tsx sibling route), and the JSON-LD Course
  * schema. The actual page body is a Client Component for language
- * switching — so the important crawl content (H1, H2, FAQ text,
+ * switching: so the important crawl content (H1, H2, FAQ text,
  * breakdown, schema.org data) must be pre-rendered here or in the
  * server-rendered portion of page.tsx. We render the course-schema
  * script from the layout to guarantee it's in HEAD of every variant.
@@ -52,7 +52,7 @@ export const metadata: Metadata = {
 };
 
 /**
- * JSON-LD Course schema — per schema.org/Course. Emitted from the
+ * JSON-LD Course schema: per schema.org/Course. Emitted from the
  * layout so Search engines find it even if the Client Component body
  * is still hydrating.
  *

@@ -67,7 +67,7 @@ export default function UkrainischeAerzteOesterreichAnerkennungPost() {
                 Österreich hat den vorübergehenden Schutz für vertriebene ukrainische Staatsangehörige durch die Vertriebenen-Verordnung (BGBl. II Nr. 92/2022) aktiviert. Dieser Status gibt Ihnen ein legales Aufenthaltsrecht in Österreich, derzeit bis zum 4. März 2027 verlängert, sowie Zugang zum österreichischen Arbeitsmarkt. Sie können angestellt werden. Sie können Einkommen erzielen. Was der vorübergehende Schutz nicht kann: Österreichs berufsrechtlichen Rahmen für die Medizin außer Kraft setzen.
               </p>
               <p className="mp-body text-[var(--mp-fg)] leading-relaxed mt-3">
-                Medizin ist ein reglementierter Beruf nach dem Ärztegesetz 1998 (ÄrzteG). Arbeitsmarktzugang und ärztliche Approbation sind zwei völlig verschiedene rechtliche Kategorien, und das Vorliegen des einen begründet das andere nicht. Eine ukrainische Ärztin mit vorübergehendem Schutz, aber ohne österreichische ärztliche Eintragung, ist gesetzlich untersagt, Patient:innen zu behandeln, Medikamente zu verschreiben oder klinische Eingriffe vorzunehmen — unabhängig davon, wie viele Jahre sie in Kiew oder Charkiw praktiziert hat.
+                Medizin ist ein reglementierter Beruf nach dem Ärztegesetz 1998 (ÄrzteG). Arbeitsmarktzugang und ärztliche Approbation sind zwei völlig verschiedene rechtliche Kategorien, und das Vorliegen des einen begründet das andere nicht. Eine ukrainische Ärztin mit vorübergehendem Schutz, aber ohne österreichische ärztliche Eintragung, ist gesetzlich untersagt, Patient:innen zu behandeln, Medikamente zu verschreiben oder klinische Eingriffe vorzunehmen, unabhängig davon, wie viele Jahre sie in Kiew oder Charkiw praktiziert hat.
               </p>
               <div className="rounded-[var(--mp-r-card)] p-4 mt-4 border border-[var(--mp-viridian)]/30 bg-[var(--mp-viridian)]/5">
                 <p className="mp-body text-[var(--mp-fg)] leading-relaxed">
@@ -472,49 +472,49 @@ Die Wiener Bank enthält SIP4a/SIP5a-basierte MCQ-Übungen. Diese universitären
               <ul className="list-disc pl-6 space-y-2 mp-body text-[var(--mp-fg)] leading-relaxed mt-3">
                 <li>
                   <a href="https://www.aerztekammer.at/berufsausuebung/approbation-anerkennung/auslaendische-approbation/" target="_blank" rel="noopener noreferrer" className="text-[var(--mp-viridian)] hover:underline inline-flex items-center gap-1">
-                    Österreichische Ärztekammer — Anerkennung ausländischer Approbationen
+                    Österreichische Ärztekammer: Anerkennung ausländischer Approbationen
                     <ExternalLink className="w-3 h-3" aria-hidden />
                   </a>
                 </li>
                 <li>
                   <a href="https://www.meduniwien.ac.at/web/en/international-affairs/information-for-students-with-ukrainian-refugee-status/" target="_blank" rel="noopener noreferrer" className="text-[var(--mp-viridian)] hover:underline inline-flex items-center gap-1">
-                    MedUni Wien — Information für Studierende mit ukrainischem Flüchtlingsstatus
+                    MedUni Wien: Information für Studierende mit ukrainischem Flüchtlingsstatus
                     <ExternalLink className="w-3 h-3" aria-hidden />
                   </a>
                 </li>
                 <li>
                   <a href="https://www.medunigraz.at/studium/studienrichtungen/humanmedizin/nostrifizierung/" target="_blank" rel="noopener noreferrer" className="text-[var(--mp-viridian)] hover:underline inline-flex items-center gap-1">
-                    MedUni Graz — Nostrifizierung Humanmedizin
+                    MedUni Graz: Nostrifizierung Humanmedizin
                     <ExternalLink className="w-3 h-3" aria-hidden />
                   </a>
                 </li>
                 <li>
                   <a href="https://i-med.ac.at/studium/studienrichtungen/humanmedizin/nostrifizierung/" target="_blank" rel="noopener noreferrer" className="text-[var(--mp-viridian)] hover:underline inline-flex items-center gap-1">
-                    MedUni Innsbruck — Nostrifizierung Humanmedizin
+                    MedUni Innsbruck: Nostrifizierung Humanmedizin
                     <ExternalLink className="w-3 h-3" aria-hidden />
                   </a>
                 </li>
                 <li>
                   <a href="https://www.jku.at/en/medicine/study/nostrification/" target="_blank" rel="noopener noreferrer" className="text-[var(--mp-viridian)] hover:underline inline-flex items-center gap-1">
-                    JKU Linz — Medizinische Nostrifizierung
+                    JKU Linz: Medizinische Nostrifizierung
                     <ExternalLink className="w-3 h-3" aria-hidden />
                   </a>
                 </li>
                 <li>
                   <a href="https://www.sozialministerium.gv.at/Themen/Gesundheit/Medizin-und-Gesundheitsberufe/Anerkennung-(Berufe).html" target="_blank" rel="noopener noreferrer" className="text-[var(--mp-viridian)] hover:underline inline-flex items-center gap-1">
-                    Bundesministerium für Soziales — Berufsanerkennung
+                    Bundesministerium für Soziales: Berufsanerkennung
                     <ExternalLink className="w-3 h-3" aria-hidden />
                   </a>
                 </li>
                 <li>
                   <a href="https://www.arztakademie.at/allgemeinmedizin" target="_blank" rel="noopener noreferrer" className="text-[var(--mp-viridian)] hover:underline inline-flex items-center gap-1">
-                    Österreichische Akademie der Ärzte — Kenntnisprüfung Allgemeinmedizin
+                    Österreichische Akademie der Ärzte: Kenntnisprüfung Allgemeinmedizin
                     <ExternalLink className="w-3 h-3" aria-hidden />
                   </a>
                 </li>
                 <li>
                   <a href="https://www.integrationsfonds.at/en/services/integration-measures/finding-a-job/professional-recognition/" target="_blank" rel="noopener noreferrer" className="text-[var(--mp-viridian)] hover:underline inline-flex items-center gap-1">
-                    ÖIF — Anerkennungsförderung für Vertriebene
+                    ÖIF: Anerkennungsförderung für Vertriebene
                     <ExternalLink className="w-3 h-3" aria-hidden />
                   </a>
                 </li>
