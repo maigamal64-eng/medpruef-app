@@ -160,6 +160,8 @@ export interface OfficialSittingView {
   filing_university?: FilingUniversity;
   source_url: string;
   read_on: string;
+  /** true: the sitting date is confirmed, the registration window is not (review M2). */
+  window_unconfirmed?: boolean;
 }
 
 /**

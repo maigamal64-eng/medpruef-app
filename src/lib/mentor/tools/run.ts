@@ -12,9 +12,10 @@
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { daysUntilViennaDate } from "@/lib/exam-dates";
+import { daysUntilViennaDate, hasOfficialWindowStarted, isOfficialWindowOpen, viennaToday, type OfficialSitting } from "@/lib/exam-dates";
 import { canFreeUserReadQuestion } from "@/lib/free-access";
 import {
+  DERIVED_ID_PREFIXES,
   FACT_EXAM_KEYS,
   FACT_TOPICS,
   FILING_UNIVERSITIES,
@@ -92,6 +93,54 @@ function internalFact(id: string, text: string, now: Date): MentorFact {
 
 // ─── get_dates ──────────────────────────────────────────────────────────
 
+export type RegistrationStatus = "not_yet_open" | "open" | "closed" | "not_published" | "not_confirmed";
+
+/**
+ * Computed in code, never left to the model (review M1): whether a window is
+ * open, not yet open or closed in Vienna time, honouring closes_at_time, and
+ * how many whole Vienna days remain until it closes (0 = closes today).
+ * Rows with an unconfirmed window (M2) or no published close get no days.
+ */
+export function registrationStatus(s: OfficialSitting, now: Date): { status: RegistrationStatus; daysUntilClose: number | null } {
+  if (s.window_unconfirmed) return { status: "not_confirmed", daysUntilClose: null };
+  if (!s.registration_closes) return { status: "not_published", daysUntilClose: null };
+  if (!isOfficialWindowOpen(s, now)) return { status: "closed", daysUntilClose: null };
+  const days = Math.max(0, daysUntilViennaDate(s.registration_closes, now));
+  return { status: hasOfficialWindowStarted(s, now) ? "open" : "not_yet_open", daysUntilClose: days };
+}
+
+/** German and English sentence for one row's status; this is the text the validator checks numbers against. */
+function statusLines(s: OfficialSitting, st: ReturnType<typeof registrationStatus>): { de: string; en: string } {
+  const isFiling = s.deadline_type === "filing_cutoff";
+  const wDe = isFiling ? "Einreichfrist" : "Anmeldung";
+  const winDe = isFiling ? "Einreichfenster" : "Anmeldefenster";
+  const closeDe = isFiling ? "Einreichfrist" : "Anmeldeschluss";
+  const wEn = isFiling ? "filing window" : "registration";
+  const head = `${s.learner_label.de}, ${s.publisher}, Termin ${s.date}`;
+  const headEn = `${s.learner_label.en}, ${s.publisher}, sitting ${s.date}`;
+  const time = s.closes_at_time ? ` ${s.closes_at_time}` : "";
+  const days = (n: number) => (n === 1 ? "1 Tag" : `${n} Tage`);
+  const daysEn = (n: number) => (n === 1 ? "1 day" : `${n} days`);
+  switch (st.status) {
+    case "closed":
+      return { de: `${head}: ${wDe} geschlossen (war bis ${s.registration_closes}${time}).`, en: `${headEn}: ${wEn} closed (was until ${s.registration_closes}${time}).` };
+    case "open":
+      return {
+        de: `${head}: ${wDe} offen, noch ${days(st.daysUntilClose ?? 0)} bis ${s.registration_closes}${time}.`,
+        en: `${headEn}: ${wEn} open, ${daysEn(st.daysUntilClose ?? 0)} left until ${s.registration_closes}${time}.`,
+      };
+    case "not_yet_open":
+      return {
+        de: `${head}: ${wDe} noch nicht offen, ab ${s.registration_opens}, bis ${s.registration_closes}${time}.`,
+        en: `${headEn}: ${wEn} not open yet, from ${s.registration_opens}, until ${s.registration_closes}${time}.`,
+      };
+    case "not_confirmed":
+      return { de: `${head}: ${winDe} nicht offiziell bestätigt.`, en: `${headEn}: ${wEn} window not officially confirmed.` };
+    default:
+      return { de: `${head}: ${closeDe} nicht veröffentlicht.`, en: `${headEn}: ${wEn} close not published.` };
+  }
+}
+
 function getDates(input: unknown, ctx: TurnContext, env: ToolEnv): ToolResult {
   const o = asObject(input);
   if (!o) return err("invalid input");
@@ -122,7 +171,10 @@ function getDates(input: unknown, ctx: TurnContext, env: ToolEnv): ToolResult {
   const facts: Array<Record<string, unknown>> = [];
   const factIds: string[] = [];
   let bytes = 0;
+  const statusDe: string[] = [];
+  const statusEn: string[] = [];
   for (const s of r.sittingRows) {
+    const st = registrationStatus(s, ctx.now);
     const item: Record<string, unknown> = {
       fact_id: sittingFactId(s),
       exam_key: s.exam_key,
@@ -130,9 +182,13 @@ function getDates(input: unknown, ctx: TurnContext, env: ToolEnv): ToolResult {
       label_en: s.learner_label.en,
       date: s.date,
       ...(s.date_end ? { date_end: s.date_end } : {}),
-      registration_opens: s.registration_opens,
-      registration_closes: s.registration_closes,
-      ...(s.closes_at_time ? { closes_at_time: s.closes_at_time } : {}),
+      // M2: an unconfirmed window is withheld; the sitting date stays.
+      registration_opens: s.window_unconfirmed ? null : s.registration_opens,
+      registration_closes: s.window_unconfirmed ? null : s.registration_closes,
+      ...(s.closes_at_time && !s.window_unconfirmed ? { closes_at_time: s.closes_at_time } : {}),
+      registration_status: st.status,
+      ...(st.daysUntilClose !== null ? { days_until_close: st.daysUntilClose } : {}),
+      ...(s.window_unconfirmed ? { window_note: "The registration window for this sitting is not officially confirmed. Say so and send the learner to the official page." } : {}),
       deadline_type: s.deadline_type,
       publisher: s.publisher,
       filing_university: s.filing_university ?? "all",
@@ -143,6 +199,9 @@ function getDates(input: unknown, ctx: TurnContext, env: ToolEnv): ToolResult {
     bytes += b;
     sittings.push(item);
     factIds.push(item.fact_id as string);
+    const lines = statusLines(s, st);
+    statusDe.push(lines.de);
+    statusEn.push(lines.en);
   }
   for (const f of r.facts) {
     const item = { fact_id: f.id, text_de: f.text_de, text_en: f.text_en, source_label: f.source_label, read_on: f.read_on };
@@ -164,7 +223,36 @@ function getDates(input: unknown, ctx: TurnContext, env: ToolEnv): ToolResult {
       []
     );
   }
-  return ok({ exam_key: examKey, filing_university: fu, sittings, facts }, factIds);
+  // Register the computed status as an internal fact for THIS call, so the
+  // numbers in it (days left, today) validate like any other value. One id per
+  // exam and university: two get_dates calls in a turn do not overwrite each other.
+  let statusFactId: string | undefined;
+  if (statusDe.length > 0) {
+    statusFactId = `${DERIVED_ID_PREFIXES.status}${ctx.requestId}.${examKey}.${fu}`.toLowerCase();
+    const today = viennaToday(ctx.now);
+    const fact = internalFact(statusFactId, "", ctx.now);
+    fact.text_de = `Heute (Wien): ${today}. ${statusDe.join(" ")}`;
+    fact.text_en = `Today (Vienna): ${today}. ${statusEn.join(" ")}`;
+    env.remember(fact);
+    factIds.push(statusFactId);
+  }
+  return ok(
+    {
+      exam_key: examKey,
+      filing_university: fu,
+      today_vienna: viennaToday(ctx.now),
+      ...(statusFactId
+        ? {
+            status_fact_id: statusFactId,
+            status_instruction:
+              "registration_status is computed in code. State that a window is open, not yet open or closed ONLY from registration_status, and cite status_fact_id with that statement. Never work it out from today's date yourself. A closed window is closed: say so and point to a later sitting or the official page.",
+          }
+        : {}),
+      sittings,
+      facts,
+    },
+    factIds
+  );
 }
 
 // ─── search_facts ───────────────────────────────────────────────────────

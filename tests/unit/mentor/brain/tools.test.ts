@@ -34,7 +34,7 @@ describe("get_dates", () => {
     const r = await brain.runTool("get_dates", { exam_key: "stichprobentest", filing_university: "innsbruck" }, ctx());
     const body = parse(r.content) as { sittings: Array<{ registration_closes: string; fact_id: string }> };
     expect(body.sittings.map((s) => s.registration_closes)).toEqual(["2099-03-25"]);
-    expect(r.factIds).toEqual([sittingFactId(SITTINGS[2])]);
+    expect(r.factIds).toEqual([sittingFactId(SITTINGS[2]), expect.stringMatching(/^status\./)]);
     const v = brain.validate(`@@LANG de\n@@BLOCK facts=${r.factIds[0]}\nAnmeldung bis 25. März 2099.`, []);
     expect(v.replaced).toBe(false);
     expect(v.citations[0].source_label).toBe("Fixture Uni Innsbruck");

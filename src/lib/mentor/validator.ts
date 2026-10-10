@@ -444,7 +444,7 @@ export function replaceSentences(text: string, bad: ExtractedValue[], fallback: 
 // ─── Validation ─────────────────────────────────────────────────────────
 
 /** Ids derived by the brain for validation only; never shown as citations. */
-const INTERNAL_PREFIXES = ["question.", "progress.", "app."];
+const INTERNAL_PREFIXES = ["question.", "progress.", "app.", "status."];
 export function isInternalFactId(id: string): boolean {
   return INTERNAL_PREFIXES.some((p) => id.startsWith(p));
 }

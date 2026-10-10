@@ -392,6 +392,13 @@ export interface OfficialSitting {
   source_url: string;
   /** ISO date the official source was read. */
   read_on: string;
+  /**
+   * true = the sitting date is confirmed but the registration window is NOT
+   * (the official page prints a typo in it). The mentor keeps the sitting date
+   * and withholds the window (review M2); the site UI is unchanged. Remove the
+   * flag once the page is re-read and the window is confirmed.
+   */
+  window_unconfirmed?: boolean;
 }
 
 // Official source documents (all read 2026-10-10 by the archive sweep; see
@@ -537,9 +544,10 @@ export const OFFICIAL_SITTINGS: readonly OfficialSitting[] = [
   sip("sip5a", "2027-02-15", "2027-01-04", "2027-01-18"), // date-ok: official SIP registration close (SIP calendar), not the OeAEK sitting
   sip("sip4a", "2027-02-19", "2027-01-04", "2027-01-18"), // date-ok: official SIP registration close (SIP calendar), not the OeAEK sitting
   // The official page prints a typo year in one cell of this window;
-  // 25 Jan to 8 Feb 2027 per the research. Re-read on deploy day.
-  sip("sip4a", "2027-03-10", "2027-01-25", "2027-02-08"),
-  sip("sip5a", "2027-03-10", "2027-01-25", "2027-02-08"),
+  // 25 Jan to 8 Feb 2027 per the research. Re-read on deploy day. Until then
+  // the mentor withholds this window (window_unconfirmed, review M2).
+  { ...sip("sip4a", "2027-03-10", "2027-01-25", "2027-02-08"), window_unconfirmed: true },
+  { ...sip("sip5a", "2027-03-10", "2027-01-25", "2027-02-08"), window_unconfirmed: true },
   sip("sip4a", "2027-04-27", "2027-03-15", "2027-03-29"),
   sip("sip5a", "2027-04-28", "2027-03-15", "2027-03-29"),
   ...stp("Wien", "2027-05-04", "2027-03-17", "2027-03-17"),

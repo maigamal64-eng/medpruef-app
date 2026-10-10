@@ -100,6 +100,8 @@ export const DERIVED_ID_PREFIXES = Object.freeze({
   app: "app.",
   question: "question.",
   progress: "progress.",
+  /** Registration status of the rows one get_dates call returned (review M1). */
+  status: "status.",
 });
 
 /** Retrieval budget per tool result, in UTF-8 bytes (bytes >= tokens, so this is conservative). */
@@ -176,10 +178,36 @@ export function validateFactRecord(raw: unknown): FactCheck {
   return { ok: true, fact };
 }
 
-/** C6 assertability rule, Europe/Vienna day. */
+/** ISO date n days after an ISO date (UTC arithmetic on dates, no clock involved). */
+function addDays(iso: string, n: number): string {
+  return new Date(Date.parse(`${iso}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
+}
+
+/** Last Vienna day a fact may be asserted before it needs a re-read: read_on + review_every_days. */
+export function factReviewDue(fact: Pick<MentorFact, "read_on" | "review_every_days">): string {
+  return addDays(fact.read_on, fact.review_every_days);
+}
+
+/**
+ * Facts owned by app code (billing-copy.ts) are versioned and deployed with the
+ * app; their read_on is bookkeeping, not an official-source read, so they do
+ * not go stale by date.
+ */
+function isOwnerBuilt(fact: MentorFact): boolean {
+  return fact.id.startsWith(DERIVED_ID_PREFIXES.app);
+}
+
+/**
+ * C6 assertability rule, Europe/Vienna day, plus review staleness (review
+ * M6): a fact whose read_on + review_every_days has passed is no longer
+ * asserted as confirmed. It comes back as an "unconfirmed" pointer with its
+ * source link until someone re-reads the source and bumps read_on.
+ */
 export function isAssertable(fact: MentorFact, now: Date): boolean {
   if (fact.verdict !== "confirmed" || fact.status !== "live") return false;
-  if (fact.valid_until && fact.valid_until < viennaToday(now)) return false;
+  const today = viennaToday(now);
+  if (fact.valid_until && fact.valid_until < today) return false;
+  if (!isOwnerBuilt(fact) && factReviewDue(fact) < today) return false;
   return true;
 }
 
@@ -237,6 +265,15 @@ function sittingTexts(s: OfficialSitting): { de: string; en: string } {
   const rangeEn = (a: string, b?: string) => (b ? `${a} to ${b}` : a);
   const time = s.closes_at_time ? ` ${s.closes_at_time}` : "";
   const isFiling = s.deadline_type === "filing_cutoff";
+  if (s.window_unconfirmed) {
+    // M2: the sitting date is confirmed, the window is not. No window date reaches the model.
+    const uniU = sittingUniversity(s);
+    const whoU = uniU === "all" ? "" : ` (${uniU})`;
+    return {
+      de: `${s.learner_label.de}: Termin ${range(s.date, s.date_end)}. ${isFiling ? "Einreichfrist" : "Anmeldefenster"} nicht offiziell bestätigt, bitte auf der offiziellen Seite prüfen. Quelle: ${s.publisher}.${whoU ? ` Universität${whoU}.` : ""}`,
+      en: `${s.learner_label.en}: sitting ${rangeEn(s.date, s.date_end)}. The ${isFiling ? "filing cutoff" : "registration window"} is not officially confirmed, check the official page. Source: ${s.publisher}.${whoU ? ` University${whoU}.` : ""}`,
+    };
+  }
   const closeDe = s.registration_closes
     ? `${isFiling ? "Einreichfrist (Antrag einreichen) bis" : "Anmeldung bis"} ${s.registration_closes}${time}`
     : `${isFiling ? "Einreichfrist" : "Anmeldeschluss"} nicht veröffentlicht`;
@@ -289,6 +326,12 @@ export function sittingToView(s: OfficialSitting): OfficialSittingView {
     read_on: s.read_on,
   };
   if (s.date_end) v.date_end = s.date_end;
+  if (s.window_unconfirmed) {
+    v.window_unconfirmed = true;
+    v.registration_opens = null;
+    v.registration_closes = null;
+    return v;
+  }
   if (s.closes_at_time) v.closes_at_time = s.closes_at_time;
   if (s.filing_university) v.filing_university = s.filing_university;
   return v;
