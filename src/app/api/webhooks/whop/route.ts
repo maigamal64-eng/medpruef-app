@@ -33,6 +33,7 @@ import {
 } from "@/lib/whop-grant";
 import { sendZohoEmail } from "@/lib/email/zoho";
 import { sendRedditConversion } from "@/lib/reddit-capi";
+import { routeMentorWhopEvent } from "@/lib/mentor/credits/whop-branch";
 
 export const dynamic = "force-dynamic";
 
@@ -223,6 +224,11 @@ export async function POST(req: NextRequest) {
     matched: Boolean(f.metaUserId || f.email),
     metadata: { event: event || "(none)", whop_event: event },
   });
+
+  // ── MENTOR CREDITS (W2-CREDITS): mentor package events never reach the
+  // Pro revoke, dunning or grant paths below (src/lib/mentor/credits/whop-branch.ts).
+  const mentor = await routeMentorWhopEvent(event, data);
+  if (mentor.handled) return NextResponse.json(mentor.body, { status: mentor.status });
 
   // ── REVOKE PATH (B-08): refund / chargeback / cancellation ──
   // Handled BEFORE the grant gate. A refund/dispute reverses money →
