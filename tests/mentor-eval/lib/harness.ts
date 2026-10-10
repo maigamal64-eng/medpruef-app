@@ -122,11 +122,13 @@ export async function runCase(h: HarnessOptions, c: GoldenCase, index: number): 
       rec.costMicro = costMicroUsd(r.model || params.model, r.usage, { onUnknown: "top_row", alert: () => undefined });
       rec.stopReason = r.stop_reason;
       rec.toolUses = r.toolUses.map((t) => t.name);
+      rec.textChars = typeof r.text === "string" ? r.text.length : 0;
       rec.ok = true;
       return r;
     } catch (err) {
       rec.ok = false;
       rec.errorCode = err instanceof AiError ? err.code : "error";
+      rec.errorMessage = String((err as Error)?.message ?? err).slice(0, 200);
       if (err instanceof AiError && err.usage) {
         rec.usage = { ...err.usage, model: params.model };
         rec.costMicro = costMicroUsd(params.model, err.usage, { onUnknown: "top_row", alert: () => undefined });

@@ -173,6 +173,10 @@ export interface CallRecord {
   ms: number;
   ok: boolean;
   errorCode?: string;
+  /** First 200 chars of the thrown error message (ours, never a key or a response body). */
+  errorMessage?: string;
+  /** Length of the visible text the call returned (0 when thinking used the whole output cap). */
+  textChars?: number;
 }
 
 export interface SettleRecord {

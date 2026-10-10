@@ -105,15 +105,34 @@ export function parseAnswer(raw: string): ParsedAnswer {
 }
 
 /**
- * Display-safe text of a PARTIAL stream (protocol lines removed). Only for a
- * typing indicator: deltas are unvalidated, so the final event's validated
- * blocks must replace them.
+ * A protocol marker written INSIDE a line ("... (status fact: @@BLOCK )",
+ * eval round 3: dl-sip5a-sep27-en) is not a block boundary: the parser only
+ * reads markers at line start, so the token would reach the learner. Matches
+ * "@@" with any marker word (also a cut-off "@@BLO"), a "@@LANG xx" code and
+ * any key=value attributes ("facts=a,b", "reason=x").
+ */
+export const INLINE_MARKER_RE = /@@(?:LANG[ \t]+[a-z]{2}\b|[A-Za-z]*)(?:[ \t]+[a-z_]+=[^\s()]*)*/g;
+
+/**
+ * Replaces every inline protocol marker with `replacement` (default: nothing).
+ * The validator passes a sentinel so it can also drop the label the marker
+ * leaves behind ("status fact:"). Only removes text.
+ */
+export function stripInlineMarkers(text: string, replacement = ""): string {
+  return text.includes(PROTOCOL_PREFIX) ? text.replace(INLINE_MARKER_RE, replacement) : text;
+}
+
+/**
+ * Display-safe text of a PARTIAL stream (protocol lines and inline markers
+ * removed). Only for a typing indicator: deltas are unvalidated, so the final
+ * event's validated blocks must replace them.
  */
 export function stripProtocolLines(partial: string): string {
   return partial
     .replace(/\r\n?/g, "\n")
     .split("\n")
     .filter((l) => !/^\s*@@/.test(l))
+    .map((l) => stripInlineMarkers(l))
     .join("\n");
 }
 

@@ -21,7 +21,7 @@
 
 import type { MentorAnswerBlock, MentorCitation, MentorLang } from "./contract";
 import type { MentorExamKey, MentorFact, ValidatedAnswer } from "./seam";
-import { parseAnswer } from "./prompt/protocol";
+import { parseAnswer, stripInlineMarkers } from "./prompt/protocol";
 import { allOfficialLinks, fallbackLine, officialLinkForExam, refusalLine, refusalLink } from "./prompt/refusals";
 
 // ─── Normalisation ──────────────────────────────────────────────────────
@@ -468,6 +468,42 @@ export function stripUnsupportedStand(text: string, allowed: ReadonlySet<string>
   return out === text ? text : out.replace(/[ \t]+([.,;:!?])/g, "$1").replace(/[ \t]{2,}/g, " ");
 }
 
+// ─── Protocol markers inside a line ─────────────────────────────────────
+
+const MARK = "\u0000";
+/**
+ * "(status fact: <marker>" / ", Quelle: <marker>": a short label opened by a
+ * bracket, comma or semicolon right before a removed marker names the marker
+ * and nothing else. Without that opener only the colon goes, never words.
+ */
+const MARK_LABEL_RE = new RegExp(`(?:(?<=\\()|[,;])[ \\t]*(?:[\\p{L}_-]+[ \\t]+){0,3}[\\p{L}_-]+[ \\t]*[:=][ \\t]*${MARK}`, "gu");
+const MARK_COLON_RE = new RegExp(`[ \\t]*[:=][ \\t]*${MARK}`, "gu");
+
+/**
+ * Removes protocol markers the model wrote inside a line (eval round 3:
+ * dl-sip5a-sep27-en showed "This window is not yet open (status fact: @@BLOCK )."
+ * to the learner). The marker, the label written for it and the empty
+ * brackets they leave go; the rest of the sentence stays and is validated as
+ * usual. A marker with facts= inside a line does NOT start a block: the text
+ * after it stays under the block's own citations, which can only make the
+ * value check stricter. Only removes text.
+ */
+export function stripProtocolMarkers(text: string): string {
+  const marked = stripInlineMarkers(text, MARK);
+  if (marked === text) return text;
+  return marked
+    .replace(MARK_LABEL_RE, "")
+    .replace(MARK_COLON_RE, "")
+    .split(MARK)
+    .join("")
+    .replace(/\(\s*[,;]?\s*\)/g, "")
+    .replace(/\[\s*\]/g, "")
+    .replace(/[ \t]+([.,;:!?)])/g, "$1")
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/[ \t]+$/g, "");
+}
+
 // ─── Questions and tool field names ─────────────────────────────────────
 
 /** [start, end) of every sentence that ends with a question mark. */
@@ -701,7 +737,7 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
     const answerIds = new Set(parsed.blocks.flatMap((x) => x.factIds));
     const internalReadOn = new Set(used.filter((f) => isInternalFactId(f.id)).map((f) => f.read_on));
     const text = neutralizeAnchorMonths(
-      stripUnsupportedStand(stripFieldNames(stripFactIds(cleanDashes(b.text), (id) => answerIds.has(id) || lookup(id) !== null)), allowed, internalReadOn),
+      stripUnsupportedStand(stripFieldNames(stripFactIds(stripProtocolMarkers(cleanDashes(b.text)), (id) => answerIds.has(id) || lookup(id) !== null)), allowed, internalReadOn),
       allowed
     );
     const values = extractValues(maskSourceLabels(text, used));

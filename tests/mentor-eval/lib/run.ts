@@ -49,6 +49,10 @@ export interface CaseReport {
   outputTokens: number;
   cacheReadTokens: number;
   cacheWriteTokens: number;
+  /** Ops alerts the turn raised (validator_error, tool_error, overrun, ...): the detail behind an upstream_error. */
+  alerts: string[];
+  /** One entry per model call: how it ended. */
+  callTrace: Array<{ ok: boolean; stopReason: string | null; toolUses: string[]; outputTokens: number | null; textChars: number | null; ms: number; errorCode?: string; errorMessage?: string }>;
 }
 
 export interface EvalReport {
@@ -159,6 +163,17 @@ export async function evaluate(input: EvalInput): Promise<EvalReport> {
       outputTokens: o.calls.reduce((n, x) => n + (x.usage?.output_tokens ?? 0), 0),
       cacheReadTokens: o.calls.reduce((n, x) => n + (x.usage?.cache_read_input_tokens ?? 0), 0),
       cacheWriteTokens: o.calls.reduce((n, x) => n + (x.usage?.cache_creation_input_tokens ?? 0), 0),
+      alerts: [...o.alerts],
+      callTrace: o.calls.map((x) => ({
+        ok: x.ok,
+        stopReason: x.stopReason,
+        toolUses: [...x.toolUses],
+        outputTokens: x.usage?.output_tokens ?? null,
+        textChars: x.textChars ?? null,
+        ms: x.ms,
+        ...(x.errorCode ? { errorCode: x.errorCode } : {}),
+        ...(x.errorMessage ? { errorMessage: x.errorMessage } : {}),
+      })),
     });
   }
 
