@@ -374,6 +374,11 @@ describe("prompt: round-1 retrieval and refusal rules", () => {
     expect(MENTOR_CORE_PROMPT).toContain("refuse with @@REFUSE reason=no_verified_source and add nothing else");
     expect(MENTOR_CORE_PROMPT).toContain("Do not add a rule, percentage or number the learner did not ask about");
   });
+  it("study plans use words, not numbered phases (a bare '1' is an unbacked number)", () => {
+    expect(MENTOR_CORE_PROMPT).toContain('Do not number phases, weeks or steps ("Phase 1", "Woche 2")');
+    const v = validateAnswer(`@@LANG en\n@@BLOCK facts=${FEE.id}\n- Phase 1: pay the 777 EUR fee.`, ALL);
+    expect(v.replaced).toBe(true);
+  });
   it("keeps explain and study in scope whatever exam label the tools return (live run 3 regression)", () => {
     expect(MENTOR_CORE_PROMPT).toContain("Explaining a question (get_question) and study planning (get_my_progress) are always in scope");
     expect(MENTOR_CORE_PROMPT).not.toMatch(/such as the Ärztekammer Kenntnisprüfung/);
