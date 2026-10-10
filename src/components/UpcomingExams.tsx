@@ -91,7 +91,7 @@ function buildCards(lang: Lang, now: Date): OfficialCardData[] {
         ? lang === "de"
           ? rows[0].learner_label.de
           : rows[0].learner_label.en
-        : `${joinList(rows.map((r) => shortExamName(r, lang)), lang)} (MedUni ${lang === "de" ? "Wien" : "Vienna"})`;
+        : `${joinList(rows.map((r) => shortExamName(r, lang)), lang)} ${td("meduni_wien_suffix", lang)}`;
     cards.push({ key: `${bank}-${rows[0].date}`, title, rows });
   }
   return cards;

@@ -50,7 +50,11 @@ import {
 } from "@/lib/i18n-dates";
 import { useLang } from "@/lib/i18n";
 import { getStoredSession } from "@/lib/auth";
-import { EXAM_SOURCE_KEY } from "@/lib/topics";
+import {
+  DEFAULT_EXAM_SOURCE,
+  getStoredExamSource,
+  hasSelectedExam,
+} from "@/lib/topics";
 import { useUserTier } from "@/lib/hooks/useUserTier";
 
 const SURFACE: SurfaceKey = "cohort_banner";
@@ -76,17 +80,22 @@ const HIDE_PATHS = [
   "/faq",
 ];
 
-/** The learner's bank: the exam they picked in this browser, else the server's active_exam. */
-function readActiveBank(): PuypExamType | null {
-  if (typeof window === "undefined") return null;
+/**
+ * The learner's bank, resolved the way the app resolves it: an explicit pick
+ * in this browser (with the legacy 'SIP' migration), else the server's
+ * active_exam, else the app default (the Vienna bank).
+ */
+function readActiveBank(): PuypExamType {
   try {
-    const local = asPuypExamType(localStorage.getItem(EXAM_SOURCE_KEY));
-    if (local) return local;
+    if (hasSelectedExam()) {
+      const picked = asPuypExamType(getStoredExamSource());
+      if (picked) return picked;
+    }
   } catch {
     /* storage blocked */
   }
   const user = getStoredSession()?.user as { active_exam?: string | null } | undefined;
-  return asPuypExamType(user?.active_exam ?? null);
+  return asPuypExamType(user?.active_exam ?? null) ?? (DEFAULT_EXAM_SOURCE as PuypExamType);
 }
 
 function readDismissed(key: string): boolean {
