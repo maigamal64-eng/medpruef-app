@@ -414,6 +414,34 @@ function factAllowedKeys(f: MentorFact): Set<string> {
   return keys;
 }
 
+// ─── Source names quoted from cited facts ───────────────────────────────
+
+/**
+ * The prompt asks the model to name the publisher. A source name such as
+ * "Prüfungstermine Gerichtsmedizin und Rezeptierkunde WS 2026/27" carries
+ * digits that are a document title, not a claim (eval round 1: dl-rez-next-en
+ * lost its whole date sentence over "27"). Only an exact quote of a CITED
+ * fact's source_label (or the part after its publisher, "MedUni Wien, ") is
+ * blanked for value extraction, with equal length so positions stay aligned.
+ * The same digits anywhere else in the text are still checked.
+ */
+export function maskSourceLabels(text: string, cited: readonly MentorFact[]): string {
+  const variants = new Set<string>();
+  for (const f of cited) {
+    const label = typeof f.source_label === "string" ? normalizeDigits(f.source_label).trim() : "";
+    if (!/\d/.test(label)) continue;
+    variants.add(label);
+    const comma = label.indexOf(", ");
+    if (comma > 0 && label.length - comma - 2 >= 12) variants.add(label.slice(comma + 2));
+  }
+  let out = text;
+  for (const v of [...variants].sort((x, y) => y.length - x.length)) {
+    const re = new RegExp(v.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+"), "giu");
+    out = out.replace(re, (m) => " ".repeat(m.length));
+  }
+  return out;
+}
+
 // ─── Fact ids written into prose ────────────────────────────────────────
 
 const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
@@ -585,7 +613,7 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
 
     const answerIds = new Set(parsed.blocks.flatMap((x) => x.factIds));
     const text = stripFactIds(cleanDashes(b.text), (id) => answerIds.has(id) || lookup(id) !== null);
-    const values = extractValues(text);
+    const values = extractValues(maskSourceLabels(text, used));
     const bad = values.filter((v) => !v.keys.some((k) => allowed.has(k)));
     let outText = text;
     if (bad.length > 0) {

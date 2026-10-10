@@ -6,7 +6,7 @@ import { describe, it, expect } from "vitest";
 import { parseAnswer, trimTruncatedAnswer } from "@/lib/mentor/prompt/protocol";
 import { MENTOR_CORE_PROMPT } from "@/lib/mentor/prompt/system";
 import { createMentorBrain } from "@/lib/mentor/prompt/brain";
-import { allowedKeysFromText, guessLang, stripFactIds, validateAnswer } from "@/lib/mentor/validator";
+import { allowedKeysFromText, guessLang, maskSourceLabels, stripFactIds, validateAnswer } from "@/lib/mentor/validator";
 import { examKeysNamedIn, isDeadlineScoped, sittingFactId, sittingToFact } from "@/lib/mentor/facts-loader";
 import { FACTS, SITTINGS, ctx, fact, fakeDb, makeLoader } from "./helpers";
 
@@ -334,7 +334,8 @@ describe("answer cut off by the output cap", () => {
 
 describe("prompt: round-1 additions", () => {
   it("forbids echoing the learner's own values and leads price answers with the plans", () => {
-    expect(MENTOR_CORE_PROMPT).toContain("Do not repeat a date, number or amount from the learner's message");
+    expect(MENTOR_CORE_PROMPT).toContain("Do not repeat a date, month, number or amount from the learner's message");
+    expect(MENTOR_CORE_PROMPT).toContain("do not name November");
     expect(MENTOR_CORE_PROMPT).toContain("give the plan prices from app.billing.plans first");
   });
 });
@@ -372,5 +373,49 @@ describe("prompt: round-1 retrieval and refusal rules", () => {
     expect(MENTOR_CORE_PROMPT).toContain("Before you say something is not officially confirmed, call search_facts");
     expect(MENTOR_CORE_PROMPT).toContain("refuse with @@REFUSE reason=no_verified_source and add nothing else");
     expect(MENTOR_CORE_PROMPT).toContain("Do not add a rule, percentage or number the learner did not ask about");
+  });
+  it("keeps explain and study in scope whatever exam label the tools return (live run 3 regression)", () => {
+    expect(MENTOR_CORE_PROMPT).toContain("Explaining a question (get_question) and study planning (get_my_progress) are always in scope");
+    expect(MENTOR_CORE_PROMPT).not.toMatch(/such as the Ärztekammer Kenntnisprüfung/);
+  });
+});
+
+describe("validator: a quoted source name of a cited fact is not a value (dl-rez-next-en)", () => {
+  const LABELLED = fact({
+    id: "fixture.dates.labelled",
+    exam_key: "rezeptierkunde",
+    topic: "dates",
+    filing_university: "all",
+    source_label: "MedUni Wien, Prüfungstermine Gerichtsmedizin und Rezeptierkunde WS 2098/99",
+    text_de: "Prüfungswoche 23. November bis 27. November 2098.",
+    text_en: "Exam week 23 Nov to 27 Nov 2098.",
+  });
+  const say = (t: string, facts = [LABELLED]) => validateAnswer(`@@LANG en\n@@BLOCK facts=${facts.map((f) => f.id).join(",")}\n${t}`, [LABELLED, FEE]);
+
+  it("keeps the sentence that quotes the label, with or without the publisher", () => {
+    for (const t of [
+      "The exam week is 23 to 27 November 2098. Source: MedUni Wien, Prüfungstermine Gerichtsmedizin und Rezeptierkunde WS 2098/99.",
+      "The exam week is 23 to 27 November 2098 (Prüfungstermine Gerichtsmedizin und Rezeptierkunde WS 2098/99).",
+    ]) {
+      const v = say(t);
+      expect(v.rejected).toEqual([]);
+      expect(v.replaced).toBe(false);
+    }
+  });
+
+  it("the label's digits used as a claim elsewhere are still replaced", () => {
+    expect(say("The exam has 99 questions. Source: Prüfungstermine Gerichtsmedizin und Rezeptierkunde WS 2098/99.").replaced).toBe(true);
+  });
+
+  it("a label of a fact the block does not cite is not masked", () => {
+    expect(say("Prüfungstermine Gerichtsmedizin und Rezeptierkunde WS 2098/99.", [FEE]).replaced).toBe(true);
+  });
+
+  it("masks with equal length so value positions stay aligned", () => {
+    const t = "Am 23. November 2098 (Prüfungstermine Gerichtsmedizin und Rezeptierkunde WS 2098/99) beginnt es.";
+    const m = maskSourceLabels(t, [LABELLED]);
+    expect(m.length).toBe(t.length);
+    expect(m).not.toContain("2098/99");
+    expect(m.startsWith("Am 23. November 2098 (")).toBe(true);
   });
 });
