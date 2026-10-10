@@ -18,12 +18,17 @@ const DEFS: Readonly<Record<MentorToolName, ToolDefinition>> = {
       "Upcoming official exam sittings, registration windows and filing cutoffs from the verified calendar, plus confirmed date facts. " +
       "filing_university is where the learner filed their Nostrifizierung application (wien, graz or innsbruck). " +
       "For the Stichprobentest the deadlines differ by publisher: ask the learner where they filed BEFORE calling with a specific university; " +
-      "calling with 'all' returns needs_filing_university instead of dates.",
+      "calling with 'all' returns needs_filing_university instead of dates. " +
+      "When the learner names one sitting month (for example 'the May 2027 Stichprobentest' or 'the SIP4a in November'), pass it as month (YYYY-MM) so only that sitting comes back.",
     input_schema: {
       type: "object",
       properties: {
         exam_key: { type: "string", enum: [...FACT_EXAM_KEYS] },
         filing_university: { type: "string", enum: [...FILING_UNIVERSITIES] },
+        month: {
+          type: "string",
+          description: "Optional. The sitting month the learner asked about, YYYY-MM. Leave it out for 'next', 'after', a season or when unsure.",
+        },
       },
       required: ["exam_key", "filing_university"],
       additionalProperties: false,

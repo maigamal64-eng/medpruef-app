@@ -48,6 +48,7 @@ import { costMicroUsd, reserveCeilingMicro, trimHistoryToFit } from "@/lib/ai/pr
 import { canAdmitMessage, creditsFromMicro, messagesLeftEstimate } from "./config";
 import type { MentorErrorCode, MentorLang, MentorSseEvent } from "./contract";
 import { trimTruncatedAnswer } from "./prompt/protocol";
+import { trimUnaskedValues } from "./validator";
 import { MENTOR_TOOL_NAMES } from "./seam";
 import type { MentorDeps, MentorTurnInput, MeterUsage, RunMentorTurn, ToolResult, TurnContext, Wallet } from "./seam";
 
@@ -102,6 +103,22 @@ export function buildTurnContext(input: MentorTurnInput, now: Date): TurnContext
     now,
     paidAccess: input.paidAccess,
   };
+}
+
+/**
+ * The learner's question for the unasked-value trim: this message, plus the
+ * previous learner message when this one is a short follow-up ("In Wien.").
+ */
+export function learnerQuestion(input: MentorTurnInput): string {
+  const msg = typeof input.request.message === "string" ? input.request.message : "";
+  if (msg.trim().length >= 60) return msg;
+  for (let i = input.history.length - 1; i >= 0; i--) {
+    const m = input.history[i];
+    if (m.role !== "user") continue;
+    const text = typeof m.content === "string" ? m.content : m.content.map((c) => (c.type === "text" ? c.text : "")).join(" ");
+    if (text.trim()) return `${msg}\n${text}`;
+  }
+  return msg;
 }
 
 export function initialMessages(input: MentorTurnInput): MessageParam[] {
@@ -445,13 +462,30 @@ export function createRunMentorTurn(opts: TurnOptions = {}): RunMentorTurn {
     }
 
     let validated: ReturnType<typeof brain.validate>;
+    let cited: Awaited<ReturnType<typeof facts.byIds>> = [];
     try {
-      const cited = factIds.size > 0 ? await facts.byIds([...factIds]) : [];
+      cited = factIds.size > 0 ? await facts.byIds([...factIds]) : [];
       validated = brain.validate(answer, cited);
     } catch (err) {
       alert({ kind: "validator_error", userId, requestId, detail: errMsg(err) });
       yield errorEvent("upstream_error");
       return;
+    }
+    // Answer only what was asked (deletes unasked fee, pass-mark and other-sitting
+    // sentences; never adds text). A failure here keeps the validated answer.
+    try {
+      const byId = new Map(cited.map((f) => [f.id, f] as const));
+      // Fact-sheet ids the answer cites without a tool call are looked up once more.
+      const missing = [...new Set(validated.blocks.flatMap((b) => (Array.isArray(b.fact_ids) ? b.fact_ids : [])))].filter((id) => !byId.has(id));
+      if (missing.length > 0) for (const f of await facts.byIds(missing)) byId.set(f.id, f);
+      validated = trimUnaskedValues(validated, {
+        question: learnerQuestion(input),
+        lang: ctx.lang,
+        resolve: (id) => byId.get(id) ?? null,
+        retrievedIds: factIds,
+      });
+    } catch (err) {
+      alert({ kind: "validator_error", userId, requestId, detail: `trim: ${errMsg(err)}` });
     }
     const blocks = validated.blocks.filter((b) => b && typeof b.text === "string" && b.text.length > 0);
     if (blocks.length === 0) {

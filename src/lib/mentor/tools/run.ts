@@ -25,6 +25,7 @@ import {
   type MentorFactsLoader,
 } from "../facts-loader";
 import { officialLinkForExam, officialLinkForUniversity } from "../prompt/refusals";
+import { allowedKeysFromText } from "../validator";
 import type { FilingUniversity, MentorExamKey, MentorFact, MentorFactTopic, ToolResult, TurnContext } from "../seam";
 import { isMentorToolName } from "./definitions";
 
@@ -141,6 +142,38 @@ function statusLines(s: OfficialSitting, st: ReturnType<typeof registrationStatu
   }
 }
 
+/** Repeated at the point of use (eval round 2: over-answers with real but unasked fees, percentages and sittings). */
+export const SCOPE_NOTE =
+  "Answer only what the learner asked. Leave out other sittings, fees, amounts and percentages in these results unless the learner asked for them.";
+
+type DatesView = ReturnType<MentorFactsLoader["datesAt"]> & { monthNote?: string };
+
+/**
+ * get_dates with a month (the learner named one sitting, "the May 2027
+ * Stichprobentest"): keep only that month's sittings, and drop date facts that
+ * name another upcoming sitting of this result (the 2027 summary of all three
+ * sittings, the other sittings' cutoffs). Rules without dates stay. When no
+ * sitting falls in that month nothing is narrowed and a note says so, so the
+ * model can say there is none instead of guessing. Narrowing only removes rows.
+ */
+export function narrowToMonth(r: DatesView, month: string | undefined): DatesView {
+  if (!month) return r;
+  const inMonth = (s: OfficialSitting) => s.date.startsWith(month) || (typeof s.date_end === "string" && s.date_end.startsWith(month));
+  const rows = r.sittingRows.filter(inMonth);
+  if (rows.length === 0) {
+    return { ...r, monthNote: "No upcoming sitting of this exam in the asked month in the verified calendar. Say so; the rows below are all upcoming sittings." };
+  }
+  const otherDates = new Set(r.sittingRows.filter((s) => !inMonth(s)).map((s) => `d:${s.date}`));
+  const facts = r.facts.filter((f) => {
+    const dates = [...allowedKeysFromText(`${f.text_de}\n${f.text_en}`)].filter((k) => /^d:\d{4}-\d{2}-\d{2}$/.test(k));
+    if (dates.length === 0) return true;
+    if (dates.some((k) => otherDates.has(k))) return false;
+    return dates.some((k) => k.startsWith(`d:${month}`)) || f.topic === "registration";
+  });
+  const keep = new Set(rows);
+  return { ...r, sittingRows: rows, sittings: r.sittings.filter((_, i) => keep.has(r.sittingRows[i])), facts };
+}
+
 function getDates(input: unknown, ctx: TurnContext, env: ToolEnv): ToolResult {
   const o = asObject(input);
   if (!o) return err("invalid input");
@@ -150,6 +183,9 @@ function getDates(input: unknown, ctx: TurnContext, env: ToolEnv): ToolResult {
   if (typeof uni !== "string" || !(FILING_UNIVERSITIES as readonly string[]).includes(uni)) return err("invalid filing_university");
   const examKey = exam as MentorExamKey;
   const fu = uni as FilingUniversity;
+  const monthIn = o.month;
+  if (monthIn !== undefined && (typeof monthIn !== "string" || !/^\d{4}-(?:0[1-9]|1[0-2])$/.test(monthIn))) return err("invalid month");
+  const month = typeof monthIn === "string" ? monthIn : undefined;
 
   if (fu === "all") {
     const unis = env.facts.universitiesWithRows(examKey, ctx.now);
@@ -168,7 +204,7 @@ function getDates(input: unknown, ctx: TurnContext, env: ToolEnv): ToolResult {
     }
   }
 
-  const r = env.facts.datesAt(examKey, fu, ctx.now);
+  const r = narrowToMonth(env.facts.datesAt(examKey, fu, ctx.now), month);
   const sittings: Array<Record<string, unknown>> = [];
   const facts: Array<Record<string, unknown>> = [];
   const factIds: string[] = [];
@@ -253,6 +289,9 @@ function getDates(input: unknown, ctx: TurnContext, env: ToolEnv): ToolResult {
     const fact = internalFact(statusFactId, "", ctx.now);
     fact.text_de = `Heute (Wien): ${today}. ${statusDe.join(" ")}`;
     fact.text_en = `Today (Vienna): ${today}. ${statusEn.join(" ")}`;
+    // The official rows this status was computed from: the validator shows them
+    // as the source of a block that cites only the status (display, not values).
+    fact.aliases = sittings.map((x) => x.fact_id as string);
     env.remember(fact);
     factIds.push(statusFactId);
   }
@@ -268,9 +307,11 @@ function getDates(input: unknown, ctx: TurnContext, env: ToolEnv): ToolResult {
               "registration_status is computed in code. State that a window is open, not yet open or closed ONLY from registration_status, and cite status_fact_id with that statement. Never work it out from today's date yourself. A closed window is closed: say so and point to a later sitting or the official page.",
           }
         : {}),
+      ...(r.monthNote ? { month_note: r.monthNote } : {}),
       sittings,
       facts,
       ...(ruleRefs.length > 0 ? { registration_rules: ruleRefs } : {}),
+      scope: SCOPE_NOTE,
       ...(unconfirmed.length > 0
         ? {
             unconfirmed,
@@ -334,6 +375,7 @@ function searchFacts(input: unknown, ctx: TurnContext, env: ToolEnv): ToolResult
       facts,
       unconfirmed,
       ...(facts.length === 0 ? { no_confirmed_fact: true } : {}),
+      scope: SCOPE_NOTE,
       note: "Sittings and deadlines of SIP4a, SIP5a, Rezeptierkunde and Gerichtsmedizin, and every Stichprobentest deadline, come only from get_dates (ask the filing university first for the Stichprobentest). Stichprobentest sitting dates and places are searchable with topic dates.",
     },
     factIds

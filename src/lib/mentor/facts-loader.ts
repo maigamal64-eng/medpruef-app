@@ -117,7 +117,21 @@ const DEFAULT_SEARCH_LIMIT = 8;
  * byte input cap still leaves room for tools, tool results and history.
  */
 export const SHEET_MAX_FACTS = 60;
-export const SHEET_MAX_BYTES = 36_000;
+export const SHEET_MAX_BYTES = 39_000;
+
+/**
+ * Rules every applicant asks about that live under late topics (documents,
+ * glossary) and therefore fell past the byte cap: the procedure steps and the
+ * two supplementary exams that are always prescribed. They go on the sheet
+ * right after the app facts (eval round 2: pr-steps and pr-prescribed failed
+ * in every run because the model cited nearby glossary facts instead). An id
+ * that is missing or not assertable is simply skipped.
+ */
+export const SHEET_PINNED_IDS: readonly string[] = [
+  "general.glossary.procedure-steps",
+  "rezeptierkunde.documents.always-prescribed",
+  "gerichtsmedizin.documents.always-prescribed",
+];
 
 /** True when a text names a calendar date (full date, day and month, or month and year). */
 export function textHasCalendarDate(text: string): boolean {
@@ -747,9 +761,11 @@ export class MentorFactsLoader implements FactsLoader {
       const i = order.indexOf(t);
       return i < 0 ? order.length : i;
     };
+    // App facts first (short, and every price question needs them), then the pinned rules, then by topic.
+    const pin = (f: MentorFact) => (f.id.startsWith("app.") ? 0 : SHEET_PINNED_IDS.includes(f.id) ? 1 : 2);
     const candidates = [...this.state().all.values()]
       .filter((f) => isAssertable(f, now) && f.topic !== "dates" && !isDeadlineScoped(f))
-      .sort((a, b) => rank(a.topic) - rank(b.topic) || a.id.localeCompare(b.id));
+      .sort((a, b) => pin(a) - pin(b) || rank(a.topic) - rank(b.topic) || a.id.localeCompare(b.id));
     const out: MentorFact[] = [];
     let bytes = 0;
     for (const f of candidates) {

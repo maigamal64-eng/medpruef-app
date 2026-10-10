@@ -410,7 +410,10 @@ function factAllowedKeys(f: MentorFact): Set<string> {
   // The read-on date of a cited fact ("Stand 2026-10-10", which the prompt asks
   // for) is a value OF that fact. Only the full date: its month or year alone
   // stays unsupported, so a read-on date cannot carry an invented "October" claim.
-  if (/^\d{4}-\d{2}-\d{2}$/.test(f.read_on)) keys.add(`d:${f.read_on}`);
+  // Only for official sources: app facts, question rows, progress and status are
+  // internal and have no "Stand" (eval round 2: ap-mentor-price-de showed the
+  // app facts' read-on date in a not-confirmed answer).
+  if (!isInternalFactId(f.id) && /^\d{4}-\d{2}-\d{2}$/.test(f.read_on)) keys.add(`d:${f.read_on}`);
   return keys;
 }
 
@@ -440,6 +443,29 @@ export function maskSourceLabels(text: string, cited: readonly MentorFact[]): st
     out = out.replace(re, (m) => " ".repeat(m.length));
   }
   return out;
+}
+
+// ─── Read-on notes without a source ─────────────────────────────────────
+
+const STAND_WORDS = "Stand|as of|read on|last read|abgerufen|gelesen|zuletzt gelesen";
+const STAND_PAREN_RE = new RegExp(`\\s*\\(\\s*(?:${STAND_WORDS})\\b[^()\\d\\n]{0,40}?(\\d{4}-\\d{2}-\\d{2})\\s*\\)`, "giu");
+const STAND_TAIL_RE = new RegExp(`\\s*[,;]?\\s*\\b(?:${STAND_WORDS})\\b[^()\\d\\n.]{0,40}?(\\d{4}-\\d{2}-\\d{2})(?=\\s*(?:[.!?]|$))`, "gimu");
+
+/**
+ * A "Stand <date>" note says when a source was read; it is not a claim about
+ * an exam. When its ISO date is not the read-on date of an official fact the
+ * block cites (for example an app fact's date, which the prompt says not to
+ * write), the note alone is removed and the sentence stays. With `strippable`
+ * only notes carrying one of those dates go (the validator passes the read-on
+ * dates of the internal facts a block cites); any other unsupported date is
+ * left for the normal sentence replacement. Only removes text:
+ * the rest of the sentence is still validated as usual, and a note whose date
+ * IS supported stays untouched.
+ */
+export function stripUnsupportedStand(text: string, allowed: ReadonlySet<string>, strippable?: ReadonlySet<string>): string {
+  const drop = (m: string, iso: string) => (allowed.has(`d:${iso}`) || (strippable && !strippable.has(iso)) ? m : "");
+  const out = text.replace(STAND_PAREN_RE, drop).replace(STAND_TAIL_RE, drop);
+  return out === text ? text : out.replace(/[ \t]+([.,;:!?])/g, "$1").replace(/[ \t]{2,}/g, " ");
 }
 
 // ─── Fact ids written into prose ────────────────────────────────────────
@@ -612,7 +638,8 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
     for (const f of used) for (const k of factAllowedKeys(f)) allowed.add(k);
 
     const answerIds = new Set(parsed.blocks.flatMap((x) => x.factIds));
-    const text = stripFactIds(cleanDashes(b.text), (id) => answerIds.has(id) || lookup(id) !== null);
+    const internalReadOn = new Set(used.filter((f) => isInternalFactId(f.id)).map((f) => f.read_on));
+    const text = stripUnsupportedStand(stripFactIds(cleanDashes(b.text), (id) => answerIds.has(id) || lookup(id) !== null), allowed, internalReadOn);
     const values = extractValues(maskSourceLabels(text, used));
     const bad = values.filter((v) => !v.keys.some((k) => allowed.has(k)));
     let outText = text;
@@ -624,10 +651,26 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
       outText = replaceSentences(text, bad, fb);
     }
     if (!outText) continue;
-    const shownIds = used.map((f) => f.id).filter((id) => !isInternalFactId(id));
-    blocks.push({ text: outText, fact_ids: [...new Set(shownIds)] });
+    const shown = used.filter((f) => !isInternalFactId(f.id));
+    // A computed registration status (internal, status.*) is built from official
+    // sitting rows; its aliases name them. Show the rows whose values the block
+    // actually states, so a status-only block still names its official source
+    // (eval round 2: dl-sip5a-sep27-de, dl-rez-jan-en had dated blocks with no
+    // shown citation). Display only: allowed values are unchanged.
+    const kept = values.filter((v) => !bad.includes(v));
     for (const f of used) {
-      if (isInternalFactId(f.id) || cited.has(f.id)) continue;
+      if (!f.id.startsWith("status.")) continue;
+      for (const sid of f.aliases ?? []) {
+        const sf = lookup(sid);
+        if (!sf || isInternalFactId(sf.id) || shown.some((x) => x.id === sf.id)) continue;
+        const k = factAllowedKeys(sf);
+        if (kept.some((v) => v.keys.some((x) => k.has(x)))) shown.push(sf);
+      }
+    }
+    const shownIds = shown.map((f) => f.id);
+    blocks.push({ text: outText, fact_ids: [...new Set(shownIds)] });
+    for (const f of shown) {
+      if (cited.has(f.id)) continue;
       cited.add(f.id);
       citations.push({ fact_id: f.id, source_label: f.source_label, source_url: f.source_url, read_on: f.read_on });
     }
@@ -646,4 +689,174 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
     result.refusalLink = refLink;
   }
   return result;
+}
+
+// ─── Unasked values (answer only what was asked) ────────────────────────
+
+/** The learner asked about money (de, en). */
+const ASKS_MONEY_RE =
+  /kost|gebühr|gebuehr|taxe|preis|euro|€|\beur\b|bezahl|zahlen|zahlung|geld|teuer|günstig|guenstig|beitrag|finanz|\bcost|\bfee|price|\bpay|money|expensive|cheap|charge|tuition|contribution|afford|how much/iu;
+/** The learner asked about the pass mark, scoring or a percentage (de, en); "if I pass" alone is not that. */
+const ASKS_PASS_MARK_RE =
+  /prozent|percent|%|bestehensgrenze|als bestanden|zum bestehen|zu bestehen|positiv (?:absolviert|bewertet)|richtig|punkte|bewertung|schwelle|mindest|pass mark|passing (?:mark|score|grade|threshold)|counts? as (?:a )?pass|to pass\b|how many .{0,30}(?:correct|right)|score|points|grading|graded|threshold|minimum/iu;
+/** The learner asked relative to a sitting ("the one after November", "next"), so other sittings are the answer. */
+const ASKS_RELATIVE_RE =
+  /\b(?:after|before|next|following|later|earlier|other|others|all|every|each|nach|vor|nächst\w*|naechst\w*|folgend\w*|später\w*|spaeter\w*|früher\w*|frueher\w*|danach|davor|andere\w*|weitere\w*|alle\w*|jede\w*)\b/iu;
+const EN_MONTH_CAPS_RE = /(?<!^)\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)\b(?!\s+I\b)/gu;
+const EN_MONTH_CAPS: Record<string, number> = { Jan: 1, Feb: 2, Mar: 3, Apr: 4, May: 5, Jun: 6, Jul: 7, Aug: 8, Sep: 9, Sept: 9, Oct: 10, Nov: 11, Dec: 12 };
+
+/** Months (with the year when named) a learner message points at. */
+export function askedMonths(question: string): Array<{ month: string; year: string | null }> {
+  const q = normalizeDigits(question);
+  const out: Array<{ month: string; year: string | null }> = [];
+  for (const v of extractValues(q)) {
+    for (const k of v.keys) {
+      let m: RegExpExecArray | null;
+      if ((m = /^d:(\d{4})-(\d{2})-\d{2}$/.exec(k)) || (m = /^my:(\d{4})-(\d{2})$/.exec(k))) out.push({ month: m[2], year: m[1] });
+      else if ((m = /^dm:(\d{2})-\d{2}$/.exec(k)) || (m = /^m:(\d{2})$/.exec(k))) out.push({ month: m[1], year: null });
+    }
+  }
+  for (const m of q.matchAll(EN_MONTH_CAPS_RE)) {
+    const n = pad(EN_MONTH_CAPS[m[1]]);
+    if (!out.some((x) => x.month === n)) out.push({ month: n, year: /\b(20\d{2})\b/.exec(q.slice(m.index ?? 0, (m.index ?? 0) + 12))?.[1] ?? null });
+  }
+  return out;
+}
+
+/** Sitting date (ISO) a fact or sitting id names: sitting.<exam>.<date>.* and <exam>.dates.<date>.* */
+function sittingDateOfId(id: string): string | null {
+  return /^(?:sitting\.[a-z0-9]+|[a-z0-9]+\.dates)\.(\d{4}-\d{2}-\d{2})(?:\.|$)/.exec(id)?.[1] ?? null;
+}
+
+/**
+ * Deletes every sentence that overlaps one of `drop` (no fallback line: the
+ * sentence was not asked for). Works line by line: a line whose sentences are
+ * all removed disappears with its list marker; other lines and paragraph
+ * breaks stay as they were.
+ */
+export function removeSentences(text: string, drop: ExtractedValue[]): string {
+  const out: string[] = [];
+  let offset = 0;
+  for (const line of text.split("\n")) {
+    const start = offset;
+    offset += line.length + 1;
+    const hits = drop.filter((v) => v.start < start + line.length && v.end > start);
+    if (hits.length === 0) {
+      out.push(line);
+      continue;
+    }
+    const marker = /^(\s*[-*•]\s+)/.exec(line)?.[1] ?? "";
+    const kept: string[] = [];
+    for (const [a, e] of sentenceRanges(line)) {
+      if (hits.some((v) => v.start < start + e && v.end > start + a)) continue;
+      const piece = line.slice(a, e).trim();
+      if (piece) kept.push(piece);
+    }
+    let rebuilt = kept.join(" ");
+    if (marker && rebuilt.startsWith(marker.trim())) rebuilt = rebuilt.slice(marker.trim().length).trim();
+    if (rebuilt && /[\p{L}\p{N}]/u.test(rebuilt)) out.push(marker + rebuilt);
+  }
+  return out.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+}
+
+export interface TrimUnaskedInput {
+  /** The learner's message, plus the previous one for a short follow-up ("In Wien."). */
+  question: string;
+  lang: MentorLang;
+  /** Resolves any fact id (official, sitting or internal). */
+  resolve: (id: string) => MentorFact | null;
+  /** Every fact id the tools returned in this turn. */
+  retrievedIds: Iterable<string>;
+}
+
+/**
+ * Answer only what was asked, enforced in code (eval round 2: Haiku kept adding
+ * REAL but unasked values: the 150 EUR application fee in a steps answer, the
+ * 60 percent pass rule in a structure or repeat answer, the other 2027 sittings
+ * in a deadline answer for one sitting). Runs after validateAnswer on its
+ * validated blocks and only DELETES sentences, so it can never add a claim:
+ *
+ *  - an EUR amount backed only by an official fee fact, when the learner did
+ *    not ask about money (app prices are internal facts and are never touched);
+ *  - a percentage backed only by an official pass-rule fact, when the learner
+ *    did not ask about the pass mark or scoring;
+ *  - the date of another sitting, when the learner named one sitting month,
+ *    did not ask relative to it ("after", "next") and a sitting of that month
+ *    was retrieved. Dates that belong to the asked sitting's own facts stay.
+ *
+ * The fee and pass-mark rules run for de and en only (the word lists are
+ * de/en; for other languages nothing is trimmed). Refusals are untouched, and
+ * when trimming would leave nothing the answer is returned unchanged.
+ */
+export function trimUnaskedValues(v: ValidatedAnswer, t: TrimUnaskedInput): ValidatedAnswer {
+  if (v.refused || typeof t.question !== "string" || t.question.trim().length === 0) return v;
+  const q = t.question;
+  const wordRules = t.lang === "de" || t.lang === "en";
+  const askMoney = !wordRules || ASKS_MONEY_RE.test(q);
+  const askPass = !wordRules || ASKS_PASS_MARK_RE.test(q);
+
+  // Sittings the learner named by month, and the dates that belong to them.
+  const retrieved = [...new Set(t.retrievedIds)];
+  const sittingDates = new Set(retrieved.map(sittingDateOfId).filter((d): d is string => d !== null));
+  const months = ASKS_RELATIVE_RE.test(q) ? [] : askedMonths(q);
+  const isTarget = (iso: string) => months.some((m) => iso.slice(5, 7) === m.month && (m.year === null || iso.startsWith(m.year)));
+  const targets = [...sittingDates].filter(isTarget);
+  const otherSitting = new Set<string>();
+  if (targets.length > 0) {
+    const own = new Set<string>();
+    for (const id of retrieved) {
+      const d = sittingDateOfId(id);
+      if (!d || !targets.includes(d)) continue;
+      const f = t.resolve(id);
+      if (f) for (const k of allowedKeysFromText(`${f.text_de}\n${f.text_en}`)) own.add(k);
+    }
+    for (const d of sittingDates) {
+      if (targets.includes(d) || own.has(`d:${d}`)) continue;
+      otherSitting.add(`d:${d}`);
+      otherSitting.add(`dm:${d.slice(5)}`);
+    }
+  }
+  if (askMoney && askPass && otherSitting.size === 0) return v;
+
+  const blocks: MentorAnswerBlock[] = [];
+  let changed = false;
+  for (const b of v.blocks) {
+    const facts = b.fact_ids.map((id) => t.resolve(id)).filter((f): f is MentorFact => f !== null);
+    const keysOf = (pred: (f: MentorFact) => boolean) => {
+      const s = new Set<string>();
+      for (const f of facts) if (pred(f)) for (const k of factAllowedKeys(f)) s.add(k);
+      return s;
+    };
+    const feeKeys = keysOf((f) => f.topic === "fee" && !isInternalFactId(f.id));
+    const passKeys = keysOf((f) => f.topic === "pass_rule" && !isInternalFactId(f.id));
+    const otherFee = keysOf((f) => f.topic !== "fee");
+    const otherPass = keysOf((f) => f.topic !== "pass_rule");
+    const values = extractValues(normalizeDigits(b.text));
+    const drop = values.filter((x) => {
+      if (!askMoney && x.kind === "eur" && x.keys.some((k) => feeKeys.has(k)) && !x.keys.some((k) => otherFee.has(k))) return true;
+      if (!askPass && x.kind === "percent" && x.keys.some((k) => passKeys.has(k)) && !x.keys.some((k) => otherPass.has(k))) return true;
+      if ((x.kind === "date" || x.kind === "daymonth") && x.keys.some((k) => otherSitting.has(k))) return true;
+      return false;
+    });
+    if (drop.length === 0) {
+      blocks.push(b);
+      continue;
+    }
+    changed = true;
+    const text = removeSentences(b.text, drop);
+    if (!text || !/[\p{L}\p{N}]/u.test(text)) continue;
+    // A fee or pass-rule fact whose value left with the sentence is no longer a source of this block.
+    const left = extractValues(normalizeDigits(text));
+    const ids = facts
+      .filter((f) => {
+        if (f.topic !== "fee" && f.topic !== "pass_rule") return true;
+        const k = factAllowedKeys(f);
+        return left.some((x) => x.keys.some((y) => k.has(y)));
+      })
+      .map((f) => f.id);
+    blocks.push({ text, fact_ids: ids });
+  }
+  if (!changed || blocks.length === 0) return v;
+  const stillCited = new Set(blocks.flatMap((b) => b.fact_ids));
+  return { ...v, blocks, citations: v.citations.filter((c) => stillCited.has(c.fact_id)) };
 }
