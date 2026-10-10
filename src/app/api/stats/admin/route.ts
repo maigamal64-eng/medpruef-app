@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
-import { requireAdmin } from "@/lib/auth-guard";
+import { adminRouteShell } from "@/lib/admin/shell";
 
 export const dynamic = "force-dynamic";
 
@@ -31,9 +31,7 @@ export const dynamic = "force-dynamic";
  *     bounded. A proper fix would move the topic/accuracy rollup
  *     into a materialized view or daily_stats.
  */
-export async function GET(req: NextRequest) {
-  const guard = await requireAdmin(req);
-  if ("error" in guard) return guard.error;
+export const GET = adminRouteShell(async () => {
   try {
     const db = getServiceClient();
     const monthAgo = new Date(Date.now() - 30 * 86400000).toISOString();
@@ -134,4 +132,4 @@ export async function GET(req: NextRequest) {
     console.error("[/api/stats/admin]", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
-}
+}, { route: "/api/stats/admin", rateLimit: { limit: 120, windowMs: 60_000 } });

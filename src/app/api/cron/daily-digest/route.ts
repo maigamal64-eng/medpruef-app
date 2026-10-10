@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { captureServerError } from "@/lib/sentry-capture";
+import { safeEqual } from "@/lib/security/timing-safe";
 
 export const dynamic = "force-dynamic";
 
@@ -182,7 +183,7 @@ function formatDigest(n: DigestNumbers, dateLabel: string): string {
 export async function GET(req: NextRequest) {
   const cronSecret = process.env.CRON_SECRET;
   const bearer = req.headers.get("authorization") || "";
-  if (!cronSecret || bearer !== `Bearer ${cronSecret}`) {
+  if (!cronSecret || !safeEqual(bearer, `Bearer ${cronSecret}`)) {
     // Vercel crons hit with Authorization: Bearer <CRON_SECRET>.
     // Fail-closed if the env is missing or the header doesn't match.
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

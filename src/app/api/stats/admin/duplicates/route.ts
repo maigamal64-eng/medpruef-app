@@ -1,12 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
-import { requireAdmin } from "@/lib/auth-guard";
+import { adminRouteShell } from "@/lib/admin/shell";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(req: NextRequest) {
-  const guard = await requireAdmin(req);
-  if ("error" in guard) return guard.error;
+export const GET = adminRouteShell(async () => {
   try {
     const db = getServiceClient();
 
@@ -63,4 +61,4 @@ export async function GET(req: NextRequest) {
     console.error("[/api/stats/admin/duplicates]", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
-}
+}, { route: "/api/stats/admin/duplicates", rateLimit: { limit: 120, windowMs: 60_000 } });

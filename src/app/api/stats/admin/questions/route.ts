@@ -1,14 +1,12 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
-import { requireAdmin } from "@/lib/auth-guard";
-import { logAdminAction, resolveActorEmail } from "@/lib/admin/audit";
+import { adminRouteShell } from "@/lib/admin/shell";
+import { logAdminAction } from "@/lib/admin/audit";
 
 export const dynamic = "force-dynamic";
 
 // GET — Stats overview OR paginated browse
-export async function GET(req: NextRequest) {
-  const guard = await requireAdmin(req);
-  if ("error" in guard) return guard.error;
+export const GET = adminRouteShell(async ({ req }) => {
   try {
     const db = getServiceClient();
     const url = new URL(req.url);
@@ -55,7 +53,7 @@ export async function GET(req: NextRequest) {
     console.error("[admin/questions GET]", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
-}
+}, { route: "/api/stats/admin/questions", rateLimit: { limit: 120, windowMs: 60_000 } });
 
 async function handleBrowse(db: ReturnType<typeof getServiceClient>, url: URL) {
   const page = parseInt(url.searchParams.get("page") || "1");
@@ -102,9 +100,7 @@ async function handleBrowse(db: ReturnType<typeof getServiceClient>, url: URL) {
 }
 
 // PATCH — Edit a question
-export async function PATCH(req: NextRequest) {
-  const guard = await requireAdmin(req);
-  if ("error" in guard) return guard.error;
+export const PATCH = adminRouteShell(async ({ req, actor }) => {
   try {
     const db = getServiceClient();
     const body = await req.json();
@@ -125,14 +121,13 @@ export async function PATCH(req: NextRequest) {
     const { error } = await db.from("questions").update(safeUpdates).eq("id", questionId);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-    const actorEmail = await resolveActorEmail(guard.userId);
     const isActivityToggle =
       typeof updates.is_active === "boolean" &&
       Object.keys(safeUpdates).length === 1;
     await logAdminAction({
       req,
-      actorId: guard.userId,
-      actorEmail,
+      actorId: actor.userId,
+      actorEmail: actor.email,
       // question_id is an integer in the DB, so targetId goes to
       // payload.target_ref via the helper's UUID check.
       action: isActivityToggle
@@ -152,4 +147,4 @@ export async function PATCH(req: NextRequest) {
     console.error("[admin/questions PATCH]", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
-}
+}, { route: "/api/stats/admin/questions#patch", rateLimit: { limit: 60, windowMs: 60_000 } });

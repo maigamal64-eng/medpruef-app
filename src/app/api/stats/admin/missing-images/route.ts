@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
-import { requireAdmin } from "@/lib/auth-guard";
+import { adminRouteShell } from "@/lib/admin/shell";
 
 export const dynamic = "force-dynamic";
 
@@ -19,9 +19,7 @@ export const dynamic = "force-dynamic";
  *   - exam_type: filter by kenntnispruefung | kmp_innsbruck | pharma
  *   - topic: filter by topic
  */
-export async function GET(req: NextRequest) {
-  const guard = await requireAdmin(req);
-  if ("error" in guard) return guard.error;
+export const GET = adminRouteShell(async ({ req }) => {
 
   try {
     const db = getServiceClient();
@@ -96,4 +94,4 @@ export async function GET(req: NextRequest) {
       { status: 500 },
     );
   }
-}
+}, { route: "/api/stats/admin/missing-images", rateLimit: { limit: 120, windowMs: 60_000 } });

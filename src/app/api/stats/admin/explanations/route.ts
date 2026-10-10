@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
-import { requireAdmin } from "@/lib/auth-guard";
+import { adminRouteShell } from "@/lib/admin/shell";
 
 export const dynamic = "force-dynamic";
 
@@ -18,9 +18,7 @@ export const dynamic = "force-dynamic";
  *   limit (max 100, default 20)
  *   minRatings (default 3)
  */
-export async function GET(req: NextRequest) {
-  const guard = await requireAdmin(req);
-  if ("error" in guard) return guard.error;
+export const GET = adminRouteShell(async ({ req }) => {
 
   const url = new URL(req.url);
   const limit = Math.min(
@@ -71,4 +69,4 @@ export async function GET(req: NextRequest) {
   }));
 
   return NextResponse.json({ explanations: rows });
-}
+}, { route: "/api/stats/admin/explanations", rateLimit: { limit: 120, windowMs: 60_000 } });
