@@ -139,7 +139,7 @@ export function formatSummary(r: EvalReport): string {
   for (const c of r.categories) L.push(`  ${c.category.padEnd(12)} ${c.passed}/${c.cases} passed${c.errored ? `, ${c.errored} errored` : ""}${c.critical ? `, ${c.critical} critical` : ""}`);
   L.push("");
   const t = r.tokens;
-  L.push("Tokens per message:");
+  L.push(r.meta.synthetic_usage ? "Tokens per message (SYNTHETIC usage from the scripted model: this proves the plumbing, it is not a measurement):" : "Tokens per message (measured from the API usage objects):");
   L.push(`  messages ${t.messages}, calls ${t.calls} (mean ${num(t.callsPerMessage.mean, 2)}, max ${t.callsPerMessage.max})`);
   L.push(`  input ${num(t.perMessage.inputTokens)}  output ${num(t.perMessage.outputTokens)}  cache read ${num(t.perMessage.cacheReadTokens)}  cache write ${num(t.perMessage.cacheWriteTokens)}`);
   L.push(`  cost mean ${usd(t.perMessage.costMicro.mean)}, p50 ${usd(t.perMessage.costMicro.p50)}, p95 ${usd(t.perMessage.costMicro.p95)}, max ${usd(t.perMessage.costMicro.max)}`);

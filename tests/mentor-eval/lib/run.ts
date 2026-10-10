@@ -66,6 +66,8 @@ export interface EvalReport {
     spent_micro: number;
     spent_usd: number;
     models: string[];
+    /** true unless the model was real: scripted and stub runs invent their usage, so their token numbers prove the plumbing only. */
+    synthetic_usage: boolean;
   };
   bar: BarResult[];
   barPass: boolean;
@@ -177,6 +179,7 @@ export async function evaluate(input: EvalInput): Promise<EvalReport> {
       spent_micro: result.spentMicro,
       spent_usd: result.spentMicro / 1_000_000,
       models,
+      synthetic_usage: input.mode !== "live",
     },
     bar,
     // A bar line with nothing to grade (pass === null) does not fail the run, but a run with no cases at all does.
