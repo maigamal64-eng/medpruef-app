@@ -1,0 +1,648 @@
+/**
+ * Mentor facts loader (C17 FactsLoader, owned by W2-BRAIN).
+ *
+ * The ONLY reader of content/mentor-facts/*.json (C6 records, data owned by
+ * W2-FACTS). Dates are never copied here: official sittings come from
+ * src/lib/exam-dates.ts (C7 OFFICIAL_SITTINGS, owner W1-CAL) and are exposed
+ * to the brain as fact-shaped records derived at read time, with ids
+ * `sitting.<exam>.<date>.<university>.<deadline>`, so the validator can check
+ * a date against them exactly like any other cited fact.
+ *
+ * Assertable = verdict "confirmed" AND status "live" AND (no valid_until OR
+ * valid_until >= today in Europe/Vienna). Everything else is never returned as
+ * an assertable fact: search exposes it only as an "unconfirmed" pointer
+ * (id, topic, official link, no text), so the model can say "not officially
+ * confirmed" plus the link.
+ *
+ * Loading is synchronous and fails closed: a missing directory or file gives
+ * an empty set plus a logged load error (the mentor then refuses with
+ * no_verified_source); a malformed record or a duplicate id is dropped and
+ * logged, never asserted.
+ *
+ * R3 integration note: fs reads under content/ are not traced into the Vercel
+ * function on their own. The integrator must add
+ *   outputFileTracingIncludes["/api/mentor/chat"] = ["./content/mentor-facts/**"]
+ * in next.config, otherwise production loads zero facts.
+ */
+
+import fs from "node:fs";
+import path from "node:path";
+import {
+  OFFICIAL_SITTINGS,
+  getUpcomingOfficialSittings,
+  viennaToday,
+  type OfficialSitting,
+} from "@/lib/exam-dates";
+import { billingCancelSummary, billingPlansSummary, billingTrialSummary } from "@/lib/billing-copy";
+import { MENTOR_RETRIEVAL_MAX_TOKENS } from "./config";
+import type {
+  FactsLoader,
+  FilingUniversity,
+  MentorExamKey,
+  MentorFact,
+  MentorFactTopic,
+  OfficialSittingView,
+} from "./seam";
+
+// ─── C6 enums (mirrors content/mentor-facts/SCHEMA.json) ─────────────────
+
+export const FACT_EXAM_KEYS: readonly MentorExamKey[] = [
+  "sip4a",
+  "sip5a",
+  "stichprobentest",
+  "rezeptierkunde",
+  "gerichtsmedizin",
+  "c1",
+  "general",
+  "fsp",
+];
+export const FACT_TOPICS: readonly MentorFactTopic[] = [
+  "dates",
+  "registration",
+  "format",
+  "scoring",
+  "pass_rule",
+  "fee",
+  "attempts",
+  "results",
+  "language",
+  "documents",
+  "glossary",
+];
+export const FILING_UNIVERSITIES: readonly FilingUniversity[] = ["wien", "graz", "innsbruck", "all"];
+const VERDICTS = ["confirmed", "partly", "contradicted", "not_in_sources"] as const;
+const STATUSES = ["live", "needs_review", "retracted"] as const;
+const DEADLINE_TYPES = ["filing_cutoff", "registration"] as const;
+const FACT_KEYS = new Set([
+  "id",
+  "exam_key",
+  "topic",
+  "filing_university",
+  "deadline_type",
+  "text_de",
+  "text_en",
+  "aliases",
+  "source_url",
+  "source_label",
+  "edition",
+  "read_on",
+  "verdict",
+  "review_every_days",
+  "valid_until",
+  "status",
+]);
+const ID_RE = /^[a-z0-9][a-z0-9._-]{2,119}$/;
+const ISO_DATE_RE = /^20[0-9]{2}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$/;
+
+/** Prefixes of fact ids the brain derives itself (never present in the data files). */
+export const DERIVED_ID_PREFIXES = Object.freeze({
+  sitting: "sitting.",
+  app: "app.",
+  question: "question.",
+  progress: "progress.",
+});
+
+/** Retrieval budget per tool result, in UTF-8 bytes (bytes >= tokens, so this is conservative). */
+export const RETRIEVAL_BUDGET_BYTES = MENTOR_RETRIEVAL_MAX_TOKENS;
+
+const DEFAULT_SEARCH_LIMIT = 8;
+
+// ─── Record validation (fail closed) ────────────────────────────────────
+
+export type FactCheck = { ok: true; fact: MentorFact } | { ok: false; error: string };
+
+function isStr(v: unknown, min = 1, max = 100_000): v is string {
+  return typeof v === "string" && v.length >= min && v.length <= max;
+}
+
+function oneOf<T extends string>(v: unknown, list: readonly T[]): v is T {
+  return typeof v === "string" && (list as readonly string[]).includes(v);
+}
+
+/** Validates one raw record against the C6 shape. Unknown keys are an error (additionalProperties false). */
+export function validateFactRecord(raw: unknown): FactCheck {
+  if (raw === null || typeof raw !== "object" || Array.isArray(raw)) return { ok: false, error: "not an object" };
+  const r = raw as Record<string, unknown>;
+  const label = typeof r.id === "string" ? r.id : "(no id)";
+  const bad = (why: string): FactCheck => ({ ok: false, error: `${label}: ${why}` });
+  for (const k of Object.keys(r)) if (!FACT_KEYS.has(k)) return bad(`unknown key ${k}`);
+  if (!isStr(r.id) || !ID_RE.test(r.id)) return bad("invalid id");
+  for (const p of Object.values(DERIVED_ID_PREFIXES)) if (r.id.startsWith(p)) return bad(`id uses reserved prefix ${p}`);
+  if (!oneOf(r.exam_key, FACT_EXAM_KEYS)) return bad("invalid exam_key");
+  if (!oneOf(r.topic, FACT_TOPICS)) return bad("invalid topic");
+  if (!oneOf(r.filing_university, FILING_UNIVERSITIES)) return bad("invalid filing_university");
+  if (r.deadline_type !== undefined && !oneOf(r.deadline_type, DEADLINE_TYPES)) return bad("invalid deadline_type");
+  if (!isStr(r.text_de, 1, 1200)) return bad("invalid text_de");
+  if (!isStr(r.text_en, 1, 1200)) return bad("invalid text_en");
+  if (!Array.isArray(r.aliases) || !r.aliases.every((a) => isStr(a, 1, 120))) return bad("invalid aliases");
+  if (!isStr(r.source_url) || !/^https:\/\//.test(r.source_url)) return bad("invalid source_url");
+  if (!isStr(r.source_label, 1, 200)) return bad("invalid source_label");
+  if (!isStr(r.edition, 1, 120)) return bad("invalid edition");
+  if (!isStr(r.read_on) || !ISO_DATE_RE.test(r.read_on)) return bad("invalid read_on");
+  if (!oneOf(r.verdict, VERDICTS)) return bad("invalid verdict");
+  if (!Number.isInteger(r.review_every_days) || (r.review_every_days as number) < 1 || (r.review_every_days as number) > 365) {
+    return bad("invalid review_every_days");
+  }
+  if (r.valid_until !== undefined && (!isStr(r.valid_until) || !ISO_DATE_RE.test(r.valid_until))) return bad("invalid valid_until");
+  if (!oneOf(r.status, STATUSES)) return bad("invalid status");
+  const fact: MentorFact = {
+    id: r.id,
+    exam_key: r.exam_key,
+    topic: r.topic,
+    filing_university: r.filing_university,
+    text_de: r.text_de,
+    text_en: r.text_en,
+    aliases: [...(r.aliases as string[])],
+    source_url: r.source_url,
+    source_label: r.source_label,
+    edition: r.edition,
+    read_on: r.read_on,
+    verdict: r.verdict,
+    review_every_days: r.review_every_days as number,
+    status: r.status,
+  };
+  if (r.deadline_type !== undefined) fact.deadline_type = r.deadline_type as MentorFact["deadline_type"];
+  if (r.valid_until !== undefined) fact.valid_until = r.valid_until as string;
+  return { ok: true, fact };
+}
+
+/** C6 assertability rule, Europe/Vienna day. */
+export function isAssertable(fact: MentorFact, now: Date): boolean {
+  if (fact.verdict !== "confirmed" || fact.status !== "live") return false;
+  if (fact.valid_until && fact.valid_until < viennaToday(now)) return false;
+  return true;
+}
+
+// ─── Disk source ────────────────────────────────────────────────────────
+
+export interface RawFactFile {
+  file: string;
+  records: unknown;
+}
+
+/** Default directory of the C6 data files. */
+export function defaultFactsDir(): string {
+  return path.join(process.cwd(), "content", "mentor-facts");
+}
+
+/**
+ * Reads every *.json in `dir` except SCHEMA.json. A missing dir returns no
+ * files plus an error (logged by the loader); unreadable or unparsable files
+ * are reported, never thrown.
+ */
+export function readFactFilesFromDisk(dir: string = defaultFactsDir()): { files: RawFactFile[]; errors: string[] } {
+  const errors: string[] = [];
+  const files: RawFactFile[] = [];
+  let names: string[];
+  try {
+    names = fs.readdirSync(dir).filter((n) => n.endsWith(".json") && n !== "SCHEMA.json").sort();
+  } catch {
+    return { files, errors: [`facts dir not readable: ${dir}`] };
+  }
+  for (const name of names) {
+    try {
+      files.push({ file: name, records: JSON.parse(fs.readFileSync(path.join(dir, name), "utf8")) });
+    } catch (e) {
+      errors.push(`${name}: ${(e as Error).message}`);
+    }
+  }
+  if (names.length === 0) errors.push(`no fact files in ${dir}`);
+  return { files, errors };
+}
+
+// ─── Sittings as facts ──────────────────────────────────────────────────
+
+function sittingUniversity(s: OfficialSitting): FilingUniversity {
+  return s.filing_university ?? "all";
+}
+
+/** Stable fact id of an official sitting row. */
+export function sittingFactId(s: OfficialSitting | OfficialSittingView): string {
+  const deadline = s.deadline_type === "filing_cutoff" ? "filing" : "registration";
+  return `${DERIVED_ID_PREFIXES.sitting}${s.exam_key}.${s.date}.${s.filing_university ?? "all"}.${deadline}`;
+}
+
+function sittingTexts(s: OfficialSitting): { de: string; en: string } {
+  const range = (a: string, b?: string) => (b ? `${a} bis ${b}` : a);
+  const rangeEn = (a: string, b?: string) => (b ? `${a} to ${b}` : a);
+  const time = s.closes_at_time ? ` ${s.closes_at_time}` : "";
+  const isFiling = s.deadline_type === "filing_cutoff";
+  const closeDe = s.registration_closes
+    ? `${isFiling ? "Einreichfrist (Antrag einreichen) bis" : "Anmeldung bis"} ${s.registration_closes}${time}`
+    : `${isFiling ? "Einreichfrist" : "Anmeldeschluss"} nicht veröffentlicht`;
+  const closeEn = s.registration_closes
+    ? `${isFiling ? "filing cutoff (submit the application) on" : "registration closes on"} ${s.registration_closes}${time}`
+    : `${isFiling ? "filing cutoff" : "registration close"} not published`;
+  const openDe = s.registration_opens ? `Anmeldung ab ${s.registration_opens}. ` : "";
+  const openEn = s.registration_opens ? `Registration opens on ${s.registration_opens}. ` : "";
+  const uni = sittingUniversity(s);
+  const whoDe = uni === "all" ? "" : ` Gilt für Antragsteller:innen an der Universität ${uni}.`;
+  const whoEn = uni === "all" ? "" : ` Applies to applicants who filed at university ${uni}.`;
+  return {
+    de: `${s.learner_label.de}: Termin ${range(s.date, s.date_end)}. ${openDe}${closeDe}. Quelle: ${s.publisher}.${whoDe}`,
+    en: `${s.learner_label.en}: sitting ${rangeEn(s.date, s.date_end)}. ${openEn}${closeEn}. Source: ${s.publisher}.${whoEn}`,
+  };
+}
+
+/** Fact-shaped view of an official sitting (verdict confirmed: C7 rows come from confirmed official reads only). */
+export function sittingToFact(s: OfficialSitting): MentorFact {
+  const t = sittingTexts(s);
+  return {
+    id: sittingFactId(s),
+    exam_key: s.exam_key,
+    topic: "dates",
+    filing_university: sittingUniversity(s),
+    deadline_type: s.deadline_type,
+    text_de: t.de,
+    text_en: t.en,
+    aliases: [],
+    source_url: s.source_url,
+    source_label: s.publisher,
+    edition: `read ${s.read_on}`,
+    read_on: s.read_on,
+    verdict: "confirmed",
+    review_every_days: 30,
+    status: "live",
+  };
+}
+
+export function sittingToView(s: OfficialSitting): OfficialSittingView {
+  const v: OfficialSittingView = {
+    exam_key: s.exam_key,
+    learner_label: { de: s.learner_label.de, en: s.learner_label.en },
+    date: s.date,
+    registration_opens: s.registration_opens,
+    registration_closes: s.registration_closes,
+    deadline_type: s.deadline_type,
+    publisher: s.publisher,
+    source_url: s.source_url,
+    read_on: s.read_on,
+  };
+  if (s.date_end) v.date_end = s.date_end;
+  if (s.closes_at_time) v.closes_at_time = s.closes_at_time;
+  if (s.filing_university) v.filing_university = s.filing_university;
+  return v;
+}
+
+// ─── App facts (prices and plan wording from the billing-copy owner) ────
+
+/** Public page that states the plans (rendered from billing-copy.ts). */
+export const APP_PRICING_URL = "https://medpruf.com/pricing";
+
+/**
+ * Plan and renewal wording as facts, built from src/lib/billing-copy.ts (the
+ * single owner) so the mentor never restates a price. Confirmed by the owner.
+ */
+export function appBillingFacts(): MentorFact[] {
+  const base = {
+    exam_key: "general" as const,
+    filing_university: "all" as const,
+    source_url: APP_PRICING_URL,
+    source_label: "MedPrüf",
+    edition: "billing-copy.ts",
+    // Bookkeeping only: the owner file is versioned with the app, not read from an official page.
+    read_on: "2026-10-02",
+    verdict: "confirmed" as const,
+    review_every_days: 30,
+    status: "live" as const,
+  };
+  return [
+    {
+      ...base,
+      id: "app.billing.plans",
+      topic: "fee",
+      text_de: billingPlansSummary("de"),
+      text_en: billingPlansSummary("en"),
+      aliases: ["Preis", "Preise", "Abo", "Kosten", "Tarif", "Pro", "price", "plan", "subscription", "Kohorte", "cohort"],
+    },
+    {
+      ...base,
+      id: "app.billing.trial",
+      topic: "fee",
+      text_de: billingTrialSummary("de"),
+      text_en: billingTrialSummary("en"),
+      aliases: ["Test", "Probe", "Testwoche", "trial", "kostenlos testen"],
+    },
+    {
+      ...base,
+      id: "app.billing.cancel",
+      topic: "fee",
+      text_de: billingCancelSummary("de"),
+      text_en: billingCancelSummary("en"),
+      aliases: ["kündigen", "Kündigung", "cancel", "abbestellen", "Mitgliedschaft"],
+    },
+  ];
+}
+
+// ─── Search ─────────────────────────────────────────────────────────────
+
+const STOPWORDS = new Set(
+  (
+    "der die das den dem des ein eine einer eines einem und oder ist sind wie was wann wo wer welche welcher welches " +
+    "fuer mit von zu zum zur im in am an auf aus bei nach ueber unter vor bis ich du mein meine wir ihr es sie man " +
+    "nicht kein keine auch noch nur schon muss kann soll gibt the a an and or is are how what when where who which " +
+    "for with of to in on at by from my i you do does can should there"
+  ).split(" ")
+);
+
+/** Lowercase, fold umlauts and accents, keep letters and digits. */
+export function foldText(s: string): string {
+  return s
+    .toLowerCase()
+    .replace(/ä/g, "ae")
+    .replace(/ö/g, "oe")
+    .replace(/ü/g, "ue")
+    .replace(/ß/g, "ss")
+    .normalize("NFKD")
+    .replace(/[̀-ͯ]/g, "");
+}
+
+export function searchTokens(s: string): string[] {
+  return foldText(s)
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter((t) => t.length >= 2 && !STOPWORDS.has(t));
+}
+
+interface IndexedFact {
+  fact: MentorFact;
+  tokens: Set<string>;
+  aliasPhrases: string[];
+}
+
+function indexFact(fact: MentorFact): IndexedFact {
+  const tokens = new Set<string>([
+    ...searchTokens(fact.text_de),
+    ...searchTokens(fact.text_en),
+    ...fact.aliases.flatMap(searchTokens),
+    ...searchTokens(fact.id.replace(/[._-]/g, " ")),
+    ...searchTokens(fact.topic.replace(/_/g, " ")),
+    ...searchTokens(fact.exam_key),
+  ]);
+  return { fact, tokens, aliasPhrases: fact.aliases.map(foldText).filter((a) => a.length >= 3) };
+}
+
+function scoreFact(ix: IndexedFact, qTokens: string[], qFolded: string): number {
+  let score = 0;
+  for (const t of qTokens) {
+    if (ix.tokens.has(t)) {
+      score += 3;
+      continue;
+    }
+    if (t.length >= 4) {
+      for (const d of ix.tokens) {
+        if (d.length >= 4 && (d.startsWith(t) || t.startsWith(d))) {
+          score += 2;
+          break;
+        }
+      }
+    }
+  }
+  for (const a of ix.aliasPhrases) if (qFolded.includes(a)) score += 4;
+  return score;
+}
+
+/** UTF-8 byte length. */
+export function utf8Bytes(s: string): number {
+  return Buffer.byteLength(s, "utf8");
+}
+
+// ─── The loader ─────────────────────────────────────────────────────────
+
+export interface UnconfirmedPointer {
+  id: string;
+  exam_key: MentorExamKey;
+  topic: MentorFactTopic;
+  verdict: MentorFact["verdict"];
+  status: MentorFact["status"];
+  source_url: string;
+  source_label: string;
+}
+
+export interface MentorFactsLoaderOptions {
+  /** Raw files (tests inject these); default: read content/mentor-facts from disk once. */
+  files?: () => { files: RawFactFile[]; errors: string[] };
+  /** Official sittings; default: C7 OFFICIAL_SITTINGS. */
+  sittings?: readonly OfficialSitting[];
+  /** Extra owner-built facts (default: app billing facts). */
+  appFacts?: () => MentorFact[];
+  /** Logger for load errors (default console.error). */
+  log?: (msg: string) => void;
+}
+
+export class MentorFactsLoader implements FactsLoader {
+  private readonly opts: MentorFactsLoaderOptions;
+  private loaded: { all: Map<string, MentorFact>; index: IndexedFact[]; errors: string[] } | null = null;
+  private readonly sittings: readonly OfficialSitting[];
+
+  constructor(opts: MentorFactsLoaderOptions = {}) {
+    this.opts = opts;
+    this.sittings = opts.sittings ?? OFFICIAL_SITTINGS;
+  }
+
+  /** Loads once (synchronous). Never throws. */
+  private state() {
+    if (this.loaded) return this.loaded;
+    const errors: string[] = [];
+    const all = new Map<string, MentorFact>();
+    const dup = new Set<string>();
+    let files: RawFactFile[] = [];
+    try {
+      const r = (this.opts.files ?? (() => readFactFilesFromDisk()))();
+      files = r.files;
+      errors.push(...r.errors);
+    } catch (e) {
+      errors.push(`facts source failed: ${(e as Error).message}`);
+    }
+    for (const f of files) {
+      if (!Array.isArray(f.records)) {
+        errors.push(`${f.file}: not a JSON array`);
+        continue;
+      }
+      for (const raw of f.records) {
+        const c = validateFactRecord(raw);
+        if (!c.ok) {
+          errors.push(`${f.file}: ${c.error}`);
+          continue;
+        }
+        if (all.has(c.fact.id) || dup.has(c.fact.id)) {
+          dup.add(c.fact.id);
+          all.delete(c.fact.id);
+          errors.push(`${f.file}: duplicate id ${c.fact.id} (all copies dropped)`);
+          continue;
+        }
+        all.set(c.fact.id, c.fact);
+      }
+    }
+    let app: MentorFact[] = [];
+    try {
+      app = (this.opts.appFacts ?? appBillingFacts)();
+    } catch (e) {
+      errors.push(`app facts failed: ${(e as Error).message}`);
+    }
+    for (const f of app) if (!all.has(f.id)) all.set(f.id, f);
+    if (errors.length > 0) (this.opts.log ?? ((m: string) => console.error(m)))(`[mentor facts] ${errors.length} load issue(s): ${errors.join("; ")}`);
+    this.loaded = { all, index: [...all.values()].map(indexFact), errors };
+    return this.loaded;
+  }
+
+  /** Load issues (malformed records, duplicates, missing files). */
+  loadErrors(): string[] {
+    return [...this.state().errors];
+  }
+
+  /** Number of records loaded from the data files and app facts (assertable or not). */
+  size(): number {
+    return this.state().all.size;
+  }
+
+  private sittingById(id: string): OfficialSitting | null {
+    if (!id.startsWith(DERIVED_ID_PREFIXES.sitting)) return null;
+    return this.sittings.find((s) => sittingFactId(s) === id) ?? null;
+  }
+
+  /** Synchronous lookup of one ASSERTABLE fact (data file, app fact or sitting). */
+  peek(id: string, now: Date = new Date()): MentorFact | null {
+    const s = this.sittingById(id);
+    if (s) return sittingToFact(s);
+    const f = this.state().all.get(id);
+    return f && isAssertable(f, now) ? f : null;
+  }
+
+  async byIds(ids: string[], now: Date = new Date()): Promise<MentorFact[]> {
+    const out: MentorFact[] = [];
+    const seen = new Set<string>();
+    for (const id of ids) {
+      if (typeof id !== "string" || seen.has(id)) continue;
+      seen.add(id);
+      const f = this.peek(id, now);
+      if (f) out.push(f);
+    }
+    return out;
+  }
+
+  /** Ranked assertable facts plus pointers to matching non-assertable ones. */
+  searchDetailed(
+    queryDe: string,
+    examKey?: MentorExamKey,
+    topic?: MentorFactTopic,
+    now: Date = new Date(),
+    limit: number = DEFAULT_SEARCH_LIMIT
+  ): { facts: MentorFact[]; unconfirmed: UnconfirmedPointer[] } {
+    const q = typeof queryDe === "string" ? queryDe.slice(0, 300) : "";
+    const qTokens = searchTokens(q);
+    const qFolded = foldText(q);
+    const scored: Array<{ f: MentorFact; s: number }> = [];
+    for (const ix of this.state().index) {
+      const f = ix.fact;
+      if (examKey && f.exam_key !== examKey && f.exam_key !== "general") continue;
+      if (topic && f.topic !== topic) continue;
+      const s = qTokens.length === 0 && (examKey || topic) ? 1 : scoreFact(ix, qTokens, qFolded);
+      if (s > 0) scored.push({ f, s });
+    }
+    scored.sort((a, b) => b.s - a.s || a.f.id.localeCompare(b.f.id));
+    const facts: MentorFact[] = [];
+    const unconfirmed: UnconfirmedPointer[] = [];
+    for (const { f } of scored) {
+      if (isAssertable(f, now)) {
+        if (facts.length < limit) facts.push(f);
+      } else if (f.status !== "retracted" && unconfirmed.length < 3) {
+        unconfirmed.push({
+          id: f.id,
+          exam_key: f.exam_key,
+          topic: f.topic,
+          verdict: f.verdict,
+          status: f.status,
+          source_url: f.source_url,
+          source_label: f.source_label,
+        });
+      }
+    }
+    return { facts, unconfirmed };
+  }
+
+  async search(queryDe: string, examKey?: MentorExamKey, topic?: MentorFactTopic): Promise<MentorFact[]> {
+    return this.searchDetailed(queryDe, examKey, topic).facts;
+  }
+
+  /** Upcoming official sittings (C7) for the exam and filing university, plus assertable date facts. */
+  datesAt(
+    examKey: MentorExamKey,
+    filingUniversity: FilingUniversity,
+    now: Date
+  ): { sittings: OfficialSittingView[]; facts: MentorFact[]; sittingRows: OfficialSitting[] } {
+    const rows = getUpcomingOfficialSittings({ exam: examKey, filingUniversity, now }, this.sittings);
+    const facts = [...this.state().all.values()].filter(
+      (f) =>
+        f.exam_key === examKey &&
+        (f.topic === "dates" || f.topic === "registration") &&
+        (filingUniversity === "all" || f.filing_university === "all" || f.filing_university === filingUniversity) &&
+        isAssertable(f, now)
+    );
+    facts.sort((a, b) => a.id.localeCompare(b.id));
+    return { sittings: rows.map(sittingToView), facts, sittingRows: rows };
+  }
+
+  async dates(
+    examKey: MentorExamKey,
+    filingUniversity: FilingUniversity
+  ): Promise<{ sittings: OfficialSittingView[]; facts: MentorFact[] }> {
+    const r = this.datesAt(examKey, filingUniversity, new Date());
+    return { sittings: r.sittings, facts: r.facts };
+  }
+
+  /** Distinct filing universities among the upcoming rows of an exam. */
+  universitiesWithRows(examKey: MentorExamKey, now: Date): FilingUniversity[] {
+    const rows = getUpcomingOfficialSittings({ exam: examKey, now }, this.sittings);
+    return [...new Set(rows.map(sittingUniversity))].sort();
+  }
+
+  /**
+   * Facts for the cached fact sheet in the system prompt: assertable, no
+   * deadlines or dates (those go through get_dates so the filing university
+   * is asked first), deterministic order, capped by count and bytes.
+   */
+  sheetFacts(now: Date, maxFacts = 25, maxBytes = 9_000): MentorFact[] {
+    const order: MentorFactTopic[] = [
+      "format",
+      "pass_rule",
+      "scoring",
+      "attempts",
+      "results",
+      "language",
+      "documents",
+      "glossary",
+      "fee",
+      "registration",
+    ];
+    const rank = (t: MentorFactTopic) => {
+      const i = order.indexOf(t);
+      return i < 0 ? order.length : i;
+    };
+    const candidates = [...this.state().all.values()]
+      .filter((f) => isAssertable(f, now) && f.topic !== "dates" && !f.deadline_type)
+      .sort((a, b) => rank(a.topic) - rank(b.topic) || a.id.localeCompare(b.id));
+    const out: MentorFact[] = [];
+    let bytes = 0;
+    for (const f of candidates) {
+      if (out.length >= maxFacts) break;
+      const b = utf8Bytes(f.text_de) + utf8Bytes(f.text_en) + 200;
+      if (bytes + b > maxBytes) continue;
+      bytes += b;
+      out.push(f);
+    }
+    return out;
+  }
+}
+
+let singleton: MentorFactsLoader | null = null;
+
+/** Process-wide loader over content/mentor-facts + C7 sittings + billing-copy facts. */
+export function getMentorFactsLoader(): MentorFactsLoader {
+  if (!singleton) singleton = new MentorFactsLoader();
+  return singleton;
+}
+
+/** Tests only: drop the cached singleton. */
+export function resetMentorFactsLoaderForTests(): void {
+  singleton = null;
+}
