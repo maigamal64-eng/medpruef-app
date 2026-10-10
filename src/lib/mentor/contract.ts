@@ -247,6 +247,10 @@ export type CreditLotSource = (typeof CREDIT_LOT_SOURCES)[number];
  *   referral_reward   <referral_id>
  *   admin_included    <user_id>:<YYYY-MM>             admin role, per UTC month
  *   unknown_included  <user_id>:<slice>               paid tier the table does not know
+ *
+ * Included lots expire at min(slice end, entitlement end): pass p_expires_at
+ * explicitly so a Pro user who lapses or is refunded does not keep the rest
+ * of the slice. Package lots (whop_payment) keep the package expiry_days.
  */
 export function includedGrantKey(subscriptionOrUserId: string, slice: number): string {
   if (!Number.isInteger(slice) || slice < 0) throw new RangeError(`invalid slice ${slice}`);
@@ -294,7 +298,28 @@ export const MENTOR_WHOP_EVENTS = Object.freeze({
  * A DB error in step 3 returns handled + 503 (Whop redelivers); it never falls
  * through to the Pro paths. Not recognised -> { handled: false } and the Pro
  * webhook continues exactly as before.
+ *
+ * WHERE THE IDS COME FROM (frozen; getting this wrong cancels the buyer's Pro
+ * through the revoke fallback):
+ *  - grant and record_only events: extractWhopPayment(data) from
+ *    src/lib/whop.ts (paymentId, membershipId, metaUserId, planId, metadata).
+ *  - clawback and deactivate events: extractWhopRevoke(data) and try EVERY
+ *    candidate: paymentId, originalPaymentId, then membershipId. Never take a
+ *    payment id from data.id on a non-payment event (on refund.created and
+ *    dispute.created data.id is the refund or dispute id; on
+ *    membership.deactivated it is the mem_ id).
+ *  - refund and dispute kinds count as mentor ONLY on a matched payment id
+ *    (a lot with source 'whop_payment'); a membership match alone is not
+ *    enough to claw back. A deactivate counts on the membership pin.
+ *  - Recognised but nothing to do (e.g. refund of an unknown mentor payment)
+ *    -> handled, 200, action "unmapped", Sentry-flagged; never handleRevoke.
  */
+export const MENTOR_WHOP_ID_RULES = Object.freeze({
+  grant: { extractor: "extractWhopPayment", ids: ["paymentId", "membershipId"] },
+  record_only: { extractor: "extractWhopPayment", ids: ["paymentId", "membershipId"] },
+  clawback: { extractor: "extractWhopRevoke", ids: ["paymentId", "originalPaymentId"], requiresPaymentMatch: true },
+  deactivate: { extractor: "extractWhopRevoke", ids: ["membershipId", "paymentId", "originalPaymentId"], requiresPaymentMatch: false },
+} as const);
 export type MentorWhopRecognition = "metadata" | "plan_id" | "ledger_payment" | "membership_pin";
 
 export type MentorWhopDecision =
@@ -364,3 +389,41 @@ export const MENTOR_RPCS = Object.freeze({
   spendMonth: { fn: "ai_spend_month", args: ["p_month"] },
   spendCap: { fn: "ai_spend_cap", args: ["p_floor_micro", "p_net_pct"] },
 } as const);
+
+// ─── Admin cost view (W3-COSTVIEW; GET /api/mentor/admin/summary, requireAdmin) ─
+
+/** Read-only. Ids only, never emails. Money here is micro-USD (admin only). */
+export interface MentorAdminSummary {
+  generated_at: string;
+  /** UTC month YYYY-MM the totals cover. */
+  month: string;
+  spend: {
+    mentor_micro: number;
+    legacy_micro: number;
+    /** ai_spend_month(month): mentor + legacy Anthropic. */
+    total_micro: number;
+    /** ai_spend_cap(floor, pct) with the config values. */
+    cap_micro: number;
+    pct_of_cap: number;
+  };
+  by_day: Array<{ day: string; mentor_micro: number; calls: number; house_micro: number }>;
+  by_model: Array<{ model: string; mentor_micro: number; calls: number; input_tokens: number; output_tokens: number; cache_read_tokens: number }>;
+  top_users: Array<{ user_id: string; spent_micro: number; messages: number; available_micro: number }>;
+  /** Open reservations older than RESERVE_STALE_MINUTES (stuck holds). */
+  stale_reservations: Array<{ request_id: string; call_index: number; user_id: string; ceiling_micro: number; age_minutes: number }>;
+  lots_by_package: Array<{ package_id: MentorPackageId; lots: number; granted_micro: number; spent_micro: number; clawed_back_micro: number; live_remaining_micro: number }>;
+  clawbacks: Array<{ lot_id: string; user_id: string; package_id: MentorPackageId; clawed_micro: number; at: string }>;
+  overruns: number;
+  debt_total_micro: number;
+  state: {
+    ai_features_enabled: boolean;
+    mentor_enabled: boolean;
+    packages_enabled: boolean;
+    topups_enabled: boolean;
+    /** DB flag 'mentor' row (enabled, env, rollout_pct) or null. */
+    db_flag: { enabled: boolean; env: string; rollout_pct: number } | null;
+    /** Global breaker tripped (total >= cap). */
+    resting: boolean;
+    beta_allowlist_size: number;
+  };
+}

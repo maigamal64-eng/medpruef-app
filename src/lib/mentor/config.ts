@@ -203,3 +203,22 @@ export function messagesLeftEstimate(availableMicro: number, avgMessageCostMicro
   const per = avgMessageCostMicro && avgMessageCostMicro > 0 ? avgMessageCostMicro : CREDIT_MICRO_USD;
   return Math.floor(availableMicro / per);
 }
+
+/**
+ * Admission rule (frozen; W2-CORE guard): a user message starts only when
+ * available >= maxToolRounds x the FIRST call's reserve ceiling. Reserves are
+ * per call, so without this a user could pay for round 1 and then fail the
+ * round-2 reserve mid-answer. Below the bar: 402 credits_exhausted (or
+ * credits_required when the user never had a lot). Later rounds still
+ * reserve individually; a later reserve failure ends the turn with an
+ * `error` event and only the calls actually made are charged.
+ */
+export function admitMessageMinMicro(firstCallCeilingMicro: number, maxToolRounds: number): number {
+  if (!Number.isInteger(firstCallCeilingMicro) || firstCallCeilingMicro <= 0) throw new RangeError("invalid ceiling");
+  if (!Number.isInteger(maxToolRounds) || maxToolRounds < 1) throw new RangeError("invalid rounds");
+  return firstCallCeilingMicro * maxToolRounds;
+}
+
+export function canAdmitMessage(availableMicro: number, firstCallCeilingMicro: number, maxToolRounds: number): boolean {
+  return Number.isFinite(availableMicro) && availableMicro >= admitMessageMinMicro(firstCallCeilingMicro, maxToolRounds);
+}

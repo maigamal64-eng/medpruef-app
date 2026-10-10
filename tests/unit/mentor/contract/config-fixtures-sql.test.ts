@@ -147,3 +147,21 @@ describe("C3 ledger migration (static checks; the live run is on a local Postgre
     expect(SQL).toContain("ON CONFLICT (package_id) DO NOTHING");
   });
 });
+
+describe("frozen guard and Whop id rules", () => {
+  it("admits a message only when 3 rounds of the first ceiling fit", async () => {
+    const { admitMessageMinMicro, canAdmitMessage } = await import("@/lib/mentor/config");
+    expect(admitMessageMinMicro(4_000, 3)).toBe(12_000);
+    expect(canAdmitMessage(11_999, 4_000, 3)).toBe(false);
+    expect(canAdmitMessage(12_000, 4_000, 3)).toBe(true);
+    expect(() => admitMessageMinMicro(0, 3)).toThrow();
+  });
+
+  it("refund and dispute need a matched payment id and never read the membership alone", async () => {
+    const { MENTOR_WHOP_ID_RULES } = await import("@/lib/mentor/contract");
+    expect(MENTOR_WHOP_ID_RULES.clawback.extractor).toBe("extractWhopRevoke");
+    expect(MENTOR_WHOP_ID_RULES.clawback.requiresPaymentMatch).toBe(true);
+    expect(MENTOR_WHOP_ID_RULES.clawback.ids).not.toContain("membershipId");
+    expect(MENTOR_WHOP_ID_RULES.deactivate.ids[0]).toBe("membershipId");
+  });
+});

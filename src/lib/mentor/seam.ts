@@ -9,6 +9,10 @@
  *   W2-BRAIN    implements Brain and FactsLoader.
  *   W2-CREDITS  implements Wallet and the Whop branch (src/lib/mentor/credits/).
  *   W2-EVAL     calls the same runMentorTurn with createTestMeter/createTestWallet.
+ *   W2-UI       builds against contract.ts types and fixtures.ts only.
+ *   W3-COSTVIEW returns contract.ts MentorAdminSummary (read-only).
+ * Admission: the W2-CORE guard admits a message only when config.ts
+ * canAdmitMessage(available, firstCallCeiling, maxToolRounds) holds.
  *
  * Money is integer micro-USD everywhere in this file. Credits are derived for
  * display only (config.ts creditsFromMicro).
