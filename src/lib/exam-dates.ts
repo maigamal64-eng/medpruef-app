@@ -394,11 +394,161 @@ export interface OfficialSitting {
   read_on: string;
 }
 
+// Official source documents (all read 2026-10-10 by the archive sweep; see
+// reports/archive-sweep-2026-10-09/out/finish/official-vienna.json and
+// official-spt-pharma.json). Re-read the SIP calendar on the day of each
+// deploy: it prints a wrong year in one cell of the 10 Mar 2027 row.
+const SRC_SIP_CALENDAR =
+  "https://www.meduniwien.ac.at/web/studierende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnisse/pruefungskalender/";
+const SRC_RIG_WS26 =
+  "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/WS26Pr%C3%BCf_modus_EW_03062026.pdf";
+const SRC_MERKBLATT_SEP26 =
+  "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/pdf/Merkblatt_Nostri_Human_VS_1._9._2026-1.pdf";
+const SRC_IMED_STP_2027 =
+  "https://www.i-med.ac.at/studium-services/media/Termine-Stichprobentest-2027-1.pdf";
+const READ_ON = "2026-10-10";
+const MUW = "MedUni Wien";
+const IMED = "Medizinische Universität Innsbruck";
+
+const SIP4A_LABEL = { de: "SIP4a (MedUni Wien)", en: "SIP4a (MedUni Vienna)" };
+const SIP5A_LABEL = { de: "SIP5a (MedUni Wien)", en: "SIP5a (MedUni Vienna)" };
+const REZ_LABEL = {
+  de: "Rezeptierkunde (Pharmakologie), MedUni Wien",
+  en: "Rezeptierkunde (pharmacology), MedUni Vienna",
+};
+const GM_LABEL = {
+  de: "Gerichtsmedizin, MedUni Wien",
+  en: "Gerichtsmedizin (forensic medicine), MedUni Vienna",
+};
+
+function sip(
+  exam_key: "sip4a" | "sip5a",
+  date: string,
+  registration_opens: string,
+  registration_closes: string
+): OfficialSitting {
+  return {
+    exam_key,
+    learner_label: exam_key === "sip4a" ? SIP4A_LABEL : SIP5A_LABEL,
+    date,
+    registration_opens,
+    registration_closes,
+    deadline_type: "registration",
+    publisher: MUW,
+    filing_university: "wien",
+    source_url: SRC_SIP_CALENDAR,
+    read_on: READ_ON,
+  };
+}
+
+function rigWeek(
+  exam_key: "rezeptierkunde" | "gerichtsmedizin",
+  date: string,
+  date_end: string,
+  registration_opens: string,
+  registration_closes: string
+): OfficialSitting {
+  return {
+    exam_key,
+    learner_label: exam_key === "rezeptierkunde" ? REZ_LABEL : GM_LABEL,
+    date,
+    date_end,
+    registration_opens,
+    registration_closes,
+    closes_at_time: "12:00",
+    deadline_type: "registration",
+    publisher: MUW,
+    filing_university: "wien",
+    source_url: SRC_RIG_WS26,
+    read_on: READ_ON,
+  };
+}
+
 /**
- * Confirmed official sittings, sorted ascending by date. EMPTY until W1-CAL
- * fills it from the confirmed research rows. Never add an estimated date.
+ * One Stichprobentest sitting has TWO published deadlines from two
+ * publishers. The MedUni Wien Merkblatt (1 Sep 2026, p7) gives a filing
+ * cutoff (Einreichungsfrist) for its own filers; the i-med 2027 Termine PDF
+ * gives a registration deadline (Anmeldefrist) and says to register at the
+ * university where you filed. Tagging the Merkblatt row "wien" follows from
+ * it being MedUni Wien's own document; tagging the i-med row "innsbruck" is
+ * an INFERENCE from the research (no sentence says it). Surfaces therefore
+ * show both rows with their publisher labels and never pick one for the
+ * learner.
  */
-export const OFFICIAL_SITTINGS: readonly OfficialSitting[] = [];
+function stp(
+  venue: "Innsbruck" | "Wien" | "Graz",
+  date: string,
+  merkblattCutoff: string,
+  imedDeadline: string
+): OfficialSitting[] {
+  const learner_label = {
+    de: `Stichprobentest ${venue}`,
+    en: `Stichprobentest ${venue === "Wien" ? "Vienna" : venue}`,
+  };
+  return [
+    {
+      exam_key: "stichprobentest",
+      learner_label,
+      date,
+      registration_opens: null,
+      registration_closes: merkblattCutoff,
+      deadline_type: "filing_cutoff",
+      publisher: MUW,
+      filing_university: "wien",
+      source_url: SRC_MERKBLATT_SEP26,
+      read_on: READ_ON,
+    },
+    {
+      exam_key: "stichprobentest",
+      learner_label,
+      date,
+      registration_opens: null,
+      registration_closes: imedDeadline,
+      deadline_type: "registration",
+      publisher: IMED,
+      filing_university: "innsbruck",
+      source_url: SRC_IMED_STP_2027,
+      read_on: READ_ON,
+    },
+  ];
+}
+
+/**
+ * Confirmed official sittings, sorted ascending by date. Filled by W1-CAL on
+ * 2026-10-10 from the next_dates rows of official-vienna.json and
+ * official-spt-pharma.json; tests/unit/lib/exam-deadline-selection.test.ts
+ * pairs every row with its official row (C14). Never add an estimated date.
+ * Rezeptierkunde/Gerichtsmedizin SS 2027 weeks are not published yet and are
+ * deliberately absent.
+ */
+export const OFFICIAL_SITTINGS: readonly OfficialSitting[] = [
+  // Nov 2026: registration open 5 to 19 Oct 2026.
+  sip("sip5a", "2026-11-17", "2026-10-05", "2026-10-19"),
+  sip("sip4a", "2026-11-18", "2026-10-05", "2026-10-19"),
+  // WS 2026/27 exam week 2: registration 7 to 20 Oct 2026, closes 12:00.
+  rigWeek("rezeptierkunde", "2026-11-23", "2026-11-27", "2026-10-07", "2026-10-20"),
+  rigWeek("gerichtsmedizin", "2026-11-23", "2026-11-27", "2026-10-07", "2026-10-20"),
+  // WS 2026/27 exam week 3: registration 2 to 15 Dec 2026, closes 12:00.
+  // The week starts on the same calendar day as an ÖÄK sitting; it is the
+  // official MedUni Wien week, not the ÖÄK date (check-dates denylist).
+  rigWeek("rezeptierkunde", "2027-01-18", "2027-01-22", "2026-12-02", "2026-12-15"), // date-ok: official MedUni Wien exam week (WS26 PDF), not the OeAEK sitting
+  rigWeek("gerichtsmedizin", "2027-01-18", "2027-01-22", "2026-12-02", "2026-12-15"), // date-ok: official MedUni Wien exam week (WS26 PDF), not the OeAEK sitting
+  ...stp("Innsbruck", "2027-02-03", "2026-12-14", "2027-01-07"),
+  sip("sip5a", "2027-02-15", "2027-01-04", "2027-01-18"), // date-ok: official SIP registration close (SIP calendar), not the OeAEK sitting
+  sip("sip4a", "2027-02-19", "2027-01-04", "2027-01-18"), // date-ok: official SIP registration close (SIP calendar), not the OeAEK sitting
+  // The official page prints a typo year in one cell of this window;
+  // 25 Jan to 8 Feb 2027 per the research. Re-read on deploy day.
+  sip("sip4a", "2027-03-10", "2027-01-25", "2027-02-08"),
+  sip("sip5a", "2027-03-10", "2027-01-25", "2027-02-08"),
+  sip("sip4a", "2027-04-27", "2027-03-15", "2027-03-29"),
+  sip("sip5a", "2027-04-28", "2027-03-15", "2027-03-29"),
+  ...stp("Wien", "2027-05-04", "2027-03-17", "2027-03-17"),
+  sip("sip4a", "2027-06-30", "2027-05-17", "2027-05-31"),
+  sip("sip5a", "2027-07-02", "2027-05-17", "2027-05-31"),
+  sip("sip4a", "2027-09-01", "2027-07-19", "2027-08-02"),
+  ...stp("Graz", "2027-09-22", "2027-06-30", "2027-08-25"),
+  sip("sip5a", "2027-09-23", "2027-08-09", "2027-08-23"),
+];
 
 export interface UpcomingOfficialSittingsOptions {
   exam?: OfficialExamKey;
@@ -434,4 +584,239 @@ export function getUpcomingOfficialSittings(
           b.registration_closes ?? "9999-12-31"
         )
     );
+}
+
+// ---------------------------------------------------------------------------
+// C7 read helpers (W1-CAL, additive). Every date surface that shows official
+// sittings or deadlines goes through these, so the banner, the calendar, the
+// picker and the agent endpoints can never disagree.
+//
+// Deadlines are compared in Vienna wall-clock time, not UTC days: the
+// Rezeptierkunde/Gerichtsmedizin window closes at 12:00 Vienna time, and a
+// whole-day window closes at the end of its day in Vienna. Comparing
+// "YYYY-MM-DD HH:MM" strings avoids offset maths across the DST switch.
+// ---------------------------------------------------------------------------
+
+/** Which official exams belong to each question bank (users.active_exam). */
+export const OFFICIAL_KEYS_BY_BANK: Record<PuypExamType, readonly OfficialExamKey[]> = {
+  // The Vienna bank is SIP4a/SIP5a practice. It is NOT the postgraduate
+  // ÖÄK exam, so no ÖÄK date is ever shown for it.
+  kenntnispruefung: ["sip4a", "sip5a"],
+  kmp_innsbruck: ["stichprobentest"],
+  // Rezeptierkunde and Gerichtsmedizin share the same exam weeks and both
+  // are always prescribed for Vienna Nostrifikanten.
+  pharma: ["rezeptierkunde", "gerichtsmedizin"],
+};
+
+/** The question bank an official exam belongs to, or null (c1, fsp, general). */
+export function bankForOfficialKey(key: OfficialExamKey): PuypExamType | null {
+  for (const bank of Object.keys(OFFICIAL_KEYS_BY_BANK) as PuypExamType[]) {
+    if (OFFICIAL_KEYS_BY_BANK[bank].includes(key)) return bank;
+  }
+  return null;
+}
+
+/** Coerce any stored exam id to a bank key, or null when unknown. */
+export function asPuypExamType(value: unknown): PuypExamType | null {
+  return value === "kenntnispruefung" || value === "kmp_innsbruck" || value === "pharma"
+    ? value
+    : null;
+}
+
+/** "YYYY-MM-DD HH:MM" for `now` in Europe/Vienna. */
+export function viennaStamp(now: Date = new Date()): string {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Vienna",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(now);
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "00";
+  return `${get("year")}-${get("month")}-${get("day")} ${get("hour")}:${get("minute")}`;
+}
+
+/** Today's ISO date in Europe/Vienna. */
+export function viennaToday(now: Date = new Date()): string {
+  return viennaStamp(now).slice(0, 10);
+}
+
+/** The moment a window closes, as a Vienna "YYYY-MM-DD HH:MM" stamp. */
+function closeStamp(s: OfficialSitting): string | null {
+  if (!s.registration_closes) return null;
+  // A whole-day window is open for all of its last day: "24:00" sorts after
+  // every real minute of that day.
+  return `${s.registration_closes} ${s.closes_at_time ?? "24:00"}`;
+}
+
+/**
+ * True while the row's registration or filing window has not closed yet
+ * (Vienna time). A row with no published close is never "open".
+ */
+export function isOfficialWindowOpen(s: OfficialSitting, now: Date = new Date()): boolean {
+  const close = closeStamp(s);
+  return close !== null && viennaStamp(now) < close;
+}
+
+/** True once the row's window has opened (or the source gives no opening). */
+export function hasOfficialWindowStarted(s: OfficialSitting, now: Date = new Date()): boolean {
+  return s.registration_opens === null || viennaToday(now) >= s.registration_opens;
+}
+
+/** Whole days from Vienna today to an ISO date (negative once past). */
+export function daysUntilViennaDate(iso: string, now: Date = new Date()): number {
+  const a = Date.parse(`${viennaToday(now)}T00:00:00Z`);
+  const b = Date.parse(`${iso.slice(0, 10)}T00:00:00Z`);
+  return Math.round((b - a) / 86_400_000);
+}
+
+export interface OfficialQuery {
+  /** Restrict to these exams (e.g. OFFICIAL_KEYS_BY_BANK.kenntnispruefung). */
+  exams?: readonly OfficialExamKey[];
+  filingUniversity?: FilingUniversity;
+  now?: Date;
+}
+
+/** Upcoming official sittings for several exams (wraps the C7 selector). */
+export function getUpcomingOfficialFor(
+  query: OfficialQuery = {},
+  sittings: readonly OfficialSitting[] = OFFICIAL_SITTINGS
+): OfficialSitting[] {
+  const { exams, filingUniversity, now = new Date() } = query;
+  return getUpcomingOfficialSittings({ filingUniversity, now }, sittings).filter(
+    (s) => !exams || exams.includes(s.exam_key)
+  );
+}
+
+/** Rows whose window is still open, soonest close first. */
+export function getOpenOfficialDeadlines(
+  query: OfficialQuery = {},
+  sittings: readonly OfficialSitting[] = OFFICIAL_SITTINGS
+): OfficialSitting[] {
+  const now = query.now ?? new Date();
+  return getUpcomingOfficialFor(query, sittings)
+    .filter((s) => isOfficialWindowOpen(s, now))
+    .sort(
+      (a, b) =>
+        closeStamp(a)!.localeCompare(closeStamp(b)!) || a.date.localeCompare(b.date)
+    );
+}
+
+/** One deadline shared by one or more sittings (SIP4a + SIP5a close together). */
+export interface OfficialDeadlineGroup {
+  registration_closes: string;
+  closes_at_time?: string;
+  deadline_type: OfficialDeadlineType;
+  publisher: string;
+  /** True when today (Vienna) is inside the window, false if it opens later. */
+  started: boolean;
+  rows: OfficialSitting[];
+}
+
+/**
+ * Open deadlines grouped by (close moment, deadline type, publisher), soonest
+ * first. Rows that close together are reported together, so a surface never
+ * picks SIP4a or SIP5a at random.
+ */
+export function getOpenOfficialDeadlineGroups(
+  query: OfficialQuery = {},
+  sittings: readonly OfficialSitting[] = OFFICIAL_SITTINGS
+): OfficialDeadlineGroup[] {
+  const now = query.now ?? new Date();
+  const groups: OfficialDeadlineGroup[] = [];
+  for (const s of getOpenOfficialDeadlines(query, sittings)) {
+    const last = groups[groups.length - 1];
+    if (
+      last &&
+      last.registration_closes === s.registration_closes &&
+      last.closes_at_time === s.closes_at_time &&
+      last.deadline_type === s.deadline_type &&
+      last.publisher === s.publisher
+    ) {
+      last.rows.push(s);
+      last.started = last.started || hasOfficialWindowStarted(s, now);
+      continue;
+    }
+    groups.push({
+      registration_closes: s.registration_closes!,
+      closes_at_time: s.closes_at_time,
+      deadline_type: s.deadline_type,
+      publisher: s.publisher,
+      started: hasOfficialWindowStarted(s, now),
+      rows: [s],
+    });
+  }
+  return groups;
+}
+
+/** The soonest open deadline group, or null. */
+export function getNextOfficialDeadlineGroup(
+  query: OfficialQuery = {},
+  sittings: readonly OfficialSitting[] = OFFICIAL_SITTINGS
+): OfficialDeadlineGroup | null {
+  return getOpenOfficialDeadlineGroups(query, sittings)[0] ?? null;
+}
+
+/** Upcoming official sittings that share one date (one picker option, one card). */
+export interface OfficialDateGroup {
+  date: string;
+  date_end?: string;
+  rows: OfficialSitting[];
+}
+
+/** Upcoming sittings grouped by date (and exam week end), ascending. */
+export function groupOfficialByDate(rows: readonly OfficialSitting[]): OfficialDateGroup[] {
+  const groups: OfficialDateGroup[] = [];
+  for (const s of rows) {
+    const g = groups.find((x) => x.date === s.date && x.date_end === s.date_end);
+    if (g) g.rows.push(s);
+    else groups.push({ date: s.date, date_end: s.date_end, rows: [s] });
+  }
+  return groups.sort((a, b) => a.date.localeCompare(b.date));
+}
+
+/**
+ * Plain JSON view of upcoming official sittings for the agent endpoints
+ * (MCP, A2A, WebMCP). Labels are English; every row carries its publisher,
+ * deadline type and source so an agent can quote both Stichprobentest
+ * publishers without merging them.
+ */
+export function officialSittingsForAgents(
+  query: OfficialQuery = {},
+  sittings: readonly OfficialSitting[] = OFFICIAL_SITTINGS
+) {
+  const now = query.now ?? new Date();
+  return getUpcomingOfficialFor(query, sittings).map((s) => ({
+    exam: s.exam_key,
+    name: s.learner_label.en,
+    date: s.date,
+    ...(s.date_end ? { dateEnd: s.date_end } : {}),
+    deadlineType:
+      s.deadline_type === "filing_cutoff"
+        ? "filing cutoff (Einreichungsfrist)"
+        : "registration deadline (Anmeldefrist)",
+    deadlineDate: s.registration_closes,
+    ...(s.closes_at_time ? { deadlineTimeVienna: s.closes_at_time } : {}),
+    windowOpens: s.registration_opens,
+    windowStatus: !s.registration_closes
+      ? "not published"
+      : isOfficialWindowOpen(s, now)
+        ? hasOfficialWindowStarted(s, now)
+          ? "open"
+          : "not open yet"
+        : "closed",
+    publisher: s.publisher,
+    ...(s.exam_key === "stichprobentest"
+      ? {
+          note:
+            s.deadline_type === "filing_cutoff"
+              ? "Filing cutoff in the MedUni Wien Merkblatt (MedUni Wien's own document for its applicants)."
+              : "Registration deadline in the i-med Termine PDF, which says to register at the university where you filed your application.",
+        }
+      : {}),
+    sourceUrl: s.source_url,
+    readOn: s.read_on,
+  }));
 }
