@@ -13,6 +13,7 @@ import {
   type MentorErrorBody,
 } from "@/lib/mentor/contract";
 import { canBuyMentorPackages } from "@/lib/mentor/credits/gate";
+import { checkMentorPlan } from "@/lib/mentor/credits/plan-check";
 import { isBuyable, isSoldPackageId, loadPackageCatalogue } from "@/lib/mentor/credits/packages";
 
 export const dynamic = "force-dynamic";
@@ -56,6 +57,24 @@ export async function POST(req: NextRequest) {
     const row = catalogue.get(packageId);
     if (!isBuyable(packageId, row, config)) return err("mentor_disabled", 403);
     const planId = mentorWhopPlanId(packageId) as string;
+
+    // M3: the price shown must be the price Whop charges. Refuse on any drift.
+    const plan = await checkMentorPlan({
+      planId,
+      priceCents: row.price_eur_cents as number,
+      kind: packageId === "mentor_topup" ? "topup" : "subscription",
+      apiKey: process.env.WHOP_API_KEY || process.env.WHOP_APP_API_KEY || null,
+    });
+    if (!plan.ok) {
+      await logPaymentEvent(sb, {
+        event: "checkout_failed",
+        userId,
+        planId,
+        reason: "provider_error",
+        metadata: { kind: MENTOR_CHECKOUT_METADATA_KIND, package: packageId, cause: `plan_${plan.reason}`, status: 503 },
+      });
+      return err("upstream_error", 503);
+    }
 
     const metadata: MentorCheckoutMetadata = {
       kind: MENTOR_CHECKOUT_METADATA_KIND,

@@ -21,8 +21,10 @@
  * One grant per call at most (the best entitlement: largest grant, then the
  * row that runs longest), so a user with two overlapping subscriptions is
  * not funded twice for the same days.
- * Included lots expire at min(slice end, entitlement end) so a lapsed or
- * refunded Pro user does not keep the rest of the slice.
+ * Included lots expire at min(slice end, entitlement end) so a lapsed Pro user
+ * does not keep the rest of the slice. A REFUNDED Pro user does keep the
+ * current slice until it ends (at most 30 days and the slice value, USD 1.00):
+ * the Pro revoke path does not claw it back (review L1, accepted).
  */
 
 import { entitlementSlice, includedGrantKey, type CreditLotSource, type MentorPackageId } from "../contract";

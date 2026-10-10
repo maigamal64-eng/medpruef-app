@@ -71,6 +71,8 @@ export type GrantReason =
   | "unknown_package"
   | "zero_grant"
   | "source_conflict"
+  /** The payment was refunded or disputed before this grant arrived (tombstone). */
+  | "revoked"
   | "db_error"
   | "missing_function"
   | "bad_response";
@@ -118,7 +120,12 @@ export async function rpcGrantCredits(sb: RpcClient, a: GrantArgs): Promise<Gran
     if (!o.ok) {
       const r = o.reason;
       const reason: GrantReason =
-        r === "invalid_args" || r === "unknown_package" || r === "zero_grant" || r === "source_conflict" || r === "db_error"
+        r === "invalid_args" ||
+        r === "unknown_package" ||
+        r === "zero_grant" ||
+        r === "source_conflict" ||
+        r === "revoked" ||
+        r === "db_error"
           ? r
           : "bad_response";
       return fail(reason, strOrNull(o.lot_id));
@@ -141,6 +148,8 @@ export interface ClawbackOutcome {
   duplicate: boolean;
   userId: string | null;
   clawedMicro: number | null;
+  /** Spent credit of a refunded paid lot that became wallet debt (review H2). */
+  debtAddedMicro: number | null;
   reason?: "invalid_args" | "not_found" | "db_error" | "missing_function" | "bad_response";
 }
 
@@ -155,6 +164,7 @@ export async function rpcClawback(
     duplicate: false,
     userId: null,
     clawedMicro: null,
+    debtAddedMicro: null,
     reason,
   });
   if (!sourceId) return fail("invalid_args");
@@ -170,7 +180,44 @@ export async function rpcClawback(
     if (!o.ok) {
       return fail(o.reason === "not_found" || o.reason === "invalid_args" || o.reason === "db_error" ? o.reason : "bad_response");
     }
-    return { ok: true, duplicate: o.duplicate === true, userId: strOrNull(o.user_id), clawedMicro: num(o.clawed_micro) };
+    return {
+      ok: true,
+      duplicate: o.duplicate === true,
+      userId: strOrNull(o.user_id),
+      clawedMicro: num(o.clawed_micro),
+      debtAddedMicro: num(o.debt_added_micro),
+    };
+  } catch {
+    return fail("db_error");
+  }
+}
+
+// ─── mentor_revoke_payment ──────────────────────────────────────────────
+
+export interface RevokeOutcome {
+  ok: boolean;
+  duplicate: boolean;
+  reason?: "invalid_args" | "db_error" | "missing_function" | "bad_response";
+}
+
+/**
+ * Tombstone a refunded or disputed Whop payment so a grant that arrives later
+ * (a retried payment.succeeded, or the verify poll) is refused (review H1).
+ * Call it BEFORE rpcClawback, for every payment id of a recognised refund.
+ */
+export async function rpcRevokePayment(sb: RpcClient, paymentId: string, event: string): Promise<RevokeOutcome> {
+  const fail = (reason: NonNullable<RevokeOutcome["reason"]>): RevokeOutcome => ({ ok: false, duplicate: false, reason });
+  if (!paymentId || paymentId.length > 200) return fail("invalid_args");
+  try {
+    const { data, error } = await sb.rpc(MENTOR_RPCS.revokePayment.fn, {
+      p_payment_id: paymentId,
+      p_event: event.slice(0, 200),
+    });
+    if (error) return fail(isMissingObjectError(error) ? "missing_function" : "db_error");
+    const o = obj(data);
+    if (!o || typeof o.ok !== "boolean") return fail("bad_response");
+    if (!o.ok) return fail(o.reason === "invalid_args" || o.reason === "db_error" ? o.reason : "bad_response");
+    return { ok: true, duplicate: o.duplicate === true };
   } catch {
     return fail("db_error");
   }

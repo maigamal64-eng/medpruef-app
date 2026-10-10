@@ -21,7 +21,7 @@ import * as Sentry from "@sentry/nextjs";
 import { extractWhopPayment, paginateWhopLedger, type WhopLedgerResult } from "@/lib/whop";
 import { mentorPackageForWhopPlan, mentorWhopPlanId, type MentorSoldPackageId } from "../config";
 import type { MentorCheckoutVerifyResponse } from "../contract";
-import { grantMentorPayment } from "./grant-payment";
+import { grantMentorPayment, paidAmountCents } from "./grant-payment";
 import { SOLD_PACKAGE_IDS } from "./packages";
 
 type Env = Record<string, string | undefined>;
@@ -30,6 +30,8 @@ type Db = Pick<SupabaseClient, "from" | "rpc">;
 export const VERIFY_WINDOW_MS = 48 * 3600_000;
 const VALID_MEMBERSHIP = new Set(["active", "trialing", "completed"]);
 const FAILED_PAYMENT = new Set(["failed", "declined", "canceled", "cancelled"]);
+/** Status or substatus words that mean the money was taken back (review H3). */
+const REFUNDED_WORDS = /refund|chargeback|charged_back|dispute/i;
 
 export type LedgerFn = (args: Parameters<typeof paginateWhopLedger>[0]) => Promise<WhopLedgerResult>;
 
@@ -45,6 +47,23 @@ function createdMs(row: unknown): number | null {
   const raw = rec(row).created_at ?? rec(row).createdAt;
   const t = typeof raw === "number" ? (raw > 1e12 ? raw : raw * 1000) : typeof raw === "string" ? Date.parse(raw) : NaN;
   return Number.isFinite(t) ? t : null;
+}
+
+/**
+ * Does this payment row show a refund or dispute? How Whop marks a refunded
+ * payment was NOT confirmed against a real one, so every plausible signal
+ * counts: a refund word in status or substatus, a refunded amount above zero,
+ * or a refunded_at timestamp. Check one real refunded payment before launch.
+ */
+export function looksRefunded(row: unknown): boolean {
+  const d = rec(row);
+  if (REFUNDED_WORDS.test(str(d.status) ?? "") || REFUNDED_WORDS.test(str(d.substatus) ?? "")) return true;
+  for (const k of ["refunded_amount", "amount_refunded", "refunded_total"]) {
+    const v = d[k];
+    const n = typeof v === "number" ? v : typeof v === "string" && v.trim() !== "" ? Number(v) : 0;
+    if (Number.isFinite(n) && n > 0) return true;
+  }
+  return Boolean(str(d.refunded_at) ?? str(d.refunded_on) ?? str(d.disputed_at));
 }
 
 export interface VerifyDeps {
@@ -141,12 +160,23 @@ export async function verifyMentorCheckout(
     const at = createdMs(row);
     if (at === null || at < cutoff) continue;
     const status = str(rec(row).status);
+    if (looksRefunded(row)) {
+      sawFailed = true;
+      continue;
+    }
     if (status !== "paid") {
       if (status && FAILED_PAYMENT.has(status)) sawFailed = true;
       continue;
     }
     const pkg = mentorPackageForWhopPlan(f.planId, env) ?? (mine.get(membershipId) as MentorSoldPackageId);
-    const g = await grantMentorPayment(deps.db, { userId, packageId: pkg, paymentId: f.paymentId, membershipId });
+    const g = await grantMentorPayment(deps.db, {
+      userId,
+      packageId: pkg,
+      paymentId: f.paymentId,
+      membershipId,
+      paidCents: paidAmountCents(row),
+      currency: f.currency,
+    });
     if (g.kind === "granted" || g.kind === "duplicate") return "granted";
     if (g.kind === "retry") return "pending";
     Sentry.captureMessage(`mentor verify: payment ${f.paymentId} cannot be granted (${g.reason}); manual grant needed`, "error");

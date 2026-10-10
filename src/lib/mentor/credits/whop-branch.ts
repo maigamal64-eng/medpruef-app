@@ -24,8 +24,13 @@
  *    treated as "not mentor" and Sentry-flagged; any other DB error on
  *    recognition returns 503 so Whop redelivers.
  *  - Clawback/deactivate ids come from extractWhopRevoke, never data.id on a
- *    non-payment event. Refunds and disputes claw back only on a matched
- *    payment lot; a membership match alone is "unmapped" (200, flagged).
+ *    non-payment event. A recognised refund or dispute first TOMBSTONES every
+ *    payment id (mentor_revoke_payment, review H1: a grant that arrives later
+ *    is refused), then claws back the matched payment lot (unspent part gone,
+ *    spent part becomes debt, review H2). A refund with no lot yet is 200
+ *    "recorded" (tombstoned); a membership match alone claws nothing back.
+ *  - A grant needs a real payment (review H3): paid amount > 0, EUR, and at
+ *    least the package price less a small tolerance; else 200 "unmapped".
  */
 
 import * as Sentry from "@sentry/nextjs";
@@ -41,8 +46,8 @@ import {
   type MentorWhopRecognition,
   type RouteMentorWhopEvent,
 } from "../contract";
-import { isUuid, rpcClawback, rpcMembershipStatus, rpcWhopLookup, type WhopLookup } from "./db";
-import { grantMentorPayment } from "./grant-payment";
+import { isUuid, rpcClawback, rpcMembershipStatus, rpcRevokePayment, rpcWhopLookup, type WhopLookup } from "./db";
+import { grantMentorPayment, paidAmountCents } from "./grant-payment";
 import { isSoldPackageId } from "./packages";
 
 type Env = Record<string, string | undefined>;
@@ -128,8 +133,12 @@ export function createMentorWhopRouter(deps: MentorRouterDeps = {}): RouteMentor
   return async function routeMentorWhopEvent(event: string, data: unknown): Promise<MentorWhopDecision> {
     const cls = classifyMentorEvent(event);
     const f = extractWhopPayment(data);
-    const metaMentor = metadataSaysMentor(data);
-    const planPkg = mentorPackageForWhopPlan(f.planId, env);
+    // A refund or dispute nests the payment under data.payment: its metadata
+    // and plan are positive mentor evidence too (review H1: a refund that
+    // beats its grant has no lot and no membership pin yet).
+    const nested = cls === "clawback" && rec(data).payment && typeof rec(data).payment === "object" ? rec(data).payment : null;
+    const metaMentor = metadataSaysMentor(data) || (nested !== null && metadataSaysMentor(nested));
+    const planPkg = mentorPackageForWhopPlan(f.planId, env) ?? (nested !== null ? mentorPackageForWhopPlan(extractWhopPayment(nested).planId, env) : null);
     const configured = mentorCommerceConfigured(env);
 
     // Positive Pro evidence (a Pro plan id or a Pro tier in metadata) and no
@@ -224,7 +233,14 @@ export function createMentorWhopRouter(deps: MentorRouterDeps = {}): RouteMentor
       if (uErr) return decide(503, "retry", recognisedBy, f.paymentId);
       if (!u) return unmapped("user_not_found", recognisedBy);
 
-      const g = await grantMentorPayment(db(), { userId, packageId, paymentId: f.paymentId, membershipId: f.membershipId });
+      const g = await grantMentorPayment(db(), {
+        userId,
+        packageId,
+        paymentId: f.paymentId,
+        membershipId: f.membershipId,
+        paidCents: paidAmountCents(data),
+        currency: f.currency,
+      });
       if (g.kind === "retry") {
         await log(db() as SupabaseClient, {
           event: "grant_failed",
@@ -276,12 +292,31 @@ export function createMentorWhopRouter(deps: MentorRouterDeps = {}): RouteMentor
     if (!recognisedBy) return NOT_MENTOR;
 
     if (cls === "clawback") {
+      // Tombstone every payment id of a recognised mentor refund/dispute FIRST,
+      // whether or not a lot exists yet (H1). A failure is a 503 so Whop redelivers.
+      for (const p of payments) {
+        const t = await rpcRevokePayment(db(), p, event);
+        if (!t.ok) {
+          if (t.reason === "missing_function") {
+            Sentry.captureMessage("mentor_revoke_payment missing: ledger migration not applied while a mentor refund arrived", "error");
+          }
+          return decide(503, "retry", recognisedBy, p);
+        }
+      }
       if (!matchedPayment) {
-        Sentry.captureMessage(`mentor ${event} with no matched payment lot (payments=${payments.join(",") || "none"}): nothing clawed back`, "warning");
-        return decide(200, "unmapped", recognisedBy, null);
+        Sentry.captureMessage(
+          `mentor ${event} with no matched payment lot (payments=${payments.join(",") || "none"}): tombstoned, nothing clawed back`,
+          "warning",
+        );
+        return payments.length > 0 ? decide(200, "recorded", recognisedBy, payments[0]) : decide(200, "unmapped", recognisedBy, null);
       }
       const c = await rpcClawback(db(), "whop_payment", matchedPayment, event);
-      if (c.ok) return decide(200, c.duplicate ? "duplicate" : "clawed_back", recognisedBy, matchedPayment);
+      if (c.ok) {
+        if (!c.duplicate && c.debtAddedMicro && c.debtAddedMicro > 0) {
+          Sentry.captureMessage(`mentor refund ${matchedPayment}: ${c.debtAddedMicro} micro-USD of spent credit became wallet debt`, "warning");
+        }
+        return decide(200, c.duplicate ? "duplicate" : "clawed_back", recognisedBy, matchedPayment);
+      }
       if (c.reason === "not_found" || c.reason === "invalid_args") {
         Sentry.captureMessage(`mentor clawback ${matchedPayment}: ${c.reason}`, "warning");
         return decide(200, "unmapped", recognisedBy, matchedPayment);

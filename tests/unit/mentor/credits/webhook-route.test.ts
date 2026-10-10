@@ -63,6 +63,8 @@ function handler(c: FakeCall): FakeResult | undefined {
     if (a.p_membership_id === "mem_MENTOR") return { data: { mentor: true, via: "membership", user_id: PRO_AND_MENTOR, package_id: "mentor_plus" } };
     return { data: { mentor: false } };
   }
+  if (c.table === "rpc:mentor_revoke_payment") return { data: { ok: true, duplicate: false } };
+  if (c.table === "ai_credit_package") return { data: [{ package_id: "mentor_plus", kind: "subscription", grant_micro: 2000000, period_days: 30, expiry_days: 33, price_eur_cents: 990, active: true, provisional: true, sort: 20, note: null }] };
   if (c.table === "rpc:mentor_clawback") return { data: { ok: true, duplicate: false, lot_id: "lot-m", user_id: PRO_AND_MENTOR, clawed_micro: 1 } };
   if (c.table === "rpc:mentor_membership_status") return { data: { ok: true, user_id: PRO_AND_MENTOR } };
   if (c.table === "rpc:mentor_grant_credits") return { data: { ok: true, duplicate: false, lot_id: "lot-new", granted_micro: 2000000 } };
@@ -112,7 +114,7 @@ describe("POST /api/webhooks/whop with the mentor branch", () => {
   }
 
   it("a mentor renewal (metadata null, mentor plan) grants credits and writes nothing on the Pro side", async () => {
-    const res = await deliver("payment.succeeded", { id: "pay_REN", plan: { id: "plan_mplus" }, membership: { id: "mem_MENTOR" }, metadata: null });
+    const res = await deliver("payment.succeeded", { id: "pay_REN", plan: { id: "plan_mplus" }, membership: { id: "mem_MENTOR" }, metadata: null, amount_after_fees: 8.2, currency: "eur" });
     expect(res.status).toBe(200);
     expect(await res.json()).toMatchObject({ mentor: true, action: "granted" });
     expect(allCalls().filter(proWrite)).toEqual([]);

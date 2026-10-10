@@ -6,10 +6,15 @@ const h = vi.hoisted(() => ({
   flag: vi.fn(async () => true),
   log: vi.fn(async () => {}),
   handler: (() => ({})) as (c: unknown) => unknown,
+  plan: vi.fn(async () => ({ ok: true }) as { ok: boolean; reason?: string }),
 }));
 
 vi.mock("@sentry/nextjs", () => ({ captureMessage: vi.fn(), captureException: vi.fn() }));
 vi.mock("@/lib/paymentEvents", () => ({ logPaymentEvent: h.log }));
+vi.mock("@/lib/mentor/credits/plan-check", async (orig) => ({
+  ...(await orig<typeof import("@/lib/mentor/credits/plan-check")>()),
+  checkMentorPlan: (...a: unknown[]) => h.plan(...(a as [])),
+}));
 vi.mock("@/lib/admin/flags", () => ({ flag: h.flag }));
 vi.mock("@/lib/rate-limit", () => ({
   checkRateLimit: () => ({ allowed: true, remaining: 5, resetAt: 0, retryAfterSec: 0 }),
@@ -25,7 +30,7 @@ vi.mock("@/lib/supabase", () => ({
 }));
 
 import { createFakeSupabase, type FakeCall, type FakeResult } from "../../helpers/fake-supabase";
-import { verifyMentorCheckout, type LedgerFn } from "@/lib/mentor/credits/verify";
+import { looksRefunded, verifyMentorCheckout, type LedgerFn } from "@/lib/mentor/credits/verify";
 import { resetPackageCache } from "@/lib/mentor/credits/packages";
 import { POST as checkout } from "@/app/api/mentor/checkout/route";
 
@@ -33,10 +38,14 @@ const U = "66666666-6666-4666-8666-666666666666";
 const NOW = Date.parse("2026-10-10T12:00:00Z");
 const ENV = { WHOP_PLAN_MENTOR_BASIS: "plan_b", WHOP_PLAN_MENTOR_PLUS: "plan_p" };
 
+const PKG_ROWS = [{ package_id: "mentor_basis", kind: "subscription", grant_micro: 750000, period_days: 30, expiry_days: 33, price_eur_cents: 490, active: true, provisional: true, sort: 10, note: null }];
+
 function db(over: (c: FakeCall) => FakeResult | undefined = () => undefined) {
+  resetPackageCache();
   return createFakeSupabase((c) => {
     const o = over(c);
     if (o) return o;
+    if (c.table === "ai_credit_package") return { data: PKG_ROWS };
     if (c.table === "ai_credit_lot") return { data: [] };
     if (c.table === "rpc:mentor_grant_credits") return { data: { ok: true, duplicate: false, lot_id: "l", granted_micro: 750000 } };
     return {};
@@ -48,7 +57,7 @@ function ledger(memberships: unknown[], payments: unknown[], truncated = false):
 }
 
 const myMembership = { id: "mem_1", status: "active", metadata: { kind: "mentor_credits", medpruef_user_id: U } };
-const paid = { id: "pay_1", status: "paid", plan: { id: "plan_b" }, membership: { id: "mem_1" }, created_at: new Date(NOW - 60_000).toISOString() };
+const paid = { id: "pay_1", status: "paid", plan: { id: "plan_b" }, membership: { id: "mem_1" }, created_at: new Date(NOW - 60_000).toISOString(), final_amount: 4.9, currency: "eur" };
 
 describe("verifyMentorCheckout", () => {
   it("granted at once when a whop_payment lot landed recently", async () => {
@@ -78,6 +87,34 @@ describe("verifyMentorCheckout", () => {
     expect(await verifyMentorCheckout({ ...deps, apiKey: "k", ledger: ledger([myMembership], [], true) }, U, null)).toBe("pending");
   });
 
+  it("H3: a paid row of EUR 0 or a refunded row never grants (failed, no grant RPC)", async () => {
+    for (const row of [
+      { ...paid, final_amount: 0, amount: 0 },
+      { ...paid, status: "refunded" },
+      { ...paid, refunded_amount: 4.9 },
+      { ...paid, substatus: "partially_refunded" },
+    ]) {
+      const { sb, calls } = db();
+      const s = await verifyMentorCheckout({ db: sb as never, apiKey: "k", companyId: "biz", env: ENV, ledger: ledger([myMembership], [row]), now: () => NOW }, U, null);
+      expect(s, JSON.stringify(row)).toBe("failed");
+      expect(calls.filter((c) => c.table === "rpc:mentor_grant_credits"), JSON.stringify(row)).toHaveLength(0);
+    }
+  });
+
+  it("H1: a payment the ledger refuses as revoked is reported failed, not granted", async () => {
+    const { sb } = db((c) => (c.table === "rpc:mentor_grant_credits" ? { data: { ok: false, reason: "revoked" } } : undefined));
+    expect(await verifyMentorCheckout({ db: sb as never, apiKey: "k", companyId: "biz", env: ENV, ledger: ledger([myMembership], [paid]), now: () => NOW }, U, null)).toBe("failed");
+  });
+
+  it("looksRefunded reads every plausible refund signal", () => {
+    expect(looksRefunded({ status: "paid" })).toBe(false);
+    expect(looksRefunded({ status: "paid", refunded_amount: 0 })).toBe(false);
+    expect(looksRefunded({ status: "refunded" })).toBe(true);
+    expect(looksRefunded({ status: "paid", substatus: "chargeback" })).toBe(true);
+    expect(looksRefunded({ status: "paid", amount_refunded: "1.5" })).toBe(true);
+    expect(looksRefunded({ status: "paid", refunded_at: "2026-10-10T00:00:00Z" })).toBe(true);
+  });
+
   it("only a failed payment -> failed; a DB error on grant -> pending", async () => {
     const { sb } = db();
     const failedPay = { ...paid, status: "failed" };
@@ -103,6 +140,8 @@ describe("POST /api/mentor/checkout", () => {
   beforeEach(() => {
     resetPackageCache();
     h.createSession.mockReset();
+    h.plan.mockReset();
+    h.plan.mockResolvedValue({ ok: true });
     h.createSession.mockResolvedValue({ id: "ch_1", purchaseUrl: "https://whop.com/checkout/plan_b/?session=ch_1", planId: "plan_b" });
     h.handler = (c: unknown) => ((c as FakeCall).table === "ai_credit_package" ? { data: pkgRows } : {});
   });
@@ -128,6 +167,17 @@ describe("POST /api/mentor/checkout", () => {
     expect("tier" in args.metadata).toBe(false);
     expect(args.redirectUrl).toMatch(/\/mentor\/checkout\/success\?package=mentor_basis$/);
     expect(args.redirectUrl).not.toMatch(/\/checkout\/success\?tier/);
+  });
+
+  it("M3: a Whop plan that differs from the package row refuses checkout with 503 and creates no session", async () => {
+    Object.assign(process.env, ON);
+    h.plan.mockResolvedValue({ ok: false, reason: "initial_price" });
+    const res = await checkout(req({ package_id: "mentor_basis" }));
+    expect(res.status).toBe(503);
+    expect(await res.json()).toEqual({ error: "upstream_error" });
+    expect(h.createSession).not.toHaveBeenCalled();
+    expect(h.plan).toHaveBeenCalledWith(expect.objectContaining({ planId: "plan_b", priceCents: 490, kind: "subscription" }));
+    expect(h.log).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ event: "checkout_failed", metadata: expect.objectContaining({ cause: "plan_initial_price" }) }));
   });
 
   it("rejects an unknown or unbuyable package", async () => {
