@@ -1,0 +1,59 @@
+import { after, type NextRequest } from "next/server";
+import { callClaude } from "@/lib/ai/anthropic";
+import { flag } from "@/lib/admin/flags";
+import { isPaidAccess, requireUser } from "@/lib/auth-guard";
+import { canFreeUserReadQuestion } from "@/lib/free-access";
+import { readMentorConfig } from "@/lib/mentor/config";
+import { createConversationStore } from "@/lib/mentor/conversation";
+import { resolveMentorServices } from "@/lib/mentor/guard";
+import { createHousePolicy, createMeter } from "@/lib/mentor/meter";
+import { createRunMentorTurn } from "@/lib/mentor/turn";
+import { captureServerError } from "@/lib/sentry-capture";
+import { getServiceClient } from "@/lib/supabase";
+import { handleMentorChat, type MentorAuth } from "./handler";
+
+export const dynamic = "force-dynamic";
+// 3 API calls x 25 s timeout, plus ledger round trips. A disconnect does not
+// end the turn: `after` keeps it running until every call is settled.
+export const maxDuration = 90;
+
+/**
+ * POST /api/mentor/chat (contract C4). Ships dark: MENTOR_ENABLED, the DB
+ * flag "mentor" and AI_FEATURES_ENABLED all default OFF, and the brain,
+ * facts and wallet services are wired at R3 (resolveMentorServices).
+ */
+export async function POST(req: NextRequest) {
+  const db = getServiceClient();
+  const config = readMentorConfig();
+  const runTurn = createRunMentorTurn({
+    alert: (a) =>
+      captureServerError(new Error(`mentor ${a.kind}${a.detail ? `: ${a.detail}` : ""}`), {
+        route: "/api/mentor/chat",
+        userId: a.userId,
+        requestId: a.requestId,
+        callIndex: a.callIndex ?? null,
+        mentorAlert: a.kind,
+      }),
+  });
+  return handleMentorChat(req, {
+    config,
+    async authenticate(request): Promise<MentorAuth> {
+      const guard = await requireUser(request as NextRequest);
+      if ("error" in guard) return { ok: false };
+      return { ok: true, userId: guard.userId, paidAccess: isPaidAccess(guard) };
+    },
+    flag: (key, userId) => flag(key, userId),
+    rpc: db,
+    services: () => resolveMentorServices(db),
+    meterFor: (userId) => createMeter(db, userId),
+    house: createHousePolicy(db, config.houseFreeFailsPerDay),
+    conversations: createConversationStore(db),
+    canReadQuestion: (userId, questionId) => canFreeUserReadQuestion(db, userId, questionId),
+    callClaude,
+    clock: { now: () => new Date() },
+    newRequestId: () => crypto.randomUUID(),
+    runTurn,
+    background: (task) => after(task),
+    alert: (message, ctx) => captureServerError(new Error(message), ctx),
+  });
+}

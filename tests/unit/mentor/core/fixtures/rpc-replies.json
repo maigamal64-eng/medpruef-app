@@ -1,0 +1,151 @@
+{
+    "balance": {
+        "lots": [
+            {
+                "kind": "gift",
+                "lot_id": "c13c0b7c-f23f-4d5c-bddd-a14ed045bb41",
+                "source": "admin_gift",
+                "starts_at": "2026-10-10T15:23:13.815156+03:00",
+                "expires_at": "2026-11-09T15:23:13.815156+02:00",
+                "package_id": "gift_admin",
+                "granted_micro": 100000,
+                "remaining_micro": 0
+            }
+        ],
+        "debt_micro": 102500,
+        "lots_micro": 0,
+        "next_expiry": null,
+        "ever_granted": true,
+        "reserved_micro": 0,
+        "available_micro": -102500
+    },
+    "sweep_ok": {
+        "ok": true,
+        "settled": 0
+    },
+    "spend_cap": 50000000,
+    "attempt_ok": {
+        "ok": true,
+        "day_used": 1,
+        "minute_used": 1
+    },
+    "release_ok": {
+        "ok": true
+    },
+    "reserve_ok": {
+        "ok": true,
+        "remaining_micro": 70000
+    },
+    "attempt_day": {
+        "ok": false,
+        "reason": "rate_limited_day",
+        "day_used": 0,
+        "minute_used": 0
+    },
+    "spend_month": 206500,
+    "reserve_ok_2": {
+        "ok": true,
+        "remaining_micro": 92500
+    },
+    "reserve_ok_3": {
+        "ok": true,
+        "remaining_micro": 92500
+    },
+    "reserve_ok_4": {
+        "ok": true,
+        "remaining_micro": 96500
+    },
+    "house_fail_ok": {
+        "ok": true,
+        "used": 1
+    },
+    "attempt_minute": {
+        "ok": false,
+        "reason": "rate_limited_minute",
+        "day_used": 1,
+        "minute_used": 1
+    },
+    "settle_ok_user": {
+        "ok": true,
+        "overrun": false,
+        "billed_to": "user",
+        "charged_micro": 2500,
+        "debt_added_micro": 0
+    },
+    "settle_overrun": {
+        "ok": true,
+        "overrun": true,
+        "billed_to": "user",
+        "charged_micro": 200000,
+        "debt_added_micro": 102500
+    },
+    "attempt_invalid": {
+        "ok": false,
+        "reason": "invalid_args"
+    },
+    "settle_input_ok": {
+        "ok": true
+    },
+    "settle_ok_house": {
+        "ok": true,
+        "overrun": false,
+        "billed_to": "house",
+        "charged_micro": 4000,
+        "debt_added_micro": 0
+    },
+    "house_fail_limit": {
+        "ok": false,
+        "used": 1,
+        "reason": "limit_reached"
+    },
+    "settle_duplicate": {
+        "ok": true,
+        "status": "settled",
+        "duplicate": true,
+        "charged_micro": 2500
+    },
+    "settle_not_found": {
+        "ok": false,
+        "reason": "not_found"
+    },
+    "release_duplicate": {
+        "ok": true,
+        "status": "released",
+        "duplicate": true
+    },
+    "release_not_found": {
+        "ok": false,
+        "reason": "not_found"
+    },
+    "reserve_insufficient": {
+        "ok": false,
+        "reason": "insufficient",
+        "remaining_micro": 70000
+    },
+    "reserve_invalid_args": {
+        "ok": false,
+        "reason": "invalid_args",
+        "remaining_micro": null
+    },
+    "settle_input_not_open": {
+        "ok": false,
+        "reason": "not_open"
+    },
+    "reserve_duplicate_open": {
+        "ok": true,
+        "reason": null,
+        "duplicate": true,
+        "remaining_micro": 70000
+    },
+    "reserve_blocked_by_debt": {
+        "ok": false,
+        "reason": "insufficient",
+        "remaining_micro": -102500
+    },
+    "reserve_duplicate_closed": {
+        "ok": false,
+        "reason": "already_closed",
+        "duplicate": true,
+        "remaining_micro": 97500
+    }
+}
