@@ -6,7 +6,62 @@ import { PUYP_MAX_EXTENSIONS } from "@/lib/puyp";
 import { suggestNextExpiresAt, type PuypExamType } from "@/lib/exam-dates";
 import { logAdminAction, resolveActorEmail } from "@/lib/admin/audit";
 
+import { sendZohoEmail } from "@/lib/email/zoho";
+import { recordEventSafe } from "@/lib/user-events";
+
 export const dynamic = "force-dynamic";
+
+// ── PUYP decision emails (best effort; never blocks or fails the decision) ──
+// Voice: doctor-to-doctor "du" for DE, plain EN otherwise. No em dashes.
+function puypEsc(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+async function sendPuypDecisionEmail(
+  sb: ReturnType<typeof getServiceClient>,
+  userId: string,
+  kind: "approved" | "rejected",
+  detail: { newExpiresAtIso?: string; reason?: string },
+): Promise<void> {
+  try {
+    const { data: u } = await sb
+      .from("users")
+      .select("email, first_name, language_code")
+      .eq("id", userId)
+      .maybeSingle();
+    const to = (u?.email as string | null) || null;
+    if (!to) return; // Telegram-only accounts have no email: nothing to send.
+    const de = ((u?.language_code as string | null) || "de").toLowerCase().startsWith("de");
+    const name = u?.first_name ? puypEsc(String(u.first_name)) : "";
+    const hello = de ? `Hallo${name ? ` ${name}` : ""},` : `Hi${name ? ` ${name}` : ""},`;
+    let subject: string;
+    let body: string;
+    if (kind === "approved") {
+      const when = new Date(detail.newExpiresAtIso as string).toLocaleDateString(
+        de ? "de-AT" : "en-GB",
+        { day: "numeric", month: "long", year: "numeric" },
+      );
+      subject = de ? "Dein MedPrüf-Zugang wurde verlängert" : "Your MedPrüf access has been extended";
+      body = de
+        ? `<p>${hello}</p><p>wir haben deine Prüfung geprüft und deinen Zugang bis zum <strong>${when}</strong> verlängert. Du musst nichts weiter tun.</p><p>Viel Erfolg beim nächsten Versuch.</p><p>Das MedPrüf-Team</p>`
+        : `<p>${hello}</p><p>we reviewed your exam result and extended your access until <strong>${when}</strong>. You do not need to do anything.</p><p>Good luck with your next attempt.</p><p>The MedPrüf Team</p>`;
+    } else {
+      const why = puypEsc(detail.reason || "");
+      subject = de ? "Zu deiner Verlängerungsanfrage bei MedPrüf" : "About your MedPrüf extension request";
+      body = de
+        ? `<p>${hello}</p><p>wir konnten deine Verlängerungsanfrage leider nicht bestätigen.</p><p>Grund: ${why}</p><p>Wenn du Fragen hast oder einen neuen Nachweis schicken möchtest, antworte einfach auf diese E-Mail oder schreib an user-b7e46e80@example.com.</p><p>Das MedPrüf-Team</p>`
+        : `<p>${hello}</p><p>unfortunately we could not confirm your extension request.</p><p>Reason: ${why}</p><p>If you have questions or want to send a new proof, reply to this email or write to user-b7e46e80@example.com.</p><p>The MedPrüf Team</p>`;
+    }
+    const res = await sendZohoEmail({ to, subject, htmlBody: body });
+    await recordEventSafe(sb, {
+      userId,
+      eventType: kind === "approved" ? "puyp_approval_email" : "puyp_rejection_email",
+      data: { ok: res.ok, reason: res.ok ? null : res.reason },
+    });
+  } catch (err) {
+    console.error("[puyp] decision email failed", err);
+  }
+}
 
 /**
  * /api/puyp/admin — admin-only PUYP queue + action endpoint.
@@ -41,8 +96,8 @@ export const dynamic = "force-dynamic";
  *   1. Update `exam_attempts` with verified_at/verified_by and
  *      rejection_reason.
  *
- * Both flows TODO-stub the email notification (Zoho wiring lives
- * elsewhere). No 404/403 leakage about admin identity — the
+ * Both flows email the user via Zoho (best effort, see sendPuypDecisionEmail).
+ * No 404/403 leakage about admin identity — the
  * requireAdmin guard is the gate.
  */
 
@@ -225,10 +280,7 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      // TODO: wire Zoho email — notify user that their claim was
-      // rejected with the rejection reason. Template lives in the
-      // shared mail-templates pile; flag for Agent sending pass.
-      //   await sendPuypRejectionEmail(attempt.user_id, reason)
+      await sendPuypDecisionEmail(sb, attempt.user_id as string, "rejected", { reason });
 
       await sb.from("user_events").insert({
         user_id: attempt.user_id,
@@ -410,10 +462,9 @@ export async function POST(req: NextRequest) {
       // Same situation — extension granted, attempt row stale.
     }
 
-    // TODO: wire Zoho email — "Your access has been extended through
-    // <date>". Template lives in the shared mail-templates pile;
-    // flag for Agent sending pass.
-    //   await sendPuypApprovalEmail(sub.user_id, newExpiresAt)
+    await sendPuypDecisionEmail(sb, sub.user_id as string, "approved", {
+      newExpiresAtIso: newExpiresAt.toISOString(),
+    });
 
     await sb.from("user_events").insert({
       user_id: sub.user_id,

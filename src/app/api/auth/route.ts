@@ -11,6 +11,7 @@ import {
   rateLimitHeaders,
 } from "@/lib/rate-limit";
 import { signSession } from "@/lib/session";
+import { recordEventSafe } from "@/lib/user-events";
 
 export const dynamic = "force-dynamic";
 
@@ -287,6 +288,14 @@ export async function POST(req: NextRequest) {
           if (logErr) console.error("[auth] activity insert:", logErr);
         });
 
+      // Tracking only: one user_events row per new signup, carrying its source.
+      // Never throws, never changes the auth response.
+      void recordEventSafe(sb, {
+        userId: user.id as string,
+        eventType: "user_registered",
+        data: { source: "email", method: "email" },
+      });
+
       // Reddit Conversions API, server-side SignUp (the campaign's conversion
       // goal). Dormant until REDDIT_CAPI_TOKEN is set; deduped against the
       // client pixel SignUp on the user id. Fire-and-forget, never blocks.
@@ -401,6 +410,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid auth" }, { status: 401 });
     }
 
+    // Tracking only: is this the first time we see this telegram_id? The
+    // upsert below cannot tell insert from update, so look first. A failed
+    // lookup just means we skip the signup tag; auth is unaffected.
+    let isNewTelegramUser = false;
+    try {
+      const { data: existing } = await sb
+        .from("users")
+        .select("id")
+        .eq("telegram_id", telegramUser.id)
+        .maybeSingle();
+      isNewTelegramUser = !existing;
+    } catch {
+      isNewTelegramUser = false;
+    }
+
     // Upsert Telegram user
     const { data: user, error } = await sb
       .from("users")
@@ -437,10 +461,11 @@ export async function POST(req: NextRequest) {
     sb.from("user_activity_log")
       .insert({
         user_id: user.id,
-        event_type: "login",
-        action: "telegram_login",
+        event_type: isNewTelegramUser ? "register" : "login",
+        action: isNewTelegramUser ? "telegram_register" : "telegram_login",
         metadata: {
           method: tokenExchange ? "bot_deeplink" : widgetData ? "widget" : "miniapp",
+          ...(isNewTelegramUser ? { source: "telegram" } : {}),
         },
         ip_address:
           req.headers.get("x-forwarded-for") ||
@@ -451,6 +476,17 @@ export async function POST(req: NextRequest) {
       .then(({ error: logErr }) => {
         if (logErr) console.error("[auth] activity insert:", logErr);
       });
+
+    if (isNewTelegramUser) {
+      void recordEventSafe(sb, {
+        userId: user.id as string,
+        eventType: "user_registered",
+        data: {
+          source: "telegram",
+          method: tokenExchange ? "bot_deeplink" : widgetData ? "widget" : "miniapp",
+        },
+      });
+    }
 
     // Mint a server-signed session token. This is the credential the
     // client sends back on `x-session-token`; `requireUser` verifies the

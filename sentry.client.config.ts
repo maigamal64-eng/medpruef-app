@@ -3,8 +3,18 @@ import * as Sentry from "@sentry/nextjs";
 Sentry.init({
   dsn: "https://user-edc7605a@example.com/0",
 
-  // Only send errors in production. In dev, log to console instead.
-  enabled: process.env.NODE_ENV === "production",
+  // Only real Vercel deployments report. NEXT_PUBLIC_DEPLOY_ENV is the
+  // build-time VERCEL_ENV (see next.config.ts); empty means a local build
+  // or `next start`, which must not count as production. Localhost
+  // hostnames are excluded as a second guard.
+  enabled:
+    process.env.NODE_ENV === "production" &&
+    (process.env.NEXT_PUBLIC_DEPLOY_ENV === "production" ||
+      process.env.NEXT_PUBLIC_DEPLOY_ENV === "preview") &&
+    !(
+      typeof window !== "undefined" &&
+      /^(localhost|127\.0\.0\.1|\[::1\])$|\.local$/.test(window.location.hostname)
+    ),
 
   // Sample 100% of errors (free tier is 5k events/month — plenty for
   // current MedPrüf load). Lower this if volume grows.
@@ -16,7 +26,7 @@ Sentry.init({
   sendDefaultPii: false,
 
   // Environment tagging
-  environment: process.env.VERCEL_ENV || process.env.NODE_ENV || "development",
+  environment: process.env.NEXT_PUBLIC_DEPLOY_ENV || "local",
 
   // Release tag — must match the `release.name` in next.config.ts so
   // events + source maps line up. The Sentry build plugin auto-injects

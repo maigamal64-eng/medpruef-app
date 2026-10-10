@@ -2,10 +2,16 @@ import * as Sentry from "@sentry/nextjs";
 
 Sentry.init({
   dsn: "https://user-edc7605a@example.com/0",
-  enabled: process.env.NODE_ENV === "production",
+  // Gated on VERCEL_ENV: only real Vercel deployments report. A local
+  // `next start` / test run has NODE_ENV=production but no VERCEL_ENV and
+  // must not count as production.
+  enabled:
+    process.env.NODE_ENV === "production" &&
+    (process.env.VERCEL_ENV === "production" ||
+      process.env.VERCEL_ENV === "preview"),
   tracesSampleRate: 0.1,
   sendDefaultPii: false,
-  environment: process.env.VERCEL_ENV || process.env.NODE_ENV || "development",
+  environment: process.env.VERCEL_ENV || "local",
 
   // Release tag — mirrors the client config so server + client events
   // group under the same release. The Sentry build plugin populates
