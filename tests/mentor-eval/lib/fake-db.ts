@@ -31,6 +31,8 @@ export class FakeQuery implements PromiseLike<{ data: Row[]; error: null }> {
     private readonly log: RecordedQuery[],
   ) {}
 
+  // The fake ignores the column list and ordering; it only filters, limits and records.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   select(_columns?: string): this {
     return this;
   }
@@ -38,6 +40,7 @@ export class FakeQuery implements PromiseLike<{ data: Row[]; error: null }> {
     this.filters.push([column, value]);
     return this;
   }
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   order(_column: string, _opts?: unknown): this {
     return this;
   }

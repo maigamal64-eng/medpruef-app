@@ -17,7 +17,7 @@ import type { MentorFinalEvent, MentorSseEvent } from "@/lib/mentor/contract";
 import type { Brain, CallClaudeFn, FactsLoader, MentorDeps, MessageParam, MeterUsage, RunMentorTurn } from "@/lib/mentor/seam";
 import { InMemoryLedger, createTestHousePolicy, createTestMeter, createTestWallet } from "@/lib/mentor/test-meter";
 import { createFakeDb, foreignReads, type FakeDb } from "./fake-db";
-import type { CallRecord, FixturesFile, GoldenCase, SettleRecord, TurnOutcome } from "./types";
+import type { CallRecord, FixturesFile, GoldenCase, SettleRecord, ToolCallRecord, TurnOutcome } from "./types";
 
 export interface BrainEnv {
   db: () => FakeDb;
@@ -32,6 +32,8 @@ export interface HarnessParts {
   createRunTurn: (alert: (a: { kind: string; detail?: string }) => void) => RunMentorTurn;
   brainFactory: BrainFactory;
   facts: FactsLoader;
+  /** Every official link the product may attach (refusals, fallbacks), so their hosts count as official. */
+  officialLinks?: () => string[];
 }
 
 export interface HarnessOptions {
@@ -137,11 +139,24 @@ export async function runCase(h: HarnessOptions, c: GoldenCase, index: number): 
 
   const db = createFakeDb({ userId, fixtures: h.fixtures, profileFixture: c.profile_fixture });
   const freeReadable = new Set(Object.values(h.fixtures.questions).filter((q) => q.free_readable !== false).map((q) => q.id));
-  const brain = h.parts.brainFactory({
+  const rawBrain = h.parts.brainFactory({
     db: () => db,
     canFreeRead: async (_db, _user, questionId) => freeReadable.has(questionId),
     clock: () => h.asOf,
   });
+  const toolCalls: ToolCallRecord[] = [];
+  const brain: typeof rawBrain = {
+    get tools() {
+      return rawBrain.tools;
+    },
+    buildSystem: (ctx) => rawBrain.buildSystem(ctx),
+    validate: (answer, facts) => rawBrain.validate(answer, facts),
+    async runTool(name, input, ctx) {
+      const r = await rawBrain.runTool(name, input, ctx);
+      toolCalls.push({ name, input, factIds: [...(r.factIds ?? [])], isError: r.isError === true });
+      return r;
+    },
+  };
 
   const alerts: string[] = [];
   const runTurn = h.parts.createRunTurn((a) => alerts.push(`${a.kind}${a.detail ? `: ${a.detail}` : ""}`));
@@ -191,6 +206,7 @@ export async function runCase(h: HarnessOptions, c: GoldenCase, index: number): 
     error,
     text: final ? textOfFinal(final) : deltas.join(""),
     calls,
+    toolCalls,
     settles,
     alerts,
     ledgerReconciles: ledger.reconciles(userId),

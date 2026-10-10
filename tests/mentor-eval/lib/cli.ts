@@ -120,7 +120,7 @@ function num(n: number, d = 0): string {
 
 export function formatSummary(r: EvalReport): string {
   const L: string[] = [];
-  L.push(`Mentor eval: ${r.barPass ? "PASS" : "FAIL"} (${r.meta.mode}, ${r.meta.cases_run}/${r.meta.cases_total} cases, as_of ${r.meta.as_of}, spent ${usd(r.meta.spent_micro)})`);
+  L.push(`Mentor eval: ${r.barPass ? "PASS" : "FAIL"} (${r.meta.mode}, ${r.meta.cases_run}/${r.meta.cases_selected} cases${r.meta.cases_selected !== r.meta.cases_total ? ` of ${r.meta.cases_total}` : ""}, as_of ${r.meta.as_of}, spent ${usd(r.meta.spent_micro)})`);
   if (!r.meta.ground_truth_from_files) L.push("  note: content/mentor-facts not found, so allowed values come from the golden file only");
   if (r.meta.skipped_for_budget.length) L.push(`  budget stop: ${r.meta.skipped_for_budget.length} case(s) not run`);
   L.push("");
@@ -133,7 +133,7 @@ export function formatSummary(r: EvalReport): string {
   if (r.failing.length > 40) L.push(`  ... ${r.failing.length - 40} more in the JSON report`);
   L.push("");
   L.push("Pass bar:");
-  for (const b of r.bar) L.push(`  ${b.pass === null ? "n/a " : b.pass ? "PASS" : "FAIL"}  ${b.label}: ${b.actual} (needs ${b.required})`);
+  for (const b of r.bar) L.push(`  ${b.pass === null ? "n/a " : b.pass ? "PASS" : b.advisory ? "WARN" : "FAIL"}  ${b.label}: ${b.actual} (needs ${b.required})`);
   L.push("");
   L.push("By category:");
   for (const c of r.categories) L.push(`  ${c.category.padEnd(12)} ${c.passed}/${c.cases} passed${c.errored ? `, ${c.errored} errored` : ""}${c.critical ? `, ${c.critical} critical` : ""}`);
@@ -151,7 +151,7 @@ export function formatSummary(r: EvalReport): string {
   return L.join("\n");
 }
 
-export async function main(argv: readonly string[], env: NodeJS.ProcessEnv, io: Io): Promise<number> {
+export async function main(argv: readonly string[], env: Readonly<Record<string, string | undefined>>, io: Io): Promise<number> {
   let args: CliArgs;
   try {
     args = parseArgs(argv);

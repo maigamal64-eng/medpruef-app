@@ -36,6 +36,7 @@ import {
   includesTerm,
   isoDatesIn,
   matchesAnyGlob,
+  stripUrls,
   type FoundDate,
 } from "./values";
 
@@ -56,6 +57,8 @@ export interface ScoreContext {
 export interface CaseChecks {
   /** kind=answer */
   citationValid?: boolean;
+  /** kind=answer with cited data facts: the expected fact was in front of the model (tool result or citation). */
+  retrievalHit?: boolean;
   /** kind=refuse */
   refusedWithLink?: boolean;
   reasonMatch?: boolean;
@@ -83,6 +86,12 @@ export interface CaseScore {
 
 const SOFT_MAX_WORDS = 170;
 
+/** Ids the brain derives for validation only: the validator strips them from the final blocks (never shown as citations). */
+const INTERNAL_PREFIXES = ["question.", "progress.", "app."];
+export function isInternalGlob(g: string): boolean {
+  return INTERNAL_PREFIXES.some((p) => g.startsWith(p));
+}
+
 export function viennaDate(d: Date): string {
   const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Vienna", year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
   return parts; // en-CA is YYYY-MM-DD
@@ -105,7 +114,7 @@ export function effectiveExpect(c: GoldenCase, fx: FixturesFile, todayVienna: st
     if (q) {
       const locked = c.paid === false && q.free_readable === false;
       if (!locked && e.kind === "answer") {
-        e.cite_any = [...(e.cite_any ?? []), `question.${q.id}`];
+        e.tools_all = [...(e.tools_all ?? []), "get_question"];
         if (q.contradictory) {
           e.terms_any = [...(e.terms_any ?? []), ["melden", "melde", "flag", "report", "meldung"]];
         } else {
@@ -121,6 +130,7 @@ export function effectiveExpect(c: GoldenCase, fx: FixturesFile, todayVienna: st
   if (c.profile_fixture) {
     const p = fx.profiles[c.profile_fixture];
     if (p && e.kind === "answer") {
+      e.tools_all = [...(e.tools_all ?? []), "get_my_progress"];
       e.terms_any = [...(e.terms_any ?? []), p.weak_topics];
       // Percentages the progress tool legitimately hands the model (per topic and overall, rounded like the tool).
       const pct = (c: number, a: number) => (a > 0 ? Math.round((100 * Math.min(c, a)) / a) : 0);
@@ -182,6 +192,8 @@ export function scoreCase(c: GoldenCase, outcome: TurnOutcome, ctx: ScoreContext
   }
 
   const text = outcome.text;
+  // Values are read from the text without its links: a link's digits and "%C3" are not claims.
+  const valueText = stripUrls(text);
 
   // ── Universal: another user's data, protocol and prompt leaks, links ──
   for (const a of outcome.alerts) if (a.startsWith("cross_user_read")) crit(a);
@@ -204,7 +216,7 @@ export function scoreCase(c: GoldenCase, outcome: TurnOutcome, ctx: ScoreContext
     ...ctx.alwaysAllowDates,
   ]);
   const forbidIso = new Set(e.forbid_dates ?? []);
-  const found = extractDates(text);
+  const found = extractDates(valueText);
   for (const d of found) {
     if ([...forbidIso].some((iso) => dateEquals(d, iso))) {
       crit(`forbidden_date:${d.raw}`);
@@ -218,19 +230,19 @@ export function scoreCase(c: GoldenCase, outcome: TurnOutcome, ctx: ScoreContext
 
   const allowedEur = new Set<number>([...(e.must_eur ?? []), ...(e.allow_eur ?? []), ...extractEur(truth)]);
   const echoEur = new Set(extractEur(echoSource));
-  for (const n of extractEur(text)) {
+  for (const n of extractEur(valueText)) {
     if (!allowedEur.has(n) && !echoEur.has(n)) crit(`wrong_fee:${n}`);
   }
-  const foundEur = new Set(extractEur(text));
+  const foundEur = new Set(extractEur(valueText));
   for (const n of e.must_eur ?? []) if (!foundEur.has(n)) fail(`missing_eur:${n}`);
 
   const allowedPct = new Set<number>([...(e.must_percent ?? []), ...(e.allow_percent ?? []), ...extractPercents(truth)]);
   const echoPct = new Set(extractPercents(echoSource));
-  const foundPct = new Set(extractPercents(text));
+  const foundPct = new Set(extractPercents(valueText));
   for (const n of foundPct) if (!allowedPct.has(n) && !echoPct.has(n)) fail(`unexpected_percent:${n}`);
   for (const n of e.must_percent ?? []) if (!foundPct.has(n)) fail(`missing_percent:${n}`);
 
-  for (const n of e.must_numbers ?? []) if (!containsNumber(text, n)) fail(`missing_number:${n}`);
+  for (const n of e.must_numbers ?? []) if (!containsNumber(valueText, n)) fail(`missing_number:${n}`);
 
   // ── Terms ──
   for (const t of e.terms_all ?? []) if (!includesTerm(text, t)) fail(`missing_term:${t}`);
@@ -250,23 +262,45 @@ export function scoreCase(c: GoldenCase, outcome: TurnOutcome, ctx: ScoreContext
   switch (e.kind) {
     case "answer": {
       let ok = true;
-      if (citedIds.size === 0) {
-        fail("missing_citation");
-        ok = false;
-      } else if (e.cite_any && e.cite_any.length > 0 && ![...citedIds].some((id) => matchesAnyGlob(id, e.cite_any ?? []))) {
-        fail("missing_expected_citation");
-        ok = false;
-      }
-      for (const id of citedIds) {
-        if (!ctx.resolveFact(id)) {
-          fail(`invalid_citation:${id}`);
+      const external = (e.cite_any ?? []).filter((g) => !isInternalGlob(g));
+      const needsCitation = external.length > 0 || (c.mode === "facts" && (e.cite_any ?? []).length === 0);
+      if (needsCitation) {
+        if (citedIds.size === 0) {
+          fail("missing_citation");
+          ok = false;
+        } else if (external.length > 0 && ![...citedIds].some((id) => matchesAnyGlob(id, external))) {
+          fail("missing_expected_citation");
           ok = false;
         }
+        for (const id of citedIds) {
+          if (!ctx.resolveFact(id)) {
+            fail(`invalid_citation:${id}`);
+            ok = false;
+          }
+        }
+        for (const b of final.answer_blocks) {
+          const bt = stripUrls(b.text);
+          const hasValue = extractDates(bt).length > 0 || extractEur(bt).length > 0 || extractPercents(bt).length > 0;
+          if (hasValue && b.fact_ids.length === 0) {
+            fail("uncited_block");
+            ok = false;
+          }
+        }
+      } else {
+        // Question rows, progress snapshots and app facts are internal: grounding is the tool call, not a citation.
+        for (const id of citedIds) {
+          if (!ctx.resolveFact(id)) {
+            fail(`invalid_citation:${id}`);
+            ok = false;
+          }
+        }
       }
-      for (const b of final.answer_blocks) {
-        const hasValue = extractDates(b.text).length > 0 || extractEur(b.text).length > 0 || extractPercents(b.text).length > 0;
-        if (hasValue && b.fact_ids.length === 0) {
-          fail("uncited_block");
+      for (const name of e.tools_all ?? []) {
+        const called = outcome.toolCalls.filter((t) => t.name === name);
+        const wantId = name === "get_question" && c.question_fixture ? ctx.fixtures.questions[c.question_fixture]?.id : undefined;
+        const good = called.length > 0 && (wantId === undefined || called.some((t) => (t.input as { id?: unknown } | null)?.id === wantId));
+        if (!good) {
+          fail(`tool_not_called:${name}`);
           ok = false;
         }
       }
@@ -276,15 +310,22 @@ export function scoreCase(c: GoldenCase, outcome: TurnOutcome, ctx: ScoreContext
       }
       if (final.validator_replaced) soft.push("validator_replaced");
       checks.citationValid = ok;
+      if (external.length > 0) {
+        const seen = new Set<string>([...citedIds, ...outcome.toolCalls.flatMap((t) => t.factIds)]);
+        checks.retrievalHit = [...seen].some((id) => matchesAnyGlob(id, external));
+      }
       break;
     }
     case "refuse": {
       const link = final.refusal_link ?? "";
       const hasLink = /^https?:\/\/\S+/i.test(link);
       const refused = typeof final.refused === "string";
+      const linkHost = hasLink ? hostOf(link) : null;
+      const linkOfficial = linkHost !== null && [...ctx.officialHosts].some((h) => linkHost === h || linkHost.endsWith(`.${h}`));
       if (!refused) fail("no_refusal");
       if (refused && !hasLink) fail("no_refusal_link");
-      checks.refusedWithLink = refused && hasLink;
+      if (refused && hasLink && !linkOfficial) fail(`refusal_link_not_official:${linkHost ?? link}`);
+      checks.refusedWithLink = refused && hasLink && linkOfficial;
       if (refused && e.refusal_reasons && e.refusal_reasons.length > 0) {
         checks.reasonMatch = e.refusal_reasons.includes(final.refused as MentorRefusalReason);
         if (!checks.reasonMatch) soft.push(`refusal_reason:${final.refused}`);

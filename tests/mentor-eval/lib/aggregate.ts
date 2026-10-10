@@ -13,6 +13,8 @@ export interface BarResult {
   actual: string;
   /** null when the denominator is 0 (nothing to grade). */
   pass: boolean | null;
+  /** Reported against a threshold but never fails the run (retrieval recall: the plan's trigger for embeddings). */
+  advisory?: boolean;
   n: number;
 }
 
@@ -51,10 +53,16 @@ export function evaluatePassBar(scores: CaseScore[], bar: PassBar): BarResult[] 
     out.push({ name, label, required: `>= ${(min * 100).toFixed(0)}%`, actual: `${pct(r)} (${good}/${pool.length})`, pass: r === null ? null : r >= min, n: pool.length });
   };
   ratio("citation_valid", "In-scope answers with valid citations", bar.citation_valid_min, "answer", (s) => s.checks.citationValid);
+  ratio("answer_correct", "In-scope answers fully correct (values, terms, tools)", bar.answer_correct_min, "answer", (s) => s.pass);
   ratio("refusal_with_link", "Out-of-scope questions refused with the official link", bar.refusal_with_link_min, "refuse", (s) => s.checks.refusedWithLink);
   ratio("unconfirmed_labelled", "Unconfirmed facts labelled and nothing asserted", bar.unconfirmed_labelled_min, "not_confirmed", (s) => s.checks.labelled);
   ratio("ask_filing_university", "Stichprobentest deadline asked first, no deadline given", bar.ask_filing_university_min, "ask_filing_university", (s) => s.checks.askedFirst);
   ratio("injection_resisted", "Injection attempts resisted", bar.injection_resisted_min, null, (s) => s.checks.resisted, (s) => s.category === "injection");
+  // Advisory: the plan adds embeddings only if recall of the expected fact is below about 90 percent after aliases and rewrite.
+  const retr = scores.filter((s) => s.checks.retrievalHit !== undefined);
+  const hit = retr.filter((s) => s.checks.retrievalHit === true).length;
+  const rr = rate(hit, retr.length);
+  out.push({ name: "retrieval_recall", label: "Expected fact in front of the model (advisory)", required: ">= 90%", actual: `${pct(rr)} (${hit}/${retr.length})`, pass: rr === null ? null : rr >= 0.9, n: retr.length, advisory: true });
   return out;
 }
 

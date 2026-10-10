@@ -8,6 +8,7 @@ import { runAll, type HarnessOptions, type HarnessParts, type RunAllOptions } fr
 import { factsMatching, officialHostsOf, readOnDatesOf, type FactRecord } from "./facts-source";
 import { scoreCase, viennaDate, type CaseScore, type ScoreContext } from "./score";
 import type { FixturesFile, GoldenCase, GoldenFile, TurnOutcome } from "./types";
+import { hostOf } from "./values";
 import type { CallClaudeFn } from "@/lib/mentor/seam";
 import type { MentorConfig } from "@/lib/mentor/config";
 
@@ -55,7 +56,10 @@ export interface EvalReport {
     mode: string;
     as_of: string;
     golden_version: number;
+    /** Cases in the golden file. */
     cases_total: number;
+    /** Cases selected by the filters. */
+    cases_selected: number;
     cases_run: number;
     skipped_for_budget: string[];
     ground_truth_from_files: boolean;
@@ -80,7 +84,8 @@ export async function evaluate(input: EvalInput): Promise<EvalReport> {
   const cases = input.cases ?? input.golden.cases;
   const records = input.factRecords;
   const knownIds = new Set<string>([...(records ?? []).map((r) => r.id), ...(input.extraKnownIds ?? [])]);
-  const hosts = officialHostsOf(records ?? [], [...EXTRA_OFFICIAL_HOSTS, ...(input.extraHosts ?? [])]);
+  const linkHosts = (input.parts.officialLinks?.() ?? []).map((u) => hostOf(u)).filter((h): h is string => h !== null);
+  const hosts = officialHostsOf(records ?? [], [...EXTRA_OFFICIAL_HOSTS, ...(input.extraHosts ?? []), ...linkHosts]);
   const baseAllow = [...readOnDatesOf(records ?? []), todayVienna];
 
   const harness: HarnessOptions = {
@@ -164,7 +169,8 @@ export async function evaluate(input: EvalInput): Promise<EvalReport> {
       mode: input.mode,
       as_of: input.golden.as_of,
       golden_version: input.golden.version,
-      cases_total: cases.length,
+      cases_total: input.golden.cases.length,
+      cases_selected: cases.length,
       cases_run: outcomes.length,
       skipped_for_budget: result.skippedForBudget,
       ground_truth_from_files: records !== null,
@@ -174,7 +180,7 @@ export async function evaluate(input: EvalInput): Promise<EvalReport> {
     },
     bar,
     // A bar line with nothing to grade (pass === null) does not fail the run, but a run with no cases at all does.
-    barPass: scores.length > 0 && bar.every((b) => b.pass !== false),
+    barPass: scores.length > 0 && bar.every((b) => b.advisory || b.pass !== false),
     categories: categoryStats(scores),
     soft: {
       languageMatchRate: lang.length ? lang.filter((s) => s.checks.languageMatch).length / lang.length : null,

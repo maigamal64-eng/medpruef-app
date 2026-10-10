@@ -107,7 +107,7 @@ export function extractDates(text: string): FoundDate[] {
       a.year = a.month > b.month ? b.year - 1 : b.year;
     }
   }
-  return out.map(({ start: _s, end: _e, ...d }) => d);
+  return out.map((d) => ({ year: d.year, month: d.month, day: d.day, raw: d.raw }));
 }
 
 export function parseIso(iso: string): { year: number; month: number; day: number } {
@@ -158,7 +158,7 @@ function parseAmount(raw: string): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-const AMOUNT = String.raw`\d[\d.,]*`;
+const AMOUNT = String.raw`\d+(?:[.,]\d+)*`;
 const P_EUR_AFTER = new RegExp(String.raw`(?<![\d.,])(${AMOUNT})\s*(?:€|EUR\b|Euro\b|euros?\b)`, "gi");
 const P_EUR_BEFORE = new RegExp(String.raw`(?:€|\bEUR\b)\s*(${AMOUNT})`, "gi");
 
@@ -196,6 +196,11 @@ const P_URL = /\b(?:https?:\/\/|www\.)[^\s)\]>"'<]+/gi;
 
 export function extractUrls(text: string): string[] {
   return [...text.matchAll(P_URL)].map((m) => m[0].replace(/[.,;:!?]+$/, ""));
+}
+
+/** The text without its links (a link's digits, "%C3" and dates must not be read as claims). */
+export function stripUrls(text: string): string {
+  return text.replace(P_URL, " ");
 }
 
 export function hostOf(url: string): string | null {

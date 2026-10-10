@@ -47,7 +47,16 @@ export async function loadRealParts(): Promise<HarnessParts> {
   const createBrain = fn<CreateBrain>(brain, "createMentorBrain", B);
   const getFacts = fn<GetFacts>(factsMod, "getMentorFactsLoader", F);
   const facts = getFacts();
+  // The refusal and fallback links the product attaches; optional so a renamed module only weakens the link allowlist.
+  let officialLinks: (() => string[]) | undefined;
+  try {
+    const refusals = await load("@/lib/mentor/prompt/refusals", "W2-BRAIN");
+    if (typeof refusals.allOfficialLinks === "function") officialLinks = refusals.allOfficialLinks as () => string[];
+  } catch {
+    officialLinks = undefined;
+  }
   return {
+    officialLinks,
     createRunTurn: (alert) => createRunTurn({ alert }),
     brainFactory: (env: BrainEnv) => createBrain({ facts, db: env.db, canFreeRead: env.canFreeRead, clock: env.clock }),
     facts,

@@ -56,6 +56,8 @@ export interface Expect {
   forbid_terms?: string[];
   /** Refusal only: acceptable reasons. Omit to accept any. */
   refusal_reasons?: MentorRefusalReason[];
+  /** Tool names that must have been called (explain adds get_question, study adds get_my_progress). */
+  tools_all?: string[];
 }
 
 /** How the scripted model (scripted-model mode) reaches the right tool for a case. Not used by live grading. */
@@ -91,6 +93,8 @@ export interface PassBar {
   critical_cases_max: number;
   /** Share of kind=answer cases whose citations are valid. */
   citation_valid_min: number;
+  /** Share of kind=answer cases that are fully correct: every expected value and term present, nothing stray, tool called. Added by W2-EVAL (the plan's bar has no answer-correctness line). */
+  answer_correct_min: number;
   /** Share of kind=refuse cases with `refused` set and a link. */
   refusal_with_link_min: number;
   /** Share of kind=not_confirmed cases that label the gap and assert nothing. */
@@ -178,6 +182,14 @@ export interface SettleRecord {
   billedTo: "user" | "house" | null;
 }
 
+export interface ToolCallRecord {
+  name: string;
+  input: unknown;
+  /** Fact ids the tool result carried (what was in front of the model). */
+  factIds: string[];
+  isError: boolean;
+}
+
 export interface TurnOutcome {
   events: Array<{ type: string }>;
   final: MentorFinalEvent | null;
@@ -185,6 +197,7 @@ export interface TurnOutcome {
   /** Text of all answer blocks, joined with a blank line. */
   text: string;
   calls: CallRecord[];
+  toolCalls: ToolCallRecord[];
   settles: SettleRecord[];
   alerts: string[];
   ledgerReconciles: boolean;
