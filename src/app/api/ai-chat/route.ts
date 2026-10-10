@@ -4,81 +4,253 @@ import { requireUser, isFreeAccess, isPaidAccess } from "@/lib/auth-guard";
 import { canFreeUserReadQuestion, logFreeCapHit } from "@/lib/free-access";
 import { addBreadcrumb, captureServerError } from "@/lib/sentry-capture";
 import { checkRateLimit, rateKey, rateLimitHeaders } from "@/lib/rate-limit";
+import {
+  AiCacheTtlViolation,
+  AiEmptyText,
+  AiError,
+  AiInputRejected,
+  AiRefusal,
+  AiTimeout,
+  callClaude,
+  type ClaudeUsage,
+  type MessageParam,
+} from "@/lib/ai/anthropic";
+import { checkLegacyUserCap, dailyAttemptLimit, getLegacyAiLimits, takeAiQuota } from "@/lib/ai/limits";
+import { costMicroUsd, measureInputBytes, reserveCeilingMicro, trimHistoryToFit } from "@/lib/ai/pricing";
+import { billingNeutralLine } from "@/lib/billing-copy";
 
 export const dynamic = "force-dynamic";
+// Anthropic (25 s) plus the OpenAI fallback (15 s) must fit inside the function.
+export const maxDuration = 60;
 
 // In-memory burst guard on top of the DB-backed daily quota. Catches
 // someone calling the endpoint 100 times in a row.
 const AI_CHAT_BURST_LIMIT = { limit: 10, windowMs: 60_000 };
 
 // ────────────────────────────────────────────────────────────────────
-// Feature flags (read once at module load).
-// All optional — defaults are conservative: features ON, auto routing,
-// 15/day quota for paid users.
+// Config (read per request, never cached at module load).
 //
-// Wave 2026-04-28 added the kill-switch + provider-mode after the
-// Anthropic OAuth token investigation (see AI-OAUTH-TEST-2026-04-28.md):
-// OAuth subscription tokens (`sk-ant-oat01-*`) are NOT usable against
-// /v1/messages for third-party apps. Production runs in `openai` mode
-// until Stripe Atlas clears + we provision a real ANTHROPIC_API_KEY.
+// Kill switch: AI_FEATURES_ENABLED=false or AI_PROVIDER_MODE=disabled.
+// AI_PRIMARY_MODEL is SET IN VERCEL and overrides the code default.
+// Daily attempts come from AI_CHAT_DAILY_ATTEMPTS (src/lib/ai/limits.ts);
+// the old AI_DAILY_QUOTA_PAID name is no longer read.
 // ────────────────────────────────────────────────────────────────────
-const AI_FEATURES_ENABLED = (process.env.AI_FEATURES_ENABLED ?? "true") === "true";
 type ProviderMode = "auto" | "claude_oauth" | "openai" | "disabled";
-const AI_PROVIDER_MODE: ProviderMode =
-  (process.env.AI_PROVIDER_MODE as ProviderMode | undefined) ?? "auto";
-const AI_DAILY_QUOTA_PAID = (() => {
-  const raw = Number(process.env.AI_DAILY_QUOTA_PAID);
-  return Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : 15;
-})();
-const AI_PRIMARY_MODEL = process.env.AI_PRIMARY_MODEL || "claude-sonnet-5";
-const AI_FALLBACK_MODEL = process.env.AI_FALLBACK_MODEL || "gpt-4o-mini";
 
-// Token-cost rates per 1M tokens (USD). Approximate; used only for the
-// audit table's cost_usd column. Update when pricing changes.
-const COST_RATES_PER_M: Record<string, { in: number; out: number }> = {
-  // Current models. Sonnet 5 is BOTH newer and cheaper than Sonnet 4.6
-  // (2/10 vs 3/15), so the 2026-08-29 upgrade cut per-explanation cost ~33%.
-  "claude-sonnet-5": { in: 2.0, out: 10.0 },
-  "claude-haiku-4-5": { in: 1.0, out: 5.0 },
-  // Superseded models. KEPT ON PURPOSE: ai_call_log rows written before
-  // 2026-08-29 still carry these ids, and estimateCostUsd() is called when
-  // reading that history back. Deleting them would silently return null and
-  // blank out the cost column for every historical row.
-  "claude-sonnet-4-6": { in: 3.0, out: 15.0 },
-  "claude-sonnet-4-5": { in: 3.0, out: 15.0 },
-  "gpt-4o-mini": { in: 0.15, out: 0.6 },
-  "gpt-4o": { in: 2.5, out: 10.0 },
+function readConfig() {
+  return {
+    enabled: (process.env.AI_FEATURES_ENABLED ?? "true") === "true",
+    mode: (process.env.AI_PROVIDER_MODE as ProviderMode | undefined) ?? "auto",
+    primaryModel: process.env.ANTHROPIC_MODEL || process.env.AI_PRIMARY_MODEL || "claude-sonnet-5",
+    fallbackModel: process.env.OPENAI_MODEL || process.env.AI_FALLBACK_MODEL || "gpt-4o-mini",
+  };
+}
+
+// Sonnet 5.x thinks by default and thinking bills (and is capped) as output.
+// Effort is therefore explicit, and max_tokens leaves room for thinking AND the
+// ~400-word answer (measured p99 answer without thinking: 775 tokens).
+const CHAT_EFFORT = "low" as const;
+const CHAT_MAX_TOKENS = 3000;
+const ANTHROPIC_TIMEOUT_MS = 25_000;
+const OPENAI_TIMEOUT_MS = 15_000;
+
+// OpenAI is not in src/lib/ai/pricing.ts (Anthropic only), so the fallback
+// carries its own rates, integer micro-USD per million tokens. An unlisted
+// OpenAI model is billed at the dearer gpt-4o row (an upper bound).
+const OPENAI_RATES: Record<string, { in: number; out: number }> = {
+  "gpt-4o-mini": { in: 150_000, out: 600_000 },
+  "gpt-4o": { in: 2_500_000, out: 10_000_000 },
 };
-function estimateCostUsd(model: string, inTok: number | null, outTok: number | null): number | null {
-  const rate = COST_RATES_PER_M[model];
-  if (!rate || inTok == null || outTok == null) return null;
-  return Number(((inTok * rate.in + outTok * rate.out) / 1_000_000).toFixed(6));
+const OPENAI_UNLISTED_RATE = OPENAI_RATES["gpt-4o"];
+
+function openaiCostMicro(model: string, inTok: number, outTok: number): number {
+  const key = model.replace(/-\d{4}-\d{2}-\d{2}$/, "");
+  const r = OPENAI_RATES[key] ?? OPENAI_UNLISTED_RATE;
+  return Math.ceil((inTok * r.in + outTok * r.out) / 1_000_000);
 }
 
 // Upgraded 2026-04-17 per user feedback (Mounzer 3/5 + Hu "bessere
 // Erklärungen"). Enforces strict structure that makes explanations
 // easier to skim on mobile: TL;DR → correct answer reasoning →
-// distractor-by-distractor breakdown → guideline citation.
+// distractor-by-distractor breakdown.
+// 2026-10-10: no exam name (the bank covers three tracks) and no guideline
+// citations (there is no source corpus behind them, so they were unverifiable).
 const SYSTEM_PROMPT = [
-  "You are MedPrüf's AI study tutor for the Austrian Kenntnisprüfung.",
+  "You are MedPrüf's study tutor. You explain multiple-choice questions from MedPrüf's question bank to physicians preparing for Austrian medical exams.",
   "Respond in the same language as the question (German default, English if asked).",
   "",
   "MANDATORY FORMAT:",
   "1. Start with a one-sentence **TL;DR** (bold) summarizing the correct answer.",
   "2. Section '**Warum die richtige Antwort**' / '**Why the correct answer**' — 2–4 bullets with clinical/physiological reasoning. Use **bold** for key medical terms.",
   "3. Section '**Warum die anderen falsch sind**' / '**Why the others are wrong**' — one short bullet per distractor naming the specific reason.",
-  "4. Where relevant, cite the guideline or source: ERC 2021, ESC, ÖDG, Österreichischer Impfplan, WHO, AGES.",
   "",
   "HARD CONSTRAINTS:",
   "- Max ~400 words total. Fit on a mobile screen.",
   "- Use markdown (**bold**, bullet lists, small tables where helpful).",
   "- Never speculate without evidence. If uncertain, say so explicitly.",
+  "- Never invent sources, guideline names, editions, years or figures. If you are unsure of a detail, say so instead of citing.",
   "- Do NOT regurgitate the question. Go straight to reasoning.",
 ].join("\n");
 
 const MAX_MESSAGES = 20;
 const MAX_MESSAGE_CHARS = 4000;
-const UPSTREAM_TIMEOUT_MS = 20_000;
+
+const TECH_PROBLEM_REPLY =
+  "Technisches Problem bei der KI-Generierung. Die Frage und die statische Erklärung funktionieren weiter, bitte später erneut versuchen oder den Fehler über das Feedback-Icon melden.";
+const REFUSAL_REPLY =
+  "Zu dieser Anfrage kann keine KI-Erklärung erstellt werden. Die Frage und die statische Erklärung funktionieren weiter.";
+
+// ────────────────────────────────────────────────────────────────────
+// ai_call_log writer. One row per upstream call, failures included.
+// The R2 columns (route, status, cache tokens) exist only after the R2
+// migrations; they are written only once a probe confirms them.
+// ────────────────────────────────────────────────────────────────────
+type CallStatus = "ok" | "timeout" | "empty_text" | "upstream_error" | "rejected_input" | "refusal" | "cache_ttl_violation";
+
+interface CallLogRow {
+  provider: "anthropic" | "openai" | "none";
+  model: string;
+  status: CallStatus;
+  errorCode: string | null;
+  inTokens: number | null;
+  outTokens: number | null;
+  cacheRead: number | null;
+  cacheWrite: number | null;
+  costMicro: number;
+  durationMs: number;
+}
+
+type ServiceClient = ReturnType<typeof getServiceClient>;
+
+const R2_NEGATIVE_TTL_MS = 60_000;
+let r2Columns: { ok: boolean; at: number } | null = null;
+
+function isMissingColumnError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const e = error as { code?: unknown; message?: unknown };
+  return e.code === "42703" || e.code === "PGRST204" || /column .*(does not exist|schema cache)/i.test(String(e.message ?? ""));
+}
+
+async function r2ColumnsPresent(db: ServiceClient): Promise<boolean> {
+  const now = Date.now();
+  if (r2Columns && (r2Columns.ok || now - r2Columns.at < R2_NEGATIVE_TTL_MS)) return r2Columns.ok;
+  let ok = false;
+  try {
+    const { error } = await db
+      .from("ai_call_log")
+      .select("cache_read_tokens,cache_write_tokens,route,status")
+      .limit(0);
+    ok = !error;
+  } catch {
+    ok = false;
+  }
+  r2Columns = { ok, at: now };
+  return ok;
+}
+
+async function writeCallLog(userId: string, questionId: number | null, row: CallLogRow): Promise<void> {
+  try {
+    const db = getServiceClient();
+    const legacy: Record<string, unknown> = {
+      user_id: userId,
+      provider: row.provider,
+      model: row.model,
+      in_tokens: row.inTokens,
+      out_tokens: row.outTokens,
+      // Integer micro-USD is already rounded up, so micro / 1e6 is exact at 6 decimals.
+      cost_usd: (row.costMicro / 1_000_000).toFixed(6),
+      duration_ms: row.durationMs,
+      question_id: questionId,
+      success: row.status === "ok",
+      error_code: row.errorCode,
+    };
+    const full = {
+      ...legacy,
+      cache_read_tokens: row.cacheRead,
+      cache_write_tokens: row.cacheWrite,
+      route: "ai_chat",
+      status: row.status,
+    };
+    const withR2 = await r2ColumnsPresent(db);
+    let { error } = await db.from("ai_call_log").insert(withR2 ? full : legacy);
+    if (error && withR2 && isMissingColumnError(error)) {
+      r2Columns = { ok: false, at: Date.now() };
+      ({ error } = await db.from("ai_call_log").insert(legacy));
+    }
+    if (error) {
+      captureServerError(error, { route: "/api/ai-chat", userId, phase: "call-log-insert", provider: row.provider });
+    }
+  } catch (err) {
+    captureServerError(err, { route: "/api/ai-chat", userId, phase: "call-log-insert", provider: row.provider });
+  }
+}
+
+/** Input-only token estimate for failures that carry no usage (German text is about 3 to 4 bytes per token). */
+function estimateInputTokens(system: string, messages: MessageParam[]): number {
+  return Math.ceil(measureInputBytes({ system: [{ type: "text", text: system }], messages }) / 3);
+}
+
+function hasUsage(u: ClaudeUsage | null | undefined): u is ClaudeUsage {
+  return !!u && (u.input_tokens > 0 || u.output_tokens > 0 || u.cache_read_input_tokens > 0 || u.cache_creation_input_tokens > 0);
+}
+
+/**
+ * R2-05: a reached call with no usage may have run thinking/output up to
+ * max_tokens, so book the reserve ceiling (input + max output), never an
+ * input-only estimate. Unknown model falls back to the dearest row with the
+ * full output budget.
+ */
+function reachedNoUsageCostMicro(model: string, system: string, turns: MessageParam[]): number {
+  const inputBytes = measureInputBytes({ system: [{ type: "text", text: system }], messages: turns });
+  try {
+    return reserveCeilingMicro(model, inputBytes, CHAT_MAX_TOKENS);
+  } catch {
+    return costMicroUsd(
+      model,
+      { input_tokens: estimateInputTokens(system, turns), output_tokens: CHAT_MAX_TOKENS },
+      { onUnknown: "top_row" },
+    );
+  }
+}
+
+function classifyAnthropicError(err: unknown): { status: CallStatus; code: string; reached: boolean; usage: ClaudeUsage | null } {
+  if (err instanceof AiError) {
+    const status: CallStatus =
+      err instanceof AiTimeout
+        ? "timeout"
+        : err instanceof AiEmptyText
+          ? "empty_text"
+          : err instanceof AiRefusal
+            ? "refusal"
+            : err instanceof AiCacheTtlViolation
+              ? "cache_ttl_violation"
+              : err instanceof AiInputRejected
+                ? "rejected_input"
+                : "upstream_error";
+    return { status, code: err.code, reached: err.reachedModel, usage: err.usage };
+  }
+  // Not a wrapper error (should not happen): bill conservatively as reached.
+  return { status: "upstream_error", code: "unexpected_error", reached: true, usage: null };
+}
+
+function secondsUntilViennaMidnight(now: Date = new Date()): number {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Vienna",
+    hour: "numeric",
+    minute: "numeric",
+    second: "numeric",
+    hourCycle: "h23",
+  }).formatToParts(now);
+  const g = (t: string) => Number(parts.find((p) => p.type === t)?.value ?? 0);
+  return Math.max(1, 86_400 - (g("hour") * 3600 + g("minute") * 60 + g("second")));
+}
+
+function aiUnavailable(): NextResponse {
+  return NextResponse.json(
+    { error: "ai_unavailable", message: "AI is temporarily unavailable. Please try again later." },
+    { status: 503 },
+  );
+}
 
 function isMissingExplanationLocaleColumn(error: unknown): boolean {
   if (!error || typeof error !== "object") return false;
@@ -152,6 +324,7 @@ export async function GET(req: NextRequest) {
 // POST — Generate AI explanation (and cache it).
 export async function POST(req: NextRequest) {
   const startedAt = Date.now();
+  const config = readConfig();
   addBreadcrumb({ category: "ai-chat", message: "request_received" });
 
   // ──────────────────────────────────────────────────────────────────
@@ -161,7 +334,7 @@ export async function POST(req: NextRequest) {
   // (showing only cached explanations). Use this when a provider has an
   // outage / runaway cost / abuse incident.
   // ──────────────────────────────────────────────────────────────────
-  if (!AI_FEATURES_ENABLED || AI_PROVIDER_MODE === "disabled") {
+  if (!config.enabled || config.mode === "disabled") {
     addBreadcrumb({ category: "ai-chat", message: "kill_switch_active", level: "warning" });
     return NextResponse.json(
       { error: "ai_disabled", message: "AI features are temporarily paused." },
@@ -205,6 +378,8 @@ export async function POST(req: NextRequest) {
   // Pro) can still READ cached explanations via GET, but cannot trigger
   // a new upstream call. Admins always pass (`isFreeAccess` returns
   // false for `role='admin'` regardless of tier).
+  // The copy carries no price: prices and renewal wording are owned by
+  // billing-copy.ts and /pricing (the old text hard-coded a stale "from 9 EUR").
   // ──────────────────────────────────────────────────────────────────
   if (isFreeAccess(guard)) {
     addBreadcrumb({
@@ -216,8 +391,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         error: "upgrade_required",
-        message:
-          "AI features are available on paid plans starting at €9. Upgrade to continue.",
+        message: `AI explanations are part of MedPrüf Pro. ${billingNeutralLine("en")} Current plans and prices: https://medpruf.com/pricing`,
       },
       { status: 402 },
     );
@@ -225,73 +399,8 @@ export async function POST(req: NextRequest) {
   addBreadcrumb({ category: "ai-chat", message: "tier_check_passed" });
 
   // ──────────────────────────────────────────────────────────────────
-  // GATE 3: per-user daily quota.
-  // Counts ai_call_log rows where (created_at AT TIME ZONE 'Europe/Vienna')::date
-  // matches today-in-Vienna. Resets at 00:00 Europe/Vienna.
-  // Falls open on DB error so a flaky table doesn't block paying users,
-  // but ships a Sentry breadcrumb so silent under-enforcement surfaces.
-  // ──────────────────────────────────────────────────────────────────
-  try {
-    const db = getServiceClient();
-    // Compute Vienna-local "today" boundary in UTC for the count window.
-    // We use a Postgres-side filter on the (created_at AT TIME ZONE 'Europe/Vienna')::date
-    // expression via a date literal computed client-side.
-    const viennaNow = new Date(
-      new Date().toLocaleString("en-US", { timeZone: "Europe/Vienna" }),
-    );
-    const viennaY = viennaNow.getFullYear();
-    const viennaM = String(viennaNow.getMonth() + 1).padStart(2, "0");
-    const viennaD = String(viennaNow.getDate()).padStart(2, "0");
-    const viennaDate = `${viennaY}-${viennaM}-${viennaD}`;
-
-    const { count, error: countErr } = await db
-      .from("ai_call_log")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", userId)
-      .gte("created_at", `${viennaDate}T00:00:00+02:00`)
-      .lt("created_at", `${viennaDate}T23:59:59.999+02:00`);
-
-    if (countErr) {
-      // Fail-open with telemetry — see comment block above.
-      captureServerError(countErr, {
-        route: "/api/ai-chat",
-        userId,
-        phase: "quota-check",
-        failOpen: true,
-      });
-    } else if (typeof count === "number" && count >= AI_DAILY_QUOTA_PAID) {
-      addBreadcrumb({
-        category: "ai-chat",
-        message: "quota_exceeded",
-        level: "warning",
-        data: { used: count, limit: AI_DAILY_QUOTA_PAID },
-      });
-      return NextResponse.json(
-        {
-          error: "quota_exceeded",
-          message: `Daily AI quota reached (${AI_DAILY_QUOTA_PAID}/day). Resets at midnight CET.`,
-          retry_after: 3600,
-        },
-        { status: 429 },
-      );
-    } else {
-      addBreadcrumb({
-        category: "ai-chat",
-        message: "quota_check_passed",
-        data: { used: count ?? 0, limit: AI_DAILY_QUOTA_PAID },
-      });
-    }
-  } catch (err) {
-    captureServerError(err, {
-      route: "/api/ai-chat",
-      userId,
-      phase: "quota-check",
-      failOpen: true,
-    });
-  }
-
-  // ──────────────────────────────────────────────────────────────────
-  // Body parsing + sanitization.
+  // Body parsing + sanitization (BEFORE the quota, so a malformed
+  // request never burns an attempt).
   // `system` is intentionally NOT accepted from the client — the output
   // is cached globally and served free to all users, so a client-supplied
   // prompt is a cache-poisoning vector. Context is built server-side from
@@ -336,6 +445,25 @@ export async function POST(req: NextRequest) {
   if (sanitized.length === 0) {
     return NextResponse.json({ error: "No valid messages" }, { status: 400 });
   }
+  // The cache write below applies only to a single-message request, judged on
+  // what the client sent (not on the normalized conversation).
+  const clientMessageCount = sanitized.length;
+  if (sanitized[sanitized.length - 1].role !== "user") {
+    return NextResponse.json({ error: "Last message must be from the user" }, { status: 400 });
+  }
+  // The follow-up UI seeds the chat with the explanation as an ASSISTANT turn,
+  // so a follow-up arrives as [assistant, user, ...]. The Messages API (and
+  // the shared wrapper) need the first turn to be the user's.
+  const conversation: MessageParam[] =
+    sanitized[0].role === "assistant"
+      ? [
+          {
+            role: "user",
+            content: responseLang === "en" ? "Please explain this question." : "Bitte erkläre diese Frage.",
+          },
+          ...sanitized,
+        ]
+      : sanitized.map((m) => ({ role: m.role, content: m.content }));
 
   const qidNum =
     typeof questionId === "number" && Number.isInteger(questionId) && questionId > 0
@@ -388,7 +516,12 @@ export async function POST(req: NextRequest) {
         phase: "question-fetch",
         questionId: qidNum,
       });
-      // Non-fatal: fall back to bare SYSTEM_PROMPT below.
+    }
+    // R2-03: a question-bound request without its question must not reach the
+    // model: the context-less answer would be billed and then cached as the
+    // global explanation. Refuse before any cap check or attempt is taken.
+    if (!questionRow) {
+      return aiUnavailable();
     }
   }
 
@@ -430,168 +563,298 @@ export async function POST(req: NextRequest) {
 
   const composedSystemPrompt = buildComposedPrompt(questionRow);
 
-  async function fetchWithTimeout(url: string, init: RequestInit): Promise<Response | null> {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), UPSTREAM_TIMEOUT_MS);
-    try {
-      const r = await fetch(url, { ...init, signal: controller.signal });
-      return r;
-    } catch (err) {
-      captureServerError(err, {
-        route: "/api/ai-chat",
-        userId,
-        phase: "upstream",
-        upstream: url,
+  // Keep the whole request inside the wrapper's input cap (and so below the
+  // cheap price step). Oldest turns go first; the newest user turn must fit.
+  const fitted = trimHistoryToFit({ system: [{ type: "text", text: composedSystemPrompt }], messages: conversation });
+  if (!fitted) {
+    return NextResponse.json({ error: "Message too large" }, { status: 400 });
+  }
+  const turns = fitted.messages;
+
+  // ──────────────────────────────────────────────────────────────────
+  // GATE 3: per-user monthly legacy cost cap (read-only, so a refusal
+  // does not burn a daily attempt). Fails CLOSED on any DB problem.
+  // ──────────────────────────────────────────────────────────────────
+  const limits = getLegacyAiLimits();
+  const quotaDb = getServiceClient();
+  const cap = await checkLegacyUserCap(quotaDb, userId, limits);
+  if (!cap.ok) {
+    if (cap.reason === "cap_reached") {
+      addBreadcrumb({
+        category: "ai-chat",
+        message: "monthly_cap_reached",
+        level: "warning",
+        data: { spentMicro: cap.spentMicro, capMicro: cap.capMicro },
       });
-      return null;
-    } finally {
-      clearTimeout(timer);
+      return NextResponse.json(
+        {
+          error: "monthly_cap_reached",
+          message: "Your monthly AI fair-use limit is reached. It resets at the start of next month (UTC).",
+        },
+        { status: 429 },
+      );
     }
+    captureServerError(new Error(`ai_legacy_cost_month ${cap.reason ?? "failed"}`), {
+      route: "/api/ai-chat",
+      userId,
+      phase: "legacy-cap-check",
+      failClosed: true,
+    });
+    return aiUnavailable();
   }
 
   // ──────────────────────────────────────────────────────────────────
-  // GATE 4: provider routing.
+  // GATE 4: per-user daily quota, counted as ATTEMPTS (a failed model
+  // call still counts) by ai_quota_take: atomic, Europe/Vienna day
+  // computed in SQL, so it needs no hard-coded UTC offset across the
+  // CEST to CET switch. Fails CLOSED: a DB error is a 503, never a free pass.
+  // ──────────────────────────────────────────────────────────────────
+  const dailyLimit = dailyAttemptLimit("ai_chat", limits);
+  const quota = await takeAiQuota(quotaDb, userId, "ai_chat", dailyLimit);
+  if (!quota.ok) {
+    if (quota.reason === "limit_reached") {
+      addBreadcrumb({
+        category: "ai-chat",
+        message: "quota_exceeded",
+        level: "warning",
+        data: { used: quota.used, limit: dailyLimit },
+      });
+      const retryAfter = secondsUntilViennaMidnight();
+      return NextResponse.json(
+        {
+          error: "quota_exceeded",
+          message: `Daily AI quota reached (${dailyLimit}/day). Resets at midnight Vienna time.`,
+          retry_after: retryAfter,
+        },
+        { status: 429, headers: { "Retry-After": String(retryAfter) } },
+      );
+    }
+    captureServerError(new Error(`ai_quota_take ${quota.reason ?? "failed"}`), {
+      route: "/api/ai-chat",
+      userId,
+      phase: "quota-check",
+      failClosed: true,
+    });
+    return aiUnavailable();
+  }
+  addBreadcrumb({
+    category: "ai-chat",
+    message: "quota_check_passed",
+    data: { used: quota.used, limit: dailyLimit },
+  });
+
+  // ──────────────────────────────────────────────────────────────────
+  // GATE 5: provider routing.
   //
   //   auto         → try Anthropic first if ANTHROPIC_API_KEY is set,
   //                  then fall back to OpenAI on failure (default).
-  //   claude_oauth → only try Anthropic. (Reserved — currently broken
-  //                  for OAuth tokens. Kept as a config option so the
-  //                  switch is one-line when Anthropic re-enables OAuth
-  //                  for /v1/messages. Today this mode is equivalent to
-  //                  `auto` but without OpenAI fallback on rate-limit.)
+  //   claude_oauth → only try Anthropic. (Reserved; see AI-OAUTH-TEST-2026-04-28.md.)
   //   openai       → skip Anthropic entirely; only OpenAI.
   //   disabled     → caught above by GATE 1.
   //
-  // The actual upstream attempts use AI_PRIMARY_MODEL / AI_FALLBACK_MODEL
-  // unless the legacy ANTHROPIC_MODEL/OPENAI_MODEL envs are set, which
-  // take precedence (so a hot-fix model swap stays one env var away).
+  // Anthropic goes through the shared wrapper (src/lib/ai/anthropic.ts):
+  // reply = first TEXT block (never content[0], Sonnet 5 thinks by
+  // default), explicit effort, one request, usage incl. cache tokens.
+  // EVERY upstream call writes one ai_call_log row, failures included.
   // ──────────────────────────────────────────────────────────────────
   let reply = "";
   let upstreamProvider: "anthropic" | "openai" | "none" = "none";
-  let upstreamModel: string = "none";
-  let inTokens: number | null = null;
-  let outTokens: number | null = null;
+  let upstreamModel = "none";
+  let truncated = false;
+  let refused = false;
 
-  const tryAnthropic = AI_PROVIDER_MODE === "auto" || AI_PROVIDER_MODE === "claude_oauth";
-  const tryOpenAI = AI_PROVIDER_MODE === "auto" || AI_PROVIDER_MODE === "openai";
+  const tryAnthropic = config.mode === "auto" || config.mode === "claude_oauth";
+  const tryOpenAI = config.mode === "auto" || config.mode === "openai";
 
-  // Try Anthropic first (when allowed).
-  const anthropicKey = process.env.ANTHROPIC_API_KEY;
-  if (tryAnthropic && anthropicKey) {
-    const anthropicModel = process.env.ANTHROPIC_MODEL || AI_PRIMARY_MODEL;
+  if (tryAnthropic && process.env.ANTHROPIC_API_KEY) {
+    const model = config.primaryModel;
     addBreadcrumb({
       category: "ai-chat",
       message: "upstream_request_started",
-      data: { provider: "anthropic", model: anthropicModel },
+      data: { provider: "anthropic", model },
     });
-    const response = await fetchWithTimeout("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": anthropicKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: anthropicModel,
-        max_tokens: 1024,
-        system: composedSystemPrompt,
-        messages: sanitized,
-      }),
-    });
-    if (response?.ok) {
-      const data = await response.json();
-      reply = data.content?.[0]?.text || "";
-      inTokens = data.usage?.input_tokens ?? null;
-      outTokens = data.usage?.output_tokens ?? null;
+    const callStart = Date.now();
+    try {
+      const result = await callClaude({
+        model,
+        effort: CHAT_EFFORT,
+        system: [{ type: "text", text: composedSystemPrompt }],
+        messages: turns,
+        max_tokens: CHAT_MAX_TOKENS,
+        timeoutMs: ANTHROPIC_TIMEOUT_MS,
+      });
+      reply = result.text;
+      truncated = result.stop_reason === "max_tokens";
       upstreamProvider = "anthropic";
-      upstreamModel = anthropicModel;
+      upstreamModel = model;
+      await writeCallLog(userId, qidNum, {
+        provider: "anthropic",
+        model,
+        status: "ok",
+        errorCode: null,
+        inTokens: result.usage.input_tokens,
+        outTokens: result.usage.output_tokens,
+        cacheRead: result.usage.cache_read_input_tokens,
+        cacheWrite: result.usage.cache_creation_input_tokens,
+        costMicro: costMicroUsd(model, result.usage, { onUnknown: "top_row" }),
+        durationMs: Date.now() - callStart,
+      });
       addBreadcrumb({
         category: "ai-chat",
         message: "upstream_response",
-        data: { provider: "anthropic", status: response.status, replyLen: reply.length },
+        data: {
+          provider: "anthropic",
+          requestId: result.request_id,
+          stopReason: result.stop_reason,
+          blockTypes: result.blocks.map((b) => b.type),
+          replyLen: reply.length,
+        },
       });
-    } else {
+    } catch (err) {
+      const c = classifyAnthropicError(err);
+      let costMicro = 0;
+      if (c.reached) {
+        costMicro = hasUsage(c.usage)
+          ? costMicroUsd(model, c.usage, { onUnknown: "top_row" })
+          : reachedNoUsageCostMicro(model, composedSystemPrompt, turns);
+      }
+      await writeCallLog(userId, qidNum, {
+        provider: "anthropic",
+        model,
+        status: c.status,
+        errorCode: c.code,
+        inTokens: c.usage?.input_tokens ?? null,
+        outTokens: c.usage?.output_tokens ?? null,
+        cacheRead: c.usage?.cache_read_input_tokens ?? null,
+        cacheWrite: c.usage?.cache_creation_input_tokens ?? null,
+        costMicro,
+        durationMs: Date.now() - callStart,
+      });
+      captureServerError(err, { route: "/api/ai-chat", userId, phase: "upstream", provider: "anthropic", status: c.status, code: c.code });
       addBreadcrumb({
         category: "ai-chat",
         message: "upstream_failed",
         level: "error",
-        data: { provider: "anthropic", status: response?.status ?? null },
+        data: { provider: "anthropic", status: c.status, code: c.code },
       });
+      // A safety refusal is not an outage: never route the same content to another provider.
+      refused = c.status === "refusal";
     }
   }
 
   // Fall back to OpenAI (when allowed AND Anthropic didn't already succeed).
-  if (!reply && tryOpenAI) {
+  if (!reply && !refused && tryOpenAI) {
     const openaiKey = process.env.OPENAI_API_KEY;
     if (openaiKey) {
-      const openaiModel = process.env.OPENAI_MODEL || AI_FALLBACK_MODEL;
+      const model = config.fallbackModel;
       addBreadcrumb({
         category: "ai-chat",
         message: "upstream_request_started",
-        data: { provider: "openai", model: openaiModel },
+        data: { provider: "openai", model },
       });
-      const response = await fetchWithTimeout("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${openaiKey}`,
-        },
-        body: JSON.stringify({
-          model: openaiModel,
-          max_tokens: 1024,
-          messages: [{ role: "system", content: composedSystemPrompt }, ...sanitized],
-        }),
+      const callStart = Date.now();
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), OPENAI_TIMEOUT_MS);
+      let status: CallStatus = "upstream_error";
+      let errorCode: string | null = "network_error";
+      let reached = true;
+      let inTok: number | null = null;
+      let outTok: number | null = null;
+      let text = "";
+      try {
+        const response = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${openaiKey}`,
+          },
+          body: JSON.stringify({
+            model,
+            max_tokens: 1024,
+            messages: [{ role: "system", content: composedSystemPrompt }, ...turns],
+          }),
+          signal: controller.signal,
+        });
+        if (response.ok) {
+          const data = await response.json();
+          text = typeof data.choices?.[0]?.message?.content === "string" ? data.choices[0].message.content : "";
+          inTok = typeof data.usage?.prompt_tokens === "number" ? data.usage.prompt_tokens : null;
+          outTok = typeof data.usage?.completion_tokens === "number" ? data.usage.completion_tokens : null;
+          status = text ? "ok" : "empty_text";
+          errorCode = text ? null : "empty_text";
+        } else {
+          status = "upstream_error";
+          errorCode = `http_${response.status}`;
+          reached = response.status >= 500; // a 4xx was rejected before generation
+        }
+      } catch (err) {
+        status = controller.signal.aborted ? "timeout" : "upstream_error";
+        errorCode = controller.signal.aborted ? "timeout" : "network_error";
+        captureServerError(err, { route: "/api/ai-chat", userId, phase: "upstream", provider: "openai" });
+      } finally {
+        clearTimeout(timer);
+      }
+      const costMicro = !reached
+        ? 0
+        : openaiCostMicro(model, inTok ?? estimateInputTokens(composedSystemPrompt, turns), outTok ?? 0);
+      await writeCallLog(userId, qidNum, {
+        provider: "openai",
+        model,
+        status,
+        errorCode,
+        inTokens: inTok,
+        outTokens: outTok,
+        cacheRead: null,
+        cacheWrite: null,
+        costMicro,
+        durationMs: Date.now() - callStart,
       });
-      if (response?.ok) {
-        const data = await response.json();
-        reply = data.choices?.[0]?.message?.content || "";
-        inTokens = data.usage?.prompt_tokens ?? null;
-        outTokens = data.usage?.completion_tokens ?? null;
+      if (status === "ok") {
+        reply = text;
         upstreamProvider = "openai";
-        upstreamModel = openaiModel;
+        upstreamModel = model;
         addBreadcrumb({
           category: "ai-chat",
           message: "upstream_response",
-          data: { provider: "openai", status: response.status, replyLen: reply.length },
+          data: { provider: "openai", replyLen: reply.length },
         });
       } else {
         addBreadcrumb({
           category: "ai-chat",
           message: "upstream_failed",
           level: "error",
-          data: { provider: "openai", status: response?.status ?? null },
+          data: { provider: "openai", status, code: errorCode },
         });
       }
     }
   }
 
   // ──────────────────────────────────────────────────────────────────
-  // Failure path: log, return 503.
+  // Failure path: return 503. Each upstream call already wrote its own
+  // ai_call_log row above. When NO provider was even attempted (no key,
+  // or a mode that allows none), write one explanatory row so the 503
+  // is visible in the usage table.
   // ──────────────────────────────────────────────────────────────────
   if (!reply) {
     addBreadcrumb({
       category: "ai-chat",
       message: "all_upstreams_failed",
       level: "error",
-      data: { durationMs: Date.now() - startedAt, mode: AI_PROVIDER_MODE },
+      data: { durationMs: Date.now() - startedAt, mode: config.mode, refused },
     });
-    // Still log to ai_call_log so the failure shows up in usage analytics.
-    try {
-      const db = getServiceClient();
-      await db.from("ai_call_log").insert({
-        user_id: userId,
+    if (!refused && !(tryAnthropic && process.env.ANTHROPIC_API_KEY) && !(tryOpenAI && process.env.OPENAI_API_KEY)) {
+      await writeCallLog(userId, qidNum, {
         provider: "none",
         model: "none",
-        in_tokens: null,
-        out_tokens: null,
-        cost_usd: null,
-        duration_ms: Date.now() - startedAt,
-        question_id: qidNum,
-        success: false,
-        error_code: AI_PROVIDER_MODE === "openai" ? "openai_failed" : "all_upstreams_failed",
+        status: "upstream_error",
+        errorCode: "no_provider_configured",
+        inTokens: null,
+        outTokens: null,
+        cacheRead: null,
+        cacheWrite: null,
+        costMicro: 0,
+        durationMs: Date.now() - startedAt,
       });
-    } catch {
-      /* swallow — telemetry must not block */
     }
     // Legacy user_events row (kept so the admin "AI failed" tile keeps working).
     try {
@@ -600,28 +863,22 @@ export async function POST(req: NextRequest) {
         user_id: userId,
         event_type: "ai_chat_failed",
         event_data: {
-          phase: "all_upstreams_failed",
+          phase: refused ? "refusal" : "all_upstreams_failed",
           duration_ms: Date.now() - startedAt,
-          mode: AI_PROVIDER_MODE,
+          mode: config.mode,
         },
       });
     } catch {
       /* swallow */
     }
-    return NextResponse.json(
-      {
-        reply:
-          "Technisches Problem bei der KI-Generierung. Die Frage und die statische Erklärung funktionieren weiter, bitte später erneut versuchen oder den Fehler über das Feedback-Icon melden.",
-      },
-      { status: 503 },
-    );
+    return NextResponse.json({ reply: refused ? REFUSAL_REPLY : TECH_PROBLEM_REPLY }, { status: 503 });
   }
 
   // ──────────────────────────────────────────────────────────────────
   // Cache-write (only when the question doesn't have an explanation
   // yet, OR when the caller explicitly regenerate=true).
   // ──────────────────────────────────────────────────────────────────
-  if (qidNum && sanitized.length === 1) {
+  if (qidNum && clientMessageCount === 1 && !truncated) {
     try {
       const db = getServiceClient();
       // Reuse the row fetched earlier for context-building — no second
@@ -706,26 +963,9 @@ export async function POST(req: NextRequest) {
   }
 
   // ──────────────────────────────────────────────────────────────────
-  // Telemetry: ai_call_log (the new quota counter) + legacy user_events
-  // (admin tile compatibility).
+  // Telemetry: legacy user_events (admin tile compatibility). The
+  // ai_call_log row was already written per upstream call above.
   // ──────────────────────────────────────────────────────────────────
-  try {
-    const db = getServiceClient();
-    const cost_usd = estimateCostUsd(upstreamModel, inTokens, outTokens);
-    await db.from("ai_call_log").insert({
-      user_id: userId,
-      provider: upstreamProvider,
-      model: upstreamModel,
-      in_tokens: inTokens,
-      out_tokens: outTokens,
-      cost_usd,
-      duration_ms: Date.now() - startedAt,
-      question_id: qidNum,
-      success: true,
-    });
-  } catch {
-    /* swallow — telemetry must not block */
-  }
   try {
     const db = getServiceClient();
     await db.from("user_events").insert({
