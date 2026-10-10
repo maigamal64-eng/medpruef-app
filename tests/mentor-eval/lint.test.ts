@@ -83,6 +83,17 @@ describe("lintGolden ground truth", () => {
     expect(text).toMatch(/lint-d-de: must_eur 150 is not printed/);
   });
 
+  it("holds allowed amounts and percentages to the facts too (a widened allow-list must name a real value)", () => {
+    const withFact = [fact("gm.format", "Innsbruck: 14 Fragen, bestanden bei mindestens 60 Prozent. Gebühr 150 EUR.")];
+    const ok = { ...OK, expect: { kind: "not_confirmed" as const, allow_eur: [150, 19, 0], allow_percent: [60] } };
+    // 19 and 0 are printed in the app billing copy (app.billing.plans / app.billing.trial), 150 and 60 in the fact.
+    expect(lintGolden(fileOf([ok]), fixtures, { facts: withFact }).errors).toEqual([]);
+    const bad = { ...OK, id: "lint-bad-de", expect: { kind: "not_confirmed" as const, allow_eur: [4], allow_percent: [95] } };
+    const text = lintGolden(fileOf([bad]), fixtures, { facts: withFact }).errors.join("\n");
+    expect(text).toMatch(/lint-bad-de: allow_eur 4 is not printed in any fact or in the app billing copy/);
+    expect(text).toMatch(/lint-bad-de: allow_percent 95 is not printed in any fact/);
+  });
+
   it("checks derived sitting ids against the supplied list when there is one", () => {
     const c = { ...OK, expect: { kind: "answer" as const, cite_any: ["sitting.sip4a.2026-11-18.*"] } };
     expect(lintGolden(fileOf([c]), fixtures, { facts, sittingIds: ["sitting.sip4a.2026-11-18.wien.registration"] }).errors).toEqual([]);

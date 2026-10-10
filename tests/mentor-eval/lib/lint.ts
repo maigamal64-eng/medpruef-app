@@ -8,6 +8,7 @@
  * from inventing a value of its own (it would then "pass" a wrong mentor).
  */
 
+import { billingCancelSummary, billingPlansSummary, billingTrialSummary } from "@/lib/billing-copy";
 import { MENTOR_MODES, MENTOR_REFUSAL_REASONS } from "@/lib/mentor/contract";
 import { checkMinCounts } from "./aggregate";
 import { countEmDashes } from "./lang";
@@ -20,6 +21,9 @@ const KINDS: readonly ExpectKind[] = ["answer", "ask_filing_university", "refuse
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
 /** Ids the files cannot prove: derived at runtime by the brain. */
 const DERIVED_PREFIXES = ["sitting.", "app.", "question.", "progress."];
+
+/** The app.billing.* fact texts (de and en), as the brain's appBillingFacts() builds them. */
+const APP_BILLING_TEXT = (["de", "en"] as const).flatMap((l) => [billingPlansSummary(l), billingTrialSummary(l), billingCancelSummary(l)]).join("\n");
 
 export interface LintOptions {
   /** Records of content/mentor-facts; null skips the ground-truth checks. */
@@ -54,6 +58,11 @@ export function lintGolden(file: GoldenFile, fx: FixturesFile, opts: LintOptions
   }
 
   const allFactDates = new Set<string>(opts.facts ? isoDatesIn(opts.facts.map((r) => `${r.text_en}\n${r.text_de}`).join("\n")) : []);
+  // Amounts and percentages a case may ALLOW (not require): printed in some verified fact, or in the app billing copy
+  // that the brain serves as the confirmed app.billing.* facts (src/lib/billing-copy.ts, the single owner of the prices).
+  const allFactsText = opts.facts ? `${opts.facts.map((r) => `${r.text_en}\n${r.text_de}`).join("\n")}\n${APP_BILLING_TEXT}` : "";
+  const allFactEur = new Set<number>(opts.facts ? extractEur(allFactsText) : []);
+  const allFactPct = new Set<number>(opts.facts ? extractPercents(allFactsText) : []);
   const seen = new Set<string>();
   for (const c of file.cases) {
     const id = c.id || "(no id)";
@@ -98,6 +107,12 @@ export function lintGolden(file: GoldenFile, fx: FixturesFile, opts: LintOptions
     if (opts.facts) {
       for (const d of e.allow_dates ?? []) {
         if (!allFactDates.has(d)) err(id, `allow_date ${d} is not printed in any fact`);
+      }
+      for (const n of e.allow_eur ?? []) {
+        if (!allFactEur.has(n)) err(id, `allow_eur ${n} is not printed in any fact or in the app billing copy`);
+      }
+      for (const n of e.allow_percent ?? []) {
+        if (!allFactPct.has(n)) err(id, `allow_percent ${n} is not printed in any fact`);
       }
       for (const g of e.cite_any ?? []) {
         if (DERIVED_PREFIXES.some((p) => g.startsWith(p))) {

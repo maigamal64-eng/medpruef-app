@@ -52,7 +52,10 @@ const UNCONFIRMED_MARKERS: RegExp[] = [
   /\b(?:unclear|conflicting|contradict\w*|inconsistent|disagree\w*)\b/i,
   /un(?:confirmed|verified)/i,
   /(?:can(?:no|')t|cannot|could\s?n[o']t)\s+(?:officially\s+)?confirm/i,
-  /no\s+(?:official|verified|confirmed)\s+(?:source|information|statement|figure|amount|date)/i,
+  /no\s+(?:official|verified|confirmed)\s+(?:source|information|statement|figure|amount|date|price|fact)/i,
+  // Round-1 grader audit: the same gap, said the way the live answers say it (see tests/mentor-eval/lang.test.ts).
+  /(?:can(?:no|')t|cannot|could\s?n[o']t)\s+find\s+(?:a\s+|an\s+|any\s+)?(?:verified|official|confirmed)/i,
+  /(?:kein|keine|keinen)\s+(?:offiziell\s+)?(?:offizielle|verifizierte|bestätigte|belegte)[nrms]?\s+(?:Angabe|Quelle|Information|Aussage|Zahl|Betrag|Frist|Anmeldefrist|Termin|Datum|Auskunft|Preis|Regelung)/iu,
   /(?:isn'?t|is\s+not|aren'?t|are\s+not)\s+(?:officially\s+)?(?:confirmed|published|stated|given)/i,
 ];
 
@@ -60,9 +63,19 @@ export function hasUnconfirmedMarker(text: string): boolean {
   return UNCONFIRMED_MARKERS.some((re) => re.test(text));
 }
 
-/** The mentor asked where the Nostrifizierung was filed (at least two of the three universities named). */
+const IMPERATIVE_ASK: RegExp[] = [
+  /\btell\s+me\b/i,
+  /\b(?:sag|sage|nenn|nenne|teile?)\s+(?:mir|uns)\b/i,
+  /\b(?:sagen|nennen|teilen)\s+Sie\s+(?:mir|uns)\b/i,
+  /\bbitte\s+(?:sag|sage|nenn|nenne|teile?)\b/i,
+];
+
+/**
+ * The mentor asked where the Nostrifizierung was filed (at least two of the three universities named).
+ * A direct request ("please tell me where you filed ...") counts as asking, with or without a question mark.
+ */
 export function asksFilingUniversity(text: string): boolean {
-  if (!text.includes("?")) return false;
+  if (!text.includes("?") && !IMPERATIVE_ASK.some((re) => re.test(text))) return false;
   const named = ["wien", "vienna", "graz", "innsbruck"].filter((u) => text.toLowerCase().includes(u)).length;
   const verb = /eingereicht|einreich|beantragt|gestellt|filed|file[ds]?\b|applied|submitted|nostrifi/i.test(text);
   return named >= 2 && verb;
