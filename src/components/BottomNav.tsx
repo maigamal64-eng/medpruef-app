@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { t } from "@/lib/i18n";
-import { Home, FileText, GraduationCap, TrendingUp, Layers } from "lucide-react";
+import { Home, FileText, GraduationCap, TrendingUp, Layers, Brain } from "lucide-react";
 import { NavItem } from "@/components/ui";
+import { useMentorAvailability } from "@/components/mentor/useMentorAvailability";
+import { mentorT } from "@/lib/i18n-mentor";
 
 type Lang = "de" | "en";
 
@@ -15,10 +17,13 @@ interface BottomNavProps {
 
 export default function BottomNav({ lang, userId }: BottomNavProps) {
   const pathname = usePathname();
+  // Mentor entry (ships dark): shown only when the server says this learner may use it.
+  const mentorAvailable = useMentorAvailability() === "available";
 
   const isActive = (key: string) => {
     if (key === "home") return pathname === "/";
     if (key === "quiz") return pathname.startsWith("/quiz");
+    if (key === "mentor") return pathname.startsWith("/mentor");
     if (key === "exam") return pathname.startsWith("/exam");
     if (key === "library") return pathname.startsWith("/library") || pathname.startsWith("/flashcards");
     if (key === "progress") return pathname.startsWith("/progress") || pathname.startsWith("/stats");
@@ -45,6 +50,10 @@ export default function BottomNav({ lang, userId }: BottomNavProps) {
 
           {/* Exam */}
           <NavItem context="bottom" href="/exam" icon={<GraduationCap className="w-5 h-5" />} label={t("exam", lang)} active={isActive("exam")} className="!px-1 max-[340px]:!px-0.5 whitespace-nowrap" />
+
+          {mentorAvailable && (
+            <NavItem context="bottom" href="/mentor" icon={<Brain className="w-5 h-5" />} label={mentorT("nav_label", lang)} active={isActive("mentor")} className="!px-1 max-[340px]:!px-0.5 whitespace-nowrap" />
+          )}
 
           {/* CENTER: Library CTA — raised, prominent. The personal study home
               (flash-notes + question-flashcard review, reached from inside).

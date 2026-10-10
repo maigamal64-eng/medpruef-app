@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { authFetch as fetch } from "@/lib/authFetch";
 import { t } from "@/lib/i18n";
 import { getLevelFromXP } from "@/lib/xp";
-import { Home, FileText, GraduationCap, BarChart3, TrendingUp, Map, Settings, Sparkles, PanelLeftClose, PanelLeftOpen, Layers, Crown, CalendarDays, Gift, History } from "lucide-react";
+import { Home, FileText, GraduationCap, BarChart3, TrendingUp, Map, Settings, Sparkles, PanelLeftClose, PanelLeftOpen, Layers, Crown, CalendarDays, Gift, History, Brain } from "lucide-react";
 import ExamSwitcherInline from "./ExamSwitcherInline";
 import { NavItem } from "@/components/ui";
 import {
@@ -15,6 +15,8 @@ import {
   type ExamSourceId,
 } from "@/lib/topics";
 import { useUserTier } from "@/lib/hooks/useUserTier";
+import { useMentorAvailability } from "@/components/mentor/useMentorAvailability";
+import { mentorT } from "@/lib/i18n-mentor";
 
 type Lang = "de" | "en";
 
@@ -197,6 +199,8 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0 }: Sidebar
   // Invite-only referral program gate (2026-06-25). The nudge-dot and
   // any referral link text are suppressed for accounts not enrolled.
   const { referralsEnabled } = useUserTier();
+  // Mentor entry (ships dark): shown only when the server says this learner may use it.
+  const mentorAvailable = useMentorAvailability() === "available";
   // Rescue-sprint §4.7 (2026-04-24): amber nudge-dot on the
   // Empfehlungen nav link until the user has copied their referral
   // code at least once. `null` = unknown (don't show dot yet),
@@ -265,6 +269,9 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0 }: Sidebar
     { href: "/", icon: <Home className="w-5 h-5" />, label: t("home", lang), key: "home" },
     { href: userId ? `/quiz?setup=1&userId=${userId}` : "/quiz?setup=1", icon: <FileText className="w-5 h-5" />, label: t("quiz", lang), key: "quiz" },
     { href: "/library", icon: <Layers className="w-5 h-5" />, label: lang === "de" ? "Bibliothek" : "Library", key: "library" },
+    ...(mentorAvailable
+      ? [{ href: "/mentor", icon: <Brain className="w-5 h-5" />, label: mentorT("nav_label", lang), key: "mentor" }]
+      : []),
     { href: "/exam", icon: <GraduationCap className="w-5 h-5" />, label: t("exam", lang), key: "exam" },
     { href: userId ? `/stats?userId=${userId}` : "/stats", icon: <BarChart3 className="w-5 h-5" />, label: t("stats", lang), key: "stats" },
     { href: "/progress", icon: <TrendingUp className="w-5 h-5" />, label: t("progress", lang), key: "progress" },
