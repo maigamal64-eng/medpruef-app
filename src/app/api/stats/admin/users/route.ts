@@ -48,9 +48,13 @@ export async function GET(req: NextRequest) {
     if (!canReadRevenue && (tier !== "all" || sort === "tier")) {
       return NextResponse.json({ error: "Revenue permission required for entitlement filters" }, { status: 403 });
     }
+    // Page cap lowered 100 -> 50 (W2-DB1). The admin UI asks for 25. Note:
+    // admin_user_directory enriches every user before paging, so the real
+    // timeout fix is the user_events (user_id, created_at) index in
+    // 20261014100000_study_rpc_perf.sql, not the page size.
     const allowedSorts = ["name", "role", "tier", "status", "xp", "streak", "questions_answered", "accuracy", "last_active", "created_at"];
     const offset = (page - 1) * limit;
-    if (!Number.isSafeInteger(page) || page < 1 || !Number.isInteger(limit) || limit < 1 || limit > 100 ||
+    if (!Number.isSafeInteger(page) || page < 1 || !Number.isInteger(limit) || limit < 1 || limit > 50 ||
         !Number.isSafeInteger(offset) || offset > 2_147_483_647 ||
         rawQuery.length > 200 || (rawQuery !== "" && (query.length < 2 || query.length > 100)) ||
         !["all", "free", "pro", "admin"].includes(tier) || !["all", "email", "telegram"].includes(auth) ||

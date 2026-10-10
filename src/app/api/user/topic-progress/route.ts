@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
 import { requireUser } from '@/lib/auth-guard'
+import { getTopicCountsCached } from '@/lib/free-tier'
 
 export const dynamic = 'force-dynamic'
 
@@ -26,7 +27,9 @@ export async function GET(req: NextRequest) {
     const sb = getServiceClient()
 
     const [countsResult, progressResult, attemptsResult] = await Promise.all([
-      sb.rpc('get_topic_counts', { p_exam_type: examType }),
+      // Bank-wide counts change only when questions are (de)activated:
+      // 1 h per-instance cache (2026-10-10, W2-DB1).
+      getTopicCountsCached(sb, examType),
       sb.rpc('get_user_topic_progress', { p_user_id: userId, p_exam_type: examType }),
       sb.rpc('get_user_topic_attempt_stats', { p_user_id: userId, p_exam_type: examType }),
     ])

@@ -5,6 +5,7 @@ import { captureServerError } from "@/lib/sentry-capture";
 import { TIERS } from "@/lib/nowpayments";
 import { getSubscriptionDisplayNames } from "@/lib/subscription-display";
 import { loadRenewalOfferSuppression } from "@/lib/billing-cadence";
+import { isPaidTier } from "@/lib/free-tier";
 
 export const dynamic = "force-dynamic";
 
@@ -30,8 +31,13 @@ export const dynamic = "force-dynamic";
  *       tier_human_name_de: string,
  *       status: string,
  *       started_at: string,
- *       expires_at: string | null,    // null if there is no expiry
- *       days_remaining: number | null,   // null if no expiry
+ *       expires_at: string | null,    // REAL access end = users.tier_expires_at
+ *                                     // (null if access has no expiry). Falls
+ *                                     // back to the subscription row only when
+ *                                     // the users read fails (W2-DB1, 2026-10-10)
+ *       expires_at_source: "access" | "subscription",
+ *       subscription_expires_at: string | null, // raw subscriptions.expires_at
+ *       days_remaining: number | null,   // from expires_at; null if no expiry
  *       is_first_month_trial: boolean,   // true only when provider data verifies a trial
  *       is_starter_3mo_trial: boolean,   // true only when provider data verifies this tier
  *       is_puyp_eligible_tier: boolean,
@@ -90,6 +96,38 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ active: false, renewal_offer_suppressed: renewalOfferSuppressed });
     }
 
+    // Report the date access really ends. users.tier_expires_at is what the
+    // paywall checks (isPaidTier); a subscriptions row can lag it, e.g. after
+    // a renewal or a manual grant extended access (seen live: row said
+    // 17 Oct, access ran to 17 Nov). Fall back to the row only if the users
+    // read fails, and say so in expires_at_source.
+    let accessExpiresAt: string | null = sub.expires_at;
+    let expiresAtSource: "access" | "subscription" = "subscription";
+    let accessEnded = false;
+    const { data: accessRow, error: accessError } = await sb
+      .from("users")
+      .select("tier, tier_expires_at")
+      .eq("id", userId)
+      .maybeSingle();
+    if (accessError) {
+      captureServerError(accessError, {
+        route: "/api/user/subscription",
+        userId,
+        step: "access_expiry_lookup",
+      });
+    } else if (accessRow) {
+      const access = accessRow as { tier: string | null; tier_expires_at: string | null };
+      accessExpiresAt = access.tier_expires_at ?? null;
+      expiresAtSource = "access";
+      // R2-09: a stale "active" subscriptions row for a user the paywall already
+      // treats as free (downgrade cleared tier_expires_at) must not read as
+      // "no expiry". Report access as ended: expiry = the row's date, 0 days.
+      if (!isPaidTier(access.tier, access.tier_expires_at)) {
+        accessExpiresAt = access.tier_expires_at ?? sub.expires_at ?? new Date().toISOString();
+        accessEnded = true;
+      }
+    }
+
     const tierKey = String(sub.tier);
     const tierDef = TIERS[tierKey];
     const displayNames = getSubscriptionDisplayNames(
@@ -104,10 +142,13 @@ export async function GET(req: NextRequest) {
     // 0 minimum so expired-but-not-yet-cronned rows don't show negative
     // days (would look like a UI bug to users).
     let daysRemaining: number | null = null;
-    if (sub.expires_at) {
-      const msRemaining = new Date(sub.expires_at).getTime() - Date.now();
-      daysRemaining = Math.max(0, Math.ceil(msRemaining / 86_400_000));
+    if (accessExpiresAt) {
+      const msRemaining = new Date(accessExpiresAt).getTime() - Date.now();
+      daysRemaining = Number.isFinite(msRemaining)
+        ? Math.max(0, Math.ceil(msRemaining / 86_400_000))
+        : null;
     }
+    if (accessEnded) daysRemaining = 0;
 
     return NextResponse.json({
       active: true,
@@ -119,7 +160,9 @@ export async function GET(req: NextRequest) {
         tier_human_name_de: displayNames.humanNameDe,
         status: sub.status,
         started_at: sub.started_at,
-        expires_at: sub.expires_at,
+        expires_at: accessExpiresAt,
+        expires_at_source: expiresAtSource,
+        subscription_expires_at: sub.expires_at,
         days_remaining: daysRemaining,
         is_first_month_trial: false, // Legacy tier key is shared by recurring and one-time plans.
         // Legacy response field retained for UI compatibility. Do not

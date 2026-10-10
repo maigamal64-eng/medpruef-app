@@ -7,7 +7,8 @@ import { VIENNA_EXAM_PARTS, DEFAULT_EXAM_SOURCE, EXAM_SOURCE_IDS } from '@/lib/t
 import { captureServerError } from '@/lib/sentry-capture'
 import {
   FREE_TIER_QUESTIONS_PER_EXAM,
-  getFreeSliceIds,
+  loadFreeSliceIds,
+  getTopicCountsCached,
   isFreeTier,
   isFreeTierEnforced,
   countDistinctAnsweredInExam,
@@ -319,10 +320,19 @@ export async function GET(req: NextRequest) {
   }
 
   // Helper: the 150-question free slice for the current exam. Used only
-  // when `free` is true.
-  const getFreeSliceForExam = async (): Promise<number[]> => {
-    return getFreeSliceIds(sb, resolveFreeExam())
+  // when `free` is true. Returns null when the slice could not be loaded
+  // (after one retry and with no cached copy): callers answer with
+  // `sliceUnavailable()` (503, the client shows its retry state) instead
+  // of treating an unreadable slice as an exhausted allowance (paywall).
+  const getFreeSliceForExam = async (): Promise<number[] | null> => {
+    const result = await loadFreeSliceIds(sb, resolveFreeExam())
+    return result.ok ? result.ids : null
   }
+  const sliceUnavailable = () =>
+    NextResponse.json(
+      { error: 'Questions are temporarily unavailable. Please retry.', retryable: true },
+      { status: 503 }
+    )
 
   // ── Durable free-tier cap (2026-06-20, behind FREE_TIER_ENFORCED) ──
   // A free user who has ANSWERED ≥150 distinct questions in this exam
@@ -363,6 +373,7 @@ export async function GET(req: NextRequest) {
     cq = withMcq(cq)
     if (free) {
       const slice = await getFreeSliceForExam()
+      if (slice === null) return sliceUnavailable()
       if (slice.length === 0) {
         return NextResponse.json({ count: 0, freeTier: true })
       }
@@ -398,6 +409,7 @@ export async function GET(req: NextRequest) {
   if (filters.ids.length > 0) {
     if (free) {
       const slice = await getFreeSliceForExam()
+      if (slice === null) return sliceUnavailable()
       const sliceSet = new Set(slice)
       filters.ids = filters.ids.filter((id) => sliceSet.has(id))
       // Durable cap: a capped free user keeps READ access to questions
@@ -459,6 +471,7 @@ export async function GET(req: NextRequest) {
     let allowedIds: number[] | null = null
     if (free) {
       allowedIds = await getFreeSliceForExam()
+      if (allowedIds === null) return sliceUnavailable()
       if (allowedIds.length === 0) return capHitResponse({ paywallHit: true, seen: 0, limit: FREE_TIER_QUESTIONS_PER_EXAM })
       const capped = await checkDurableCap()
       if (capped) return capHitResponse({ paywallHit: true, seen: capped.seen, limit: FREE_TIER_QUESTIONS_PER_EXAM })
@@ -515,6 +528,7 @@ export async function GET(req: NextRequest) {
     query = withMcq(query)
     if (free) {
       let slice = await getFreeSliceForExam()
+      if (slice === null) return sliceUnavailable()
       if (slice.length === 0) return NextResponse.json([])
       const capped = await checkDurableCap()
       if (capped) {
@@ -568,6 +582,7 @@ export async function GET(req: NextRequest) {
   let freeSliceIds: number[] | null = null
   if (free) {
     freeSliceIds = await getFreeSliceForExam()
+    if (freeSliceIds === null) return sliceUnavailable()
     if (freeSliceIds.length === 0) {
       return capHitResponse({
         paywallHit: true,
@@ -590,7 +605,16 @@ export async function GET(req: NextRequest) {
     }
     countQuery = countQuery.in('id', freeSliceIds)
   }
-  const { count } = await countQuery
+  const { count, error: countError } = await countQuery
+  // A failed or timed-out count must not read as "nothing left": for a free
+  // learner that path below answers with a paywall.
+  if (countError) {
+    captureServerError(countError, { route: '/api/questions', phase: 'random-count' })
+    return NextResponse.json(
+      { error: 'Questions are temporarily unavailable. Please retry.', retryable: true },
+      { status: 503 }
+    )
+  }
 
   if (!count) {
     // A free user whose excludeIds has covered every allowed question
@@ -667,14 +691,16 @@ export async function POST(req: NextRequest) {
   if (action === 'topics') {
     // Use the get_topic_counts() RPC function to bypass the Supabase REST
     // 1000-row limit. The function does GROUP BY server-side and returns
-    // at most ~15 rows (one per topic).
+    // at most ~15 rows (one per topic). Cached 1 h per instance
+    // (getTopicCountsCached, 2026-10-10).
     const normalized = !examSource || examSource === 'SIP'
       ? DEFAULT_EXAM_SOURCE
       : examSource
 
-    const { data, error } = await sb.rpc('get_topic_counts', {
-      p_exam_type: normalized === 'all' ? null : normalized,
-    })
+    const { data, error } = await getTopicCountsCached(
+      sb,
+      normalized === 'all' ? null : normalized
+    )
 
     if (error) {
       captureServerError(error, { route: '/api/questions', method: 'POST', phase: 'topics-rpc' })

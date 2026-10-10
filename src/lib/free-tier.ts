@@ -17,9 +17,13 @@
  *
  * To change the sample size globally: bump `FREE_TIER_QUESTIONS_PER_EXAM`
  * and wait 5 min for the cache to expire, or restart the server.
+ *
+ * This module also holds the 1 h topic-counts cache (`getTopicCountsCached`)
+ * used by the study routes, since both caches serve the question bank.
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { EXAM_SOURCE_IDS } from '@/lib/topics'
 
 /** Free-tier question allowance per exam type. */
 export const FREE_TIER_QUESTIONS_PER_EXAM = 150
@@ -43,47 +47,148 @@ const SLICE_CACHE = new Map<string, CacheEntry>()
 const CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutes
 
 /**
- * Return the 150 lowest-id active question ids for an exam type, or
- * fewer if the exam has <150 active rows (rare — only pharma at 335
- * still has >150).
+ * Result of a free-slice load. `ok: false` means the slice could not be
+ * read (database stall or error) and no cached copy exists. Callers that
+ * gate a learner must treat that as "temporarily unavailable" (retryable
+ * 503), never as "free allowance used up" (paywall).
+ */
+export type FreeSliceResult = { ok: true; ids: number[] } | { ok: false }
+
+/** One query attempt for the free slice. Throws on any database error. */
+async function querySliceOnce(sb: SupabaseClient, examType: string): Promise<number[]> {
+  const { data, error } = await sb
+    .from('questions')
+    .select('id')
+    .eq('is_active', true)
+    .eq('exam_type', examType)
+    .order('id', { ascending: true })
+    .limit(FREE_TIER_QUESTIONS_PER_EXAM)
+  if (error) throw error
+  return (data || []).map((r) => r.id as number)
+}
+
+/**
+ * Load the 150 lowest-id active question ids for an exam type, telling
+ * "unavailable" apart from "empty".
  *
- * On DB error we return an empty array. That causes the caller's
- * intersection to be empty, which means a free user hits the paywall
- * immediately — fail-closed is the right call here (we don't want
- * a Supabase outage to silently promote free users to pro).
+ * 2026-10-10 (W2-DB1): a single statement timeout (57014) on this select
+ * used to surface as `[]`, which /api/questions turned into a paywall for
+ * a free learner. Now: one retry on failure, then the stale cached slice
+ * if we have one, then `{ ok: false }`.
+ */
+export async function loadFreeSliceIds(
+  sb: SupabaseClient,
+  examType: string
+): Promise<FreeSliceResult> {
+  const now = Date.now()
+  const cached = SLICE_CACHE.get(examType)
+  if (cached && cached.expiresAt > now) {
+    return { ok: true, ids: cached.ids }
+  }
+
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const ids = await querySliceOnce(sb, examType)
+      SLICE_CACHE.set(examType, { ids, expiresAt: Date.now() + CACHE_TTL_MS })
+      return { ok: true, ids }
+    } catch (err) {
+      console.error('[free-tier] free slice query failed', {
+        examType,
+        attempt,
+        code: (err as { code?: string } | null)?.code ?? null,
+        timeout: isStatementTimeout(err),
+      })
+    }
+  }
+  // Both attempts failed: a stale slice is still the right slice (the
+  // lowest-id rows almost never change), so prefer it over failing.
+  if (cached) return { ok: true, ids: cached.ids }
+  return { ok: false }
+}
+
+/**
+ * Return the 150 lowest-id active question ids for an exam type, or
+ * fewer if the exam has <150 active rows.
+ *
+ * Legacy contract (kept for /api/offline/questions): on a persistent DB
+ * error we return an empty array, which fails CLOSED there (we don't want
+ * a Supabase outage to silently promote free users to pro). Callers that
+ * show a learner a paywall on `[]` should use `loadFreeSliceIds` instead.
  */
 export async function getFreeSliceIds(
   sb: SupabaseClient,
   examType: string
 ): Promise<number[]> {
-  const now = Date.now()
-  const cached = SLICE_CACHE.get(examType)
-  if (cached && cached.expiresAt > now) {
-    return cached.ids
+  const result = await loadFreeSliceIds(sb, examType)
+  return result.ok ? result.ids : []
+}
+
+/** PostgREST / Postgres "canceling statement due to statement timeout". */
+export function isStatementTimeout(err: unknown): boolean {
+  const e = err as { code?: unknown; message?: unknown } | null
+  if (!e || typeof e !== 'object') return false
+  if (e.code === '57014') return true
+  return typeof e.message === 'string' && /statement timeout/i.test(e.message)
+}
+
+// ── Topic counts cache (2026-10-10, W2-DB1) ─────────────────────────
+//
+// `get_topic_counts` returns ~16 rows per exam type and only changes when
+// questions are activated or deactivated. It ran on every topic-progress
+// and topic-list request and was one of the three functions behind the
+// learner-facing 57014 timeouts. Cache successful results per exam type
+// (null = all exams) for 1 hour per server instance, share one in-flight
+// query between concurrent callers, and serve the last good copy if a
+// refresh fails. A failure with nothing cached is returned as an error.
+
+export interface TopicCountRow {
+  topic: string
+  count: number
+}
+
+const TOPIC_COUNTS_TTL_MS = 60 * 60 * 1000 // 1 hour
+const TOPIC_COUNTS_MAX_KEYS = 16
+const TOPIC_COUNTS_CACHE = new Map<string, { rows: TopicCountRow[]; expiresAt: number }>()
+const TOPIC_COUNTS_INFLIGHT = new Map<string, Promise<TopicCountRow[]>>()
+
+export async function getTopicCountsCached(
+  sb: SupabaseClient,
+  examType: string | null
+): Promise<{ data: TopicCountRow[]; error: null } | { data: null; error: unknown }> {
+  const key = examType ?? '__all__'
+  const cached = TOPIC_COUNTS_CACHE.get(key)
+  if (cached && cached.expiresAt > Date.now()) return { data: cached.rows, error: null }
+
+  let inflight = TOPIC_COUNTS_INFLIGHT.get(key)
+  if (!inflight) {
+    inflight = (async () => {
+      const { data, error } = await sb.rpc('get_topic_counts', { p_exam_type: examType })
+      if (error) throw error
+      const rows = ((data || []) as { topic: string; count: number | string }[]).map((r) => ({
+        topic: r.topic,
+        count: Number(r.count),
+      }))
+      // Keys come from request input; bound the map so junk exam types
+      // cannot grow it (real keys: 3 exams + all).
+      // R2-10: drop expired entries first so stale junk keys cannot pin the cap.
+      const nowMs = Date.now()
+      for (const [k, v] of TOPIC_COUNTS_CACHE) if (v.expiresAt <= nowMs) TOPIC_COUNTS_CACHE.delete(k)
+      const knownKey = key === '__all__' || (EXAM_SOURCE_IDS as string[]).includes(key)
+      if (knownKey && (TOPIC_COUNTS_CACHE.has(key) || TOPIC_COUNTS_CACHE.size < TOPIC_COUNTS_MAX_KEYS)) {
+        TOPIC_COUNTS_CACHE.set(key, { rows, expiresAt: Date.now() + TOPIC_COUNTS_TTL_MS })
+      }
+      return rows
+    })().finally(() => {
+      TOPIC_COUNTS_INFLIGHT.delete(key)
+    })
+    TOPIC_COUNTS_INFLIGHT.set(key, inflight)
   }
 
   try {
-    const { data, error } = await sb
-      .from('questions')
-      .select('id')
-      .eq('is_active', true)
-      .eq('exam_type', examType)
-      .order('id', { ascending: true })
-      .limit(FREE_TIER_QUESTIONS_PER_EXAM)
-
-    if (error) {
-      console.error('[free-tier] getFreeSliceIds', { examType, error })
-      return cached?.ids ?? []
-    }
-    const ids = (data || []).map((r) => r.id as number)
-    SLICE_CACHE.set(examType, { ids, expiresAt: now + CACHE_TTL_MS })
-    return ids
-  } catch (err) {
-    console.error('[free-tier] getFreeSliceIds unexpected', {
-      examType,
-      err,
-    })
-    return cached?.ids ?? []
+    return { data: await inflight, error: null }
+  } catch (error) {
+    if (cached) return { data: cached.rows, error: null }
+    return { data: null, error }
   }
 }
 
