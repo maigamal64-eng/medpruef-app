@@ -50,8 +50,8 @@ import type { MentorErrorCode, MentorLang, MentorSseEvent } from "./contract";
 import { MENTOR_TOOL_NAMES } from "./seam";
 import type { MentorDeps, MentorTurnInput, MeterUsage, RunMentorTurn, ToolResult, TurnContext, Wallet } from "./seam";
 
-/** Per API call; 3 rounds (75 s) fit the chat route maxDuration (90 s). */
-export const MENTOR_CALL_TIMEOUT_MS = 25_000;
+/** Per API call; 3 rounds (54 s) plus ledger round trips fit the chat route maxDuration (60 s, a limit every Vercel plan allows). */
+export const MENTOR_CALL_TIMEOUT_MS = 18_000;
 
 /** Tool uses answered per round; extra ones get an error result (every tool_use needs a tool_result). */
 export const MENTOR_MAX_TOOL_USES_PER_ROUND = 4;

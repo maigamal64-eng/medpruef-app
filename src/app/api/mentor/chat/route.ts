@@ -13,9 +13,9 @@ import { getServiceClient } from "@/lib/supabase";
 import { handleMentorChat, type MentorAuth } from "./handler";
 
 export const dynamic = "force-dynamic";
-// 3 API calls x 25 s timeout, plus ledger round trips. A disconnect does not
+// 3 API calls x 18 s timeout, plus ledger round trips. A disconnect does not
 // end the turn: `after` keeps it running until every call is settled.
-export const maxDuration = 90;
+export const maxDuration = 60;
 
 /**
  * POST /api/mentor/chat (contract C4). Ships dark: MENTOR_ENABLED, the DB
