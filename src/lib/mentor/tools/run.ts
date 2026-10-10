@@ -161,7 +161,7 @@ function getDates(input: unknown, ctx: TurnContext, env: ToolEnv): ToolResult {
             "Ask the learner where they filed their Nostrifizierung application (Wien, Graz or Innsbruck) before giving any deadline. Deadlines differ by publisher. Ask it as one direct question ending with a question mark.",
           options: ["wien", "graz", "innsbruck"],
           sitting_dates_hint:
-            "If the learner asked only when or where a sitting takes place (no deadline), call search_facts with topic dates instead: sitting dates and places need no filing university.",
+            "If the learner asked only when or where a Stichprobentest sitting takes place (no deadline), call search_facts with topic dates instead: sitting dates and places need no filing university.",
         },
         []
       );
@@ -334,7 +334,7 @@ function searchFacts(input: unknown, ctx: TurnContext, env: ToolEnv): ToolResult
       facts,
       unconfirmed,
       ...(facts.length === 0 ? { no_confirmed_fact: true } : {}),
-      note: "Deadlines and registration windows are not searchable: use get_dates (ask the filing university first for the Stichprobentest). When and where a sitting takes place is searchable with topic dates.",
+      note: "Sittings and deadlines of SIP4a, SIP5a, Rezeptierkunde and Gerichtsmedizin, and every Stichprobentest deadline, come only from get_dates (ask the filing university first for the Stichprobentest). Stichprobentest sitting dates and places are searchable with topic dates.",
     },
     factIds
   );

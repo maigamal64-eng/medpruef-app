@@ -7,7 +7,7 @@ import { parseAnswer, trimTruncatedAnswer } from "@/lib/mentor/prompt/protocol";
 import { MENTOR_CORE_PROMPT } from "@/lib/mentor/prompt/system";
 import { createMentorBrain } from "@/lib/mentor/prompt/brain";
 import { allowedKeysFromText, guessLang, stripFactIds, validateAnswer } from "@/lib/mentor/validator";
-import { isDeadlineScoped, sittingFactId, sittingToFact } from "@/lib/mentor/facts-loader";
+import { examKeysNamedIn, isDeadlineScoped, sittingFactId, sittingToFact } from "@/lib/mentor/facts-loader";
 import { FACTS, SITTINGS, ctx, fact, fakeDb, makeLoader } from "./helpers";
 
 const FEE = FACTS[0]; // 777 EUR, read_on 2099-01-01
@@ -336,5 +336,41 @@ describe("prompt: round-1 additions", () => {
   it("forbids echoing the learner's own values and leads price answers with the plans", () => {
     expect(MENTOR_CORE_PROMPT).toContain("Do not repeat a date, number or amount from the learner's message");
     expect(MENTOR_CORE_PROMPT).toContain("give the plan prices from app.billing.plans first");
+  });
+});
+
+describe("search_facts: exams named in the query join the exam scope (pr-prescribed)", () => {
+  const PHARMA = fact({
+    id: "fixture.documents.pharma-always",
+    exam_key: "rezeptierkunde",
+    topic: "documents",
+    filing_university: "all",
+    text_de: "Die Ergänzungsprüfung Rezeptierkunde ist stets vorzuschreiben.",
+    text_en: "The supplementary exam in Rezeptierkunde is always prescribed.",
+    aliases: ["Rezeptierkunde", "stets", "always"],
+  });
+
+  it("names exams by their German words, never infers c1, general or fsp", () => {
+    expect([...examKeysNamedIn("Rezeptierkunde Pflicht nach Stichprobentest")].sort()).toEqual(["rezeptierkunde", "stichprobentest"]);
+    expect([...examKeysNamedIn("Gerichtliche Medizin Termin SIP5a")].sort()).toEqual(["gerichtsmedizin", "sip5a"]);
+    expect(examKeysNamedIn("Deutsch C1 Nachweis Gebühr").size).toBe(0);
+  });
+
+  it("an exam_key search reaches a named second exam's fact, and not an unnamed one's", () => {
+    const loader = makeLoader([...FACTS, PHARMA]);
+    const hit = loader.searchDetailed("Rezeptierkunde stets Pflicht Stichprobentest bestanden", "stichprobentest", undefined, ctx().now);
+    expect(hit.facts.map((f) => f.id)).toContain(PHARMA.id);
+    const miss = loader.searchDetailed("stets Pflicht bestanden", "stichprobentest", undefined, ctx().now);
+    expect(miss.facts.map((f) => f.id)).not.toContain(PHARMA.id);
+  });
+});
+
+describe("prompt: round-1 retrieval and refusal rules", () => {
+  it("routes later SIP and supplementary-exam sittings to get_dates, searches before 'not confirmed', refuses statistics", () => {
+    expect(MENTOR_CORE_PROMPT).toContain("sittings and registration windows (also later ones");
+    expect(MENTOR_CORE_PROMPT).toContain("come only from get_dates; call it with filing_university all");
+    expect(MENTOR_CORE_PROMPT).toContain("Before you say something is not officially confirmed, call search_facts");
+    expect(MENTOR_CORE_PROMPT).toContain("refuse with @@REFUSE reason=no_verified_source and add nothing else");
+    expect(MENTOR_CORE_PROMPT).toContain("Do not add a rule, percentage or number the learner did not ask about");
   });
 });

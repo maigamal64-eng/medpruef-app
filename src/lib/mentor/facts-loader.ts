@@ -444,6 +444,28 @@ export function searchTokens(s: string): string[] {
     .filter((t) => t.length >= 2 && !STOPWORDS.has(t));
 }
 
+/** Folded exam names a German query may use; c1, general and fsp are never inferred. */
+const EXAM_NAME_TOKENS: ReadonlyArray<readonly [MentorExamKey, readonly string[]]> = [
+  ["sip4a", ["sip4a", "sip4"]],
+  ["sip5a", ["sip5a", "sip5"]],
+  ["stichprobentest", ["stichprobentest", "stichproben", "spt", "stp"]],
+  ["rezeptierkunde", ["rezeptierkunde", "pharmakologie", "pharma"]],
+  ["gerichtsmedizin", ["gerichtsmedizin", "gerichtliche", "rechtsmedizin"]],
+];
+
+/**
+ * Exams the query names by name. A question about two exams ("Muss ich
+ * Rezeptierkunde machen, wenn ich den Stichprobentest bestehe?") was searched
+ * with exam_key stichprobentest, which hid every rezeptierkunde fact (eval
+ * round 1: pr-prescribed). Named exams join the exam_key scope.
+ */
+export function examKeysNamedIn(query: string): Set<MentorExamKey> {
+  const tokens = new Set(searchTokens(query));
+  const out = new Set<MentorExamKey>();
+  for (const [key, names] of EXAM_NAME_TOKENS) if (names.some((n) => tokens.has(n))) out.add(key);
+  return out;
+}
+
 interface IndexedFact {
   fact: MentorFact;
   tokens: Set<string>;
@@ -617,10 +639,11 @@ export class MentorFactsLoader implements FactsLoader {
     // topic "format" for "is Rezeptierkunde always prescribed", which lives under
     // "documents", and the fact never reached it). With no query words the topic
     // still filters, so a topic-only lookup stays exact.
+    const named = examKeysNamedIn(q);
     const scored: Array<{ f: MentorFact; s: number; onTopic: boolean }> = [];
     for (const ix of this.state().index) {
       const f = ix.fact;
-      if (examKey && f.exam_key !== examKey && f.exam_key !== "general") continue;
+      if (examKey && f.exam_key !== examKey && f.exam_key !== "general" && !named.has(f.exam_key)) continue;
       const onTopic = !topic || f.topic === topic;
       if (!onTopic && qTokens.length === 0) continue;
       if (isDeadlineScoped(f)) continue;
