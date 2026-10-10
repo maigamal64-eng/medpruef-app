@@ -132,4 +132,23 @@ describe("POST /api/webhooks/whop with the mentor branch", () => {
     await deliver("membership.deactivated", { id: "mem_PRO" });
     expect(allCalls().some((c) => c.table.startsWith("rpc:mentor_"))).toBe(false);
   });
+
+  it("after launch (mentor plan configured) a Pro renewal with no plan id runs one lookup, then the Pro grant path runs as before", async () => {
+    const res = await deliver("payment.succeeded", { id: "pay_PRORENEW", membership: { id: "mem_PRO" }, metadata: null, amount_after_fees: 17.92, currency: "eur" });
+    const body = await res.json();
+    expect(body.mentor).toBeUndefined();
+    expect(allCalls().filter((c) => c.table === "rpc:mentor_whop_lookup")).toHaveLength(1);
+    expect(allCalls().some((c) => c.table.startsWith("rpc:mentor_") && c.table !== "rpc:mentor_whop_lookup")).toBe(false);
+    // the Pro path took over: it claimed the payment id for the Pro grant
+    const claim = allCalls().find((c) => c.table === "processed_webhook_events" && c.op === "insert");
+    expect((claim?.payload as { event_id?: string } | undefined)?.event_id).toBe("pay_PRORENEW");
+  });
+
+  it("with no plan configured, a mentor membership event that carries mentor metadata is still kept away from the Pro revoke path", async () => {
+    delete process.env.WHOP_PLAN_MENTOR_PLUS;
+    const res = await deliver("membership.deactivated", { id: "mem_X", metadata: { kind: "mentor_credits" } });
+    expect(res.status).toBe(200);
+    expect((await res.json()).mentor).toBe(true);
+    expect(allCalls().filter(proWrite)).toEqual([]);
+  });
 });
