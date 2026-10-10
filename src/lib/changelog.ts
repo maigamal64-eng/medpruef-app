@@ -997,7 +997,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     },
     description: {
       de: "Wer in der Juni-26-Kohorte oder im Jahresabo den ersten echten Prüfungsversuch nicht besteht und ≥70 % des Fragenkatalogs bearbeitet hat, bekommt den Zugang kostenlos bis zum nächsten Prüfungszyklus verlängert (maximal 2 zusätzliche Zyklen pro Abonnement, kein Bargeld-Rückerstattungs-Weg). Nach dem konfigurierten Prüfungsdatum erscheinen im Dashboard zwei Buttons: „Bestanden\" (wird sofort gespeichert) oder „Nicht bestanden\" (Datum + Prüfungstyp + Nachweis-Upload, PDF oder Bild, max. 10 MB). Ein Admin prüft den Nachweis und genehmigt oder lehnt ab; jede Verlängerung wird protokolliert.",
-      en: "June 26 Cohort and 12-month subscribers who fail their first real attempt and have ≥70% Qbank completion get their access extended free through the next exam cycle (max 2 extra cycles per subscription, no cash-refund surface). After the configured exam date the dashboard shows two buttons: \"I passed\" (self-recorded) or \"I failed\" (date + exam type + proof upload, PDF or image, max 10MB). An admin reviews the proof and approves or rejects; every extension is logged.",
+      en: "June 26 Cohort and 12-month subscribers who fail their first real attempt and have ≥70% Qbank completion get their access extended free through the next exam cycle (max 2 extra cycles per subscription, no cash-refund surface). After the configured exam date the dashboard shows two buttons: \"I passed\" (self-recorded) or \"I failed\" (date + exam type + proof upload, PDF or image, max 10MB). An admin reviews the proof and approves or rejects; every extension is logged.", // date-ok: legacy tier name "June 26 Cohort" in a dated changelog entry, not a date claim
     },
   },
   {
