@@ -12,6 +12,12 @@
  * sittings from src/lib/exam-dates.ts (the self-aging calendar), so a
  * pick resolves to a concrete YYYY-MM-DD that drives /api/user/study-plan.
  *
+ * Since W1-CAL (2026-10-10) the options are the OFFICIAL sittings of the
+ * C7 export for the learner's bank: SIP4a/SIP5a for the Vienna bank (never
+ * the postgraduate ÖÄK date), the Rezeptierkunde/Gerichtsmedizin exam weeks
+ * for Pharma (the week's first day is the target date), and the
+ * Stichprobentest sittings with both publishers' deadlines.
+ *
  * Controlled: `value` is "" (no date yet) or a "YYYY-MM-DD" ISO date.
  * `onChange` always emits one of those two shapes.
  *
@@ -23,17 +29,30 @@ import {
   Calendar,
   CheckCircle2,
   Clock,
-  MapPin,
   CalendarPlus,
   CircleSlash,
   ExternalLink,
 } from "lucide-react";
 import {
-  getUpcomingSittings,
+  OFFICIAL_KEYS_BY_BANK,
   PHARMA_INFO_URL,
-  type ExamSitting,
+  daysUntilViennaDate,
+  getUpcomingOfficialFor,
+  groupOfficialByDate,
+  hasOfficialWindowStarted,
+  isOfficialWindowOpen,
+  type OfficialDateGroup,
   type PuypExamType,
 } from "@/lib/exam-dates";
+import {
+  deadlineLabel,
+  formatOfficialDate,
+  formatSittingWhen,
+  formatWindow,
+  joinList,
+  shortExamName,
+  td,
+} from "@/lib/i18n-dates";
 
 type Lang = "de" | "en";
 
@@ -87,13 +106,13 @@ export default function ExamSittingPicker({
 }: ExamSittingPickerProps) {
   const et = coerceExamType(examType);
 
-  // Future sittings for THIS exam only (self-aging, sorted ascending).
-  const sittings = useMemo<ExamSitting[]>(
-    () => getUpcomingSittings().filter((s) => s.examType === et),
+  // Official upcoming sittings for THIS bank, one option per date.
+  const groups = useMemo<OfficialDateGroup[]>(
+    () => groupOfficialByDate(getUpcomingOfficialFor({ exams: OFFICIAL_KEYS_BY_BANK[et] })),
     [et],
   );
 
-  const sittingDates = useMemo(() => new Set(sittings.map((s) => s.date)), [sittings]);
+  const sittingDates = useMemo(() => new Set(groups.map((g) => g.date)), [groups]);
   // A value that is set but matches no known sitting = a custom date.
   const isCustom = value !== "" && !sittingDates.has(value);
 
@@ -106,19 +125,15 @@ export default function ExamSittingPicker({
 
   return (
     <div className="space-y-2.5">
-      {/* Pharma (and any exam with no published sitting): rolling/term-based note */}
-      {sittings.length === 0 && (
+      {/* No published official sitting: honest empty state */}
+      {groups.length === 0 && (
         <div className="rounded-xl border border-[var(--mp-border)] bg-[var(--mp-surface-sunken)] p-3.5">
           <p className="text-sm font-medium text-[var(--mp-fg)] flex items-center gap-2">
             <Calendar className="w-4 h-4 text-[var(--mp-fg-subtle)]" aria-hidden />
-            {lang === "de"
-              ? "Kein fester Prüfungstermin"
-              : "No fixed exam date"}
+            {td("picker_no_official", lang)}
           </p>
           <p className="text-xs text-[var(--mp-fg-muted)] mt-1 leading-relaxed">
-            {lang === "de"
-              ? "Diese Prüfung folgt den regulären Semester-Prüfungswochen. Setze dein Wunschdatum unten, um einen Lernplan zu erhalten."
-              : "This exam follows the regular semester exam weeks. Set your target date below to get a study plan."}
+            {td("picker_no_official_body", lang)}
           </p>
           <a
             href={PHARMA_INFO_URL}
@@ -126,24 +141,39 @@ export default function ExamSittingPicker({
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1 text-xs text-[var(--mp-viridian)] hover:text-[var(--mp-accent-teal)] mt-2 transition-colors"
           >
-            {lang === "de" ? "Offizielle Termine" : "Official dates"}
+            {td("official_dates", lang)}
             <ExternalLink className="w-3 h-3" />
           </a>
         </div>
       )}
 
-      {/* Real upcoming sittings — the recommended anchor */}
-      {sittings.map((s) => {
-        const selected = value === s.date;
-        const dleft = daysUntil(s.date);
-        const regLeft = s.registrationDeadline
-          ? daysUntil(s.registrationDeadline)
-          : null;
+      {groups.length > 0 && (
+        <p className="text-xs text-[var(--mp-fg-muted)] leading-relaxed">
+          {td("picker_official_hint", lang)}
+        </p>
+      )}
+
+      {/* Official upcoming sittings: the recommended anchor */}
+      {groups.map((g) => {
+        const selected = value === g.date;
+        const dleft = daysUntil(g.date);
+        const isStp = g.rows[0].exam_key === "stichprobentest";
+        const title = isStp
+          ? lang === "de"
+            ? g.rows[0].learner_label.de
+            : g.rows[0].learner_label.en
+          : joinList(g.rows.map((r) => shortExamName(r, lang)), lang);
+        // One deadline per distinct (close, publisher, type).
+        const deadlines = [
+          ...new Map(
+            g.rows.map((r) => [`${r.registration_closes}|${r.publisher}|${r.deadline_type}`, r]),
+          ).values(),
+        ].sort((a, b) => (a.registration_closes ?? "").localeCompare(b.registration_closes ?? ""));
         return (
           <button
-            key={s.date}
+            key={g.date}
             type="button"
-            onClick={() => onChange(s.date)}
+            onClick={() => onChange(g.date)}
             aria-pressed={selected}
             className={`w-full ${pad} rounded-xl border-2 text-left transition-all ${
               selected ? selectedRing : idleRing
@@ -152,18 +182,10 @@ export default function ExamSittingPicker({
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-semibold text-[var(--mp-fg)]">
-                    {s.label[lang]}
-                  </span>
-                  {s.location && (
-                    <span className="inline-flex items-center gap-1 text-xs text-[var(--mp-fg-muted)]">
-                      <MapPin className="w-3 h-3" aria-hidden />
-                      {s.location}
-                    </span>
-                  )}
+                  <span className="font-semibold text-[var(--mp-fg)]">{title}</span>
                 </div>
                 <p className="text-sm text-[var(--mp-fg-muted)] mt-0.5">
-                  {formatDate(s.date, lang)}
+                  {g.date_end ? formatSittingWhen(g, lang) : formatDate(g.date, lang)}
                 </p>
                 <div className="flex items-center gap-2 flex-wrap mt-1.5">
                   {dleft >= 0 && (
@@ -174,23 +196,40 @@ export default function ExamSittingPicker({
                         : `in ${dleft} ${dleft === 1 ? "day" : "days"}`}
                     </span>
                   )}
-                  {s.registrationDeadline && regLeft !== null && (
-                    <span
-                      className={`inline-flex items-center text-[11px] font-medium px-1.5 py-0.5 rounded ${
-                        regLeft < 0
-                          ? "bg-[var(--mp-status-warning)]/15 text-[var(--mp-status-warning)]"
-                          : "bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-muted)]"
-                      }`}
-                    >
-                      {regLeft < 0
-                        ? lang === "de"
-                          ? "Anmeldung geschlossen"
-                          : "Registration closed"
-                        : lang === "de"
+                  {deadlines.map((r) => {
+                    if (!r.registration_closes) return null;
+                    const open = isOfficialWindowOpen(r);
+                    const started = hasOfficialWindowStarted(r);
+                    const regLeft = daysUntilViennaDate(r.registration_closes);
+                    let text: string;
+                    if (isStp) {
+                      // Both publishers, labelled; no instruction wording.
+                      text = `${deadlineLabel(r, lang)}: ${formatOfficialDate(r.registration_closes, lang)}`;
+                    } else if (!open) {
+                      text = lang === "de" ? "Anmeldung geschlossen" : "Registration closed";
+                    } else if (!started) {
+                      text = formatWindow(r, lang);
+                    } else if (regLeft <= 0) {
+                      text = td("closes_today", lang);
+                    } else {
+                      text =
+                        lang === "de"
                           ? `Anmeldeschluss in ${regLeft} ${regLeft === 1 ? "Tag" : "Tagen"}`
-                          : `Registration closes in ${regLeft} ${regLeft === 1 ? "day" : "days"}`}
-                    </span>
-                  )}
+                          : `Registration closes in ${regLeft} ${regLeft === 1 ? "day" : "days"}`;
+                    }
+                    return (
+                      <span
+                        key={`${r.publisher}-${r.registration_closes}`}
+                        className={`inline-flex items-center text-[11px] font-medium px-1.5 py-0.5 rounded ${
+                          !open
+                            ? "bg-[var(--mp-status-warning)]/15 text-[var(--mp-status-warning)]"
+                            : "bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-muted)]"
+                        }`}
+                      >
+                        {text}
+                      </span>
+                    );
+                  })}
                 </div>
               </div>
               {selected && (

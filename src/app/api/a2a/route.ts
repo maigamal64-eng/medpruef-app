@@ -8,7 +8,9 @@
  * Implements: `message/send` (alias `SendMessage`) and `tasks/get`
  * (alias `GetTask`). The agent answers questions about the Austrian
  * medical-licensing exams (types, next sitting dates, registration
- * deadlines), grounded in src/lib/exam-dates.ts. It exposes NO prices and
+ * deadlines), grounded in the OFFICIAL sittings of src/lib/exam-dates.ts
+ * (C7, W1-CAL 2026-10-10: SIP4a/SIP5a, Rezeptierkunde/Gerichtsmedizin,
+ * Stichprobentest with both publishers; no ÖÄK date). It exposes NO prices and
  * NO question-bank content, and requires no auth (read-only public info).
  *
  * A GET returns the Agent Card for convenience (some clients probe the
@@ -17,9 +19,10 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import {
-  getUpcomingSittings,
-  getNextExamSitting,
-  PHARMA_INFO_URL,
+  OFFICIAL_KEYS_BY_BANK,
+  getNextOfficialDeadlineGroup,
+  getUpcomingOfficialFor,
+  type OfficialSitting,
   type PuypExamType,
 } from "@/lib/exam-dates";
 import { getExamSource } from "@/lib/topics";
@@ -30,26 +33,44 @@ const AGENT_CARD_URL = "https://medpruf.com/.well-known/agent-card.json";
 
 function detectExam(text: string): PuypExamType | null {
   const t = text.toLowerCase();
-  if (/kenntnis|wien|vienna/.test(t)) return "kenntnispruefung";
+  // Most specific first: "Stichprobentest Wien" is the Stichprobentest.
   if (/stichprobentest|innsbruck|graz|nostrif/.test(t)) return "kmp_innsbruck";
-  if (/pharma|rezeptier/.test(t)) return "pharma";
+  if (/pharma|rezeptier|gerichtsmed|forensic/.test(t)) return "pharma";
+  if (/sip ?4|sip ?5|kenntnis|wien|vienna/.test(t)) return "kenntnispruefung";
   return null;
+}
+
+/** One official row as plain English text for an agent. */
+function rowLine(s: OfficialSitting): string {
+  const when = s.date_end ? `${s.date} to ${s.date_end}` : s.date;
+  const kind =
+    s.deadline_type === "filing_cutoff"
+      ? "filing cutoff (MedUni Wien Merkblatt)"
+      : s.exam_key === "stichprobentest"
+        ? "registration deadline (i-med Termine PDF)"
+        : "registration closes";
+  const close = s.registration_closes
+    ? ` ${kind} ${s.registration_closes}${s.closes_at_time ? ` ${s.closes_at_time} Vienna time` : ""}.`
+    : "";
+  return `${s.learner_label.en}: ${when}.${close} Source: ${s.source_url}`;
 }
 
 function examLine(examType: PuypExamType, now: Date): string {
   const label = getExamSource(examType)?.label || examType;
-  if (examType === "pharma") {
-    return `${label}: no fixed date, it follows the MedUni Wien semester exam schedule. Info: ${PHARMA_INFO_URL}`;
+  const exams = OFFICIAL_KEYS_BY_BANK[examType];
+  const g = getNextOfficialDeadlineGroup({ exams, now });
+  if (!g) {
+    return `${label}: no upcoming official deadline is published right now.`;
   }
-  const s = getNextExamSitting(examType, now);
-  if (!s) {
-    return `${label}: the next sitting date is not yet published on the official source.`;
-  }
-  const where = s.location ? ` in ${s.location}` : "";
-  const deadline = s.registrationDeadline
-    ? ` Registration closes ${s.registrationDeadline}.`
-    : "";
-  return `${label}: next sitting ${s.date}${where}.${deadline} Source: ${s.sourceUrl}`;
+  const rows =
+    examType === "kmp_innsbruck"
+      ? getUpcomingOfficialFor({ exams, now }).filter((r) => r.date === g.rows[0].date)
+      : g.rows;
+  const intro =
+    examType === "kenntnispruefung"
+      ? `${label} (MedUni Wien SIP4a/SIP5a, not the postgraduate ÖÄK exam):`
+      : `${label}:`;
+  return [intro, ...rows.map((r) => `- ${rowLine(r)}`)].join("\n");
 }
 
 function answerFor(userText: string): string {
@@ -57,22 +78,14 @@ function answerFor(userText: string): string {
   const exam = detectExam(userText);
   if (exam) return examLine(exam, now);
 
-  // Default: summarize everything upcoming.
-  const upcoming = getUpcomingSittings(now);
-  const lines = upcoming.map((s) => {
-    const label = getExamSource(s.examType)?.label || s.examType;
-    const where = s.location ? ` in ${s.location}` : "";
-    const deadline = s.registrationDeadline
-      ? ` (registration closes ${s.registrationDeadline})`
-      : "";
-    return `- ${label}: ${s.date}${where}${deadline}. Source: ${s.sourceUrl}`;
-  });
+  // Default: summarize every upcoming official sitting.
+  const lines = getUpcomingOfficialFor({ now }).map((s) => `- ${rowLine(s)}`);
   return [
-    "MedPrüf prepares foreign-trained doctors for the Austrian medical-licensing exams (Nostrifizierung). Upcoming sittings:",
+    "MedPrüf prepares foreign-trained doctors for the Austrian medical-licensing exams (Nostrifizierung). Upcoming official sittings:",
     ...(lines.length
       ? lines
-      : ["- No fixed dates are published yet; check https://medpruf.com."]),
-    `- Pharmakologie / Rezeptierkunde: no fixed date, follows the MedUni Wien semester schedule (${PHARMA_INFO_URL}).`,
+      : ["- No upcoming official dates are published right now; check https://medpruf.com."]),
+    "Your university's page is always the binding reference.",
     "Prices and plans are on https://medpruf.com/pricing. This agent does not expose question content.",
   ].join("\n");
 }

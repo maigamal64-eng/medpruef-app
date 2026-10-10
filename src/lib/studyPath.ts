@@ -16,7 +16,12 @@
  * Austrian lens only. No em dashes in user-facing copy.
  */
 
-import { EXAM_SITTINGS, type PuypExamType } from "./exam-dates";
+import {
+  OFFICIAL_KEYS_BY_BANK,
+  OFFICIAL_SITTINGS,
+  asPuypExamType,
+  isOfficialWindowOpen,
+} from "./exam-dates";
 
 export type PhaseKey = "foundation" | "build" | "consolidate" | "taper";
 export type PhaseStatus = "past" | "current" | "upcoming";
@@ -153,26 +158,38 @@ export function phaseKeyForDaysLeft(daysLeft: number): PhaseKey {
 
 /**
  * Find the registration deadline for the user's exam date, IF that date
- * matches a known official sitting for the active exam. Custom dates and
- * Pharma (no fixed sitting) return null, so the deadline rung is hidden.
+ * matches an OFFICIAL sitting (C7 `OFFICIAL_SITTINGS`) of the user's bank.
+ * Custom dates return null, so the deadline rung is hidden.
+ *
+ * W1-CAL (2026-10-10): reads the official MedUni Wien SIP4a/SIP5a and
+ * Rezeptierkunde/Gerichtsmedizin rows, never the postgraduate ÖÄK dates.
+ * The Stichprobentest returns null on purpose: each sitting has two
+ * deadlines from two publishers, and this rung renders one "register now"
+ * date, which would pick one for the learner.
  */
 export function registrationFor(
   activeExam: string,
   examISO: string,
   now: Date = new Date(),
 ): RegistrationStatus | null {
-  const list = EXAM_SITTINGS[activeExam as PuypExamType] ?? [];
-  const sitting = list.find((s) => s.date === examISO.slice(0, 10));
-  if (!sitting || !sitting.registrationDeadline) return null;
+  const bank = asPuypExamType(activeExam);
+  if (!bank || bank === "kmp_innsbruck") return null;
+  const keys = OFFICIAL_KEYS_BY_BANK[bank];
+  const day = examISO.slice(0, 10);
+  const sitting = OFFICIAL_SITTINGS.find(
+    (s) => keys.includes(s.exam_key) && s.date === day && s.deadline_type === "registration",
+  );
+  if (!sitting || !sitting.registration_closes) return null;
 
-  const daysLeft = diffDays(toISO(now), sitting.registrationDeadline);
+  const daysLeft = diffDays(toISO(now), sitting.registration_closes);
   let level: RegistrationLevel;
-  if (daysLeft < 0) level = "passed";
+  // Vienna wall-clock: the Rezeptierkunde window closes at 12:00 on its day.
+  if (daysLeft < 0 || !isOfficialWindowOpen(sitting, now)) level = "passed";
   else if (daysLeft <= 7) level = "urgent";
   else if (daysLeft <= 21) level = "soon";
   else level = "quiet";
 
-  return { deadlineISO: sitting.registrationDeadline, daysLeft, level };
+  return { deadlineISO: sitting.registration_closes, daysLeft, level };
 }
 
 /**

@@ -1,6 +1,11 @@
+"use client";
+
+import { useMemo } from "react";
 import ExamLandingShell, {
   type ExamLandingContent,
 } from "@/components/seo/ExamLandingShell";
+import { getUpcomingOfficialFor, type OfficialSitting } from "@/lib/exam-dates";
+import { describeStpSitting, td } from "@/lib/i18n-dates";
 
 /**
  * /stichprobentest — Stichprobentest (Innsbruck) landing page.
@@ -24,6 +29,14 @@ import ExamLandingShell, {
  * to the honest Stichprobentest core in this pass; a proper rebuild of
  * the positive exposition belongs to the Route-A vs Route-B positioning
  * project (Kenntnisprüfung/Ärztekammer vs Stichprobentest/MedUni).
+ *
+ * W1-CAL (2026-10-10): the old venue table read EXAM_SITTINGS and printed
+ * "via your university" where a deadline was unpublished; both 2027
+ * deadlines are now published, by two publishers. The page is a client
+ * component so the "next Stichprobentest" FAQ answer is built at view time
+ * from the C7 official sittings (self-aging), naming each deadline with its
+ * publisher (MedUni Wien Merkblatt filing cutoff, i-med Anmeldefrist) and
+ * quoting the official "register at the university where you filed".
  */
 
 const content: ExamLandingContent = {
@@ -53,10 +66,8 @@ const content: ExamLandingContent = {
     de: "Alle Pläne ansehen",
     en: "See all plans",
   },
-  // Renders the venue-rotation table from the self-aging calendar
-  // (src/lib/exam-dates.ts). This is the one exam whose venue moves
-  // every sitting, so the rotation is a real reader question.
-  sittingsExamType: "kmp_innsbruck",
+  // The venue-rotation table (sittingsExamType) is replaced by the
+  // official two-publisher answer in the FAQ below (see the header note).
   breakdown: [
     {
       label: { de: "Fragen", en: "Questions" },
@@ -187,6 +198,34 @@ const content: ExamLandingContent = {
   ],
 };
 
+const NEXT_SITTING_QUESTION = "Wann findet der nächste Stichprobentest statt?";
+
+/** FAQ answer for one language, from the C7 official sittings at `now`. */
+function nextSittingAnswer(lang: "de" | "en", now: Date): string {
+  const rows = getUpcomingOfficialFor({ exams: ["stichprobentest"], now });
+  const byDate = new Map<string, OfficialSitting[]>();
+  for (const r of rows) byDate.set(r.date, [...(byDate.get(r.date) ?? []), r]);
+  if (byDate.size === 0) return td("stp_faq_none", lang);
+  const sittings = [...byDate.values()].map((group) => describeStpSitting(group, lang));
+  return [
+    td("stp_faq_answer_intro", lang),
+    ...sittings,
+    td("stp_where", lang),
+    td("binding", lang),
+  ].join(" ");
+}
+
 export default function KmpInnsbruckPage() {
-  return <ExamLandingShell content={content} />;
+  const withOfficialDates = useMemo<ExamLandingContent>(() => {
+    const now = new Date();
+    return {
+      ...content,
+      faq: content.faq.map((item) =>
+        item.q.de === NEXT_SITTING_QUESTION
+          ? { ...item, a: { de: nextSittingAnswer("de", now), en: nextSittingAnswer("en", now) } }
+          : item
+      ),
+    };
+  }, []);
+  return <ExamLandingShell content={withOfficialDates} />;
 }

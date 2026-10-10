@@ -1,15 +1,16 @@
 "use client";
 
 /**
- * UpcomingExams — self-aging exam calendar.
+ * UpcomingExams: self-aging OFFICIAL exam calendar.
  *
- * Reads the next future sittings from `@/lib/exam-dates` (the code
- * owner of exam dates) and renders them as on-brand cards. Because the
- * selector returns only FUTURE sittings, this display NEVER needs a
- * manual edit when a date passes — a past sitting drops out and the
- * next one shows automatically. Pharmakologie has no fixed date, so it
- * renders as a separate "rolling / term-based" note rather than a fake
- * countdown.
+ * Since W1-CAL (2026-10-10) the cards come from the C7 export
+ * (`OFFICIAL_SITTINGS` in `@/lib/exam-dates`, confirmed official rows only),
+ * one card per exam family: the next SIP4a/SIP5a window (MedUni Wien), the
+ * next Rezeptierkunde/Gerichtsmedizin exam week (closes Tuesday 12:00), and
+ * the next Stichprobentest sitting with BOTH published deadlines, each
+ * labelled by its publisher. Deadlines are compared in Vienna time, so a
+ * closed window drops out by itself. No postgraduate ÖÄK date is shown.
+ * New strings live in `@/lib/i18n-dates`.
  *
  * Used on /landing (full section) and /pricing (compact block). Pass
  * `variant="compact"` for the slimmer pricing version. DE + EN via the
@@ -21,28 +22,27 @@
  */
 
 import { useEffect, useState } from "react";
-import { CalendarDays, MapPin, Clock, ArrowRight } from "lucide-react";
+import { CalendarDays, Clock, ArrowRight } from "lucide-react";
 import {
-  getUpcomingSittings,
-  EXAM_SITTINGS,
-  PHARMA_INFO_URL,
-  type ExamSitting,
+  OFFICIAL_KEYS_BY_BANK,
+  getNextOfficialDeadlineGroup,
+  getUpcomingOfficialFor,
+  viennaToday,
+  type OfficialSitting,
+  type PuypExamType,
 } from "@/lib/exam-dates";
+import {
+  deadlineLabel,
+  formatClose,
+  formatOfficialDate,
+  formatSittingWhen,
+  formatWindow,
+  joinList,
+  shortExamName,
+  td,
+} from "@/lib/i18n-dates";
 
 type Lang = "de" | "en";
-
-const LOCALE: Record<Lang, string> = { de: "de-AT", en: "en-GB" };
-
-function formatLongDate(iso: string, lang: Lang): string {
-  // Parse as a local date (no TZ shift on the day label).
-  const [y, m, d] = iso.split("-").map(Number);
-  const dt = new Date(y, (m ?? 1) - 1, d ?? 1);
-  return dt.toLocaleDateString(LOCALE[lang], {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-}
 
 function daysUntil(iso: string): number {
   const [y, m, d] = iso.split("-").map(Number);
@@ -61,40 +61,67 @@ const T = {
     de: "Immer aktuell: vergangene Termine fallen automatisch heraus, sobald sie vorbei sind.",
     en: "Always current: past dates drop off automatically once they pass.",
   },
-  registration: { de: "Anmeldeschluss", en: "Registration deadline" },
-  registrationPassed: {
-    de: "Anmeldeschluss vorbei",
-    en: "Registration deadline passed",
-  },
   daysLeft: { de: "Tage", en: "days" },
   dayLeft: { de: "Tag", en: "day" },
   source: { de: "Offizielle Quelle", en: "Official source" },
-  noDate: {
-    de: "Nächster Termin noch nicht veröffentlicht.",
-    en: "Next date not yet published.",
-  },
-  pharmaTitle: {
-    de: "Pharmakologie / Rezeptierkunde",
-    en: "Pharmakologie / Rezeptierkunde",
-  },
-  pharmaBody: {
-    de: "Kein fixer Jahrestermin: die Prüfung folgt den regulären Semester-Prüfungswochen deiner Medizinischen Universität (ca. Ende September bis Jänner) und wird pro Semester angemeldet. Deinen genauen Termin entnimmst du deinem Nostrifikationsbescheid.",
-    en: "No fixed annual date: the exam follows your Medical University's regular semester exam weeks (roughly late September to January) and is registered per semester. Check your nostrification decision letter for your exact date.",
-  },
-  rolling: { de: "Laufend / pro Semester", en: "Rolling / per semester" },
 } as const;
 
-function ExamCard({
-  sitting,
+/** One card: one exam family's next official sitting(s) and deadline(s). */
+interface OfficialCardData {
+  key: string;
+  title: string;
+  rows: OfficialSitting[];
+}
+
+/** Build the three family cards from the C7 export at `now`. */
+function buildCards(lang: Lang, now: Date): OfficialCardData[] {
+  const cards: OfficialCardData[] = [];
+  const families: PuypExamType[] = ["kenntnispruefung", "pharma", "kmp_innsbruck"];
+  for (const bank of families) {
+    const exams = OFFICIAL_KEYS_BY_BANK[bank];
+    const g = getNextOfficialDeadlineGroup({ exams, now });
+    if (!g) continue;
+    let rows = g.rows;
+    if (bank === "kmp_innsbruck") {
+      // Every publisher's deadline for that one sitting.
+      rows = getUpcomingOfficialFor({ exams, now }).filter((r) => r.date === g.rows[0].date);
+    }
+    const title =
+      bank === "kmp_innsbruck"
+        ? lang === "de"
+          ? rows[0].learner_label.de
+          : rows[0].learner_label.en
+        : `${joinList(rows.map((r) => shortExamName(r, lang)), lang)} (MedUni ${lang === "de" ? "Wien" : "Vienna"})`;
+    cards.push({ key: `${bank}-${rows[0].date}`, title, rows });
+  }
+  return cards;
+}
+
+function OfficialCard({
+  card,
   lang,
+  now,
   mounted,
 }: {
-  sitting: ExamSitting;
+  card: OfficialCardData;
   lang: Lang;
+  now: Date;
   mounted: boolean;
 }) {
-  const days = mounted ? daysUntil(sitting.date) : null;
+  const first = card.rows[0];
+  const days = mounted ? daysUntil(first.date) : null;
   const dayWord = days === 1 ? T.dayLeft[lang] : T.daysLeft[lang];
+  const isStp = first.exam_key === "stichprobentest";
+  // One line per distinct sitting date (SIP5a 17 Nov, SIP4a 18 Nov).
+  const whenLines = [...new Map(card.rows.map((r) => [`${r.date}|${r.date_end ?? ""}`, r])).values()];
+  // One deadline line per distinct (close, publisher); SIP4a/SIP5a share one.
+  const deadlineRows = [
+    ...new Map(
+      card.rows.map((r) => [`${r.registration_closes}|${r.closes_at_time ?? ""}|${r.publisher}|${r.deadline_type}`, r])
+    ).values(),
+  ].sort((a, b) => (a.registration_closes ?? "").localeCompare(b.registration_closes ?? ""));
+  const sources = [...new Map(card.rows.map((r) => [r.source_url, r])).values()];
+  const todayIso = viennaToday(now);
 
   return (
     <article className="lp-card p-5 sm:p-6 h-full flex flex-col">
@@ -110,10 +137,10 @@ function ExamCard({
             />
           </span>
           <h3
-            className="font-display font-bold text-[var(--mp-fg)] truncate"
+            className="font-display font-bold text-[var(--mp-fg)]"
             style={{ fontSize: "16px" }}
           >
-            {sitting.label[lang]}
+            {card.title}
           </h3>
         </div>
         {days !== null && (
@@ -129,102 +156,58 @@ function ExamCard({
         )}
       </div>
 
-      <p
-        className="font-display font-extrabold text-[var(--mp-fg)] mb-3"
-        style={{ fontSize: "clamp(20px, 2.4vw, 26px)", letterSpacing: "-0.01em" }}
-      >
-        {formatLongDate(sitting.date, lang)}
-      </p>
-
-      <dl className="space-y-1.5 text-sm text-[var(--mp-fg-muted)] mb-4">
-        {sitting.location && (
-          <div className="flex items-center gap-2">
-            <MapPin className="w-4 h-4 flex-shrink-0 opacity-70" aria-hidden="true" />
-            <dd>{sitting.location}</dd>
-          </div>
-        )}
-        {sitting.registrationDeadline && (
-          <div className="flex items-center gap-2">
-            <Clock className="w-4 h-4 flex-shrink-0 opacity-70" aria-hidden="true" />
-            <dd>
-              <span>{
-                mounted && sitting.registrationDeadline < new Date().toISOString().slice(0, 10)
-                  ? T.registrationPassed[lang]
-                  : T.registration[lang]
-              }: </span>
-              {formatLongDate(sitting.registrationDeadline, lang)}
-            </dd>
-          </div>
-        )}
-      </dl>
-
-      {sitting.note && (
-        <p
-          className="text-xs leading-relaxed mb-4 mt-auto text-[var(--mp-fg-muted)]"
-        >
-          {sitting.note[lang]}
-        </p>
-      )}
-
-      <a
-        href={sitting.sourceUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-xs font-medium text-[var(--mp-viridian)] hover:underline underline-offset-2 inline-flex items-center gap-1 mt-auto"
-      >
-        {T.source[lang]}
-        <ArrowRight className="w-3 h-3" aria-hidden="true" />
-      </a>
-    </article>
-  );
-}
-
-function PharmaCard({ lang }: { lang: Lang }) {
-  return (
-    <article className="lp-card p-5 sm:p-6 h-full flex flex-col">
-      <div className="flex items-start justify-between gap-3 mb-3">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <span
-            className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
-            style={{ background: "rgba(58, 124, 165, 0.12)" }}
+      <div className="mb-3 space-y-0.5">
+        {whenLines.map((r) => (
+          <p
+            key={`${r.exam_key}-${r.date}`}
+            className="font-display font-extrabold text-[var(--mp-fg)]"
+            style={{ fontSize: whenLines.length > 1 ? "18px" : "clamp(20px, 2.4vw, 26px)", letterSpacing: "-0.01em" }}
           >
-            <CalendarDays
-              className="w-4.5 h-4.5 text-[var(--mp-info)]"
-              aria-hidden="true"
-            />
-          </span>
-          <h3
-            className="font-display font-bold text-[var(--mp-fg)] truncate"
-            style={{ fontSize: "16px" }}
-          >
-            {T.pharmaTitle[lang]}
-          </h3>
-        </div>
-        <span
-          className="text-xs font-semibold whitespace-nowrap rounded-full px-2.5 py-1 flex-shrink-0"
-          style={{
-            background: "var(--mp-surface-sunken)",
-            color: "var(--mp-fg-muted)",
-            border: "1px solid var(--mp-border-subtle)",
-          }}
-        >
-          {T.rolling[lang]}
-        </span>
+            {whenLines.length > 1 && !isStp ? `${shortExamName(r, lang)}: ` : ""}
+            {formatSittingWhen(r, lang)}
+          </p>
+        ))}
       </div>
 
-      <p className="text-sm text-[var(--mp-fg-muted)] leading-relaxed mb-4">
-        {T.pharmaBody[lang]}
+      <dl className="space-y-1.5 text-sm text-[var(--mp-fg-muted)] mb-4">
+        {deadlineRows.map((r) => (
+          <div key={`${r.publisher}-${r.registration_closes}`} className="flex items-start gap-2">
+            <Clock className="w-4 h-4 flex-shrink-0 opacity-70 mt-0.5" aria-hidden="true" />
+            <dd>
+              {!isStp && r.registration_opens && r.registration_opens > todayIso ? (
+                formatWindow(r, lang)
+              ) : (
+                <>
+                  <span>{deadlineLabel(r, lang)}: </span>
+                  <strong className="text-[var(--mp-fg)]">{formatClose(r, lang)}</strong>
+                </>
+              )}
+            </dd>
+          </div>
+        ))}
+      </dl>
+
+      <p className="text-xs leading-relaxed mb-4 mt-auto text-[var(--mp-fg-muted)]">
+        {isStp ? td("stp_where", lang) : first.exam_key === "rezeptierkunde" || first.exam_key === "gerichtsmedizin" ? td("calendar_rig_note", lang) : td("binding", lang)}
       </p>
 
-      <a
-        href={PHARMA_INFO_URL}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-xs font-medium text-[var(--mp-viridian)] hover:underline underline-offset-2 inline-flex items-center gap-1 mt-auto"
-      >
-        {T.source[lang]}
-        <ArrowRight className="w-3 h-3" aria-hidden="true" />
-      </a>
+      <div className="flex flex-col gap-1 mt-auto">
+        {sources.map((r) => (
+          <a
+            key={r.source_url}
+            href={r.source_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs font-medium text-[var(--mp-viridian)] hover:underline underline-offset-2 inline-flex items-center gap-1"
+          >
+            {td("source_read", lang, {
+              publisher: r.publisher,
+              read: formatOfficialDate(r.read_on, lang),
+            })}
+            <ArrowRight className="w-3 h-3" aria-hidden="true" />
+          </a>
+        ))}
+      </div>
     </article>
   );
 }
@@ -239,39 +222,30 @@ export default function UpcomingExams({
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
-  // Public marketing must not label postgraduate ÖÄK dates as Vienna bank dates.
-  // Shared operational dates and extension policies are unchanged.
-  const sittings = getUpcomingSittings().filter(s => s.examType !== "kenntnispruefung");
-  // Show Pharma's rolling note only if its calendar is empty (the
-  // honest representation — never a fake countdown).
-  const showPharma = EXAM_SITTINGS.pharma.length === 0;
+  // Official sittings only (C7). The Vienna bank is SIP4a/SIP5a practice,
+  // so no postgraduate ÖÄK date appears here. `now` is read at render: the
+  // server render and the client agree except across a deadline minute.
+  const now = new Date();
+  const cards = buildCards(lang, now);
 
   const viennaNote = (
     <p className="mt-4 text-sm text-[var(--mp-fg-muted)]">
-      {lang === "de"
-        ? "SIP4a/SIP5a: Termine und Anmeldung findest du bei der MedUni Wien. Die Wiener Fragenbank ist keine Simulation der postgradualen ÖÄK-Arztprüfung."
-        : "SIP4a/SIP5a: check MedUni Vienna for dates and registration. The Vienna question bank is not a simulation of the postgraduate ÖÄK exam."}{" "}
-      <a href="https://www.meduniwien.ac.at/web/en/studium-weiterbildung/nostrifizierung/pruefungen/" target="_blank" rel="noopener noreferrer" className="text-[var(--mp-viridian)] hover:underline">
+      {td("calendar_vienna_note", lang)}{" "}
+      <a href="https://www.meduniwien.ac.at/web/studium-weiterbildung/nostrifizierung/pruefungen/" target="_blank" rel="noopener noreferrer" className="text-[var(--mp-viridian)] hover:underline">
         {lang === "de" ? "Universitäre Prüfungsinformationen" : "University exam information"}
       </a>
     </p>
   );
 
-  const cards = (
+  const grid = (
     <div
       className={`grid gap-4 sm:gap-5 grid-cols-1 sm:grid-cols-2 ${
-        sittings.length + (showPharma ? 1 : 0) >= 3 ? "lg:grid-cols-3" : ""
+        cards.length >= 3 ? "lg:grid-cols-3" : ""
       }`}
     >
-      {sittings.map((s) => (
-        <ExamCard
-          key={`${s.examType}-${s.date}`}
-          sitting={s}
-          lang={lang}
-          mounted={mounted}
-        />
+      {cards.map((c) => (
+        <OfficialCard key={c.key} card={c} lang={lang} now={now} mounted={mounted} />
       ))}
-      {showPharma && <PharmaCard lang={lang} />}
     </div>
   );
 
@@ -293,7 +267,7 @@ export default function UpcomingExams({
             {lang === "de" ? "Universitäre Prüfungsinformationen" : "University exam information"}
           </a>
         </div>
-        {cards}
+        {grid}
         {viennaNote}
       </div>
     );
@@ -326,7 +300,7 @@ export default function UpcomingExams({
             {T.subtitle[lang]}
           </p>
         </div>
-        {cards}
+        {grid}
         {viennaNote}
       </div>
     </section>

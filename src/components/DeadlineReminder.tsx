@@ -3,33 +3,49 @@
 import { useMemo, useState } from "react";
 import { BellRing, CheckCircle2 } from "lucide-react";
 import { t, type Lang } from "@/lib/i18n";
-import { getNextRegistrationDeadlineSitting } from "@/lib/exam-dates";
+import {
+  bankForOfficialKey,
+  getNextOfficialDeadlineGroup,
+  getUpcomingOfficialFor,
+} from "@/lib/exam-dates";
+import {
+  describeDeadlineGroup,
+  describeStpSitting,
+  describeUpcomingGroup,
+} from "@/lib/i18n-dates";
 import { getStoredAttribution } from "@/lib/attribution";
 
 /**
  * Exam deadline reminder capture (2026-07-03). Shows the nearest real
- * registration deadline (from the self-aging exam calendar) and captures an
- * email so we can nudge the candidate before it closes. The market's purest
- * lead magnet: a scared candidate always wants this. Posts to /api/reminders.
+ * registration deadline and captures an email so we can nudge the candidate
+ * before it closes. Posts to /api/reminders.
+ *
+ * Since W1-CAL (2026-10-10) the deadline comes from the OFFICIAL sittings
+ * (C7 `OFFICIAL_SITTINGS`: SIP4a/SIP5a, Rezeptierkunde/Gerichtsmedizin,
+ * Stichprobentest with both publishers), compared in Vienna time. It no
+ * longer shows the postgraduate ÖÄK date. The reminder's exam_type maps back
+ * to the legacy bank key so /api/reminders does not drop it to "all".
  */
 export default function DeadlineReminder({ lang }: { lang: Lang }) {
   const [email, setEmail] = useState("");
   const [state, setState] = useState<"idle" | "loading" | "done" | "error">("idle");
 
   const next = useMemo(() => {
-    const s = getNextRegistrationDeadlineSitting();
-    if (!s) return null;
-    const deadline = s.registrationDeadline!;
-    const d = new Date(`${deadline}T00:00:00Z`);
-    const today = new Date();
-    today.setUTCHours(0, 0, 0, 0);
-    const days = Math.round((d.getTime() - today.getTime()) / 86400000);
-    const dateStr = d.toLocaleDateString(lang === "de" ? "de-AT" : lang, {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    });
-    return { sitting: s, dateStr, days };
+    const now = new Date();
+    const g = getNextOfficialDeadlineGroup({ now });
+    if (!g) return null;
+    const first = g.rows[0];
+    let text: string;
+    if (first.exam_key === "stichprobentest") {
+      // Both publishers for that sitting, each with its label.
+      const rows = getUpcomingOfficialFor({ exams: ["stichprobentest"], now }).filter(
+        (r) => r.date === first.date
+      );
+      text = describeStpSitting(rows, lang);
+    } else {
+      text = g.started ? describeDeadlineGroup(g, lang, now) : describeUpcomingGroup(g, lang);
+    }
+    return { text, examType: bankForOfficialKey(first.exam_key) ?? "all" };
   }, [lang]);
 
   async function submit(e: React.FormEvent) {
@@ -42,7 +58,7 @@ export default function DeadlineReminder({ lang }: { lang: Lang }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email,
-          exam_type: next?.sitting.examType ?? "all",
+          exam_type: next?.examType ?? "all",
           locale: lang,
           source: "landing_deadline",
           attribution: getStoredAttribution(),
@@ -67,13 +83,8 @@ export default function DeadlineReminder({ lang }: { lang: Lang }) {
             {t("reminder_title", lang)}
           </h3>
           <p className="mt-1 text-sm text-[var(--mp-fg-muted)]">
-            {t("reminder_next", lang)}{" "}
-            <strong className="text-[var(--mp-fg)]">
-              {next.sitting.label[lang === "de" ? "de" : "en"]}
-              {next.sitting.location ? `, ${next.sitting.location}` : ""}
-            </strong>{" "}
-            {"·"} {t("reminder_deadline", lang)} <strong className="text-[var(--mp-fg)]">{next.dateStr}</strong>{" "}
-            <span className="text-[var(--mp-viridian)] font-medium">({next.days} {t("reminder_days_left", lang)})</span>
+            <span className="text-[var(--mp-fg)] font-medium">{t("reminder_next", lang)}</span>{" "}
+            {next.text}
           </p>
         </div>
       </div>

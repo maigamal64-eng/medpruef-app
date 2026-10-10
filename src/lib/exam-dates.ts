@@ -820,3 +820,38 @@ export function officialSittingsForAgents(
     readOn: s.read_on,
   }));
 }
+
+/** Which official exams each bank covers, as agent-facing names. */
+const BANK_AGENT_NOTE: Record<PuypExamType, string> = {
+  kenntnispruefung:
+    "The Vienna question bank prepares for the MedUni Wien SIP4a and SIP5a exams that nostrification applicants sit. It is not the postgraduate ÖÄK Arztprüfung, so no ÖÄK date is given here.",
+  kmp_innsbruck:
+    "The national Stichprobentest (nostrification screening). Each sitting has two published deadlines from two publishers: a filing cutoff in the MedUni Wien Merkblatt and a registration deadline in the i-med Termine PDF. Both are listed; the i-med PDF says to register at the university where you filed.",
+  pharma:
+    "Rezeptierkunde (pharmacology) and Gerichtsmedizin at MedUni Wien share fixed exam weeks; registration closes on a Tuesday at 12:00 Vienna time. Summer semester 2027 weeks are not published yet.",
+};
+
+/**
+ * get_exam_info payload for one bank (MCP, A2A, WebMCP share it): the next
+ * official deadline and every upcoming official sitting of that bank.
+ */
+export function officialExamInfoForAgents(bank: PuypExamType, now: Date = new Date()) {
+  const exams = OFFICIAL_KEYS_BY_BANK[bank];
+  const next = getNextOfficialDeadlineGroup({ exams, now });
+  return {
+    examType: bank,
+    officialExams: exams,
+    note: BANK_AGENT_NOTE[bank],
+    nextDeadline: next
+      ? {
+          date: next.registration_closes,
+          ...(next.closes_at_time ? { timeVienna: next.closes_at_time } : {}),
+          type: next.deadline_type,
+          publisher: next.publisher,
+          windowStatus: next.started ? "open" : "not open yet",
+          sittings: next.rows.map((r) => ({ exam: r.exam_key, date: r.date, ...(r.date_end ? { dateEnd: r.date_end } : {}) })),
+        }
+      : null,
+    upcomingSittings: officialSittingsForAgents({ exams, now }),
+  };
+}

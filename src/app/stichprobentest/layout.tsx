@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getNextExamSitting } from "@/lib/exam-dates";
+import { getUpcomingOfficialFor } from "@/lib/exam-dates";
 
 /**
  * /stichprobentest — SEO landing page for the national Stichprobentest
@@ -71,11 +71,14 @@ export const metadata: Metadata = {
 };
 
 function buildCourseSchema() {
-  // The "KMP Innsbruck" exam is the national Stichprobentest — venue
-  // rotates each sitting (next: Graz, 23 Sep 2026). Use the real next
-  // sitting (computed at runtime, ages out) for both startDate and the
-  // CourseInstance location; omit startDate if none is published.
-  const sitting = getNextExamSitting("kmp_innsbruck");
+  // The national Stichprobentest: the venue rotates each sitting. Use the
+  // next OFFICIAL sitting (C7 export, ages out) for both startDate and the
+  // CourseInstance location; omit startDate if none is published. The venue
+  // is the last word of the official learner label ("Stichprobentest Graz").
+  const next = getUpcomingOfficialFor({ exams: ["stichprobentest"] })[0];
+  const sitting = next
+    ? { date: next.date, location: next.learner_label.de.replace(/^Stichprobentest\s+/, "") }
+    : null;
   const courseInstance: Record<string, unknown> = {
     "@type": "CourseInstance",
     courseMode: "online",

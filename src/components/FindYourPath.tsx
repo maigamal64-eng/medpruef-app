@@ -62,10 +62,42 @@ import { LogoMark } from "./Logo";
 import { t as tr } from "@/lib/i18n";
 import { getStoredSession } from "@/lib/auth";
 import { authFetch } from "@/lib/authFetch";
-import { type PuypExamType } from "@/lib/exam-dates";
+import {
+  OFFICIAL_KEYS_BY_BANK,
+  getNextOfficialDeadlineGroup,
+  getUpcomingOfficialFor,
+  type PuypExamType,
+} from "@/lib/exam-dates";
+import {
+  describeDeadlineGroup,
+  describeStpSitting,
+  describeUpcomingGroup,
+  td,
+} from "@/lib/i18n-dates";
 import { generateStudyPlan, type TopicProgress } from "@/lib/studyPlan";
 import { buildStudyPath } from "@/lib/studyPath";
 import StudyPathTimeline from "./StudyPathTimeline";
+
+/**
+ * The next official deadline for a route, from the C7 export (W1-CAL).
+ * Vienna route: SIP4a/SIP5a registration close. Stichprobentest route: the
+ * next sitting with both publishers' deadlines, each labelled. null when
+ * nothing official is open.
+ */
+function officialDeadlineText(examType: PuypExamType, lang: string): string | null {
+  const now = new Date();
+  const exams = OFFICIAL_KEYS_BY_BANK[examType];
+  const g = getNextOfficialDeadlineGroup({ exams, now });
+  if (!g) return null;
+  if (examType === "kmp_innsbruck") {
+    const date = g.rows[0].date;
+    return describeStpSitting(
+      getUpcomingOfficialFor({ exams, now }).filter((r) => r.date === date),
+      lang,
+    );
+  }
+  return g.started ? describeDeadlineGroup(g, lang, now) : describeUpcomingGroup(g, lang);
+}
 
 type Lang = "de" | "en";
 
@@ -368,8 +400,14 @@ export default function FindYourPath({ initialLang = "de" }: { initialLang?: Lan
           {step === 1 && examType && (
             <div className="pb-2">
               <p className="mb-3 text-xs leading-relaxed text-[var(--mp-fg-muted)]" role="note">
-                {t(examType === "kenntnispruefung" ? "fyp_calendar_notice" : "fyp_university_notice")}
+                {examType === "kenntnispruefung" ? td("fyp_kp_notice", lang) : t("fyp_university_notice")}
               </p>
+              {officialDeadlineText(examType, lang) && (
+                <p className="mb-3 rounded-xl border border-[var(--mp-border)] bg-[var(--mp-surface-sunken)] p-3 text-xs leading-relaxed text-[var(--mp-fg)]">
+                  <span className="font-semibold">{td("fyp_next_deadline", lang)}:</span>{" "}
+                  {officialDeadlineText(examType, lang)}
+                </p>
+              )}
               <label className="block text-sm font-medium text-[var(--mp-fg)]">
                 {t("fyp_study_target_label")}
                 <input
@@ -585,7 +623,7 @@ function RouteExplainer({
         <p className="mt-2 text-xs leading-relaxed text-[var(--mp-fg-muted)]">
           {t("fyp_explain_kp_p")}
         </p>
-        <p className="mt-2 text-xs leading-relaxed text-[var(--mp-fg-muted)]" role="note">{t("fyp_calendar_notice")}</p>
+        <p className="mt-2 text-xs leading-relaxed text-[var(--mp-fg-muted)]" role="note">{td("fyp_kp_notice", lang)}</p>
         <button
           type="button"
           onClick={() => onChoose("kenntnispruefung")}
@@ -699,8 +737,14 @@ function YourPath({
         </p>
 
         <p className="mt-3 text-xs leading-relaxed text-[var(--mp-fg-muted)]" role="note">
-          {t(isKP ? "fyp_calendar_notice" : "fyp_university_notice")}
+          {isKP ? td("fyp_kp_notice", lang) : t("fyp_university_notice")}
         </p>
+        {officialDeadlineText(examType, lang) && (
+          <p className="mt-3 rounded-xl border border-[var(--mp-border)] bg-[var(--mp-surface-raised)] p-3 text-xs leading-relaxed text-[var(--mp-fg)]">
+            <span className="font-semibold">{td("fyp_next_deadline", lang)}:</span>{" "}
+            {officialDeadlineText(examType, lang)}
+          </p>
+        )}
 
         {/* Timeline */}
         <section className="mt-6">

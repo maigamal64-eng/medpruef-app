@@ -25,10 +25,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import {
-  EXAM_SITTINGS,
-  PHARMA_INFO_URL,
-  getNextExamSitting,
-  getUpcomingSittings,
+  officialExamInfoForAgents,
+  officialSittingsForAgents,
   type PuypExamType,
 } from "@/lib/exam-dates";
 import { EXAM_SOURCES } from "@/lib/topics";
@@ -124,67 +122,20 @@ function examSourceLabel(examType: PuypExamType): string {
 
 /** Builds the get_exam_info payload for a single exam type. */
 function buildExamInfo(examType: PuypExamType) {
-  const label = examSourceLabel(examType);
-  const nextSitting = getNextExamSitting(examType);
-
-  if (examType === "pharma" && !nextSitting) {
-    return {
-      examType,
-      name: label,
-      scheduling: "rolling" as const,
-      note:
-        "Pharmakologie/Rezeptierkunde has no fixed annual date. It follows the regular MedUni Wien semester exam weeks (late September to January) and is registered per semester.",
-      infoUrl: PHARMA_INFO_URL,
-    };
-  }
-
-  if (!nextSitting) {
-    return {
-      examType,
-      name: label,
-      scheduling: "fixed" as const,
-      nextSitting: null,
-      note: "No upcoming sitting is published yet for this exam.",
-    };
-  }
-
-  return {
-    examType,
-    name: label,
-    scheduling: "fixed" as const,
-    nextSitting: {
-      date: nextSitting.date,
-      label: nextSitting.label.en,
-      location: nextSitting.location,
-      registrationDeadline: nextSitting.registrationDeadline,
-      sourceUrl: nextSitting.sourceUrl,
-      confidence: nextSitting.confidence,
-    },
-  };
+  // Official sittings only (C7, W1-CAL 2026-10-10): SIP4a/SIP5a for the
+  // Vienna bank, Rezeptierkunde/Gerichtsmedizin weeks for Pharma, and the
+  // Stichprobentest with both publishers' deadlines. No ÖÄK date.
+  return { name: examSourceLabel(examType), ...officialExamInfoForAgents(examType) };
 }
 
-/** Builds the get_deadlines payload: every known future sitting + deadline. */
+/** get_deadlines payload: every upcoming official sitting with its deadline. */
 function buildDeadlines() {
-  const upcoming = getUpcomingSittings().map((s) => ({
-    examType: s.examType,
-    name: examSourceLabel(s.examType),
-    date: s.date,
-    label: s.label.en,
-    location: s.location,
-    registrationDeadline: s.registrationDeadline,
-    sourceUrl: s.sourceUrl,
-  }));
-
-  const hasPharma = EXAM_SITTINGS.pharma.length === 0;
-
   return {
-    upcoming,
-    notes: hasPharma
-      ? [
-          "Pharmakologie/Rezeptierkunde has no fixed date; it follows the MedUni Wien semester exam schedule. See " +
-            PHARMA_INFO_URL,
-        ]
-      : [],
+    upcoming: officialSittingsForAgents(),
+    notes: [
+      "Dates come from the official MedUni Wien and i-med calendars (read on the readOn date of each row). Your university's page is always the binding reference.",
+      "Stichprobentest sittings list two deadlines from two publishers; neither is picked for you.",
+    ],
   };
 }
 
@@ -199,7 +150,7 @@ const TOOLS = [
   {
     name: "get_exam_info",
     description:
-      "Look up one of the three Austrian medical-licensing exams MedPrüf prepares candidates for (Kenntnisprüfung Wien, Stichprobentest Innsbruck, or Pharmakologie) by name, and get its next known sitting date, registration deadline, and location. Returns publicly published exam-calendar facts only, no prices and no exam question content.",
+      "Look up one of the three Austrian medical-licensing exams MedPrüf prepares candidates for (Kenntnisprüfung Wien, Stichprobentest Innsbruck, or Pharmakologie) by name, and get its official upcoming sittings and the next registration or filing deadline (MedUni Wien SIP4a/SIP5a for the Vienna bank, Rezeptierkunde/Gerichtsmedizin exam weeks for Pharmakologie, and Stichprobentest sittings with both publishers' deadlines). Returns publicly published exam-calendar facts only, no prices and no exam question content.",
     inputSchema: {
       type: "object",
       properties: {
@@ -217,7 +168,7 @@ const TOOLS = [
   {
     name: "get_deadlines",
     description:
-      "List every upcoming registration deadline and exam sitting date across all three Austrian medical-licensing exams MedPrüf prepares candidates for. Useful for a candidate deciding which sitting to target next. Publicly published exam-calendar facts only, no prices and no exam question content.",
+      "List every upcoming official sitting and its registration or filing deadline (SIP4a, SIP5a, Rezeptierkunde, Gerichtsmedizin, Stichprobentest), each with its publisher and source. Useful for a candidate deciding which sitting to target next. Publicly published exam-calendar facts only, no prices and no exam question content.",
     inputSchema: {
       type: "object",
       properties: {},
