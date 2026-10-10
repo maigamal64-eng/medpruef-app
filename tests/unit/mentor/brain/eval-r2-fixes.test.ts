@@ -9,7 +9,7 @@ import { MENTOR_CORE_PROMPT } from "@/lib/mentor/prompt/system";
 import { narrowToMonth, SCOPE_NOTE } from "@/lib/mentor/tools/run";
 import { MENTOR_TOOLS } from "@/lib/mentor/tools/definitions";
 import { getMentorFactsLoader, MentorFactsLoader, SHEET_PINNED_IDS, sittingFactId } from "@/lib/mentor/facts-loader";
-import { askedMonths, removeSentences, extractValues, stripUnsupportedStand, trimUnaskedValues, validateAnswer } from "@/lib/mentor/validator";
+import { askedMonths, removeSentences, extractValues, questionRanges, stripFieldNames, stripUnsupportedStand, trimUnaskedValues, validateAnswer } from "@/lib/mentor/validator";
 import { learnerQuestion } from "@/lib/mentor/turn";
 import type { OfficialSitting } from "@/lib/exam-dates";
 import type { MentorFact, MentorTurnInput, ValidatedAnswer } from "@/lib/mentor/seam";
@@ -389,5 +389,26 @@ describe("validator: an echoed anchor month becomes 'danach' (dl-sip4a-feb-de, d
     const bad = validateAnswer("@@LANG de\n@@BLOCK facts=fixture.dates.feb\nDer Termin nach dem im November ist am 20. Februar 2099.", [FEB]);
     expect(bad.replaced).toBe(true);
     expect(JSON.stringify(bad.blocks)).not.toContain("20. Februar");
+  });
+});
+
+describe("validator: questions to the learner and tool field names (dl-stp-ask-feb-de, dl-sip4a-next)", () => {
+  it("a month repeated inside a question is not a claim; a day date in a question still is", () => {
+    const q = validateAnswer("@@LANG de\n@@BLOCK\nWo hast du deinen Antrag für den Termin im Februar eingereicht: Wien, Graz oder Innsbruck?", []);
+    expect(q.replaced).toBe(false);
+    expect(q.blocks[0].text).toContain("im Februar");
+    const d = validateAnswer("@@LANG de\n@@BLOCK\nHast du für den 3. Februar 2099 eingereicht?", []);
+    expect(d.replaced).toBe(true);
+    const claim = validateAnswer("@@LANG de\n@@BLOCK\nDer Termin ist im Februar.", []);
+    expect(claim.replaced).toBe(true);
+  });
+
+  it("removes tool field names copied into prose", () => {
+    expect(stripFieldNames("Die Anmeldung ist offen (registration_status: open, status_fact_id: ).")).toBe("Die Anmeldung ist offen.");
+    expect(stripFieldNames("Registration is open (MedUni Wien, Stand 2099-01-01; registration window status as of today: open, see ).")).toBe(
+      "Registration is open (MedUni Wien, Stand 2099-01-01; registration window status as of today: open)."
+    );
+    expect(stripFieldNames("Nothing to strip here.")).toBe("Nothing to strip here.");
+    expect(questionRanges("Satz eins. Frage zwei? Satz drei.")).toEqual([[10, 22]]);
   });
 });

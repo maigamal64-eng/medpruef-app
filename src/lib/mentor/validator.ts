@@ -468,6 +468,33 @@ export function stripUnsupportedStand(text: string, allowed: ReadonlySet<string>
   return out === text ? text : out.replace(/[ \t]+([.,;:!?])/g, "$1").replace(/[ \t]{2,}/g, " ");
 }
 
+// ─── Questions and tool field names ─────────────────────────────────────
+
+/** [start, end) of every sentence that ends with a question mark. */
+export function questionRanges(text: string): Array<[number, number]> {
+  return sentenceRanges(text).filter(([a, e]) => /\?\s*$/.test(text.slice(a, e)));
+}
+
+const FIELD_NAME_RE = /\b(?:registration_status|status_fact_id|fact_ids?|days_until_close|needs_filing_university)\b\s*[:=]?\s*(?:open|closed|not_yet_open|not_confirmed|not_published|true|false)?/giu;
+
+/**
+ * Tool field names the model sometimes copies into prose ("registration
+ * status: open, status_fact_id: ...") are protocol, not text for a learner.
+ * Removes them, a dangling "see" whose id was stripped, and the empty
+ * brackets they leave. Only removes text.
+ */
+export function stripFieldNames(text: string): string {
+  // "see status.<id>" loses its id in stripFactIds and leaves "see )".
+  const out = text.replace(FIELD_NAME_RE, "").replace(/[,;]?\s*\b(?:see|siehe)\s*(?=[)\]])/giu, "");
+  if (out === text) return text;
+  return out
+    .replace(/[,;]\s*(?=[,;)\]])/g, "")
+    .replace(/\(\s*[,;]?\s*\)/g, "")
+    .replace(/\(\s*[,;]\s*/g, "(")
+    .replace(/[ \t]+([.,;:!?)])/g, "$1")
+    .replace(/[ \t]{2,}/g, " ");
+}
+
 // ─── Anchor months ("the sitting after the one in November") ────────────
 
 const ANCHOR_DE = new RegExp(
@@ -674,11 +701,19 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
     const answerIds = new Set(parsed.blocks.flatMap((x) => x.factIds));
     const internalReadOn = new Set(used.filter((f) => isInternalFactId(f.id)).map((f) => f.read_on));
     const text = neutralizeAnchorMonths(
-      stripUnsupportedStand(stripFactIds(cleanDashes(b.text), (id) => answerIds.has(id) || lookup(id) !== null), allowed, internalReadOn),
+      stripUnsupportedStand(stripFieldNames(stripFactIds(cleanDashes(b.text), (id) => answerIds.has(id) || lookup(id) !== null)), allowed, internalReadOn),
       allowed
     );
     const values = extractValues(maskSourceLabels(text, used));
-    const bad = values.filter((v) => !v.keys.some((k) => allowed.has(k)));
+    // A question to the learner asserts nothing: a month or month-year it repeats
+    // ("Wo hast du für den Termin im Februar eingereicht?") is not a claim. Day
+    // dates, numbers, percentages and amounts in a question are still checked.
+    const asked = questionRanges(text);
+    const bad = values.filter(
+      (v) =>
+        !v.keys.some((k) => allowed.has(k)) &&
+        !((v.kind === "month" || v.kind === "monthyear") && asked.some(([a, e]) => v.start >= a && v.end <= e))
+    );
     let outText = text;
     if (bad.length > 0) {
       replaced = true;
