@@ -17,6 +17,8 @@ export interface RecordedQuery {
 
 type Row = Record<string, unknown>;
 
+const SYNTH_TS = "2026-10-01T00:00:00Z"; // date-ok: synthetic row timestamp, not a claim
+
 export interface FakeDb {
   from(table: string): FakeQuery;
   readonly queries: RecordedQuery[];
@@ -100,8 +102,8 @@ export function createFakeDb(spec: FakeDbSpec): FakeDb {
     { id: fu.id, active_exam: fu.active_exam, exam_date: fu.exam_date },
   ];
   const strength: Row[] = [
-    ...(profile?.rows ?? []).map((r) => ({ user_id: userId, last_answered_at: "2026-10-01T00:00:00Z", ...r })),
-    ...fu.rows.map((r) => ({ user_id: fu.id, last_answered_at: "2026-10-01T00:00:00Z", ...r })),
+    ...(profile?.rows ?? []).map((r) => ({ user_id: userId, last_answered_at: SYNTH_TS, ...r })),
+    ...fu.rows.map((r) => ({ user_id: fu.id, last_answered_at: SYNTH_TS, ...r })),
   ];
   const tables: Record<string, Row[]> = {
     questions: Object.values(fixtures.questions).map(questionRow),

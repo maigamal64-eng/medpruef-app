@@ -45,7 +45,7 @@ const P_MD = new RegExp(String.raw`\b(${MONTH_ALT})\b\.?\s+(\d{1,2})(?:st|nd|rd|
 
 function validDay(y: number | null, m: number, d: number): boolean {
   if (m < 1 || m > 12 || d < 1 || d > 31) return false;
-  const year = y ?? 2028; // a leap year, so a year-less 29 Feb is not rejected
+  const year = y ?? 2028; // a leap year, so a year-less 29th of February is not rejected
   const t = new Date(Date.UTC(year, m - 1, d));
   return t.getUTCMonth() === m - 1 && t.getUTCDate() === d;
 }

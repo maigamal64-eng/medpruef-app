@@ -36,7 +36,7 @@ export interface Expect {
   kind: ExpectKind;
   /** Glob patterns (`*` only). At least one cited fact id must match one of them. */
   cite_any?: string[];
-  /** ISO dates that must appear (a year-less "17. Nov" counts when day and month match). */
+  /** ISO dates that must appear (a year-less day and month counts when they match). */
   must_dates?: string[];
   /** ISO dates that may additionally appear. Any other date in the answer is a wrong date. */
   allow_dates?: string[];

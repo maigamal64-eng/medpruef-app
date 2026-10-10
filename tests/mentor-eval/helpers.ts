@@ -56,8 +56,8 @@ export function mkCtx(over: Partial<ScoreContext> = {}): ScoreContext {
     truthText: () => "",
     resolveFact: () => true,
     officialHosts: new Set(["meduniwien.ac.at", "i-med.ac.at", "medpruf.com"]),
-    alwaysAllowDates: ["2026-10-10", "2026-10-12"],
-    todayVienna: "2026-10-12",
+    alwaysAllowDates: ["2026-10-10", "2026-10-12"], // date-ok: test clock, not a claim
+    todayVienna: "2026-10-12", // date-ok: test clock, not a claim
     fixtures,
     ...over,
   };
