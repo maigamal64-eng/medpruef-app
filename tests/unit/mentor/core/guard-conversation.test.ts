@@ -116,8 +116,16 @@ describe("rate limit and breaker", () => {
     expect(mentorError("credits_required")).toEqual({ status: 402, body: { error: "credits_required", packages_url: MENTOR_PACKAGES_URL } });
     expect(mentorError("credits_exhausted").body.packages_url).toBe(MENTOR_PACKAGES_URL);
   });
-  it("the R3 wiring point is null on this branch (fail closed)", () => {
-    expect(resolveMentorServices({} as never)).toBeNull();
+  it("the R3 wiring point returns real services and reuses one brain per process", () => {
+    // Construction only: no DB call happens until a service method runs.
+    const a = resolveMentorServices({} as never);
+    const b = resolveMentorServices({} as never);
+    expect(a).not.toBeNull();
+    expect(b).not.toBeNull();
+    expect(a!.brain).toBe(b!.brain);
+    expect(a!.facts).toBe(b!.facts);
+    expect(typeof a!.wallet.ensureIncludedGrants).toBe("function");
+    expect(typeof a!.brain.validate).toBe("function");
   });
 });
 

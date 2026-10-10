@@ -100,6 +100,9 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
 
   outputFileTracingIncludes: {
+    // Mentor verified facts are read from disk at runtime by the facts loader;
+    // without this the chat function ships zero facts and refuses everything.
+    "/api/mentor/chat": ["./content/mentor-facts/**/*"],
   },
 
   async rewrites() {

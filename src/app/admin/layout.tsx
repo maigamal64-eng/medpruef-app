@@ -150,6 +150,7 @@ const NAV: NavSection[] = [
       { label: "Feedback", href: "/admin/feedback", icon: MessageSquare, permission: "feedback.read" },
       { label: "Flags", href: "/admin/flags", icon: Flag, permission: "system.read" },
       { label: "PUYP", href: "/admin/puyp", icon: ShieldCheck, permission: "revenue.read" },
+      { label: "Mentor cost", href: "/admin/mentor", icon: Gauge, permission: "revenue.read" },
     ],
   },
   {

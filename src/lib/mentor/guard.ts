@@ -28,6 +28,9 @@ import {
 } from "./contract";
 import { rpcAttemptTake } from "./ledger";
 import type { Brain, FactsLoader, Wallet } from "./seam";
+import { getMentorFactsLoader } from "./facts-loader";
+import { createMentorBrain, type MentorBrain } from "./prompt/brain";
+import { createWallet } from "./credits/wallet";
 
 /** Where the UI sends a learner without credits (W2-UI owns the page). */
 export const MENTOR_PACKAGES_URL = "/mentor/packages";
@@ -180,12 +183,16 @@ export interface MentorServices {
  * THE single wiring point for the services other lanes implement:
  *   Brain, FactsLoader  W2-BRAIN   (src/lib/mentor/prompt|tools|validator.ts, facts-loader.ts)
  *   Wallet              W2-CREDITS (src/lib/mentor/credits/wallet.ts)
- * Those files do not exist on ov/m-core-20261010, so this returns null and
- * both routes answer 503 reserve_failed (and alert) until the R3 integrator
- * replaces the body with the real constructors. Fail closed by design: never
- * a no-op wallet, never the in-memory test meter.
+ * Wired at R3 (int/R3-20261010). The brain is a per-process singleton: it
+ * keeps a turn store that bridges runTool and validate within one turn, so
+ * every request must reuse the same instance (W2-BRAIN note 5). The facts
+ * loader is already a singleton. The wallet is stateless and bound to the
+ * route's service client. Never a no-op wallet, never the in-memory test meter.
  */
+let brainSingleton: MentorBrain | null = null;
+
 export function resolveMentorServices(client: SupabaseClient): MentorServices | null {
-  void client; // R3: pass to the W2-BRAIN and W2-CREDITS constructors
-  return null;
+  const facts = getMentorFactsLoader();
+  if (!brainSingleton) brainSingleton = createMentorBrain({ facts });
+  return { brain: brainSingleton, facts, wallet: createWallet(client) };
 }

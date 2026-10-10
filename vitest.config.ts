@@ -28,7 +28,7 @@ export default defineConfig({
     postcss: { plugins: [] },
   },
   test: {
-    include: ["tests/unit/**/*.test.ts"],
+    include: ["tests/unit/**/*.test.ts", "tests/mentor-eval/**/*.test.ts"],
     environment: "node",
     globals: false,
     passWithNoTests: false,
