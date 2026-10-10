@@ -89,6 +89,10 @@ export function createFakeSupabase(handler: FakeHandler) {
         return b;
       },
       or: filter("or"),
+      filter: (column: string, operator: string, value: unknown) => {
+        call.filters.push({ kind: `filter:${operator}`, column, value });
+        return b;
+      },
       order: () => b,
       range: () => b,
       limit(n: number) {

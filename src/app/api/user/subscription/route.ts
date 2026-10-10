@@ -4,6 +4,7 @@ import { getServiceClient } from "@/lib/supabase";
 import { captureServerError } from "@/lib/sentry-capture";
 import { TIERS } from "@/lib/nowpayments";
 import { getSubscriptionDisplayNames } from "@/lib/subscription-display";
+import { loadRenewalOfferSuppression } from "@/lib/billing-cadence";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +20,9 @@ export const dynamic = "force-dynamic";
  * Response shape (200):
  *   {
  *     active: boolean,
+ *     renewal_offer_suppressed: boolean, // true when any active plan renews by
+ *                                        // itself or its cadence is unknown;
+ *                                        // read by RenewalPrompt (i-MP-TRUTH-19)
  *     subscription?: {
  *       id: string,
  *       tier: string,
@@ -70,8 +74,20 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    // Fail closed: if the cadence read fails, never offer a second plan.
+    let renewalOfferSuppressed = true;
+    try {
+      renewalOfferSuppressed = (await loadRenewalOfferSuppression(sb, userId)).suppressed;
+    } catch (cadenceError) {
+      captureServerError(cadenceError, {
+        route: "/api/user/subscription",
+        userId,
+        step: "renewal_cadence_lookup",
+      });
+    }
+
     if (!sub) {
-      return NextResponse.json({ active: false });
+      return NextResponse.json({ active: false, renewal_offer_suppressed: renewalOfferSuppressed });
     }
 
     const tierKey = String(sub.tier);
@@ -95,6 +111,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       active: true,
+      renewal_offer_suppressed: renewalOfferSuppressed,
       subscription: {
         id: sub.id,
         tier: tierKey,

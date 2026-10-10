@@ -29,6 +29,12 @@
  * Checkout: POST /api/whop/checkout { tier } then follow the returned
  * purchaseUrl, mirroring the proven /pricing call site. No whop.com URL
  * is ever constructed here.
+ *
+ * Auto-renewing plans (i-MP-TRUTH-19, 2026-10-10): before showing, the
+ * banner asks /api/user/subscription whether the user already holds a plan
+ * that renews by itself (rule in `@/lib/billing-cadence`). It stays hidden
+ * while that check loads, when it fails, and when the answer is "suppress",
+ * so nobody is sold a second plan on top of one that auto-renews.
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -37,6 +43,7 @@ import { CalendarClock } from "lucide-react";
 import { useUserTier } from "@/lib/hooks/useUserTier";
 import { useLang, t, type Lang } from "@/lib/i18n";
 import { getStoredSession } from "@/lib/auth";
+import { authFetch } from "@/lib/authFetch";
 import { TIERS } from "@/lib/content-truth";
 import {
   evaluateRenewalPrompt,
@@ -88,6 +95,9 @@ export default function RenewalPrompt() {
   const [dismissed, setDismissed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
+  // null = not checked yet; true only when the server confirmed no active
+  // plan renews by itself. Anything else keeps the banner hidden.
+  const [offerAllowed, setOfferAllowed] = useState<boolean | null>(null);
 
   useEffect(() => {
     try {
@@ -114,11 +124,33 @@ export default function RenewalPrompt() {
     role,
   });
 
+  const inWindow = decision !== null;
+  useEffect(() => {
+    // Only users inside the renewal window trigger the cadence check.
+    if (isLoading || !inWindow) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const r = await authFetch("/api/user/subscription", { skipAuthRedirect: true });
+        const body = (await r.json().catch(() => ({}))) as {
+          renewal_offer_suppressed?: boolean;
+        };
+        if (!cancelled) setOfferAllowed(r.ok && body.renewal_offer_suppressed === false);
+      } catch {
+        if (!cancelled) setOfferAllowed(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isLoading, inWindow, tier, tierExpiresAt]);
+
   const hidden =
     isLoading ||
     dismissed ||
     allowedToday !== true ||
     decision === null ||
+    offerAllowed !== true ||
     HIDE_PATHS.some((p) => pathname?.startsWith(p));
 
   // Stamp the day the FIRST time the banner is actually rendered, so a

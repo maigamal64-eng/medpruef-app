@@ -3,6 +3,7 @@ import * as Sentry from "@sentry/nextjs";
 import { getServiceClient } from "@/lib/supabase";
 import { sendZohoEmail } from "@/lib/email/zoho";
 import { renderTrialReminder } from "@/lib/email/templates";
+import { loadRenewalOfferSuppression } from "@/lib/billing-cadence";
 
 export const dynamic = "force-dynamic";
 
@@ -86,6 +87,7 @@ export async function GET(req: NextRequest) {
 
   const errors: string[] = [];
   let remindersMarked = 0;
+  let remindersSkippedRenewing = 0;
   let expiriesProcessed = 0;
 
   // ── 1b. Invocation heartbeat ──
@@ -129,6 +131,22 @@ export async function GET(req: NextRequest) {
       for (const trial of dueTrials) {
         const subId = trial.id as string;
         const userId = trial.user_id as string;
+
+        // i-MP-TRUTH-19 (2026-10-10): this email asks the user to pick a
+        // longer plan. Never send it to someone whose plan renews by itself
+        // (or whose cadence we cannot read): it would sell a second plan on
+        // top of one that auto-renews. Skipped rows are NOT stamped, so a
+        // user who later cancels can still get the reminder.
+        try {
+          const { suppressed } = await loadRenewalOfferSuppression(sb, userId);
+          if (suppressed) {
+            remindersSkippedRenewing += 1;
+            continue;
+          }
+        } catch (cadenceErr) {
+          errors.push(`cadence:${subId}: ${(cadenceErr as Error).message}`);
+          continue;
+        }
 
         // Look up the user's email + first_name + endowment stats for
         // the personalized template (review-2026-04-26-C1).
@@ -356,6 +374,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     ok: true,
     reminders_marked: remindersMarked,
+    reminders_skipped_renewing: remindersSkippedRenewing,
     expiries_processed: expiriesProcessed,
     errors,
     ran_at: nowIso,

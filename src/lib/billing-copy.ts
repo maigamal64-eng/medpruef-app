@@ -17,6 +17,20 @@
 
 export type BillingLang = "de" | "en";
 
+/**
+ * The Whop plans listed above that renew automatically (monthly, quarterly,
+ * and the trial that converts to monthly). Data, not copy: read by
+ * src/lib/billing-cadence.ts so the renewal banner and the reminder cron
+ * never offer a second plan to someone whose plan already renews.
+ * Any other plan id (the Exam Cohort, the legacy one-time 19/49 plans) is
+ * treated as one-time.
+ */
+export const AUTO_RENEWING_WHOP_PLAN_IDS: ReadonlySet<string> = new Set([
+  "plan_redacted8f2b848b", // Monthly, 19 EUR every 30 days
+  "plan_redacted145e2752", // Quarterly, 49 EUR every 90 days
+  "plan_redactedec56d4df", // Pro trial, then 19 EUR every 30 days
+]);
+
 /** Whop's buyer-side membership page (documented in Whop's own help docs). */
 export const WHOP_MANAGE_URL = "https://whop.com/@me/settings/memberships";
 /** Same address without scheme, for plain-text copy. */

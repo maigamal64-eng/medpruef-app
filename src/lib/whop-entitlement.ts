@@ -52,13 +52,25 @@ export async function repairWhopUserAccess(sb: SupabaseClient, userId: string): 
   return { granted: true, tier_expires_at: current.tier_expires_at ?? null };
 }
 
+/**
+ * PostgREST filter value for "this jsonb array holds an entry for paymentId".
+ * `granted_payment_ids` is jsonb, so the containment operand must be a JSON
+ * array literal (`cs.[{"payment_id":"..."}]`). supabase-js `.contains()` with
+ * an array argument serializes a Postgres ARRAY literal instead
+ * (`cs.{[object Object]}`), which the database rejects with 22P02
+ * "invalid input syntax for type json" (the 2026-10-07..09 503 retry loop).
+ */
+export function grantedPaymentIdsContainsValue(paymentId: string): string {
+  return JSON.stringify([{ payment_id: paymentId }]);
+}
+
 /** Signed webhook retry: identify the owner from stored grant provenance. */
 export async function repairWhopPaymentAccess(sb: SupabaseClient, paymentId: string): Promise<void> {
   const [latest, history] = await Promise.all([
     sb.from("subscriptions").select("user_id").eq("payment_provider", "whop")
       .eq("provider_payment_id", paymentId),
     sb.from("subscriptions").select("user_id").eq("payment_provider", "whop")
-      .contains("granted_payment_ids", [{ payment_id: paymentId }]),
+      .filter("granted_payment_ids", "cs", grantedPaymentIdsContainsValue(paymentId)),
   ]);
   if (latest.error) throw latest.error;
   if (history.error) throw history.error;
