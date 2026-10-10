@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
 import { getServiceClient } from "@/lib/supabase";
 import { sendZohoEmail } from "@/lib/email/zoho";
-import { renderTrialReminder } from "@/lib/email/templates";
 import { loadRenewalOfferSuppression } from "@/lib/billing-cadence";
+import { BILLING_SUPPORT_EMAIL, WHOP_MANAGE_URL, WHOP_MANAGE_TEXT } from "@/lib/billing-copy";
+import { formatEuro } from "@/lib/content-truth";
+import { safeEqual } from "@/lib/security/timing-safe";
 
 export const dynamic = "force-dynamic";
 
@@ -71,7 +73,8 @@ export async function GET(req: NextRequest) {
       { status: 503 },
     );
   }
-  if (authHeader !== `Bearer ${cronSecret}`) {
+  // Constant-time compare (contract C11); null header fails closed.
+  if (!safeEqual(authHeader, `Bearer ${cronSecret}`)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -137,6 +140,9 @@ export async function GET(req: NextRequest) {
         // (or whose cadence we cannot read): it would sell a second plan on
         // top of one that auto-renews. Skipped rows are NOT stamped, so a
         // user who later cancels can still get the reminder.
+        // Everyone who passes this gate holds ONLY one-time / non-Whop
+        // rows, which is why renderOneTimeReminder below states that
+        // nothing renews and never says the current plan does.
         try {
           const { suppressed } = await loadRenewalOfferSuppression(sb, userId);
           if (suppressed) {
@@ -183,7 +189,7 @@ export async function GET(req: NextRequest) {
           const accuracyPct = answered > 0 ? Math.round((correct / answered) * 100) : 0;
           const streakDays = (gam?.current_streak as number | null) ?? 0;
 
-          const tpl = renderTrialReminder({
+          const tpl = renderOneTimeReminder({
             firstName: (user.first_name as string | null) ?? null,
             lang,
             expiresAtIso: trial.expires_at as string,
@@ -401,4 +407,111 @@ async function recordEvent(
   } catch (err) {
     console.error(`[cron/trial-reminder:${eventType}]`, err);
   }
+}
+
+interface OneTimeReminderArgs {
+  firstName: string | null;
+  lang: "de" | "en";
+  expiresAtIso: string;
+  qsAnswered: number;
+  accuracyPct: number;
+  streakDays: number;
+}
+
+/**
+ * Reminder text for ONE-TIME buyers (DB-TIMEOUTS item 4, 2026-10-10).
+ *
+ * The earlier shared template told every recipient that "Single Month and
+ * 3-Month are subscriptions, if you are on one of those you do not need to
+ * do anything". After the cadence gate above the only recipients left are
+ * people whose access does NOT renew, so that sentence was both irrelevant
+ * and a false comfort. This text says the current access is a one-time
+ * payment that is not charged again, and describes the subscription plans
+ * only as options they could choose (billed until they cancel).
+ *
+ * Deliberately contains no "renew/verlängern/erneuern" wording at all;
+ * tests/unit/cron/trial-reminder.test.ts enforces that on the sent body.
+ * The days-left figure is computed, not hardcoded (the sweep window is 14
+ * days, the old subject said "5 Tagen" regardless).
+ */
+function renderOneTimeReminder(args: OneTimeReminderArgs): { subject: string; htmlBody: string } {
+  const { firstName, lang, expiresAtIso, qsAnswered, accuracyPct, streakDays } = args;
+  const expires = new Date(expiresAtIso);
+  const daysLeft = Math.max(1, Math.ceil((expires.getTime() - Date.now()) / 86_400_000));
+  const expiresFmt = expires.toLocaleDateString(lang === "de" ? "de-AT" : "en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+  const greetingName = firstName ? `, ${firstName}` : "";
+
+  const stats: string[] = [];
+  if (qsAnswered > 0) stats.push(lang === "de" ? `${qsAnswered} Fragen beantwortet` : `${qsAnswered} questions answered`);
+  if (accuracyPct > 0) stats.push(lang === "de" ? `${accuracyPct} % richtig` : `${accuracyPct}% correct`);
+  if (streakDays > 0) stats.push(lang === "de" ? `${streakDays}-Tage-Streak` : `${streakDays}-day streak`);
+  const statsLine = stats.length > 0 ? stats.join(" · ") : null;
+
+  const cohort = formatEuro(12900);
+  const threeMonth = formatEuro(4900);
+  const singleMonth = formatEuro(1900);
+  const wrapStyle =
+    "font-family: -apple-system, system-ui, Segoe UI, Roboto, sans-serif; color:#1a2b3c; line-height:1.55; max-width:560px; margin:0 auto; padding:24px;";
+  const btnStyle =
+    "display:inline-block; background:#003a8c; color:white; padding:10px 18px; border-radius:8px; text-decoration:none; font-weight:600;";
+
+  if (lang === "de") {
+    const subject = `Dein MedPrüf Pro-Zugang endet in ${daysLeft} ${daysLeft === 1 ? "Tag" : "Tagen"}`;
+    const htmlBody = `<!DOCTYPE html>
+<html><body style="${wrapStyle}">
+<p>Hallo${greetingName},</p>
+
+<p>kurzer Hinweis: dein <strong>MedPrüf Pro-Zugang</strong> endet am <strong>${expiresFmt}</strong>, also in ca. ${daysLeft} ${daysLeft === 1 ? "Tag" : "Tagen"}. Du hast einmalig bezahlt, es gibt keine automatische Abbuchung. Wenn du nichts tust, endet der Zugang an diesem Datum und es wird nichts mehr abgebucht.</p>
+
+${statsLine ? `<p><strong>Was du in dieser Zeit aufgebaut hast:</strong> ${statsLine}.<br>Das alles bleibt erhalten, wenn du weitermachst.</p>` : ""}
+
+<p>Wenn du weitermachen möchtest, kannst du selbst einen neuen Tarif wählen:</p>
+
+<ul>
+  <li><strong>Prüfungs-Kohorte</strong> (${cohort} einmalig, 6 Monate, Pass-Until-You-Pass-Garantie): Einmalzahlung, kein Abo, Karten-Checkout über Whop, sofortiger Vollzugang.</li>
+  <li><strong>Einzelmonat</strong> (${singleMonth} pro Monat) und <strong>3-Monats-Tarif</strong> (${threeMonth} pro Quartal): das sind Abos, die bis zur Kündigung weiterlaufen. Kündigen kannst du jederzeit bei Whop: <a href="${WHOP_MANAGE_URL}">${WHOP_MANAGE_TEXT}</a> (Mitgliedschaft auswählen, dann „Cancel membership“).</li>
+</ul>
+
+<p><a href="https://medpruf.com/pricing" style="${btnStyle}">Tarife ansehen →</a></p>
+
+<p>Falls du nicht weitermachen willst, alles gut. Dein Konto bleibt bestehen, du kannst die kostenlose Version (150 Fragen pro Prüfung) jederzeit weiter nutzen, und wenn du in einem halben Jahr zurückkommst, ist alles noch da.</p>
+
+<p>Bei Fragen: einfach auf diese Mail antworten (${BILLING_SUPPORT_EMAIL}).</p>
+
+<p>Liebe Grüße, [name]<br>
+<small style="color:#4a5568;">MedPrüf · [name] · Österreich</small></p>
+</body></html>`;
+    return { subject, htmlBody };
+  }
+
+  const subject = `Your MedPrüf Pro access ends in ${daysLeft} ${daysLeft === 1 ? "day" : "days"}`;
+  const htmlBody = `<!DOCTYPE html>
+<html><body style="${wrapStyle}">
+<p>Hi${greetingName},</p>
+
+<p>quick heads-up: your <strong>MedPrüf Pro access</strong> ends on <strong>${expiresFmt}</strong>, about ${daysLeft} ${daysLeft === 1 ? "day" : "days"} from now. You paid once, so nothing is charged automatically. If you do nothing, access simply ends on that date and you will not be charged again.</p>
+
+${statsLine ? `<p><strong>What you've built so far:</strong> ${statsLine}.<br>All of it stays if you continue.</p>` : ""}
+
+<p>If you want to keep going, you can choose a new plan yourself:</p>
+
+<ul>
+  <li><strong>Exam Cohort</strong> (${cohort} once, 6 months, Pass-Until-You-Pass guarantee): one-time payment, no subscription, card checkout via Whop, instant full access.</li>
+  <li><strong>Single Month</strong> (${singleMonth} per month) and <strong>3-Month plan</strong> (${threeMonth} per quarter): these are subscriptions that keep running until you cancel. You can cancel any time at Whop: <a href="${WHOP_MANAGE_URL}">${WHOP_MANAGE_TEXT}</a> (select your membership, then "Cancel membership").</li>
+</ul>
+
+<p><a href="https://medpruf.com/pricing" style="${btnStyle}">See plans →</a></p>
+
+<p>If you want to stop, that's fine. Your account stays, you can keep using the free tier (150 questions per exam) anytime, and if you come back in six months everything is still there.</p>
+
+<p>Questions: just reply to this email (${BILLING_SUPPORT_EMAIL}).</p>
+
+<p>Best, [name]<br>
+<small style="color:#4a5568;">MedPrüf · [name] · Austria</small></p>
+</body></html>`;
+  return { subject, htmlBody };
 }
