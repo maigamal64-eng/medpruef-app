@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
+import { formatEuro, TIERS } from "@/lib/content-truth";
 import { createFakeSupabase, eqVal, type FakeCall } from "../helpers/fake-supabase";
 
 // W3-CRON (DB-TIMEOUTS item 4 + 7): the reminder text for one-time buyers
@@ -10,6 +11,9 @@ const h = vi.hoisted(() => ({
   planId: "plan_redacted8dbd8718" as string | null, // Exam Cohort (one-time)
   lang: "de",
   daysOut: 4,
+  firstName: "Mira" as string,
+  tierExpiresAt: null as string | null,
+  otherActive: [] as Array<{ id: string; expires_at: string; trial_reminder_sent_at: string | null }>,
 }));
 
 vi.mock("@sentry/nextjs", () => ({ captureMessage: vi.fn(), captureException: vi.fn() }));
@@ -30,12 +34,20 @@ vi.mock("@/lib/supabase", () => ({
         };
       }
       if (c.table === "subscriptions" && c.op === "select" && c.filters.some((f) => f.kind === "lt")) return { data: [] };
+      if (c.table === "subscriptions" && c.op === "select" && c.columns?.startsWith("id, expires_at")) {
+        return {
+          data: [
+            { id: "sub_due", expires_at: new Date(Date.now() + h.daysOut * 86400_000).toISOString(), trial_reminder_sent_at: null },
+            ...h.otherActive,
+          ],
+        };
+      }
       if (c.table === "subscriptions" && c.op === "select" && eqVal(c, "user_id") === "u2") {
         return { data: [{ tier: "first_3mo_27", payment_provider: "whop", provider_payment_id: "pay_due" }] };
       }
       if (c.table === "payment_events") return { data: h.planId ? [{ payment_id: "pay_due", plan_id: h.planId }] : [] };
       if (c.table === "users" && c.op === "select") {
-        return { data: { email: "u@example.com", first_name: "Mira", language_code: h.lang } };
+        return { data: { email: "u@example.com", first_name: h.firstName, language_code: h.lang, tier_expires_at: h.tierExpiresAt } };
       }
       if (c.table === "user_gamification") {
         return { data: { total_questions_answered: 120, total_correct: 90, current_streak: 3 } };
@@ -70,6 +82,9 @@ beforeEach(() => {
   h.planId = "plan_redacted8dbd8718";
   h.lang = "de";
   h.daysOut = 4;
+  h.firstName = "Mira";
+  h.tierExpiresAt = null;
+  h.otherActive = [];
 });
 
 describe("cron trial-reminder: one-time buyer wording", () => {
@@ -124,6 +139,46 @@ describe("cron trial-reminder: one-time buyer wording", () => {
     delete process.env.TRIAL_REMINDER_EMAILS_ENABLED;
     await run();
     expect(h.sent).toHaveLength(0);
+  });
+});
+
+const daysFromNow = (n: number) => new Date(Date.now() + n * 86400_000).toISOString();
+
+describe("cron trial-reminder: coverage and escaping (R4-01, R4-02, R4-03)", () => {
+  it("skips, without stamping, when another active row ends later", async () => {
+    h.otherActive = [{ id: "sub_other", expires_at: daysFromNow(40), trial_reminder_sent_at: null }];
+    const body = await (await run()).json();
+    expect(h.sent).toHaveLength(0);
+    expect(body.reminders_skipped_covered).toBe(1);
+    expect(body.reminders_marked).toBe(0);
+  });
+  it("skips when users.tier_expires_at is later than the row", async () => {
+    h.tierExpiresAt = daysFromNow(40);
+    const body = await (await run()).json();
+    expect(h.sent).toHaveLength(0);
+    expect(body.reminders_skipped_covered).toBe(1);
+  });
+  it("skips when another active row already carries a reminder stamp", async () => {
+    h.otherActive = [{ id: "sub_other", expires_at: daysFromNow(h.daysOut), trial_reminder_sent_at: new Date().toISOString() }];
+    await run();
+    expect(h.sent).toHaveLength(0);
+  });
+  it("sends when coverage ends on the same date as the row", async () => {
+    h.tierExpiresAt = daysFromNow(h.daysOut);
+    h.otherActive = [{ id: "sub_other", expires_at: daysFromNow(h.daysOut - 1), trial_reminder_sent_at: null }];
+    const body = await (await run()).json();
+    expect(h.sent).toHaveLength(1);
+    expect(body.reminders_skipped_covered).toBe(0);
+  });
+  it("escapes markup in first_name", async () => {
+    h.firstName = "<a href=x>Mira</a>";
+    await run();
+    expect(h.sent[0].htmlBody).toContain("&lt;a href=x&gt;Mira&lt;/a&gt;");
+    expect(h.sent[0].htmlBody).not.toContain("<a href=x>");
+  });
+  it("reads prices from content-truth", async () => {
+    await run();
+    expect(h.sent[0].htmlBody).toContain(formatEuro(TIERS.premium_pass_guaranteed.price_cents));
   });
 });
 

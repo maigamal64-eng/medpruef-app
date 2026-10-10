@@ -4,7 +4,7 @@ import { getServiceClient } from "@/lib/supabase";
 import { sendZohoEmail } from "@/lib/email/zoho";
 import { loadRenewalOfferSuppression } from "@/lib/billing-cadence";
 import { BILLING_SUPPORT_EMAIL, WHOP_MANAGE_URL, WHOP_MANAGE_TEXT } from "@/lib/billing-copy";
-import { formatEuro } from "@/lib/content-truth";
+import { formatEuro, TIERS, FREE_TIER } from "@/lib/content-truth";
 import { safeEqual } from "@/lib/security/timing-safe";
 
 export const dynamic = "force-dynamic";
@@ -91,6 +91,7 @@ export async function GET(req: NextRequest) {
   const errors: string[] = [];
   let remindersMarked = 0;
   let remindersSkippedRenewing = 0;
+  let remindersSkippedCovered = 0;
   let expiriesProcessed = 0;
 
   // ── 1b. Invocation heartbeat ──
@@ -159,7 +160,7 @@ export async function GET(req: NextRequest) {
         const [{ data: user, error: userErr }, { data: gam }] = await Promise.all([
           sb
             .from("users")
-            .select("email, first_name, language_code")
+            .select("email, first_name, language_code, tier_expires_at")
             .eq("id", userId)
             .maybeSingle(),
           sb
@@ -173,6 +174,41 @@ export async function GET(req: NextRequest) {
           errors.push(`user_lookup:${subId}: ${userErr.message}`);
           continue;
         }
+        // R4-01: the email states an end date, so it must be the END OF THE
+        // USER'S COVERAGE, not this row's date. If another active row or an
+        // extended users.tier_expires_at reaches past this row, skip WITHOUT
+        // stamping (the row may still become the last one later). Also skip
+        // when another active row already carries a reminder stamp, so a user
+        // with two rows in the window gets one email, not two.
+        {
+          const rowEndMs = new Date(trial.expires_at as string).getTime();
+          let coverageEndMs = rowEndMs;
+          let alreadyReminded = false;
+          const tierEnd = user?.tier_expires_at
+            ? new Date(user.tier_expires_at as string).getTime()
+            : NaN;
+          if (Number.isFinite(tierEnd)) coverageEndMs = Math.max(coverageEndMs, tierEnd);
+          const { data: activeRows, error: covErr } = await sb
+            .from("subscriptions")
+            .select("id, expires_at, trial_reminder_sent_at")
+            .eq("user_id", userId)
+            .eq("status", "active")
+            .gt("expires_at", nowIso);
+          if (covErr) {
+            errors.push(`coverage:${subId}: ${covErr.message}`);
+            continue;
+          }
+          for (const r of activeRows ?? []) {
+            const endMs = new Date(r.expires_at as string).getTime();
+            if (Number.isFinite(endMs)) coverageEndMs = Math.max(coverageEndMs, endMs);
+            if (r.id !== subId && r.trial_reminder_sent_at) alreadyReminded = true;
+          }
+          if (coverageEndMs > rowEndMs || alreadyReminded) {
+            remindersSkippedCovered += 1;
+            continue;
+          }
+        }
+
         if (!user?.email) {
           // No email on file — record the pending event but skip the
           // send. Still stamp so we don't retry forever.
@@ -381,6 +417,7 @@ export async function GET(req: NextRequest) {
     ok: true,
     reminders_marked: remindersMarked,
     reminders_skipped_renewing: remindersSkippedRenewing,
+    reminders_skipped_covered: remindersSkippedCovered,
     expiries_processed: expiriesProcessed,
     errors,
     ran_at: nowIso,
@@ -407,6 +444,15 @@ async function recordEvent(
   } catch (err) {
     console.error(`[cron/trial-reminder:${eventType}]`, err);
   }
+}
+
+function escapeHtml(v: string): string {
+  return v
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 interface OneTimeReminderArgs {
@@ -443,7 +489,7 @@ function renderOneTimeReminder(args: OneTimeReminderArgs): { subject: string; ht
     month: "long",
     year: "numeric",
   });
-  const greetingName = firstName ? `, ${firstName}` : "";
+  const greetingName = firstName ? `, ${escapeHtml(firstName)}` : "";
 
   const stats: string[] = [];
   if (qsAnswered > 0) stats.push(lang === "de" ? `${qsAnswered} Fragen beantwortet` : `${qsAnswered} questions answered`);
@@ -451,9 +497,9 @@ function renderOneTimeReminder(args: OneTimeReminderArgs): { subject: string; ht
   if (streakDays > 0) stats.push(lang === "de" ? `${streakDays}-Tage-Streak` : `${streakDays}-day streak`);
   const statsLine = stats.length > 0 ? stats.join(" · ") : null;
 
-  const cohort = formatEuro(12900);
-  const threeMonth = formatEuro(4900);
-  const singleMonth = formatEuro(1900);
+  const cohort = formatEuro(TIERS.premium_pass_guaranteed.price_cents);
+  const threeMonth = formatEuro(TIERS.first_3mo_27.price_cents);
+  const singleMonth = formatEuro(TIERS.first_month_19.price_cents);
   const wrapStyle =
     "font-family: -apple-system, system-ui, Segoe UI, Roboto, sans-serif; color:#1a2b3c; line-height:1.55; max-width:560px; margin:0 auto; padding:24px;";
   const btnStyle =
@@ -478,7 +524,7 @@ ${statsLine ? `<p><strong>Was du in dieser Zeit aufgebaut hast:</strong> ${stats
 
 <p><a href="https://medpruf.com/pricing" style="${btnStyle}">Tarife ansehen →</a></p>
 
-<p>Falls du nicht weitermachen willst, alles gut. Dein Konto bleibt bestehen, du kannst die kostenlose Version (150 Fragen pro Prüfung) jederzeit weiter nutzen, und wenn du in einem halben Jahr zurückkommst, ist alles noch da.</p>
+<p>Falls du nicht weitermachen willst, alles gut. Dein Konto bleibt bestehen, du kannst die kostenlose Version (${FREE_TIER.questions_per_exam_type} Fragen pro Prüfung) jederzeit weiter nutzen, und wenn du in einem halben Jahr zurückkommst, ist alles noch da.</p>
 
 <p>Bei Fragen: einfach auf diese Mail antworten (${BILLING_SUPPORT_EMAIL}).</p>
 
@@ -506,7 +552,7 @@ ${statsLine ? `<p><strong>What you've built so far:</strong> ${statsLine}.<br>Al
 
 <p><a href="https://medpruf.com/pricing" style="${btnStyle}">See plans →</a></p>
 
-<p>If you want to stop, that's fine. Your account stays, you can keep using the free tier (150 questions per exam) anytime, and if you come back in six months everything is still there.</p>
+<p>If you want to stop, that's fine. Your account stays, you can keep using the free tier (${FREE_TIER.questions_per_exam_type} questions per exam) anytime, and if you come back in six months everything is still there.</p>
 
 <p>Questions: just reply to this email (${BILLING_SUPPORT_EMAIL}).</p>
 
