@@ -204,7 +204,7 @@ export function daysLeftText(iso: string, lang: string, now: Date = new Date()):
   return n === 1 ? td("days_left_one", lang) : td("days_left_many", lang, { n });
 }
 
-/** "Anmeldung 4. Jänner bis 18. Jänner 2027" for a window that opens later. */
+/** "Anmeldung <opens> bis <closes>" for a window that opens later. */
 export function formatWindow(s: OfficialSitting, lang: string): string {
   if (!s.registration_closes || !s.registration_opens) return "";
   return td("window", lang, {
