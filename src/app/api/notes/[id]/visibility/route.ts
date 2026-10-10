@@ -83,7 +83,7 @@ export async function PATCH(
       }
 
       const text = buildSearchText(normalizeContent(note.content));
-      const scan = await scanNoteForPublic(text);
+      const scan = await scanNoteForPublic(text, { userId });
       if (!scan.qualityOk) {
         return NextResponse.json(
           {
