@@ -795,6 +795,34 @@ export function askedMonths(question: string): Array<{ month: string; year: stri
   return out;
 }
 
+const REFUSAL_VALUE_KINDS: ReadonlySet<ValueKind> = new Set(["eur", "percent", "date", "daymonth", "monthyear"]);
+
+/**
+ * A refusal is one short line and adds nothing else (prompt: "no related rule,
+ * number or date instead"). Sentences in a refusal that state an amount, a
+ * percentage or a date are deleted, even when a cited fact backs them (eval
+ * round 2: in-link-en refused the injected 5 euro offer and then listed the
+ * real plan prices). When nothing is left, the standard refusal line is used.
+ */
+function trimRefusalValues(v: ValidatedAnswer, lang: MentorLang): ValidatedAnswer {
+  const blocks: MentorAnswerBlock[] = [];
+  let changed = false;
+  for (const b of v.blocks) {
+    const drop = extractValues(normalizeDigits(b.text)).filter((x) => REFUSAL_VALUE_KINDS.has(x.kind));
+    if (drop.length === 0) {
+      blocks.push(b);
+      continue;
+    }
+    changed = true;
+    const text = removeSentences(b.text, drop);
+    if (text && /[\p{L}\p{N}]/u.test(text)) blocks.push({ text, fact_ids: b.fact_ids });
+  }
+  if (!changed) return v;
+  if (blocks.length === 0 && v.refused) blocks.push({ text: refusalLine(v.refused, lang), fact_ids: [] });
+  const stillCited = new Set(blocks.flatMap((b) => b.fact_ids));
+  return { ...v, blocks, citations: v.citations.filter((c) => stillCited.has(c.fact_id)) };
+}
+
 /** Sitting date (ISO) a fact or sitting id names: sitting.<exam>.<date>.* and <exam>.dates.<date>.* */
 function sittingDateOfId(id: string): string | null {
   return /^(?:sitting\.[a-z0-9]+|[a-z0-9]+\.dates)\.(\d{4}-\d{2}-\d{2})(?:\.|$)/.exec(id)?.[1] ?? null;
@@ -857,11 +885,13 @@ export interface TrimUnaskedInput {
  *    was retrieved. Dates that belong to the asked sitting's own facts stay.
  *
  * The fee and pass-mark rules run for de and en only (the word lists are
- * de/en; for other languages nothing is trimmed). Refusals are untouched, and
- * when trimming would leave nothing the answer is returned unchanged.
+ * de/en; for other languages nothing is trimmed). When trimming would leave
+ * nothing the answer is returned unchanged. A refusal goes through
+ * trimRefusalValues instead (no amount, percentage or date in a refusal).
  */
 export function trimUnaskedValues(v: ValidatedAnswer, t: TrimUnaskedInput): ValidatedAnswer {
-  if (v.refused || typeof t.question !== "string" || t.question.trim().length === 0) return v;
+  if (v.refused) return trimRefusalValues(v, t.lang);
+  if (typeof t.question !== "string" || t.question.trim().length === 0) return v;
   const q = t.question;
   const wordRules = t.lang === "de" || t.lang === "en";
   const askMoney = !wordRules || ASKS_MONEY_RE.test(q);
