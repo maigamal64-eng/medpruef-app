@@ -1,0 +1,30 @@
+{
+  "id": "msg_01SYNTHETICfixtureThinkingFirst",
+  "type": "message",
+  "role": "assistant",
+  "model": "claude-sonnet-5-5",
+  "content": [
+    {
+      "type": "thinking",
+      "thinking": "",
+      "signature": "EuYBCkQIBxgCIkBzeW50aGV0aWMtZml4dHVyZS1zaWduYXR1cmUtbm90LWEtcmVhbC1vbmU"
+    },
+    {
+      "type": "text",
+      "text": "**TL;DR:** Bei einer Spannungspneumothorax-Verdachtsdiagnose wird sofort entlastet."
+    }
+  ],
+  "stop_reason": "end_turn",
+  "stop_sequence": null,
+  "usage": {
+    "input_tokens": 1142,
+    "cache_creation_input_tokens": 0,
+    "cache_read_input_tokens": 1536,
+    "cache_creation": {
+      "ephemeral_5m_input_tokens": 0,
+      "ephemeral_1h_input_tokens": 0
+    },
+    "output_tokens": 558,
+    "service_tier": "standard"
+  }
+}
