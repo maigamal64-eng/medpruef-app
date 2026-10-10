@@ -5,6 +5,7 @@ import { computeCanBuy, computeUsageState, handleMentorUsage, nominalAdmitCeilin
 import { handleMentorSweep } from "@/app/api/cron/mentor-sweep/handler";
 import type { ConversationStore, AppendTurn } from "@/lib/mentor/conversation";
 import type { MentorSseEvent, MentorUsageResponse } from "@/lib/mentor/contract";
+import { createRestingCache } from "@/lib/mentor/guard";
 import { createRunMentorTurn } from "@/lib/mentor/turn";
 import { CONV, USER, config, makeDeps, usage, type Step } from "./helpers";
 
@@ -256,6 +257,45 @@ describe("GET /api/mentor/usage handler", () => {
     expect((await handleMentorUsage(get(), usageSetup(1, { authenticate: async () => ({ ok: false }) }))).status).toBe(401);
     expect((await handleMentorUsage(get(), usageSetup(1, { config: config({ enabled: false }) }))).status).toBe(403);
     expect((await handleMentorUsage(get(), usageSetup(1, { services: () => null }))).status).toBe(503);
+  });
+
+  it("M5: rate limited per user before any DB work (429 + retry-after, no grant, no spend scan)", async () => {
+    let touched = 0;
+    const setup = usageSetup(500_000, {
+      rateLimit: () => ({ allowed: false, retryAfterSec: 17 }),
+      services: () => {
+        touched++;
+        return null;
+      },
+    });
+    const res = await handleMentorUsage(get(), setup);
+    expect(res.status).toBe(429);
+    expect(res.headers.get("retry-after")).toBe("17");
+    expect(await res.json()).toMatchObject({ error: "rate_limited", retry_after_seconds: 17 });
+    expect(touched).toBe(0);
+    const ok = await handleMentorUsage(get(), usageSetup(500_000, { rateLimit: () => ({ allowed: true, retryAfterSec: 0 }) }));
+    expect(ok.status).toBe(200);
+  });
+
+  it("M5: the breaker read is cached for the TTL, only a known answer is cached", async () => {
+    let t = 0;
+    const r = rpc();
+    const cached = createRestingCache(60_000, () => t);
+    expect(await cached(r as never, config(), new Date())).toBe(false);
+    const firstRead = r.calls.length;
+    expect(firstRead).toBeGreaterThan(0);
+    for (let i = 0; i < 4; i++) await cached(r as never, config(), new Date());
+    expect(r.calls.length).toBe(firstRead); // four more polls, no DB
+    t = 61_000;
+    await cached(r as never, config(), new Date());
+    expect(r.calls.length).toBeGreaterThan(firstRead);
+
+    const bad = rpc({ ai_spend_month: new Error("boom") });
+    const c2 = createRestingCache(60_000, () => t);
+    expect(await c2(bad as never, config(), new Date())).toBeNull();
+    const n = bad.calls.length;
+    expect(await c2(bad as never, config(), new Date())).toBeNull();
+    expect(bad.calls.length).toBeGreaterThan(n); // unknown is never cached
   });
 
   it("can_buy needs the packages flag, a Whop plan env var and an active row", () => {

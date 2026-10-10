@@ -55,7 +55,7 @@ interface Reservation {
 
 export interface TestLedgerEntry {
   userId: string | null;
-  kind: "grant" | "reserve" | "settle_input" | "settle" | "release" | "house_cost" | "clawback" | "debt_paydown";
+  kind: "grant" | "reserve" | "settle_input" | "settle" | "release" | "house_cost" | "clawback" | "clawback_debt" | "debt_paydown";
   delta: number;
   hold: number;
   cost: number | null;
@@ -83,6 +83,8 @@ export class InMemoryLedger {
   private readonly reserved = new Map<string, number>();
   private readonly debt = new Map<string, number>();
   private readonly keys = new Set<string>();
+  /** Refunded/disputed Whop payment ids (mirror of ai_mentor_revoked_payment). */
+  private readonly revoked = new Set<string>();
   private seq = 0;
   /** Inject failures: when set, every method behaves like a DB error. */
   failNext: boolean = false;
@@ -154,6 +156,7 @@ export class InMemoryLedger {
       if (existing.userId !== g.userId) return { ok: false, duplicate: false, lotId: existing.id, reason: "source_conflict" };
       return { ok: true, duplicate: true, lotId: existing.id };
     }
+    if (g.source === "whop_payment" && this.revoked.has(g.sourceId)) return { ok: false, duplicate: false, lotId: null, reason: "revoked" };
     const lot: Lot = {
       id: `lot_${++this.seq}`,
       userId: g.userId,
@@ -181,15 +184,36 @@ export class InMemoryLedger {
     return { ok: true, duplicate: false, lotId: lot.id };
   }
 
-  clawback(source: CreditLotSource, sourceId: string): { ok: boolean; clawedMicro: number; duplicate: boolean } {
+  /** Tombstone a refunded/disputed payment (mentor_revoke_payment). Idempotent. */
+  revokePayment(paymentId: string): { ok: boolean; duplicate: boolean } {
+    if (this.takeFailure()) return { ok: false, duplicate: false };
+    const duplicate = this.revoked.has(paymentId);
+    this.revoked.add(paymentId);
+    return { ok: true, duplicate };
+  }
+
+  /**
+   * Mirror of mentor_clawback: the unspent part is removed; for a paid
+   * whop_payment lot the SPENT part becomes wallet debt (review H2).
+   */
+  clawback(
+    source: CreditLotSource,
+    sourceId: string,
+  ): { ok: boolean; clawedMicro: number; debtAddedMicro: number; duplicate: boolean } {
     const lot = this.lots.find((l) => l.source === source && l.sourceId === sourceId);
-    if (!lot) return { ok: false, clawedMicro: 0, duplicate: false };
-    if (lot.status === "clawed_back") return { ok: true, clawedMicro: lot.clawed, duplicate: true };
+    if (!lot) return { ok: false, clawedMicro: 0, debtAddedMicro: 0, duplicate: false };
+    if (lot.status === "clawed_back") return { ok: true, clawedMicro: lot.clawed, debtAddedMicro: 0, duplicate: true };
     const clawed = this.remaining(lot);
     lot.clawed += clawed;
     lot.status = "clawed_back";
     this.log({ userId: lot.userId, kind: "clawback", delta: -clawed, hold: 0, cost: null, key: `clawback:${source}:${sourceId}` });
-    return { ok: true, clawedMicro: clawed, duplicate: false };
+    let debtAdded = 0;
+    if (source === "whop_payment" && lot.spent > 0) {
+      debtAdded = lot.spent;
+      this.debt.set(lot.userId, (this.debt.get(lot.userId) ?? 0) + debtAdded);
+      this.log({ userId: lot.userId, kind: "clawback_debt", delta: -debtAdded, hold: 0, cost: null, key: `clawback_debt:${source}:${sourceId}` });
+    }
+    return { ok: true, clawedMicro: clawed, debtAddedMicro: debtAdded, duplicate: false };
   }
 
   private settleCore(rk: string, r: Reservation, actual: number, billUser: boolean, status: "settled" | "swept", usage?: MeterUsage): SettleResult {

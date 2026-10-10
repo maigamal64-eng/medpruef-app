@@ -26,10 +26,11 @@
 -- shared with [name], nothing else is touched):
 --   tables    ai_credit_package, ai_credit_wallet, ai_credit_lot,
 --             ai_mentor_reservation, ai_mentor_whop_membership, ai_mentor_rate,
---             ai_mentor_message (history), ai_usage_ledger (append-only)
+--             ai_mentor_message (history), ai_mentor_revoked_payment
+--             (tombstones), ai_usage_ledger (append-only)
 --   public    mentor_reserve, mentor_settle_input, mentor_settle, mentor_release,
 --   RPCs      mentor_sweep_stale, mentor_grant_credits, mentor_clawback,
---             mentor_membership_status, mentor_whop_lookup, mentor_balance,
+--             mentor_revoke_payment, mentor_membership_status, mentor_whop_lookup, mentor_balance,
 --             mentor_attempt_take, mentor_house_fail_take,
 --             ai_spend_month (replaced: legacy rows plus mentor ledger spend)
 --   helpers   _mentor_available, _mentor_consume, _mentor_settle_core,
@@ -175,6 +176,18 @@ CREATE TABLE IF NOT EXISTS public.ai_mentor_rate (
   updated_at    timestamptz NOT NULL DEFAULT now()
 );
 
+-- ─── Revoked payments (tombstones) ──────────────────────────────────────
+-- A refund or dispute that arrives BEFORE its grant (the payment.succeeded
+-- delivery failed and is being retried, or the buyer is polling verify) finds
+-- no lot to claw back. Without a tombstone the later grant would hand the full
+-- package to a refunded payment. mentor_revoke_payment writes the tombstone,
+-- mentor_grant_credits refuses a tombstoned whop_payment (review H1).
+CREATE TABLE IF NOT EXISTS public.ai_mentor_revoked_payment (
+  payment_id  text        PRIMARY KEY CHECK (length(payment_id) BETWEEN 1 AND 200),
+  event       text        CHECK (event IS NULL OR length(event) <= 200),
+  created_at  timestamptz NOT NULL DEFAULT now()
+);
+
 -- ─── Conversation history (the turn loop rebuilds the last turns from here) ─
 -- Stored text only (no thinking blocks, no tool payloads), so a history
 -- rebuild can never replay a thinking block. Deletable for erasure requests.
@@ -197,7 +210,8 @@ CREATE INDEX IF NOT EXISTS idx_ai_mentor_message_user ON public.ai_mentor_messag
 
 -- ─── Append-only ledger ─────────────────────────────────────────────────
 -- delta_micro_usd: signed change of the user's spendable credit
---   (grant +, settle -, clawback -, admin_adjust +/-; debt_paydown 0).
+--   (grant +, settle -, clawback -, clawback_debt -, admin_adjust +/-;
+--   debt_paydown 0).
 --   Invariant: SUM(delta) per user = live-lot remaining + expired-unspent
 --   - debt, i.e. the ledger reconciles to the lots to the micro-USD.
 -- hold_micro: signed change of the user's reserved hold
@@ -209,7 +223,7 @@ CREATE TABLE IF NOT EXISTS public.ai_usage_ledger (
   user_id             uuid,
   kind                text        NOT NULL CHECK (kind IN
                         ('grant', 'reserve', 'settle_input', 'settle', 'release', 'house_cost',
-                         'clawback', 'admin_adjust', 'debt_paydown')),
+                         'clawback', 'clawback_debt', 'admin_adjust', 'debt_paydown')),
   delta_micro_usd     bigint      NOT NULL DEFAULT 0,
   hold_micro          bigint      NOT NULL DEFAULT 0,
   cost_micro          bigint      CHECK (cost_micro IS NULL OR cost_micro >= 0),
@@ -238,7 +252,8 @@ DECLARE
   t text;
 BEGIN
   FOREACH t IN ARRAY ARRAY['ai_credit_package', 'ai_credit_wallet', 'ai_credit_lot', 'ai_mentor_reservation',
-                           'ai_mentor_whop_membership', 'ai_mentor_rate', 'ai_mentor_message', 'ai_usage_ledger'] LOOP
+                           'ai_mentor_whop_membership', 'ai_mentor_rate', 'ai_mentor_message', 'ai_usage_ledger',
+                           'ai_mentor_revoked_payment'] LOOP
     EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', t);
     IF NOT EXISTS (SELECT 1 FROM pg_policies
                    WHERE schemaname = 'public' AND tablename = t AND policyname = t || '_no_client') THEN
@@ -259,6 +274,7 @@ GRANT SELECT, INSERT, UPDATE ON public.ai_mentor_whop_membership  TO service_rol
 GRANT SELECT, INSERT, UPDATE ON public.ai_mentor_rate             TO service_role;
 GRANT SELECT, INSERT, DELETE ON public.ai_mentor_message          TO service_role;
 GRANT SELECT, INSERT         ON public.ai_usage_ledger            TO service_role;
+GRANT SELECT, INSERT         ON public.ai_mentor_revoked_payment  TO service_role;
 
 -- ─── Helpers ────────────────────────────────────────────────────────────
 
@@ -681,6 +697,19 @@ BEGIN
   END IF;
   v_expires := COALESCE(p_expires_at, v_start + make_interval(days => v_pkg.expiry_days));
 
+  -- Review H1: a refunded or disputed payment must never be granted, whatever
+  -- the order the events arrived in. The advisory lock (shared with
+  -- mentor_revoke_payment) serialises a grant against a concurrent revoke of
+  -- the same payment; it is taken before the wallet row (lock order: payment
+  -- key, wallet, lots, reservations).
+  IF p_source = 'whop_payment' THEN
+    PERFORM pg_advisory_xact_lock(hashtextextended('mentor_pay:' || p_source_id, 0));
+    IF NOT EXISTS (SELECT 1 FROM public.ai_credit_lot WHERE source = p_source AND source_id = p_source_id)
+       AND EXISTS (SELECT 1 FROM public.ai_mentor_revoked_payment WHERE payment_id = p_source_id) THEN
+      RETURN jsonb_build_object('ok', false, 'reason', 'revoked');
+    END IF;
+  END IF;
+
   INSERT INTO public.ai_credit_wallet (user_id) VALUES (p_user) ON CONFLICT (user_id) DO NOTHING;
   SELECT * INTO v_wallet FROM public.ai_credit_wallet WHERE user_id = p_user FOR UPDATE;
 
@@ -732,7 +761,14 @@ $$;
 
 -- ─── mentor_clawback ────────────────────────────────────────────────────
 -- Refund or dispute of a lot's source (e.g. 'whop_payment', '<pay_id>'):
--- removes the UNSPENT part only. Spent credit is not reversed. Idempotent.
+-- removes the UNSPENT part. For a PAID lot (source 'whop_payment') the SPENT
+-- part is turned into wallet debt (review H2): the API cost of credit that was
+-- already used is not recoverable from Whop, so the user stays blocked until a
+-- new paid lot covers it. That includes the part of the lot that paid down
+-- earlier debt, so buying and refunding can never launder debt. Free included
+-- lots (pro_included, ...) claw back the unspent part only. Idempotent: a
+-- second call changes nothing. Ledger: -unspent as 'clawback', -spent as
+-- 'clawback_debt', so SUM(delta) = live lots + expired unspent - debt holds.
 CREATE OR REPLACE FUNCTION public.mentor_clawback(p_source text, p_source_id text, p_reason text)
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -744,6 +780,7 @@ DECLARE
   v_user   uuid;
   v_lot    public.ai_credit_lot%ROWTYPE;
   v_clawed bigint;
+  v_debt   bigint := 0;
 BEGIN
   IF p_source IS NULL OR p_source_id IS NULL THEN
     RETURN jsonb_build_object('ok', false, 'reason', 'invalid_args');
@@ -765,8 +802,45 @@ BEGIN
   INSERT INTO public.ai_usage_ledger (user_id, kind, delta_micro_usd, source, source_id, lot_id, package_id, note)
   VALUES (v_user, 'clawback', -v_clawed, 'clawback', p_source || ':' || p_source_id, v_lot.id, v_lot.package_id,
           left(COALESCE(p_reason, ''), 200));
+  IF p_source = 'whop_payment' AND v_lot.spent_micro > 0 THEN
+    v_debt := v_lot.spent_micro;
+    UPDATE public.ai_credit_wallet SET debt_micro = debt_micro + v_debt, updated_at = now() WHERE user_id = v_user;
+    INSERT INTO public.ai_usage_ledger (user_id, kind, delta_micro_usd, source, source_id, lot_id, package_id, note)
+    VALUES (v_user, 'clawback_debt', -v_debt, 'clawback_debt', p_source || ':' || p_source_id, v_lot.id, v_lot.package_id,
+            'spent on refunded lot');
+  END IF;
   RETURN jsonb_build_object('ok', true, 'duplicate', false, 'lot_id', v_lot.id, 'user_id', v_user,
-                            'clawed_micro', v_clawed);
+                            'clawed_micro', v_clawed, 'debt_added_micro', v_debt);
+EXCEPTION WHEN OTHERS THEN
+  RETURN jsonb_build_object('ok', false, 'reason', 'db_error', 'sqlstate', SQLSTATE);
+END;
+$$;
+
+-- ─── mentor_revoke_payment ──────────────────────────────────────────────
+-- Tombstone for a refunded or disputed Whop payment (review H1). Called by the
+-- webhook for every payment id of a recognised mentor refund/dispute, BEFORE
+-- mentor_clawback, whether or not a lot exists yet. Idempotent. It takes the
+-- same advisory lock as mentor_grant_credits, so a grant that is mid-flight
+-- commits first and the clawback that follows then finds its lot.
+CREATE OR REPLACE FUNCTION public.mentor_revoke_payment(p_payment_id text, p_event text)
+RETURNS jsonb
+LANGUAGE plpgsql
+VOLATILE
+SECURITY INVOKER
+SET search_path = public, pg_temp
+AS $$
+DECLARE
+  v_rows integer;
+BEGIN
+  IF p_payment_id IS NULL OR length(p_payment_id) NOT BETWEEN 1 AND 200 THEN
+    RETURN jsonb_build_object('ok', false, 'reason', 'invalid_args');
+  END IF;
+  PERFORM pg_advisory_xact_lock(hashtextextended('mentor_pay:' || p_payment_id, 0));
+  INSERT INTO public.ai_mentor_revoked_payment (payment_id, event)
+  VALUES (p_payment_id, left(COALESCE(p_event, ''), 200))
+  ON CONFLICT (payment_id) DO NOTHING;
+  GET DIAGNOSTICS v_rows = ROW_COUNT;
+  RETURN jsonb_build_object('ok', true, 'duplicate', v_rows = 0);
 EXCEPTION WHEN OTHERS THEN
   RETURN jsonb_build_object('ok', false, 'reason', 'db_error', 'sqlstate', SQLSTATE);
 END;
@@ -1012,6 +1086,7 @@ BEGIN
     'public.mentor_sweep_stale(interval)',
     'public.mentor_grant_credits(uuid, text, text, text, bigint, timestamptz, timestamptz, text, text)',
     'public.mentor_clawback(text, text, text)',
+    'public.mentor_revoke_payment(text, text)',
     'public.mentor_membership_status(text, text)',
     'public.mentor_whop_lookup(text, text)',
     'public.mentor_balance(uuid)',
@@ -1035,6 +1110,10 @@ COMMENT ON FUNCTION public.mentor_reserve(uuid, uuid, smallint, bigint) IS
   'C3: book the maximum cost of one API call. {ok, remaining_micro[, reason, duplicate]}. Fails closed. service_role only.';
 COMMENT ON FUNCTION public.mentor_grant_credits(uuid, text, text, text, bigint, timestamptz, timestamptz, text, text) IS
   'Credits: create one lot, idempotent on (source, source_id); pays down debt; pins the Whop membership. service_role only.';
+COMMENT ON FUNCTION public.mentor_clawback(text, text, text) IS
+  'Refund/dispute: claws back the unspent part; for a paid whop_payment lot the spent part becomes wallet debt. Idempotent. service_role only.';
+COMMENT ON FUNCTION public.mentor_revoke_payment(text, text) IS
+  'Tombstones a refunded/disputed Whop payment so a later grant is refused (reason revoked). Idempotent. service_role only.';
 COMMENT ON FUNCTION public.ai_spend_month(text) IS
   'Anthropic spend for a UTC month YYYY-MM, micro-USD: legacy ai_call_log rows plus mentor ledger consumption. service_role only.';
 

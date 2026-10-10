@@ -147,6 +147,27 @@ export async function mentorResting(client: RpcClient, config: MentorConfig, now
   return r.reason === "global_cap" ? true : null;
 }
 
+/** Breaker state for the usage view, cached per instance (review M5). */
+export type RestingFn = (client: RpcClient, config: MentorConfig, now: Date) => Promise<boolean | null>;
+
+/**
+ * mentorResting with a TTL cache: the usage view is polled on every page, and
+ * each uncached call runs the month spend scans. Only a known answer (true or
+ * false) is cached; an unknown (null, DB error) is retried on the next call.
+ * The chat route never uses this: it checks the live breaker on every message.
+ */
+export function createRestingCache(ttlMs = 60_000, nowMs: () => number = () => Date.now()): RestingFn {
+  let hit: { at: number; key: string; value: boolean } | null = null;
+  return async (client, config, now) => {
+    const key = `${config.globalMonthlyCapFloorMicro}:${config.globalCapNetPct}`;
+    const t = nowMs();
+    if (hit && hit.key === key && t - hit.at < ttlMs) return hit.value;
+    const value = await mentorResting(client, config, now);
+    if (value !== null) hit = { at: t, key, value };
+    return value;
+  };
+}
+
 // ─── Services from the other mentor lanes (R3 wiring point) ─────────────
 
 export interface MentorServices {

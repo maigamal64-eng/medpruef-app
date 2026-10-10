@@ -102,16 +102,54 @@ describe("C16 in-memory ledger mirrors the SQL semantics", () => {
     expect(l.settle("r1", 0, 10, { input_tokens: 1, output_tokens: 1 }, true)).toMatchObject({ duplicate: true, chargedMicro: 50_000 });
   });
 
-  it("clawback removes only the unspent part and is idempotent", () => {
+  it("clawback removes the unspent part, turns the spent part of a paid lot into debt, and is idempotent (H2)", () => {
     const c = clock();
     const l = new InMemoryLedger(c.now);
     grant(l, c);
     l.reserve(U, "r1", 0, 300_000);
     l.settle("r1", 0, 250_000, { input_tokens: 1, output_tokens: 1 }, true);
-    expect(l.clawback("whop_payment", "pay_1")).toMatchObject({ ok: true, clawedMicro: 500_000 });
-    expect(l.clawback("whop_payment", "pay_1")).toMatchObject({ duplicate: true });
-    expect(l.available(U)).toBe(0);
+    expect(l.clawback("whop_payment", "pay_1")).toMatchObject({ ok: true, clawedMicro: 500_000, debtAddedMicro: 250_000 });
+    expect(l.clawback("whop_payment", "pay_1")).toMatchObject({ duplicate: true, debtAddedMicro: 0 });
+    expect(l.debtOf(U)).toBe(250_000);
+    expect(l.available(U)).toBe(-250_000);
+    expect(l.reserve(U, "r2", 0, 1)).toMatchObject({ ok: false, reason: "insufficient" });
     expect(l.reconciles(U)).toBe(true);
+  });
+
+  it("a free included lot claws back the unspent part only (no debt)", () => {
+    const c = clock();
+    const l = new InMemoryLedger(c.now);
+    grant(l, c, { source: "pro_included", sourceId: "sub1:0", packageId: "included_pro_monthly", kind: "included", micro: 1_000_000 });
+    l.reserve(U, "r1", 0, 300_000);
+    l.settle("r1", 0, 300_000, { input_tokens: 1, output_tokens: 1 }, true);
+    expect(l.clawback("pro_included", "sub1:0")).toMatchObject({ ok: true, clawedMicro: 700_000, debtAddedMicro: 0 });
+    expect(l.debtOf(U)).toBe(0);
+    expect(l.reconciles(U)).toBe(true);
+  });
+
+  it("buying then refunding cannot launder overrun debt (H2, scenario C)", () => {
+    const c = clock();
+    const l = new InMemoryLedger(c.now);
+    grant(l, c, { sourceId: "pay_0" });
+    l.reserve(U, "r1", 0, 750_000);
+    l.settle("r1", 0, 1_050_000, { input_tokens: 1, output_tokens: 1 }, true);
+    expect(l.debtOf(U)).toBe(300_000);
+    grant(l, c, { sourceId: "pay_1" });
+    expect(l.debtOf(U)).toBe(0);
+    l.clawback("whop_payment", "pay_1");
+    expect(l.debtOf(U)).toBe(300_000);
+    expect(l.reconciles(U)).toBe(true);
+  });
+
+  it("a refund that arrives before the grant tombstones the payment (H1)", () => {
+    const c = clock();
+    const l = new InMemoryLedger(c.now);
+    expect(l.clawback("whop_payment", "pay_1")).toMatchObject({ ok: false });
+    expect(l.revokePayment("pay_1")).toMatchObject({ ok: true, duplicate: false });
+    expect(l.revokePayment("pay_1")).toMatchObject({ ok: true, duplicate: true });
+    expect(grant(l, c)).toMatchObject({ ok: false, reason: "revoked" });
+    expect(l.available(U)).toBe(0);
+    expect(l.lots).toHaveLength(0);
   });
 
   it("a duplicate Whop payment grants once; the same payment id for another user is refused", () => {

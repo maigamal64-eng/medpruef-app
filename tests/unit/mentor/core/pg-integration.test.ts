@@ -192,3 +192,98 @@ describe.skipIf(!PORT)("W2-CORE on the real ledger SQL (local Postgres)", () => 
     expect(await checkMentorBreaker(pg, config({ globalMonthlyCapFloorMicro: 1 }), now)).toMatchObject({ status: 503, body: { error: "global_cap" } });
   }, 30_000);
 });
+
+/** Review H1/H2 against the real ledger SQL: refund ordering and refund-after-spend. */
+const grantPay = (user: string, pkg: string, payId: string) =>
+  sql(`SELECT mentor_grant_credits('${user}','${pkg}','whop_payment','${payId}',NULL,NULL,NULL,'${payId}',NULL)::text;`).then((t) => JSON.parse(t) as { ok: boolean; reason?: string; duplicate?: boolean });
+const spend = async (user: string, micro: number) => {
+  const id = crypto.randomUUID();
+  expect(JSON.parse(await sql(`SELECT mentor_reserve('${user}','${id}',0::smallint,${micro})::text;`)).ok).toBe(true);
+  await sql(`SELECT mentor_settle('${id}',0::smallint,${micro},'{}'::jsonb,true)::text;`);
+};
+const debtOf = async (user: string) => Number(await sql(`SELECT COALESCE((SELECT debt_micro FROM ai_credit_wallet WHERE user_id='${user}'),0);`));
+
+describe.skipIf(!PORT)("refunds against the real ledger SQL (review H1, H2)", () => {
+  it("H1: a refund that arrives before the grant tombstones the payment; the later grant is refused and no lot exists", async () => {
+    const user = crypto.randomUUID();
+    const pay = `pay_A_${user}`;
+    expect(JSON.parse(await sql(`SELECT mentor_revoke_payment('${pay}','refund.created')::text;`))).toEqual({ ok: true, duplicate: false });
+    expect(JSON.parse(await sql(`SELECT mentor_revoke_payment('${pay}','refund.created')::text;`))).toEqual({ ok: true, duplicate: true });
+    expect(JSON.parse(await sql(`SELECT mentor_clawback('whop_payment','${pay}','refund.created')::text;`))).toMatchObject({ ok: false, reason: "not_found" });
+    expect(await grantPay(user, "mentor_basis", pay)).toMatchObject({ ok: false, reason: "revoked" });
+    expect(Number(await sql(`SELECT count(*) FROM ai_credit_lot WHERE user_id='${user}';`))).toBe(0);
+    expect(JSON.parse(await sql(`SELECT mentor_balance('${user}')::text;`)).available_micro).toBe(0);
+  });
+
+  it("H1: a replayed grant of an already granted and later clawed back payment stays a duplicate, not a new lot", async () => {
+    const user = crypto.randomUUID();
+    const pay = `pay_A2_${user}`;
+    expect(await grantPay(user, "mentor_basis", pay)).toMatchObject({ ok: true, duplicate: false });
+    await sql(`SELECT mentor_revoke_payment('${pay}','refund.created')::text;`);
+    await sql(`SELECT mentor_clawback('whop_payment','${pay}','refund.created')::text;`);
+    expect(await grantPay(user, "mentor_basis", pay)).toMatchObject({ ok: true, duplicate: true });
+    expect(Number(await sql(`SELECT count(*) FROM ai_credit_lot WHERE user_id='${user}';`))).toBe(1);
+    expect(JSON.parse(await sql(`SELECT mentor_balance('${user}')::text;`)).available_micro).toBe(0);
+  });
+
+  it("H1: a grant racing a refund of the same payment never leaves credit behind (12 rounds)", async () => {
+    for (let i = 0; i < 12; i++) {
+      const user = crypto.randomUUID();
+      const pay = `pay_RACE_${i}_${user}`;
+      await Promise.all([
+        grantPay(user, "mentor_basis", pay),
+        // the webhook order: tombstone first, then claw back whatever the grant left
+        sql(`SELECT mentor_revoke_payment('${pay}','refund.created')::text;`).then(() => sql(`SELECT mentor_clawback('whop_payment','${pay}','refund.created')::text;`)),
+      ]);
+      const bal = JSON.parse(await sql(`SELECT mentor_balance('${user}')::text;`));
+      expect(bal.available_micro, `round ${i}`).toBe(0);
+    }
+  }, 60_000);
+
+  it("H2 scenario B: refund after spending leaves the spent part as debt and the ledger reconciles", async () => {
+    const user = crypto.randomUUID();
+    const pay = `pay_B_${user}`;
+    expect(await grantPay(user, "mentor_basis", pay)).toMatchObject({ ok: true });
+    await spend(user, 700_000);
+    const c = JSON.parse(await sql(`SELECT mentor_clawback('whop_payment','${pay}','refund.created')::text;`));
+    expect(c).toMatchObject({ ok: true, clawed_micro: 50_000, debt_added_micro: 700_000 });
+    expect(await debtOf(user)).toBe(700_000);
+    const again = JSON.parse(await sql(`SELECT mentor_clawback('whop_payment','${pay}','refund.created')::text;`));
+    expect(again).toMatchObject({ ok: true, duplicate: true });
+    expect(await debtOf(user)).toBe(700_000);
+    const r = await reconcile(user);
+    expect(r.ledger).toBe(r.lots - r.debt);
+    // debt blocks the next reserve until a new paid lot covers it
+    const id = crypto.randomUUID();
+    expect(JSON.parse(await sql(`SELECT mentor_reserve('${user}','${id}',0::smallint,1000)::text;`))).toMatchObject({ ok: false, reason: "insufficient" });
+    expect(await grantPay(user, "mentor_basis", `pay_B2_${user}`)).toMatchObject({ ok: true });
+    expect(await debtOf(user)).toBe(0);
+    expect(JSON.parse(await sql(`SELECT mentor_balance('${user}')::text;`)).available_micro).toBe(50_000);
+  });
+
+  it("H2 scenario C: buying and refunding cannot launder overrun debt", async () => {
+    const user = crypto.randomUUID();
+    expect(await grantPay(user, "mentor_basis", `pay_C0_${user}`)).toMatchObject({ ok: true });
+    const id = crypto.randomUUID();
+    await sql(`SELECT mentor_reserve('${user}','${id}',0::smallint,750000)::text;`);
+    await sql(`SELECT mentor_settle('${id}',0::smallint,1050000,'{}'::jsonb,true)::text;`);
+    expect(await debtOf(user)).toBe(300_000);
+    const pay = `pay_C1_${user}`;
+    expect(await grantPay(user, "mentor_basis", pay)).toMatchObject({ ok: true });
+    expect(await debtOf(user)).toBe(0);
+    await sql(`SELECT mentor_clawback('whop_payment','${pay}','refund.created')::text;`);
+    expect(await debtOf(user)).toBe(300_000);
+    const r = await reconcile(user);
+    expect(r.ledger).toBe(r.lots - r.debt);
+  });
+
+  it("H2: a free included lot claws back the unspent part only, no debt", async () => {
+    const user = crypto.randomUUID();
+    await sql(`SELECT mentor_grant_credits('${user}','included_pro_monthly','pro_included','sub_${user}:0')::text;`);
+    await spend(user, 300_000);
+    await sql(`SELECT mentor_clawback('pro_included','sub_${user}:0','pro refund')::text;`);
+    expect(await debtOf(user)).toBe(0);
+    const r = await reconcile(user);
+    expect(r.ledger).toBe(r.lots - r.debt);
+  });
+});

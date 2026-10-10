@@ -342,7 +342,12 @@ export type MentorWhopDecision =
  *    fallback. A membership.deactivated on a mentor membership never cancels Pro.
  *  - Grant = mentor_grant_credits(user, package, 'whop_payment', payment_id, ...)
  *    with p_whop_membership_id so renewals are pinned. Idempotent on payment id.
- *  - Refund/dispute = mentor_clawback('whop_payment', payment_id): unspent only.
+ *  - Refund/dispute = mentor_revoke_payment(payment_id) for every payment id
+ *    FIRST (tombstone: a grant that arrives later is refused, review H1), then
+ *    mentor_clawback('whop_payment', payment_id): the unspent part is removed
+ *    and the SPENT part becomes wallet debt (review H2).
+ *  - A grant needs a real payment: amount > 0 and at least the package price
+ *    less a VAT/fee tolerance (review H3).
  *  - An unmapped mentor payment (no user) is recorded for a manual grant and
  *    Sentry-flagged; it returns 200 so Whop stops retrying.
  *  - Inserted into src/app/api/webhooks/whop/route.ts as ONE call:
@@ -381,6 +386,8 @@ export const MENTOR_RPCS = Object.freeze({
     ],
   },
   clawback: { fn: "mentor_clawback", args: ["p_source", "p_source_id", "p_reason"] },
+  /** Tombstone for a refunded/disputed payment; a later grant of it is refused (reason "revoked"). */
+  revokePayment: { fn: "mentor_revoke_payment", args: ["p_payment_id", "p_event"] },
   membershipStatus: { fn: "mentor_membership_status", args: ["p_membership_id", "p_status"] },
   whopLookup: { fn: "mentor_whop_lookup", args: ["p_payment_id", "p_membership_id"] },
   balance: { fn: "mentor_balance", args: ["p_user"] },

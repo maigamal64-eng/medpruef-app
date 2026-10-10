@@ -1,7 +1,9 @@
 /**
  * GET /api/mentor/usage handler (W2-CORE): credits and state for the UI.
  * Learners never see dollars: whole credits and an "about N messages" estimate.
- * Not rate limited (no model call); every DB gate still fails closed.
+ * No model call, but it does DB writes (included grants) and spend scans, so
+ * it is rate limited per user and the breaker read is cached (review M5).
+ * Every DB gate still fails closed.
  */
 
 import type { RpcClient } from "@/lib/ai/limits";
@@ -16,7 +18,7 @@ import {
   type MentorSoldPackageId,
 } from "@/lib/mentor/config";
 import type { MentorAccessSource, MentorPackageId, MentorUsageResponse, MentorUsageState } from "@/lib/mentor/contract";
-import { checkMentorAccess, mentorError, mentorResting, type FlagFn, type MentorServices } from "@/lib/mentor/guard";
+import { checkMentorAccess, mentorError, mentorResting, type FlagFn, type MentorServices, type RestingFn } from "@/lib/mentor/guard";
 import type { Clock } from "@/lib/mentor/seam";
 import { errorResponse, type MentorAuth } from "../chat/handler";
 
@@ -40,6 +42,10 @@ export interface UsageHandlerDeps {
   /** Package ids with an active catalogue row. Throws on DB error. */
   activePackageIds(): Promise<Set<string>>;
   alert(message: string, ctx: Record<string, string | number | boolean | null | undefined>): void;
+  /** Per-user limiter (review M5). Omitted in unit tests; the route always passes it. */
+  rateLimit?(userId: string): { allowed: boolean; retryAfterSec: number };
+  /** Cached breaker read. Defaults to the uncached mentorResting. */
+  resting?: RestingFn;
 }
 
 export function nominalAdmitCeiling(config: MentorConfig): number | null {
@@ -82,6 +88,9 @@ export async function handleMentorUsage(req: Request, d: UsageHandlerDeps): Prom
   const auth = await d.authenticate(req);
   if (!auth.ok) return errorResponse(mentorError("unauthenticated"));
   const { userId } = auth;
+
+  const gate = d.rateLimit?.(userId);
+  if (gate && !gate.allowed) return errorResponse(mentorError("rate_limited", { retry_after_seconds: Math.max(1, gate.retryAfterSec) }));
 
   const denied = await checkMentorAccess(d.config, userId, d.flag);
   if (denied) return errorResponse(denied);
@@ -129,7 +138,7 @@ export async function handleMentorUsage(req: Request, d: UsageHandlerDeps): Prom
   } catch {
     canBuy = false;
   }
-  const resting = await mentorResting(d.rpc, d.config, now);
+  const resting = await (d.resting ?? mentorResting)(d.rpc, d.config, now);
 
   const response: MentorUsageResponse = {
     state: computeUsageState({
