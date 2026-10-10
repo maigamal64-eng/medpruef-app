@@ -110,7 +110,8 @@ describe("MentorFactsLoader", () => {
   it("sheetFacts excludes dates, deadlines and non-assertable facts, deterministic order", () => {
     const l = makeLoader();
     const a = l.sheetFacts(NOW).map((f) => f.id);
-    expect(a).toEqual(["fixture.format.sip5a", "fixture.pass.sip5a", "fixture.general.glossary", "fixture.fee.sip5a"]);
+    // Short, often-asked rules first (fee, pass rule), then format, then glossary (eval W3).
+    expect(a).toEqual(["fixture.fee.sip5a", "fixture.pass.sip5a", "fixture.format.sip5a", "fixture.general.glossary"]);
     expect(makeLoader().sheetFacts(NOW).map((f) => f.id)).toEqual(a);
   });
 

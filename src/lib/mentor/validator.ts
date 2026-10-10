@@ -303,6 +303,10 @@ export function extractValues(text: string): ExtractedValue[] {
   scan(/(?<![\d.,])([01]?\d|2[0-3])\.([0-5]\d)\s*Uhr(?![\p{L}])/gu, (m) => {
     take("time", m.index, m.index + m[0].length, [`t:${pad(Number(m[1]))}:${m[2]}`]);
   });
+  // "12 Uhr" is the same time as "12:00" (and still the number 12 of the fact text).
+  scan(/(?<![\d.,:])([01]?\d|2[0-3])\s*Uhr(?![\p{L}])/gu, (m) => {
+    take("time", m.index, m.index + m[0].length, [`t:${pad(Number(m[1]))}:00`, `n:${Number(m[1])}`]);
+  });
   // 10. percentages
   scan(
     new RegExp(`(?<![${L}\\d.,])(${NUM})\\s*(?:%|prozent(?![${L}])|percent(?![${L}])|per\\s+cent(?![${L}])|pour\\s?cent(?![${L}])|процент[${L}]*|відсот[${L}]*|في\\s*المائة|بالمئة)`, "giu"),
@@ -374,7 +378,41 @@ export function allowedKeysFromText(text: string, into: Set<string> = new Set())
 function factAllowedKeys(f: MentorFact): Set<string> {
   const keys = allowedKeysFromText(`${f.text_de}\n${f.text_en}`);
   keys.add(`u:${f.source_url.replace(/\/+$/, "").toLowerCase()}`);
+  // The read-on date of a cited fact ("Stand 2026-10-10", which the prompt asks
+  // for) is a value OF that fact. Only the full date: its month or year alone
+  // stays unsupported, so a read-on date cannot carry an invented "October" claim.
+  if (/^\d{4}-\d{2}-\d{2}$/.test(f.read_on)) keys.add(`d:${f.read_on}`);
   return keys;
+}
+
+// ─── Fact ids written into prose ────────────────────────────────────────
+
+const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
+const UUID_ONE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+/** Dotted id-shaped tokens (sip4a.dates.2026-11, status.<uuid>.sip4a.all). */
+const ID_TOKEN_RE = /(?<![\p{L}\p{N}_.-])[a-z][a-z0-9_]*(?:\.[A-Za-z0-9_-]+)+(?![\p{L}\p{N}_-])/gu;
+
+/**
+ * Removes fact ids and UUIDs the model wrote into the text ("(status.0000...)").
+ * They are protocol data, not claims: their digits must not be read as values,
+ * and the learner should not see them. Only tokens that are an id the answer
+ * cites, an id the brain can resolve, an internal id, or contain a UUID go.
+ */
+export function stripFactIds(text: string, isKnownId: (id: string) => boolean): string {
+  const out = text
+    .replace(ID_TOKEN_RE, (tok) => {
+      const t = tok.replace(/[.]+$/, "");
+      const internal = isInternalFactId(t) && /^[a-z]+\.[a-z0-9]/.test(t);
+      return internal || UUID_ONE.test(t) || isKnownId(t) ? tok.slice(t.length) : tok;
+    })
+    .replace(UUID_RE, "");
+  if (out === text) return text;
+  return out
+    .replace(/\(\s*[,;]?\s*\)/g, "")
+    .replace(/\[\s*\]/g, "")
+    .replace(/[ \t]+([.,;:!?])/g, "$1")
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/[ \t]+\n/g, "\n");
 }
 
 // ─── Sentences ──────────────────────────────────────────────────────────
@@ -456,13 +494,39 @@ export interface ValidateOptions {
   defaultLang?: MentorLang;
 }
 
+/**
+ * Language of an answer that omitted @@LANG (eval W3: Haiku sometimes starts
+ * with @@BLOCK). Only used to pick the language of the fallback line. Script
+ * first (ar, ru/uk), then common function words; null when unsure.
+ */
+export function guessLang(text: string): MentorLang | null {
+  if (/[\u0600-\u06ff]/.test(text)) return "ar";
+  if (/[іїєґ]/i.test(text)) return "uk";
+  if (/[\u0400-\u04ff]/.test(text)) return "ru";
+  const words = text.toLowerCase().match(/\p{L}+/gu) ?? [];
+  const count = (set: ReadonlySet<string>) => words.filter((w) => set.has(w)).length;
+  const scores: Array<[MentorLang, number]> = [
+    ["de", count(DE_WORDS) + (/[äöüß]/i.test(text) ? 2 : 0)],
+    ["en", count(EN_WORDS)],
+    ["fr", count(FR_WORDS)],
+    ["tr", count(TR_WORDS) + (/[ğışç]/i.test(text) ? 2 : 0)],
+  ];
+  scores.sort((a, b) => b[1] - a[1]);
+  return scores[0][1] >= 2 && scores[0][1] > scores[1][1] ? scores[0][0] : null;
+}
+const DE_WORDS = new Set(["der", "die", "das", "und", "ist", "nicht", "ein", "eine", "für", "mit", "den", "dem", "sie", "du", "bitte", "wird", "auf", "bis", "zur", "zum"]);
+const EN_WORDS = new Set(["the", "and", "is", "not", "a", "for", "with", "you", "your", "please", "will", "on", "until", "to", "of", "are"]);
+const FR_WORDS = new Set(["le", "la", "les", "et", "est", "pas", "pour", "avec", "vous", "votre", "des", "une"]);
+const TR_WORDS = new Set(["ve", "bir", "bu", "için", "ile", "değil", "lütfen", "sınav"]);
+
 function cleanDashes(s: string): string {
   return s.replace(/\s*—\s*/g, ", ");
 }
 
 export function validateAnswer(answer: string, facts: MentorFact[], opts: ValidateOptions = {}): ValidatedAnswer {
   const parsed = parseAnswer(normalizeDigits(typeof answer === "string" ? answer : ""));
-  const lang: MentorLang = parsed.lang ?? opts.defaultLang ?? "en";
+  const lang: MentorLang =
+    parsed.lang ?? opts.defaultLang ?? guessLang(parsed.blocks.map((b) => b.text).join("\n")) ?? "en";
   const byId = new Map<string, MentorFact>();
   for (const f of facts ?? []) {
     if (f && typeof f.id === "string" && f.verdict === "confirmed" && f.status === "live") byId.set(f.id, f);
@@ -490,7 +554,8 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
     const allowed = new Set<string>(globalUrls);
     for (const f of used) for (const k of factAllowedKeys(f)) allowed.add(k);
 
-    const text = cleanDashes(b.text);
+    const answerIds = new Set(parsed.blocks.flatMap((x) => x.factIds));
+    const text = stripFactIds(cleanDashes(b.text), (id) => answerIds.has(id) || lookup(id) !== null);
     const values = extractValues(text);
     const bad = values.filter((v) => !v.keys.some((k) => allowed.has(k)));
     let outText = text;

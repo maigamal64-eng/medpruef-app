@@ -35,6 +35,7 @@ import {
 } from "@/lib/exam-dates";
 import { billingCancelSummary, billingPlansSummary, billingTrialSummary } from "@/lib/billing-copy";
 import { MENTOR_RETRIEVAL_MAX_TOKENS } from "./config";
+import { extractValues, normalizeDigits } from "./validator";
 import type {
   FactsLoader,
   FilingUniversity,
@@ -110,13 +111,40 @@ export const RETRIEVAL_BUDGET_BYTES = MENTOR_RETRIEVAL_MAX_TOKENS;
 const DEFAULT_SEARCH_LIMIT = 8;
 
 /**
- * Deadline-shaped facts reach the model ONLY through get_dates, which asks for
- * the filing university first: anything with a deadline_type, and any
- * dates/registration fact scoped to one university.
+ * Fact sheet caps (cached system block). About 15k tokens at the measured
+ * 0.42 tokens per byte; a cache read costs a tenth of fresh input, so the
+ * larger sheet costs less than the extra search round it saves. The 90,000
+ * byte input cap still leaves room for tools, tool results and history.
  */
+export const SHEET_MAX_FACTS = 60;
+export const SHEET_MAX_BYTES = 36_000;
+
+/** True when a text names a calendar date (full date, day and month, or month and year). */
+export function textHasCalendarDate(text: string): boolean {
+  return extractValues(normalizeDigits(text)).some((v) => v.kind === "date" || v.kind === "daymonth" || v.kind === "monthyear");
+}
+
+/**
+ * Deadline-shaped facts reach the model ONLY through get_dates, which asks for
+ * the filing university first: anything with a deadline_type, any dates fact
+ * scoped to one university, and a university-scoped registration fact that
+ * names a calendar date. A registration RULE with no date and no deadline_type
+ * (how to register, no late registration, how to deregister) is not a
+ * deadline: it stays searchable and may sit in the fact sheet (eval W2/W3:
+ * the SIP4a/SIP5a rules were unreachable before).
+ */
+const scopedCache = new WeakMap<MentorFact, boolean>();
 export function isDeadlineScoped(f: MentorFact): boolean {
   if (f.deadline_type) return true;
-  return (f.topic === "dates" || f.topic === "registration") && f.filing_university !== "all";
+  if (f.filing_university === "all") return false;
+  if (f.topic === "dates") return true;
+  if (f.topic !== "registration") return false;
+  let hit = scopedCache.get(f);
+  if (hit === undefined) {
+    hit = textHasCalendarDate(`${f.text_de}\n${f.text_en}`);
+    scopedCache.set(f, hit);
+  }
+  return hit;
 }
 
 // ─── Record validation (fail closed) ────────────────────────────────────
@@ -623,17 +651,32 @@ export class MentorFactsLoader implements FactsLoader {
     examKey: MentorExamKey,
     filingUniversity: FilingUniversity,
     now: Date
-  ): { sittings: OfficialSittingView[]; facts: MentorFact[]; sittingRows: OfficialSitting[] } {
+  ): { sittings: OfficialSittingView[]; facts: MentorFact[]; sittingRows: OfficialSitting[]; unconfirmed: UnconfirmedPointer[] } {
     const rows = getUpcomingOfficialSittings({ exam: examKey, filingUniversity, now }, this.sittings);
-    const facts = [...this.state().all.values()].filter(
+    const scoped = [...this.state().all.values()].filter(
       (f) =>
         f.exam_key === examKey &&
         (f.topic === "dates" || f.topic === "registration") &&
-        (filingUniversity === "all" || f.filing_university === "all" || f.filing_university === filingUniversity) &&
-        isAssertable(f, now)
+        (filingUniversity === "all" || f.filing_university === "all" || f.filing_university === filingUniversity)
     );
+    const facts = scoped.filter((f) => isAssertable(f, now));
     facts.sort((a, b) => a.id.localeCompare(b.id));
-    return { sittings: rows.map(sittingToView), facts, sittingRows: rows };
+    // Gaps the sources name ("not published", "two publishers disagree"), so the
+    // model can say "not officially confirmed" instead of improvising (eval W3).
+    const unconfirmed: UnconfirmedPointer[] = scoped
+      .filter((f) => !isAssertable(f, now) && f.status !== "retracted")
+      .sort((a, b) => a.id.localeCompare(b.id))
+      .slice(0, 3)
+      .map((f) => ({
+        id: f.id,
+        exam_key: f.exam_key,
+        topic: f.topic,
+        verdict: f.verdict,
+        status: f.status,
+        source_url: f.source_url,
+        source_label: f.source_label,
+      }));
+    return { sittings: rows.map(sittingToView), facts, sittingRows: rows, unconfirmed };
   }
 
   async dates(
@@ -655,18 +698,21 @@ export class MentorFactsLoader implements FactsLoader {
    * deadlines or dates (those go through get_dates so the filing university
    * is asked first), deterministic order, capped by count and bytes.
    */
-  sheetFacts(now: Date, maxFacts = 25, maxBytes = 9_000): MentorFact[] {
+  sheetFacts(now: Date, maxFacts = SHEET_MAX_FACTS, maxBytes = SHEET_MAX_BYTES): MentorFact[] {
+    // Short, often-asked rules first (eval W3: with format first the 9 KB sheet
+    // held only format facts, so prices, pass rules, attempts and registration
+    // rules depended on the model searching well).
     const order: MentorFactTopic[] = [
-      "format",
+      "fee",
       "pass_rule",
-      "scoring",
+      "registration",
       "attempts",
+      "scoring",
+      "format",
+      "documents",
       "results",
       "language",
-      "documents",
       "glossary",
-      "fee",
-      "registration",
     ];
     const rank = (t: MentorFactTopic) => {
       const i = order.indexOf(t);

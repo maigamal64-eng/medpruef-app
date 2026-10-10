@@ -12,6 +12,14 @@
  *
  * Anything before the first @@BLOCK that is not a header line becomes an
  * uncited block (validated strictly). Malformed markup never passes through.
+ *
+ * Layout tolerance (eval W3, Haiku writes both orders): a block that has no
+ * citation of its own (text before the first marker, or text under a bare
+ * @@BLOCK) and is IMMEDIATELY followed by a "@@BLOCK facts=..." line borrows
+ * that line's fact ids, because the model used the line as a footer for the
+ * text above it. A trailing bare @@BLOCK (used as a closing tag) is ignored.
+ * This never widens what a value may be: every value is still checked against
+ * facts the model cited, in the next marker line at most.
  */
 
 import { MENTOR_LANGS, MENTOR_REFUSAL_REASONS, type MentorLang, type MentorRefusalReason } from "../contract";
@@ -84,9 +92,14 @@ export function parseAnswer(raw: string): ParsedAnswer {
     }
   }
   if (cur) out.blocks.push(cur);
-  const preText = pre.join("\n").trim();
-  if (preText) out.blocks.unshift({ text: preText, factIds: [] });
+  out.blocks.unshift({ text: pre.join("\n"), factIds: [] });
   for (const b of out.blocks) b.text = b.text.trim();
+  // Footer-style citation: an uncited block takes the ids of the facts line right after it.
+  for (let i = 0; i + 1 < out.blocks.length; i++) {
+    const b = out.blocks[i];
+    const next = out.blocks[i + 1];
+    if (b.factIds.length === 0 && b.text.length > 0 && next.factIds.length > 0) b.factIds = [...next.factIds];
+  }
   out.blocks = out.blocks.filter((b) => b.text.length > 0);
   return out;
 }

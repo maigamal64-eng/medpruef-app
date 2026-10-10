@@ -158,8 +158,10 @@ function getDates(input: unknown, ctx: TurnContext, env: ToolEnv): ToolResult {
         {
           needs_filing_university: true,
           instruction:
-            "Ask the learner where they filed their Nostrifizierung application (Wien, Graz or Innsbruck) before giving any deadline. Deadlines differ by publisher.",
+            "Ask the learner where they filed their Nostrifizierung application (Wien, Graz or Innsbruck) before giving any deadline. Deadlines differ by publisher. Ask it as one direct question ending with a question mark.",
           options: ["wien", "graz", "innsbruck"],
+          sitting_dates_hint:
+            "If the learner asked only when or where a sitting takes place (no deadline), call search_facts with topic dates instead: sitting dates and places need no filing university.",
         },
         []
       );
@@ -170,7 +172,21 @@ function getDates(input: unknown, ctx: TurnContext, env: ToolEnv): ToolResult {
   const sittings: Array<Record<string, unknown>> = [];
   const facts: Array<Record<string, unknown>> = [];
   const factIds: string[] = [];
-  let bytes = 0;
+  // Registration RULES (how to register, no late registration, deregistration)
+  // already sit in the cached fact sheet: name them by id first, so sittings
+  // can never crowd them out of this result (eval W2/W3: they were cut by the
+  // budget). A rule not on the sheet goes in with its text like any date fact.
+  const sheetIds = new Set(env.facts.sheetFacts(ctx.now).map((f) => f.id));
+  const rules = r.facts.filter((f) => f.topic === "registration" && sheetIds.has(f.id));
+  const ruleRefs = rules.map((f) => ({ fact_id: f.id, in_fact_sheet: true }));
+  for (const f of rules) factIds.push(f.id);
+  const unconfirmed = r.unconfirmed.map((u) => ({
+    fact_id: u.id,
+    topic: u.topic,
+    status: "not officially confirmed",
+    source_label: u.source_label,
+  }));
+  let bytes = utf8Bytes(JSON.stringify(ruleRefs)) + utf8Bytes(JSON.stringify(unconfirmed));
   const statusDe: string[] = [];
   const statusEn: string[] = [];
   for (const s of r.sittingRows) {
@@ -204,6 +220,7 @@ function getDates(input: unknown, ctx: TurnContext, env: ToolEnv): ToolResult {
     statusEn.push(lines.en);
   }
   for (const f of r.facts) {
+    if (sheetIds.has(f.id) && f.topic === "registration") continue;
     const item = { fact_id: f.id, text_de: f.text_de, text_en: f.text_en, source_label: f.source_label, read_on: f.read_on };
     const b = utf8Bytes(JSON.stringify(item));
     if (bytes + b > RETRIEVAL_BUDGET_BYTES) break;
@@ -216,11 +233,14 @@ function getDates(input: unknown, ctx: TurnContext, env: ToolEnv): ToolResult {
       {
         sittings: [],
         facts: [],
+        ...(ruleRefs.length > 0 ? { registration_rules: ruleRefs } : {}),
+        ...(unconfirmed.length > 0 ? { unconfirmed } : {}),
         no_verified_date: true,
-        instruction: "No verified upcoming date for this exam and university. Say so and refer the learner to the official page.",
+        instruction:
+          'No verified upcoming date for this exam and university. Say that it is "not officially confirmed" (de: "nicht offiziell bestätigt") and refer the learner to the official page.',
         official_page: fu === "all" ? officialLinkForExam(examKey) : officialLinkForUniversity(fu),
       },
-      []
+      ruleRefs.map((x) => x.fact_id)
     );
   }
   // Register the computed status as an internal fact for THIS call, so the
@@ -250,6 +270,14 @@ function getDates(input: unknown, ctx: TurnContext, env: ToolEnv): ToolResult {
         : {}),
       sittings,
       facts,
+      ...(ruleRefs.length > 0 ? { registration_rules: ruleRefs } : {}),
+      ...(unconfirmed.length > 0
+        ? {
+            unconfirmed,
+            unconfirmed_instruction:
+              'These points are not officially confirmed. If the learner asks about one, say exactly that ("not officially confirmed", de: "nicht offiziell bestätigt") and assert no value for it.',
+          }
+        : {}),
     },
     factIds
   );
@@ -323,7 +351,16 @@ async function getQuestion(input: unknown, ctx: TurnContext, env: ToolEnv): Prom
   const o = asObject(input);
   const id = o?.id;
   if (typeof id !== "number" || !Number.isInteger(id) || id < 1 || id > 2_147_483_647) return err("invalid id");
-  const notAvailable = err("question not found or not available to this learner");
+  // A machine refusal lets the app show the official link and the upgrade path (eval W3: ex-locked).
+  const notAvailable: ToolResult = {
+    content: JSON.stringify({
+      notice: DATA_NOTICE,
+      error: "question not found or not available to this learner",
+      instruction: "Refuse with @@REFUSE reason=no_verified_source and one short line. Do not repeat the question id.",
+    }),
+    factIds: [],
+    isError: true,
+  };
   let db: MentorDb;
   try {
     db = await env.db();

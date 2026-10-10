@@ -1,0 +1,238 @@
+/**
+ * Mentor quality loop, round 1 (eval W3-EVALRUN failure causes). One test
+ * group per fixed cause; every date and fee is synthetic (2099, odd amounts).
+ */
+import { describe, it, expect } from "vitest";
+import { parseAnswer } from "@/lib/mentor/prompt/protocol";
+import { MENTOR_CORE_PROMPT } from "@/lib/mentor/prompt/system";
+import { createMentorBrain } from "@/lib/mentor/prompt/brain";
+import { guessLang, stripFactIds, validateAnswer } from "@/lib/mentor/validator";
+import { isDeadlineScoped, sittingFactId, sittingToFact } from "@/lib/mentor/facts-loader";
+import { FACTS, SITTINGS, ctx, fact, fakeDb, makeLoader } from "./helpers";
+
+const FEE = FACTS[0]; // 777 EUR, read_on 2099-01-01
+const DATES = FACTS[3]; // 2099-03-18 12:00
+const SIT = sittingToFact(SITTINGS[0]); // sitting 2099-04-20, window 2099-02-01 to 2099-03-18
+const ALL = [FEE, DATES, SIT];
+const FALLBACK_DE = "nicht offiziell bestätigt";
+const parse = (s: string) => JSON.parse(s) as Record<string, unknown>;
+
+const RULE_DEREG = fact({
+  id: "fixture.registration.dereg",
+  exam_key: "sip5a",
+  topic: "registration",
+  filing_university: "wien",
+  text_de: "Die Abmeldung erfolgt spätestens drei Werktage vor der Prüfung in Med.Campus.",
+  text_en: "Deregister in Med.Campus at the latest three working days before the exam.",
+  aliases: ["Abmeldung", "abmelden", "deregister"],
+});
+const REG_WINDOW = fact({
+  id: "fixture.registration.window",
+  exam_key: "sip5a",
+  topic: "registration",
+  filing_university: "wien",
+  text_de: "Anmeldung vom 1. Februar bis 18. März 2099.",
+  text_en: "Registration from 1 February to 18 March 2099.",
+});
+const DATES_ALL = fact({
+  id: "fixture.dates.stp-sittings",
+  exam_key: "stichprobentest",
+  topic: "dates",
+  filing_university: "all",
+  text_de: "Der Stichprobentest findet am 6. Mai 2099 in Wien statt.",
+  text_en: "The Stichprobentest takes place on 6 May 2099 in Vienna.",
+});
+const NOT_PUBLISHED = fact({
+  id: "fixture.dates.graz-none",
+  exam_key: "stichprobentest",
+  topic: "dates",
+  filing_university: "graz",
+  verdict: "not_in_sources",
+  text_de: "Nicht offiziell bestätigt: Graz hat keine eigenen Fristen veröffentlicht.",
+  text_en: "Not officially confirmed: Graz has published no own deadlines.",
+});
+
+describe("protocol: footer-style citations (Haiku writes the facts line after the text)", () => {
+  it("text before the first facts line borrows that line's ids", () => {
+    const p = parseAnswer("@@LANG de\nDie Prüfung ist am 20. April 2099.\n@@BLOCK facts=a,b\nKurzer Satz ohne Werte.\n@@BLOCK");
+    expect(p.blocks).toEqual([
+      { text: "Die Prüfung ist am 20. April 2099.", factIds: ["a", "b"] },
+      { text: "Kurzer Satz ohne Werte.", factIds: ["a", "b"] },
+    ]);
+  });
+
+  it("a trailing bare @@BLOCK used as a closing tag adds no block", () => {
+    const p = parseAnswer("@@LANG en\n@@BLOCK facts=a\nText.\n@@BLOCK");
+    expect(p.blocks).toEqual([{ text: "Text.", factIds: ["a"] }]);
+  });
+
+  it("text under a bare @@BLOCK borrows the next facts line; header-first blocks keep their own ids", () => {
+    const p = parseAnswer("@@BLOCK facts=a\nEins.\n@@BLOCK\nZwei.\n@@BLOCK facts=c\nDrei.");
+    expect(p.blocks.map((b) => b.factIds)).toEqual([["a"], ["c"], ["c"]]);
+  });
+
+  it("uncited text with no facts line after it stays uncited", () => {
+    const p = parseAnswer("@@LANG de\n@@BLOCK facts=a\nEins.\n@@BLOCK\nZwei.");
+    expect(p.blocks[1]).toEqual({ text: "Zwei.", factIds: [] });
+  });
+
+  it("validator keeps a correct date written above its facts line (dl-sip4a-next-de shape)", () => {
+    const id = sittingFactId(SITTINGS[0]);
+    const raw = `@@LANG de\nDie nächste SIP5a ist am 20. April 2099, Anmeldung bis 18. März 2099.\n@@BLOCK facts=${id}\nDie Anmeldung läuft über die Universität.\n@@BLOCK`;
+    const v = validateAnswer(raw, ALL);
+    expect(v.replaced).toBe(false);
+    expect(v.blocks[0].text).toContain("20. April 2099");
+    expect(v.blocks[0].fact_ids).toEqual([id]);
+  });
+
+  it("safety holds: an invented date above a facts line is still replaced", () => {
+    const raw = `@@LANG de\nDie Prüfung ist am 21. April 2099.\n@@BLOCK facts=${sittingFactId(SITTINGS[0])}\n@@BLOCK`;
+    const v = validateAnswer(raw, ALL);
+    expect(v.replaced).toBe(true);
+    expect(v.blocks[0].text).toContain(FALLBACK_DE);
+    expect(v.rejected).toContainEqual({ value: "21. April 2099", reason: "not_in_cited_facts" });
+  });
+});
+
+describe("validator: the read-on date of a cited fact is allowed", () => {
+  for (const stand of ["Stand 2099-01-01", "Stand 01.01.2099", "read on 1 January 2099", "read 1 Jan 2099"]) {
+    it(`keeps "${stand}" next to the cited value`, () => {
+      const v = validateAnswer(`@@LANG de\n@@BLOCK facts=${FEE.id}\nDie Gebühr beträgt 777 EUR (${stand}).`, ALL);
+      expect(v.replaced).toBe(false);
+      expect(v.rejected).toEqual([]);
+    });
+  }
+
+  it("only the full date: the read-on month alone is not a supported value", () => {
+    const v = validateAnswer(`@@LANG de\n@@BLOCK facts=${FEE.id}\nDie Gebühr wird im Januar 2099 fällig.`, ALL);
+    expect(v.replaced).toBe(true);
+  });
+
+  it("a block that cites nothing may not carry a read-on date", () => {
+    const v = validateAnswer(`@@LANG de\n@@BLOCK\nStand 2099-01-01.`, ALL);
+    expect(v.replaced).toBe(true);
+  });
+});
+
+describe("validator: fact ids written into the prose", () => {
+  it("removes an internal status id with a UUID and reads none of its digits as values", () => {
+    const raw = `@@LANG de\n@@BLOCK facts=${DATES.id}\nDie Anmeldung endet am 2099-03-18 (status.00000000-0000-4000-9000-000000000009.sip5a.all).`;
+    const v = validateAnswer(raw, ALL);
+    expect(v.rejected).toEqual([]);
+    expect(v.replaced).toBe(false);
+    expect(v.blocks[0].text).toBe("Die Anmeldung endet am 2099-03-18.");
+  });
+
+  it("removes a cited data id, keeps ordinary dotted words, e-mails and links", () => {
+    const known = (id: string) => id === "sip5a.dates.2099-04";
+    expect(stripFactIds("Laut sip5a.dates.2099-04 gilt das.", known)).toBe("Laut gilt das.");
+    expect(stripFactIds("Das gilt z.B. hier.", known)).toBe("Das gilt z.B. hier.");
+    expect(stripFactIds("Mail an pruefung@meduniwien.ac.at senden.", known)).toBe("Mail an pruefung@meduniwien.ac.at senden.");
+    expect(stripFactIds("Mein progress.The end", known)).toBe("Mein progress.The end");
+  });
+});
+
+describe("validator: '12 Uhr' is the same time as '12:00'", () => {
+  it("accepts '12 Uhr' against a fact that says 12:00", () => {
+    const v = validateAnswer(`@@LANG de\n@@BLOCK facts=${DATES.id}\nAnmeldeschluss 2099-03-18 um 12 Uhr.`, ALL);
+    expect(v.replaced).toBe(false);
+  });
+  it("still rejects '13 Uhr'", () => {
+    const v = validateAnswer(`@@LANG de\n@@BLOCK facts=${DATES.id}\nAnmeldeschluss 2099-03-18 um 13 Uhr.`, ALL);
+    expect(v.replaced).toBe(true);
+  });
+});
+
+describe("validator: fallback language when @@LANG is missing", () => {
+  it("a German answer without @@LANG gets the German fallback, not the English one", () => {
+    const v = validateAnswer("@@BLOCK\nDie Prüfung ist am 21. April 2099 und du musst dich bitte rechtzeitig anmelden.", ALL);
+    expect(v.blocks[0].text).toContain(FALLBACK_DE);
+  });
+  it("guesses de and en, and gives up on too little text", () => {
+    expect(guessLang("Die Anmeldung ist nicht offen und du musst warten.")).toBe("de");
+    expect(guessLang("The window is not open and you have to wait for the next one.")).toBe("en");
+    expect(guessLang("OK")).toBeNull();
+  });
+});
+
+describe("BRAIN reachability of registration rules", () => {
+  it("a university-scoped registration rule without a date is not deadline-scoped; one with a date is", () => {
+    expect(isDeadlineScoped(RULE_DEREG)).toBe(false);
+    expect(isDeadlineScoped(REG_WINDOW)).toBe(true);
+    expect(isDeadlineScoped(fact({ id: "x", topic: "registration", filing_university: "wien", deadline_type: "registration" }))).toBe(true);
+    expect(isDeadlineScoped(fact({ id: "y", topic: "dates", filing_university: "wien" }))).toBe(true);
+  });
+
+  it("search_facts finds the rule and the fact sheet carries it, the dated window stays out of both", async () => {
+    const loader = makeLoader([...FACTS, RULE_DEREG, REG_WINDOW]);
+    const brain = createMentorBrain({ facts: loader, db: () => fakeDb({}).db });
+    const r = await brain.runTool("search_facts", { query_de: "SIP5a abmelden Abmeldung", exam_key: "sip5a" }, ctx());
+    expect(r.factIds).toContain(RULE_DEREG.id);
+    expect(r.factIds).not.toContain(REG_WINDOW.id);
+    const sheet = loader.sheetFacts(ctx().now).map((f) => f.id);
+    expect(sheet).toContain(RULE_DEREG.id);
+    expect(sheet).not.toContain(REG_WINDOW.id);
+  });
+
+  it("get_dates names the rule ids first, so sittings can never crowd them out", async () => {
+    const loader = makeLoader([...FACTS, RULE_DEREG]);
+    const brain = createMentorBrain({ facts: loader, db: () => fakeDb({}).db });
+    const r = await brain.runTool("get_dates", { exam_key: "sip5a", filing_university: "wien" }, ctx());
+    const body = parse(r.content) as { registration_rules: Array<{ fact_id: string; in_fact_sheet: boolean }> };
+    expect(body.registration_rules).toEqual([{ fact_id: RULE_DEREG.id, in_fact_sheet: true }]);
+    expect(r.factIds[0]).toBe(RULE_DEREG.id);
+    expect(r.factIds).toContain(sittingFactId(SITTINGS[0]));
+  });
+
+  it("get_dates lists the gaps the sources name as not officially confirmed", async () => {
+    const loader = makeLoader([...FACTS, NOT_PUBLISHED]);
+    const brain = createMentorBrain({ facts: loader, db: () => fakeDb({}).db });
+    const r = await brain.runTool("get_dates", { exam_key: "stichprobentest", filing_university: "graz" }, ctx());
+    const body = parse(r.content) as { unconfirmed: Array<{ fact_id: string; status: string }>; no_verified_date: boolean };
+    expect(body.no_verified_date).toBe(true);
+    expect(body.unconfirmed).toEqual([expect.objectContaining({ fact_id: NOT_PUBLISHED.id, status: "not officially confirmed" })]);
+    expect(r.factIds).not.toContain(NOT_PUBLISHED.id);
+  });
+
+  it("asking for the filing university points to search_facts for sitting dates and leaks no date", async () => {
+    const loader = makeLoader([...FACTS, DATES_ALL]);
+    const brain = createMentorBrain({ facts: loader, db: () => fakeDb({}).db });
+    const r = await brain.runTool("get_dates", { exam_key: "stichprobentest", filing_university: "all" }, ctx());
+    const body = parse(r.content);
+    expect(body.needs_filing_university).toBe(true);
+    expect(String(body.sitting_dates_hint)).toMatch(/search_facts/);
+    expect(String(body.instruction)).toMatch(/question mark/);
+    expect(r.content).not.toMatch(/2099/);
+    const s = await brain.runTool("search_facts", { query_de: "Stichprobentest Termin", exam_key: "stichprobentest", topic: "dates" }, ctx());
+    expect(s.factIds).toContain(DATES_ALL.id);
+  });
+});
+
+describe("get_question on a question the learner may not open", () => {
+  it("tells the model to refuse with no_verified_source and not to repeat the id", async () => {
+    const brain = createMentorBrain({ facts: makeLoader(), db: () => fakeDb({}).db, canFreeRead: async () => false });
+    const r = await brain.runTool("get_question", { id: 9000011 }, ctx({ paidAccess: false }));
+    expect(r.isError).toBe(true);
+    const body = parse(r.content);
+    expect(String(body.instruction)).toContain("@@REFUSE reason=no_verified_source");
+    expect(r.content).not.toContain("9000011");
+  });
+});
+
+describe("prompt: answer shape", () => {
+  it("states header-first with no closing marker and @@LANG first", () => {
+    expect(MENTOR_CORE_PROMPT).toContain("Each @@BLOCK line comes BEFORE the text it covers");
+    expect(MENTOR_CORE_PROMPT).toContain("never end the answer with @@BLOCK");
+    expect(MENTOR_CORE_PROMPT).toContain("the @@LANG line is always the first line");
+  });
+  it("leads with the direct answer, answers only what was asked, and fixes the gap wording", () => {
+    expect(MENTOR_CORE_PROMPT).toContain("The first sentence is the direct answer");
+    expect(MENTOR_CORE_PROMPT).toContain("Answer only what was asked");
+    expect(MENTOR_CORE_PROMPT).toContain('"nicht offiziell bestätigt"');
+    expect(MENTOR_CORE_PROMPT).toContain('"not officially confirmed"');
+  });
+  it("asks the filing university as a real question and keeps ids out of the text", () => {
+    expect(MENTOR_CORE_PROMPT).toContain("ends with a question mark");
+    expect(MENTOR_CORE_PROMPT).toContain("Never write links, fact ids");
+  });
+});
