@@ -213,7 +213,15 @@ function searchFacts(input: unknown, ctx: TurnContext, env: ToolEnv): ToolResult
     status: "not officially confirmed",
     source_label: u.source_label,
   }));
-  return ok({ facts, unconfirmed, ...(facts.length === 0 ? { no_confirmed_fact: true } : {}) }, factIds);
+  return ok(
+    {
+      facts,
+      unconfirmed,
+      ...(facts.length === 0 ? { no_confirmed_fact: true } : {}),
+      note: "Deadlines and sitting dates are not searchable: use get_dates (ask the filing university first).",
+    },
+    factIds
+  );
 }
 
 // ─── get_question ───────────────────────────────────────────────────────
@@ -259,19 +267,21 @@ async function getQuestion(input: unknown, ctx: TurnContext, env: ToolEnv): Prom
   const choices = Array.isArray(pick("choices"))
     ? (pick("choices") as ChoiceRow[]).slice(0, 8).map((c, i) => ({
         label: String.fromCharCode(65 + i),
-        text: str(c?.text, 300) ?? "",
+        text: str(c?.text, 200) ?? "",
         correct: c?.correct === true,
       }))
     : [];
-  const q = {
+  const base = {
     id,
     exam_type: str(pick("exam_type"), 40),
     topic: str(pick("topic"), 120),
-    question: str(pick("question"), 1200),
+    question: str(pick("question"), 1000),
     choices,
-    keyed_answer: str(pick("answer"), 400),
-    explanation: str(pick("explanation"), 1600),
+    keyed_answer: str(pick("answer"), 300),
   };
+  // The whole row stays inside the retrieval budget: the explanation gets what is left.
+  const left = RETRIEVAL_BUDGET_BYTES - utf8Bytes(JSON.stringify(base)) - 600;
+  const q = { ...base, explanation: left > 50 ? str(pick("explanation"), left) : null };
   const content = { question: q };
   const corpus = [q.question, ...choices.map((c) => `${c.label}) ${c.text}`), q.keyed_answer, q.explanation].filter(Boolean).join("\n");
   const factId = `question.${id}`;

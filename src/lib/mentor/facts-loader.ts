@@ -107,6 +107,16 @@ export const RETRIEVAL_BUDGET_BYTES = MENTOR_RETRIEVAL_MAX_TOKENS;
 
 const DEFAULT_SEARCH_LIMIT = 8;
 
+/**
+ * Deadline-shaped facts reach the model ONLY through get_dates, which asks for
+ * the filing university first: anything with a deadline_type, and any
+ * dates/registration fact scoped to one university.
+ */
+export function isDeadlineScoped(f: MentorFact): boolean {
+  if (f.deadline_type) return true;
+  return (f.topic === "dates" || f.topic === "registration") && f.filing_university !== "all";
+}
+
 // ─── Record validation (fail closed) ────────────────────────────────────
 
 export type FactCheck = { ok: true; fact: MentorFact } | { ok: false; error: string };
@@ -536,6 +546,7 @@ export class MentorFactsLoader implements FactsLoader {
       const f = ix.fact;
       if (examKey && f.exam_key !== examKey && f.exam_key !== "general") continue;
       if (topic && f.topic !== topic) continue;
+      if (isDeadlineScoped(f)) continue;
       const s = qTokens.length === 0 && (examKey || topic) ? 1 : scoreFact(ix, qTokens, qFolded);
       if (s > 0) scored.push({ f, s });
     }
@@ -619,7 +630,7 @@ export class MentorFactsLoader implements FactsLoader {
       return i < 0 ? order.length : i;
     };
     const candidates = [...this.state().all.values()]
-      .filter((f) => isAssertable(f, now) && f.topic !== "dates" && !f.deadline_type)
+      .filter((f) => isAssertable(f, now) && f.topic !== "dates" && !isDeadlineScoped(f))
       .sort((a, b) => rank(a.topic) - rank(b.topic) || a.id.localeCompare(b.id));
     const out: MentorFact[] = [];
     let bytes = 0;

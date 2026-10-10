@@ -4,7 +4,7 @@ import { MENTOR_TOOLS } from "@/lib/mentor/tools/definitions";
 import { QUESTION_COLUMNS } from "@/lib/mentor/tools/run";
 import { createMentorBrain } from "@/lib/mentor/prompt/brain";
 import { sittingFactId } from "@/lib/mentor/facts-loader";
-import { SITTINGS, ctx, fakeDb, makeLoader } from "./helpers";
+import { FACTS, SITTINGS, ctx, fact, fakeDb, makeLoader } from "./helpers";
 
 const parse = (s: string) => JSON.parse(s) as Record<string, unknown>;
 
@@ -60,6 +60,44 @@ describe("get_dates", () => {
   });
 });
 
+describe("deadline facts only through get_dates", () => {
+  const cutoff = fact({
+    id: "fixture.stp.wien.cutoff",
+    exam_key: "stichprobentest",
+    topic: "registration",
+    filing_university: "wien",
+    deadline_type: "filing_cutoff",
+    text_de: "Einreichfrist Stichprobentest Wien: 2099-03-02.",
+    text_en: "Stichprobentest filing cutoff Vienna: 2099-03-02.",
+    aliases: ["Frist", "Einreichfrist", "deadline"],
+  });
+  const uniDates = fact({
+    id: "fixture.stp.innsbruck.dates",
+    exam_key: "stichprobentest",
+    topic: "dates",
+    filing_university: "innsbruck",
+    text_de: "Frist Innsbruck 2099-03-25.",
+    text_en: "Deadline Innsbruck 2099-03-25.",
+    aliases: ["Frist"],
+  });
+  const loader = makeLoader([...FACTS, cutoff, uniDates]);
+  const brain = createMentorBrain({ facts: loader, db: () => fakeDb({}).db });
+
+  it("search_facts and the fact sheet never return a university-scoped deadline", async () => {
+    const r = await brain.runTool("search_facts", { query_de: "Frist Einreichfrist Stichprobentest", exam_key: "stichprobentest" }, ctx());
+    expect(r.factIds).not.toContain(cutoff.id);
+    expect(r.factIds).not.toContain(uniDates.id);
+    expect(r.content).not.toContain("2099-03-02");
+    expect(brain.buildSystem(ctx())[1].text).not.toContain(cutoff.id);
+  });
+
+  it("get_dates returns it once the filing university is known", async () => {
+    const r = await brain.runTool("get_dates", { exam_key: "stichprobentest", filing_university: "wien" }, ctx());
+    expect(r.factIds).toContain(cutoff.id);
+    expect(r.factIds).not.toContain(uniDates.id);
+  });
+});
+
 describe("search_facts", () => {
   const brain = createMentorBrain({ facts: makeLoader(), db: () => fakeDb({}).db });
   it("returns confirmed facts with ids and unconfirmed pointers without text", async () => {
@@ -103,6 +141,7 @@ describe("get_question", () => {
       ["eq", "is_active", true],
     ]);
     expect(r.content).not.toMatch(/2099-02|exam_dates|secret cached/);
+    expect(Buffer.byteLength(r.content, "utf8")).toBeLessThanOrEqual(4_000 + 400);
     expect(r.factIds).toEqual(["question.42"]);
     const v = brain.validate("@@LANG de\n@@BLOCK facts=question.42\nRichtig ist 2,5 mg, nicht 25 mg.", []);
     expect(v.replaced).toBe(false);
