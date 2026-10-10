@@ -266,6 +266,44 @@ describe("mentor facts base: dates never outlive their deadline", () => {
   });
 });
 
+describe("mentor facts base: German and English say the same numbers and dates", () => {
+  // The only normalisation: a clock time may be written "12 Uhr" in German and "12:00" in English.
+  const digits = (t: string) => (t.replace(/(\d{1,2}):00/g, "$1").match(/\d+/g) ?? []).sort();
+  const DE_MONTHS: Record<string, number> = { Januar: 1, Februar: 2, "März": 3, April: 4, Mai: 5, Juni: 6, Juli: 7, August: 8, September: 9, Oktober: 10, November: 11, Dezember: 12 };
+
+  /** ISO dates printed in a German text ("17. November 2026", "5. Oktober bis 19. Oktober 2026"); a missing year is the next year printed after it. */
+  function deDates(t: string): string[] {
+    const re = new RegExp(`(\\d{1,2})\\. (${Object.keys(DE_MONTHS).join("|")})(?: (\\d{4}))?`, "g");
+    const out: string[] = [];
+    for (const m of t.matchAll(re)) {
+      let year = m[3];
+      if (!year) year = t.slice(m.index! + m[0].length).match(/\b(20\d\d)\b/)?.[1] ?? "????";
+      out.push(`${year}-${String(DE_MONTHS[m[2]]).padStart(2, "0")}-${m[1].padStart(2, "0")}`);
+    }
+    return out.sort();
+  }
+
+  it("every fact carries the same multiset of numbers in text_de and text_en", () => {
+    for (const f of facts) expect(digits(f.text_de), f.id).toEqual(digits(f.text_en));
+  });
+
+  it("every date written out in German is the same calendar date as in the English text (no swapped 17 and 18 Nov, no Oct for Nov)", () => {
+    let checked = 0;
+    for (const f of facts) {
+      const en = datesInText(f.text_en).map((d: { iso: string }) => d.iso).sort();
+      expect(deDates(f.text_de), f.id).toEqual(en);
+      checked += en.length;
+    }
+    expect(checked).toBeGreaterThanOrEqual(70);
+  });
+
+  it("the parity check itself catches a swap", () => {
+    const f = facts.find((x) => x.id === "sip5a.dates.2026-11")!;
+    expect(deDates(f.text_de.replace("17. November", "18. November"))).not.toEqual(datesInText(f.text_en).map((d: { iso: string }) => d.iso).sort());
+    expect(digits(f.text_de.replace("17. November", "18. November"))).not.toEqual(digits(f.text_en));
+  });
+});
+
 describe("mentor facts base: twins stay in step", () => {
   const find = (id: string) => facts.find((f) => f.id === id);
 
