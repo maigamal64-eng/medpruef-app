@@ -186,7 +186,7 @@ export default function UkrainianRefugeePhysiciansPost() {
               <h3 className="mp-h3 text-[18px] mt-6 mb-3">University-Specific Language Requirements</h3>
               <div className="rounded-[var(--mp-r-card)] p-4 border border-[var(--mp-viridian)]/30 bg-[var(--mp-viridian)]/5">
                 <p className="mp-body text-[var(--mp-fg)] leading-relaxed">
-                  <strong>Vienna currently requires C1; JKU currently asks for at least B2 for the Stichprobentest. Requirements are university-specific.</strong> Confirm the exact requirement with the university where you file your nostrification application.
+                  <strong>MedUni Wien requires at least C1 German, proven by a language diploma, with the nostrification application.</strong> Confirm the exact level with the university where you file your application, and do not assume a lower level is accepted anywhere.
                 </p>
               </div>
             </section>
@@ -411,7 +411,7 @@ The Vienna bank contains SIP4a/SIP5a-based MCQ exercises. These university sourc
                 </summary>
                 <div className="p-4">
                   <p className="mp-body text-[var(--mp-fg)] leading-relaxed">
-                    You need B2 CEFR to register for the Austrian Medical Chamber&apos;s language examination. The examination itself assesses professional medical communication. A C1-level certificate is required for the nostrification application at the medical universities (Vienna currently requires C1; JKU currently asks for at least B2 for the Stichprobentest; requirements are university-specific).
+                    You need B2 CEFR to register for the Austrian Medical Chamber&apos;s language examination. The examination itself assesses professional medical communication. A C1-level certificate is required for the nostrification application at the medical universities (MedUni Wien requires at least C1; confirm the level with the university where you file).
                   </p>
                 </div>
               </details>
