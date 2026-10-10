@@ -184,7 +184,7 @@ export default function UkrainischeAerzteOesterreichAnerkennungPost() {
               <h3 className="mp-h3 text-[18px] mt-6 mb-3">Universitätsspezifische Sprachanforderungen</h3>
               <div className="rounded-[var(--mp-r-card)] p-4 border border-[var(--mp-viridian)]/30 bg-[var(--mp-viridian)]/5">
                 <p className="mp-body text-[var(--mp-fg)] leading-relaxed">
-                  <strong>Wien verlangt derzeit C1; JKU fragt derzeit mindestens B2 für den Stichprobentest ab. Anforderungen sind universitätsspezifisch.</strong> Klären Sie die genaue Anforderung bei der Universität, bei der Sie die Nostrifizierung beantragen.
+                  <strong>Die MedUni Wien verlangt mit dem Nostrifizierungsantrag mindestens Deutsch C1, nachgewiesen durch ein Sprachdiplom.</strong> Klären Sie das genaue Niveau bei der Universität, bei der Sie einreichen, und gehen Sie nicht davon aus, dass anderswo ein niedrigeres Niveau gilt.
                 </p>
               </div>
             </section>
@@ -409,7 +409,7 @@ Die Wiener Bank enthält SIP4a/SIP5a-basierte MCQ-Übungen. Diese universitären
                 </summary>
                 <div className="p-4">
                   <p className="mp-body text-[var(--mp-fg)] leading-relaxed">
-                    Sie benötigen B2 GER für die Anmeldung zur ärztlichen Sprachprüfung der Österreichischen Ärztekammer. Die Prüfung selbst prüft professionelle medizinische Kommunikation. Ein C1-Zertifikat wird für den Nostrifizierungsantrag an den Medizinischen Universitäten verlangt (Wien verlangt derzeit C1; JKU verlangt derzeit mindestens B2 für den Stichprobentest; Anforderungen sind universitätsspezifisch).
+                    Sie benötigen B2 GER für die Anmeldung zur ärztlichen Sprachprüfung der Österreichischen Ärztekammer. Die Prüfung selbst prüft professionelle medizinische Kommunikation. Ein C1-Zertifikat wird für den Nostrifizierungsantrag an den Medizinischen Universitäten verlangt (MedUni Wien verlangt mindestens C1; klären Sie das Niveau mit der Universität, bei der Sie einreichen).
                   </p>
                 </div>
               </details>

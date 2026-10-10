@@ -125,7 +125,7 @@ function buildFAQSchema() {
         name: "What German level do Ukrainian refugee physicians need to practice medicine in Austria?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "You need B2 CEFR to register for the Austrian Medical Chamber's language examination. The examination itself assesses professional medical communication. A C1-level certificate is required for the nostrification application at the medical universities (Vienna currently requires C1; JKU currently asks for at least B2 for the Stichprobentest; requirements are university-specific).",
+          text: "You need B2 CEFR to register for the Austrian Medical Chamber's language examination. The examination itself assesses professional medical communication. A C1-level certificate is required for the nostrification application at the medical universities (MedUni Wien requires at least C1; confirm the level with the university where you file).",
         },
       },
       {

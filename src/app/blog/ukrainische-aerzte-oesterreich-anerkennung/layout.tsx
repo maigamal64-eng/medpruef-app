@@ -125,7 +125,7 @@ function buildFAQSchema() {
         name: "Welches Deutschniveau brauchen ukrainische Ärzt:innen für die ärztliche Tätigkeit in Österreich?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "Sie benötigen B2 GER für die Anmeldung zur ärztlichen Sprachprüfung der Österreichischen Ärztekammer. Die Prüfung selbst prüft professionelle medizinische Kommunikation. Ein C1-Zertifikat wird für den Nostrifizierungsantrag an den Medizinischen Universitäten verlangt (Wien verlangt derzeit C1; JKU verlangt derzeit mindestens B2 für den Stichprobentest; Anforderungen sind universitätsspezifisch).",
+          text: "Sie benötigen B2 GER für die Anmeldung zur ärztlichen Sprachprüfung der Österreichischen Ärztekammer. Die Prüfung selbst prüft professionelle medizinische Kommunikation. Ein C1-Zertifikat wird für den Nostrifizierungsantrag an den Medizinischen Universitäten verlangt (MedUni Wien verlangt mindestens C1; klären Sie das Niveau mit der Universität, bei der Sie einreichen).",
         },
       },
       {
