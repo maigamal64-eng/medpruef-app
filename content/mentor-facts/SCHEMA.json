@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://medpruf.com/schemas/mentor-facts/v1",
+  "title": "MedPruef mentor fact file (contract C6, frozen by W0-C0A on 2026-10-10)",
+  "description": "Each data file in content/mentor-facts/ (sip.json, stichprobentest.json, pharma.json, general.json; owned by W2-FACTS) is a JSON array of fact records. Read ONLY through the C17 facts loader. Assertability rule: a fact may be asserted to a learner only when verdict == 'confirmed' AND status == 'live' AND (valid_until is absent OR valid_until >= today, Europe/Vienna); a fact past valid_until is treated as needs_review by the loader. Every date, deadline, fee or format value must come from a confirmed official row (C14) and pass research/check-dates.py. Postgraduate OeAEK facts stay out.",
+  "type": "array",
+  "items": { "$ref": "#/$defs/Fact" },
+  "$defs": {
+    "IsoDate": {
+      "type": "string",
+      "pattern": "^20[0-9]{2}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$"
+    },
+    "Fact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "exam_key",
+        "topic",
+        "filing_university",
+        "text_de",
+        "text_en",
+        "aliases",
+        "source_url",
+        "source_label",
+        "edition",
+        "read_on",
+        "verdict",
+        "review_every_days",
+        "status"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Stable, unique across all fact files, never reused after retraction. Convention: <exam_key>.<topic>.<slug>, e.g. sip5a.dates.nov-2026.",
+          "pattern": "^[a-z0-9][a-z0-9._-]{2,119}$"
+        },
+        "exam_key": {
+          "enum": ["sip4a", "sip5a", "stichprobentest", "rezeptierkunde", "gerichtsmedizin", "c1", "general", "fsp"]
+        },
+        "topic": {
+          "enum": ["dates", "registration", "format", "scoring", "pass_rule", "fee", "attempts", "results", "language", "documents", "glossary"]
+        },
+        "filing_university": {
+          "enum": ["wien", "graz", "innsbruck", "all"],
+          "description": "Which filers the fact applies to. Stichprobentest cutoffs differ by publisher for the same sitting."
+        },
+        "deadline_type": {
+          "enum": ["filing_cutoff", "registration"],
+          "description": "Only for deadline facts. filing_cutoff = last day to file the application (MedUni Wien Merkblatt); registration = last day to register for the sitting."
+        },
+        "text_de": { "type": "string", "minLength": 1, "maxLength": 1200 },
+        "text_en": { "type": "string", "minLength": 1, "maxLength": 1200 },
+        "aliases": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1, "maxLength": 120 },
+          "description": "Learner phrasings the search_facts tool should match (DE, EN and common misspellings)."
+        },
+        "source_url": { "type": "string", "pattern": "^https://" },
+        "source_label": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "edition": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120,
+          "description": "Document edition or page state, e.g. 'Merkblatt, Stand 1 Sep 2026' or 'page read 2026-10-10'."
+        },
+        "read_on": { "$ref": "#/$defs/IsoDate" },
+        "verdict": { "enum": ["confirmed", "partly", "contradicted", "not_in_sources"] },
+        "review_every_days": { "type": "integer", "minimum": 1, "maximum": 365 },
+        "valid_until": { "$ref": "#/$defs/IsoDate" },
+        "status": { "enum": ["live", "needs_review", "retracted"] }
+      }
+    }
+  },
+  "x-mentor-tools-frozen": {
+    "get_dates": "get_dates(exam_key, filing_university) -> upcoming OFFICIAL_SITTINGS (src/lib/exam-dates.ts, C7) plus assertable date facts",
+    "search_facts": "search_facts(query_de, exam_key?, topic?) -> assertable facts only",
+    "get_question": "get_question(id)",
+    "get_my_progress": "get_my_progress()"
+  }
+}

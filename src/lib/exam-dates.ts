@@ -332,3 +332,106 @@ export function suggestNextExpiresAt(
   d.setUTCDate(d.getUTCDate() + bufferDays);
   return d;
 }
+
+// ---------------------------------------------------------------------------
+// C7: official sittings (display only). Contract frozen by W0-C0A, 2026-10-10.
+//
+// One source for the in-app deadline banner, the Telegram packs and the AI
+// mentor. Values are filled by W1-CAL ONLY from confirmed rows of the official
+// research files (official-vienna.json, official-spt-pharma.json), with a unit
+// test comparing every value to those files (C14).
+//
+// This list is DISPLAY ONLY. It never feeds PUYP or referral access maths:
+// those keep reading EXAM_SITTINGS above, and EXAM_SITTINGS.kenntnispruefung
+// is held (it must not change in this run).
+// ---------------------------------------------------------------------------
+
+/** Exam keys shared with the mentor fact records (C6 `exam_key`). */
+export type OfficialExamKey =
+  | "sip4a"
+  | "sip5a"
+  | "stichprobentest"
+  | "rezeptierkunde"
+  | "gerichtsmedizin"
+  | "c1"
+  | "general"
+  | "fsp";
+
+/** University where the learner filed; deadlines can differ per publisher. */
+export type FilingUniversity = "wien" | "graz" | "innsbruck" | "all";
+
+/**
+ * `filing_cutoff`: last day to FILE the application that places you in this
+ * sitting (MedUni Wien Merkblatt). `registration`: last day to REGISTER for
+ * the sitting itself (i-med PDF, SIP calendar).
+ */
+export type OfficialDeadlineType = "filing_cutoff" | "registration";
+
+export interface OfficialSitting {
+  exam_key: OfficialExamKey;
+  /** Learner-facing name of the sitting (DE + EN; other languages fall back to EN). */
+  learner_label: { de: string; en: string };
+  /** ISO date (YYYY-MM-DD) of the sitting, or the first day of an exam week. */
+  date: string;
+  /** Optional last day when the sitting is a week (Rezeptierkunde, Gerichtsmedizin). Additive to C7. */
+  date_end?: string;
+  /** ISO date the registration window opens, or null if the source gives none. */
+  registration_opens: string | null;
+  /** ISO date the registration or filing window closes, or null if unpublished. */
+  registration_closes: string | null;
+  /** Local Vienna time the window closes on registration_closes, e.g. "12:00". */
+  closes_at_time?: string;
+  deadline_type: OfficialDeadlineType;
+  /** Who published the date, e.g. "MedUni Wien" or "Medizinische Universitaet Innsbruck". */
+  publisher: string;
+  /**
+   * Which filers this row applies to. Additive to C7: the Stichprobentest has
+   * different cutoffs per publisher for the SAME sitting. Defaults to "all".
+   */
+  filing_university?: FilingUniversity;
+  source_url: string;
+  /** ISO date the official source was read. */
+  read_on: string;
+}
+
+/**
+ * Confirmed official sittings, sorted ascending by date. EMPTY until W1-CAL
+ * fills it from the confirmed research rows. Never add an estimated date.
+ */
+export const OFFICIAL_SITTINGS: readonly OfficialSitting[] = [];
+
+export interface UpcomingOfficialSittingsOptions {
+  exam?: OfficialExamKey;
+  filingUniversity?: FilingUniversity;
+  now?: Date;
+}
+
+/**
+ * Upcoming official sittings: the sitting (or the last day of its exam week)
+ * is today or later, UTC-day granularity like the rest of this file.
+ * `filingUniversity` keeps rows for that university plus rows marked "all"
+ * (or unmarked). Sorted by date, then by the registration close.
+ */
+export function getUpcomingOfficialSittings(
+  options: UpcomingOfficialSittingsOptions = {},
+  sittings: readonly OfficialSitting[] = OFFICIAL_SITTINGS
+): OfficialSitting[] {
+  const { exam, filingUniversity, now = new Date() } = options;
+  const todayIso = now.toISOString().slice(0, 10);
+  return sittings
+    .filter((s) => (s.date_end ?? s.date) >= todayIso)
+    .filter((s) => !exam || s.exam_key === exam)
+    .filter((s) => {
+      if (!filingUniversity || filingUniversity === "all") return true;
+      const u = s.filing_university ?? "all";
+      return u === "all" || u === filingUniversity;
+    })
+    .slice()
+    .sort(
+      (a, b) =>
+        a.date.localeCompare(b.date) ||
+        (a.registration_closes ?? "9999-12-31").localeCompare(
+          b.registration_closes ?? "9999-12-31"
+        )
+    );
+}
