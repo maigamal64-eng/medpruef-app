@@ -23,7 +23,8 @@ vi.mock("@/lib/sentry-capture", () => ({ captureServerError: h.captureServerErro
 vi.mock("@/lib/ai/anthropic", async (orig) => ({ ...(await orig<typeof import("@/lib/ai/anthropic")>()), callClaude: h.callClaude }));
 
 import { POST } from "@/app/api/translate/route";
-import { AiTimeout, AiUpstream } from "@/lib/ai/anthropic";
+import { AiRefusal, AiTimeout, AiUpstream } from "@/lib/ai/anthropic";
+import { costMicroUsd } from "@/lib/ai/pricing";
 
 const USER = "11111111-1111-4111-8111-111111111111";
 
@@ -44,6 +45,9 @@ beforeEach(() => {
   vi.stubEnv("ANTHROPIC_API_KEY", "test-key");
   vi.stubEnv("OPENAI_API_KEY", "");
   vi.stubEnv("AI_TRANSLATE_DAILY_ATTEMPTS", "");
+  vi.stubEnv("AI_FALLBACK_MODEL", "");
+  vi.stubEnv("OPENAI_TRANSLATE_MODEL", "");
+  vi.stubEnv("ANTHROPIC_TRANSLATE_MODEL", "");
 });
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -209,5 +213,80 @@ describe("POST /api/translate metering", () => {
     expect(res.status).toBe(503);
     expect(h.callClaude).not.toHaveBeenCalled();
     expect(logRows()).toHaveLength(0);
+  });
+});
+
+describe("POST /api/translate Anthropic fallback (AI_FALLBACK_MODEL is a Claude model)", () => {
+  const FALLBACK = "claude-sonnet-4-6";
+  const openaiFetch = vi.fn(async () => new Response("must not be called", { status: 500 }));
+
+  beforeEach(() => {
+    vi.stubEnv("AI_FALLBACK_MODEL", FALLBACK);
+    vi.stubEnv("OPENAI_API_KEY", "oa-key"); // present on purpose: it must never be used
+    openaiFetch.mockClear();
+    vi.stubGlobal("fetch", openaiFetch);
+  });
+
+  it("Haiku fails, claude-sonnet-4-6 answers through the wrapper: two anthropic rows, Sonnet 4.6 cost, no OpenAI call", async () => {
+    h.callClaude
+      .mockRejectedValueOnce(new AiUpstream("HTTP 500", { reachedModel: true, status: 500, code: "http_500" }))
+      .mockResolvedValueOnce({ ...okResult, model: FALLBACK, text: "Sonnet fallback translation." });
+    const res = await req();
+    expect(res.status).toBe(200);
+    const j = await res.json();
+    expect(j.translatedText).toBe("Sonnet fallback translation.");
+    expect(j.sourceModel).toBe(FALLBACK);
+
+    expect(h.callClaude).toHaveBeenCalledTimes(2);
+    const [first, second] = h.callClaude.mock.calls.map((c) => c[0] as { model: string; max_tokens: number; effort: string; system: unknown; messages: unknown });
+    expect(first.model).toBe("claude-haiku-4-5");
+    expect(second).toMatchObject({ model: FALLBACK, max_tokens: 1400, effort: "low" });
+    expect(second.system).toEqual(first.system);
+    expect(second.messages).toEqual(first.messages);
+    expect(openaiFetch).not.toHaveBeenCalled();
+
+    const rows = logRows();
+    expect(rows.map((r) => [r.provider, r.model, r.status])).toEqual([
+      ["anthropic", "claude-haiku-4-5", "upstream_error"],
+      ["anthropic", FALLBACK, "ok"],
+    ]);
+    expect(Number(rows[0].cost_usd)).toBeGreaterThan(0);
+    expect(Number(rows[1].cost_usd)).toBeCloseTo(costMicroUsd(FALLBACK, OK_USAGE) / 1e6, 9);
+    expect(takes()).toHaveLength(1);
+    expect(rowsFor(h.state, "question_translations")[0]).toMatchObject({ source_model: FALLBACK });
+  });
+
+  it("a refusal is never re-sent to the fallback model", async () => {
+    h.callClaude.mockRejectedValueOnce(
+      new AiRefusal("declined", { usage: OK_USAGE, request_id: "r", stop_details: null, blocks: [], partialText: "" }),
+    );
+    const res = await req();
+    expect(res.status).toBe(503);
+    expect(h.callClaude).toHaveBeenCalledTimes(1);
+    expect(openaiFetch).not.toHaveBeenCalled();
+    expect(logRows().map((r) => r.status)).toEqual(["refusal"]);
+  });
+
+  it("both Claude models fail: 503, both logged with a cost, no OpenAI call", async () => {
+    h.callClaude.mockRejectedValue(new AiTimeout("timed out", { usage: null, request_id: null }));
+    const res = await req();
+    expect(res.status).toBe(503);
+    expect(h.callClaude).toHaveBeenCalledTimes(2);
+    expect(openaiFetch).not.toHaveBeenCalled();
+    const rows = logRows();
+    expect(rows.map((r) => [r.model, r.status])).toEqual([
+      ["claude-haiku-4-5", "timeout"],
+      [FALLBACK, "timeout"],
+    ]);
+    expect(rows.every((r) => Number(r.cost_usd) > 0)).toBe(true);
+  });
+
+  it("a slot naming the translate primary makes one call only", async () => {
+    vi.stubEnv("AI_FALLBACK_MODEL", "claude-haiku-4-5");
+    h.callClaude.mockRejectedValue(new AiUpstream("HTTP 500", { reachedModel: true, status: 500, code: "http_500" }));
+    const res = await req();
+    expect(res.status).toBe(503);
+    expect(h.callClaude).toHaveBeenCalledTimes(1);
+    expect(openaiFetch).not.toHaveBeenCalled();
   });
 });

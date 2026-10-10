@@ -17,10 +17,12 @@ import {
 } from "@/lib/ai/anthropic";
 import { checkLegacyUserCap, dailyAttemptLimit, getLegacyAiLimits, takeAiQuota } from "@/lib/ai/limits";
 import { costMicroUsd, measureInputBytes, reserveCeilingMicro, trimHistoryToFit } from "@/lib/ai/pricing";
+import { DEFAULT_FALLBACK_MODEL, anthropicFallbackModel, resolveFallback } from "@/lib/ai/fallback";
 import { billingNeutralLine } from "@/lib/billing-copy";
 
 export const dynamic = "force-dynamic";
-// Anthropic (25 s) plus the OpenAI fallback (15 s) must fit inside the function.
+// The primary Anthropic call (25 s) plus ONE fallback (Anthropic 20 s or
+// OpenAI 15 s, never both) must fit inside the function.
 export const maxDuration = 60;
 
 // In-memory burst guard on top of the DB-backed daily quota. Catches
@@ -32,6 +34,9 @@ const AI_CHAT_BURST_LIMIT = { limit: 10, windowMs: 60_000 };
 //
 // Kill switch: AI_FEATURES_ENABLED=false or AI_PROVIDER_MODE=disabled.
 // AI_PRIMARY_MODEL is SET IN VERCEL and overrides the code default.
+// AI_FALLBACK_MODEL (or OPENAI_MODEL, which takes precedence) is the fallback
+// slot: a Claude model id is called through the shared Anthropic wrapper, any
+// other id goes to OpenAI (src/lib/ai/fallback.ts). Default gpt-4o-mini.
 // Daily attempts come from AI_CHAT_DAILY_ATTEMPTS (src/lib/ai/limits.ts);
 // the old AI_DAILY_QUOTA_PAID name is no longer read.
 // ────────────────────────────────────────────────────────────────────
@@ -42,7 +47,7 @@ function readConfig() {
     enabled: (process.env.AI_FEATURES_ENABLED ?? "true") === "true",
     mode: (process.env.AI_PROVIDER_MODE as ProviderMode | undefined) ?? "auto",
     primaryModel: process.env.ANTHROPIC_MODEL || process.env.AI_PRIMARY_MODEL || "claude-sonnet-5",
-    fallbackModel: process.env.OPENAI_MODEL || process.env.AI_FALLBACK_MODEL || "gpt-4o-mini",
+    fallback: resolveFallback([process.env.OPENAI_MODEL, process.env.AI_FALLBACK_MODEL]),
   };
 }
 
@@ -52,6 +57,10 @@ function readConfig() {
 const CHAT_EFFORT = "low" as const;
 const CHAT_MAX_TOKENS = 3000;
 const ANTHROPIC_TIMEOUT_MS = 25_000;
+// Anthropic fallback model (for example claude-sonnet-4-6): shorter, so the
+// primary timeout plus the fallback still fits maxDuration with room for the
+// DB writes. Sonnet 4.6 answered this route in 9.3 s on 10 Oct 2026.
+const ANTHROPIC_FALLBACK_TIMEOUT_MS = 20_000;
 const OPENAI_TIMEOUT_MS = 15_000;
 
 // OpenAI is not in src/lib/ai/pricing.ts (Anthropic only), so the fallback
@@ -647,10 +656,16 @@ export async function POST(req: NextRequest) {
   // GATE 5: provider routing.
   //
   //   auto         → try Anthropic first if ANTHROPIC_API_KEY is set,
-  //                  then fall back to OpenAI on failure (default).
-  //   claude_oauth → only try Anthropic. (Reserved; see AI-OAUTH-TEST-2026-04-28.md.)
+  //                  then the fallback slot on failure (default).
+  //   claude_oauth → only Anthropic: the primary and, when the slot holds
+  //                  a Claude model, the Anthropic fallback.
   //   openai       → skip Anthropic entirely; only OpenAI.
   //   disabled     → caught above by GATE 1.
+  //
+  // The fallback slot (AI_FALLBACK_MODEL) is ONE provider, never a chain:
+  // a Claude model id is a second Anthropic call on that model through the
+  // same wrapper; any other id is the OpenAI call below. A refusal is never
+  // sent to the fallback, and a slot naming the primary model is skipped.
   //
   // Anthropic goes through the shared wrapper (src/lib/ai/anthropic.ts):
   // reply = first TEXT block (never content[0], Sonnet 5 thinks by
@@ -664,14 +679,24 @@ export async function POST(req: NextRequest) {
   let refused = false;
 
   const tryAnthropic = config.mode === "auto" || config.mode === "claude_oauth";
-  const tryOpenAI = config.mode === "auto" || config.mode === "openai";
+  const tryOpenAI = config.mode === "openai" || (config.mode === "auto" && config.fallback.provider === "openai");
+  const fallbackClaudeModel = tryAnthropic ? anthropicFallbackModel(config.fallback, config.primaryModel) : null;
+  const openaiModel = config.fallback.provider === "openai" ? config.fallback.model : DEFAULT_FALLBACK_MODEL;
 
-  if (tryAnthropic && process.env.ANTHROPIC_API_KEY) {
-    const model = config.primaryModel;
+  /**
+   * One Anthropic call through the shared wrapper plus its own ai_call_log
+   * row (success or failure, cost always booked). Used for the primary model
+   * and for the Anthropic fallback model.
+   */
+  async function attemptAnthropic(
+    model: string,
+    timeoutMs: number,
+    role: "primary" | "fallback",
+  ): Promise<{ reply: string; truncated: boolean; refused: boolean }> {
     addBreadcrumb({
       category: "ai-chat",
       message: "upstream_request_started",
-      data: { provider: "anthropic", model },
+      data: { provider: "anthropic", model, role },
     });
     const callStart = Date.now();
     try {
@@ -681,12 +706,8 @@ export async function POST(req: NextRequest) {
         system: [{ type: "text", text: composedSystemPrompt }],
         messages: turns,
         max_tokens: CHAT_MAX_TOKENS,
-        timeoutMs: ANTHROPIC_TIMEOUT_MS,
+        timeoutMs,
       });
-      reply = result.text;
-      truncated = result.stop_reason === "max_tokens";
-      upstreamProvider = "anthropic";
-      upstreamModel = model;
       await writeCallLog(userId, qidNum, {
         provider: "anthropic",
         model,
@@ -704,12 +725,15 @@ export async function POST(req: NextRequest) {
         message: "upstream_response",
         data: {
           provider: "anthropic",
+          model,
+          role,
           requestId: result.request_id,
           stopReason: result.stop_reason,
           blockTypes: result.blocks.map((b) => b.type),
-          replyLen: reply.length,
+          replyLen: result.text.length,
         },
       });
+      return { reply: result.text, truncated: result.stop_reason === "max_tokens", refused: false };
     } catch (err) {
       const c = classifyAnthropicError(err);
       let costMicro = 0;
@@ -730,23 +754,58 @@ export async function POST(req: NextRequest) {
         costMicro,
         durationMs: Date.now() - callStart,
       });
-      captureServerError(err, { route: "/api/ai-chat", userId, phase: "upstream", provider: "anthropic", status: c.status, code: c.code });
+      captureServerError(err, {
+        route: "/api/ai-chat",
+        userId,
+        phase: "upstream",
+        provider: "anthropic",
+        model,
+        role,
+        status: c.status,
+        code: c.code,
+      });
       addBreadcrumb({
         category: "ai-chat",
         message: "upstream_failed",
         level: "error",
-        data: { provider: "anthropic", status: c.status, code: c.code },
+        data: { provider: "anthropic", model, role, status: c.status, code: c.code },
       });
-      // A safety refusal is not an outage: never route the same content to another provider.
-      refused = c.status === "refusal";
+      // A safety refusal is not an outage: never route the same content to another model or provider.
+      return { reply: "", truncated: false, refused: c.status === "refusal" };
     }
   }
 
-  // Fall back to OpenAI (when allowed AND Anthropic didn't already succeed).
+  if (tryAnthropic && process.env.ANTHROPIC_API_KEY) {
+    const primary = await attemptAnthropic(config.primaryModel, ANTHROPIC_TIMEOUT_MS, "primary");
+    reply = primary.reply;
+    truncated = primary.truncated;
+    refused = primary.refused;
+    if (reply) {
+      upstreamProvider = "anthropic";
+      upstreamModel = config.primaryModel;
+    }
+
+    // Anthropic fallback (AI_FALLBACK_MODEL is a Claude model, for example
+    // claude-sonnet-4-6): one more metered call on a DIFFERENT model, same
+    // wrapper, same key, same request shape. No second quota attempt is taken.
+    if (!reply && !refused && fallbackClaudeModel) {
+      const fb = await attemptAnthropic(fallbackClaudeModel, ANTHROPIC_FALLBACK_TIMEOUT_MS, "fallback");
+      reply = fb.reply;
+      truncated = fb.truncated;
+      refused = fb.refused;
+      if (reply) {
+        upstreamProvider = "anthropic";
+        upstreamModel = fallbackClaudeModel;
+      }
+    }
+  }
+
+  // Fall back to OpenAI (when the slot is an OpenAI model, or in openai mode,
+  // AND Anthropic didn't already succeed).
   if (!reply && !refused && tryOpenAI) {
     const openaiKey = process.env.OPENAI_API_KEY;
     if (openaiKey) {
-      const model = config.fallbackModel;
+      const model = openaiModel;
       addBreadcrumb({
         category: "ai-chat",
         message: "upstream_request_started",

@@ -4,6 +4,7 @@ import { requireUser, isFreeAccess } from "@/lib/auth-guard";
 import { canFreeUserReadQuestion, logFreeCapHit } from "@/lib/free-access";
 import { checkRateLimit, rateKey, rateLimitHeaders } from "@/lib/rate-limit";
 import { getLegacyAiLimits } from "@/lib/ai/limits";
+import { anthropicFallbackModel, resolveFallback } from "@/lib/ai/fallback";
 import { legacyGate, logAiCall, meteredClaude, type MeterDb } from "@/lib/notes-safety";
 
 export const dynamic = "force-dynamic";
@@ -30,7 +31,10 @@ const TRANSLATE_BURST_LIMIT = { limit: 15, windowMs: 60_000 };
  *   (question_id, lang, field) is unique → zero duplicate upstream
  *   calls per (question, language, field) across the entire user base.
  * - On miss: fetch source text from questions, call Anthropic (Haiku)
- *   first, fall back to OpenAI (gpt-4o-mini), then cache + return.
+ *   first, then the fallback slot (OPENAI_TRANSLATE_MODEL, else
+ *   AI_FALLBACK_MODEL, else gpt-4o-mini): a Claude model id is a second
+ *   metered Anthropic call through the same wrapper, any other id goes to
+ *   OpenAI. Then cache + return.
  * - Rate-limit: DB-backed daily ATTEMPT cap through ai_quota_take (free: 5,
  *   paid: AI_TRANSLATE_DAILY_ATTEMPTS, default 40, Europe/Vienna day). Cache
  *   hits are free and never counted. Every model call (Anthropic and the
@@ -356,7 +360,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(body, { status: gate.status });
   }
 
-  // 4. Upstream call: Anthropic first (metered), OpenAI fallback (metered).
+  // 4. Upstream call: Anthropic first (metered), then ONE fallback (metered):
+  //    the Anthropic fallback model or OpenAI, chosen by the fallback slot.
   //    Every model call writes one ai_call_log row, failures included.
   const targetLangLabel = LANG_LABELS[lang] || lang;
   const system = buildSystem(targetLangLabel);
@@ -365,13 +370,16 @@ export async function POST(req: NextRequest) {
   let translatedText = "";
   let sourceModel = "";
 
+  const primaryModel = process.env.ANTHROPIC_TRANSLATE_MODEL || "claude-haiku-4-5";
+  const fallback = resolveFallback([process.env.OPENAI_TRANSLATE_MODEL, process.env.AI_FALLBACK_MODEL]);
+  let primaryRefused = false;
+
   {
-    const model = process.env.ANTHROPIC_TRANSLATE_MODEL || "claude-haiku-4-5";
     const res = await meteredClaude({
       db: meterDb,
       userId,
       route: "translate",
-      model,
+      model: primaryModel,
       system,
       user,
       maxTokens: 1400,
@@ -380,14 +388,38 @@ export async function POST(req: NextRequest) {
     });
     if (res.ok && res.text) {
       translatedText = res.text;
-      sourceModel = model;
+      sourceModel = primaryModel;
+    } else if (!res.ok && !res.skipped && res.status === "refusal") {
+      primaryRefused = true;
     }
   }
 
-  if (!translatedText) {
+  // Anthropic fallback (the slot is a Claude model, for example
+  // claude-sonnet-4-6): same wrapper, same key, own ai_call_log row. A refusal
+  // is never re-sent to another model; a slot naming the primary is skipped.
+  const fallbackClaudeModel = anthropicFallbackModel(fallback, primaryModel);
+  if (!translatedText && !primaryRefused && fallbackClaudeModel) {
+    const res = await meteredClaude({
+      db: meterDb,
+      userId,
+      route: "translate",
+      model: fallbackClaudeModel,
+      system,
+      user,
+      maxTokens: 1400,
+      timeoutMs: UPSTREAM_TIMEOUT_MS,
+      questionId,
+    });
+    if (res.ok && res.text) {
+      translatedText = res.text;
+      sourceModel = fallbackClaudeModel;
+    }
+  }
+
+  if (!translatedText && fallback.provider === "openai") {
     const openaiKey = process.env.OPENAI_API_KEY;
     if (openaiKey) {
-      const model = process.env.OPENAI_TRANSLATE_MODEL || "gpt-4o-mini";
+      const model = fallback.model;
       const started = Date.now();
       const inputBytes = new TextEncoder().encode(system + user).length;
       const resp = await fetchWithTimeout("https://api.openai.com/v1/chat/completions", {

@@ -119,15 +119,17 @@ const json = (body: unknown, status = 200, headers: Record<string, string> = {})
 const OPENAI_OK = { choices: [{ message: { content: "Fallback explanation" } }], usage: { prompt_tokens: 1000, completion_tokens: 400 } };
 
 type FetchCall = { url: string; body: Record<string, unknown> };
-function stubFetch(handlers: { anthropic?: () => Response; openai?: () => Response }) {
+/** Handlers receive the parsed request body (so a test can answer per model) and the init (for the abort signal). */
+type FetchHandler = (body: Record<string, unknown>, init?: RequestInit) => Response | Promise<Response>;
+function stubFetch(handlers: { anthropic?: FetchHandler; openai?: FetchHandler }) {
   const seen: FetchCall[] = [];
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url: string, init?: RequestInit) => {
       const body = init?.body ? (JSON.parse(String(init.body)) as Record<string, unknown>) : {};
       seen.push({ url, body });
-      if (url.includes("api.anthropic.com")) return (handlers.anthropic ?? (() => json(THINKING_FIRST, 200, { "request-id": "req_abc" })))();
-      if (url.includes("api.openai.com")) return (handlers.openai ?? (() => json(OPENAI_OK)))();
+      if (url.includes("api.anthropic.com")) return (handlers.anthropic ?? (() => json(THINKING_FIRST, 200, { "request-id": "req_abc" })))(body, init);
+      if (url.includes("api.openai.com")) return (handlers.openai ?? (() => json(OPENAI_OK)))(body, init);
       throw new Error(`unexpected fetch ${url}`);
     }),
   );
@@ -160,6 +162,8 @@ beforeEach(() => {
   vi.stubEnv("OPENAI_API_KEY", "");
   vi.stubEnv("AI_PRIMARY_MODEL", "claude-sonnet-5");
   vi.stubEnv("ANTHROPIC_MODEL", "");
+  vi.stubEnv("AI_FALLBACK_MODEL", "");
+  vi.stubEnv("OPENAI_MODEL", "");
   vi.stubEnv("AI_FEATURES_ENABLED", "true");
   vi.stubEnv("AI_PROVIDER_MODE", "auto");
   vi.stubEnv("AI_CHAT_DAILY_ATTEMPTS", "");
@@ -268,6 +272,7 @@ describe("empty or failed upstream calls are metered", () => {
   it("Anthropic failure then OpenAI success: two rows, one quota attempt, provider openai with cost", async () => {
     const t = setup();
     vi.stubEnv("OPENAI_API_KEY", "sk-test");
+    vi.stubEnv("AI_FALLBACK_MODEL", "gpt-4o-mini"); // an OpenAI model in the slot keeps the OpenAI fallback
     stubFetch({ anthropic: () => json({ error: {} }, 500) });
     const res = await post();
     expect(res.status).toBe(200);
@@ -510,5 +515,195 @@ describe("explanation locale cache (ported from tests/unit/api/ai-chat-route.tes
     const res = await post();
     expect(res.status).toBe(200);
     expect(t.updates()).toHaveLength(0);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────────
+// Anthropic fallback ([name], 10 Oct 2026: claude-sonnet-4-6 instead of
+// OpenAI). The slot is AI_FALLBACK_MODEL; a Claude id there means one more
+// metered call through the same wrapper, never OpenAI.
+// ────────────────────────────────────────────────────────────────────
+const PRIMARY = "claude-haiku-5-5";
+const FALLBACK = "claude-sonnet-4-6";
+
+const SONNET_46_OK = {
+  id: "msg_fb",
+  type: "message",
+  role: "assistant",
+  model: FALLBACK,
+  content: [{ type: "text", text: "**TL;DR** Fallback: Das Pankreas produziert Insulin." }],
+  stop_reason: "end_turn",
+  usage: { input_tokens: 1100, output_tokens: 520, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 },
+};
+const FALLBACK_TEXT = SONNET_46_OK.content[0].text;
+
+/** Answer per model: `primary` for the primary model, `fallback` (default: a Sonnet 4.6 success) for the fallback model. */
+function byModel(primary: FetchHandler, fallback: FetchHandler = () => json(SONNET_46_OK, 200, { "request-id": "req_fb" })): FetchHandler {
+  return (body, init) => (body.model === FALLBACK ? fallback(body, init) : primary(body, init));
+}
+
+function completedEvents(t: ReturnType<typeof setup>) {
+  return t.calls
+    .filter((c) => c.table === "user_events" && c.op === "insert")
+    .map((c) => c.payload as { event_type: string; event_data: Record<string, unknown> });
+}
+
+describe("Anthropic fallback (AI_FALLBACK_MODEL is a Claude model)", () => {
+  beforeEach(() => {
+    vi.stubEnv("AI_PRIMARY_MODEL", PRIMARY);
+    vi.stubEnv("AI_FALLBACK_MODEL", FALLBACK);
+    vi.stubEnv("OPENAI_API_KEY", "sk-test"); // present on purpose: it must never be used
+  });
+
+  it("primary HTTP 500, then claude-sonnet-4-6 answers: 200, two anthropic rows, Sonnet 4.6 cost, one attempt, no OpenAI call", async () => {
+    const t = setup();
+    const seen = stubFetch({ anthropic: byModel(() => json({ error: { type: "api_error" } }, 500)) });
+    const res = await post();
+    expect(res.status).toBe(200);
+    expect((await res.json()).reply).toBe(FALLBACK_TEXT);
+
+    expect(seen.map((c) => [new URL(c.url).host, c.body.model])).toEqual([
+      ["api.anthropic.com", PRIMARY],
+      ["api.anthropic.com", FALLBACK],
+    ]);
+    // Same request shape as the primary: effort low, the thinking-safe max_tokens, same system prompt and turns.
+    expect(seen[1].body.output_config).toEqual({ effort: "low" });
+    expect(seen[1].body.max_tokens).toBe(3000);
+    expect(seen[1].body.system).toEqual(seen[0].body.system);
+    expect(seen[1].body.messages).toEqual(seen[0].body.messages);
+    expect(seen[1].body).not.toHaveProperty("thinking");
+    expect(seen[1].body).not.toHaveProperty("temperature");
+
+    const rows = t.inserts();
+    expect(rows.map((r) => [r.provider, r.model, r.status])).toEqual([
+      ["anthropic", PRIMARY, "upstream_error"],
+      ["anthropic", FALLBACK, "ok"],
+    ]);
+    const expected = costMicroUsd(FALLBACK, SONNET_46_OK.usage);
+    expect(expected).toBeGreaterThan(0);
+    expect(Number(rows[1].cost_usd)).toBeCloseTo(expected / 1e6, 9);
+    expect(rows[1]).toMatchObject({ route: "ai_chat", success: true, error_code: null, in_tokens: 1100, out_tokens: 520, question_id: 42 });
+    expect(Number(rows[0].cost_usd)).toBeGreaterThan(0); // the failed primary is still booked
+    expect(t.rpcs("ai_quota_take")).toHaveLength(1);
+
+    // Cached like a primary reply; the completion event names the fallback model.
+    expect(t.updates()).toEqual([expect.objectContaining({ ai_explanation: FALLBACK_TEXT })]);
+    expect(completedEvents(t)).toEqual([
+      expect.objectContaining({ event_type: "ai_chat_completed", event_data: expect.objectContaining({ provider: "anthropic", model: FALLBACK }) }),
+    ]);
+  });
+
+  it("an empty-text primary (thinking only, cut by max_tokens) also falls back", async () => {
+    const t = setup();
+    stubFetch({ anthropic: byModel(() => json({ ...THINKING_ONLY_MAX_TOKENS, model: PRIMARY })) });
+    const res = await post();
+    expect(res.status).toBe(200);
+    expect(t.inserts().map((r) => [r.model, r.status])).toEqual([
+      [PRIMARY, "empty_text"],
+      [FALLBACK, "ok"],
+    ]);
+  });
+
+  it("a primary timeout falls back and both calls are booked", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    try {
+      const t = setup();
+      const hang: FetchHandler = (_body, init) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () => reject(new DOMException("aborted", "AbortError")), { once: true });
+        });
+      const seen = stubFetch({ anthropic: byModel(hang) });
+      const pending = post();
+      await vi.waitFor(() => expect(seen).toHaveLength(1));
+      await vi.advanceTimersByTimeAsync(25_000);
+      const res = await pending;
+      expect(res.status).toBe(200);
+      expect((await res.json()).reply).toBe(FALLBACK_TEXT);
+      const rows = t.inserts();
+      expect(rows.map((r) => [r.model, r.status])).toEqual([
+        [PRIMARY, "timeout"],
+        [FALLBACK, "ok"],
+      ]);
+      expect(Number(rows[0].cost_usd)).toBeGreaterThan(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("a refusal is never sent to the fallback model", async () => {
+    const t = setup();
+    const seen = stubFetch({
+      anthropic: byModel(() =>
+        json({
+          ...THINKING_FIRST,
+          model: PRIMARY,
+          content: [{ type: "text", text: "partial text that must not be shown" }],
+          stop_reason: "refusal",
+          stop_details: { type: "refusal", category: "other" },
+        }),
+      ),
+    });
+    const res = await post();
+    expect(res.status).toBe(503);
+    expect(seen.map((c) => c.body.model)).toEqual([PRIMARY]);
+    expect(t.inserts()).toHaveLength(1);
+    expect(t.inserts()[0]).toMatchObject({ status: "refusal" });
+    expect(t.updates()).toHaveLength(0);
+  });
+
+  it("both models fail: 503, both calls metered, nothing cached, still no OpenAI call", async () => {
+    const t = setup();
+    const seen = stubFetch({ anthropic: () => json({ error: { type: "api_error" } }, 500) });
+    const res = await post();
+    expect(res.status).toBe(503);
+    expect(seen.map((c) => [new URL(c.url).host, c.body.model])).toEqual([
+      ["api.anthropic.com", PRIMARY],
+      ["api.anthropic.com", FALLBACK],
+    ]);
+    const rows = t.inserts();
+    expect(rows.map((r) => [r.model, r.status, r.error_code])).toEqual([
+      [PRIMARY, "upstream_error", "http_500"],
+      [FALLBACK, "upstream_error", "http_500"],
+    ]);
+    expect(rows.every((r) => Number(r.cost_usd) > 0)).toBe(true);
+    expect(t.updates()).toHaveLength(0);
+    expect(t.rpcs("ai_quota_take")).toHaveLength(1);
+  });
+
+  it("a primary success never calls the fallback", async () => {
+    const t = setup();
+    const seen = stubFetch({ anthropic: byModel(() => json({ ...THINKING_FIRST, model: PRIMARY })) });
+    expect((await post()).status).toBe(200);
+    expect(seen.map((c) => c.body.model)).toEqual([PRIMARY]);
+    expect(t.inserts()).toHaveLength(1);
+    expect(completedEvents(t)[0].event_data).toMatchObject({ model: PRIMARY });
+  });
+
+  it("a slot naming the primary model makes exactly one call", async () => {
+    vi.stubEnv("AI_FALLBACK_MODEL", PRIMARY);
+    const t = setup();
+    const seen = stubFetch({ anthropic: () => json({ error: {} }, 500) });
+    expect((await post()).status).toBe(503);
+    expect(seen).toHaveLength(1);
+    expect(t.inserts()).toHaveLength(1);
+  });
+
+  it("openai mode still calls OpenAI with an OpenAI model when the slot holds a Claude model", async () => {
+    vi.stubEnv("AI_PROVIDER_MODE", "openai");
+    const t = setup();
+    const seen = stubFetch({});
+    const res = await post();
+    expect(res.status).toBe(200);
+    expect(seen.map((c) => [new URL(c.url).host, c.body.model])).toEqual([["api.openai.com", "gpt-4o-mini"]]);
+    expect(t.inserts()[0]).toMatchObject({ provider: "openai", model: "gpt-4o-mini" });
+  });
+
+  it("no Anthropic key: the OpenAI key is not used as a fallback; one explanatory row at cost 0", async () => {
+    vi.stubEnv("ANTHROPIC_API_KEY", "");
+    const t = setup();
+    const seen = stubFetch({});
+    expect((await post()).status).toBe(503);
+    expect(seen).toHaveLength(0);
+    expect(t.inserts()).toEqual([expect.objectContaining({ provider: "none", error_code: "no_provider_configured", cost_usd: "0.000000" })]);
   });
 });
