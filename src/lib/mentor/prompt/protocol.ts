@@ -116,3 +116,26 @@ export function stripProtocolLines(partial: string): string {
     .filter((l) => !/^\s*@@/.test(l))
     .join("\n");
 }
+
+/**
+ * An answer cut off by the output cap (stop_reason max_tokens) ends mid-word or
+ * mid-marker. Keep everything up to the last complete sentence: a trailing
+ * partial marker line is dropped, and the last text line is cut after its last
+ * ".", "!" or "?" (dropped when it has none). Only removes text, so it cannot
+ * add a claim; what is left is validated as usual.
+ */
+export function trimTruncatedAnswer(raw: string): string {
+  if (typeof raw !== "string" || raw.length === 0) return "";
+  const lines = raw.replace(/\s+$/, "").split("\n");
+  while (lines.length > 0) {
+    const last = lines.pop() as string;
+    const t = last.trim();
+    if (t.length === 0 || t.startsWith("@@")) continue;
+    const m = /^([\s\S]*[.!?])(?=\s|$)/.exec(last);
+    if (m && /[\p{L}\p{N}]/u.test(m[1].replace(/^\s*-\s*/, ""))) {
+      lines.push(m[1]);
+      break;
+    }
+  }
+  return lines.join("\n");
+}

@@ -87,7 +87,10 @@ export const MENTOR_CONFIG_DEFAULTS: Readonly<MentorConfig> = Object.freeze({
   modelDefault: MODEL_IDS.HAIKU_5_5,
   modelEscalate: MODEL_IDS.SONNET_5_5,
   effort: "low",
-  maxTokens: 700,
+  // Haiku 5.5 always thinks (300 to 600 output tokens even at effort low), so 700
+  // cut the visible answer off (eval round 1: 9 truncated or empty answers).
+  // 1000 keeps a heavy 3-call answer under one credit (USD 0.005) at worst case.
+  maxTokens: 1000,
   maxToolRounds: 3,
   ratePerMin: 6,
   ratePerDay: 60,
@@ -161,7 +164,7 @@ export function readMentorConfig(env: Env = process.env): MentorConfig {
     modelEscalate: envModel(env[MENTOR_ENV.modelEscalate], d.modelEscalate),
     effort: envEffort(env[MENTOR_ENV.effort]),
     // Hard ceilings: env can only tighten these, never exceed the contract.
-    maxTokens: envInt(env[MENTOR_ENV.maxTokens], d.maxTokens, 64, 700),
+    maxTokens: envInt(env[MENTOR_ENV.maxTokens], d.maxTokens, 64, 1000),
     maxToolRounds: envInt(env[MENTOR_ENV.maxToolRounds], d.maxToolRounds, 1, 3),
     ratePerMin: envInt(env[MENTOR_ENV.ratePerMin], d.ratePerMin, 0, 60),
     ratePerDay: envInt(env[MENTOR_ENV.ratePerDay], d.ratePerDay, 0, 1000),

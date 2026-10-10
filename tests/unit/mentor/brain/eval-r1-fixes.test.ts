@@ -3,10 +3,10 @@
  * group per fixed cause; every date and fee is synthetic (2099, odd amounts).
  */
 import { describe, it, expect } from "vitest";
-import { parseAnswer } from "@/lib/mentor/prompt/protocol";
+import { parseAnswer, trimTruncatedAnswer } from "@/lib/mentor/prompt/protocol";
 import { MENTOR_CORE_PROMPT } from "@/lib/mentor/prompt/system";
 import { createMentorBrain } from "@/lib/mentor/prompt/brain";
-import { guessLang, stripFactIds, validateAnswer } from "@/lib/mentor/validator";
+import { allowedKeysFromText, guessLang, stripFactIds, validateAnswer } from "@/lib/mentor/validator";
 import { isDeadlineScoped, sittingFactId, sittingToFact } from "@/lib/mentor/facts-loader";
 import { FACTS, SITTINGS, ctx, fact, fakeDb, makeLoader } from "./helpers";
 
@@ -234,5 +234,107 @@ describe("prompt: answer shape", () => {
   it("asks the filing university as a real question and keeps ids out of the text", () => {
     expect(MENTOR_CORE_PROMPT).toContain("ends with a question mark");
     expect(MENTOR_CORE_PROMPT).toContain("Never write links, fact ids");
+  });
+});
+
+describe("validator: a fact range names its year once (dl-rez-jan)", () => {
+  const RANGE = fact({
+    id: "fixture.dates.range",
+    exam_key: "rezeptierkunde",
+    topic: "dates",
+    filing_university: "all",
+    text_de: "Prüfungswoche 18. Januar bis 22. Januar 2099. Anmeldezeitraum 2. Dezember bis 15. Dezember 2098.",
+    text_en: "Exam week 18 Jan to 22 Jan 2099. Registration window 2 Dec to 15 Dec 2098.",
+  });
+  const say = (t: string) => validateAnswer(`@@LANG de\n@@BLOCK facts=${RANGE.id}\n${t}`, [RANGE]);
+
+  it("the start date of the range carries the range's year", () => {
+    const keys = allowedKeysFromText(`${RANGE.text_de}\n${RANGE.text_en}`);
+    expect(keys.has("d:2099-01-18")).toBe(true);
+    expect(keys.has("d:2098-12-02")).toBe(true);
+  });
+
+  for (const t of [
+    "Die Prüfungswoche ist 18. bis 22. Januar 2099.",
+    "Die Prüfung beginnt am 18. Januar 2099.",
+    "Exam week 18 to 22 January 2099.",
+    "Beginn am 18.01.2099.",
+    "Anmeldung ab 2. Dezember 2098.",
+  ]) {
+    it(`keeps "${t}"`, () => {
+      const v = say(t);
+      expect(v.rejected).toEqual([]);
+      expect(v.replaced).toBe(false);
+    });
+  }
+
+  for (const t of ["Die Prüfung beginnt am 18. Februar 2099.", "Die Prüfung beginnt am 18. Januar 2100.", "Anmeldung ab 2. Dezember 2099."]) {
+    it(`still replaces "${t}"`, () => {
+      expect(say(t).replaced).toBe(true);
+    });
+  }
+
+  it("a start month after the end month belongs to the year before", () => {
+    const keys = allowedKeysFromText("Ferien vom 28. Dezember bis 5. Januar 2099.");
+    expect(keys.has("d:2098-12-28")).toBe(true);
+    expect(keys.has("d:2099-12-28")).toBe(false);
+  });
+
+  it("two separate dates with no range word do not borrow a year", () => {
+    const keys = allowedKeysFromText("Am 18. Januar ist Anmeldung. Die Prüfung ist am 22. Februar 2099.");
+    expect(keys.has("d:2099-01-18")).toBe(false);
+  });
+});
+
+describe("search_facts: topic ranks, it does not exclude (pr-prescribed)", () => {
+  const ALWAYS = fact({
+    id: "fixture.documents.always",
+    exam_key: "sip5a",
+    topic: "documents",
+    filing_university: "all",
+    text_de: "Die Ergänzungsprüfung ist unabhängig vom Ergebnis stets vorzuschreiben.",
+    text_en: "The supplementary exam is always prescribed, whatever the result.",
+    aliases: ["stets", "Pflicht", "always"],
+  });
+
+  it("a fact under another topic is still found when the query matches, after the on-topic facts", async () => {
+    const loader = makeLoader([...FACTS, ALWAYS]);
+    const r = loader.searchDetailed("Ergänzungsprüfung Pflicht stets", "sip5a", "format", ctx().now);
+    expect(r.facts.map((f) => f.id)).toContain(ALWAYS.id);
+    const onTopic = r.facts.filter((f) => f.topic === "format").length;
+    expect(r.facts.slice(0, onTopic).every((f) => f.topic === "format")).toBe(true);
+  });
+
+  it("a topic-only lookup (no query words) still filters exactly", () => {
+    const loader = makeLoader([...FACTS, ALWAYS]);
+    const r = loader.searchDetailed("", "sip5a", "format", ctx().now);
+    expect(r.facts.every((f) => f.topic === "format")).toBe(true);
+  });
+
+  it("deadline-scoped facts stay out even when the topic is off", () => {
+    const loader = makeLoader([...FACTS, ALWAYS]);
+    const r = loader.searchDetailed("Anmeldung Frist", "sip5a", "format", ctx().now);
+    expect(r.facts.some((f) => isDeadlineScoped(f))).toBe(false);
+  });
+});
+
+describe("answer cut off by the output cap", () => {
+  it("drops a partial marker line and the unfinished sentence", () => {
+    const raw = "@@LANG de\n@@BLOCK facts=a\nDie Prüfung ist am 20. April 2099. Die Anmeldung erfolgt per E-Mail an\n@@BLOCK facts=rezeptierkunde.dates.";
+    expect(trimTruncatedAnswer(raw)).toBe("@@LANG de\n@@BLOCK facts=a\nDie Prüfung ist am 20. April 2099.");
+  });
+  it("drops a last text line with no complete sentence, keeps earlier lines", () => {
+    expect(trimTruncatedAnswer("@@LANG en\n@@BLOCK facts=a\n- One done.\n- Two is cut mid")).toBe("@@LANG en\n@@BLOCK facts=a\n- One done.");
+  });
+  it("leaves nothing when nothing is complete", () => {
+    expect(trimTruncatedAnswer("@@LANG en\n@@BLOCK facts=a\n- Yes. The exam week is 18 to 22 January 2099 (M")).toBe("@@LANG en\n@@BLOCK facts=a\n- Yes.");
+    expect(trimTruncatedAnswer("-")).toBe("");
+  });
+});
+
+describe("prompt: round-1 additions", () => {
+  it("forbids echoing the learner's own values and leads price answers with the plans", () => {
+    expect(MENTOR_CORE_PROMPT).toContain("Do not repeat a date, number or amount from the learner's message");
+    expect(MENTOR_CORE_PROMPT).toContain("give the plan prices from app.billing.plans first");
   });
 });

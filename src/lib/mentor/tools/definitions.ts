@@ -34,6 +34,7 @@ const DEFS: Readonly<Record<MentorToolName, ToolDefinition>> = {
     description:
       "Search the verified official facts (procedure, format, scoring, pass rules, attempts, results, language, documents, fees, MedPrüf plans). " +
       "query_de must be German keywords: rewrite the learner's question into German first. " +
+      "topic is optional and only ranks results (facts of that topic first); leave it out when unsure. " +
       "Returns confirmed facts with ids to cite, and 'unconfirmed' pointers that you must present as not officially confirmed.",
     input_schema: {
       type: "object",

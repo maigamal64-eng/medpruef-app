@@ -47,6 +47,7 @@ import {
 import { costMicroUsd, reserveCeilingMicro, trimHistoryToFit } from "@/lib/ai/pricing";
 import { canAdmitMessage, creditsFromMicro, messagesLeftEstimate } from "./config";
 import type { MentorErrorCode, MentorLang, MentorSseEvent } from "./contract";
+import { trimTruncatedAnswer } from "./prompt/protocol";
 import { MENTOR_TOOL_NAMES } from "./seam";
 import type { MentorDeps, MentorTurnInput, MeterUsage, RunMentorTurn, ToolResult, TurnContext, Wallet } from "./seam";
 
@@ -432,7 +433,8 @@ export function createRunMentorTurn(opts: TurnOptions = {}): RunMentorTurn {
         continue;
       }
 
-      answer = result.text;
+      // Cut off by the output cap: keep only the complete sentences (eval round 1).
+      answer = result.stop_reason === "max_tokens" ? trimTruncatedAnswer(result.text) : result.text;
       break;
     }
 

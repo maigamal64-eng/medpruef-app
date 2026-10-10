@@ -334,7 +334,7 @@ function searchFacts(input: unknown, ctx: TurnContext, env: ToolEnv): ToolResult
       facts,
       unconfirmed,
       ...(facts.length === 0 ? { no_confirmed_fact: true } : {}),
-      note: "Deadlines and sitting dates are not searchable: use get_dates (ask the filing university first).",
+      note: "Deadlines and registration windows are not searchable: use get_dates (ask the filing university first for the Stichprobentest). When and where a sitting takes place is searchable with topic dates.",
     },
     factIds
   );

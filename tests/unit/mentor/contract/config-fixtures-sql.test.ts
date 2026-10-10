@@ -30,7 +30,7 @@ describe("C5 config", () => {
       topupsEnabled: false,
       modelDefault: MODEL_IDS.HAIKU_5_5,
       effort: "low",
-      maxTokens: 700,
+      maxTokens: 1000,
       maxToolRounds: 3,
       ratePerMin: 6,
       ratePerDay: 60,
@@ -49,9 +49,9 @@ describe("C5 config", () => {
     expect(readMentorConfig({ MENTOR_ENABLED: "1" }).enabled).toBe(false);
   });
 
-  it("env can tighten but never exceed max_tokens 700 or 3 tool rounds", () => {
+  it("env can tighten but never exceed max_tokens 1000 or 3 tool rounds", () => {
     const c = readMentorConfig({ MENTOR_MAX_TOKENS: "4000", MENTOR_MAX_TOOL_ROUNDS: "9", MENTOR_EFFORT: "max" });
-    expect(c.maxTokens).toBe(700);
+    expect(c.maxTokens).toBe(1000);
     expect(c.maxToolRounds).toBe(3);
     expect(c.effort).toBe("low");
     expect(readMentorConfig({ MENTOR_MAX_TOKENS: "500" }).maxTokens).toBe(500);

@@ -88,7 +88,7 @@ export function fakeFacts(): FactsLoader & { requested: string[][] } {
 }
 
 export type Step =
-  | { text: string; toolUses?: Array<{ id: string; name: string; input?: unknown }>; usage?: ClaudeUsage; model?: string; extraBlocks?: ContentBlock[] }
+  | { text: string; toolUses?: Array<{ id: string; name: string; input?: unknown }>; usage?: ClaudeUsage; model?: string; extraBlocks?: ContentBlock[]; stopReason?: string }
   | { throw: unknown; startUsage?: ClaudeUsage };
 
 /** Scripted callClaude: one step per API call. Fires onMessageStart like the wrapper does. */
@@ -125,7 +125,7 @@ export function scriptedClaude(steps: Step[]) {
       ...(step.text ? [{ type: "text", text: step.text }] : []),
       ...toolUses,
     ];
-    return { text: step.text, blocks, toolUses, usage: u, stop_reason: toolUses.length ? "tool_use" : "end_turn", model: step.model ?? params.model, request_id: "req_x" };
+    return { text: step.text, blocks, toolUses, usage: u, stop_reason: step.stopReason ?? (toolUses.length ? "tool_use" : "end_turn"), model: step.model ?? params.model, request_id: "req_x" };
   };
   return { fn, calls };
 }

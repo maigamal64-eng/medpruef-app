@@ -350,7 +350,9 @@ export function extractValues(text: string): ExtractedValue[] {
 
 /** Every key a fact text supports (a full date also supports its parts). */
 export function allowedKeysFromText(text: string, into: Set<string> = new Set()): Set<string> {
-  for (const v of extractValues(normalizeDigits(text))) {
+  const norm = normalizeDigits(text);
+  const values = extractValues(norm);
+  for (const v of [...values, ...rangeStartDates(norm, values)]) {
     for (const k of v.keys) {
       into.add(k);
       const [kind, val] = [k.slice(0, k.indexOf(":")), k.slice(k.indexOf(":") + 1)];
@@ -373,6 +375,33 @@ export function allowedKeysFromText(text: string, into: Set<string> = new Set())
     }
   }
   return into;
+}
+
+const RANGE_JOIN = /^\s*,?\s*(?:bis(?:\s+(?:zum|zur|einschließlich))?|to|until|till|through|and|und|au|à|до|по|ile|ve|-|–|—)\s*(?:the\s+)?$/iu;
+
+/**
+ * A fact range "18. Januar bis 22. Januar 2027" (or "2 Dec to 15 Dec 2026")
+ * names the year once, after the end date; the start date carries the same
+ * year. Without this, the fact allowed only "18. Januar" and rejected a
+ * correct "18. Januar 2027" (eval round 1: dl-rez-jan). Used on the ALLOW side
+ * only (fact texts), never to read an answer, and only for a day and month
+ * directly joined to a full date by a range word. A start month after the end
+ * month belongs to the year before ("28. Dezember bis 5. Januar 2027").
+ */
+function rangeStartDates(text: string, values: ExtractedValue[]): ExtractedValue[] {
+  const out: ExtractedValue[] = [];
+  for (let i = 0; i + 1 < values.length; i++) {
+    const a = values[i];
+    const b = values[i + 1];
+    if (a.kind !== "daymonth" || b.kind !== "date" || a.keys.length !== 1 || b.keys.length !== 1) continue;
+    if (!RANGE_JOIN.test(text.slice(a.end, b.start))) continue;
+    const dm = /^dm:(\d{2})-(\d{2})$/.exec(a.keys[0]);
+    const d = /^d:(\d{4})-(\d{2})-\d{2}$/.exec(b.keys[0]);
+    if (!dm || !d) continue;
+    const year = Number(dm[1]) > Number(d[2]) ? Number(d[1]) - 1 : Number(d[1]);
+    out.push({ ...a, kind: "date", keys: [`d:${year}-${dm[1]}-${dm[2]}`] });
+  }
+  return out;
 }
 
 function factAllowedKeys(f: MentorFact): Set<string> {

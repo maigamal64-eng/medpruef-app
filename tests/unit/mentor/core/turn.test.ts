@@ -31,6 +31,13 @@ function invariant(ledger: ReturnType<typeof makeDeps>["ledger"]) {
 }
 
 describe("runMentorTurn: success paths", () => {
+  it("an answer cut off by max_tokens shows only its complete sentences", async () => {
+    const t = run([{ text: "Die Anmeldung läuft online. Danach kommt die Bestätigung per E-Ma", usage: usage(1200, 1000), stopReason: "max_tokens" }]);
+    const f = finalOf(await t.events);
+    expect(f.answer_blocks.map((b) => b.text).join(" ")).toBe("Die Anmeldung läuft online.");
+    invariant(t.ledger);
+  });
+
   it("one call: reserve, settle_input, settle at the actual cost, validated delta + final", async () => {
     const u = usage(1200, 300);
     const t = run([{ text: "Die Anmeldung läuft online.", usage: u }]);
@@ -46,7 +53,7 @@ describe("runMentorTurn: success paths", () => {
     expect(t.claude.calls[0].stream).toBe(true);
     expect(t.claude.calls[0].signal).toBeUndefined();
     expect(t.claude.calls[0].effort).toBe("low");
-    expect(t.claude.calls[0].max_tokens).toBe(700);
+    expect(t.claude.calls[0].max_tokens).toBe(1000);
     invariant(t.ledger);
   });
 

@@ -612,16 +612,22 @@ export class MentorFactsLoader implements FactsLoader {
     const q = typeof queryDe === "string" ? queryDe.slice(0, 300) : "";
     const qTokens = searchTokens(q);
     const qFolded = foldText(q);
-    const scored: Array<{ f: MentorFact; s: number }> = [];
+    // The topic ranks, it does not exclude: facts of the asked topic come first,
+    // then other facts that match the query words (eval round 1: the model asked
+    // topic "format" for "is Rezeptierkunde always prescribed", which lives under
+    // "documents", and the fact never reached it). With no query words the topic
+    // still filters, so a topic-only lookup stays exact.
+    const scored: Array<{ f: MentorFact; s: number; onTopic: boolean }> = [];
     for (const ix of this.state().index) {
       const f = ix.fact;
       if (examKey && f.exam_key !== examKey && f.exam_key !== "general") continue;
-      if (topic && f.topic !== topic) continue;
+      const onTopic = !topic || f.topic === topic;
+      if (!onTopic && qTokens.length === 0) continue;
       if (isDeadlineScoped(f)) continue;
       const s = qTokens.length === 0 && (examKey || topic) ? 1 : scoreFact(ix, qTokens, qFolded);
-      if (s > 0) scored.push({ f, s });
+      if (s > 0) scored.push({ f, s, onTopic });
     }
-    scored.sort((a, b) => b.s - a.s || a.f.id.localeCompare(b.f.id));
+    scored.sort((a, b) => Number(b.onTopic) - Number(a.onTopic) || b.s - a.s || a.f.id.localeCompare(b.f.id));
     const facts: MentorFact[] = [];
     const unconfirmed: UnconfirmedPointer[] = [];
     for (const { f } of scored) {
