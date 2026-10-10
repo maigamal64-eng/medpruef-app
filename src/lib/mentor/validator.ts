@@ -468,6 +468,40 @@ export function stripUnsupportedStand(text: string, allowed: ReadonlySet<string>
   return out === text ? text : out.replace(/[ \t]+([.,;:!?])/g, "$1").replace(/[ \t]{2,}/g, " ");
 }
 
+// ─── Anchor months ("the sitting after the one in November") ────────────
+
+const ANCHOR_DE = new RegExp(
+  `\\bnach\\s+(?:dem|der|den)\\s+(?:[\\p{L}\\d-]+\\s+){0,2}?(?:im|vom)\\s+(${MONTH_ALT})(?:\\s+(\\d{4}))?(?![\\p{L}\\d])`,
+  "giu"
+);
+const ANCHOR_EN = new RegExp(
+  `\\bafter\\s+the\\s+(?:(?:[\\p{L}\\d-]+\\s+){0,2}?in\\s+(${MONTH_ALT})(?:\\s+(\\d{4}))?|(${MONTH_ALT})(?:\\s+(\\d{4}))?\\s+(?:sitting|exam|one|date|session))(?![\\p{L}\\d])`,
+  "giu"
+);
+
+/**
+ * The learner asks for "the SIP4a sitting after the one in November"; Haiku
+ * writes "the next sitting after the one in November is on <date>" and cites
+ * only the later sitting, so the echoed month is unsupported and the whole
+ * date sentence used to be replaced (eval round 2: dl-sip4a-feb in 3 runs).
+ * When the anchor month is not supported by the block's facts, only the
+ * anchor phrase is replaced by "danach" / "after that": the unsupported month
+ * leaves, no value is added, and the date that follows is still validated.
+ */
+export function neutralizeAnchorMonths(text: string, allowed: ReadonlySet<string>): string {
+  const unsupported = (month: string | undefined, year: string | undefined) => {
+    const n = month ? monthNumber(month) : null;
+    if (!n) return false;
+    return year ? !allowed.has(`my:${year}-${pad(n)}`) : !allowed.has(`m:${pad(n)}`);
+  };
+  const cased = (m: string, word: string) => (/^\p{Lu}/u.test(m) ? word[0].toUpperCase() + word.slice(1) : word);
+  return text
+    .replace(ANCHOR_DE, (m, mo: string, y?: string) => (unsupported(mo, y) ? cased(m, "danach") : m))
+    .replace(ANCHOR_EN, (m, mo1?: string, y1?: string, mo2?: string, y2?: string) =>
+      unsupported(mo1 ?? mo2, mo1 ? y1 : y2) ? cased(m, "after that") : m
+    );
+}
+
 // ─── Fact ids written into prose ────────────────────────────────────────
 
 const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
@@ -639,7 +673,10 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
 
     const answerIds = new Set(parsed.blocks.flatMap((x) => x.factIds));
     const internalReadOn = new Set(used.filter((f) => isInternalFactId(f.id)).map((f) => f.read_on));
-    const text = stripUnsupportedStand(stripFactIds(cleanDashes(b.text), (id) => answerIds.has(id) || lookup(id) !== null), allowed, internalReadOn);
+    const text = neutralizeAnchorMonths(
+      stripUnsupportedStand(stripFactIds(cleanDashes(b.text), (id) => answerIds.has(id) || lookup(id) !== null), allowed, internalReadOn),
+      allowed
+    );
     const values = extractValues(maskSourceLabels(text, used));
     const bad = values.filter((v) => !v.keys.some((k) => allowed.has(k)));
     let outText = text;

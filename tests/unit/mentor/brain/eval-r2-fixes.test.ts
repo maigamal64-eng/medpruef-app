@@ -367,3 +367,27 @@ describe("replay of run1-r1 answers on the real facts", () => {
     expect(out.citations.map((c) => c.fact_id)).toEqual(["general.glossary.procedure-steps"]);
   });
 });
+
+describe("validator: an echoed anchor month becomes 'danach' (dl-sip4a-feb-de, dl-sip4a-feb-en)", () => {
+  const FEB = fact({ id: "fixture.dates.feb", exam_key: "sip4a", topic: "dates", text_de: "SIP4a am 19. Februar 2099.", text_en: "SIP4a on 19 February 2099." });
+
+  it("keeps the date sentence and drops only the unsupported anchor month", () => {
+    const de = validateAnswer("@@LANG de\n@@BLOCK facts=fixture.dates.feb\nDer nächste SIP4a-Termin nach dem Termin im November ist am 19. Februar 2099.", [FEB]);
+    expect(de.replaced).toBe(false);
+    expect(de.blocks[0].text).toBe("Der nächste SIP4a-Termin danach ist am 19. Februar 2099.");
+    const en = validateAnswer("@@LANG en\n@@BLOCK facts=fixture.dates.feb\nThe SIP4a sitting after the one in November is on 19 February 2099.", [FEB]);
+    expect(en.replaced).toBe(false);
+    expect(en.blocks[0].text).toBe("The SIP4a sitting after that is on 19 February 2099.");
+    const en2 = validateAnswer("@@LANG en\n@@BLOCK facts=fixture.dates.feb\nAfter the November sitting, the next one is on 19 February 2099.", [FEB]);
+    expect(en2.blocks[0].text).toBe("After that, the next one is on 19 February 2099.");
+  });
+
+  it("leaves a supported anchor alone and still replaces an invented date", () => {
+    const NOV = fact({ id: "fixture.dates.nov", exam_key: "sip4a", topic: "dates", text_de: "SIP4a am 18. November 2098.", text_en: "SIP4a on 18 November 2098." });
+    const ok = validateAnswer("@@LANG de\n@@BLOCK facts=fixture.dates.feb,fixture.dates.nov\nNach dem Termin im November ist der nächste am 19. Februar 2099.", [FEB, NOV]);
+    expect(ok.blocks[0].text).toContain("im November");
+    const bad = validateAnswer("@@LANG de\n@@BLOCK facts=fixture.dates.feb\nDer Termin nach dem im November ist am 20. Februar 2099.", [FEB]);
+    expect(bad.replaced).toBe(true);
+    expect(JSON.stringify(bad.blocks)).not.toContain("20. Februar");
+  });
+});
