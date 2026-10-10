@@ -5,6 +5,7 @@ import {
   allFacts,
   buildRegistry,
   dateNeedles,
+  dueFacts,
   loadFacts,
   stringifyRegistry,
   verifyBaseline,
@@ -150,5 +151,20 @@ describe.skipIf(sittings.length === 0)("mentor date facts agree with OFFICIAL_SI
         }
       }
     }
+  });
+});
+
+describe("review dates (M6): facts past read_on + review_every_days are listed", () => {
+  const mk = (id: string, read_on: string, days: number) => ({ id, read_on, review_every_days: days });
+  it("overdue only strictly after the due day, same rule as the runtime isAssertable", () => {
+    const f = [mk("a.fee", "2026-10-10", 90), mk("a.fmt", "2026-10-10", 365), mk("a.dates", "2026-10-10", 30)];
+    expect(dueFacts(f, "2026-11-09")).toEqual([]); // the due day itself is still fine
+    expect(dueFacts(f, "2026-11-10").map((x: { id: string }) => x.id)).toEqual(["a.dates"]);
+    expect(dueFacts(f, "2027-01-09").map((x: { id: string }) => x.id)).toEqual(["a.dates", "a.fee"]);
+    expect(dueFacts(f, "2027-10-11").map((x: { id: string }) => x.id)).toEqual(["a.dates", "a.fee", "a.fmt"]);
+  });
+
+  it("no seeded fact is overdue on the day it was read", () => {
+    expect(dueFacts(facts, "2026-10-10")).toEqual([]);
   });
 });

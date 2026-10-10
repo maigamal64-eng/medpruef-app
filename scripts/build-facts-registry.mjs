@@ -19,6 +19,12 @@
  *   node scripts/build-facts-registry.mjs --check    fail (exit 1) if the facts are invalid
  *                                                    or the committed registry is stale
  *   node scripts/build-facts-registry.mjs --validate validate only, write nothing
+ *   node scripts/build-facts-registry.mjs --due [--on YYYY-MM-DD]
+ *                                                    list facts whose read_on + review_every_days has
+ *                                                    passed (the mentor stops asserting them, review M6)
+ *                                                    and exit 1 if there are any. Wire it into the
+ *                                                    facts-watch run so an overdue fact fails loudly
+ *                                                    BEFORE the mentor starts answering "unconfirmed".
  *   node scripts/build-facts-registry.mjs --verify-baseline <dir>
  *        for every generated needle, confirm it appears in the text baseline of its
  *        source (research/date-watch/baseline/*.txt style: <source-id>.txt files are
@@ -355,11 +361,37 @@ export function verifyBaseline(registry, dir) {
   return { misses, skipped };
 }
 
+/** ISO date n days after an ISO date. */
+function addDays(iso, n) {
+  return new Date(Date.parse(`${iso}T00:00:00Z`) + n * 86_400_000).toISOString().slice(0, 10);
+}
+
+/**
+ * Facts past their review date on `onIso` (a Vienna day). Same rule as the runtime
+ * isAssertable in src/lib/mentor/facts-loader.ts: due = read_on + review_every_days,
+ * overdue when onIso > due. `due_in_days` lets a caller warn ahead of time.
+ */
+export function dueFacts(facts, onIso) {
+  return facts
+    .map((f) => {
+      const due = addDays(f.read_on, f.review_every_days);
+      return { id: f.id, due, overdue: onIso > due, due_in_days: Math.round((Date.parse(`${due}T00:00:00Z`) - Date.parse(`${onIso}T00:00:00Z`)) / 86_400_000) };
+    })
+    .filter((x) => x.overdue)
+    .sort((a, b) => a.due.localeCompare(b.due) || a.id.localeCompare(b.id));
+}
+
+function viennaToday() {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Vienna", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+}
+
 // ---- CLI -------------------------------------------------------------------------------------
 function main(argv) {
   const check = argv.includes("--check");
   const validateOnly = argv.includes("--validate");
   const vb = argv.indexOf("--verify-baseline");
+  const due = argv.includes("--due");
+  const onIdx = argv.indexOf("--on");
 
   const byFile = loadFacts();
   const errors = validateAll(byFile);
@@ -372,6 +404,22 @@ function main(argv) {
   const counts = facts.reduce((acc, f) => ((acc[f.verdict] = (acc[f.verdict] ?? 0) + 1), acc), {});
   console.log(`build-facts-registry: ${facts.length} facts valid (${Object.entries(counts).map(([k, v]) => `${v} ${k}`).join(", ")})`);
   if (validateOnly) return;
+
+  if (due) {
+    const on = onIdx !== -1 ? argv[onIdx + 1] : viennaToday();
+    if (!/^20\d\d-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/.test(on ?? "")) {
+      console.error("build-facts-registry: --on needs YYYY-MM-DD");
+      process.exit(1);
+    }
+    const overdue = dueFacts(facts, on);
+    if (overdue.length) {
+      console.error(`build-facts-registry: ${overdue.length} fact(s) past their review date on ${on}: the mentor no longer asserts them (re-read the source, bump read_on):`);
+      for (const o of overdue.slice(0, 80)) console.error(`  - ${o.id} (due ${o.due})`);
+      process.exit(1);
+    }
+    console.log(`build-facts-registry: no fact is past its review date on ${on}`);
+    return;
+  }
 
   const existing = JSON.parse(readFileSync(REGISTRY_PATH, "utf8"));
   const next = buildRegistry(existing, facts);
