@@ -26,7 +26,7 @@
 -- shared with [name], nothing else is touched):
 --   tables    ai_credit_package, ai_credit_wallet, ai_credit_lot,
 --             ai_mentor_reservation, ai_mentor_whop_membership, ai_mentor_rate,
---             ai_usage_ledger (append-only)
+--             ai_mentor_message (history), ai_usage_ledger (append-only)
 --   public    mentor_reserve, mentor_settle_input, mentor_settle, mentor_release,
 --   RPCs      mentor_sweep_stale, mentor_grant_credits, mentor_clawback,
 --             mentor_membership_status, mentor_whop_lookup, mentor_balance,
@@ -175,6 +175,26 @@ CREATE TABLE IF NOT EXISTS public.ai_mentor_rate (
   updated_at    timestamptz NOT NULL DEFAULT now()
 );
 
+-- ─── Conversation history (the turn loop rebuilds the last turns from here) ─
+-- Stored text only (no thinking blocks, no tool payloads), so a history
+-- rebuild can never replay a thinking block. Deletable for erasure requests.
+CREATE TABLE IF NOT EXISTS public.ai_mentor_message (
+  id               bigint      GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  conversation_id  uuid        NOT NULL,
+  user_id          uuid        NOT NULL,
+  role             text        NOT NULL CHECK (role IN ('user', 'assistant')),
+  text             text        NOT NULL CHECK (length(text) BETWEEN 1 AND 20000),
+  fact_ids         text[]      NOT NULL DEFAULT '{}',
+  request_id       uuid,
+  refused          text,
+  lang             text,
+  mode             text,
+  created_at       timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_ai_mentor_message_conv ON public.ai_mentor_message (conversation_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_ai_mentor_message_user ON public.ai_mentor_message (user_id, created_at);
+
 -- ─── Append-only ledger ─────────────────────────────────────────────────
 -- delta_micro_usd: signed change of the user's spendable credit
 --   (grant +, settle -, clawback -, admin_adjust +/-; debt_paydown 0).
@@ -218,7 +238,7 @@ DECLARE
   t text;
 BEGIN
   FOREACH t IN ARRAY ARRAY['ai_credit_package', 'ai_credit_wallet', 'ai_credit_lot', 'ai_mentor_reservation',
-                           'ai_mentor_whop_membership', 'ai_mentor_rate', 'ai_usage_ledger'] LOOP
+                           'ai_mentor_whop_membership', 'ai_mentor_rate', 'ai_mentor_message', 'ai_usage_ledger'] LOOP
     EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', t);
     IF NOT EXISTS (SELECT 1 FROM pg_policies
                    WHERE schemaname = 'public' AND tablename = t AND policyname = t || '_no_client') THEN
@@ -237,6 +257,7 @@ GRANT SELECT, INSERT, UPDATE ON public.ai_credit_lot              TO service_rol
 GRANT SELECT, INSERT, UPDATE ON public.ai_mentor_reservation      TO service_role;
 GRANT SELECT, INSERT, UPDATE ON public.ai_mentor_whop_membership  TO service_role;
 GRANT SELECT, INSERT, UPDATE ON public.ai_mentor_rate             TO service_role;
+GRANT SELECT, INSERT, DELETE ON public.ai_mentor_message          TO service_role;
 GRANT SELECT, INSERT         ON public.ai_usage_ledger            TO service_role;
 
 -- ─── Helpers ────────────────────────────────────────────────────────────
