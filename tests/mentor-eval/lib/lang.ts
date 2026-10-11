@@ -59,6 +59,8 @@ const UNCONFIRMED_MARKERS: RegExp[] = [
   /(?:isn'?t|is\s+not|aren'?t|are\s+not)\s+(?:officially\s+)?(?:confirmed|published|stated|given)/i,
   // Round-3 grader audit: noun before the participle ("ist kein Anmeldeschluss offiziell bestätigt", un-graz-de).
   /\b(?:kein|keine|keinen)\s+\p{L}+\s+(?:offiziell\s+)?(?:bestätigt|bestaetigt|veröffentlicht|genannt|angegeben|festgelegt)/iu,
+  // ... and "ist nichts offiziell bestätigt" (un-gm-format-de, fix-r3-live2).
+  /\bnichts\s+(?:offiziell\s+)?(?:bestätigt|bestaetigt|veröffentlicht|bekannt|festgelegt|angegeben)/iu,
 ];
 
 export function hasUnconfirmedMarker(text: string): boolean {

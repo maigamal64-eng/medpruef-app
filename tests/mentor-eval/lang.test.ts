@@ -36,6 +36,7 @@ describe("unconfirmed marker", () => {
     // Round-3 grader audit (fix-r3-live1 un-graz-de): noun before the participle.
     "Für den Stichprobentest im September 2027 ist kein Anmeldeschluss offiziell bestätigt.",
     "Für Graz ist keine Anmeldefrist veröffentlicht.",
+    "Zur Anzahl der Fragen und zur Dauer der Gerichtsmedizin-Prüfung in Wien ist nichts offiziell bestätigt.",
   ])("labels the live wording: %s", (t) => expect(hasUnconfirmedMarker(t)).toBe(true));
 
   it.each([
