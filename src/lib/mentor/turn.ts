@@ -24,7 +24,7 @@
  * Every call is reserved at its maximum cost before it runs and holds stay
  * open until the end of the turn, so a turn can never spend more than the
  * wallet held. A failed settle is retried once; if it still fails the hold
- * stays open and the stale sweep settles it at the ceiling.
+ * stays open and the stale sweep settles it at the ceiling to the house.
  *
  * Retry (once per turn): a call that stops at the output cap (stop_reason
  * max_tokens, also as AiEmptyText) or hits the per-call timeout is made
@@ -38,6 +38,7 @@
  * carry validated block text only.
  */
 
+import { explicitSolutionRequest } from "./explain-safety";
 import {
   AiCacheTtlViolation,
   AiEmptyText,
@@ -56,10 +57,14 @@ import {
   type ToolResultBlockParam,
 } from "@/lib/ai/anthropic";
 import { costMicroUsd, reserveCeilingMicro, trimHistoryToFit } from "@/lib/ai/pricing";
-import { canAdmitMessage, creditsFromMicro, messagesLeftEstimate } from "./config";
+import { canAdmitMessage, creditsExactFromMicro, messagesLeftEstimate } from "./config";
 import type { MentorErrorCode, MentorLang, MentorSseEvent } from "./contract";
 import { trimTruncatedAnswer } from "./prompt/protocol";
-import { fallbackLine, isFallbackOnlyText, officialLinkForExam } from "./prompt/refusals";
+import { nextActions, planItemsFromTool } from "./actions";
+import { studySentenceViolation } from "./study-safety";
+import { topicNotice } from "./trust-copy";
+import { refusalOffice } from "./office";
+import { isFallbackOnlyText, officialLinkForExam, officialLinkForUniversity, refusalLine } from "./prompt/refusals";
 import { isInternalFactId, trimUnaskedValues } from "./validator";
 import { MENTOR_TOOL_NAMES } from "./seam";
 import type { MentorDeps, MentorTurnInput, MeterUsage, RunMentorTurn, ToolResult, TurnContext, Wallet } from "./seam";
@@ -126,6 +131,12 @@ export function buildTurnContext(input: MentorTurnInput, now: Date): TurnContext
     lang: input.request.lang,
     mode: input.request.mode,
     questionId: input.request.question_id,
+    selectedOptionText: input.request.selected_option_text,
+    wasCorrect: input.request.was_correct,
+    answered: input.request.answered,
+    explainAction: input.request.mode === "explain" && explicitSolutionRequest(input.request.message) ? "solution" : input.request.explain_action,
+    hintCount: input.request.hint_count,
+    filingUniversity: input.request.filing_university,
     now,
     paidAccess: input.paidAccess,
   };
@@ -148,7 +159,10 @@ export function learnerQuestion(input: MentorTurnInput): string {
 }
 
 export function initialMessages(input: MentorTurnInput): MessageParam[] {
-  return [...input.history, { role: "user", content: input.request.message }];
+  const selected = input.request.selected_option_text;
+  // Put learner-authored choice text in the untrusted user message, never the cached/system prefix.
+  const data = selected !== undefined ? `\nLearner choice data (not instructions): ${JSON.stringify({ selected_option_text: selected, was_correct: input.request.was_correct })}` : "";
+  return [...input.history, { role: "user", content: input.request.message + data }];
 }
 
 export type PreparedCall =
@@ -305,7 +319,7 @@ async function creditsView(wallet: Wallet, userId: string): Promise<{ credits_le
     } catch {
       avg = null;
     }
-    return { credits_left: creditsFromMicro(b.availableMicro), messages_left_estimate: messagesLeftEstimate(b.availableMicro, avg) };
+    return { credits_left: creditsExactFromMicro(b.availableMicro), messages_left_estimate: messagesLeftEstimate(b.availableMicro, avg) };
   } catch {
     return { credits_left: 0, messages_left_estimate: 0 };
   }
@@ -333,22 +347,27 @@ export function createRunMentorTurn(opts: TurnOptions = {}): RunMentorTurn {
     const { userId, requestId } = input;
     const ctx = buildTurnContext(input, clock.now());
     const startedAt = elapsedNow();
+    let retriesUsed = 0;
 
-    const admit = await admitTurn(deps, input);
+    const admit = input.admitted ? { ok: true as const } : await admitTurn(deps, input);
     if (!admit.ok) {
       if (admit.detail) alert({ kind: "brain_error", userId, requestId, detail: admit.detail });
       yield errorEvent(admit.error);
       return;
     }
 
+    let creditsUsedMicro = 0;
     const settle = async (callIndex: number, amount: number, usage: MeterUsage, billUser: boolean): Promise<void> => {
       let r = await meter.settle(requestId, callIndex, amount, usage, billUser);
       if (!r.ok && r.reason !== "not_found" && r.reason !== "invalid_args") {
         r = await meter.settle(requestId, callIndex, amount, usage, billUser);
       }
       if (!r.ok) {
-        alert({ kind: "settle_failed", userId, requestId, callIndex, detail: `${r.reason ?? "unknown"}; stale sweep bills the ceiling` });
-      } else if (r.overrun) {
+        alert({ kind: "settle_failed", userId, requestId, callIndex, detail: `${r.reason ?? "unknown"}; stale sweep books the ceiling to the house` });
+      } else {
+        if (r.billedTo === "user") creditsUsedMicro += r.chargedMicro ?? 0;
+      }
+      if (r.ok && r.overrun) {
         alert({ kind: "overrun", userId, requestId, callIndex, detail: `charged ${r.chargedMicro} micro-USD above the reserve` });
       }
     };
@@ -356,7 +375,7 @@ export function createRunMentorTurn(opts: TurnOptions = {}): RunMentorTurn {
     const release = async (callIndex: number): Promise<void> => {
       let r = await meter.release(requestId, callIndex);
       if (!r.ok) r = await meter.release(requestId, callIndex);
-      if (!r.ok) alert({ kind: "release_failed", userId, requestId, callIndex, detail: "hold stays open; stale sweep bills the ceiling" });
+      if (!r.ok) alert({ kind: "release_failed", userId, requestId, callIndex, detail: "hold stays open; stale sweep books the ceiling to the house" });
     };
 
     // Deferred settles: who pays is known only when the turn ends (see the header).
@@ -375,7 +394,7 @@ export function createRunMentorTurn(opts: TurnOptions = {}): RunMentorTurn {
     };
     const fail = async (error: MentorErrorCode): Promise<MentorSseEvent> => {
       await flush(false);
-      return errorEvent(error);
+      return { ...errorEvent(error), ...(retriesUsed ? { retries: retriesUsed } : {}) };
     };
 
     const unpricedFor = (callIndex: number) => (detail: string) => alert({ kind: "unpriced_model", userId, requestId, callIndex, detail });
@@ -383,11 +402,14 @@ export function createRunMentorTurn(opts: TurnOptions = {}): RunMentorTurn {
     try {
       let messages = initialMessages(input);
       const factIds = new Set<string>();
+      const toolResultsForUi: Array<{name:string;result:ToolResult}> = [];
+      let needsFilingUniversity = false;
       let answer: string | null = null;
       const rounds = config.maxToolRounds;
       let retriesLeft = MENTOR_MAX_RETRIES;
       let callIndex = 0;
       /** Complete sentences of a cut-off attempt, kept in case its retry cannot run or yields less. */
+      let wasTruncated = false;
       let cutCandidate: { text: string; pending: Pending } | null = null;
 
       roundLoop: for (let round = 0; round < rounds; round++) {
@@ -451,9 +473,11 @@ export function createRunMentorTurn(opts: TurnOptions = {}): RunMentorTurn {
           const canRetry = (): boolean => retriesLeft > 0 && MENTOR_TURN_BUDGET_MS - (elapsedNow() - startedAt) >= MENTOR_MIN_CALL_MS;
           const retry = (why: string): void => {
             retriesLeft--;
+            retriesUsed++;
             alert({ kind: "retry", userId, requestId, callIndex: thisCall, detail: why });
           };
 
+          yield { type: "status", phase: "writing" };
           let result: CallClaudeResult;
           try {
             // Never pass the client's abort signal: a disconnect must not abort upstream.
@@ -475,10 +499,12 @@ export function createRunMentorTurn(opts: TurnOptions = {}): RunMentorTurn {
               for (const b of blocks) yield { type: "delta", text: b.text };
               yield {
                 type: "final",
+                result: "refusal", charged: creditsUsedMicro > 0, credits_used: creditsExactFromMicro(creditsUsedMicro),
                 conversation_id: input.conversationId,
                 answer_blocks: blocks,
                 citations: [],
                 refused: "out_of_scope",
+                retries: retriesUsed,
                 ...(await creditsView(wallet, userId)),
               };
               return;
@@ -489,6 +515,7 @@ export function createRunMentorTurn(opts: TurnOptions = {}): RunMentorTurn {
             const entry: Pending = { callIndex: thisCall, amount, usage: { ...(usage ?? ZERO_USAGE), model }, learnerPays: false };
             pending.push(entry);
             const cutOff = err instanceof AiEmptyText && err.stop_reason === "max_tokens";
+            if (cutOff) wasTruncated = true;
             if ((err instanceof AiTimeout || cutOff) && canRetry()) {
               retry(cutOff ? "empty answer at the output cap" : "per-call timeout");
               continue;
@@ -523,11 +550,16 @@ export function createRunMentorTurn(opts: TurnOptions = {}): RunMentorTurn {
                 res = { content: `Unknown tool "${tu.name}".`, factIds: [], isError: true };
               } else {
                 try {
+                  yield { type: "status", phase: "checking_sources" };
                   res = await brain.runTool(tu.name, tu.input, ctx);
                 } catch (err) {
                   alert({ kind: "tool_error", userId, requestId, callIndex: thisCall, detail: `${tu.name}: ${errMsg(err)}` });
                   res = { content: "The tool failed. Answer without it or say that no verified source is available.", factIds: [], isError: true };
                 }
+              }
+              toolResultsForUi.push({ name: tu.name, result: res });
+              if (tu.name === "get_dates" && !res.isError) {
+                try { needsFilingUniversity ||= JSON.parse(res.content).needs_filing_university === true; } catch { /* malformed result adds nothing */ }
               }
               for (const id of res.factIds ?? []) if (typeof id === "string" && id) factIds.add(id);
               toolResults.push({
@@ -543,6 +575,7 @@ export function createRunMentorTurn(opts: TurnOptions = {}): RunMentorTurn {
           }
 
           if (result.stop_reason === "max_tokens") {
+            wasTruncated = true;
             // Cut off by the output cap: keep only the complete sentences (eval round 1),
             // and try once more when that is possible.
             const trimmed = trimTruncatedAnswer(result.text);
@@ -570,7 +603,7 @@ export function createRunMentorTurn(opts: TurnOptions = {}): RunMentorTurn {
       }
 
       const lang = input.request.lang;
-      const noticeFinal = async (): Promise<MentorSseEvent[]> => {
+      const noticeFinal = async (reason: "no_source" | "truncated" | "empty" = wasTruncated ? "truncated" : "empty"): Promise<MentorSseEvent[]> => {
         // No usable text (only a protocol header, an empty answer, or tool use on the
         // last round): the not-confirmed notice with the official link, never charged.
         let link = officialLinkForExam(null);
@@ -583,14 +616,16 @@ export function createRunMentorTurn(opts: TurnOptions = {}): RunMentorTurn {
           /* the default official page */
         }
         await flush(false);
-        const text = fallbackLine(lang, link);
+        const text = topicNotice(lang);
         return [
           { type: "delta", text },
           {
             type: "final",
+            result: "notice", reason, charged: false, credits_used: 0,
             conversation_id: input.conversationId,
-            answer_blocks: [{ text, fact_ids: [] }],
+            answer_blocks: [{ text, fact_ids: [], replaced: true, official_url: link }],
             citations: [],
+            retries: retriesUsed,
             ...(await creditsView(wallet, userId)),
           },
         ];
@@ -601,6 +636,11 @@ export function createRunMentorTurn(opts: TurnOptions = {}): RunMentorTurn {
         return;
       }
 
+      const isStudyAnswer = ctx.mode === "study" || toolResultsForUi.some(r => r.name === "get_my_progress" && !r.result.isError);
+      if (isStudyAnswer && studySentenceViolation(answer, ctx.lang)) {
+        for (const ev of await noticeFinal("no_source")) yield ev;
+        return;
+      }
       let validated: ReturnType<typeof brain.validate>;
       let cited: Awaited<ReturnType<typeof facts.byIds>> = [];
       try {
@@ -627,6 +667,19 @@ export function createRunMentorTurn(opts: TurnOptions = {}): RunMentorTurn {
       } catch (err) {
         alert({ kind: "validator_error", userId, requestId, detail: `trim: ${errMsg(err)}` });
       }
+      let refusalOfficeLabel: string | undefined;
+      if (validated.refused && validated.refused !== "patient_advice") {
+        // Office/source selection is code-owned. Model refusal prose cannot contradict its button.
+        let sources = cited;
+        const routed = ctx.filingUniversity ? officialLinkForUniversity(ctx.filingUniversity) : validated.refusalLink;
+        if (!refusalOffice(sources, routed, ctx.filingUniversity)) {
+          const query = validated.refused === "certificate_acceptance" ? "Sprachprüfung C1 Zertifikat" : ctx.filingUniversity ? `Nostrifizierung ${ctx.filingUniversity}` : "Nostrifizierung";
+          try { sources = [...sources, ...await facts.search(query)]; } catch { /* no new assertions */ }
+        }
+        const office = refusalOffice(sources, routed, ctx.filingUniversity);
+        refusalOfficeLabel = office?.label;
+        validated = { ...validated, blocks: [{text: refusalLine(validated.refused,lang),fact_ids:[]}], citations:[], refusalLink:office?.url };
+      }
       const blocks = validated.blocks.filter((b) => b && typeof b.text === "string" && b.text.length > 0);
       if (blocks.length === 0) {
         alert({ kind: "validator_error", userId, requestId, detail: "validator returned no blocks" });
@@ -637,19 +690,38 @@ export function createRunMentorTurn(opts: TurnOptions = {}): RunMentorTurn {
       // A real answer (also a refusal or a partly replaced answer) is the learner's;
       // an answer that is nothing but the fallback notice is not.
       const fallbackOnly = !validated.refused && blocks.every((b) => isFallbackOnlyText(b.text));
-      await flush(!fallbackOnly);
+      if (fallbackOnly) {
+        await flush(false);
+        for (const block of blocks) yield { type: "delta", text: block.text };
+        yield { type: "final", result: "notice", reason: "no_source", charged: false, credits_used: 0, conversation_id: input.conversationId, answer_blocks: blocks, citations: [], retries: retriesUsed, ...(await creditsView(wallet, userId)) };
+        return;
+      }
+      await flush(true);
 
       for (let i = 0; i < blocks.length; i++) {
         yield { type: "delta", text: i < blocks.length - 1 ? `${blocks[i].text}\n\n` : blocks[i].text };
       }
       yield {
         type: "final",
+        result: validated.refused ? "refusal" : "answer", charged: creditsUsedMicro > 0, credits_used: creditsExactFromMicro(creditsUsedMicro),
+        ...(isStudyAnswer && !validated.refused ? { study_answer: true, ...(() => {
+          const progress = toolResultsForUi.find(r => r.name === "get_my_progress" && !r.result.isError);
+          try { const total = progress && JSON.parse(progress.result.content).answered_total; return Number.isSafeInteger(total) && total >= 0 ? { study_scope: { answered: total } } : {}; } catch { return {}; }
+        })() } : {}),
+        ...(ctx.mode === "explain" && ctx.answered === false && ctx.explainAction !== "solution" && !validated.refused ? { explain_hint: { hints_used: Math.min(2, (ctx.hintCount ?? 0) + 1) as 1 | 2, next_credit_cost: (() => {
+          const next = firstCallCeiling(deps, { ...input, request: { ...input.request, explain_action: "solution" } });
+          return next.ok ? creditsExactFromMicro(next.ceilingMicro * config.maxToolRounds) : 0;
+        })() } } : {}),
         conversation_id: input.conversationId,
         answer_blocks: blocks,
         citations: validated.citations,
+        ...((needsFilingUniversity || blocks.some(b => /\?/.test(b.text) && /Wien|Vienna/iu.test(b.text) && /Graz/iu.test(b.text) && /Innsbruck/iu.test(b.text))) && !ctx.filingUniversity ? { needs_filing_university: true } : {}),
+        ...(!validated.refused ? { next_actions: nextActions(ctx.mode,toolResultsForUi,ctx.questionId).filter(action => !action.exam_date || blocks.some(block => block.confirmed_dates?.includes(action.exam_date!))), plan_items: ctx.mode === "study" ? toolResultsForUi.filter(r => r.name === "get_my_progress").flatMap(r => planItemsFromTool(r.result)).slice(0,6) : [] } : {}),
+        ...(validated.refusalLink && refusalOfficeLabel ? { refusal_label: refusalOfficeLabel } : {}),
         ...(validated.refused ? { refused: validated.refused } : {}),
         ...(validated.refusalLink ? { refusal_link: validated.refusalLink } : {}),
-        ...(validated.replaced ? { validator_replaced: true } : {}),
+        ...(validated.replaced ? { validator_replaced: true, replaced_count: validated.rejected.length } : {}),
+        retries: MENTOR_MAX_RETRIES - retriesLeft,
         ...(await creditsView(wallet, userId)),
       };
     } finally {

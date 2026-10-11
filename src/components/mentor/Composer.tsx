@@ -1,23 +1,21 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { SendHorizontal, Square, Globe } from "lucide-react";
+import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
+import { SendHorizontal, Square, Globe, Settings2, ChevronDown } from "lucide-react";
 import { mentorT, type MentorKey, type MentorUiLang } from "@/lib/i18n-mentor";
 import type { MentorLang, MentorMode } from "@/lib/mentor/contract";
 import { MENTOR_MESSAGE_MAX_CHARS } from "@/lib/mentor/contract";
+import { Dialog } from "@/components/ui";
+import { r3T } from "./r3-copy";
 import { canSubmit, draftStatus } from "./chat-state";
 import { MENTOR_ANSWER_LANGS, answerLangLabel } from "./view-model";
+import { r2AnswerCopy } from "./r2-answer-copy";
+import { typedLanguage, LANGUAGE_SWITCH_COPY } from "./input-language";
+import { shellT } from "./r1-shell-copy";
 
-const MODE_PLACEHOLDER: Record<MentorMode, MentorKey> = {
-  facts: "composer_placeholder_facts",
-  explain: "composer_placeholder_explain",
-  study: "composer_placeholder_study",
-};
-const MODE_LABEL: Record<MentorMode, MentorKey> = {
-  facts: "mode_facts",
-  explain: "mode_explain",
-  study: "mode_study",
-};
+const MODE_PLACEHOLDER: Record<MentorMode, MentorKey> = { facts: "composer_placeholder_facts", explain: "composer_placeholder_explain", study: "composer_placeholder_study" };
+const MODE_LABEL: Record<MentorMode, MentorKey> = { facts: "mode_facts", explain: "mode_explain", study: "mode_study" };
 
 export interface ComposerProps {
   lang: MentorUiLang;
@@ -29,128 +27,82 @@ export interface ComposerProps {
   answerLang: MentorLang;
   onAnswerLang: (l: MentorLang) => void;
   busy: boolean;
-  /** Composer closed by state (no credits, resting, rate-limit cooldown). */
   blocked: boolean;
+  blockedReason?: string;
+  blockedActionHref?: string | null;
   onSend: () => void;
   onStop: () => void;
   autoFocusKey?: number;
+  conversationKey?: string | number;
+  hasThread?: boolean;
 }
 
 export default function Composer(p: ComposerProps) {
   const ref = useRef<HTMLTextAreaElement>(null);
+  const [optionsOpen, setOptionsOpen] = useState(false);
+  const [languageOpen, setLanguageOpen] = useState(false);
+  const [infoOpen, setInfoOpen] = useState(false);
+  const [languageOffer, setLanguageOffer] = useState<ReturnType<typeof typedLanguage>>(null);
+  const offered = useRef(false);
+  useEffect(() => { offered.current = false; setLanguageOffer(null); }, [p.conversationKey]);
+  useEffect(() => {
+    if (offered.current) return;
+    const typed = typedLanguage(p.draft);
+    if (typed && typed !== p.answerLang) { offered.current = true; setLanguageOffer(typed); }
+  }, [p.draft, p.answerLang]);
   const status = draftStatus(p.draft);
   const sendable = canSubmit(p.draft, p.busy) && !p.blocked;
-
-  // Grow with content up to a cap; shrink back after send.
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
+    // A wrapped placeholder must not inflate normal phone chrome.
+    if (!p.draft) { el.style.height = "44px"; return; }
     el.style.height = "auto";
     el.style.height = `${Math.min(el.scrollHeight, 144)}px`;
   }, [p.draft]);
-
-  // Focus after a starter prompt fills the draft.
-  useEffect(() => {
-    if (p.autoFocusKey) ref.current?.focus();
-  }, [p.autoFocusKey]);
-
+  useEffect(() => { if (p.autoFocusKey) { const el = ref.current; el?.focus(); el?.setSelectionRange(el.value.length, el.value.length); } }, [p.autoFocusKey]);
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key !== "Enter" || e.shiftKey || e.nativeEvent.isComposing) return;
-    // Phones keep Enter as a newline; a pointer device sends.
-    const fine = typeof window !== "undefined" && window.matchMedia?.("(pointer: fine)").matches;
-    if (fine && sendable) {
-      e.preventDefault();
-      p.onSend();
-    }
+    if (window.matchMedia?.("(pointer: fine)").matches && sendable) { e.preventDefault(); p.onSend(); }
   };
+  const reason = p.blockedReason ?? mentorT("credits_loading", p.lang);
 
   return (
-    <div className="border-t border-[var(--mp-border)] bg-[var(--mp-surface-raised)] px-3 pb-2 pt-2.5 sm:px-4 lg:px-8">
-      <div className="mx-auto w-full max-w-3xl">
-        <div className="mb-2 flex items-center gap-2">
-          <div role="radiogroup" aria-label={mentorT("mode_label", p.lang)} className="flex min-w-0 flex-1 gap-1 overflow-x-auto [scrollbar-width:none]">
-            {p.modes.map((m) => {
-              const on = m === p.mode;
-              return (
-                <button
-                  key={m}
-                  type="button"
-                  role="radio"
-                  aria-checked={on}
-                  onClick={() => p.onMode(m)}
-                  className={`min-h-9 shrink-0 rounded-full border px-3 text-[12.5px] font-semibold transition-colors ${
-                    on
-                      ? "border-[var(--mp-viridian)] bg-[var(--mp-success-bg)] text-[var(--mp-viridian)]"
-                      : "border-[var(--mp-border)] bg-transparent text-[var(--mp-fg-muted)] hover:bg-[var(--mp-surface-sunken)]"
-                  }`}
-                >
-                  {mentorT(MODE_LABEL[m], p.lang)}
-                </button>
-              );
-            })}
+    <div data-mentor-composer className="relative border-t border-[var(--mp-border)] bg-[var(--mp-surface-raised)] px-3 py-0 sm:px-4 lg:px-8">
+      <div className="relative mx-auto w-full max-w-3xl">
+        {!p.hasThread && <div className="pb-1">
+          <p className="text-[12px] font-semibold">{r3T("topic", p.lang)}</p>
+          <div data-mentor-scope role="radiogroup" aria-label={r3T("topic", p.lang)} className="grid gap-1" style={{gridTemplateColumns: `repeat(${p.modes.length}, minmax(0,1fr))`}}>
+            {p.modes.map((m, index) => <button key={m} type="button" role="radio" tabIndex={m === p.mode ? 0 : -1} aria-checked={m === p.mode} onKeyDown={e => { if (["ArrowLeft","ArrowRight","ArrowUp","ArrowDown","Home","End"].includes(e.key)) { e.preventDefault(); const next = e.key === "Home" ? 0 : e.key === "End" ? p.modes.length-1 : (index + (["ArrowLeft","ArrowUp"].includes(e.key) ? -1 : 1) + p.modes.length)%p.modes.length; p.onMode(p.modes[next]); (e.currentTarget.parentElement?.children[next] as HTMLButtonElement)?.focus(); } }} onClick={() => p.onMode(m)} className={`min-h-11 min-w-0 rounded-lg px-1 text-[12px] leading-tight ${m === p.mode ? "bg-[var(--mp-success-bg)] text-[var(--mp-viridian)]" : "text-[var(--mp-fg-muted)]"}`}>{mentorT(MODE_LABEL[m], p.lang)}</button>)}
           </div>
-          <label className="relative inline-flex min-h-9 shrink-0 items-center gap-1 rounded-full border border-[var(--mp-border)] bg-transparent ps-2.5 pe-1 text-[12.5px] font-semibold text-[var(--mp-fg-muted)]">
-            <Globe className="h-3.5 w-3.5" aria-hidden />
-            <span className="sr-only">{mentorT("lang_label", p.lang)}</span>
-            <select
-              value={p.answerLang}
-              onChange={(e) => p.onAnswerLang(e.target.value as MentorLang)}
-              className="min-h-9 cursor-pointer appearance-none bg-transparent [&&]:!bg-transparent pe-1 ps-0.5 text-[12.5px] font-semibold text-[var(--mp-fg)] outline-none"
-              aria-label={mentorT("lang_label", p.lang)}
-            >
-              {MENTOR_ANSWER_LANGS.map((l) => (
-                <option key={l} value={l}>
-                  {answerLangLabel(l)}
-                </option>
-              ))}
-            </select>
-          </label>
+          <p className="text-[12px] text-[var(--mp-fg-muted)]">{r3T(`${p.mode}_hint`, p.lang)}</p>
+          <button type="button" onClick={() => setLanguageOpen(true)} className="flex min-h-11 items-center gap-2 text-[13px]"><Globe className="h-4 w-4" aria-hidden />{mentorT("lang_label", p.lang)}: {p.answerLang.toUpperCase()}<ChevronDown className="h-4 w-4" aria-hidden /></button>
+        </div>}
+        {languageOffer && <div dir="auto" data-language-offer className="mb-2 rounded-lg border border-[var(--mp-border)] p-2 text-[13px] text-[var(--mp-fg)]">
+          <p>{languageOffer === "ar" ? r2AnswerCopy("arabic_later", p.lang) : LANGUAGE_SWITCH_COPY[languageOffer]}</p>
+          <div className="flex flex-wrap gap-2"><button type="button" onClick={() => { p.onAnswerLang(languageOffer === "ar" ? "en" : languageOffer); setLanguageOffer(null); }} className="mp-btn mp-btn--secondary min-h-11">{answerLangLabel(languageOffer === "ar" ? "en" : languageOffer)}</button><button type="button" onClick={() => setLanguageOffer(null)} className="min-h-11 px-2 underline">{r2AnswerCopy("decline", languageOffer === "ar" ? p.lang : languageOffer)}</button></div>
+        </div>}
+        {optionsOpen && <div className="absolute bottom-full start-0 z-30 mb-2 w-full rounded-xl border border-[var(--mp-border)] bg-[var(--mp-surface-raised)] p-3 shadow-lg">
+          <div aria-label={mentorT("mode_label", p.lang)} className="grid gap-1" style={{gridTemplateColumns:`repeat(${p.modes.length},minmax(0,1fr))`}}>
+            {p.modes.map((m) => <button key={m} type="button" aria-pressed={m === p.mode} onClick={() => p.onMode(m)} className={`min-h-11 min-w-0 rounded-lg border px-1 text-[12px] leading-tight ${m === p.mode ? "border-[var(--mp-viridian)] text-[var(--mp-viridian)]" : "border-[var(--mp-border)]"}`}>{mentorT(MODE_LABEL[m], p.lang)}</button>)}
+          </div>
+          <button type="button" onClick={() => { setOptionsOpen(false); setLanguageOpen(true); }} className="mt-2 flex min-h-11 items-center gap-2 text-[13px]"><Globe className="h-4 w-4" aria-hidden />{mentorT("lang_label", p.lang)}: {answerLangLabel(p.answerLang)}<ChevronDown className="h-4 w-4" aria-hidden /></button>
+        </div>}
+        <div data-mentor-state-bar={p.blocked ? "blocked" : "open"} className={`flex min-h-12 items-center gap-1.5 rounded-xl bg-[var(--mp-surface-sunken)] p-0 ring-1 transition-colors ${status.over ? "ring-[var(--mp-error)]" : "ring-[var(--mp-border)] focus-within:ring-[var(--mp-viridian)]"}`}>
+          {!p.blocked && p.hasThread && <button type="button" onClick={() => setOptionsOpen((v) => !v)} aria-expanded={optionsOpen} aria-label={`${shellT("options", p.lang)}: ${mentorT(MODE_LABEL[p.mode], p.lang)} · ${answerLangLabel(p.answerLang)}`} className="flex min-h-11 max-w-28 shrink-0 items-center gap-1 rounded-xl px-1.5 text-[12px] text-[var(--mp-fg-muted)]"><Settings2 className="h-4 w-4 shrink-0" aria-hidden /><span className="truncate">{mentorT(MODE_LABEL[p.mode], p.lang)} · {answerLangLabel(p.answerLang)}</span></button>}
+          <div className="relative min-w-0 flex-1">
+            {p.blocked && <p id="mentor-blocked-reason" aria-live="off" className={p.draft ? "absolute start-2 top-0 max-w-full truncate text-[12px] leading-tight text-[var(--mp-fg-muted)]" : "sr-only"}>{reason}</p>}
+            <textarea ref={ref} value={p.draft} onChange={(e) => p.onDraft(e.target.value)} onKeyDown={onKeyDown} rows={1} dir="auto" readOnly={p.blocked} aria-readonly={p.blocked} aria-describedby={p.blocked ? "mentor-blocked-reason" : undefined} aria-label={mentorT("composer_label", p.lang)} aria-invalid={status.over} placeholder={p.blocked ? reason : mentorT(MODE_PLACEHOLDER[p.mode], p.lang)} enterKeyHint="send" className={`max-h-36 min-h-11 w-full min-w-0 resize-none bg-transparent [&&]:!bg-transparent [&&]:!border-transparent px-2 ${p.blocked && p.draft ? "pb-1 pt-4" : "py-2.5"} text-[15px] leading-snug text-[var(--mp-fg)] outline-none placeholder:text-[var(--mp-fg-subtle)]`} />
+          </div>
+          {p.blocked ? p.blockedActionHref && <Link href={p.blockedActionHref} className="mp-btn mp-btn--primary !h-12 !min-h-12 shrink-0 !px-3 text-[12px]">{mentorT("btn_see_packages", p.lang)}</Link> : p.busy ? <button type="button" onClick={p.onStop} className="mp-btn mp-btn--secondary h-11 w-11 shrink-0 !p-0" aria-label={mentorT("btn_stop", p.lang)}><Square className="h-4 w-4 fill-current" aria-hidden /></button> : <button type="button" onClick={p.onSend} disabled={!sendable} className="mp-btn mp-btn--success h-11 w-11 shrink-0 !p-0 disabled:cursor-not-allowed disabled:bg-[var(--mp-surface-sunken)] disabled:text-[var(--mp-fg-muted)] disabled:border disabled:border-[var(--mp-border)]" aria-label={mentorT("btn_send", p.lang)}><SendHorizontal className="h-[18px] w-[18px] rtl:-scale-x-100" aria-hidden /></button>}
         </div>
+        <div className="flex items-center justify-between gap-2 text-[12px] leading-4 text-[var(--mp-fg-muted)]">
+          <p dir="auto">{r3T("disclaimer", p.lang)} <button type="button" onClick={e => { e.currentTarget.focus(); setInfoOpen(true); }} className="inline-flex min-h-11 items-center underline">{r3T("more", p.lang)}</button></p>
+          {status.nearLimit && <p className="shrink-0 font-semibold tabular-nums" role={status.over ? "alert" : undefined}>{status.over ? mentorT("composer_too_long", p.lang) : mentorT("composer_counter", p.lang, { n: status.count, max: MENTOR_MESSAGE_MAX_CHARS })}</p>}
+        </div>
+        <Dialog open={languageOpen} onOpenChange={setLanguageOpen} title={mentorT("lang_label", p.lang)}><div data-mentor-sheet className="flex flex-col">{MENTOR_ANSWER_LANGS.map(l => <button type="button" key={l} aria-pressed={p.answerLang === l} className="min-h-11 text-start" onClick={() => { p.onAnswerLang(l === "ar" ? "en" : l); setLanguageOpen(false); }}>{answerLangLabel(l)}{l === "ar" ? " (Beta)" : ""}</button>)}</div></Dialog>
+        <Dialog open={infoOpen} onOpenChange={setInfoOpen} title={r3T("more", p.lang)}><div data-mentor-sheet className="space-y-3 text-[13px] text-[var(--mp-fg)]">{(["uses","never","report","data"] as const).map(k => <p key={k}>{r3T(k, p.lang)}</p>)}</div></Dialog>
 
-        <div className={`flex items-end gap-2 rounded-2xl border bg-[var(--mp-surface-sunken)] p-1.5 transition-colors ${status.over ? "border-[var(--mp-error)]" : "border-[var(--mp-border)] focus-within:border-[var(--mp-viridian)]"}`}>
-          <textarea
-            ref={ref}
-            value={p.draft}
-            onChange={(e) => p.onDraft(e.target.value)}
-            onKeyDown={onKeyDown}
-            rows={1}
-            dir="auto"
-            disabled={p.blocked}
-            aria-label={mentorT("composer_label", p.lang)}
-            aria-invalid={status.over}
-            placeholder={mentorT(MODE_PLACEHOLDER[p.mode], p.lang)}
-            enterKeyHint="send"
-            className="max-h-36 min-h-11 flex-1 resize-none bg-transparent [&&]:!bg-transparent [&&]:!border-transparent px-2.5 py-2.5 text-[15px] leading-snug text-[var(--mp-fg)] outline-none placeholder:text-[var(--mp-fg-subtle)] disabled:cursor-not-allowed disabled:opacity-60"
-          />
-          {p.busy ? (
-            <button type="button" onClick={p.onStop} className="mp-btn mp-btn--secondary h-11 w-11 shrink-0 !p-0" aria-label={mentorT("btn_stop", p.lang)}>
-              <Square className="h-4 w-4 fill-current" aria-hidden />
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={p.onSend}
-              disabled={!sendable}
-              className="mp-btn mp-btn--success h-11 w-11 shrink-0 !p-0 disabled:cursor-not-allowed disabled:opacity-40"
-              aria-label={mentorT("btn_send", p.lang)}
-            >
-              <SendHorizontal className="h-[18px] w-[18px] rtl:-scale-x-100" aria-hidden />
-            </button>
-          )}
-        </div>
-
-        {/* pe-16 and min-h-14 keep the global feedback launcher (fixed bottom-right) clear of the send button. */}
-        <div className="mt-1.5 flex min-h-14 items-start justify-between gap-3 pe-16">
-          <p dir="auto" className="text-[10.5px] leading-snug text-[var(--mp-fg-subtle)]">{mentorT("disclaimer", p.lang)}</p>
-          {status.nearLimit && (
-            <p
-              className={`shrink-0 text-[10.5px] font-semibold tabular-nums ${status.over ? "text-[var(--mp-error)]" : "text-[var(--mp-fg-muted)]"}`}
-              role={status.over ? "alert" : undefined}
-            >
-              {status.over ? mentorT("composer_too_long", p.lang) : mentorT("composer_counter", p.lang, { n: status.count, max: MENTOR_MESSAGE_MAX_CHARS })}
-            </p>
-          )}
-        </div>
       </div>
     </div>
   );

@@ -124,6 +124,7 @@ const NAV: NavSection[] = [
     shortcut: "r",
     items: [
       { label: "Users", href: "/admin/users", icon: Users, permission: "users.read" },
+      { label: "AI Mentor", href: "/admin/mentor", icon: Gauge, permission: "revenue.read" },
       { label: "Payments", href: "/admin/payments", icon: CreditCard, permission: "revenue.read" },
       { label: "Subscriptions", href: "/admin/subscriptions", icon: Ticket, permission: "revenue.read" },
       { label: "Referrals", href: "/admin/referrals", icon: GitBranch, permission: "revenue.read" },
@@ -150,7 +151,7 @@ const NAV: NavSection[] = [
       { label: "Feedback", href: "/admin/feedback", icon: MessageSquare, permission: "feedback.read" },
       { label: "Flags", href: "/admin/flags", icon: Flag, permission: "system.read" },
       { label: "PUYP", href: "/admin/puyp", icon: ShieldCheck, permission: "revenue.read" },
-      { label: "Mentor cost", href: "/admin/mentor", icon: Gauge, permission: "revenue.read" },
+      { label: "AI Mentor", href: "/admin/mentor", icon: Gauge, permission: "revenue.read" },
     ],
   },
   {
@@ -363,6 +364,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
 
       if (leader) {
         const key = e.key.toLowerCase();
+        if (key === "m" && can("revenue.read")) { e.preventDefault(); router.push("/admin/mentor"); leader=false; if(leaderTimer)clearTimeout(leaderTimer); return; }
         const section = NAV.find((s) => s.shortcut === key);
         if (section) {
           e.preventDefault();
@@ -375,7 +377,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
 
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [adminNavOpen, goTo, shortcutsOpen]);
+  }, [adminNavOpen, goTo, shortcutsOpen, can, router]);
 
   useEffect(() => {
     if (!adminNavOpen || !compactAdmin) return;
@@ -751,6 +753,7 @@ function ShortcutsDialog({ onClose }: { onClose: () => void }) {
           <ShortcutRow keys="g l" label="Go to Plan & Actions" />
           <ShortcutRow keys="g w" label="Go to Channels" />
           <ShortcutRow keys="g r" label="Go to Revenue" />
+          <ShortcutRow keys="g m" label="Go to AI Mentor" />
           <ShortcutRow keys="g c" label="Go to Content" />
           <ShortcutRow keys="g p" label="Go to Product" />
           <ShortcutRow keys="g s" label="Go to System" />

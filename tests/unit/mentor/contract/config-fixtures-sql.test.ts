@@ -131,7 +131,11 @@ describe("C3 ledger migration (static checks; the live run is on a local Postgre
 
   it("every table has RLS and the ledger is append-only for service_role", () => {
     const tables = [...SQL.matchAll(/CREATE TABLE IF NOT EXISTS public\.([a-z_]+)/g)].map((m) => m[1]);
-    for (const t of tables) expect(SQL).toContain(`'${t}'`);
+    for (const t of tables) {
+      const loopProtected = SQL.includes(`'${t}'`);
+      const explicitProtected = SQL.includes(`ALTER TABLE public.${t} ENABLE ROW LEVEL SECURITY;`);
+      expect(loopProtected || explicitProtected, `${t} has RLS`).toBe(true);
+    }
     expect(SQL).toContain("GRANT SELECT, INSERT         ON public.ai_usage_ledger            TO service_role;");
     expect(SQL).not.toMatch(/GRANT[^;]*(UPDATE|DELETE)[^;]*ai_usage_ledger/);
   });

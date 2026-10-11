@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { MENTOR_DICTS, MENTOR_KEYS, hasOwnMentorString, mentorT, type MentorEntry, type MentorUiLang } from "@/lib/i18n-mentor";
+import { MENTOR_DICTS, MENTOR_KEYS, MENTOR_NATIVE_REVIEW_PENDING_KEYS, MENTOR_EN_FALLBACK_KEYS, hasOwnMentorString, mentorT, type MentorEntry, type MentorUiLang } from "@/lib/i18n-mentor";
 
 const LANGS: MentorUiLang[] = ["de", "en", "ru", "uk", "tr", "ar"];
 const FULL: MentorUiLang[] = ["de", "en", "ru", "uk", "tr"];
@@ -12,10 +12,28 @@ function placeholders(s: string): string[] {
 }
 
 describe("mentor dictionary", () => {
-  it("de and en cover every key; ru, uk and tr cover every key too", () => {
+  it("de and en cover every key; untranslated product copy and pending patient wording use English", () => {
     for (const l of FULL) {
-      const missing = MENTOR_KEYS.filter((k) => !hasOwnMentorString(k, l));
+      const fallbackKeys = [...MENTOR_EN_FALLBACK_KEYS, ...MENTOR_NATIVE_REVIEW_PENDING_KEYS];
+      const missing = MENTOR_KEYS.filter((k) => !hasOwnMentorString(k, l) && (["de", "en"].includes(l) || !fallbackKeys.includes(k)));
       expect(missing, `${l} missing`).toEqual([]);
+    }
+  });
+
+  it("RU, UK and TR own recurring and one-time purchase labels and the Whop return note", () => {
+    for (const l of ["ru", "uk", "tr"] as const) {
+      for (const k of ["pkg_buy_subscription", "pkg_buy_once", "pkg_pay_note"] as const) {
+        expect(hasOwnMentorString(k, l), `${l}.${k}`).toBe(true);
+        expect(mentorT(k, l, { price: "server price", n: 30 })).not.toBe(mentorT(k, "en", { price: "server price", n: 30 }));
+      }
+    }
+  });
+
+  it("the patient safety line alone is held for native review and remains the fixed English fallback", () => {
+    expect(MENTOR_NATIVE_REVIEW_PENDING_KEYS).toEqual(["refusal_patient_advice"]);
+    for (const l of ["ru", "uk", "tr"] as const) {
+      expect(hasOwnMentorString("refusal_patient_advice", l)).toBe(false);
+      expect(mentorT("refusal_patient_advice", l)).toBe(mentorT("refusal_patient_advice", "en"));
     }
   });
 
@@ -45,7 +63,7 @@ describe("mentor dictionary", () => {
     for (const l of FULL) {
       for (const k of MENTOR_KEYS) {
         const de = new Set(texts(MENTOR_DICTS.de[k]!).flatMap(placeholders));
-        for (const t of texts(MENTOR_DICTS[l][k]!)) {
+        for (const t of texts(MENTOR_DICTS[l][k] ?? MENTOR_DICTS.en[k]!)) {
           expect(new Set(placeholders(t)), `${l}.${k}`).toEqual(de);
         }
       }
@@ -55,7 +73,7 @@ describe("mentor dictionary", () => {
   it("plural entries have an other form; ru and uk define few and many", () => {
     for (const l of FULL) {
       for (const k of MENTOR_KEYS) {
-        const e = MENTOR_DICTS[l][k]!;
+        const e = MENTOR_DICTS[l][k] ?? MENTOR_DICTS.en[k]!;
         if (typeof e !== "string") expect(e.other, `${l}.${k}`).toBeTruthy();
       }
     }

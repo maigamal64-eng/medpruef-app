@@ -23,7 +23,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   if (!guard.ok) return guard.response;
 
   try {
-    const result = await handleMentorAdminSummary(getServiceClient(), readMentorConfig(), new Date());
+    const result = await handleMentorAdminSummary(getServiceClient(), readMentorConfig(), new Date(), req.nextUrl.searchParams.get("timezone") === "UTC" ? "UTC" : "Europe/Vienna");
     if (result.status === 503) {
       // "Not installed yet" is an expected state before release train R3, not an alert.
       if (result.body.error !== "ledger_not_applied") {

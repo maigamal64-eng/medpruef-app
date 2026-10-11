@@ -26,7 +26,16 @@ export type MentorMode = (typeof MENTOR_MODES)[number];
 /** Hard cap on one user message (characters, after trim). */
 export const MENTOR_MESSAGE_MAX_CHARS = 1_500;
 
+export const MENTOR_ENTRIES = ["nav", "home", "question", "explanation", "study_plan", "exam_dates", "pricing", "faq", "telegram"] as const;
+export type MentorEntry = typeof MENTOR_ENTRIES[number];
+export const MENTOR_CHANNELS = ["web", "telegram"] as const;
+export type MentorChannel = typeof MENTOR_CHANNELS[number];
+
 export interface MentorChatRequest {
+  entry?: MentorEntry;
+  channel?: MentorChannel;
+  /** One UUID per learner message, reused on every transport retry. */
+  client_request_id: string;
   /** Omitted on the first message; the server returns one in `final`. */
   conversation_id?: string;
   message: string;
@@ -34,22 +43,41 @@ export interface MentorChatRequest {
   mode: MentorMode;
   /** questions.id for "explain this question"; must be a question the caller may read. */
   question_id?: number;
+  /** Untrusted learner data; never a verified fact or a system instruction. */
+  selected_option_text?: string;
+  was_correct?: boolean;
+  answered?: boolean;
+  explain_action?: "hint" | "solution";
+  hint_count?: 0 | 1 | 2;
+  /** Routes sources only, never an eligibility assertion. */
+  filing_university?: "wien" | "graz" | "innsbruck";
 }
+
+export type MentorNextActionKind = "practice_topic" | "open_question" | "save_note" | "open_flashcards" | "open_mistakes" | "open_exam_dates" | "open_study_plan" | "set_exam_date" | "deadline_reminder";
+export interface MentorNextAction { exam_date?: string; sitting_label?: string; kind: MentorNextActionKind; topic?: string; question_id?: number; exam_source?: string }
+export interface MentorPlanItem { topic: string; accuracy: number; answered: number; action: "practice" | "review_mistakes" | "flashcards"; exam_source?: string }
 
 // ─── Chat SSE events ────────────────────────────────────────────────────
 
 export interface MentorAnswerBlock {
   text: string;
+  explain_layer?: "grounded" | "background" | "options";
   /** Fact ids (C6) that back this block. Empty only for blocks with no factual claim. */
   fact_ids: string[];
+  replaced?: boolean;
+  official_url?: string;
+  /** Exact date substrings confirmed by the validator, display only. */
+  confirmed_dates?: string[];
+  date_type?: "deadline" | "sitting";
 }
 
 export interface MentorCitation {
   fact_id: string;
   source_label: string;
   source_url: string;
-  /** ISO date the official source was read ("Stand <date>"). */
+  /** ISO date the official page was checked, not publication or validity. */
   read_on: string;
+  review_every_days?: number;
 }
 
 export const MENTOR_REFUSAL_REASONS = [
@@ -71,24 +99,51 @@ export interface MentorDeltaEvent {
 
 export interface MentorFinalEvent {
   type: "final";
+  request_id?: string;
+  question_id?: number;
   conversation_id: string;
+  /** Optional only for compatibility with older recovered finals. New turns always set it. */
+  result?: "answer" | "notice" | "refusal";
+  reason?: "no_source" | "truncated" | "empty";
+  charged?: boolean;
+  /** Exact learner debit from successful settlement, in credits. */
+  credits_used?: number;
+  explain_hint?: { hints_used: 1 | 2; next_credit_cost: number };
+  study_scope?: { answered: number };
+  study_answer?: boolean;
   answer_blocks: MentorAnswerBlock[];
   citations: MentorCitation[];
   refused?: MentorRefusalReason;
   /** Official link shown with every refusal. */
   refusal_link?: string;
+  /** Code-owned office name, UI supplies localized open verb. */
+  refusal_label?: string;
+  needs_filing_university?: boolean;
+  next_actions?: MentorNextAction[];
+  plan_items?: MentorPlanItem[];
   /** True when the code validator replaced an unsupported value. */
   validator_replaced?: boolean;
+  replaced_count?: number;
+  retries?: number;
   credits_left: number;
   messages_left_estimate: number;
 }
 
 export interface MentorErrorEvent {
   type: "error";
+  retries?: number;
   error: MentorErrorCode;
 }
 
-export type MentorSseEvent = MentorDeltaEvent | MentorFinalEvent | MentorErrorEvent;
+export interface MentorInProgressEvent { type: "in_progress"; client_request_id: string }
+export interface MentorChatResultResponse {
+  status: "in_progress" | "complete" | "error" | "expired" | "missing";
+  final?: MentorFinalEvent;
+  error?: MentorErrorCode;
+}
+export interface MentorStatusEvent { type: "status"; phase: "checking_sources" | "writing" }
+export interface MentorHeartbeatEvent { type: "heartbeat" }
+export type MentorSseEvent = MentorStatusEvent | MentorHeartbeatEvent | MentorDeltaEvent | MentorFinalEvent | MentorErrorEvent | MentorInProgressEvent;
 
 // ─── Errors (HTTP status before the stream starts; `error` event after) ──
 
@@ -101,8 +156,9 @@ export const MENTOR_ERROR_STATUS = Object.freeze({
   credits_exhausted: 402,
   /** Env/DB flag off or not on the beta allowlist: UI hides the mentor. */
   mentor_disabled: 403,
-  /** Too many failures today on our side, after the free house fails. */
-  locked_today: 403,
+  mentor_resting: 403,
+  already_subscribed: 409,
+  pending_purchase: 409,
   input_too_large: 413,
   rate_limited: 429,
   ai_disabled: 503,
@@ -115,6 +171,9 @@ export type MentorErrorCode = keyof typeof MENTOR_ERROR_STATUS;
 
 export interface MentorErrorBody {
   error: MentorErrorCode;
+  reason?: "question_access";
+  limit?: "minute" | "day";
+  credits_deducted?: false;
   /** Present on 429 rate_limited. */
   retry_after_seconds?: number;
   /** Present on 402: where to buy. */
@@ -125,7 +184,7 @@ export interface MentorErrorBody {
 
 export const MENTOR_USAGE_STATES = ["ok", "low", "exhausted", "resting", "none"] as const;
 /**
- * ok: credits available. low: under MENTOR_LOW_CREDITS. exhausted: had
+ * ok: credits available. low: below max(10, 15% of current grant). exhausted: had
  * credits, below one reserve. resting: global breaker (503). none: never had
  * credits (show the packages).
  */
@@ -134,7 +193,15 @@ export type MentorUsageState = (typeof MENTOR_USAGE_STATES)[number];
 export type MentorAccessSource = "package" | "pro_included" | "trial" | "gift" | "admin" | "none";
 
 export interface MentorUsageResponse {
+  source?: MentorAccessSource;
+  trial?: { credits: number; credits_left: number; expires_at: string; expired: boolean; pro_included_credits?: number };
+  included_allowance?: { credits: number; credits_left: number; period_days: number; renews_at: string | null };
   state: MentorUsageState;
+  /** Server-owned relative warning threshold, shared by all consumers. */
+  low_threshold?: number;
+  current_grant?: number;
+  source_package?: MentorPackageId;
+  renewal_at?: string | null;
   credits_left: number;
   messages_left_estimate: number;
   /** ISO time the soonest live lot expires, or null. */
@@ -142,9 +209,13 @@ export interface MentorUsageResponse {
   /** Where the user's current credits come from (for copy, never dollars). */
   sources: MentorAccessSource[];
   /** Active mentor subscriptions (renewing). */
-  subscriptions: Array<{ package_id: MentorPackageId; renews: boolean }>;
+  subscriptions: Array<{ package_id: MentorPackageId; renews: boolean; renews_at?: string | null; ends_at?: string | null; management_url?: string; status?: "active" | "ending" | "payment_failed" }>;
   /** Whether the packages page should be offered (MENTOR_PACKAGES_ENABLED and at least one buyable package). */
   can_buy: boolean;
+  reason?: "paused";
+  resting_until?: string | null;
+  pending_purchase?: { package_id: MentorPackageOffer["package_id"]; since: string; checkout_session_id: string; retry_allowed: boolean } | null;
+  recent_purchase?: { checkout_session_id: string; credits_added: number; granted_at: string } | null;
 }
 
 // ─── Packages (catalogue rows live in public.ai_credit_package) ─────────
@@ -211,16 +282,28 @@ export interface MentorPackagesResponse {
 }
 
 export interface MentorCheckoutRequest {
+  idempotency_key?: string;
+  retry_pending?: boolean;
   package_id: MentorPackageOffer["package_id"];
 }
 
 export interface MentorCheckoutResponse {
   purchase_url: string;
+  checkout_session_id: string;
 }
 
+export interface MentorPurchaseReceipt {
+  package_id: "mentor_basis" | "mentor_plus" | "mentor_topup";
+  credits: number;
+  expires_at: string;
+  /** Immutable provider snapshot. null means no confirmed renewal date. */
+  renews_at: string | null;
+}
 export interface MentorCheckoutVerifyResponse {
   status: "granted" | "pending" | "failed";
+  credits_added: number;
   credits_left: number;
+  receipt?: MentorPurchaseReceipt;
 }
 
 // ─── Lot sources and included-grant keys (ai_credit_lot.source) ─────────
@@ -401,6 +484,9 @@ export const MENTOR_RPCS = Object.freeze({
 
 /** Read-only. Ids only, never emails. Money here is micro-USD (admin only). */
 export interface MentorAdminSummary {
+  timezone?: "UTC" | "Europe/Vienna";
+  projection?: { projected_month_micro: number; cap_in_days: number | null };
+  quality?: MentorQualitySummary;
   generated_at: string;
   /** UTC month YYYY-MM the totals cover. */
   month: string;
@@ -433,4 +519,19 @@ export interface MentorAdminSummary {
     resting: boolean;
     beta_allowlist_size: number;
   };
+}
+
+export const MENTOR_REPORT_REASONS = ["date_wrong", "rule_wrong", "explanation_unclear", "question_wrong", "other"] as const;
+export type MentorReportReason = typeof MENTOR_REPORT_REASONS[number];
+export const MENTOR_TURN_OUTCOMES = ["answered", "refused", "replaced_partial", "notice_only", "error", "blocked_402", "blocked_429", "blocked_cap"] as const;
+export type MentorTurnOutcome = typeof MENTOR_TURN_OUTCOMES[number];
+export interface MentorQualitySummary {
+  by_day: Array<{ day: string; outcomes: Record<MentorTurnOutcome, number> }>;
+  replaced_pct: number; error_pct: number;
+  replaced_amber: boolean; error_amber: boolean;
+  p50_latency_ms: number; p95_latency_ms: number;
+  cost_per_message_micro: number;
+  cold_cache_share_pct: number;
+  messages_per_payer: number;
+  answers_by_language: Record<string, number>;
 }

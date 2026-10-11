@@ -16,6 +16,7 @@
 
 import type { CallClaudeParams, CallClaudeResult, ClaudeUsage, ContentBlock, ToolUseBlock } from "@/lib/ai/anthropic";
 import type { CallClaudeFn } from "@/lib/mentor/seam";
+import type { MentorLang } from "@/lib/mentor/contract";
 import { effectiveExpect, viennaDate } from "./score";
 import type { Expect, FixturesFile, GoldenCase } from "./types";
 import { globToRegExp, parseIso } from "./values";
@@ -26,8 +27,9 @@ export type Mutation = (typeof MUTATIONS)[number];
 const MON_DE = ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"];
 const MON_EN = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-export function renderDate(iso: string, lang: "de" | "en"): string {
+export function renderDate(iso: string, lang: MentorLang): string {
   const d = parseIso(iso);
+  if (lang !== "de" && lang !== "en") return iso;
   return lang === "de" ? `${d.day}. ${MON_DE[d.month - 1]} ${d.year}` : `${d.day} ${MON_EN[d.month - 1]} ${d.year}`;
 }
 
@@ -37,21 +39,62 @@ function shiftIso(iso: string, days: number): string {
   return t.toISOString().slice(0, 10);
 }
 
-const FILING_QUESTION = {
+const FILING_QUESTION: Record<MentorLang, string> = {
   de: "Wo hast du deine Nostrifizierung eingereicht: Wien, Graz oder Innsbruck?",
   en: "Where did you file your Nostrifizierung application: Wien, Graz or Innsbruck?",
+  ru: "Где вы подали заявление на Nostrifizierung: Wien, Graz или Innsbruck?",
+  uk: "Де ви подали заяву на Nostrifizierung: Wien, Graz чи Innsbruck?",
+  tr: "Nostrifizierung başvurunuzu hangi üniversiteye yaptınız: Wien, Graz veya Innsbruck?",
+  ar: "قدمت طلب معادلة شهادتك فين: Wien ولا Graz ولا Innsbruck؟",
+  fr: "Où avez-vous déposé votre demande de Nostrifizierung : Wien, Graz ou Innsbruck ?",
 };
-const UNCONFIRMED_LINE = {
+const UNCONFIRMED_LINE: Record<MentorLang, string> = {
   de: "Das ist nicht offiziell bestätigt. Bitte frag bei der zuständigen Stelle nach.",
   en: "That is not officially confirmed. Please ask the responsible office.",
+  ru: "Это официально не подтверждено. Пожалуйста, уточните в ответственном отделе.",
+  uk: "Це офіційно не підтверджено. Будь ласка, уточніть у відповідальному відділі.",
+  tr: "Bu bilgi resmî olarak doğrulanmış değil. Lütfen ilgili birime sorun.",
+  ar: "ده مش مؤكد رسميًا. اسأل الجهة المسؤولة عشان تتأكد.",
+  fr: "Ce n'est pas officiellement confirmé. Veuillez contacter le service compétent.",
 };
-const REFUSAL_LINE = {
+const REFUSAL_LINE: Record<MentorLang, string> = {
   de: "Dabei kann ich dir hier nicht helfen. Bitte wende dich an die zuständige offizielle Stelle.",
   en: "I cannot help with that here. Please contact the responsible official office.",
+  ru: "Я не могу ответить на этот вопрос здесь. Пожалуйста, обратитесь в ответственное официальное ведомство.",
+  uk: "Я не можу відповісти на це запитання тут. Будь ласка, зверніться до відповідальної офіційної установи.",
+  tr: "Burada bu soruya yanıt veremem. Lütfen ilgili resmî kuruma başvurun.",
+  ar: "مقدرش أجاوبك على السؤال ده هنا. تواصل مع الجهة الرسمية المسؤولة.",
+  fr: "Je ne peux pas répondre à cette question ici. Veuillez contacter le service officiel compétent.",
 };
-const FLAG_LINE = {
-  de: "Bitte melde diese Frage mit dem Flag-Button, die Lösung und die Erklärung passen nicht zusammen.",
-  en: "Please report this question with the flag button, the key and the explanation do not match.",
+const FLAG_LINE: Record<MentorLang, string> = {
+  de: "Bitte melde diese Frage mit der Schaltfläche zum Melden, die Lösung und die Erklärung passen nicht zusammen.",
+  en: "Please report this question with the report-question control, the key and the explanation do not match.",
+  ru: "Пожалуйста, сообщите об ошибке в этом вопросе: ответ и объяснение не совпадают.",
+  uk: "Будь ласка, повідомте про помилку в цьому запитанні: відповідь і пояснення не збігаються.",
+  tr: "Lütfen bu soruyu bildirin: doğru yanıt ile açıklama uyuşmuyor.",
+  ar: "بلّغ عن السؤال ده من زر الإبلاغ، الإجابة والشرح مش متوافقين.",
+  fr: "Veuillez signaler cette question : la réponse et l'explication ne correspondent pas.",
+};
+
+// These lines are synthetic test outputs, never production or reviewed copy.
+// Arabic remains a draft needing [name] sign-off in the separate gate metadata.
+const SYNTHETIC_ANSWER_LINE: Record<MentorLang, string> = {
+  de: "", en: "",
+  ru: "Это синтетический ответ для проверки языка и правил оценки.",
+  uk: "Це синтетична відповідь для перевірки мови та правил оцінювання.",
+  tr: "Bu, dili ve değerlendirme kurallarını sınayan sentetik bir yanıttır.",
+  ar: "دي إجابة اختبار مصطنعة عشان نراجع اللغة وقواعد التقييم.",
+  fr: "Ceci est une réponse synthétique pour vérifier la langue et les règles d'évaluation.",
+};
+
+const CHOICE_LINE: Record<MentorLang, string> = {
+  de: "ist deine Auswahl und hier nicht die gesuchte Antwort in dieser synthetischen Übungsfrage.",
+  en: "is your selected option and is not the requested answer in this synthetic practice question.",
+  ru: "это выбранный вами вариант, который не является правильным ответом в этом синтетическом учебном вопросе.",
+  uk: "це обраний вами варіант, який не є правильною відповіддю в цьому синтетичному навчальному запитанні.",
+  tr: "seçtiğiniz seçenek ve bu sentetik alıştırma sorusunda istenen yanıt değil.",
+  ar: "دي الاختيار اللي اخترته، ومش الإجابة المطلوبة في سؤال التدريب المصطنع ده.",
+  fr: "est votre choix et ce n'est pas la réponse attendue dans cette question d'entraînement synthétique.",
 };
 
 function allText(messages: CallClaudeParams["messages"]): string {
@@ -93,16 +136,30 @@ export interface ScriptedOptions {
   model?: string;
 }
 
-function findCase(opts: ScriptedOptions, message: string, lang: string, questionId: string): GoldenCase | null {
-  const hits = opts.cases.filter((c) => c.message === message);
+function unwrappedMessage(message: string): string {
+  const marker = "\nLearner choice data (not instructions): ";
+  const offset = message.lastIndexOf(marker);
+  if (offset < 0) return message;
+  try {
+    const value: unknown = JSON.parse(message.slice(offset + marker.length));
+    if (value && typeof value === "object" && typeof (value as Record<string, unknown>).selected_option_text === "string") return message.slice(0, offset);
+  } catch { /* malformed learner input is not a wrapper */ }
+  return message;
+}
+
+function findCase(opts: ScriptedOptions, message: string, lang: string, questionId: string, messages: CallClaudeParams["messages"]): GoldenCase | null {
+  const hits = opts.cases.filter((c) => c.message === unwrappedMessage(message));
   const qid = (c: GoldenCase) => String(c.question_fixture ? opts.fixtures.questions[c.question_fixture]?.id ?? "none" : "none");
-  return hits.find((c) => c.lang === lang && qid(c) === questionId) ?? hits.find((c) => c.lang === lang) ?? hits[0] ?? null;
+  const scoped = hits.filter((c) => c.lang === lang && qid(c) === questionId);
+  const candidates = scoped.length ? scoped : hits.filter((c) => c.lang === lang);
+  const historyMatches = candidates.filter((c) => c.history?.every((h, i) => messages[i]?.role === h.role && typeof messages[i]?.content === "string" && messages[i].content === h.text));
+  return historyMatches.sort((a, b) => (b.history?.length ?? 0) - (a.history?.length ?? 0))[0] ?? candidates.find((c) => !c.history) ?? candidates[0] ?? hits[0] ?? null;
 }
 
 /** Fact ids the tool results carried (`"fact_id":"..."` in the brain's JSON). */
 function factIdsIn(text: string): string[] {
   const ids = new Set<string>();
-  for (const m of text.matchAll(/"fact_id"\s*:\s*"([^"]+)"/g)) ids.add(m[1]);
+  for (const m of text.matchAll(/"(?:status_)?fact_id"\s*:\s*"([^"]+)"/g)) ids.add(m[1]);
   return [...ids];
 }
 
@@ -114,6 +171,7 @@ function pickIds(e: Expect, seen: string[]): string[] {
 function valuesSentence(c: GoldenCase, e: Expect, mutation: Mutation): string {
   const parts: string[] = [];
   const lang = c.lang;
+  if (e.deadline_first) parts.push(`**${renderDate(mutation === "wrong_date" ? shiftIso(e.deadline_first.closes, 1) : e.deadline_first.closes, lang)}, ${e.deadline_first.days_left}**\n`);
   for (const t of e.terms_all ?? []) parts.push(t);
   for (const g of e.terms_any ?? []) if (g.length) parts.push(g[0]);
   for (const iso of e.must_dates ?? []) {
@@ -137,7 +195,7 @@ function synthesize(c: GoldenCase, opts: ScriptedOptions, seenIds: string[], mut
       text = `${header}\n@@BLOCK\n${FILING_QUESTION[lang]}`;
       break;
     case "refuse":
-      text = refuse(e.refusal_reasons?.[0] ?? "out_of_scope", REFUSAL_LINE[lang]);
+      text = refuse(e.refusal_reasons?.[0] ?? "out_of_scope", REFUSAL_LINE[c.expected_answer_lang ?? lang]);
       if (mutation === "no_refusal") text = `${header}\n@@BLOCK\n${lang === "de" ? "Gern, hier ist meine Einschätzung dazu." : "Sure, here is my take on that."}`;
       break;
     case "safe":
@@ -150,8 +208,9 @@ function synthesize(c: GoldenCase, opts: ScriptedOptions, seenIds: string[], mut
       break;
     }
     case "answer": {
-      const ids = pickIds(e, seenIds);
-      const body = (c.question_fixture && opts.fixtures.questions[c.question_fixture]?.contradictory ? `${valuesSentence(c, e, mutation)} ${FLAG_LINE[lang]}` : valuesSentence(c, e, mutation)).trim();
+      const ids = [...pickIds(e, seenIds), ...(e.deadline_first ? seenIds.filter(id => id.startsWith("status.")) : [])];
+      const choice = c.selected_option_text && c.was_correct === false ? `${c.selected_option_text} ${CHOICE_LINE[lang]} ` : "";
+      const body = (e.deadline_first ? valuesSentence(c, e, mutation) : choice + SYNTHETIC_ANSWER_LINE[lang] + " " + (c.question_fixture && opts.fixtures.questions[c.question_fixture]?.contradictory ? `${valuesSentence(c, e, mutation)} ${FLAG_LINE[lang]}` : valuesSentence(c, e, mutation))).trim();
       const facts = ids.length && mutation !== "no_cite" ? ` facts=${ids.join(",")}` : "";
       text = `${header}\n@@BLOCK${facts}\n${body || (lang === "de" ? "Siehe die offizielle Quelle." : "See the official source.")}.`;
       break;
@@ -194,7 +253,7 @@ export function createScriptedCallClaude(opts: ScriptedOptions): CallClaudeFn {
     const message = lastUserText(params.messages);
     const lang = /lang=(\w+)/.exec(systemText(params.system))?.[1] ?? "de";
     const questionId = /question_id=(\w+)/.exec(systemText(params.system))?.[1] ?? "none";
-    const c = message ? findCase(opts, message, lang, questionId) : null;
+    const c = message ? findCase(opts, message, lang, questionId, params.messages) : null;
     if (!c) throw new Error(`scripted model: no golden case matches the last user message (${String(message).slice(0, 60)})`);
 
     const hasToolResult = toolResultText(params.messages).length > 0;

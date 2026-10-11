@@ -71,7 +71,7 @@ describe("copy rules", () => {
   it("every refusal and fallback link is an official entry of austrian-resources.ts", () => {
     const official = new Set(AUSTRIAN_RESOURCES.filter((r) => r.category === "official").map((r) => r.url));
     for (const r of MENTOR_REFUSAL_REASONS) {
-      for (const e of [null, "stichprobentest", "sip5a", "general", "fsp"] as const) expect(official.has(refusalLink(r, e))).toBe(true);
+      for (const e of [null, "stichprobentest", "sip5a", "general", "fsp"] as const) expect(r === "patient_advice" ? refusalLink(r, e) === undefined : official.has(refusalLink(r, e)!)).toBe(true);
     }
     for (const u of ["wien", "graz", "innsbruck", "all"] as const) expect(official.has(officialLinkForUniversity(u))).toBe(true);
     expect(official.has(officialLinkForExam(null))).toBe(true);

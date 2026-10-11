@@ -48,7 +48,7 @@ export function createMeter(client: RpcClient, userId: string): Meter {
  * Who pays for an our-side failure (empty text, timeout, stream cut): the
  * first `freePerDay` a Europe/Vienna day are on the house; after that, and on
  * any DB error, the user is billed (fail closed: never give it away). The
- * mentor is not locked for the day; locked_today stays unused by core.
+ * mentor is not locked for the day; failures remain recoverable.
  */
 export function createHousePolicy(client: RpcClient, freePerDay: number): HousePolicy {
   return {

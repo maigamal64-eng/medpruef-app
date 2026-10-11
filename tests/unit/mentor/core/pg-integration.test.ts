@@ -287,3 +287,38 @@ describe.skipIf(!PORT)("refunds against the real ledger SQL (review H1, H2)", ()
     expect(r.ledger).toBe(r.lots - r.debt);
   });
 });
+
+
+describe.skipIf(!PORT)("Mentor P0 money guards on real SQL", () => {
+  it("MUX-39: killing after reserve leaves balance unchanged after sweep and books house_cost", async () => {
+    const user = await freshUser(100_000);
+    const id = crypto.randomUUID();
+    const before = JSON.parse(await sql(`SELECT mentor_balance('${user}')::text;`)).available_micro;
+    await sql(`SELECT mentor_reserve('${user}','${id}',0::smallint,10000)::text;`);
+    await sql(`UPDATE ai_mentor_reservation SET created_at=now()-interval '16 minutes' WHERE request_id='${id}';`);
+    const swept = JSON.parse(await sql(`SELECT mentor_sweep_stale(interval '15 minutes')::text;`));
+    expect(swept.ok).toBe(true);
+    expect(JSON.parse(await sql(`SELECT mentor_balance('${user}')::text;`)).available_micro).toBe(before);
+    expect(Number(await sql(`SELECT count(*) FROM ai_usage_ledger WHERE request_id='${id}' AND kind='house_cost' AND delta_micro_usd=0;`))).toBe(1);
+    expect(Number(await sql(`SELECT count(*) FROM ai_usage_ledger WHERE request_id='${id}' AND kind='settle';`))).toBe(0);
+  });
+  it("MUX-35/78/85: concurrent claims and purchases serialize; retry/expiry are bounded", async () => {
+    const user = crypto.randomUUID(), client = crypto.randomUUID();
+    // Stub users exists in the documented local scratch schema; only owner setup inserts it.
+    await run(PSQL, ["-h", "127.0.0.1", "-p", String(PORT), "-U", "postgres", "-d", "mentor", "-qtAX", "-v", "ON_ERROR_STOP=1", "-c", `INSERT INTO public.users(id) VALUES('${user}');`]);
+    const claims = await Promise.all(Array.from({ length: 10 }, async () => JSON.parse(await sql(`SELECT mentor_claim_request('${user}','${client}','${crypto.randomUUID()}','${"a".repeat(64)}','{"lang":"de","mode":"facts"}')::text;`))));
+    expect(claims.filter(c => c.claimed)).toHaveLength(1);
+    expect(claims.filter(c => c.result?.status === 'in_progress')).toHaveLength(9);
+    const purchases = await Promise.all(Array.from({ length: 10 }, async () => JSON.parse(await sql(`SELECT mentor_begin_purchase('${user}','mentor_basis','${crypto.randomUUID()}',false)::text;`))));
+    expect(purchases.filter(p => p.ok)).toHaveLength(1);
+    expect(purchases.filter(p => p.reason === 'pending_purchase')).toHaveLength(9);
+    expect(JSON.parse(await sql(`SELECT mentor_begin_purchase('${user}','mentor_basis','${crypto.randomUUID()}',true)::text;`)).reason).toBe('pending_purchase');
+    await sql(`UPDATE ai_mentor_purchase SET created_at=now()-interval '31 minutes' WHERE user_id='${user}';`);
+    expect(JSON.parse(await sql(`SELECT mentor_begin_purchase('${user}','mentor_basis','${crypto.randomUUID()}',true)::text;`)).ok).toBe(true);
+    await sql(`UPDATE ai_mentor_purchase SET expires_at=now()-interval '1 second' WHERE user_id='${user}' AND status='pending';`);
+    expect(JSON.parse(await sql(`SELECT mentor_begin_purchase('${user}','mentor_basis','${crypto.randomUUID()}',false)::text;`)).ok).toBe(true);
+    await sql(`INSERT INTO ai_mentor_whop_membership(membership_id,user_id,package_id,status) VALUES('mem_p0_${user}','${user}','mentor_basis','active');`);
+    expect(JSON.parse(await sql(`SELECT mentor_begin_purchase('${user}','mentor_basis','${crypto.randomUUID()}',false)::text;`)).reason).toBe('already_subscribed');
+    expect(JSON.parse(await sql(`SELECT mentor_begin_purchase('${user}','mentor_topup','${crypto.randomUUID()}',false)::text;`)).ok).toBe(true);
+  });
+});

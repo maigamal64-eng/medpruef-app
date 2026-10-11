@@ -40,7 +40,11 @@ export const MENTOR_HISTORY_TURNS = 6;
 export const MENTOR_RETRIEVAL_MAX_TOKENS = 4_000;
 
 /** "low" state when fewer than this many credits are left. */
-export const MENTOR_LOW_CREDITS = 20;
+export const MENTOR_LOW_CREDITS = 10;
+/** Descending balance crosses the higher limit first: under 15% OR under 10. */
+export function mentorLowThreshold(currentGrantCredits: number): number {
+  return Math.max(MENTOR_LOW_CREDITS, Number.isFinite(currentGrantCredits) ? Math.max(0,currentGrantCredits) * 0.15 : 0);
+}
 
 /**
  * Package id -> env var holding its Whop plan id. An unset or empty env var
@@ -65,6 +69,7 @@ export interface MentorConfig {
   escalationEnabled: boolean;
   packagesEnabled: boolean;
   topupsEnabled: boolean;
+  telegramEnabled: boolean;
   betaUserIds: readonly string[];
   modelDefault: string;
   modelEscalate: string;
@@ -85,6 +90,7 @@ export const MENTOR_CONFIG_DEFAULTS: Readonly<MentorConfig> = Object.freeze({
   escalationEnabled: false,
   packagesEnabled: false,
   topupsEnabled: false,
+  telegramEnabled: false,
   betaUserIds: Object.freeze([]) as readonly string[],
   modelDefault: MODEL_IDS.HAIKU_5_5,
   modelEscalate: MODEL_IDS.SONNET_5_5,
@@ -126,6 +132,7 @@ export const MENTOR_ENV = Object.freeze({
   escalationEnabled: "MENTOR_ESCALATION_ENABLED",
   packagesEnabled: "MENTOR_PACKAGES_ENABLED",
   topupsEnabled: "MENTOR_TOPUPS_ENABLED",
+  telegramEnabled: "MENTOR_TELEGRAM_ENABLED",
   betaUserIds: "MENTOR_BETA_USER_IDS",
   modelDefault: "MENTOR_MODEL_DEFAULT",
   modelEscalate: "MENTOR_MODEL_ESCALATE",
@@ -179,6 +186,7 @@ export function readMentorConfig(env: Env = process.env): MentorConfig {
     escalationEnabled: envFlag(env[MENTOR_ENV.escalationEnabled]),
     packagesEnabled: envFlag(env[MENTOR_ENV.packagesEnabled]),
     topupsEnabled: envFlag(env[MENTOR_ENV.topupsEnabled]),
+    telegramEnabled: envFlag(env[MENTOR_ENV.telegramEnabled]),
     betaUserIds: Object.freeze(parseBetaUserIds(env[MENTOR_ENV.betaUserIds])),
     modelDefault: envModel(env[MENTOR_ENV.modelDefault], d.modelDefault),
     modelEscalate: envModel(env[MENTOR_ENV.modelEscalate], d.modelEscalate),
@@ -208,6 +216,11 @@ export function mentorPackageForWhopPlan(planId: string | null | undefined, env:
     if (mentorWhopPlanId(pkg, env) === id) return pkg;
   }
   return null;
+}
+
+/** Exact wallet/ledger credits for verifiable balances and debit receipts. */
+export function creditsExactFromMicro(micro: number): number {
+  return Number.isFinite(micro) && micro > 0 ? micro / CREDIT_MICRO_USD : 0;
 }
 
 /** Whole credits a learner may see (floor; never negative). */

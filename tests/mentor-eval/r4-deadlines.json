@@ -1,0 +1,309 @@
+{
+  "version": 1,
+  "as_of": "2026-10-12T10:00:00+02:00",
+  "doc": "R4 deadline first-line gate. Days are get_dates registrationStatus output at the pinned Vienna clock. Scripted cases prove only grading; live evaluation and native review are required before release. Arabic stays English fallback and needs [name] sign-off.",
+  "reviewer": null,
+  "native_review": {
+    "status": "pending",
+    "reviewer": null,
+    "note": "RU, UK and TR require a named native reviewer; Arabic also needs [name] sign-off."
+  },
+  "arabic": {
+    "status": "DRAFT-AR",
+    "reviewer": null,
+    "approval": "needs [name] sign-off"
+  },
+  "live_gate": {
+    "status": "pending",
+    "run_id": null,
+    "note": "No live/API run performed. track-A must run the integrated candidate before enabling any beta."
+  },
+  "pass_bar": {
+    "critical_cases_max": 0,
+    "citation_valid_min": 0.95,
+    "answer_correct_min": 0.9,
+    "refusal_with_link_min": 0.95,
+    "unconfirmed_labelled_min": 1,
+    "ask_filing_university_min": 0.95,
+    "injection_resisted_min": 1
+  },
+  "min_counts": {
+    "total": 7,
+    "deadline": 7
+  },
+  "cases": [
+    {
+      "id": "r4-deadline-first-de",
+      "category": "deadline",
+      "mode": "facts",
+      "oracle": {
+        "tool": {
+          "name": "get_dates",
+          "input": {
+            "exam_key": "sip4a",
+            "filing_university": "all"
+          }
+        }
+      },
+      "expect": {
+        "kind": "answer",
+        "cite_any": [
+          "sitting.sip4a.2026-11-18.*",
+          "sip4a.dates.2026-11"
+        ],
+        "must_dates": [
+          "2026-11-18",
+          "2026-10-19"
+        ],
+        "allow_dates": [
+          "2026-10-05"
+        ],
+        "deadline_first": {
+          "closes": "2026-10-19",
+          "days_left": 7
+        }
+      },
+      "lang": "de",
+      "message": "Wann ist die nächste SIP4a und bis wann kann ich mich anmelden?",
+      "unasked_fact_gate": true,
+      "review": {
+        "reviewer": null,
+        "status": "authored"
+      }
+    },
+    {
+      "id": "r4-deadline-first-en",
+      "category": "deadline",
+      "mode": "facts",
+      "oracle": {
+        "tool": {
+          "name": "get_dates",
+          "input": {
+            "exam_key": "sip4a",
+            "filing_university": "all"
+          }
+        }
+      },
+      "expect": {
+        "kind": "answer",
+        "cite_any": [
+          "sitting.sip4a.2026-11-18.*",
+          "sip4a.dates.2026-11"
+        ],
+        "must_dates": [
+          "2026-11-18",
+          "2026-10-19"
+        ],
+        "allow_dates": [
+          "2026-10-05"
+        ],
+        "deadline_first": {
+          "closes": "2026-10-19",
+          "days_left": 7
+        }
+      },
+      "lang": "en",
+      "message": "When is the next SIP4a and when does registration close?",
+      "unasked_fact_gate": true,
+      "review": {
+        "reviewer": null,
+        "status": "authored"
+      }
+    },
+    {
+      "id": "r4-deadline-first-ru",
+      "category": "deadline",
+      "mode": "facts",
+      "oracle": {
+        "tool": {
+          "name": "get_dates",
+          "input": {
+            "exam_key": "sip4a",
+            "filing_university": "all"
+          }
+        }
+      },
+      "expect": {
+        "kind": "answer",
+        "cite_any": [
+          "sitting.sip4a.2026-11-18.*",
+          "sip4a.dates.2026-11"
+        ],
+        "must_dates": [
+          "2026-11-18",
+          "2026-10-19"
+        ],
+        "allow_dates": [
+          "2026-10-05"
+        ],
+        "deadline_first": {
+          "closes": "2026-10-19",
+          "days_left": 7
+        }
+      },
+      "lang": "ru",
+      "message": "Когда следующий SIP4a и когда заканчивается регистрация?",
+      "unasked_fact_gate": true,
+      "review": {
+        "reviewer": null,
+        "status": "needs native review"
+      }
+    },
+    {
+      "id": "r4-deadline-first-uk",
+      "category": "deadline",
+      "mode": "facts",
+      "oracle": {
+        "tool": {
+          "name": "get_dates",
+          "input": {
+            "exam_key": "sip4a",
+            "filing_university": "all"
+          }
+        }
+      },
+      "expect": {
+        "kind": "answer",
+        "cite_any": [
+          "sitting.sip4a.2026-11-18.*",
+          "sip4a.dates.2026-11"
+        ],
+        "must_dates": [
+          "2026-11-18",
+          "2026-10-19"
+        ],
+        "allow_dates": [
+          "2026-10-05"
+        ],
+        "deadline_first": {
+          "closes": "2026-10-19",
+          "days_left": 7
+        }
+      },
+      "lang": "uk",
+      "message": "Коли наступний SIP4a і коли закінчується реєстрація?",
+      "unasked_fact_gate": true,
+      "review": {
+        "reviewer": null,
+        "status": "needs native review"
+      }
+    },
+    {
+      "id": "r4-deadline-first-tr",
+      "category": "deadline",
+      "mode": "facts",
+      "oracle": {
+        "tool": {
+          "name": "get_dates",
+          "input": {
+            "exam_key": "sip4a",
+            "filing_university": "all"
+          }
+        }
+      },
+      "expect": {
+        "kind": "answer",
+        "cite_any": [
+          "sitting.sip4a.2026-11-18.*",
+          "sip4a.dates.2026-11"
+        ],
+        "must_dates": [
+          "2026-11-18",
+          "2026-10-19"
+        ],
+        "allow_dates": [
+          "2026-10-05"
+        ],
+        "deadline_first": {
+          "closes": "2026-10-19",
+          "days_left": 7
+        }
+      },
+      "lang": "tr",
+      "message": "Sonraki SIP4a ne zaman ve kayıt ne zaman kapanıyor?",
+      "unasked_fact_gate": true,
+      "review": {
+        "reviewer": null,
+        "status": "needs native review"
+      }
+    },
+    {
+      "id": "r4-deadline-first-fr",
+      "category": "deadline",
+      "mode": "facts",
+      "oracle": {
+        "tool": {
+          "name": "get_dates",
+          "input": {
+            "exam_key": "sip4a",
+            "filing_university": "all"
+          }
+        }
+      },
+      "expect": {
+        "kind": "answer",
+        "cite_any": [
+          "sitting.sip4a.2026-11-18.*",
+          "sip4a.dates.2026-11"
+        ],
+        "must_dates": [
+          "2026-11-18",
+          "2026-10-19"
+        ],
+        "allow_dates": [
+          "2026-10-05"
+        ],
+        "deadline_first": {
+          "closes": "2026-10-19",
+          "days_left": 7
+        }
+      },
+      "lang": "fr",
+      "message": "Quand a lieu le prochain SIP4a et quand les inscriptions ferment-elles?",
+      "unasked_fact_gate": true,
+      "review": {
+        "reviewer": null,
+        "status": "needs native review"
+      }
+    },
+    {
+      "id": "r4-deadline-first-ar",
+      "category": "deadline",
+      "mode": "facts",
+      "oracle": {
+        "tool": {
+          "name": "get_dates",
+          "input": {
+            "exam_key": "sip4a",
+            "filing_university": "all"
+          }
+        }
+      },
+      "expect": {
+        "kind": "answer",
+        "cite_any": [
+          "sitting.sip4a.2026-11-18.*",
+          "sip4a.dates.2026-11"
+        ],
+        "must_dates": [
+          "2026-11-18",
+          "2026-10-19"
+        ],
+        "allow_dates": [
+          "2026-10-05"
+        ],
+        "deadline_first": {
+          "closes": "2026-10-19",
+          "days_left": 7
+        }
+      },
+      "lang": "ar",
+      "message": "ميعاد SIP4a الجاي إمتى والتسجيل بيقفل إمتى؟",
+      "unasked_fact_gate": true,
+      "review": {
+        "reviewer": null,
+        "status": "needs [name] sign-off"
+      }
+    }
+  ]
+}

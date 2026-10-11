@@ -44,11 +44,21 @@ describe("golden set shape", () => {
     expect(ask.length).toBeGreaterThanOrEqual(4);
     const multi = golden.cases.filter((c) => c.category === "deadline" && c.history && c.history.length > 0);
     expect(multi.length).toBeGreaterThanOrEqual(8);
-    for (const c of multi) {
+    const published = multi.filter((c) => c.expect.kind === "answer");
+    expect(published.length).toBeGreaterThanOrEqual(8);
+    for (const c of published) {
       const must = c.expect.must_dates ?? [];
       const forbid = c.expect.forbid_dates ?? [];
       expect(must.length, c.id).toBe(1);
       expect(forbid.length, c.id).toBe(1);
+    }
+    const graz = multi.filter((c) => c.filing_university === "graz");
+    expect(graz).toHaveLength(6);
+    for (const c of graz) {
+      expect(c.expect.kind, c.id).toBe("not_confirmed");
+      expect(c.expect.must_dates ?? [], c.id).toEqual([]);
+      expect(c.expect.forbid_dates, c.id).toEqual(["2026-12-14", "2027-01-07", "2027-03-17", "2027-06-30", "2027-08-25"]);
+      expect(c.expect.forbid_terms, c.id).toEqual(["Wien", "Vienna", "Innsbruck"]);
     }
     // Wien and Innsbruck pairs forbid each other's date.
     const feb = (id: string) => golden.cases.find((c) => c.id === id)?.expect;

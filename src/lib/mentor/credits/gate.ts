@@ -7,20 +7,20 @@
  */
 
 import { flag } from "@/lib/admin/flags";
-import { MENTOR_DB_FLAG_KEY, type MentorConfig } from "../config";
+import { type MentorConfig } from "../config";
+
+import { getServiceClient } from "@/lib/supabase";
+import { mentorBetaAllowed } from "../beta";
+import { mentorAvailabilityGate } from "../availability";
 
 export type FlagFn = (key: string, userId?: string) => Promise<boolean>;
 
 export async function canBuyMentorPackages(
   userId: string,
   config: Pick<MentorConfig, "aiFeaturesEnabled" | "enabled" | "packagesEnabled" | "betaUserIds">,
-  flagFn: FlagFn = flag,
+  flagFn: FlagFn = (key, id) => flag(key, id, { fresh: true }),
+  betaAllowed: (userId: string) => Promise<boolean> = id => mentorBetaAllowed(getServiceClient(), id, config.betaUserIds),
 ): Promise<boolean> {
-  if (!config.aiFeaturesEnabled || !config.enabled || !config.packagesEnabled) return false;
-  if (config.betaUserIds.length > 0 && !config.betaUserIds.includes(userId.toLowerCase())) return false;
-  try {
-    return await flagFn(MENTOR_DB_FLAG_KEY, userId);
-  } catch {
-    return false;
-  }
+  if (!config.packagesEnabled) return false;
+  return (await mentorAvailabilityGate(config, userId, (key, id) => flagFn(key, id), betaAllowed)) === "available";
 }

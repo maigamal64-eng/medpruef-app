@@ -20,6 +20,11 @@ import type { MentorAdminSummary } from "@/lib/mentor/contract";
 import { Alert, BrandedLoader, EmptyState } from "@/components/ui";
 import { AdminPageShell } from "../_components/AdminPageShell";
 import { AdminPermissionGate } from "../_components/AdminPermissionGate";
+import { TrendsHeader } from "./TrendsHeader";
+import type { MentorAdminTimezone } from "@/lib/mentor/admin-trends";
+import { ControlsSection } from "./ControlsSection";
+import { OperationsSection } from "./OperationsSection";
+import { QualitySection } from "./QualitySection";
 import {
   BreakerCard,
   ClawbacksTable,
@@ -53,12 +58,16 @@ export default function AdminMentorPage() {
 }
 
 function AdminMentorContent() {
+  const [timezone, setTimezone] = useState<MentorAdminTimezone>("Europe/Vienna");
+  const [range,setRange] = useState("month");
+  const [tab, setTab] = useState("Cost");
+  useEffect(()=>{const sync=()=>setTab(new URLSearchParams(window.location.search).get("tab")??"Cost");const select=(event:Event)=>setTab((event as CustomEvent<string>).detail);sync();window.addEventListener("popstate",sync);window.addEventListener("mentor-admin-tab",select);return()=>{window.removeEventListener("popstate",sync);window.removeEventListener("mentor-admin-tab",select);};},[]);
   const [state, setState] = useState<Load>({ kind: "loading" });
 
   const load = useCallback(async () => {
     setState({ kind: "loading" });
     try {
-      const res = await fetch("/api/mentor/admin/summary");
+      const res = await fetch(`/api/mentor/admin/summary?timezone=${encodeURIComponent(timezone)}`);
       if (res.ok) {
         setState({ kind: "ok", summary: (await res.json()) as MentorAdminSummary });
         return;
@@ -75,7 +84,7 @@ function AdminMentorContent() {
     } catch (e) {
       setState({ kind: "error", message: (e as Error).message || "The cost view could not load." });
     }
-  }, []);
+  }, [timezone]);
 
   useEffect(() => {
     void load();
@@ -85,15 +94,18 @@ function AdminMentorContent() {
 
   return (
     <AdminPageShell
-      title="Mentor cost"
+      title="AI Mentor"
       description={
         summary
-          ? `Spend, credits and the breaker for UTC ${summary.month}. Read-only. Updated ${summary.generated_at.slice(0, 16).replace("T", " ")} UTC.`
+          ? `Spend and breaker for UTC ${summary.month}. Daily trends: ${summary.timezone ?? "UTC"}. Read-only. Updated ${summary.generated_at.slice(0, 16).replace("T", " ")} UTC.`
           : "Spend, credits and the breaker for the AI mentor. Read-only."
       }
-      freshness={state.kind === "loading" ? "cached" : state.kind === "ok" ? "live" : "disconnected"}
+      freshness={state.kind === "loading" ? "cached" : state.kind === "ok" ? "live" : state.kind === "not_applied" ? undefined : "disconnected"}
+      actions={state.kind === "not_applied" ? <span className="rounded border border-[var(--mp-border-subtle)] px-2 py-1 text-xs">Not installed</span> : undefined}
       onRefresh={load}
     >
+      {tab === "Facts" && <OperationsSection view="facts" />}
+      {tab === "Readiness" && <><OperationsSection view="readiness" /><ControlsSection /></>}
       {state.kind === "loading" && (
         <div className="flex items-center justify-center py-12">
           <BrandedLoader size={48} label="Loading mentor cost…" />
@@ -105,7 +117,7 @@ function AdminMentorContent() {
           tone="neutral"
           icon={<Database className="h-10 w-10" aria-hidden />}
           title="The mentor ledger is not installed yet"
-          body="The credits and cost tables arrive with release train R3 (migration 20261022100000). Nothing has been spent through the mentor, so there is nothing to show."
+          body="The credits and cost tables arrive with release train R3 (migration 20261022100000). The cost view becomes available after installation. Current spend cannot be determined from this view."
         />
       )}
 
@@ -115,24 +127,28 @@ function AdminMentorContent() {
         </Alert>
       )}
 
-      {summary && (
+      {summary && tab === "Quality" && summary.quality && <QualitySection quality={summary.quality} />}
+      {summary && tab === "Cost" && (
         <div className="space-y-6">
+          <TrendsHeader summary={summary} />
+          <div className="flex gap-3 flex-wrap"><label className="text-xs">Daily timezone <select aria-label="Daily timezone" value={timezone} onChange={e=>setTimezone(e.target.value as MentorAdminTimezone)} className="ml-2 min-h-11 bg-[var(--mp-surface-raised)] rounded border border-[var(--mp-border-subtle)] px-2"><option value="Europe/Vienna">Vienna</option><option value="UTC">UTC</option></select></label><label className="text-xs">Trend range <select aria-label="Trend range" value={range} onChange={e=>setRange(e.target.value)} className="ml-2 min-h-11 bg-[var(--mp-surface-raised)] rounded border border-[var(--mp-border-subtle)] px-2"><option value="today">Today</option><option value="7">7 days</option><option value="month">Month</option></select></label></div>
           <BreakerCard summary={summary} />
           <StateChips state={summary.state} />
           <Tiles summary={summary} />
-          <Section title="Spend per day" hint="True API cost of settled calls, UTC days.">
-            <SpendByDay rows={summary.by_day} />
+
+          <Section title="Spend per day" hint={`True API cost of settled calls, ${timezone === "UTC" ? "UTC" : "Vienna"} days. Last 14 daily bars shown.`}>
+            <SpendByDay timezone={timezone} rows={summary.by_day.slice(range==="today"?-1:range==="7"?-7:-14)} />
           </Section>
           <Section title="Credits sold vs consumed" hint="Lifetime, per package. 1 credit = $0.005 of API cost.">
             <PackagesTable rows={summary.lots_by_package} />
           </Section>
-          <Section title="Top users this month" hint="By amount billed. Ids only.">
+          <Section title="Top users this month" hint="By amount billed. Open a learner support panel from the id.">
             <TopUsersTable rows={summary.top_users} />
           </Section>
           <Section title="By model">
             <ModelsTable rows={summary.by_model} />
           </Section>
-          <Section title="Stuck holds" hint="Open reservations older than the sweep age; the cron settles them at their ceiling.">
+          <Section title="Stuck holds" hint="Open reservations older than the sweep age; the cron records house cost without a learner debit.">
             <StaleTable rows={summary.stale_reservations} />
           </Section>
           <Section title="Recent clawbacks" hint="Unspent credit taken back after a refund or dispute.">

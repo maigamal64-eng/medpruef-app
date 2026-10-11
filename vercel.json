@@ -3,6 +3,14 @@
     {
       "path": "/api/cron/trial-reminder",
       "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/cron/mentor-sweep",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/mentor-health",
+      "schedule": "0 * * * *"
     }
   ]
 }

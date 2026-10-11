@@ -19,7 +19,7 @@ const ALL = [FEE, FORMAT, PASS, DATES, SIT];
 
 const block = (ids: string[], text: string) => `@@BLOCK facts=${ids.join(",")}\n${text}`;
 const answer = (...blocks: string[]) => `@@LANG de\n${blocks.join("\n")}`;
-const FALLBACK = "nicht offiziell bestätigt";
+const FALLBACK = "nicht offiziell bestätig";
 
 describe("normalisation and extraction", () => {
   it("folds Arabic-Indic, extended and fullwidth digits", () => {
@@ -111,10 +111,10 @@ describe("validateAnswer: unsupported values are replaced (acceptance)", () => {
   it("a wrong date is replaced by the fallback", () => {
     const r = validateAnswer(answer(block([DATES.id], "Die Anmeldung endet am 19. März 2099. Viel Erfolg!")), ALL);
     expect(r.replaced).toBe(true);
-    expect(r.blocks[0].text).toContain(FALLBACK);
-    expect(r.blocks[0].text).not.toContain("19. März");
-    expect(r.blocks[0].text).toContain("Viel Erfolg!");
-    expect(r.blocks[0].text).toContain(DATES.source_url);
+    expect(r.blocks.find(b => b.replaced)?.text).toContain("nicht offiziell bestätigen");
+    expect(r.blocks.map(b => b.text).join(" ")).not.toContain("19. März");
+    expect(r.blocks[0].text).toBe("Viel Erfolg!");
+    expect(r.blocks.find(b => b.replaced)?.official_url).toBe(DATES.source_url);
     expect(r.rejected).toEqual([{ value: "19. März 2099", reason: "not_in_cited_facts" }]);
   });
 
@@ -177,7 +177,9 @@ describe("validateAnswer: unsupported values are replaced (acceptance)", () => {
 
   it("keeps list markers and other lines when one bullet is replaced", () => {
     const r = validateAnswer(answer(block([FEE.id], "- Gebühr: 777 EUR\n- Dauer: 5 Stunden\n- Viel Erfolg")), ALL);
-    expect(r.blocks[0].text.split("\n")).toEqual(["- Gebühr: 777 EUR", expect.stringMatching(/^- .*nicht offiziell bestätigt/), "- Viel Erfolg"]);
+    expect(r.blocks[0].text.split("\n")).toEqual(["- Gebühr: 777 EUR", "- Viel Erfolg"]);
+    expect(r.blocks[1].replaced).toBe(true);
+    expect(r.blocks[1].fact_ids).toEqual([]);
   });
 
   it("removes em dashes from model text", () => {
@@ -196,7 +198,7 @@ describe("validateAnswer: refusals and internal facts", () => {
 
   it("an empty refusal gets the default line; an unknown reason is ignored", () => {
     const r = validateAnswer("@@LANG de\n@@REFUSE reason=patient_advice", ALL);
-    expect(r.blocks[0].text).toMatch(/Patient/);
+    expect(r.blocks[0].text).toContain("1450");
     expect(validateAnswer("@@REFUSE reason=whatever\n@@BLOCK\nHallo", ALL).refused).toBeUndefined();
   });
 

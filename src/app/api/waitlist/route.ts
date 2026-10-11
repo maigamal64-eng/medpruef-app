@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
-import { resolveOptionalUser } from "@/lib/auth-guard";
+import { requireUser, resolveOptionalUser } from "@/lib/auth-guard";
 
 export const dynamic = "force-dynamic";
 
@@ -36,20 +36,31 @@ export const dynamic = "force-dynamic";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
-    const emailRaw = typeof body?.email === "string" ? body.email.trim() : "";
+    const mentorInterest = body?.source === "mentor_packages";
+    let mentorUserId: string | null = null;
+    let ownedEmail = "";
+    if (mentorInterest) {
+      const guard = await requireUser(req);
+      if ("error" in guard) return guard.error;
+      mentorUserId = guard.userId;
+      const { data, error } = await getServiceClient().from("users").select("email").eq("id", guard.userId).maybeSingle();
+      if (error || typeof data?.email !== "string") return NextResponse.json({ error: "Email unavailable" }, { status: 503 });
+      ownedEmail = data.email.trim();
+    }
+    const emailRaw = mentorInterest ? ownedEmail : typeof body?.email === "string" ? body.email.trim() : "";
     // Accept both `tierInterest` (camelCase, legacy) and `tier_interest`
     // (snake_case, 2026-04-22 Stripe-pending shape) — whichever wins.
     const tierInterest = String(
-      body?.tier_interest ?? body?.tierInterest ?? ""
+      mentorInterest ? "unknown" : body?.tier_interest ?? body?.tierInterest ?? ""
     )
       .toLowerCase()
       .trim();
     const explicitNote =
-      typeof body?.note === "string" ? body.note.trim().slice(0, 500) : null;
+      !mentorInterest && typeof body?.note === "string" ? body.note.trim().slice(0, 500) : null;
 
     // Optional Stripe-pending metadata — folded into the `note` column.
-    const examType = typeof body?.exam_type === "string" ? body.exam_type.trim() : null;
-    const examDate = typeof body?.exam_date === "string" ? body.exam_date.trim() : null;
+    const examType = !mentorInterest && typeof body?.exam_type === "string" ? body.exam_type.trim() : null;
+    const examDate = !mentorInterest && typeof body?.exam_date === "string" ? body.exam_date.trim() : null;
     const source = typeof body?.source === "string" ? body.source.trim() : null;
 
     // Lightweight email check — full RFC parsing is overkill; the
@@ -103,7 +114,7 @@ export async function POST(req: NextRequest) {
 
     // Optional user link from the verified session token (S-1) — never
     // a client-supplied header/body id.
-    const candidate = resolveOptionalUser(req);
+    const candidate = mentorUserId ?? resolveOptionalUser(req);
 
     const sb = getServiceClient();
 

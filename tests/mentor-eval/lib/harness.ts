@@ -28,6 +28,7 @@ export interface BrainEnv {
 export type BrainFactory = (env: BrainEnv) => Brain;
 
 export interface HarnessParts {
+  forCase?: (c: GoldenCase) => HarnessParts;
   /** Builds the turn runner; `alert` receives every ops alert the turn raises (overruns, settle failures, ...). */
   createRunTurn: (alert: (a: { kind: string; detail?: string }) => void) => RunMentorTurn;
   brainFactory: BrainFactory;
@@ -66,6 +67,7 @@ export function textOfFinal(final: MentorFinalEvent): string {
 }
 
 export async function runCase(h: HarnessOptions, c: GoldenCase, index: number): Promise<TurnOutcome> {
+  const parts = h.parts.forCase?.(c) ?? h.parts;
   const started = Date.now();
   const userId = userIdFor(index);
   const config: MentorConfig = { ...MENTOR_CONFIG_DEFAULTS, ...(h.config ?? {}), enabled: true, aiFeaturesEnabled: true };
@@ -142,7 +144,7 @@ export async function runCase(h: HarnessOptions, c: GoldenCase, index: number): 
 
   const db = createFakeDb({ userId, fixtures: h.fixtures, profileFixture: c.profile_fixture });
   const freeReadable = new Set(Object.values(h.fixtures.questions).filter((q) => q.free_readable !== false).map((q) => q.id));
-  const rawBrain = h.parts.brainFactory({
+  const rawBrain = parts.brainFactory({
     db: () => db,
     canFreeRead: async (_db, _user, questionId) => freeReadable.has(questionId),
     clock: () => h.asOf,
@@ -162,11 +164,11 @@ export async function runCase(h: HarnessOptions, c: GoldenCase, index: number): 
   };
 
   const alerts: string[] = [];
-  const runTurn = h.parts.createRunTurn((a) => alerts.push(`${a.kind}${a.detail ? `: ${a.detail}` : ""}`));
+  const runTurn = parts.createRunTurn((a) => alerts.push(`${a.kind}${a.detail ? `: ${a.detail}` : ""}`));
   const deps: MentorDeps = {
     meter,
     brain,
-    facts: h.parts.facts,
+    facts: parts.facts,
     callClaude,
     clock: { now: () => h.asOf },
     wallet: createTestWallet(ledger),
@@ -184,7 +186,11 @@ export async function runCase(h: HarnessOptions, c: GoldenCase, index: number): 
       requestId: idFor("00000000-0000-4000-9000", index + 1),
       userId,
       conversationId: idFor("00000000-0000-4000-a000", index + 1),
-      request: { message: c.message, lang: c.lang, mode: c.mode, ...(question ? { question_id: question.id } : {}) },
+      request: {
+        client_request_id: idFor("00000000-0000-4000-9000", index + 1), message: c.message, lang: c.lang, mode: c.mode, ...(question ? { question_id: question.id } : {}),
+        ...(c.filing_university ? {filing_university:c.filing_university} : {}),
+        ...(c.selected_option_text !== undefined ? {selected_option_text:c.selected_option_text} : {}),
+        ...(c.was_correct !== undefined ? {was_correct:c.was_correct} : {}) },
       history: historyOf(c),
       paidAccess: c.paid !== false,
     })) {

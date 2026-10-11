@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Alert } from "@/components/ui";
+import { r3T } from "./r3-copy";
 import { mentorT, type MentorUiLang } from "@/lib/i18n-mentor";
 import type { ErrorView } from "./view-model";
 
@@ -26,8 +26,12 @@ export default function ErrorNotice({
   onRetry,
   onNewChat,
   waitSeconds,
+  onRephrase,
+  diagnostics,
 }: {
   view: ErrorView;
+  onRephrase?: () => void;
+  diagnostics?: { requestId?: string; code?: string; time?: string };
   lang: MentorUiLang;
   /** Where "see packages" goes; omitted when the server told us buying is off. */
   packagesHref?: string | null;
@@ -40,33 +44,36 @@ export default function ErrorNotice({
   const showWait = view.action === "wait";
   const waiting = showWait && waitSeconds !== undefined && waitSeconds > 0;
   const text = mentorT(waiting || !showWait ? view.messageKey : "err_rate_limited_nowait", lang, vars);
-  const variant = view.tone === "error" ? "error" : view.tone === "warning" ? "warning" : "info";
+  const [copied, setCopied] = useState(false);
 
   return (
-    <Alert variant={variant} className="mt-2">
+    <div role="status" className="mt-2 rounded-xl border border-[var(--mp-border)] bg-[var(--mp-surface-sunken)] p-3">
       <p dir="auto" className="text-[13.5px] leading-snug text-[var(--mp-fg)]">{text}</p>
       <div className="mt-2 flex flex-wrap gap-2">
         {view.action === "packages" && packagesHref && (
-          <Link href={packagesHref} className="mp-btn mp-btn--primary mp-btn--sm min-h-10">
+          <Link href={packagesHref} className="mp-btn mp-btn--primary mp-btn--sm min-h-11">
             {mentorT("btn_see_packages", lang)}
           </Link>
         )}
         {view.action === "signin" && (
-          <Link href="/login?next=%2Fmentor" className="mp-btn mp-btn--primary mp-btn--sm min-h-10">
+          <Link href="/login?next=%2Fmentor" className="mp-btn mp-btn--primary mp-btn--sm min-h-11">
             {mentorT("btn_signin", lang)}
           </Link>
         )}
         {view.action === "new_chat" && onNewChat && (
-          <button type="button" onClick={onNewChat} className="mp-btn mp-btn--secondary mp-btn--sm min-h-10">
+          <button type="button" onClick={onNewChat} className="mp-btn mp-btn--secondary mp-btn--sm min-h-11">
             {mentorT("btn_new_chat", lang)}
           </button>
         )}
         {(view.action === "retry" || (view.action === "wait" && !waiting)) && onRetry && (
-          <button type="button" onClick={onRetry} className="mp-btn mp-btn--secondary mp-btn--sm min-h-10">
+          <button type="button" onClick={onRetry} className="mp-btn mp-btn--secondary mp-btn--sm min-h-11">
             {mentorT("btn_retry", lang)}
           </button>
         )}
+        {view.action === "rephrase" && <button type="button" onClick={onRephrase} className="mp-btn mp-btn--secondary min-h-11">{r3T("edit", lang)}</button>}
+        {view.action === "pro" && <Link href="/pricing" className="mp-btn mp-btn--secondary min-h-11">{r3T("pro", lang)}</Link>}
       </div>
-    </Alert>
+      {diagnostics && <details className="mt-2 text-[12px]"><summary className="min-h-11 cursor-pointer">{mentorT("btn_copy_error", lang)}</summary><button type="button" className="mp-btn mp-btn--secondary min-h-11" onClick={async () => { try { await navigator.clipboard.writeText(JSON.stringify({ request_id: diagnostics.requestId ?? null, code: diagnostics.code ?? null, time: diagnostics.time ?? null })); setCopied(true); } catch { setCopied(false); } }}>{mentorT("btn_copy_error", lang)}</button>{copied && <span aria-hidden> ✓</span>}</details>}
+    </div>
   );
 }

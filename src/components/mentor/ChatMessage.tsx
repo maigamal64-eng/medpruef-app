@@ -1,136 +1,77 @@
 "use client";
 
-import { ExternalLink, Info, ShieldAlert, RotateCcw, Brain } from "lucide-react";
+import { useRef, useState } from "react";
+import { ExternalLink, Info, RotateCcw, Flag } from "lucide-react";
 import { mentorT, type MentorUiLang } from "@/lib/i18n-mentor";
-import type { MentorAnswerBlock, MentorCitation } from "@/lib/mentor/contract";
 import type { AssistantMsg, UserMsg } from "./chat-state";
 import ErrorNotice from "./ErrorNotice";
-import { errorView, formatDate, refusalKey, safeExternalUrl } from "./view-model";
+import { r3T } from "./r3-copy";
+import { errorView, safeExternalUrl } from "./view-model";
+import ReportQuestionModal from "@/components/ReportQuestionModal";
+import ReportAnswerSheet from "./ReportAnswerSheet";
+import { loadMentorApi } from "./client";
+import type { MentorReportReason, MentorReportedQuestion } from "./api";
+import { AnswerBlocks, FilingUniversityChoice, NextActions, SourceChips, StudyPlanRows, type FilingUniversity } from "./AnswerDetails";
+import { answerCopy } from "./answer-copy";
+import MentorAvatar from "./MentorAvatar";
+import { r2AnswerCopy } from "./r2-answer-copy";
+import { trackMentor } from "./telemetry";
+import { AnswerText } from "./answer-display";
+import { ExplainBlocks, HintActions, ProvenanceChip } from "./ExplainDetails";
+import { r3ExplainCopy } from "./r3-explain-copy";
+import { isOlderSource, visibleAnswer } from "./answer-view";
+export { citationIndex } from "./AnswerDetails";
 
-export function UserBubble({ msg }: { msg: UserMsg }) {
+/** Fixed, reviewed safety copy; hotline numbers are links, never model claims. */
+export function PatientAdvice({ lang }: { lang: MentorUiLang }) {
+  const line = mentorT("refusal_patient_advice", lang);
   return (
-    <div className="flex justify-end">
+    <div className="mt-3 flex gap-2.5 rounded-xl border border-[var(--mp-border)] bg-[var(--mp-surface-sunken)] p-3">
+      <Info className="mt-3 h-4 w-4 shrink-0 text-[var(--mp-info)]" aria-hidden />
+      <p dir="auto" className="text-[13px] leading-relaxed text-[var(--mp-fg)]">
+        {line.split(/(1450|144)/).map((part, i) => part === "1450" || part === "144" ? (
+          <bdi dir="ltr" key={i}><a href={`tel:${part}`} className="inline-flex min-h-11 min-w-11 items-center justify-center font-semibold text-[var(--mp-cta-blue)] underline">{part}</a></bdi>
+        ) : part)}
+      </p>
+    </div>
+  );
+}
+
+export function UserBubble({ msg, lang = "en" }: { msg: UserMsg; lang?: MentorUiLang }) {
+  return (
+    <article className="flex justify-end">
+      <span className="sr-only">{answerCopy("you", lang)}</span>
       <p
         dir="auto"
         className="max-w-[88%] whitespace-pre-wrap break-words rounded-2xl rounded-ee-md bg-[var(--mp-oxford-blue)] px-4 py-2.5 text-[14.5px] leading-relaxed text-white shadow-[var(--shadow-xs)] sm:max-w-[75%]"
       >
         {msg.text}
       </p>
-    </div>
+    </article>
   );
 }
 
-function Avatar() {
-  return (
-    <span
-      aria-hidden
-      className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-[var(--mp-viridian)]/25 bg-[var(--mp-success-bg)] text-[var(--mp-viridian)]"
-    >
-      <Brain className="h-4 w-4" />
-    </span>
-  );
-}
-
-/** Numbers each citation once, in order of first appearance, keyed by fact id. */
-export function citationIndex(citations: MentorCitation[]): Map<string, number> {
-  const idx = new Map<string, number>();
-  citations.forEach((c) => {
-    if (!idx.has(c.fact_id)) idx.set(c.fact_id, idx.size + 1);
-  });
-  return idx;
-}
-
-function SourceChips({ citations, lang }: { citations: MentorCitation[]; lang: MentorUiLang }) {
-  const idx = citationIndex(citations);
-  const seen = new Set<string>();
-  const unique = citations.filter((c) => (seen.has(c.fact_id) ? false : (seen.add(c.fact_id), true)));
-  if (unique.length === 0) return null;
-  return (
-    <div className="mt-3 border-t border-[var(--mp-border)] pt-2.5">
-      <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--mp-fg-subtle)]">{mentorT("sources_label", lang)}</p>
-      <ul className="flex flex-col gap-1.5">
-        {unique.map((c) => {
-          const href = safeExternalUrl(c.source_url);
-          const date = formatDate(c.read_on, lang);
-          const n = idx.get(c.fact_id);
-          const inner = (
-            <>
-              <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-[var(--mp-viridian)]/12 px-1 text-[10.5px] font-bold text-[var(--mp-viridian)]">
-                {n}
-              </span>
-              <span className="min-w-0 flex-1">
-                <span dir="auto" className="block truncate text-[12.5px] font-medium text-[var(--mp-fg)]">
-                  {c.source_label}
-                </span>
-                {date && <span className="block text-[11px] text-[var(--mp-fg-muted)]">{mentorT("source_stand", lang, { date })}</span>}
-              </span>
-              {href && <ExternalLink className="h-3.5 w-3.5 shrink-0 text-[var(--mp-fg-subtle)] rtl:-scale-x-100" aria-hidden />}
-            </>
-          );
-          return (
-            <li key={c.fact_id}>
-              {href ? (
-                <a
-                  href={href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex min-h-10 items-center gap-2 rounded-lg border border-[var(--mp-border)] bg-[var(--mp-surface-sunken)] px-2.5 py-1.5 transition-colors hover:border-[var(--mp-viridian)]/40"
-                  aria-label={`${c.source_label}. ${mentorT("source_open", lang)}`}
-                >
-                  {inner}
-                </a>
-              ) : (
-                <div className="flex min-h-10 items-center gap-2 rounded-lg border border-[var(--mp-border)] bg-[var(--mp-surface-sunken)] px-2.5 py-1.5">{inner}</div>
-              )}
-            </li>
-          );
-        })}
-      </ul>
-    </div>
-  );
-}
-
-function Blocks({ blocks, citations }: { blocks: MentorAnswerBlock[]; citations: MentorCitation[] }) {
-  const idx = citationIndex(citations);
-  return (
-    <div className="space-y-2.5">
-      {blocks.map((b, i) => {
-        const nums = [...new Set(b.fact_ids.map((f) => idx.get(f)).filter((n): n is number => n !== undefined))].sort((a, c) => a - c);
-        return (
-          <p key={i} dir="auto" className="whitespace-pre-wrap break-words text-[14.5px] leading-relaxed text-[var(--mp-fg)]">
-            {b.text}
-            {nums.map((n) => (
-              <sup key={n} className="ms-0.5 rounded bg-[var(--mp-viridian)]/12 px-1 text-[10px] font-bold text-[var(--mp-viridian)]">
-                {n}
-              </sup>
-            ))}
-          </p>
-        );
-      })}
-    </div>
-  );
-}
-
-function Refusal({ reason, link, lang }: { reason: NonNullable<AssistantMsg["final"]>["refused"]; link?: string; lang: MentorUiLang }) {
+function Refusal({ reason, link, office, lang, onSuggestedQuestion }: { reason: NonNullable<AssistantMsg["final"]>["refused"]; link?: string; office?: string; lang: MentorUiLang; onSuggestedQuestion?: (text: string) => void }) {
   if (!reason) return null;
+  if (reason === "patient_advice") return <PatientAdvice lang={lang} />;
   const href = safeExternalUrl(link);
   return (
-    <div className="mt-3 flex gap-2.5 rounded-xl border border-[var(--mp-status-warning)]/35 bg-[var(--mp-warning-bg)] p-3">
-      <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-[var(--mp-warning-dk)]" aria-hidden />
+    <div className="mt-3 flex gap-2.5 rounded-xl border border-[var(--mp-border)] bg-[var(--mp-surface-sunken)] p-3">
+      <Info className="mt-0.5 h-4 w-4 shrink-0 text-[var(--mp-info)]" aria-hidden />
       <div className="min-w-0">
-        <p className="text-[13px] font-semibold text-[var(--mp-warning-dk)]">{mentorT("refusal_label", lang)}</p>
-        <p className="mt-0.5 text-[12.5px] leading-snug text-[var(--mp-fg-muted)]">{mentorT(refusalKey(reason), lang)}</p>
+
         {href && (
           <a
             href={href}
             target="_blank"
             rel="noopener noreferrer"
-            className="mp-btn mp-btn--secondary mp-btn--sm mt-2 min-h-10"
+            className="mp-btn mp-btn--secondary mt-2 min-h-11 w-full whitespace-normal break-words text-start sm:w-auto"
           >
-            {mentorT("refusal_link", lang)}
+            {office ? answerCopy("office_open", lang, { office }) : mentorT("refusal_link", lang)}
             <ExternalLink className="h-3.5 w-3.5 rtl:-scale-x-100" aria-hidden />
           </a>
         )}
+        {onSuggestedQuestion && <button type="button" onClick={() => onSuggestedQuestion(r2AnswerCopy("neighbour", lang))} className="mt-1 block min-h-11 text-start text-[13px] text-[var(--mp-fg)] underline">{r2AnswerCopy("neighbour", lang)}</button>}
       </div>
     </div>
   );
@@ -138,7 +79,7 @@ function Refusal({ reason, link, lang }: { reason: NonNullable<AssistantMsg["fin
 
 export function TypingDots({ label }: { label: string }) {
   return (
-    <span role="status" aria-label={label} className="inline-flex items-center gap-1 py-1.5">
+    <span aria-hidden="true" title={label} className="inline-flex items-center gap-1 py-1.5">
       {[0, 1, 2].map((i) => (
         <span
           key={i}
@@ -156,33 +97,104 @@ export function AssistantBubble({
   packagesHref,
   waitSeconds,
   onRetry,
+  onRetryNotice,
   onNewChat,
+  onRephrase,
+  learnerId,
+  onSuggestedQuestion,
+  onChooseUniversity,
+  onExplainAction,
 }: {
   msg: AssistantMsg;
   lang: MentorUiLang;
   packagesHref: string | null;
   waitSeconds: number;
   onRetry: () => void;
+  onRetryNotice?: () => void;
   onNewChat: () => void;
+  onRephrase?: () => void;
+  learnerId?: string;
+  onSuggestedQuestion?: (text: string) => void;
+  onChooseUniversity?: (university: FilingUniversity) => void;
+  onExplainAction?: (action: "hint"|"solution") => void;
 }) {
   const f = msg.final;
-  const blocks = f && f.answer_blocks.length > 0 ? f.answer_blocks : null;
+  const [showCost, setShowCost] = useState(false);
+  const [highlightedFact, setHighlightedFact] = useState<string | null>(null);
+  const visible = f ? visibleAnswer(f.answer_blocks, f.citations) : null;
+  const blocks = visible && visible.blocks.length > 0 ? visible.blocks : null;
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportInitialReason, setReportInitialReason] = useState<MentorReportReason>();
+  const [reportNotice, setReportNotice] = useState<"saved" | "question_unavailable" | null>(null);
+  const [reportedQuestion, setReportedQuestion] = useState<MentorReportedQuestion | null>(null);
+  const reportButton = useRef<HTMLButtonElement>(null);
+  const questionButton = useRef<HTMLButtonElement>(null);
+  const questionReturnTarget = useRef<HTMLButtonElement | null>(null);
+  const [questionLoading, setQuestionLoading] = useState(false);
+  const openQuestionReport = async () => {
+    if (!f?.question_id || questionLoading) return;
+    questionReturnTarget.current = questionButton.current;
+    setQuestionLoading(true);
+    const api = await loadMentorApi();
+    const result = await api.question(f.question_id);
+    setQuestionLoading(false);
+    if (result.ok) setReportedQuestion(result.question);
+    else setReportNotice("question_unavailable");
+  };
+  const report = async (reason: MentorReportReason, details: string) => {
+    if (!f?.request_id) return false;
+    const api = await loadMentorApi();
+    const r = await api.report({ request_id: f.request_id, reason, ...(details ? { details } : {}) });
+    if (!r.ok) return false;
+    setReportNotice("saved");
+    trackMentor("mentor_report", { entry: "mentor", lang });
+    if (reason === "question_wrong" && f.question_id) {
+      const q = await api.question(f.question_id);
+      if (q.ok) {
+        questionReturnTarget.current = reportButton.current;
+        // Let the answer sheet return focus to its report control before the
+        // question dialog captures that same return target.
+        requestAnimationFrame(() => requestAnimationFrame(() => setReportedQuestion(q.question)));
+      }
+      else setReportNotice("question_unavailable");
+    }
+    setReportOpen(false);
+    return true;
+  };
+  const answer = (f?.refused === "patient_advice" ? mentorT("refusal_patient_advice", lang) : blocks?.map((b) => b.text).join(" ") || msg.text).replace(/https?:\/\/[^\s)]+/g, "").trim();
 
+  if (msg.status === "done" && f?.result === "notice") {
+    const href = safeExternalUrl(f.answer_blocks.find(b => b.official_url)?.official_url);
+    return <article className="rounded-xl border border-[var(--mp-border)] bg-[var(--mp-surface-sunken)] p-4 text-[var(--mp-fg)]" data-mentor-system-notice>
+      <p dir="auto" className="text-[14px] leading-relaxed">{r2AnswerCopy("notice", lang)}</p>
+      {href && <a href={href} target="_blank" rel="noopener noreferrer" className="mp-btn mp-btn--secondary mt-2 min-h-11">{answerCopy("official_open", lang)}</a>}
+      <button type="button" onClick={f.reason === "no_source" ? onRephrase : (onRetryNotice ?? onRetry)} className="mp-btn mp-btn--secondary mt-2 min-h-11">{r2AnswerCopy(f.reason === "no_source" ? "rephrase" : "retry", lang)}</button>
+      {/* No-debit reassurance is withheld until track-A proves MUX-39 in scratch PostgreSQL. */}
+    </article>;
+  }
+  if (msg.status === "error" && msg.error) {
+    if (msg.error === "rate_limited") return null; // The composer owns the single live countdown.
+    return <article data-mentor-system-notice>{(msg.error === "credits_required" || msg.error === "credits_exhausted") && <p className="text-[13px] text-[var(--mp-fg)]">{r3T("saved",lang)}</p>}<ErrorNotice view={errorView(msg.error,{retryAfterSeconds:msg.retryAfterSeconds,reason:msg.reason})} lang={lang} packagesHref={msg.packagesUrl ?? packagesHref} waitSeconds={waitSeconds} onRetry={onRetry} onNewChat={onNewChat} onRephrase={onRephrase} diagnostics={{requestId:msg.requestId,code:msg.error,time:msg.errorAt}} /></article>;
+  }
+  const dateBlocks = blocks?.filter(b => b.confirmed_dates?.length) ?? [];
+  const dateFooter = visible?.citations.some(c => isOlderSource(c)) ? "older_footer" : dateBlocks.some(b => b.date_type === "deadline") ? "deadline_footer" : "sitting_footer";
   return (
-    <div className="flex gap-2.5">
-      <Avatar />
+    <article className="flex gap-2.5">
+      <span className="sr-only">{answerCopy("mentor", lang)}</span>
+      <MentorAvatar lang={lang} />
       <div className="min-w-0 max-w-[92%] flex-1 sm:max-w-[80%] sm:flex-none">
         <div className="rounded-2xl rounded-ss-md border border-[var(--mp-border)] bg-[var(--mp-surface-raised)] px-4 py-3 shadow-[var(--shadow-card)]">
-          {msg.status === "streaming" && msg.text === "" && <TypingDots label={mentorT("thinking", lang)} />}
+          {msg.status === "streaming" && msg.inProgress && <p className="text-[13px] text-[var(--mp-fg-muted)]">{mentorT("answer_in_progress", lang)}</p>}
+          {msg.status === "streaming" && msg.text === "" && !msg.inProgress && <div className="min-h-20"><p className="text-[13px] text-[var(--mp-fg-muted)]">{msg.phase ? r3ExplainCopy(msg.phase === "writing" ? "writing" : "checking",lang) : mentorT("thinking",lang)}</p><div aria-hidden className="mt-2 space-y-2"><div className="h-2 w-full rounded bg-[var(--mp-border)]"/><div className="h-2 w-5/6 rounded bg-[var(--mp-border)]"/><div className="h-2 w-2/3 rounded bg-[var(--mp-border)]"/></div>{msg.slow && <p className="text-[12px] text-[var(--mp-fg-muted)]">{r3ExplainCopy("slow",lang)}</p>}</div>}
 
           {msg.status === "streaming" && msg.text !== "" && (
-            <p dir="auto" aria-live="polite" className="whitespace-pre-wrap break-words text-[14.5px] leading-relaxed text-[var(--mp-fg)]">
+            <p dir="auto" className="whitespace-pre-wrap break-words text-[14.5px] leading-relaxed text-[var(--mp-fg)]">
               {msg.text}
               <span aria-hidden className="ms-0.5 inline-block h-4 w-[2px] translate-y-0.5 bg-[var(--mp-viridian)] motion-safe:animate-pulse" />
             </p>
           )}
 
-          {msg.status === "done" && (blocks ? <Blocks blocks={blocks} citations={f?.citations ?? []} /> : msg.text && <p dir="auto" className="whitespace-pre-wrap break-words text-[14.5px] leading-relaxed">{msg.text}</p>)}
+          {msg.status === "done" && f?.refused !== "patient_advice" && (blocks ? f?.question_id ? <ExplainBlocks blocks={blocks} lang={lang} hint={!!f.explain_hint} /> : <AnswerBlocks blocks={blocks} citations={visible?.citations ?? []} lang={lang} onCitation={fact => { setHighlightedFact(null); requestAnimationFrame(() => setHighlightedFact(fact)); }} /> : msg.text && <AnswerText text={msg.text} />)}
 
           {(msg.status === "error" || msg.status === "stopped") && msg.text !== "" && (
             <p dir="auto" className="whitespace-pre-wrap break-words text-[14.5px] leading-relaxed text-[var(--mp-fg)]">
@@ -190,16 +202,36 @@ export function AssistantBubble({
             </p>
           )}
 
-          {msg.status === "done" && f?.refused && <Refusal reason={f.refused} link={f.refusal_link} lang={lang} />}
+          {msg.status === "done" && f?.refused && <Refusal reason={f.refused} link={f.refusal_link} office={f.refusal_label} lang={lang} onSuggestedQuestion={onSuggestedQuestion} />}
 
-          {msg.status === "done" && f?.validator_replaced && (
-            <p className="mt-2.5 flex gap-2 text-[12px] leading-snug text-[var(--mp-fg-muted)]">
-              <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--mp-info)]" aria-hidden />
-              {mentorT("validator_notice", lang)}
-            </p>
+          {msg.status === "done" && f && f.refused !== "patient_advice" && (visible?.citations.length ?? 0) > 0 && <SourceChips citations={visible!.citations} lang={lang} learnerId={learnerId} highlightedFact={highlightedFact} suppressOlderFooter={dateBlocks.length > 0} />}
+          {msg.status === "done" && dateBlocks.length > 0 && !f?.refused && <p className="mt-2 text-[12px] leading-relaxed text-[var(--mp-fg)]">{dateFooter === "older_footer" ? answerCopy("older_footer", lang) : r2AnswerCopy(dateFooter, lang)}</p>}
+          {msg.status === "done" && f && !f.refused && <ProvenanceChip lang={lang} questionId={f.question_id} study={f.study_answer} />}
+          {msg.status === "done" && f?.explain_hint && onExplainAction && <HintActions lang={lang} hintsUsed={f.explain_hint.hints_used} creditCost={f.explain_hint.next_credit_cost} onAction={onExplainAction} />}
+          {msg.status === "done" && f?.credits_used !== undefined && f.credits_used > 0 && <div className="mt-2 text-[12px] text-[var(--mp-fg-muted)]"><button type="button" onClick={() => setShowCost(v => !v)} aria-label={r3ExplainCopy("cost_info",lang)} aria-expanded={showCost} className="min-h-11 min-w-11 text-start underline">{r3ExplainCopy("cost_info",lang)}</button>{(showCost || f.credits_left < 20) && <p>{r3ExplainCopy("cost_used",lang,{n:f.credits_used})}. {r3ExplainCopy("cost_remaining",lang,{n:f.credits_left})}</p>}</div>}
+          {/* Free-answer reassurance waits for track-A scratch PostgreSQL proof. */}
+          {msg.status === "done" && f?.study_answer && <div className="mt-2 text-[12px] leading-relaxed text-[var(--mp-fg)]">{f.study_scope && <span className="inline-flex rounded-full border border-[var(--mp-border)] px-2 py-1">{r2AnswerCopy("study_scope", lang, { n: f.study_scope.answered })}</span>}<p className="mt-1">{r2AnswerCopy("study_footer", lang)}</p></div>}
+          {msg.status === "done" && f?.needs_filing_university && <FilingUniversityChoice lang={lang} onChoose={onChooseUniversity} />}
+          {msg.status === "done" && f?.plan_items && <StudyPlanRows items={f.plan_items} lang={lang} requestId={f.request_id} />}
+          {msg.status === "done" && f?.next_actions && <NextActions actions={f.next_actions} lang={lang} requestId={f.request_id} mode={f.question_id ? "explain" : f.study_answer ? "study" : "facts"} />}
+          {msg.status === "done" && f?.refused === "no_verified_source" && (
+            <div className="mt-3 space-y-2">
+              <button type="button" onClick={(event) => { event.currentTarget.focus(); setReportInitialReason("other"); setReportOpen(true); }} className="mp-btn mp-btn--secondary min-h-11 w-full whitespace-normal text-start">{answerCopy("report_team", lang)}</button>
+              {onSuggestedQuestion && <button type="button" onClick={() => onSuggestedQuestion(answerCopy("starter", lang))} className="min-h-11 w-full rounded-lg border border-[var(--mp-border)] bg-[var(--mp-surface-sunken)] p-2.5 text-start text-[13px] text-[var(--mp-fg)]"><span className="block font-semibold">{answerCopy("starter_label", lang)}</span>{answerCopy("starter", lang)}</button>}
+            </div>
+          )}
+          {msg.status === "done" && f?.question_id && (
+            <button ref={questionButton} type="button" disabled={questionLoading} aria-busy={questionLoading} onClick={(event) => { event.currentTarget.focus(); void openQuestionReport(); }} className="mt-2 inline-flex min-h-11 items-center gap-1.5 text-start text-[13px] font-semibold text-[var(--mp-cta-blue)]"><Flag className="h-3.5 w-3.5 shrink-0" aria-hidden />{answerCopy("report_question", lang)}</button>
           )}
 
-          {msg.status === "done" && f && f.citations.length > 0 && <SourceChips citations={f.citations} lang={lang} />}
+          {msg.status === "done" && f?.request_id && (
+            <>
+              <button ref={reportButton} type="button" onClick={(e) => { e.currentTarget.focus(); setReportInitialReason(undefined); setReportOpen(true); }} className="mt-2 inline-flex min-h-11 items-center gap-1.5 text-start text-[13px] text-[var(--mp-fg-muted)] hover:text-[var(--mp-fg)]" aria-label={mentorT("report_answer_aria", lang, { answer: answer.slice(0, 100) })}>
+                <Flag className="h-3.5 w-3.5 shrink-0" aria-hidden />{mentorT("report_answer", lang)}
+              </button>
+              {reportNotice && <p role="status" className="text-[13px] text-[var(--mp-fg-muted)]">{mentorT(reportNotice === "saved" ? "report_success" : "report_question_unavailable", lang)}</p>}
+            </>
+          )}
 
           {msg.status === "stopped" && (
             <p className="mt-2 flex items-center gap-2 text-[12.5px] text-[var(--mp-fg-muted)]">
@@ -211,21 +243,11 @@ export function AssistantBubble({
             </p>
           )}
 
-          {msg.status === "error" && msg.error && (
-            <>
-              {msg.text !== "" && <p className="mt-2 text-[12px] text-[var(--mp-fg-muted)]">{mentorT("partial_notice", lang)}</p>}
-              <ErrorNotice
-                view={errorView(msg.error, { retryAfterSeconds: msg.retryAfterSeconds })}
-                lang={lang}
-                packagesHref={msg.packagesUrl ?? packagesHref}
-                waitSeconds={waitSeconds}
-                onRetry={onRetry}
-                onNewChat={onNewChat}
-              />
-            </>
-          )}
+
         </div>
+        <ReportAnswerSheet open={reportOpen} onClose={() => setReportOpen(false)} onSubmit={report} lang={lang} initialReason={reportInitialReason} />
+        {reportedQuestion && <ReportQuestionModal open={!!reportedQuestion} onClose={() => { setReportedQuestion(null); requestAnimationFrame(() => questionReturnTarget.current?.focus()); }} lang={lang === "de" ? "de" : "en"} questionId={reportedQuestion.id} questionText={reportedQuestion.question} explanation={reportedQuestion.explanation} topic={reportedQuestion.topic} />}
       </div>
-    </div>
+    </article>
   );
 }

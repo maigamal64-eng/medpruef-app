@@ -188,6 +188,12 @@ export interface TurnContext {
   lang: MentorLang;
   mode: MentorMode;
   questionId?: number;
+  selectedOptionText?: string;
+  wasCorrect?: boolean;
+  answered?: boolean;
+  explainAction?: "hint" | "solution";
+  hintCount?: 0 | 1 | 2;
+  filingUniversity?: Exclude<FilingUniversity, "all">;
   now: Date;
   /** Whether the caller is a paid/Pro user (question access for get_question follows the free-access rule otherwise). */
   paidAccess: boolean;
@@ -209,7 +215,7 @@ export interface ValidatedAnswer {
   /** True when at least one unsupported date, number, percentage or EUR amount was replaced. */
   replaced: boolean;
   /** Values the validator rejected, for the review queue (never shown to the learner). */
-  rejected: Array<{ value: string; reason: "not_in_cited_facts" | "uncited_number" | "unknown_fact_id" }>;
+  rejected: Array<{ value: string; reason: "not_in_cited_facts" | "uncited_number" | "unknown_fact_id" | "study_safety" }>;
 }
 
 export interface Brain {
@@ -287,6 +293,8 @@ export interface MentorDeps {
 }
 
 export interface MentorTurnInput {
+  /** Internal handler has admitted and reserved the first call. Never accepted from JSON. */
+  admitted?: boolean;
   requestId: string;
   userId: string;
   conversationId: string;

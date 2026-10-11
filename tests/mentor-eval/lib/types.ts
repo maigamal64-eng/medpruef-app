@@ -11,7 +11,7 @@ import type { MentorErrorCode, MentorFinalEvent, MentorLang, MentorMode, MentorR
 import type { MeterUsage } from "@/lib/mentor/seam";
 
 /** v1 grades German and English. Other languages need [name]'s sign-off first (Arabic) or a follow-up. */
-export type EvalLang = Extract<MentorLang, "de" | "en">;
+export type EvalLang = MentorLang;
 
 export type Category =
   | "deadline"
@@ -33,6 +33,14 @@ export type Category =
 export type ExpectKind = "answer" | "ask_filing_university" | "refuse" | "not_confirmed" | "safe";
 
 export interface Expect {
+  /** Deadline answer first visible line, using the get_dates pinned-clock output. */
+  deadline_first?: { closes: string; days_left: number };
+  /** Wrong-choice tutor case: the first sentence must address this learner data. */
+  first_addressed_choice?: string;
+  /** First German term must remain exact and have a nonempty localized bracket gloss. */
+  gloss_term?: string;
+  /** Shuffled options must be named by text, never display letters. */
+  forbid_option_letters?: boolean;
   kind: ExpectKind;
   /** Glob patterns (`*` only). At least one cited fact id must match one of them. */
   cite_any?: string[];
@@ -71,12 +79,25 @@ export interface HistoryTurn {
 }
 
 export interface GoldenCase {
+  /** Enforce block-level date/eligibility/pass-rule grounding for the trust slice. */
+  trust_gate?: boolean;
+  /** Reject supported but unasked neighbouring dates, fees and pass percentages. */
+  unasked_fact_gate?: boolean;
+  /** Hermetic trust cases replace the fact source with an adversarial row. */
+  fact_scenario?: "stale" | "contradicted" | "needs_review" | "retracted" | "expired" | "conflicting_duplicate";
   id: string;
   category: Category;
   lang: EvalLang;
   mode: MentorMode;
   message: string;
   history?: HistoryTurn[];
+  filing_university?: "wien" | "graz" | "innsbruck";
+  selected_option_text?: string;
+  was_correct?: boolean;
+  /** R1 multilingual gate is strict; unknown script is not a passing language. */
+  require_language_match?: boolean;
+  /** Fixed safety or unapproved Arabic fallback has an explicit expected active language. */
+  expected_answer_lang?: EvalLang;
   /** Key into fixtures.questions; sets request.question_id. */
   question_fixture?: string;
   /** Key into fixtures.profiles; the user's own progress for get_my_progress. */
@@ -113,6 +134,7 @@ export interface GoldenFile {
   pass_bar: PassBar;
   min_counts: Record<string, number>;
   cases: GoldenCase[];
+  precision_gate?: { false_replacement_rate_max: number; leaked_unsupported_date_rate_max: number };
 }
 
 // ─── Fixtures (synthetic; nothing is read from production) ───────────────

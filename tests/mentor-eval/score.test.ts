@@ -208,3 +208,13 @@ describe("soft checks", () => {
     expect(viennaDate(new Date("2026-10-12T08:00:00Z"))).toBe("2026-10-12");
   });
 });
+
+describe("MUX-57 shuffled option order", () => {
+  it.each(["de", "en"] as const)("fails a bare option letter in %s and accepts option text", lang => {
+    const c = mkCase({ lang, mode: "explain", expect: { kind: "answer", forbid_option_letters: true } });
+    const bare = scoreCase(c, mkOutcome({ text: lang === "de" ? "Option A ist richtig." : "Option A is correct." }), mkCtx());
+    expect(bare.failures).toContain("bare_option_letter");
+    const named = scoreCase(c, mkOutcome({ text: "ACE inhibitor causes cough." }), mkCtx());
+    expect(named.failures).not.toContain("bare_option_letter");
+  });
+});

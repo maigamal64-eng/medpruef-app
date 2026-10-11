@@ -47,8 +47,10 @@ import {
   type RouteMentorWhopEvent,
 } from "../contract";
 import { isUuid, rpcClawback, rpcMembershipStatus, rpcRevokePayment, rpcWhopLookup, type WhopLookup } from "./db";
+import { confirmedRenewal } from "./receipt";
 import { grantMentorPayment, paidAmountCents } from "./grant-payment";
 import { isSoldPackageId } from "./packages";
+import { checkoutSessionFromPayment, clearPendingPurchase } from "./purchases";
 
 type Env = Record<string, string | undefined>;
 type Db = Pick<SupabaseClient, "from" | "rpc">;
@@ -177,6 +179,11 @@ export function createMentorWhopRouter(deps: MentorRouterDeps = {}): RouteMentor
         cheap ?? (lk && lk.kind === "mentor" && lk.via === "payment" ? "ledger_payment" : "membership_pin");
 
       if (cls === "record_only") {
+        const checkoutSessionId = checkoutSessionFromPayment(data);
+        if (checkoutSessionId) {
+          try { await clearPendingPurchase(db(), { status: "failed", checkoutSessionId, paymentIds: f.paymentId ? [f.paymentId] : [] }); }
+          catch { return decide(503, "retry", recognisedBy, f.paymentId); }
+        }
         // Whop runs its own dunning for mentor plans in v1: record, never the Pro recovery email.
         console.info(`[whop webhook] mentor ${event} recorded payment=${f.paymentId ?? "(none)"}`);
         return decide(200, "recorded", recognisedBy, f.paymentId);
@@ -239,7 +246,9 @@ export function createMentorWhopRouter(deps: MentorRouterDeps = {}): RouteMentor
         paymentId: f.paymentId,
         membershipId: f.membershipId,
         paidCents: paidAmountCents(data),
+        renewsAt: confirmedRenewal(rec(data).membership),
         currency: f.currency,
+        checkoutSessionId: checkoutSessionFromPayment(data),
       });
       if (g.kind === "retry") {
         await log(db() as SupabaseClient, {
@@ -303,6 +312,12 @@ export function createMentorWhopRouter(deps: MentorRouterDeps = {}): RouteMentor
           return decide(503, "retry", recognisedBy, p);
         }
       }
+      // Release the matching checkout only, after durable payment tombstones.
+      try {
+        await clearPendingPurchase(db(), {
+          status: "refunded", checkoutSessionId: checkoutSessionFromPayment(data), paymentIds: payments,
+        });
+      } catch { return decide(503, "retry", recognisedBy, matchedPayment); }
       if (!matchedPayment) {
         Sentry.captureMessage(
           `mentor ${event} with no matched payment lot (payments=${payments.join(",") || "none"}): tombstoned, nothing clawed back`,

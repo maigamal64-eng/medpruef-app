@@ -20,7 +20,7 @@ describe("lintGolden structure", () => {
 
   it.each<[string, Partial<GoldenCase>, RegExp]>([
     ["bad id", { id: "X" }, /id must match/],
-    ["unknown language", { lang: "ar" as never }, /lang must be de or en/],
+    ["unknown language", { lang: "xx" as never }, /invalid mentor language/],
     ["empty message", { message: " " }, /empty message/],
     ["em dash in a learner message", { message: "Frage — bitte" }, /em dash/],
     ["unknown fixture", { question_fixture: "q-nope" }, /unknown question_fixture/],

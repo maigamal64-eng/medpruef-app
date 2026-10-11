@@ -6,11 +6,11 @@
  *   send  -> user bubble + empty streaming assistant bubble, busy
  *   event(delta)  -> text appended
  *   event(final)  -> blocks, citations, refusal, credits; done; conversation kept
- *   event(error)  -> partial text kept, assistant bubble in error state
+ *   event(error)  -> text discarded, assistant bubble in error state
  *   fail          -> request failed before a final (HTTP error / offline)
  *   end           -> stream closed; a still-open bubble without a final is an
  *                    interrupted answer, never a silent success
- *   stop          -> user pressed stop; partial text kept
+ *   stop          -> user pressed stop; undelivered text discarded
  *   retry         -> drop the failed assistant bubble and stream a new one
  */
 
@@ -22,6 +22,8 @@ export interface UserMsg {
   id: string;
   role: "user";
   text: string;
+  /** The immutable send body, including its UUID, is reused by retries. */
+  request?: MentorChatRequest;
 }
 
 export type AssistantStatus = "streaming" | "done" | "error" | "stopped";
@@ -36,6 +38,14 @@ export interface AssistantMsg {
   error?: MentorClientError;
   retryAfterSeconds?: number;
   packagesUrl?: string;
+  inProgress?: boolean;
+  phase?: "checking_sources" | "writing";
+  slow?: boolean;
+  startedAt?: number;
+  limit?: "minute" | "day";
+  reason?: string;
+  errorAt?: string;
+  requestId?: string;
 }
 
 export type ChatMsg = UserMsg | AssistantMsg;
@@ -51,9 +61,11 @@ export interface ChatState {
 export const INITIAL_CHAT_STATE: ChatState = { messages: [], busy: false, credits: null };
 
 export type ChatAction =
-  | { type: "send"; userId: string; assistantId: string; text: string }
+  | { type: "send"; userId: string; assistantId: string; text: string; request?: MentorChatRequest }
   | { type: "event"; event: MentorSseEvent }
-  | { type: "fail"; error: MentorClientError; retryAfterSeconds?: number; packagesUrl?: string }
+  | { type: "fail"; error: MentorClientError; retryAfterSeconds?: number; packagesUrl?: string; limit?: "minute" | "day"; reason?: string }
+  | { type: "restore"; state: ChatState }
+  | { type: "slow" }
   | { type: "end" }
   | { type: "stop" }
   | { type: "retry"; assistantId: string }
@@ -79,8 +91,8 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
         busy: true,
         messages: [
           ...state.messages,
-          { id: action.userId, role: "user", text: action.text },
-          { id: action.assistantId, role: "assistant", status: "streaming", text: "" },
+          { id: action.userId, role: "user", text: action.text, ...(action.request ? { request: action.request } : {}) },
+          { id: action.assistantId, role: "assistant", status: "streaming", text: "", startedAt: Date.now(), requestId: action.request?.client_request_id },
         ],
       };
     }
@@ -89,6 +101,9 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
       const a = lastAssistant(state);
       if (!a || a.status !== "streaming") return state;
       const e = action.event;
+      if (e.type === "heartbeat") return state;
+      if (e.type === "status") return withLastAssistant(state, m => ({ ...m, phase: e.phase }));
+      if (e.type === "in_progress") return withLastAssistant(state, (m) => ({ ...m, inProgress: true }));
       if (e.type === "delta") return withLastAssistant(state, (m) => ({ ...m, text: m.text + e.text }));
       if (e.type === "final") {
         const next = withLastAssistant(state, (m) => ({ ...m, status: "done", final: e, error: undefined }));
@@ -99,15 +114,15 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
           credits: { left: e.credits_left, estimate: e.messages_left_estimate },
         };
       }
-      // error event: keep whatever text arrived
-      return { ...withLastAssistant(state, (m) => ({ ...m, status: "error", error: e.error })), busy: false };
+      // Never display undelivered text after an error. Only final blocks are checked.
+      return { ...withLastAssistant(state, (m) => ({ ...m, status: "error", text: "", error: e.error, errorAt: new Date().toISOString() })), busy: false };
     }
 
     case "fail": {
       const a = lastAssistant(state);
       if (!a || a.status !== "streaming") return { ...state, busy: false };
       const next = withLastAssistant(state, (m) => {
-        const out: AssistantMsg = { ...m, status: "error", error: action.error };
+        const out: AssistantMsg = { ...m, status: "error", text: "", error: action.error, errorAt: new Date().toISOString(), limit: action.limit, reason: action.reason };
         if (action.retryAfterSeconds !== undefined) out.retryAfterSeconds = action.retryAfterSeconds;
         if (action.packagesUrl) out.packagesUrl = action.packagesUrl;
         return out;
@@ -119,13 +134,13 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
       const a = lastAssistant(state);
       if (!a || a.status !== "streaming") return { ...state, busy: false };
       // The stream closed with no final and no error event: interrupted.
-      return { ...withLastAssistant(state, (m) => ({ ...m, status: "error", error: "upstream_error" })), busy: false };
+      return { ...withLastAssistant(state, (m) => ({ ...m, status: "error", text: "", error: "upstream_error" })), busy: false };
     }
 
     case "stop": {
       const a = lastAssistant(state);
       if (!a || a.status !== "streaming") return { ...state, busy: false };
-      return { ...withLastAssistant(state, (m) => ({ ...m, status: "stopped" })), busy: false };
+      return { ...withLastAssistant(state, (m) => ({ ...m, status: "stopped", text: "" })), busy: false };
     }
 
     case "retry": {
@@ -139,6 +154,10 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
       };
     }
 
+    case "restore":
+      return state.busy ? state : action.state;
+    case "slow":
+      return withLastAssistant(state, m => ({ ...m, slow: true }));
     case "reset":
       return { ...INITIAL_CHAT_STATE, credits: state.credits };
   }
@@ -151,6 +170,14 @@ export function lastUserText(state: ChatState): string | null {
     if (m.role === "user") return m.text;
   }
   return null;
+}
+
+export function lastUserRequest(state: ChatState): MentorChatRequest | undefined {
+  for (let i = state.messages.length - 1; i >= 0; i--) {
+    const m = state.messages[i];
+    if (m.role === "user") return m.request;
+  }
+  return undefined;
 }
 
 export interface DraftStatus {
@@ -179,13 +206,30 @@ export interface BuildRequestInput {
   lang: MentorLang;
   mode: MentorMode;
   questionId?: number;
+  clientRequestId: string;
+  entry?: MentorChatRequest["entry"];
+  filingUniversity?: "wien" | "graz" | "innsbruck";
+  selectedOptionText?: string;
+  wasCorrect?: boolean;
+  answered?: boolean;
+  explainAction?: "hint" | "solution";
+  hintCount?: 0 | 1 | 2;
 }
 
 /** The exact POST body for /api/mentor/chat. question_id only in explain mode. */
 export function buildChatRequest(i: BuildRequestInput): MentorChatRequest {
-  const req: MentorChatRequest = { message: i.text.trim(), lang: i.lang, mode: i.mode };
+  const req: MentorChatRequest = { message: i.text.trim(), lang: i.lang, mode: i.mode, client_request_id: i.clientRequestId };
+  if (i.entry) req.entry = i.entry;
   if (i.conversationId) req.conversation_id = i.conversationId;
-  if (i.mode === "explain" && i.questionId !== undefined) req.question_id = i.questionId;
+  if (i.mode === "explain" && i.questionId !== undefined) {
+    req.question_id = i.questionId;
+    if (i.selectedOptionText !== undefined) req.selected_option_text = i.selectedOptionText;
+    if (i.wasCorrect !== undefined) req.was_correct = i.wasCorrect;
+    if (i.answered !== undefined) req.answered = i.answered;
+    if (i.explainAction) req.explain_action = i.explainAction;
+    if (i.hintCount !== undefined) req.hint_count = i.hintCount;
+  }
+  if (i.filingUniversity) req.filing_university = i.filingUniversity;
   return req;
 }
 

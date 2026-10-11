@@ -4,7 +4,9 @@
  * Supports sendBeacon on page unload for reliability.
  */
 
-export type TrackEventType =
+import type { MentorClientEvent } from "@/lib/mentor/telemetry";
+
+export type TrackEventType = MentorClientEvent
   | "page_view"
   | "question_start"
   | "question_answer"

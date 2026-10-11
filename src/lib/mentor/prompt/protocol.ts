@@ -41,6 +41,7 @@ const EXAM_KEYS: readonly MentorExamKey[] = [
 export interface ParsedBlock {
   text: string;
   factIds: string[];
+  explainLayer?: "grounded" | "background" | "options";
 }
 
 export interface ParsedAnswer {
@@ -88,7 +89,8 @@ export function parseAnswer(raw: string): ParsedAnswer {
         .split(",")
         .map((s) => s.trim())
         .filter((s) => s.length > 0 && s.length <= 160);
-      cur = { text: "", factIds: [...new Set(ids)] };
+      const layer = attr(rest, "layer");
+      cur = { text: "", factIds: [...new Set(ids)], ...(layer === "grounded" || layer === "background" || layer === "options" ? { explainLayer: layer } : {}) };
     }
   }
   if (cur) out.blocks.push(cur);
@@ -98,7 +100,7 @@ export function parseAnswer(raw: string): ParsedAnswer {
   for (let i = 0; i + 1 < out.blocks.length; i++) {
     const b = out.blocks[i];
     const next = out.blocks[i + 1];
-    if (b.factIds.length === 0 && b.text.length > 0 && next.factIds.length > 0) b.factIds = [...next.factIds];
+    if (!b.explainLayer && b.factIds.length === 0 && b.text.length > 0 && next.factIds.length > 0) b.factIds = [...next.factIds];
   }
   out.blocks = out.blocks.filter((b) => b.text.length > 0);
   return out;

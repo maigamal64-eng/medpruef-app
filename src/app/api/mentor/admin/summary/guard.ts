@@ -21,7 +21,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth-guard";
-import { canAccessAdminPermission, loadAdminPermissionSnapshot } from "@/lib/admin/permissions";
+import { canAccessAdminPermission, loadAdminPermissionSnapshot, type AdminPermission } from "@/lib/admin/permissions";
 import { checkRateLimit, rateLimitHeaders } from "@/lib/rate-limit";
 import { captureServerError } from "@/lib/sentry-capture";
 
@@ -31,7 +31,7 @@ const LIMIT = { limit: 60, windowMs: 60_000 };
 
 export type MentorAdminGuard = { ok: true; userId: string } | { ok: false; response: NextResponse };
 
-export async function requireMentorAdmin(req: NextRequest): Promise<MentorAdminGuard> {
+export async function requireMentorAdmin(req: NextRequest, permission: AdminPermission = MENTOR_ADMIN_PERMISSION): Promise<MentorAdminGuard> {
   const base = await requireUser(req, { allowCached: false });
   if ("error" in base) return { ok: false, response: base.error };
   if (base.role !== "admin") {
@@ -40,7 +40,7 @@ export async function requireMentorAdmin(req: NextRequest): Promise<MentorAdminG
 
   try {
     const snapshot = await loadAdminPermissionSnapshot(base.userId);
-    if (!canAccessAdminPermission(snapshot, MENTOR_ADMIN_PERMISSION)) {
+    if (!canAccessAdminPermission(snapshot, permission)) {
       return {
         ok: false,
         response: NextResponse.json({ error: "You do not have permission to perform this action" }, { status: 403 }),

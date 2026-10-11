@@ -3,7 +3,11 @@ import { AiCacheTtlViolation, AiEmptyText, AiInputRejected, AiRefusal, AiTimeout
 import { costMicroUsd } from "@/lib/ai/pricing";
 import type { MentorFinalEvent, MentorSseEvent } from "@/lib/mentor/contract";
 import { admitTurn, assistantBlocks, createRunMentorTurn, firstCallCeiling, MENTOR_REFUSAL_COPY, type MentorAlert } from "@/lib/mentor/turn";
-import { USER, collect, makeDeps, turnInput, usage, type Step } from "./helpers";
+import { USER, collect as collectAll, makeDeps, turnInput, usage, type Step } from "./helpers";
+
+async function collect<T extends MentorSseEvent>(events: AsyncIterable<T>): Promise<T[]> {
+  return (await collectAll(events)).filter(e => e.type !== "status" && e.type !== "heartbeat");
+}
 
 const MODEL = "claude-haiku-5-5";
 const GRANT = 200_000; // 40 credits
@@ -12,7 +16,7 @@ function run(steps: Step[], opts: Parameters<typeof makeDeps>[1] = { grantMicro:
   const env = makeDeps(steps, opts);
   const alerts: MentorAlert[] = [];
   const turn = createRunMentorTurn({ alert: (a) => alerts.push(a) });
-  return { ...env, alerts, events: collect<MentorSseEvent>(turn(env.deps, input)) };
+  return { ...env, alerts, events: collect<MentorSseEvent>(turn(env.deps, input)).then(events => events.filter(e => e.type !== "status" && e.type !== "heartbeat")) };
 }
 
 function finalOf(events: MentorSseEvent[]): MentorFinalEvent {
@@ -60,7 +64,7 @@ describe("runMentorTurn: success paths", () => {
     const f = finalOf(events);
     expect(f.conversation_id).toBe(turnInput().conversationId);
     expect(f.answer_blocks[0].text).toBe("Die Anmeldung läuft online.");
-    expect(f.credits_left).toBe(Math.floor((GRANT - costMicroUsd(MODEL, u)) / 5000));
+    expect(f.credits_left).toBe((GRANT - costMicroUsd(MODEL, u)) / 5000);
     expect(t.claude.calls[0].stream).toBe(true);
     expect(t.claude.calls[0].signal).toBeUndefined();
     expect(t.claude.calls[0].effort).toBe("low");
@@ -121,7 +125,7 @@ describe("runMentorTurn: success paths", () => {
     invariant(t.ledger);
   });
 
-  it("validator refusal passes through with the official link", async () => {
+  it("validator refusal cannot pass a destination without a verified source row", async () => {
     const t = run([{ text: "x" }], {
       grantMicro: GRANT,
       brain: {
@@ -137,7 +141,8 @@ describe("runMentorTurn: success paths", () => {
     });
     const f = finalOf(await t.events);
     expect(f.refused).toBe("individual_ruling");
-    expect(f.refusal_link).toBe("https://example.org/kontakt");
+    expect(f.refusal_link).toBeUndefined();
+    expect(f.refusal_label).toBeUndefined();
     expect(settled(t.ledger)).toHaveLength(1); // validator refusals are billable
   });
 });
@@ -226,7 +231,8 @@ describe("runMentorTurn: billing matrix on failures", () => {
       env.deps.callClaude = claude.fn;
       const events = await collect(turn(env.deps, turnInput({ requestId: `22222222-2222-4222-8222-00000000000${i}` })));
       expect(events.map((e) => e.type)).toEqual(["delta", "final"]);
-      expect(finalOf(events).answer_blocks[0].text).toMatch(/^Diese Angabe ist nicht offiziell bestätigt\. Bitte prüf sie auf der offiziellen Seite: https:\/\//);
+      expect(finalOf(events).answer_blocks[0].text).toBe("Diese Angabe ist nicht offiziell bestätigt.");
+      expect(finalOf(events)).toMatchObject({ result: "notice", reason: "empty", charged: false });
       expect(claude.calls).toHaveLength(1); // not a cut-off: no retry
     }
     expect(settled(env.ledger).map((e) => e.kind)).toEqual(["house_cost", "house_cost", "house_cost", "house_cost"]);
@@ -236,7 +242,7 @@ describe("runMentorTurn: billing matrix on failures", () => {
 
   it("timeout twice (retried once, cost unknown): upstream_error, both attempts on the house at the ceiling", async () => {
     const t = run([{ throw: new AiTimeout("timeout", { usage: usage(500, 0) }) }, { throw: new AiTimeout("timeout", {}) }], { grantMicro: GRANT, houseFree: 0 });
-    expect(await t.events).toEqual([{ type: "error", error: "upstream_error" }]);
+    expect(await t.events).toEqual([{ type: "error", error: "upstream_error", retries: 1 }]);
     expect(t.claude.calls).toHaveLength(2);
     const holds = t.ledger.entries.filter((e) => e.kind === "reserve").map((e) => e.hold);
     const s = settled(t.ledger);
@@ -281,8 +287,6 @@ describe("runMentorTurn: billing matrix on failures", () => {
 });
 
 describe("runMentorTurn: retry once, and the learner never pays for an error or the notice", () => {
-  const NOTICE_DE = /^Diese Angabe ist nicht offiziell bestätigt\. Bitte prüf sie auf der offiziellen Seite: https:\/\/\S+$/;
-
   it("max_tokens with a cut answer, then a full answer: retried once, the cut attempt is the house's, the answer the learner's", async () => {
     const u1 = usage(1200, 1500);
     const u2 = usage(1250, 900);
@@ -325,7 +329,9 @@ describe("runMentorTurn: retry once, and the learner never pays for an error or 
     ]);
     const events = await t.events;
     expect(events.map((e) => e.type)).toEqual(["delta", "final"]);
-    expect(finalOf(events).answer_blocks[0].text).toMatch(NOTICE_DE);
+    expect(finalOf(events).answer_blocks[0].text).toBe("Diese Angabe ist nicht offiziell bestätigt.");
+    expect(finalOf(events)).toMatchObject({ result: "notice", reason: "truncated", charged: false });
+    expect(finalOf(events).answer_blocks[0].official_url).toMatch(/^https:\/\//);
     expect(t.claude.calls).toHaveLength(2);
     expect(t.ledger.entries.some((e) => e.kind === "settle")).toBe(false);
     expect(settled(t.ledger).map((e) => [e.kind, e.cost])).toEqual([
@@ -357,7 +363,7 @@ describe("runMentorTurn: retry once, and the learner never pays for an error or 
 
   it("no second retry: three timeouts in a row make two calls, then upstream_error, all on the house", async () => {
     const t = run([{ throw: new AiTimeout("t1", {}) }, { throw: new AiTimeout("t2", {}) }, { text: "never" }]);
-    expect(await t.events).toEqual([{ type: "error", error: "upstream_error" }]);
+    expect(await t.events).toEqual([{ type: "error", error: "upstream_error", retries: 1 }]);
     expect(t.claude.calls).toHaveLength(2);
     expect(t.ledger.entries.some((e) => e.kind === "settle")).toBe(false);
     invariant(t.ledger);
@@ -384,6 +390,7 @@ describe("runMentorTurn: retry once, and the learner never pays for an error or 
     });
     const f = finalOf(await t.events);
     expect(f.answer_blocks[0].text).toBe(notice);
+    expect(f).toMatchObject({ result: "notice", reason: "no_source", charged: false });
     expect(settled(t.ledger).map((e) => [e.kind, e.cost])).toEqual([["house_cost", costMicroUsd(MODEL, u)]]);
     expect(f.credits_left).toBe(GRANT / 5000);
     invariant(t.ledger);
@@ -453,7 +460,8 @@ describe("runMentorTurn: ledger faults", () => {
     now += 16 * 60 * 1000;
     expect(ledger.sweepUser(USER)).toBe(1);
     expect(ledger.reservedOf(USER)).toBe(0);
-    expect(ledger.entries.at(-1)).toMatchObject({ kind: "settle", cost: hold });
+    expect(ledger.entries.at(-1)).toMatchObject({ kind: "house_cost", cost: hold, delta: 0 });
+    expect(ledger.balance(USER).availableMicro).toBe(GRANT);
     expect(ledger.reconciles(USER)).toBe(true);
   });
 

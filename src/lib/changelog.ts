@@ -23,6 +23,46 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-10-11", tag: "admin",
+    title: { de: "Mentor-Datenschutz, Belege und Betriebsansichten vorbereitet", en: "Mentor privacy, receipts and operations views prepared" },
+    description: {
+      de: "Der deaktivierte Mentor-Kandidat ergänzt löschbare Chats, geprüfte Einstiegskontexte, bestätigte Prüfungsdaten, zahlungsbezogene Belege und Betriebsansichten. Datenbank-, Browser-, Modell- und Sprachprüfungen stehen vor der Freigabe.",
+      en: "The disabled mentor candidate adds chat erasure, validated entry context, confirmed exam dates, payment receipts and operations views. Database, browser, model and language checks remain release gates.",
+    },
+  },
+  {
+    date: "2026-10-11", tag: "admin",
+    title: { de: "Mentor-Verlauf, Guthaben und Erklärungen vorbereitet", en: "Mentor history, credits and explanations prepared" },
+    description: {
+      de: "Der deaktivierte Mentor-Kandidat bewahrt Fragen und Verlauf, trennt Rate-Limits und Erklärungsebenen und ergänzt wiederherstellbare Paketkäufe. Datenbank-, Browser-, Modell-, Sprach- und medizinische Prüfungen stehen vor der Freigabe.",
+      en: "The disabled mentor candidate preserves questions and history, distinguishes rate limits and explanation layers and adds recoverable package purchases. Database, browser, model, language and medical reviews remain release gates.",
+    },
+  },
+  {
+    date: "2026-10-11", tag: "admin",
+    title: { de: "Mentor-Prüfung und Betriebsansichten vorbereitet", en: "Mentor review and operations views prepared" },
+    description: {
+      de: "Der deaktivierte Mentor-Kandidat ergänzt Quellenansichten, Antwortprüfung, Faktenstatus, Einführungskontrollen und begrenzte Auswertung. Datenbank-, Browser-, Sprach- und Modellprüfungen bleiben vor der Freigabe erforderlich.",
+      en: "The disabled mentor candidate adds source presentation, answer review, fact health, rollout controls and bounded analytics. Database, browser, language and model checks remain required before release.",
+    },
+  },
+  {
+    date: "2026-10-11", tag: "admin",
+    title: { de: "Mentor-Quellen und Bedienung vorbereitet", en: "Mentor sources and controls prepared" },
+    description: {
+      de: "Der deaktivierte Mentor-Kandidat zeigt Quellenprüfdaten, ältere Angaben und getrennte Prüfhinweise. Guthaben, Antwortwiederherstellung und Frage-Meldungen wurden vorbereitet. Sprach-, Browser- und Modellprüfungen stehen vor der Freigabe.",
+      en: "The disabled mentor candidate shows source check dates, older information and separate validation notices. Credits, answer recovery and question reports have been prepared. Language, browser and model gates precede release.",
+    },
+  },
+  {
+    date: "2026-10-11", tag: "admin",
+    title: { de: "Mentor-Sicherungen zur Einführung vorbereitet", en: "Mentor safeguards prepared for launch" },
+    description: {
+      de: "Vorbereitete Mentor-Ansichten behalten Guthaben bei Pausen, verhindern doppelte Zahlungsversuche und erlauben Antwortmeldungen. Wiederholte Anfragen nutzen dieselbe Antwort. Die Einführung bleibt hinter deaktivierten Einstellungen; Datenbank- und Browserprüfungen stehen vor der Freigabe.",
+      en: "Prepared mentor views preserve credits during pauses, prevent duplicate payment attempts and support answer reports. Repeated requests recover the same answer. Launch remains behind disabled settings; database and browser acceptance checks precede release.",
+    },
+  },
+  {
     date: "2026-10-07", tag: "fix",
     title: { de: "Manuell gewährten Pro-Zugang bewahren", en: "Preserve manually granted Pro access" },
     description: {

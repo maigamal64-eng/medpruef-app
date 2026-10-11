@@ -64,6 +64,8 @@ import {
   FeedbackFlagsPanel,
 } from "./_parts/panels";
 
+import { MentorPanel } from "./_parts/MentorPanel";
+
 type Tab = "timeline" | "answers" | "sessions" | "notes" | "money" | "voice";
 
 function statusOf(lastActivity: string | null): {
@@ -394,6 +396,8 @@ export default function AdminUserDetailPage() {
           tint="rgba(0,123,95,0.10)"
         />}
       </div>
+
+      {canReadRevenue && <MentorPanel userId={id} />}
 
       {/* behavior strip */}
       <div className="flex items-center gap-2 flex-wrap">

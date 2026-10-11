@@ -3,6 +3,9 @@ import { createMentorApi, failureFromResponse, isSafePurchaseUrl, CHAT_HEADERS_T
 import { FIXTURE_ERRORS, FIXTURE_USAGE, FIXTURE_STREAM_OK, FIXTURE_PACKAGES } from "@/lib/mentor/fixtures";
 import { MENTOR_ERROR_STATUS, type MentorErrorCode, type MentorSseEvent } from "@/lib/mentor/contract";
 
+const REQUEST_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+const CHECKOUT_ID = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+
 const json = (body: unknown, status = 200, headers: Record<string, string> = {}) =>
   new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json", ...headers } });
 
@@ -55,23 +58,23 @@ describe("mentor api client", () => {
   it("chat: streams events, uses a long header timeout and reports sawFinal", async () => {
     const f = vi.fn<MentorFetch>().mockResolvedValue(sseResponse(FIXTURE_STREAM_OK));
     const got: MentorSseEvent[] = [];
-    const r = await createMentorApi(f).chat({ message: "hi", lang: "de", mode: "facts" }, (e) => got.push(e));
+    const r = await createMentorApi(f).chat({ client_request_id: REQUEST_ID, message: "hi", lang: "de", mode: "facts" }, (e) => got.push(e));
     expect(r).toEqual({ ok: true, sawFinal: true, sawError: false });
     expect(got).toEqual(FIXTURE_STREAM_OK);
     expect(f.mock.calls[0][1]?.timeoutMs).toBe(CHAT_HEADERS_TIMEOUT_MS);
     expect(f.mock.calls[0][1]?.timeoutMs).toBeGreaterThan(25_000);
-    expect(JSON.parse(String(f.mock.calls[0][1]?.body))).toEqual({ message: "hi", lang: "de", mode: "facts" });
+    expect(JSON.parse(String(f.mock.calls[0][1]?.body))).toEqual({ client_request_id: REQUEST_ID, message: "hi", lang: "de", mode: "facts" });
   });
 
   it("chat: a 402 before the stream is a failure with the packages link", async () => {
     const f = vi.fn<MentorFetch>().mockResolvedValue(json(FIXTURE_ERRORS.credits_exhausted.body, 402));
-    const r = await createMentorApi(f).chat({ message: "hi", lang: "en", mode: "facts" }, () => {});
+    const r = await createMentorApi(f).chat({ client_request_id: REQUEST_ID, message: "hi", lang: "en", mode: "facts" }, () => {});
     expect(r).toMatchObject({ ok: false, error: "credits_exhausted", packagesUrl: "/mentor/packages" });
   });
 
   it("chat: a mid-stream error event is reported, a dropped connection is a network failure", async () => {
     const f = vi.fn<MentorFetch>().mockResolvedValueOnce(sseResponse([{ type: "delta", text: "a" }, { type: "error", error: "upstream_error" }]));
-    expect(await createMentorApi(f).chat({ message: "x", lang: "de", mode: "facts" }, () => {})).toEqual({ ok: true, sawFinal: false, sawError: true });
+    expect(await createMentorApi(f).chat({ client_request_id: REQUEST_ID, message: "x", lang: "de", mode: "facts" }, () => {})).toEqual({ ok: true, sawFinal: false, sawError: true });
 
     const broken = new ReadableStream<Uint8Array>({
       start(c) {
@@ -80,14 +83,14 @@ describe("mentor api client", () => {
       },
     });
     f.mockResolvedValueOnce(new Response(broken, { status: 200, headers: { "content-type": "text/event-stream" } }));
-    expect(await createMentorApi(f).chat({ message: "x", lang: "de", mode: "facts" }, () => {})).toMatchObject({ ok: false, error: "network" });
+    expect(await createMentorApi(f).chat({ client_request_id: REQUEST_ID, message: "x", lang: "de", mode: "facts" }, () => {})).toMatchObject({ ok: false, error: "network" });
   });
 
   it("chat: an aborted request is not an error", async () => {
     const ctrl = new AbortController();
     const stream = new ReadableStream<Uint8Array>({ start() {} });
     const f = vi.fn<MentorFetch>().mockResolvedValue(new Response(stream, { status: 200, headers: { "content-type": "text/event-stream" } }));
-    const p = createMentorApi(f).chat({ message: "x", lang: "de", mode: "facts" }, () => {}, ctrl.signal);
+    const p = createMentorApi(f).chat({ client_request_id: REQUEST_ID, message: "x", lang: "de", mode: "facts" }, () => {}, ctrl.signal);
     setTimeout(() => ctrl.abort(), 10);
     expect(await p).toEqual({ ok: true, sawFinal: false, sawError: false });
   });
@@ -98,8 +101,8 @@ describe("mentor api client", () => {
     expect(isSafePurchaseUrl("javascript:alert(1)")).toBe(false);
     const f = vi.fn<MentorFetch>().mockResolvedValue(json({ purchase_url: "javascript:alert(1)" }));
     expect(await createMentorApi(f).checkout({ package_id: "mentor_basis" })).toMatchObject({ ok: false });
-    f.mockResolvedValueOnce(json({ purchase_url: "https://whop.com/c/1" }));
-    expect(await createMentorApi(f).checkout({ package_id: "mentor_basis" })).toEqual({ ok: true, purchaseUrl: "https://whop.com/c/1" });
+    f.mockResolvedValueOnce(json({ purchase_url: "https://whop.com/c/1", checkout_session_id: CHECKOUT_ID }));
+    expect(await createMentorApi(f).checkout({ package_id: "mentor_basis" })).toEqual({ ok: true, purchaseUrl: "https://whop.com/c/1", checkoutSessionId: CHECKOUT_ID });
   });
 
   it("verify: forwards Whop's query string and validates the status", async () => {

@@ -19,10 +19,13 @@
  * unknown cited id is dropped and logged.
  */
 
+import { unsafeExplainBackground } from "./explain-safety";
+import { studySentenceViolation } from "./study-safety";
+import { topicNotice } from "./trust-copy";
 import type { MentorAnswerBlock, MentorCitation, MentorLang } from "./contract";
 import type { MentorExamKey, MentorFact, ValidatedAnswer } from "./seam";
 import { parseAnswer, stripInlineMarkers } from "./prompt/protocol";
-import { allOfficialLinks, fallbackLine, officialLinkForExam, refusalLine, refusalLink } from "./prompt/refusals";
+import { allOfficialLinks, officialLinkForExam, refusalLine, refusalLink } from "./prompt/refusals";
 
 // ─── Normalisation ──────────────────────────────────────────────────────
 
@@ -659,6 +662,44 @@ export function replaceSentences(text: string, bad: ExtractedValue[], fallback: 
   return out.replace(/[ \t]+\n/g, "\n").trim();
 }
 
+/** Drop unsupported independent clauses, never a condition that qualified a kept date. */
+export function keepSupportedClauses(text: string, bad: ExtractedValue[]): string {
+  const out: string[] = [];
+  const conditional = /(?:\b(?:if|unless|provided|conditional|wenn|falls|sofern|vorausgesetzt|nur wenn|es sei denn|если|якщо|eğer|eger)\b|إذا|لو)/iu;
+  const ranges = sentenceRanges(text);
+  const drop = new Set<number>();
+  ranges.forEach(([a,e],i) => {
+    const sentence = text.slice(a,e);
+    if (!bad.some(v => v.start < e && v.end > a) || !conditional.test(sentence)) return;
+    drop.add(i);
+    // A conditional continuation qualifies the preceding assertion too.
+    // "Deadline X. This applies only if unsupported Y" must not become an
+    // unconditional X after deleting Y. Other independent sentences survive.
+    if (i > 0 && /^(?:\s*(?:it|this|that|these|those|unless|provided|only if|das|dies|diese|dieser|das gilt|nur wenn|falls|sofern|это|це|bu|ده|دي)\b)/iu.test(sentence)) drop.add(i - 1);
+  });
+  for (const [i,[a,e]] of ranges.entries()) {
+    if (drop.has(i)) continue;
+    const sentence = text.slice(a,e);
+    const hits = bad.filter(v => v.start < e && v.end > a);
+    if (!hits.length) { out.push(sentence.trim()); continue; }
+    if (conditional.test(sentence)) continue;
+    // Semicolons delimit standalone clauses. Conjunctions/commas may qualify a neighbour, so remain intact.
+    let offset = a;
+    for (const clause of sentence.split(/;/)) {
+      const end = offset + clause.length;
+      if (!hits.some(v => v.start < end && v.end > offset) && /\p{L}/u.test(clause)) out.push(clause.trim().replace(/^[,;]\s*/, ""));
+      offset = end + 1;
+    }
+  }
+  return out.join(text.includes("\n") ? "\n" : " ").trim();
+}
+
+/** Delete source stamps only when an official source chip exists. Event dates remain checked. */
+export function stripSourceStamp(text: string): string {
+  return text.replace(/\(?\b(?:Stand(?:\s+vom)?|as of|source checked(?: on)?|Quelle geprüft am)\s*:?[ \t]*(?:\d{4}-\d{1,2}-\d{1,2}|\d{1,2}\s*[./]\s*\d{1,2}\s*[./]\s*\d{2,4}|\d{1,2}\.?\s+\p{L}+\.?\s+\d{4}|\p{L}+\.?\s+\d{1,2},?\s+\d{4})\)?/giu, "")
+    .replace(/\(\s*\)/g, "").replace(/[ \t]+([.,;!?])/g,"$1").replace(/[ \t]{2,}/g," ").trim();
+}
+
 // ─── Validation ─────────────────────────────────────────────────────────
 
 /** Ids derived by the brain for validation only; never shown as citations. */
@@ -668,6 +709,7 @@ export function isInternalFactId(id: string): boolean {
 }
 
 export interface ValidateOptions {
+  study?: boolean;
   /** Synchronous lookup for cited ids not in `facts` (the brain's loader and turn store). */
   resolve?: (id: string) => MentorFact | null;
   /** Language to use when the answer omits @@LANG. */
@@ -748,6 +790,11 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
   const refused = parsed.refuse?.reason;
   const refuseExam: MentorExamKey | null = parsed.refuse?.exam ?? null;
   const refLink = refused ? refusalLink(refused, refuseExam) : undefined;
+  // Refusals are fixed safety copy, never a place to repeat model claims or fallback notices.
+  if (refused === "patient_advice") return {
+    blocks: [{ text: refusalLine(refused, lang), fact_ids: [] }], citations: [],
+    replaced: false, rejected: [], refused, ...(refLink ? { refusalLink: refLink } : {}),
+  };
   const globalUrls = new Set(allOfficialLinks().map((u) => `u:${u.replace(/\/+$/, "").toLowerCase()}`));
   if (refLink) globalUrls.add(`u:${refLink.replace(/\/+$/, "").toLowerCase()}`);
 
@@ -764,7 +811,7 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
       if (f) used.push(f);
       else rejected.push({ value: id, reason: "unknown_fact_id" });
     }
-    const allowed = new Set<string>(globalUrls);
+    const allowed = new Set<string>([...globalUrls, "n:112", "n:144", "n:1450"]);
     for (const f of used) {
       for (const k of factAllowedKeys(f)) allowed.add(k);
       // A computed status (status.*) states values of the official sitting rows it
@@ -784,6 +831,19 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
       stripUnsupportedStand(stripFieldNames(stripFactIds(stripProtocolMarkers(cleanDashes(b.text)), (id) => answerIds.has(id) || lookup(id) !== null)), allowed, internalReadOn),
       allowed
     );
+    const studyViolation = (opts.study === true || used.some(f => f.id.startsWith("progress."))) ? studySentenceViolation(text, lang) : null;
+    if (studyViolation) {
+      replaced = true; rejected.push({ value: studyViolation, reason: "study_safety" });
+      blocks.push({ text: topicNotice(lang), fact_ids: [], replaced: true, official_url: officialLinkForExam(null) });
+      continue;
+    }
+    // Background is never allowed to borrow the row's numeric or dosing authority.
+    // Delete the entire layer on any such claim, even when the row contains it.
+    if (b.explainLayer === "background" && (extractValues(text).length > 0 || unsafeExplainBackground(text))) {
+      replaced = true;
+      rejected.push({ value: "background_numbers_or_doses", reason: "not_in_cited_facts" });
+      continue;
+    }
     const values = extractValues(maskSourceLabels(text, used));
     // A question to the learner asserts nothing: a month or month-year it repeats
     // ("Wo hast du für den Termin im Februar eingereicht?") is not a claim. Day
@@ -799,14 +859,17 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
     if (bad.length > 0) {
       replaced = true;
       for (const v of bad) rejected.push({ value: v.raw, reason: used.length > 0 ? "not_in_cited_facts" : "uncited_number" });
-      const official = used.find((f) => !isInternalFactId(f.id))?.source_url ?? refLink ?? officialLinkForExam(refuseExam);
-      const fb = fallbackLine(lang, official);
       // A block that cites only the learner's own progress is a personal study
       // plan: an unsupported value there ("die drei schwächsten Bereiche") is not
       // an official claim, so "check the official page" would mislead (eval round
       // 3: st-spt-de, st-sip-de). The sentence is deleted instead; deletion only.
       const progressOnly = used.length > 0 && used.every((f) => f.id.startsWith("progress."));
-      outText = progressOnly ? removeSentences(text, bad) : replaceSentences(text, bad, fb);
+      outText = progressOnly || refused ? removeSentences(text, bad) : keepSupportedClauses(text, bad);
+    }
+    if (!outText && bad.length > 0 && !refused && !(used.length > 0 && used.every(f => f.id.startsWith("progress.")))) {
+      const source = used.find(f => !isInternalFactId(f.id));
+      blocks.push({ text: topicNotice(lang, source), fact_ids: [], replaced: true, official_url: source?.source_url ?? refLink ?? officialLinkForExam(refuseExam) });
+      continue;
     }
     if (!outText) continue;
     const shown = used.filter((f) => !isInternalFactId(f.id));
@@ -826,22 +889,27 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
       }
     }
     const shownIds = shown.map((f) => f.id);
-    blocks.push({ text: outText, fact_ids: [...new Set(shownIds)] });
+    const displayText = shownIds.length ? stripSourceStamp(outText) : outText;
+    const confirmedDates = kept.filter(v => (v.kind === "date" || v.kind === "daymonth") && v.keys.some(k => k.startsWith("d:") || k.startsWith("dm:")) && displayText.includes(v.raw)).map(v => v.raw);
+    blocks.push({ text: displayText, fact_ids: [...new Set(shownIds)], ...(b.explainLayer ? { explain_layer: b.explainLayer } : {}), ...(confirmedDates.length ? { confirmed_dates: [...new Set(confirmedDates)], date_type: shown.some(f => f.topic === "registration" || /(?:registration|filing|deadline|closes|opens)/i.test(f.id)) ? "deadline" as const : "sitting" as const } : {}) });
+    if (bad.length && !refused && !(used.length > 0 && used.every(f => f.id.startsWith("progress.")))) {
+      const source = used.find(f => !isInternalFactId(f.id));
+      blocks.push({ text: topicNotice(lang, source), fact_ids: [], replaced: true, official_url: source?.source_url ?? refLink ?? officialLinkForExam(refuseExam) });
+    }
     for (const f of shown) {
       if (cited.has(f.id)) continue;
       cited.add(f.id);
-      citations.push({ fact_id: f.id, source_label: f.source_label, source_url: f.source_url, read_on: f.read_on });
+      citations.push({ fact_id: f.id, source_label: f.source_label, source_url: f.source_url, read_on: f.read_on, review_every_days: f.review_every_days });
     }
   }
 
   if (blocks.length === 0) {
-    blocks.push({
-      text: refused ? refusalLine(refused, lang) : fallbackLine(lang, officialLinkForExam(refuseExam)),
-      fact_ids: [],
-    });
+    blocks.push({ text: refused ? refusalLine(refused, lang) : topicNotice(lang), fact_ids: [], ...(refused ? {} : { replaced: true, official_url: officialLinkForExam(refuseExam) }) });
   }
 
-  const result: ValidatedAnswer = { blocks, citations, replaced, rejected };
+  const compact = blocks.filter((b,i) => !b.replaced || i === 0 || !blocks[i-1].replaced || blocks[i-1].text !== b.text || blocks[i-1].official_url !== b.official_url);
+  const ordered = [...compact.filter(b => !b.replaced), ...compact.filter(b => b.replaced)];
+  const result: ValidatedAnswer = { blocks: ordered, citations, replaced, rejected };
   if (refused) {
     result.refused = refused;
     result.refusalLink = refLink;
@@ -901,7 +969,7 @@ function trimRefusalValues(v: ValidatedAnswer, lang: MentorLang): ValidatedAnswe
     }
     changed = true;
     const text = removeSentences(b.text, drop);
-    if (text && /[\p{L}\p{N}]/u.test(text)) blocks.push({ text, fact_ids: b.fact_ids });
+    if (text && /[\p{L}\p{N}]/u.test(text)) blocks.push({ ...b, text });
   }
   if (!changed) return v;
   if (blocks.length === 0 && v.refused) blocks.push({ text: refusalLine(v.refused, lang), fact_ids: [] });
@@ -1062,7 +1130,7 @@ export function trimUnaskedValues(v: ValidatedAnswer, t: TrimUnaskedInput): Vali
         return left.some((x) => x.keys.some((y) => k.has(y)));
       })
       .map((f) => f.id);
-    blocks.push({ text, fact_ids: ids });
+    blocks.push({ ...b, text, fact_ids: ids });
   }
   if (!changed || blocks.length === 0) return v;
   const stillCited = new Set(blocks.flatMap((b) => b.fact_ids));

@@ -1,7 +1,7 @@
 /**
- * Language and style checks (W2-EVAL). Heuristics for German vs English only
- * (v1 grades those two). A short or mixed answer is "unknown" and passes, so
- * the check only flags answers that are clearly in the wrong language.
+ * Language and style checks. Script/word heuristics support the R1 native
+ * slice; they are regression checks, not a substitute for native review.
+ * DE/EN keep the legacy unknown allowance, the native release gate does not.
  */
 
 const DE = new Set(
@@ -17,9 +17,13 @@ const EN = new Set(
   ).split(" ")
 );
 
-export type DetectedLang = "de" | "en" | "unknown";
+export type DetectedLang = "de" | "en" | "ru" | "uk" | "tr" | "ar" | "fr" | "unknown";
 
 export function detectLang(text: string): DetectedLang {
+  if (/[\u0600-\u06ff]/.test(text)) return "ar";
+  if (/[іїєґ]/iu.test(text)) return "uk";
+  if (/[\u0400-\u04ff]/.test(text)) return "ru";
+  if (/[ğışİ]/u.test(text) || /\b(?:lütfen|sınav|için|kayıt|değil)\b/iu.test(text)) return "tr";
   const words = text.toLowerCase().match(/[a-zäöüß]+/g) ?? [];
   let de = 0;
   let en = 0;
@@ -34,13 +38,17 @@ export function detectLang(text: string): DetectedLang {
   return "unknown";
 }
 
-export function languageMatches(text: string, lang: "de" | "en"): boolean {
+export function languageMatches(text: string, lang: import("@/lib/mentor/contract").MentorLang): boolean {
   const d = detectLang(text);
-  return d === "unknown" || d === lang;
+  return d === lang || ((lang === "de" || lang === "en") && d === "unknown");
 }
 
 /** Answer says the gap exists ("not officially confirmed" and its neighbours), DE or EN. */
 const UNCONFIRMED_MARKERS: RegExp[] = [
+  /(?:не\s+подтвержден|не\s+мож[еу]\s+официально\s+подтверд)/iu,
+  /(?:не\s+підтверджен|не\s+мож[уе]\s+офіційно\s+підтверд)/iu,
+  /(?:doğrulanma|doğrulayama|doğrulanmış\s+değil)/iu,
+  /(?:مش\s+(?:متأكد|مؤكد)|مش\s+قادر\s+أ?أكد|لم\s+يتم\s+تأكيد)/u,
   /nicht\s+(?:\p{L}+\s+){0,2}(?:bestätigt|bestaetigt|belegt|eindeutig|geklärt)/iu,
   /\b(?:unklar|widersprüchlich|widerspruechlich|uneinheitlich)\b/i,
   /nicht\s+(?:\p{L}+\s+){0,2}(?:veröffentlicht|angegeben|genannt|festgelegt|bekannt)/iu,
@@ -126,4 +134,13 @@ const LEAK_MARKERS = [
 ];
 export function leakedMarkers(text: string): string[] {
   return LEAK_MARKERS.filter((m) => text.includes(m));
+}
+
+/** Study answers are checked sentence by sentence so an English majority cannot hide German plan bullets. */
+export function studySentencesMatchLanguage(text: string, lang: import("@/lib/mentor/contract").MentorLang): boolean {
+  return text.split(/(?<=[.!?])\s+|\n/u).filter(s => s.trim()).every(sentence => {
+    if (lang !== "de" && /\b(?:Zuerst|Danach|Zum\s+Schluss)\b/iu.test(sentence)) return false;
+    const detected = detectLang(sentence);
+    return detected === "unknown" || detected === lang;
+  });
 }

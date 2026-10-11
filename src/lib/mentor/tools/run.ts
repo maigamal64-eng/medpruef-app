@@ -1,3 +1,4 @@
+import { deadlineTemplate } from "../deadline-copy";
 /**
  * Mentor tool implementations (W2-BRAIN). Read-only, input validated in code
  * (the model's tool input can carry a prompt-injected value), identity only
@@ -178,7 +179,7 @@ function getDates(input: unknown, ctx: TurnContext, env: ToolEnv): ToolResult {
   const o = asObject(input);
   if (!o) return err("invalid input");
   const exam = o.exam_key;
-  const uni = o.filing_university ?? "all";
+  const uni = ctx.filingUniversity ?? o.filing_university ?? "all";
   if (typeof exam !== "string" || !(FACT_EXAM_KEYS as readonly string[]).includes(exam)) return err("invalid exam_key");
   if (typeof uni !== "string" || !(FILING_UNIVERSITIES as readonly string[]).includes(uni)) return err("invalid filing_university");
   const examKey = exam as MentorExamKey;
@@ -239,6 +240,7 @@ function getDates(input: unknown, ctx: TurnContext, env: ToolEnv): ToolResult {
       registration_closes: s.window_unconfirmed ? null : s.registration_closes,
       ...(s.closes_at_time && !s.window_unconfirmed ? { closes_at_time: s.closes_at_time } : {}),
       registration_status: st.status,
+      deadline_template: deadlineTemplate(s, ctx.lang, st),
       ...(st.daysUntilClose !== null ? { days_until_close: st.daysUntilClose } : {}),
       ...(s.window_unconfirmed ? { window_note: "The registration window for this sitting is not officially confirmed. Say so and send the learner to the official page." } : {}),
       deadline_type: s.deadline_type,
@@ -431,11 +433,11 @@ async function getQuestion(input: unknown, ctx: TurnContext, env: ToolEnv): Prom
   // Whitelist: whatever the row carries, only these fields leave this function.
   const pick = (k: QuestionField) => row?.[k];
   const str = (v: unknown, max: number) => (typeof v === "string" ? truncateUtf8(v, max) : null);
+  const hintOnly = ctx.answered === false && ctx.explainAction !== "solution";
   const choices = Array.isArray(pick("choices"))
-    ? (pick("choices") as ChoiceRow[]).slice(0, 8).map((c, i) => ({
-        label: String.fromCharCode(65 + i),
+    ? (pick("choices") as ChoiceRow[]).slice(0, 8).map((c) => ({
         text: str(c?.text, 200) ?? "",
-        correct: c?.correct === true,
+        ...(hintOnly ? {} : { correct: c?.correct === true }),
       }))
     : [];
   const base = {
@@ -444,13 +446,13 @@ async function getQuestion(input: unknown, ctx: TurnContext, env: ToolEnv): Prom
     topic: str(pick("topic"), 120),
     question: str(pick("question"), 1000),
     choices,
-    keyed_answer: str(pick("answer"), 300),
+    ...(hintOnly ? { hint_only: true } : { keyed_answer: str(pick("answer"), 300) }),
   };
   // The whole row stays inside the retrieval budget: the explanation gets what is left.
   const left = RETRIEVAL_BUDGET_BYTES - utf8Bytes(JSON.stringify(base)) - 600;
-  const q = { ...base, explanation: left > 50 ? str(pick("explanation"), left) : null };
+  const q = { ...base, ...(hintOnly ? {} : { explanation: left > 50 ? str(pick("explanation"), left) : null }) };
   const content = { question: q };
-  const corpus = [q.question, ...choices.map((c) => `${c.label}) ${c.text}`), q.keyed_answer, q.explanation].filter(Boolean).join("\n");
+  const corpus = [q.question, ...choices.map((c) => c.text), hintOnly ? null : str(pick("answer"), 300), hintOnly ? null : str(pick("explanation"), left)].filter(Boolean).join("\n");
   const factId = `question.${id}`;
   env.remember(internalFact(factId, corpus, ctx.now));
   return ok(
@@ -458,7 +460,7 @@ async function getQuestion(input: unknown, ctx: TurnContext, env: ToolEnv): Prom
       ...content,
       fact_id: factId,
       instruction:
-        "Explain in the learner's language and keep German exam terms verbatim. If the keyed answer looks self-contradictory, do not defend it: tell the learner to report the question with the flag button.",
+        hintOnly ? "Give one guiding hint from the stem and unmarked choices only. Never identify a correct option. Do not assert an answer or invent a missing explanation." : "Explain in the learner's language and keep German exam terms verbatim. Name an option by its text, shortened if long. Never refer to option letters. If the keyed answer looks self-contradictory, do not defend it: tell the learner to use the app's report-question control.",
     },
     [factId]
   );
@@ -535,6 +537,8 @@ async function getMyProgress(_input: unknown, ctx: TurnContext, env: ToolEnv): P
     {
       fact_id: factId,
       progress: text,
+      answered_total: totalA,
+      weak_topics: weak.map((r) => ({ topic: r.topic, accuracy: r.acc, answered: r.answered, exam_source: r.exam })),
       instruction: "Plan from days left and the weak topics. Never promise a pass rate or an outcome.",
     },
     [factId]

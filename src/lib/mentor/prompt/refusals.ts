@@ -10,6 +10,7 @@
  * Arabic wording waits for [name]'s sign-off. No em dashes.
  */
 
+import { isTopicNotice } from "../trust-copy";
 import { AUSTRIAN_RESOURCES } from "@/lib/austrian-resources";
 import type { MentorLang, MentorRefusalReason } from "../contract";
 import type { FilingUniversity, MentorExamKey } from "../seam";
@@ -69,7 +70,8 @@ const REASON_RESOURCE: Readonly<Record<MentorRefusalReason, number | "exam">> = 
   out_of_scope: OFFICIAL_RESOURCE_IDS.berufsanerkennung,
 });
 
-export function refusalLink(reason: MentorRefusalReason, exam: MentorExamKey | null | undefined): string {
+export function refusalLink(reason: MentorRefusalReason, exam: MentorExamKey | null | undefined): string | undefined {
+  if (reason === "patient_advice") return undefined;
   const r = REASON_RESOURCE[reason];
   return r === "exam" ? officialLinkForExam(exam) : resourceUrl(r);
 }
@@ -83,46 +85,58 @@ type Lines = Readonly<Record<MentorRefusalReason, string>>;
 
 const REFUSAL_LINES_DE: Lines = Object.freeze({
   individual_ruling:
-    "Ob das in deinem Fall gilt, kann nur die zuständige Stelle entscheiden. Bitte frag dort direkt nach.",
+    "Ob das in deinem Fall gilt, kann ich nicht entscheiden. Bitte frag die zuständige Stelle direkt.",
   legal_or_documents:
     "Rechtliche Fragen und Fragen zu Unterlagen kann ich nicht beantworten. Bitte wende dich an die zuständige Universität.",
   certificate_acceptance:
-    "Welches Zertifikat anerkannt wird, entscheidet die zuständige Stelle. Bitte frag dort direkt nach.",
+    "Ob dein Zertifikat anerkannt wird, kann ich nicht entscheiden. Bitte frag die zuständige Stelle direkt.",
   patient_advice:
-    "Ich gebe keine Ratschläge zu echten Patientinnen oder Patienten. Ich helfe nur bei der Prüfungsvorbereitung.",
+    "Bei eigenen Beschwerden in Österreich: Hausärztin oder Hausarzt, 1450 (Gesundheitsberatung) oder Notruf 144. Ich helfe nur bei der Prüfungsvorbereitung.",
   real_exam_recall:
     "Ob eine Frage in einer echten Prüfung vorkam, kann ich nicht sagen. Ich erkläre dir gern den Inhalt.",
   competitor_comparison: "Andere Anbieter vergleiche ich nicht. Ich helfe dir gern bei deiner Vorbereitung.",
   no_verified_source:
-    "Dazu habe ich keine bestätigte offizielle Quelle. Bitte prüf das direkt bei der zuständigen Stelle.",
+    "Dazu habe ich keine bestätigte offizielle Quelle. Bitte prüfe das direkt bei der zuständigen Stelle.",
   out_of_scope: "Dabei kann ich nicht helfen. Ich beantworte Fragen zu Prüfungen, Abläufen und deiner Vorbereitung.",
 });
 
 const REFUSAL_LINES_EN: Lines = Object.freeze({
-  individual_ruling: "Only the responsible office can decide whether this applies to you. Please ask them directly.",
+  individual_ruling: "I cannot decide whether this applies to you. Please ask the responsible office directly.",
   legal_or_documents:
     "I cannot answer legal or document questions. Please contact the responsible university.",
   certificate_acceptance:
-    "Which certificate is accepted is decided by the responsible office. Please ask them directly.",
-  patient_advice: "I do not give advice about real patients. I only help with exam preparation.",
+    "I cannot decide whether your certificate is accepted. Please ask the responsible office directly.",
+  patient_advice: "If you have symptoms yourself in Austria: your GP, 1450 (health advice line) or emergency 144. I only help with exam preparation.",
   real_exam_recall: "I cannot say whether a question appeared in a real exam. I am happy to explain the content.",
   competitor_comparison: "I do not compare other providers. I am happy to help with your preparation.",
   no_verified_source: "I have no confirmed official source for this. Please check directly with the responsible office.",
   out_of_scope: "I cannot help with that. I answer questions about the exams, the procedure and your preparation.",
 });
 
+/** Authored beta copy, not signed native approval. Arabic remains English fallback. */
+export const R4_RULING_REFUSALS = {
+  ru: { text: "Я не могу решить, относится ли это к твоему случаю. Обратись напрямую в ответственное ведомство.", reviewer: null, status: "needs native review" },
+  uk: { text: "Я не можу вирішити, чи стосується це твого випадку. Звернися безпосередньо до відповідальної установи.", reviewer: null, status: "needs native review" },
+  tr: { text: "Bunun senin durumun için geçerli olup olmadığına karar veremem. Lütfen doğrudan yetkili kuruma sor.", reviewer: null, status: "needs native review" },
+} as const;
 export function refusalLine(reason: MentorRefusalReason, lang: MentorLang | null | undefined): string {
+  if (reason === "individual_ruling" && lang && lang in R4_RULING_REFUSALS) return R4_RULING_REFUSALS[lang as keyof typeof R4_RULING_REFUSALS].text;
   return (lang === "de" ? REFUSAL_LINES_DE : REFUSAL_LINES_EN)[reason];
 }
 
 /** Sentence that replaces an unsupported value (the link is appended by the validator). */
 export function fallbackLine(lang: MentorLang | null | undefined, link: string): string {
   return lang === "de"
-    ? `Diese Angabe ist nicht offiziell bestätigt. Bitte prüf sie auf der offiziellen Seite: ${link}`
+    ? `Diese Angabe ist nicht offiziell bestätigt. Bitte prüfe sie auf der offiziellen Seite: ${link}`
     : `This detail is not officially confirmed. Please check it on the official page: ${link}`;
 }
 
-const FALLBACK_PREFIXES: readonly string[] = (["de", "en"] as const).map((l) => fallbackLine(l, "\u0000").split("\u0000")[0]);
+const FALLBACK_PREFIXES: readonly string[] = [
+  ...(["de", "en"] as const).map((l) => fallbackLine(l, "\u0000").split("\u0000")[0]),
+  // Historical recovered answers use the shorter German imperative. They remain free notices.
+  "Diese Angabe ist nicht offiziell bestätigt. Bitte prüf sie auf der offiziellen Seite: ",
+  "Diese Angabe ist nicht offiziell bestätigt. Bitte prüfe sie auf der offiziellen Seite: ",
+];
 const FALLBACK_LINE_RE = new RegExp(
   FALLBACK_PREFIXES.map((p) => `${p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\S+`).join("|"),
   "gu",
@@ -137,6 +151,7 @@ const FALLBACK_LINE_RE = new RegExp(
  */
 export function isFallbackOnlyText(text: string): boolean {
   if (typeof text !== "string" || text.trim().length === 0) return false;
+  if (text.trim().split(/\n+/).every(line => isTopicNotice(line.trim()))) return true;
   let hit = false;
   const rest = text.replace(FALLBACK_LINE_RE, () => {
     hit = true;

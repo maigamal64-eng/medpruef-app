@@ -18,7 +18,8 @@ interface BottomNavProps {
 export default function BottomNav({ lang, userId }: BottomNavProps) {
   const pathname = usePathname();
   // Mentor entry (ships dark): shown only when the server says this learner may use it.
-  const mentorAvailable = useMentorAvailability() === "available";
+  const mentorAvailability = useMentorAvailability();
+  const mentorAvailable = mentorAvailability === "available" || mentorAvailability === "resting";
 
   const isActive = (key: string) => {
     if (key === "home") return pathname === "/";
@@ -52,7 +53,7 @@ export default function BottomNav({ lang, userId }: BottomNavProps) {
           <NavItem context="bottom" href="/exam" icon={<GraduationCap className="w-5 h-5" />} label={t("exam", lang)} active={isActive("exam")} className="!px-1 max-[340px]:!px-0.5 whitespace-nowrap" />
 
           {mentorAvailable && (
-            <NavItem context="bottom" href="/mentor" icon={<Brain className="w-5 h-5" />} label={mentorT("nav_label", lang)} active={isActive("mentor")} className="!px-1 max-[340px]:!px-0.5 whitespace-nowrap" />
+            <NavItem context="bottom" href="/mentor" icon={<Brain className="w-5 h-5" />} label={mentorT("nav_label", lang)} active={isActive("mentor")} className={`!px-1 max-[340px]:!px-0.5 whitespace-nowrap ${mentorAvailability === "resting" ? "opacity-50" : ""}`} />
           )}
 
           {/* CENTER: Library CTA — raised, prominent. The personal study home

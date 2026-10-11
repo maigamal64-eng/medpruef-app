@@ -17,6 +17,7 @@
  *   db_error            anything else (including the spend/cap RPCs)
  */
 
+import type { MentorTurnRow } from "@/lib/mentor/outcomes";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { checkGlobalSpend, type RpcClient } from "@/lib/ai/limits";
 import { MENTOR_DB_FLAG_KEY, RESERVE_STALE_MINUTES, type MentorConfig } from "@/lib/mentor/config";
@@ -105,7 +106,7 @@ export async function loadSummaryInputs(
   const { start, end } = monthRangeIso(month);
   const staleBefore = new Date(now.getTime() - RESERVE_STALE_MINUTES * 60_000).toISOString();
 
-  const [ledger, lots, clawbacks, stale, debts, flag] = await Promise.all([
+  const [ledger, lots, clawbacks, stale, debts, flag, turns] = await Promise.all([
     // Settled calls of the month: the spend, by-day, by-model and per-user source.
     fetchAllPages<LedgerCallRow>((from, to) =>
       client
@@ -167,6 +168,8 @@ export async function loadSummaryInputs(
       if (error) fail(error);
       return (data as DbFlagRow | null) ?? null;
     })(),
+    fetchAllPages<MentorTurnRow>((from, to) => client.from("ai_mentor_turn").select("*").gte("created_at", start).lt("created_at", end)
+      .order("request_id", { ascending: true }).range(from, to) as unknown as PageResult<MentorTurnRow>),
   ]);
 
   // Spend and cap come from the SAME two RPCs the guard calls, so the admin
@@ -184,6 +187,7 @@ export async function loadSummaryInputs(
   return {
     month,
     now,
+    turns,
     ledger,
     lots,
     clawbacks,

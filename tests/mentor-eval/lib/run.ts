@@ -115,7 +115,7 @@ export async function evaluate(input: EvalInput): Promise<EvalReport> {
 
     // Resolve what the answer cited: the loader proves derived ids (sitting.*, app.*), files prove data ids.
     const cited = new Set<string>(o.final ? [...o.final.answer_blocks.flatMap((b) => b.fact_ids), ...o.final.citations.map((x) => x.fact_id)] : []);
-    const resolved = new Map<string, { read_on?: string } | null>();
+    const resolved = new Map<string, { read_on?: string; text_en?: string; text_de?: string } | null>();
     for (const id of cited) {
       if (/^question\.\d+$/.test(id)) {
         resolved.set(id, questionIds.has(Number(id.slice(9))) ? {} : null);
@@ -134,7 +134,11 @@ export async function evaluate(input: EvalInput): Promise<EvalReport> {
     }
     const allow = [...baseAllow, ...[...resolved.values()].map((r) => r?.read_on).filter((d): d is string => typeof d === "string")];
     const ctx: ScoreContext = {
-      truthText: (globs) => (records ? factsMatching(records, globs).map((r) => `${r.text_en}\n${r.text_de}`).join("\n") : ""),
+      truthText: (globs) => {
+        const rows = new Map((records ? factsMatching(records, globs) : []).map((r) => [r.id,r]));
+        for (const id of globs) { const r=resolved.get(id); if (r && typeof r.text_en === "string" && typeof r.text_de === "string") rows.set(id,{id,text_en:r.text_en,text_de:r.text_de} as FactRecord); }
+        return [...rows.values()].map((r)=>`${r.text_en}\n${r.text_de}`).join("\n");
+      },
       resolveFact: (id) => resolved.get(id) !== null && resolved.has(id),
       officialHosts: hosts,
       alwaysAllowDates: allow,
@@ -179,6 +183,20 @@ export async function evaluate(input: EvalInput): Promise<EvalReport> {
   }
 
   const bar = evaluatePassBar(scores, input.golden.pass_bar);
+  const strictLanguageIds = new Set(cases.filter(c => c.require_language_match).map(c => c.id));
+  const strictLanguageScores = scores.filter(s => strictLanguageIds.has(s.id));
+  if (strictLanguageIds.size) {
+    const matched = strictLanguageScores.filter(s => s.checks.languageMatch === true).length;
+    bar.push({name:"native_language_match",label:"Strict native slice language match",required:"100% of selected strict cases",actual:`${matched}/${strictLanguageIds.size}`,n:strictLanguageIds.size,pass:matched === strictLanguageIds.size});
+  }
+  if (input.golden.precision_gate) {
+    const answers = scores.filter(s => s.kind === "answer");
+    const rate = answers.length ? answers.filter(s => s.soft.includes("validator_replaced")).length / answers.length : 0;
+    const leaked = scores.length ? scores.filter(s => s.critical.some(c => /date/.test(c))).length / scores.length : 0;
+    bar.push({name:"false_replacement_rate", label:"Grounded answers replaced", actual:String(rate), required:`< ${input.golden.precision_gate.false_replacement_rate_max}`, n:answers.length, pass:answers.length > 0 ? rate < input.golden.precision_gate.false_replacement_rate_max : null},
+      {name:"leaked_unsupported_date_rate",label:"Unsupported dates leaked",actual:String(leaked),required:`<= ${input.golden.precision_gate.leaked_unsupported_date_rate_max}`,n:scores.length,pass:scores.length > 0 ? leaked <= input.golden.precision_gate.leaked_unsupported_date_rate_max : null},
+      {name:"precision_case_completion",label:"Precision gate cases completed",actual:String(scores.length),required:String(cases.length),n:cases.length,pass:scores.length === cases.length && result.skippedForBudget.length === 0});
+  }
   const lang = scores.filter((s) => s.checks.languageMatch !== undefined);
   const reasons = scores.filter((s) => s.checks.reasonMatch !== undefined);
   const models = [...new Set(outcomes.flatMap((o) => o.calls.map((c) => c.model)))];

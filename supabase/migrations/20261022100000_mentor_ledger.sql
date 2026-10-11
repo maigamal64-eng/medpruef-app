@@ -20,7 +20,7 @@
 --     update, never a code change.
 --   * Every API call reserves its maximum cost first (mentor_reserve), then
 --     settles the actual cost (mentor_settle). Stale reservations settle at the
---     ceiling, billed to the user, never released.
+--     ceiling as house_cost; the learner gets the hold back.
 --
 -- Objects (all MedPruef-only, prefixed ai_ or mentor_; the Supabase project is
 -- shared with [name], nothing else is touched):
@@ -148,6 +148,7 @@ CREATE TABLE IF NOT EXISTS public.ai_mentor_reservation (
   ceiling_micro        bigint      NOT NULL CHECK (ceiling_micro > 0),
   input_settled_micro  bigint      CHECK (input_settled_micro IS NULL OR input_settled_micro >= 0),
   actual_micro         bigint      CHECK (actual_micro IS NULL OR actual_micro >= 0),
+  rate_counted         boolean     NOT NULL DEFAULT false,
   status               text        NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'settled', 'released', 'swept')),
   billed_to            text        CHECK (billed_to IS NULL OR billed_to IN ('user', 'house')),
   created_at           timestamptz NOT NULL DEFAULT now(),
@@ -163,6 +164,8 @@ CREATE TABLE IF NOT EXISTS public.ai_mentor_whop_membership (
   user_id           uuid        NOT NULL,
   package_id        text        NOT NULL REFERENCES public.ai_credit_package (package_id),
   status            text        NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
+  renews_at         timestamptz,
+  ends_at           timestamptz,
   first_payment_id  text,
   last_payment_id   text,
   created_at        timestamptz NOT NULL DEFAULT now(),
@@ -251,6 +254,83 @@ CREATE TABLE IF NOT EXISTS public.ai_usage_ledger (
 CREATE INDEX IF NOT EXISTS idx_ai_usage_ledger_user_time ON public.ai_usage_ledger (user_id, created_at);
 CREATE INDEX IF NOT EXISTS idx_ai_usage_ledger_spend ON public.ai_usage_ledger (created_at) WHERE cost_micro IS NOT NULL;
 
+-- P0 reliability records. New empty relations use CASCADE to join account erasure.
+CREATE TABLE IF NOT EXISTS public.ai_mentor_request (
+  request_id uuid PRIMARY KEY,
+  user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  client_request_id uuid NOT NULL,
+  fingerprint text NOT NULL CHECK (length(fingerprint) = 64),
+  meta jsonb NOT NULL DEFAULT '{}',
+  status text NOT NULL DEFAULT 'running' CHECK (status IN ('running','complete','error')),
+  final_event jsonb,
+  error_code text,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  completed_at timestamptz,
+  expires_at timestamptz NOT NULL DEFAULT now() + interval '24 hours',
+  UNIQUE (user_id, client_request_id)
+);
+CREATE TABLE IF NOT EXISTS public.ai_mentor_turn (
+  request_id uuid PRIMARY KEY,
+  user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  conversation_id uuid, created_at timestamptz NOT NULL DEFAULT now(),
+  entry text NOT NULL DEFAULT 'nav' CHECK (entry IN ('nav','home','question','explanation','study_plan','exam_dates','pricing','faq','telegram')),
+  channel text NOT NULL DEFAULT 'web' CHECK (channel IN ('web','telegram')), lang text NOT NULL, mode text NOT NULL,
+  question_id bigint,
+  outcome text NOT NULL CHECK (outcome IN ('answered','refused','replaced_partial','notice_only','error','blocked_402','blocked_429','blocked_cap')),
+  refusal_reason text, replaced_count integer NOT NULL DEFAULT 0,
+  calls integer NOT NULL DEFAULT 0, retries integer NOT NULL DEFAULT 0,
+  latency_ms integer NOT NULL DEFAULT 0, charged boolean NOT NULL DEFAULT false,
+  charged_micro bigint NOT NULL DEFAULT 0, house_micro bigint NOT NULL DEFAULT 0,
+  fact_ids text[] NOT NULL DEFAULT '{}', next_actions_shown text[] NOT NULL DEFAULT '{}',
+  next_action_clicked text, hint_used boolean NOT NULL DEFAULT false,
+  solution_shown boolean NOT NULL DEFAULT false, cold_cache boolean NOT NULL DEFAULT false
+);
+CREATE INDEX IF NOT EXISTS idx_ai_mentor_turn_time ON public.ai_mentor_turn(created_at,request_id);
+CREATE TABLE IF NOT EXISTS public.ai_mentor_report (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  request_id uuid NOT NULL,
+  fact_ids text[] NOT NULL DEFAULT '{}',
+  answer_text text NOT NULL CHECK (length(answer_text) BETWEEN 1 AND 20000),
+  lang text NOT NULL,
+  reason text NOT NULL CHECK (reason IN ('date_wrong','rule_wrong','explanation_unclear','question_wrong','other')),
+  details text CHECK (length(details) <= 1500),
+  status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','reviewed')),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE(user_id,request_id)
+);
+-- MUX-100 quality review. Canonical snapshots expire after 30 days, never model history.
+CREATE TABLE IF NOT EXISTS public.ai_mentor_review (
+ request_id uuid PRIMARY KEY,
+ user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+ conversation_id uuid NOT NULL,
+ question_text text NOT NULL CHECK(length(question_text)<=8000),
+ answer_text text NOT NULL CHECK(length(answer_text)<=24000),
+ lang text NOT NULL, outcome text NOT NULL,
+ citations jsonb NOT NULL DEFAULT '[]' CHECK(jsonb_typeof(citations)='array' AND jsonb_array_length(citations)<=60),
+ verdict text CHECK(verdict IN ('accept','wrong','needs_fact_change')),
+ verdict_lang text, reviewed_by uuid REFERENCES public.users(id) ON DELETE SET NULL,
+ reviewed_at timestamptz, created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_ai_mentor_review_time ON public.ai_mentor_review(created_at,request_id);
+CREATE TABLE IF NOT EXISTS public.ai_mentor_job (
+  job text PRIMARY KEY, last_run_at timestamptz NOT NULL
+);
+CREATE TABLE IF NOT EXISTS public.ai_mentor_purchase (
+  checkout_session_id uuid PRIMARY KEY,
+  whop_checkout_session_id text,
+  purchase_url text,
+  user_id uuid NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
+  package_id text NOT NULL REFERENCES public.ai_credit_package(package_id),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  expires_at timestamptz NOT NULL DEFAULT now() + interval '24 hours',
+  status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','granted','failed','refunded','expired','superseded')),
+  payment_id text, lot_id uuid, granted_micro bigint,
+  granted_at timestamptz
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_ai_mentor_purchase_pending ON public.ai_mentor_purchase(user_id,package_id) WHERE status='pending';
+CREATE UNIQUE INDEX IF NOT EXISTS idx_ai_mentor_history_turn ON public.ai_mentor_message(request_id,role) WHERE request_id IS NOT NULL;
+
 -- ─── RLS (deny all clients) ─────────────────────────────────────────────
 DO $rls$
 DECLARE
@@ -258,7 +338,8 @@ DECLARE
 BEGIN
   FOREACH t IN ARRAY ARRAY['ai_credit_package', 'ai_credit_wallet', 'ai_credit_lot', 'ai_mentor_reservation',
                            'ai_mentor_whop_membership', 'ai_mentor_rate', 'ai_mentor_message', 'ai_usage_ledger',
-                           'ai_mentor_revoked_payment'] LOOP
+                           'ai_mentor_revoked_payment', 'ai_mentor_request', 'ai_mentor_turn',
+                           'ai_mentor_report', 'ai_mentor_purchase', 'ai_mentor_job', 'ai_mentor_review'] LOOP
     EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', t);
     IF NOT EXISTS (SELECT 1 FROM pg_policies
                    WHERE schemaname = 'public' AND tablename = t AND policyname = t || '_no_client') THEN
@@ -280,6 +361,9 @@ GRANT SELECT, INSERT, UPDATE ON public.ai_mentor_rate             TO service_rol
 GRANT SELECT, INSERT, DELETE ON public.ai_mentor_message          TO service_role;
 GRANT SELECT, INSERT         ON public.ai_usage_ledger            TO service_role;
 GRANT SELECT, INSERT         ON public.ai_mentor_revoked_payment  TO service_role;
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.ai_mentor_request, public.ai_mentor_turn,
+  public.ai_mentor_report, public.ai_mentor_purchase, public.ai_mentor_job, public.ai_mentor_review TO service_role;
 
 -- ─── Helpers ────────────────────────────────────────────────────────────
 
@@ -410,7 +494,7 @@ END;
 $$;
 
 -- Settle this user's open reservations older than p_older_than at their
--- ceiling, billed to the user. Caller holds the wallet lock.
+-- ceiling, billed to the house. Caller holds the wallet lock.
 CREATE OR REPLACE FUNCTION public._mentor_sweep_user(p_user uuid, p_older_than interval)
 RETURNS integer
 LANGUAGE plpgsql
@@ -432,7 +516,7 @@ BEGIN
      FOR UPDATE
   LOOP
     PERFORM public._mentor_settle_core(v_res.request_id, v_res.call_index, v_res.ceiling_micro,
-                                       '{}'::jsonb, true, 'swept');
+                                       '{}'::jsonb, false, 'swept');
     v_n := v_n + 1;
   END LOOP;
   RETURN v_n;
@@ -578,7 +662,7 @@ BEGIN
    WHERE request_id = p_request AND call_index = p_call_index FOR UPDATE;
   IF v_res.status <> 'open' THEN
     RETURN jsonb_build_object('ok', true, 'duplicate', true, 'status', v_res.status,
-                              'charged_micro', v_res.actual_micro);
+                              'charged_micro', v_res.actual_micro, 'billed_to', v_res.billed_to);
   END IF;
   RETURN public._mentor_settle_core(p_request, p_call_index, p_actual_micro, p_usage, p_bill_user, 'settled');
 EXCEPTION WHEN OTHERS THEN
@@ -630,7 +714,7 @@ $$;
 
 -- ─── mentor_sweep_stale ─────────────────────────────────────────────────
 -- Global sweep (cron or admin): settles every open reservation older than
--- p_older_than at its ceiling, billed to the user. Never releases.
+-- p_older_than at its ceiling as house_cost. Learner funds are preserved.
 CREATE OR REPLACE FUNCTION public.mentor_sweep_stale(p_older_than interval)
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -652,6 +736,29 @@ BEGIN
     PERFORM 1 FROM public.ai_credit_wallet WHERE user_id = v_user FOR UPDATE;
     v_n := v_n + public._mentor_sweep_user(v_user, p_older_than);
   END LOOP;
+  INSERT INTO public.ai_mentor_job (job, last_run_at) VALUES ('sweep', now())
+    ON CONFLICT (job) DO UPDATE SET last_run_at = EXCLUDED.last_run_at;
+  DELETE FROM public.ai_mentor_report WHERE created_at < now() - interval '30 days';
+  DELETE FROM public.ai_mentor_review WHERE created_at < now() - interval '30 days';
+  UPDATE public.ai_mentor_request SET status = 'error', error_code = 'upstream_error', completed_at = now()
+    WHERE status = 'running' AND created_at < now() - p_older_than;
+  -- Crash backstop: finish a missing turn outcome from text-free request metadata and the ledger.
+  INSERT INTO public.ai_mentor_turn(request_id,user_id,conversation_id,created_at,entry,channel,lang,mode,question_id,
+    outcome,calls,retries,latency_ms,charged,charged_micro,house_micro,cold_cache)
+  SELECT r.request_id,r.user_id,nullif(r.meta->>'conversation_id','')::uuid,r.created_at,
+    coalesce(r.meta->>'entry','nav'),coalesce(r.meta->>'channel','web'),
+    coalesce(r.meta->>'lang','en'),coalesce(r.meta->>'mode','facts'),nullif(r.meta->>'question_id','')::bigint,
+    'error', count(l.id)::integer,0,
+    least(2147483647,extract(epoch FROM (now()-r.created_at))*1000)::integer,
+    coalesce(sum(l.cost_micro) FILTER(WHERE l.kind='settle'),0)>0,
+    coalesce(sum(l.cost_micro) FILTER(WHERE l.kind='settle'),0),
+    coalesce(sum(l.cost_micro) FILTER(WHERE l.kind='house_cost'),0),
+    coalesce(bool_or(l.id IS NOT NULL AND coalesce(l.cache_read_tokens,0)=0),false)
+  FROM public.ai_mentor_request r LEFT JOIN public.ai_usage_ledger l
+    ON l.request_id=r.request_id AND l.kind IN ('settle','house_cost')
+  WHERE r.status='error' AND r.created_at<now()-p_older_than
+  GROUP BY r.request_id ON CONFLICT(request_id) DO NOTHING;
+  UPDATE public.ai_mentor_request SET final_event = NULL WHERE expires_at < now() AND final_event IS NOT NULL;
   RETURN jsonb_build_object('ok', true, 'settled', v_n);
 EXCEPTION WHEN OTHERS THEN
   RETURN jsonb_build_object('ok', false, 'reason', 'db_error', 'sqlstate', SQLSTATE);
@@ -962,7 +1069,7 @@ END;
 $$;
 
 -- ─── mentor_attempt_take ────────────────────────────────────────────────
--- Counts ATTEMPTS (not successes) at request time: one per user message.
+-- Counts only attempts with a successful first reservation, not admission denials.
 -- Minute window is a fixed UTC minute; the day is the Europe/Vienna day,
 -- computed here. Fails closed.
 CREATE OR REPLACE FUNCTION public.mentor_attempt_take(p_user uuid, p_per_min integer, p_per_day integer)
@@ -1123,3 +1230,158 @@ COMMENT ON FUNCTION public.ai_spend_month(text) IS
   'Anthropic spend for a UTC month YYYY-MM, micro-USD: legacy ai_call_log rows plus mentor ledger consumption. service_role only.';
 
 RESET lock_timeout;
+
+-- Atomic request ownership: a running/finished/expired UUID never gets another billing key.
+CREATE OR REPLACE FUNCTION public.mentor_claim_request(p_user uuid,p_client uuid,p_request uuid,p_fingerprint text,p_meta jsonb DEFAULT '{}'::jsonb)
+RETURNS jsonb LANGUAGE plpgsql SECURITY INVOKER SET search_path=public,pg_temp AS $$
+DECLARE r public.ai_mentor_request%ROWTYPE; v_new integer;
+BEGIN
+  IF p_user IS NULL OR p_client IS NULL OR p_request IS NULL OR p_fingerprint IS NULL OR length(p_fingerprint) <> 64 THEN
+    RETURN jsonb_build_object('ok',false,'reason','invalid_args');
+  END IF;
+  -- Same owner lock as mentor erasure; a deletion cannot race a new durable claim.
+  PERFORM 1 FROM public.users WHERE id=p_user FOR UPDATE;
+  IF NOT FOUND THEN RETURN jsonb_build_object('ok',false,'reason','invalid_user'); END IF;
+  INSERT INTO public.ai_mentor_request(request_id,user_id,client_request_id,fingerprint,meta)
+    VALUES(p_request,p_user,p_client,p_fingerprint,coalesce(p_meta,'{}'::jsonb)) ON CONFLICT(user_id,client_request_id) DO NOTHING;
+  GET DIAGNOSTICS v_new=ROW_COUNT;
+  SELECT * INTO STRICT r FROM public.ai_mentor_request WHERE user_id=p_user AND client_request_id=p_client FOR UPDATE;
+  IF r.fingerprint <> p_fingerprint THEN RETURN jsonb_build_object('ok',true,'claimed',false,'result',jsonb_build_object('status','error','error','invalid_input')); END IF;
+  IF v_new=1 THEN RETURN jsonb_build_object('ok',true,'claimed',true,'request_id',r.request_id); END IF;
+  IF r.expires_at <= now() THEN RETURN jsonb_build_object('ok',true,'claimed',false,'result',jsonb_build_object('status','expired')); END IF;
+  IF r.status='complete' THEN RETURN jsonb_build_object('ok',true,'claimed',false,'result',jsonb_build_object('status','complete','final',r.final_event)); END IF;
+  IF r.status='running' AND r.created_at > now()-interval '15 minutes' THEN
+    RETURN jsonb_build_object('ok',true,'claimed',false,'result',jsonb_build_object('status','in_progress'));
+  END IF;
+  RETURN jsonb_build_object('ok',true,'claimed',false,'result',jsonb_build_object('status','error','error',coalesce(r.error_code,'upstream_error')));
+END; $$;
+
+-- Serialise checkout intents on the wallet row, before any provider session is created.
+CREATE OR REPLACE FUNCTION public.mentor_begin_purchase(p_user uuid,p_package text,p_checkout_session_id uuid,p_retry boolean DEFAULT false)
+RETURNS jsonb LANGUAGE plpgsql SECURITY INVOKER SET search_path=public,pg_temp AS $$
+DECLARE r public.ai_mentor_purchase%ROWTYPE;
+BEGIN
+  IF p_user IS NULL OR p_checkout_session_id IS NULL OR p_package IS NULL OR p_package NOT IN ('mentor_basis','mentor_plus','mentor_topup') THEN
+    RETURN jsonb_build_object('ok',false,'reason','invalid_args');
+  END IF;
+  INSERT INTO public.ai_credit_wallet(user_id) VALUES(p_user) ON CONFLICT(user_id) DO NOTHING;
+  PERFORM 1 FROM public.ai_credit_wallet WHERE user_id=p_user FOR UPDATE;
+  SELECT * INTO r FROM public.ai_mentor_purchase WHERE checkout_session_id=p_checkout_session_id;
+  IF FOUND THEN
+    IF r.user_id<>p_user OR r.package_id<>p_package THEN RETURN jsonb_build_object('ok',false,'reason','invalid_args'); END IF;
+    RETURN jsonb_build_object('ok',false,'reason','pending_purchase','checkout_session_id',r.checkout_session_id);
+  END IF;
+  IF p_package <> 'mentor_topup' AND EXISTS(SELECT 1 FROM public.ai_mentor_whop_membership WHERE user_id=p_user AND package_id=p_package AND status='active') THEN
+    RETURN jsonb_build_object('ok',false,'reason','already_subscribed');
+  END IF;
+  UPDATE public.ai_mentor_purchase SET status='expired' WHERE user_id=p_user AND status='pending' AND expires_at<=now();
+  SELECT * INTO r FROM public.ai_mentor_purchase WHERE user_id=p_user AND package_id=p_package AND status='pending' FOR UPDATE;
+  IF FOUND THEN
+    IF NOT coalesce(p_retry,false) OR r.created_at>now()-interval '30 minutes' THEN
+      RETURN jsonb_build_object('ok',false,'reason','pending_purchase','checkout_session_id',r.checkout_session_id);
+    END IF;
+    UPDATE public.ai_mentor_purchase SET status='superseded' WHERE checkout_session_id=r.checkout_session_id;
+  END IF;
+  INSERT INTO public.ai_mentor_purchase(checkout_session_id,user_id,package_id) VALUES(p_checkout_session_id,p_user,p_package);
+  RETURN jsonb_build_object('ok',true,'checkout_session_id',p_checkout_session_id);
+END; $$;
+REVOKE ALL ON FUNCTION public.mentor_claim_request(uuid,uuid,uuid,text,jsonb) FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.mentor_claim_request(uuid,uuid,uuid,text,jsonb) TO service_role;
+REVOKE ALL ON FUNCTION public.mentor_begin_purchase(uuid,text,uuid,boolean) FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.mentor_begin_purchase(uuid,text,uuid,boolean) TO service_role;
+
+-- Weekly deterministic 20-row sample with category coverage. No learner IDs cross this boundary.
+CREATE OR REPLACE FUNCTION public.mentor_review_sample() RETURNS jsonb
+LANGUAGE sql STABLE SECURITY INVOKER SET search_path=pg_catalog,public AS $$
+ WITH candidates AS (
+ SELECT r.*, CASE
+ WHEN EXISTS(SELECT 1 FROM public.ai_mentor_report p WHERE p.request_id=r.request_id AND p.user_id=r.user_id) THEN 'reported'
+ WHEN r.outcome IN ('replaced_partial','notice_only') THEN r.outcome
+ WHEN EXISTS(SELECT 1 FROM public.ai_credit_lot l WHERE l.user_id=r.user_id AND l.source='whop_payment' AND l.starts_at<=r.created_at)
+ AND NOT EXISTS(SELECT 1 FROM public.ai_mentor_turn prev WHERE prev.user_id=r.user_id AND prev.created_at<r.created_at
+ AND EXISTS(SELECT 1 FROM public.ai_credit_lot l WHERE l.user_id=prev.user_id AND l.source='whop_payment' AND l.starts_at<=prev.created_at)) THEN 'first_payer'
+ ELSE 'random' END AS category
+ FROM public.ai_mentor_review r WHERE r.created_at>=now()-interval '30 days'
+ ), ranked AS (SELECT *, row_number() OVER(PARTITION BY category ORDER BY md5(request_id::text||date_trunc('week',now() AT TIME ZONE 'UTC')::text),request_id) AS position FROM candidates),
+ sample AS (SELECT * FROM ranked ORDER BY position, CASE category WHEN 'reported' THEN 0 WHEN 'replaced_partial' THEN 1 WHEN 'notice_only' THEN 2 WHEN 'first_payer' THEN 3 ELSE 4 END,request_id LIMIT 20)
+ SELECT coalesce(jsonb_agg(jsonb_build_object('request_id',request_id,'conversation_id',conversation_id,'question_text',question_text,
+ 'answer_text',answer_text,'lang',lang,'outcome',outcome,'citations',citations,'created_at',created_at,'category',category,'verdict',verdict)
+ ORDER BY conversation_id,created_at),'[]'::jsonb) FROM sample;
+$$;
+CREATE OR REPLACE FUNCTION public.mentor_review_verdict(p_request uuid,p_verdict text,p_actor uuid) RETURNS boolean
+LANGUAGE plpgsql SECURITY INVOKER SET search_path=pg_catalog,public AS $$
+DECLARE v_lang text;
+BEGIN
+ IF p_verdict IS NULL OR p_verdict NOT IN ('accept','wrong','needs_fact_change') THEN RAISE EXCEPTION 'invalid verdict' USING ERRCODE='22023'; END IF;
+ SELECT lang INTO v_lang FROM public.ai_mentor_review WHERE request_id=p_request AND created_at>=now()-interval '30 days' FOR UPDATE;
+ IF NOT FOUND THEN RETURN false; END IF;
+ UPDATE public.ai_mentor_review SET verdict=p_verdict,verdict_lang=v_lang,reviewed_by=p_actor,reviewed_at=now() WHERE request_id=p_request;
+ INSERT INTO public.admin_audit_log(actor_id,actor_email,action,target_type,target_id,payload) VALUES(p_actor,coalesce((SELECT email FROM public.users WHERE id=p_actor),''),'mentor.review.verdict','mentor_review',p_request,jsonb_build_object('verdict',p_verdict,'lang',v_lang));
+ RETURN true;
+END $$;
+REVOKE ALL ON FUNCTION public.mentor_review_sample(),public.mentor_review_verdict(uuid,text,uuid) FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.mentor_review_sample(),public.mentor_review_verdict(uuid,text,uuid) TO service_role;
+
+-- MUX-103 instant operational controls, all initially empty. No enabled flag is changed.
+CREATE TABLE IF NOT EXISTS public.ai_mentor_control (
+ key text PRIMARY KEY CHECK(key='mentor'), paused_rollout_pct integer CHECK(paused_rollout_pct BETWEEN 0 AND 100),
+ paused_at timestamptz
+);
+CREATE TABLE IF NOT EXISTS public.ai_mentor_beta_override (
+ user_id uuid PRIMARY KEY REFERENCES public.users(id) ON DELETE CASCADE,
+ allowed boolean NOT NULL, updated_at timestamptz NOT NULL DEFAULT now()
+);
+ALTER TABLE public.ai_mentor_control ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.ai_mentor_beta_override ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.ai_mentor_control,public.ai_mentor_beta_override FROM PUBLIC,anon,authenticated;
+GRANT SELECT,INSERT,UPDATE ON public.ai_mentor_control,public.ai_mentor_beta_override TO service_role;
+CREATE OR REPLACE FUNCTION public.mentor_set_pause(p_pause boolean,p_actor uuid) RETURNS jsonb
+LANGUAGE plpgsql SECURITY INVOKER SET search_path=pg_catalog,public AS $$
+DECLARE f public.flags%ROWTYPE; previous integer;
+BEGIN
+ SELECT * INTO f FROM public.flags WHERE key='mentor' FOR UPDATE;
+ IF NOT FOUND THEN RAISE EXCEPTION 'mentor flag missing' USING ERRCODE='55000'; END IF;
+ INSERT INTO public.ai_mentor_control(key) VALUES('mentor') ON CONFLICT DO NOTHING;
+ SELECT paused_rollout_pct INTO previous FROM public.ai_mentor_control WHERE key='mentor' FOR UPDATE;
+ IF p_pause THEN
+  IF previous IS NULL THEN UPDATE public.ai_mentor_control SET paused_rollout_pct=f.rollout_pct,paused_at=now() WHERE key='mentor'; END IF;
+  UPDATE public.flags SET rollout_pct=0,updated_at=now() WHERE key='mentor';
+ ELSE
+  -- Resume can restore a recorded rollout only. It never enables an originally disabled flag.
+  IF NOT f.enabled OR previous IS NULL OR previous<=0 OR f.rollout_pct<>0 THEN RAISE EXCEPTION 'no enabled rollout to restore' USING ERRCODE='55000'; END IF;
+  UPDATE public.flags SET rollout_pct=previous,updated_at=now() WHERE key='mentor';
+  UPDATE public.ai_mentor_control SET paused_rollout_pct=NULL,paused_at=NULL WHERE key='mentor';
+ END IF;
+ INSERT INTO public.admin_audit_log(actor_id,actor_email,action,target_type,payload) VALUES(p_actor,coalesce((SELECT email FROM public.users WHERE id=p_actor),''),CASE WHEN p_pause THEN 'mentor.pause' ELSE 'mentor.resume' END,'flags',jsonb_build_object('key','mentor','previous_rollout',f.rollout_pct));
+ RETURN jsonb_build_object('paused',p_pause);
+END $$;
+CREATE OR REPLACE FUNCTION public.mentor_set_beta(p_user uuid,p_allowed boolean,p_actor uuid) RETURNS boolean
+LANGUAGE plpgsql SECURITY INVOKER SET search_path=pg_catalog,public AS $$
+BEGIN
+ IF p_user IS NULL OR p_allowed IS NULL THEN RAISE EXCEPTION 'invalid beta override' USING ERRCODE='22023'; END IF;
+ INSERT INTO public.ai_mentor_beta_override(user_id,allowed) VALUES(p_user,p_allowed)
+ ON CONFLICT(user_id) DO UPDATE SET allowed=excluded.allowed,updated_at=now();
+ INSERT INTO public.admin_audit_log(actor_id,actor_email,action,target_type,target_id,payload) VALUES(p_actor,coalesce((SELECT email FROM public.users WHERE id=p_actor),''),'mentor.beta.override','user',p_user,jsonb_build_object('allowed',p_allowed));
+ RETURN true;
+END $$;
+REVOKE ALL ON FUNCTION public.mentor_set_pause(boolean,uuid),public.mentor_set_beta(uuid,boolean,uuid) FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.mentor_set_pause(boolean,uuid),public.mentor_set_beta(uuid,boolean,uuid) TO service_role;
+
+-- MUX-27: only a successfully reserved message can enter rate counters.
+-- Service only, no model call or learner debit. Wallet lock serializes reserve/release.
+CREATE OR REPLACE FUNCTION public.mentor_reserved_attempt(p_user uuid,p_request uuid,p_per_min integer,p_per_day integer)
+RETURNS jsonb LANGUAGE plpgsql VOLATILE SECURITY INVOKER SET search_path=public,pg_temp AS $$
+DECLARE counted boolean; result jsonb;
+BEGIN
+  PERFORM 1 FROM public.ai_credit_wallet WHERE user_id=p_user FOR UPDATE;
+  IF NOT EXISTS(SELECT 1 FROM public.ai_mentor_reservation WHERE user_id=p_user AND request_id=p_request AND call_index=0 AND status='open') THEN
+    RETURN jsonb_build_object('ok',false,'reason','invalid_args');
+  END IF;
+  SELECT rate_counted INTO counted FROM public.ai_mentor_reservation WHERE user_id=p_user AND request_id=p_request AND call_index=0;
+  IF counted THEN RETURN jsonb_build_object('ok',true,'minute_used',0,'day_used',0,'duplicate',true); END IF;
+  result := public.mentor_attempt_take(p_user,p_per_min,p_per_day);
+  IF result->>'ok'='true' THEN UPDATE public.ai_mentor_reservation SET rate_counted=true WHERE user_id=p_user AND request_id=p_request AND call_index=0; END IF;
+  RETURN result;
+END; $$;
+REVOKE ALL ON FUNCTION public.mentor_reserved_attempt(uuid,uuid,integer,integer) FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.mentor_reserved_attempt(uuid,uuid,integer,integer) TO service_role;

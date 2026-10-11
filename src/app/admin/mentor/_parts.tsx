@@ -40,7 +40,7 @@ export function Section({ title, hint, children }: { title: string; hint?: strin
 }
 
 function TableWrap({ children }: { children: ReactNode }) {
-  return <div className={`${CARD} overflow-x-auto`}>{children}</div>;
+  return <div className="relative min-w-0"><div tabIndex={0} role="region" aria-label="Scrollable data table" className={`${CARD} overflow-x-auto [&_th:first-child]:sticky [&_th:first-child]:left-0 [&_th:first-child]:bg-[var(--mp-surface-raised)] [&_td:first-child]:sticky [&_td:first-child]:left-0 [&_td:first-child]:bg-[var(--mp-surface-raised)]`}>{children}</div><span aria-hidden className="pointer-events-none absolute right-0 top-0 h-full w-6 bg-gradient-to-l from-[var(--mp-surface-raised)] to-transparent" /></div>;
 }
 
 function Empty({ children }: { children: ReactNode }) {
@@ -52,9 +52,11 @@ function Empty({ children }: { children: ReactNode }) {
 export function BreakerCard({ summary }: { summary: MentorAdminSummary }) {
   const { spend, state } = summary;
   const resting = state.resting;
+  const observed = new Date(summary.generated_at);
+  const resetAt = new Date(Date.UTC(observed.getUTCFullYear(), observed.getUTCMonth()+1, 1)).toISOString().slice(0,16).replace("T"," ");
   const pct = Math.min(Math.max(spend.pct_of_cap, 0), 100);
   const tone: StatusTone = resting ? "danger" : spend.pct_of_cap >= 80 ? "warn" : "success";
-  const bar = resting ? "bg-red-500" : spend.pct_of_cap >= 80 ? "bg-amber-500" : "bg-emerald-500";
+  const bar = resting ? "bg-red-500" : spend.pct_of_cap >= 80 ? "bg-[var(--mp-warning)]" : "bg-emerald-500";
   return (
     <div className={`${CARD} p-4 sm:p-5 space-y-3`} data-testid="breaker">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -83,6 +85,7 @@ export function BreakerCard({ summary }: { summary: MentorAdminSummary }) {
         </span>
         <span className="tabular-nums">{formatPct(spend.pct_of_cap)} of cap</span>
       </div>
+      {resting && <p className="text-xs">Resumes {resetAt} UTC, or ask the release owner to review the floor. <a href="/admin/env" className="underline">Environment settings</a></p>}
       <p className="text-[11px] leading-relaxed text-[var(--mp-fg-muted)]">
         Cap is the larger of the floor and the configured share of trailing 30-day net revenue. At or over it, no new
         mentor message starts (the same two database functions the guard calls).
@@ -153,7 +156,7 @@ export function Tiles({ summary }: { summary: MentorAdminSummary }) {
       />
       <Tile
         label="Overruns"
-        value={formatCount(summary.overruns)}
+        value={`${summary.overruns > 0 ? "⚠ " : ""}${formatCount(summary.overruns)}`}
         sub="calls over their reserve"
         tone={summary.overruns > 0 ? "warn" : undefined}
       />
@@ -165,7 +168,7 @@ export function Tiles({ summary }: { summary: MentorAdminSummary }) {
       />
       <Tile
         label="Stuck holds"
-        value={formatCount(summary.stale_reservations.length)}
+        value={`${summary.stale_reservations.length > 0 ? "⚠ " : ""}${formatCount(summary.stale_reservations.length)}`}
         sub="open past the sweep age"
         tone={summary.stale_reservations.length > 0 ? "danger" : undefined}
       />
@@ -175,7 +178,7 @@ export function Tiles({ summary }: { summary: MentorAdminSummary }) {
 
 // ─── Spend per day ──────────────────────────────────────────────────────
 
-export function SpendByDay({ rows }: { rows: MentorAdminSummary["by_day"] }) {
+export function SpendByDay({ rows, timezone = "UTC" }: { rows: MentorAdminSummary["by_day"]; timezone?: "UTC" | "Europe/Vienna" }) {
   const max = Math.max(1, ...rows.map((r) => r.mentor_micro));
   const total = rows.reduce((s, r) => s + r.mentor_micro, 0);
   if (rows.length === 0 || total === 0) {
@@ -185,9 +188,9 @@ export function SpendByDay({ rows }: { rows: MentorAdminSummary["by_day"] }) {
     <div className={`${CARD} p-4 space-y-3`}>
       <div className="overflow-x-auto">
         <div
-          className="flex h-40 min-w-[36rem] items-end gap-[3px]"
+          className="flex h-40 min-w-0 items-end gap-[3px]"
           role="img"
-          aria-label={`Mentor spend per UTC day, ${formatUsd(total)} in total`}
+          aria-label={`Mentor spend per ${timezone} day, ${formatUsd(total)} in total`}
         >
           {rows.map((r) => {
             const h = (r.mentor_micro / max) * 100;
@@ -202,13 +205,13 @@ export function SpendByDay({ rows }: { rows: MentorAdminSummary["by_day"] }) {
                   className="flex w-full flex-col justify-end overflow-hidden rounded-t-sm bg-[var(--mp-accent-teal)]"
                   style={{ height: `${Math.max(h, r.mentor_micro > 0 ? 2 : 0)}%` }}
                 >
-                  {houseH > 0 && <div className="w-full bg-amber-500" style={{ height: `${houseH}%` }} />}
+                  {houseH > 0 && <div className="w-full bg-[var(--mp-warning)]" style={{ height: `${houseH}%` }} />}
                 </div>
               </div>
             );
           })}
         </div>
-        <div className="mt-1 flex min-w-[36rem] gap-[3px] text-[9px] font-mono text-[var(--mp-fg-muted)]">
+        <div className="mt-1 flex min-w-0 gap-[3px] text-[9px] font-mono text-[var(--mp-fg-muted)]">
           {rows.map((r) => (
             <span key={r.day} className="min-w-0 flex-1 text-center">
               {dayOfMonth(r.day)}
@@ -221,9 +224,9 @@ export function SpendByDay({ rows }: { rows: MentorAdminSummary["by_day"] }) {
           <i className="inline-block h-2 w-2 rounded-sm bg-[var(--mp-accent-teal)]" /> billed to users
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <i className="inline-block h-2 w-2 rounded-sm bg-amber-500" /> paid by the house
+          <i className="inline-block h-2 w-2 rounded-sm bg-[var(--mp-warning)]" /> paid by the house
         </span>
-        <span>UTC days</span>
+        <span>{timezone} days</span>
       </div>
       <details className="text-xs">
         <summary className="cursor-pointer text-[var(--mp-fg-muted)]">Daily table</summary>
@@ -231,7 +234,7 @@ export function SpendByDay({ rows }: { rows: MentorAdminSummary["by_day"] }) {
           <table className="w-full text-xs">
             <thead>
               <tr className="text-left">
-                <th className={TH}>Day (UTC)</th>
+                <th className={TH}>Day ({timezone})</th>
                 <th className={`${TH} text-right`}>Spend</th>
                 <th className={`${TH} text-right`}>Calls</th>
                 <th className={`${TH} text-right`}>House</th>
@@ -322,7 +325,7 @@ export function TopUsersTable({ rows }: { rows: MentorAdminSummary["top_users"] 
           {rows.map((r) => (
             <tr key={r.user_id} className="border-t border-[var(--mp-border-subtle)] text-[var(--mp-fg)]">
               <td className={`${TD} font-mono`} title={r.user_id}>
-                {shortId(r.user_id)}
+                <a className="underline" href={`/admin/users/${encodeURIComponent(r.user_id)}#mentor`}>{shortId(r.user_id)}</a>
               </td>
               <td className={`${TD} text-right`}>{formatUsd(r.spent_micro)}</td>
               <td className={`${TD} text-right`}>{formatCount(r.messages)}</td>
@@ -393,7 +396,7 @@ export function StaleTable({ rows }: { rows: MentorAdminSummary["stale_reservati
                 {shortId(r.request_id)}
               </td>
               <td className={`${TD} font-mono`} title={r.user_id}>
-                {shortId(r.user_id)}
+                <a className="underline" href={`/admin/users/${encodeURIComponent(r.user_id)}#mentor`}>{shortId(r.user_id)}</a>
               </td>
               <td className={`${TD} text-right`}>{r.call_index}</td>
               <td className={`${TD} text-right`}>{formatUsd(r.ceiling_micro)}</td>
@@ -426,7 +429,7 @@ export function ClawbacksTable({ rows }: { rows: MentorAdminSummary["clawbacks"]
               <td className={`${TD} font-mono`}>{r.at.slice(0, 16).replace("T", " ")}</td>
               <td className={TD}>{PACKAGE_LABEL[r.package_id] ?? r.package_id}</td>
               <td className={`${TD} font-mono`} title={r.user_id}>
-                {shortId(r.user_id)}
+                <a className="underline" href={`/admin/users/${encodeURIComponent(r.user_id)}#mentor`}>{shortId(r.user_id)}</a>
               </td>
               <td className={`${TD} font-mono`} title={r.lot_id}>
                 {shortId(r.lot_id)}

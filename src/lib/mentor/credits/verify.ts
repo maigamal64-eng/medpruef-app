@@ -2,7 +2,7 @@
  * Mentor credits: return-from-Whop verification (GET /api/mentor/checkout/verify).
  *
  * Mirrors the proven Pro verify flow (src/app/api/whop/checkout/verify):
- *   1. a whop_payment lot created for this user in the last 48 h -> granted
+ *   1. the payment lot linked to this buyer's persisted checkout -> granted
  *   2. otherwise read Whop: memberships on each configured mentor plan whose
  *      metadata names this user, then a `paid` payment on one of those
  *      memberships within 48 h -> grant through grantMentorPayment (the same
@@ -21,8 +21,9 @@ import * as Sentry from "@sentry/nextjs";
 import { extractWhopPayment, paginateWhopLedger, type WhopLedgerResult } from "@/lib/whop";
 import { mentorPackageForWhopPlan, mentorWhopPlanId, type MentorSoldPackageId } from "../config";
 import type { MentorCheckoutVerifyResponse } from "../contract";
+import { confirmedRenewal } from "./receipt";
 import { grantMentorPayment, paidAmountCents } from "./grant-payment";
-import { SOLD_PACKAGE_IDS } from "./packages";
+import { checkoutSessionFromPayment, clearPendingPurchase, getMentorPurchase, type MentorPurchase } from "./purchases";
 
 type Env = Record<string, string | undefined>;
 type Db = Pick<SupabaseClient, "from" | "rpc">;
@@ -75,40 +76,52 @@ export interface VerifyDeps {
   now?: () => number;
 }
 
-/** Step 1: has a whop_payment lot for this user landed recently? */
-async function recentLot(db: Db, userId: string, sinceIso: string, pkg: MentorSoldPackageId | null): Promise<boolean | null> {
-  let q = db
-    .from("ai_credit_lot")
-    .select("id")
-    .eq("user_id", userId)
-    .eq("source", "whop_payment")
-    .gte("created_at", sinceIso);
-  if (pkg) q = q.eq("package_id", pkg);
-  const { data, error } = await q.limit(1);
-  if (error) return null;
+/** A prior lot for the same package never confirms this purchase. */
+async function purchaseLot(db: Db, purchase: MentorPurchase): Promise<boolean> {
+  if (!purchase.payment_id) return false;
+  const { data, error } = await db.from("ai_credit_lot").select("id")
+    .eq("user_id", purchase.user_id).eq("package_id", purchase.package_id)
+    .eq("source", "whop_payment").eq("source_id", purchase.payment_id).eq("status", "live").limit(1);
+  if (error) return false;
   return Array.isArray(data) && data.length > 0;
+}
+
+/** Provider row must carry this checkout's correlation, never merely this user's plan. */
+function belongsToPurchase(row: unknown, purchase: MentorPurchase, membershipMatches: boolean): boolean {
+  const d = rec(row);
+  const explicit = checkoutSessionFromPayment(row);
+  if (explicit) return explicit === purchase.checkout_session_id;
+  const external = str(d.checkout_session_id) ?? str(d.checkout_configuration_id)
+    ?? str(rec(d.checkout_configuration).id) ?? str(rec(d.checkout_session).id);
+  if (external) return external === purchase.whop_checkout_session_id;
+  // Whop may retain checkout metadata only on the membership. In that case
+  // require the exact correlated membership AND a payment made after checkout.
+  return membershipMatches;
 }
 
 export async function verifyMentorCheckout(
   deps: VerifyDeps,
   userId: string,
   onlyPackage: MentorSoldPackageId | null,
+  checkoutSessionId: string | null = null,
 ): Promise<MentorCheckoutVerifyResponse["status"]> {
+  if (!checkoutSessionId) return "pending";
+  const purchase = await getMentorPurchase(deps.db, userId, checkoutSessionId);
+  if (!purchase || (onlyPackage && onlyPackage !== purchase.package_id)) return "pending";
+  if (purchase.status === "failed" || purchase.status === "refunded") return "failed";
+  if (await purchaseLot(deps.db, purchase)) return "granted";
+
   const env = deps.env ?? process.env;
   const now = deps.now ? deps.now() : Date.now();
-  const cutoff = now - VERIFY_WINDOW_MS;
+  const cutoff = Math.max(now - VERIFY_WINDOW_MS, Date.parse(purchase.created_at));
   const ledger = deps.ledger ?? paginateWhopLedger;
-
-  const hit = await recentLot(deps.db, userId, new Date(cutoff).toISOString(), onlyPackage);
-  if (hit) return "granted";
-
   if (!deps.apiKey) return "pending";
-  const plans = (onlyPackage ? [onlyPackage] : [...SOLD_PACKAGE_IDS])
-    .map((p) => ({ pkg: p, plan: mentorWhopPlanId(p, env) }))
-    .filter((x): x is { pkg: MentorSoldPackageId; plan: string } => Boolean(x.plan));
-  if (plans.length === 0) return "pending";
+  const planId = mentorWhopPlanId(purchase.package_id, env);
+  if (!planId) return "pending";
+  const plans = [{ pkg: purchase.package_id, plan: planId }];
 
   // Memberships on the mentor plans whose metadata names this user.
+  const renewals = new Map<string, string>();
   const mine = new Map<string, MentorSoldPackageId>();
   let truncated = false;
   try {
@@ -128,14 +141,14 @@ export async function verifyMentorCheckout(
         const metaUser = str(meta.medpruef_user_id) ?? str(meta.user_id);
         const status = str(d.status);
         const valid = d.valid === true || d.valid === "true" || (status !== null && VALID_MEMBERSHIP.has(status));
-        if (id && metaUser === userId && valid) mine.set(id, pkg);
+        if (id && metaUser === userId && valid && checkoutSessionFromPayment(m) === purchase.checkout_session_id) { mine.set(id, pkg); const date = confirmedRenewal(m); if (date) renewals.set(id, date); }
       }
     }
   } catch (err) {
     Sentry.captureException(err, { tags: { route: "mentor/checkout/verify", step: "memberships" } });
     return "pending";
   }
-  if (mine.size === 0) return "pending";
+
 
   let payments: WhopLedgerResult;
   try {
@@ -156,7 +169,10 @@ export async function verifyMentorCheckout(
     const f = extractWhopPayment(row);
     const memberRaw = str(rec(rec(row).member).id) ?? str(rec(row).member_id);
     const membershipId = [f.membershipId, memberRaw].find((x): x is string => Boolean(x && mine.has(x))) ?? null;
-    if (!membershipId || !f.paymentId) continue;
+    if (!f.paymentId || !belongsToPurchase(row, purchase, Boolean(membershipId))) continue;
+    if (f.metaUserId && f.metaUserId !== userId) continue;
+    const rowPackage = mentorPackageForWhopPlan(f.planId, env);
+    if (rowPackage && rowPackage !== purchase.package_id) continue;
     const at = createdMs(row);
     if (at === null || at < cutoff) continue;
     const status = str(rec(row).status);
@@ -168,20 +184,27 @@ export async function verifyMentorCheckout(
       if (status && FAILED_PAYMENT.has(status)) sawFailed = true;
       continue;
     }
-    const pkg = mentorPackageForWhopPlan(f.planId, env) ?? (mine.get(membershipId) as MentorSoldPackageId);
+    const pkg = purchase.package_id;
     const g = await grantMentorPayment(deps.db, {
       userId,
       packageId: pkg,
       paymentId: f.paymentId,
-      membershipId,
+      membershipId: membershipId ?? f.membershipId,
       paidCents: paidAmountCents(row),
       currency: f.currency,
+      checkoutSessionId: purchase.checkout_session_id,
+      renewsAt: membershipId ? renewals.get(membershipId) ?? null : confirmedRenewal(rec(row).membership),
     });
     if (g.kind === "granted" || g.kind === "duplicate") return "granted";
     if (g.kind === "retry") return "pending";
     Sentry.captureMessage(`mentor verify: payment ${f.paymentId} cannot be granted (${g.reason}); manual grant needed`, "error");
+    await clearPendingPurchase(deps.db, { status: "failed", checkoutSessionId: purchase.checkout_session_id });
     return "failed";
   }
   if (payments.truncated || truncated) return "pending";
-  return sawFailed ? "failed" : "pending";
+  if (sawFailed) {
+    await clearPendingPurchase(deps.db, { status: "failed", checkoutSessionId: purchase.checkout_session_id });
+    return "failed";
+  }
+  return "pending";
 }

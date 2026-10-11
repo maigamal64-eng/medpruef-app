@@ -47,18 +47,18 @@ describe("usageView", () => {
     }
   });
 
-  it("shows credits and messages, never money", () => {
+  it("shows credits and a stable cost explanation, never money", () => {
     const v = usageView(FIXTURE_USAGE.ok, "en", NOW);
     expect(v.creditsText).toBe("142 credits");
-    expect(v.messagesText).toBe("about 142 messages");
+    expect(v.messagesText).toBe("A short question usually costs less than one credit, long answers more.");
     expect(`${v.creditsText}${v.messagesText}`).not.toMatch(/\$|USD|dollar/i);
   });
 
-  it("mentions expiry only when it is near and credits remain", () => {
+  it("mentions any future lot expiry including exhausted lots", () => {
     const soon = { ...FIXTURE_USAGE.ok, next_expiry: "2026-10-15T00:00:00Z" };
     expect(usageView(soon, "de", NOW).expiryText).toContain("2026");
-    expect(usageView({ ...FIXTURE_USAGE.ok, next_expiry: "2026-12-01T00:00:00Z" }, "de", NOW).expiryText).toBeNull();
-    expect(usageView({ ...soon, credits_left: 0 }, "de", NOW).expiryText).toBeNull();
+    expect(usageView({ ...FIXTURE_USAGE.ok, next_expiry: "2026-12-01T00:00:00Z" }, "de", NOW).expiryText).not.toBeNull();
+    expect(usageView({ ...soon, credits_left: 0 }, "de", NOW).expiryText).not.toBeNull();
     expect(usageView({ ...soon, next_expiry: "2026-10-01T00:00:00Z" }, "de", NOW).expiryText).toBeNull();
   });
 
@@ -85,10 +85,12 @@ describe("errorView", () => {
     expect(errorView("credits_exhausted").action).toBe("packages");
     expect(errorView("unauthenticated").action).toBe("signin");
     expect(errorView("input_too_large").action).toBe("new_chat");
-    for (const c of ["ai_disabled", "global_cap", "reserve_failed", "upstream_error", "network", "unknown"] as const) {
+    for (const c of ["reserve_failed", "upstream_error", "network", "unknown"] as const) {
       expect(errorView(c).action).toBe("retry");
     }
-    expect(errorView("locked_today").action).toBe("none");
+    for (const c of ["ai_disabled", "global_cap", "mentor_resting"] as const) expect(errorView(c)).toMatchObject({ tone: "info", action: "none" });
+    expect(errorView("invalid_input").action).toBe("rephrase");
+    expect(errorView("invalid_input", {reason:"question_access"}).action).toBe("pro");
     expect(errorView("mentor_disabled").action).toBe("none");
   });
 

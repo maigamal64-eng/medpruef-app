@@ -8,6 +8,7 @@
 
 import type { Brain, FactsLoader, RunMentorTurn } from "@/lib/mentor/seam";
 import type { BrainEnv, HarnessParts } from "./harness";
+import { trustFactLoader } from "./trust-facts";
 
 export class RealPartsMissing extends Error {
   constructor(spec: string, owner: string, cause: unknown) {
@@ -55,10 +56,16 @@ export async function loadRealParts(): Promise<HarnessParts> {
   } catch {
     officialLinks = undefined;
   }
-  return {
+  const parts: HarnessParts = {
     officialLinks,
     createRunTurn: (alert) => createRunTurn({ alert }),
     brainFactory: (env: BrainEnv) => createBrain({ facts, db: env.db, canFreeRead: env.canFreeRead, clock: env.clock }),
     facts,
   };
+  parts.forCase = (c) => {
+    if (!c.fact_scenario) return parts;
+    const fixtureFacts = trustFactLoader(c.fact_scenario);
+    return { ...parts, forCase: undefined, facts: fixtureFacts, brainFactory: (env) => createBrain({ facts: fixtureFacts, db: env.db, canFreeRead: env.canFreeRead, clock: env.clock }) };
+  };
+  return parts;
 }

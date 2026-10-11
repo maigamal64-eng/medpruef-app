@@ -28,14 +28,20 @@ import {
   type MentorHttpError,
   type MentorServices,
 } from "@/lib/mentor/guard";
+import type { MentorRequestStore } from "@/lib/mentor/requests";
+import { makeTurnRow, type MentorTurnRow } from "@/lib/mentor/outcomes";
 import { admitTurn } from "@/lib/mentor/turn";
 
 export type MentorAuth = { ok: true; userId: string; paidAccess: boolean } | { ok: false };
 
 export interface ChatHandlerDeps {
   config: MentorConfig;
+  requests: MentorRequestStore;
+  recordTurn(row: MentorTurnRow): Promise<void>;
+  recordReview?(input: { requestId: string; userId: string; request: import("@/lib/mentor/contract").MentorChatRequest; final: MentorFinalEvent }): Promise<void>;
   authenticate(req: Request): Promise<MentorAuth>;
   flag: FlagFn;
+  betaAllowed?(userId: string): Promise<boolean>;
   rpc: RpcClient;
   services(): MentorServices | null;
   meterFor(userId: string): Meter;
@@ -92,7 +98,7 @@ export async function handleMentorChat(req: Request, d: ChatHandlerDeps): Promis
   const { userId, paidAccess } = auth;
 
   // 2 + 3. switches (AI master, mentor master, allowlist, DB flag)
-  const denied = await checkMentorAccess(d.config, userId, d.flag);
+  const denied = await checkMentorAccess(d.config, userId, d.flag, d.betaAllowed);
   if (denied) return errorResponse(denied);
 
   // 4. input
@@ -101,45 +107,95 @@ export async function handleMentorChat(req: Request, d: ChatHandlerDeps): Promis
   const parsed = parseChatRequest(body.value);
   if (!parsed.ok) return errorResponse(parsed.error);
   const request = parsed.request;
+  // This route is the web transport. A Telegram adapter has not passed its release gates.
+  if (request.channel === "telegram" || request.entry === "telegram") return errorResponse(mentorError("invalid_input"));
   if (request.question_id !== undefined && !paidAccess) {
     try {
-      if (!(await d.canReadQuestion(userId, request.question_id))) return errorResponse(mentorError("invalid_input"));
+      if (!(await d.canReadQuestion(userId, request.question_id))) return errorResponse(mentorError("invalid_input", { reason: "question_access" }));
     } catch {
       return errorResponse(mentorError("reserve_failed"));
     }
   }
 
   const now = d.clock.now();
+  let requestId: string;
+  try {
+    const claim = await d.requests.claim(userId, request, d.newRequestId());
+    if (!claim.claimed) {
+      if (claim.result.status === "complete" && claim.result.final) return new Response(sseFrame(claim.result.final), { headers: { ...SSE_HEADERS } });
+      if (claim.result.status === "in_progress") return new Response(sseFrame({ type: "in_progress", client_request_id: request.client_request_id }), { headers: { ...SSE_HEADERS } });
+      return errorResponse(mentorError(claim.result.error ?? "upstream_error"));
+    }
+    requestId = claim.requestId;
+  } catch {
+    return errorResponse(mentorError("reserve_failed"));
+  }
+  const startedMs = Date.now();
+  const recordedSettles = new Set<number>();
+  const stats = { calls: 0, retries: 0, chargedMicro: 0, houseMicro: 0, coldCache: false };
+  const record = async (final: MentorFinalEvent | null, error?: import("@/lib/mentor/contract").MentorErrorCode) => {
+    try {
+      await d.recordTurn(makeTurnRow({ requestId, userId, request, startedAt: now, final, error, latencyMs: Date.now() - startedMs, ...stats }));
+    } catch {
+      d.alert("mentor outcome write failed", { route: "/api/mentor/chat", userId, requestId });
+    }
+  };
+  const finish = async (final: MentorFinalEvent | import("@/lib/mentor/contract").MentorErrorCode) => {
+    try { await d.requests.finish(userId, requestId, final); }
+    catch { d.alert("mentor result write failed", { route: "/api/mentor/chat", userId, requestId }); }
+  };
+  const blocked = async (e: MentorHttpError) => {
+    await record(null, e.body.error);
+    await finish(e.body.error);
+    return errorResponse(e);
+  };
 
-  // 5. attempts (counted before any model call)
-  const limited = await takeMentorAttempt(d.rpc, d.config, userId, now);
-  if (limited) return errorResponse(limited);
 
   // 6. global breaker
   const resting = await checkMentorBreaker(d.rpc, d.config, now);
-  if (resting) return errorResponse(resting);
+  if (resting) return blocked(resting);
 
   // 7. wallet, history, admission
   const services = d.services();
   if (!services) {
     d.alert("mentor services not wired (resolveMentorServices returned null)", { route: "/api/mentor/chat", userId });
-    return errorResponse(mentorError("reserve_failed"));
+    return blocked(mentorError("reserve_failed"));
   }
   try {
     await services.wallet.ensureIncludedGrants(userId, now);
   } catch (err) {
     d.alert(`ensureIncludedGrants failed: ${String((err as Error)?.message ?? err)}`, { route: "/api/mentor/chat", userId });
-    return errorResponse(mentorError("reserve_failed"));
+    return blocked(mentorError("reserve_failed"));
   }
   let conversation: Awaited<ReturnType<ConversationStore["resolve"]>>;
   try {
     conversation = await d.conversations.resolve(userId, request.conversation_id);
   } catch {
-    return errorResponse(mentorError("reserve_failed"));
+    return blocked(mentorError("reserve_failed"));
   }
 
   const deps: MentorDeps = {
-    meter: d.meterFor(userId),
+    meter: (() => {
+      const meter = d.meterFor(userId);
+      return {
+        ...meter,
+        async reserve(...args: Parameters<Meter["reserve"]>) {
+          const r = await meter.reserve(...args);
+          if (r.ok && !r.duplicate) stats.calls++;
+          return r;
+        },
+        async settle(...args: Parameters<Meter["settle"]>) {
+          const r = await meter.settle(...args);
+          if (r.ok && r.billedTo && !recordedSettles.has(args[1])) {
+            recordedSettles.add(args[1]);
+            if (r.billedTo === "user") stats.chargedMicro += r.chargedMicro ?? 0;
+            else stats.houseMicro += r.chargedMicro ?? 0;
+            if ((args[3].cache_read_input_tokens ?? 0) === 0) stats.coldCache = true;
+          }
+          return r;
+        },
+      };
+    })(),
     brain: services.brain,
     facts: services.facts,
     callClaude: d.callClaude,
@@ -149,7 +205,7 @@ export async function handleMentorChat(req: Request, d: ChatHandlerDeps): Promis
     config: d.config,
   };
   const input: MentorTurnInput = {
-    requestId: d.newRequestId(),
+    requestId,
     userId,
     conversationId: conversation.conversationId,
     request,
@@ -158,7 +214,27 @@ export async function handleMentorChat(req: Request, d: ChatHandlerDeps): Promis
   };
 
   const admit = await admitTurn(deps, input);
-  if (!admit.ok) return errorResponse(mentorError(admit.error));
+  if (!admit.ok) return blocked(mentorError(admit.error));
+
+  // Only admitted, successfully reserved messages enter the rate counters.
+  // Cache the first reserve for the loop; its internal admission already passed.
+  const firstReserve = await deps.meter.reserve(requestId, 0, admit.ceilingMicro);
+  if (!firstReserve.ok || firstReserve.duplicate) return blocked(mentorError(firstReserve.reason === "insufficient" ? "credits_exhausted" : "reserve_failed"));
+  const limited = await takeMentorAttempt(d.rpc, d.config, userId, now, requestId);
+  if (limited) {
+    await deps.meter.release(requestId, 0);
+    return blocked(limited);
+  }
+  const realReserve = deps.meter.reserve.bind(deps.meter);
+  let initialHold = true;
+  deps.meter.reserve = async (id, index, ceiling) => {
+    if (initialHold && id === requestId && index === 0 && ceiling === admit.ceilingMicro) {
+      initialHold = false;
+      return firstReserve;
+    }
+    return realReserve(id, index, ceiling);
+  };
+  input.admitted = true;
 
   // 8. stream
   const encoder = new TextEncoder();
@@ -181,26 +257,21 @@ export async function handleMentorChat(req: Request, d: ChatHandlerDeps): Promis
     }
   };
 
+  const heartbeat = setInterval(() => emit({ type: "heartbeat" }), 10_000);
   const task = (async () => {
     let final: MentorFinalEvent | null = null;
+    let error: import("@/lib/mentor/contract").MentorErrorCode | undefined;
     try {
       for await (const ev of d.runTurn(deps, input)) {
-        emit(ev);
-        if (ev.type === "final") final = ev;
+        if (ev.type === "final") final = { ...ev, request_id: requestId, ...(request.question_id ? { question_id: request.question_id } : {}) };
+        else if (ev.type === "error") { error = ev.error; stats.retries = ev.retries ?? 0; }
+        else emit(ev);
       }
     } catch (err) {
       d.alert(`mentor turn threw: ${String((err as Error)?.message ?? err)}`, { route: "/api/mentor/chat", userId, requestId: input.requestId });
-      emit({ type: "error", error: "upstream_error" });
-    } finally {
-      if (open && controller) {
-        try {
-          (controller as ReadableStreamDefaultController<Uint8Array>).close();
-        } catch {
-          /* already closed */
-        }
-      }
+      error = "upstream_error";
     }
-    if (final) {
+    if (final && final.result !== "notice") {
       const factIds = [...new Set(final.answer_blocks.flatMap((b) => b.fact_ids))];
       const saved = await d.conversations.append({
         conversationId: input.conversationId,
@@ -212,8 +283,18 @@ export async function handleMentorChat(req: Request, d: ChatHandlerDeps): Promis
         assistantText: final.answer_blocks.map((b) => b.text).join("\n\n"),
         factIds,
         refused: final.refused,
-      });
+      }).catch(() => false);
       if (!saved) d.alert("mentor history write failed", { route: "/api/mentor/chat", userId, requestId: input.requestId });
+    }
+    if (final && d.recordReview) await d.recordReview({ requestId, userId, request, final }).catch(() => d.alert("mentor review snapshot write failed", { requestId }));
+    if (initialHold) await deps.meter.release(requestId, 0);
+    clearInterval(heartbeat);
+    stats.retries = final?.retries ?? stats.retries;
+    await record(final, error);
+    await finish(final ?? error ?? "upstream_error");
+    emit(final ?? { type: "error", error: error ?? "upstream_error" });
+    if (open && controller) {
+      try { (controller as ReadableStreamDefaultController<Uint8Array>).close(); } catch { /* closed */ }
     }
   })();
   d.background(task);

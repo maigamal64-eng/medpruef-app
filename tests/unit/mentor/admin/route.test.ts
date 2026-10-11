@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
+import { buildMentorQuality } from "@/app/api/mentor/admin/summary/quality";
 import { stubClient } from "./stub-client";
 
 const h = vi.hoisted(() => ({
@@ -26,7 +27,7 @@ const grant = (...permissions: string[]) => ({ roles: [{ key: "owner", name: "Ow
 function liveClient() {
   return stubClient({
     tables: { ai_usage_ledger: [], ai_credit_lot: [], ai_mentor_reservation: [], ai_credit_wallet: [], flags: [] },
-    rpc: { ai_spend_month: { data: 1_000 }, ai_spend_cap: { data: 50_000_000 } },
+    rpc: { mentor_admin_snapshot: { data: { mentor_micro:0,by_day:[],by_model:[],top_users:[],lots_by_package:[],stale_reservations:[],clawbacks:[],overruns:0,debt_total_micro:0,quality:buildMentorQuality([]) } }, ai_spend_month: { data: 1_000 }, ai_spend_cap: { data: 50_000_000 } },
   });
 }
 
@@ -110,7 +111,7 @@ describe("GET /api/mentor/admin/summary: outcome", () => {
 
   it("503 ledger_not_applied is expected before R3 and is NOT sent to Sentry", async () => {
     h.getServiceClient.mockReturnValue(
-      stubClient({ tables: {}, errors: { ai_usage_ledger: { code: "42P01", message: "does not exist" } } }).client,
+      stubClient({ tables: {}, rpc: { mentor_admin_snapshot: { error: { code: "PGRST202", message: "does not exist" } } } }).client,
     );
     const res = await GET(req());
     expect(res.status).toBe(503);

@@ -135,6 +135,8 @@ describe("get_question", () => {
     const brain = createMentorBrain({ facts: makeLoader(), db: () => db });
     const r = await brain.runTool("get_question", { id: 42 }, ctx());
     expect(r.isError).toBeFalsy();
+    expect(JSON.parse(r.content).question.choices.every((c: Record<string, unknown>) => !("label" in c))).toBe(true);
+    expect(r.content).toContain("Name an option by its text");
     expect(calls[0].select).toBe(QUESTION_COLUMNS);
     expect(calls[0].filters).toEqual([
       ["eq", "id", 42],

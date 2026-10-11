@@ -12,9 +12,24 @@ import { CONV, USER, config, makeDeps, usage, type Step } from "./helpers";
 const R = replies as Record<string, unknown>;
 const NEW_REQ = "44444444-4444-4444-8444-444444444444";
 
+function memoryRequests(): import("@/lib/mentor/requests").MentorRequestStore {
+  const rows = new Map<string, import("@/lib/mentor/contract").MentorChatResultResponse>();
+  return {
+    async claim(u, req, id) {
+      const key = u + req.client_request_id;
+      const r = rows.get(key);
+      if (r) return { claimed: false, result: r };
+      rows.set(key, { status: "in_progress" });
+      return { claimed: true, requestId: id };
+    },
+    async finish(u, id, r) { rows.set(u + id, typeof r === "string" ? { status: "error", error: r } : { status: "complete", final: r }); },
+    async result(u, id) { return rows.get(u + id) ?? { status: "missing" }; },
+  };
+}
+
 function rpc(over: Record<string, unknown> = {}) {
   const map: Record<string, unknown> = {
-    mentor_attempt_take: R.attempt_ok,
+    mentor_reserved_attempt: R.attempt_ok,
     ai_spend_month: R.spend_month,
     ai_spend_cap: R.spend_cap,
     mentor_sweep_stale: { ok: true, settled: 2 },
@@ -45,7 +60,7 @@ function memoryConversations(): ConversationStore & { appended: AppendTurn[] } {
   };
 }
 
-function chatSetup(steps: Step[], over: Partial<ChatHandlerDeps> = {}, opts: { grantMicro?: number } = { grantMicro: 200_000 }) {
+export function chatSetup(steps: Step[], over: Partial<ChatHandlerDeps> = {}, opts: { grantMicro?: number } = { grantMicro: 200_000 }) {
   const env = makeDeps(steps, { grantMicro: opts.grantMicro });
   const tasks: Promise<unknown>[] = [];
   const alerts: string[] = [];
@@ -53,6 +68,8 @@ function chatSetup(steps: Step[], over: Partial<ChatHandlerDeps> = {}, opts: { g
   const client = rpc();
   const deps: ChatHandlerDeps = {
     config: env.deps.config,
+    requests: memoryRequests(),
+    recordTurn: async () => {},
     authenticate: async () => ({ ok: true, userId: USER, paidAccess: true }),
     flag: async () => true,
     rpc: client,
@@ -76,7 +93,7 @@ function chatSetup(steps: Step[], over: Partial<ChatHandlerDeps> = {}, opts: { g
   return { env, deps, tasks, alerts, conversations, client };
 }
 
-function post(body: unknown, headers: Record<string, string> = {}): Request {
+export function post(body: unknown, headers: Record<string, string> = {}): Request {
   return new Request("http://localhost/api/mentor/chat", {
     method: "POST",
     headers: { "content-type": "application/json", ...headers },
@@ -84,7 +101,7 @@ function post(body: unknown, headers: Record<string, string> = {}): Request {
   });
 }
 
-const GOOD = { message: "Wie melde ich mich an?", lang: "de", mode: "facts" };
+const GOOD = { client_request_id: NEW_REQ, message: "Wie melde ich mich an?", lang: "de", mode: "facts" };
 
 async function readEvents(res: Response): Promise<MentorSseEvent[]> {
   const text = await res.text();
@@ -133,7 +150,7 @@ describe("POST /api/mentor/chat handler: gates in order", () => {
   });
 
   it("429 with Retry-After when the attempt limit is hit", async () => {
-    const s = chatSetup([], { rpc: rpc({ mentor_attempt_take: R.attempt_minute }) });
+    const s = chatSetup([], { rpc: rpc({ mentor_reserved_attempt: R.attempt_minute }) });
     const res = await handleMentorChat(post(GOOD), s.deps);
     expect(res.status).toBe(429);
     expect(Number(res.headers.get("retry-after"))).toBeGreaterThan(0);
@@ -143,7 +160,7 @@ describe("POST /api/mentor/chat handler: gates in order", () => {
   it("503 global_cap when the breaker trips; 503 reserve_failed when the attempt RPC fails", async () => {
     const capped = chatSetup([], { rpc: rpc({ ai_spend_month: 60_000_000 }) });
     expect(await (await handleMentorChat(post(GOOD), capped.deps)).json()).toEqual({ error: "global_cap" });
-    const broken = chatSetup([], { rpc: rpc({ mentor_attempt_take: new Error("db") }) });
+    const broken = chatSetup([], { rpc: rpc({ mentor_reserved_attempt: new Error("db") }) });
     expect(await (await handleMentorChat(post(GOOD), broken.deps)).json()).toEqual({ error: "reserve_failed" });
   });
 
@@ -171,6 +188,12 @@ describe("POST /api/mentor/chat handler: gates in order", () => {
 });
 
 describe("POST /api/mentor/chat handler: stream", () => {
+  it("notice finals persist for recovery but never feed conversation history", async () => {
+    const s = chatSetup([], { runTurn: async function* () { yield { type: "final", result: "notice", reason: "empty", charged: false, conversation_id: CONV, answer_blocks: [{ text: "No information.", fact_ids: [], replaced: true }], citations: [], credits_left: 40, messages_left_estimate: 10 }; } });
+    const events = await readEvents(await handleMentorChat(post(GOOD), s.deps)); await Promise.all(s.tasks);
+    expect(events.at(-1)).toMatchObject({ result: "notice", reason: "empty", charged: false }); expect(s.conversations.appended).toHaveLength(0);
+    const recovered = await s.deps.requests.result(USER, NEW_REQ); expect(recovered.status).toBe("complete"); expect(recovered.final?.result).toBe("notice");
+  });
   it("SSE frames, headers, history written after final, ledger reconciled", async () => {
     const s = chatSetup([{ text: "Online über das Portal.", usage: usage(900, 120) }]);
     const res = await handleMentorChat(post(GOOD), s.deps);
@@ -179,7 +202,7 @@ describe("POST /api/mentor/chat handler: stream", () => {
     expect(res.headers.get("cache-control")).toContain("no-transform");
     const events = await readEvents(res);
     await Promise.all(s.tasks);
-    expect(events.map((e) => e.type)).toEqual(["delta", "final"]);
+    expect(events.map((e) => e.type)).toEqual(["status", "delta", "final"]);
     expect(s.conversations.appended).toHaveLength(1);
     expect(s.conversations.appended[0]).toMatchObject({ userId: USER, requestId: NEW_REQ, userText: GOOD.message, assistantText: "Online über das Portal." });
     expect(s.env.ledger.reconciles(USER)).toBe(true);
@@ -216,8 +239,7 @@ describe("POST /api/mentor/chat handler: stream", () => {
   });
 });
 
-describe("GET /api/mentor/usage handler", () => {
-  function usageSetup(grantMicro: number, over: Partial<UsageHandlerDeps> = {}) {
+  export function usageSetup(grantMicro: number, over: Partial<UsageHandlerDeps> = {}) {
     const env = makeDeps([], { grantMicro });
     const deps: UsageHandlerDeps = {
       config: config(),
@@ -236,6 +258,8 @@ describe("GET /api/mentor/usage handler", () => {
   }
   const get = () => new Request("http://localhost/api/mentor/usage");
 
+describe("GET /api/mentor/usage handler", () => {
+
   it("ok with credits, estimate, sources and subscriptions", async () => {
     const res = await handleMentorUsage(get(), usageSetup(500_000));
     const body = (await res.json()) as MentorUsageResponse;
@@ -247,7 +271,8 @@ describe("GET /api/mentor/usage handler", () => {
 
   it("none, low, exhausted, resting", async () => {
     expect(((await (await handleMentorUsage(get(), usageSetup(0))).json()) as MentorUsageResponse).state).toBe("none");
-    expect(((await (await handleMentorUsage(get(), usageSetup(50_000))).json()) as MentorUsageResponse).state).toBe("low");
+    expect(((await (await handleMentorUsage(get(), usageSetup(45_000))).json()) as MentorUsageResponse).state).toBe("low");
+    expect(((await (await handleMentorUsage(get(), usageSetup(50_000))).json()) as MentorUsageResponse).state).toBe("ok");
     expect(((await (await handleMentorUsage(get(), usageSetup(1_000))).json()) as MentorUsageResponse).state).toBe("exhausted");
     const resting = usageSetup(500_000, { rpc: rpc({ ai_spend_month: 60_000_000 }) });
     expect(((await (await handleMentorUsage(get(), resting)).json()) as MentorUsageResponse).state).toBe("resting");
@@ -255,7 +280,7 @@ describe("GET /api/mentor/usage handler", () => {
 
   it("gates: 401, 403 when dark, 503 when not wired", async () => {
     expect((await handleMentorUsage(get(), usageSetup(1, { authenticate: async () => ({ ok: false }) }))).status).toBe(401);
-    expect((await handleMentorUsage(get(), usageSetup(1, { config: config({ enabled: false }) }))).status).toBe(403);
+    expect((await handleMentorUsage(get(), usageSetup(0, { config: config({ enabled: false }) }))).status).toBe(403);
     expect((await handleMentorUsage(get(), usageSetup(1, { services: () => null }))).status).toBe(503);
   });
 
@@ -326,9 +351,81 @@ describe("GET /api/cron/mentor-sweep handler", () => {
     expect((await handleMentorSweep(req("Bearer s"), { cronSecret: undefined, rpc: rpc(), alert: (m) => alerts.push(m) })).status).toBe(503);
     expect((await handleMentorSweep(req("Bearer wrong"), { cronSecret: "s3cret", rpc: rpc(), alert: () => {} })).status).toBe(401);
     expect((await handleMentorSweep(req(), { cronSecret: "s3cret", rpc: rpc(), alert: () => {} })).status).toBe(401);
-    const ok = await handleMentorSweep(req("Bearer s3cret"), { cronSecret: "s3cret", rpc: rpc(), alert: () => {} });
+    const ok = await handleMentorSweep(req("Bearer s3cret"), { cronSecret: "s3cret", rpc: rpc(), alert: m => alerts.push(m) });
+    expect(alerts).toContain("mentor sweep recovered 2 stale holds on the house");
     expect(await ok.json()).toEqual({ ok: true, settled: 2 });
     const broken = await handleMentorSweep(req("Bearer s3cret"), { cronSecret: "s3cret", rpc: rpc({ mentor_sweep_stale: new Error("x") }), alert: () => {} });
     expect(broken.status).toBe(503);
+  });
+});
+
+
+describe("MUX-35: transport retries never make a second charge", () => {
+  it("drops the stream, waits for settlement, then replays one stored final and one history pair", async () => {
+    let ids = 0;
+    const s = chatSetup([{ text: "Fertig.", usage: usage(900, 120) }, { text: "Fertig.", usage: usage(900, 120) }], { newRequestId: () => ids++ === 0 ? NEW_REQ : "55555555-5555-4555-8555-555555555555" });
+    const first = await handleMentorChat(post(GOOD), s.deps);
+    await first.body?.cancel();
+    await Promise.all(s.tasks);
+    const replay = await readEvents(await handleMentorChat(post(GOOD), s.deps));
+    expect(s.env.ledger.entries.filter(e => e.kind === "settle")).toHaveLength(1);
+    expect(s.conversations.appended).toHaveLength(1);
+    expect(s.env.claude.calls).toHaveLength(1);
+    expect(replay).toHaveLength(1);
+    expect(replay[0]).toMatchObject({ type: "final", request_id: NEW_REQ });
+  });
+  it("a repeat while running returns in_progress without model or ledger calls", async () => {
+    const s = chatSetup([]);
+    await s.deps.requests.claim(USER, GOOD as import("@/lib/mentor/contract").MentorChatRequest, NEW_REQ);
+    const events = await readEvents(await handleMentorChat(post(GOOD), s.deps));
+    expect(events).toEqual([{ type: "in_progress", client_request_id: NEW_REQ }]);
+    expect(s.env.claude.calls).toHaveLength(0);
+    expect(s.env.ledger.entries.filter(e => e.kind === "reserve")).toHaveLength(0);
+  });
+});
+
+describe("MUX-97: one outcome row per accepted turn", () => {
+  const baseFinal = { type: "final" as const, conversation_id: CONV, answer_blocks: [{ text: "Answer", fact_ids: [] }], citations: [], credits_left: 10, messages_left_estimate: 10 };
+  const cases: Array<[import("@/lib/mentor/contract").MentorTurnOutcome, MentorSseEvent]> = [
+    ["answered", baseFinal], ["refused", { ...baseFinal, refused: "patient_advice" }],
+    ["replaced_partial", { ...baseFinal, validator_replaced: true }],
+    ["notice_only", { ...baseFinal, answer_blocks: [{ text: "This detail is not officially confirmed. Please check it on the official page: https://example.org", fact_ids: [] }] }],
+    ["error", { type: "error", error: "upstream_error" }],
+    ["blocked_402", { type: "error", error: "credits_exhausted" }],
+    ["blocked_429", { type: "error", error: "rate_limited" }],
+    ["blocked_cap", { type: "error", error: "global_cap" }],
+  ];
+  it.each(cases)("%s records exactly once including replay", async (outcome, event) => {
+    const recorded: import("@/lib/mentor/outcomes").MentorTurnRow[] = [];
+    const s = chatSetup([], { recordTurn: async r => { recorded.push(r); }, runTurn: async function* () { yield event; } });
+    await readEvents(await handleMentorChat(post(GOOD), s.deps));
+    await Promise.all(s.tasks);
+    await readEvents(await handleMentorChat(post(GOOD), s.deps));
+    expect(recorded).toHaveLength(1);
+    expect(recorded[0].outcome).toBe(outcome);
+    expect(recorded[0]).not.toHaveProperty("text");
+    expect(recorded[0]).not.toHaveProperty("answer_text");
+  });
+});
+
+
+describe("MUX-30/79/85: paused usage and durable purchase visibility", () => {
+  const get = () => new Request("https://example.org/api/mentor/usage");
+  it.each([{ enabled: false }, { aiFeaturesEnabled: false }])("preserves paying credits and returns 200 resting for %j", async cfg => {
+    const d = usageSetup(500_000, { config: config(cfg) });
+    const r = await handleMentorUsage(get(), d);
+    expect(r.status).toBe(200);
+    expect(await r.json()).toMatchObject({ state: "resting", reason: "paused", resting_until: null, can_buy: false, credits_left: 100 });
+  });
+  it("returns the breaker reset time and never offers purchase while resting", async () => {
+    const d = usageSetup(500_000, { rpc: rpc({ ai_spend_month: 60_000_000 }) });
+    expect(await (await handleMentorUsage(get(), d)).json()).toMatchObject({ state: "resting", reason: "paused", resting_until: "2026-11-01T00:00:00.000Z", can_buy: false });
+  });
+  it("returns pending_purchase and a grant receipt; read failures fail closed", async () => {
+    const pending = { package_id: "mentor_basis" as const, since: "2026-10-11T01:00:00Z", checkout_session_id: NEW_REQ, retry_allowed: false };
+    const d = usageSetup(500_000, { pendingPurchase: async () => pending });
+    expect(await (await handleMentorUsage(get(), d)).json()).toMatchObject({ pending_purchase: pending });
+    d.pendingPurchase = async () => { throw new Error("db down"); };
+    expect((await handleMentorUsage(get(), d)).status).toBe(503);
   });
 });

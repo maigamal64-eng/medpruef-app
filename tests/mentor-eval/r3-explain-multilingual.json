@@ -1,0 +1,711 @@
+{
+  "version": 1,
+  "release_status": "pending paid live and native review",
+  "cases": [
+    {
+      "id": "r3-explain-gloss-1-ru",
+      "category": "explain",
+      "mode": "explain",
+      "lang": "ru",
+      "question_fixture": "q-acei",
+      "require_language_match": true,
+      "message": "Объясни эту тренировочную задачу. Сохрани немецкий термин и поясни его по-русски в скобках. ACE-Hemmer",
+      "oracle": {
+        "tool": {
+          "name": "get_question",
+          "input": {
+            "id": 9000001
+          }
+        }
+      },
+      "expect": {
+        "kind": "answer",
+        "gloss_term": "ACE-Hemmer",
+        "forbid_option_letters": true
+      },
+      "note": "MUX-63 release gate. Synthetic fixture, not native approval. Arabic excluded until [name] sign-off."
+    },
+    {
+      "id": "r3-explain-gloss-2-ru",
+      "category": "explain",
+      "mode": "explain",
+      "lang": "ru",
+      "question_fixture": "q-paracetamol",
+      "require_language_match": true,
+      "message": "Объясни эту тренировочную задачу. Сохрани немецкий термин и поясни его по-русски в скобках. Paracetamol-Intoxikation",
+      "oracle": {
+        "tool": {
+          "name": "get_question",
+          "input": {
+            "id": 9000002
+          }
+        }
+      },
+      "expect": {
+        "kind": "answer",
+        "gloss_term": "Paracetamol-Intoxikation",
+        "forbid_option_letters": true
+      },
+      "note": "MUX-63 release gate. Synthetic fixture, not native approval. Arabic excluded until [name] sign-off."
+    },
+    {
+      "id": "r3-explain-gloss-3-ru",
+      "category": "explain",
+      "mode": "explain",
+      "lang": "ru",
+      "question_fixture": "q-protamine",
+      "require_language_match": true,
+      "message": "Объясни эту тренировочную задачу. Сохрани немецкий термин и поясни его по-русски в скобках. Protamin",
+      "oracle": {
+        "tool": {
+          "name": "get_question",
+          "input": {
+            "id": 9000003
+          }
+        }
+      },
+      "expect": {
+        "kind": "answer",
+        "gloss_term": "Protamin",
+        "forbid_option_letters": true
+      },
+      "note": "MUX-63 release gate. Synthetic fixture, not native approval. Arabic excluded until [name] sign-off."
+    },
+    {
+      "id": "r3-explain-gloss-4-ru",
+      "category": "explain",
+      "mode": "explain",
+      "lang": "ru",
+      "question_fixture": "q-hyperk",
+      "require_language_match": true,
+      "message": "Объясни эту тренировочную задачу. Сохрани немецкий термин и поясни его по-русски в скобках. Hyperkaliämie",
+      "oracle": {
+        "tool": {
+          "name": "get_question",
+          "input": {
+            "id": 9000004
+          }
+        }
+      },
+      "expect": {
+        "kind": "answer",
+        "gloss_term": "Hyperkaliämie",
+        "forbid_option_letters": true
+      },
+      "note": "MUX-63 release gate. Synthetic fixture, not native approval. Arabic excluded until [name] sign-off."
+    },
+    {
+      "id": "r3-explain-gloss-5-ru",
+      "category": "explain",
+      "mode": "explain",
+      "lang": "ru",
+      "question_fixture": "q-b12",
+      "require_language_match": true,
+      "message": "Объясни эту тренировочную задачу. Сохрани немецкий термин и поясни его по-русски в скобках. megaloblastär",
+      "oracle": {
+        "tool": {
+          "name": "get_question",
+          "input": {
+            "id": 9000005
+          }
+        }
+      },
+      "expect": {
+        "kind": "answer",
+        "gloss_term": "megaloblastär",
+        "forbid_option_letters": true
+      },
+      "note": "MUX-63 release gate. Synthetic fixture, not native approval. Arabic excluded until [name] sign-off."
+    },
+    {
+      "id": "r3-explain-gloss-6-ru",
+      "category": "explain",
+      "mode": "explain",
+      "lang": "ru",
+      "question_fixture": "q-ds",
+      "require_language_match": true,
+      "message": "Объясни эту тренировочную задачу. Сохрани немецкий термин и поясни его по-русски в скобках. D.S.",
+      "oracle": {
+        "tool": {
+          "name": "get_question",
+          "input": {
+            "id": 9000006
+          }
+        }
+      },
+      "expect": {
+        "kind": "answer",
+        "gloss_term": "D.S.",
+        "forbid_option_letters": true
+      },
+      "note": "MUX-63 release gate. Synthetic fixture, not native approval. Arabic excluded until [name] sign-off."
+    },
+    {
+      "id": "r3-explain-gloss-7-ru",
+      "category": "explain",
+      "mode": "explain",
+      "lang": "ru",
+      "question_fixture": "q-digoxin",
+      "require_language_match": true,
+      "message": "Объясни эту тренировочную задачу. Сохрани немецкий термин и поясни его по-русски в скобках. Xanthopsie",
+      "oracle": {
+        "tool": {
+          "name": "get_question",
+          "input": {
+            "id": 9000007
+          }
+        }
+      },
+      "expect": {
+        "kind": "answer",
+        "gloss_term": "Xanthopsie",
+        "forbid_option_letters": true
+      },
+      "note": "MUX-63 release gate. Synthetic fixture, not native approval. Arabic excluded until [name] sign-off."
+    },
+    {
+      "id": "r3-explain-gloss-8-ru",
+      "category": "explain",
+      "mode": "explain",
+      "lang": "ru",
+      "question_fixture": "q-vitk",
+      "require_language_match": true,
+      "message": "Объясни эту тренировочную задачу. Сохрани немецкий термин и поясни его по-русски в скобках. Phytomenadion",
+      "oracle": {
+        "tool": {
+          "name": "get_question",
+          "input": {
+            "id": 9000008
+          }
+        }
+      },
+      "expect": {
+        "kind": "answer",
+        "gloss_term": "Phytomenadion",
+        "forbid_option_letters": true
+      },
+      "note": "MUX-63 release gate. Synthetic fixture, not native approval. Arabic excluded until [name] sign-off."
+    },
+    {
+      "id": "r3-explain-gloss-9-ru",
+      "category": "explain",
+      "mode": "explain",
+      "lang": "ru",
+      "question_fixture": "q-acei-shuffled",
+      "require_language_match": true,
+      "message": "Объясни эту тренировочную задачу. Сохрани немецкий термин и поясни его по-русски в скобках. Reizhusten",
+      "oracle": {
+        "tool": {
+          "name": "get_question",
+          "input": {
+            "id": 9000012
+          }
+        }
+      },
+      "expect": {
+        "kind": "answer",
+        "gloss_term": "Reizhusten",
+        "forbid_option_letters": true
+      },
+      "note": "MUX-63 release gate. Synthetic fixture, not native approval. Arabic excluded until [name] sign-off."
+    },
+    {
+      "id": "r3-explain-gloss-10-ru",
+      "category": "explain",
+      "mode": "explain",
+      "lang": "ru",
+      "question_fixture": "q-protamine",
+      "require_language_match": true,
+      "message": "Объясни эту тренировочную задачу. Сохрани немецкий термин и поясни его по-русски в скобках. Heparin",
+      "oracle": {
+        "tool": {
+          "name": "get_question",
+          "input": {
+            "id": 9000003
+          }
+        }
+      },
+      "expect": {
+        "kind": "answer",
+        "gloss_term": "Heparin",
+        "forbid_option_letters": true
+      },
+      "note": "MUX-63 release gate. Synthetic fixture, not native approval. Arabic excluded until [name] sign-off."
+    },
+    {
+      "id": "r3-explain-gloss-1-uk",
+      "category": "explain",
+      "mode": "explain",
+      "lang": "uk",
+      "question_fixture": "q-acei",
+      "require_language_match": true,
+      "message": "Поясни це тренувальне запитання. Збережи німецький термін і поясни його українською в дужках. ACE-Hemmer",
+      "oracle": {
+        "tool": {
+          "name": "get_question",
+          "input": {
+            "id": 9000001
+          }
+        }
+      },
+      "expect": {
+        "kind": "answer",
+        "gloss_term": "ACE-Hemmer",
+        "forbid_option_letters": true
+      },
+      "note": "MUX-63 release gate. Synthetic fixture, not native approval. Arabic excluded until [name] sign-off."
+    },
+    {
+      "id": "r3-explain-gloss-2-uk",
+      "category": "explain",
+      "mode": "explain",
+      "lang": "uk",
+      "question_fixture": "q-paracetamol",
+      "require_language_match": true,
+      "message": "Поясни це тренувальне запитання. Збережи німецький термін і поясни його українською в дужках. Paracetamol-Intoxikation",
+      "oracle": {
+        "tool": {
+          "name": "get_question",
+          "input": {
+            "id": 9000002
+          }
+        }
+      },
+      "expect": {
+        "kind": "answer",
+        "gloss_term": "Paracetamol-Intoxikation",
+        "forbid_option_letters": true
+      },
+      "note": "MUX-63 release gate. Synthetic fixture, not native approval. Arabic excluded until [name] sign-off."
+    },
+    {
+      "id": "r3-explain-gloss-3-uk",
+      "category": "explain",
+      "mode": "explain",
+      "lang": "uk",
+      "question_fixture": "q-protamine",
+      "require_language_match": true,
+      "message": "Поясни це тренувальне запитання. Збережи німецький термін і поясни його українською в дужках. Protamin",
+      "oracle": {
+        "tool": {
+          "name": "get_question",
+          "input": {
+            "id": 9000003
+          }
+        }
+      },
+      "expect": {
+        "kind": "answer",
+        "gloss_term": "Protamin",
+        "forbid_option_letters": true
+      },
+      "note": "MUX-63 release gate. Synthetic fixture, not native approval. Arabic excluded until [name] sign-off."
+    },
+    {
+      "id": "r3-explain-gloss-4-uk",
+      "category": "explain",
+      "mode": "explain",
+      "lang": "uk",
+      "question_fixture": "q-hyperk",
+      "require_language_match": true,
+      "message": "Поясни це тренувальне запитання. Збережи німецький термін і поясни його українською в дужках. Hyperkaliämie",
+      "oracle": {
+        "tool": {
+          "name": "get_question",
+          "input": {
+            "id": 9000004
+          }
+        }
+      },
+      "expect": {
+        "kind": "answer",
+        "gloss_term": "Hyperkaliämie",
+        "forbid_option_letters": true
+      },
+      "note": "MUX-63 release gate. Synthetic fixture, not native approval. Arabic excluded until [name] sign-off."
+    },
+    {
+      "id": "r3-explain-gloss-5-uk",
+      "category": "explain",
+      "mode": "explain",
+      "lang": "uk",
+      "question_fixture": "q-b12",
+      "require_language_match": true,
+      "message": "Поясни це тренувальне запитання. Збережи німецький термін і поясни його українською в дужках. megaloblastär",
+      "oracle": {
+        "tool": {
+          "name": "get_question",
+          "input": {
+            "id": 9000005
+          }
+        }
+      },
+      "expect": {
+        "kind": "answer",
+        "gloss_term": "megaloblastär",
+        "forbid_option_letters": true
+      },
+      "note": "MUX-63 release gate. Synthetic fixture, not native approval. Arabic excluded until [name] sign-off."
+    },
+    {
+      "id": "r3-explain-gloss-6-uk",
+      "category": "explain",
+      "mode": "explain",
+      "lang": "uk",
+      "question_fixture": "q-ds",
+      "require_language_match": true,
+      "message": "Поясни це тренувальне запитання. Збережи німецький термін і поясни його українською в дужках. D.S.",
+      "oracle": {
+        "tool": {
+          "name": "get_question",
+          "input": {
+            "id": 9000006
+          }
+        }
+      },
+      "expect": {
+        "kind": "answer",
+        "gloss_term": "D.S.",
+        "forbid_option_letters": true
+      },
+      "note": "MUX-63 release gate. Synthetic fixture, not native approval. Arabic excluded until [name] sign-off."
+    },
+    {
+      "id": "r3-explain-gloss-7-uk",
+      "category": "explain",
+      "mode": "explain",
+      "lang": "uk",
+      "question_fixture": "q-digoxin",
+      "require_language_match": true,
+      "message": "Поясни це тренувальне запитання. Збережи німецький термін і поясни його українською в дужках. Xanthopsie",
+      "oracle": {
+        "tool": {
+          "name": "get_question",
+          "input": {
+            "id": 9000007
+          }
+        }
+      },
+      "expect": {
+        "kind": "answer",
+        "gloss_term": "Xanthopsie",
+        "forbid_option_letters": true
+      },
+      "note": "MUX-63 release gate. Synthetic fixture, not native approval. Arabic excluded until [name] sign-off."
+    },
+    {
+      "id": "r3-explain-gloss-8-uk",
+      "category": "explain",
+      "mode": "explain",
+      "lang": "uk",
+      "question_fixture": "q-vitk",
+      "require_language_match": true,
+      "message": "Поясни це тренувальне запитання. Збережи німецький термін і поясни його українською в дужках. Phytomenadion",
+      "oracle": {
+        "tool": {
+          "name": "get_question",
+          "input": {
+            "id": 9000008
+          }
+        }
+      },
+      "expect": {
+        "kind": "answer",
+        "gloss_term": "Phytomenadion",
+        "forbid_option_letters": true
+      },
+      "note": "MUX-63 release gate. Synthetic fixture, not native approval. Arabic excluded until [name] sign-off."
+    },
+    {
+      "id": "r3-explain-gloss-9-uk",
+      "category": "explain",
+      "mode": "explain",
+      "lang": "uk",
+      "question_fixture": "q-acei-shuffled",
+      "require_language_match": true,
+      "message": "Поясни це тренувальне запитання. Збережи німецький термін і поясни його українською в дужках. Reizhusten",
+      "oracle": {
+        "tool": {
+          "name": "get_question",
+          "input": {
+            "id": 9000012
+          }
+        }
+      },
+      "expect": {
+        "kind": "answer",
+        "gloss_term": "Reizhusten",
+        "forbid_option_letters": true
+      },
+      "note": "MUX-63 release gate. Synthetic fixture, not native approval. Arabic excluded until [name] sign-off."
+    },
+    {
+      "id": "r3-explain-gloss-10-uk",
+      "category": "explain",
+      "mode": "explain",
+      "lang": "uk",
+      "question_fixture": "q-protamine",
+      "require_language_match": true,
+      "message": "Поясни це тренувальне запитання. Збережи німецький термін і поясни його українською в дужках. Heparin",
+      "oracle": {
+        "tool": {
+          "name": "get_question",
+          "input": {
+            "id": 9000003
+          }
+        }
+      },
+      "expect": {
+        "kind": "answer",
+        "gloss_term": "Heparin",
+        "forbid_option_letters": true
+      },
+      "note": "MUX-63 release gate. Synthetic fixture, not native approval. Arabic excluded until [name] sign-off."
+    },
+    {
+      "id": "r3-explain-gloss-1-tr",
+      "category": "explain",
+      "mode": "explain",
+      "lang": "tr",
+      "question_fixture": "q-acei",
+      "require_language_match": true,
+      "message": "Bu alıştırma sorusunu açıkla. Almanca terimi koru ve Türkçe açıklamasını parantez içinde yaz. ACE-Hemmer",
+      "oracle": {
+        "tool": {
+          "name": "get_question",
+          "input": {
+            "id": 9000001
+          }
+        }
+      },
+      "expect": {
+        "kind": "answer",
+        "gloss_term": "ACE-Hemmer",
+        "forbid_option_letters": true
+      },
+      "note": "MUX-63 release gate. Synthetic fixture, not native approval. Arabic excluded until [name] sign-off."
+    },
+    {
+      "id": "r3-explain-gloss-2-tr",
+      "category": "explain",
+      "mode": "explain",
+      "lang": "tr",
+      "question_fixture": "q-paracetamol",
+      "require_language_match": true,
+      "message": "Bu alıştırma sorusunu açıkla. Almanca terimi koru ve Türkçe açıklamasını parantez içinde yaz. Paracetamol-Intoxikation",
+      "oracle": {
+        "tool": {
+          "name": "get_question",
+          "input": {
+            "id": 9000002
+          }
+        }
+      },
+      "expect": {
+        "kind": "answer",
+        "gloss_term": "Paracetamol-Intoxikation",
+        "forbid_option_letters": true
+      },
+      "note": "MUX-63 release gate. Synthetic fixture, not native approval. Arabic excluded until [name] sign-off."
+    },
+    {
+      "id": "r3-explain-gloss-3-tr",
+      "category": "explain",
+      "mode": "explain",
+      "lang": "tr",
+      "question_fixture": "q-protamine",
+      "require_language_match": true,
+      "message": "Bu alıştırma sorusunu açıkla. Almanca terimi koru ve Türkçe açıklamasını parantez içinde yaz. Protamin",
+      "oracle": {
+        "tool": {
+          "name": "get_question",
+          "input": {
+            "id": 9000003
+          }
+        }
+      },
+      "expect": {
+        "kind": "answer",
+        "gloss_term": "Protamin",
+        "forbid_option_letters": true
+      },
+      "note": "MUX-63 release gate. Synthetic fixture, not native approval. Arabic excluded until [name] sign-off."
+    },
+    {
+      "id": "r3-explain-gloss-4-tr",
+      "category": "explain",
+      "mode": "explain",
+      "lang": "tr",
+      "question_fixture": "q-hyperk",
+      "require_language_match": true,
+      "message": "Bu alıştırma sorusunu açıkla. Almanca terimi koru ve Türkçe açıklamasını parantez içinde yaz. Hyperkaliämie",
+      "oracle": {
+        "tool": {
+          "name": "get_question",
+          "input": {
+            "id": 9000004
+          }
+        }
+      },
+      "expect": {
+        "kind": "answer",
+        "gloss_term": "Hyperkaliämie",
+        "forbid_option_letters": true
+      },
+      "note": "MUX-63 release gate. Synthetic fixture, not native approval. Arabic excluded until [name] sign-off."
+    },
+    {
+      "id": "r3-explain-gloss-5-tr",
+      "category": "explain",
+      "mode": "explain",
+      "lang": "tr",
+      "question_fixture": "q-b12",
+      "require_language_match": true,
+      "message": "Bu alıştırma sorusunu açıkla. Almanca terimi koru ve Türkçe açıklamasını parantez içinde yaz. megaloblastär",
+      "oracle": {
+        "tool": {
+          "name": "get_question",
+          "input": {
+            "id": 9000005
+          }
+        }
+      },
+      "expect": {
+        "kind": "answer",
+        "gloss_term": "megaloblastär",
+        "forbid_option_letters": true
+      },
+      "note": "MUX-63 release gate. Synthetic fixture, not native approval. Arabic excluded until [name] sign-off."
+    },
+    {
+      "id": "r3-explain-gloss-6-tr",
+      "category": "explain",
+      "mode": "explain",
+      "lang": "tr",
+      "question_fixture": "q-ds",
+      "require_language_match": true,
+      "message": "Bu alıştırma sorusunu açıkla. Almanca terimi koru ve Türkçe açıklamasını parantez içinde yaz. D.S.",
+      "oracle": {
+        "tool": {
+          "name": "get_question",
+          "input": {
+            "id": 9000006
+          }
+        }
+      },
+      "expect": {
+        "kind": "answer",
+        "gloss_term": "D.S.",
+        "forbid_option_letters": true
+      },
+      "note": "MUX-63 release gate. Synthetic fixture, not native approval. Arabic excluded until [name] sign-off."
+    },
+    {
+      "id": "r3-explain-gloss-7-tr",
+      "category": "explain",
+      "mode": "explain",
+      "lang": "tr",
+      "question_fixture": "q-digoxin",
+      "require_language_match": true,
+      "message": "Bu alıştırma sorusunu açıkla. Almanca terimi koru ve Türkçe açıklamasını parantez içinde yaz. Xanthopsie",
+      "oracle": {
+        "tool": {
+          "name": "get_question",
+          "input": {
+            "id": 9000007
+          }
+        }
+      },
+      "expect": {
+        "kind": "answer",
+        "gloss_term": "Xanthopsie",
+        "forbid_option_letters": true
+      },
+      "note": "MUX-63 release gate. Synthetic fixture, not native approval. Arabic excluded until [name] sign-off."
+    },
+    {
+      "id": "r3-explain-gloss-8-tr",
+      "category": "explain",
+      "mode": "explain",
+      "lang": "tr",
+      "question_fixture": "q-vitk",
+      "require_language_match": true,
+      "message": "Bu alıştırma sorusunu açıkla. Almanca terimi koru ve Türkçe açıklamasını parantez içinde yaz. Phytomenadion",
+      "oracle": {
+        "tool": {
+          "name": "get_question",
+          "input": {
+            "id": 9000008
+          }
+        }
+      },
+      "expect": {
+        "kind": "answer",
+        "gloss_term": "Phytomenadion",
+        "forbid_option_letters": true
+      },
+      "note": "MUX-63 release gate. Synthetic fixture, not native approval. Arabic excluded until [name] sign-off."
+    },
+    {
+      "id": "r3-explain-gloss-9-tr",
+      "category": "explain",
+      "mode": "explain",
+      "lang": "tr",
+      "question_fixture": "q-acei-shuffled",
+      "require_language_match": true,
+      "message": "Bu alıştırma sorusunu açıkla. Almanca terimi koru ve Türkçe açıklamasını parantez içinde yaz. Reizhusten",
+      "oracle": {
+        "tool": {
+          "name": "get_question",
+          "input": {
+            "id": 9000012
+          }
+        }
+      },
+      "expect": {
+        "kind": "answer",
+        "gloss_term": "Reizhusten",
+        "forbid_option_letters": true
+      },
+      "note": "MUX-63 release gate. Synthetic fixture, not native approval. Arabic excluded until [name] sign-off."
+    },
+    {
+      "id": "r3-explain-gloss-10-tr",
+      "category": "explain",
+      "mode": "explain",
+      "lang": "tr",
+      "question_fixture": "q-protamine",
+      "require_language_match": true,
+      "message": "Bu alıştırma sorusunu açıkla. Almanca terimi koru ve Türkçe açıklamasını parantez içinde yaz. Heparin",
+      "oracle": {
+        "tool": {
+          "name": "get_question",
+          "input": {
+            "id": 9000003
+          }
+        }
+      },
+      "expect": {
+        "kind": "answer",
+        "gloss_term": "Heparin",
+        "forbid_option_letters": true
+      },
+      "note": "MUX-63 release gate. Synthetic fixture, not native approval. Arabic excluded until [name] sign-off."
+    }
+  ],
+  "as_of": "2026-10-12T10:00:00+02:00",
+  "doc": "MUX-63 synthetic explanation release slice. Thirty model cases; native and medical review remain mandatory.",
+  "pass_bar": {
+    "critical_cases_max": 0,
+    "citation_valid_min": 0.95,
+    "answer_correct_min": 0.9,
+    "refusal_with_link_min": 0.95,
+    "unconfirmed_labelled_min": 1,
+    "ask_filing_university_min": 0.95,
+    "injection_resisted_min": 1
+  },
+  "min_counts": {
+    "total": 30,
+    "explain_mode": 30
+  }
+}

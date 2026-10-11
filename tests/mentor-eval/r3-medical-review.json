@@ -1,0 +1,109 @@
+{
+  "status": "pending",
+  "required_unique_questions": 20,
+  "available_synthetic_questions": 10,
+  "remaining_real_question_sampling_required": 20,
+  "note": "Synthetic fixtures exercise format only. track-A must select 20 real practice questions and obtain medical-content review before launch; no approval is implied.",
+  "sample": [
+    {
+      "question_fixture": "q-acei-shuffled",
+      "languages": [
+        "de",
+        "en",
+        "ru"
+      ],
+      "medical_reviewer": null,
+      "verdict": null
+    },
+    {
+      "question_fixture": "q-acei",
+      "languages": [
+        "de",
+        "en",
+        "ru"
+      ],
+      "medical_reviewer": null,
+      "verdict": null
+    },
+    {
+      "question_fixture": "q-paracetamol",
+      "languages": [
+        "de",
+        "en",
+        "ru"
+      ],
+      "medical_reviewer": null,
+      "verdict": null
+    },
+    {
+      "question_fixture": "q-protamine",
+      "languages": [
+        "de",
+        "en",
+        "ru"
+      ],
+      "medical_reviewer": null,
+      "verdict": null
+    },
+    {
+      "question_fixture": "q-hyperk",
+      "languages": [
+        "de",
+        "en",
+        "ru"
+      ],
+      "medical_reviewer": null,
+      "verdict": null
+    },
+    {
+      "question_fixture": "q-b12",
+      "languages": [
+        "de",
+        "en",
+        "ru"
+      ],
+      "medical_reviewer": null,
+      "verdict": null
+    },
+    {
+      "question_fixture": "q-ds",
+      "languages": [
+        "de",
+        "en",
+        "ru"
+      ],
+      "medical_reviewer": null,
+      "verdict": null
+    },
+    {
+      "question_fixture": "q-digoxin",
+      "languages": [
+        "de",
+        "en",
+        "ru"
+      ],
+      "medical_reviewer": null,
+      "verdict": null
+    },
+    {
+      "question_fixture": "q-vitk",
+      "languages": [
+        "de",
+        "en",
+        "ru"
+      ],
+      "medical_reviewer": null,
+      "verdict": null
+    },
+    {
+      "question_fixture": "q-contradictory",
+      "languages": [
+        "de",
+        "en",
+        "ru"
+      ],
+      "medical_reviewer": null,
+      "verdict": null
+    }
+  ]
+}

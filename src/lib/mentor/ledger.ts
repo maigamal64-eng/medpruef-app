@@ -72,8 +72,8 @@ export function interpretSettle(data: unknown, error: unknown): SettleResult {
   if (r.ok === true) {
     const charged = intOrNull(r.charged_micro);
     if (r.duplicate === true) {
-      // Already closed (settled, released or swept): nothing new was charged.
-      return { ok: true, duplicate: true, chargedMicro: charged, billedTo: null, overrun: false };
+      // Already closed: no new debit, but retain its original payer for an exact receipt after a lost response.
+      return { ok: true, duplicate: true, chargedMicro: charged, billedTo: r.billed_to === "user" || r.billed_to === "house" ? r.billed_to : null, overrun: false };
     }
     const billedTo = r.billed_to === "user" || r.billed_to === "house" ? r.billed_to : null;
     if (charged === null || charged < 0 || billedTo === null) {
@@ -212,15 +212,19 @@ export function rpcSweepStale(client: RpcClient, minutes: number): Promise<{ ok:
 const SOLD_PACKAGES: readonly MentorPackageId[] = ["mentor_basis", "mentor_plus", "mentor_topup"];
 
 /** Active mentor Whop memberships of a user (renewing subscriptions). Throws on DB error. */
-export async function readActiveMentorSubscriptions(client: SupabaseClient, userId: string): Promise<Array<{ package_id: MentorPackageId; renews: boolean }>> {
-  const { data, error } = await client.from("ai_mentor_whop_membership").select("package_id,status").eq("user_id", userId).eq("status", "active");
+export async function readActiveMentorSubscriptions(client: SupabaseClient, userId: string): Promise<import("./contract").MentorUsageResponse["subscriptions"]> {
+  const { data, error } = await client.from("ai_mentor_whop_membership").select("package_id,status,membership_id,renews_at,ends_at").eq("user_id", userId).eq("status", "active");
   if (error) throw new Error("ai_mentor_whop_membership read failed");
   if (!Array.isArray(data)) return [];
-  const out: Array<{ package_id: MentorPackageId; renews: boolean }> = [];
+  const out: import("./contract").MentorUsageResponse["subscriptions"] = [];
   for (const row of data) {
     const pkg = (row as Row)?.package_id;
     if (typeof pkg === "string" && (SOLD_PACKAGES as readonly string[]).includes(pkg)) {
-      out.push({ package_id: pkg as MentorPackageId, renews: true });
+      out.push({ package_id: pkg as MentorPackageId, renews: pkg !== "mentor_topup", status: "active",
+        renews_at: typeof row.renews_at === "string" ? row.renews_at : null,
+        ends_at: typeof row.ends_at === "string" ? row.ends_at : null,
+        ...(typeof row.membership_id === "string" ? { management_url: `https://whop.com/billing/manage/${encodeURIComponent(row.membership_id)}` } : {}),
+      });
     }
   }
   return out;
@@ -233,4 +237,9 @@ export async function readActivePackageIds(client: SupabaseClient): Promise<Set<
   const ids = new Set<string>();
   if (Array.isArray(data)) for (const row of data) if (typeof (row as Row)?.package_id === "string") ids.add((row as Row).package_id as string);
   return ids;
+}
+
+/** Rate admission for an already reserved learner message. SQL rejects absent holds. */
+export function rpcReservedAttempt(client: RpcClient, userId: string, requestId: string, perMin: number, perDay: number): Promise<ReturnType<typeof interpretAttempt>> {
+  return call(client, "mentor_reserved_attempt", { p_user: userId, p_request: requestId, p_per_min: perMin, p_per_day: perDay }, interpretAttempt);
 }

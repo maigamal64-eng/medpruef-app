@@ -12,6 +12,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { MentorConfig } from "@/lib/mentor/config";
 import type { MentorAdminSummary } from "@/lib/mentor/contract";
+import { loadRollupSummary, type MentorAdminTimezone } from "@/lib/mentor/admin-trends";
 import { buildAdminSummary } from "./aggregate";
 import { loadSummaryInputs, MentorAdminLoadError, type MentorAdminLoadErrorCode } from "./load";
 
@@ -23,8 +24,10 @@ export async function handleMentorAdminSummary(
   client: SupabaseClient,
   config: MentorConfig,
   now: Date,
+  timezone?: MentorAdminTimezone,
 ): Promise<MentorAdminResult> {
   try {
+    if (timezone) return { status: 200, body: await loadRollupSummary(client, config, now, timezone) };
     const inputs = await loadSummaryInputs(client, config, now);
     return { status: 200, body: buildAdminSummary(inputs) };
   } catch (err) {

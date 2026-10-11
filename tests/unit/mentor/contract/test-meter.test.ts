@@ -91,15 +91,15 @@ describe("C16 in-memory ledger mirrors the SQL semantics", () => {
     expect(l.available(U)).toBe(750_000);
   });
 
-  it("stale reservations settle at the ceiling on the next reserve, never released", () => {
+  it("stale reservations settle on the house at the ceiling and restore learner credit", () => {
     const c = clock();
     const l = new InMemoryLedger(c.now);
     grant(l, c);
     l.reserve(U, "r1", 0, 50_000);
     c.advance(16 * 60 * 1000);
     l.reserve(U, "r2", 0, 1_000);
-    expect(l.available(U)).toBe(750_000 - 50_000 - 1_000);
-    expect(l.settle("r1", 0, 10, { input_tokens: 1, output_tokens: 1 }, true)).toMatchObject({ duplicate: true, chargedMicro: 50_000 });
+    expect(l.available(U)).toBe(750_000 - 1_000);
+    expect(l.settle("r1", 0, 10, { input_tokens: 1, output_tokens: 1 }, true)).toMatchObject({ duplicate: true, chargedMicro: 50_000, billedTo: "house" });
   });
 
   it("clawback removes the unspent part, turns the spent part of a paid lot into debt, and is idempotent (H2)", () => {

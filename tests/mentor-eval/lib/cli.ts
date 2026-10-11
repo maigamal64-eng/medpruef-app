@@ -8,7 +8,7 @@
  *   node scripts/mentor-eval.mjs --live --max-usd 0.60       real Haiku calls (needs ANTHROPIC_API_KEY in the env)
  *
  * Common flags: --ids a,b  --category c  --lang de|en  --limit N  --concurrency 1..4
- *               --out file.json  --json  --golden f  --fixtures f  --facts-dir d  --as-of ISO  --model id
+ *               --out file.json  --json  --golden f  --fixtures f  --facts-dir d  --as-of ISO  --model id --precision
  * Exit codes: 0 pass bar met, 1 pass bar missed, 2 usage or environment error.
  *
  * Safety: --live refuses when VERCEL_ENV=production, never prints the key, stops at
@@ -52,6 +52,7 @@ export interface CliArgs {
   factsDir?: string;
   asOf?: string;
   model?: string;
+  precision?: boolean;
 }
 
 export class UsageError extends Error {}
@@ -84,6 +85,7 @@ export function parseArgs(argv: readonly string[]): CliArgs {
       case "--max-usd": a.maxUsd = Number(need(i++, k)); break;
       case "--out": a.out = need(i++, k); break;
       case "--json": a.json = true; break;
+      case "--precision": a.precision = true; break;
       case "--golden": a.golden = need(i++, k); break;
       case "--fixtures": a.fixtures = need(i++, k); break;
       case "--facts-dir": a.factsDir = need(i++, k); break;
@@ -170,6 +172,7 @@ export async function main(argv: readonly string[], env: Readonly<Record<string,
     return 2;
   }
   if (args.asOf) golden = { ...golden, as_of: args.asOf };
+  if (args.precision) golden = { ...golden, precision_gate: { false_replacement_rate_max: 0.005, leaked_unsupported_date_rate_max: 0 } };
 
   const factsDir = args.factsDir ?? defaultFactsDir();
   const factRecords = loadFactRecords(factsDir);

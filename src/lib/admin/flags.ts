@@ -52,21 +52,22 @@ function bucketForUser(key: string, userId: string): number {
   return hash % 100;
 }
 
-export async function flag(key: string, userId?: string): Promise<boolean> {
+export async function flag(key: string, userId?: string, options: { fresh?: boolean; throwOnError?: boolean } = {}): Promise<boolean> {
   try {
     const now = Date.now();
     const hit = cache.get(key);
     let row: FlagRow | null = null;
 
-    if (hit && now - hit.at < CACHE_TTL_MS) {
+    if (!options.fresh && hit && now - hit.at < CACHE_TTL_MS) {
       row = hit.row;
     } else {
       const sb = getServiceClient();
-      const { data } = await sb
+      const { data, error } = await sb
         .from("flags")
         .select("key, env, enabled, rollout_pct")
         .eq("key", key)
         .maybeSingle();
+      if (error && options.throwOnError) throw new Error(`flag read failed: ${error.code ?? "unknown"}`);
       row = (data as FlagRow) ?? null;
       cache.set(key, { row, at: now });
     }
@@ -86,6 +87,7 @@ export async function flag(key: string, userId?: string): Promise<boolean> {
     return bucketForUser(key, userId) < row.rollout_pct;
   } catch (err) {
     captureServerError(err, { route: "admin/flags/read", flagKey: key });
+    if (options.throwOnError) throw err;
     // Fail closed — a broken flag is a disabled flag.
     return false;
   }

@@ -6,6 +6,7 @@ const h = vi.hoisted(() => ({
   flag: vi.fn(async () => true),
   log: vi.fn(async () => {}),
   handler: (() => ({})) as (c: unknown) => unknown,
+  resting: vi.fn(async () => false as boolean | null),
   plan: vi.fn(async () => ({ ok: true }) as { ok: boolean; reason?: string }),
 }));
 
@@ -15,6 +16,7 @@ vi.mock("@/lib/mentor/credits/plan-check", async (orig) => ({
   ...(await orig<typeof import("@/lib/mentor/credits/plan-check")>()),
   checkMentorPlan: (...a: unknown[]) => h.plan(...(a as [])),
 }));
+vi.mock("@/lib/mentor/guard", () => ({ mentorResting: h.resting }));
 vi.mock("@/lib/admin/flags", () => ({ flag: h.flag }));
 vi.mock("@/lib/rate-limit", () => ({
   checkRateLimit: () => ({ allowed: true, remaining: 5, resetAt: 0, retryAfterSec: 0 }),
@@ -35,8 +37,11 @@ import { resetPackageCache } from "@/lib/mentor/credits/packages";
 import { POST as checkout } from "@/app/api/mentor/checkout/route";
 
 const U = "66666666-6666-4666-8666-666666666666";
+const SESSION = "88888888-8888-4888-8888-888888888888";
 const NOW = Date.parse("2026-10-10T12:00:00Z");
 const ENV = { WHOP_PLAN_MENTOR_BASIS: "plan_b", WHOP_PLAN_MENTOR_PLUS: "plan_p" };
+
+const PURCHASE = { checkout_session_id: SESSION, whop_checkout_session_id: "ch_1", user_id: U, package_id: "mentor_basis", created_at: new Date(NOW - 120_000).toISOString(), expires_at: new Date(NOW + 86400000).toISOString(), status: "pending", payment_id: null, lot_id: null, granted_micro: null };
 
 const PKG_ROWS = [{ package_id: "mentor_basis", kind: "subscription", grant_micro: 750000, period_days: 30, expiry_days: 33, price_eur_cents: 490, active: true, provisional: true, sort: 10, note: null }];
 
@@ -46,6 +51,7 @@ function db(over: (c: FakeCall) => FakeResult | undefined = () => undefined) {
     const o = over(c);
     if (o) return o;
     if (c.table === "ai_credit_package") return { data: PKG_ROWS };
+    if (c.table === "ai_mentor_purchase") return { data: c.op === "select" ? PURCHASE : { checkout_session_id: SESSION } };
     if (c.table === "ai_credit_lot") return { data: [] };
     if (c.table === "rpc:mentor_grant_credits") return { data: { ok: true, duplicate: false, lot_id: "l", granted_micro: 750000 } };
     return {};
@@ -56,18 +62,18 @@ function ledger(memberships: unknown[], payments: unknown[], truncated = false):
   return async (a) => ({ rows: a.endpoint === "memberships" ? (a.query.includes("plan_b") ? memberships : []) : payments, truncated });
 }
 
-const myMembership = { id: "mem_1", status: "active", metadata: { kind: "mentor_credits", medpruef_user_id: U } };
+const myMembership = { id: "mem_1", status: "active", metadata: { kind: "mentor_credits", medpruef_user_id: U, checkout_session_id: SESSION } };
 const paid = { id: "pay_1", status: "paid", plan: { id: "plan_b" }, membership: { id: "mem_1" }, created_at: new Date(NOW - 60_000).toISOString(), final_amount: 4.9, currency: "eur" };
 
 describe("verifyMentorCheckout", () => {
-  it("granted at once when a whop_payment lot landed recently", async () => {
-    const { sb } = db((c) => (c.table === "ai_credit_lot" ? { data: [{ id: "l" }] } : undefined));
-    expect(await verifyMentorCheckout({ db: sb as never, apiKey: null, companyId: null, env: ENV, now: () => NOW }, U, null)).toBe("granted");
+  it("granted only when this purchase is linked to its payment lot", async () => {
+    const { sb } = db((c) => c.table === "ai_mentor_purchase" ? { data: { ...PURCHASE, status: "granted", payment_id: "pay_1", lot_id: "l", granted_micro: 750000 } } : c.table === "ai_credit_lot" ? { data: [{ id: "l" }] } : undefined);
+    expect(await verifyMentorCheckout({ db: sb as never, apiKey: null, companyId: null, env: ENV, now: () => NOW }, U, null, SESSION)).toBe("granted");
   });
 
   it("finds the paid payment on this user's mentor membership and grants through the webhook's idempotent grant", async () => {
     const { sb, calls } = db();
-    const s = await verifyMentorCheckout({ db: sb as never, apiKey: "k", companyId: "biz", env: ENV, ledger: ledger([myMembership], [paid]), now: () => NOW }, U, null);
+    const s = await verifyMentorCheckout({ db: sb as never, apiKey: "k", companyId: "biz", env: ENV, ledger: ledger([myMembership], [paid]), now: () => NOW }, U, null, SESSION);
     expect(s).toBe("granted");
     expect(calls.find((c) => c.table === "rpc:mentor_grant_credits")!.payload).toMatchObject({
       p_user: U,
@@ -82,9 +88,9 @@ describe("verifyMentorCheckout", () => {
     const other = { ...myMembership, metadata: { medpruef_user_id: "77777777-7777-4777-8777-777777777777" } };
     const { sb } = db();
     const deps = { db: sb as never, companyId: "biz", env: ENV, now: () => NOW };
-    expect(await verifyMentorCheckout({ ...deps, apiKey: "k", ledger: ledger([other], [paid]) }, U, null)).toBe("pending");
-    expect(await verifyMentorCheckout({ ...deps, apiKey: null }, U, null)).toBe("pending");
-    expect(await verifyMentorCheckout({ ...deps, apiKey: "k", ledger: ledger([myMembership], [], true) }, U, null)).toBe("pending");
+    expect(await verifyMentorCheckout({ ...deps, apiKey: "k", ledger: ledger([other], [paid]) }, U, null, SESSION)).toBe("pending");
+    expect(await verifyMentorCheckout({ ...deps, apiKey: null }, U, null, SESSION)).toBe("pending");
+    expect(await verifyMentorCheckout({ ...deps, apiKey: "k", ledger: ledger([myMembership], [], true) }, U, null, SESSION)).toBe("pending");
   });
 
   it("H3: a paid row of EUR 0 or a refunded row never grants (failed, no grant RPC)", async () => {
@@ -95,7 +101,7 @@ describe("verifyMentorCheckout", () => {
       { ...paid, substatus: "partially_refunded" },
     ]) {
       const { sb, calls } = db();
-      const s = await verifyMentorCheckout({ db: sb as never, apiKey: "k", companyId: "biz", env: ENV, ledger: ledger([myMembership], [row]), now: () => NOW }, U, null);
+      const s = await verifyMentorCheckout({ db: sb as never, apiKey: "k", companyId: "biz", env: ENV, ledger: ledger([myMembership], [row]), now: () => NOW }, U, null, SESSION);
       expect(s, JSON.stringify(row)).toBe("failed");
       expect(calls.filter((c) => c.table === "rpc:mentor_grant_credits"), JSON.stringify(row)).toHaveLength(0);
     }
@@ -103,7 +109,7 @@ describe("verifyMentorCheckout", () => {
 
   it("H1: a payment the ledger refuses as revoked is reported failed, not granted", async () => {
     const { sb } = db((c) => (c.table === "rpc:mentor_grant_credits" ? { data: { ok: false, reason: "revoked" } } : undefined));
-    expect(await verifyMentorCheckout({ db: sb as never, apiKey: "k", companyId: "biz", env: ENV, ledger: ledger([myMembership], [paid]), now: () => NOW }, U, null)).toBe("failed");
+    expect(await verifyMentorCheckout({ db: sb as never, apiKey: "k", companyId: "biz", env: ENV, ledger: ledger([myMembership], [paid]), now: () => NOW }, U, null, SESSION)).toBe("failed");
   });
 
   it("looksRefunded reads every plausible refund signal", () => {
@@ -118,9 +124,9 @@ describe("verifyMentorCheckout", () => {
   it("only a failed payment -> failed; a DB error on grant -> pending", async () => {
     const { sb } = db();
     const failedPay = { ...paid, status: "failed" };
-    expect(await verifyMentorCheckout({ db: sb as never, apiKey: "k", companyId: "biz", env: ENV, ledger: ledger([myMembership], [failedPay]), now: () => NOW }, U, null)).toBe("failed");
+    expect(await verifyMentorCheckout({ db: sb as never, apiKey: "k", companyId: "biz", env: ENV, ledger: ledger([myMembership], [failedPay]), now: () => NOW }, U, null, SESSION)).toBe("failed");
     const e = db((c) => (c.table === "rpc:mentor_grant_credits" ? { data: { ok: false, reason: "db_error" } } : undefined));
-    expect(await verifyMentorCheckout({ db: e.sb as never, apiKey: "k", companyId: "biz", env: ENV, ledger: ledger([myMembership], [paid]), now: () => NOW }, U, null)).toBe("pending");
+    expect(await verifyMentorCheckout({ db: e.sb as never, apiKey: "k", companyId: "biz", env: ENV, ledger: ledger([myMembership], [paid]), now: () => NOW }, U, null, SESSION)).toBe("pending");
   });
 });
 
@@ -143,7 +149,14 @@ describe("POST /api/mentor/checkout", () => {
     h.plan.mockReset();
     h.plan.mockResolvedValue({ ok: true });
     h.createSession.mockResolvedValue({ id: "ch_1", purchaseUrl: "https://whop.com/checkout/plan_b/?session=ch_1", planId: "plan_b" });
-    h.handler = (c: unknown) => ((c as FakeCall).table === "ai_credit_package" ? { data: pkgRows } : {});
+    h.resting.mockResolvedValue(false);
+    h.handler = (c: unknown) => {
+      const call = c as FakeCall;
+      if (call.table === "ai_credit_package") return { data: pkgRows };
+      if (call.table === "rpc:mentor_begin_purchase") return { data: { ok: true } };
+      if (call.table === "ai_mentor_purchase") return { data: { checkout_session_id: SESSION } };
+      return {};
+    };
   });
   afterEach(() => {
     for (const k of [...Object.keys(ON), "MENTOR_BETA_USER_IDS"]) delete process.env[k];
@@ -160,12 +173,12 @@ describe("POST /api/mentor/checkout", () => {
     Object.assign(process.env, ON);
     const res = await checkout(req({ package_id: "mentor_basis" }));
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ purchase_url: "https://whop.com/checkout/plan_b/?session=ch_1" });
+    expect(await res.json()).toEqual({ purchase_url: "https://whop.com/checkout/plan_b/?session=ch_1", checkout_session_id: expect.any(String) });
     const args = h.createSession.mock.calls[0][0] as { planId: string; metadata: Record<string, string>; redirectUrl: string };
     expect(args.planId).toBe("plan_b");
-    expect(args.metadata).toEqual({ kind: "mentor_credits", package: "mentor_basis", medpruef_user_id: U });
+    expect(args.metadata).toEqual({ kind: "mentor_credits", package: "mentor_basis", medpruef_user_id: U, checkout_session_id: expect.any(String) });
     expect("tier" in args.metadata).toBe(false);
-    expect(args.redirectUrl).toMatch(/\/mentor\/checkout\/success\?package=mentor_basis$/);
+    expect(args.redirectUrl).toContain(`/mentor/checkout/success?package=mentor_basis&checkout_session_id=${args.metadata.checkout_session_id}`);
     expect(args.redirectUrl).not.toMatch(/\/checkout\/success\?tier/);
   });
 

@@ -730,7 +730,9 @@ textarea:focus {
   --mp-clinic-paper:    var(--mp-surface-sunken);
   --mp-exam-navy:       #0A2041;
   --mp-warning:         #F4A261;
-  --mp-warning-dk:      #D68A3A; /* WCAG AA-safe on white */
+  --mp-warning-dk:      #D68A3A; /* Decorative icons and borders; not AA-safe body text. */
+  --mp-warning-text:    #8A4B00;
+  --mp-info-text:       #2B6489;
   --mp-error:           #D64545;
   --mp-info:            #3A7CA5;
 
@@ -890,7 +892,9 @@ textarea:focus {
   --mp-accent-teal:     #34D0C0; /* streak/secondary/spark — clearly TEAL */
   --mp-cta-blue:        #4D8DF0; /* primary action — lifts off dark, AA on dark surfaces */
   --mp-cta-blue-hover:  #6BA1F4;
-  --mp-warning-dk:      #F4A261; /* warning hue unchanged; amber text stays legible on low-alpha tint */
+  --mp-warning-dk:      #F4A261;
+  --mp-warning-text:    #F4A261;
+  --mp-info-text:       #5BA3CE;
   /* 2026-06-26 dark-contrast fix: error + info were the ONLY status text
      colors never brightened for dark (viridian/teal/cta were). The :root
      #D64545 / #3A7CA5 only reached ~3.4-3.6:1 as text on dark cards + tints.
@@ -1109,9 +1113,9 @@ textarea:focus {
 .mp-alert__icon { flex-shrink: 0; width: 18px; height: 18px; margin-top: 1px; }
 .mp-alert__title { font-weight: 700; margin-bottom: 2px; }
 .mp-alert__body { color: var(--mp-fg-muted); }
-.mp-alert--info    { background: var(--mp-info-bg);    border-color: rgba(58,124,165,.3); color: var(--mp-info); }
+.mp-alert--info    { background: var(--mp-info-bg);    border-color: rgba(58,124,165,.3); color: var(--mp-info-text); }
 .mp-alert--success { background: var(--mp-success-bg); border-color: rgba(0,123,95,.3);   color: var(--mp-viridian); }
-.mp-alert--warning { background: var(--mp-warning-bg); border-color: rgba(244,162,97,.3); color: var(--mp-warning-dk); }
+.mp-alert--warning { background: var(--mp-warning-bg); border-color: rgba(244,162,97,.3); color: var(--mp-warning-text); }
 .mp-alert--error   { background: var(--mp-error-bg);   border-color: rgba(214,69,69,.3);  color: var(--mp-error); }
 
 /* ═══ TOAST (.mp-toast) ═══ */
@@ -1762,3 +1766,26 @@ textarea:focus {
   .lp-cta::before { display: none; }
   .lp-stamp__pulse { animation: none; }
 }
+
+/* Dark mentor R3: caption floor and keyboard boundaries are mentor-scoped. */
+:root { --mp-text-caption: 12px; }
+main:has([data-mentor-header]), main[data-mentor-packages] { --mp-text-caption: 12px; }
+main:has([data-mentor-header]) :is(button,a,select,summary):focus-visible,
+main[data-mentor-packages] :is(button,a,select,summary):focus-visible,
+.mp-dialog__surface:has([data-mentor-sheet]) :is(button,a):focus-visible {
+  outline: 2px solid var(--mp-cta-blue); outline-offset: 2px; box-shadow: var(--mp-focus-ring);
+}
+[data-mentor-state-bar]:focus-within { outline: 2px solid var(--mp-cta-blue); outline-offset: 2px; box-shadow: var(--mp-focus-ring); }
+main:has([data-mentor-header]) [class*="text-[12px]"],
+main[data-mentor-packages] [class*="text-[12px]"] { font-size: var(--mp-text-caption); }
+[data-theme="dark"] main:has([data-mentor-header]) .mp-btn--primary,
+[data-theme="dark"] main:has([data-mentor-header]) .mp-btn--success:not(:disabled),
+[data-theme="dark"] main[data-mentor-packages] .mp-btn--primary { background: #4D8DF0; color: #001028; }
+[data-theme="dark"] main:has([data-mentor-header]) article.justify-end > p { background: #1D3F73; border: 1px solid #4D8DF0; }
+@media (max-width:639px) {
+  .mp-dialog__overlay:has([data-mentor-sheet]) { align-items:flex-end; padding:0; }
+  .mp-dialog__surface:has([data-mentor-sheet]) { max-width:none; max-height:90dvh; border-radius:20px 20px 0 0; padding-bottom:env(safe-area-inset-bottom); }
+}
+
+[data-mentor-composer] button:disabled { opacity: 1; }
+.mentor-frame .bottom-nav a > span:last-child { font-size: var(--mp-text-caption); }

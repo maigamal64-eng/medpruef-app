@@ -13,6 +13,7 @@ import {
 } from "@/components/mentor/chat-state";
 import { FIXTURE_FINAL_OK, FIXTURE_FINAL_REFUSED } from "@/lib/mentor/fixtures";
 
+const REQUEST_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const run = (actions: ChatAction[], s: ChatState = INITIAL_CHAT_STATE) => actions.reduce(chatReducer, s);
 const send: ChatAction = { type: "send", userId: "u1", assistantId: "a1", text: "Hallo" };
 const asst = (s: ChatState) => s.messages[s.messages.length - 1] as AssistantMsg;
@@ -40,9 +41,9 @@ describe("chat reducer", () => {
     expect(asst(s).final?.refused).toBe("individual_ruling");
   });
 
-  it("an error event keeps the partial text and frees the composer", () => {
+  it("an error event discards unchecked text and frees the composer", () => {
     const s = run([send, { type: "event", event: { type: "delta", text: "teil" } }, { type: "event", event: { type: "error", error: "upstream_error" } }]);
-    expect(asst(s)).toMatchObject({ status: "error", text: "teil", error: "upstream_error" });
+    expect(asst(s)).toMatchObject({ status: "error", text: "", error: "upstream_error" });
     expect(s.busy).toBe(false);
   });
 
@@ -64,9 +65,9 @@ describe("chat reducer", () => {
     expect(run([{ type: "end" }], s).messages).toEqual(s.messages);
   });
 
-  it("stop keeps the partial text; retry replaces the failed bubble and reuses the user message", () => {
+  it("stop discards undelivered text; retry replaces the failed bubble and reuses the user message", () => {
     const s = run([send, { type: "event", event: { type: "delta", text: "halb" } }, { type: "stop" }]);
-    expect(asst(s)).toMatchObject({ status: "stopped", text: "halb" });
+    expect(asst(s)).toMatchObject({ status: "stopped", text: "" });
     const r = run([{ type: "retry", assistantId: "a2" }], s);
     expect(r.messages).toHaveLength(2);
     expect(asst(r)).toMatchObject({ id: "a2", status: "streaming", text: "" });
@@ -108,8 +109,9 @@ describe("draft and request helpers", () => {
   });
 
   it("buildChatRequest sends question_id only in explain mode and the conversation id when known", () => {
-    expect(buildChatRequest({ text: " x ", lang: "de", mode: "facts", questionId: 5 })).toEqual({ message: "x", lang: "de", mode: "facts" });
-    expect(buildChatRequest({ text: "x", lang: "en", mode: "explain", questionId: 5, conversationId: "c" })).toEqual({
+    expect(buildChatRequest({ clientRequestId: REQUEST_ID, text: " x ", lang: "de", mode: "facts", questionId: 5 })).toEqual({ client_request_id: REQUEST_ID, message: "x", lang: "de", mode: "facts" });
+    expect(buildChatRequest({ clientRequestId: REQUEST_ID, text: "x", lang: "en", mode: "explain", questionId: 5, conversationId: "c" })).toEqual({
+      client_request_id: REQUEST_ID,
       message: "x",
       lang: "en",
       mode: "explain",

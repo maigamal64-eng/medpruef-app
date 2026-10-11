@@ -16,6 +16,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { MentorSoldPackageId } from "../config";
 import { isUuid, rpcGrantCredits, type GrantReason } from "./db";
 import { loadPackageCatalogue } from "./packages";
+import { markPurchaseGranted } from "./purchases";
 
 /**
  * A payment counts when it paid at least this share of the package price.
@@ -28,7 +29,7 @@ export const MIN_PAID_RATIO = 0.8;
 
 export type MentorPaymentGrant =
   | { kind: "granted"; lotId: string | null; grantedMicro: number | null }
-  | { kind: "duplicate"; lotId: string | null }
+  | { kind: "duplicate"; lotId: string | null; grantedMicro?: number | null }
   /** Permanent: retrying cannot help (bad ids, package missing, key owned by another user, refunded, wrong amount). */
   | { kind: "unmapped"; reason: GrantReason | "no_payment_id" | "invalid_user" | "amount_mismatch" | "package_not_priced" }
   /** Transient: DB or transport error, or the ledger migration is not applied yet. */
@@ -78,6 +79,9 @@ export async function grantMentorPayment(
     paidCents: number | null;
     /** ISO currency of the payment, lower or upper case. Absent is tolerated (the plan check pins EUR at checkout). */
     currency: string | null;
+    /** Correlation for an initial checkout only. Renewals leave it absent. */
+    checkoutSessionId?: string | null;
+    renewsAt?: string | null;
   },
 ): Promise<MentorPaymentGrant> {
   if (!args.paymentId) return { kind: "unmapped", reason: "no_payment_id" };
@@ -104,7 +108,30 @@ export async function grantMentorPayment(
     whopPaymentId: args.paymentId,
     whopMembershipId: args.membershipId,
   });
-  if (r.ok) return r.duplicate ? { kind: "duplicate", lotId: r.lotId } : { kind: "granted", lotId: r.lotId, grantedMicro: r.grantedMicro };
+  if (r.ok) {
+    let grantedMicro = r.grantedMicro;
+    if (args.packageId !== "mentor_topup" && args.renewsAt && Number.isFinite(Date.parse(args.renewsAt))) {
+      const { error } = await sb.from("ai_credit_lot").update({ renews_at: args.renewsAt })
+        .eq("user_id", args.userId).eq("source", "whop_payment").eq("source_id", args.paymentId).eq("package_id", args.packageId).is("renews_at", null);
+      if (error) return { kind: "retry", reason: "db_error" };
+    }
+    if (args.checkoutSessionId) {
+      try {
+        // Duplicate grants do not return an amount; read the same immutable payment lot.
+        if (grantedMicro == null) {
+          const { data, error } = await sb.from("ai_credit_lot").select("granted_micro").eq("user_id", args.userId)
+            .eq("source", "whop_payment").eq("source_id", args.paymentId).eq("package_id", args.packageId).maybeSingle();
+          if (error) return { kind: "retry", reason: "db_error" };
+          grantedMicro = num(data?.granted_micro);
+        }
+        await markPurchaseGranted(sb, {
+          userId: args.userId, packageId: args.packageId, checkoutSessionId: args.checkoutSessionId,
+          paymentId: args.paymentId, lotId: r.lotId, grantedMicro,
+        });
+      } catch { return { kind: "retry", reason: "db_error" }; }
+    }
+    return r.duplicate ? { kind: "duplicate", lotId: r.lotId, grantedMicro } : { kind: "granted", lotId: r.lotId, grantedMicro };
+  }
   const reason = r.reason ?? "bad_response";
   if (reason === "db_error" || reason === "missing_function" || reason === "bad_response") return { kind: "retry", reason };
   return { kind: "unmapped", reason };

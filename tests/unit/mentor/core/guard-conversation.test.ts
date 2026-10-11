@@ -53,11 +53,11 @@ describe("checkMentorAccess", () => {
 });
 
 describe("parseChatRequest", () => {
-  const ok = { message: "  Hallo  ", lang: "de", mode: "facts" };
+  const ok = { client_request_id: CONV, message: "  Hallo  ", lang: "de", mode: "facts" };
   it("accepts and trims", () => {
-    expect(parseChatRequest(ok)).toEqual({ ok: true, request: { message: "Hallo", lang: "de", mode: "facts" } });
+    expect(parseChatRequest(ok)).toEqual({ ok: true, request: { entry: "nav", channel: "web", client_request_id: CONV, message: "Hallo", lang: "de", mode: "facts" } });
     const full = parseChatRequest({ ...ok, conversation_id: CONV.toUpperCase(), question_id: 42 });
-    expect(full).toEqual({ ok: true, request: { message: "Hallo", lang: "de", mode: "facts", conversation_id: CONV, question_id: 42 } });
+    expect(full).toEqual({ ok: true, request: { entry: "nav", channel: "web", client_request_id: CONV, message: "Hallo", lang: "de", mode: "facts", conversation_id: CONV, question_id: 42 } });
   });
   it.each([
     [null],
@@ -94,7 +94,7 @@ describe("rate limit and breaker", () => {
     expect(await takeMentorAttempt(rpcClient({ mentor_attempt_take: R.attempt_ok }), config(), USER, now)).toBeNull();
     expect(await takeMentorAttempt(rpcClient({ mentor_attempt_take: R.attempt_minute }), config(), USER, now)).toEqual({
       status: 429,
-      body: { error: "rate_limited", retry_after_seconds: 30 },
+      body: { error: "rate_limited", limit: "minute", credits_deducted: false, retry_after_seconds: 30 },
     });
     expect((await takeMentorAttempt(rpcClient({ mentor_attempt_take: R.attempt_day }), config(), USER, now))?.body.error).toBe("rate_limited");
     expect(await takeMentorAttempt(rpcClient({ mentor_attempt_take: new Error("db") }), config(), USER, now)).toMatchObject({

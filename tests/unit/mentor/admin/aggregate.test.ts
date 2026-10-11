@@ -295,7 +295,7 @@ describe("state and shape", () => {
       inputs({ ledger: [call()], lots: [lot()], clawbacks: [CLAWBACK], staleReservations: [STALE], walletDebts: [5] }),
     );
     expect(Object.keys(s).sort()).toEqual(
-      ["by_day", "by_model", "clawbacks", "debt_total_micro", "generated_at", "lots_by_package", "month", "overruns", "spend", "stale_reservations", "state", "top_users"].sort(),
+      ["by_day", "by_model", "clawbacks", "debt_total_micro", "generated_at", "lots_by_package", "month", "overruns", "quality", "spend", "stale_reservations", "state", "top_users"].sort(),
     );
     expect(s.month).toBe(MONTH);
     expect(s.generated_at).toBe(NOW.toISOString());

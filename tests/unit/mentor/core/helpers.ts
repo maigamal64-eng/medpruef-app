@@ -149,7 +149,7 @@ export function grant(ledger: InMemoryLedger, micro: number, sourceId = "g1", us
 }
 
 export function request(over: Partial<MentorChatRequest> = {}): MentorChatRequest {
-  return { message: "Wie melde ich mich an?", lang: "de", mode: "facts", ...over };
+  return { client_request_id: REQ, message: "Wie melde ich mich an?", lang: "de", mode: "facts", ...over };
 }
 
 export function turnInput(over: Partial<MentorTurnInput> = {}): MentorTurnInput {

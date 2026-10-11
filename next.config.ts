@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { MENTOR_FACT_TRACE } from "./src/lib/mentor/deployment-manifest";
 import { withSentryConfig } from "@sentry/nextjs";
 
 // Canonical host — all production traffic should land here. Any request from
@@ -102,7 +103,7 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     // Mentor verified facts are read from disk at runtime by the facts loader;
     // without this the chat function ships zero facts and refuses everything.
-    "/api/mentor/chat": ["./content/mentor-facts/**/*"],
+    ...MENTOR_FACT_TRACE,
   },
 
   async rewrites() {

@@ -242,7 +242,7 @@ export class InMemoryLedger {
     let n = 0;
     for (const [rk, r] of this.reservations) {
       if (r.userId === userId && r.status === "open" && r.createdAt < cutoff) {
-        this.settleCore(rk, r, r.ceiling, true, "swept");
+        this.settleCore(rk, r, r.ceiling, false, "swept");
         n++;
       }
     }

@@ -89,7 +89,7 @@ describe("protocol: footer-style citations (Haiku writes the facts line after th
     const raw = `@@LANG de\nDie Prüfung ist am 21. April 2099.\n@@BLOCK facts=${sittingFactId(SITTINGS[0])}\n@@BLOCK`;
     const v = validateAnswer(raw, ALL);
     expect(v.replaced).toBe(true);
-    expect(v.blocks[0].text).toContain(FALLBACK_DE);
+    expect(v.blocks[0].text).toMatch(/nicht offiziell bestätig/);
     expect(v.rejected).toContainEqual({ value: "21. April 2099", reason: "not_in_cited_facts" });
   });
 });

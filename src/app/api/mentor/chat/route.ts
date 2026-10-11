@@ -10,6 +10,10 @@ import { createHousePolicy, createMeter } from "@/lib/mentor/meter";
 import { createRunMentorTurn } from "@/lib/mentor/turn";
 import { captureServerError } from "@/lib/sentry-capture";
 import { getServiceClient } from "@/lib/supabase";
+import { createMentorRequestStore } from "@/lib/mentor/requests";
+import { recordReviewSnapshot } from "@/lib/mentor/review";
+import { mentorBetaAllowed } from "@/lib/mentor/beta";
+import { writeMentorTurn } from "@/lib/mentor/outcomes";
 import { handleMentorChat, type MentorAuth } from "./handler";
 
 export const dynamic = "force-dynamic";
@@ -37,12 +41,16 @@ export async function POST(req: NextRequest) {
   });
   return handleMentorChat(req, {
     config,
+    requests: createMentorRequestStore(db),
+    recordTurn: (row) => writeMentorTurn(db, row),
+    recordReview: (snapshot) => recordReviewSnapshot(db, snapshot),
     async authenticate(request): Promise<MentorAuth> {
       const guard = await requireUser(request as NextRequest);
       if ("error" in guard) return { ok: false };
       return { ok: true, userId: guard.userId, paidAccess: isPaidAccess(guard) };
     },
-    flag: (key, userId) => flag(key, userId),
+    flag: (key, userId) => flag(key, userId, { fresh: true }),
+    betaAllowed: (userId) => mentorBetaAllowed(db, userId, config.betaUserIds),
     rpc: db,
     services: () => resolveMentorServices(db),
     meterFor: (userId) => createMeter(db, userId),

@@ -3,6 +3,7 @@ import { getServiceClient } from "@/lib/supabase";
 import { captureServerError } from "@/lib/sentry-capture";
 import { analyticsWritesDisabled } from "@/lib/supabase-resilience";
 import { normalizeEventTimestamp, normalizeTrackedPath } from "@/lib/telemetry-normalize";
+import { isMentorClientEvent, mentorEventData } from "@/lib/mentor/telemetry";
 
 export const dynamic = "force-dynamic";
 
@@ -115,8 +116,8 @@ export async function POST(req: NextRequest) {
     // a row that will never persist.
     if (events && events.length > 0) {
       // Original user_events table
-      const normalizedEvents = events.map((e) => {
-        const data = { ...(e.data || {}) };
+      const normalizedEvents = events.filter((e) => !e.type.startsWith("mentor_") || isMentorClientEvent(e.type)).map((e) => {
+        const data: Record<string, unknown> = isMentorClientEvent(e.type) ? mentorEventData(e.data || {}) : { ...(e.data || {}) };
         if (typeof data.page === "string") {
           const safePage = normalizeTrackedPath(data.page);
           if (safePage) data.page = safePage;

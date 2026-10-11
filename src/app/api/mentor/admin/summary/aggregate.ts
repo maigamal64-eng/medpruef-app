@@ -83,7 +83,11 @@ export interface DbFlagRow {
   rollout_pct: number;
 }
 
+import type { MentorTurnRow } from "@/lib/mentor/outcomes";
+import { buildMentorQuality } from "./quality";
+
 export interface SummaryInputs {
+  turns?: MentorTurnRow[];
   /** UTC month the ledger rows cover, YYYY-MM. */
   month: string;
   now: Date;
@@ -277,6 +281,7 @@ export function buildAdminSummary(input: SummaryInputs): MentorAdminSummary {
   }));
 
   return {
+    quality: buildMentorQuality(input.turns ?? []),
     generated_at: now.toISOString(),
     month: input.month,
     spend: {
