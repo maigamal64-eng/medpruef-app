@@ -1835,6 +1835,11 @@ function Footer({ lang }: { lang: Lang }) {
                 </Link>
               </li>
               <li>
+                <Link href="/wien-route" className="hover:text-white transition-colors">
+                  {lang === "de" ? "Prüfungsweg Wien" : "Vienna exam pathway"}
+                </Link>
+              </li>
+              <li>
                 <Link href="/blog" className="hover:text-white transition-colors">
                   Blog
                 </Link>

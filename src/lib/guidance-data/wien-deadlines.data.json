@@ -3,7 +3,7 @@
     {
       "id": "sip.registration.account",
       "statement": {
-        "de": "SIP4a und SIP5a: Fülle das jeweilige Formular elektronisch aus und sende es während der Anmeldefrist von deinem MedUni-Wien-Studierendenkonto an die Studienabteilung (Nostrifikationsprüfungsanmeldungen). Gib die vorgeschriebenen Prüfungsteile an.",
+        "de": "SIP4a und SIP5a: Füllen Sie das jeweilige Formular elektronisch aus und senden Sie es während der Anmeldefrist von Ihrem MedUni-Wien-Studierendenkonto an die Studienabteilung (Nostrifikationsprüfungsanmeldungen). Geben Sie die vorgeschriebenen Prüfungsteile an.",
         "en": "SIP4a and SIP5a: complete the appropriate form electronically and email it within the registration window from your MedUni Vienna student account to the Studienabteilung (nostrification exam registration). Specify the required exam parts."
       },
       "status": "official",
@@ -23,7 +23,7 @@
     {
       "id": "sip.registration.complete",
       "statement": {
-        "de": "Unvollständige oder verspätet eingelangte Anmeldungen werden nicht berücksichtigt. Verwende ausschließlich das Formular für die betreffende SIP.",
+        "de": "Unvollständige oder verspätet eingelangte Anmeldungen werden nicht berücksichtigt. Verwenden Sie ausschließlich das Formular für die betreffende SIP.",
         "en": "Incomplete registrations and registrations received outside the window are not considered. Use only the form for the relevant SIP."
       },
       "status": "official",
@@ -63,7 +63,7 @@
     {
       "id": "sip.registration.confirmation",
       "statement": {
-        "de": "Verlasse dich nicht auf eine automatische Anmeldebestätigung. Ob eine solche versandt wird, ist aktuell nicht bestätigt: Der verlinkte Informationsblatt-Download ist nicht abrufbar. Prüfe deine Anmeldung in Med.Campus und kläre Unstimmigkeiten mit der Studienabteilung.",
+        "de": "Verlassen Sie sich nicht auf eine automatische Anmeldebestätigung. Ob eine solche versandt wird, ist aktuell nicht bestätigt: Der verlinkte Informationsblatt-Download ist nicht abrufbar. Prüfen Sie Ihre Anmeldung in Med.Campus und klären Sie Unstimmigkeiten mit der Studienabteilung.",
         "en": "Do not rely on an automatic registration confirmation. Whether one is sent is currently unconfirmed: the linked information-sheet download is unavailable. Check your registration in Med.Campus and clarify discrepancies with the Studienabteilung."
       },
       "status": "not_confirmed",
@@ -83,7 +83,7 @@
     {
       "id": "sip.registration.withdrawal",
       "statement": {
-        "de": "Melde dich spätestens 3 volle Werktage vor der Gesamtprüfung selbst über Med.Campus ab. Nach Ablauf der Frist ist bei kurzfristiger Erkrankung ein ärztliches Attest an die Studienabteilung erforderlich.",
+        "de": "Melden Sie sich spätestens 3 volle Werktage vor der Gesamtprüfung selbst über Med.Campus ab. Nach Ablauf der Frist ist bei kurzfristiger Erkrankung ein ärztliches Attest an die Studienabteilung erforderlich.",
         "en": "Withdraw from the overall exam yourself through Med.Campus at least 3 full working days before it. After that deadline, short-notice illness requires a medical certificate sent to the Studienabteilung."
       },
       "status": "official",
@@ -125,7 +125,7 @@
     {
       "id": "rez-gm.registration.separate",
       "statement": {
-        "de": "Rezeptierkunde und Gerichtsmedizin benötigen jeweils ein eigenes Anmeldeformular und eine eigene Nachricht: Rezeptierkunde an Nostrifikationsprüfungsanmeldungen, Gerichtsmedizin an das Studienreferat Gerichtsmedizin. Sende beide vom gültigen MedUni-Wien-Studierendenkonto.",
+        "de": "Rezeptierkunde und Gerichtsmedizin benötigen jeweils ein eigenes Anmeldeformular und eine eigene Nachricht: Rezeptierkunde an Nostrifikationsprüfungsanmeldungen, Gerichtsmedizin an das Studienreferat Gerichtsmedizin. Senden Sie beide von Ihrem gültigen MedUni-Wien-Studierendenkonto.",
         "en": "Rezeptierkunde and Gerichtsmedizin each need their own form and message: Rezeptierkunde goes to nostrification exam registration; Gerichtsmedizin goes to the forensic medicine student office. Send both from your valid MedUni Vienna student account."
       },
       "status": "official",
@@ -185,8 +185,8 @@
     {
       "id": "sip.scoring.pass-rule",
       "statement": {
-        "de": "Für eine positive SIP sind mindestens 60 Prozent der gewerteten Fragen je Block (SIP4a) bzw. Fach (SIP5a) und insgesamt erforderlich. Prüfe für deinen konkreten Antritt auch die aktuelle Prüfungsausschreibung.",
-        "en": "Passing a SIP requires at least 60 percent of scored questions in each block (SIP4a) or subject (SIP5a), and overall. Also check the current announcement for your particular sitting."
+        "de": "Für eine positive SIP sind mindestens 60 Prozent der Fragen in jedem Block bzw. Tertial und insgesamt erforderlich. Prüfen Sie für Ihren konkreten Antritt auch die aktuelle Prüfungsausschreibung.",
+        "en": "Passing a SIP requires at least 60 percent of the questions in each block or tertial, and overall. Also check the current announcement for your particular sitting."
       },
       "status": "official",
       "source_url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/Humanmedizin/allg-info-beurteilungkriterien-2026.pdf",
@@ -226,7 +226,7 @@
     {
       "id": "sip.registration.march-unconfirmed",
       "statement": {
-        "de": "Für die SIP4a und SIP5a am 10. März 2027 zeigt der Kalender widersprüchliche Anmeldejahre. Das Anmeldefenster ist noch nicht bestätigt. Bitte frage die Studienabteilung, bevor du damit planst.",
+        "de": "Für die SIP4a und SIP5a am 10. März 2027 zeigt der Kalender widersprüchliche Anmeldejahre. Das Anmeldefenster ist noch nicht bestätigt. Bitte fragen Sie bei der Studienabteilung nach, bevor Sie damit planen.",
         "en": "For SIP4a and SIP5a on 10 March 2027, the calendar shows conflicting registration years. The window is not yet confirmed. Ask the Studienabteilung before relying on it."
       },
       "status": "not_confirmed",

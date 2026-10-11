@@ -322,6 +322,27 @@ export default function KenntnispruefungFunnel() {
         </div>
       </section>
 
+      <section className="mx-auto max-w-6xl px-4 pb-16 lg:px-8" aria-labelledby="wien-registration-heading">
+        <div className="rounded-2xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] p-6">
+          <h2 id="wien-registration-heading" className="font-display text-xl font-bold">
+            {L === "de" ? "Anmeldung an der MedUni Wien" : "Registering at MedUni Vienna"}
+          </h2>
+          <p className="mt-2 text-sm text-[var(--mp-fg-muted)]">
+            {L === "de"
+              ? "Anmeldefristen, Formulare und Regeln für SIP4a, SIP5a, Rezeptierkunde und Gerichtsmedizin, jeweils mit offizieller Quelle und Prüfdatum."
+              : "Registration deadlines, forms and rules for SIP4a, SIP5a, Rezeptierkunde and Gerichtsmedizin, each with its official source and check date."}
+          </p>
+          <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm font-semibold">
+            <Link href="/wien-route/sip-anmeldung" className="text-[var(--mp-viridian)] underline-offset-4 hover:underline">
+              {L === "de" ? "SIP4a und SIP5a anmelden" : "Register for SIP4a and SIP5a"}
+            </Link>
+            <Link href="/wien-route" className="text-[var(--mp-viridian)] underline-offset-4 hover:underline">
+              {L === "de" ? "Prüfungsweg Wien" : "Vienna exam pathway"}
+            </Link>
+          </div>
+        </div>
+      </section>
+
       <section className="mx-auto max-w-6xl px-4 pb-16 lg:px-8">
         <div className="grid gap-10 md:grid-cols-2 md:items-center">
           <div>

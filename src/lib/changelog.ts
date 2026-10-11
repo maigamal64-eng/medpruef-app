@@ -23,6 +23,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-10-12",
+    tag: "feature",
+    title: { de: "Wien: Anmeldefristen und Prüfungsregeln", en: "Vienna: registration deadlines and exam rules" },
+    description: {
+      de: "Neue Hinweise zu SIP4a, SIP5a, Rezeptierkunde und Gerichtsmedizin mit offiziellen Quellen, Wiener Ortszeit, Quellenstand und Meldemöglichkeit. Nicht bestätigte Anmeldefenster werden gekennzeichnet.",
+      en: "New guidance for SIP4a, SIP5a, Rezeptierkunde and Gerichtsmedizin with official sources, Vienna local time, review stamps and discrepancy reporting. Unconfirmed registration windows are labelled.",
+    },
+  },
+  {
     date: "2026-10-11",
     tag: "feature",
     title: { de: "Anmeldefrist für SIP4a und SIP5a im Kalender", en: "SIP4a and SIP5a registration deadline in the calendar" },

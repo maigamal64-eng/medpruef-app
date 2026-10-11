@@ -97,6 +97,8 @@ export interface ExamLandingContent {
    * Future-only, so it self-ages exactly like the rest of the calendar.
    */
   sittingsExamType?: PuypExamType;
+  /** Optional link to the official registration guidance for this exam. */
+  guidanceLink?: { href: string; label: { de: string; en: string } };
   /** What's this exam going to cover? 3–5 bullets, DE/EN. */
   whatYouLearn: Array<{ de: string; en: string }>;
   /** FAQ — 5 to 8 exam-specific questions. */
@@ -304,6 +306,14 @@ export default function ExamLandingShell({ content }: { content: ExamLandingCont
               </div>
             ))}
           </dl>
+          {content.guidanceLink && (
+            <Link
+              href={content.guidanceLink.href}
+              className="mt-5 inline-block text-sm font-semibold text-[var(--mp-viridian)] underline-offset-4 hover:underline"
+            >
+              {content.guidanceLink.label[L]}
+            </Link>
+          )}
         </div>
       </section>
 

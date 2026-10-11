@@ -41,6 +41,13 @@ function getContent(): ExamLandingContent {
     en: "Start free: 150 Pharma questions",
   },
   secondaryCtaHref: "/pricing",
+  guidanceLink: {
+    href: "/wien-route/rez-gm-anmeldung",
+    label: {
+      de: "Rezeptierkunde und Gerichtsmedizin anmelden: Fristen und Formulare",
+      en: "Register for Rezeptierkunde and Gerichtsmedizin: deadlines and forms",
+    },
+  },
   secondaryCtaLabel: {
     de: "Prüfungs-Kohorte ansehen",
     en: "See Exam Cohort",

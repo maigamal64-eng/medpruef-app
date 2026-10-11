@@ -29,6 +29,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   // lastModified for those routes to that date so the signal reflects
   // the real launch, not the daily sitemap regen.
   const seoSprintDate = new Date("2026-04-24T00:00:00Z");
+  const guidanceDate = new Date("2026-10-12T00:00:00Z");
 
   const blogPostEntries: MetadataRoute.Sitemap = BLOG_POSTS.map((p) => ({
     url: `${base}/blog/${p.slug}`,
@@ -69,6 +70,16 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "weekly",
       priority: 0.8,
     },
+    // Vienna registration guidance (b01, 2026-10-12). Facts carry their own
+    // read-on stamps; the date marks when the pages went live.
+    ...["/wien-route", "/wien-route/sip-anmeldung", "/wien-route/rez-gm-anmeldung", "/wien-route/sip-regeln"].map(
+      (path) => ({
+        url: `${base}${path}`,
+        lastModified: guidanceDate,
+        changeFrequency: "weekly" as const,
+        priority: 0.8,
+      })
+    ),
     {
       url: `${base}/about`,
       lastModified: now,

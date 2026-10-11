@@ -40,6 +40,7 @@ export default function LegalFooter() {
     { href: "/impressum", label: { de: "Impressum", en: "Imprint" } },
     { href: "/privacy", label: { de: "Datenschutz", en: "Privacy" } },
     { href: "/terms", label: { de: "AGB", en: "Terms" } },
+    { href: "/wien-route", label: { de: "Prüfungsweg Wien", en: "Vienna exam pathway" } },
     { href: "mailto:user-b7e46e80@example.com", label: { de: "Kontakt", en: "Contact" } },
   ];
 

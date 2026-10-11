@@ -8,7 +8,7 @@ export interface GuidanceRoute {
 export const GUIDANCE_ROUTES: readonly GuidanceRoute[] = [
   {
     path: "/wien-route",
-    label: {"de": "Wien: dein Prüfungsweg", "en": "Vienna: your exam pathway"},
+    label: {"de": "Prüfungsweg Wien", "en": "Vienna exam pathway"},
     package: "b01",
     status: "live",
   },

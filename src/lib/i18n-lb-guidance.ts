@@ -1,13 +1,13 @@
 export const guidanceCopy = {
   de: {
     kicker: "Nostrifizierung in Österreich", lede: "Anmelden, Fristen prüfen, den nächsten Schritt kennen. Für Nostrifizierungswerberinnen und Nostrifizierungswerber der MedUni Wien.",
-    index: "Dein Prüfungsweg in Wien", sip: "SIP4a und SIP5a anmelden", rez: "Rezeptierkunde und Gerichtsmedizin anmelden", rules: "SIP: Regeln und Bestehen",
-    dates: "Anmeldefenster und Termine", steps: "So gehst du vor", routeSteps: "Deine nächsten Schritte", sources: "Regeln mit offiziellen Quellen",
+    index: "Ihr Prüfungsweg in Wien", sip: "SIP4a und SIP5a anmelden", rez: "Rezeptierkunde und Gerichtsmedizin anmelden", rules: "SIP: Regeln und Bestehen",
+    dates: "Anmeldefenster und Termine", steps: "So gehen Sie vor", routeSteps: "Ihre nächsten Schritte", sources: "Regeln mit offiziellen Quellen",
     open: "Anmeldung offen", upcoming: "Nächstes veröffentlichtes Anmeldefenster", closed: "Dieses Anmeldefenster ist geschlossen.", unpublished: "Das nächste Anmeldefenster ist noch nicht veröffentlicht.",
     unconfirmed: "Anmeldefenster noch nicht bestätigt", remaining: "Kalendertage bis Anmeldeschluss", window: "Anmeldefenster", sitting: "Prüfungstermin", vienna: "Wiener Ortszeit (Europe/Vienna)", endOfDay: "Ende des Tages", until: "bis", opens: "Öffnet am",
-    checked: "Geprüft am", against: "anhand von", official: "Offiziell", reported: "Berichtet", not_confirmed: "Nicht bestätigt", stale: "Erneute Quellenprüfung fällig. Prüfe vor deiner Anmeldung die offizielle Quelle.",
-    form: "Offizielles Formular", showContact: "Anmeldeadresse anzeigen", contact: "Vom Studierendenkonto senden an", report: "Unstimmigkeit melden", reportLabel: "Was stimmt nicht?", submit: "Meldung senden", sending: "Wird gesendet", sent: "Meldung gespeichert. Danke für den Hinweis.", failed: "Die Meldung konnte nicht gespeichert werden. Du kannst sie per E-Mail senden.", email: "Per E-Mail melden", privacy: "Bitte keine Gesundheitsdaten oder persönlichen Unterlagen eingeben. Wir nennen keine feste Antwortzeit.",
-    preparation: "Das Bescheid-Dokument legt fest, welche Prüfungsteile du absolvieren musst. Prüfe für deinen Antritt die aktuelle Ausschreibung und die offizielle Anmeldeseite.",
+    checked: "Geprüft am", against: "anhand von", official: "Offiziell", reported: "Berichtet", not_confirmed: "Nicht bestätigt", stale: "Erneute Quellenprüfung fällig. Prüfen Sie vor Ihrer Anmeldung die offizielle Quelle.",
+    form: "Offizielles Formular", showContact: "Anmeldeadresse anzeigen", contact: "Vom Studierendenkonto senden an", report: "Unstimmigkeit melden", reportLabel: "Was stimmt nicht?", submit: "Meldung senden", sending: "Wird gesendet", sent: "Meldung gespeichert. Danke für den Hinweis.", failed: "Die Meldung konnte nicht gespeichert werden. Sie können sie per E-Mail senden.", email: "Per E-Mail melden", privacy: "Bitte keine Gesundheitsdaten oder persönlichen Unterlagen eingeben. Wir nennen keine feste Antwortzeit.",
+    preparation: "Ihr Bescheid legt fest, welche Prüfungsteile Sie absolvieren müssen. Prüfen Sie für Ihren Antritt die aktuelle Ausschreibung und die offizielle Anmeldeseite.",
   },
   en: {
     kicker: "Nostrification in Austria", lede: "Register, check deadlines and know the next step. For nostrification applicants at MedUni Vienna.",

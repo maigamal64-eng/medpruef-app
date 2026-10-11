@@ -22,6 +22,7 @@
  */
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { CalendarDays, Clock, ArrowRight } from "lucide-react";
 import {
   OFFICIAL_KEYS_BY_BANK,
@@ -113,6 +114,13 @@ function OfficialCard({
   const days = mounted ? daysUntil(first.date) : null;
   const dayWord = days === 1 ? T.dayLeft[lang] : T.daysLeft[lang];
   const isStp = first.exam_key === "stichprobentest";
+  // Vienna registration guidance for the SIP and Rez/GM cards.
+  const guidanceHref =
+    first.exam_key === "sip4a" || first.exam_key === "sip5a"
+      ? "/wien-route/sip-anmeldung"
+      : first.exam_key === "rezeptierkunde" || first.exam_key === "gerichtsmedizin"
+        ? "/wien-route/rez-gm-anmeldung"
+        : null;
   // One line per distinct sitting date (SIP5a 17 Nov, SIP4a 18 Nov).
   const whenLines = [...new Map(card.rows.map((r) => [`${r.date}|${r.date_end ?? ""}`, r])).values()];
   // One deadline line per distinct (close, publisher); SIP4a/SIP5a share one.
@@ -208,6 +216,16 @@ function OfficialCard({
           );
         })}
       </dl>
+
+      {guidanceHref && (
+        <Link
+          href={guidanceHref}
+          className="text-sm font-semibold text-[var(--mp-viridian)] hover:underline underline-offset-2 inline-flex items-center gap-1 mb-4"
+        >
+          {lang === "de" ? "Anmeldung: Fristen und Formulare" : "Registration: deadlines and forms"}
+          <ArrowRight className="w-3 h-3" aria-hidden="true" />
+        </Link>
+      )}
 
       <p className="text-xs leading-relaxed mb-4 mt-auto text-[var(--mp-fg-muted)]">
         {isStp ? td("stp_where", lang) : first.exam_key === "rezeptierkunde" || first.exam_key === "gerichtsmedizin" ? td("calendar_rig_note", lang) : td("binding", lang)}
