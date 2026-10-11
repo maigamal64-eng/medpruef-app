@@ -4,7 +4,8 @@ import { getServiceClient } from "@/lib/supabase";
 import { resolveOptionalUser } from "@/lib/auth-guard";
 import { sanitizeAttribution } from "@/lib/attribution";
 import { sendZohoEmail } from "@/lib/email/zoho";
-import { assertDb, enabled, noStore, SITE } from "./common";
+import { checkRateLimit, callerIdentity, rateKey } from "@/lib/rate-limit";
+import { assertDb, CONFIRMATION_COOLDOWN_MS, confirmationFooter, enabled, noStore, SITE } from "./common";
 import { normalizeEmail, signReminderToken, unsubscribeCredential, verifyReminderToken } from "./tokens";
 
 const exams = new Set(["kenntnispruefung", "kmp_innsbruck", "pharma", "all"]);
@@ -16,6 +17,9 @@ export async function subscribeExamReminder(req: NextRequest) {
     if (!email || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return response({ error: "Invalid email" }, 400);
     const exam = exams.has(String(body?.exam_type)) ? String(body.exam_type) : "all";
     const locale = ["de", "en", "ru", "uk", "tr", "ar"].includes(String(body?.locale)) ? String(body.locale) : "de";
+    // Per-IP burst limit (per instance). The durable per-address cooldown below
+    // is the real fence against confirmation-mail flooding.
+    if (!checkRateLimit({ key: rateKey("exam-reminder-signup", callerIdentity(req)), limit: 10, windowMs: 10 * 60_000 }).allowed) return response({ error: "Too many requests; please retry later" }, 429);
     const db = getServiceClient();
     const userId = resolveOptionalUser(req);
     let linkedUserId: string | null = null;
@@ -37,14 +41,30 @@ export async function subscribeExamReminder(req: NextRequest) {
     // Anonymous repeats NEVER clear an unsubscribe or activate a historical row.
     // Only possession of the emailed, purpose-bound credential grants consent.
     const alreadyConfirmed = row?.confirmed === true && !row.unsubscribed_at && (row.consent_version == null || row.consent_email === email);
-    if (!alreadyConfirmed && enabled("EXAM_REMINDERS_ENABLED")) {
+    if (!alreadyConfirmed && enabled("EXAM_REMINDERS_ENABLED") && await claimConfirmationSlot(db, row.id, email)) {
       const url = `${SITE}/api/reminders?confirm=${encodeURIComponent(signReminderToken("exam-confirm", row.confirmation_token))}`;
       const de = locale === "de";
-      const sent = await sendZohoEmail({ to: email, subject: de ? "Prüfungserinnerungen bestätigen" : "Confirm exam reminders", htmlBody: `<p>${de ? "Bitte bestätigen Sie Prüfungserinnerungen für diese E-Mail-Adresse." : "Please confirm exam reminders for this email address."}</p><p><a href="${url}">${de ? "Bestätigen" : "Confirm"}</a></p>` });
-      if (!sent.ok) return response({ error: "Could not send confirmation; please retry" }, 503);
+      const sent = await sendZohoEmail({ to: email, subject: de ? "Prüfungserinnerungen bestätigen" : "Confirm exam reminders", htmlBody: `<p>${de ? "Bitte bestätigen Sie Prüfungserinnerungen für diese E-Mail-Adresse." : "Please confirm exam reminders for this email address."}</p><p><a href="${url}">${de ? "Bestätigen" : "Confirm"}</a></p>${confirmationFooter(de)}` });
+      if (!sent.ok) {
+        // Release the slot so a genuine retry is possible; no mail was accepted.
+        assertDb((await db.from("exam_reminders").update({ confirmation_sent_at: null }).eq("id", row.id)).error);
+        return response({ error: "Could not send confirmation; please retry" }, 503);
+      }
     }
     return response({ ok: true, confirmation_pending: !alreadyConfirmed });
   } catch { return response({ error: "Could not save reminder; please retry" }, 503); }
+}
+// At most one confirmation mail per normalized address per cooldown, across
+// every exam type row; the slot is claimed by a conditional UPDATE before the
+// provider call so concurrent requests cannot both send.
+async function claimConfirmationSlot(db: ReturnType<typeof getServiceClient>, id: number, email: string): Promise<boolean> {
+  const cutoff = new Date(Date.now() - CONFIRMATION_COOLDOWN_MS).toISOString();
+  const recent = await db.from("exam_reminders").select("id").eq("email", email).gte("confirmation_sent_at", cutoff).limit(1);
+  assertDb(recent.error);
+  if (recent.data?.length) return false;
+  const claim = await db.from("exam_reminders").update({ confirmation_sent_at: new Date().toISOString() }).eq("id", id).or(`confirmation_sent_at.is.null,confirmation_sent_at.lt.${cutoff}`).select("id").maybeSingle();
+  assertDb(claim.error);
+  return !!claim.data;
 }
 export async function examReminderLink(req: NextRequest) {
   const confirmation = req.nextUrl.searchParams.get("confirm");

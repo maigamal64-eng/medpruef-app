@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth-guard";
 import { getServiceClient } from "@/lib/supabase";
 import { assertDb, enabled, noStore } from "@/lib/reminders/common";
+import { checkRateLimit, rateKey } from "@/lib/rate-limit";
 
 import { unsubscribeCredential, verifyReminderToken } from "@/lib/reminders/tokens";
 import { confirmStudyConsent, requestStudyConsent, deliverableDestination } from "@/lib/reminders/study-consent";
@@ -51,6 +52,7 @@ export async function POST(req: NextRequest) {
   if (typeof body?.opt_in !== "boolean" || (body.channel !== undefined && body.channel !== "email")) return NextResponse.json({ error: "Choose an email preference" }, { status: 400, headers: noStore });
   // Disabling remains possible during a rollout hold. No opt-in while OFF.
   if (body.opt_in && !enabled("STUDY_NUDGE_ENABLED")) return NextResponse.json({ error: "Study nudges are not enabled" }, { status: 409, headers: noStore });
+  if (body.opt_in && !checkRateLimit({ key: rateKey("nudge-optin", guard.userId), limit: 5, windowMs: 60 * 60_000 }).allowed) return NextResponse.json({ error: "Too many requests; please retry later" }, { status: 429, headers: noStore });
   try {
     const db = getServiceClient();
     if (body.opt_in) {

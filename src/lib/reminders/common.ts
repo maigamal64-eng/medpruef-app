@@ -24,6 +24,10 @@ export function escapeHtml(value: string): string {
 }
 // Use the canonical HTTPS origin, never a caller-supplied Host header.
 export const SITE = "https://medpruf.com";
+export const CONFIRMATION_COOLDOWN_MS = 60 * 60_000;
+export function confirmationFooter(de: boolean): string {
+  return `<p>${de ? "Falls Sie dies nicht angefordert haben, können Sie diese E-Mail ignorieren." : "If you did not request this, you can ignore this email."}</p>`;
+}
 export function unsubscribeUrl(kind: "exam" | "study", token: string): string {
   return `${SITE}/api/${kind === "exam" ? "reminders" : "nudge"}?unsub=${encodeURIComponent(signReminderToken(`${kind}-unsubscribe`, token))}`;
 }
@@ -54,7 +58,12 @@ export async function deliverBatch(db: ReminderDb, table: string, deliveries: De
     assertDb(claim.error);
     if (!claim.data) throw new Error("Reminder reservation missing");
     // Re-check opt-out after acquiring the reservation, right before sending.
-    if (!await delivery.isSubscribed()) { counts.skipped++; continue; }
+    if (!await delivery.isSubscribed()) {
+      // Nothing reached the provider: drop the reservation so the ledger never
+      // shows a held send that could not have gone out.
+      assertDb((await db.from(table).delete().eq("id", claim.data.id)).error);
+      counts.skipped++; continue;
+    }
     let ok = false;
     try { ok = (await sendZohoEmail(delivery.mail)).ok; } catch { /* held for manual reconciliation */ }
     const stamp = await db.from(table).update({ status: ok ? "sent" : "failed", sent_at: ok ? now.toISOString() : null }).eq("id", claim.data.id);
