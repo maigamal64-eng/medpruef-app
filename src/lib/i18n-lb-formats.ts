@@ -1,0 +1,28 @@
+export const FORMAT_COPY = {
+  de: {
+    eyebrow: "ÖSTERREICH / PRÜFUNGSREGELN", title: "Welches Format hat dein Termin?",
+    intro: "Format, Punkte und Regeln für die universitäre Nostrifizierung. Jede Angabe hat eine Quelle und einen Prüfstand. Was noch nicht bestätigt ist, bleibt sichtbar offen.",
+    back: "Alle Prüfungsformate", home: "MedPrüf", rules: "Regeln ansehen", sittings: "Kommende Termine", noSittings: "Kein kommender Termin im offiziellen Kalender veröffentlicht.",
+    overview: "Prüfungen und Geltungsbereich", details: "Regeln und Grenzen", checked: "Geprüft am", against: "anhand von", edition: "Ausgabe", status: { official: "Amtlich belegt", reported: "Berichtet", not_confirmed: "Nicht bestätigt" },
+    format: { mc: "Multiple Choice (MC)", kaf: "Kurzantwortfragen (KAF)", mixed: "Gemischte Aufgaben", oral: "Mündlich", not_announced: "Format noch nicht angekündigt" },
+    expected: "Ausschreibung erwartet bis", expectedMissing: "Veröffentlichungsdatum nicht bestätigt", overdue: "Erwarteter Termin verstrichen; aktuelle Ausschreibung prüfen.",
+    duration: "Dauer", durationUnknown: "Für diesen Termin nicht bestätigt", minutes: "Minuten", calendarSource: "Terminquelle", registration: "Anmeldefrist", filing: "Einreichungsfrist", opens: "ab", closes: "bis", vienna: "Wiener Zeit",
+    windowUnknown: "Anmeldefenster noch nicht bestätigt", publisher: "Herausgeber", source: "Quelle öffnen", noFormat: "Für diesen neu veröffentlichten Termin ist das Format noch nicht bestätigt.",
+    scope: "Geltungsbereich", fsp: "FSP und C1 sind eigene Sprachprüfungen. MedPrüf bietet dafür keine Prüfungssimulation.",
+    officialNotice: "Dein Bescheid und die aktuelle Ausschreibung bestimmen, welche Teile du ablegst und welche Regeln gelten. Die Übung ersetzt keine amtliche Einladung.",
+    footer: "Quellenstand pro Karte. Termine und Fristen aus dem offiziellen Kalender; keine automatische Übertragung älterer Formate auf neue Termine.", language: "Sprache wählen",
+  },
+  en: {
+    eyebrow: "AUSTRIA / EXAM RULES", title: "Which format applies to your sitting?",
+    intro: "Format, scoring and rules for university nostrification exams. Each statement has a source and review date. Unconfirmed details stay visibly unconfirmed.",
+    back: "All exam formats", home: "MedPrüf", rules: "Read the rules", sittings: "Upcoming sittings", noSittings: "No upcoming sitting is published in the official calendar.",
+    overview: "Exams and scope", details: "Rules and limitations", checked: "Checked on", against: "against", edition: "Edition", status: { official: "Officially sourced", reported: "Reported", not_confirmed: "Not confirmed" },
+    format: { mc: "Multiple choice (MC)", kaf: "Short-answer questions (KAF)", mixed: "Mixed tasks", oral: "Oral", not_announced: "Format not yet announced" },
+    expected: "Announcement expected by", expectedMissing: "Publication date not confirmed", overdue: "Expected date has passed; check the current announcement.",
+    duration: "Duration", durationUnknown: "Not confirmed for this sitting", minutes: "minutes", calendarSource: "Sitting source", registration: "Registration deadline", filing: "Filing deadline", opens: "from", closes: "to", vienna: "Vienna time",
+    windowUnknown: "Registration window not yet confirmed", publisher: "Publisher", source: "Open source", noFormat: "The format for this newly published sitting is not yet confirmed.",
+    scope: "Scope", fsp: "FSP and C1 are separate language exams. MedPrüf does not provide an exam simulation for them.",
+    officialNotice: "Your Bescheid and current announcement determine your prescribed parts and the applicable rules. Practice does not replace the official invitation.",
+    footer: "Each card has its own source date. Sittings and deadlines come from the official calendar; older formats are not automatically applied to new sittings.", language: "Choose language",
+  },
+} as const;
