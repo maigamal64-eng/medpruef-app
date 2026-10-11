@@ -242,3 +242,46 @@ describe("trimUnaskedValues: no guarantee talk unless the learner asked (st-sip-
     expect(out.blocks[0].text).toBe("MedPrüf does not guarantee a pass.");
   });
 });
+
+describe("restated values keep a correct date sentence (fix-r3-live8: dl-rez-jan-en, dl-sip5a-next-en)", () => {
+  const L = getMentorFactsLoader();
+  const now = new Date("2026-10-12T08:00:00Z");
+
+  it("dl-rez-jan-en: 'on the 15th' after 15 December 2026 is the same day, the sentence stays", async () => {
+    const brain = createMentorBrain({ facts: L, db: () => fakeDb({}).db, clock: () => now });
+    const r = await brain.runTool("get_dates", { exam_key: "rezeptierkunde", filing_university: "all" }, ctx({ now }));
+    const st = r.factIds.find((i) => i.startsWith("status.")) as string;
+    const v = brain.validate(
+      `@@LANG en\n@@BLOCK facts=sitting.rezeptierkunde.2027-01-18.wien.registration,${st}\n- The registration window runs from 2 December to 15 December 2026, closing at 12:00 on the 15th. It is not yet open.`,
+      await L.byIds(r.factIds)
+    );
+    expect(v.replaced).toBe(false);
+    expect(allText(v)).toContain("closing at 12:00 on the 15th");
+  });
+
+  it("an ordinal that is not the day of a supported date in its sentence is still replaced", () => {
+    const A = fact({ id: "fixture.dates.a", exam_key: "sip4a", topic: "dates", text_de: "Frist bis 15. Dezember 2099.", text_en: "Deadline 15 December 2099." });
+    const v = validateAnswer("@@LANG en\n@@BLOCK facts=fixture.dates.a\nThe deadline is 15 December 2099. You can also come on the 16th.", [A]);
+    expect(v.replaced).toBe(true);
+    expect(allText(v)).not.toContain("16th");
+    expect(allText(v)).toContain("15 December 2099");
+  });
+
+  it("dl-sip5a-next-en: today's date as an 'as of' note is accepted, today's date as a claim is not", async () => {
+    const brain = createMentorBrain({ facts: L, db: () => fakeDb({}).db, clock: () => now });
+    const cited = await L.byIds(["sitting.sip5a.2026-11-17.wien.registration"]);
+    const ok = brain.validate(
+      "@@LANG en\n@@BLOCK facts=sitting.sip5a.2026-11-17.wien.registration\nThe next SIP5a sitting is on 17 November 2026, and registration is open and closes on 19 October 2026 (status as of 12 October 2026; source: MedUni Wien, Prüfungskalender (SIP), read 10 October 2026).",
+      cited
+    );
+    expect(ok.replaced).toBe(false);
+    expect(allText(ok)).toContain("closes on 19 October 2026");
+    const claim = brain.validate("@@LANG en\n@@BLOCK facts=sitting.sip5a.2026-11-17.wien.registration\nRegistration closes on 12 October 2026.", cited);
+    expect(claim.replaced).toBe(true);
+    expect(allText(claim)).not.toContain("12 October 2026");
+    const today = brain.validate("@@LANG en\n@@BLOCK facts=sitting.sip5a.2026-11-17.wien.registration\nRegistration closes today, 12 October 2026.", cited);
+    expect(today.replaced).toBe(true);
+    const otherDay = brain.validate("@@LANG en\n@@BLOCK facts=sitting.sip5a.2026-11-17.wien.registration\nThe sitting is on 17 November 2026 (as of 11 October 2026).", cited);
+    expect(otherDay.replaced).toBe(true);
+  });
+});

@@ -672,6 +672,39 @@ export interface ValidateOptions {
   resolve?: (id: string) => MentorFact | null;
   /** Language to use when the answer omits @@LANG. */
   defaultLang?: MentorLang;
+  /** Today in Europe/Vienna (YYYY-MM-DD): only accepted as the date of an "as of" / "Stand" note. */
+  today?: string;
+}
+
+const ORDINAL_DAY_RE = /^(\d{1,2})(?:st|nd|rd|th)$/i;
+const AS_OF_BEFORE_RE = /(?:\bas of|\bStand(?:\s+vom)?)[\s:,(]*$/iu;
+
+/**
+ * Values that restate something already known rather than claim something new
+ * (eval round 3, fix-r3-live8): an English ordinal day ("closing at 12:00 on
+ * the 15th") whose day is the day of a SUPPORTED date in the same sentence,
+ * and today's date written as the date of an "as of" / "Stand" note
+ * ("status as of 12 October 2026"). Nothing else is exempted.
+ */
+function restatesKnown(v: ExtractedValue, text: string, values: ExtractedValue[], allowed: ReadonlySet<string>, today: string | undefined): boolean {
+  const ord = ORDINAL_DAY_RE.exec(v.raw.trim());
+  if (ord) {
+    const day = ord[1].padStart(2, "0");
+    const sentence = sentenceRanges(text).find(([a, e]) => v.start >= a && v.end <= e);
+    if (!sentence) return false;
+    return values.some(
+      (o) =>
+        o !== v &&
+        (o.kind === "date" || o.kind === "daymonth") &&
+        o.start >= sentence[0] &&
+        o.end <= sentence[1] &&
+        o.keys.some((k) => allowed.has(k) && k.endsWith(`-${day}`))
+    );
+  }
+  if (today && v.kind === "date" && v.keys.includes(`d:${today}`)) {
+    return AS_OF_BEFORE_RE.test(text.slice(Math.max(0, v.start - 30), v.start));
+  }
+  return false;
 }
 
 /**
@@ -759,7 +792,8 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
     const bad = values.filter(
       (v) =>
         !v.keys.some((k) => allowed.has(k)) &&
-        !((v.kind === "month" || v.kind === "monthyear") && asked.some(([a, e]) => v.start >= a && v.end <= e))
+        !((v.kind === "month" || v.kind === "monthyear") && asked.some(([a, e]) => v.start >= a && v.end <= e)) &&
+        !restatesKnown(v, text, values, allowed, opts.today)
     );
     let outText = text;
     if (bad.length > 0) {
