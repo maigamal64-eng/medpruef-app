@@ -1,0 +1,208 @@
+{
+  "_provenance": {
+    "source_path": "./reports/archive-sweep-2026-10-09/out/finish/official-spt-pharma.json",
+    "source_sha256": "762dfd51f08c03d446e559f8ccd1066727bd717ad65cbf4f24c16a3cfa33980d",
+    "snapshot_read_on": "2026-10-10"
+  },
+  "checked": [
+    {
+      "claim": "A mid-Nov 2026 SIP sitting closes registration in mid to late October 2026",
+      "our_value": "Not in SoT or code.",
+      "official_value": "Registration window 5 Oct to 19 Oct 2026 for SIP4a (18 Nov) and SIP5a (17 Nov). It is open now and closes in 9 days. Nostrifikanten register by email from their muw student account with the SIP4a or SIP5a form; late registration is not possible.",
+      "verdict": "confirmed",
+      "source": "MedUni Wien Pruefungskalender SIP + Anmeldemodalitaeten SIP (meduniwien.ac.at, read 10 Oct 2026)",
+      "fix": "Surface this deadline to Vienna-bank users now (19 Oct 2026). Add the next windows: 4 to 18 Jan 2027 (Feb sittings), 25 Jan to 8 Feb 2027 (10 Mar), 15 to 29 Mar 2027 (Apr), 17 to 31 May 2027 (Jun/Jul)."
+    },
+    {
+      "claim": "SIP4a/SIP5a question format is mostly MCQ, KAF at some sittings",
+      "our_value": "SoT 0.1: bank is MCQ practice, does not reproduce all formats.",
+      "official_value": "Calendar format column says 'MC oder KAF' for Nov 2026 and most 2027 sittings, 'MC' only for the SIP4a Feb 2027 main sitting and SIP5a Jul 2027. The format is fixed in the Ausschreibung (published at most 3 weeks before). The page says March sittings are mostly KAF (short answer).",
+      "verdict": "confirmed",
+      "source": "MedUni Wien Pruefungskalender SIP + Anmeldemodalitaeten SIP (meduniwien.ac.at, read 10 Oct 2026)",
+      "fix": "Keep the 'MCQ practice, not a full format match' wording. Do not promise MC for any SIP sitting. Add: format is announced about 3 weeks before the sitting."
+    },
+    {
+      "claim": "2027 Stichprobentest sittings are 3 Feb Innsbruck, 4 May Wien, 22 Sep Graz",
+      "our_value": "exam-dates.ts has these three dates, sourced from the AST Infoblatt (September 2026), which says 'geplant'.",
+      "official_value": "Both official sources say 'festgelegt' (fixed): i-med 2027 Termine PDF and MedUni Wien Merkblatt (1 Sep 2026) give 3 Feb 2027 Innsbruck, 4 May 2027 Wien, 22 Sep 2027 Graz.",
+      "verdict": "confirmed",
+      "source": "i-med.ac.at Termine Stichprobentest 2027 PDF (read 10 Oct 2026, file dated 27 Aug 2026); MedUni Wien Merkblatt Nostrifizierung Humanmedizin, version 1 Sep 2026 (read 10 Oct 2026)",
+      "fix": "Switch sourceUrl to the i-med 2027 Termine PDF (https://www.i-med.ac.at/studium-services/media/Termine-Stichprobentest-2027-1.pdf), drop the 'planned, re-verify' caveat in the SoT and code comment."
+    },
+    {
+      "claim": "2026 sittings were Innsbruck 4 Feb, Wien 5 May, Graz 23 Sep, with registration deadlines 7 Jan, 23 Mar, 26 Aug",
+      "our_value": "SoT section 1 and exam-dates.ts: Graz 23 Sep 2026, deadline 26 Aug 2026.",
+      "official_value": "Same: Innsbruck 4 Feb 2026 (Anmeldefrist 7 Jan 2026), Wien 5 May 2026 (23 Mar 2026), Graz 23 Sep 2026 (26 Aug 2026). The PDF is still live (last modified 24 Mar 2026).",
+      "verdict": "confirmed",
+      "source": "i-med.ac.at Termine Stichprobentest 2026 PDF (read 10 Oct 2026; same text as archive file document-5769604481259936460)",
+      "fix": "None for the dates. The 2026 sittings are all past on 10 Oct 2026."
+    },
+    {
+      "claim": "SoT 'next sitting' table and 'in-market cohort right now' (28 Sep and 23 Sep 2026)",
+      "our_value": "SoT section 1 table (verified 2026-06-20) and cohort bullet lead with 28 Sep 2026 and 23 Sep 2026 (Graz).",
+      "official_value": "Graz STP on 23 Sep 2026 was real and is now past. Next STP is Innsbruck 3 Feb 2027. The next Vienna SIP sitting is 17 and 18 Nov 2026, and the next Rezeptierkunde/Gerichtsmedizin week is 23 to 27 Nov 2026.",
+      "verdict": "confirmed",
+      "source": "i-med.ac.at Termine Stichprobentest 2026 PDF (read 10 Oct 2026; same text as archive file document-5769604481259936460); i-med.ac.at Termine Stichprobentest 2027 PDF (read 10 Oct 2026, file dated 27 Aug 2026)",
+      "fix": "Rewrite the table and cohort bullet: next STP 3 Feb 2027 (Innsbruck); next SIP 17/18 Nov 2026; next Pharma/Forensic week 23 to 27 Nov 2026."
+    },
+    {
+      "claim": "STP structure: 10 fields, 250 questions, one attempt, positive at 6 of 10 fields with 60% each",
+      "our_value": "SoT section 1.1.",
+      "official_value": "Fields and counts match (30/30/30, 25 x4, 20 x3 = 250). 60% per field. One attempt only. Result: 6 or more fields positive means exams only for the failed fields (plus possible thesis); 5 or fewer means regular-curriculum exams (plus possible thesis). The test is not an exam under the UG, it is part of the investigation. The documents state field counts; the figure 250 is from the Wien 2023 info sheet.",
+      "verdict": "confirmed",
+      "source": "MedUni Wien Merkblatt Nostrifizierung Humanmedizin, version 1 Sep 2026 (read 10 Oct 2026); i-med.ac.at Termine Stichprobentest 2026 PDF (read 10 Oct 2026; same text as archive file document-5769604481259936460)",
+      "fix": "None. Add that the STP can be taken only once and that Wien expects the candidate to sit the next possible sitting after filing."
+    },
+    {
+      "claim": "Every Nostrifikant must always sit Rezeptierkunde/Pharmakologie and Gerichtliche Medizin, whatever the STP result",
+      "our_value": "SoT section 1.1.",
+      "official_value": "Confirmed in Wien Merkblatt (1 Sep 2026), Innsbruck positive and negative PDFs, and the Graz Merkblatt: both exams are always prescribed because of country differences.",
+      "verdict": "confirmed",
+      "source": "MedUni Wien Merkblatt Nostrifizierung Humanmedizin, version 1 Sep 2026 (read 10 Oct 2026); MedUni Innsbruck, Information ueber den Ablauf der Pruefungen nach positivem / negativem Stichprobentest Humanmedizin (PDFs dated 24 Mar 2026, read 10 Oct 2026)",
+      "fix": "None."
+    },
+    {
+      "claim": "Rezeptierkunde and Pharmakologie are one exam, or two registrations",
+      "our_value": "SoT calls it one row, 'Pharmakologie / Rezeptierkunde'.",
+      "official_value": "One exam: Wien names it 'Rezeptierkunde (Pharmakologie)', one registration form, one set of exam weeks shared with Gerichtsmedizin.",
+      "verdict": "confirmed",
+      "source": "MedUni Wien Merkblatt Nostrifizierung Humanmedizin, version 1 Sep 2026 (read 10 Oct 2026); MedUni Wien Pruefungskalender Rigorosumspruefungen WS2026/27 and SS2026 for Nostrifikanten (Gerichtsmedizin, Rezeptierkunde), read 10 Oct 2026",
+      "fix": "None, but name it 'Rezeptierkunde (Pharmakologie)' in learner copy."
+    },
+    {
+      "claim": "Pharma and Gerichtsmedizin attempts and no-show rule (attempts 4 and 5 commission, 3-month block)",
+      "our_value": "Not in SoT.",
+      "official_value": "Registration forms: attempts 1 to 3 normal, attempt 4 and 5 commission. Merkblatt: failed exams may be repeated four times (5 attempts), a 6th for the last exam of the programme. Not deregistering at least 3 working days before (illness until exam day) triggers a statutory 3-month block.",
+      "verdict": "confirmed",
+      "source": "MedUni Wien Merkblatt Nostrifizierung Humanmedizin, version 1 Sep 2026 (read 10 Oct 2026); MedUni Wien Rezeptierkunde and Gerichtsmedizin registration forms (version 1 Mar 2023); MedUni Wien Pruefungskalender Rigorosumspruefungen WS2026/27 and SS2026 for Nostrifikanten (Gerichtsmedizin, Rezeptierkunde), read 10 Oct 2026",
+      "fix": "Add to SoT as plain facts. Cite the Wien Merkblatt."
+    },
+    {
+      "claim": "Rezeptierkunde/Gerichtsmedizin registration is by email from a university account",
+      "our_value": "Not in SoT.",
+      "official_value": "Only from the muw student email account (data protection rule), with the form as scan or photo. That means the candidate must already be admitted as an extraordinary student after the Bescheid.",
+      "verdict": "confirmed",
+      "source": "MedUni Wien Pruefungskalender Rigorosumspruefungen WS2026/27 and SS2026 for Nostrifikanten (Gerichtsmedizin, Rezeptierkunde), read 10 Oct 2026",
+      "fix": "Add: you cannot register before admission after the Bescheid."
+    },
+    {
+      "claim": "German C1 certificate is required with the application at Wien, Graz and Innsbruck",
+      "our_value": "SoT has no language rule. Blog says Vienna requires C1.",
+      "official_value": "Wien: C1 declaration plus a C1 certificate at filing, language exam taken no more than 3 years before the date of the exam it counts for, as the Merkblatt words it (Merkblatt 1 Sep 2026; Ermittlungsverfahren page). Graz web page: C1, certificate not older than 2 years. Innsbruck Nostrifizierungsablauf page: C1. Insufficient German does not change the STP result; language dictionaries are allowed, medical and electronic ones are not (Wien).",
+      "verdict": "confirmed",
+      "source": "MedUni Wien Merkblatt Nostrifizierung Humanmedizin, version 1 Sep 2026 (read 10 Oct 2026); meduniwien.ac.at Ermittlungsverfahren page; medunigraz.at Nostrifizierung page; i-med.ac.at Nostrifizierungsablauf page (all read 10 Oct 2026)",
+      "fix": "Add a language row to SoT: C1 certificate required at filing at all three; age limits 3 years (Wien, Merkblatt wording) and 2 years (Graz). Start date of the C1 rule (archive says Feb 2025) not verified."
+    },
+    {
+      "claim": "Accepted certificates; a course certificate or German FSP is not enough",
+      "our_value": "Not in SoT.",
+      "official_value": "Wien list (10 items): OESD C1, Goethe C1, telc C1 variants, DSD II, TestDaF level 4 and 5, OeIF C1, university language centre C1, DSH 2 or 3, German-language school-leaving certificate, or at least 3 years of study in German. The OeAK Fachsprachpruefung is not on the list. A course attendance certificate is not on the list.",
+      "verdict": "confirmed",
+      "source": "MedUni Wien Merkblatt Nostrifizierung Humanmedizin, version 1 Sep 2026 (read 10 Oct 2026)",
+      "fix": "Add the list or a pointer to the Merkblatt. Say 'FSP does not replace the C1 certificate' only as 'not on the Wien list'."
+    },
+    {
+      "claim": "Stichprobentest is one joint test by Wien, Graz, Innsbruck; JKU hosts no sitting; venue rotates",
+      "our_value": "SoT section 1.",
+      "official_value": "Joint since 2017 by the Austrian medical universities. Sittings rotate Innsbruck, Wien, Graz. Innsbruck page: the test can be taken anywhere, the result counts at the university where the application was filed. Registration is at the filing university.",
+      "verdict": "confirmed",
+      "source": "i-med.ac.at Termine Stichprobentest 2026 PDF (read 10 Oct 2026; same text as archive file document-5769604481259936460); i-med.ac.at Termine Stichprobentest 2027 PDF (read 10 Oct 2026, file dated 27 Aug 2026); i-med.ac.at Nostrifizierungsablauf page",
+      "fix": "None. Whether each university writes its own questions is not in any official document (archive peer claim only)."
+    },
+    {
+      "claim": "Diplomarbeit or Wahlfach wording",
+      "our_value": "Not in SoT.",
+      "official_value": "For Wien applications filed from 1 Aug 2026: if the Bescheid prescribes a Diplomarbeit, it must follow MedUni Wien rules, ends with an oral commission exam, and cannot be replaced by the 'vertiefte Ausbildung fuer Nostrifizierungswerber:innen' Wahlfach (at least 3 weekly hours). Earlier applications are not covered by this text.",
+      "verdict": "confirmed",
+      "source": "meduniwien.ac.at Antragstellung page and Merkblatt 1 Sep 2026",
+      "fix": "Add with the 1 Aug 2026 cut-off."
+    },
+    {
+      "claim": "FSP: 2027 dates, deadline 4 Jan 2027, fee rise to about 35 EUR, B2 to register, certificate up to 10 years old",
+      "our_value": "Blog: 1,179.65 EUR in 2026, B2 to register, 10-year certificate age.",
+      "official_value": "arztakademie.at: 26 Nov 2026 (reg by 5 Nov), 10 Dec 2026 (19 Nov); 2027: 25 Jan (4 Jan), 18 Feb (28 Jan), 22 Mar (1 Mar), 22 Apr (1 Apr), 13 May (22 Apr), 24 Jun (3 Jun). Fee 1,179.65 EUR in 2026 (repeat 589.83); 1,213.86 EUR in 2027 (repeat 606.93), a rise of 34.21 EUR. B2 proof needed, not older than 10 years. 22 Oct 2026 is fully booked.",
+      "verdict": "confirmed",
+      "source": "arztakademie.at/sprachpruefung-termine and /sprachpruefung (read 10 Oct 2026)",
+      "fix": "Blog fee is right for 2026; add the 2027 fee from 1 Jan 2027."
+    }
+  ],
+  "next_dates": [
+    {
+      "exam": "SIP5a and SIP4a (Vienna, Nostrifikanten)",
+      "date": "17 Nov 2026 (SIP5a), 18 Nov 2026 (SIP4a)",
+      "format": "MC or KAF, set in the Ausschreibung",
+      "registration": "5 Oct to 19 Oct 2026, email with SIP4a or SIP5a form from muw account",
+      "source": "MedUni Wien Pruefungskalender SIP + Anmeldemodalitaeten SIP (meduniwien.ac.at, read 10 Oct 2026)"
+    },
+    {
+      "exam": "Rezeptierkunde and Gerichtsmedizin (Wien)",
+      "date": "Week 23 to 27 Nov 2026",
+      "format": "Rezeptierkunde: 30 MC, 1 hour. Gerichtsmedizin: Wien format not published",
+      "registration": "7 Oct to 20 Oct 2026, closes Tuesday 12:00; email with form",
+      "source": "MedUni Wien Pruefungskalender Rigorosumspruefungen WS2026/27 and SS2026 for Nostrifikanten (Gerichtsmedizin, Rezeptierkunde), read 10 Oct 2026"
+    },
+    {
+      "exam": "Innsbruck KMP rounds used by Innsbruck filers",
+      "date": "1 to 5 Feb 2027",
+      "format": "Electronic, KMP 5A 5B 6A 6B for negative STP",
+      "registration": "9 to 11 Dec 2026 (Oct 2026 round closed 25 Sep)",
+      "source": "i-med.ac.at Pruefungstermine WS 2026/27 KMP PDF; MedUni Innsbruck, Information ueber den Ablauf der Pruefungen nach positivem / negativem Stichprobentest Humanmedizin (PDFs dated 24 Mar 2026, read 10 Oct 2026)"
+    },
+    {
+      "exam": "Stichprobentest Innsbruck",
+      "date": "3 Feb 2027",
+      "format": "Electronic; 10 fields, 250 questions",
+      "registration": "Wien Merkblatt cutoff 14 Dec 2026; i-med PDF cutoff 7 Jan 2027 (use your filing university's date; earlier is safe)",
+      "source": "i-med.ac.at Termine Stichprobentest 2027 PDF (read 10 Oct 2026, file dated 27 Aug 2026); MedUni Wien Merkblatt Nostrifizierung Humanmedizin, version 1 Sep 2026 (read 10 Oct 2026)"
+    },
+    {
+      "exam": "Rezeptierkunde and Gerichtsmedizin (Wien)",
+      "date": "Week 18 to 22 Jan 2027",
+      "format": "as above",
+      "registration": "2 Dec to 15 Dec 2026, closes Tuesday 12:00",
+      "source": "MedUni Wien Pruefungskalender Rigorosumspruefungen WS2026/27 and SS2026 for Nostrifikanten (Gerichtsmedizin, Rezeptierkunde), read 10 Oct 2026"
+    },
+    {
+      "exam": "SIP5a and SIP4a (Vienna)",
+      "date": "15 Feb 2027 (SIP5a, MC or KAF), 19 Feb 2027 (SIP4a, MC main sitting)",
+      "format": "MC or KAF",
+      "registration": "4 Jan to 18 Jan 2027",
+      "source": "MedUni Wien Pruefungskalender SIP + Anmeldemodalitaeten SIP (meduniwien.ac.at, read 10 Oct 2026)"
+    },
+    {
+      "exam": "SIP4a and SIP5a (Vienna)",
+      "date": "10 Mar 2027 (both); 27 Apr (SIP4a) and 28 Apr (SIP5a) 2027",
+      "format": "March mostly KAF per the page; Apr MC or KAF",
+      "registration": "25 Jan to 8 Feb 2027 (March); 15 Mar to 29 Mar 2027 (April)",
+      "source": "MedUni Wien Pruefungskalender SIP + Anmeldemodalitaeten SIP (meduniwien.ac.at, read 10 Oct 2026)"
+    },
+    {
+      "exam": "Stichprobentest Wien",
+      "date": "4 May 2027",
+      "format": "Electronic",
+      "registration": "17 Mar 2027 in both the Wien Merkblatt and the i-med PDF",
+      "source": "i-med.ac.at Termine Stichprobentest 2027 PDF (read 10 Oct 2026, file dated 27 Aug 2026); MedUni Wien Merkblatt Nostrifizierung Humanmedizin, version 1 Sep 2026 (read 10 Oct 2026)"
+    },
+    {
+      "exam": "SIP4a and SIP5a (Vienna), summer 2027",
+      "date": "30 Jun 2027 (SIP4a), 2 Jul 2027 (SIP5a); 1 Sep 2027 (SIP4a), 23 Sep 2027 (SIP5a)",
+      "format": "MC or KAF; SIP5a Jul is MC main sitting",
+      "registration": "17 to 31 May 2027; 19 Jul to 2 Aug 2027 (SIP4a Sep); 9 to 23 Aug 2027 (SIP5a Sep)",
+      "source": "MedUni Wien Pruefungskalender SIP + Anmeldemodalitaeten SIP (meduniwien.ac.at, read 10 Oct 2026)"
+    },
+    {
+      "exam": "Stichprobentest Graz",
+      "date": "22 Sep 2027",
+      "format": "Electronic",
+      "registration": "Wien Merkblatt cutoff 30 Jun 2027; i-med PDF cutoff 25 Aug 2027 (use your filing university's date; earlier is safe)",
+      "source": "i-med.ac.at Termine Stichprobentest 2027 PDF (read 10 Oct 2026, file dated 27 Aug 2026); MedUni Wien Merkblatt Nostrifizierung Humanmedizin, version 1 Sep 2026 (read 10 Oct 2026)"
+    },
+    {
+      "exam": "OeAEK Sprachpruefung Deutsch (FSP), for context",
+      "date": "26 Nov 2026, 10 Dec 2026, 25 Jan 2027",
+      "format": "Oral and written, B2 certificate needed to register",
+      "registration": "5 Nov 2026, 19 Nov 2026, 4 Jan 2027",
+      "source": "arztakademie.at/sprachpruefung-termine (read 10 Oct 2026)"
+    }
+  ]
+}

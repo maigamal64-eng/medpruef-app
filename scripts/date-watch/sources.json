@@ -1,0 +1,63 @@
+{
+ "_doc": "Official pages W1-WATCH re-reads. kind html|pdf. start/end are optional text markers that cut the volatile site chrome (menu, footer) away; if a marker is missing the whole text is used and the read is flagged marker_missing. Edit here, not in watch.py.",
+ "sources": [
+  {
+   "id": "muw-sip-kalender",
+   "kind": "html",
+   "role": "calendar+format",
+   "title": "MedUni Wien Pruefungskalender (SIP rows, Fragenformat column)",
+   "url": "https://www.meduniwien.ac.at/web/studierende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnisse/pruefungskalender/",
+   "start": "Aktuelle Prüfungstermine",
+   "end": null
+  },
+  {
+   "id": "muw-nostri-pruefungen",
+   "kind": "html",
+   "role": "registration+links",
+   "title": "MedUni Wien Nostrifizierung, Pruefungen page (forms, calendar PDF links)",
+   "url": "https://www.meduniwien.ac.at/web/studium-weiterbildung/nostrifizierung/pruefungen/",
+   "start": "Informationen zur Prüfungsanmeldung",
+   "end": "Studienabteilung"
+  },
+  {
+   "id": "muw-nostri-antragstellung",
+   "kind": "html",
+   "role": "merkblatt-links",
+   "title": "MedUni Wien Nostrifizierung, Antragstellung page (Merkblatt links, deadlines)",
+   "url": "https://www.meduniwien.ac.at/web/studium-weiterbildung/nostrifizierung/antragstellung/",
+   "start": null,
+   "end": null
+  },
+  {
+   "id": "muw-merkblatt-human",
+   "kind": "pdf",
+   "role": "merkblatt",
+   "title": "Merkblatt Nostrifizierung Humanmedizin, Stand 1 Sep 2026",
+   "url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/pdf/Merkblatt_Nostri_Human_VS_1._9._2026-1.pdf"
+  },
+  {
+   "id": "muw-ws26-rezept-gm",
+   "kind": "pdf",
+   "role": "calendar",
+   "title": "WS26 Pruefungstermine Gerichtsmedizin und Rezeptierkunde (PDF dated 03.06.2026)",
+   "url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/WS26Pr%C3%BCf_modus_EW_03062026.pdf"
+  },
+  {
+   "id": "imed-stp-2027",
+   "kind": "pdf",
+   "role": "calendar",
+   "title": "i-med Termine Stichprobentest 2027",
+   "url": "https://www.i-med.ac.at/studium-services/media/Termine-Stichprobentest-2027-1.pdf"
+  },
+  {
+   "id": "muw-ausschreibungen",
+   "kind": "html",
+   "role": "ausschreibung (format MC or KAF)",
+   "title": "MedUni Wien Pruefungsausschreibungen Humanmedizin (behind a login; the Ausschreibung fixes MC or KAF at most 3 weeks before a sitting)",
+   "url": "https://www.meduniwien.ac.at/web/studierende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnisse/pruefungsausschreibungen/",
+   "start": "Bitte loggen Sie sich",
+   "end": "Hilfe bei Problemen",
+   "must_contain": "Bitte loggen Sie sich"
+  }
+ ]
+}

@@ -1,0 +1,29 @@
+{
+ "id": "muw-ws26-rezept-gm",
+ "url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/WS26Pr%C3%BCf_modus_EW_03062026.pdf",
+ "final_url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/WS26Pr%C3%BCf_modus_EW_03062026.pdf",
+ "fetched_at": "2026-10-10T09:42:44+00:00",
+ "http_status": 200,
+ "content_type": "application/pdf",
+ "bytes": 204814,
+ "bytes_sha256": "cb78af4c3dc2d64d948bb55510325217adb123737a59c300c8e88564f716829f",
+ "problems": [],
+ "text_sha256": "fa5b4f5fcc6466c58d5c1f8e171946a4e282ef2f71874bdb99b923363b2297d4",
+ "text_chars": 1859,
+ "dates": [
+  "2026-08-12",
+  "2026-08-25",
+  "2026-09-28",
+  "2026-10-02",
+  "2026-10-07",
+  "2026-10-20",
+  "2026-11-23",
+  "2026-11-27",
+  "2026-12-02",
+  "2026-12-15",
+  "2027-01-18",
+  "2027-01-22"
+ ],
+ "rows": {},
+ "links": []
+}

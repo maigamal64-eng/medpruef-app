@@ -1,0 +1,27 @@
+{
+ "id": "muw-nostri-antragstellung",
+ "url": "https://www.meduniwien.ac.at/web/studium-weiterbildung/nostrifizierung/antragstellung/",
+ "final_url": "https://www.meduniwien.ac.at/web/studium-weiterbildung/nostrifizierung/antragstellung/",
+ "fetched_at": "2026-10-10T09:42:42+00:00",
+ "http_status": 200,
+ "content_type": "text/html; charset=utf-8",
+ "bytes": 87728,
+ "bytes_sha256": "b1e433d26fd6cedef6b33abde4ee6cc64d03d9446cea3ec4ba9363b0e3c3e70b",
+ "problems": [],
+ "text_sha256": "7d0708e2aaf79bc3be46f1e14ad437e27e5fefd435ecdc0580645cccb23a952d",
+ "text_chars": 12581,
+ "dates": [
+  "2023-11-24",
+  "2026-08-01",
+  "2026-08-03",
+  "2026-09-01",
+  "2026-09-15"
+ ],
+ "rows": {},
+ "links": [
+  "/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/aktuell/Antragsformular_VS_1._8._2026.pdf",
+  "/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/aktuell/Formular_Bekanntgabe_der_Zustellungsvollmacht_MedUni_Wien_-_RA_VS_Nov._23.docx",
+  "/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/pdf/Merkblatt_Nostri._Zahn_VS_Sept._2026.pdf",
+  "/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/pdf/Merkblatt_Nostri_Human_VS_1._9._2026-1.pdf"
+ ]
+}

@@ -1,0 +1,28 @@
+{
+ "id": "muw-nostri-pruefungen",
+ "url": "https://www.meduniwien.ac.at/web/studium-weiterbildung/nostrifizierung/pruefungen/",
+ "final_url": "https://www.meduniwien.ac.at/web/studium-weiterbildung/nostrifizierung/pruefungen/",
+ "fetched_at": "2026-10-10T09:42:41+00:00",
+ "http_status": 200,
+ "content_type": "text/html; charset=utf-8",
+ "bytes": 88192,
+ "bytes_sha256": "79ca406e3de4d8fc70337bdb6c3dffe1c6607bd75ca2e3551c284aeccbfb5b21",
+ "problems": [],
+ "text_sha256": "34cf9df2c3d7a99b37f831c3792e1c93af021638151dfa4809987e2efebe1bf6",
+ "text_chars": 2155,
+ "dates": [
+  "2018-03-01",
+  "2024-04-09",
+  "2025-08-11",
+  "2026-01-19"
+ ],
+ "rows": {},
+ "links": [
+  "/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/Humanmedizin/Formulare/Anmeldung_SIP4a_Nostrifikanten.pdf",
+  "/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/Humanmedizin/Formulare/Anmeldung_SIP5a_Nostrifikanten.pdf",
+  "/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/GerichtsmedizinFormular__1.2023_.pdf",
+  "/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/RezeptierkundeFormular__1.2023_.pdf",
+  "/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/SS26Pruef_modus_EW_13012026.pdf",
+  "/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/WS26Pr%C3%BCf_modus_EW_03062026.pdf"
+ ]
+}

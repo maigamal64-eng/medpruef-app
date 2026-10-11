@@ -1,0 +1,18 @@
+{
+ "id": "muw-ausschreibungen",
+ "url": "https://www.meduniwien.ac.at/web/studierende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnisse/pruefungsausschreibungen/",
+ "final_url": "https://www.meduniwien.ac.at/web/studierende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnisse/pruefungsausschreibungen/",
+ "fetched_at": "2026-10-10T09:42:46+00:00",
+ "http_status": 200,
+ "content_type": "text/html; charset=utf-8",
+ "bytes": 68412,
+ "bytes_sha256": "44133f4b43df894202390487234a4fd876d44c70ed1c02e2caaaebd03b46bb67",
+ "problems": [],
+ "text_sha256": "7fd0742f4506cf63f48f7f49f51350b7c15db4b902c48a007c8b87407e283dfd",
+ "text_chars": 331,
+ "dates": [],
+ "rows": {},
+ "links": [
+  "/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/Humanmedizin/Zugang-Pr%C3%BCfungsr%C3%A4ume.pdf"
+ ]
+}

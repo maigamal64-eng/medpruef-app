@@ -1,0 +1,418 @@
+{
+ "id": "muw-sip-kalender",
+ "url": "https://www.meduniwien.ac.at/web/studierende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnisse/pruefungskalender/",
+ "final_url": "https://www.meduniwien.ac.at/web/studierende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnisse/pruefungskalender/",
+ "fetched_at": "2026-10-10T09:42:40+00:00",
+ "http_status": 200,
+ "content_type": "text/html; charset=utf-8",
+ "bytes": 101087,
+ "bytes_sha256": "e45ff54b4024b1d44a9701c18ac54d6a85d6bcc2959ed7b7512717afa55042f3",
+ "problems": [],
+ "text_sha256": "7aabb4f592843dd8fbceef5dd6b3e988e3c9a5c91e413d97a0fa2449c922e739",
+ "text_chars": 16487,
+ "dates": [
+  "2026-02-09",
+  "2026-10-19",
+  "2026-11-17",
+  "2026-11-18",
+  "2027-01-18",
+  "2027-02-08",
+  "2027-02-15",
+  "2027-02-16",
+  "2027-02-18",
+  "2027-02-19",
+  "2027-03-10",
+  "2027-03-29",
+  "2027-04-27",
+  "2027-04-28",
+  "2027-04-30",
+  "2027-05-31",
+  "2027-06-28",
+  "2027-06-29",
+  "2027-06-30",
+  "2027-07-01",
+  "2027-07-02",
+  "2027-08-02",
+  "2027-08-23",
+  "2027-08-31",
+  "2027-09-01",
+  "2027-09-21",
+  "2027-09-22",
+  "2027-09-23"
+ ],
+ "rows": {
+  "SIP1a#1": {
+   "exam": "SIP1a",
+   "date": "2026-11-17",
+   "date_text": "17.11.2026",
+   "registration": "2026-10-05..2026-10-19",
+   "format": "MC oder KAF",
+   "notes": []
+  },
+  "SIP1b#1": {
+   "exam": "SIP1b",
+   "date": "2026-11-18",
+   "date_text": "18.11.2026",
+   "registration": "2026-10-05..2026-10-19",
+   "format": "MC oder KAF",
+   "notes": []
+  },
+  "SIP2#1": {
+   "exam": "SIP2",
+   "date": "2026-11-17",
+   "date_text": "17.11.2026",
+   "registration": "2026-10-05..2026-10-19",
+   "format": "MC oder KAF",
+   "notes": []
+  },
+  "SIP3#1": {
+   "exam": "SIP3",
+   "date": "2026-11-18",
+   "date_text": "18.11.2026",
+   "registration": "2026-10-05..2026-10-19",
+   "format": "MC oder KAF",
+   "notes": []
+  },
+  "SIP4a#1": {
+   "exam": "SIP4a",
+   "date": "2026-11-18",
+   "date_text": "18.11.2026",
+   "registration": "2026-10-05..2026-10-19",
+   "format": "MC oder KAF",
+   "notes": []
+  },
+  "SIP5a#1": {
+   "exam": "SIP5a",
+   "date": "2026-11-17",
+   "date_text": "17.11.2026",
+   "registration": "2026-10-05..2026-10-19",
+   "format": "MC oder KAF",
+   "notes": []
+  },
+  "FIP2/ePTM#1": {
+   "exam": "FIP2/ePTM",
+   "date": "2027-02-19",
+   "date_text": "15.02.-19.02.2027",
+   "registration": "2027-01-04..2027-01-18",
+   "format": "MC (Hauptpruefungstermin)",
+   "notes": []
+  },
+  "FIP3/ePTM#1": {
+   "exam": "FIP3/ePTM",
+   "date": "2027-02-19",
+   "date_text": "15.02.-19.02.2027",
+   "registration": "2027-01-04..2027-01-18",
+   "format": "MC (Hauptpruefungstermin)",
+   "notes": []
+  },
+  "FIP5/ePTM#1": {
+   "exam": "FIP5/ePTM",
+   "date": "2027-02-19",
+   "date_text": "15.02.-19.02.2027",
+   "registration": "2027-01-04..2027-01-18",
+   "format": "MC (Hauptpruefungstermin)",
+   "notes": []
+  },
+  "SIP1a#2": {
+   "exam": "SIP1a",
+   "date": "2027-02-18",
+   "date_text": "18.02.2027",
+   "registration": "2027-01-04..2027-01-18",
+   "format": "MC (Hauptpruefungstermin)",
+   "notes": []
+  },
+  "SIP1b#2": {
+   "exam": "SIP1b",
+   "date": "2027-02-16",
+   "date_text": "16.02.2027",
+   "registration": "2027-01-04..2027-01-18",
+   "format": "MC oder KAF",
+   "notes": []
+  },
+  "SIP2#2": {
+   "exam": "SIP2",
+   "date": "2027-02-15",
+   "date_text": "15.02.2027",
+   "registration": "2027-01-04..2027-01-18",
+   "format": "MC oder KAF",
+   "notes": []
+  },
+  "SIP3#2": {
+   "exam": "SIP3",
+   "date": "2027-02-16",
+   "date_text": "16.02.2027",
+   "registration": "2027-01-04..2027-01-18",
+   "format": "MC oder KAF",
+   "notes": []
+  },
+  "SIP4a#2": {
+   "exam": "SIP4a",
+   "date": "2027-02-19",
+   "date_text": "19.02.2027",
+   "registration": "2027-01-04..2027-01-18",
+   "format": "MC (Hauptpruefungstermin)",
+   "notes": []
+  },
+  "SIP5a#2": {
+   "exam": "SIP5a",
+   "date": "2027-02-15",
+   "date_text": "15.02.2027",
+   "registration": "2027-01-04..2027-01-18",
+   "format": "MC oder KAF",
+   "notes": []
+  },
+  "SIP1a#3": {
+   "exam": "SIP1a",
+   "date": "2027-03-10",
+   "date_text": "10.03.2027",
+   "registration": "2027-01-25..2027-02-08",
+   "format": "not listed",
+   "notes": [
+    "registration cells disagree on the page (typo year); used the one that closes before the exam"
+   ]
+  },
+  "SIP1b#3": {
+   "exam": "SIP1b",
+   "date": "2027-03-10",
+   "date_text": "10.03.2027",
+   "registration": "2027-01-25..2027-02-08",
+   "format": "not listed",
+   "notes": [
+    "registration cells disagree on the page (typo year); used the one that closes before the exam"
+   ]
+  },
+  "SIP2#3": {
+   "exam": "SIP2",
+   "date": "2027-03-10",
+   "date_text": "10.03.2027",
+   "registration": "2027-01-25..2027-02-08",
+   "format": "not listed",
+   "notes": [
+    "registration cells disagree on the page (typo year); used the one that closes before the exam"
+   ]
+  },
+  "SIP3#3": {
+   "exam": "SIP3",
+   "date": "2027-03-10",
+   "date_text": "10.03.2027",
+   "registration": "2027-01-25..2027-02-08",
+   "format": "not listed",
+   "notes": [
+    "registration cells disagree on the page (typo year); used the one that closes before the exam"
+   ]
+  },
+  "SIP4a#3": {
+   "exam": "SIP4a",
+   "date": "2027-03-10",
+   "date_text": "10.03.2027",
+   "registration": "2027-01-25..2027-02-08",
+   "format": "not listed",
+   "notes": [
+    "registration cells disagree on the page (typo year); used the one that closes before the exam"
+   ]
+  },
+  "SIP5a#3": {
+   "exam": "SIP5a",
+   "date": "2027-03-10",
+   "date_text": "10.03.2027",
+   "registration": "2027-01-25..2027-02-08",
+   "format": "not listed",
+   "notes": [
+    "registration cells disagree on the page (typo year); used the one that closes before the exam"
+   ]
+  },
+  "FIP2/ePTM#2": {
+   "exam": "FIP2/ePTM",
+   "date": "2027-04-30",
+   "date_text": "26.04.-30.04.2027",
+   "registration": "2027-03-15..2027-03-29",
+   "format": "MC",
+   "notes": []
+  },
+  "FIP3/ePTM#2": {
+   "exam": "FIP3/ePTM",
+   "date": "2027-04-30",
+   "date_text": "26.04.-30.04.2027",
+   "registration": "2027-03-15..2027-03-29",
+   "format": "MC",
+   "notes": []
+  },
+  "FIP5/ePTM#2": {
+   "exam": "FIP5/ePTM",
+   "date": "2027-04-30",
+   "date_text": "26.04.-30.04.2027",
+   "registration": "2027-03-15..2027-03-29",
+   "format": "MC",
+   "notes": []
+  },
+  "SIP1a#4": {
+   "exam": "SIP1a",
+   "date": "2027-04-28",
+   "date_text": "28.04.2027",
+   "registration": "2027-03-15..2027-03-29",
+   "format": "MC oder KAF",
+   "notes": []
+  },
+  "SIP1b#4": {
+   "exam": "SIP1b",
+   "date": "2027-04-27",
+   "date_text": "27.04.2027",
+   "registration": "2027-03-15..2027-03-29",
+   "format": "MC oder KAF",
+   "notes": []
+  },
+  "SIP2#4": {
+   "exam": "SIP2",
+   "date": "2027-04-27",
+   "date_text": "27.04.2027",
+   "registration": "2027-03-15..2027-03-29",
+   "format": "MC oder KAF",
+   "notes": []
+  },
+  "SIP3#4": {
+   "exam": "SIP3",
+   "date": "2027-04-28",
+   "date_text": "28.04.2027",
+   "registration": "2027-03-15..2027-03-29",
+   "format": "MC oder KAF",
+   "notes": []
+  },
+  "SIP4a#4": {
+   "exam": "SIP4a",
+   "date": "2027-04-27",
+   "date_text": "27.04.2027",
+   "registration": "2027-03-15..2027-03-29",
+   "format": "MC oder KAF",
+   "notes": []
+  },
+  "SIP5a#4": {
+   "exam": "SIP5a",
+   "date": "2027-04-28",
+   "date_text": "28.04.2027",
+   "registration": "2027-03-15..2027-03-29",
+   "format": "MC oder KAF",
+   "notes": []
+  },
+  "FIP2/ePTM#3": {
+   "exam": "FIP2/ePTM",
+   "date": "2027-07-02",
+   "date_text": "28.06.-02.07.2027",
+   "registration": "2027-05-17..2027-05-31",
+   "format": "MC",
+   "notes": []
+  },
+  "FIP3/ePTM#3": {
+   "exam": "FIP3/ePTM",
+   "date": "2027-07-02",
+   "date_text": "28.06.-02.07.2027",
+   "registration": "2027-05-17..2027-05-31",
+   "format": "MC",
+   "notes": []
+  },
+  "FIP5/ePTM#3": {
+   "exam": "FIP5/ePTM",
+   "date": "2027-07-02",
+   "date_text": "28.06.-02.07.2027",
+   "registration": "2027-05-17..2027-05-31",
+   "format": "MC",
+   "notes": []
+  },
+  "SIP1a#5": {
+   "exam": "SIP1a",
+   "date": "2027-06-30",
+   "date_text": "30.06.2027",
+   "registration": "2027-05-17..2027-05-31",
+   "format": "MC oder KAF",
+   "notes": []
+  },
+  "SIP1b#5": {
+   "exam": "SIP1b",
+   "date": "2027-06-29",
+   "date_text": "29.06.2027",
+   "registration": "2027-05-17..2027-05-31",
+   "format": "MC (Hauptpruefungstermin)",
+   "notes": []
+  },
+  "SIP2#5": {
+   "exam": "SIP2",
+   "date": "2027-06-28",
+   "date_text": "28.06.2027",
+   "registration": "2027-05-17..2027-05-31",
+   "format": "MC (Hauptpruefungstermin)",
+   "notes": []
+  },
+  "SIP3#5": {
+   "exam": "SIP3",
+   "date": "2027-07-01",
+   "date_text": "01.07.2027",
+   "registration": "2027-05-17..2027-05-31",
+   "format": "MC (Hauptpruefungstermin)",
+   "notes": []
+  },
+  "SIP4a#5": {
+   "exam": "SIP4a",
+   "date": "2027-06-30",
+   "date_text": "30.06.2027",
+   "registration": "2027-05-17..2027-05-31",
+   "format": "MC oder KAF",
+   "notes": []
+  },
+  "SIP5a#5": {
+   "exam": "SIP5a",
+   "date": "2027-07-02",
+   "date_text": "02.07.2027",
+   "registration": "2027-05-17..2027-05-31",
+   "format": "MC (Hauptpruefungstermin)",
+   "notes": []
+  },
+  "SIP1a#6": {
+   "exam": "SIP1a",
+   "date": "2027-09-01",
+   "date_text": "01.09.2027",
+   "registration": "2027-07-19..2027-08-02",
+   "format": "MC oder KAF",
+   "notes": []
+  },
+  "SIP1b#6": {
+   "exam": "SIP1b",
+   "date": "2027-08-31",
+   "date_text": "31.08.2027",
+   "registration": "2027-07-19..2027-08-02",
+   "format": "MC oder KAF",
+   "notes": []
+  },
+  "SIP4a#6": {
+   "exam": "SIP4a",
+   "date": "2027-09-01",
+   "date_text": "01.09.2027",
+   "registration": "2027-07-19..2027-08-02",
+   "format": "MC oder KAF",
+   "notes": []
+  },
+  "SIP2#6": {
+   "exam": "SIP2",
+   "date": "2027-09-21",
+   "date_text": "21.09.2027",
+   "registration": "2027-08-09..2027-08-23",
+   "format": "MC oder KAF",
+   "notes": []
+  },
+  "SIP3#6": {
+   "exam": "SIP3",
+   "date": "2027-09-22",
+   "date_text": "22.09.2027",
+   "registration": "2027-08-09..2027-08-23",
+   "format": "MC oder KAF",
+   "notes": []
+  },
+  "SIP5a#6": {
+   "exam": "SIP5a",
+   "date": "2027-09-23",
+   "date_text": "23.09.2027",
+   "registration": "2027-08-09..2027-08-23",
+   "format": "MC oder KAF",
+   "notes": []
+  }
+ },
+ "links": []
+}

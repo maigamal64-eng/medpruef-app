@@ -1,0 +1,258 @@
+{
+  "_provenance": {
+    "source_path": "./reports/archive-sweep-2026-10-09/out/finish/official-vienna.json",
+    "source_sha256": "1a54a6c9babbe9572aba9b3570ce05e8832a27c9ada2b92e4171ae1193ea870d",
+    "snapshot_read_on": "2026-10-10"
+  },
+  "checked": [
+    {
+      "claim": "Next Vienna SIP4a / SIP5a sittings (what Vienna-bank users actually sit)",
+      "our_value": "No SIP date anywhere. exam-dates.ts maps the Vienna bank (key kenntnispruefung) to postgraduate OeAEK dates (28 Sep 2026; 18 Jan, 10 May, 27 Sep 2027).",
+      "official_value": "SIP5a 17 Nov 2026, SIP4a 18 Nov 2026, registration 5 to 19 Oct 2026 (open now). Then SIP5a 15 Feb 2027, SIP4a 19 Feb 2027 (reg 4 to 18 Jan 2027); both 10 Mar 2027; SIP4a 27 Apr / SIP5a 28 Apr 2027; SIP4a 30 Jun / SIP5a 2 Jul 2027; SIP4a 1 Sep / SIP5a 23 Sep 2027.",
+      "source": "MedUni Wien Pruefungskalender (SIP), page read 2026-10-10",
+      "verdict": "confirmed",
+      "fix": "Add a SIP sitting list (source: the Pruefungskalender page) to exam-dates.ts and stop mapping the Vienna bank to OeAEK dates. Surface the 19 Oct 2026 close this week."
+    },
+    {
+      "claim": "Registration for SIP closes about 4 weeks before the sitting (archive pattern, low confidence)",
+      "our_value": "Not in our facts.",
+      "official_value": "Confirmed by 6 official data points: closes 19 Oct 2026 for 17/18 Nov 2026; 1 Jun for 1 Jul 2026; 24 Aug for 24 Sep 2026; 10 Feb for 11 Mar 2025; 26 May for 27 Jun 2025; 18 Mar for 16 Apr 2024. Window is about 2 weeks long, closing 29 to 32 days before.",
+      "source": "MedUni Wien Pruefungskalender (SIP), page read 2026-10-10; SIP4a Ausschreibung for the 1 Jul 2026 sitting (archive doc 5856138765080201879), p1-2; SIP5a Ausschreibung for the 24 Sep 2026 sitting (archive doc 5278226464154625336), p1-3; SIP5a Ausschreibung for 11 Mar 2025 (archive doc 5870511069977384813), p1-2; SIP5a Ausschreibung for 27 Jun 2025 (archive doc 5397884845726660011), p1-2; SIP4a Ausschreibung for 16 Apr 2024 (archive doc 5240401632071535742), p1-2",
+      "verdict": "confirmed",
+      "fix": "Use the official calendar dates, not the pattern, in code. The pattern is a good sanity check only."
+    },
+    {
+      "claim": "SoT section 1 table leads with dead dates (28 Sep 2026 Kenntnispruefung, 23 Sep 2026 Graz Stichprobentest)",
+      "our_value": "Both named as 'next sitting' and 'cohort RIGHT NOW'.",
+      "official_value": "Both are past on 10 Oct 2026. The Graz 23 Sep 2026 sitting was a real, scheduled sitting (Merkblatt Aug 2026 and i-med 2026 PDF). 28 Sep (OeAEK) is not in the Vienna sources and is not checked here, but it is past too.",
+      "source": "Merkblatt Nostrifizierung Humanmedizin, edition 1 Aug 2026 (archive doc 5316609160949838811) p7; i-med.ac.at Termine Stichprobentest 2026 PDF, p1 (https://www.i-med.ac.at/studium/docs/termine-stichprobentest-2026.pdf, read 2026-10-10); WS26 Pruefungstermine Gerichtsmedizin und Rezeptierkunde, PDF dated 03.06.2026, p1",
+      "verdict": "confirmed",
+      "fix": "Rewrite the SoT section 1 table with the next sittings in next_dates. Do not lead any copy with 28 Sep or 23 Sep 2026."
+    },
+    {
+      "claim": "Stichprobentest 2027 sittings: 3 Feb Innsbruck, 4 May Wien, 22 Sep Graz",
+      "our_value": "Same three dates in exam-dates.ts (source AST Infoblatt, Stand September 2026).",
+      "official_value": "Same three dates in the MedUni Wien Merkblatt of 1 Sep 2026 and in the i-med 2027 Termine PDF.",
+      "source": "MedUni Wien Merkblatt Nostrifizierung Humanmedizin, edition 1 Sep 2026 (current on the Antragstellung page, read 2026-10-10) p7; i-med.ac.at Termine Stichprobentest 2027 PDF, p1 (https://www.i-med.ac.at/studium-services/media/Termine-Stichprobentest-2027-1.pdf, read 2026-10-10)",
+      "verdict": "confirmed",
+      "fix": "Add the MedUni Wien Merkblatt and the i-med 2027 PDF as sources next to the AST Infoblatt."
+    },
+    {
+      "claim": "Register for the Stichprobentest at the university where you filed (note text in exam-dates.ts and SoT)",
+      "our_value": "Said in exam-dates.ts notes and SoT section 1.",
+      "official_value": "i-med PDF: you must register within the Anmeldefrist at the university where you filed the nostrification application. Merkblatt: the university invites you by email to the address on your application and you must sit the next possible sitting.",
+      "source": "i-med.ac.at Termine Stichprobentest 2027 PDF, p1 (https://www.i-med.ac.at/studium-services/media/Termine-Stichprobentest-2027-1.pdf, read 2026-10-10); MedUni Wien Merkblatt Nostrifizierung Humanmedizin, edition 1 Sep 2026 (current on the Antragstellung page, read 2026-10-10) p6-7",
+      "verdict": "confirmed",
+      "fix": "Keep. Add: the invitation goes to the email on the application; check spam folder (Merkblatt tells applicants to check spam)."
+    },
+    {
+      "claim": "Archive: late Vienna filers are sent to the next sitting elsewhere, usually Graz; you can file in one city and sit in another",
+      "our_value": "Not in our facts (note text says register at the university where you filed).",
+      "official_value": "Confirmed by structure: the Merkblatt gives MedUni Wien filers one filing cutoff per sitting, and the sittings are hosted in Innsbruck, Wien and Graz. After the Wien cutoff of 23 Mar 2026 the next cutoff was the Graz sitting (29 Jun 2026). So a Vienna filer sits in another city depending on the filing date. Only the words 'late filers are moved' and 'usually Graz' are not stated in any sentence.",
+      "source": "MedUni Wien Merkblatt Nostrifizierung Humanmedizin, edition 1 Sep 2026 (current on the Antragstellung page, read 2026-10-10) p7; Merkblatt Nostrifizierung Humanmedizin, edition 1 Aug 2026 (archive doc 5316609160949838811) p7",
+      "verdict": "confirmed",
+      "fix": "Say in the SoT: the sitting you get depends on when you file at MedUni Wien (see the Merkblatt dates) and may be in another city."
+    },
+    {
+      "claim": "Rezeptierkunde and Pharmakologie: one exam or two?",
+      "our_value": "SoT treats them as one exam named Pharmakologie / Rezeptierkunde.",
+      "official_value": "Official wording is one Nostrifikant exam called Rezeptierkunde, with Pharmakologie in brackets as the subject area. One registration form and mailbox. No separate Pharmakologie registration exists for Nostrifikanten in these documents.",
+      "source": "MedUni Wien Merkblatt Nostrifizierung Humanmedizin, edition 1 Sep 2026 (current on the Antragstellung page, read 2026-10-10) p5, p8; MedUni Wien Nostrifizierung, Pruefungen page, read 2026-10-10",
+      "verdict": "confirmed",
+      "fix": "Keep one pharma track. Name it 'Rezeptierkunde (Pharmakologie)' when quoting the university."
+    },
+    {
+      "claim": "Gerichtsmedizin and Rezeptierkunde are always imposed on every Vienna Nostrifikant, whatever the Stichprobentest result",
+      "our_value": "SoT section 0 and 1.1: always mandatory, 'in jedem Falle'.",
+      "official_value": "Confirmed in the Merkblatt: always prescribed, because of country-specific differences, independent of the Stichprobentest result. Condition: only when basic equivalence is given; a rejected application gets neither.",
+      "source": "MedUni Wien Merkblatt Nostrifizierung Humanmedizin, edition 1 Sep 2026 (current on the Antragstellung page, read 2026-10-10) p5, p8",
+      "verdict": "confirmed",
+      "fix": "Keep; add the condition (basic equivalence must be given)."
+    },
+    {
+      "claim": "SIP pass rule per block / Tertial",
+      "our_value": "Not in our facts.",
+      "official_value": "60% of scored questions in each block (SIP4a) or subject (SIP5a) AND 60% overall. Overall below 60% means the whole exam is repeated. Overall reached but 1 or 2 subjects (fewer than half) below 60% means only those are repeated.",
+      "source": "SIP4a Ausschreibung for the 1 Jul 2026 sitting (archive doc 5856138765080201879), p1-2 p2; SIP5a Ausschreibung for the 24 Sep 2026 sitting (archive doc 5278226464154625336), p1-3 p2",
+      "verdict": "confirmed",
+      "fix": "Add to SoT section 1.1 (SIP block)."
+    },
+    {
+      "claim": "SIP attempts and commission rule (archive: 5 attempts, attempts 4 and 5 commission, oral part contested)",
+      "our_value": "Not in our facts.",
+      "official_value": "Failed exams may be repeated 4 times (5 attempts), a 6th if it is the very last exam of the study. If all attempts are used, admission ends and re-admission is excluded. Attempt 4 ('k 4') and attempt 5 ('k 5', the UN 996 202 group) are commission attempts: after the written exam the board reviews it. The June 2025 sheet states that for Nostrifikanten the board reviews the written exam, while regular-study candidates sit an oral part. So for Nostrifikanten no oral part is stated for attempt 5.",
+      "source": "MedUni Wien Merkblatt Nostrifizierung Humanmedizin, edition 1 Sep 2026 (current on the Antragstellung page, read 2026-10-10) p9; SIP4a Ausschreibung for the 1 Jul 2026 sitting (archive doc 5856138765080201879), p1-2 p1; SIP5a Ausschreibung for 27 Jun 2025 (archive doc 5397884845726660011), p1-2 p1",
+      "verdict": "confirmed",
+      "fix": "Add to SoT. Wording note: the sheets do not define 'UN 996 202'; read as the Nostrifikant group because the 2025 sheet contrasts Nostrifikanten with regular study."
+    },
+    {
+      "claim": "Stichprobentest structure: exactly 10 subjects, 250 MCQ, one attempt, positive at 6 of 10 fields at 60% each (SoT 1.1)",
+      "our_value": "As stated.",
+      "official_value": "Subjects and counts confirmed: 30 each Innere, Chirurgie, Kinder; 25 each Neurologie, Gynaekologie, Dermatologie, Notfall; 20 each HNO, Psychiatrie, Augen (total 250). A field is positive at 60% of questions. 6 or more positive fields: exams only for the negative fields (plus maybe a thesis). 5 or fewer: exams of the regular curriculum. One attempt only. The test is electronic (i-med). It is a measure inside the procedure, not an exam under the UG.",
+      "source": "MedUni Wien Merkblatt Nostrifizierung Humanmedizin, edition 1 Sep 2026 (current on the Antragstellung page, read 2026-10-10) p6-8; i-med.ac.at Termine Stichprobentest 2027 PDF, p1 (https://www.i-med.ac.at/studium-services/media/Termine-Stichprobentest-2027-1.pdf, read 2026-10-10)",
+      "verdict": "confirmed",
+      "fix": "Keep. The Merkblatt says 'questions', not 'MCQ'; keep our MCQ wording only if another source confirms it."
+    },
+    {
+      "claim": "What a Vienna Nostrifikant sits after the Stichprobentest, and whether the result decides the list",
+      "our_value": "Not in our facts.",
+      "official_value": "Yes. The Bescheid lists the exams: 6 or more positive fields means exams for the negative fields only; 5 or fewer means regular-curriculum exams; Rezeptierkunde and Gerichtliche Medizin always. Exams are taken in the order given in the curriculum, are in German, and the Bescheid sets a deadline (length not stated). All prescribed SIP parts must be taken at the same sitting. Admission as extraordinary student comes first.",
+      "source": "MedUni Wien Merkblatt Nostrifizierung Humanmedizin, edition 1 Sep 2026 (current on the Antragstellung page, read 2026-10-10) p2, p7-8; Info-Blatt Pruefungsanmeldung Human (archive doc 5861958308327333788), p1",
+      "verdict": "confirmed",
+      "fix": "Add a short 'what happens after the test' block to the SoT."
+    },
+    {
+      "claim": "How to register for SIP4a/5a: by email or Med.Campus? (archive: both reported)",
+      "our_value": "Not in our facts.",
+      "official_value": "Nostrifikanten use the SIP4a or SIP5a registration form sent by email from the university student account, inside the window; late or incomplete forms are not considered. The calendar also says Nostrifikanten register through the Studienabteilung (it names a different general mailbox). Deregistration is online in Med.Campus up to 3 full working days before. No-show without deregistration means a 3 month block (extended over teaching-free periods).",
+      "source": "MedUni Wien Nostrifizierung, Pruefungen page, read 2026-10-10; Info-Blatt Pruefungsanmeldung Human (archive doc 5861958308327333788), p1; MedUni Wien Pruefungskalender (SIP), page read 2026-10-10",
+      "verdict": "confirmed",
+      "fix": "Add to SoT: email form, student account, window only, 3 working days to deregister."
+    },
+    {
+      "claim": "C1 German level is needed for Vienna nostrification (SoT has no level rule; blog says Vienna requires C1)",
+      "our_value": "No rule in SoT. Blog: Vienna currently requires C1.",
+      "official_value": "C1 proof is required at filing. Accepted: OeSD C1, Goethe C1, telc C1 (also C1 Hochschule, C1 Beruf), DSD II, TestDaF level 4 and 5, OeIF C1 test, C1 certificate of an Austrian university language centre, DSH 2 and 3, German-language school-leaving certificate, or a 3-year degree taught in German. The certificate must not be older than 3 years from the exam date. A German FSP and a course attendance certificate are not on the list.",
+      "source": "MedUni Wien Merkblatt Nostrifizierung Humanmedizin, edition 1 Sep 2026 (current on the Antragstellung page, read 2026-10-10) p2-4; MedUni Wien Ermittlungsverfahren page, read 2026-10-10",
+      "verdict": "confirmed",
+      "fix": "Add the C1 rule and the list to SoT section 1.1. The blog line about Vienna is right."
+    },
+    {
+      "claim": "Stichprobentest is one joint test by MedUni Wien, Graz, Innsbruck; JKU Linz hosts none (SoT section 1)",
+      "our_value": "As stated.",
+      "official_value": "Run jointly by all Austrian medical universities since 2017. The 2026 and 2027 sittings are hosted by Innsbruck, Wien and Graz in rotation.",
+      "source": "MedUni Wien Merkblatt Nostrifizierung Humanmedizin, edition 1 Sep 2026 (current on the Antragstellung page, read 2026-10-10) p6-7; i-med.ac.at Termine Stichprobentest 2027 PDF, p1 (https://www.i-med.ac.at/studium-services/media/Termine-Stichprobentest-2027-1.pdf, read 2026-10-10)",
+      "verdict": "confirmed",
+      "fix": "Keep."
+    },
+    {
+      "claim": "i18n RU, UK, TR, AR still describe Kenntnispruefung as the OeAEK exam with 795 EUR and 3 dates a year (Vienna-bank users)",
+      "our_value": "Four languages still carry the old text.",
+      "official_value": "Vienna Nostrifikanten sit university exams as extraordinary students. No MedUni Wien document read mentions a 795 EUR fee or a fixed 3-per-year schedule for them. Costs there are the 150 EUR application fee plus semester fees.",
+      "source": "MedUni Wien Merkblatt Nostrifizierung Humanmedizin, edition 1 Sep 2026 (current on the Antragstellung page, read 2026-10-10) p1, p5-9; MedUni Wien Pruefungskalender (SIP), page read 2026-10-10",
+      "verdict": "confirmed",
+      "fix": "Fix the four languages to the corrected DE and EN text. The OeAEK facts themselves are not checked here."
+    }
+  ],
+  "next_dates": [
+    {
+      "exam": "SIP5a (Vienna, 6 subjects)",
+      "date": "17 Nov 2026",
+      "format": "MC or KAF, announced in the Ausschreibung (due about 27 Oct 2026 at the latest)",
+      "registration": "5 to 19 Oct 2026 (OPEN, closes Mon 19 Oct, 9 days left). Nostrifikanten: form by email from the student account.",
+      "source": "MedUni Wien Pruefungskalender (SIP), page read 2026-10-10; MedUni Wien Nostrifizierung, Pruefungen page, read 2026-10-10"
+    },
+    {
+      "exam": "SIP4a (Vienna, blocks 21, 22/23, 25, 26, 27)",
+      "date": "18 Nov 2026",
+      "format": "MC or KAF, announced in the Ausschreibung",
+      "registration": "5 to 19 Oct 2026 (OPEN, closes Mon 19 Oct, 9 days left)",
+      "source": "MedUni Wien Pruefungskalender (SIP), page read 2026-10-10; MedUni Wien Nostrifizierung, Pruefungen page, read 2026-10-10"
+    },
+    {
+      "exam": "Rezeptierkunde (Pharmakologie) and Gerichtsmedizin, MedUni Wien, WS 2026/27 week 2",
+      "date": "23 to 27 Nov 2026 (week 48)",
+      "format": "Rezeptierkunde: written, 30 MC one best answer (info sheet 2018). Gerichtsmedizin: format not stated in official sources.",
+      "registration": "7 to 20 Oct 2026, closes Tue 20 Oct 12:00 (OPEN, 10 days left). Form by email from the student account; Rezeptierkunde and Gerichtsmedizin have separate mailboxes.",
+      "source": "WS26 Pruefungstermine Gerichtsmedizin und Rezeptierkunde, PDF dated 03.06.2026, p1; MedUni Wien Nostrifizierung, Pruefungen page, read 2026-10-10"
+    },
+    {
+      "exam": "Rezeptierkunde and Gerichtsmedizin, MedUni Wien, WS 2026/27 week 3",
+      "date": "18 to 22 Jan 2027 (week 3)",
+      "format": "As above",
+      "registration": "2 to 15 Dec 2026, closes Tue 15 Dec 12:00",
+      "source": "WS26 Pruefungstermine Gerichtsmedizin und Rezeptierkunde, PDF dated 03.06.2026, p1"
+    },
+    {
+      "exam": "Stichprobentest Innsbruck (national test, hosted in rotation)",
+      "date": "3 Feb 2027",
+      "format": "Electronic, 10 subjects, 250 questions, one attempt",
+      "registration": "Vienna filers: file at MedUni Wien by 14 Dec 2026 (Merkblatt Einreichungsfrist). Innsbruck filers: register by 7 Jan 2027 (i-med Anmeldefrist). Register at the university where you filed.",
+      "source": "MedUni Wien Merkblatt Nostrifizierung Humanmedizin, edition 1 Sep 2026 (current on the Antragstellung page, read 2026-10-10) p7; i-med.ac.at Termine Stichprobentest 2027 PDF, p1 (https://www.i-med.ac.at/studium-services/media/Termine-Stichprobentest-2027-1.pdf, read 2026-10-10)"
+    },
+    {
+      "exam": "SIP5a (Vienna)",
+      "date": "15 Feb 2027",
+      "format": "MC or KAF",
+      "registration": "4 to 18 Jan 2027",
+      "source": "MedUni Wien Pruefungskalender (SIP), page read 2026-10-10"
+    },
+    {
+      "exam": "SIP4a (Vienna)",
+      "date": "19 Feb 2027",
+      "format": "MC (main sitting)",
+      "registration": "4 to 18 Jan 2027",
+      "source": "MedUni Wien Pruefungskalender (SIP), page read 2026-10-10"
+    },
+    {
+      "exam": "SIP4a and SIP5a (Vienna)",
+      "date": "10 Mar 2027",
+      "format": "Not listed; the calendar says March sittings are mostly KAF, final format in the Ausschreibung",
+      "registration": "25 Jan to 8 Feb 2027 (the page prints a typo year in one cell)",
+      "source": "MedUni Wien Pruefungskalender (SIP), page read 2026-10-10"
+    },
+    {
+      "exam": "SIP4a (Vienna)",
+      "date": "27 Apr 2027",
+      "format": "MC or KAF",
+      "registration": "15 to 29 Mar 2027",
+      "source": "MedUni Wien Pruefungskalender (SIP), page read 2026-10-10"
+    },
+    {
+      "exam": "SIP5a (Vienna)",
+      "date": "28 Apr 2027",
+      "format": "MC or KAF",
+      "registration": "15 to 29 Mar 2027",
+      "source": "MedUni Wien Pruefungskalender (SIP), page read 2026-10-10"
+    },
+    {
+      "exam": "Stichprobentest Wien",
+      "date": "4 May 2027",
+      "format": "Electronic, 10 subjects, 250 questions",
+      "registration": "Filing cutoff and registration deadline both 17 Mar 2027",
+      "source": "MedUni Wien Merkblatt Nostrifizierung Humanmedizin, edition 1 Sep 2026 (current on the Antragstellung page, read 2026-10-10) p7; i-med.ac.at Termine Stichprobentest 2027 PDF, p1 (https://www.i-med.ac.at/studium-services/media/Termine-Stichprobentest-2027-1.pdf, read 2026-10-10)"
+    },
+    {
+      "exam": "Rezeptierkunde and Gerichtsmedizin, MedUni Wien, SS 2027",
+      "date": "Not published yet (SS 2026 pattern: weeks in March, May and late June)",
+      "format": "As above",
+      "registration": "Not published yet",
+      "source": "SS26 Pruefungstermine Gerichtsmedizin und Rezeptierkunde, PDF dated 13.01.2026, p1"
+    },
+    {
+      "exam": "SIP4a (Vienna)",
+      "date": "30 Jun 2027",
+      "format": "MC or KAF",
+      "registration": "17 to 31 May 2027",
+      "source": "MedUni Wien Pruefungskalender (SIP), page read 2026-10-10"
+    },
+    {
+      "exam": "SIP5a (Vienna)",
+      "date": "2 Jul 2027",
+      "format": "MC (main sitting)",
+      "registration": "17 to 31 May 2027",
+      "source": "MedUni Wien Pruefungskalender (SIP), page read 2026-10-10"
+    },
+    {
+      "exam": "SIP4a (Vienna)",
+      "date": "1 Sep 2027",
+      "format": "MC or KAF",
+      "registration": "19 Jul to 2 Aug 2027",
+      "source": "MedUni Wien Pruefungskalender (SIP), page read 2026-10-10"
+    },
+    {
+      "exam": "Stichprobentest Graz",
+      "date": "22 Sep 2027",
+      "format": "Electronic, 10 subjects, 250 questions",
+      "registration": "Vienna filers: file at MedUni Wien by 30 Jun 2027 (Merkblatt Einreichungsfrist). i-med registration deadline 25 Aug 2027 (fits other filers).",
+      "source": "MedUni Wien Merkblatt Nostrifizierung Humanmedizin, edition 1 Sep 2026 (current on the Antragstellung page, read 2026-10-10) p7; i-med.ac.at Termine Stichprobentest 2027 PDF, p1 (https://www.i-med.ac.at/studium-services/media/Termine-Stichprobentest-2027-1.pdf, read 2026-10-10)"
+    },
+    {
+      "exam": "SIP5a (Vienna)",
+      "date": "23 Sep 2027",
+      "format": "MC or KAF",
+      "registration": "9 to 23 Aug 2027",
+      "source": "MedUni Wien Pruefungskalender (SIP), page read 2026-10-10"
+    }
+  ]
+}

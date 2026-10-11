@@ -1,0 +1,259 @@
+{
+ "checked": [],
+ "new_facts": [],
+ "next_dates": [
+  {
+   "exam": "SIP1a (Vienna)",
+   "date": "17.11.2026",
+   "format": "MC oder KAF",
+   "registration": "5.10.2026 - 19.10.2026",
+   "source": "MedUni Wien Pruefungskalender (SIP), page read 2026-10-10 by W1-WATCH"
+  },
+  {
+   "exam": "SIP2 (Vienna)",
+   "date": "17.11.2026",
+   "format": "MC oder KAF",
+   "registration": "5.10.2026 - 19.10.2026",
+   "source": "MedUni Wien Pruefungskalender (SIP), page read 2026-10-10 by W1-WATCH"
+  },
+  {
+   "exam": "SIP5a (Vienna)",
+   "date": "17.11.2026",
+   "format": "MC oder KAF",
+   "registration": "5.10.2026 - 19.10.2026",
+   "source": "MedUni Wien Pruefungskalender (SIP), page read 2026-10-10 by W1-WATCH"
+  },
+  {
+   "exam": "SIP1b (Vienna)",
+   "date": "18.11.2026",
+   "format": "MC oder KAF",
+   "registration": "5.10.2026 - 19.10.2026",
+   "source": "MedUni Wien Pruefungskalender (SIP), page read 2026-10-10 by W1-WATCH"
+  },
+  {
+   "exam": "SIP3 (Vienna)",
+   "date": "18.11.2026",
+   "format": "MC oder KAF",
+   "registration": "5.10.2026 - 19.10.2026",
+   "source": "MedUni Wien Pruefungskalender (SIP), page read 2026-10-10 by W1-WATCH"
+  },
+  {
+   "exam": "SIP4a (Vienna)",
+   "date": "18.11.2026",
+   "format": "MC oder KAF",
+   "registration": "5.10.2026 - 19.10.2026",
+   "source": "MedUni Wien Pruefungskalender (SIP), page read 2026-10-10 by W1-WATCH"
+  },
+  {
+   "exam": "SIP2 (Vienna)",
+   "date": "15.2.2027",
+   "format": "MC oder KAF",
+   "registration": "4.1.2027 - 18.1.2027",
+   "source": "MedUni Wien Pruefungskalender (SIP), page read 2026-10-10 by W1-WATCH"
+  },
+  {
+   "exam": "SIP5a (Vienna)",
+   "date": "15.2.2027",
+   "format": "MC oder KAF",
+   "registration": "4.1.2027 - 18.1.2027",
+   "source": "MedUni Wien Pruefungskalender (SIP), page read 2026-10-10 by W1-WATCH"
+  },
+  {
+   "exam": "SIP1b (Vienna)",
+   "date": "16.2.2027",
+   "format": "MC oder KAF",
+   "registration": "4.1.2027 - 18.1.2027",
+   "source": "MedUni Wien Pruefungskalender (SIP), page read 2026-10-10 by W1-WATCH"
+  },
+  {
+   "exam": "SIP3 (Vienna)",
+   "date": "16.2.2027",
+   "format": "MC oder KAF",
+   "registration": "4.1.2027 - 18.1.2027",
+   "source": "MedUni Wien Pruefungskalender (SIP), page read 2026-10-10 by W1-WATCH"
+  },
+  {
+   "exam": "SIP1a (Vienna)",
+   "date": "18.2.2027",
+   "format": "MC (Hauptpruefungstermin)",
+   "registration": "4.1.2027 - 18.1.2027",
+   "source": "MedUni Wien Pruefungskalender (SIP), page read 2026-10-10 by W1-WATCH"
+  },
+  {
+   "exam": "SIP4a (Vienna)",
+   "date": "19.2.2027",
+   "format": "MC (Hauptpruefungstermin)",
+   "registration": "4.1.2027 - 18.1.2027",
+   "source": "MedUni Wien Pruefungskalender (SIP), page read 2026-10-10 by W1-WATCH"
+  },
+  {
+   "exam": "SIP1a (Vienna)",
+   "date": "10.3.2027",
+   "format": "not listed",
+   "registration": "25.1.2027 - 8.2.2027",
+   "source": "MedUni Wien Pruefungskalender (SIP), page read 2026-10-10 by W1-WATCH"
+  },
+  {
+   "exam": "SIP1b (Vienna)",
+   "date": "10.3.2027",
+   "format": "not listed",
+   "registration": "25.1.2027 - 8.2.2027",
+   "source": "MedUni Wien Pruefungskalender (SIP), page read 2026-10-10 by W1-WATCH"
+  },
+  {
+   "exam": "SIP2 (Vienna)",
+   "date": "10.3.2027",
+   "format": "not listed",
+   "registration": "25.1.2027 - 8.2.2027",
+   "source": "MedUni Wien Pruefungskalender (SIP), page read 2026-10-10 by W1-WATCH"
+  },
+  {
+   "exam": "SIP3 (Vienna)",
+   "date": "10.3.2027",
+   "format": "not listed",
+   "registration": "25.1.2027 - 8.2.2027",
+   "source": "MedUni Wien Pruefungskalender (SIP), page read 2026-10-10 by W1-WATCH"
+  },
+  {
+   "exam": "SIP4a (Vienna)",
+   "date": "10.3.2027",
+   "format": "not listed",
+   "registration": "25.1.2027 - 8.2.2027",
+   "source": "MedUni Wien Pruefungskalender (SIP), page read 2026-10-10 by W1-WATCH"
+  },
+  {
+   "exam": "SIP5a (Vienna)",
+   "date": "10.3.2027",
+   "format": "not listed",
+   "registration": "25.1.2027 - 8.2.2027",
+   "source": "MedUni Wien Pruefungskalender (SIP), page read 2026-10-10 by W1-WATCH"
+  },
+  {
+   "exam": "SIP1b (Vienna)",
+   "date": "27.4.2027",
+   "format": "MC oder KAF",
+   "registration": "15.3.2027 - 29.3.2027",
+   "source": "MedUni Wien Pruefungskalender (SIP), page read 2026-10-10 by W1-WATCH"
+  },
+  {
+   "exam": "SIP2 (Vienna)",
+   "date": "27.4.2027",
+   "format": "MC oder KAF",
+   "registration": "15.3.2027 - 29.3.2027",
+   "source": "MedUni Wien Pruefungskalender (SIP), page read 2026-10-10 by W1-WATCH"
+  },
+  {
+   "exam": "SIP4a (Vienna)",
+   "date": "27.4.2027",
+   "format": "MC oder KAF",
+   "registration": "15.3.2027 - 29.3.2027",
+   "source": "MedUni Wien Pruefungskalender (SIP), page read 2026-10-10 by W1-WATCH"
+  },
+  {
+   "exam": "SIP1a (Vienna)",
+   "date": "28.4.2027",
+   "format": "MC oder KAF",
+   "registration": "15.3.2027 - 29.3.2027",
+   "source": "MedUni Wien Pruefungskalender (SIP), page read 2026-10-10 by W1-WATCH"
+  },
+  {
+   "exam": "SIP3 (Vienna)",
+   "date": "28.4.2027",
+   "format": "MC oder KAF",
+   "registration": "15.3.2027 - 29.3.2027",
+   "source": "MedUni Wien Pruefungskalender (SIP), page read 2026-10-10 by W1-WATCH"
+  },
+  {
+   "exam": "SIP5a (Vienna)",
+   "date": "28.4.2027",
+   "format": "MC oder KAF",
+   "registration": "15.3.2027 - 29.3.2027",
+   "source": "MedUni Wien Pruefungskalender (SIP), page read 2026-10-10 by W1-WATCH"
+  },
+  {
+   "exam": "SIP2 (Vienna)",
+   "date": "28.6.2027",
+   "format": "MC (Hauptpruefungstermin)",
+   "registration": "17.5.2027 - 31.5.2027",
+   "source": "MedUni Wien Pruefungskalender (SIP), page read 2026-10-10 by W1-WATCH"
+  },
+  {
+   "exam": "SIP1b (Vienna)",
+   "date": "29.6.2027",
+   "format": "MC (Hauptpruefungstermin)",
+   "registration": "17.5.2027 - 31.5.2027",
+   "source": "MedUni Wien Pruefungskalender (SIP), page read 2026-10-10 by W1-WATCH"
+  },
+  {
+   "exam": "SIP1a (Vienna)",
+   "date": "30.6.2027",
+   "format": "MC oder KAF",
+   "registration": "17.5.2027 - 31.5.2027",
+   "source": "MedUni Wien Pruefungskalender (SIP), page read 2026-10-10 by W1-WATCH"
+  },
+  {
+   "exam": "SIP4a (Vienna)",
+   "date": "30.6.2027",
+   "format": "MC oder KAF",
+   "registration": "17.5.2027 - 31.5.2027",
+   "source": "MedUni Wien Pruefungskalender (SIP), page read 2026-10-10 by W1-WATCH"
+  },
+  {
+   "exam": "SIP3 (Vienna)",
+   "date": "1.7.2027",
+   "format": "MC (Hauptpruefungstermin)",
+   "registration": "17.5.2027 - 31.5.2027",
+   "source": "MedUni Wien Pruefungskalender (SIP), page read 2026-10-10 by W1-WATCH"
+  },
+  {
+   "exam": "SIP5a (Vienna)",
+   "date": "2.7.2027",
+   "format": "MC (Hauptpruefungstermin)",
+   "registration": "17.5.2027 - 31.5.2027",
+   "source": "MedUni Wien Pruefungskalender (SIP), page read 2026-10-10 by W1-WATCH"
+  },
+  {
+   "exam": "SIP1b (Vienna)",
+   "date": "31.8.2027",
+   "format": "MC oder KAF",
+   "registration": "19.7.2027 - 2.8.2027",
+   "source": "MedUni Wien Pruefungskalender (SIP), page read 2026-10-10 by W1-WATCH"
+  },
+  {
+   "exam": "SIP1a (Vienna)",
+   "date": "1.9.2027",
+   "format": "MC oder KAF",
+   "registration": "19.7.2027 - 2.8.2027",
+   "source": "MedUni Wien Pruefungskalender (SIP), page read 2026-10-10 by W1-WATCH"
+  },
+  {
+   "exam": "SIP4a (Vienna)",
+   "date": "1.9.2027",
+   "format": "MC oder KAF",
+   "registration": "19.7.2027 - 2.8.2027",
+   "source": "MedUni Wien Pruefungskalender (SIP), page read 2026-10-10 by W1-WATCH"
+  },
+  {
+   "exam": "SIP2 (Vienna)",
+   "date": "21.9.2027",
+   "format": "MC oder KAF",
+   "registration": "9.8.2027 - 23.8.2027",
+   "source": "MedUni Wien Pruefungskalender (SIP), page read 2026-10-10 by W1-WATCH"
+  },
+  {
+   "exam": "SIP3 (Vienna)",
+   "date": "22.9.2027",
+   "format": "MC oder KAF",
+   "registration": "9.8.2027 - 23.8.2027",
+   "source": "MedUni Wien Pruefungskalender (SIP), page read 2026-10-10 by W1-WATCH"
+  },
+  {
+   "exam": "SIP5a (Vienna)",
+   "date": "23.9.2027",
+   "format": "MC oder KAF",
+   "registration": "9.8.2027 - 23.8.2027",
+   "source": "MedUni Wien Pruefungskalender (SIP), page read 2026-10-10 by W1-WATCH"
+  }
+ ],
+ "_note": "W1-WATCH candidate rows from the live calendar page (unreviewed). check-dates.py reads next_dates date and registration fields. Review, then run watch.py --promote."
+}

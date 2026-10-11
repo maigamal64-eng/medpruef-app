@@ -1,0 +1,25 @@
+{
+ "id": "muw-merkblatt-human",
+ "url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/pdf/Merkblatt_Nostri_Human_VS_1._9._2026-1.pdf",
+ "final_url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/pdf/Merkblatt_Nostri_Human_VS_1._9._2026-1.pdf",
+ "fetched_at": "2026-10-10T09:42:43+00:00",
+ "http_status": 200,
+ "content_type": "application/pdf",
+ "bytes": 269412,
+ "bytes_sha256": "58baf982c4b29cf5bdad8bfc4b4535c0c892cb49fd6048c5c6b5154bd1b4e36d",
+ "problems": [],
+ "text_sha256": "cc740facede03733e5e6c250c722d182f5c1199d2639f2dbed77f4b42be270d8",
+ "text_chars": 24905,
+ "dates": [
+  "2026-08-01",
+  "2026-09-01",
+  "2026-12-14",
+  "2027-02-03",
+  "2027-03-17",
+  "2027-05-04",
+  "2027-06-30",
+  "2027-09-22"
+ ],
+ "rows": {},
+ "links": []
+}

@@ -1,0 +1,339 @@
+{
+  "version": 1,
+  "base": "e60676a9ff982321859adc06b118ec6f638e916f",
+  "note": "Only exact existing lines are grandfathered for intake. --strict fails on all hits. Remove entries when copy is corrected; never regenerate in CI.",
+  "allowlist": [
+    {
+      "path": "marketing/campaigns/reddit-ads-brainstorm-brief.md",
+      "line": 24,
+      "rule": "official-questions",
+      "sha256": "db77ad333281b96389caab6c4e547e46eefe7b0cfd82e927c2ed669b085b9f9b",
+      "reason": "Existing tracked claim at e60676a; reported for track-A copy review. This exception is not truth approval."
+    },
+    {
+      "path": "marketing/campaigns/reddit-ads-brainstorm-brief.md",
+      "line": 28,
+      "rule": "complete-simulation",
+      "sha256": "fb4c0145ef639ac774946934729261788db01954e96e12ac545ac5eacd640b21",
+      "reason": "Existing tracked claim at e60676a; reported for track-A copy review. This exception is not truth approval."
+    },
+    {
+      "path": "marketing/campaigns/reddit-ads-decisions.md",
+      "line": 57,
+      "rule": "official-questions",
+      "sha256": "a1f8b5661f6dcdc0db4f6464950a0a5e948074cab9f2dd6d4b934889098af097",
+      "reason": "Existing tracked claim at e60676a; reported for track-A copy review. This exception is not truth approval."
+    },
+    {
+      "path": "marketing/campaigns/reddit-ads-decisions.md",
+      "line": 57,
+      "rule": "complete-simulation",
+      "sha256": "a1f8b5661f6dcdc0db4f6464950a0a5e948074cab9f2dd6d4b934889098af097",
+      "reason": "Existing tracked claim at e60676a; reported for track-A copy review. This exception is not truth approval."
+    },
+    {
+      "path": "marketing/campaigns/reddit-ads-decisions.md",
+      "line": 130,
+      "rule": "official-questions",
+      "sha256": "0d143b9fafab01d69781069db72cb9ae1466e9cd3edc59c5a3c632ef7188842d",
+      "reason": "Existing tracked claim at e60676a; reported for track-A copy review. This exception is not truth approval."
+    },
+    {
+      "path": "marketing/organic-queue/seeds-german.md",
+      "line": 37,
+      "rule": "complete-simulation",
+      "sha256": "c797414ec425b6ad775bb28933dfb7210acb36488b134a7d8c80e67628480c17",
+      "reason": "Existing tracked claim at e60676a; reported for track-A copy review. This exception is not truth approval."
+    },
+    {
+      "path": "marketing/organic-queue/video-and-seo.md",
+      "line": 31,
+      "rule": "official-questions",
+      "sha256": "278c39200f7a98d8cf7c16b51b1072521e313af0ce937ced4763cd589bd8ff63",
+      "reason": "Existing tracked claim at e60676a; reported for track-A copy review. This exception is not truth approval."
+    },
+    {
+      "path": "marketing/organic-queue/video-and-seo.md",
+      "line": 42,
+      "rule": "official-questions",
+      "sha256": "1f1823eeb981df21165b53d1bacdd889b9be0c28371ef6ffcac4255e22a524bc",
+      "reason": "Existing tracked claim at e60676a; reported for track-A copy review. This exception is not truth approval."
+    },
+    {
+      "path": "marketing/organic-queue/video-and-seo.md",
+      "line": 72,
+      "rule": "official-questions",
+      "sha256": "f892de10982806ec082ed5f1e93cc95714d6e21d1d174a41ea58ebc317818227",
+      "reason": "Existing tracked claim at e60676a; reported for track-A copy review. This exception is not truth approval."
+    },
+    {
+      "path": "marketing/organic-queue/video-and-seo.md",
+      "line": 82,
+      "rule": "official-questions",
+      "sha256": "b6cbf4e9efc9e60afc6392522f3e6a9a5d46fee7760d1bbced7839fb9fc8790c",
+      "reason": "Existing tracked claim at e60676a; reported for track-A copy review. This exception is not truth approval."
+    },
+    {
+      "path": "marketing/presence/ARABIC-BIOS-DRAFT.md",
+      "line": 34,
+      "rule": "complete-simulation",
+      "sha256": "721dcef01a19200745eb892bbe547f65b023381d7a922a7217a6a45bca3d6022",
+      "reason": "Existing tracked claim at e60676a; reported for track-A copy review. This exception is not truth approval."
+    },
+    {
+      "path": "marketing/presence/FIELD-RESEARCH.md",
+      "line": 15,
+      "rule": "official-questions",
+      "sha256": "fc8f00831a0385cc385718a0894efc4e0e0fdff7a29bbcb1e84cf987c1ed20bf",
+      "reason": "Existing tracked claim at e60676a; reported for track-A copy review. This exception is not truth approval."
+    },
+    {
+      "path": "marketing/presence/FIELD-RESEARCH.md",
+      "line": 50,
+      "rule": "complete-simulation",
+      "sha256": "ba9c06c59e27ce594c3db6aa93c1333dcaf4b69f7b650cd09c02ee6ca989d97f",
+      "reason": "Existing tracked claim at e60676a; reported for track-A copy review. This exception is not truth approval."
+    },
+    {
+      "path": "marketing/presence/FIELD-RESEARCH.md",
+      "line": 63,
+      "rule": "complete-simulation",
+      "sha256": "0f2e08c7829b0920b2cd38d443afd74142bcb89d096012a42d66fa41c2f6e138",
+      "reason": "Existing tracked claim at e60676a; reported for track-A copy review. This exception is not truth approval."
+    },
+    {
+      "path": "marketing/presence/FIELD-RESEARCH.md",
+      "line": 67,
+      "rule": "official-questions",
+      "sha256": "f0cb4a6c95a680f1f58bc0b6226b70f0ef3ae3cd1d3243fac424b21e267d6abd",
+      "reason": "Existing tracked claim at e60676a; reported for track-A copy review. This exception is not truth approval."
+    },
+    {
+      "path": "marketing/presence/FIELD-RESEARCH.md",
+      "line": 67,
+      "rule": "complete-simulation",
+      "sha256": "f0cb4a6c95a680f1f58bc0b6226b70f0ef3ae3cd1d3243fac424b21e267d6abd",
+      "reason": "Existing tracked claim at e60676a; reported for track-A copy review. This exception is not truth approval."
+    },
+    {
+      "path": "marketing/presence/presence-console.html",
+      "line": 163,
+      "rule": "complete-simulation",
+      "sha256": "aa5cc4cea33d39a727485424d2c96ac1bd1abff43eea56a18f84458fa5066dfe",
+      "reason": "Existing tracked claim at e60676a; reported for track-A copy review. This exception is not truth approval."
+    },
+    {
+      "path": "marketing/presence/presence-console.html",
+      "line": 167,
+      "rule": "complete-simulation",
+      "sha256": "45a433707c072243e0f559d15703c79591d007a6516124ff513b89085887c89c",
+      "reason": "Existing tracked claim at e60676a; reported for track-A copy review. This exception is not truth approval."
+    },
+    {
+      "path": "marketing/presence/presence-console.html",
+      "line": 168,
+      "rule": "official-questions",
+      "sha256": "3928f12040b3a0293633021e90771bfcfa3c654dae22f30fc45e1fcfa136c267",
+      "reason": "Existing tracked claim at e60676a; reported for track-A copy review. This exception is not truth approval."
+    },
+    {
+      "path": "marketing/presence/presence-console.html",
+      "line": 184,
+      "rule": "official-questions",
+      "sha256": "5ae926205d191399b2684693edb4722f762cea2dfd09709c380fbd9258f871f3",
+      "reason": "Existing tracked claim at e60676a; reported for track-A copy review. This exception is not truth approval."
+    },
+    {
+      "path": "marketing/presence/presence-console.html",
+      "line": 185,
+      "rule": "complete-simulation",
+      "sha256": "5cca97a2b1db6c5f5b39570794c9737261e0911b6f9e76202c1dc7fb3ee25831",
+      "reason": "Existing tracked claim at e60676a; reported for track-A copy review. This exception is not truth approval."
+    },
+    {
+      "path": "marketing/presence/presence-console.html",
+      "line": 210,
+      "rule": "complete-simulation",
+      "sha256": "9f1c7de9a6c24b55b31692a75cb800db3b3a220d9bae87487e665111b6c84df4",
+      "reason": "Existing tracked claim at e60676a; reported for track-A copy review. This exception is not truth approval."
+    },
+    {
+      "path": "marketing/presence/presence-console.html",
+      "line": 211,
+      "rule": "complete-simulation",
+      "sha256": "c27d23042890c500c85fccf2225f142a3d26d8d72bc03d7f8e14d18969e07647",
+      "reason": "Existing tracked claim at e60676a; reported for track-A copy review. This exception is not truth approval."
+    },
+    {
+      "path": "marketing/presence/presence-console.html",
+      "line": 278,
+      "rule": "official-questions",
+      "sha256": "ec5be2a623297a6d0969d7fa38f1401253c9672c3d6d19b3ff82f256520f5dc5",
+      "reason": "Existing tracked claim at e60676a; reported for track-A copy review. This exception is not truth approval."
+    },
+    {
+      "path": "marketing/research/answerthepublic-2026-07-02/business-summary-verbatim.md",
+      "line": 21,
+      "rule": "official-questions",
+      "sha256": "48a1e12741f1681c25a90d45c74e12b75023f515b9a8a0b44b33758133b5ecdc",
+      "reason": "Existing tracked claim at e60676a; reported for track-A copy review. This exception is not truth approval."
+    },
+    {
+      "path": "marketing/research/answerthepublic-2026-07-02/business-summary-verbatim.md",
+      "line": 22,
+      "rule": "complete-simulation",
+      "sha256": "93235695ea7dce39787359e109abb7566ae1625feca97d2c1f0946f456833f15",
+      "reason": "Existing tracked claim at e60676a; reported for track-A copy review. This exception is not truth approval."
+    },
+    {
+      "path": "marketing/research/answerthepublic-2026-07-02/keyword-coverage-map.md",
+      "line": 20,
+      "rule": "official-questions",
+      "sha256": "838cf8af4b4488284042a3c7e184759fb8adff16caaa76e30570073e9dbd8f01",
+      "reason": "Existing tracked claim at e60676a; reported for track-A copy review. This exception is not truth approval."
+    },
+    {
+      "path": "src/app/.well-known/agent-skills/_skills.ts",
+      "line": 84,
+      "rule": "official-questions",
+      "sha256": "16060f336b41d1f9f89c0ab8760ec015baf08ee2b1e468747d4399860dce4fc1",
+      "reason": "Existing tracked claim at e60676a; reported for track-A copy review. This exception is not truth approval."
+    },
+    {
+      "path": "src/app/stichprobentest/page.tsx",
+      "line": 190,
+      "rule": "official-questions",
+      "sha256": "2191a24f588f6e7d2254e18741c1f80e5af165dfa0ef2b8a4f3929785b3705e9",
+      "reason": "Existing tracked claim at e60676a; reported for track-A copy review. This exception is not truth approval."
+    },
+    {
+      "path": "src/app/stichprobentest/page.tsx",
+      "line": 191,
+      "rule": "official-questions",
+      "sha256": "f7b750b5caf55c18f05aeb72b5d7e8262462677ab51da29a04edd30dea04013b",
+      "reason": "Existing tracked claim at e60676a; reported for track-A copy review. This exception is not truth approval."
+    },
+    {
+      "path": "src/app/stichprobentest/page.tsx",
+      "line": 194,
+      "rule": "official-questions",
+      "sha256": "113ea5270b2833e426b9d878c16d3463b5b8255b93afa04019810a8e8070201e",
+      "reason": "Existing tracked claim at e60676a; reported for track-A copy review. This exception is not truth approval."
+    },
+    {
+      "path": "src/app/stichprobentest/page.tsx",
+      "line": 195,
+      "rule": "official-questions",
+      "sha256": "fa800e72439165c836fb8144ddf7b2b5195b0967964174bde3abc5734faf0497",
+      "reason": "Existing tracked claim at e60676a; reported for track-A copy review. This exception is not truth approval."
+    },
+    {
+      "path": "src/lib/i18n.ts",
+      "line": 308,
+      "rule": "unverified-pass-rate",
+      "sha256": "6483280e0f3a36ac9a522f4bdd3539794518a2b69cf88c1f3d14295850637bda",
+      "reason": "Existing tracked claim at e60676a; reported for track-A copy review. This exception is not truth approval."
+    },
+    {
+      "path": "src/lib/i18n-extra.ts",
+      "line": 260,
+      "rule": "unverified-pass-rate-translation",
+      "sha256": "2250a25311139ee94497c7c13e583a2542e77b086e0986e35f841ffb252cf1ce",
+      "reason": "Existing tracked translation claim at e60676a; reported for track-A copy review. This exception is not truth approval."
+    },
+    {
+      "path": "src/lib/i18n-extra.ts",
+      "line": 866,
+      "rule": "unverified-pass-rate-translation",
+      "sha256": "15ebbc53884f8756242425b5e9f69d3559553429e22500668c02223c23781886",
+      "reason": "Existing tracked translation claim at e60676a; reported for track-A copy review. This exception is not truth approval."
+    },
+    {
+      "path": "src/lib/i18n-extra.ts",
+      "line": 2054,
+      "rule": "unverified-pass-rate-translation",
+      "sha256": "d1df3f9872c62f9c94557921422d91ea91efbc672efd6c54a7ed2a2c9f0f58f2",
+      "reason": "Existing tracked translation claim at e60676a; reported for track-A copy review. This exception is not truth approval."
+    }
+  ],
+  "count_exclusions": [
+    {
+      "path": "marketing/presence/MEDIA-MAP.md",
+      "line": 30,
+      "sha256": "163e8e982554533557e940882604b5346246c5a9dbe8030cfd8d6ddf82893d16",
+      "reason": "Internal dated asset audit quotes past text and completed replacements; not current public copy."
+    },
+    {
+      "path": "marketing/presence/MEDIA-MAP.md",
+      "line": 72,
+      "sha256": "5a2b6154893ecb6518e2d0d198426c24e06a6ab23c31856686525d69f5c647a9",
+      "reason": "Internal dated asset audit quotes past text and completed replacements; not current public copy."
+    },
+    {
+      "path": "marketing/presence/MEDIA-MAP.md",
+      "line": 73,
+      "sha256": "1bc49fb5305064b0e0b9d7326864174ef93e1007b2eb51824a7ea394354ccd64",
+      "reason": "Internal dated asset audit quotes past text and completed replacements; not current public copy."
+    },
+    {
+      "path": "marketing/presence/MEDIA-MAP.md",
+      "line": 74,
+      "sha256": "3897af63d12840196139b5a944d0b4e6560bdb7b25036277629e92ba90fb4db5",
+      "reason": "Internal dated asset audit quotes past text and completed replacements; not current public copy."
+    },
+    {
+      "path": "marketing/presence/MEDIA-MAP.md",
+      "line": 75,
+      "sha256": "cb7a13dc01f36ac54352c482b6fabb849372d55df90a0ba39b2ab115e6875592",
+      "reason": "Internal dated asset audit quotes past text and completed replacements; not current public copy."
+    },
+    {
+      "path": "marketing/presence/MEDIA-MAP.md",
+      "line": 77,
+      "sha256": "17c6edfee9828859056ba153d1c375805654e25fe71d004d5efe8cd48a4bfd43",
+      "reason": "Internal dated asset audit quotes past text and completed replacements; not current public copy."
+    },
+    {
+      "path": "marketing/presence/MEDIA-MAP.md",
+      "line": 121,
+      "sha256": "4c6a1f6d296cfac2f63b2e3019848ada419b83ff7b641dcef38eac3f35dde577",
+      "reason": "Internal dated asset audit quotes past text and completed replacements; not current public copy."
+    },
+    {
+      "path": "marketing/research/answerthepublic-2026-07-02/keyword-coverage-map.md",
+      "line": 7,
+      "sha256": "c268721513f05eadb9e1083a9c083f986b30f3066250fff846375e48888ca56e",
+      "reason": "Internal dated competitor/source/SEO research snapshot, not a current public bank-count claim."
+    },
+    {
+      "path": "marketing/research/answerthepublic-2026-07-02/keyword-coverage-map.md",
+      "line": 8,
+      "sha256": "65f7133f2a19de38ab9411374dcbb42445023aa704ebd80aae8ff490d609f967",
+      "reason": "Internal dated competitor/source/SEO research snapshot, not a current public bank-count claim."
+    },
+    {
+      "path": "marketing/research/answerthepublic-2026-07-02/raw/01-pass-kenntnispruefung-first-try.md",
+      "line": 5,
+      "sha256": "bb468338056725834edc1abf6ae100e7dcad6e4dbb817984c6cd24832bf10aa9",
+      "reason": "Internal dated competitor/source/SEO research snapshot, not a current public bank-count claim."
+    },
+    {
+      "path": "marketing/research/answerthepublic-2026-07-02/raw/01-pass-kenntnispruefung-first-try.md",
+      "line": 18,
+      "sha256": "82834ecef72dabf09fcb20b159d2ff61379ec11fbe751e28a721d3b5811a21d6",
+      "reason": "Internal dated competitor/source/SEO research snapshot, not a current public bank-count claim."
+    },
+    {
+      "path": "marketing/research/scout-fleet-findings-2026-07-03.md",
+      "line": 289,
+      "sha256": "e27f8745b9c366853c52a3b9d8bcf342ca0bc31079c436fddc0b4fdedf56c5b1",
+      "reason": "Internal dated competitor/source/SEO research snapshot, not a current public bank-count claim."
+    },
+    {
+      "path": "marketing/research/scout-fleet-findings-2026-07-03.md",
+      "line": 667,
+      "sha256": "2997f879dbafc2d6eff30b0e65ef8f612079da5f3d0d1e9845fb6b6d38a3782e",
+      "reason": "Internal dated competitor/source/SEO research snapshot, not a current public bank-count claim."
+    }
+  ]
+}
