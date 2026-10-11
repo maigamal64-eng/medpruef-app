@@ -1,0 +1,1376 @@
+[
+  {
+    "id": 112820,
+    "field": "chirurgie",
+    "fingerprint": "40890f3b693a2d5025a1ff2a4932c230eca7441a80e8e601aeb3f392c5289fae",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112822,
+    "field": "chirurgie",
+    "fingerprint": "456cc9d255f0fd7ffc778ff407f226723279818e063732f83896fbe935f83a6c",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112823,
+    "field": "innere_medizin",
+    "fingerprint": "1c4a751575f23d0cd5942a7b7a9132471e1ce798d58b3788ec827175c215449e",
+    "reason": "Medical diagnosis, physiology or non-operative treatment is the primary competence."
+  },
+  {
+    "id": 112824,
+    "field": "innere_medizin",
+    "fingerprint": "8b5d741bedfc3e4858d6a87ac6f1ecf2c2d5955e31e5e8158b409f8421c8a52d",
+    "reason": "Medical diagnosis, physiology or non-operative treatment is the primary competence."
+  },
+  {
+    "id": 112826,
+    "field": "chirurgie",
+    "fingerprint": "ee4e0c011f03c104544e6c7290184f738adf1cfa93bfeef02f9d98c9bb5ae9a4",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112827,
+    "field": "notfallmedizin",
+    "fingerprint": "4878a7a1d8a1fedba44531e9fa4a747969016c65f6100316410a9f550422d4bb",
+    "reason": "Immediate stabilisation, airway, critical monitoring or intensive care competence."
+  },
+  {
+    "id": 112829,
+    "field": "chirurgie",
+    "fingerprint": "b82b3a2c9ccb687d36be41eac1fdcad130e9d5ff9330b49586da7374d4e140a0",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112830,
+    "field": "chirurgie",
+    "fingerprint": "6bbfaf6ba2f69faf5ddbdb84dca092a7ac9c34f7724eec4ed82869ee5ea2c232",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112831,
+    "field": "notfallmedizin",
+    "fingerprint": "2093abb484344943efbb8e0038833636340fb43be8b281e0a3e0e4e08d3920e9",
+    "reason": "Immediate stabilisation, airway, critical monitoring or intensive care competence."
+  },
+  {
+    "id": 112832,
+    "field": "innere_medizin",
+    "fingerprint": "dc9bc7e95788e9ef373952abbd84e410cc1f550451ad09a630a8fca420ab55a2",
+    "reason": "Medical diagnosis, physiology or non-operative treatment is the primary competence."
+  },
+  {
+    "id": 112833,
+    "field": "chirurgie",
+    "fingerprint": "8a3b176d99e024a60d516e40f415f5c623d26b77ba6767f9446ada11f50585ed",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112834,
+    "field": "chirurgie",
+    "fingerprint": "fd43be515d404d936a3c7ee9c8d774f68a50b41fade88a3befdc868a516a3736",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112835,
+    "field": "chirurgie",
+    "fingerprint": "1bf4ee5e5e0d0a319e5feea555369c7e8b8be91941bbd218d0d29fadd40e07e3",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112839,
+    "field": "chirurgie",
+    "fingerprint": "73848814cd46b9478e72670c16b26d9a17e4f2e77e56efa77bde83cff4b74ab4",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112840,
+    "field": "chirurgie",
+    "fingerprint": "ac0ab22796b2db3bff91cf111f03e836f2d8e08af081a69d303b6eeb31da3269",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112843,
+    "field": "chirurgie",
+    "fingerprint": "37ca3b4e098bf6e89e9f06f48e073285a0191417bcc7a9327642683f44e00f1c",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112844,
+    "field": "chirurgie",
+    "fingerprint": "8e00c99ca288d5990771a79384c60a727d82b74d5118adb8efbe17d27eb9b95a",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112846,
+    "field": "innere_medizin",
+    "fingerprint": "7a642078825c6ceb4d0980cdee7f5e615778770cb3017c85ea6a7ba796735cb5",
+    "reason": "Medical diagnosis, physiology or non-operative treatment is the primary competence."
+  },
+  {
+    "id": 112848,
+    "field": "chirurgie",
+    "fingerprint": "82708fd6bc1a676fc0c29190b07f4017ae6fbf1e1ac63e130732542456c45665",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112849,
+    "field": "chirurgie",
+    "fingerprint": "fa52dc77decbfb83b1d690b5e04b4e028c7f84b01b18210b9582ae8f431f9135",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112851,
+    "field": "chirurgie",
+    "fingerprint": "4d37757a07c47e8ade8841b10e48d7d0ab8f0bc458397ac6b2537348b1214409",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112853,
+    "field": "notfallmedizin",
+    "fingerprint": "76f995c4bc24a28033cc784c11f39c817c2849b525dfb2f7090029239327fbc8",
+    "reason": "Immediate stabilisation, airway, critical monitoring or intensive care competence."
+  },
+  {
+    "id": 112854,
+    "field": "innere_medizin",
+    "fingerprint": "d68062ce9a00176fe9100fdd7f40c4612424debbd414215314cc05823f25de04",
+    "reason": "Medical diagnosis, physiology or non-operative treatment is the primary competence."
+  },
+  {
+    "id": 112855,
+    "field": "innere_medizin",
+    "fingerprint": "f23b3150ee33fb12fddf309b151d114b4343e50d795e59ebf745e0fc90ed36a2",
+    "reason": "Medical diagnosis, physiology or non-operative treatment is the primary competence."
+  },
+  {
+    "id": 112857,
+    "field": "neurologie",
+    "fingerprint": "d41825e78ee6d391e5db882067b852639735952a93be6bd3577c3846b3d6f981",
+    "reason": "Neurological localisation, diagnosis, prognosis or stroke care is the primary competence."
+  },
+  {
+    "id": 112858,
+    "field": "chirurgie",
+    "fingerprint": "8a0cc838fe2d2ea34e6f9d16d4f423e8a4395af9c8dac3c73c05c1a85b19e734",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112861,
+    "field": "chirurgie",
+    "fingerprint": "65dd76e1bebfd452928811a76e8247f4e41ff9fb355abee5e9f72785c1dad5c4",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112863,
+    "field": "chirurgie",
+    "fingerprint": "83f141c9d55f3e49092c18d5d6a101369491defcb5b4063e36695564a98f6329",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112865,
+    "field": "chirurgie",
+    "fingerprint": "4115b00b40699ecabf360c8644c57f5243cb2180a9f612aa78af7e30c0de5c59",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112866,
+    "field": "innere_medizin",
+    "fingerprint": "89a4f9bdcc54d46672d11d839dfe2b6805f653608584ff1cee19dcd42ba2e661",
+    "reason": "Medical diagnosis, physiology or non-operative treatment is the primary competence."
+  },
+  {
+    "id": 112868,
+    "field": "chirurgie",
+    "fingerprint": "1213c932ad4717ba0de5ac69c9f3a523b480c4afbca4267d4f7c667180f3b387",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112870,
+    "field": "chirurgie",
+    "fingerprint": "68b117bcad5dbb2ea28bb319c5d2a45f40e2f3b6cbc4bba3eb002af3f74e2e46",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112871,
+    "field": "neurologie",
+    "fingerprint": "0eba4eb45c9bc56da654b4aaa255d0f1f86c6b9bbfb410e2ac4ad88a3fdb939d",
+    "reason": "Neurological localisation, diagnosis, prognosis or stroke care is the primary competence."
+  },
+  {
+    "id": 112872,
+    "field": "chirurgie",
+    "fingerprint": "b625d0602cde5ed420348ca0376c2985c396a6a29c02808600faea03ca0b76b2",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112875,
+    "field": "chirurgie",
+    "fingerprint": "0b737e08a7c72a0f5df15d1b30d34318245528c3d39593ce6dd8ffdd01c27b92",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112876,
+    "field": "chirurgie",
+    "fingerprint": "a1d18f0eb198090ef26d219ce69900d7ce3d60327143e560308c28abced7b213",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112877,
+    "field": "chirurgie",
+    "fingerprint": "ae741c3f18cd139ae3529263f7edade1ff2031dec3e9cdf2e2217cb2560268a9",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112879,
+    "field": "chirurgie",
+    "fingerprint": "b88eec2536f29a3ddac8e2773434fcb13de31321d8ffecc3f5c4d409c9c2ae1c",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112881,
+    "field": "chirurgie",
+    "fingerprint": "53b7bc51f4345c79459105f781ea280ab0046b59f2646f186ffb0ec90ff0b0d7",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112883,
+    "field": "innere_medizin",
+    "fingerprint": "b99919257dd0ef560b2be3c4c4eaae0c5281ac64c7c9b88c92896d9671d06973",
+    "reason": "Medical diagnosis, physiology or non-operative treatment is the primary competence."
+  },
+  {
+    "id": 112885,
+    "field": "chirurgie",
+    "fingerprint": "c8a876c882560a643679868f94be262885257dca5d1fe4437ff5ff0b66f929b8",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112886,
+    "field": "innere_medizin",
+    "fingerprint": "090e81656335ed3cda940f48f0348ab6620a288f969675cfecb70456ca276152",
+    "reason": "Medical diagnosis, physiology or non-operative treatment is the primary competence."
+  },
+  {
+    "id": 112887,
+    "field": "chirurgie",
+    "fingerprint": "5b0df45550ff57141694fb3b60fd208ccc7f0ace197abb7bc413f20bd7efac02",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112889,
+    "field": "chirurgie",
+    "fingerprint": "3f9276b61314e5161ad12e077fde896442b4442e12dbc0c6e2db729f872b19f9",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112890,
+    "field": "chirurgie",
+    "fingerprint": "9197be5e960c857324d2ab75d09b73a0d805497cf57286bc3c37db6c81f0eb83",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112891,
+    "field": "innere_medizin",
+    "fingerprint": "bac01dc18a11a3336a6856cdb847204e7742431a7493d759f7cb8533db42fa8d",
+    "reason": "Medical diagnosis, physiology or non-operative treatment is the primary competence."
+  },
+  {
+    "id": 112892,
+    "field": "chirurgie",
+    "fingerprint": "ff97c876f68c5bfc1ec64c2263e905ec4f7f2ea44a7ce33b6e5c86fa17f66f6c",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112896,
+    "field": "chirurgie",
+    "fingerprint": "81237733860a6daf1781fb8e8ce03b3840b5d72340375015d15ca9e4b9396b72",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112897,
+    "field": "innere_medizin",
+    "fingerprint": "08ad19c6afe2d0e62af227d319a142d2821c19209833e22acefba14da50c21f5",
+    "reason": "Medical diagnosis, physiology or non-operative treatment is the primary competence."
+  },
+  {
+    "id": 112899,
+    "field": "chirurgie",
+    "fingerprint": "d81e90da757d654eb742cb9f2f6a08f353bb5176487cf5fabcf17489a58efe52",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112900,
+    "field": "chirurgie",
+    "fingerprint": "c978ac0861cbab0a9ff0b28d9ed065b1afd77f8e42913f2e14e12abdbdd9b6a3",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112903,
+    "field": "chirurgie",
+    "fingerprint": "894054bb3b258aa294a6741842a4a781693bc7bbc74be86847d82fb40d3f265f",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112905,
+    "field": "neurologie",
+    "fingerprint": "101b90fdd9f66d6d8436a53a6485be56d8adfad94268e4f7fed76f018cc16e9a",
+    "reason": "Neurological localisation, diagnosis, prognosis or stroke care is the primary competence."
+  },
+  {
+    "id": 112906,
+    "field": "chirurgie",
+    "fingerprint": "57970ad46c19bf5468dfc37f7fdd78099997504faebc2c55657eaf7b4b63bbcb",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112907,
+    "field": "chirurgie",
+    "fingerprint": "9c7554c82f54361195e4a233b9460d9a88dbfe8da1c0657883927de64f7e939c",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112909,
+    "field": "chirurgie",
+    "fingerprint": "4fd696aa836594878326f9f78243ecd09cb63c8ce733a3ee547ca61dd731201f",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112910,
+    "field": "chirurgie",
+    "fingerprint": "3693a9f1bcc510909243980a029867a223c44aeae7be486c33335439d36e548c",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112911,
+    "field": "chirurgie",
+    "fingerprint": "83c39cc3ce29b48d44b6971c9618efe47720e5b231e71a83fa7eeb7a3275c510",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112912,
+    "field": "chirurgie",
+    "fingerprint": "4a12e8931ff6694d77fdd937d9d98e6d251811b95edb0d9caac0c9425c535ce8",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112915,
+    "field": "chirurgie",
+    "fingerprint": "6e36bfe3d148ed70a0f2203e7cbebc27f211b8287ac04158eeff99727244a0af",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112916,
+    "field": "innere_medizin",
+    "fingerprint": "62618cd5ed31cb00e7803565b7a07ca766cae28e4e82b1a3e354444756735f0c",
+    "reason": "Medical diagnosis, physiology or non-operative treatment is the primary competence."
+  },
+  {
+    "id": 112917,
+    "field": "notfallmedizin",
+    "fingerprint": "b48a4eefd86ff65ae452174d917896c5262f363f23dbbe3a419b606483c08439",
+    "reason": "Immediate stabilisation, airway, critical monitoring or intensive care competence."
+  },
+  {
+    "id": 112918,
+    "field": "innere_medizin",
+    "fingerprint": "65caadc2fa2dcb566d4eef62c89668af7d4da50700abc3f06c6b878418eafe26",
+    "reason": "Medical diagnosis, physiology or non-operative treatment is the primary competence."
+  },
+  {
+    "id": 112920,
+    "field": "chirurgie",
+    "fingerprint": "ca3caf33249d627652b2bf1d61831c0cb82b65337f94313afb9dce51a2588976",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112921,
+    "field": "chirurgie",
+    "fingerprint": "0536e66a503c987d70387b250e597ededb346ac4a9cc0c6869301ae6fa333c2e",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112922,
+    "field": "chirurgie",
+    "fingerprint": "1fd4653394cc32eb03be33e7345ea822b30fb9958e76a22c7efe503f0cc3d132",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112925,
+    "field": "chirurgie",
+    "fingerprint": "e445188159711ee375e78680a6207406a5b93e41f91c34b1044ad0120ea44330",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112927,
+    "field": "chirurgie",
+    "fingerprint": "92e0ffb86de8fa34df38a446a03ede94bedd83040f87a49d5fc6984b1a2d4621",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112929,
+    "field": "chirurgie",
+    "fingerprint": "2205e9c7a161afb5fe6e7d35b7ba3d6080bc523d66595704bbec76f576201ab8",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112932,
+    "field": "chirurgie",
+    "fingerprint": "e2f83f522deafe5a5453c9596a59da78745d09256a8b22bd33ad22a69dfecbce",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112934,
+    "field": "chirurgie",
+    "fingerprint": "2e9ff667ba70b63c21f0f2fe05eedc268af9b15e972884d4a7cbd9df4d2a56de",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112935,
+    "field": "chirurgie",
+    "fingerprint": "cb9c340a6c605bdaf05e2835b771507115ff67655922df5bf0d598df10106b21",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112936,
+    "field": "chirurgie",
+    "fingerprint": "d926b67af9f55e180107fd8df82ac6eb6b46b6a8de618667cb488838d1e06a57",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112937,
+    "field": "chirurgie",
+    "fingerprint": "d63ab5797332946cd1e71ed4427514428362f699a01c1069a45805058d4acfaf",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112938,
+    "field": "innere_medizin",
+    "fingerprint": "2f249709954721b541d8c33ec2ce6e908129d305680ba6f32bb9d0aa848d0ea8",
+    "reason": "Medical diagnosis, physiology or non-operative treatment is the primary competence."
+  },
+  {
+    "id": 112942,
+    "field": "neurologie",
+    "fingerprint": "344dad7f7cccfbb3f7a37481fa6992f5cf5395306eca0466a3098a96ca97f426",
+    "reason": "Neurological localisation, diagnosis, prognosis or stroke care is the primary competence."
+  },
+  {
+    "id": 112943,
+    "field": "chirurgie",
+    "fingerprint": "9b89eb0d791118b2833b105a201ec4a2d0a14a647899373a7821931a4e9e8813",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112944,
+    "field": "chirurgie",
+    "fingerprint": "e2beecd2aa9405b328f24a246b5f81695ae11f22616417fc470b452beeb1b48b",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112947,
+    "field": "chirurgie",
+    "fingerprint": "5876dfbdfb6688883ce0b486cba621d7916a61f41189bb9cc02ea815ae5c9358",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112949,
+    "field": "innere_medizin",
+    "fingerprint": "854ba7d17f098815d531022bf272e4879847f8712a9e89a70a798314f9478e55",
+    "reason": "Medical diagnosis, physiology or non-operative treatment is the primary competence."
+  },
+  {
+    "id": 112950,
+    "field": "chirurgie",
+    "fingerprint": "82500599ffcb73a1ff11ca7c42b565718b54e70c4212d3badd9834af4a312170",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112953,
+    "field": "innere_medizin",
+    "fingerprint": "bbe8f80e8e366c6a4b45a665834495a79c55ea701a58a413c14a5a7ba23578ea",
+    "reason": "Medical diagnosis, physiology or non-operative treatment is the primary competence."
+  },
+  {
+    "id": 112954,
+    "field": "chirurgie",
+    "fingerprint": "384e6cb0ddc295aa12352376a9b550c1dfa3bbff461be98735b2b3b9c75e48e8",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112955,
+    "field": "chirurgie",
+    "fingerprint": "1657cf65d580e9651a80236fa05bb78c160dfd8f63ad51b1d0ca744d95f1ad8b",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112956,
+    "field": "notfallmedizin",
+    "fingerprint": "2eec9a9bfa49d0b0d169d9b1d246bd56228806f455ff30c6c938f05ab2213667",
+    "reason": "Immediate stabilisation, airway, critical monitoring or intensive care competence."
+  },
+  {
+    "id": 112957,
+    "field": "chirurgie",
+    "fingerprint": "e1d312f17835bb577e13a710300c257f6c98c65178b01942e41f9c61523d65bf",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112959,
+    "field": "chirurgie",
+    "fingerprint": "a20641045964437ed77ed682b8dbdc2c1eefc4b57f481f919d7fd080751d3275",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112961,
+    "field": "chirurgie",
+    "fingerprint": "b5fe1376154e769da474c3b11356b9f115b783a068f8b4381993a5a1a5b91239",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112962,
+    "field": "neurologie",
+    "fingerprint": "29f722b3606130c047dd20da0e8b01564b1af32f8d9202b38a3ded6bd1ea222d",
+    "reason": "Neurological localisation, diagnosis, prognosis or stroke care is the primary competence."
+  },
+  {
+    "id": 112963,
+    "field": "innere_medizin",
+    "fingerprint": "72006586860eac1d8c21d7e4dcb5367ad42a5b459f7d2d7e242eabea356970be",
+    "reason": "Medical diagnosis, physiology or non-operative treatment is the primary competence."
+  },
+  {
+    "id": 112964,
+    "field": "neurologie",
+    "fingerprint": "7e6246048017435de6c4781097b50c48e7aa00055efa7670f12f0004b277fb04",
+    "reason": "Neurological localisation, diagnosis, prognosis or stroke care is the primary competence."
+  },
+  {
+    "id": 112966,
+    "field": "chirurgie",
+    "fingerprint": "647d59b98947ea4d69726aad99ab4ea0e0401a260a57869197203443419b42dc",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112967,
+    "field": "chirurgie",
+    "fingerprint": "08413e6094f93da9bc8074001d0bae083f70744c538638ee04f454724ec305c3",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112968,
+    "field": "chirurgie",
+    "fingerprint": "f577ce2e9aa0a871b04974a7dcf3e78e2d43a4c35f12c3277dd3431a44e51b92",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112970,
+    "field": "chirurgie",
+    "fingerprint": "ccdb2cdfffd262141e4122aea6874489d495646ef18a03d717314b4c9c229fd3",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112971,
+    "field": "innere_medizin",
+    "fingerprint": "40ee9be2f134b9849857a99d6888d6bda20bb153498fcd1ccf79f245f3c24922",
+    "reason": "Medical diagnosis, physiology or non-operative treatment is the primary competence."
+  },
+  {
+    "id": 112974,
+    "field": "chirurgie",
+    "fingerprint": "beefa3f79fd3e0b0b8db8dc0cca956602f08a29e16751772b648bdb91c28b42a",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112976,
+    "field": "innere_medizin",
+    "fingerprint": "f1d0b7e46ced94c44fd14389dc4e9590370d5a70f4cd87b7aaf3a215e79c8817",
+    "reason": "Medical diagnosis, physiology or non-operative treatment is the primary competence."
+  },
+  {
+    "id": 112979,
+    "field": "chirurgie",
+    "fingerprint": "ef172327110623ae2f72d1deab5281ef0e18f20848bd6a86d47fd226f7e5e94d",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112980,
+    "field": "chirurgie",
+    "fingerprint": "8c2079a531b37cd67c0004b8ef57a22efabb9a4427bf3d799d82e44557409923",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112984,
+    "field": "chirurgie",
+    "fingerprint": "51a29c53d3d4396fe471bc4196efb743b6ab4d78efc2a53189b56d848796b15b",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112986,
+    "field": "innere_medizin",
+    "fingerprint": "94201997f8e69044e5dc1abe70e1831c29e5a37e8c220264a413e710bed277e1",
+    "reason": "Medical diagnosis, physiology or non-operative treatment is the primary competence."
+  },
+  {
+    "id": 112987,
+    "field": "chirurgie",
+    "fingerprint": "8d41a4796463473e08b5c10fccf3fa1b9c5321c292bd64aa6d0cd4af19eb8e81",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112988,
+    "field": "chirurgie",
+    "fingerprint": "656c80794b64c23237d9dd63de04879e0f3033f34b932dedc7bedba87be66eb5",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112990,
+    "field": "chirurgie",
+    "fingerprint": "c55378c7d131e04ab0f43e498a883e5f787674fbfc2ff97b79cf2582d45599ce",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112991,
+    "field": "chirurgie",
+    "fingerprint": "8774ddce43b042f67ef5bee21c0b60f9a6da4b2fb2d9beb82c565ac5f8d43054",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112992,
+    "field": "chirurgie",
+    "fingerprint": "eab332d0686a66e5afd72094e6175f8c6e9d63c14bc7f764dc4c658bb178781c",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112993,
+    "field": "chirurgie",
+    "fingerprint": "6826baddba153dedf87dab1dbfb49852b2654539ac11d4f41b67309a46691ece",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112994,
+    "field": "chirurgie",
+    "fingerprint": "9d464eab487146688d12a93bdc60167668352526fea5ab6582d85c04a32ee2e3",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112995,
+    "field": "notfallmedizin",
+    "fingerprint": "f970a4dd206570f8712b72110cdb84f0c1129aed135bc3104a0b19ebe0af61ba",
+    "reason": "Immediate stabilisation, airway, critical monitoring or intensive care competence."
+  },
+  {
+    "id": 112996,
+    "field": "chirurgie",
+    "fingerprint": "52d23f5a1194e3c25a3c2c0283642e03b285c05aebe8a84342841b0eb4f9495c",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 112998,
+    "field": "chirurgie",
+    "fingerprint": "c74b5fb10b1fd5ff8d724973c6995e60115ea69950af5e628d0fa015db997a8e",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113003,
+    "field": "chirurgie",
+    "fingerprint": "117854bf1c1c2b16a79f681ec6687a7642fd8d7b3d43966e7ecb6495380c83b2",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113004,
+    "field": "neurologie",
+    "fingerprint": "4ae4aa36664881ece6a1a370852ef2115ab632101221f3ba56b9e13e6307baf6",
+    "reason": "Neurological localisation, diagnosis, prognosis or stroke care is the primary competence."
+  },
+  {
+    "id": 113005,
+    "field": "chirurgie",
+    "fingerprint": "474fb30ee8c4d3620b32a9623bc0d9c24a04c7fdc321e19b4652404d565da082",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113006,
+    "field": "chirurgie",
+    "fingerprint": "05ec75d37ce7a1a1dcabe74de7355a87d313e7cf823b6c69e11a69228e078c54",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113008,
+    "field": "chirurgie",
+    "fingerprint": "5774b79b53a48113ecf5d5a4c201b33cb39423833aa648bd39508a8a27e04e92",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113010,
+    "field": "notfallmedizin",
+    "fingerprint": "b6ee78f51e4fc6d4d1bcb575850134d1eb3e2e84d9ca7b9b9c38fa900f7af25b",
+    "reason": "Immediate stabilisation, airway, critical monitoring or intensive care competence."
+  },
+  {
+    "id": 113011,
+    "field": "chirurgie",
+    "fingerprint": "ef8e6d3cfe5d78cd617d5364788f60cb099e0aaa8f0842f4e7a2f2ff9bf4db5a",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113012,
+    "field": "chirurgie",
+    "fingerprint": "5e3111bbd9b2e2c30400a0e1d634e39d2e3efcdae69581a7650da337b2b408d7",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113013,
+    "field": "notfallmedizin",
+    "fingerprint": "38a31dd001f17149431d0c6f86b5d3d2bf1c6c4509de5e9ff43cc38c1619365d",
+    "reason": "Immediate stabilisation, airway, critical monitoring or intensive care competence."
+  },
+  {
+    "id": 113014,
+    "field": "chirurgie",
+    "fingerprint": "b4cd9decb655f9745260ff7f73fa7370c0aed4bafe1accd0ecdaacdb5f46011d",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113015,
+    "field": "neurologie",
+    "fingerprint": "135820edce4b731b76fade4b878ebf2038b04cce8633bd9eea6e2ea47b874acd",
+    "reason": "Neurological localisation, diagnosis, prognosis or stroke care is the primary competence."
+  },
+  {
+    "id": 113016,
+    "field": "chirurgie",
+    "fingerprint": "98071af0c7c37dbf43fbc3b54f898878ba75d0bde2529f6de5d90038c91d29e8",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113019,
+    "field": "chirurgie",
+    "fingerprint": "b2b827d885c16e748452a61197f4712a8dd09a805032c5ba43f8d32d5bae1c27",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113021,
+    "field": "chirurgie",
+    "fingerprint": "9c720ad7f6f5ff88dd36aae6d0c02aef7979e4dc20470e9e90ccd2728487a5c8",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113022,
+    "field": "chirurgie",
+    "fingerprint": "e6be01f90cd3cf5fefb9673a02cc4e7943aa544736e398b6e67d17d743dfe6de",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113024,
+    "field": "chirurgie",
+    "fingerprint": "74daf2446e59ed828830ef75b9754d00fadef8439b7775c7b55d6e54cb30b6fa",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113026,
+    "field": "chirurgie",
+    "fingerprint": "d941ea28f6f15ddff71f6698eb80ba8d76bcff9744a37c74706f99f596d27078",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113027,
+    "field": "chirurgie",
+    "fingerprint": "96bb25cc5458a457daa7bcba24776b412e1e24b54bb23fe171a70ab02289ee4e",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113031,
+    "field": "chirurgie",
+    "fingerprint": "5db39b02c336cc9b7ba86a426346fe9af9857cdd7781368d1c0c96feabd7db36",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113032,
+    "field": "chirurgie",
+    "fingerprint": "a24dacf6bf925827b52ba0e8e38668c0a0b59541a7aae1ad241c318cb19388b6",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113034,
+    "field": "chirurgie",
+    "fingerprint": "97e2ee1fbfeb74a21036377ced364c659b8e6bf3782693b5bc9f47cb4c0a4b5a",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113036,
+    "field": "chirurgie",
+    "fingerprint": "31f1781bb50b166e08498a052751fd0978dc68e899e8200a7356bc09a6065f53",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113038,
+    "field": "chirurgie",
+    "fingerprint": "7c6b897476b4f38bcec1b6382b3d55bc3769a42a5c69b2bd7e4063f00d404f79",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113039,
+    "field": "chirurgie",
+    "fingerprint": "f6e012ece6d0e6af07e5c828030f55f3a5ca0715484bd3e4ebe96b60e21b1606",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113041,
+    "field": "chirurgie",
+    "fingerprint": "1879b3e90ba0339c1925a4ac868088ad41733e7a5757e721de17065903879803",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113042,
+    "field": "chirurgie",
+    "fingerprint": "a26399be37f7cbf98d17d0f3aa3952eb3a7bd37c3aa2dcfbfd0a895b54cc3e5c",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113043,
+    "field": "chirurgie",
+    "fingerprint": "46d19b2776a60f8f1da9d039b6de23ea74cdd1d038b99cb1181621b1658cafb5",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113049,
+    "field": "innere_medizin",
+    "fingerprint": "3838d9bd55c5e6d102af1321a00674780c9fe8c34a2a21aa7be09a47c6da23f0",
+    "reason": "Medical diagnosis, physiology or non-operative treatment is the primary competence."
+  },
+  {
+    "id": 113050,
+    "field": "chirurgie",
+    "fingerprint": "b5667e723d39d0c1f07ec7300c3cea4a42411482b124b638b966a43cc49a6012",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113052,
+    "field": "chirurgie",
+    "fingerprint": "01505565ebfb401a7ccd8f1ca945ebe3b27529e6b063e8cea9fa1c77e6b13ba1",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113053,
+    "field": "chirurgie",
+    "fingerprint": "bbacc34c6b767c0d942b86643a3d7e5c4243769ff17b1e474b6629ddb72d2206",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113054,
+    "field": "neurologie",
+    "fingerprint": "04e6a3d868b5a597ed4b0f791c7442dee5d9b19834e59e8b7198e76f8e90316c",
+    "reason": "Neurological localisation, diagnosis, prognosis or stroke care is the primary competence."
+  },
+  {
+    "id": 113056,
+    "field": "chirurgie",
+    "fingerprint": "404a5d3568b5444d6c3f47aa64e776a6e699387d86cfd35aea6815d2b354de58",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113057,
+    "field": "notfallmedizin",
+    "fingerprint": "34142be25caba0138700fa6f800bfb2cb91f3916643f42a6f0de4bf97470d616",
+    "reason": "Immediate stabilisation, airway, critical monitoring or intensive care competence."
+  },
+  {
+    "id": 113058,
+    "field": "innere_medizin",
+    "fingerprint": "80b4d5c55f5a447479f0b0e7eabb95f467cf8198485fa0be71ef6e9e8d512dc4",
+    "reason": "Medical diagnosis, physiology or non-operative treatment is the primary competence."
+  },
+  {
+    "id": 113059,
+    "field": "innere_medizin",
+    "fingerprint": "167ac1a89a4e928ffac11cbb04c7b910ea25787782abbad22a48d70cf09b130b",
+    "reason": "Medical diagnosis, physiology or non-operative treatment is the primary competence."
+  },
+  {
+    "id": 113060,
+    "field": "chirurgie",
+    "fingerprint": "6dd68d7fca81524cf29c13036a4596fba3f434a65bda84e1501e1e3b497fff01",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113061,
+    "field": "chirurgie",
+    "fingerprint": "edd27f266e2517e9ccb5289963ad632496db4388e2d8854e79bcc3439f66872b",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113062,
+    "field": "innere_medizin",
+    "fingerprint": "8738b2477798c9ea1c310348d3f8c4648e5b169f1257374daa6bb1820fa2f502",
+    "reason": "Medical diagnosis, physiology or non-operative treatment is the primary competence."
+  },
+  {
+    "id": 113063,
+    "field": "chirurgie",
+    "fingerprint": "b409ff9addf2f0687e70cf13154aca98259cf9452c11a622345e3d3fd921234d",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113066,
+    "field": "chirurgie",
+    "fingerprint": "033790c4ebfe1a3266b87be1bd02f950e7ba16d2602dabf98daff6fb0a98ab6e",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113067,
+    "field": "notfallmedizin",
+    "fingerprint": "d7b2c2c3d2fd58024103b5fdbac317639dc21ac513d82ebb518d0d02af2f494e",
+    "reason": "Immediate stabilisation, airway, critical monitoring or intensive care competence."
+  },
+  {
+    "id": 113068,
+    "field": "chirurgie",
+    "fingerprint": "5ca5358f5a9d35811bef703b3feb771fb7b875547119f7fd8ce7100c4f030677",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113069,
+    "field": "notfallmedizin",
+    "fingerprint": "16422612eeba239cb7dc8242a9a47c12586d9f19870d426f09ebb08b580efbc8",
+    "reason": "Immediate stabilisation, airway, critical monitoring or intensive care competence."
+  },
+  {
+    "id": 113070,
+    "field": "chirurgie",
+    "fingerprint": "34123f41a4eeb9486fb5236eaf8878d04eab7d11cce621dd9dee9f82248a1ee1",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113072,
+    "field": "chirurgie",
+    "fingerprint": "4a9d276471114c64c50a80584280d3febb923e691321a3aa0cc77713e3b37702",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113073,
+    "field": "notfallmedizin",
+    "fingerprint": "f74bc3bee14f97539c4ce10007c45a71e1180d1843bd0d7c65662310b3cabf9e",
+    "reason": "Immediate stabilisation, airway, critical monitoring or intensive care competence."
+  },
+  {
+    "id": 113075,
+    "field": "chirurgie",
+    "fingerprint": "e3dfa9ef521d7461e5de78fc51831471b242b7dec52d6838db9fad49d4798855",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113076,
+    "field": "chirurgie",
+    "fingerprint": "69cf8da56a7aa2d56563ecec5dbf6e48f595c05bf1b99babd201c93fc7e97169",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113077,
+    "field": "notfallmedizin",
+    "fingerprint": "281e65527a689d7ef9861db8cb0faf000550e7324c4df15c5e5908450963a190",
+    "reason": "Immediate stabilisation, airway, critical monitoring or intensive care competence."
+  },
+  {
+    "id": 113078,
+    "field": "chirurgie",
+    "fingerprint": "778704ed1c3aba8a9222aa1f34c425cbd5f65ad1e89e37d8eef2aef34b95ae05",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113080,
+    "field": "chirurgie",
+    "fingerprint": "a8ef1be86e14f52888d72f1df081d15d3905e4283910e6de309239e4f3866ce5",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113081,
+    "field": "innere_medizin",
+    "fingerprint": "a77a3f3e00bcf80e84923adcdda3d08a5977e2ef385b04c9c5426c427f68030a",
+    "reason": "Medical diagnosis, physiology or non-operative treatment is the primary competence."
+  },
+  {
+    "id": 113082,
+    "field": "chirurgie",
+    "fingerprint": "4894321bce6b5a7114c17cdcb452ceb4a26ebe9d7185b39c952ec0d9ba3a3fe4",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113084,
+    "field": "notfallmedizin",
+    "fingerprint": "3448900e00bd1fc36ea07bfbe90506e50f768bb4e1b0c576868306b14bba56c9",
+    "reason": "Immediate stabilisation, airway, critical monitoring or intensive care competence."
+  },
+  {
+    "id": 113085,
+    "field": "chirurgie",
+    "fingerprint": "74e379f9a80bd70ff8e45414dfaf5dcfca2457abe6bd4daec2722290685a8527",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113086,
+    "field": "innere_medizin",
+    "fingerprint": "debf230adeff78e47cb7b3abc773e85eddd7625c571b214ba6f7632f07ba59b0",
+    "reason": "Medical diagnosis, physiology or non-operative treatment is the primary competence."
+  },
+  {
+    "id": 113087,
+    "field": "chirurgie",
+    "fingerprint": "57aab7769950ac503c615ab4fe6e2284700106ac409c14388e4d929c878306c1",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113088,
+    "field": "innere_medizin",
+    "fingerprint": "574481c3acdd052232e28c383410c21d0fe0fea2f31a302c7af6379f10b8c968",
+    "reason": "Medical diagnosis, physiology or non-operative treatment is the primary competence."
+  },
+  {
+    "id": 113089,
+    "field": "chirurgie",
+    "fingerprint": "68137823d286621a829413edfe7583663d0ccdf408f6478ef51bd394a4d8e414",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113090,
+    "field": "chirurgie",
+    "fingerprint": "cccb6c6cf480885d3d3b679093ad0aaa6a76540c715c4361a1d53126ed319e1c",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113093,
+    "field": "chirurgie",
+    "fingerprint": "9bc25e2c4bd74dadbe9420ffcf8b6c3df5100ae69a0bc037fae3db4082bdc9b2",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113094,
+    "field": "chirurgie",
+    "fingerprint": "3a5ef843ace84134b1f24a08562b70df46a88c64c541eb9ad9811d964a9b2249",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113096,
+    "field": "notfallmedizin",
+    "fingerprint": "80b7b04def3d87485fc73ad8fddb90802ebf9f08dc9923cfb2d93505b5a6e395",
+    "reason": "Immediate stabilisation, airway, critical monitoring or intensive care competence."
+  },
+  {
+    "id": 113097,
+    "field": "chirurgie",
+    "fingerprint": "125ddcc0f9f0383af3acd83a2b903b6dcf7c2fa96d44be71b22deda47d7f0bed",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113099,
+    "field": "chirurgie",
+    "fingerprint": "5c11c0b713e51f3f2a2025864449c9b954a35688351b44daf0d1b8f0625af5b2",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113100,
+    "field": "chirurgie",
+    "fingerprint": "c0d20d2277d6bb05f4e531c824f530db864d19615a5da4b85f87aca3db3f93e7",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113101,
+    "field": "chirurgie",
+    "fingerprint": "3c8ddf94e61293fd2e0ff8c1f7d83634d02ab4dcdf9cc018a070726c250322bf",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113103,
+    "field": "chirurgie",
+    "fingerprint": "fcd094d232638dd7f576f40ffd3c41c5f12eac6cce8a4ce6c2671fb2bf12a75b",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113104,
+    "field": "notfallmedizin",
+    "fingerprint": "ddb2b818bb7ad27f9661cf682d0e0e9531b100a94629ff89265a35fadbbb0381",
+    "reason": "Immediate stabilisation, airway, critical monitoring or intensive care competence."
+  },
+  {
+    "id": 113107,
+    "field": "chirurgie",
+    "fingerprint": "54d47700af47d7ae7ec4de87044dbf854ba6f14136ab95b3a68d6725898f7d65",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113108,
+    "field": "chirurgie",
+    "fingerprint": "a082a649649681dbba360c10dcb5f62e5f2f9b2a015bb7e01a1ba71318757e7d",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113110,
+    "field": "chirurgie",
+    "fingerprint": "ee32ad26f0c06aff484bfd23274f273aa747f253502aa01eaf60559bbb8a9541",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113111,
+    "field": "neurologie",
+    "fingerprint": "b68322a5731ec667614cee96d6e3b7d7f45d6b70fab2d517960a15cca1a6fadc",
+    "reason": "Neurological localisation, diagnosis, prognosis or stroke care is the primary competence."
+  },
+  {
+    "id": 113113,
+    "field": "chirurgie",
+    "fingerprint": "6f08a2f40845862ea9031e12e0fb732e00fa75ad447281264e1232126a600880",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113114,
+    "field": "notfallmedizin",
+    "fingerprint": "4b3b3f57cd29768d9a5b3bb11f31a4e47eba49cc7c20d0dca9e418b5c34eb3db",
+    "reason": "Immediate stabilisation, airway, critical monitoring or intensive care competence."
+  },
+  {
+    "id": 113115,
+    "field": "chirurgie",
+    "fingerprint": "6afa6931beaae1a69f38d0dc43a6c65d87531a5c5cff25a1582a78cfd1023743",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113116,
+    "field": "innere_medizin",
+    "fingerprint": "1598614d2fd4011bf15cc70664790859394c95c81f15f788c2529fa18219fa8d",
+    "reason": "Medical diagnosis, physiology or non-operative treatment is the primary competence."
+  },
+  {
+    "id": 113117,
+    "field": "innere_medizin",
+    "fingerprint": "23fa1a53f5b242a86036f562a9012201deef52d2e518b54692e72224084b2497",
+    "reason": "Medical diagnosis, physiology or non-operative treatment is the primary competence."
+  },
+  {
+    "id": 113118,
+    "field": "chirurgie",
+    "fingerprint": "9156a221b6c093d85dfe5def17b2768bdbf0e7050e0fdf00e551e653d75dc2f6",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113119,
+    "field": "chirurgie",
+    "fingerprint": "500fc1326d5a770bcdb33720c911673daa9186210bb0429a9eca91a3e1ae6c85",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113120,
+    "field": "chirurgie",
+    "fingerprint": "8e6c0605be7c5f435b037f3731b232d0287c28a9eb81c8026e7f0b18484362d7",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113121,
+    "field": "chirurgie",
+    "fingerprint": "a3c98f66affbb7efb5dfede236571380e3d3e9408b85c1f2c97ec5cb9d921b12",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113122,
+    "field": "innere_medizin",
+    "fingerprint": "6a547dd20dd92bb09a18b672ca0af55068f4df130cb5ae3299ed75f59a201434",
+    "reason": "Medical diagnosis, physiology or non-operative treatment is the primary competence."
+  },
+  {
+    "id": 113123,
+    "field": "chirurgie",
+    "fingerprint": "8f1a008e7e853fd5fd27e6b5e9c2ab2d01c1d78353dcb25ad368e3242f7914e4",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113124,
+    "field": "chirurgie",
+    "fingerprint": "e4e9efe122e43fa5022143c527928ff0aa43a075deac4c546b0456a6ef76a7a2",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113126,
+    "field": "chirurgie",
+    "fingerprint": "68dd77be54e1af0fb0f65cd225a493a30d828f260c8a46734174639a18faa464",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113127,
+    "field": "chirurgie",
+    "fingerprint": "8fd00558dfbfbfbf8c63c16acc6de186bc27679ee5b78a4a29470a554c32f2ca",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113128,
+    "field": "chirurgie",
+    "fingerprint": "fb21eaf06e475c355a8ef53fb0cc9779f793f3811de85de0ad927bf78c05839e",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113129,
+    "field": "chirurgie",
+    "fingerprint": "12ed713899f154be529599d208111defaa95ecac4ddaf58f224f262a38ebaba6",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113131,
+    "field": "neurologie",
+    "fingerprint": "3e282177a209f0b00848c7f6a06ecc916218cb378ff4f9da497dd81c4ab6f1b1",
+    "reason": "Neurological localisation, diagnosis, prognosis or stroke care is the primary competence."
+  },
+  {
+    "id": 113132,
+    "field": "innere_medizin",
+    "fingerprint": "11f7d840a11bc01dd04dad8fb535d3c81622f0d02623aa2cfbae2f87abf9a25d",
+    "reason": "Medical diagnosis, physiology or non-operative treatment is the primary competence."
+  },
+  {
+    "id": 113133,
+    "field": "chirurgie",
+    "fingerprint": "146bc457b083d0f8f1789b4497d77b7eaed3fd49bdcde0807a94bc036e06acf0",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113134,
+    "field": "innere_medizin",
+    "fingerprint": "87c341fedd7741a4ec2632bc2b1a4c5a3425c0a8c8764ddbf206d97a5d120ed1",
+    "reason": "Medical diagnosis, physiology or non-operative treatment is the primary competence."
+  },
+  {
+    "id": 113135,
+    "field": "notfallmedizin",
+    "fingerprint": "7e1aaad8881e261d9256fbfa50812c745836fe69e5aa64d3aec5cf77a8441fb6",
+    "reason": "Immediate stabilisation, airway, critical monitoring or intensive care competence."
+  },
+  {
+    "id": 113138,
+    "field": "chirurgie",
+    "fingerprint": "c0fe39e0f7c1345fef65201d069985600a117fe1bbbb0b96a9a5416a37637a87",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113139,
+    "field": "chirurgie",
+    "fingerprint": "8dcf52e8040126a9fb441f2730695b7c9ce6d1143d654e0bccaa508d0aaf8df4",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113141,
+    "field": "chirurgie",
+    "fingerprint": "dd406d81927c5937ede2fb62d94a65e0e9d1bdd6e25aadc94175c52d897ed0ba",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113144,
+    "field": "notfallmedizin",
+    "fingerprint": "a055c4a7ff2d1d4b023aa8d636f5efdddf4987822c7c0ba8b4c26e9743feb230",
+    "reason": "Immediate stabilisation, airway, critical monitoring or intensive care competence."
+  },
+  {
+    "id": 113145,
+    "field": "chirurgie",
+    "fingerprint": "df4c4c1c70e78f853c7e235ef1a5ae7cc9742dc9e7af4273521f4ff9b3faf41f",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113146,
+    "field": "innere_medizin",
+    "fingerprint": "79dcb4c1a340edcc919f5c721dd9aaa2d1e20ba8cfb1aba2505db415758dc340",
+    "reason": "Medical diagnosis, physiology or non-operative treatment is the primary competence."
+  },
+  {
+    "id": 113149,
+    "field": "chirurgie",
+    "fingerprint": "1d57b496146ab84de5f8165303778dcef91ae38c37689e0d250db47639682113",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113150,
+    "field": "chirurgie",
+    "fingerprint": "5696e7f65f966ea64e5203ff5448635b69efea58a23e7e3210e347e369a01f5e",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113151,
+    "field": "chirurgie",
+    "fingerprint": "fb474d7a8ffdd33bd4b7e4b57ad146333226c3b0ef25eaeb8d2271dd1a5bc27f",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113152,
+    "field": "chirurgie",
+    "fingerprint": "0c799c023a214b599ffaed195be21ced188f7773a6ffb34071f3ebf9cba1a2bf",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113153,
+    "field": "chirurgie",
+    "fingerprint": "3fe125c3413284c8b63a4f487568d536c92a9004c4af5025d0645550fce22673",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113154,
+    "field": "chirurgie",
+    "fingerprint": "7853775425bee29fdb001f303f03e9082b1b32d2789d1b9d8df858a2e4e9f2f0",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113157,
+    "field": "notfallmedizin",
+    "fingerprint": "e072304819b15750808801d95d7adb07fc20e28619a9b0d9afddd110e49080fb",
+    "reason": "Immediate stabilisation, airway, critical monitoring or intensive care competence."
+  },
+  {
+    "id": 113158,
+    "field": "innere_medizin",
+    "fingerprint": "58bf12ca154a46534ec88743c2a9875d69b1b6fcdce626d711621c294e658acf",
+    "reason": "Medical diagnosis, physiology or non-operative treatment is the primary competence."
+  },
+  {
+    "id": 113160,
+    "field": "neurologie",
+    "fingerprint": "709f4f098715f0de1296e618bcb0597e3651ab9f75d72f4a27d0f1dba704a1a7",
+    "reason": "Neurological localisation, diagnosis, prognosis or stroke care is the primary competence."
+  },
+  {
+    "id": 113161,
+    "field": "innere_medizin",
+    "fingerprint": "5b49e3f22d4c62408039059bf06f891b61fc0787acf2a751d3d2803302c9ca46",
+    "reason": "Medical diagnosis, physiology or non-operative treatment is the primary competence."
+  },
+  {
+    "id": 113162,
+    "field": "chirurgie",
+    "fingerprint": "f585c4e7c9eac47541991e8502109188d45d5ec2a6db36e3e2d91d1c03bbff1d",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113164,
+    "field": "chirurgie",
+    "fingerprint": "5fd1d147700f212d4f746b75ab7f0d899da53a159310243b4df17635630e29be",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113167,
+    "field": "chirurgie",
+    "fingerprint": "7e28bf37c5f966d73973d2459da2b33b8dc7d5724ec2ba12e16ae97158551013",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113169,
+    "field": "chirurgie",
+    "fingerprint": "734718d5a7920c4e0377db622c3971fcbc487abbd99a14cba069630e999eb7d2",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113171,
+    "field": "chirurgie",
+    "fingerprint": "a36d532badcd3ef92a8f2e865e13d91824c87621c0dc2282c98e4ee5611f97aa",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  },
+  {
+    "id": 113173,
+    "field": "chirurgie",
+    "fingerprint": "a8d62cdb8005f7d54271f009a825c89ef123455b12c88ed51f1d77f39b9b0fcb",
+    "reason": "Surgical disease, operative procedure, transplant care or perioperative anaesthesia/pain management is the primary competence."
+  }
+]
