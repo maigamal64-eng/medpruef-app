@@ -62,7 +62,7 @@ async function claimConfirmationSlot(db: ReturnType<typeof getServiceClient>, id
   const recent = await db.from("exam_reminders").select("id").eq("email", email).gte("confirmation_sent_at", cutoff).limit(1);
   assertDb(recent.error);
   if (recent.data?.length) return false;
-  const claim = await db.from("exam_reminders").update({ confirmation_sent_at: new Date().toISOString() }).eq("id", id).or(`confirmation_sent_at.is.null,confirmation_sent_at.lt.${cutoff}`).select("id").maybeSingle();
+  const claim = await db.from("exam_reminders").update({ confirmation_sent_at: new Date().toISOString() }).eq("id", id).or(`confirmation_sent_at.is.null,confirmation_sent_at.lt."${cutoff}"`).select("id").maybeSingle();
   assertDb(claim.error);
   return !!claim.data;
 }
