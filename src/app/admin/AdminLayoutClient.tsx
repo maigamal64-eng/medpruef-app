@@ -101,7 +101,7 @@ const NAV: NavSection[] = [
     label: "Channels",
     icon: Sprout,
     shortcut: "w",
-    permission: "overview.read",
+    permission: "revenue.read",
     href: "/admin/growth",
     items: [],
   },

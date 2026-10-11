@@ -99,7 +99,7 @@ interface GrowthContent {
 }
 
 export default function AdminGrowthPage() {
-  return <AdminPermissionGate permission="overview.read"><AdminGrowthPageContent /></AdminPermissionGate>;
+  return <AdminPermissionGate permission="revenue.read"><AdminGrowthPageContent /></AdminPermissionGate>;
 }
 
 function AdminGrowthPageContent() {
