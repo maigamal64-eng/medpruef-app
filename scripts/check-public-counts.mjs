@@ -41,7 +41,7 @@ export function checkCounts(claims, counts, tolerance = 0.02, exclusions = []) {
       : Math.abs(actual - c.claimed) <= Math.ceil(c.claimed * tolerance);
     return { ...c, actual, delta: actual - c.claimed, tolerance: c.mode === 'approximate' ? tolerance : 0, status: ok ? 'OK' : 'FAIL' };
   });
-  return { ok: results.every(r => r.status !== 'FAIL'), counts, claims_checked: results.length,
+  return { ok: results.length > 0 && results.every(r => r.status !== 'FAIL'), counts, claims_checked: results.length,
     failures: results.filter(r => r.status === 'FAIL').length, results };
 }
 
@@ -49,7 +49,7 @@ export function checkCounts(claims, counts, tolerance = 0.02, exclusions = []) {
 export async function readCounts({ envPath, fetchImpl = fetch }) {
   const env = envPath ? parseEnv(readFileSync(resolve(envPath), 'utf8')) : process.env;
   const url = new URL(env.NEXT_PUBLIC_SUPABASE_URL);
-  const key = env.NEXT_PUBLIC_SUPABASE_ANON_KEY || env.SUPABASE_SERVICE_ROLE_KEY;
+  const key = env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (url.protocol !== 'https:' || url.username || url.password || !key) throw new Error('Invalid count credentials');
   const entries = await Promise.all(['total', ...TYPES].map(async type => {
     const endpoint = new URL('/rest/v1/questions', url);

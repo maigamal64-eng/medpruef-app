@@ -37,7 +37,7 @@ export function checkClaims(lines, allowlist = [], { strict = false } = {}) {
       }
     }
   }
-  return { ok: !results.some(r => r.blocking), files_scanned: new Set(lines.map(l => l.path)).size,
+  return { ok: lines.length > 0 && !results.some(r => r.blocking), files_scanned: new Set(lines.map(l => l.path)).size,
     hits: results.length, failures: results.filter(r => r.blocking).length, results };
 }
 
