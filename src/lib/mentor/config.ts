@@ -44,9 +44,11 @@ export const MENTOR_LOW_CREDITS = 20;
 
 /**
  * Package id -> env var holding its Whop plan id. An unset or empty env var
- * means the package cannot be bought (the package API hides it). The plan
- * ids do not exist yet: [name] creates the plans (separate Whop product
- * recommended) and main-Claude sets these vars.
+ * means the package cannot be bought (the package API hides it). Pricing A
+ * (2026-10-11): Basis EUR 4.90 / 150 credits, Plus EUR 9.90 / 400 credits,
+ * top-up EUR 10 / 400 credits (rows in the ledger migration). The plan ids are
+ * MISSING: they do not exist until [name] creates the "MedPrüf Mentor" product
+ * on Whop; main-Claude then sets these vars. Never put an invented id here.
  */
 export const MENTOR_WHOP_PLAN_ENV = Object.freeze({
   mentor_basis: "WHOP_PLAN_MENTOR_BASIS",
@@ -88,9 +90,27 @@ export const MENTOR_CONFIG_DEFAULTS: Readonly<MentorConfig> = Object.freeze({
   modelEscalate: MODEL_IDS.SONNET_5_5,
   effort: "low",
   // Haiku 5.5 always thinks (300 to 600 output tokens even at effort low), so 700
-  // cut the visible answer off (eval round 1: 9 truncated or empty answers).
-  // 1000 keeps a heavy 3-call answer under one credit (USD 0.005) at worst case.
-  maxTokens: 1000,
+  // cut the visible answer off (eval round 1: 9 truncated or empty answers) and
+  // 1000 still cut long German deadline answers (eval round 3: successful ones
+  // use 924 to 973; 5 cut-offs in 2 full runs). 1500 leaves room; a cut-off
+  // answer is retried once (turn.ts).
+  //
+  // Cost basis (Haiku 5.5, pricing.ts reserveCeilingMicro, 2026-10-11): one
+  // call reserves (input bytes + 512) x USD 0.125/MTok (cache write, the dearest
+  // input rate) + max_tokens x USD 0.50/MTok. Real first call of a German
+  // deadline question (about 50 KB of prompt): USD 0.0068 at 1000, 0.0070 at
+  // 1500, 0.0073 at 2000 (1.35 / 1.40 / 1.45 credits). Admission needs 3 such
+  // ceilings, so the last 4.2 credits of a balance cannot start a message
+  // (4.06 at 1000). Every call is reserved at its ceiling before it runs and
+  // holds stay open until the turn ends, so a turn (3 rounds plus one retry,
+  // about USD 0.028 at worst) can never spend more than the wallet held; a
+  // retry or a later round that does not fit ends the turn on the house.
+  // Measured actual cost (eval run2-r3 at 1000, warm cache, 150 messages):
+  // mean USD 0.0007, p95 0.0011, max 0.0014 per message at about 1.5 calls,
+  // so one credit (USD 0.005) still covers a typical message several times
+  // over and "about one message per credit" stays a conservative promise.
+  // A failed or notice-only turn costs the learner 0 (turn.ts).
+  maxTokens: 1500,
   maxToolRounds: 3,
   ratePerMin: 6,
   ratePerDay: 60,
@@ -164,7 +184,7 @@ export function readMentorConfig(env: Env = process.env): MentorConfig {
     modelEscalate: envModel(env[MENTOR_ENV.modelEscalate], d.modelEscalate),
     effort: envEffort(env[MENTOR_ENV.effort]),
     // Hard ceilings: env can only tighten these, never exceed the contract.
-    maxTokens: envInt(env[MENTOR_ENV.maxTokens], d.maxTokens, 64, 1000),
+    maxTokens: envInt(env[MENTOR_ENV.maxTokens], d.maxTokens, 64, 2000),
     maxToolRounds: envInt(env[MENTOR_ENV.maxToolRounds], d.maxToolRounds, 1, 3),
     ratePerMin: envInt(env[MENTOR_ENV.ratePerMin], d.ratePerMin, 0, 60),
     ratePerDay: envInt(env[MENTOR_ENV.ratePerDay], d.ratePerDay, 0, 1000),

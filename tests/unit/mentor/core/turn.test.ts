@@ -31,10 +31,21 @@ function invariant(ledger: ReturnType<typeof makeDeps>["ledger"]) {
 }
 
 describe("runMentorTurn: success paths", () => {
-  it("an answer cut off by max_tokens shows only its complete sentences", async () => {
-    const t = run([{ text: "Die Anmeldung läuft online. Danach kommt die Bestätigung per E-Ma", usage: usage(1200, 1000), stopReason: "max_tokens" }]);
+  it("an answer cut off by max_tokens twice shows only the complete sentences; the learner pays the delivered attempt only", async () => {
+    const u1 = usage(1200, 1500);
+    const u2 = usage(1300, 1500);
+    const t = run([
+      { text: "Die Anmeldung läuft online. Danach kommt die Bestätigung per E-Ma", usage: u1, stopReason: "max_tokens" },
+      { text: "Die Anmeldung läuft online. Danach kommt", usage: u2, stopReason: "max_tokens" },
+    ]);
     const f = finalOf(await t.events);
+    expect(t.claude.calls).toHaveLength(2);
     expect(f.answer_blocks.map((b) => b.text).join(" ")).toBe("Die Anmeldung läuft online.");
+    // Both attempts trim to the same sentence: the second (not longer) is delivered and billed; the first is the house's.
+    expect(settled(t.ledger).map((e) => [e.kind, e.cost])).toEqual([
+      ["house_cost", costMicroUsd(MODEL, u1)],
+      ["settle", costMicroUsd(MODEL, u2)],
+    ]);
     invariant(t.ledger);
   });
 
@@ -53,7 +64,7 @@ describe("runMentorTurn: success paths", () => {
     expect(t.claude.calls[0].stream).toBe(true);
     expect(t.claude.calls[0].signal).toBeUndefined();
     expect(t.claude.calls[0].effort).toBe("low");
-    expect(t.claude.calls[0].max_tokens).toBe(1000);
+    expect(t.claude.calls[0].max_tokens).toBe(1500);
     invariant(t.ledger);
   });
 
@@ -205,35 +216,37 @@ describe("runMentorTurn: billing matrix on failures", () => {
     invariant(t.ledger);
   });
 
-  it("empty text: house pays the first 3 a day at actual cost, then the user", async () => {
+  it("empty text (no cut-off): the notice, never the learner's; the house books the actual cost every time", async () => {
     const u = usage(700, 30);
     const env = makeDeps([], { grantMicro: GRANT, houseFree: 3 });
     const turn = createRunMentorTurn({ alert: () => {} });
-    const kinds: string[] = [];
     const { scriptedClaude } = await import("./helpers");
     for (let i = 0; i < 4; i++) {
       const claude = scriptedClaude([{ throw: new AiEmptyText("empty", { usage: u, stop_reason: "end_turn", blocks: [] }) }]);
       env.deps.callClaude = claude.fn;
       const events = await collect(turn(env.deps, turnInput({ requestId: `22222222-2222-4222-8222-00000000000${i}` })));
-      expect(events).toEqual([{ type: "error", error: "upstream_error" }]);
+      expect(events.map((e) => e.type)).toEqual(["delta", "final"]);
+      expect(finalOf(events).answer_blocks[0].text).toMatch(/^Diese Angabe ist nicht offiziell bestätigt\. Bitte prüf sie auf der offiziellen Seite: https:\/\//);
+      expect(claude.calls).toHaveLength(1); // not a cut-off: no retry
     }
-    for (const e of settled(env.ledger)) kinds.push(e.kind);
-    expect(kinds).toEqual(["house_cost", "house_cost", "house_cost", "settle"]);
+    expect(settled(env.ledger).map((e) => e.kind)).toEqual(["house_cost", "house_cost", "house_cost", "house_cost"]);
     expect(settled(env.ledger).every((e) => e.cost === costMicroUsd(MODEL, u))).toBe(true);
     invariant(env.ledger);
   });
 
-  it("timeout (cost unknown) is billed at the reserve ceiling", async () => {
-    const t = run([{ throw: new AiTimeout("timeout", { usage: usage(500, 0) }) }], { grantMicro: GRANT, houseFree: 0 });
-    await t.events;
-    const reserve = t.ledger.entries.find((e) => e.kind === "reserve");
-    const s = settled(t.ledger)[0];
-    expect(s.kind).toBe("settle");
-    expect(s.cost).toBe(reserve?.hold);
+  it("timeout twice (retried once, cost unknown): upstream_error, both attempts on the house at the ceiling", async () => {
+    const t = run([{ throw: new AiTimeout("timeout", { usage: usage(500, 0) }) }, { throw: new AiTimeout("timeout", {}) }], { grantMicro: GRANT, houseFree: 0 });
+    expect(await t.events).toEqual([{ type: "error", error: "upstream_error" }]);
+    expect(t.claude.calls).toHaveLength(2);
+    const holds = t.ledger.entries.filter((e) => e.kind === "reserve").map((e) => e.hold);
+    const s = settled(t.ledger);
+    expect(s.map((e) => e.kind)).toEqual(["house_cost", "house_cost"]);
+    expect(s.map((e) => e.cost)).toEqual(holds);
+    expect(t.ledger.entries.some((e) => e.kind === "settle")).toBe(false);
     invariant(t.ledger);
   });
 
-  it("a cut stream that reached the model is billed at the ceiling; house first", async () => {
+  it("a cut stream that reached the model is booked to the house at the ceiling", async () => {
     const t = run([{ throw: new AiUpstream("cut", { reachedModel: true, code: "stream_incomplete" }), startUsage: usage(600, 0) }]);
     await t.events;
     const s = settled(t.ledger)[0];
@@ -258,24 +271,154 @@ describe("runMentorTurn: billing matrix on failures", () => {
     invariant(t.ledger);
   });
 
-  it("a house-policy error fails closed to billing the user", async () => {
-    const env = makeDeps([{ throw: new AiEmptyText("e", { usage: usage(1, 1), stop_reason: null, blocks: [] }) }], { grantMicro: GRANT });
+  it("an error turn never consults the house policy (a policy failure cannot bill the learner)", async () => {
+    const env = makeDeps([{ throw: new AiUpstream("5xx", { reachedModel: true, status: 500 }) }], { grantMicro: GRANT });
     env.deps.house = { takeFreeFail: async () => { throw new Error("db"); } };
-    await collect(createRunMentorTurn({ alert: () => {} })(env.deps, turnInput()));
-    expect(settled(env.ledger)[0].kind).toBe("settle");
+    expect(await collect(createRunMentorTurn({ alert: () => {} })(env.deps, turnInput()))).toEqual([{ type: "error", error: "upstream_error" }]);
+    expect(settled(env.ledger).map((e) => e.kind)).toEqual(["house_cost"]);
+    invariant(env.ledger);
+  });
+});
+
+describe("runMentorTurn: retry once, and the learner never pays for an error or the notice", () => {
+  const NOTICE_DE = /^Diese Angabe ist nicht offiziell bestätigt\. Bitte prüf sie auf der offiziellen Seite: https:\/\/\S+$/;
+
+  it("max_tokens with a cut answer, then a full answer: retried once, the cut attempt is the house's, the answer the learner's", async () => {
+    const u1 = usage(1200, 1500);
+    const u2 = usage(1250, 900);
+    const t = run([
+      { text: "@@LANG de\n@@BLOC", usage: u1, stopReason: "max_tokens" },
+      { text: "Die Anmeldung läuft online.", usage: u2 },
+    ]);
+    const f = finalOf(await t.events);
+    expect(f.answer_blocks[0].text).toBe("Die Anmeldung läuft online.");
+    expect(t.claude.calls).toHaveLength(2);
+    expect(t.claude.calls[1].messages).toEqual(t.claude.calls[0].messages); // same request again
+    expect(t.alerts.filter((a) => a.kind === "retry")).toHaveLength(1);
+    expect(settled(t.ledger).map((e) => [e.kind, e.cost])).toEqual([
+      ["house_cost", costMicroUsd(MODEL, u1)],
+      ["settle", costMicroUsd(MODEL, u2)],
+    ]);
+    invariant(t.ledger);
+  });
+
+  it("per-call timeout, then an answer: retried once, the timed-out attempt is the house's at the ceiling", async () => {
+    const u2 = usage(1250, 400);
+    const t = run([{ throw: new AiTimeout("timeout", {}), startUsage: usage(1200, 0) }, { text: "Die Anmeldung läuft online.", usage: u2 }]);
+    const f = finalOf(await t.events);
+    expect(f.answer_blocks[0].text).toBe("Die Anmeldung läuft online.");
+    expect(t.claude.calls).toHaveLength(2);
+    const holds = t.ledger.entries.filter((e) => e.kind === "reserve").map((e) => e.hold);
+    expect(settled(t.ledger).map((e) => [e.kind, e.cost])).toEqual([
+      ["house_cost", holds[0]],
+      ["settle", costMicroUsd(MODEL, u2)],
+    ]);
+    invariant(t.ledger);
+  });
+
+  it("a retry that still ends with only a protocol header shows the notice with the official link; nothing charged, real cost logged", async () => {
+    const u1 = usage(1200, 1500);
+    const u2 = usage(1210, 1500);
+    const t = run([
+      { text: "@@LANG de\n@@BLOC", usage: u1, stopReason: "max_tokens" },
+      { text: "@@LANG de\n@@BLOCK facts=", usage: u2, stopReason: "max_tokens" },
+    ]);
+    const events = await t.events;
+    expect(events.map((e) => e.type)).toEqual(["delta", "final"]);
+    expect(finalOf(events).answer_blocks[0].text).toMatch(NOTICE_DE);
+    expect(t.claude.calls).toHaveLength(2);
+    expect(t.ledger.entries.some((e) => e.kind === "settle")).toBe(false);
+    expect(settled(t.ledger).map((e) => [e.kind, e.cost])).toEqual([
+      ["house_cost", costMicroUsd(MODEL, u1)],
+      ["house_cost", costMicroUsd(MODEL, u2)],
+    ]);
+    expect(finalOf(events).credits_left).toBe(GRANT / 5000); // balance untouched
+    invariant(t.ledger);
+  });
+
+  it("a retry that cannot be reserved delivers the first attempt's complete sentences and bills only that attempt", async () => {
+    const u1 = usage(1200, 1500);
+    const env = makeDeps(
+      [
+        { text: "Die Anmeldung läuft online. Danach kommt", usage: u1, stopReason: "max_tokens" },
+        { text: "never" },
+      ],
+      { grantMicro: GRANT },
+    );
+    const orig = env.deps.meter.reserve;
+    let n = 0;
+    env.deps.meter.reserve = async (...a) => (++n === 2 ? { ok: false, remainingMicro: 0, reason: "insufficient" } : orig(...a));
+    const events = await collect(createRunMentorTurn({ alert: () => {} })(env.deps, turnInput()));
+    expect(finalOf(events).answer_blocks[0].text).toBe("Die Anmeldung läuft online.");
+    expect(env.claude.calls).toHaveLength(1);
+    expect(settled(env.ledger).map((e) => [e.kind, e.cost])).toEqual([["settle", costMicroUsd(MODEL, u1)]]);
+    invariant(env.ledger);
+  });
+
+  it("no second retry: three timeouts in a row make two calls, then upstream_error, all on the house", async () => {
+    const t = run([{ throw: new AiTimeout("t1", {}) }, { throw: new AiTimeout("t2", {}) }, { text: "never" }]);
+    expect(await t.events).toEqual([{ type: "error", error: "upstream_error" }]);
+    expect(t.claude.calls).toHaveLength(2);
+    expect(t.ledger.entries.some((e) => e.kind === "settle")).toBe(false);
+    invariant(t.ledger);
+  });
+
+  it("no retry when the turn budget is spent: the timeout ends the turn, on the house", async () => {
+    const env = makeDeps([{ throw: new AiTimeout("timeout", {}) }, { text: "never" }], { grantMicro: GRANT });
+    let now = 0;
+    const turn = createRunMentorTurn({ alert: () => {}, elapsedNow: () => (now += 25_000) });
+    expect(await collect(turn(env.deps, turnInput()))).toEqual([{ type: "error", error: "upstream_error" }]);
+    expect(env.claude.calls).toHaveLength(1);
+    expect(settled(env.ledger).map((e) => e.kind)).toEqual(["house_cost"]);
+    invariant(env.ledger);
+  });
+
+  it("an answer the validator replaced entirely by the fallback notice is not charged; the cost is logged for [name]", async () => {
+    const u = usage(1200, 600);
+    const notice = "Diese Angabe ist nicht offiziell bestätigt. Bitte prüf sie auf der offiziellen Seite: https://example.org/official";
+    const t = run([{ text: "Die Frist endet am 9999.", usage: u }], {
+      grantMicro: GRANT,
+      brain: {
+        validate: () => ({ blocks: [{ text: notice, fact_ids: [] }], citations: [], replaced: true, rejected: [{ value: "9999", reason: "not_in_cited_facts" }] }),
+      },
+    });
+    const f = finalOf(await t.events);
+    expect(f.answer_blocks[0].text).toBe(notice);
+    expect(settled(t.ledger).map((e) => [e.kind, e.cost])).toEqual([["house_cost", costMicroUsd(MODEL, u)]]);
+    expect(f.credits_left).toBe(GRANT / 5000);
+    invariant(t.ledger);
+  });
+
+  it("an answer with real text next to a replaced value is a delivered answer and is charged", async () => {
+    const u = usage(1200, 600);
+    const notice = "Diese Angabe ist nicht offiziell bestätigt. Bitte prüf sie auf der offiziellen Seite: https://example.org/official";
+    const t = run([{ text: "x", usage: u }], {
+      grantMicro: GRANT,
+      brain: {
+        validate: () => ({
+          blocks: [{ text: "Die Anmeldung läuft online.", fact_ids: [] }, { text: notice, fact_ids: [] }],
+          citations: [],
+          replaced: true,
+          rejected: [],
+        }),
+      },
+    });
+    await t.events;
+    expect(settled(t.ledger).map((e) => e.kind)).toEqual(["settle"]);
+    invariant(t.ledger);
   });
 });
 
 describe("runMentorTurn: ledger faults", () => {
   const quiet = createRunMentorTurn({ alert: () => {} });
 
-  it("a reserve DB error on round 2 ends the turn; round 1 stays billed", async () => {
+  it("a reserve DB error on round 2 ends the turn; round 1 is booked to the house, not the learner", async () => {
     const env = makeDeps([{ text: "", toolUses: [{ id: "a", name: "get_dates" }] }, { text: "never" }], { grantMicro: GRANT });
     const orig = env.deps.meter.reserve;
     let n = 0;
     env.deps.meter.reserve = async (...a) => (++n === 2 ? { ok: false, remainingMicro: null, reason: "db_error" } : orig(...a));
     expect(await collect(quiet(env.deps, turnInput()))).toEqual([{ type: "error", error: "reserve_failed" }]);
-    expect(settled(env.ledger)).toHaveLength(1);
+    expect(settled(env.ledger).map((e) => e.kind)).toEqual(["house_cost"]);
     expect(env.claude.calls).toHaveLength(1);
     invariant(env.ledger);
   });

@@ -5,7 +5,7 @@ import { AUSTRIAN_RESOURCES } from "@/lib/austrian-resources";
 import type { Brain } from "@/lib/mentor/seam";
 import { createMentorBrain } from "@/lib/mentor/prompt/brain";
 import { MENTOR_CORE_PROMPT } from "@/lib/mentor/prompt/system";
-import { REFUSAL_COPY, fallbackLine, officialLinkForExam, officialLinkForUniversity, refusalLink, refusalLine } from "@/lib/mentor/prompt/refusals";
+import { REFUSAL_COPY, fallbackLine, isFallbackOnlyText, officialLinkForExam, officialLinkForUniversity, refusalLink, refusalLine } from "@/lib/mentor/prompt/refusals";
 import { MENTOR_TOOLS } from "@/lib/mentor/tools/definitions";
 import { NOW, ctx, fakeDb, makeLoader } from "./helpers";
 
@@ -75,5 +75,20 @@ describe("copy rules", () => {
     }
     for (const u of ["wien", "graz", "innsbruck", "all"] as const) expect(official.has(officialLinkForUniversity(u))).toBe(true);
     expect(official.has(officialLinkForExam(null))).toBe(true);
+  });
+});
+
+describe("isFallbackOnlyText (the not-charged notice)", () => {
+  const link = officialLinkForExam(null);
+  it("is true for one or more bare notice lines in de or en", () => {
+    expect(isFallbackOnlyText(fallbackLine("de", link))).toBe(true);
+    expect(isFallbackOnlyText(fallbackLine("en", link))).toBe(true);
+    expect(isFallbackOnlyText(`- ${fallbackLine("de", link)}\n\n${fallbackLine("de", link)}`)).toBe(true);
+  });
+  it("is false for empty text or any answer with other words or numbers", () => {
+    expect(isFallbackOnlyText("")).toBe(false);
+    expect(isFallbackOnlyText("Die Anmeldung läuft online.")).toBe(false);
+    expect(isFallbackOnlyText(`Die Anmeldung läuft online. ${fallbackLine("de", link)}`)).toBe(false);
+    expect(isFallbackOnlyText(`${fallbackLine("en", link)} 2027`)).toBe(false);
   });
 });

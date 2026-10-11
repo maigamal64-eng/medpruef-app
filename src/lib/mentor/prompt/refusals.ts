@@ -122,5 +122,28 @@ export function fallbackLine(lang: MentorLang | null | undefined, link: string):
     : `This detail is not officially confirmed. Please check it on the official page: ${link}`;
 }
 
+const FALLBACK_PREFIXES: readonly string[] = (["de", "en"] as const).map((l) => fallbackLine(l, "\u0000").split("\u0000")[0]);
+const FALLBACK_LINE_RE = new RegExp(
+  FALLBACK_PREFIXES.map((p) => `${p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\S+`).join("|"),
+  "gu",
+);
+
+/**
+ * True when a text says nothing but the generic "not officially confirmed,
+ * check the official page" line(s) (list markers and punctuation aside): the
+ * whole answer was replaced by the fallback notice. Such a turn is not charged
+ * to the learner (turn.ts). A text with any other word or number is a real,
+ * partly replaced answer and is false.
+ */
+export function isFallbackOnlyText(text: string): boolean {
+  if (typeof text !== "string" || text.trim().length === 0) return false;
+  let hit = false;
+  const rest = text.replace(FALLBACK_LINE_RE, () => {
+    hit = true;
+    return " ";
+  });
+  return hit && !/[\p{L}\p{N}]/u.test(rest);
+}
+
 /** Exported for the no-em-dash test. */
 export const REFUSAL_COPY = Object.freeze({ de: REFUSAL_LINES_DE, en: REFUSAL_LINES_EN });
