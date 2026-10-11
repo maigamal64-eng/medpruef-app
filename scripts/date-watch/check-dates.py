@@ -13,7 +13,8 @@ What counts as confirmed (frozen by W0-C0A):
   * next_dates[] rows (the official calendar read itself): `date` and `registration` fields
   Never read: our_value, fix, new_facts, source, why_it_matters. Those quote the wrong
   dates on purpose (OeAEK 28 Sep 2026, the stale 26.01. to 09.02.2026 window, ...).
-  A built-in denylist (C14: OeAEK postgraduate dates stay out) overrides the allowlist.
+  Postgraduate claims are excluded in their own context; stale SIP windows are
+  globally excluded. A shared calendar day can still be a confirmed Pharma date.
 
 This proves consistency with OUR research files, not correctness. The same-day re-read
 of the official page (C14) covers correctness.
@@ -53,11 +54,14 @@ DEFAULT_OFFICIAL = [
 ]
 # C14: postgraduate OeAEK facts were not checked and stay out; the SIP calendar's stale
 # 2026 entry for the 10 Mar 2027 window is a known page error. Never allowed.
-DENYLIST = {
+POSTGRAD_DATES = {
     "2026-09-28": "OeAEK Arztpruefung (postgraduate, not checked, past)",
     "2027-01-18": "OeAEK 2027 date (not checked)",
     "2027-05-10": "OeAEK 2027 date (not checked)",
     "2027-09-27": "OeAEK 2027 date (not checked)",
+}
+POSTGRAD_CONTEXT = re.compile(r"\b(?:OeAEK|ÖÄK|OÄK|Arztakademie|Arztpr[uü]fung|postgraduate|Allgemeinmedizin)\b", re.I)
+DENYLIST = {
     "2026-01-26": "stale SIP calendar entry (26.01. to 09.02.2026), real window is 25 Jan to 8 Feb 2027",
     "2026-02-09": "stale SIP calendar entry (26.01. to 09.02.2026), real window is 25 Jan to 8 Feb 2027",
 }
@@ -178,9 +182,22 @@ def extract(text: str, propagate_year: bool = True):
     return res
 
 
+UNIT_SEPARATOR = re.compile(r"(?<=[.;])\s+(?=[A-Z(])|;\s*")
+
+
 def units(text: str):
     """Split a research string into sentence/clause units so a year never leaks across them."""
-    return [u for u in re.split(r"(?<=[.;])\s+(?=[A-Z(])|;\s*", text) if u.strip()]
+    return [u for u in UNIT_SEPARATOR.split(text) if u.strip()]
+
+
+def context_at(text: str, position: int):
+    """Locate this occurrence's clause, even when identical dates repeat."""
+    start = 0
+    for separator in UNIT_SEPARATOR.finditer(text):
+        if position < separator.start():
+            return text[start:separator.start()]
+        start = separator.end()
+    return text[start:]
 
 
 def load_allowed(paths):
@@ -277,8 +294,10 @@ def check(lines, allowed, extra_allowed, strict_yearless):
             if tok["invalid"]:
                 r.update(status="FAIL", why="invalid calendar date")
             elif tok["iso"]:
-                if tok["iso"] in DENYLIST:
-                    r.update(status="FAIL", why=f"denylisted: {DENYLIST[tok['iso']]}")
+                context = context_at(text, tok["pos"])
+                exclusion = DENYLIST.get(tok["iso"]) or (POSTGRAD_DATES.get(tok["iso"]) if POSTGRAD_CONTEXT.search(context) else None)
+                if exclusion:
+                    r.update(status="FAIL", why=f"denylisted: {exclusion}")
                 elif tok["iso"] in allowed or tok["iso"] in extra_allowed:
                     r.update(status="OK", why=(allowed.get(tok["iso"]) or ["--allow-date"])[0])
                 else:
@@ -310,11 +329,17 @@ def main():
     ap.add_argument("--print-allowed", action="store_true")
     ap.add_argument("--strict-yearless", action="store_true")
     ap.add_argument("--json", action="store_true")
-    args, rest = ap.parse_known_args()
-    pathspec = [r for r in rest if r != "--"]
-    if args.diff:  # in diff mode positional args are a git pathspec, not pack files
-        pathspec = list(args.packs) + pathspec
-        args.packs = []
+    argv = sys.argv[1:]
+    separator = argv.index("--") if "--" in argv else len(argv)
+    args = ap.parse_args(argv[:separator])
+    pathspec = argv[separator + 1:]
+    if args.diff:
+        if args.packs:
+            ap.error("diff pathspecs must follow an explicit -- separator")
+    elif separator < len(argv):
+        # In file mode the separator permits filenames starting with a dash.
+        args.packs += pathspec
+        pathspec = []
 
     sources = ([] if args.no_default_official else DEFAULT_OFFICIAL) + args.official
     try:

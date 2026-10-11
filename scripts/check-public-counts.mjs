@@ -2,13 +2,14 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { parseEnv } from 'node:util';
-import { ROOT, POLICY, argumentsFor, hash, isMain, sourceLines } from './date-watch/truth-utils.mjs';
+import { ROOT, POLICY, argumentsFor, isMain, logicalBlocks, sourceLocation, sourceLines } from './date-watch/truth-utils.mjs';
 
 const TYPES = ['kenntnispruefung', 'kmp_innsbruck', 'pharma'];
-const NUMBER = /(?<![\w\\])(?<prefix>over\s+|more than\s+|über\s+|mehr als\s+|at least\s+|mindestens\s+)?(?<number>\d{1,3}(?:[.,\u00a0 ]\d{3})+|\d+)(?<plus>\s*\+)?\s+(?:(?:curated|clinical|medical|practice|real|Austrian|original|official|exam|multiple[ -]choice|kuratierte[nr]?|klinische[nr]?|medizinische[nr]?|echte[nr]?|österreichische[nr]?|MCQ)[ -]+){0,5}(?:questions|exercises|Fragen|Übungsfragen|Prüfungsfragen|Übungen)\b/gi;
+const NUMBER = /(?<![\w\\])(?<prefix>over\s+|more than\s+|über\s+|mehr als\s+|at least\s+|mindestens\s+)?(?<number>\d{1,3}(?:[.,\u00a0 ]\d{3})+|\d+)(?<plus>\s*\+)?\s+(?:(?:curated|clinical|medical|practice|real|Austrian|original|official|exam|multiple[\s-]choice|kuratierte[nr]?|klinische[nr]?|medizinische[nr]?|echte[nr]?|österreichische[nr]?|MCQ)[\s-]+){0,5}(?:questions|exercises|Fragen|Übungsfragen|Prüfungsfragen|Übungen)\b/gi;
 
 export function extractCounts(lines) {
-  return lines.flatMap(({ path, line, text }) => [...text.replace(/\\[nrt]/g, '  ').matchAll(NUMBER)].map(m => {
+  return logicalBlocks(lines).flatMap(block => [...block.text.replace(/\\[nrt]/g, '  ').matchAll(NUMBER)].map(m => {
+    const text = block.text;
     const count = Number(m.groups.number.replace(/[.,\u00a0 ]/g, ''));
     const after = text.slice(m.index + m[0].length);
     if (/^\s*(?:gratis|kostenlos|free|per\s+(?:month|day)|\/month)\b/i.test(after)
@@ -17,11 +18,11 @@ export function extractCounts(lines) {
     const mode = /over|more than|über|mehr als/.test(prefix) ? 'greater-than' : (prefix || m.groups.plus) ? 'at-least' : 'approximate';
     // A literal per-track number must name the track in the same clause. Otherwise the claim is global.
     const clause = text.replace(/\\[nrt]/g, '  ').slice(0, m.index).split(/['"`]|[;.!?](?!\d)/).at(-1);
-    const examType = /(?:Stichprobentest|Innsbruck)\s*[:(]?\s*$/i.test(clause) ? 'kmp_innsbruck'
-      : /(?:Pharma(?:kologie|cology)?|Rezeptierkunde)\s*[:(]?\s*$/i.test(clause) ? 'pharma'
-      : /(?:SIP4a|SIP5a|Wien|Vienna)\s*[:(]?\s*$/i.test(clause) ? 'kenntnispruefung' : 'total';
+    const examType = /\b(?:Stichprobentest(?:\s*\(Innsbruck\))?|Innsbruck)[\s\p{P}]*$/iu.test(clause) ? 'kmp_innsbruck'
+      : /\b(?:Pharma(?:kologie|cology)?|Rezeptierkunde)[\s\p{P}]*$/iu.test(clause) ? 'pharma'
+      : /\b(?:Kenntnisprüfung(?:\s*(?:\(Wien\)|Wien))?|SIP4a|SIP5a|Wien|Vienna)[\s\p{P}]*$/iu.test(clause) ? 'kenntnispruefung' : 'total';
     if (count < 1000 && examType === 'total') return null;
-    return { path, line, sha256: hash(text.trim()), raw: m[0], claimed: count, mode, exam_type: examType };
+    return { ...sourceLocation(block, m.index, m[0].length), raw: m[0], claimed: count, mode, exam_type: examType };
   })).filter(Boolean);
 }
 

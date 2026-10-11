@@ -26,11 +26,16 @@ python3 scripts/date-watch/watch.py --facts-watch --state-dir /path/to/writable/
 dates, and 2 for missing sources or usage errors. Its normal CI scope is added lines
 in public copy, not test dates, historical changelogs or research snapshots. A
 `date-ok:` history marker is explicitly reported, and `--strict-yearless` requires
-a year. Denylisted postgraduate dates cannot be unlocked by `--allow-date`.
+a year. Postgraduate exclusions apply to postgraduate claims, including with
+`--allow-date`; shared confirmed Pharma and SIP registration dates remain valid.
+Stale SIP windows are excluded globally. Unknown options exit 2; diff pathspecs
+must follow an explicit `--` separator.
 
 `watch.py` returns 0 for an unchanged read, 10 for drift or a new source problem,
 and 1 when the pre-deploy gate fails. Unknown source IDs return 2. Network fetches
 use curl with a 30-second cap, a 10-second connection cap and HTTPS-only redirects.
+Nonzero curl or PDF converter exits are failed reads even if partial output looks
+valid. Document href changes are checked independently of visible-text changes.
 Failed reads cannot become an acknowledged baseline. Existing source problems
 also fail the pre-deploy gate. It uses the bundled baseline until the external
 state directory has an acknowledged baseline. Its original cadence is daily
@@ -38,7 +43,10 @@ state directory has an acknowledged baseline. Its original cadence is daily
 candidate calendar rows before `--promote`. Neither operation updates application
 facts. `--facts-watch` reads `context/FACTS-REGISTRY.json` without modifying it,
 checks expected text, self-ages past dates, and writes an aggregate source report
-only to the selected state directory. It has no acknowledgement or promotion mode.
+only to the selected state directory. It validates all required registry fields
+before fetching; `expect_any` must be a nonempty array of nonblank strings. Reports
+are written atomically; report symlinks and registry aliases are refused with exit 2.
+It has no acknowledgement or promotion mode.
 
 ## Claims and counts
 
@@ -50,14 +58,19 @@ node scripts/check-public-counts.mjs --env-file /absolute/path/to/.env.local --r
 
 Both scans use `git ls-files` in the selected worktree: `src/app`, `src/lib/i18n*.ts`,
 `blog`, `marketing` and `comms`, with text-file extensions only. Ignored or untracked
-main-checkout drafts cannot enter a scan. Reports contain paths, locations, hashes,
+main-checkout drafts cannot enter a scan. Canonical paths must remain in the
+repository, and symlinked source files or ancestors are refused. Soft-wrapped
+Markdown and JSX text is matched across consecutive lines within a paragraph.
+Reports retain the first matched source line and a hash of the full physical
+lines containing the match. Reports contain paths, locations, hashes,
 matched claims and aggregate counts, never copied learner records or credentials.
 
 The claims rules flag invented pass rates, guaranteed passing, official or real
 exam-question provenance, full simulations, complete curriculum coverage and
 university endorsement. Negated disclaimers and the contractual access guarantee
 remain valid. Existing hits are pinned in `claims-policy.json` by path, line,
-rule and whole-line SHA256, and are reported as `existing-needs-track-a`.
+rule and whole-line SHA256 (all matched lines for wrapped text), and are reported
+as `existing-needs-track-a`.
 This is an explicit backlog allowance, not approval of their truth. Changes or
 new hits fail. `--strict` fails on every hit. track-A removes each exception as it
 corrects copy; never regenerate the policy in CI.

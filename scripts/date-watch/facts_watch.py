@@ -2,8 +2,62 @@
 import json
 import os
 import re
+import tempfile
+from urllib.parse import urlsplit
 from datetime import datetime, timezone
 from watch import fetch_net, html_to_text, pdf_to_text, sha
+
+
+def validate_registry(data):
+    facts = data.get("facts") if isinstance(data, dict) else None
+    if not isinstance(facts, list) or not facts:
+        raise ValueError("empty registry")
+    ids = set()
+    for fact in facts:
+        if not isinstance(fact, dict):
+            raise ValueError("invalid fact")
+        for key in ("id", "source_url", "value"):
+            if not isinstance(fact.get(key), str) or not fact[key].strip():
+                raise ValueError("invalid required field")
+        if not re.fullmatch(r"[A-Za-z0-9_-]+", fact["id"]) or fact["id"] in ids:
+            raise ValueError("invalid fact id")
+        ids.add(fact["id"])
+        url = urlsplit(fact["source_url"])
+        if url.scheme != "https" or not url.hostname or url.username or url.password:
+            raise ValueError("invalid source URL")
+        expected = fact.get("expect_any")
+        if not isinstance(expected, list) or not expected or any(
+                not isinstance(s, str) or not s.strip() for s in expected):
+            raise ValueError("invalid expectations")
+    return facts
+
+
+def safe_report_path(registry, state_dir):
+    output = os.path.join(state_dir, "facts-report.json")
+    if os.path.islink(output):
+        raise ValueError("report symlink refused")
+    if os.path.realpath(output) == os.path.realpath(registry) or (
+            os.path.exists(output) and os.path.samefile(output, registry)):
+        raise ValueError("report aliases registry")
+    return output
+
+
+def write_report(registry, state_dir, report):
+    output = safe_report_path(registry, state_dir)
+    os.makedirs(state_dir, exist_ok=True)
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=state_dir,
+                                         prefix=".facts-report-", delete=False) as out:
+            temporary = out.name
+            json.dump(report, out, indent=2, ensure_ascii=False)
+            out.flush()
+            os.fsync(out.fileno())
+        safe_report_path(registry, state_dir)
+        os.replace(temporary, output)
+    finally:
+        if temporary and os.path.exists(temporary):
+            os.unlink(temporary)
 
 
 def check_fact(fact, record, today):
@@ -21,14 +75,12 @@ def check_fact(fact, record, today):
 
 def run(registry, state_dir, fixture_dir=None):
     try:
-        facts = json.load(open(registry, encoding="utf-8"))["facts"]
-        if not isinstance(facts, list) or not facts:
-            raise ValueError("empty registry")
+        with open(registry, encoding="utf-8") as source:
+            facts = validate_registry(json.load(source))
+        safe_report_path(registry, state_dir)
         results, cache = [], {}
         for fact in facts:
             url = fact["source_url"]
-            if not url.startswith("https://") or not fact.get("expect_any"):
-                raise ValueError("invalid fact")
             if fixture_dir:
                 body = open(os.path.join(fixture_dir, fact["id"] + ".txt"), "rb").read()
                 code, text = 200, body.decode("utf-8")
@@ -46,9 +98,7 @@ def run(registry, state_dir, fixture_dir=None):
             cache[url] = record
             results.append(check_fact(fact, record, datetime.now(timezone.utc).date().isoformat()))
         report = {"ok": all(r["status"] == "ok" for r in results), "registry": registry, "results": results}
-        os.makedirs(state_dir, exist_ok=True)
-        with open(os.path.join(state_dir, "facts-report.json"), "w", encoding="utf-8") as out:
-            json.dump(report, out, indent=2, ensure_ascii=False)
+        write_report(registry, state_dir, report)
         print(json.dumps(report, indent=2, ensure_ascii=False))
         return 0 if report["ok"] else 1
     except Exception:

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { readFileSync, writeFileSync } from 'node:fs';
-import { ROOT, POLICY, argumentsFor, hash, isMain, sourceLines } from './date-watch/truth-utils.mjs';
+import { ROOT, POLICY, argumentsFor, isMain, logicalBlocks, sourceLocation, sourceLines } from './date-watch/truth-utils.mjs';
 
 export const RULES = [
   { id: 'unverified-pass-rate-translation', pattern: /["']landing_pass_rate["']\s*:\s*["'][^"'\n]*\d+\s*%/gi },
@@ -14,17 +14,18 @@ export const RULES = [
 
 // Negation belongs to the matched clause, never to a different sentence on the same line.
 function negated(text, start) {
-  const before = text.slice(0, start).split(/[.!?;\n]|['"`]/).at(-1);
+  const before = text.slice(0, start).split(/[.!?;]|['"`]/).at(-1);
   return /\b(?:not|no|never|keine?[nrs]?|nicht)\s+(?:(?:fully|a|an|eine?|mehr)\s+)?$/i.test(before);
 }
 
 export function checkClaims(lines, allowlist = [], { strict = false } = {}) {
   const results = [];
-  for (const { path, line, text } of lines) {
+  for (const block of logicalBlocks(lines)) {
+    const { text } = block;
     for (const rule of RULES) {
       for (const match of text.matchAll(rule.pattern)) {
         if (negated(text, match.index)) continue;
-        const fingerprint = hash(text.trim());
+        const { path, line, sha256: fingerprint } = sourceLocation(block, match.index, match[0].length);
         const entry = allowlist.find(a => a.path === path && a.rule === rule.id && a.sha256 === fingerprint && a.reason);
         // The occurrence index prevents a repeated new claim on an otherwise unchanged line passing.
         const allowed = entry && line === entry.line;

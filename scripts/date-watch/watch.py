@@ -53,6 +53,8 @@ def fetch_net(url):
                            capture_output=True, text=True, timeout=40)
         code, eff, ctype = (r.stdout.split("|") + ["", "", ""])[:3]
         body = open(out, "rb").read() if os.path.exists(out) else b""
+        if r.returncode != 0:
+            return 0, eff or url, ctype, body
         return int(code or 0), eff, ctype, body
     except Exception as e:
         return 0, url, "", str(e).encode()
@@ -82,6 +84,8 @@ def pdf_to_text(b):
     try:
         p = os.path.join(d, "x.pdf"); open(p, "wb").write(b)
         r = subprocess.run(["pdftotext", "-layout", p, "-"], capture_output=True, timeout=60)
+        if r.returncode != 0:
+            raise RuntimeError("pdf conversion failed")
         t = r.stdout.decode("utf-8", "ignore")
         lines = [re.sub(r"[ \t]+", " ", l).strip() for l in t.split("\n")]
         return "\n".join(l for l in lines if l)
@@ -150,7 +154,10 @@ def read_source(src, fixture_dir):
             rec["problems"].append("expected_pdf_got_other (login wall or moved?)")
             text = html_to_text(body)
         elif src["kind"] == "pdf":
-            text = pdf_to_text(body)
+            try:
+                text = pdf_to_text(body)
+            except Exception:
+                rec["problems"].append("pdf_conversion_failed")
         else:
             text = html_to_text(body)
             if re.search(r"(?i)(login|anmelden).{0,40}(passwort|password)|sso|shibboleth", eff + text[:400]) and len(text) < 1500:
@@ -183,6 +190,8 @@ def compare(src, cur, cur_text, base, base_text):
     newp = [p for p in cur["problems"] if p not in base.get("problems", [])]
     if newp:
         notes.append("read problem: " + ",".join(newp))
+    for l in sorted(set(cur["links"]) ^ set(base["links"])):
+        notes.append(("link added " if l in cur["links"] else "link removed ") + l)
     if cur["text_sha256"] != base["text_sha256"]:
         add = sorted(set(cur["dates"]) - set(base["dates"])); rem = sorted(set(base["dates"]) - set(cur["dates"]))
         if add: notes.append("dates added " + ", ".join(add))
@@ -197,8 +206,6 @@ def compare(src, cur, cur_text, base, base_text):
                     if a[f] != b[f]:
                         notes.append(f"{k} {f} {a[f]} -> {b[f]}")
                         if f == "format": fmt_flags.append(f"{k} {a[f]} -> {b[f]}")
-        for l in sorted(set(cur["links"]) ^ set(base["links"])):
-            notes.append(("link added " if l in cur["links"] else "link removed ") + l.rsplit("/", 1)[-1])
         if not notes:
             n = sum(1 for l in difflib.unified_diff(base_text.splitlines(), cur_text.splitlines(), lineterm="", n=0)
                     if l[:1] in "+-" and l[:3] not in ("+++", "---"))
