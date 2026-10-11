@@ -3,6 +3,8 @@ import { safeEqual } from "@/lib/security/timing-safe";
 import { getServiceClient } from "@/lib/supabase";
 import { sendZohoEmail, type SendZohoEmailArgs } from "@/lib/email/zoho";
 
+import { signReminderToken } from "./tokens";
+
 export type ReminderDb = ReturnType<typeof getServiceClient>;
 export const enabled = (name: string) => process.env[name] === "true";
 export const noStore = { "Cache-Control": "no-store", "Referrer-Policy": "no-referrer" };
@@ -23,7 +25,7 @@ export function escapeHtml(value: string): string {
 // Use the canonical HTTPS origin, never a caller-supplied Host header.
 export const SITE = "https://medpruf.com";
 export function unsubscribeUrl(kind: "exam" | "study", token: string): string {
-  return `${SITE}/api/${kind === "exam" ? "reminders" : "nudge"}?unsub=${encodeURIComponent(token)}`;
+  return `${SITE}/api/${kind === "exam" ? "reminders" : "nudge"}?unsub=${encodeURIComponent(signReminderToken(`${kind}-unsubscribe`, token))}`;
 }
 
 export interface Delivery {
@@ -67,7 +69,7 @@ export async function loadSubscriptions(db: ReminderDb, table: string, columns: 
   // Explicit pagination avoids PostgREST's default 1000-row truncation.
   for (let page = 0; page < 100; page++) {
     let query = db.from(table).select(columns).order("id").range(page * 100, page * 100 + 99);
-    query = filter === "exam" ? query.eq("confirmed", true).is("unsubscribed_at", null) : query.eq("opt_in", true).eq("channel", "email");
+    query = filter === "exam" ? query.eq("confirmed", true).eq("consent_version", 1).not("consent_confirmed_at", "is", null).is("unsubscribed_at", null) : query.eq("opt_in", true).eq("channel", "email");
     const { data, error } = await query;
     assertDb(error);
     const rows = (data ?? []) as unknown as Record<string, unknown>[];
