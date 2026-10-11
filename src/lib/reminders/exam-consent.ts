@@ -36,11 +36,11 @@ export async function subscribeExamReminder(req: NextRequest) {
     if (!row) throw new Error("Missing subscription");
     // Anonymous repeats NEVER clear an unsubscribe or activate a historical row.
     // Only possession of the emailed, purpose-bound credential grants consent.
-    const alreadyConfirmed = row?.confirmed === true && row.consent_email === email && row.consent_confirmed_at && row.consent_version === 1 && !row.unsubscribed_at;
+    const alreadyConfirmed = row?.confirmed === true && !row.unsubscribed_at && (row.consent_version == null || row.consent_email === email);
     if (!alreadyConfirmed && enabled("EXAM_REMINDERS_ENABLED")) {
       const url = `${SITE}/api/reminders?confirm=${encodeURIComponent(signReminderToken("exam-confirm", row.confirmation_token))}`;
       const de = locale === "de";
-      const sent = await sendZohoEmail({ to: email, subject: de ? "Prüfungserinnerungen bestätigen" : "Confirm exam reminders", htmlBody: `<p>${de ? "Bitte bestätige Prüfungserinnerungen für diese E-Mail-Adresse." : "Please confirm exam reminders for this email address."}</p><p><a href="${url}">${de ? "Bestätigen" : "Confirm"}</a></p>` });
+      const sent = await sendZohoEmail({ to: email, subject: de ? "Prüfungserinnerungen bestätigen" : "Confirm exam reminders", htmlBody: `<p>${de ? "Bitte bestätigen Sie Prüfungserinnerungen für diese E-Mail-Adresse." : "Please confirm exam reminders for this email address."}</p><p><a href="${url}">${de ? "Bestätigen" : "Confirm"}</a></p>` });
       if (!sent.ok) return response({ error: "Could not send confirmation; please retry" }, 503);
     }
     return response({ ok: true, confirmation_pending: !alreadyConfirmed });

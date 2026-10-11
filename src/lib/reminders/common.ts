@@ -69,7 +69,7 @@ export async function loadSubscriptions(db: ReminderDb, table: string, columns: 
   // Explicit pagination avoids PostgREST's default 1000-row truncation.
   for (let page = 0; page < 100; page++) {
     let query = db.from(table).select(columns).order("id").range(page * 100, page * 100 + 99);
-    query = filter === "exam" ? query.eq("confirmed", true).eq("consent_version", 1).not("consent_confirmed_at", "is", null).is("unsubscribed_at", null) : query.eq("opt_in", true).eq("channel", "email");
+    query = filter === "exam" ? query.eq("confirmed", true).is("unsubscribed_at", null) : query.eq("opt_in", true).eq("channel", "email");
     const { data, error } = await query;
     assertDb(error);
     const rows = (data ?? []) as unknown as Record<string, unknown>[];

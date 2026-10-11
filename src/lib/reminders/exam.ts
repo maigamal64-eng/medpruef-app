@@ -7,7 +7,10 @@ export async function runExamReminders(db: ReminderDb, now: Date, dryRun: boolea
   const rows = await loadSubscriptions(db, "exam_reminders", "id,email,exam_type,locale,unsub_token,confirmed,consent_email,consent_confirmed_at,consent_version", "exam");
   const groups = new Map<string, { rows: typeof rows; delivery: Delivery }>();
   for (const row of rows) {
-    if (typeof row.email !== "string" || typeof row.unsub_token !== "string" || row.confirmed !== true || row.consent_version !== 1 || !row.consent_confirmed_at || row.consent_email !== normalizeEmail(row.email)) continue;
+    // Audience = confirmed, not unsubscribed ([name] pick decision:pick-predeadline-send).
+    // A row confirmed through the signed link must still match its consented address.
+    if (typeof row.email !== "string" || typeof row.unsub_token !== "string" || row.confirmed !== true) continue;
+    if (row.consent_version != null && row.consent_email !== normalizeEmail(row.email)) continue;
     for (const { sitting, sittingKey, offset } of reminderSchedule(String(row.exam_type), now)) {
       const identity = recipientKey(row.email);
       const key = JSON.stringify([identity, sittingKey, offset, "email"]);
@@ -19,7 +22,7 @@ export async function runExamReminders(db: ReminderDb, now: Date, dryRun: boolea
         mail: { to: normalizeEmail(row.email), ...renderExamReminder(sitting, offset, String(row.locale), dryRun ? SITE : unsubscribeUrl("exam", row.unsub_token)) },
         isSubscribed: async () => {
           for (const subscription of group.rows) {
-            const { data, error } = await db.from("exam_reminders").select("id").eq("id", subscription.id).eq("confirmed", true).eq("consent_version", 1).eq("consent_email", normalizeEmail(String(subscription.email))).eq("consent_confirmed_at", subscription.consent_confirmed_at).eq("exam_type", subscription.exam_type).eq("email", subscription.email).eq("unsub_token", subscription.unsub_token).is("unsubscribed_at", null).maybeSingle();
+            const { data, error } = await db.from("exam_reminders").select("id").eq("id", subscription.id).eq("confirmed", true).eq("exam_type", subscription.exam_type).eq("email", subscription.email).eq("unsub_token", subscription.unsub_token).is("unsubscribed_at", null).maybeSingle();
             assertDb(error);
             if (data) return true;
           }

@@ -5,7 +5,7 @@ import { getServiceClient } from "@/lib/supabase";
 import { assertDb, enabled, noStore } from "@/lib/reminders/common";
 
 import { unsubscribeCredential, verifyReminderToken } from "@/lib/reminders/tokens";
-import { confirmStudyConsent, requestStudyConsent, verifiedDestination } from "@/lib/reminders/study-consent";
+import { confirmStudyConsent, requestStudyConsent, deliverableDestination } from "@/lib/reminders/study-consent";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -37,9 +37,9 @@ export async function GET(req: NextRequest) {
   try {
     const { data, error } = await getServiceClient().from("study_nudge_prefs").select("opt_in,channel,last_sent,consent_email,consent_confirmed_at,consent_version").eq("user_id", guard.userId).maybeSingle();
     assertDb(error);
-    const owner = await getServiceClient().from("users").select("email,email_verified_at,email_status").eq("id", guard.userId).maybeSingle();
+    const owner = await getServiceClient().from("users").select("email,email_status").eq("id", guard.userId).maybeSingle();
     assertDb(owner.error);
-    const bound = !!data?.consent_email && !!data?.consent_confirmed_at && data?.consent_version === 1 && data.consent_email === verifiedDestination(owner.data);
+    const bound = !!data?.consent_email && !!data?.consent_confirmed_at && data?.consent_version === 1 && data.consent_email === deliverableDestination(owner.data);
     return NextResponse.json({ enabled: true, opt_in: !!data?.opt_in && bound, channel: "email", last_sent: data?.last_sent ?? null }, { headers: noStore });
   } catch { return NextResponse.json({ error: "Could not load preference" }, { status: 503, headers: noStore }); }
 }
