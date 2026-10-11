@@ -30,7 +30,7 @@ describe("C5 config", () => {
       topupsEnabled: false,
       modelDefault: MODEL_IDS.HAIKU_5_5,
       effort: "low",
-      maxTokens: 1000,
+      maxTokens: 1500,
       maxToolRounds: 3,
       ratePerMin: 6,
       ratePerDay: 60,
@@ -49,9 +49,11 @@ describe("C5 config", () => {
     expect(readMentorConfig({ MENTOR_ENABLED: "1" }).enabled).toBe(false);
   });
 
-  it("env can tighten but never exceed max_tokens 1000 or 3 tool rounds", () => {
+  it("env can set max_tokens up to 2000 but never more, and never more than 3 tool rounds", () => {
     const c = readMentorConfig({ MENTOR_MAX_TOKENS: "4000", MENTOR_MAX_TOOL_ROUNDS: "9", MENTOR_EFFORT: "max" });
-    expect(c.maxTokens).toBe(1000);
+    expect(c.maxTokens).toBe(1500);
+    expect(readMentorConfig({ MENTOR_MAX_TOKENS: "2000" }).maxTokens).toBe(2000);
+    expect(readMentorConfig({ MENTOR_MAX_TOKENS: "2001" }).maxTokens).toBe(1500);
     expect(c.maxToolRounds).toBe(3);
     expect(c.effort).toBe("low");
     expect(readMentorConfig({ MENTOR_MAX_TOKENS: "500" }).maxTokens).toBe(500);
@@ -142,7 +144,13 @@ describe("C3 ledger migration (static checks; the live run is on a local Postgre
 
   it("seeds exactly the package ids the contract names, sold packages inactive", () => {
     for (const id of MENTOR_PACKAGE_IDS) expect(SQL).toMatch(new RegExp(`\\('${id}',`));
-    expect(SQL).toMatch(/\('mentor_basis',\s+'subscription',\s+\d+,\s+30,\s+33,\s+\d+, false, true/);
+    // [name]'s pricing A (2026-10-11): sold rows decided (provisional false) but inactive until the Whop plans exist.
+    expect(SQL).toMatch(/\('mentor_basis',\s+'subscription',\s+750000,\s+30,\s+33,\s+490, false, false/);
+    expect(SQL).toMatch(/\('mentor_plus',\s+'subscription',\s+2000000,\s+30,\s+33,\s+990, false, false/);
+    expect(SQL).toMatch(/\('mentor_topup',\s+'topup',\s+2000000,\s+NULL,\s+180,\s+1000, false, false/);
+    // Pro includes 50 credits (250,000 micro-USD) per 30-day slice.
+    expect(SQL).toMatch(/\('included_pro_monthly',\s+'included',\s+250000,\s+30,/);
+    expect(SQL).toMatch(/\('included_pro_quarterly',\s+'included',\s+250000,\s+30,/);
     expect(SQL).toMatch(/\('trial_taste',\s+'trial',\s+100000,/);
     expect(SQL).toContain("ON CONFLICT (package_id) DO NOTHING");
   });

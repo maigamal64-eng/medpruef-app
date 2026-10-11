@@ -15,8 +15,8 @@ const DAY = 86_400_000;
 // The seeded catalogue (20261022100000_mentor_ledger.sql), included rows only.
 function catalogue(over: Partial<Record<MentorPackageId, Partial<IncludedPackageRow>>> = {}) {
   const base: Array<[MentorPackageId, number, number]> = [
-    ["included_pro_monthly", 1_000_000, 30],
-    ["included_pro_quarterly", 1_000_000, 30],
+    ["included_pro_monthly", 250_000, 30],
+    ["included_pro_quarterly", 250_000, 30],
     ["included_cohort", 750_000, 30],
     ["trial_taste", 100_000, 7],
     ["gift_admin", 300_000, 30],
@@ -102,7 +102,10 @@ describe("planIncludedGrants", () => {
     const monthly = sub({ id: "m" });
     const g = planIncludedGrants(snap({ subs: [trial, cohort, monthly] }), NOW);
     expect(g).toHaveLength(1);
-    expect(g[0].sourceId).toBe("m:0");
+    // Pricing A: Pro 250,000 per slice, cohort 750,000 (pick B), so the cohort is the larger grant.
+    expect(g[0].sourceId).toBe("c:0");
+    const g2 = planIncludedGrants(snap({ subs: [trial, monthly] }), NOW);
+    expect(g2.map((x) => x.sourceId)).toEqual(["m:0"]);
   });
 
   it("two overlapping rows of one entitlement: the longer-running row anchors the slice (no second grant days later)", () => {

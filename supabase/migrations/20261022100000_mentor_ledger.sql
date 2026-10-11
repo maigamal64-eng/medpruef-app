@@ -73,19 +73,24 @@ CREATE TABLE IF NOT EXISTS public.ai_credit_package (
 );
 
 -- Seed. ON CONFLICT DO NOTHING so a re-run never overwrites [name]'s edits.
--- Sold packages are inactive until the Whop plans exist and [name] picks prices
--- (proposal: reports/plan-2026-10-10/act/mentor-pricing.json). Included rows
--- carry [name]'s 10 Oct pick (plan-allowance B): Pro USD 1.00, cohort 0.75,
--- trial 0.10, gifts and referrals 0.30, free 0; unknown gets the smallest
--- positive value; admin an explicit USD 5.00 cap.
+-- Sold packages carry [name]'s pricing A (2026-10-11; proposal:
+-- reports/plan-2026-10-10/act/mentor-pricing.json): Mentor Basis EUR 4.90 for
+-- 150 credits and Mentor Plus EUR 9.90 for 400 credits every 30 days, the
+-- EUR 10 top-up for 400 credits. They stay inactive until the Whop plans of the
+-- "MedPruef Mentor" product exist (WHOP_PLAN_MENTOR_* are MISSING, so nothing
+-- is buyable either way). Pro includes 50 credits (USD 0.25) per 30-day slice,
+-- monthly and quarterly alike (pricing A). Other included rows carry [name]'s
+-- 10 Oct pick (plan-allowance B): cohort 0.75, trial 0.10, gifts and
+-- referrals 0.30, free 0; unknown gets the smallest positive value; admin an
+-- explicit USD 5.00 cap. 1 credit = USD 0.005.
 INSERT INTO public.ai_credit_package
   (package_id, kind, grant_micro, period_days, expiry_days, price_eur_cents, active, provisional, sort, note)
 VALUES
-  ('mentor_basis',           'subscription',  750000,   30,  33,  490, false, true, 10, 'PROPOSED: 150 credits every 30 days. Lot lives 30 days plus 3 days grace.'),
-  ('mentor_plus',            'subscription', 2000000,   30,  33,  990, false, true, 20, 'PROPOSED: 400 credits every 30 days.'),
-  ('mentor_topup',           'topup',        2000000, NULL, 180, 1000, false, true, 30, 'PROPOSED: one-time 400 credits, valid 180 days. Sold only when MENTOR_TOPUPS_ENABLED.'),
-  ('included_pro_monthly',   'included',     1000000,   30,  30, NULL, true,  true, 40, '[name] pick B: USD 1.00 per 30-day slice of Pro monthly.'),
-  ('included_pro_quarterly', 'included',     1000000,   30,  30, NULL, true,  true, 41, '[name] pick B: USD 1.00 per 30-day slice of Pro quarterly.'),
+  ('mentor_basis',           'subscription',  750000,   30,  33,  490, false, false, 10, '[name] pricing A: Mentor Basis, EUR 4.90 for 150 credits every 30 days. Lot lives 30 days plus 3 days grace. Inactive until WHOP_PLAN_MENTOR_BASIS exists.'),
+  ('mentor_plus',            'subscription', 2000000,   30,  33,  990, false, false, 20, '[name] pricing A: Mentor Plus, EUR 9.90 for 400 credits every 30 days. Inactive until WHOP_PLAN_MENTOR_PLUS exists.'),
+  ('mentor_topup',           'topup',        2000000, NULL, 180, 1000, false, false, 30, '[name] pricing A: top-up, EUR 10 one-time for 400 credits, valid 180 days. Sold only when MENTOR_TOPUPS_ENABLED and WHOP_PLAN_MENTOR_TOPUP exists.'),
+  ('included_pro_monthly',   'included',      250000,   30,  30, NULL, true,  false, 40, '[name] pricing A: Pro includes 50 credits (USD 0.25) per 30-day slice of Pro monthly.'),
+  ('included_pro_quarterly', 'included',      250000,   30,  30, NULL, true,  false, 41, '[name] pricing A: Pro includes 50 credits (USD 0.25) per 30-day slice of Pro quarterly.'),
   ('included_cohort',        'included',      750000,   30,  30, NULL, true,  true, 42, '[name] pick B: USD 0.75 per 30-day slice of the 6-month cohort.'),
   ('trial_taste',            'trial',         100000, NULL,   7, NULL, true,  true, 50, '[name] pick B: USD 0.10 once per user, ever.'),
   ('gift_admin',             'gift',          300000, NULL,  30, NULL, true,  true, 60, '[name] pick B: admin-gifted Pro, USD 0.30.'),

@@ -13,10 +13,10 @@ const DAY = 86_400_000;
 
 // Rows exactly as the seeded migration returns them through PostgREST.
 const SEED: Array<Record<string, unknown>> = [
-  { package_id: "mentor_basis", kind: "subscription", grant_micro: 750000, period_days: 30, expiry_days: 33, price_eur_cents: 490, active: false, provisional: true, sort: 10, note: "x" },
-  { package_id: "mentor_plus", kind: "subscription", grant_micro: 2000000, period_days: 30, expiry_days: 33, price_eur_cents: 990, active: false, provisional: true, sort: 20, note: null },
-  { package_id: "mentor_topup", kind: "topup", grant_micro: 2000000, period_days: null, expiry_days: 180, price_eur_cents: 1000, active: false, provisional: true, sort: 30, note: null },
-  { package_id: "included_pro_monthly", kind: "included", grant_micro: 1000000, period_days: 30, expiry_days: 30, price_eur_cents: null, active: true, provisional: true, sort: 40, note: null },
+  { package_id: "mentor_basis", kind: "subscription", grant_micro: 750000, period_days: 30, expiry_days: 33, price_eur_cents: 490, active: false, provisional: false, sort: 10, note: "x" },
+  { package_id: "mentor_plus", kind: "subscription", grant_micro: 2000000, period_days: 30, expiry_days: 33, price_eur_cents: 990, active: false, provisional: false, sort: 20, note: null },
+  { package_id: "mentor_topup", kind: "topup", grant_micro: 2000000, period_days: null, expiry_days: 180, price_eur_cents: 1000, active: false, provisional: false, sort: 30, note: null },
+  { package_id: "included_pro_monthly", kind: "included", grant_micro: 250000, period_days: 30, expiry_days: 30, price_eur_cents: null, active: true, provisional: false, sort: 40, note: null },
   { package_id: "trial_taste", kind: "trial", grant_micro: 100000, period_days: null, expiry_days: 7, price_eur_cents: null, active: true, provisional: true, sort: 50, note: null },
 ];
 

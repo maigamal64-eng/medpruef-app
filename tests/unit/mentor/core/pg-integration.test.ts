@@ -280,7 +280,7 @@ describe.skipIf(!PORT)("refunds against the real ledger SQL (review H1, H2)", ()
   it("H2: a free included lot claws back the unspent part only, no debt", async () => {
     const user = crypto.randomUUID();
     await sql(`SELECT mentor_grant_credits('${user}','included_pro_monthly','pro_included','sub_${user}:0')::text;`);
-    await spend(user, 300_000);
+    await spend(user, 100_000); // part of the 250,000 Pro slice (pricing A)
     await sql(`SELECT mentor_clawback('pro_included','sub_${user}:0','pro refund')::text;`);
     expect(await debtOf(user)).toBe(0);
     const r = await reconcile(user);
