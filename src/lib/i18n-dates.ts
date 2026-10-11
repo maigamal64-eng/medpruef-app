@@ -13,6 +13,7 @@
 
 import {
   daysUntilViennaDate,
+  isOfficialWindowOpen,
   type OfficialDeadlineGroup,
   type OfficialExamKey,
   type OfficialSitting,
@@ -30,6 +31,7 @@ const DE = {
   closes_today: "Anmeldeschluss heute",
   window: "Anmeldung {opens} bis {closes}",
   window_closed: "Anmeldung geschlossen",
+  registration_deadline_badge: "Anmeldung bis {date}, {left}",
   week: "Woche {start} bis {end}",
   and: "und",
   meduni_wien_suffix: "(MedUni Wien)",
@@ -79,6 +81,7 @@ const EN: Record<DateKey, string> = {
   closes_today: "Registration closes today",
   window: "Registration {opens} to {closes}",
   window_closed: "Registration closed",
+  registration_deadline_badge: "Register by {date}, {left}",
   week: "Week of {start} to {end}",
   and: "and",
   meduni_wien_suffix: "(MedUni Vienna)",
@@ -202,6 +205,35 @@ export function daysLeftText(iso: string, lang: string, now: Date = new Date()):
   const n = daysUntilViennaDate(iso, now);
   if (n <= 0) return td("last_day", lang);
   return n === 1 ? td("days_left_one", lang) : td("days_left_many", lang, { n });
+}
+
+/** SIP deadline chip, absent once the official Vienna window closes. */
+export function registrationDeadlineBadge(
+  sitting: OfficialSitting,
+  lang: string,
+  now: Date = new Date()
+): { text: string; daysLeft: number; imminent: boolean } | null {
+  if (
+    (sitting.exam_key !== "sip4a" && sitting.exam_key !== "sip5a") ||
+    !sitting.registration_closes ||
+    !isOfficialWindowOpen(sitting, now)
+  ) return null;
+
+  const iso = sitting.registration_closes;
+  const daysLeft = daysUntilViennaDate(iso, now);
+  const date = new Date(`${iso}T12:00:00Z`).toLocaleDateString(dateLocale(lang), {
+    timeZone: "Europe/Vienna",
+    day: "numeric",
+    month: "short",
+  });
+  return {
+    text: td("registration_deadline_badge", lang, {
+      date,
+      left: daysLeftText(iso, lang, now),
+    }),
+    daysLeft,
+    imminent: daysLeft < 14,
+  };
 }
 
 /** "Anmeldung <opens> bis <closes>" for a window that opens later. */

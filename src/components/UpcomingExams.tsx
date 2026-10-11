@@ -16,9 +16,9 @@
  * `variant="compact"` for the slimmer pricing version. DE + EN via the
  * `lang` prop (the surfaces already manage language state).
  *
- * The "days until" count is computed once on mount (client-only) to
- * avoid an SSR/hydration mismatch on the day-granularity number; the
- * dates themselves render server-side from the static calendar.
+ * Exam-day counts render after mount. The SIP registration badge also
+ * renders server-side, then refreshes at minute boundaries and on focus
+ * so a page left open advances when the Vienna window closes.
  */
 
 import { useEffect, useState } from "react";
@@ -38,6 +38,7 @@ import {
   formatSittingWhen,
   formatWindow,
   joinList,
+  registrationDeadlineBadge,
   shortExamName,
   td,
 } from "@/lib/i18n-dates";
@@ -170,21 +171,42 @@ function OfficialCard({
       </div>
 
       <dl className="space-y-1.5 text-sm text-[var(--mp-fg-muted)] mb-4">
-        {deadlineRows.map((r) => (
-          <div key={`${r.publisher}-${r.registration_closes}`} className="flex items-start gap-2">
-            <Clock className="w-4 h-4 flex-shrink-0 opacity-70 mt-0.5" aria-hidden="true" />
-            <dd>
-              {!isStp && r.registration_opens && r.registration_opens > todayIso ? (
-                formatWindow(r, lang)
-              ) : (
-                <>
-                  <span>{deadlineLabel(r, lang)}: </span>
-                  <strong className="text-[var(--mp-fg)]">{formatClose(r, lang)}</strong>
-                </>
-              )}
-            </dd>
-          </div>
-        ))}
+        {deadlineRows.map((r) => {
+          const badge = registrationDeadlineBadge(r, lang, now);
+          if (badge) return (
+            <div key={`${r.publisher}-${r.registration_closes}`}>
+              <dd
+                className="inline-flex max-w-full items-start gap-2 rounded-xl px-3 py-2 text-sm font-medium leading-relaxed"
+                style={{
+                  // Opaque, theme-independent tints keep DARK text AA-safe
+                  // in both themes, unlike the existing dark warning wash.
+                  background: badge.imminent
+                    ? "color-mix(in srgb, var(--mp-warning) 25%, white)"
+                    : "var(--mp-info-bg)",
+                  color: badge.imminent ? "var(--mp-oxford-blue)" : "var(--mp-fg)",
+                }}
+              >
+                <CalendarDays className="w-4 h-4 flex-shrink-0 mt-0.5" aria-hidden="true" />
+                <span className="min-w-0 whitespace-normal break-words">{badge.text}</span>
+              </dd>
+            </div>
+          );
+          return (
+            <div key={`${r.publisher}-${r.registration_closes}`} className="flex items-start gap-2">
+              <Clock className="w-4 h-4 flex-shrink-0 opacity-70 mt-0.5" aria-hidden="true" />
+              <dd>
+                {!isStp && r.registration_opens && r.registration_opens > todayIso ? (
+                  formatWindow(r, lang)
+                ) : (
+                  <>
+                    <span>{deadlineLabel(r, lang)}: </span>
+                    <strong className="text-[var(--mp-fg)]">{formatClose(r, lang)}</strong>
+                  </>
+                )}
+              </dd>
+            </div>
+          );
+        })}
       </dl>
 
       <p className="text-xs leading-relaxed mb-4 mt-auto text-[var(--mp-fg-muted)]">
@@ -219,13 +241,31 @@ export default function UpcomingExams({
   lang: Lang;
   variant?: "full" | "compact";
 }) {
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  const [clientNow, setClientNow] = useState<Date | null>(null);
+  useEffect(() => {
+    const refresh = () => setClientNow(new Date());
+    refresh();
+    // Refresh the static text at minute boundaries, including Vienna midnight.
+    let timer: ReturnType<typeof setTimeout>;
+    const schedule = () => {
+      timer = setTimeout(() => {
+        refresh();
+        schedule();
+      }, 60_000 - (Date.now() % 60_000));
+    };
+    schedule();
+    window.addEventListener("focus", refresh);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("focus", refresh);
+    };
+  }, []);
+  const mounted = clientNow !== null;
 
   // Official sittings only (C7). The Vienna bank is SIP4a/SIP5a practice,
   // so no postgraduate ÖÄK date appears here. `now` is read at render: the
   // server render and the client agree except across a deadline minute.
-  const now = new Date();
+  const now = clientNow ?? new Date();
   const cards = buildCards(lang, now);
 
   const viennaNote = (

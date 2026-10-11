@@ -23,6 +23,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-10-11",
+    tag: "feature",
+    title: { de: "Anmeldefrist für SIP4a und SIP5a im Kalender", en: "SIP4a and SIP5a registration deadline in the calendar" },
+    description: {
+      de: "Der Prüfungskalender zeigt das Datum des nächsten Anmeldeschlusses und die verbleibenden Tage nach Wiener Zeit. Unter 14 Tagen hebt ein dezenter Hinweis die Frist hervor. Nach Ablauf erscheint das nächste veröffentlichte Anmeldefenster.",
+      en: "The exam calendar shows the next registration deadline date and days left in Vienna time. A subtle badge highlights deadlines under 14 days away. After the deadline, the calendar moves to the next published registration window.",
+    },
+  },
+  {
     date: "2026-10-11", tag: "fix",
     title: { de: "Zugang nach Erstattungen korrekt berechnen", en: "Calculate access correctly after refunds" },
     description: {
