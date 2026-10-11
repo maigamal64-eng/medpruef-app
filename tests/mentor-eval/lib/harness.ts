@@ -123,6 +123,7 @@ export async function runCase(h: HarnessOptions, c: GoldenCase, index: number): 
       rec.stopReason = r.stop_reason;
       rec.toolUses = r.toolUses.map((t) => t.name);
       rec.textChars = typeof r.text === "string" ? r.text.length : 0;
+      if (r.toolUses.length === 0 && typeof r.text === "string") rec.rawText = r.text.slice(0, 4000);
       rec.ok = true;
       return r;
     } catch (err) {

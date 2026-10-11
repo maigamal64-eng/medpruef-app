@@ -52,7 +52,7 @@ export interface CaseReport {
   /** Ops alerts the turn raised (validator_error, tool_error, overrun, ...): the detail behind an upstream_error. */
   alerts: string[];
   /** One entry per model call: how it ended. */
-  callTrace: Array<{ ok: boolean; stopReason: string | null; toolUses: string[]; outputTokens: number | null; textChars: number | null; ms: number; errorCode?: string; errorMessage?: string }>;
+  callTrace: Array<{ ok: boolean; stopReason: string | null; toolUses: string[]; outputTokens: number | null; textChars: number | null; ms: number; errorCode?: string; errorMessage?: string; rawText?: string }>;
 }
 
 export interface EvalReport {
@@ -173,6 +173,7 @@ export async function evaluate(input: EvalInput): Promise<EvalReport> {
         ms: x.ms,
         ...(x.errorCode ? { errorCode: x.errorCode } : {}),
         ...(x.errorMessage ? { errorMessage: x.errorMessage } : {}),
+        ...(x.rawText !== undefined ? { rawText: x.rawText } : {}),
       })),
     });
   }

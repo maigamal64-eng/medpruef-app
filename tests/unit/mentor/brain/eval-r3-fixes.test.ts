@@ -114,3 +114,50 @@ describe("stripProtocolLines (typing indicator) also drops inline markers", () =
     expect(out.trim().startsWith("Open (status fact:")).toBe(true);
   });
 });
+
+describe("validateAnswer: a personal study plan loses an unsupported sentence, never gains an 'official page' line (st-spt-de, st-sip-de)", () => {
+  const PROGRESS = fact({
+    id: "progress.00000000-0000-4000-9000-000000000099",
+    exam_key: "general",
+    topic: "progress",
+    text_de: "Noch 37 Tage. Neurologie 36 %, Chirurgie 40 %, Kardiologie 45 %.",
+    text_en: "37 days left. Neurologie 36 %, Chirurgie 40 %, Kardiologie 45 %.",
+  });
+  const OFFICIAL = fact({ id: "fixture.format.official", text_de: "Die Prüfung hat 123 Fragen.", text_en: "The exam has 123 questions." });
+  const plan = [
+    "Bis zu deiner Prüfung sind es noch 37 Tage.",
+    "- Zuerst die drei schwächsten Bereiche gezielt üben.",
+    "- Danach Neurologie (36 %) und Chirurgie (40 %).",
+    "- Zum Schluss Kardiologie (45 %).",
+  ].join("\n");
+
+  it("deletes the sentence with the unsupported count word and keeps every other line byte for byte", () => {
+    const v = validateAnswer(`@@LANG de\n@@BLOCK facts=${PROGRESS.id}\n${plan}`, [PROGRESS]);
+    const text = allText(v);
+    expect(text).toBe("Bis zu deiner Prüfung sind es noch 37 Tage.\n- Danach Neurologie (36 %) und Chirurgie (40 %).\n- Zum Schluss Kardiologie (45 %).");
+    expect(text).not.toMatch(/offiziell|official/);
+    expect(v.replaced).toBe(true);
+    expect(v.rejected.map((r) => r.value)).toContain("drei");
+  });
+
+  it("an invented date in a study plan is deleted, not shown", () => {
+    const v = validateAnswer(`@@LANG de\n@@BLOCK facts=${PROGRESS.id}\nNeurologie (36 %) bis 30. Oktober 2099 abschließen.\nDanach Chirurgie (40 %).`, [PROGRESS]);
+    expect(allText(v)).toBe("Danach Chirurgie (40 %).");
+  });
+
+  it("a block citing an official fact still gets the fallback line (unchanged)", () => {
+    const v = validateAnswer(`@@LANG de\n@@BLOCK facts=${OFFICIAL.id}\nDie Prüfung hat 124 Fragen.`, [OFFICIAL]);
+    expect(v.replaced).toBe(true);
+    expect(allText(v)).not.toContain("124");
+    expect(allText(v)).toMatch(/offiziell/);
+  });
+
+  it("a study block that empties is dropped; a sole empty block becomes the generic fallback", () => {
+    const two = validateAnswer(`@@LANG de\n@@BLOCK facts=${PROGRESS.id}\nZuerst die drei schwächsten Bereiche.\n@@BLOCK\nViel Erfolg beim Üben.`, [PROGRESS]);
+    expect(allText(two)).toBe("Viel Erfolg beim Üben.");
+    const one = validateAnswer(`@@LANG de\n@@BLOCK facts=${PROGRESS.id}\nZuerst die drei schwächsten Bereiche.`, [PROGRESS]);
+    expect(one.blocks).toHaveLength(1);
+    expect(one.blocks[0].text.length).toBeGreaterThan(0);
+    expect(allText(one)).not.toContain("drei");
+  });
+});

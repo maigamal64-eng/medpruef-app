@@ -177,6 +177,8 @@ export interface CallRecord {
   errorMessage?: string;
   /** Length of the visible text the call returned (0 when thinking used the whole output cap). */
   textChars?: number;
+  /** Raw protocol text of a call that ended without a tool call (what the validator saw), for diagnosis. */
+  rawText?: string;
 }
 
 export interface SettleRecord {

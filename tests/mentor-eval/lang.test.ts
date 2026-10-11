@@ -33,6 +33,9 @@ describe("unconfirmed marker", () => {
     "Zur Abmeldung von der Rezeptierkunde liegt mir keine offiziell bestätigte Angabe vor.",
     "I can't find a verified price for a Mentor package with more messages.",
     "I have no verified fact about a Mentor package with more messages.",
+    // Round-3 grader audit (fix-r3-live1 un-graz-de): noun before the participle.
+    "Für den Stichprobentest im September 2027 ist kein Anmeldeschluss offiziell bestätigt.",
+    "Für Graz ist keine Anmeldefrist veröffentlicht.",
   ])("labels the live wording: %s", (t) => expect(hasUnconfirmedMarker(t)).toBe(true));
 
   it.each([
@@ -43,6 +46,8 @@ describe("unconfirmed marker", () => {
     "Es gibt keine Gebühr für die Abmeldung.",
     "I found the verified date on the calendar.",
     "There is no official reason to worry, the window is open until 19 Oct 2026.",
+    "Der Termin ist offiziell bestätigt.",
+    "Kein Problem, die Frist ist bestätigt: 19. Oktober 2026.",
   ])("does not label a confident answer: %s", (t) => expect(hasUnconfirmedMarker(t)).toBe(false));
 
   it.each(["Die Frist ist der 14. Dezember 2026.", "The exam is on 3 Feb 2027.", "Das läuft wie geplant."])("does not label: %s", (t) =>

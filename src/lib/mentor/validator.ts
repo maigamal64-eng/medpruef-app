@@ -756,7 +756,12 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
       for (const v of bad) rejected.push({ value: v.raw, reason: used.length > 0 ? "not_in_cited_facts" : "uncited_number" });
       const official = used.find((f) => !isInternalFactId(f.id))?.source_url ?? refLink ?? officialLinkForExam(refuseExam);
       const fb = fallbackLine(lang, official);
-      outText = replaceSentences(text, bad, fb);
+      // A block that cites only the learner's own progress is a personal study
+      // plan: an unsupported value there ("die drei schwächsten Bereiche") is not
+      // an official claim, so "check the official page" would mislead (eval round
+      // 3: st-spt-de, st-sip-de). The sentence is deleted instead; deletion only.
+      const progressOnly = used.length > 0 && used.every((f) => f.id.startsWith("progress."));
+      outText = progressOnly ? removeSentences(text, bad) : replaceSentences(text, bad, fb);
     }
     if (!outText) continue;
     const shown = used.filter((f) => !isInternalFactId(f.id));
