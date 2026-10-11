@@ -830,16 +830,18 @@ export async function POST(req: NextRequest) {
  * An empty survivor list collapses to the epoch (no window remains).
  */
 function recomputeExpiryFromEntries(
-  startedAt: string | null,
   surviving: Array<{ payment_id: string; added_months: number; granted_at: string }>
 ): Date {
-  let end = startedAt && Number.isFinite(Date.parse(startedAt)) ? new Date(startedAt) : new Date(0);
+  // A stacked row start can include the refunded window. Only the surviving
+  // payments may establish the remaining window.
+  let end = new Date(0);
   const sorted = [...surviving].sort(
     (a, b) => Date.parse(a.granted_at) - Date.parse(b.granted_at)
   );
   for (const e of sorted) {
     const grantedMs = Date.parse(e.granted_at);
-    const base = Number.isFinite(grantedMs) && grantedMs > end.getTime() ? new Date(grantedMs) : end;
+    if (!Number.isFinite(grantedMs)) throw new Error("Invalid surviving payment grant date");
+    const base = grantedMs > end.getTime() ? new Date(grantedMs) : end;
     end = computeExpiry(Math.max(1, e.added_months || 1), base);
   }
   return end;
@@ -955,6 +957,7 @@ async function handleRevoke(
           .eq("status", "active");
         if (scanErr) {
           Sentry.captureException(scanErr, { tags: { route: "webhooks/whop", step: "revoke_granted_ids_scan" } });
+          return NextResponse.json({ error: "Could not verify payment history" }, { status: 503 });
         } else {
           subs = ((allActive ?? []) as RevokeSub[]).filter((s) =>
             (s.granted_payment_ids ?? []).some(
@@ -1036,6 +1039,47 @@ async function handleRevoke(
         { ok: false, error: "revoke matched no subscription", event },
         { status: 200 }
       );
+    }
+
+    // A direct payment match does not exhaust the affected history: old
+    // reconciliation artifacts can copy that payment into a second row.
+    // Read every active Whop row for this user before the idempotency claim,
+    // both to remove all copies and to avoid counting another row's payment.
+    const { data: activeWhop, error: activeWhopError } = await sb
+      .from("subscriptions")
+      .select("id, user_id, tier, status, expires_at, amount_cents, started_at, provider_payment_id, granted_payment_ids, whop_membership_id")
+      .eq("payment_provider", "whop")
+      .eq("user_id", userId)
+      .eq("status", "active");
+    if (activeWhopError) {
+      Sentry.captureException(activeWhopError, { tags: { route: "webhooks/whop", step: "revoke_user_history_scan" } });
+      return NextResponse.json({ error: "Could not verify payment history" }, { status: 503 });
+    }
+    const activeWhopRows = (activeWhop ?? []) as RevokeSub[];
+    const affected = new Map(subs.map(sub => [sub.id, sub]));
+    for (const sub of activeWhopRows) {
+      if ((sub.granted_payment_ids ?? []).some(entry => paymentCandidates.includes(entry.payment_id))) {
+        affected.set(sub.id, sub);
+      }
+    }
+    subs = [...affected.values()];
+
+    // Prefer the row whose provider_payment_id owns a surviving payment.
+    // Otherwise an older history-only row owns it. Stable ordering prevents
+    // duplicate histories from either double-counting or revoking both rows.
+    const paymentOwners = new Map<string, string>();
+    const orderedActive = [...activeWhopRows].sort((a, b) =>
+      (Date.parse(a.started_at ?? "") || 0) - (Date.parse(b.started_at ?? "") || 0) || a.id.localeCompare(b.id)
+    );
+    for (const sub of orderedActive) {
+      if (sub.provider_payment_id && !paymentOwners.has(sub.provider_payment_id)) {
+        paymentOwners.set(sub.provider_payment_id, sub.id);
+      }
+    }
+    for (const sub of orderedActive) {
+      for (const entry of sub.granted_payment_ids ?? []) {
+        if (entry.payment_id && !paymentOwners.has(entry.payment_id)) paymentOwners.set(entry.payment_id, sub.id);
+      }
     }
 
     if (process.env.WHOP_ATOMIC_GRANTS_ENABLED === "true") {
@@ -1162,15 +1206,20 @@ async function handleRevoke(
       }
       // Drop every entry for the refunded payment id (also handles the
       // pre-Fix-1 duplicate-payment artifacts honestly).
-      const surviving = entries.filter((e) => e.payment_id !== matchedEntry.payment_id);
+      const surviving = entries.filter(e =>
+        !paymentCandidates.includes(e.payment_id) &&
+        (!paymentOwners.has(e.payment_id) || paymentOwners.get(e.payment_id) === sub.id)
+      );
       let reExpiry: Date | null = null;
       try {
-        reExpiry = recomputeExpiryFromEntries(sub.started_at, surviving);
+        reExpiry = recomputeExpiryFromEntries(surviving);
       } catch (reErr) {
         Sentry.captureException(reErr, {
           tags: { route: "webhooks/whop", step: "revoke_recompute_window" },
           extra: { subId: sub.id },
         });
+        await releaseWhopClaim(sb, claimKey);
+        return NextResponse.json({ error: "Could not verify remaining payment window" }, { status: 503 });
       }
       if (surviving.length > 0 && reExpiry && reExpiry.getTime() > nowMs) {
         const latestSurviving = surviving[surviving.length - 1];
@@ -1188,11 +1237,22 @@ async function handleRevoke(
             tags: { route: "webhooks/whop", step: "revoke_partial_update" },
             extra: { subId: sub.id, kind },
           });
-          flipIds.push(sub.id); // fail safe toward the full revoke
+          await releaseWhopClaim(sb, claimKey);
+          return NextResponse.json({ error: "DB update failed" }, { status: 500 });
         } else {
           keptActiveIds.push(sub.id);
         }
       } else {
+        // Full revokes must also remove the refunded payment from the ledger.
+        const { error: historyError } = await sb
+          .from("subscriptions")
+          .update({ granted_payment_ids: surviving, updated_at: nowIso })
+          .eq("id", sub.id);
+        if (historyError) {
+          await releaseWhopClaim(sb, claimKey);
+          Sentry.captureException(historyError, { tags: { route: "webhooks/whop", step: "revoke_history_update" } });
+          return NextResponse.json({ error: "DB update failed" }, { status: 500 });
+        }
         flipIds.push(sub.id);
       }
     }
@@ -1207,6 +1267,7 @@ async function handleRevoke(
           tags: { route: "webhooks/whop", step: "revoke_sub_update" },
           extra: { flipIds, kind },
         });
+        await releaseWhopClaim(sb, claimKey);
         return NextResponse.json({ error: "DB update failed" }, { status: 500 });
       }
     }
@@ -1216,13 +1277,14 @@ async function handleRevoke(
     // Reconcile the user's tier_expires_at to the max live window across the
     // surviving active rows (this one may legitimately SHORTEN: the refunded
     // window is gone). Tier itself stays Pro while any window survives.
-    if (keptActiveIds.length > 0 && !independentCoverage) {
+    if ((keptActiveIds.length > 0 || flipIds.length > 0) && !independentCoverage) {
       try {
-        const { data: activeAfter } = await sb
+        const { data: activeAfter, error: activeAfterError } = await sb
           .from("subscriptions")
           .select("id, expires_at")
           .eq("user_id", userId)
           .eq("status", "active");
+        if (activeAfterError) throw activeAfterError;
         const maxExpiry = (activeAfter ?? [])
           .map((row) => Date.parse((row as { expires_at?: string | null }).expires_at ?? ""))
           .filter((ms) => Number.isFinite(ms) && ms > nowMs)
@@ -1230,7 +1292,8 @@ async function handleRevoke(
         await sb
           .from("users")
           .update({
-            tier_expires_at: maxExpiry !== null ? new Date(maxExpiry).toISOString() : null,
+            tier_expires_at: (activeAfter ?? []).some(row => row.expires_at == null)
+              ? null : maxExpiry !== null ? new Date(maxExpiry).toISOString() : null,
             updated_at: nowIso,
           })
           .eq("id", userId)
