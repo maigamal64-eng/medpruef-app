@@ -5,7 +5,7 @@
  * Kenntnisprüfung (Route A) and Nostrifizierung / Stichprobentest (Route B).
  *
  * SOURCE: reviews/uiux-overhaul-2026-06-25/A0-austrian-resources.md (Atlas, 2026-06-25)
- * LINK-CHECK: curl -sL GET, 2026-06-25. 12/12 live.
+ * LINK-CHECK: run scripts/linkcheck.mjs for dated HTTP and content hashes.
  *   arztakademie.at/anmeldung returned 404 (dead page); rows 2+3 merged into
  *   one Arztakademie card on the live /allgemeinmedizin URL.
  *
@@ -29,10 +29,12 @@ export interface AustrianResource {
   route?: ResourceRoute
   /** True when the resource is only partially free (e.g. AMBOSS) */
   freemium?: boolean
+  /** Edition belongs to the linked document, never inferred from its file name. */
+  edition?: string
 }
 
 /**
- * 12 verified Austrian resources, 3 categories.
+ * Austrian resources in 3 categories, with official registration sources.
  * All external links open in a new tab (enforced in the page component).
  * One-liners are in both DE and EN; no em dashes in either language.
  */
@@ -105,6 +107,102 @@ export const AUSTRIAN_RESOURCES: AustrianResource[] = [
       "The official Austrian portal for professional recognition, with a recognition pathfinder in 8 languages (including Arabic).",
     category: "official",
     route: "both",
+  },
+
+  // Official source hub for university nostrification candidates.
+  {
+    id: 14,
+    title: "MedUni Wien: SIP-Prüfungskalender",
+    url: "https://www.meduniwien.ac.at/web/studierende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnisse/pruefungskalender/",
+    deOneLiner: "SIP-Termine, Anmeldefristen und Hinweise zur Veröffentlichung der Fragenformate.",
+    enOneLiner: "SIP dates, registration windows and information on publication of question formats.",
+    category: "official",
+    route: "B",
+  },
+  {
+    id: 15,
+    title: "MedUni Wien: Nostrifizierung, Prüfungen",
+    url: "https://www.meduniwien.ac.at/web/studium-weiterbildung/nostrifizierung/pruefungen/",
+    deOneLiner: "Anmeldeformulare und Anmeldewege für SIP-Prüfungsteile, Rezeptierkunde und Gerichtsmedizin.",
+    enOneLiner: "Registration forms and procedures for SIP exam parts, Rezeptierkunde and legal medicine.",
+    category: "official",
+    route: "B",
+  },
+  {
+    id: 16,
+    title: "MedUni Wien: Merkblatt Humanmedizin (1. September 2026)",
+    url: "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/pdf/Merkblatt_Nostri_Human_VS_1._9._2026-1.pdf",
+    deOneLiner: "Merkblatt zur Nostrifizierung Humanmedizin, Ausgabe 1. September 2026: Voraussetzungen, Verfahren und Ergänzungsprüfungen.",
+    enOneLiner: "Human medicine nostrification information sheet, edition 1 September 2026: requirements, procedure and supplementary exams.",
+    category: "official",
+    route: "B",
+    edition: "1 September 2026",
+  },
+  {
+    id: 17,
+    title: "MedUni Wien: Rezeptierkunde und Gerichtsmedizin, WS 2026/27",
+    url: "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/WS26Pr%C3%BCf_modus_EW_03062026.pdf",
+    deOneLiner: "Prüfungswochen und Anmeldefristen für Rezeptierkunde und Gerichtsmedizin im Wintersemester 2026/27.",
+    enOneLiner: "Exam weeks and registration windows for Rezeptierkunde and legal medicine in winter semester 2026/27.",
+    category: "official",
+    route: "B",
+    edition: "3 June 2026, WS 2026/27",
+  },
+  {
+    id: 18,
+    title: "MedUni Wien: Rezeptierkunde und Gerichtsmedizin, SS 2026",
+    url: "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/SS26Pruef_modus_EW_13012026.pdf",
+    deOneLiner: "Vergangene Prüfungswochen und Anmeldefristen im Sommersemester 2026, keine Termine für 2027.",
+    enOneLiner: "Past exam weeks and registration windows in summer semester 2026, not dates for 2027.",
+    category: "official",
+    route: "B",
+    edition: "13 January 2026, SS 2026",
+  },
+  {
+    id: 19,
+    title: "MedUni Innsbruck: Stichprobentest, Termine 2027",
+    url: "https://www.i-med.ac.at/studium-services/media/Termine-Stichprobentest-2027-1.pdf",
+    deOneLiner: "Offizielle Stichprobentest-Termine 2027 und Anmeldefristen des Innsbrucker Dokuments. Beachte auch das Merkblatt deiner Antragsuniversität.",
+    enOneLiner: "Official 2027 Stichprobentest dates and registration deadlines in the Innsbruck document. Also check your filing university information sheet.",
+    category: "official",
+    route: "B",
+    edition: "27 August 2026, sittings 2027",
+  },
+  {
+    id: 20,
+    title: "MedUni Wien: Nostrifizierung, Antragstellung",
+    url: "https://www.meduniwien.ac.at/web/studium-weiterbildung/nostrifizierung/antragstellung/",
+    deOneLiner: "Voraussetzungen, Unterlagen und aktuelle Merkblätter für den Nostrifizierungsantrag.",
+    enOneLiner: "Requirements, documents and current information sheets for the nostrification application.",
+    category: "official",
+    route: "B",
+  },
+  {
+    id: 21,
+    title: "MedUni Wien: Med.Campus",
+    url: "https://campus.meduniwien.ac.at/",
+    deOneLiner: "Studierendenportal zur Prüfung der Anmeldung und für Abmeldungen. Nostrifikant:innen beachten die besonderen Anmeldewege.",
+    enOneLiner: "Student portal to check registration and withdraw. Nostrification candidates must follow their specific registration procedures.",
+    category: "official",
+    route: "B",
+  },
+  {
+    id: 22,
+    title: "Arztakademie: Sprachprüfung Deutsch",
+    url: "https://www.arztakademie.at/sprachpruefung",
+    deOneLiner: "Informationen zur österreichischen ärztlichen Sprachprüfung, getrennt von SIP und Stichprobentest.",
+    enOneLiner: "Information on the Austrian medical German language exam, separate from SIP and the Stichprobentest.",
+    category: "official",
+    route: "B",
+  },
+  {
+    id: 23,
+    title: "MedUni Wien: SIP-Ausschreibungen",
+    url: "https://www.meduniwien.ac.at/web/studierende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnisse/pruefungsausschreibungen/",
+    deOneLiner: "Ausschreibungen mit dem verbindlichen Fragenformat des jeweiligen SIP-Termins. Der Zugriff kann eine Anmeldung erfordern.",
+    enOneLiner: "Exam notices with the binding question format for each SIP sitting. Access may require sign-in.",
+    category: "official",
+    route: "B",
   },
 
   // --- Category 2: Free clinical guidelines ---
