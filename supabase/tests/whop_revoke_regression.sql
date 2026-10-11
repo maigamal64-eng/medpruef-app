@@ -164,11 +164,16 @@ BEGIN
  PERFORM pg_temp.assert_true(EXISTS(SELECT 1 FROM user_events WHERE event_type='whop_revoke_unmatched'
   AND event_data->>'reason'='no_granted_payment_match') AND NOT EXISTS(SELECT 1 FROM processed_webhook_events),
   'unmatched refund logs user_event without consuming claim');
+ -- Pre-history (before Fix 6) rows: provider_payment_id is the grant's own
+ -- proof of payment, so the refunded row is revoked; the other row stays.
  UPDATE subscriptions SET granted_payment_ids='[]';
  SELECT * INTO r FROM commit_whop_revoke('00000000-0000-4000-8000-000000000004','refund:legacy','refunded',
   'refund.created',pg_temp.snapshot(),ARRAY['pay_bank'],7);
- PERFORM pg_temp.assert_true(cardinality(r.flipped_ids)=0 AND (SELECT count(*)=2 FROM subscriptions WHERE status='active'),
-  'provider id without matching grant history is unmatched');
+ PERFORM pg_temp.assert_true(r.flipped_ids=ARRAY['00000000-0000-4000-8000-000000000102'::uuid]
+  AND (SELECT status='refunded' FROM subscriptions WHERE id='00000000-0000-4000-8000-000000000102')
+  AND (SELECT status='active' FROM subscriptions WHERE id='00000000-0000-4000-8000-000000000101')
+  AND (SELECT tier='pro' AND tier_expires_at=card_grant+interval '1 month' FROM users,fixture_clock),
+  'provider id without grant history revokes that legacy row only');
 END $$;
 
 -- Three rows share copied history; provider owners override history owners.
@@ -557,6 +562,28 @@ BEGIN
  END LOOP;
 END $$;
 
+-- REVIEW4: legacy-provider-only-row
+-- A single pre-history pass refunded later (e.g. a chargeback): revoke it,
+-- even when the caller passes no snapshot row that has the payment in history.
+SELECT pg_temp.reset_munir();
+DELETE FROM subscriptions WHERE id='00000000-0000-4000-8000-000000000101';
+UPDATE subscriptions SET granted_payment_ids='[]',started_at=(SELECT card_grant FROM fixture_clock);
+UPDATE users SET tier_expires_at=(SELECT expires_at FROM subscriptions);
+DO $$
+DECLARE r record; before_rows jsonb;
+BEGIN
+ SELECT * INTO r FROM commit_whop_revoke('00000000-0000-4000-8000-000000000004','refund:legacy-only','refunded',
+  'refund.created',pg_temp.snapshot(),ARRAY['pay_bank'],7);
+ PERFORM pg_temp.assert_true(r.pro_revoked AND (SELECT status='refunded' FROM subscriptions)
+  AND (SELECT tier='free' FROM users) AND EXISTS(SELECT 1 FROM processed_webhook_events WHERE event_id='refund:legacy-only'),
+  'legacy provider-id-only row is revoked and the claim consumed');
+ before_rows:=pg_temp.snapshot();
+ SELECT * INTO r FROM commit_whop_revoke('00000000-0000-4000-8000-000000000004','dispute:legacy-only','refunded',
+  'dispute.created',pg_temp.snapshot(),ARRAY['pay_bank'],7);
+ PERFORM pg_temp.assert_true(cardinality(r.flipped_ids)=0 AND NOT r.replayed AND before_rows=pg_temp.snapshot()
+  AND (SELECT tier='free' FROM users),'an already-refunded legacy row is not re-processed');
+END $$;
+
 -- REVIEW4: last-unlimited-whop-row
 SELECT pg_temp.reset_munir();
 DELETE FROM subscriptions WHERE id='00000000-0000-4000-8000-000000000101';
@@ -618,10 +645,12 @@ END $$;
 DO $$
 DECLARE g timestamptz; refund text; r record;
 BEGIN
- FOREACH refund IN ARRAY ARRAY['pay_c','pay_a'] LOOP
+ FOREACH refund IN ARRAY ARRAY['pay_c','pay_a','pay_a_dup'] LOOP
   PERFORM pg_temp.reset_munir();
   DELETE FROM subscriptions;
   SELECT card_grant INTO g FROM fixture_clock;
+  -- One month earlier for pay_a_dup, so row B's surviving month has elapsed.
+  IF refund='pay_a_dup' THEN g:=g-interval '1 month'; END IF;
   INSERT INTO subscriptions(id,user_id,tier,status,payment_provider,amount_cents,started_at,expires_at,provider_payment_id,granted_payment_ids)
   SELECT v.id::uuid,'00000000-0000-4000-8000-000000000004','first_month_19','active','whop',1900,g+v.start_off,g+v.end_off,v.pay,
     jsonb_build_array(jsonb_build_object('payment_id',v.pay,'amount_cents',1900,'added_months',1,'granted_at',g+v.grant_off))
@@ -631,9 +660,19 @@ BEGIN
    ('00000000-0000-4000-8000-000000000203','pay_c',interval '20 minutes',interval '2 months',interval '3 months')
   ) v(id,pay,grant_off,start_off,end_off);
   UPDATE users SET tier_expires_at=g+interval '3 months';
+  -- pay_a_dup: a legacy duplicate provider id also matches row B, whose
+  -- surviving month already elapsed. B flips but still queues row C.
+  IF refund='pay_a_dup' THEN
+   UPDATE subscriptions SET provider_payment_id='pay_a' WHERE id='00000000-0000-4000-8000-000000000202';
+  END IF;
   SELECT * INTO r FROM commit_whop_revoke('00000000-0000-4000-8000-000000000004','refund:'||refund,'refunded',
-   'refund.created',pg_temp.snapshot(),ARRAY[refund],7);
-  IF refund='pay_c' THEN
+   'refund.created',pg_temp.snapshot(),ARRAY[replace(refund,'_dup','')],7);
+  IF refund='pay_a_dup' THEN
+   PERFORM pg_temp.assert_true((SELECT array_agg(status ORDER BY id)=ARRAY['refunded','refunded','active'] FROM subscriptions)
+     AND (SELECT expires_at=g+interval '2 months 10 minutes' FROM subscriptions WHERE id='00000000-0000-4000-8000-000000000203')
+     AND (SELECT tier_expires_at=g+interval '2 months 10 minutes' FROM users),
+    'a matched dependent row with elapsed survivors still queues later rows');
+  ELSIF refund='pay_c' THEN
    PERFORM pg_temp.assert_true((SELECT array_agg(status ORDER BY id)=ARRAY['active','active','refunded']
      AND array_agg(expires_at ORDER BY id)=ARRAY[g+interval '1 month',g+interval '2 months',g+interval '3 months'] FROM subscriptions)
      AND (SELECT tier_expires_at=g+interval '2 months' FROM users),

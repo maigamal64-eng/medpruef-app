@@ -60,15 +60,18 @@ BEGIN
  INTO affected_ids,affected_expiry FROM subscriptions sub
  WHERE sub.user_id=p_user_id AND sub.payment_provider='whop' AND
    (sub.id IN (SELECT (value->>'id')::uuid FROM jsonb_array_elements(p_expected_subscriptions)) OR
-    (sub.status='active' AND EXISTS(SELECT 1 FROM jsonb_array_elements(coalesce(sub.granted_payment_ids,'[]')) e
-      WHERE e->>'payment_id'=ANY(p_payment_candidates))));
+    (sub.status='active' AND (sub.provider_payment_id=ANY(p_payment_candidates) OR
+     EXISTS(SELECT 1 FROM jsonb_array_elements(coalesce(sub.granted_payment_ids,'[]')) e
+      WHERE e->>'payment_id'=ANY(p_payment_candidates)))));
 
  -- A membership identifies the user, not proof that a payment granted time.
  -- Leave the claim unconsumed so a later corrected ledger can be retried.
+ -- provider_payment_id is written by the grant, so it is proof of payment
+ -- even on a pre-history row whose granted_payment_ids is empty.
  IF coalesce(cardinality(p_payment_candidates),0)>0 AND NOT EXISTS(
-   SELECT 1 FROM subscriptions sub,
-     LATERAL jsonb_array_elements(coalesce(sub.granted_payment_ids,'[]')) e
-   WHERE sub.id=ANY(affected_ids) AND e->>'payment_id'=ANY(p_payment_candidates)
+   SELECT 1 FROM subscriptions sub WHERE sub.id=ANY(affected_ids) AND (sub.provider_payment_id=ANY(p_payment_candidates) OR
+     EXISTS(SELECT 1 FROM jsonb_array_elements(coalesce(sub.granted_payment_ids,'[]')) e
+       WHERE e->>'payment_id'=ANY(p_payment_candidates)))
  ) THEN
   RAISE LOG 'Whop revoke % matched no granted payment for user % (candidates=%)',p_event,p_user_id,p_payment_candidates;
   INSERT INTO user_events(user_id,event_type,event_data)
@@ -131,6 +134,9 @@ BEGIN
   matched:=NULL;
   SELECT value->>'payment_id' INTO matched FROM jsonb_array_elements(coalesce(s.granted_payment_ids,'[]'))
     WHERE value->>'payment_id'=ANY(p_payment_candidates) LIMIT 1;
+  IF matched IS NULL AND s.provider_payment_id=ANY(p_payment_candidates) AND s.status IS DISTINCT FROM p_kind THEN
+   matched:=s.provider_payment_id;
+  END IF;
   SELECT coalesce(jsonb_agg(e.value ORDER BY e.ord),'[]') INTO row_entries
     FROM jsonb_array_elements(coalesce(s.granted_payment_ids,'[]')) WITH ORDINALITY e(value,ord)
     WHERE nullif(e.value->>'payment_id','') IS NOT NULL;
@@ -226,6 +232,9 @@ BEGIN
          NOT EXISTS(SELECT 1 FROM jsonb_array_elements(survivors) e WHERE (e->>'added_months')::integer<>0)
          THEN 0 ELSE s.amount_cents END,updated_at=now_at WHERE id=s.id;
      flipped:=array_append(flipped,s.id); action:='flip';
+     -- Surviving paid time that already elapsed still precedes later queued
+     -- rows; only a row with no surviving payment leaves the queue.
+     IF s.status='active' AND jsonb_array_length(survivors)>0 AND end_at>queue_end THEN queue_end:=end_at; END IF;
     END IF;
    ELSIF end_at<s.expires_at THEN
     -- Untouched dependent stacked row: it loses the queue time removed above.

@@ -935,6 +935,15 @@ function isStackedRow(sub: RevokeSub, entries: RevokeEntry[]): boolean {
     startedMs > Math.min(...grants) + STACK_TOLERANCE_MS;
 }
 
+// The grant writes provider_payment_id, so it proves that payment granted the
+// row even on a pre-history (before Fix 6) row with no granted_payment_ids
+// entry. A membership pin alone never does. With `kind`, a row already in
+// that revoked state is not re-processed on a retry.
+function grantsCandidate(sub: RevokeSub, candidates: string[], kind?: WhopRevokeKind): boolean {
+  return (sub.granted_payment_ids ?? []).some(entry => !!entry?.payment_id && candidates.includes(entry.payment_id)) ||
+    (!!sub.provider_payment_id && candidates.includes(sub.provider_payment_id) && sub.status !== kind);
+}
+
 const REVOKE_COLUMNS = "id, user_id, tier, status, expires_at, amount_cents, started_at, provider_payment_id, granted_payment_ids, whop_membership_id, updated_at";
 interface RevokeOwner {
   tier: string; role: string; tier_expires_at: string | null; updated_at: string | null;
@@ -967,12 +976,12 @@ function planWhopRevoke(pending: PendingWhopRevoke, rows: RevokeSub[]): PendingW
     (Date.parse(a.started_at ?? "") || 0) - (Date.parse(b.started_at ?? "") || 0) || a.id.localeCompare(b.id);
   const active = rows.filter(row => row.status === "active");
   const affected = rows.filter(row => pending.original_subscriptions.some(original => original.id === row.id) ||
-    (row.status === "active" && (row.granted_payment_ids ?? []).some(e => candidates.includes(e.payment_id))));
+    (row.status === "active" && grantsCandidate(row, candidates)));
   const affectedIds = new Set(affected.map(row => row.id));
   // A retry may resume after this refund already left a row: the original
   // snapshot still proves that later stacked rows lost their queue position.
   const originallyMatched = new Set(pending.original_subscriptions
-    .filter(row => (row.granted_payment_ids ?? []).some(e => candidates.includes(e.payment_id))).map(row => row.id));
+    .filter(row => grantsCandidate(row, candidates)).map(row => row.id));
   const owners = new Map<string, string>();
   const ordered = [...active].sort(byStart);
   for (const row of ordered) {
@@ -1005,7 +1014,7 @@ function planWhopRevoke(pending: PendingWhopRevoke, rows: RevokeSub[]): PendingW
   const sequence = [...new Map([...affected, ...active].map(row => [row.id, row])).values()].sort(byStart);
   for (const sub of sequence) {
     const entries = revokeEntries(sub);
-    const matched = entries.some(entry => candidates.includes(entry.payment_id));
+    const matched = candidates.length > 0 && grantsCandidate(sub, candidates, pending.kind);
     const storedMs = sub.expires_at == null ? null : Date.parse(sub.expires_at);
     const stacked = isStackedRow(sub, entries);
     // undefined: this row no longer covers anything after the plan.
@@ -1063,7 +1072,9 @@ function planWhopRevoke(pending: PendingWhopRevoke, rows: RevokeSub[]): PendingW
         plan.updates.push({ id: sub.id, snapshot: sub, values: { status: pending.kind, cancelled_at: nowIso,
           amount_cents: amountCents, granted_payment_ids: surviving, updated_at: nowIso } });
         plan.flipped_ids.push(sub.id);
-        endMs = undefined;
+        // Surviving paid time that already elapsed still precedes later
+        // queued rows; only a row with no surviving payment leaves the queue.
+        endMs = sub.status === "active" && surviving.length > 0 ? expiresMs : undefined;
       }
     }
     if (endMs === null) queueUnbounded = true;
@@ -1443,9 +1454,7 @@ async function handleRevoke(
 
     // A membership pin identifies the account, not proof that this payment
     // granted time. Never turn an unknown payment refund into a full revoke.
-    if (paymentCandidates.length > 0 && !subs.some(sub =>
-      (sub.granted_payment_ids ?? []).some(entry => paymentCandidates.includes(entry.payment_id))
-    )) {
+    if (paymentCandidates.length > 0 && !subs.some(sub => grantsCandidate(sub, paymentCandidates))) {
       Sentry.captureMessage(
         `Whop revoke '${event}' matched no granted payment (paymentCandidates=${paymentCandidates.join(",")} membership=${r.membershipId ?? "none"} user=${userId})`,
         "warning"
