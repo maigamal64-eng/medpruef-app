@@ -1,6 +1,6 @@
 export const FORMAT_COPY = {
   de: {
-    eyebrow: "ÖSTERREICH / PRÜFUNGSREGELN", title: "Welches Format hat dein Termin?",
+    eyebrow: "ÖSTERREICH / PRÜFUNGSREGELN", title: "Welches Format hat Ihr Termin?",
     intro: "Format, Punkte und Regeln für die universitäre Nostrifizierung. Jede Angabe hat eine Quelle und einen Prüfstand. Was noch nicht bestätigt ist, bleibt sichtbar offen.",
     back: "Alle Prüfungsformate", home: "MedPrüf", rules: "Regeln ansehen", sittings: "Kommende Termine", noSittings: "Kein kommender Termin im offiziellen Kalender veröffentlicht.",
     overview: "Prüfungen und Geltungsbereich", details: "Regeln und Grenzen", checked: "Geprüft am", against: "anhand von", edition: "Ausgabe", status: { official: "Amtlich belegt", reported: "Berichtet", not_confirmed: "Nicht bestätigt" },
@@ -9,7 +9,7 @@ export const FORMAT_COPY = {
     duration: "Dauer", durationUnknown: "Für diesen Termin nicht bestätigt", minutes: "Minuten", calendarSource: "Terminquelle", registration: "Anmeldefrist", filing: "Einreichungsfrist", opens: "ab", closes: "bis", vienna: "Wiener Zeit",
     windowUnknown: "Anmeldefenster noch nicht bestätigt", publisher: "Herausgeber", source: "Quelle öffnen", noFormat: "Für diesen neu veröffentlichten Termin ist das Format noch nicht bestätigt.",
     scope: "Geltungsbereich", fsp: "FSP und C1 sind eigene Sprachprüfungen. MedPrüf bietet dafür keine Prüfungssimulation.",
-    officialNotice: "Dein Bescheid und die aktuelle Ausschreibung bestimmen, welche Teile du ablegst und welche Regeln gelten. Die Übung ersetzt keine amtliche Einladung.",
+    officialNotice: "Ihr Bescheid und die aktuelle Ausschreibung bestimmen, welche Teile Sie ablegen und welche Regeln gelten. Die Übung ersetzt keine amtliche Einladung.",
     footer: "Quellenstand pro Karte. Termine und Fristen aus dem offiziellen Kalender; keine automatische Übertragung älterer Formate auf neue Termine.", language: "Sprache wählen",
   },
   en: {

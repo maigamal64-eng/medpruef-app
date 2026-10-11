@@ -385,7 +385,7 @@
         "en": "Check the admission time"
       },
       "text": {
-        "de": "Für diese SIP-Termine ist keine aktuelle Verspätungsregel öffentlich bestätigt. Prüfe Einlasszeit, Ort und Arbeitsende in deiner Ausschreibung. Plane keine zusätzliche Prüfungszeit bei Verspätung ein.",
+        "de": "Für diese SIP-Termine ist keine aktuelle Verspätungsregel öffentlich bestätigt. Prüfen Sie Einlasszeit, Ort und Arbeitsende in Ihrer Ausschreibung. Planen Sie keine zusätzliche Prüfungszeit bei Verspätung ein.",
         "en": "A current late-arrival rule is not publicly confirmed for these SIP sittings. Check admission time, location and finish time in your announcement. Do not plan on extra working time if you arrive late."
       },
       "sourceId": "source-03",
@@ -421,7 +421,7 @@
         "en": "Which SIP4a parts?"
       },
       "text": {
-        "de": "Das Formular nennt Block 25 (chirurgische Fächer), Block 26 (Dermatologie und Venerologie) und Block 27 (Innere Medizin). Melde die im Bescheid vorgeschriebenen Teile an; diese müssen beim selben Termin absolviert werden.",
+        "de": "Das Formular nennt Block 25 (chirurgische Fächer), Block 26 (Dermatologie und Venerologie) und Block 27 (Innere Medizin). Melden Sie die im Bescheid vorgeschriebenen Teile an; diese müssen beim selben Termin absolviert werden.",
         "en": "The form lists block 25 (surgical subjects), block 26 (dermatology and venereology) and block 27 (internal medicine). Register for the parts prescribed in your Bescheid and take them at the same sitting."
       },
       "sourceId": "source-01",
@@ -439,7 +439,7 @@
         "en": "Which SIP5a parts?"
       },
       "text": {
-        "de": "Das Formular nennt Neurologie, Psychiatrie, Kinderheilkunde, Gynäkologie, Augenheilkunde, HNO sowie Notfall- und Intensivmedizin. Melde die im Bescheid vorgeschriebenen Teile an; diese müssen beim selben Termin absolviert werden.",
+        "de": "Das Formular nennt Neurologie, Psychiatrie, Kinderheilkunde, Gynäkologie, Augenheilkunde, HNO sowie Notfall- und Intensivmedizin. Melden Sie die im Bescheid vorgeschriebenen Teile an; diese müssen beim selben Termin absolviert werden.",
         "en": "The form lists neurology, psychiatry, paediatrics, gynaecology, ophthalmology, ENT, and emergency and intensive care medicine. Register for the parts prescribed in your Bescheid and take them at the same sitting."
       },
       "sourceId": "source-02",
@@ -457,7 +457,7 @@
         "en": "Commission attempts"
       },
       "text": {
-        "de": "Die allgemeine SIP-Information beschreibt kommissionelle Wiederholungen und für bestimmte letzte Antritte im ordentlichen Studium einen zusätzlichen mündlichen Teil. Die Durchführung für Nostrifizierungswerber:innen ist damit nicht bestätigt. Die aktuellen SIP-Anmeldeformulare enthalten keine kommissionelle Antrittsauswahl. Kläre das Verfahren für deinen Antritt mit der Studienabteilung und deiner aktuellen Ausschreibung.",
+        "de": "Die allgemeine SIP-Information beschreibt kommissionelle Wiederholungen und für bestimmte letzte Antritte im ordentlichen Studium einen zusätzlichen mündlichen Teil. Die Durchführung für Nostrifizierungswerber:innen ist damit nicht bestätigt. Die aktuellen SIP-Anmeldeformulare enthalten keine kommissionelle Antrittsauswahl. Klären Sie das Verfahren für Ihren Antritt mit der Studienabteilung und Ihrer aktuellen Ausschreibung.",
         "en": "The general SIP information describes commission repeats and an additional oral part for certain final attempts in a regular degree programme. That does not confirm the procedure for nostrification applicants. The current SIP registration forms do not contain a commission-attempt selection. Confirm the procedure for your attempt with the study department and your current announcement."
       },
       "sourceId": "source-18",
@@ -478,7 +478,7 @@
         "en": "Commission attempts"
       },
       "text": {
-        "de": "Die allgemeine SIP-Information beschreibt kommissionelle Wiederholungen und für bestimmte letzte Antritte im ordentlichen Studium einen zusätzlichen mündlichen Teil. Die Durchführung für Nostrifizierungswerber:innen ist damit nicht bestätigt. Die aktuellen SIP-Anmeldeformulare enthalten keine kommissionelle Antrittsauswahl. Kläre das Verfahren für deinen Antritt mit der Studienabteilung und deiner aktuellen Ausschreibung.",
+        "de": "Die allgemeine SIP-Information beschreibt kommissionelle Wiederholungen und für bestimmte letzte Antritte im ordentlichen Studium einen zusätzlichen mündlichen Teil. Die Durchführung für Nostrifizierungswerber:innen ist damit nicht bestätigt. Die aktuellen SIP-Anmeldeformulare enthalten keine kommissionelle Antrittsauswahl. Klären Sie das Verfahren für Ihren Antritt mit der Studienabteilung und Ihrer aktuellen Ausschreibung.",
         "en": "The general SIP information describes commission repeats and an additional oral part for certain final attempts in a regular degree programme. That does not confirm the procedure for nostrification applicants. The current SIP registration forms do not contain a commission-attempt selection. Confirm the procedure for your attempt with the study department and your current announcement."
       },
       "sourceId": "source-18",
@@ -553,7 +553,7 @@
         "en": "Venues in 2027"
       },
       "text": {
-        "de": "Der offizielle Kalender nennt für alle aufgeführten Termine 2027 die elektronische Durchführung. Die Standorte wechseln zwischen Innsbruck, Wien und Graz. Melde dich an der Universität an, bei der du den Antrag eingereicht hast. Die Kalender nennen unterschiedliche Fristarten und Herausgeber; wähle nicht allein nach dem Prüfungsort.",
+        "de": "Der offizielle Kalender nennt für alle aufgeführten Termine 2027 die elektronische Durchführung. Die Standorte wechseln zwischen Innsbruck, Wien und Graz. Melden Sie sich an der Universität an, bei der Sie den Antrag eingereicht haben. Die Kalender nennen unterschiedliche Fristarten und Herausgeber; wählen Sie nicht allein nach dem Prüfungsort.",
         "en": "The official calendar states that the listed 2027 sittings are electronic. Venues rotate between Innsbruck, Vienna and Graz. Register at the university where you filed. Published deadlines have different types and publishers; do not choose solely by the test venue."
       },
       "sourceId": "source-08",
@@ -571,8 +571,8 @@
         "en": "Innsbruck formats and points"
       },
       "text": {
-        "de": "Die Innsbrucker Formatbeschreibung nennt MC und Weil-Fragen mit einer besten Antwort aus vier oder fünf Optionen: zwei Punkte richtig, sonst null. Weitere Formate sind Zuordnung, Lückentext, Bildanalyse, Freitext und Key-Feature-Aufgaben. Teilpunkte und bei bestimmten Fehlern Abzüge hängen vom Aufgabentyp ab. Eine allgemeine SIP-Pick-N-Regel gilt hier nicht.",
-        "en": "The Innsbruck guide describes MC and Weil items with one best answer from four or five choices: two points when correct, otherwise zero. It also covers matching, gap text, image tasks, free text and key-feature tasks. Partial credit and some deductions depend on the item type. There is no universal SIP Pick-N rule here."
+        "de": "Die Innsbrucker Formatbeschreibung nennt MC und Weil-Fragen mit einer besten Antwort aus vier oder fünf Optionen: zwei Punkte richtig, sonst null. Weitere Formate sind Zuordnung, Lückentext, Bildanalyse, Freitext und Key-Feature-Aufgaben. Teilpunkte und bei bestimmten Fehlern Abzüge hängen vom Aufgabentyp ab. Ob eine Pick-N-Regel gilt, ist hier nicht bestätigt.",
+        "en": "The Innsbruck guide describes MC and Weil items with one best answer from four or five choices: two points when correct, otherwise zero. It also covers matching, gap text, image tasks, free text and key-feature tasks. Partial credit and some deductions depend on the item type. Whether a Pick-N rule applies is not confirmed here."
       },
       "sourceId": "source-09",
       "status": "official",
@@ -607,7 +607,7 @@
         "en": "Innsbruck: admission closes"
       },
       "text": {
-        "de": "Nach dem Innsbrucker Leitfaden werden Ort und Einlasszeit nach Ende der Anmeldefrist mitgeteilt. Wer bis zum Ende der Einlasszeit nicht da ist, wird nicht zugelassen. Prüfe die aktuelle Einladung; diese Innsbrucker Regel bestätigt keine Regel für Wien oder Graz.",
+        "de": "Nach dem Innsbrucker Leitfaden werden Ort und Einlasszeit nach Ende der Anmeldefrist mitgeteilt. Wer bis zum Ende der Einlasszeit nicht da ist, wird nicht zugelassen. Prüfen Sie die aktuelle Einladung; diese Innsbrucker Regel bestätigt keine Regel für Wien oder Graz.",
         "en": "The Innsbruck guide says location and admission time are sent after registration closes. Candidates arriving after admission closes are not admitted. Check the current invitation; this Innsbruck rule does not confirm the rule for Vienna or Graz."
       },
       "sourceId": "source-09",
@@ -625,7 +625,7 @@
         "en": "Clarify withdrawal and absence"
       },
       "text": {
-        "de": "Eine aktuelle Abmeldefrist und die konkrete Folge eines Nichterscheinens sind für diese Stichprobentest-Termine hier nicht bestätigt. Kläre dies mit deiner Antragsuniversität; setze Nichterscheinen nicht automatisch mit einem negativen Testergebnis gleich.",
+        "de": "Eine aktuelle Abmeldefrist und die konkrete Folge eines Nichterscheinens sind für diese Stichprobentest-Termine hier nicht bestätigt. Klären Sie dies mit Ihrer Antragsuniversität; setzen Sie Nichterscheinen nicht automatisch mit einem negativen Testergebnis gleich.",
         "en": "This review does not confirm a current withdrawal deadline or the specific consequence of absence for these sittings. Ask your filing university; do not automatically equate absence with a negative test result."
       },
       "sourceId": "source-08",
@@ -643,7 +643,7 @@
         "en": "Permitted dictionaries"
       },
       "text": {
-        "de": "Das Wiener Merkblatt erlaubt Sprachwörterbücher, aber keine medizinischen Wörterbücher oder elektronischen Hilfsmittel. Der Innsbrucker Leitfaden erlaubt Fremdsprachenwörterbücher als Buch für Personen mit nichtdeutscher Muttersprache. Prüfe die Einladung deines Standorts.",
+        "de": "Das Wiener Merkblatt erlaubt Sprachwörterbücher, aber keine medizinischen Wörterbücher oder elektronischen Hilfsmittel. Der Innsbrucker Leitfaden erlaubt Fremdsprachenwörterbücher als Buch für Personen mit nichtdeutscher Muttersprache. Prüfen Sie die Einladung Ihres Standorts.",
         "en": "The Vienna Merkblatt permits language dictionaries, but no medical dictionaries or electronic aids. The Innsbruck guide permits foreign-language dictionaries as books for candidates whose native language is not German. Check your venue invitation."
       },
       "sourceId": "source-04",
@@ -706,7 +706,7 @@
         "en": "Your Bescheid determines the exams"
       },
       "text": {
-        "de": "Bei grundsätzlicher Gleichwertigkeit sind Rezeptierkunde und Gerichtliche Medizin unabhängig vom Stichprobentest-Ergebnis vorzuschreiben. Das heißt nicht, dass ein abgewiesener Antrag zu Ergänzungsprüfungen führt. Die vorgeschriebenen Teile stehen in deinem Bescheid.",
+        "de": "Bei grundsätzlicher Gleichwertigkeit sind Rezeptierkunde und Gerichtliche Medizin unabhängig vom Stichprobentest-Ergebnis vorzuschreiben. Das heißt nicht, dass ein abgewiesener Antrag zu Ergänzungsprüfungen führt. Die vorgeschriebenen Teile stehen in Ihrem Bescheid.",
         "en": "Where basic equivalence is established, Rezeptierkunde and legal medicine are prescribed regardless of the test result. A rejected application does not lead to supplementary exams. Your Bescheid identifies the required parts."
       },
       "sourceId": "source-04",
@@ -724,8 +724,8 @@
         "en": "Vienna: format and duration unconfirmed"
       },
       "text": {
-        "de": "Die gelesenen öffentlichen Wiener Quellen bestätigen das Format, die Fragenzahl, die Bewertung und die Dauer der kommenden Rezeptierkunde-Termine nicht. Die frühere Rezeptierkunde-Ausschreibung war beim Abruf leer und konnte nicht überprüft werden. Prüfe die aktuelle Ausschreibung; übertrage das Innsbrucker Rezeptformat nicht auf Wien.",
-        "en": "The public Vienna sources checked do not confirm the format, question count, scoring or duration of upcoming Rezeptierkunde sittings. The earlier Rezeptierkunde announcement returned an empty document and could not be verified. Check your current announcement; do not assume the Innsbruck prescription-writing format applies to Vienna."
+        "de": "Die gelesenen öffentlichen Wiener Quellen bestätigen das Format, die Fragenzahl, die Bewertung und die Dauer der kommenden Rezeptierkunde-Termine nicht. Prüfen Sie die aktuelle Ausschreibung; übertragen Sie das Innsbrucker Rezeptformat nicht auf Wien.",
+        "en": "The public Vienna sources checked do not confirm the format, question count, scoring or duration of upcoming Rezeptierkunde sittings. Check your current announcement; do not assume the Innsbruck prescription-writing format applies to Vienna."
       },
       "sourceId": "source-15",
       "status": "not_confirmed",
@@ -742,7 +742,7 @@
         "en": "Vienna: late arrival at the earlier sitting"
       },
       "text": {
-        "de": "Für kommende Wiener Rezeptierkunde-Termine sind hier keine aktuellen Regeln zur verspäteten Ankunft oder zu erlaubten Hilfsmitteln bestätigt. Prüfe Einlasszeit, Prüfungsende und Hilfsmittel in deiner Ausschreibung.",
+        "de": "Für kommende Wiener Rezeptierkunde-Termine sind hier keine aktuellen Regeln zur verspäteten Ankunft oder zu erlaubten Hilfsmitteln bestätigt. Prüfen Sie Einlasszeit, Prüfungsende und Hilfsmittel in Ihrer Ausschreibung.",
         "en": "Current late-arrival and permitted-aid rules are not confirmed here for upcoming Vienna Rezeptierkunde sittings. Check admission time, finish time and permitted aids in your announcement."
       },
       "sourceId": "source-15",
@@ -760,7 +760,7 @@
         "en": "Deadline clear, check the withdrawal route"
       },
       "text": {
-        "de": "Der Wiener Semesterkalender verlangt die Abmeldung über die muw-Mailadresse mindestens drei Arbeitstage vor der Prüfung, bei Erkrankung bis zum Prüfungstag. Bei nicht fristgerechter Abmeldung wird die gesetzliche Sperrfrist wirksam; ihre Länge ist in diesem Kalender nicht angegeben. Prüfe die aktuelle Ausschreibung auf ergänzende Vorgaben.",
+        "de": "Der Wiener Semesterkalender verlangt die Abmeldung über die muw-Mailadresse mindestens drei Arbeitstage vor der Prüfung, bei Erkrankung bis zum Prüfungstag. Bei nicht fristgerechter Abmeldung wird die gesetzliche Sperrfrist wirksam; ihre Länge ist in diesem Kalender nicht angegeben. Prüfen Sie die aktuelle Ausschreibung auf ergänzende Vorgaben.",
         "en": "The Vienna semester calendar requires withdrawal through the muw email route at least three working days before the exam, or by exam day for illness. Late withdrawal triggers the statutory block; this calendar does not state its length. Check the current announcement for additional instructions."
       },
       "sourceId": "source-12",
@@ -799,7 +799,7 @@
         "en": "Vienna: format and duration unconfirmed"
       },
       "text": {
-        "de": "Die öffentlich gelesenen Wiener Unterlagen bestätigen weder Fragenformat noch Fragenzahl oder Dauer für die kommenden Gerichtsmedizin-Termine. Berichte über mündliche Prüfungen sind hier keine amtliche Bestätigung. Nutze deine aktuelle Ausschreibung.",
+        "de": "Die öffentlich gelesenen Wiener Unterlagen bestätigen weder Fragenformat noch Fragenzahl oder Dauer für die kommenden Gerichtsmedizin-Termine. Berichte über mündliche Prüfungen sind hier keine amtliche Bestätigung. Nutzen Sie Ihre aktuelle Ausschreibung.",
         "en": "The public Vienna documents checked do not confirm format, question count or duration for upcoming legal-medicine sittings. Reports of oral exams are not official confirmation here. Use your current announcement."
       },
       "sourceId": "source-15",
@@ -853,7 +853,7 @@
         "en": "Current admission rule unconfirmed"
       },
       "text": {
-        "de": "Eine aktuelle Wiener Verspätungsregel für Gerichtsmedizin ist in den gelesenen Quellen nicht bestätigt. Übertrage die Rezeptierkunde-Regel nicht auf diesen Termin.",
+        "de": "Eine aktuelle Wiener Verspätungsregel für Gerichtsmedizin ist in den gelesenen Quellen nicht bestätigt. Übertragen Sie die Rezeptierkunde-Regel nicht auf diesen Termin.",
         "en": "The sources checked do not confirm a current Vienna late-arrival rule for legal medicine. Do not transfer the Rezeptierkunde rule to this sitting."
       },
       "sourceId": "source-15",
@@ -871,7 +871,7 @@
         "en": "Commission on the form"
       },
       "text": {
-        "de": "Das offizielle Anmeldeformular kennzeichnet den vierten und fünften Antritt als kommissionell. Prüfe die konkrete Durchführung in deiner aktuellen Ausschreibung.",
+        "de": "Das offizielle Anmeldeformular kennzeichnet den vierten und fünften Antritt als kommissionell. Prüfen Sie die konkrete Durchführung in Ihrer aktuellen Ausschreibung.",
         "en": "The official registration form marks attempts four and five as commission attempts. Check the current announcement for the precise procedure."
       },
       "sourceId": "source-11",
@@ -889,7 +889,7 @@
         "en": "Commission on the form"
       },
       "text": {
-        "de": "Das offizielle Anmeldeformular kennzeichnet den vierten und fünften Antritt als kommissionell. Prüfe die konkrete Durchführung in deiner aktuellen Ausschreibung.",
+        "de": "Das offizielle Anmeldeformular kennzeichnet den vierten und fünften Antritt als kommissionell. Prüfen Sie die konkrete Durchführung in Ihrer aktuellen Ausschreibung.",
         "en": "The official registration form marks attempts four and five as commission attempts. Check the current announcement for the precise procedure."
       },
       "sourceId": "source-13",
@@ -907,7 +907,7 @@
         "en": "Vienna: confirm the pass limit"
       },
       "text": {
-        "de": "Die gelesenen öffentlichen Wiener Quellen bestätigen keine Bestehensgrenze für kommende Rezeptierkunde-Termine. Übertrage die SIP- oder Innsbrucker 60-Prozent-Regel nicht ungeprüft; bestätige die Grenze in deiner aktuellen Ausschreibung.",
+        "de": "Die gelesenen öffentlichen Wiener Quellen bestätigen keine Bestehensgrenze für kommende Rezeptierkunde-Termine. Übertragen Sie die SIP- oder Innsbrucker 60-Prozent-Regel nicht ungeprüft; bestätigen Sie die Grenze in Ihrer aktuellen Ausschreibung.",
         "en": "The public Vienna sources checked do not confirm a pass limit for upcoming Rezeptierkunde sittings. Do not assume the SIP or Innsbruck 60-percent rule applies; confirm the limit in your current announcement."
       },
       "sourceId": "source-15",
@@ -982,7 +982,7 @@
         "en": "Austria: application, test and decision"
       },
       "text": {
-        "de": "Der Stichprobentest ist Teil der universitären Nostrifizierung. Welche Ergänzungsprüfungen nötig sind, entscheidet der Bescheid deiner Antragsuniversität. Die MedPrüf-Fragenbank ist eine Übungshilfe und bestimmt weder Zulassung noch Anerkennung.",
+        "de": "Der Stichprobentest ist Teil der universitären Nostrifizierung. Welche Ergänzungsprüfungen nötig sind, entscheidet der Bescheid Ihrer Antragsuniversität. Die MedPrüf-Fragenbank ist eine Übungshilfe und bestimmt weder Zulassung noch Anerkennung.",
         "en": "The Stichprobentest is part of university nostrification. Your filing university decision determines the required supplementary exams. MedPrüf practice does not determine admission or recognition."
       },
       "sourceId": "source-04",
@@ -1242,12 +1242,12 @@
       "expectedBy": null,
       "expectedByStatus": "not_confirmed",
       "verifiedOn": "2026-10-11",
-      "sourceId": "source-15",
-      "sourceUrl": "https://www.meduniwien.ac.at/web/studium-weiterbildung/nostrifizierung/pruefungen/",
-      "sourceLabel": "MedUni Wien, Nostrifizierung, Prüfungen",
+      "sourceId": "source-12",
+      "sourceUrl": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/WS26Pr%C3%BCf_modus_EW_03062026.pdf",
+      "sourceLabel": "MedUni Wien, Prüfungstermine Gerichtsmedizin und Rezeptierkunde WS 2026/27",
       "note": {
-        "de": "Der frühere Termin bestätigt nicht automatisch Format oder Dauer der nächsten Prüfungswoche.",
-        "en": "The earlier sitting does not automatically confirm the next exam week format or duration."
+        "de": "Der Kalender nennt den Beginn der Prüfungswoche; Format und Dauer des Termins sind damit nicht bestätigt. Der frühere Termin bestätigt sie nicht automatisch.",
+        "en": "The calendar gives the start of the exam week; it does not confirm the format or duration of this sitting. The earlier sitting does not confirm them automatically."
       }
     },
     {
@@ -1258,12 +1258,12 @@
       "expectedBy": null,
       "expectedByStatus": "not_confirmed",
       "verifiedOn": "2026-10-11",
-      "sourceId": "source-15",
-      "sourceUrl": "https://www.meduniwien.ac.at/web/studium-weiterbildung/nostrifizierung/pruefungen/",
-      "sourceLabel": "MedUni Wien, Nostrifizierung, Prüfungen",
+      "sourceId": "source-12",
+      "sourceUrl": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/WS26Pr%C3%BCf_modus_EW_03062026.pdf",
+      "sourceLabel": "MedUni Wien, Prüfungstermine Gerichtsmedizin und Rezeptierkunde WS 2026/27",
       "note": {
-        "de": "Der frühere Termin bestätigt nicht automatisch Format oder Dauer der nächsten Prüfungswoche.",
-        "en": "The earlier sitting does not automatically confirm the next exam week format or duration."
+        "de": "Der Kalender nennt den Beginn der Prüfungswoche; Format und Dauer des Termins sind damit nicht bestätigt. Der frühere Termin bestätigt sie nicht automatisch.",
+        "en": "The calendar gives the start of the exam week; it does not confirm the format or duration of this sitting. The earlier sitting does not confirm them automatically."
       }
     },
     {
@@ -1274,12 +1274,12 @@
       "expectedBy": null,
       "expectedByStatus": "not_confirmed",
       "verifiedOn": "2026-10-11",
-      "sourceId": "source-15",
-      "sourceUrl": "https://www.meduniwien.ac.at/web/studium-weiterbildung/nostrifizierung/pruefungen/",
-      "sourceLabel": "MedUni Wien, Nostrifizierung, Prüfungen",
+      "sourceId": "source-12",
+      "sourceUrl": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/WS26Pr%C3%BCf_modus_EW_03062026.pdf",
+      "sourceLabel": "MedUni Wien, Prüfungstermine Gerichtsmedizin und Rezeptierkunde WS 2026/27",
       "note": {
-        "de": "Der frühere Termin bestätigt nicht automatisch Format oder Dauer der nächsten Prüfungswoche.",
-        "en": "The earlier sitting does not automatically confirm the next exam week format or duration."
+        "de": "Der Kalender nennt den Beginn der Prüfungswoche; Format und Dauer des Termins sind damit nicht bestätigt. Der frühere Termin bestätigt sie nicht automatisch.",
+        "en": "The calendar gives the start of the exam week; it does not confirm the format or duration of this sitting. The earlier sitting does not confirm them automatically."
       }
     },
     {
@@ -1290,12 +1290,12 @@
       "expectedBy": null,
       "expectedByStatus": "not_confirmed",
       "verifiedOn": "2026-10-11",
-      "sourceId": "source-15",
-      "sourceUrl": "https://www.meduniwien.ac.at/web/studium-weiterbildung/nostrifizierung/pruefungen/",
-      "sourceLabel": "MedUni Wien, Nostrifizierung, Prüfungen",
+      "sourceId": "source-12",
+      "sourceUrl": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/WS26Pr%C3%BCf_modus_EW_03062026.pdf",
+      "sourceLabel": "MedUni Wien, Prüfungstermine Gerichtsmedizin und Rezeptierkunde WS 2026/27",
       "note": {
-        "de": "Der frühere Termin bestätigt nicht automatisch Format oder Dauer der nächsten Prüfungswoche.",
-        "en": "The earlier sitting does not automatically confirm the next exam week format or duration."
+        "de": "Der Kalender nennt den Beginn der Prüfungswoche; Format und Dauer des Termins sind damit nicht bestätigt. Der frühere Termin bestätigt sie nicht automatisch.",
+        "en": "The calendar gives the start of the exam week; it does not confirm the format or duration of this sitting. The earlier sitting does not confirm them automatically."
       }
     }
   ],
