@@ -164,14 +164,18 @@ describe.skipIf(!PORT)("W2-CORE on the real ledger SQL (local Postgres)", () => 
       const sequential: string[] = [];
       for (let i = 0; i < 10; i++) sequential.push(((await oneTurn(i)).at(-1) as { type: string }).type);
       const concurrent = await Promise.all(Array.from({ length: 8 }, (_, i) => oneTurn(i)));
-      expect(sequential.filter((t) => t === "final")).toHaveLength(4);
+      // Billing 2026-10-11 (turn.ts): an empty-text turn is retried, then ends in the
+      // not-confirmed notice (a final), so 3 of every 5 scripts end in a final.
+      expect(sequential.filter((t) => t === "final")).toHaveLength(6);
       expect(concurrent.every((ev) => ev.length > 0)).toBe(true);
       const r = await reconcile(user);
       expect(r.reserved).toBe(0);
       expect(r.open).toBe(0);
       expect(r.ledger).toBe(r.lots - r.debt);
       const houseRows = Number(await sql(`SELECT count(*) FROM ai_usage_ledger WHERE user_id='${user}' AND kind='house_cost';`));
-      expect(houseRows).toBe(2); // house_fail_take limit 2 per Vienna day, then the user pays
+      // The learner never pays an error or the notice: every reached call of the 4
+      // sequential timeout/empty-text turns (plus the concurrent ones) is house_cost.
+      expect(houseRows).toBeGreaterThanOrEqual(4);
       const releases = Number(await sql(`SELECT count(*) FROM ai_usage_ledger WHERE user_id='${user}' AND kind='release';`));
       expect(releases).toBeGreaterThanOrEqual(3);
       console.log(`[turns] sequential=${sequential.join(",")} reconcile=${JSON.stringify(r)} house_rows=${houseRows} releases=${releases}`);

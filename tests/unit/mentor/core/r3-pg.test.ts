@@ -15,7 +15,7 @@ describe.skipIf(!port)("MUX-21/27/81 real PostgreSQL R3 release gates", () => {
         INSERT INTO public.users(id,email,role) VALUES(u,'fixture-r3@example.invalid','user');
         r:=public.mentor_grant_credits(u,'trial_taste','trial_taste','r3-expired-'||u,NULL,now()-interval '8 days');
         IF r->>'ok'<>'true' THEN RAISE EXCEPTION 'trial grant failed'; END IF;
-        PERFORM public.mentor_sweep_stale();
+        PERFORM public.mentor_sweep_stale(interval '15 minutes');
         r:=public.mentor_balance(u);
         IF (r->>'available_micro')::bigint<>0 OR jsonb_array_length(r->'lots')<>0 THEN RAISE EXCEPTION 'expired ghost balance'; END IF;
         r:=public.mentor_reserved_attempt(u,req,6,60);
