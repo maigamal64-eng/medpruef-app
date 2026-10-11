@@ -17,6 +17,15 @@ vi.mock("@/lib/admin/audit", () => ({
 vi.mock("@/lib/supabase", () => ({
   getServiceClient: () => ({
     from: () => ({
+      // The PATCH reads the current row first for the changed-field audit.
+      select: () => ({
+        eq: () => ({
+          maybeSingle: async () => ({
+            data: { question: "q", answer: "a", explanation: null, topic: "t", tags: [], is_active: true, difficulty: null },
+            error: null,
+          }),
+        }),
+      }),
       update: (u: unknown) => {
         h.updated.push(u);
         return { eq: async () => ({ error: null }) };
