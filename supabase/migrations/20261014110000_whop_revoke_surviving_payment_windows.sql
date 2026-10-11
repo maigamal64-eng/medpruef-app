@@ -11,7 +11,7 @@ LANGUAGE plpgsql SECURITY INVOKER SET search_path=public,pg_temp AS $$
 DECLARE
  u public.users%ROWTYPE; s public.subscriptions%ROWTYPE;
  expected jsonb; entry jsonb; matched text; survivors jsonb;
- owners jsonb := '{}'; affected_ids uuid[]; payment_id text;
+ owners jsonb := '{}'; canonical jsonb := '{}'; row_grants jsonb; affected_ids uuid[]; payment_id text;
  now_at timestamptz; affected_expiry timestamptz; independent boolean;
  end_at timestamptz; granted_at timestamptz; base_utc timestamp; added integer;
  kept uuid[] := '{}'; flipped uuid[] := '{}'; revoked boolean := false;
@@ -91,6 +91,12 @@ BEGIN
    ORDER BY sub.started_at NULLS FIRST,sub.id LOOP
   FOR entry IN SELECT value FROM jsonb_array_elements(coalesce(s.granted_payment_ids,'[]')) LOOP
    payment_id:=entry->>'payment_id';
+   IF nullif(payment_id,'') IS NOT NULL AND NOT coalesce(payment_id=ANY(p_payment_candidates),false) THEN
+    IF canonical ? payment_id AND canonical->payment_id IS DISTINCT FROM entry THEN
+     RAISE EXCEPTION 'Conflicting surviving payment metadata for %',payment_id USING ERRCODE='22023';
+    END IF;
+    canonical:=canonical || jsonb_build_object(payment_id,entry);
+   END IF;
    IF nullif(payment_id,'') IS NOT NULL AND NOT owners ? payment_id THEN
     owners:=owners || jsonb_build_object(payment_id,s.id::text);
    END IF;
@@ -114,14 +120,24 @@ BEGIN
    kept:=array_append(kept,s.id); CONTINUE;
   END IF;
   IF matched IS NULL THEN
-   UPDATE subscriptions SET status=p_kind,cancelled_at=now_at,updated_at=now_at WHERE id=s.id;
+   UPDATE subscriptions SET status=p_kind,cancelled_at=now_at,granted_payment_ids=coalesce(s.granted_payment_ids,'[]'),updated_at=now_at WHERE id=s.id;
    flipped:=array_append(flipped,s.id); CONTINUE;
   END IF;
-  SELECT coalesce(jsonb_agg(value ORDER BY ord),'[]') INTO survivors
-    FROM jsonb_array_elements(coalesce(s.granted_payment_ids,'[]')) WITH ORDINALITY AS e(value,ord)
-    WHERE nullif(value->>'payment_id','') IS NOT NULL
-      AND NOT coalesce(value->>'payment_id'=ANY(p_payment_candidates),false)
-      AND (NOT owners ? (value->>'payment_id') OR owners->>(value->>'payment_id')=s.id::text);
+  row_grants:='{}';
+  FOR entry IN SELECT value FROM jsonb_array_elements(coalesce(s.granted_payment_ids,'[]')) LOOP
+   payment_id:=entry->>'payment_id';
+   IF nullif(payment_id,'') IS NULL OR coalesce(payment_id=ANY(p_payment_candidates),false) THEN CONTINUE; END IF;
+   IF canonical ? payment_id AND canonical->payment_id IS DISTINCT FROM entry THEN
+    RAISE EXCEPTION 'Conflicting surviving payment metadata for %',payment_id USING ERRCODE='22023';
+   END IF;
+   canonical:=canonical || jsonb_build_object(payment_id,entry);
+   IF NOT owners ? payment_id OR owners->>payment_id=s.id::text THEN
+    row_grants:=row_grants || jsonb_build_object(payment_id,entry);
+   END IF;
+  END LOOP;
+  SELECT coalesce(jsonb_agg(value ORDER BY
+    CASE WHEN pg_input_is_valid(value->>'granted_at','timestamptz') THEN (value->>'granted_at')::timestamptz END,
+    value->>'payment_id'),'[]') INTO survivors FROM jsonb_each(row_grants);
   end_at:='epoch';
   FOR entry IN SELECT value FROM jsonb_array_elements(survivors)
     ORDER BY CASE WHEN pg_input_is_valid(value->>'granted_at','timestamptz') THEN (value->>'granted_at')::timestamptz END NULLS LAST LOOP
@@ -133,7 +149,15 @@ BEGIN
     RAISE EXCEPTION 'Invalid surviving granted_at on subscription %',s.id USING ERRCODE='22023';
    END IF;
    base_utc:=greatest(end_at,granted_at) AT TIME ZONE 'UTC';
-   added:=greatest(1,coalesce((entry->>'added_months')::integer,1));
+   IF NOT coalesce(pg_input_is_valid(entry->>'added_months','integer'),false) OR (entry->>'added_months')::integer<0 THEN
+    RAISE EXCEPTION 'Invalid surviving payment duration on subscription %',s.id USING ERRCODE='22023';
+   END IF;
+   added:=(entry->>'added_months')::integer;
+   IF added=0 THEN
+    -- Original 7-day trial plus 1-day floor, never extend paid time.
+    end_at:=greatest(end_at,granted_at+interval '192 hours');
+    CONTINUE;
+   END IF;
    end_at:=(date_trunc('month',base_utc)+make_interval(months=>added)
       +(base_utc-date_trunc('month',base_utc))) AT TIME ZONE 'UTC';
   END LOOP;
@@ -148,6 +172,12 @@ BEGIN
    flipped:=array_append(flipped,s.id);
   END IF;
  END LOOP;
+ -- The kept set includes untouched coverage, even if omitted by the caller.
+ SELECT coalesce(array_agg(DISTINCT id ORDER BY id),'{}') INTO kept FROM (
+   SELECT unnest(kept) AS id UNION
+   SELECT sub.id FROM subscriptions sub WHERE sub.user_id=p_user_id AND sub.status='active'
+     AND (sub.expires_at IS NULL OR sub.expires_at>now_at)
+ ) covering;
  SELECT EXISTS(SELECT 1 FROM subscriptions sub WHERE sub.user_id=p_user_id AND sub.status='active'
     AND (sub.expires_at IS NULL OR sub.expires_at>now_at)) INTO covered;
  IF NOT independent THEN

@@ -26,8 +26,8 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-10-11", tag: "fix",
     title: { de: "Zugang nach Erstattungen korrekt berechnen", en: "Calculate access correctly after refunds" },
     description: {
-      de: "Nach einer Erstattung wird der verbleibende Zugang aus den nicht erstatteten Zahlungen berechnet. Eine unbekannte Zahlung entzieht keinen bestehenden Zugang. Bei einer verzögerten Prüfung bleibt das bisherige Ablaufdatum erhalten.",
-      en: "After a refund, remaining access is calculated from payments that were not refunded. An unknown payment does not revoke existing access. A deferred review preserves the existing expiry date.",
+      de: "Nach einer Erstattung wird der verbleibende Zugang aus den nicht erstatteten Zahlungen berechnet. Eine unbekannte Zahlung entzieht keinen bestehenden Zugang. Eine kostenlose Testphase behält ihre ursprüngliche Laufzeit. Doppelte Zahlungen verlängern den Zugang nur einmal. Bei einer unterbrochenen Prüfung wird die Zugangsänderung beim nächsten Versuch abgeschlossen.",
+      en: "After a refund, remaining access is calculated from payments that were not refunded. An unknown payment does not revoke existing access. A free trial keeps its original duration. Duplicate payments extend access once. Interrupted access updates finish on the next retry.",
     },
   },
   {

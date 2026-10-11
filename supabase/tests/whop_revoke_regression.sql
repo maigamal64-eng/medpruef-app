@@ -62,7 +62,21 @@ BEGIN
   LATERAL jsonb_array_elements(s.granted_payment_ids) e WHERE e->>'payment_id'='pay_bank'),
   'Munir refunded payment removed from every history');
 END $$;
-GRANT ALL ON fixture_clock TO service_role;
+CREATE TEMP TABLE revoke_failures(mode text);
+CREATE FUNCTION pg_temp.fail_revoke_write() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+ IF TG_TABLE_NAME='subscriptions' THEN
+  IF NEW.status IS DISTINCT FROM OLD.status AND EXISTS(SELECT 1 FROM revoke_failures WHERE mode='status') THEN
+   RAISE EXCEPTION 'injected revoke status failure' USING ERRCODE='P0001';
+  END IF;
+ ELSIF EXISTS(SELECT 1 FROM revoke_failures WHERE mode='user') THEN
+  RAISE EXCEPTION 'injected revoke user failure' USING ERRCODE='P0001';
+ END IF;
+ RETURN NEW;
+END $$;
+CREATE TRIGGER test_revoke_status BEFORE UPDATE ON subscriptions FOR EACH ROW EXECUTE FUNCTION pg_temp.fail_revoke_write();
+CREATE TRIGGER test_revoke_user BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION pg_temp.fail_revoke_write();
+GRANT ALL ON fixture_clock,revoke_failures TO service_role;
 SET LOCAL ROLE service_role;
 SELECT pg_temp.reset_munir();
 SELECT * FROM commit_whop_revoke('00000000-0000-4000-8000-000000000004','refund:munir','refunded',
@@ -84,16 +98,16 @@ SELECT pg_temp.reset_munir();
 UPDATE subscriptions SET provider_payment_id='pay_bank',granted_payment_ids=granted_payment_ids->0 || '[]'::jsonb
  WHERE id='00000000-0000-4000-8000-000000000101';
 DO $$
-DECLARE before_user jsonb; r record;
+DECLARE r record;
 BEGIN
- SELECT to_jsonb(u) INTO before_user FROM users u;
  SELECT * INTO r FROM commit_whop_revoke('00000000-0000-4000-8000-000000000004','refund:sibling','refunded',
   'refund.created',pg_temp.snapshot(),ARRAY['pay_bank'],7);
  PERFORM pg_temp.assert_true((SELECT status='active' AND jsonb_array_length(granted_payment_ids)=1 FROM subscriptions
   WHERE id='00000000-0000-4000-8000-000000000101') AND cardinality(r.flipped_ids)=1,
   'mixed match leaves unmatched sibling row paid');
- PERFORM pg_temp.assert_true(cardinality(r.kept_active_ids)=0 AND r.had_other_active
-  AND before_user=(SELECT to_jsonb(u) FROM users u),'SQL reconciles only with kept>0 AND covered');
+ PERFORM pg_temp.assert_true(cardinality(r.kept_active_ids)=1 AND r.had_other_active
+  AND (SELECT tier_expires_at=card_grant+interval '1 month' FROM users,fixture_clock),
+  'SQL reconciles surviving coverage with kept>0 AND covered');
 END $$;
 
 -- A duplicate must return its receipt even with a stale caller snapshot.
@@ -241,6 +255,117 @@ SELECT * FROM commit_whop_revoke('00000000-0000-4000-8000-000000000004','refund:
  'refund.created',pg_temp.snapshot(),ARRAY['pay_card','pay_bank'],7);
 SELECT pg_temp.assert_true((SELECT tier='pro' AND tier_expires_at>clock_timestamp()+interval '11 months' FROM users),
  'independent manual Pro preserved');
+
+-- REVIEW2: trial-before-expiry
+SELECT pg_temp.reset_munir();
+DELETE FROM subscriptions WHERE id='00000000-0000-4000-8000-000000000101';
+DO $$
+DECLARE g timestamptz:=clock_timestamp()-interval '2 days'; r record;
+BEGIN
+ UPDATE subscriptions SET started_at=g,expires_at=g+interval '1 month 8 days',
+  granted_payment_ids=jsonb_build_array(
+   jsonb_build_object('payment_id','pay_trial','amount_cents',0,'added_months',0,'granted_at',g),
+   jsonb_build_object('payment_id','pay_bank','amount_cents',1900,'added_months',1,'granted_at',g+interval '1 day'));
+ UPDATE users SET tier_expires_at=g+interval '1 month 8 days';
+ SELECT * INTO r FROM commit_whop_revoke('00000000-0000-4000-8000-000000000004','refund:trial-before','refunded',
+  'refund.created',pg_temp.snapshot(),ARRAY['pay_bank'],7);
+ PERFORM pg_temp.assert_true(cardinality(r.kept_active_ids)=1 AND NOT r.pro_revoked
+  AND (SELECT expires_at=g+interval '8 days' AND jsonb_array_length(granted_payment_ids)=1 FROM subscriptions)
+  AND (SELECT tier='pro' AND tier_expires_at=g+interval '8 days' FROM users),'zero-month survivor preserves original eight-day trial');
+END $$;
+
+-- REVIEW2: trial-after-expiry
+SELECT pg_temp.reset_munir();
+DELETE FROM subscriptions WHERE id='00000000-0000-4000-8000-000000000101';
+DO $$
+DECLARE g timestamptz:=clock_timestamp()-interval '10 days'; r record;
+BEGIN
+ UPDATE subscriptions SET started_at=g,expires_at=g+interval '1 month 8 days',
+  granted_payment_ids=jsonb_build_array(
+   jsonb_build_object('payment_id','pay_trial','amount_cents',0,'added_months',0,'granted_at',g),
+   jsonb_build_object('payment_id','pay_bank','amount_cents',1900,'added_months',1,'granted_at',g+interval '7 days'));
+ UPDATE users SET tier_expires_at=g+interval '1 month 8 days';
+ SELECT * INTO r FROM commit_whop_revoke('00000000-0000-4000-8000-000000000004','refund:trial-after','refunded',
+  'refund.created',pg_temp.snapshot(),ARRAY['pay_bank'],7);
+ PERFORM pg_temp.assert_true(r.pro_revoked AND cardinality(r.flipped_ids)=1
+  AND (SELECT status='refunded' AND jsonb_array_length(granted_payment_ids)=1 FROM subscriptions)
+  AND (SELECT tier='free' AND tier_expires_at IS NULL FROM users),'expired zero-month trial cannot grant a month');
+END $$;
+
+-- REVIEW2: identical-survivor-duplicates
+SELECT pg_temp.reset_munir();
+DELETE FROM subscriptions WHERE id='00000000-0000-4000-8000-000000000101';
+UPDATE subscriptions SET granted_payment_ids=jsonb_build_array(granted_payment_ids->0,granted_payment_ids->0,granted_payment_ids->1);
+SELECT * FROM commit_whop_revoke('00000000-0000-4000-8000-000000000004','refund:duplicate-survivor','refunded',
+ 'refund.created',pg_temp.snapshot(),ARRAY['pay_bank'],7);
+SELECT pg_temp.assert_true((SELECT jsonb_array_length(granted_payment_ids)=1 AND expires_at=card_grant+interval '1 month'
+ FROM subscriptions,fixture_clock) AND (SELECT tier_expires_at=card_grant+interval '1 month' FROM users,fixture_clock),
+ 'identical survivor duplicates are counted and persisted once');
+
+-- REVIEW2: conflicting-survivor-duplicates
+SELECT pg_temp.reset_munir();
+DELETE FROM subscriptions WHERE id='00000000-0000-4000-8000-000000000101';
+DO $$
+DECLARE field text; original jsonb; conflict jsonb; before_rows jsonb; before_user jsonb; failed boolean;
+BEGIN
+ SELECT granted_payment_ids INTO original FROM subscriptions;
+ FOREACH field IN ARRAY ARRAY['amount_cents','added_months','granted_at'] LOOP
+  conflict:=jsonb_set(original->0,ARRAY[field],CASE WHEN field='granted_at' THEN to_jsonb('2026-01-01T00:00:00Z'::text) ELSE '2'::jsonb END);
+  UPDATE subscriptions SET granted_payment_ids=jsonb_build_array(original->0,conflict,original->1);
+  before_rows:=pg_temp.snapshot(); SELECT to_jsonb(u) INTO before_user FROM users u; failed:=false;
+  BEGIN
+   PERFORM * FROM commit_whop_revoke('00000000-0000-4000-8000-000000000004','refund:conflict','refunded',
+    'refund.created',pg_temp.snapshot(),ARRAY['pay_bank'],7);
+  EXCEPTION WHEN SQLSTATE '22023' THEN failed:=true;
+  END;
+  PERFORM pg_temp.assert_true(failed AND before_rows=pg_temp.snapshot() AND before_user=(SELECT to_jsonb(u) FROM users u)
+   AND NOT EXISTS(SELECT 1 FROM processed_webhook_events),'conflicting survivor '||field||' rejected atomically');
+ END LOOP;
+END $$;
+
+-- REVIEW2: omitted-untouched-coverage
+SELECT pg_temp.reset_munir();
+UPDATE subscriptions SET granted_payment_ids=jsonb_build_array(granted_payment_ids->0)
+ WHERE id='00000000-0000-4000-8000-000000000101';
+UPDATE subscriptions SET granted_payment_ids=jsonb_build_array(granted_payment_ids->1)
+ WHERE id='00000000-0000-4000-8000-000000000102';
+DO $$
+DECLARE r record;
+BEGIN
+ SELECT * INTO r FROM commit_whop_revoke('00000000-0000-4000-8000-000000000004','refund:untouched','refunded',
+  'refund.created',pg_temp.snapshot(ARRAY['00000000-0000-4000-8000-000000000102']::uuid[]),ARRAY['pay_bank'],7);
+ PERFORM pg_temp.assert_true(cardinality(r.kept_active_ids)=1 AND cardinality(r.flipped_ids)=1 AND r.had_other_active
+  AND (SELECT tier_expires_at=card_grant+interval '1 month' FROM users,fixture_clock),
+  'omitted untouched coverage joins kept set and shortens user expiry');
+END $$;
+
+-- REVIEW2: atomic-failure-redelivery
+-- Inject failures at status and user reconciliation writes. Every failed SQL
+-- statement (including a read failure) aborts this transaction, so no pending
+-- receipt is needed. A later delivery must still match the original history.
+DO $$
+DECLARE mode text; before_rows jsonb; before_user jsonb; failed boolean; r record; candidates text[];
+BEGIN
+ FOREACH mode IN ARRAY ARRAY['status','partial','full'] LOOP
+  PERFORM pg_temp.reset_munir();
+  INSERT INTO revoke_failures VALUES(CASE WHEN mode='status' THEN 'status' ELSE 'user' END);
+  candidates:=CASE WHEN mode='partial' THEN ARRAY['pay_bank'] ELSE ARRAY['pay_card','pay_bank'] END;
+  before_rows:=pg_temp.snapshot(); SELECT to_jsonb(u) INTO before_user FROM users u; failed:=false;
+  BEGIN
+   PERFORM * FROM commit_whop_revoke('00000000-0000-4000-8000-000000000004','refund:failure','refunded',
+    'refund.created',pg_temp.snapshot(),candidates,7);
+  EXCEPTION WHEN SQLSTATE 'P0001' THEN failed:=true;
+  END;
+  PERFORM pg_temp.assert_true(failed AND before_rows=pg_temp.snapshot() AND before_user=(SELECT to_jsonb(u) FROM users u)
+    AND NOT EXISTS(SELECT 1 FROM processed_webhook_events),mode||' failure rolls back status, history, user and receipt');
+  DELETE FROM revoke_failures;
+  SELECT * INTO r FROM commit_whop_revoke('00000000-0000-4000-8000-000000000004','refund:failure','refunded',
+    'refund.created',pg_temp.snapshot(),candidates,7);
+  PERFORM pg_temp.assert_true(NOT r.replayed AND EXISTS(SELECT 1 FROM processed_webhook_events)
+    AND (SELECT CASE WHEN mode='partial' THEN tier='pro' AND tier_expires_at=card_grant+interval '1 month'
+      ELSE tier='free' AND tier_expires_at IS NULL END FROM users,fixture_clock),mode||' redelivery completes reconciliation');
+ END LOOP;
+END $$;
 
 -- Snapshot mismatch must release all mutations by aborting before claim.
 SELECT pg_temp.reset_munir();
