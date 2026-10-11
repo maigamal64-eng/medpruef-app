@@ -40,7 +40,6 @@ import {
   Menu,
   MessageSquare,
   Moon,
-  Rocket,
   Server,
   Shield,
   ShieldAlert,
@@ -59,7 +58,6 @@ import { ShortcutHint } from "./_components/primitives";
 
 type SectionKey =
   | "overview"
-  | "launch"
   | "growth"
   | "revenue"
   | "content"
@@ -96,15 +94,6 @@ const NAV: NavSection[] = [
     shortcut: "o",
     permission: "overview.read",
     href: "/admin/overview",
-    items: [],
-  },
-  {
-    key: "launch",
-    label: "Plan & Actions",
-    icon: Rocket,
-    shortcut: "l",
-    permission: "overview.read",
-    href: "/admin/launch",
     items: [],
   },
   {
@@ -744,7 +733,6 @@ function ShortcutsDialog({ onClose }: { onClose: () => void }) {
         </div>
         <div className="p-4 text-xs text-[var(--mp-fg-muted)] grid grid-cols-2 gap-x-6 gap-y-2">
           <ShortcutRow keys="g o" label="Go to Overview" />
-          <ShortcutRow keys="g l" label="Go to Plan & Actions" />
           <ShortcutRow keys="g w" label="Go to Channels" />
           <ShortcutRow keys="g r" label="Go to Revenue" />
           <ShortcutRow keys="g m" label="Go to AI Mentor" />

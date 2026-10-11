@@ -12,11 +12,12 @@
  *      MEDPRUF-CAMPAIGNS.md.
  *   4. EXPERIMENTS (static): the revived Funnels/Experiments stubs — none yet.
  *
- * Boundary note (same rule as control-plane): this client page imports ONLY
- * pure data (growthChannels consts) + the funnel TYPE (duplicated minimally
- * below). The funnel COMPUTATION lives server-side in @/lib/admin/growthMetrics
- * (it pulls getServiceClient) and is reached exclusively via the admin-shelled
- * API route — it is NEVER imported into the client.
+ * Boundary note: this client page imports NO growth data. The strategy,
+ * published log and presence list (which name outreach targets and internal
+ * accounts) come from GET /api/stats/admin/growth/content, and the funnel from
+ * GET /api/stats/admin/growth; both are admin-shelled. Never import
+ * publishedContent or growthChannels here, not even types: anything a client
+ * module imports ships in a public JS chunk (ADM-04/ADM-08, 2026-10-11).
  *
  * Growth owns reach/funnel; euros (MRR, conversion, churn, LTV) stay on
  * /admin/control-plane.
@@ -44,18 +45,6 @@ import {
   formatPct,
   type StatusTone,
 } from "../_components/primitives";
-import {
-  PRESENCE_CHANNELS,
-  type ChannelStatus,
-} from "@/lib/admin/growthChannels";
-import {
-  CHANNEL_STRATEGY,
-  PUBLISHED,
-  PUBLISHED_LAST_UPDATED,
-  CHANNEL_LABEL as PUB_CHANNEL_LABEL,
-  type TierStatus,
-  type PublishStatus,
-} from "@/lib/admin/publishedContent";
 
 // Mirror of the API response shape (the server type lives with the computation
 // in @/lib/admin/growthMetrics; duplicated minimally here to avoid pulling a
@@ -78,6 +67,37 @@ interface GrowthMetrics {
   };
 }
 
+// Mirror of GET /api/stats/admin/growth/content (server data lives in
+// @/lib/admin/publishedContent + growthChannels; duplicated minimally here so
+// none of it is bundled into the client).
+type ChannelStatus = "live" | "ready" | "planned";
+type TierStatus = "running" | "ready" | "pending-[name]" | "later";
+type PublishStatus = "published" | "queued" | "drafted" | "sent";
+interface GrowthContent {
+  strategy: Array<{
+    tier: number;
+    label: string;
+    cash: string;
+    status: TierStatus;
+    moves: string[];
+    rationale: string;
+  }>;
+  published: Array<{
+    id: string;
+    channel: string;
+    date: string;
+    kind: string;
+    summary: string;
+    link?: string;
+    status: PublishStatus;
+    results: string;
+    metrics?: { label: string; value: string }[];
+  }>;
+  publishedLastUpdated: string;
+  channelLabels: Record<string, string>;
+  presence: Array<{ name: string; handle: string; status: ChannelStatus }>;
+}
+
 export default function AdminGrowthPage() {
   return <AdminPermissionGate permission="overview.read"><AdminGrowthPageContent /></AdminPermissionGate>;
 }
@@ -86,16 +106,33 @@ function AdminGrowthPageContent() {
   const [metrics, setMetrics] = useState<GrowthMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [content, setContent] = useState<GrowthContent | null>(null);
+  const [contentError, setContentError] = useState<string | null>(null);
 
   const hydrate = useCallback(async () => {
     setLoading(true);
+    const loadMetrics = async () => {
+      try {
+        const res = await fetch("/api/stats/admin/growth", { cache: "no-store" });
+        if (!res.ok) throw new Error(`growth ${res.status}`);
+        setMetrics((await res.json()) as GrowthMetrics);
+        setError(null);
+      } catch (e) {
+        setError((e as Error).message || "Failed to load growth metrics");
+      }
+    };
+    const loadContent = async () => {
+      try {
+        const res = await fetch("/api/stats/admin/growth/content", { cache: "no-store" });
+        if (!res.ok) throw new Error(`growth content ${res.status}`);
+        setContent((await res.json()) as GrowthContent);
+        setContentError(null);
+      } catch (e) {
+        setContentError((e as Error).message || "Failed to load channel content");
+      }
+    };
     try {
-      const res = await fetch("/api/stats/admin/growth", { cache: "no-store" });
-      if (!res.ok) throw new Error(`growth ${res.status}`);
-      setMetrics((await res.json()) as GrowthMetrics);
-      setError(null);
-    } catch (e) {
-      setError((e as Error).message || "Failed to load growth metrics");
+      await Promise.all([loadMetrics(), loadContent()]);
     } finally {
       setLoading(false);
     }
@@ -133,14 +170,29 @@ function AdminGrowthPageContent() {
       {/* ─── GROWTH FUNNEL (live hero) ───────────────────────────────── */}
       {!error && <FunnelBlock metrics={metrics} loading={loading} />}
 
-      {/* ─── CHANNEL STRATEGY (the fire-list) ────────────────────────── */}
-      <StrategySection />
+      {contentError && (
+        <div className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-600 dark:text-red-400 flex items-center gap-2">
+          <AlertCircle size={14} />
+          {contentError} <button type="button" className="ml-3 underline" onClick={() => void hydrate()}>Retry</button>
+        </div>
+      )}
 
-      {/* ─── PUBLISHED & RESULTS ─────────────────────────────────────── */}
-      <PublishedSection />
+      {content && (
+        <>
+          {/* ─── CHANNEL STRATEGY (the fire-list) ────────────────────── */}
+          <StrategySection strategy={content.strategy} />
 
-      {/* ─── PRESENCE CHANNELS (static) ──────────────────────────────── */}
-      <PresenceSection />
+          {/* ─── PUBLISHED & RESULTS ─────────────────────────────────── */}
+          <PublishedSection
+            published={content.published}
+            lastUpdated={content.publishedLastUpdated}
+            channelLabels={content.channelLabels}
+          />
+
+          {/* ─── PRESENCE CHANNELS ───────────────────────────────────── */}
+          <PresenceSection presence={content.presence} />
+        </>
+      )}
     </AdminPageShell>
   );
 }
@@ -249,17 +301,17 @@ const CHANNEL_LABEL: Record<ChannelStatus, string> = {
   planned: "Planned",
 };
 
-function PresenceSection() {
-  const liveCount = PRESENCE_CHANNELS.filter((c) => c.status === "live").length;
+function PresenceSection({ presence }: { presence: GrowthContent["presence"] }) {
+  const liveCount = presence.filter((c) => c.status === "live").length;
   return (
     <section className="space-y-3">
       <SectionHeading
         title="Presence channels"
         icon={Radio}
-        hint={`${liveCount} live · ${PRESENCE_CHANNELS.length} platforms · mirrors the presence console`}
+        hint={`${liveCount} live · ${presence.length} platforms · mirrors the presence console`}
       />
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        {PRESENCE_CHANNELS.map((c) => (
+        {presence.map((c) => (
           <div
             key={c.name}
             className="rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] px-4 py-3 flex items-center gap-3"
@@ -284,7 +336,7 @@ function PresenceSection() {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// Channel strategy — the fire-list (from publishedContent.ts)
+// Channel strategy — the fire-list (served by /api/stats/admin/growth/content)
 // ═══════════════════════════════════════════════════════════════════
 
 const TIER_TONE: Record<TierStatus, { label: string; tone: StatusTone }> = {
@@ -294,7 +346,7 @@ const TIER_TONE: Record<TierStatus, { label: string; tone: StatusTone }> = {
   later: { label: "Later", tone: "neutral" },
 };
 
-function StrategySection() {
+function StrategySection({ strategy }: { strategy: GrowthContent["strategy"] }) {
   return (
     <section className="space-y-3">
       <SectionHeading
@@ -303,7 +355,7 @@ function StrategySection() {
         hint="The fire-list: where the tight budget + effort go, best first"
       />
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        {CHANNEL_STRATEGY.map((t) => {
+        {strategy.map((t) => {
           const tone = TIER_TONE[t.status];
           return (
             <div
@@ -355,16 +407,24 @@ const PUB_STATUS_TONE: Record<
   drafted: { label: "Drafted", tone: "neutral" },
 };
 
-function PublishedSection() {
+function PublishedSection({
+  published,
+  lastUpdated,
+  channelLabels,
+}: {
+  published: GrowthContent["published"];
+  lastUpdated: string;
+  channelLabels: GrowthContent["channelLabels"];
+}) {
   return (
     <section className="space-y-3">
       <SectionHeading
         title="Published & results"
         icon={Megaphone}
-        hint={`What we put out + what it produced · updated ${PUBLISHED_LAST_UPDATED}`}
+        hint={`What we put out + what it produced · updated ${lastUpdated}`}
       />
       <div className="rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] overflow-hidden divide-y divide-[var(--mp-border-subtle)]">
-        {PUBLISHED.map((p) => {
+        {published.map((p) => {
           const st = PUB_STATUS_TONE[p.status];
           return (
             <div key={p.id} className="px-4 py-3 flex items-start gap-3">
@@ -372,7 +432,7 @@ function PublishedSection() {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-[var(--mp-surface-sunken)] text-[var(--mp-fg)]">
-                    {PUB_CHANNEL_LABEL[p.channel]}
+                    {channelLabels[p.channel] ?? p.channel}
                   </span>
                   <span className="text-[10px] uppercase tracking-wider text-[var(--mp-fg-subtle)]">
                     {p.kind}

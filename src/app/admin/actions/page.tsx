@@ -1,13 +1,7 @@
-"use client";
+import { redirect } from "next/navigation";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-
-// Tab consolidated (admin nav refactor 2026-06-30) -> /admin/launch
+// Tab consolidated (admin nav refactor 2026-06-30) into /admin/launch, which
+// was cut on 2026-10-11 (the daily board owns planning).
 export default function RedirectPage() {
-  const router = useRouter();
-  useEffect(() => {
-    router.replace("/admin/launch");
-  }, [router]);
-  return null;
+  redirect("/admin");
 }

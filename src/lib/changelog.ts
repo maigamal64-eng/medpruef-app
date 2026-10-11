@@ -23,6 +23,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    date: "2026-10-11",
+    tag: "admin",
+    title: { de: "Kanal-Strategie nur für Admins", en: "Channel strategy admin-only" },
+    description: {
+      de: "Strategie, Outreach-Ziele und Präsenzliste der Kanäle-Seite werden nur noch über eine Admin-Abfrage geladen und sind in keinem öffentlichen Skript enthalten. Plan & Actions wurde entfernt; alte Links führen zur Admin-Startseite.",
+      en: "The Channels page strategy, outreach targets and presence list now load only through an admin request and ship in no public script. Plan & Actions was removed; old links open the admin home.",
+    },
+  },
+  {
     date: "2026-10-11", tag: "admin",
     title: { de: "Mentor-Datenschutz, Belege und Betriebsansichten vorbereitet", en: "Mentor privacy, receipts and operations views prepared" },
     description: {

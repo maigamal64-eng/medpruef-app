@@ -144,7 +144,6 @@ export const PUBLISHED: PublishedItem[] = [
     kind: "comment",
     summary:
       "8 value-first comments on foreign-doctor recognition logistics (r/approbation, r/germany, r/Medizinstudium). Level-0: genuinely helpful, no MedPrüf mention while karma is low.",
-    link: "https://www.reddit.com/user/Desperate-Silver-624/",
     status: "published",
     results:
       "All 8 verified live, 0 removed, health green. A user REPLY landed on r/approbation (warm continuation): the topic (recognition logistics) is what works. Concentration risk flagged: 5/8 in r/approbation, now diversifying.",

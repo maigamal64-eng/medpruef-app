@@ -234,7 +234,7 @@ export const INTEGRATIONS: Integration[] = [
     status: "partial",
     does: "A live, value-first, health-gated Reddit cycle already runs on a real account. It does NOT need setup. It is deliberately holding at Level-0 (helpful comments, no MedPruf mention) until the account earns enough karma to mention the product safely.",
     functionality: [
-      "LIVE: scheduled cycle (~/.claude/scheduled-tasks/medpruef-reddit-cycle) on account Desperate-Silver-624, via the CDP bot-browser; value-first, capped 3/run + 10/day",
+      "LIVE: scheduled cycle (~/.claude/scheduled-tasks/medpruef-reddit-cycle) on a separate stealth account, via the CDP bot-browser; value-first, capped 3/run + 10/day",
       "Pain-point / intent mining + community mapping (research, live)",
       "Karma-aware escalation: it stays at Level-0 (no promo) until karma clears the safe threshold (~50); current karma ~4",
       "Governed only: vote + DM gated off, every call logged",
@@ -243,7 +243,7 @@ export const INTEGRATIONS: Integration[] = [
       "MedPruf's load-bearing organic channel. The rail is built and running; the real constraint is ACCOUNT KARMA, not creds. Posting the seed/promo now from a karma-4 account = near-instant ban, so the bot correctly holds. Nothing for [name] to set up or post here.",
     activation: null,
     activationNote:
-      "Already live: no creds, no setup, and NOTHING for [name] to post. The bot (Desperate-Silver-624) runs value-first and holds at Level-0 because promo is unsafe until karma reaches ~50 (currently ~4). The open work is karma-building plus wiring the auto-escalation from Level-0 to a gentle mention once karma clears, an agent (Herold) task, not an [name] action. See reviews/trial-feedback-2026-07-01.md FB-09.",
+      "Already live: no creds, no setup, and NOTHING for [name] to post. The bot runs value-first and holds at Level-0 because promo is unsafe until karma reaches ~50 (currently ~4). The open work is karma-building plus wiring the auto-escalation from Level-0 to a gentle mention once karma clears, an agent (Herold) task, not an [name] action. See reviews/trial-feedback-2026-07-01.md FB-09.",
   },
   {
     key: "bluesky",

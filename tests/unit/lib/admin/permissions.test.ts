@@ -56,6 +56,8 @@ describe("admin permissions", () => {
     expect(permissionForAdminRequest("/api/stats/admin/clarity", "GET")).toBe("system.read");
     expect(permissionForAdminRequest("/api/stats/admin/control-plane", "GET")).toBe("revenue.read");
     expect(permissionForAdminRequest("/api/stats/admin/growth", "GET")).toBe("revenue.read");
+    expect(permissionForAdminRequest("/api/stats/admin/growth/content", "GET")).toBe("revenue.read");
+    expect(permissionForAdminRequest("/api/stats/admin/growth/content", "POST")).toBeNull();
     expect(permissionForAdminRequest("/api/stats/admin/payments", "GET")).toBe("revenue.read");
     expect(permissionForAdminRequest("/api/stats/admin/questions", "GET")).toBe("content.read");
     expect(permissionForAdminRequest("/api/stats/admin/questions", "PATCH")).toBe("content.moderate");
