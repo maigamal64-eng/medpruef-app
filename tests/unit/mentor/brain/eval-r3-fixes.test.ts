@@ -7,9 +7,10 @@
  */
 import { describe, it, expect } from "vitest";
 import { getMentorFactsLoader } from "@/lib/mentor/facts-loader";
-import { INLINE_MARKER_RE, parseAnswer, stripInlineMarkers, stripProtocolLines } from "@/lib/mentor/prompt/protocol";
+import { INLINE_MARKER_RE, parseAnswer, stripInlineMarkers, stripProtocolLines, trimTruncatedAnswer } from "@/lib/mentor/prompt/protocol";
+import { createMentorBrain } from "@/lib/mentor/prompt/brain";
 import { stripProtocolMarkers, validateAnswer } from "@/lib/mentor/validator";
-import { fact } from "./helpers";
+import { ctx, fact, fakeDb } from "./helpers";
 
 /** The eval's leak predicate (tests/mentor-eval/lib/lang.ts LEAK_MARKERS, protocol part). */
 const leaks = (s: string) => ["@@BLOCK", "@@REFUSE", "@@LANG", "@@"].filter((m) => s.includes(m));
@@ -159,5 +160,64 @@ describe("validateAnswer: a personal study plan loses an unsupported sentence, n
     expect(one.blocks).toHaveLength(1);
     expect(one.blocks[0].text.length).toBeGreaterThan(0);
     expect(allText(one)).not.toContain("drei");
+  });
+});
+
+describe("a status-only block keeps its official read-on date (dl-sip4a-still-open-en, fix-r3-live4)", () => {
+  const L = getMentorFactsLoader();
+  const now = new Date("2026-10-12T08:00:00Z");
+
+  it("replay on the real facts: the close date sentence with 'read 2026-10-10' stays", async () => {
+    const brain = createMentorBrain({ facts: L, db: () => fakeDb({}).db, clock: () => now });
+    const r = await brain.runTool("get_dates", { exam_key: "sip4a", filing_university: "all" }, ctx({ now }));
+    const status = r.factIds.find((id) => id.startsWith("status.")) as string;
+    const raw = [
+      "@@LANG en",
+      `@@BLOCK facts=${status}`,
+      "Yes, the registration window for the SIP4a sitting on 18 Nov 2026 is open, and it closes on 19 Oct 2026 (MedUni Wien, Prüfungskalender (SIP), read 2026-10-10).",
+    ].join("\n");
+    const cited = await L.byIds(r.factIds);
+    const v = brain.validate(raw, cited);
+    expect(v.replaced).toBe(false);
+    expect(allText(v)).toContain("closes on 19 Oct 2026");
+    expect(allText(v)).toContain("read 2026-10-10");
+  });
+
+  it("only the alias rows' exact read-on date is added: another date in a status-only block is still replaced", async () => {
+    const brain = createMentorBrain({ facts: L, db: () => fakeDb({}).db, clock: () => now });
+    const r = await brain.runTool("get_dates", { exam_key: "sip4a", filing_university: "all" }, ctx({ now }));
+    const status = r.factIds.find((id) => id.startsWith("status.")) as string;
+    const cited = await L.byIds(r.factIds);
+    const v = brain.validate(`@@LANG en\n@@BLOCK facts=${status}\nIt closes on 21 Oct 2026 (read 2026-10-09).`, cited);
+    expect(v.replaced).toBe(true);
+    expect(allText(v)).not.toMatch(/21 Oct|2026-10-09/);
+  });
+});
+
+describe("trimTruncatedAnswer: only the last text line can be unfinished (ap-prices-de, fix-r3-live4)", () => {
+  it("keeps bullet lines without a full stop and drops the unfinished last line and trailing markers", () => {
+    const raw = [
+      "@@LANG de",
+      "@@BLOCK facts=app.billing.plans",
+      "Die MedPrüf-Tarife kosten:",
+      "- Einzelmonat: 19 € pro Monat (Abo, verlängert sich automatisch alle 30 Tage)",
+      "- Prüfungs-Kohorte: 129 € für 6 Monate (Einmalzahlung, verlängert sich nicht)",
+      "@@BLOCK facts=app.billing.plans",
+      "Die Abos werden zum Verlängerungsdatum abgebucht, bis du k",
+    ].join("\n");
+    expect(trimTruncatedAnswer(raw)).toBe(
+      [
+        "@@LANG de",
+        "@@BLOCK facts=app.billing.plans",
+        "Die MedPrüf-Tarife kosten:",
+        "- Einzelmonat: 19 € pro Monat (Abo, verlängert sich automatisch alle 30 Tage)",
+        "- Prüfungs-Kohorte: 129 € für 6 Monate (Einmalzahlung, verlängert sich nicht)",
+      ].join("\n")
+    );
+  });
+
+  it("thinking used the whole cap: a lone unfinished sentence still leaves nothing (pr-late-de)", () => {
+    const raw = "@@LANG de\n@@BLOCK facts=a.b\n- Bei SIP4a und SIP5a sind Nachmeldungen laut Prüfungskalender aus keinem Grund möglich,";
+    expect(parseAnswer(trimTruncatedAnswer(raw)).blocks).toEqual([]);
   });
 });

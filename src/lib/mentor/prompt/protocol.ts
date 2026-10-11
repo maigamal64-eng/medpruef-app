@@ -138,23 +138,31 @@ export function stripProtocolLines(partial: string): string {
 
 /**
  * An answer cut off by the output cap (stop_reason max_tokens) ends mid-word or
- * mid-marker. Keep everything up to the last complete sentence: a trailing
- * partial marker line is dropped, and the last text line is cut after its last
- * ".", "!" or "?" (dropped when it has none). Only removes text, so it cannot
- * add a claim; what is left is validated as usual.
+ * mid-marker. A trailing partial marker line is dropped, and the last text line
+ * is cut after its last ".", "!" or "?" (dropped when it has none); earlier
+ * lines are complete and kept. Only removes text, so it cannot add a claim;
+ * what is left is validated as usual.
  */
 export function trimTruncatedAnswer(raw: string): string {
   if (typeof raw !== "string" || raw.length === 0) return "";
   const lines = raw.replace(/\s+$/, "").split("\n");
-  while (lines.length > 0) {
-    const last = lines.pop() as string;
-    const t = last.trim();
-    if (t.length === 0 || t.startsWith("@@")) continue;
-    const m = /^([\s\S]*[.!?])(?=\s|$)/.exec(last);
-    if (m && /[\p{L}\p{N}]/u.test(m[1].replace(/^\s*-\s*/, ""))) {
-      lines.push(m[1]);
-      break;
+  const dropTrailingMarkers = () => {
+    while (lines.length > 0) {
+      const t = (lines[lines.length - 1] as string).trim();
+      if (t.length === 0 || t.startsWith("@@")) lines.pop();
+      else break;
     }
+  };
+  dropTrailingMarkers();
+  // Only the LAST text line can be unfinished: every earlier line ended with a
+  // newline the model wrote, so a bullet without a full stop ("- Einzelmonat:
+  // 19 EUR pro Monat") is complete and stays (eval round 3: ap-prices-de lost
+  // its whole price list over an unfinished closing sentence).
+  if (lines.length > 0) {
+    const last = lines.pop() as string;
+    const m = /^([\s\S]*[.!?])(?=\s|$)/.exec(last);
+    if (m && /[\p{L}\p{N}]/u.test(m[1].replace(/^\s*-\s*/, ""))) lines.push(m[1]);
+    dropTrailingMarkers();
   }
   return lines.join("\n");
 }

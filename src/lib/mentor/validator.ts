@@ -732,7 +732,18 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
       else rejected.push({ value: id, reason: "unknown_fact_id" });
     }
     const allowed = new Set<string>(globalUrls);
-    for (const f of used) for (const k of factAllowedKeys(f)) allowed.add(k);
+    for (const f of used) {
+      for (const k of factAllowedKeys(f)) allowed.add(k);
+      // A computed status (status.*) states values of the official sitting rows it
+      // was built from (its aliases), so their read-on date is the "Stand" of that
+      // block (eval round 3: dl-sip4a-still-open-en lost its whole "closes on
+      // 19 Oct 2026 (read 2026-10-10)" sentence). Only that full date is added.
+      if (!f.id.startsWith("status.")) continue;
+      for (const sid of f.aliases ?? []) {
+        const sf = lookup(sid);
+        if (sf && !isInternalFactId(sf.id) && /^\d{4}-\d{2}-\d{2}$/.test(sf.read_on)) allowed.add(`d:${sf.read_on}`);
+      }
+    }
 
     const answerIds = new Set(parsed.blocks.flatMap((x) => x.factIds));
     const internalReadOn = new Set(used.filter((f) => isInternalFactId(f.id)).map((f) => f.read_on));
