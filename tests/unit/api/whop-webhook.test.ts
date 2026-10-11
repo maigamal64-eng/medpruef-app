@@ -210,23 +210,24 @@ describe("POST /api/webhooks/whop: dunning (fix B)", () => {
 describe("POST /api/webhooks/whop: dunning grace is per-user (fix B)", () => {
   it("filters the recover:% grace lookup by the revoked user's id", async () => {
     const subscriptionExpiry = new Date(Date.now() + 86400_000).toISOString();
+    const updatedAt = new Date().toISOString();
+    const owner = { id: MEZOO, role: "user", tier: "pro", tier_expires_at: subscriptionExpiry, updated_at: updatedAt };
+    const sub = { id: "sub_1", user_id: MEZOO, tier: "first_month_19", status: "active",
+      payment_provider: "whop", expires_at: subscriptionExpiry, amount_cents: 1900,
+      started_at: updatedAt, updated_at: updatedAt, provider_payment_id: "pay_x", granted_payment_ids: [],
+      whop_membership_id: "mem_GONE" };
     h.handler = baseHandler((c) => {
-      // Both rows represent the same grant, not two Date.now() snapshots
-      // that can look like an independent override a millisecond apart.
-      if (c.table === "users" && c.op === "select" && eqVal(c, "id") === MEZOO) {
-        return { data: { id: MEZOO, tier: "pro", tier_expires_at: subscriptionExpiry } };
+      // Reads return fresh snapshots; writes return their affected row just
+      // like PostgREST UPDATE ... SELECT used by the revoke's CAS guards.
+      if (c.table === "users" && c.op === "select" && eqVal(c, "id") === MEZOO) return { data: structuredClone(owner) };
+      if (c.table === "users" && c.op === "update") {
+        Object.assign(owner, c.payload); return { data: [{ id: MEZOO }] };
       }
-      if (c.table === "subscriptions" && c.op === "select" && eqVal(c, "whop_membership_id") === "mem_GONE") {
-        return {
-          data: [
-            {
-              id: "sub_1", user_id: MEZOO, tier: "first_month_19", status: "active",
-              expires_at: subscriptionExpiry, amount_cents: 1900,
-              started_at: new Date().toISOString(), provider_payment_id: "pay_x", granted_payment_ids: [],
-              whop_membership_id: "mem_GONE",
-            },
-          ],
-        };
+      if (c.table === "subscriptions" && c.op === "select") {
+        return { data: (!eqVal(c, "status") || eqVal(c, "status") === sub.status) ? [structuredClone(sub)] : [] };
+      }
+      if (c.table === "subscriptions" && c.op === "update") {
+        Object.assign(sub, c.payload); return { data: [{ id: sub.id }] };
       }
       return undefined;
     }) as (call: unknown) => unknown;
@@ -242,20 +243,24 @@ describe("POST /api/webhooks/whop: dunning grace is per-user (fix B)", () => {
 
 describe("POST /api/webhooks/whop: independent manual coverage", () => {
   it.each([null, "2031-01-01T00:00:00Z"])("preserves manual Pro expiry %s when a shorter membership deactivates", async (manualExpiry) => {
+    const owner = { id: MEZOO, role: "user", tier: "pro", tier_expires_at: manualExpiry, updated_at: "2026-10-01T00:00:00Z" };
+    const sub = { id: "sub_paid", user_id: MEZOO, tier: "first_month_19", status: "active", payment_provider: "whop",
+      expires_at: "2030-01-01T00:00:00Z", amount_cents: 1900, started_at: "2029-12-01T00:00:00Z",
+      updated_at: "2026-10-01T00:00:00Z", provider_payment_id: "pay_manual_test", granted_payment_ids: [], whop_membership_id: "mem_MANUAL" };
     h.handler = baseHandler((c) => {
-      if (c.table === "users" && c.op === "select" && eqVal(c, "id") === MEZOO) {
-        return { data: { id: MEZOO, tier: "pro", tier_expires_at: manualExpiry } };
+      if (c.table === "users" && c.op === "select" && eqVal(c, "id") === MEZOO) return { data: structuredClone(owner) };
+      if (c.table === "subscriptions" && c.op === "select") {
+        return { data: (!eqVal(c, "status") || eqVal(c, "status") === sub.status) ? [structuredClone(sub)] : [] };
       }
-      if (c.table === "subscriptions" && c.op === "select" && eqVal(c, "whop_membership_id") === "mem_MANUAL") {
-        return { data: [{ id: "sub_paid", user_id: MEZOO, tier: "first_month_19", status: "active",
-          expires_at: "2030-01-01T00:00:00Z", amount_cents: 1900, started_at: "2029-12-01T00:00:00Z",
-          provider_payment_id: "pay_manual_test", granted_payment_ids: [], whop_membership_id: "mem_MANUAL" }] };
+      if (c.table === "subscriptions" && c.op === "update") {
+        Object.assign(sub, c.payload); return { data: [{ id: sub.id }] };
       }
       return undefined;
     }) as (call: unknown) => unknown;
     const res = await deliver("membership.deactivated", { id: "mem_MANUAL" });
     expect(res.status).toBe(200);
     expect(allCalls().some((c) => c.table === "users" && c.op === "update")).toBe(false);
+    expect(sub.status).toBe("cancelled");
   });
 });
 
@@ -280,6 +285,46 @@ describe("POST /api/webhooks/whop: trial reuse", () => {
     const body = await res.json();
     expect(body.reason).toBe("trial_already_used");
     expect(allCalls().some((c) => c.table === "subscriptions" && c.op === "insert")).toBe(false);
+  });
+});
+
+describe("POST /api/webhooks/whop: verify-first trial provenance", () => {
+  it.each([
+    ["no history", null, true],
+    ["a renewal only", [{ payment_id: "pay_R", amount_cents: 1900, added_months: 1, granted_at: "2026-10-08T00:00:00.000Z" }], false],
+  ] as const)("attaches the EUR 0 payment as the original trial when the verify row has %s", async (_label, history, withEnd) => {
+    h.handler = baseHandler((c) => {
+      if (c.table === "subscriptions" && c.op === "select" && eqVal(c, "tier") === "notes_pro_trial" && eqVal(c, "status") === "active") {
+        return { data: [{ id: "sub_verify", started_at: "2026-10-01T00:00:00+00:00", expires_at: "2026-10-09T00:00:00+00:00", granted_payment_ids: history }] };
+      }
+      return undefined;
+    }) as (call: unknown) => unknown;
+    const res = await deliver("payment.succeeded", {
+      ...renewal, id: "pay_TRIAL0", billing_reason: "subscription_create", amount_after_fees: 0,
+      metadata: { medpruef_user_id: MEZOO, tier: "notes_pro_trial" },
+    });
+    expect((await res.json()).deduped).toBe(true);
+    const attach = allCalls().find((c) => c.table === "subscriptions" && c.op === "update");
+    expect(eqVal(attach!, "id")).toBe("sub_verify");
+    expect((attach!.payload as { granted_payment_ids: unknown[] }).granted_payment_ids).toEqual([
+      { payment_id: "pay_TRIAL0", amount_cents: 0, added_months: 0, granted_at: "2026-10-01T00:00:00.000Z",
+        ...(withEnd ? { trial_ends_at: "2026-10-09T00:00:00.000Z" } : {}) },
+      ...(history ?? []),
+    ]);
+  });
+  it("leaves recorded trial provenance unchanged", async () => {
+    h.handler = baseHandler((c) => {
+      if (c.table === "subscriptions" && c.op === "select" && eqVal(c, "tier") === "notes_pro_trial" && eqVal(c, "status") === "active") {
+        return { data: [{ id: "sub_verify", started_at: "2026-10-01T00:00:00Z", expires_at: "2026-10-09T00:00:00Z",
+          granted_payment_ids: [{ payment_id: "mem_X", amount_cents: 0, added_months: 0, granted_at: "2026-10-01T00:00:00Z" }] }] };
+      }
+      return undefined;
+    }) as (call: unknown) => unknown;
+    await deliver("payment.succeeded", {
+      ...renewal, id: "pay_TRIAL0", billing_reason: "subscription_create", amount_after_fees: 0,
+      metadata: { medpruef_user_id: MEZOO, tier: "notes_pro_trial" },
+    });
+    expect(allCalls().some((c) => c.table === "subscriptions" && c.op === "update")).toBe(false);
   });
 });
 

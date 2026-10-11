@@ -48,6 +48,8 @@ export interface GrantedPaymentEntry {
   amount_cents: number | null;
   added_months: number;
   granted_at: string;
+  /** Zero-month trial entries only: the trial's actual end (trial/verify). */
+  trial_ends_at?: string;
 }
 
 interface GrantArgs {

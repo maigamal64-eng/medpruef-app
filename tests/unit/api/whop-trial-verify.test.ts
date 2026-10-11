@@ -75,6 +75,15 @@ describe("/api/whop/trial/verify", () => {
     const insert = (h.calls as FakeCall[]).find((c) => c.table === "subscriptions" && c.op === "insert");
     expect((insert!.payload as { whop_membership_id: string }).whop_membership_id).toBe("mem_NEW");
   });
+  it("records the trial as zero-month provenance with its actual end", async () => {
+    const POST = await load();
+    await POST(req());
+    const payload = (h.calls as FakeCall[]).find((c) => c.table === "subscriptions" && c.op === "insert")!.payload as {
+      expires_at: string; started_at: string; granted_payment_ids: Array<Record<string, unknown>>;
+    };
+    expect(payload.granted_payment_ids).toEqual([{ payment_id: "mem_NEW", amount_cents: 0, added_months: 0,
+      granted_at: payload.started_at, trial_ends_at: payload.expires_at }]);
+  });
 
   it("refuses a second free window on an account that already used its trial", async () => {
     h.priorTrials = [{ id: "old", status: "expired", expires_at: "2026-09-01T00:00:00Z", whop_membership_id: "mem_OLD", provider_payment_id: "pay_old" }];

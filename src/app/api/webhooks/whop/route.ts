@@ -520,12 +520,39 @@ export async function POST(req: NextRequest) {
     if (isTrialStart) {
       const { data: existingTrial } = await sb
         .from("subscriptions")
-        .select("id")
+        .select("id, started_at, expires_at, granted_payment_ids")
         .eq("user_id", userId)
         .eq("tier", "notes_pro_trial")
         .eq("status", "active")
         .limit(1);
       if (existingTrial && existingTrial.length > 0) {
+        // A verify-first row written before trial provenance has no zero-month
+        // entry. Attach this EUR 0 payment as the original trial, so a later
+        // renewal refund keeps the trial window instead of revoking it.
+        const trialRow = existingTrial[0] as {
+          id: string; started_at: string | null; expires_at: string | null;
+          granted_payment_ids: Array<{ added_months?: number }> | null;
+        };
+        const history = Array.isArray(trialRow.granted_payment_ids) ? trialRow.granted_payment_ids : [];
+        if (!history.some((entry) => entry?.added_months === 0)) {
+          const startedIso = trialRow.started_at && Number.isFinite(Date.parse(trialRow.started_at))
+            ? new Date(trialRow.started_at).toISOString() : new Date().toISOString();
+          const trialEntry = {
+            payment_id: f.paymentId, amount_cents: 0, added_months: 0, granted_at: startedIso,
+            ...(history.length === 0 && trialRow.expires_at ? { trial_ends_at: new Date(trialRow.expires_at).toISOString() } : {}),
+          };
+          let attach = sb.from("subscriptions")
+            .update({ granted_payment_ids: [trialEntry, ...history], updated_at: new Date().toISOString() })
+            .eq("id", trialRow.id);
+          attach = trialRow.granted_payment_ids == null ? attach.is("granted_payment_ids", null)
+            : attach.filter("granted_payment_ids", "eq", JSON.stringify(trialRow.granted_payment_ids));
+          const { error: attachError } = await attach;
+          if (attachError) {
+            // Non-fatal: the revoke path reconstructs a verify-first trial
+            // from started_at when this provenance is missing.
+            Sentry.captureException(attachError, { tags: { route: "webhooks/whop", step: "trial_provenance_attach" }, extra: { userId } });
+          }
+        }
         await sb
           .from("users")
           .update({ tier: "pro", updated_at: new Date().toISOString() })
@@ -827,14 +854,13 @@ export async function POST(req: NextRequest) {
  * granted_payment_ids entries. Walks the entries chronologically with the
  * same extension math the grant used: each payment's window starts at
  * max(current end, that payment's granted_at) and adds its added_months.
- * An empty survivor list collapses to the epoch (no window remains).
+ * An empty survivor list collapses to `start` (the epoch unless the row was
+ * queued behind an earlier surviving row).
  */
-function recomputeExpiryFromEntries(
-  surviving: Array<{ payment_id: string; added_months: number; granted_at: string }>
-): Date {
+function recomputeExpiryFromEntries(surviving: RevokeEntry[], start: Date = new Date(0)): Date {
   // A stacked row start can include the refunded window. Only the surviving
-  // payments may establish the remaining window.
-  let end = new Date(0);
+  // payments, queued after any surviving earlier row, establish the window.
+  let end = start;
   const sorted = [...surviving].sort(
     (a, b) => Date.parse(a.granted_at) - Date.parse(b.granted_at)
   );
@@ -845,48 +871,279 @@ function recomputeExpiryFromEntries(
     if (!Number.isInteger(e.added_months) || e.added_months < 0) {
       throw new Error("Invalid surviving payment duration");
     }
-    // A zero-month entry is the original 7-day trial plus its 1-day floor.
-    // It cannot extend a later paid window or create a monthly grant.
+    // A zero-month entry is the original trial: its recorded end, else the
+    // 7-day trial plus its 1-day floor. It never extends a later paid window.
     end = e.added_months === 0
-      ? new Date(Math.max(end.getTime(), grantedMs + 8 * 86400_000))
+      ? new Date(Math.max(end.getTime(), trialEndMs(e, grantedMs)))
       : computeExpiry(e.added_months, base);
   }
   return end;
 }
 
+const TRIAL_FLOOR_MS = 8 * 86400_000;
+const STACK_TOLERANCE_MS = 60_000;
+// trial/verify records the membership's real trial end. Anything missing or
+// outside one month of the grant falls back to the standard 8-day window.
+function trialEndMs(e: RevokeEntry, grantedMs: number): number {
+  const recorded = Date.parse(e.trial_ends_at ?? "");
+  return Number.isFinite(recorded) && recorded >= grantedMs && recorded <= grantedMs + 31 * 86400_000
+    ? recorded : grantedMs + TRIAL_FLOOR_MS;
+}
+
+interface RevokeEntry {
+  payment_id: string;
+  amount_cents: number | null;
+  added_months: number;
+  granted_at: string;
+  trial_ends_at?: string;
+}
+
+interface RevokeSub {
+  id: string;
+  user_id: string;
+  tier: string;
+  status: string;
+  expires_at: string | null;
+  amount_cents: number | null;
+  started_at: string | null;
+  provider_payment_id: string | null;
+  updated_at: string | null;
+  whop_membership_id: string | null;
+  granted_payment_ids: RevokeEntry[] | null;
+}
+
+// Verify-first trial rows written before trial provenance carry no zero-month
+// entry: verify stamped started_at at trial start and only later paid
+// renewals were recorded. Reconstruct that original trial from started_at.
+// A row first created by a paid grant has started_at == its first grant.
+function revokeEntries(sub: RevokeSub): RevokeEntry[] {
+  const entries = (sub.granted_payment_ids ?? []).filter(entry => entry?.payment_id);
+  if (sub.tier !== "notes_pro_trial" || entries.some(entry => entry.added_months === 0)) return entries;
+  const startedMs = Date.parse(sub.started_at ?? "");
+  if (!Number.isFinite(startedMs) ||
+      entries.some(entry => !(Date.parse(entry.granted_at) > startedMs + STACK_TOLERANCE_MS))) return entries;
+  return [{ payment_id: `trial:${sub.id}`, amount_cents: 0, added_months: 0,
+    granted_at: new Date(startedMs).toISOString() }, ...entries];
+}
+
+// A legacy stacked row was queued behind other time: its window starts after
+// its own first payment. Only such rows inherit a queue position.
+function isStackedRow(sub: RevokeSub, entries: RevokeEntry[]): boolean {
+  const startedMs = Date.parse(sub.started_at ?? "");
+  const grants = entries.map(entry => Date.parse(entry.granted_at));
+  return Number.isFinite(startedMs) && grants.length > 0 && grants.every(Number.isFinite) &&
+    startedMs > Math.min(...grants) + STACK_TOLERANCE_MS;
+}
+
+const REVOKE_COLUMNS = "id, user_id, tier, status, expires_at, amount_cents, started_at, provider_payment_id, granted_payment_ids, whop_membership_id, updated_at";
+interface RevokeOwner {
+  tier: string; role: string; tier_expires_at: string | null; updated_at: string | null;
+}
 interface PendingWhopRevoke {
   state: "pending" | "complete";
   user_id: string;
   event: string;
   kind: WhopRevokeKind;
   independent_coverage: boolean;
+  owner_snapshot: RevokeOwner;
+  entitlement_update?: RevokeOwner;
+  subscription_owner_snapshot?: RevokeOwner;
+  payment_candidates: string[];
+  original_subscriptions: RevokeSub[];
   ledger_applied?: boolean;
-  updates: Array<{ id: string; values: {
-    status?: string; cancelled_at?: string; expires_at?: string;
+  updates: Array<{ id: string; snapshot: RevokeSub; values: {
+    status?: string; cancelled_at?: string; expires_at?: string; amount_cents?: number | null;
     provider_payment_id?: string; granted_payment_ids?: unknown[]; updated_at: string;
   } }>;
   flipped_ids: string[];
   kept_active_ids: string[];
 }
 
-// The fallback has no cross-table transaction. Persist the entire revoke plan
-// before any ledger write so retries do not need the removed payment history.
+function planWhopRevoke(pending: PendingWhopRevoke, rows: RevokeSub[]): PendingWhopRevoke {
+  const nowMs = Date.now();
+  const nowIso = new Date(nowMs).toISOString();
+  const candidates = pending.payment_candidates;
+  const byStart = (a: RevokeSub, b: RevokeSub) =>
+    (Date.parse(a.started_at ?? "") || 0) - (Date.parse(b.started_at ?? "") || 0) || a.id.localeCompare(b.id);
+  const active = rows.filter(row => row.status === "active");
+  const affected = rows.filter(row => pending.original_subscriptions.some(original => original.id === row.id) ||
+    (row.status === "active" && (row.granted_payment_ids ?? []).some(e => candidates.includes(e.payment_id))));
+  const affectedIds = new Set(affected.map(row => row.id));
+  // A retry may resume after this refund already left a row: the original
+  // snapshot still proves that later stacked rows lost their queue position.
+  const originallyMatched = new Set(pending.original_subscriptions
+    .filter(row => (row.granted_payment_ids ?? []).some(e => candidates.includes(e.payment_id))).map(row => row.id));
+  const owners = new Map<string, string>();
+  const ordered = [...active].sort(byStart);
+  for (const row of ordered) {
+    if (row.provider_payment_id && !owners.has(row.provider_payment_id)) owners.set(row.provider_payment_id, row.id);
+  }
+  const canonical = new Map<string, string>();
+  for (const row of [...ordered, ...affected.filter(row => row.status !== "active")]) {
+    for (const entry of row.granted_payment_ids ?? []) {
+      if (!entry?.payment_id || candidates.includes(entry.payment_id)) continue;
+      const metadata = JSON.stringify(entry, Object.keys(entry).sort());
+      if (canonical.has(entry.payment_id) && canonical.get(entry.payment_id) !== metadata) {
+        throw new Error("Conflicting surviving payment metadata");
+      }
+      canonical.set(entry.payment_id, metadata);
+      if (row.status === "active" && !owners.has(entry.payment_id)) owners.set(entry.payment_id, row.id);
+    }
+  }
+  const survivorsOf = (sub: RevokeSub, entries: RevokeEntry[]) =>
+    [...new Map(entries.filter(entry => !candidates.includes(entry.payment_id) &&
+      (!owners.has(entry.payment_id) || owners.get(entry.payment_id) === sub.id))
+      .map(entry => [entry.payment_id, entry])).values()]
+      .sort((a, b) => Date.parse(a.granted_at) - Date.parse(b.granted_at) || a.payment_id.localeCompare(b.payment_id));
+  const plan: PendingWhopRevoke = { ...pending, updates: [], flipped_ids: [], kept_active_ids: [] };
+  // Walk affected and active rows in queue order. A stacked row's surviving
+  // window starts after the latest surviving earlier row, never after time
+  // that this refund removed.
+  let queueEnd = 0;
+  let queueUnbounded = false;
+  let changedBefore = false;
+  const sequence = [...new Map([...affected, ...active].map(row => [row.id, row])).values()].sort(byStart);
+  for (const sub of sequence) {
+    const entries = revokeEntries(sub);
+    const matched = entries.some(entry => candidates.includes(entry.payment_id));
+    const storedMs = sub.expires_at == null ? null : Date.parse(sub.expires_at);
+    const stacked = isStackedRow(sub, entries);
+    // undefined: this row no longer covers anything after the plan.
+    let endMs: number | null | undefined = sub.status === "active" ? storedMs : undefined;
+    const windowFor = (surviving: RevokeEntry[]) => {
+      const rebuilt = recomputeExpiryFromEntries(surviving, new Date(stacked ? queueEnd : 0)).getTime();
+      return storedMs != null && Number.isFinite(storedMs) ? Math.min(rebuilt, storedMs) : rebuilt;
+    };
+    if (!affectedIds.has(sub.id) || (candidates.length > 0 && !matched)) {
+      // Untouched by this payment: never replay saved survivor values over
+      // the current ledger, but a stacked row still loses removed queue time.
+      if (sub.status === "active" && candidates.length > 0 && changedBefore && stacked && !queueUnbounded &&
+          storedMs != null && Number.isFinite(storedMs)) {
+        const rebuilt = windowFor(survivorsOf(sub, entries));
+        if (rebuilt < storedMs) {
+          plan.updates.push({ id: sub.id, snapshot: sub, values: { expires_at: new Date(rebuilt).toISOString(), updated_at: nowIso } });
+          endMs = rebuilt;
+        }
+      }
+      if (affectedIds.has(sub.id)) {
+        // A prior attempt (or another refund) already removed these payments.
+        if (sub.status === "active") plan.kept_active_ids.push(sub.id);
+        else if (sub.status === pending.kind) plan.flipped_ids.push(sub.id);
+        if (originallyMatched.has(sub.id)) changedBefore = true;
+      } else if (endMs !== storedMs && endMs != null && endMs > nowMs) {
+        plan.kept_active_ids.push(sub.id);
+      }
+    } else if (pending.kind === "cancelled" && sub.status === "active" && sub.tier === "notes_pro_trial" &&
+        Number(sub.amount_cents ?? 0) === 0 && entries.every(entry => entry.added_months === 0) &&
+        sub.expires_at && Date.parse(sub.expires_at) > nowMs) {
+      plan.kept_active_ids.push(sub.id);
+    } else if (!matched) {
+      endMs = undefined;
+      if (sub.status === pending.kind) { plan.flipped_ids.push(sub.id); continue; }
+      // A membership-only cancellation has no removable payment identity.
+      // A changed row requires the transactional RPC, never a stale overwrite.
+      const original = pending.original_subscriptions.find(row => row.id === sub.id);
+      if (!original || JSON.stringify(sub) !== JSON.stringify(original)) throw new Error("Membership ledger changed; retry atomically");
+      plan.updates.push({ id: sub.id, snapshot: sub, values: { status: pending.kind, cancelled_at: nowIso,
+        granted_payment_ids: (sub.granted_payment_ids ?? []).filter(entry => entry?.payment_id), updated_at: nowIso } });
+      plan.flipped_ids.push(sub.id);
+    } else {
+      changedBefore = true;
+      const surviving = survivorsOf(sub, entries);
+      const expiresMs = windowFor(surviving);
+      // The grant path can leave the paid renewal amount on a trial-tier row.
+      // Restore zero-only trial provenance; paid survivors retain their amount.
+      const amountCents = surviving.length > 0 && surviving.every(entry => entry.added_months === 0) ? 0 : sub.amount_cents;
+      if (sub.status === "active" && surviving.length > 0 && expiresMs > nowMs) {
+        plan.updates.push({ id: sub.id, snapshot: sub, values: { expires_at: new Date(expiresMs).toISOString(), amount_cents: amountCents,
+          provider_payment_id: surviving[surviving.length - 1].payment_id, granted_payment_ids: surviving, updated_at: nowIso } });
+        plan.kept_active_ids.push(sub.id);
+        endMs = expiresMs;
+      } else {
+        plan.updates.push({ id: sub.id, snapshot: sub, values: { status: pending.kind, cancelled_at: nowIso,
+          amount_cents: amountCents, granted_payment_ids: surviving, updated_at: nowIso } });
+        plan.flipped_ids.push(sub.id);
+        endMs = undefined;
+      }
+    }
+    if (endMs === null) queueUnbounded = true;
+    else if (endMs !== undefined && Number.isFinite(endMs)) queueEnd = Math.max(queueEnd, endMs);
+  }
+  return plan;
+}
+
+// PostgREST timestamps may use +00:00 and six fractional digits, while
+// planned writes use JavaScript ISO Z strings. Compare instants, retaining
+// PostgreSQL's sub-millisecond version precision for updated_at snapshots.
+function sameTimestamp(a: string | null | undefined, b: string | null | undefined): boolean {
+  if (a === b) return true;
+  if (a == null || b == null || !Number.isFinite(Date.parse(a)) || Date.parse(a) !== Date.parse(b)) return false;
+  const micros = (value: string) => (value.match(/\.(\d+)(?:Z|[+-]\d{2}(?::?\d{2})?)$/i)?.[1] ?? "")
+    .padEnd(6, "0").slice(3, 6);
+  return micros(a) === micros(b);
+}
+
+// Provenance compares the entitlement only. users.updated_at also moves on
+// profile edits, so it is a CAS version for the write, never proof of a
+// grant. Every audited grant (admin_grant_entitlement) moves the expiry.
+function sameOwner(a: RevokeOwner, b: RevokeOwner | undefined): boolean {
+  return !!b && a.tier === b.tier && a.role === b.role && sameTimestamp(a.tier_expires_at, b.tier_expires_at);
+}
+
+// Durable intent plus fresh-ledger compare-and-swap writes makes removal
+// idempotent even when a write succeeds but the following receipt write fails.
 async function finishPendingWhopRevoke(
   sb: ReturnType<typeof getServiceClient>, claimKey: string, pending: PendingWhopRevoke
 ): Promise<NextResponse> {
   const userId = pending.user_id;
   try {
-    if (!pending.ledger_applied) {
-      for (const update of pending.updates) {
-        const { error } = await sb.from("subscriptions").update(update.values)
-          .eq("id", update.id).eq("user_id", userId);
-        if (error) throw error;
-      }
-      pending = { ...pending, ledger_applied: true };
+    if (!pending.owner_snapshot || !pending.original_subscriptions || !pending.payment_candidates) {
+      throw new Error("Legacy pending revoke requires atomic reconciliation");
+    }
+    const { data: freshRows, error: ledgerReadError } = await sb.from("subscriptions")
+      .select(REVOKE_COLUMNS).eq("user_id", userId).eq("payment_provider", "whop");
+    if (ledgerReadError) throw ledgerReadError;
+    const { data: beforeOwner, error: beforeOwnerError } = await sb.from("users")
+      .select("tier, role, tier_expires_at, updated_at").eq("id", userId).maybeSingle();
+    if (beforeOwnerError || !beforeOwner) throw beforeOwnerError ?? new Error("Account coverage unavailable");
+    const coveringBefore = (freshRows ?? []).filter(row => row.status === "active" &&
+      (row.expires_at == null || Date.parse(row.expires_at) > Date.now()));
+    const expiryBefore = coveringBefore.length === 0 ? undefined : coveringBefore.some(row => row.expires_at == null) ? null
+      : new Date(Math.max(...coveringBefore.map(row => Date.parse(row.expires_at!)))).toISOString();
+    const representedOriginal = pending.independent_coverage && sameOwner(beforeOwner as RevokeOwner, pending.owner_snapshot);
+    if (sameTimestamp(beforeOwner.tier_expires_at, expiryBefore) && (representedOriginal ||
+        (!sameOwner(beforeOwner as RevokeOwner, pending.owner_snapshot) &&
+         !sameOwner(beforeOwner as RevokeOwner, pending.subscription_owner_snapshot)))) {
+      // Another grant/revoke may already have reconciled this user's current
+      // ledger. Persist that observation BEFORE removal, so a failed phase
+      // write cannot make its unreconciled expiry look like a manual grant.
+      // A purchase between the initial ledger and owner reads can make the
+      // original independence decision stale too. Current ledger provenance
+      // takes precedence over that earlier inferred decision.
+      pending = { ...pending, subscription_owner_snapshot: beforeOwner as RevokeOwner,
+        independent_coverage: representedOriginal ? false : pending.independent_coverage };
       const { error } = await sb.from("processed_webhook_events").update({ payload: pending })
         .eq("provider", "whop").eq("event_id", claimKey);
       if (error) throw error;
     }
+    pending = planWhopRevoke(pending, (freshRows ?? []) as RevokeSub[]);
+    for (const update of pending.updates) {
+      let write = sb.from("subscriptions").update(update.values).eq("id", update.id).eq("user_id", userId)
+        .eq("payment_provider", "whop");
+      const snapshot = update.snapshot;
+      for (const column of ["tier", "status", "expires_at", "amount_cents", "started_at", "provider_payment_id", "whop_membership_id", "updated_at"] as const) {
+        write = snapshot[column] == null ? write.is(column, null) : write.eq(column, snapshot[column]);
+      }
+      write = snapshot.granted_payment_ids == null ? write.is("granted_payment_ids", null)
+        : write.filter("granted_payment_ids", "eq", JSON.stringify(snapshot.granted_payment_ids));
+      const { data: changed, error } = await write.select("id");
+      if (error) throw error;
+      if (changed?.length !== 1) throw new Error("Subscription changed; retry revoke from fresh ledger");
+    }
+    pending = { ...pending, ledger_applied: true };
+    const { error: phaseError } = await sb.from("processed_webhook_events").update({ payload: pending })
+      .eq("provider", "whop").eq("event_id", claimKey);
+    if (phaseError) throw phaseError;
     const nowMs = Date.now();
     const nowIso = new Date(nowMs).toISOString();
     const { data: activeRows, error: coverageError } = await sb.from("subscriptions")
@@ -896,13 +1153,29 @@ async function finishPendingWhopRevoke(
     const keptIds = Array.from(new Set([...pending.kept_active_ids, ...coverage.map(row => row.id)]));
     const covered = coverage.length > 0;
     let proRevoked = false;
-    if (!pending.independent_coverage) {
+    const { data: currentOwner, error: ownerError } = await sb.from("users")
+      .select("tier, role, tier_expires_at, updated_at").eq("id", userId).maybeSingle();
+    if (ownerError || !currentOwner) throw ownerError ?? new Error("Account coverage unavailable");
+    const current = currentOwner as RevokeOwner;
+    const unchangedOwner = sameOwner(current, pending.owner_snapshot);
+    const ownPreviousWrite = sameOwner(current, pending.entitlement_update) ||
+      sameOwner(current, pending.subscription_owner_snapshot);
+    // A changed live Pro entitlement not explained by current subscription
+    // coverage is an independent owner grant. The original unreconciled
+    // refunded expiry is explicitly exempt from this inference.
+    const coveringExpiry = covered ? (coverage.some(row => row.expires_at == null) ? null
+      : new Date(Math.max(...coverage.map(row => Date.parse(row.expires_at!)))).toISOString()) : undefined;
+    const independent = current.role === "admin" || current.tier === "admin" ||
+      (unchangedOwner && pending.independent_coverage) ||
+      (!unchangedOwner && !ownPreviousWrite && current.tier === "pro" &&
+        (current.tier_expires_at == null || Date.parse(current.tier_expires_at) > nowMs) &&
+        !sameTimestamp(current.tier_expires_at, coveringExpiry));
+    let desired: RevokeOwner | undefined;
+    if (!independent) {
       if (keptIds.length > 0 && covered) {
-        const expiresAt = coverage.some(row => row.expires_at == null) ? null
-          : new Date(Math.max(...coverage.map(row => Date.parse(row.expires_at!)))).toISOString();
-        const { error } = await sb.from("users").update({ tier_expires_at: expiresAt, updated_at: nowIso })
-          .eq("id", userId).neq("tier", "admin").neq("role", "admin");
-        if (error) throw error;
+        // Surviving paid coverage establishes Pro as well as its window: a
+        // preceding grant may have written the row but not the user.
+        desired = { ...current, tier: "pro", tier_expires_at: coveringExpiry!, updated_at: nowIso };
       } else if (!covered) {
         const days = Number((process.env.WHOP_DUNNING_GRACE_DAYS ?? "7").trim() || "7");
         const since = new Date(nowMs - (Number.isFinite(days) && days > 0 ? days : 7) * 86400_000).toISOString();
@@ -916,12 +1189,25 @@ async function finishPendingWhopRevoke(
             note: "user downgrade skipped: dunning recovery in flight",
           });
         } else {
-          const { error } = await sb.from("users").update({ tier: "free", tier_expires_at: null, updated_at: nowIso })
-            .eq("id", userId).neq("tier", "admin").neq("role", "admin");
-          if (error) throw error;
+          desired = { ...current, tier: "free", tier_expires_at: null, updated_at: nowIso };
           proRevoked = true;
         }
       }
+    }
+    if (desired) {
+      // Save the intended output BEFORE the user CAS. On a completion failure
+      // we recognize our own write without confusing it with a manual grant.
+      pending = { ...pending, entitlement_update: desired };
+      const { error: intentError } = await sb.from("processed_webhook_events").update({ payload: pending })
+        .eq("provider", "whop").eq("event_id", claimKey);
+      if (intentError) throw intentError;
+      let write = sb.from("users").update({ tier: desired.tier, tier_expires_at: desired.tier_expires_at, updated_at: nowIso })
+        .eq("id", userId).eq("tier", current.tier).eq("role", current.role);
+      write = current.tier_expires_at == null ? write.is("tier_expires_at", null) : write.eq("tier_expires_at", current.tier_expires_at);
+      write = current.updated_at == null ? write.is("updated_at", null) : write.eq("updated_at", current.updated_at);
+      const { data: changed, error } = await write.select("id");
+      if (error) throw error;
+      if (changed?.length !== 1) throw new Error("Account entitlement changed; retry reconciliation");
     }
     // Mark complete only AFTER the user entitlement write succeeds. Even a
     // failed completion write is retryable with the same durable plan.
@@ -1017,30 +1303,13 @@ async function handleRevoke(
       new Set([r.paymentId, r.originalPaymentId].filter((x): x is string => Boolean(x)))
     );
 
-    interface RevokeSub {
-      id: string;
-      user_id: string;
-      tier: string;
-      status: string;
-      expires_at: string | null;
-      amount_cents: number | null;
-      started_at: string | null;
-      provider_payment_id: string | null;
-      whop_membership_id: string | null;
-      granted_payment_ids: Array<{
-        payment_id: string;
-        amount_cents: number | null;
-        added_months: number;
-        granted_at: string;
-      }> | null;
-    }
 
     let subs: RevokeSub[] = [];
     if (paymentCandidates.length > 0) {
       const { data: byPay, error: byPayErr } = await sb
         .from("subscriptions")
         .select(
-          "id, user_id, tier, status, expires_at, amount_cents, started_at, provider_payment_id, granted_payment_ids, whop_membership_id"
+          REVOKE_COLUMNS
         )
         .eq("payment_provider", "whop")
         .in("provider_payment_id", paymentCandidates);
@@ -1059,7 +1328,7 @@ async function handleRevoke(
         const { data: allActive, error: scanErr } = await sb
           .from("subscriptions")
           .select(
-            "id, user_id, tier, status, expires_at, amount_cents, started_at, provider_payment_id, granted_payment_ids, whop_membership_id"
+            REVOKE_COLUMNS
           )
           .eq("payment_provider", "whop")
           .eq("status", "active");
@@ -1080,7 +1349,7 @@ async function handleRevoke(
       const { data: byMembership, error: membershipErr } = await sb
         .from("subscriptions")
         .select(
-          "id, user_id, tier, status, expires_at, amount_cents, started_at, provider_payment_id, granted_payment_ids, whop_membership_id"
+          REVOKE_COLUMNS
         )
         .eq("payment_provider", "whop")
         .eq("whop_membership_id", r.membershipId);
@@ -1121,7 +1390,7 @@ async function handleRevoke(
     if (subs.length === 0 && userId) {
       const { data: byUser } = await sb
         .from("subscriptions")
-        .select("id, user_id, tier, status, expires_at, amount_cents, started_at, provider_payment_id, granted_payment_ids, whop_membership_id")
+        .select(REVOKE_COLUMNS)
         .eq("payment_provider", "whop")
         .eq("user_id", userId)
         .eq("status", "active");
@@ -1155,7 +1424,7 @@ async function handleRevoke(
     // both to remove all copies and to avoid counting another row's payment.
     const { data: activeWhop, error: activeWhopError } = await sb
       .from("subscriptions")
-      .select("id, user_id, tier, status, expires_at, amount_cents, started_at, provider_payment_id, granted_payment_ids, whop_membership_id")
+      .select(REVOKE_COLUMNS)
       .eq("payment_provider", "whop")
       .eq("user_id", userId)
       .eq("status", "active");
@@ -1186,24 +1455,6 @@ async function handleRevoke(
         membership_id: r.membershipId, reason: "no_granted_payment_match",
       });
       return NextResponse.json({ ok: false, error: "revoke matched no subscription", event }, { status: 200 });
-    }
-
-    // Prefer the row whose provider_payment_id owns a surviving payment.
-    // Otherwise an older history-only row owns it. Stable ordering prevents
-    // duplicate histories from either double-counting or revoking both rows.
-    const paymentOwners = new Map<string, string>();
-    const orderedActive = [...activeWhopRows].sort((a, b) =>
-      (Date.parse(a.started_at ?? "") || 0) - (Date.parse(b.started_at ?? "") || 0) || a.id.localeCompare(b.id)
-    );
-    for (const sub of orderedActive) {
-      if (sub.provider_payment_id && !paymentOwners.has(sub.provider_payment_id)) {
-        paymentOwners.set(sub.provider_payment_id, sub.id);
-      }
-    }
-    for (const sub of orderedActive) {
-      for (const entry of sub.granted_payment_ids ?? []) {
-        if (entry.payment_id && !paymentOwners.has(entry.payment_id)) paymentOwners.set(entry.payment_id, sub.id);
-      }
     }
 
     if (process.env.WHOP_ATOMIC_GRANTS_ENABLED === "true") {
@@ -1241,7 +1492,7 @@ async function handleRevoke(
     // is not owned by the membership being revoked. Read failures must retry.
     const { data: coverageOwner, error: coverageError } = await sb
       .from("users")
-      .select("tier, role, tier_expires_at")
+      .select("tier, role, tier_expires_at, updated_at")
       .eq("id", userId)
       .maybeSingle();
     if (coverageError || !coverageOwner) {
@@ -1249,59 +1500,24 @@ async function handleRevoke(
     }
     const ownerExpiryMs = Date.parse(coverageOwner.tier_expires_at ?? "");
     const affectedExpiryMs = Math.max(...subs.map((sub) => Date.parse(sub.expires_at ?? "")).filter(Number.isFinite));
+    // An owner expiry (including NULL) that current Whop coverage explains is
+    // subscription-owned, not an independent grant, even when it is longer
+    // than the affected rows (a stacked row or a non-expiring Whop row).
+    const whopCovering = activeWhopRows.filter(row => row.expires_at == null || Date.parse(row.expires_at) > Date.now());
+    const whopCoverExpiry = whopCovering.length === 0 ? undefined : whopCovering.some(row => row.expires_at == null) ? null
+      : new Date(Math.max(...whopCovering.map(row => Date.parse(row.expires_at!)))).toISOString();
+    const whopExplained = whopCoverExpiry !== undefined && sameTimestamp(coverageOwner.tier_expires_at, whopCoverExpiry);
     const independentCoverage = coverageOwner.role === "admin" || coverageOwner.tier === "admin" ||
-      (coverageOwner.tier === "pro" && (coverageOwner.tier_expires_at == null ||
+      (coverageOwner.tier === "pro" && !whopExplained && (coverageOwner.tier_expires_at == null ||
         (Number.isFinite(ownerExpiryMs) && ownerExpiryMs > Date.now() && ownerExpiryMs > affectedExpiryMs)));
 
-    const nowMs = Date.now();
-    const nowIso = new Date(nowMs).toISOString();
-    const pending: PendingWhopRevoke = {
-      state: "pending", user_id: userId, event, kind, independent_coverage: independentCoverage,
-      updates: [], flipped_ids: [], kept_active_ids: [],
-    };
-    // Validate/canonicalize all surviving metadata before claiming or writing.
-    const canonicalGrants = new Map<string, string>();
+    let pending: PendingWhopRevoke;
     try {
-      for (const sub of [...activeWhopRows, ...subs.filter(sub => !activeWhopRows.some(row => row.id === sub.id))]) {
-        for (const entry of sub.granted_payment_ids ?? []) {
-          if (!entry?.payment_id || paymentCandidates.includes(entry.payment_id)) continue;
-          const metadata = JSON.stringify(entry, Object.keys(entry).sort());
-          const previous = canonicalGrants.get(entry.payment_id);
-          if (previous !== undefined && previous !== metadata) throw new Error("Conflicting surviving payment metadata");
-          canonicalGrants.set(entry.payment_id, metadata);
-        }
-      }
-      for (const sub of subs) {
-        if (kind === "cancelled" && sub.status === "active" && sub.tier === "notes_pro_trial" &&
-            Number(sub.amount_cents ?? 0) === 0 && sub.expires_at && Date.parse(sub.expires_at) > nowMs) {
-          pending.kept_active_ids.push(sub.id);
-          continue;
-        }
-        const entries = (sub.granted_payment_ids ?? []).filter(entry => entry?.payment_id);
-        const matched = entries.some(entry => paymentCandidates.includes(entry.payment_id));
-        if (!matched && paymentCandidates.length > 0) continue;
-        if (!matched) {
-          pending.updates.push({ id: sub.id, values: { status: kind, cancelled_at: nowIso, granted_payment_ids: entries, updated_at: nowIso } });
-          pending.flipped_ids.push(sub.id);
-          continue;
-        }
-        const surviving = [...new Map(entries.filter(entry => !paymentCandidates.includes(entry.payment_id) &&
-          (!paymentOwners.has(entry.payment_id) || paymentOwners.get(entry.payment_id) === sub.id))
-          .map(entry => [entry.payment_id, entry])).values()]
-          .sort((a, b) => Date.parse(a.granted_at) - Date.parse(b.granted_at) || a.payment_id.localeCompare(b.payment_id));
-        const expiresAt = recomputeExpiryFromEntries(surviving);
-        if (sub.status === "active" && surviving.length > 0 && expiresAt.getTime() > nowMs) {
-          pending.updates.push({ id: sub.id, values: { expires_at: expiresAt.toISOString(),
-            provider_payment_id: surviving[surviving.length - 1].payment_id,
-            granted_payment_ids: surviving, updated_at: nowIso } });
-          pending.kept_active_ids.push(sub.id);
-        } else {
-          // Status, cancellation timestamp and cleaned history are ONE write.
-          pending.updates.push({ id: sub.id, values: { status: kind, cancelled_at: nowIso,
-            granted_payment_ids: surviving, updated_at: nowIso } });
-          pending.flipped_ids.push(sub.id);
-        }
-      }
+      pending = planWhopRevoke({
+        state: "pending", user_id: userId, event, kind, independent_coverage: independentCoverage,
+        owner_snapshot: coverageOwner as RevokeOwner, payment_candidates: paymentCandidates,
+        original_subscriptions: subs, updates: [], flipped_ids: [], kept_active_ids: [],
+      }, [...activeWhopRows, ...subs.filter(sub => !activeWhopRows.some(row => row.id === sub.id))]);
     } catch (error) {
       Sentry.captureException(error, { tags: { route: "webhooks/whop", step: "revoke_recompute_window" } });
       return NextResponse.json({ error: "Could not verify remaining payment window" }, { status: 503 });

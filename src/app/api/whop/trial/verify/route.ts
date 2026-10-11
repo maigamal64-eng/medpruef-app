@@ -270,6 +270,10 @@ export async function POST(req: NextRequest) {
       currency: "EUR",
       provider_payment_id: mine.id, // membership id — the grant/idempotency key
       whop_membership_id: mine.id, // 2026-10-02: the renewal routing pin (fix A)
+      // Trial provenance: a later renewal refund keeps exactly this window.
+      granted_payment_ids: [
+        { payment_id: mine.id, amount_cents: 0, added_months: 0, granted_at: nowIso, trial_ends_at: expiresIso },
+      ],
       started_at: nowIso,
       expires_at: expiresIso,
     });
