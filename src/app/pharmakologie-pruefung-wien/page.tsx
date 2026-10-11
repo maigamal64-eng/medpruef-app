@@ -6,11 +6,9 @@ import ExamLandingShell, {
  * /pharmakologie-pruefung-wien — Pharmakologie landing page.
  *
  * Unique to this page:
- *   - No fixed exam date is shown because Pharma dates depend on the
- *     student's university and term.
+ *   - MedUni Wien publishes term-specific Rezeptierkunde exam weeks.
  *
- * Content: 335 questions, single topic "Pharmakologie" per NOTES.md
- * §Content (source: Rezeptierkunde 2026 PDF).
+ * Practice material: Rezeptierkunde collection; counts are not pinned here.
  */
 
 const content: ExamLandingContent = {
@@ -40,11 +38,11 @@ const content: ExamLandingContent = {
     de: "Prüfungs-Kohorte ansehen",
     en: "See Exam Cohort",
   },
-  // Pharma has no fixed annual exam date; timing is set by each university.
+  // MedUni Wien Rezeptierkunde calendar, WS 2026/27, checked 2026-10-11.
   breakdown: [
     {
-      label: { de: "Fragen", en: "Questions" },
-      value: "335",
+      label: { de: "Übungsbank", en: "Practice bank" },
+      value: "Rezeptierkunde",
       sub: {
         de: "Rezeptierkunde + klinische Pharma",
         en: "Prescribing + clinical pharma",
@@ -52,10 +50,10 @@ const content: ExamLandingContent = {
     },
     {
       label: { de: "Prüfungstermin", en: "Exam date" },
-      value: { de: "kein Fixtermin", en: "term-based" },
+      value: { de: "23. bis 27. Nov.", en: "23 to 27 Nov." },
       sub: {
-        de: "Termin laut Universität",
-        en: "Date set by your university",
+        de: "2026 · Anmeldung bis 20. Okt., 12:00 Uhr (Wien)",
+        en: "2026 · Register by 20 Oct, 12:00 Vienna time",
       },
     },
     {
@@ -104,8 +102,8 @@ const content: ExamLandingContent = {
         en: "What does the Vienna Pharmakologie exam actually test?",
       },
       a: {
-        de: "Die Prüfung kombiniert zwei Komponenten: klinische Pharmakologie (Wirkstoffe, Dosierungen, Kontraindikationen, Wechselwirkungen) und Rezeptierkunde (korrektes Ausstellen österreichischer Rezepte, inkl. Suchtgiftformulare). Es geht weniger um auswendig gelerntes Wissen und mehr um situatives Entscheiden: „Welches Medikament bei dieser Diagnose, in welcher Dosis, mit welchen Kontraindikationen, und auf welcher Rezeptform?\" Die österreichische Spezifität ist wichtig, Verordnungsregeln unterscheiden sich von Deutschland oder der Schweiz.",
-        en: "The exam combines two parts: clinical pharmacology (drugs, dosing, contraindications, interactions) and prescribing (correctly writing Austrian prescriptions, including controlled-substance forms). It's less about memorized knowledge and more about situated decision-making: \"Which drug for this diagnosis, what dose, what contraindications, which prescription form?\" The Austrian specificity matters; prescribing rules differ from Germany or Switzerland.",
+        de: "Für das Wiener Nostrifikationsverfahren werden Rezeptierkunde (Pharmakologie) und Gerichtliche Medizin als Ergänzungsprüfungen vorgeschrieben. Die aktuellen offiziellen Anmeldeseiten beschreiben kein Prüfungsformat. Kläre Inhalte und Ablauf mit der Universität anhand deines Bescheids. MedPrüfs Pharma-Bank bietet Übungsfragen zur Rezeptierkunde und klinischen Pharmakologie, keine bestätigte Simulation der offiziellen Prüfung.",
+        en: "Vienna nostrification requires supplementary examinations in prescribing (pharmacology) and forensic medicine. The current official registration pages do not describe the exam format. Confirm content and procedure with the university using your decision letter. MedPrüf’s Pharma bank offers practice in prescribing and clinical pharmacology, not a verified simulation of the official exam.",
       },
     },
     {
@@ -114,8 +112,8 @@ const content: ExamLandingContent = {
         en: "When is the next Pharmakologie exam?",
       },
       a: {
-        de: "Pharma-Prüfungstermine hängen von deiner Medizinischen Universität und deinem Studienplan ab. Prüfe deinen Nostrifikationsbescheid oder frage deine Universität nach dem nächsten Termin. MedPrüf zeigt keinen allgemeinen jährlichen Pharma-Termin an. Die Prüfungs-Kohorte kostet 129 € für sechs Monate.",
-        en: "Pharma exam dates depend on your Medical University and study plan. Check your nostrification decision or ask your university for the next date. MedPrüf does not show one general annual Pharma date. The Exam Cohort costs €129 for six months.",
+        de: "MedUni Wien veröffentlicht für Rezeptierkunde und Gerichtsmedizin die Prüfungswochen 23. bis 27. November 2026 und 18. bis 22. Januar 2027. Anmeldung: 7. bis 20. Oktober 2026 bzw. 2. bis 15. Dezember 2026, jeweils bis Dienstag um 12:00 Uhr (Wien). Beide Prüfungen werden separat mit dem jeweiligen Formular vom MedUni-E-Mail-Konto angemeldet. Prüfungswochen für das Sommersemester 2027 sind noch nicht veröffentlicht. Stand: 11. Oktober 2026, offizieller Prüfungskalender WS 2026/27: https://www.meduniwien.ac.at/web/studium-weiterbildung/nostrifizierung/pruefungen/",
+        en: "MedUni Vienna lists exam weeks for prescribing and forensic medicine on 23 to 27 November 2026 and 18 to 22 January 2027. Registration runs from 7 to 20 October 2026 and from 2 to 15 December 2026 respectively, closing on Tuesday at 12:00 Vienna time. Register separately for each exam using its form and your MedUni email account. Summer-semester 2027 exam weeks have not yet been published. Checked on 11 October 2026 against the official WS 2026/27 exam calendar: meduniwien.ac.at (Nostrifizierung, Prüfungen).",
       },
     },
     {
@@ -164,8 +162,8 @@ const content: ExamLandingContent = {
         en: "What sources do the questions and explanations use?",
       },
       a: {
-        de: "Die 335 Fragen stammen aus der aktuellen Rezeptierkunde-Sammlung 2026, kuratiert und typographisch bereinigt (siehe NOTES.md §OCR-Aufräumaktion). Die KI-Erklärungen greifen auf Standardreferenzen zurück: Herold („Innere Medizin\"), Austrian Drug Compendium (AMI), ESC/ÖDG/ERC-Guidelines für herzkreislauf- und metabolische Indikationen, Amboss für klinische Entscheidungslogik. Jede Erklärung nennt die Guideline oder Quelle beim Namen, wenn sie relevant ist, so kannst du Aussagen selbst nachprüfen.",
-        en: "The 335 questions come from the current Rezeptierkunde collection for 2026, curated and typographically cleaned (see NOTES.md §OCR cleanup). AI explanations draw on standard references: Herold (\"Innere Medizin\"), the Austrian Drug Compendium (AMI), ESC/ÖDG/ERC guidelines for cardiovascular and metabolic indications, Amboss for clinical decision logic. Every explanation cites the guideline or source by name when relevant, so you can check claims yourself.",
+        de: "Die Pharma-Bank enthält Übungsmaterial aus der Rezeptierkunde-Sammlung. Sie ist keine Sammlung offiziell veröffentlichter Prüfungsfragen und bestätigt keine vollständige Prüfungsabdeckung. KI-generierte Erklärungen sind Lernhilfen und können Fehler enthalten. Prüfe klinische Aussagen anhand aktueller Fachinformationen und Leitlinien.",
+        en: "The Pharma bank contains practice material from the prescribing collection. It is not a collection of officially published exam questions and does not establish complete exam coverage. AI-generated explanations are study aids and may contain errors. Check clinical claims against current drug information and guidelines.",
       },
     },
   ],

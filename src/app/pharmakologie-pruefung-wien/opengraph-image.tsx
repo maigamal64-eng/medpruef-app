@@ -111,7 +111,7 @@ export default function Image() {
               maxWidth: 980,
             }}
           >
-            335 Fragen · Rezeptierkunde · Pass-Until-You-Pass-Garantie
+            Übungsfragen · Rezeptierkunde · Pass-Until-You-Pass-Garantie
           </div>
         </div>
 
