@@ -61,7 +61,8 @@ for (const lang of ["de", "en"] as const) {
         expect(metrics.left).toBeGreaterThanOrEqual(0);
         expect(metrics.right).toBeLessThanOrEqual(320);
         expect(metrics.overflow).toBe(false);
-        expect(metrics.wraps).toBe(true);
+        // The German label wraps at 320 px; the shorter English one fits on one line.
+        if (lang === "de") expect(metrics.wraps).toBe(true);
         expect(metrics.whiteSpace).toBe("normal");
       }
     });
@@ -82,5 +83,5 @@ test("SIP badge advances while the page stays open across Vienna midnight", asyn
   await expect(badge).toHaveText("Register by 19 Oct, today is the last day");
   await page.clock.runFor(60_000);
   await expect(badge).toHaveText("Register by 18 Jan, 90 days left");
-  await expect(badge).not.toContainText(/0 days left|19 Oct/);
+  await expect(badge).not.toContainText(/(^|\D)0 days left|19 Oct/);
 });
