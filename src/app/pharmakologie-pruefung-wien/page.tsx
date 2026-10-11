@@ -2,6 +2,11 @@ import ExamLandingShell, {
   type ExamLandingContent,
 } from "@/components/seo/ExamLandingShell";
 
+import { getOpenOfficialDeadlines } from "@/lib/exam-dates";
+import { formatSittingWhen, formatWindow, td } from "@/lib/i18n-dates";
+
+export const dynamic = "force-dynamic";
+
 /**
  * /pharmakologie-pruefung-wien — Pharmakologie landing page.
  *
@@ -11,7 +16,9 @@ import ExamLandingShell, {
  * Practice material: Rezeptierkunde collection; counts are not pinned here.
  */
 
-const content: ExamLandingContent = {
+function getContent(): ExamLandingContent {
+  const sitting = getOpenOfficialDeadlines({ exams: ["rezeptierkunde"] })[0];
+  return {
   examName: {
     de: "Pharmakologie-Prüfung Wien",
     en: "Vienna Pharmakologie Exam",
@@ -38,7 +45,7 @@ const content: ExamLandingContent = {
     de: "Prüfungs-Kohorte ansehen",
     en: "See Exam Cohort",
   },
-  // MedUni Wien Rezeptierkunde calendar, WS 2026/27, checked 2026-10-11.
+  // MedUni Wien Rezeptierkunde calendar, WS 2026/27, checked 2026-10-11. date-ok: source verification stamp
   breakdown: [
     {
       label: { de: "Übungsbank", en: "Practice bank" },
@@ -50,10 +57,13 @@ const content: ExamLandingContent = {
     },
     {
       label: { de: "Prüfungstermin", en: "Exam date" },
-      value: { de: "23. bis 27. Nov.", en: "23 to 27 Nov." },
+      value: {
+        de: sitting ? formatSittingWhen(sitting, "de") : td("picker_no_official", "de"),
+        en: sitting ? formatSittingWhen(sitting, "en") : td("picker_no_official", "en"),
+      },
       sub: {
-        de: "2026 · Anmeldung bis 20. Okt., 12:00 Uhr (Wien)",
-        en: "2026 · Register by 20 Oct, 12:00 Vienna time",
+        de: sitting ? `${formatWindow(sitting, "de")}, ${sitting.closes_at_time} Uhr (Wien)` : "",
+        en: sitting ? `${formatWindow(sitting, "en")}, ${sitting.closes_at_time} Vienna time` : "",
       },
     },
     {
@@ -112,8 +122,8 @@ const content: ExamLandingContent = {
         en: "When is the next Pharmakologie exam?",
       },
       a: {
-        de: "MedUni Wien veröffentlicht für Rezeptierkunde und Gerichtsmedizin die Prüfungswochen 23. bis 27. November 2026 und 18. bis 22. Januar 2027. Anmeldung: 7. bis 20. Oktober 2026 bzw. 2. bis 15. Dezember 2026, jeweils bis Dienstag um 12:00 Uhr (Wien). Beide Prüfungen werden separat mit dem jeweiligen Formular vom MedUni-E-Mail-Konto angemeldet. Prüfungswochen für das Sommersemester 2027 sind noch nicht veröffentlicht. Stand: 11. Oktober 2026, offizieller Prüfungskalender WS 2026/27: https://www.meduniwien.ac.at/web/studium-weiterbildung/nostrifizierung/pruefungen/",
-        en: "MedUni Vienna lists exam weeks for prescribing and forensic medicine on 23 to 27 November 2026 and 18 to 22 January 2027. Registration runs from 7 to 20 October 2026 and from 2 to 15 December 2026 respectively, closing on Tuesday at 12:00 Vienna time. Register separately for each exam using its form and your MedUni email account. Summer-semester 2027 exam weeks have not yet been published. Checked on 11 October 2026 against the official WS 2026/27 exam calendar: meduniwien.ac.at (Nostrifizierung, Prüfungen).",
+        de: "MedUni Wien veröffentlicht für Rezeptierkunde und Gerichtsmedizin die Prüfungswochen 23. bis 27. November 2026 und 18. bis 22. Januar 2027. Anmeldung: 7. bis 20. Oktober 2026 bzw. 2. bis 15. Dezember 2026, jeweils bis Dienstag um 12:00 Uhr (Wien). Beide Prüfungen werden separat mit dem jeweiligen Formular vom MedUni-E-Mail-Konto angemeldet. Prüfungswochen für das Sommersemester 2027 sind noch nicht veröffentlicht. Stand: 11. Oktober 2026, offizieller Prüfungskalender WS 2026/27: https://www.meduniwien.ac.at/web/studium-weiterbildung/nostrifizierung/pruefungen/", // date-ok: official MedUni Wien exam weeks (WS26 calendar) and source verification stamp
+        en: "MedUni Vienna lists exam weeks for prescribing and forensic medicine on 23 to 27 November 2026 and 18 to 22 January 2027. Registration runs from 7 to 20 October 2026 and from 2 to 15 December 2026 respectively, closing on Tuesday at 12:00 Vienna time. Register separately for each exam using its form and your MedUni email account. Summer-semester 2027 exam weeks have not yet been published. Checked on 11 October 2026 against the official WS 2026/27 exam calendar: https://www.meduniwien.ac.at/web/studium-weiterbildung/nostrifizierung/pruefungen/", // date-ok: official MedUni Wien exam weeks (WS26 calendar) and source verification stamp
       },
     },
     {
@@ -168,7 +178,8 @@ const content: ExamLandingContent = {
     },
   ],
 };
+}
 
 export default function PharmakologiePage() {
-  return <ExamLandingShell content={content} />;
+  return <ExamLandingShell content={getContent()} />;
 }

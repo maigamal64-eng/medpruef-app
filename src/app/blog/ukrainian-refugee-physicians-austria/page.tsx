@@ -338,13 +338,13 @@ The Vienna bank contains SIP4a/SIP5a-based MCQ exercises. These university sourc
                       <td className="mp-body text-sm p-3 border-b border-[var(--mp-border-subtle)]">Nostrification admission, registration via your uni</td>
                       <td className="mp-body text-sm p-3 border-b border-[var(--mp-border-subtle)]">MedUni Vienna/Graz/Innsbruck (joint)</td>
                       <td className="mp-body text-sm p-3 border-b border-[var(--mp-border-subtle)]">€150 (statutory)</td>
-                      <td className="mp-body text-sm p-3 border-b border-[var(--mp-border-subtle)]">Next: 3 Feb 2027 (Innsbruck). MedUni Vienna leaflet (1 Sep 2026): filing by 14 Dec 2026. i-med.ac.at: registration by 7 Jan 2027. Confirm your deadline with your application university. Checked on 11 Oct 2026.</td>
+                      <td className="mp-body text-sm p-3 border-b border-[var(--mp-border-subtle)]">Next: 3 Feb 2027 (Innsbruck). MedUni Vienna leaflet (1 Sep 2026): filing by 14 Dec 2026. i-med.ac.at: registration by 7 Jan 2027. Confirm your deadline with your application university. Checked on 11 Oct 2026.</td> {/* date-ok: source verification stamp */}
                     </tr>
                     <tr style={{ background: "var(--mp-surface-raised)" }}>
                       <td className="mp-body text-sm p-3 border-b border-[var(--mp-border-subtle)]">6. Supplementary Exams</td>
                       <td className="mp-body text-sm p-3 border-b border-[var(--mp-border-subtle)]">Per Stichprobentest result + mandatory Pharma/Forensics</td>
                       <td className="mp-body text-sm p-3 border-b border-[var(--mp-border-subtle)]">Your nostrification university</td>
-                      <td className="mp-body text-sm p-3 border-b border-[var(--mp-border-subtle)]">Tuition + student-union contribution depend on university and status</td>
+                      <td className="mp-body text-sm p-3 border-b border-[var(--mp-border-subtle)]">Student-union fee + tuition per semester (once admitted as a non-degree student)</td>
                       <td className="mp-body text-sm p-3 border-b border-[var(--mp-border-subtle)]">Months</td>
                     </tr>
                     <tr style={{ background: "var(--mp-surface)" }}>

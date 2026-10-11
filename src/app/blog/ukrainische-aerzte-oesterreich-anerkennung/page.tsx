@@ -320,7 +320,7 @@ Die Wiener Bank enthält SIP4a/SIP5a-basierte MCQ-Übungen. Diese universitären
                     <tr style={{ background: "var(--mp-surface)" }}>
                       <td className="mp-body text-sm p-3 border-b border-[var(--mp-border-subtle)]">3. Nostrifizierungs-Antrag</td>
                       <td className="mp-body text-sm p-3 border-b border-[var(--mp-border-subtle)]">Vollständige ukrain. Unterlagen + C1 + Übersetzungen</td>
-                      <td className="mp-body text-sm p-3 border-b border-[var(--mp-border-subtle)]">Nostrifizierungsuniversität laut Antrag; Stichprobentest nur Wien/Graz/Innsbruck</td>
+                      <td className="mp-body text-sm p-3 border-b border-[var(--mp-border-subtle)]">Nostrifizierungsuniversität laut Antrag; Stichprobentest-Standorte nur Wien/Graz/Innsbruck</td>
                       <td className="mp-body text-sm p-3 border-b border-[var(--mp-border-subtle)]">150 € Antragsgebühr</td>
                       <td className="mp-body text-sm p-3 border-b border-[var(--mp-border-subtle)]">6–18 Monate</td>
                     </tr>
@@ -336,13 +336,13 @@ Die Wiener Bank enthält SIP4a/SIP5a-basierte MCQ-Übungen. Diese universitären
                       <td className="mp-body text-sm p-3 border-b border-[var(--mp-border-subtle)]">Nostrifizierungs-Zulassung, Anmeldung über Ihre Uni</td>
                       <td className="mp-body text-sm p-3 border-b border-[var(--mp-border-subtle)]">MedUni Wien/Graz/Innsbruck (gemeinsam)</td>
                       <td className="mp-body text-sm p-3 border-b border-[var(--mp-border-subtle)]">150 € (gesetzlich)</td>
-                      <td className="mp-body text-sm p-3 border-b border-[var(--mp-border-subtle)]">Nächster: 3. Feb. 2027 (Innsbruck). MedUni-Wien-Merkblatt (1. Sept. 2026): Einreichung bis 14. Dez. 2026. i-med.ac.at: Anmeldung bis 7. Jan. 2027. Frist bei der Antragsuniversität bestätigen. Geprüft am 11. Okt. 2026.</td>
+                      <td className="mp-body text-sm p-3 border-b border-[var(--mp-border-subtle)]">Nächster: 3. Feb. 2027 (Innsbruck). MedUni-Wien-Merkblatt (1. Sept. 2026): Einreichung bis 14. Dez. 2026. i-med.ac.at: Anmeldung bis 7. Jan. 2027. Frist bei der Antragsuniversität bestätigen. Geprüft am 11. Okt. 2026.</td> {/* date-ok: source verification stamp */}
                     </tr>
                     <tr style={{ background: "var(--mp-surface-raised)" }}>
                       <td className="mp-body text-sm p-3 border-b border-[var(--mp-border-subtle)]">6. Ergänzungsprüfungen</td>
                       <td className="mp-body text-sm p-3 border-b border-[var(--mp-border-subtle)]">Je nach Stichprobentest + verpflichtend Pharma/Forensik</td>
                       <td className="mp-body text-sm p-3 border-b border-[var(--mp-border-subtle)]">Ihre Nostrifizierungs-Uni</td>
-                      <td className="mp-body text-sm p-3 border-b border-[var(--mp-border-subtle)]">Studienbeitrag + ÖH-Beitrag nach Universität und Status</td>
+                      <td className="mp-body text-sm p-3 border-b border-[var(--mp-border-subtle)]">ÖH-Beitrag + Studienbeitrag pro Semester (bei Zulassung als außerordentliche:r Studierende:r)</td>
                       <td className="mp-body text-sm p-3 border-b border-[var(--mp-border-subtle)]">Monate</td>
                     </tr>
                     <tr style={{ background: "var(--mp-surface)" }}>
