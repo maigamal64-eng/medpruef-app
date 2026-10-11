@@ -1,3 +1,4 @@
+import { adminErrorResponse } from "@/lib/admin/error-response";
 import { NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { adminRouteShell } from "@/lib/admin/shell";
@@ -32,7 +33,7 @@ export const GET = adminRouteShell(
       sb
         .from("admin_audit_log")
         .select(
-          "id, actor_id, actor_email, action, target_type, target_id, payload, ip_address, created_at"
+          "action, created_at"
         )
         .order("created_at", { ascending: false })
         .limit(limit),
@@ -42,17 +43,11 @@ export const GET = adminRouteShell(
         .gte("created_at", since.toISOString()),
     ]);
 
-    if (latestRes.error) {
-      return NextResponse.json(
-        { error: latestRes.error.message },
-        { status: 500 }
-      );
-    }
+    if (latestRes.error || todayCountRes.error) return adminErrorResponse(latestRes.error || todayCountRes.error, "/api/admin/audit-log/latest");
 
     const items = latestRes.data || [];
     const latest = items[0] || null;
     return NextResponse.json({
-      items,
       today_count: todayCountRes.count || 0,
       last_action_at: latest ? latest.created_at : null,
       last_action: latest ? latest.action : null,

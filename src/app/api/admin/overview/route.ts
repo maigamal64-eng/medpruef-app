@@ -1,3 +1,4 @@
+import { checkedRead } from "@/lib/admin/read-result";
 import { NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { adminRouteShell } from "@/lib/admin/shell";
@@ -37,16 +38,16 @@ export const GET = adminRouteShell(
     //    One select across the last 7 days powers today + sparkline; MTD
     //    is a separate fetch since the month-window often exceeds 7 days.
     const [recent7dRes, mtdPaidRes] = canReadRevenue ? await Promise.all([
-      sb
+      checkedRead(sb
         .from("subscriptions")
         .select("amount_cents, started_at")
         .eq("status", "active")
-        .gte("started_at", sevenDaysAgo.toISOString()),
-      sb
+        .gte("started_at", sevenDaysAgo.toISOString())),
+      checkedRead(sb
         .from("subscriptions")
         .select("amount_cents, started_at")
         .eq("status", "active")
-        .gte("started_at", startOfMonth.toISOString()),
+        .gte("started_at", startOfMonth.toISOString())),
     ]) : [{ data: null }, { data: null }];
 
     const revenueMtdCents = (mtdPaidRes.data || []).reduce(
@@ -73,10 +74,10 @@ export const GET = adminRouteShell(
     }
 
     // 2. Active paid subscriptions (by tier).
-    const { data: activeSubs } = canReadRevenue ? await sb
+    const { data: activeSubs } = canReadRevenue ? await checkedRead(sb
       .from("subscriptions")
       .select("tier, status, expires_at")
-      .eq("status", "active") : { data: null };
+      .eq("status", "active")) : { data: null };
     const activeByTier: Record<string, number> = {};
     let activeTotal = 0;
     for (const row of activeSubs || []) {
@@ -91,37 +92,37 @@ export const GET = adminRouteShell(
     }
 
     // 3. New signups today.
-    const { count: signupsToday } = await sb
+    const { count: signupsToday } = await checkedRead(sb
       .from("users")
       .select("id", { count: "exact", head: true })
-      .gte("created_at", startOfDay.toISOString());
+      .gte("created_at", startOfDay.toISOString()));
 
     // 4. 150Q paywall hits today — from user_events. event_type literal
     //    is tentative; if the events aren't landed yet the count is 0.
-    const { count: paywallHits } = await sb
+    const { count: paywallHits } = await checkedRead(sb
       .from("user_events")
       .select("id", { count: "exact", head: true })
       .eq("event_type", "paywall_hit")
-      .gte("created_at", startOfDay.toISOString());
+      .gte("created_at", startOfDay.toISOString()));
 
     // 5. Referrals awaiting action (qualified but not rewarded).
-    const { count: referralsAwaitingAction } = canReadRevenue ? await sb
+    const { count: referralsAwaitingAction } = canReadRevenue ? await checkedRead(sb
       .from("referrals")
       .select("id", { count: "exact", head: true })
-      .eq("status", "qualified") : { count: null };
+      .eq("status", "qualified")) : { count: null };
 
     // 6. PUYP verifications pending.
-    const { count: puypPending } = canReadRevenue ? await sb
+    const { count: puypPending } = canReadRevenue ? await checkedRead(sb
       .from("exam_attempts")
       .select("id", { count: "exact", head: true })
       .eq("result", "fail")
-      .is("verified_at", null) : { count: null };
+      .is("verified_at", null)) : { count: null };
 
     // 7. Flagged questions (open).
-    const { count: flaggedOpen } = await sb
+    const { count: flaggedOpen } = await checkedRead(sb
       .from("user_feedback")
       .select("id", { count: "exact", head: true })
-      .eq("status", "new");
+      .eq("status", "new"));
 
     // 8. Webhook failures (last 24h) — best-effort; processed_webhook_events
     //    currently has no status column, so return 0.
@@ -133,24 +134,24 @@ export const GET = adminRouteShell(
     //     that never delivered. Should be 0 in steady state. The post-
     //     PR-#7 audit (review-2026-04-25-A2) found 8; cancelling them is
     //     handled by `/api/admin/subscriptions/reconcile-pending`.
-    const { count: stuckPending24h } = canReadRevenue ? await sb
+    const { count: stuckPending24h } = canReadRevenue ? await checkedRead(sb
       .from("subscriptions")
       .select("id", { count: "exact", head: true })
       .eq("status", "pending")
       .eq("payment_provider", "nowpayments")
-      .lt("created_at", twentyFourHoursAgo.toISOString()) : { count: null };
+      .lt("created_at", twentyFourHoursAgo.toISOString())) : { count: null };
 
     // 9. Free-to-paid conversion (rolling 7d) — signups vs active new subs.
     const [{ count: signups7d }, { count: newPaid7d }] = canReadRevenue ? await Promise.all([
-      sb
+      checkedRead(sb
         .from("users")
         .select("id", { count: "exact", head: true })
-        .gte("created_at", sevenDaysAgo.toISOString()),
-      sb
+        .gte("created_at", sevenDaysAgo.toISOString())),
+      checkedRead(sb
         .from("subscriptions")
         .select("id", { count: "exact", head: true })
         .eq("status", "active")
-        .gte("started_at", sevenDaysAgo.toISOString()),
+        .gte("started_at", sevenDaysAgo.toISOString())),
     ]) : [{ count: null }, { count: null }];
 
     const conversion7d =
@@ -159,12 +160,12 @@ export const GET = adminRouteShell(
         : null;
 
     // 10. Cron health — derived from cron_runs last-seen.
-    const { data: cronRuns } = canReadSystem ? await sb
+    const { data: cronRuns } = canReadSystem ? await checkedRead(sb
       .from("cron_runs")
       .select("cron_name, status, started_at, finished_at")
       .gte("started_at", twentyFourHoursAgo.toISOString())
       .order("started_at", { ascending: false })
-      .limit(200) : { data: null };
+      .limit(200)) : { data: null };
 
     const cronMap: Record<
       string,
@@ -186,14 +187,14 @@ export const GET = adminRouteShell(
     //      trend up after the /dashboard activation card ships
     //      (review-2026-04-26-B2).
     const [{ count: tgRegistered }, { count: tgConfirmed }] = canReadSystem ? await Promise.all([
-      sb
+      checkedRead(sb
         .from("users")
         .select("id", { count: "exact", head: true })
-        .not("telegram_id", "is", null),
-      sb
+        .not("telegram_id", "is", null)),
+      checkedRead(sb
         .from("users")
         .select("id", { count: "exact", head: true })
-        .not("telegram_chat_id_confirmed", "is", null),
+        .not("telegram_chat_id_confirmed", "is", null)),
     ]) : [{ count: null }, { count: null }];
 
     // 10b. AI chat health — last 60 minutes of completed vs failed
@@ -205,16 +206,16 @@ export const GET = adminRouteShell(
     // silently failed). Both halves fixed in the same commit.
     const oneHourAgoIso = new Date(now.getTime() - 60 * 60_000).toISOString();
     const [{ data: aiCompleted }, { count: aiFailedCountRaw }] = canReadSystem ? await Promise.all([
-      sb
+      checkedRead(sb
         .from("user_events")
         .select("event_data, created_at")
         .eq("event_type", "ai_chat_completed")
-        .gte("created_at", oneHourAgoIso),
-      sb
+        .gte("created_at", oneHourAgoIso)),
+      checkedRead(sb
         .from("user_events")
         .select("id", { count: "exact", head: true })
         .eq("event_type", "ai_chat_failed")
-        .gte("created_at", oneHourAgoIso),
+        .gte("created_at", oneHourAgoIso)),
     ]) : [{ data: null }, { count: null }];
     const aiCompletedCount = aiCompleted?.length ?? 0;
     const aiFailedCount = aiFailedCountRaw ?? 0;
@@ -233,16 +234,16 @@ export const GET = adminRouteShell(
     })();
 
     // 11. Live activity feed — recent significant events.
-    const { data: recentEvents } = canReadUsers ? await sb
-      .from("user_events")
-      .select("id, event_type, user_id, created_at")
-      .gte("created_at", twentyFourHoursAgo.toISOString())
-      .order("created_at", { ascending: false })
-      .limit(20) : { data: null };
-    const { count: recentEventCount } = !canReadUsers ? await sb
+    const { count: recentEvents } = canReadUsers ? await checkedRead(sb
       .from("user_events")
       .select("id", { count: "exact", head: true })
-      .gte("created_at", twentyFourHoursAgo.toISOString()) : { count: null };
+      .gte("created_at", twentyFourHoursAgo.toISOString())
+      .order("created_at", { ascending: false })
+      .limit(20)) : { count: null };
+    const { count: recentEventCount } = !canReadUsers ? await checkedRead(sb
+      .from("user_events")
+      .select("id", { count: "exact", head: true })
+      .gte("created_at", twentyFourHoursAgo.toISOString())) : { count: null };
 
     return NextResponse.json({
       generated_at: now.toISOString(),
@@ -275,8 +276,8 @@ export const GET = adminRouteShell(
           confirmed: tgConfirmed ?? 0,
         } : null,
         crons: canReadSystem ? cronMap : null,
-        recent_events: canReadUsers ? recentEvents || [] : null,
-        recent_events_aggregate: canReadUsers ? null : { total_last_24h: recentEventCount ?? 0 },
+        recent_events: null,
+        recent_events_aggregate: { total_last_24h: (canReadUsers ? recentEvents : recentEventCount) ?? 0 },
       },
       restricted_sections: [
         ...(!canReadRevenue ? ["revenue"] : []),

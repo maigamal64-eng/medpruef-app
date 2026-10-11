@@ -145,13 +145,14 @@ export async function fetchVercelDeployments(
     res = await fetch(url, {
       headers: { Authorization: `Bearer ${token}` },
       next: { revalidate: REVALIDATE_SECONDS },
+      signal: AbortSignal.timeout(8_000),
     });
   } catch (err) {
     return {
       configured: true,
       ok: false,
       status: 0,
-      reason: `Could not reach Vercel: ${(err as Error).message}`,
+      reason: (err as Error).name === "TimeoutError" ? "Vercel did not respond within 8 seconds. Retry." : "Could not reach Vercel. Retry.",
     };
   }
 
@@ -167,9 +168,13 @@ export async function fetchVercelDeployments(
     };
   }
 
-  const body = (await res.json()) as { deployments?: RawVercelDeployment[] };
-  const deployments = (body.deployments ?? []).map(mapDeployment);
-  return { configured: true, ok: true, deployments };
+  try {
+    const body = (await res.json()) as { deployments?: RawVercelDeployment[] };
+    const deployments = (body.deployments ?? []).map(mapDeployment);
+    return { configured: true, ok: true, deployments };
+  } catch {
+    return { configured: true, ok: false, status: 0, reason: "Could not read Vercel deployments. Retry." };
+  }
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -200,6 +205,7 @@ export interface ErrorsOk {
   configured: true;
   ok: true;
   issues: IssueRow[];
+  total: number;
 }
 
 export type ErrorsResult = OpsNotConfigured | OpsUpstreamError | ErrorsOk;
@@ -253,51 +259,45 @@ export async function fetchSentryIssues(
     return { configured: false, missing: "SENTRY_AUTH_TOKEN" };
   }
 
-  const url =
-    `${SENTRY_REGION_HOST}/api/0/projects/${SENTRY_ORG}/${SENTRY_PROJECT}/issues/` +
-    `?statsPeriod=${encodeURIComponent(statsPeriod)}&limit=${limit}&query=${encodeURIComponent(
-      "is:unresolved"
-    )}`;
-
-  let res: Response;
+  const signal = AbortSignal.timeout(8_000);
+  const base = `${SENTRY_REGION_HOST}/api/0/projects/${SENTRY_ORG}/${SENTRY_PROJECT}/issues/`;
+  const params = new URLSearchParams({ statsPeriod, per_page: "100", query: "is:unresolved" });
+  let url: string | null = `${base}?${params}`;
+  const issues: IssueRow[] = [];
+  let total = 0;
+  const seen = new Set<string>();
   try {
-    res = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      next: { revalidate: REVALIDATE_SECONDS },
-    });
+    while (url) {
+      if (seen.has(url)) throw new Error("Repeated Sentry cursor");
+      seen.add(url);
+      const res: Response = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        next: { revalidate: REVALIDATE_SECONDS },
+        signal,
+      });
+      if (!res.ok) return {
+        configured: true, ok: false, status: res.status,
+        reason: res.status === 401 || res.status === 403
+          ? "SENTRY_AUTH_TOKEN was rejected (check issue-read scope)."
+          : `Sentry API returned HTTP ${res.status}.`,
+      };
+      const body: unknown = await res.json();
+      if (!Array.isArray(body)) throw new Error("Unexpected Sentry response shape");
+      total += body.length;
+      for (const item of body) { if (issues.length < limit) issues.push(mapIssue(item as RawSentryIssue)); }
+      const nextLink: string | undefined = res.headers.get("link")?.split(",").find((part) => /rel="next"/.test(part) && /results="true"/.test(part));
+      const candidate: string | undefined = nextLink?.match(/<([^>]+)>/)?.[1];
+      // Never forward the provider token to a host/path supplied by a bad Link.
+      url = candidate && candidate.startsWith(base + "?") ? candidate : null;
+      if (candidate && !url) throw new Error("Invalid Sentry pagination link");
+    }
+    return { configured: true, ok: true, issues, total };
   } catch (err) {
     return {
-      configured: true,
-      ok: false,
-      status: 0,
-      reason: `Could not reach Sentry: ${(err as Error).message}`,
+      configured: true, ok: false, status: 0,
+      reason: (err as Error).name === "TimeoutError" || signal.aborted
+        ? "Sentry did not respond within 8 seconds. Retry."
+        : "Could not load Sentry issues. Retry.",
     };
   }
-
-  if (!res.ok) {
-    return {
-      configured: true,
-      ok: false,
-      status: res.status,
-      reason:
-        res.status === 401 || res.status === 403
-          ? "SENTRY_AUTH_TOKEN was rejected: it likely lacks the event:read / project:read scope (a source-map-upload token can't read issues)."
-          : `Sentry API returned HTTP ${res.status}.`,
-    };
-  }
-
-  const body = (await res.json()) as RawSentryIssue[] | { detail?: string };
-  if (!Array.isArray(body)) {
-    return {
-      configured: true,
-      ok: false,
-      status: res.status,
-      reason: body?.detail || "Unexpected Sentry response shape.",
-    };
-  }
-
-  return { configured: true, ok: true, issues: body.map(mapIssue) };
 }

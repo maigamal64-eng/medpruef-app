@@ -83,7 +83,7 @@ function AdminErrorsPageContent() {
     >
       {error && (
         <Alert variant="error" title="Failed to load">
-          {error}
+          {error} <button type="button" className="ml-3 underline" onClick={() => void load()}>Retry</button>
         </Alert>
       )}
 
@@ -100,7 +100,7 @@ function AdminErrorsPageContent() {
         />
       ) : !result.ok ? (
         <Alert variant="warning" title={`Sentry unavailable (HTTP ${result.status})`}>
-          {result.reason}
+          {result.reason} <button type="button" className="ml-3 underline" onClick={() => void load()}>Retry</button>
         </Alert>
       ) : result.issues.length === 0 ? (
         <EmptyState
@@ -110,7 +110,7 @@ function AdminErrorsPageContent() {
           body="Sentry has no unresolved issues for this project in the last 14 days."
         />
       ) : (
-        <IssuesTable rows={result.issues} />
+        <div className="space-y-3"><p className="text-xs text-[var(--mp-fg-muted)]">First {result.issues.length} of {result.total} unresolved issues</p><IssuesTable rows={result.issues} /></div>
       )}
     </AdminPageShell>
   );

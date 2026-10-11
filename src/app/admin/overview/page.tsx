@@ -93,12 +93,7 @@ interface OverviewSnapshot {
       confirmed: number;
     } | null;
     crons: Record<string, { lastStatus: string; lastStartedAt: string | null }> | null;
-    recent_events: Array<{
-      id: string | number;
-      event_type: string;
-      user_id: string | null;
-      created_at: string;
-    }>;
+    recent_events_aggregate: { total_last_24h: number };
   };
 }
 
@@ -157,12 +152,13 @@ export default function AdminOverviewPage() {
       onRefresh={hydrate}
     >
       {error && (
-        <div className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-600 dark:text-red-400 flex items-center gap-2">
+        <div className="rounded-md border border-[var(--mp-border)] bg-[var(--mp-surface-raised)] px-3 py-2 text-xs text-[var(--mp-fg-muted)] flex items-center gap-2">
           <AlertCircle size={14} />
-          {error}
+          Could not load overview. <button type="button" className="underline" onClick={() => void hydrate()}>Retry</button>
         </div>
       )}
 
+      {!error && <>
       {can("system.read") && <>
         <RunningNowRibbon />
         <AdminActionsRibbon />
@@ -275,7 +271,7 @@ export default function AdminOverviewPage() {
             initial={snapshot?.tiles.webhook_failures_24h ?? 0}
           />
           <CronsTile crons={snapshot?.tiles.crons ?? {}} />
-          {can("users.read") && <LiveFeedTile events={snapshot?.tiles.recent_events ?? []} />}
+          {can("users.read") && <ActivityCountTile count={snapshot?.tiles.recent_events_aggregate?.total_last_24h ?? 0} />}
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
           {can("revenue.read") && snapshot && snapshot.tiles.stuck_pending_24h !== null && (
@@ -294,6 +290,7 @@ export default function AdminOverviewPage() {
           />
         </div>
       </section>}
+      </>}
     </AdminPageShell>
   );
 }
@@ -1057,74 +1054,11 @@ function CronsTile({
   );
 }
 
-function LiveFeedTile({
-  events,
-}: {
-  events: Array<{
-    id: string | number;
-    event_type: string;
-    user_id: string | null;
-    created_at: string;
-  }>;
-}) {
-  return (
-    <div className="relative rounded-2xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] flex flex-col min-h-[240px] overflow-hidden">
-      <div
-        className="absolute top-0 left-0 right-0 h-[3px] rounded-t-2xl"
-        style={{ backgroundColor: "var(--mp-info)", opacity: 0.85 }}
-        aria-hidden
-      />
-      <div className="flex items-center gap-2 px-4 pt-3 pb-3 border-b border-[var(--mp-border-subtle)]">
-        <Activity size={12} className="text-[var(--mp-fg-muted)]" />
-        <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--mp-fg-muted)]">
-          Live activity
-        </span>
-        <span className="flex-1" />
-        <StatusDot tone="info" size={6} />
-      </div>
-      <div className="flex-1 overflow-y-auto overflow-x-auto max-h-[260px]">
-        {events.length === 0 ? (
-          <div className="px-4 py-6 text-center text-xs text-[var(--mp-fg-muted)]">
-            <Clock size={14} className="inline-block mb-1 opacity-50" />
-            <div>Waiting for events…</div>
-          </div>
-        ) : (
-          <ul className="flex lg:flex-col gap-0 px-2 py-1">
-            {events.slice(0, 40).map((e) => (
-              <li
-                key={String(e.id)}
-                className="flex-shrink-0 lg:flex-shrink flex items-center gap-2 px-2 py-1.5 text-[11px] font-mono text-[var(--mp-fg-muted)] border-b last:border-0 border-[var(--mp-border-subtle)]/40"
-              >
-                <StatusDot tone="info" size={6} />
-                <span className="text-[var(--mp-fg)] flex-shrink-0">
-                  {e.event_type}
-                </span>
-                <span className="tabular-nums text-[10px] text-[var(--mp-fg-subtle)] ml-auto flex-shrink-0">
-                  {new Date(e.created_at).toLocaleTimeString("de-AT", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                    second: "2-digit",
-                  })}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-      <div className="px-4 py-2 border-t border-[var(--mp-border-subtle)] text-[10px] text-[var(--mp-fg-muted)] flex items-center justify-between">
-        <span>Last {events.slice(0, 40).length}</span>
-        <Link
-          href="/admin/audit"
-          className="text-[var(--mp-viridian)] hover:underline"
-        >
-          See full audit →
-        </Link>
-      </div>
-    </div>
-  );
+function ActivityCountTile({ count }: { count: number }) {
+  return <Tile label="Activity (24h)" icon={Activity} tone="neutral" href="/admin/users" footer="Recorded learner events in the last 24 hours">
+    <FormatInt value={count} />
+  </Tile>;
 }
-
-// ═══ Admin-actions ribbon ═════════════════════════════════════════
 
 /**
  * Audit-trail health indicator. Two values live in the header:
@@ -1146,6 +1080,8 @@ function AdminActionsRibbon() {
     last_action: string | null;
   } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [auditError, setAuditError] = useState(false);
+  const [auditAttempt, setAuditAttempt] = useState(0);
   const [now, setNow] = useState(() => Date.now());
 
   // Keep the relative timestamp fresh — re-render once a minute.
@@ -1157,6 +1093,7 @@ function AdminActionsRibbon() {
   // Initial fetch.
   useEffect(() => {
     let cancelled = false;
+    setAuditError(false);
     (async () => {
       try {
         const res = await fetch("/api/admin/audit-log/latest?limit=1", {
@@ -1177,13 +1114,13 @@ function AdminActionsRibbon() {
           setLoading(false);
         }
       } catch {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) { setAuditError(true); setLoading(false); }
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [auditAttempt]);
 
   // Realtime bump on INSERT — every mutation landing in admin_audit_log
   // triggers a local counter bump so the header stays live without
@@ -1206,6 +1143,7 @@ function AdminActionsRibbon() {
     },
   });
 
+  if (auditError) return <div role="status" className="text-xs text-[var(--mp-fg-muted)]">Could not load audit summary. <button type="button" className="underline" onClick={() => setAuditAttempt((n) => n + 1)}>Retry</button></div>;
   if (loading || !summary) return null;
 
   const count = summary.today_count;

@@ -1,5 +1,6 @@
 "use client";
 
+import { safeNextPath } from "@/lib/safe-next";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getLang, setLang } from "@/lib/i18n";
@@ -230,7 +231,7 @@ export default function LoginPage() {
         await claimStoredReferralCode();
       }
       const next = new URLSearchParams(window.location.search).get("next");
-      window.location.href = next && next.startsWith("/") ? next : "/";
+      window.location.href = safeNextPath(next);
     } catch {
       setError(lang === "de" ? "Verbindungsfehler" : "Connection error");
     } finally {
@@ -283,7 +284,7 @@ export default function LoginPage() {
         await claimStoredReferralCode();
       }
       const next = new URLSearchParams(window.location.search).get("next");
-      window.location.href = next && next.startsWith("/") ? next : "/";
+      window.location.href = safeNextPath(next);
     } catch {
       setCodeError(lang === "de" ? "Verbindungsfehler" : "Connection error");
       setLoading(false);

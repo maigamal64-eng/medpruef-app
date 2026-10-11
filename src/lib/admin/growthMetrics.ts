@@ -56,6 +56,7 @@
  * is warranted. READ-ONLY throughout: every query here is a SELECT/count.
  */
 
+import { assertReadSucceeded } from "./read-result";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
@@ -145,6 +146,8 @@ export async function computeGrowthMetrics(
       .in("payment_provider", REAL_PAYMENT_RAILS as unknown as string[]),
   ]);
 
+  assertReadSucceeded(allUsersRes);
+  assertReadSucceeded(activeSubsRes);
   const allUsers = (allUsersRes.data ?? []) as Array<{
     id: string;
     email: string | null;
@@ -176,6 +179,7 @@ export async function computeGrowthMetrics(
       )
     );
     for (const res of counts) {
+      assertReadSucceeded(res);
       const n = res.count ?? 0;
       if (n >= 1) activated += 1;
       if (n >= ENGAGED_MIN_ANSWERS) engaged += 1;

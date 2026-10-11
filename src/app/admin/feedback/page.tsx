@@ -8,13 +8,13 @@ import { Alert, BrandedLoader, EmptyState, useToast } from "@/components/ui";
 import { AdminPageShell } from "../_components/AdminPageShell";
 import type { FeedbackItem } from "../_components/types";
 
-const STATUSES = ["all", "new", "reviewed", "resolved", "dismissed"] as const;
+const STATUSES = ["needs_action", "all", "new", "reviewed", "resolved", "dismissed"] as const;
 
 export default function AdminFeedbackPage() {
   const toast = useToast();
   const { can, loading: accessLoading } = useAdminPermissions();
   const [items, setItems] = useState<FeedbackItem[]>([]);
-  const [statusFilter, setStatusFilter] = useState<(typeof STATUSES)[number]>("new");
+  const [statusFilter, setStatusFilter] = useState<(typeof STATUSES)[number]>("needs_action");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actingId, setActingId] = useState<number | null>(null);
@@ -82,7 +82,7 @@ export default function AdminFeedbackPage() {
                 onClick={() => setStatusFilter(status)}
                 className={`mp-tabs__tab whitespace-nowrap ${statusFilter === status ? "mp-tabs__tab--active" : ""}`}
               >
-                {status === "all" ? "All" : status[0].toUpperCase() + status.slice(1)}
+                {status === "needs_action" ? "Needs action" : status === "all" ? "All" : status[0].toUpperCase() + status.slice(1)}
               </button>
             ))}
           </div>
@@ -118,9 +118,9 @@ export default function AdminFeedbackPage() {
                 </div>
                 <div className="flex sm:flex-col flex-wrap items-center sm:items-stretch gap-1 sm:min-w-28">
                   <span className="text-[10px] px-2 py-0.5 rounded font-semibold bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-muted)]">{item.status}</span>
-                  {item.status === "new" && can("feedback.manage") && (
+                  {(item.status === "new" || item.status === "reviewed") && can("feedback.manage") && (
                     <>
-                      <button type="button" disabled={actingId !== null} onClick={() => void updateStatus(item, "reviewed")} className="text-xs px-2 py-1.5 rounded bg-[var(--mp-status-warning)]/10 text-[var(--mp-status-warning)] disabled:opacity-50">{actingId === item.id ? "Saving…" : "Mark reviewed"}</button>
+                      {item.status === "new" && <button type="button" disabled={actingId !== null} onClick={() => void updateStatus(item, "reviewed")} className="text-xs px-2 py-1.5 rounded bg-[var(--mp-status-warning)]/10 text-[var(--mp-status-warning)] disabled:opacity-50">{actingId === item.id ? "Saving…" : "Mark reviewed"}</button>}
                       <button type="button" disabled={actingId !== null} onClick={() => void updateStatus(item, "resolved")} className="text-xs px-2 py-1.5 rounded bg-[var(--mp-accent-teal)]/10 text-[var(--mp-accent-teal)] disabled:opacity-50">Resolve</button>
                       <button type="button" disabled={actingId !== null} onClick={() => void updateStatus(item, "dismissed")} className="text-xs px-2 py-1.5 rounded bg-[var(--mp-fg-subtle)]/10 text-[var(--mp-fg-subtle)] disabled:opacity-50">Dismiss</button>
                     </>

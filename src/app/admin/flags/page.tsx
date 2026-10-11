@@ -59,14 +59,14 @@ export default function AdminFlagsPage() {
     >
       {error && (
         <Alert variant="error" title="Failed to load">
-          {error}
+          {error} <button type="button" className="ml-3 underline" onClick={() => void load()}>Retry</button>
         </Alert>
       )}
       {loading ? (
         <div className="flex items-center justify-center py-12">
           <BrandedLoader size={48} label="Loading flags…" />
         </div>
-      ) : items.length === 0 ? (
+      ) : error ? null : items.length === 0 ? (
         <EmptyState
           tone="neutral"
           icon={<FlagIcon className="w-10 h-10" aria-hidden />}

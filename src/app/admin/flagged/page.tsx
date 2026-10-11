@@ -73,7 +73,7 @@ export default function AdminFlaggedPage() {
     >
       {error && (
         <Alert variant="error" title="Failed to load">
-          {error}
+          {error} <button type="button" className="ml-3 underline" onClick={() => void load()}>Retry</button>
         </Alert>
       )}
 

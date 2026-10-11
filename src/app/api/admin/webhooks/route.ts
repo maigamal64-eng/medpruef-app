@@ -9,7 +9,7 @@ export const GET = adminRouteShell(
     const sb = getServiceClient();
     const { data, error } = await sb
       .from("processed_webhook_events")
-      .select("provider, event_id, processed_at, payload")
+      .select("provider, event_id, processed_at")
       .order("processed_at", { ascending: false, nullsFirst: false })
       .limit(200);
     if (error) {

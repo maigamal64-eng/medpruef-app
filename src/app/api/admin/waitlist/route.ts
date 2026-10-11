@@ -1,3 +1,4 @@
+import { csvCell } from "@/lib/csv-cell";
 import { NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { adminRouteShell } from "@/lib/admin/shell";
@@ -49,12 +50,7 @@ export const GET = adminRouteShell(
       const body = rows
         .map((r) =>
           cols
-            .map((c) => {
-              const v = (r as Record<string, unknown>)[c];
-              if (v == null) return "";
-              const s = String(v).replace(/"/g, '""');
-              return /[,"\n]/.test(s) ? `"${s}"` : s;
-            })
+.map((c) => csvCell((r as Record<string, unknown>)[c]))
             .join(",")
         )
         .join("\n");

@@ -1,3 +1,5 @@
+import { canAccessAdminPermission, loadAdminPermissionSnapshot } from "@/lib/admin/permissions";
+import { assertReadSucceeded } from "@/lib/admin/read-result";
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { requireAdmin, resolveOptionalUser } from "@/lib/auth-guard";
@@ -113,6 +115,8 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Failed to fetch" }, { status: 500 });
     }
 
+    const canReadUsers = canAccessAdminPermission(await loadAdminPermissionSnapshot(guard.userId), "users.read");
+
     // Enrich with question text and user name
     const questionIds = [...new Set((suggestions || []).map((s: { question_id: number }) => s.question_id))];
     const userIds = [...new Set((suggestions || []).filter((s: { user_id: string | null }) => s.user_id).map((s: { user_id: string }) => s.user_id))];
@@ -120,12 +124,14 @@ export async function GET(req: NextRequest) {
     const [questionsRes, usersRes] = await Promise.all([
       questionIds.length > 0
         ? db.from("questions").select("id, question, topic, choices").in("id", questionIds)
-        : Promise.resolve({ data: [] }),
-      userIds.length > 0
+        : Promise.resolve({ data: [], error: null }),
+      canReadUsers && userIds.length > 0
         ? db.from("users").select("id, first_name, last_name, telegram_username, email").in("id", userIds)
-        : Promise.resolve({ data: [] }),
+        : Promise.resolve({ data: [], error: null }),
     ]);
 
+    assertReadSucceeded(questionsRes);
+    assertReadSucceeded(usersRes);
     const questionMap: Record<number, { question: string; topic: string; choices: unknown }> = {};
     for (const q of (questionsRes.data || []) as { id: number; question: string; topic: string; choices: unknown }[]) {
       questionMap[q.id] = { question: q.question, topic: q.topic, choices: q.choices };
@@ -143,7 +149,7 @@ export async function GET(req: NextRequest) {
         question_text: questionMap[s.question_id as number]?.question?.slice(0, 200) || "",
         question_topic: questionMap[s.question_id as number]?.topic || "",
         question_choices: questionMap[s.question_id as number]?.choices || null,
-        user_name: user_id ? (userMap[user_id as string] || "Unknown") : "Anonymous",
+        user_name: user_id ? (canReadUsers ? (userMap[user_id as string] || "Learner") : "Learner") : "Anonymous",
       };
     });
 
@@ -154,6 +160,7 @@ export async function GET(req: NextRequest) {
       db.from("question_suggestions").select("id", { count: "exact", head: true }).eq("status", "rejected"),
     ]);
 
+    for (const result of [pendingRes, approvedRes, rejectedRes]) assertReadSucceeded(result);
     return NextResponse.json({
       suggestions: enriched,
       total: count || 0,

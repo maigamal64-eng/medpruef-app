@@ -102,7 +102,9 @@ export async function GET(req: NextRequest) {
       .order('created_at', { ascending: false })
       .limit(limit)
 
-    if (status !== 'all') {
+    if (status === 'needs_action') {
+      query = query.in('status', ['new', 'reviewed'])
+    } else if (status !== 'all') {
       query = query.eq('status', status)
     }
 

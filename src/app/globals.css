@@ -1019,6 +1019,7 @@ textarea:focus {
 .mp-btn--primary {
   background: var(--mp-oxford-blue); color: #FFFFFF;
 }
+[data-theme="dark"] [data-admin="1"] .mp-btn--primary { background: var(--mp-cta-blue); }
 .mp-btn--primary:hover { background: var(--mp-cta-blue); }
 .mp-btn--primary:focus-visible { box-shadow: var(--mp-focus-ring-cta); }
 .mp-btn--success { background: var(--mp-viridian); color: #FFFFFF; }

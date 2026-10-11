@@ -14,10 +14,10 @@ export const GET = adminRouteShell(
     let q = sb
       .from("admin_audit_log")
       .select(
-        "id, actor_email, action, target_type, target_id, payload, ip_address, created_at"
+        "id, actor_email, action, target_type, target_id, payload, created_at"
       )
       .order("created_at", { ascending: false })
-      .limit(500);
+      .limit(200);
     if (actor) q = q.eq("actor_id", actor);
     if (action) q = q.eq("action", action);
 

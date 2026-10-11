@@ -14,9 +14,10 @@
  *   - Skeleton rows instead of a full-page spinner
  */
 
+import { readUsersUrl } from "@/lib/admin/users-url";
 import { Fragment, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Ban,
   ChevronDown,
@@ -66,28 +67,38 @@ export default function AdminUsersPage() {
   const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [search, setSearch] = useState("");
-  const [query, setQuery] = useState("");
-  const [page, setPage] = useState(1);
-  const [tierFilter, setTierFilter] = useState<TierFilter>("all");
-  const [authFilter, setAuthFilter] = useState<AuthFilter>("all");
+  const searchParams = useSearchParams();
+  const urlState = readUsersUrl(new URLSearchParams(searchParams.toString()));
+  const query = urlState.query;
+  const page = urlState.page;
+  const tierFilter = urlState.tier as TierFilter;
+  const authFilter = urlState.auth as AuthFilter;
+  const sort = urlState.sort;
+  const [search, setSearch] = useState(query);
+  useEffect(() => { setSearch(query); }, [query]);
+  const updateUrl = useCallback((updates: Record<string, string>) => {
+    const params = new URLSearchParams(searchParams.toString());
+    for (const [key, value] of Object.entries(updates)) {
+      if (!value || value === "all") params.delete(key); else params.set(key, value);
+    }
+    router.replace(`/admin/users?${params}`, { scroll: false });
+  }, [router, searchParams]);
+  const setPage = (value: number | ((current: number) => number)) => updateUrl({ page: String(typeof value === "function" ? value(page) : value) });
+  const setTierFilter = (value: TierFilter) => updateUrl({ tier: value, page: "1" });
+  const setAuthFilter = (value: AuthFilter) => updateUrl({ auth: value, page: "1" });
+  const setSort = (value: (current: typeof sort) => typeof sort) => { const next = value(sort); updateUrl({ sort: next.col, order: next.asc ? "asc" : "desc", page: "1" }); };
   const [expandedUser, setExpandedUser] = useState<string | null>(null);
   const [editingUser, setEditingUser] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Record<string, string>>({});
   const [resetTarget, setResetTarget] = useState<UserRow | null>(null);
-  const [sort, setSort] = useState<{ col: string; asc: boolean }>({
-    col: "last_active",
-    asc: false,
-  });
-
   useEffect(() => {
     const timer = window.setTimeout(() => {
       const trimmed = search.trim();
-      setQuery(trimmed.length >= 2 ? trimmed : "");
-      setPage(1);
+      const next = trimmed.length >= 2 ? trimmed : "";
+      if (next !== query) updateUrl({ q: next, page: "1" });
     }, 250);
     return () => window.clearTimeout(timer);
-  }, [search]);
+  }, [search, query, updateUrl]);
 
   const fetchUsers = useCallback(async () => {
     if (!can("users.read")) return;
@@ -114,7 +125,7 @@ export default function AdminUsersPage() {
     } finally {
       setLoading(false);
     }
-  }, [authFilter, can, canReadRevenue, page, query, sort, tierFilter]);
+  }, [authFilter, can, canReadRevenue, page, query, sort.col, sort.asc, tierFilter]);
 
   useEffect(() => {
     if (accessLoading) return;
@@ -173,7 +184,7 @@ export default function AdminUsersPage() {
   return (
     <AdminPageShell
       title="Users"
-      description={loading && users.length === 0 ? "Loading user directory…" : error ? `Showing a saved snapshot of ${formatInt(users.length)} users. The latest request failed.` : `Showing ${formatInt(users.length)} of ${formatInt(total)} matching users`}
+      description={loading && users.length === 0 ? "Loading user directory…" : error ? (users.length ? `Showing a saved snapshot of ${formatInt(users.length)} users. The latest request failed.` : "User directory unavailable. Retry the request.") : `Showing ${formatInt(users.length)} of ${formatInt(total)} matching users`}
       freshness={error ? (users.length ? "cached" : "disconnected") : loading ? "cached" : "live"}
       onRefresh={fetchUsers}
     >
@@ -237,7 +248,7 @@ export default function AdminUsersPage() {
               <FilterChip
                 key={t}
                 active={tierFilter === t}
-                onClick={() => { setPage(1); setTierFilter(t); }}
+                onClick={() => { setTierFilter(t); }}
               >
                 {t === "all" ? "All" : t}
               </FilterChip>
@@ -252,7 +263,7 @@ export default function AdminUsersPage() {
               <FilterChip
                 key={a}
                 active={authFilter === a}
-                onClick={() => { setPage(1); setAuthFilter(a); }}
+                onClick={() => { setAuthFilter(a); }}
               >
                 {a === "all" ? "All" : a === "email" ? "Email" : "Telegram"}
               </FilterChip>
@@ -291,7 +302,6 @@ export default function AdminUsersPage() {
                   [
                     { key: "name", label: "User", align: "left" },
                     { key: "auth", label: "Auth", align: "left" },
-                    { key: "role", label: "Role", align: "left" },
                     ...(canReadRevenue ? [{ key: "tier", label: "Tier", align: "left" as const }] : []),
                     { key: "status", label: "Status", align: "left" },
                     { key: "xp", label: "XP", align: "right" },
@@ -335,7 +345,6 @@ export default function AdminUsersPage() {
                         type="button"
                         className="inline-flex items-center gap-1 hover:text-[var(--mp-fg)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--mp-viridian)]"
                         onClick={() => {
-                          setPage(1);
                           setSort((prev) => ({ col: col.key, asc: prev.col === col.key ? !prev.asc : false }));
                         }}
                       >
@@ -352,11 +361,11 @@ export default function AdminUsersPage() {
             <tbody>
               {loading && users.length === 0 ? (
                 Array.from({ length: 6 }).map((_, i) => (
-                  <RowSkeleton key={i} cols={canReadRevenue ? 12 : 11} />
+                  <RowSkeleton key={i} cols={canReadRevenue ? 11 : 10} />
                 ))
               ) : users.length === 0 ? (
                 <tr>
-                  <td colSpan={canReadRevenue ? 12 : 11} className="px-4 py-8">
+                  <td colSpan={canReadRevenue ? 11 : 10} className="px-4 py-8">
                     {error ? (
                       <p className="text-center text-sm text-[var(--mp-fg-muted)]">The user directory could not be loaded. Retry the request before treating this as an empty result.</p>
                     ) : (
@@ -402,6 +411,7 @@ export default function AdminUsersPage() {
                               {u.name.charAt(0).toUpperCase()}
                             </div>
                           )}
+                          <div className="min-w-0">
                           <Link
                             href={`/admin/users/${u.id}`}
                             onClick={(e) => e.stopPropagation()}
@@ -410,6 +420,8 @@ export default function AdminUsersPage() {
                           >
                             {u.name}
                           </Link>
+                          <p className="text-xs text-[var(--mp-fg-muted)] truncate max-w-[220px]">{u.email || (u.username ? `@${u.username}` : "")}</p>
+                          </div>
                         </div>
                       </td>
                       {/* Auth Badges */}
@@ -426,12 +438,6 @@ export default function AdminUsersPage() {
                             </span>
                           )}
                         </div>
-                      </td>
-                      {/* Access role assignment is managed in the dedicated access console. */}
-                      <td className="px-3 py-2.5">
-                        <span className="inline-flex rounded-full border border-[var(--mp-border-subtle)] px-2 py-0.5 text-[10px] text-[var(--mp-fg-muted)]">
-                          {u.role === "admin" ? "Admin account" : "Learner"}
-                        </span>
                       </td>
                       {/* Entitlements are visible only to revenue readers. */}
                       {canReadRevenue && <td className="px-3 py-2.5">
@@ -537,7 +543,7 @@ export default function AdminUsersPage() {
                     {expandedUser === u.id && (
                       <tr>
                         <td
-                          colSpan={canReadRevenue ? 12 : 11}
+                          colSpan={canReadRevenue ? 11 : 10}
                           className="px-4 py-4 bg-[var(--mp-surface-sunken)]/50 border-b border-[var(--mp-border-subtle)]"
                         >
                           {editingUser === u.id ? (
@@ -736,7 +742,7 @@ export default function AdminUsersPage() {
           ))}
         </div>
         <div className="flex items-center justify-between gap-3 border-t border-[var(--mp-border-subtle)] px-3 py-2 text-xs text-[var(--mp-fg-muted)]">
-          <span aria-live="polite">Page {totalPages === 0 ? 0 : page} of {totalPages} · {formatInt(total)} matching users</span>
+          <span aria-live="polite">{error ? "Directory counts unavailable" : `Page ${totalPages === 0 ? 0 : page} of ${totalPages} · ${formatInt(total)} matching users`}</span>
           <div className="flex items-center gap-2">
             {loading && <span role="status">Updating…</span>}
             <button type="button" className="mp-btn mp-btn--secondary mp-btn--sm" disabled={loading || page <= 1} onClick={() => setPage((value) => Math.max(1, value - 1))}>Previous</button>

@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
-import Script from "next/script";
+import PublicIntegrations from "@/components/PublicIntegrations";
 import TrackerInit from "@/components/TrackerInit";
 import ThemeProvider from "@/components/ThemeProvider";
 import LangAttributeSync from "@/components/LangAttributeSync";
@@ -15,10 +15,6 @@ import RenewalPrompt from "@/components/RenewalPrompt";
 import EmailValidationModal from "@/components/EmailValidationModal";
 import CookieBannerMount from "@/components/CookieBannerMount";
 import LangHtmlSync from "@/components/LangHtmlSync";
-import ConsentGatedAnalytics from "@/components/ConsentGatedAnalytics";
-import ConsentGatedMetaPixel from "@/components/ConsentGatedMetaPixel";
-import ConsentGatedRedditPixel from "@/components/ConsentGatedRedditPixel";
-import WhopPixel from "@/components/WhopPixel";
 import AttributionCapture from "@/components/AttributionCapture";
 import OfflineIndicator from "@/components/OfflineIndicator";
 import TrackRouteChange from "@/components/TrackRouteChange";
@@ -357,11 +353,6 @@ export default function RootLayout({
           regardless of consent, and the CookieBanner was defined in
           the repo but never mounted).
         */}
-        {/* Telegram WebApp SDK — afterInteractive so it doesn't block, graceful in browser */}
-        <Script
-          src="https://telegram.org/js/telegram-web-app.js"
-          strategy="afterInteractive"
-        />
       </head>
       <body
         className={`${inter.className} ${plusJakarta.variable} ${jetbrainsMono.variable} bg-[var(--mp-surface-sunken)] text-[var(--mp-fg)] min-h-screen antialiased`}
@@ -407,18 +398,7 @@ export default function RootLayout({
             <SearchModalMount />
             <CookieBannerMount />
             <LangHtmlSync />
-            <ConsentGatedAnalytics />
-            {/* Meta (Facebook) Pixel — same consent gate as GA4. No-ops
-                cleanly when NEXT_PUBLIC_META_PIXEL_ID is unset (paid-ads
-                test dormant). See marketing/campaigns/paid-ads-setup-2026-06-24.md. */}
-            <ConsentGatedMetaPixel />
-            <ConsentGatedRedditPixel />
-            {/* Whop Pixel (biz_redacted912fd07f). Deliberately NOT behind
-                the cookie banner ([name]'s call 2026-08-29): it loads for
-                every visitor, unlike the Meta + Reddit pixels above.
-                NEXT_PUBLIC_WHOP_PIXEL_CONSENT_MODE=optin|optout re-gates it
-                without a code change. */}
-            <WhopPixel />
+            <PublicIntegrations />
             {/* First-touch campaign attribution (utm_* + rdt_cid) captured to
                 localStorage on landing, attached to the register call. Not a
                 tracker, no consent gate needed (first-party, no network). */}

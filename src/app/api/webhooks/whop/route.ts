@@ -422,7 +422,7 @@ export async function POST(req: NextRequest) {
     if (!userId || !tier) {
       // Don't drop it — flag for manual grant + record telemetry.
       Sentry.captureMessage(
-        `Whop payment unmapped, manual grant needed: payment=${f.paymentId} plan=${f.planId} email=${f.email} tier=${tier}`,
+        `Whop payment unmapped, manual grant needed: payment=${f.paymentId} plan=${f.planId} tier=${tier}`,
         "warning"
       );
       await recordEvent(sb, userId, "whop_payment_unmapped", {

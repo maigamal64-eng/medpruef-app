@@ -1,3 +1,4 @@
+import { assertReadSucceeded } from "@/lib/admin/read-result";
 import { NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { adminRouteShell } from "@/lib/admin/shell";
@@ -8,7 +9,7 @@ export const GET = adminRouteShell(
   async () => {
     const sb = getServiceClient();
 
-    const [{ data: activeSubs }, { data: recent }] = await Promise.all([
+    const [activeRes, recentRes] = await Promise.all([
       sb.from("subscriptions").select("tier, status, expires_at").eq("status", "active"),
       sb
         .from("subscriptions")
@@ -17,6 +18,10 @@ export const GET = adminRouteShell(
         .limit(50),
     ]);
 
+    assertReadSucceeded(activeRes);
+    assertReadSucceeded(recentRes);
+    const activeSubs = activeRes.data;
+    const recent = recentRes.data;
     const now = Date.now();
     const byTier: Record<string, number> = {};
     let totalActive = 0;

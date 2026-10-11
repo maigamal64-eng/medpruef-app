@@ -88,6 +88,7 @@ function AdminGrowthPageContent() {
   const [error, setError] = useState<string | null>(null);
 
   const hydrate = useCallback(async () => {
+    setLoading(true);
     try {
       const res = await fetch("/api/stats/admin/growth", { cache: "no-store" });
       if (!res.ok) throw new Error(`growth ${res.status}`);
@@ -125,12 +126,12 @@ function AdminGrowthPageContent() {
       {error && (
         <div className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-600 dark:text-red-400 flex items-center gap-2">
           <AlertCircle size={14} />
-          {error}
+          {error} <button type="button" className="ml-3 underline" onClick={() => void hydrate()}>Retry</button>
         </div>
       )}
 
       {/* ─── GROWTH FUNNEL (live hero) ───────────────────────────────── */}
-      <FunnelBlock metrics={metrics} loading={loading} />
+      {!error && <FunnelBlock metrics={metrics} loading={loading} />}
 
       {/* ─── CHANNEL STRATEGY (the fire-list) ────────────────────────── */}
       <StrategySection />

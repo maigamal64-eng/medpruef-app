@@ -1,5 +1,6 @@
 "use client";
 
+import { isAdminPath } from "@/lib/admin-route";
 import { useEffect } from "react";
 import { getCookieConsent } from "@/components/CookieBanner";
 
@@ -41,6 +42,7 @@ function analyticsAllowed(): boolean {
 }
 
 function loadGA4() {
+  if (isAdminPath(window.location.pathname)) return;
   if (!GA_ID) return;
   if (document.getElementById("ga-loader")) return; // already loaded
   const s1 = document.createElement("script");
@@ -66,6 +68,7 @@ function loadGA4() {
 }
 
 function loadClarity() {
+  if (isAdminPath(window.location.pathname)) return;
   if (!CLARITY_ID) return;
   if (document.getElementById("clarity-loader")) return;
   const s = document.createElement("script");
@@ -81,6 +84,7 @@ function loadClarity() {
 
 export default function ConsentGatedAnalytics() {
   useEffect(() => {
+    if (isAdminPath(window.location.pathname)) return;
     const tryLoad = () => {
       if (!analyticsAllowed()) return;
       loadGA4();

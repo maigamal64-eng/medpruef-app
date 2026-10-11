@@ -13,6 +13,7 @@
  * `/api/suggestions` (approve/reject). Toasts surface success/failure.
  */
 
+import { changedQuestionFields } from "@/lib/admin/question-edit";
 import { Fragment, useCallback, useEffect, useState } from "react";
 import {
   ArrowLeftRight,
@@ -80,17 +81,19 @@ export default function AdminQuestionsPage() {
 
   const fetchStats = useCallback(async () => {
     try {
-      const res = await fetch("/api/stats/admin/questions");
+      const res = await fetch(`/api/stats/admin/questions${examTypeFilter === "all" ? "" : `?examType=${examTypeFilter}`}`);
       if (!res.ok) throw new Error("Failed to load question stats");
       setStats(await res.json());
       setReadErrors((current) => ({ ...current, stats: "" }));
     } catch (e) { setReadErrors((current) => ({ ...current, stats: (e as Error).message })); }
-  }, []);
+  }, [examTypeFilter]);
 
   const fetchQuestions = useCallback(
     async (p = 1, topic = "", q = "", hasExpl = "all", isActive = "all", examType = "all") => {
       try {
         const params = new URLSearchParams({ mode: "browse", page: String(p), limit: "25" });
+        const questionId = searchParams.get("questionId");
+        if (questionId) params.set("questionId", questionId);
         if (topic) params.set("topic", topic);
         if (q) params.set("search", q);
         if (hasExpl === "with") params.set("hasExplanation", "true");
@@ -107,7 +110,7 @@ export default function AdminQuestionsPage() {
         setReadErrors((current) => ({ ...current, questions: "" }));
       } catch (e) { setReadErrors((current) => ({ ...current, questions: (e as Error).message })); }
     },
-    []
+    [searchParams]
   );
 
   const fetchDuplicates = useCallback(async () => {
@@ -129,11 +132,11 @@ export default function AdminQuestionsPage() {
   }, []);
 
   useEffect(() => {
-    if (!accessLoading && can("content.read")) {
-      fetchStats();
-      fetchQuestions(1);
-    }
-  }, [accessLoading, can, fetchStats, fetchQuestions]);
+    if (!accessLoading && can("content.read")) void fetchStats();
+  }, [accessLoading, can, fetchStats]);
+  useEffect(() => {
+    if (!accessLoading && can("content.read")) void fetchQuestions(1);
+  }, [accessLoading, can, fetchQuestions]);
 
   useEffect(() => {
     if (tab === "duplicates" && !duplicates) fetchDuplicates();
@@ -152,11 +155,16 @@ export default function AdminQuestionsPage() {
 
   const handleEdit = async (questionId: number) => {
     if (!can("content.moderate")) return;
+    const before = questions.find((q) => q.id === questionId);
+    if (!before) return;
+    const updates = changedQuestionFields(before as unknown as Record<string, unknown>, questionEditForm);
+    if (updates.is_active === false && !window.confirm("Hide this question from learners?")) return;
+    if (!Object.keys(updates).length) { setEditingQuestion(null); return; }
     try {
       const res = await fetch("/api/stats/admin/questions", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ questionId, updates: questionEditForm }),
+        body: JSON.stringify({ questionId, updates }),
       });
       if (!res.ok) throw new Error("Failed");
       setEditingQuestion(null);
@@ -204,12 +212,12 @@ export default function AdminQuestionsPage() {
         if (tab === "duplicates") fetchDuplicates();
       }}
     >
-      {readErrors.stats && <Alert variant="error" title="Question metrics unavailable">{readErrors.stats}</Alert>}
-      {readErrors.questions && tab === "browse" && <Alert variant="error" title="Questions could not be loaded">{readErrors.questions}</Alert>}
-      {readErrors.duplicates && tab === "duplicates" && <Alert variant="error" title="Duplicate scan unavailable">{readErrors.duplicates}</Alert>}
-      {readErrors.reviews && tab === "reviews" && <Alert variant="error" title="Review queue unavailable">{readErrors.reviews}</Alert>}
+      {readErrors.stats && <Alert variant="error" title="Question metrics unavailable">{readErrors.stats} <button type="button" className="ml-3 underline" onClick={() => void fetchStats()}>Retry</button></Alert>}
+      {readErrors.questions && tab === "browse" && <Alert variant="error" title="Questions could not be loaded">{readErrors.questions} <button type="button" className="ml-3 underline" onClick={() => void fetchQuestions(page, topicFilter, search, explFilter, activeFilter, examTypeFilter)}>Retry</button></Alert>}
+      {readErrors.duplicates && tab === "duplicates" && <Alert variant="error" title="Duplicate scan unavailable">{readErrors.duplicates} <button type="button" className="ml-3 underline" onClick={() => void fetchDuplicates()}>Retry</button></Alert>}
+      {readErrors.reviews && tab === "reviews" && <Alert variant="error" title="Review queue unavailable">{readErrors.reviews} <button type="button" className="ml-3 underline" onClick={() => void fetchSuggestions()}>Retry</button></Alert>}
       {/* Stats Cards — .mp-stat tight grid */}
-      {stats && (
+      {stats && !readErrors.stats && (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           <div className="mp-stat" style={{ padding: 12 }}>
             <span className="mp-stat__label">Total</span>
@@ -224,7 +232,7 @@ export default function AdminQuestionsPage() {
             <span className="mp-stat__value" style={{ fontSize: 22, color: "var(--mp-fg-subtle)" }}>{stats.inactive.toLocaleString()}</span>
           </div>
           <div className="mp-stat" style={{ padding: 12 }}>
-            <span className="mp-stat__label">MCQ</span>
+            <span className="mp-stat__label">MCQ (Wien + Innsbruck)</span>
             <span className="mp-stat__value" style={{ fontSize: 22, color: "var(--mp-accent-teal)" }}>{stats.mcqPct}%</span>
           </div>
           <div className="mp-stat" style={{ padding: 12 }}>
@@ -274,7 +282,7 @@ export default function AdminQuestionsPage() {
         </button>
       </div>
 
-      {tab === "browse" && (
+      {tab === "browse" && !readErrors.questions && (
         <>
           {/* Search + Filters — MPDS fields */}
           <div className="flex flex-col sm:flex-row gap-3 flex-wrap">
@@ -572,7 +580,7 @@ export default function AdminQuestionsPage() {
         </>
       )}
 
-      {tab === "duplicates" && (
+      {tab === "duplicates" && !readErrors.duplicates && (
         <div className="card rounded-xl p-6">
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -620,7 +628,7 @@ export default function AdminQuestionsPage() {
         </div>
       )}
 
-      {tab === "reviews" && (
+      {tab === "reviews" && !readErrors.reviews && (
         <div className="space-y-4">
           {/* Review Stats */}
           {suggestions && (
@@ -687,30 +695,7 @@ export default function AdminQuestionsPage() {
                           By {String(s.user_name || "Anonymous")} · {String(s.question_topic || "")} · {new Date(String(s.created_at)).toLocaleDateString("en-GB")}
                         </p>
                         {s.details ? <p className="text-xs text-[var(--mp-fg-muted)] mt-1 italic">&quot;{String(s.details)}&quot;</p> : null}
-                        {(() => {
-                          const ctx = s.context as Record<string, unknown> | null;
-                          if (!ctx) return null;
-                          const url = ctx.url as string | undefined;
-                          const examType = ctx.exam_type as string | undefined;
-                          const ua = ctx.user_agent as string | undefined;
-                          const viewport = ctx.viewport as string | undefined;
-                          const guestId = ctx.guest_id as string | undefined;
-                          const sessionName = ctx.session_first_name as string | undefined;
-                          const ip = ctx.ip as string | undefined;
-                          const buildId = ctx.build_id as string | undefined;
-                          return (
-                            <div className="mt-2 flex flex-wrap gap-1 text-[10px]">
-                              {sessionName && <span className="bg-[var(--mp-viridian)]/10 text-[var(--mp-viridian)] px-1.5 py-0.5 rounded">{sessionName}</span>}
-                              {guestId && <span className="bg-[var(--mp-status-warning)]/10 text-[var(--mp-status-warning)] px-1.5 py-0.5 rounded">guest: {guestId.slice(0, 18)}</span>}
-                              {examType && <span className="bg-[var(--mp-cta-blue)]/10 text-[var(--mp-cta-blue)] px-1.5 py-0.5 rounded">{examType}</span>}
-                              {url && <span className="bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-muted)] px-1.5 py-0.5 rounded border border-[var(--mp-border)] truncate max-w-[220px]" title={url}>{new URL(url).pathname}</span>}
-                              {viewport && <span className="bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-subtle)] px-1.5 py-0.5 rounded border border-[var(--mp-border)]">{viewport}</span>}
-                              {ip && <span className="bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-subtle)] px-1.5 py-0.5 rounded border border-[var(--mp-border)]">{ip}</span>}
-                              {buildId && <span className="bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-subtle)] px-1.5 py-0.5 rounded border border-[var(--mp-border)]" title={buildId}>build: {buildId.slice(0, 7)}</span>}
-                              {ua && <span className="bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-subtle)] px-1.5 py-0.5 rounded border border-[var(--mp-border)] truncate max-w-[260px]" title={ua}>{(ua.match(/\(([^)]+)\)/)?.[1] || ua).slice(0, 40)}</span>}
-                            </div>
-                          );
-                        })()}
+
                       </div>
 
                       {/* Actions */}

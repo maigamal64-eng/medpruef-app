@@ -1,5 +1,6 @@
 "use client";
 
+import { isAdminPath } from "@/lib/admin-route";
 import { useEffect } from "react";
 import { getCookieConsent } from "@/components/CookieBanner";
 
@@ -35,6 +36,7 @@ import { getCookieConsent } from "@/components/CookieBanner";
 const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID;
 
 function loadMetaPixel() {
+  if (typeof window !== "undefined" && isAdminPath(window.location.pathname)) return;
   if (!META_PIXEL_ID) return; // env empty → clean no-op, no fbq defined
   if (typeof window === "undefined") return;
   // Already bootstrapped (fbq present) or script already injected.
@@ -66,6 +68,7 @@ function loadMetaPixel() {
 
 export default function ConsentGatedMetaPixel() {
   useEffect(() => {
+    if (isAdminPath(window.location.pathname)) return;
     if (!META_PIXEL_ID) return; // dormant until [name] sets the env var
 
     const tryLoad = () => {

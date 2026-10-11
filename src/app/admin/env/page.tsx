@@ -9,8 +9,6 @@ import { AdminPageShell } from "../_components/AdminPageShell";
 interface EnvStatus {
   name: string;
   present: boolean;
-  /** Masked hint so we know SOMETHING is set without leaking the value. */
-  masked?: string;
 }
 
 export default function AdminEnvPage() {
@@ -49,14 +47,14 @@ export default function AdminEnvPage() {
     >
       {error && (
         <Alert variant="error" title="Failed to load">
-          {error}
+          {error} <button type="button" className="ml-3 underline" onClick={() => void load()}>Retry</button>
         </Alert>
       )}
       {loading ? (
         <div className="flex items-center justify-center py-12">
           <BrandedLoader size={48} label="Checking env…" />
         </div>
-      ) : (
+      ) : error ? null : (
         <div className="rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] overflow-hidden">
           <table className="w-full text-xs">
             <thead className="bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-muted)] uppercase text-[10px] tracking-wider">

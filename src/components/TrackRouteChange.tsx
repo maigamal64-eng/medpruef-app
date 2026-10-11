@@ -1,5 +1,6 @@
 "use client";
 
+import { isAdminPath } from "@/lib/admin-route";
 import { useEffect } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { trackPageView } from "@/lib/tracker";
@@ -49,7 +50,7 @@ export default function TrackRouteChange() {
       const win = window as unknown as {
         gtag?: (...args: unknown[]) => void;
       };
-      if (typeof win.gtag === "function" && process.env.NEXT_PUBLIC_GA_ID) {
+      if (!isAdminPath(pathname) && typeof win.gtag === "function" && process.env.NEXT_PUBLIC_GA_ID) {
         const qs = searchParams?.toString();
         const path = qs ? `${pathname}?${qs}` : pathname;
         win.gtag("config", process.env.NEXT_PUBLIC_GA_ID, { page_path: path });

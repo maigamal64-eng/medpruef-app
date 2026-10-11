@@ -19,6 +19,7 @@
  * want to persist them.
  */
 
+import { adminErrorResponse } from "./error-response";
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth-guard";
 import { checkRateLimit, rateLimitHeaders } from "@/lib/rate-limit";
@@ -81,10 +82,7 @@ export function adminRouteShell(
       };
     } catch (err) {
       captureServerError(err, { route: options.route, stage: "resolve-email" });
-      return NextResponse.json(
-        { error: "Admin context lookup failed" },
-        { status: 500 }
-      );
+      return adminErrorResponse(err, options.route);
     }
 
     try {
@@ -94,10 +92,7 @@ export function adminRouteShell(
         route: options.route,
         actor: actor.userId,
       });
-      return NextResponse.json(
-        { error: "Internal admin error" },
-        { status: 500 }
-      );
+      return adminErrorResponse(err, options.route);
     }
   };
 }

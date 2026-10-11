@@ -202,7 +202,7 @@ export default function AdminUserDetailPage() {
 
       {/* ── Identity header ─────────────────────────────────────────── */}
       <div className="rounded-2xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] p-5">
-        <div className="flex items-start gap-4 flex-wrap">
+        <div className="flex flex-col sm:flex-row items-start gap-4">
           {/* avatar */}
           {p.photo_url ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -217,9 +217,9 @@ export default function AdminUserDetailPage() {
             </div>
           )}
 
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0 w-full sm:flex-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-xl font-semibold text-[var(--mp-fg)] truncate">
+              <h1 className="text-xl font-semibold text-[var(--mp-fg)] break-words">
                 {p.name}
               </h1>
               {canReadRevenue && p.tier && <span

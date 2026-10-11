@@ -1,5 +1,6 @@
 "use client";
 
+import { fetchAdminAccess } from "./access-fetch";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { authFetch } from "@/lib/authFetch";
 
@@ -62,9 +63,9 @@ export function AdminAccessProvider({ children }: { children: React.ReactNode })
     setLoading(true);
     setError(null);
     try {
-      const response = await authFetch("/api/admin/access/me", {
+      const response = await fetchAdminAccess(() => authFetch("/api/admin/access/me", {
         cache: "no-store",
-      });
+      }));
       if (!response.ok) {
         setSnapshot(EMPTY_SNAPSHOT);
         setError(`Access check failed (${response.status}).`);

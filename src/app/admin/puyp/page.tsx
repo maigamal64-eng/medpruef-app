@@ -288,7 +288,7 @@ export default function AdminPuypPage() {
     <AdminPageShell
       title="Pass-Until-You-Pass"
       description="Review proof uploads, grant or reject re-exam extensions. Admin-only."
-      freshness={loading ? "cached" : "live"}
+      freshness={loading ? "cached" : error ? "disconnected" : "live"}
       onRefresh={() => fetchQueue(status)}
       actions={
         <div className="flex items-center gap-2">
@@ -298,7 +298,7 @@ export default function AdminPuypPage() {
               className="text-[var(--mp-viridian)]"
               aria-hidden
             />
-            {sorted.length} in queue
+            {error ? "Queue unavailable" : loading ? "Loading queue" : `${sorted.length} in queue`}
           </span>
           <div className="mp-tabs" role="tablist">
             {(["pending", "approved", "rejected", "all"] as StatusFilter[]).map(
@@ -321,7 +321,7 @@ export default function AdminPuypPage() {
     >
       {error && (
         <Alert variant="error" title="Failed to load">
-          {error}
+          {error} <button type="button" className="ml-3 underline" onClick={() => void fetchQueue(status)}>Retry</button>
         </Alert>
       )}
 
@@ -329,7 +329,7 @@ export default function AdminPuypPage() {
         <div className="flex items-center justify-center py-12">
           <BrandedLoader size={60} label="Loading queue…" />
         </div>
-      ) : sorted.length === 0 ? (
+      ) : error ? null : sorted.length === 0 ? (
         <EmptyState
           tone="success"
           icon={<CheckCircle2 className="w-10 h-10" aria-hidden />}

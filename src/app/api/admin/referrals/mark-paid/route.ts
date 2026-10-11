@@ -68,13 +68,19 @@ export const POST = adminRouteShell(
       );
     }
 
-    const { error: updErr } = await sb
+    const { data: updated, error: updErr } = await sb
       .from("referrals")
       .update({ status: "rewarded", rewarded_at: now })
-      .eq("id", body.referral_id);
+      .eq("id", body.referral_id)
+      .eq("status", "qualified")
+      .eq("reward_type", current.reward_type)
+      .select("id")
+      .maybeSingle();
     if (updErr) {
       return NextResponse.json({ error: updErr.message }, { status: 500 });
     }
+
+    if (!updated) return NextResponse.json({ error: "Referral is no longer qualified" }, { status: 409 });
 
     await logAdminAction({
       req,

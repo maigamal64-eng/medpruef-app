@@ -1,5 +1,6 @@
 "use client";
 
+import { isAdminPath } from "@/lib/admin-route";
 import { useEffect } from "react";
 import { getCookieConsent } from "@/components/CookieBanner";
 
@@ -33,6 +34,7 @@ import { getCookieConsent } from "@/components/CookieBanner";
 const REDDIT_PIXEL_ID = process.env.NEXT_PUBLIC_REDDIT_PIXEL_ID;
 
 function loadRedditPixel() {
+  if (typeof window !== "undefined" && isAdminPath(window.location.pathname)) return;
   if (!REDDIT_PIXEL_ID) return; // env empty → clean no-op, no rdt defined
   if (typeof window === "undefined") return;
   if (
@@ -61,6 +63,7 @@ function loadRedditPixel() {
 
 export default function ConsentGatedRedditPixel() {
   useEffect(() => {
+    if (isAdminPath(window.location.pathname)) return;
     if (!REDDIT_PIXEL_ID) return; // dormant until the env var is set
 
     const tryLoad = () => {

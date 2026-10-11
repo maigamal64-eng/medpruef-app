@@ -12,7 +12,6 @@ interface WebhookEvent {
   provider: string;
   event_id: string;
   processed_at: string | null;
-  payload: Record<string, unknown> | null;
 }
 
 export default function AdminWebhooksPage() {

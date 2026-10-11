@@ -36,6 +36,7 @@ vi.mock("@/lib/supabase", () => ({
 }));
 
 import { POST } from "@/app/api/webhooks/whop/route";
+import { captureMessage } from "@sentry/nextjs";
 
 const SECRET = "ws_test_secret";
 const MEZOO = "573a6d8c-7871-4c77-8b88-d0748b7f4785";
@@ -333,5 +334,23 @@ describe("atomic revoke routing", () => {
     expect(calls.filter(c=>c.table==="rpc:commit_whop_revoke")).toHaveLength(1);
     expect(calls.some(c=>["subscriptions","users"].includes(c.table)&&c.op==="update")).toBe(false);
     expect(calls.some(c=>c.table==="processed_webhook_events"&&c.op==="insert")).toBe(false);
+  });
+});
+
+
+describe("ADM-Q04 unmapped payment warning", () => {
+  it("includes payment references but omits the buyer email", async () => {
+    vi.mocked(captureMessage).mockClear();
+    h.handler = baseHandler((call) => call.table === "users" ? { data: null } : undefined) as (call: unknown) => unknown;
+    const response = await deliver("payment.succeeded", {
+      ...renewal, id: "pay_SYNTHETIC_UNMAPPED", membership: null,
+      member: null, checkout_configuration_id: null,
+      user: { email: "synthetic-unmapped@example.invalid" },
+    });
+    expect(response.status).toBe(200);
+    const warning = vi.mocked(captureMessage).mock.calls.find(([message]) => typeof message === "string" && message.includes("Whop payment unmapped"));
+    expect(warning).toBeDefined();
+    expect(warning![0]).toContain("pay_SYNTHETIC_UNMAPPED");
+    expect(warning![0]).not.toContain("synthetic-unmapped@example.invalid");
   });
 });

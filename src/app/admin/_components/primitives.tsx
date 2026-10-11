@@ -12,7 +12,8 @@
  * pulse so tabs in the background don't silently thrash.
  */
 
-import { ReactNode, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { ReactNode, useLayoutEffect, useEffect, useRef, useState } from "react";
 import type { LucideIcon } from "lucide-react";
 
 // ═══════════════════════════════════════════════════════════════════
@@ -280,12 +281,23 @@ export function KebabMenu({
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const [position, setPosition] = useState({ left: 0, top: 0 });
+  useLayoutEffect(() => {
+    if (!open || !ref.current || !menuRef.current) return;
+    const trigger = ref.current.getBoundingClientRect();
+    const menu = menuRef.current.getBoundingClientRect();
+    setPosition({
+      left: Math.max(8, Math.min(trigger.right - menu.width, window.innerWidth - menu.width - 8)),
+      top: Math.max(8, trigger.bottom + menu.height + 4 > window.innerHeight ? trigger.top - menu.height - 4 : trigger.bottom + 4),
+    });
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
     function onClickOutside(e: MouseEvent) {
       if (!ref.current) return;
-      if (!ref.current.contains(e.target as Node)) setOpen(false);
+      if (!ref.current.contains(e.target as Node) && !menuRef.current?.contains(e.target as Node)) setOpen(false);
     }
     function onEscape(e: KeyboardEvent) {
       if (e.key === "Escape") setOpen(false);
@@ -317,10 +329,12 @@ export function KebabMenu({
           <circle cx="12" cy="19" r="1.6" fill="currentColor" />
         </svg>
       </button>
-      {open && (
+      {open && createPortal(
         <div
+          ref={menuRef}
+          style={position}
           role="menu"
-          className="absolute right-0 top-full mt-1 min-w-[180px] rounded-lg border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] shadow-lg z-20 py-1"
+          className="fixed min-w-[180px] max-h-[calc(100vh-16px)] overflow-y-auto rounded-lg border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] shadow-lg z-[100] py-1"
         >
           {items.map((it) => {
             const Icon = it.icon;
@@ -346,7 +360,7 @@ export function KebabMenu({
               </button>
             );
           })}
-        </div>
+        </div>, document.body
       )}
     </div>
   );

@@ -5,6 +5,7 @@
  * Scaffold: proxies to the existing /api/stats/admin/missing-images.
  */
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { ImageOff } from "lucide-react";
 import { authFetch as fetch } from "@/lib/authFetch";
@@ -28,7 +29,7 @@ function AdminMediaPageContent() {
       const res = await fetch("/api/stats/admin/missing-images?limit=200");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      setItems(Array.isArray(data?.items) ? data.items : []);
+      setItems(Array.isArray(data?.questions) ? data.questions : []);
     } catch (e) {
       setError((e as Error).message || "Failed to load media audit");
     } finally {
@@ -44,31 +45,33 @@ function AdminMediaPageContent() {
     <AdminPageShell
       title="Media audit"
       description="Questions tagged missing_image, plus the alt-text coverage gap."
-      freshness={loading ? "cached" : "live"}
+      freshness={loading ? "cached" : error ? "disconnected" : "cached"}
       onRefresh={load}
     >
       {error && (
         <Alert variant="error" title="Failed to load">
-          {error}
+          {error} <button type="button" className="ml-3 underline" onClick={() => void load()}>Retry</button>
         </Alert>
       )}
       {loading ? (
         <div className="flex items-center justify-center py-12">
           <BrandedLoader size={48} label="Loading…" />
         </div>
-      ) : items.length === 0 ? (
+      ) : error ? null : items.length === 0 ? (
         <EmptyState
           tone="success"
           icon={<ImageOff className="w-10 h-10" aria-hidden />}
           title="Nothing flagged"
-          body="Every image-dependent question has an image_url and alt text."
+          body="No active questions are currently tagged missing_image. This queue does not check alt-text coverage."
         />
       ) : (
-        <div className="rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] p-3 text-xs text-[var(--mp-fg)]">
-          {items.length} questions flagged. Full editing UI lands in a
-          follow-up; for now use <code>/admin/questions</code> with the
-          <em> missing_image</em> tag filter.
-        </div>
+        <ul className="space-y-3">
+          {items.map((item) => <li key={String(item.id)} className="rounded-xl border border-[var(--mp-border-subtle)] p-3 text-sm">
+            <Link className="underline" href={`/admin/questions?questionId=${item.id}`}>Question #{String(item.id)}</Link>
+            <p className="text-xs text-[var(--mp-fg-muted)]">{String(item.exam_type)} · {String(item.topic)}</p>
+            <p className="mt-2 whitespace-pre-wrap">{String(item.question)}</p>
+          </li>)}
+        </ul>
       )}
       <ComingSoonCard title="Alt-text editor">
         Per-row alt-text capture + bulk image upload ships in a follow-up.

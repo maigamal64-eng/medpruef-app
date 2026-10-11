@@ -20,17 +20,7 @@ const REQUIRED_VARS = [
   "NEXT_PUBLIC_BUILD_ID",
 ];
 
-function maskHint(value: string | undefined): string {
-  if (!value) return "";
-  if (value.length <= 8) return "***";
-  return `${value.slice(0, 4)}…${value.slice(-3)} (${value.length} chars)`;
-}
-
-/**
- * Presence-only check — never returns the value itself. Returns a
- * short masked hint so the admin can confirm "this is what I set"
- * without exfiltrating the secret.
- */
+/** Returns variable names and presence only. */
 export const GET = adminRouteShell(
   async () => {
     const items = REQUIRED_VARS.map((name) => {
@@ -38,7 +28,6 @@ export const GET = adminRouteShell(
       return {
         name,
         present: !!value && value.length > 0,
-        masked: value ? maskHint(value) : undefined,
       };
     });
     return NextResponse.json({ items });
