@@ -13,6 +13,7 @@
 
 import {
   daysUntilViennaDate,
+  hasOfficialWindowStarted,
   isOfficialWindowOpen,
   type OfficialDeadlineGroup,
   type OfficialExamKey,
@@ -207,7 +208,11 @@ export function daysLeftText(iso: string, lang: string, now: Date = new Date()):
   return n === 1 ? td("days_left_one", lang) : td("days_left_many", lang, { n });
 }
 
-/** SIP deadline chip, absent once the official Vienna window closes. */
+/**
+ * SIP deadline chip, shown only while the official Vienna window is open:
+ * absent before it opens (the card shows the window instead), after it
+ * closes, and for a window the source has not confirmed.
+ */
 export function registrationDeadlineBadge(
   sitting: OfficialSitting,
   lang: string,
@@ -216,6 +221,8 @@ export function registrationDeadlineBadge(
   if (
     (sitting.exam_key !== "sip4a" && sitting.exam_key !== "sip5a") ||
     !sitting.registration_closes ||
+    sitting.window_unconfirmed ||
+    !hasOfficialWindowStarted(sitting, now) ||
     !isOfficialWindowOpen(sitting, now)
   ) return null;
 

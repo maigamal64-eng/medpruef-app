@@ -68,21 +68,45 @@ describe("official SIP registration deadline badge", () => {
     for (const row of expired) expect(registrationDeadlineBadge(row, "de")).toBeNull();
     const next = nextSip()!;
     expect(next.registration_closes).toBe("2027-01-18");
+    expect(next.started).toBe(false);
     expect(next.rows.map((row) => row.exam_key).sort()).toEqual(["sip4a", "sip5a"]);
     for (const row of next.rows) {
       expect(OFFICIAL_SITTINGS).toContain(row);
-      const badge = registrationDeadlineBadge(row, "en")!;
-      expect(badge.text).toMatch(/^Register by 18 Jan, \d+ days left$/);
-      expect(badge.daysLeft).toBe(90);
-      expect(badge.imminent).toBe(false);
+      // Not open yet: no "Register by" countdown before 4 Jan.
+      expect(registrationDeadlineBadge(row, "en")).toBeNull();
+    }
+    vi.setSystemTime(new Date("2027-01-03T23:00:00Z")); // 4 Jan 00:00 CET, window opens
+    for (const row of nextSip()!.rows) {
+      expect(registrationDeadlineBadge(row, "en")).toEqual({
+        text: "Register by 18 Jan, 14 days left", daysLeft: 14, imminent: false,
+      });
+    }
+  });
+
+  it("shows no badge before a window opens", () => {
+    freeze("2026-11-01T12:00:00Z");
+    for (const row of nextSip()!.rows) expect(registrationDeadlineBadge(row, "de")).toBeNull();
+  });
+
+  it("never counts down the unconfirmed March 2027 window", () => {
+    for (const instant of ["2027-01-25T12:00:00Z", "2027-01-30T12:00:00Z"]) {
+      freeze(instant);
+      const group = nextSip()!;
+      expect(group.registration_closes).toBe("2027-02-08");
+      for (const row of group.rows) {
+        expect(row.window_unconfirmed).toBe(true);
+        expect(registrationDeadlineBadge(row, "en")).toBeNull();
+      }
     }
   });
 
   it("counts calendar days across Vienna's daylight-saving change", () => {
-    freeze("2026-10-24T22:01:00Z"); // 25 Oct 00:01 CEST, clocks go back later that day
-    expect(registrationDeadlineBadge(nextSip()!.rows[0], "en")?.daysLeft).toBe(85);
-    vi.setSystemTime(new Date("2026-10-25T23:01:00Z")); // 26 Oct 00:01 CET
-    expect(registrationDeadlineBadge(nextSip()!.rows[0], "en")?.daysLeft).toBe(84);
+    freeze("2027-03-27T23:01:00Z"); // 28 Mar 00:01 CET, clocks go forward later that day
+    const row = nextSip()!.rows[0];
+    expect(row.registration_closes).toBe("2027-03-29");
+    expect(registrationDeadlineBadge(row, "en")?.daysLeft).toBe(1);
+    vi.setSystemTime(new Date("2027-03-28T22:01:00Z")); // 29 Mar 00:01 CEST
+    expect(registrationDeadlineBadge(row, "en")?.text).toBe("Register by 29 Mar, today is the last day");
   });
 
   it("does not create SIP badges for other families or unpublished deadlines", () => {

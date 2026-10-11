@@ -10,6 +10,7 @@ import { OFFICIAL_SITTINGS, getUpcomingOfficialSittings, viennaStamp, daysUntilV
 import data from "@/lib/guidance-data/wien-deadlines.data.json";
 import { loadFacts, formatGuidanceDate, type GuidanceLang, type GuidanceFact } from "@/lib/guidance/facts";
 import { liveGuidanceRoutes } from "@/lib/guidance/routes";
+import { daysLeftText } from "@/lib/i18n-dates";
 import { guidanceCopy } from "@/lib/i18n-lb-guidance";
 import FactStamp from "./FactStamp";
 import StaleBanner from "./StaleBanner";
@@ -72,7 +73,7 @@ export function DeadlinePanel({ exams, lang, now }: { exams: readonly OfficialEx
         <h3 className="mt-2 font-semibold">{s.learner_label[lang]}</h3>
         <p className="mt-3">{c.window}{": "}{s.registration_opens ? formatGuidanceDate(s.registration_opens, lang) : c.unpublished}{" "}{c.until}{" "}{formatGuidanceDate(s.registration_closes!, lang)}{", "}{s.closes_at_time ?? c.endOfDay}</p>
         <p className="mt-2 text-sm">{c.vienna}</p>
-        {window.daysRemaining !== null && <p className="mt-3 font-semibold" data-countdown>{window.daysRemaining}{" "}{c.remaining}</p>}
+        {window.daysRemaining !== null && <p className="mt-3 font-semibold" data-countdown>{c.remaining}{": "}{daysLeftText(s.registration_closes!, lang, now)}</p>}
         <p className="mt-3 text-sm">{c.sitting}{": "}{formatGuidanceDate(s.date, lang)}{s.date_end ? ` ${c.until} ${formatGuidanceDate(s.date_end, lang)}` : ""}</p>
         <FactStamp lang={lang} fact={{ id: `${s.exam_key}.dates.${s.date}`, statement: { de: "", en: "" }, status: "official", source_url: s.source_url, source_label: s.publisher, ...data.date_sources[s.exam_key.startsWith("sip") ? "sip" : "rez_gm"], applies_to: [] }} />
       </div>;

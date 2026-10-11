@@ -82,6 +82,9 @@ test("SIP badge advances while the page stays open across Vienna midnight", asyn
   const badge = page.locator("#exam-calendar dd").filter({ hasText: /^Register by/ });
   await expect(badge).toHaveText("Register by 19 Oct, today is the last day");
   await page.clock.runFor(60_000);
-  await expect(badge).toHaveText("Register by 18 Jan, 90 days left");
-  await expect(badge).not.toContainText(/(^|\D)0 days left|19 Oct/);
+  // The next window (4 to 18 Jan) has not opened: no countdown, the card shows the window.
+  await expect(badge).toHaveCount(0);
+  const card = page.locator("#exam-calendar article").filter({ has: page.getByRole("heading", { name: /SIP/ }) });
+  await expect(card).toContainText("18 January 2027");
+  await expect(card).not.toContainText("19 Oct");
 });
