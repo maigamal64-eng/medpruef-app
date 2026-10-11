@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import replies from "./fixtures/rpc-replies.json";
 import { handleMentorChat, sseFrame, type ChatHandlerDeps } from "@/app/api/mentor/chat/handler";
 import { computeCanBuy, computeUsageState, handleMentorUsage, nominalAdmitCeiling, type UsageHandlerDeps } from "@/app/api/mentor/usage/handler";
@@ -348,14 +348,24 @@ describe("GET /api/cron/mentor-sweep handler", () => {
   const req = (auth?: string) => new Request("http://localhost/api/cron/mentor-sweep", { headers: auth ? { authorization: auth } : {} });
   it("fails closed without CRON_SECRET, 401 on a wrong bearer, sweeps on the right one", async () => {
     const alerts: string[] = [];
-    expect((await handleMentorSweep(req("Bearer s"), { cronSecret: undefined, rpc: rpc(), alert: (m) => alerts.push(m) })).status).toBe(503);
-    expect((await handleMentorSweep(req("Bearer wrong"), { cronSecret: "s3cret", rpc: rpc(), alert: () => {} })).status).toBe(401);
-    expect((await handleMentorSweep(req(), { cronSecret: "s3cret", rpc: rpc(), alert: () => {} })).status).toBe(401);
-    const ok = await handleMentorSweep(req("Bearer s3cret"), { cronSecret: "s3cret", rpc: rpc(), alert: m => alerts.push(m) });
+    expect((await handleMentorSweep(req("Bearer s"), { cronSecret: undefined, enabled: true, rpc: rpc(), alert: (m) => alerts.push(m) })).status).toBe(503);
+    expect((await handleMentorSweep(req("Bearer wrong"), { cronSecret: "s3cret", enabled: true, rpc: rpc(), alert: () => {} })).status).toBe(401);
+    expect((await handleMentorSweep(req(), { cronSecret: "s3cret", enabled: true, rpc: rpc(), alert: () => {} })).status).toBe(401);
+    const ok = await handleMentorSweep(req("Bearer s3cret"), { cronSecret: "s3cret", enabled: true, rpc: rpc(), alert: m => alerts.push(m) });
     expect(alerts).toContain("mentor sweep recovered 2 stale holds on the house");
     expect(await ok.json()).toEqual({ ok: true, settled: 2 });
-    const broken = await handleMentorSweep(req("Bearer s3cret"), { cronSecret: "s3cret", rpc: rpc({ mentor_sweep_stale: new Error("x") }), alert: () => {} });
+    const broken = await handleMentorSweep(req("Bearer s3cret"), { cronSecret: "s3cret", enabled: true, rpc: rpc({ mentor_sweep_stale: new Error("x") }), alert: () => {} });
     expect(broken.status).toBe(503);
+  });
+  it("is a silent no-op while MENTOR_ENABLED is off (ships dark, ledger may not exist)", async () => {
+    const alerts: string[] = [];
+    const sweep = vi.fn();
+    const off = await handleMentorSweep(req("Bearer s3cret"), { cronSecret: "s3cret", enabled: false, rpc: { rpc: sweep } as never, alert: m => alerts.push(m) });
+    expect(off.status).toBe(200);
+    expect(await off.json()).toEqual({ ok: true, skipped: "mentor_disabled" });
+    expect(sweep).not.toHaveBeenCalled();
+    expect(alerts).toEqual([]);
+    expect((await handleMentorSweep(req("Bearer wrong"), { cronSecret: "s3cret", enabled: false, rpc: rpc(), alert: () => {} })).status).toBe(401);
   });
 });
 

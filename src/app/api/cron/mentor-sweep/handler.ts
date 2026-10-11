@@ -13,6 +13,8 @@ import { rpcSweepStale } from "@/lib/mentor/ledger";
 
 export interface SweepHandlerDeps {
   cronSecret: string | undefined;
+  /** MENTOR_ENABLED. While the mentor ships dark the ledger may not exist, so the sweep is a no-op. */
+  enabled: boolean;
   rpc: RpcClient;
   alert(message: string): void;
 }
@@ -33,6 +35,8 @@ export async function handleMentorSweep(req: Request, d: SweepHandlerDeps): Prom
     return json({ error: "cron_secret_not_configured" }, 503);
   }
   if (!bearerMatches(req.headers.get("authorization"), d.cronSecret)) return json({ error: "unauthorized" }, 401);
+  // Dark: no ledger reads and no alerts. A learner's own stale holds are still swept by mentor_reserve.
+  if (d.enabled !== true) return json({ ok: true, skipped: "mentor_disabled" }, 200);
   const r = await rpcSweepStale(d.rpc, RESERVE_STALE_MINUTES);
   if (!r.ok) {
     d.alert("mentor_sweep_stale failed");
