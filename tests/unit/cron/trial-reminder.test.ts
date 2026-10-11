@@ -25,11 +25,18 @@ vi.mock("@/lib/email/zoho", () => ({
 }));
 vi.mock("@/lib/supabase", () => ({
   getServiceClient: () => {
+    // One stored expires_at for sub_due per cron run (the route calls
+    // getServiceClient once per GET). The due query and the R4-01 coverage
+    // query read the SAME row, so they must see the same value; computing
+    // Date.now() separately in each branch made the coverage copy a few ms
+    // later whenever a millisecond boundary fell between the two queries,
+    // and the row was then (correctly, for that data) skipped as covered.
+    const dueExpiresAt = new Date(Date.now() + h.daysOut * 86400_000).toISOString();
     const { sb } = createFakeSupabase((c: FakeCall) => {
       if (c.table === "subscriptions" && c.op === "select" && c.filters.some((f) => f.kind === "lte")) {
         return {
           data: [
-            { id: "sub_due", user_id: "u2", tier: "first_3mo_27", expires_at: new Date(Date.now() + h.daysOut * 86400_000).toISOString() },
+            { id: "sub_due", user_id: "u2", tier: "first_3mo_27", expires_at: dueExpiresAt },
           ],
         };
       }
@@ -37,7 +44,7 @@ vi.mock("@/lib/supabase", () => ({
       if (c.table === "subscriptions" && c.op === "select" && c.columns?.startsWith("id, expires_at")) {
         return {
           data: [
-            { id: "sub_due", expires_at: new Date(Date.now() + h.daysOut * 86400_000).toISOString(), trial_reminder_sent_at: null },
+            { id: "sub_due", expires_at: dueExpiresAt, trial_reminder_sent_at: null },
             ...h.otherActive,
           ],
         };
