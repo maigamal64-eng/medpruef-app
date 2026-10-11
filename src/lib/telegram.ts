@@ -1,4 +1,5 @@
 import crypto from 'crypto'
+import { safeEqual } from '@/lib/security/timing-safe'
 
 /**
  * Server-side: validate Telegram initData and extract user.
@@ -30,7 +31,7 @@ export function validateInitData(initData: string, botToken: string): TelegramUs
     const secretKey = crypto.createHmac('sha256', 'WebAppData').update(botToken).digest()
     const calculatedHash = crypto.createHmac('sha256', secretKey).update(dataCheckString).digest('hex')
 
-    if (calculatedHash !== hash) return null
+    if (!safeEqual(calculatedHash, hash)) return null
 
     const userStr = params.get('user')
     if (!userStr) return null
@@ -62,7 +63,7 @@ export function validateLoginWidget(
     const secretKey = crypto.createHash('sha256').update(botToken).digest()
     const computed = crypto.createHmac('sha256', secretKey).update(checkString).digest('hex')
 
-    if (computed !== hash) return null
+    if (!safeEqual(computed, hash)) return null
 
     return {
       id: data.id as number,

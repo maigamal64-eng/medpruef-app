@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
 import crypto from 'crypto'
 import { campaignWelcomeUrl, parseCampaignStart } from '@/lib/campaign-links'
+import { safeEqual } from '@/lib/security/timing-safe'
 
 export const dynamic = 'force-dynamic'
 
@@ -132,7 +133,7 @@ export async function POST(req: NextRequest) {
   // Validate secret header (set by Telegram if configured at setWebhook time)
   const secret = req.headers.get('x-telegram-bot-api-secret-token')
   const expected = process.env.TELEGRAM_WEBHOOK_SECRET
-  if (!expected || secret !== expected) {
+  if (!expected || !safeEqual(secret, expected)) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   }
 
