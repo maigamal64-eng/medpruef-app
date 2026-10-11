@@ -941,6 +941,21 @@ export interface TrimUnaskedInput {
  * nothing the answer is returned unchanged. A refusal goes through
  * trimRefusalValues instead (no amount, percentage or date in a refusal).
  */
+/** Guarantee talk ("not a guarantee of any result", "keine Garantie"): the prompt forbids it, even as a denial. */
+const GUARANTEE_RE = /\b(?:guarant\w*|garant\w*)/giu;
+/** The learner asked about a guarantee or a pass themselves (de, en): then the answer may address it. */
+const ASKS_GUARANTEE_RE = /guarant|garant|sicher bestehen|bestehe ich|will i pass|am i going to pass/iu;
+
+function guaranteeHits(text: string): ExtractedValue[] {
+  return [...text.matchAll(GUARANTEE_RE)].map((m) => ({
+    kind: "number" as ValueKind,
+    raw: m[0],
+    start: m.index ?? 0,
+    end: (m.index ?? 0) + m[0].length,
+    keys: [],
+  }));
+}
+
 export function trimUnaskedValues(v: ValidatedAnswer, t: TrimUnaskedInput): ValidatedAnswer {
   if (v.refused) return trimRefusalValues(v, t.lang);
   if (typeof t.question !== "string" || t.question.trim().length === 0) return v;
@@ -971,7 +986,10 @@ export function trimUnaskedValues(v: ValidatedAnswer, t: TrimUnaskedInput): Vali
       otherSitting.add(`dm:${d.slice(5)}`);
     }
   }
-  if (askMoney && askPass && otherSitting.size === 0) return v;
+  // Eval round 3 (st-sip-en): "This is a study aid, not a guarantee of any result."
+  // The sentence goes unless the learner asked about a guarantee or passing.
+  const dropGuarantee = wordRules && !ASKS_GUARANTEE_RE.test(q);
+  if (askMoney && askPass && otherSitting.size === 0 && !dropGuarantee) return v;
 
   const blocks: MentorAnswerBlock[] = [];
   let changed = false;
@@ -993,6 +1011,7 @@ export function trimUnaskedValues(v: ValidatedAnswer, t: TrimUnaskedInput): Vali
       if ((x.kind === "date" || x.kind === "daymonth") && x.keys.some((k) => otherSitting.has(k))) return true;
       return false;
     });
+    if (dropGuarantee) drop.push(...guaranteeHits(b.text));
     if (drop.length === 0) {
       blocks.push(b);
       continue;

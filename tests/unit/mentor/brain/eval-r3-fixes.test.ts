@@ -9,7 +9,8 @@ import { describe, it, expect } from "vitest";
 import { getMentorFactsLoader } from "@/lib/mentor/facts-loader";
 import { INLINE_MARKER_RE, parseAnswer, stripInlineMarkers, stripProtocolLines, trimTruncatedAnswer } from "@/lib/mentor/prompt/protocol";
 import { createMentorBrain } from "@/lib/mentor/prompt/brain";
-import { stripProtocolMarkers, validateAnswer } from "@/lib/mentor/validator";
+import { stripProtocolMarkers, trimUnaskedValues, validateAnswer } from "@/lib/mentor/validator";
+import type { ValidatedAnswer } from "@/lib/mentor/seam";
 import { ctx, fact, fakeDb } from "./helpers";
 
 /** The eval's leak predicate (tests/mentor-eval/lib/lang.ts LEAK_MARKERS, protocol part). */
@@ -219,5 +220,25 @@ describe("trimTruncatedAnswer: only the last text line can be unfinished (ap-pri
   it("thinking used the whole cap: a lone unfinished sentence still leaves nothing (pr-late-de)", () => {
     const raw = "@@LANG de\n@@BLOCK facts=a.b\n- Bei SIP4a und SIP5a sind Nachmeldungen laut Prüfungskalender aus keinem Grund möglich,";
     expect(parseAnswer(trimTruncatedAnswer(raw)).blocks).toEqual([]);
+  });
+});
+
+describe("trimUnaskedValues: no guarantee talk unless the learner asked (st-sip-en, fix-r3-live5)", () => {
+  const PROGRESS = fact({ id: "progress.00000000-0000-4000-9000-000000000098", exam_key: "general", topic: "progress", text_de: "Noch 37 Tage.", text_en: "37 days left." });
+  const base = (text: string): ValidatedAnswer => ({ blocks: [{ text, fact_ids: [PROGRESS.id] }], citations: [], replaced: false, rejected: [] });
+  const resolve = (id: string) => (id === PROGRESS.id ? PROGRESS : null);
+
+  it("deletes the disclaimer sentence and keeps the plan", () => {
+    const v = base("You have 37 days left.\nZum Schluss: mixed sets across all topics. This is a study aid, not a guarantee of any result.");
+    const out = trimUnaskedValues(v, { question: "Make me a study plan until my exam.", lang: "en", resolve, retrievedIds: [] });
+    expect(out.blocks.map((b) => b.text).join("\n")).toBe("You have 37 days left.\nZum Schluss: mixed sets across all topics.");
+    const de = trimUnaskedValues(base("Noch 37 Tage. Eine Garantie zum Bestehen gibt es nicht."), { question: "Mach mir einen Lernplan.", lang: "de", resolve, retrievedIds: [] });
+    expect(de.blocks.map((b) => b.text).join("\n")).toBe("Noch 37 Tage.");
+  });
+
+  it("keeps it when the learner asked about a guarantee", () => {
+    const v = base("MedPrüf does not guarantee a pass.");
+    const out = trimUnaskedValues(v, { question: "Does MedPrüf guarantee that I pass?", lang: "en", resolve, retrievedIds: [] });
+    expect(out.blocks[0].text).toBe("MedPrüf does not guarantee a pass.");
   });
 });
