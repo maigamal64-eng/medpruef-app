@@ -1064,6 +1064,29 @@ async function handleRevoke(
     }
     subs = [...affected.values()];
 
+    // A membership pin identifies the account, not proof that this payment
+    // granted time. Never turn an unknown payment refund into a full revoke.
+    if (paymentCandidates.length > 0 && !subs.some(sub =>
+      (sub.granted_payment_ids ?? []).some(entry => paymentCandidates.includes(entry.payment_id))
+    )) {
+      // Successful refunds remove their own history entry. Recognize their
+      // existing receipt before reporting a redelivery as an unknown payment.
+      const { data: priorClaim, error: priorClaimError } = await sb
+        .from("processed_webhook_events").select("event_id")
+        .eq("provider", "whop").eq("event_id", claimKey).maybeSingle();
+      if (priorClaimError) return NextResponse.json({ error: "Could not verify revoke receipt" }, { status: 503 });
+      if (priorClaim?.event_id) return NextResponse.json({ ok: true, duplicate: true });
+      Sentry.captureMessage(
+        `Whop revoke '${event}' matched no granted payment (paymentCandidates=${paymentCandidates.join(",")} membership=${r.membershipId ?? "none"} user=${userId})`,
+        "warning"
+      );
+      await recordEvent(sb, userId, "whop_revoke_unmatched", {
+        event, kind, payment_id: r.paymentId, original_payment_id: r.originalPaymentId,
+        membership_id: r.membershipId, reason: "no_granted_payment_match",
+      });
+      return NextResponse.json({ ok: false, error: "revoke matched no subscription", event }, { status: 200 });
+    }
+
     // Prefer the row whose provider_payment_id owns a surviving payment.
     // Otherwise an older history-only row owns it. Stable ordering prevents
     // duplicate histories from either double-counting or revoking both rows.
@@ -1153,11 +1176,9 @@ async function handleRevoke(
     const nowIso = new Date().toISOString();
 
     // ── 1. Revoke the matched subscription(s), Fix 6-aware (2026-09-21) ──
-    // For each matched sub, resolve the payment entry the event points at:
-    //   - a granted_payment_ids entry matching a payment candidate, or
-    //   - legacy rows with no entries: a synthetic entry from
-    //     provider_payment_id + the tier's duration (reproduces the old
-    //     full-flip behavior exactly).
+    // For each matched sub, resolve the granted_payment_ids entry the event
+    // points at. A provider id without a grant history is insufficient proof
+    // that a payment contributed time; record it as unmatched above.
     // If SURVIVING entries still cover a live window (recomputed expiry in
     // the future), the row STAYS ACTIVE with the recomputed expiry, the
     // refunded payment's entry is dropped, and provider_payment_id moves to
@@ -1189,19 +1210,11 @@ async function handleRevoke(
       const matchedEntry =
         entries.find(
           (e) => e.payment_id && paymentCandidates.includes(e.payment_id)
-        ) ??
-        (entries.length === 0 &&
-        sub.provider_payment_id &&
-        paymentCandidates.includes(sub.provider_payment_id)
-          ? {
-              payment_id: sub.provider_payment_id,
-              amount_cents: null,
-              added_months: tierDurationMonths(sub.tier),
-              granted_at: sub.started_at ?? nowIso,
-            }
-          : null);
+        );
       if (!matchedEntry) {
-        flipIds.push(sub.id);
+        // Membership-only deactivation may flip the whole row. A payment
+        // refund can affect only rows whose history contains that payment.
+        if (paymentCandidates.length === 0) flipIds.push(sub.id);
         continue;
       }
       // Drop every entry for the refunded payment id (also handles the
@@ -1289,15 +1302,20 @@ async function handleRevoke(
           .map((row) => Date.parse((row as { expires_at?: string | null }).expires_at ?? ""))
           .filter((ms) => Number.isFinite(ms) && ms > nowMs)
           .reduce<number | null>((acc, ms) => (acc === null || ms > acc ? ms : acc), null);
-        await sb
-          .from("users")
-          .update({
-            tier_expires_at: (activeAfter ?? []).some(row => row.expires_at == null)
-              ? null : maxExpiry !== null ? new Date(maxExpiry).toISOString() : null,
-            updated_at: nowIso,
-          })
-          .eq("id", userId)
-          .neq("tier", "admin");
+        const hasNullExpiry = (activeAfter ?? []).some(row => row.expires_at == null);
+        // Reconcile only when kept active rows provide live coverage. A full
+        // revoke without coverage must preserve the finite expiry until the
+        // downgrade succeeds, including dunning grace and failed reads.
+        if (hasNullExpiry || maxExpiry !== null) {
+          await sb
+            .from("users")
+            .update({
+              tier_expires_at: hasNullExpiry ? null : new Date(maxExpiry!).toISOString(),
+              updated_at: nowIso,
+            })
+            .eq("id", userId)
+            .neq("tier", "admin");
+        }
       } catch (reconErr) {
         Sentry.captureException(reconErr, {
           tags: { route: "webhooks/whop", step: "revoke_partial_user_reconcile" },
