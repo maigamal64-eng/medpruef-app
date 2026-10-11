@@ -1,0 +1,297 @@
+{
+  "facts": [
+    {
+      "id": "sip.registration.account",
+      "statement": {
+        "de": "SIP4a und SIP5a: Fülle das jeweilige Formular elektronisch aus und sende es während der Anmeldefrist von deinem MedUni-Wien-Studierendenkonto an die Studienabteilung (Nostrifikationsprüfungsanmeldungen). Gib die vorgeschriebenen Prüfungsteile an.",
+        "en": "SIP4a and SIP5a: complete the appropriate form electronically and email it within the registration window from your MedUni Vienna student account to the Studienabteilung (nostrification exam registration). Specify the required exam parts."
+      },
+      "status": "official",
+      "source_url": "https://www.meduniwien.ac.at/web/studierende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnisse/pruefungskalender/anmeldemodalitaeten-sip-pruefungen/",
+      "source_label": "MedUni Wien",
+      "edition": "Anmeldemodalitäten, Seitenstand 11.10.2026",
+      "read_on": "2026-10-11",
+      "review_every_days": 30,
+      "applies_to": [
+        "sip-anmeldung"
+      ],
+      "exam_key": "general",
+      "topic": "registration",
+      "filing_university": "wien",
+      "verdict": "confirmed"
+    },
+    {
+      "id": "sip.registration.complete",
+      "statement": {
+        "de": "Unvollständige oder verspätet eingelangte Anmeldungen werden nicht berücksichtigt. Verwende ausschließlich das Formular für die betreffende SIP.",
+        "en": "Incomplete registrations and registrations received outside the window are not considered. Use only the form for the relevant SIP."
+      },
+      "status": "official",
+      "source_url": "https://www.meduniwien.ac.at/web/studium-weiterbildung/nostrifizierung/pruefungen/",
+      "source_label": "MedUni Wien",
+      "edition": "Nostrifizierung: Prüfungen, Seitenstand 11.10.2026",
+      "read_on": "2026-10-11",
+      "review_every_days": 30,
+      "applies_to": [
+        "sip-anmeldung"
+      ],
+      "exam_key": "general",
+      "topic": "registration",
+      "filing_university": "wien",
+      "verdict": "confirmed"
+    },
+    {
+      "id": "sip.registration.parts",
+      "statement": {
+        "de": "Alle laut Bescheid vorgeschriebenen Prüfungsteile müssen am selben Termin absolviert werden. Das SIP4a-Formular ist elektronisch auszufüllen und nach dem Schema Matrikelnummer_NACHNAME_Vorname_SIP4a.pdf zu benennen.",
+        "en": "All exam parts required by your decision must be taken at the same sitting. Complete the SIP4a form electronically and name it using Matrikelnummer_NACHNAME_Vorname_SIP4a.pdf."
+      },
+      "status": "official",
+      "source_url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/Humanmedizin/Formulare/Anmeldung_SIP4a_Nostrifikanten.pdf",
+      "source_label": "MedUni Wien",
+      "edition": "Anmeldeformular SIP4a, verlinkt 11.10.2026",
+      "read_on": "2026-10-11",
+      "review_every_days": 30,
+      "applies_to": [
+        "sip-anmeldung"
+      ],
+      "exam_key": "general",
+      "topic": "registration",
+      "filing_university": "wien",
+      "verdict": "confirmed"
+    },
+    {
+      "id": "sip.registration.confirmation",
+      "statement": {
+        "de": "Verlasse dich nicht auf eine automatische Anmeldebestätigung. Ob eine solche versandt wird, ist aktuell nicht bestätigt: Der verlinkte Informationsblatt-Download ist nicht abrufbar. Prüfe deine Anmeldung in Med.Campus und kläre Unstimmigkeiten mit der Studienabteilung.",
+        "en": "Do not rely on an automatic registration confirmation. Whether one is sent is currently unconfirmed: the linked information-sheet download is unavailable. Check your registration in Med.Campus and clarify discrepancies with the Studienabteilung."
+      },
+      "status": "not_confirmed",
+      "source_url": "https://www.meduniwien.ac.at/web/studium-weiterbildung/nostrifizierung/pruefungen/",
+      "source_label": "MedUni Wien",
+      "edition": "Nostrifizierung: Prüfungen, Download geprüft 11.10.2026",
+      "read_on": "2026-10-11",
+      "review_every_days": 30,
+      "applies_to": [
+        "sip-anmeldung"
+      ],
+      "exam_key": "general",
+      "topic": "registration",
+      "filing_university": "wien",
+      "verdict": "not_in_sources"
+    },
+    {
+      "id": "sip.registration.withdrawal",
+      "statement": {
+        "de": "Melde dich spätestens 3 volle Werktage vor der Gesamtprüfung selbst über Med.Campus ab. Nach Ablauf der Frist ist bei kurzfristiger Erkrankung ein ärztliches Attest an die Studienabteilung erforderlich.",
+        "en": "Withdraw from the overall exam yourself through Med.Campus at least 3 full working days before it. After that deadline, short-notice illness requires a medical certificate sent to the Studienabteilung."
+      },
+      "status": "official",
+      "source_url": "https://www.meduniwien.ac.at/web/studierende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnisse/pruefungskalender/anmeldemodalitaeten-sip-pruefungen/",
+      "source_label": "MedUni Wien",
+      "edition": "Anmeldemodalitäten, Seitenstand 11.10.2026",
+      "read_on": "2026-10-11",
+      "review_every_days": 30,
+      "applies_to": [
+        "sip-anmeldung",
+        "sip-regeln"
+      ],
+      "exam_key": "general",
+      "topic": "registration",
+      "filing_university": "wien",
+      "verdict": "confirmed"
+    },
+    {
+      "id": "sip.attempts.no-show",
+      "statement": {
+        "de": "Unentschuldigtes Fernbleiben führt zu einer dreimonatigen Sperre. Lehrveranstaltungsfreie Zeiten hemmen die Sperre und verlängern sie dadurch effektiv.",
+        "en": "An unexcused no-show leads to a three-month suspension. Periods without teaching pause the suspension, effectively extending it."
+      },
+      "status": "official",
+      "source_url": "https://www.meduniwien.ac.at/web/studierende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnisse/pruefungskalender/anmeldemodalitaeten-sip-pruefungen/",
+      "source_label": "MedUni Wien",
+      "edition": "Anmeldemodalitäten, Seitenstand 11.10.2026",
+      "read_on": "2026-10-11",
+      "review_every_days": 30,
+      "applies_to": [
+        "sip-anmeldung",
+        "sip-regeln"
+      ],
+      "exam_key": "general",
+      "topic": "attempts",
+      "filing_university": "wien",
+      "verdict": "confirmed"
+    },
+    {
+      "id": "rez-gm.registration.separate",
+      "statement": {
+        "de": "Rezeptierkunde und Gerichtsmedizin benötigen jeweils ein eigenes Anmeldeformular und eine eigene Nachricht: Rezeptierkunde an Nostrifikationsprüfungsanmeldungen, Gerichtsmedizin an das Studienreferat Gerichtsmedizin. Sende beide vom gültigen MedUni-Wien-Studierendenkonto.",
+        "en": "Rezeptierkunde and Gerichtsmedizin each need their own form and message: Rezeptierkunde goes to nostrification exam registration; Gerichtsmedizin goes to the forensic medicine student office. Send both from your valid MedUni Vienna student account."
+      },
+      "status": "official",
+      "source_url": "https://www.meduniwien.ac.at/web/studium-weiterbildung/nostrifizierung/pruefungen/",
+      "source_label": "MedUni Wien",
+      "edition": "Nostrifizierung: Prüfungen, Seitenstand 11.10.2026",
+      "read_on": "2026-10-11",
+      "review_every_days": 30,
+      "applies_to": [
+        "rez-gm-anmeldung"
+      ],
+      "exam_key": "general",
+      "topic": "registration",
+      "filing_university": "wien",
+      "verdict": "confirmed"
+    },
+    {
+      "id": "rez-gm.registration.cutoff",
+      "statement": {
+        "de": "Die Anmeldung schließt am letzten Dienstag der veröffentlichten Anmeldefrist um 12:00 Uhr. Eine nachträgliche Anmeldung ist nicht möglich.",
+        "en": "Registration closes at noon on the final Tuesday of the published window. Late registration is not possible."
+      },
+      "status": "official",
+      "source_url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/WS26Pr%C3%BCf_modus_EW_03062026.pdf",
+      "source_label": "MedUni Wien",
+      "edition": "Prüfungskalender Rigorosumsprüfungen WS2026/27, 03.06.2026",
+      "read_on": "2026-10-11",
+      "review_every_days": 30,
+      "applies_to": [
+        "rez-gm-anmeldung"
+      ],
+      "exam_key": "general",
+      "topic": "registration",
+      "filing_university": "wien",
+      "verdict": "confirmed"
+    },
+    {
+      "id": "rez-gm.registration.withdrawal",
+      "statement": {
+        "de": "Eine Abmeldung ist spätestens 3 Werktage vor dem Prüfungstermin per E-Mail vom gültigen MedUni-Wien-Konto an Nostrifikationsprüfungsanmeldungen möglich. Im Krankheitsfall ist die Abmeldung bis zum Prüfungstag möglich.",
+        "en": "Withdraw by email from your valid MedUni Vienna account to nostrification exam registration at least 3 working days before the exam. In case of illness, withdrawal is possible up to the exam day."
+      },
+      "status": "official",
+      "source_url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/WS26Pr%C3%BCf_modus_EW_03062026.pdf",
+      "source_label": "MedUni Wien",
+      "edition": "Prüfungskalender Rigorosumsprüfungen WS2026/27, 03.06.2026",
+      "read_on": "2026-10-11",
+      "review_every_days": 30,
+      "applies_to": [
+        "rez-gm-anmeldung"
+      ],
+      "exam_key": "general",
+      "topic": "registration",
+      "filing_university": "wien",
+      "verdict": "confirmed"
+    },
+    {
+      "id": "sip.scoring.pass-rule",
+      "statement": {
+        "de": "Für eine positive SIP sind mindestens 60 Prozent der gewerteten Fragen je Block (SIP4a) bzw. Fach (SIP5a) und insgesamt erforderlich. Prüfe für deinen konkreten Antritt auch die aktuelle Prüfungsausschreibung.",
+        "en": "Passing a SIP requires at least 60 percent of scored questions in each block (SIP4a) or subject (SIP5a), and overall. Also check the current announcement for your particular sitting."
+      },
+      "status": "official",
+      "source_url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/Humanmedizin/allg-info-beurteilungkriterien-2026.pdf",
+      "source_label": "MedUni Wien",
+      "edition": "Bestehensgrenzen SIP, verlinkte Fassung 2026 (Dokumentdatum 14.01.2021)",
+      "read_on": "2026-10-11",
+      "review_every_days": 30,
+      "applies_to": [
+        "sip-regeln"
+      ],
+      "exam_key": "general",
+      "topic": "pass_rule",
+      "filing_university": "wien",
+      "verdict": "confirmed"
+    },
+    {
+      "id": "sip.format.announcement",
+      "statement": {
+        "de": "Der Kalender nennt für die nächsten November-Termine MC oder KAF. Die konkrete Form, der Prüfungsort und die Uhrzeit stehen in der Prüfungsausschreibung; das SIP-Formular nennt eine Veröffentlichung spätestens 3 Wochen vor der Prüfung.",
+        "en": "The calendar lists MC or KAF for the next November sittings. The announcement specifies the format, venue and time; the SIP form says it is published at least 3 weeks before the exam."
+      },
+      "status": "official",
+      "source_url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/Humanmedizin/Formulare/Anmeldung_SIP4a_Nostrifikanten.pdf",
+      "source_label": "MedUni Wien",
+      "edition": "Anmeldeformular SIP4a, verlinkt 11.10.2026",
+      "read_on": "2026-10-11",
+      "review_every_days": 30,
+      "applies_to": [
+        "sip-anmeldung",
+        "sip-regeln"
+      ],
+      "exam_key": "general",
+      "topic": "format",
+      "filing_university": "wien",
+      "verdict": "confirmed"
+    },
+    {
+      "id": "sip.registration.march-unconfirmed",
+      "statement": {
+        "de": "Für die SIP4a und SIP5a am 10. März 2027 zeigt der Kalender widersprüchliche Anmeldejahre. Das Anmeldefenster ist noch nicht bestätigt. Bitte frage die Studienabteilung, bevor du damit planst.",
+        "en": "For SIP4a and SIP5a on 10 March 2027, the calendar shows conflicting registration years. The window is not yet confirmed. Ask the Studienabteilung before relying on it."
+      },
+      "status": "not_confirmed",
+      "source_url": "https://www.meduniwien.ac.at/web/studierende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnisse/pruefungskalender/",
+      "source_label": "MedUni Wien",
+      "edition": "Prüfungskalender, Seitenstand 11.10.2026",
+      "read_on": "2026-10-11",
+      "review_every_days": 30,
+      "applies_to": [
+        "sip-anmeldung"
+      ],
+      "exam_key": "general",
+      "topic": "registration",
+      "filing_university": "wien",
+      "verdict": "not_in_sources"
+    }
+  ],
+  "unconfirmed_windows": [
+    {
+      "exam_key": "sip4a",
+      "date": "2027-03-10",
+      "registration_opens": "2027-01-25",
+      "registration_closes": "2027-02-08",
+      "source_url": "https://www.meduniwien.ac.at/web/studierende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnisse/pruefungskalender/",
+      "read_on": "2026-10-11"
+    },
+    {
+      "exam_key": "sip5a",
+      "date": "2027-03-10",
+      "registration_opens": "2027-01-25",
+      "registration_closes": "2027-02-08",
+      "source_url": "https://www.meduniwien.ac.at/web/studierende/mein-studium/diplomstudium-humanmedizin/pruefungen-pruefungsergebnisse/pruefungskalender/",
+      "read_on": "2026-10-11"
+    }
+  ],
+  "contacts": {
+    "sip": {
+      "local": "nostrifikationspruefungsanmeldungen",
+      "domain": "meduniwien.ac.at"
+    },
+    "rez": {
+      "local": "nostrifikationspruefungsanmeldungen",
+      "domain": "meduniwien.ac.at"
+    },
+    "gm": {
+      "local": "studref-gerichtsmedizin",
+      "domain": "meduniwien.ac.at"
+    }
+  },
+  "forms": {
+    "sip4a": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/Humanmedizin/Formulare/Anmeldung_SIP4a_Nostrifikanten.pdf",
+    "sip5a": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/Humanmedizin/Formulare/Anmeldung_SIP5a_Nostrifikanten.pdf",
+    "rezeptierkunde": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/RezeptierkundeFormular__1.2023_.pdf",
+    "gerichtsmedizin": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/GerichtsmedizinFormular__1.2023_.pdf"
+  },
+  "date_sources": {
+    "sip": {
+      "edition": "Prüfungskalender, Seitenstand 11.10.2026",
+      "read_on": "2026-10-11",
+      "review_every_days": 30
+    },
+    "rez_gm": {
+      "edition": "Prüfungskalender WS2026/27, 03.06.2026",
+      "read_on": "2026-10-11",
+      "review_every_days": 30
+    }
+  }
+}
