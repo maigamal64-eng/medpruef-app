@@ -500,7 +500,7 @@ const translations = {
   'exam_result': { de: 'Dein Ergebnis', en: 'Your Result' },
   'exam_passed': { de: 'Bestanden ✓', en: 'Passed ✓' },
   'exam_failed': { de: 'Nicht bestanden', en: 'Not Passed' },
-  'pass_threshold': { de: '60% zum Bestehen erforderlich', en: '60% required to pass' },
+  'pass_threshold': { de: 'Übungsgrenze dieser Simulation: 60 %', en: 'Practice threshold of this simulation: 60 %' },
   'review_answers': { de: 'Antworten überprüfen', en: 'Review Answers' },
   'exam_new': { de: 'Neue Prüfung', en: 'New Exam' },
   'exam_loading': { de: 'Prüfung wird vorbereitet...', en: 'Preparing exam...' },

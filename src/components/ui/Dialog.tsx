@@ -130,6 +130,35 @@ function tabbables(root: HTMLElement): HTMLElement[] {
 /** Destructive primary stays inert this long after opening (EXM-19, ACC-46). */
 export const CONFIRM_ARM_MS = 800
 
+// Shared background lock: reference-counted so nested dialogs that close out
+// of order never unlock the page while another dialog is still open.
+const inertCounts = new Map<Element, number>()
+let scrollLocks = 0
+let scrollRestore = ''
+function lockBackground(except: Element): Element[] {
+  const locked: Element[] = []
+  for (const child of Array.from(document.body.children)) {
+    if (child === except || child.contains(except)) continue
+    if (child.hasAttribute('data-mp-keep-live')) continue
+    const count = inertCounts.get(child) ?? 0
+    if (count === 0 && child.hasAttribute('inert')) continue // inert for another reason
+    inertCounts.set(child, count + 1)
+    child.setAttribute('inert', '')
+    locked.push(child)
+  }
+  if (scrollLocks === 0) { scrollRestore = document.body.style.overflow; document.body.style.overflow = 'hidden' }
+  scrollLocks++
+  return locked
+}
+function unlockBackground(locked: Element[]): void {
+  for (const el of locked) {
+    const count = (inertCounts.get(el) ?? 1) - 1
+    if (count <= 0) { inertCounts.delete(el); el.removeAttribute('inert') } else inertCounts.set(el, count)
+  }
+  scrollLocks = Math.max(0, scrollLocks - 1)
+  if (scrollLocks === 0) document.body.style.overflow = scrollRestore
+}
+
 export function Dialog({
   open,
   onOpenChange,
@@ -271,27 +300,15 @@ export function Dialog({
       ;(pick() ?? surface).focus({ preventScroll: true })
     }, 0)
 
-    const prevOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-
-    // Background inert: every body child except this overlay and the root
-    // live regions (they must keep announcing).
-    const inerted: Element[] = []
+    // Background inert + scroll lock: every body child except this overlay
+    // and the root live regions (they must keep announcing).
     const overlay = overlayRef.current
-    if (overlay) {
-      for (const child of Array.from(document.body.children)) {
-        if (child === overlay || child.contains(overlay)) continue
-        if (child.hasAttribute('data-mp-keep-live') || child.hasAttribute('inert')) continue
-        child.setAttribute('inert', '')
-        inerted.push(child)
-      }
-    }
+    const locked = overlay ? lockBackground(overlay) : []
 
     return () => {
       document.removeEventListener('keydown', handleKey, true)
       clearTimeout(focusTimer)
-      document.body.style.overflow = prevOverflow
-      for (const el of inerted) el.removeAttribute('inert')
+      unlockBackground(locked)
     }
   }, [open, overlayId, canEscape, requestClose, kind, initialFocus])
 
@@ -390,12 +407,17 @@ export function Dialog({
           // history entry, so Back from the new page returns to the page
           // under the overlay (no duplicate entry, no double Back).
           const link = el.closest?.('a[href]') as HTMLAnchorElement | null
-          if (!link || busy || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
-          if (link.target && link.target !== '_self') return
+          if (!link || busy || !dismissible || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
+          if ((link.target && link.target !== '_self') || link.hasAttribute('download')) return
           let url: URL
           try { url = new URL(link.href, window.location.href) } catch { return }
-          if (url.origin !== window.location.origin) return
+          if (url.origin !== window.location.origin || url.pathname.startsWith('/api/')) return
           if (!ownsCurrentEntry(overlayId, window.history)) { requestClose(); return }
+          // A link to the page under the overlay (or an in-page hash) only closes it.
+          if (url.pathname === window.location.pathname && url.search === window.location.search) {
+            if (url.hash) return
+            e.preventDefault(); requestClose(); return
+          }
           e.preventDefault()
           skipBackRef.current = true
           router.replace(url.pathname + url.search + url.hash)

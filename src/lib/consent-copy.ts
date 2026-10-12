@@ -20,10 +20,20 @@ export const CONSENT_STORAGE_KEY = 'medpruef_cookies'
 export const CONSENT_COOKIE = 'mp_consent'
 
 export type ConsentMode = 'optout' | 'optin'
-export type ConsentValue = 'accepted' | 'declined'
+/**
+ * 'acknowledged' is the opt-out mode "OK": analytics stay on (they run until
+ * declined) but it is NOT consent for the advertising pixels, which stay
+ * strictly opt-in and only load on 'accepted'.
+ */
+export type ConsentValue = 'accepted' | 'declined' | 'acknowledged'
 
 export function consentMode(optOut: boolean = TRACKING_OPT_OUT): ConsentMode {
   return optOut ? 'optout' : 'optin'
+}
+
+/** The stored value for the bar's affirmative button in each mode. */
+export function affirmativeConsent(mode: ConsentMode): ConsentValue {
+  return mode === 'optout' ? 'acknowledged' : 'accepted'
 }
 
 /** i18n keys for the banner, per mode. */
@@ -37,11 +47,11 @@ export function consentCopyKeys(mode: ConsentMode): { body: TranslationKey; decl
 export function consentFromCookie(cookie: string): ConsentValue | null {
   const row = cookie.split(';').map((part) => part.trim()).find((part) => part.startsWith(`${CONSENT_COOKIE}=`))
   const value = row?.slice(CONSENT_COOKIE.length + 1)
-  return value === 'accepted' || value === 'declined' ? value : null
+  return value === 'accepted' || value === 'declined' || value === 'acknowledged' ? value : null
 }
 
 /**
  * Runs in <head> before first paint: reserve the banner's height when no
  * choice is stored, so it never slides over content (ONB-03/05).
  */
-export const CONSENT_HEAD_SCRIPT = `(function(){var d=document.documentElement;try{var v=localStorage.getItem('${CONSENT_STORAGE_KEY}');if(v==='accepted'||v==='declined')return}catch(e){}if(/(?:^|; )${CONSENT_COOKIE}=(accepted|declined)/.test(document.cookie))return;d.classList.add('mp-consent-pending')})()`
+export const CONSENT_HEAD_SCRIPT = `(function(){var d=document.documentElement;try{var v=localStorage.getItem('${CONSENT_STORAGE_KEY}');if(v==='accepted'||v==='declined'||v==='acknowledged')return}catch(e){}if(/(?:^|; )${CONSENT_COOKIE}=(accepted|declined|acknowledged)/.test(document.cookie))return;d.classList.add('mp-consent-pending')})()`

@@ -399,15 +399,17 @@ export default function RootLayout({
                 banner and the announcement gate both suppress themselves
                 for paid accounts), so the two can never compete. */}
             {/* UX-GLOBAL-11: one in-flow, sticky top status region in the
-                gate's priority order (offline, renewal, update, guest,
-                cohort). One at a time on phones; it publishes --mp-banner-h
+                gate's priority order (offline, renewal, guest, cohort,
+                then the PWA update/install strip). One at a time on phones; it publishes --mp-banner-h
                 so headers and focus never sit under it. */}
             <StatusRegion>
               <StatusSlot name="offline"><OfflineIndicator /></StatusSlot>
               <StatusSlot name="renewal"><RenewalPrompt /></StatusSlot>
-              <StatusSlot name="update"><PWAInstall /></StatusSlot>
               <StatusSlot name="guest"><GuestMigrationBanner /></StatusSlot>
               <StatusSlot name="cohort"><CohortCountdownBanner /></StatusSlot>
+              {/* PWAInstall renders both the update banner and the install
+                  prompt; the install prompt must not outrank real status. */}
+              <StatusSlot name="pwa"><PWAInstall /></StatusSlot>
             </StatusRegion>
             <LiveRegions />
             <NavigationMarker />

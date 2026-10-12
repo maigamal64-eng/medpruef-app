@@ -42,4 +42,9 @@ describe('one Back order (UX-GLOBAL-10)', () => {
     expect(trail.length).toBe(20)
     expect(pushTrail(['/a'], '/a')).toEqual(['/a'])
   })
+
+  it('browser Back to the previous entry shrinks the trail', () => {
+    expect(pushTrail(['/', '/library', '/history'], '/library', true)).toEqual(['/', '/library'])
+    expect(pushTrail(['/', '/library'], '/settings', true)).toEqual(['/', '/library', '/settings'])
+  })
 })

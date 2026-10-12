@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { CONSENT_HEAD_SCRIPT, consentCopyKeys, consentFromCookie, consentMode } from '@/lib/consent-copy'
+import { CONSENT_HEAD_SCRIPT, affirmativeConsent, consentCopyKeys, consentFromCookie, consentMode } from '@/lib/consent-copy'
 import { optionStateFor, optionTagKey, type OptionState } from '@/components/ui/Option'
 import { resultVerdict } from '@/components/ui/ResultCard'
 import { shellChrome, resolveLayoutMode } from '@/components/ui/AppLayout'
@@ -28,6 +28,13 @@ describe('cookie consent copy (UX-GLOBAL-13)', () => {
     expect(germanOf('cookie_optout_body')).toMatch(/jederzeit ablehnen/)
     expect(germanOf('cookie_optin_body')).toMatch(/nur wenn Sie zustimmen/)
     expect(translationKeyExists('cookie_body')).toBe(false)
+  })
+
+  it('opt-out "OK" is an analytics acknowledgement, never ad-pixel consent', () => {
+    expect(affirmativeConsent('optout')).toBe('acknowledged')
+    expect(affirmativeConsent('optin')).toBe('accepted')
+    expect(consentFromCookie('mp_consent=acknowledged')).toBe('acknowledged')
+    expect(CONSENT_HEAD_SCRIPT).toContain('acknowledged')
   })
 
   it('a decline persists through the cookie mirror when storage is blocked', () => {

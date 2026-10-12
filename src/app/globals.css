@@ -2019,14 +2019,14 @@ html { scroll-padding-top: calc(var(--mp-banner-h) + 8px); }
 }
 .mp-status-region:not(:has(> .mp-status-slot:not(:empty))) { padding-top: 0; }
 .mp-status-slot { display: contents; }
-html[data-onboarding="open"] .mp-status-region > :not([data-status-banner="update"]) { display: none; }
+html[data-onboarding="open"] .mp-status-region > * { display: none; }
 /* Phones show one banner at a time: the first child that renders wins
    (children are mounted in the gate's priority order). */
 @media (max-width: 767px) {
   .mp-status-region > .mp-status-slot:not(:empty) ~ .mp-status-slot:not(:empty) { display: none !important; }
 }
 /* Sticky headers and the Sidebar sit below the region. */
-.sticky.top-0 { top: var(--mp-banner-h); }
+.sticky.top-0:not([data-admin="1"] *) { top: var(--mp-banner-h); }
 .sidebar { top: var(--mp-banner-h); height: calc(100dvh - var(--mp-banner-h)); }
 .mp-public-layout .main-content { padding-bottom: 0; }
 

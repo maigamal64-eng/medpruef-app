@@ -44,7 +44,9 @@ import QuestionActions from "@/components/QuestionActions";
 import QuestionCard from "@/components/QuestionCard";
 import ImageLightbox from "@/components/ImageLightbox";
 import { ResultCard, resultVerdict } from "@/components/ui/ResultCard";
-import { GraduationCap, Clock, AlertTriangle, Search, Map as MapIcon, X } from "lucide-react";
+import { consumeSelfPop, overlayStack } from "@/lib/overlay-stack";
+import { announce } from "@/lib/announce";
+import { GraduationCap, Clock, Info, Search, Map as MapIcon, X } from "lucide-react";
 
 type Lang = "de" | "en";
 type ExamPhase = "entry" | "loading" | "exam" | "results" | "review";
@@ -840,12 +842,24 @@ function ExamContent() {
     return () => { window.removeEventListener("beforeunload", warn); document.removeEventListener("click", click, true); };
   }, [phase, historySaveState]);
 
+  // UX-GLOBAL-15: the result's save chip is plain text; speak changes once.
+  useEffect(() => {
+    if (phase !== "results") return;
+    if (historySaveState === "saved") announce(t("result_saved", lang));
+    else if (historySaveState === "failed") announce(t("result_not_saved", lang), "assertive");
+  }, [phase, historySaveState, lang]);
+
   useEffect(() => {
     if (phase !== "exam") return;
     // A same-URL history entry lets the first browser Back ask before leaving.
     const url = window.location.pathname + window.location.search;
     window.history.pushState({ ...window.history.state, mpExamFocus: true }, "", url);
-    const back = () => { window.history.pushState({ ...window.history.state, mpExamFocus: true }, "", url); setConfirmAction("leave"); };
+    const back = () => {
+      // An overlay (the image lightbox) closing through Back, or our own
+      // overlay Back, is not the learner leaving the exam (UX-GLOBAL-14/26).
+      if (consumeSelfPop() || overlayStack().length > 0) return;
+      window.history.pushState({ ...window.history.state, mpExamFocus: true }, "", url); setConfirmAction("leave");
+    };
     window.addEventListener("popstate", back);
     return () => { window.removeEventListener("popstate", back); if (window.history.state?.mpExamFocus) { const state = { ...window.history.state }; delete state.mpExamFocus; window.history.replaceState(state, "", window.location.href); } };
   }, [phase]);
@@ -1301,7 +1315,7 @@ function ExamContent() {
               )}
               {!mcqSimUnavailable && (
                 <div className="bg-[var(--mp-status-warning)]/6 border border-[var(--mp-status-warning)]/25 rounded p-4 mb-6 text-center">
-                  <p className="text-sm text-[var(--mp-status-warning)] flex items-center justify-center gap-1"><AlertTriangle className="w-4 h-4 inline" /> {t("pass_threshold", lang)}</p>
+                  <p className="text-sm text-[var(--mp-fg-muted)] flex items-center justify-center gap-1"><Info className="w-4 h-4 inline" aria-hidden /> {t("pass_threshold", lang)}</p>
                 </div>
               )}
 

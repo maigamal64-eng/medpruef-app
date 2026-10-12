@@ -111,8 +111,11 @@ export function withReturnTo(href: string, returnTo: string): string {
 const TRAIL_KEY = 'mp_nav_trail'
 const TRAIL_MAX = 20
 
-export function pushTrail(trail: readonly string[], path: string): string[] {
+export function pushTrail(trail: readonly string[], path: string, traversal = false): string[] {
   if (trail[trail.length - 1] === path) return trail.slice()
+  // Browser Back to the previous trail entry shrinks the trail instead of
+  // growing it, so goBack() never steps out of the app.
+  if (traversal && trail[trail.length - 2] === path) return trail.slice(0, -1)
   const next = [...trail, path]
   return next.length > TRAIL_MAX ? next.slice(next.length - TRAIL_MAX) : next
 }
@@ -127,11 +130,16 @@ export function readTrail(): string[] {
   }
 }
 
-export function recordNavigation(path: string): void {
+export function recordNavigation(path: string, traversal = false): void {
   try {
-    const next = pushTrail(readTrail(), path)
+    const next = pushTrail(readTrail(), path, traversal)
     sessionStorage.setItem(TRAIL_KEY, JSON.stringify(next))
   } catch { /* storage blocked: Back falls through to the IA parent */ }
+}
+
+/** A document load from outside the app starts a fresh trail. */
+export function resetTrail(): void {
+  try { sessionStorage.removeItem(TRAIL_KEY) } catch { /* ignore */ }
 }
 
 export function previousInAppPath(currentPath: string): string | null {

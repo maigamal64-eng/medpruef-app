@@ -26,13 +26,14 @@ import {
   consentCopyKeys,
   consentFromCookie,
   consentMode,
+  affirmativeConsent,
   type ConsentValue,
 } from "@/lib/consent-copy";
 
 export function getCookieConsent(): ConsentValue | null {
   if (typeof window === "undefined") return null;
   const val = safeStorage.getItem(CONSENT_STORAGE_KEY);
-  if (val === "accepted" || val === "declined") return val;
+  if (val === "accepted" || val === "declined" || val === "acknowledged") return val;
   try { return consentFromCookie(document.cookie); } catch { return null; }
 }
 
@@ -130,7 +131,8 @@ export default function CookieBanner({ lang }: CookieBannerProps) {
         <button type="button" onClick={() => choose("declined")} className="mp-btn mp-btn--secondary">
           {t(keys.decline, lang)}
         </button>
-        <button type="button" onClick={() => choose("accepted")} className="mp-btn mp-btn--secondary">
+        {/* Opt-out "OK" stores 'acknowledged' (analytics notice), never ad-pixel consent. */}
+        <button type="button" onClick={() => choose(affirmativeConsent(consentMode()))} className="mp-btn mp-btn--secondary">
           {t(keys.accept, lang)}
         </button>
       </div>

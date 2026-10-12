@@ -157,7 +157,21 @@ export default function ExamSwitcherInline({ variant = 'header', className = '' 
                     name={groupName}
                     value={exam.id}
                     checked={isActive}
-                    onChange={() => void switchTo(exam.id)}
+                    // Arrow keys only move the focus inside the group; a
+                    // click, Enter or Space commits (switching reloads).
+                    onChange={() => { /* committed on click, Enter or Space */ }}
+                    // Pointer, label and Space activation all arrive as a click.
+                    onClick={() => void switchTo(exam.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') { e.preventDefault(); void switchTo(exam.id) }
+                      if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+                        e.preventDefault()
+                        const radios = Array.from((e.currentTarget.closest('fieldset') ?? document).querySelectorAll<HTMLInputElement>('input[type="radio"]'))
+                        const i = radios.indexOf(e.currentTarget)
+                        const next = radios[(i + (e.key === 'ArrowDown' || e.key === 'ArrowRight' ? 1 : radios.length - 1)) % radios.length]
+                        next?.focus()
+                      }
+                    }}
                   />
                   <span className="flex-1 min-w-0">
                     <span className="block text-[15px] font-semibold text-[var(--mp-fg)]">{getExamLabel(exam.id, 'full', lang)}</span>
