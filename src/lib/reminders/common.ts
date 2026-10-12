@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { safeEqual } from "@/lib/security/timing-safe";
 import { getServiceClient } from "@/lib/supabase";
 import { sendZohoEmail, type SendZohoEmailArgs } from "@/lib/email/zoho";
+import { checkSuppression } from "@/lib/mail-suppression";
 
 import { signReminderToken } from "./tokens";
 
@@ -46,7 +47,10 @@ export async function deliverBatch(db: ReminderDb, table: string, deliveries: De
     const existing = await query.maybeSingle();
     assertDb(existing.error);
     if (existing.data) { counts.skipped++; continue; }
-    if (!await delivery.isSubscribed()) { counts.skipped++; continue; }
+    // b39: the shared do-not-email list (opt-outs, bounces) wins over any
+    // subscription row. An unreadable list throws, aborting the run like any
+    // other database failure, so an outage is visible and nothing is sent.
+    if (!await delivery.isSubscribed() || await checkSuppression(db, delivery.mail.to, "marketing") !== "clear") { counts.skipped++; continue; }
     counts.pending++;
     if (dryRun) continue;
 
@@ -58,7 +62,7 @@ export async function deliverBatch(db: ReminderDb, table: string, deliveries: De
     assertDb(claim.error);
     if (!claim.data) throw new Error("Reminder reservation missing");
     // Re-check opt-out after acquiring the reservation, right before sending.
-    if (!await delivery.isSubscribed()) {
+    if (!await delivery.isSubscribed() || await checkSuppression(db, delivery.mail.to, "marketing") !== "clear") {
       // Nothing reached the provider: drop the reservation so the ledger never
       // shows a held send that could not have gone out.
       assertDb((await db.from(table).delete().eq("id", claim.data.id)).error);

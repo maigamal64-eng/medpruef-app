@@ -3,6 +3,7 @@ import * as Sentry from "@sentry/nextjs";
 import { getServiceClient } from "@/lib/supabase";
 import { LONG_DB_TIMEOUT_MS } from "@/lib/db-unavailable";
 import { sendZohoEmail } from "@/lib/email/zoho";
+import { sendUnlessSuppressed } from "@/lib/mail-suppression";
 import { prechargeRemindersEnabled, sendPrechargeTrialReminder } from "@/lib/precharge-trial-reminder";
 import { loadRenewalOfferSuppression } from "@/lib/billing-cadence";
 import { BILLING_SUPPORT_EMAIL, WHOP_MANAGE_URL, WHOP_MANAGE_TEXT } from "@/lib/billing-copy";
@@ -202,37 +203,48 @@ export async function GET(req: NextRequest) {
             streakDays,
           });
 
-          const sendResult = await sendZohoEmail({
+          // b39: the shared do-not-email list is checked right before the
+          // provider call (fails closed when the list cannot be read).
+          const sendResult = await sendUnlessSuppressed(sb, "marketing", {
             to: user.email as string,
             subject: tpl.subject,
             htmlBody: tpl.htmlBody,
           });
+          const withheld = !sendResult.ok && (sendResult.reason === "suppressed" || sendResult.reason === "invalid_address");
+          const suppressed = !sendResult.ok && sendResult.reason === "suppressed";
 
           await recordEvent(
             sb,
             userId,
             sendResult.ok
               ? "trial_reminder_email_sent"
-              : "trial_reminder_email_failed",
+              : suppressed
+                ? "trial_reminder_email_suppressed"
+                : withheld
+                  ? "trial_reminder_email_invalid_address"
+                  : "trial_reminder_email_failed",
             {
               subscription_id: subId,
               expires_at: trial.expires_at,
-              user_email: user.email,
+              // No fresh plaintext address record for someone who opted out.
+              ...(withheld ? {} : { user_email: user.email }),
               language_code: user.language_code ?? null,
               reason: "day_25_reminder",
               ok: sendResult.ok,
               ...(!sendResult.ok
                 ? {
                     failure_reason: sendResult.reason,
-                    failure_status: sendResult.status ?? null,
+                    failure_status: "status" in sendResult ? sendResult.status ?? null : null,
                   }
                 : {}),
             },
           );
 
-          if (!sendResult.ok && sendResult.reason !== "not_configured") {
+          // A withheld address stamps like "not_configured": the stamp is final
+          // for this trial, so lifting a suppression later does not re-send it.
+          if (!sendResult.ok && sendResult.reason !== "not_configured" && !withheld) {
             errors.push(
-              `send:${subId}: ${sendResult.reason}${sendResult.status ? ` (HTTP ${sendResult.status})` : ""}`,
+              `send:${subId}: ${sendResult.reason}${"status" in sendResult && sendResult.status ? ` (HTTP ${sendResult.status})` : ""}`,
             );
             // Don't stamp on a real send failure — let the cron retry
             // tomorrow. Only "not_configured" (env vars missing) stamps,

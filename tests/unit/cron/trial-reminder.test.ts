@@ -53,6 +53,7 @@ vi.mock("@/lib/supabase", () => ({
         return { data: [{ tier: "first_3mo_27", payment_provider: "whop", provider_payment_id: "pay_due" }] };
       }
       if (c.table === "payment_events") return { data: h.planId ? [{ payment_id: "pay_due", plan_id: h.planId }] : [] };
+      if (c.table === "mail_suppression") return { data: [] };
       if (c.table === "users" && c.op === "select") {
         return { data: { email: "u@example.com", first_name: h.firstName, language_code: h.lang, tier_expires_at: h.tierExpiresAt } };
       }

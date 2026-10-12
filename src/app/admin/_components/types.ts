@@ -44,6 +44,8 @@ export interface UserRow {
   exam_date?: string | null;
   /** Present when the directory read the lock state (UX-ADM-18). */
   is_banned?: boolean;
+  /** b39: active do-not-email entry; null when clear; "unknown" when the list could not be read; "unmailable" when no sender can use the address. */
+  do_not_email?: { suppressed: true; causes: string[]; scope: "all" | "marketing"; since: string } | null | "unknown" | "unmailable";
 }
 
 export interface QuestionStats {

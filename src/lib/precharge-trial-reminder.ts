@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { VERIFIED_CANCEL_PATH, billingPrechargeReminder } from "@/lib/billing-copy";
 import { loadWhopBillingSnapshot, type ProviderBillingSnapshot } from "@/lib/whop-subscription-snapshot";
 import { sendZohoEmail } from "@/lib/email/zoho";
+import { checkSuppression, type SuppressionStatus } from "@/lib/mail-suppression";
 
 export function prechargeRemindersEnabled(): boolean {
   return process.env.TRIAL_REMINDER_EMAILS_ENABLED === "true" && VERIFIED_CANCEL_PATH;
@@ -39,6 +40,18 @@ export async function sendPrechargeTrialReminder(sb: SupabaseClient, args: { use
     .eq("id", args.userId).maybeSingle();
   if (userError) return "unavailable";
   if (!user?.email) return "ineligible";
+  // b39: a pre-charge billing notice counts as transactional, so a "Stopp"
+  // (marketing) opt-out still gets it; a bounce or complaint (scope all) does
+  // not. Checked before the claim, so an unreadable list burns no claim and a
+  // later lift is honoured on the next sweep.
+  let listed: SuppressionStatus;
+  try { listed = await checkSuppression(sb, user.email, "transactional"); } catch { return "unavailable"; }
+  if (listed !== "clear") {
+    await sb.from("user_events").insert({ user_id: args.userId, event_type: "trial_precharge_reminder_suppressed", event_data: {
+      subscription_id: trial.id, membership_id: args.membershipId, suppression: listed,
+    } });
+    return "ineligible";
+  }
   const claimKey = `trialssoon:${args.membershipId}`;
   const claimedAt = new Date(nowMs).toISOString();
   const { data: claim, error: claimError } = await sb.from("processed_webhook_events").insert({

@@ -63,7 +63,7 @@ async function getZohoAccessToken(): Promise<string | null> {
       signal: ctrl.signal,
     });
     if (!r.ok) {
-      console.error("[zoho] refresh failed", r.status, (await r.text()).slice(0, 200));
+      console.error("[zoho] refresh failed", { status: r.status, code: "oauth_http_error" });
       return null;
     }
     const body = (await r.json()) as { access_token?: string };
@@ -73,6 +73,8 @@ async function getZohoAccessToken(): Promise<string | null> {
       expiresAtMs: Date.now() + ACCESS_TOKEN_TTL_MS,
     };
     return body.access_token;
+  } catch {
+    return null;
   } finally {
     clearTimeout(timer);
   }
@@ -127,8 +129,7 @@ export async function sendZohoEmail(args: SendZohoEmailArgs): Promise<SendZohoEm
       signal: ctrl.signal,
     });
     if (!r.ok) {
-      const txt = await r.text();
-      console.error("[zoho] send failed", r.status, txt.slice(0, 300));
+      console.error("[zoho] send failed", { status: r.status, code: "mail_http_error" });
       // Token may have just expired between cache + send; clear so the
       // next call re-authenticates.
       if (r.status === 401) clearZohoTokenCache();
@@ -136,16 +137,16 @@ export async function sendZohoEmail(args: SendZohoEmailArgs): Promise<SendZohoEm
         ok: false,
         reason: "send_failed",
         status: r.status,
-        details: txt.slice(0, 300),
+        details: "mail_http_error",
       };
     }
     const body = (await r.json()) as { data?: { messageId?: string } };
     return { ok: true, messageId: body?.data?.messageId };
-  } catch (err) {
+  } catch {
     return {
       ok: false,
       reason: "send_failed",
-      details: err instanceof Error ? err.message.slice(0, 200) : "unknown",
+      details: "mail_transport_error",
     };
   } finally {
     clearTimeout(timer);

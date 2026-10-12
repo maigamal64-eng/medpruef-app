@@ -8,6 +8,7 @@ const h = vi.hoisted(() => ({
   calls: [] as unknown[],
   sendZohoEmail: vi.fn(async () => ({ ok: true })),
   planId: "plan_redacted145e2752" as string | null,
+  suppression: "none" as "none" | "opt_out" | "error",
 }));
 
 vi.mock("@sentry/nextjs", () => ({ captureMessage: vi.fn(), captureException: vi.fn() }));
@@ -25,6 +26,11 @@ vi.mock("@/lib/supabase", () => ({
       }
       if (c.table === "payment_events") return { data: h.planId ? [{ payment_id: "pay_due", plan_id: h.planId }] : [] };
       if (c.table === "users" && c.op === "select") return { data: { email: "u@example.com", first_name: "U", language_code: "de" } };
+      if (c.table === "mail_suppression") {
+        if (h.suppression === "error") return { error: { message: "suppression unavailable" } };
+        const [key] = (c.filters.find((f) => f.kind === "in")?.value ?? []) as string[];
+        return { data: h.suppression === "opt_out" ? [{ id: "s1", email_key: key, cause: "opt_out", scope: "marketing", source: "comms-log", created_at: "2026-09-21T00:00:00Z" }] : [] };
+      }
       return {};
     });
     h.calls = calls;
@@ -42,6 +48,7 @@ beforeEach(() => {
   process.env.TRIAL_REMINDER_EMAILS_ENABLED = "true";
   h.sendZohoEmail.mockClear();
   h.planId = "plan_redacted145e2752";
+  h.suppression = "none";
 });
 
 describe("cron trial-reminder: auto-renewing plans", () => {
@@ -64,5 +71,25 @@ describe("cron trial-reminder: auto-renewing plans", () => {
     expect(h.sendZohoEmail).toHaveBeenCalledTimes(1);
     expect(stamped()).toBe(true);
     expect(body.reminders_marked).toBe(1);
+  });
+
+  it("b39: never emails an address on the do-not-email list, and stamps it", async () => {
+    h.planId = "plan_redacted8dbd8718";
+    h.suppression = "opt_out";
+    const body = await (await run()).json();
+    expect(h.sendZohoEmail).not.toHaveBeenCalled();
+    expect(stamped()).toBe(true);
+    expect(body.reminders_marked).toBe(1);
+    const event = (h.calls as FakeCall[]).find((c) => c.table === "user_events" && JSON.stringify(c.payload).includes("trial_reminder_email_suppressed"));
+    expect(event).toBeDefined();
+    expect(JSON.stringify(event!.payload)).not.toContain("u@example.com");
+  });
+
+  it("b39: fails closed when the do-not-email list cannot be read (no send, no stamp)", async () => {
+    h.planId = "plan_redacted8dbd8718";
+    h.suppression = "error";
+    await run();
+    expect(h.sendZohoEmail).not.toHaveBeenCalled();
+    expect(stamped()).toBe(false);
   });
 });

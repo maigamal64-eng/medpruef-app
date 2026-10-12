@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { LONG_DB_TIMEOUT_MS } from "@/lib/db-unavailable";
+import { adminSuppressionFlags, type AdminSuppressionFlag } from "@/lib/mail-suppression";
 import { requireAdmin } from "@/lib/auth-guard";
 import { logAdminAction, resolveActorEmail } from "@/lib/admin/audit";
 import { canAccessAdminPermission, loadAdminPermissionSnapshot } from "@/lib/admin/permissions";
@@ -197,7 +198,7 @@ export async function GET(req: NextRequest) {
       console.error("[admin/users GET] directory RPC failed", error.code);
       return NextResponse.json({ error: "Failed to fetch users" }, { status: 500 });
     }
-    const result = data as { items?: Array<{ id: string; tier: string | null }>; total?: number } | null;
+    const result = data as { items?: Array<{ id: string; tier: string | null; email?: string | null }>; total?: number } | null;
     const total = Number(result?.total ?? 0);
     const totalPages = Math.ceil(total / limit);
     const items = result?.items ?? [];
@@ -212,11 +213,19 @@ export async function GET(req: NextRequest) {
       if (lockError) return adminErrorResponse(lockError, "/api/stats/admin/users");
       for (const row of lockRows ?? []) banned.add(row.id as string);
     }
+    // b39: do-not-email flag per row. A failed lookup shows "unknown", never "clear".
+    let flags: Map<string, AdminSuppressionFlag | "unmailable"> | null = null;
+    try {
+      flags = await adminSuppressionFlags(getServiceClient(), items.map((item) => item.email));
+    } catch {
+      console.error("[admin/users GET] suppression lookup failed");
+    }
     return NextResponse.json({
       items: items.map((item) => ({
         ...item,
         tier: canReadRevenue ? item.tier : null,
         is_banned: banned.has(item.id),
+        do_not_email: flags === null ? "unknown" : item.email ? (flags.get(item.email) ?? null) : null,
       })),
       total,
       page,
