@@ -153,7 +153,7 @@ async function fetchRecentPayments(apiKey: string): Promise<{
   return paginateWhopLedger({
     apiKey,
     endpoint: "payments",
-    query: `company_id=${encodeURIComponent(process.env.WHOP_COMPANY_ID ?? "")}`,
+    query: `account_id=${encodeURIComponent(process.env.WHOP_COMPANY_ID ?? "")}`,
     cutoffMs: Date.now() - PAYMENT_WINDOW_MS,
     tag: "checkout_verify.payments",
   });

@@ -176,7 +176,7 @@ export async function verifyMentorCheckoutDetailed(
     payments = await ledger({
       apiKey: deps.apiKey,
       endpoint: "payments",
-      query: `company_id=${encodeURIComponent(deps.companyId ?? "")}`,
+      query: `account_id=${encodeURIComponent(deps.companyId ?? "")}`,
       cutoffMs: cutoff,
       tag: "mentor_verify.payments",
     });

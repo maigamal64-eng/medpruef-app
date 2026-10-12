@@ -394,7 +394,7 @@ export async function paginateWhopLedger(args: {
   apiKey: string;
   /** e.g. "payments" | "memberships" */
   endpoint: string;
-  /** query string WITHOUT page/per, e.g. `company_id=biz_x` or `plan_id=plan_x` */
+  /** query string WITHOUT page/per, e.g. `account_id=biz_x` (Whop renamed company_id for payments, Oct 2026) or `plan_id=plan_x` */
   query: string;
   cutoffMs?: number | null;
   match?: (row: unknown) => boolean;

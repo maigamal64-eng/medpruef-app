@@ -26,6 +26,18 @@ export const CHANGELOG: ChangelogEntry[] = [
   "date": "2026-10-12",
   "tag": "admin",
   "title": {
+    "de": "Whop-Zahlungsabgleich nutzt den neuen Konto-Filter",
+    "en": "Whop payment lookup uses the new account filter"
+  },
+  "description": {
+    "de": "Whop filtert Zahlungslisten jetzt nach account_id statt company_id. Die Rückkehr aus dem Checkout und die Mentor-Kaufprüfung lesen Zahlungen wieder korrekt.",
+    "en": "Whop now filters payment lists by account_id instead of company_id. The checkout return check and the mentor purchase check read payments correctly again."
+  }
+},
+{
+  "date": "2026-10-12",
+  "tag": "admin",
+  "title": {
     "de": "KI-Mentor: Umsatz neben Kosten, ein Berechtigungsschema, Datum für das Ende der Pause (ausgeschaltet)",
     "en": "AI mentor: revenue next to cost, one permission map, a date for the end of a pause (switched off)"
   },
