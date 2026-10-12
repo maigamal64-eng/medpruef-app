@@ -61,7 +61,7 @@ export const GET = adminRouteShell(
       (actorId && !UUID_RE.test(actorId)) ||
       (actorEmail && (actorEmail.length > 200 || /[,()*%\\]/.test(actorEmail))) ||
       (action && !ACTION_RE.test(action)) ||
-      (before && !Number.isFinite(Date.parse(before))) ||
+      (before && (!Number.isFinite(Date.parse(before)) || !/^[0-9T:. +\-Z]{10,40}$/.test(before))) ||
       (beforeId && !UUID_RE.test(beforeId)) ||
       !Number.isInteger(limit) || limit < 1 || limit > 200
     ) {
@@ -73,7 +73,8 @@ export const GET = adminRouteShell(
         p_actor_id: actor.userId,
         p_user_id: learner,
         p_limit: limit,
-        p_before: before ? new Date(before).toISOString() : null,
+        // Raw timestamp: a Date round trip would cut microseconds.
+        p_before: before,
       });
       if (error && isMissingFunction(error)) {
         return NextResponse.json({ category, available: false, items: [], total: null, scanned: 0, next_before: null });
@@ -107,7 +108,7 @@ export const GET = adminRouteShell(
     // Compound cursor (created_at, id): rows written in one transaction share
     // a timestamp, so a timestamp-only cursor would skip the rest of them.
     const items: Array<AuditRow & { category: AuditCategory }> = [];
-    let cursor: { at: string; id: string | null } | null = before ? { at: new Date(before).toISOString(), id: beforeId || null } : null;
+    let cursor: { at: string; id: string | null } | null = before ? { at: before, id: beforeId || null } : null;
     let scanned = 0;
     let total: number | null = null;
     let exhausted = false;

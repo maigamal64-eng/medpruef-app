@@ -138,7 +138,9 @@ describe("GET /api/admin/audit (ADM-15 A, UX-ADM-34)", () => {
     expect(first.next_before).toBe("2026-10-02T00:00:00Z|00000000-0000-4000-8000-000000000002");
     const second = await (await audit(req(`/api/admin/audit?limit=2&before=${encodeURIComponent(first.next_before)}`))).json();
     expect(second.total).toBeNull();
-    expect(calls.at(-1)?.filters).toContainEqual({ kind: "or", column: "created_at.lt.2026-10-02T00:00:00.000Z,and(created_at.eq.2026-10-02T00:00:00.000Z,id.lt.00000000-0000-4000-8000-000000000002)", value: undefined });
+    expect(calls.at(-1)?.filters).toContainEqual({ kind: "or", column: "created_at.lt.2026-10-02T00:00:00Z,and(created_at.eq.2026-10-02T00:00:00Z,id.lt.00000000-0000-4000-8000-000000000002)", value: undefined });
+    await audit(req(`/api/admin/audit?before=${encodeURIComponent("2026-10-02T07:34:28.123456+00:00|00000000-0000-4000-8000-000000000002")}`));
+    expect(calls.at(-1)?.filters).toContainEqual({ kind: "or", column: "created_at.lt.2026-10-02T07:34:28.123456+00:00,and(created_at.eq.2026-10-02T07:34:28.123456+00:00,id.lt.00000000-0000-4000-8000-000000000002)", value: undefined });
   });
 
   it("filters a learner by target or payload, validates input", async () => {
