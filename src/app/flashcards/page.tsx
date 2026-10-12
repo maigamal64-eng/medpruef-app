@@ -190,12 +190,17 @@ function Flashcard({
   /* Correct options for the back. Prefer structured options; fall back to the
    * pipe-joined answer string split into a list so the back is never blank
    * even for open-answer cards. */
-  const correctOptions: string[] = question.options
-    ? question.options.filter((o) => o.correct).map((o) => o.text)
+  // PRA-64: structured options keep their original letters on the back.
+  const correctOptions: Array<{ text: string; letter?: string }> = question.options
+    ? question.options
+        .map((o, i) => ({ text: o.text, correct: o.correct, letter: String.fromCharCode(65 + i) }))
+        .filter((o) => o.correct)
+        .map(({ text, letter }) => ({ text, letter }))
     : question.answer
         .split("|")
         .map((s) => s.trim())
-        .filter(Boolean);
+        .filter(Boolean)
+        .map((text) => ({ text }));
 
   /* Explanation — treat whitespace-only as absent (the ~69% no-explanation
    * path must feel complete, not broken). */
@@ -272,15 +277,12 @@ function Flashcard({
           {/* Answer — scrollable so long explanations never overflow the card */}
           <div className="flex-1 flex flex-col gap-2.5 overflow-y-auto -mr-2 pr-2">
             {correctOptions.length > 0 ? (
-              correctOptions.map((text, idx) => (
+              correctOptions.map(({ text, letter }, idx) => (
                 <Option
                   key={idx}
-                  state="correct"
-                  letter={
-                    correctOptions.length > 1
-                      ? String.fromCharCode(65 + idx)
-                      : undefined
-                  }
+                  static
+                  state="revealed"
+                  letter={letter}
                 >
                   {text}
                 </Option>

@@ -93,11 +93,11 @@ describe('R1 state, structured actions and wire contract',()=>{
   for(const kind of kinds){const href=actionHref({kind,topic:'x&redirect=https://evil.test',question_id:42});const u=new URL(href,'https://medpruf.com');expect(u.searchParams.get('from')).toBe('mentor');expect(existsSync(`src/app${u.pathname}/page.tsx`)).toBe(true);expect(u.searchParams.has('redirect')).toBe(false);}
  });
  it('warning/info text colours meet contrast on light and dark tinted backgrounds',()=>{
-  const css=readFileSync('src/app/globals.css','utf8');expect(css).toContain('--mp-warning-text:    #8A4B00');expect(css).toContain('--mp-info-text:       #2B6489');
+  const css=readFileSync('src/app/globals.css','utf8');expect(css).toContain('--mp-warning-text:    #8A5300');expect(css).toContain('--mp-info:            #2F6A8F');
   const rgb=(h:string)=>h.match(/\w\w/g)!.map(x=>parseInt(x,16)/255);
   const lum=(c:number[])=>c.map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4).reduce((v,x,i)=>v+x*[.2126,.7152,.0722][i],0);
   const ratio=(fg:string,bg:number[])=>{const a=lum(rgb(fg)),b=lum(bg);return(Math.max(a,b)+.05)/(Math.min(a,b)+.05);};
-  expect(ratio('8A4B00',rgb('FFF4E6'))).toBeGreaterThan(4.5);expect(ratio('2B6489',rgb('EAF3F9'))).toBeGreaterThan(4.5);
+  expect(ratio('8A5300',rgb('FFF4E6'))).toBeGreaterThan(4.5);expect(ratio('2F6A8F',rgb('EAF3F9'))).toBeGreaterThan(4.5);
   for(const base of ['11233E','0C192B']){
    const blend=(tint:string)=>rgb(base).map((v,i)=>v*.7+rgb(tint)[i]*.3);
    expect(ratio('F4A261',blend('643C14'))).toBeGreaterThan(4.5);expect(ratio('5BA3CE',blend('1E3A52'))).toBeGreaterThan(4.5);

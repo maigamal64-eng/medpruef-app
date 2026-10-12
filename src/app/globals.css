@@ -288,13 +288,13 @@ body {
 /* ═══ BUTTON SYSTEM ═══ */
 .btn-primary {
   display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
-  background: #003A8C; color: #FFFFFF;
+  background: var(--mp-action-primary); color: var(--mp-fg-on-cta-blue);
   font-weight: 600; border-radius: var(--radius-md);
   padding: 0.625rem 1.25rem;
   box-shadow: var(--shadow-xs), inset 0 1px 0 rgba(255,255,255,0.1);
   transition: all var(--duration-base) var(--ease-out);
 }
-.btn-primary:hover { background: #002d6e; box-shadow: var(--shadow-card); }
+.btn-primary:hover { background: var(--mp-action-primary-hover); box-shadow: var(--shadow-card); }
 .btn-primary:active { transform: scale(0.98); box-shadow: var(--shadow-xs); }
 .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
 
@@ -312,13 +312,13 @@ body {
 
 .btn-success {
   display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
-  background: #00A896; color: #FFFFFF;
+  background: var(--mp-action-success); color: var(--mp-fg-on-viridian);
   font-weight: 600; border-radius: var(--radius-md);
   padding: 0.625rem 1.25rem;
   box-shadow: var(--shadow-xs);
   transition: all var(--duration-base) var(--ease-out);
 }
-.btn-success:hover { background: #008F80; box-shadow: var(--shadow-card); }
+.btn-success:hover { background: var(--mp-action-success-hover); box-shadow: var(--shadow-card); }
 .btn-success:active { transform: scale(0.98); }
 
 /* ═══ GLASS EFFECT ═══ */
@@ -440,15 +440,29 @@ body {
   transform-origin: 50% 50%;
 }
 
-/* ═══ REDUCED MOTION ═══ */
+/* ═══ REDUCED MOTION (UX-GLOBAL-35) ═══
+   One block for every animation: transitions and keyframes collapse to
+   0.01ms, smooth scrolling becomes instant, shimmer stops, flips become a
+   plain swap. Components never rely on motion to carry meaning. */
 @media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto !important; }
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
   }
+  .mp-skeleton, .skeleton, .cta-shimmer, .animate-pulse, .animate-spin { animation: none !important; }
   .stagger > * { opacity: 1; animation: none; }
   .card-hover:hover { transform: none; }
   .card-interactive:hover { transform: none; }
+  /* Flashcard flip becomes a plain crossfade: no 3D rotation. */
+  .flip-card-inner, .flip-card-inner.flipped { transform: none !important; }
+  .flip-card-back { transform: none !important; opacity: 0; visibility: hidden; }
+  .flip-card-inner.flipped .flip-card-back { opacity: 1; visibility: visible; }
+  .flip-card-inner.flipped .flip-card-front { opacity: 0; visibility: hidden; }
 }
 
 /* === SCROLLBAR === */
@@ -486,9 +500,48 @@ body {
 /* Keep page content clear of the floating mobile study navigation, including
    the device's home-indicator inset. The bar itself is taller than its visual
    row because of the lifted Library action and outer margin. */
-:root { --mobile-nav-clearance: calc(6.25rem + env(safe-area-inset-bottom, 0px)); }
+:root { --mobile-nav-clearance: calc(4.75rem + env(safe-area-inset-bottom, 0px)); }
+@media (max-width: 1024px) { :root { --mp-bottom-nav-h: calc(4rem + env(safe-area-inset-bottom, 0px)); } }
 .bottom-nav { padding-bottom: env(safe-area-inset-bottom, 0px); }
-.bottom-nav > div { margin-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px)); }
+/* Phone navigation (UX-GLOBAL-09/11): opaque, top border, no blur. */
+.mp-bottom-nav { background: var(--mp-surface-raised); border-top: 1px solid var(--mp-border); box-shadow: 0 -1px 0 rgba(0, 27, 61, 0.02); }
+.mp-nav-bottom-item {
+  position: relative;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  min-width: 56px; min-height: 48px; padding: 4px 6px;
+  border-radius: 12px; color: var(--mp-fg-muted);
+  transition: color var(--mp-dur-micro) var(--mp-ease-out);
+}
+.mp-nav-bottom-item:active { color: var(--mp-fg); }
+.mp-nav-bottom-item--active { color: var(--mp-fg); font-weight: 700; }
+.mp-nav-bottom-item--active > span:first-child { color: var(--mp-action-primary); }
+.mp-nav-bottom-item--active::before {
+  content: ""; position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+  width: 24px; height: 3px; border-radius: 0 0 3px 3px; background: var(--mp-action-primary);
+}
+.mp-bottom-nav__label { font-size: 12px; line-height: 1.2; text-align: center; overflow-wrap: break-word; max-width: 76px; }
+.mp-bottom-nav__raised { min-height: 48px; }
+
+/* Mehr sheet rows (48 px, UX-GLOBAL-09). */
+.mp-more-row {
+  display: flex; align-items: center; gap: 12px;
+  width: 100%; min-height: 48px; padding: 8px 10px;
+  border-radius: var(--mp-r-button);
+  color: var(--mp-fg); font-size: 15px; font-weight: 500;
+}
+.mp-more-row:hover { background: var(--mp-surface-sunken); }
+.mp-more-row > svg { color: var(--mp-fg-muted); flex-shrink: 0; }
+.mp-more-row--active { background: var(--mp-tint-brand); font-weight: 700; }
+.mp-more-row--active > svg { color: var(--mp-action-primary); }
+.mp-theme-choice { border: 0; padding: 0; margin: 0; }
+.mp-theme-choice__option {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 44px; padding: 6px 8px;
+  border: 1px solid var(--mp-border-control); border-radius: var(--mp-r-button);
+  font-size: 14px; color: var(--mp-fg); cursor: pointer;
+}
+.mp-theme-choice__option:has(input:checked) { border-color: var(--mp-viridian); background: var(--mp-tint-viridian); font-weight: 700; }
+.mp-theme-choice__option input { accent-color: var(--mp-viridian); width: 16px; height: 16px; }
 
 /* Keep transient notifications above the floating learner navigation. The
    viewport offset follows the same safe-area-aware clearance as page content. */
@@ -527,7 +580,6 @@ body {
 .topic-card-border { border-left-width: 3px; border-left-style: solid; border-radius: var(--radius-lg); }
 
 textarea:focus {
-  outline: none;
   border-color: var(--teal);
   box-shadow: 0 0 0 2px rgba(0, 123, 95, 0.15);
 }
@@ -730,11 +782,22 @@ textarea:focus {
   --mp-clinic-paper:    var(--mp-surface-sunken);
   --mp-exam-navy:       #0A2041;
   --mp-warning:         #F4A261;
-  --mp-warning-dk:      #D68A3A; /* Decorative icons and borders; not AA-safe body text. */
-  --mp-warning-text:    #8A4B00;
-  --mp-info-text:       #2B6489;
-  --mp-error:           #D64545;
-  --mp-info:            #3A7CA5;
+  /* UX-GLOBAL-22 (2026-10-12): state tokens are contrast-tested in
+     tests/unit/a11-ui-primitives/contrast.test.ts on white, sunken and their
+     own tints. #D68A3A is 2.78:1 on white: fills, icons and borders only. */
+  --mp-warning-dk:      #D68A3A; /* Fills, icons and borders only. Never text (2.78:1 on white). */
+  --mp-warning-text:    #8A5300; /* 6.33:1 white, 5.58:1 sunken, 5.83:1 on #FFF4E6 */
+  --mp-error:           #B03030; /* 6.34:1 white, 5.55:1 on #FDECEC; also the destructive fill */
+  --mp-info:            #2F6A8F; /* 5.87:1 white, 5.22:1 on #EAF3F9 */
+  --mp-info-text:       var(--mp-info);
+  --mp-error-text:      var(--mp-error);
+  --mp-success-text:    var(--mp-viridian);
+  --mp-fg-on-error:     #FFFFFF;
+  /* 3:1 border for controls whose border is the only indicator (inputs,
+     radios, unselected exam and sitting cards). Decorative borders stay light. */
+  --mp-border-control:  #76849A;
+  /* Focus indicator colour (UX-GLOBAL-23): drawn as a 2px outline, 2px offset. */
+  --mp-focus-color:     #003A8C;
 
   /* ─── Tinted semantic backgrounds ─── */
   /* Light-mode hex tints. Dark mode overrides below in
@@ -819,10 +882,25 @@ textarea:focus {
   --mp-dur-base:    200ms;
   --mp-dur-hero:    400ms;
 
-  /* ─── Focus rings (a11y — never outline:none without replacement) ─── */
-  --mp-focus-ring:       0 0 0 3px rgba(0, 168, 150, 0.35);
-  --mp-focus-ring-cta:   0 0 0 3px rgba(0, 58, 140, 0.35);
-  --mp-focus-ring-error: 0 0 0 3px rgba(214, 69, 69, 0.35);
+  /* ─── Focus rings (UX-GLOBAL-23) ───
+     The real indicator is the global :focus-visible outline below (2px solid
+     --mp-focus-color, 2px offset). These box-shadow forms remain for legacy
+     call sites and draw the same thing: a surface-coloured inner ring and a
+     2px solid outer ring. No low-alpha teal ring any more (2.98:1). */
+  --mp-focus-ring:       0 0 0 2px var(--mp-surface-raised), 0 0 0 4px var(--mp-focus-color);
+  --mp-focus-ring-cta:   var(--mp-focus-ring);
+  --mp-focus-ring-error: 0 0 0 2px var(--mp-surface-raised), 0 0 0 4px var(--mp-error);
+
+  /* ─── Layers (UX-GLOBAL-11): one named scale, in this order. New or touched
+     code uses these (or the .mp-layer-* classes), never literal z values. ─── */
+  --mp-z-base:     0;
+  --mp-z-sticky:   10;
+  --mp-z-nav:      40;
+  --mp-z-banner:   50;
+  --mp-z-sheet:    60;
+  --mp-z-dialog:   70;
+  --mp-z-lightbox: 80;
+  --mp-z-toast:    90;
 
   /* ─── Spacing scale (8-pt grid, gamification-native)
      Use these in new surfaces instead of ad-hoc m-* / p-* values.
@@ -893,8 +971,10 @@ textarea:focus {
   --mp-cta-blue:        #4D8DF0; /* primary action — lifts off dark, AA on dark surfaces */
   --mp-cta-blue-hover:  #6BA1F4;
   --mp-warning-dk:      #F4A261;
-  --mp-warning-text:    #F4A261;
-  --mp-info-text:       #5BA3CE;
+  --mp-warning-text:    #F4A261; /* 7.64:1 on #11233E */
+  --mp-fg-on-error:     #081224; /* 6.40:1 on #F26D6D; white would be 2.92:1 */
+  --mp-border-control:  #64799B; /* 3.56:1 on #11233E */
+  --mp-focus-color:     #6BA1F4; /* 6.02:1 on #11233E, 7.15:1 on #081224 */
   /* 2026-06-26 dark-contrast fix: error + info were the ONLY status text
      colors never brightened for dark (viridian/teal/cta were). The :root
      #D64545 / #3A7CA5 only reached ~3.4-3.6:1 as text on dark cards + tints.
@@ -903,6 +983,9 @@ textarea:focus {
      matches the existing --mp-focus-ring-error rgba(242,109,109). */
   --mp-error:           #F26D6D; /* ~5.4:1 on #11233E, ~5.3:1 on error-tint */
   --mp-info:            #5BA3CE; /* ~5.7:1 on #11233E, ~5.2:1 on info-tint */
+  --mp-info-text:       var(--mp-info);
+  --mp-error-text:      var(--mp-error);
+  --mp-success-text:    var(--mp-viridian);
 
   /* ─── CRITICAL: re-declare aliases INSIDE the dark scope ───
      (see block header — re-substitutes against the dark base tokens above) */
@@ -954,10 +1037,10 @@ textarea:focus {
                      0 28px 70px rgba(0, 0, 0, 0.60);
   --mp-ring-inset:   inset 0 1px 0 rgba(255, 255, 255, 0.06);
 
-  /* ─── FOCUS RING (dark) — brighter so it survives the dark canvas ─── */
-  --mp-focus-ring:       0 0 0 3px rgba(52, 208, 192, 0.45);
-  --mp-focus-ring-cta:   0 0 0 3px rgba(77, 141, 240, 0.45);
-  --mp-focus-ring-error: 0 0 0 3px rgba(242, 109, 109, 0.40);
+  /* ─── FOCUS RING (dark) — re-declared so it resolves the dark tokens ─── */
+  --mp-focus-ring:       0 0 0 2px var(--mp-surface-raised), 0 0 0 4px var(--mp-focus-color);
+  --mp-focus-ring-cta:   var(--mp-focus-ring);
+  --mp-focus-ring-error: 0 0 0 2px var(--mp-surface-raised), 0 0 0 4px var(--mp-error);
 
   /* ─── SIGNATURE SPARK (dark) — the ü-dots motif glows on the dark canvas ─── */
   --mp-spark:          var(--mp-accent-teal);
@@ -1014,14 +1097,16 @@ textarea:focus {
               transform var(--mp-dur-micro) var(--mp-ease-out),
               box-shadow var(--mp-dur-micro) var(--mp-ease-out);
 }
-.mp-btn:focus-visible { outline: none; box-shadow: var(--mp-focus-ring); }
+.mp-btn:focus-visible { outline: 2px solid var(--mp-focus-color); outline-offset: 2px; box-shadow: 0 0 0 2px var(--mp-surface-raised); }
 .mp-btn:active { transform: scale(0.98); }
+/* UX-GLOBAL-21: primary = CTA blue in both themes. Light #003A8C with a white
+   label (10.59:1), hover #002D6E. Dark #4D8DF0 with #001B3D (5.21:1), hover
+   #6BA1F4. The fill holds 4.79:1 on the #11233E card, so the dark admin
+   Approve button is visible too (ADM-Q23). */
 .mp-btn--primary {
-  background: var(--mp-oxford-blue); color: #FFFFFF;
+  background: var(--mp-action-primary); color: var(--mp-fg-on-cta-blue);
 }
-[data-theme="dark"] [data-admin="1"] .mp-btn--primary { background: var(--mp-cta-blue); }
-.mp-btn--primary:hover { background: var(--mp-cta-blue); }
-.mp-btn--primary:focus-visible { box-shadow: var(--mp-focus-ring-cta); }
+.mp-btn--primary:hover { background: var(--mp-action-primary-hover); }
 .mp-btn--success { background: var(--mp-viridian); color: #FFFFFF; }
 .mp-btn--success:hover { background: var(--mp-viridian-dk); }
 [data-theme="dark"] .mp-btn--success { color: var(--mp-oxford-blue-dk); }
@@ -1033,12 +1118,17 @@ textarea:focus {
 .mp-btn--ghost { background: transparent; color: var(--mp-fg-muted); }
 .mp-btn--ghost:hover { background: var(--mp-surface-sunken); color: var(--mp-fg); }
 .mp-btn--destructive {
-  background: transparent; color: var(--mp-error);
-  border-color: rgba(214, 69, 69, .3);
+  background: var(--mp-action-destructive); color: var(--mp-fg-on-error);
+  border-color: var(--mp-action-destructive);
 }
-.mp-btn--destructive:hover { background: rgba(214, 69, 69, .08); }
-.mp-btn--sm { padding: 6px 12px;  font-size: 12px; }
-.mp-btn--lg { padding: 14px 20px; font-size: 15px; }
+.mp-btn--destructive:hover { background: color-mix(in srgb, var(--mp-action-destructive) 88%, #000000); }
+[data-theme="dark"] .mp-btn--destructive:hover { background: color-mix(in srgb, var(--mp-action-destructive) 88%, #FFFFFF); }
+/* Text variant (UX-GLOBAL-21): a link-weight action, no fill or border. */
+.mp-btn--text { background: transparent; color: var(--mp-action-primary); padding-left: 4px; padding-right: 4px; }
+.mp-btn--text:hover { text-decoration: underline; }
+.mp-btn--sm { padding: 6px 12px;  font-size: 13px; }
+.mp-btn--lg { padding: 14px 20px; font-size: 15px; min-height: 48px; }
+.mp-btn:disabled, .mp-btn[aria-disabled="true"] { opacity: 0.55; cursor: not-allowed; transform: none; }
 
 /* ═══ FORM FIELD (.mp-field) ═══ */
 .mp-field { display: flex; flex-direction: column; gap: 6px; }
@@ -1058,8 +1148,8 @@ textarea:focus {
 }
 .mp-field__input::placeholder { color: var(--mp-fg-subtle); }
 .mp-field__input:focus {
-  outline: none; border-color: var(--mp-viridian);
-  box-shadow: var(--mp-focus-ring); background: var(--mp-surface-raised);
+  border-color: var(--mp-focus-color);
+  background: var(--mp-surface-raised);
 }
 .mp-field__input--error { border-color: var(--mp-error); }
 .mp-field__input--error:focus { box-shadow: var(--mp-focus-ring-error); }
@@ -1137,6 +1227,21 @@ textarea:focus {
 .mp-toast--success .mp-toast__icon { background: var(--mp-viridian); }
 .mp-toast--error   .mp-toast__icon { background: var(--mp-error); }
 .mp-toast--warning .mp-toast__icon { background: var(--mp-warning-dk); }
+[data-theme="dark"] .mp-toast { background: var(--mp-surface-high); border: 1px solid var(--mp-border-strong); color: var(--mp-fg); }
+/* Wrapped text: two to three lines, never a truncated error. */
+.mp-toast__text { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: break-word; }
+.mp-toast__desc { opacity: 0.9; }
+.mp-toast__action {
+  flex-shrink: 0; min-height: 44px; padding: 0 10px;
+  font-weight: 700; color: inherit; text-decoration: underline; text-underline-offset: 2px;
+  border-radius: var(--mp-r-input);
+}
+.mp-toast__close {
+  flex-shrink: 0; width: 44px; height: 44px; margin: -10px -10px -10px 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: var(--mp-r-input); color: inherit;
+}
+.mp-toast__close:hover, .mp-toast__action:hover { background: rgba(255, 255, 255, 0.12); }
 
 /* ═══ EMPTY STATE (.mp-empty) — alt-A illustrated/warm ═══ */
 .mp-empty { text-align: center; padding: 48px 24px; }
@@ -1185,11 +1290,10 @@ textarea:focus {
 /* ═══ DIALOG (.mp-dialog__*) — a11y baseline baked in ═══ */
 .mp-dialog__overlay {
   position: fixed; inset: 0;
-  background: rgba(0, 27, 61, 0.55);
-  backdrop-filter: blur(6px);
+  background: rgba(0, 18, 40, 0.62); /* solid scrim, no blur (UX-GLOBAL-14) */
   display: flex; align-items: center; justify-content: center;
   padding: 24px;
-  z-index: var(--mp-layer-dialog, 50);
+  z-index: var(--mp-z-dialog);
 }
 .mp-dialog__surface {
   background: var(--mp-surface-raised);
@@ -1209,14 +1313,66 @@ textarea:focus {
   margin: 0;
 }
 .mp-dialog__close {
-  width: 28px; height: 28px; border-radius: 8px;
+  width: 44px; height: 44px; border-radius: 10px; margin: -8px -8px 0 0;
   border: none; background: transparent; color: var(--mp-fg-subtle);
   cursor: pointer;
   display: flex; align-items: center; justify-content: center;
   flex-shrink: 0;
 }
 .mp-dialog__close:hover { background: var(--mp-surface-sunken); color: var(--mp-fg); }
-.mp-dialog__body { padding: 0 20px 20px; overflow-y: auto; }
+.mp-dialog__body { padding: 0 20px 20px; overflow-y: auto; min-height: 0; flex: 1 1 auto; }
+.mp-dialog__surface { max-height: min(85dvh, 640px); }
+
+/* Dialog placements (UX-GLOBAL-14). 'auto' is a bottom sheet under 640px
+   and centred above; 'sheet' is always a sheet; 'fullscreen' fills the
+   viewport (image lightbox). One implementation, one focus contract. */
+.mp-dialog__handle { display: none; }
+@media (max-width: 639px) {
+  .mp-dialog__overlay[data-placement="auto"] { align-items: flex-end; padding: 0; }
+  .mp-dialog__overlay[data-placement="auto"] .mp-dialog__surface {
+    max-width: none !important; max-height: 85dvh;
+    border-radius: var(--mp-r-modal) var(--mp-r-modal) 0 0;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .mp-dialog__overlay[data-placement="auto"] .mp-dialog__handle { display: block; }
+}
+.mp-dialog__overlay[data-placement="sheet"] { align-items: flex-end; padding: 0; }
+.mp-dialog__overlay[data-placement="sheet"] .mp-dialog__surface {
+  max-height: 85dvh;
+  border-radius: var(--mp-r-modal) var(--mp-r-modal) 0 0;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.mp-dialog__overlay[data-placement="sheet"] .mp-dialog__handle { display: block; }
+@media (min-width: 640px) {
+  .mp-dialog__overlay[data-placement="sheet"] { align-items: center; padding: 24px; }
+  .mp-dialog__overlay[data-placement="sheet"] .mp-dialog__surface { border-radius: var(--mp-r-modal); padding-bottom: 0; }
+  .mp-dialog__overlay[data-placement="sheet"] .mp-dialog__handle { display: none; }
+}
+.mp-dialog__handle {
+  width: 40px; height: 4px; border-radius: 9999px;
+  background: var(--mp-border-strong);
+  margin: 8px auto 0;
+}
+.mp-dialog__overlay[data-placement="fullscreen"] {
+  padding: 0; background: rgba(4, 10, 20, 0.94);
+  z-index: var(--mp-z-lightbox);
+}
+.mp-dialog__overlay[data-placement="fullscreen"] .mp-dialog__surface {
+  max-width: none !important; max-height: none; width: 100vw; height: 100vh; height: 100dvh;
+  border-radius: 0; background: transparent; box-shadow: none;
+}
+.mp-dialog__overlay[data-placement="fullscreen"] .mp-dialog__header {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 1;
+  padding: calc(8px + env(safe-area-inset-top, 0px)) 12px 8px;
+}
+.mp-dialog__overlay[data-placement="fullscreen"] .mp-dialog__title { color: #FFFFFF; font-size: 15px; }
+.mp-dialog__overlay[data-placement="fullscreen"] .mp-dialog__close {
+  background: rgba(0, 0, 0, 0.6); color: #FFFFFF; border: 1px solid rgba(255, 255, 255, 0.7);
+  margin: 0;
+}
+.mp-dialog__overlay[data-placement="fullscreen"] .mp-dialog__body { padding: 0; height: 100%; }
+.mp-dialog__overlay[data-stack-depth] { z-index: calc(var(--mp-z-dialog) + var(--mp-dialog-depth, 0)); }
+.mp-dialog__overlay[data-placement="fullscreen"][data-stack-depth] { z-index: calc(var(--mp-z-lightbox) + var(--mp-dialog-depth, 0)); }
 .mp-dialog__footer {
   display: flex; gap: 8px; padding: 12px 20px;
   border-top: 1px solid var(--mp-border-subtle);
@@ -1431,14 +1587,28 @@ textarea:focus {
  * Desktop (>=768px): centered bottom sheet, 1rem above the bottom of
  * the viewport (the original layout — never had occlusion issues).
  */
-.mp-cookie-banner {
-  bottom: calc(5rem + env(safe-area-inset-bottom, 0px));
+/* UX-GLOBAL-13 (2026-10-12): docked consent bar with reserved height. */
+.mp-consent-pending body { padding-bottom: var(--mp-cookie-h, 96px); }
+.mp-consent-pending { scroll-padding-bottom: calc(var(--mp-cookie-h, 96px) + var(--mp-bottom-nav-h, 0px)); }
+.mp-cookie-bar {
+  position: fixed; left: 0; right: 0; bottom: 0;
+  z-index: var(--mp-z-banner);
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px 16px;
+  padding: 10px 16px max(12px, env(safe-area-inset-bottom, 0px));
+  background: var(--mp-surface-raised); color: var(--mp-fg);
+  border-top: 1px solid var(--mp-border);
+  box-shadow: var(--mp-shadow-elev);
 }
-@media (min-width: 768px) {
-  .mp-cookie-banner {
-    bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
-  }
+.mp-cookie-bar[hidden] { display: none; }
+@media (max-width: 1024px) {
+  body:has(.mp-bottom-nav) .mp-cookie-bar { bottom: var(--mp-bottom-nav-h, 0px); padding-bottom: 10px; }
 }
+.mp-cookie-bar__text { flex: 1 1 240px; max-width: 640px; font-size: 13px; line-height: 1.4; margin: 0; }
+.mp-cookie-bar__link { color: var(--mp-action-primary); text-decoration: underline; text-underline-offset: 2px; font-weight: 600; }
+.mp-cookie-bar__actions { display: flex; gap: 8px; flex-shrink: 0; }
+.mp-cookie-bar__actions .mp-btn { min-height: 44px; min-width: 96px; }
+/* Sticky action bars hide while the consent bar is visible (ACC-11). */
+.mp-cookie-visible .mp-sticky-action { display: none; }
 
 /* ═══════════════════════════════════════════════════════════════
    SUGGESTION (coach) card — calm viridian replacement for the
@@ -1476,13 +1646,15 @@ textarea:focus {
    that needs an accessible 3px viridian ring on keyboard focus.
    ═══════════════════════════════════════════════════════════════ */
 .mp-focusable:focus-visible {
-  outline: none;
-  box-shadow: var(--mp-focus-ring);
+  outline: 2px solid var(--mp-focus-color);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--mp-surface-raised);
   border-radius: var(--mp-r-card);
 }
 .mp-focusable-cta:focus-visible {
-  outline: none;
-  box-shadow: var(--mp-focus-ring-cta);
+  outline: 2px solid var(--mp-focus-color);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--mp-surface-raised);
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -1492,7 +1664,7 @@ textarea:focus {
    ═══════════════════════════════════════════════════════════════ */
 .mp-btn-primary-tall {
   display: flex; align-items: center; justify-content: center; gap: 10px;
-  background: var(--mp-cta-blue); color: #FFFFFF;
+  background: var(--mp-action-primary); color: var(--mp-fg-on-cta-blue);
   font-family: var(--mp-font-body);
   font-weight: 600; font-size: 15px; line-height: 1;
   padding: 18px 20px;
@@ -1505,7 +1677,7 @@ textarea:focus {
 }
 .mp-btn-primary-tall:hover { background: var(--mp-cta-blue-hover); box-shadow: var(--mp-shadow-hover); }
 .mp-btn-primary-tall:active { transform: scale(0.98); }
-.mp-btn-primary-tall:focus-visible { outline: none; box-shadow: var(--mp-focus-ring-cta); }
+.mp-btn-primary-tall:focus-visible { outline: 2px solid var(--mp-focus-color); outline-offset: 2px; box-shadow: 0 0 0 2px var(--mp-surface-raised); }
 
 .mp-btn-secondary-slim {
   display: flex; align-items: center; justify-content: center; gap: 8px;
@@ -1521,7 +1693,7 @@ textarea:focus {
 }
 .mp-btn-secondary-slim:hover { background: var(--mp-surface-sunken); border-color: rgba(0, 123, 95, 0.4); }
 .mp-btn-secondary-slim:active { transform: scale(0.98); }
-.mp-btn-secondary-slim:focus-visible { outline: none; box-shadow: var(--mp-focus-ring); }
+.mp-btn-secondary-slim:focus-visible { outline: 2px solid var(--mp-focus-color); outline-offset: 2px; box-shadow: 0 0 0 2px var(--mp-surface-raised); }
 
 /* ═══════════════════════════════════════════════════════════════
    Cohort chip — sits next to the greeting, shows the user's
@@ -1792,14 +1964,15 @@ main[data-mentor-packages] [class*="text-[12px]"] { font-size: var(--mp-text-cap
 .mentor-frame .bottom-nav a > span:last-child { font-size: var(--mp-text-caption); }
 
 /* Practice/exam focus shell, semantic status and safe-area action bar. */
-:root { --mp-layer-dialog: 50; --mp-warning-text: #8A5400; --mp-error-text: #B03030; }
-[data-theme="dark"] { --mp-warning-text: #F4C47A; --mp-error-text: #F26D6D; }
+/* State text tokens are owned by the token layer above (UX-GLOBAL-22);
+   --mp-error-text is an alias of --mp-error, never an independent hex. */
+:root { --mp-layer-dialog: var(--mp-z-dialog); }
 .mp-focus-layout { height: 100vh; height: 100dvh; display: flex; overflow: hidden; }
 .mp-focus-main { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
 .mp-exam-pane { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
 .mp-exam-actions { display: flex; gap: 8px; flex-shrink: 0; padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); border-top: 1px solid var(--mp-border); background: var(--mp-surface-raised); box-shadow: var(--mp-shadow-elev); }
 .mp-exam-actions .mp-btn { min-height: 44px; padding-inline: 10px; }
-[data-question-heading]:focus-visible { outline: 2px solid var(--mp-viridian); outline-offset: 4px; }
+[data-question-heading]:focus-visible { outline: 2px solid var(--mp-focus-color); outline-offset: 4px; }
 .mp-exam-cell-partial { border-style: dashed; background: linear-gradient(to top, var(--mp-warning-bg) 50%, var(--mp-surface-raised) 50%); }
 
 .mp-study-shortcut-help, .mp-study-shortcut-hint { display: none; }
@@ -1807,3 +1980,231 @@ main[data-mentor-packages] [class*="text-[12px]"] { font-size: var(--mp-text-cap
   .mp-study-shortcut-help { display: inline-flex; min-width: 44px; min-height: 44px; }
   .mp-study-shortcut-hint { display: flex; }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   a11 UI primitives (2026-10-12): focus, layers, hit areas, inputs,
+   status region and bottom budget. Source items UX-GLOBAL-11, 13, 23, 24.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Focus indicator (UX-GLOBAL-23): one solid 2px outline with a 2px offset on
+   every focusable element. Light #003A8C (9.34:1 on sunken), dark #6BA1F4. */
+:where(a, button, input, select, textarea, summary, [tabindex], [role="button"], [role="tab"], [role="switch"], [role="checkbox"], [role="radio"], [role="option"]):focus-visible {
+  outline: 2px solid var(--mp-focus-color);
+  outline-offset: 2px;
+}
+.mp-focusable:focus-visible,
+.mp-focusable-cta:focus-visible,
+.mp-btn-primary-tall:focus-visible,
+.mp-field__input:focus-visible,
+.mp-launch-range:focus-visible {
+  outline: 2px solid var(--mp-focus-color);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--mp-surface-raised);
+}
+@media (forced-colors: active) {
+  :focus-visible { outline: 2px solid Highlight !important; outline-offset: 2px; }
+}
+/* Pressed feedback within 100ms on tappable cards (HOME-36). */
+.mp-card--interactive:active, .card-interactive:active { transition-duration: 80ms; }
+
+/* Layers (UX-GLOBAL-11). */
+.mp-layer-sticky   { z-index: var(--mp-z-sticky); }
+.mp-layer-nav      { z-index: var(--mp-z-nav); }
+.mp-layer-banner   { z-index: var(--mp-z-banner); }
+.mp-layer-sheet    { z-index: var(--mp-z-sheet); }
+.mp-layer-dialog   { z-index: var(--mp-z-dialog); }
+.mp-layer-lightbox { z-index: var(--mp-z-lightbox); }
+.mp-layer-toast    { z-index: var(--mp-z-toast); }
+
+/* Top status region: one in-flow sticky region for every banner and status
+   strip. It publishes --mp-banner-h (ResizeObserver in StatusRegion) so focus
+   never lands under it. */
+:root { --mp-banner-h: 0px; }
+html { scroll-padding-top: calc(var(--mp-banner-h) + 8px); }
+.mp-status-region {
+  position: sticky; top: 0; left: 0; right: 0;
+  z-index: var(--mp-z-banner);
+  display: flex; flex-direction: column;
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.mp-status-region:not(:has(> .mp-status-slot:not(:empty))) { padding-top: 0; }
+.mp-status-slot { display: contents; }
+html[data-onboarding="open"] .mp-status-region > :not([data-status-banner="update"]) { display: none; }
+/* Phones show one banner at a time: the first child that renders wins
+   (children are mounted in the gate's priority order). */
+@media (max-width: 767px) {
+  .mp-status-region > .mp-status-slot:not(:empty) ~ .mp-status-slot:not(:empty) { display: none !important; }
+}
+/* Sticky headers and the Sidebar sit below the region. */
+.sticky.top-0 { top: var(--mp-banner-h); }
+.sidebar { top: var(--mp-banner-h); height: calc(100dvh - var(--mp-banner-h)); }
+.mp-public-layout .main-content { padding-bottom: 0; }
+
+/* Bottom budget (UX-GLOBAL-11): the nav plus at most one fixed action bar,
+   opaque surface, top border, no blur. */
+.mp-sticky-action {
+  position: fixed; left: 0; right: 0;
+  bottom: 0;
+  z-index: var(--mp-z-sticky);
+  background: var(--mp-surface-raised);
+  border-top: 1px solid var(--mp-border);
+  box-shadow: var(--mp-shadow-elev);
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+  max-height: calc(72px + env(safe-area-inset-bottom, 0px));
+}
+@media (max-width: 1024px) {
+  .app-layout .mp-sticky-action { bottom: var(--mp-bottom-nav-h, 0px); padding-bottom: 12px; }
+}
+
+/* Touch targets (UX-GLOBAL-24): a 44px hit area without changing the visual
+   size. Add .mp-hit to small icon buttons, chips and close controls. */
+.mp-hit { position: relative; }
+.mp-hit::before {
+  content: ""; position: absolute;
+  top: 50%; left: 50%;
+  width: max(100%, 44px); height: max(100%, 44px);
+  transform: translate(-50%, -50%);
+}
+.mp-icon-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 44px; min-height: 44px;
+  border-radius: var(--mp-r-button);
+  color: var(--mp-fg-muted);
+  background: transparent;
+}
+.mp-icon-btn:hover { background: var(--mp-surface-sunken); color: var(--mp-fg); }
+
+/* Inputs (UX-GLOBAL-24): 16px text under 768px so iOS does not zoom on focus,
+   44px tall. Scoped deviation from the compact MPDS input (DESIGN-DEBT DD-21). */
+@media (max-width: 767px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]),
+  select,
+  textarea { font-size: 16px !important; }
+  .mp-field__input { min-height: 44px; }
+}
+
+/* Primary CTAs and plan buttons: 48px, wrapping text (UX-GLOBAL-21/24). */
+.mp-btn { min-height: 44px; white-space: normal; text-align: center; hyphens: auto; }
+.mp-btn--sm { min-height: 36px; }
+.mp-btn--primary.mp-btn--lg, .mp-btn--cta { min-height: 48px; }
+
+/* Text floor helpers (UX-GLOBAL-24). */
+.mp-text-floor { font-size: 13px; line-height: 1.4; }
+.mp-h1--fluid { font-size: clamp(24px, 7vw, 40px); overflow-wrap: anywhere; hyphens: auto; }
+
+/* PageHeader (UX-GLOBAL-10): one row, title 22px phone / 28px desktop. */
+.mp-page-header { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; min-height: 44px; }
+.mp-page-header__title {
+  font-family: var(--mp-font-display, inherit);
+  font-size: 22px; font-weight: 800; line-height: 1.2; color: var(--mp-fg);
+  overflow-wrap: break-word; hyphens: auto;
+}
+.mp-page-header__subtitle { font-size: 13px; color: var(--mp-fg-muted); margin-top: 2px; }
+@media (min-width: 1025px) { .mp-page-header__title { font-size: 28px; } }
+
+/* Content widths (UX-GLOBAL-10): reading 840px, wide 1152px. */
+.mp-width-reading { max-width: 840px; margin-left: auto; margin-right: auto; }
+.mp-width-wide { max-width: 1152px; margin-left: auto; margin-right: auto; }
+
+/* Screen-reader-only text for the root live regions. */
+.mp-sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+.mp-skip-link {
+  position: absolute; left: 8px; top: -100px;
+  z-index: var(--mp-z-toast);
+  background: var(--mp-surface-raised); color: var(--mp-fg);
+  padding: 12px 16px; border-radius: var(--mp-r-button);
+  border: 2px solid var(--mp-focus-color);
+}
+.mp-skip-link:focus { top: 8px; }
+
+/* Offline strip (UX-GLOBAL-11/22): neutral surface, never amber. */
+.mp-offline-strip {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 8px 16px;
+  background: var(--mp-surface-high); color: var(--mp-fg);
+  border-bottom: 1px solid var(--mp-border);
+  font-size: 13px; font-weight: 600;
+}
+.mp-offline-strip > svg { color: var(--mp-info); }
+
+/* Multi-answer rule chip (UX-GLOBAL-25): 13px, icon, above the options.
+   Info tokens, not amber (amber means a warning that needs action). */
+.mp-multi-chip {
+  display: flex; align-items: flex-start; gap: 8px;
+  margin-bottom: 4px; padding: 8px 10px;
+  border-radius: var(--mp-r-button);
+  background: var(--mp-info-bg); color: var(--mp-info-text);
+  font-size: 13px; font-weight: 600; line-height: 1.4;
+}
+
+/* Question image box (UX-GLOBAL-26): reserved ratio, never shifts options. */
+.mp-question-image {
+  position: relative; display: block; width: 100%; max-height: 18rem;
+  overflow: hidden;
+  border-radius: var(--mp-r-input);
+  border: 1px solid var(--mp-border);
+  background: var(--mp-surface-raised);
+}
+.mp-question-image__hint {
+  position: absolute; right: 8px; bottom: 8px;
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 8px; border-radius: var(--mp-r-full);
+  background: rgba(0, 18, 40, 0.72); color: #FFFFFF;
+  font-size: 12px; font-weight: 600;
+}
+
+/* Image lightbox (UX-GLOBAL-26) on the Dialog fullscreen placement. */
+.mp-lightbox { position: relative; width: 100%; height: 100%; display: flex; flex-direction: column; }
+.mp-lightbox__scroll {
+  flex: 1; min-height: 0; overflow: auto;
+  display: flex; align-items: center; justify-content: center;
+  padding: calc(64px + env(safe-area-inset-top, 0px)) 8px 88px;
+  touch-action: pan-x pan-y pinch-zoom;
+  overscroll-behavior: contain;
+}
+.mp-lightbox__img { max-width: 100%; max-height: 100%; object-fit: contain; user-select: none; margin: auto; }
+.mp-lightbox__controls {
+  position: absolute; left: 50%; bottom: max(16px, env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
+  display: flex; align-items: center; gap: 4px;
+  padding: 4px; border-radius: var(--mp-r-full);
+  background: rgba(0, 0, 0, 0.72); border: 1px solid rgba(255, 255, 255, 0.7);
+}
+.mp-lightbox__btn {
+  width: 44px; height: 44px; border-radius: var(--mp-r-full);
+  display: inline-flex; align-items: center; justify-content: center; color: #FFFFFF;
+}
+.mp-lightbox__btn:disabled { opacity: 0.45; }
+.mp-lightbox__btn:hover:not(:disabled) { background: rgba(255, 255, 255, 0.14); }
+.mp-lightbox__zoom { min-width: 52px; text-align: center; color: #FFFFFF; font-size: 13px; font-variant-numeric: tabular-nums; }
+.mp-lightbox__hint {
+  position: absolute; left: 50%; bottom: calc(max(16px, env(safe-area-inset-bottom, 0px)) + 60px); transform: translateX(-50%);
+  padding: 6px 12px; border-radius: var(--mp-r-full);
+  background: rgba(0, 0, 0, 0.72); color: #FFFFFF; font-size: 13px; white-space: nowrap;
+}
+
+/* ResultCard (UX-GLOBAL-27): neutral card, hero number, status chip. */
+.mp-result-card {
+  background: var(--mp-surface-raised);
+  border: 1px solid var(--mp-border);
+  border-radius: var(--mp-r-card);
+  box-shadow: var(--mp-shadow-card);
+  padding: 20px;
+}
+.mp-result-card__label { font-size: 13px; font-weight: 600; color: var(--mp-fg-muted); margin: 0; }
+.mp-result-card__value { font-family: var(--mp-font-display, inherit); font-size: 44px; font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; margin: 4px 0 0; }
+.mp-result-card__note { font-size: 13px; color: var(--mp-fg-muted); margin: 0; }
+.mp-result-card__practice { font-size: 14px; font-weight: 600; color: var(--mp-fg); margin: 0; }
+.mp-result-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 10px; border-radius: var(--mp-r-full);
+  font-size: 13px; font-weight: 700;
+  border: 1px solid var(--mp-border);
+  background: var(--mp-surface-sunken); color: var(--mp-fg);
+}
+.mp-result-chip--above { border-color: var(--mp-viridian); color: var(--mp-success-text); background: var(--mp-tint-viridian); }
+.mp-result-chip--below, .mp-result-chip--timeout { color: var(--mp-fg); }
+.mp-result-chip--save-saved { color: var(--mp-success-text); }
+.mp-result-chip--save-failed { color: var(--mp-error-text); border-color: var(--mp-error); }

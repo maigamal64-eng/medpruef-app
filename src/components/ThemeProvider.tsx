@@ -30,6 +30,31 @@ export function setStoredTheme(theme: Theme) {
   document.documentElement.setAttribute("data-theme", theme);
 }
 
+export type ThemeChoice = Theme | "system";
+
+/** The learner's explicit choice, or "system" when none is stored. */
+export function getThemeChoice(): ThemeChoice {
+  if (typeof window === "undefined") return "system";
+  try {
+    const stored = localStorage.getItem(THEME_KEY);
+    return stored === "light" || stored === "dark" ? stored : "system";
+  } catch {
+    return "system";
+  }
+}
+
+/** Apply a choice; "system" clears the stored preference and follows the OS. */
+export function setThemeChoice(choice: ThemeChoice) {
+  if (typeof window === "undefined") return;
+  if (choice === "system") {
+    try { localStorage.removeItem(THEME_KEY); } catch { /* storage blocked */ }
+    document.documentElement.setAttribute("data-theme", getSystemTheme());
+    return;
+  }
+  try { localStorage.setItem(THEME_KEY, choice); } catch { /* storage blocked */ }
+  document.documentElement.setAttribute("data-theme", choice);
+}
+
 export function toggleTheme(): Theme {
   const current = getStoredTheme();
   const next: Theme = current === "dark" ? "light" : "dark";

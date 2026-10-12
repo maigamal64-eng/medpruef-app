@@ -8,6 +8,7 @@ import { buildAuthHref } from "@/lib/auth-entry";
 
 import { useEffect, useState, useCallback, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { ResultCard } from "@/components/ui/ResultCard";
 import { BrandedLoader } from "@/components/Logo";
 // Auth-aware fetch wrapper: attaches the signed session token required by
 // server-side route guards. The alias keeps all request paths authenticated.
@@ -26,7 +27,7 @@ import { getPaywallCopy } from "@/lib/paywall-copy";
 import { useUserTier } from "@/lib/hooks/useUserTier";
 import { gradeSelection } from "@/lib/practice-exam-state";
 import { recordAnswer } from "@/lib/weakness";
-import { Inbox, Trophy, Sparkles, Gift } from "lucide-react";
+import { Inbox, Sparkles, Gift } from "lucide-react";
 import LanguageToggle from "@/components/LanguageToggle";
 import ThemeToggle from "@/components/ThemeToggle";
 import Sidebar from "@/components/Sidebar";
@@ -1600,12 +1601,13 @@ function FinalCompletionCard({
   onRestart: () => void;
 }) {
   const accuracy = questionCount > 0 ? Math.round((correctCount / questionCount) * 100) : 0;
+  const graded = questionCount;
 
-  // Tone-appropriate headline + subline. No red on partial-correct —
-  // the accuracy number carries the fact; the copy carries the vibe.
-  // Tiers: 100% celebrate, ≥80% strong, ≥60% solid, ≥40% encouraging,
-  // <40% constructive. Never punitive.
+  // UX-GLOBAL-27: one ResultCard hierarchy. Tiered headlines only from 3
+  // graded attempts; a round with nothing graded shows a neutral status line
+  // and no accuracy, XP or Richtig tile. Never punitive, no red.
   const headline = (() => {
+    if (graded < 3) return t("result_round_short", lang);
     if (accuracy === 100) return lang === "de" ? "Perfekt!" : "Perfect!";
     if (accuracy >= 80) return lang === "de" ? "Starke Runde!" : "Strong round!";
     if (accuracy >= 60) return lang === "de" ? "Solide Runde." : "Solid round.";
@@ -1616,68 +1618,59 @@ function FinalCompletionCard({
     ? `${questionCount} von ${targetCount} Fragen bearbeitet`
     : `${questionCount} of ${targetCount} questions answered`;
 
+  const primary = (
+    <div className="flex flex-col sm:flex-row gap-3">
+      <button onClick={onRestart} className="mp-btn mp-btn--primary mp-btn--cta flex-1">
+        {lang === "de" ? "Neues Quiz starten" : "Start new quiz"}
+      </button>
+      <Link href="/" className="mp-btn mp-btn--secondary flex-1">
+        {t("back_home", lang)}
+      </Link>
+    </div>
+  );
+
+  if (graded === 0) {
+    return (
+      <ResultCard
+        label={t("result_round_label", lang)}
+        value={subline}
+        status="practice"
+        statusLabel={t("result_round_nothing_graded", lang)}
+        primary={primary}
+      />
+    );
+  }
+
   return (
-    <div className="card rounded-3xl p-8 md:p-10 text-center animate-scale-in">
-      <div className="mb-5">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[var(--mp-viridian)]/10 border border-[var(--mp-viridian)]/30 mb-3">
-          <Trophy className="w-8 h-8 text-[var(--mp-viridian)]" />
+    <ResultCard
+      label={t("result_round_label", lang)}
+      value={t("result_round_value", lang).replace("{correct}", String(correctCount)).replace("{total}", String(questionCount))}
+      status="practice"
+      statusLabel={headline}
+      note={subline}
+      primary={primary}
+    >
+      {partialCount > 0 && <p className="text-[var(--mp-warning-text)] text-sm mb-3">{t("exam_partial", lang)}: {partialCount}. {t("practice_partial_summary", lang)}</p>}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="mp-stat">
+          <p className="mp-stat__label">{lang === "de" ? "Genauigkeit" : "Accuracy"}</p>
+          <p className="text-xl font-bold font-mono text-[var(--mp-fg)]">{accuracy} %</p>
         </div>
-        <h2 className="text-2xl md:text-3xl font-bold text-[var(--mp-fg)] font-display">
-          {headline}
-        </h2>
-        <p className="text-sm text-[var(--mp-fg-subtle)] mt-1">
-          {subline}
-        </p>
+        <div className="mp-stat">
+          <p className="mp-stat__label">{lang === "de" ? "Verfügbar" : "Available"}</p>
+          <p className="text-xl font-bold font-mono text-[var(--mp-fg)]">{topicTotal > 0 ? `${topicTotal.toLocaleString("de-DE")}` : "-"}</p>
+        </div>
       </div>
-
-      {/* Accuracy ring — viridian regardless of score. The %-number is
-          factual; the colour is not a judgement. */}
-      <div className="mb-5">
-        <div className="text-6xl md:text-7xl font-black font-display text-[var(--mp-viridian)]">
-          {accuracy}%
-        </div>
-        <p className="text-sm text-[var(--mp-fg-subtle)] mt-1">
-          {lang === "de" ? "Genauigkeit" : "Accuracy"}
-        </p>
-      </div>
-
-      {partialCount > 0 && <p className="text-[var(--mp-warning-text)] text-sm">{t("exam_partial", lang)}: {partialCount}. {t("practice_partial_summary", lang)}</p>}
-      {totalXp > 0 && (
-        <div className="inline-flex items-center gap-2 bg-[var(--mp-status-warning)]/15 text-[var(--mp-status-warning)] font-bold px-5 py-2.5 rounded-2xl mb-5">
-          +{totalXp} XP {lang === "de" ? "verdient" : "earned"}
-        </div>
+      {totalXp > 0 && accuracy >= 60 && (
+        <p className="mt-3 text-sm font-semibold text-[var(--mp-fg-muted)]">+{totalXp} XP {lang === "de" ? "verdient" : "earned"}</p>
       )}
-
-      <div className="grid grid-cols-2 gap-3 mb-6">
-        <div className="card rounded-xl p-3 text-center">
-          <p className="text-xl font-bold font-mono text-[var(--mp-fg)]">
-            {correctCount}/{questionCount}
-          </p>
-          <p className="text-[11px] text-[var(--mp-fg-subtle)]">{lang === "de" ? "Richtig" : "Correct"}</p>
-        </div>
-        <div className="card rounded-xl p-3 text-center">
-          <p className="text-xl font-bold font-mono text-[var(--mp-fg)]">
-            {topicTotal > 0 ? `${topicTotal.toLocaleString("de-DE")}` : "-"}
-          </p>
-          <p className="text-[11px] text-[var(--mp-fg-subtle)]">{lang === "de" ? "Verfügbar" : "Available"}</p>
-        </div>
-      </div>
-
-      <div className="flex flex-col sm:flex-row gap-3">
-        <button onClick={onRestart} className="flex-1 btn-primary py-3 text-sm rounded-2xl">
-          {lang === "de" ? "Neues Quiz starten" : "Start new quiz"}
-        </button>
-        <Link href="/" className="flex-1 btn-secondary py-3 text-sm rounded-2xl text-center">
-          {t("back_home", lang)}
-        </Link>
-      </div>
 
       {/* Post-quiz share prompt — only appears at ≥80% accuracy AND
           when the user hasn't yet copied their referral code AND we
           haven't shown it on this device. Self-gating logic lives in
           QuizSharePrompt. Rescue-sprint §4.6. */}
       {accuracy >= 80 && <QuizSharePrompt lang={lang} />}
-    </div>
+    </ResultCard>
   );
 }
 

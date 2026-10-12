@@ -42,6 +42,8 @@ interface Props {
   guestId?: string | null;
   /** Fired when the dialog should close (either user cancel or after submit). */
   onClose: () => void;
+  /** Open straight into a flag with this reason (e.g. the image error's "Bild fehlt"). */
+  preset?: { reason: (typeof FLAG_REASONS)[number]["value"] } | null;
   /** Fired once the POST resolves so the parent can flip its submitted state. */
   onSubmitted: () => void;
 }
@@ -53,6 +55,7 @@ const FLAG_REASONS = [
   { value: "typo", de: "Tippfehler", en: "Typo" },
   { value: "unclear", de: "Unklar", en: "Unclear" },
   { value: "missing_explanation", de: "Erklärung fehlt", en: "Missing Explanation" },
+  { value: "missing_image", de: "Bild fehlt", en: "Image missing" },
   { value: "wrong_topic", de: "Falsches Thema", en: "Wrong Topic" },
   { value: "other", de: "Sonstiges", en: "Other" },
 ] as const;
@@ -68,6 +71,7 @@ export default function QuestionReportForm({
   guestId,
   onClose,
   onSubmitted,
+  preset,
 }: Props) {
   const [type, setType] = useState<"flag" | "edit" | null>(null);
   const [flagReason, setFlagReason] = useState("");
@@ -81,15 +85,15 @@ export default function QuestionReportForm({
   // Reset on open / question change
   useEffect(() => {
     if (!open) return;
-    setType(null);
-    setFlagReason("");
+    setType(preset ? "flag" : null);
+    setFlagReason(preset?.reason ?? "");
     setDetails("");
     setEditQuestion(initialQuestion);
     setEditExplanation(initialExplanation || "");
     setEditTopic(initialTopic);
     setSubmitted(false);
     setLoading(false);
-  }, [open, questionId, initialQuestion, initialExplanation, initialTopic]);
+  }, [open, questionId, initialQuestion, initialExplanation, initialTopic, preset]);
 
   const submitFlag = async () => {
     if (!flagReason) return;

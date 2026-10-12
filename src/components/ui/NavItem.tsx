@@ -120,29 +120,17 @@ export function NavItem({
     )
   }
 
-  // context === 'bottom'
-  // Reproduces navItemClass(key) from BottomNav.tsx
-  const bottomClasses = [
-    'flex flex-col items-center gap-0.5 py-1.5 px-2 rounded-xl transition-all duration-200',
-    active
-      ? 'text-[var(--mp-viridian)]'
-      : 'text-[var(--mp-fg-subtle)] active:text-[var(--mp-fg-muted)]',
-    className,
-  ]
+  // context === 'bottom' (UX-GLOBAL-09/23/24): 48 px target, 12 px label in
+  // full colour, active state shown by weight and a shape cue (top bar), not
+  // colour alone. Styles live in globals.css (.mp-nav-bottom-item).
+  const bottomClasses = ['mp-nav-bottom-item', active ? 'mp-nav-bottom-item--active' : '', className]
     .filter(Boolean)
     .join(' ')
 
   return (
     <Link href={href} className={bottomClasses} aria-current={active ? 'page' : undefined}>
       <span aria-hidden>{icon}</span>
-      <span
-        className={[
-          'text-[10px]',
-          active ? 'font-semibold text-[var(--mp-viridian)]' : 'font-medium',
-        ].join(' ')}
-      >
-        {label}
-      </span>
+      <span className="mp-bottom-nav__label">{label}</span>
     </Link>
   )
 }

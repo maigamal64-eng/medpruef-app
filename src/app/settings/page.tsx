@@ -1223,8 +1223,8 @@ export default function SettingsPage() {
               </div>
             )}
 
-            {/* ═══ Konto ═══ */}
-            <div className="set-group set-span2">
+            {/* ═══ Konto ═══ (anchor: the Mehr sheet's "Abo und Zahlung" entry) */}
+            <div className="set-group set-span2" id="konto" tabIndex={-1}>
               <div className="set-label">{lang === "de" ? "Konto" : "Account"}</div>
 
               {/* Email-linking card — Telegram-only users (no email yet) */}

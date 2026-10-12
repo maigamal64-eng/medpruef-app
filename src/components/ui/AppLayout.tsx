@@ -1,44 +1,38 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { setFocusMode } from '@/lib/focus-mode'
+import { t, useLang } from '@/lib/i18n'
 
 /**
- * AppLayout — MPDS v2 app shell primitive.
+ * AppLayout — the app shell primitive (UX-GLOBAL-10).
  *
- * Wraps the `.app-layout` + `.main-content` CSS classes from globals.css,
- * which handle the sidebar-left / content-right flex layout, responsive
- * sidebar hiding, and bottom-nav bottom-padding on mobile.
+ * Modes:
+ *   'standard' — Sidebar (desktop) and BottomNav (phone). The default.
+ *   'focus'    — the running exam (and its review once the leave path
+ *                exists): Sidebar, BottomNav, the feedback launcher and the
+ *                global offline pill are NOT mounted (not just layered
+ *                lower). The page owns one labelled exit and a reserved
+ *                status row. Follows the visual viewport height.
+ *   'public'   — visitors without a session: no learner Sidebar, no
+ *                BottomNav, document scroll. The page renders the public
+ *                header (PUB-02).
  *
- * This primitive does NOT own sidebar auto-hide logic (`return null` on
- * `/quiz` and `/exam`); that lives inside `<Sidebar>` itself and moves
- * to AppLayout only in B.2 if the team decides to centralize it.
+ * /quiz and /flashcards stay 'standard' ([name]'s PRA-31 option B: an opaque
+ * nav with the Next action above it).
  *
- * Usage:
- *   <AppLayout sidebar={<Sidebar ... />} bottomNav={<BottomNav ... />}>
- *     <main className="main-content ...">
- *       {children}
- *     </main>
- *   </AppLayout>
+ * The skip link "Zum Inhalt" and the named navigation landmarks are built
+ * here once (PRA-51). Pages render their own <main>.
  *
- *   // Without explicit main wrapper (main-content class applied to children):
- *   <AppLayout sidebar={variant !== "focus" && sidebar} bottomNav={nav}>
- *     <PageContent />
- *   </AppLayout>
- *
- * Layout rules (from globals.css):
- *   - `.app-layout`: flex, min-height: 100dvh
- *   - `.sidebar`: 260px, dark Oxford Blue, hidden below 1024px
- *   - `.main-content`: flex:1, min-width:0, padding-bottom:80px on mobile
- *
- * B.2 migration note: when each surface adds `<AppLayout>`, remove the
- * hand-rolled `<div className="app-layout">` wrapper at the call-site.
- * The auto-hide behavior (`sidebar === null` on /quiz / /exam) is currently
- * implemented inside Sidebar.tsx and continues to work transparently.
+ * `variant` is the legacy name of `mode` ('default' = 'standard').
  */
 
+export type AppLayoutMode = 'standard' | 'focus' | 'public'
+
 export interface AppLayoutProps {
+  mode?: AppLayoutMode
+  /** @deprecated use `mode`. */
+  variant?: 'default' | 'focus'
   /** The sidebar node — typically `<Sidebar lang={lang} ... />`. Pass null to omit. */
-  variant?: "default" | "focus"
   sidebar?: React.ReactNode
   /** The bottom nav node — typically `<BottomNav lang={lang} />`. Pass null to omit. */
   bottomNav?: React.ReactNode
@@ -47,24 +41,50 @@ export interface AppLayoutProps {
   className?: string
 }
 
-export function AppLayout({ variant = "default", sidebar, bottomNav, children, className }: AppLayoutProps) {
-  const [viewportHeight, setViewportHeight] = useState<number | undefined>();
+export function resolveLayoutMode(mode: AppLayoutMode | undefined, variant: AppLayoutProps['variant']): AppLayoutMode {
+  if (mode) return mode
+  return variant === 'focus' ? 'focus' : 'standard'
+}
+
+/** Which chrome each mode mounts. Pure: covered by the shell unit test. */
+export function shellChrome(mode: AppLayoutMode): { sidebar: boolean; bottomNav: boolean; floatingChrome: boolean } {
+  if (mode === 'focus') return { sidebar: false, bottomNav: false, floatingChrome: false }
+  if (mode === 'public') return { sidebar: false, bottomNav: false, floatingChrome: true }
+  return { sidebar: true, bottomNav: true, floatingChrome: true }
+}
+
+export function AppLayout({ mode, variant, sidebar, bottomNav, children, className }: AppLayoutProps) {
+  const resolved = resolveLayoutMode(mode, variant)
+  const chrome = shellChrome(resolved)
+  const lang = useLang()
+  const [viewportHeight, setViewportHeight] = useState<number | undefined>()
   useEffect(() => {
-    if (variant !== "focus") return;
-    const viewport = window.visualViewport;
-    const resize = () => setViewportHeight(viewport?.height || window.innerHeight);
-    resize(); viewport?.addEventListener("resize", resize); window.addEventListener("resize", resize);
-    return () => { viewport?.removeEventListener("resize", resize); window.removeEventListener("resize", resize); };
-  }, [variant]);
-  useEffect(() => { setFocusMode(variant === "focus"); return () => setFocusMode(false); }, [variant]);
+    if (resolved !== 'focus') return
+    const viewport = window.visualViewport
+    const resize = () => setViewportHeight(viewport?.height || window.innerHeight)
+    resize(); viewport?.addEventListener('resize', resize); window.addEventListener('resize', resize)
+    return () => { viewport?.removeEventListener('resize', resize); window.removeEventListener('resize', resize) }
+  }, [resolved])
+  useEffect(() => { setFocusMode(resolved === 'focus'); return () => setFocusMode(false) }, [resolved])
+
+  const skipToMain = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    const main = document.querySelector('main')
+    if (!main) return
+    e.preventDefault()
+    if (!main.hasAttribute('tabindex')) main.setAttribute('tabindex', '-1')
+    main.focus()
+  }
+
   return (
     <div
-      style={variant === "focus" && viewportHeight ? { height: viewportHeight } : undefined}
-      className={[variant === 'focus' ? 'mp-focus-layout' : 'app-layout', className].filter(Boolean).join(' ')}
+      style={resolved === 'focus' && viewportHeight ? { height: viewportHeight } : undefined}
+      data-shell-mode={resolved}
+      className={[resolved === 'focus' ? 'mp-focus-layout' : 'app-layout', resolved === 'public' ? 'mp-public-layout' : '', className].filter(Boolean).join(' ')}
     >
-      {variant !== "focus" && sidebar}
+      <a href="#main" className="mp-skip-link" onClick={skipToMain}>{t('a11_skip_to_content', lang)}</a>
+      {chrome.sidebar && sidebar}
       {children}
-      {variant !== "focus" && bottomNav}
+      {chrome.bottomNav && bottomNav}
     </div>
   )
 }

@@ -56,3 +56,13 @@ export {
   type ContextTabsProps,
   type ContextTab,
 } from './ContextTabs'
+
+// ── a11 UI primitives (2026-10-12): shell, overlays, status, images, results.
+export { PageHeader, type PageHeaderProps } from './PageHeader'
+export { LiveRegions } from './LiveRegions'
+export { QuestionImage, type QuestionImageProps } from './QuestionImage'
+export { ResultCard, type ResultCardProps, type ResultStatus } from './ResultCard'
+export { StickyActionBar, type StickyActionBarProps } from './StickyActionBar'
+export { optionStateFor, optionTagKey } from './Option'
+export type { DialogPlacement, DialogKind } from './Dialog'
+export type { AppLayoutMode } from './AppLayout'

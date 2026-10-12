@@ -43,6 +43,7 @@ import TopicIcon from "@/components/TopicIcon";
 import QuestionActions from "@/components/QuestionActions";
 import QuestionCard from "@/components/QuestionCard";
 import ImageLightbox from "@/components/ImageLightbox";
+import { ResultCard, resultVerdict } from "@/components/ui/ResultCard";
 import { GraduationCap, Clock, AlertTriangle, Search, Map as MapIcon, X } from "lucide-react";
 
 type Lang = "de" | "en";
@@ -903,7 +904,6 @@ function ExamContent() {
   ).length;
 
   const overallPct = questions.length > 0 ? totalCorrect / questions.length : 0;
-  const passed = overallPct >= PASS_THRESHOLD;
 
   // Topic groups used by the sidebar navigator + minimap section headers.
   // Memoized because it's derived from the (stable-per-load) questions array.
@@ -1502,25 +1502,37 @@ function ExamContent() {
           <div className="px-4 lg:px-8 py-6 max-w-2xl mx-auto">
             <h1 className="mp-h2 mb-6">{t("exam_finished", lang)}</h1>{selectedPart !== "all" && <p className="mb-3">{t("exam_part_run", lang)} · {questions.length}</p>}
 
-            {/* Overall result */}
-            <div className={`rounded-2xl p-8 border mb-6 text-center animate-scale-in ${
-              passed
-                ? "bg-[var(--mp-accent-teal)]/8 border-[var(--mp-accent-teal)]/40"
-                : "bg-[var(--mp-error)]/8 border-[var(--mp-error)]/40"
-            }`}>
-              <div className={`text-5xl font-black font-mono mb-2 ${passed ? "text-[var(--mp-accent-teal)]" : "text-[var(--mp-error)]"}`}>
-                {Math.round(overallPct * 100)}%
-              </div>
-              <div className={`text-lg font-bold mb-2 ${passed ? "text-[var(--mp-accent-teal)]" : "text-[var(--mp-error)]"}`}>
-                {passed ? t("exam_passed", lang) : t("exam_failed", lang)}
-              </div>
-              <p className="text-[var(--mp-fg-subtle)] text-sm font-mono">
-                {totalCorrect} / {questions.length} {t("correct", lang)} · {t("pass_threshold", lang)}
-              </p>
-            </div>
+            {/* Overall result (UX-GLOBAL-27): neutral ResultCard. No pass word:
+                full Vienna runs show above/below the practice threshold, part
+                runs are labelled practice, a time-out says so. */}
+            {(() => {
+              const verdictRun = selectedPart === "all" && examSource === "kenntnispruefung";
+              const verdict = resultVerdict({ pct: overallPct, threshold: PASS_THRESHOLD, verdictRun, timedOut: timeExpired });
+              const pct = Math.round(overallPct * 100);
+              const statusLabel = verdict.status === "timeout" ? t("result_time_up", lang)
+                : verdict.status === "practice" ? t("result_practice_label", lang)
+                : t(verdict.status === "above" ? "result_above" : "result_below", lang).replace("{n}", String(Math.round(PASS_THRESHOLD * 100)));
+              return (
+                <ResultCard
+                  className="mb-6"
+                  label={verdict.status === "practice" ? t("result_selection_label", lang) : t("result_label", lang)}
+                  value={`${pct} %`}
+                  status={verdict.status}
+                  statusLabel={statusLabel}
+                  emphasise={verdict.emphasise}
+                  thresholdNote={verdictRun ? t("result_threshold_note", lang).replace("{n}", String(Math.round(PASS_THRESHOLD * 100))) : undefined}
+                  note={t("result_practice_note", lang)}
+                  saveState={historySaveState === "saved" ? "saved" : historySaveState === "failed" ? "failed" : historySaveState === "saving" ? "saving" : "none"}
+                  saveLabel={t(historySaveState === "saved" ? "result_saved" : historySaveState === "failed" ? "result_not_saved" : "result_saving", lang)}
+                >
+                  <p className="text-sm text-[var(--mp-fg-muted)] font-mono">
+                    {t("result_counts", lang).replace("{correct}", String(totalCorrect)).replace("{total}", String(questions.length))}
+                  </p>
+                </ResultCard>
+              );
+            })()}
 
             {timeExpired && <p role="status" className="mp-card p-3 mb-3">{t("exam_expired", lang)}. {showTimeUp && <button className="mp-btn mp-btn--ghost min-h-11" onClick={() => setShowTimeUp(false)}>{t(historySaveState === "saved" ? "exam_time_up_submitted" : "exam_time_up", lang)}</button>}</p>}
-            <p role="status">{t(historySaveState === "saved" ? "exam_saved" : historySaveState === "failed" ? "exam_not_saved" : "exam_saving", lang)}</p>
             {/* History ledger link: the attempt is saved server-side and can
                 be reviewed any time under Verlauf (Pro). */}
             {historySaveState === "saving" && (
@@ -1573,8 +1585,8 @@ function ExamContent() {
                           <TopicIcon name={cfg.icon} className="w-4 h-4" />
                           <span className="text-sm text-[var(--mp-fg)] font-medium">{topic}</span>
                         </div>
-                        <span className={`text-sm font-bold font-mono ${topicPassed ? "text-[var(--mp-accent-teal)]" : "text-[var(--mp-error)]"}`}>
-                          {pct}%
+                        <span className="text-sm font-bold font-mono text-[var(--mp-fg)]">
+                          {pct} %
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
@@ -1583,11 +1595,11 @@ function ExamContent() {
                             className="h-full rounded-full transition-all"
                             style={{
                               width: `${pct}%`,
-                              backgroundColor: topicPassed ? "var(--mp-viridian)" : pct >= 40 ? "var(--mp-status-warning)" : "var(--mp-error)",
+                              backgroundColor: topicPassed ? "var(--mp-viridian)" : "var(--mp-fg-muted)",
                             }}
                           />
                         </div>
-                        <span className="text-[10px] text-[var(--mp-fg-subtle)] font-mono w-14 text-right">
+                        <span className="text-[13px] text-[var(--mp-fg-muted)] font-mono w-14 text-right">
                           {correct}/{total}
                         </span>
                       </div>

@@ -26,6 +26,7 @@ import SearchModal from "@/components/SearchModal";
 import { getLang } from "@/lib/i18n";
 import { getStoredExamSource } from "@/lib/topics";
 import { getStoredSession } from "@/lib/auth";
+import { OPEN_SEARCH_EVENT } from "@/components/nav/MoreSheet";
 
 const HIDDEN_PATHS = [
   "/landing",
@@ -110,7 +111,16 @@ export default function SearchModalMount() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [mounted, onHidden, hasLocalPalette, open, refresh]);
 
-  if (!mounted || onHidden || hasLocalPalette) return null;
+  // "Suche" in the Mehr sheet and the Sidebar opens this palette on every
+  // route, including Home (whose own Cmd+K palette stays local).
+  useEffect(() => {
+    if (!mounted || onHidden) return;
+    const openFromNav = () => { refresh(); setOpen(true); };
+    window.addEventListener(OPEN_SEARCH_EVENT, openFromNav);
+    return () => window.removeEventListener(OPEN_SEARCH_EVENT, openFromNav);
+  }, [mounted, onHidden, refresh]);
+
+  if (!mounted || onHidden) return null;
 
   return (
     <SearchModal

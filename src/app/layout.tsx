@@ -5,6 +5,7 @@ import PublicIntegrations from "@/components/PublicIntegrations";
 import TrackerInit from "@/components/TrackerInit";
 import ThemeProvider from "@/components/ThemeProvider";
 import { LANGUAGE_HEAD_SCRIPT } from "@/lib/language-model";
+import { CONSENT_HEAD_SCRIPT } from "@/lib/consent-copy";
 import LegalFooter from "@/components/LegalFooter";
 import PWAInstall from "@/components/PWAInstall";
 import StudyChrome from "@/components/exam/StudyChrome";
@@ -19,6 +20,10 @@ import AttributionCapture from "@/components/AttributionCapture";
 import PendingExamRecovery from "@/components/exam/PendingExamRecovery";
 import TrackRouteChange from "@/components/TrackRouteChange";
 import SearchModalMount from "@/components/SearchModalMount";
+import StatusRegion, { StatusSlot } from "@/components/shell/StatusRegion";
+import NavigationMarker from "@/components/shell/NavigationMarker";
+import OfflineIndicator from "@/components/OfflineIndicator";
+import { LiveRegions } from "@/components/ui/LiveRegions";
 import WebMCP from "@/components/WebMCP";
 import { ToastProvider } from "@/components/ui";
 import RootErrorBoundary from "@/components/RootErrorBoundary";
@@ -119,6 +124,10 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  // ONB-50 / UX-GLOBAL-11: the soft keyboard resizes the layout viewport, so
+  // fixed bars and focused fields are not covered. viewport-fit=cover waits
+  // for the staged safe-area work and a real-iPhone test (release.md).
+  interactiveWidget: "resizes-content",
   // WCAG 2.1 1.4.4 requires that users can resize text to 200%
   // without loss of content or functionality. Previously this export
   // set `maximumScale: 1, userScalable: false` which blocked pinch-
@@ -142,6 +151,8 @@ export default function RootLayout({
     <html lang="de" dir="ltr" translate="no" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: LANGUAGE_HEAD_SCRIPT }} />
+        {/* UX-GLOBAL-13: reserve the consent bar's height before first paint. */}
+        <script dangerouslySetInnerHTML={{ __html: CONSENT_HEAD_SCRIPT }} />
         {/*
           Tell Google Translate (and Edge / iOS Safari translate) to leave
           the DOM alone. The native language picker is the supported way to
@@ -356,7 +367,7 @@ export default function RootLayout({
         */}
       </head>
       <body
-        className={`${inter.className} ${plusJakarta.variable} ${jetbrainsMono.variable} bg-[var(--mp-surface-sunken)] text-[var(--mp-fg)] min-h-screen antialiased`}
+        className={`${inter.className} ${plusJakarta.variable} ${jetbrainsMono.variable} bg-[var(--mp-surface-sunken)] text-[var(--mp-fg)] min-h-screen min-h-dvh antialiased`}
       >
         <ThemeProvider />
         {/* Keep <html lang> in sync with the user's chosen language. SSR
@@ -387,14 +398,20 @@ export default function RootLayout({
                 only one of these that a PAYING user ever sees (the cohort
                 banner and the announcement gate both suppress themselves
                 for paid accounts), so the two can never compete. */}
-            <div className="fixed top-0 left-0 right-0 z-[70] flex flex-col">
-              <GuestMigrationBanner />
-              <RenewalPrompt />
-              <CohortCountdownBanner />
-              <PWAInstall />
-            </div>
+            {/* UX-GLOBAL-11: one in-flow, sticky top status region in the
+                gate's priority order (offline, renewal, update, guest,
+                cohort). One at a time on phones; it publishes --mp-banner-h
+                so headers and focus never sit under it. */}
+            <StatusRegion>
+              <StatusSlot name="offline"><OfflineIndicator /></StatusSlot>
+              <StatusSlot name="renewal"><RenewalPrompt /></StatusSlot>
+              <StatusSlot name="update"><PWAInstall /></StatusSlot>
+              <StatusSlot name="guest"><GuestMigrationBanner /></StatusSlot>
+              <StatusSlot name="cohort"><CohortCountdownBanner /></StatusSlot>
+            </StatusRegion>
+            <LiveRegions />
+            <NavigationMarker />
             <EmailValidationModal />
-            <StudyChrome />
             <IntercomMessenger />
             <SearchModalMount />
             <CookieBannerMount />
@@ -412,6 +429,8 @@ export default function RootLayout({
                 (expected — WebMCP is not yet standardized). Renders null. */}
             <WebMCP />
             {children}
+            {/* Floating chrome comes after main in DOM order (HOME-37). */}
+            <StudyChrome />
             {/* LegalFooter — slim Impressum/Datenschutz/AGB/Kontakt strip
                 on authenticated pages. Auto-hides on /landing (full
                 footer), /login (pre-auth), /onboarding, and /admin/*

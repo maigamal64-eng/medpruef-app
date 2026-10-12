@@ -1,12 +1,12 @@
 'use client';
-import { usePathname } from 'next/navigation';
 import { useFocusMode } from '@/lib/focus-mode';
 import FeedbackWidget from '@/components/FeedbackWidget';
-import OfflineIndicator from '@/components/OfflineIndicator';
-/** Focus runs replace floating chrome with their own inline safety status. */
+/** Focus runs replace floating chrome with their own inline safety status.
+ *  The offline status lives in the root StatusRegion (UX-GLOBAL-11); the
+ *  widget hides its own launcher on /exam while the form still opens from
+ *  the Mehr sheet. */
 export default function StudyChrome() {
   const focus = useFocusMode();
-  const path = usePathname();
   if (focus) return null;
-  return <>{path !== '/exam' && <FeedbackWidget />}<OfflineIndicator /></>;
+  return <FeedbackWidget />;
 }

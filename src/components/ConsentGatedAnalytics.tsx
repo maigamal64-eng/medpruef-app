@@ -3,6 +3,7 @@
 import { isAdminPath } from "@/lib/admin-route";
 import { useEffect } from "react";
 import { getCookieConsent } from "@/components/CookieBanner";
+import { TRACKING_OPT_OUT } from "@/lib/consent-copy";
 
 /**
  * Loads Google Analytics 4 and Microsoft Clarity ONLY after the user
@@ -34,7 +35,7 @@ const CLARITY_ID = process.env.NEXT_PUBLIC_CLARITY_ID;
  * Vercel and redeploy; behavior returns to strict opt-in. The Meta/Reddit
  * AD pixels are NOT included in opt-out mode; they stay strictly opt-in.
  */
-const OPT_OUT_MODE = process.env.NEXT_PUBLIC_TRACKING_OPTOUT === "true";
+const OPT_OUT_MODE = TRACKING_OPT_OUT; // shared with the banner copy (src/lib/consent-copy.ts)
 
 function analyticsAllowed(): boolean {
   const consent = getCookieConsent();

@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { authFetch as fetch } from "@/lib/authFetch";
 import { t , type Lang, useLang } from "@/lib/i18n";
 import { getLevelFromXP } from "@/lib/xp";
-import { Home, FileText, GraduationCap, BarChart3, TrendingUp, Map, Settings, Sparkles, PanelLeftClose, PanelLeftOpen, Layers, Crown, CalendarDays, Gift, History, Brain } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import ExamSwitcherInline from "./ExamSwitcherInline";
 import { NavItem } from "@/components/ui";
 import {
@@ -16,8 +16,10 @@ import {
 } from "@/lib/topics";
 import { useUserTier } from "@/lib/hooks/useUserTier";
 import { useMentorAvailability } from "@/components/mentor/useMentorAvailability";
-import { mentorT } from "@/lib/i18n-mentor";
 import { examChipAccessibleName, getExamLabel } from "@/lib/master-locale/exam-label";
+import { GROUP_LABEL_KEYS, groupDestinations, isDestinationActive, visibleDestinations, type Destination, type DestinationGroup } from "@/lib/nav-destinations";
+import { DestinationIcon } from "@/components/nav/DestinationIcon";
+import { OPEN_FEEDBACK_EVENT, OPEN_SEARCH_EVENT, destinationLabel } from "@/components/nav/MoreSheet";
 
 
 
@@ -248,55 +250,64 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0 }: Sidebar
     userId && !userId.startsWith("guest_") && hasCopiedCode === false && referralsEnabled
   );
 
-  const navItems: Array<{
-    href: string;
-    icon: React.ReactNode;
-    label: string;
-    key: string;
-    dot?: boolean;
-    dotTooltip?: string;
-  }> = [
-    { href: "/", icon: <Home className="w-5 h-5" />, label: t("home", lang), key: "home" },
-    { href: "/quiz?setup=1", icon: <FileText className="w-5 h-5" />, label: t("quiz", lang), key: "quiz" },
-    { href: "/library", icon: <Layers className="w-5 h-5" />, label: t("home_library", lang), key: "library" },
-    ...(mentorAvailable
-      ? [{ href: "/mentor", icon: <Brain className={`w-5 h-5 ${mentorAvailability === "resting" ? "opacity-50" : ""}`} />, label: mentorT("nav_label", lang), key: "mentor" }]
-      : []),
-    { href: "/exam", icon: <GraduationCap className="w-5 h-5" />, label: t("exam", lang), key: "exam" },
-    { href: "/stats", icon: <BarChart3 className="w-5 h-5" />, label: t("stats", lang), key: "stats" },
-    { href: "/progress", icon: <TrendingUp className="w-5 h-5" />, label: t("progress", lang), key: "progress" },
-    { href: "/history", icon: <History className="w-5 h-5" />, label: t("home_history", lang), key: "history" },
-    { href: "/curriculum", icon: <Map className="w-5 h-5" />, label: t("curriculum", lang), key: "curriculum" },
-    { href: "/study-plan", icon: <CalendarDays className="w-5 h-5" />, label: t("home_study_plan", lang), key: "study-plan" },
-    // Empfehlungen / Referrals is invite-only (2026-06-25): only accounts an
-    // admin has flagged (referralsEnabled) see the nav link at all. The
-    // /referrals page itself fails closed too, but a non-enrolled user must
-    // not even see the entry point.
-    ...(referralsEnabled
-      ? [
-          {
-            href: "/referrals",
-            icon: <Gift className="w-5 h-5" />,
-            label: t("home_referrals", lang),
-            key: "referrals",
-            dot: referralsDot,
-            dotTooltip: t("home_your_referral_code_is_waiting", lang),
-          },
-        ]
-      : []),
-    { href: "/pricing", icon: <Crown className="w-5 h-5" />, label: t("home_pricing", lang), key: "pricing" },
-  ];
+  // UX-GLOBAL-09: the Sidebar renders the shared destination list, in the
+  // same groups and order as the phone Mehr sheet (src/lib/nav-destinations.ts).
+  const gates = { mentor: mentorAvailable, referrals: referralsEnabled };
+  const groups = groupDestinations(visibleDestinations(gates));
+  const mainGroups = groups.filter((g) => g.group !== "account");
+  const accountGroup = groups.find((g) => g.group === "account");
 
-  const bottomItems = [
-    { href: "/changelog", icon: <Sparkles className="w-5 h-5" />, label: t("home_what_s_new", lang), key: "changelog" },
-    { href: "/settings", icon: <Settings className="w-5 h-5" />, label: t("settings", lang), key: "settings" },
-  ];
+  const runAction = (action: NonNullable<Destination["action"]>) => {
+    window.dispatchEvent(new CustomEvent(action === "open-feedback" ? OPEN_FEEDBACK_EVENT : OPEN_SEARCH_EVENT));
+  };
 
-  const isActive = (key: string) => {
-    if (key === "home") return pathname === "/";
-    if (key === "library") return pathname.startsWith("/library") || pathname.startsWith("/flashcards");
-    if (key === "history") return pathname.startsWith("/history");
-    return pathname.startsWith(`/${key === "stats" ? "stats" : key}`);
+  const renderGroup = (group: DestinationGroup, items: Destination[]) => {
+    const headingId = `sidebar-group-${group}`;
+    return (
+      <div key={group} className="mb-2">
+        <h2 id={headingId} className={collapsed ? "sr-only" : "px-3 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-[var(--mp-sidebar-fg-muted)]"}>
+          {t(GROUP_LABEL_KEYS[group], lang)}
+        </h2>
+        <ul aria-labelledby={headingId}>
+          {items.map((item) => {
+            const label = destinationLabel(item, lang);
+            const icon = <DestinationIcon name={item.key} />;
+            if (item.action) {
+              return (
+                <li key={item.key}>
+                  <button
+                    type="button"
+                    onClick={() => item.action && runAction(item.action)}
+                    title={collapsed ? label : undefined}
+                    aria-label={collapsed ? label : undefined}
+                    className={collapsed
+                      ? "flex items-center justify-center w-9 h-9 mx-auto rounded-lg mb-0.5 text-[var(--mp-sidebar-fg-muted)] hover:bg-white/5 hover:text-white"
+                      : "flex w-full items-center gap-3 px-3 py-2.5 rounded-r-xl mb-px text-[var(--mp-sidebar-fg-muted)] hover:bg-white/5 hover:text-white"}
+                  >
+                    <span className="inline-flex flex-shrink-0 opacity-70" aria-hidden>{icon}</span>
+                    {!collapsed && <span className="text-[13px]">{label}</span>}
+                  </button>
+                </li>
+              );
+            }
+            return (
+              <li key={item.key}>
+                <NavItem
+                  context="sidebar"
+                  href={item.href ?? "/"}
+                  icon={icon}
+                  label={label}
+                  active={isDestinationActive(item, pathname)}
+                  collapsed={collapsed}
+                  dot={item.key === "referrals" ? referralsDot : undefined}
+                  dotTooltip={item.key === "referrals" ? t("home_your_referral_code_is_waiting", lang) : undefined}
+                />
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    );
   };
 
   return (
@@ -350,38 +361,18 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0 }: Sidebar
       )}
 
       {/* Main Navigation */}
-      <nav className={`${collapsed ? "px-2" : "px-3"} mt-3`}>
-        {navItems.map((item) => (
-          <NavItem
-            key={item.key}
-            context="sidebar"
-            href={item.href}
-            icon={item.icon}
-            label={item.label}
-            active={isActive(item.key)}
-            collapsed={collapsed}
-            dot={item.dot}
-            dotTooltip={item.dotTooltip}
-          />
-        ))}
+      <nav aria-label={t("nav_main", lang)} className={`${collapsed ? "px-2" : "px-3"} mt-3`}>
+        {mainGroups.map((g) => renderGroup(g.group, g.items))}
       </nav>
 
       <div className="flex-1" />
 
-      {/* Bottom items */}
-      <nav className={`${collapsed ? "px-2" : "px-3"} mb-1`}>
-        {bottomItems.map((item) => (
-          <NavItem
-            key={item.key}
-            context="sidebar"
-            href={item.href}
-            icon={item.icon}
-            label={item.label}
-            active={isActive(item.key)}
-            collapsed={collapsed}
-          />
-        ))}
-      </nav>
+      {/* Account group */}
+      {accountGroup && (
+        <nav aria-label={t(GROUP_LABEL_KEYS.account, lang)} className={`${collapsed ? "px-2" : "px-3"} mb-1`}>
+          {renderGroup("account", accountGroup.items)}
+        </nav>
+      )}
 
       {/* Collapse toggle */}
       <div className={`border-t border-white/[0.06] ${collapsed ? "px-2 py-2" : "px-4 py-2"}`}>

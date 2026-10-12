@@ -1,45 +1,61 @@
 'use client'
 
 /**
- * Toast — MPDS v2 transient notification system.
+ * Toast — MPDS v2 transient notification system (UX-GLOBAL-15, ACC-43).
  *
- * Exposes a `<ToastProvider>` that wraps the app (mount once in layout)
- * and a `useToast()` hook that any component can call to push a toast.
+ * Mount <ToastProvider> once in the root layout; call useToast() anywhere.
  *
- * Usage:
- *   // In RootLayout:
- *   <ToastProvider><App /></ToastProvider>
- *
- *   // In any component:
  *   const toast = useToast()
- *   toast.success("Answer recorded")
- *   toast.error("Could not save")
- *   toast.show({ title: "Translating…", variant: "info", duration: 0 })
+ *   toast.success("Gespeichert")
+ *   toast.error("Nicht gespeichert", "Prüfen Sie Ihre Verbindung.")
+ *   toast.show({ key: "translate", title: "Wird übersetzt…", variant: "info", duration: 0 })
+ *   toast.show({ title: "Entfernt", variant: "info", duration: 10000,
+ *     action: { label: "Rückgängig", onClick: undo } })
  *
- * A11y: toasts render into a single `aria-live="polite"` region so
- * screen readers announce them without interrupting the user. Pause
- * auto-dismiss on hover (pointer users) and on focus (keyboard users).
- *
- * Respects `prefers-reduced-motion` — entrance animation is disabled
- * automatically via the same rule that kills the rest of the app's motion.
+ * Contract:
+ * - keyed: a toast with the same key replaces the previous one, never stacks
+ * - at most 3 visible; a 4th drops the oldest non-error first
+ * - errors stay at least 10 s (or until dismissed); every toast pauses on
+ *   hover and focus
+ * - spoken once through announce(): errors assertive, everything else polite.
+ *   The toast DOM itself is not a live region, so nothing is read twice.
+ * - text wraps (two to three lines), optional action button, 44 px close
+ * - docks above the bottom navigation and the sticky action bar
+ * - a toast is never the only channel for an error that needs action: show
+ *   an inline Alert near the cause as well. Payment errors are never toasts.
  */
 
-import { createContext, useCallback, useContext, useMemo, useState, useRef, useEffect } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { CheckCircle2, AlertTriangle, Info, X } from 'lucide-react'
 import { t, useLang } from '@/lib/i18n'
+import { announce } from '@/lib/announce'
+import { pushToast, type ToastRecord } from '@/lib/toast-queue'
 
 type Variant = 'success' | 'error' | 'warning' | 'info'
 
-interface ToastItem {
-  id: number
+export interface ToastAction {
+  label: string
+  onClick: () => void
+}
+
+interface ToastItem extends ToastRecord {
+  description?: string
+  duration: number // ms; 0 = no auto-dismiss
+  action?: ToastAction
+}
+
+export interface ToastInput {
   title: string
   description?: string
   variant: Variant
-  duration: number // ms; 0 = no auto-dismiss
+  duration?: number
+  key?: string
+  action?: ToastAction
 }
 
 interface ToastContextValue {
-  show: (input: Omit<ToastItem, 'id'>) => number
+  show: (input: ToastInput) => number
   dismiss: (id: number) => void
   success: (title: string, description?: string) => number
   error: (title: string, description?: string) => number
@@ -56,46 +72,38 @@ export function useToast() {
 }
 
 const DEFAULT_DURATION = 4200
+export const ERROR_MIN_DURATION = 10000
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([])
   const nextIdRef = useRef(1)
 
   const dismiss = useCallback((id: number) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id))
+    setToasts((prev) => prev.filter((item) => item.id !== id))
   }, [])
 
-  const show = useCallback((input: Omit<ToastItem, 'id'>) => {
+  const show = useCallback((input: ToastInput) => {
     const id = nextIdRef.current++
+    const requested = input.duration ?? DEFAULT_DURATION
+    const duration = input.variant === 'error' && requested !== 0 ? Math.max(requested, ERROR_MIN_DURATION) : requested
     const toast: ToastItem = {
-      ...input,
-      duration: input.duration ?? DEFAULT_DURATION,
       id,
+      key: input.key,
+      variant: input.variant,
+      title: input.title,
+      description: input.description,
+      duration,
+      action: input.action,
     }
-    setToasts((prev) => [...prev, toast])
+    setToasts((prev) => pushToast(prev, toast) as ToastItem[])
+    announce([input.title, input.description].filter(Boolean).join('. '), input.variant === 'error' ? 'assertive' : 'polite')
     return id
   }, [])
 
-  const success = useCallback(
-    (title: string, description?: string) =>
-      show({ title, description, variant: 'success', duration: DEFAULT_DURATION }),
-    [show]
-  )
-  const error = useCallback(
-    (title: string, description?: string) =>
-      show({ title, description, variant: 'error', duration: 6000 }),
-    [show]
-  )
-  const warning = useCallback(
-    (title: string, description?: string) =>
-      show({ title, description, variant: 'warning', duration: 5000 }),
-    [show]
-  )
-  const info = useCallback(
-    (title: string, description?: string) =>
-      show({ title, description, variant: 'info', duration: DEFAULT_DURATION }),
-    [show]
-  )
+  const success = useCallback((title: string, description?: string) => show({ title, description, variant: 'success' }), [show])
+  const error = useCallback((title: string, description?: string) => show({ title, description, variant: 'error', duration: ERROR_MIN_DURATION }), [show])
+  const warning = useCallback((title: string, description?: string) => show({ title, description, variant: 'warning', duration: 6000 }), [show])
+  const info = useCallback((title: string, description?: string) => show({ title, description, variant: 'info' }), [show])
 
   const value = useMemo<ToastContextValue>(
     () => ({ show, dismiss, success, error, warning, info }),
@@ -112,24 +120,24 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
 function ToastViewport({ toasts, onDismiss }: { toasts: ToastItem[]; onDismiss: (id: number) => void }) {
   const lang = useLang()
-  // IMPORTANT: do NOT gate on `typeof document === 'undefined'` here.
-  // This component renders on both server and client via ToastProvider,
-  // and a null/div split triggers a hydration mismatch. The region is
-  // harmless when empty (fixed-positioned, pointer-events-none) so we
-  // render it unconditionally and let the portal-less viewport stay in
-  // the React tree. Only individual toasts render once `toasts` grows.
-  return (
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => { setMounted(true) }, [])
+  // Portalled to <body> after mount so an open Dialog (which makes the rest
+  // of the page inert) keeps toasts and their actions reachable.
+  if (!mounted) return null
+  return createPortal(
     <div
+      data-mp-keep-live=""
       role="region"
-      aria-label={lang === 'de' ? 'Benachrichtigungen' : 'Notifications'}
-      aria-live="polite"
-      className="mp-toast-viewport fixed bottom-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none max-w-[calc(100vw-2rem)]"
+      aria-label={t('a11_notifications', lang)}
+      className="mp-toast-viewport mp-layer-toast fixed bottom-4 right-4 flex flex-col gap-2 pointer-events-none max-w-[calc(100vw-2rem)]"
       style={{ paddingBottom: 'env(safe-area-inset-bottom, 0)' }}
     >
-      {toasts.map((t) => (
-        <ToastView key={t.id} toast={t} onDismiss={onDismiss} />
+      {toasts.map((item) => (
+        <ToastView key={item.id} toast={item} onDismiss={onDismiss} />
       ))}
-    </div>
+    </div>,
+    document.body,
   )
 }
 
@@ -138,8 +146,8 @@ function ToastView({ toast, onDismiss }: { toast: ToastItem; onDismiss: (id: num
   const lang = useLang()
   useEffect(() => {
     if (toast.duration === 0 || paused) return
-    const t = setTimeout(() => onDismiss(toast.id), toast.duration)
-    return () => clearTimeout(t)
+    const timer = setTimeout(() => onDismiss(toast.id), toast.duration)
+    return () => clearTimeout(timer)
   }, [toast.id, toast.duration, paused, onDismiss])
 
   const Icon = {
@@ -161,18 +169,25 @@ function ToastView({ toast, onDismiss }: { toast: ToastItem; onDismiss: (id: num
         <Icon className="w-3 h-3" aria-hidden />
       </div>
       <div className="flex-1 min-w-0">
-        <div className="font-medium truncate">{toast.title}</div>
-        {toast.description && (
-          <div className="text-xs opacity-80 truncate">{toast.description}</div>
-        )}
+        <div className="font-medium mp-toast__text">{toast.title}</div>
+        {toast.description && <div className="text-[13px] mp-toast__text mp-toast__desc">{toast.description}</div>}
       </div>
+      {toast.action && (
+        <button
+          type="button"
+          className="mp-toast__action"
+          onClick={() => { toast.action?.onClick(); onDismiss(toast.id) }}
+        >
+          {toast.action.label}
+        </button>
+      )}
       <button
         type="button"
         onClick={() => onDismiss(toast.id)}
-        aria-label={t("close", lang)}
-        className="flex-shrink-0 rounded-md p-1 hover:bg-white/10 transition"
+        aria-label={t('close', lang)}
+        className="mp-toast__close"
       >
-        <X className="w-3 h-3" aria-hidden />
+        <X className="w-4 h-4" aria-hidden />
       </button>
     </div>
   )

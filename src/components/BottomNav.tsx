@@ -1,14 +1,28 @@
 "use client";
 
+/**
+ * BottomNav — the phone navigation bar (UX-GLOBAL-09/11, HOME-49 option B).
+ *
+ * Five items maximum: Start, Simulation, Üben (raised centre), Lernplan (or
+ * the mentor when it is switched on for this learner), Mehr. Every other
+ * destination is one tap away in the Mehr sheet, which renders the same
+ * grouped list as the desktop Sidebar (src/lib/nav-destinations.ts).
+ *
+ * Opaque surface with a top border, no blur (HOME-48, PRA-31 option B), on
+ * the named nav layer. Not mounted in focus mode (AppLayout) or on public
+ * routes.
+ */
+
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { MoreHorizontal } from "lucide-react";
 import { t, type Lang } from "@/lib/i18n";
-import { Home, FileText, GraduationCap, TrendingUp, Layers, Brain } from "lucide-react";
 import { NavItem } from "@/components/ui";
 import { useMentorAvailability } from "@/components/mentor/useMentorAvailability";
-import { mentorT } from "@/lib/i18n-mentor";
-
-
+import { DESTINATIONS, RAISED_SLOT, bottomSlots, isDestinationActive, isMoreActive, type Destination } from "@/lib/nav-destinations";
+import MoreSheet, { OPEN_MORE_EVENT, destinationLabel } from "@/components/nav/MoreSheet";
+import { DestinationIcon } from "@/components/nav/DestinationIcon";
 
 interface BottomNavProps {
   lang: Lang;
@@ -16,78 +30,81 @@ interface BottomNavProps {
 }
 
 export default function BottomNav({ lang }: BottomNavProps) {
-  const pathname = usePathname();
+  const pathname = usePathname() ?? "/";
   // Mentor entry (ships dark): shown only when the server says this learner may use it.
   const mentorAvailability = useMentorAvailability();
   const mentorAvailable = mentorAvailability === "available" || mentorAvailability === "resting";
+  const gates = { mentor: mentorAvailable, referrals: false };
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreRef = useRef<HTMLButtonElement>(null);
 
-  const isActive = (key: string) => {
-    if (key === "home") return pathname === "/";
-    if (key === "quiz") return pathname.startsWith("/quiz");
-    if (key === "mentor") return pathname.startsWith("/mentor");
-    if (key === "exam") return pathname.startsWith("/exam");
-    if (key === "library") return pathname.startsWith("/library") || pathname.startsWith("/flashcards");
-    if (key === "progress") return pathname.startsWith("/progress") || pathname.startsWith("/stats");
-    return false;
-  };
+  // The header avatar opens the same sheet.
+  useEffect(() => {
+    const open = () => setMoreOpen(true);
+    window.addEventListener(OPEN_MORE_EVENT, open);
+    return () => window.removeEventListener(OPEN_MORE_EVENT, open);
+  }, []);
 
-  // Generic "Quiz" entry opens the customization builder (FEEDBACK #4a:
-  // choosing Quiz must offer customization, not silently dump into the full
-  // bank). Topic cards still deep-link with ?topic=… and resume from there.
-  const quizHref = "/quiz?setup=1";
-  const quizActive = isActive("quiz");
-  const libraryActive = isActive("library");
+  // Close the sheet when a destination navigates.
+  useEffect(() => { setMoreOpen(false); }, [pathname]);
+
+  const slots = bottomSlots(gates)
+    .map((key) => DESTINATIONS.find((d) => d.key === key))
+    .filter((d): d is Destination => !!d);
+  const moreActive = isMoreActive(pathname, gates);
+  const slotLabel = (d: Destination) => (d.slotLabelKey ? t(d.slotLabelKey, lang) : destinationLabel(d, lang));
 
   return (
-    <nav className="bottom-nav fixed bottom-0 left-0 right-0 z-50 safe-area-bottom">
-      <div className="glass border-t border-[var(--mp-border)] shadow-[var(--shadow-elevated)] mx-2 max-[340px]:mx-1 mb-2 rounded-2xl">
-        {/* px-1 + compact per-item padding: the bar carries FOUR flanking
-            slots (2 + 2) around the raised center CTA — a symmetric 5-slot
-            nav. `whitespace-nowrap` keeps the longest label (Karteikarten)
-            on one line; the max-[340px] guards stay as harmless headroom. */}
-        <div className="flex items-end justify-around px-1 max-[340px]:px-0.5 pt-2 pb-2.5 relative">
-          {/* Home */}
-          <NavItem context="bottom" href="/" icon={<Home className="w-5 h-5" />} label={t("home", lang)} active={isActive("home")} className="!px-1 max-[340px]:!px-0.5 whitespace-nowrap" />
-
-          {/* Exam */}
-          <NavItem context="bottom" href="/exam" icon={<GraduationCap className="w-5 h-5" />} label={t("exam", lang)} active={isActive("exam")} className="!px-1 max-[340px]:!px-0.5 whitespace-nowrap" />
-
-          {mentorAvailable && (
-            <NavItem context="bottom" href="/mentor" icon={<Brain className="w-5 h-5" />} label={mentorT("nav_label", lang)} active={isActive("mentor")} className={`!px-1 max-[340px]:!px-0.5 whitespace-nowrap ${mentorAvailability === "resting" ? "opacity-50" : ""}`} />
-          )}
-
-          {/* CENTER: Library CTA — raised, prominent. The personal study home
-              (flash-notes + question-flashcard review, reached from inside).
-              Promoted to the centerpiece per [name]; Quiz keeps a full flanking
-              slot so it stays equally reachable. Highlights on /library + /flashcards. */}
-          <Link
-            href="/library"
-            aria-label={t("home_library", lang)}
-            aria-current={libraryActive ? "page" : undefined}
-            className="flex flex-col items-center -mt-5 transition-transform active:scale-95"
+    <nav className="bottom-nav mp-bottom-nav fixed bottom-0 left-0 right-0 mp-layer-nav" aria-label={t("nav_main", lang)}>
+      <ul className="flex items-end justify-around px-1 pt-1.5 pb-1 max-w-[560px] mx-auto">
+        {slots.map((destination) => {
+          const active = isDestinationActive(destination, pathname);
+          const label = slotLabel(destination);
+          if (destination.key === RAISED_SLOT) {
+            return (
+              <li key={destination.key} className="flex-1 flex justify-center">
+                <Link
+                  href={destination.href ?? "/"}
+                  aria-current={active ? "page" : undefined}
+                  className="mp-bottom-nav__raised group flex flex-col items-center -mt-4 min-w-[64px] rounded-2xl"
+                >
+                  <span className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-colors ${active ? "bg-[var(--mp-action-primary-hover)] ring-4 ring-[var(--mp-focus-color)]/25" : "bg-[var(--mp-action-primary)]"} text-[var(--mp-fg-on-cta-blue)] shadow-[var(--mp-shadow-card)]`}>
+                    <DestinationIcon name={destination.key} className="w-6 h-6" />
+                  </span>
+                  <span className={`mp-bottom-nav__label mt-0.5 ${active ? "font-bold text-[var(--mp-fg)]" : "text-[var(--mp-fg-muted)]"}`}>{label}</span>
+                </Link>
+              </li>
+            );
+          }
+          return (
+            <li key={destination.key} className="flex-1 flex justify-center">
+              <NavItem
+                context="bottom"
+                href={destination.href ?? "/"}
+                icon={<DestinationIcon name={destination.key} />}
+                label={label}
+                active={active}
+                className="mp-bottom-nav__item"
+              />
+            </li>
+          );
+        })}
+        <li className="flex-1 flex justify-center">
+          <button
+            ref={moreRef}
+            type="button"
+            onClick={() => setMoreOpen(true)}
+            aria-haspopup="dialog"
+            aria-expanded={moreOpen}
+            aria-current={moreActive ? "page" : undefined}
+            className={`mp-bottom-nav__item mp-nav-bottom-item ${moreActive ? "mp-nav-bottom-item--active" : ""}`}
           >
-            <div className={`w-14 h-14 rounded-2xl flex items-center justify-center border transition-colors ${
-              libraryActive
-                ? "bg-[var(--mp-viridian)] ring-4 ring-[var(--mp-viridian)]/20"
-                : "bg-transparent border-transparent text-[var(--mp-fg-muted)] hover:bg-[var(--mp-surface-sunken)] hover:text-[var(--mp-cta-blue)]"
-            }`}>
-              <Layers className={`w-6 h-6 ${libraryActive ? "text-white" : "text-current"}`} />
-            </div>
-            <span className={`text-[10px] mt-1 ${libraryActive ? "font-bold text-[var(--mp-viridian)]" : "font-medium text-[var(--mp-fg-muted)]"}`}>
-              {t("home_library", lang)}
-            </span>
-          </Link>
-
-          {/* Quiz — flanking slot (moved off the center CTA so the Library is
-              the centerpiece; Quiz stays one tap away). */}
-          <NavItem context="bottom" href={quizHref} icon={<FileText className="w-5 h-5" />} label={t("quiz", lang)} active={quizActive} className="!px-1 max-[340px]:!px-0.5 whitespace-nowrap" />
-
-          {/* Progress — rightmost flanking slot. Profile/Settings moved OFF
-              the bottom nav (it split 2-left vs 3-right around the raised CTA);
-              Settings is reachable via the home-header avatar → /settings. */}
-          <NavItem context="bottom" href="/progress" icon={<TrendingUp className="w-5 h-5" />} label={t("progress", lang)} active={isActive("progress")} className="!px-1 max-[340px]:!px-0.5 whitespace-nowrap" />
-        </div>
-      </div>
+            <MoreHorizontal className="w-5 h-5" aria-hidden />
+            <span className="mp-bottom-nav__label">{t("nav_more", lang)}</span>
+          </button>
+        </li>
+      </ul>
+      <MoreSheet open={moreOpen} onOpenChange={setMoreOpen} lang={lang} mentorAvailable={mentorAvailable} />
     </nav>
   );
 }

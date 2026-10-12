@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, ArrowLeft, CheckCircle2, GraduationCap, Calendar, Target, Compass } from "lucide-react";
 import { getStoredTheme } from "./ThemeProvider";
@@ -50,6 +50,11 @@ const goalPresets = [10, 20, 30, 50];
 
 export default function Onboarding({ lang = "de", onLangChange, onComplete }: OnboardingProps) {
   const [activeLang, setActiveLang] = useState<Lang>((lang as Lang) || "de");
+  // The consent bar and the top status region stay hidden while Onboarding is open (UX-GLOBAL-11/13).
+  useEffect(() => {
+    document.documentElement.dataset.onboarding = "open";
+    return () => { delete document.documentElement.dataset.onboarding; };
+  }, []);
   const l = activeLang;
   const t = (k: Parameters<typeof tr>[0]) => tr(k, l);
   const arrivalExam = readAuthEntry().exam;
@@ -137,7 +142,7 @@ export default function Onboarding({ lang = "de", onLangChange, onComplete }: On
     .replace("{total}", String(totalSteps));
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-[var(--mp-surface-sunken)]">
+    <div className="fixed inset-0 mp-layer-dialog flex flex-col bg-[var(--mp-surface-sunken)] min-h-dvh">
       <div className="mx-auto flex h-full w-full max-w-lg flex-col">
         {/* Top bar: language toggle (keeps DE/EN switchable without a step) + Skip */}
         <div className="flex shrink-0 items-center justify-between px-5 pt-5">

@@ -17,7 +17,7 @@ import { getStoredSession } from "@/lib/auth";
 import { BOOKMARK_EVENT, loadBookmarks, readCachedBookmarks, setBookmark } from "@/lib/bookmarks";
 import TopicIcon from "@/components/TopicIcon";
 import { cleanExplanation } from "@/lib/explanation";
-import { Lightbulb, FileText, Bot, Flag, CheckCircle2, Languages } from "lucide-react";
+import { Lightbulb, FileText, Bot, Flag, CheckCircle2, Languages, ListChecks } from "lucide-react";
 import AIChatAssistant from "@/components/AIChatAssistant";
 import TranslateButton from "@/components/TranslateButton";
 import QuestionReportForm from "@/components/question/QuestionReportForm";
@@ -29,6 +29,8 @@ import {
   HighlightSelectionButton,
 } from "@/components/question/QuestionHighlightLayer";
 import { Option, AnswerReveal, ContextTabs, type ContextTab } from "@/components/ui";
+import { optionStateFor } from "@/components/ui/Option";
+import { QuestionImage } from "@/components/ui/QuestionImage";
 
 type Lang = "de" | "en";
 
@@ -148,6 +150,7 @@ export default function QuestionCard({
   const [recallScratch, setRecallScratch] = useState("");
   // Flag/edit report modal
   const [showReportForm, setShowReportForm] = useState(false);
+  const [reportPreset, setReportPreset] = useState<{ reason: "missing_image" } | null>(null);
   const [suggestionSubmitted, setSuggestionSubmitted] = useState(false);
   const [explanationRating, setExplanationRating] = useState<1 | -1 | null>(null);
 
@@ -365,13 +368,8 @@ export default function QuestionCard({
   //   pre-answer:  selected → 'selected', else → 'idle'
   //   post-answer: correct option → 'correct'; a chosen-wrong → 'wrong';
   //                everything else → 'disabled'
-  const getOptionState = (idx: number, opt: MCQOption) => {
-    const isSelected = selectedIdxs.has(idx);
-    if (!answered) return isSelected ? "selected" : "idle";
-    if (opt.correct) return "correct";
-    if (isSelected) return "wrong";
-    return "disabled";
-  };
+  const getOptionState = (idx: number, opt: MCQOption) =>
+    optionStateFor({ answered, selected: selectedIdxs.has(idx), correct: !!opt.correct });
 
   const effectiveImageUrl = imageUrl ?? question.image_url;
 
@@ -432,22 +430,14 @@ export default function QuestionCard({
 
         {!examMode && isMulti && <span className="mp-badge mb-3">{t("practice_multi_label", lang)}</span>}
 
-        {/* Optional image */}
+        {/* Optional image (UX-GLOBAL-26): reserved box, retry, report. */}
         {effectiveImageUrl && (
-          <button
-            onClick={() => setLightboxSrc(effectiveImageUrl)}
-            className="block w-full mb-4 rounded-[var(--mp-r-input)] overflow-hidden border border-[var(--mp-border)] hover:border-[var(--mp-viridian)]/40 transition-colors group"
-            aria-label={lang === "de" ? "Bild vergrößern" : "Enlarge image"}
-          >
-            <img
-              src={effectiveImageUrl}
-              alt={lang === "de" ? "Medizinische Abbildung" : "Medical illustration"}
-              className="w-full max-h-64 object-contain bg-[var(--mp-surface-raised)]"
-            />
-            <p className="text-[10px] text-[var(--mp-fg-subtle)] text-center py-1 bg-[var(--mp-surface-raised)] group-hover:text-[var(--mp-fg-muted)] transition-colors">
-              {lang === "de" ? "Zum Vergrößern klicken" : "Click to enlarge"}
-            </p>
-          </button>
+          <QuestionImage
+            src={effectiveImageUrl}
+            alt={lang === "de" ? "Medizinische Abbildung" : "Medical illustration"}
+            onOpen={() => setLightboxSrc(effectiveImageUrl)}
+            onReport={hideActions ? undefined : () => { setReportPreset({ reason: "missing_image" }); setShowReportForm(true); }}
+          />
         )}
 
         {/* Question text (selectable for highlighting) */}
@@ -526,9 +516,12 @@ export default function QuestionCard({
             </div>
           )}
           {!isOpenAnswer && (!recallFirst || optionsRevealed || answered) && isMulti && !answered && (
-            <p className="text-[11px] text-[var(--mp-status-warning)] font-semibold mb-1">
-              {firstMultiHint && <span className="block">{t("practice_first_multi", lang)}</span>}
-              {t("practice_multi_rule", lang).replace("{n}", String(nCorrect))} <span>{t("practice_selected_count", lang).replace("{n}", String(selectedIdxs.size)).replace("{total}", String(nCorrect))}</span>
+            <p className="mp-multi-chip">
+              <ListChecks className="w-4 h-4 flex-shrink-0" aria-hidden />
+              <span>
+                {firstMultiHint && <span className="block">{t("practice_first_multi", lang)}</span>}
+                {t("practice_multi_rule", lang).replace("{n}", String(nCorrect))} <span>{t("practice_selected_count", lang).replace("{n}", String(selectedIdxs.size)).replace("{total}", String(nCorrect))}</span>
+              </span>
             </p>
           )}
           {!isOpenAnswer && (!recallFirst || optionsRevealed || answered) && options.map((opt, idx) => (
@@ -539,7 +532,6 @@ export default function QuestionCard({
               multiSelect={isMulti}
               checked={selectedIdxs.has(idx)}
               disabled={answered}
-              resultLabel={answered ? (opt.correct ? (selectedIdxs.has(idx) ? t("practice_chosen_correct", lang) : t("practice_missed", lang)) : selectedIdxs.has(idx) ? t("practice_chosen_wrong", lang) : t("practice_not_chosen", lang)) : undefined}
               onClick={() => handleSelect(idx)}
             >
               <span className="flex flex-col items-start gap-1.5">
@@ -554,7 +546,7 @@ export default function QuestionCard({
             <button
               onClick={handleSubmitMulti}
               disabled={selectedIdxs.size === 0}
-              className="w-full mt-2 py-3 bg-[var(--mp-status-warning)] hover:bg-[#FFC97A] text-[#1A0E00] rounded-[var(--mp-r-button)] font-bold text-sm transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
+              className="mp-btn mp-btn--primary mp-btn--cta w-full mt-2"
             >
               {lang === "de" ? "Antwort prüfen" : "Check Answer"}
             </button>
@@ -712,7 +704,8 @@ export default function QuestionCard({
           initialQuestion={question.question}
           initialExplanation={question.explanation || ""}
           initialTopic={question.topic}
-          onClose={() => setShowReportForm(false)}
+          preset={reportPreset}
+          onClose={() => { setShowReportForm(false); setReportPreset(null); }}
           onSubmitted={() => setSuggestionSubmitted(true)}
         />
       )}

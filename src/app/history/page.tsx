@@ -33,8 +33,10 @@ import {
   Crown,
   FileText,
   History as HistoryIcon,
+  Minus,
   XCircle,
 } from "lucide-react";
+import { Option, optionStateFor } from "@/components/ui/Option";
 import { useUserTier } from "@/lib/hooks/useUserTier";
 import { authFetch } from "@/lib/authFetch";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -362,13 +364,18 @@ export default function HistoryPage() {
                     <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--mp-border-subtle)] text-[var(--mp-fg-subtle)]">
                       {L("aus dem Fragenpool entfernt", "removed from the bank")}
                     </span>
+                  ) : !q.options.some((o) => o.is_selected) ? (
+                    // EXM-39: an unanswered question is neutral, never red "Falsch".
+                    <span className="inline-flex items-center gap-1 text-[13px] font-semibold text-[var(--mp-fg-muted)]">
+                      <Minus className="w-4 h-4" aria-hidden /> {L("Nicht beantwortet", "Not answered")}
+                    </span>
                   ) : q.is_correct ? (
-                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--mp-accent-teal)]">
-                      <CheckCircle2 className="w-4 h-4" /> {L("Richtig", "Correct")}
+                    <span className="inline-flex items-center gap-1 text-[13px] font-semibold text-[var(--mp-success-text)]">
+                      <CheckCircle2 className="w-4 h-4" aria-hidden /> {L("Richtig", "Correct")}
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--mp-error)]">
-                      <XCircle className="w-4 h-4" /> {L("Falsch", "Wrong")}
+                    <span className="inline-flex items-center gap-1 text-[13px] font-semibold text-[var(--mp-error-text)]">
+                      <XCircle className="w-4 h-4" aria-hidden /> {L("Falsch", "Wrong")}
                     </span>
                   )}
                 </div>
@@ -379,29 +386,17 @@ export default function HistoryPage() {
                       <img src={q.image_url} alt="" className="max-h-48 rounded-lg mb-2 border border-[var(--mp-border-subtle)]" />
                     )}
                     <p className="text-[var(--mp-fg)] text-sm mb-2 whitespace-pre-wrap">{q.stem}</p>
-                    <div className="space-y-1.5 mb-2">
+                    {/* UX-GLOBAL-25: the same Option row and vocabulary as the quiz. */}
+                    <div className="space-y-2 mb-2" lang="de" dir="ltr">
                       {q.options.map((o, oi) => (
-                        <div
+                        <Option
                           key={oi}
-                          className={`text-sm rounded-lg px-3 py-1.5 border ${
-                            o.is_correct
-                              ? "border-[var(--mp-accent-teal)]/50 bg-[var(--mp-accent-teal)]/8 text-[var(--mp-fg)]"
-                              : o.is_selected
-                                ? "border-[var(--mp-error)]/50 bg-[var(--mp-error)]/8 text-[var(--mp-fg)]"
-                                : "border-transparent text-[var(--mp-fg-subtle)]"
-                          }`}
+                          static
+                          letter={String.fromCharCode(65 + oi)}
+                          state={optionStateFor({ answered: true, selected: o.is_selected, correct: o.is_correct })}
                         >
-                          <span className="inline-flex items-center gap-1.5">
-                            {o.is_correct ? (
-                              <CheckCircle2 className="w-3.5 h-3.5 text-[var(--mp-accent-teal)] shrink-0" />
-                            ) : o.is_selected ? (
-                              <XCircle className="w-3.5 h-3.5 text-[var(--mp-error)] shrink-0" />
-                            ) : (
-                              <span className="w-3.5 shrink-0" />
-                            )}
-                            {o.text}
-                          </span>
-                        </div>
+                          {o.text}
+                        </Option>
                       ))}
                     </div>
                     {(q.explanation || q.ai_explanation) && (

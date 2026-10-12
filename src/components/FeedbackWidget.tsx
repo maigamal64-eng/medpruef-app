@@ -7,15 +7,32 @@ import { MessageSquarePlus, X, Send, Check } from 'lucide-react'
 import { getStoredExamSource } from '@/lib/topics'
 import { authFetch as fetch } from '@/lib/authFetch'
 import { t, useLang } from '@/lib/i18n'
+import { announce } from '@/lib/announce'
+import { OPEN_FEEDBACK_EVENT } from '@/components/nav/MoreSheet'
 
 /**
- * First-party feedback launcher. The same form is available on desktop and
- * mobile, above the mobile navigation when necessary.
+ * First-party feedback form and launcher (UX-GLOBAL-28).
  *
- * Hidden on /landing, /login, /admin, /privacy, /terms, /impressum (unchanged).
+ * - The form opens from the floating launcher on desktop, from "Feedback und
+ *   Hilfe" in the Mehr sheet and Sidebar (OPEN_FEEDBACK_EVENT), and from any
+ *   in-page "Feedback geben" row that dispatches the same event.
+ * - Phones (under 1024 px): no launcher on the study surfaces /quiz,
+ *   /flashcards and /exam (their question action row carries "Problem
+ *   melden", and the Mehr sheet carries "Feedback und Hilfe"). Elsewhere on
+ *   phones the launcher is the 40 px edge-aligned interim (HOME-47) until the
+ *   in-quiz entry is confirmed live on a real device; then PHONE_FAB_RETIRED
+ *   flips to true and phones keep only the Mehr entry.
+ * - Never in focus mode (the running exam does not mount it).
+ * - Hidden on /landing, /login, /admin, /privacy, /terms, /impressum.
+ * - The form closes only on a button press; results are spoken once through
+ *   announce() and shown inline.
  */
 
 const MOBILE_MQ = '(max-width: 1024px)'
+/** Flip after the real-device check of the in-quiz feedback entry (release.md). */
+export const PHONE_FAB_RETIRED = false
+const PHONE_STUDY_ROUTES = ['/quiz', '/flashcards', '/exam', '/mistakes', '/pricing', '/settings', '/checkout/success']
+const HIDDEN_ROUTES = ['/landing', '/login', '/admin', '/privacy', '/terms', '/impressum']
 
 export default function FeedbackWidget() {
   const focusMode = useFocusMode()
@@ -49,6 +66,21 @@ export default function FeedbackWidget() {
     if (open && textRef.current) textRef.current.focus()
   }, [open])
 
+  // Non-modal popover: Escape closes it (ADM-39 popover rule).
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [open])
+
+  // Opened from the Mehr sheet, the Sidebar or an in-page "Feedback geben" row.
+  useEffect(() => {
+    const openForm = () => { setSent(false); setOpen(true) }
+    window.addEventListener(OPEN_FEEDBACK_EVENT, openForm)
+    return () => window.removeEventListener(OPEN_FEEDBACK_EVENT, openForm)
+  }, [])
+
   // Close the form on route changes, but keep the initial mount from
   // racing with a user's first click on the launcher.
   useEffect(() => {
@@ -58,17 +90,12 @@ export default function FeedbackWidget() {
     lastPathnameRef.current = pathname ?? null
   }, [pathname])
 
-  if (!mounted || focusMode || pathname === "/exam") return null
+  if (!mounted || focusMode) return null
+  if (HIDDEN_ROUTES.some(p => pathname?.startsWith(p))) return null
 
-  // Hide on certain pages
-  if (['/landing', '/login', '/admin', '/privacy', '/terms', '/impressum'].some(p => pathname?.startsWith(p))) {
-    return null
-  }
-
-  // The floating launcher can cover interactive controls on narrow pricing
-  // cards and the Settings language picker. Keep the FAB out of those
-  // phone/tablet layouts; it remains available on learner study screens.
-  if ((pathname?.startsWith('/checkout/success') || pathname?.startsWith('/pricing') || pathname?.startsWith('/settings') || pathname?.startsWith('/mistakes')) && isMobile) return null
+  // Phones: never over the study surfaces (and money/settings screens);
+  // elsewhere the 40 px interim launcher until PHONE_FAB_RETIRED.
+  const launcherVisible = pathname !== '/exam' && !(isMobile && (PHONE_FAB_RETIRED || PHONE_STUDY_ROUTES.some(p => pathname?.startsWith(p))))
 
   const handleSubmit = async () => {
     if (!message.trim() || sending) return
@@ -100,12 +127,10 @@ export default function FeedbackWidget() {
 
       setSent(true)
       setMessage('')
-      setTimeout(() => {
-        setSent(false)
-        setOpen(false)
-      }, 2000)
+      announce(t('feedback_thanks_title', lang))
     } catch {
       setSubmitError(true)
+      announce(t('feedback_send_failed', lang), 'assertive')
     } finally {
       setSending(false)
     }
@@ -119,25 +144,26 @@ export default function FeedbackWidget() {
   //   - Mobile: bottom:96px (clears the bottom-nav), shared with the launcher.
   const mobileOffset = 'bottom-[calc(var(--mobile-nav-clearance)+0.75rem)]'
   const feedbackPanel = open && (
-    <div className={`fixed z-50 w-80 max-w-[calc(100vw-2rem)] max-h-[min(70dvh,32rem)] overflow-y-auto ${isMobile ? `${mobileOffset} right-4` : 'bottom-6 right-6'}`}>
+    <div role="dialog" aria-modal="false" aria-label={t('feedback_title', lang)} className={`fixed mp-layer-sheet w-80 max-w-[calc(100vw-2rem)] max-h-[min(70dvh,32rem)] overflow-y-auto ${isMobile ? `${mobileOffset} right-4` : 'bottom-6 right-6'}`}>
       <div className="bg-[var(--mp-surface-raised)] rounded-2xl shadow-2xl border border-[var(--mp-border-subtle)] overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 bg-[var(--mp-cta-blue)] text-white">
+        <div className="flex items-center justify-between px-4 py-1 bg-[var(--mp-action-primary)] text-[var(--mp-fg-on-cta-blue)]">
           <span className="text-sm font-semibold">{t('feedback_title', lang)}</span>
           <button
             onClick={() => setOpen(false)}
-            className="hover:bg-white/20 rounded p-1 transition-colors"
+            className="hover:bg-white/20 rounded-lg w-11 h-11 -mr-3 flex items-center justify-center transition-colors"
             aria-label={t('feedback_close', lang)}
           >
-            <X className="w-4 h-4" />
+            <X className="w-4 h-4" aria-hidden />
           </button>
         </div>
 
         {sent ? (
           <div className="p-6 text-center">
-            <Check className="w-8 h-8 text-[var(--mp-accent-teal)] mx-auto mb-2" />
+            <Check className="w-8 h-8 text-[var(--mp-viridian)] mx-auto mb-2" aria-hidden />
             <p className="text-sm font-medium text-[var(--mp-fg)]">{t('feedback_thanks_title', lang)}</p>
-            <p className="text-xs text-[var(--mp-fg-subtle)] mt-1">{t('feedback_thanks_body', lang)}</p>
+            <p className="text-[13px] text-[var(--mp-fg-muted)] mt-1">{t('feedback_thanks_body', lang)}</p>
+            <button type="button" onClick={() => { setSent(false); setOpen(false) }} className="mp-btn mp-btn--secondary mt-4">{t('feedback_close', lang)}</button>
           </div>
         ) : (
           <div className="p-4">
@@ -151,23 +177,20 @@ export default function FeedbackWidget() {
               maxLength={2000}
             />
             {submitError && (
-              <p role="alert" className="mt-2 text-xs text-[var(--mp-error)]">
-                {lang === 'de'
-                  ? 'Feedback konnte nicht gesendet werden. Bitte versuche es erneut.'
-                  : 'Feedback could not be sent. Please try again.'}
+              <p className="mt-2 text-[13px] text-[var(--mp-error-text)]">
+                {t('feedback_send_failed', lang)}
               </p>
             )}
             <div className="flex items-center justify-between mt-2">
-              <span className="text-[10px] text-[var(--mp-fg-subtle)]">
+              <span className="text-[12px] text-[var(--mp-fg-subtle)]">
                 {t('feedback_context_hint', lang)}
               </span>
               <button
                 onClick={handleSubmit}
                 disabled={!message.trim() || sending}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-[var(--mp-cta-blue)] text-white rounded-lg text-xs font-medium
-                           disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[var(--mp-cta-blue)]/90 transition-colors"
+                className="mp-btn mp-btn--primary mp-btn--sm"
               >
-                <Send className="w-3.5 h-3.5" />
+                <Send className="w-3.5 h-3.5" aria-hidden />
                 {sending ? t('feedback_sending', lang) : t('feedback_send', lang)}
               </button>
             </div>
@@ -179,14 +202,14 @@ export default function FeedbackWidget() {
 
   return (
     <>
-      {!open && (
+      {!open && launcherVisible && (
         <button
           onClick={openFeedback}
-          className={`fixed ${isMobile ? `${mobileOffset} right-4 w-[52px] h-[52px]` : 'bottom-6 right-6 w-11 h-11'} z-40 rounded-full bg-[var(--mp-cta-blue)] text-white shadow-lg hover:shadow-xl transition-all flex items-center justify-center active:scale-95`}
+          className={`fixed ${isMobile ? `${mobileOffset} right-2 w-10 h-10 mp-hit` : 'bottom-6 right-6 w-11 h-11'} mp-layer-sticky rounded-full bg-[var(--mp-action-primary)] text-[var(--mp-fg-on-cta-blue)] shadow-lg hover:shadow-xl transition-all flex items-center justify-center active:scale-95`}
           title={t('feedback_button_title', lang)}
           aria-label={t('feedback_button_title', lang)}
         >
-          <MessageSquarePlus className="w-5 h-5" />
+          <MessageSquarePlus className="w-5 h-5" aria-hidden />
         </button>
       )}
       {feedbackPanel}
