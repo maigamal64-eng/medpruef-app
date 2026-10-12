@@ -3,13 +3,32 @@ import { requireUser } from "@/lib/auth-guard";
 import { getServiceClient } from "@/lib/supabase";
 import { captureServerError } from "@/lib/sentry-capture";
 import { computeQbankCompletion, type PuypExamType } from "@/lib/puyp";
+import { validActionKey } from "@/lib/puyp-idempotency";
+
+/** user_events type for a fail recorded without proof (a24, pick-ux-exm-46 A). */
+const PUYP_FAIL_EVENT = "puyp_result_recorded";
 
 export const dynamic = "force-dynamic";
 
 /**
  * POST /api/puyp/result
  *
- * Records a user-reported PASS on their real exam. No admin
+ * Records a user-reported result of the real exam.
+ *
+ * FAIL without proof (a24, pick-ux-exm-46 A): every learner can record that
+ * they did not pass. Such a fail claims nothing, so it is NOT an
+ * exam_attempts row (the admin PUYP queue, inbox count and action alert all
+ * read exam_attempts result='fail'). It is one user_events row
+ * (event_type 'puyp_result_recorded', outcome 'fail', with_proof false), keyed
+ * by the client action UUID so a retry returns the first record. Outcomes are
+ * internal calibration only and are never shown as a pass rate. Learners who
+ * claim the guarantee upload proof through /api/puyp/submit instead.
+ *   Body: { result: 'fail', idempotency_key: uuid,
+ *           exam_type?: ..., attempt_date?: 'YYYY-MM-DD' }
+ *   No unique index backs the key, so two truly simultaneous first requests
+ *   can write two telemetry rows; no money or access depends on them.
+ *
+ * PASS: records a user-reported PASS on their real exam. No admin
  * verification needed — there's no incentive to lie about passing
  * (no extension granted), so we trust the self-report. An admin can
  * always retroactively flip the row if something looks fishy.
@@ -43,13 +62,14 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => ({}));
     const result = String(body?.result || "").toLowerCase();
 
-    if (result !== "pass") {
-      // This endpoint is pass-only. Fail uploads go through
-      // /api/puyp/submit with multipart/form-data + proof file.
+    if (result !== "pass" && result !== "fail") {
       return NextResponse.json(
-        { error: "This endpoint only accepts result='pass'. Use /api/puyp/submit to submit a fail with proof." },
+        { error: "result must be 'pass' or 'fail'. A guarantee claim with proof goes through /api/puyp/submit." },
         { status: 400 }
       );
+    }
+    if (result === "fail" && !validActionKey(body?.idempotency_key)) {
+      return NextResponse.json({ error: "Valid idempotency_key required" }, { status: 400 });
     }
 
     const sb = getServiceClient();
@@ -94,6 +114,10 @@ export async function POST(req: NextRequest) {
         { error: "attempt_date required. Set your exam date in settings or pass attempt_date in the body." },
         { status: 400 }
       );
+    }
+
+    if (result === "fail") {
+      return recordFailWithoutProof(sb, userId, examType as PuypExamType, attemptDate, body.idempotency_key as string);
     }
 
     // Natural pass key: one self-reported pass per account and exam bank.
@@ -178,4 +202,46 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+type ServiceClient = ReturnType<typeof getServiceClient>;
+
+async function recordFailWithoutProof(
+  sb: ServiceClient,
+  userId: string,
+  examType: PuypExamType,
+  attemptDate: string,
+  actionKey: string
+): Promise<NextResponse> {
+  const readPrior = () =>
+    sb
+      .from("user_events")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("event_type", PUYP_FAIL_EVENT)
+      .eq("event_data->>idempotency_key", actionKey)
+      .limit(1)
+      .maybeSingle();
+  const prior = await readPrior();
+  if (prior.error) return NextResponse.json({ error: "Could not confirm prior result" }, { status: 500 });
+  if (prior.data) return NextResponse.json({ ok: true, result: "fail", with_proof: false, duplicate: true });
+
+  const completion = await computeQbankCompletion(userId, examType);
+  const { error } = await sb.from("user_events").insert({
+    user_id: userId,
+    event_type: PUYP_FAIL_EVENT,
+    event_data: {
+      outcome: "fail",
+      with_proof: false,
+      exam_type: examType,
+      attempt_date: attemptDate,
+      idempotency_key: actionKey,
+      qbank_completion_pct: completion.pct,
+    },
+  });
+  if (error) {
+    captureServerError(error, { route: "/api/puyp/result", userId, step: "fail_insert" });
+    return NextResponse.json({ error: "Failed to record result" }, { status: 500 });
+  }
+  return NextResponse.json({ ok: true, result: "fail", with_proof: false });
 }

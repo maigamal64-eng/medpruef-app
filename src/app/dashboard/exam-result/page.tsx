@@ -1,101 +1,103 @@
 "use client";
 
 /**
- * /dashboard/exam-result — "How did your exam go?" Pass-Until-You-Pass
- * gate for users on PUYP-eligible tiers (June 26 Cohort + 12-month).
+ * /dashboard/exam-result: the learner records the result of the REAL exam
+ * (Pass-Until-You-Pass). Not the simulation result.
  *
- * Flow (April 23 2026 lock #1):
- *   1. User's exam_date ≤ today → dashboard surface nudges here.
- *   2. Two big buttons: "I passed" / "I failed".
- *   3. Pass → POST /api/puyp/result — server records, no extension,
- *      redirect to /stats. The referrer's €75 payout becomes
- *      claimable on the 30-day hold measured from the referee's
- *      original subscription_started_at (handled server-side).
- *   4. Fail → form with attempt_date, exam_type, proof upload. POST
- *      /api/puyp/submit (multipart). Server enforces:
- *         • active subscription on a PUYP-eligible tier
- *         • puyp_extensions_used < 2
- *         • Qbank completion ≥ 70%
- *         • file ≤ 10MB, image/pdf MIME
- *      Response confirms receipt for review, without an unverified turnaround promise.
- *
- * If the user is NOT on a PUYP-eligible tier or has no active sub,
- * the page shows an "upgrade to claim" card explaining the offer
- * but steers them to /pricing rather than starting a submission
- * that will just 403.
+ * a24 (UX-EXM-44/46/47/48/55):
+ *   - Title is the task, "Wie lief Ihre echte Prüfung?", with the programme
+ *     name as a small neutral eyebrow chip; standard AppLayout shell.
+ *   - Bestanden: confirm step, then POST /api/puyp/result (one pass per
+ *     account and exam; a repeat returns the first record).
+ *   - Nicht bestanden (pick-ux-exm-46 A): never a dead button. A learner whose
+ *     Prüfungs-Kohorte guarantee can still pay out uploads proof through
+ *     POST /api/puyp/submit (admin review queue). Everyone else records the
+ *     fail without proof via POST /api/puyp/result result='fail'; that writes
+ *     a user_events row, never an exam_attempts row, so it stays out of the
+ *     admin queue. Outcomes are internal calibration, never a pass rate.
+ *   - A status load failure shows an error with "Erneut laden", never the
+ *     no-guarantee branch.
+ *   - Proof upload on phones: photo prepared on selection, 120 s timeout,
+ *     indeterminate progress, file and form kept after any failure, retry
+ *     with the same client action UUID.
+ *   - After a fail: one calm line and one link to the Lernplan.
  */
 
-import { PASS_RECEIPT_KEY, passReceiptFromResponse } from "@/lib/study-p0";
-import { useEffect, useState, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import {
-  ArrowLeft,
-  ArrowRight,
-  CheckCircle2,
-  Clock,
-  FileText,
-  GraduationCap,
-  Shield,
-  Upload,
-  XCircle,
-} from "lucide-react";
+import { PASS_RECEIPT_KEY, passReceiptFromResponse } from "@/lib/study-p0";
 import { authFetch } from "@/lib/authFetch";
 import { getStoredSession } from "@/lib/auth";
-import { getLang, t } from "@/lib/i18n";
+import { t, useLang } from "@/lib/i18n";
+import { tp, type PuypKey } from "@/lib/i18n-puyp";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
+import { Alert, AppLayout, BrandedLoader, Button, ConfirmAction, useToast } from "@/components/ui";
+import { ChooseView } from "./_parts/ChooseView";
+import { ProofForm } from "./_parts/ProofForm";
+import { FailDone } from "./_parts/FailDone";
 import {
-  Alert,
-  BrandedLoader,
-  ConfirmAction,
-  EmptyState,
-  Select,
-  TextField,
-  useToast,
-} from "@/components/ui";
+  failPathFor,
+  parseStatus,
+  proofSignature,
+  UPLOAD_TIMEOUT_MS,
+  uploadErrorKey,
+  type ExamType,
+  type PuypStatus,
+} from "./_parts/rules";
 
-type ExamType = "kenntnispruefung" | "kmp_innsbruck" | "pharma";
-
-interface PuypStatus {
-  eligible: boolean;
-  reason?: string;
-  subscription?: {
-    tier: string;
-    expires_at: string | null;
-    puyp_extensions_used: number;
-  };
-  exam_type: ExamType | null;
-  exam_date: string | null;
-  qbank_completion_pct: number;
-  qbank_answered: number;
-  qbank_total: number;
-  meets_completion_gate: boolean;
-}
+type View = "choose" | "proof" | "submitted" | "recorded";
 
 export default function ExamResultPage() {
   const router = useRouter();
   const toast = useToast();
+  const lang = useLang();
 
+  const [userId, setUserId] = useState("");
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [status, setStatus] = useState<PuypStatus | null>(null);
-  const [lang, setLangState] = useState<"de" | "en">("de");
-  const [userId, setUserId] = useState<string>("");
-  const [view, setView] = useState<"choose" | "fail-form" | "submitted">(
-    "choose"
-  );
+  const [view, setView] = useState<View>("choose");
   const [attemptDate, setAttemptDate] = useState("");
   const [examType, setExamType] = useState<ExamType>("kenntnispruefung");
   const [proofFile, setProofFile] = useState<File | null>(null);
+  const [dateError, setDateError] = useState<string | undefined>();
+
+  // One in-flight action at a time; keys survive retries (EXM-55).
+  const seeded = useRef(false);
   const actionBusy = useRef(false);
   const uploadKey = useRef({ signature: "", key: "" });
-  const [submitting, setSubmitting] = useState(false);
-  // EXM-45 (UX-GLOBAL-18): recording a pass is irreversible, so it is confirmed first.
+  const failKey = useRef({ signature: "", key: "" });
+  const [passPending, setPassPending] = useState(false);
+  const [failPending, setFailPending] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [failError, setFailError] = useState(false);
+  const [uploadError, setUploadError] = useState<PuypKey | null>(null);
   const [confirmPass, setConfirmPass] = useState(false);
+  const [confirmFail, setConfirmFail] = useState(false);
 
-  // Hydrate from session + (later) server
+  const loadStatus = useCallback(async () => {
+    setLoading(true);
+    setLoadError(false);
+    try {
+      const res = await authFetch("/api/puyp/status");
+      const parsed = res.ok ? parseStatus(await res.json().catch(() => null)) : null;
+      if (!parsed) { setLoadError(true); return; }
+      setStatus(parsed);
+      // Defaults only from a good read, once; a reload never overwrites the learner's choice.
+      if (!seeded.current) {
+        seeded.current = true;
+        if (parsed.exam_type) setExamType(parsed.exam_type);
+        if (parsed.exam_date) setAttemptDate((prev) => prev || (parsed.exam_date as string));
+      }
+    } catch {
+      setLoadError(true);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
-    setLangState(getLang());
     const session = getStoredSession();
     if (!session?.user?.id) {
       router.replace("/login?next=/dashboard/exam-result");
@@ -103,178 +105,149 @@ export default function ExamResultPage() {
     }
     setUserId(session.user.id);
     void loadStatus();
-  }, [router]);
+  }, [router, loadStatus]);
 
-  async function loadStatus() {
-    setLoading(true);
-    try {
-      const res = await authFetch("/api/puyp/status");
-      if (!res.ok) {
-        // Fall back to session defaults so the UI can still render
-        // something useful rather than a blank page.
-        const session = getStoredSession();
-        setStatus({
-          eligible: false,
-          reason:
-            "We couldn't load your Pass-Until-You-Pass status. Please reload the page.",
-          exam_type:
-            ((session?.user as { active_exam?: ExamType } | undefined)
-              ?.active_exam as ExamType) || "kenntnispruefung",
-          exam_date: null,
-          qbank_completion_pct: 0,
-          qbank_answered: 0,
-          qbank_total: 0,
-          meets_completion_gate: false,
-        });
-        return;
-      }
-      const data = (await res.json()) as PuypStatus;
-      setStatus(data);
-      if (data.exam_type) setExamType(data.exam_type);
-      if (data.exam_date) setAttemptDate(data.exam_date);
-    } catch {
-      // same fallback as above
-      setStatus({
-        eligible: false,
-        reason: "Could not reach the server: check your connection and reload.",
-        exam_type: "kenntnispruefung",
-        exam_date: null,
-        qbank_completion_pct: 0,
-        qbank_answered: 0,
-        qbank_total: 0,
-        meets_completion_gate: false,
-      });
-    } finally {
-      setLoading(false);
-    }
-  }
+  useEffect(() => { if (attemptDate) setDateError(undefined); }, [attemptDate]);
 
   async function submitPass(): Promise<boolean> {
     if (actionBusy.current) return false;
-    actionBusy.current = true; setSubmitting(true);
+    actionBusy.current = true; setPassPending(true);
     try {
       const res = await authFetch("/api/puyp/result", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          result: "pass",
-          exam_type: examType,
-          attempt_date: attemptDate || undefined,
-        }),
+        body: JSON.stringify({ result: "pass", exam_type: examType, attempt_date: attemptDate || undefined }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || (lang === "de" ? "Konnte Bestehen nicht speichern" : "Failed to record pass"));
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.ok) throw new Error("pass_not_saved");
       const receipt = passReceiptFromResponse(res, data, userId);
       if (receipt) { try { sessionStorage.setItem(PASS_RECEIPT_KEY, JSON.stringify(receipt)); } catch { /* A receipt is optional; never claim a write from the URL. */ } }
-      toast.success(
-        lang === "de" ? "Herzlichen Glückwunsch!" : "Congratulations!",
-        lang === "de" ? "Dein Bestehen ist gespeichert." : "We've recorded your pass."
-      );
+      toast.success(tp("passSaved", lang), tp("passSavedBody", lang));
       router.push("/stats?examPassed=1");
       // Stay busy while /stats loads so the open confirm cannot post again.
       return true;
-    } catch (err) {
-      toast.error((err as Error).message);
-      actionBusy.current = false; setSubmitting(false);
+    } catch {
+      toast.error(tp("passError", lang));
+      actionBusy.current = false; setPassPending(false);
       return false;
     }
   }
 
-  async function submitFail(e: React.FormEvent) {
-    e.preventDefault();
-    if (actionBusy.current) return;
-    if (!proofFile) {
-      toast.error(lang === "de" ? "Bitte zuerst einen Nachweis hochladen." : "Please upload a proof file first.");
-      return;
-    }
-    if (proofFile.size > 10 * 1024 * 1024) {
-      toast.error(
-        lang === "de" ? "Datei zu groß" : "File too large",
-        lang === "de" ? "Maximal 10 MB." : "Maximum 10MB."
-      );
-      return;
-    }
+  function startFail() {
+    if (!status) return;
+    setFailError(false);
+    if (failPathFor(status).mode === "claim") { setUploadError(null); setView("proof"); return; }
+    if (!attemptDate) { setDateError(tp("attemptDateMissing", lang)); return; }
+    setConfirmFail(true);
+  }
 
-    const signature = `${userId}:${examType}:${attemptDate}:${proofFile.name}:${proofFile.size}:${proofFile.lastModified}`;
+  async function recordFail(): Promise<boolean> {
+    if (actionBusy.current) return false;
+    const signature = `${userId}:${examType}:${attemptDate}`;
+    if (failKey.current.signature !== signature) failKey.current = { signature, key: crypto.randomUUID() };
+    actionBusy.current = true; setFailPending(true); setFailError(false);
+    try {
+      const res = await authFetch("/api/puyp/result", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ result: "fail", exam_type: examType, attempt_date: attemptDate, idempotency_key: failKey.current.key }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.ok || data.result !== "fail") throw new Error("fail_not_saved");
+      setView("recorded");
+      return true;
+    } catch {
+      setFailError(true);
+      return false;
+    } finally {
+      actionBusy.current = false; setFailPending(false);
+    }
+  }
+
+  async function submitProof() {
+    if (actionBusy.current || !proofFile || !attemptDate) return;
+    const signature = proofSignature(userId, examType, attemptDate, proofFile);
     if (uploadKey.current.signature !== signature) uploadKey.current = { signature, key: crypto.randomUUID() };
     const form = new FormData();
     form.append("idempotency_key", uploadKey.current.key);
     form.append("proof", proofFile);
     form.append("exam_type", examType);
-    if (attemptDate) form.append("attempt_date", attemptDate);
+    form.append("attempt_date", attemptDate);
 
-    actionBusy.current = true; setSubmitting(true);
+    actionBusy.current = true; setUploading(true); setUploadError(null);
     try {
-      const res = await authFetch("/api/puyp/submit", {
-        method: "POST",
-        body: form,
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data?.error || (lang === "de" ? "Einreichung fehlgeschlagen" : "Submission failed"));
-      }
+      const res = await authFetch("/api/puyp/submit", { method: "POST", body: form, timeoutMs: UPLOAD_TIMEOUT_MS });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.ok) { setUploadError(uploadErrorKey({ status: res.status })); return; }
       setView("submitted");
-      toast.success(
-        lang === "de" ? "Eingereicht!" : "Submitted!",
-        t("puyp_received", lang)
-      );
     } catch (err) {
-      toast.error((err as Error).message || (lang === "de" ? "Konnte nicht einreichen, bitte erneut versuchen" : "Could not submit; try again"));
+      setUploadError(uploadErrorKey({ error: err }));
     } finally {
-      actionBusy.current = false;
-      setSubmitting(false);
+      actionBusy.current = false; setUploading(false);
     }
   }
 
   return (
-    <div className="min-h-screen bg-[var(--mp-surface-sunken)] flex">
+    <AppLayout sidebar={<Sidebar lang={lang} userId={userId} />} bottomNav={<BottomNav lang={lang} userId={userId} />}>
       <ConfirmAction
         open={confirmPass}
         onOpenChange={setConfirmPass}
         title={t("a12_pass_confirm_title", lang)}
         consequence={attemptDate ? t("a12_pass_confirm_body_date", lang).replace("{date}", attemptDate) : t("a12_pass_confirm_body", lang)}
         confirmLabel={t("a12_pass_confirm_action", lang)}
-        pendingLabel={t("a12_saving", lang)}
-        cancelLabel={t("a12_cancel", lang)}
-        pending={submitting}
+        pendingLabel={tp("saving", lang)}
+        cancelLabel={tp("cancel", lang)}
+        pending={passPending}
         // On success the page navigates; closing the dialog then would pop that navigation.
         onConfirm={() => { void submitPass().then((saved) => { if (!saved) setConfirmPass(false); }); }}
       />
-      <Sidebar lang={lang} userId={userId} />
-      <main className="flex-1 min-w-0 pb-24 md:pb-6 md:ml-64">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-1 text-sm text-[var(--mp-fg-muted)] hover:text-[var(--mp-viridian)] mb-4"
-          >
-            <ArrowLeft size={14} /> {lang === "de" ? "Zurück zum Dashboard" : "Back to dashboard"}
-          </Link>
-
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-lg bg-[var(--mp-viridian)]/10 flex items-center justify-center">
-              <GraduationCap size={20} className="text-[var(--mp-viridian)]" />
-            </div>
-            <div>
-              <h1 className="mp-h1">Pass-Until-You-Pass</h1>
-              <p className="text-sm text-[var(--mp-fg-muted)]">
-                {lang === "de" ? "Wie lief deine Prüfung?" : "Tell us how your exam went."}
-              </p>
-            </div>
-          </div>
+      <ConfirmAction
+        open={confirmFail}
+        onOpenChange={setConfirmFail}
+        title={tp("failConfirmTitle", lang)}
+        consequence={attemptDate ? tp("failConfirmBodyDate", lang, { date: attemptDate }) : tp("failConfirmBody", lang)}
+        confirmLabel={tp("failConfirmAction", lang)}
+        pendingLabel={tp("saving", lang)}
+        cancelLabel={tp("cancel", lang)}
+        pending={failPending}
+        onConfirm={() => { void recordFail().then(() => setConfirmFail(false)); }}
+      />
+      <main id="main" className="main-content flex-1 min-w-0 pb-24 md:pb-6 bg-[var(--mp-surface-sunken)]">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+          <header className="space-y-2">
+            <span className="inline-flex items-center rounded-full border border-[var(--mp-border)] bg-[var(--mp-surface)] px-2.5 py-0.5 text-xs font-medium text-[var(--mp-fg-muted)]">
+              {tp("eyebrow", lang)}
+            </span>
+            <h1 className="mp-h2 text-balance">{tp("title", lang)}</h1>
+            <p className="text-sm text-[var(--mp-fg-muted)]">{tp("intro", lang)}</p>
+          </header>
 
           {loading && (
             <div className="flex justify-center py-16">
-              <BrandedLoader label={lang === "de" ? "Status wird geladen …" : "Loading your status…"} />
+              <BrandedLoader label={tp("loading", lang)} />
             </div>
           )}
 
-          {!loading && status && view === "choose" && (
+          {!loading && loadError && (
+            <Alert variant="error" title={tp("loadErrorTitle", lang)}>
+              <p>{tp("loadErrorBody", lang)}</p>
+              <Button type="button" variant="secondary" className="mt-2 min-h-[44px]" onClick={() => void loadStatus()}>
+                {tp("reload", lang)}
+              </Button>
+            </Alert>
+          )}
+
+          {!loading && !loadError && status && view === "choose" && (
             <ChooseView
               lang={lang}
               status={status}
-              submitting={submitting}
+              passPending={passPending}
+              failPending={failPending}
+              failError={failError}
+              dateError={dateError}
               onPass={() => setConfirmPass(true)}
-              onFail={() => setView("fail-form")}
+              onFail={startFail}
+              onRetryFail={() => void recordFail()}
               examType={examType}
               setExamType={setExamType}
               attemptDate={attemptDate}
@@ -282,8 +255,8 @@ export default function ExamResultPage() {
             />
           )}
 
-          {!loading && status && view === "fail-form" && (
-            <FailForm
+          {!loading && !loadError && status && view === "proof" && (
+            <ProofForm
               lang={lang}
               status={status}
               examType={examType}
@@ -292,427 +265,17 @@ export default function ExamResultPage() {
               setAttemptDate={setAttemptDate}
               proofFile={proofFile}
               setProofFile={setProofFile}
-              submitting={submitting}
-              onSubmit={submitFail}
+              submitting={uploading}
+              uploadError={uploadError}
+              onSubmit={() => void submitProof()}
               onCancel={() => setView("choose")}
             />
           )}
 
-          {!loading && view === "submitted" && <SubmittedView lang={lang} />}
+          {view === "submitted" && <FailDone lang={lang} withProof />}
+          {view === "recorded" && <FailDone lang={lang} withProof={false} />}
         </div>
       </main>
-      <BottomNav lang={lang} userId={userId} />
-    </div>
-  );
-}
-
-// ═══ Views ══════════════════════════════════════════════════════════
-
-function ChooseView({
-  lang,
-  status,
-  onPass,
-  onFail,
-  submitting,
-  examType,
-  setExamType,
-  attemptDate,
-  setAttemptDate,
-}: {
-  lang: "de" | "en";
-  status: PuypStatus;
-  submitting: boolean;
-  onPass: () => void;
-  onFail: () => void;
-  examType: ExamType;
-  setExamType: (v: ExamType) => void;
-  attemptDate: string;
-  setAttemptDate: (v: string) => void;
-}) {
-  const examOptions = [
-    { value: "kenntnispruefung", label: lang === "de" ? "Kenntnisprüfung Wien" : "Kenntnisprüfung Vienna" },
-    { value: "kmp_innsbruck", label: "Stichprobentest (Innsbruck)" },
-    { value: "pharma", label: lang === "de" ? "Pharmakologie" : "Pharmacology" },
-  ];
-
-  // Non-eligible branch — steer to /pricing.
-  if (!status.eligible) {
-    return (
-      <div className="space-y-6">
-        <Alert
-          variant="info"
-          title={lang === "de"
-            ? "Pass-Until-You-Pass ist eine Premium-Funktion"
-            : "Pass-Until-You-Pass is a premium feature"}
-        >
-          {lang === "de" ? (
-            <>
-              Die Garantie gilt für die <strong>Prüfungs-Kohorte</strong> und das{" "}
-              <strong>12-Monats-Abo</strong>. Du kannst dein Ergebnis unten
-              trotzdem festhalten, aber es gibt keine Verlängerung auf deinem
-              aktuellen Tarif.
-            </>
-          ) : (
-            <>
-              The guarantee applies to the <strong>Exam Cohort</strong> and{" "}
-              <strong>12-month</strong> plans. You can still record your result
-              below, but there&apos;s no subscription extension on your current tier.
-            </>
-          )}
-        </Alert>
-
-        <div className="mp-card p-5 space-y-4">
-          <h2 className="mp-h2">{lang === "de" ? "Wie lief deine Prüfung?" : "How did your exam go?"}</h2>
-
-          <Select
-            label={lang === "de" ? "Prüfungstyp" : "Exam type"}
-            value={examType}
-            onChange={(e) => setExamType(e.target.value as ExamType)}
-            options={examOptions}
-          />
-
-          <TextField
-            label={lang === "de" ? "Prüfungsdatum" : "Attempt date"}
-            type="date"
-            value={attemptDate}
-            onChange={(e) => setAttemptDate(e.target.value)}
-            helper={lang === "de" ? "Das Datum deiner realen Prüfung." : "The date of your real exam."}
-          />
-
-          <div className="flex flex-col sm:flex-row gap-3 pt-2">
-            <button
-              type="button"
-              className="mp-btn mp-btn--primary flex-1 justify-center"
-              disabled={submitting}
-              aria-busy={submitting}
-              onClick={onPass}
-            >
-              <CheckCircle2 size={16} /> {submitting ? t("puyp_pending", lang) : lang === "de" ? "Bestanden" : "I passed"}
-            </button>
-            <button
-              type="button"
-              className="mp-btn mp-btn--secondary flex-1 justify-center"
-              onClick={onFail}
-              disabled
-              title={lang === "de"
-                ? "Upgrade auf einen berechtigten Tarif, um eine PUYP-Verlängerung zu beantragen"
-                : "Upgrade to an eligible plan to submit a PUYP claim"}
-            >
-              <XCircle size={16} /> {lang === "de" ? "Nicht bestanden" : "I failed"}
-            </button>
-          </div>
-
-          <Link
-            href="/pricing"
-            className="block text-center text-sm text-[var(--mp-cta-blue)] hover:underline pt-2"
-          >
-            {lang === "de"
-              ? "Tarife mit Pass-Until-You-Pass ansehen"
-              : "See the plans with Pass-Until-You-Pass"}
-            <ArrowRight size={14} className="inline ml-1" />
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
-  const used = status.subscription?.puyp_extensions_used ?? 0;
-  const remaining = Math.max(0, 2 - used);
-  const atCap = used >= 2;
-
-  return (
-    <div className="space-y-6">
-      <div className="mp-card p-5 space-y-3">
-        <div className="flex items-center gap-2 text-sm text-[var(--mp-viridian)]">
-          <Shield size={14} />{" "}
-          <span>
-            {lang === "de"
-              ? "Dein Tarif enthält Pass-Until-You-Pass"
-              : "Your plan includes Pass-Until-You-Pass"}
-          </span>
-        </div>
-        <h2 className="mp-h2">{lang === "de" ? "Wie lief deine Prüfung?" : "How did your exam go?"}</h2>
-        <p className="text-sm text-[var(--mp-fg-muted)]">
-          {lang === "de"
-            ? "Wenn du beim ersten realen Versuch nicht bestanden hast und ≥70 % der Fragebank beantwortet hast, verlängern wir deinen Zugang kostenlos bis zum nächsten Zyklus."
-            : "If you failed on your first real attempt and have answered ≥70% of the question bank, we'll extend your access through the next cycle at no cost."}{" "}
-          {remaining > 0
-            ? lang === "de"
-              ? `Dir ${remaining === 1 ? "bleibt" : "bleiben"} noch ${remaining} Verlängerung${remaining === 1 ? "" : "en"}.`
-              : `You have ${remaining} extension${remaining === 1 ? "" : "s"} remaining.`
-            : lang === "de"
-              ? "Du hast bereits beide Verlängerungen für dieses Abo genutzt."
-              : "You've already used the full 2 extensions on this subscription."}
-        </p>
-
-        <div className="grid sm:grid-cols-2 gap-3 pt-2">
-          <div className="mp-card p-3 text-xs">
-            <div className="flex items-center justify-between text-[var(--mp-fg-muted)]">
-              <span>{lang === "de" ? "Fragebank-Fortschritt" : "Qbank completion"}</span>
-              <span
-                className={
-                  status.meets_completion_gate
-                    ? "text-[var(--mp-viridian)] font-semibold"
-                    : "text-[var(--mp-status-warning)] font-semibold"
-                }
-              >
-                {status.qbank_completion_pct.toFixed(1)}%
-              </span>
-            </div>
-            <div className="text-[var(--mp-fg-subtle)] text-[11px] mt-1">
-              {status.qbank_answered.toLocaleString()}{" "}
-              {lang === "de" ? "von" : "of"}{" "}
-              {status.qbank_total.toLocaleString()}{" "}
-              {lang === "de" ? "Fragen beantwortet" : "questions answered"}
-              {!status.meets_completion_gate &&
-                (lang === "de"
-                  ? " · ≥70 % nötig, um zu beantragen"
-                  : " · need ≥70% to claim")}
-            </div>
-          </div>
-          <div className="mp-card p-3 text-xs">
-            <div className="flex items-center justify-between text-[var(--mp-fg-muted)]">
-              <span>{lang === "de" ? "Abo" : "Subscription"}</span>
-              <span className="text-[var(--mp-fg)] font-semibold capitalize">
-                {status.subscription?.tier.replace(/_/g, " ")}
-              </span>
-            </div>
-            <div className="text-[var(--mp-fg-subtle)] text-[11px] mt-1">
-              {lang === "de" ? "Verlängerungen genutzt" : "Extensions used"}: {used}/2
-            </div>
-          </div>
-        </div>
-
-        <div className="grid gap-3">
-          <TextField
-            label={lang === "de" ? "Prüfungsdatum" : "Attempt date"}
-            type="date"
-            value={attemptDate}
-            onChange={(e) => setAttemptDate(e.target.value)}
-            helper={lang === "de" ? "Das Datum deiner realen Prüfung." : "The date of your real exam."}
-          />
-          <Select
-            label={lang === "de" ? "Prüfungstyp" : "Exam type"}
-            value={examType}
-            onChange={(e) => setExamType(e.target.value as ExamType)}
-            options={examOptions}
-          />
-        </div>
-
-        <div className="flex flex-col sm:flex-row gap-3 pt-2">
-          <button
-            type="button"
-            className="mp-btn mp-btn--primary flex-1 justify-center"
-            disabled={submitting}
-            aria-busy={submitting}
-            onClick={onPass}
-          >
-            <CheckCircle2 size={16} /> {submitting ? t("puyp_pending", lang) : lang === "de" ? "Bestanden" : "I passed"}
-          </button>
-          <button
-            type="button"
-            className="mp-btn mp-btn--secondary flex-1 justify-center"
-            onClick={onFail}
-            disabled={atCap || !status.meets_completion_gate}
-            title={
-              atCap
-                ? lang === "de"
-                  ? "Du hast bereits beide Verlängerungen genutzt"
-                  : "You've used all 2 extensions on this subscription"
-                : !status.meets_completion_gate
-                  ? lang === "de"
-                    ? "Du brauchst ≥70 % Fragebank-Fortschritt, um einzureichen"
-                    : "You need ≥70% Qbank completion to submit"
-                  : undefined
-            }
-          >
-            <XCircle size={16} />{" "}
-            {lang === "de"
-              ? "Nicht bestanden: Verlängerung beantragen"
-              : "I failed: claim extension"}
-          </button>
-        </div>
-
-        {(atCap || !status.meets_completion_gate) && (
-          <p className="text-xs text-[var(--mp-fg-subtle)] pt-1">
-            {atCap
-              ? lang === "de"
-                ? "Verlängerungslimit erreicht. Du kannst trotzdem ein Nicht-Bestehen festhalten, es löst aber keine Verlängerung aus."
-                : "Extension cap reached. You can still record a fail; it won't trigger an extension."
-              : lang === "de"
-                ? "Beantworte weiter Fragen, um die 70-%-Schwelle zu erreichen."
-                : "Keep answering questions to reach the 70% completion threshold."}
-          </p>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function FailForm({
-  lang,
-  status,
-  examType,
-  setExamType,
-  attemptDate,
-  setAttemptDate,
-  proofFile,
-  setProofFile,
-  submitting,
-  onSubmit,
-  onCancel,
-}: {
-  lang: "de" | "en";
-  status: PuypStatus;
-  examType: ExamType;
-  setExamType: (v: ExamType) => void;
-  attemptDate: string;
-  setAttemptDate: (v: string) => void;
-  proofFile: File | null;
-  setProofFile: (f: File | null) => void;
-  submitting: boolean;
-  onSubmit: (e: React.FormEvent) => void;
-  onCancel: () => void;
-}) {
-  const examOptions = [
-    { value: "kenntnispruefung", label: lang === "de" ? "Kenntnisprüfung Wien" : "Kenntnisprüfung Vienna" },
-    { value: "kmp_innsbruck", label: "Stichprobentest (Innsbruck)" },
-    { value: "pharma", label: lang === "de" ? "Pharmakologie" : "Pharmacology" },
-  ];
-
-  return (
-    <form
-      onSubmit={onSubmit}
-      className="mp-card p-5 space-y-4"
-      aria-labelledby="puyp-fail-title"
-    >
-      <h2 id="puyp-fail-title" className="mp-h2">
-        {lang === "de" ? "Nachweis für nicht bestandenen Versuch einreichen" : "Submit proof of failed attempt"}
-      </h2>
-      <p className="text-sm text-[var(--mp-fg-muted)]">
-        {lang === "de"
-          ? "Lade deinen offiziellen Prüfungsbescheid hoch (PDF oder Foto). Ein Admin prüft innerhalb von 72 Stunden und verlängert dein Abo bis zum nächsten verfügbaren Zyklus."
-          : "Upload your official exam result (PDF or photo). An admin will verify within 72 hours and extend your subscription to cover the next available cycle."}
-      </p>
-
-      <Alert variant="info" title={lang === "de" ? "Was zählt als Nachweis?" : "What counts as proof?"}>
-        {lang === "de"
-          ? "Jedes offizielle Dokument mit deinem Namen, Prüfungstyp, Versuchsdatum und dem nicht bestandenen Ergebnis. Screenshots aus dem Prüfungsportal sind in Ordnung."
-          : "Any official document showing your name, exam type, attempt date, and the failing result. Screenshots of an exam-board portal are fine."}
-      </Alert>
-
-      <TextField
-        label={lang === "de" ? "Prüfungsdatum" : "Attempt date"}
-        type="date"
-        required
-        value={attemptDate}
-        onChange={(e) => setAttemptDate(e.target.value)}
-      />
-
-      <Select
-        label={lang === "de" ? "Prüfungstyp" : "Exam type"}
-        required
-        value={examType}
-        onChange={(e) => setExamType(e.target.value as ExamType)}
-        options={examOptions}
-      />
-
-      <div className="mp-field">
-        <label htmlFor="puyp-proof" className="mp-field__label mp-field__label--required">
-          {lang === "de" ? "Nachweisdatei" : "Proof file"}
-        </label>
-        <div className="mp-card p-3 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-[var(--mp-cta-blue)]/10 flex items-center justify-center flex-shrink-0">
-            <Upload size={16} className="text-[var(--mp-cta-blue)]" />
-          </div>
-          <div className="flex-1 min-w-0 text-xs">
-            {proofFile ? (
-              <>
-                <div className="font-medium text-[var(--mp-fg)] truncate">
-                  {proofFile.name}
-                </div>
-                <div className="text-[var(--mp-fg-subtle)]">
-                  {(proofFile.size / 1024 / 1024).toFixed(2)} MB · {proofFile.type || "—"}
-                </div>
-              </>
-            ) : (
-              <div className="text-[var(--mp-fg-subtle)]">
-                {lang === "de"
-                  ? "Keine Datei ausgewählt · max. 10 MB · PDF, JPG, PNG, WebP"
-                  : "No file selected · max 10MB · PDF, JPG, PNG, WebP"}
-              </div>
-            )}
-          </div>
-          <label
-            htmlFor="puyp-proof"
-            className="mp-btn mp-btn--secondary mp-btn--sm cursor-pointer"
-          >
-            {proofFile
-              ? lang === "de" ? "Ändern" : "Change"
-              : lang === "de" ? "Datei wählen" : "Choose file"}
-          </label>
-          <input
-            id="puyp-proof"
-            type="file"
-            accept="image/png,image/jpeg,image/webp,application/pdf"
-            onChange={(e) => setProofFile(e.target.files?.[0] || null)}
-            className="sr-only"
-          />
-        </div>
-        <p className="mp-field__helper">
-          {lang === "de"
-            ? "Dateien werden privat gespeichert. Nur Admins können sie über eine kurzlebige signierte URL einsehen."
-            : "Files are stored privately. Only admins can review them via a short-lived signed URL."}
-        </p>
-      </div>
-
-      <div className="text-xs text-[var(--mp-fg-subtle)] border-t border-[var(--mp-border)] pt-3">
-        {lang === "de"
-          ? `Beim Einreichen wird ein Snapshot deines Fragebank-Fortschritts (${status.qbank_completion_pct.toFixed(1)} %) an die Anfrage angehängt.`
-          : `Submitting attaches a snapshot of your Qbank completion (${status.qbank_completion_pct.toFixed(1)}%) to the claim.`}
-      </div>
-
-      <div className="flex flex-col sm:flex-row gap-3 pt-2">
-        <button
-          type="submit"
-          className="mp-btn mp-btn--primary flex-1 justify-center"
-          disabled={submitting || !proofFile || !attemptDate}
-        >
-          {submitting ? (
-            <>{lang === "de" ? "Wird gesendet …" : "Submitting…"}</>
-          ) : (
-            <>
-              {lang === "de" ? "Zur Prüfung einreichen" : "Submit for review"} <ArrowRight size={14} />
-            </>
-          )}
-        </button>
-        <button
-          type="button"
-          className="mp-btn mp-btn--secondary"
-          onClick={onCancel}
-          disabled={submitting}
-        >
-          {lang === "de" ? "Abbrechen" : "Cancel"}
-        </button>
-      </div>
-    </form>
-  );
-}
-
-function SubmittedView({ lang }: { lang: "de" | "en" }) {
-  return (
-    <EmptyState
-      tone="success"
-      icon={<Clock className="w-10 h-10" aria-hidden />}
-      title={lang === "de" ? "Eingereicht: Admin prüft." : "Submitted: admin is reviewing."}
-      body={lang === "de"
-        ? "Wir mailen dir innerhalb von 72 Stunden. Bei Genehmigung wird dein Abo automatisch bis zum nächsten Prüfungszyklus verlängert. Du kannst diese Seite schließen."
-        : "We'll email you within 72 hours. If approved, your subscription will extend automatically to cover the next exam cycle. You can close this page."}
-      action={
-        <Link href="/" className="mp-btn mp-btn--primary mt-4">
-          <FileText size={14} /> {lang === "de" ? "Zurück zum Dashboard" : "Back to dashboard"}
-        </Link>
-      }
-    />
+    </AppLayout>
   );
 }
