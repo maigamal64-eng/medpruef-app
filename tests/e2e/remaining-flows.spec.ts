@@ -27,6 +27,7 @@ type FixtureOptions = {
   delayExamPreferenceMs?: number;
   seedStudyScope?: string;
   emptyNotes?: boolean;
+  theme?: "light" | "dark";
 };
 type ExamSubmission = { attempt_id: string; question_ids: number[]; answers: Record<string, unknown> };
 type FixtureState = {
@@ -63,19 +64,19 @@ async function fixture(browser: Browser, opts: FixtureOptions): Promise<{ contex
     if (url.hostname === "localhost" || url.hostname === "127.0.0.1") return route.continue();
     return route.abort();
   });
-  await page.addInitScript(({ lang, role, tier, cachedActiveExam, cachedTargetDate, seedStudyScope }) => {
+  await page.addInitScript(({ lang, role, tier, cachedActiveExam, cachedTargetDate, seedStudyScope, theme }) => {
     localStorage.setItem("medpruef_session", JSON.stringify({
       user: { id: "ux-flow-fixture", email: "fixture@example.invalid", role, tier, active_exam: cachedActiveExam, first_name: "Fixture", xp_total: 0, streak_count: 0, daily_goal: 20 },
       gamification: { total_xp: 0, current_streak: 0, total_questions_answered: 0, total_correct: 0, daily_questions_today: 0 },
     }));
     localStorage.setItem("medpruef_session_token", "local-test-session-token");
     localStorage.setItem("medpruef_onboarding", "1");
-    localStorage.setItem("medpruef_theme", "light");
+    localStorage.setItem("medpruef_theme", theme);
     localStorage.setItem("medpruef-lang", lang);
     localStorage.setItem("medpruef_cookies", "declined");
     if (cachedTargetDate) localStorage.setItem("medpruef_profile", JSON.stringify({ targetDate: cachedTargetDate, dailyGoal: 20 }));
     if (seedStudyScope) localStorage.setItem(seedStudyScope, JSON.stringify({ v: 4, savedAt: Date.now(), targetCount: 20, answered: [{ id: 777_001, correct: false }] }));
-  }, { lang: opts.lang ?? "en", role: opts.role ?? "user", tier: opts.tier ?? "pro", cachedActiveExam: opts.cachedActiveExam, cachedTargetDate: opts.cachedTargetDate, seedStudyScope: opts.seedStudyScope });
+  }, { lang: opts.lang ?? "en", role: opts.role ?? "user", tier: opts.tier ?? "pro", cachedActiveExam: opts.cachedActiveExam, cachedTargetDate: opts.cachedTargetDate, seedStudyScope: opts.seedStudyScope, theme: opts.theme ?? "light" });
 
   await page.route("**/api/**", async (route) => {
     const req = route.request();
@@ -792,4 +793,40 @@ test("long mistake-list reading stays clear of the floating launcher on a phone"
     await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
     await expect(page.getByRole("link", { name: "Review mistakes" })).toBeVisible();
   } finally { await context.close(); }
+});
+
+// a37 (TR-30, MUX-90): the AI tab is labelled as AI, every real AI answer says it
+// can be wrong, and one tap opens the report form with the AI reason preset.
+test("AI explanation tab: KI badge, error line and one-tap report in DE and EN, light and dark, 375 and 1280", async ({ browser }, testInfo) => {
+  testInfo.setTimeout(240_000);
+  for (const lang of ["de", "en"] as const) {
+    for (const theme of ["light", "dark"] as const) {
+      for (const viewport of [{ width: 375, height: 812 }, { width: 1280, height: 900 }]) {
+        const { context, page, state } = await fixture(browser, { ...viewport, lang, theme, role: "user", tier: "pro" });
+        const errors: string[] = [];
+        page.on("pageerror", (e) => errors.push(e.message));
+        page.on("console", (m) => { if (m.type() === "error" && !/Failed to load resource|net::ERR_FAILED|ERR_ABORTED/.test(m.text())) errors.push(m.text()); });
+        try {
+          await page.goto("/quiz?topic=Neurologie&examSource=kmp_innsbruck&limit=3", { waitUntil: "domcontentloaded" });
+          await expect(page.locator("[data-question-text]")).toContainText("Fixture question");
+          await page.getByRole("radio", { name: "Correct option" }).click();
+          const tabName = lang === "de" ? "KI-Erklärung" : "AI Explanation";
+          await page.getByRole("tab", { name: tabName }).click();
+          const panel = page.locator("[data-ai-trust]").first();
+          await expect(panel).toContainText(lang === "de" ? "KI-generiert, kann Fehler enthalten." : "AI-generated, may contain errors.");
+          await expect(page.locator("[data-ai-badge]").first()).toHaveText(lang === "de" ? "KI" : "AI");
+          await expect(page.getByText(/MedPrüf Assistent|MedPrüf Assistant/)).toHaveCount(0);
+          const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+          expect(overflow).toBeLessThanOrEqual(0);
+          await page.screenshot({ path: shot(`a37-ai-trust-${lang}-${theme}`, viewport.width, viewport.height), fullPage: true });
+          await page.getByRole("button", { name: lang === "de" ? "Fehler in der KI-Erklärung melden" : "Report an error in the AI explanation" }).click();
+          const dialog = page.getByRole("dialog");
+          await expect(dialog).toBeVisible();
+          await expect(dialog.getByRole("button", { name: lang === "de" ? "KI-Erklärung falsch" : "AI explanation wrong" })).toHaveAttribute("aria-pressed", "true");
+          expect(state.suggestionWrites).toHaveLength(0);
+          expect(errors).toEqual([]);
+        } finally { await context.close(); }
+      }
+    }
+  }
 });

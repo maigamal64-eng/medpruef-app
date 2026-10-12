@@ -18,6 +18,8 @@ import {
 import { checkLegacyUserCap, dailyAttemptLimit, getLegacyAiLimits, takeAiQuota } from "@/lib/ai/limits";
 import { costMicroUsd, measureInputBytes, reserveCeilingMicro, trimHistoryToFit } from "@/lib/ai/pricing";
 import { DEFAULT_FALLBACK_MODEL, anthropicFallbackModel, resolveFallback } from "@/lib/ai/fallback";
+import { guardCitations } from "@/lib/ai/citation-guard";
+import { buildLegacyExplainPrompt } from "@/lib/ai/legacy-explain-prompt";
 import { billingNeutralLine } from "@/lib/billing-copy";
 
 export const dynamic = "force-dynamic";
@@ -78,28 +80,7 @@ function openaiCostMicro(model: string, inTok: number, outTok: number): number {
   return Math.ceil((inTok * r.in + outTok * r.out) / 1_000_000);
 }
 
-// Upgraded 2026-04-17 per user feedback (Mounzer 3/5 + Hu "bessere
-// Erklärungen"). Enforces strict structure that makes explanations
-// easier to skim on mobile: TL;DR → correct answer reasoning →
-// distractor-by-distractor breakdown.
-// 2026-10-10: no exam name (the bank covers three tracks) and no guideline
-// citations (there is no source corpus behind them, so they were unverifiable).
-const SYSTEM_PROMPT = [
-  "You are MedPrüf's study tutor. You explain multiple-choice questions from MedPrüf's question bank to physicians preparing for Austrian medical exams.",
-  "Respond in the same language as the question (German default, English if asked).",
-  "",
-  "MANDATORY FORMAT:",
-  "1. Start with a one-sentence **TL;DR** (bold) summarizing the correct answer.",
-  "2. Section '**Warum die richtige Antwort**' / '**Why the correct answer**' — 2–4 bullets with clinical/physiological reasoning. Use **bold** for key medical terms.",
-  "3. Section '**Warum die anderen falsch sind**' / '**Why the others are wrong**' — one short bullet per distractor naming the specific reason.",
-  "",
-  "HARD CONSTRAINTS:",
-  "- Max ~400 words total. Fit on a mobile screen.",
-  "- Use markdown (**bold**, bullet lists, small tables where helpful).",
-  "- Never speculate without evidence. If uncertain, say so explicitly.",
-  "- Never invent sources, guideline names, editions, years or figures. If you are unsure of a detail, say so instead of citing.",
-  "- Do NOT regurgitate the question. Go straight to reasoning.",
-].join("\n");
+
 
 const MAX_MESSAGES = 20;
 const MAX_MESSAGE_CHARS = 4000;
@@ -552,39 +533,7 @@ export async function POST(req: NextRequest) {
   // available (no questionId, fetch error, or missing row) we fall back to
   // the bare SYSTEM_PROMPT so existing behaviour for question-less calls is
   // unchanged.
-  function buildComposedPrompt(row: QuestionRow | null): string {
-    if (!row || !row.question) return SYSTEM_PROMPT;
-
-    const lines: string[] = [
-      SYSTEM_PROMPT,
-      "",
-      "--- QUESTION CONTEXT (use this; do not ask the user for it) ---",
-    ];
-    if (row.topic) lines.push(`TOPIC: ${row.topic}`);
-    lines.push(`QUESTION: ${row.question}`);
-
-    const choices = row.choices;
-    if (Array.isArray(choices) && choices.length > 0) {
-      lines.push("ANSWER CHOICES (the interface shuffles their display order):");
-      choices.forEach((c) => {
-        lines.push(`- ${JSON.stringify(c.text)}${c.correct ? " (CORRECT)" : ""}`);
-      });
-      lines.push("Refer to each choice by its exact wording. Never use A/B/C letters or positional labels, because learners see a shuffled order.");
-    }
-
-    if (row.answer) lines.push(`CORRECT ANSWER: ${row.answer}`);
-    if (row.explanation && row.explanation.trim().length > 0) {
-      lines.push(`STATIC EXPLANATION: ${row.explanation}`);
-    }
-
-    lines.push(
-      responseLang === "en" ? "Respond in English." : "Respond in German.",
-    );
-
-    return lines.join("\n");
-  }
-
-  const composedSystemPrompt = buildComposedPrompt(questionRow);
+  const composedSystemPrompt = buildLegacyExplainPrompt(questionRow, responseLang);
 
   // Keep the whole request inside the wrapper's input cap (and so below the
   // cheap price step). Oldest turns go first; the newest user turn must fit.
@@ -945,6 +894,15 @@ export async function POST(req: NextRequest) {
       /* swallow */
     }
     return NextResponse.json({ reply: refused ? REFUSAL_REPLY : TECH_PROBLEM_REPLY }, { status: 503 });
+  }
+
+  // TR-30: the chat has no source corpus, so any citation in the reply is
+  // invented. Strip it in code (the prompt already forbids it) before the
+  // reply is cached or shown, and say once that the detail is not certain.
+  const guarded = guardCitations(reply, responseLang === "en" ? "en" : "de");
+  if (guarded.removed > 0) {
+    addBreadcrumb({ category: "ai-chat", message: "citation_removed", level: "info", data: { removed: guarded.removed } });
+    reply = guarded.text;
   }
 
   // ──────────────────────────────────────────────────────────────────

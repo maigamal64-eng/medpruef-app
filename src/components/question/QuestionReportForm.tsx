@@ -55,6 +55,7 @@ const FLAG_REASONS = [
   { value: "typo", de: "Tippfehler", en: "Typo" },
   { value: "unclear", de: "Unklar", en: "Unclear" },
   { value: "missing_explanation", de: "Erklärung fehlt", en: "Missing Explanation" },
+  { value: "ai_explanation_wrong", de: "KI-Erklärung falsch", en: "AI explanation wrong" },
   { value: "missing_image", de: "Bild fehlt", en: "Image missing" },
   { value: "wrong_topic", de: "Falsches Thema", en: "Wrong Topic" },
   { value: "other", de: "Sonstiges", en: "Other" },
@@ -295,6 +296,7 @@ export default function QuestionReportForm({
                 <button
                   key={r.value}
                   type="button"
+                  aria-pressed={flagReason === r.value}
                   onClick={() => setFlagReason(r.value)}
                   className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
                     flagReason === r.value

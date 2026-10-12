@@ -1,18 +1,21 @@
 "use client";
 
 import { useState, useRef, useEffect, type ReactNode } from "react";
-import { Send, Bot, User, Loader2, Lock, RefreshCw } from "lucide-react";
+import { Send, Bot, User, Loader2, Lock, RefreshCw, Flag } from "lucide-react";
 import { trackEvent } from "@/lib/tracker";
 import ReactMarkdown from "react-markdown";
 import { authFetch as fetch } from "@/lib/authFetch";
 import { useUserTier } from "@/lib/hooks/useUserTier";
 import TurnIntoNoteButton from "@/components/TurnIntoNoteButton";
+import { aiChatCopy, type AiMessageSource } from "@/components/ai-chat-copy";
 
 type Lang = "de" | "en";
 
 interface Message {
   role: "user" | "assistant";
   content: string;
+  /** Assistant messages only: a real AI answer, the bank's own explanation, or app notice copy. */
+  source?: AiMessageSource;
 }
 
 interface AIChatAssistantProps {
@@ -33,6 +36,8 @@ interface AIChatAssistantProps {
    * Pro-level AI-chat access even when their tier is `'free'` / `null`.
    * Added 2026-04-24. */
   userRole?: string;
+  /** Opens the question report form (TR-30). Omitted where reporting is hidden. */
+  onReport?: () => void;
 }
 
 export default function AIChatAssistant({
@@ -49,7 +54,9 @@ export default function AIChatAssistant({
   options: _options,
   userTier = "free",
   userRole = "user",
+  onReport,
 }: AIChatAssistantProps) {
+  const copy = aiChatCopy(lang);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -235,7 +242,7 @@ export default function AIChatAssistant({
               const sourceLang: Lang = cacheData.lang === "en" ? "en" : "de";
               const shown = await maybeTranslateToUiLang(cacheData.explanation, sourceLang);
               setCachedExplanation(shown);
-              setMessages([{ role: "assistant", content: shown }]);
+              setMessages([{ role: "assistant", content: shown, source: "ai" }]);
               setHasRealExplanation(true);
               setLoading(false);
               return;
@@ -259,14 +266,10 @@ export default function AIChatAssistant({
       // Pro-upsell card in the footer carry the "ask your own question"
       // pitch. No silent 402, no "unavailable" copy.
       if (!isPro && !forceRegenerate) {
-        const fallback =
-          (explanation && explanation.trim().length > 0)
-            ? explanation
-            : lang === "de"
-              ? "Für diese Frage ist noch keine KI-Erklärung hinterlegt. Sobald ein Pro-Nutzer sie anfragt, ist sie auch für dich kostenlos sichtbar."
-              : "There is no AI explanation cached for this question yet. As soon as a Pro user requests one, it becomes free to read for you too.";
+        const fromBank = !!(explanation && explanation.trim().length > 0);
+        const fallback = fromBank ? explanation! : copy.noCache;
         setCachedExplanation(fallback);
-        setMessages([{ role: "assistant", content: fallback }]);
+        setMessages([{ role: "assistant", content: fallback, source: fromBank ? "bank" : "notice" }]);
         return;
       }
 
@@ -274,9 +277,7 @@ export default function AIChatAssistant({
       // Context (question stem, choices, correct answer) is built server-side from
       // questionId — the client no longer sends a system prompt so it cannot
       // poison the globally-cached explanation.
-      const userPrompt = lang === "de"
-        ? "Erkläre diese Frage und warum die richtige Antwort korrekt ist. Gehe auch kurz auf die falschen Antworten ein."
-        : "Explain this question and why the correct answer is right. Briefly address why the other options are wrong.";
+      const userPrompt = copy.firstPrompt;
 
       const response = await fetch("/api/ai-chat", {
         method: "POST",
@@ -298,9 +299,7 @@ export default function AIChatAssistant({
         const is429 = response.status === 429;
         let content: string;
         if (is402) {
-          content = lang === "de"
-            ? "Diese Frage hat noch keine KI-Erklärung. Die automatische KI-Generierung ist Teil von MedPrüf Pro, sobald ein Pro-Nutzer sie anfragt, wird sie für dich kostenlos sichtbar. [Mehr erfahren](/pricing?gate=ai_chat)"
-            : "This question has no AI explanation yet. Automatic AI generation is part of MedPrüf Pro; as soon as a Pro user requests one, it becomes free for you to read. [Learn more](/pricing?gate=ai_chat)";
+          content = copy.paywall;
           // Event — so we can measure paywall-hit rate per free user
           // and verify the copy change actually reduces "KI funktioniert
           // nicht" feedback.
@@ -308,30 +307,21 @@ export default function AIChatAssistant({
             trackEvent("ai_chat_paywall_shown", { questionId, reason: "tier_gate" });
           } catch {}
         } else if (is429) {
-          content = lang === "de"
-            ? "Du hast das Tages-Limit für die KI-Erklärungen erreicht. Es wird nach Mitternacht UTC zurückgesetzt."
-            : "You've reached the daily limit for AI explanations. It resets after midnight UTC.";
+          content = copy.dailyLimit;
         } else {
-          content = lang === "de"
-            ? "Technisches Problem bei der KI-Generierung. Die Frage und die statische Erklärung funktionieren weiter, bitte melde den Fehler über das Feedback-Icon, falls er mehrfach auftritt."
-            : "Technical problem generating the AI answer. The question and its static explanation still work; please report via the feedback icon if the issue persists.";
+          content = copy.techProblem;
         }
-        setMessages([{ role: "assistant", content }]);
+        setMessages([{ role: "assistant", content, source: "notice" }]);
         return;
       }
 
       const data = await response.json();
       const reply = data.reply || data.content || "...";
       setCachedExplanation(reply);
-      setMessages([{ role: "assistant", content: reply }]);
+      setMessages([{ role: "assistant", content: reply, source: "ai" }]);
       setHasRealExplanation(true);
     } catch {
-      setMessages([{
-        role: "assistant",
-        content: lang === "de"
-          ? "Verbindungsfehler. Bitte versuche es später erneut."
-          : "Connection error. Please try again later.",
-      }]);
+      setMessages([{ role: "assistant", content: copy.connection, source: "notice" }]);
     } finally {
       setLoading(false);
     }
@@ -368,12 +358,12 @@ export default function AIChatAssistant({
 
       if (!response.ok) throw new Error("API error");
       const data = await response.json();
-      setMessages([...newMessages, { role: "assistant", content: data.reply || data.content || "..." }]);
+      const replyText = data.reply || data.content;
+      setMessages([...newMessages, replyText
+        ? { role: "assistant", content: replyText, source: "ai" }
+        : { role: "assistant", content: copy.sendError, source: "notice" }]);
     } catch {
-      setMessages([...newMessages, {
-        role: "assistant",
-        content: lang === "de" ? "Fehler beim Senden." : "Error sending.",
-      }]);
+      setMessages([...newMessages, { role: "assistant", content: copy.sendError, source: "notice" }]);
     } finally {
       setLoading(false);
       inputRef.current?.focus();
@@ -393,15 +383,12 @@ export default function AIChatAssistant({
             <Bot className="w-4 h-4 text-white" />
           </div>
           <div className="min-w-0">
-            <div className="text-[11px] font-semibold text-[var(--mp-fg)] truncate">
-              {lang === "de" ? "MedPrüf Assistent" : "MedPrüf Assistant"}
+            <div className="flex items-center gap-1.5 text-[12px] font-semibold text-[var(--mp-fg)] min-w-0">
+              <span className="truncate">{copy.title}</span>
+              <span data-ai-badge className="inline-flex items-center rounded border border-[var(--mp-border)] px-1 text-[10px] font-bold leading-4 text-[var(--mp-fg-muted)]">{copy.badge}</span>
             </div>
-            <div className="text-[10px] text-[var(--mp-fg-muted)]">
-              {loading && !cachedExplanation
-                ? (lang === "de" ? "Generiere…" : "Generating…")
-                : cachedExplanation
-                  ? (lang === "de" ? "Bereit" : "Ready")
-                  : (lang === "de" ? "Lade…" : "Loading…")}
+            <div className="text-[11px] text-[var(--mp-fg-muted)]">
+              {loading && !cachedExplanation ? copy.generating : cachedExplanation ? copy.ready : copy.loading}
             </div>
           </div>
         </div>
@@ -410,16 +397,16 @@ export default function AIChatAssistant({
             <button
               onClick={handleRegenerate}
               className="p-1.5 rounded-lg text-[var(--mp-fg-muted)] hover:text-[var(--mp-fg)] hover:bg-[var(--mp-surface-raised)] transition-colors"
-              title={lang === "de" ? "Neu generieren" : "Regenerate"}
-              aria-label={lang === "de" ? "Neu generieren" : "Regenerate"}
+              title={copy.regenerate}
+              aria-label={copy.regenerate}
             >
               <RefreshCw className="w-4 h-4" />
             </button>
           ) : (
             <span
               className="p-1.5 rounded-lg text-[var(--mp-fg-subtle)] cursor-not-allowed"
-              title={lang === "de" ? "Pro-Feature: Erklärung neu generieren" : "Pro feature: regenerate explanation"}
-              aria-label={lang === "de" ? "Pro-Feature: Erklärung neu generieren" : "Pro feature: regenerate explanation"}
+              title={copy.regenerateLocked}
+              aria-label={copy.regenerateLocked}
             >
               <Lock className="w-4 h-4" />
             </span>
@@ -440,6 +427,9 @@ export default function AIChatAssistant({
               }
             </div>
             <div className={`flex flex-col gap-1.5 max-w-[85%] ${msg.role === "user" ? "items-end" : "items-start"}`}>
+              {msg.role === "assistant" && msg.source === "bank" && (
+                <p className="text-[11px] font-medium text-[var(--mp-fg-muted)]">{copy.bankLabel}</p>
+              )}
               <div className={`rounded-2xl px-4 py-3 text-sm leading-relaxed ${
                 msg.role === "user"
                   ? "bg-[var(--mp-cta-blue)] text-white rounded-tr-sm"
@@ -447,8 +437,25 @@ export default function AIChatAssistant({
               }`}>
                 <ReactMarkdown components={markdownComponents(msg.role)}>{msg.content}</ReactMarkdown>
               </div>
+              {/* TR-30: every real AI answer says it is AI and can be wrong, with a one-tap report. */}
+              {msg.role === "assistant" && msg.source === "ai" && (
+                <p data-ai-trust className="flex flex-wrap items-center gap-x-2 text-[12px] leading-snug text-[var(--mp-fg-muted)]">
+                  <span>{copy.trustLine}</span>
+                  {onReport && (
+                    <button
+                      type="button"
+                      onClick={() => { trackEvent("feature_use", { feature: "ai_chat_report_click", questionId }); onReport(); }}
+                      aria-label={copy.reportAria}
+                      className="inline-flex min-h-11 items-center gap-1 font-medium text-[var(--mp-cta-blue)] underline underline-offset-2"
+                    >
+                      <Flag className="h-3.5 w-3.5" aria-hidden />
+                      {copy.report}
+                    </button>
+                  )}
+                </p>
+              )}
               {/* Turn any real AI answer into a flash-note (skip placeholder / error copy). */}
-              {msg.role === "assistant" && hasRealExplanation && msg.content.length > 40 && (
+              {msg.role === "assistant" && msg.source === "ai" && hasRealExplanation && msg.content.length > 40 && (
                 <TurnIntoNoteButton
                   kind="ai_explanation"
                   lang={lang}
@@ -509,29 +516,17 @@ export default function AIChatAssistant({
                     </div>
                     <div className="min-w-0 flex-1">
                       <h3 className="mp-h3 text-[15px] leading-tight mb-1.5 text-[var(--mp-fg)]">
-                        {lang === "de" ? "Interaktive Rückfragen mit Pro" : "Interactive follow-ups with Pro"}
+                        {copy.upsellTitle}
                       </h3>
                       <p className="mp-body text-[13px] leading-snug text-[var(--mp-fg)] mb-3">
-                        {lang === "de" ? (
-                          <>
-                            Diese Erklärung und alle anderen KI-Erklärungen sind für dich kostenlos.
-                            Wenn du eine eigene Frage an die KI stellen willst (z.&nbsp;B. „Warum ist Option C falsch?“),
-                            brauchst du Pro.
-                          </>
-                        ) : (
-                          <>
-                            This explanation and all other AI explanations are free for you.
-                            If you want to ask the AI your own question (e.g.&nbsp;&quot;Why is option C wrong?&quot;),
-                            you need Pro.
-                          </>
-                        )}
+                        {copy.upsellBody}
                       </p>
                       <a
                         href="/pricing"
                         className="mp-btn mp-btn--success mp-btn--sm"
                         onClick={() => trackEvent("feature_use", { feature: "ai_chat_pro_upsell_click", questionId })}
                       >
-                        {lang === "de" ? "Mehr über Pro →" : "Learn about Pro →"}
+                        {copy.upsellCta}
                       </a>
                     </div>
                   </div>
@@ -556,10 +551,10 @@ export default function AIChatAssistant({
                     resolving
                       ? "…"
                       : canType
-                        ? (lang === "de" ? "Folgefrage stellen…" : "Ask a follow-up question…")
-                        : (lang === "de" ? "Folgefrage stellen (Pro)…" : "Ask a follow-up question (Pro)…")
+                        ? copy.placeholder
+                        : copy.placeholderLocked
                   }
-                  aria-label={lang === "de" ? "Folgefrage stellen" : "Ask a follow-up question"}
+                  aria-label={copy.inputAria}
                   className="flex-1 bg-[var(--mp-surface-sunken)] border border-[var(--mp-border)] rounded-xl px-4 py-2.5 text-sm text-[var(--mp-fg)] placeholder-[var(--mp-fg-subtle)] focus:outline-none focus:border-[var(--mp-viridian)]/50 disabled:cursor-not-allowed disabled:text-[var(--mp-fg-subtle)]"
                   disabled={loading || !canType}
                 />
@@ -568,8 +563,8 @@ export default function AIChatAssistant({
                   disabled={!canType || !input.trim() || loading}
                   aria-label={
                     canType
-                      ? (lang === "de" ? "Folgefrage senden" : "Send follow-up question")
-                      : (lang === "de" ? "Gesperrt, Pro erforderlich" : "Locked, Pro required")
+                      ? copy.send
+                      : copy.sendLocked
                   }
                   className="w-10 h-10 rounded-xl bg-[var(--mp-viridian)] text-white flex items-center justify-center hover:bg-[var(--mp-accent-teal)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:bg-[var(--mp-surface-sunken)] disabled:text-[var(--mp-fg-subtle)]"
                 >

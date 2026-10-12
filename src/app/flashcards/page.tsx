@@ -88,6 +88,7 @@ import {
 import PaywallUpgradeModal from "@/components/PaywallUpgradeModal";
 import { getExamLabel } from "@/lib/master-locale/exam-label";
 import type { MCQOption } from "@/lib/mcq";
+import { aiChatCopy } from "@/components/ai-chat-copy";
 
 type Lang = "de" | "en";
 type Confidence = "again" | "hard" | "good" | "easy";
@@ -197,9 +198,12 @@ function Flashcard({
 
   /* Explanation — treat whitespace-only as absent (the ~69% no-explanation
    * path must feel complete, not broken). */
-  const explanation =
-    question.explanation?.trim() || question.ai_explanation?.trim() || "";
+  const bankExplanation = question.explanation?.trim() || "";
+  const explanation = bankExplanation || question.ai_explanation?.trim() || "";
   const hasExplanation = explanation.length > 0;
+  // TR-30 / MUX-90: AI text is never shown as the bank's own explanation.
+  const explanationIsAi = !bankExplanation && hasExplanation;
+  const aiCopy = aiChatCopy(lang);
 
   return (
     <FlipCard
@@ -261,7 +265,7 @@ function Flashcard({
             {t("tap_to_flip", lang)}
           </div>
           <p className="text-[10px] text-center text-[var(--mp-fg-subtle)] mt-1">
-            {lang === "de" ? "Lange Fragen kannst du hier scrollen." : "Scroll inside the card to read long questions."}
+            {lang === "de" ? "Lange Fragen können Sie hier scrollen." : "Scroll inside the card to read long questions."}
           </p>
         </>
       }
@@ -289,13 +293,16 @@ function Flashcard({
             {hasExplanation && (
               <AnswerReveal correct>
                 <p className="text-[10px] font-semibold text-[var(--mp-fg-subtle)] uppercase tracking-wider mb-1 font-mono">
-                  {t("explanation", lang)}
+                  {explanationIsAi ? `${aiCopy.title} (${aiCopy.badge})` : t("explanation", lang)}
                 </p>
                 <p className="text-sm text-[var(--mp-fg-muted)] leading-relaxed whitespace-pre-line">
                   {explanation.length > 600
                     ? explanation.slice(0, 600) + "…"
                     : explanation}
                 </p>
+                {explanationIsAi && (
+                  <p data-ai-trust className="mt-1.5 text-[11px] text-[var(--mp-fg-subtle)]">{aiCopy.trustLine}</p>
+                )}
               </AnswerReveal>
             )}
 
@@ -581,7 +588,7 @@ function FlashcardContent() {
             }
             body={
               lang === "de"
-                ? "Du hast alle fälligen Karten durchgearbeitet. Neue Wiederholungen schalten sich automatisch frei, oder starte ein kurzes Zufalls-Quiz, um weiter zu üben."
+                ? "Sie haben alle fälligen Karten durchgearbeitet. Neue Wiederholungen schalten sich automatisch frei, oder starten Sie ein kurzes Zufalls-Quiz, um weiter zu üben."
                 : "You've cleared every card due right now. New reviews unlock automatically, or start a quick random quiz to keep the momentum."
             }
             action={

@@ -150,7 +150,7 @@ export default function QuestionCard({
   const [recallScratch, setRecallScratch] = useState("");
   // Flag/edit report modal
   const [showReportForm, setShowReportForm] = useState(false);
-  const [reportPreset, setReportPreset] = useState<{ reason: "missing_image" } | null>(null);
+  const [reportPreset, setReportPreset] = useState<{ reason: "missing_image" | "ai_explanation_wrong" } | null>(null);
   const [suggestionSubmitted, setSuggestionSubmitted] = useState(false);
   const [explanationRating, setExplanationRating] = useState<1 | -1 | null>(null);
 
@@ -657,6 +657,7 @@ export default function QuestionCard({
                       options={options.map(o => ({ text: o.text, correct: o.correct }))}
                       userTier={userTier}
                       userRole={userRole}
+                      onReport={hideActions ? undefined : () => { setReportPreset({ reason: "ai_explanation_wrong" }); setShowReportForm(true); }}
                     />
                   </div>
                 )}
