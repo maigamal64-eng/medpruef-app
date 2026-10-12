@@ -110,18 +110,6 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-06-26",
     tag: "improvement",
     title: {
-      de: "Aufgeräumte Frageansicht, mehrere Notizen, KI-Erklärung in deiner Sprache und eine echte Prüfungssimulation",
-      en: "Tidier question view, multiple notes, AI explanation in your language, and a true exam simulation",
-    },
-    description: {
-      de: "Die Frageansicht hat jetzt nur noch eine Stelle pro Aktion: Erklärung, KI-Erklärung, Notizen und Übersetzen sitzen in den Reitern, Merken und Melden in der Leiste, keine doppelten oder toten Knöpfe mehr (auch am Handy). Du kannst jetzt mehrere Notizen pro Frage anlegen, und sie sind überall synchron. Die Übersetzung funktioniert wieder, und die KI-Erklärung erscheint in deiner Oberflächensprache (Englisch, wenn du Englisch eingestellt hast). Die Prüfungssimulation bildet jetzt die echte Prüfung ab (volle Fragenanzahl und Verteilung), und die Fragenübersicht überlappt nicht mehr. Gemerkte Fragen werden im Fortschritt jetzt richtig angezeigt, und die Karteikarten sind am Handy über die untere Navigation erreichbar.",
-      en: "The question view now has one home per action: Explanation, AI Explanation, Notes and Translate live in the tabs, Bookmark and Report in the bar, with no duplicate or dead buttons (on mobile too). You can now keep multiple notes per question, and they stay in sync everywhere. Translation works again, and the AI explanation appears in your interface language (English when you have English selected). The exam simulation now reflects the real exam (full question count and distribution), and the question navigator no longer overlaps. Bookmarked questions now show up correctly in Progress, and Flashcards are reachable on mobile via the bottom navigation.",
-    },
-  },
-  {
-    date: "2026-06-26",
-    tag: "improvement",
-    title: {
       de: "Lesbarer Dunkelmodus, neue Ladeanimation und ein aufgeräumter Hilfe-Button",
       en: "Readable dark mode, a new loading animation, and a tidier help button",
     },
@@ -178,31 +166,6 @@ export const CHANGELOG: ChangelogEntry[] = [
       en: "Since Apr 17, a new strict prompt powers AI explanations: TL;DR → correct-answer reasoning → distractor-by-distractor breakdown → guideline citations (ERC 2021, ESC, ÖDG, Austrian immunization schedule). Older cached explanations from the pre-Apr-17 loose prompt were regenerated in the background so every user (including free) sees the crisper version immediately, no need to click \"Regenerate.\" Ratings were reset so the new explanations are judged on their own merits.",
     },
   },
-  {
-    date: "2026-04-18",
-    tag: "feature",
-    title: {
-      de: "Übersetzung der Erklärungen in deine Sprache",
-      en: "Translate explanations into your language",
-    },
-    description: {
-      de: "Neuer „🌐 In meiner Sprache\u201C-Button unter jeder Erklärung: übersetzt den Text in Russisch, Arabisch, Englisch, Französisch, Türkisch, Ukrainisch oder Serbisch (medizinische Fachbegriffe, Medikamentennamen und Leitlinien-Bezeichnungen wie ERC 2021, ESC, ÖDG bleiben im Original). Übersetzungen werden einmalig erstellt und dann für alle Nutzer:innen gecacht. Free-Tier: 5 Übersetzungen/Tag. Pro: unbegrenzt.",
-      en: "New \"🌐 In my language\" button beneath every explanation: translates the text into Russian, Arabic, English, French, Turkish, Ukrainian, or Serbian (medical terminology, drug names, and guideline references like ERC 2021, ESC, ÖDG stay in the original). Translations are generated once and then cached for everyone. Free tier: 5 translations/day. Pro: unlimited.",
-    },
-  },
-  // ═══ 2026-04-14 ═══
-  {
-    date: "2026-04-14",
-    tag: "improvement",
-    title: {
-      de: "Automatische Updates: Neue Versionen ohne Neuladen",
-      en: "Automatic updates: new versions without manual reload",
-    },
-    description: {
-      de: 'Die App erkennt jetzt automatisch, wenn eine neue Version bereitsteht. Du siehst eine "Neue Version verfügbar"-Anzeige und kannst mit einem Klick neu laden. Der Cache wird bei jedem Deploy automatisch geleert: keine hängenden alten Versionen mehr.',
-      en: `The app now automatically detects when a new version is available. You'll see a "New version available" prompt and can reload with one click. The cache is purged automatically on every deploy: no more stale old versions.`,
-    },
-  },
   // ═══ 2026-04-12 ═══
   {
     date: "2026-04-12",
@@ -214,16 +177,6 @@ export const CHANGELOG: ChangelogEntry[] = [
     description: {
       de: "Die Vorbereitung für Innsbruck ist jetzt verfügbar. Wählen Sie im Prüfungs-Umschalter in der Seitenleiste zwischen Kenntnisprüfung Wien, KMP Innsbruck und Pharmakologie.",
       en: "Preparation for Innsbruck is now available. Use the exam switcher in the sidebar to choose between Vienna Kenntnisprüfung, KMP Innsbruck, and Pharmacology.",
-    },
-  },
-  // ═══ 2026-04-11 ═══
-  {
-    date: "2026-04-11",
-    tag: "feature",
-    title: { de: "Landing-Page komplett überarbeitet", en: "Landing page rewrite" },
-    description: {
-      de: "Neue, launch-bereite Startseite mit Hero, Funktionsübersicht, Beispielfrage zum Ausprobieren, transparenter Preisgestaltung, FAQ und Teaser für kommende Prüfungen (Approbation Deutschland).",
-      en: "New launch-ready landing page with hero, feature overview, interactive sample question, transparent pricing, FAQ, and a teaser for upcoming exams (Approbation Germany).",
     },
   },
 {
