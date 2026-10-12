@@ -26,6 +26,18 @@ export const CHANGELOG: ChangelogEntry[] = [
   "date": "2026-10-12",
   "tag": "admin",
   "title": {
+    "de": "KI-Mentor: Umsatz neben Kosten, ein Berechtigungsschema, Datum für das Ende der Pause (ausgeschaltet)",
+    "en": "AI mentor: revenue next to cost, one permission map, a date for the end of a pause (switched off)"
+  },
+  "description": {
+    "de": "Pausiert der Mentor wegen der monatlichen Kostengrenze, sehen Sie, ab wann er voraussichtlich wieder da ist; Ihre Credits bleiben erhalten. Admin: Der Kosten-Tab zeigt Nettoumsatz, echte API-Kosten und Kosten der in Pro enthaltenen Credits der letzten 30 Tage sowie Umsatz je Paket. Die Marge bleibt „Unavailable“, bis Whop-Gebühr und Wechselkurs belegt sind. Alle Mentor-Admin-Routen laufen über dieselbe Berechtigungstabelle wie der Rest des Admin-Bereichs. Der Mentor selbst bleibt ohne Umgebungsschalter aus.",
+    "en": "When the monthly spend cap pauses the mentor, you see when it is expected back; your credits are kept. Admin: the Cost tab shows net revenue, true API cost and the cost of Pro-included credits for the last 30 days, plus revenue per package. Margin stays \"Unavailable\" until the Whop fee and exchange rate are on record. All mentor admin routes use the same permission map as the rest of the admin area. The mentor itself stays off without environment switches."
+  }
+},
+{
+  "date": "2026-10-12",
+  "tag": "admin",
+  "title": {
     "de": "KI-Mentor: erster Besuch mit Preis und Beispielantwort, Fragekarte, Heute-Karte, klare Zahlungsfehler (ausgeschaltet)",
     "en": "AI mentor: first visit with price and sample answer, question card, Today card, clear payment errors (switched off)"
   },
