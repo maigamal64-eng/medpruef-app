@@ -124,6 +124,14 @@ describe("a restated month of a cited sitting row is grounded on it (gate5 dl-si
     });
   }
 
+  for (const sentence of ["Der Stichprobentest im November findet ebenfalls an der MedUni Wien statt.", "Die Gerichtsmedizin-Prüfung im November ist ebenfalls offen."]) {
+    it(`a borrowed month is refused in a sentence naming another exam: ${sentence}`, async () => {
+      const v = await run("sip4a", undefined, () => `@@BLOCK facts=sip4a.registration.method\n${sentence}`, ["sip4a.registration.method"]);
+      expect(v.replaced).toBe(true);
+      expect(all(v)).not.toContain(sentence);
+    });
+  }
+
   it("a bare year is never borrowed (review P2)", async () => {
     const v = await run("sip4a", undefined, () =>
       "@@BLOCK facts=sip4a.registration.method\nSeit 2026 ist die Anmeldung nur noch elektronisch möglich.",
@@ -252,6 +260,18 @@ describe("gate6 run 1 residuals", () => {
     expect(v.replaced).toBe(false);
     expect(all(v)).toContain("1 Stunde");
   });
+
+  for (const [id, sentence] of [
+    ["rezeptierkunde.format.wien-rules", "Sie haben nur 1 Antritt."],
+    ["rezeptierkunde.format.wien-rules", "Nach 1 Woche erhalten Sie das Ergebnis."],
+    ["general.documents.chamber-confirmation", "Die Bestätigung ist 1 Monat gültig."],
+  ] as const) {
+    it(`a 1 with another unit than the fact's 'eine <unit>' is still rejected: ${sentence}`, async () => {
+      const v = brain().validate(`@@LANG de\n@@BLOCK facts=${id}\n${sentence}`, await L.byIds([id], now), [id]);
+      expect(v.replaced).toBe(true);
+      expect(all(v)).not.toContain(sentence);
+    });
+  }
 
   it("a bare 1 is still rejected when the cited fact has no 'one <unit>' phrase", () => {
     const f = fact({ id: "fixture.format.sip5a", text_de: "Die Prüfung hat 123 Fragen.", text_en: "The exam has 123 questions." });

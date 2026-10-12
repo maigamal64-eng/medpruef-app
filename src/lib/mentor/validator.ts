@@ -421,15 +421,44 @@ function rangeStartDates(text: string, values: ExtractedValue[]): ExtractedValue
 }
 
 /**
- * "eine Stunde" / "one hour" in a fact is the value 1 (gate6 run 1: pr-rez-format-de
- * wrote "1 Stunde" for the fact's "eine Stunde" and lost the sentence). Fact side
+ * "eine Stunde" / "one hour" in a fact supports "1 Stunde" / "1 hour" in an answer
+ * (gate6 run 1: pr-rez-format-de wrote "1 Stunde" for the fact's "eine Stunde" and
+ * lost the sentence). Tied to the unit (review P1): only a "1" directly followed by
+ * the same unit the fact states with "ein/eine/one", never a bare n:1. Fact side
  * only: an answer's "eine" is never read as a number.
  */
-const ONE_UNIT_RE = /(?<![\p{L}])(?:ein|eine|einer|einem|einen|one|a single)\s+(?:Stunde|Minute|Tag|Woche|Monat|Jahr|Punkt|Antritt|Versuch|hour|minute|day|week|month|year|point|attempt)(?![\p{L}])/iu;
+const ONE_UNITS: ReadonlyArray<readonly [RegExp, string]> = [
+  [/^(?:Stunden?|hours?)$/iu, "hour"],
+  [/^(?:Minuten?|minutes?)$/iu, "minute"],
+  [/^(?:Tage?|Tag|days?)$/iu, "day"],
+  [/^(?:Wochen?|weeks?)$/iu, "week"],
+  [/^(?:Monate?|Monat|months?)$/iu, "month"],
+  [/^(?:Jahre?|Jahr|years?)$/iu, "year"],
+  [/^(?:Punkte?|Punkt|points?)$/iu, "point"],
+];
+const oneUnit = (word: string): string | null => ONE_UNITS.find(([re]) => re.test(word))?.[1] ?? null;
+const ONE_UNIT_FACT_RE = /(?<![\p{L}])(?:ein|eine|einer|einem|einen|one|a single)\s+(\p{L}+)/giu;
+
+/** Units a fact states with "ein/eine/one" ("eine Stunde" -> hour). */
+function factOneUnits(f: MentorFact): Set<string> {
+  const out = new Set<string>();
+  for (const m of `${f.text_de}\n${f.text_en}`.matchAll(ONE_UNIT_FACT_RE)) {
+    const u = oneUnit(m[1]);
+    if (u) out.add(u);
+  }
+  return out;
+}
+
+/** A "1" in the answer directly followed by a unit one of the block's facts states as "eine <unit>". */
+function oneOfStatedUnit(v: ExtractedValue, text: string, units: ReadonlySet<string>): boolean {
+  if (units.size === 0 || v.kind !== "number" || !v.keys.includes("n:1")) return false;
+  const next = /^\s+(\p{L}+)/u.exec(text.slice(v.end));
+  const u = next ? oneUnit(next[1]) : null;
+  return u !== null && units.has(u);
+}
 
 function factAllowedKeys(f: MentorFact): Set<string> {
   const keys = allowedKeysFromText(`${f.text_de}\n${f.text_en}`);
-  if (ONE_UNIT_RE.test(`${f.text_de}\n${f.text_en}`)) keys.add("n:1");
   keys.add(`u:${f.source_url.replace(/\/+$/, "").toLowerCase()}`);
   // The read-on date of a cited fact ("Stand 2026-10-10", which the prompt asks
   // for) is a value OF that fact. Only the full date: its month or year alone
@@ -883,6 +912,16 @@ export function dropStudyCountWords(text: string): string {
 /** A deadline phrase: a restated sitting month is never accepted inside one (review P1: "bis Ende November"). */
 const DEADLINE_WORD_RE = /(?<![\p{L}])(?:bis|until|till|by|before|from|since|ab|seit|vor|ende|end|ends|endet|enden|closes?|closing|deadline|cut-?off|spätestens|latest|\p{L}*frist\p{L}*|\p{L}*schluss|einreich\p{L}*|nachreich\p{L}*|submit\p{L}*|file|filing)(?![\p{L}])/iu;
 
+/** Exam names in learner prose: a borrowed month is refused in a sentence naming another exam (re-review P1). */
+const EXAM_NAMES: Record<string, RegExp> = {
+  sip4a: /(?<![\p{L}\p{N}])SIP\s?4\s?a(?![\p{L}\p{N}])/iu,
+  sip5a: /(?<![\p{L}\p{N}])SIP\s?5\s?a(?![\p{L}\p{N}])/iu,
+  rezeptierkunde: /Rezeptierkunde|Pharmakologie|pharmacology/iu,
+  gerichtsmedizin: /Gerichtsmedizin|forensic/iu,
+  stichprobentest: /Stichprobentest|aptitude sample/iu,
+  c1: /(?<![\p{L}\p{N}])C1(?![\p{L}\p{N}])/u,
+  fsp: /Fachsprachprüfung|(?<![\p{L}])FSP(?![\p{L}])/u,
+};
 const SITTING_NOUN = "SIP\\s?4a|SIP\\s?5a|SIP|Rezeptierkunde|Pharmakologie|Gerichtsmedizin|Stichprobentest|Kenntnisprüfung|Prüfung|Prüfungstermin|Termin|Antritt|sitting|exam|examination|session";
 /** "<exam or sitting noun> [sitting|exam|Termin|Prüfung] im/in/vom <month>" ending right before the month. */
 const SITTING_MONTH_BEFORE_RE = new RegExp(`(?<![\\p{L}])(?:${SITTING_NOUN})(?:\\s+(?:${SITTING_NOUN}))?\\s+(?:im|in|vom|am|of)\\s+$`, "iu");
@@ -969,7 +1008,8 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
     return [...exams].some((exam) =>
       (sittingMonths.get(exam) ?? []).some((r) =>
         v.keys.some((k) => r.keys.has(k)) &&
-        (Object.keys(UNIVERSITY_NAMES) as Array<keyof typeof UNIVERSITY_NAMES>).every((u) => u === r.university || !UNIVERSITY_NAMES[u].test(sentence))
+        (Object.keys(UNIVERSITY_NAMES) as Array<keyof typeof UNIVERSITY_NAMES>).every((u) => u === r.university || !UNIVERSITY_NAMES[u].test(sentence)) &&
+        Object.entries(EXAM_NAMES).every(([k, re]) => k === exam || !re.test(sentence))
       )
     );
   };
@@ -1018,6 +1058,7 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
     }
 
     const blockExams = new Set(used.filter((f) => !isInternalFactId(f.id)).map((f) => f.exam_key));
+    const blockOneUnits = new Set(used.filter((f) => !isInternalFactId(f.id)).flatMap((f) => [...factOneUnits(f)]));
     const answerIds = new Set(parsed.blocks.flatMap((x) => x.factIds));
     const internalReadOn = new Set(used.filter((f) => isInternalFactId(f.id)).map((f) => f.read_on));
     const studyBlock = opts.study === true || used.some((f) => f.id.startsWith("progress."));
@@ -1063,7 +1104,8 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
         !v.keys.some((k) => allowed.has(k)) &&
         !((v.kind === "month" || v.kind === "monthyear") && asked.some(([a, e]) => v.start >= a && v.end <= e)) &&
         !restatesKnown(v, text, values, allowed, opts.today) &&
-        !restatesSittingMonth(v, text, blockExams)
+        !restatesSittingMonth(v, text, blockExams) &&
+        !oneOfStatedUnit(v, text, blockOneUnits)
     );
     let outText = text;
     if (bad.length > 0) {
