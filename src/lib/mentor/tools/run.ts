@@ -491,7 +491,9 @@ async function getQuestion(input: unknown, ctx: TurnContext, env: ToolEnv): Prom
   env.remember(internalFact(factId, corpus, ctx.now));
   // Terms the learner named that this row contains (learner spelling); never in hint mode,
   // where starting with an option's term could point at the key.
-  const glossFirst = hintOnly || ctx.lang === "de" ? [] : rowTermsNamed(ctx.namedTerms, corpus);
+  // German answers need no gloss (no inline lang ternary here: LX-19 narrow-reader ratchet).
+  const glossed = !hintOnly && ctx.lang !== "de";
+  const glossFirst = glossed ? rowTermsNamed(ctx.namedTerms, corpus) : [];
   return ok(
     {
       ...content,
@@ -501,9 +503,7 @@ async function getQuestion(input: unknown, ctx: TurnContext, env: ToolEnv): Prom
         ? "Give one guiding hint from the stem and unmarked choices only. Never identify a correct option. Do not assert an answer or invent a missing explanation."
         : [
             "Explain in the learner's language and keep German exam terms verbatim. Name an option by its text, shortened if long. Never refer to option letters.",
-            ctx.lang === "de"
-              ? ""
-              : `Gloss shape: at its first mention write each German term once, directly followed by a short ${ctx.lang} gloss in round brackets, "<term> (<gloss>)". Never reuse an option's own brackets for this ("Vitamin K (Phytomenadion)": write "Phytomenadion (<gloss>)").${glossFirst.length > 0 ? " Start the answer with the gloss_first terms, written exactly as listed, each with its gloss." : ""}`,
+            glossed && `Gloss shape: at its first mention write each German term once, directly followed by a short ${ctx.lang} gloss in round brackets, "<term> (<gloss>)". Never reuse an option's own brackets for this ("Vitamin K (Phytomenadion)": write "Phytomenadion (<gloss>)").${glossFirst.length > 0 ? " Start the answer with the gloss_first terms, written exactly as listed, each with its gloss." : ""}`,
             "If the keyed answer does not fit the stem or the explanation points to another option, do not defend it and invent no stem finding: say the key looks doubtful, say what the row supports, and suggest the app's report-question control. Otherwise do not mention reporting.",
             "Background is optional and usually omitted; if written, one sentence with no digit (not even in a name such as B12) and no counting word (one, two, both, single).",
           ]
