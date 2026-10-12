@@ -26,6 +26,18 @@ export const CHANGELOG: ChangelogEntry[] = [
   "date": "2026-10-12",
   "tag": "admin",
   "title": {
+    "de": "Admin: sichere Fragenkorrekturen, Lernenden-Schutz und PUYP-Nachverfolgung",
+    "en": "Admin: safe question edits, learner safeguards and PUYP follow-up"
+  },
+  "description": {
+    "de": "Vorgeschlagene Korrekturen zeigen vor dem Übernehmen einen Vorher/Nachher-Vergleich und lassen sich rückgängig machen; Antworten und Auswahlmöglichkeiten werden nie automatisch übernommen. Profiländerungen prüfen E-Mail-Adressen, Sperren und Freischaltungen gibt es nur noch im Profil, und dauerhaftes Pro wird nicht verkürzt. Neu: Abmelden auf allen Geräten, Duplikatsuche über die ganze Fragenbank und eine Nachverfolgungsliste für abgelehnte PUYP-Anträge.",
+    "en": "Suggested question edits show a before/after view before they are applied and can be reverted; answers and choices are never applied automatically. Profile edits validate email addresses, lock and grant live only on the learner profile, and permanent Pro is never shortened. New: sign out on all devices, a duplicate scan over the whole question bank and a follow-up list for rejected PUYP claims."
+  }
+},
+{
+  "date": "2026-10-12",
+  "tag": "admin",
+  "title": {
     "de": "Mentor-Fakten: SIP-Termine neu gelesen, Wiederholungsregel angeglichen",
     "en": "Mentor facts: SIP dates re-read, repeat rule aligned"
   },
