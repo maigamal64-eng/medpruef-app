@@ -15,6 +15,7 @@ import { trackEvent } from "@/lib/tracker";
 import { authFetch as fetch } from "@/lib/authFetch";
 import { captureClientContext } from "@/lib/clientContext";
 import { Alert, Dialog, Textarea } from "@/components/ui";
+import { REPORT_REASONS as FLAG_REASONS, type ReportReason } from "@/components/question/report-reasons";
 
 type Lang = "de" | "en";
 
@@ -26,18 +27,12 @@ interface Props {
   questionText: string;
   explanation: string;
   topic: string;
+  /** Open straight into a flag with this reason (e.g. the image error's "Bild fehlt"). */
+  preset?: { reason: ReportReason } | null;
+  /** Fired once a report is stored (2xx), never on a failed send. */
+  onSubmitted?: () => void;
 }
 
-const FLAG_REASONS = [
-  { value: "incorrect_answer", de: "Falsche Antwort", en: "Incorrect Answer" },
-  { value: "malformed", de: "Fehlerhaft", en: "Malformed" },
-  { value: "duplicate", de: "Duplikat", en: "Duplicate" },
-  { value: "typo", de: "Tippfehler", en: "Typo" },
-  { value: "unclear", de: "Unklar", en: "Unclear" },
-  { value: "missing_explanation", de: "Erklärung fehlt", en: "Missing Explanation" },
-  { value: "wrong_topic", de: "Falsches Thema", en: "Wrong Topic" },
-  { value: "other", de: "Sonstiges", en: "Other" },
-];
 
 export default function ReportQuestionModal({
   open,
@@ -47,6 +42,8 @@ export default function ReportQuestionModal({
   questionText,
   explanation,
   topic,
+  preset = null,
+  onSubmitted,
 }: Props) {
   const [type, setType] = useState<"flag" | "edit" | null>(null);
   const [flagReason, setFlagReason] = useState("");
@@ -63,8 +60,8 @@ export default function ReportQuestionModal({
   // Reset state on open / question change
   useEffect(() => {
     if (open) {
-      setType(null);
-      setFlagReason("");
+      setType(preset ? "flag" : null);
+      setFlagReason(preset?.reason ?? "");
       setDetails("");
       setEditQuestion(questionText);
       setEditExplanation(explanation || "");
@@ -74,23 +71,42 @@ export default function ReportQuestionModal({
       setSendError(null);
       setSignedIn(!!getSessionToken());
     }
-  }, [open, questionId, questionText, explanation, topic]);
+  }, [open, questionId, questionText, explanation, topic, preset]);
 
   // QLT-03: only a stored report is acknowledged; a failed POST says so.
+  // UX-PRA-35: offline keeps the dialog and the typed text; reports never
+  // enter the answer outbox. A failed send keeps everything for a retry.
   const postReport = async (body: Record<string, unknown>): Promise<boolean> => {
     setSendError(null);
-    const res = await fetch("/api/suggestions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      setSendError(copy.offline);
+      return false;
+    }
+    let res: Response;
+    try {
+      res = await fetch("/api/suggestions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+    } catch {
+      setSendError(typeof navigator !== "undefined" && navigator.onLine === false ? copy.offline : copy.sendError);
+      return false;
+    }
     if (res.ok) return true;
     setSendError(res.status === 429 ? copy.rateLimited : copy.sendError);
     return false;
   };
+  // Back online: clear the offline line so "Senden" reads as available again.
+  useEffect(() => {
+    if (!open) return;
+    const onOnline = () => setSendError((current) => (current === copy.offline ? null : current));
+    window.addEventListener("online", onOnline);
+    return () => window.removeEventListener("online", onOnline);
+  }, [open, copy.offline]);
 
   const submitFlag = async () => {
-    if (!flagReason) return;
+    if (!flagReason || loading) return;
     setLoading(true);
     try {
       const context = captureClientContext({ question_id: questionId });
@@ -103,6 +119,7 @@ export default function ReportQuestionModal({
       });
       if (!ok) return;
       setSubmitted(true);
+      onSubmitted?.();
       trackEvent("feature_use", { feature: "flag_question", reason: flagReason, questionId });
     } catch {
       setSendError(copy.sendError);
@@ -116,7 +133,7 @@ export default function ReportQuestionModal({
     if (editQuestion !== questionText) changes.question = editQuestion;
     if (editExplanation !== (explanation || "")) changes.explanation = editExplanation;
     if (editTopic !== topic) changes.topic = editTopic;
-    if (Object.keys(changes).length === 0 && !details) return;
+    if ((Object.keys(changes).length === 0 && !details) || loading) return;
     setLoading(true);
     try {
       const context = captureClientContext({ question_id: questionId });
@@ -129,6 +146,7 @@ export default function ReportQuestionModal({
       });
       if (!ok) return;
       setSubmitted(true);
+      onSubmitted?.();
       trackEvent("feature_use", { feature: "suggest_edit", questionId });
     } catch {
       setSendError(copy.sendError);
@@ -250,18 +268,21 @@ export default function ReportQuestionModal({
       ) : type === "flag" ? (
         <div className="space-y-4">
           <div>
-            <label className="text-[11px] uppercase tracking-wider text-[var(--mp-fg-subtle)] font-semibold mb-2 block">
+            <p id="report-reason-label" className="text-[12px] uppercase tracking-wider text-[var(--mp-fg-subtle)] font-semibold mb-2 block">
               {lang === "de" ? "Was ist das Problem?" : "What's wrong?"}
-            </label>
-            <div className="flex flex-wrap gap-2">
+            </p>
+            <div className="flex flex-wrap gap-2" role="radiogroup" aria-labelledby="report-reason-label">
               {FLAG_REASONS.map((r) => (
                 <button
                   key={r.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={flagReason === r.value}
                   onClick={() => setFlagReason(r.value)}
-                  className={`text-xs px-3 py-1.5 rounded-full border transition-all ${
+                  className={`min-h-11 text-[13px] px-3 py-1.5 rounded-full border transition-all ${
                     flagReason === r.value
-                      ? "bg-[var(--mp-error)]/10 border-[var(--mp-error)]/40 text-[var(--mp-error)] font-semibold"
-                      : "border-[var(--mp-border)] text-[var(--mp-fg-muted)] hover:border-[var(--mp-error)]/30"
+                      ? "bg-[var(--mp-error)]/10 border-[var(--mp-error)]/40 text-[var(--mp-error-text)] font-semibold"
+                      : "border-[var(--mp-border-control)] text-[var(--mp-fg-muted)] hover:border-[var(--mp-error)]/30"
                   }`}
                 >
                   {lang === "de" ? r.de : r.en}

@@ -17,6 +17,7 @@ export interface ReportsCopy {
   close: string;
   sendError: string;
   rateLimited: string;
+  offline: string;
   listTitle: string;
   listIntro: string;
   listEmpty: string;
@@ -46,6 +47,7 @@ const DE: ReportsCopy = {
   close: "Schließen",
   sendError: "Ihre Meldung konnte nicht gesendet werden. Bitte versuchen Sie es erneut.",
   rateLimited: "Sie haben in kurzer Zeit viele Meldungen gesendet. Bitte versuchen Sie es in einigen Minuten erneut.",
+  offline: "Sie sind offline. Ihre Eingabe bleibt erhalten; senden Sie die Meldung, sobald Sie wieder verbunden sind.",
   listTitle: "Meine Meldungen",
   listIntro: "Hier sehen Sie, was aus Ihren gemeldeten Fragen geworden ist.",
   listEmpty: "Sie haben noch keine Frage gemeldet. Einen Fehler melden Sie über „Melden“ direkt bei der Frage.",
@@ -89,6 +91,7 @@ const EN: ReportsCopy = {
   close: "Close",
   sendError: "Your report could not be sent. Please try again.",
   rateLimited: "You sent many reports in a short time. Please try again in a few minutes.",
+  offline: "You are offline. Your text is kept; send the report once you are connected again.",
   listTitle: "My reports",
   listIntro: "What happened to the questions you reported.",
   listEmpty: "You have not reported a question yet. Use Report on any question to tell us about an error.",

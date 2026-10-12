@@ -4,6 +4,7 @@ import { resolveOptionalUser } from '@/lib/auth-guard'
 import { generateWrongOptions, buildMCQOptions, buildMCQFromStored, buildMCQFromChoices, filterDisplayableChoices } from '@/lib/mcq'
 import type { StoredChoice } from '@/lib/mcq'
 import { VIENNA_EXAM_PARTS, DEFAULT_EXAM_SOURCE, EXAM_SOURCE_IDS } from '@/lib/topics'
+import { FLASHCARD_HEADERS, splitFlashcards } from '@/lib/flashcard-eligibility'
 import { captureServerError } from '@/lib/sentry-capture'
 import {
   FREE_TIER_QUESTIONS_PER_EXAM,
@@ -225,6 +226,11 @@ export async function GET(req: NextRequest) {
   const countOnly = countOnlyRaw === '1' || countOnlyRaw === 'true'
 
   const mcqOnly = sp.get('mcqOnly') === '1' || sp.get('mcqOnly') === 'true'
+  // UX-PRA-64: /flashcards asks for recall-able cards only. Applied on the
+  // review-due and random paths (the ones /flashcards uses); a batch is read
+  // so a run of multi-answer rows never ends in a false "Alles wiederholt".
+  const flashcardMode = sp.get('flashcard') === '1'
+  const cardBatch = flashcardMode ? Math.min(30, Math.max(limit * 8, 8)) : limit
 
   const filters: FilterParams = {
     examSource: sp.get('examSource') || DEFAULT_EXAM_SOURCE,
@@ -562,7 +568,7 @@ export async function GET(req: NextRequest) {
       .select('question_id')
       .eq('user_id', userId)
       .lte('next_review_at', new Date().toISOString())
-      .limit(limit)
+      .limit(cardBatch)
 
     const { data: progress } = await reviewQuery
 
@@ -572,7 +578,11 @@ export async function GET(req: NextRequest) {
       q = applyFilters(q, filters)
       q = withMcq(q)
       const { data } = await q
-      if (data && data.length > 0) return NextResponse.json(attachOptions(data))
+      if (data && data.length > 0) {
+        if (!flashcardMode) return NextResponse.json(attachOptions(data))
+        const split = splitFlashcards(attachOptions(data))
+        if (split.cards.length > 0) return flashcardResponse(split.cards.slice(0, limit), split)
+      }
     }
   }
 
@@ -637,18 +647,53 @@ export async function GET(req: NextRequest) {
     return NextResponse.json([])
   }
 
-  const offset = Math.floor(Math.random() * Math.max(1, count - limit))
-
-  let query = sb.from('questions').select('*').eq('is_active', true)
-  query = applyFilters(query, filters)
-  query = withMcq(query)
-  if (free && freeSliceIds) {
-    query = query.in('id', freeSliceIds)
+  const randomBatch = async (size: number) => {
+    const offset = Math.floor(Math.random() * Math.max(1, count - size))
+    let query = sb.from('questions').select('*').eq('is_active', true)
+    query = applyFilters(query, filters)
+    query = withMcq(query)
+    if (free && freeSliceIds) {
+      query = query.in('id', freeSliceIds)
+    }
+    return query.range(offset, offset + size - 1)
   }
-  const { data, error } = await query.range(offset, offset + limit - 1)
+
+  if (flashcardMode) {
+    // Up to three random batches; the skipped ids come back so the page adds
+    // them to excludeIds and never pays a round trip per skipped card.
+    const total = { cards: [] as Record<string, unknown>[], skippedIds: [] as number[], skipped: { multi: 0, option_dependent: 0 } }
+    for (let attempt = 0; attempt < 3 && total.cards.length === 0; attempt += 1) {
+      const { data, error } = await randomBatch(cardBatch)
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+      const split = splitFlashcards(attachOptions(data || []))
+      total.cards = split.cards
+      for (const id of split.skippedIds) if (!total.skippedIds.includes(id)) total.skippedIds.push(id)
+      total.skipped.multi += split.skipped.multi
+      total.skipped.option_dependent += split.skipped.option_dependent
+      if (count <= cardBatch) break
+    }
+    return flashcardResponse(total.cards.slice(0, limit), total)
+  }
+
+  const { data, error } = await randomBatch(limit)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json(attachOptions(data || []))
+}
+
+/** Flashcard batch: the cards plus what the eligibility rules removed. */
+function flashcardResponse(
+  cards: Record<string, unknown>[],
+  split: { skippedIds: number[]; skipped: { multi: number; option_dependent: number } },
+) {
+  const res = NextResponse.json(cards)
+  res.headers.set(FLASHCARD_HEADERS.skippedIds, split.skippedIds.slice(0, 100).join(','))
+  res.headers.set(FLASHCARD_HEADERS.multi, String(split.skipped.multi))
+  res.headers.set(FLASHCARD_HEADERS.optionDependent, String(split.skipped.option_dependent))
+  if (split.skippedIds.length > 0) {
+    console.info('[questions] flashcard eligibility skipped', split.skipped)
+  }
+  return res
 }
 
 /** Attach shuffled MCQ options + n_correct to each question. image_url comes from DB. */

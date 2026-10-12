@@ -686,6 +686,23 @@ const translations = {
   'a22_guest_body': { de: 'Sie nutzen MedPrüf als Gast. Ihr Fortschritt liegt nur auf diesem Gerät. Legen Sie ein Konto an, damit er gespeichert bleibt.', en: 'You are using MedPrüf as a guest. Your progress is only on this device. Create an account so it stays saved.' },
   'a22_guest_cta': { de: 'Konto erstellen', en: 'Create account' },
   'a22_guest_dismiss': { de: 'Gast-Hinweis für 7 Tage ausblenden', en: 'Hide the guest notice for 7 days' },
+  // a23 practice (start), formal Sie.
+  'a23_fc_front': { de: 'Vorderseite', en: 'Front' },
+  'a23_fc_back': { de: 'Rückseite', en: 'Back' },
+  'a23_fc_n_correct': { de: '{n} richtige', en: '{n} correct' },
+  'a23_fc_multi': { de: 'Mehrfachauswahl', en: 'Multiple answers' },
+  'a23_fc_single': { de: 'Einfachauswahl', en: 'Single answer' },
+  'a23_fc_back_region': { de: 'Antwort und Erklärung', en: 'Answer and explanation' },
+  'a23_fc_stem_label': { de: 'Frage', en: 'Question' },
+  'a23_fc_stem_show': { de: 'Frage ganz anzeigen', en: 'Show the whole question' },
+  'a23_fc_stem_hide': { de: 'Frage kürzer anzeigen', en: 'Show less of the question' },
+  'a23_fc_ai_draft': { de: 'KI-Entwurf, nicht redaktionell geprüft', en: 'AI draft, not editorially reviewed' },
+  'a23_fc_read_more': { de: 'Mehr lesen', en: 'Read more' },
+  'a23_fc_in_question': { de: 'Mehr in der Frage', en: 'More in the question' },
+  'a23_fc_no_explanation': { de: 'Zu dieser Karte gibt es noch keine Erklärung.', en: 'There is no explanation for this card yet.' },
+  'a23_fc_report': { de: 'Frage melden', en: 'Report question' },
+  'a23_fc_quiz_only': { de: '{n} Karten nur im Quiz, weil sie Antwortoptionen brauchen.', en: '{n} cards only in the quiz because they need their answer options.' },
+  // a23 practice (end)
   // Home page
   'welcome': { de: 'Willkommen zurück', en: 'Welcome back' },
   'choose_topic': { de: 'Fachgebiet wählen', en: 'Choose Specialty' },

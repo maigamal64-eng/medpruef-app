@@ -63,6 +63,10 @@ import { canUse } from "@/lib/entitlements";
 import { intervalLabel } from "@/lib/master-learning/srs";
 import { newActionKey } from "@/lib/mutation";
 import { CONFIDENCE_GRADE } from "@/lib/answer-request";
+import { cleanExplanation, cutAtSentence, EXPLANATION_PREVIEW_CHARS } from "@/lib/explanation";
+import { FLASHCARD_HEADERS } from "@/lib/flashcard-eligibility";
+import Markdown from "@/components/Markdown";
+import ReportQuestionModal from "@/components/ReportQuestionModal";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
 import { FlipCard } from "@/components/FlashCard";
@@ -72,6 +76,7 @@ import {
   Option,
   AnswerReveal,
   EmptyState,
+  Dialog,
 } from "@/components/ui";
 import LanguageToggle from "@/components/LanguageToggle";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -85,6 +90,7 @@ import {
   ShieldCheck,
   Lock,
   Sparkles,
+  Flag,
 } from "lucide-react";
 import PaywallUpgradeModal from "@/components/PaywallUpgradeModal";
 import { getExamLabel } from "@/lib/master-locale/exam-label";
@@ -159,15 +165,19 @@ interface FlashcardProps {
   onFlip: () => void;
   lang: Lang;
   topicConfig: { color: string; icon: string };
+  onReadMore: (text: string, aiDraft: boolean) => void;
+  examSource: string;
 }
+
+/** Stems longer than this read as a paragraph: 20 px, start-aligned (PRA-68). */
+const LONG_STEM_CHARS = 180;
 
 /**
  * <Flashcard> renders the centered 3D-flip card pair (front + back) for one
- * question, matching 06-flashcards.html: a top accent bar (viridian→spark
- * front, CTA→teal back), a specialty chip keyed on the fach's TOPIC_CONFIG
- * color (via color-mix, dark-safe), a Vorderseite/Rückseite side label, the
- * recall cue on the front, and the correct answer (viridian key emphasis) +
- * optional explanation on the back. One card, full focus.
+ * question: a top accent bar, a specialty chip, the recall cue on the front,
+ * and on the back the stem preview (PRA-63), the correct answer with its
+ * original letters (PRA-64) and the explanation as sanitised markdown cut at
+ * a sentence boundary (PRA-62). One card, full focus (PRA-68 A).
  */
 function Flashcard({
   question,
@@ -176,11 +186,17 @@ function Flashcard({
   onFlip,
   lang,
   topicConfig,
+  onReadMore,
+  examSource,
 }: FlashcardProps) {
   const stemId = useId();
+  const stemPreviewId = useId();
+  const [stemOpen, setStemOpen] = useState(false);
+  useEffect(() => { setStemOpen(false); }, [question.id]);
   const stem = stripMultiCorrectHint(question.question);
   const hintCount = extractCorrectCount(question.question);
   const isMulti = (question.n_correct ?? 1) > 1 || (hintCount ?? 0) > 1;
+  const longStem = stem.length > LONG_STEM_CHARS;
 
   /* Correct options for the back. Prefer structured options; fall back to the
    * pipe-joined answer string split into a list so the back is never blank
@@ -197,14 +213,17 @@ function Flashcard({
         .filter(Boolean)
         .map((text) => ({ text }));
 
-  /* Explanation — treat whitespace-only as absent (the ~69% no-explanation
-   * path must feel complete, not broken). */
-  const bankExplanation = question.explanation?.trim() || "";
-  const explanation = bankExplanation || question.ai_explanation?.trim() || "";
-  const hasExplanation = explanation.length > 0;
-  // TR-30 / MUX-90: AI text is never shown as the bank's own explanation.
-  const explanationIsAi = !bankExplanation && hasExplanation;
+  /* Explanation: whitespace-only is absent. When only the AI cache exists it
+   * is labelled as an AI draft (TR-30). */
+  const reviewed = cleanExplanation(question.explanation, { keepLines: true });
+  const aiText = cleanExplanation(question.ai_explanation, { keepLines: true });
+  const aiDraft = !reviewed && !!aiText;
+  // TR-30 / MUX-90 (a37): AI text is never shown as the bank's own explanation.
   const aiCopy = aiChatCopy(lang);
+  const explanation = reviewed || aiText;
+  const hasExplanation = explanation.length > 0;
+  const cut = cutAtSentence(explanation, EXPLANATION_PREVIEW_CHARS);
+  const quizHref = `/quiz?${new URLSearchParams({ questionId: String(question.id), examSource })}`;
 
   return (
     <FlipCard
@@ -219,42 +238,38 @@ function Flashcard({
         icon: topicConfig.icon,
         label: question.topic,
       }}
-      frontLabel={lang === "de" ? "Vorderseite" : "Front"}
-      backLabel={lang === "de" ? "Rückseite" : "Back"}
+      frontLabel={t("a23_fc_front", lang)}
+      backLabel={t("a23_fc_back", lang)}
       front={
         <>
-          {/* Format badge — replaces the inline "(N richtige)" stem hint */}
+          {/* Format badge, replaces the inline "(N richtige)" stem hint */}
           <div className="flex justify-center">
             {isMulti ? (
-              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-[var(--mp-cta-blue)]/10 text-[var(--mp-cta-blue)]">
+              <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-[var(--mp-cta-blue)]/10 text-[var(--mp-cta-blue)]">
                 {hintCount !== null
-                  ? lang === "de"
-                    ? `${hintCount} richtige`
-                    : `${hintCount} correct`
-                  : lang === "de"
-                    ? "Mehrfachauswahl"
-                    : "Multi-select"}
+                  ? t("a23_fc_n_correct", lang).replace("{n}", String(hintCount))
+                  : t("a23_fc_multi", lang)}
               </span>
             ) : (
-              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-[var(--mp-viridian)]/10 text-[var(--mp-viridian)]">
-                {lang === "de" ? "Einfachauswahl" : "Single"}
+              <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-[var(--mp-viridian)]/10 text-[var(--mp-viridian)]">
+                {t("a23_fc_single", lang)}
               </span>
             )}
           </div>
 
-          {/* Recall cue (stem). Container SCROLLS so a long stem is never
-              clipped; `justify-start` + `my-auto` centers short stems yet keeps
-              tall ones reachable from the top (the flexbox-overflow gotcha). */}
-          <div className="flex-1 min-h-0 flex flex-col items-center justify-start text-center gap-4 px-1 overflow-y-auto -mr-1 pr-1">
-            <div className="my-auto flex flex-col items-center gap-4 w-full">
-              <p id={stemId} className="font-display font-bold text-[var(--mp-fg)] text-[19px] sm:text-[21px] leading-[1.3] whitespace-pre-line">
+          {/* Recall cue (stem). Scaled by length (PRA-68): short prompts 24 px
+              centred, long ones 20 px start-aligned, never below 18 px. The
+              container scrolls as the never-clip backstop. */}
+          <div className={`flex-1 min-h-0 flex flex-col ${longStem ? "items-stretch text-start" : "items-center text-center"} justify-start gap-4 px-1 overflow-y-auto -mr-1 pr-1`}>
+            <div className={`my-auto flex flex-col ${longStem ? "items-stretch" : "items-center"} gap-4 w-full`}>
+              <p id={stemId} className={`font-display text-[var(--mp-fg)] whitespace-pre-line [overflow-wrap:anywhere] hyphens-auto ${longStem ? "text-[20px] font-semibold leading-[1.4]" : "text-[24px] font-bold leading-[1.3]"}`}>
                 {stem}
               </p>
               {question.image_url && (
                 <img
                   src={question.image_url}
                   alt=""
-                  className="max-h-36 rounded-lg object-contain"
+                  className="max-h-36 rounded-lg object-contain self-center"
                 />
               )}
             </div>
@@ -262,18 +277,33 @@ function Flashcard({
 
           {/* Flip hint */}
           <div className="flex items-center justify-center gap-2 text-xs text-[var(--mp-fg-subtle)] mt-2">
-            <RotateCw className="w-[15px] h-[15px]" />
+            <RotateCw className="w-[15px] h-[15px]" aria-hidden />
             {t("tap_to_flip", lang)}
           </div>
-          <p className="text-[10px] text-center text-[var(--mp-fg-subtle)] mt-1">
-            {lang === "de" ? "Lange Fragen können Sie hier scrollen." : "Scroll inside the card to read long questions."}
-          </p>
         </>
       }
       back={
         <>
-          {/* Answer — scrollable so long explanations never overflow the card */}
-          <div className="flex-1 flex flex-col gap-2.5 overflow-y-auto -mr-2 pr-2">
+          {/* One reading region; it scrolls only for very long backs and is
+              then focusable and named (PRA-62). */}
+          <div className="flex-1 min-h-0 flex flex-col gap-2.5 overflow-y-auto -mr-2 pr-2" tabIndex={0} role="region" aria-label={t("a23_fc_back_region", lang)}>
+            {/* PRA-63: the question stays on the back, clamped to two lines. */}
+            <div className="pb-2.5 border-b border-[var(--mp-border-soft)]">
+              <p className="sr-only">{t("a23_fc_stem_label", lang)}</p>
+              <p id={stemPreviewId} className={`text-[13px] leading-snug text-[var(--mp-fg-muted)] whitespace-pre-line [overflow-wrap:anywhere] ${stemOpen ? "" : "line-clamp-2"}`}>
+                {stem}
+              </p>
+              <button
+                type="button"
+                className="mt-1 min-h-11 text-[13px] font-semibold text-[var(--mp-cta-blue)] underline underline-offset-2"
+                aria-expanded={stemOpen}
+                aria-controls={stemPreviewId}
+                onClick={() => setStemOpen((v) => !v)}
+              >
+                {stemOpen ? t("a23_fc_stem_hide", lang) : t("a23_fc_stem_show", lang)}
+              </button>
+            </div>
+
             {correctOptions.length > 0 ? (
               correctOptions.map(({ text, letter }, idx) => (
                 <Option
@@ -293,25 +323,29 @@ function Flashcard({
 
             {hasExplanation && (
               <AnswerReveal correct>
-                <p className="text-[10px] font-semibold text-[var(--mp-fg-subtle)] uppercase tracking-wider mb-1 font-mono">
-                  {explanationIsAi ? `${aiCopy.title} (${aiCopy.badge})` : t("explanation", lang)}
+                <p className="text-[11px] font-semibold text-[var(--mp-fg-subtle)] uppercase tracking-wider mb-1 font-mono">
+                  {aiDraft ? `${aiCopy.title} (${aiCopy.badge})` : t("explanation", lang)}
                 </p>
-                <p className="text-sm text-[var(--mp-fg-muted)] leading-relaxed whitespace-pre-line">
-                  {explanation.length > 600
-                    ? explanation.slice(0, 600) + "…"
-                    : explanation}
-                </p>
-                {explanationIsAi && (
-                  <p data-ai-trust className="mt-1.5 text-[11px] text-[var(--mp-fg-subtle)]">{aiCopy.trustLine}</p>
+                <Markdown className="text-sm text-[var(--mp-fg-muted)] leading-relaxed [overflow-wrap:anywhere]">{cut.text}</Markdown>
+                {aiDraft && (
+                  <p data-ai-trust className="mt-1.5 text-[12px] text-[var(--mp-fg-muted)]">{aiCopy.trustLine}</p>
                 )}
+                <div className="mt-1 flex flex-wrap gap-x-4">
+                  {cut.truncated && (
+                    <button type="button" className="min-h-11 text-[13px] font-semibold text-[var(--mp-cta-blue)] underline underline-offset-2" onClick={() => onReadMore(explanation, aiDraft)}>
+                      {t("a23_fc_read_more", lang)}
+                    </button>
+                  )}
+                  <Link href={quizHref} className="inline-flex min-h-11 items-center text-[13px] font-semibold text-[var(--mp-cta-blue)] underline underline-offset-2">
+                    {t("a23_fc_in_question", lang)}
+                  </Link>
+                </div>
               </AnswerReveal>
             )}
 
             {!hasExplanation && (
               <p className="text-xs text-[var(--mp-fg-subtle)] text-center font-mono italic mt-1">
-                {lang === "de"
-                  ? "Keine Erklärung vorhanden"
-                  : "No explanation available"}
+                {t("a23_fc_no_explanation", lang)}
               </p>
             )}
           </div>
@@ -360,6 +394,12 @@ function FlashcardContent() {
   const ratingKeyRef = useRef(newActionKey());
   const [lastResult, setLastResult] = useState<string | null>(null);
   const [dueToday, setDueToday] = useState<number | null>(null);
+  // TR-09: one-tap report on every card; PRA-62: full explanation sheet;
+  // PRA-64: cards kept in the quiz this session, counted from the server.
+  const [reportOpen, setReportOpen] = useState(false);
+  const [readMore, setReadMore] = useState<{ text: string; aiDraft: boolean } | null>(null);
+  const [quizOnlyCount, setQuizOnlyCount] = useState(0);
+  const skipRetries = useRef(0);
 
   useEffect(() => {
     setLangState(getLang());
@@ -411,18 +451,34 @@ function FlashcardContent() {
     try {
       const examSource = getStoredExamSource();
       const topic = searchParams.get("topic") || "random";
-      const params = new URLSearchParams({ topic, limit: "1", examSource });
+      const params = new URLSearchParams({ topic, limit: "1", examSource, flashcard: "1" });
       const scope = `${examSource}:${topic}`;
       if (seenScopeRef.current !== scope) {
         seenScopeRef.current = scope;
         seenQuestionIdsRef.current = [];
+        setQuizOnlyCount(0);
       }
       addExcludedQuestionIds(params, seenQuestionIdsRef.current);
       const res = await fetch(`/api/questions?${params}`, { signal: request.signal });
       if (!request.current()) return;
       if (!res.ok && res.status !== 402) throw new Error(`Question request failed (${res.status})`);
+      // PRA-64: cards that need their options stay in the quiz. Their ids
+      // join excludeIds so they never cost another round trip.
+      const skippedIds = (res.headers.get(FLASHCARD_HEADERS.skippedIds) || "")
+        .split(",").map(Number).filter((id) => Number.isInteger(id) && id > 0);
+      const freshSkips = skippedIds.filter((id) => !seenQuestionIdsRef.current.includes(id));
+      if (freshSkips.length) {
+        seenQuestionIdsRef.current = [...seenQuestionIdsRef.current, ...freshSkips];
+        setQuizOnlyCount((n) => n + freshSkips.length);
+      }
       const data = await res.json();
       if (!request.current()) return;
+      if (Array.isArray(data) && data.length === 0 && freshSkips.length > 0 && skipRetries.current < 4) {
+        skipRetries.current += 1;
+        void fetchCardRef.current();
+        return;
+      }
+      skipRetries.current = 0;
       if ((!Array.isArray(data) && !data?.paywallHit) || (!res.ok && !data?.paywallHit)) throw new Error("Invalid question response");
       if (Array.isArray(data) && data.length > 0) {
         shownRef.current += 1;
@@ -450,6 +506,8 @@ function FlashcardContent() {
       if (request.current()) setLoading(false);
     }
   }, [searchParams]);
+  const fetchCardRef = useRef(fetchCard);
+  fetchCardRef.current = fetchCard;
 
   // Fetch first card
   useEffect(() => {
@@ -680,7 +738,23 @@ function FlashcardContent() {
                 <span>{lang === "de" ? `Heute fällig: ${dueToday}` : `Due today: ${dueToday}`}</span>
               </>)}
             </div>
+            {quizOnlyCount > 0 && (
+              <p className="text-[12px] text-[var(--mp-fg-muted)] mt-0.5">
+                {t("a23_fc_quiz_only", lang).replace("{n}", String(quizOnlyCount))}
+              </p>
+            )}
           </div>
+
+          {/* TR-09: one-tap report on both faces, every width. */}
+          <button
+            type="button"
+            onClick={() => setReportOpen(true)}
+            aria-label={t("a23_fc_report", lang)}
+            title={t("a23_fc_report", lang)}
+            className="min-w-11 min-h-11 rounded-[10px] border border-[var(--mp-border-soft)] bg-[var(--mp-surface)] flex items-center justify-center text-[var(--mp-fg-muted)] hover:text-[var(--mp-error-text)] transition-colors flex-shrink-0"
+          >
+            <Flag className="w-[17px] h-[17px]" aria-hidden />
+          </button>
 
           {/* Shuffle = skip to the next card (re-fetch; no new endpoint). */}
           <button
@@ -705,17 +779,13 @@ function FlashcardContent() {
           </div>
         </div>
 
-        {/* ── Card area: one centered card, full focus ──────────────── */}
-        {/* Desktop sizing fix for #1: the old fixed `lg:aspect-[16/10]` (~460×287)
-            was too short for long stems, forcing heavy scroll/clip. Mobile keeps
-            the 3/4 ratio (it already reads fine there). On desktop the card now
-            GROWS to fill the available column height — clamp(420px, 62vh, 620px),
-            wider max-w-[560px] — so most long questions fit with little/no scroll,
-            and the front face still scrolls as the guaranteed never-clip backstop.
-            The 3D flip is unaffected (both faces fill inset-0 of whatever box). */}
-        <div className="flex-1 flex items-center justify-center px-5 lg:px-8 py-2 min-h-0">
-          <div className="w-full max-w-[340px] lg:max-w-[560px]">
-            <div className="aspect-[3/4] lg:aspect-auto lg:h-[clamp(420px,62vh,620px)] w-full">
+        {/* ── Card area: one centered card, full focus (PRA-68 A) ─────
+            Phones: the card is fluid, full width minus the 16 px gutters and
+            the remaining height between the bar and the rating tray, with a
+            floor and a dvh-based ceiling. Desktop keeps its clamp. */}
+        <div className="flex-1 flex items-stretch lg:items-center justify-center px-4 lg:px-8 py-2 min-h-0">
+          <div className="w-full lg:max-w-[560px] flex flex-col">
+            <div className="flex-1 min-h-[360px] max-h-[72dvh] lg:flex-none lg:max-h-none lg:h-[clamp(420px,62vh,620px)] w-full">
               <Flashcard
                 question={question}
                 flipped={flipped}
@@ -723,14 +793,16 @@ function FlashcardContent() {
                 onFlip={() => setFlipped(true)}
                 lang={lang}
                 topicConfig={topicConfig}
+                onReadMore={(text, aiDraft) => setReadMore({ text, aiDraft })}
+                examSource={getStoredExamSource()}
               />
             </div>
           </div>
         </div>
 
         {/* ── Action tray: flip CTA (front) → SM-2 buttons (back) ────── */}
-        <div className="flex-shrink-0 px-5 lg:px-8 pt-3 pb-6 lg:pb-8">
-          <div className="w-full max-w-[340px] lg:max-w-[520px] mx-auto">
+        <div className="flex-shrink-0 px-4 lg:px-8 pt-3 pb-6 lg:pb-8">
+          <div className="w-full lg:max-w-[520px] mx-auto">
             <p role="status" className="min-h-5 mb-2 text-center text-sm text-[var(--mp-fg)]">{lastResult ?? ""}</p>
             {!flipped ? (
               <button
@@ -778,6 +850,27 @@ function FlashcardContent() {
             )}
           </div>
         </div>
+        <ReportQuestionModal
+          open={reportOpen}
+          onClose={() => setReportOpen(false)}
+          lang={lang}
+          questionId={question.id}
+          questionText={question.question}
+          explanation={question.explanation || ""}
+          topic={question.topic}
+        />
+        <Dialog
+          open={readMore !== null}
+          onOpenChange={(open) => { if (!open) setReadMore(null); }}
+          title={t("explanation", lang)}
+          placement="sheet"
+          maxWidth="640px"
+        >
+          {readMore?.aiDraft && <p className="text-[12px] font-semibold text-[var(--mp-warning-text)] mb-2">{t("a23_fc_ai_draft", lang)}</p>}
+          <div lang="de" dir="ltr">
+            <Markdown className="text-[15px] leading-relaxed text-[var(--mp-fg)] [overflow-wrap:anywhere]">{readMore?.text ?? ""}</Markdown>
+          </div>
+        </Dialog>
       </main>
     </AppLayout>
   );
