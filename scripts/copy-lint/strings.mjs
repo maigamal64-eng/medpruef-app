@@ -10,11 +10,13 @@ import { readFileSync } from 'node:fs';
 export function germanCondition(cond) {
   const NOT_DE = /!==?\s*["']de["']|["']de["']\s*!==?/;
   const IS_DE = /===?\s*["']de["']|["']de["']\s*===?/;
-  const IS_EN = /===?\s*["']en["']|["']en["']\s*===?/;
+  const NOT_EN = /!==?\s*["']en["']|["']en["']\s*!==?/;
+  const IS_EN = /(?<!!)===?\s*["']en["']|["']en["']\s*===?/;
   const DE_FLAG = /^\(?\s*(?:de|isDe|isDE|isGerman)\s*\)?$/;
   const NOT_DE_FLAG = /^!\s*\(?\s*(?:de|isDe|isDE|isGerman)\s*\)?$/;
   if (NOT_DE.test(cond) || NOT_DE_FLAG.test(cond)) return false;
   if (IS_DE.test(cond) || DE_FLAG.test(cond)) return true;
+  if (NOT_EN.test(cond) && !/&&|\|\|/.test(cond)) return true;
   if (IS_EN.test(cond) && !/\|\|/.test(cond)) return false;
   return null;
 }

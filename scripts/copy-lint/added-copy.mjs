@@ -16,7 +16,7 @@ const git = (repo, args) => execFileSync('git', ['-C', repo, ...args], { encodin
 
 /** Added line numbers per path for base..head. */
 export function addedLinesBetween(repo, base, head) {
-  const diff = git(repo, ['diff', '-U0', '--no-color', '--no-ext-diff', '--diff-filter=AM', base, head]);
+  const diff = git(repo, ['diff', '-U0', '--no-color', '--no-ext-diff', base, head]);
   const added = new Map();
   let path = null;
   for (const line of diff.split('\n')) {

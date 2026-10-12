@@ -228,7 +228,7 @@ const COPY = {
       de: "Angeführt von Flash-Notes und deiner persönlichen Library, plus alles, was du in jeder anderen Prüfungs-App vermisst.",
       en: "Led by flash-notes and your personal Library, plus everything you miss in every other exam app.",
     },
-    // Each card renders from the claims register (LX-30, learning-claims.data.json).
+    // Each card renders from the claims register (LX-30, learning-claims.copy.json).
     items: ([
       [NotebookPen, "landing.flash-notes"],
       [Layers, "landing.library"],

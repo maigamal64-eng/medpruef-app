@@ -1,10 +1,11 @@
 /**
  * Public learning-feature claims (LX-30, UX-GLOBAL-07). Every /pricing cohort
  * bullet and /landing feature card renders from a row in
- * src/lib/guidance-data/learning-claims.data.json; this module fills the
+ * src/lib/guidance-data/learning-claims.copy.json (provenance per id: learning-claims.data.json,
+ * test-only, never bundled); this module fills the
  * placeholders from src/lib/content-truth.ts. Framework-agnostic.
  */
-import data from "@/lib/guidance-data/learning-claims.data.json";
+import data from "@/lib/guidance-data/learning-claims.copy.json";
 import {
   AI_DAILY_LIMIT_WORDING,
   EXAM_SIMULATION_HOURS,
@@ -21,9 +22,6 @@ export interface LearningClaim {
   tag?: string;
   title?: Record<ClaimTextLang, string>;
   text: Record<ClaimTextLang, string>;
-  source: string;
-  code_paths: string[];
-  test: { file: string; name: string };
 }
 
 export const LEARNING_CLAIMS = data.claims as LearningClaim[];

@@ -42,7 +42,7 @@ export function addedLines(repo, base, files) {
 }
 
 /** German strings in JSON copy registers that render on public pages (always checked in full). */
-export const JSON_REGISTERS = ['src/lib/guidance-data/learning-claims.data.json', 'src/lib/guidance-data/bank-provenance.data.json', 'src/lib/guidance-data/wien-deadlines.data.json'];
+export const JSON_REGISTERS = ['src/lib/guidance-data/learning-claims.copy.json', 'src/lib/guidance-data/bank-provenance.data.json', 'src/lib/guidance-data/wien-deadlines.data.json'];
 export function jsonRegisterHits(repo = ROOT, files = JSON_REGISTERS, read = path => readFileSync(resolve(repo, path), 'utf8')) {
   const hits = [];
   const walk = (node, path, trail) => {

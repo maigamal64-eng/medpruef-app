@@ -44,8 +44,8 @@ function adminRanges(path, source) {
   return ranges;
 }
 
-/** Public copy in JSON registers: every `de`/`en`/`title`/`text`/`statement` string. */
-export const JSON_COPY = ['src/lib/guidance-data/learning-claims.data.json', 'src/lib/guidance-data/bank-provenance.data.json', 'src/lib/guidance-data/wien-deadlines.data.json'];
+/** Public copy in JSON registers: every string under a `de` or `en` key. */
+export const JSON_COPY = ['src/lib/guidance-data/learning-claims.copy.json', 'src/lib/guidance-data/bank-provenance.data.json', 'src/lib/guidance-data/wien-deadlines.data.json'];
 export function jsonCopyHits(repo = ROOT, files = JSON_COPY, read = path => readFileSync(resolve(repo, path), 'utf8')) {
   const hits = [];
   const walk = (node, path, trail) => {

@@ -73,6 +73,7 @@ describe("German branch detection", () => {
     expect(germanCondition("lang === 'de'")).toBe(true);
     expect(germanCondition('lang !== "de"')).toBe(false);
     expect(germanCondition('lang === "en"')).toBe(false);
+    expect(germanCondition("lang !== 'en'")).toBe(true);
     expect(germanCondition("isDe")).toBe(true);
     expect(germanCondition("!de")).toBe(false);
     expect(germanCondition("lang === 'en' || lang === 'tr'")).toBe(null);

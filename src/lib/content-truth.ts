@@ -326,7 +326,7 @@ export const BANNED_PHRASES = [
 
 // ── 10b. Learning-feature claim inputs (LX-30, UX-GLOBAL-07) ──────
 //
-// Public learning claims render from src/lib/guidance-data/learning-claims.data.json
+// Public learning claims render from src/lib/guidance-data/learning-claims.copy.json
 // through src/lib/learning-claims.ts; these constants fill their placeholders.
 // tests/unit/track-b/b32-lx-pure-modules/learning-claims.test.ts checks them
 // against the code that does the work.

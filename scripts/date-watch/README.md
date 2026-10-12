@@ -51,8 +51,11 @@ It has no acknowledgement or promotion mode.
 
 `--fail-past` (G05, used in CI) also fails a confirmed date that is already past
 (Europe/Vienna today, or `--today YYYY-MM-DD`). Lines that quote a past sitting on
-purpose carry a `date-ok:` marker. CI runs this on the lines added since the push or
-pull-request base, so existing history is untouched.
+purpose carry a `date-ok:` marker. CI runs this on the string literals and JSX text added since the push or
+pull-request base in `src/app` (not admin, API or sitemap files), `src/components/seo`
+and `src/lib/i18n*.ts` (`scripts/copy-lint/added-copy.mjs`); a `date-ok:` marker counts
+only on the string's own source lines. Markdown drafts in `marketing/` and `comms/`
+are not checked in CI.
 
 ## Schedule, alerts and one state directory
 

@@ -233,7 +233,7 @@ export default function PricingPage() {
 
   /* Cohort feature bullets — the dominant card */
   // Every bullet renders from the claims register (LX-30); an unregistered
-  // bullet cannot ship. Code path and test per row: learning-claims.data.json.
+  // bullet cannot ship. Code path and test per id: learning-claims.data.json.
   const cohortFeatures: Array<{ de: string; en: string }> = claimsFor("pricing.cohort").map((c) => claimText(c.id));
 
   const checkoutProblem = (slot: string) => checkoutFailure?.slot === slot && <div data-plan={slot} className="my-4"><PaymentStatus state={checkoutFailure.state} check={() => { const tier = slot === 'cohort' ? 'premium_pass_guaranteed' : slot === 'starter' ? 'first_3mo_27' : 'first_month_19'; window.location.href = `/checkout/success?tier=${tier}`; }} />

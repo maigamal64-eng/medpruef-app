@@ -642,6 +642,7 @@ export default function Home() {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),
+          timeoutMs: 4_000,
         }).catch(() => {});
       }
       router.push(quizHref);
