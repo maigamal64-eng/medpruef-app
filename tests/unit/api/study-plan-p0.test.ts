@@ -18,7 +18,11 @@ describe('study plan route without a date', () => {
   it('returns a rolling daily plan with bank-scoped due reviews and never writes', async () => {
     const fake = createFakeSupabase(baseline); mocks.client.mockReturnValue(fake.sb);
     const response = await GET(request()); expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({ plan: null, hasExamDate: false, activeExam: 'pharma', dailyGoal: 20, rollingPlan: { newQuestions: 20, dueReviews: 7 } });
+    // a25 (LX-01, pick-plan-target A): no date still means a provisional plan toward the next official sitting, never written.
+    const json = await response.json();
+    expect(json).toMatchObject({ hasExamDate: false, examDate: null, provisional: true, activeExam: 'pharma', dailyGoal: 40, rollingPlan: { newQuestions: 20, dueReviews: 7 } });
+    expect(json.plan.generatedFor).toBe(json.targetDate);
+    expect(['next_official_sitting', 'fallback_horizon']).toContain(json.targetSource);
     const due = fake.calls.find(call => call.table === 'user_question_progress');
     expect(due?.filters).toContainEqual({ kind: 'eq', column: 'questions.exam_type', value: 'pharma' });
     expect(due?.filters).toContainEqual({ kind: 'eq', column: 'user_id', value: 'synthetic-owner' });

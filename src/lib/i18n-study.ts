@@ -186,9 +186,9 @@ const STRINGS = {
 
   // Mock exam trend (INF-04)
   sims_title: { de: 'Prüfungssimulationen je Fachgebiet', en: 'Exam simulations by topic' },
-  sims_count: { de: '{n} vollständige Prüfungssimulationen abgeschlossen', en: '{n} full exam simulations completed' },
-  sims_count_one: { de: '1 vollständige Prüfungssimulation abgeschlossen', en: '1 full exam simulation completed' },
-  sims_need_three: { de: 'Nach drei vollständigen Prüfungssimulationen sehen Sie hier die Entwicklung je Fachgebiet.', en: 'After three full exam simulations you see the trend per topic here.' },
+  sims_count: { de: '{n} Vollsimulationen abgeschlossen', en: '{n} full-length simulations completed' },
+  sims_count_one: { de: '1 Vollsimulation abgeschlossen', en: '1 full-length simulation completed' },
+  sims_need_three: { de: 'Nach drei Vollsimulationen sehen Sie hier die Entwicklung je Fachgebiet.', en: 'After three full-length simulations you see the trend per topic here.' },
   sims_not_prediction: { de: 'Das ist keine Vorhersage Ihres Ergebnisses.', en: 'This is not a prediction of your result.' },
   sims_gap_over: { de: '{n} Prozentpunkte über 60 %', en: '{n} percentage points over 60%' },
   sims_gap_under: { de: '{n} Prozentpunkte unter 60 %', en: '{n} percentage points under 60%' },
