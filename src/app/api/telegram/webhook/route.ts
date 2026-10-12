@@ -208,20 +208,20 @@ export async function POST(req: NextRequest) {
       .eq('id', uuid)
       .maybeSingle()
     if (!lookupErr && user) {
-      // Defensive: only confirm if the Telegram from-id matches the
-      // user's stored telegram_id (or the user has no telegram_id yet,
-      // in which case we link it). Prevents user A from confirming
-      // user B's bot via a leaked uuid.
+      // Confirm only when the Telegram from-id equals the user's stored
+      // telegram_id. This path NEVER links a Telegram account: the user
+      // id in the deep link is not a secret, and writing telegram_id here
+      // let anyone who knew an email-only account's id attach their own
+      // Telegram and then sign in to that account via web_login (account
+      // takeover, closed 2026-10-13). The activation card only renders for
+      // accounts that already have a telegram_id, so no real flow needs it.
       const fromIdMatches =
-        !user.telegram_id || Number(user.telegram_id) === msg.from.id
+        user.telegram_id != null && Number(user.telegram_id) === msg.from.id
       if (fromIdMatches) {
-        const update: Record<string, unknown> = {
-          telegram_chat_id_confirmed: new Date().toISOString(),
-        }
-        if (!user.telegram_id) {
-          update.telegram_id = msg.from.id
-        }
-        await sb.from('users').update(update).eq('id', uuid)
+        await sb
+          .from('users')
+          .update({ telegram_chat_id_confirmed: new Date().toISOString() })
+          .eq('id', uuid)
         const lang = (user.language_code as string | null) || msg.from.language_code || 'en'
         // NOTE: this bot only handles /start* commands — free-text replies
         // sent back here are NOT processed/forwarded, so the copy must not
