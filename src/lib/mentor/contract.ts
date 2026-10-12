@@ -516,6 +516,16 @@ export interface MentorAdminSummary {
     /** ai_spend_cap(floor, pct) with the config values. */
     cap_micro: number;
     pct_of_cap: number;
+    /**
+     * MUX-106 A: each lane's share of cap_micro (they add up to it). With
+     * split_caps false the a38 split read is not installed and the breaker
+     * still compares total_micro with cap_micro.
+     */
+    split_caps?: boolean;
+    mentor_cap_micro?: number;
+    legacy_cap_micro?: number;
+    mentor_pct_of_cap?: number;
+    legacy_pct_of_cap?: number;
   };
   by_day: Array<{ day: string; mentor_micro: number; calls: number; house_micro: number }>;
   by_model: Array<{ model: string; mentor_micro: number; calls: number; input_tokens: number; output_tokens: number; cache_read_tokens: number }>;

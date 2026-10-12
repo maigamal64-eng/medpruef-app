@@ -15,7 +15,8 @@ import {
   type ClaudeUsage,
   type MessageParam,
 } from "@/lib/ai/anthropic";
-import { checkLegacyUserCap, dailyAttemptLimit, getLegacyAiLimits, takeAiQuota } from "@/lib/ai/limits";
+import { checkLaneSpend, checkLegacyUserCap, dailyAttemptLimit, getLegacyAiLimits, takeAiQuota } from "@/lib/ai/limits";
+import { readMentorConfig } from "@/lib/mentor/config";
 import { costMicroUsd, measureInputBytes, reserveCeilingMicro, trimHistoryToFit } from "@/lib/ai/pricing";
 import { DEFAULT_FALLBACK_MODEL, anthropicFallbackModel, resolveFallback } from "@/lib/ai/fallback";
 import { guardCitations } from "@/lib/ai/citation-guard";
@@ -543,12 +544,27 @@ export async function POST(req: NextRequest) {
   }
   const turns = fitted.messages;
 
+  const limits = getLegacyAiLimits();
+  const quotaDb = getServiceClient();
+
+  // ──────────────────────────────────────────────────────────────────
+  // GATE 2b (MUX-106 A, OW-65): the legacy share of the monthly AI cap.
+  // ai-chat counts against the same legacy lane as translate and notes,
+  // and a legacy surge can never rest the paid mentor. Fails CLOSED.
+  // ──────────────────────────────────────────────────────────────────
+  const cfg = readMentorConfig();
+  const lane = await checkLaneSpend(quotaDb, "legacy", { floorMicro: cfg.globalMonthlyCapFloorMicro, netPct: cfg.globalCapNetPct, mentorSharePct: cfg.mentorCapSharePct });
+  if (!lane.ok) {
+    if (lane.reason !== "global_cap") {
+      captureServerError(new Error(`legacy lane spend ${lane.reason ?? "failed"}`), { route: "/api/ai-chat", userId, phase: "legacy-lane-check", failClosed: true });
+    }
+    return aiUnavailable();
+  }
+
   // ──────────────────────────────────────────────────────────────────
   // GATE 3: per-user monthly legacy cost cap (read-only, so a refusal
   // does not burn a daily attempt). Fails CLOSED on any DB problem.
   // ──────────────────────────────────────────────────────────────────
-  const limits = getLegacyAiLimits();
-  const quotaDb = getServiceClient();
   const cap = await checkLegacyUserCap(quotaDb, userId, limits);
   if (!cap.ok) {
     if (cap.reason === "cap_reached") {

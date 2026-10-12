@@ -16,7 +16,7 @@
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { checkGlobalSpend, type RpcClient } from "@/lib/ai/limits";
+import { checkLaneSpend, type RpcClient } from "@/lib/ai/limits";
 import { type MentorConfig, MENTOR_DB_FLAG_KEY } from "./config";
 import {
   MENTOR_ERROR_STATUS,
@@ -182,19 +182,27 @@ export async function takeMentorAttempt(client: RpcClient, config: MentorConfig,
 // ─── Gate 6: global breaker ─────────────────────────────────────────────
 
 /**
- * ai_spend_month (UTC month: mentor ledger + legacy Anthropic rows) against
- * ai_spend_cap(floor, pct) with the C5 config numbers. At or over the cap the
- * mentor rests (503 global_cap); a DB error is 503 reserve_failed.
+ * MUX-106 option A ([name], 2026-10-12): the mentor's own UTC-month spend
+ * (ai_spend_month_split, mentor ledger consumption) against its share of
+ * ai_spend_cap(floor, pct) with the C5 config numbers. Legacy AI spend has
+ * its own share and can no longer rest the paid mentor; the two shares add up
+ * to the old total ceiling. At or over the mentor cap the mentor rests (503
+ * global_cap); a DB error is 503 reserve_failed. Before the a38 changeset the
+ * shared total is checked, as before.
  */
+export function mentorSpendCheck(client: RpcClient, config: MentorConfig, now: Date) {
+  return checkLaneSpend(client, "mentor", { now, floorMicro: config.globalMonthlyCapFloorMicro, netPct: config.globalCapNetPct, mentorSharePct: config.mentorCapSharePct });
+}
+
 export async function checkMentorBreaker(client: RpcClient, config: MentorConfig, now: Date): Promise<MentorHttpError | null> {
-  const r = await checkGlobalSpend(client, { now, floorMicro: config.globalMonthlyCapFloorMicro, netPct: config.globalCapNetPct });
+  const r = await mentorSpendCheck(client, config, now);
   if (r.ok) return null;
   return r.reason === "global_cap" ? mentorError("global_cap") : mentorError("reserve_failed");
 }
 
 /** Read-only breaker state for the usage view: true (resting), false, or null when unknown. */
 export async function mentorResting(client: RpcClient, config: MentorConfig, now: Date): Promise<boolean | null> {
-  const r = await checkGlobalSpend(client, { now, floorMicro: config.globalMonthlyCapFloorMicro, netPct: config.globalCapNetPct });
+  const r = await mentorSpendCheck(client, config, now);
   if (r.ok) return false;
   return r.reason === "global_cap" ? true : null;
 }
@@ -211,7 +219,7 @@ export type RestingFn = (client: RpcClient, config: MentorConfig, now: Date) => 
 export function createRestingCache(ttlMs = 60_000, nowMs: () => number = () => Date.now()): RestingFn {
   let hit: { at: number; key: string; value: boolean } | null = null;
   return async (client, config, now) => {
-    const key = `${config.globalMonthlyCapFloorMicro}:${config.globalCapNetPct}`;
+    const key = `${config.globalMonthlyCapFloorMicro}:${config.globalCapNetPct}:${config.mentorCapSharePct}`;
     const t = nowMs();
     if (hit && hit.key === key && t - hit.at < ttlMs) return hit.value;
     const value = await mentorResting(client, config, now);

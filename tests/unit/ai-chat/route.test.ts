@@ -29,6 +29,7 @@ const UID = "11111111-1111-4111-8111-111111111111";
 interface Scenario {
   quota?: FakeResult; // ai_quota_take reply
   cap?: FakeResult; // ai_legacy_cost_month reply
+  split?: FakeResult; // ai_spend_month_split reply (MUX-106 A legacy lane)
   r2Columns?: boolean; // do the R2 ai_call_log columns exist
   localeColumn?: boolean; // does questions.ai_explanation_lang exist
   cachedAi?: string | null;
@@ -45,6 +46,8 @@ function setup(sc: Scenario = {}) {
   const { sb, calls } = createFakeSupabase((call: FakeCall): FakeResult | undefined => {
     if (call.table === "rpc:ai_quota_take") return s.quota ?? { data: { ok: true, used: 1 } };
     if (call.table === "rpc:ai_legacy_cost_month") return s.cap ?? { data: 0 };
+    if (call.table === "rpc:ai_spend_month_split") return s.split ?? { data: { mentor_micro: 0, legacy_micro: 0 } };
+    if (call.table === "rpc:ai_spend_cap") return { data: 50_000_000 };
     if (call.table === "ai_call_log") {
       if (call.op === "select") {
         return s.r2Columns ? { data: [] } : { error: { code: "42703", message: "column ai_call_log.route does not exist" } };

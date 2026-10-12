@@ -94,9 +94,16 @@ describe("POST /api/translate metering", () => {
     expect(rowsFor(h.state, "user_events")).toHaveLength(1);
   });
 
-  it("gate order: global spend, then user cap, then the quota take", async () => {
+  it("gate order: legacy lane spend (split read, shared fallback before the a38 changeset), then user cap, then the quota take", async () => {
     await req();
-    expect(h.state.rpcCalls.map((c) => c.fn)).toEqual(["ai_spend_month", "ai_spend_cap", "ai_legacy_cost_month", "ai_quota_take", "cache_question_translation_if_current"]);
+    expect(h.state.rpcCalls.map((c) => c.fn)).toEqual(["ai_spend_month_split", "ai_spend_cap", "ai_spend_month", "ai_spend_cap", "ai_legacy_cost_month", "ai_quota_take", "cache_question_translation_if_current"]);
+  });
+
+  it("MUX-106 A: a legacy surge over the legacy share rests translate; mentor spend does not", async () => {
+    h.state.rpc.ai_spend_month_split = () => ({ data: { mentor_micro: 0, legacy_micro: 25_000_000 }, error: null });
+    expect((await req()).status).toBe(503);
+    h.state.rpc.ai_spend_month_split = () => ({ data: { mentor_micro: 49_000_000, legacy_micro: 1_000 }, error: null });
+    expect((await req()).status).toBe(200);
   });
 
   it("free users keep their 5 a day", async () => {

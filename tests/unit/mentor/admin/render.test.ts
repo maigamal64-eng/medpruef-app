@@ -63,9 +63,19 @@ describe("admin cost view render", () => {
     expect(h).toContain("Breaker tripped");
     expect(h).toContain("$51.00");
     expect(h).toContain("$50.00");
-    expect(h).toContain("102.0% of cap");
-    expect(h).toContain('role="progressbar"');
-    expect(h).toContain('aria-valuenow="100"');
+    expect(h).toContain("(102.0%)");
+    expect(h).toContain("Legacy AI (striped)");
+    expect(h).toContain('data-testid="breaker-stack"');
+    expect(h).toMatch(/aria-label="Monthly spend: mentor \$[0-9.]+, legacy AI \$[0-9.]+, total cap \$50\.00"/);
+  });
+
+  it("MUX-106 A: split caps show both lanes against their own share; a legacy surge does not trip the mentor", () => {
+    const split = { ...populated, state: { ...populated.state, resting: false }, spend: { mentor_micro: 1_000_000, legacy_micro: 50_000_000, total_micro: 51_000_000, cap_micro: 50_000_000, pct_of_cap: 102, split_caps: true, mentor_cap_micro: 25_000_000, legacy_cap_micro: 25_000_000, mentor_pct_of_cap: 4, legacy_pct_of_cap: 200 } };
+    const h = html(createElement(BreakerCard, { summary: split })).replace(/<!-- -->/g, "").replace(/<[^>]+>/g, "");
+    expect(h).toContain("Within the mentor cap");
+    expect(h).toContain("of $25.00 (4.0%)");
+    expect(h).toContain("of $25.00 (200.0%)");
+    expect(h).not.toContain("Breaker tripped");
   });
 
   it("shows a calm breaker when there is headroom", () => {

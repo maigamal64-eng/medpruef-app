@@ -1,4 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { mentorSpendCheck } from "@/lib/mentor/guard";
+import { spendView } from "@/app/api/mentor/admin/summary/aggregate";
 import type { MentorAdminSummary } from "./contract";
 import type { MentorConfig } from "./config";
 import { MENTOR_DB_FLAG_KEY } from "./config";
@@ -23,17 +25,19 @@ function validSnapshot(raw: unknown): raw is Snapshot {
 }
 export async function loadRollupSummary(db: SupabaseClient, config: MentorConfig, now: Date, timezone: MentorAdminTimezone): Promise<MentorAdminSummary> {
  const month=utcMonth(now);
- const [rollup,flag,spend]=await Promise.all([
+ const [rollup,flag,spend,lane]=await Promise.all([
   db.rpc("mentor_admin_snapshot",{p_month:month,p_timezone:timezone,p_now:now.toISOString()}),
   db.from("flags").select("enabled,env,rollout_pct").eq("key",MENTOR_DB_FLAG_KEY).maybeSingle(),
   checkGlobalSpend(db as unknown as RpcClient,{now,floorMicro:config.globalMonthlyCapFloorMicro,netPct:config.globalCapNetPct}),
+  mentorSpendCheck(db as unknown as RpcClient,config,now),
  ]);
  if(rollup.error){if(["42883","PGRST202","42P01","PGRST205"].includes(rollup.error.code))throw new MentorAdminLoadError("ledger_not_applied");throw new MentorAdminLoadError("db_error");}
- if(flag.error||!validSnapshot(rollup.data)||spend.spentMicro===null||spend.capMicro===null)throw new MentorAdminLoadError("db_error");
+ if(flag.error||!validSnapshot(rollup.data)||spend.spentMicro===null||spend.capMicro===null||lane.reason==="db_error"||lane.reason==="bad_response")throw new MentorAdminLoadError("db_error");
  const {mentor_micro,...data}=rollup.data;
  const total=Math.max(spend.spentMicro,mentor_micro), cap=spend.capMicro;
+ const view=spendView(total,mentor_micro,cap,config.mentorCapSharePct,lane.split);
  return {...data,generated_at:now.toISOString(),month,timezone,projection:projectMentorSpend(total,cap,now),
-  spend:{mentor_micro,legacy_micro:Math.max(0,total-mentor_micro),total_micro:total,cap_micro:cap,pct_of_cap:cap>0?total/cap*100:total>0?100:0},
-  state:{ai_features_enabled:config.aiFeaturesEnabled,mentor_enabled:config.enabled,packages_enabled:config.packagesEnabled,topups_enabled:config.topupsEnabled,db_flag:flag.data,resting:total>=cap,beta_allowlist_size:config.betaUserIds.length},
+  spend:view.spend,
+  state:{ai_features_enabled:config.aiFeaturesEnabled,mentor_enabled:config.enabled,packages_enabled:config.packagesEnabled,topups_enabled:config.topupsEnabled,db_flag:flag.data,resting:view.resting,beta_allowlist_size:config.betaUserIds.length},
  };
 }

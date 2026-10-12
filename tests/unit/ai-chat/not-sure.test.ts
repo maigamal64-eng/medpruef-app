@@ -35,6 +35,8 @@ function setup() {
   const { sb } = createFakeSupabase((call: FakeCall): FakeResult | undefined => {
     if (call.table === "rpc:ai_quota_take") return { data: { ok: true, used: 1 } };
     if (call.table === "rpc:ai_legacy_cost_month") return { data: 0 };
+    if (call.table === "rpc:ai_spend_month_split") return { data: { mentor_micro: 0, legacy_micro: 0 } };
+    if (call.table === "rpc:ai_spend_cap") return { data: 50_000_000 };
     if (call.table === "ai_call_log") return call.op === "select" ? { data: [] } : {};
     if (call.table === "questions") {
       if (call.op === "select") {

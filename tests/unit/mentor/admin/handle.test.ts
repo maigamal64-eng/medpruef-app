@@ -35,7 +35,7 @@ describe("handleMentorAdminSummary", () => {
     const r = await handleMentorAdminSummary(client, CONFIG, NOW);
     expect(r.status).toBe(200);
     if (r.status !== 200) return;
-    expect(r.body.spend).toEqual({ mentor_micro: 2_500, legacy_micro: 1_000_000, total_micro: 1_002_500, cap_micro: 50_000_000, pct_of_cap: 2 });
+    expect(r.body.spend).toMatchObject({ mentor_micro: 2_500, legacy_micro: 1_000_000, total_micro: 1_002_500, cap_micro: 50_000_000, pct_of_cap: 2, split_caps: false });
     expect(r.body.top_users).toEqual([{ user_id: U1, spent_micro: 2_000, messages: 1, available_micro: 748_000 }]);
     expect(r.body.clawbacks).toHaveLength(1);
     expect(r.body.stale_reservations[0]).toMatchObject({ request_id: R3, age_minutes: 150 });

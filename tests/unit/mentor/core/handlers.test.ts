@@ -41,6 +41,8 @@ function rpc(over: Record<string, unknown> = {}) {
     calls,
     rpc(fn: string) {
       calls.push(fn);
+      // An unmocked function is "not installed" (PostgREST PGRST202), e.g. the a38 split read.
+      if (!(fn in map)) return Promise.resolve({ data: null, error: { code: "PGRST202", message: `Could not find the function public.${fn}` } });
       const v = map[fn];
       return Promise.resolve(v instanceof Error ? { data: null, error: { message: v.message } } : { data: v, error: null });
     },

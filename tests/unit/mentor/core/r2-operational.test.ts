@@ -13,7 +13,7 @@ function setup(steps: Step[], rpcOverrides: Record<string,unknown>={}) {
   const rows: Array<Parameters<ChatHandlerDeps["recordTurn"]>[0]>=[];
   const deps:ChatHandlerDeps={
     config:env.deps.config,authenticate:async()=>({ok:true,userId:USER,paidAccess:true}),flag:async()=>true,
-    rpc:{rpc:async(name)=>({data:rpcOverrides[name]??({mentor_reserved_attempt:replies.attempt_ok,ai_spend_month:replies.spend_month,ai_spend_cap:replies.spend_cap} as Record<string,unknown>)[name],error:null})},
+    rpc:{rpc:async(name)=>name==="ai_spend_month_split"&&!(name in rpcOverrides)?{data:null,error:{code:"PGRST202",message:"Could not find the function"}}:({data:rpcOverrides[name]??({mentor_reserved_attempt:replies.attempt_ok,ai_spend_month:replies.spend_month,ai_spend_cap:replies.spend_cap} as Record<string,unknown>)[name],error:null})},
     requests:{claim:async(_u,r,id)=>{const prior=results.get(r.client_request_id);if(prior)return {claimed:false,result:prior.result};results.set(r.client_request_id,{id,result:{status:"in_progress"}});return {claimed:true,requestId:id};},
       finish:async(_u,id,r)=>{const row=[...results.values()].find(row=>row.id===id);if(row)row.result=typeof r==="string"?{status:"error",error:r}:{status:"complete",final:r};},
       result:async(_u,id)=>results.get(id)?.result??{status:"missing"}},

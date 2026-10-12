@@ -54,41 +54,49 @@ export function BreakerCard({ summary }: { summary: MentorAdminSummary }) {
   const resting = state.resting;
   const observed = new Date(summary.generated_at);
   const resetAt = new Date(Date.UTC(observed.getUTCFullYear(), observed.getUTCMonth()+1, 1)).toISOString().slice(0,16).replace("T"," ");
-  const pct = Math.min(Math.max(spend.pct_of_cap, 0), 100);
-  const tone: StatusTone = resting ? "danger" : spend.pct_of_cap >= 80 ? "warn" : "success";
-  const bar = resting ? "bg-red-500" : spend.pct_of_cap >= 80 ? "bg-[var(--mp-warning)]" : "bg-emerald-500";
+  // MUX-106 A: the mentor rests on its own share; the legacy share cannot pause it.
+  const split = spend.split_caps === true && spend.mentor_cap_micro !== undefined && spend.legacy_cap_micro !== undefined;
+  const lanePct = split ? spend.mentor_pct_of_cap ?? 0 : spend.pct_of_cap;
+  const tone: StatusTone = resting ? "danger" : lanePct >= 80 ? "warn" : "success";
+  const width = (micro: number) => (spend.cap_micro > 0 ? Math.min(Math.max((micro / spend.cap_micro) * 100, 0), 100) : 0);
+  const mentorW = width(spend.mentor_micro);
+  const legacyW = Math.min(width(spend.legacy_micro), 100 - mentorW);
+  const shareMark = split ? width(spend.mentor_cap_micro!) : null;
   return (
     <div className={`${CARD} p-4 sm:p-5 space-y-3`} data-testid="breaker">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <StatusDot tone={tone} pulse={resting} size={10} title={resting ? "Breaker tripped" : "Within budget"} />
           <span className="text-sm font-semibold text-[var(--mp-fg)]">
-            {resting ? "Breaker tripped: the mentor is resting" : tone === "warn" ? "Approaching the global monthly cap" : "Within the global monthly cap"}
+            {resting ? "Breaker tripped: the mentor is resting" : tone === "warn" ? (split ? "Approaching the mentor cap" : "Approaching the global monthly cap") : split ? "Within the mentor cap" : "Within the global monthly cap"}
           </span>
         </div>
         <span className="text-[11px] font-mono text-[var(--mp-fg-muted)]">UTC month {summary.month}</span>
       </div>
       <div
-        className="h-2.5 w-full overflow-hidden rounded-full bg-[var(--mp-surface-sunken)]"
-        role="progressbar"
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-valuenow={Math.round(pct)}
-        aria-label="Monthly spend against the global cap"
+        className="relative h-2.5 w-full overflow-hidden rounded-full bg-[var(--mp-surface-sunken)]"
+        role="img"
+        aria-label={`Monthly spend: mentor ${formatUsd(spend.mentor_micro)}, legacy AI ${formatUsd(spend.legacy_micro)}, total cap ${formatUsd(spend.cap_micro)}`}
+        data-testid="breaker-stack"
       >
-        <div className={`h-full rounded-full ${bar}`} style={{ width: `${pct}%` }} />
+        <div className="absolute inset-y-0 start-0 bg-[var(--mp-cta-blue)]" style={{ width: `${mentorW}%` }} data-lane="mentor" />
+        <div className="absolute inset-y-0 bg-[repeating-linear-gradient(45deg,var(--mp-fg-muted)_0_3px,transparent_3px_6px)]" style={{ insetInlineStart: `${mentorW}%`, width: `${legacyW}%` }} data-lane="legacy" />
+        {shareMark !== null && <div aria-hidden className="absolute inset-y-0 w-0.5 bg-[var(--mp-fg)]" style={{ insetInlineStart: `${shareMark}%` }} />}
       </div>
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-xs text-[var(--mp-fg-muted)]">
-        <span>
-          <strong className="text-base text-[var(--mp-fg)] tabular-nums">{formatUsd(spend.total_micro)}</strong> spent of{" "}
-          <span className="tabular-nums">{formatUsd(spend.cap_micro)}</span> cap
-        </span>
-        <span className="tabular-nums">{formatPct(spend.pct_of_cap)} of cap</span>
-      </div>
+      <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-[var(--mp-fg-muted)]" aria-label="Legend">
+        <li className="inline-flex items-center gap-1.5"><span aria-hidden className="inline-block h-2.5 w-3 rounded-sm bg-[var(--mp-cta-blue)]" />
+          <span>Mentor <strong className="tabular-nums text-[var(--mp-fg)]">{formatUsd(spend.mentor_micro)}</strong>{split && <> of <span className="tabular-nums">{formatUsd(spend.mentor_cap_micro!)}</span> ({formatPct(spend.mentor_pct_of_cap ?? 0)})</>}</span></li>
+        <li className="inline-flex items-center gap-1.5"><span aria-hidden className="inline-block h-2.5 w-3 rounded-sm bg-[repeating-linear-gradient(45deg,var(--mp-fg-muted)_0_3px,transparent_3px_6px)]" />
+          <span>Legacy AI (striped) <strong className="tabular-nums text-[var(--mp-fg)]">{formatUsd(spend.legacy_micro)}</strong>{split && <> of <span className="tabular-nums">{formatUsd(spend.legacy_cap_micro!)}</span> ({formatPct(spend.legacy_pct_of_cap ?? 0)})</>}</span></li>
+        <li className="tabular-nums">Total {formatUsd(spend.total_micro)} of {formatUsd(spend.cap_micro)} ({formatPct(spend.pct_of_cap)})</li>
+      </ul>
       {resting && <p className="text-xs">Resumes {resetAt} UTC, or ask the release owner to review the floor. <a href="/admin/env" className="underline">Environment settings</a></p>}
       <p className="text-[11px] leading-relaxed text-[var(--mp-fg-muted)]">
-        Cap is the larger of the floor and the configured share of trailing 30-day net revenue. At or over it, no new
-        mentor message starts (the same two database functions the guard calls).
+        Cap is the larger of the floor and the configured share of trailing 30-day net revenue.{" "}
+        {split
+          ? "It is split between the mentor and legacy AI (MENTOR_CAP_SHARE_PCT); the line marks the mentor share. Only mentor spend at or over the mentor share rests the mentor; legacy AI stops on its own share."
+          : "Separate mentor and legacy caps start once the a38 changeset is applied; until then the total decides."}{" "}
+        Learners only see a neutral resting note, never these numbers.
       </p>
     </div>
   );

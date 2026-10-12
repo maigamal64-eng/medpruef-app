@@ -74,7 +74,7 @@ export function stubClient(opts: StubOptions): { client: SupabaseClient; log: St
     log.rpcs.push({ fn, args });
     const r = opts.rpc?.[fn];
     if (typeof r === "function") r();
-    const res = (r as { data?: unknown; error?: Err } | undefined) ?? { data: null, error: { message: "no stub" } };
+    const res = (r as { data?: unknown; error?: Err } | undefined) ?? { data: null, error: fn === "ai_spend_month_split" ? { code: "PGRST202", message: "no stub" } : { message: "no stub" } };
     return Promise.resolve({ data: res.data ?? null, error: res.error ?? null });
   }
 

@@ -34,8 +34,9 @@ import {
   callClaude,
   type ClaudeUsage,
 } from "@/lib/ai/anthropic";
+import { readMentorConfig } from "@/lib/mentor/config";
 import {
-  checkGlobalSpend,
+  checkLaneSpend,
   checkLegacyUserCap,
   getLegacyAiLimits,
   takeAiQuota,
@@ -243,7 +244,10 @@ export type LegacyGateResult =
  * taken last, so a refused request never burns one.
  */
 export async function legacyGate(db: RpcClient, userId: string, route: LegacyAiLogRoute, dailyLimit: number | null): Promise<LegacyGateResult> {
-  const global = await checkGlobalSpend(db);
+  // MUX-106 A: legacy AI has its own share of the monthly cap, read with the
+  // same floor and percent the mentor uses (one owner: the mentor config).
+  const cfg = readMentorConfig();
+  const global = await checkLaneSpend(db, "legacy", { floorMicro: cfg.globalMonthlyCapFloorMicro, netPct: cfg.globalCapNetPct, mentorSharePct: cfg.mentorCapSharePct });
   if (!global.ok) {
     return global.reason === "global_cap"
       ? { ok: false, kind: "resting", status: 503, code: "AI_RESTING" }

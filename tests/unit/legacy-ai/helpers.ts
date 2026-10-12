@@ -48,7 +48,7 @@ export function makeDb(state: FakeDbState) {
         state.cachedTranslation = { translated_text: String(row.translated_text), source_model: String(row.source_model), created_at: "local-test" };
         return Promise.resolve({ data: true, error: null });
       }
-      return Promise.resolve(h ? h(args) : { data: null, error: { message: `no rpc ${fn}` } });
+      return Promise.resolve(h ? h(args) : { data: null, error: { code: "PGRST202", message: `no rpc ${fn}` } });
     }),
     from: vi.fn((table: string) => {
       const b: Record<string, unknown> = {};

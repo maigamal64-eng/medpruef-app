@@ -215,3 +215,84 @@ export async function checkGlobalSpend(
     return { ok: false, spentMicro: null, capMicro: null, reason: "db_error" };
   }
 }
+
+// ─── Separate mentor and legacy caps (MUX-106 option A, 2026-10-12) ──────
+
+export type SpendLane = "mentor" | "legacy";
+
+/** Default share of the monthly AI cap reserved for the paid mentor; legacy gets the rest. */
+export const MENTOR_CAP_SHARE_PCT_DEFAULT = 50;
+
+/**
+ * The total cap is split, never raised: the mentor gets floor(cap x share),
+ * legacy AI (ai-chat, translate, notes transform, notes safety) the rest, so
+ * the two lane caps always add up to the old shared ceiling.
+ */
+export function laneCapMicro(totalCapMicro: number, lane: SpendLane, mentorSharePct: number): number {
+  const share = Math.min(100, Math.max(0, Math.floor(mentorSharePct)));
+  const mentor = Math.floor((totalCapMicro * share) / 100);
+  return lane === "mentor" ? mentor : totalCapMicro - mentor;
+}
+
+export interface LaneSpendCheck extends GlobalSpendCheck {
+  lane: SpendLane;
+  /** false: the split read is not installed yet and the shared total was checked (status quo). */
+  split: boolean;
+  totalSpentMicro: number | null;
+  totalCapMicro: number | null;
+}
+
+function missingFunction(error: unknown): boolean {
+  const e = error as { code?: unknown; message?: unknown } | null;
+  if (!e) return false;
+  if (e.code === "PGRST202" || e.code === "42883") return true;
+  return typeof e.message === "string" && /function public\.ai_spend_month_split\b[^\n]{0,80} does not exist|could not find the function/i.test(e.message);
+}
+
+function parseSplit(data: unknown): { mentor: number; legacy: number } | null {
+  const v = Array.isArray(data) ? data[0] : data;
+  if (!v || typeof v !== "object") return null;
+  const r = v as Record<string, unknown>;
+  const mentor = parseMicro(r.mentor_micro);
+  const legacy = parseMicro(r.legacy_micro);
+  return mentor === null || legacy === null ? null : { mentor, legacy };
+}
+
+/**
+ * One lane's monthly spend against its own cap (ai_spend_month_split +
+ * ai_spend_cap). A legacy surge can no longer rest the paid mentor, and the
+ * mentor cannot starve legacy. Allowed only while the lane's spend is
+ * strictly below its cap. Before the a38 changeset is applied the split read
+ * is missing: the shared total is checked against the total cap, exactly as
+ * before (never open). Any other DB problem fails closed.
+ */
+export async function checkLaneSpend(
+  client: RpcClient,
+  lane: SpendLane,
+  opts: { now?: Date; floorMicro?: number; netPct?: number; mentorSharePct: number },
+): Promise<LaneSpendCheck> {
+  const unknown = (reason: "db_error" | "bad_response"): LaneSpendCheck => ({ ok: false, spentMicro: null, capMicro: null, reason, lane, split: true, totalSpentMicro: null, totalCapMicro: null });
+  try {
+    const capArgs: Record<string, unknown> = {};
+    if (opts.floorMicro !== undefined) capArgs.p_floor_micro = opts.floorMicro;
+    if (opts.netPct !== undefined) capArgs.p_net_pct = opts.netPct;
+    const [splitRes, capRes] = await Promise.all([
+      client.rpc("ai_spend_month_split", { p_month: utcMonthKey(opts.now) }),
+      client.rpc("ai_spend_cap", capArgs),
+    ]);
+    if (splitRes.error && missingFunction(splitRes.error)) {
+      const shared = await checkGlobalSpend(client, { now: opts.now, floorMicro: opts.floorMicro, netPct: opts.netPct });
+      return { ...shared, lane, split: false, totalSpentMicro: shared.spentMicro, totalCapMicro: shared.capMicro };
+    }
+    if (splitRes.error || capRes.error) return unknown("db_error");
+    const split = parseSplit(splitRes.data);
+    const cap = parseMicro(capRes.data);
+    if (!split || cap === null) return unknown("bad_response");
+    const spent = lane === "mentor" ? split.mentor : split.legacy;
+    const laneCap = laneCapMicro(cap, lane, opts.mentorSharePct);
+    const base = { lane, split: true, totalSpentMicro: split.mentor + split.legacy, totalCapMicro: cap, spentMicro: spent, capMicro: laneCap };
+    return spent < laneCap ? { ...base, ok: true } : { ...base, ok: false, reason: "global_cap" };
+  } catch {
+    return unknown("db_error");
+  }
+}

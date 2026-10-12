@@ -20,8 +20,11 @@ const COPY = {
 
 export type A38Key = keyof typeof COPY;
 
+/** Column per UI language: German, else the English line (reviewed fallback). */
+const COLUMN: Partial<Record<MentorUiLang, 0 | 1>> = { de: 0 };
+
 export function a38T(key: A38Key, lang: MentorUiLang, vars: Record<string, string | number> = {}): string {
-  return COPY[key][lang === "de" ? 0 : 1].replace(/\{(\w+)\}/g, (m, k: string) => String(vars[k] ?? m));
+  return COPY[key][COLUMN[lang] ?? 1].replace(/\{(\w+)\}/g, (m, k: string) => String(vars[k] ?? m));
 }
 
 function oneDecimal(value: number, lang: MentorUiLang): string {

@@ -22,6 +22,7 @@
  */
 
 import { MODEL_IDS } from "@/lib/ai/pricing";
+import { MENTOR_CAP_SHARE_PCT_DEFAULT } from "@/lib/ai/limits";
 
 type Env = Record<string, string | undefined>;
 
@@ -82,6 +83,8 @@ export interface MentorConfig {
   houseFreeFailsPerDay: number;
   globalMonthlyCapFloorMicro: number;
   globalCapNetPct: number;
+  /** MUX-106 A: percent of the monthly AI cap reserved for the mentor; legacy AI gets the rest. */
+  mentorCapSharePct: number;
 }
 
 export const MENTOR_CONFIG_DEFAULTS: Readonly<MentorConfig> = Object.freeze({
@@ -124,6 +127,7 @@ export const MENTOR_CONFIG_DEFAULTS: Readonly<MentorConfig> = Object.freeze({
   houseFreeFailsPerDay: 3,
   globalMonthlyCapFloorMicro: 50_000_000,
   globalCapNetPct: 6,
+  mentorCapSharePct: MENTOR_CAP_SHARE_PCT_DEFAULT,
 });
 
 export const MENTOR_ENV = Object.freeze({
@@ -145,6 +149,7 @@ export const MENTOR_ENV = Object.freeze({
   houseFreeFailsPerDay: "MENTOR_HOUSE_FREE_FAILS_PER_DAY",
   globalMonthlyCapFloorMicro: "MENTOR_GLOBAL_MONTHLY_CAP_FLOOR_MICRO",
   globalCapNetPct: "MENTOR_GLOBAL_CAP_NET_PCT",
+  mentorCapSharePct: "MENTOR_CAP_SHARE_PCT",
 } as const);
 
 /** Strict boolean: only the literal "true" is on. */
@@ -200,6 +205,7 @@ export function readMentorConfig(env: Env = process.env): MentorConfig {
     houseFreeFailsPerDay: envInt(env[MENTOR_ENV.houseFreeFailsPerDay], d.houseFreeFailsPerDay, 0, 20),
     globalMonthlyCapFloorMicro: envInt(env[MENTOR_ENV.globalMonthlyCapFloorMicro], d.globalMonthlyCapFloorMicro, 0, 1_000_000_000),
     globalCapNetPct: envInt(env[MENTOR_ENV.globalCapNetPct], d.globalCapNetPct, 0, 100),
+    mentorCapSharePct: envInt(env[MENTOR_ENV.mentorCapSharePct], d.mentorCapSharePct, 0, 100),
   };
 }
 

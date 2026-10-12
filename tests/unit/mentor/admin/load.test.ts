@@ -126,7 +126,8 @@ describe("what it reads", () => {
     await loadSummaryInputs(client, CONFIG, NOW);
     const kinds = new Set(log.queries.flatMap((q) => q.filters.map((f) => f.split(":")[0])));
     expect([...kinds].every((k) => ["eq", "in", "gt", "gte", "lt"].includes(k))).toBe(true);
-    expect(log.rpcs.map((r) => r.fn).sort()).toEqual(["ai_spend_cap", "ai_spend_month"]);
+    // The two breaker RPCs plus the a38 split probe (absent here, so the shared total decides).
+    expect([...new Set(log.rpcs.map((r) => r.fn))].sort()).toEqual(["ai_spend_cap", "ai_spend_month", "ai_spend_month_split"]);
   });
 
   it("asks the SAME two RPCs the guard asks, with the config floor and percent", async () => {

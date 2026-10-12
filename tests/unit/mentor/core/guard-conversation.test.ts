@@ -24,6 +24,7 @@ function rpcClient(map: Record<string, unknown | Error>) {
     calls,
     rpc(fn: string) {
       calls.push(fn);
+      if (!(fn in map)) return Promise.resolve({ data: null, error: { code: "PGRST202", message: `Could not find the function public.${fn}` } });
       const v = map[fn];
       if (v instanceof Error) return Promise.resolve({ data: null, error: { message: v.message } });
       return Promise.resolve({ data: v, error: null });

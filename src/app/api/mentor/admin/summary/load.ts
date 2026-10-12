@@ -20,6 +20,7 @@
 import type { MentorTurnRow } from "@/lib/mentor/outcomes";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { checkGlobalSpend, type RpcClient } from "@/lib/ai/limits";
+import { mentorSpendCheck } from "@/lib/mentor/guard";
 import { MENTOR_DB_FLAG_KEY, RESERVE_STALE_MINUTES, type MentorConfig } from "@/lib/mentor/config";
 import {
   CLAWBACKS_LIMIT,
@@ -183,6 +184,10 @@ export async function loadSummaryInputs(
   if (spend.spentMicro === null || spend.capMicro === null || spend.reason === "db_error" || spend.reason === "bad_response") {
     throw new MentorAdminLoadError("db_error", spend.reason ?? "spend");
   }
+  // MUX-106 A: is the split read installed? Then each lane has its own cap,
+  // exactly as the guard decides (mentorSpendCheck). An unknown answer is an error.
+  const lane = await mentorSpendCheck(client as unknown as RpcClient, config, now);
+  if (lane.reason === "db_error" || lane.reason === "bad_response") throw new MentorAdminLoadError("db_error", "spend_split");
 
   return {
     month,
@@ -197,5 +202,6 @@ export async function loadSummaryInputs(
     spendTotalMicro: spend.spentMicro,
     capMicro: spend.capMicro,
     config,
+    splitCaps: lane.split,
   };
 }

@@ -26,6 +26,7 @@
  *    (a message starts only while spend is strictly below the cap).
  */
 
+import { laneCapMicro } from "@/lib/ai/limits";
 import type { MentorConfig } from "@/lib/mentor/config";
 import {
   MENTOR_PACKAGE_IDS,
@@ -106,6 +107,8 @@ export interface SummaryInputs {
   /** ai_spend_cap(floor, pct). */
   capMicro: number;
   config: MentorConfig;
+  /** MUX-106 A: the split read is installed, so each lane has its own cap. */
+  splitCaps?: boolean;
 }
 
 export const TOP_USERS_LIMIT = 10;
@@ -152,6 +155,32 @@ export function daysOfMonthUpTo(month: string, now: Date): string[] {
 }
 
 /** pct of cap, one decimal. A cap of 0 reads as 100 once anything is spent. */
+/**
+ * MUX-106 A: the spend card and the breaker state from one place. With split
+ * caps the mentor rests on its own share; before the a38 changeset the shared
+ * total decides, exactly as the guard does.
+ */
+export function spendView(totalMicro: number, mentorMicro: number, capMicro: number, mentorSharePct: number, splitCaps: boolean): { spend: MentorAdminSummary["spend"]; resting: boolean } {
+  const legacyMicro = Math.max(0, totalMicro - mentorMicro);
+  const mentorCap = laneCapMicro(capMicro, "mentor", mentorSharePct);
+  const legacyCap = laneCapMicro(capMicro, "legacy", mentorSharePct);
+  return {
+    spend: {
+      mentor_micro: mentorMicro,
+      legacy_micro: legacyMicro,
+      total_micro: totalMicro,
+      cap_micro: capMicro,
+      pct_of_cap: pctOfCap(totalMicro, capMicro),
+      split_caps: splitCaps,
+      mentor_cap_micro: mentorCap,
+      legacy_cap_micro: legacyCap,
+      mentor_pct_of_cap: pctOfCap(mentorMicro, mentorCap),
+      legacy_pct_of_cap: pctOfCap(legacyMicro, legacyCap),
+    },
+    resting: splitCaps ? mentorMicro >= mentorCap : totalMicro >= capMicro,
+  };
+}
+
 export function pctOfCap(totalMicro: number, capMicro: number): number {
   if (!(capMicro > 0)) return totalMicro > 0 ? 100 : 0;
   return Math.round((totalMicro / capMicro) * 1000) / 10;
@@ -210,6 +239,7 @@ export function buildAdminSummary(input: SummaryInputs): MentorAdminSummary {
   // remainder go negative if a row landed between the two reads.
   const totalMicro = Math.max(n(input.spendTotalMicro), mentorMicro);
   const capMicro = n(input.capMicro);
+  const spendNow = spendView(totalMicro, mentorMicro, capMicro, config.mentorCapSharePct, input.splitCaps === true);
 
   // Lots: live remaining per user and sold vs consumed per package.
   const liveByUser = new Map<string, number>();
@@ -284,13 +314,7 @@ export function buildAdminSummary(input: SummaryInputs): MentorAdminSummary {
     quality: buildMentorQuality(input.turns ?? []),
     generated_at: now.toISOString(),
     month: input.month,
-    spend: {
-      mentor_micro: mentorMicro,
-      legacy_micro: totalMicro - mentorMicro,
-      total_micro: totalMicro,
-      cap_micro: capMicro,
-      pct_of_cap: pctOfCap(totalMicro, capMicro),
-    },
+    spend: spendNow.spend,
     by_day: [...day.entries()]
       .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
       .map(([d, v]) => ({ day: d, mentor_micro: v.mentor, calls: v.calls, house_micro: v.house })),
@@ -318,7 +342,7 @@ export function buildAdminSummary(input: SummaryInputs): MentorAdminSummary {
       db_flag: input.dbFlag
         ? { enabled: !!input.dbFlag.enabled, env: input.dbFlag.env, rollout_pct: n(input.dbFlag.rollout_pct) }
         : null,
-      resting: totalMicro >= capMicro,
+      resting: spendNow.resting,
       beta_allowlist_size: config.betaUserIds.length,
     },
   };
