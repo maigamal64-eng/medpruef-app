@@ -3,7 +3,6 @@ import { repairWhopPaymentAccess } from "@/lib/whop-entitlement";
 import { NextRequest, NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
 import { getServiceClient } from "@/lib/supabase";
-import { LONG_DB_TIMEOUT_MS } from "@/lib/db-unavailable";
 import { logWebhookAttempt } from "@/lib/webhook-logger";
 import { logPaymentEvent } from "@/lib/paymentEvents";
 import {
@@ -83,7 +82,7 @@ export async function POST(req: NextRequest) {
 
   // Service client (hoisted) — the funnel logger writes at every exit, incl.
   // the pre-verify rejections that are the silent-grant-failure smoking gun.
-  const sbLog = getServiceClient({ timeoutMs: LONG_DB_TIMEOUT_MS });
+  const sbLog = getServiceClient();
 
   const secret = process.env.WHOP_WEBHOOK_SECRET;
   if (!secret) {
@@ -293,7 +292,7 @@ export async function POST(req: NextRequest) {
         "warning"
       );
       try {
-        await recordEvent(getServiceClient({ timeoutMs: LONG_DB_TIMEOUT_MS }), null, "whop_unrecognized_payment_event", {
+        await recordEvent(getServiceClient(), null, "whop_unrecognized_payment_event", {
           event, payment_id: f.paymentId, plan_id: f.planId, email: f.email,
         });
       } catch {
@@ -339,7 +338,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: "no payment id" }, { status: 200 });
     }
 
-    const sb = getServiceClient({ timeoutMs: LONG_DB_TIMEOUT_MS });
+    const sb = getServiceClient();
 
     // Idempotency claim — first delivery wins; retries / multi-event dup.
     claimSb = sb;
@@ -747,6 +746,28 @@ export async function POST(req: NextRequest) {
           } catch (userErr) {
             Sentry.captureException(userErr, { tags: { route: "webhooks/whop", step: "user_update_replay" }, extra: { userId } });
             return NextResponse.json({ error: "Entitlement reconciliation pending" }, { status: 503 });
+          }
+          // The first attempt logged grant_failed; record the success once so
+          // the payment does not stay in Unresolved payments.
+          const { data: logged, error: loggedErr } = await sbLog
+            .from("payment_events")
+            .select("id")
+            .eq("payment_id", f.paymentId)
+            .eq("event", "grant_succeeded")
+            .limit(1);
+          if (!loggedErr && (!logged || logged.length === 0)) {
+            await logPaymentEvent(sbLog, {
+              event: "grant_succeeded",
+              userId,
+              email: f.email,
+              tier,
+              planId: f.planId,
+              paymentId: f.paymentId,
+              amountCents: f.amountCents ?? TIERS[tier]?.priceCents ?? null,
+              currency: (f.currency || "eur").toUpperCase(),
+              matched: true,
+              metadata: { event, expires_at: grant.expiresAt, mode: "replayed", membership_id: f.membershipId, ok: true },
+            });
           }
         }
         return NextResponse.json({ ok: true, duplicate: true });
@@ -1303,7 +1324,7 @@ async function handleRevoke(
   const claimKey = `${kind === "refunded" ? "refund" : "cancel"}:${r.eventDedupeId}`;
 
   try {
-    const sb = getServiceClient({ timeoutMs: LONG_DB_TIMEOUT_MS });
+    const sb = getServiceClient();
     const { data: priorReceipt, error: receiptReadError } = await sb.from("processed_webhook_events")
       .select("event_id, payload").eq("provider", "whop").eq("event_id", claimKey).maybeSingle();
     if (receiptReadError) return NextResponse.json({ error: "Could not verify revoke receipt" }, { status: 503 });
@@ -1429,7 +1450,7 @@ async function handleRevoke(
         `Whop revoke '${event}' matched no whop subscription (paymentCandidates=${paymentCandidates.join(",") || "none"} membership=${r.membershipId ?? "none"} user=${userId ?? "unmapped"}) — manual revoke may be needed`,
         "warning"
       );
-      await recordEvent(getServiceClient({ timeoutMs: LONG_DB_TIMEOUT_MS }), userId, "whop_revoke_unmatched", {
+      await recordEvent(getServiceClient(), userId, "whop_revoke_unmatched", {
         event,
         kind,
         payment_id: r.paymentId,
@@ -1599,7 +1620,7 @@ async function handlePaymentRecovery(
     `[whop webhook] RECOVERY event=${event} paymentId=${f.paymentId ?? "(none)"} status=${status ?? "(none)"} hasRecoveryUrl=${Boolean(recoveryUrl)}`
   );
 
-  const sb = getServiceClient({ timeoutMs: LONG_DB_TIMEOUT_MS });
+  const sb = getServiceClient();
 
   // ── Resolve the subscriber FIRST (fix A), so the claim can record whose
   // dunning this is and the grace guard can filter by user (fix B). The old
@@ -1792,7 +1813,7 @@ async function handleTrialEndingSoon(
   const membershipId = trialEndingMembershipId(d);
   if (!membershipId) return NextResponse.json({ ok: true, skipped: "no_membership" });
   const metadata = rec(d.metadata);
-  const sb = getServiceClient({ timeoutMs: LONG_DB_TIMEOUT_MS });
+  const sb = getServiceClient();
   const buyer = await resolveWhopBuyer(sb, {
     membershipId, metaUserId: str(d.medpruef_user_id) ?? str(metadata.medpruef_user_id) ?? f.metaUserId,
     checkoutConfigId: str(d.checkout_configuration_id) ?? f.checkoutConfigId, email: f.email,

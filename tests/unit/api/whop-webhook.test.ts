@@ -37,6 +37,7 @@ vi.mock("@/lib/supabase", () => ({
 
 import { POST } from "@/app/api/webhooks/whop/route";
 import { captureMessage } from "@sentry/nextjs";
+import { logPaymentEvent } from "@/lib/paymentEvents";
 
 const SECRET = "ws_test_secret";
 const MEZOO = "573a6d8c-7871-4c77-8b88-d0748b7f4785";
@@ -173,6 +174,37 @@ describe("POST /api/webhooks/whop: retry repairs entitlement", () => {
     expect(allCalls().filter(c => c.table === "subscriptions" && c.op === "insert")).toHaveLength(1);
     expect(allCalls().some(c => c.table === "subscriptions" && c.op === "update")).toBe(false);
     expect(allCalls().some(c => c.table === "processed_webhook_events" && c.op === "delete")).toBe(false);
+  });
+});
+
+describe("POST /api/webhooks/whop: a grant that committed after its deadline (a-db-timeouts)", () => {
+  it("the redelivery replays (no second window), restores access and records grant_succeeded once", async () => {
+    let sub: Record<string, unknown> | null = null;
+    let owner = { id: MEZOO, tier: "free", tier_expires_at: null as string | null };
+    h.handler = baseHandler(c => {
+      if (c.table === "subscriptions" && c.op === "insert") {
+        // The row commits, but the 8 s deadline already reported a failure.
+        sub = { ...(c.payload as Record<string, unknown>), id: "sub_late" };
+        return { error: { code: "", message: "DbUnavailableError: Database did not answer within 8000 ms" } };
+      }
+      if (c.table === "subscriptions" && c.op === "select") return { data: sub ? [sub] : [] };
+      if (c.table === "users" && c.op === "select" && eqVal(c, "id") === MEZOO) return { data: owner };
+      if (c.table === "users" && c.op === "update") { owner = { ...owner, ...(c.payload as typeof owner) }; return { data: { id: MEZOO } }; }
+      // releaseWhopClaim frees the payment id for the redelivery.
+      if (c.table === "processed_webhook_events" && c.op === "delete") { claimed.delete(eqVal(c, "event_id") as string); return { data: null }; }
+      return undefined;
+    }) as (call: unknown) => unknown;
+    const first = await deliver("payment.succeeded", renewal);
+    expect(first.status).toBeGreaterThanOrEqual(500);
+    expect(owner.tier).toBe("free");
+    vi.mocked(logPaymentEvent).mockClear();
+    const second = await deliver("payment.succeeded", renewal);
+    expect(second.status).toBe(200);
+    expect(await second.json()).toMatchObject({ duplicate: true });
+    expect(owner.tier).toBe("pro");
+    expect(allCalls().filter(c => c.table === "subscriptions" && c.op === "insert")).toHaveLength(1);
+    expect(allCalls().some(c => c.table === "subscriptions" && c.op === "update")).toBe(false);
+    expect(vi.mocked(logPaymentEvent)).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ event: "grant_succeeded", paymentId: "pay_redactedfd51769b", metadata: expect.objectContaining({ mode: "replayed" }) }));
   });
 });
 

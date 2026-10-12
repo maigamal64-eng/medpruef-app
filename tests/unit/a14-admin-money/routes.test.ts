@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   release: vi.fn(),
   log: vi.fn(),
   perms: vi.fn(),
+  repair: vi.fn(),
 }));
 vi.mock("@/lib/supabase", () => ({ getServiceClient: mocks.db }));
 vi.mock("@/lib/auth-guard", () => ({ requireAdmin: mocks.guard, resolveOptionalUser: vi.fn(() => null) }));
@@ -19,6 +20,7 @@ vi.mock("@/lib/admin/audit", () => ({ logAdminAction: mocks.audit, resolveActorE
 vi.mock("@/lib/rate-limit", () => ({ checkRateLimit: mocks.rate, rateKey: () => "fixture", callerIdentity: () => "fixture", rateLimitHeaders: () => ({}) }));
 vi.mock("@/lib/sentry-capture", () => ({ captureServerError: vi.fn() }));
 vi.mock("@/lib/paymentEvents", () => ({ logPaymentEvent: mocks.log }));
+vi.mock("@/lib/whop-entitlement", () => ({ repairWhopUserAccess: mocks.repair }));
 vi.mock("@/lib/whop-grant", () => ({ extendOrInsertWhopSubscription: mocks.grant, reconcileUserTierPro: mocks.reconcile, releaseWhopClaim: mocks.release }));
 vi.mock("@/lib/admin/permissions", () => ({
   loadAdminPermissionSnapshot: vi.fn(async () => ({ roles: [], permissions: mocks.perms() })),
@@ -182,6 +184,30 @@ describe("POST /api/admin/payments/resolve", () => {
     const res = await resolve(req("/api/admin/payments/resolve", "POST", { payment_id: "pay_unmapped", action: "link", reason: "Paid via concierge link", user_ref: LEARNER, confirm: true }));
     expect(res.status).toBe(409);
     expect(calls.filter((c) => c.op !== "select")).toHaveLength(0);
+    expect(mocks.grant).not.toHaveBeenCalled();
+  });
+
+  // a-db-timeouts: a link whose grant committed after its deadline left the
+  // payment on this learner's active row; linking again replays and repairs.
+  it("replays a link already on this learner's active row and repairs access", async () => {
+    mocks.grant.mockResolvedValue({ mode: "extended", subscriptionId: "sub-own", expiresAt: "2026-11-12T00:00:00.000Z", previousExpiresAt: "2026-11-12T00:00:00.000Z", replayed: true, entitlementReconciled: false });
+    mocks.repair.mockResolvedValue({ granted: true, tier_expires_at: "2026-11-12T00:00:00.000Z" });
+    const world = resolveWorld({});
+    database((c) => (c.table === "subscriptions" && eqVal(c, "provider_payment_id") === "pay_unmapped" ? { data: [{ id: "sub-own", user_id: LEARNER, status: "active" }] } : world(c)));
+    const res = await resolve(req("/api/admin/payments/resolve", "POST", { payment_id: "pay_unmapped", action: "link", reason: "Paid via concierge link", user_ref: LEARNER, confirm: true }));
+    expect(res.status).toBe(200);
+    expect(mocks.repair).toHaveBeenCalledWith(expect.anything(), LEARNER);
+    expect(mocks.reconcile).not.toHaveBeenCalled();
+    expect(mocks.log).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ event: "grant_succeeded", paymentId: "pay_unmapped" }));
+  });
+
+  it("still refuses when the carrying row is another learner's or no longer active", async () => {
+    const world = resolveWorld({});
+    for (const row of [{ id: "sub-x", user_id: "00000000-0000-4000-8000-0000000000c9", status: "active" }, { id: "sub-own", user_id: LEARNER, status: "refunded" }]) {
+      database((c) => (c.table === "subscriptions" && eqVal(c, "provider_payment_id") === "pay_unmapped" ? { data: [row] } : world(c)));
+      const res = await resolve(req("/api/admin/payments/resolve", "POST", { payment_id: "pay_unmapped", action: "link", reason: "Paid via concierge link", user_ref: LEARNER, confirm: true }));
+      expect(res.status).toBe(409);
+    }
     expect(mocks.grant).not.toHaveBeenCalled();
   });
 

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { repairWhopUserAccess } from "@/lib/whop-entitlement";
 import { getServiceClient } from "@/lib/supabase";
 import { adminRouteShell } from "@/lib/admin/shell";
 import { adminErrorResponse } from "@/lib/admin/error-response";
@@ -142,12 +143,18 @@ export const POST = adminRouteShell(
         // A payment already carried by a subscription row granted access even if
         // its grant_succeeded log line was lost: never grant it twice.
         const [latest, history] = await Promise.all([
-          sb.from("subscriptions").select("id").eq("provider_payment_id", paymentId).limit(1),
-          sb.from("subscriptions").select("id").contains("granted_payment_ids", JSON.stringify([{ payment_id: paymentId }])).limit(1),
+          sb.from("subscriptions").select("id, user_id, status").eq("provider_payment_id", paymentId).limit(5),
+          sb.from("subscriptions").select("id, user_id, status").contains("granted_payment_ids", JSON.stringify([{ payment_id: paymentId }])).limit(5),
         ]);
         if (latest.error) throw latest.error;
         if (history.error) throw history.error;
-        if ((latest.data ?? []).length > 0 || (history.data ?? []).length > 0) {
+        const carriers = [...(latest.data ?? []), ...(history.data ?? [])] as { id: string; user_id: string | null; status: string | null }[];
+        // a-db-timeouts: a link whose grant committed after its database
+        // deadline left the payment on THIS learner's ACTIVE row without
+        // access or a grant_succeeded line. Linking again replays the grant
+        // (no second extension) and repairs access. Another owner, or a
+        // refunded/revoked row, still refuses.
+        if (carriers.length > 0 && !carriers.every((row) => row.user_id === learner!.id && row.status === "active")) {
           return NextResponse.json({ error: "This payment is already on a subscription row, so it granted access before. Open Trace a payment to check; nothing was changed." }, { status: 409 });
         }
       }
@@ -262,9 +269,10 @@ export const POST = adminRouteShell(
         return NextResponse.json({ error: "The grant failed and nothing was kept. Try again." }, { status: 500 });
       }
       let entitlementPending = false;
-      if (!grant.entitlementReconciled && !grant.replayed) {
+      if (!grant.entitlementReconciled) {
         try {
-          await reconcileUserTierPro(sb, learner!.id, grant.expiresAt);
+          if (grant.replayed) await repairWhopUserAccess(sb, learner!.id);
+          else await reconcileUserTierPro(sb, learner!.id, grant.expiresAt);
         } catch (err) {
           entitlementPending = true;
           captureServerError(err, { route: "/api/admin/payments/resolve", step: "reconcile_user" });
