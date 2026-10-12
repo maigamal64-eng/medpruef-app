@@ -658,8 +658,15 @@ function LibraryContent() {
     } catch (error) { setDueError(true); trackEvent('error_state_shown', { page: '/library/due', status: libraryReadFailure(error).status }); }
     finally { setDueLoading(false); }
   }, []);
-  const fetchNotes = useCallback(async (append = false, offset = 0) => {
-    if (requestBusy.current) return;
+  // A full refresh asked for while a read runs (e.g. right after creating a
+  // note) waits for that read and then runs once more, so it is never dropped.
+  const queuedRefresh = useRef<Array<() => void> | null>(null);
+  const fetchNotesRef = useRef<(append?: boolean, offset?: number) => Promise<void>>(async () => {});
+  const fetchNotes = useCallback(async (append = false, offset = 0): Promise<void> => {
+    if (requestBusy.current) {
+      if (append) return;
+      return new Promise<void>((resolve) => { (queuedRefresh.current ??= []).push(resolve); });
+    }
     requestBusy.current = true;
     if (append) setLoadingMore(true); else setLoading(true);
     setNotesError(false); setFailedAppend(append);
@@ -679,7 +686,14 @@ function LibraryContent() {
       requestBusy.current = false; setLoading(false); setLoadingMore(false);
     }
     if (!append) void loadDueNotes();
+    const waiters = queuedRefresh.current;
+    if (waiters) {
+      queuedRefresh.current = null;
+      await fetchNotesRef.current(false, 0);
+      waiters.forEach((resolve) => resolve());
+    }
   }, [loadDueNotes]);
+  useEffect(() => { fetchNotesRef.current = fetchNotes; }, [fetchNotes]);
 
   // Optimistic local update (e.g. after publish/unpublish) so the overlay reflects
   // the new visibility without a refetch.

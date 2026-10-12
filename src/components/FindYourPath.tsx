@@ -806,7 +806,8 @@ function YourPath({
                   </div>
                 </div>
               </div>
-              {planShape.status !== "tight" && planShape.status !== "expired" && (
+              {/* a25: "tight" now means load, so the split shows whenever the plan has two phases. */}
+              {planShape.status !== "expired" && planShape.phaseBreak > (planShape.dailySchedule[0]?.day ?? "") && (
                 <p className="mt-3 text-xs leading-relaxed text-[var(--mp-fg-muted)]">
                   {t("fyp_out_plan_split")}
                 </p>

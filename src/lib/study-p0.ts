@@ -54,6 +54,8 @@ export interface StudyPlanResponse {
   answeredToday?: number | null;
   focus?: 'all' | 'weak';
   weakAvailable?: boolean;
+  /** The learner's Vienna day the plan was built for (a25). */
+  todayISO?: string;
 }
 
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
@@ -71,6 +73,7 @@ export function isStudyPlanResponse(value: unknown): value is StudyPlanResponse 
   if (!isRecord(value) || typeof value.hasExamDate !== 'boolean') return false;
   if (value.rollingPlan !== undefined && !isRolling(value.rollingPlan)) return false;
   if (value.targetDate !== undefined && !(typeof value.targetDate === 'string' && ISO.test(value.targetDate))) return false;
+  if (value.todayISO !== undefined && !(typeof value.todayISO === 'string' && ISO.test(value.todayISO))) return false;
   if (value.nextSittings !== undefined && !(Array.isArray(value.nextSittings) && value.nextSittings.every(d => typeof d === 'string' && ISO.test(d)))) return false;
   if (value.answeredToday !== undefined && value.answeredToday !== null && !nonnegative(value.answeredToday)) return false;
   if (!value.hasExamDate) {

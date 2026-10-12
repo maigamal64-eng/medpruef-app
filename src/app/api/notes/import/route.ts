@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
-import { requireUser } from "@/lib/auth-guard";
+import { requireUser, isFreeAccess } from "@/lib/auth-guard";
+import { NoteAllowanceError, readNoteAllowance, remainingNotes } from "@/lib/notes-cap";
 import {
   MAX_IMPORT_BATCH,
   NOTE_SELECT_COLUMNS,
@@ -135,7 +136,7 @@ export async function POST(req: NextRequest) {
 
     // Also de-dupe within the batch itself (two entries colliding on a key).
     const seenInBatch = new Set<string>();
-    const toInsert = candidates
+    const fresh = candidates
       .filter((c) => {
         if (existingKeys.has(c.importKey) || seenInBatch.has(c.importKey)) return false;
         seenInBatch.add(c.importKey);
@@ -143,7 +144,25 @@ export async function POST(req: NextRequest) {
       })
       .map((c) => c.row);
 
-    const skippedExisting = candidates.length - toInsert.length;
+    const skippedExisting = candidates.length - fresh.length;
+
+    // a25 (pick-ux-stu-51 B): free accounts import only into the slots left
+    // in their lifetime allowance; the rest is reported, never inserted.
+    let toInsert = fresh;
+    if (isFreeAccess(guard) && fresh.length > 0) {
+      let left: number;
+      try {
+        left = remainingNotes(await readNoteAllowance(sb, userId));
+      } catch (err) {
+        if (!(err instanceof NoteAllowanceError)) throw err;
+        console.error("[notes/import] allowance read", err.detail);
+        return NextResponse.json({ error: "Failed to prepare import" }, { status: 500 });
+      }
+      if (fresh.length > left) {
+        overLimit += fresh.length - left;
+        toInsert = fresh.slice(0, left);
+      }
+    }
 
     if (toInsert.length === 0) {
       return NextResponse.json({

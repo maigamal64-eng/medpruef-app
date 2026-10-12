@@ -196,7 +196,8 @@ export default function StudyPlanPage() {
     try { localStorage.setItem(`medpruef_plan_picker_later_${session?.user.id}`, "1"); } catch { /* optional */ }
   }
 
-  const todayISO = toLocalISO(new Date());
+  // The server's Vienna day wins, so "today" matches the plan between 00:00 and 02:00 (reviewer P2).
+  const todayISO = resp?.todayISO ?? toLocalISO(new Date());
   const plan = resp?.plan ?? null;
   const user = session?.user;
   const dailyGoal = resp?.dailyGoal || user?.daily_goal || 20;

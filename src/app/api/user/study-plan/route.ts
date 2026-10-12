@@ -175,8 +175,12 @@ export async function GET(req: NextRequest) {
     const examDate = typeof userRow.exam_date === "string" && /^\d{4}-\d{2}-\d{2}/.test(userRow.exam_date)
       ? userRow.exam_date.slice(0, 10)
       : null;
+    // One calendar for the whole response: the learner's Vienna day. The pure
+    // modules count UTC days, so they get noon UTC of that Vienna day.
     const now = new Date();
-    const target = studyPlanTarget(activeExam, examDate, now);
+    const todayISO = viennaDay(now);
+    const planNow = new Date(`${todayISO}T12:00:00Z`);
+    const target = studyPlanTarget(activeExam, examDate, planNow);
 
     // Answers today (Vienna day) from the server counters, so the plan never
     // shows yesterday's total after midnight or on another device (UX-STU-19).
@@ -185,7 +189,7 @@ export async function GET(req: NextRequest) {
       .select("daily_questions_today, daily_reset_date")
       .eq("user_id", userId)
       .maybeSingle();
-    const answeredToday = gam ? answersToday(gam.daily_questions_today, gam.daily_reset_date, viennaDay(now)) : null;
+    const answeredToday = gam ? answersToday(gam.daily_questions_today, gam.daily_reset_date, todayISO) : null;
 
     const weakOnlyAsked = req.nextUrl.searchParams.get("focus") === "weak";
     const weakTopics = availableTopics.filter(t => t.answered > 0 && t.accuracy < 60);
@@ -196,7 +200,7 @@ export async function GET(req: NextRequest) {
       examDate: new Date(`${target.targetDate}T00:00:00Z`),
       dailyQuestionGoal: dailyGoal,
       availableTopics: planTopics,
-      now,
+      now: planNow,
       simulationPresetId: simulationPresetFor(activeExam),
       lightDays: true,
     });
@@ -225,8 +229,10 @@ export async function GET(req: NextRequest) {
       nextSittings: target.nextSittings,
       dailyGoal,
       activeExam,
-      unseenTotal: unseenTotal(availableTopics),
-      bankTotal: availableTopics.reduce((sum, t) => sum + t.total, 0),
+      todayISO,
+      // Totals of the planned pool, so "reach X of Y" never mixes a weak-only plan with the whole bank.
+      unseenTotal: unseenTotal(planTopics),
+      bankTotal: planTopics.reduce((sum, t) => sum + t.total, 0),
       answeredToday,
       focus: focusWeak ? "weak" : "all",
       weakAvailable: weakTopics.length > 0,

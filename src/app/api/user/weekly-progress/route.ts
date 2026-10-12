@@ -43,8 +43,9 @@ export async function GET(req: NextRequest) {
         .eq("user_id", guard.userId)
         .eq("questions.exam_type" as string, activeExam)
         .gte("created_at", since)
-        .order("created_at", { ascending: true })
-        .order("id", { ascending: true })
+        // Newest first, so a MAX_ROWS stop drops the oldest weeks, not the current one.
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
         .range(from, from + PAGE - 1);
       if (error) throw error;
       for (const r of data || []) rows.push({ createdAt: String(r.created_at), isCorrect: r.is_correct === true });

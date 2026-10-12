@@ -35,8 +35,10 @@ export default function PlanHero(p: PlanHeroProps) {
         : p.provisional
           ? ts(daysLeft === 1 ? "hero_day_provisional" : "hero_days_provisional", lang, { n: daysLeft })
           : ts(daysLeft === 1 ? "hero_day" : "hero_days", lang, { n: daysLeft });
-  const showSplit = plan.status === "normal" || plan.status === "far_future";
+  // Two phases exist whenever the switch day comes after the first plan day;
+  // "tight" is about load now, not the schedule shape (reviewer P3).
   const shortWindow = plan.phaseBreak === plan.dailySchedule[0]?.day;
+  const showSplit = plan.status !== "expired" && !shortWindow;
 
   return (
     <section
@@ -101,7 +103,7 @@ export default function PlanHero(p: PlanHeroProps) {
         </div>
       )}
 
-      {!p.expired && showSplit && !shortWindow && (
+      {!p.expired && showSplit && (
         <p className="relative mt-4 text-[13px] text-white/85">{ts("hero_split", lang, { date: studyDate(plan.phaseBreak, lang, { day: "numeric", month: "long" }) })}</p>
       )}
       {!p.expired && plan.status === "far_future" && <p className="relative mt-2 text-[13px] text-white/80">{ts("hero_far", lang)}</p>}

@@ -637,14 +637,22 @@ export async function GET(req: NextRequest) {
 
     if (progress && progress.length > 0) {
       const reviewIds = progress.map((p) => p.question_id)
-      let q = sb.from('questions').select('*').in('id', reviewIds).eq('is_active', true)
-      q = applyFilters(q, filters)
-      q = withMcq(q)
-      const { data: matched } = await q
+      // Filter on ids only, keep the most overdue cardBatch, then read full
+      // rows for just those (reviewer P2: never pull 500 full rows).
+      let idq = sb.from('questions').select('id').in('id', reviewIds).eq('is_active', true)
+      idq = applyFilters(idq, filters)
+      idq = withMcq(idq)
+      const { data: matchedIds } = await idq
       const dueOrder = new Map(reviewIds.map((id, i) => [id, i]))
-      const data = (matched || [])
-        .sort((a, b) => (dueOrder.get(a.id) ?? 0) - (dueOrder.get(b.id) ?? 0))
+      const pickedIds = (matchedIds || [])
+        .map((r) => r.id as number)
+        .sort((a, b) => (dueOrder.get(a) ?? 0) - (dueOrder.get(b) ?? 0))
         .slice(0, cardBatch)
+      let data: Array<Record<string, unknown> & { id: number }> = []
+      if (pickedIds.length > 0) {
+        const { data: rows } = await sb.from('questions').select('*').in('id', pickedIds)
+        data = ((rows || []) as Array<Record<string, unknown> & { id: number }>).sort((a, b) => (dueOrder.get(a.id) ?? 0) - (dueOrder.get(b.id) ?? 0))
+      }
       if (data.length > 0) {
         if (!flashcardMode) return NextResponse.json(attachOptions(data))
         const split = splitFlashcards(attachOptions(data))
