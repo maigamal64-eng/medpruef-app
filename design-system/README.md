@@ -94,13 +94,13 @@
 **Borders:** 1px `rgba(228, 233, 240, 0.7)` on default cards, tightening to solid `#E4E9F0` on hover. Topic cards use a 3px-wide colored left-edge keyed to the specialty.
 
 **Hover states:**
-- Buttons primary: background darkens `#003A8C → #002d6e`.
+- Buttons primary: background darkens `#003A8C → #002d6e`. **Dark extension (2026-10-12, UX-GLOBAL-21):** the dark primary is `#4D8DF0` with an `#001B3D` label (5.21:1), hover `#6BA1F4`. Exactly one filled primary per screen state; `success` fills are for confirmations only, never purchase or trial buttons. Destructive is the `--mp-error` fill with `--mp-fg-on-error`.
 - Buttons secondary: bg tints to `#F7F9FC`, border darkens `#E4E9F0 → #A0AEC0`.
 - Cards: `translateY(-2px)` + elevation bump + border solidifies.
 
 **Press states:** `scale(0.98)` on buttons, `scale(0.99)` on interactive cards. Never change color on press — scale is the signal.
 
-**Transparency + blur:** reserved for `.glass` — 85% white + `backdrop-filter: blur(20px) saturate(180%)`. Used on the mobile bottom nav and floating modals only. In dark mode, glass switches to 90% `#0F172A`.
+**Transparency + blur:** no fixed layer uses blur any more (2026-10-12, UX-GLOBAL-11/14): the bottom nav is opaque `--mp-surface-raised` with a top border, dialog scrims are solid. `.glass` remains only on legacy marketing surfaces.
 
 **Animation system (all respect `prefers-reduced-motion`, which disables everything listed below):**
 - Durations: micro 120ms, base 200ms, hero 350-400ms. Never over 500ms.
@@ -109,15 +109,16 @@
 
 **Layout rules:**
 - Desktop: 260px dark Oxford-Blue sidebar (collapses to 68px icon-only, persisted in localStorage `medpruef_sidebar_collapsed`) + main canvas.
-- Mobile: sticky bottom nav with a **raised, Duolingo-style center Quiz CTA** (14×14 rounded-2xl, `-mt-5` offset, CTA Blue with 4-ring halo).
+- Mobile: bottom nav with five items maximum and a **raised centre action** ([name]'s HOME-49 option B, 12 Oct 2026): Start, Simulation, **Üben (raised, CTA blue)**, Lernplan (the mentor takes this slot when it is switched on for the learner), Mehr. The Mehr sheet and the desktop Sidebar render one destination list in the same groups (Lernen, Planen, Auswerten, Konto); source `src/lib/nav-destinations.ts`.
 - Max content width 1200px. Quiz reading pane 720px.
 - Sidebar auto-hides on `/quiz` and `/exam` for distraction-free testing.
 - Pinch-zoom is **never** disabled (WCAG 2.1 1.4.4, enforced 2026-04-15 post-audit).
 
 **Accessibility non-negotiables:**
-- Every interactive element has a visible focus ring (teal 2px offset).
+- Every interactive element has a visible focus indicator: a 2px solid outline, 2px offset, `#003A8C` light / `#6BA1F4` dark, `Highlight` in forced-colors mode (replaces the 2.98:1 teal ring, 2026-10-12).
 - `prefers-reduced-motion` disables every animation listed above.
-- Touch targets ≥ 44×44 px on mobile.
+- Touch targets ≥ 44×44 px on the primary path (shared `.mp-hit` utility), 48 px for primary CTAs and plan buttons; the WCAG 2.5.8 24 px floor applies elsewhere.
+- Text floor 13 px for anything a learner must read to act; inputs 16 px under 768 px (scoped deviation DD-21).
 - Color-only information is forbidden — always pair a color cue with a Lucide icon or a label.
 - Arabic renders with `dir="rtl"`.
 

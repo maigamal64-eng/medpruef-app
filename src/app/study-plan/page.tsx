@@ -387,7 +387,7 @@ export default function StudyPlanPage() {
                         <b className="font-display font-black text-2xl leading-none text-white">
                           {daysLeft}
                         </b>
-                        <span className="text-[9px] uppercase tracking-wider text-white/70 mt-0.5">
+                        <span className="text-[11px] font-semibold uppercase tracking-wider text-white mt-0.5">
                           {lang === "de"
                             ? daysLeft === 1
                               ? "Tag"
@@ -423,7 +423,7 @@ export default function StudyPlanPage() {
                         <div className="h-full bg-[var(--mp-spark)]" style={{ width: "70%" }} aria-hidden />
                         <div className="h-full bg-white/40" style={{ width: "30%" }} aria-hidden />
                       </div>
-                      <div className="flex items-center justify-between mt-1.5 text-[10px] font-mono uppercase tracking-wider text-white/70">
+                      <div className="flex items-center justify-between mt-1.5 text-[12px] font-mono uppercase tracking-wider text-white/70">
                         <span>{lang === "de" ? "70% Neu" : "70% New"}</span>
                         <span>{lang === "de" ? "30% Festigung" : "30% Consolidation"}</span>
                       </div>
@@ -545,7 +545,7 @@ export default function StudyPlanPage() {
                                     : "New"}
                                 </span>
                               </div>
-                              <div className="text-[11px] text-[var(--mp-fg-subtle)] mt-0.5 font-mono tabular-nums">
+                              <div className="text-[13px] text-[var(--mp-fg-subtle)] mt-0.5 font-mono tabular-nums">
                                 {tt.targetCount} {lang === "de" ? "Fragen" : "questions"}
                                 {" · "}
                                 {subText}
@@ -586,16 +586,16 @@ export default function StudyPlanPage() {
 
                   {/* Calm daily-goal reward line */}
                   <div className="mt-3 pt-3 border-t border-[var(--mp-border)] flex items-center justify-between">
-                    <span className="text-[11px] text-[var(--mp-fg-subtle)] font-mono tabular-nums">
+                    <span className="text-[13px] text-[var(--mp-fg-subtle)] font-mono tabular-nums">
                       {doneToday}/{dailyGoal} {lang === "de" ? "Fragen heute" : "questions today"}
                     </span>
                     {doneToday >= dailyGoal ? (
-                      <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-[var(--mp-viridian)]">
+                      <span className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-[var(--mp-viridian)]">
                         <Check className="w-3.5 h-3.5" aria-hidden />
                         {lang === "de" ? "Tagesziel erreicht" : "Daily goal reached"}
                       </span>
                     ) : (
-                      <span className="text-[11px] text-[var(--mp-fg-muted)]">
+                      <span className="text-[13px] text-[var(--mp-fg-muted)]">
                         {lang === "de"
                           ? `Noch ${Math.max(0, dailyGoal - doneToday)} bis zum Ziel`
                           : `${Math.max(0, dailyGoal - doneToday)} to go`}
@@ -611,7 +611,7 @@ export default function StudyPlanPage() {
                       {lang === "de" ? "Kommende Tage" : "Upcoming days"}
                     </h3>
                     {plan.status !== "tight" && plan.status !== "expired" && (
-                      <div className="text-[11px] font-semibold flex items-center gap-1.5 text-[var(--mp-fg-subtle)]">
+                      <div className="text-[13px] font-semibold flex items-center gap-1.5 text-[var(--mp-fg-subtle)]">
                         <span className="text-[var(--mp-cta-blue)]">
                           {lang === "de" ? "70% Neu" : "70% New"}
                         </span>
@@ -681,7 +681,7 @@ export default function StudyPlanPage() {
                                 <b className="font-mono font-bold text-[13px] leading-none">
                                   {date.getDate()}
                                 </b>
-                                <span className="text-[8px] uppercase tracking-wide mt-0.5">
+                                <span className="text-[11px] font-semibold uppercase tracking-wide mt-0.5">
                                   {labels[date.getDay()]}
                                 </span>
                               </div>
@@ -704,7 +704,7 @@ export default function StudyPlanPage() {
                                       : "Today"
                                     : title}
                                 </span>
-                                <span className="font-mono text-[11px] font-semibold text-[var(--mp-fg-subtle)] shrink-0">
+                                <span className="font-mono text-[13px] font-semibold text-[var(--mp-fg-subtle)] shrink-0">
                                   {d.totalQuestions} {lang === "de" ? "Fr." : "q"}
                                 </span>
                               </div>
@@ -715,7 +715,7 @@ export default function StudyPlanPage() {
                                     return (
                                       <span
                                         key={tt.topic}
-                                        className={`text-[10px] font-semibold px-2 py-[3px] rounded-full ${tag.cls}`}
+                                        className={`text-[12px] font-semibold px-2 py-[3px] rounded-full ${tag.cls}`}
                                       >
                                         {tt.topic}
                                       </span>

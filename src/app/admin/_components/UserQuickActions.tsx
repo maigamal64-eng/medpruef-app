@@ -219,14 +219,16 @@ export function UserQuickActions({
       </div>
 
       <Dialog
+        busy={processing}
         open={signOutOpen}
         onOpenChange={(o) => { if (!processing) setSignOutOpen(o); }}
         title="Sign out everywhere?"
         description={userEmail ? `Target: ${userEmail}` : undefined}
         footer={
           <DialogFooter>
-            <button className="mp-btn mp-btn--secondary" onClick={() => setSignOutOpen(false)} disabled={processing}>Cancel</button>
+            <button data-dialog-safe className="mp-btn mp-btn--secondary" onClick={() => setSignOutOpen(false)} disabled={processing}>Cancel</button>
             <button
+              data-dialog-primary
               className="mp-btn mp-btn--primary"
               disabled={processing}
               onClick={() => void postAction(`/api/admin/users/${userId}/force-refresh-session`, { reason: "Admin: sign out everywhere" }, "Signed out on every device", () => setSignOutOpen(false))}
@@ -240,14 +242,16 @@ export function UserQuickActions({
       </Dialog>
 
       <Dialog
+        busy={processing}
         open={resetOpen}
         onOpenChange={(o) => { if (!processing) setResetOpen(o); }}
         title="Reset learner progress counters?"
         description={userEmail ? `Target: ${userEmail}` : undefined}
         footer={
           <DialogFooter>
-            <button className="mp-btn mp-btn--secondary" onClick={() => setResetOpen(false)} disabled={processing}>Cancel</button>
+            <button data-dialog-safe className="mp-btn mp-btn--secondary" onClick={() => setResetOpen(false)} disabled={processing}>Cancel</button>
             <button
+              data-dialog-primary
               className="mp-btn mp-btn--destructive"
               disabled={processing}
               onClick={() => void postAction("/api/stats/admin/users", { userId, updates: { reset_gamification: true } }, "Progress counters reset", () => setResetOpen(false))}
@@ -263,6 +267,7 @@ export function UserQuickActions({
       </Dialog>
 
       <Dialog
+        busy={processing}
         open={grantOpen}
         onOpenChange={(o) => {
           if (!o) {
@@ -342,6 +347,7 @@ export function UserQuickActions({
       </Dialog>
 
       <Dialog
+        busy={processing}
         open={lockOpen}
         onOpenChange={(o) => {
           if (!o) {
@@ -362,6 +368,7 @@ export function UserQuickActions({
         footer={
           <DialogFooter>
             <button
+              data-dialog-safe
               className="mp-btn mp-btn--secondary"
               onClick={() => {
                 setLockOpen(false);
@@ -372,6 +379,7 @@ export function UserQuickActions({
               Cancel
             </button>
             <button
+              data-dialog-primary
               className={`mp-btn ${isBanned ? "mp-btn--primary" : "mp-btn--destructive"}`}
               onClick={submitLock}
               disabled={processing}

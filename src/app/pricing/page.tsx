@@ -243,6 +243,9 @@ export default function PricingPage() {
 
   return (
     <AppLayout
+      // PUB-02 / UX-GLOBAL-10: visitors without a session get the public
+      // shell (no learner Sidebar or BottomNav); everyone uses document scroll.
+      mode={user ? "standard" : "public"}
       className="pricing-layout"
       sidebar={<Sidebar lang={lang} userId={user?.id} userName={user?.first_name} />}
       bottomNav={<BottomNav lang={lang} userId={user?.id} />}

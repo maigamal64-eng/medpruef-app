@@ -524,3 +524,66 @@ Tracked in `design-system/DESIGN-DEBT.md`:
 - `<Sparkline>` chart primitive (blocked on chart palette being tokenized)
 
 When you need a new primitive, add it here, follow the pattern from existing ones (forwardRef if appropriate, a11y-first, docstring with usage example), and update this README.
+
+---
+
+## a11 contracts (2026-10-12, UX-GLOBAL-09 to 35)
+
+Frozen contracts so clusters fill disjoint files. Migration onto these happens
+inside the PR that already touches a route for a learner-facing fix, one route
+per PR with a screenshot diff, never together with a shell rewrite or the exam
+clock (UX-GLOBAL-29).
+
+### Dialog placements (UX-GLOBAL-14)
+
+`placement`: `center` (default) · `auto` (bottom sheet under 640 px, centred
+above) · `sheet` · `fullscreen` (lightbox). `kind`: `auto` · `content` (focus the
+title) · `form` (first field) · `confirm` (focus `[data-dialog-safe]`; the
+`[data-dialog-primary]` button stays inert for 800 ms). `busy` blocks Escape,
+scrim, close and Back while a write runs; `mandatory` has no close path.
+Escape closes only the topmost overlay; Android Back and iOS swipe-back close
+it through a pushed history entry; the background is `inert`. The phone
+placement is not the rejected desktop BottomSheet (tombstone above).
+`window.confirm` is not used anywhere. Non-modal popovers (KebabMenu, the
+feedback form) are not Dialogs: no trap, close on Escape/outside tap.
+
+### Status (UX-GLOBAL-15)
+
+`announce(text, 'polite' | 'assertive')` from `@/lib/announce` feeds the two
+root live regions (`<LiveRegions />` in the root layout). Visible status text
+is plain text; the code that changes it calls `announce()` once. No
+per-component `aria-live`. Toasts are keyed, capped at 3, errors stay at
+least 10 s, and are spoken through `announce()`; errors also render inline.
+
+### Shell (UX-GLOBAL-09/10/11)
+
+- `AppLayout mode`: `standard` · `focus` (no Sidebar, BottomNav, feedback
+  launcher or offline pill mounted) · `public` (no learner chrome).
+- `PageHeader`: one row, 22/28 px title, optional subtitle, back IconButton
+  using `goBack()` (`returnTo` → in-app history → IA parent → Home or
+  /landing), one trailing slot.
+- Navigation: `src/lib/nav-destinations.ts` is the one destination list. The
+  Sidebar and the Mehr sheet render it; BottomNav shows five items maximum.
+- Layers: `--mp-z-{base,sticky,nav,banner,sheet,dialog,lightbox,toast}` and
+  `.mp-layer-*`; no literal `z-50`/`z-[60]` in new or touched code.
+- Top status region (`shell/StatusRegion`): every banner in one sticky in-flow
+  region publishing `--mp-banner-h`; one banner at a time on phones.
+- Bottom budget: the nav plus at most one `StickyActionBar`.
+
+### Answers, images, results (UX-GLOBAL-25/26/27)
+
+- `Option` states `idle · selected · correct · wrong · missed · disabled ·
+  revealed`; `optionStateFor({ answered, selected, correct })`. One tag
+  vocabulary: "Ihre Wahl, richtig" · "Ihre Wahl, falsch" · "Richtig, nicht
+  gewählt". No opacity after grading; `static` for review lists.
+- `QuestionImage`: reserved aspect-ratio box, Skeleton, retry and "Problem
+  melden" with reason "Bild fehlt". `ImageLightbox` is the one lightbox
+  (Dialog fullscreen, native pinch/scroll, +/- and reset, arrow keys).
+- `ResultCard` + `resultVerdict()`: neutral card, hero number, status chip,
+  save chip, one primary action. No pass words; part runs are "Übung".
+
+### Focus, type, targets (UX-GLOBAL-23/24)
+
+Focus is a 2 px solid outline (`--mp-focus-color`), 2 px offset, forced-colors
+aware. Text floor 13 px for state and must-read text; inputs 16 px under
+768 px; `.mp-hit` gives a 44 px hit area without changing the visual size.

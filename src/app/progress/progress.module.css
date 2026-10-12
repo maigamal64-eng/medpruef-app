@@ -202,13 +202,13 @@
 }
 .wd {
   font-family: var(--mp-font-mono);
-  font-size: 9px;
+  font-size: 12px;
   color: var(--mp-fg-subtle);
   font-weight: 600;
 }
 .wval {
   font-family: var(--mp-font-mono);
-  font-size: 9px;
+  font-size: 13px;
   color: var(--mp-fg-muted);
   font-weight: 700;
 }
@@ -227,7 +227,7 @@
 }
 .heatDayLbl {
   font-family: var(--mp-font-mono);
-  font-size: 9px;
+  font-size: 12px;
   color: var(--mp-fg-subtle);
   text-align: center;
 }

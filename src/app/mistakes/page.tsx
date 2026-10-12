@@ -6,6 +6,10 @@ import Link from 'next/link';
 import { authFetch } from '@/lib/authFetch';
 import { t, useLang } from '@/lib/i18n';
 import { BrandedLoader } from '@/components/Logo';
+import { AppLayout } from '@/components/ui';
+import Sidebar from '@/components/Sidebar';
+import BottomNav from '@/components/BottomNav';
+import { getStoredSession } from '@/lib/auth';
 
 interface Mistake { id: number; question: string; topic: string }
 function MistakeList() {
@@ -48,4 +52,16 @@ function MistakeList() {
     </>}
   </main>;
 }
-export default function MistakesPage() { return <Suspense fallback={<BrandedLoader />}><MistakeList /></Suspense>; }
+/** UX-GLOBAL-09: the learner shell (Sidebar + BottomNav) on /mistakes too. */
+export default function MistakesPage() {
+  const lang = useLang();
+  const [userId, setUserId] = useState<string | undefined>();
+  useEffect(() => { setUserId(getStoredSession()?.user?.id); }, []);
+  return (
+    <AppLayout sidebar={<Sidebar lang={lang} userId={userId} />} bottomNav={<BottomNav lang={lang} userId={userId} />}>
+      <div className="main-content">
+        <Suspense fallback={<BrandedLoader />}><MistakeList /></Suspense>
+      </div>
+    </AppLayout>
+  );
+}

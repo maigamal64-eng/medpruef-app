@@ -5,7 +5,7 @@ import { Alert, Dialog, RatingButton } from "@/components/ui";
 import { checkedJson, DataResponseError } from "@/lib/async-data";
 import { libraryP0Copy as copy, libraryMigrationHintKey } from "@/lib/library-p0-copy";
 import { LIBRARY_PAGE_SIZE, checkedLibraryReview, isLibraryPage, mergeLibraryPage, libraryReadFailure } from "@/lib/library-p0-state";
-import { useLang as useGlobalLang, renderLang } from "@/lib/i18n";
+import { useLang as useGlobalLang, renderLang, t as i18nT } from "@/lib/i18n";
 
 /**
  * Bibliothek / Library — the personal home for ALL revisable cards (Notes
@@ -550,6 +550,7 @@ function LibraryContent() {
   const [notes, setNotes] = useState<ServerNote[]>([]);
   const [legacyNotesCount, setLegacyNotesCount] = useState(0);
   const [legacyImporting, setLegacyImporting] = useState(false);
+  const [legacyConfirmOpen, setLegacyConfirmOpen] = useState(false);
   const [legacyImportDone, setLegacyImportDone] = useState(false);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -679,10 +680,8 @@ function LibraryContent() {
 
   const importLegacyNotes = async () => {
     if (!userId || legacyImporting || legacyImportDone) return;
-    const confirmed = window.confirm(lang === "de"
-      ? "Diese alten Notizen liegen ungeschützt auf diesem Browser und könnten von einer anderen Person stammen. Nur fortfahren, wenn du sicher bist, dass sie zu deinem Konto gehören. Die Originale bleiben im Browser gespeichert."
-      : "These old notes are stored globally in this browser and may belong to someone else who used it. Continue only if you are sure they belong to your account. The originals will remain in the browser.");
-    if (!confirmed) return;
+    // STU-56 / UX-GLOBAL-14: confirmed in a ui/Dialog, never window.confirm.
+    setLegacyConfirmOpen(false);
     const items = readLegacyNotes();
     if (!items.length) {
       setLegacyNotesCount(0);
@@ -858,7 +857,7 @@ function LibraryContent() {
                 </p>
                 <button
                   type="button"
-                  onClick={() => void importLegacyNotes()}
+                  onClick={() => setLegacyConfirmOpen(true)}
                   disabled={legacyImporting}
                   className="mt-2 text-xs font-semibold text-[var(--mp-cta-blue)] underline underline-offset-2 disabled:opacity-60"
                 >
@@ -868,6 +867,24 @@ function LibraryContent() {
                 </button>
               </div>
             </div>
+            <Dialog
+              open={legacyConfirmOpen}
+              onOpenChange={setLegacyConfirmOpen}
+              kind="confirm"
+              busy={legacyImporting}
+              title={i18nT("library_legacy_confirm_title", lang)}
+              description={i18nT("library_legacy_confirm_body", lang)}
+              footer={
+                <>
+                  <button type="button" data-dialog-safe className="mp-btn mp-btn--secondary" onClick={() => setLegacyConfirmOpen(false)}>
+                    {i18nT("library_legacy_confirm_cancel", lang)}
+                  </button>
+                  <button type="button" data-dialog-primary className="mp-btn mp-btn--primary" onClick={() => void importLegacyNotes()}>
+                    {i18nT("library_legacy_confirm_ok", lang)}
+                  </button>
+                </>
+              }
+            />
           </section>
         )}
 

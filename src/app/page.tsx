@@ -33,6 +33,7 @@ import {
 import LanguagePicker from "@/components/LanguagePicker";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
+import { OPEN_MORE_EVENT } from "@/components/nav/MoreSheet";
 import { AppLayout } from "@/components/ui";
 import TopicCard from "@/components/TopicCard";
 import HomeHero from "@/components/HomeHero";
@@ -766,14 +767,18 @@ export default function Home() {
                nav (which now carries a symmetric 5 slots). Mirrors the Sidebar
                avatar (viridian, white initial). Keeps Settings reachable on
                mobile, where the Sidebar is hidden below lg. */}
-            <Link
-              href="/settings"
-              aria-label={t("settings", lang)}
-              title={t("settings", lang)}
-              className="w-11 h-11 flex items-center justify-center rounded-full bg-[var(--mp-viridian)] text-white text-xs font-bold ring-2 ring-[var(--mp-accent-teal)]/30 hover:opacity-90 transition-opacity mp-focusable flex-shrink-0"
+            {/* UX-GLOBAL-09: the avatar opens the same Mehr sheet as the
+                bottom bar (settings, theme, feedback, account in one place). */}
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new CustomEvent(OPEN_MORE_EVENT))}
+              aria-haspopup="dialog"
+              aria-label={t("nav_more_title", lang)}
+              title={t("nav_more_title", lang)}
+              className="w-11 h-11 flex items-center justify-center rounded-full bg-[var(--mp-viridian)] text-[var(--mp-fg-on-viridian)] text-xs font-bold ring-2 ring-[var(--mp-accent-teal)]/30 hover:opacity-90 transition-opacity mp-focusable flex-shrink-0"
             >
               {(user.first_name || "M").charAt(0).toUpperCase()}
-            </Link>
+            </button>
           </div>
         </div>
 

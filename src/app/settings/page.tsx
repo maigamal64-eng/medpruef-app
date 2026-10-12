@@ -1429,6 +1429,7 @@ export default function SettingsPage() {
           <DialogFooter>
             <button
               type="button"
+              data-dialog-safe
               className="mp-btn mp-btn--secondary"
               onClick={() => setClearDialogOpen(false)}
             >
@@ -1436,6 +1437,7 @@ export default function SettingsPage() {
             </button>
             <button
               type="button"
+              data-dialog-primary
               className="mp-btn mp-btn--destructive"
               onClick={handleClearData}
             >

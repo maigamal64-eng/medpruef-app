@@ -459,7 +459,7 @@ export default function CreateTestBuilder({ lang, examSource, onStart, onCancel 
                       <span className="flex items-center gap-1.5">
                         <span className="text-xs font-semibold">{opt.label[lang]}</span>
                         {opt.badge && (
-                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-[var(--mp-viridian)]/15 text-[var(--mp-viridian)]">
+                          <span className="text-[12px] font-bold px-1.5 py-0.5 rounded-full bg-[var(--mp-tint-viridian)] text-[var(--mp-success-text)]">
                             {opt.badge}
                           </span>
                         )}

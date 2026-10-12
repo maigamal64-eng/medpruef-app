@@ -132,12 +132,12 @@ function StudyRadar({
         <PolarGrid stroke="var(--mp-border)" />
         <PolarAngleAxis
           dataKey="subject"
-          tick={{ fontSize: isNarrow ? 9 : 10, fill: "var(--mp-fg-muted)" }}
+          tick={{ fontSize: 12, fill: "var(--mp-fg-muted)" }}
         />
         <PolarRadiusAxis
           angle={90}
           domain={[0, 100]}
-          tick={{ fontSize: 9, fill: "var(--mp-fg-subtle)" }}
+          tick={{ fontSize: 12, fill: "var(--mp-fg-muted)" }}
           axisLine={false}
         />
         <Radar
@@ -815,7 +815,7 @@ export default function ProgressPage() {
                                         : `Question #${id}`}
                                   </p>
                                   {topic && (
-                                    <p className="text-[10px] text-[var(--mp-fg-subtle)] mt-1 font-mono">
+                                    <p className="text-[12px] text-[var(--mp-fg-subtle)] mt-1 font-mono">
                                       {topic}
                                     </p>
                                   )}
@@ -905,7 +905,7 @@ export default function ProgressPage() {
                                   {entry.note.slice(0, 80)}
                                 </p>
                                 {topic && (
-                                  <p className="text-[10px] text-[var(--mp-fg-subtle)] mt-1 font-mono">
+                                  <p className="text-[12px] text-[var(--mp-fg-subtle)] mt-1 font-mono">
                                     {topic}
                                   </p>
                                 )}
@@ -1073,7 +1073,7 @@ export default function ProgressPage() {
                             return (
                               <span
                                 key={wt.topic}
-                                className="topic-text inline-flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded-full border"
+                                className="topic-text inline-flex items-center gap-1 text-[13px] font-mono px-2 py-0.5 rounded-full border"
                                 style={{
                                   ["--topic-color" as string]: config.color,
                                   borderColor: `color-mix(in srgb, ${config.color} 35%, transparent)`,

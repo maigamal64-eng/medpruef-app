@@ -1,7 +1,8 @@
 'use client'
 import { t, useLang } from '@/lib/i18n'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useId, useState } from 'react'
+import { Dialog } from '@/components/ui/Dialog'
 import { authFetch as fetch } from '@/lib/authFetch'
 import {
   EXAM_SOURCES,
@@ -12,9 +13,10 @@ import {
 import { examChipAccessibleName, getExamLabel } from '@/lib/master-locale/exam-label'
 
 /**
- * Inline exam-type dropdown. Meant to be dropped into an existing header or
- * sidebar — no fixed positioning, fits the flow of whatever parent contains
- * it. The dropdown panel is absolutely positioned relative to the button.
+ * Inline exam-type switcher. The trigger fits any header or sidebar; the
+ * choice opens in the shared ui/Dialog (bottom sheet on phones, centred on
+ * desktop) as a native radio group, a persistent single choice
+ * (UX-GLOBAL-14/23).
  *
  * Variants:
  *   - "sidebar":  dark surface for the sidebar user-card area
@@ -36,9 +38,7 @@ export default function ExamSwitcherInline({ variant = 'header', className = '' 
   const [mounted, setMounted] = useState(false)
   const [open, setOpen] = useState(false)
   const [saveError, setSaveError] = useState(false)
-  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number } | null>(null)
-  const rootRef = useRef<HTMLDivElement>(null)
-  const btnRef = useRef<HTMLButtonElement>(null)
+  const groupName = useId()
 
   useEffect(() => {
     setActive(getStoredExamSource())
@@ -65,20 +65,6 @@ export default function ExamSwitcherInline({ variant = 'header', className = '' 
     } catch { /* storage may be unavailable in restricted browser contexts */ }
     return () => { alive = false }
   }, [])
-
-  useEffect(() => {
-    if (!open) return
-    const onClick = (e: MouseEvent) => {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false)
-    }
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false)
-    document.addEventListener('mousedown', onClick)
-    document.addEventListener('keydown', onKey)
-    return () => {
-      document.removeEventListener('mousedown', onClick)
-      document.removeEventListener('keydown', onKey)
-    }
-  }, [open])
 
   if (!mounted) {
     // Render an invisible placeholder with the same dimensions to avoid layout shift
@@ -135,20 +121,12 @@ export default function ExamSwitcherInline({ variant = 'header', className = '' 
   })()
 
   return (
-    <div ref={rootRef} className={`relative inline-block ${className}`}>
+    <div className={`relative inline-block ${className}`}>
       <button
-        ref={btnRef}
-        onClick={() => {
-          if (!open && btnRef.current) {
-            const rect = btnRef.current.getBoundingClientRect()
-            // Position dropdown below the button, clamped to viewport
-            const left = Math.max(8, Math.min(rect.left, window.innerWidth - 272))
-            setDropdownPos({ top: rect.bottom + 8, left })
-          }
-          setOpen(o => !o)
-        }}
+        type="button"
+        onClick={() => setOpen(true)}
         className={btnClass}
-        aria-haspopup="listbox"
+        aria-haspopup="dialog"
         aria-expanded={open}
         title={`${t("home_exam", lang)}: ${getExamLabel(activeExam.id, 'full', lang)}`}
         aria-label={variant === 'compact' ? examChipAccessibleName(activeExam.id, lang) : undefined}
@@ -156,68 +134,41 @@ export default function ExamSwitcherInline({ variant = 'header', className = '' 
         <span className="truncate">
           {variant === 'compact' ? getExamLabel(activeExam.id, 'short') : getExamLabel(activeExam.id, 'full', lang)}
         </span>
-        <svg width="10" height="10" viewBox="0 0 20 20" fill="currentColor" className="opacity-60 flex-shrink-0">
+        <svg width="10" height="10" viewBox="0 0 20 20" fill="currentColor" className="flex-shrink-0" aria-hidden>
           <path d="M5 7l5 5 5-5H5z" />
         </svg>
       </button>
       {saveError && (
-        <span role="alert" className="absolute right-0 top-full z-50 mt-1 w-56 rounded-lg border border-[var(--mp-error)]/30 bg-[var(--mp-surface-raised)] p-2 text-xs text-[var(--mp-error)] shadow-lg">
+        <p className="mt-1 text-[13px] text-[var(--mp-error-text)]">
           {t("home_exam_save_error", lang)}
-        </span>
+        </p>
       )}
 
-      {open && dropdownPos && (
-        <div
-          className="fixed w-64 bg-white dark:bg-slate-800
-                     border border-slate-200 dark:border-slate-700
-                     rounded-xl shadow-xl overflow-hidden"
-          style={{ top: dropdownPos.top, left: dropdownPos.left, zIndex: 9999 }}
-          role="listbox"
-        >
-          <div className="px-3 py-2 text-[10px] uppercase tracking-wider text-slate-500 dark:text-slate-400 border-b border-slate-100 dark:border-slate-700">
-            {t("home_exam", lang)}
+      <Dialog open={open} onOpenChange={setOpen} title={t("home_exam", lang)} placement="auto" kind="content">
+        <fieldset className="border-0 p-0 m-0">
+          <legend className="mp-sr-only">{t("home_exam", lang)}</legend>
+          <div className="flex flex-col gap-2">
+            {EXAM_SOURCES.map(exam => {
+              const isActive = exam.id === active
+              return (
+                <label key={exam.id} className={`mp-choice-row ${isActive ? 'mp-choice-row--checked' : ''}`}>
+                  <input
+                    type="radio"
+                    name={groupName}
+                    value={exam.id}
+                    checked={isActive}
+                    onChange={() => void switchTo(exam.id)}
+                  />
+                  <span className="flex-1 min-w-0">
+                    <span className="block text-[15px] font-semibold text-[var(--mp-fg)]">{getExamLabel(exam.id, 'full', lang)}</span>
+                    <span className="block text-[13px] text-[var(--mp-fg-muted)]">{getExamLabel(exam.id, 'bridge', lang)}</span>
+                  </span>
+                </label>
+              )
+            })}
           </div>
-          {EXAM_SOURCES.map(exam => {
-            const isActive = exam.id === active
-            const isComing = false // all exams are now live
-            return (
-              <button
-                key={exam.id}
-                onClick={() => !isComing && switchTo(exam.id)}
-                disabled={isComing}
-                className={`w-full flex items-start gap-2.5 px-3 py-2.5 text-left transition-colors
-                            ${isActive
-                              ? 'bg-[var(--mp-accent-teal)]/10 text-[var(--mp-accent-teal)]'
-                              : isComing
-                                ? 'opacity-40 cursor-not-allowed text-slate-700 dark:text-slate-200'
-                                : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200'
-                            }`}
-                role="option"
-                aria-selected={isActive}
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium flex items-center gap-2">
-                    <span className="truncate">{getExamLabel(exam.id, 'full', lang)}</span>
-                    {isActive && (
-                      <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor" className="flex-shrink-0">
-                        <path d="M7.5 13.5L4 10l1.4-1.4 2.1 2.1 7-7L16 5.1z" />
-                      </svg>
-                    )}
-                    {isComing && (
-                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-500 flex-shrink-0">
-                        bald
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-                    {getExamLabel(exam.id, 'bridge', lang)}
-                  </div>
-                </div>
-              </button>
-            )
-          })}
-        </div>
-      )}
+        </fieldset>
+      </Dialog>
     </div>
   )
 }

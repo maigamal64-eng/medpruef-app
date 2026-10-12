@@ -726,6 +726,7 @@ export default function AdminReferralsPage() {
 
       {/* ─── Single Mark-Paid Dialog ────────────────────────────── */}
       <Dialog
+        busy={processing}
         open={!!target}
         onOpenChange={(o) => {
           if (!o) {
@@ -755,6 +756,7 @@ export default function AdminReferralsPage() {
             </button>
             <button
               className="mp-btn mp-btn--primary"
+              data-dialog-primary
               onClick={submitMarkPaid}
               disabled={processing || !canManage}
             >
@@ -797,6 +799,7 @@ export default function AdminReferralsPage() {
 
       {/* ─── Bulk Mark-Paid Dialog ──────────────────────────────── */}
       <Dialog
+        busy={processing}
         open={bulkOpen}
         onOpenChange={(o) => {
           if (!o) {
@@ -825,6 +828,7 @@ export default function AdminReferralsPage() {
             </button>
             <button
               className="mp-btn mp-btn--primary"
+              data-dialog-primary
               onClick={submitBulk}
               disabled={processing || !canManage || payableSelected.length === 0}
             >
@@ -857,6 +861,7 @@ export default function AdminReferralsPage() {
 
       {/* ─── Exam-reward grant confirm dialog ──────────────────────── */}
       <Dialog
+        busy={examRewardProcessing}
         open={!!examRewardTarget}
         onOpenChange={(o) => {
           if (!o) {
@@ -884,6 +889,7 @@ export default function AdminReferralsPage() {
             </button>
             <button
               className="mp-btn mp-btn--primary"
+              data-dialog-primary
               onClick={submitExamRewardGrant}
               disabled={examRewardProcessing || !canManage}
             >

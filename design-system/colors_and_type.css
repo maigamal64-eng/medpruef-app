@@ -9,7 +9,7 @@
   /* ─── BRAND COLORS ─── */
   --mp-oxford-blue:     #001B3D; /* primary surfaces, headings, high-trust */
   --mp-oxford-blue-dk:  #001028;
-  --mp-viridian:        #007B5F; /* success, correct, "Pro" accents */
+  --mp-viridian:        #006B52; /* success, correct, "Pro" accents (synced with globals.css 2026-10-12) */
   --mp-viridian-dk:     #005A45;
   --mp-cta-blue:        #003A8C; /* primary buttons, links */
   --mp-cta-blue-hover:  #002d6e;
@@ -18,9 +18,15 @@
   --mp-accent-teal:     #00A896; /* secondary accents, streak highlights */
   --mp-accent-hover:    #1bb680;
   --mp-warning:         #F4A261; /* caution, "review" badges */
-  --mp-warning-dk:      #D68A3A;
-  --mp-error:           #D64545; /* wrong answers, destructive */
-  --mp-info:            #3A7CA5; /* informational banners */
+  --mp-warning-dk:      #D68A3A; /* fills, icons, borders only: 2.78:1 on white, never text */
+  --mp-warning-text:    #8A5300; /* 6.33:1 on white, 5.58:1 on sunken, 5.83:1 on #FFF4E6 */
+  --mp-error:           #B03030; /* wrong answers, destructive fill; 6.34:1 on white */
+  --mp-error-text:      var(--mp-error);
+  --mp-fg-on-error:     #FFFFFF;
+  --mp-info:            #2F6A8F; /* informational; 5.22:1 on #EAF3F9 */
+  --mp-info-text:       var(--mp-info);
+  --mp-border-control:  #76849A; /* 3:1 border where it is the only control indicator */
+  --mp-focus-color:     #003A8C; /* focus outline, 2px solid, 2px offset */
 
   /* ─── SEMANTIC SURFACES (light) ─── */
   --mp-bg:              #F7F9FC;
@@ -96,10 +102,12 @@
   --mp-icon-md: 20px;
   --mp-icon-lg: 24px;
 
-  /* ─── V2: FOCUS RING ─── */
-  --mp-focus-ring: 0 0 0 3px rgba(0, 123, 95, 0.35);
-  --mp-focus-ring-cta: 0 0 0 3px rgba(0, 58, 140, 0.30);
-  --mp-focus-ring-error: 0 0 0 3px rgba(214, 69, 69, 0.30);
+  /* ─── V2: FOCUS RING (UX-GLOBAL-23, 2026-10-12) ───
+     The indicator is a 2px solid outline in --mp-focus-color with a 2px
+     offset; the box-shadow form below is for legacy call sites only. */
+  --mp-focus-ring: 0 0 0 2px #FFFFFF, 0 0 0 4px var(--mp-focus-color);
+  --mp-focus-ring-cta: var(--mp-focus-ring);
+  --mp-focus-ring-error: 0 0 0 2px #FFFFFF, 0 0 0 4px var(--mp-error);
 }
 
 /* ─── DARK MODE ─── */
@@ -112,7 +120,14 @@
   --mp-text-light:   #64748B;
   --mp-border:       #334155;
   --mp-border-soft:  rgba(51, 65, 85, 0.7);
-  --mp-viridian:     #00A896; /* viridian shifts brighter in dark */
+  --mp-viridian:     #2BC39A; /* viridian brightens along its own hue in dark */
+  --mp-cta-blue:     #4D8DF0; /* dark primary fill; label #001B3D (5.21:1) */
+  --mp-error:        #F26D6D;
+  --mp-fg-on-error:  #081224;
+  --mp-info:         #5BA3CE;
+  --mp-warning-text: #F4A261;
+  --mp-border-control: #64799B;
+  --mp-focus-color:  #6BA1F4;
 }
 
 /* ═══ SEMANTIC TYPE CLASSES ═══ */

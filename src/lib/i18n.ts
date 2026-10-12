@@ -21,6 +21,10 @@ const translations = {
   // a11 UI primitives (2026-10-12): shell, navigation, overlays, status,
   // consent, answer rows, images and result cards. Formal Sie.
   a11_notifications: { de: "Benachrichtigungen", en: "Notifications" },
+  library_legacy_confirm_title: { de: "Alte Notizen übernehmen?", en: "Import the older notes?" },
+  library_legacy_confirm_body: { de: "Diese Notizen liegen ungeschützt in diesem Browser und könnten von einer anderen Person stammen. Fahren Sie nur fort, wenn sie zu Ihrem Konto gehören. Die Originale bleiben im Browser gespeichert.", en: "These notes are stored unprotected in this browser and may belong to someone else. Continue only if they belong to your account. The originals stay in the browser." },
+  library_legacy_confirm_ok: { de: "Notizen übernehmen", en: "Import notes" },
+  library_legacy_confirm_cancel: { de: "Abbrechen", en: "Cancel" },
   a11_offline_now: { de: "Sie sind offline.", en: "You are offline." },
   a11_online_again: { de: "Wieder online.", en: "Back online." },
   feedback_send_failed: { de: "Feedback konnte nicht gesendet werden. Bitte versuchen Sie es erneut.", en: "Feedback could not be sent. Please try again." },

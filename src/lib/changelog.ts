@@ -110,6 +110,18 @@ export const CHANGELOG: ChangelogEntry[] = [
   "date": "2026-10-12",
   "tag": "improvement",
   "title": {
+    "de": "Neue Navigation, klarere Antworten und besser lesbare Farben",
+    "en": "New navigation, clearer answers and more readable colours"
+  },
+  "description": {
+    "de": "Auf dem Smartphone zeigt die Leiste unten jetzt Start, Simulation, Üben, Lernplan und Mehr. Unter Mehr finden Sie alle weiteren Bereiche wie Verlauf, Meine Fehler, Einstellungen und Feedback, in derselben Ordnung wie in der Seitenleiste am Computer. Nach dem Beantworten zeigt jede Option ihr Ergebnis in Worten und mit einem Symbol, nicht nur in Farbe. Bilder in Fragen verschieben die Antworten nicht mehr beim Laden und lassen sich vergrößern und neu laden. Prüfungsergebnisse zeigen den Abstand zur Übungsgrenze ohne Bestehensaussage. Fehler- und Hinweisfarben sind kontrastreicher, die Fokusmarkierung ist deutlich sichtbar, und Animationen respektieren die Einstellung für reduzierte Bewegung.",
+    "en": "On phones the bottom bar now shows Home, Simulation, Practise, Study plan and More. More lists every other area, such as History, My mistakes, Settings and Feedback, in the same order as the desktop sidebar. After answering, every option states its result in words and with an icon, not only in colour. Question images no longer move the answers while loading and can be enlarged and reloaded. Exam results show the distance to the practice threshold without a pass claim. Error and notice colours have more contrast, the focus outline is clearly visible, and animations respect the reduced-motion setting."
+  }
+},
+{
+  "date": "2026-10-12",
+  "tag": "improvement",
+  "title": {
     "de": "Klarere Prüfungsnamen und einheitliche Zahlen",
     "en": "Clearer exam names and consistent numbers"
   },

@@ -415,6 +415,7 @@ export default function AdminPuypPage() {
 
       {/* ── Approve dialog ── */}
       {can("revenue.manage") && <Dialog
+        busy={processing}
         open={!!approveTarget}
         onOpenChange={(o) => !o && setApproveTarget(null)}
         title="Approve PUYP extension"
@@ -434,6 +435,7 @@ export default function AdminPuypPage() {
             </button>
             <button
               className="mp-btn mp-btn--primary"
+              data-dialog-primary
               onClick={submitApprove}
               disabled={processing || !newExpiresAt}
             >
@@ -476,6 +478,7 @@ export default function AdminPuypPage() {
 
       {/* ── Reject dialog ── */}
       {can("revenue.manage") && <Dialog
+        busy={processing}
         open={!!rejectTarget}
         onOpenChange={(o) => {
           if (!o) {
@@ -501,6 +504,7 @@ export default function AdminPuypPage() {
             </button>
             <button
               className="mp-btn mp-btn--destructive"
+              data-dialog-primary
               onClick={submitReject}
               disabled={processing || !rejectReason.trim()}
             >

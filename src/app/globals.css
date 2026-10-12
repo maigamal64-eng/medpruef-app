@@ -564,18 +564,8 @@ body {
   .main-content { scroll-padding-bottom: var(--mobile-nav-clearance); }
 }
 
-/* Pricing has tall plan cards and conversion controls near their bottoms.
-   Give this route its own scrollport that ends above the persistent mobile
-   navigation, so the bar never overlays card copy or checkout buttons. */
-@media (max-width: 1024px) {
-  .pricing-layout .main-content {
-    height: calc(100dvh - var(--mobile-nav-clearance));
-    box-sizing: border-box;
-    overflow-y: auto;
-    overscroll-behavior-y: contain;
-    padding-bottom: 1rem;
-  }
-}
+/* ACC-13 / UX-GLOBAL-10: /pricing no longer owns a nested scrollport; it
+   uses document scroll and the shared nav clearance like every page. */
 
 .topic-card-border { border-left-width: 3px; border-left-style: solid; border-radius: var(--radius-lg); }
 
@@ -2208,3 +2198,14 @@ html[data-onboarding="open"] .mp-status-region > :not([data-status-banner="updat
 .mp-result-chip--below, .mp-result-chip--timeout { color: var(--mp-fg); }
 .mp-result-chip--save-saved { color: var(--mp-success-text); }
 .mp-result-chip--save-failed { color: var(--mp-error-text); border-color: var(--mp-error); }
+
+/* Persistent single choice rows (UX-GLOBAL-23): native radio, 48px rows,
+   3:1 control border, MPDS selected style (viridian tint + 1.5px border). */
+.mp-choice-row {
+  display: flex; align-items: center; gap: 12px;
+  min-height: 48px; padding: 10px 12px;
+  border: 1px solid var(--mp-border-control); border-radius: var(--mp-r-button);
+  background: var(--mp-surface-raised); cursor: pointer;
+}
+.mp-choice-row input { width: 18px; height: 18px; accent-color: var(--mp-viridian); flex-shrink: 0; }
+.mp-choice-row--checked, .mp-choice-row:has(input:checked) { border: 1.5px solid var(--mp-viridian); background: var(--mp-tint-viridian); }

@@ -150,7 +150,7 @@ export default function ReadinessSignal({ lang = "de" }: { lang?: Lang }) {
             <Sparkles className="w-5 h-5" style={{ color: band.color }} aria-hidden />
           )}
           <div>
-            <p className="text-[10px] uppercase tracking-wider font-semibold text-[var(--mp-fg-subtle)]">
+            <p className="text-[12px] uppercase tracking-wider font-semibold text-[var(--mp-fg-subtle)]">
               {lang === "de" ? "Übungs-Bereitschaft" : "Practice readiness"}
             </p>
             <p className="text-base font-bold" style={{ color: band.color }}>
@@ -177,7 +177,7 @@ export default function ReadinessSignal({ lang = "de" }: { lang?: Lang }) {
           return (
             <div key={k}>
               <div className="flex items-center justify-between mb-1">
-                <span className={`text-[11px] font-medium ${isLowest ? "text-[var(--mp-fg)]" : "text-[var(--mp-fg-muted)]"}`}>
+                <span className={`text-[13px] font-medium ${isLowest ? "text-[var(--mp-fg)]" : "text-[var(--mp-fg-muted)]"}`}>
                   {FACTOR_LABEL[k][lang]}
                 </span>
               </div>
@@ -208,7 +208,7 @@ export default function ReadinessSignal({ lang = "de" }: { lang?: Lang }) {
       </div>
 
       {/* Honest disclaimer (verbatim from the methodology spec) */}
-      <p className="text-[11px] text-[var(--mp-fg-subtle)] mt-3 leading-relaxed">
+      <p className="text-[13px] text-[var(--mp-fg-subtle)] mt-3 leading-relaxed">
         {lang === "de"
           ? "Das zeigt, wie bereit deine Übung aussieht: Abdeckung, Genauigkeit, Beständigkeit und Tempo im Vergleich zu deinem Plan. Es ist keine Vorhersage deines Prüfungsergebnisses."
           : "This shows how ready your practice looks: your coverage, accuracy, consistency, and pace vs your plan. It is not a prediction of your exam result."}

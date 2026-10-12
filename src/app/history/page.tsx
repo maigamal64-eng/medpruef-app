@@ -22,7 +22,9 @@ import { DataRegion } from "@/components/ui/DataRegion";
 import { createRequestSequence } from "@/lib/async-data";
 import { getLang, useLang, renderLang, t } from "@/lib/i18n";
 import Link from "next/link";
-import { Alert, EmptyState, Skeleton } from "@/components/ui";
+import { Alert, AppLayout, EmptyState, Skeleton } from "@/components/ui";
+import Sidebar from "@/components/Sidebar";
+import BottomNav from "@/components/BottomNav";
 import { loadPendingExams } from "@/lib/examSession";
 import { getStoredSession } from "@/lib/auth";
 import {
@@ -126,7 +128,7 @@ function ScoreBar({ pct, passed }: { pct: number; passed: boolean }) {
   );
 }
 
-export default function HistoryPage() {
+function HistoryContent() {
   const { isPaid, isLoading: tierLoading } = useUserTier();
   const [lang, setLang] = useState<Lang>("de");
   const preferredLang = useLang();
@@ -683,5 +685,19 @@ function AnswerRow({ row, lang }: { row: AnswerRow; lang: Lang }) {
         </p>
       )}
     </div>
+  );
+}
+
+/** UX-GLOBAL-09: the learner shell (Sidebar + BottomNav) on /history too. */
+export default function HistoryPage() {
+  const lang = useLang();
+  const [userId, setUserId] = useState<string | undefined>();
+  useEffect(() => { setUserId(getStoredSession()?.user?.id); }, []);
+  return (
+    <AppLayout sidebar={<Sidebar lang={lang} userId={userId} />} bottomNav={<BottomNav lang={lang} userId={userId} />}>
+      <div className="main-content">
+        <HistoryContent />
+      </div>
+    </AppLayout>
   );
 }
