@@ -1,12 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ChevronRight, ChevronLeft, Check, Sparkles } from 'lucide-react'
 import { getStoredSession } from '@/lib/auth'
 import { authFetch as fetch } from '@/lib/authFetch'
 import { Dialog, Textarea } from '@/components/ui'
 import { t, useLang, type TranslationKey } from '@/lib/i18n'
 import { fetchAnnouncementState } from '@/lib/announcements/useAnnouncementGate'
+import { dismissSurface, useAnnouncementSlot } from '@/lib/announcements/queue'
 import { safeStorage } from "@/lib/safe-storage";
 
 const STORAGE_COMPLETED = 'medpruef_survey_v1_completed'
@@ -121,14 +122,6 @@ export default function UserSurveyModal() {
         timer = setTimeout(() => {
           if (cancelled) return
           setShow(true)
-          // Stamp shown_at server-side as soon as we render. Fire-and-
-          // forget; if it fails the user just sees the modal once more
-          // on the next visit, which is fine.
-          fetch('/api/announcements/seen', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ surface: 'feedback_survey_shown' }),
-          }).catch(() => {})
         }, 3000)
       } catch { /* silent */ }
     })()
@@ -139,8 +132,23 @@ export default function UserSurveyModal() {
     }
   }, [])
 
+  // UX-GLOBAL-12: the survey only opens when the announcement queue grants it.
+  const visible = useAnnouncementSlot('survey', show)
+  const stamped = useRef(false)
+  useEffect(() => {
+    if (!visible || stamped.current) return
+    stamped.current = true
+    // Stamp shown_at once it actually rendered. Fire-and-forget.
+    fetch('/api/announcements/seen', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ surface: 'feedback_survey_shown' }),
+    }).catch(() => {})
+  }, [visible])
+
   const dismiss = () => {
     setShow(false)
+    dismissSurface('survey', 'no_interest')
     safeStorage.setItem(STORAGE_DISMISSED, 'true')
     // Cross-device dismiss (review-2026-04-26-A3) so the next browser
     // / incognito session doesn't re-fire the survey for this user.
@@ -337,7 +345,7 @@ export default function UserSurveyModal() {
 
   return (
     <Dialog
-      open={show}
+      open={visible}
       onOpenChange={(next) => {
         if (!next) dismiss()
       }}

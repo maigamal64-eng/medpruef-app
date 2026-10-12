@@ -20,6 +20,7 @@
  */
 
 import { useEffect, useRef, useState } from "react";
+import { dismissSurface, useAnnouncementSlot } from "@/lib/announcements/queue";
 import { X, Send } from "lucide-react";
 import { createFeedbackSubmission } from "@/lib/checkout-feedback-submit";
 import { authFetch } from "@/lib/authFetch";
@@ -57,6 +58,7 @@ export default function CheckoutStallPrompt() {
   const [eligible, setEligible] = useState(false);
   const [checked, setChecked] = useState(false);
   const [dismissed, setDismissed] = useState(false);
+  const granted = useAnnouncementSlot("checkout_stall", checked && eligible && !dismissed);
   const [selectedReason, setSelectedReason] = useState<Reason | null>(null);
   const [details, setDetails] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -99,6 +101,7 @@ export default function CheckoutStallPrompt() {
     } catch {
       /* non-critical */
     }
+    dismissSurface("checkout_stall", "later");
     setDismissed(true);
   };
 
@@ -123,7 +126,8 @@ export default function CheckoutStallPrompt() {
     void handleSubmit("other", true);
   };
 
-  if (!checked || !eligible || dismissed) return null;
+  // UX-GLOBAL-12: checkout follow-up ranks after access and renewal.
+  if (!granted) return null;
 
   return (
     <section

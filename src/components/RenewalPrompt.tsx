@@ -38,6 +38,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
+import { dismissSurface, useAnnouncementSlot } from "@/lib/announcements/queue";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { CalendarClock } from "lucide-react";
@@ -141,13 +142,16 @@ export default function RenewalPrompt() {
     };
   }, [isLoading, inWindow, tier, tierExpiresAt]);
 
-  const hidden =
+  const wantsShow = !(
     isLoading ||
     dismissed ||
     allowedToday !== true ||
     decision === null ||
     offerAllowed !== true ||
-    HIDE_PATHS.some((p) => pathname?.startsWith(p));
+    HIDE_PATHS.some((p) => pathname?.startsWith(p)));
+  // UX-GLOBAL-12: access and renewal hold the highest queue priority.
+  const granted = useAnnouncementSlot("renewal", wantsShow);
+  const hidden = !granted;
 
   // Stamp the day the FIRST time the banner is actually rendered, so a
   // user who simply navigates away still only sees it once per day.
@@ -158,6 +162,7 @@ export default function RenewalPrompt() {
   if (hidden || !decision) return null;
 
   const handleDismiss = () => {
+    dismissSurface("renewal", "later");
     stampSeen();
     setDismissed(true);
   };

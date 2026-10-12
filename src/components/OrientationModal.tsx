@@ -34,6 +34,7 @@ import {
   useAnnouncementGate,
   type SurfaceKey,
 } from "@/lib/announcements/useAnnouncementGate";
+import { dismissSurface, useAnnouncementSlot } from "@/lib/announcements/queue";
 import { t, useLang } from "@/lib/i18n";
 import { getStoredExamSource, type ExamSourceId } from "@/lib/topics";
 import { safeStorage } from "@/lib/safe-storage";
@@ -81,7 +82,8 @@ export default function OrientationModal() {
   // tracks this via `orientation_modal_seen_at` being null for users
   // who were created before the rewrite. No client flag read needed.
 
-  const open = activeSurface === "orientation_modal";
+  // UX-GLOBAL-12: the gate decides the cadence, the queue decides "now".
+  const open = useAnnouncementSlot("orientation", activeSurface === "orientation_modal" && Boolean(state));
 
   const dismiss = async () => {
     // Stamp the new localStorage key AND clear the legacy one so the
@@ -93,6 +95,7 @@ export default function OrientationModal() {
     } catch {
       /* noop */
     }
+    dismissSurface("orientation", "no_interest");
     await markSeen(SURFACE);
   };
 

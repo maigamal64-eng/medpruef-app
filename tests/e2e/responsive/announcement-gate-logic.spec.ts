@@ -71,11 +71,25 @@ test.describe("computeActiveSurface — §1.4.2 cadence table", () => {
     expect(result).toBeNull();
   });
 
-  test("Session 2, orientation_modal unseen → orientation_modal", () => {
+  test("Session 2, orientation_modal unseen → no modal yet (ONB-35: never in the first two sessions)", () => {
     const result = computeActiveSurface(
       makeState({ sessionCount: 2, qsAnsweredTotal: 6, orientationModalSeenAt: null }),
     );
+    expect(result).toBe("cohort_banner");
+  });
+
+  test("Session 3, ≥5 answers, orientation_modal unseen → orientation_modal", () => {
+    const result = computeActiveSurface(
+      makeState({ sessionCount: 3, qsAnsweredTotal: 6, orientationModalSeenAt: null }),
+    );
     expect(result).toBe("orientation_modal");
+  });
+
+  test("Session 3, fewer than 5 answers → no orientation modal", () => {
+    const result = computeActiveSurface(
+      makeState({ sessionCount: 3, qsAnsweredTotal: 2, orientationModalSeenAt: null }),
+    );
+    expect(result).toBeNull();
   });
 
   test("Session 2, orientation already seen → cohort_banner (fallback)", () => {

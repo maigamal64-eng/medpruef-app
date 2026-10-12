@@ -6,6 +6,7 @@ import { billingTrialLine, VERIFIED_CANCEL_PATH } from "@/lib/billing-copy";
  * exact terms must all be known. Per-account dismissal persists locally. */
 
 import { useAnnouncementGate } from "@/lib/announcements/useAnnouncementGate";
+import { dismissSurface, isSurfaceDismissed, useAnnouncementSlot } from "@/lib/announcements/queue";
 import { canShowHomeTrial, type HomeTrialTerms } from "@/lib/home-trial-announcement";
 import { useEffect, useState } from "react";
 import { authFetch as fetch } from "@/lib/authFetch";
@@ -43,7 +44,13 @@ export default function TrialAnnouncementCard({
       return;
     }
     try {
-      setDismissed(localStorage.getItem(dismissKey(userId)) === "1");
+      // ACC-27: a dismissal is a cooldown in the shared queue table, never forever.
+      // A legacy permanent dismissal becomes one 14-day "Kein Interesse".
+      if (localStorage.getItem(dismissKey(userId)) === "1") {
+        localStorage.removeItem(dismissKey(userId));
+        dismissSurface("trial_card", "no_interest");
+      }
+      setDismissed(isSurfaceDismissed("trial_card"));
     } catch {
       // Storage blocked — default to NOT dismissed so the card can still
       // show (matches <TrialRibbon>'s "still allow" fallback); a user
@@ -64,17 +71,15 @@ export default function TrialAnnouncementCard({
     return () => { cancelled = true; };
   }, [userId, isGuest]);
 
-  const dismiss = () => {
-    try {
-      localStorage.setItem(dismissKey(userId), "1");
-    } catch {
-      /* ignore — non-persistent dismiss for this session's render only */
-    }
+  const dismiss = (choice: "later" | "no_interest" = "later") => {
+    dismissSurface("trial_card", choice);
     setDismissed(true);
   };
 
-  if (isGuest || loading || dismissed || !state) return null;
-  if (!canShowHomeTrial(state, { ready: !queue.loading && queue.state?.userId === userId, answered: queue.state?.qsAnsweredTotal ?? 0, activeSurface: queue.activeSurface })) return null;
+  const wants = !isGuest && !loading && !dismissed && Boolean(state) && canShowHomeTrial(state as HomeTrialTerms, { ready: !queue.loading && queue.state?.userId === userId, answered: queue.state?.qsAnsweredTotal ?? 0, activeSurface: queue.activeSurface });
+  // UX-GLOBAL-12: one unrequested inline card per session, through the queue.
+  const granted = useAnnouncementSlot("trial_card", wants);
+  if (!granted || !state) return null;
 
 
   return (
@@ -115,12 +120,16 @@ export default function TrialAnnouncementCard({
         </div>
 
         {VERIFIED_CANCEL_PATH && <a className="min-h-11 inline-flex items-center underline" href="/faq#cancellation">{t("home_cancel_help", lang)}</a>}
+        <div className="flex flex-wrap gap-2 mt-1">
+          <button type="button" onClick={() => dismiss("later")} className="mp-btn mp-btn--ghost mp-btn--sm min-h-11">{lang === "de" ? "Später" : "Later"}</button>
+          <button type="button" onClick={() => dismiss("no_interest")} className="mp-btn mp-btn--ghost mp-btn--sm min-h-11">{lang === "de" ? "Kein Interesse" : "Not interested"}</button>
+        </div>
       </div>
 
       <button
         type="button"
-        onClick={dismiss}
-        aria-label={t("close", lang)}
+        onClick={() => dismiss("later")}
+        aria-label={lang === "de" ? "Später" : "Later"}
         className="absolute top-1 end-1 min-h-11 min-w-11 p-1 mp-focusable rounded-lg text-[var(--mp-fg-light)] hover:text-[var(--mp-fg)] hover:bg-[var(--mp-surface-raised)] transition-colors"
       >
         <X className="w-4 h-4" />

@@ -18,7 +18,7 @@ import { completeAuthEntry } from "@/lib/auth-entry-completion";
 import { readAuthEntry, buildAuthHref } from "@/lib/auth-entry";
 import { t, getUiLang, useLang, renderLang, type Lang } from "@/lib/i18n";
 import { getExamLabel } from "@/lib/master-locale/exam-label";
-import { Lightbulb, ClipboardList, CheckCircle, User, ChevronRight, Search, Target, ArrowRight } from "lucide-react";
+import { ClipboardList, CheckCircle, User, ChevronRight, Search, Target, ArrowRight } from "lucide-react";
 import { isTelegramMiniApp, getMiniAppInitData, getStoredSession, storeSession, setSessionToken, clearSession } from "@/lib/auth";
 import { isStandalonePWA, isTouchFirstDevice } from "@/lib/telegram-login";
 import TelegramCodeHandoff from "@/components/TelegramCodeHandoff";
@@ -99,53 +99,6 @@ declare global {
       };
     };
   }
-}
-
-/** Floating weakness toast — appears top-right, auto-dismisses after 8s.
- *  Retuned Apr 23 to use the viridian "suggestion" palette (calm coach tone)
- *  rather than the old warning-yellow accent. Matches the inline suggestion
- *  card below the hero. */
-function WeaknessToast({ weakTopics, lang }: { weakTopics: TopicStats[]; lang: Lang }) {
-  const [visible, setVisible] = useState(true);
-  const [dismissed, setDismissed] = useState(false);
-
-  useEffect(() => {
-    if (weakTopics.length === 0) return;
-    const timer = setTimeout(() => setVisible(false), 8000);
-    return () => clearTimeout(timer);
-  }, [weakTopics.length]);
-
-  if (!visible || dismissed || weakTopics.length === 0) return null;
-  const wt = weakTopics[0];
-  const acc = Math.min(Math.round(wt.accuracy), 100);
-
-  return (
-    <div className="fixed top-4 right-4 z-50 max-w-sm animate-slide-up">
-      <div
-        className="rounded-2xl p-4 shadow-[var(--mp-shadow-elev)] bg-[var(--mp-surface-raised)] border-l-[3px]"
-        style={{ borderLeftColor: "var(--mp-viridian)", border: "1px solid var(--mp-border-subtle)", borderLeft: "3px solid var(--mp-viridian)" }}
-      >
-        <div className="flex items-start gap-3">
-          <Lightbulb className="w-5 h-5 text-[var(--mp-viridian)] flex-shrink-0 mt-0.5" aria-hidden />
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-[var(--mp-fg)] mb-0.5">
-              {t("home_focus", lang).replace("{topic}", wt.topic)}
-            </p>
-            <p className="text-xs text-[var(--mp-fg-subtle)]">
-              {t("home_focus_body", lang).replace("{n}", String(acc))}
-            </p>
-          </div>
-          <button
-            onClick={() => setDismissed(true)}
-            className="text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg)] transition-colors flex-shrink-0 mp-focusable"
-            aria-label={t("home_close", lang)}
-          >
-            <span className="text-lg leading-none">&times;</span>
-          </button>
-        </div>
-      </div>
-    </div>
-  );
 }
 
 /** Time-of-day-aware greeting. German/English parity. Kept local since it's
@@ -1115,7 +1068,6 @@ export default function Home() {
       <OrientationModal />
       <UserSurveyModal />
       <ReferralShareFloater />
-      <WeaknessToast weakTopics={weakTopics} lang={lang} />
       {showCohortConfetti && <CohortWelcomeCheck />}
 
     </AppLayout>

@@ -19,7 +19,7 @@
  *
  *   Session 1, <5 Qs answered                → null (nothing)
  *   Session 1, ≥5 Qs                         → 'cohort_banner'
- *   Session 2+, orientation_modal not seen   → 'orientation_modal'
+ *   Session 3+, ≥5 Qs, orientation not seen  → 'orientation_modal' (ONB-35)
  *   Session 3+ OR ≥25 Qs answered            → 'referral_floater'
  *     AND orientation_modal seen
  *     AND cohort_banner dismissed
@@ -51,6 +51,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { authFetch } from "@/lib/authFetch";
 import { useUserTier } from "@/lib/hooks/useUserTier";
+import { setAnnouncementContext } from "@/lib/announcements/queue";
 
 // ── Shared deduped fetch ─────────────────────────────────────────
 //
@@ -111,6 +112,12 @@ export function fetchAnnouncementState(): Promise<AnnouncementStateResponse | nu
       if (!r.ok) return null;
       return r.json() as Promise<AnnouncementStateResponse>;
     })
+    .then((body) => {
+      // UX-GLOBAL-12: the queue's first-session and first-answer rules read
+      // the same server row the cadence uses.
+      if (body?.state) setAnnouncementContext({ firstSession: body.state.sessionCount <= 1, answeredTotal: body.state.qsAnsweredTotal });
+      return body;
+    })
     .catch(() => null)
     .finally(() => {
       // Clear immediately on settle so the NEXT page load / navigation
@@ -160,6 +167,7 @@ export interface UseAnnouncementGateResult {
 // ── Cadence thresholds ───────────────────────────────────────────
 
 const MIN_QS_FOR_COHORT_BANNER = 5;
+const MIN_SESSION_FOR_ORIENTATION = 3;
 const MIN_QS_FOR_REFERRAL_FLOATER = 25;
 const MIN_SESSION_FOR_REFERRAL_FLOATER = 3;
 // 30 days (2026-09-21): the cooldown only ever applies to a DISMISSAL
@@ -208,9 +216,9 @@ export function computeActiveSurface(
     return null;
   }
 
-  // Session 2+ and the user hasn't seen the orientation modal yet.
-  // This is the one modal-style surface we allow; fires once ever.
-  if (sessionCount >= 2 && !orientationModalSeenAt) {
+  // ONB-35 (a12): the orientation modal never appears in the first two
+  // sessions and only after at least 5 answers; it fires once ever.
+  if (sessionCount >= MIN_SESSION_FOR_ORIENTATION && qsAnsweredTotal >= MIN_QS_FOR_COHORT_BANNER && !orientationModalSeenAt) {
     return "orientation_modal";
   }
 

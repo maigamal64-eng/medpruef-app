@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { setAnnouncementContext } from "@/lib/announcements/queue";
 import Link from "next/link";
 import { ArrowRight, ArrowLeft, CheckCircle2, GraduationCap, Calendar, Target, Compass } from "lucide-react";
 import { getStoredTheme } from "./ThemeProvider";
@@ -53,7 +54,8 @@ export default function Onboarding({ lang = "de", onLangChange, onComplete }: On
   // The consent bar and the top status region stay hidden while Onboarding is open (UX-GLOBAL-11/13).
   useEffect(() => {
     document.documentElement.dataset.onboarding = "open";
-    return () => { delete document.documentElement.dataset.onboarding; };
+    setAnnouncementContext({ onboardingOpen: true }); // UX-GLOBAL-12: nothing over Onboarding
+    return () => { delete document.documentElement.dataset.onboarding; setAnnouncementContext({ onboardingOpen: false }); };
   }, []);
   const l = activeLang;
   const t = (k: Parameters<typeof tr>[0]) => tr(k, l);

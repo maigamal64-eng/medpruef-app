@@ -6,6 +6,7 @@ import { getStoredSession, storeSession } from '@/lib/auth'
 import { authFetch } from '@/lib/authFetch'
 import { Dialog, TextField, Alert } from '@/components/ui'
 import { t, useLang } from '@/lib/i18n'
+import { dismissSurface, useAnnouncementSlot } from '@/lib/announcements/queue'
 
 const STORAGE_KEY = 'medpruef_email_validation_dismissed'
 
@@ -42,8 +43,12 @@ export default function EmailValidationModal() {
     } catch { /* silent */ }
   }, [])
 
+  // UX-GLOBAL-12: an unrequested modal, granted by the queue (access first).
+  const visible = useAnnouncementSlot('email_validation', show)
+
   const dismiss = () => {
     setShow(false)
+    dismissSurface('email_validation', 'later')
     sessionStorage.setItem(STORAGE_KEY, '1')
   }
 
@@ -120,7 +125,7 @@ export default function EmailValidationModal() {
 
   return (
     <Dialog
-      open={show}
+      open={visible}
       onOpenChange={(next) => {
         if (!next) dismiss()
       }}

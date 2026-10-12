@@ -194,9 +194,10 @@ export const PRESETS = {
   }),
 
   /** Session 2, orientation not yet seen → orientation modal. */
+  // ONB-35 (a12): the orientation modal waits for session 3 and 5 answers.
   session2FirstTime: (userId: string): AnnouncementState => ({
     userId,
-    sessionCount: 2,
+    sessionCount: 3,
     qsAnsweredTotal: 6,
     orientationModalSeenAt: null,
     cohortBannerDismissedAt: null,

@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { dismissSurface, useAnnouncementSlot } from '@/lib/announcements/queue';
 import { usePathname } from "next/navigation";
 import { Download, X, RefreshCw } from "lucide-react";
 import { t, useLang } from "@/lib/i18n";
@@ -38,6 +39,8 @@ export default function PWAInstall() {
   const [waitingWorker, setWaitingWorker] = useState<ServiceWorker | null>(null);
   const [updateAvailable, setUpdateAvailable] = useState(false);
   const studyInProgress = isStudyRoute(pathname);
+  // UX-GLOBAL-12: the install card is an unrequested inline surface (never during study).
+  const installGranted = useAnnouncementSlot('install_card', showBanner && !dismissed && !studyInProgress);
 
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return;
@@ -158,6 +161,7 @@ export default function PWAInstall() {
   const handleDismiss = () => {
     setShowBanner(false);
     setDismissed(true);
+    dismissSurface('install_card', 'later');
     localStorage.setItem("medpruef_pwa_dismissed", "1");
   };
 
@@ -197,7 +201,7 @@ export default function PWAInstall() {
     );
   }
 
-  if (!showBanner || dismissed) return null;
+  if (!installGranted) return null;
 
   // F7 fix (2026-04-26): Chrome fires beforeinstallprompt AND its own
   // system-level install prompt, causing two stacked banners. We call

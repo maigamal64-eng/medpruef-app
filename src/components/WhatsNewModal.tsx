@@ -5,6 +5,7 @@ import { Mountain, Pill, Calendar, Target, Star, MessageSquarePlus, WifiOff, Sea
 import { Dialog } from '@/components/ui'
 import { t, useLang, type TranslationKey } from '@/lib/i18n'
 import { fetchAnnouncementState } from '@/lib/announcements/useAnnouncementGate'
+import { dismissSurface, useAnnouncementSlot } from '@/lib/announcements/queue'
 // authFetch (aliased to `fetch`) adds the signed `x-session-token` header
 // that the `requireUser`-guarded /api/announcements/seen endpoint verifies
 // (B-22). The bare `fetch` here silently 401'd, so whats_new_seen_at never
@@ -114,6 +115,8 @@ export default function WhatsNewModal() {
             try { safeStorage.setItem(STORAGE_KEY, CURRENT_VERSION) } catch {}
             return
           }
+          // ONB-34: never in the first two sessions.
+          if (!body?.state || body.state.sessionCount < 3) return
         } catch { /* fall through to legacy behaviour */ }
 
         if (cancelled) return
@@ -131,8 +134,12 @@ export default function WhatsNewModal() {
     }
   }, [])
 
+  // UX-GLOBAL-12: one unrequested modal per session, through the queue.
+  const visible = useAnnouncementSlot('whats_new', open)
+
   const dismiss = () => {
     setOpen(false)
+    dismissSurface('whats_new', 'no_interest')
     safeStorage.setItem(STORAGE_KEY, CURRENT_VERSION)
     fetch('/api/announcements/seen', {
       method: 'POST',
@@ -143,7 +150,7 @@ export default function WhatsNewModal() {
 
   return (
     <Dialog
-      open={open}
+      open={visible}
       onOpenChange={(next) => {
         if (!next) dismiss()
         else setOpen(true)
