@@ -21,7 +21,7 @@
 
 import { mentionsDosing, unsafeExplainBackground } from "./explain-safety";
 import { studySentenceViolation } from "./study-safety";
-import { countsOwnEnumeration } from "./enumeration-count";
+import { ownEnumerationSpan } from "./enumeration-count";
 import { deadlineGapNotice, topicNotice } from "./trust-copy";
 import type { MentorAnswerBlock, MentorCitation, MentorLang } from "./contract";
 import type { MentorExamKey, MentorFact, ValidatedAnswer } from "./seam";
@@ -1100,15 +1100,23 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
     // ("Wo hast du für den Termin im Februar eingereicht?") is not a claim. Day
     // dates, numbers, percentages and amounts in a question are still checked.
     const asked = questionRanges(text);
-    const bad = values.filter(
+    const unsupported = values.filter(
       (v) =>
         !v.keys.some((k) => allowed.has(k)) &&
         !((v.kind === "month" || v.kind === "monthyear") && asked.some(([a, e]) => v.start >= a && v.end <= e)) &&
         !restatesKnown(v, text, values, allowed, opts.today) &&
         !restatesSittingMonth(v, text, blockExams) &&
-        !oneOfStatedUnit(v, text, blockOneUnits) &&
-        !countsOwnEnumeration(v, text)
+        !oneOfStatedUnit(v, text, blockOneUnits)
     );
+    // A count of the answer's own enumeration ("The first two are subscriptions") is not a
+    // fact value (gate7). Two passes: it is exempt only while no other unsupported value
+    // sits in the sentences of the count and its list, so it never outlives a deleted list.
+    const factNames = used.flatMap((f) => [f.text_de, f.text_en]).filter((t): t is string => typeof t === "string");
+    const spans = new Map(unsupported.map((v) => [v, ownEnumerationSpan(v, text, factNames)] as const));
+    const bad = unsupported.filter((v) => {
+      const span = spans.get(v);
+      return !span || unsupported.some((o) => o !== v && !spans.get(o) && o.start < span[1] && o.end > span[0]);
+    });
     let outText = text;
     if (bad.length > 0) {
       replaced = true;

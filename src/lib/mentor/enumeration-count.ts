@@ -29,6 +29,11 @@
  *      coordinated series ("A, B and C") before it, or after it when a colon
  *      follows the count ("the two: A and B"). With an ordinal or "other"
  *      ("the first two") it must be smaller than that series instead.
+ *   6. No item of that list is headed by a value noun ("a first attempt and a
+ *      retake"), no value noun names it before a colon, a colon list never
+ *      counts in a sentence naming an exam, and no other unsupported value lies
+ *      in the sentences of the count and the list (the caller checks this
+ *      last one, so a count never outlives a deleted list).
  * The count then only restates the size of a list the answer already wrote, and
  * every item of that list is validated as usual. Nothing is added to the text.
  */
@@ -74,8 +79,8 @@ const BARE_END_RE = /^\s*(?:[,;:.!?)]|$)/u;
 /** A value noun anywhere in the sentence keeps every bare count in it strict (attempts, questions, exams, time, money). */
 const VALUE_NOUN_RE = new RegExp(
   "(?<![\\p{L}])(?:" +
-    "attempts?|tries|times|days?|weeks?|months?|monthly|years?|yearly|hours?|minutes?|questions?|points?|exams?|examinations?|sittings?|sessions?|dates?|deadlines?|parts?|blocks|tertials?|semesters?|credits?|messages?|percent|euros?|universit(?:y|ies)|places|seats|attempt" +
-    "|antritt\\p{L}*|versuch\\p{L}*|mal|tag|tage|tagen|woche\\p{L}*|monat\\p{L}*|jahr\\p{L}*|stunde\\p{L}*|minute\\p{L}*|frage|fragen|punkt\\p{L}*|prüfung\\p{L}*|termin\\p{L}*|frist\\p{L}*|teil|teile|teilen|blöcke|tertial\\p{L}*|semester\\p{L}*|nachricht\\p{L}*|prozent|universität\\p{L}*|plätze|anmelde\\p{L}*" +
+    "attempts?|tries|times|days?|weeks?|months?|monthly|years?|yearly|hours?|minutes?|questions?|points?|exams?|examinations?|sittings?|sessions?|dates?|deadlines?|parts?|blocks|tertials?|semesters?|credits?|messages?|percent|euros?|universit(?:y|ies)|places|seats|attempt|chances?|retakes?|try|resits?|subjects?|sections?|stations?|cases?" +
+    "|antritt\\p{L}*|versuch\\p{L}*|mal|tag|tage|tagen|woche\\p{L}*|monat\\p{L}*|jahr\\p{L}*|stunde\\p{L}*|minute\\p{L}*|frage|fragen|punkt\\p{L}*|prüfung\\p{L}*|termin\\p{L}*|frist\\p{L}*|teil|teile|teilen|blöcke|tertial\\p{L}*|semester\\p{L}*|nachricht\\p{L}*|prozent|universität\\p{L}*|plätze|anmelde\\p{L}*|chance\\p{L}*|wiederholung\\p{L}*|anl[äa]uf\\p{L}*|fächer|fäll\\p{L}*|\\p{L}*(?:prüfung|termin|antritt)\\p{L}*" +
     "|tentatives?|fois|jours?|semaines?|mois|ans|années?|heures?|questions?|examens?|sessions?|épreuves?|crédits?|pourcent" +
     "|попыт\\p{L}*|раз|раза|дн\\p{L}*|недел\\p{L}*|месяц\\p{L}*|год\\p{L}*|лет|час\\p{L}*|минут\\p{L}*|вопрос\\p{L}*|балл\\p{L}*|экзамен\\p{L}*|сесси\\p{L}*|процент\\p{L}*" +
     "|спроб\\p{L}*|рази|дні|днів|тижн\\p{L}*|місяц\\p{L}*|рок\\p{L}*|годин\\p{L}*|хвилин\\p{L}*|питан\\p{L}*|бал\\p{L}*|іспит\\p{L}*|відсот\\p{L}*" +
@@ -110,16 +115,37 @@ const HAS_CONJ_RE = new RegExp(`(?<![\\p{L}])(?:${CONJ})(?![\\p{L}])`, "iu");
  * Items of a coordinated series ("A, B and C") in `seg`; null without a conjunction or
  * with a chunk longer than `maxWords` (a clause run, not an item).
  */
-function seriesCount(seg: string, maxWords: number): number | null {
+function seriesCount(seg: string, maxWords: number, names: readonly string[]): number | null {
   if (!HAS_CONJ_RE.test(seg)) return null;
   const chunks = seg.split(CHUNK_SPLIT_RE).map((c) => c.trim()).filter((c) => /\p{L}|\d/u.test(c));
   if (chunks.length < 2) return null;
   if (chunks.some((c) => c.split(/\s+/).length > maxWords)) return null;
+  // A list of attempts, sittings or other value nouns makes its size a fact (review P2).
+  if (chunks.some((c) => valueItem(c, names))) return null;
   return chunks.length;
 }
 
+/** A price with its period ("19 € per month", "129 € for 6 months"): the price is validated, its period word is not a counted thing. */
+const PRICE_PERIOD_RE = /(?:\d[\d.,]*\s*(?:€|EUR(?![\p{L}])|Euro(?![\p{L}]))|(?:€|EUR)\s*\d[\d.,]*)(?:\s+(?:per|pro|je|a|an|im|every|alle)\s+\p{L}+|\s+(?:for|für|pour)\s+\d+\s+\p{L}+)?/gu;
+/** Capitalised names: two or more words ("Single Month", "Exam Cohort") or one hyphenated word ("Prüfungs-Kohorte"). */
+const NAME_RUN_RE = /\p{Lu}[\p{L}]*-[\p{L}-]+|\p{Lu}[\p{L}-]*(?:\s+\p{Lu}[\p{L}-]*)+/gu;
+
+/**
+ * The item names a value noun ("a first attempt", "Written exam", "eine Wiederholung"),
+ * so the list's size is a fact. Not counted: tokens with a digit ("3-Month"), a price
+ * with its period, and a capitalised name the cited facts write verbatim ("Single Month",
+ * "Exam Cohort" in app.billing.plans).
+ */
+function valueItem(chunk: string, names: readonly string[]): boolean {
+  let rest = chunk.replace(LIST_MARKER_RE, " ").replace(PRICE_PERIOD_RE, " ");
+  rest = rest.replace(NAME_RUN_RE, (m) => (names.some((t) => t.includes(m)) ? " " : m));
+  rest = rest.split(/\s+/).filter((w) => !/\d/.test(w)).join(" ");
+  return VALUE_NOUN_RE.test(rest);
+}
+const LIST_MARKER_RE = /^\s*(?:[-*•]|\d{1,2}[.)])\s+/u;
+
 /** List runs ("- a\n- b\n- c") of the block. */
-function listRuns(text: string): Enumeration[] {
+function listRuns(text: string, names: readonly string[]): Enumeration[] {
   const out: Enumeration[] = [];
   let offset = 0;
   let run: Enumeration | null = null;
@@ -134,21 +160,23 @@ function listRuns(text: string): Enumeration[] {
     offset = end + 1;
   }
   if (run && run.count >= 2) out.push(run);
-  return out;
+  return out.filter((r) => !text.slice(r.start, r.end).split("\n").some((line) => valueItem(line, names)));
 }
 
 /** The series in `text[a, b)`: only after its last colon (the lead "three plans:" is not an item). */
-function seriesIn(text: string, a: number, b: number, maxWords = 12): Enumeration | null {
+function seriesIn(text: string, a: number, b: number, names: readonly string[], maxWords = 12): Enumeration | null {
   const seg = text.slice(a, b);
   const colon = seg.lastIndexOf(":");
   const body = colon >= 0 ? seg.slice(colon + 1) : seg;
-  const n = seriesCount(body, maxWords);
+  // "two attempts: ..." names what is counted; a value noun there keeps the count strict.
+  if (colon >= 0 && VALUE_NOUN_RE.test(/(\p{L}+)\s*$/u.exec(seg.slice(0, colon))?.[1] ?? "")) return null;
+  const n = seriesCount(body, maxWords, names);
   return n === null ? null : { start: a + (colon >= 0 ? colon + 1 : 0), end: b, count: n };
 }
 
 /** The enumeration a count at [s, e) points at, nearest first; null when none is written. */
-function nearestEnumeration(text: string, s: number, e: number, cataphoric: boolean): Enumeration | null {
-  const lists = listRuns(text);
+function nearestEnumeration(text: string, s: number, e: number, cataphoric: boolean, names: readonly string[]): Enumeration | null {
+  const lists = listRuns(text, names);
   if (cataphoric) {
     // "the two: A and B" or "die drei Optionen:\n- a\n- b\n- c"
     const colon = text.indexOf(":", e);
@@ -158,20 +186,20 @@ function nearestEnumeration(text: string, s: number, e: number, cataphoric: bool
     if (rest.trim()) {
       const [, sEnd] = sentenceAround(text, colon + 1);
       // Items after a colon are short names; a longer clause there is an explanation, not a list.
-      return seriesIn(text, colon + 1, Math.max(sEnd, colon + 1), 6);
+      return seriesIn(text, colon + 1, Math.max(sEnd, colon + 1), names, 6);
     }
     return after ?? null;
   }
   const [sa] = sentenceAround(text, s);
   const candidates: Enumeration[] = [];
-  const same = seriesIn(text, sa, s);
+  const same = seriesIn(text, sa, s, names);
   if (same) candidates.push(same);
   // The two sentences before, in the same block.
   let cursor = sa;
   for (let i = 0; i < 2 && cursor > 0; i++) {
     const [pa, pe] = sentenceAround(text, Math.max(0, cursor - 1));
     if (pe <= pa) break;
-    const prev = seriesIn(text, pa, pe);
+    const prev = seriesIn(text, pa, pe, names);
     if (prev) candidates.push(prev);
     cursor = pa;
   }
@@ -180,21 +208,28 @@ function nearestEnumeration(text: string, s: number, e: number, cataphoric: bool
   return candidates.reduce((best, c) => (c.end > best.end ? c : best));
 }
 
+/** Exam names: a colon list in a sentence naming an exam may be its parts (review P3). */
+const EXAM_IN_SENTENCE_RE = /(?<![\p{L}])(?:SIP|SPT|KAF|Stichprobentest|Rezeptierkunde|Pharmakologie|Gerichtsmedizin|Kenntnisprüfung|Fachsprachprüfung|FSP|C1)/u;
+
 /**
- * True when the bare count `v` counts the answer's own enumeration (see the
- * module comment for every condition). `text` is the block text the value was
- * extracted from (same offsets).
+ * The text span [start, end) a bare count `v` relies on when it counts the
+ * answer's own enumeration: the sentences holding the count and the list it
+ * counts (see the module comment for every condition); null when it does not.
+ * `text` is the block text the value was extracted from (same offsets); `names`
+ * are the cited facts' texts (item names they write verbatim are not value nouns). The
+ * caller exempts the count only when no other unsupported value lies in that
+ * span, so a count never outlives a deleted list (review P1).
  */
-export function countsOwnEnumeration(v: ExtractedValue, text: string): boolean {
-  if (v.kind !== "number") return false;
+export function ownEnumerationSpan(v: ExtractedValue, text: string, names: readonly string[] = []): [number, number] | null {
+  if (v.kind !== "number") return null;
   const n = v.keys.map((k) => (k.startsWith("n:") ? Number(k.slice(2)) : NaN)).find((x) => Number.isInteger(x));
-  if (n === undefined || n < 2 || n > 12) return false;
+  if (n === undefined || n < 2 || n > 12) return null;
   const before = text.slice(Math.max(0, v.start - 40), v.start);
   const det = DET_BEFORE_RE.exec(before);
-  if (!det) return false;
+  if (!det) return null;
   const [sa, se] = sentenceAround(text, v.start);
   const sentence = text.slice(sa, se);
-  if (VALUE_NOUN_RE.test(sentence) || MONEY_SIGN_RE.test(sentence)) return false;
+  if (VALUE_NOUN_RE.test(sentence) || MONEY_SIGN_RE.test(sentence)) return null;
   let after = text.slice(v.end, se);
   const ordAfter = ORDINAL_AFTER_RE.exec(after);
   if (ordAfter) after = after.slice(ordAfter[0].length);
@@ -203,10 +238,21 @@ export function countsOwnEnumeration(v: ExtractedValue, text: string): boolean {
   const item = ITEM_RE.exec(after) ?? (/^\s+\p{Ll}/u.test(after) ? ITEM_RE_I.exec(after) : null);
   let tail = after;
   if (item) tail = after.slice(item[0].length);
-  else if (!BARE_END_RE.test(after) && !FOLLOW_RE.test(after)) return false;
-  const fits = (en: Enumeration | null) => en !== null && (subset ? n < en.count : n === en.count);
+  else if (!BARE_END_RE.test(after) && !FOLLOW_RE.test(after)) return null;
+  const fits = (en: Enumeration | null): en is Enumeration => en !== null && (subset ? n < en.count : n === en.count);
+  const span = (en: Enumeration): [number, number] => [Math.min(sa, sentenceAround(text, en.start)[0]), Math.max(se, sentenceAround(text, Math.max(en.start, en.end - 1))[1])];
   // A colon after the count may introduce the items ("the two: A and B") or an explanation;
-  // either the items after it or the nearest ones before it must match.
-  if (/^\s*:/.test(tail) && fits(nearestEnumeration(text, v.start, v.end, true))) return true;
-  return fits(nearestEnumeration(text, v.start, v.end, false));
+  // either the items after it or the nearest ones before it must match. Never in a sentence
+  // naming an exam, where a colon list may be its parts.
+  if (/^\s*:/.test(tail) && !EXAM_IN_SENTENCE_RE.test(sentence)) {
+    const ahead = nearestEnumeration(text, v.start, v.end, true, names);
+    if (fits(ahead)) return span(ahead);
+  }
+  const back = nearestEnumeration(text, v.start, v.end, false, names);
+  return fits(back) ? span(back) : null;
+}
+
+/** True when the bare count `v` counts the answer's own enumeration (span-free form, for tests). */
+export function countsOwnEnumeration(v: ExtractedValue, text: string, names: readonly string[] = []): boolean {
+  return ownEnumerationSpan(v, text, names) !== null;
 }

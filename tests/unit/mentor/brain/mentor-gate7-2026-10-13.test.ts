@@ -99,3 +99,37 @@ describe("french, russian, ukrainian, turkish (digits)", () => {
   it("tr: ilk 2 seçenek", () => kept("tr", "Seçenekler plan Alpha, plan Beta ve plan Gamma. İlk 2 seçenek yanlış.", "İlk 2 seçenek yanlış."));
   it("tr: sınav stays strict", () => deleted("tr", "Seçenekler plan Alpha, plan Beta ve plan Gamma. İlk 2 sınav ücretsiz.", "sınav"));
 });
+
+describe("review probes (Argus, gate7)", () => {
+  const facts = [plans];
+  const probe = (lang: string, body: string, sentence: string) => {
+    const v = validateAnswer(`@@LANG ${lang}\n@@BLOCK facts=fixture.plans\n${body}`, facts);
+    expect(v.replaced, all(v)).toBe(true);
+    expect(all(v)).not.toContain(sentence);
+  };
+  it("P1: the count goes when its list is deleted (de months)", () => probe("de", "Termine: November und Jänner. Verpassen Sie die zwei, warten Sie.", "die zwei"));
+  it("P1: the count goes when its list is deleted (de dates)", () => probe("de", "Sie können im November 2026, im Januar 2027 und im März 2027 antreten. Die drei sind alle Ihre Chancen.", "Die drei"));
+  it("P1: the count goes when a list item is unsupported (en digit)", () => probe("en", "Single Month and 3-Month renew. The 2 are subscriptions.", "The 2 are"));
+  it("P1: the count goes with its deleted month list (en)", () => probe("en", "November or January. Pick one of the two.", "of the two"));
+  it("P2: a list of attempts makes its count a fact", () => probe("en", "You get a first attempt and a retake. After the two, you must reapply.", "After the two"));
+  it("P2: chances stay strict", () => probe("en", "You register online and you pay the fee. Those two are your chances.", "Those two"));
+  it("P2: German Wiederholungsprüfungen elsewhere in the sentence stay strict", () => probe("de", "Plan Alpha, Plan Beta und Plan Gamma sind möglich. Die ersten zwei gelten auch für Wiederholungsprüfungen.", "Die ersten zwei"));
+  it("P3: a colon list in a sentence naming an exam stays strict", () => probe("en", "SIP4a has the 3: written, oral and practical.", "has the 3"));
+  it("P3: ru without an item noun fails closed", () => probe("ru", "Варианты: plan Alpha, plan Beta и plan Gamma. Первые 2 можно выбрать.", "Первые 2"));
+  it("a lead value noun before the colon keeps the count strict", () => probe("en", "Two attempts: the written one and the oral one. The first two are free of charge.", "The first two"));
+});
+
+describe("item names and prices (review re-check)", () => {
+  it("exam parts as list items stay strict", () => deleted("en", "The format has:\n- Written exam\n- Oral exam\nThe two are held on one day.", "The two are held"));
+  it("a capitalised name the cited fact does not write is not exempt", () => deleted("en", "You can choose Exam Cohort, Single Month and plan Gamma. The first two renew automatically.", "The first two renew"));
+  it("de: price list with the fact's own names", async () => {
+    const facts = await L.byIds(["app.billing.plans"], now);
+    const raw = "@@LANG de\n@@BLOCK facts=app.billing.plans\nEs gibt Einzelmonat zu 19 € pro Monat, 3-Monats-Tarif zu 49 € pro Quartal und Prüfungs-Kohorte zu 129 € für 6 Monate. Die ersten zwei sind Abos.";
+    const v = validateAnswer(raw, facts);
+    expect(v.replaced, JSON.stringify(v.rejected)).toBe(false);
+    expect(all(v)).toContain("Die ersten zwei sind Abos.");
+    // "drei" would be supported by the fact itself (3-Monats-Tarif); "vier" is not.
+    const bad = validateAnswer(raw.replace("Die ersten zwei", "Die ersten vier"), facts);
+    expect(bad.replaced).toBe(true);
+  });
+});
