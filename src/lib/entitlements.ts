@@ -21,6 +21,8 @@ export type Feature =
   | 'mock_exam'
   | 'bookmarks'
   | 'history'
+  /** a24 (pick-ux-exm-38 B): the read-only list of the learner's own exam dates and scores. */
+  | 'history_list'
   | 'ai_followup'
   | 'cached_ai_explanation'
   | 'note_review'
@@ -36,7 +38,11 @@ export const ENTITLEMENTS: Readonly<Record<Feature, Readonly<Record<Audience, bo
   mistake_review: PRO_ONLY,
   mock_exam: PRO_ONLY,
   bookmarks: PRO_ONLY,
+  // Question-by-question review and the answer history stay Pro.
   history: PRO_ONLY,
+  // pick-ux-exm-38 B ([name] 2026-10-12): every signed-in learner keeps a
+  // read-only list of their own exam dates and scores, lapsed accounts too.
+  history_list: SIGNED_IN,
   ai_followup: PRO_ONLY,
   cached_ai_explanation: SIGNED_IN,
   note_review: SIGNED_IN,
@@ -52,6 +58,15 @@ export const FREE_SAMPLE_DECISION = {
   proOnly: ['mistake_review', 'mock_exam', 'spaced_repetition', 'bookmarks', 'history'] as const satisfies readonly Feature[],
   note: 'Mistake review and mock exams Pro-only for launch; a free taste is tested after launch.',
 } as const;
+
+/** pick-ux-exm-38 B: scores free, question-by-question review Pro. */
+export const HISTORY_LIST_DECISION = {
+  id: 'pick-ux-exm-38',
+  pick: 'B',
+  decidedOn: '2026-10-12',
+  open: 'history_list',
+  proOnly: 'history',
+} as const satisfies { open: Feature; proOnly: Feature } & Record<string, string>;
 
 export interface AudienceInput {
   signedIn: boolean;

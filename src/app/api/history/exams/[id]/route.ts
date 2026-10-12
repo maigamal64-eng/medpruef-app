@@ -174,6 +174,12 @@ export async function GET(
       exam_type: row.exam_type,
       title: row.title,
       config: row.config,
+      // a24 (UX-EXM-39 'Markiert'): ids the learner flagged during the run,
+      // restricted to this attempt's questions. Legacy rows have none.
+      flagged_ids: Array.isArray(row.config?.flagged_ids)
+        ? Array.from(new Set((row.config.flagged_ids as unknown[]).map(Number)))
+            .filter((n) => Number.isInteger(n) && n > 0 && qids.includes(n))
+        : [],
       correct_count: row.correct_count,
       total_count: row.total_count,
       score_pct: row.score_pct,

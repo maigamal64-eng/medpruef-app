@@ -60,6 +60,8 @@ describe('entitlements matrix (UX-GLOBAL-19, LX-07)', () => {
     expect(featureFromGate('mock_exam')).toBe('mock_exam');
     expect(featureFromGate('<script>')).toBeNull();
     for (const feature of Object.keys(ENTITLEMENTS) as Feature[]) {
+      // a24: the read-only exam list is open to every signed-in learner and never gated.
+      if (feature === 'history_list') continue;
       expect(gateSentence(feature, 'de')).toMatch(/ ist Teil von Pro\.$/);
       expect(gateSentence(feature, 'en')).toMatch(/ is part of Pro\.$/);
     }
