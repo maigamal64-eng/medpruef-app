@@ -60,6 +60,18 @@ export const CHANGELOG: ChangelogEntry[] = [
 },
 {
   "date": "2026-10-12",
+  "tag": "fix",
+  "title": {
+    "de": "Elf Antwortschlüssel korrigiert",
+    "en": "Eleven answer keys corrected"
+  },
+  "description": {
+    "de": "Wir haben elf Fragen mit falsch markierter Antwort nach zwei unabhängigen medizinischen Prüfungen korrigiert, darunter eine falsche Rasburicase-Dosis. Die Erklärungen wurden passend zur richtigen Antwort neu geschrieben.",
+    "en": "After two independent medical reviews we corrected eleven questions with a wrongly marked answer, including a wrong rasburicase dose. Their explanations were rewritten to match the correct answer."
+  }
+},
+{
+  "date": "2026-10-12",
   "tag": "admin",
   "title": {
     "de": "Do-not-email-Liste und Zugangsende-Erinnerung vorbereitet",
