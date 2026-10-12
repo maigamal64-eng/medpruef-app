@@ -2,6 +2,8 @@
  * a21 smoke: account and public pages at 375 px and desktop, light and dark,
  * DE and EN. Every API is mocked (no production call). Fails on a console
  * error or horizontal overflow; screenshots go to A21_SHOTS when set.
+ * It sets its own viewport, so it runs on the "Desktop" project only:
+ *   BASE_URL=http://localhost:3121 npx playwright test tests/e2e/a21 --project=Desktop
  */
 import { expect, test, type Page } from "@playwright/test";
 import { seedSession } from "../fixtures/session";
@@ -41,7 +43,8 @@ async function mockApis(page: Page, tier: "free" | "pro" | undefined) {
 }
 
 for (const viewport of [{ w: 375, h: 812 }, { w: 1280, h: 900 }]) for (const scheme of ["light", "dark"] as const) for (const lang of ["de", "en"] as const) for (const c of CASES) {
-  test(`${c.name} ${viewport.w} ${scheme} ${lang}`, async ({ page }) => {
+  test(`${c.name} ${viewport.w} ${scheme} ${lang}`, async ({ page }, info) => {
+    test.skip(info.project.name !== "Desktop", "sets its own viewport; runs once on the Desktop project");
     await page.setViewportSize({ width: viewport.w, height: viewport.h });
     await page.emulateMedia({ colorScheme: scheme });
     const errors: string[] = [];
