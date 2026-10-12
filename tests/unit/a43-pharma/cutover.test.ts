@@ -67,6 +67,7 @@ describe("a43 learner history survives the switch", () => {
     expect(isEarlierVersionAnswer("  methotrexat ", choices, "Etanercept")).toBe(false);
     expect(isEarlierVersionAnswer("Etanercept | Leflunomid", choices, "Etanercept")).toBe(false);
     expect(isEarlierVersionAnswer("Ferritin", [{ text: "x" }], "Ferritin")).toBe(false);
+    expect(isEarlierVersionAnswer("A | B", [{ text: "A | B" }, { text: "C" }], "C")).toBe(false);
   });
 
   it("a flashcard rating that stored a key reworded since is an earlier version", () => {

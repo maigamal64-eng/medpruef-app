@@ -380,6 +380,8 @@ export function isEarlierVersionAnswer(
   if (!Array.isArray(choices) || choices.length === 0) return false;
   const current = new Set(choices.map((c) => (typeof c?.text === "string" ? normAnswer(c.text) : "")).filter(Boolean));
   if (current.size === 0) return false;
+  // An option whose own text contains " | " is one selected option, not a join.
+  if (current.has(normAnswer(userAnswer))) return false;
   const parts = userAnswer.split(" | ").map(normAnswer).filter(Boolean);
   return parts.length === 0 || parts.some((part) => !current.has(part));
 }
