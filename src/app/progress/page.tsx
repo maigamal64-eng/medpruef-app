@@ -19,7 +19,7 @@ import { startTopicProgressRequest } from "@/lib/topic-progress-request";
  *
  * THE DATA LAYER IS UNCHANGED - every source the old page read is read the
  * same way here; only the presentation is rebuilt:
- *   - /api/stats?userId=…     → gamification snapshot + per-topic stats
+ *   - /api/stats (signed session) → gamification snapshot + per-topic stats
  *   - /api/questions?ids=…    → bookmarked + noted questions
  *   - <ReadinessSignal>       → self-fetches /api/user/readiness (consumed as-is)
  *   - account-scoped bookmark API/cache and notes; legacy quiz/profile

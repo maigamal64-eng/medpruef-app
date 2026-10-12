@@ -91,8 +91,9 @@ function cleanValue(key: string, value: unknown): string | number | boolean | nu
   if (typeof value === 'boolean') return value;
   if (typeof value !== 'string') return null;
   const trimmed = value.trim();
+  // Paths keep only the normalised pathname (query, fragment and raw ids go).
+  if (/(^|_)(page|path|url|href|route)$/i.test(key)) return trimmed.startsWith('/') ? normalizeTrackedPath(trimmed) : null;
   if (!trimmed || EMAIL.test(trimmed) || TOKENISH.test(trimmed) || /userId=/i.test(trimmed)) return null;
-  if (/(^|_)(page|path|url|href|route)$/i.test(key)) return normalizeTrackedPath(trimmed);
   // Free text is not a property: long or many-word strings are dropped.
   if (trimmed.length > MAX_STRING || trimmed.split(/\s+/).length > MAX_WORDS) return null;
   return trimmed;

@@ -245,7 +245,7 @@ export default function RootLayout({
 
           Honesty rules baked in (brand-sweep 2026-06-04):
           - Offers list ONLY the tiers that are actually purchasable today:
-            the free tier (€0) + the three live tiers (€19/€49/€129), all
+            the free tier + the three live tiers (amounts from content-truth TIERS), all
             paid by card via Whop.
           - No aggregateRating / Review (removed 2026-04-22 — the hard-coded
             4.8/156 didn't match real data; re-introduce only when wired to
