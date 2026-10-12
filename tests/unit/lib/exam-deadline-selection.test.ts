@@ -1,4 +1,3 @@
-import { execSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
@@ -57,22 +56,17 @@ describe("getNextRegistrationDeadlineSitting", () => {
 
 // ---------------------------------------------------------------------------
 // C7 / C14: every OFFICIAL_SITTINGS value must pair with a row of the official
-// research files. The files live in the gitignored reports/ folder of the
-// main checkout, so they are found through the shared git dir (works from a
-// worktree too). OFFICIAL_DATES_DIR overrides. A missing file FAILS: this test
-// is the control for dates learners act on.
+// research files. Dated snapshots of their next_dates live in content/official
+// (GU-14), so a clean clone and CI find them; OFFICIAL_DATES_DIR overrides
+// (for example the fresh research output under reports/). A missing file
+// FAILS: this test is the control for dates learners act on.
 // ---------------------------------------------------------------------------
 
 const OFFICIAL_FILES = ["official-vienna.json", "official-spt-pharma.json"];
 
 function officialDir(): string {
   if (process.env.OFFICIAL_DATES_DIR) return process.env.OFFICIAL_DATES_DIR;
-  const common = execSync("git rev-parse --path-format=absolute --git-common-dir", {
-    cwd: __dirname,
-  })
-    .toString()
-    .trim();
-  return path.join(path.dirname(common), "reports/archive-sweep-2026-10-09/out/finish");
+  return path.resolve(__dirname, "../../../content/official");
 }
 
 interface NextDateRow {

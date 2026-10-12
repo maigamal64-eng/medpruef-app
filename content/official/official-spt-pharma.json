@@ -1,0 +1,88 @@
+{
+  "_snapshot": {
+    "from": "reports/archive-sweep-2026-10-09/out/finish/official-spt-pharma.json",
+    "source_sha256": "762dfd51f08c03d446e559f8ccd1066727bd717ad65cbf4f24c16a3cfa33980d",
+    "taken_on": "2026-10-13",
+    "read_on": "2026-10-10",
+    "scope": "next_dates only (public official dates with their sources); research notes stay in reports/"
+  },
+  "next_dates": [
+    {
+      "exam": "SIP5a and SIP4a (Vienna, Nostrifikanten)",
+      "date": "17 Nov 2026 (SIP5a), 18 Nov 2026 (SIP4a)",
+      "format": "MC or KAF, set in the Ausschreibung",
+      "registration": "5 Oct to 19 Oct 2026, email with SIP4a or SIP5a form from muw account",
+      "source": "MedUni Wien Pruefungskalender SIP + Anmeldemodalitaeten SIP (meduniwien.ac.at, read 10 Oct 2026)"
+    },
+    {
+      "exam": "Rezeptierkunde and Gerichtsmedizin (Wien)",
+      "date": "Week 23 to 27 Nov 2026",
+      "format": "Rezeptierkunde: 30 MC, 1 hour. Gerichtsmedizin: Wien format not published",
+      "registration": "7 Oct to 20 Oct 2026, closes Tuesday 12:00; email with form",
+      "source": "MedUni Wien Pruefungskalender Rigorosumspruefungen WS2026/27 and SS2026 for Nostrifikanten (Gerichtsmedizin, Rezeptierkunde), read 10 Oct 2026"
+    },
+    {
+      "exam": "Innsbruck KMP rounds used by Innsbruck filers",
+      "date": "1 to 5 Feb 2027",
+      "format": "Electronic, KMP 5A 5B 6A 6B for negative STP",
+      "registration": "9 to 11 Dec 2026 (Oct 2026 round closed 25 Sep)",
+      "source": "i-med.ac.at Pruefungstermine WS 2026/27 KMP PDF; MedUni Innsbruck, Information ueber den Ablauf der Pruefungen nach positivem / negativem Stichprobentest Humanmedizin (PDFs dated 24 Mar 2026, read 10 Oct 2026)"
+    },
+    {
+      "exam": "Stichprobentest Innsbruck",
+      "date": "3 Feb 2027",
+      "format": "Electronic; 10 fields, 250 questions",
+      "registration": "Wien Merkblatt cutoff 14 Dec 2026; i-med PDF cutoff 7 Jan 2027 (use your filing university's date; earlier is safe)",
+      "source": "i-med.ac.at Termine Stichprobentest 2027 PDF (read 10 Oct 2026, file dated 27 Aug 2026); MedUni Wien Merkblatt Nostrifizierung Humanmedizin, version 1 Sep 2026 (read 10 Oct 2026)"
+    },
+    {
+      "exam": "Rezeptierkunde and Gerichtsmedizin (Wien)",
+      "date": "Week 18 to 22 Jan 2027",
+      "format": "as above",
+      "registration": "2 Dec to 15 Dec 2026, closes Tuesday 12:00",
+      "source": "MedUni Wien Pruefungskalender Rigorosumspruefungen WS2026/27 and SS2026 for Nostrifikanten (Gerichtsmedizin, Rezeptierkunde), read 10 Oct 2026"
+    },
+    {
+      "exam": "SIP5a and SIP4a (Vienna)",
+      "date": "15 Feb 2027 (SIP5a, MC or KAF), 19 Feb 2027 (SIP4a, MC main sitting)",
+      "format": "MC or KAF",
+      "registration": "4 Jan to 18 Jan 2027",
+      "source": "MedUni Wien Pruefungskalender SIP + Anmeldemodalitaeten SIP (meduniwien.ac.at, read 10 Oct 2026)"
+    },
+    {
+      "exam": "SIP4a and SIP5a (Vienna)",
+      "date": "10 Mar 2027 (both); 27 Apr (SIP4a) and 28 Apr (SIP5a) 2027",
+      "format": "March mostly KAF per the page; Apr MC or KAF",
+      "registration": "25 Jan to 8 Feb 2027 (March); 15 Mar to 29 Mar 2027 (April)",
+      "source": "MedUni Wien Pruefungskalender SIP + Anmeldemodalitaeten SIP (meduniwien.ac.at, read 10 Oct 2026)"
+    },
+    {
+      "exam": "Stichprobentest Wien",
+      "date": "4 May 2027",
+      "format": "Electronic",
+      "registration": "17 Mar 2027 in both the Wien Merkblatt and the i-med PDF",
+      "source": "i-med.ac.at Termine Stichprobentest 2027 PDF (read 10 Oct 2026, file dated 27 Aug 2026); MedUni Wien Merkblatt Nostrifizierung Humanmedizin, version 1 Sep 2026 (read 10 Oct 2026)"
+    },
+    {
+      "exam": "SIP4a and SIP5a (Vienna), summer 2027",
+      "date": "30 Jun 2027 (SIP4a), 2 Jul 2027 (SIP5a); 1 Sep 2027 (SIP4a), 23 Sep 2027 (SIP5a)",
+      "format": "MC or KAF; SIP5a Jul is MC main sitting",
+      "registration": "17 to 31 May 2027; 19 Jul to 2 Aug 2027 (SIP4a Sep); 9 to 23 Aug 2027 (SIP5a Sep)",
+      "source": "MedUni Wien Pruefungskalender SIP + Anmeldemodalitaeten SIP (meduniwien.ac.at, read 10 Oct 2026)"
+    },
+    {
+      "exam": "Stichprobentest Graz",
+      "date": "22 Sep 2027",
+      "format": "Electronic",
+      "registration": "Wien Merkblatt cutoff 30 Jun 2027; i-med PDF cutoff 25 Aug 2027 (use your filing university's date; earlier is safe)",
+      "source": "i-med.ac.at Termine Stichprobentest 2027 PDF (read 10 Oct 2026, file dated 27 Aug 2026); MedUni Wien Merkblatt Nostrifizierung Humanmedizin, version 1 Sep 2026 (read 10 Oct 2026)"
+    },
+    {
+      "exam": "OeAEK Sprachpruefung Deutsch (FSP), for context",
+      "date": "26 Nov 2026, 10 Dec 2026, 25 Jan 2027",
+      "format": "Oral and written, B2 certificate needed to register",
+      "registration": "5 Nov 2026, 19 Nov 2026, 4 Jan 2027",
+      "source": "arztakademie.at/sprachpruefung-termine (read 10 Oct 2026)"
+    }
+  ]
+}
