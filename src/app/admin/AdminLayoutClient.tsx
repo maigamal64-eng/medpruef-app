@@ -85,7 +85,7 @@ interface NavItem {
   badgeKey?: InboxKey;
 }
 
-type InboxKey = "question_reports" | "note_reports" | "feedback";
+type InboxKey = "question_reports" | "note_reports" | "feedback" | "ops_actions";
 type InboxCounts = Partial<Record<InboxKey, number | null>>;
 
 interface NavSection {
@@ -118,6 +118,8 @@ const NAV: NavSection[] = [
       { label: "Question reports", href: "/admin/flagged", icon: ShieldAlert, permission: "content.read", badgeKey: "question_reports" },
       { label: "Note reports", href: "/admin/note-reports", icon: NotebookPen, permission: "content.read", badgeKey: "note_reports" },
       { label: "Feedback", href: "/admin/feedback", icon: MessageSquare, permission: "feedback.read", badgeKey: "feedback" },
+      // a17 (UX-ADM-13): agent-prepared actions waiting for the owner.
+      { label: "Ops approvals", href: "/admin/ops", icon: ShieldCheck, permission: "access.manage", ownerOnly: true, badgeKey: "ops_actions" },
     ],
   },
   {
@@ -176,7 +178,6 @@ const NAV: NavSection[] = [
       { label: "Audit", href: "/admin/audit", icon: BarChart3, permission: "system.read" },
       { label: "Env", href: "/admin/env", icon: Database, permission: "system.read" },
       { label: "Admins & roles", href: "/admin/access", icon: ShieldCheck, permission: "access.manage" },
-      { label: "Ops approvals", href: "/admin/ops", icon: ShieldCheck, permission: "access.manage", ownerOnly: true },
     ],
   },
 ];
@@ -317,7 +318,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   }, [pathname]);
 
   // Inbox badges: refresh on navigation and every 60 s while visible.
-  const canInbox = !permissionsLoading && !permissionsError && (can("content.read") || can("feedback.read"));
+  const canInbox = !permissionsLoading && !permissionsError && (can("content.read") || can("feedback.read") || can("access.manage"));
   useEffect(() => {
     if (!canInbox) return;
     let cancelled = false;
@@ -327,7 +328,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
         const res = await authFetch("/api/admin/inbox");
         const body = await res.json().catch(() => null);
         if (!cancelled && res.ok && body && typeof body === "object") {
-          setInbox({ question_reports: body.question_reports ?? null, note_reports: body.note_reports ?? null, feedback: body.feedback ?? null });
+          setInbox({ question_reports: body.question_reports ?? null, note_reports: body.note_reports ?? null, feedback: body.feedback ?? null, ops_actions: body.ops_actions ?? null });
         }
       } catch { /* badges stay unknown */ }
     };

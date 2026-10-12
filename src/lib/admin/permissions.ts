@@ -37,6 +37,9 @@ export function permissionForAdminRequest(
   if (path === "/api/admin/inbox") return null; // a15: per-count permission checks in the handler, see canAuthorizeAdminRequest
   if (path === "/api/admin/ops/oauth/interaction") return verb === "GET" ? "access.manage" : null;
   if (path === "/api/admin/ops/oauth/consent") return verb === "POST" ? "access.manage" : null;
+  if (path === "/api/admin/ops/oauth/deny") return verb === "POST" ? "access.manage" : null;
+  if (path === "/api/admin/ops/connections") return verb === "GET" ? "access.manage" : null;
+  if (/^\/api\/admin\/ops\/connections\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/disconnect$/i.test(path)) return verb === "POST" ? "access.manage" : null;
   if (path === "/api/admin/ops/actions") return verb === "GET" ? "access.manage" : null;
   if (/^\/api\/admin\/ops\/actions\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/(approve|reject)$/i.test(path)) return verb === "POST" ? "access.manage" : null;
   if (path === "/api/admin/access/roles") return ["GET", "POST", "PUT"].includes(verb) ? "access.manage" : null;

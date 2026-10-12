@@ -3,9 +3,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { adminRouteShell } from "@/lib/admin/shell";
 import { loadAdminPermissionSnapshot } from "@/lib/admin/permissions";
 import { getServiceClient } from "@/lib/supabase";
+import { OPS_OAUTH_SCOPES } from "@/lib/ops/scopes";
 
-export const OPS_OAUTH_SCOPES = ["users.read", "users.sessions.read", "users.notes.read", "content.read", "content.moderate", "feedback.read", "feedback.manage", "users.entitlements.write", "revenue.read", "overview.read", "system.read"] as const;
+export { OPS_OAUTH_SCOPES };
 const UID = /^[A-Za-z0-9_-]{16,128}$/;
+const BINDING = /^[A-Za-z0-9_-]{43}$/;
 type BridgeConfig = { issuer: string; secret: string; environment: string };
 type Interaction = { client_id: string; requested_scopes: string[]; prompt: string };
 
@@ -36,6 +38,18 @@ export function parseOAuthConsent(value: unknown): { interaction_id: string; sco
   const input = value as Record<string, unknown>;
   if (Object.keys(input).sort().join(",") !== "interaction_id,scopes" || typeof input.interaction_id !== "string" || !UID.test(input.interaction_id) || !Array.isArray(input.scopes) || !input.scopes.length || input.scopes.length > OPS_OAUTH_SCOPES.length || new Set(input.scopes).size !== input.scopes.length || input.scopes.some((scope) => !OPS_OAUTH_SCOPES.includes(scope as typeof OPS_OAUTH_SCOPES[number]))) return null;
   return { interaction_id: input.interaction_id, scopes: input.scopes as string[] };
+}
+
+/** The issuer's one-time browser-binding token (ADM-09 A); appended as ?bind= by the consenting page. */
+export function validateBinding(value: unknown): string {
+  if (typeof value !== "string" || !BINDING.test(value)) throw new Error("Invalid completion");
+  return value;
+}
+
+export function parseOAuthDeny(value: unknown): { interaction_id: string } | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const input = value as Record<string, unknown>;
+  return Object.keys(input).join(",") === "interaction_id" && typeof input.interaction_id === "string" && UID.test(input.interaction_id) ? { interaction_id: input.interaction_id } : null;
 }
 
 export function validateReturnTo(value: unknown, issuer: string): string {
@@ -89,10 +103,27 @@ export const oauthConsent = privateShell(adminRouteShell(async ({ req, actor }) 
     if (input.scopes.some((scope) => !detail.requested_scopes.includes(scope))) return json({ error: "Scope was not requested by this client" }, 400);
     const { data, error } = await getServiceClient().rpc("ops_oauth_owner_consent", { p_actor_id: actor.userId, p_client_id: detail.client_id, p_environment: config.environment, p_audience: `${config.issuer}/mcp`, p_scopes: input.scopes });
     if (error || typeof data?.principal_id !== "string") return json({ error: "Consent could not be recorded" }, error?.code === "42501" ? 403 : 503);
-    const completed = await bridgeFetch(config, "POST", `/bridge/complete/${input.interaction_id}`, JSON.stringify({ principal_id: data.principal_id })) as { returnTo?: unknown };
-    return json({ returnTo: validateReturnTo(completed.returnTo, config.issuer), issuer: config.issuer });
+    const completed = await bridgeFetch(config, "POST", `/bridge/complete/${input.interaction_id}`, JSON.stringify({ principal_id: data.principal_id })) as { returnTo?: unknown; binding?: unknown };
+    return json({ returnTo: validateReturnTo(completed.returnTo, config.issuer), binding: validateBinding(completed.binding), issuer: config.issuer });
   } catch { return json({ error: "Connection completion could not be verified. Reopen the connection flow to check its state." }, 503); }
 }, { route: "/api/admin/ops/oauth/consent", rateLimit: { limit: 10, windowMs: 60_000 } }));
+
+/** Owner Cancel: the issuer records access_denied so the client is told no (ADM-ops-ui-11). */
+export const oauthDeny = privateShell(adminRouteShell(async ({ req, actor }) => {
+  if (!sameOrigin(req)) return json({ error: "Untrusted request origin" }, 403);
+  if (!(await ownerCheck(actor.userId))) return json({ error: "Current owner access required" }, 403);
+  let raw: string;
+  try { raw = await readLimitedBody(req.body, 1024); }
+  catch { return json({ error: "Request too large or invalid" }, 413); }
+  let input;
+  try { input = parseOAuthDeny(JSON.parse(raw)); } catch { input = null; }
+  if (!input) return json({ error: "Invalid request" }, 400);
+  try {
+    const config = loadOAuthBridgeConfig();
+    const denied = await bridgeFetch(config, "POST", `/bridge/deny/${input.interaction_id}`) as { returnTo?: unknown };
+    return json({ returnTo: validateReturnTo(denied.returnTo, config.issuer), issuer: config.issuer });
+  } catch { return json({ error: "The connection was already decided or has expired. Nothing was connected." }, 409); }
+}, { route: "/api/admin/ops/oauth/deny", rateLimit: { limit: 10, windowMs: 60_000 } }));
 
 function privateShell(handler: (req: NextRequest) => Promise<NextResponse>) {
   return async (req: NextRequest) => { const response = await handler(req); response.headers.set("Cache-Control", "no-store"); return response; };
