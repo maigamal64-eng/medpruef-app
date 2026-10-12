@@ -117,11 +117,21 @@ export function apiFixture(url: URL, method: string, opts: { signedIn: boolean; 
     return ok(Array.from({ length: limit }, (_, i) => question(91001 + i, "Neurologie", i === 1)));
   }
   if (p === "/api/answer") return ok({ saved: true, xp: 10, correct: true });
+  if (p === "/api/stats") return ok({
+    gamification: { total_xp: 120, current_streak: 2, longest_streak: 3, total_questions_answered: 40, total_correct: 28, level: 2, rank_name: "Famulant", daily_questions_today: 5 },
+    topicStats: { Neurologie: { total: 24, correct: 17 }, Kardiologie: { total: 16, correct: 11 } },
+  });
+  if (p === "/api/user/topic-progress") return ok([
+    { topic: "Neurologie", total: 420, answered: 24, accuracy: 71 },
+    { topic: "Kardiologie", total: 380, answered: 16, accuracy: 69 },
+    { topic: "Chirurgische Fächer", total: 510, answered: 0, accuracy: null },
+  ]);
+  if (p === "/api/user/study-plan") return ok({ hasExamDate: false, plan: null });
   if (p === "/api/track" || p === "/api/funnel-events" || p === "/api/beacon/landing") return { status: 204, body: null };
   return ok({});
 }
 
-type Result = { route: string; variant: string; status: string; scrollWidth?: number; innerWidth?: number; offenders?: string[]; errors?: string[]; writes?: string[] };
+type Result = { route: string; variant: string; status: string; scrollWidth?: number; innerWidth?: number; offenders?: string[]; fixedInFlow?: string[]; errors?: string[]; writes?: string[] };
 const results: Result[] = [];
 
 function trackErrors(page: Page): string[] {
@@ -139,7 +149,7 @@ function trackErrors(page: Page): string[] {
 async function measure(page: Page) {
   await page.evaluate(() => document.fonts.ready);
   await page.waitForTimeout(400);
-  const out = { scrollWidth: 0, innerWidth: 0, offenders: [] as string[] };
+  const out = { scrollWidth: 0, innerWidth: 0, offenders: [] as string[], fixedInFlow: [] as string[] };
   for (const bottom of [false, true]) {
     await page.evaluate((b) => window.scrollTo(0, b ? document.body.scrollHeight : 0), bottom);
     await page.evaluate(() => new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r()))));
@@ -153,11 +163,17 @@ async function measure(page: Page) {
         }
         return box.right > width + 1 || box.left < -1;
       }).slice(0, 8).map((el) => `${el.tagName.toLowerCase()}${el.className && typeof el.className === "string" ? "." + el.className.trim().split(/\s+/).slice(0, 3).join(".") : ""} [${Math.round(el.getBoundingClientRect().left)},${Math.round(el.getBoundingClientRect().right)}]`);
-      return { scrollWidth: document.documentElement.scrollWidth, innerWidth: width, offenders };
+      // An element styled `fixed` that computes to another position sits in
+      // the page flow (the a35 feedback-launcher regression).
+      const fixedInFlow = [...document.querySelectorAll<HTMLElement>("[class~='fixed']")]
+        .filter((el) => getComputedStyle(el).display !== "none" && getComputedStyle(el).position !== "fixed")
+        .map((el) => `${el.tagName.toLowerCase()} ${el.getAttribute("aria-label") ?? ""}`.trim());
+      return { scrollWidth: document.documentElement.scrollWidth, innerWidth: width, offenders, fixedInFlow };
     });
     out.scrollWidth = Math.max(out.scrollWidth, m.scrollWidth);
     out.innerWidth = m.innerWidth;
     out.offenders.push(...m.offenders.filter((o) => !out.offenders.includes(o)));
+    out.fixedInFlow.push(...m.fixedInFlow.filter((o) => !out.fixedInFlow.includes(o)));
   }
   return out;
 }
@@ -165,7 +181,9 @@ async function measure(page: Page) {
 async function visit(page: Page, route: string) {
   const response = await page.goto(route, { waitUntil: "domcontentloaded" });
   expect(response?.status(), `${route} HTTP status`).toBe(200);
-  const target = route.startsWith("/quiz") ? page.locator("[data-question-text]").first() : page.locator("h1").first();
+  // A learner region that cannot read its data shows an alert instead of its
+  // heading; that still has to fit, so it counts as rendered.
+  const target = route.startsWith("/quiz") ? page.locator("[data-question-text]").first() : page.locator("h1, [role=alert]").first();
   await target.waitFor({ state: "visible", timeout: 25_000 });
   await page.waitForLoadState("networkidle", { timeout: 8_000 }).catch(() => {});
 }
@@ -188,8 +206,11 @@ for (const v of VARIANTS.filter((x) => !variantFilter || tag(x) === variantFilte
         await visit(page, path_);
         const m = await measure(page);
         Object.assign(result, m, { errors, writes: writes.map((w) => `${w.method} ${w.path}`) });
-        result.status = m.scrollWidth <= m.innerWidth + 1 && m.offenders.length === 0 && errors.length === 0 ? "passed" : "findings";
+        // Offenders are diagnostics (fixed or clipped elements can sit past an
+        // edge without making the page scroll); the gate is the scroll width.
+        result.status = m.scrollWidth <= m.innerWidth + 1 && m.fixedInFlow.length === 0 && errors.length === 0 ? "passed" : "findings";
         expect.soft(m.scrollWidth, `${route} scrollWidth at ${tag(v)}; offenders ${m.offenders.join(" | ")}`).toBeLessThanOrEqual(m.innerWidth + 1);
+        expect.soft(m.fixedInFlow, `${route} fixed elements in the page flow at ${tag(v)}`).toEqual([]);
         expect.soft(errors, `${route} console errors at ${tag(v)}`).toEqual([]);
       } finally {
         results.push(result);
@@ -224,9 +245,9 @@ test("TR-19 / LX-32: landing to the first free question with no card step, under
   if (new URL(page.url()).pathname === "/login") {
     const register = page.getByRole("button", { name: "Registrieren", exact: true });
     if ((await register.getAttribute("aria-pressed")) !== "true") await register.click();
-    await page.getByLabel("Vorname").fill("Fixture");
-    await page.getByLabel("E-Mail", { exact: false }).first().fill("release@example.invalid");
-    await page.getByLabel("Passwort", { exact: false }).first().fill("synthetic-pass-1234");
+    await page.locator('input[name="given-name"]').fill("Fixture");
+    await page.locator('input[name="email"]').fill("release@example.invalid");
+    await page.locator('input[name="password"]').fill("synthetic-pass-1234");
     await page.getByRole("button", { name: "Konto erstellen" }).click();
   }
   // Onboarding may ask for the exam first; pick the Vienna bank if it does.
@@ -239,7 +260,7 @@ test("TR-19 / LX-32: landing to the first free question with no card step, under
     await page.waitForTimeout(700);
   }
   await expect(firstQuestion).toBeVisible({ timeout: 20_000 });
-  await page.getByRole("radio").first().click().catch(async () => page.getByRole("checkbox").first().click());
+  await page.getByRole("button", { name: /Antwort A/ }).first().click();
   const elapsed = Date.now() - started;
   const cardFields = await page.locator('input[autocomplete^="cc-"], input[name*="card" i]').count();
   results.push({ route: "flow:landing-to-first-question", variant: tag(v), status: elapsed < 60_000 && cardFields === 0 ? "passed" : "findings", errors, writes: visited });

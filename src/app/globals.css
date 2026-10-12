@@ -2064,8 +2064,11 @@ html[data-onboarding="open"] .mp-status-region > * { display: none; }
 }
 
 /* Touch targets (UX-GLOBAL-24): a 44px hit area without changing the visual
-   size. Add .mp-hit to small icon buttons, chips and close controls. */
-.mp-hit { position: relative; }
+   size. Add .mp-hit to small icon buttons, chips and close controls.
+   The position lives in the components layer so a positioning utility on the
+   same element (fixed, absolute, sticky) wins: unlayered it overrode `fixed`
+   and put the phone feedback launcher into the page flow (a35). */
+@layer components { .mp-hit { position: relative; } }
 .mp-hit::before {
   content: ""; position: absolute;
   top: 50%; left: 50%;

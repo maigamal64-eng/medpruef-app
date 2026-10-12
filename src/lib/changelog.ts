@@ -23,6 +23,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
 {
+  "date": "2026-10-13",
+  "tag": "fix",
+  "title": {
+    "de": "Feedback-Knopf auf dem Handy wieder an seinem Platz, Kurzanleitung KAF bei den Materialien",
+    "en": "Phone feedback button back in place, KAF short guide under Materials"
+  },
+  "description": {
+    "de": "Auf dem Handy schwebt der Feedback-Knopf wieder unten rechts, statt am Seitenende halb abgeschnitten zwischen den Inhalten zu stehen. Unter Materialien finden Sie jetzt auch die Kurzanleitung der MedUni Wien zu Kurzantwortfragen (KAF), dazu die Seiten zur Antragstellung und zu Med.Campus; jeder offizielle Link wurde am 13. Oktober 2026 geprüft.",
+    "en": "On phones the feedback button floats at the bottom right again instead of sitting half cut off at the end of the page. Materials now also lists the MedUni Wien short guide to short-answer questions (KAF), plus the application and Med.Campus pages; every official link was checked on 13 October 2026."
+  }
+},
+{
   "date": "2026-10-12",
   "tag": "admin",
   "title": {
