@@ -29,6 +29,7 @@ import { gateSentence } from "@/lib/entitlement-copy";
 import { buildAuthHref, parseAuthEntry } from "@/lib/auth-entry";
 import { billingAccountSentence, billingAmount, BILLING_SUPPORT_EMAIL, SUPPORT_REPLY_PROMISE, WHOP_MANAGE_URL } from "@/lib/billing-copy";
 import { claimsFor, claimText } from "@/lib/learning-claims";
+import { FREE_TIER } from "@/lib/content-truth";
 import { referralRewardBullets, referralDisclosure } from "@/lib/referral-copy";
 import { puypScopeLine } from "@/lib/puyp-copy";
 import { t, getLang } from "@/lib/i18n";
@@ -59,7 +60,7 @@ import CheckoutProblem, { type CheckoutProblemState } from "./_parts/CheckoutPro
 import { ACTION_FOR, PLAN_ORDER, RECOMMENDED, SLOT_FOR, TIER_FOR_ACTION, longDate, type PaidTier, type Slot } from "./_parts/plans";
 
 type Lang = "de" | "en";
-type SubInfo = { suppressed: boolean; subscription: SubscriptionCardSnapshot | null } | "error" | null;
+type SubInfo = { suppressed: boolean; extendable: boolean; subscription: SubscriptionCardSnapshot | null } | "error" | null;
 
 export default function PricingPage() {
   const router = useRouter();
@@ -87,8 +88,11 @@ export default function PricingPage() {
 
   // Reset on a bfcache return or a tab coming back: never a dead page (UX-ACC-09).
   useEffect(() => {
-    const reset = () => { request.current?.abort(); checkoutGate.current.leave(); setCheckoutLoading(null); setCheckoutSlow(false); setTrialBusy(false); refreshTier(); };
-    const visible = () => { if (document.visibilityState === "visible") reset(); };
+    const reset = () => { request.current?.abort(); request.current = null; checkoutGate.current.leave(); setCheckoutLoading(null); setCheckoutSlow(false); setTrialBusy(false); refreshTier(); };
+    // A tab switch during the checkout request must not abort it: the server
+    // has already logged the redirect, so an abort would leave a 30-minute
+    // pending lock without a Whop page. Only a settled or bfcache page resets.
+    const visible = () => { if (document.visibilityState === "visible" && !request.current) reset(); };
     const restored = (event: PageTransitionEvent) => { if (event.persisted) reset(); };
     document.addEventListener("visibilitychange", visible); window.addEventListener("pageshow", restored);
     return () => { document.removeEventListener("visibilitychange", visible); window.removeEventListener("pageshow", restored); };
@@ -125,7 +129,14 @@ export default function PricingPage() {
       const r = await fetch("/api/user/subscription", { timeoutMs: 8_000, skipAuthRedirect: true });
       if (!r.ok) throw new Error("subscription unavailable");
       const d = await r.json();
-      setSubInfo({ suppressed: d?.renewal_offer_suppressed !== false, subscription: d?.subscription ?? null });
+      // Mirrors the server rule: a payment adds time only when the newest
+      // Whop row ends when the account ends (manual, crypto or hand-extended
+      // access is extended by support instead).
+      const sub = d?.subscription ?? null;
+      const rowEnd = Date.parse(String(sub?.subscription_expires_at ?? ""));
+      const accessEnd = Date.parse(String(sub?.expires_at ?? ""));
+      const extendable = sub?.payment_provider === "whop" && Number.isFinite(rowEnd) && Number.isFinite(accessEnd) && Math.abs(rowEnd - accessEnd) <= 60_000;
+      setSubInfo({ suppressed: d?.renewal_offer_suppressed !== false, extendable, subscription: sub });
     } catch { setSubInfo("error"); }
   }, [signedIn, isPaid]);
   useEffect(() => { void loadSub(); }, [loadSub]);
@@ -149,15 +160,16 @@ export default function PricingPage() {
       const state: CheckoutProblemState = data?.code === "CHECKOUT_PENDING" ? "pending"
         : data?.code === "ALREADY_RENEWING" ? "renewing"
         : data?.code === "ALREADY_PRO" ? "already"
+        : data?.code === "EXTENSION_UNAVAILABLE" ? "extension"
         : r.status === 401 ? "signin"
         : "failed";
       setCheckoutFailure({ tier, state });
       if (state === "pending") setPaymentPending(true);
-      if (state === "renewing" || state === "already") { refreshTier(); void loadSub(); }
+      if (state === "renewing" || state === "already" || state === "extension") { refreshTier(); void loadSub(); }
     } catch {
       if (!controller.signal.aborted) setCheckoutFailure({ tier, state: typeof navigator !== "undefined" && navigator.onLine === false ? "offline" : "failed" });
     }
-    if (request.current === controller) { checkoutGate.current.leave(); setCheckoutLoading(null); }
+    if (request.current === controller) { request.current = null; checkoutGate.current.leave(); setCheckoutLoading(null); }
   }, [signedIn, storedExam, paymentPending, trialBusy, refreshTier, loadSub]);
 
   /** Every paid click: the confirm sheet when the flag is on, else straight to checkout. */
@@ -206,6 +218,7 @@ export default function PricingPage() {
     if (!tierExpiresAt) return { kind: "none", note: t("account_checkout_already", lang) };
     if (subInfo === null) return { kind: "none", note: de ? "Ihr Abo wird geprüft." : "Checking your plan." };
     if (subInfo === "error" || subInfo.suppressed) return { kind: "none", note: de ? "Ihr Abo verlängert sich automatisch. Kein zweiter Tarif nötig." : "Your plan renews automatically. No second plan needed." };
+    if (!subInfo.extendable) return { kind: "none", note: t("account_extension_unavailable", lang) };
     return { kind: "extend" };
   };
   const busy = Boolean(checkoutLoading) || trialBusy || paymentPending;
@@ -404,8 +417,8 @@ export default function PricingPage() {
             <FAQItem
               q={de ? "Gibt es Tarife pro Prüfung?" : "Is there per-exam pricing?"}
               a={de
-                ? `Nein, jeder bezahlte Tarif enthält alle drei Fragenbanken (${getExamLabel("kenntnispruefung", "full", "de")}, ${getExamLabel("kmp_innsbruck", "full", "de")}, ${getExamLabel("pharma", "full", "de")}). Kostenlos üben Sie 150 Fragen pro Fragenbank.`
-                : `No, every paid plan unlocks all three question banks (${getExamLabel("kenntnispruefung", "full", "en")}, ${getExamLabel("kmp_innsbruck", "full", "en")}, ${getExamLabel("pharma", "full", "en")}). Free, you practise 150 questions per question bank.`}
+                ? `Nein, jeder bezahlte Tarif enthält alle drei Fragenbanken (${getExamLabel("kenntnispruefung", "full", "de")}, ${getExamLabel("kmp_innsbruck", "full", "de")}, ${getExamLabel("pharma", "full", "de")}). Kostenlos üben Sie ${FREE_TIER.questions_per_exam_type} Fragen pro Fragenbank.`
+                : `No, every paid plan unlocks all three question banks (${getExamLabel("kenntnispruefung", "full", "en")}, ${getExamLabel("kmp_innsbruck", "full", "en")}, ${getExamLabel("pharma", "full", "en")}). Free, you practise ${FREE_TIER.questions_per_exam_type} questions per question bank.`}
             />
           </div>
           <div className="text-center mt-6">
@@ -478,7 +491,7 @@ function FreeTierRow({ lang, examSource }: { lang: Lang; examSource: ExamSourceI
       <div>
         <h2 id="free-tier" className="mp-h3 mb-1">{de ? "Kostenlos starten" : "Start free"}</h2>
         <p className="text-sm text-[var(--mp-fg-muted)] m-0">
-          {de ? "150 Fragen pro Fragenbank mit Erklärungen, wo vorhanden. Keine Zahlung nötig, keine Karte." : "150 questions per question bank with explanations where available. No payment needed, no card."}
+          {de ? `${FREE_TIER.questions_per_exam_type} Fragen pro Fragenbank mit Erklärungen, wo vorhanden. Keine Zahlung nötig, keine Karte.` : `${FREE_TIER.questions_per_exam_type} questions per question bank with explanations where available. No payment needed, no card.`}
         </p>
       </div>
       <div className="flex flex-col gap-2 md:items-end">

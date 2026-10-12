@@ -155,8 +155,14 @@ export const FAQ_PUYP_WHY: { q: Bi; a: Bi } = {
 
 /* ── Referrals (UX-ACC-50) ────────────────────────────────────────── */
 
+/** The programme is invite-only (users.referrals_enabled), so the public answer says so first. */
+const REFERRAL_SCOPE: Record<FaqLang, string> = {
+  de: "Das Empfehlungsprogramm steht nur freigeschalteten Konten offen.",
+  en: "The referral programme is open to enabled accounts only.",
+};
+
 export function faqReferralAnswer(lang: FaqLang): string {
-  return `${referralRewardSentence(lang)} ${referralWindowDefinition(lang)}`;
+  return `${REFERRAL_SCOPE[lang]} ${referralRewardSentence(lang)} ${referralWindowDefinition(lang)}`;
 }
 
 /* ── Free tier, per exam, founder ─────────────────────────────────── */

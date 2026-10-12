@@ -10,7 +10,11 @@
  *   - each extension runs to the next official sitting of the learner's exam
  *     with open registration, plus 14 days ([name], pick-puyp-outcomes A and
  *     pick-access-dates A, 2026-10-11; existing access is never shortened)
- *   - review time: no hour promise until it is measured (UX-PUB-23, PUB-28)
+ *   - review time: no hour figure until it is measured; the spec's fallback
+ *     "in der Regel innerhalb weniger Werktage" is used (UX-PUB-23, PUB-28)
+ *   - "mit offener Anmeldung" is [name]'s approved policy (pick-access-dates A);
+ *     approvals are manual with a per-claim override, and the code default
+ *     (suggestNextExpiresAt) follows in TR-06
  *   - an access extension, not a cash refund; the purchase refund rule is
  *     separate (pick-refund-route A: email, refunded through Whop)
  * Formal Sie, no em dashes.

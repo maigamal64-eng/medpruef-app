@@ -105,8 +105,10 @@ export default function TrialActivation({
   }, [resume, loading, state, exam]);
 
   useEffect(() => {
-    const reset = () => { request.current?.abort(); actionGate.current.leave(); setPhase('idle'); setSlow(false); onWorking.current?.(false); setRetry(n => n + 1); };
-    const visible = () => { if (document.visibilityState === 'visible') reset(); };
+    const reset = () => { request.current?.abort(); request.current = null; actionGate.current.leave(); setPhase('idle'); setSlow(false); onWorking.current?.(false); setRetry(n => n + 1); };
+    // A tab switch during the trial request never aborts it (the server logs
+    // the redirect first); only a settled or bfcache-restored page resets.
+    const visible = () => { if (document.visibilityState === 'visible' && !request.current) reset(); };
     const restored = (event: PageTransitionEvent) => { if (event.persisted) reset(); };
     document.addEventListener('visibilitychange', visible); window.addEventListener('pageshow', restored);
     return () => { document.removeEventListener('visibilitychange', visible); window.removeEventListener('pageshow', restored); };
@@ -139,7 +141,7 @@ export default function TrialActivation({
     } catch {
       if (!controller.signal.aborted) setPhase("error");
     } finally {
-      if (request.current === controller) { actionGate.current.leave(); onWorking.current?.(false); }
+      if (request.current === controller) { request.current = null; actionGate.current.leave(); onWorking.current?.(false); }
     }
   };
 

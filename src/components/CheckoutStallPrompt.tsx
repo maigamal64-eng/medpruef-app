@@ -27,6 +27,7 @@ import { createFeedbackSubmission } from "@/lib/checkout-feedback-submit";
 import { authFetch } from "@/lib/authFetch";
 import { t, useLang, type TranslationKey } from "@/lib/i18n";
 import { BILLING_SUPPORT_EMAIL } from "@/lib/billing-copy";
+import { FREE_TIER } from "@/lib/content-truth";
 
 const DISMISS_KEY = "medpruef_checkout_stall_dismissed_at";
 /** "Nein danke" is honoured for 30 days (UX-ACC-29). */
@@ -169,7 +170,7 @@ export default function CheckoutStallPrompt() {
             </>
           ) : (selectedReason === "price" || selectedReason === "changed_mind") ? (
             <>
-              <p className="text-sm text-[var(--mp-fg-muted)] m-0">{de ? "Sie können jederzeit kostenlos weiterüben: 150 Fragen pro Fragenbank, ohne Karte." : "You can keep practising for free at any time: 150 questions per question bank, no card."}</p>
+              <p className="text-sm text-[var(--mp-fg-muted)] m-0">{de ? `Sie können jederzeit kostenlos weiterüben: ${FREE_TIER.questions_per_exam_type} Fragen pro Fragenbank, ohne Karte.` : `You can keep practising for free at any time: ${FREE_TIER.questions_per_exam_type} questions per question bank, no card.`}</p>
               <a className="inline-flex min-h-11 items-center text-sm underline" href="/quiz">{de ? "Kostenlos weiterüben" : "Keep practising for free"}</a>
             </>
           ) : (

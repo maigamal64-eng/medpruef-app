@@ -127,7 +127,7 @@ describe("cron trial-reminder: one-time buyer wording", () => {
   it("computes the days left for the subject instead of a fixed 5 days", async () => {
     h.daysOut = 11;
     await run();
-    expect(h.sent[0].subject).toBe("Dein MedPrüf Pro-Zugang endet in 11 Tagen");
+    expect(h.sent[0].subject).toBe("Ihr MedPrüf Pro-Zugang endet in 11 Tagen");
     h.sent.length = 0;
     h.lang = "en";
     h.daysOut = 1;

@@ -30,6 +30,7 @@ describe('signed pending checkout protection', () => {
     mocks.create.mockResolvedValue({ id: 'ch_fixture', purchaseUrl: 'https://whop.example/checkout' });
     const fake = createFakeSupabase(call => {
       if (call.table === 'users') return { data: { tier: 'pro', role: 'user', tier_expires_at: end, email: null } };
+      if (call.table === 'subscriptions' && call.columns === 'expires_at') return { data: [{ expires_at: end }] };
       if (call.table === 'subscriptions') return { data: [{ tier: 'premium_pass_guaranteed', payment_provider: 'whop', provider_payment_id: 'pay_old' }] };
       if (call.table === 'payment_events' && call.columns?.includes('plan_id')) return { data: [{ payment_id: 'pay_old', plan_id: 'plan_redacted324decbc' }] };
       return { data: [] };
@@ -56,5 +57,20 @@ describe('signed pending checkout protection', () => {
     const response = await GET(new NextRequest('https://medpruf.com/api/whop/checkout/status?userId=other'));
     expect(response.headers.get('cache-control')).toBe('no-store'); expect(await response.json()).toMatchObject({ pending: { tier: 'first_month_19', reference: 'ch_fixture' } });
     expect(eqVal(fake.calls[0], 'user_id')).toBe('synthetic-owner'); expect(fake.calls[0].limit).toBe(100); expect(fake.calls.every(call => call.op === 'select')).toBe(true);
+  });
+  it('refuses an extension that would add no days (access not from the newest Whop row)', async () => {
+    const end = new Date(Date.now() + 20 * 86_400_000).toISOString();
+    const rowEnds = [[], [{ expires_at: new Date(Date.now() + 5 * 86_400_000).toISOString() }]];
+    for (const rows of rowEnds) {
+      mocks.client.mockReturnValue(createFakeSupabase(call => {
+        if (call.table === 'users') return { data: { tier: 'pro', role: 'user', tier_expires_at: end } };
+        if (call.table === 'subscriptions' && call.columns === 'expires_at') return { data: rows };
+        if (call.table === 'subscriptions') return { data: [{ tier: 'pro', payment_provider: 'manual', provider_payment_id: null }] };
+        return { data: [] };
+      }).sb);
+      const response = await POST(request());
+      expect(response.status).toBe(409); expect(await response.json()).toMatchObject({ code: 'EXTENSION_UNAVAILABLE' });
+    }
+    expect(mocks.create).not.toHaveBeenCalled();
   });
 });

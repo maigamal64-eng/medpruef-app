@@ -69,6 +69,18 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ code: 'PAYMENT_STATUS_UNAVAILABLE' }, { status: 503 });
       }
       if (renewing) return NextResponse.json({ code: 'ALREADY_RENEWING' }, { status: 409 });
+      // The grant extends the newest live Whop row. Only when that row ends
+      // when the account ends does a payment add time; access from a manual,
+      // crypto or referral grant, or a hand extension (PUYP), would gain no
+      // days, so it is refused and support extends it by hand.
+      const { data: liveRows, error: liveError } = await sb.from('subscriptions')
+        .select('expires_at').eq('user_id', userId).eq('payment_provider', 'whop').eq('status', 'active')
+        .order('expires_at', { ascending: false }).limit(1);
+      if (liveError) return NextResponse.json({ code: 'PAYMENT_STATUS_UNAVAILABLE' }, { status: 503 });
+      const rowEnd = Date.parse(String(liveRows?.[0]?.expires_at ?? ''));
+      if (!Number.isFinite(rowEnd) || Math.abs(rowEnd - Date.parse(account.tier_expires_at)) > 60_000) {
+        return NextResponse.json({ code: 'EXTENSION_UNAVAILABLE' }, { status: 409 });
+      }
       extendsFrom = account.tier_expires_at;
     }
 
@@ -133,6 +145,9 @@ export async function POST(req: NextRequest) {
       tier,
       planId,
       checkoutSessionId: session.id,
+      // The pending strip passes this to verify so an extension is checked
+      // against the moved end date, never against access that was already active.
+      metadata: extendsFrom ? { extends_from: extendsFrom } : undefined,
     });
 
     return NextResponse.json({

@@ -9,7 +9,7 @@ import { BILLING_SUPPORT_EMAIL, type BillingLang } from "@/lib/billing-copy";
 import { t } from "@/lib/i18n";
 import { WHOP_MANAGE_URL } from "@/lib/billing-copy";
 
-export type CheckoutProblemState = "pending" | "failed" | "offline" | "signin" | "renewing" | "already";
+export type CheckoutProblemState = "pending" | "failed" | "offline" | "signin" | "renewing" | "already" | "extension";
 
 export default function CheckoutProblem({ state, lang, onRetry, onCheck, onSignIn }: {
   state: CheckoutProblemState;
@@ -24,6 +24,7 @@ export default function CheckoutProblem({ state, lang, onRetry, onCheck, onSignI
     : state === "signin" ? t("account_checkout_signin", lang)
     : state === "renewing" ? t("account_checkout_renewing", lang)
     : state === "already" ? t("account_checkout_already", lang)
+    : state === "extension" ? t("account_extension_unavailable", lang)
     : t("account_checkout_failed", lang);
   const alert = state === "failed" || state === "offline";
   return (

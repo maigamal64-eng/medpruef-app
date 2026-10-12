@@ -72,6 +72,11 @@ export default function PlanCard({ tier, lang, featured, action, loading, busy, 
             {!loading && <ArrowRight className="w-4 h-4" aria-hidden />}
           </button>
         )}
+        {action.kind === "extend" && renewing && (
+          <p className="mp-small text-[var(--mp-fg-muted)] md:text-right m-0">{de
+            ? `Abbuchung heute und danach alle ${CADENCE_DAYS[tier]} Tage, bis Sie kündigen. Jede Zahlung verlängert Ihren Zugang um ${CADENCE_DAYS[tier]} Tage nach dem jetzigen Ende.`
+            : `Charged today and then every ${CADENCE_DAYS[tier]} days until you cancel. Each payment adds ${CADENCE_DAYS[tier]} days after your current end.`}</p>
+        )}
         {action.kind === "signin" && (
           <p className="mp-small text-[var(--mp-fg-muted)] md:text-right m-0">{de ? "Sie registrieren sich zuerst, dann geht es zur Kartenzahlung." : "You register first, then continue to card payment."}</p>
         )}

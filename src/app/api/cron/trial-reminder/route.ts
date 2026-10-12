@@ -490,29 +490,29 @@ function renderOneTimeReminder(args: OneTimeReminderArgs): { subject: string; ht
     "display:inline-block; background:#003a8c; color:white; padding:10px 18px; border-radius:8px; text-decoration:none; font-weight:600;";
 
   if (lang === "de") {
-    const subject = `Dein MedPrüf Pro-Zugang endet in ${daysLeft} ${daysLeft === 1 ? "Tag" : "Tagen"}`;
+    const subject = `Ihr MedPrüf Pro-Zugang endet in ${daysLeft} ${daysLeft === 1 ? "Tag" : "Tagen"}`;
     const htmlBody = `<!DOCTYPE html>
 <html><body style="${wrapStyle}">
 <p>Hallo${greetingName},</p>
 
-<p>kurzer Hinweis: dein <strong>MedPrüf Pro-Zugang</strong> endet am <strong>${expiresFmt}</strong>, also in ca. ${daysLeft} ${daysLeft === 1 ? "Tag" : "Tagen"}. Du hast einmalig bezahlt, es gibt keine automatische Abbuchung. Wenn du nichts tust, endet der Zugang an diesem Datum und es wird nichts mehr abgebucht.</p>
+<p>kurzer Hinweis: Ihr <strong>MedPrüf Pro-Zugang</strong> endet am <strong>${expiresFmt}</strong>, also in ca. ${daysLeft} ${daysLeft === 1 ? "Tag" : "Tagen"}. Sie haben einmalig bezahlt, es gibt keine automatische Abbuchung. Wenn Sie nichts tun, endet der Zugang an diesem Datum und es wird nichts mehr abgebucht.</p>
 
-${statsLine ? `<p><strong>Was du in dieser Zeit aufgebaut hast:</strong> ${statsLine}.<br>Das alles bleibt erhalten, wenn du weitermachst.</p>` : ""}
+${statsLine ? `<p><strong>Was Sie in dieser Zeit aufgebaut haben:</strong> ${statsLine}.<br>Das alles bleibt erhalten, wenn Sie weitermachen.</p>` : ""}
 
-<p>Wenn du weitermachen möchtest, kannst du selbst einen neuen Tarif wählen:</p>
+<p>Wenn Sie weitermachen möchten, können Sie selbst einen neuen Tarif wählen:</p>
 
 <ul>
   <li><strong>Prüfungs-Kohorte</strong> (${cohort} einmalig, 6 Monate, Pass-Until-You-Pass-Garantie): Einmalzahlung, kein Abo, Karten-Checkout über Whop, sofortiger Vollzugang.</li>
-  <li><strong>Einzelmonat</strong> (${singleMonth} pro Monat) und <strong>3-Monats-Tarif</strong> (${threeMonth} pro Quartal): das sind Abos, die bis zur Kündigung weiterlaufen. Kündigen kannst du jederzeit bei Whop: <a href="${WHOP_MANAGE_URL}">${WHOP_MANAGE_TEXT}</a> (Mitgliedschaft auswählen, dann „Cancel membership“).</li>
+  <li><strong>Monatsabo</strong> (${singleMonth} pro Monat) und <strong>3-Monats-Tarif</strong> (${threeMonth} pro Quartal): das sind Abos, die bis zur Kündigung weiterlaufen. Kündigen können Sie bei Whop: <a href="${WHOP_MANAGE_URL}">${WHOP_MANAGE_TEXT}</a> (Mitgliedschaft auswählen, dann „Cancel membership“; die Seite ist auf Englisch).</li>
 </ul>
 
 <p><a href="https://medpruf.com/pricing" style="${btnStyle}">Tarife ansehen →</a></p>
 
-<p>Falls du nicht weitermachen willst, alles gut. Dein Konto bleibt bestehen, du kannst die kostenlose Version (${FREE_TIER.questions_per_exam_type} Fragen pro Prüfung) jederzeit weiter nutzen, und wenn du in einem halben Jahr zurückkommst, ist alles noch da.</p>
+<p>Falls Sie nicht weitermachen möchten, ist das in Ordnung. Ihr Konto bleibt bestehen, Sie können die kostenlose Version (${FREE_TIER.questions_per_exam_type} Fragen pro Fragenbank) weiter nutzen, und wenn Sie später zurückkommen, ist alles noch da.</p>
 
 <p>Bei Fragen: einfach auf diese Mail antworten (${BILLING_SUPPORT_EMAIL}).</p>
 
-<p>Liebe Grüße, [name]<br>
+<p>Viele Grüße, [name]<br>
 <small style="color:#4a5568;">${COMPANY.one_line.de}</small></p>
 </body></html>`;
     return { subject, htmlBody };
