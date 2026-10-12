@@ -185,10 +185,10 @@ describe('a25 study dash catalogue hygiene', () => {
     expect(ts('cur_practice', 'de')).toBe('Üben');
     expect(ts('cur_practice', 'tr')).toBe('Practice');
     expect(ts('cur_practice', 'ar')).toBe('Practice');
-    expect(ts('cur_subjects_title', 'de', { exam: 'Stichprobentest (Innsbruck)' })).toBe('Stichprobentest (Innsbruck): Fächer');
+    expect(ts('cur_subjects_title', 'de', { exam: 'Stichprobentest (Innsbruck)' })).toBe('Stichprobentest (Innsbruck): Fachgebiete');
     expect(ts('cur_total_label', 'de')).toBe('Fragen in Ihrer Prüfung');
-    expect(subjectCount(1, 'de')).toBe('1 Fach');
-    expect(subjectCount(12, 'en')).toBe('12 subjects');
+    expect(subjectCount(1, 'de')).toBe('1 Fachgebiet');
+    expect(subjectCount(12, 'en')).toBe('12 topics');
     expect(studyNum(10700, 'de')).toMatch(/^10\D700$/);
   });
 });

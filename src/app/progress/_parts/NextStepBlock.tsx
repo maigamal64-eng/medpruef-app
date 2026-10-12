@@ -14,7 +14,6 @@ import { gateSentence } from "@/lib/entitlement-copy";
 import { weakTopicHref } from "@/lib/next-step";
 import { ProPill } from "@/components/ui/ProPill";
 import { ts, studyPct } from "@/lib/i18n-study";
-import { te } from "@/lib/i18n-exam";
 import { MIN_TOPIC_SAMPLE } from "@/lib/learning-metrics";
 
 export interface WeakRow {
@@ -46,7 +45,7 @@ export default function NextStepBlock({ weak, examSource, audience, lang }: { we
         )}
         <Link href={mockHref} className="mp-btn mp-btn--secondary mp-btn--lg justify-center min-h-11">
           <GraduationCap className="w-5 h-5" aria-hidden />
-          {te("mock_entry", lang)}
+          {ts("sim_label", lang)}
           {!canUse("mock_exam", audience) && <span aria-hidden className="mp-pro-pill">Pro</span>}
         </Link>
       </div>

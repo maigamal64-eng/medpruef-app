@@ -11,8 +11,8 @@ import { renderLang, type UiLanguage } from './language-model';
 const STRINGS = {
   // Page chrome
   plan_title: { de: 'Lernplan', en: 'Study plan' },
-  plan_signin_body: { de: 'Melden Sie sich an, um Ihren Lernplan bis zur Prüfung zu sehen.', en: 'Sign in to see your study plan up to exam day.' },
-  plan_signin: { de: 'Anmelden', en: 'Sign in' },
+  plan_signin_body: { de: 'Bitte loggen Sie sich ein, um Ihren Lernplan bis zur Prüfung zu sehen.', en: 'Please log in to see your study plan up to exam day.' },
+  plan_signin: { de: 'Einloggen', en: 'Log in' },
 
   // Hero (UX-STU-18, LX-01, LX-03)
   hero_days: { de: 'Noch {n} Tage bis zur Prüfung', en: 'Your exam is in {n} days' },
@@ -25,10 +25,10 @@ const STRINGS = {
   hero_unit_day: { de: 'Tag', en: 'day' },
   hero_target_official: { de: 'Nächster offizieller Termin: {date}', en: 'Next official sitting: {date}' },
   hero_target_horizon: { de: 'Für diese Prüfung ist noch kein Termin veröffentlicht. Der Plan reicht 12 Wochen.', en: 'No sitting is published for this exam yet. The plan covers 12 weeks.' },
-  hero_change_date: { de: 'Prüfungsdatum ändern', en: 'Change exam date' },
-  hero_set_date: { de: 'Prüfungsdatum eintragen', en: 'Enter your exam date' },
+  hero_change_date: { de: 'Prüfungstermin ändern', en: 'Change exam date' },
+  hero_set_date: { de: 'Prüfungstermin eintragen', en: 'Enter your exam date' },
   hero_split: { de: '70 % der Zeit: neuer Stoff, 30 % der Zeit: Wiederholung ab {date}', en: '70% of the time: new material, 30% of the time: review from {date}' },
-  hero_short: { de: 'Wenig Zeit bis zur Prüfung: Der Plan wiederholt jetzt Ihre schwächeren Fächer.', en: 'Not much time left: the plan now reviews your weaker subjects.' },
+  hero_short: { de: 'Wenig Zeit bis zur Prüfung: Der Plan wiederholt jetzt Ihre schwächeren Fachgebiete.', en: 'Not much time left: the plan now reviews your weaker topics.' },
   hero_far: { de: 'Der Plan zeigt das nächste Jahr. Er wächst mit, wenn der Termin näher rückt.', en: 'The plan shows the next year. It extends as the date gets closer.' },
 
   // Expired own date (LX-03)
@@ -45,25 +45,23 @@ const STRINGS = {
   provisional_badge: { de: 'Vorläufig', en: 'Provisional' },
   provisional_body: { de: 'Dieser Plan zielt auf den nächsten offiziellen Termin. Er gilt, bis Sie Ihren eigenen Termin wählen.', en: 'This plan targets the next official sitting. It applies until you choose your own date.' },
   provisional_later: { de: 'Termin später eintragen', en: 'Enter my date later' },
-  provisional_pick: { de: 'Termin wählen', en: 'Choose my date' },
 
   // Effort (LX-02, UX-STU-23)
   effort_reach: { de: 'Mit {goal} Fragen am Tag kommen Sie bis zum {date} auf etwa {reach} neue Fragen. In Ihrer Prüfung sind {unseen} noch offen. Dazu kommt die Wiederholung Ihrer Fehler.', en: 'At {goal} questions a day you reach about {reach} new questions by {date}. {unseen} in your exam are still open. Review of your mistakes comes on top.' },
   effort_fits: { de: 'Das passt: Für alle offenen Fragen reichen etwa {q} Fragen am Tag (rund {m} Minuten).', en: 'That works: about {q} questions a day (around {m} minutes) cover every open question.' },
   effort_tight: { de: 'Das wird knapp: Für alle offenen Fragen wären es etwa {q} Fragen am Tag (rund {m} Minuten).', en: 'That is tight: covering every open question takes about {q} questions a day (around {m} minutes).' },
-  effort_too_much: { de: 'Für alle offenen Fragen wären es etwa {q} Fragen am Tag (rund {m} Minuten). Das ist sehr viel. Sie können den Plan auf Ihre schwächeren Fächer eingrenzen.', en: 'Covering every open question takes about {q} questions a day (around {m} minutes). That is a lot. You can narrow the plan to your weaker subjects.' },
+  effort_too_much: { de: 'Für alle offenen Fragen wären es etwa {q} Fragen am Tag (rund {m} Minuten). Das ist sehr viel. Sie können den Plan auf Ihre schwächeren Fachgebiete eingrenzen.', en: 'Covering every open question takes about {q} questions a day (around {m} minutes). That is a lot. You can narrow the plan to your weaker topics.' },
   effort_none_open: { de: 'Sie haben jede Frage Ihrer Prüfung mindestens einmal gesehen. Der Plan wiederholt jetzt.', en: 'You have seen every question in your exam at least once. The plan now reviews.' },
   effort_basis: { de: 'Grundlage: etwa 1,5 Minuten je Frage (Schätzung).', en: 'Basis: about 1.5 minutes per question (estimate).' },
   effort_share: { de: 'Für 80 % der Fragen wären es etwa {q} am Tag.', en: 'For 80% of the questions it would be about {q} a day.' },
   goal_label: { de: 'Fragen pro Tag', en: 'Questions per day' },
   goal_saving: { de: 'Tagesziel wird gespeichert', en: 'Saving daily goal' },
   goal_error: { de: 'Das Tagesziel konnte nicht gespeichert werden.', en: 'The daily goal could not be saved.' },
-  focus_weak_on: { de: 'Auf schwächere Fächer eingrenzen', en: 'Narrow to weaker subjects' },
-  focus_weak_off: { de: 'Alle Fächer planen', en: 'Plan all subjects' },
-  focus_weak_active: { de: 'Der Plan umfasst nur Ihre schwächeren Fächer.', en: 'The plan covers your weaker subjects only.' },
+  focus_weak_on: { de: 'Auf schwächere Fachgebiete eingrenzen', en: 'Narrow to weaker topics' },
+  focus_weak_off: { de: 'Alle Fachgebiete planen', en: 'Plan all topics' },
+  focus_weak_active: { de: 'Der Plan umfasst nur Ihre schwächeren Fachgebiete.', en: 'The plan covers your weaker topics only.' },
 
   // Registration line and phases (UX-STU-24 B, UX-STU-18)
-  reg_line: { de: 'Anmeldeschluss: {date}', en: 'Registration closes: {date}' },
   reg_line_days: { de: 'Anmeldeschluss: {date}, noch {n} Tage', en: 'Registration closes: {date}, {n} days left' },
   reg_line_day: { de: 'Anmeldeschluss: {date}, noch 1 Tag', en: 'Registration closes: {date}, 1 day left' },
   reg_passed: { de: 'Die Anmeldefrist für diesen Termin ist vorbei ({date}).', en: 'Registration for this sitting has closed ({date}).' },
@@ -89,7 +87,6 @@ const STRINGS = {
   today_goal_done: { de: 'Tagesziel erreicht', en: 'Daily goal reached' },
   today_rest: { de: 'Heute ist ein freier Tag. Üben können Sie trotzdem jederzeit.', en: 'Today is a free day. You can still practice any time.' },
   today_light: { de: 'Leichter Tag: halbe Menge, nur Wiederholung.', en: 'Light day: half the load, review only.' },
-  today_again: { de: 'Nochmal üben', en: 'Practice again' },
   block_questions: { de: '{n} Fragen', en: '{n} questions' },
   block_question: { de: '1 Frage', en: '1 question' },
   block_aria: { de: '{topic}, {focus}, {count}: üben', en: '{topic}, {focus}, {count}: practice' },
@@ -99,11 +96,9 @@ const STRINGS = {
   plan_adapts: { de: 'Der Plan passt sich täglich an Ihren Stand an.', en: 'The plan adapts daily to your progress.' },
 
   // Simulation days (LX-04, UX-STU-25)
-  sim_label: { de: 'Probeprüfung', en: 'Mock exam' },
+  sim_label: { de: 'Prüfungssimulation', en: 'Exam simulation' },
   sim_detail: { de: '{n} Fragen, {h} Stunden, mit Zeitlimit', en: '{n} questions, {h} hours, timed' },
   sim_detail_min: { de: '{n} Fragen, {m} Minuten, mit Zeitlimit', en: '{n} questions, {m} minutes, timed' },
-  sim_scope: { de: 'Übung unter Zeitdruck aus unserer Fragenbank. Gewertet wird jede Frage ganz oder gar nicht.', en: 'Timed practice from our question bank. Each question counts all or nothing.' },
-  sim_open: { de: 'Probeprüfung starten', en: 'Start mock exam' },
 
   // Upcoming days (UX-STU-27)
   upcoming_title: { de: 'Kommende Tage', en: 'Upcoming days' },
@@ -115,8 +110,8 @@ const STRINGS = {
   upcoming_practice_now: { de: 'Heute schon üben', en: 'Practice it today' },
 
   // Weak subjects (UX-STU-21, 35)
-  weak_title: { de: 'Schwächere Fächer', en: 'Weaker subjects' },
-  weak_body: { de: 'Diese Fächer bekommen im Plan mehr Gewicht.', en: 'These subjects get more weight in your plan.' },
+  weak_title: { de: 'Schwächere Fachgebiete', en: 'Weaker topics' },
+  weak_body: { de: 'Diese Fachgebiete bekommen im Plan mehr Gewicht.', en: 'These topics get more weight in your plan.' },
 
   // Quiz return (UX-STU-20)
   back_plan: { de: 'Zurück zum Lernplan', en: 'Back to study plan' },
@@ -126,17 +121,13 @@ const STRINGS = {
   back_mistakes: { de: 'Zurück zu den Fehlern', en: 'Back to mistakes' },
   back_history: { de: 'Zurück zum Verlauf', en: 'Back to history' },
 
-  // Rolling plan (UX-STU-16)
-  rolling_label: { de: 'Vorläufiger Plan, bis Sie ein Datum wählen', en: 'Provisional plan until you choose a date' },
-
   // Progress page (LX-09, UX-STU-29/35/36/38/40)
   progress_title: { de: 'Fortschritt', en: 'Progress' },
-  progress_intro: { de: 'Ihr Stand: Einschätzung, Fächer, Wochen und Abdeckung.', en: 'Where you stand: readiness, subjects, weeks and coverage.' },
   progress_coverage_error: { de: 'Der Fortschritt für diese Prüfung konnte nicht geladen werden.', en: 'Progress for this exam could not be loaded.' },
   progress_empty_title: { de: 'Noch nicht genug Daten', en: 'Not enough data yet' },
   progress_empty_body: { de: 'Sobald Sie ein paar Fragen beantwortet haben, erscheinen hier Ihr Wissensprofil und Ihre Wochen.', en: 'Once you answer a few questions, your knowledge profile and weeks show up here.' },
   progress_empty_cta: { de: 'Erste Fragen beantworten', en: 'Answer your first questions' },
-  progress_countdown_set: { de: 'Prüfungsdatum setzen', en: 'Set exam date' },
+  progress_countdown_set: { de: 'Prüfungstermin festlegen', en: 'Set exam date' },
   weekly_title: { de: 'Wochen im Überblick', en: 'Weeks at a glance' },
   weekly_volume: { de: 'Antworten je Woche', en: 'Answers per week' },
   weekly_accuracy: { de: 'Trefferquote je Woche', en: 'Accuracy per week' },
@@ -149,9 +140,9 @@ const STRINGS = {
   weekly_values: { de: 'Werte als Liste', en: 'Values as a list' },
   weekly_basis: { de: 'Alle Antworten in Ihrer aktiven Prüfung, mit Wiederholungen.', en: 'All answers in your active exam, including repeats.' },
   next_title: { de: 'Ihr nächster Schritt', en: 'Your next step' },
-  next_weakest: { de: 'Schwächstes Fach üben: {topic}', en: 'Practice your weakest subject: {topic}' },
+  next_weakest: { de: 'Schwächstes Fachgebiet üben: {topic}', en: 'Practice your weakest topic: {topic}' },
   next_weakest_pro: { de: 'Fehler in {topic} wiederholen', en: 'Review mistakes in {topic}' },
-  next_weak_list: { de: 'Fächer unter 60 % Trefferquote (ab {min} Antworten), schwächstes zuerst', en: 'Subjects under 60% accuracy (from {min} answers), weakest first' },
+  next_weak_list: { de: 'Fachgebiete unter 60 % Trefferquote (ab {min} Antworten), schwächstes zuerst', en: 'Topics under 60% accuracy (from {min} answers), weakest first' },
   next_weak_stat: { de: '{acc} richtig, {n} Antworten', en: '{acc} correct, {n} answers' },
   kpi_seen: { de: 'Verschiedene Fragen gesehen', en: 'Different questions seen' },
   kpi_seen_sub: { de: 'ohne Wiederholungen', en: 'without repeats' },
@@ -164,46 +155,41 @@ const STRINGS = {
   kpi_days: { de: 'Tage', en: 'days' },
   kpi_day: { de: 'Tag', en: 'day' },
   kpi_unknown: { de: 'unbekannt', en: 'unknown' },
-  saved_title: { de: 'Gespeichert', en: 'Saved' },
+  saved_title: { de: 'Gemerkt', en: 'Saved' },
   saved_questions: { de: 'Gemerkte Fragen', en: 'Saved questions' },
   saved_notes: { de: 'Notizen zur Frage', en: 'Notes on questions' },
-  saved_empty: { de: 'Noch nichts gemerkt. Gemerkte Fragen und Lernkarten finden Sie in der Bibliothek.', en: 'Nothing saved yet. Saved questions and flashcards are in the Library.' },
+  saved_empty: { de: 'Noch nichts gemerkt. Gemerkte Fragen und Lernnotizen finden Sie in der Bibliothek.', en: 'Nothing saved yet. Saved questions and study notes are in the Library.' },
   saved_library: { de: 'Zur Bibliothek', en: 'Open Library' },
-  radar_more: { de: 'Beantworten Sie Fragen in mindestens drei Fächern, dann erscheint das Wissensprofil.', en: 'Answer questions in at least three subjects to see the knowledge profile.' },
+  radar_more: { de: 'Beantworten Sie Fragen in mindestens drei Fachgebieten, dann erscheint das Wissensprofil.', en: 'Answer questions in at least three topics to see the knowledge profile.' },
   radar_title: { de: 'Wissensprofil', en: 'Knowledge profile' },
-  radar_subjects: { de: '{n} Fächer', en: '{n} subjects' },
-  radar_list_title: { de: 'Trefferquote je Fach', en: 'Accuracy by subject' },
-  radar_list_row: { de: '{topic}: {acc}', en: '{topic}: {acc}' },
+  radar_subjects: { de: '{n} Fachgebiete', en: '{n} topics' },
+  radar_list_title: { de: 'Trefferquote je Fachgebiet', en: 'Accuracy by topic' },
   radar_alt: { de: 'Wissensprofil als Netzdiagramm. Die Werte stehen in der Liste darunter.', en: 'Knowledge profile as a radar chart. The values are in the list below.' },
 
   // Field readiness (CNT-42)
-  fields_title: { de: 'Stand je Prüfungsfach', en: 'Status by exam field' },
+  fields_title: { de: 'Stand je Fachgebiet', en: 'Status by topic' },
   fields_intro: { de: 'Zum Vergleich die Regel aus der offiziellen Quelle:', en: 'For comparison, the rule from the official source:' },
-  fields_stp_note: { de: 'Die Fächer hier sind die Themen unserer Fragenbank, nicht genau die zehn offiziellen Prüfungsfächer.', en: 'The subjects here are the topics of our question bank, not exactly the ten official exam fields.' },
+  fields_stp_note: { de: 'Die Fachgebiete hier sind die Themen unserer Fragenbank, nicht genau die zehn offiziellen Prüfungsfächer.', en: 'The topics here come from our question bank, not exactly the ten official exam fields.' },
   fields_rule_link: { de: 'Regel und Quelle ansehen', en: 'See the rule and its source' },
-  fields_basis: { de: 'Grundlage: Ihre Antworten im Üben, nur Fächer mit mindestens {min} Antworten. Das ist keine Vorhersage Ihres Ergebnisses.', en: 'Basis: your practice answers, only subjects with at least {min} answers. This is not a prediction of your result.' },
-  fields_rule_stp: { de: 'Beim Stichprobentest zählen die offiziellen Prüfungsfächer. Hier sehen Sie Ihre Trefferquote je Fach aus dem Üben im Vergleich zu 60 %.', en: 'The Stichprobentest counts the official exam fields. Here you see your practice accuracy per subject against 60%.' },
+  fields_basis: { de: 'Grundlage: Ihre Antworten im Üben, nur Fachgebiete mit mindestens {min} Antworten. Das ist keine Vorhersage Ihres Ergebnisses.', en: 'Basis: your practice answers, only topics with at least {min} answers. This is not a prediction of your result.' },
   fields_at: { de: 'ab 60 %', en: '60% or more' },
   fields_below: { de: 'unter 60 %', en: 'under 60%' },
   fields_few: { de: 'zu wenig Antworten', en: 'not enough answers' },
   fields_row: { de: '{field}: {acc} richtig bei {n} Antworten, {state}', en: '{field}: {acc} correct over {n} answers, {state}' },
   fields_row_few: { de: '{field}: {n} Antworten, zu wenig für eine Aussage', en: '{field}: {n} answers, not enough to tell' },
-  fields_all_at: { de: 'Alle Fächer mit genug Antworten liegen bei 60 % oder mehr.', en: 'Every subject with enough answers is at 60% or more.' },
-  fields_some_below: { de: '{n} von {total} Fächern liegen noch unter 60 %.', en: '{n} of {total} subjects are still under 60%.' },
-  fields_part: { de: '{part}', en: '{part}' },
-  fields_error: { de: 'Der Stand je Fach konnte nicht geladen werden.', en: 'The status by field could not be loaded.' },
+  fields_all_at: { de: 'Alle Fachgebiete mit genug Antworten liegen bei 60 % oder mehr.', en: 'Every topic with enough answers is at 60% or more.' },
+  fields_some_below: { de: '{n} von {total} Fachgebieten liegen noch unter 60 % oder haben zu wenige Antworten.', en: '{n} of {total} topics are still under 60% or have too few answers.' },
+  fields_error: { de: 'Der Stand je Fachgebiet konnte nicht geladen werden.', en: 'The status by topic could not be loaded.' },
   starter_title: { de: 'So bereiten Sie sich vor', en: 'How to prepare' },
-  starter_order: { de: 'Reihenfolge: zuerst jedes Fach einmal ansehen, dann die schwächsten Fächer üben, in den letzten Wochen Probeprüfungen mit Zeitlimit.', en: 'Order: first look at every subject once, then practice the weakest, and in the last weeks take timed mock exams.' },
-  starter_enough: { de: 'Genug geübt ist ein Fach, wenn Sie dort im Üben stabil 60 % oder mehr erreichen. Das ist eine Orientierung, keine Prognose.', en: 'A subject is practiced enough when you reach 60% or more there steadily. This is guidance, not a forecast.' },
-  starter_formats: { de: 'Prüfungsformat und Fächer', en: 'Exam format and subjects' },
+  starter_order: { de: 'Reihenfolge: zuerst jedes Fachgebiet einmal ansehen, dann die schwächsten Fachgebiete üben, in den letzten Wochen Prüfungssimulationen mit Zeitlimit.', en: 'Order: first look at every topic once, then practice the weakest, and in the last weeks take timed exam simulations.' },
+  starter_enough: { de: 'Genug geübt ist ein Fachgebiet, wenn Sie dort im Üben stabil 60 % oder mehr erreichen. Das ist eine Orientierung, keine Prognose.', en: 'A topic is practiced enough when you reach 60% or more there steadily. This is guidance, not a forecast.' },
 
   // Mock exam trend (INF-04)
-  sims_title: { de: 'Probeprüfungen je Fach', en: 'Mock exams by subject' },
-  sims_count: { de: '{n} vollständige Probeprüfungen abgeschlossen', en: '{n} full mock exams completed' },
-  sims_count_one: { de: '1 vollständige Probeprüfung abgeschlossen', en: '1 full mock exam completed' },
-  sims_need_three: { de: 'Nach drei vollständigen Probeprüfungen sehen Sie hier die Entwicklung je Fach.', en: 'After three full mock exams you see the trend per subject here.' },
+  sims_title: { de: 'Prüfungssimulationen je Fachgebiet', en: 'Exam simulations by topic' },
+  sims_count: { de: '{n} vollständige Prüfungssimulationen abgeschlossen', en: '{n} full exam simulations completed' },
+  sims_count_one: { de: '1 vollständige Prüfungssimulation abgeschlossen', en: '1 full exam simulation completed' },
+  sims_need_three: { de: 'Nach drei vollständigen Prüfungssimulationen sehen Sie hier die Entwicklung je Fachgebiet.', en: 'After three full exam simulations you see the trend per topic here.' },
   sims_not_prediction: { de: 'Das ist keine Vorhersage Ihres Ergebnisses.', en: 'This is not a prediction of your result.' },
-  sims_row: { de: '{topic}: {series}', en: '{topic}: {series}' },
   sims_gap_over: { de: '{n} Prozentpunkte über 60 %', en: '{n} percentage points over 60%' },
   sims_gap_under: { de: '{n} Prozentpunkte unter 60 %', en: '{n} percentage points under 60%' },
   sims_gap_at: { de: 'genau 60 %', en: 'exactly 60%' },
@@ -211,7 +197,7 @@ const STRINGS = {
   sims_delta_down: { de: '{n} Prozentpunkte weniger als zuvor', en: '{n} percentage points less than before' },
   sims_delta_same: { de: 'gleich wie zuvor', en: 'same as before' },
   sims_few: { de: 'zu wenige Fragen für einen Vergleich', en: 'too few questions to compare' },
-  sims_error: { de: 'Die Probeprüfungen konnten nicht geladen werden.', en: 'Mock exams could not be loaded.' },
+  sims_error: { de: 'Die Prüfungssimulationen konnten nicht geladen werden.', en: 'Exam simulations could not be loaded.' },
 } as const;
 
 export type StudyKey = keyof typeof STRINGS;

@@ -288,7 +288,6 @@ export default function StudyPlanPage() {
 
           {showRolling && resp?.rollingPlan && (
             <section className="mp-card p-5 space-y-4">
-              <p className="text-[12px] font-semibold text-[var(--mp-fg-muted)]">{ts("rolling_label", lang)}</p>
               <h2 className="text-xl font-display font-bold text-[var(--mp-fg)]">{t("study_rolling_title", lang)}</h2>
               <p className="text-sm text-[var(--mp-fg-muted)]">{t("study_rolling_body", lang)}</p>
               <Link className="mp-btn mp-btn--primary min-h-11" href={buildQuizHref({ examSource: activeExam, practiceMode: "unseen", limit: 20, returnTo: "/study-plan" })}>{t("study_new_questions", lang)}</Link>

@@ -18,8 +18,8 @@ const STRINGS = {
   share: { de: 'Teilen', en: 'Share' },
   signin_title: { de: 'Bitte melden Sie sich an', en: 'Please sign in' },
   signin_body: {
-    de: 'Ihre Statistik (Stufe, Serie, Stärke je Fach) erscheint hier, sobald Sie angemeldet sind und einige Fragen beantwortet haben.',
-    en: 'Your statistics (level, streak, strength by subject) appear here once you are signed in and have answered a few questions.',
+    de: 'Ihre Statistik (Stufe, Serie, Stärke je Fachgebiet) erscheint hier, sobald Sie eingeloggt sind und einige Fragen beantwortet haben.',
+    en: 'Your statistics (level, streak, strength by topic) appear here once you are logged in and have answered a few questions.',
   },
   to_home: { de: 'Zur Startseite', en: 'Go to home' },
 
@@ -42,7 +42,7 @@ const STRINGS = {
   tile_answers: { de: 'Antworten insgesamt', en: 'Total answers' },
   tile_answers_sub: { de: 'mit Wiederholungen', en: 'with repeats' },
   tile_hit_rate: { de: 'Trefferquote', en: 'Hit rate' },
-  strength_title: { de: 'Stärke je Fach', en: 'Strength by subject' },
+  strength_title: { de: 'Stärke je Fachgebiet', en: 'Strength by topic' },
   strength_more: { de: 'Mehr', en: 'More' },
   badge_strong: { de: 'Stark', en: 'Strong' },
   badge_practice_more: { de: 'Mehr üben', en: 'Practice more' },
@@ -51,15 +51,15 @@ const STRINGS = {
   start_simulation: { de: 'Prüfungssimulation starten', en: 'Start exam simulation' },
   empty_title: { de: 'Noch keine Statistik', en: 'No statistics yet' },
   empty_body: {
-    de: 'Beantworten Sie Ihre ersten Fragen. Danach sehen Sie hier Ihre Stufe, Ihre Serie und Ihre Stärke je Fach.',
-    en: 'Answer your first questions. Your level, streak and strength by subject then appear here.',
+    de: 'Beantworten Sie Ihre ersten Fragen. Danach sehen Sie hier Ihre Stufe, Ihre Serie und Ihre Stärke je Fachgebiet.',
+    en: 'Answer your first questions. Your level, streak and strength by topic then appear here.',
   },
   start_first_quiz: { de: 'Erstes Quiz starten', en: 'Start first quiz' },
 
   // ── /curriculum ─────────────────────────────────────────────────────
-  cur_subjects_title: { de: '{exam}: Fächer', en: '{exam}: subjects' },
-  cur_subject_count_one: { de: '1 Fach', en: '1 subject' },
-  cur_subject_count: { de: '{n} Fächer', en: '{n} subjects' },
+  cur_subjects_title: { de: '{exam}: Fachgebiete', en: '{exam}: topics' },
+  cur_subject_count_one: { de: '1 Fachgebiet', en: '1 topic' },
+  cur_subject_count: { de: '{n} Fachgebiete', en: '{n} topics' },
   cur_lede_tracked: { de: 'Der Ring zeigt, wie viele verschiedene Fragen Sie gesehen haben.', en: 'The ring shows how many different questions you have seen.' },
   cur_lede_device: { de: 'Antworten werden nur auf diesem Gerät gezählt.', en: 'Answers are counted on this device only.' },
   cur_total_label: { de: 'Fragen in Ihrer Prüfung', en: 'Questions in your exam' },
@@ -86,10 +86,10 @@ const STRINGS = {
   cur_legend_none: { de: 'Noch nicht begonnen (0 %)', en: 'Not started (0%)' },
   cur_sort_label: { de: 'Sortierung', en: 'Sort' },
   cur_sort_default: { de: 'Reihenfolge im Lehrplan', en: 'Curriculum order' },
-  cur_sort_weakest: { de: 'Schwächstes Fach zuerst', en: 'Weakest subject first' },
-  cur_all_subjects: { de: 'Alle Fächer', en: 'All subjects' },
+  cur_sort_weakest: { de: 'Schwächstes Fachgebiet zuerst', en: 'Weakest topic first' },
+  cur_all_subjects: { de: 'Alle Fachgebiete', en: 'All topics' },
   cur_totals_unavailable: { de: 'Die aktuellen Fragenzahlen konnten nicht geladen werden.', en: 'Current question totals could not be loaded.' },
-  cur_empty: { de: 'Für diese Prüfung sind noch keine Fächer verfügbar.', en: 'No subjects are available for this exam yet.' },
+  cur_empty: { de: 'Für diese Prüfung sind noch keine Fachgebiete verfügbar.', en: 'No topics are available for this exam yet.' },
   cur_pick_error: { de: 'Auswahl nicht gespeichert. Bitte versuchen Sie es erneut.', en: 'Choice not saved. Please try again.' },
 } as const;
 
@@ -135,7 +135,7 @@ export function rankLabel(level: number, lang: string | null | undefined): strin
   return ts('level_of', lang, { n, total: LEVEL_COUNT });
 }
 
-/** "Fächer" count with the singular. */
+/** "Fachgebiete" count with the singular. */
 export function subjectCount(n: number, lang: string | null | undefined): string {
   return n === 1 ? ts('cur_subject_count_one', lang) : ts('cur_subject_count', lang, { n });
 }

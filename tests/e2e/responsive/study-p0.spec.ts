@@ -38,13 +38,13 @@ for (const lang of ['de', 'en']) for (const dark of [false, true]) {
     await noDate.click(); await create.click();
     await expect(noDate).toHaveAttribute('aria-pressed', 'true');
     await page.getByRole('button', { name: lang === 'de' ? 'Erneut versuchen' : 'Try again', exact: true }).click();
-    await expect(page.getByText(lang === 'de' ? 'Vorläufiger Plan, bis du ein Datum wählst' : 'Provisional plan until you choose a date', { exact: true })).toBeVisible();
+    await expect(page.getByText(lang === 'de' ? 'Vorläufiger Plan, bis Sie ein Datum wählen' : 'Provisional plan until you choose a date', { exact: true })).toBeVisible();
     await expect(page.getByRole('heading', { level: 1 })).toBeFocused();
     await expect(page.getByRole('link', { name: lang === 'de' ? 'Jetzt wiederholen' : 'Review now' })).toHaveAttribute('href', /practiceMode=review/);
     await expect(page).toHaveURL(/study-plan$/);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.reload();
-    await expect(page.getByText(lang === 'de' ? 'Vorläufiger Plan, bis du ein Datum wählst' : 'Provisional plan until you choose a date', { exact: true })).toBeVisible();
+    await expect(page.getByText(lang === 'de' ? 'Vorläufiger Plan, bis Sie ein Datum wählen' : 'Provisional plan until you choose a date', { exact: true })).toBeVisible();
   });
 }
 for (const fault of ['500', 'offline', 'malformed']) {

@@ -15,7 +15,8 @@ describe("GET /api/user/weekly-progress (LX-09)", () => {
   it("reads only the signed-in learner's rows of the active exam, bounded by date", async () => {
     const fake = createFakeSupabase((call) => {
       if (call.table === "users") return { data: { active_exam: "kmp_innsbruck" } };
-      return { data: [{ created_at: new Date().toISOString(), is_correct: true }, { created_at: new Date().toISOString(), is_correct: false }] };
+      const at = new Date(Date.now() - 60_000).toISOString();
+      return { data: [{ created_at: at, is_correct: true }, { created_at: at, is_correct: false }] };
     });
     mocks.getServiceClient.mockReturnValue(fake.sb);
     const res = await weekly(new NextRequest("https://fixture.test/api/user/weekly-progress?userId=someone-else"));

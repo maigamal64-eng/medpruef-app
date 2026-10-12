@@ -32,6 +32,39 @@ export const CHANGELOG: ChangelogEntry[] = [
   "description": {
     "de": "Antwortet der Server beim Speichern einer Antwort, einer Karteikarten-Bewertung oder eines Simulationsergebnisses nicht rechtzeitig, bleibt der Eintrag auf Ihrem Gerät gespeichert und wird automatisch nachgesendet, auch ohne Verbindungsabbruch. Sie sehen dazu einen Hinweis. Jede Antwort wird dabei nur einmal gezählt, auch für XP und Serie. Außerdem laden Startseite, Lernplan und Übungsstand mit weniger Datenbankabfragen.",
     "en": "If the server does not respond in time while saving an answer, a flashcard rating or an exam simulation result, the entry stays saved on your device and is sent again automatically, even without a lost connection. A note tells you so. Each answer is still counted only once, including XP and streak. Home, the study plan and readiness also load with fewer database reads."
+
+  "tag": "feature",
+  "title": {
+    "de": "Lernplan für alle: vorläufiges Ziel, Aufwand pro Tag und Probeprüfungen",
+    "en": "A study plan for everyone: provisional target, daily effort and mock exams"
+  },
+  "description": {
+    "de": "Ohne eigenes Prüfungsdatum plant der Lernplan jetzt bis zum nächsten offiziellen Termin Ihrer Prüfung und zeigt das als vorläufig an; Ihr Profil ändert sich dabei nicht. Ist Ihr Termin vorbei, stellen Sie den Plan mit einem Tipp auf den nächsten Termin um. Der Plan zeigt, wie viele Fragen pro Tag das Datum bedeutet (Schätzung: etwa 1,5 Minuten je Frage), und sagt offen, wenn es knapp wird. In der Wiederholungsphase stehen Probeprüfungen mit Zeitlimit an festen Tagen. Dazu: Phasen mit Datum, beide veröffentlichten Stichprobentest-Fristen mit Quelle, ein ehrlicher Tagesstand, ein leichterer Tag pro Woche und der Weg zurück zum Plan nach dem Üben.",
+    "en": "Without your own exam date, the study plan now targets the next official sitting of your exam and marks it as provisional; your profile is not changed. If your date has passed, one tap switches the plan to the next sitting. The plan shows how many questions a day the date implies (estimate: about 1.5 minutes per question) and says plainly when it is tight. Timed mock exams sit on named days in the review phase. Also: phases with dates, both published Stichprobentest deadlines with sources, an honest count for today, one lighter day a week and a way back to the plan after practice."
+  }
+},
+{
+  "date": "2026-10-12",
+  "tag": "feature",
+  "title": {
+    "de": "Fortschritt: Countdown, Wochen im Überblick und Stand je Prüfungsfach",
+    "en": "Progress: countdown, weeks at a glance and status by exam field"
+  },
+  "description": {
+    "de": "Fortschritt zeigt Ihren eigenen Countdown, Antworten und Trefferquote der letzten 12 Wochen und Ihre Trefferquote je Fach im Vergleich zur 60-%-Marke, mit der offiziellen Regel und der Grundlage daneben. Pro: Nach drei vollständigen Probeprüfungen sehen Sie die Entwicklung je Fach. Das ist keine Vorhersage Ihres Ergebnisses. Der nächste Schritt nennt Ihr schwächstes Fach, das Wissensprofil hat lesbare Fachnamen und eine Liste.",
+    "en": "Progress shows your own countdown, answers and accuracy for the last 12 weeks and your accuracy per subject against the 60% mark, with the official rule and the basis beside it. Pro: after three full mock exams you see the trend per subject. This is not a prediction of your result. The next step names your weakest subject, and the knowledge profile has readable subject names and a list."
+  }
+},
+{
+  "date": "2026-10-12",
+  "tag": "improvement",
+  "title": {
+    "de": "Lehrplan und Statistik: klare Abdeckung und Stufen als Zahl",
+    "en": "Curriculum and statistics: clear coverage and levels as numbers"
+  },
+  "description": {
+    "de": "Im Lehrplan zeigen die Ringe nur noch die Abdeckung, mit Legende und Schwellen, und Sie können nach dem schwächsten Fach sortieren. Für Stichprobentest und Pharmakologie gibt es eine eigene Fächerliste. Die Statistik zeigt Ihre Stufe als Zahl (Stufe 3 von 8).",
+    "en": "In the curriculum, rings now show coverage only, with a legend and thresholds, and subjects can be sorted weakest first. Stichprobentest and Pharmacology get their own subject list. Statistics shows your level as a number (Level 3 of 8)."
   }
 },
 {
