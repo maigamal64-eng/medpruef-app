@@ -8,6 +8,8 @@ interface Props {
   onSelect: (id: ExamSourceId) => void;
 }
 
+// UX-GLOBAL-07: the picker shows exam names only; no raw database keys,
+// hand-typed question counts or "more exams coming soon" promise.
 export default function ExamSelector({ lang, onSelect }: Props) {
   const handle = (id: ExamSourceId) => {
     setStoredExamSource(id);
@@ -38,28 +40,13 @@ export default function ExamSelector({ lang, onSelect }: Props) {
             >
               <span className="text-2xl">{exam.badge}</span>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="font-semibold text-[var(--mp-fg)] text-sm">{exam.fullName}</span>
-                  <span className="text-[10px] font-mono bg-[var(--mp-viridian)]/10 text-[var(--mp-viridian)] px-1.5 py-0.5 rounded border border-[var(--mp-viridian)]/20">
-                    {exam.id}
-                  </span>
-                </div>
-                <div className="text-xs text-[var(--mp-fg-subtle)] font-mono mt-0.5">
-                  {exam.questions.toLocaleString("de-DE")}{" "}
-                  {t("home_questions_66", lang)}
-                </div>
+                <span className="font-semibold text-[var(--mp-fg)] text-sm">{exam.fullName}</span>
               </div>
               <span className="text-[var(--mp-viridian)] opacity-0 group-hover:opacity-100 transition-opacity text-lg">
                 →
               </span>
             </button>
           ))}
-        </div>
-
-        <div className="mt-4 p-3 rounded border border-[var(--mp-border)] bg-[var(--mp-surface-sunken)] text-center">
-          <p className="text-xs text-[var(--mp-fg-subtle)]">
-            {t("home_more_exams_coming_soon", lang)}
-          </p>
         </div>
 
         <p className="text-center text-[10px] text-[var(--mp-fg-subtle)]/60 mt-4">
