@@ -199,3 +199,15 @@ describe("loadMentorRevenue", () => {
     await expect(loadMentorRevenue(client, NOW, {})).rejects.toBeTruthy();
   });
 });
+
+import { isMentorRevenue } from "@/app/admin/mentor/RevenueSection";
+describe("isMentorRevenue (client shape check)", () => {
+  it("accepts the server shape and rejects an empty or partial body", () => {
+    const r = computeMentorRevenue({ ...base, ledger: buildLedger([]), mentorIds: new Set() });
+    expect(isMentorRevenue(r)).toBe(true);
+    expect(isMentorRevenue({})).toBe(false);
+    expect(isMentorRevenue(null)).toBe(false);
+    expect(isMentorRevenue({ ...r, by_currency: undefined })).toBe(false);
+    expect(isMentorRevenue({ ...r, margin: undefined })).toBe(false);
+  });
+});

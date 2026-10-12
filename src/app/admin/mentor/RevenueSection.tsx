@@ -70,13 +70,29 @@ export function RevenueTiles({ revenue }: { revenue: MentorRevenue }) {
   );
 }
 
+/** A 200 with a malformed body is an error, never a crash or a zero. */
+export function isMentorRevenue(v: unknown): v is MentorRevenue {
+  if (!v || typeof v !== "object") return false;
+  const r = v as Partial<MentorRevenue>;
+  return typeof r.window_days === "number" && typeof r.since === "string" && typeof r.basis === "string"
+    && Array.isArray(r.by_currency) && Array.isArray(r.by_package)
+    && typeof r.payments_without_amount === "number" && typeof r.refunds_without_amount === "number"
+    && (r.cost_micro === null || typeof r.cost_micro === "number")
+    && !!r.pro_included && typeof r.pro_included.cost_micro === "number" && typeof r.pro_included.lots === "number"
+    && !!r.margin && typeof r.margin.available === "boolean";
+}
+
 export function RevenueSection() {
   const [state, setState] = useState<{ kind: "loading" } | { kind: "ok"; revenue: MentorRevenue } | { kind: "not_installed" } | { kind: "error" }>({ kind: "loading" });
   const load = useCallback(async () => {
     setState({ kind: "loading" });
     try {
       const res = await authFetch("/api/mentor/admin/revenue");
-      if (res.ok) { setState({ kind: "ok", revenue: (await res.json()) as MentorRevenue }); return; }
+      if (res.ok) {
+        const body: unknown = await res.json().catch(() => null);
+        setState(isMentorRevenue(body) ? { kind: "ok", revenue: body } : { kind: "error" });
+        return;
+      }
       const body = (await res.json().catch(() => ({}))) as { error?: string };
       setState(body.error === "ledger_not_applied" ? { kind: "not_installed" } : { kind: "error" });
     } catch {

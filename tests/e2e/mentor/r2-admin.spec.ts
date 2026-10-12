@@ -11,6 +11,7 @@ async function setup(page:Page){
  const writes:Array<{path:string;body:unknown}>=[];
  await page.route("**/api/**",route=>{
  const path=new URL(route.request().url()).pathname;
+ if(route.request().method()==="POST"&&path==="/api/track")return route.fulfill({json:{ok:true}});
  if(route.request().method()==="POST"){writes.push({path,body:route.request().postDataJSON()});return route.fulfill({json:{ok:true,paused:true}});}
  if(path==="/api/admin/access/me")return route.fulfill({json:{actor:{userId:ADMIN,email:null},roles:[],permissions:["revenue.read","content.read","content.moderate","system.read","system.manage","users.read"]}});
  if(path==="/api/auth/me")return route.fulfill({json:{user:{id:ADMIN,role:"admin",tier:"admin"}}});

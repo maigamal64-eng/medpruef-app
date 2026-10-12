@@ -259,7 +259,9 @@ export default function MentorChatScreen() {
   const blocked = cooling || paused || usage.status !== "ready" || view?.canChat === false;
   const exhausted = usage.status === "ready" && usage.usage.state === "exhausted" ? exhaustedState(usage.usage, offers, lang) : null;
   const firstRun = usage.status === "ready" && usage.usage.state === "none";
-  const blockedReason = cooling ? r3T(limitKind === "day" ? "day" : "minute", lang, { s: waitSeconds }) : paused ? [shellT("rest", lang), restingUntilText(usage.status === "ready" ? usage.usage : null, lang)].filter(Boolean).join(" ") : exhausted?.composerReason ?? (firstRun ? a39T("composer_none", lang) : usage.status === "error" ? mentorT("err_load_failed", lang) : mentorT("credits_loading", lang));
+  // MUX-99: the breaker reset date, on its own line (the 44px phone composer clips a longer placeholder).
+  const restingLine = paused ? restingUntilText(usage.status === "ready" ? usage.usage : null, lang) : null;
+  const blockedReason = cooling ? r3T(limitKind === "day" ? "day" : "minute", lang, { s: waitSeconds }) : paused ? shellT("rest", lang) : exhausted?.composerReason ?? (firstRun ? a39T("composer_none", lang) : usage.status === "error" ? mentorT("err_load_failed", lang) : mentorT("credits_loading", lang));
   const blockedActionHref = exhausted && canBuy ? exhausted.href : firstRun ? PACKAGES_HREF : null;
   const infoKind = view?.tone === "low" ? "low" : usage.status === "ready" && usage.usage.sources.includes("trial") && view?.expiryText ? "trial" : null;
   const infoText = view?.trialNoticeText ?? (usage.status === "ready" && infoKind === "low" ? lowCreditText(usage.usage, lang) : view?.expiryText ?? "");
@@ -565,6 +567,7 @@ export default function MentorChatScreen() {
             {jumpAnswer && <div className="pointer-events-none relative h-0"><button type="button" className="mp-btn mp-btn--secondary pointer-events-auto absolute bottom-2 end-3 min-h-11 shadow-lg" onClick={() => { const el = scrollRef.current; if (el) el.scrollTo({ top: el.scrollHeight, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }); }}>{shellT("end", lang)}</button></div>}
 
             {cooling && <div aria-hidden="true" className="px-3 text-[12px] text-[var(--mp-fg)]">{blockedReason}</div>}
+            {restingLine && <p data-mentor-resting-until className="px-3 text-[12px] text-[var(--mp-fg)]">{restingLine}</p>}
             {!empty && chat.messages.filter(m => m.role === "assistant" && m.status === "done").length === 1 && <p className="px-3 text-[12px] text-[var(--mp-fg-muted)]">{r3T("remembered",lang)}</p>}
             <Composer
               hasThread={!empty}
