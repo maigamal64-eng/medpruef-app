@@ -130,7 +130,9 @@ export default function CheckoutSuccessPage() {
     `tier: ${tier || (trial ? "notes_pro_trial" : "unknown")}`,
     reference ? `reference: ${reference}` : "",
   ].filter(Boolean).join("\n"))}`;
-  const title = granted
+  // No purchase parameter and no active Pro: nothing to check (no fake pending).
+  const unidentified = params !== null && !hasPurchase && !granted && (!signedIn || (!isLoading && !isPaid));
+  const title = unidentified ? t("checkout_unidentified", lang) : granted
     ? t(trial ? "checkout_trial_title" : extendsFrom ? "checkout_extended_title" : "checkout_granted_title", lang)
     : outcome === "unmatched" ? t("account_unmatched", lang) : t("checkout_pending_title", lang);
   const pendingLine = trial ? t("checkout_trial_pending", lang) : extendsFrom ? t("checkout_extension_pending", lang) : null;
@@ -144,14 +146,15 @@ export default function CheckoutSuccessPage() {
     <div className="mp-card mx-auto max-w-lg p-5 sm:p-8 space-y-4">
       <div role="status" aria-live="polite" className="space-y-3">
         {granted ? <CheckCircle2 aria-hidden className="h-10 w-10 text-[var(--mp-success)]" />
-          : outcome === "pending" && elapsed < 60_000 ? <>
+          : !unidentified && outcome === "pending" && elapsed < 60_000 ? <>
             <Loader2 aria-hidden className="h-10 w-10 text-[var(--mp-accent-text)] animate-spin motion-reduce:hidden" />
             <span aria-hidden className="hidden motion-reduce:inline text-2xl tracking-widest text-[var(--mp-fg-muted)]">···</span>
           </>
           : <Clock aria-hidden className="h-10 w-10 text-[var(--mp-fg-muted)]" />}
         <h1 ref={heading} tabIndex={-1} className="mp-h2 outline-none">{title}</h1>
-        {!granted && pendingLine && <p className="mp-body">{pendingLine}</p>}
-        {!granted && <p className="mp-body">{t(ceiling ? "account_pending_ceiling" : "account_do_not_pay_again", lang)}</p>}
+        {unidentified && <p className="mp-body">{t("checkout_unidentified_body", lang)}</p>}
+        {!granted && !unidentified && pendingLine && <p className="mp-body">{pendingLine}</p>}
+        {!granted && !unidentified && <p className="mp-body">{t(ceiling ? "account_pending_ceiling" : "account_do_not_pay_again", lang)}</p>}
         {!granted && paymentSeen && <p className="mp-body">{t("account_received_unmatched", lang)}</p>}
         {!granted && elapsed >= 60_000 && !ceiling && <p className="mp-body">{t("account_pending_later", lang)}</p>}
         {outcome === "failed" && !granted && <p className="text-sm text-[var(--mp-error-text)]">{t("request_error", lang)}</p>}
@@ -184,7 +187,7 @@ export default function CheckoutSuccessPage() {
         <Link className="inline-flex min-h-11 items-center underline text-sm" href="/">{t("checkout_home", lang)}</Link>
         <Link className="inline-flex min-h-11 items-center underline text-sm" href="/settings#subscription">{t("checkout_to_settings", lang)}</Link>
       </div>}
-      {!granted && signedIn && <button type="button" aria-disabled={checking || !gate.current.available()} className="mp-btn mp-btn--secondary min-h-11" onClick={() => void verify()}>{checking ? t("account_checking", lang) : t("account_check_again", lang)}</button>}
+      {!granted && signedIn && !unidentified && <button type="button" aria-disabled={checking || !gate.current.available()} className="mp-btn mp-btn--secondary min-h-11" onClick={() => void verify()}>{checking ? t("account_checking", lang) : t("account_check_again", lang)}</button>}
       {!granted && !signedIn && params && <Link className="mp-btn mp-btn--secondary min-h-11" href={buildAuthHref({ next: `/checkout/success?${params.toString()}` }, "signin_required")}>{t("checkout_signin_check", lang)}</Link>}
       {!granted && <a className="inline-flex min-h-11 items-center text-sm text-[var(--mp-fg-muted)] underline" href={help}>{t("account_payment_help", lang)}</a>}
     </div>

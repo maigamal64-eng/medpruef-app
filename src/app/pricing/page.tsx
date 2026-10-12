@@ -40,6 +40,7 @@ import { goBack } from "@/lib/go-back";
 import { getExamLabel } from "@/lib/master-locale/exam-label";
 import type { SubscriptionCardSnapshot } from "@/lib/subscription-display";
 import PendingPaymentBanner from "@/components/PendingPaymentBanner";
+import BillingReceipt from "@/components/BillingReceipt";
 import PublicStudyLink from "@/components/PublicStudyLink";
 import FreeOfferDisclosure from "@/components/FreeOfferDisclosure";
 import Sidebar from "@/components/Sidebar";
@@ -297,6 +298,7 @@ export default function PricingPage() {
               {actionFor(RECOMMENDED).kind === "extend" && tierExpiresAt && (
                 <p className="m-0 text-[var(--mp-fg-muted)]">{de ? `Sie können jetzt verlängern. Die neue Laufzeit beginnt, wenn Ihr jetziger Zugang am ${longDate(tierExpiresAt, lang)} endet.` : `You can extend now. The new period starts when your current access ends on ${longDate(tierExpiresAt, lang)}.`}</p>
               )}
+              <BillingReceipt />
               {subInfo !== null && subInfo !== "error" && subInfo.suppressed && (
                 <a className="inline-flex min-h-11 items-center underline" href={WHOP_MANAGE_URL} target="_blank" rel="noopener noreferrer">{de ? "Abo bei Whop verwalten (öffnet einen neuen Tab, Seite auf Englisch)" : "Manage your plan at Whop (opens a new tab)"}</a>
               )}

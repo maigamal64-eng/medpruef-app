@@ -157,6 +157,8 @@ const translations = {
   account_checkout_renewing: { de: "Ihr Abo verlängert sich bereits automatisch. Ein zweiter Tarif würde doppelt abbuchen. Verwalten Sie Ihr Abo bei Whop oder schreiben Sie uns, wenn Sie wechseln möchten.", en: "Your plan already renews automatically. A second plan would charge twice. Manage your plan at Whop or write to us if you want to switch." },
   account_checkout_already: { de: "Ihr Pro-Zugang ist bereits aktiv und unbefristet.", en: "Your Pro access is already active with no end date." },
   account_payment_absent_line: { de: "Keine Zahlung gefunden. Die Tarife sind wieder verfügbar.", en: "No payment found. The plans are available again." },
+  checkout_unidentified: { de: "Dieser Link gehört zu keiner Zahlung.", en: "This link does not identify a payment." },
+  checkout_unidentified_body: { de: "Wenn Sie bezahlt haben, melden Sie sich an. Wir prüfen dann Ihren Zugang.", en: "If you paid, sign in and we check your access." },
   checkout_pending_title: { de: "Zahlung wird geprüft", en: "Checking payment" },
   checkout_granted_title: { de: "Ihr Pro-Zugang ist aktiv", en: "Your Pro access is active" },
   checkout_extended_title: { de: "Ihr Zugang ist verlängert", en: "Your access is extended" },

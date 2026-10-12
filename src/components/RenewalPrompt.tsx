@@ -181,11 +181,11 @@ export default function RenewalPrompt() {
             aria-hidden
           />
           <p className="text-xs sm:text-sm text-[var(--mp-fg)]">
-            {lang === 'de' ? `Dein Pro-Zugang ${decision.lapsed ? 'endete' : 'endet'} am ${date} und verlängert sich nicht.` : `Your Pro access ${decision.lapsed ? 'ended' : 'ends'} on ${date} and does not renew.`}
+            {lang === 'de' ? `Ihr Pro-Zugang ${decision.lapsed ? 'endete' : 'endet'} am ${date} und verlängert sich nicht.` : `Your Pro access ${decision.lapsed ? 'ended' : 'ends'} on ${date} and does not renew.`}
           </p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
-          <Link href="/pricing?action=renew#your-plan" className="mp-btn mp-btn--secondary min-h-11 text-xs">
+          <Link href="/pricing?action=renew#plans" className="mp-btn mp-btn--secondary min-h-11 text-xs">
             {lang === 'de' ? `Weiterlernen nach dem ${date}` : `Continue studying after ${date}`}
           </Link>
           <button

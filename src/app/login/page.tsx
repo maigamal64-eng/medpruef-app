@@ -5,6 +5,8 @@ import { useSearchParams } from "next/navigation";
 import LanguagePicker from "@/components/LanguagePicker";
 import FreeOfferDisclosure from "@/components/FreeOfferDisclosure";
 import { billingAuthContext } from "@/lib/billing-copy";
+import SupportContactForm from "@/components/SupportContactForm";
+import { TIER_FOR_ACTION, planFacts } from "@/app/pricing/_parts/plans";
 import { t } from "@/lib/i18n";
 import { completeAuthEntry } from "@/lib/auth-entry-completion";
 import { authFetch } from "@/lib/authFetch";
@@ -96,6 +98,13 @@ function LoginPage() {
   const [mode, setMode] = useState<AuthMode>(() => initialAuthMode(new URLSearchParams(searchParams.toString()), getKnownAccounts().length > 0));
   const [reason, setReason] = useState(() => searchParams.get('reason') || '');
   const entry = readAuthEntry(new URLSearchParams(searchParams.toString()));
+  // A paid plan chosen on /pricing travels in `next` (UX-ACC-02): name it.
+  const checkoutPlan = (() => {
+    try {
+      const action = new URL(entry.next, "https://medpruf.com").searchParams.get("action");
+      return action ? TIER_FOR_ACTION[action] ?? null : null;
+    } catch { return null; }
+  })();
   const [trialTerms, setTrialTerms] = useState<{ trialDays: number; priceAfterCents: number }>();
   useEffect(() => {
     if (entry.intent !== 'trial') return;
@@ -401,6 +410,11 @@ function LoginPage() {
               </button>
             </div>
 
+            {checkoutPlan && !entry.intent && <Alert variant="info" className="bg-[var(--mp-surface-sunken)] text-sm">
+              <span role="status">{lang === "de"
+                ? `Fast geschafft: Nach der Anmeldung geht es weiter zur Zahlung (${planFacts(checkoutPlan, "de").name}, ${planFacts(checkoutPlan, "de").price}).`
+                : `Almost done: after signing in you continue to payment (${planFacts(checkoutPlan, "en").name}, ${planFacts(checkoutPlan, "en").price}).`}</span>
+            </Alert>}
             {entry.intent && <Alert variant="info" className="bg-[var(--mp-surface-sunken)] text-sm">
               {billingAuthContext(lang, entry.intent, trialTerms)}
               {entry.intent === 'trial' && <Link href="/faq#cancellation" className="inline-flex min-h-11 items-center underline">{t('auth_cancel', uiLang)}</Link>}
@@ -494,7 +508,7 @@ function LoginPage() {
                     <p>
                       {lang === "de" ? (
                         <>
-                          Du hast dich auf diesem Gerät bereits mit{" "}
+                          Sie haben sich auf diesem Gerät bereits mit{" "}
                           <strong>{mostRecentKnownAccount.email}</strong> angemeldet.
                         </>
                       ) : (
@@ -530,7 +544,6 @@ function LoginPage() {
               </button>
             </form>
             {mode === 'register' && <button type="button" className="min-h-11 text-sm text-[var(--mp-accent-text)] underline" onClick={() => setMode('login')}>{t('auth_existing', uiLang)}</button>}
-            <a href="mailto:user-b7e46e80@example.com" className="flex min-h-11 items-center text-sm text-[var(--mp-accent-text)] underline">{t('auth_contact', uiLang)}</a>
 
             {/* Divider */}
             <div className="flex items-center gap-3" aria-hidden="true">
@@ -611,6 +624,9 @@ function LoginPage() {
               )}
             </div>
           </div>
+
+          {/* Contact without a session (LX-31): the form shows only while it can be sent. */}
+          <SupportContactForm lang={lang} defaultTopic="access" className="mt-6" />
 
           {/* Benefits */}
           <div className="mt-6 grid grid-cols-3 gap-3">
