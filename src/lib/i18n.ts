@@ -273,6 +273,8 @@ const translations = {
   home_seen_before: { de: "Du hast", en: "You have seen" },
   home_seen_after: { de: "der Fragenbank gesehen", en: "of this question bank" },
   home_topics_error: { de: "Fachgebiete konnten nicht geladen werden.", en: "Topics could not be loaded." },
+  home_topics_error_start: { de: "Sie können trotzdem mit gemischten Fragen aus allen Fachgebieten starten.", en: "You can still start with mixed questions from every topic." },
+  home_topics_error_start_cta: { de: "Gemischte Fragen starten", en: "Start mixed questions" },
   home_simulation: { de: "Prüfung simulieren", en: "Simulate an exam" },
   home_days_until: { de: "Noch {days} bis zur Prüfung", en: "{days} until the exam" },
   home_days_short: { de: "noch {days}", en: "{days} left" },

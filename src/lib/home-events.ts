@@ -7,7 +7,7 @@ import { trackEvent } from "@/lib/tracker";
 
 export const HOME_CTA_SLOTS = [
   "hero_study", "hero_plan", "resume", "coach", "topic", "plan", "sip_tile", "other_modes", "mistakes", "saved",
-  "due_review", "stat_today", "stat_accuracy", "nav_slot",
+  "due_review", "stat_today", "stat_accuracy", "nav_slot", "topics_error_start",
 ] as const;
 export type HomeCtaSlot = (typeof HOME_CTA_SLOTS)[number];
 

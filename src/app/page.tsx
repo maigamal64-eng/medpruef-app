@@ -880,7 +880,12 @@ export default function Home() {
             </div>
 
             {topicsError && <Alert variant="info" title={t("home_topics_error", uiLang)} className="mb-4">
-              <Button variant="secondary" className="mt-2 min-h-11" aria-disabled={topicsLoading} aria-busy={topicsLoading} onClick={() => { if (!topicsLoading) void fetchTopics(examSource); }}>{t("request_retry", uiLang)}</Button>
+              {/* Issue 5 (2026-10-12): a failed topic list never dead-ends Home; the mixed start needs no topic list. */}
+              <p>{t("home_topics_error_start", uiLang)}</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <Link href={buildQuizHref({ topic: "random", examSource, practiceMode: "unseen" })} data-testid="home-topics-error-start" className="mp-btn mp-btn--secondary min-h-11 mp-focusable" onClick={() => track("topics_error_start")}>{t("home_topics_error_start_cta", uiLang)}</Link>
+                <Button variant="secondary" className="min-h-11" aria-disabled={topicsLoading} aria-busy={topicsLoading} onClick={() => { if (!topicsLoading) void fetchTopics(examSource); }}>{t("request_retry", uiLang)}</Button>
+              </div>
             </Alert>}
             {topicsLoading && topicsExam !== examSource && <DataRegion loading retry={() => void fetchTopics(examSource)} />}
             {topicsExam === examSource && (compactTopics ? (
