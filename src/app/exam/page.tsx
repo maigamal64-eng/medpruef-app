@@ -59,6 +59,9 @@ import QuestionActions from "@/components/QuestionActions";
 import QuestionCard from "@/components/QuestionCard";
 import { consumeSelfPop, hasHistoryOverlay } from "@/lib/overlay-stack";
 import { announce } from "@/lib/announce";
+import PaywallUpgradeModal from "@/components/PaywallUpgradeModal";
+import { getGateCopy } from "@/lib/paywall-copy";
+import { trackEvent } from "@/lib/tracker";
 import { Check, ChevronDown, Flag, GraduationCap, LayoutGrid, Map as MapIcon, Minus, NotebookPen, X } from "lucide-react";
 
 type Lang = "de" | "en";
@@ -164,6 +167,9 @@ function ExamContent() {
   const [online, setOnline] = useState(true);
   const [autosaveFailed, setAutosaveFailed] = useState(false);
   const [storageOk, setStorageOk] = useState(true);
+  // Issue 12: free accounts see the in-place paywall, never the builder.
+  const [proGate, setProGate] = useState(false);
+  const [gateOpen, setGateOpen] = useState(false);
   const [otherTab, setOtherTab] = useState(false);
   const [pendingLocal, setPendingLocal] = useState(false);
   const [authExpired, setAuthExpired] = useState(false);
@@ -263,10 +269,13 @@ function ExamContent() {
     if (session) {
       setUserId(session.user.id);
       setUserName(session.user.first_name);
-      // The mock exam is Pro-only (pick-free-features A): free users land on
-      // /pricing?gate=mock_exam, which explains why.
+      // The mock exam is Pro-only (pick-free-features A). Issue 12
+      // (2026-10-12): the one paywall opens in place (gate mock_exam) instead
+      // of a silent redirect to /pricing, and the gate hit is logged.
       if (!hasProAccess(session)) {
-        window.location.href = "/pricing?gate=mock_exam";
+        setProGate(true);
+        setGateOpen(true);
+        trackEvent("paywall_hit", { gate: "mock_exam", surface: "exam", exam: getStoredExamSource(), trigger: "open" });
       }
     }
     // UX-EXM-15: say before Start when this device cannot store the exam.
@@ -946,6 +955,42 @@ function ExamContent() {
   }), [questions, answers]);
 
   const runDurationLabel = (seconds: number, untimed: boolean) => (untimed ? te("duration_untimed", lang) : formatDurationLabel(seconds, examLang(lang)));
+
+  // ── PRO GATE ── (issue 12): the one paywall in place; dismissing it keeps
+  // a plain explanation with the same two ways out, no exam can start.
+  if (proGate) {
+    const gateCopy = getGateCopy({ lang, gate: "mock_exam" });
+    return (
+      <div className="app-layout">
+        <Sidebar lang={lang} userId={userId} userName={userName} />
+        <main className="main-content safe-area-top safe-area-bottom bg-[var(--mp-surface-sunken)]">
+          <PartialTranslationNote />
+          <div className="px-4 lg:px-10 pt-4 pb-2 flex items-center justify-between border-b border-[var(--mp-border)]">
+            <Link href="/" className="text-[var(--mp-fg-muted)] hover:text-[var(--mp-fg)] text-sm transition-colors min-h-11 inline-flex items-center">
+              ← {t("back_home", lang)}
+            </Link>
+            <div className="flex items-center gap-2">
+              <ThemeToggle />
+              <LanguageToggle lang={lang} onChange={switchLang} />
+            </div>
+          </div>
+          <div className="px-4 pt-6 pb-32 lg:pb-12">
+            <section className="max-w-lg w-full mx-auto mp-card p-5 space-y-3" data-testid="exam-pro-gate" aria-labelledby="exam-pro-gate-title">
+              <GraduationCap className="w-8 h-8 text-[var(--mp-oxford-blue)] dark:text-[var(--mp-fg)]" aria-hidden />
+              <h1 id="exam-pro-gate-title" className="mp-h3 text-[var(--mp-fg)]">{gateCopy.title}</h1>
+              <p className="text-sm text-[var(--mp-fg-muted)]">{te("gate_body", lang)}</p>
+              <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                <Link href={gateCopy.pricingHref} className="mp-btn mp-btn--primary min-h-11 justify-center" onClick={() => trackEvent("paywall_click", { target: "pricing", gate: "mock_exam" })}>{te("gate_plans", lang)}</Link>
+                <Link href="/quiz" className="mp-btn mp-btn--secondary min-h-11 justify-center">{te("gate_back_practice", lang)}</Link>
+              </div>
+            </section>
+          </div>
+        </main>
+        <BottomNav lang={lang} userId={userId} />
+        <PaywallUpgradeModal open={gateOpen} onOpenChange={setGateOpen} lang={lang} gate="mock_exam" surface="exam" />
+      </div>
+    );
+  }
 
   // ── ENTRY ──
   if (phase === "entry") {

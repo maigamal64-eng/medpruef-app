@@ -49,6 +49,7 @@ export type TrackEventType = MentorClientEvent
   | "next_step_shown"
   | "error_state_shown"
   | "home_load_failed"
+  | "paywall_hit"
   | "offline_state"
   | "page_view"
   | "question_start"
