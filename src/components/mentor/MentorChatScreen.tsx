@@ -254,7 +254,7 @@ export default function MentorChatScreen() {
   const cooling = blockedUntil !== null && waitSeconds > 0;
   const blocked = cooling || paused || usage.status !== "ready" || view?.canChat === false;
   const exhausted = usage.status === "ready" && usage.usage.state === "exhausted" ? exhaustedState(usage.usage, offers, lang) : null;
-  const blockedReason = cooling ? r3T(limitKind === "day" ? "day" : "minute", lang, { s: waitSeconds }) : paused ? shellT("rest", lang) : exhausted?.reason ?? (usage.status === "error" ? mentorT("err_load_failed", lang) : mentorT("credits_loading", lang));
+  const blockedReason = cooling ? r3T(limitKind === "day" ? "day" : "minute", lang, { s: waitSeconds }) : paused ? shellT("rest", lang) : exhausted?.composerReason ?? (usage.status === "error" ? mentorT("err_load_failed", lang) : mentorT("credits_loading", lang));
   const blockedActionHref = exhausted && canBuy ? exhausted.href : null;
   const infoKind = view?.tone === "low" ? "low" : usage.status === "ready" && usage.usage.sources.includes("trial") && view?.expiryText ? "trial" : null;
   const infoText = view?.trialNoticeText ?? (usage.status === "ready" && infoKind === "low" ? lowCreditText(usage.usage, lang) : view?.expiryText ?? "");

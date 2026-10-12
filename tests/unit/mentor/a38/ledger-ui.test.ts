@@ -68,6 +68,7 @@ describe("a38 MUX-23 one admission number", () => {
     expect(errorViewFor({ error: "credits_exhausted" }, "de").text).toBeUndefined();
     const u = { state: "exhausted", credits_left: 2, admit_min_credits: 4.21, sources: ["package"], subscriptions: [], can_buy: false, messages_left_estimate: 0, next_expiry: null } as unknown as MentorUsageResponse;
     expect(exhaustedState(u, [], "de").reason).toContain("mindestens 4,3 Credits. Sie haben noch 2,0.");
+    expect(exhaustedState(u, [], "de").composerReason).toBe("Mindestens 4,3 Credits nötig, Sie haben 2,0.");
     expect(exhaustedState({ ...u, credits_left: 0 }, [], "de").reason).toContain("aufgebraucht");
     expect(readFileSync("src/components/mentor/PackagesScreen.tsx", "utf8")).toMatch(/admissionGapText\(usage\.value\.credits_left, usage\.value\.admit_min_credits/);
   });

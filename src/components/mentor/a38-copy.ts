@@ -9,6 +9,7 @@ const COPY = {
   not_charged_line: ["Dafür wurden keine Credits abgezogen.", "No credits were deducted for this."],
   not_charged_footer: ["Nicht berechnet", "Not charged"],
   network_check: ["Prüfen Sie Ihr Guthaben. Bei einem Fehler buchen wir die Credits zurück.", "Check your balance. If something fails, we refund the credits."],
+  admission_gap_short: ["Mindestens {n} Credits nötig, Sie haben {x}.", "At least {n} credits needed, you have {x}."],
   admission_gap: ["Für die nächste Nachricht brauchen Sie mindestens {n} Credits. Sie haben noch {x}. Mit einem Paket geht es weiter.", "You need at least {n} credits for the next message. You have {x} left. A package lets you continue."],
   hide: ["Ausblenden", "Hide"],
   hide_hint: ["Der Mentor schreibt diese Antwort trotzdem fertig. Danach sehen Sie hier, ob sie berechnet wurde.", "The mentor still finishes this answer. Afterwards you see here whether it was charged."],
@@ -36,11 +37,11 @@ function oneDecimal(value: number, lang: MentorUiLang): string {
  * The bar is rounded up and the balance down, so the shown balance is always
  * below the shown bar. "Aufgebraucht" stays for a true zero (returns null).
  */
-export function admissionGapText(creditsLeft: number | undefined, admitMinCredits: number | null | undefined, lang: MentorUiLang): string | null {
+export function admissionGapText(creditsLeft: number | undefined, admitMinCredits: number | null | undefined, lang: MentorUiLang, form: "full" | "short" = "full"): string | null {
   if (typeof creditsLeft !== "number" || typeof admitMinCredits !== "number") return null;
   if (!Number.isFinite(creditsLeft) || !Number.isFinite(admitMinCredits)) return null;
   if (creditsLeft <= 0 || creditsLeft >= admitMinCredits) return null;
   const n = Math.ceil(admitMinCredits * 10) / 10;
   const x = Math.floor(creditsLeft * 10) / 10;
-  return a38T("admission_gap", lang, { n: oneDecimal(n, lang), x: oneDecimal(x, lang) });
+  return a38T(form === "short" ? "admission_gap_short" : "admission_gap", lang, { n: oneDecimal(n, lang), x: oneDecimal(x, lang) });
 }

@@ -8,8 +8,8 @@ import { FIXTURE_FINAL_OK } from "../../../src/lib/mentor/fixtures";
 test.use({ browserName: "chromium", serviceWorkers: "block", video: "off" });
 const USER = "00000000-0000-4000-8000-00000000a380";
 const COPY = {
-  de: { hide: "Ausblenden", waiting: "Ausgeblendet. Die Antwort wird noch fertig geschrieben.", charged: "Sie haben gestoppt. Die Antwort ist fertig und wurde berechnet.", view: "Ansehen", gap: "Für die nächste Nachricht brauchen Sie mindestens 4,3 Credits. Sie haben noch 2,4.", free: "Dafür wurden keine Credits abgezogen.", send: "Senden" },
-  en: { hide: "Hide", waiting: "Hidden. The answer is still being finished.", charged: "You stopped it. The answer is ready and was charged.", view: "View", gap: "You need at least 4.3 credits for the next message. You have 2.4 left.", free: "No credits were deducted for this.", send: "Send" },
+  de: { hide: "Ausblenden", waiting: "Ausgeblendet. Die Antwort wird noch fertig geschrieben.", charged: "Sie haben gestoppt. Die Antwort ist fertig und wurde berechnet.", view: "Ansehen", gap: "Mindestens 4,3 Credits nötig, Sie haben 2,4.", free: "Dafür wurden keine Credits abgezogen.", send: "Senden" },
+  en: { hide: "Hide", waiting: "Hidden. The answer is still being finished.", charged: "You stopped it. The answer is ready and was charged.", view: "View", gap: "At least 4.3 credits needed, you have 2.4.", free: "No credits were deducted for this.", send: "Send" },
 } as const;
 
 async function setup(page: Page, opts: { lang: "de" | "en"; theme: "light" | "dark"; usage?: Record<string, unknown>; chat?: () => string; delayMs?: number }) {
@@ -55,6 +55,7 @@ for (const [width, lang, theme] of [[375, "de", "light"], [375, "en", "dark"], [
     await expect(page.getByRole("button", { name: COPY[lang].send, exact: true })).toHaveCount(0);
     await expect(page.getByText(COPY[lang].charged)).toBeVisible({ timeout: 10_000 });
     await expect(page.getByRole("button", { name: COPY[lang].send, exact: true })).toBeVisible();
+    await page.screenshot({ path: `tests/e2e/.artifacts/a38/hidden-${width}-${lang}-${theme}.png`, fullPage: false });
     await page.getByRole("button", { name: COPY[lang].view, exact: true }).click();
     await expect(page.getByText(COPY[lang].charged)).toHaveCount(0);
     await expectNoHorizontalScroll(page);
@@ -79,7 +80,7 @@ for (const [width, lang, theme] of [[375, "de", "light"], [375, "en", "dark"], [
     await page.setViewportSize({ width, height: 844 });
     const errors = await setup(page, { lang, theme, usage: { state: "exhausted", credits_left: 2.4, admit_min_credits: 4.21, current_grant: 50 } });
     await page.goto("/mentor", { waitUntil: "domcontentloaded" });
-    await expect(page.getByText(COPY[lang].gap).first()).toBeAttached({ timeout: 30_000 });
+    await expect(page.getByRole("textbox").first()).toHaveAttribute("placeholder", COPY[lang].gap, { timeout: 30_000 });
     await expectNoHorizontalScroll(page);
     await page.screenshot({ path: `tests/e2e/.artifacts/a38/gap-${width}-${lang}-${theme}.png` });
     expect(unexpected(errors)).toEqual([]);

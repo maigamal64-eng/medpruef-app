@@ -30,5 +30,7 @@ export function exhaustedState(u: MentorUsageResponse, offers: MentorPackageOffe
   if ((subscriber || pro) && topup) parts.push(shellT("topup", lang, { n: topup.credits, price: formatEur(topup.price_eur_cents, lang) }));
   else if (pro && plus) parts.push(shellT("more", lang, { name: "Mentor Plus", price: formatEur(plus.price_eur_cents, lang) }));
   const selected = topup && (subscriber || pro) ? "mentor_topup" : "mentor_plus";
-  return { reason: parts.join(" "), href: `/mentor/packages?from=exhausted&select=${selected}#topup` };
+  // The composer placeholder is one 44px line on phones: it gets the short form.
+  const composerReason = admissionGapText(u.credits_left, u.admit_min_credits, lang, "short") ?? parts.join(" ");
+  return { reason: parts.join(" "), composerReason, href: `/mentor/packages?from=exhausted&select=${selected}#topup` };
 }
