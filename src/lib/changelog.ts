@@ -26,6 +26,30 @@ export const CHANGELOG: ChangelogEntry[] = [
   "date": "2026-10-12",
   "tag": "improvement",
   "title": {
+    "de": "Üben, Karteikarten und Fehlerliste sagen genauer, was passiert",
+    "en": "Practice, flashcards and the mistake list say more precisely what happens"
+  },
+  "description": {
+    "de": "Im Quiz gibt es vor dem Antworten keinen ausgegrauten Prüfen-Knopf und keine Jahres-Chips mehr; eine Antwort wird beim ersten Tippen geprüft, ein Tippen am Ende eines Wischens zählt nicht. Nach dem Antworten sehen Sie nur die Punkte, die tatsächlich gespeichert wurden, bei Pro den gespeicherten Wiederholungsabstand und eine Zeile mit Thema und Prüfungsjahr. Auf dem Handy bleibt „Nächste Frage“ unten erreichbar, die nächste Frage wird nach dem Speichern vorgeladen. Mehrfachauswahl-Fragen lassen sich erst mit der genannten Anzahl prüfen. Die KI-Erklärung zeigt Fehler als klaren Hinweis mit „Erneut versuchen“ oder dem Zeitpunkt, ab dem es weitergeht. Übersetzt wird nur noch im Tab „Übersetzen“, Ihre Lesesprache bleibt gespeichert. Notizen werden nach dem Speichern geprüft. Im Testbaukasten können Sie SIP4a oder SIP5a üben. Karteikarten haben einen Meldeknopf, zeigen die Frage auch auf der Rückseite, formatieren die Erklärung und öffnen lange Erklärungen mit „Mehr lesen“; Fragen, die ihre Antwortoptionen brauchen, bleiben im Quiz. Meine Fehler zeigt offene und korrigierte Fehler getrennt: Eine Frage gilt als korrigiert, wenn Sie sie danach zweimal richtig beantworten, mit mindestens einem Tag Abstand. Eine gemeldete Frage können Sie überspringen, ohne dass sie gewertet wird.",
+    "en": "In the quiz there is no greyed-out check button and no year chips before you answer; an answer is checked on the first tap, and a tap that ends a scroll does not count. After answering you see only the points that were actually saved, with Pro the stored review interval, and one line with topic and exam year. On phones Next question stays reachable at the bottom, and the next question is preloaded after the save. Multiple-answer questions can only be checked with the stated number of picks. The AI explanation shows failures as a clear notice with Try again or the time it continues. Translation now lives only in the Translate tab and your reading language is remembered. Notes are verified after saving. The test builder lets you practise SIP4a or SIP5a. Flashcards have a report button, keep the question on the back, format the explanation and open long ones with Read more; questions that need their answer options stay in the quiz. My mistakes shows open and corrected mistakes separately: a question counts as corrected once you answer it correctly twice afterwards, at least a day apart. A reported question can be skipped without being counted."
+  }
+},
+{
+  "date": "2026-10-12",
+  "tag": "admin",
+  "title": {
+    "de": "a23: abgestufte Wiederholung, Karteikarten-Bewertungen und offene Fehler vorbereitet (Schalter aus)",
+    "en": "a23: graded repetition, flashcard ratings and open mistakes prepared (flags off)"
+  },
+  "description": {
+    "de": "Unangewendetes Changeset 20261222090000: Intervalle höchstens 180 Tage und nie nach dem Prüfungsdatum minus 2 Tage, abgestufte Wiederholung, eigenes Karteikarten-Protokoll ohne XP und ohne Kontingent, eine Serverregel für offene Fehler. Schalter SRS_GRADE_ENABLED, FLASHCARD_REVIEW_KIND_ENABLED und FREE_SCHEDULE_ENABLED sind aus.",
+    "en": "Unapplied changeset 20261222090000: intervals at most 180 days and never after the exam date minus 2 days, graded repetition, a separate flashcard review log without XP or allowance, one server rule for open mistakes. Flags SRS_GRADE_ENABLED, FLASHCARD_REVIEW_KIND_ENABLED and FREE_SCHEDULE_ENABLED are off."
+  }
+},
+{
+  "date": "2026-10-12",
+  "tag": "improvement",
+  "title": {
     "de": "KI-Erklärungen klar als KI gekennzeichnet",
     "en": "AI explanations clearly marked as AI"
   },

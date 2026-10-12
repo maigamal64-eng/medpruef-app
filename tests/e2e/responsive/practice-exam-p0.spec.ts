@@ -90,7 +90,8 @@ test('practice 402 removes revealed answer and grants no XP or stored attempt', 
   await setup(page, false, 'en', false);
   await page.route('**/api/answer', route => route.fulfill({ status: 402, json: { gate: 'qbank_limit' } }));
   await page.goto('/quiz?examSource=kenntnispruefung');
-  await page.getByRole('checkbox', { name: /Fixture A/ }).click(); await page.getByRole('button', { name: 'Check Answer' }).click();
+  // a23 (UX-PRA-15): the multi-answer check arms only with exactly N picks.
+  await page.getByRole('checkbox', { name: /Fixture A/ }).click(); await page.getByRole('checkbox', { name: /Fixture B/ }).click(); await page.getByRole('button', { name: 'Check Answer' }).click();
   // a12: the one paywall dismisses with "Later".
   await expect(page.getByRole('dialog')).toBeVisible(); await page.getByRole('button', { name: 'Later', exact: true }).click();
   await expect(page.getByText('Synthetic fixture: choose two entries.')).toHaveCount(0);

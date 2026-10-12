@@ -727,7 +727,7 @@ function FlashcardContent() {
                 </b>
               </span>
             </div>
-            <div className="text-[11px] text-[var(--mp-fg-subtle)] mt-0.5 truncate flex items-center justify-center gap-1.5">
+            <div className="text-[12px] text-[var(--mp-fg-muted)] mt-0.5 flex flex-wrap items-center justify-center gap-x-1.5">
               <span
                 className="topic-text inline-flex items-center gap-1"
                 style={{ ["--topic-color" as string]: topicConfig.color }}
@@ -870,7 +870,7 @@ function FlashcardContent() {
           placement="sheet"
           maxWidth="640px"
         >
-          {readMore?.aiDraft && <p className="text-[12px] font-semibold text-[var(--mp-warning-text)] mb-2">{t("a23_fc_ai_draft", lang)}</p>}
+          {readMore?.aiDraft && <p data-ai-trust className="text-[12px] text-[var(--mp-fg-muted)] mb-2">{aiChatCopy(lang).trustLine}</p>}
           <div lang="de" dir="ltr">
             <Markdown className="text-[15px] leading-relaxed text-[var(--mp-fg)] [overflow-wrap:anywhere]">{readMore?.text ?? ""}</Markdown>
           </div>

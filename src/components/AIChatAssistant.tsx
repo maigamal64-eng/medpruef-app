@@ -308,22 +308,12 @@ export default function AIChatAssistant({
         // true outage (5xx) so the copy matches reality. The audit
         // (2026-04-24) confirmed "nicht verfügbar" reads as a bug —
         // each branch below must name the actual reason.
-        const is402 = response.status === 402;
-        const is429 = response.status === 429;
-        let content: string;
-        if (is402) {
-          content = copy.paywall;
-          // Event — so we can measure paywall-hit rate per free user
-          // and verify the copy change actually reduces "KI funktioniert
-          // nicht" feedback.
-          try {
-            trackEvent("ai_chat_paywall_shown", { questionId, reason: "tier_gate" });
-          } catch {}
-        } else if (is429) {
-          content = copy.dailyLimit;
-        } else {
-          content = copy.techProblem;
-        }
+        // Only a 402 reaches this point (every other failure is an Alert above).
+        const content = copy.paywall;
+        // Event: measures the paywall-hit rate per free user.
+        try {
+          trackEvent("ai_chat_paywall_shown", { questionId, reason: "tier_gate" });
+        } catch {}
         setMessages([{ role: "assistant", content, source: "notice" }]);
         return;
       }
