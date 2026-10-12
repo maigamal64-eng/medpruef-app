@@ -35,7 +35,6 @@ import { getExamLabel } from "@/lib/master-locale/exam-label";
 import { safeStorage } from "@/lib/safe-storage";
 import { syncStamp, to, type OfflineKey } from "@/lib/i18n-offline";
 import { trackEvent } from "@/lib/tracker";
-import { announce } from "@/lib/announce";
 import { Dialog, DialogFooter } from "@/components/ui";
 
 interface Props {
@@ -51,6 +50,7 @@ const FAILURE_KEY: Record<Exclude<PackFailure, "aborted">, OfflineKey> = {
   offline: "err_offline",
   auth: "err_auth",
   quota: "err_quota",
+  rate: "err_rate",
   server: "err_server",
 };
 
@@ -80,6 +80,8 @@ export default function OfflinePackCard({ lang, examType, userId, onChanged }: P
   const [progress, setProgress] = useState<PackProgress | null>(null);
   const [message, setMessage] = useState<{ tone: "ok" | "error" | "info"; text: string } | null>(null);
   const [stored, setStored] = useState<number | null>(null);
+  /** Across every exam: "Offline-Daten löschen" clears all of them. */
+  const [storedAll, setStoredAll] = useState<number>(0);
   const [lastSync, setLastSync] = useState<string | null>(null);
   const [persist, setPersist] = useState<OfflinePersistenceResult["status"] | null>(null);
   const [resumable, setResumable] = useState(false);
@@ -92,6 +94,7 @@ export default function OfflinePackCard({ lang, examType, userId, onChanged }: P
 
   const refreshLocal = useCallback(async () => {
     setStored(await countQuestions(examType).catch(() => null));
+    setStoredAll(await countQuestions().catch(() => 0));
     setLastSync(getLastSync(examType));
     setPersist(readPersistence());
   }, [examType]);
@@ -129,6 +132,8 @@ export default function OfflinePackCard({ lang, examType, userId, onChanged }: P
 
   // Topic packs include images by default; the whole bank does not (size).
   useEffect(() => { setIncludeImages(kind === "topic"); }, [kind]);
+  // Leaving the page stops a running download (Resume continues it later).
+  useEffect(() => () => abortRef.current?.abort(), []);
 
   useEffect(() => {
     setResumable(scopeReady && readPackCursor({ examType, topic: kind === "topic" && topic ? topic : null }) !== null);
@@ -140,37 +145,51 @@ export default function OfflinePackCard({ lang, examType, userId, onChanged }: P
     abortRef.current = controller;
     setRunning(true);
     setMessage(null);
-    setProgress({ stored: 0, total: summaryData?.total ?? null, textBytes: 0, imagesCached: 0, imageBytes: 0 });
+    // A resumed pack counts only what this run stores, so it shows no bar.
+    const total = resume ? null : summaryData?.total ?? null;
+    setProgress({ stored: 0, total, textBytes: 0, imagesCached: 0, imageBytes: 0 });
     trackEvent("offline_download_started", { size: scope.topic ? "topic" : "bank", exam: examType });
-    const result = await downloadPack({
-      fetchFn: authFetch,
-      scope,
-      userId,
-      includeImages,
-      total: summaryData?.total ?? null,
-      resume,
-      signal: controller.signal,
-      onProgress: setProgress,
-    });
-    abortRef.current = null;
-    setRunning(false);
-    await refreshLocal();
+    // Images only when the learner saw their size (summary loaded, images present).
+    const withImages = includeImages && !!summaryData && summaryData.images > 0;
+    let result: Awaited<ReturnType<typeof downloadPack>> | null = null;
+    try {
+      result = await downloadPack({
+        fetchFn: authFetch,
+        scope,
+        userId,
+        includeImages: withImages,
+        total,
+        resume,
+        signal: controller.signal,
+        onProgress: setProgress,
+      });
+    } catch {
+      result = null;
+    } finally {
+      abortRef.current = null;
+      setRunning(false);
+    }
+    await refreshLocal().catch(() => undefined);
     onChanged?.();
+    if (!result) {
+      setMessage({ tone: "error", text: to("err_server", lang) });
+      return;
+    }
     if (result.ok) {
       if (result.progress.stored === 0) {
         setMessage({ tone: "info", text: to("empty_pack", lang) });
-      } else {
-        const mb = formatMegabytes(result.progress.textBytes + result.progress.imageBytes, lang);
-        const text = to("done", lang, { n: result.progress.stored, mb })
-          + (result.progress.imagesCached > 0 ? ` ${to("done_images", lang, { n: result.progress.imagesCached })}` : "");
-        setMessage({ tone: "ok", text });
-        announce(text);
+        return;
       }
+      const mb = formatMegabytes(result.progress.textBytes + result.progress.imageBytes, lang);
+      const missed = result.imagesFailed + result.imagesSkipped;
+      const text = to("done", lang, { n: result.progress.stored, mb })
+        + (result.progress.imagesCached > 0 ? ` ${to("done_images", lang, { n: result.progress.imagesCached })}` : "")
+        + (withImages && missed > 0 ? ` ${to("images_missed", lang, { n: missed })}` : "");
+      setMessage({ tone: "ok", text });
       return;
     }
     const text = result.reason === "aborted" ? to("aborted", lang) : to(FAILURE_KEY[result.reason], lang);
     setMessage({ tone: result.reason === "aborted" ? "info" : "error", text });
-    announce(text);
   };
 
   const clear = async () => {
@@ -336,7 +355,7 @@ export default function OfflinePackCard({ lang, examType, userId, onChanged }: P
             <button
               type="button"
               onClick={() => setClearOpen(true)}
-              disabled={running || !stored}
+              disabled={running || storedAll === 0}
               className="mp-btn mp-btn--ghost w-full sm:w-auto min-h-11 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <Trash2 className="w-4 h-4" aria-hidden />

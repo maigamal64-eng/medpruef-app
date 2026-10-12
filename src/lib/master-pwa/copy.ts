@@ -47,7 +47,7 @@ export const PWA_COPY: Record<PwaLang, PwaCopy> = {
     offlinePage: {
       title: "Sie sind gerade offline.",
       body: "MedPrüf kann ohne Verbindung nicht neu gestartet werden. Ihr Konto bleibt geschützt. Sobald Sie wieder online sind, öffnen Sie MedPrüf wie gewohnt.",
-      hint: "Tipp: Eine bereits geöffnete App und heruntergeladene Fragen funktionieren weiter. Öffnen Sie MedPrüf vor einer Reise einmal mit Verbindung.",
+      hint: "Tipp: In einer bereits geöffneten App funktionieren heruntergeladene Fragen weiter. Öffnen Sie MedPrüf vor einer Reise einmal mit Verbindung.",
       retry: "Erneut versuchen",
     },
   },
@@ -74,7 +74,7 @@ export const PWA_COPY: Record<PwaLang, PwaCopy> = {
     offlinePage: {
       title: "You are offline right now.",
       body: "MedPrüf cannot restart without a connection. Your account stays protected. Once you are back online, open MedPrüf as usual.",
-      hint: "Tip: an app that is already open and downloaded questions keep working. Open MedPrüf once with a connection before you travel.",
+      hint: "Tip: in an app that is already open, downloaded questions keep working. Open MedPrüf once with a connection before you travel.",
       retry: "Try again",
     },
   },

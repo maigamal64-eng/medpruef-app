@@ -55,7 +55,7 @@ export default function InstallAppRow({ lang }: { lang: string }) {
             onClick={async () => {
               const platform = pwaPlatform(readInstallEnv());
               trackEvent("pwa_install_clicked", { platform, surface: "settings" });
-              await promptInstall();
+              if ((await promptInstall()) === "accepted") trackEvent("pwa_install_prompt_accepted", { platform });
             }}
           >
             <Download className="w-4 h-4" aria-hidden />

@@ -152,12 +152,13 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Cache-first: Supabase storage images
+  // Network-first: Supabase storage images. Online, a replaced image is
+  // always fresh; offline, the stored copy answers (pack images from
+  // OFFLINE_IMAGE_CACHE or a passively stored public image).
   if (isSupabaseStorage) {
     event.respondWith(
-      caches.match(event.request).then((cached) => {
-        if (cached) return cached;
-        return fetch(event.request).then((response) => {
+      fetch(event.request)
+        .then((response) => {
           const cacheControl = response.headers.get("cache-control") || "";
           const vary = response.headers.get("vary") || "";
           if (
@@ -171,8 +172,8 @@ self.addEventListener("fetch", (event) => {
             caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
           }
           return response;
-        });
-      })
+        })
+        .catch(async () => (await caches.match(event.request)) || Response.error())
     );
     return;
   }

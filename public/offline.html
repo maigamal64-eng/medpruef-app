@@ -35,7 +35,7 @@
       <img src="/brand/logo-mark.png" alt="" />
       <h1 id="t">Sie sind gerade offline.</h1>
       <p id="b">MedPrüf kann ohne Verbindung nicht neu gestartet werden. Ihr Konto bleibt geschützt. Sobald Sie wieder online sind, öffnen Sie MedPrüf wie gewohnt.</p>
-      <p id="h">Tipp: Eine bereits geöffnete App und heruntergeladene Fragen funktionieren weiter. Öffnen Sie MedPrüf vor einer Reise einmal mit Verbindung.</p>
+      <p id="h">Tipp: In einer bereits geöffneten App funktionieren heruntergeladene Fragen weiter. Öffnen Sie MedPrüf vor einer Reise einmal mit Verbindung.</p>
       <button type="button" id="r" onclick="location.reload()">Erneut versuchen</button>
     </main>
     <script>
@@ -54,15 +54,12 @@
         document.title = "MedPrüf is offline";
         document.getElementById("t").textContent = "You are offline right now.";
         document.getElementById("b").textContent = "MedPrüf cannot restart without a connection. Your account stays protected. Once you are back online, open MedPrüf as usual.";
-        document.getElementById("h").textContent = "Tip: an app that is already open and downloaded questions keep working. Open MedPrüf once with a connection before you travel.";
+        document.getElementById("h").textContent = "Tip: in an app that is already open, downloaded questions keep working. Open MedPrüf once with a connection before you travel.";
         document.getElementById("r").textContent = "Try again";
       }
-      // offline_page_shown cannot be sent while offline: the app counts this
-      // marker on its next online load (src/lib/offline-page-marker.ts).
-      try {
-        var n = parseInt(localStorage.getItem("medpruef_offline_page_shown") || "0", 10);
-        localStorage.setItem("medpruef_offline_page_shown", String((isFinite(n) ? n : 0) + 1));
-      } catch (e) {}
+      // offline_page_shown cannot be sent while offline: PWAInstall sends one
+      // event for this marker on the next online load (src/lib/master-pwa/launch.ts).
+      try { localStorage.setItem("medpruef_offline_page_shown", "1"); } catch (e) {}
     </script>
   </body>
 </html>

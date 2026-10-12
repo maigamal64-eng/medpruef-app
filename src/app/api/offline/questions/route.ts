@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { requireUser, isFreeAccess } from "@/lib/auth-guard";
+import { checkRateLimit, rateKey } from "@/lib/rate-limit";
 import {
   DEFAULT_EXAM_SOURCE,
   EXAM_SOURCE_IDS,
@@ -15,6 +16,9 @@ import {
 } from "@/lib/offline-pack-rules";
 
 export const dynamic = "force-dynamic";
+
+const OFFLINE_CHUNK_LIMIT = { limit: 300, windowMs: 60 * 60 * 1000 };
+const OFFLINE_SUMMARY_LIMIT = { limit: 120, windowMs: 60 * 60 * 1000 };
 
 /**
  * GET /api/offline/questions
@@ -33,8 +37,10 @@ export const dynamic = "force-dynamic";
  *   summary  — "1" returns { total, images, estimatedTextBytes, topics } for
  *              the same scope instead of rows (size line before a download)
  *
- * Download responses carry { questions, nextAfterId, sizeBytes }: the next
- * cursor (null on the last chunk) and the serialised size of this chunk.
+ * Download responses carry { questions, nextAfterId, sizeBytes, accessUntil,
+ * limited }: the next cursor (null on the last chunk), the serialised size of
+ * this chunk and the end of the paid access that allowed it. Rate limited per
+ * account (429 OFFLINE_RATE_LIMITED).
  *
  * Auth: requireUser — this is a user-specific download action (counts
  * against the session, not anonymous). Guests can't use offline mode
@@ -80,6 +86,17 @@ export async function GET(req: NextRequest) {
   const topic = rawTopic ? rawTopic.slice(0, 200) : null;
   const summary = sp.get("summary") === "1";
 
+  // Per-account bound on pack traffic (a28): a whole Vienna bank is about 76
+  // chunks of 100, so 300 chunk calls an hour allow several full downloads.
+  const limit = summary ? OFFLINE_SUMMARY_LIMIT : OFFLINE_CHUNK_LIMIT;
+  const rl = checkRateLimit({ key: rateKey(summary ? "offline-summary" : "offline-chunk", guard.userId), ...limit });
+  if (!rl.allowed) {
+    return NextResponse.json(
+      { error: "Too many offline downloads", code: "OFFLINE_RATE_LIMITED" },
+      { status: 429, headers: { ...noStore, "Retry-After": String(rl.retryAfterSec) } },
+    );
+  }
+
   const sb = getServiceClient();
 
   // ── Free-tier gate (2026-06-20, free set a-free-set 2026-10-12) ──
@@ -105,7 +122,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json(
         summary
           ? { total: 0, images: 0, estimatedTextBytes: 0, topics: [], limited: true }
-          : { questions: [], nextAfterId: null, sizeBytes: 0 },
+          : { questions: [], nextAfterId: null, sizeBytes: 0, accessUntil: null, limited: true },
         { headers: noStore },
       );
     }
@@ -193,6 +210,11 @@ export async function GET(req: NextRequest) {
       questions,
       nextAfterId: nextCursor(questions.map((q) => q.id), count),
       sizeBytes: new TextEncoder().encode(JSON.stringify(questions)).length,
+      // Paid packs carry the end of the access that allowed them; the offline
+      // quiz stops serving (and clears) the pack after it. null = no end date
+      // (admin, open-ended grant) or a free pack (the free slice stays free).
+      accessUntil: allowed ? null : guard.tierExpiresAt,
+      limited: allowed !== null,
     },
     { headers: noStore },
   );

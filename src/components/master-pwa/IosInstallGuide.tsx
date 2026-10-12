@@ -70,7 +70,8 @@ export default function IosInstallGuide({ lang, env, onDismiss }: Props) {
             className="mp-btn mp-btn--secondary mt-3 min-h-11"
             onClick={async () => {
               try {
-                await navigator.clipboard.writeText(window.location.href);
+                // Origin and path only: query strings (sign-in tokens, campaign tags) stay out of the clipboard.
+                await navigator.clipboard.writeText(`${window.location.origin}${window.location.pathname}`);
                 setCopyState("copied");
               } catch {
                 setCopyState("failed");

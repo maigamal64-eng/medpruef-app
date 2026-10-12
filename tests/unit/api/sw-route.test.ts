@@ -11,7 +11,7 @@ describe("service worker data privacy and offline fallback", () => {
     expect(script).toContain(".catch(async () => (await caches.match(OFFLINE_URL)) || Response.error())");
     expect(script).toContain('if (url.pathname.startsWith("/api/")) {\n    return;');
     const navigationRules = script.split("// Never persist rendered pages.")[1]?.split("// Network-first: Next.js build output")[0] || "";
-    const apiRules = script.split("// API responses can be account-specific")[1]?.split("// Cache-first: Supabase storage images")[0] || "";
+    const apiRules = script.split("// API responses can be account-specific")[1]?.split("// Network-first: Supabase storage images")[0] || "";
     expect(navigationRules).not.toContain("cache.put(event.request, clone)");
     expect(apiRules).not.toContain("respondWith");
     const installRules = script.split('self.addEventListener("install"')[1]?.split('self.addEventListener("activate"')[0] || "";

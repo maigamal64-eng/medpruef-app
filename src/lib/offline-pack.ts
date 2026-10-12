@@ -37,6 +37,8 @@ import { safeStorage } from "./safe-storage";
 import { EXAM_SOURCE_IDS } from "./topics";
 
 export const OFFLINE_OWNER_KEY = "medpruef_offline_owner";
+/** { accessUntil: ISO | null } of the paid access that allowed the stored pack. */
+export const OFFLINE_ACCESS_KEY = "medpruef_offline_access";
 
 export interface PackScope {
   examType: string;
@@ -53,7 +55,7 @@ export interface PackSummary {
   limited: boolean;
 }
 
-export type PackFailure = "offline" | "auth" | "quota" | "server" | "aborted";
+export type PackFailure = "offline" | "auth" | "quota" | "rate" | "server" | "aborted";
 
 export interface PackProgress {
   stored: number;
@@ -90,6 +92,7 @@ export async function fetchPackSummary(fetchFn: FetchFn, scope: PackScope): Prom
   try {
     const res = await fetchFn(`/api/offline/questions?${scopeQuery(scope)}&summary=1`);
     if (res.status === 401 || res.status === 403) return "auth";
+    if (res.status === 429) return "rate";
     if (!res.ok) return "server";
     const body = (await res.json()) as Partial<PackSummary>;
     if (typeof body.total !== "number") return "server";
@@ -150,6 +153,8 @@ export async function downloadPack(opts: {
   const imageCache = includeImages ? await openImageCache() : null;
   let cursor = opts.resume ? readPackCursor(scope) : null;
   let persistenceAsked = false;
+  let accessUntil: string | null = null;
+  let limitedPack = false;
 
   for (;;) {
     if (signal?.aborted) return { ok: false, reason: "aborted", progress };
@@ -160,11 +165,16 @@ export async function downloadPack(opts: {
       const after = cursor !== null ? `&afterId=${cursor}` : "";
       const res = await fetchFn(`/api/offline/questions?${scopeQuery(scope)}&count=${OFFLINE_CHUNK_SIZE}${after}`, { signal });
       if (res.status === 401 || res.status === 403) return { ok: false, reason: "auth", progress };
+      if (res.status === 429) return { ok: false, reason: "rate", progress };
       if (!res.ok) return { ok: false, reason: "server", progress };
-      const body = (await res.json()) as { questions?: OfflineQuestion[]; nextAfterId?: number | null; sizeBytes?: number };
+      const body = (await res.json()) as { questions?: OfflineQuestion[]; nextAfterId?: number | null; sizeBytes?: number; accessUntil?: string | null; limited?: boolean };
       rows = Array.isArray(body.questions) ? body.questions : [];
       next = typeof body.nextAfterId === "number" ? body.nextAfterId : null;
       progress.textBytes += typeof body.sizeBytes === "number" ? body.sizeBytes : 0;
+      accessUntil = typeof body.accessUntil === "string" ? body.accessUntil : null;
+      limitedPack = body.limited === true;
+      // A cursor that does not move forward would loop for ever.
+      if (next !== null && cursor !== null && next <= cursor) return { ok: false, reason: "server", progress };
     } catch (error) {
       if (signal?.aborted || (error as { name?: string })?.name === "AbortError") return { ok: false, reason: "aborted", progress };
       return { ok: false, reason: isOffline() ? "offline" : "server", progress };
@@ -183,8 +193,9 @@ export async function downloadPack(opts: {
         void requestOfflinePersistence();
       }
       progress.stored += rows.length;
-      // Resume point only after the rows are stored.
-      writePackCursor(scope, next);
+      // A free-slice download never lifts the end date of paid content
+      // already on the device; a paid download sets the current one.
+      if (!limitedPack) writePackAccess(accessUntil);
       setLastSync(scope.examType, new Date().toISOString());
 
       if (imageCache && imageBudget > 0 && typeof window !== "undefined") {
@@ -198,6 +209,9 @@ export async function downloadPack(opts: {
           imagesFailed += warm.failed;
         }
       }
+      // Resume point only after the rows and their images are stored.
+      if (signal?.aborted) return { ok: false, reason: "aborted", progress };
+      writePackCursor(scope, next);
     }
     onProgress?.({ ...progress });
     if (next === null) {
@@ -208,9 +222,32 @@ export async function downloadPack(opts: {
   }
 }
 
+/**
+ * Store the end of the paid access that allowed the pack. The latest chunk
+ * wins: null means a free pack or access without an end date.
+ */
+function writePackAccess(accessUntil: string | null): void {
+  safeStorage.setItem(OFFLINE_ACCESS_KEY, JSON.stringify({ accessUntil }));
+}
+
+/** True when the stored pack came from paid access that has ended. */
+export function isPackAccessExpired(now: number = Date.now()): boolean {
+  try {
+    const raw = safeStorage.getItem(OFFLINE_ACCESS_KEY);
+    if (!raw) return false;
+    const until = (JSON.parse(raw) as { accessUntil?: unknown }).accessUntil;
+    if (typeof until !== "string") return false;
+    const end = Date.parse(until);
+    return Number.isFinite(end) && end < now;
+  } catch {
+    return false;
+  }
+}
+
 /** Remove downloaded questions, their images, cursors and sync stamps (never queued answers). */
 export async function clearOfflinePack(): Promise<void> {
   await clearOfflineQuestions();
+  safeStorage.removeItem(OFFLINE_ACCESS_KEY);
   try {
     if (typeof caches !== "undefined") await caches.delete(OFFLINE_IMAGE_CACHE);
   } catch {

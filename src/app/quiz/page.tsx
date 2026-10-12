@@ -56,7 +56,7 @@ import {
   type OfflineQuestion,
 } from "@/lib/offlineDb";
 import { isRetryableSaveStatus, requestAnswerSync } from "@/lib/offlineSync";
-import { ensureOfflineOwner } from "@/lib/offline-pack";
+import { clearOfflinePack, ensureOfflineOwner, isPackAccessExpired } from "@/lib/offline-pack";
 import OfflinePackEntry from "@/components/OfflinePackEntry";
 import { to } from "@/lib/i18n-offline";
 import { buildMCQFromChoices, type StoredChoice } from "@/lib/mcq";
@@ -518,8 +518,15 @@ function QuizContent() {
         return null;
       }
       try {
-        // Content downloaded by another account on this device is never served.
+        // Content downloaded by another account on this device is never served,
+        // and a paid pack is not served after the access that allowed it ended.
         await ensureOfflineOwner(userId);
+        if (isPackAccessExpired()) {
+          await clearOfflinePack();
+          setLoadError(true);
+          setLoadErrorReason(to("quiz_pack_expired", lang));
+          return null;
+        }
         const rows = config.topics.length === 1
           ? await getQuestionsByTopic(config.examSource, config.topics[0])
           : await getAllQuestions(config.examSource);
@@ -1360,7 +1367,7 @@ function QuizContent() {
               ) : !question ? (
                 <div className="text-center py-12">
                   <Inbox className="w-12 h-12 text-[var(--mp-fg-subtle)] mx-auto mb-4" />
-                  <p className="text-[var(--mp-fg-muted)]">{loadError ? (lang === "de" ? "Fragen konnten nicht geladen werden. Bitte prüfen Sie Ihre Verbindung und versuchen Sie es erneut." : "Questions could not be loaded. Check your connection and retry.") : effectiveMode === "unseen" ? (lang === "de" ? "Alle verfügbaren Fragen in dieser Auswahl sind bearbeitet. Wiederholen Sie nur, wenn Sie möchten." : "You have covered all available questions in this selection. Review only when you choose.") : effectiveMode === "review" ? (lang === "de" ? "Keine fälligen Wiederholungen in dieser Auswahl." : "No due reviews in this selection.") : t("no_questions", lang)}</p>
+                  <p className="text-[var(--mp-fg-muted)]">{loadError ? loadErrorReason ?? (lang === "de" ? "Fragen konnten nicht geladen werden. Bitte prüfen Sie Ihre Verbindung und versuchen Sie es erneut." : "Questions could not be loaded. Check your connection and retry.") : effectiveMode === "unseen" ? (lang === "de" ? "Alle verfügbaren Fragen in dieser Auswahl sind bearbeitet. Wiederholen Sie nur, wenn Sie möchten." : "You have covered all available questions in this selection. Review only when you choose.") : effectiveMode === "review" ? (lang === "de" ? "Keine fälligen Wiederholungen in dieser Auswahl." : "No due reviews in this selection.") : t("no_questions", lang)}</p>
                   {loadError && <button className="mp-btn mp-btn--primary mt-4" onClick={() => {
                     setLoading(true);
                     setLoadError(false);

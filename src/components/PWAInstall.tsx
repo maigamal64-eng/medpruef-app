@@ -20,6 +20,7 @@ import {
 import {
   promptInstall,
   setDeferredInstallPrompt,
+  subscribeInstallPrompt,
   type BeforeInstallPromptEvent,
 } from "@/lib/master-pwa/install-prompt";
 
@@ -95,8 +96,10 @@ export default function PWAInstall() {
     if (shouldCountStandaloneLaunch(env, sent)) {
       try { sessionStorage.setItem(STANDALONE_SESSION_KEY, "1"); } catch { /* blocked */ }
       trackEvent("standalone_launch", { platform: pwaPlatform(env), source: launchSource(window.location.search) });
-      refreshSkipLandingCookie();
     }
+    // Any signed-in load keeps the 30-day skip-landing cookie fresh, so the
+    // installed app's start_url keeps opening on Home after a quiet month.
+    refreshSkipLandingCookie();
     if (navigator.onLine !== false) {
       try {
         if (readOfflinePageMarker(localStorage.getItem(OFFLINE_PAGE_MARKER_KEY)) > 0) {
@@ -105,9 +108,12 @@ export default function PWAInstall() {
         }
       } catch { /* storage blocked */ }
     }
-    const onInstalled = () => trackEvent("pwa_install_prompt_accepted", { platform: pwaPlatform(readInstallEnv()) });
-    window.addEventListener("appinstalled", onInstalled);
-    return () => window.removeEventListener("appinstalled", onInstalled);
+    // The Settings row can use the shared prompt; the banner then has nothing to offer.
+    return subscribeInstallPrompt((event) => {
+      if (event) return;
+      setInstallPrompt(null);
+      setShowBanner(false);
+    });
   }, []);
 
   useEffect(() => {
@@ -243,6 +249,7 @@ export default function PWAInstall() {
     trackEvent("pwa_install_clicked", { platform: pwaPlatform(readInstallEnv()), surface: "banner" });
     const outcome = await promptInstall();
     if (outcome === "accepted") {
+      trackEvent("pwa_install_prompt_accepted", { platform: pwaPlatform(readInstallEnv()) });
       setShowBanner(false);
     }
     setInstallPrompt(null);

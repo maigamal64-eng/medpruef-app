@@ -59,7 +59,8 @@ export function isStorableImageResponse(
     // worker's passive rule stays strict. private / no-store still refuse.
     if (/private|no-store/i.test(cacheControl)) return false;
     if (vary.trim() === "*" || /cookie|authorization|x-session-token/i.test(vary)) return false;
-    return true;
+    // Only images: a public-bucket path could in principle hold anything.
+    return /^image\//i.test(response.headers.get("content-type") ?? "");
   }
   if (opts.requirePublic && !/(?:^|,)\s*public\b/i.test(cacheControl)) return false;
   if (/private|no-store|no-cache/i.test(cacheControl)) return false;

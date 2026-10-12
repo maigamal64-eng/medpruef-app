@@ -57,6 +57,11 @@ const STRINGS = {
     de: 'Der Speicher auf diesem Gerät ist voll. Löschen Sie Offline-Daten, wählen Sie ein einzelnes Fachgebiet oder laden Sie ohne Bilder.',
     en: 'The storage on this device is full. Clear offline data, choose a single subject or download without images.',
   },
+  err_rate: {
+    de: 'Sie haben in kurzer Zeit sehr viel heruntergeladen. Bitte versuchen Sie es in einer Stunde erneut. Gespeicherte Fragen bleiben erhalten.',
+    en: 'You have downloaded a lot in a short time. Please try again in an hour. Saved questions are kept.',
+  },
+  images_missed: { de: '{n} Bilder konnten nicht gespeichert werden.', en: '{n} images could not be saved.' },
   err_server: { de: 'Der Download hat nicht geklappt. Bitte versuchen Sie es erneut.', en: 'The download did not work. Please try again.' },
   aborted: { de: 'Download abgebrochen. Gespeicherte Fragen bleiben erhalten.', en: 'Download cancelled. Saved questions are kept.' },
   clear: { de: 'Offline-Daten löschen', en: 'Clear offline data' },
@@ -69,7 +74,7 @@ const STRINGS = {
 
   // LX-14 storage protection
   persist_label: { de: 'Speicher geschützt', en: 'Storage protected' },
-  persist_granted: { de: 'Ja. Der Browser löscht die heruntergeladenen Fragen nicht von sich aus.', en: 'Yes. The browser does not delete the downloaded questions on its own.' },
+  persist_granted: { de: 'Ja. Der Browser hat zugesagt, die heruntergeladenen Fragen nicht automatisch zu löschen.', en: 'Yes. The browser has agreed not to delete the downloaded questions automatically.' },
   persist_denied: { de: 'Nein. Der Browser darf die heruntergeladenen Fragen löschen, zum Beispiel wenn der Speicher knapp wird.', en: 'No. The browser may delete the downloaded questions, for example when storage runs low.' },
   persist_unknown: { de: 'Nicht bekannt. Dieser Browser sagt nicht, ob er die Daten behält.', en: 'Unknown. This browser does not say whether it keeps the data.' },
   persist_pending: { de: 'Wird nach dem ersten Download geprüft.', en: 'Checked after the first download.' },
@@ -104,6 +109,10 @@ const STRINGS = {
   quiz_no_choices: {
     de: 'Die gespeicherten Fragen haben keine offline nutzbaren Antwortoptionen. Laden Sie Fragen unter Einstellungen, Offline lernen herunter.',
     en: 'The saved questions have no answer options that work offline. Download questions under Settings, Study offline.',
+  },
+  quiz_pack_expired: {
+    de: 'Ihr Zugang für die heruntergeladenen Fragen ist abgelaufen, deshalb wurden sie von diesem Gerät entfernt. Sobald Sie online sind, können Sie die Fragen Ihres aktuellen Zugangs neu herunterladen.',
+    en: 'Your access for the downloaded questions has ended, so they were removed from this device. Once you are online you can download the questions of your current access again.',
   },
   quiz_none_saved: {
     de: 'Keine gespeicherten Fragen gefunden. Laden Sie zuerst Fragen unter Einstellungen, Offline lernen herunter.',
