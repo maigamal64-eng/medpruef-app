@@ -165,13 +165,13 @@
     {
       "id": "rez-gm.registration.withdrawal",
       "statement": {
-        "de": "Eine Abmeldung ist spätestens 3 Werktage vor dem Prüfungstermin per E-Mail vom gültigen MedUni-Wien-Konto an Nostrifikationsprüfungsanmeldungen möglich. Im Krankheitsfall ist die Abmeldung bis zum Prüfungstag möglich.",
-        "en": "Withdraw by email from your valid MedUni Vienna account to nostrification exam registration at least 3 working days before the exam. In case of illness, withdrawal is possible up to the exam day."
+        "de": "Nicht eindeutig bestätigt für Rezeptierkunde: Beide amtlichen Dokumente nennen als Frist spätestens 3 Werktage vor dem Prüfungstermin; im Krankheitsfall ist die Abmeldung bis zum Prüfungstag möglich. Der Prüfungskalender WS 2026/27 nennt dafür eine E-Mail vom gültigen MedUni-Wien-Konto an Nostrifikationsprüfungsanmeldungen, die Kandidatenausschreibung Rezeptierkunde nennt die Abmeldung in Med.Campus. Prüfen Sie den Weg in der aktuellen Ausschreibung.",
+        "en": "Not unambiguously confirmed for Rezeptierkunde: both official documents set the deadline at 3 working days before the exam at the latest; in case of illness, withdrawal is possible up to the exam day. The winter semester 2026/27 exam calendar names an email from your valid MedUni Vienna account to nostrification exam registration, while the Rezeptierkunde candidate announcement names withdrawal in Med.Campus. Check the route in the current announcement."
       },
-      "status": "official",
+      "status": "not_confirmed",
       "source_url": "https://www.meduniwien.ac.at/web/fileadmin/content/serviceeinrichtungen/studienabteilung/studium/nostrifikation/WS26Pr%C3%BCf_modus_EW_03062026.pdf",
       "source_label": "MedUni Wien",
-      "edition": "Prüfungskalender Rigorosumsprüfungen WS2026/27, 03.06.2026",
+      "edition": "Prüfungskalender WS2026/27 (03.06.2026) und Kandidatenausschreibung Rezeptierkunde (01.10.2026)",
       "read_on": "2026-10-11",
       "review_every_days": 30,
       "applies_to": [
@@ -180,7 +180,7 @@
       "exam_key": "general",
       "topic": "registration",
       "filing_university": "wien",
-      "verdict": "confirmed"
+      "verdict": "partly"
     },
     {
       "id": "sip.scoring.pass-rule",

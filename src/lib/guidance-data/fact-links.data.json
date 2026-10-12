@@ -1,0 +1,18 @@
+{
+  "note": "One owner per official fact (G29). The public guidance pages (wien-deadlines.data.json, b01) and the mentor facts (content/mentor-facts) state the same official rules. Each guidance fact names the mentor rows that state the same rule; tests/unit/track-b/b01-wien-deadline/facts-consistency.test.ts fails when a guidance fact is unlinked, a link breaks, or the two stores disagree on whether the rule is confirmed. Dates are owned by OFFICIAL_SITTINGS (src/lib/exam-dates.ts).",
+  "reconciled_on": "2026-10-12",
+  "links": {
+    "sip.registration.account": { "mentor_ids": ["sip4a.registration.method", "sip5a.registration.method"], "relation": "same" },
+    "sip.registration.complete": { "mentor_ids": ["sip4a.registration.no-late-registration", "sip5a.registration.no-late-registration"], "relation": "overlaps", "note": "Guidance adds that incomplete forms are not considered (Nostrifizierung: Prüfungen page)." },
+    "sip.registration.parts": { "mentor_ids": ["sip4a.documents.same-sitting", "sip5a.documents.same-sitting", "sip4a.registration.method"], "relation": "same" },
+    "sip.registration.confirmation": { "mentor_ids": [], "relation": "guidance-only", "note": "Not in the mentor base; stated as not confirmed on the page." },
+    "sip.registration.withdrawal": { "mentor_ids": ["sip4a.registration.deregistration", "sip5a.registration.deregistration"], "relation": "same" },
+    "sip.attempts.no-show": { "mentor_ids": ["sip4a.attempts.no-show-block", "sip5a.attempts.no-show-block"], "relation": "same" },
+    "rez-gm.registration.separate": { "mentor_ids": ["rezeptierkunde.registration.method", "gerichtsmedizin.registration.method"], "relation": "same" },
+    "rez-gm.registration.cutoff": { "mentor_ids": ["rezeptierkunde.dates.2026-11", "gerichtsmedizin.dates.2026-11"], "relation": "same" },
+    "rez-gm.registration.withdrawal": { "mentor_ids": ["rezeptierkunde.registration.deregistration", "gerichtsmedizin.registration.deregistration"], "relation": "same", "note": "Reconciled 2026-10-12: the guidance page stated the email route as official; the mentor row records that the Rezeptierkunde Kandidatenausschreibung names Med.Campus instead. The page now says the route is not unambiguously confirmed." },
+    "sip.scoring.pass-rule": { "mentor_ids": ["sip4a.pass_rule.sixty-percent", "sip5a.pass_rule.sixty-percent"], "relation": "same" },
+    "sip.format.announcement": { "mentor_ids": ["sip4a.format.announcement", "sip5a.format.announcement", "sip4a.results.ausschreibung-timing", "sip5a.results.ausschreibung-timing"], "relation": "same" },
+    "sip.registration.march-unconfirmed": { "mentor_ids": ["sip4a.registration.window-2027-03", "sip5a.registration.window-2027-03"], "relation": "same" }
+  }
+}
