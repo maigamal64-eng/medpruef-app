@@ -10,7 +10,7 @@ import Link from "next/link";
 import { getLang, useLang, renderLang } from "@/lib/i18n";
 import { getStoredExamSource, type ExamSourceId } from "@/lib/topics";
 import UpcomingExams from "@/components/UpcomingExams";
-import PublicStudyLink from "@/components/PublicStudyLink";
+import PublicStudyLink, { useTrialAvailable } from "@/components/PublicStudyLink";
 import FreeOfferDisclosure from "@/components/FreeOfferDisclosure";
 import { buildAuthHref } from "@/lib/auth-entry";
 import LanguagePicker from "@/components/LanguagePicker";
@@ -876,6 +876,7 @@ function Nav({ lang, onLangChange }: { lang: Lang; onLangChange: (l: Lang) => vo
    baseline. Right rail = a stylized "exam record" card.
    ───────────────────────────────────────────────────────────── */
 function Hero({ lang, freeHref }: { lang: Lang; freeHref: string }) {
+  const trialAvailable = useTrialAvailable();
   return (
     <section
       className="relative overflow-hidden text-white"
@@ -999,7 +1000,7 @@ function Hero({ lang, freeHref }: { lang: Lang; freeHref: string }) {
                   {COPY.hero.cta_trial_second[lang]}
                   <ChevronRight className="w-4 h-4" aria-hidden="true" />
                 </PublicStudyLink>
-                <p className="text-[11px] leading-snug text-white/65">{COPY.hero.cta_trial_terms[lang]}</p>
+                {trialAvailable && <p className="text-[11px] leading-snug text-white/65">{COPY.hero.cta_trial_terms[lang]}</p>}
               </div>
               <FreeOfferDisclosure lang={lang} className="w-full max-w-md" />
             </div>
@@ -1686,6 +1687,7 @@ function WhyMedPruef({ lang }: { lang: Lang }) {
 }
 
 function FinalCTA({ lang, freeHref }: { lang: Lang; freeHref: string }) {
+  const trialAvailable = useTrialAvailable();
   return (
     <section
       className="relative py-20 md:py-24 text-white overflow-hidden"
@@ -1744,7 +1746,7 @@ function FinalCTA({ lang, freeHref }: { lang: Lang; freeHref: string }) {
             {COPY.hero.cta_trial_second[lang]}
           </PublicStudyLink>
         </div>
-        <p className="mt-3 text-xs text-white/60 max-w-md mx-auto">{COPY.hero.cta_trial_terms[lang]}</p>
+        {trialAvailable && <p className="mt-3 text-xs text-white/60 max-w-md mx-auto">{COPY.hero.cta_trial_terms[lang]}</p>}
         <p className="mt-5 text-xs text-white/50 flex items-center justify-center gap-2 flex-wrap">
           <Languages className="w-3.5 h-3.5" aria-hidden="true" />
           {COPY.cta.trust[lang]}

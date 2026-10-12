@@ -17,6 +17,17 @@ function trialAvailable(): Promise<boolean> {
   return availability.request;
 }
 
+/** True once the card trial is confirmed available (same cached check the trial links use). */
+export function useTrialAvailable(): boolean {
+  const [enabled, setEnabled] = useState(false);
+  useEffect(() => {
+    let active = true;
+    void trialAvailable().then(value => { if (active) setEnabled(value); });
+    return () => { active = false; };
+  }, []);
+  return enabled;
+}
+
 /** Marketing entry keeps the bank and intent in the URL, including in empty-storage webviews. */
 export default function PublicStudyLink({ href, onClick, ...props }: Props) {
   const entry = publicStudyEntry(href);

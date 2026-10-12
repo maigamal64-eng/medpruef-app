@@ -29,6 +29,7 @@ type FetchState =
 
 function formatRelative(iso: string, lang: Lang): string {
   const diffMin = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+  if (!Number.isFinite(diffMin)) return "";
   if (diffMin < 1) return t("home_just_now", lang);
   const unit = diffMin < 60 ? "minute" : diffMin < 1440 ? "hour" : "day";
   const amount = unit === "minute" ? diffMin : Math.round(diffMin / (unit === "hour" ? 60 : 1440));
