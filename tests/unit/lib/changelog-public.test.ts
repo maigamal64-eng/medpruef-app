@@ -21,4 +21,13 @@ describe("getPublicChangelogEntries", () => {
     expect(currentPublicUpdate).toBeDefined();
     expect(publicEntries).toContain(currentPublicUpdate);
   });
+
+  it("public entries never name internal systems (track-A audit 12 Oct 2026)", () => {
+    const internal = /\b(Sentry|webhooks?|cron|migrations?|Supabase|Vercel|RPC|CSP|PostgREST|ClickHouse|Codex|Claude Code|Lane [AB]|admin|Datenbank|database|deploys?|endpoints?|API|feature flags?|Feature-Flags?)\b/i;
+    const leaks = getPublicChangelogEntries()
+      .map((e) => ({ e, text: [e.title.de, e.title.en, e.description.de, e.description.en].join(" ") }))
+      .filter(({ text }) => internal.test(text))
+      .map(({ e }) => `${e.date} ${e.title.en}`);
+    expect(leaks).toEqual([]);
+  });
 });

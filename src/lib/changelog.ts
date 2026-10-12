@@ -102,8 +102,8 @@ export const CHANGELOG: ChangelogEntry[] = [
     "en": "No answer is lost when the server briefly stops responding"
   },
   "description": {
-    "de": "Antwortet der Server beim Speichern einer Antwort, einer Karteikarten-Bewertung oder eines Simulationsergebnisses nicht rechtzeitig, bleibt der Eintrag auf Ihrem Gerät gespeichert und wird automatisch nachgesendet, auch ohne Verbindungsabbruch. Sie sehen dazu einen Hinweis. Jede Antwort wird dabei nur einmal gezählt, auch für XP und Serie. Außerdem laden Startseite, Lernplan und Übungsstand mit weniger Datenbankabfragen.",
-    "en": "If the server does not respond in time while saving an answer, a flashcard rating or an exam simulation result, the entry stays saved on your device and is sent again automatically, even without a lost connection. A note tells you so. Each answer is still counted only once, including XP and streak. Home, the study plan and readiness also load with fewer database reads."
+    "de": "Antwortet der Server beim Speichern einer Antwort, einer Karteikarten-Bewertung oder eines Simulationsergebnisses nicht rechtzeitig, bleibt der Eintrag auf Ihrem Gerät gespeichert und wird automatisch nachgesendet, auch ohne Verbindungsabbruch. Sie sehen dazu einen Hinweis. Jede Antwort wird dabei nur einmal gezählt, auch für XP und Serie.",
+    "en": "If the server does not respond in time while saving an answer, a flashcard rating or an exam simulation result, the entry stays saved on your device and is sent again automatically, even without a lost connection. A note tells you so. Each answer is still counted only once, including XP and streak."
   }
 },
 {
@@ -330,8 +330,8 @@ export const CHANGELOG: ChangelogEntry[] = [
     "en": "Clearer pricing, safer payment and honest details"
   },
   "description": {
-    "de": "Die Preisseite zeigt jeden Tarif gleich aufgebaut: Preis wie abgebucht, heutige Zahlung, Verlängerung oder Einmalzahlung und wie Sie kündigen. Empfohlen ist der 3-Monats-Tarif. Eine laufende Zahlung sperrt einen zweiten Kauf, und die Bestätigungsseite zeigt einen Beleg statt einer automatischen Weiterleitung. Neu sind die Gesamtkosten bis zu Ihrem Prüfungstermin, ein Kontaktformular ohne Konto, eine einheitliche Beschreibung der Garantie und Einladungen, die offen sagen, dass Sie eine Belohnung erhalten. Seiten und Hinweise sprechen Sie jetzt mit Sie an.",
-    "en": "The pricing page shows every plan the same way: price as charged, today's payment, renewal or one-time and how to cancel. The 3-month plan is recommended. A payment in progress blocks a second purchase, and the confirmation page shows a receipt instead of redirecting. New: the total cost until your exam date, a contact form without an account, one description of the guarantee, and invites that say openly that you receive a reward."
+    "de": "Die Preisseite zeigt jeden Tarif gleich aufgebaut: Preis wie abgebucht, heutige Zahlung, Verlängerung oder Einmalzahlung und wie Sie kündigen. Empfohlen ist der 3-Monats-Tarif. Eine laufende Zahlung sperrt einen zweiten Kauf, und die Bestätigungsseite zeigt einen Beleg statt einer automatischen Weiterleitung. Neu sind die Gesamtkosten bis zu Ihrem Prüfungstermin, ein Kontaktformular ohne Konto und eine einheitliche Beschreibung der Garantie. Seiten und Hinweise sprechen Sie jetzt mit Sie an.",
+    "en": "The pricing page shows every plan the same way: price as charged, today's payment, renewal or one-time and how to cancel. The 3-month plan is recommended. A payment in progress blocks a second purchase, and the confirmation page shows a receipt instead of redirecting. New: the total cost until your exam date, a contact form without an account and one description of the guarantee."
   }
 },
 {
@@ -510,8 +510,8 @@ export const CHANGELOG: ChangelogEntry[] = [
     "en": "Corrected answers no longer show outdated AI explanations"
   },
   "description": {
-    "de": "Wenn wir die richtige Antwort oder die Antwortoptionen einer Frage korrigieren, werden die gespeicherte KI-Erklärung, ihre Übersetzungen und ihre Bewertungen sofort verworfen. So sehen Sie keine KI-Erklärung mehr, die zur alten Lösung gehört. Reine Formulierungs- oder Tippfehlerkorrekturen am Fragetext oder an der Erklärung behalten die KI-Erklärung; nur die Übersetzung des geänderten Textes wird beim nächsten Abruf neu erstellt.",
-    "en": "When we correct a question's right answer or its answer options, the saved AI explanation, its translations and its ratings are discarded immediately. You no longer see an AI explanation written for the old solution. Wording or typo fixes to the question text or the explanation keep the AI explanation; only the translation of the changed text is recreated the next time it is requested."
+    "de": "Wenn wir die richtige Antwort einer Frage oder ihre Antwortoptionen korrigieren, sehen Sie keine KI-Erklärung mehr, die für die alte Lösung geschrieben wurde.",
+    "en": "When we correct a question's right answer or its answer options, you no longer see an AI explanation written for the old solution."
   }
 },
 {
@@ -540,7 +540,7 @@ export const CHANGELOG: ChangelogEntry[] = [
 },
 {
   "date": "2026-10-12",
-  "tag": "fix",
+  "tag": "admin",
   "title": {
     "de": "Sichereres Feedback-Formular, korrekte Prüfungsbeschreibung",
     "en": "Safer feedback form, correct exam description"
@@ -707,17 +707,17 @@ export const CHANGELOG: ChangelogEntry[] = [
     }
   },
   {
-    "date": "2026-10-11",
-    "tag": "fix",
-    "title": {
-      "de": "Prüfungsergebnisse ohne doppelte Einreichung",
-      "en": "Prevent duplicate exam-result submissions"
-    },
-    "description": {
-      "de": "Die Einreichung zeigt ihren laufenden Status. Wiederholte Nachweis-Anfragen verwenden denselben Schlüssel und können den bestätigten Datensatz wiederfinden.",
-      "en": "Submissions show their pending state. Proof retries use the same key and can recover the confirmed record."
-    }
+  "date": "2026-10-11",
+  "tag": "fix",
+  "title": {
+    "de": "Prüfungsergebnisse ohne doppelte Einreichung",
+    "en": "Prevent duplicate exam-result submissions"
   },
+  "description": {
+    "de": "Beim Einreichen sehen Sie, dass die Übermittlung läuft. Wenn Sie einen Nachweis erneut senden, entsteht kein zweiter Eintrag, und Ihr bereits bestätigtes Ergebnis bleibt erhalten.",
+    "en": "While submitting you see that it is in progress. Sending a proof again does not create a second entry, and your confirmed result is kept."
+  }
+},
   {
     date: "2026-10-11", tag: "fix",
     title: { de: "Startseite bleibt bei Verbindungsproblemen erreichbar", en: "Home remains available during connection problems" },
@@ -777,13 +777,17 @@ export const CHANGELOG: ChangelogEntry[] = [
     },
   },
   {
-    date: "2026-10-11", tag: "fix",
-    title: { de: "Zugang nach Erstattungen korrekt berechnen", en: "Calculate access correctly after refunds" },
-    description: {
-      de: "Nach einer Erstattung wird der verbleibende Zugang aus den nicht erstatteten Zahlungen berechnet. Eine unbekannte Zahlung entzieht keinen bestehenden Zugang. Eine kostenlose Testphase behält ihre ursprüngliche Laufzeit. Doppelte Zahlungen verlängern den Zugang nur einmal. Bei einer unterbrochenen Prüfung wird die Zugangsänderung beim nächsten Versuch abgeschlossen. Spätere Käufe und manuell gewährter Zugang bleiben bei Wiederholungen erhalten. Nach einer erstatteten Verlängerung bleibt die ursprüngliche Testphase auch bei einer Deaktivierung erhalten. Eine Profiländerung während einer laufenden Prüfung verhindert die Zugangskorrektur nicht mehr. Eine über den Checkout gestartete Testphase bleibt nach einer erstatteten Verlängerung erhalten. Nachgelagerte Zeiträume verlieren die erstattete Zeit, und verbleibende bezahlte Zeiträume stellen den Pro-Zugang wieder her.",
-      en: "After a refund, remaining access is calculated from payments that were not refunded. An unknown payment does not revoke existing access. A free trial keeps its original duration. Duplicate payments extend access once. Interrupted access updates finish on the next retry. Later purchases and manually granted access are preserved on retries. After a refunded renewal, the original trial also survives membership deactivation. A profile edit during a pending update no longer blocks the access correction. A trial started through checkout survives a refunded renewal. Queued periods lose the refunded time, and remaining paid periods restore Pro access.",
-    },
+  "date": "2026-10-11",
+  "tag": "fix",
+  "title": {
+    "de": "Zugang nach Erstattungen korrekt berechnen",
+    "en": "Calculate access correctly after refunds"
   },
+  "description": {
+    "de": "Nach einer Erstattung berechnen wir Ihren verbleibenden Zugang aus den Zahlungen, die nicht erstattet wurden. Eine Testphase behält ihre ursprüngliche Laufzeit, spätere Käufe bleiben erhalten, und eine doppelte Zahlung verlängert den Zugang nur einmal.",
+    "en": "After a refund, your remaining access is calculated from the payments that were not refunded. A trial keeps its original length, later purchases are kept, and a duplicate payment extends access only once."
+  }
+},
   {
     date: "2026-10-11",
     tag: "admin",
@@ -841,7 +845,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   {
     date: "2026-10-11",
-    tag: "fix",
+    tag: "admin",
     title: {"de": "Sichere Weiterleitung nach Anmeldung", "en": "Safer login redirects"},
     description: {"de": "Links nach der Anmeldung akzeptieren nur Pfade auf dieser Website.", "en": "Login return links now accept paths on this site only."},
   },
@@ -1116,7 +1120,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   {
     date: "2026-09-21",
-    tag: "improvement",
+    tag: "admin",
     title: {
       de: "Empfehlungshinweise ausblendbar",
       en: "Referral prompts can be dismissed",
@@ -1139,17 +1143,17 @@ export const CHANGELOG: ChangelogEntry[] = [
     },
   },
   {
-    date: "2026-09-20",
-    tag: "feature",
-    title: {
-      de: "Neu: Dein Verlauf (Pro)",
-      en: "New: Your History (Pro)",
-    },
-    description: {
-      de: "Jede gespeicherte Prüfungssimulation bleibt jetzt dauerhaft erhalten: öffne sie jederzeit wieder, Frage für Frage, mit deiner Auswahl, der richtigen Antwort und der Erklärung dazu. Außerdem findest du unter „Verlauf“ deinen kompletten Fragen-Verlauf (filterbar nach Prüfung, Fachgebiet, richtig/falsch und Zeitraum) und eine Übersicht über deinen Fortschritt. Verlauf ist ein Pro-Feature; gespeicherte Prüfungen bleiben auch für dich gespeichert, wenn du später upgradest.",
-      en: "Every exam simulation you submit is now saved for good: reopen it any time, question by question, with your answer, the correct answer and the explanation. The question history tab lets you browse every question you ever answered, filterable by exam, specialty, correct/wrong and time window, alongside a progress overview. History is a Pro feature; your attempts keep saving either way.",
-    },
+  "date": "2026-09-20",
+  "tag": "feature",
+  "title": {
+    "de": "Verlauf Ihrer Prüfungssimulationen",
+    "en": "History of your exam simulations"
   },
+  "description": {
+    "de": "Jede eingereichte Prüfungssimulation wird dauerhaft gespeichert. Mit Pro öffnen Sie sie jederzeit Frage für Frage wieder, mit der richtigen Antwort und der Erklärung, und durchsuchen alle beantworteten Fragen nach Prüfung, Fachgebiet, richtig oder falsch und Zeitraum.",
+    "en": "Every exam simulation you submit is saved for good. With Pro you can reopen it question by question with the correct answer and the explanation, and browse every question you answered by exam, subject, right or wrong and time window."
+  }
+},
   {
     date: "2026-09-20",
     tag: "admin",
@@ -1224,7 +1228,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   {
     date: "2026-07-11",
-    tag: "improvement",
+    tag: "admin",
     title: {
       de: "Für freigeschaltete Konten: Empfehlungen zählen nach dem Pro-Trial",
       en: "For eligible accounts: referrals count after the Pro trial",
@@ -1236,7 +1240,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   {
     date: "2026-07-11",
-    tag: "feature",
+    tag: "admin",
     title: {
       de: "Empfehlungs-Bonus für ausgewählte Konten",
       en: "Referral reward for selected accounts",
@@ -1247,17 +1251,17 @@ export const CHANGELOG: ChangelogEntry[] = [
     },
   },
   {
-    date: "2026-07-09",
-    tag: "improvement",
-    title: {
-      de: "Pro-Testphase: 7 Tage gratis, Karte hinterlegen",
-      en: "Pro trial: 7 days free, card on file",
-    },
-    description: {
-      de: "Die Pro-Testphase läuft wieder über Whop mit hinterlegter Karte: heute 0 €, 7 Tage voller Pro-Zugang, danach 19 €/Monat, jederzeit in der Testphase kündbar. Alles klar angeschrieben, keine versteckte Verlängerung. Die Karte hält die Testphase ernst und deckt die echten KI-Kosten von Pro.",
-      en: "The Pro trial runs through Whop with a card on file again: €0 today, 7 days of full Pro, then €19/month, cancel anytime during the trial. All stated up front, no hidden renewal. The card keeps the trial serious and covers Pro's real AI costs.",
-    },
+  "date": "2026-07-09",
+  "tag": "improvement",
+  "title": {
+    "de": "Pro-Testphase: 7 Tage gratis mit hinterlegter Karte",
+    "en": "Pro trial: 7 days free with a card on file"
   },
+  "description": {
+    "de": "Sie testen Pro 7 Tage lang ohne Kosten. Sie hinterlegen eine Karte, heute werden 0 € belastet. Danach kostet Pro 19 € pro Monat, außer Sie kündigen während der Testwoche. Alle Bedingungen stehen vorab da, ohne versteckte Verlängerung.",
+    "en": "Try Pro for 7 days at no cost. You add a card and are charged 0 € today. After that Pro costs 19 € per month unless you cancel during the trial week. All terms are shown up front, with no hidden renewal."
+  }
+},
   {
     date: "2026-07-05",
     tag: "admin",
@@ -1404,7 +1408,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   {
     date: "2026-07-03",
-    tag: "feature",
+    tag: "admin",
     title: {
       de: "Fristerinnerung: verpass keine Anmeldung mehr",
       en: "Deadline reminders: never miss a registration",
@@ -1451,17 +1455,17 @@ export const CHANGELOG: ChangelogEntry[] = [
     },
   },
   {
-    date: "2026-07-01",
-    tag: "improvement",
-    title: {
-      de: "Hinweis auf die Gratis-Testwoche im Dashboard",
-      en: "Free trial reminder on the dashboard",
-    },
-    description: {
-      de: "Kostenlose Nutzer sehen beim Öffnen der App jetzt einen kurzen, schließbaren Hinweis auf die 7-tägige Pro-Testwoche direkt im Dashboard. Einmal geschlossen, erscheint er nicht erneut.",
-      en: "Free users now see a short, dismissible reminder about the 7-day Pro trial right on the dashboard when they open the app. Once closed, it won't reappear.",
-    },
+  "date": "2026-07-01",
+  "tag": "improvement",
+  "title": {
+    "de": "Hinweis auf die Gratis-Testwoche auf der Startseite",
+    "en": "Free trial reminder on Home"
   },
+  "description": {
+    "de": "Kostenlose Nutzer sehen auf der Startseite einen kurzen, schließbaren Hinweis auf die 7-tägige Pro-Testwoche.",
+    "en": "Free users see a short, dismissible reminder about the 7-day Pro trial on Home."
+  }
+},
   {
     date: "2026-07-01",
     tag: "feature",
@@ -1475,17 +1479,17 @@ export const CHANGELOG: ChangelogEntry[] = [
     },
   },
   {
-    date: "2026-06-30",
-    tag: "feature",
-    title: {
-      de: "Neu: Lernkarten-Notizen + deine Bibliothek",
-      en: "New: flash-notes + your Library",
-    },
-    description: {
-      de: "Mach mit einem Tipp aus jeder Frage, jeder Notiz oder jeder KI-Erklärung eine Lernkarte. Du kannst die Sprache wählen und einen Fokus angeben, und deine Antwort fließt mit ein, damit die Karte genau deine Lücken trifft. Alle Karten leben in deiner neuen Bibliothek (jetzt der mittlere Knopf in der unteren Leiste) und lassen sich dort durchsuchen, sortieren und mit Spaced Repetition wiederholen. Jede Karte zeigt auch ihre Quellen (Ursprungsfrage, KI-Nachricht, Bild).",
-      en: "Turn any question, note, or AI explanation into a flash-note with one tap. Choose the language, add a focus, and your own answer is factored in so the card targets your gaps. Every card lives in your new Library (now the center button in the bottom bar), where you can search, sort, and review it with spaced repetition. Each card also shows its sources (the question, the AI message, the image).",
-    },
+  "date": "2026-06-30",
+  "tag": "feature",
+  "title": {
+    "de": "Neu: Lernkarten-Notizen und Ihre Bibliothek",
+    "en": "New: flash-notes and your Library"
   },
+  "description": {
+    "de": "Mit einem Tipp machen Sie aus jeder Frage, jeder Notiz oder jeder KI-Erklärung eine Lernkarte. Sie wählen die Sprache und einen Fokus, und Ihre eigene Antwort fließt mit ein, damit die Karte Ihre Lücken trifft. Alle Karten liegen in Ihrer Bibliothek, wo Sie sie durchsuchen, sortieren und mit Spaced Repetition wiederholen. Jede Karte zeigt auch ihre Quellen (Ursprungsfrage, KI-Nachricht, Bild).",
+    "en": "Turn any question, note or AI explanation into a flash-note with one tap. Choose the language, add a focus, and your own answer is factored in so the card targets your gaps. Every card lives in your Library, where you can search, sort and review it with spaced repetition. Each card also shows its sources (the question, the AI message, the image)."
+  }
+},
   {
     date: "2026-06-30",
     tag: "admin",
@@ -1500,7 +1504,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   {
     date: "2026-06-27",
-    tag: "improvement",
+    tag: "admin",
     title: {
       de: "Aufgeräumte untere Navigation am Handy",
       en: "Tidier bottom navigation on mobile",
@@ -1523,29 +1527,29 @@ export const CHANGELOG: ChangelogEntry[] = [
     },
   },
   {
-    date: "2026-06-26",
-    tag: "improvement",
-    title: {
-      de: "Aufgeräumte Frageansicht, mehrere Notizen, KI-Erklärung in deiner Sprache und eine echte Prüfungssimulation",
-      en: "Tidier question view, multiple notes, AI explanation in your language, and a true exam simulation",
-    },
-    description: {
-      de: "Die Frageansicht hat jetzt nur noch eine Stelle pro Aktion: Erklärung, KI-Erklärung, Notizen und Übersetzen sitzen in den Reitern, Merken und Melden in der Leiste, keine doppelten oder toten Knöpfe mehr (auch am Handy). Du kannst jetzt mehrere Notizen pro Frage anlegen, und sie sind überall synchron. Die Übersetzung funktioniert wieder, und die KI-Erklärung erscheint in deiner Oberflächensprache (Englisch, wenn du Englisch eingestellt hast). Die Prüfungssimulation bildet jetzt die echte Prüfung ab (volle Fragenanzahl und Verteilung), und die Fragenübersicht überlappt nicht mehr. Gemerkte Fragen werden im Fortschritt jetzt richtig angezeigt, und die Karteikarten sind am Handy über die untere Navigation erreichbar.",
-      en: "The question view now has one home per action: Explanation, AI Explanation, Notes and Translate live in the tabs, Bookmark and Report in the bar, with no duplicate or dead buttons (on mobile too). You can now keep multiple notes per question, and they stay in sync everywhere. Translation works again, and the AI explanation appears in your interface language (English when you have English selected). The exam simulation now reflects the real exam (full question count and distribution), and the question navigator no longer overlaps. Bookmarked questions now show up correctly in Progress, and Flashcards are reachable on mobile via the bottom navigation.",
-    },
+  "date": "2026-06-26",
+  "tag": "improvement",
+  "title": {
+    "de": "Aufgeräumte Frageansicht, mehrere Notizen, KI-Erklärung in Ihrer Sprache und eine echte Prüfungssimulation",
+    "en": "Tidier question view, multiple notes, AI explanation in your language, and a true exam simulation"
   },
+  "description": {
+    "de": "Die Frageansicht hat jetzt nur noch eine Stelle pro Aktion: Erklärung, KI-Erklärung, Notizen und Übersetzen sitzen in den Reitern, Merken und Melden in der Leiste, ohne doppelte oder tote Knöpfe (auch am Handy). Sie können mehrere Notizen pro Frage anlegen, und sie sind überall synchron. Die Übersetzung funktioniert wieder, und die KI-Erklärung erscheint in Ihrer Oberflächensprache. Die Prüfungssimulation bildet die echte Prüfung ab (volle Fragenanzahl und Verteilung), und die Fragenübersicht überlappt nicht mehr. Gemerkte Fragen werden im Fortschritt richtig angezeigt.",
+    "en": "The question view now has one home per action: Explanation, AI Explanation, Notes and Translate live in the tabs, Bookmark and Report in the bar, with no duplicate or dead buttons (on mobile too). You can keep multiple notes per question, and they stay in sync everywhere. Translation works again, and the AI explanation appears in your interface language. The exam simulation reflects the real exam (full question count and distribution), and the question navigator no longer overlaps. Bookmarked questions show up correctly in Progress."
+  }
+},
   {
-    date: "2026-06-26",
-    tag: "improvement",
-    title: {
-      de: "Lesbarer Dunkelmodus, neue Ladeanimation und ein aufgeräumter Hilfe-Button",
-      en: "Readable dark mode, a new loading animation, and a tidier help button",
-    },
-    description: {
-      de: "Der Dunkelmodus ist jetzt durchgehend in unserem Oxford-Blau gehalten, mit klar lesbarem Text auf jeder Karte (kein Dunkel-auf-Dunkel mehr). Beim Laden begrüßt dich neu eine ruhige EKG-Herzschlag-Animation mit dem MedPrüf-Logo. Und die zwei schwebenden Buttons unten rechts sind am Handy zu einem einzigen Button zusammengefasst, der Chat und Feedback aufklappt, sauber über der unteren Navigation.",
-      en: "Dark mode is now consistently in our Oxford blue with clearly readable text on every card (no more dark-on-dark). A calm ECG heartbeat animation with the MedPrüf logo now greets you while pages load. And on mobile the two floating buttons in the bottom-right are merged into one button that fans up Chat and Feedback, cleanly above the bottom navigation.",
-    },
+  "date": "2026-06-26",
+  "tag": "improvement",
+  "title": {
+    "de": "Lesbarer Dunkelmodus und eine neue Ladeanimation",
+    "en": "Readable dark mode and a new loading animation"
   },
+  "description": {
+    "de": "Der Dunkelmodus ist durchgehend in unserem Oxford-Blau gehalten, mit klar lesbarem Text auf jeder Karte (kein Dunkel-auf-Dunkel mehr). Beim Laden begrüßt Sie eine ruhige EKG-Herzschlag-Animation mit dem MedPrüf-Logo.",
+    "en": "Dark mode is consistently in our Oxford blue with clearly readable text on every card (no more dark-on-dark). A calm ECG heartbeat animation with the MedPrüf logo greets you while pages load."
+  }
+},
   {
     date: "2026-06-26",
     tag: "feature",
@@ -1571,20 +1575,20 @@ export const CHANGELOG: ChangelogEntry[] = [
     },
   },
   {
-    date: "2026-06-26",
-    tag: "improvement",
-    title: {
-      de: "Anmeldeseite: E-Mail als primäre Option",
-      en: "Login page: email as primary option",
-    },
-    description: {
-      de: "Die Anmeldung per E-Mail und Passwort ist jetzt die primäre Option auf der Anmeldeseite. Telegram-Anmeldung bleibt vollständig verfügbar, ist aber als sekundäre Option dargestellt. Die Fragenanzahl wird jetzt aus der zentralen content-truth.ts bezogen.",
-      en: "Email and password sign-in is now the primary option on the login page. Telegram login remains fully available but is shown as a secondary option. The question count is now sourced from the central content-truth.ts.",
-    },
+  "date": "2026-06-26",
+  "tag": "improvement",
+  "title": {
+    "de": "Anmeldeseite: E-Mail als primäre Option",
+    "en": "Login page: email as primary option"
   },
+  "description": {
+    "de": "Die Anmeldung mit E-Mail und Passwort ist jetzt die erste Option auf der Anmeldeseite. Die Telegram-Anmeldung bleibt vollständig verfügbar und erscheint als zweite Option.",
+    "en": "Email and password sign-in is now the primary option on the login page. Telegram sign-in remains fully available as a secondary option."
+  }
+},
   {
     date: "2026-06-25",
-    tag: "feature",
+    tag: "admin",
     title: {
       de: "Österreichische Ressourcenbibliothek",
       en: "Austrian Resource Library",
@@ -1667,17 +1671,17 @@ export const CHANGELOG: ChangelogEntry[] = [
     },
   },
   {
-    date: "2026-06-20",
-    tag: "feature",
-    title: {
-      de: "Neuer Prüfungskalender, immer aktuell",
-      en: "New exam calendar, always current",
-    },
-    description: {
-      de: "Auf der Startseite und der Preisseite gibt es jetzt einen Prüfungskalender mit den nächsten Terminen: Kenntnisprüfung Wien am 28. September 2026 (Anmeldeschluss 28. Juli) und der nationale Stichprobentest (KMP) am 23. September 2026 in Graz (Anmeldeschluss 26. August). Die Pharmakologie-Prüfung hat keinen fixen Jahrestermin, sie folgt den Semesterwochen deiner Universität und wird entsprechend angezeigt. Der Kalender pflegt sich selbst: vergangene Termine fallen automatisch heraus, sobald sie vorbei sind, sodass die Daten immer stimmen.",
-      en: "The home page and the pricing page now show an exam calendar with the next dates: Kenntnisprüfung Vienna on 28 September 2026 (registration closes 28 July) and the national Stichprobentest (KMP) on 23 September 2026 in Graz (registration closes 26 August). The Pharmakologie exam has no fixed annual date, it follows your university's semester weeks and is shown that way. The calendar maintains itself: past dates drop off automatically once they pass, so the dates are always correct.",
-    },
+  "date": "2026-06-20",
+  "tag": "feature",
+  "title": {
+    "de": "Prüfungskalender mit den nächsten Terminen",
+    "en": "Exam calendar with the next dates"
   },
+  "description": {
+    "de": "Ein Prüfungskalender zeigt die nächsten Termine und Anmeldefristen für die Kenntnisprüfung Wien und den Stichprobentest. Vergangene Termine verschwinden automatisch.",
+    "en": "An exam calendar shows the next dates and registration deadlines for the Kenntnisprüfung Vienna and the Stichprobentest. Past dates drop off automatically."
+  }
+},
   {
     date: "2026-06-20",
     tag: "improvement",
@@ -1787,17 +1791,17 @@ export const CHANGELOG: ChangelogEntry[] = [
     },
   },
   {
-    date: "2026-04-26",
-    tag: "fix",
-    title: {
-      de: "Telegram-Bot antwortet jetzt auf /start, plus 9 UX-Fixes",
-      en: "Telegram bot now replies to /start, plus 9 UX fixes",
-    },
-    description: {
-      de: "Der Telegram-Bot hat auf einen leeren /start-Befehl bisher gar nicht reagiert: Nutzer sahen nur Stille. Jetzt antwortet er sofort mit einer Willkommensnachricht und zwei Buttons: „MedPrüf öffnen & anmelden\" und „Mini App öffnen\". Außerdem: Der Bot antwortet ab sofort in der Sprache, die du in der App verwendest (DE/EN), nicht mehr immer auf Englisch. Das PWA-Installationsbanner überlagert den Seiteninhalt nicht mehr, es sitzt jetzt als schmale Leiste oben. Der Feedback-Button überlappt nicht mehr die untere Navigation auf Mobilgeräten. Der \"Bot aktivieren\"-Banner wird innerhalb der Telegram-App selbst nicht mehr angezeigt. Der Preis in der Beschreibung wurde auf €79 für 3 Monate korrigiert (von fälschlich €19). Weitere kleinere Verbesserungen.",
-      en: "The Telegram bot was completely silent when you sent a bare /start command: users saw nothing. It now replies immediately with a welcome message and two buttons: \"Open MedPrüf & sign in\" and \"Open Mini App\". Also: the bot now replies in the language you're using in the app (DE/EN) instead of always defaulting to English. The PWA install banner no longer overlaps page content; it's now a slim bar pinned to the top. The feedback button no longer overlaps the bottom nav on mobile. The \"Activate bot\" banner is no longer shown when you're already inside the Telegram app. The price in the description was corrected to €79 for 3 months (was incorrectly €19). Plus other minor polish.",
-    },
+  "date": "2026-04-26",
+  "tag": "fix",
+  "title": {
+    "de": "Telegram-Bot antwortet auf /start, plus Verbesserungen",
+    "en": "Telegram bot replies to /start, plus fixes"
   },
+  "description": {
+    "de": "Der Telegram-Bot antwortet auf /start jetzt sofort mit einer Begrüßung und den Schaltflächen zum Öffnen von MedPrüf und der Mini-App, in der Sprache, die Sie in der App nutzen. Das Banner zur App-Installation verdeckt keine Inhalte mehr, und der Feedback-Button überlappt die untere Navigation am Handy nicht mehr.",
+    "en": "The Telegram bot now replies to /start right away with a welcome and buttons to open MedPrüf and the Mini App, in the language you use in the app. The app install banner no longer covers content, and the feedback button no longer overlaps the bottom navigation on mobile."
+  }
+},
   {
     date: "2026-04-24",
     tag: "admin",
@@ -1872,7 +1876,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   {
     date: "2026-04-23",
-    tag: "improvement",
+    tag: "admin",
     title: {
       de: "Startseite: Premium-Redesign",
       en: "Dashboard: premium redesign",
@@ -1883,17 +1887,17 @@ export const CHANGELOG: ChangelogEntry[] = [
     },
   },
   {
-    date: "2026-04-23",
-    tag: "improvement",
-    title: {
-      de: "Landing, Preise & FAQ: Premium-Politur",
-      en: "Landing, Pricing & FAQ: premium polish",
-    },
-    description: {
-      de: "Öffentliche Flächen komplett überarbeitet. Landing: neues Mobile-Hamburger-Menü, Hero-CTAs stapeln sich jetzt sauber auf schmalen Screens, sichtbare Zahlenreihe (10.992 Fragen · 3 Prüfungen · 7 Sprachen · 1.806 Mehrfachantworten) schrumpft nicht mehr zusammen. Pricing: Mobile-Reihenfolge priorisiert 6 Monate („Beliebt\") vor 3/12/Monatlich, ruhigere Referral- und Pass-Until-You-Pass-Blöcke unter den Tarifkarten, Warteliste-Dialog in klar „du\"-freundlicher Tonalität. FAQ: sticky Inhaltsverzeichnis links am Desktop, aufklappbar am Handy, Info-Callouts für harte Regeln (max. 2 Zyklen, kein SEPA), „Zurück zu den Preisen\"-CTA am Ende der relevantesten Antworten.",
-      en: "Public-facing surfaces re-polished end-to-end. Landing: new mobile hamburger menu, hero CTAs stack cleanly on narrow screens, the stats strip (10,992 questions · 3 exam types · 7 languages · 1,806 multi-correct) now renders coherently on every viewport. Pricing: mobile tier order prioritises 6 months (\"Popular\") ahead of 3/12/monthly, referral and Pass-Until-You-Pass blocks subordinate visually to the tier cards above them, waitlist dialog rewritten in \"du\"-friendly tone. FAQ: sticky TOC on desktop, collapsible TOC on mobile, info callouts for hard constraints (max 2 cycles, no SEPA), \"Back to pricing\" CTA at the end of the highest-intent answers.",
-    },
+  "date": "2026-04-23",
+  "tag": "improvement",
+  "title": {
+    "de": "Startseite, Preise und FAQ überarbeitet",
+    "en": "Landing, pricing and FAQ polished"
   },
+  "description": {
+    "de": "Die Startseite hat ein Menü für das Handy und Schaltflächen, die auf schmalen Bildschirmen sauber untereinander stehen. Die Preisseite ist auf dem Handy übersichtlicher. Die FAQ hat ein Inhaltsverzeichnis, das am Computer mitläuft und am Handy einklappbar ist.",
+    "en": "The landing page has a mobile menu and buttons that stack cleanly on narrow screens. The pricing page is easier to scan on mobile. The FAQ has a table of contents that stays visible on desktop and collapses on mobile."
+  }
+},
   {
     date: "2026-04-23",
     tag: "admin",
@@ -1908,7 +1912,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   {
     date: "2026-04-23",
-    tag: "feature",
+    tag: "admin",
     title: {
       de: "Kostenlose Stufe: 150 Fragen pro Prüfung",
       en: "Free tier: 150 questions per exam",
@@ -2123,17 +2127,17 @@ export const CHANGELOG: ChangelogEntry[] = [
     },
   },
   {
-    date: "2026-04-18",
-    tag: "improvement",
-    title: {
-      de: "Alle zwischengespeicherten KI-Erklärungen im neuen strikten Format neu generiert",
-      en: "All cached AI explanations regenerated in the new strict format",
-    },
-    description: {
-      de: "Seit 17.04. läuft ein neuer, strikter Prompt für die KI-Erklärungen: TL;DR → Begründung der richtigen Antwort → Distraktor-Analyse → Leitlinien-Referenzen (ERC 2021, ESC, ÖDG, Österreichischer Impfplan). Ältere Erklärungen mit dem alten, unstrukturierten Format wurden im Hintergrund aktualisiert, damit alle Nutzer (auch kostenlose) sofort die klarere Fassung sehen, ohne „Neu generieren\u201C zu klicken. Bewertungen wurden zurückgesetzt, damit die neuen Erklärungen auf ihren eigenen Beinen stehen.",
-      en: "Since Apr 17, a new strict prompt powers AI explanations: TL;DR → correct-answer reasoning → distractor-by-distractor breakdown → guideline citations (ERC 2021, ESC, ÖDG, Austrian immunization schedule). Older cached explanations from the pre-Apr-17 loose prompt were regenerated in the background so every user (including free) sees the crisper version immediately, no need to click \"Regenerate.\" Ratings were reset so the new explanations are judged on their own merits.",
-    },
+  "date": "2026-04-18",
+  "tag": "improvement",
+  "title": {
+    "de": "KI-Erklärungen im neuen Format für alle",
+    "en": "AI explanations in the new format for everyone"
   },
+  "description": {
+    "de": "Ältere KI-Erklärungen wurden im neuen, klareren Format neu erstellt: zuerst die Kurzfassung, dann die Begründung der richtigen Antwort, jede falsche Option einzeln und passende Leitlinien. Alle, auch im kostenlosen Zugang, sehen sofort die neue Version.",
+    "en": "Older AI explanations were rebuilt in the new, clearer format: a short summary first, then why the correct answer is right, each wrong option on its own, and relevant guidelines. Everyone, free plan included, sees the new version right away."
+  }
+},
   {
     date: "2026-04-18",
     tag: "admin",
@@ -2159,17 +2163,17 @@ export const CHANGELOG: ChangelogEntry[] = [
     },
   },
   {
-    date: "2026-04-18",
-    tag: "feature",
-    title: {
-      de: "Übersetzung der Erklärungen in deine Sprache",
-      en: "Translate explanations into your language",
-    },
-    description: {
-      de: "Neuer „🌐 In meiner Sprache\u201C-Button unter jeder Erklärung: übersetzt den Text in Russisch, Arabisch, Englisch, Französisch, Türkisch, Ukrainisch oder Serbisch (medizinische Fachbegriffe, Medikamentennamen und Leitlinien-Bezeichnungen wie ERC 2021, ESC, ÖDG bleiben im Original). Übersetzungen werden einmalig erstellt und dann für alle Nutzer:innen gecacht. Free-Tier: 5 Übersetzungen/Tag. Pro: unbegrenzt.",
-      en: "New \"🌐 In my language\" button beneath every explanation: translates the text into Russian, Arabic, English, French, Turkish, Ukrainian, or Serbian (medical terminology, drug names, and guideline references like ERC 2021, ESC, ÖDG stay in the original). Translations are generated once and then cached for everyone. Free tier: 5 translations/day. Pro: unlimited.",
-    },
+  "date": "2026-04-18",
+  "tag": "feature",
+  "title": {
+    "de": "Übersetzung der Erklärungen in Ihre Sprache",
+    "en": "Translate explanations into your language"
   },
+  "description": {
+    "de": "Erklärungen lassen sich ins Russische, Arabische, Englische, Französische, Türkische, Ukrainische oder Serbische übersetzen. Medizinische Fachbegriffe, Medikamentennamen und Leitlinien-Bezeichnungen bleiben im Original. Übersetzungen werden einmal erstellt und dann für alle gespeichert. Kostenloser Zugang: 5 Übersetzungen pro Tag. Pro: unbegrenzt.",
+    "en": "Explanations can be translated into Russian, Arabic, English, French, Turkish, Ukrainian or Serbian. Medical terms, drug names and guideline references stay in the original. Translations are created once and then saved for everyone. Free plan: 5 translations per day. Pro: unlimited."
+  }
+},
   {
     date: "2026-04-18",
     tag: "admin",
@@ -2232,7 +2236,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   {
     date: "2026-04-17",
-    tag: "feature",
+    tag: "admin",
     title: {
       de: "Preisseite: Free, Pro und Gruppentarife transparent",
       en: "Pricing page: Free, Pro, and Group plans, transparent",
@@ -2269,7 +2273,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   // ═══ 2026-04-15 (overnight audit) ═══
   {
     date: "2026-04-15",
-    tag: "improvement",
+    tag: "admin",
     title: {
       de: "Sicherheits-Generalüberholung: Admin-Bereich geschützt, neue Zugriffskontrollen",
       en: "Security overhaul: admin panel protected, new access controls",
@@ -2281,7 +2285,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   {
     date: "2026-04-15",
-    tag: "improvement",
+    tag: "admin",
     title: {
       de: "Cookie-Banner aktiv: GA4 und Clarity nur nach Zustimmung",
       en: "Cookie banner active: GA4 and Clarity only after consent",
@@ -2293,7 +2297,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   {
     date: "2026-04-15",
-    tag: "fix",
+    tag: "admin",
     title: {
       de: "Alle bisherigen Fragen-Meldungen wurden anonym gespeichert: korrigiert",
       en: "All previous question reports were stored anonymously: fixed",
@@ -2365,7 +2369,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   {
     date: "2026-04-15",
-    tag: "improvement",
+    tag: "admin",
     title: {
       de: "Alle Fragenzahlen im Produkt auf 10.992 aktualisiert",
       en: "All question counts across the product updated to 10,992",
@@ -2425,17 +2429,17 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   // ═══ 2026-04-14 ═══
   {
-    date: "2026-04-14",
-    tag: "improvement",
-    title: {
-      de: "Automatische Updates: Neue Versionen ohne Neuladen",
-      en: "Automatic updates: new versions without manual reload",
-    },
-    description: {
-      de: 'Die App erkennt jetzt automatisch, wenn eine neue Version bereitsteht. Du siehst eine "Neue Version verfügbar"-Anzeige und kannst mit einem Klick neu laden. Der Cache wird bei jedem Deploy automatisch geleert: keine hängenden alten Versionen mehr.',
-      en: `The app now automatically detects when a new version is available. You'll see a "New version available" prompt and can reload with one click. The cache is purged automatically on every deploy: no more stale old versions.`,
-    },
+  "date": "2026-04-14",
+  "tag": "improvement",
+  "title": {
+    "de": "Automatische Updates: neue Versionen ohne manuelles Neuladen",
+    "en": "Automatic updates: new versions without manual reload"
   },
+  "description": {
+    "de": "Die App erkennt jetzt automatisch, wenn eine neue Version verfügbar ist. Sie sehen einen Hinweis und laden mit einem Klick neu, statt mit einer veralteten Version weiterzuarbeiten.",
+    "en": "The app now detects automatically when a new version is available. You see a notice and reload with one click instead of continuing on an outdated version."
+  }
+},
   {
     date: "2026-04-14",
     tag: "admin",
@@ -2474,7 +2478,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   {
     date: "2026-04-14",
-    tag: "fix",
+    tag: "admin",
     title: {
       de: "Service Worker: neue Deploys werden sofort übernommen",
       en: "Service worker: new deploys take effect immediately",
@@ -2486,17 +2490,17 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   // ═══ 2026-04-12 ═══
   {
-    date: "2026-04-12",
-    tag: "feature",
-    title: {
-      de: "Neue Prüfung: KMP Innsbruck",
-      en: "New exam: KMP Innsbruck",
-    },
-    description: {
-      de: "Die Vorbereitung für Innsbruck ist jetzt verfügbar. Wählen Sie im Prüfungs-Umschalter in der Seitenleiste zwischen Kenntnisprüfung Wien, KMP Innsbruck und Pharmakologie.",
-      en: "Preparation for Innsbruck is now available. Use the exam switcher in the sidebar to choose between Vienna Kenntnisprüfung, KMP Innsbruck, and Pharmacology.",
-    },
+  "date": "2026-04-12",
+  "tag": "feature",
+  "title": {
+    "de": "Neue Prüfung: Stichprobentest (Innsbruck)",
+    "en": "New exam: Stichprobentest (Innsbruck)"
   },
+  "description": {
+    "de": "Die Vorbereitung auf den Stichprobentest (Innsbruck) ist jetzt verfügbar. Sie wählen ihn in der Prüfungsauswahl.",
+    "en": "Preparation for the Stichprobentest (Innsbruck) is now available. Choose it in the exam picker."
+  }
+},
   {
     date: "2026-04-12",
     tag: "feature",
@@ -2595,14 +2599,17 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   // ═══ 2026-04-11 ═══
   {
-    date: "2026-04-11",
-    tag: "feature",
-    title: { de: "Landing-Page komplett überarbeitet", en: "Landing page rewrite" },
-    description: {
-      de: "Neue, launch-bereite Startseite mit Hero, Funktionsübersicht, Beispielfrage zum Ausprobieren, transparenter Preisgestaltung, FAQ und Teaser für kommende Prüfungen (Approbation Deutschland).",
-      en: "New launch-ready landing page with hero, feature overview, interactive sample question, transparent pricing, FAQ, and a teaser for upcoming exams (Approbation Germany).",
-    },
+  "date": "2026-04-11",
+  "tag": "feature",
+  "title": {
+    "de": "Startseite komplett überarbeitet",
+    "en": "Landing page rewrite"
   },
+  "description": {
+    "de": "Neue Startseite mit Überblick über die Funktionen, einer interaktiven Beispielfrage, transparenten Preisen und FAQ.",
+    "en": "New landing page with a feature overview, an interactive sample question, transparent pricing and an FAQ."
+  }
+},
   {
     date: "2026-04-11",
     tag: "admin",
@@ -2750,7 +2757,7 @@ export const CHANGELOG: ChangelogEntry[] = [
   },
   {
     date: "2026-04-10",
-    tag: "feature",
+    tag: "admin",
     title: { de: "Zeitübung", en: "Timed Practice" },
     description: {
       de: "Neue Zeitübung: 10, 20 oder 30 Fragen mit Zeitlimit und Zusammenfassung am Ende.",
