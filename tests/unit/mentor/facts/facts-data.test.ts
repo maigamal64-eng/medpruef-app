@@ -187,7 +187,8 @@ describe("mentor facts base: honesty rules", () => {
     for (const f of facts) {
       expect(f.source_url).toMatch(/^https:\/\//);
       expect(f.source_label.length).toBeGreaterThan(5);
-      expect(f.read_on).toBe("2026-10-10");
+      // first read 2026-10-10; weekly rows move forward on each official re-read
+      expect(f.read_on >= "2026-10-10" && /^\d{4}-\d{2}-\d{2}$/.test(f.read_on), `${f.id} read_on ${f.read_on}`).toBe(true);
       expect(f.text_de.length).toBeGreaterThan(40);
       expect(f.text_en.length).toBeGreaterThan(40);
       expect(f.aliases.length).toBeGreaterThan(0);
@@ -338,6 +339,15 @@ describe("mentor facts base: twins stay in step", () => {
     expect(find("sip4a.pass_rule.sixty-percent")!.text_en).toMatch(/each block/);
     expect(find("sip5a.pass_rule.sixty-percent")!.text_en).toMatch(/each subject/);
     expect(find("sip4a.pass_rule.sixty-percent")!.text_en).not.toMatch(/subject/);
+  });
+
+  it("the SIP pass rules state the partial repeat as the Beurteilungskriterien PDF does (up to two)", () => {
+    for (const id of ["sip4a.pass_rule.sixty-percent", "sip5a.pass_rule.sixty-percent"]) {
+      const f = find(id)!;
+      expect(f.text_de, id).toMatch(/bis zu zwei nicht bestandene/);
+      expect(f.text_en, id).toMatch(/up to two failed/);
+      expect(`${f.text_de} ${f.text_en}`, id).not.toMatch(/Hälfte|fewer than half|1 oder 2|1 or 2/);
+    }
   });
 
   it("Rezeptierkunde and Gerichtsmedizin have the same dated weeks and the same always-prescribed rule", () => {

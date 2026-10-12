@@ -24,6 +24,18 @@ export interface ChangelogEntry {
 export const CHANGELOG: ChangelogEntry[] = [
 {
   "date": "2026-10-12",
+  "tag": "admin",
+  "title": {
+    "de": "Mentor-Fakten: SIP-Termine neu gelesen, Wiederholungsregel angeglichen",
+    "en": "Mentor facts: SIP dates re-read, repeat rule aligned"
+  },
+  "description": {
+    "de": "Die 18 Mentor-Fakten mit wöchentlicher Prüfung (SIP-Prüfungskalender, Rezeptierkunde und Gerichtsmedizin) wurden an den offiziellen Quellen der MedUni Wien neu gelesen; beide Quellen sind unverändert. Die SIP4a- und SIP5a-Bestehensregel nennt jetzt wie die Beurteilungskriterien bis zu zwei wiederholbare Blöcke bzw. Fächer.",
+    "en": "The 18 weekly-review mentor facts (SIP exam calendar, Rezeptierkunde and Gerichtsmedizin) were re-read against MedUni Wien's official sources; both sources are unchanged. The SIP4a and SIP5a pass rule now states up to two repeatable blocks or subjects, as the Beurteilungskriterien do."
+  }
+},
+{
+  "date": "2026-10-12",
   "tag": "improvement",
   "title": {
     "de": "Genauere Angaben zu Funktionen und SIP-Regeln",

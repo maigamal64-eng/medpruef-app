@@ -107,7 +107,7 @@
         "sip5a.pass_rule.sixty-percent"
       ],
       "relation": "overlaps",
-      "note": "Re-read 2026-10-12 from the Beurteilungskriterien PDF (sha256 e845b214...): up to two failed blocks or tertials can be repeated. The mentor rows add '(fewer than half)', which this document does not state and which does not fit SIP4a's three blocks; the mentor owner should re-read the Ausschreibung and align the mentor text."
+      "note": "Re-read 2026-10-12 from the Beurteilungskriterien PDF (sha256 e845b214...): up to two failed blocks or tertials can be repeated, otherwise the whole exam. Aligned 2026-10-12 (a-mentor-facts): the mentor rows now say 'up to two' and no longer add '(fewer than half)'. The mentor rows keep the Ausschreibung units (blocks for SIP4a, subjects for SIP5a); the page uses the PDF's 'blocks or tertials'."
     },
     "sip.attempts.limit": {
       "mentor_ids": [

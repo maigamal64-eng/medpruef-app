@@ -61,10 +61,12 @@ describe("validateAnswer: an inline marker never reaches the learner (dl-sip5a-s
   const resolve = (id: string) => L.peek(id, now);
 
   it("replay on the real facts: marker gone, both dates and the read-on date stay, nothing replaced", () => {
+    // The row's own read date (it moves on every weekly re-read of the official calendar).
+    const readOn = resolve("sip5a.dates.2027-09")!.read_on;
     const raw = [
       "@@LANG en",
       "@@BLOCK facts=sip5a.dates.2027-09",
-      "- The SIP5a sitting in autumn 2027 is on 23 September 2027 (MedUni Wien, read on 2026-10-10). It is the only SIP5a sitting listed for autumn 2027.",
+      `- The SIP5a sitting in autumn 2027 is on 23 September 2027 (MedUni Wien, read on ${readOn}). It is the only SIP5a sitting listed for autumn 2027.`,
       "- Its registration window runs from 9 August to 23 August 2027. This window is not yet open (status fact: @@BLOCK ).",
       "@@BLOCK facts=sip5a.registration.method",
       "Registration is by emailed form only, sent from your Studierenden-Mail-Account during the Anmeldefrist.",
@@ -75,7 +77,7 @@ describe("validateAnswer: an inline marker never reaches the learner (dl-sip5a-s
     expect(text).toContain("This window is not yet open.");
     expect(text).toContain("23 September 2027");
     expect(text).toContain("9 August to 23 August 2027");
-    expect(text).toContain("read on 2026-10-10");
+    expect(text).toContain(`read on ${readOn}`);
     expect(v.replaced).toBe(false);
     expect(v.citations.map((c) => c.fact_id)).toContain("sip5a.dates.2027-09");
   });
