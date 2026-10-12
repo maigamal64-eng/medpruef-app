@@ -12,7 +12,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Clock, X } from "lucide-react";
 import { getStoredSession } from "@/lib/auth";
-import { loadExamSession, remainingSeconds } from "@/lib/examSession";
+import { loadExamSession, loadPendingExams, remainingSeconds } from "@/lib/examSession";
 import { useLang } from "@/lib/i18n";
 import { te } from "@/lib/i18n-exam";
 
@@ -24,6 +24,8 @@ function read(): { left: number | null; untimed: boolean } | null {
   if (!id || id.startsWith("guest_")) return null;
   const saved = loadExamSession(id);
   if (!saved || saved.finishedAt) return null;
+  // A submitted run waits in the pending outbox until History acknowledges it; it is not running.
+  if (saved.attemptId && loadPendingExams(id).some((p) => p.attemptId === saved.attemptId)) return null;
   if (saved.untimed) return { left: null, untimed: true };
   return { left: remainingSeconds(saved.startedAt, saved.durationS), untimed: false };
 }

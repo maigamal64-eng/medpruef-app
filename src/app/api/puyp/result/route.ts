@@ -1,3 +1,4 @@
+import { checkRateLimit } from "@/lib/rate-limit";
 import { NextRequest, NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth-guard";
 import { getServiceClient } from "@/lib/supabase";
@@ -117,6 +118,11 @@ export async function POST(req: NextRequest) {
     }
 
     if (result === "fail") {
+      // Each record reads the bank completion and writes a row: bound it per learner.
+      const gate = checkRateLimit({ key: `puyp-fail:${userId}`, limit: 5, windowMs: 60 * 60_000 });
+      if (!gate.allowed) {
+        return NextResponse.json({ error: "Too many requests", retryAfter: gate.retryAfterSec }, { status: 429, headers: { "Retry-After": String(gate.retryAfterSec) } });
+      }
       return recordFailWithoutProof(sb, userId, examType as PuypExamType, attemptDate, body.idempotency_key as string);
     }
 

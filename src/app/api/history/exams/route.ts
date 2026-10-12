@@ -4,6 +4,7 @@ import * as Sentry from "@sentry/nextjs";
 import { requireUser, isPaidAccess } from "@/lib/auth-guard";
 import { filterFreeAccessibleQuestions, logFreeCapHit } from "@/lib/free-access";
 import { getServiceClient } from "@/lib/supabase";
+import { readKafPool } from "@/app/api/exam/kaf-pool/pool-read";
 import { clampDurationMs, parseAccepted, parseKafAnswers, parseSelfMarks, sanitizeExamConfig } from "@/lib/exam-history-server";
 
 export const dynamic = "force-dynamic";
@@ -137,6 +138,7 @@ export async function POST(req: NextRequest) {
   > = {};
   let correctCount = 0;
   let answers: Record<string, string[]> = {};
+  const knownIds = new Set<number>();
 
   if (config.kind === "kaf") {
     // KAF (SIM-04): Pro only and dark until KAF_TIMED_ENABLED. Every item must
@@ -148,16 +150,14 @@ export async function POST(req: NextRequest) {
     if (!isPaidAccess(guard)) {
       return NextResponse.json({ error: "Pro required", code: "PRO_REQUIRED" }, { status: 403 });
     }
-    const { data: kafRows, error: kafErr } = await sb
-      .from("kaf_items")
-      .select("question_id, accepted")
-      .in("question_id", questionIds);
-    if (kafErr) {
-      Sentry.captureException(kafErr, { tags: { route: "history/exams", step: "kaf_load" } });
-      return NextResponse.json({ error: "Grading failed" }, { status: 500 });
+    // Same filters as the learner pool: active item, active Kenntnisprüfung question.
+    const pool = await readKafPool(sb, { ids: questionIds, withKey: true });
+    if (!pool.ok) {
+      Sentry.captureException(pool.error, { tags: { route: "history/exams", step: "kaf_load" } });
+      return NextResponse.json({ error: "Grading failed" }, { status: pool.unavailable ? 503 : 500 });
     }
     const accepted = new Map<number, string[][]>();
-    for (const r of (kafRows ?? []) as { question_id: number; accepted: unknown }[]) accepted.set(r.question_id, parseAccepted(r.accepted));
+    for (const r of pool.items) accepted.set(r.question_id, parseAccepted(r.accepted));
     if (questionIds.some((id) => !accepted.get(id)?.length)) {
       return NextResponse.json({ error: "Item not in the reviewed pool" }, { status: 400 });
     }
@@ -177,9 +177,10 @@ export async function POST(req: NextRequest) {
   // Texts, not indices: /api/questions shuffles options per load, so client
   // indices are meaningless against the DB's choices order.
   const rawAnswers = (body.answers ?? {}) as Record<string, unknown>;
+  const idSet = new Set(questionIds);
   for (const [k, v] of Object.entries(rawAnswers)) {
     const qid = Number(k);
-    if (!Number.isInteger(qid) || qid <= 0) continue;
+    if (!Number.isInteger(qid) || qid <= 0 || !idSet.has(qid)) continue;
     if (!Array.isArray(v)) continue;
     const sel = v
       .map((x) => (typeof x === "string" ? x.trim().slice(0, 300) : ""))
@@ -208,6 +209,7 @@ export async function POST(req: NextRequest) {
   for (const r of (qRows ?? []) as unknown as { id: number; choices?: StoredChoice[] | null }[]) {
     qById.set(r.id, r.choices ?? []);
   }
+  for (const id of qById.keys()) knownIds.add(id);
 
   for (const qid of questionIds) {
     const choices = qById.get(qid) ?? [];
@@ -301,7 +303,8 @@ export async function POST(req: NextRequest) {
   // reviews, behind EXAM_MISSES_TO_REVIEW_ENABLED (default OFF). Only the
   // schedule table is touched; answer_history and the free cap stay as they are.
   if (process.env.EXAM_MISSES_TO_REVIEW_ENABLED === "true" && config.kind === "mcq" && isPaidAccess(guard)) {
-    const missed = questionIds.filter((qid) => !grading[String(qid)]?.is_correct);
+    // Only ids that exist in the bank: one deleted id must not fail the whole batch.
+    const missed = questionIds.filter((qid) => knownIds.has(qid) && !grading[String(qid)]?.is_correct);
     if (missed.length > 0) {
       try {
         const now = new Date().toISOString();

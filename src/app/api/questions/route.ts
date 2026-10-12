@@ -302,6 +302,12 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // a24: the any-of tag filter is only honoured on the blueprint/random paths; personal
+  // history modes run through a database function without it, so refuse the mix.
+  if (filters.tagsAny.length > 0 && ['unseen', 'wrong', 'review'].includes(filters.practiceMode)) {
+    return NextResponse.json({ error: 'tagsAny cannot be combined with this practice mode' }, { status: 400 })
+  }
+
   // Personal modes must never degrade to random questions when identity or
   // history is unavailable. resolveTier fails closed during DB/auth errors.
   if (['unseen', 'wrong', 'review'].includes(filters.practiceMode) && !authed.userId) {
