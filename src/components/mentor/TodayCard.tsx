@@ -32,6 +32,9 @@ interface TopicRow { topic?: unknown; answered?: unknown; lastCorrectSample?: un
 export function todayData(study: { activeExam?: unknown; examDate?: unknown } | null, topics: TopicRow[] | null, due: { entitled?: unknown; dueToday?: unknown } | null, now: Date = new Date()): TodayData | null {
   const exam = typeof study?.activeExam === "string" ? study.activeExam : null;
   const daysLeft = viennaDaysUntil(typeof study?.examDate === "string" ? study.examDate : null, now);
+  // Before the a12 last-correct read exists every sample is null: say nothing
+  // about topics rather than "too little data" to everyone.
+  if (topics && !topics.some((t) => typeof t.lastCorrectSample === "number")) topics = null;
   const rows = (topics ?? []).map((t) => ({
     topic: typeof t.topic === "string" ? t.topic : "",
     answered: typeof t.lastCorrectSample === "number" ? t.lastCorrectSample : 0,

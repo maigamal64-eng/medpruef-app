@@ -107,11 +107,17 @@ export async function markPurchaseGranted(db: Db, args: {
   if (purchase.payment_id && purchase.payment_id !== args.paymentId) return "unchanged";
   if (purchase.status === "refunded") return "unchanged";
   if (purchase.status === "granted" && purchase.payment_id === args.paymentId) return "unchanged";
-  const { error } = await db.from("ai_mentor_purchase").update({
+  const granted = {
     status: "granted", payment_id: args.paymentId, lot_id: args.lotId, granted_micro: args.grantedMicro,
     granted_at: new Date().toISOString(),
-  }).eq("user_id", args.userId).eq("package_id", args.packageId)
+  };
+  const write = (patch: Record<string, unknown>) => db.from("ai_mentor_purchase").update(patch)
+    .eq("user_id", args.userId).eq("package_id", args.packageId)
     .eq("checkout_session_id", args.checkoutSessionId).neq("status", "refunded");
+  // MUX-84: a grant after a failed attempt clears the stored reason, so the
+  // return screen never keeps saying "nothing was charged" after a charge.
+  let { error } = await write({ ...granted, failure_reason: null });
+  if (error && missingColumn(error)) ({ error } = await write(granted));
   if (error) throw new Error("mentor granted purchase persistence failed");
   return "updated";
 }
@@ -132,7 +138,7 @@ export async function readPurchaseFailure(db: Db, userId: string, checkoutSessio
 /** PostgREST/PostgreSQL "column does not exist": the a39 changeset is not applied yet. */
 function missingColumn(error: unknown): boolean {
   const e = error as { code?: string; message?: string } | null;
-  return !!e && (e.code === "42703" || e.code === "PGRST204" || /failure_reason/.test(e.message ?? ""));
+  return !!e && (e.code === "42703" || e.code === "PGRST204");
 }
 
 /** Only the identified purchase is released; a late event cannot clear a newer checkout. */

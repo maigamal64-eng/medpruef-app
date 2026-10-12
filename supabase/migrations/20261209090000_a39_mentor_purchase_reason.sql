@@ -6,7 +6,9 @@
 --   declined      the payment row shows failed/declined (processor-confirmed)
 --   refunded      the payment row shows a refund or dispute
 --   needs_manual  a paid payment that cannot be granted automatically
--- NULL keeps the generic "we are checking, do not pay again" copy.
+-- NULL keeps the generic "we are checking, do not pay again" copy. A later
+-- grant clears it (markPurchaseGranted), so a paid row never keeps a reason;
+-- the check only constrains the values, never blocks a grant.
 --
 -- Requires 20261022100000_mentor_ledger.sql (ai_mentor_purchase). Unapplied;
 -- until it is applied the app reads NULL and writes the status alone
@@ -26,7 +28,7 @@ BEGIN
   ) THEN
     ALTER TABLE public.ai_mentor_purchase
       ADD CONSTRAINT ai_mentor_purchase_failure_reason_check
-      CHECK (failure_reason IS NULL OR (failure_reason IN ('declined', 'refunded', 'needs_manual') AND status IN ('failed', 'refunded')));
+      CHECK (failure_reason IS NULL OR failure_reason IN ('declined', 'refunded', 'needs_manual'));
   END IF;
 END $$;
 

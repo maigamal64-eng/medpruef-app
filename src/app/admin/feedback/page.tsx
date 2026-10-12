@@ -167,7 +167,7 @@ export default function AdminFeedbackPage() {
             onClick={() => setMentorOnly((v) => !v)}
             className={`mp-btn mp-btn--sm min-h-11 shrink-0 ${mentorOnly ? "mp-btn--primary" : "mp-btn--secondary"}`}
           >
-            Mentor only
+            Mentor only (loaded rows)
           </button>
         </div>
       }

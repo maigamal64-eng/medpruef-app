@@ -1,8 +1,9 @@
 "use client";
 
 /**
- * MUX-110: the "KI-Mentor" group in Settings, shown only while the mentor is
- * available. Reads GET /api/mentor/usage; erasure uses the owner route
+ * MUX-110: the "KI-Mentor" group in Settings. Usage rows while the mentor is
+ * available; the delete row also while it rests and, with the public copy
+ * flag on, for every signed-in learner. Reads GET /api/mentor/usage; erasure uses the owner route
  * DELETE /api/mentor/chat/history behind a confirm. Answer-language server
  * sync is not part of this card (not built).
  */
@@ -14,6 +15,7 @@ import { announce } from "@/lib/announce";
 import { ConfirmAction } from "@/components/ui";
 import { useMentorAvailability } from "@/components/mentor/useMentorAvailability";
 import type { MentorUsageResponse } from "@/lib/mentor/contract";
+import { mentorPublicCopyEnabled } from "@/lib/mentor-public/flag";
 import { entryT } from "./entry-copy";
 import { formatMentorDate, mentorPackageName } from "./settings-format";
 
@@ -29,6 +31,10 @@ export default function MentorSettingsCard({ lang }: { lang: string }) {
   const [deleting, setDeleting] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
   const available = mounted && availability === "available";
+  // Erasure stays reachable after the mentor is paused or a learner leaves the
+  // beta; once the public copy promises "in Settings" (launch flag), for every
+  // signed-in learner. Usage rows need the mentor to be available.
+  const showDelete = mounted && (available || availability === "resting" || mentorPublicCopyEnabled());
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -44,7 +50,7 @@ export default function MentorSettingsCard({ lang }: { lang: string }) {
 
   useEffect(() => { if (available) void fetchUsage(); }, [available, fetchUsage]);
 
-  if (!available) return null;
+  if (!showDelete) return null;
 
   const erase = async () => {
     setDeleting(true);
@@ -72,8 +78,8 @@ export default function MentorSettingsCard({ lang }: { lang: string }) {
     <section id="ki-mentor" data-testid="settings-mentor-card" aria-labelledby="ki-mentor-title">
       <h2 id="ki-mentor-title" className="text-[11px] font-bold tracking-[0.06em] uppercase text-[var(--mp-fg-subtle)] px-1 pb-2">{entryT("settings_title", lang)}</h2>
       <div className="rounded-[var(--mp-r-card)] border border-[var(--mp-border)] bg-[var(--mp-surface-raised)] px-4 py-2">
-        {load.state === "loading" && <p role="status" className="min-h-11 flex items-center text-sm text-[var(--mp-fg-muted)]">…</p>}
-        {load.state === "error" && (
+        {available && load.state === "loading" && <p role="status" className="min-h-11 flex items-center text-sm text-[var(--mp-fg-muted)]">…</p>}
+        {available && load.state === "error" && (
           <div role="alert" className={ROW}>
             <span className="text-sm text-[var(--mp-fg)]">{entryT("settings_load_failed", lang)}</span>
             <button type="button" className="mp-btn mp-btn--secondary mp-btn--sm min-h-11" onClick={() => void fetchUsage()}>{entryT("settings_retry", lang)}</button>
@@ -112,9 +118,9 @@ export default function MentorSettingsCard({ lang }: { lang: string }) {
           </dl>
         )}
         <div className="flex flex-col py-1">
-          <Link href="/mentor?from=nav" className="inline-flex items-center gap-2 min-h-11 text-sm font-semibold text-[var(--mp-viridian)]">
+          {available && <Link href="/mentor?from=nav" className="inline-flex items-center gap-2 min-h-11 text-sm font-semibold text-[var(--mp-viridian)]">
             <Bot className="w-4 h-4" aria-hidden />{entryT("settings_open", lang)}
-          </Link>
+          </Link>}
           {manageUrl && (
             <a href={manageUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 min-h-11 text-sm font-semibold text-[var(--mp-viridian)]">
               <ExternalLink className="w-4 h-4" aria-hidden />{entryT("settings_manage", lang)}

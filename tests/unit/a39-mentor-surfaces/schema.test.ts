@@ -3,11 +3,11 @@ import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { clearPendingPurchase, readPurchaseFailure } from "../../../src/lib/mentor/credits/purchases";
+import { clearPendingPurchase, markPurchaseGranted, readPurchaseFailure } from "../../../src/lib/mentor/credits/purchases";
 
 // a39 proof on a throwaway PostgreSQL 16 cluster (test:db:a39):
 //  20261209090000 adds ai_mentor_purchase.failure_reason (declined, refunded,
-//  needs_manual, only on failed/refunded rows), is idempotent, keeps RLS
+//  needs_manual), a later grant clears it, is idempotent, keeps RLS
 //  deny-all, and the rollback drops it; purchases.ts then writes status only.
 // Opt-in only; never reads a connection URL or production env.
 const databaseEnabled = process.env.A39_DATABASE_TESTS === "1";
@@ -56,6 +56,7 @@ function table(name: string) {
     update(p: Record<string, unknown>) { patch = p; return q; },
     select(c: string) { cols = c; return q; },
     eq(k: string, v: unknown) { where.push(`${k} = ${lit(v)}`); return q; },
+    neq(k: string, v: unknown) { where.push(`${k} <> ${lit(v)}`); return q; },
     in(k: string, vs: unknown[]) { where.push(`${k} IN (${vs.map(lit).join(",")})`); return q; },
     async maybeSingle() {
       const r = sql(`SET ROLE service_role; SELECT coalesce((SELECT to_jsonb(t) FROM (SELECT ${cols} FROM public.${name} WHERE ${where.join(" AND ") || "true"} LIMIT 1) t)::text, 'null');`, true);
@@ -127,15 +128,25 @@ describe.skipIf(!databaseEnabled)("a39 purchase failure reason on isolated Postg
     sql(`INSERT INTO public.ai_mentor_purchase (checkout_session_id, user_id, package_id) VALUES ('${S3}', '${U}', 'mentor_topup');`);
     await clearPendingPurchase(db, { status: "failed", checkoutSessionId: S3 });
     expect(await readPurchaseFailure(db, U, S3)).toBeNull();
-    // The check refuses unknown reasons and reasons on a pending row.
+    // The check refuses unknown reasons.
     expect(sql(`UPDATE public.ai_mentor_purchase SET failure_reason = 'guess' WHERE checkout_session_id = '${S3}';`, true).status).not.toBe(0);
-    expect(sql(`INSERT INTO public.ai_mentor_purchase (checkout_session_id, user_id, package_id, failure_reason) VALUES ('00000000-0000-4000-8000-0000000000e4', '${U}', 'mentor_basis', 'declined');`, true).status).not.toBe(0);
     expect(rows("SELECT relrowsecurity FROM pg_class WHERE oid = 'public.ai_mentor_purchase'::regclass;")).toBe("t");
     for (const role of ["anon", "authenticated"]) expect(rows(`SELECT has_table_privilege('${role}', 'public.ai_mentor_purchase', 'SELECT');`)).toBe("f");
   });
 
+  it("a later grant of a declined purchase succeeds and clears the reason", async () => {
+    // S1 was failed before the changeset; mark it declined now, then a second card pays.
+    await clearPendingPurchase(db, { status: "failed", checkoutSessionId: S1, reason: "declined" });
+    sql(`UPDATE public.ai_mentor_purchase SET failure_reason = 'declined' WHERE checkout_session_id = '${S1}';`);
+    expect(await markPurchaseGranted(db, { userId: U, packageId: "mentor_basis", checkoutSessionId: S1, paymentId: "pay_second_card", lotId: null, grantedMicro: 750000 })).toBe("updated");
+    expect(rows(`SELECT status || ':' || coalesce(failure_reason, 'null') FROM public.ai_mentor_purchase WHERE checkout_session_id = '${S1}';`)).toBe("granted:null");
+    expect(await readPurchaseFailure(db, U, S1)).toBeNull();
+  });
+
   it("the rollback drops the column; the app falls back to status only", async () => {
     sql(down);
+    sql(`UPDATE public.ai_mentor_purchase SET status = 'failed' WHERE checkout_session_id = '${S3}';`);
+    expect(await markPurchaseGranted(db, { userId: U, packageId: "mentor_topup", checkoutSessionId: S3, paymentId: "pay_s3", lotId: null, grantedMicro: 1 })).toBe("updated");
     expect(rows("SELECT count(*) FROM information_schema.columns WHERE table_name = 'ai_mentor_purchase' AND column_name = 'failure_reason';")).toBe("0");
     expect(await readPurchaseFailure(db, U, S2)).toBeNull();
     sql(migration);

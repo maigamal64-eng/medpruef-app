@@ -141,6 +141,11 @@ describe("MUX-84 payment failure screens", () => {
     expect(updates[1].payload).toEqual({ status: "failed" });
   });
 
+  it("a CHECK violation is not mistaken for a missing column", async () => {
+    const d = db(PURCHASE, (c) => c.table === "ai_mentor_purchase" && c.op === "update" ? { error: { code: "23514", message: "violates check constraint ai_mentor_purchase_failure_reason_check" } } : undefined);
+    await expect(run(d.sb, [pay({ status: "declined" })])).rejects.toThrow("mentor purchase release failed");
+  });
+
   it("a stored failed purchase reads its reason; refunded rows say refunded", async () => {
     let d = db({ ...PURCHASE, status: "failed" }, (c) => c.table === "ai_mentor_purchase" && c.columns === "failure_reason" ? { data: { failure_reason: "needs_manual" } } : undefined);
     expect(await run(d.sb, [])).toEqual({ status: "failed", reason: "needs_manual" });
@@ -178,6 +183,8 @@ describe("MUX-68 shared weak-topic rule and MUX-51 Heute card", () => {
     expect(todayData({ activeExam: "kenntnispruefung", examDate: "2026-11-17" }, rows, { entitled: true, dueToday: 4 }, NOW)).toEqual({ exam: "kenntnispruefung", daysLeft: 36, weak: { topic: "Innere", pct: 45 }, thin: false, due: 4 });
     expect(todayData({ activeExam: "pharma", examDate: null }, rows.slice(0, 1), { entitled: false }, NOW)).toMatchObject({ thin: true, weak: null });
     expect(todayData(null, null, null, NOW)).toBeNull();
+    // Before the a12 read exists (all samples null) the card says nothing about topics.
+    expect(todayData({ activeExam: "pharma", examDate: null }, [{ topic: "X", lastCorrectSample: null, lastCorrectPct: null }], { entitled: false }, NOW)).toBeNull();
     expect(readFileSync("src/components/mentor/TodayCard.tsx", "utf8")).not.toMatch(/\/api\/mentor\//);
   });
 });

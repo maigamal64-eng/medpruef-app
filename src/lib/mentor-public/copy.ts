@@ -98,8 +98,8 @@ export const MENTOR_PRIVACY = {
     ],
   },
   erasure: {
-    de: "Sie können Ihren Mentor-Chatverlauf jederzeit im Mentor und in den Einstellungen löschen. Dabei werden auch Ihre Meldungen und gespeicherten Antwort-Stichproben entfernt; Ihr Credit-Guthaben bleibt erhalten. Wenn Sie Ihr Konto löschen lassen, trennen wir die verbleibenden Mentor-Daten von Ihrer Person (Anonymisierung), damit die Buchhaltung vollständig bleibt.",
-    en: "You can delete your mentor chat history at any time in the mentor and in Settings. This also removes your reports and stored answer samples; your credit balance stays. If you have your account deleted, we separate the remaining mentor data from your person (anonymization) so the accounting records stay complete.",
+    de: "Sie können Ihren Mentor-Chatverlauf jederzeit im Mentor und in den Einstellungen löschen. Dabei werden auch Ihre Meldungen und gespeicherten Antwort-Stichproben entfernt; Ihr Credit-Guthaben bleibt erhalten.",
+    en: "You can delete your mentor chat history at any time in the mentor and in Settings. This also removes your reports and stored answer samples; your credit balance stays.",
   },
 } as const;
 
