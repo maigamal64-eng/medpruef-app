@@ -1221,3 +1221,45 @@ export function trimUnaskedValues(v: ValidatedAnswer, t: TrimUnaskedInput): Vali
   const stillCited = new Set(blocks.flatMap((b) => b.fact_ids));
   return { ...v, blocks, citations: v.citations.filter((c) => stillCited.has(c.fact_id)) };
 }
+
+// ─── A filing university without its own published deadline ──────────────
+
+/** Names of each filing university and its publisher, as answers write them (de, en, ru, uk, tr, fr). */
+const UNIVERSITY_NAMES: Record<"wien" | "graz" | "innsbruck", RegExp> = {
+  wien: /(?<![\p{L}])(?:Wien|Wiener|Vienna|Vienne|Viyana|Вена|Вене|Відень|Відні)(?![\p{L}])/iu,
+  graz: /(?<![\p{L}])(?:Graz|Грац\p{L}*)(?![\p{L}])/iu,
+  innsbruck: /(?<![\p{L}])(?:Innsbruck|i-med|Инсбрук\p{L}*|Інсбрук\p{L}*)(?![\p{L}])/iu,
+};
+
+/**
+ * get_dates returned that this filing university publishes no own deadline (MedUni
+ * Graz, Stichprobentest). A second tool call can still bring the shared sitting list
+ * back, and the model then adds that sitting's day or another publisher's name
+ * (eval 12 Oct: r1-gap-graz-ru/tr). Every sentence with a day date or the name of
+ * another university is removed; deletion only, any language. When nothing would
+ * remain the answer is returned unchanged.
+ */
+export function trimForDeadlineGap(v: ValidatedAnswer, university: "wien" | "graz" | "innsbruck"): ValidatedAnswer {
+  if (v.refused) return v;
+  const others = (Object.keys(UNIVERSITY_NAMES) as Array<keyof typeof UNIVERSITY_NAMES>).filter((u) => u !== university).map((u) => UNIVERSITY_NAMES[u]);
+  const blocks: MentorAnswerBlock[] = [];
+  let changed = false;
+  for (const b of v.blocks) {
+    const drop: ExtractedValue[] = extractValues(normalizeDigits(b.text)).filter((x) => x.kind === "date" || x.kind === "daymonth");
+    for (const re of others) {
+      for (const m of b.text.matchAll(new RegExp(re.source, "giu"))) drop.push({ kind: "number", raw: m[0], start: m.index ?? 0, end: (m.index ?? 0) + m[0].length, keys: [] });
+    }
+    if (drop.length === 0) {
+      blocks.push(b);
+      continue;
+    }
+    changed = true;
+    const text = removeSentences(b.text, drop);
+    // The removed sentences carried the dated sitting or another publisher; a block left
+    // without any value no longer shows their source chip.
+    if (text && /[\p{L}\p{N}]/u.test(text)) blocks.push({ ...b, text, fact_ids: b.replaced || extractValues(normalizeDigits(text)).length > 0 ? b.fact_ids : [] });
+  }
+  if (!changed || blocks.length === 0 || blocks.every((b) => b.replaced)) return v;
+  const stillCited = new Set(blocks.flatMap((b) => b.fact_ids));
+  return { ...v, blocks, citations: v.citations.filter((c) => stillCited.has(c.fact_id)) };
+}

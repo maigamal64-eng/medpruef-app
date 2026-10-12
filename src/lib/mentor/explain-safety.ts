@@ -4,8 +4,14 @@ export function unsafeExplainBackground(text: string): boolean {
  const words = /(?<!\p{L})(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|once|twice|eins|eine|einen|einem|einer|zwei|drei|vier|fünf|fuenf|sechs|sieben|acht|neun|zehn|elf|zwölf|один|одна|одно|два|две|три|четыре|пять|шесть|семь|восемь|девять|десять|одна|одне|один|два|дві|три|чотири|п'ять|шість|сім|вісім|дев'ять|десять|bir|iki|üç|dört|beş|altı|yedi|sekiz|dokuz|on|واحد|اتنين|اثنين|تلاتة|ثلاثة)(?!\p{L})/iu;
  // Articles "eine" and "bir" overlap number words: omit them unless next to a unit.
  // The general scanner deliberately stays conservative for unambiguous numerals.
- const unambiguous = words.source.replace("|eine|einen|einem|einer", "").replace("|bir", "");
- if (new RegExp(unambiguous,"iu").test(text)) return true;
+ // Turkish "on" (ten) is also the English preposition (eval 12 Oct: "on the prescription"):
+ // it counts only before a Turkish counted noun.
+ const unambiguous = words.source.replace("|eine|einen|einem|einer", "").replace("|bir", "").replace("|on|", "|");
+ if (/(?<!\p{L})on\s+(?:tablet\p{L}*|kapsül\p{L}*|gün\p{L}*|hafta\p{L}*|ay(?!\p{L})|kez|kere|saat\p{L}*|damla\p{L}*)/iu.test(text)) return true;
+ // "one" as a pronoun counts nothing: "each one", "the one", "one of", "one another",
+ // "one ..., the other" (eval 12 Oct: ex-ds-en). "one tablet" stays caught.
+ const pronoun = text.replace(/(?<!\p{L})(?:each|every|no|any|the|which|this|that)\s+one(?!\p{L})|(?<!\p{L})one\s+(?:of|another)(?!\p{L})|(?<!\p{L})one(?!\p{L})(?=[^.!?]*(?<!\p{L})the other(?!\p{L}))/giu, "");
+ if (new RegExp(unambiguous,"iu").test(pronoun)) return true;
  return /(?<!\p{L})(?:mg|mcg|µg|ml|milligram\p{L}*|microgram\p{L}*|dose\p{L}*|dosing|dosierung|dosieren|dosage|doz\p{L}*|доз\p{L}*|جرعة|جرعات)(?!\p{L})/iu.test(text);
 }
 

@@ -56,3 +56,17 @@ export function hoistDeadlineLine(v: ValidatedAnswer, templates: readonly Deadli
   const moved = { ...v.blocks[block], text };
   return { ...v, blocks: [moved, ...v.blocks.filter((_, i) => i !== block)] };
 }
+
+/** The filing university whose own deadline get_dates reported as unpublished in this turn, if any. */
+export function deadlineGapUniversity(results: ReadonlyArray<{ name: string; result: ToolResult }>): "wien" | "graz" | "innsbruck" | null {
+  for (const r of results) {
+    if (r.name !== "get_dates" || r.result.isError) continue;
+    try {
+      const u = (JSON.parse(r.result.content) as { deadline_gap_university?: unknown }).deadline_gap_university;
+      if (u === "wien" || u === "graz" || u === "innsbruck") return u;
+    } catch {
+      /* a malformed result adds nothing */
+    }
+  }
+  return null;
+}

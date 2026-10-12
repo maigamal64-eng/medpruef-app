@@ -8,8 +8,9 @@ import { describe, it, expect } from "vitest";
 import { createMentorBrain } from "@/lib/mentor/prompt/brain";
 import { buildTurnContext, MENTOR_CORE_PROMPT } from "@/lib/mentor/prompt/system";
 import { getMentorFactsLoader } from "@/lib/mentor/facts-loader";
-import { trimUnaskedValues, validateAnswer, extractValues } from "@/lib/mentor/validator";
-import { deadlineLinesFromTools, hoistDeadlineLine } from "@/lib/mentor/deadline-first";
+import { trimForDeadlineGap, trimUnaskedValues, validateAnswer, extractValues } from "@/lib/mentor/validator";
+import { unsafeExplainBackground } from "@/lib/mentor/explain-safety";
+import { deadlineGapUniversity, deadlineLinesFromTools, hoistDeadlineLine } from "@/lib/mentor/deadline-first";
 import { daysPhrase } from "@/lib/mentor/deadline-copy";
 import type { MentorFact, ValidatedAnswer } from "@/lib/mentor/seam";
 import { ctx, fact, fakeDb } from "./helpers";
@@ -221,5 +222,48 @@ describe("restated values stay grounded (precision false replacements)", () => {
     expect(v.blocks[0].fact_ids).toEqual([]);
     const without = validateAnswer("@@LANG de\n@@BLOCK\nIhnen bleiben noch 37 Tage.", [], { resolve });
     expect(without.replaced).toBe(true);
+  });
+});
+
+describe("Graz answers keep only the gap (r1-gap-graz-ru/tr, second tool call)", () => {
+  it("removes sentences with a day date or another publisher, in any language", () => {
+    const v: ValidatedAnswer = {
+      blocks: [
+        { text: "Срок регистрации для Graz не подтверждён официально. Уточните его у MedUni Graz.", fact_ids: [] },
+        { text: "Сам Stichprobentest проводится 22 сентября 2027 года в Graz (источник: i-med).", fact_ids: ["stichprobentest.dates.2027-sittings"] },
+        { text: "Kayıt, başvurunun yapıldığı üniversitede yapılır (Quelle: i-med, Innsbruck).", fact_ids: ["stichprobentest.registration.filing-university"] },
+      ],
+      citations: [{ fact_id: "stichprobentest.dates.2027-sittings", source_label: "i-med", source_url: "https://www.i-med.ac.at/x", read_on: "2026-10-12" }],
+      replaced: false,
+      rejected: [],
+    };
+    const out = trimForDeadlineGap(v, "graz");
+    expect(out.blocks.map((b) => b.text)).toEqual(["Срок регистрации для Graz не подтверждён официально. Уточните его у MedUni Graz."]);
+    expect(out.citations).toEqual([]);
+  });
+
+  it("returns the answer unchanged when nothing would remain, and leaves refusals alone", () => {
+    const only: ValidatedAnswer = { blocks: [{ text: "Am 22. September 2027 in Wien.", fact_ids: [] }], citations: [], replaced: false, rejected: [] };
+    expect(trimForDeadlineGap(only, "graz")).toBe(only);
+  });
+
+  it("the gap result names the university for the turn", async () => {
+    const r = await brain().runTool("get_dates", { exam_key: "stichprobentest", filing_university: "graz" }, ctx({ now }));
+    expect(deadlineGapUniversity([{ name: "get_dates", result: r }])).toBe("graz");
+    const w = await brain().runTool("get_dates", { exam_key: "stichprobentest", filing_university: "wien" }, ctx({ now }));
+    expect(deadlineGapUniversity([{ name: "get_dates", result: w }])).toBeNull();
+  });
+});
+
+describe("background pronoun 'one' (ex-ds-en)", () => {
+  it("is not a quantity, a counted thing still is", () => {
+    expect(unsafeExplainBackground("Learn the abbreviations by the job each one does on the prescription.")).toBe(false);
+    expect(unsafeExplainBackground("Two groups, one involving the marrow and the other the membrane.")).toBe(true);
+    expect(unsafeExplainBackground("Bone marrow failure in one, a membrane defect in the other.")).toBe(false);
+    expect(unsafeExplainBackground("Take one tablet.")).toBe(true);
+    expect(unsafeExplainBackground("Vitamin B12.")).toBe(true);
+    // Turkish "on" (ten) is the English preposition too.
+    expect(unsafeExplainBackground("The directions go on the label.")).toBe(false);
+    expect(unsafeExplainBackground("İlaç on gün boyunca verilir.")).toBe(true);
   });
 });
