@@ -9,10 +9,10 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ l
   const c = correctionsCopy[lang];
   return <main lang={lang} className="min-h-screen bg-[#f5f4ef] px-5 py-10 text-[#182d2c] sm:px-10 sm:py-16">
     <div className="mx-auto max-w-4xl">
-      <nav aria-label={lang === "de" ? "Seitennavigation" : "Page navigation"} className="mb-12 flex flex-wrap gap-x-6 gap-y-3 text-sm font-semibold">
+      <nav aria-label={c.nav} className="mb-12 flex flex-wrap gap-x-6 gap-y-3 text-sm font-semibold">
         <Link href="/landing" className="underline underline-offset-4">{c.home}</Link>
         <Link href={`/wien-route?lang=${lang}`} className="underline underline-offset-4">{c.guide}</Link>
-        <Link href={`/korrekturen?lang=${lang === "de" ? "en" : "de"}`} hrefLang={lang === "de" ? "en" : "de"} className="ml-auto underline underline-offset-4">{c.language}</Link>
+        <Link href={`/korrekturen?lang=${c.otherLang}`} hrefLang={c.otherLang} className="ml-auto underline underline-offset-4">{c.language}</Link>
       </nav>
       <p className="mb-4 text-sm font-semibold uppercase tracking-widest">MedPrüf</p>
       <h1 className="max-w-3xl text-4xl font-semibold leading-tight tracking-tight sm:text-6xl">{c.title}</h1>
