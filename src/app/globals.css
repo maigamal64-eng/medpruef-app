@@ -2226,3 +2226,8 @@ html[data-onboarding="open"] .mp-status-region > * { display: none; }
 }
 .admin-card-actions > * { width: 100%; min-height: 44px; justify-content: center; }
 .admin-card-actions > .mp-btn { display: inline-flex; align-items: center; }
+/* a18: on phones and tablets the admin bottom bar covers the last 5rem;
+   keep scrolled-to and focused elements above it. */
+@media (max-width: 1023px) {
+  html:has([data-admin="1"]) { scroll-padding-bottom: calc(5rem + env(safe-area-inset-bottom)); }
+}

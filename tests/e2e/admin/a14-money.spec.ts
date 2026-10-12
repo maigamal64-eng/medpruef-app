@@ -107,9 +107,12 @@ for (const viewport of [{ name: "phone", width: 375, height: 812 }, { name: "des
       test("overview shows cash money in, paying learners and the payment diagnosis", async ({ page }) => {
         await page.goto("/admin/overview");
         await expect(page.getByTestId("overview-payment-diagnosis")).toContainText("never granted Pro");
+        // a18: the money strip leads; the detailed tiles sit under More signals.
+        // Stuck NOWPayments checkouts left the home page (Paid roster, Pending view).
+        await expect(page.getByTestId("overview-money-strip")).toBeVisible();
+        await page.getByTestId("overview-more-signals").locator("summary").click();
         await expect(page.getByText("Money in today (cash)")).toBeVisible();
         await expect(page.getByText("Paying learners")).toBeVisible();
-        await expect(page.getByText("Stuck checkouts need a manual reconcile.", { exact: false })).toBeVisible();
         await expect(page.getByText("All webhooks landed")).toHaveCount(0);
         await noOverflow(page);
         if (shotDir) await page.screenshot({ path: `${shotDir}/overview-${viewport.name}-${theme}.png`, fullPage: true });
@@ -121,7 +124,10 @@ for (const viewport of [{ name: "phone", width: 375, height: 812 }, { name: "des
         await expect(page.getByTestId("payments-diagnosis")).not.toContainText("ALARM");
         await expect(page.getByTestId("unresolved-row")).toHaveCount(1);
         await expect(page.getByRole("button", { name: "Link to learner" })).toBeDisabled();
-        await page.getByRole("button", { name: "Mark as test" }).click();
+        // a18: keep the button clear of the phone bottom bar before tapping.
+        const markTest = page.getByRole("button", { name: "Mark as test" });
+        await markTest.evaluate((el) => el.scrollIntoView({ block: "center" }));
+        await markTest.click();
         await expect(page.getByRole("dialog")).toContainText("Mark payment as test");
         await noOverflow(page);
         if (shotDir) await page.screenshot({ path: `${shotDir}/payments-dialog-${viewport.name}-${theme}.png` });
@@ -135,7 +141,8 @@ for (const viewport of [{ name: "phone", width: 375, height: 812 }, { name: "des
         await page.goto("/admin/subscriptions");
         await expect(page.getByTestId("roster-kpis")).toContainText("Lose Pro in 7 days");
         await expect(page.getByRole("tab", { name: /Ending soon, will not renew/ })).toHaveAttribute("aria-selected", "true");
-        await expect(page.locator("span:visible", { hasText: "Synthetic Learner 1" }).first()).toBeVisible();
+        // Since a16 names come from UserLink (/api/admin/users/names); unmocked here, so the id label shows.
+        await expect(page.getByRole("link", { name: /^Learner 00000000/ }).locator("visible=true").first()).toBeVisible();
         await expect(page.getByText("Synthetic Learner 4", { exact: false })).toHaveCount(0);
         await noOverflow(page);
         if (shotDir) await page.screenshot({ path: `${shotDir}/subscriptions-${viewport.name}-${theme}.png`, fullPage: true });

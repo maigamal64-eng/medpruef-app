@@ -166,7 +166,7 @@ for (const viewport of [{ name: "phone", width: 375, height: 812 }, { name: "des
         await expect(page.getByRole("button", { name: "Load older rows" })).toBeVisible();
         await page.getByRole("button", { name: "Ops decisions" }).click();
         await expect(page).toHaveURL(/category=ops/);
-        await expect(page.getByText("Goodwill after outage")).toBeVisible();
+        await expect(page.getByText("Goodwill after outage").locator("visible=true")).toBeVisible();
         await noOverflow(page);
         if (shotDir) await page.screenshot({ path: `${shotDir}/audit-${viewport.name}-${theme}.png`, fullPage: true });
       });
