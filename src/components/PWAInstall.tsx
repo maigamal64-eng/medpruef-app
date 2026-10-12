@@ -1,10 +1,29 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { dismissSurface, useAnnouncementSlot } from '@/lib/announcements/queue';
 import { usePathname } from "next/navigation";
 import { Download, X, RefreshCw } from "lucide-react";
 import { t, useLang } from "@/lib/i18n";
 import { isExamActive } from "@/lib/examSession";
+
+/** sessionStorage: when the learner last pressed Update (survives the reload). */
+const UPDATE_REQUESTED_KEY = "medpruef_sw_update_requested_at";
+/** UX-ACC-32: after this long without the new worker in control, offer a way out. */
+const UPDATE_STUCK_MS = 30_000;
+
+function readUpdateRequestedAt(): number | null {
+  try {
+    const raw = sessionStorage.getItem(UPDATE_REQUESTED_KEY);
+    const at = raw ? Number(raw) : NaN;
+    return Number.isFinite(at) ? at : null;
+  } catch { return null; }
+}
+function writeUpdateRequestedAt(at: number | null): void {
+  try {
+    if (at === null) sessionStorage.removeItem(UPDATE_REQUESTED_KEY);
+    else sessionStorage.setItem(UPDATE_REQUESTED_KEY, String(at));
+  } catch { /* storage may be blocked; the in-page timer still runs */ }
+}
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
@@ -38,6 +57,10 @@ export default function PWAInstall() {
   const [dismissed, setDismissed] = useState(false);
   const [waitingWorker, setWaitingWorker] = useState<ServiceWorker | null>(null);
   const [updateAvailable, setUpdateAvailable] = useState(false);
+  // The waiting worker did not take control within 30 s of a press.
+  const [updateStuck, setUpdateStuck] = useState(false);
+  const stuckTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reasonId = useId();
   const studyInProgress = isStudyRoute(pathname);
   // UX-GLOBAL-12: the install card is an unrequested inline surface (never during study).
   const installGranted = useAnnouncementSlot('install_card', showBanner && !dismissed && !studyInProgress);
@@ -56,6 +79,10 @@ export default function PWAInstall() {
 
     let refreshing = false;
     const reloadOnControllerChange = () => {
+      // The new worker is in control: the update was applied.
+      writeUpdateRequestedAt(null);
+      if (stuckTimer.current) clearTimeout(stuckTimer.current);
+      setUpdateStuck(false);
       if (refreshing) return;
       // Keep both timed exams and active practice routes in place. The user
       // can navigate away and apply the waiting update afterward.
@@ -84,6 +111,16 @@ export default function PWAInstall() {
         if (registration.waiting) {
           setWaitingWorker(registration.waiting);
           setUpdateAvailable(true);
+          // A press from before the last reload that still has not taken
+          // control: show the way out instead of another silent loop.
+          const requestedAt = readUpdateRequestedAt();
+          if (requestedAt !== null) {
+            const elapsed = Date.now() - requestedAt;
+            if (elapsed >= UPDATE_STUCK_MS) setUpdateStuck(true);
+            else stuckTimer.current = setTimeout(() => setUpdateStuck(true), UPDATE_STUCK_MS - elapsed);
+          }
+        } else {
+          writeUpdateRequestedAt(null);
         }
 
         // New worker found — wait until installed, then prompt the user.
@@ -125,6 +162,7 @@ export default function PWAInstall() {
       navigator.serviceWorker.removeEventListener("message", onMessage);
       if (interval) clearInterval(interval);
       if (focusHandler) window.removeEventListener("focus", focusHandler);
+      if (stuckTimer.current) clearTimeout(stuckTimer.current);
     };
   }, []);
 
@@ -133,6 +171,11 @@ export default function PWAInstall() {
     // taps the banner. Applying it reloads the document, so keep the current
     // quiz, exam, or flashcard session in place until the learner leaves it.
     if (isStudyRoute(window.location.pathname)) return;
+    // UX-ACC-32: remember the press across the reload; if the waiting worker
+    // has not taken control 30 s later, the banner offers "Seite neu laden".
+    if (readUpdateRequestedAt() === null) writeUpdateRequestedAt(Date.now());
+    if (stuckTimer.current) clearTimeout(stuckTimer.current);
+    stuckTimer.current = setTimeout(() => setUpdateStuck(true), UPDATE_STUCK_MS);
     if (waitingWorker) {
       waitingWorker.postMessage({ type: "SKIP_WAITING" });
     } else {
@@ -167,8 +210,25 @@ export default function PWAInstall() {
 
   // Update banner takes priority over install banner (also moved to top — F8 fix)
   if (updateAvailable) {
+    const de = lang === "de";
+    // UX-ACC-32: the reason is a second line at every width; while deferred
+    // the button stays focusable (aria-disabled only) so the reason is reachable.
+    const reason = updateStuck && !studyInProgress
+      ? (de
+        ? "Das Update ist noch nicht aktiv. Laden Sie die Seite neu. Hilft das nicht, schließen Sie die App einmal ganz und öffnen Sie sie wieder."
+        : "The update is not active yet. Reload the page. If that does not help, close the app completely once and open it again.")
+      : studyInProgress
+        ? (de
+          ? "Das Update startet, sobald Sie die Lerneinheit beenden. Ihr Fortschritt bleibt erhalten."
+          : "The update starts once you finish the study session. Your progress is kept.")
+        : null;
+    const buttonLabel = studyInProgress
+      ? (de ? "Update nach dem Lernen" : "Update after studying")
+      : updateStuck
+        ? (de ? "Seite neu laden" : "Reload page")
+        : t("pwa_update_cta", lang);
     return (
-      <div className="animate-slide-down">
+      <div className="animate-slide-down" role="status">
         <div
           className="flex items-center gap-3 px-4 py-2.5 border-b"
           style={{
@@ -178,23 +238,28 @@ export default function PWAInstall() {
           }}
         >
           <RefreshCw className="w-4 h-4 text-[var(--mp-cta-blue)] shrink-0" aria-hidden />
-          <p className="flex-1 text-sm font-medium text-[var(--mp-fg)]">
-            {t("pwa_update_title", lang)}
-          </p>
-          {studyInProgress && (
-            <p className="hidden sm:block max-w-64 text-xs text-[var(--mp-fg-muted)]">
-              {lang === "de"
-                ? "Das Update wartet, bis du deine Lerneinheit beendet hast."
-                : "The update will wait until you finish this study session."}
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-[var(--mp-fg)]">
+              {t("pwa_update_title", lang)}
             </p>
-          )}
+            {reason && (
+              <p id={reasonId} className="text-xs text-[var(--mp-fg-muted)] mt-0.5">
+                {reason}
+              </p>
+            )}
+          </div>
           <button
-            onClick={handleUpdate}
-            disabled={studyInProgress}
-            aria-disabled={studyInProgress}
-            className="btn-primary text-xs px-3 py-1.5 flex items-center gap-1.5 shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+            type="button"
+            onClick={() => {
+              if (studyInProgress) return;
+              if (updateStuck) { window.location.reload(); return; }
+              handleUpdate();
+            }}
+            aria-disabled={studyInProgress || undefined}
+            aria-describedby={reason ? reasonId : undefined}
+            className="btn-primary text-xs px-3 py-1.5 min-h-11 flex items-center gap-1.5 shrink-0 aria-disabled:opacity-50 aria-disabled:cursor-not-allowed"
           >
-            <RefreshCw className="w-3 h-3" aria-hidden /> {t("pwa_update_cta", lang)}
+            <RefreshCw className="w-3 h-3" aria-hidden /> {buttonLabel}
           </button>
         </div>
       </div>

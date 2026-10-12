@@ -65,9 +65,9 @@ export default function IntercomMessenger() {
   if (process.env.NEXT_PUBLIC_MEDPRUF_INTERCOM_ENABLED !== "true" || !signedIn || ["/admin", "/login", "/landing", "/privacy", "/terms", "/impressum"].some((path) => pathname?.startsWith(path))) return null;
   return <div className="fixed left-4 bottom-[calc(88px+env(safe-area-inset-bottom))] lg:bottom-6 z-40 max-w-[220px]">
     <button type="button" onClick={() => void openMessenger()} disabled={opening} className="mp-btn mp-btn--secondary shadow-lg flex items-center gap-2" aria-label={lang === "de" ? "Support-Chat öffnen" : "Open support chat"}>
-      <MessageCircle size={18} />{opening ? (lang === "de" ? "Wird geöffnet…" : "Opening…") : (lang === "de" ? "Support-Chat" : "Support chat")}
+      <MessageCircle size={18} aria-hidden />{opening ? (lang === "de" ? "Wird geöffnet…" : "Opening…") : (lang === "de" ? "Support-Chat" : "Support chat")}
     </button>
-    {error && <p role="alert" className="mt-2 rounded-lg bg-[var(--mp-surface-raised)] p-2 text-xs text-[var(--mp-fg)]">{lang === "de" ? "Chat nicht verfügbar. Bitte nutze das Feedback-Formular." : "Chat unavailable. Please use the feedback form."}</p>}
+    {error && <p role="alert" className="mt-2 rounded-lg bg-[var(--mp-surface-raised)] p-2 text-xs text-[var(--mp-fg)]">{lang === "de" ? "Chat nicht verfügbar. Bitte nutzen Sie das Feedback-Formular." : "Chat unavailable. Please use the feedback form."}</p>}
   </div>;
 }
 

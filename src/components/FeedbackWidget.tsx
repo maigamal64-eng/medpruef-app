@@ -24,8 +24,10 @@ import { OPEN_FEEDBACK_EVENT } from '@/components/nav/MoreSheet'
  *   flips to true and phones keep only the Mehr entry.
  * - Never in focus mode (the running exam does not mount it).
  * - Hidden on /landing, /login, /admin, /privacy, /terms, /impressum.
- * - The form closes only on a button press; results are spoken once through
- *   announce() and shown inline.
+ * - The form closes only on a button press or Escape, never on a route
+ *   change (UX-ACC-44); focus then returns to the launcher, or to the control
+ *   that opened it when the launcher is not shown. Results are spoken once
+ *   through announce() and shown inline; the thanks card is role=status.
  */
 
 const MOBILE_MQ = '(max-width: 1024px)'
@@ -45,7 +47,9 @@ export default function FeedbackWidget() {
   const [mounted, setMounted] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const textRef = useRef<HTMLTextAreaElement>(null)
-  const lastPathnameRef = useRef<string | null>(null)
+  const launcherRef = useRef<HTMLButtonElement>(null)
+  const openerRef = useRef<HTMLElement | null>(null)
+  const wasOpenRef = useRef(false)
   // Reactive pathname — fires on every App Router navigation so the widget
   // hides/shows correctly after navigation (Frontend P1-3, 2026-04-15).
   const pathname = usePathname()
@@ -66,6 +70,20 @@ export default function FeedbackWidget() {
     if (open && textRef.current) textRef.current.focus()
   }, [open])
 
+  // Focus return on close: the launcher when it is shown again, otherwise the
+  // control that opened the form (Mehr sheet, Sidebar or an in-page row).
+  useEffect(() => {
+    if (open) { wasOpenRef.current = true; return }
+    if (!wasOpenRef.current) return
+    wasOpenRef.current = false
+    const opener = openerRef.current
+    openerRef.current = null
+    requestAnimationFrame(() => {
+      if (launcherRef.current) launcherRef.current.focus()
+      else if (opener && opener.isConnected) opener.focus()
+    })
+  }, [open])
+
   // Non-modal popover: Escape closes it (ADM-39 popover rule).
   useEffect(() => {
     if (!open) return
@@ -76,19 +94,14 @@ export default function FeedbackWidget() {
 
   // Opened from the Mehr sheet, the Sidebar or an in-page "Feedback geben" row.
   useEffect(() => {
-    const openForm = () => { setSent(false); setOpen(true) }
+    const openForm = () => {
+      openerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null
+      setSent(false)
+      setOpen(true)
+    }
     window.addEventListener(OPEN_FEEDBACK_EVENT, openForm)
     return () => window.removeEventListener(OPEN_FEEDBACK_EVENT, openForm)
   }, [])
-
-  // Close the form on route changes, but keep the initial mount from
-  // racing with a user's first click on the launcher.
-  useEffect(() => {
-    if (lastPathnameRef.current && lastPathnameRef.current !== pathname) {
-      setOpen(false)
-    }
-    lastPathnameRef.current = pathname ?? null
-  }, [pathname])
 
   if (!mounted || focusMode) return null
   if (HIDDEN_ROUTES.some(p => pathname?.startsWith(p))) return null
@@ -137,6 +150,7 @@ export default function FeedbackWidget() {
   }
 
   const openFeedback = () => {
+    openerRef.current = launcherRef.current
     setOpen(true)
   }
 
@@ -159,7 +173,7 @@ export default function FeedbackWidget() {
         </div>
 
         {sent ? (
-          <div className="p-6 text-center">
+          <div className="p-6 text-center" role="status">
             <Check className="w-8 h-8 text-[var(--mp-viridian)] mx-auto mb-2" aria-hidden />
             <p className="text-sm font-medium text-[var(--mp-fg)]">{t('feedback_thanks_title', lang)}</p>
             <p className="text-[13px] text-[var(--mp-fg-muted)] mt-1">{t('feedback_thanks_body', lang)}</p>
@@ -204,6 +218,8 @@ export default function FeedbackWidget() {
     <>
       {!open && launcherVisible && (
         <button
+          ref={launcherRef}
+          type="button"
           onClick={openFeedback}
           className={`fixed ${isMobile ? `${mobileOffset} right-2 w-10 h-10 mp-hit` : 'bottom-6 right-6 w-11 h-11'} mp-layer-sticky rounded-full bg-[var(--mp-action-primary)] text-[var(--mp-fg-on-cta-blue)] shadow-lg hover:shadow-xl transition-all flex items-center justify-center active:scale-95`}
           title={t('feedback_button_title', lang)}

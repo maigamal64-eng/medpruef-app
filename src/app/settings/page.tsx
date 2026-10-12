@@ -30,8 +30,9 @@ import BillingReceipt from "@/components/BillingReceipt";
  * no XP bar, no confetti, no spark. Achievement-as-identity, not arcade.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { getLang, useLang, renderLang, t } from "@/lib/i18n";
 import LanguagePicker from "@/components/LanguagePicker";
 import { getStoredSession, clearSession, storeSession } from "@/lib/auth";
@@ -50,11 +51,17 @@ import {
   BILLING_SUPPORT_EMAIL,
   SUPPORT_REPLY_PROMISE,
   billingAccountSentence,
+  billingAmount,
+  VERIFIED_CANCEL_PATH,
+  WHOP_MANAGE_URL,
 } from "@/lib/billing-copy";
+import { TIERS } from "@/lib/content-truth";
+import ExamSwitcherInline from "@/components/ExamSwitcherInline";
+import { settingsBuildLabel } from "@/components/settings/build-label";
 import { EXAM_SOURCES, setStoredExamSource, type ExamSourceId } from "@/lib/topics";
-import { getExamLabel } from "@/lib/master-locale/exam-label";
 import {
   Alert,
+  ConfirmAction,
   Dialog,
   DialogFooter,
   TextField,
@@ -63,6 +70,7 @@ import {
 import {
   ArrowRight,
   BookMarked,
+  History,
   CalendarDays,
   CloudDownload,
   Crown,
@@ -130,8 +138,11 @@ function initialsOf(first?: string, last?: string): string {
 
 export default function SettingsPage() {
   const toast = useToast();
+  const router = useRouter();
   const [lang, setLangState] = useState<Lang>("de");
   const uiLang = useLang();
+  // One render-language flag instead of inline lang ternaries (LX-19 ratchet).
+  const de = lang === "de";
   useEffect(() => { setLangState(renderLang(uiLang)); }, [uiLang]);
   const [theme, setThemeState] = useState<Theme>("light");
   const [session, setSession] = useState<ReturnType<typeof getStoredSession>>(null);
@@ -147,6 +158,10 @@ export default function SettingsPage() {
   });
   const [examPickerOpen, setExamPickerOpen] = useState(false);
   const [clearDialogOpen, setClearDialogOpen] = useState(false);
+  // Logout confirmation (UX-ACC-38): the pending count is re-read when the
+  // learner asks to sign out, so the warning never shows a stale number.
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
+  const [logoutPendingCount, setLogoutPendingCount] = useState(0);
 
   // ── Offline-mode state ──
   // Live count of cached questions, preset-size selector, last-sync ISO
@@ -316,7 +331,7 @@ export default function SettingsPage() {
     saveProfile(updated);
     void persistToServer({ dailyGoal: clamped });
     toast.success(
-      lang === "de" ? "Tagesziel gespeichert" : "Daily goal saved",
+      de ? "Tagesziel gespeichert" : "Daily goal saved",
     );
   };
 
@@ -324,7 +339,7 @@ export default function SettingsPage() {
     setExamDateSaved(false);
     const saved = await persistToServer({ examDate: value || null });
     if (!saved) {
-      toast.error(lang === "de" ? "Prüfungstermin konnte nicht gespeichert werden" : "Could not save exam date");
+      toast.error(de ? "Prüfungstermin konnte nicht gespeichert werden" : "Could not save exam date");
       return;
     }
     const updated = { ...profile, targetDate: value };
@@ -333,8 +348,8 @@ export default function SettingsPage() {
     saveProfile(updated);
     setExamDateSaved(Boolean(value));
     toast.success(value
-      ? (lang === "de" ? "Prüfungstermin gespeichert" : "Exam date saved")
-      : (lang === "de" ? "Prüfungstermin entfernt" : "Exam date cleared"));
+      ? (de ? "Prüfungstermin gespeichert" : "Exam date saved")
+      : (de ? "Prüfungstermin entfernt" : "Exam date cleared"));
   };
 
   const handleClearData = () => {
@@ -356,6 +371,7 @@ export default function SettingsPage() {
         key &&
         ((userId && key === bookmarkStorageKey(userId)) ||
           key === "medpruef_quiz_autosave" ||
+          key === "medpruef_quiz_session_v2" ||
           key === "medpruef_weakness")
       ) {
         keysToRemove.push(key);
@@ -366,9 +382,27 @@ export default function SettingsPage() {
     toast.success(t("data_cleared", lang));
   };
 
+  const requestLogout = async () => {
+    const userId = getStoredSession()?.user?.id;
+    const pending = await countPendingAnswers(userId).catch(() => 0);
+    setLogoutPendingCount(pending);
+    setLogoutConfirmOpen(true);
+  };
+
   const handleLogout = () => {
     clearSession({ logout: true });
     window.location.href = "/";
+  };
+
+  /** Paid learners: "Abo und Zahlung" moves to the subscription card. */
+  const openBillingCard = () => {
+    const target = document.getElementById("abo-und-zahlung");
+    if (!target) {
+      router.push("/pricing");
+      return;
+    }
+    target.scrollIntoView({ behavior: "smooth", block: "start" });
+    target.focus({ preventScroll: true });
   };
 
   // ── Offline: download a batch and persist to IndexedDB ──
@@ -385,9 +419,9 @@ export default function SettingsPage() {
       );
       if (!res.ok) {
         toast.error(
-          lang === "de" ? "Download fehlgeschlagen" : "Download failed",
-          lang === "de"
-            ? "Bitte überprüfe deine Verbindung und versuche es erneut."
+          de ? "Download fehlgeschlagen" : "Download failed",
+          de
+            ? "Bitte prüfen Sie Ihre Verbindung und versuchen Sie es erneut."
             : "Check your connection and try again.",
         );
         return;
@@ -396,7 +430,7 @@ export default function SettingsPage() {
       const batch = Array.isArray(data.questions) ? data.questions : [];
       if (batch.length === 0) {
         toast.warning(
-          lang === "de" ? "Keine Fragen verfügbar" : "No questions available",
+          de ? "Keine Fragen verfügbar" : "No questions available",
         );
         return;
       }
@@ -407,17 +441,17 @@ export default function SettingsPage() {
       const fresh = await countQuestions();
       setOfflineCount(fresh);
       toast.success(
-        lang === "de"
+        de
           ? `${batch.length} Fragen heruntergeladen`
           : `${batch.length} questions downloaded`,
-        lang === "de"
+        de
           ? "Sie stehen bei kurzen Verbindungsabbrüchen in einer geöffneten Sitzung bereit."
           : "They are ready for brief connection drops during an open session.",
       );
     } catch (e) {
       console.error("[settings] offline download", e);
       toast.error(
-        lang === "de" ? "Download fehlgeschlagen" : "Download failed",
+        de ? "Download fehlgeschlagen" : "Download failed",
       );
     } finally {
       setOfflineDownloading(false);
@@ -434,11 +468,11 @@ export default function SettingsPage() {
         "kenntnispruefung";
       clearLastSync(activeExam);
       setOfflineClearOpen(false);
-      toast.success(lang === "de" ? "Heruntergeladene Fragen gelöscht" : "Downloaded questions cleared");
+      toast.success(de ? "Heruntergeladene Fragen gelöscht" : "Downloaded questions cleared");
     } catch (e) {
       console.error("[settings] clear offline", e);
       toast.error(
-        lang === "de" ? "Löschen fehlgeschlagen" : "Could not clear offline data",
+        de ? "Löschen fehlgeschlagen" : "Could not clear offline data",
       );
     }
   };
@@ -447,7 +481,7 @@ export default function SettingsPage() {
     const currentUserId = getStoredSession()?.user?.id;
     if (!legacyRecoveryUserId || currentUserId !== legacyRecoveryUserId || isGuest || currentUserId?.startsWith("guest_")) {
       setLegacyRecoveryOpen(false);
-      toast.error(lang === "de" ? "Konto geändert. Bitte erneut prüfen." : "Account changed. Please review again.");
+      toast.error(de ? "Konto geändert. Bitte erneut prüfen." : "Account changed. Please review again.");
       return;
     }
     setLegacyRecoveryBusy(true);
@@ -461,7 +495,7 @@ export default function SettingsPage() {
       setOfflinePendingCount(accountCount);
       setLegacyRecoveryOpen(false);
       setLegacyRecoveryUserId(null);
-      toast.success(lang === "de"
+      toast.success(de
         ? `${claimed} ältere Antworten diesem Konto zugeordnet.`
         : `${claimed} older answers assigned to this account.`);
       if (typeof navigator !== "undefined" && navigator.onLine) {
@@ -469,7 +503,7 @@ export default function SettingsPage() {
       }
     } catch (error) {
       console.error("[settings] recover legacy offline answers", error);
-      toast.error(lang === "de" ? "Antworten konnten nicht übernommen werden" : "Could not recover answers");
+      toast.error(de ? "Antworten konnten nicht übernommen werden" : "Could not recover answers");
     } finally {
       setLegacyRecoveryBusy(false);
     }
@@ -487,21 +521,21 @@ export default function SettingsPage() {
   // ── Profile-card derived values ──
   const displayName =
     [user?.first_name, user?.last_name].filter(Boolean).join(" ").trim() ||
-    (lang === "de" ? "Gast" : "Guest");
+    (de ? "Gast" : "Guest");
   const avatarInitials = initialsOf(user?.first_name, user?.last_name);
   const { level: rankLevel, rank: rankName } = getLevelFromXP(gam?.total_xp || 0);
   // Calm tier label for the profile chip. Paid cohorts surface their human
   // name; admin shows Admin; everyone else reads Kostenlos.
   const tierChipLabel =
     activeSub && (activeSub as { tier_human_name_de?: string }).tier_human_name_de
-      ? lang === "de"
+      ? de
         ? (activeSub as { tier_human_name_de: string }).tier_human_name_de
         : (activeSub as { tier_human_name: string }).tier_human_name
       : liveTier === "admin"
         ? "Admin"
         : liveIsPaid
           ? "Pro"
-          : lang === "de"
+          : de
             ? "Kostenlos"
             : "Free";
   const tierChipIsPaid = liveIsPaid || !!activeSub;
@@ -511,9 +545,31 @@ export default function SettingsPage() {
     serverActiveExam ||
     (user as { active_exam?: string } | undefined)?.active_exam ||
     "kenntnispruefung";
-  const activeExamLabel = getExamLabel(activeExamId, "full", lang);
   const preferenceTargetDate =
     serverExamDate === undefined ? profile.targetDate : serverExamDate || "";
+  // Free plan row (UX-ACC-20): the entry price comes from TIERS via billing-copy.
+  const monthlyFrom = billingAmount(TIERS.first_month_19.price_cents, de ? "de" : "en");
+  // Clear-data row and its confirmation name exactly what is removed (UX-ACC-38).
+  const clearDataLabel = de
+    ? "Notizen, Lesezeichen und Zwischenstand löschen"
+    : "Delete notes, bookmarks and saved quiz";
+  const clearDataScope = de
+    ? "Löscht Ihre Notizen zu Fragen auf diesem Gerät, alle Lesezeichen in Ihrem Konto und den Quiz-Zwischenstand. Lernfortschritt und Abo bleiben erhalten."
+    : "Deletes your question notes on this device, all bookmarks in your account and the saved quiz session. Learning progress and subscription stay.";
+  const logoutConsequence = (() => {
+    const base = de
+      ? "Sie werden auf diesem Gerät abgemeldet. Ihr Lernfortschritt bleibt in Ihrem Konto gespeichert."
+      : "You will be signed out on this device. Your learning progress stays saved in your account.";
+    if (logoutPendingCount <= 0) return base;
+    const unsent = de
+      ? logoutPendingCount === 1
+        ? "1 Antwort wurde noch nicht gesendet. Sie bleibt auf diesem Gerät und wird erst gesendet, wenn Sie sich hier wieder mit diesem Konto anmelden und online sind."
+        : `${logoutPendingCount} Antworten wurden noch nicht gesendet. Sie bleiben auf diesem Gerät und werden erst gesendet, wenn Sie sich hier wieder mit diesem Konto anmelden und online sind.`
+      : logoutPendingCount === 1
+        ? "1 answer has not been sent yet. It stays on this device and is only sent once you sign in here again with this account while online."
+        : `${logoutPendingCount} answers have not been sent yet. They stay on this device and are only sent once you sign in here again with this account while online.`;
+    return `${unsent} ${base}`;
+  })();
 
   return (
     <AppLayout
@@ -827,6 +883,26 @@ export default function SettingsPage() {
             min-width: 30px;
             text-align: center;
           }
+          /* Active-exam row: the shared picker trigger covers the row. */
+          .exam-row {
+            position: relative;
+            cursor: pointer;
+          }
+          .exam-row:hover {
+            background: var(--mp-surface-sunken);
+          }
+          .exam-row .sr-ctrl :global(.relative) {
+            position: static;
+          }
+          .exam-row .sr-ctrl :global(button[aria-haspopup="dialog"]) {
+            min-height: 44px;
+            max-width: 12rem;
+          }
+          .exam-row .sr-ctrl :global(button[aria-haspopup="dialog"])::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+          }
           /* destructive row */
           .set-row.danger .sr-ic {
             background: var(--mp-error-bg);
@@ -857,9 +933,9 @@ export default function SettingsPage() {
 
         <div className="set-wrap">
           <div className="set-pagehead">
-            <h1>{lang === "de" ? "Einstellungen" : "Settings"}</h1>
+            <h1>{de ? "Einstellungen" : "Settings"}</h1>
             <p>
-              {lang === "de"
+              {de
                 ? "Änderungen werden automatisch gespeichert."
                 : "Changes are saved automatically."}
             </p>
@@ -874,7 +950,7 @@ export default function SettingsPage() {
                 <div className="pc-rank">
                   {rankName}
                   <span className="pc-lvl">
-                    {lang === "de" ? `Stufe ${rankLevel}` : `Level ${rankLevel}`}
+                    {de ? `Stufe ${rankLevel}` : `Level ${rankLevel}`}
                   </span>
                 </div>
               )}
@@ -895,7 +971,7 @@ export default function SettingsPage() {
           <div className="set-2col" style={{ marginTop: 20 }}>
             {/* ═══ Lernen ═══ */}
             <div className="set-group">
-              <div className="set-label">{lang === "de" ? "Lernen" : "Learning"}</div>
+              <div className="set-label">{de ? "Lernen" : "Learning"}</div>
               <div className="set-card">
                 {/* Exam date → opens the sitting picker dialog */}
                 <button
@@ -910,8 +986,8 @@ export default function SettingsPage() {
                   <div className="sr-body">
                     <div className="sr-title">{t("exam_target_date", lang)}</div>
                     <div className="sr-sub">
-                      {lang === "de"
-                        ? "Steuert deinen Lernplan"
+                      {de
+                        ? "Steuert Ihren Lernplan"
                         : "Drives your study plan"}
                     </div>
                   </div>
@@ -919,10 +995,10 @@ export default function SettingsPage() {
                     <span className="sr-val">
                       {preferenceTargetDate
                         ? new Date(preferenceTargetDate).toLocaleDateString(
-                            lang === "de" ? "de-AT" : "en-GB",
+                            de ? "de-AT" : "en-GB",
                             { day: "numeric", month: "short", year: "numeric" },
                           )
-                        : lang === "de"
+                        : de
                           ? "Festlegen"
                           : "Set"}
                       <ArrowRight aria-hidden />
@@ -939,12 +1015,12 @@ export default function SettingsPage() {
                   </div>
                   <div className="sr-body">
                     <div className="sr-title">
-                      {lang === "de" ? "Tagesziel" : "Daily goal"}
+                      {de ? "Tagesziel" : "Daily goal"}
                     </div>
                     <div className="sr-sub">
-                      {lang === "de"
-                        ? "5–100 Fragen pro Tag"
-                        : "5–100 questions per day"}
+                      {de
+                        ? "5 bis 100 Fragen pro Tag"
+                        : "5 to 100 questions per day"}
                     </div>
                   </div>
                   <div className="sr-ctrl">
@@ -953,7 +1029,7 @@ export default function SettingsPage() {
                         type="button"
                         onClick={() => handleDailyGoalChange(profile.dailyGoal - 5)}
                         disabled={profile.dailyGoal <= 5}
-                        aria-label={lang === "de" ? "Ziel verringern" : "Decrease goal"}
+                        aria-label={de ? "Ziel verringern" : "Decrease goal"}
                       >
                         −
                       </button>
@@ -962,7 +1038,7 @@ export default function SettingsPage() {
                         type="button"
                         onClick={() => handleDailyGoalChange(profile.dailyGoal + 5)}
                         disabled={profile.dailyGoal >= 100}
-                        aria-label={lang === "de" ? "Ziel erhöhen" : "Increase goal"}
+                        aria-label={de ? "Ziel erhöhen" : "Increase goal"}
                       >
                         +
                       </button>
@@ -970,16 +1046,26 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                {/* Active exam — read-only summary */}
-                <div className="set-row">
+                {/* Active exam (UX-ACC-38): the whole row opens the shared
+                    exam picker. ExamSwitcherInline owns the trigger and the
+                    sheet; the row stretches its trigger over the row so any
+                    tap on the row opens it (no second picker). */}
+                <div className="set-row exam-row" data-active-exam={activeExamId}>
                   <div className="sr-ic">
                     <BookMarked aria-hidden />
                   </div>
                   <div className="sr-body">
                     <div className="sr-title">
-                      {lang === "de" ? "Aktive Prüfung" : "Active exam"}
+                      {de ? "Aktive Prüfung" : "Active exam"}
                     </div>
-                    <div className="sr-sub">{activeExamLabel}</div>
+                    <div className="sr-sub">
+                      {de
+                        ? "Fragen, Lernplan und Simulation folgen dieser Prüfung."
+                        : "Questions, study plan and simulations follow this exam."}
+                    </div>
+                  </div>
+                  <div className="sr-ctrl">
+                    <ExamSwitcherInline variant="header" />
                   </div>
                 </div>
               </div>
@@ -988,7 +1074,7 @@ export default function SettingsPage() {
             {/* ═══ Darstellung ═══ */}
             <div className="set-group">
               <div className="set-label">
-                {lang === "de" ? "Darstellung" : "Display"}
+                {de ? "Darstellung" : "Display"}
               </div>
               <div className="set-card">
                 {/* Theme — segmented (sun / moon). The live ThemeProvider
@@ -999,13 +1085,13 @@ export default function SettingsPage() {
                     {theme === "dark" ? <Moon aria-hidden /> : <Sun aria-hidden />}
                   </div>
                   <div className="sr-body">
-                    <div className="sr-title">{lang === "de" ? "Design" : "Theme"}</div>
+                    <div className="sr-title">{de ? "Design" : "Theme"}</div>
                     <div className="sr-sub">
                       {theme === "dark"
-                        ? lang === "de"
+                        ? de
                           ? "Dunkel"
                           : "Dark"
-                        : lang === "de"
+                        : de
                           ? "Hell"
                           : "Light"}
                     </div>
@@ -1014,7 +1100,7 @@ export default function SettingsPage() {
                     <div
                       className="seg"
                       role="radiogroup"
-                      aria-label={lang === "de" ? "Design" : "Theme"}
+                      aria-label={de ? "Design" : "Theme"}
                     >
                       <button
                         type="button"
@@ -1022,7 +1108,7 @@ export default function SettingsPage() {
                         aria-checked={theme === "light"}
                         className={theme === "light" ? "on" : ""}
                         onClick={() => applyTheme("light")}
-                        aria-label={lang === "de" ? "Hell" : "Light"}
+                        aria-label={de ? "Hell" : "Light"}
                       >
                         <Sun aria-hidden />
                       </button>
@@ -1032,7 +1118,7 @@ export default function SettingsPage() {
                         aria-checked={theme === "dark"}
                         className={theme === "dark" ? "on" : ""}
                         onClick={() => applyTheme("dark")}
-                        aria-label={lang === "de" ? "Dunkel" : "Dark"}
+                        aria-label={de ? "Dunkel" : "Dark"}
                       >
                         <Moon aria-hidden />
                       </button>
@@ -1044,7 +1130,7 @@ export default function SettingsPage() {
                   <div className="sr-ic"><Languages aria-hidden /></div>
                   <div className="sr-body">
                     <div className="sr-title">{t("language_app", lang)}</div>
-                    <div className="sr-sub">{lang === "de" ? "Menüs und Hinweise in deiner Sprache. Die Prüfungsfragen bleiben auf Deutsch, wie in der Prüfung." : "Menus and guidance in your language. Exam questions stay in German, as in the exam."}</div>
+                    <div className="sr-sub">{de ? "Menüs und Hinweise in Ihrer Sprache. Die Prüfungsfragen bleiben auf Deutsch, wie in der Prüfung." : "Menus and guidance in your language. Exam questions stay in German, as in the exam."}</div>
                   </div>
                   <LanguagePicker settings className="w-full sm:w-auto" />
                 </div>
@@ -1058,7 +1144,7 @@ export default function SettingsPage() {
                 WiFi dead zones. */}
             <div id="offline" className="set-group set-span2 scroll-mt-20">
               <div className="set-label">
-                {lang === "de" ? "Offline-Modus" : "Offline mode"}
+                {de ? "Offline-Modus" : "Offline mode"}
               </div>
               <div className="set-card" style={{ padding: 18 }}>
                 <div className="flex items-center gap-3 mb-4">
@@ -1067,12 +1153,12 @@ export default function SettingsPage() {
                   </div>
                   <div className="min-w-0">
                     <div className="sr-title">
-                      {lang === "de"
+                      {de
                         ? "Fragen offline verfügbar machen"
                         : "Make questions available offline"}
                     </div>
                     <div className="sr-sub">
-                      {lang === "de"
+                      {de
                         ? "Lädt Fragen auf dieses Gerät, damit eine bereits geöffnete Sitzung bei kurzen Verbindungsabbrüchen weiterläuft. Die App ganz ohne Internet zu starten ist noch nicht möglich."
                         : "Loads questions onto this device so a session that is already open keeps going through brief connection drops. Starting the app without any internet is not possible yet."}
                     </div>
@@ -1088,18 +1174,18 @@ export default function SettingsPage() {
                   <div className="min-w-0">
                     <p className="text-lg font-bold text-[var(--mp-fg)] font-mono tabular-nums">
                       {offlineCount.toLocaleString(
-                        lang === "de" ? "de-DE" : "en-US",
+                        de ? "de-DE" : "en-US",
                       )}{" "}
                       <span className="text-sm font-semibold text-[var(--mp-fg-muted)]">
-                        {lang === "de" ? "Fragen gespeichert" : "questions saved"}
+                        {de ? "Fragen gespeichert" : "questions saved"}
                       </span>
                     </p>
                     <p className="text-xs text-[var(--mp-fg-subtle)] mt-0.5">
                       {offlineLastSync
-                        ? lang === "de"
+                        ? de
                           ? `Zuletzt aktualisiert: ${new Date(offlineLastSync).toLocaleString("de-AT", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`
                           : `Last updated: ${new Date(offlineLastSync).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`
-                        : lang === "de"
+                        : de
                           ? "Noch nicht heruntergeladen."
                           : "Not yet downloaded."}
                     </p>
@@ -1108,14 +1194,14 @@ export default function SettingsPage() {
 
                 {/* Preset size chips */}
                 <p className="text-sm font-semibold text-[var(--mp-fg)] mb-2">
-                  {lang === "de"
+                  {de
                     ? "Wie viele Fragen herunterladen?"
                     : "How many questions to download?"}
                 </p>
                 <div
                   role="radiogroup"
                   aria-label={
-                    lang === "de" ? "Anzahl der Fragen" : "Number of questions"
+                    de ? "Anzahl der Fragen" : "Number of questions"
                   }
                   className="flex flex-wrap gap-2 mb-4"
                 >
@@ -1130,11 +1216,11 @@ export default function SettingsPage() {
                         onClick={() => setOfflineSize(n as 100 | 250 | 500)}
                         className={`px-4 py-2 rounded-full text-sm font-semibold border transition-colors ${
                           active
-                            ? "bg-[var(--mp-viridian)] text-white border-[var(--mp-viridian)]"
+                            ? "bg-[var(--mp-viridian)] text-[var(--mp-fg-on-viridian)] border-[var(--mp-viridian)]"
                             : "bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-muted)] border-[var(--mp-border-soft)] hover:border-[var(--mp-viridian)] hover:text-[var(--mp-fg)]"
                         }`}
                       >
-                        {n.toLocaleString(lang === "de" ? "de-DE" : "en-US")}
+                        {n.toLocaleString(de ? "de-DE" : "en-US")}
                       </button>
                     );
                   })}
@@ -1150,10 +1236,10 @@ export default function SettingsPage() {
                   >
                     <CloudDownload className="w-4 h-4" aria-hidden />
                     {offlineDownloading
-                      ? lang === "de"
+                      ? de
                         ? "Lädt…"
                         : "Downloading…"
-                      : lang === "de"
+                      : de
                         ? "Herunterladen"
                         : "Download"}
                   </button>
@@ -1164,22 +1250,22 @@ export default function SettingsPage() {
                     className="mp-btn mp-btn--ghost w-full sm:w-auto disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <Trash2 className="w-4 h-4" aria-hidden />
-                    {lang === "de" ? "Offline-Daten löschen" : "Clear offline data"}
+                    {de ? "Offline-Daten löschen" : "Clear offline data"}
                   </button>
                 </div>
 
                 {/* Guest warning — offline requires a real user row for sync */}
                 {offlinePendingCount > 0 && (
-                  <p className="mt-3 text-sm text-amber-800" role="status">
-                    {lang === "de"
-                      ? `${offlinePendingCount} Antworten warten auf Synchronisierung. Sie bleiben erhalten, wenn du die heruntergeladenen Fragen löschst.`
+                  <p className="mt-3 text-sm text-[var(--mp-warning-text)]" role="status">
+                    {de
+                      ? `${offlinePendingCount} Antworten warten auf Synchronisierung. Sie bleiben erhalten, wenn Sie die heruntergeladenen Fragen löschen.`
                       : `${offlinePendingCount} answers are waiting to sync. They stay queued when you clear downloaded questions.`}
                   </p>
                 )}
                 {offlineLegacyPendingCount > 0 && (
-                  <div className="mt-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950" role="status">
+                  <div className="mt-3 rounded-lg border border-[var(--mp-status-warning)] bg-[var(--mp-warning-bg)] p-3 text-sm text-[var(--mp-warning-text)]" role="status">
                     <p>
-                      {lang === "de"
+                      {de
                         ? `${offlineLegacyPendingCount} ältere Offline-Antworten sind auf diesem Gerät erhalten. Das zugehörige Konto ist nicht gespeichert, deshalb werden sie nicht automatisch synchronisiert.`
                         : `${offlineLegacyPendingCount} older offline answers are preserved on this device. Their account was not recorded, so they are not synced automatically.`}
                     </p>
@@ -1192,7 +1278,7 @@ export default function SettingsPage() {
                           setLegacyRecoveryOpen(true);
                         }}
                       >
-                        {lang === "de" ? "Diesem Konto zuordnen…" : "Assign to this account…"}
+                        {de ? "Diesem Konto zuordnen…" : "Assign to this account…"}
                       </button>
                     )}
                   </div>
@@ -1202,10 +1288,10 @@ export default function SettingsPage() {
                     <Alert
                       variant="info"
                       title={
-                        lang === "de" ? "Anmeldung erforderlich" : "Sign-in required"
+                        de ? "Anmeldung erforderlich" : "Sign-in required"
                       }
                     >
-                      {lang === "de"
+                      {de
                         ? "Der Offline-Modus ist nur für angemeldete Nutzer verfügbar, nur so können beantwortete Fragen später synchronisiert werden."
                         : "Offline mode is only available to signed-in users, so that answers recorded offline can sync back to your account."}
                     </Alert>
@@ -1225,7 +1311,7 @@ export default function SettingsPage() {
 
             {/* ═══ Konto ═══ (anchor: the Mehr sheet's "Abo und Zahlung" entry) */}
             <div className="set-group set-span2" id="konto" tabIndex={-1}>
-              <div className="set-label">{lang === "de" ? "Konto" : "Account"}</div>
+              <div className="set-label">{de ? "Konto" : "Account"}</div>
 
               {/* Email-linking card — Telegram-only users (no email yet) */}
               {user?.telegram_id && !user?.email && (
@@ -1234,10 +1320,26 @@ export default function SettingsPage() {
                 </div>
               )}
 
-              {/* Active subscription / current plan — rich card branches */}
+              {/* Active subscription / current plan — rich card branches.
+                  "Abo und Zahlung" (UX-ACC-20) scrolls here and focuses it. */}
               {activeSub ? (
-                <div className="mb-4">
+                <div className="mb-4 scroll-mt-24" id="abo-und-zahlung" tabIndex={-1}>
                   <SubscriptionCard sub={activeSub} lang={lang} />
+                  <div className="mt-2 px-1 flex flex-col gap-1 text-xs text-[var(--mp-fg-muted)]">
+                    {user?.email && (
+                      <p>
+                        {de ? "Quittungen gehen an " : "Receipts go to "}
+                        <span className="font-semibold text-[var(--mp-fg)]">{user.email}</span>.
+                      </p>
+                    )}
+                    <p>
+                      {de
+                        ? "Rückerstattung innerhalb von 7 Tagen nach einem Kauf: schreiben Sie an "
+                        : "Refunds within 7 days of a purchase: write to "}
+                      <a className="underline underline-offset-2" href={`mailto:${BILLING_SUPPORT_EMAIL}`}>{BILLING_SUPPORT_EMAIL}</a>
+                      {de ? ". Die Erstattung erfolgt über Whop." : ". The refund is paid through Whop."}
+                    </p>
+                  </div>
                 </div>
               ) : null}
 
@@ -1250,18 +1352,18 @@ export default function SettingsPage() {
                     </div>
                     <div className="sr-body">
                       <div className="sr-title">
-                        {lang === "de" ? "Aktueller Tarif" : "Current plan"}
+                        {de ? "Aktueller Tarif" : "Current plan"}
                       </div>
                       <div className="sr-sub">
                         {liveIsPaid
                           ? liveTierExpiresAt
-                            ? lang === "de"
+                            ? de
                               ? `Pro · gültig bis ${new Date(liveTierExpiresAt).toLocaleDateString("de-AT", { day: "numeric", month: "long", year: "numeric" })}`
                               : `Pro · valid until ${new Date(liveTierExpiresAt).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}`
-                            : lang === "de"
+                            : de
                               ? "Pro · Vollzugriff aktiv"
                               : "Pro · full access active"
-                          : lang === "de"
+                          : de
                             ? "Kostenlos · 150 Fragen pro Prüfung"
                             : "Free · 150 questions per exam"}
                       </div>
@@ -1275,7 +1377,7 @@ export default function SettingsPage() {
                           ? "Admin"
                           : liveIsPaid
                             ? "Pro"
-                            : lang === "de"
+                            : de
                               ? "Kostenlos"
                               : "Free"}
                       </span>
@@ -1283,54 +1385,62 @@ export default function SettingsPage() {
                   </div>
                 )}
 
-                {/* Manage subscription / pricing */}
-                <Link href="/history" className="set-row min-h-11">{t("exam_history", lang)}</Link>
-                <Link href="/pricing" className="set-row" style={{ display: "flex" }}>
-                  <div className="sr-ic">
-                    <Sparkles aria-hidden />
-                  </div>
-                  <div className="sr-body">
-                    <div className="sr-title">
-                      {liveIsPaid
-                        ? lang === "de"
-                          ? "Tarife ansehen"
-                          : "View plans"
-                        : lang === "de"
-                          ? "Pro ansehen"
-                          : "View Pro"}
+                {/* Plan row (UX-ACC-20): a real 44 px row like its siblings.
+                    styled-jsx scopes .set-row to intrinsic elements only, so
+                    these rows are buttons with router.push, not next/link. */}
+                {activeSub ? (
+                  <button type="button" className="set-row" onClick={openBillingCard}>
+                    <div className="sr-ic">
+                      <Crown aria-hidden />
                     </div>
-                    <div className="sr-sub">
-                      {liveIsPaid
-                        ? lang === "de"
-                          ? "Preise & Tarife ansehen"
-                          : "See pricing & plans"
-                        : lang === "de"
-                          ? "Unbegrenzter Zugang"
-                          : "Unlimited access"}
+                    <div className="sr-body">
+                      <div className="sr-title">{de ? "Abo und Zahlung" : "Plan and billing"}</div>
+                      <div className="sr-sub">
+                        {de ? "Ihr Tarif, Abrechnung und Rückerstattung" : "Your plan, billing and refunds"}
+                      </div>
                     </div>
-                  </div>
-                  <div className="sr-ctrl">
-                    <span className="sr-val">
-                      <ArrowRight aria-hidden />
-                    </span>
-                  </div>
-                </Link>
+                    <div className="sr-ctrl">
+                      <span className="sr-val">
+                        <ArrowRight aria-hidden />
+                      </span>
+                    </div>
+                  </button>
+                ) : (
+                  <button type="button" className="set-row" onClick={() => router.push("/pricing")}>
+                    <div className="sr-ic">
+                      <Sparkles aria-hidden />
+                    </div>
+                    <div className="sr-body">
+                      <div className="sr-title">
+                        {liveIsPaid
+                          ? de
+                            ? "Tarife ansehen"
+                            : "View plans"
+                          : de
+                            ? `Pro freischalten, ab ${monthlyFrom} pro Monat`
+                            : `Unlock Pro, from ${monthlyFrom} per month`}
+                      </div>
+                      <div className="sr-sub">
+                        {de ? "Preise und Bedingungen ansehen" : "See prices and terms"}
+                      </div>
+                    </div>
+                    <div className="sr-ctrl">
+                      <span className="sr-val">
+                        <ArrowRight aria-hidden />
+                      </span>
+                    </div>
+                  </button>
+                )}
 
-                {/* Clear study data — destructive */}
-                <button
-                  type="button"
-                  className="set-row danger"
-                  onClick={() => setClearDialogOpen(true)}
-                >
+                {/* Saved simulations */}
+                <button type="button" className="set-row" onClick={() => router.push("/history")}>
                   <div className="sr-ic">
-                    <Trash2 aria-hidden />
+                    <History aria-hidden />
                   </div>
                   <div className="sr-body">
-                    <div className="sr-title">{t("clear_data", lang)}</div>
+                    <div className="sr-title">{t("exam_history", lang)}</div>
                     <div className="sr-sub">
-                      {lang === "de"
-                        ? "Lesezeichen, Notizen und Quiz-Daten entfernen"
-                        : "Remove bookmarks, notes, and quiz data"}
+                      {de ? "Ihre gespeicherten Simulationen" : "Your saved simulations"}
                     </div>
                   </div>
                   <div className="sr-ctrl">
@@ -1340,9 +1450,29 @@ export default function SettingsPage() {
                   </div>
                 </button>
 
-                {/* Logout */}
+                {/* Clear notes, bookmarks and the quiz resume (UX-ACC-38) */}
+                <button
+                  type="button"
+                  className="set-row danger"
+                  onClick={() => setClearDialogOpen(true)}
+                >
+                  <div className="sr-ic">
+                    <Trash2 aria-hidden />
+                  </div>
+                  <div className="sr-body">
+                    <div className="sr-title">{clearDataLabel}</div>
+                    <div className="sr-sub">{clearDataScope}</div>
+                  </div>
+                  <div className="sr-ctrl">
+                    <span className="sr-val">
+                      <ArrowRight aria-hidden />
+                    </span>
+                  </div>
+                </button>
+
+                {/* Logout (asks first, warns about unsent offline answers) */}
                 {user && !isGuest && (
-                  <button type="button" className="set-row" onClick={handleLogout}>
+                  <button type="button" className="set-row" onClick={() => void requestLogout()}>
                     <div className="sr-ic">
                       <LogOut aria-hidden />
                     </div>
@@ -1350,7 +1480,7 @@ export default function SettingsPage() {
                       <div className="sr-title">{t("logout", lang)}</div>
                       <div className="sr-sub">
                         {user.first_name} ·{" "}
-                        {lang === "de" ? "angemeldet" : "signed in"}
+                        {de ? "angemeldet" : "signed in"}
                       </div>
                     </div>
                     <div className="sr-ctrl">
@@ -1362,17 +1492,17 @@ export default function SettingsPage() {
                 )}
               </div>
 
-              {/* About / version footer */}
+              {/* About / build footer (short build id names the deployed build in bug reports) */}
               <div className="flex items-center justify-between px-1 mt-4">
                 <Link
                   href="/about"
                   className="text-sm text-[var(--mp-fg-muted)] hover:text-[var(--mp-fg)] transition-colors font-semibold inline-flex items-center gap-1"
                 >
-                  {lang === "de" ? "Über MedPrüf" : "About MedPrüf"}
+                  {de ? "Über MedPrüf" : "About MedPrüf"}
                   <ArrowRight className="w-3.5 h-3.5" aria-hidden />
                 </Link>
                 <span className="text-xs font-mono text-[var(--mp-fg-subtle)]">
-                  MedPr&uuml;f v1.0
+                  Version {settingsBuildLabel()}
                 </span>
               </div>
             </div>
@@ -1388,21 +1518,21 @@ export default function SettingsPage() {
         onOpenChange={setExamPickerOpen}
         title={t("exam_target_date", lang)}
         description={
-          lang === "de"
-            ? "Wähle deinen Prüfungstermin, um einen personalisierten Lernplan freizuschalten."
+          de
+            ? "Wählen Sie Ihren Prüfungstermin, um einen persönlichen Lernplan freizuschalten."
             : "Pick your exam date to unlock a personalized study plan."
         }
         footer={
           <DialogFooter>
             {returnToStudyPlan && examDateSaved && <Link href="/study-plan" className="mp-btn mp-btn--primary min-h-11">
-              {lang === "de" ? "Zum Lernplan zurück" : "Return to study plan"}
+              {de ? "Zum Lernplan zurück" : "Return to study plan"}
             </Link>}
             <button
               type="button"
               className="mp-btn mp-btn--secondary"
               onClick={() => setExamPickerOpen(false)}
             >
-              {lang === "de" ? "Fertig" : "Done"}
+              {de ? "Fertig" : "Done"}
             </button>
           </DialogFooter>
         }
@@ -1415,45 +1545,28 @@ export default function SettingsPage() {
         />
       </Dialog>
 
-      {/* Destructive confirm dialog */}
-      <Dialog
+      {/* Destructive confirm: repeats what is removed, Cancel focused first. */}
+      <ConfirmAction
         open={clearDialogOpen}
         onOpenChange={setClearDialogOpen}
-        title={t("clear_data", lang)}
-        description={
-          lang === "de"
-            ? "Lesezeichen, Notizen, Quiz-Autosave und lokale Schwachstellen-Daten werden entfernt."
-            : "Bookmarks, notes, quiz autosave, and local weakness data will be removed."
-        }
-        footer={
-          <DialogFooter>
-            <button
-              type="button"
-              data-dialog-safe
-              className="mp-btn mp-btn--secondary"
-              onClick={() => setClearDialogOpen(false)}
-            >
-              {lang === "de" ? "Abbrechen" : "Cancel"}
-            </button>
-            <button
-              type="button"
-              data-dialog-primary
-              className="mp-btn mp-btn--destructive"
-              onClick={handleClearData}
-            >
-              <Trash2 className="w-4 h-4" aria-hidden />
-              {t("clear_data", lang)}
-            </button>
-          </DialogFooter>
-        }
-      >
-        <Alert
-          variant="warning"
-          title={lang === "de" ? "Kann nicht rückgängig gemacht werden" : "Cannot be undone"}
-        >
-          {t("clear_data_confirm", lang)}
-        </Alert>
-      </Dialog>
+        title={clearDataLabel}
+        consequence={`${clearDataScope} ${de ? "Das kann nicht rückgängig gemacht werden." : "This cannot be undone."}`}
+        confirmLabel={de ? "Löschen" : "Delete"}
+        cancelLabel={de ? "Abbrechen" : "Cancel"}
+        destructive
+        onConfirm={handleClearData}
+      />
+
+      {/* Logout confirm (UX-ACC-38): warns when offline answers are unsent. */}
+      <ConfirmAction
+        open={logoutConfirmOpen}
+        onOpenChange={setLogoutConfirmOpen}
+        title={de ? "Abmelden?" : "Sign out?"}
+        consequence={logoutConsequence}
+        confirmLabel={t("logout", lang)}
+        cancelLabel={de ? "Angemeldet bleiben" : "Stay signed in"}
+        onConfirm={handleLogout}
+      />
 
       {/* Offline-data confirm dialog — separate from the general clear
           dialog so the copy can be specific about IndexedDB questions +
@@ -1465,9 +1578,9 @@ export default function SettingsPage() {
           if (!legacyRecoveryBusy) setLegacyRecoveryOpen(open);
           if (!open && !legacyRecoveryBusy) setLegacyRecoveryUserId(null);
         }}
-        title={lang === "de" ? "Offline-Antworten übernehmen?" : "Recover offline answers?"}
-        description={lang === "de"
-          ? "Nur fortfahren, wenn diese älteren Antworten in diesem Browser von dir und für dieses Konto gegeben wurden."
+        title={de ? "Offline-Antworten übernehmen?" : "Recover offline answers?"}
+        description={de
+          ? "Fahren Sie nur fort, wenn Sie diese älteren Antworten in diesem Browser selbst für dieses Konto gegeben haben."
           : "Continue only if you recorded these older answers in this browser and they belong to this account."}
         footer={
           <DialogFooter>
@@ -1480,7 +1593,7 @@ export default function SettingsPage() {
                 setLegacyRecoveryUserId(null);
               }}
             >
-              {lang === "de" ? "Abbrechen" : "Cancel"}
+              {de ? "Abbrechen" : "Cancel"}
             </button>
             <button
               type="button"
@@ -1489,18 +1602,18 @@ export default function SettingsPage() {
               onClick={handleClaimLegacyOfflineAnswers}
             >
               {legacyRecoveryBusy
-                ? (lang === "de" ? "Wird übernommen…" : "Recovering…")
-                : (lang === "de" ? "Ja, diesem Konto zuordnen" : "Yes, assign to this account")}
+                ? (de ? "Wird übernommen…" : "Recovering…")
+                : (de ? "Ja, diesem Konto zuordnen" : "Yes, assign to this account")}
             </button>
           </DialogFooter>
         }
       >
         <Alert
           variant="warning"
-          title={lang === "de" ? "Danach können sie synchronisiert werden" : "They may sync after this"}
+          title={de ? "Danach können sie synchronisiert werden" : "They may sync after this"}
         >
-          {lang === "de"
-            ? "Nach deiner Bestätigung werden nur Antworten ohne gespeicherte Konto-ID diesem Konto zugeordnet. Sobald eine Verbindung besteht, werden sie an dein Konto gesendet. Die Zuordnung lässt sich hier nicht rückgängig machen. Bei Abbrechen bleiben alle Antworten unverändert auf diesem Gerät."
+          {de
+            ? "Nach Ihrer Bestätigung werden nur Antworten ohne gespeicherte Konto-ID diesem Konto zugeordnet. Sobald eine Verbindung besteht, werden sie an Ihr Konto gesendet. Die Zuordnung lässt sich hier nicht rückgängig machen. Bei Abbrechen bleiben alle Antworten unverändert auf diesem Gerät."
             : "After confirmation, only answers with no stored account ID will be assigned to this account. They will sync to it when a connection is available. This assignment cannot be undone here. Cancel leaves every answer unchanged on this device."}
         </Alert>
       </Dialog>
@@ -1508,9 +1621,9 @@ export default function SettingsPage() {
       <Dialog
         open={offlineClearOpen}
         onOpenChange={setOfflineClearOpen}
-        title={lang === "de" ? "Offline-Fragen löschen?" : "Clear offline questions?"}
+        title={de ? "Offline-Fragen löschen?" : "Clear offline questions?"}
         description={
-          lang === "de"
+          de
           ? "Heruntergeladene Fragen werden entfernt. Nicht synchronisierte Antworten bleiben erhalten."
             : "Downloaded questions will be removed. Unsynced answers will be kept."
         }
@@ -1521,7 +1634,7 @@ export default function SettingsPage() {
               className="mp-btn mp-btn--secondary"
               onClick={() => setOfflineClearOpen(false)}
             >
-              {lang === "de" ? "Abbrechen" : "Cancel"}
+              {de ? "Abbrechen" : "Cancel"}
             </button>
             <button
               type="button"
@@ -1529,7 +1642,7 @@ export default function SettingsPage() {
               onClick={handleClearOffline}
             >
               <Trash2 className="w-4 h-4" aria-hidden />
-              {lang === "de" ? "Löschen" : "Clear"}
+              {de ? "Löschen" : "Clear"}
             </button>
           </DialogFooter>
         }
@@ -1537,12 +1650,12 @@ export default function SettingsPage() {
         <Alert
           variant="warning"
           title={
-            lang === "de"
+            de
               ? "Antworten bleiben erhalten"
               : "Answers will be kept"
           }
         >
-          {lang === "de"
+          {de
             ? "Nur heruntergeladene Fragen werden entfernt. Nicht synchronisierte Antworten bleiben auf diesem Gerät erhalten."
             : "Only downloaded questions will be removed. Unsynced answers will remain on this device."}
         </Alert>
@@ -1565,29 +1678,57 @@ export default function SettingsPage() {
  *   - credentials committed to users only after verify confirms the email
  */
 function EmailLinkCard({ lang }: { lang: Lang }) {
+  const de = lang === "de";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
-  const [err, setErr] = useState("");
+  // UX-ACC-44: field errors go through TextField's error prop (aria-invalid,
+  // aria-describedby); only a connection/server failure is a form-level alert.
+  const [emailErr, setEmailErr] = useState("");
+  const [passwordErr, setPasswordErr] = useState("");
+  const [formErr, setFormErr] = useState("");
+  const emailRef = useRef<HTMLInputElement>(null);
+  const passwordRef = useRef<HTMLInputElement>(null);
+  const successRef = useRef<HTMLDivElement>(null);
   const toast = useToast();
+
+  useEffect(() => {
+    if (sent) successRef.current?.focus();
+  }, [sent]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSending(true);
-    setErr("");
+    // aria-disabled keeps the button focusable, so the guard lives here.
+    if (sending) return;
+    setEmailErr("");
+    setPasswordErr("");
+    setFormErr("");
 
+    const trimmed = email.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+      setEmailErr(de ? "Bitte geben Sie eine gültige E-Mail-Adresse ein." : "Please enter a valid email address.");
+      emailRef.current?.focus();
+      return;
+    }
+    if (password.length < 8) {
+      setPasswordErr(de ? "Das Passwort braucht mindestens 8 Zeichen." : "The password needs at least 8 characters.");
+      passwordRef.current?.focus();
+      return;
+    }
+
+    setSending(true);
     let res: Response;
     try {
       res = await authFetch("/api/user/link-email/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, lang }),
+        body: JSON.stringify({ email: trimmed, password, lang }),
       });
     } catch {
       setSending(false);
-      setErr(lang === "de" ? "Verbindungsfehler" : "Connection error");
+      setFormErr(de ? "Keine Verbindung. Bitte versuchen Sie es erneut." : "Connection error. Please try again.");
       return;
     }
 
@@ -1597,42 +1738,49 @@ function EmailLinkCard({ lang }: { lang: Lang }) {
 
     if (!res.ok) {
       if (res.status === 409 && data.error === "email_taken") {
-        setErr(
-          lang === "de"
+        setEmailErr(
+          de
             ? "Diese E-Mail-Adresse ist bereits einem anderen Konto zugeordnet."
             : "This email address is already linked to another account.",
         );
+        emailRef.current?.focus();
       } else if (res.status === 409) {
-        setErr(
-          lang === "de"
+        setEmailErr(
+          de
             ? "Eine Bestätigungs-E-Mail wurde bereits gesendet. Bitte prüfen Sie Ihren Posteingang."
             : "A verification email was already sent. Please check your inbox.",
         );
+        emailRef.current?.focus();
       } else {
-        setErr(data.message ?? (lang === "de" ? "Fehler. Bitte erneut versuchen." : "Error. Please try again."));
+        setFormErr(data.message ?? (de ? "Fehler. Bitte versuchen Sie es erneut." : "Error. Please try again."));
       }
       return;
     }
 
     setSent(true);
     toast.success(
-      lang === "de" ? "Bestätigungs-E-Mail gesendet" : "Verification email sent",
-      lang === "de"
-        ? `Wir haben eine E-Mail an ${email} gesendet.`
-        : `We sent an email to ${email}.`,
+      de ? "Bestätigungs-E-Mail gesendet" : "Verification email sent",
+      de
+        ? `Wir haben eine E-Mail an ${trimmed} gesendet.`
+        : `We sent an email to ${trimmed}.`,
     );
   };
 
   if (sent) {
     return (
-      <div className="p-4 rounded-[var(--mp-r-card)] bg-[var(--mp-success-bg)] border border-[rgba(0,123,95,0.2)]">
+      <div
+        ref={successRef}
+        role="status"
+        tabIndex={-1}
+        className="p-4 rounded-[var(--mp-r-card)] bg-[var(--mp-success-bg)] border border-[var(--mp-border-subtle)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--mp-focus-color)]"
+      >
         <p className="text-sm font-semibold text-[var(--mp-viridian)] mb-1">
-          {lang === "de" ? "Bestätigungs-E-Mail gesendet" : "Verification email sent"}
+          {de ? "Bestätigungs-E-Mail gesendet" : "Verification email sent"}
         </p>
         <p className="text-xs text-[var(--mp-fg-muted)]">
-          {lang === "de"
-            ? `Bitte öffnen Sie den Link in der E-Mail an ${email}, um die Verknüpfung abzuschließen.`
-            : `Please open the link in the email we sent to ${email} to complete the linking.`}
+          {de
+            ? `Bitte öffnen Sie den Link in der E-Mail an ${email.trim()}, um die Verknüpfung abzuschließen.`
+            : `Please open the link in the email we sent to ${email.trim()} to complete the linking.`}
         </p>
       </div>
     );
@@ -1646,68 +1794,72 @@ function EmailLinkCard({ lang }: { lang: Lang }) {
         </div>
         <div>
           <p className="text-sm font-semibold text-[var(--mp-fg)]">
-            {lang === "de" ? "E-Mail-Adresse hinzufügen" : "Add email address"}
+            {de ? "E-Mail-Adresse hinzufügen" : "Add email address"}
           </p>
           <p className="text-xs text-[var(--mp-fg-subtle)] mt-0.5">
-            {lang === "de"
+            {de
               ? "Damit können Sie sich auch per E-Mail und Passwort anmelden. Ihre Telegram-Anmeldung bleibt aktiv."
               : "This lets you also sign in with email and password. Your Telegram login stays active."}
           </p>
         </div>
       </div>
 
-      {err && (
-        <div className="mb-3 text-xs text-[var(--mp-error)] bg-[var(--mp-error-bg)] border border-[rgba(214,69,69,0.2)] rounded-lg px-3 py-2">
-          {err}
+      {formErr && (
+        <div role="alert" className="mb-3 text-xs text-[var(--mp-error-text)] bg-[var(--mp-error-bg)] border border-[var(--mp-border-subtle)] rounded-lg px-3 py-2">
+          {formErr}
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-3">
+      <form onSubmit={handleSubmit} noValidate className="space-y-3">
         <TextField
-          label={lang === "de" ? "E-Mail-Adresse" : "Email address"}
+          ref={emailRef}
+          label={de ? "E-Mail-Adresse" : "Email address"}
           type="email"
           required
           autoComplete="email"
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(e) => { setEmail(e.target.value); setEmailErr(""); }}
           placeholder="name@example.com"
+          error={emailErr || undefined}
         />
         <div className="relative">
           <TextField
-            label={lang === "de" ? "Neues Passwort" : "New password"}
+            ref={passwordRef}
+            label={de ? "Neues Passwort" : "New password"}
             type={showPassword ? "text" : "password"}
             required
             minLength={8}
             autoComplete="new-password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder={lang === "de" ? "Min. 8 Zeichen" : "Min. 8 characters"}
-            helper={lang === "de" ? "Mindestens 8 Zeichen." : "At least 8 characters."}
+            onChange={(e) => { setPassword(e.target.value); setPasswordErr(""); }}
+            placeholder={de ? "Mindestens 8 Zeichen" : "At least 8 characters"}
+            helper={de ? "Mindestens 8 Zeichen." : "At least 8 characters."}
+            error={passwordErr || undefined}
           />
           <button
             type="button"
             onClick={() => setShowPassword((v) => !v)}
             aria-label={showPassword
-              ? (lang === "de" ? "Passwort verbergen" : "Hide password")
-              : (lang === "de" ? "Passwort anzeigen" : "Show password")}
+              ? (de ? "Passwort verbergen" : "Hide password")
+              : (de ? "Passwort anzeigen" : "Show password")}
             className="absolute right-3 top-[34px] text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg-muted)] transition-colors"
           >
             {showPassword ? (
-              <EyeOff className="w-4 h-4" />
+              <EyeOff className="w-4 h-4" aria-hidden />
             ) : (
-              <Eye className="w-4 h-4" />
+              <Eye className="w-4 h-4" aria-hidden />
             )}
           </button>
         </div>
         <button
           type="submit"
-          disabled={sending}
-          className="mp-btn mp-btn--primary w-full justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+          aria-disabled={sending || undefined}
+          className="mp-btn mp-btn--primary w-full justify-center aria-disabled:opacity-50 aria-disabled:cursor-not-allowed"
         >
           <Mail className="w-4 h-4" aria-hidden />
           {sending
-            ? (lang === "de" ? "Sende E-Mail..." : "Sending email...")
-            : (lang === "de" ? "Bestätigungs-E-Mail senden" : "Send verification email")}
+            ? (de ? "E-Mail wird gesendet…" : "Sending email…")
+            : (de ? "Bestätigungs-E-Mail senden" : "Send verification email")}
         </button>
       </form>
     </div>
@@ -1718,7 +1870,7 @@ function EmailLinkCard({ lang }: { lang: Lang }) {
 
 /** Provider billing and actual access expiry are deliberately separate. */
 function SubscriptionCard({ sub, lang }: { sub: SubscriptionCardSnapshot; lang: Lang }) {
-  const copyLang = lang === "de" ? "de" : "en";
+  const copyLang = renderLang(lang);
   const state = subscriptionBillingState(sub);
   const labels = {
     active: { de: "Aktiv", en: "Active" }, trial: { de: "Pro-Test", en: "Pro trial" },
@@ -1742,14 +1894,18 @@ function SubscriptionCard({ sub, lang }: { sub: SubscriptionCardSnapshot; lang: 
       </div>
       <p className="text-sm leading-relaxed text-[var(--mp-fg)]">{billingAccountSentence(sub, copyLang)}</p>
       {canViewBilling && <div className="flex flex-col gap-2 items-start">
-        <a href={sub.manage_url!} target="_blank" rel="noopener noreferrer" className="mp-btn mp-btn--secondary min-h-11">
-          {canManage ? copyLang === "de" ? "Kündigen oder verwalten" : "Cancel or manage" : copyLang === "de" ? "Abrechnung bei Whop ansehen" : "View billing at Whop"}
+        {/* Until VERIFIED_CANCEL_PATH, no label claims a verified self-serve
+            cancellation: the link opens Whop's membership page and the steps
+            below are instructions. */}
+        <a href={VERIFIED_CANCEL_PATH ? sub.manage_url! : WHOP_MANAGE_URL} target="_blank" rel="noopener noreferrer" className="mp-btn mp-btn--secondary min-h-11 h-auto whitespace-normal text-left">
+          {canManage && VERIFIED_CANCEL_PATH
+            ? copyLang === "de" ? "Kündigen oder verwalten (öffnet Whop in einem neuen Tab)" : "Cancel or manage (opens Whop in a new tab)"
+            : copyLang === "de" ? "Abo bei Whop verwalten (öffnet Whop in einem neuen Tab, Seite auf Englisch)" : "Manage your plan at Whop (opens Whop in a new tab)"}
         </a>
-        <p className="text-xs text-[var(--mp-fg-muted)]">{copyLang === "de" ? "Öffnet Whop in einem neuen Tab." : "Opens Whop in a new tab."}</p>
       </div>}
       {canManage && <details className="text-sm text-[var(--mp-fg-muted)]">
-        <summary className="min-h-11 flex items-center cursor-pointer text-[var(--mp-fg)]">{copyLang === "de" ? "Kündigung bei Whop" : "Cancellation at Whop"}</summary>
-        <p className="leading-relaxed">{copyLang === "de" ? 'Logg dich bei Whop mit derselben E-Mail ein, wähle deine Mitgliedschaft und dann „Cancel membership“. Die Whop-Seite ist auf Englisch.' : 'Log in to Whop with the same email, select your membership, then "Cancel membership".'}</p>
+        <summary className="min-h-11 flex items-center cursor-pointer text-[var(--mp-fg)]">{copyLang === "de" ? "Schritte zur Kündigung bei Whop" : "Steps to cancel at Whop"}</summary>
+        <p className="leading-relaxed">{copyLang === "de" ? 'Melden Sie sich bei Whop mit derselben E-Mail-Adresse an, wählen Sie Ihre Mitgliedschaft und dann „Cancel membership“. Die Whop-Seite ist auf Englisch.' : 'Log in to Whop with the same email, select your membership, then "Cancel membership".'}</p>
       </details>}
       <p className="text-sm text-[var(--mp-fg-muted)]">
         {copyLang === "de" ? "Fragen zur Abrechnung? " : "Questions about billing? "}
