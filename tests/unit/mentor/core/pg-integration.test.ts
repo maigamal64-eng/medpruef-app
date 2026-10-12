@@ -11,7 +11,7 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
-import { AiEmptyText, AiTimeout, AiUpstream } from "@/lib/ai/anthropic";
+import { AiEmptyText, AiRefusal, AiTimeout, AiUpstream } from "@/lib/ai/anthropic";
 import type { RpcClient } from "@/lib/ai/limits";
 import { checkMentorBreaker, takeMentorAttempt } from "@/lib/mentor/guard";
 import { intOrNull } from "@/lib/mentor/ledger";
@@ -306,6 +306,32 @@ describe.skipIf(!PORT)("Mentor P0 money guards on real SQL", () => {
     expect(Number(await sql(`SELECT count(*) FROM ai_usage_ledger WHERE request_id='${id}' AND kind='house_cost' AND delta_micro_usd=0;`))).toBe(1);
     expect(Number(await sql(`SELECT count(*) FROM ai_usage_ledger WHERE request_id='${id}' AND kind='settle';`))).toBe(0);
   });
+  it("TR-32 / MUX-38 B: a reached failure, a safety refusal, a validator refusal and a replaced answer leave the balance unchanged; a whole answer is charged", async () => {
+    const turn = createRunMentorTurn({ alert: () => {} });
+    const runOne = async (steps: Step[], validated?: { refused?: string; replaced: boolean }) => {
+      const user = await freshUser(500_000);
+      const before = JSON.parse(await sql(`SELECT mentor_balance('${user}')::text;`)).available_micro as number;
+      const env = makeDeps(steps, { grantMicro: 0 });
+      env.deps.meter = createMeter(pg, user);
+      env.deps.house = createHousePolicy(pg, 2);
+      env.deps.wallet = pgWallet();
+      env.deps.callClaude = scriptedClaude(steps).fn;
+      if (validated) env.deps.brain = { ...env.deps.brain, validate: () => ({ blocks: [{ text: "Die Anmeldung läuft online.", fact_ids: [] }], citations: [], rejected: [], ...validated }) as never };
+      const events = await collect(turn(env.deps, turnInput({ userId: user, requestId: crypto.randomUUID() })));
+      const last = events.at(-1) as { type: string; charged?: boolean };
+      const after = JSON.parse(await sql(`SELECT mentor_balance('${user}')::text;`)).available_micro as number;
+      const kinds = (await sql(`SELECT string_agg(kind, ',' ORDER BY id) FROM ai_usage_ledger WHERE user_id='${user}' AND kind IN ('settle','house_cost');`)) || "";
+      const r = await reconcile(user);
+      expect(r).toMatchObject({ reserved: 0, open: 0 });
+      expect(r.ledger).toBe(r.lots - r.debt);
+      return { type: last.type, charged: last.charged, unchanged: after === before, kinds };
+    };
+    expect(await runOne([{ throw: new AiTimeout("t", {}) }, { throw: new AiTimeout("t", {}) }])).toMatchObject({ type: "error", unchanged: true, kinds: "house_cost,house_cost" });
+    expect(await runOne([{ throw: new AiRefusal("declined", { usage: usage(800, 40), stop_details: null, blocks: [], partialText: "" }) }])).toMatchObject({ type: "final", charged: false, unchanged: true, kinds: "house_cost" });
+    expect(await runOne([{ text: "x", usage: usage(900, 100) }], { refused: "individual_ruling", replaced: false })).toMatchObject({ type: "final", charged: false, unchanged: true, kinds: "house_cost" });
+    expect(await runOne([{ text: "x", usage: usage(900, 100) }], { replaced: true })).toMatchObject({ type: "final", charged: false, unchanged: true, kinds: "house_cost" });
+    expect(await runOne([{ text: "x", usage: usage(900, 100) }], { replaced: false })).toMatchObject({ type: "final", charged: true, unchanged: false, kinds: "settle" });
+  }, 60_000);
   it("MUX-35/78/85: concurrent claims and purchases serialize; retry/expiry are bounded", async () => {
     const user = crypto.randomUUID(), client = crypto.randomUUID();
     // Stub users exists in the documented local scratch schema; only owner setup inserts it.

@@ -143,7 +143,10 @@ describe("runMentorTurn: success paths", () => {
     expect(f.refused).toBe("individual_ruling");
     expect(f.refusal_link).toBeUndefined();
     expect(f.refusal_label).toBeUndefined();
-    expect(settled(t.ledger)).toHaveLength(1); // validator refusals are billable
+    // MUX-38 B: a validator refusal is never the learner's.
+    expect(settled(t.ledger).map((e) => e.kind)).toEqual(["house_cost"]);
+    expect(f.charged).toBe(false);
+    expect(f.credits_used).toBe(0);
   });
 });
 
@@ -207,7 +210,7 @@ describe("runMentorTurn: billing matrix on failures", () => {
     invariant(t.ledger);
   });
 
-  it("safety refusal -> billed to the user at usage, final with refused out_of_scope", async () => {
+  it("safety refusal -> booked to the house at usage (MUX-38 B), final with refused out_of_scope and charged false", async () => {
     const u = usage(800, 40);
     const t = run([{ throw: new AiRefusal("declined", { usage: u, stop_details: null, blocks: [], partialText: "teil" }) }]);
     const events = await t.events;
@@ -217,7 +220,10 @@ describe("runMentorTurn: billing matrix on failures", () => {
     expect(JSON.stringify(events)).not.toContain("teil");
     const s = settled(t.ledger);
     expect(s).toHaveLength(1);
-    expect(s[0]).toMatchObject({ kind: "settle", cost: costMicroUsd(MODEL, u) });
+    expect(s[0]).toMatchObject({ kind: "house_cost", cost: costMicroUsd(MODEL, u) });
+    expect(f.charged).toBe(false);
+    expect(f.credits_used).toBe(0);
+    expect(f.credits_left).toBe(GRANT / 5000);
     invariant(t.ledger);
   });
 
@@ -396,7 +402,7 @@ describe("runMentorTurn: retry once, and the learner never pays for an error or 
     invariant(t.ledger);
   });
 
-  it("an answer with real text next to a replaced value is a delivered answer and is charged", async () => {
+  it("an answer with real text next to a replaced value is not charged (MUX-38 B)", async () => {
     const u = usage(1200, 600);
     const notice = "Diese Angabe ist nicht offiziell bestätigt. Bitte prüf sie auf der offiziellen Seite: https://example.org/official";
     const t = run([{ text: "x", usage: u }], {
@@ -410,9 +416,25 @@ describe("runMentorTurn: retry once, and the learner never pays for an error or 
         }),
       },
     });
-    await t.events;
-    expect(settled(t.ledger).map((e) => e.kind)).toEqual(["settle"]);
+    const f = finalOf(await t.events);
+    expect(settled(t.ledger).map((e) => e.kind)).toEqual(["house_cost"]);
+    expect(f).toMatchObject({ result: "answer", validator_replaced: true, charged: false, credits_used: 0 });
     invariant(t.ledger);
+  });
+
+  it("billing table (MUX-38 B): only an answer the validator kept whole is charged", async () => {
+    const outcome = async (validated: { refused?: string; replaced: boolean }) => {
+      const t = run([{ text: "x", usage: usage(900, 200) }], {
+        grantMicro: GRANT,
+        brain: { validate: () => ({ blocks: [{ text: "Die Anmeldung läuft online.", fact_ids: [] }], citations: [], rejected: [], ...validated }) as never },
+      });
+      const f = finalOf(await t.events);
+      return { charged: f.charged, kinds: settled(t.ledger).map((e) => e.kind), unchanged: f.credits_left === GRANT / 5000 };
+    };
+    expect(await outcome({ replaced: false })).toMatchObject({ charged: true, kinds: ["settle"], unchanged: false });
+    expect(await outcome({ replaced: true })).toMatchObject({ charged: false, kinds: ["house_cost"], unchanged: true });
+    expect(await outcome({ refused: "individual_ruling", replaced: false })).toMatchObject({ charged: false, kinds: ["house_cost"], unchanged: true });
+    expect(await outcome({ refused: "patient_advice", replaced: false })).toMatchObject({ charged: false, kinds: ["house_cost"], unchanged: true });
   });
 });
 

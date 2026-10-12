@@ -8,17 +8,19 @@
  * Pure with respect to I/O: everything goes through MentorDeps, so the route
  * and the golden-set eval run this file unchanged (no supabase, no next).
  *
- * Billing ([name], 2026-10-11): the learner pays only for a DELIVERED answer.
+ * Billing ([name], 2026-10-11; MUX-38 option B, 2026-10-12): the learner pays
+ * only for a DELIVERED, unreplaced answer. "Never pay for an error or a no."
  * Every reached call is still settled with its real cost (or the reserve
  * ceiling when the cost is unknown), but settles are DEFERRED to the end of
  * the turn, when the outcome is known, and then booked:
  *   - to the learner (kind settle): the calls of a turn that ends in a real
- *     answer, a validator refusal or a safety refusal (AiRefusal), except an
- *     attempt that was retried away (below);
+ *     answer the validator kept whole, except an attempt that was retried
+ *     away (below);
  *   - to the house (kind house_cost, delta 0, cost logged for [name]): every
- *     call of a turn that ends in an error event or in the fallback notice
- *     only ("not officially confirmed, check the official page"), and every
- *     attempt that was retried away.
+ *     call of a turn that ends in an error event, in the fallback notice
+ *     only ("not officially confirmed, check the official page"), in a
+ *     validator or safety refusal (AiRefusal), or in an answer the validator
+ *     partly replaced, and every attempt that was retried away.
  *   - provably never reached the model (AiInputRejected, AiUpstream with
  *     reachedModel=false): the hold is released, nothing is booked.
  * Every call is reserved at its maximum cost before it runs and holds stay
@@ -326,6 +328,15 @@ async function creditsView(wallet: Wallet, userId: string): Promise<{ credits_le
   }
 }
 
+/**
+ * MUX-38 option B ([name], 2026-10-12): the learner pays only for an answer the
+ * validator kept whole. A validator or safety refusal and a partly replaced
+ * answer are booked to the house (charged:false), like errors and notices.
+ */
+export function learnerPaysFor(validated: { refused?: unknown; replaced?: unknown }): boolean {
+  return !validated.refused && !validated.replaced;
+}
+
 function errorEvent(error: MentorErrorCode): MentorSseEvent {
   return { type: "error", error };
 }
@@ -494,13 +505,14 @@ export function createRunMentorTurn(opts: TurnOptions = {}): RunMentorTurn {
             const model = prep.params.model;
             if (err instanceof AiRefusal) {
               const amount = usage ? priceCall(model, model, usage, prep.ceilingMicro, unpricedFor(thisCall)) : prep.ceilingMicro;
-              pending.push({ callIndex: thisCall, amount, usage: { ...(usage ?? ZERO_USAGE), model }, learnerPays: true });
-              await flush(true);
+              // MUX-38 B: a refusal is never the learner's; the call goes to the house.
+              pending.push({ callIndex: thisCall, amount, usage: { ...(usage ?? ZERO_USAGE), model }, learnerPays: false });
+              await flush(false);
               const blocks = [{ text: refusalCopy(input.request.lang), fact_ids: [] as string[] }];
               for (const b of blocks) yield { type: "delta", text: b.text };
               yield {
                 type: "final",
-                result: "refusal", charged: creditsUsedMicro > 0, credits_used: creditsExactFromMicro(creditsUsedMicro),
+                result: "refusal", charged: false, credits_used: 0,
                 conversation_id: input.conversationId,
                 answer_blocks: blocks,
                 citations: [],
@@ -694,8 +706,8 @@ export function createRunMentorTurn(opts: TurnOptions = {}): RunMentorTurn {
         return;
       }
 
-      // A real answer (also a refusal or a partly replaced answer) is the learner's;
-      // an answer that is nothing but the fallback notice is not.
+      // Only a real answer the validator kept whole is the learner's (MUX-38 B).
+      // A refusal, a partly replaced answer or nothing but the fallback notice is not.
       const fallbackOnly = !validated.refused && blocks.every((b) => isFallbackOnlyText(b.text));
       if (fallbackOnly) {
         await flush(false);
@@ -703,7 +715,7 @@ export function createRunMentorTurn(opts: TurnOptions = {}): RunMentorTurn {
         yield { type: "final", result: "notice", reason: "no_source", charged: false, credits_used: 0, conversation_id: input.conversationId, answer_blocks: blocks, citations: [], retries: retriesUsed, ...(await creditsView(wallet, userId)) };
         return;
       }
-      await flush(true);
+      await flush(learnerPaysFor(validated));
 
       for (let i = 0; i < blocks.length; i++) {
         yield { type: "delta", text: i < blocks.length - 1 ? `${blocks[i].text}\n\n` : blocks[i].text };
