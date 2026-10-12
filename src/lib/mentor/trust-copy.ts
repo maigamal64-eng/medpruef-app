@@ -16,8 +16,39 @@ const COPY = {
   tr: { generic: 'Bu bilgi resmî olarak doğrulanmamış.', topic: 'Şu anda {topic} resmî olarak doğrulayamıyorum.', registration: '{exam} kayıt son tarihini', dates: '{exam} sınav tarihini', fee: '{exam} ücretini', rule: '{exam} kuralını', pass_rule: '{exam} geçme kuralını' },
   fr: { generic: 'Cette information n’est pas officiellement confirmée.', topic: 'Je ne peux pas confirmer officiellement {topic} pour le moment.', registration: 'la date limite d’inscription à {exam}', dates: 'la date de {exam}', fee: 'les frais de {exam}', rule: 'la règle de {exam}', pass_rule: 'la règle de réussite de {exam}' },
 } as const;
+/**
+ * A filing university without its own published deadline (gate round 3: r1-gap-graz-*).
+ * One line per language: what is not officially confirmed, for which exam and university.
+ * Arabic answers fall back to English (pick-arabic A).
+ */
+const GAP_COPY = {
+  de: 'Der {exam}-Anmeldeschluss für eine Einreichung an der {uni} ist nicht offiziell bestätigt.',
+  en: 'The {exam} registration deadline for an application filed at {uni} is not officially confirmed.',
+  ru: 'Срок регистрации на {exam} для заявления, поданного в {uni}, официально не подтвержден.',
+  uk: 'Термін реєстрації на {exam} для заяви, поданої в {uni}, офіційно не підтверджено.',
+  tr: '{uni} başvuruları için {exam} kayıt son tarihi resmî olarak doğrulanmamış.',
+  fr: 'La date limite d’inscription au {exam} pour une demande déposée à {uni} n’est pas officiellement confirmée.',
+} as const;
+const GAP_UNIVERSITY = { wien: 'MedUni Wien', graz: 'MedUni Graz', innsbruck: 'Med Uni Innsbruck' } as const;
+const GAP_EXAMS: Record<string, string> = { sip4a: 'SIP4a', sip5a: 'SIP5a', stichprobentest: 'Stichprobentest', rezeptierkunde: 'Rezeptierkunde', gerichtsmedizin: 'Gerichtsmedizin' };
+
+/** The code-owned "registration deadline not officially confirmed" line for a filing university without its own deadline. */
+export function deadlineGapNotice(lang: MentorLang, university: keyof typeof GAP_UNIVERSITY, examKey: string | undefined): string {
+  const exam = examKey ? GAP_EXAMS[examKey] : undefined;
+  if (!exam) return topicNotice(lang);
+  const copy = GAP_COPY[lang as keyof typeof GAP_COPY] ?? GAP_COPY.en;
+  return copy.replace('{exam}', exam).replace('{uni}', GAP_UNIVERSITY[university]);
+}
+
+function isDeadlineGapNotice(text: string): boolean {
+  return Object.values(GAP_COPY).some(copy => Object.values(GAP_EXAMS).some(exam => Object.values(GAP_UNIVERSITY).some(uni => text === copy.replace('{exam}', exam).replace('{uni}', uni))));
+}
+
 export const AR_TRUST_DRAFT = { status: 'needs [name] sign-off', generic: 'المعلومة دي لسه مش متأكدة من مصدر رسمي.', topic: 'مش قادر أأكد {topic} رسميًا دلوقتي.' } as const;
-export const TRUST_STRING_REVIEWS = Object.fromEntries(Object.entries(COPY).flatMap(([lang, copy]) => Object.keys(copy).map(key => [`${lang}.${key}`, { reviewer: null, status: lang === 'de' || lang === 'en' ? 'authored' : 'needs native review' }])));
+export const TRUST_STRING_REVIEWS = Object.fromEntries([
+  ...Object.entries(COPY).flatMap(([lang, copy]) => Object.keys(copy).map(key => [`${lang}.${key}`, { reviewer: null, status: lang === 'de' || lang === 'en' ? 'authored' : 'needs native review' }])),
+  ...Object.keys(GAP_COPY).map(lang => [`${lang}.deadline_gap`, { reviewer: null, status: lang === 'de' || lang === 'en' ? 'authored' : 'needs native review' }]),
+]);
 export function topicNotice(lang: MentorLang, fact?: MentorFact): string {
   const c = COPY[lang as keyof typeof COPY] ?? COPY.en;
   if (!fact) return c.generic;
@@ -26,6 +57,7 @@ export function topicNotice(lang: MentorLang, fact?: MentorFact): string {
   return c.topic.replace('{topic}',topic);
 }
 export function isTopicNotice(text: string): boolean {
+  if (isDeadlineGapNotice(text)) return true;
   const exams = ['SIP4a', 'SIP5a', 'Stichprobentest', 'Rezeptierkunde', 'Gerichtsmedizin', 'C1', 'Sprachprüfung', 'Nostrifizierung'];
   return Object.values(COPY).some(copy => text === copy.generic || (['registration', 'dates', 'fee', 'rule', 'pass_rule'] as const).some(topic => exams.some(exam => text === copy.topic.replace('{topic}', copy[topic].replace('{exam}', exam)))));
 }

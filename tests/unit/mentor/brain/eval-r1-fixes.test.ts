@@ -376,7 +376,8 @@ describe("prompt: round-1 retrieval and refusal rules", () => {
   });
   it("study plans use words, not numbered phases (a bare '1' is an unbacked number)", () => {
     expect(MENTOR_CORE_PROMPT).toContain('Do not number phases, weeks or steps ("Phase 1", "Woche 2")');
-    expect(MENTOR_CORE_PROMPT).toContain("in the learner's language (de: \"Zuerst\"");
+    // Gate round 3: the order words reach the model per language through the turn context.
+    expect(MENTOR_CORE_PROMPT).toContain("order words the turn context names for the learner's language");
     expect(MENTOR_CORE_PROMPT).toContain("do not mention guarantees or chances of success at all");
     const v = validateAnswer(`@@LANG en\n@@BLOCK facts=${FEE.id}\n- Phase 1: pay the 777 EUR fee.`, ALL);
     expect(v.replaced).toBe(true);

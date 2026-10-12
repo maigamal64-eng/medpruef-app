@@ -21,7 +21,7 @@
 
 import { unsafeExplainBackground } from "./explain-safety";
 import { studySentenceViolation } from "./study-safety";
-import { topicNotice } from "./trust-copy";
+import { deadlineGapNotice, topicNotice } from "./trust-copy";
 import type { MentorAnswerBlock, MentorCitation, MentorLang } from "./contract";
 import type { MentorExamKey, MentorFact, ValidatedAnswer } from "./seam";
 import { parseAnswer, stripInlineMarkers } from "./prompt/protocol";
@@ -913,12 +913,21 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
     }
     // Background is never allowed to borrow the row's numeric or dosing authority.
     // Delete the entire layer on any such claim, even when the row contains it.
-    if (b.explainLayer === "background" && (extractValues(text).length > 0 || unsafeExplainBackground(text))) {
+    // Explain layers belong to question rows: a study block (learner progress) keeps its
+    // numbers under the progress check (gate round 3: st-spt-en had a layer=background plan line).
+    const layer = used.some((f) => f.id.startsWith("progress.")) ? undefined : b.explainLayer;
+    if (layer === "background" && (extractValues(text).length > 0 || unsafeExplainBackground(text))) {
       replaced = true;
       rejected.push({ value: "background_numbers_or_doses", reason: "not_in_cited_facts" });
       continue;
     }
-    const values = extractValues(maskSourceLabels(text, used));
+    // A source title of a fact the tools returned in this turn for the same exam and the same
+    // publisher as a cited fact is a document name, not a claim: "Prüfungstermine ... WS 2026/27"
+    // next to a cited sitting whose own label is only the publisher "MedUni Wien" (gate round 3:
+    // dl-rez-next-en). Exact labels only; another exam's or publisher's label stays checked.
+    const labelPeers = [...byId.values()].filter((f) => !isInternalFactId(f.id) && typeof f.source_label === "string" &&
+      used.some((u) => !isInternalFactId(u.id) && u.exam_key === f.exam_key && typeof u.source_label === "string" && u.source_label.trim().length >= 3 && f.source_label.startsWith(u.source_label.trim())));
+    const values = extractValues(maskSourceLabels(text, [...used, ...labelPeers]));
     // A question to the learner asserts nothing: a month or month-year it repeats
     // ("Wo hast du für den Termin im Februar eingereicht?") is not a claim. Day
     // dates, numbers, percentages and amounts in a question are still checked.
@@ -965,7 +974,7 @@ export function validateAnswer(answer: string, facts: MentorFact[], opts: Valida
     const shownIds = shown.map((f) => f.id);
     const displayText = shownIds.length ? stripSourceStamp(outText) : outText;
     const confirmedDates = kept.filter(v => (v.kind === "date" || v.kind === "daymonth") && v.keys.some(k => k.startsWith("d:") || k.startsWith("dm:")) && displayText.includes(v.raw)).map(v => v.raw);
-    blocks.push({ text: displayText, fact_ids: [...new Set(shownIds)], ...(b.explainLayer ? { explain_layer: b.explainLayer } : {}), ...(confirmedDates.length ? { confirmed_dates: [...new Set(confirmedDates)], date_type: shown.some(f => f.topic === "registration" || /(?:registration|filing|deadline|closes|opens)/i.test(f.id)) ? "deadline" as const : "sitting" as const } : {}) });
+    blocks.push({ text: displayText, fact_ids: [...new Set(shownIds)], ...(layer ? { explain_layer: layer } : {}), ...(confirmedDates.length ? { confirmed_dates: [...new Set(confirmedDates)], date_type: shown.some(f => f.topic === "registration" || /(?:registration|filing|deadline|closes|opens)/i.test(f.id)) ? "deadline" as const : "sitting" as const } : {}) });
     if (bad.length && !refused && !(used.length > 0 && used.every(f => f.id.startsWith("progress.")))) {
       const source = used.find(f => !isInternalFactId(f.id));
       blocks.push({ text: topicNotice(lang, source), fact_ids: [], replaced: true, official_url: source?.source_url ?? refLink ?? officialLinkForExam(refuseExam) });
@@ -1311,4 +1320,24 @@ export function trimForDeadlineGap(v: ValidatedAnswer, university: "wien" | "gra
   }
   const stillCited = new Set(blocks.flatMap((b) => b.fact_ids));
   return { ...v, blocks, citations: v.citations.filter((c) => stillCited.has(c.fact_id)) };
+}
+
+/**
+ * The deadline gap answered in code (gate round 3: r1-gap-graz-uk). get_dates reported
+ * that this filing university publishes no own deadline, so nothing of the model's text
+ * about that deadline can be a fact: its wording of "not confirmed" varied by run and once
+ * carried a raw link. The answer is the code-owned not-confirmed line for that exam's
+ * registration deadline with that university's official page, first and alone. Blocks
+ * that cite only another exam's facts (a Vienna pharma answer in the same turn) follow it,
+ * trimmed as in trimForDeadlineGap. A notice is never charged (replaced, MUX-38 B).
+ */
+export function answerDeadlineGap(v: ValidatedAnswer, university: "wien" | "graz" | "innsbruck", lang: MentorLang, exam?: string): ValidatedAnswer {
+  if (v.refused) return v;
+  const trimmed = trimForDeadlineGap(v, university, lang, exam);
+  const otherExam = (b: MentorAnswerBlock) =>
+    !!exam && !b.replaced && b.fact_ids.length > 0 && b.fact_ids.every((id) => !id.startsWith(`${exam}.`) && !id.startsWith(`sitting.${exam}.`) && !id.startsWith("status."));
+  const kept = trimmed.blocks.filter(otherExam);
+  const notice: MentorAnswerBlock = { text: deadlineGapNotice(lang, university, exam), fact_ids: [], replaced: true, official_url: officialLinkForUniversity(university) };
+  const stillCited = new Set(kept.flatMap((b) => b.fact_ids));
+  return { ...trimmed, blocks: [notice, ...kept], citations: trimmed.citations.filter((c) => stillCited.has(c.fact_id)), replaced: true };
 }

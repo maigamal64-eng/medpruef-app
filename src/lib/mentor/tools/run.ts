@@ -32,6 +32,7 @@ import { allowedKeysFromText } from "../validator";
 import type { FilingUniversity, MentorExamKey, MentorFact, MentorFactTopic, ToolResult, TurnContext } from "../seam";
 import { isMentorToolName } from "./definitions";
 import { rowTermsNamed } from "../gloss-terms";
+import { studyOrderWords } from "../prompt/system";
 
 /** Minimal DB surface the tools use (a Supabase service client in production, a fake in tests). */
 export type MentorDb = Pick<SupabaseClient, "from">;
@@ -609,7 +610,7 @@ async function getMyProgress(_input: unknown, ctx: TurnContext, env: ToolEnv): P
       ]),
       instruction: `${thin
         ? `Too little data to judge topics. Start by suggesting ${THIN_FIRST_QUESTIONS} mixed questions, then plan with the learner.`
-        : "Plan from days left and the weak topics."} Never promise a pass rate or an outcome. Write only numbers listed in numbers_you_may_write, as listed: no threshold, sum, average, difference or count of topics, also not as a word (three, drei, both); name the topics instead.`,
+        : "Plan from days left and the weak topics."} Start every block with @@BLOCK facts=${factId}, also the plan sentences. Never promise a pass rate or an outcome. Write only numbers listed in numbers_you_may_write, as listed: no threshold, sum, average, difference or count of topics, also not as a word (three, drei, both); name the topics instead. Order the steps with ${studyOrderWords(ctx.lang)} only; write topic names as listed, without a gloss.`,
     },
     [factId]
   );

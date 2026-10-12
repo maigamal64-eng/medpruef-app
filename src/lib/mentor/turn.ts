@@ -67,7 +67,7 @@ import { studySentenceViolation } from "./study-safety";
 import { topicNotice } from "./trust-copy";
 import { refusalOffice } from "./office";
 import { isFallbackOnlyText, officialLinkForExam, officialLinkForUniversity, refusalLine } from "./prompt/refusals";
-import { isInternalFactId, trimForDeadlineGap, trimUnaskedValues } from "./validator";
+import { answerDeadlineGap, isInternalFactId, trimUnaskedValues } from "./validator";
 import { deadlineGap, deadlineLinesFromTools, hoistDeadlineLine } from "./deadline-first";
 import { MENTOR_TOOL_NAMES } from "./seam";
 import { learnerNamedTerms } from "./gloss-terms";
@@ -718,9 +718,10 @@ export function createRunMentorTurn(opts: TurnOptions = {}): RunMentorTurn {
       }
       // Deadline first in every language: the tool's closing line opens the answer (reorder only).
       validated = hoistDeadlineLine(validated, deadlineLinesFromTools(toolResultsForUi));
-      // A filing university without its own deadline: no other publisher's day or name (deletion only).
+      // A filing university without its own deadline: the code-owned not-confirmed line with
+      // that university's page, first and every time; no other publisher's day or name.
       const gap = deadlineGap(toolResultsForUi);
-      if (gap) validated = trimForDeadlineGap(validated, gap.university, ctx.lang, gap.exam);
+      if (gap) validated = answerDeadlineGap(validated, gap.university, ctx.lang, gap.exam);
       let refusalOfficeLabel: string | undefined;
       if (validated.refused && validated.refused !== "patient_advice") {
         // Office/source selection is code-owned. Model refusal prose cannot contradict its button.

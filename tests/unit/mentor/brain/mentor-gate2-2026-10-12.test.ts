@@ -210,8 +210,9 @@ describe("glosses stay in the answer language (r1-ex-wrong-choice-tr)", () => {
   });
 
   it("the turn context asks for single-language glosses", () => {
-    expect(systemTurnContext(ctx({ lang: "tr" }))).toContain("Glosses in brackets are tr only: no Cyrillic");
-    expect(systemTurnContext(ctx({ lang: "uk" }))).toContain("Glosses in brackets are uk in Cyrillic");
-    expect(systemTurnContext(ctx({ lang: "de" }))).not.toContain("Glosses in brackets");
+    // Gate round 3: explain mode only.
+    expect(systemTurnContext(ctx({ lang: "tr", mode: "explain" }))).toContain("Glosses in brackets are tr only: no Cyrillic");
+    expect(systemTurnContext(ctx({ lang: "uk", mode: "explain" }))).toContain("Glosses in brackets are uk in Cyrillic");
+    expect(systemTurnContext(ctx({ lang: "de", mode: "explain" }))).not.toContain("Glosses in brackets");
   });
 });
