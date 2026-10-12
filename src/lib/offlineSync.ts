@@ -26,11 +26,53 @@ import {
   drainPendingAnswers,
   pendingAnswersForUser,
   removePendingAnswer,
+  updatePendingAnswer,
   type PendingAnswer,
 } from "@/lib/offlineDb";
 
 let initialized = false;
 let draining = false;
+
+/** UX-PRA-45: what one replay did, shown once as a status line. */
+export interface OfflineSyncResult {
+  sent: number;
+  /** Question removed or changed (404, 409 unavailable). */
+  unavailable: number;
+  /** Free allowance reached (402). */
+  plan: number;
+  /** The server already holds another answer under this key (409 conflict). */
+  conflict: number;
+  /** Five failed attempts. */
+  gaveUp: number;
+  /** Still queued because the session expired (401/403). */
+  waitingForLogin: number;
+}
+
+export const OFFLINE_SYNC_EVENT = "medpruef:offline-sync-result";
+export const MAX_REPLAY_ATTEMPTS = 5;
+
+export type ReplayDecision = "saved" | "drop_unavailable" | "drop_plan" | "drop_conflict" | "keep_auth" | "retry";
+
+/**
+ * Pure: what a replay response means for the queued row. A 409 is never
+ * retried: re-sending a key the server already holds could count twice.
+ */
+export function replayDecision(status: number, body: { error?: unknown } | null = null): ReplayDecision {
+  if (status >= 200 && status < 300) return "saved";
+  if (status === 401 || status === 403) return "keep_auth";
+  if (status === 402) return "drop_plan";
+  if (status === 404) return "drop_unavailable";
+  if (status === 409) {
+    const error = typeof body?.error === "string" ? body.error : "";
+    return /another answer/i.test(error) ? "drop_conflict" : "drop_unavailable";
+  }
+  if (status >= 400 && status < 500) return "drop_unavailable";
+  return "retry";
+}
+
+export function emptySyncResult(): OfflineSyncResult {
+  return { sent: 0, unavailable: 0, plan: 0, conflict: 0, gaveUp: 0, waitingForLogin: 0 };
+}
 
 async function flushQueue(): Promise<void> {
   if (draining) return;
@@ -39,6 +81,7 @@ async function flushQueue(): Promise<void> {
   // Never drain a local queue into an account that did not create it.
   if (!userId) return;
   draining = true;
+  const result = emptySyncResult();
   try {
     const queue: PendingAnswer[] = pendingAnswersForUser(await drainPendingAnswers(), userId);
     for (const p of queue) {
@@ -57,23 +100,29 @@ async function flushQueue(): Promise<void> {
             timeSpentMs: p.timeSpentMs,
           }),
         });
-        if (res.ok) {
+        const body = res.ok ? null : await res.json().catch(() => null);
+        const decision = replayDecision(res.status, body);
+        if (decision === "saved") {
           await removePendingAnswer(p.id);
-        } else if (res.status === 401 || res.status === 403) {
-          // Auth gone — leave queued; user may be in a session-expired
-          // state. Next online event or manual login + retry will drain.
+          result.sent += 1;
+        } else if (decision === "keep_auth") {
+          // Auth gone: leave queued; the next online event or a login drains it.
+          result.waitingForLogin += queue.length - queue.indexOf(p);
           break;
-        } else if (res.status === 402) {
-          // Free allowance exhausted (2026-10-02 server-side paywall): the
-          // answer will never be accepted on this tier, so drop it rather
-          // than retrying forever.
+        } else if (decision === "retry") {
+          const attempts = (p.attempts ?? 0) + 1;
+          if (attempts >= MAX_REPLAY_ATTEMPTS) {
+            await removePendingAnswer(p.id);
+            result.gaveUp += 1;
+          } else {
+            await updatePendingAnswer({ ...p, attempts });
+          }
+        } else {
           await removePendingAnswer(p.id);
-        } else if (res.status === 404) {
-          // Question was deleted server-side — drop the orphan so it
-          // doesn't loop. 4xx for bad data is permanent, not flaky.
-          await removePendingAnswer(p.id);
+          if (decision === "drop_plan") result.plan += 1;
+          else if (decision === "drop_conflict") result.conflict += 1;
+          else result.unavailable += 1;
         }
-        // Any other 5xx: leave queued, next online event retries.
       } catch {
         // Network flake — stop the loop; whatever we didn't drain
         // will retry on the next `online` event.
@@ -84,6 +133,11 @@ async function flushQueue(): Promise<void> {
     console.error("[offlineSync] drain failed", e);
   } finally {
     draining = false;
+    const touched = result.sent + result.unavailable + result.plan + result.conflict + result.gaveUp + result.waitingForLogin;
+    if (touched > 0 && typeof window !== "undefined") {
+      try { sessionStorage.setItem(OFFLINE_SYNC_EVENT, JSON.stringify(result)); } catch { /* storage blocked */ }
+      window.dispatchEvent(new CustomEvent<OfflineSyncResult>(OFFLINE_SYNC_EVENT, { detail: result }));
+    }
   }
 }
 

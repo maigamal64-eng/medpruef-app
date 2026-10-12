@@ -54,6 +54,8 @@ export interface PendingAnswer {
   isCorrect: boolean;
   timeSpentMs: number;
   createdAt: string;
+  /** Failed replay attempts (UX-PRA-45); a row is dropped after the fifth. */
+  attempts?: number;
 }
 
 /** Select only answers owned by the currently authenticated account. */
@@ -277,6 +279,18 @@ export async function queuePendingAnswer(
     transaction.oncomplete = () => resolve(row.id);
     transaction.onerror = () =>
       reject(transaction.error ?? new Error("queuePendingAnswer failed"));
+  });
+}
+
+/** Store a changed queued row (attempt counter) without touching any other row. */
+export async function updatePendingAnswer(row: PendingAnswer): Promise<void> {
+  if (!isIndexedDbAvailable()) return;
+  const db = await openDb();
+  await new Promise<void>((resolve, reject) => {
+    const transaction = db.transaction(PENDING_STORE, "readwrite");
+    transaction.objectStore(PENDING_STORE).put(row);
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error ?? new Error("updatePendingAnswer failed"));
   });
 }
 

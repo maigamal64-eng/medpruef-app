@@ -15,6 +15,8 @@
 --                           still advances. Behind FLASHCARD_REVIEW_KIND_ENABLED.
 --   pick-ux-pra-85 A        handled in /api/answer (FREE_SCHEDULE_ENABLED decides
 --                           p_is_free / p_schedule); no SQL difference.
+--   UX-PRA-55               get_mistake_rows: one server rule for open and
+--                           corrected mistakes (read-only, service_role only).
 --
 -- An exam date in the past never caps anything (a stale users.exam_date would
 -- otherwise make every card due immediately). src/lib/master-learning/srs.ts
@@ -423,6 +425,86 @@ BEGIN
 END;
 $$;
 
+-- 7. Open mistakes (UX-PRA-55), one server definition for /mistakes and the
+--    "Meine Fehler" pool. A question is open while it has a miss and, since
+--    the last miss, fewer than two correct answers with the second at least
+--    one day (24 h) after the first; src/lib/learning-metrics.ts isOpenMistake
+--    is the same rule. Corrected rows stay listed under "Korrigiert". Totals
+--    are counted before the state filter. Stable order: last miss, then id.
+CREATE OR REPLACE FUNCTION public.get_mistake_rows(
+  p_user_id uuid,
+  p_exam_types text[],
+  p_topics text[],
+  p_state text,
+  p_offset integer,
+  p_limit integer
+) RETURNS TABLE(
+  question_id integer,
+  topic text,
+  is_active boolean,
+  wrong_count integer,
+  last_wrong_at timestamptz,
+  corrected_at timestamptz,
+  is_open boolean,
+  open_total bigint,
+  corrected_total bigint
+)
+LANGUAGE sql
+STABLE
+SET search_path = public, pg_temp
+AS $$
+  WITH attempts AS (
+    SELECT ah.question_id, ah.is_correct, ah.created_at
+    FROM public.answer_history ah
+    JOIN public.questions q ON q.id = ah.question_id
+    WHERE ah.user_id = p_user_id
+      AND (p_exam_types IS NULL OR q.exam_type = ANY(p_exam_types))
+      AND (p_topics IS NULL OR q.topic = ANY(p_topics))
+  ),
+  misses AS (
+    SELECT a.question_id,
+           (count(*) FILTER (WHERE NOT a.is_correct))::integer AS wrong_count,
+           max(a.created_at) FILTER (WHERE NOT a.is_correct) AS last_wrong_at
+    FROM attempts a
+    GROUP BY a.question_id
+    HAVING count(*) FILTER (WHERE NOT a.is_correct) > 0
+  ),
+  since AS (
+    SELECT m.question_id, a.created_at,
+           min(a.created_at) OVER (PARTITION BY m.question_id) AS first_ok
+    FROM misses m
+    JOIN attempts a ON a.question_id = m.question_id AND a.is_correct AND a.created_at > m.last_wrong_at
+  ),
+  graduated AS (
+    SELECT s.question_id, min(s.created_at) AS corrected_at
+    FROM since s
+    WHERE s.created_at >= s.first_ok + interval '1 day'
+    GROUP BY s.question_id
+  ),
+  rows_all AS (
+    SELECT m.question_id, q.topic, q.is_active, m.wrong_count, m.last_wrong_at, g.corrected_at,
+           (g.corrected_at IS NULL) AS is_open
+    FROM misses m
+    JOIN public.questions q ON q.id = m.question_id
+    LEFT JOIN graduated g ON g.question_id = m.question_id
+  ),
+  counted AS (
+    SELECT r.*,
+           count(*) FILTER (WHERE r.is_open) OVER () AS open_total,
+           count(*) FILTER (WHERE NOT r.is_open) OVER () AS corrected_total
+    FROM rows_all r
+  )
+  SELECT c.question_id, c.topic, c.is_active, c.wrong_count, c.last_wrong_at, c.corrected_at, c.is_open,
+         c.open_total, c.corrected_total
+  FROM counted c
+  WHERE coalesce(p_state, 'open') = 'all'
+     OR (coalesce(p_state, 'open') = 'open' AND c.is_open)
+     OR (p_state = 'corrected' AND NOT c.is_open)
+  ORDER BY c.last_wrong_at DESC, c.question_id DESC
+  OFFSET greatest(coalesce(p_offset, 0), 0)
+  LIMIT least(greatest(coalesce(p_limit, 20), 1), 200);
+$$;
+
 REVOKE EXECUTE ON FUNCTION public.srs_cap_interval(integer, date, date) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.srs_cap_interval(integer, date, date) TO service_role;
 REVOKE EXECUTE ON FUNCTION public.srs_graded_next(double precision, integer, smallint, date, date) FROM PUBLIC, anon, authenticated;
@@ -433,3 +515,5 @@ REVOKE EXECUTE ON FUNCTION public.record_graded_answer(uuid, integer, smallint, 
 GRANT EXECUTE ON FUNCTION public.record_graded_answer(uuid, integer, smallint, uuid, boolean, text, integer) TO service_role;
 REVOKE EXECUTE ON FUNCTION public.record_flashcard_review(uuid, integer, smallint, uuid, boolean, boolean) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.record_flashcard_review(uuid, integer, smallint, uuid, boolean, boolean) TO service_role;
+REVOKE EXECUTE ON FUNCTION public.get_mistake_rows(uuid, text[], text[], text, integer, integer) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.get_mistake_rows(uuid, text[], text[], text, integer, integer) TO service_role;

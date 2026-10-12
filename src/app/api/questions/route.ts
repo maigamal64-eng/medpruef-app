@@ -5,6 +5,7 @@ import { generateWrongOptions, buildMCQOptions, buildMCQFromStored, buildMCQFrom
 import type { StoredChoice } from '@/lib/mcq'
 import { VIENNA_EXAM_PARTS, DEFAULT_EXAM_SOURCE, EXAM_SOURCE_IDS } from '@/lib/topics'
 import { FLASHCARD_HEADERS, splitFlashcards } from '@/lib/flashcard-eligibility'
+import { isMissingRuleError } from '@/lib/mistakes'
 import { captureServerError } from '@/lib/sentry-capture'
 import {
   FREE_TIER_QUESTIONS_PER_EXAM,
@@ -483,6 +484,42 @@ export async function GET(req: NextRequest) {
       if (allowedIds.length === 0) return capHitResponse({ paywallHit: true, seen: 0, limit: FREE_TIER_QUESTIONS_PER_EXAM })
       const capped = await checkDurableCap()
       if (capped) return capHitResponse({ paywallHit: true, seen: capped.seen, limit: FREE_TIER_QUESTIONS_PER_EXAM })
+    }
+
+    // UX-PRA-55: "Meine Fehler wiederholen" practises open mistakes only
+    // (?open=1), from the same rule as /mistakes. Before the a23 changeset
+    // is applied the all-time wrong pool below answers instead.
+    if (filters.practiceMode === 'wrong' && sp.get('open') === '1' && !listMode) {
+      const { data: openRows, error: openError } = await sb.rpc('get_mistake_rows', {
+        p_user_id: userId,
+        p_exam_types: examTypes,
+        p_topics: topics,
+        p_state: 'open',
+        p_offset: 0,
+        p_limit: 200,
+      })
+      if (openError && !isMissingRuleError(openError)) {
+        captureServerError(openError, { route: '/api/questions', phase: 'open-mistakes' })
+        return NextResponse.json({ error: 'Could not load your mistakes. Please retry.' }, { status: 503 })
+      }
+      if (!openError) {
+        const excluded = new Set(filters.excludeIds)
+        const openIds = ((openRows || []) as { question_id: number; is_active: boolean | null }[])
+          .filter((row) => row.is_active !== false && !excluded.has(Number(row.question_id)))
+          .map((row) => Number(row.question_id))
+          .slice(0, Math.min(limit, 200))
+        if (openIds.length === 0) return NextResponse.json([])
+        let openQuery = sb.from('questions').select('*').in('id', openIds).eq('is_active', true)
+        openQuery = withMcq(openQuery)
+        const { data, error } = await openQuery
+        if (error) {
+          captureServerError(error, { route: '/api/questions', phase: 'open-mistakes-select' })
+          return NextResponse.json({ error: 'Could not load your mistakes. Please retry.' }, { status: 503 })
+        }
+        const order = new Map(openIds.map((id, index) => [id, index]))
+        const ordered = (data || []).sort((a, b) => (order.get(Number(a.id)) ?? 0) - (order.get(Number(b.id)) ?? 0))
+        return NextResponse.json(attachOptions(ordered))
+      }
     }
 
     const { data: candidateRows, error: candidateError } = await sb.rpc(

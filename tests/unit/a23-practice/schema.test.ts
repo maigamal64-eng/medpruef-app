@@ -182,6 +182,33 @@ describe.skipIf(!databaseEnabled)("a23 graded review on isolated PostgreSQL 16",
     expect(rows(`SELECT current_streak || ':' || daily_questions_today || ':' || total_questions_answered FROM public.user_gamification WHERE user_id='${CARD}';`)).toBe("5:1:1");
   });
 
+  it("get_mistake_rows: open until two correct answers a day apart since the last miss", () => {
+    const M = "00000000-0000-4000-8000-0000000000d5";
+    sql(`
+      INSERT INTO public.users (id) VALUES ('${M}');
+      INSERT INTO public.questions (id, topic, exam_type, is_active) VALUES
+        (21, 'HNO', 'kenntnispruefung', true), (22, 'HNO', 'kenntnispruefung', true), (23, 'Augen', 'kenntnispruefung', true),
+        (24, 'Augen', 'kenntnispruefung', true), (25, 'HNO', 'kenntnispruefung', false), (26, 'HNO', 'pharma', true);
+      INSERT INTO public.answer_history (user_id, question_id, is_correct, created_at) VALUES
+        ('${M}', 21, false, '2026-10-01T08:00Z'), ('${M}', 21, true, '2026-10-01T09:00Z'), ('${M}', 21, true, '2026-10-01T20:00Z'),
+        ('${M}', 22, false, '2026-10-02T08:00Z'), ('${M}', 22, true, '2026-10-02T09:00Z'), ('${M}', 22, true, '2026-10-03T09:00Z'),
+        ('${M}', 23, true, '2026-10-03T08:00Z'),
+        ('${M}', 24, true, '2026-09-01T08:00Z'), ('${M}', 24, false, '2026-10-04T08:00Z'), ('${M}', 24, false, '2026-10-05T08:00Z'),
+        ('${M}', 25, false, '2026-10-06T08:00Z'),
+        ('${M}', 26, false, '2026-10-07T08:00Z');
+    `);
+    const read = (state: string, extra = "NULL") =>
+      rows(`SET ROLE service_role; SELECT coalesce(string_agg(question_id || ':' || is_open || ':' || wrong_count || ':' || is_active || ':' || open_total || '/' || corrected_total, ',' ORDER BY last_wrong_at DESC, question_id DESC), '') FROM public.get_mistake_rows('${M}', ARRAY['kenntnispruefung'], ${extra}, '${state}', 0, 20);`);
+    // 21: two correct the same day -> open; 22: second correct 24 h later -> corrected;
+    // 23: never missed; 24: two misses, open; 25: inactive but listed; 26: other bank.
+    expect(read("open")).toBe("25:true:1:false:3/1,24:true:2:true:3/1,21:true:1:true:3/1");
+    expect(read("corrected")).toBe("22:false:1:true:3/1");
+    expect(read("all")).toBe("25:true:1:false:3/1,24:true:2:true:3/1,22:false:1:true:3/1,21:true:1:true:3/1");
+    expect(read("open", "ARRAY['Augen']")).toBe("24:true:2:true:1/0");
+    expect(rows(`SET ROLE service_role; SELECT corrected_at FROM public.get_mistake_rows('${M}', NULL, NULL, 'corrected', 0, 20);`)).toMatch(/^2026-10-03 09:00:00/);
+    expect(rows(`SET ROLE service_role; SELECT count(*) FROM public.get_mistake_rows('${M}', NULL, NULL, 'open', 1, 2);`)).toBe("2");
+  });
+
   it("everything is service_role only", () => {
     for (const role of ["anon", "authenticated"]) {
       for (const call of [
@@ -190,6 +217,7 @@ describe.skipIf(!databaseEnabled)("a23 graded review on isolated PostgreSQL 16",
         `SELECT * FROM public.srs_graded_next(2.5, 1, 2::smallint, '2026-10-12', NULL);`,
         `SELECT public.srs_cap_interval(5, '2026-10-12', NULL);`,
         `SELECT count(*) FROM public.flashcard_reviews;`,
+        `SELECT * FROM public.get_mistake_rows('${CARD}', NULL, NULL, 'open', 0, 20);`,
       ]) {
         const denied = sql(`SET ROLE ${role}; ${call}`, true);
         expect(denied.status, call).not.toBe(0);
@@ -202,14 +230,14 @@ describe.skipIf(!databaseEnabled)("a23 graded review on isolated PostgreSQL 16",
   it("re-applies idempotently, rolls back to the uncapped quiz RPC and re-applies", () => {
     sql(migration);
     sql(rollback);
-    expect(rows(`SELECT count(*) FROM pg_proc WHERE proname IN ('srs_graded_next','srs_cap_interval','record_graded_answer','record_flashcard_review');`)).toBe("0");
+    expect(rows(`SELECT count(*) FROM pg_proc WHERE proname IN ('srs_graded_next','srs_cap_interval','record_graded_answer','record_flashcard_review','get_mistake_rows');`)).toBe("0");
     expect(rows(`SELECT count(*) FROM pg_class WHERE relname = 'flashcard_reviews';`)).toBe("0");
     // The restored quiz RPC is uncapped again.
     sql(`UPDATE public.user_question_progress SET interval_days = 170, ease_factor = 2.9 WHERE user_id='${PRO}' AND question_id=1;`);
     sql(`SET ROLE service_role; SELECT public.record_quiz_answer('${PRO}', 1, true, 'A', 1000, false, '${req(500)}');`);
     expect(rows(`SELECT interval_days FROM public.user_question_progress WHERE user_id='${PRO}' AND question_id=1;`)).toBe("510");
     sql(migration);
-    expect(rows(`SELECT count(*) FROM pg_proc WHERE proname IN ('srs_graded_next','srs_cap_interval','record_graded_answer','record_flashcard_review');`)).toBe("4");
+    expect(rows(`SELECT count(*) FROM pg_proc WHERE proname IN ('srs_graded_next','srs_cap_interval','record_graded_answer','record_flashcard_review','get_mistake_rows');`)).toBe("5");
     const denied = sql(`SET ROLE authenticated; SELECT public.record_quiz_answer('${PRO}', 1, true, 'A', 1000, false, '${req(501)}');`, true);
     expect(denied.stderr).toMatch(/permission denied/);
   });

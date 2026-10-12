@@ -34,6 +34,7 @@ import BottomNav from "@/components/BottomNav";
 import QuestionCard from "@/components/QuestionCard";
 import FirstQuestionPrimer from "@/components/FirstQuestionPrimer";
 import QuestionActions from "@/components/QuestionActions";
+import OfflineSyncNotice from "@/components/question/OfflineSyncNotice";
 import { QuizTopBar, QuizFooterAction, type QuizFooterMode } from "@/components/QuizChrome";
 import QuizSetup, { type QuizConfig } from "@/components/QuizSetup";
 import CreateTestBuilder from "@/components/CreateTestBuilder";
@@ -1151,6 +1152,7 @@ function QuizContent() {
                 </div>
               )}
 
+              <OfflineSyncNotice lang={lang} />
               {(saving || saveError) && <div role="status" className="card p-4 mb-4 text-sm">
                 {saving ? (lang === "de" ? "Antwort wird gespeichert…" : "Saving your answer…") : (lang === "de" ? "Antwort noch nicht als gespeichert bestätigt. Bitte erneut versuchen, bevor du weitergehst." : "Your answer has not been confirmed saved. Retry before continuing.")}
                 {saveError && <button className="mp-btn mp-btn--primary mt-2" onClick={() => { const pending = pendingAnswer.current; if (pending) void handleAnswer(pending.correct, pending.selected); }}>{lang === "de" ? "Speichern erneut versuchen" : "Retry saving"}</button>}
