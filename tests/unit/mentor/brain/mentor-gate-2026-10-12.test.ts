@@ -293,6 +293,7 @@ describe("background pronoun 'one' (ex-ds-en)", () => {
     expect(unsafeExplainBackground("Take one of the tablets daily.")).toBe(true);
     expect(unsafeExplainBackground("Patients take one capsule; the other drug is given later.")).toBe(true);
     expect(unsafeExplainBackground("Eine Tablette am Morgen.")).toBe(true);
+    expect(unsafeExplainBackground("Take one with food and the other later.")).toBe(true);
     expect(unsafeExplainBackground("Vitamin B12.")).toBe(true);
     // Turkish "on" (ten) is the English preposition too.
     expect(unsafeExplainBackground("The directions go on the label.")).toBe(false);

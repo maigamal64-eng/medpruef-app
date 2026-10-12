@@ -10,6 +10,7 @@ export function unsafeExplainBackground(text: string): boolean {
  if (/(?<!\p{L})on\s+(?:tablet\p{L}*|kapsül\p{L}*|gün\p{L}*|hafta\p{L}*|ay(?!\p{L})|kez|kere|saat\p{L}*|damla\p{L}*)/iu.test(text)) return true;
  // A counted "one" is a quantity, also with "the other" or "of the" around it (review P1).
  if (/(?<!\p{L})one\s+(?:of\s+(?:the|these|those|its|their)\s+)?(?:tablet|capsule|pill|drop|dose|ampoule|ampule|puff|injection|vial|spray|sachet|patch|unit|time|day|week|hour|month|morning|evening|night)\p{L}*/iu.test(text)) return true;
+ if (/(?<!\p{L})(?:take|takes|taken|give|gives|given|use|apply|inject|swallow|chew|insert|inhale|administer)\s+one(?!\p{L})/iu.test(text)) return true;
  // Otherwise "one" as a pronoun counts nothing: "each one", "the one", "one another",
  // "one ..., the other" (eval 12 Oct: ex-ds-en).
  const pronoun = text.replace(/(?<!\p{L})(?:each|every|no|any|the|which|this|that)\s+one(?!\p{L})|(?<!\p{L})one\s+another(?!\p{L})|(?<!\p{L})one(?!\p{L})(?=[^.!?]*(?<!\p{L})the other(?!\p{L}))/giu, "");
