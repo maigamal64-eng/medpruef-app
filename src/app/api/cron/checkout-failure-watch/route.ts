@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
+import { LONG_DB_TIMEOUT_MS } from "@/lib/db-unavailable";
 import { captureServerError } from "@/lib/sentry-capture";
 import { safeEqual } from "@/lib/security/timing-safe";
 import { checkoutWatchMessage, evaluateCheckoutWatch, type WatchEvent } from "@/lib/checkout-failure-rate";
@@ -33,7 +34,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const now = Date.now();
-    const { data, error } = await getServiceClient()
+    const { data, error } = await getServiceClient({ timeoutMs: LONG_DB_TIMEOUT_MS })
       .from("payment_events")
       .select("event,reason,created_at,user_id")
       .gte("created_at", new Date(now - 24 * 3_600_000).toISOString())

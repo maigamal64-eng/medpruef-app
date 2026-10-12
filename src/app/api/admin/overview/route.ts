@@ -1,6 +1,7 @@
 import { checkedRead } from "@/lib/admin/read-result";
 import { NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
+import { LONG_DB_TIMEOUT_MS } from "@/lib/db-unavailable";
 import { adminRouteShell } from "@/lib/admin/shell";
 import { canAccessAdminPermission, loadAdminPermissionSnapshot } from "@/lib/admin/permissions";
 import { accountsById, loadAccounts, loadLedger, loadSubscriptions, loadWhopDeliveries } from "@/lib/admin/moneyMetrics";
@@ -44,7 +45,7 @@ export const GET = adminRouteShell(
     const canReadUsers = canAccessAdminPermission(permissionSnapshot, "users.read");
     const canReadSystem = canAccessAdminPermission(permissionSnapshot, "system.read");
     const canReadFeedback = canAccessAdminPermission(permissionSnapshot, "feedback.read");
-    const sb = getServiceClient();
+    const sb = getServiceClient({ timeoutMs: LONG_DB_TIMEOUT_MS });
     const now = new Date();
     const startOfDay = viennaStartOfDay(now, (d) => viennaDay(d));
     const sevenDaysAgo = new Date(now.getTime() - 7 * 86400_000);

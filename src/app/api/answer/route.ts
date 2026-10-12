@@ -6,6 +6,7 @@ import { captureServerError } from "@/lib/sentry-capture";
 import { qualifyReferralOnActivity } from "@/lib/referral-exam-reward";
 import { parseGrade, parseKind, readAnswerFlags, resolveAnswerPath, skipSchedule } from "@/lib/answer-request";
 import { withDbUnavailable } from "@/lib/db-unavailable-route";
+import { isDbUnavailable } from "@/lib/db-unavailable";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -134,7 +135,7 @@ async function handlePOST(req: NextRequest) {
       .maybeSingle();
     // flashcard_reviews may not exist before the a23 changeset: no prior row.
     const missingTable = priorErr && (priorErr.code === "42P01" || priorErr.code === "PGRST205");
-    if (priorErr && !missingTable) throw new Error("Flashcard idempotency check failed");
+    if (priorErr && !missingTable) throw new Error("Flashcard idempotency check failed", { cause: priorErr });
     if (prior) {
       if ((prior as { question_id?: number }).question_id !== questionId) {
         return NextResponse.json({ error: "Request already used for another answer" }, { status: 409 });
@@ -164,7 +165,7 @@ async function handlePOST(req: NextRequest) {
       if (reviewErr.message?.includes("IDEMPOTENCY_KEY_CONFLICT")) {
         return NextResponse.json({ error: "Request already used for another answer" }, { status: 409 });
       }
-      throw new Error("Flashcard review could not be saved");
+      throw new Error("Flashcard review could not be saved", { cause: reviewErr });
     }
     const card = reviewed as { saved?: boolean; duplicate?: boolean; scheduled?: boolean; intervalDays?: number | null; nextReviewAt?: string | null; cardsToday?: number; gamification?: Record<string, unknown> | null };
     if (!card?.saved) throw new Error("Flashcard review was not confirmed");
@@ -211,7 +212,7 @@ async function handlePOST(req: NextRequest) {
     if (recordErr.message?.includes("IDEMPOTENCY_KEY_CONFLICT")) {
       return NextResponse.json({ error: "Request already used for another answer" }, { status: 409 });
     }
-    throw new Error("Answer could not be saved");
+    throw new Error("Answer could not be saved", { cause: recordErr });
   }
   const result = recorded as { saved?: boolean; duplicate?: boolean; xp?: number; totalXp?: number; gamification?: Record<string, unknown> | null };
   if (!result?.saved) throw new Error("Answer save was not confirmed");
@@ -261,7 +262,9 @@ async function handlePOST(req: NextRequest) {
   });
 
   } catch (err) {
-    captureServerError(err, {
+    // A database outage becomes 503 in withDbUnavailable; the device outbox
+    // retries it. Only real defects go to Sentry (no flood during a freeze).
+    if (!isDbUnavailable(err)) captureServerError(err, {
       route: "/api/answer",
       userId,
       questionId,

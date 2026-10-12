@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
+import { LONG_DB_TIMEOUT_MS } from "@/lib/db-unavailable";
 import { captureServerError } from "@/lib/sentry-capture";
 import { safeEqual } from "@/lib/security/timing-safe";
 
@@ -191,7 +192,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const sb = getServiceClient();
+    const sb = getServiceClient({ timeoutMs: LONG_DB_TIMEOUT_MS });
 
     // "Yesterday" window: from 24h ago to now (inclusive).
     const sinceIso = new Date(Date.now() - 86_400_000).toISOString();

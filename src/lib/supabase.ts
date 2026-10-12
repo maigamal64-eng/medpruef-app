@@ -29,7 +29,7 @@ export const supabase: SupabaseClient = supabaseUrl
   ? createClient(supabaseUrl, supabaseAnonKey, serverSupabaseOptions)
   : (null as unknown as SupabaseClient) // build-time placeholder; never called at runtime
 
-export function getServiceClient(): SupabaseClient {
+export function getServiceClient(options: { timeoutMs?: number } = {}): SupabaseClient {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!url || !serviceKey) {
@@ -38,5 +38,10 @@ export function getServiceClient(): SupabaseClient {
       'Check Vercel env vars (must be scoped to Preview + Production).'
     )
   }
-  return createClient(url, serviceKey, serverSupabaseOptions)
+  // A caller may ask for a longer deadline (LONG_DB_TIMEOUT_MS) on a route
+  // whose maxDuration allows it; everything else uses the 8 s default.
+  const opts = options.timeoutMs
+    ? { global: { fetch: createTimedFetch(undefined, options.timeoutMs) } }
+    : serverSupabaseOptions
+  return createClient(url, serviceKey, opts)
 }

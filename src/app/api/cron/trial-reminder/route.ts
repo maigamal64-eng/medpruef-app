@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
 import { getServiceClient } from "@/lib/supabase";
+import { LONG_DB_TIMEOUT_MS } from "@/lib/db-unavailable";
 import { sendZohoEmail } from "@/lib/email/zoho";
 import { prechargeRemindersEnabled, sendPrechargeTrialReminder } from "@/lib/precharge-trial-reminder";
 import { loadRenewalOfferSuppression } from "@/lib/billing-cadence";
@@ -45,7 +46,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const sb = getServiceClient();
+  const sb = getServiceClient({ timeoutMs: LONG_DB_TIMEOUT_MS });
   const nowIso = new Date().toISOString();
   // 14-day window covers both tiers: `first_month_19` (30-day arc, fires
   // around day 16+) and `first_3mo_27` (90-day arc, fires around day 76+).

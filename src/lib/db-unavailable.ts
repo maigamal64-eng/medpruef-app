@@ -29,6 +29,12 @@
 
 export const DB_UNAVAILABLE_CODE = "DB_UNAVAILABLE";
 export const DEFAULT_SUPABASE_FETCH_TIMEOUT_MS = 8_000;
+/**
+ * Per-client deadline for the few 60 s routes whose single queries are
+ * legitimately heavy (crons, whole-bank admin scans, the Whop webhook's
+ * locking grant/revoke functions): `getServiceClient({ timeoutMs: LONG_DB_TIMEOUT_MS })`.
+ */
+export const LONG_DB_TIMEOUT_MS = 25_000;
 export const DB_RETRY_AFTER_SECONDS = 15;
 const MIN_TIMEOUT_MS = 1_000;
 const MAX_TIMEOUT_MS = 25_000;
@@ -87,6 +93,7 @@ export function __resetDbUnavailableState(): void {
 
 // ── Fetch wrapper ───────────────────────────────────────────────────────
 
+const MAX_UPSTREAM_RETRY_AFTER_S = 2;
 const GATEWAY_STATUSES = new Set([502, 503, 504, 520, 521, 522, 523, 524]);
 
 function requestUrl(input: RequestInfo | URL): string {
@@ -137,7 +144,17 @@ export function createTimedFetch(
       if (GATEWAY_STATUSES.has(res.status)) markDbUnavailable();
       else if (res.status >= 500 && new TextDecoder().decode(body.slice(0, 2_048)).includes('"57014"')) markDbUnavailable();
       const nullBody = res.status === 204 || res.status === 205 || res.status === 304;
-      return new Response(nullBody ? null : body, { status: res.status, statusText: res.statusText, headers: res.headers });
+      // The body is already decoded and complete: drop the transfer headers.
+      const headers = new Headers(res.headers);
+      headers.delete("content-encoding");
+      headers.delete("content-length");
+      // postgrest-js sleeps for Retry-After on a 503/520 GET with no cap; keep
+      // that wait inside the route's maxDuration.
+      const retryAfter = Number(headers.get("retry-after"));
+      if (headers.has("retry-after") && !(Number.isFinite(retryAfter) && retryAfter <= MAX_UPSTREAM_RETRY_AFTER_S)) {
+        headers.set("retry-after", String(MAX_UPSTREAM_RETRY_AFTER_S));
+      }
+      return new Response(nullBody ? null : body, { status: res.status, statusText: res.statusText, headers });
     } catch (err) {
       if (timedOut) {
         markDbUnavailable();

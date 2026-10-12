@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
+import { LONG_DB_TIMEOUT_MS } from "@/lib/db-unavailable";
 import { adminRouteShell } from "@/lib/admin/shell";
 import { adminErrorResponse } from "@/lib/admin/error-response";
 import { groupDuplicateQuestions, isMissingFunctionError, type DuplicateSourceRow } from "@/lib/admin/duplicates";
@@ -22,7 +23,7 @@ export const GET = adminRouteShell(async ({ req }) => {
   if (exam && !EXAM_TYPES.includes(exam)) {
     return NextResponse.json({ error: "Unknown exam type" }, { status: 400 });
   }
-  const db = getServiceClient();
+  const db = getServiceClient({ timeoutMs: LONG_DB_TIMEOUT_MS });
 
   const { data, error } = await db.rpc("find_duplicate_questions", { p_exam_type: exam || null, p_limit: 50 });
   if (!error) return NextResponse.json(data);

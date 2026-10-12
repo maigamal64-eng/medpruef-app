@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
+import { LONG_DB_TIMEOUT_MS } from "@/lib/db-unavailable";
 import { requireAdmin } from "@/lib/auth-guard";
 import { logAdminAction, resolveActorEmail } from "@/lib/admin/audit";
 import { canAccessAdminPermission, loadAdminPermissionSnapshot } from "@/lib/admin/permissions";
@@ -11,7 +12,7 @@ import { USER_SEGMENTS, isMissingFunction, segmentNeedsRevenue, type UserSegment
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 30;
+export const maxDuration = 60;
 
 
 interface LockedUserRow {
@@ -41,7 +42,7 @@ interface LockedUserRow {
  * learner events and session starts. Never users.updated_at.
  */
 async function learnerLastActive(ids: string[]): Promise<Map<string, string | null>> {
-  const db = getServiceClient();
+  const db = getServiceClient({ timeoutMs: LONG_DB_TIMEOUT_MS });
   const out = new Map<string, string | null>();
   await Promise.all(ids.map(async (id) => {
     const [answer, events, session] = await Promise.all([
@@ -66,7 +67,7 @@ async function learnerLastActive(ids: string[]): Promise<Map<string, string | nu
  * activity rule above.
  */
 async function lockedDirectory(query: string, limit: number, offset: number, page: number, canReadRevenue: boolean) {
-  let request = getServiceClient()
+  let request = getServiceClient({ timeoutMs: LONG_DB_TIMEOUT_MS })
     .from("users")
     .select("id, telegram_id, email, first_name, last_name, telegram_username, photo_url, role, tier, created_at, updated_at, user_gamification(total_xp, current_streak, total_questions_answered, total_correct, daily_questions_today, last_study_date)", { count: "exact" })
     .eq("is_banned", true)
@@ -139,7 +140,7 @@ export async function GET(req: NextRequest) {
     }
     // UX-ADM-19: counts per segment (learners only). Needs the a16 changeset.
     if (params.get("view") === "segments") {
-      const { data, error } = await getServiceClient().rpc("admin_user_segment_counts");
+      const { data, error } = await getServiceClient({ timeoutMs: LONG_DB_TIMEOUT_MS }).rpc("admin_user_segment_counts");
       if (error && isMissingFunction(error)) return NextResponse.json({ available: false, counts: null });
       if (error) return adminErrorResponse(error, "/api/stats/admin/users");
       const counts = { ...(data as Record<string, number>) };
@@ -167,7 +168,7 @@ export async function GET(req: NextRequest) {
     // segment. Until the changeset is applied, fall back to v1 (its last
     // active still includes profile updates) and refuse segment filters.
     let activityBasis: "learner" | "legacy" = "learner";
-    let { data, error } = await getServiceClient().rpc("admin_user_directory_v2", {
+    let { data, error } = await getServiceClient({ timeoutMs: LONG_DB_TIMEOUT_MS }).rpc("admin_user_directory_v2", {
       p_q: query || null,
       p_tier: tier,
       p_auth: auth,
@@ -182,7 +183,7 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ error: "Segments are not available until the a16 database changeset is applied." }, { status: 503 });
       }
       activityBasis = "legacy";
-      ({ data, error } = await getServiceClient().rpc("admin_user_directory", {
+      ({ data, error } = await getServiceClient({ timeoutMs: LONG_DB_TIMEOUT_MS }).rpc("admin_user_directory", {
         p_q: query || null,
         p_tier: tier,
         p_auth: auth,
@@ -203,7 +204,7 @@ export async function GET(req: NextRequest) {
     // UX-ADM-18: the directory RPC has no lock state; read it for this page.
     const banned = new Set<string>();
     if (items.length > 0) {
-      const { data: lockRows, error: lockError } = await getServiceClient()
+      const { data: lockRows, error: lockError } = await getServiceClient({ timeoutMs: LONG_DB_TIMEOUT_MS })
         .from("users")
         .select("id")
         .in("id", items.map((item) => item.id))
@@ -238,7 +239,7 @@ export async function PATCH(req: NextRequest) {
   if ("error" in guard) return guard.error;
   const route = "/api/stats/admin/users";
   try {
-    const db = getServiceClient();
+    const db = getServiceClient({ timeoutMs: LONG_DB_TIMEOUT_MS });
     const body = await req.json().catch(() => null);
     const userId = body?.userId;
     const updates = body?.updates;

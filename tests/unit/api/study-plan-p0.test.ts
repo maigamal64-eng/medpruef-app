@@ -56,7 +56,7 @@ describe('study plan route without a date', () => {
     expect(response.headers.get('Retry-After')).toBe('15');
     expect(await response.json()).toMatchObject({ code: 'DB_UNAVAILABLE' });
   });
-  it('another topic-counts failure is a typed 500, an empty bank a typed 503, and neither is cached', async () => {
+  it('another topic-counts failure and an empty bank are typed 500s, and neither is cached', async () => {
     const failing = createFakeSupabase(call => call.table === 'rpc:get_topic_counts' ? { error: { code: '42883', message: 'function missing' } } : baseline(call));
     mocks.client.mockReturnValue(failing.sb);
     const failed = await GET(request());
@@ -65,7 +65,7 @@ describe('study plan route without a date', () => {
     const empty = createFakeSupabase(call => call.table === 'rpc:get_topic_counts' ? { data: [] } : baseline(call));
     mocks.client.mockReturnValue(empty.sb);
     const blank = await GET(request());
-    expect(blank.status).toBe(503);
+    expect(blank.status).toBe(500);
     expect(await blank.json()).toMatchObject({ code: 'TOPIC_COUNTS_EMPTY' });
     const healthy = createFakeSupabase(baseline);
     mocks.client.mockReturnValue(healthy.sb);

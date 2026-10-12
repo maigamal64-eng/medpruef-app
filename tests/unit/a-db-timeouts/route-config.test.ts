@@ -33,6 +33,7 @@ const LONGER: Record<string, string> = {
   "api/stats/admin/growth": "admin: paged funnel reads",
   "api/stats/admin/duplicates": "admin: pages through the whole bank",
   "api/stats/admin/users/[id]": "admin: every answer of one learner, paged",
+  "api/stats/admin/users": "admin: learner directory and segment counts (heavy RPCs, 25 s deadline)",
   "api/admin/overview": "admin: independent blocks incl. money ledger paging",
   "api/admin/subscriptions": "admin: paged roster with money totals",
   "api/admin/audit": "admin: newest-first audit scan",

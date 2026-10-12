@@ -153,3 +153,17 @@ describe("paywall_hit write", () => {
     spy.mockRestore();
   });
 });
+
+describe("/api/track backpressure", () => {
+  it("drops batches past 120 a minute for one account without queuing work", async () => {
+    database(() => ({ data: { user_id: USER } }));
+    mocks.optional.mockReturnValue("66666666-6666-4666-8666-666666666666");
+    const statuses: number[] = [];
+    for (let i = 0; i < 125; i++) {
+      statuses.push((await track(post("https://medpruf.com/api/track", { sessionId: SESSION, events: [] }))).status);
+      mocks.deferred.length = 0;
+    }
+    expect(statuses.filter((s) => s === 202)).toHaveLength(120);
+    expect(statuses.slice(120).every((s) => s === 204)).toBe(true);
+  });
+});

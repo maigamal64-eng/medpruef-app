@@ -151,6 +151,23 @@ export async function extendOrInsertWhopSubscription(
     };
   }
 
+  // a-db-timeouts: a write can commit after the 8 s database deadline made it
+  // look failed; the claim is then released and the payment redelivered. A
+  // payment already in an active row's history is a replay: never extend
+  // twice. Access is reconciled by the caller (entitlementReconciled false).
+  const already = ((actives ?? []) as ActiveSubRow[]).find((row) =>
+    Array.isArray(row.granted_payment_ids) && row.granted_payment_ids.some((e) => e?.payment_id === paymentId));
+  if (already?.id) {
+    return {
+      mode: "extended",
+      subscriptionId: already.id,
+      expiresAt: already.expires_at ?? "",
+      previousExpiresAt: already.expires_at ?? null,
+      replayed: true,
+      entitlementReconciled: already.expires_at === null,
+    };
+  }
+
   const live = ((actives ?? []) as ActiveSubRow[]).find((row) => {
     if (!row.expires_at) return true; // never-expiring row: still extendable
     return new Date(row.expires_at).getTime() > now.getTime();

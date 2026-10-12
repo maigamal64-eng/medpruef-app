@@ -1,6 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
+import { LONG_DB_TIMEOUT_MS } from "@/lib/db-unavailable";
 import { captureServerError } from "@/lib/sentry-capture";
 import { checkedRead } from "@/lib/admin/read-result";
 import { loadLedger, loadWhopDeliveries } from "@/lib/admin/moneyMetrics";
@@ -41,7 +42,7 @@ export async function GET(req: NextRequest) {
   const expected = Buffer.from(`Bearer ${secret}`), got = Buffer.from(req.headers.get("authorization") ?? "");
   if (expected.length !== got.length || !timingSafeEqual(expected, got)) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
-  const sb = getServiceClient();
+  const sb = getServiceClient({ timeoutMs: LONG_DB_TIMEOUT_MS });
   const now = new Date();
   // Heartbeat first, so /admin/crons can tell "did it fire" (ADM-12 B).
   try {

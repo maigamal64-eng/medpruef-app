@@ -1,5 +1,6 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { NextResponse } from "next/server";
+import { captureServerError } from "@/lib/sentry-capture";
 import {
   DB_RETRY_AFTER_SECONDS,
   DB_UNAVAILABLE_CODE,
@@ -49,7 +50,12 @@ export function withDbUnavailable<A extends unknown[]>(
     try {
       res = await probeStore.run(probe, () => handler(...args));
     } catch (err) {
-      if (sawUnavailable() || isDbUnavailable(err)) return dbUnavailableResponse();
+      if (isDbUnavailable(err)) return dbUnavailableResponse();
+      if (sawUnavailable()) {
+        // Still answer 503 (the database was failing), but never hide a bug.
+        captureServerError(err, { phase: "withDbUnavailable", note: "thrown while the database was unavailable" });
+        return dbUnavailableResponse();
+      }
       throw err;
     }
     if (res.status < 500 || !sawUnavailable()) return res;

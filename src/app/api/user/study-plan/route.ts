@@ -93,7 +93,7 @@ async function handleGET(req: NextRequest) {
       console.error("[study-plan GET] topic counts empty for", activeExam);
       return NextResponse.json(
         { error: "Failed to load topic counts", code: "TOPIC_COUNTS_EMPTY" },
-        { status: 503, headers: { "Retry-After": "15" } }
+        { status: 500 }
       );
     }
 

@@ -5,6 +5,7 @@ import { captureServerError } from "@/lib/sentry-capture";
 import { analyticsWritesDisabled } from "@/lib/supabase-resilience";
 import { dbRecentlyUnavailable, isDbUnavailable } from "@/lib/db-unavailable";
 import { afterResponse } from "@/lib/after-response";
+import { checkRateLimit, rateKey } from "@/lib/rate-limit";
 import { normalizeEventTimestamp, normalizeTrackedPath } from "@/lib/telemetry-normalize";
 import { isMentorClientEvent, mentorEventData } from "@/lib/mentor/telemetry";
 import { isAllowedEvent, sanitizeEventData, uaClass } from "@/lib/analytics-events";
@@ -44,8 +45,14 @@ export async function POST(req: NextRequest) {
   // Only the signature is checked before answering. The account row (ban,
   // session invalidation) is re-read by requireUser in the deferred write,
   // and nothing is written when that check fails.
-  if (!resolveOptionalUser(req)) {
+  const signedUserId = resolveOptionalUser(req);
+  if (!signedUserId) {
     return NextResponse.json({ error: "Missing or invalid session" }, { status: 401 });
+  }
+  // The answer no longer waits for the database, so bound the deferred work
+  // one account can queue (the tracker sends about 15 batches a minute).
+  if (!checkRateLimit({ key: rateKey("track", signedUserId), limit: 120, windowMs: 60_000 }).allowed) {
+    return new NextResponse(null, { status: 204 });
   }
 
   let body: TrackPayload;
