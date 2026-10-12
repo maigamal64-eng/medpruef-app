@@ -12,7 +12,6 @@ import { NavItem } from "@/components/ui";
 import {
   EXAM_SOURCES,
   getStoredExamSource,
-  setStoredExamSource,
   type ExamSourceId,
 } from "@/lib/topics";
 import { useUserTier } from "@/lib/hooks/useUserTier";

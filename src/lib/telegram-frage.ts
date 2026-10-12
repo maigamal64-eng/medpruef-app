@@ -4,9 +4,11 @@
  *
  *  - /frage: one question of the day from the FREE SLICE of the learner's bank
  *    (the 150 lowest-id active questions), single-answer items only, with an
- *    inline keyboard of option letters and a deep link that signs the sender
- *    into the same account (the existing 10-minute single-use login token)
- *    and opens that question in MedPrüf, where the explanation lives.
+ *    inline keyboard of option letters and a bot deep link ("/start
+ *    frage_<id>"). The message itself holds no credential (it can be
+ *    forwarded); the webhook mints the usual 10-minute single-use login link
+ *    for whoever opens that deep link in their own chat, with next= the
+ *    question, so the answer lands in that person's account.
  *  - Option tap (callback_query "frage:<id>:<i>"): answered only while the id
  *    is still in the free slice; the reply says right or wrong and names the
  *    correct letter, never the explanation.
@@ -15,7 +17,6 @@
  * master-learning/telegram-commands.ts. Option taps need "callback_query" in
  * the webhook's allowed_updates (a setWebhook change, [name]'s hand).
  */
-import crypto from "crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { buildFrageReply, isCallbackAllowed, parseCommand, isKnownCommand, type FreeSliceQuestion } from "@/lib/master-learning/telegram-commands";
 import { loadFreeSliceIds } from "@/lib/free-tier";
@@ -23,7 +24,6 @@ import { EXAM_SOURCE_IDS } from "@/lib/topics";
 import { viennaDay } from "@/lib/home-study-core";
 
 export const BOT_USERNAME = "MedPruefBot";
-const TOKEN_TTL_MS = 10 * 60 * 1000;
 const LETTERS = ["A", "B", "C", "D", "E", "F"];
 
 export function isFrageEnabled(env: Record<string, string | undefined> = process.env): boolean {
@@ -67,7 +67,6 @@ export async function handleFrageCommand(
   sb: SupabaseClient,
   msg: { chat: { id: number; type?: string }; from: { id: number; first_name?: string; last_name?: string; username?: string; language_code?: string } },
   send: Send,
-  siteUrl: string,
   now: Date = new Date(),
 ): Promise<void> {
   if (msg.chat.type && msg.chat.type !== "private") return; // never answer in groups
@@ -77,25 +76,15 @@ export async function handleFrageCommand(
     await send("sendMessage", { chat_id: msg.chat.id, text: "Heute ist keine Frage verfügbar. Öffnen Sie MedPrüf, um zu üben." });
     return;
   }
-  // Same single-use, 10-minute login token as /start web_login: the link signs
-  // the sender into the account linked to this Telegram id (or creates it).
-  const token = crypto.randomUUID();
-  const { error } = await sb.from("telegram_login_tokens").insert({
-    token,
-    telegram_id: msg.from.id,
-    first_name: msg.from.first_name || null,
-    last_name: msg.from.last_name || null,
-    username: msg.from.username || null,
-    language_code: msg.from.language_code || null,
-    expires_at: new Date(now.getTime() + TOKEN_TTL_MS).toISOString(),
-  });
+  // The button carries no credential: the question may be forwarded. It opens
+  // the bot with "/start frage_<id>", and the webhook then mints a login link
+  // for whoever tapped it, in their own private chat (same flow as web_login).
   const reply = buildFrageReply(loaded.pool, loaded.ids, { dayKey: viennaDay(now), deepLinkUrl: "about:blank" });
   if (reply.questionId === null) {
     await send("sendMessage", { chat_id: msg.chat.id, text: reply.text });
     return;
   }
-  const next = `/quiz?examSource=${encodeURIComponent(exam)}&questionId=${reply.questionId}`;
-  const deepLink = error ? `${siteUrl}${next}` : `${siteUrl}/?tg_token=${encodeURIComponent(token)}&next=${encodeURIComponent(next)}`;
+  const deepLink = `https://t.me/${BOT_USERNAME}?start=frage_${reply.questionId}`;
   const keyboard = reply.inlineKeyboard.map((row) => row.map((b) => (b.url ? { ...b, url: deepLink } : b)));
   await send("sendMessage", { chat_id: msg.chat.id, text: reply.text, reply_markup: { inline_keyboard: keyboard } });
 }
@@ -121,4 +110,10 @@ export async function handleFrageCallback(
     ? "Richtig. Die Erklärung finden Sie in MedPrüf."
     : `Leider nicht richtig. Richtig ist ${LETTERS[q.correctIndex]}. Die Erklärung finden Sie in MedPrüf.`;
   await send("answerCallbackQuery", { callback_query_id: cb.id, text, show_alert: true });
+}
+
+/** "/start frage_<id>" payload from the /frage button: the question id, or null. */
+export function frageStartQuestionId(payload: string | undefined): number | null {
+  const m = payload ? /^frage_(\d{1,9})$/.exec(payload) : null;
+  return m ? Number(m[1]) : null;
 }

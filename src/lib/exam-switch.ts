@@ -14,7 +14,16 @@ import { setStoredExamSource, type ExamSourceId } from "@/lib/topics";
 
 export const EXAM_CHANGED_EVENT = "medpruef:examChanged";
 
-export interface ExamChangedDetail { examSource: ExamSourceId }
+export interface ExamChangedDetail {
+  examSource: ExamSourceId
+  /** "server": Home applied the account preference; chips follow, Home does not refetch again. */
+  source?: "switch" | "server"
+}
+
+/** Tell the chips that Home applied the account's exam (never reloads anything). */
+export function announceServerExam(id: ExamSourceId): void {
+  window.dispatchEvent(new CustomEvent<ExamChangedDetail>(EXAM_CHANGED_EVENT, { detail: { examSource: id, source: "server" }, cancelable: true }));
+}
 
 export async function saveExamPreference(id: ExamSourceId, fetcher: typeof authFetch = authFetch): Promise<boolean> {
   try {

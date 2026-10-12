@@ -3,7 +3,7 @@ import { getServiceClient } from '@/lib/supabase'
 import crypto from 'crypto'
 import { campaignWelcomeUrl, parseCampaignStart } from '@/lib/campaign-links'
 import { safeEqual } from '@/lib/security/timing-safe'
-import { handleFrageCallback, handleFrageCommand, isFrageCommand, isFrageEnabled } from '@/lib/telegram-frage'
+import { frageStartQuestionId, handleFrageCallback, handleFrageCommand, isFrageCommand, isFrageEnabled } from '@/lib/telegram-frage'
 
 export const dynamic = 'force-dynamic'
 
@@ -170,8 +170,7 @@ export async function POST(req: NextRequest) {
 
   // LX-34 phase 1: "/frage" answers with the free question of the day (flag default OFF).
   if (isFrageEnabled() && isFrageCommand(msg.text)) {
-    const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://medpruf.com').replace(/\/$/, '')
-    await handleFrageCommand(getServiceClient(), { chat: msg.chat, from: msg.from }, botCall, siteUrl)
+    await handleFrageCommand(getServiceClient(), { chat: msg.chat, from: msg.from }, botCall)
     return NextResponse.json({ ok: true })
   }
 
@@ -259,10 +258,14 @@ export async function POST(req: NextRequest) {
   // Bare /start (payload empty/undefined) or unrecognised payload: send a
   // welcome message with two inline buttons — one for the web app, one for
   // the Mini App. F4 fix (2026-04-26).
+  // LX-34: "/start frage_<id>" from the /frage button signs the person who
+  // tapped it in and opens that question (flag default OFF).
+  const frageQuestionId = isFrageEnabled() ? frageStartQuestionId(payload) : null
   const isWebLogin =
     payload === 'web_login' ||
     payload === 'web_login_de' ||
-    payload === 'web_login_en'
+    payload === 'web_login_en' ||
+    frageQuestionId !== null
 
   if (!isWebLogin) {
     // Unknown or empty payload → send welcome reply. A campaign start
@@ -322,7 +325,7 @@ export async function POST(req: NextRequest) {
   }
 
   const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://medpruf.com').replace(/\/$/, '')
-  const loginUrl = `${siteUrl}/?tg_token=${encodeURIComponent(token)}`
+  const loginUrl = `${siteUrl}/?tg_token=${encodeURIComponent(token)}${frageQuestionId !== null ? `&next=${encodeURIComponent(`/quiz?questionId=${frageQuestionId}`)}` : ''}`
   const buttonLabel = isDE ? 'MedPrüf öffnen' : 'Open MedPrüf'
 
   // Two ways to sign in from ONE token (FB-08, mobile-PWA fix):

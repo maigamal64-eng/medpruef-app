@@ -67,7 +67,7 @@ import { topicStatus, type TopicStatus } from "@/lib/learning-metrics";
 import { canUse } from "@/lib/entitlements";
 import { useHomeStudy } from "@/lib/hooks/useHomeStudy";
 import { asExamSourceId } from "@/lib/active-exam";
-import { EXAM_CHANGED_EVENT, type ExamChangedDetail } from "@/lib/exam-switch";
+import { EXAM_CHANGED_EVENT, announceServerExam, type ExamChangedDetail } from "@/lib/exam-switch";
 import { announce } from "@/lib/announce";
 import { trackHomeCta, type HomeCtaSlot } from "@/lib/home-events";
 import { isReadinessResponse } from "@/components/ReadinessSignal";
@@ -387,28 +387,33 @@ export default function Home() {
       setStoredExamSource(serverExam);
       setExamSource(serverExam);
       void fetchTopics(serverExam);
+      announceServerExam(serverExam);
       announce(t("a22_exam_set", getUiLang()).replace("{exam}", getExamLabel(serverExam, "full", getUiLang())));
     } else if (serverExam) {
       serverExamApplied.current = true;
     }
   }, [fetchTopics]);
   const study = useHomeStudy(user?.id, onSnapshot);
+  const refreshStudy = study.refresh;
 
   // UX-HOME-12: an exam switch refreshes Home in place (no reload).
   useEffect(() => {
     const onChanged = (e: Event) => {
-      const next = asExamSourceId((e as CustomEvent<ExamChangedDetail>).detail?.examSource);
+      const detail = (e as CustomEvent<ExamChangedDetail>).detail;
+      const next = asExamSourceId(detail?.examSource);
       if (!next) return;
       e.preventDefault();
+      if (detail?.source === "server") return; // Home applied it itself
+
       setExamSource(next);
       setShowAllTopics(false);
       void fetchTopics(next);
-      study.refresh(true);
+      refreshStudy(true);
       announce(t("a22_exam_switched", getUiLang()).replace("{exam}", getExamLabel(next, "full", getUiLang())));
     };
     window.addEventListener(EXAM_CHANGED_EVENT, onChanged);
     return () => window.removeEventListener(EXAM_CHANGED_EVENT, onChanged);
-  }, [fetchTopics, study]);
+  }, [fetchTopics, refreshStudy]);
 
   // Online/offline measurement (UX-HOME-53) and a topic refresh on reconnect.
   useEffect(() => {

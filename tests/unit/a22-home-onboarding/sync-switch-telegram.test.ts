@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { queueOnboardingSync, readDraft, readPending, replayOnboardingSync, writeDraft, DRAFT_TTL_MS } from '@/lib/onboarding-sync';
-import { toFreeSliceQuestion, handleFrageCallback, handleFrageCommand, isFrageCommand, isFrageEnabled } from '@/lib/telegram-frage';
+import { frageStartQuestionId, toFreeSliceQuestion, handleFrageCallback, handleFrageCommand, isFrageCommand, isFrageEnabled } from '@/lib/telegram-frage';
 
 const ok = { ok: true, status: 200, json: async () => ({}) } as Response;
 const fail = { ok: false, status: 500, json: async () => ({}) } as Response;
@@ -119,28 +119,34 @@ describe('LX-34 /frage', () => {
     expect(isFrageCommand('/frage@OtherBot')).toBe(false);
     expect(isFrageCommand('frage')).toBe(false);
   });
+  it('the /start payload carries only a question id', () => {
+    expect(frageStartQuestionId('frage_11')).toBe(11);
+    expect(frageStartQuestionId('frage_x')).toBeNull();
+    expect(frageStartQuestionId('web_login')).toBeNull();
+  });
   it('single-answer items only', () => {
     expect(toFreeSliceQuestion(rows[0])?.correctIndex).toBe(1);
     expect(toFreeSliceQuestion(rows[1])).toBeNull();
   });
   it('never answers in a group', async () => {
     const send = vi.fn(async () => {});
-    await handleFrageCommand(frageSb({ slice: [11, 12], rows }) as never, { chat: { id: 1, type: 'group' }, from: { id: 9 } }, send, 'https://medpruf.com');
+    await handleFrageCommand(frageSb({ slice: [11, 12], rows }) as never, { chat: { id: 1, type: 'group' }, from: { id: 9 } }, send);
     expect(send).not.toHaveBeenCalled();
   });
-  it('a private chat gets a free-slice question, letters and a same-account deep link', async () => {
+  it('a private chat gets a free-slice question, letters and a credential-free bot deep link', async () => {
     const sent: { method: string; body: Record<string, unknown> }[] = [];
     const sb = frageSb({ slice: [11, 12], rows, activeExam: 'pharma' });
-    await handleFrageCommand(sb as never, { chat: { id: 1, type: 'private' }, from: { id: 9 } }, async (method, body) => { sent.push({ method, body }); }, 'https://medpruf.com', new Date('2026-10-12T10:00:00Z'));
+    await handleFrageCommand(sb as never, { chat: { id: 1, type: 'private' }, from: { id: 9 } }, async (method, body) => { sent.push({ method, body }); }, new Date('2026-10-12T10:00:00Z'));
     expect(sent).toHaveLength(1);
     const text = String(sent[0].body.text);
     expect(text).toContain('Welche Antwort?');
     expect(text).not.toMatch(/Zwei.*richtig/);
     const kb = JSON.stringify(sent[0].body.reply_markup);
     expect(kb).toContain('frage:11:0');
-    expect(kb).toContain('tg_token=');
-    expect(kb).toContain(encodeURIComponent('/quiz?examSource=pharma&questionId=11'));
-    expect(sb.inserts).toHaveLength(1);
+    // A forwarded message must not sign anyone in: no token in the button.
+    expect(kb).not.toContain('tg_token');
+    expect(kb).toContain('https://t.me/MedPruefBot?start=frage_11');
+    expect(sb.inserts).toHaveLength(0);
   });
   it('option taps outside the free slice are refused; inside say right or wrong', async () => {
     const answers: Record<string, unknown>[] = [];
