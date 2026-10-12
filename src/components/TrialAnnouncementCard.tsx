@@ -1,4 +1,5 @@
 "use client";
+import { IconButton } from "@/components/ui/IconButton";
 import { t, type Lang } from "@/lib/i18n";
 import { billingTrialLine, VERIFIED_CANCEL_PATH } from "@/lib/billing-copy";
 
@@ -10,7 +11,7 @@ import { dismissSurface, isSurfaceDismissed, useAnnouncementSlot } from "@/lib/a
 import { canShowHomeTrial, type HomeTrialTerms } from "@/lib/home-trial-announcement";
 import { useEffect, useState } from "react";
 import { authFetch as fetch } from "@/lib/authFetch";
-import { Sparkles, X, CreditCard } from "lucide-react";
+import { Sparkles, CreditCard } from "lucide-react";
 
 
 
@@ -126,14 +127,7 @@ export default function TrialAnnouncementCard({
         </div>
       </div>
 
-      <button
-        type="button"
-        onClick={() => dismiss("later")}
-        aria-label={t("a12_later", lang)}
-        className="absolute top-1 end-1 min-h-11 min-w-11 p-1 mp-focusable rounded-lg text-[var(--mp-fg-light)] hover:text-[var(--mp-fg)] hover:bg-[var(--mp-surface-raised)] transition-colors"
-      >
-        <X className="w-4 h-4" />
-      </button>
+      <IconButton label={t("a12_later", lang)} onClick={() => dismiss("later")} className="absolute top-1 end-1" />
     </div>
   );
 }

@@ -23,9 +23,10 @@
  * review-2026-04-26-B2.
  */
 
+import { IconButton } from "@/components/ui/IconButton";
 import { useEffect, useState } from "react";
-import { Send, ExternalLink, X } from "lucide-react";
-import { useLang } from "@/lib/i18n";
+import { Send, ExternalLink } from "lucide-react";
+import { t, useLang } from "@/lib/i18n";
 import { authFetch as fetch } from "@/lib/authFetch";
 
 type ActivationState =
@@ -177,14 +178,7 @@ export default function TelegramActivationCard() {
         background: "color-mix(in srgb, var(--mp-cta-blue) 6%, transparent)",
       }}
     >
-      <button
-        type="button"
-        onClick={dismiss}
-        aria-label={lang === "de" ? "Schließen" : "Dismiss"}
-        className="absolute top-2 right-2 text-[var(--mp-fg-muted)] hover:text-[var(--mp-fg)]"
-      >
-        <X className="w-4 h-4" />
-      </button>
+      <IconButton label={t("a22_dismiss", lang)} onClick={dismiss} className="absolute top-1 end-1" />
       <div className="flex items-start gap-3 pr-6">
         <Send className="w-5 h-5 text-[var(--mp-cta-blue)] mt-0.5 shrink-0" aria-hidden />
         <div className="flex-1 min-w-0">

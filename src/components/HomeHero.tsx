@@ -25,7 +25,7 @@ import Link from "next/link";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Play, CalendarDays } from "lucide-react";
-import { formatCount, formatNumber, formatNumberText, formatPercent, formatPercentText } from "@/lib/master-locale/format";
+import { formatCount, formatNumber, formatNumberText, formatPercentText } from "@/lib/master-locale/format";
 import { renderedLanguage } from "@/lib/master-locale/render";
 import type { ReadinessBand, Trend, FactorKey } from "@/lib/readiness";
 import type { StudyPhase } from "@/lib/home-study-core";

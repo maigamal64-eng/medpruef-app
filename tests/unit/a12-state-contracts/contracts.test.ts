@@ -143,7 +143,8 @@ describe('announcement queue (UX-GLOBAL-12)', () => {
   const ctx: QueueContext = { onboardingOpen: false, firstSession: false, answeredTotal: 30, fieldFocused: false, msSincePointerDown: 5_000 };
   it('shows one unrequested inline surface and one modal, by priority', () => {
     expect(electSurfaces(['trial_card', 'install_card', 'referral_floater', 'checkout_stall'], ctx, {}, {}, now)).toEqual({ modal: null, inline: 'checkout_stall' });
-    expect(electSurfaces(['trial_card', 'renewal', 'whats_new', 'email_validation'], ctx, {}, {}, now)).toEqual({ modal: 'email_validation', inline: 'renewal' });
+    // UX-ONB-37 (a22): the bounced-address repair is an inline Home card now.
+    expect(electSurfaces(['trial_card', 'renewal', 'whats_new', 'email_validation'], ctx, {}, {}, now)).toMatchObject({ modal: 'whats_new' });
   });
   it('keeps the session to its first surface of each kind; only access and renewal may follow a finished one', () => {
     expect(electSurfaces(['trial_card', 'install_card'], ctx, {}, { inline: 'renewal' }, now).inline).toBeNull();

@@ -1,174 +1,154 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Mail, CheckCircle } from 'lucide-react'
 import { getStoredSession, storeSession } from '@/lib/auth'
 import { authFetch } from '@/lib/authFetch'
-import { Dialog, TextField, Alert } from '@/components/ui'
+import { Dialog, TextField } from '@/components/ui'
 import { t, useLang } from '@/lib/i18n'
 import { dismissSurface, useAnnouncementSlot } from '@/lib/announcements/queue'
 
-const STORAGE_KEY = 'medpruef_email_validation_dismissed'
-
 /**
- * Shown to users whose email has bounced (email_status === 'bounced').
- * Asks them to update their email address.
- * Uses sessionStorage so it re-shows on next session if not resolved.
+ * Bounced address repair (UX-ONB-37). An info card on Home, granted by the
+ * announcement queue as its single inline card, never a modal over a
+ * question. "E-Mail-Adresse ändern" opens a short form in the Dialog
+ * primitive; server errors stay on the field with the typed address kept;
+ * success says only what happened ("Gespeichert.") because no confirmation
+ * mail is sent by this route. "Später erinnern" snoozes for 7 days.
+ * Scope stays bounced addresses.
  */
 export default function EmailValidationModal() {
   const lang = useLang()
-  const [show, setShow] = useState(false)
+  const [eligible, setEligible] = useState(false)
   const [currentEmail, setCurrentEmail] = useState('')
+  const [formOpen, setFormOpen] = useState(false)
   const [newEmail, setNewEmail] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
+  const busy = useRef(false)
 
   useEffect(() => {
     try {
-      if (sessionStorage.getItem(STORAGE_KEY) === '1') return
-
       const session = getStoredSession()
       const userId = session?.user?.id || ''
       if (!userId || userId.startsWith('guest_')) return
-
-      // Only show if email_status is 'bounced'
       if (session?.user?.email_status !== 'bounced') return
-
       setCurrentEmail(session?.user?.email || '')
-
-      // Delay to avoid fighting other modals (WhatsNew, Survey)
-      const timer = setTimeout(() => setShow(true), 4000)
-      return () => clearTimeout(timer)
+      setEligible(true)
     } catch { /* silent */ }
   }, [])
 
-  // UX-GLOBAL-12: an unrequested modal, granted by the queue (access first).
-  const visible = useAnnouncementSlot('email_validation', show)
+  const visible = useAnnouncementSlot('email_validation', eligible && !success)
 
-  const dismiss = () => {
-    setShow(false)
+  const later = () => {
+    setEligible(false)
     dismissSurface('email_validation', 'later')
-    sessionStorage.setItem(STORAGE_KEY, '1')
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (busy.current) return
     const trimmed = newEmail.trim().toLowerCase()
-    if (!trimmed || submitting) return
-
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
       setError(t('email_validation_invalid', lang))
       return
     }
-
+    busy.current = true
     setSubmitting(true)
     setError('')
-
     try {
       const res = await authFetch('/api/user/email-update', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: trimmed }),
+        timeoutMs: 15_000,
       })
-      const data = await res.json()
-
       if (!res.ok) {
-        if (res.status === 409) {
-          setError(t('email_validation_duplicate', lang))
-        } else {
-          setError(data.error || t('email_validation_generic_error', lang))
-        }
+        setError(t(res.status === 409 ? 'email_validation_duplicate' : 'email_validation_generic_error', lang))
         return
       }
-
-      // Update session with new email
       const session = getStoredSession()
       if (session) {
         session.user.email = trimmed
         session.user.email_status = 'unverified'
         storeSession(session)
       }
-
       setSuccess(true)
-      setTimeout(() => {
-        dismiss()
-      }, 2000)
     } catch {
       setError(t('email_validation_network', lang))
     } finally {
+      busy.current = false
       setSubmitting(false)
     }
   }
 
-  const footer = success ? null : (
-    <>
-      <button
-        type="button"
-        onClick={dismiss}
-        className="mp-btn mp-btn--secondary"
-      >
-        {t('email_validation_remind_later', lang)}
-      </button>
-      <button
-        type="submit"
-        form="email-validation-form"
-        disabled={!newEmail.trim() || submitting}
-        className="mp-btn mp-btn--destructive"
-      >
-        {submitting ? t('email_validation_submitting', lang) : t('email_validation_submit', lang)}
-      </button>
-    </>
-  )
-
-  const errorBody = t('email_validation_error_body', lang).split('{email}')
+  const body = t('email_validation_error_body', lang).split('{email}')
 
   return (
-    <Dialog
-      open={visible}
-      onOpenChange={(next) => {
-        if (!next) dismiss()
-      }}
-      title={t('email_validation_title', lang)}
-      description={success ? undefined : t('email_validation_subtitle', lang)}
-      maxWidth="480px"
-      footer={footer}
-    >
-      {success ? (
-        <div className="flex flex-col items-center gap-3 py-4">
-          <CheckCircle className="w-12 h-12 text-[var(--mp-viridian)]" aria-hidden />
-          <p className="text-sm font-medium text-[var(--mp-fg)] text-center">
-            {t('email_validation_success', lang)}
-          </p>
-        </div>
-      ) : (
-        <form id="email-validation-form" onSubmit={handleSubmit} className="space-y-4">
-          <Alert variant="error" title={t('email_validation_error_title', lang)}>
-            <span className="flex items-start gap-2">
-              <Mail className="w-4 h-4 mt-0.5 shrink-0" aria-hidden />
-              <span>
-                {errorBody[0]}<strong>{currentEmail}</strong>{errorBody[1] ?? ''}
-              </span>
-            </span>
-          </Alert>
-
-          {error && (
-            <Alert variant="error" title={t('email_validation_update_fail_title', lang)}>
-              {error}
-            </Alert>
+    <>
+      {(visible || success) && (
+        <section
+          aria-labelledby="email-repair-title"
+          className="mb-6 rounded-[var(--mp-r-card)] border border-[var(--mp-border)] bg-[var(--mp-surface-raised)] p-4"
+          data-testid="email-repair-card"
+        >
+          {success ? (
+            <div role="status" className="flex items-start gap-3">
+              <CheckCircle className="h-5 w-5 flex-shrink-0 text-[var(--mp-viridian)]" aria-hidden />
+              <div className="min-w-0 flex-1">
+                <h2 id="email-repair-title" className="text-[15px] font-semibold text-[var(--mp-fg)]">{t('a22_email_saved', lang)}</h2>
+                <button type="button" onClick={() => { setSuccess(false); setEligible(false) }} className="mt-2 mp-btn mp-btn--secondary min-h-11">{t('a22_close', lang)}</button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-start gap-3">
+              <Mail className="h-5 w-5 flex-shrink-0 text-[var(--mp-cta-blue)]" aria-hidden />
+              <div className="min-w-0 flex-1">
+                <h2 id="email-repair-title" className="text-[15px] font-semibold text-[var(--mp-fg)]">{t('a22_email_repair_title', lang)}</h2>
+                <p className="mt-1 text-sm text-[var(--mp-fg-muted)]">{body[0]}<strong className="break-all">{currentEmail}</strong>{body[1] ?? ''}</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button type="button" onClick={() => setFormOpen(true)} className="mp-btn mp-btn--primary min-h-11">{t('a22_email_repair_title', lang)}</button>
+                  <button type="button" onClick={later} className="mp-btn mp-btn--secondary min-h-11">{t('email_validation_remind_later', lang)}</button>
+                </div>
+              </div>
+            </div>
           )}
+        </section>
+      )}
 
+      <Dialog
+        open={formOpen && !success}
+        onOpenChange={setFormOpen}
+        title={t('a22_email_repair_title', lang)}
+        kind="form"
+        busy={submitting}
+        maxWidth="480px"
+        footer={
+          <>
+            <button type="button" onClick={() => setFormOpen(false)} className="mp-btn mp-btn--secondary min-h-11">{t('a12_cancel', lang)}</button>
+            <button type="submit" form="email-repair-form" aria-busy={submitting} aria-disabled={submitting} className="mp-btn mp-btn--primary min-h-11">
+              {submitting ? t('email_validation_submitting', lang) : t('a22_email_repair_save', lang)}
+            </button>
+          </>
+        }
+      >
+        <form id="email-repair-form" onSubmit={handleSubmit} noValidate className="space-y-4">
           <TextField
             label={t('email_validation_new_label', lang)}
             type="email"
+            name="email"
+            inputMode="email"
+            autoComplete="email"
+            autoCapitalize="none"
+            spellCheck={false}
             required
             value={newEmail}
+            error={error || undefined}
             onChange={(e) => { setNewEmail(e.target.value); setError('') }}
-            placeholder={t('email_validation_placeholder', lang)}
-            autoFocus
           />
         </form>
-      )}
-    </Dialog>
+      </Dialog>
+    </>
   )
 }

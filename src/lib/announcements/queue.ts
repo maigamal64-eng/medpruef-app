@@ -45,7 +45,8 @@ export interface SurfaceSpec {
 
 export const SURFACES: Record<SurfaceId, SurfaceSpec> = {
   renewal: { kind: "inline", priority: 1, laterMs: 3 * DAY, noInterestMs: 14 * DAY },
-  email_validation: { kind: "modal", priority: 1, laterMs: 1 * DAY, noInterestMs: 30 * DAY },
+  // UX-ONB-37: a Home card, not a modal; "Später erinnern" snoozes 7 days.
+  email_validation: { kind: "inline", priority: 1, laterMs: 7 * DAY, noInterestMs: 30 * DAY },
   checkout_stall: { kind: "inline", priority: 2, laterMs: 3 * DAY, noInterestMs: 14 * DAY },
   orientation: { kind: "modal", priority: 3, laterMs: 3 * DAY, noInterestMs: 3650 * DAY },
   whats_new: { kind: "modal", priority: 3, laterMs: 3 * DAY, noInterestMs: 3650 * DAY },

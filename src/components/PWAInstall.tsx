@@ -1,8 +1,9 @@
 "use client";
+import { IconButton } from "@/components/ui/IconButton";
 import { useEffect, useId, useRef, useState } from "react";
 import { dismissSurface, useAnnouncementSlot } from '@/lib/announcements/queue';
 import { usePathname } from "next/navigation";
-import { Download, X, RefreshCw } from "lucide-react";
+import { Download, RefreshCw } from "lucide-react";
 import { t, useLang } from "@/lib/i18n";
 import { isExamActive } from "@/lib/examSession";
 
@@ -297,13 +298,7 @@ export default function PWAInstall() {
         >
           {t("pwa_install_cta", lang)}
         </button>
-        <button
-          onClick={handleDismiss}
-          className="text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg-muted)] shrink-0 ml-1"
-          aria-label={t("pwa_dismiss", lang)}
-        >
-          <X className="w-4 h-4" />
-        </button>
+        <IconButton label={t("pwa_dismiss", lang)} onClick={handleDismiss} className="ml-1" />
       </div>
     </div>
   );

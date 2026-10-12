@@ -28,6 +28,7 @@
  * Hide-on-path list preserved.
  */
 
+import { IconButton } from "@/components/ui/IconButton";
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { CalendarClock } from "lucide-react";
@@ -118,15 +119,7 @@ export default function CohortCountdownBanner() {
           >
             {td("banner_link", lang)}
           </a>
-          <button
-            type="button"
-            onClick={handleDismiss}
-            className="text-white/70 hover:text-white text-xs px-2 py-1 min-w-[44px] min-h-[24px]"
-            aria-label={td("dismiss", lang)}
-            title={td("dismiss", lang)}
-          >
-            ✕
-          </button>
+          <IconButton label={td("dismiss", lang)} onClick={handleDismiss} tone="inverse" />
         </div>
       </div>
     </div>

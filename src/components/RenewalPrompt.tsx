@@ -37,6 +37,7 @@
  * so nobody is sold a second plan on top of one that auto-renews.
  */
 
+import { IconButton } from "@/components/ui/IconButton";
 import { useCallback, useEffect, useState } from "react";
 import { dismissSurface, useAnnouncementSlot } from "@/lib/announcements/queue";
 import Link from "next/link";
@@ -188,15 +189,7 @@ export default function RenewalPrompt() {
           <Link href="/pricing?action=renew#plans" className="mp-btn mp-btn--secondary min-h-11 text-xs">
             {lang === 'de' ? `Weiterlernen nach dem ${date}` : `Continue studying after ${date}`}
           </Link>
-          <button
-            type="button"
-            onClick={handleDismiss}
-            className="text-[var(--mp-fg-muted)] hover:text-[var(--mp-fg)] text-xs px-2 py-1 min-w-[44px] min-h-[44px]"
-            aria-label={t("renewal_dismiss", lang)}
-            title={t("renewal_dismiss", lang)}
-          >
-            ✕
-          </button>
+          <IconButton label={t("renewal_dismiss", lang)} onClick={handleDismiss} />
         </div>
       </div>
     </div>

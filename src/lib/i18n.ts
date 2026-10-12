@@ -670,6 +670,16 @@ const translations = {
   'a22_verify_mismatch_body': { de: 'Der Link gehört zu einem anderen Konto als dem, mit dem Sie hier angemeldet sind. Melden Sie sich mit dem richtigen Konto an.', en: 'This link belongs to a different account than the one signed in here. Please sign in with the right account.' },
   'a22_verify_invalid_body': { de: 'Dieser Bestätigungslink ist ungültig. Fordern Sie nach der Anmeldung in den Einstellungen einen neuen an.', en: 'This confirmation link is invalid. After signing in, request a new one in Settings.' },
   'a22_verify_error_body': { de: 'Die Bestätigung hat nicht geklappt. Bitte prüfen Sie Ihre Verbindung und öffnen Sie den Link erneut.', en: 'Confirmation did not work. Please check your connection and open the link again.' },
+  // a22 email repair card (UX-ONB-37), shared dismiss (UX-HOME-39), guest banner (UX-ONB-41).
+  'a22_email_repair_title': { de: 'E-Mail-Adresse ändern', en: 'Change email address' },
+  'a22_email_repair_save': { de: 'E-Mail-Adresse speichern', en: 'Save email address' },
+  'a22_email_saved': { de: 'Gespeichert. Das ist ab jetzt Ihre Anmelde-E-Mail.', en: 'Saved. This is now your sign-in email.' },
+  'a22_stall_dismiss': { de: 'Nein danke, ausblenden', en: 'No thanks, hide' },
+  'a22_close': { de: 'Schließen', en: 'Close' },
+  'a22_dismiss': { de: 'Ausblenden', en: 'Dismiss' },
+  'a22_guest_body': { de: 'Sie nutzen MedPrüf als Gast. Ihr Fortschritt liegt nur auf diesem Gerät. Legen Sie ein Konto an, damit er gespeichert bleibt.', en: 'You are using MedPrüf as a guest. Your progress is only on this device. Create an account so it stays saved.' },
+  'a22_guest_cta': { de: 'Konto erstellen', en: 'Create account' },
+  'a22_guest_dismiss': { de: 'Gast-Hinweis für 7 Tage ausblenden', en: 'Hide the guest notice for 7 days' },
   // Home page
   'welcome': { de: 'Willkommen zurück', en: 'Welcome back' },
   'choose_topic': { de: 'Fachgebiet wählen', en: 'Choose Specialty' },

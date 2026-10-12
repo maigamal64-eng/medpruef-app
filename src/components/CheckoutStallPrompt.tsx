@@ -20,9 +20,10 @@
  * devices without needing a local flag.
  */
 
+import { IconButton } from "@/components/ui/IconButton";
 import { useEffect, useRef, useState } from "react";
 import { dismissSurface, useAnnouncementSlot } from "@/lib/announcements/queue";
-import { X, Send } from "lucide-react";
+import { Send } from "lucide-react";
 import { createFeedbackSubmission } from "@/lib/checkout-feedback-submit";
 import { authFetch } from "@/lib/authFetch";
 import { t, useLang, type TranslationKey } from "@/lib/i18n";
@@ -150,14 +151,7 @@ export default function CheckoutStallPrompt({ onVisibleChange }: { onVisibleChan
       className="mp-card rounded-2xl p-4 mb-6 relative"
       aria-label={t("checkout_stall_title", lang)}
     >
-      <button
-        type="button"
-        onClick={handleDismiss}
-        className="absolute top-2 end-2 min-h-11 min-w-11 inline-flex items-center justify-center rounded-lg text-[var(--mp-fg-subtle)] hover:bg-[var(--mp-surface-sunken)] hover:text-[var(--mp-fg)]"
-        aria-label={de ? "Nein danke, ausblenden" : "No thanks, hide"}
-      >
-        <X className="w-4 h-4" aria-hidden />
-      </button>
+      <IconButton label={t("a22_stall_dismiss", lang)} onClick={handleDismiss} className="absolute top-2 end-2" />
 
       {answered ? (
         <div ref={thanks} tabIndex={-1} role="status" className="pe-10 outline-none space-y-2">

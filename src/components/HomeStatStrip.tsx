@@ -18,7 +18,7 @@ import { t, type Lang } from "@/lib/i18n";
 
 import Link from "next/link";
 import { ChevronRight, Flame, Target, TrendingUp } from "lucide-react";
-import { formatNumber, formatNumberText } from "@/lib/master-locale/format";
+import { formatNumberText } from "@/lib/master-locale/format";
 import { renderedLanguage } from "@/lib/master-locale/render";
 
 export interface HomeStatStripProps {

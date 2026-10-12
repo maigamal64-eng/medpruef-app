@@ -3,21 +3,21 @@
 import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { getStoredSession } from '@/lib/auth'
-import { AlertTriangle, UserPlus } from 'lucide-react'
+import { Info, UserPlus } from 'lucide-react'
 import Link from 'next/link'
 import { t, useLang } from '@/lib/i18n'
-import { safeSessionStorage } from "@/lib/safe-storage";
+import { safeStorage } from '@/lib/safe-storage'
+import { IconButton } from '@/components/ui/IconButton'
+
+const DISMISS_KEY = 'medpruef_guest_banner_hidden_until'
+const SEVEN_DAYS = 7 * 86_400_000
 
 /**
- * Persistent banner shown to users logged in as guest_*.
- * Encourages them to create an account to preserve progress.
- * Hidden on /login, /landing, /privacy, /terms pages.
- *
- * 2026-04-15: switched from `window.location.pathname`-on-mount to
- * `usePathname()` from next/navigation so the hide/show decision
- * reacts to App Router soft navigations (Frontend audit P1-8).
- * Also stopped setting `isGuest=false` as a "hide" mechanism —
- * isGuest now tracks the real session state honestly.
+ * Legacy guest sessions only (UX-ONB-41). The copy says what the code does:
+ * a guest's progress lives on this device, and no carry-over to a new account
+ * is promised. Info tone on tokens (no white on amber), wrapping text at 14 px,
+ * a 44 px labelled dismiss that hides it for 7 days. /login treats a guest
+ * session as signed out, so "Konto erstellen" no longer bounces.
  */
 export default function GuestMigrationBanner() {
   const [isGuest, setIsGuest] = useState(false)
@@ -26,48 +26,36 @@ export default function GuestMigrationBanner() {
   const lang = useLang()
 
   useEffect(() => {
-    const session = getStoredSession()
-    const userId = session?.user?.id || ''
+    const userId = getStoredSession()?.user?.id || ''
     setIsGuest(userId.startsWith('guest_'))
-    setDismissed(safeSessionStorage.getItem('medpruef_guest_banner_dismissed') === '1')
+    const until = Number(safeStorage.getItem(DISMISS_KEY) || 0)
+    setDismissed(Number.isFinite(until) && until > Date.now())
   }, [])
 
-  const hideOnPath = ['/login', '/landing', '/privacy', '/terms', '/impressum'].some(p =>
-    pathname?.startsWith(p)
-  )
+  const hideOnPath = ['/login', '/landing', '/privacy', '/terms', '/impressum'].some(p => pathname?.startsWith(p))
   if (!isGuest || dismissed || hideOnPath) return null
 
   const handleDismiss = () => {
     setDismissed(true)
-    safeSessionStorage.setItem('medpruef_guest_banner_dismissed', '1')
+    safeStorage.setItem(DISMISS_KEY, String(Date.now() + SEVEN_DAYS))
   }
 
   return (
-    <div className="bg-gradient-to-r from-[#D68A3A] to-[var(--mp-error)] text-white px-4 py-2.5 shadow-lg">
-      <div className="max-w-4xl mx-auto flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2 min-w-0">
-          <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-          <p className="text-xs sm:text-sm font-medium truncate">
-            {t('guest_banner_body', lang)}
-          </p>
-        </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <Link
-            href="/login?mode=register"
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-[var(--mp-error)] rounded-lg text-xs font-bold hover:bg-white/90 transition-colors"
-          >
-            <UserPlus className="w-3.5 h-3.5" />
-            {t('guest_banner_cta', lang)}
+    <section
+      aria-label={t('a22_guest_cta', lang)}
+      className="border-b border-[var(--mp-border)] bg-[var(--mp-surface-raised)] px-4 py-2"
+    >
+      <div className="max-w-4xl mx-auto flex flex-wrap items-center gap-x-3 gap-y-1">
+        <Info className="w-4 h-4 flex-shrink-0 text-[var(--mp-info-text)]" aria-hidden />
+        <p className="min-w-0 flex-1 text-[14px] text-[var(--mp-fg)]">{t('a22_guest_body', lang)}</p>
+        <div className="flex items-center gap-1">
+          <Link href="/login?mode=register" className="mp-btn mp-btn--secondary min-h-11 text-[14px]">
+            <UserPlus className="w-4 h-4" aria-hidden />
+            {t('a22_guest_cta', lang)}
           </Link>
-          <button
-            onClick={handleDismiss}
-            className="text-white/70 hover:text-white text-xs px-1.5"
-            title={t('guest_banner_dismiss', lang)}
-          >
-            ✕
-          </button>
+          <IconButton label={t('a22_guest_dismiss', lang)} onClick={handleDismiss} />
         </div>
       </div>
-    </div>
+    </section>
   )
 }

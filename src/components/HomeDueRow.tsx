@@ -13,7 +13,7 @@ import { RotateCcw } from "lucide-react";
 import { authFetch } from "@/lib/authFetch";
 import { t, type Lang } from "@/lib/i18n";
 import { buildQuizHref } from "@/lib/quiz-links";
-import { formatNumber, formatNumberText } from "@/lib/master-locale/format";
+import { formatNumberText } from "@/lib/master-locale/format";
 import { renderedLanguage } from "@/lib/master-locale/render";
 import type { DueSummary } from "@/lib/master-learning/due-summary";
 

@@ -15,7 +15,6 @@ import IntercomMessenger from "@/components/IntercomMessenger";
 import GuestMigrationBanner from "@/components/GuestMigrationBanner";
 import CohortCountdownBanner from "@/components/CohortCountdownBanner";
 import RenewalPrompt from "@/components/RenewalPrompt";
-import EmailValidationModal from "@/components/EmailValidationModal";
 import CookieBannerMount from "@/components/CookieBannerMount";
 import LangHtmlSync from "@/components/LangHtmlSync";
 import AttributionCapture from "@/components/AttributionCapture";
@@ -416,7 +415,6 @@ export default function RootLayout({
             </StatusRegion>
             <LiveRegions />
             <NavigationMarker />
-            <EmailValidationModal />
             <IntercomMessenger />
             <SearchModalMount />
             <CookieBannerMount />
