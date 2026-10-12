@@ -42,6 +42,9 @@ export default function StudyNudgeCard({ lang }: { lang: string }) {
   const save = useCallback(async (optIn: boolean, channel: Channel, hour: number) => {
     if (!state || inFlight.current) return;
     inFlight.current = true;
+    const previous = state;
+    // The chosen channel and hour show at once; a failed save puts the saved state back.
+    setState({ ...state, channel, hour });
     setBusy(true);
     setMessage({ ok: true, text: c.saving });
     let next: { ok: boolean; text: string };
@@ -53,9 +56,10 @@ export default function StudyNudgeCard({ lang }: { lang: string }) {
         setState({ ...state, opt_in: body.opt_in === true, channel, hour, confirmation_pending: pending });
         next = { ok: true, text: pending ? c.pending : c.saved };
       } else {
+        setState(previous);
         next = { ok: false, text: res.status === 429 ? c.rateLimited : c.failed };
       }
-    } catch { next = { ok: false, text: c.failed }; }
+    } catch { setState(previous); next = { ok: false, text: c.failed }; }
     inFlight.current = false;
     setBusy(false);
     setMessage(next);
