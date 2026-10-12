@@ -46,10 +46,10 @@ export function RevenueTiles({ revenue }: { revenue: MentorRevenue }) {
           label={`Margin (${revenue.window_days} d)`}
           value={m.available ? `${formatMoneyCents(m.margin_eur_cents, "EUR")}${m.margin_pct === null ? "" : `, ${m.margin_pct.toFixed(1)}%`} (${TONE_LABEL[m.tone]})` : "Unavailable"}
           valueClass={m.available ? TONE_CLASS[m.tone] : undefined}
-          sub={m.available ? `After Whop fee ${formatMoneyCents(m.fee_eur_cents, "EUR")} and API cost ${formatMoneyCents(m.cost_eur_cents, "EUR")}` : m.reason}
+          sub={m.available ? `Blended: after Whop fee ${formatMoneyCents(m.fee_eur_cents, "EUR")} and all mentor API cost ${formatMoneyCents(m.cost_eur_cents, "EUR")} (includes Pro-included, trial and house cost)` : m.reason}
         />
         <Tile label={`True API cost (${revenue.window_days} d)`} value={revenue.cost_micro === null ? "Unknown" : `${formatUsd(revenue.cost_micro)} USD`} sub={revenue.cost_micro === null ? "Daily cost rollup not readable" : "Settled plus house cost, Vienna days"} />
-        <Tile label={`Pro-included cost (${revenue.window_days} d)`} value={`${formatUsd(revenue.pro_included.cost_micro)} USD`} sub={`Spent from ${formatCount(revenue.pro_included.lots)} included lots that started in the window; no extra revenue`} />
+        <Tile label="Pro-included credits used" value={`${formatUsd(revenue.pro_included.cost_micro)} USD`} sub={`Used so far from ${formatCount(revenue.pro_included.lots)} included lots that started in the last ${revenue.window_days} days. Part of the true API cost, no extra revenue`} />
       </div>
       {revenue.by_package.length > 0 && (
         <ul className="space-y-1 text-sm" aria-label="Sold per package">
@@ -59,6 +59,12 @@ export function RevenueTiles({ revenue }: { revenue: MentorRevenue }) {
             </li>
           ))}
         </ul>
+      )}
+      {revenue.plans_configured === 0 && (
+        <p className="text-xs text-amber-700 dark:text-amber-400">No mentor Whop plan ids are configured in this runtime; only payments tagged by the mentor checkout are recognised.</p>
+      )}
+      {revenue.refunds_amount_assumed > 0 && (
+        <p className="text-xs text-amber-700 dark:text-amber-400">{formatCount(revenue.refunds_amount_assumed)} refunds have no reported refund amount; the full charge was subtracted.</p>
       )}
       {(revenue.payments_without_amount > 0 || revenue.refunds_without_amount > 0) && (
         <p className="text-xs text-amber-700 dark:text-amber-400">
@@ -77,6 +83,7 @@ export function isMentorRevenue(v: unknown): v is MentorRevenue {
   return typeof r.window_days === "number" && typeof r.since === "string" && typeof r.basis === "string"
     && Array.isArray(r.by_currency) && Array.isArray(r.by_package)
     && typeof r.payments_without_amount === "number" && typeof r.refunds_without_amount === "number"
+    && typeof r.refunds_amount_assumed === "number" && typeof r.plans_configured === "number"
     && (r.cost_micro === null || typeof r.cost_micro === "number")
     && !!r.pro_included && typeof r.pro_included.cost_micro === "number" && typeof r.pro_included.lots === "number"
     && !!r.margin && typeof r.margin.available === "boolean";

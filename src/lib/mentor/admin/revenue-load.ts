@@ -38,16 +38,22 @@ export async function loadMentorRevenue(
   // Two days of slack so the Vienna-day window never misses an edge row.
   const sinceIso = new Date(now.getTime() - (MENTOR_REVENUE_WINDOW_DAYS + 2) * 86_400_000).toISOString();
   const sinceDay = sinceIso.slice(0, 10);
-  const [rows, resolutions, clawed, tombstones, included, cost] = await Promise.all([
+  const [rows, resolutions, clawbacks, tombstones, paymentLots, included, cost] = await Promise.all([
     loadLedgerRows(db),
     loadResolutions(db),
-    readAll<{ whop_payment_id: string | null; updated_at: string }>((from, to) =>
-      db.from("ai_credit_lot").select("whop_payment_id, updated_at")
-        .eq("source", "whop_payment").eq("status", "clawed_back").gte("updated_at", sinceIso)
-        .order("updated_at", { ascending: true }).range(from, to)),
+    // The append-only clawback rows date a refund; source_id is "whop_payment:<payment id>".
+    readAll<{ source_id: string; created_at: string }>((from, to) =>
+      db.from("ai_usage_ledger").select("source_id, created_at")
+        .eq("kind", "clawback").gte("created_at", sinceIso)
+        .order("created_at", { ascending: true }).range(from, to)),
     readAll<{ payment_id: string; created_at: string }>((from, to) =>
       db.from("ai_mentor_revoked_payment").select("payment_id, created_at")
         .gte("created_at", sinceIso).order("created_at", { ascending: true }).range(from, to)),
+    // Granted mentor payment lots: a mentor payment even when its grant_succeeded row was not logged.
+    readAll<{ whop_payment_id: string | null }>((from, to) =>
+      db.from("ai_credit_lot").select("whop_payment_id")
+        .eq("source", "whop_payment").gte("created_at", sinceIso)
+        .order("created_at", { ascending: true }).range(from, to)),
     readAll<MentorIncludedLot>((from, to) =>
       db.from("ai_credit_lot").select("spent_micro, starts_at")
         .eq("source", "pro_included").gte("starts_at", sinceIso)
@@ -60,13 +66,20 @@ export async function loadMentorRevenue(
   ]);
 
   const planPackages = mentorPlanPackages(env);
+  const PREFIX = "whop_payment:";
+  const clawed: MentorRevokedPayment[] = clawbacks
+    .filter((r) => r.source_id.startsWith(PREFIX) && r.source_id.length > PREFIX.length)
+    .map((r) => ({ payment_id: r.source_id.slice(PREFIX.length), at: r.created_at, source: "clawback" }));
   const revoked: MentorRevokedPayment[] = [
-    ...clawed.filter((r) => r.whop_payment_id).map((r) => ({ payment_id: r.whop_payment_id as string, at: r.updated_at })),
-    ...tombstones.map((r) => ({ payment_id: r.payment_id, at: r.created_at })),
+    ...clawed,
+    ...tombstones.map((r) => ({ payment_id: r.payment_id, at: r.created_at, source: "tombstone" as const })),
   ];
+  const mentorIds = mentorPaymentIds(rows, new Set(planPackages.keys()));
+  for (const lot of paymentLots) if (lot.whop_payment_id) mentorIds.add(lot.whop_payment_id);
+  for (const r of clawed) mentorIds.add(r.payment_id);
   return computeMentorRevenue({
     ledger: buildLedger(rows, resolutions.rows),
-    mentorIds: mentorPaymentIds(rows, new Set(planPackages.keys())),
+    mentorIds,
     planPackages,
     revoked,
     includedLots: included,

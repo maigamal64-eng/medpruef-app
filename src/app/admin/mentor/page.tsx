@@ -138,7 +138,7 @@ function AdminMentorContent() {
           <BreakerCard summary={summary} />
           <StateChips state={summary.state} />
           <Tiles summary={summary} />
-          <Section title="Revenue next to cost" hint="Mentor payments in EUR, refunds subtracted. Read-only.">
+          <Section title="Revenue next to cost" hint="Mentor payments per currency, refunds subtracted. Read-only.">
             <RevenueSection />
           </Section>
 

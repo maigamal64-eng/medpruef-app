@@ -25,7 +25,7 @@ const mentor = (payment_id: string, amount_cents: number | null, created_at: str
 const base = {
   planPackages: new Map([["plan_basis", "mentor_basis"], ["plan_plus", "mentor_plus"]]),
   includedLots: [] as Array<{ spent_micro: number; starts_at: string }>,
-  revoked: [] as Array<{ payment_id: string; at: string }>,
+  revoked: [] as Array<{ payment_id: string; at: string; source: "clawback" | "tombstone" }>,
   costMicro: 1_000_000 as number | null,
   now: NOW,
 };
@@ -78,14 +78,36 @@ describe("computeMentorRevenue", () => {
       ledger: buildLedger(rows),
       mentorIds: mentorPaymentIds(rows, new Set()),
       revoked: [
-        { payment_id: "pay_old", at: "2026-11-12T09:00:00Z" },
-        { payment_id: "pay_old", at: "2026-11-12T09:00:05Z" },
-        { payment_id: "pay_new", at: "2026-10-01T09:00:00Z" },
-        { payment_id: "pay_ghost", at: "2026-11-13T09:00:00Z" },
+        { payment_id: "pay_old", at: "2026-11-12T09:00:00Z", source: "clawback" },
+        { payment_id: "pay_old", at: "2026-11-12T09:00:05Z", source: "tombstone" },
+        { payment_id: "pay_new", at: "2026-10-01T09:00:00Z", source: "clawback" },
+        { payment_id: "pay_ghost", at: "2026-11-13T09:00:00Z", source: "clawback" },
+        { payment_id: "chk_secondary_id", at: "2026-11-13T09:00:00Z", source: "tombstone" },
       ],
     });
     expect(r.by_currency[0]).toEqual({ currency: "EUR", gross_cents: 490, refunded_cents: 990, net_cents: -500, payments: 1, refunds: 1 });
+    // A clawed mentor lot with no counted payment is reported; a tombstone's secondary id is ignored.
     expect(r.refunds_without_amount).toBe(1);
+    expect(r.refunds_amount_assumed).toBe(1);
+  });
+
+  it("never subtracts a refund for a payment that was not counted as mentor money", () => {
+    const rows = [row({ payment_id: "pay_pro", amount_cents: 1900, created_at: "2026-11-10T09:00:00Z" })];
+    const r = computeMentorRevenue({ ...base, ledger: buildLedger(rows), mentorIds: new Set(), revoked: [{ payment_id: "pay_pro", at: "2026-11-12T09:00:00Z", source: "clawback" }] });
+    expect(r.by_currency).toEqual([]);
+    expect(r.refunds_without_amount).toBe(1);
+  });
+
+  it("a partial refund subtracts the refunded amount Whop reported, never more than the charge", () => {
+    const rows = [
+      mentor("pay_a", 1900, "2026-11-10T09:00:00Z"),
+      row({ event: "webhook_received", payment_id: "pay_a", amount_cents: 500, created_at: "2026-11-12T09:00:00Z", metadata: { whop_event: "refund.created" } }),
+      mentor("pay_b", 490, "2026-11-10T09:00:00Z"),
+      row({ event: "webhook_received", payment_id: "pay_b", amount_cents: 9999, created_at: "2026-11-12T09:00:00Z", metadata: { whop_event: "refund.created" } }),
+    ];
+    const r = computeMentorRevenue({ ...base, ledger: buildLedger(rows), mentorIds: new Set(["pay_a", "pay_b"]), revoked: [{ payment_id: "pay_a", at: "2026-11-12T09:00:01Z", source: "clawback" }, { payment_id: "pay_b", at: "2026-11-12T09:00:01Z", source: "clawback" }] });
+    expect(r.by_currency[0]).toMatchObject({ gross_cents: 2390, refunded_cents: 990, net_cents: 1400, refunds: 2 });
+    expect(r.refunds_amount_assumed).toBe(0);
   });
 
   it("keeps payments with no amount out of the totals and says so", () => {
@@ -130,13 +152,20 @@ describe("computeMentorRevenue", () => {
       usdPerEur: { value: 1.1, verifiedAt: "2026-11-01", evidence: "fixture" },
     };
     const rows = [mentor("pay_a", 990, "2026-11-10T09:00:00Z"), mentor("pay_b", 990, "2026-11-11T09:00:00Z")];
-    const r = computeMentorRevenue({ ...base, finance, costMicro: 2_200_000, ledger: buildLedger(rows), mentorIds: new Set(["pay_a", "pay_b"]), revoked: [{ payment_id: "pay_b", at: "2026-11-12T09:00:00Z" }] });
+    const refund = row({ event: "webhook_received", payment_id: "pay_b", amount_cents: 990, created_at: "2026-11-12T09:00:00Z", metadata: { whop_event: "refund.created" } });
+    const r = computeMentorRevenue({ ...base, finance, costMicro: 2_200_000, ledger: buildLedger([...rows, refund]), mentorIds: new Set(["pay_a", "pay_b"]), revoked: [{ payment_id: "pay_b", at: "2026-11-12T09:00:00Z", source: "clawback" }] });
     // net 990; fee 2 x (60 + 33.66) = 187; cost USD 2.20 / 1.1 = EUR 2.00 = 200 cents.
     expect(r.margin).toEqual({ available: true, net_eur_cents: 990, fee_eur_cents: 187, cost_eur_cents: 200, margin_eur_cents: 603, margin_pct: 60.9, tone: "ok" });
     const usd = computeMentorRevenue({ ...base, finance, ledger: buildLedger([mentor("pay_u", 990, "2026-11-10T09:00:00Z", { currency: "USD" })]), mentorIds: new Set(["pay_u"]) });
     expect(usd.margin.available).toBe(false);
     const noCost = computeMentorRevenue({ ...base, finance, costMicro: null, ledger: buildLedger(rows), mentorIds: new Set(["pay_a"]) });
     expect(noCost.margin.available).toBe(false);
+    // A refund without a reported amount makes net uncertain: no margin.
+    const assumed = computeMentorRevenue({ ...base, finance, ledger: buildLedger(rows), mentorIds: new Set(["pay_a", "pay_b"]), revoked: [{ payment_id: "pay_b", at: "2026-11-12T09:00:00Z", source: "clawback" }] });
+    expect(assumed.margin.available).toBe(false);
+    // Net zero against cost is a loss (red), not "watch".
+    const loss = computeMentorRevenue({ ...base, finance, costMicro: 1_100_000, ledger: buildLedger([]), mentorIds: new Set() });
+    expect(loss.margin).toMatchObject({ available: true, net_eur_cents: 0, margin_pct: null, tone: "danger" });
   });
 
   it("margin tone: amber under 50 percent, red under 30 percent", () => {
@@ -170,20 +199,32 @@ describe("loadMentorRevenue", () => {
     expect([...mentorPlanPackages({ WHOP_PLAN_MENTOR_BASIS: " plan_b ", WHOP_PLAN_MENTOR_PLUS: "" })]).toEqual([["plan_b", "mentor_basis"]]);
   });
 
-  it("reads clawbacks, tombstones, included lots and the Vienna rollup, paging past 1000 lots", async () => {
-    h.ledgerRows.mockResolvedValue([mentor("pay_a", 490, "2026-11-10T09:00:00Z"), mentor("pay_b", 990, "2026-11-11T09:00:00Z")]);
-    const lots = Array.from({ length: 1500 }, (_, i) => ({ source: "pro_included", status: "live", spent_micro: 100, starts_at: `2026-11-1${i % 9}T00:00:00Z`, whop_payment_id: null, updated_at: "2026-11-10T00:00:00Z" }));
-    lots.push({ source: "whop_payment", status: "clawed_back", spent_micro: 0, starts_at: "2026-11-10T00:00:00Z", whop_payment_id: "pay_a" as never, updated_at: "2026-11-15T00:00:00Z" });
+  it("reads clawback ledger rows, tombstones, payment and included lots and the Vienna rollup, paging past 1000 lots", async () => {
+    h.ledgerRows.mockResolvedValue([
+      mentor("pay_a", 490, "2026-11-10T09:00:00Z"),
+      mentor("pay_b", 990, "2026-11-11T09:00:00Z"),
+      // Its grant_succeeded row was dropped: only the payment.succeeded delivery names it.
+      row({ event: "webhook_received", payment_id: "pay_c", amount_cents: 1000, created_at: "2026-11-12T09:00:00Z", metadata: { whop_event: "payment.succeeded" } }),
+    ]);
+    const lots: Array<Record<string, unknown>> = Array.from({ length: 1500 }, (_, i) => ({ source: "pro_included", spent_micro: 100, starts_at: `2026-11-1${i % 9}T00:00:00Z`, created_at: `2026-11-1${i % 9}T00:00:00Z`, whop_payment_id: null }));
+    lots.push({ source: "whop_payment", spent_micro: 0, starts_at: "2026-11-12T09:00:00Z", created_at: "2026-11-12T09:00:01Z", whop_payment_id: "pay_c" });
     const { client } = stubClient({
       tables: {
         ai_credit_lot: lots,
-        ai_mentor_revoked_payment: [{ payment_id: "pay_b", created_at: "2026-11-16T00:00:00Z" }],
+        ai_usage_ledger: [
+          { kind: "clawback", source_id: "whop_payment:pay_a", created_at: "2026-11-15T00:00:00Z" },
+          { kind: "clawback", source_id: "trial_taste:x", created_at: "2026-11-15T00:00:00Z" },
+          { kind: "settle", source_id: "whop_payment:pay_b", created_at: "2026-11-15T00:00:00Z" },
+        ],
+        ai_mentor_revoked_payment: [{ payment_id: "pay_b", created_at: "2026-11-16T00:00:00Z" }, { payment_id: "chk_other", created_at: "2026-11-16T00:00:00Z" }],
         ai_mentor_daily_cost: [{ timezone: "Europe/Vienna", day: "2026-11-10", mentor_micro: 400 }, { timezone: "UTC", day: "2026-11-10", mentor_micro: 999 }],
       },
     });
     const r = await loadMentorRevenue(client, NOW, {});
     expect(r.pro_included).toEqual({ cost_micro: 150_000, lots: 1500 });
-    expect(r.by_currency[0]).toMatchObject({ gross_cents: 1480, refunded_cents: 1480, net_cents: 0, refunds: 2 });
+    expect(r.by_currency[0]).toMatchObject({ gross_cents: 2480, refunded_cents: 1480, net_cents: 1000, payments: 3, refunds: 2 });
+    expect(r.refunds_without_amount).toBe(0);
+    expect(r.plans_configured).toBe(0);
     expect(r.cost_micro).toBe(400);
   });
 

@@ -13,7 +13,7 @@ const revenue = {
   window_days: 30, since: "2026-09-13", basis: "Mentor payments at their gross Whop amount on the Vienna payment day, per currency; refunds and disputes that clawed credits back are subtracted on their own day.",
   by_currency: [{ currency: "EUR", gross_cents: 2470, refunded_cents: 490, net_cents: 1980, payments: 3, refunds: 1 }],
   by_package: [{ package_id: "mentor_basis", currency: "EUR", gross_cents: 980, payments: 2 }, { package_id: "mentor_plus", currency: "EUR", gross_cents: 990, payments: 1 }],
-  payments_without_amount: 0, refunds_without_amount: 0, cost_micro: 840000, pro_included: { cost_micro: 120000, lots: 4 },
+  payments_without_amount: 0, refunds_without_amount: 0, refunds_amount_assumed: 0, plans_configured: 3, cost_micro: 840000, pro_included: { cost_micro: 120000, lots: 4 },
   margin: { available: false, reason: "The Whop fee and the USD to EUR rate are not verified against the Whop account yet. No assumed fee is shown." },
 };
 

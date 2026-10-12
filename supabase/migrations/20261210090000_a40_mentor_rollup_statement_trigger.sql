@@ -25,6 +25,8 @@ BEGIN
   CROSS JOIN (VALUES ('UTC'), ('Europe/Vienna')) z(tz)
   WHERE n.kind IN ('settle', 'house_cost')
   GROUP BY z.tz, (n.created_at AT TIME ZONE z.tz)::date
+  -- A fixed order so concurrent multi-day statements lock the daily rows alike.
+  ORDER BY 1, 2
   ON CONFLICT (timezone, day) DO UPDATE
     SET mentor_micro = d.mentor_micro + EXCLUDED.mentor_micro,
         house_micro  = d.house_micro + EXCLUDED.house_micro,
