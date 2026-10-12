@@ -420,8 +420,16 @@ function rangeStartDates(text: string, values: ExtractedValue[]): ExtractedValue
   return out;
 }
 
+/**
+ * "eine Stunde" / "one hour" in a fact is the value 1 (gate6 run 1: pr-rez-format-de
+ * wrote "1 Stunde" for the fact's "eine Stunde" and lost the sentence). Fact side
+ * only: an answer's "eine" is never read as a number.
+ */
+const ONE_UNIT_RE = /(?<![\p{L}])(?:ein|eine|einer|einem|einen|one|a single)\s+(?:Stunde|Minute|Tag|Woche|Monat|Jahr|Punkt|Antritt|Versuch|hour|minute|day|week|month|year|point|attempt)(?![\p{L}])/iu;
+
 function factAllowedKeys(f: MentorFact): Set<string> {
   const keys = allowedKeysFromText(`${f.text_de}\n${f.text_en}`);
+  if (ONE_UNIT_RE.test(`${f.text_de}\n${f.text_en}`)) keys.add("n:1");
   keys.add(`u:${f.source_url.replace(/\/+$/, "").toLowerCase()}`);
   // The read-on date of a cited fact ("Stand 2026-10-10", which the prompt asks
   // for) is a value OF that fact. Only the full date: its month or year alone

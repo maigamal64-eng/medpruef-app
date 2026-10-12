@@ -91,12 +91,17 @@ export function detectAnswerLang(raw: string): Exclude<MentorLang, "ar"> | "ar" 
 }
 
 /** The requested language is nearly absent from the prose (review P2: quoted German option text inside an English answer is not a mismatch). */
-function expectedAbsent(p: ProseScores, expected: Exclude<MentorLang, "ar">): boolean {
+function expectedAbsent(p: ProseScores, expected: Exclude<MentorLang, "ar">, detected: Exclude<MentorLang, "ar"> | "ar"): boolean {
   if (expected === "ru" || expected === "uk") {
     if (p.cyrillic < p.letters * 0.2) return true;
     return expected === "uk" ? p.ukOnly === 0 && p.ruOnly > 0 : p.ruOnly === 0 && p.ukOnly > 0;
   }
-  return p.cyrillic + p.arabic > p.letters * 0.5 || p.words[expected] <= 1;
+  if (p.cyrillic + p.arabic > p.letters * 0.5 || p.words[expected] <= 1) return true;
+  // A few requested-language words ("Seçenek", "Seçenekler") inside prose that is
+  // otherwise in another language (gate6 run 1: r3-explain-gloss-8-tr, German prose
+  // with two Turkish words) is still that other language.
+  const other = detected in p.words ? p.words[detected as keyof typeof WORDS] : 0;
+  return p.words[expected] <= 3 && other >= 8 * Math.max(1, p.words[expected]);
 }
 
 /**
@@ -109,7 +114,7 @@ export function answerLanguageMismatch(raw: string, requested: MentorLang): Excl
   const expected = expectedAnswerLang(requested);
   const detected = detectAnswerLang(raw);
   if (detected === null || detected === expected) return null;
-  return expectedAbsent(proseScores(raw), expected) ? detected : null;
+  return expectedAbsent(proseScores(raw), expected, detected) ? detected : null;
 }
 
 const LANGUAGE_NAMES: Record<Exclude<MentorLang, "ar">, string> = {

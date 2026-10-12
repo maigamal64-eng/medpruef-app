@@ -243,3 +243,27 @@ describe("study blocks drop a count of their own topics (gate5 st-spt-en)", () =
     expect(all(v)).not.toContain("99 percent");
   });
 });
+
+describe("gate6 run 1 residuals", () => {
+  it("pr-rez-format-de: '1 Stunde' is the fact's 'eine Stunde'", async () => {
+    const ids = ["rezeptierkunde.format.wien-rules"];
+    const raw = "@@LANG de\n@@BLOCK facts=rezeptierkunde.format.wien-rules\nDie Gesamtprüfungsdauer beträgt 1 Stunde: 45 Minuten für die Beantwortung und 15 Minuten für das Übertragen der Antworten auf den Antwortbogen.";
+    const v = brain().validate(raw, await L.byIds(ids, now), ids);
+    expect(v.replaced).toBe(false);
+    expect(all(v)).toContain("1 Stunde");
+  });
+
+  it("a bare 1 is still rejected when the cited fact has no 'one <unit>' phrase", () => {
+    const f = fact({ id: "fixture.format.sip5a", text_de: "Die Prüfung hat 123 Fragen.", text_en: "The exam has 123 questions." });
+    const v = validateAnswer("@@LANG de\n@@BLOCK facts=fixture.format.sip5a\nDie Prüfung dauert 1 Stunde.", [f]);
+    expect(v.replaced).toBe(true);
+  });
+
+  it("r3-explain-gloss-8-tr: German prose with two Turkish words is a mismatch (retry fires)", async () => {
+    const { answerLanguageMismatch } = await import("@/lib/mentor/answer-language");
+    const raw = "@@LANG tr\n@@BLOCK layer=grounded facts=question.9000008\nPhytomenadion (K vitamini) hebt die Wirkung von Phenprocoumon (fenprokumon) auf, weil es die Gerinnungsfaktorsynthese wiederherstellt. Die Seçenek Protamin (protamin) ist ein Heparin-Antidot und wirkt hier nicht, weil Phenprocoumon kein Heparin ist. Der Schlüssel ist nach dem vorliegenden Erklärungstext plausibel.\n\n@@BLOCK layer=grounded facts=question.9000008\nPhenprocoumon ist ein Vitamin-K-Antagonist und hemmt die Synthese der Gerinnungsfaktoren. Vitamin K wirkt deshalb an der Ursache, allerdings mit Verzögerung von Stunden.\n\n@@BLOCK layer=grounded facts=question.9000008\nTrick: Phenprocoumon hemmt die Vitamin-K-abhängige Synthese, deshalb hebt das Vitamin selbst die Wirkung auf. Die übrigen Seçenekler wirken über andere Mechanismen und sind hier nicht passend.";
+    expect(answerLanguageMismatch(raw, "tr")).toBe("de");
+    // A Turkish answer that quotes German terms is not a mismatch.
+    expect(answerLanguageMismatch("@@LANG tr\nDoğru cevap Protamin (protamin), çünkü Heparin (heparin) ile bağlanır ve bu yüzden etkisini nötralize eder. Diğer seçenekler bu soru için uygun değil.", "tr")).toBeNull();
+  });
+});
