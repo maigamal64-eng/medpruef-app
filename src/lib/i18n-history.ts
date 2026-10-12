@@ -30,7 +30,7 @@ const STRINGS = {
   load_error: { de: 'Verlauf konnte nicht geladen werden.', en: 'History could not be loaded.' },
   retry: { de: 'Erneut versuchen', en: 'Try again' },
   empty_title: { de: 'Noch keine gespeicherte Simulation.', en: 'No saved simulation yet.' },
-  empty_body: { de: 'Prüfungen vor dem 20. September 2026 wurden nicht gespeichert.', en: 'Exams before 20 September 2026 were not saved.' },
+  empty_body: { de: 'Prüfungen vor dem 20. September 2026 wurden nicht gespeichert.', en: 'Exams before 20 September 2026 were not saved.' }, // date-ok: history ledger start, not an exam sitting
   start_simulation: { de: 'Simulation starten', en: 'Start a simulation' },
   load_more: { de: 'Weitere Prüfungen laden', en: 'Load more exams' },
   loading_more: { de: 'Wird geladen', en: 'Loading' },
