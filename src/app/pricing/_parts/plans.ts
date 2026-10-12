@@ -98,7 +98,8 @@ export function longDate(iso: string | null | undefined, lang: BillingLang): str
   if (!iso) return null;
   const time = Date.parse(iso);
   if (!Number.isFinite(time)) return null;
-  return new Intl.DateTimeFormat(lang === "de" ? "de-AT" : "en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Vienna" }).format(new Date(time));
+  const locale = { de: "de-AT", en: "en-GB" }[lang];
+  return new Intl.DateTimeFormat(locale, { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Vienna" }).format(new Date(time));
 }
 
 /**

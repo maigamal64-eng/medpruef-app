@@ -23,53 +23,75 @@ export const PUYP_BUFFER_DAYS = 14;
 
 export interface PuypRow { label: string; value: string }
 
+const pct = PUYP_COMPLETION_THRESHOLD_PCT;
+const max = PUYP_MAX_EXTENSIONS;
+const days = PUYP_BUFFER_DAYS;
+
+/**
+ * Copy by language. A record, not inline ternaries, so a reviewed language
+ * is one more key (LX-19). Guarantee conditions in further languages need a
+ * legal-quality review first (UX-ACC-18).
+ */
+const COPY: Record<BillingLang, {
+  scope: string;
+  conditions: PuypRow[];
+  examples: string[];
+  notRefund: string;
+  definition: (cohort: string, rows: string, notRefund: string) => string;
+}> = {
+  de: {
+    scope: "Die Garantie gilt nur für die Prüfungs-Kohorte.",
+    conditions: [
+      { label: "Voraussetzung", value: `Sie haben mindestens ${pct} % der Fragenbank Ihrer Prüfung bearbeitet und die Prüfung nicht bestanden.` },
+      { label: "Nachweis", value: "Sie laden Ihr offizielles Prüfungsergebnis hoch. Wir prüfen den Nachweis in der Regel innerhalb weniger Werktage." },
+      { label: "Verlängerung", value: `Ihr Zugang läuft kostenlos bis zum nächsten offiziellen Termin Ihrer Prüfung mit offener Anmeldung, plus ${days} Tage. Höchstens ${max === 2 ? "zweimal" : `${max}-mal`}.` },
+    ],
+    examples: [
+      `Wien: Sie bestehen einen SIP-Block nicht. Ihr Zugang läuft bis zum nächsten SIP-Termin mit offener Anmeldung plus ${days} Tage, damit Sie den Block wiederholen können.`,
+      `Stichprobentest: Nach dem Stichprobentest werden Ihnen weitere Prüfungen vorgeschrieben und Sie bestehen eine davon nicht. Ihr Zugang läuft bis zum nächsten Termin dieser Prüfung plus ${days} Tage.`,
+    ],
+    notRefund: "Die Garantie verlängert Ihren Zugang, sie ist keine Geldrückerstattung.",
+    definition: (cohort, rows, notRefund) => `Die Pass-Until-You-Pass-Garantie gilt nur für die Prüfungs-Kohorte (${cohort} einmalig für 6 Monate). ${rows} ${notRefund}`,
+  },
+  en: {
+    scope: "The guarantee applies to the Exam Cohort only.",
+    conditions: [
+      { label: "Condition", value: `You have worked through at least ${pct} % of your exam's question bank and did not pass the exam.` },
+      { label: "Proof", value: "You upload your official exam result. We usually check it within a few working days." },
+      { label: "Extension", value: `Your access runs free until the next official sitting of your exam with open registration, plus ${days} days. At most ${max === 2 ? "twice" : `${max} times`}.` },
+    ],
+    examples: [
+      `Vienna: you do not pass an SIP block. Your access runs until the next SIP sitting with open registration plus ${days} days, so you can retake the block.`,
+      `Stichprobentest: after the Stichprobentest further exams are required of you and you do not pass one of them. Your access runs until the next sitting of that exam plus ${days} days.`,
+    ],
+    notRefund: "The guarantee extends your access; it is not a cash refund.",
+    definition: (cohort, rows, notRefund) => `The Pass-Until-You-Pass guarantee applies to the Exam Cohort only (${cohort} once for 6 months). ${rows} ${notRefund}`,
+  },
+};
+
 /** One-line scope for the pricing hero and any plan card that lacks the guarantee. */
 export function puypScopeLine(lang: BillingLang): string {
-  return lang === "de" ? "Die Garantie gilt nur für die Prüfungs-Kohorte." : "The guarantee applies to the Exam Cohort only.";
+  return COPY[lang].scope;
 }
 
 /** Three key and value rows: condition, proof, extension. */
 export function puypConditions(lang: BillingLang): PuypRow[] {
-  const pct = PUYP_COMPLETION_THRESHOLD_PCT;
-  const max = PUYP_MAX_EXTENSIONS;
-  return lang === "de"
-    ? [
-        { label: "Voraussetzung", value: `Sie haben mindestens ${pct} % der Fragenbank Ihrer Prüfung bearbeitet und die Prüfung nicht bestanden.` },
-        { label: "Nachweis", value: "Sie laden Ihr offizielles Prüfungsergebnis hoch. Wir prüfen den Nachweis in der Regel innerhalb weniger Werktage." },
-        { label: "Verlängerung", value: `Ihr Zugang läuft kostenlos bis zum nächsten offiziellen Termin Ihrer Prüfung mit offener Anmeldung, plus ${PUYP_BUFFER_DAYS} Tage. Höchstens ${max === 2 ? "zweimal" : `${max}-mal`}.` },
-      ]
-    : [
-        { label: "Condition", value: `You have worked through at least ${pct} % of your exam's question bank and did not pass the exam.` },
-        { label: "Proof", value: "You upload your official exam result. We usually check it within a few working days." },
-        { label: "Extension", value: `Your access runs free until the next official sitting of your exam with open registration, plus ${PUYP_BUFFER_DAYS} days. At most ${max === 2 ? "twice" : `${max} times`}.` },
-      ];
+  return COPY[lang].conditions.map((row) => ({ ...row }));
 }
 
 /** Worked examples [name] asked for (pick-puyp-outcomes A). */
 export function puypExamples(lang: BillingLang): string[] {
-  return lang === "de"
-    ? [
-        `Wien: Sie bestehen einen SIP-Block nicht. Ihr Zugang läuft bis zum nächsten SIP-Termin mit offener Anmeldung plus ${PUYP_BUFFER_DAYS} Tage, damit Sie den Block wiederholen können.`,
-        `Stichprobentest: Nach dem Stichprobentest werden Ihnen weitere Prüfungen vorgeschrieben und Sie bestehen eine davon nicht. Ihr Zugang läuft bis zum nächsten Termin dieser Prüfung plus ${PUYP_BUFFER_DAYS} Tage.`,
-      ]
-    : [
-        `Vienna: you do not pass an SIP block. Your access runs until the next SIP sitting with open registration plus ${PUYP_BUFFER_DAYS} days, so you can retake the block.`,
-        `Stichprobentest: after the Stichprobentest further exams are required of you and you do not pass one of them. Your access runs until the next sitting of that exam plus ${PUYP_BUFFER_DAYS} days.`,
-      ];
+  return [...COPY[lang].examples];
 }
 
 /** The guarantee is an extension, never cash; the purchase refund rule stays separate. */
 export function puypNotRefund(lang: BillingLang): string {
-  return lang === "de"
-    ? "Die Garantie verlängert Ihren Zugang, sie ist keine Geldrückerstattung."
-    : "The guarantee extends your access; it is not a cash refund.";
+  return COPY[lang].notRefund;
 }
 
 /** One-paragraph definition for FAQ answers, the AGB and JSON-LD. */
 export function puypDefinition(lang: BillingLang): string {
   const cohort = billingAmount(TIERS.premium_pass_guaranteed.price_cents, lang);
-  const rows = puypConditions(lang).map((row) => row.value).join(" ");
-  return lang === "de"
-    ? `Die Pass-Until-You-Pass-Garantie gilt nur für die Prüfungs-Kohorte (${cohort} einmalig für 6 Monate). ${rows} ${puypNotRefund(lang)}`
-    : `The Pass-Until-You-Pass guarantee applies to the Exam Cohort only (${cohort} once for 6 months). ${rows} ${puypNotRefund(lang)}`;
+  const rows = COPY[lang].conditions.map((row) => row.value).join(" ");
+  return COPY[lang].definition(cohort, rows, COPY[lang].notRefund);
 }

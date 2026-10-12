@@ -10,6 +10,8 @@ import { billingAmount, type BillingLang } from "@/lib/billing-copy";
 import { coverCost, coverUntil, type CoverComparison, type CoverPlan } from "@/lib/plan-cover";
 import { longDate } from "./plans";
 
+const LOWEST: Record<BillingLang, string> = { de: "günstigste Summe", en: "lowest total" };
+
 const NAME: Record<CoverPlan, { de: string; en: string }> = {
   first_month_19: { de: "Monatsabo", en: "Monthly plan" },
   first_3mo_27: { de: "3 Monate", en: "3 months" },
@@ -23,7 +25,7 @@ function Row({ c, lang, label }: { c: CoverComparison; lang: BillingLang; label:
       {c.covers.map((cover) => (
         <td key={cover.plan} className="py-2 pe-3 tabular-nums">
           {billingAmount(cover.totalCents, lang)}
-          {cover.plan === c.cheapest && <span className="block text-xs text-[var(--mp-fg-muted)]">{lang === "de" ? "günstigste Summe" : "lowest total"}</span>}
+          {cover.plan === c.cheapest && <span className="block text-xs text-[var(--mp-fg-muted)]">{LOWEST[lang]}</span>}
         </td>
       ))}
     </tr>
