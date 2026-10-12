@@ -55,19 +55,11 @@ function AdminErrorsPageContent() {
     load();
   }, [load]);
 
-  const freshness = loading
-    ? "cached"
-    : error
-      ? "disconnected"
-      : result?.configured && result.ok
-        ? "live"
-        : "disconnected";
-
   return (
     <AdminPageShell
       title="Errors"
       description="Unresolved Sentry issues for medpruf (javascript-nextjs), last 14 days."
-      freshness={freshness}
+      loadState={{ loading, error: error || (!loading && !(result?.configured && result.ok)) }}
       onRefresh={load}
       actions={
         <a

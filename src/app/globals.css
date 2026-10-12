@@ -2216,3 +2216,13 @@ html[data-onboarding="open"] .mp-status-region > * { display: none; }
 }
 .mp-choice-row input { width: 18px; height: 18px; accent-color: var(--mp-viridian); flex-shrink: 0; }
 .mp-choice-row--checked, .mp-choice-row:has(input:checked) { border: 1.5px solid var(--mp-viridian); background: var(--mp-tint-viridian); }
+
+/* Admin touch targets (a18, ADM-14 A): on touch screens every admin button
+   is at least 44px tall, and card actions from ResponsiveTable are
+   full-width so neighbouring actions cannot be mis-tapped. */
+@media (pointer: coarse) {
+  [data-admin="1"] .mp-btn,
+  [data-admin="1"] [aria-haspopup="menu"] { min-height: 44px; min-width: 44px; }
+}
+.admin-card-actions > * { width: 100%; min-height: 44px; justify-content: center; }
+.admin-card-actions > .mp-btn { display: inline-flex; align-items: center; }

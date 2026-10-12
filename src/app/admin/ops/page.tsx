@@ -148,7 +148,7 @@ export default function OpsApprovalsPage() {
     <AdminPageShell
       title={waiting ? `Ops approvals (${waiting})` : "Ops approvals"}
       description="Changes an agent prepared. Nothing runs until you approve the exact change."
-      freshness={error || !allowed ? "disconnected" : "near-live"}
+      loadState={allowed ? { loading, error } : undefined}
       onRefresh={allowed && !busy ? () => void load() : undefined}
     >
       <div className="flex gap-3 rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] p-4">

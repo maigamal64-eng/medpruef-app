@@ -1,13 +1,7 @@
-"use client";
+import { redirect } from "next/navigation";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-
-// Tab consolidated (admin nav refactor 2026-06-30) -> /admin/overview
-export default function RedirectPage() {
-  const router = useRouter();
-  useEffect(() => {
-    router.replace("/admin/overview");
-  }, [router]);
-  return null;
+// The funnel lives on Growth (UX-ADM-07, a18). Old links and bookmarks land there
+// instead of looping back to Today.
+export default function FunnelsRedirectPage() {
+  redirect("/admin/growth");
 }

@@ -72,8 +72,6 @@ export default function AdminPaymentsPage() {
     else setLoading(false);
   }, [accessLoading, can, hydrate]);
 
-  const freshness = error ? (metrics ? "cached" : "disconnected") : loading ? "cached" : "live";
-
   return (
     <AdminPageShell
       title="Payments"
@@ -83,7 +81,8 @@ export default function AdminPaymentsPage() {
           {metrics && <span className="font-mono text-[var(--mp-fg-muted)]">Snapshot {new Date(metrics.generated_at).toLocaleTimeString()}</span>}
         </span>
       }
-      freshness={freshness}
+      loadState={{ loading, error, updatedAt: updatedAt ? Date.parse(updatedAt) : null }}
+      pollMs={60_000}
       onRefresh={hydrate}
     >
       {!accessLoading && !can("revenue.read") && (

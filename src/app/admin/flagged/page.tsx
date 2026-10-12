@@ -103,7 +103,7 @@ export default function AdminFlaggedPage() {
     <AdminPageShell
       title="Question reports"
       description="Learner-reported question issues. Open a report to see the full question and record a decision; the reporter sees the outcome in My reports."
-      freshness={loading ? "cached" : error ? "disconnected" : "live"}
+      loadState={{ loading, error }}
       onRefresh={() => { void load(); void loadSide(); }}
     >
       <div className="grid gap-3 sm:grid-cols-2">

@@ -8,7 +8,6 @@ export default function AdminSqlRetiredPage() {
     <AdminPageShell
       title="SQL console retired"
       description="Direct SQL access is no longer available from the admin interface."
-      freshness="live"
     >
       <Alert variant="warning" title="This tool has been disabled">
         The SQL console was removed to keep admin access scoped and auditable. Use the named admin views for supported diagnostics.

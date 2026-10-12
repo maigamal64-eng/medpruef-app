@@ -42,7 +42,7 @@ export default function AdminEnvPage() {
     <AdminPageShell
       title="Environment"
       description="Presence-only check: values are never shipped to the client."
-      freshness={loading ? "cached" : error ? "disconnected" : "cached"}
+      loadState={{ loading, error }}
       onRefresh={load}
     >
       {error && (

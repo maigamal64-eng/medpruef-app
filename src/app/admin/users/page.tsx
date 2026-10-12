@@ -225,7 +225,7 @@ export default function AdminUsersPage() {
     <AdminPageShell
       title="Users"
       description={loading && users.length === 0 ? "Loading user directory…" : error ? (users.length ? `Showing a saved snapshot of ${formatInt(users.length)} users. The latest request failed.` : "User directory unavailable. Retry the request.") : `Showing ${formatInt(users.length)} of ${formatInt(total)} matching users. ${activityBasis === "legacy" ? "Last active still includes profile updates until the a16 database changeset is applied." : LAST_ACTIVE_BASIS}`}
-      freshness={error ? (users.length ? "cached" : "disconnected") : loading ? "cached" : "live"}
+      loadState={{ loading, error }}
       onRefresh={fetchUsers}
     >
       {!accessLoading && !canRead && (

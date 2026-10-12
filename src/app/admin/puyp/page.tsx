@@ -324,7 +324,7 @@ export default function AdminPuypPage() {
     <AdminPageShell
       title="Pass-Until-You-Pass"
       description="Review proof uploads, grant or reject re-exam extensions. Admin-only."
-      freshness={loading ? "cached" : error ? "disconnected" : "live"}
+      loadState={{ loading, error }}
       onRefresh={() => fetchQueue(status)}
       actions={
         <div className="flex items-center gap-2">

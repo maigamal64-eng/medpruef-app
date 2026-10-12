@@ -53,19 +53,11 @@ function AdminDeploysPageContent() {
     load();
   }, [load]);
 
-  const freshness = loading
-    ? "cached"
-    : error
-      ? "disconnected"
-      : result?.configured && result.ok
-        ? "live"
-        : "disconnected";
-
   return (
     <AdminPageShell
       title="Deploys"
       description="Recent Vercel deployments for the MedPrüf project."
-      freshness={freshness}
+      loadState={{ loading, error: error || (!loading && !(result?.configured && result.ok)) }}
       onRefresh={load}
       actions={
         <a

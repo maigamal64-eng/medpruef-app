@@ -8,9 +8,9 @@ import { useCallback, useEffect, useState } from "react";
 import { Gauge } from "lucide-react";
 import { authFetch as fetch } from "@/lib/authFetch";
 import { AdminPermissionGate } from "../_components/AdminPermissionGate";
-import { useAdminRealtime } from "@/lib/admin/useAdminRealtime";
 import { Alert, BrandedLoader, EmptyState } from "@/components/ui";
 import { AdminPageShell } from "../_components/AdminPageShell";
+import { ResponsiveTable } from "../_components/ResponsiveTable";
 import { ListFooter } from "../_components/ListFooter";
 
 const PAGE_ROWS = 200;
@@ -56,15 +56,11 @@ function AdminCronsPageContent() {
     load();
   }, [load]);
 
-  useAdminRealtime("cron_runs", {
-    onEvent: () => load(),
-  });
-
   return (
     <AdminPageShell
       title="Cron health"
       description="Scheduled task runs in the last 48 hours."
-      freshness={loading ? "cached" : error ? "disconnected" : "live"}
+      loadState={{ loading, error }}
       onRefresh={load}
     >
       {error && (
@@ -85,49 +81,31 @@ function AdminCronsPageContent() {
         />
       ) : (
         <div className="rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] overflow-hidden">
-          <table className="w-full text-xs tabular-nums">
-            <thead className="bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-muted)] uppercase text-[10px] tracking-wider">
-              <tr>
-                <th className="text-left px-3 py-2">Started</th>
-                <th className="text-left px-3 py-2">Cron</th>
-                <th className="text-left px-3 py-2">Status</th>
-                <th className="text-right px-3 py-2">Rows</th>
-                <th className="text-left px-3 py-2">Error</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(showAll ? items : items.slice(0, PAGE_ROWS)).map((r) => (
-                <tr
-                  key={r.id}
-                  className="border-t border-[var(--mp-border-subtle)] text-[var(--mp-fg)]"
+          <ResponsiveTable
+            label="Cron runs"
+            minWidth={560}
+            rows={showAll ? items : items.slice(0, PAGE_ROWS)}
+            rowKey={(r) => r.id}
+            columns={[
+              { key: "cron", header: "Cron", card: "title", className: "font-mono", cell: (r) => r.cron_name },
+              { key: "started", header: "Started", className: "font-mono text-[10px] text-[var(--mp-fg-muted)]", cell: (r) => new Date(r.started_at).toLocaleString("en-GB", { timeZone: "Europe/Vienna" }) },
+              { key: "status", header: "Status", cell: (r) => (
+                <span
+                  className={`text-[10px] px-1.5 py-0.5 rounded border font-mono ${
+                    r.status === "succeeded"
+                      ? "border-emerald-500/40 text-emerald-500"
+                      : r.status === "failed"
+                        ? "border-red-500/40 text-red-500"
+                        : "border-amber-500/40 text-amber-500"
+                  }`}
                 >
-                  <td className="px-3 py-2 font-mono text-[10px] text-[var(--mp-fg-muted)]">
-                    {new Date(r.started_at).toLocaleString()}
-                  </td>
-                  <td className="px-3 py-2 font-mono">{r.cron_name}</td>
-                  <td className="px-3 py-2">
-                    <span
-                      className={`text-[10px] px-1.5 py-0.5 rounded border font-mono ${
-                        r.status === "succeeded"
-                          ? "border-emerald-500/40 text-emerald-500"
-                          : r.status === "failed"
-                            ? "border-red-500/40 text-red-500"
-                            : "border-amber-500/40 text-amber-500"
-                      }`}
-                    >
-                      {r.status}
-                    </span>
-                  </td>
-                  <td className="px-3 py-2 text-right font-mono">
-                    {r.rows_affected ?? "—"}
-                  </td>
-                  <td className="px-3 py-2 text-[10px] text-red-500 truncate max-w-[200px]">
-                    {r.error || ""}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  {r.status}
+                </span>
+              ) },
+              { key: "rows", header: "Rows", align: "right", className: "font-mono tabular-nums", cell: (r) => r.rows_affected ?? "—" },
+              { key: "error", header: "Error", className: "max-w-[260px] text-[10px] text-red-500 [overflow-wrap:anywhere]", cell: (r) => r.error || "—" },
+            ]}
+          />
           <ListFooter
             shown={showAll ? items.length : Math.min(items.length, PAGE_ROWS)}
             total={total ?? items.length}

@@ -139,7 +139,7 @@ export default function AdminFeedbackPage() {
     <AdminPageShell
       title="Feedback inbox"
       description="Learner messages submitted through the in-app feedback tool. Question reports are handled in Question reports."
-      freshness={loading ? "cached" : error ? "disconnected" : "live"}
+      loadState={{ loading, error }}
       onRefresh={() => { void fetchFeedback(); void fetchSummary(); }}
       actions={
         <div className="max-w-full overflow-x-auto pb-1">

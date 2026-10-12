@@ -54,7 +54,7 @@ export default function AdminFlagsPage() {
     <AdminPageShell
       title="Feature flags"
       description="Current feature-flag records. This view is read-only because code-level consumers and rollout safety are not yet tied to a controlled change workflow."
-      freshness={loading ? "cached" : error ? "disconnected" : "live"}
+      loadState={{ loading, error }}
       onRefresh={load}
     >
       {error && (

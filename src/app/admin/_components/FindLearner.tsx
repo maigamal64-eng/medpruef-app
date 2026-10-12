@@ -11,6 +11,8 @@ import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 import { useAdminPermissions } from "@/lib/admin/useAdminPermissions";
 
+export const FIND_LEARNER_INPUT_ID = "admin-find-learner";
+
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function FindLearner() {
@@ -26,15 +28,16 @@ export function FindLearner() {
     setValue("");
   };
   return (
-    <form role="search" onSubmit={submit} className="relative w-full max-w-[260px] min-w-0">
+    <form role="search" onSubmit={submit} className="relative w-full max-w-[260px] min-w-[96px]">
       <Search size={13} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--mp-fg-subtle)]" aria-hidden />
       <input
+        id={FIND_LEARNER_INPUT_ID}
         type="search"
         value={value}
         onChange={(e) => setValue(e.target.value)}
-        placeholder="Find learner"
+        placeholder="Find learner (/)"
         aria-label="Find learner by name, email, username or id"
-        className="h-9 w-full rounded-lg border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-sunken)] pl-8 pr-2 text-xs text-[var(--mp-fg)] placeholder:text-[var(--mp-fg-subtle)] focus:outline-none focus:border-[var(--mp-viridian)]/40"
+        className="h-11 lg:h-9 w-full rounded-lg border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-sunken)] pl-8 pr-2 text-xs text-[var(--mp-fg)] placeholder:text-[var(--mp-fg-subtle)] focus:outline-none focus:border-[var(--mp-viridian)]/40"
       />
     </form>
   );

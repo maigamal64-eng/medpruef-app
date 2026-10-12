@@ -1,20 +1,25 @@
 "use client";
 
 /**
- * Admin shell — mission-control deck.
+ * Admin shell (a18, ADM-11 A): menu grouped around the founder's jobs.
  *
- * §2.1 + §2.11 of the April 23 admin revamp sprint.
- *
- * Structure:
- *  - Collapsible sidebar (Overview · Revenue · Content · Product · System)
- *  - Top bar with route refresh and browser-offline notice
- *  - Keyboard shortcuts: g o/i/r/c/p/s, /, ?, Esc
- *  - Inbox group (a15, UX-ADM-16): question reports, note reports and
- *    feedback with open-item badges from /api/admin/inbox (null = unknown,
- *    never shown as zero) and the count in the tab title.
- *  - Dark-mode first: the admin subtree gets data-theme='dark' applied to
- *    the <html> element unless localStorage('medpruef_admin_theme') overrides.
- *    The public app's theme preference is saved + restored when leaving /admin.
+ *  - Sidebar from ./_components/admin-nav.ts: Today · Inbox · Learners ·
+ *    Money · Content · Growth · System. Inbox items carry count chips from
+ *    /api/admin/inbox (one load in AdminChromeProvider, polled every 60 s
+ *    while visible). A count that failed to load reads "--", never 0.
+ *  - Collapsed desktop rail (UX-ADM-28): a section icon expands the rail
+ *    with that section open.
+ *  - Phones and tablets (<1024px): bottom bar Today / Inbox / Find / Money /
+ *    More with 44px targets (ADM-14 A); the drawer holds the full menu.
+ *  - Top bar: menu button with the Inbox total, the page title (set by
+ *    AdminPageShell, which also sets the tab title), Find learner, Exit.
+ *    No top-bar Refresh: each page owns its Refresh (UX-ADM-29, ADM-Q21).
+ *  - Keyboard: g + t/i/u/m/c/g/s (old g o, g r, g w still work), / focuses
+ *    Find learner, ? lists shortcuts, Esc closes.
+ *  - Theme (UX-ADM-38): the admin applies its own theme; the public app's
+ *    theme is saved per tab in sessionStorage and put back when the admin
+ *    unmounts, so a second admin tab cannot leave the app in admin dark mode.
+ *    Every storage access goes through safeStorage.
  *
  * Server-side, every /api/admin/* route is guarded by requireAdmin(); this
  * client layout just does the UX courtesy of bouncing unauthenticated visitors
@@ -25,162 +30,27 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Activity,
-  AlertTriangle,
-  BarChart3,
-  BellRing,
   ChevronDown,
-  CreditCard,
-  Database,
-  FileText,
-  Flag,
-  Gauge,
-  GitBranch,
-  Image as ImageIcon,
   Inbox,
-  NotebookPen,
   Keyboard,
   LayoutDashboard,
   LogOut,
   Menu,
-  MessageSquare,
   Moon,
-  Server,
+  MoreHorizontal,
+  Search,
   Shield,
-  ShieldAlert,
-  ShieldCheck,
-  Sprout,
   Sun,
-  Ticket,
-  Users,
   Wallet,
-  Zap,
 } from "lucide-react";
 import { clearSession, getStoredSession } from "@/lib/auth";
-import { authFetch } from "@/lib/authFetch";
-import { AdminAccessProvider, useAdminPermissions, type AdminPermission } from "@/lib/admin/useAdminPermissions";
+import { safeSessionStorage, safeStorage } from "@/lib/safe-storage";
+import { AdminAccessProvider, useAdminPermissions } from "@/lib/admin/useAdminPermissions";
 import { ShortcutHint } from "./_components/primitives";
 import { SignOutEverywhere } from "./_components/SignOutEverywhere";
-import { FindLearner } from "./_components/FindLearner";
-
-type SectionKey =
-  | "overview"
-  | "inbox"
-  | "growth"
-  | "revenue"
-  | "content"
-  | "product"
-  | "system";
-
-interface NavItem {
-  label: string;
-  href: string;
-  icon: typeof Users;
-  permission: AdminPermission;
-  description?: string;
-  /** Reserved for future gating (e.g., pay-wall specific routes). */
-  experimental?: boolean;
-  ownerOnly?: boolean;
-  /** Open-item count from /api/admin/inbox shown as a badge. */
-  badgeKey?: InboxKey;
-}
-
-type InboxKey = "question_reports" | "note_reports" | "feedback" | "ops_actions";
-type InboxCounts = Partial<Record<InboxKey, number | null>>;
-
-interface NavSection {
-  key: SectionKey;
-  label: string;
-  icon: typeof LayoutDashboard;
-  shortcut: string;
-  items: NavItem[];
-  permission?: AdminPermission;
-  /** For sections with a single "landing" href (Overview). */
-  href?: string;
-}
-
-const NAV: NavSection[] = [
-  {
-    key: "overview",
-    label: "Overview",
-    icon: LayoutDashboard,
-    shortcut: "o",
-    permission: "overview.read",
-    href: "/admin/overview",
-    items: [],
-  },
-  {
-    key: "inbox",
-    label: "Inbox",
-    icon: Inbox,
-    shortcut: "i",
-    items: [
-      { label: "Question reports", href: "/admin/flagged", icon: ShieldAlert, permission: "content.read", badgeKey: "question_reports" },
-      { label: "Note reports", href: "/admin/note-reports", icon: NotebookPen, permission: "content.read", badgeKey: "note_reports" },
-      { label: "Feedback", href: "/admin/feedback", icon: MessageSquare, permission: "feedback.read", badgeKey: "feedback" },
-      // a17 (UX-ADM-13): agent-prepared actions waiting for the owner.
-      { label: "Ops approvals", href: "/admin/ops", icon: ShieldCheck, permission: "access.manage", ownerOnly: true, badgeKey: "ops_actions" },
-    ],
-  },
-  {
-    key: "growth",
-    label: "Channels",
-    icon: Sprout,
-    shortcut: "w",
-    permission: "revenue.read",
-    href: "/admin/growth",
-    items: [],
-  },
-  {
-    key: "revenue",
-    label: "Revenue",
-    icon: Wallet,
-    shortcut: "r",
-    items: [
-      { label: "Users", href: "/admin/users", icon: Users, permission: "users.read" },
-      { label: "AI Mentor", href: "/admin/mentor", icon: Gauge, permission: "revenue.read" },
-      { label: "Payments", href: "/admin/payments", icon: CreditCard, permission: "revenue.read" },
-      { label: "Subscriptions", href: "/admin/subscriptions", icon: Ticket, permission: "revenue.read" },
-      { label: "Referrals", href: "/admin/referrals", icon: GitBranch, permission: "revenue.read" },
-      { label: "Waitlist", href: "/admin/waitlist", icon: BellRing, permission: "revenue.read" },
-    ],
-  },
-  {
-    key: "content",
-    label: "Content",
-    icon: FileText,
-    shortcut: "c",
-    items: [
-      { label: "Questions", href: "/admin/questions", icon: FileText, permission: "content.read" },
-      { label: "Media", href: "/admin/media", icon: ImageIcon, permission: "content.read" },
-    ],
-  },
-  {
-    key: "product",
-    label: "Product",
-    icon: Activity,
-    shortcut: "p",
-    items: [
-      { label: "Flags", href: "/admin/flags", icon: Flag, permission: "system.read" },
-      { label: "PUYP", href: "/admin/puyp", icon: ShieldCheck, permission: "revenue.read" },
-      { label: "AI Mentor", href: "/admin/mentor", icon: Gauge, permission: "revenue.read" },
-    ],
-  },
-  {
-    key: "system",
-    label: "System",
-    icon: Server,
-    shortcut: "s",
-    items: [
-      { label: "Crons", href: "/admin/crons", icon: Gauge, permission: "system.read" },
-      { label: "Deploys", href: "/admin/deploys", icon: Zap, permission: "system.read" },
-      { label: "Errors", href: "/admin/errors", icon: AlertTriangle, permission: "system.read" },
-      { label: "Audit", href: "/admin/audit", icon: BarChart3, permission: "system.read" },
-      { label: "Env", href: "/admin/env", icon: Database, permission: "system.read" },
-      { label: "Admins & roles", href: "/admin/access", icon: ShieldCheck, permission: "access.manage" },
-    ],
-  },
-];
+import { FindLearner, FIND_LEARNER_INPUT_ID } from "./_components/FindLearner";
+import { ADMIN_NAV, SHORTCUT_ALIASES, sumCounts, type InboxKey, type NavSection, type SectionKey } from "./_components/admin-nav";
+import { AdminChromeProvider, useAdminChrome, type InboxState } from "./_components/admin-chrome";
 
 const THEME_KEY = "medpruef_admin_theme";
 const PREV_THEME_KEY = "medpruef_admin_prev_app_theme";
@@ -190,8 +60,15 @@ type Theme = "light" | "dark";
 
 function getStoredTheme(): Theme | null {
   if (typeof window === "undefined") return null;
-  const v = localStorage.getItem(THEME_KEY);
+  const v = safeStorage.getItem(THEME_KEY);
   return v === "light" || v === "dark" ? v : null;
+}
+
+function focusFindLearner(): boolean {
+  const input = document.getElementById(FIND_LEARNER_INPUT_ID);
+  if (!(input instanceof HTMLInputElement)) return false;
+  input.focus();
+  return true;
 }
 
 export default function AdminLayout({
@@ -201,15 +78,26 @@ export default function AdminLayout({
 }) {
   return (
     <AdminAccessProvider>
-      <AdminLayoutContent>{children}</AdminLayoutContent>
+      <AdminChromeGate>
+        <AdminLayoutContent>{children}</AdminLayoutContent>
+      </AdminChromeGate>
     </AdminAccessProvider>
   );
 }
+
+function AdminChromeGate({ children }: { children: React.ReactNode }) {
+  const { can, loading, error } = useAdminPermissions();
+  const enabled = !loading && !error && (can("content.read") || can("feedback.read") || can("revenue.read") || can("access.manage"));
+  return <AdminChromeProvider enabled={enabled}>{children}</AdminChromeProvider>;
+}
+
+type Badge = { total: number; unknown: boolean };
 
 function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { can, roles, loading: permissionsLoading, error: permissionsError } = useAdminPermissions();
+  const { inbox, refreshInbox, pageTitle } = useAdminChrome();
   const actorIsOwner = roles.some((role) => role.key === "owner");
   const [authChecked, setAuthChecked] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -219,10 +107,15 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [theme, setTheme] = useState<Theme>("dark");
   const [browserOffline, setBrowserOffline] = useState(false);
-  const [inbox, setInbox] = useState<InboxCounts>({});
+  /** A section the shell asked to open (rail click, bottom-bar Inbox). */
+  const [forcedOpen, setForcedOpen] = useState<{ key: SectionKey; n: number } | null>(null);
   const openNavButtonRef = useRef<HTMLButtonElement>(null);
   const closeNavButtonRef = useRef<HTMLButtonElement>(null);
   const navAsideRef = useRef<HTMLElement>(null);
+
+  const openSection = useCallback((key: SectionKey) => {
+    setForcedOpen((prev) => ({ key, n: (prev?.n ?? 0) + 1 }));
+  }, []);
 
   useEffect(() => {
     setAdminNavOpen(false);
@@ -263,31 +156,25 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
     setAuthChecked(true);
   }, [router, pathname]);
 
-  // Theme: apply admin theme on entering /admin/*, restore on leaving.
+  // Theme: apply the admin theme on entering /admin/*, restore the app's
+  // theme on leaving. The app theme is remembered per tab (sessionStorage).
   useEffect(() => {
     if (typeof document === "undefined") return;
     const root = document.documentElement;
-    const prevFromStore = localStorage.getItem(PREV_THEME_KEY);
     const currentAttr = (root.getAttribute(APP_THEME_ATTR) as Theme | null) ?? "light";
-
-    // Record the app-wide theme the first time we mount, so we can put
-    // it back when the admin unmounts.
-    if (!prevFromStore) {
-      localStorage.setItem(PREV_THEME_KEY, currentAttr);
+    if (!safeSessionStorage.getItem(PREV_THEME_KEY)) {
+      safeSessionStorage.setItem(PREV_THEME_KEY, currentAttr);
     }
-
-    const stored = getStoredTheme();
-    const next: Theme = stored ?? "dark";
+    const next: Theme = getStoredTheme() ?? "dark";
     setTheme(next);
     root.setAttribute(APP_THEME_ATTR, next);
 
     return () => {
-      // Restore the app theme when the admin layout unmounts.
-      const prev = localStorage.getItem(PREV_THEME_KEY) as Theme | null;
-      if (prev) {
+      const prev = safeSessionStorage.getItem(PREV_THEME_KEY);
+      if (prev === "light" || prev === "dark") {
         document.documentElement.setAttribute(APP_THEME_ATTR, prev);
-        localStorage.removeItem(PREV_THEME_KEY);
       }
+      safeSessionStorage.removeItem(PREV_THEME_KEY);
     };
     // Run once on mount.
   }, []);
@@ -295,14 +182,14 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
   function toggleTheme() {
     const next: Theme = theme === "dark" ? "light" : "dark";
     setTheme(next);
-    localStorage.setItem(THEME_KEY, next);
+    safeStorage.setItem(THEME_KEY, next);
     document.documentElement.setAttribute(APP_THEME_ATTR, next);
   }
 
   // Derive active section from the pathname.
   useEffect(() => {
     if (!pathname) return setActiveSection(null);
-    for (const section of NAV) {
+    for (const section of ADMIN_NAV) {
       if (section.href && pathname.startsWith(section.href)) {
         setActiveSection(section.key);
         return;
@@ -317,73 +204,61 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
     setActiveSection(null);
   }, [pathname]);
 
-  // Inbox badges: refresh on navigation and every 60 s while visible.
-  const canInbox = !permissionsLoading && !permissionsError && (can("content.read") || can("feedback.read") || can("access.manage"));
+  // Counts follow navigation too, so a closed item drops off the badge.
+  const firstPath = useRef(true);
   useEffect(() => {
-    if (!canInbox) return;
-    let cancelled = false;
-    const load = async () => {
-      if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
-      try {
-        const res = await authFetch("/api/admin/inbox");
-        const body = await res.json().catch(() => null);
-        if (!cancelled && res.ok && body && typeof body === "object") {
-          setInbox({ question_reports: body.question_reports ?? null, note_reports: body.note_reports ?? null, feedback: body.feedback ?? null, ops_actions: body.ops_actions ?? null });
-        }
-      } catch { /* badges stay unknown */ }
-    };
-    void load();
-    const timer = setInterval(() => void load(), 60_000);
-    return () => { cancelled = true; clearInterval(timer); };
-  }, [canInbox, pathname]);
-
-  // Tab title carries the open count on inbox pages.
-  useEffect(() => {
-    if (typeof document === "undefined" || !pathname) return;
-    const item = NAV.find((s) => s.key === "inbox")?.items.find((i) => pathname.startsWith(i.href));
-    if (!item?.badgeKey) return;
-    const n = inbox[item.badgeKey];
-    const previous = document.title;
-    document.title = `${typeof n === "number" && n > 0 ? `(${n}) ` : ""}${item.label} · MedPrüf Admin`;
-    return () => { document.title = previous; };
-  }, [inbox, pathname]);
+    if (firstPath.current) { firstPath.current = false; return; }
+    void refreshInbox();
+  }, [pathname, refreshInbox]);
 
   // Report browser connectivity only when offline. A green server or
   // realtime health signal is not available to this shell.
   useEffect(() => {
     if (typeof window === "undefined") return;
     const sync = () => setBrowserOffline(!navigator.onLine);
-    const onOnline = () => sync();
-    const onOffline = () => sync();
-    window.addEventListener("online", onOnline);
-    window.addEventListener("offline", onOffline);
+    window.addEventListener("online", sync);
+    window.addEventListener("offline", sync);
     sync();
     return () => {
-      window.removeEventListener("online", onOnline);
-      window.removeEventListener("offline", onOffline);
+      window.removeEventListener("online", sync);
+      window.removeEventListener("offline", sync);
     };
   }, []);
 
-  // Keyboard shortcuts.
-  const goTo = useCallback(
-    (section: SectionKey) => {
-      const target = NAV.find((s) => s.key === section && (!s.permission || can(s.permission)));
-      if (!target) return;
-      const href = target.href ?? target.items.find((item) => can(item.permission))?.href;
-      if (href) router.push(href);
+  const visibleNav = useMemo(() => {
+    if (permissionsLoading || permissionsError) return [];
+    return ADMIN_NAV.map((section) => {
+      if (section.permission && !can(section.permission)) return null;
+      const items = section.items.filter((item) => can(item.permission) && (!item.ownerOnly || actorIsOwner));
+      if (!section.href && items.length === 0) return null;
+      return { ...section, items };
+    }).filter((section): section is NavSection => section !== null);
+  }, [actorIsOwner, can, permissionsError, permissionsLoading]);
+
+  const landingFor = useCallback(
+    (key: SectionKey) => {
+      const target = visibleNav.find((s) => s.key === key);
+      return target ? target.href ?? target.items[0]?.href ?? null : null;
     },
-    [can, router]
+    [visibleNav],
   );
 
+  // Inbox total for the menu button and the bottom bar: the visible inbox items only.
+  const inboxBadge = useMemo<Badge>(() => {
+    const keys = visibleNav.find((s) => s.key === "inbox")?.items.flatMap((i) => i.badgeKeys ?? []) ?? [];
+    return sumCounts(inbox.counts, keys, inbox.failed);
+  }, [inbox, visibleNav]);
+  const canFind = !permissionsLoading && !permissionsError && can("users.read");
+
+  // Keyboard shortcuts.
   useEffect(() => {
     let leader = false;
     let leaderTimer: ReturnType<typeof setTimeout> | null = null;
 
     function onKey(e: KeyboardEvent) {
-      // Ignore inside form fields.
       const target = e.target as HTMLElement | null;
       const tag = target?.tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA" || target?.isContentEditable) {
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || target?.isContentEditable) {
         return;
       }
 
@@ -399,6 +274,11 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      if (e.key === "/" && !e.metaKey && !e.ctrlKey && !leader) {
+        if (focusFindLearner()) e.preventDefault();
+        return;
+      }
+
       if (e.key === "g" && !e.metaKey && !e.ctrlKey && !leader) {
         leader = true;
         if (leaderTimer) clearTimeout(leaderTimer);
@@ -410,20 +290,20 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
 
       if (leader) {
         const key = e.key.toLowerCase();
-        if (key === "m" && can("revenue.read")) { e.preventDefault(); router.push("/admin/mentor"); leader=false; if(leaderTimer)clearTimeout(leaderTimer); return; }
-        const section = NAV.find((s) => s.shortcut === key);
-        if (section) {
+        const sectionKey = ADMIN_NAV.find((s) => s.shortcut === key)?.key ?? SHORTCUT_ALIASES[key];
+        leader = false;
+        if (leaderTimer) clearTimeout(leaderTimer);
+        const href = sectionKey ? landingFor(sectionKey) : null;
+        if (href) {
           e.preventDefault();
-          goTo(section.key);
-          leader = false;
-          if (leaderTimer) clearTimeout(leaderTimer);
+          router.push(href);
         }
       }
     }
 
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [adminNavOpen, goTo, shortcutsOpen, can, router]);
+  }, [adminNavOpen, landingFor, shortcutsOpen, router]);
 
   useEffect(() => {
     if (!adminNavOpen || !compactAdmin) return;
@@ -449,20 +329,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
     return () => aside.removeEventListener("keydown", keepFocusInside);
   }, [adminNavOpen, compactAdmin]);
 
-  const navExpandedByDefault = useMemo<Set<SectionKey>>(() => {
-    if (activeSection) return new Set([activeSection]);
-    return new Set();
-  }, [activeSection]);
-
-  const visibleNav = useMemo(() => {
-    if (permissionsLoading || permissionsError) return [];
-    return NAV.map((section) => {
-      if (section.permission && !can(section.permission)) return null;
-      const items = section.items.filter((item) => can(item.permission) && (!item.ownerOnly || actorIsOwner));
-      if (!section.href && items.length === 0) return null;
-      return { ...section, items };
-    }).filter((section): section is NavSection => section !== null);
-  }, [actorIsOwner, can, permissionsError, permissionsLoading]);
+  const railCollapsed = sidebarCollapsed && !compactAdmin;
 
   if (!authChecked) {
     return (
@@ -518,13 +385,13 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
             <div className="w-8 h-8 rounded-lg bg-[var(--mp-viridian)] flex items-center justify-center flex-shrink-0">
               <Shield size={14} className="text-white" />
             </div>
-            {!sidebarCollapsed && (
+            {!railCollapsed && (
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-semibold text-[var(--mp-fg)] truncate">
                   MedPr&uuml;f Ops
                 </div>
                 <div className="text-[10px] text-[var(--mp-fg-muted)] uppercase tracking-wider">
-                  Mission Control
+                  Admin
                 </div>
               </div>
             )}
@@ -533,7 +400,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
                 ref={closeNavButtonRef}
                 type="button"
                 onClick={() => setAdminNavOpen(false)}
-                className="ml-auto inline-flex h-9 w-9 items-center justify-center rounded-lg text-[var(--mp-fg-muted)] hover:bg-[var(--mp-surface-sunken)]"
+                className="ml-auto inline-flex h-11 w-11 items-center justify-center rounded-lg text-[var(--mp-fg-muted)] hover:bg-[var(--mp-surface-sunken)]"
                 aria-label="Close admin navigation"
               >
                 <span aria-hidden="true">×</span>
@@ -559,9 +426,15 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
                 key={section.key}
                 section={section}
                 inbox={inbox}
-                collapsed={sidebarCollapsed && !compactAdmin}
+                collapsed={railCollapsed}
                 activePath={pathname}
-                initiallyOpen={navExpandedByDefault.has(section.key)}
+                initiallyOpen={activeSection === section.key}
+                forcedOpen={forcedOpen?.key === section.key ? forcedOpen.n : 0}
+                onRailExpand={() => {
+                  // UX-ADM-28: a section icon on the collapsed rail opens the rail on that section.
+                  setSidebarCollapsed(false);
+                  openSection(section.key);
+                }}
               />
             ))}
             {permissionsLoading && (
@@ -582,7 +455,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
               title="Keyboard shortcuts (?)"
             >
               <Keyboard size={14} />
-              {!sidebarCollapsed && <span>Shortcuts</span>}
+              {!railCollapsed && <span>Shortcuts</span>}
             </button>
             <button
               type="button"
@@ -591,7 +464,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
               title={`Switch to ${theme === "dark" ? "light" : "dark"}`}
             >
               {theme === "dark" ? <Sun size={14} /> : <Moon size={14} />}
-              {!sidebarCollapsed && (
+              {!railCollapsed && (
                 <span>{theme === "dark" ? "Light mode" : "Dark mode"}</span>
               )}
             </button>
@@ -604,9 +477,9 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
               className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs text-[var(--mp-fg-muted)] hover:bg-[var(--mp-surface-sunken)]"
             >
               <LogOut size={14} />
-              {!sidebarCollapsed && <span>Sign out</span>}
+              {!railCollapsed && <span>Sign out</span>}
             </button>
-            <SignOutEverywhere collapsed={sidebarCollapsed} />
+            <SignOutEverywhere collapsed={railCollapsed} />
           </div>
         </div>
       </aside>
@@ -619,28 +492,47 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
               ref={openNavButtonRef}
               type="button"
               onClick={() => setAdminNavOpen(true)}
-              className="lg:hidden inline-flex items-center justify-center w-9 h-9 rounded-lg text-[var(--mp-fg-muted)] hover:bg-[var(--mp-surface-sunken)] shrink-0"
-              aria-label="Open admin navigation"
+              className="lg:hidden relative inline-flex items-center justify-center w-11 h-11 rounded-lg text-[var(--mp-fg-muted)] hover:bg-[var(--mp-surface-sunken)] shrink-0"
+              aria-label={`Open admin navigation${inboxBadge.unknown ? ", inbox count unavailable" : inboxBadge.total > 0 ? `, ${inboxBadge.total} waiting in Inbox` : ""}`}
             >
               <Menu size={18} />
+              <CornerBadge badge={inboxBadge} />
             </button>
+            {pageTitle && (
+              <div className="min-w-0 max-w-[40%] sm:max-w-[45%] truncate text-sm font-semibold text-[var(--mp-fg)]" data-testid="admin-topbar-title">
+                {pageTitle}
+              </div>
+            )}
             {browserOffline && <BrowserOfflineStatus />}
             <div className="flex-1 min-w-0 flex justify-end">
               <FindLearner />
             </div>
             <Link
               href="/"
-              className="text-xs text-[var(--mp-fg-muted)] hover:text-[var(--mp-fg)] px-1 sm:px-2 py-1 shrink-0"
+              className="inline-flex min-h-11 items-center text-xs text-[var(--mp-fg-muted)] hover:text-[var(--mp-fg)] px-1 sm:px-2 shrink-0"
             >
               Exit admin
             </Link>
           </div>
         </header>
 
-        <main className="flex-1 min-w-0 p-3 sm:p-6 bg-[var(--mp-surface-sunken)]">
+        <main className={`flex-1 min-w-0 p-3 sm:p-6 bg-[var(--mp-surface-sunken)] ${compactAdmin ? "pb-[calc(5rem+env(safe-area-inset-bottom))]" : ""}`}>
           {children}
         </main>
       </div>
+
+      {compactAdmin && !permissionsLoading && !permissionsError && (
+        <AdminBottomBar
+          pathname={pathname}
+          todayHref={landingFor("today")}
+          moneyHref={landingFor("money")}
+          showInbox={visibleNav.some((s) => s.key === "inbox")}
+          inboxBadge={inboxBadge}
+          canFind={canFind}
+          onInbox={() => { openSection("inbox"); setAdminNavOpen(true); }}
+          onMore={() => setAdminNavOpen(true)}
+        />
+      )}
 
       {shortcutsOpen && <ShortcutsDialog onClose={() => setShortcutsOpen(false)} />}
     </div>
@@ -649,11 +541,33 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
 
 // ─── Sub-components ──────────────────────────────────────────────────────
 
-function InboxBadge({ count, label }: { count: number | null | undefined; label: string }) {
-  if (typeof count !== "number" || count <= 0) return null;
+/** Count chip: a number when known and above 0, "--" when it failed to load. */
+function InboxBadge({ badge, label }: { badge: Badge; label: string }) {
+  if (badge.unknown) {
+    return (
+      <span className="ml-auto min-w-5 rounded-full border border-[var(--mp-border-subtle)] px-1.5 py-0.5 text-center font-mono text-[11px] leading-none text-[var(--mp-fg-muted)]" aria-label={`${label}: count unavailable`} title="Count could not be loaded">
+        --
+      </span>
+    );
+  }
+  if (badge.total <= 0) return null;
   return (
-    <span className="ml-auto min-w-5 rounded-full bg-[var(--mp-error)] px-1.5 py-0.5 text-center font-mono text-[11px] font-semibold leading-none text-white" aria-label={`${count} open ${label}`}>
-      {count > 99 ? "99+" : count}
+    <span className="ml-auto min-w-5 rounded-full bg-[var(--mp-error)] px-1.5 py-0.5 text-center font-mono text-[11px] font-semibold leading-none text-white" aria-label={`${badge.total} open ${label}`}>
+      {badge.total > 99 ? "99+" : badge.total}
+    </span>
+  );
+}
+
+/** Small badge pinned to an icon button (menu button, bottom bar). */
+function CornerBadge({ badge }: { badge: Badge }) {
+  if (!badge.unknown && badge.total <= 0) return null;
+  return (
+    <span
+      aria-hidden
+      data-testid="admin-inbox-corner-badge"
+      className={`absolute -top-0.5 right-0 min-w-4 rounded-full px-1 py-px text-center font-mono text-[10px] font-semibold leading-tight ${badge.unknown ? "border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] text-[var(--mp-fg-muted)]" : "bg-[var(--mp-error)] text-white"}`}
+    >
+      {badge.unknown ? "--" : badge.total > 99 ? "99+" : badge.total}
     </span>
   );
 }
@@ -664,19 +578,28 @@ function NavSectionView({
   collapsed,
   activePath,
   initiallyOpen,
+  forcedOpen,
+  onRailExpand,
 }: {
   section: NavSection;
-  inbox: InboxCounts;
+  inbox: InboxState;
   collapsed: boolean;
   activePath: string | null;
   initiallyOpen: boolean;
+  /** Increments when the shell asks this section to open. */
+  forcedOpen: number;
+  onRailExpand: () => void;
 }) {
   const [open, setOpen] = useState(initiallyOpen || section.key === "inbox");
-  const sectionCount = section.items.reduce((sum, item) => sum + (item.badgeKey && typeof inbox[item.badgeKey] === "number" ? (inbox[item.badgeKey] as number) : 0), 0);
+  const keys = section.items.flatMap((item) => item.badgeKeys ?? []) as InboxKey[];
+  const sectionBadge = sumCounts(inbox.counts, keys, inbox.failed);
 
   useEffect(() => {
     if (initiallyOpen) setOpen(true);
   }, [initiallyOpen]);
+  useEffect(() => {
+    if (forcedOpen > 0) setOpen(true);
+  }, [forcedOpen]);
 
   const Icon = section.icon;
 
@@ -694,13 +617,15 @@ function NavSectionView({
   const rowIdle = "text-[var(--mp-fg)] hover:bg-[var(--mp-surface-sunken)]";
 
   if (!hasChildren) {
-    // Single-landing section (Overview).
+    // Single-landing section (Today, Growth).
     const href = section.href ?? "/admin";
     return (
       <Link
         href={href}
+        aria-current={sectionActive ? "page" : undefined}
         className={`${rowBase} ${sectionActive ? rowActive : rowIdle} mx-2 my-0.5`}
         title={collapsed ? `${section.label} (g ${section.shortcut})` : undefined}
+        aria-label={collapsed ? section.label : undefined}
       >
         <Icon size={16} />
         {!collapsed && <span>{section.label}</span>}
@@ -718,14 +643,21 @@ function NavSectionView({
     <div className="mx-2 my-0.5">
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
-        className={`${rowBase} ${anyChildActive ? rowActive : rowIdle} w-full`}
+        onClick={() => {
+          if (collapsed) onRailExpand();
+          else setOpen((v) => !v);
+        }}
+        className={`${rowBase} ${anyChildActive ? rowActive : rowIdle} relative w-full`}
         title={collapsed ? `${section.label} (g ${section.shortcut})` : undefined}
-        aria-expanded={open}
+        aria-label={collapsed ? `${section.label}, open menu` : undefined}
+        aria-expanded={collapsed ? false : open}
       >
         <Icon size={16} />
+        {collapsed && (sectionBadge.unknown || sectionBadge.total > 0) && (
+          <span aria-hidden className={`absolute right-1.5 top-1.5 h-2 w-2 rounded-full ${sectionBadge.unknown ? "bg-[var(--mp-fg-muted)]" : "bg-[var(--mp-error)]"}`} />
+        )}
         {!collapsed && <span className="flex-1 text-left">{section.label}</span>}
-        {!collapsed && !open && sectionCount > 0 && <InboxBadge count={sectionCount} label="items" />}
+        {!collapsed && !open && <InboxBadge badge={sectionBadge} label={`${section.label.toLowerCase()} items`} />}
         {!collapsed && (
           <>
             <span className="inline-flex items-center gap-0.5">
@@ -749,7 +681,7 @@ function NavSectionView({
               key={item.href}
               href={item.href}
               aria-current={active ? "page" : undefined}
-              className={`flex items-center gap-2 px-2 py-1.5 rounded text-xs transition-colors ${
+              className={`flex min-h-9 items-center gap-2 px-2 py-1.5 rounded text-xs transition-colors max-lg:min-h-11 max-lg:text-sm ${
                   active
                     ? "bg-[var(--mp-viridian)]/12 text-[var(--mp-viridian)]"
                     : "text-[var(--mp-fg-muted)] hover:text-[var(--mp-fg)] hover:bg-[var(--mp-surface-sunken)]"
@@ -757,13 +689,84 @@ function NavSectionView({
               >
                 <ItemIcon size={12} />
                 {item.label}
-                {item.badgeKey ? <InboxBadge count={inbox[item.badgeKey]} label={item.label.toLowerCase()} /> : null}
+                {item.badgeKeys ? <InboxBadge badge={sumCounts(inbox.counts, item.badgeKeys, inbox.failed)} label={item.label.toLowerCase()} /> : null}
               </Link>
             );
           })}
         </div>
       )}
     </div>
+  );
+}
+
+/** Phone and tablet bar (ADM-11 A, ADM-14 A): the daily jobs one tap away. */
+function AdminBottomBar({
+  pathname,
+  todayHref,
+  moneyHref,
+  showInbox,
+  inboxBadge,
+  canFind,
+  onInbox,
+  onMore,
+}: {
+  pathname: string | null;
+  todayHref: string | null;
+  moneyHref: string | null;
+  showInbox: boolean;
+  inboxBadge: Badge;
+  canFind: boolean;
+  onInbox: () => void;
+  onMore: () => void;
+}) {
+  const cell = "relative flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 px-1 text-[11px] font-medium";
+  const idle = "text-[var(--mp-fg-muted)]";
+  const active = "text-[var(--mp-viridian)]";
+  const onToday = Boolean(todayHref && pathname?.startsWith(todayHref));
+  const onMoney = ["/admin/payments", "/admin/subscriptions", "/admin/referrals", "/admin/mentor"].some((h) => pathname?.startsWith(h));
+  return (
+    <nav
+      aria-label="Admin quick navigation"
+      data-testid="admin-bottom-bar"
+      className="fixed inset-x-0 bottom-0 z-40 flex border-t border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] pb-[env(safe-area-inset-bottom)] lg:hidden"
+    >
+      {todayHref && (
+        <Link href={todayHref} className={`${cell} ${onToday ? active : idle}`} aria-current={onToday ? "page" : undefined}>
+          <LayoutDashboard size={18} aria-hidden />
+          Today
+        </Link>
+      )}
+      {showInbox && (
+        <button
+          type="button"
+          onClick={onInbox}
+          className={`${cell} ${idle}`}
+          aria-label={`Inbox${inboxBadge.unknown ? ", count unavailable" : inboxBadge.total > 0 ? `, ${inboxBadge.total} waiting` : ""}`}
+        >
+          <span className="relative px-2">
+            <Inbox size={18} aria-hidden />
+            <CornerBadge badge={inboxBadge} />
+          </span>
+          Inbox
+        </button>
+      )}
+      {canFind && (
+        <button type="button" onClick={() => focusFindLearner()} className={`${cell} ${idle}`}>
+          <Search size={18} aria-hidden />
+          Find
+        </button>
+      )}
+      {moneyHref && (
+        <Link href={moneyHref} className={`${cell} ${onMoney ? active : idle}`} aria-current={onMoney ? "page" : undefined}>
+          <Wallet size={18} aria-hidden />
+          Money
+        </Link>
+      )}
+      <button type="button" onClick={onMore} className={`${cell} ${idle}`}>
+        <MoreHorizontal size={18} aria-hidden />
+        More
+      </button>
+    </nav>
   );
 }
 
@@ -782,6 +785,7 @@ function ShortcutsDialog({ onClose }: { onClose: () => void }) {
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
+      aria-label="Keyboard shortcuts"
       onClick={onClose}
     >
       <div
@@ -798,20 +802,16 @@ function ShortcutsDialog({ onClose }: { onClose: () => void }) {
           <button
             type="button"
             onClick={onClose}
-            className="text-xs text-[var(--mp-fg-muted)] hover:text-[var(--mp-fg)]"
+            className="min-h-11 px-2 text-xs text-[var(--mp-fg-muted)] hover:text-[var(--mp-fg)]"
           >
             Close
           </button>
         </div>
-        <div className="p-4 text-xs text-[var(--mp-fg-muted)] grid grid-cols-2 gap-x-6 gap-y-2">
-          <ShortcutRow keys="g o" label="Go to Overview" />
-          <ShortcutRow keys="g i" label="Go to Inbox" />
-          <ShortcutRow keys="g w" label="Go to Channels" />
-          <ShortcutRow keys="g r" label="Go to Revenue" />
-          <ShortcutRow keys="g m" label="Go to AI Mentor" />
-          <ShortcutRow keys="g c" label="Go to Content" />
-          <ShortcutRow keys="g p" label="Go to Product" />
-          <ShortcutRow keys="g s" label="Go to System" />
+        <div className="p-4 text-xs text-[var(--mp-fg-muted)] grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
+          {ADMIN_NAV.map((section) => (
+            <ShortcutRow key={section.key} keys={`g ${section.shortcut}`} label={`Go to ${section.label}`} />
+          ))}
+          <ShortcutRow keys="/" label="Find learner" />
           <ShortcutRow keys="?" label="This dialog" />
           <ShortcutRow keys="Esc" label="Close dialogs" />
         </div>

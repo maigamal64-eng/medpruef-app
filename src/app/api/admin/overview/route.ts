@@ -13,24 +13,26 @@ import {
   isActiveUnexpired,
   isStaffOrTestAccount,
   rowPaymentIds,
+  viennaDay,
 } from "@/lib/admin/money-rules";
+import { computeTodayMoneyNeeds, viennaStartOfDay } from "@/lib/admin/today-rules";
 import { classifySubscriptionCadence } from "@/lib/billing-cadence";
 
 export const dynamic = "force-dynamic";
 
 /**
- * GET /api/admin/overview — the snapshot behind the 11 live tiles on
- * /admin/overview.
+ * GET /api/admin/overview: the Today page (a18, ADM-11 A).
  *
- * Returns one flat JSON blob that hydrates every tile's initial value.
- * Each tile then subscribes to postgres_changes via useAdminRealtime()
- * and bumps its counter locally. That keeps the Realtime channels
- * narrow (one per table) and avoids the N round-trips per event that
- * a "re-query on every change" pattern would cost.
+ * One snapshot, read on load and polled every 60 s by the page (admin
+ * realtime is off, ADM-20 A). Each block is read on its own: a block that
+ * fails comes back null and is named in `failed`, so the page shows
+ * "Could not load, Retry" for that block instead of a zero (ADM-Q07),
+ * while the other blocks still render.
  *
- * Money tiles (a14, 2026-10-12) read the shared definitions in
- * src/lib/admin/money-rules.ts: cash in by payment date, paying learners
- * with trials apart, and the same payment health the Payments page shows.
+ * Money uses the shared definitions in src/lib/admin/money-rules.ts (cash in
+ * by payment date, paying learners with trials apart, the Payments
+ * diagnosis); the Needs-you money rows come from src/lib/admin/today-rules.ts.
+ * Days are Vienna days. Counts only: no learner identity leaves this route.
  */
 export const GET = adminRouteShell(
   async ({ actor }) => {
@@ -38,244 +40,179 @@ export const GET = adminRouteShell(
     const canReadRevenue = canAccessAdminPermission(permissionSnapshot, "revenue.read");
     const canReadUsers = canAccessAdminPermission(permissionSnapshot, "users.read");
     const canReadSystem = canAccessAdminPermission(permissionSnapshot, "system.read");
+    const canReadFeedback = canAccessAdminPermission(permissionSnapshot, "feedback.read");
     const sb = getServiceClient();
     const now = new Date();
-    const startOfDay = new Date(now);
-    startOfDay.setUTCHours(0, 0, 0, 0);
+    const startOfDay = viennaStartOfDay(now, (d) => viennaDay(d));
     const sevenDaysAgo = new Date(now.getTime() - 7 * 86400_000);
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 86400_000);
     const twentyFourHoursAgo = new Date(now.getTime() - 24 * 3600_000);
+    const oneHourAgo = new Date(now.getTime() - 60 * 60_000);
+    const failed: string[] = [];
 
-    // 1-2. Money in, paying learners and payment health (ADM-01 A, UX-ADM-04).
-    //      One shared definition (src/lib/admin/money-rules.ts): cash by
-    //      payment date, gross, refunds on their own day, Vienna days; paying
-    //      = distinct real learners with a positive payment, trials apart.
-    const money = canReadRevenue ? await (async () => {
-      const [{ ledger }, accounts, subs, deliveries] = await Promise.all([
-        loadLedger(sb),
-        loadAccounts(sb),
-        loadSubscriptions(sb, sevenDaysAgo.toISOString()),
-        loadWhopDeliveries(sb, sevenDaysAgo.toISOString()),
-      ]);
-      const users = accountsById(accounts);
-      const paymentsById = new Map(ledger.payments.map((p) => [p.payment_id, p]));
-      const payers = classifyPayers(subs, users, now, paymentsById);
-      const byCadence = { renews: 0, one_time: 0, unknown: 0 };
-      for (const userId of payers.paying) {
-        const cadences = subs
-          .filter((s) => s.user_id === userId && isActiveUnexpired(s, now))
-          .map((s) => classifySubscriptionCadence({
-            tier: s.tier ?? "",
-            payment_provider: s.payment_provider,
-            plan_id: rowPaymentIds(s).map((id) => paymentsById.get(id)?.plan_id).find(Boolean) ?? null,
-          }));
-        if (cadences.includes("auto_renews")) byCadence.renews += 1;
-        else if (cadences.includes("unknown")) byCadence.unknown += 1;
-        else byCadence.one_time += 1;
-      }
-      const realSignups7d = accounts.filter((a) =>
-        !isStaffOrTestAccount(a) && a.created_at && Date.parse(a.created_at) >= sevenDaysAgo.getTime()).length;
-      let newPayers7d = 0;
-      for (const [userId, at] of firstPaidAtByUser(ledger)) {
-        if (isStaffOrTestAccount(users.get(userId))) continue;
-        if (Date.parse(at) >= sevenDaysAgo.getTime()) newPayers7d += 1;
-      }
-      return {
-        moneyIn: computeMoneyIn(ledger, now),
-        payers,
-        byCadence,
-        realSignups7d,
-        newPayers7d,
-        health: computePaymentHealth(deliveries, ledger, now),
-      };
-    })() : null;
-
-    // 3. New signups today.
-    const { count: signupsToday } = await checkedRead(sb
-      .from("users")
-      .select("id", { count: "exact", head: true })
-      .gte("created_at", startOfDay.toISOString()));
-
-    // 4. 150Q paywall hits today — from user_events. event_type literal
-    //    is tentative; if the events aren't landed yet the count is 0.
-    const { count: paywallHits } = await checkedRead(sb
-      .from("user_events")
-      .select("id", { count: "exact", head: true })
-      .eq("event_type", "paywall_hit")
-      .gte("created_at", startOfDay.toISOString()));
-
-    // 5. Referrals awaiting action (qualified but not rewarded).
-    const { count: referralsAwaitingAction } = canReadRevenue ? await checkedRead(sb
-      .from("referrals")
-      .select("id", { count: "exact", head: true })
-      .eq("status", "qualified")) : { count: null };
-
-    // 6. PUYP verifications pending.
-    const { count: puypPending } = canReadRevenue ? await checkedRead(sb
-      .from("exam_attempts")
-      .select("id", { count: "exact", head: true })
-      .eq("result", "fail")
-      .is("verified_at", null)) : { count: null };
-
-    // 7. Flagged questions (open).
-    const { count: flaggedOpen } = await checkedRead(sb
-      .from("user_feedback")
-      .select("id", { count: "exact", head: true })
-      .eq("status", "new"));
-
-    // 8b. Stuck pending subscriptions — pending checkout rows older
-    //     than 24h (in practice the Apr to Jun NOWPayments backlog). Surfaces operational debt: every entry here is either
-    //     a user who abandoned at the BTC checkout screen or a webhook
-    //     that never delivered. Should be 0 in steady state. The post-
-    //     PR-#7 audit (review-2026-04-25-A2) found 8; cancelling them is
-    //     handled by `/api/admin/subscriptions/reconcile-pending`.
-    const { count: stuckPending24h } = canReadRevenue ? await checkedRead(sb
-      .from("subscriptions")
-      .select("id", { count: "exact", head: true })
-      .eq("status", "pending")
-      .lt("created_at", twentyFourHoursAgo.toISOString())) : { count: null };
-
-    // 10. Cron health — derived from cron_runs last-seen.
-    const { data: cronRuns } = canReadSystem ? await checkedRead(sb
-      .from("cron_runs")
-      .select("cron_name, status, started_at, finished_at")
-      .gte("started_at", twentyFourHoursAgo.toISOString())
-      .order("started_at", { ascending: false })
-      .limit(200)) : { data: null };
-
-    const cronMap: Record<
-      string,
-      { lastStatus: string; lastStartedAt: string | null }
-    > = {};
-    for (const r of cronRuns || []) {
-      const n = r.cron_name as string;
-      if (!cronMap[n]) {
-        cronMap[n] = {
-          lastStatus: (r.status as string) || "unknown",
-          lastStartedAt: (r.started_at as string) || null,
-        };
+    /** Run one block; a failure becomes null plus its name in `failed`. */
+    async function block<T>(name: string, allowed: boolean, run: () => Promise<T>): Promise<T | null> {
+      if (!allowed) return null;
+      try {
+        return await run();
+      } catch {
+        failed.push(name);
+        return null;
       }
     }
+    const headCount = async (q: PromiseLike<{ count: number | null; error: unknown }>) => {
+      const { count } = await checkedRead(q);
+      if (typeof count !== "number") throw new Error("count unavailable");
+      return count;
+    };
 
-    // 10a. Telegram bot activation rate — how many of the users who
-    //      registered via the Telegram Login Widget have actually DM'd
-    //      the bot. Lower-bound for who we can push messages to. Should
-    //      trend up after the /dashboard activation card ships
-    //      (review-2026-04-26-B2).
-    const [{ count: tgRegistered }, { count: tgConfirmed }] = canReadSystem ? await Promise.all([
-      checkedRead(sb
-        .from("users")
-        .select("id", { count: "exact", head: true })
-        .not("telegram_id", "is", null)),
-      checkedRead(sb
-        .from("users")
-        .select("id", { count: "exact", head: true })
-        .not("telegram_chat_id_confirmed", "is", null)),
-    ]) : [{ count: null }, { count: null }];
+    const [money, signups, freeLimitHits, crons, telegram, aiChat, activity, feedbackNew] = await Promise.all([
+      // Money in, paying learners, payment health and the Needs-you money rows (ADM-01 A, UX-ADM-04, ADM-11 A).
+      block("money", canReadRevenue, async () => {
+        const [{ ledger }, accounts, subs, deliveries] = await Promise.all([
+          loadLedger(sb),
+          loadAccounts(sb),
+          loadSubscriptions(sb, thirtyDaysAgo.toISOString()),
+          loadWhopDeliveries(sb, sevenDaysAgo.toISOString()),
+        ]);
+        const users = accountsById(accounts);
+        const paymentsById = new Map(ledger.payments.map((p) => [p.payment_id, p]));
+        const payers = classifyPayers(subs, users, now, paymentsById);
+        const byCadence = { renews: 0, one_time: 0, unknown: 0 };
+        for (const userId of payers.paying) {
+          const cadences = subs
+            .filter((s) => s.user_id === userId && isActiveUnexpired(s, now))
+            .map((s) => classifySubscriptionCadence({
+              tier: s.tier ?? "",
+              payment_provider: s.payment_provider,
+              plan_id: rowPaymentIds(s).map((id) => paymentsById.get(id)?.plan_id).find(Boolean) ?? null,
+            }));
+          if (cadences.includes("auto_renews")) byCadence.renews += 1;
+          else if (cadences.includes("unknown")) byCadence.unknown += 1;
+          else byCadence.one_time += 1;
+        }
+        let newPayers7d = 0;
+        for (const [userId, at] of firstPaidAtByUser(ledger)) {
+          if (isStaffOrTestAccount(users.get(userId))) continue;
+          if (Date.parse(at) >= sevenDaysAgo.getTime()) newPayers7d += 1;
+        }
+        const realSince = (since: Date) => accounts.filter((a) =>
+          !isStaffOrTestAccount(a) && a.created_at && Date.parse(a.created_at) >= since.getTime()).length;
+        const moneyIn = computeMoneyIn(ledger, now);
+        const health = computePaymentHealth(deliveries, ledger, now);
+        return {
+          revenue: {
+            today_cents: moneyIn.today.cash_cents,
+            mtd_cents: moneyIn.month_to_date.cash_cents,
+            series_7d: moneyIn.series_7d,
+            today: moneyIn.today,
+            month_to_date: moneyIn.month_to_date,
+            other_currencies: moneyIn.other_currencies,
+            basis: moneyIn.basis,
+          },
+          active_subs: {
+            total: payers.paying.size,
+            in_trial: payers.inTrial.size,
+            by_cadence: byCadence,
+            basis: PAYING_BASIS,
+          },
+          new_payers_7d: {
+            new_payers: newPayers7d,
+            signups: realSince(sevenDaysAgo),
+            ratio: realSince(sevenDaysAgo) > 0 ? newPayers7d / realSince(sevenDaysAgo) : null,
+          },
+          real_signups: { d7: realSince(sevenDaysAgo), d30: realSince(thirtyDaysAgo) },
+          payment_health: {
+            level: health.level,
+            diagnosis: health.diagnosis,
+            failures_24h: health.failures_24h,
+            probes_24h: health.probes_24h,
+            unresolved_total: health.unresolved_total,
+          },
+          needs: computeTodayMoneyNeeds(ledger, subs, payers.paying, now, paymentsById),
+        };
+      }),
 
-    // 10b. AI chat health — last 60 minutes of completed vs failed
-    //      events. Tile shows {requests, completed, failed, avg_latency_ms}
-    //      so drift surfaces before users complain (review-2026-04-26-A4).
-    // NOTE (review-2026-04-26-A3): user_events column is `event_data`,
-    // not `metadata`. PR #9 read the wrong field; 24h of "0/0" data
-    // came from this mismatch (the writes also used `metadata` and
-    // silently failed). Both halves fixed in the same commit.
-    const oneHourAgoIso = new Date(now.getTime() - 60 * 60_000).toISOString();
-    const [{ data: aiCompleted }, { count: aiFailedCountRaw }] = canReadSystem ? await Promise.all([
-      checkedRead(sb
-        .from("user_events")
-        .select("event_data, created_at")
-        .eq("event_type", "ai_chat_completed")
-        .gte("created_at", oneHourAgoIso)),
-      checkedRead(sb
-        .from("user_events")
-        .select("id", { count: "exact", head: true })
-        .eq("event_type", "ai_chat_failed")
-        .gte("created_at", oneHourAgoIso)),
-    ]) : [{ data: null }, { count: null }];
-    const aiCompletedCount = aiCompleted?.length ?? 0;
-    const aiFailedCount = aiFailedCountRaw ?? 0;
-    const aiAvgLatencyMs = (() => {
-      if (!aiCompleted || aiCompleted.length === 0) return null;
-      const lats = aiCompleted
-        .map(
-          (e) =>
-            ((e.event_data as Record<string, unknown> | null)?.duration_ms as
-              | number
-              | undefined) ?? null,
-        )
-        .filter((n): n is number => typeof n === "number");
-      if (lats.length === 0) return null;
-      return Math.round(lats.reduce((a, b) => a + b, 0) / lats.length);
-    })();
+      // New accounts since Vienna midnight (all accounts; the money strip uses real learners only).
+      block("signups", true, () => headCount(sb.from("users").select("id", { count: "exact", head: true }).gte("created_at", startOfDay.toISOString()))),
 
-    // 11. Live activity feed — recent significant events.
-    const { count: recentEvents } = canReadUsers ? await checkedRead(sb
-      .from("user_events")
-      .select("id", { count: "exact", head: true })
-      .gte("created_at", twentyFourHoursAgo.toISOString())
-      .order("created_at", { ascending: false })
-      .limit(20)) : { count: null };
-    const { count: recentEventCount } = !canReadUsers ? await checkedRead(sb
-      .from("user_events")
-      .select("id", { count: "exact", head: true })
-      .gte("created_at", twentyFourHoursAgo.toISOString())) : { count: null };
+      // Learners who reached the free limit today: the event the quota wall writes (paywall_hit was never emitted).
+      block("free_limit", canReadUsers, () => headCount(sb.from("user_events").select("id", { count: "exact", head: true }).eq("event_type", "free_quota_cap_hit").gte("created_at", startOfDay.toISOString()))),
+
+      // Cron runs recorded in the last 24 hours, latest per job.
+      block("crons", canReadSystem, async () => {
+        const { data } = await checkedRead(sb
+          .from("cron_runs")
+          .select("cron_name, status, started_at")
+          .gte("started_at", twentyFourHoursAgo.toISOString())
+          .order("started_at", { ascending: false })
+          .limit(200));
+        const map: Record<string, { lastStatus: string; lastStartedAt: string | null }> = {};
+        for (const r of data || []) {
+          const n = r.cron_name as string;
+          if (!map[n]) map[n] = { lastStatus: (r.status as string) || "unknown", lastStartedAt: (r.started_at as string) || null };
+        }
+        return map;
+      }),
+
+      // Telegram bot activation (review-2026-04-26-B2).
+      block("telegram", canReadSystem, async () => {
+        const [registered, confirmed] = await Promise.all([
+          headCount(sb.from("users").select("id", { count: "exact", head: true }).not("telegram_id", "is", null)),
+          headCount(sb.from("users").select("id", { count: "exact", head: true }).not("telegram_chat_id_confirmed", "is", null)),
+        ]);
+        return { registered, confirmed };
+      }),
+
+      // AI chat health, last 60 minutes (user_events.event_data, review-2026-04-26-A3/A4).
+      block("ai_chat", canReadSystem, async () => {
+        const [{ data: completed }, failedCount] = await Promise.all([
+          checkedRead(sb.from("user_events").select("event_data").eq("event_type", "ai_chat_completed").gte("created_at", oneHourAgo.toISOString()).limit(1000)),
+          headCount(sb.from("user_events").select("id", { count: "exact", head: true }).eq("event_type", "ai_chat_failed").gte("created_at", oneHourAgo.toISOString())),
+        ]);
+        const lats = (completed ?? [])
+          .map((e) => ((e.event_data as Record<string, unknown> | null)?.duration_ms as number | undefined) ?? null)
+          .filter((n): n is number => typeof n === "number");
+        return {
+          requests: (completed?.length ?? 0) + failedCount,
+          completed: completed?.length ?? 0,
+          failed: failedCount,
+          avg_latency_ms: lats.length ? Math.round(lats.reduce((a, b) => a + b, 0) / lats.length) : null,
+        };
+      }),
+
+      // Learner events in the last 24 hours (count only).
+      block("activity", canReadUsers, () => headCount(sb.from("user_events").select("id", { count: "exact", head: true }).gte("created_at", twentyFourHoursAgo.toISOString()))),
+
+      // Feedback nobody has opened yet (status new). Was "flagged_open" (UX-ADM-06).
+      block("feedback_new", canReadFeedback, () => headCount(sb.from("user_feedback").select("id", { count: "exact", head: true }).eq("status", "new"))),
+    ]);
 
     return NextResponse.json({
       generated_at: now.toISOString(),
+      day: viennaDay(now),
       tiles: {
-        revenue: money ? {
-          today_cents: money.moneyIn.today.cash_cents,
-          mtd_cents: money.moneyIn.month_to_date.cash_cents,
-          series_7d: money.moneyIn.series_7d,
-          today: money.moneyIn.today,
-          month_to_date: money.moneyIn.month_to_date,
-          other_currencies: money.moneyIn.other_currencies,
-          basis: money.moneyIn.basis,
-        } : null,
-        active_subs: money ? {
-          total: money.payers.paying.size,
-          in_trial: money.payers.inTrial.size,
-          by_cadence: money.byCadence,
-          basis: PAYING_BASIS,
-        } : null,
-        signups_today: signupsToday || 0,
-        paywall_hits_today: paywallHits || 0,
-        referrals_awaiting_action: canReadRevenue ? referralsAwaitingAction || 0 : null,
-        puyp_pending: canReadRevenue ? puypPending || 0 : null,
-        flagged_open: flaggedOpen || 0,
-        payment_health: money ? {
-          level: money.health.level,
-          diagnosis: money.health.diagnosis,
-          failures_24h: money.health.failures_24h,
-          probes_24h: money.health.probes_24h,
-          unresolved_total: money.health.unresolved_total,
-        } : null,
-        stuck_pending_24h: canReadRevenue ? stuckPending24h || 0 : null,
-        new_payers_7d: money ? {
-          new_payers: money.newPayers7d,
-          signups: money.realSignups7d,
-          ratio: money.realSignups7d > 0 ? money.newPayers7d / money.realSignups7d : null,
-        } : null,
-        ai_chat_1h: canReadSystem ? {
-          requests: aiCompletedCount + aiFailedCount,
-          completed: aiCompletedCount,
-          failed: aiFailedCount,
-          avg_latency_ms: aiAvgLatencyMs,
-        } : null,
-        telegram_activation: canReadSystem ? {
-          registered: tgRegistered ?? 0,
-          confirmed: tgConfirmed ?? 0,
-        } : null,
-        crons: canReadSystem ? cronMap : null,
-        recent_events: null,
-        recent_events_aggregate: { total_last_24h: (canReadUsers ? recentEvents : recentEventCount) ?? 0 },
+        revenue: money?.revenue ?? null,
+        active_subs: money?.active_subs ?? null,
+        new_payers_7d: money?.new_payers_7d ?? null,
+        real_signups: money?.real_signups ?? null,
+        payment_health: money?.payment_health ?? null,
+        signups_today: signups,
+        free_limit_hits_today: freeLimitHits,
+        ai_chat_1h: aiChat,
+        telegram_activation: telegram,
+        crons,
+        recent_events_aggregate: activity == null ? null : { total_last_24h: activity },
+        feedback_new: feedbackNew,
       },
+      needs: money?.needs ?? null,
+      failed,
       restricted_sections: [
         ...(!canReadRevenue ? ["revenue"] : []),
         ...(!canReadUsers ? ["recent_events"] : []),
         ...(!canReadSystem ? ["system"] : []),
       ],
-    });
+    }, { headers: { "Cache-Control": "private, no-store" } });
   },
   { route: "/api/admin/overview", rateLimit: { limit: 120, windowMs: 60_000 } }
 );

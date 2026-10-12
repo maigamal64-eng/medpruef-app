@@ -142,7 +142,6 @@ function AdminGrowthPageContent() {
     hydrate();
   }, [hydrate]);
 
-  const freshness = loading ? "cached" : error ? "disconnected" : "live";
 
   return (
     <AdminPageShell
@@ -157,7 +156,7 @@ function AdminGrowthPageContent() {
           )}
         </span>
       }
-      freshness={freshness}
+      loadState={{ loading, error }}
       onRefresh={hydrate}
     >
       {error && (

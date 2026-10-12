@@ -101,7 +101,7 @@ function AdminMentorContent() {
           ? `Spend and breaker for UTC ${summary.month}. Daily trends: ${summary.timezone ?? "UTC"}. Read-only. Updated ${summary.generated_at.slice(0, 16).replace("T", " ")} UTC.`
           : "Spend, credits and the breaker for the AI mentor. Read-only."
       }
-      freshness={state.kind === "loading" ? "cached" : state.kind === "ok" ? "live" : state.kind === "not_applied" ? undefined : "disconnected"}
+      loadState={state.kind === "not_applied" ? undefined : { loading: state.kind === "loading", error: state.kind !== "loading" && state.kind !== "ok" }}
       actions={state.kind === "not_applied" ? <span className="rounded border border-[var(--mp-border-subtle)] px-2 py-1 text-xs">Not installed</span> : undefined}
       onRefresh={load}
     >

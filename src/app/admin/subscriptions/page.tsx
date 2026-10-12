@@ -14,7 +14,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { authFetch as fetch } from "@/lib/authFetch";
-import { useAdminRealtime } from "@/lib/admin/useAdminRealtime";
 import { useAdminPermissions } from "@/lib/admin/useAdminPermissions";
 import { AdminPageShell } from "../_components/AdminPageShell";
 import { UserLink } from "../_components/UserLink";
@@ -152,7 +151,6 @@ export default function AdminSubscriptionsPage() {
     else setLoading(false);
   }, [accessLoading, can, load]);
 
-  useAdminRealtime("subscriptions", { onEvent: () => void load() });
 
   const counts = useMemo(() => {
     const rows = data?.rows ?? [];
@@ -165,7 +163,7 @@ export default function AdminSubscriptionsPage() {
     <AdminPageShell
       title="Subscriptions"
       description="Who pays, who renews and who loses Pro. One row per paying learner, by access end."
-      freshness={error ? (data ? "cached" : "disconnected") : loading ? "cached" : "live"}
+      loadState={{ loading, error }}
       onRefresh={load}
     >
       {error && (

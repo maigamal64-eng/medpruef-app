@@ -17,7 +17,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CheckCircle2, GraduationCap } from "lucide-react";
 import { authFetch as fetch } from "@/lib/authFetch";
-import { useAdminRealtime } from "@/lib/admin/useAdminRealtime";
 import { useAdminPermissions } from "@/lib/admin/useAdminPermissions";
 import {
   Alert,
@@ -31,6 +30,7 @@ import {
 } from "@/components/ui";
 import { AdminPageShell } from "../_components/AdminPageShell";
 import { UserLink } from "../_components/UserLink";
+import { ResponsiveTable } from "../_components/ResponsiveTable";
 import {
   FormatEuro,
   StatusDot,
@@ -201,10 +201,6 @@ export default function AdminReferralsPage() {
     else setLoading(false);
   }, [accessLoading, canRead, status, load]);
 
-  useAdminRealtime("referrals", {
-    onEvent: () => load(status),
-  });
-
   // Reset selection whenever the filter changes
   useEffect(() => {
     setSelected(new Set());
@@ -339,7 +335,7 @@ export default function AdminReferralsPage() {
     <AdminPageShell
       title="Referrals"
       description="Referral payout list returns up to 200 records and is not paginated. Verify the transfer in its provider before recording a payout."
-      freshness={error || examRewardError ? (items.length || examRewardItems.length ? "cached" : "disconnected") : loading || examRewardLoading ? "cached" : "live"}
+      loadState={{ loading: loading || examRewardLoading, error: error || examRewardError }}
       onRefresh={() => load(status)}
       actions={
         <div className="flex items-center gap-2">
@@ -411,113 +407,96 @@ export default function AdminReferralsPage() {
           />
         ) : (
           <div className="rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] overflow-hidden">
-            <div className="overflow-x-auto">
-            <table className="w-full text-xs tabular-nums">
-              <thead className="bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-muted)] uppercase text-[10px] tracking-wider">
-                <tr>
-                  <th className="text-left px-3 py-2">Referrer</th>
-                  <th className="text-left px-3 py-2">Active exam</th>
-                  <th className="text-left px-3 py-2">Qualified referees (farm signals)</th>
-                  <th className="text-right px-3 py-2">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {examRewardItems.map((item) => (
-                  <tr
-                    key={item.referrer_user_id}
-                    className="border-t border-[var(--mp-border-subtle)] text-[var(--mp-fg)] align-top"
-                  >
-                    <td className="px-3 py-2">
-                      <div className="font-medium">
-                        <UserLink id={item.referrer_user_id} label={item.referrer_first_name || null} />
-                      </div>
-                      <div className="text-[var(--mp-fg-muted)]">
-                        {item.referrer_email || "—"}
-                      </div>
-                    </td>
-                    <td className="px-3 py-2 font-mono text-[10px]">
-                      {item.referrer_active_exam || (
-                        <span className="text-[var(--mp-status-warning)]">
-                          not set
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2">
-                      <ul className="space-y-1.5">
-                        {item.referees.map((r) => (
-                          <li
-                            key={r.referee_user_id || r.email || Math.random()}
-                            className="border border-[var(--mp-border-subtle)] rounded-lg px-2 py-1.5"
-                          >
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="font-medium">{r.email || "—"}</span>
-                              {r.referee_user_id && <UserLink id={r.referee_user_id} label="Profile" />}
-                              <span className="text-[var(--mp-fg-muted)]">
-                                ({r.email_domain || "—"})
-                              </span>
-                              <StatusDot
-                                tone={r.signup_method === "telegram" ? "neutral" : "success"}
-                                size={6}
-                              />
-                              <span className="text-[10px] text-[var(--mp-fg-muted)]">
-                                {r.signup_method}
-                              </span>
-                            </div>
-                            <div className="text-[var(--mp-fg-muted)] mt-0.5">
-                              signed up{" "}
-                              {r.signup_at
-                                ? new Date(r.signup_at).toLocaleDateString("de-AT")
-                                : "—"}{" "}
-                              · {r.distinct_question_count} distinct Qs across{" "}
-                              {r.distinct_day_span} days ·{" "}
-                              {r.first_answer_at && r.last_answer_at
-                                ? `${new Date(r.first_answer_at).toLocaleDateString("de-AT")} → ${new Date(r.last_answer_at).toLocaleDateString("de-AT")}`
-                                : "—"}
-                            </div>
-                            <div className="flex items-center gap-1.5 mt-1">
-                              <StatusDot
-                                tone={
-                                  r.card_trial_active
-                                    ? "success"
-                                    : cardRequired
-                                      ? "danger"
-                                      : "neutral"
-                                }
-                                size={6}
-                              />
-                              <span className="text-[10px] text-[var(--mp-fg-muted)]">
-                                {r.card_trial_active
-                                  ? `card linked (${r.card_trial_tier || "whop"}) ${
-                                      r.card_trial_activated_at
-                                        ? new Date(r.card_trial_activated_at).toLocaleDateString("de-AT")
-                                        : ""
-                                    }`
-                                  : cardRequired
-                                    ? "no card on file"
-                                    : "card not required (gate off)"}
-                              </span>
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    </td>
-                    <td className="px-3 py-2 text-right">
-                      {canManage && <button
-                        type="button"
-                        className="mp-btn mp-btn--primary mp-btn--sm"
-                        onClick={() => {
-                          setExamRewardTarget(item);
-                          setExamRewardConfirming(false);
-                        }}
-                      >
-                        Grant Pro through exam window
-                      </button>}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            </div>
+            <ResponsiveTable
+              label="Pending exam-reward grants"
+              testId="referrals-exam-rewards"
+              rows={examRewardItems}
+              rowKey={(item) => item.referrer_user_id}
+              columns={[
+                { key: "referrer", header: "Referrer", card: "title", cell: (item) => (
+                  <>
+                    <div className="font-medium">
+                      <UserLink id={item.referrer_user_id} label={item.referrer_first_name || null} />
+                    </div>
+                    <div className="text-xs font-normal text-[var(--mp-fg-muted)]">{item.referrer_email || "—"}</div>
+                  </>
+                ) },
+                { key: "exam", header: "Active exam", className: "font-mono text-[10px]", cell: (item) => item.referrer_active_exam || (
+                  <span className="text-[var(--mp-status-warning)]">not set</span>
+                ) },
+                { key: "referees", header: "Qualified referees (farm signals)", cardLabel: "Qualified referees", cell: (item) => (
+                          <ul className="space-y-1.5">
+                            {item.referees.map((r) => (
+                              <li
+                                key={r.referee_user_id || r.email || Math.random()}
+                                className="border border-[var(--mp-border-subtle)] rounded-lg px-2 py-1.5"
+                              >
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className="font-medium">{r.email || "—"}</span>
+                                  {r.referee_user_id && <UserLink id={r.referee_user_id} label="Profile" />}
+                                  <span className="text-[var(--mp-fg-muted)]">
+                                    ({r.email_domain || "—"})
+                                  </span>
+                                  <StatusDot
+                                    tone={r.signup_method === "telegram" ? "neutral" : "success"}
+                                    size={6}
+                                  />
+                                  <span className="text-[10px] text-[var(--mp-fg-muted)]">
+                                    {r.signup_method}
+                                  </span>
+                                </div>
+                                <div className="text-[var(--mp-fg-muted)] mt-0.5">
+                                  signed up{" "}
+                                  {r.signup_at
+                                    ? new Date(r.signup_at).toLocaleDateString("de-AT")
+                                    : "—"}{" "}
+                                  · {r.distinct_question_count} distinct Qs across{" "}
+                                  {r.distinct_day_span} days ·{" "}
+                                  {r.first_answer_at && r.last_answer_at
+                                    ? `${new Date(r.first_answer_at).toLocaleDateString("de-AT")} → ${new Date(r.last_answer_at).toLocaleDateString("de-AT")}`
+                                    : "—"}
+                                </div>
+                                <div className="flex items-center gap-1.5 mt-1">
+                                  <StatusDot
+                                    tone={
+                                      r.card_trial_active
+                                        ? "success"
+                                        : cardRequired
+                                          ? "danger"
+                                          : "neutral"
+                                    }
+                                    size={6}
+                                  />
+                                  <span className="text-[10px] text-[var(--mp-fg-muted)]">
+                                    {r.card_trial_active
+                                      ? `card linked (${r.card_trial_tier || "whop"}) ${
+                                          r.card_trial_activated_at
+                                            ? new Date(r.card_trial_activated_at).toLocaleDateString("de-AT")
+                                            : ""
+                                        }`
+                                      : cardRequired
+                                        ? "no card on file"
+                                        : "card not required (gate off)"}
+                                  </span>
+                                </div>
+                              </li>
+                            ))}
+                          </ul>
+                ) },
+              ]}
+              actions={(item) => (canManage ? (
+                <button
+                  type="button"
+                  className="mp-btn mp-btn--primary mp-btn--sm"
+                  onClick={() => {
+                    setExamRewardTarget(item);
+                    setExamRewardConfirming(false);
+                  }}
+                >
+                  Grant Pro through exam window
+                </button>
+              ) : null)}
+            />
           </div>
         )}
       </section>
@@ -551,176 +530,92 @@ export default function AdminReferralsPage() {
         )
       ) : (
           <div className="rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] overflow-hidden">
-          <div className="overflow-x-auto">
-          <table className="w-full text-xs tabular-nums">
-            <thead className="bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-muted)] uppercase text-[10px] tracking-wider">
-              <tr>
-                <th className="text-left px-3 py-2 w-10">
+          <ResponsiveTable
+            label="Referral payouts"
+            testId="referrals-payouts"
+            minWidth={900}
+            rows={sorted}
+            rowKey={(r) => r.id}
+            rowClassName={(r) => (selected.has(r.id) ? "bg-[var(--mp-viridian)]/5" : "")}
+            columns={[
+              { key: "select", cardLabel: "Select", card: "meta", className: "w-10", header: (
+                <input
+                  type="checkbox"
+                  aria-label="Select all qualified referrals"
+                  checked={payableSelected.length > 0 && payableSelected.length === sorted.filter((r) => r.status === "qualified").length}
+                  onChange={toggleSelectAll}
+                  disabled={!canManage || sorted.filter((r) => r.status === "qualified").length === 0}
+                />
+              ), cell: (r) => (
+                <label className="inline-flex min-h-8 items-center gap-2">
                   <input
                     type="checkbox"
-                    aria-label="Select all qualified referrals"
-                    checked={
-                      payableSelected.length > 0 &&
-                      payableSelected.length ===
-                        sorted.filter((r) => r.status === "qualified").length
-                    }
-                    onChange={toggleSelectAll}
-                    disabled={!canManage ||
-                      sorted.filter((r) => r.status === "qualified").length ===
-                      0
-                    }
+                    aria-label={`Select referral ${r.id}`}
+                    checked={selected.has(r.id)}
+                    onChange={() => toggleSelect(r.id)}
+                    disabled={!canManage || r.status !== "qualified"}
                   />
-                </th>
-                <th className="text-left px-3 py-2">Hold expires</th>
-                <th className="text-left px-3 py-2">Days in hold</th>
-                <th className="text-left px-3 py-2">Referrer</th>
-                <th className="text-left px-3 py-2">Referee</th>
-                <th className="text-left px-3 py-2">Payout method</th>
-                <th className="text-right px-3 py-2">Reward</th>
-                <th className="text-left px-3 py-2">Status</th>
-                <th className="text-right px-3 py-2">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sorted.map((r) => {
-                const daysInHold = daysBetween(
-                  r.qualified_at || r.created_at,
-                  new Date().toISOString()
-                );
-                const holdOverdue =
-                  r.hold_expires_at &&
-                  new Date(r.hold_expires_at).getTime() < Date.now() &&
-                  r.status === "qualified";
+                  <span className="lg:hidden text-xs">Select for bulk payout</span>
+                </label>
+              ) },
+              { key: "referrer", header: "Referrer", card: "title", cell: (r) => (
+                <>
+                  <div className="font-medium">{r.referrer_user_id ? <UserLink id={r.referrer_user_id} label={r.referrer?.first_name || null} /> : "—"}</div>
+                  <div className="text-xs font-normal text-[var(--mp-fg-muted)]">{r.referrer?.email}</div>
+                </>
+              ) },
+              { key: "hold", header: "Hold expires", className: "font-mono text-[10px] text-[var(--mp-fg-muted)]", cell: (r) => {
+                const holdOverdue = r.hold_expires_at && new Date(r.hold_expires_at).getTime() < Date.now() && r.status === "qualified";
+                return r.hold_expires_at ? (
+                  <span className={holdOverdue ? "text-[var(--mp-error)] font-semibold" : ""}>
+                    {new Date(r.hold_expires_at).toLocaleString("de-AT", { day: "2-digit", month: "short", year: "numeric" })}
+                    {holdOverdue && " · overdue"}
+                  </span>
+                ) : "—";
+              } },
+              { key: "days", header: "Days in hold", cell: (r) => {
+                const daysInHold = daysBetween(r.qualified_at || r.created_at, new Date().toISOString());
                 return (
-                  <tr
-                    key={r.id}
-                    className={`border-t border-[var(--mp-border-subtle)] text-[var(--mp-fg)] ${
-                      selected.has(r.id)
-                        ? "bg-[var(--mp-viridian)]/5"
-                        : ""
-                    }`}
-                  >
-                    <td className="px-3 py-2">
-                      <input
-                        type="checkbox"
-                        aria-label={`Select referral ${r.id}`}
-                        checked={selected.has(r.id)}
-                        onChange={() => toggleSelect(r.id)}
-                        disabled={!canManage || r.status !== "qualified"}
-                      />
-                    </td>
-                    <td className="px-3 py-2 text-[var(--mp-fg-muted)] font-mono text-[10px]">
-                      {r.hold_expires_at ? (
-                        <span
-                          className={
-                            holdOverdue
-                              ? "text-[var(--mp-error)] font-semibold"
-                              : ""
-                          }
-                        >
-                          {new Date(r.hold_expires_at).toLocaleString("de-AT", {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                          })}
-                          {holdOverdue && " · overdue"}
-                        </span>
-                      ) : (
-                        "—"
-                      )}
-                    </td>
-                    <td className="px-3 py-2">
-                      <span className="inline-flex items-center gap-1.5">
-                        <StatusDot
-                          tone={
-                            daysInHold == null
-                              ? "neutral"
-                              : daysInHold >= 30
-                                ? "danger"
-                                : daysInHold >= 14
-                                  ? "warn"
-                                  : "success"
-                          }
-                          size={6}
-                        />
-                        <span className="font-mono tabular-nums">
-                          {daysInHold != null ? `${daysInHold}d` : "—"}
-                        </span>
-                      </span>
-                    </td>
-                    <td className="px-3 py-2">
-                      <div className="font-medium">
-                        {r.referrer_user_id ? <UserLink id={r.referrer_user_id} label={r.referrer?.first_name || null} /> : "—"}
-                      </div>
-                      <div className="text-[var(--mp-fg-muted)]">
-                        {r.referrer?.email}
-                      </div>
-                    </td>
-                    <td className="px-3 py-2">
-                      <div className="font-medium">
-                        {r.referee_user_id ? <UserLink id={r.referee_user_id} label={r.referee?.first_name || null} /> : "—"}
-                      </div>
-                      <div className="text-[var(--mp-fg-muted)]">
-                        {r.referee?.email}
-                      </div>
-                    </td>
-                    <td className="px-3 py-2 font-mono text-[10px]">
-                      {r.referrer?.payout_method || (
-                        <span className="text-[var(--mp-status-warning)]">
-                          not set
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-3 py-2 text-right font-mono">
-                      <FormatEuro cents={r.reward_credit_cents} />
-                    </td>
-                    <td className="px-3 py-2">
-                      <span className="inline-flex items-center gap-1.5">
-                        <StatusDot
-                          tone={
-                            r.status === "qualified"
-                              ? "warn"
-                              : r.status === "rewarded"
-                                ? "success"
-                                : "neutral"
-                          }
-                          size={6}
-                        />
-                        <span className="text-[10px] font-mono">
-                          {r.status}
-                        </span>
-                      </span>
-                    </td>
-                    <td className="px-3 py-2 text-right">
-                      {r.status === "qualified" && canManage ? (
-                        <button
-                          type="button"
-                          className="mp-btn mp-btn--primary mp-btn--sm"
-                          onClick={() => {
-                            setTarget(r);
-                            setTxid("");
-                            setNotes("");
-                            setConfirming(false);
-                          }}
-                        >
-                          Mark paid
-                        </button>
-                      ) : (
-                        <span className="text-[10px] text-[var(--mp-fg-muted)]">
-                          {r.rewarded_at
-                            ? `Paid ${new Date(r.rewarded_at).toLocaleDateString(
-                                "de-AT"
-                              )}`
-                            : "—"}
-                        </span>
-                      )}
-                    </td>
-                  </tr>
+                  <span className="inline-flex items-center gap-1.5">
+                    <StatusDot tone={daysInHold == null ? "neutral" : daysInHold >= 30 ? "danger" : daysInHold >= 14 ? "warn" : "success"} size={6} />
+                    <span className="font-mono tabular-nums">{daysInHold != null ? `${daysInHold}d` : "—"}</span>
+                  </span>
                 );
-              })}
-            </tbody>
-          </table>
-          </div>
+              } },
+              { key: "referee", header: "Referee", cell: (r) => (
+                <>
+                  <div className="font-medium">{r.referee_user_id ? <UserLink id={r.referee_user_id} label={r.referee?.first_name || null} /> : "—"}</div>
+                  <div className="text-[var(--mp-fg-muted)]">{r.referee?.email}</div>
+                </>
+              ) },
+              { key: "method", header: "Payout method", className: "font-mono text-[10px]", cell: (r) => r.referrer?.payout_method || <span className="text-[var(--mp-status-warning)]">not set</span> },
+              { key: "reward", header: "Reward", align: "right", className: "font-mono tabular-nums", cell: (r) => <FormatEuro cents={r.reward_credit_cents} /> },
+              { key: "status", header: "Status", cell: (r) => (
+                <span className="inline-flex items-center gap-1.5">
+                  <StatusDot tone={r.status === "qualified" ? "warn" : r.status === "rewarded" ? "success" : "neutral"} size={6} />
+                  <span className="text-[10px] font-mono">{r.status}</span>
+                </span>
+              ) },
+            ]}
+            actions={(r) => (r.status === "qualified" && canManage ? (
+              <button
+                type="button"
+                className="mp-btn mp-btn--primary mp-btn--sm"
+                onClick={() => {
+                  setTarget(r);
+                  setTxid("");
+                  setNotes("");
+                  setConfirming(false);
+                }}
+              >
+                Mark paid
+              </button>
+            ) : (
+              <span className="text-[10px] text-[var(--mp-fg-muted)]">
+                {r.rewarded_at ? `Paid ${new Date(r.rewarded_at).toLocaleDateString("de-AT")}` : "—"}
+              </span>
+            ))}
+          />
         </div>
       )}
 

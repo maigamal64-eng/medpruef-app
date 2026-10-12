@@ -9,7 +9,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Download, Inbox } from "lucide-react";
 import { authFetch as fetch } from "@/lib/authFetch";
-import { useAdminRealtime } from "@/lib/admin/useAdminRealtime";
 import {
   Alert,
   BrandedLoader,
@@ -69,10 +68,6 @@ export default function AdminWaitlistPage() {
     else setLoading(false);
   }, [accessLoading, can, load]);
 
-  useAdminRealtime("waitlist", {
-    onEvent: () => load(),
-  });
-
   async function exportCsv() {
     if (!can("revenue.read")) return;
     const params = new URLSearchParams({ format: "csv" });
@@ -110,7 +105,7 @@ export default function AdminWaitlistPage() {
     <AdminPageShell
       title="Waitlist"
       description="Pricing and exam-intent signups recorded by the waitlist source."
-      freshness={error ? (items.length ? "cached" : "disconnected") : loading ? "cached" : "live"}
+      loadState={{ loading, error }}
       onRefresh={load}
       actions={
         can("revenue.read") ? <button

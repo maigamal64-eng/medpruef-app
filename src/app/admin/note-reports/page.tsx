@@ -112,7 +112,7 @@ export default function NoteReportsPage() {
   if (!can("content.read")) return <div className="p-6"><Alert variant="error" title="Access not available">Your admin role does not include permission to read note reports.</Alert></div>;
 
   return (
-    <AdminPageShell title="Community note reports" description="Review learner reports about public study notes. Takedown hides a note from Explore; dismissal closes only the report." freshness={loading ? "cached" : error ? "disconnected" : "live"} onRefresh={() => void load()}>
+    <AdminPageShell title="Community note reports" description="Review learner reports about public study notes. Takedown hides a note from Explore; dismissal closes only the report." loadState={{ loading, error }} onRefresh={() => void load()}>
       {error && <Alert variant="error" title="Could not complete the request">{error}<button type="button" className="ml-3 underline" onClick={() => void load()}>Retry</button></Alert>}
       <p className="text-sm text-[var(--mp-fg-muted)] mb-5">
         Offene Meldungen zu öffentlichen Lernkarten. „Entfernen“ deaktiviert die Notiz sofort und nimmt sie aus Explore.

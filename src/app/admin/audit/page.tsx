@@ -12,16 +12,16 @@
  * changeset).
  */
 
-import { Fragment, useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { BarChart3, ChevronDown, ChevronUp } from "lucide-react";
 import { authFetch as fetch } from "@/lib/authFetch";
 import { AdminPermissionGate } from "../_components/AdminPermissionGate";
-import { useAdminRealtime } from "@/lib/admin/useAdminRealtime";
 import { Alert, BrandedLoader, EmptyState } from "@/components/ui";
 import { AdminPageShell } from "../_components/AdminPageShell";
 import { FilterChip } from "../_components/primitives";
 import { ListFooter } from "../_components/ListFooter";
+import { ResponsiveTable } from "../_components/ResponsiveTable";
 import { UserLink } from "../_components/UserLink";
 import { AUDIT_BASIS, AUDIT_CATEGORY_LABELS, type AuditCategory } from "@/lib/admin/learner-history";
 
@@ -114,9 +114,12 @@ function AdminAuditPageContent() {
   }, [action, actor, category, learner]);
 
   const seq = useRef(0);
-  const load = useCallback(async (before: string | null = null) => {
+  const [paged, setPaged] = useState(false);
+  const [updatedAt, setUpdatedAt] = useState<number | null>(null);
+  // silent: the 60 s poll refreshes the first page without blanking the list.
+  const load = useCallback(async (before: string | null = null, silent = false) => {
     const mine = ++seq.current;
-    if (before) setLoadingMore(true); else setLoading(true);
+    if (before) setLoadingMore(true); else if (!silent) setLoading(true);
     setError(null);
     try {
       const res = await fetch(query(before));
@@ -132,6 +135,8 @@ function AdminAuditPageContent() {
         setOps([]);
       }
       if (!before) setTotal(typeof body.total === "number" ? body.total : null);
+      setPaged(Boolean(before));
+      if (!before) setUpdatedAt(Date.now());
       setScanned((current) => (before ? current + body.scanned : body.scanned));
       setNextBefore(body.next_before ?? null);
     } catch (e) {
@@ -148,12 +153,6 @@ function AdminAuditPageContent() {
     void load(null);
   }, [load]);
 
-  useAdminRealtime("admin_audit_log", {
-    onEvent: () => {
-      if (category !== "ops") void load(null);
-    },
-  });
-
   const applyFilters = (e: React.FormEvent) => {
     e.preventDefault();
     updateUrl({ learner: draft.learner.trim(), actor: draft.actor.trim(), action: draft.action.trim() });
@@ -166,8 +165,10 @@ function AdminAuditPageContent() {
     <AdminPageShell
       title="Audit log"
       description="Who changed what, when and why. Admin API actions and Ops decisions."
-      freshness={loading ? "cached" : error ? "disconnected" : "live"}
-      onRefresh={() => void load(null)}
+      loadState={{ loading, error, updatedAt }}
+      // ADM-20 A: polled every 60 s while visible; paused once older rows are loaded so the poll never drops them.
+      pollMs={paged ? undefined : 60_000}
+      onRefresh={() => void load(null, !paged)}
     >
       <div className="space-y-3 rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] p-3">
         <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Category">
@@ -251,93 +252,65 @@ function AdminAuditPageContent() {
         />
       ) : (
         <div className="overflow-hidden rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)]">
-          <div className="overflow-x-auto">
-            {category === "ops" ? (
-              <table className="w-full min-w-[720px] text-xs">
-                <thead className="bg-[var(--mp-surface-sunken)] text-[10px] uppercase tracking-wider text-[var(--mp-fg-muted)]">
-                  <tr>
-                    <th className="px-3 py-2 text-left">When</th>
-                    <th className="px-3 py-2 text-left">Decision</th>
-                    <th className="px-3 py-2 text-left">Operation</th>
-                    <th className="px-3 py-2 text-left">By</th>
-                    <th className="px-3 py-2 text-left">Target</th>
-                    <th className="px-3 py-2 text-left">Reason</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {ops.map((o) => (
-                    <tr key={o.id} className="border-t border-[var(--mp-border-subtle)] text-[var(--mp-fg)]">
-                      <td className="whitespace-nowrap px-3 py-2 font-mono text-[10px] text-[var(--mp-fg-muted)]">{when(o.at)}</td>
-                      <td className="px-3 py-2 font-mono">{o.event.replace("action.", "")}</td>
-                      <td className="px-3 py-2 font-mono">{o.operation}{o.days ? ` · ${o.days} days` : ""}{o.decision ? ` · ${o.decision}` : ""}</td>
-                      <td className="px-3 py-2 text-[var(--mp-fg-muted)]">{o.actor_email ?? (o.principal ? `Ops agent ${o.principal}` : "Ops agent")}</td>
-                      <td className="px-3 py-2">{o.user_id ? <UserLink id={o.user_id} /> : o.feedback_id ? `Feedback #${o.feedback_id}` : "—"}</td>
-                      <td className="px-3 py-2 text-[var(--mp-fg-muted)] [overflow-wrap:anywhere]">{o.reason ?? "—"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <table className="w-full min-w-[720px] text-xs">
-                <thead className="bg-[var(--mp-surface-sunken)] text-[10px] uppercase tracking-wider text-[var(--mp-fg-muted)]">
-                  <tr>
-                    <th className="px-3 py-2 text-left">When</th>
-                    <th className="px-3 py-2 text-left">Actor</th>
-                    <th className="px-3 py-2 text-left">Action</th>
-                    <th className="px-3 py-2 text-left">Target</th>
-                    <th className="px-3 py-2 text-left">Reason</th>
-                    <th className="px-3 py-2 text-right"><span className="sr-only">Payload</span></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.map((r) => {
-                    const learnerId = learnerOf(r);
-                    const reason = r.payload?.reason ?? r.payload?.note;
-                    const expanded = open === r.id;
-                    return (
-                      <Fragment key={r.id}>
-                        <tr className="border-t border-[var(--mp-border-subtle)] text-[var(--mp-fg)]">
-                          <td className="whitespace-nowrap px-3 py-2 font-mono text-[10px] text-[var(--mp-fg-muted)]">{when(r.created_at)}</td>
-                          <td className="px-3 py-2 text-[var(--mp-fg-muted)]">{r.actor_email ?? "—"}</td>
-                          <td className="px-3 py-2">
-                            <button type="button" className="font-mono underline-offset-2 hover:underline" onClick={() => updateUrl({ action: r.action })} title="Filter by this action">
-                              {r.action}
-                            </button>
-                            <span className="ml-1 text-[10px] text-[var(--mp-fg-subtle)]">{AUDIT_CATEGORY_LABELS[r.category]}</span>
-                          </td>
-                          <td className="px-3 py-2 text-[10px]">
-                            {learnerId ? <UserLink id={learnerId} /> : r.target_type && r.target_id ? (
-                              <span className="font-mono [overflow-wrap:anywhere]">{r.target_type}:{r.target_id}</span>
-                            ) : r.target_type ?? "—"}
-                          </td>
-                          <td className="max-w-[260px] px-3 py-2 text-[var(--mp-fg-muted)] [overflow-wrap:anywhere]">{typeof reason === "string" && reason ? reason : "—"}</td>
-                          <td className="px-3 py-2 text-right">
-                            {r.payload && Object.keys(r.payload).length > 0 && (
-                              <button
-                                type="button"
-                                onClick={() => setOpen(expanded ? null : r.id)}
-                                aria-expanded={expanded}
-                                className="inline-flex items-center gap-1 rounded px-2 py-1 text-[10px] text-[var(--mp-fg-muted)] hover:bg-[var(--mp-surface-sunken)]"
-                              >
-                                Payload {expanded ? <ChevronUp size={11} aria-hidden /> : <ChevronDown size={11} aria-hidden />}
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                        {expanded && (
-                          <tr className="border-t border-[var(--mp-border-subtle)]/50">
-                            <td colSpan={6} className="bg-[var(--mp-surface-sunken)] px-3 py-2">
-                              <pre className="max-h-80 overflow-auto whitespace-pre-wrap break-all font-mono text-[10px] text-[var(--mp-fg)]">{JSON.stringify(r.payload, null, 2)}</pre>
-                            </td>
-                          </tr>
-                        )}
-                      </Fragment>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )}
-          </div>
+          {category === "ops" ? (
+            <ResponsiveTable
+              label="Ops decisions"
+              testId="audit-ops-table"
+              rows={ops}
+              rowKey={(o) => o.id}
+              columns={[
+                { key: "when", header: "When", card: "meta", className: "whitespace-nowrap font-mono text-[10px] text-[var(--mp-fg-muted)]", cell: (o) => when(o.at) },
+                { key: "decision", header: "Decision", card: "title", className: "font-mono", cell: (o) => o.event.replace("action.", "") },
+                { key: "operation", header: "Operation", className: "font-mono", cell: (o) => `${o.operation}${o.days ? ` · ${o.days} days` : ""}${o.decision ? ` · ${o.decision}` : ""}` },
+                { key: "by", header: "By", className: "text-[var(--mp-fg-muted)]", cell: (o) => o.actor_email ?? (o.principal ? `Ops agent ${o.principal}` : "Ops agent") },
+                { key: "target", header: "Target", cell: (o) => (o.user_id ? <UserLink id={o.user_id} /> : o.feedback_id ? `Feedback #${o.feedback_id}` : "—") },
+                { key: "reason", header: "Reason", className: "text-[var(--mp-fg-muted)] [overflow-wrap:anywhere]", cell: (o) => o.reason ?? "—" },
+              ]}
+            />
+          ) : (
+            <ResponsiveTable
+              label="Audit rows"
+              testId="audit-table"
+              rows={items}
+              rowKey={(r) => r.id}
+              columns={[
+                { key: "when", header: "When", card: "meta", className: "whitespace-nowrap font-mono text-[10px] text-[var(--mp-fg-muted)]", cell: (r) => when(r.created_at) },
+                { key: "action", header: "Action", card: "title", cell: (r) => (
+                  <>
+                    <button type="button" className="font-mono underline-offset-2 hover:underline" onClick={() => updateUrl({ action: r.action })} title="Filter by this action">
+                      {r.action}
+                    </button>
+                    <span className="ml-1 text-[10px] font-normal text-[var(--mp-fg-subtle)]">{AUDIT_CATEGORY_LABELS[r.category]}</span>
+                  </>
+                ) },
+                { key: "actor", header: "Actor", className: "text-[var(--mp-fg-muted)]", cell: (r) => r.actor_email ?? "—" },
+                { key: "target", header: "Target", className: "text-[10px]", cell: (r) => {
+                  const learnerId = learnerOf(r);
+                  return learnerId ? <UserLink id={learnerId} /> : r.target_type && r.target_id ? (
+                    <span className="font-mono [overflow-wrap:anywhere]">{r.target_type}:{r.target_id}</span>
+                  ) : r.target_type ?? "—";
+                } },
+                { key: "reason", header: "Reason", className: "max-w-[260px] text-[var(--mp-fg-muted)] [overflow-wrap:anywhere]", cell: (r) => {
+                  const reason = r.payload?.reason ?? r.payload?.note;
+                  return typeof reason === "string" && reason ? reason : "—";
+                } },
+              ]}
+              actionsHeader="Payload"
+              actions={(r) => (r.payload && Object.keys(r.payload).length > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => setOpen(open === r.id ? null : r.id)}
+                  aria-expanded={open === r.id}
+                  className="mp-btn mp-btn--ghost mp-btn--sm inline-flex items-center gap-1 text-[11px]"
+                >
+                  Payload {open === r.id ? <ChevronUp size={11} aria-hidden /> : <ChevronDown size={11} aria-hidden />}
+                </button>
+              ) : null)}
+              expanded={(r) => (open === r.id ? (
+                <pre className="max-h-80 overflow-auto whitespace-pre-wrap break-all font-mono text-[10px] text-[var(--mp-fg)]">{JSON.stringify(r.payload, null, 2)}</pre>
+              ) : null)}
+            />
+          )}
           <ListFooter
             shown={shown}
             total={category === "all" || category === "ops" ? total : null}

@@ -57,7 +57,7 @@ function AdminMediaPageContent() {
     <AdminPageShell
       title="Media audit"
       description="Active questions tagged missing_image. Open one in the editor to rewrite the stem or note the image source."
-      freshness={loading ? "cached" : error ? "disconnected" : "live"}
+      loadState={{ loading, error }}
       onRefresh={load}
     >
       {error && (

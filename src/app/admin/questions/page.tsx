@@ -14,9 +14,8 @@
  */
 
 import { changedQuestionFields } from "@/lib/admin/question-edit";
-import { Fragment, useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
-  ArrowLeftRight,
   Search,
   Edit3,
   RotateCcw,
@@ -39,6 +38,7 @@ import {
   Alert,
   BrandedLoader,
 } from "@/components/ui";
+import { ResponsiveTable } from "../_components/ResponsiveTable";
 import { AdminPageShell } from "../_components/AdminPageShell";
 import { ReviewsQueue } from "./ReviewsQueue";
 import type {
@@ -199,7 +199,7 @@ export default function AdminQuestionsPage() {
     <AdminPageShell
       title="Questions"
       description="Browse, edit, de-duplicate, and review user-flagged content."
-      freshness="cached"
+      loadState={{ loading: !stats && !readErrors.stats, error: readErrors.stats || (tab === "browse" ? readErrors.questions : tab === "duplicates" ? readErrors.duplicates : undefined) }}
       onRefresh={() => {
         fetchStats();
         if (tab === "browse")
@@ -346,170 +346,148 @@ export default function AdminQuestionsPage() {
 
           {/* Questions Table */}
           <div className="card rounded-xl overflow-hidden">
-            <div className="flex items-center gap-1.5 border-b border-[var(--mp-border-subtle)] px-3 py-2 text-xs text-[var(--mp-fg-muted)] lg:hidden">
-              <ArrowLeftRight size={14} aria-hidden="true" />
-              <span>Scroll horizontally to see all columns</span>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-[var(--mp-surface-sunken)] border-b border-[var(--mp-border)]">
-                    <th className="text-left px-3 py-2.5 text-[var(--mp-fg-subtle)] font-medium text-xs">ID</th>
-                    <th className="text-left px-3 py-2.5 text-[var(--mp-fg-subtle)] font-medium text-xs">Topic</th>
-                    <th className="text-left px-3 py-2.5 text-[var(--mp-fg-subtle)] font-medium text-xs">Question</th>
-                    <th className="text-center px-3 py-2.5 text-[var(--mp-fg-subtle)] font-medium text-xs">Choices</th>
-                    <th className="text-center px-3 py-2.5 text-[var(--mp-fg-subtle)] font-medium text-xs">Expl</th>
-                    <th className="text-center px-3 py-2.5 text-[var(--mp-fg-subtle)] font-medium text-xs">Img</th>
-                    <th className="text-left px-3 py-2.5 text-[var(--mp-fg-subtle)] font-medium text-xs">Exam Dates</th>
-                    <th className="text-center px-3 py-2.5 text-[var(--mp-fg-subtle)] font-medium text-xs">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {questions.map((q) => (
-                    <Fragment key={q.id}>
-                      <tr
-                        onClick={() => setExpandedQuestion(q.id === expandedQuestion ? null : q.id)}
-                        className={`border-b border-[var(--mp-border)]/50 cursor-pointer transition-colors ${
-                          expandedQuestion === q.id ? "bg-[var(--mp-viridian)]/5" : "hover:bg-[var(--mp-surface-sunken)]"
-                        } ${!q.is_active ? "opacity-50" : ""}`}
+            {questions.length === 0 ? (
+              <div className="px-4 py-2">
+                <EmptyState
+                  tone="neutral"
+                  icon={<FileText className="w-10 h-10" aria-hidden />}
+                  title="No questions match these filters"
+                  body="Try clearing a filter or adjusting your search."
+                />
+              </div>
+            ) : (
+              <ResponsiveTable
+                label="Questions"
+                testId="questions-table"
+                minWidth={860}
+                rows={questions}
+                rowKey={(q) => q.id}
+                onRowClick={(q) => setExpandedQuestion(q.id === expandedQuestion ? null : q.id)}
+                rowClassName={(q) => `${expandedQuestion === q.id ? "bg-[var(--mp-viridian)]/5" : ""} ${!q.is_active ? "opacity-50" : ""}`}
+                columns={[
+                  { key: "id", header: "ID", card: "title", className: "font-mono text-xs text-[var(--mp-fg-subtle)]", cell: (q) => `#${q.id}` },
+                  { key: "topic", header: "Topic", card: "meta", cell: (q) => (
+                    <span className="text-[10px] bg-[var(--mp-cta-blue)]/10 text-[var(--mp-cta-blue)] px-2 py-0.5 rounded font-medium truncate max-w-[160px] inline-block">
+                      {q.topic?.slice(0, 20) || "---"}
+                    </span>
+                  ) },
+                  { key: "question", header: "Question", className: "text-xs text-[var(--mp-fg-muted)] max-w-[300px] lg:truncate", cell: (q) => q.question_preview },
+                  { key: "choices", header: "Choices", align: "center", className: "font-mono text-xs", cell: (q) => q.choices_count || "---" },
+                  { key: "expl", header: "Expl", cardLabel: "Explanation", align: "center", cell: (q) => (q.has_explanation
+                    ? <CheckCircle size={14} className="inline text-[var(--mp-viridian)]" aria-label="Has explanation" />
+                    : <EyeOff size={14} className="inline text-[var(--mp-fg-subtle)]" aria-label="No explanation" />) },
+                  { key: "img", header: "Img", cardLabel: "Image", align: "center", cell: (q) => (q.has_image
+                    ? <Eye size={14} className="inline text-[var(--mp-cta-blue)]" aria-label="Has image" />
+                    : <span className="text-[var(--mp-fg-subtle)] text-xs">---</span>) },
+                  { key: "dates", header: "Exam Dates", className: "text-xs text-[var(--mp-fg-subtle)]", cell: (q) => (q.exam_dates?.length ? q.exam_dates.slice(0, 2).join(", ") + (q.exam_dates.length > 2 ? ` +${q.exam_dates.length - 2}` : "") : "---") },
+                ]}
+                actions={(q) => (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setExpandedQuestion(q.id === expandedQuestion ? null : q.id)}
+                      aria-expanded={expandedQuestion === q.id}
+                      className="mp-btn mp-btn--ghost mp-btn--sm lg:hidden"
+                    >
+                      {expandedQuestion === q.id ? "Hide details" : "Show details"}
+                    </button>
+                    {can("content.moderate") && (
+                      <button
+                        type="button"
+                        onClick={() => startEdit(q)}
+                        className="mp-btn mp-btn--secondary mp-btn--sm inline-flex items-center gap-1"
+                        aria-label={`Edit question #${q.id}`}
                       >
-                        <td className="px-3 py-2.5 font-mono text-xs text-[var(--mp-fg-subtle)]">#{q.id}</td>
-                        <td className="px-3 py-2.5">
-                          <span className="text-[10px] bg-[var(--mp-cta-blue)]/10 text-[var(--mp-cta-blue)] px-2 py-0.5 rounded font-medium truncate max-w-[120px] inline-block">
-                            {q.topic?.slice(0, 20) || "---"}
-                          </span>
-                        </td>
-                        <td className="px-3 py-2.5 text-xs text-[var(--mp-fg-muted)] max-w-[300px] truncate">{q.question_preview}</td>
-                        <td className="px-3 py-2.5 text-center font-mono text-xs">{q.choices_count || "---"}</td>
-                        <td className="px-3 py-2.5 text-center">
-                          {q.has_explanation
-                            ? <CheckCircle size={14} className="inline text-[var(--mp-viridian)]" />
-                            : <EyeOff size={14} className="inline text-[var(--mp-fg-subtle)]" />
-                          }
-                        </td>
-                        <td className="px-3 py-2.5 text-center">
-                          {q.has_image
-                            ? <Eye size={14} className="inline text-[var(--mp-cta-blue)]" />
-                            : <span className="text-[var(--mp-fg-subtle)] text-xs">---</span>
-                          }
-                        </td>
-                        <td className="px-3 py-2.5 text-xs text-[var(--mp-fg-subtle)]">
-                          {q.exam_dates?.length ? q.exam_dates.slice(0, 2).join(", ") + (q.exam_dates.length > 2 ? ` +${q.exam_dates.length - 2}` : "") : "---"}
-                        </td>
-                        <td className="px-3 py-2.5 text-center" onClick={(e) => e.stopPropagation()}>
-                          {can("content.moderate") && <button
-                            onClick={() => startEdit(q)}
-                            className="p-1.5 rounded-md hover:bg-[var(--mp-viridian)]/10 text-[var(--mp-fg-muted)] hover:text-[var(--mp-viridian)] transition-colors"
-                            title="Edit"
-                          >
-                            <Edit3 size={13} />
-                          </button>}
-                        </td>
-                      </tr>
+                        <Edit3 size={13} aria-hidden /> <span>Edit</span>
+                      </button>
+                    )}
+                  </>
+                )}
+                expanded={(q) => (expandedQuestion === q.id ? (
+                  <div className="px-1 py-2">
+              {editingQuestion === q.id ? (
+                <div className="space-y-3">
+                  <h4 className="mp-caption text-[var(--mp-fg)]">Editing Question #{q.id}</h4>
+                  <TextField
+                    label="Topic"
+                    value={(questionEditForm.topic as string) || ""}
+                    onChange={(e) => setQuestionEditForm((prev) => ({ ...prev, topic: e.target.value }))}
+                  />
+                  <Textarea
+                    label="Explanation"
+                    rows={4}
+                    value={(questionEditForm.explanation as string) || ""}
+                    onChange={(e) => setQuestionEditForm((prev) => ({ ...prev, explanation: e.target.value }))}
+                  />
+                  <div className="flex items-center gap-3">
+                    <label className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={!!questionEditForm.is_active}
+                        onChange={(e) => setQuestionEditForm((prev) => ({ ...prev, is_active: e.target.checked }))}
+                        className="accent-[var(--mp-viridian)]"
+                      />
+                      Active
+                    </label>
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={() => handleEdit(q.id)} className="mp-btn mp-btn--primary mp-btn--sm">Save</button>
+                    <button onClick={() => setEditingQuestion(null)} className="mp-btn mp-btn--secondary mp-btn--sm">Cancel</button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {/* Full question text */}
+                  <div>
+                    <p className="text-[10px] text-[var(--mp-fg-subtle)] uppercase tracking-wider mb-1">Question</p>
+                    <p className="text-sm text-[var(--mp-fg)] whitespace-pre-wrap">{q.question}</p>
+                  </div>
 
-                      {/* Expanded Question Detail */}
-                      {expandedQuestion === q.id && (
-                        <tr>
-                          <td colSpan={8} className="px-4 py-4 bg-[var(--mp-surface-sunken)]/50 border-b border-[var(--mp-border)]">
-                            {editingQuestion === q.id ? (
-                              <div className="space-y-3">
-                                <h4 className="mp-caption text-[var(--mp-fg)]">Editing Question #{q.id}</h4>
-                                <TextField
-                                  label="Topic"
-                                  value={(questionEditForm.topic as string) || ""}
-                                  onChange={(e) => setQuestionEditForm((prev) => ({ ...prev, topic: e.target.value }))}
-                                />
-                                <Textarea
-                                  label="Explanation"
-                                  rows={4}
-                                  value={(questionEditForm.explanation as string) || ""}
-                                  onChange={(e) => setQuestionEditForm((prev) => ({ ...prev, explanation: e.target.value }))}
-                                />
-                                <div className="flex items-center gap-3">
-                                  <label className="flex items-center gap-2 text-sm">
-                                    <input
-                                      type="checkbox"
-                                      checked={!!questionEditForm.is_active}
-                                      onChange={(e) => setQuestionEditForm((prev) => ({ ...prev, is_active: e.target.checked }))}
-                                      className="accent-[var(--mp-viridian)]"
-                                    />
-                                    Active
-                                  </label>
-                                </div>
-                                <div className="flex gap-2">
-                                  <button onClick={() => handleEdit(q.id)} className="mp-btn mp-btn--primary mp-btn--sm">Save</button>
-                                  <button onClick={() => setEditingQuestion(null)} className="mp-btn mp-btn--secondary mp-btn--sm">Cancel</button>
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="space-y-3">
-                                {/* Full question text */}
-                                <div>
-                                  <p className="text-[10px] text-[var(--mp-fg-subtle)] uppercase tracking-wider mb-1">Question</p>
-                                  <p className="text-sm text-[var(--mp-fg)] whitespace-pre-wrap">{q.question}</p>
-                                </div>
-
-                                {/* Choices */}
-                                {q.choices && q.choices.length > 0 && (
-                                  <div>
-                                    <p className="text-[10px] text-[var(--mp-fg-subtle)] uppercase tracking-wider mb-1">Choices</p>
-                                    <div className="space-y-1">
-                                      {q.choices.map((c, i) => (
-                                        <div key={i} className={`flex items-start gap-2 text-sm px-2 py-1 rounded ${c.correct ? "bg-[var(--mp-viridian)]/10 text-[var(--mp-viridian)] font-medium" : "text-[var(--mp-fg-muted)]"}`}>
-                                          <span className="font-mono text-xs mt-0.5">{String.fromCharCode(65 + i)}.</span>
-                                          <span>{c.text}</span>
-                                          {c.correct && <CheckCircle size={14} className="flex-shrink-0 mt-0.5" />}
-                                        </div>
-                                      ))}
-                                    </div>
-                                  </div>
-                                )}
-
-                                {/* Answer */}
-                                {q.answer && (
-                                  <div>
-                                    <p className="text-[10px] text-[var(--mp-fg-subtle)] uppercase tracking-wider mb-1">Answer</p>
-                                    <p className="text-sm text-[var(--mp-viridian)] font-medium">{q.answer}</p>
-                                  </div>
-                                )}
-
-                                {/* Explanation */}
-                                <div>
-                                  <p className="text-[10px] text-[var(--mp-fg-subtle)] uppercase tracking-wider mb-1">Explanation</p>
-                                  <p className="text-sm text-[var(--mp-fg-muted)] whitespace-pre-wrap">{q.explanation || "No explanation yet."}</p>
-                                </div>
-
-                                {/* Metadata */}
-                                <div className="flex flex-wrap gap-4 text-xs text-[var(--mp-fg-subtle)]">
-                                  <span>Anki: {q.anki_note_id || "---"}</span>
-                                  <span>Tags: {q.tags?.join(", ") || "---"}</span>
-                                  <span>Active: {q.is_active ? "Yes" : "No"}</span>
-                                  {q.image_url && (
-                                    <a href={q.image_url} target="_blank" rel="noopener noreferrer" className="text-[var(--mp-cta-blue)] underline">View Image</a>
-                                  )}
-                                </div>
-                              </div>
-                            )}
-                          </td>
-                        </tr>
-                      )}
-                    </Fragment>
-                  ))}
-                  {questions.length === 0 && (
-                    <tr>
-                      <td colSpan={8} className="px-4 py-2">
-                        <EmptyState
-                          tone="neutral"
-                          icon={<FileText className="w-10 h-10" aria-hidden />}
-                          title="No questions match these filters"
-                          body="Try clearing a filter or adjusting your search."
-                        />
-                      </td>
-                    </tr>
+                  {/* Choices */}
+                  {q.choices && q.choices.length > 0 && (
+                    <div>
+                      <p className="text-[10px] text-[var(--mp-fg-subtle)] uppercase tracking-wider mb-1">Choices</p>
+                      <div className="space-y-1">
+                        {q.choices.map((c, i) => (
+                          <div key={i} className={`flex items-start gap-2 text-sm px-2 py-1 rounded ${c.correct ? "bg-[var(--mp-viridian)]/10 text-[var(--mp-viridian)] font-medium" : "text-[var(--mp-fg-muted)]"}`}>
+                            <span className="font-mono text-xs mt-0.5">{String.fromCharCode(65 + i)}.</span>
+                            <span>{c.text}</span>
+                            {c.correct && <CheckCircle size={14} className="flex-shrink-0 mt-0.5" />}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   )}
-                </tbody>
-              </table>
-            </div>
+
+                  {/* Answer */}
+                  {q.answer && (
+                    <div>
+                      <p className="text-[10px] text-[var(--mp-fg-subtle)] uppercase tracking-wider mb-1">Answer</p>
+                      <p className="text-sm text-[var(--mp-viridian)] font-medium">{q.answer}</p>
+                    </div>
+                  )}
+
+                  {/* Explanation */}
+                  <div>
+                    <p className="text-[10px] text-[var(--mp-fg-subtle)] uppercase tracking-wider mb-1">Explanation</p>
+                    <p className="text-sm text-[var(--mp-fg-muted)] whitespace-pre-wrap">{q.explanation || "No explanation yet."}</p>
+                  </div>
+
+                  {/* Metadata */}
+                  <div className="flex flex-wrap gap-4 text-xs text-[var(--mp-fg-subtle)]">
+                    <span>Anki: {q.anki_note_id || "---"}</span>
+                    <span>Tags: {q.tags?.join(", ") || "---"}</span>
+                    <span>Active: {q.is_active ? "Yes" : "No"}</span>
+                    {q.image_url && (
+                      <a href={q.image_url} target="_blank" rel="noopener noreferrer" className="text-[var(--mp-cta-blue)] underline">View Image</a>
+                    )}
+                  </div>
+                </div>
+              )}
+                  </div>
+                ) : null)}
+              />
+            )}
           </div>
 
           {/* Pagination — .mp-btn pills */}
