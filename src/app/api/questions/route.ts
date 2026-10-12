@@ -510,6 +510,7 @@ export async function GET(req: NextRequest) {
           .slice(0, Math.min(limit, 200))
         if (openIds.length === 0) return NextResponse.json([])
         let openQuery = sb.from('questions').select('*').in('id', openIds).eq('is_active', true)
+        openQuery = applyFilters(openQuery, filters)
         openQuery = withMcq(openQuery)
         const { data, error } = await openQuery
         if (error) {
@@ -599,6 +600,7 @@ export async function GET(req: NextRequest) {
   // already 402'd above; for practiceMode='all' we don't interject with
   // SR-due questions because the spaced-rep scheduler is itself a Pro
   // feature.
+  let reviewSkipped: { skippedIds: number[]; skipped: { multi: number; option_dependent: number } } | null = null
   if (filters.practiceMode === 'all' && userId && !userId.startsWith('guest_') && !free) {
     const reviewQuery = sb
       .from('user_question_progress')
@@ -619,6 +621,9 @@ export async function GET(req: NextRequest) {
         if (!flashcardMode) return NextResponse.json(attachOptions(data))
         const split = splitFlashcards(attachOptions(data))
         if (split.cards.length > 0) return flashcardResponse(split.cards.slice(0, limit), split)
+        // Every due card needs its options: report them with the random batch
+        // so the page excludes them instead of re-reading them each time.
+        reviewSkipped = split
       }
     }
   }
@@ -698,7 +703,11 @@ export async function GET(req: NextRequest) {
   if (flashcardMode) {
     // Up to three random batches; the skipped ids come back so the page adds
     // them to excludeIds and never pays a round trip per skipped card.
-    const total = { cards: [] as Record<string, unknown>[], skippedIds: [] as number[], skipped: { multi: 0, option_dependent: 0 } }
+    const total = {
+      cards: [] as Record<string, unknown>[],
+      skippedIds: [...(reviewSkipped?.skippedIds ?? [])],
+      skipped: { multi: reviewSkipped?.skipped.multi ?? 0, option_dependent: reviewSkipped?.skipped.option_dependent ?? 0 },
+    }
     for (let attempt = 0; attempt < 3 && total.cards.length === 0; attempt += 1) {
       const { data, error } = await randomBatch(cardBatch)
       if (error) return NextResponse.json({ error: error.message }, { status: 500 })

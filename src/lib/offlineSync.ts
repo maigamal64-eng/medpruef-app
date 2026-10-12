@@ -60,6 +60,8 @@ export type ReplayDecision = "saved" | "drop_unavailable" | "drop_plan" | "drop_
 export function replayDecision(status: number, body: { error?: unknown } | null = null): ReplayDecision {
   if (status >= 200 && status < 300) return "saved";
   if (status === 401 || status === 403) return "keep_auth";
+  // Timeouts and rate limits (edge or platform) are transient.
+  if (status === 408 || status === 425 || status === 429) return "retry";
   if (status === 402) return "drop_plan";
   if (status === 404) return "drop_unavailable";
   if (status === 409) {

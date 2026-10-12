@@ -14,6 +14,8 @@ describe("offline answer replay (UX-PRA-45)", () => {
     expect(replayDecision(400)).toBe("drop_unavailable");
     expect(replayDecision(500)).toBe("retry");
     expect(replayDecision(503)).toBe("retry");
+    expect(replayDecision(429)).toBe("retry");
+    expect(replayDecision(408)).toBe("retry");
     expect(MAX_REPLAY_ATTEMPTS).toBe(5);
   });
   it("says what was counted and what was dropped, never a blanket success", () => {

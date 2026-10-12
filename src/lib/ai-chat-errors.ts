@@ -16,8 +16,12 @@ export interface AiFailure {
   resetAt: Date | null;
 }
 
-/** Client timeout for one AI explanation request (below the 25 s authFetch default). */
-export const AI_CLIENT_TIMEOUT_MS = 15_000;
+/**
+ * Client timeout for one AI explanation request. It must outlast the server's
+ * worst case (/api/ai-chat: primary model 25 s, then the fallback 20 s), or a
+ * retry would start a second paid generation while the first still runs.
+ */
+export const AI_CLIENT_TIMEOUT_MS = 50_000;
 
 export function classifyAiFailure(input: {
   status?: number | null;

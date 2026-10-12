@@ -459,7 +459,7 @@ function QuizContent() {
       if (effectiveMode === "wrong" || effectiveMode === "review" || config.filter === "unused") {
         setLoadError(true);
         setLoadErrorReason(lang === "de"
-          ? "Falsche und fällige Fragen brauchen deine Online-Lernhistorie. Verbinde dich erneut, um diesen Modus zu nutzen."
+          ? "Falsche und fällige Fragen brauchen Ihre Online-Lernhistorie. Verbinden Sie sich erneut, um diesen Modus zu nutzen."
           : "Wrong-answer and due-review queues need your online study history. Reconnect to use this mode.");
         return null;
       }
@@ -716,6 +716,7 @@ function QuizContent() {
   const skipReported = useCallback(() => {
     if (!question || answered || saving || saveError || reportedId !== question.id) return;
     if (!seenIdsRef.current.includes(question.id)) seenIdsRef.current.push(question.id);
+    prefetchPaywall.current = null;
     setReportedId(null);
     setLoading(true);
     void fetchQuestion().then((q) => {
@@ -953,6 +954,7 @@ function QuizContent() {
   }, [saving, saveError]);
 
   const restart = () => {
+    prefetchPaywall.current = null;
     setQuestion(null);
     setNextQuestion(null);
     setAnswered(false);
@@ -1207,7 +1209,7 @@ function QuizContent() {
 
               <OfflineSyncNotice lang={lang} />
               {(saving || saveError) && <div role="status" className="card p-4 mb-4 text-sm">
-                {saving ? (lang === "de" ? "Antwort wird gespeichert…" : "Saving your answer…") : (lang === "de" ? "Antwort noch nicht als gespeichert bestätigt. Bitte erneut versuchen, bevor du weitergehst." : "Your answer has not been confirmed saved. Retry before continuing.")}
+                {saving ? (lang === "de" ? "Antwort wird gespeichert…" : "Saving your answer…") : (lang === "de" ? "Antwort noch nicht als gespeichert bestätigt. Bitte erneut versuchen, bevor Sie weitergehen." : "Your answer has not been confirmed saved. Retry before continuing.")}
                 {saveError && <button className="mp-btn mp-btn--primary mt-2" onClick={() => { const pending = pendingAnswer.current; if (pending) void handleAnswer(pending.correct, pending.selected); }}>{lang === "de" ? "Speichern erneut versuchen" : "Retry saving"}</button>}
               </div>}
               {quizFinished ? (
@@ -1253,10 +1255,10 @@ function QuizContent() {
                     <div role="status" className="mp-card p-4 flex flex-wrap items-center justify-between gap-3 text-sm">
                       <span>{t("a23_quiz_slow", lang)}</span>
                       <span className="flex gap-2">
-                        <button type="button" className="mp-btn mp-btn--secondary min-h-11" onClick={() => {
-                          setSlowLoad(false);
-                          void fetchQuestion().then((q) => { setQuestion(q); }).finally(() => setLoading(false));
-                        }}>{t("a23_quiz_slow_retry", lang)}</button>
+                        {/* A reload restarts the stuck request; the saved trail
+                            resumes the session, and no second fetch can race
+                            the first one and swap the question. */}
+                        <button type="button" className="mp-btn mp-btn--secondary min-h-11" onClick={() => window.location.reload()}>{t("a23_quiz_slow_retry", lang)}</button>
                         <Link href="/" className="mp-btn mp-btn--ghost min-h-11">{t("a23_quiz_slow_back", lang)}</Link>
                       </span>
                     </div>
@@ -1267,7 +1269,7 @@ function QuizContent() {
               ) : !question ? (
                 <div className="text-center py-12">
                   <Inbox className="w-12 h-12 text-[var(--mp-fg-subtle)] mx-auto mb-4" />
-                  <p className="text-[var(--mp-fg-muted)]">{loadError ? (lang === "de" ? "Fragen konnten nicht geladen werden. Bitte prüfe deine Verbindung und versuche es erneut." : "Questions could not be loaded. Check your connection and retry.") : effectiveMode === "unseen" ? (lang === "de" ? "Alle verfügbaren Fragen in dieser Auswahl sind bearbeitet. Wiederhole nur, wenn du möchtest." : "You have covered all available questions in this selection. Review only when you choose.") : effectiveMode === "review" ? (lang === "de" ? "Keine fälligen Wiederholungen in dieser Auswahl." : "No due reviews in this selection.") : t("no_questions", lang)}</p>
+                  <p className="text-[var(--mp-fg-muted)]">{loadError ? (lang === "de" ? "Fragen konnten nicht geladen werden. Bitte prüfen Sie Ihre Verbindung und versuchen Sie es erneut." : "Questions could not be loaded. Check your connection and retry.") : effectiveMode === "unseen" ? (lang === "de" ? "Alle verfügbaren Fragen in dieser Auswahl sind bearbeitet. Wiederholen Sie nur, wenn Sie möchten." : "You have covered all available questions in this selection. Review only when you choose.") : effectiveMode === "review" ? (lang === "de" ? "Keine fälligen Wiederholungen in dieser Auswahl." : "No due reviews in this selection.") : t("no_questions", lang)}</p>
                   {loadError && <button className="mp-btn mp-btn--primary mt-4" onClick={() => {
                     setLoading(true);
                     setLoadError(false);

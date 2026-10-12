@@ -22,6 +22,7 @@ import BottomNav from '@/components/BottomNav';
 import { getStoredSession } from '@/lib/auth';
 import { useSignedInRoute } from '@/lib/hooks/useSignedInRoute';
 import { type MistakeState } from '@/lib/mistakes';
+import { safeNext } from '@/lib/auth-entry';
 
 interface MistakeRow {
   id: number;
@@ -53,7 +54,8 @@ function MistakeList() {
   const examSource = params.get('examSource') || 'kenntnispruefung';
   const topic = params.get('topic');
   const returnTo = params.get('returnTo');
-  const backHref = returnTo && returnTo.startsWith('/') && !returnTo.startsWith('//') ? returnTo : '/';
+  // Same-site paths only (safeNext rejects //, backslashes and control characters).
+  const backHref = safeNext(returnTo, '/');
   const lang = useLang();
   const [state, setState] = useState<MistakeState>('open');
   const [rows, setRows] = useState<MistakeRow[]>([]);

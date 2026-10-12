@@ -200,7 +200,7 @@ export default function QuestionCard({
   // UX-PRA-17 B: on touch, a tap that ends a scroll or a drag is not an
   // answer. Ignore option taps within 150 ms of a scroll and after the finger
   // moved more than 10 px.
-  const touchGuard = useRef({ x: 0, y: 0, moved: false, lastScroll: 0 });
+  const touchGuard = useRef({ x: 0, y: 0, moved: false, lastScroll: 0, touchAt: 0 });
   useEffect(() => {
     const onScroll = () => { touchGuard.current.lastScroll = Date.now(); };
     window.addEventListener("scroll", onScroll, { passive: true, capture: true });
@@ -211,13 +211,20 @@ export default function QuestionCard({
     touchGuard.current.x = touch?.clientX ?? 0;
     touchGuard.current.y = touch?.clientY ?? 0;
     touchGuard.current.moved = false;
+    touchGuard.current.touchAt = Date.now();
   };
   const onOptionTouchMove = (e: React.TouchEvent) => {
     const touch = e.touches[0];
     if (!touch) return;
     if (Math.abs(touch.clientX - touchGuard.current.x) > 10 || Math.abs(touch.clientY - touchGuard.current.y) > 10) touchGuard.current.moved = true;
   };
-  const tapIsAccidental = () => touchGuard.current.moved || Date.now() - touchGuard.current.lastScroll < 150;
+  // Only a click that a touch produced is checked; mouse, wheel and keyboard
+  // activation are never swallowed.
+  const tapIsAccidental = () => {
+    const g = touchGuard.current;
+    if (Date.now() - g.touchAt > 1000) return false;
+    return g.moved || g.touchAt - g.lastScroll < 150;
+  };
 
 
   // Load persisted note + favorite state on question change

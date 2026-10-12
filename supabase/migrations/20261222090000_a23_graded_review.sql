@@ -118,7 +118,6 @@ DECLARE
   v_new_streak integer;
   v_new_day boolean;
   v_exam date;
-  v_days integer;
 BEGIN
   SELECT * INTO v_question
   FROM public.questions
@@ -350,7 +349,7 @@ BEGIN
       RAISE EXCEPTION 'IDEMPOTENCY_KEY_CONFLICT' USING ERRCODE = 'P0001';
     END IF;
     SELECT count(*) INTO v_cards_today FROM public.flashcard_reviews
-    WHERE user_id = p_user_id AND (created_at AT TIME ZONE 'Europe/Vienna')::date = v_today;
+    WHERE user_id = p_user_id AND created_at >= (v_today::timestamp AT TIME ZONE 'Europe/Vienna');
     SELECT * INTO v_gam FROM public.user_gamification WHERE user_id = p_user_id;
     RETURN jsonb_build_object('saved', true, 'duplicate', true, 'kind', 'flashcard', 'xp', 0,
       'scheduled', v_existing.scheduled, 'intervalDays', v_existing.interval_days,
@@ -416,7 +415,7 @@ BEGIN
   UPDATE public.users SET last_active_date = v_today WHERE id = p_user_id;
 
   SELECT count(*) INTO v_cards_today FROM public.flashcard_reviews
-  WHERE user_id = p_user_id AND (created_at AT TIME ZONE 'Europe/Vienna')::date = v_today;
+  WHERE user_id = p_user_id AND created_at >= (v_today::timestamp AT TIME ZONE 'Europe/Vienna');
 
   RETURN jsonb_build_object('saved', true, 'duplicate', false, 'kind', 'flashcard', 'xp', 0,
     'scheduled', coalesce(p_schedule, false), 'intervalDays', v_days,
