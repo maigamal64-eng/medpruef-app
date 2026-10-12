@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useState } from "react";
 import { getStoredSession } from "@/lib/auth";
 import { authFetch } from "@/lib/authFetch";
 
@@ -32,7 +32,7 @@ function stored(userId: string): Cached | null {
   } catch { /* Storage is optional. */ }
   return null;
 }
-/** The hook initializes synchronously from a user-scoped session value. */
+/** The user-scoped session value the hook applies right after hydration. */
 export function seedMentorAvailability(): MentorAvailability {
   const user = currentUserId();
   return user ? stored(user)?.value ?? "unknown" : "hidden";
@@ -102,7 +102,12 @@ export function probeMentorAvailability(force = false, isRetry = false): Promise
 }
 
 export function useMentorAvailability(): MentorAvailability {
-  const [state, setState] = useState<MentorAvailability>(seedMentorAvailability);
+  // The first render matches the server ("hidden": the server has no session),
+  // then the user-scoped session value is applied before paint. Seeding it in
+  // useState made a returning learner's nav differ from the server HTML
+  // (hydration error #418 on the second page load).
+  const [state, setState] = useState<MentorAvailability>("hidden");
+  useLayoutEffect(() => { setState(seedMentorAvailability()); }, []);
   useEffect(() => {
     let live = true;
     const listener = (value: MentorAvailability) => { if (live) setState(value); };

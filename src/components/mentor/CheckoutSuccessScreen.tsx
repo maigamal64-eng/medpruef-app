@@ -92,10 +92,13 @@ export default function CheckoutSuccessScreen() {
   useEffect(() => {
     if (session.userId) trackMentor("mentor_checkout_return", { entry: "checkout", lang, status: s });
   }, [session.userId, lang, s]);
-  const Icon = s === "granted" ? CheckCircle2 : s === "failed" ? XCircle : s === "slow" ? Clock : Loader2;
+  // MUX-84: money arrived and waits for a manual unlock: a clock, not an error mark.
+  const manual = s === "failed" && failure === "needs_manual";
+  const Icon = s === "granted" ? CheckCircle2 : manual ? Clock : s === "failed" ? XCircle : s === "slow" ? Clock : Loader2;
   const tone =
     s === "granted"
       ? "border-[var(--mp-viridian)]/30 bg-[var(--mp-success-bg)] text-[var(--mp-viridian)]"
+      : manual ? "border-[var(--mp-status-warning)]/30 bg-[var(--mp-warning-bg)] text-[var(--mp-warning-dk)]"
       : s === "failed"
         ? "border-[var(--mp-error)]/30 bg-[var(--mp-error-bg)] text-[var(--mp-error)]"
         : s === "slow" ? "border-[var(--mp-status-warning)]/30 bg-[var(--mp-warning-bg)] text-[var(--mp-warning-dk)]" : "border-[var(--mp-border)] bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-muted)]";
@@ -124,7 +127,7 @@ export default function CheckoutSuccessScreen() {
           <div role="status" aria-live="polite" aria-atomic="true" className="mt-3 rounded-lg bg-[var(--mp-surface-sunken)] p-3 text-[13px] leading-relaxed text-[var(--mp-fg-muted)]">
             <span className="sr-only">{failed?.title ?? mentorT(title, lang)}. </span>
             {(s === "pending" || s === "slow") && packageCopy("noRepeat", lang)}
-            {failed && <><span className="block text-[14px] text-[var(--mp-fg)]">{failed.body}</span><span className="mt-1 block">{failed.support}</span></>}
+            {failed && <><span className="block text-[14px] text-[var(--mp-fg)]">{failed.body}</span>{!manual && <span className="mt-1 block">{failed.support}</span>}</>}
           </div>
           {failed?.reference && <div className="mt-2 flex items-center justify-center gap-2 text-[12px] text-[var(--mp-fg-muted)]"><code dir="ltr" className="break-all">{failed.reference}</code><button type="button" onClick={() => void copyRef()} className="mp-btn mp-btn--ghost min-h-11 shrink-0 text-[12px]">{a39T(copied ? "copied" : "copy_ref", lang)}</button></div>}
 

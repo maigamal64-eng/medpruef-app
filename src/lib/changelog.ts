@@ -26,6 +26,18 @@ export const CHANGELOG: ChangelogEntry[] = [
   "date": "2026-10-12",
   "tag": "admin",
   "title": {
+    "de": "KI-Mentor: erster Besuch mit Preis und Beispielantwort, Fragekarte, Heute-Karte, klare Zahlungsfehler (ausgeschaltet)",
+    "en": "AI mentor: first visit with price and sample answer, question card, Today card, clear payment errors (switched off)"
+  },
+  "description": {
+    "de": "Ohne Credits zeigt der Mentor den Preis aus dem Paket und eine kostenlose Beispielantwort aus einer geprüften Quelle; das Eingabefeld bleibt mit Begründung geschlossen. Der Gratis-Test ist als solcher beschriftet und endet mit „Das war Ihr Gratis-Test“. Bei einer besprochenen Frage bleiben Stamm und Antworten sichtbar, Ihre Wahl und die richtige Antwort nur nach dem Beantworten. Eine Erklärung lässt sich als Lernkarte speichern. Eine kostenlose Heute-Karte zeigt Tage bis zur Prüfung, das schwächste Fachgebiet und fällige Wiederholungen. Paketkarten nennen Verlängerung und die 3 Tage Nachfrist. Eine fehlgeschlagene Zahlung sagt, was passiert ist (abgelehnt, erstattet oder manuelle Freischaltung mit Referenz). Einträge auf der Übungsfrage, auf Start, bei Fehlern und Terminen sowie eine Mentor-Karte in den Einstellungen erscheinen nur, wenn der Mentor für Sie freigeschaltet ist. Admin: Feedback-Filter „Mentor only“. Öffentliche Texte (Preise, Datenschutz, AGB, FAQ) bleiben hinter NEXT_PUBLIC_MENTOR_PUBLIC_COPY verborgen. Der Mentor bleibt ohne Umgebungsschalter aus.",
+    "en": "Without credits the mentor shows the price from the package and a free sample answer from a checked source; the composer stays closed with a reason. The free trial is labelled as such and ends with \"That was your free trial\". A discussed question keeps its stem and options visible, your choice and the key only after answering. An explanation can be saved as a flashcard. A free Today card shows days to the exam, the weakest topic and due reviews. Package cards state renewal and the 3-day grace. A failed payment says what happened (declined, refunded or manual unlock with a reference). Entries on the practice question, Home, mistakes and exam dates and a mentor card in Settings appear only when the mentor is switched on for you. Admin: feedback filter \"Mentor only\". Public copy (pricing, privacy, terms, FAQ) stays hidden behind NEXT_PUBLIC_MENTOR_PUBLIC_COPY. The mentor itself stays off without environment switches."
+  }
+},
+{
+  "date": "2026-10-12",
+  "tag": "admin",
+  "title": {
     "de": "KI-Mentor: ehrliche Abrechnung, Ausblenden statt Stopp, getrennte Kostengrenzen (ausgeschaltet)",
     "en": "AI mentor: honest billing, Hide instead of Stop, separate spend caps (switched off)"
   },
