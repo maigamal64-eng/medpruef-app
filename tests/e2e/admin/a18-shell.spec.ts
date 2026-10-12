@@ -24,7 +24,7 @@ const overview = {
     feedback_new: 0,
     ai_chat_1h: { requests: 4, completed: 4, failed: 0, avg_latency_ms: 2100 },
     telegram_activation: { registered: 77, confirmed: 30 },
-    crons: { "trial-reminder": { lastStatus: "succeeded", lastStartedAt: recent } },
+    crons: [{ key: "trial-reminder", label: "Trial reminder and expiry sweep", state: "ok", tone: "ok", text: "OK: last run 1 h ago" }],
     recent_events_aggregate: { total_last_24h: 853 },
   },
   needs: {

@@ -160,6 +160,8 @@ export default function AdminOverviewPage() {
   if (!can("overview.read")) return <div className="p-6"><div className="rounded-lg border border-red-500/40 bg-red-500/10 p-4 text-sm">Your admin role does not include access to the overview.</div></div>;
 
   const tiles = snapshot?.tiles;
+  // a19: the jobs list is an array; anything else (an older payload) shows the skeleton, never a crash.
+  const cronJobs = Array.isArray(tiles?.crons) ? tiles.crons : null;
   const blockFailed = (name: string) => overviewDown || failed.has(name);
 
   return (
@@ -191,7 +193,7 @@ export default function AdminOverviewPage() {
       {(can("system.read") || can("revenue.read")) && (
         <SystemLine
           health={tiles?.payment_health ?? null}
-          crons={tiles?.crons ?? null}
+          crons={cronJobs}
           showPayments={can("revenue.read")}
           showCrons={can("system.read")}
           paymentsFailed={blockFailed("money")}
@@ -239,7 +241,7 @@ export default function AdminOverviewPage() {
             <section className="space-y-3">
               <SectionHeading title="Platform" icon={Activity} hint="Signals without their own page; not links" />
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {can("system.read") && (blockFailed("crons") ? <FailedTile label="Scheduled jobs" icon={Gauge} onRetry={() => void hydrate()} /> : tiles?.crons ? <CronsTile crons={tiles.crons} /> : <TileSkeleton />)}
+                {can("system.read") && (blockFailed("crons") ? <FailedTile label="Scheduled jobs" icon={Gauge} onRetry={() => void hydrate()} /> : cronJobs ? <CronsTile crons={cronJobs} /> : <TileSkeleton />)}
                 {can("system.read") && (blockFailed("ai_chat") ? <FailedTile label="AI chat (60 min)" icon={Bot} onRetry={() => void hydrate()} /> : tiles?.ai_chat_1h ? <AIChatHealthTile initial={tiles.ai_chat_1h} /> : <TileSkeleton />)}
                 {can("system.read") && (blockFailed("telegram") ? <FailedTile label="Telegram bot activation" icon={Activity} onRetry={() => void hydrate()} /> : tiles?.telegram_activation ? <TelegramActivationTile initial={tiles.telegram_activation} /> : <TileSkeleton />)}
                 {can("users.read") && (blockFailed("free_limit") ? <FailedTile label="Free limit reached today" icon={ShieldAlert} onRetry={() => void hydrate()} /> : typeof tiles?.free_limit_hits_today === "number" ? <FreeLimitTile count={tiles.free_limit_hits_today} /> : <TileSkeleton />)}

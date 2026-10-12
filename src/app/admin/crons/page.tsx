@@ -48,8 +48,8 @@ function AdminCronsPageContent() {
     try {
       const res = await fetch("/api/admin/crons", { cache: "no-store" });
       const body = await res.json().catch(() => null);
-      if (!res.ok || !body || !Array.isArray(body.jobs) || !Array.isArray(body.items)) throw new Error(body?.error || `HTTP ${res.status}`);
-      setJobs(body.jobs);
+      if (!res.ok || !body || !Array.isArray(body.items)) throw new Error(body?.error || `HTTP ${res.status}`);
+      setJobs(Array.isArray(body.jobs) ? body.jobs : []);
       setItems(body.items);
       setTotal(typeof body.total === "number" ? body.total : null);
       setUpdatedAt(Date.now());
@@ -86,7 +86,7 @@ function AdminCronsPageContent() {
         <div className="space-y-4">
           <section aria-labelledby="cron-jobs-h" className="rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)]">
             <h2 id="cron-jobs-h" className="border-b border-[var(--mp-border-subtle)] px-4 py-3 text-sm font-semibold text-[var(--mp-fg)]">
-              {attention.length === 0 ? "Jobs: nothing late or failing" : `Jobs: ${attention.length} need${attention.length === 1 ? "s" : ""} attention`}
+              {jobs.length === 0 ? "Jobs: no schedule data" : attention.length === 0 ? "Jobs: nothing late or failing" : `Jobs: ${attention.length} need${attention.length === 1 ? "s" : ""} attention`}
             </h2>
             <ul className="divide-y divide-[var(--mp-border-subtle)]" data-testid="cron-jobs">
               {jobs.map((j) => (
