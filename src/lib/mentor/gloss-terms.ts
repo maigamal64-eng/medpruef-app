@@ -14,10 +14,11 @@ const MAX_TERMS = 3;
 const MAX_TERM_CHARS = 40;
 
 /**
- * Abbreviation with dots ("D.S.", "Rp.", "m.f.") or a Latin-script word (umlauts,
+ * Abbreviation with dots ("D.S.", "m.f.", or a capitalised single one such as
+ * "Rp."; "mg." ending a sentence is not one) or a Latin-script word (umlauts,
  * hyphens), with a letter-code suffix kept ("Vitamin K", "Vitamin B12").
  */
-const TOKEN_RE = /(?:\p{Script=Latin}{1,3}\.){1,4}(?!\p{L})|\p{Script=Latin}[\p{Script=Latin}\p{M}-]*(?: \p{Lu}\d{0,2}(?![\p{L}\p{N}]))?/gu;
+const TOKEN_RE = /(?:\p{Script=Latin}{1,3}\.){2,4}(?!\p{L})|\p{Lu}\p{Script=Latin}{0,2}\.(?!\p{L})|\p{Script=Latin}[\p{Script=Latin}\p{M}-]*(?: \p{Lu}\d{0,2}(?![\p{L}\p{N}]))?/gu;
 
 /**
  * Request words of en/fr/tr that are spelled like German row words (review P2:

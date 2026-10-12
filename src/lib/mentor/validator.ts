@@ -805,7 +805,7 @@ export function stripForeignScriptGlosses(text: string, lang: MentorLang): strin
   const foreign = lang === "ru" || lang === "uk" ? /[\u0600-\u06ff]/u : /[\u0400-\u04ff\u0600-\u06ff]/u;
   if (!foreign.test(text)) return text;
   return text
-    .replace(/\s?\(([^()\n]*)\)/g, (whole, inner: string) => {
+    .replace(/[ \t]?\(([^()\n]*)\)/g, (whole, inner: string) => {
       if (!foreign.test(inner)) return whole;
       const kept = inner.split(/([,;])/);
       const items: string[] = [];
@@ -813,9 +813,11 @@ export function stripForeignScriptGlosses(text: string, lang: MentorLang): strin
         const item = kept[i].trim();
         if (item && !foreign.test(item)) items.push(items.length ? `${kept[i - 1] ?? ","} ${item}` : item);
       }
-      return items.length ? `${whole.startsWith(" ") ? " " : ""}(${items.join("")})` : "";
+      return items.length ? `${/^[ \t]/.test(whole) ? whole[0] : ""}(${items.join("")})` : "\u0000";
     })
-    .replace(/^ +/gm, "");
+    // A bracket removed at the start of a line leaves no leading space; other lines keep their indent.
+    .replace(/(^|\n)\u0000[ \t]*/g, "$1")
+    .replace(/\u0000/g, "");
 }
 
 /** The text without its date values (dates, day-months, month-years), for grounding that may not carry dates. */

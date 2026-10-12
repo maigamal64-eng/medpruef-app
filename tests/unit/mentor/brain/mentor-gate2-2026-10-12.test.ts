@@ -84,6 +84,7 @@ describe("terms the learner named (r3-explain-gloss-*)", () => {
   it("keeps a letter-code suffix and short abbreviations, last named terms first", () => {
     expect(learnerNamedTerms("Объясни. Vitamin K")).toEqual(["Vitamin K"]);
     expect(learnerNamedTerms("Поясни Vitamin B12 и Rp.")).toEqual(["Vitamin B12", "Rp."]);
+    expect(learnerNamedTerms("Explain the dose in mg.")).not.toContain("mg.");
     const corpus = [...vitK.choices.map((c) => c.text), vitK.question, "Rp. Furosemid"].join("\n");
     expect(rowTermsNamed(["Vitamin K"], corpus)).toEqual(["Vitamin K"]);
     expect(rowTermsNamed(["Vitamin K"], "Vitamin Kardiologie")).toEqual([]);
@@ -189,6 +190,7 @@ describe("glosses stay in the answer language (r1-ex-wrong-choice-tr)", () => {
     expect(stripForeignScriptGlosses("Brady (брадикардия) stays.", "ru")).toBe("Brady (брадикардия) stays.");
     expect(stripForeignScriptGlosses("No brackets here.", "tr")).toBe("No brackets here.");
     expect(stripForeignScriptGlosses("(брадикардия) yanlış seçenek.", "tr")).toBe("yanlış seçenek.");
+    expect(stripForeignScriptGlosses("Satz.\n(брадикардия) yanlış.\n  - madde (öğe)", "tr")).toBe("Satz.\nyanlış.\n  - madde (öğe)");
     expect(stripForeignScriptGlosses("Bradykardie (yavaş; брадикардия; kalp atışı)", "tr")).toBe("Bradykardie (yavaş; kalp atışı)");
     expect(stripForeignScriptGlosses("Hypoglykämie (نقص السكر, low blood sugar)", "ar")).toBe("Hypoglykämie (low blood sugar)");
   });
