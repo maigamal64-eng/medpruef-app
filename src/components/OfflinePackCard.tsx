@@ -195,12 +195,12 @@ export default function OfflinePackCard({ lang, examType, userId, onChanged }: P
   const imageCount = summaryData?.images ?? 0;
 
   return (
-    <div className="set-card" style={{ padding: 18 }} data-testid="offline-pack-card">
+    <div className="bg-[var(--mp-surface)] border border-[var(--mp-border-soft)] rounded-[var(--mp-r-card)] shadow-[var(--mp-shadow-card)] p-[18px]" data-testid="offline-pack-card">
       <div className="flex items-start gap-3 mb-4">
-        <div className="sr-ic"><CloudDownload aria-hidden /></div>
+        <div className="w-[34px] h-[34px] rounded-[9px] bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-muted)] flex items-center justify-center flex-shrink-0"><CloudDownload className="w-[18px] h-[18px]" aria-hidden /></div>
         <div className="min-w-0">
-          <h3 className="sr-title">{to("title", lang, { exam: examLabel })}</h3>
-          <p className="sr-sub">{to("intro", lang)}</p>
+          <h3 className="text-[15px] font-semibold text-[var(--mp-fg)]">{to("title", lang, { exam: examLabel })}</h3>
+          <p className="text-[13px] text-[var(--mp-fg-muted)] mt-1">{to("intro", lang)}</p>
         </div>
       </div>
 

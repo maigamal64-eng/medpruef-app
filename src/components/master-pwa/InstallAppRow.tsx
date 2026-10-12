@@ -37,15 +37,18 @@ export default function InstallAppRow({ lang }: { lang: string }) {
   }, []);
 
   if (state === "hidden") return null;
+  // The iOS guide is its own card with its own heading; no card around a card.
+  if (state === "ios") {
+    return <div className="mt-3" data-testid="install-app-row"><IosInstallGuide lang={lang} /></div>;
+  }
 
   return (
-    <div className="set-card mt-3" style={{ padding: 18 }} data-testid="install-app-row">
-      <h3 className="sr-title mb-2">{to("install_label", lang)}</h3>
-      {state === "installed" && <p className="sr-sub">{to("install_installed", lang)}</p>}
-      {state === "ios" && <IosInstallGuide lang={lang} />}
+    <div className="bg-[var(--mp-surface)] border border-[var(--mp-border-soft)] rounded-[var(--mp-r-card)] shadow-[var(--mp-shadow-card)] p-[18px] mt-3" data-testid="install-app-row">
+      <h3 className="text-[15px] font-semibold text-[var(--mp-fg)] mb-2">{to("install_label", lang)}</h3>
+      {state === "installed" && <p className="text-[13px] text-[var(--mp-fg-muted)]">{to("install_installed", lang)}</p>}
       {state === "prompt" && (
         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-          <p className="sr-sub flex-1">{to("install_android", lang)}</p>
+          <p className="text-[13px] text-[var(--mp-fg-muted)] flex-1">{to("install_android", lang)}</p>
           <button
             type="button"
             className="mp-btn mp-btn--primary w-full sm:w-auto min-h-11"
