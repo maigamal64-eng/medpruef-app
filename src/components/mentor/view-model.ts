@@ -15,7 +15,7 @@ import type {
 } from "@/lib/mentor/contract";
 import { MENTOR_LANGS } from "@/lib/mentor/contract";
 import type { MentorKey, MentorUiLang } from "@/lib/i18n-mentor";
-import { mentorT } from "@/lib/i18n-mentor";
+import { hasOwnMentorString, mentorT } from "@/lib/i18n-mentor";
 import type { MentorClientError } from "./api";
 import { shellT } from "./r1-shell-copy";
 import { r3PackageCopy } from "./r3-package-copy";
@@ -204,6 +204,23 @@ export function usageView(u: MentorUsageResponse, lang: MentorUiLang, now: Date 
         showBuy: false,
       };
   }
+}
+
+/**
+ * MUX-99: the server's expected resume date when the monthly breaker rests the
+ * mentor ("Voraussichtlich wieder ab 1. November 2026."). A manual pause has no
+ * date, and a past or invalid date is never shown.
+ */
+export function restingUntilText(u: Pick<MentorUsageResponse, "state" | "resting_until"> | null | undefined, lang: MentorUiLang, now: Date = new Date()): string | null {
+  if (u?.state !== "resting" || !u.resting_until) return null;
+  const t = Date.parse(u.resting_until);
+  if (!Number.isFinite(t) || t <= now.getTime()) return null;
+  // Untranslated languages read the English line, so the date follows it.
+  const textLang: MentorUiLang = hasOwnMentorString("state_resting_until", lang) ? lang : "en";
+  const date = formatDate(u.resting_until, textLang);
+  if (!date) return null;
+  const line = mentorT("state_resting_until", textLang, { date });
+  return `${line.charAt(0).toLocaleUpperCase(uiLocale(textLang))}${line.slice(1)}.`;
 }
 
 /** Consume the server-owned threshold; clients never recreate its grant rule. */

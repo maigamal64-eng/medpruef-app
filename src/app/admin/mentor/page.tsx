@@ -25,6 +25,7 @@ import type { MentorAdminTimezone } from "@/lib/mentor/admin-trends";
 import { ControlsSection } from "./ControlsSection";
 import { BetaSection } from "./BetaSection";
 import { OperationsSection } from "./OperationsSection";
+import { RevenueSection } from "./RevenueSection";
 import { QualitySection } from "./QualitySection";
 import {
   BreakerCard,
@@ -137,6 +138,9 @@ function AdminMentorContent() {
           <BreakerCard summary={summary} />
           <StateChips state={summary.state} />
           <Tiles summary={summary} />
+          <Section title="Revenue next to cost" hint="Mentor payments in EUR, refunds subtracted. Read-only.">
+            <RevenueSection />
+          </Section>
 
           <Section title="Spend per day" hint={`True API cost of settled calls, ${timezone === "UTC" ? "UTC" : "Vienna"} days. Last 14 daily bars shown.`}>
             <SpendByDay timezone={timezone} rows={summary.by_day.slice(range==="today"?-1:range==="7"?-7:-14)} />

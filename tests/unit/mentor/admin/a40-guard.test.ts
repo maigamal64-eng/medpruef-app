@@ -61,6 +61,7 @@ describe("mentor admin routes in the admin permission map", () => {
     expect(permissionForAdminRequest("/api/mentor/admin/operations", "GET")).toBe("revenue.read");
     expect(permissionForAdminRequest("/api/mentor/admin/funnel", "GET")).toBe("revenue.read");
     expect(permissionForAdminRequest("/api/mentor/admin/learner", "GET")).toBe("revenue.read");
+    expect(permissionForAdminRequest("/api/mentor/admin/revenue", "GET")).toBe("revenue.read");
     expect(permissionForAdminRequest("/api/mentor/admin/review", "GET")).toBe("content.read");
     expect(permissionForAdminRequest("/api/mentor/admin/review", "POST")).toBe("content.moderate");
     expect(permissionForAdminRequest("/api/mentor/admin/flags", "GET")).toBe("system.read");

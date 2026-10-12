@@ -24,7 +24,7 @@ import type { MentorClientError } from "./api";
 import PurchaseNotice from "./PurchaseNotice";
 import { rememberMentorCreditHolder } from "./useMentorAvailability";
 import { packageCopy } from "./package-copy";
-import { formatDate } from "./view-model";
+import { formatDate, restingUntilText } from "./view-model";
 import { trackMentor, trackMentorOnce } from "./telemetry";
 import ComingSoonPackages from "./ComingSoonPackages";
 import { cheapestWay } from "./r4-package-state";
@@ -178,7 +178,7 @@ export default function PackagesScreen() {
               </section>
 
               <div className="mt-3"><PurchaseNotice usage={usage.status === "ready" ? usage.value : undefined} lang={lang} /></div>
-              {resting && <RestingPackagesNotice lang={lang} />}
+              {resting && <RestingPackagesNotice lang={lang} until={restingUntilText(usage.status === "ready" ? usage.value : null, lang)} />}
 
 
               {failed && (

@@ -6,7 +6,7 @@ import { getStoredSession } from "@/lib/auth";
 import { mentorT, type MentorUiLang } from "@/lib/i18n-mentor";
 import { loadMentorApi } from "./client";
 
-export default function RestingPackagesNotice({ lang }: { lang: MentorUiLang }) {
+export default function RestingPackagesNotice({ lang, until }: { lang: MentorUiLang; until?: string | null }) {
   const [email, setEmail] = useState(() => getStoredSession()?.user.email ?? "");
   const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const save = async (e: React.FormEvent) => {
@@ -19,7 +19,7 @@ export default function RestingPackagesNotice({ lang }: { lang: MentorUiLang }) 
   };
   return (
     <Alert variant="info" className="mt-4">
-      <p className="text-[13px] leading-relaxed">{mentorT("pkg_resting", lang)}</p>
+      <p className="text-[13px] leading-relaxed">{mentorT("pkg_resting", lang)}{until ? ` ${until}` : ""}</p>
       {status === "saved" ? <p role="status" className="mt-2 text-[13px]">{mentorT("pkg_waitlist_saved", lang)}</p> : (
         <form onSubmit={save} className="mt-3 flex flex-wrap items-end gap-2">
           <label className="min-w-0 flex-1 text-[13px]">

@@ -85,7 +85,7 @@ export function permissionForAdminRequest(
   if (path === "/api/admin/flags") return verb === "GET" ? "system.read" : null;
   // a40 (OW-66): AI Mentor admin. The learner panel, beta search and beta cohort
   // also require a second grant, checked by requireMentorAdmin(req, also).
-  if (["/api/mentor/admin/summary", "/api/mentor/admin/operations", "/api/mentor/admin/funnel", "/api/mentor/admin/learner"].includes(path)) return verb === "GET" ? "revenue.read" : null;
+  if (["/api/mentor/admin/summary", "/api/mentor/admin/operations", "/api/mentor/admin/funnel", "/api/mentor/admin/learner", "/api/mentor/admin/revenue"].includes(path)) return verb === "GET" ? "revenue.read" : null;
   if (path === "/api/mentor/admin/review") return verb === "GET" ? "content.read" : verb === "POST" ? "content.moderate" : null;
   if (path === "/api/mentor/admin/flags") return verb === "GET" ? "system.read" : verb === "POST" ? "system.manage" : null;
   if (path === "/api/mentor/admin/beta") return verb === "GET" || verb === "POST" ? "system.manage" : null;

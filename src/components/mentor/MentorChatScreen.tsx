@@ -30,7 +30,7 @@ import MentorAvatar from "./MentorAvatar";
 import CreditPill from "./CreditPill";
 import ErrorNotice, { useCountdown } from "./ErrorNotice";
 import MentorFrame, { useMentorSession } from "./MentorFrame";
-import { defaultAnswerLang, isAnswerLang, usageView, sanitizeOffers } from "./view-model";
+import { defaultAnswerLang, isAnswerLang, restingUntilText, usageView, sanitizeOffers } from "./view-model";
 import { recoverMentorTurn, type MentorApi } from "./api";
 import PurchaseNotice from "./PurchaseNotice";
 import QuestionContextCard, { choiceWasWrong } from "./QuestionContextCard";
@@ -259,7 +259,7 @@ export default function MentorChatScreen() {
   const blocked = cooling || paused || usage.status !== "ready" || view?.canChat === false;
   const exhausted = usage.status === "ready" && usage.usage.state === "exhausted" ? exhaustedState(usage.usage, offers, lang) : null;
   const firstRun = usage.status === "ready" && usage.usage.state === "none";
-  const blockedReason = cooling ? r3T(limitKind === "day" ? "day" : "minute", lang, { s: waitSeconds }) : paused ? shellT("rest", lang) : exhausted?.composerReason ?? (firstRun ? a39T("composer_none", lang) : usage.status === "error" ? mentorT("err_load_failed", lang) : mentorT("credits_loading", lang));
+  const blockedReason = cooling ? r3T(limitKind === "day" ? "day" : "minute", lang, { s: waitSeconds }) : paused ? [shellT("rest", lang), restingUntilText(usage.status === "ready" ? usage.usage : null, lang)].filter(Boolean).join(" ") : exhausted?.composerReason ?? (firstRun ? a39T("composer_none", lang) : usage.status === "error" ? mentorT("err_load_failed", lang) : mentorT("credits_loading", lang));
   const blockedActionHref = exhausted && canBuy ? exhausted.href : firstRun ? PACKAGES_HREF : null;
   const infoKind = view?.tone === "low" ? "low" : usage.status === "ready" && usage.usage.sources.includes("trial") && view?.expiryText ? "trial" : null;
   const infoText = view?.trialNoticeText ?? (usage.status === "ready" && infoKind === "low" ? lowCreditText(usage.usage, lang) : view?.expiryText ?? "");

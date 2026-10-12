@@ -8,7 +8,6 @@ export function OperationsSection({view = "all"}: {view?: "all" | "facts" | "rea
  useEffect(()=>{void load();},[load]);
  if(error)return <p role="alert">{error}</p>;if(!data)return <p>Loading readiness and fact health…</p>;
  return <div className="space-y-5">
- <p className="rounded-xl border border-[var(--mp-border-subtle)] p-4 text-sm">Net revenue 30 days (EUR): unavailable. Realised margin (%): unavailable until the Whop fee model, EUR cost conversion and payment/clawback attribution are verified. No assumed fee is displayed.</p>
  {view !== "facts" && <details open className="rounded-xl border border-[var(--mp-border-subtle)] p-4"><summary className="cursor-pointer font-semibold">Launch readiness</summary>
  <p className="text-xs my-3">Read-only breaker floor: USD {(data.breaker.floor_micro/1e6).toFixed(2)}. Share of trailing revenue: {data.breaker.net_pct}%. Monthly breaker resets {data.breaker.resting_until.slice(0,16).replace("T"," ")} UTC. <a href="/admin/env" className="underline">Environment settings</a>.</p>
  <p className="text-xs my-3">Checks reflect this server and committed deployment configuration. Money and environment controls are read-only.</p>
