@@ -5,6 +5,7 @@ import { captureServerError } from "@/lib/sentry-capture";
 import { analyticsWritesDisabled } from "@/lib/supabase-resilience";
 import { normalizeEventTimestamp, normalizeTrackedPath } from "@/lib/telemetry-normalize";
 import { isMentorClientEvent, mentorEventData } from "@/lib/mentor/telemetry";
+import { isAllowedEvent, sanitizeEventData, uaClass } from "@/lib/analytics-events";
 
 export const dynamic = "force-dynamic";
 
@@ -124,8 +125,12 @@ export async function POST(req: NextRequest) {
     // a row that will never persist.
     if (events && events.length > 0) {
       // Original user_events table
-      const normalizedEvents = events.filter((e) => !e.type.startsWith("mentor_") || isMentorClientEvent(e.type)).map((e) => {
-        const data: Record<string, unknown> = isMentorClientEvent(e.type) ? mentorEventData(e.data || {}) : { ...(e.data || {}) };
+      // UX-GLOBAL-32: one allowlist; unknown names are dropped and properties
+      // lose identity and free text. Automation traffic is marked, not counted.
+      const agentClass = uaClass(req.headers.get("user-agent"));
+      const normalizedEvents = events.filter((e) => typeof e.type === "string" && isAllowedEvent(e.type) && (!e.type.startsWith("mentor_") || isMentorClientEvent(e.type))).map((e) => {
+        const data: Record<string, unknown> = isMentorClientEvent(e.type) ? mentorEventData(e.data || {}) : sanitizeEventData(e.type, e.data || {});
+        if (agentClass !== "browser") data.ua_class = agentClass;
         if (typeof data.page === "string") {
           const safePage = normalizeTrackedPath(data.page);
           if (safePage) data.page = safePage;

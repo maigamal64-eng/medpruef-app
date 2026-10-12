@@ -2,18 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { analyticsWritesDisabled } from "@/lib/supabase-resilience";
 import { normalizeTrackedPath } from "@/lib/telemetry-normalize";
+import { FUNNEL_EVENTS, sanitizeEventData, uaClass } from "@/lib/analytics-events";
 
 export const dynamic = "force-dynamic";
 
-const EVENTS = new Set([
-  "landing_view",
-  "cta_click",
-  "registration_view",
-  "registration_success",
-  "first_answer",
-  "checkout_intent",
-  "purchase_success",
-]);
+// UX-GLOBAL-32: the anonymous funnel accepts only its part of the one allowlist.
+const EVENTS = new Set<string>(FUNNEL_EVENTS);
 const ATTRIBUTION_KEYS = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "rdt_cid"] as const;
 
 function stringValue(value: unknown, max: number): string | null {
@@ -42,7 +36,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid funnel event" }, { status: 400 });
     }
 
-    const eventData = cleanObject(body.eventData, ["source", "cta", "exam", "tier", "value"], 120);
+    const eventData = sanitizeEventData(eventName, cleanObject(body.eventData, ["source", "cta", "exam", "tier", "value", "surface", "slot", "intent"], 120));
+    const agentClass = uaClass(req.headers.get("user-agent"));
     const attribution = cleanObject(body.attribution, ATTRIBUTION_KEYS, 200);
     const lang = stringValue(body.lang, 24);
     const device = body.device === "mobile" || body.device === "desktop" ? body.device : null;
@@ -57,7 +52,7 @@ export async function POST(req: NextRequest) {
       event_type: `funnel_${eventName}`,
       page: path,
       action: eventName,
-      metadata: { ...eventData, attribution, lang, device, anonymous: true },
+      metadata: { ...eventData, attribution, lang, device, anonymous: true, ...(agentClass !== "browser" ? { ua_class: agentClass } : {}) },
     });
     return new NextResponse(null, { status: 204 });
   } catch {

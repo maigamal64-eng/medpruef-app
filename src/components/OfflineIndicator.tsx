@@ -1,41 +1,43 @@
 "use client";
 
 /**
- * OfflineIndicator — in-flow status strip (inside the root StatusRegion)
- * that appears whenever the browser reports `navigator.onLine === false`.
+ * OfflineIndicator: the one OfflineStatus in the top StatusRegion
+ * (UX-GLOBAL-20). In-flow strip, never a floating pill; in focus mode the
+ * exam shows its own inline status instead.
  *
- * Part of backlog item #7 (offline mode). Users study on trains and
- * hospital floors where the network drops mid-session — this pill is
- * the "don't panic, you've got N questions cached" reassurance signal.
- *
- * Shows only when offline — goes fully hidden (no DOM node) when
- * online, so there's zero visual cost during normal use.
- *
- * Mounts near `CookieBannerMount` in layout.tsx so it's present on
- * every authenticated page. Reads the cached-question count
- * periodically via `countQuestions()`.
+ * Appears only after offline persists for 3 s, in info tone (neutral
+ * surface, info icon); warning tone only when nothing can be done offline.
+ * Counts come from IndexedDB (outbox and stored questions) so they survive a
+ * reload; each sentence is shown only when its behaviour is true
+ * (src/lib/offline-copy.ts). "Wieder online. Alles gesendet." stays visible
+ * for at least 5 s and only when the outbox is empty. Announced once via
+ * announce(); tapping opens Settings > Offline.
  */
 
 import { useFocusMode } from "@/lib/focus-mode";
 import { useEffect, useState } from "react";
-import { CloudOff } from "lucide-react";
-import { countQuestions } from "@/lib/offlineDb";
-import { getUiLang, t, useLang } from "@/lib/i18n";
+import Link from "next/link";
+import { CloudOff, Info } from "lucide-react";
+import { countPendingAnswers, countQuestions } from "@/lib/offlineDb";
+import { getStoredSession } from "@/lib/auth";
+import { useLang } from "@/lib/i18n";
 import { announce } from "@/lib/announce";
+import { offlineView, OFFLINE_SHOW_AFTER_MS, RECONNECT_VISIBLE_MS } from "@/lib/offline-copy";
+import { trackEvent } from "@/lib/tracker";
 
 export default function OfflineIndicator() {
   const focusMode = useFocusMode();
   const lang = useLang();
   const [online, setOnline] = useState(true);
-  const [count, setCount] = useState<number>(0);
+  const [persisted, setPersisted] = useState(false);
+  const [justReconnected, setJustReconnected] = useState(false);
+  const [queued, setQueued] = useState<number | null>(null);
+  const [stored, setStored] = useState<number | null>(null);
 
   useEffect(() => {
-    // Initial online state — guard against SSR.
-    if (typeof navigator !== "undefined") {
-      setOnline(navigator.onLine);
-    }
-    const goOnline = () => { setOnline(true); announce(t("a11_online_again", getUiLang())); };
-    const goOffline = () => { setOnline(false); announce(t("a11_offline_now", getUiLang())); };
+    if (typeof navigator !== "undefined") setOnline(navigator.onLine);
+    const goOnline = () => setOnline(true);
+    const goOffline = () => setOnline(false);
     window.addEventListener("online", goOnline);
     window.addEventListener("offline", goOffline);
     return () => {
@@ -44,40 +46,61 @@ export default function OfflineIndicator() {
     };
   }, []);
 
+  // A blip under 3 s never shows a strip; a reconnect shows its line for 5 s.
   useEffect(() => {
-    // Refresh the cached-question count whenever we flip offline, and
-    // once on mount so the pill is accurate the instant it appears.
+    if (!online) {
+      setJustReconnected(false);
+      const timer = window.setTimeout(() => setPersisted(true), OFFLINE_SHOW_AFTER_MS);
+      return () => window.clearTimeout(timer);
+    }
+    if (persisted) {
+      setPersisted(false);
+      setJustReconnected(true);
+      const timer = window.setTimeout(() => setJustReconnected(false), RECONNECT_VISIBLE_MS);
+      return () => window.clearTimeout(timer);
+    }
+  }, [online, persisted]);
+
+  // Counts from IndexedDB, refreshed while the strip matters.
+  useEffect(() => {
+    if (online && !justReconnected) return;
     let cancelled = false;
-    countQuestions()
-      .then((n) => {
-        if (!cancelled) setCount(n);
-      })
-      .catch(() => {
-        if (!cancelled) setCount(0);
-      });
-    return () => {
-      cancelled = true;
+    const refresh = () => {
+      const userId = getStoredSession()?.user?.id ?? null;
+      countPendingAnswers(userId).then(v => { if (!cancelled) setQueued(v); }).catch(() => { if (!cancelled) setQueued(null); });
+      countQuestions().then(v => { if (!cancelled) setStored(v); }).catch(() => { if (!cancelled) setStored(null); });
     };
-  }, [online]);
+    refresh();
+    const interval = window.setInterval(refresh, 2_000);
+    return () => { cancelled = true; window.clearInterval(interval); };
+  }, [online, justReconnected]);
 
-  if (online || focusMode) return null;
+  const view = offlineView({ online, persisted, queued, stored, justReconnected, lang });
 
-  const label =
-    lang === "de"
-      ? count > 0
-        ? `Offline: ${count.toLocaleString("de-DE")} Fragen auf diesem Gerät verfügbar`
-        : "Offline: keine Fragen auf diesem Gerät gespeichert"
-      : count > 0
-        ? `Offline: ${count.toLocaleString("en-US")} questions available on this device`
-        : "Offline: no questions saved on this device";
+  // Announced once per state change, never on every count refresh.
+  useEffect(() => {
+    if (view.state === "hidden") return;
+    announce(view.text);
+    if (view.state === "offline") trackEvent("offline_state", { state: (queued ?? 0) > 0 ? "queued" : (stored ?? 0) > 0 ? "ready" : "empty" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view.state, view.state === "offline" ? view.tone : ""]);
 
-  // In-flow strip inside the top StatusRegion (UX-GLOBAL-11). Amber is not an
-  // offline colour (UX-GLOBAL-22): neutral surface, info icon. Spoken once
-  // through announce() when the connection drops.
+  if (view.state === "hidden" || focusMode) return null;
+
+  const Icon = view.tone === "warning" ? CloudOff : Info;
   return (
-    <div className="mp-offline-strip">
-      <CloudOff className="w-4 h-4 flex-shrink-0" aria-hidden />
-      <span>{label}</span>
+    <div className={`mp-offline-strip${view.tone === "warning" ? " mp-offline-strip--warning" : ""}`}>
+      <Icon className="w-4 h-4 flex-shrink-0" aria-hidden />
+      <Link href="/settings#offline" className="min-w-0 flex-1 underline-offset-2 hover:underline">
+        <span className="hidden min-[360px]:inline">{view.text}</span>
+        <span className="min-[360px]:hidden">{view.short}</span>
+        {view.detail && <span className="ms-2 font-semibold">{view.detail}</span>}
+      </Link>
+      {view.action && (
+        <Link href={view.action.href} className="font-semibold underline flex-shrink-0 min-h-11 inline-flex items-center">
+          {view.action.label}
+        </Link>
+      )}
     </div>
   );
 }

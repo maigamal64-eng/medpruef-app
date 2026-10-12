@@ -18,6 +18,7 @@
  */
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { safeSessionStorage, safeStorage } from "@/lib/safe-storage";
+import { trackEvent } from "@/lib/tracker";
 
 export type SurfaceKind = "modal" | "inline";
 export type SurfaceId =
@@ -200,6 +201,9 @@ export function useAnnouncementSlot(id: SurfaceId, wants: boolean): boolean {
     const result = currentElection();
     setGranted(result.modal === id || result.inline === id);
   }, [id, wants, tick]);
+  useEffect(() => {
+    if (granted && SURFACES[id].kind === "modal") trackEvent("modal_shown", { id });
+  }, [granted, id]);
   useEffect(() => () => { if (candidates.delete(id)) emit(); }, [id]);
   return wants && granted;
 }

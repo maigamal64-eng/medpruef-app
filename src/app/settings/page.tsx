@@ -1056,7 +1056,7 @@ export default function SettingsPage() {
                 Lets the user pre-download a batch of questions into
                 IndexedDB so the quiz keeps working on trains / hospital
                 WiFi dead zones. */}
-            <div className="set-group set-span2">
+            <div id="offline" className="set-group set-span2 scroll-mt-20">
               <div className="set-label">
                 {lang === "de" ? "Offline-Modus" : "Offline mode"}
               </div>

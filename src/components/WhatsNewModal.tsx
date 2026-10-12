@@ -16,6 +16,12 @@ import { safeStorage } from "@/lib/safe-storage";
 
 const CURRENT_VERSION = '2026-04-22'
 const STORAGE_KEY = 'medpruef_whats_new_seen'
+/**
+ * HOME-41 / ONB-34 (a12): the April 2026 modal is retired. A What's New modal
+ * opens only for an entry flagged as a highlight (set this to its version);
+ * ordinary entries live on /changelog. Until then the modal never opens.
+ */
+const HIGHLIGHT_VERSION: string | null = null
 
 interface Feature {
   icon: React.ReactNode
@@ -94,6 +100,7 @@ export default function WhatsNewModal() {
       // locally, OR (review-2026-04-26-A3) the cross-device gate says
       // we already showed it on another device.
       try {
+        if (HIGHLIGHT_VERSION !== CURRENT_VERSION) return
         const session = JSON.parse(safeStorage.getItem('medpruef_session') || '{}')
         const userId = session?.user?.id || ''
         if (!userId || userId.startsWith('guest_')) return

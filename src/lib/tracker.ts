@@ -21,6 +21,24 @@ function sendTrack(input: RequestInfo | URL, init: RequestInit): Promise<Respons
 
 
 export type TrackEventType = MentorClientEvent
+  // UX-GLOBAL-32 canonical names (src/lib/analytics-events.ts is the allowlist).
+  | "paywall_click"
+  | "plan_selected"
+  | "checkout_started"
+  | "trial_terms_viewed"
+  | "language_changed"
+  | "offline_sync"
+  | "offline_download_started"
+  | "pwa_install_prompt_shown"
+  | "pwa_install_prompt_accepted"
+  | "modal_shown"
+  | "session_started"
+  | "session_completed"
+  | "due_review_started"
+  | "due_count_shown"
+  | "note_review"
+  | "home_ready"
+  | "next_step_shown"
   | "error_state_shown"
   | "home_load_failed"
   | "offline_state"
@@ -224,7 +242,7 @@ export function initTracker(userId: string): void {
     }
   });
 
-  trackEvent("session_start", { userId });
+  trackEvent("session_start", {}); // the row carries user_id; ids never travel in event data (UX-GLOBAL-32)
 }
 
 export function trackEvent(

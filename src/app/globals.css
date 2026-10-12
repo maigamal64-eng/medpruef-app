@@ -2123,6 +2123,9 @@ html[data-onboarding="open"] .mp-status-region > * { display: none; }
   font-size: 13px; font-weight: 600;
 }
 .mp-offline-strip > svg { color: var(--mp-info); }
+.mp-offline-strip a { color: inherit; }
+/* Warning tone only when nothing can be done offline (UX-GLOBAL-20). */
+.mp-offline-strip--warning > svg { color: var(--mp-warning-text, var(--mp-fg)); }
 
 /* Multi-answer rule chip (UX-GLOBAL-25): 13px, icon, above the options.
    Info tokens, not amber (amber means a warning that needs action). */
