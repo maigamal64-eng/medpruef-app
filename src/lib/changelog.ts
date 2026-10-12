@@ -26,6 +26,18 @@ export const CHANGELOG: ChangelogEntry[] = [
   "date": "2026-10-12",
   "tag": "admin",
   "title": {
+    "de": "a44: Gerichtsmedizin vorbereitet (Schalter aus)",
+    "en": "a44: Gerichtsmedizin prepared (flag off)"
+  },
+  "description": {
+    "de": "128 von MedPrüf verfasste und zweifach medizinisch geprüfte Gerichtsmedizin-Fragen liegen als Daten-Artefakt bereit: Thema Gerichtsmedizin in der Fragenbank Pharmakologie / Rezeptierkunde, zuerst inaktiv eingefügt, freigeschaltet nur über das b20-Aktivierungstor in drei Stapeln (127 Fragen, eine wegen Überschneidung zurückgehalten). Neu: mündliche Übung unter /gm-practice (Frage ohne Optionen, 10 Minuten, keine Vorbereitungszeit, Musterantwort mit Quelle, Selbsteinschätzung nur auf dem Gerät) und ein Übungsblock auf /gerichtsmedizin mit Formatkarte (Wien nicht bestätigt, zwei Kandidatenberichte als berichtet). Alles erst mit NEXT_PUBLIC_GM_PRACTICE=true und mindestens 100 aktiven Fragen sichtbar.",
+    "en": "128 Gerichtsmedizin questions written by MedPrüf, each read twice by medical review, are ready as a data artifact: topic Gerichtsmedizin in the Pharmacology / Rezeptierkunde bank, inserted inactive first and activated only through the b20 activation gate in three batches (127 questions, one held for an overlap). New: oral practice at /gm-practice (question without options, 10 minutes, no preparation time, model answer with source, self-assessment kept on the device) and a practice block on /gerichtsmedizin with a format card (Vienna not confirmed, two candidate accounts marked as reported). Visible only with NEXT_PUBLIC_GM_PRACTICE=true and at least 100 active questions."
+  }
+},
+{
+  "date": "2026-10-12",
+  "tag": "admin",
+  "title": {
     "de": "Do-not-email-Liste und Zugangsende-Erinnerung vorbereitet",
     "en": "Do-not-email list and access-ending reminder prepared"
   },

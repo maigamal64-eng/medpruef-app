@@ -4,7 +4,7 @@
   "banks": {
     "kenntnispruefung": { "sources": ["SIP_Anki", "VIENNA_2026_SIP5a"], "public_description": { "de": "Kuratierte Übungsfragen zu SIP4a und SIP5a der MedUni Wien", "en": "Curated practice questions for MedUni Vienna SIP4a and SIP5a" } },
     "kmp_innsbruck": { "sources": ["KOALAMED_KMP6a", "KOALAMED_KMP6b", "KOALAMED_KMP5b"], "public_description": { "de": "Kuratierte klinische Übungsfragen aus dem Innsbrucker Curriculum, keine offiziellen oder erinnerten Prüfungsfragen", "en": "Curated clinical practice questions from the Innsbruck curriculum, not official or recalled exam items" } },
-    "pharma": { "sources": ["PHARMA_REZEPTIERKUNDE_2026"], "public_description": { "de": "Übungsmaterial zur Rezeptierkunde (Pharmakologie)", "en": "Practice material for Rezeptierkunde (pharmacology)" } }
+    "pharma": { "sources": ["PHARMA_REZEPTIERKUNDE_2026", "TRACK_B_AUTHORED_GERICHTSMEDIZIN_2026_10"], "public_description": { "de": "Übungsmaterial zur Rezeptierkunde (Pharmakologie)", "en": "Practice material for Rezeptierkunde (pharmacology)" } }
   },
   "sources": [
     {
@@ -71,6 +71,17 @@
       "keep": "Live as free-recall practice notes; MC publication needs independently authored, reviewed options",
       "refresh_path": "Record permission or replace with authored rows through the activation gate",
       "decision": null,
+      "reviewed_on": "2026-10-12", "review_every_days": 90
+    },
+    {
+      "source_file": "TRACK_B_AUTHORED_GERICHTSMEDIZIN_2026_10", "exam_type": "pharma", "active_rows_at_snapshot": 0,
+      "lineage": "track-B b27 gm-set.json (sha256 9fb55d0c), seeded by scripts/sql/track-a/a44-gm-delivery/gm-seed.sql",
+      "origin": "Original Gerichtsmedizin practice questions written by MedPrüf (track-B, 2026-10-12) from Austrian statutes and open-access articles; topic Gerichtsmedizin in the pharma bank (pick-gm-placement B)",
+      "rights_status": "cleared",
+      "rights_basis": "Original authorship; statutes are free of copyright (§ 7 UrhG); article facts restated, never copied; three rows mirroring published CME questions dropped (b27 rights-basis.json, rights-drop.json)",
+      "keep": "128 rows seeded inactive; 127 activate through the b20 gate on a release GO, b27-078 held for a gate overlap",
+      "refresh_path": "New or reworded rows only as authored rows with two Medic reads through the activation gate",
+      "decision": { "ref": "pick-gm-placement", "by": "triage (auto, under [name]'s go on CNT-25)", "on": "2026-10-11", "text": "Labelled topic Gerichtsmedizin in the pharma bank; release only after every row passed medical review (pick-gm-go A)" },
       "reviewed_on": "2026-10-12", "review_every_days": 90
     }
   ]

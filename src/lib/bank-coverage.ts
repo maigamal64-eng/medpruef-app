@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { isGmRow } from "@/lib/gm-practice";
 
 export const BANKS = ["kenntnispruefung", "kmp_innsbruck", "pharma"] as const;
 export type Bank = typeof BANKS[number];
@@ -19,7 +20,9 @@ export function correctionDate(tag: string): string | null {
 
 export function summarizeBankCoverage(rows: readonly BankMetadata[]) {
   return BANKS.map((bank) => {
-    const items = rows.filter((row) => row.exam_type === bank);
+    // a44: Gerichtsmedizin rows sit in the pharma bank (pick-gm-placement B) but
+    // are not Rezeptierkunde material; they never move the pharma coverage line.
+    const items = rows.filter((row) => row.exam_type === bank && !(bank === "pharma" && isGmRow(row)));
     const months = items.flatMap((row) => row.exam_dates ?? [])
       .filter((value) => /^\d{4}-(0[1-9]|1[0-2])$/.test(value)).sort();
     const updates = items.flatMap((row) => (row.tags ?? []).map(correctionDate))

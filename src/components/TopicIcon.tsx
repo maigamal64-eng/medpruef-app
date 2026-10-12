@@ -11,6 +11,7 @@ import {
   MessageCircle,
   Zap,
   ClipboardList,
+  Scale,
   type LucideIcon,
 } from "lucide-react";
 
@@ -26,6 +27,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   MessageCircle,
   Zap,
   ClipboardList,
+  Scale,
 };
 
 interface Props {

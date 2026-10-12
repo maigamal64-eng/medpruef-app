@@ -20,10 +20,12 @@ interface Props {
   examSource: string;
   userId: string | null;
   lang: string;
+  /** a44: the round's topics; a Gerichtsmedizin-only round shows no note. */
+  topics?: readonly string[];
 }
 
-export default function PharmaMcNote({ examSource, userId, lang }: Props) {
-  const eligible = shouldShowPharmaMcNote({ enabled: pharmaMcNoteEnabled(), examSource, userId });
+export default function PharmaMcNote({ examSource, userId, lang, topics }: Props) {
+  const eligible = shouldShowPharmaMcNote({ enabled: pharmaMcNoteEnabled(), examSource, userId, topics });
   // Hidden on the server and first paint; storage is read after mount.
   const [visible, setVisible] = useState(false);
 

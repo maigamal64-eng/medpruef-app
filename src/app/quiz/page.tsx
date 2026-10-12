@@ -1251,7 +1251,7 @@ function QuizContent() {
               {lang === "de" ? "Fehlerliste ansehen" : "View mistake list"}
             </Link>
             <div><OfflinePackEntry lang={lang} examType={config.examSource} userId={userId || null} variant="link" /></div>
-            <PharmaMcNote examSource={config.examSource} userId={userId || null} lang={lang} />
+            <PharmaMcNote examSource={config.examSource} userId={userId || null} lang={lang} topics={config.topics} />
           </div>
         </section>
 

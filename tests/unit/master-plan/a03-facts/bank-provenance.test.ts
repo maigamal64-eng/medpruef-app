@@ -12,7 +12,7 @@ const today = () => new Date().toISOString().slice(0, 10);
 describe("bank provenance record (CNT-11, TR-05, pick-bank-provenance A)", () => {
   it("has exactly one record per source_file row in the ledger table", () => {
     const ledgerRows = [...ledger.matchAll(/^\| `([A-Z0-9_a-z]+)` \| ([\d,]+) \|/gm)].map((m) => [m[1], Number(m[2].replace(/,/g, ""))]);
-    expect(ledgerRows.length).toBe(6);
+    expect(ledgerRows.length).toBe(7); // a44 added the inactive Gerichtsmedizin source (0 rows at the snapshot)
     expect(BANK_SOURCES.map((s) => [s.source_file, s.active_rows_at_snapshot]).sort()).toEqual([...ledgerRows].sort());
     expect(BANK_SOURCES.reduce((n, s) => n + s.active_rows_at_snapshot, 0)).toBe(data.snapshot.active_rows_total);
   });

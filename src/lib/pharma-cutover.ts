@@ -11,6 +11,7 @@
  * (NEXT_PUBLIC_PHARMA_MC_NOTE, default OFF; only the literal "true" enables it).
  * The simulation preset (rx_mc_30) needs no flag: it lights up from live counts.
  */
+import { isGmTopic } from "@/lib/gm-practice";
 import { renderLang, type UiLanguage } from "./language-model";
 import { safeStorage } from "./safe-storage";
 
@@ -34,9 +35,14 @@ export function dismissPharmaMcNote(userId: string): void {
   safeStorage.setItem(pharmaMcNoteKey(userId), "1");
 }
 
-/** Whether the note may show: flag on, pharmacology bank, signed-in non-guest account. */
-export function shouldShowPharmaMcNote(input: { enabled: boolean; examSource: string; userId: string | null | undefined }): boolean {
+/**
+ * Whether the note may show: flag on, pharmacology bank, signed-in non-guest
+ * account, and not a Gerichtsmedizin-only round (a44: that topic sits in the
+ * pharma bank but was never free recall, so the switch note does not apply).
+ */
+export function shouldShowPharmaMcNote(input: { enabled: boolean; examSource: string; userId: string | null | undefined; topics?: readonly string[] }): boolean {
   if (!input.enabled || input.examSource !== PHARMA_EXAM_SOURCE) return false;
+  if (input.topics?.length && input.topics.every(isGmTopic)) return false;
   return !!input.userId && !input.userId.startsWith("guest_");
 }
 

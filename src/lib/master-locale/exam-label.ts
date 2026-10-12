@@ -39,6 +39,18 @@ const LABELS: Record<ExamLabelKey, { full: Bi; bridge: Bi; short: string }> = {
   },
 };
 
+/**
+ * a44 (pick-gm-placement B): Gerichtsmedizin is a labelled topic inside the
+ * pharma bank. Once NEXT_PUBLIC_GM_PRACTICE is 'true' (flipped in the release
+ * that activates the reviewed rows) the bank's names say so; the chip stays
+ * "Pharma" and the database key never changes.
+ */
+const PHARMA_WITH_GM: { full: Bi; bridge: Bi } = {
+  full: { de: 'Pharmakologie / Rezeptierkunde und Gerichtsmedizin', en: 'Pharmacology / Rezeptierkunde and Gerichtsmedizin' },
+  bridge: { de: 'Übungsfragen für Pharmakologie, Rezeptierkunde und Gerichtsmedizin', en: 'Practice questions for pharmacology, Rezeptierkunde and Gerichtsmedizin' },
+};
+const gmPracticeOn = (): boolean => process.env.NEXT_PUBLIC_GM_PRACTICE === 'true';
+
 export const EXAM_LABEL_KEYS = Object.keys(LABELS) as ExamLabelKey[];
 
 export function isExamLabelKey(key: unknown): key is ExamLabelKey {
@@ -54,7 +66,8 @@ export function getExamLabel(key: string | null | undefined, form: ExamLabelForm
   if (!isExamLabelKey(key)) return lang === 'de' ? 'Prüfung' : 'Exam';
   const entry = LABELS[key];
   if (form === 'short') return entry.short;
-  return lang === 'de' ? entry[form].de : entry[form].en;
+  const names = key === 'pharma' && gmPracticeOn() ? PHARMA_WITH_GM : entry;
+  return lang === 'de' ? names[form].de : names[form].en;
 }
 
 /** "SIP, SIP4a / SIP5a Wien": visible text first, then the full name. */

@@ -27,6 +27,8 @@ export const TOPIC_CONFIG: Record<string, { icon: string; color: string }> = {
   'Notfall- und Intensivmedizin': { icon: 'Zap', color: '#D64545' },
   // Pharma exam (single topic)
   'Pharmakologie': { icon: 'Pill', color: '#8B5CF6' },
+  // a44: Gerichtsmedizin, a labelled topic in the pharma bank (pick-gm-placement B)
+  'Gerichtsmedizin': { icon: 'Scale', color: '#475569' },
   // Stichprobentest (Innsbruck) topic variants (kept for future)
   'Dermatologie': { icon: 'Dna', color: '#007B5F' },
   'Gynäkologie und Geburtshilfe': { icon: 'Baby', color: '#EC4899' },
@@ -55,6 +57,7 @@ export const TOPIC_SHORT_NAMES: Readonly<Record<string, string>> = {
   'Hals-Nasen-Ohrenheilkunde': 'HNO',
   'Notfall- und Intensivmedizin': 'Notfall',
   'Pharmakologie': 'Pharmakologie',
+  'Gerichtsmedizin': 'Gerichtsmedizin',
   'Dermatologie': 'Dermatologie',
   'Gynäkologie und Geburtshilfe': 'Gynäkologie',
   'HNO': 'HNO',
