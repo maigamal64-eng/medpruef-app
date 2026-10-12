@@ -523,6 +523,7 @@ export default function AdminUsersPage() {
                             {u.status === "none" ? "no activity" : u.status}
                           </span>
                           {u.is_banned && <LockedPill />}
+                          <DoNotEmailPill flag={u.do_not_email} />
                         </span>
                       </td>
                       {/* XP */}
@@ -753,16 +754,7 @@ export default function AdminUsersPage() {
                 {canReadRevenue && <span className="rounded-full border border-[var(--mp-border-subtle)] px-2 py-0.5 text-[10px] text-[var(--mp-fg-muted)]">{u.tier || "free"}</span>}
                 {u.telegram_id && <span className="rounded-full bg-[#229ED9]/10 px-2 py-0.5 text-[10px] text-[#229ED9]">Telegram</span>}
                 {u.email && <span className="rounded-full bg-[var(--mp-viridian)]/10 px-2 py-0.5 text-[10px] text-[var(--mp-viridian)]">Email</span>}
-                {u.do_not_email === "unknown" && <span className="rounded-full border border-[var(--mp-border-subtle)] px-2 py-0.5 text-[10px] text-[var(--mp-fg-muted)]" title="The do-not-email list could not be read">Mail status unknown</span>}
-                {u.do_not_email === "unmailable" && <span className="rounded-full bg-[var(--mp-error,#D64545)]/10 px-2 py-0.5 text-[10px] text-[var(--mp-error,#D64545)]" title="Senders withhold this address: it cannot be checked against the do-not-email list">Unmailable address</span>}
-                {u.do_not_email && u.do_not_email !== "unknown" && u.do_not_email !== "unmailable" && (
-                  <span
-                    className="rounded-full bg-[var(--mp-error,#D64545)]/10 px-2 py-0.5 text-[10px] text-[var(--mp-error,#D64545)]"
-                    title={`Since ${formatDate(u.do_not_email.since)}: ${u.do_not_email.causes.join(", ").replace(/_/g, " ")}`}
-                  >
-                    {u.do_not_email.scope === "all" ? "Do not email" : "No marketing mail"}
-                  </span>
-                )}
+                <DoNotEmailPill flag={u.do_not_email} />
               </div>
               <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
                 <div><dt className="text-[10px] text-[var(--mp-fg-subtle)]">Questions answered</dt><dd className="font-mono tabular-nums">{formatInt(u.questions_answered)}</dd></div>
@@ -874,6 +866,23 @@ function DetailField({
         {value}
       </div>
     </div>
+  );
+}
+
+/** b39/a46: do-not-email state of the learner's address. "unknown" when the list could not be read. */
+function DoNotEmailPill({ flag }: { flag: UserRow["do_not_email"] }) {
+  if (!flag) return null;
+  if (flag === "unknown") {
+    return <span className="rounded-full border border-[var(--mp-border-subtle)] px-2 py-0.5 text-[10px] text-[var(--mp-fg-muted)]" title="The do-not-email list could not be read">Mail status unknown</span>;
+  }
+  const tone = "rounded-full bg-[var(--mp-error)]/10 px-2 py-0.5 text-[10px] text-[var(--mp-error)]";
+  if (flag === "unmailable") {
+    return <span className={tone} title="Senders withhold this address: it cannot be checked against the do-not-email list">Unmailable address</span>;
+  }
+  return (
+    <span className={tone} title={`Since ${formatDate(flag.since)}: ${flag.causes.join(", ").replace(/_/g, " ")}`}>
+      {flag.scope === "all" ? "Do not email" : "No marketing mail"}
+    </span>
   );
 }
 
