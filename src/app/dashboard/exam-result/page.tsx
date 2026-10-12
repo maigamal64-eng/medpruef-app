@@ -227,13 +227,11 @@ export default function ExamResultPage() {
       <ConfirmAction
         open={confirmPass}
         onOpenChange={setConfirmPass}
-        title={lang === "de" ? "Bestehen eintragen?" : "Record your pass?"}
-        consequence={lang === "de"
-          ? `Sie tragen ein, dass Sie die Prüfung${attemptDate ? ` am ${attemptDate}` : ""} bestanden haben. Das lässt sich hier nicht rückgängig machen.`
-          : `You record that you passed the exam${attemptDate ? ` on ${attemptDate}` : ""}. This cannot be undone here.`}
-        confirmLabel={lang === "de" ? "Bestanden eintragen" : "Record pass"}
-        pendingLabel={lang === "de" ? "Wird gespeichert" : "Saving"}
-        cancelLabel={lang === "de" ? "Abbrechen" : "Cancel"}
+        title={t("a12_pass_confirm_title", lang)}
+        consequence={attemptDate ? t("a12_pass_confirm_body_date", lang).replace("{date}", attemptDate) : t("a12_pass_confirm_body", lang)}
+        confirmLabel={t("a12_pass_confirm_action", lang)}
+        pendingLabel={t("a12_saving", lang)}
+        cancelLabel={t("a12_cancel", lang)}
         pending={submitting}
         onConfirm={() => { void submitPass().finally(() => setConfirmPass(false)); }}
       />

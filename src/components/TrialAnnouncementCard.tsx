@@ -121,15 +121,15 @@ export default function TrialAnnouncementCard({
 
         {VERIFIED_CANCEL_PATH && <a className="min-h-11 inline-flex items-center underline" href="/faq#cancellation">{t("home_cancel_help", lang)}</a>}
         <div className="flex flex-wrap gap-2 mt-1">
-          <button type="button" onClick={() => dismiss("later")} className="mp-btn mp-btn--ghost mp-btn--sm min-h-11">{lang === "de" ? "Später" : "Later"}</button>
-          <button type="button" onClick={() => dismiss("no_interest")} className="mp-btn mp-btn--ghost mp-btn--sm min-h-11">{lang === "de" ? "Kein Interesse" : "Not interested"}</button>
+          <button type="button" onClick={() => dismiss("later")} className="mp-btn mp-btn--ghost mp-btn--sm min-h-11">{t("a12_later", lang)}</button>
+          <button type="button" onClick={() => dismiss("no_interest")} className="mp-btn mp-btn--ghost mp-btn--sm min-h-11">{t("a12_no_interest", lang)}</button>
         </div>
       </div>
 
       <button
         type="button"
         onClick={() => dismiss("later")}
-        aria-label={lang === "de" ? "Später" : "Later"}
+        aria-label={t("a12_later", lang)}
         className="absolute top-1 end-1 min-h-11 min-w-11 p-1 mp-focusable rounded-lg text-[var(--mp-fg-light)] hover:text-[var(--mp-fg)] hover:bg-[var(--mp-surface-raised)] transition-colors"
       >
         <X className="w-4 h-4" />

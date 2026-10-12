@@ -10,6 +10,7 @@
  * database, no clock except the optional `now` passed by the caller.
  */
 import { isPaidTier, type PaywallGate } from './free-tier';
+import { t, type Lang, type TranslationKey } from './i18n';
 
 export type Audience = 'guest' | 'free' | 'trial' | 'pro' | 'lapsed';
 
@@ -95,24 +96,9 @@ export function featureForPracticeMode(mode: string | null | undefined): Feature
   return null;
 }
 
-const FEATURE_NAME: Record<Feature, { de: string; en: string }> = {
-  question_sample: { de: 'Die kostenlose Fragenauswahl', en: 'The free question sample' },
-  full_bank: { de: 'Der volle Fragenpool', en: 'The full question bank' },
-  spaced_repetition: { de: 'Die Wiederholungsplanung', en: 'Review scheduling' },
-  mistake_review: { de: 'Das Wiederholen Ihrer Fehler', en: 'Reviewing your mistakes' },
-  mock_exam: { de: 'Die Prüfungssimulation', en: 'The mock exam' },
-  bookmarks: { de: 'Das Merken von Fragen', en: 'Saving questions' },
-  history: { de: 'Der Verlauf', en: 'The history' },
-  ai_followup: { de: 'Die KI-Folgefrage', en: 'AI follow-up questions' },
-  cached_ai_explanation: { de: 'Die KI-Erklärung', en: 'The AI explanation' },
-  note_review: { de: 'Die Wiederholung von Lernnotizen', en: 'Note review' },
-  offline_download: { de: 'Der Offline-Download', en: 'Offline download' },
-};
-
-/** One gate sentence for every surface: '{Funktion} ist Teil von Pro.' */
+/** One gate sentence for every surface: '{Funktion} ist Teil von Pro.' (i18n keys a12_feature_*). */
 export function gateSentence(feature: Feature, lang: string): string {
-  const name = FEATURE_NAME[feature][lang === 'de' ? 'de' : 'en'];
-  return lang === 'de' ? `${name} ist Teil von Pro.` : `${name} is part of Pro.`;
+  return t('a12_gate_sentence', lang as Lang).replace('{name}', t(`a12_feature_${feature}` as TranslationKey, lang as Lang));
 }
 
 /** /pricing?gate=<id> carries the gate; unknown values show no line. */

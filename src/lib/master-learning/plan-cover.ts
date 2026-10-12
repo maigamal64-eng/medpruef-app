@@ -68,6 +68,6 @@ export function loggedOutTotals(prices: CoverPrices = DEFAULT_PRICES): CoverResu
 }
 
 export function monthsLabel(months: number, lang: "de" | "en"): string {
-  if (lang === "de") return `${months} ${months === 1 ? "Monat" : "Monate"} bis zu deinem Termin`;
+  if (lang === "de") return `${months} ${months === 1 ? "Monat" : "Monate"} bis zu Ihrem Termin`;
   return `${months} ${months === 1 ? "month" : "months"} until your date`;
 }

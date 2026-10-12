@@ -79,7 +79,8 @@ describe("/api/bookmarks", () => {
   });
 
   it("enforces the Pro gate on reads and writes", async () => {
-    isPaidAccess.mockReturnValue(false);
+    // a12: the route reads the entitlements matrix, so a free guard is denied.
+    requireUser.mockResolvedValue({ ...paidUser, tier: "free" });
     const getResponse = await GET(new NextRequest("https://example.test/api/bookmarks"));
     const patchResponse = await PATCH(new NextRequest("https://example.test/api/bookmarks", {
       method: "PATCH",
@@ -154,7 +155,8 @@ describe("/api/bookmarks", () => {
   });
 
   it("clears only this account's bookmark flags without requiring active Pro access", async () => {
-    isPaidAccess.mockReturnValue(false);
+    // a12: the route reads the entitlements matrix, so a free guard is denied.
+    requireUser.mockResolvedValue({ ...paidUser, tier: "free" });
     const response = await DELETE(new NextRequest("https://example.test/api/bookmarks", { method: "DELETE" }));
 
     expect(response.status).toBe(200);

@@ -6,6 +6,8 @@
  * outbox is empty. Nothing here promises offline study in general (HOME-55
  * is undecided). Pure.
  */
+import { t, type Lang } from './i18n';
+
 export const OFFLINE_SHOW_AFTER_MS = 3_000;
 export const RECONNECT_VISIBLE_MS = 5_000;
 
@@ -28,14 +30,15 @@ export interface OfflineInput {
 }
 
 function n(value: number, lang: string): string {
-  return value.toLocaleString(lang === 'de' ? 'de-AT' : 'en-GB');
+  const locale = { de: 'de-AT' }[lang] ?? 'en-GB';
+  return value.toLocaleString(locale);
 }
 
 export function offlineView(input: OfflineInput): OfflineView {
-  const de = input.lang === 'de';
+  const lang = input.lang as Lang;
   if (input.online) {
     if (input.justReconnected && input.queued === 0) {
-      const text = de ? 'Wieder online. Alles gesendet.' : 'Back online. Everything sent.';
+      const text = t('a12_offline_reconnected', lang);
       return { state: 'reconnected', tone: 'info', text, short: text, detail: null, action: null };
     }
     return { state: 'hidden' };
@@ -43,24 +46,23 @@ export function offlineView(input: OfflineInput): OfflineView {
   if (!input.persisted) return { state: 'hidden' };
   const queued = input.queued ?? 0;
   const stored = input.stored ?? 0;
-  const detail = queued > 0 ? (de ? `${n(queued, input.lang)} warten` : `${n(queued, input.lang)} waiting`) : null;
   if (queued > 0) {
     return {
       state: 'offline', tone: 'info',
-      text: de ? 'Offline. Ihre Antworten werden auf diesem Gerät gespeichert und später gesendet.' : 'Offline. Your answers are saved on this device and sent later.',
-      short: de ? 'Offline. Antworten werden später gesendet.' : 'Offline. Answers are sent later.',
-      detail,
+      text: t('a12_offline_queued', lang),
+      short: t('a12_offline_queued_short', lang),
+      detail: t('a12_offline_waiting', lang).replace('{n}', n(queued, input.lang)),
       action: null,
     };
   }
   if (stored > 0) {
-    const text = de ? `Offline: ${n(stored, input.lang)} Fragen bereit.` : `Offline: ${n(stored, input.lang)} questions ready.`;
+    const text = t('a12_offline_ready', lang).replace('{n}', n(stored, input.lang));
     return { state: 'offline', tone: 'info', text, short: text, detail: null, action: null };
   }
   // Nothing can be done offline: warning tone with the one useful action.
-  const text = de ? 'Offline: keine Fragen geladen.' : 'Offline: no questions downloaded.';
+  const text = t('a12_offline_empty', lang);
   return {
     state: 'offline', tone: 'warning', text, short: text, detail: null,
-    action: { label: de ? 'Fragen herunterladen' : 'Download questions', href: '/settings#offline' },
+    action: { label: t('a12_offline_download', lang), href: '/settings#offline' },
   };
 }

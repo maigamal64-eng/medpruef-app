@@ -1,5 +1,6 @@
 import { safeSessionStorage, safeStorage } from './safe-storage';
 import { EXAM_SOURCE_IDS, type ExamSourceId } from './topics';
+import { t, type Lang, type TranslationKey } from './i18n';
 
 // Existing learner destinations only. Login/verification cannot return to themselves.
 const RETURN_ROUTES = new Set(['/', '/pricing', '/quiz', '/exam', '/history', '/settings', '/profile', '/progress', '/stats', '/study-plan', '/curriculum', '/library', '/flashcards', '/mistakes', '/referrals', '/materials', '/about', '/faq', '/changelog', '/terms', '/privacy', '/impressum', '/landing', '/kenntnispruefung-wien', '/stichprobentest', '/kmp-innsbruck', '/pharmakologie-pruefung-wien', '/checkout/success', '/exam-dates']);
@@ -76,21 +77,19 @@ export function initialAuthMode(params: URLSearchParams, knownAccount: boolean):
 }
 
 /** Destination names for the sign-in reason line (UX-GLOBAL-17). */
-const DESTINATION_NAMES: Record<string, { de: string; en: string }> = {
-  '/mistakes': { de: 'Ihre Fehlerliste', en: 'your mistake list' },
-  '/progress': { de: 'Ihren Fortschritt', en: 'your progress' },
-  '/stats': { de: 'Ihre Statistik', en: 'your statistics' },
-  '/history': { de: 'Ihren Verlauf', en: 'your history' },
-  '/study-plan': { de: 'Ihren Lernplan', en: 'your study plan' },
-  '/library': { de: 'Ihre Bibliothek', en: 'your library' },
-  '/exam': { de: 'die Prüfungssimulation', en: 'the mock exam' },
-  '/settings': { de: 'Ihre Einstellungen', en: 'your settings' },
+const DESTINATION_KEYS: Record<string, TranslationKey> = {
+  '/mistakes': 'a12_dest_mistakes',
+  '/progress': 'a12_dest_progress',
+  '/stats': 'a12_dest_stats',
+  '/history': 'a12_dest_history',
+  '/study-plan': 'a12_dest_study_plan',
+  '/library': 'a12_dest_library',
+  '/exam': 'a12_dest_exam',
+  '/settings': 'a12_dest_settings',
 };
 
 /** 'Bitte melden Sie sich an, um {Ziel} zu sehen.' or null for unnamed targets. */
 export function signInReasonLine(next: string | null | undefined, lang: string): string | null {
-  const path = safeNext(next).split(/[?#]/)[0];
-  const name = DESTINATION_NAMES[path];
-  if (!name) return null;
-  return lang === 'de' ? `Bitte melden Sie sich an, um ${name.de} zu sehen.` : `Please sign in to see ${name.en}.`;
+  const key = DESTINATION_KEYS[safeNext(next).split(/[?#]/)[0]];
+  return key ? t('a12_signin_reason', lang as Lang).replace('{target}', t(key, lang as Lang)) : null;
 }

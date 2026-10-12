@@ -5,6 +5,8 @@
  *
  * Free or non-entitled callers get { entitled: false } and no counts.
  */
+import { t } from "../i18n";
+
 
 export const DUE_ROUND_CAP = 20;
 const DAY_MS = 86_400_000;
@@ -99,18 +101,14 @@ export function dueRound<T extends DueRow>(rows: readonly T[], now: Date, cap = 
 export function dueCopy(summary: DueSummary, lang: "de" | "en"): string | null {
   if (!summary.entitled) return null;
   if (summary.dueToday > 0) {
-    return lang === "de" ? `Heute fällig: ${summary.dueToday}` : `Due today: ${summary.dueToday}`;
+    return t("a12_due_today", lang).replace("{n}", String(summary.dueToday));
   }
   const next = summary.next7.findIndex((n) => n > 0);
   if (next === -1) {
-    return lang === "de" ? "Heute ist nichts fällig." : "Nothing is due today.";
+    return t("a12_due_none", lang);
   }
   const n = summary.next7[next];
-  const when =
-    next === 0
-      ? lang === "de" ? "morgen" : "tomorrow"
-      : lang === "de" ? `in ${next + 1} Tagen` : `in ${next + 1} days`;
-  return lang === "de"
-    ? `Heute ist nichts fällig. Nächste Wiederholung: ${when} (${n}).`
-    : `Nothing is due today. Next review: ${when} (${n}).`;
+  const when = next === 0 ? t("a12_due_next_tomorrow", lang) : t("a12_due_next_days", lang).replace("{n}", String(next + 1));
+  const nextLabel = { de: "Nächste Wiederholung", en: "Next review" }[lang];
+  return `${t("a12_due_none", lang)} ${nextLabel}: ${when} (${n}).`;
 }

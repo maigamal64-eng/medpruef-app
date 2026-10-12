@@ -48,7 +48,7 @@ describe("plan cover", () => {
   });
 
   it("labels", () => {
-    expect(monthsLabel(4, "de")).toBe("4 Monate bis zu deinem Termin");
-    expect(monthsLabel(1, "de")).toBe("1 Monat bis zu deinem Termin");
+    expect(monthsLabel(4, "de")).toBe("4 Monate bis zu Ihrem Termin");
+    expect(monthsLabel(1, "de")).toBe("1 Monat bis zu Ihrem Termin");
   });
 });

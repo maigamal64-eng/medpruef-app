@@ -19,6 +19,8 @@
  *
  * Rounding is half-to-even to match PostgreSQL round(double precision).
  */
+import { t } from "../i18n";
+
 
 export const MAX_INTERVAL_DAYS = 180;
 export const EXAM_BUFFER_DAYS = 2;
@@ -161,9 +163,9 @@ export function gradeIsCorrect(grade: Grade): boolean {
 
 /** Learner-facing result of an interval, shown AFTER the tap from the stored value. */
 export function intervalLabel(days: number, lang: "de" | "en"): string {
-  if (days <= 0) return lang === "de" ? "Kommt heute wieder" : "Comes back today";
-  if (days === 1) return lang === "de" ? "Wiederholung morgen" : "Review tomorrow";
-  return lang === "de" ? `Wiederholung in ${days} Tagen` : `Review in ${days} days`;
+  if (days <= 0) return t("a12_interval_today", lang);
+  if (days === 1) return t("a12_interval_tomorrow", lang);
+  return t("a12_interval_days", lang).replace("{n}", String(days));
 }
 
 /** Preview per grade, so the button label equals the stored interval. */

@@ -8,6 +8,8 @@
  * track-A passes the future sittings of the active bank (getFutureSittings from
  * exam-dates.ts), so no date is typed in this file.
  */
+import { t } from "../i18n";
+
 
 export type PlanTargetSource =
   | "user_exam_date"
@@ -142,7 +144,5 @@ export function planTargetShares(
 
 /** Learner-facing label for a provisional target (DE and EN). */
 export function provisionalLabel(lang: "de" | "en"): string {
-  return lang === "de"
-    ? "Vorläufig, bis Sie Ihren Termin wählen"
-    : "Provisional until you choose your date";
+  return t("a12_plan_provisional", lang);
 }

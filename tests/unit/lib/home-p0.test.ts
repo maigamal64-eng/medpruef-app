@@ -54,15 +54,16 @@ describe('HOME-08 known progress, unknown progress and accessible state', () => 
 describe('HOME-27 strong topics and zero-answer topics for all three banks', () => {
   for (const examSource of ['kenntnispruefung', 'kmp_innsbruck', 'pharma']) {
     it(`${examSource} renders strong progress independent of weak-topic recommendations`, () => {
-      const html = renderToStaticMarkup(createElement(TopicCard, { topic: 'Fixture topic', count: 40, accuracy: 95, answered: 20, lang: 'en', examSource }));
+      const html = renderToStaticMarkup(createElement(TopicCard, { topic: 'Fixture topic', count: 40, lastCorrectPct: 95, answered: 20, lang: 'en', examSource }));
       expect(html).toContain('95%'); expect(html).toContain('20/40'); expect(html).toContain('width:50%');
       expect(html).toContain(`examSource=${examSource}`); expect(html).not.toContain('userId=');
     });
     it(`${examSource} zero answers gives an empty completion bar, and known zero accuracy is visible after answers`, () => {
-      const empty = renderToStaticMarkup(createElement(TopicCard, { topic: 'Fixture topic', count: 40, accuracy: 0, answered: 0, lang: 'de', examSource }));
-      expect(empty).toContain('width:0%'); expect(empty).not.toContain('>0%</span>');
-      const wrong = renderToStaticMarkup(createElement(TopicCard, { topic: 'Fixture topic', count: 40, accuracy: 0, answered: 20, lang: 'en', examSource }));
-      expect(wrong).toContain('>0%</span>'); expect(wrong).toContain('20/40');
+      const empty = renderToStaticMarkup(createElement(TopicCard, { topic: 'Fixture topic', count: 40, lastCorrectPct: 0, answered: 0, lang: 'de', examSource }));
+      expect(empty).toContain('width:0%'); expect(empty).not.toContain('>0%');
+      // a12 (UX-GLOBAL-06): a known zero "last correct" is shown after answers, with its label.
+      const wrong = renderToStaticMarkup(createElement(TopicCard, { topic: 'Fixture topic', count: 40, lastCorrectPct: 0, answered: 20, status: 'practice_more', lang: 'en', examSource }));
+      expect(wrong).toContain('>0%'); expect(wrong).toContain('last correct'); expect(wrong).toContain('Practise more'); expect(wrong).toContain('20/40');
     });
   }
 });

@@ -9,20 +9,13 @@
  * server's result (intervalLabel) in a status line.
  */
 import { CheckCircle2, MinusCircle, RotateCcw, XCircle, Zap } from 'lucide-react'
-import { BINARY_BUTTON_LABELS } from '@/lib/master-learning/srs'
+import { t, type Lang } from '@/lib/i18n'
 import { RatingButton } from './RatingButton'
 
 export type RatingName = 'again' | 'hard' | 'good' | 'easy'
 
-const LABELS: Record<RatingName, { de: string; en: string }> = {
-  again: { de: 'Nochmal', en: 'Again' },
-  hard: { de: 'Schwer', en: 'Hard' },
-  good: { de: 'Gut', en: 'Good' },
-  easy: { de: 'Einfach', en: 'Easy' },
-}
-
 export function ratingLabel(name: RatingName, lang: string): string {
-  return LABELS[name][lang === 'de' ? 'de' : 'en']
+  return t(`a12_rating_${name}`, lang as Lang)
 }
 
 export interface RatingRowProps {
@@ -35,12 +28,10 @@ export interface RatingRowProps {
 }
 
 export function RatingRow({ lang, scheduled, busy, onRate, id = 'rating-row-label' }: RatingRowProps) {
-  const de = lang === 'de'
-  const binary = BINARY_BUTTON_LABELS[de ? 'de' : 'en']
   return (
     <div role="group" aria-labelledby={id} aria-busy={busy ? true : undefined}>
       <p id={id} className="mb-2 text-center text-sm font-bold text-[var(--mp-fg)]">
-        {de ? 'Wie gut wussten Sie es?' : 'How well did you know it?'}
+        {t('a12_rating_question', lang as Lang)}
       </p>
       {scheduled ? (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -61,13 +52,13 @@ export function RatingRow({ lang, scheduled, busy, onRate, id = 'rating-row-labe
         <>
           <div className="grid grid-cols-2 gap-2">
             <RatingButton intensity={0} icon={<XCircle className="w-4 h-4" />} busy={busy !== null} pressed={busy === 'again'} onClick={() => onRate('again')}>
-              {binary.wrong}
+              {t('a12_rating_not_knew', lang as Lang)}
             </RatingButton>
             <RatingButton intensity={2} icon={<CheckCircle2 className="w-4 h-4" />} busy={busy !== null} pressed={busy === 'good'} onClick={() => onRate('good')}>
-              {binary.right}
+              {t('a12_rating_knew', lang as Lang)}
             </RatingButton>
           </div>
-          <p className="mt-2 text-center text-xs text-[var(--mp-fg-muted)]">{binary.proNote}.</p>
+          <p className="mt-2 text-center text-xs text-[var(--mp-fg-muted)]">{t('a12_rating_pro_note', lang as Lang)}</p>
         </>
       )}
     </div>
