@@ -24,7 +24,7 @@ export const VIENNA_TOPICS = Object.freeze(['Chirurgische Fächer', 'Innere Medi
 // /umfang states these areas are not covered; their rows stay inactive.
 export const UNCOVERED_TOPIC = /public health|medizinrecht|ethik|evidenzbasiert|\bebm\b|umwelt|arbeitsmedizin/i;
 const ARCHIVE_RELAXED = new Set(['ID_NOT_NEW', 'ARCHIVE', 'NOT_AUTHORED']);
-export const COUNT_HINT = /\((\d)\s*richtige/gi;
+export const COUNT_HINT = /\(\s*(\d)\s*richtige/gi;
 // Image markers used across the bank (April audit, free set, qlt02) and track-B (b25).
 export const IMAGE_TAGS = Object.freeze(['missing_image', 'needs_verified_source_media', 'image-needed']);
 // IMAGE_REF from scripts/free-set/build_free_set.py plus explicit references.
@@ -65,7 +65,8 @@ export function laneAErrors(row, kind, corpus) {
   const hasImage = Boolean(row.image_url || (Array.isArray(row.image_urls) && row.image_urls.length));
   if (!hasImage && (IMAGE_REFS.some((re) => re.test(row.question ?? '')) ||
       (row.tags ?? []).some((t) => IMAGE_TAGS.includes(t)))) errors.push('IMAGE_MISSING');
-  if ((row.tags ?? []).includes('missing_image')) errors.push('IMAGE_MISSING');
+  // A stale missing_image tag blocks even with an image attached: clear the tag in a reviewed edit first.
+  if ((row.tags ?? []).includes('missing_image') && !errors.includes('IMAGE_MISSING')) errors.push('IMAGE_MISSING');
   return errors;
 }
 

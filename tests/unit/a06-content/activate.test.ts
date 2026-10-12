@@ -44,6 +44,8 @@ describe('a06 activation gate', () => {
     expect(check([stated(3, 2)], 'archive')[0].errors).toContain('N_MISMATCH');
     expect(check([stated(2, 1)], 'archive')[0].errors).toContain('N_MISMATCH');
     expect(check([stated(2, 2)], 'archive')[0].errors).not.toContain('N_MISMATCH');
+    const spaced = archiveRow({ question: 'Fixture item on shapes drawn on the empty board, which are right? ( 2 richtige Antworten)', choices: archiveRow().choices.map((c: Row, i: number) => ({ ...c, correct: i < 2 })) });
+    expect(check([spaced], 'archive')[0].errors).not.toContain('MULTI_WITHOUT_N');
     for (const q of ['Fixture: siehe Abb. 1 auf dem leeren Zeichenbrett heute', 'Fixture: welche Abbildungen gehören zu den Formen dort',
       'Fixture: was ist auf dem Bild zu sehen bei den Formen', 'Fixture: wie lautet die Diagnose für folgendes EKG bei Formen'])
       expect(check([archiveRow({ question: q })], 'archive')[0].errors).toContain('IMAGE_MISSING');

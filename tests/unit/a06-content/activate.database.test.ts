@@ -83,7 +83,8 @@ database('a06 activation changeset on isolated Postgres 16', () => {
   });
   it('edits stem and explanation with audit, replays, rolls back exactly and refuses drift', () => {
     sql(`CREATE OR REPLACE FUNCTION a06_noop() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RETURN NEW; END $$;
-      CREATE OR REPLACE TRIGGER questions_clear_explanation_translations_on_key_change AFTER UPDATE ON questions FOR EACH ROW EXECUTE FUNCTION a06_noop();`);
+      CREATE OR REPLACE TRIGGER questions_clear_explanation_translations_on_key_change AFTER UPDATE ON questions FOR EACH ROW
+        WHEN (OLD.question IS DISTINCT FROM NEW.question OR OLD.explanation IS DISTINCT FROM NEW.explanation) EXECUTE FUNCTION a06_noop();`);
     const before = { ...archiveRow(), content_hash_short: null };
     const q = before.question + ' heute';
     const after = { ...before, question: q, explanation: before.explanation + ' Ergänzt.', content_hash: contentHash(q), content_hash_short: contentHash(q).slice(0, 12) };
@@ -105,7 +106,14 @@ database('a06 activation changeset on isolated Postgres 16', () => {
     expect(sql('SELECT count(*) FROM question_activation_log;')).toBe('2');
     expect(sql("SELECT count(*) FROM admin_audit_log WHERE action='a06_content_activation';")).toBe('2');
   });
-  it('refuses an edit when the translation cache trigger is missing', () => {
+  it('refuses an edit when the translation cache trigger is missing or is the older answer-only version', () => {
+    sql(`CREATE OR REPLACE FUNCTION a06_noop() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RETURN NEW; END $$;
+      CREATE OR REPLACE TRIGGER questions_clear_explanation_translations_on_key_change AFTER UPDATE ON questions FOR EACH ROW
+        WHEN (OLD.answer IS DISTINCT FROM NEW.answer) EXECUTE FUNCTION a06_noop();`);
+    const old = { ...archiveRow(), content_hash_short: null };
+    const e0 = emitEdit({ batch_id: 'a06-edit-db3', actor, reason: 'Fixture edit for the a06 proof', edits: [{ before: old, after: { ...old, explanation: old.explanation + ' X.', content_hash_short: old.content_hash.slice(0, 12) } }] });
+    expect(() => sql(e0.apply)).toThrow(/Translation cache trigger missing/);
+    sql('DROP TRIGGER questions_clear_explanation_translations_on_key_change ON questions;');
     const before = { ...archiveRow(), content_hash_short: null };
     const e = emitEdit({ batch_id: 'a06-edit-db2', actor, reason: 'Fixture edit for the a06 proof', edits: [{ before, after: { ...before, explanation: before.explanation + ' X.', content_hash_short: before.content_hash.slice(0, 12) } }] });
     expect(() => sql(e.apply)).toThrow(/Translation cache trigger missing/);
