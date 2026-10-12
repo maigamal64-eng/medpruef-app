@@ -213,15 +213,14 @@ function Flashcard({
         .filter(Boolean)
         .map((text) => ({ text }));
 
-  /* Explanation: whitespace-only is absent. When only the AI cache exists it
-   * is labelled as an AI draft (TR-30). */
-  const reviewed = cleanExplanation(question.explanation, { keepLines: true });
-  const aiText = cleanExplanation(question.ai_explanation, { keepLines: true });
-  const aiDraft = !reviewed && !!aiText;
-  // TR-30 / MUX-90 (a37): AI text is never shown as the bank's own explanation.
-  const aiCopy = aiChatCopy(lang);
-  const explanation = reviewed || aiText;
+  /* Explanation: whitespace-only is absent; line breaks are kept so the
+   * markdown renders (PRA-62). */
+  const bankExplanation = cleanExplanation(question.explanation, { keepLines: true });
+  const explanation = bankExplanation || cleanExplanation(question.ai_explanation, { keepLines: true });
   const hasExplanation = explanation.length > 0;
+  // TR-30 / MUX-90 (a37): AI text is never shown as the bank's own explanation.
+  const explanationIsAi = !bankExplanation && hasExplanation;
+  const aiCopy = aiChatCopy(lang);
   const cut = cutAtSentence(explanation, EXPLANATION_PREVIEW_CHARS);
   const quizHref = `/quiz?${new URLSearchParams({ questionId: String(question.id), examSource })}`;
 
@@ -324,15 +323,15 @@ function Flashcard({
             {hasExplanation && (
               <AnswerReveal correct>
                 <p className="text-[11px] font-semibold text-[var(--mp-fg-subtle)] uppercase tracking-wider mb-1 font-mono">
-                  {aiDraft ? `${aiCopy.title} (${aiCopy.badge})` : t("explanation", lang)}
+                  {explanationIsAi ? `${aiCopy.title} (${aiCopy.badge})` : t("explanation", lang)}
                 </p>
                 <Markdown className="text-sm text-[var(--mp-fg-muted)] leading-relaxed [overflow-wrap:anywhere]">{cut.text}</Markdown>
-                {aiDraft && (
+                {explanationIsAi && (
                   <p data-ai-trust className="mt-1.5 text-[12px] text-[var(--mp-fg-muted)]">{aiCopy.trustLine}</p>
                 )}
                 <div className="mt-1 flex flex-wrap gap-x-4">
                   {cut.truncated && (
-                    <button type="button" className="min-h-11 text-[13px] font-semibold text-[var(--mp-cta-blue)] underline underline-offset-2" onClick={() => onReadMore(explanation, aiDraft)}>
+                    <button type="button" className="min-h-11 text-[13px] font-semibold text-[var(--mp-cta-blue)] underline underline-offset-2" onClick={() => onReadMore(explanation, explanationIsAi)}>
                       {t("a23_fc_read_more", lang)}
                     </button>
                   )}
