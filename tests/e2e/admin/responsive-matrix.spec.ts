@@ -236,11 +236,12 @@ async function mockApi(route: Route, url: URL): Promise<void> {
     payload = {
       generated_at: "2026-09-26T20:00:00.000Z",
       tiles: {
-        revenue: { today_cents: 18700, mtd_cents: 109300, series_7d: [3, 5, 4, 8, 7, 9, 12] },
-        active_subs: { total: 12, by_tier: { pro: 12 } }, signups_today: 4,
+        revenue: { today_cents: 18700, mtd_cents: 109300, series_7d: [3, 5, 4, 8, 7, 9, 12], today: { gross_cents: 18700, refunds_cents: 0, cash_cents: 18700 }, month_to_date: { gross_cents: 111200, refunds_cents: 1900, cash_cents: 109300 }, other_currencies: [] },
+        active_subs: { total: 11, in_trial: 1, by_cadence: { renews: 5, one_time: 6, unknown: 0 } }, signups_today: 4,
         paywall_hits_today: 8, referrals_awaiting_action: 2, puyp_pending: 1,
-        flagged_open: 3, webhook_failures_24h: 0, stuck_pending_24h: 0,
-        conversion_7d: 0.14, ai_chat_1h: { requests: 0, completed: 0, failed: 0, avg_latency_ms: null },
+        flagged_open: 3, stuck_pending_24h: 0,
+        payment_health: { level: "ok", diagnosis: "16 Whop deliveries processed in 7 days; every paid payment is granted or resolved.", failures_24h: 0, probes_24h: 1, unresolved_total: 0 },
+        new_payers_7d: { new_payers: 2, signups: 14, ratio: 0.14 }, ai_chat_1h: { requests: 0, completed: 0, failed: 0, avg_latency_ms: null },
         telegram_activation: { registered: 0, confirmed: 0 }, crons: {},
         recent_events: [{ id: "fixture-1", event_type: "question_answered", user_id: ADMIN_ID, created_at: "2026-09-26T19:58:00.000Z" }],
       },
@@ -281,7 +282,7 @@ async function mockApi(route: Route, url: URL): Promise<void> {
     }];
   } else if (pathname === "/api/announcements/state") {
     payload = { state: { userId: ADMIN_ID, sessionCount: 1, qsAnsweredTotal: 0, orientationModalSeenAt: null, cohortBannerDismissedAt: null, referralFloaterDismissedAt: null, lastSessionAt: "2026-09-26T20:00:00.000Z" } };
-  } else if (pathname === "/api/admin/subscriptions") payload = { total_active: 0, by_tier: {}, recent: [] };
+  } else if (pathname === "/api/admin/subscriptions") payload = { generated_at: "2026-09-26T20:00:00.000Z", names_visible: true, kpis: { paying: 0, paying_by_cadence: { renews: 0, one_time: 0, unknown: 0 }, in_trial: 0, lose_7d: 0, lose_30d: 0, renew_30d: 0, ended_30d: 0, lifetime_gross_cents: 0, stuck_pending_24h: 0 }, rows: [], pending: [], basis: { paid_to_date: "", cadence: "" } };
   else if (["/api/admin/webhooks", "/api/admin/crons", "/api/admin/referrals", "/api/admin/flags"].includes(pathname)) payload = { items: [] };
 
   await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(payload) });

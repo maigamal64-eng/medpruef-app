@@ -44,7 +44,11 @@ describe("ADM-Q04 minimal responses", () => {
   it("overview activity queries use HEAD counts instead of identities", async () => {
     const { calls } = database(); const response = await overview(request("/api/admin/overview")); expect(response.status).toBe(200);
     const body = await response.json(); expect(body.tiles.recent_events_aggregate).toEqual({ total_last_24h: 0 }); expect(body.tiles.recent_events).toBeNull();
-    expect(calls.some((call) => call.columns?.includes("user_id"))).toBe(false);
+    // a14: the money tiles read payment/subscription owners server-side to
+    // count distinct payers; the response carries counts only. The activity
+    // feed itself must still never select identities.
+    expect(calls.some((call) => call.table === "user_events" && call.columns?.includes("user_id"))).toBe(false);
+    expect(JSON.stringify(body)).not.toMatch(/user_id/);
   });
 });
 describe("ADM-Q05 sanitized database failures", () => {

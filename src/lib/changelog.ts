@@ -26,6 +26,18 @@ export const CHANGELOG: ChangelogEntry[] = [
   "date": "2026-10-12",
   "tag": "admin",
   "title": {
+    "de": "Admin: ehrliche Umsatzzahlen, offene Zahlungen und zahlende Lernende",
+    "en": "Admin: honest money numbers, unresolved payments and the paid roster"
+  },
+  "description": {
+    "de": "Startseite, Zahlungen und Wachstum nutzen dieselbe Definition: Geldeingang nach Zahlungsdatum (brutto, Rückerstattungen am eigenen Tag, Wiener Zeit) und zahlende Lernende ohne Test- und Team-Konten, Testphasen getrennt. Der Zahlungsalarm meldet nur noch echte Probleme; bezahlte Zahlungen ohne Freischaltung erscheinen in einer Liste mit „Lernenden zuordnen“, „Als Test markieren“ und „Nicht unsere“. Neu: Monatsübersicht mit Whop-Gebühren, Suche nach einer Zahlung, Rückerstattungen mit Zugangsstatus und eine Abo-Liste, wer zahlt, wer verlängert und wessen Pro bald endet.",
+    "en": "Home, Payments and Growth share one definition: money in by payment date (gross, refunds on their own day, Vienna time) and paying learners without test or staff accounts, trials apart. The payment alarm only fires on real problems; paid payments that never granted Pro sit in a queue with Link to learner, Mark as test and Mark not ours. New: a monthly view with Whop fees, a payment search, refunds with access outcome and a roster of who pays, who renews and whose Pro ends soon."
+  }
+},
+{
+  "date": "2026-10-12",
+  "tag": "admin",
+  "title": {
     "de": "Admin: sichere Fragenkorrekturen, Lernenden-Schutz und PUYP-Nachverfolgung",
     "en": "Admin: safe question edits, learner safeguards and PUYP follow-up"
   },
