@@ -7,6 +7,7 @@
 import { describe, it, expect } from "vitest";
 import { getMentorFactsLoader } from "@/lib/mentor/facts-loader";
 import { validateAnswer } from "@/lib/mentor/validator";
+import { studySentenceViolation } from "@/lib/mentor/study-safety";
 import type { ValidatedAnswer } from "@/lib/mentor/seam";
 import { fact } from "./helpers";
 
@@ -159,4 +160,14 @@ describe("re-review P1: a cited-fact name never hides a counted noun", () => {
     const v = check("en", "Plan Alpha is 49 € per attempt and plan Beta 49 € per retake. The two are separate.");
     expect(all(v)).not.toContain("The two are separate");
   });
+});
+
+describe("study safety: time passing is not an outcome (gate7 run 1 st-sip-en)", () => {
+  it("'before 37 days pass' is allowed", () => {
+    expect(studySentenceViolation("Recheck your weak topics in the final stretch before 37 days pass.", "en")).toBeNull();
+    expect(studySentenceViolation("As the weeks pass, mix in your stronger topics.", "en")).toBeNull();
+  });
+  for (const s of ["You will pass the exam.", "Before 37 days pass you will pass.", "You can pass if the days pass quickly.", "Your chance is good.", "Weeks passing the exam."]) {
+    it(`a real prediction is still refused: ${s}`, () => expect(studySentenceViolation(s, "en")).toBe("outcome_prediction"));
+  }
 });
