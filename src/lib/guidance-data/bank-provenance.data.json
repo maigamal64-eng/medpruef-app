@@ -1,0 +1,77 @@
+{
+  "note": "Typed provenance and review record for every active source_file (CNT-11, TR-05; pick-bank-provenance A). Sitting coverage and last content change are computed from the data (bank coverage, b18); this file holds the deliberate review. Ledger prose: docs/content/question-sources.md. A unit test fails when reviewed_on + review_every_days has passed.",
+  "snapshot": { "taken_on": "2026-10-11", "method": "read-only PostgREST count of active rows by source_file", "active_rows_total": 10648 },
+  "banks": {
+    "kenntnispruefung": { "sources": ["SIP_Anki", "VIENNA_2026_SIP5a"], "public_description": { "de": "Kuratierte Übungsfragen zu SIP4a und SIP5a der MedUni Wien", "en": "Curated practice questions for MedUni Vienna SIP4a and SIP5a" } },
+    "kmp_innsbruck": { "sources": ["KOALAMED_KMP6a", "KOALAMED_KMP6b", "KOALAMED_KMP5b"], "public_description": { "de": "Kuratierte klinische Übungsfragen aus dem Innsbrucker Curriculum, keine offiziellen oder erinnerten Prüfungsfragen", "en": "Curated clinical practice questions from the Innsbruck curriculum, not official or recalled exam items" } },
+    "pharma": { "sources": ["PHARMA_REZEPTIERKUNDE_2026"], "public_description": { "de": "Übungsmaterial zur Rezeptierkunde (Pharmakologie)", "en": "Practice material for Rezeptierkunde (pharmacology)" } }
+  },
+  "sources": [
+    {
+      "source_file": "SIP_Anki", "exam_type": "kenntnispruefung", "active_rows_at_snapshot": 7408,
+      "lineage": "scripts/anki_reimport.py",
+      "origin": "Community Anki export (owner-recorded MEDICUS community deck lineage); original authorship not verified",
+      "rights_status": "uncleared-logged",
+      "rights_basis": "None recorded. A free community deck does not by itself grant redistribution rights.",
+      "keep": "Live as curated practice questions; never described as official or all original",
+      "refresh_path": "In-place corrections through reviewed repairs; new material only as authored rows through the activation gate",
+      "decision": { "ref": "n-provenance", "by": "[name]", "on": "2026-10-10", "text": "Say curated practice questions; buyer terms exclude uncleared content" },
+      "reviewed_on": "2026-10-12", "review_every_days": 90
+    },
+    {
+      "source_file": "VIENNA_2026_SIP5a", "exam_type": "kenntnispruefung", "active_rows_at_snapshot": 153,
+      "lineage": "scripts/import_vienna_2026.py",
+      "origin": "SIP5a-labelled PDF material; author and reuse permission unverified",
+      "rights_status": "uncleared-logged",
+      "rights_basis": "None recorded",
+      "keep": "Live as curated practice questions; the label does not authenticate a university publication",
+      "refresh_path": "Obtain a documented licence or replace with authored rows through the activation gate",
+      "decision": null,
+      "reviewed_on": "2026-10-12", "review_every_days": 90
+    },
+    {
+      "source_file": "KOALAMED_KMP6a", "exam_type": "kmp_innsbruck", "active_rows_at_snapshot": 1851,
+      "lineage": "scripts/import_koalamed.py",
+      "origin": "KoalaMed KMP6a-labelled PDFs distilled from the MedUni Innsbruck clinical curriculum; the source has closed",
+      "rights_status": "uncleared-logged",
+      "rights_basis": "None recorded",
+      "keep": "Live as curated practice material",
+      "refresh_path": "None from KoalaMed (closed). Replacement only through authored rows and the activation gate",
+      "decision": { "ref": "pick-koalamed", "by": "[name]", "on": "2026-10-11", "text": "Relaunch posts may name the SPT bank as practice material; rights note logged only; no refresh from KoalaMed." },
+      "reviewed_on": "2026-10-12", "review_every_days": 90
+    },
+    {
+      "source_file": "KOALAMED_KMP6b", "exam_type": "kmp_innsbruck", "active_rows_at_snapshot": 406,
+      "lineage": "scripts/import_koalamed.py",
+      "origin": "KoalaMed KMP6b-labelled PDFs, same scope as KMP6a; the source has closed",
+      "rights_status": "uncleared-logged",
+      "rights_basis": "None recorded",
+      "keep": "Live as curated practice material",
+      "refresh_path": "None from KoalaMed (closed). Replacement only through authored rows and the activation gate",
+      "decision": { "ref": "pick-koalamed", "by": "[name]", "on": "2026-10-11", "text": "Relaunch posts may name the SPT bank as practice material; rights note logged only; no refresh from KoalaMed." },
+      "reviewed_on": "2026-10-12", "review_every_days": 90
+    },
+    {
+      "source_file": "KOALAMED_KMP5b", "exam_type": "kmp_innsbruck", "active_rows_at_snapshot": 508,
+      "lineage": "scripts/import_koalamed.py",
+      "origin": "KoalaMed KMP5b-labelled PDFs, same scope as KMP6a; the source has closed",
+      "rights_status": "uncleared-logged",
+      "rights_basis": "None recorded",
+      "keep": "Live as curated practice material",
+      "refresh_path": "None from KoalaMed (closed). Replacement only through authored rows and the activation gate",
+      "decision": { "ref": "pick-koalamed", "by": "[name]", "on": "2026-10-11", "text": "Relaunch posts may name the SPT bank as practice material; rights note logged only; no refresh from KoalaMed." },
+      "reviewed_on": "2026-10-12", "review_every_days": 90
+    },
+    {
+      "source_file": "PHARMA_REZEPTIERKUNDE_2026", "exam_type": "pharma", "active_rows_at_snapshot": 322,
+      "lineage": "scripts/import_pharma.py",
+      "origin": "Pharmakologie Stichpunkte PDF notes; author and redistribution rights unverified",
+      "rights_status": "uncleared-logged",
+      "rights_basis": "None recorded",
+      "keep": "Live as free-recall practice notes; MC publication needs independently authored, reviewed options",
+      "refresh_path": "Record permission or replace with authored rows through the activation gate",
+      "decision": null,
+      "reviewed_on": "2026-10-12", "review_every_days": 90
+    }
+  ]
+}

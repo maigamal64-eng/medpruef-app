@@ -2,6 +2,12 @@
 """
 Import KMP Innsbruck questions from source-files/koalamed/*.pdf.
 
+FROZEN FOR WRITES ([name], 2026-10-11, pick-koalamed / TR-05): KoalaMed has
+closed and nothing is refreshed or re-imported from it. --apply refuses to
+run; dry-run parsing stays available for audits. New Stichprobentest rows
+come only as authored rows through the activation gate. Ledger:
+docs/content/question-sources.md, src/lib/guidance-data/bank-provenance.data.json.
+
 The PDFs come from the KoalaMed prep platform but the questions are for
 the Kumulative Modulprüfung (KMP) at the Medical University of Innsbruck.
 exam_type='kmp_innsbruck' in the DB; source_file uses 'KOALAMED_KMP6a' etc.
@@ -271,6 +277,9 @@ def main():
     ap.add_argument("--only", default="", help="Glob filter on filename")
     ap.add_argument("--report", default="reports/kmp_innsbruck_sample.md")
     args = ap.parse_args()
+    if args.apply:
+        sys.exit("[kmp] refused: no refresh or re-import from KoalaMed ([name], 2026-10-11, TR-05). "
+                 "See docs/content/question-sources.md.")
 
     files = sorted(KOALAMED_DIR.glob("*.pdf"))
     if args.only:
