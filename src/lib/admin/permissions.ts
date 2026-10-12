@@ -52,7 +52,7 @@ export function permissionForAdminRequest(
       return verb === "GET" ? "users.read" : verb === "PATCH" ? "users.write" : null;
     }
     if (path === "/api/stats/admin/new-users" || path === "/api/stats/admin/activity") return verb === "GET" ? "users.read" : null;
-    if (path === "/api/stats/admin/control-plane" || path === "/api/stats/admin/payments" || path === "/api/stats/admin/growth" || path === "/api/stats/admin/growth/content") return verb === "GET" ? "revenue.read" : null;
+    if (path === "/api/stats/admin/control-plane" || path === "/api/stats/admin/payments" || path === "/api/stats/admin/payments/trace" || path === "/api/stats/admin/growth" || path === "/api/stats/admin/growth/content") return verb === "GET" ? "revenue.read" : null;
     if (path === "/api/stats/admin/clarity") return verb === "GET" ? "system.read" : null;
     if (["/api/stats/admin/questions", "/api/stats/admin/duplicates", "/api/stats/admin/missing-images", "/api/stats/admin/explanations"].includes(path)) {
       if (verb === "GET") return "content.read";
@@ -76,6 +76,7 @@ export function permissionForAdminRequest(
   if (path === "/api/admin/users/grant") return verb === "POST" ? "users.entitlements.write" : null;
   if (path === "/api/admin/subscriptions") return verb === "GET" ? "revenue.read" : null;
   if (path === "/api/admin/subscriptions/reconcile-pending") return verb === "POST" ? "revenue.reconcile" : null;
+  if (path === "/api/admin/payments/resolve") return verb === "POST" ? "revenue.manage" : null;
   if (path === "/api/admin/referrals" || path === "/api/admin/referrals/pending-exam-rewards") return verb === "GET" ? "revenue.read" : null;
   if (["/api/admin/referrals/grant-exam-reward", "/api/admin/referrals/mark-paid", "/api/admin/puyp/bulk-approve"].includes(path)) return verb === "POST" ? "revenue.manage" : null;
   if (path === "/api/puyp/admin") return verb === "GET" ? "revenue.read" : verb === "POST" ? "revenue.manage" : null;

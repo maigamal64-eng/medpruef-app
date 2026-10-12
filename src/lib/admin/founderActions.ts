@@ -104,22 +104,9 @@ export const ACTIONS: ReadonlyArray<FounderAction> = [
       "If a real problem surfaces, set NOTES_EXPLORE_ENABLED=false to pull all public notes at once, then investigate.",
     ],
   },
-  {
-    id: "verify-whop-paid-charge",
-    title: "Prove a real PAID Whop charge grants Pro (one-time €19)",
-    why: "The Whop grant pipeline is already PROVEN end to end: the €0 card trial fired checkout → webhook (signature valid) → grant_succeeded → Pro on 2026-07-01. What has NEVER cleared is a real, nonzero card charge. The paid €19 one-time plan runs the identical webhook code as the trial (same plan→tier map, same 1-month grant), so the only unproven step is a real card clearing Whop's processor on a paid plan. One €19 charge closes that last gap before any ad spend.",
-    category: "Revenue",
-    status: "blocking",
-    needs: "Your own card and ~3 minutes (refundable to yourself after). The €19 single-month plan is plan_redacted07253e20. This is the one proof no agent can run: it needs a real card and a real charge.",
-    steps: [
-      "Open medpruf.com/pricing while logged in as a real test user (NOT the bare whop.com/medpruf link, which arrives unmapped).",
-      "Start the Whop checkout on the €19 single-month plan and complete a real card payment to the end (do not abandon at the Whop screen).",
-      "Open /admin/payments and confirm the paid row fired checkout_session_created → checkout_redirected → webhook_received → grant_succeeded (the trial already proved this chain works; you are confirming it also fires on a nonzero charge).",
-      "Confirm the test user flipped to pro and a subscriptions row appeared with payment_provider='whop', tier='first_month_19', status='active', expiring ~1 month out.",
-      "Refund the charge in the Whop dashboard.",
-      "If the grant did not fire, stop and flag Kassa before spending a cent on ads.",
-    ],
-  },
+  // REMOVED 2026-10-12 (done, a14): "verify-whop-paid-charge". Its done-when
+  // is true: real nonzero Whop charges have cleared and granted Pro since
+  // July (9 paid payments in September alone; /admin/payments Money in).
   {
     id: "pixel-test-fire",
     title: "Confirm the Meta Pixel CompleteRegistration lands",
@@ -166,7 +153,7 @@ export const ACTIONS: ReadonlyArray<FounderAction> = [
  * NO agent can do for [name]. Everything else the fleet already runs. The list is
  * in PRIORITY order — the top item (fire the loaded community seeds) is the
  * highest-leverage move because top-of-funnel is the confirmed bottleneck; the
- * two blocking items (a real paid charge + the Google Ads link) gate paid SPEND,
+ * blocking items (the Pixel and the Google Ads link) gate paid SPEND,
  * not the free organic seeds.
  *
  * STANDING RULE (added 2026-07-01 to stop this queue drifting stale — the
@@ -185,4 +172,4 @@ export const ACTIONS: ReadonlyArray<FounderAction> = [
  * Anything that fails either test is agent-work or already-done; keep it out.
  */
 export const ACTIONS_INTRO_NOTE =
-  "These are the only steps no agent can take for you: posting as yourself in a forum, a real charge on your card, linking your Google Ads, flipping an env flag after you've tested it. The fleet runs everything else (sends, drafts, monitoring). Top-of-funnel is still the bottleneck, so firing the loaded community seeds stays the highest-leverage reach move. Rail truth (2026-07-01): the Whop grant pipeline is PROVEN end to end. The €0 card trial fired checkout, webhook, grant, and Pro on a real card. The one thing still unproven is a real, nonzero PAID charge clearing (the €19 one-time plan), which is why that single card test remains. The flash-notes Pro trial and community Explore are both LIVE now; both fail safe (flip NOTES_TRIAL_ENABLED / NOTES_EXPLORE_ENABLED to false to pull them instantly). The one ongoing content action is watching the Explore moderation queue at /admin/note-reports.";
+  "These are the only steps no agent can take for you: posting as yourself in a forum, linking your Google Ads, flipping an env flag after you've tested it. The fleet runs everything else (sends, drafts, monitoring). Top-of-funnel is still the bottleneck, so firing the loaded community seeds stays the highest-leverage reach move. Rail truth (2026-10-12): the Whop rail is PROVEN on real paid charges, not just the €0 trial; money in, unresolved payments and refunds are tracked at /admin/payments. The flash-notes Pro trial and community Explore are both LIVE now; both fail safe (flip NOTES_TRIAL_ENABLED / NOTES_EXPLORE_ENABLED to false to pull them instantly). The one ongoing content action is watching the Explore moderation queue at /admin/note-reports.";

@@ -8,9 +8,16 @@
  * Grouping: the 11 tiles are split into three named sections so the
  * operator's eye doesn't read the page as "wall of tiles":
  *
- *   1. Revenue & Growth      (revenue, active subs, signups, conversion)
+ *   1. Revenue & Growth      (money in, paying learners, signups, new payers)
  *   2. Operational Queues    (paywall, referrals, PUYP, flagged feedback)
- *   3. Platform Health       (webhooks, crons, activity feed)
+ *   3. Platform Health       (payment failures, crons, activity feed)
+ *
+ * Money tiles (a14, 2026-10-12) use the shared definitions in
+ * src/lib/admin/money-rules.ts via /api/admin/overview: cash in by payment
+ * date, paying learners with trials apart, and the same payment diagnosis
+ * as /admin/payments. They refresh on the 60s poll; no tile adds amounts
+ * from Realtime subscription inserts, because renewals extend rows in place
+ * and stored amounts mix gross and net.
  *
  * Within each section ONE tile is hero-sized (col-span-2). Every tile
  * uses `tabular-nums`, every euro figure goes through
@@ -61,27 +68,36 @@ import {
   useIsVisible,
   formatInt,
   formatEuroFromCents,
-  formatPct,
 } from "../_components/primitives";
 
 interface OverviewSnapshot {
   generated_at: string;
   tiles: {
     revenue: {
+      /** Cash today (gross minus refunds), Vienna day, EUR cents. */
       today_cents: number;
       mtd_cents: number;
-      /** Optional sparkline series — 7-day daily revenue in cents. */
+      /** 7 Vienna days of cash, oldest first. */
       series_7d?: number[];
-    };
-    active_subs: { total: number; by_tier: Record<string, number> };
+      today?: MoneySplit;
+      month_to_date?: MoneySplit;
+      other_currencies?: Array<{ currency: string; paid_payments: number; gross_cents: number; refunds_cents: number }>;
+      basis?: string;
+    } | null;
+    active_subs: {
+      total: number;
+      in_trial: number;
+      by_cadence: { renews: number; one_time: number; unknown: number };
+      basis?: string;
+    } | null;
     signups_today: number;
     paywall_hits_today: number;
     referrals_awaiting_action: number;
     puyp_pending: number;
     flagged_open: number;
-    webhook_failures_24h: number | null;
+    payment_health: PaymentHealthTile | null;
     stuck_pending_24h: number | null;
-    conversion_7d: number | null;
+    new_payers_7d: { new_payers: number; signups: number; ratio: number | null } | null;
     ai_chat_1h: {
       requests: number;
       completed: number;
@@ -95,6 +111,20 @@ interface OverviewSnapshot {
     crons: Record<string, { lastStatus: string; lastStartedAt: string | null }> | null;
     recent_events_aggregate: { total_last_24h: number };
   };
+}
+
+interface MoneySplit {
+  gross_cents: number;
+  refunds_cents: number;
+  cash_cents: number;
+}
+
+interface PaymentHealthTile {
+  level: "alarm" | "attention" | "ok" | "quiet";
+  diagnosis: string;
+  failures_24h: number;
+  probes_24h: number;
+  unresolved_total: number;
 }
 
 export default function AdminOverviewPage() {
@@ -164,6 +194,10 @@ export default function AdminOverviewPage() {
         <AdminActionsRibbon />
       </>}
 
+      {can("revenue.read") && snapshot?.tiles.payment_health && (
+        <PaymentDiagnosisLine health={snapshot.tiles.payment_health} />
+      )}
+
       {can("revenue.read") && <MentorOverviewCard />}
 
       {/* Revenue figures are withheld from roles without revenue.read. */}
@@ -188,24 +222,15 @@ export default function AdminOverviewPage() {
             <>
               {/* Hero tile — Revenue today with sparkline */}
               <div className="sm:col-span-2" data-testid="overview-revenue-hero">
-                <RevenueHeroTile
-                  todayCents={snapshot?.tiles.revenue.today_cents ?? 0}
-                  mtdCents={snapshot?.tiles.revenue.mtd_cents ?? 0}
-                  series7d={snapshot?.tiles.revenue.series_7d ?? []}
-                  visible={isVisible}
-                />
+                <RevenueHeroTile revenue={snapshot?.tiles.revenue ?? null} />
               </div>
-              <ActiveSubsTile
-                total={snapshot?.tiles.active_subs.total ?? 0}
-                byTier={snapshot?.tiles.active_subs.by_tier ?? {}}
-                visible={isVisible}
-              />
+              <PayingLearnersTile paying={snapshot?.tiles.active_subs ?? null} />
               <SignupsTile
                 initial={snapshot?.tiles.signups_today ?? 0}
                 visible={isVisible}
               />
               <div className="sm:col-span-2 lg:col-span-1" data-testid="overview-conversion-tile">
-                <ConversionTile conversion7d={snapshot?.tiles.conversion_7d ?? null} />
+                <NewPayersTile data={snapshot?.tiles.new_payers_7d ?? null} />
               </div>
             </>
           )}
@@ -267,9 +292,11 @@ export default function AdminOverviewPage() {
           hint="Infra signals + live activity feed"
         />
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr_320px] gap-3">
-          <WebhookFailuresTile
-            initial={snapshot?.tiles.webhook_failures_24h ?? 0}
-          />
+          {can("revenue.read") ? (
+            <PaymentFailuresTile health={snapshot?.tiles.payment_health ?? null} />
+          ) : (
+            <PaymentFailuresTile health={null} restricted />
+          )}
           <CronsTile crons={snapshot?.tiles.crons ?? {}} />
           {can("users.read") && <ActivityCountTile count={snapshot?.tiles.recent_events_aggregate?.total_last_24h ?? 0} />}
         </div>
@@ -500,59 +527,52 @@ function Tile({
 
 // ═══ Revenue & Growth tiles ═══════════════════════════════════════
 
-function RevenueHeroTile({
-  todayCents,
-  mtdCents,
-  series7d,
-  visible,
-}: {
-  todayCents: number;
-  mtdCents: number;
-  series7d: number[];
-  visible: boolean;
-}) {
-  const [pulse, setPulse] = useState(false);
-  const [liveToday, setLiveToday] = useState(todayCents);
-  const [liveMtd, setLiveMtd] = useState(mtdCents);
+function PaymentDiagnosisLine({ health }: { health: PaymentHealthTile }) {
+  const tone = health.level === "alarm" ? "danger" : health.level === "attention" ? "warn" : health.level === "ok" ? "success" : "neutral";
+  return (
+    <Link
+      href="/admin/payments"
+      data-testid="overview-payment-diagnosis"
+      className="no-underline flex items-start gap-2 rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] px-4 py-3 text-sm text-[var(--mp-fg)] hover:border-[var(--mp-border)]"
+    >
+      <span className="mt-1.5"><StatusDot tone={tone} size={8} /></span>
+      <span className="min-w-0 flex-1 break-words">
+        <span className="font-semibold">Payments: </span>
+        {health.diagnosis}
+      </span>
+    </Link>
+  );
+}
 
-  useEffect(() => setLiveToday(todayCents), [todayCents]);
-  useEffect(() => setLiveMtd(mtdCents), [mtdCents]);
-
-  useAdminRealtime("subscriptions", {
-    onEvent: (payload) => {
-      if (payload.eventType !== "INSERT") return;
-      const row = payload.new as Record<string, unknown> | undefined;
-      const cents = Number(row?.amount_cents) || 0;
-      const status = row?.status as string | undefined;
-      if (status !== "active") return;
-      setLiveToday((v) => v + cents);
-      setLiveMtd((v) => v + cents);
-      if (visible) {
-        setPulse(true);
-        setTimeout(() => setPulse(false), 700);
-      }
-    },
-  });
-
-  const hasAny = liveToday > 0 || liveMtd > 0 || series7d.length > 0;
+function RevenueHeroTile({ revenue }: { revenue: OverviewSnapshot["tiles"]["revenue"] }) {
+  const series7d = revenue?.series_7d ?? [];
+  const today = revenue?.today ?? { gross_cents: revenue?.today_cents ?? 0, refunds_cents: 0, cash_cents: revenue?.today_cents ?? 0 };
+  const mtd = revenue?.month_to_date ?? { gross_cents: revenue?.mtd_cents ?? 0, refunds_cents: 0, cash_cents: revenue?.mtd_cents ?? 0 };
+  const hasAny = series7d.some((v) => v !== 0);
+  const other = revenue?.other_currencies ?? [];
 
   return (
     <Tile
-      label="Revenue today"
+      label="Money in today (cash)"
       icon={Wallet}
       tone="success"
-      href="/admin/subscriptions"
-      pulse={pulse}
+      href="/admin/payments#money"
       hero
       footer={
-        <div className="flex items-center justify-between">
-          <span>
-            Month-to-date:{" "}
-            <strong className="text-[var(--mp-fg)]">
-              {formatEuroFromCents(liveMtd)}
-            </strong>
-          </span>
-          <StatusDot tone="success" size={6} pulse={pulse} />
+        <div className="space-y-0.5">
+          <div className="flex flex-wrap items-center justify-between gap-x-3">
+            <span>
+              This month:{" "}
+              <strong className="text-[var(--mp-fg)]">{formatEuroFromCents(mtd.cash_cents)}</strong>
+            </span>
+            <span className="text-[var(--mp-fg-subtle)]">
+              {formatEuroFromCents(mtd.gross_cents)} paid, {formatEuroFromCents(mtd.refunds_cents)} refunded
+            </span>
+          </div>
+          <div className="text-[var(--mp-fg-subtle)]">
+            Gross by payment date, refunds on their own day, Vienna time.
+            {other.length > 0 && ` Plus ${other.map((o) => `${o.currency} ${(o.gross_cents / 100).toFixed(2)}`).join(", ")} not converted.`}
+          </div>
         </div>
       }
     >
@@ -562,8 +582,13 @@ function RevenueHeroTile({
             Today
           </div>
           <div className="text-[32px] leading-none font-semibold text-[var(--mp-fg)]">
-            <FormatEuro cents={liveToday} />
+            <FormatEuro cents={today.cash_cents} />
           </div>
+          {today.refunds_cents > 0 && (
+            <div className="mt-1 text-[10px] text-[var(--mp-fg-muted)]">
+              {formatEuroFromCents(today.gross_cents)} paid, {formatEuroFromCents(today.refunds_cents)} refunded
+            </div>
+          )}
         </div>
         <div className="flex flex-col items-end">
           <div className="text-[10px] uppercase tracking-wider text-[var(--mp-fg-muted)] mb-1">
@@ -573,8 +598,8 @@ function RevenueHeroTile({
             series={series7d}
             width={140}
             height={40}
-            ariaLabel={`7-day revenue. ${
-              hasAny ? "" : "No revenue recorded in the last 7 days."
+            ariaLabel={`7-day cash in. ${
+              hasAny ? "" : "No money in during the last 7 days."
             }`}
           />
         </div>
@@ -583,67 +608,28 @@ function RevenueHeroTile({
   );
 }
 
-function ActiveSubsTile({
-  total,
-  byTier,
-  visible,
-}: {
-  total: number;
-  byTier: Record<string, number>;
-  visible: boolean;
-}) {
-  const [pulse, setPulse] = useState(false);
-  const [live, setLive] = useState({ total, byTier });
-
-  useEffect(() => setLive({ total, byTier }), [total, byTier]);
-
-  useAdminRealtime("subscriptions", {
-    onEvent: (payload) => {
-      if (payload.eventType === "INSERT") {
-        const row = payload.new as Record<string, unknown> | undefined;
-        if ((row?.status as string) === "active") {
-          const tier = (row?.tier as string) || "unknown";
-          setLive((p) => ({
-            total: p.total + 1,
-            byTier: { ...p.byTier, [tier]: (p.byTier[tier] || 0) + 1 },
-          }));
-          if (visible) {
-            setPulse(true);
-            setTimeout(() => setPulse(false), 700);
-          }
-        }
-      }
-    },
-  });
-
-  const tiers = Object.entries(live.byTier)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 3);
-
+function PayingLearnersTile({ paying }: { paying: OverviewSnapshot["tiles"]["active_subs"] }) {
+  const c = paying?.by_cadence ?? { renews: 0, one_time: 0, unknown: 0 };
   return (
     <Tile
-      label="Active paid subs"
+      label="Paying learners"
       icon={Users}
       tone="info"
       href="/admin/subscriptions"
-      pulse={pulse}
       footer={
-        tiers.length > 0 ? (
-          <div className="flex gap-2 flex-wrap">
-            {tiers.map(([tier, n]) => (
-              <span key={tier} className="text-[var(--mp-fg)]">
-                {tier}:{" "}
-                <strong className="tabular-nums">{formatInt(n)}</strong>
-              </span>
-            ))}
-          </div>
+        paying ? (
+          <span className="text-[var(--mp-fg)]">
+            {formatInt(c.renews)} renew, {formatInt(c.one_time)} one-time
+            {c.unknown > 0 ? `, ${formatInt(c.unknown)} unknown` : ""}
+            <span className="text-[var(--mp-fg-muted)]"> · {formatInt(paying.in_trial)} in trial</span>
+          </span>
         ) : (
-          <span>No active subs</span>
+          <span>Not available</span>
         )
       }
     >
-      <div className="text-2xl font-semibold text-[var(--mp-fg)]">
-        <FormatInt value={live.total} />
+      <div className="text-2xl font-semibold text-[var(--mp-fg)]" title={paying?.basis}>
+        {paying ? <FormatInt value={paying.total} /> : "—"}
       </div>
     </Tile>
   );
@@ -689,24 +675,28 @@ function SignupsTile({
   );
 }
 
-function ConversionTile({ conversion7d }: { conversion7d: number | null }) {
-  const ratio = conversion7d;
-  const pct = ratio != null ? ratio * 100 : null;
-  const tone = pct == null ? "neutral" : pct < 2 ? "danger" : "info";
+function NewPayersTile({ data }: { data: OverviewSnapshot["tiles"]["new_payers_7d"] }) {
   return (
     <Tile
-      label="Conversion (7d)"
+      label="New payers (7d)"
       icon={TrendingUp}
-      tone={tone}
-      href="/admin/funnels"
+      tone="info"
+      href="/admin/subscriptions?view=all"
       footer={
-        <span className="italic text-[var(--mp-fg-muted)]">
-          Paywall hit → purchase
-        </span>
+        data ? (
+          <span>
+            Real signups in the same 7 days: {formatInt(data.signups)}
+          </span>
+        ) : (
+          <span className="italic text-[var(--mp-fg-muted)]">Not available</span>
+        )
       }
     >
       <div className="text-2xl font-semibold text-[var(--mp-fg)]">
-        {ratio != null ? formatPct(ratio) : "—"}
+        {data ? <FormatInt value={data.new_payers} /> : "—"}
+      </div>
+      <div className="mt-1 text-[10px] text-[var(--mp-fg-muted)]">
+        Learners whose first paid payment was in the last 7 days
       </div>
     </Tile>
   );
@@ -936,7 +926,7 @@ function StuckPendingTile({ initial }: { initial: number }) {
           <span>
             <StatusDot tone="warn" size={6} />{" "}
             <span className="ml-1">
-              Run reconcile or force-cancel via /admin/subscriptions.
+              Stuck checkouts need a manual reconcile. Ask the ops agent or run the reconcile job.
             </span>
           </span>
         ) : (
@@ -953,36 +943,48 @@ function StuckPendingTile({ initial }: { initial: number }) {
   );
 }
 
-function WebhookFailuresTile({
-  initial,
-}: {
-  initial: number;
-}) {
-  // Not yet wired to Realtime (processed_webhook_events RT lands in a
-  // follow-up — until then the /api/admin/overview 60s refresh is
-  // good enough).
-  const [live, setLive] = useState(initial);
-  useEffect(() => setLive(initial), [initial]);
-
-  const tone = live > 0 ? "danger" : "success";
-
+/**
+ * Payment failures (24h) — UX-ADM-04. Same computation as the Payments
+ * diagnosis (computePaymentHealth): unresolved paid payments seen in the
+ * last 24h plus signed-looking deliveries rejected for the secret. Unsigned
+ * probes are counted apart and never turn the tile red. Never a green zero
+ * when the number could not be read.
+ */
+function PaymentFailuresTile({ health, restricted }: { health: PaymentHealthTile | null; restricted?: boolean }) {
+  if (!health) {
+    return (
+      <Tile label="Payment failures (24h)" icon={Webhook} tone="neutral" footer={
+        <span className="italic text-[var(--mp-fg-muted)]">
+          {restricted ? "Needs revenue access to read payment failures." : "Not measured yet."}
+        </span>
+      }>
+        <div className="text-2xl font-semibold text-[var(--mp-fg-muted)]">Not measured</div>
+      </Tile>
+    );
+  }
+  const live = health.failures_24h;
+  const tone = live > 0 ? "danger" : health.unresolved_total > 0 ? "warn" : "neutral";
   return (
     <Tile
-      label="Webhook failures (24h)"
+      label="Payment failures (24h)"
       icon={Webhook}
       tone={tone}
-      href="/admin/webhooks"
+      href="/admin/payments#failures"
       footer={
-        live > 0 ? (
-          <span>
-            <StatusDot tone="danger" size={6} />{" "}
-            <span className="ml-1">Investigate Whop webhook deliveries.</span>
-          </span>
-        ) : (
-          <span className="italic text-[var(--mp-fg-muted)]">
-            All webhooks landed in the last 24h
-          </span>
-        )
+        <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          {live > 0 ? (
+            <span>Open the payment failures and resolve each one.</span>
+          ) : health.unresolved_total > 0 ? (
+            <span>{formatInt(health.unresolved_total)} older unresolved payment{health.unresolved_total === 1 ? "" : "s"} still open.</span>
+          ) : (
+            <span>No paid payment is waiting on a grant.</span>
+          )}
+          {health.probes_24h > 0 && (
+            <span className="rounded border border-[var(--mp-border-subtle)] px-1.5 py-0.5 text-[var(--mp-fg-muted)]">
+              {formatInt(health.probes_24h)} unsigned probe{health.probes_24h === 1 ? "" : "s"}
+            </span>
+          )}
+        </span>
       }
     >
       <div className="text-2xl font-semibold text-[var(--mp-fg)]">

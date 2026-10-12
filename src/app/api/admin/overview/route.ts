@@ -3,6 +3,18 @@ import { NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { adminRouteShell } from "@/lib/admin/shell";
 import { canAccessAdminPermission, loadAdminPermissionSnapshot } from "@/lib/admin/permissions";
+import { accountsById, loadAccounts, loadLedger, loadSubscriptions, loadWhopDeliveries } from "@/lib/admin/moneyMetrics";
+import {
+  PAYING_BASIS,
+  classifyPayers,
+  computeMoneyIn,
+  computePaymentHealth,
+  firstPaidAtByUser,
+  isActiveUnexpired,
+  isStaffOrTestAccount,
+  rowPaymentIds,
+} from "@/lib/admin/money-rules";
+import { classifySubscriptionCadence } from "@/lib/billing-cadence";
 
 export const dynamic = "force-dynamic";
 
@@ -16,9 +28,9 @@ export const dynamic = "force-dynamic";
  * narrow (one per table) and avoids the N round-trips per event that
  * a "re-query on every change" pattern would cost.
  *
- * Sprint §2.2 — 6 tiles are live-wired (revenue today, active subs,
- * new signups today, paywall hits, referrals awaiting action, PUYP
- * pending). The other 5 return skeleton numbers for the scaffold.
+ * Money tiles (a14, 2026-10-12) read the shared definitions in
+ * src/lib/admin/money-rules.ts: cash in by payment date, paying learners
+ * with trials apart, and the same payment health the Payments page shows.
  */
 export const GET = adminRouteShell(
   async ({ actor }) => {
@@ -30,66 +42,52 @@ export const GET = adminRouteShell(
     const now = new Date();
     const startOfDay = new Date(now);
     startOfDay.setUTCHours(0, 0, 0, 0);
-    const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
     const sevenDaysAgo = new Date(now.getTime() - 7 * 86400_000);
     const twentyFourHoursAgo = new Date(now.getTime() - 24 * 3600_000);
 
-    // 1. Revenue today (cents) + month-to-date (cents) + 7-day sparkline.
-    //    One select across the last 7 days powers today + sparkline; MTD
-    //    is a separate fetch since the month-window often exceeds 7 days.
-    const [recent7dRes, mtdPaidRes] = canReadRevenue ? await Promise.all([
-      checkedRead(sb
-        .from("subscriptions")
-        .select("amount_cents, started_at")
-        .eq("status", "active")
-        .gte("started_at", sevenDaysAgo.toISOString())),
-      checkedRead(sb
-        .from("subscriptions")
-        .select("amount_cents, started_at")
-        .eq("status", "active")
-        .gte("started_at", startOfMonth.toISOString())),
-    ]) : [{ data: null }, { data: null }];
-
-    const revenueMtdCents = (mtdPaidRes.data || []).reduce(
-      (sum, r) => sum + (Number(r.amount_cents) || 0),
-      0
-    );
-
-    // Bucket the last-7-days revenue into per-day cents (oldest → newest).
-    // series_7d[0] = 6 days ago, series_7d[6] = today.
-    const series7d: number[] = new Array(7).fill(0);
-    let revenueTodayCents = 0;
-    const todayMs = startOfDay.getTime();
-    for (const row of recent7dRes.data || []) {
-      const startedAt = row.started_at ? new Date(row.started_at as string) : null;
-      if (!startedAt || isNaN(startedAt.getTime())) continue;
-      const amount = Number(row.amount_cents) || 0;
-      const daysAgo = Math.floor((todayMs - startedAt.getTime()) / 86400_000);
-      if (daysAgo >= 0 && daysAgo < 7) {
-        series7d[6 - daysAgo] += amount;
+    // 1-2. Money in, paying learners and payment health (ADM-01 A, UX-ADM-04).
+    //      One shared definition (src/lib/admin/money-rules.ts): cash by
+    //      payment date, gross, refunds on their own day, Vienna days; paying
+    //      = distinct real learners with a positive payment, trials apart.
+    const money = canReadRevenue ? await (async () => {
+      const [{ ledger }, accounts, subs, deliveries] = await Promise.all([
+        loadLedger(sb),
+        loadAccounts(sb),
+        loadSubscriptions(sb, sevenDaysAgo.toISOString()),
+        loadWhopDeliveries(sb, sevenDaysAgo.toISOString()),
+      ]);
+      const users = accountsById(accounts);
+      const paymentsById = new Map(ledger.payments.map((p) => [p.payment_id, p]));
+      const payers = classifyPayers(subs, users, now, paymentsById);
+      const byCadence = { renews: 0, one_time: 0, unknown: 0 };
+      for (const userId of payers.paying) {
+        const cadences = subs
+          .filter((s) => s.user_id === userId && isActiveUnexpired(s, now))
+          .map((s) => classifySubscriptionCadence({
+            tier: s.tier ?? "",
+            payment_provider: s.payment_provider,
+            plan_id: rowPaymentIds(s).map((id) => paymentsById.get(id)?.plan_id).find(Boolean) ?? null,
+          }));
+        if (cadences.includes("auto_renews")) byCadence.renews += 1;
+        else if (cadences.includes("unknown")) byCadence.unknown += 1;
+        else byCadence.one_time += 1;
       }
-      if (startedAt.getTime() >= todayMs) {
-        revenueTodayCents += amount;
+      const realSignups7d = accounts.filter((a) =>
+        !isStaffOrTestAccount(a) && a.created_at && Date.parse(a.created_at) >= sevenDaysAgo.getTime()).length;
+      let newPayers7d = 0;
+      for (const [userId, at] of firstPaidAtByUser(ledger)) {
+        if (isStaffOrTestAccount(users.get(userId))) continue;
+        if (Date.parse(at) >= sevenDaysAgo.getTime()) newPayers7d += 1;
       }
-    }
-
-    // 2. Active paid subscriptions (by tier).
-    const { data: activeSubs } = canReadRevenue ? await checkedRead(sb
-      .from("subscriptions")
-      .select("tier, status, expires_at")
-      .eq("status", "active")) : { data: null };
-    const activeByTier: Record<string, number> = {};
-    let activeTotal = 0;
-    for (const row of activeSubs || []) {
-      const tier = (row.tier as string) || "unknown";
-      if (
-        !row.expires_at ||
-        new Date(row.expires_at as string).getTime() > now.getTime()
-      ) {
-        activeByTier[tier] = (activeByTier[tier] || 0) + 1;
-        activeTotal += 1;
-      }
-    }
+      return {
+        moneyIn: computeMoneyIn(ledger, now),
+        payers,
+        byCadence,
+        realSignups7d,
+        newPayers7d,
+        health: computePaymentHealth(deliveries, ledger, now),
+      };
+    })() : null;
 
     // 3. New signups today.
     const { count: signupsToday } = await checkedRead(sb
@@ -124,12 +122,8 @@ export const GET = adminRouteShell(
       .select("id", { count: "exact", head: true })
       .eq("status", "new"));
 
-    // 8. Webhook failures (last 24h) — best-effort; processed_webhook_events
-    //    currently has no status column, so return 0.
-    const webhookFailures24h = 0;
-
-    // 8b. Stuck pending subscriptions — pending NOWPayments rows older
-    //     than 24h. Surfaces operational debt: every entry here is either
+    // 8b. Stuck pending subscriptions — pending checkout rows older
+    //     than 24h (in practice the Apr to Jun NOWPayments backlog). Surfaces operational debt: every entry here is either
     //     a user who abandoned at the BTC checkout screen or a webhook
     //     that never delivered. Should be 0 in steady state. The post-
     //     PR-#7 audit (review-2026-04-25-A2) found 8; cancelling them is
@@ -138,26 +132,7 @@ export const GET = adminRouteShell(
       .from("subscriptions")
       .select("id", { count: "exact", head: true })
       .eq("status", "pending")
-      .eq("payment_provider", "nowpayments")
       .lt("created_at", twentyFourHoursAgo.toISOString())) : { count: null };
-
-    // 9. Free-to-paid conversion (rolling 7d) — signups vs active new subs.
-    const [{ count: signups7d }, { count: newPaid7d }] = canReadRevenue ? await Promise.all([
-      checkedRead(sb
-        .from("users")
-        .select("id", { count: "exact", head: true })
-        .gte("created_at", sevenDaysAgo.toISOString())),
-      checkedRead(sb
-        .from("subscriptions")
-        .select("id", { count: "exact", head: true })
-        .eq("status", "active")
-        .gte("started_at", sevenDaysAgo.toISOString())),
-    ]) : [{ count: null }, { count: null }];
-
-    const conversion7d =
-      signups7d && signups7d > 0 && newPaid7d != null
-        ? newPaid7d / signups7d
-        : null;
 
     // 10. Cron health — derived from cron_runs last-seen.
     const { data: cronRuns } = canReadSystem ? await checkedRead(sb
@@ -248,23 +223,39 @@ export const GET = adminRouteShell(
     return NextResponse.json({
       generated_at: now.toISOString(),
       tiles: {
-        revenue: canReadRevenue ? {
-          today_cents: revenueTodayCents,
-          mtd_cents: revenueMtdCents,
-          series_7d: series7d,
+        revenue: money ? {
+          today_cents: money.moneyIn.today.cash_cents,
+          mtd_cents: money.moneyIn.month_to_date.cash_cents,
+          series_7d: money.moneyIn.series_7d,
+          today: money.moneyIn.today,
+          month_to_date: money.moneyIn.month_to_date,
+          other_currencies: money.moneyIn.other_currencies,
+          basis: money.moneyIn.basis,
         } : null,
-        active_subs: canReadRevenue ? {
-          total: activeTotal,
-          by_tier: activeByTier,
+        active_subs: money ? {
+          total: money.payers.paying.size,
+          in_trial: money.payers.inTrial.size,
+          by_cadence: money.byCadence,
+          basis: PAYING_BASIS,
         } : null,
         signups_today: signupsToday || 0,
         paywall_hits_today: paywallHits || 0,
         referrals_awaiting_action: canReadRevenue ? referralsAwaitingAction || 0 : null,
         puyp_pending: canReadRevenue ? puypPending || 0 : null,
         flagged_open: flaggedOpen || 0,
-        webhook_failures_24h: canReadSystem ? webhookFailures24h : null,
+        payment_health: money ? {
+          level: money.health.level,
+          diagnosis: money.health.diagnosis,
+          failures_24h: money.health.failures_24h,
+          probes_24h: money.health.probes_24h,
+          unresolved_total: money.health.unresolved_total,
+        } : null,
         stuck_pending_24h: canReadRevenue ? stuckPending24h || 0 : null,
-        conversion_7d: canReadRevenue ? conversion7d : null,
+        new_payers_7d: money ? {
+          new_payers: money.newPayers7d,
+          signups: money.realSignups7d,
+          ratio: money.realSignups7d > 0 ? money.newPayers7d / money.realSignups7d : null,
+        } : null,
         ai_chat_1h: canReadSystem ? {
           requests: aiCompletedCount + aiFailedCount,
           completed: aiCompletedCount,

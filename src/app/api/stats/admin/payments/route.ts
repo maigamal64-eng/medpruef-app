@@ -2,25 +2,26 @@ import { NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { adminRouteShell } from "@/lib/admin/shell";
 import { computePaymentFunnelMetrics } from "@/lib/admin/paymentFunnelMetrics";
+import { canAccessAdminPermission, loadAdminPermissionSnapshot } from "@/lib/admin/permissions";
 
 export const dynamic = "force-dynamic";
 
 /**
- * GET /api/stats/admin/payments — the read-only payment-funnel observability
- * behind /admin/payments (Gate 1, 2026-06-24).
+ * GET /api/stats/admin/payments — the read-only data behind /admin/payments.
  *
- * Guarded by adminRouteShell (requireAdmin + per-admin rate limit), same as
- * /api/stats/admin/control-plane. All computation is read-only — see
- * paymentFunnelMetrics.ts. Surfaces the funnel counts (checkout started →
- * redirected → webhook received → granted), the named failure reasons, the
- * Whop inbound-delivery truth from webhook_attempts (so a WHOP_WEBHOOK_SECRET
- * mismatch — every payment rejected at the door — is visible, not swallowed),
- * and the recent payment-events feed.
+ * Guarded by adminRouteShell (revenue.read via the permission map). Returns
+ * the shared payment diagnosis, cash money in per Vienna month, the distinct
+ * funnel, the Unresolved payments queue, refunds with access outcome and the
+ * webhook deliveries (a14, ADM-01/ADM-02). Learner names and emails are
+ * included only when the viewer also holds users.read.
  */
 export const GET = adminRouteShell(
-  async () => {
+  async ({ actor }) => {
+    const snapshot = await loadAdminPermissionSnapshot(actor.userId);
     const sb = getServiceClient();
-    const metrics = await computePaymentFunnelMetrics(sb);
+    const metrics = await computePaymentFunnelMetrics(sb, {
+      canReadUsers: canAccessAdminPermission(snapshot, "users.read"),
+    });
     return NextResponse.json(metrics);
   },
   {

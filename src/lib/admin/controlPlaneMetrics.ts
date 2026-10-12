@@ -56,22 +56,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { TIERS } from "@/lib/nowpayments";
 import { CONTROL_PLANE_PROCESSES, type AutomationLevel } from "./processRegistry";
+import { accountsById, loadAccounts, loadLedger, loadSubscriptions } from "./moneyMetrics";
+import { classifyPayers, isStaffOrTestAccount } from "./money-rules";
 
-/**
- * Email domains whose accounts are NOT real paying customers (admin, the comped
- * client [name], demo/test users all live on @medpruf.com). Excluded from the
- * genuinely-paying numerator AND the real-users denominator.
- */
-const INTERNAL_EMAIL_DOMAINS = ["@medpruf.com", "@medpruef.com"];
-
-/** Payment rails that represent real money changing hands (manual = comped/gift). */
-const REAL_PAYMENT_RAILS = ["whop", "stripe", "nowpayments"] as const;
-
-function isInternalEmail(email: string | null | undefined): boolean {
-  if (!email) return false;
-  const e = email.toLowerCase();
-  return INTERNAL_EMAIL_DOMAINS.some((d) => e.endsWith(d));
-}
+// Real users and paying customers (a14, 2026-10-12) use the ONE shared
+// definition in ./money-rules: staff and test accounts excluded, paying =
+// active unexpired real-rail subscription with a positive payment.
 
 /** The live headline offer the MRR/LTV model is priced from. */
 const HEADLINE_TIER_ID = "premium_pass_guaranteed";
@@ -192,16 +182,16 @@ export async function computeControlPlaneMetrics(
   const offer = headlineOffer();
 
   const [
-    allUsersRes,
+    accounts,
     proAllTimeRes,
     proEntitledRes,
     activeRowsRes,
-    activeSubsRes,
+    subs,
     realChurn30dRes,
+    { ledger },
   ] = await Promise.all([
-    // EVERY user's id+email+role — so we can subtract internal/admin accounts
-    // from the real-users denominator in JS (a single cheap projection).
-    sb.from("users").select("id, email, role"),
+    // Every account (paged), so staff and test accounts leave both sides.
+    loadAccounts(sb),
     // entitled-Pro ALL-TIME (incl. comped/admin/demo) — the "nothing hidden" line.
     sb
       .from("users")
@@ -218,14 +208,8 @@ export async function computeControlPlaneMetrics(
       .from("subscriptions")
       .select("id", { count: "exact", head: true })
       .eq("status", "active"),
-    // REAL paying base: active subs on a real rail (whop/stripe/nowpayments —
-    // manual/comped excluded), unexpired. Fetched (not head-counted) so we can
-    // de-dupe by user_id and drop any internal account. Tiny set (0 today).
-    sb
-      .from("subscriptions")
-      .select("user_id, expires_at")
-      .eq("status", "active")
-      .in("payment_provider", REAL_PAYMENT_RAILS as unknown as string[]),
+    // Active subscription rows for the shared paying rule.
+    loadSubscriptions(sb, nowIso),
     // REAL churn: subs that were ACTUALLY ACTIVATED (expires_at set) then lost
     // in the last 30d. Abandoned crypto checkouts (expires_at NULL) excluded.
     sb
@@ -234,21 +218,10 @@ export async function computeControlPlaneMetrics(
       .in("status", ["cancelled", "refunded", "expired"])
       .not("expires_at", "is", null)
       .gte("updated_at", thirtyDaysAgoIso),
+    loadLedger(sb),
   ]);
 
-  const allUsers = (allUsersRes.data ?? []) as Array<{
-    id: string;
-    email: string | null;
-    role: string | null;
-  }>;
-  // Real users = exclude admins + internal (@medpruf.com) accounts (admin,
-  // comped client [name], demo/test all live there).
-  const realUserIds = new Set<string>();
-  for (const u of allUsers) {
-    if (u.role === "admin") continue;
-    if (isInternalEmail(u.email)) continue;
-    realUserIds.add(u.id);
-  }
+  const realUserIds = new Set(accounts.filter((u) => !isStaffOrTestAccount(u)).map((u) => u.id));
   const realUsers = realUserIds.size;
 
   const proAllTime = proAllTimeRes.count ?? 0; // entitled incl. comped
@@ -256,20 +229,8 @@ export async function computeControlPlaneMetrics(
   const activeRows = activeRowsRes.count ?? 0;
   const churn30d = realChurn30dRes.count ?? 0;
 
-  // REAL paying customers = distinct REAL users holding an active+unexpired sub
-  // on a real rail. (0 today; ticks up by itself on the first card payment.)
-  const activeSubs = (activeSubsRes.data ?? []) as Array<{
-    user_id: string | null;
-    expires_at: string | null;
-  }>;
-  const payingUserIds = new Set<string>();
-  for (const s of activeSubs) {
-    if (!s.user_id) continue;
-    if (!realUserIds.has(s.user_id)) continue; // drop internal/comped/admin
-    const unexpired = !s.expires_at || new Date(s.expires_at).getTime() > now.getTime();
-    if (unexpired) payingUserIds.add(s.user_id);
-  }
-  const payingUsers = payingUserIds.size;
+  // REAL paying customers: the shared rule (positive payment, trials apart).
+  const payingUsers = classifyPayers(subs, accountsById(accounts), now, new Map(ledger.payments.map((p) => [p.payment_id, p]))).paying.size;
 
   // MRR = REAL paying users × monthly-equivalent of the €129/6-mo pass.
   // 0 payers ⇒ €0 (the honest figure; not the €19 a demo account would print).

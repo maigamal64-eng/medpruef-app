@@ -8,23 +8,16 @@
  * The funnel is signups → activated → engaged → paying, each step a count plus
  * its percentage of signups, so the drop-off between stages is visible.
  *
- * REAL-USER + REAL-PAYING DEFINITIONS (mirrored from controlPlaneMetrics so the
- * two panels never disagree — that module is the canonical owner of both the
- * internal-email exclusion and the real-paying rule; replicated here, not
- * imported, because those consts are module-private there):
- *   - signups   = REAL users = all users minus admin (role='admin') and
- *                 internal @medpruf.com / @medpruef.com accounts (the admin,
- *                 the comped client [name], and the demo/test user all carry an
- *                 internal email; Telegram-auth users have a NULL email and ARE
- *                 real — isInternalEmail() returns false for null, so they stay).
+ * REAL-USER + PAYING DEFINITIONS (a14, 2026-10-12): owned by ./money-rules and
+ * shared with Overview, Payments, the paid roster and the control plane:
+ *   - signups   = real users = all accounts minus staff and test accounts
+ *                 (isStaffOrTestAccount). Telegram-only accounts have no email
+ *                 and stay counted.
  *   - activated = real users with >= 1 answer_history row.
  *   - engaged   = real users with >= 25 answer_history rows.
- *   - paying    = distinct real users holding an active, unexpired subscription
- *                 on a real rail (whop/stripe/nowpayments — manual/comped
- *                 excluded). This is the SAME computation as
- *                 controlPlaneMetrics.active_paid_users; if it ever differs,
- *                 one of the two has drifted. It is 0 today and ticks up by
- *                 itself on the first real card payment.
+ *   - paying    = distinct real learners with an active, unexpired real-rail
+ *                 subscription AND a positive payment (classifyPayers). A trial
+ *                 without a charge is in trial, not paying.
  *
  * ── HOW "engaged" IS COUNTED WITHOUT THE 1000-ROW REST CAP (the method the
  *    task asks to be documented) ──────────────────────────────────────────────
@@ -58,33 +51,18 @@
 
 import { assertReadSucceeded } from "./read-result";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { accountsById, loadAccounts, loadLedger, loadSubscriptions } from "./moneyMetrics";
+import { PAYING_BASIS, STAFF_TEST_BASIS, classifyPayers, isStaffOrTestAccount } from "./money-rules";
 
-/**
- * Email domains whose accounts are NOT real users (admin, the comped client
- * [name], demo/test all live on @medpruf.com / @medpruef.com). Canonical owner of
- * this exclusion is controlPlaneMetrics (INTERNAL_EMAIL_DOMAINS); kept in sync
- * here because that const is module-private there.
- */
-const INTERNAL_EMAIL_DOMAINS = ["@medpruf.com", "@medpruef.com"];
-
-/**
- * Payment rails that represent real money changing hands (manual = comped/gift).
- * MUST match controlPlaneMetrics.REAL_PAYMENT_RAILS exactly (3 elements) so
- * `paying` here equals control-plane's `active_paid_users`.
- */
-const REAL_PAYMENT_RAILS = ["whop", "stripe", "nowpayments"] as const;
+// Real users and paying people (a14, 2026-10-12) come from the ONE shared
+// definition in ./money-rules (isStaffOrTestAccount + classifyPayers), the
+// same rules Overview, Payments, the paid roster and the control plane use.
 
 /** Engagement threshold — answer_history rows for a real user to count "engaged". */
 const ENGAGED_MIN_ANSWERS = 25;
 
 /** Per-user count requests issued concurrently (keeps the service pool sane). */
 const CHUNK_SIZE = 20;
-
-function isInternalEmail(email: string | null | undefined): boolean {
-  if (!email) return false;
-  const e = email.toLowerCase();
-  return INTERNAL_EMAIL_DOMAINS.some((d) => e.endsWith(d));
-}
 
 export interface GrowthFunnelStep {
   /** Absolute count at this stage. */
@@ -95,13 +73,13 @@ export interface GrowthFunnelStep {
 
 export interface GrowthMetrics {
   generated_at: string;
-  /** Real users (all minus admin + internal-email accounts). */
+  /** Real users (all minus staff and test accounts). */
   signups: GrowthFunnelStep;
   /** Real users with >= 1 answer_history row. */
   activated: GrowthFunnelStep;
   /** Real users with >= 25 answer_history rows. */
   engaged: GrowthFunnelStep;
-  /** Distinct real users with an active+unexpired sub on a real rail. */
+  /** Paying learners (shared definition in ./money-rules). */
   paying: GrowthFunnelStep;
   /** Plain-language note on how each funnel figure was derived. */
   basis: {
@@ -121,8 +99,8 @@ function step(count: number, signups: number): GrowthFunnelStep {
 
 /**
  * Compute the growth funnel from the live DB. READ-ONLY: every query here is a
- * SELECT/count; this never mutates. The internal-email exclusion + the
- * real-paying rule are mirrored from controlPlaneMetrics (the canonical owner).
+ * SELECT/count; this never mutates. Real users and paying come from
+ * ./money-rules.
  */
 export async function computeGrowthMetrics(
   sb: SupabaseClient
@@ -130,36 +108,16 @@ export async function computeGrowthMetrics(
   const now = new Date();
   const nowIso = now.toISOString();
 
-  // ─── signups: real users = all users minus admin + internal-email ─────────
-  // Same single cheap projection as controlPlaneMetrics. (Inherits the same
-  // latent 1000-row cap on the users table itself; fine at 114 — we add no new
-  // cap bug below.)
-  const [allUsersRes, activeSubsRes] = await Promise.all([
-    sb.from("users").select("id, email, role"),
-    // REAL paying base — replicated VERBATIM from controlPlaneMetrics'
-    // activeSubsRes: active subs on a real rail, fetched (not head-counted) so
-    // we can de-dupe by user_id and drop internal accounts. Tiny set (0 today).
-    sb
-      .from("subscriptions")
-      .select("user_id, expires_at")
-      .eq("status", "active")
-      .in("payment_provider", REAL_PAYMENT_RAILS as unknown as string[]),
+  // ─── signups: real users = all accounts minus staff and test accounts ────
+  const [accounts, subs, { ledger }] = await Promise.all([
+    loadAccounts(sb),
+    loadSubscriptions(sb, nowIso),
+    loadLedger(sb),
   ]);
-
-  assertReadSucceeded(allUsersRes);
-  assertReadSucceeded(activeSubsRes);
-  const allUsers = (allUsersRes.data ?? []) as Array<{
-    id: string;
-    email: string | null;
-    role: string | null;
-  }>;
   const realUserIds: string[] = [];
-  const realUserIdSet = new Set<string>();
-  for (const u of allUsers) {
-    if (u.role === "admin") continue;
-    if (isInternalEmail(u.email)) continue;
+  for (const u of accounts) {
+    if (isStaffOrTestAccount(u)) continue;
     realUserIds.push(u.id);
-    realUserIdSet.add(u.id);
   }
   const signups = realUserIds.length;
 
@@ -186,21 +144,9 @@ export async function computeGrowthMetrics(
     }
   }
 
-  // ─── paying: distinct real users with an active+unexpired sub on a real rail
-  // (mirrors controlPlaneMetrics exactly — must equal active_paid_users). ────
-  const activeSubs = (activeSubsRes.data ?? []) as Array<{
-    user_id: string | null;
-    expires_at: string | null;
-  }>;
-  const payingUserIds = new Set<string>();
-  for (const s of activeSubs) {
-    if (!s.user_id) continue;
-    if (!realUserIdSet.has(s.user_id)) continue; // drop internal/comped/admin
-    const unexpired =
-      !s.expires_at || new Date(s.expires_at).getTime() > now.getTime();
-    if (unexpired) payingUserIds.add(s.user_id);
-  }
-  const paying = payingUserIds.size;
+  // ─── paying: the shared definition (positive payment, trials apart) ──────
+  const payers = classifyPayers(subs, accountsById(accounts), now, new Map(ledger.payments.map((p) => [p.payment_id, p])));
+  const paying = payers.paying.size;
 
   return {
     generated_at: nowIso,
@@ -209,13 +155,10 @@ export async function computeGrowthMetrics(
     engaged: step(engaged, signups),
     paying: step(paying, signups),
     basis: {
-      signups: `Real users: all accounts minus the admin and internal @medpruf.com / @medpruef.com accounts (admin, the comped client, the demo user). Telegram-auth users with no email are kept.`,
+      signups: `Real users: all accounts minus staff and test accounts. ${STAFF_TEST_BASIS}`,
       activated: `Real users with at least 1 answered question (a row in answer_history).`,
       engaged: `Real users with ${ENGAGED_MIN_ANSWERS} or more answered questions. Counted per user via an exact HEAD count of answer_history (no rows fetched), so the 1000-row REST cap never applies even for the heaviest users.`,
-      paying:
-        paying === 0
-          ? `Distinct real users with an active, unexpired subscription on a real rail (whop / stripe / nowpayments; comped / manual excluded). 0 today; rises by itself on the first real card payment. Same definition as the control plane's paying customers.`
-          : `${paying} distinct real paying customer${paying === 1 ? "" : "s"} (active, unexpired sub on a real rail; comped / manual excluded). Same definition as the control plane's paying customers.`,
+      paying: `${paying} paying learner${paying === 1 ? "" : "s"}, ${payers.inTrial.size} in trial. ${PAYING_BASIS}`,
     },
   };
 }

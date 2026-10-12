@@ -49,7 +49,6 @@ import {
   Ticket,
   Users,
   Wallet,
-  Webhook,
   Zap,
 } from "lucide-react";
 import { clearSession, getStoredSession } from "@/lib/auth";
@@ -151,7 +150,6 @@ const NAV: NavSection[] = [
     items: [
       { label: "Crons", href: "/admin/crons", icon: Gauge, permission: "system.read" },
       { label: "Deploys", href: "/admin/deploys", icon: Zap, permission: "system.read" },
-      { label: "Webhooks", href: "/admin/webhooks", icon: Webhook, permission: "system.read" },
       { label: "Errors", href: "/admin/errors", icon: AlertTriangle, permission: "system.read" },
       { label: "Audit", href: "/admin/audit", icon: BarChart3, permission: "system.read" },
       { label: "Env", href: "/admin/env", icon: Database, permission: "system.read" },

@@ -1,116 +1,65 @@
 "use client";
 
 /**
- * /admin/payments — Payment-funnel observability (Gate 1, 2026-06-24).
+ * /admin/payments — money in, payment health and the resolve queue.
  *
- * Proves whether users factually tried to pay and exactly where the flow
- * dropped, and makes a SILENT grant failure (e.g. WHOP_WEBHOOK_SECRET mismatch
- * → every real payment rejected at the door with no grant) loudly visible.
+ * Rebuilt 2026-10-12 (a14: ADM-01 A, ADM-02 A, OW-31, UX-ADM-04):
+ *   1. One diagnosis line, the same function as the Overview failures tile.
+ *      ALARM only when signed-looking deliveries failed for 7 days with none
+ *      processed; unsigned probes are a neutral count.
+ *   2. Money in per Vienna month, cash basis, gross with Whop fees and net
+ *      where Whop reported both amounts.
+ *   3. Payment failures: the Unresolved payments queue (paid, never granted)
+ *      never ages out and offers Link to learner, Mark as test, Mark not ours.
+ *   4. Trace one payment end to end.
+ *   5. The funnel in distinct sessions and payments, refunds (90 days) with
+ *      access outcome, Whop deliveries (absorbs /admin/webhooks) and the feed.
  *
- * Read-only over GET /api/stats/admin/payments:
- *   1. A headline DIAGNOSIS line (0-attempt story vs broken-grant story).
- *   2. The funnel: checkout started → redirected → webhook received → granted.
- *   3. Failed / unmatched webhooks PROMINENT (named reasons + delivery truth).
- *   4. The recent payment-events feed.
- *
- * Boundary (the known server-import-into-client P0): this client page imports
- * ONLY pure presentational primitives + the metrics TYPE (duplicated minimally
- * below). The COMPUTATION lives server-side in @/lib/admin/paymentFunnelMetrics
- * (it pulls getServiceClient) and is reached exclusively via the admin-shelled
- * API route — never imported here. Mirrors /admin/control-plane exactly.
+ * Boundary: imports only presentational primitives and the mirrored TYPES;
+ * the computation lives server-side in @/lib/admin/paymentFunnelMetrics.
  */
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import {
   AlertCircle,
   AlertTriangle,
   CheckCircle2,
   CreditCard,
   Inbox,
+  RotateCcw,
   ShieldAlert,
   TrendingDown,
+  Wallet,
   Webhook,
 } from "lucide-react";
 import { authFetch as fetch } from "@/lib/authFetch";
 import { useAdminPermissions } from "@/lib/admin/useAdminPermissions";
 import { AdminPageShell } from "../_components/AdminPageShell";
-import {
-  FormatInt,
-  SectionHeading,
-  StatusDot,
-  formatInt,
-} from "../_components/primitives";
-
-// ── Mirror of the API response shape (the server type lives with the
-// computation in @/lib/admin/paymentFunnelMetrics; duplicated minimally here
-// so a server-only module is never pulled into the client bundle). ──
-interface FunnelStep {
-  key: string;
-  label: string;
-  count: number;
-}
-interface PaymentFeedRow {
-  id: number;
-  event: string;
-  provider: string;
-  user_id: string | null;
-  tier: string | null;
-  payment_id: string | null;
-  checkout_session_id: string | null;
-  reason: string | null;
-  signature_valid: boolean | null;
-  matched: boolean | null;
-  amount_cents: number | null;
-  currency: string | null;
-  created_at: string;
-}
-interface WebhookDeliveryRow {
-  id: string;
-  result: string;
-  signature_valid: boolean | null;
-  event_id: string | null;
-  error: string | null;
-  received_at: string;
-}
-interface PaymentFunnelMetrics {
-  generated_at: string;
-  window_days: number;
-  funnel: FunnelStep[];
-  totals: {
-    checkout_failed: number;
-    grant_failed: number;
-    grant_succeeded: number;
-    webhook_received: number;
-    webhook_unmatched: number;
-  };
-  failure_reasons: Array<{ reason: string; count: number }>;
-  webhook_deliveries: {
-    total: number;
-    by_result: Record<string, number>;
-    sig_invalid: number;
-    recent: WebhookDeliveryRow[];
-  };
-  recent_events: PaymentFeedRow[];
-  diagnosis: string;
-}
+import { FormatInt, SectionHeading, StatusDot, formatInt } from "../_components/primitives";
+import { ResolveDialog, type ResolveAction } from "./_parts/ResolveDialog";
+import { PaymentTrace } from "./_parts/PaymentTrace";
+import { money, monthLabel, when, type PaymentsMetrics, type UnresolvedPaymentRow } from "./_parts/types";
 
 export default function AdminPaymentsPage() {
   const { can, loading: accessLoading } = useAdminPermissions();
-  const [metrics, setMetrics] = useState<PaymentFunnelMetrics | null>(null);
+  const [metrics, setMetrics] = useState<PaymentsMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
+  const [resolving, setResolving] = useState<{ payment: UnresolvedPaymentRow; action: ResolveAction } | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const hydrate = useCallback(async () => {
     if (!can("revenue.read")) return;
     try {
       const res = await fetch("/api/stats/admin/payments", { cache: "no-store" });
-      if (!res.ok) throw new Error(`payments ${res.status}`);
-      setMetrics((await res.json()) as PaymentFunnelMetrics);
+      if (!res.ok) throw new Error(`Could not load payments (HTTP ${res.status}).`);
+      setMetrics((await res.json()) as PaymentsMetrics);
       setUpdatedAt(new Date().toISOString());
       setError(null);
     } catch (e) {
-      setError((e as Error).message || "Failed to load payment funnel");
+      setError((e as Error).message || "Could not load payments.");
     } finally {
       setLoading(false);
     }
@@ -123,24 +72,14 @@ export default function AdminPaymentsPage() {
   }, [accessLoading, can, hydrate]);
 
   const freshness = error ? (metrics ? "cached" : "disconnected") : loading ? "cached" : "live";
-  const sigAlarm = (metrics?.webhook_deliveries.sig_invalid ?? 0) > 0;
-  const hasFailures =
-    (metrics?.totals.grant_failed ?? 0) > 0 ||
-    (metrics?.totals.webhook_unmatched ?? 0) > 0 ||
-    (metrics?.totals.checkout_failed ?? 0) > 0;
 
   return (
     <AdminPageShell
-      title="Payment funnel"
+      title="Payments"
       description={
         <span>
-          Did a buyer factually try to pay, and where did it drop? Last{" "}
-          {metrics?.window_days ?? 30}d.{" "}
-          {metrics && (
-            <span className="font-mono text-[var(--mp-fg-muted)]">
-              Snapshot {new Date(metrics.generated_at).toLocaleTimeString()}
-            </span>
-          )}
+          Money in, payments that did not grant, and every Whop delivery.{" "}
+          {metrics && <span className="font-mono text-[var(--mp-fg-muted)]">Snapshot {new Date(metrics.generated_at).toLocaleTimeString()}</span>}
         </span>
       }
       freshness={freshness}
@@ -152,445 +91,412 @@ export default function AdminPaymentsPage() {
         </div>
       )}
       {can("revenue.read") && <>
-      {error && (
-        <div role="alert" className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-600 dark:text-red-400 flex items-center gap-2">
-          <AlertCircle size={14} />
-          <span>{error}{metrics && updatedAt ? ` Showing the snapshot from ${new Date(updatedAt).toLocaleString()}.` : ""}</span>
-        </div>
-      )}
-
-      {!metrics && !loading && (
-        <div role="status" className="rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] px-4 py-8 text-center text-sm text-[var(--mp-fg-muted)]">
-          Payment funnel data is unavailable. Retry the request before treating missing activity as zero.
-        </div>
-      )}
-
-      {/* ─── Headline diagnosis ───────────────────────────────────────── */}
-      {(metrics || loading) && <DiagnosisBanner metrics={metrics} loading={loading} alarm={sigAlarm} />}
-
-      {/* ─── The funnel ───────────────────────────────────────────────── */}
-      {(metrics || loading) && <FunnelSection metrics={metrics} loading={loading} />}
-
-      {/* ─── Failures + unmatched (prominent) ─────────────────────────── */}
-      {(metrics || loading) && <FailuresSection metrics={metrics} loading={loading} hasFailures={hasFailures} />}
-
-      {/* ─── Webhook delivery truth ───────────────────────────────────── */}
-      {(metrics || loading) && <DeliveriesSection metrics={metrics} loading={loading} />}
-
-      {/* ─── Recent payment-events feed ───────────────────────────────── */}
-      {(metrics || loading) && <FeedSection metrics={metrics} loading={loading} />}
+        {error && (
+          <div role="alert" className="flex items-start gap-2 rounded-md border border-[var(--mp-error)]/40 bg-[var(--mp-error-bg)] px-3 py-2 text-xs text-[var(--mp-error)]">
+            <AlertCircle size={14} className="mt-0.5 shrink-0" />
+            <span className="min-w-0 flex-1">{error}{metrics && updatedAt ? ` Showing the snapshot from ${new Date(updatedAt).toLocaleString()}.` : ""}</span>
+            <button type="button" className="underline" onClick={() => void hydrate()}>Retry</button>
+          </div>
+        )}
+        {notice && (
+          <div role="status" className="flex items-start gap-2 rounded-md border border-[var(--mp-viridian)]/40 px-3 py-2 text-xs text-[var(--mp-fg)]">
+            <CheckCircle2 size={14} className="mt-0.5 shrink-0 text-[var(--mp-viridian)]" />
+            <span className="min-w-0 flex-1">{notice}</span>
+            <button type="button" className="underline" onClick={() => setNotice(null)}>Dismiss</button>
+          </div>
+        )}
+        {!metrics && !loading && (
+          <div role="status" className="rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] px-4 py-8 text-center text-sm text-[var(--mp-fg-muted)]">
+            Payment data is unavailable. Retry before treating missing activity as zero.
+          </div>
+        )}
+        {loading && !metrics && (
+          <div role="status" className="rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] px-4 py-3 text-sm text-[var(--mp-fg-muted)]">Reading payments…</div>
+        )}
+        {metrics && <>
+          <DiagnosisBanner metrics={metrics} />
+          <MoneySection metrics={metrics} />
+          <FailuresSection
+            metrics={metrics}
+            canManage={can("revenue.manage")}
+            onResolve={(payment, action) => { setNotice(null); setResolving({ payment, action }); }}
+          />
+          <PaymentTrace />
+          <FunnelSection metrics={metrics} />
+          <RefundsSection metrics={metrics} />
+          <DeliveriesSection metrics={metrics} />
+          <FeedSection metrics={metrics} />
+        </>}
+        <ResolveDialog
+          payment={resolving?.payment ?? null}
+          action={resolving?.action ?? "test"}
+          onClose={() => setResolving(null)}
+          onDone={(message) => { setResolving(null); setNotice(message); void hydrate(); }}
+        />
       </>}
     </AdminPageShell>
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// Diagnosis banner — the one-line read
-// ═══════════════════════════════════════════════════════════════════
+// ── Diagnosis ───────────────────────────────────────────────────────────
 
-function DiagnosisBanner({
-  metrics,
-  loading,
-  alarm,
-}: {
-  metrics: PaymentFunnelMetrics | null;
-  loading: boolean;
-  alarm: boolean;
-}) {
-  if (loading) {
-    return (
-      <div className="rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] px-4 py-3 text-sm text-[var(--mp-fg-muted)]">
-        Reading the funnel…
-      </div>
-    );
-  }
-  if (!metrics) return null;
-  const tone = alarm
-    ? {
-        border: "var(--mp-error)",
-        bg: "color-mix(in srgb, var(--mp-error) 10%, transparent)",
-        Icon: ShieldAlert,
-        fg: "var(--mp-error)",
-      }
-    : metrics.totals.grant_succeeded > 0
-      ? {
-          border: "var(--mp-viridian)",
-          bg: "color-mix(in srgb, var(--mp-viridian) 10%, transparent)",
-          Icon: CheckCircle2,
-          fg: "var(--mp-viridian)",
-        }
-      : {
-          border: "var(--mp-border-subtle)",
-          bg: "var(--mp-surface-raised)",
-          Icon: AlertCircle,
-          fg: "var(--mp-fg-muted)",
-        };
+function DiagnosisBanner({ metrics }: { metrics: PaymentsMetrics }) {
+  const level = metrics.health.level;
+  const tone = level === "alarm"
+    ? { border: "var(--mp-error)", bg: "color-mix(in srgb, var(--mp-error) 10%, transparent)", Icon: ShieldAlert, fg: "var(--mp-error)" }
+    : level === "attention"
+      ? { border: "var(--mp-warning)", bg: "color-mix(in srgb, var(--mp-warning) 10%, transparent)", Icon: AlertTriangle, fg: "var(--mp-fg)" }
+      : level === "ok"
+        ? { border: "var(--mp-viridian)", bg: "color-mix(in srgb, var(--mp-viridian) 8%, transparent)", Icon: CheckCircle2, fg: "var(--mp-viridian)" }
+        : { border: "var(--mp-border-subtle)", bg: "var(--mp-surface-raised)", Icon: AlertCircle, fg: "var(--mp-fg-muted)" };
   const Icon = tone.Icon;
   return (
-    <div
-      className="rounded-xl border px-4 py-3 flex items-start gap-3"
-      style={{ borderColor: tone.border, backgroundColor: tone.bg }}
-    >
-      <Icon size={18} style={{ color: tone.fg }} className="mt-0.5 flex-shrink-0" />
-      <div className="text-sm text-[var(--mp-fg)] leading-relaxed">
-        {metrics.diagnosis}
+    <div data-testid="payments-diagnosis" className="flex items-start gap-3 rounded-xl border px-4 py-3" style={{ borderColor: tone.border, backgroundColor: tone.bg }}>
+      <Icon size={18} style={{ color: tone.fg }} className="mt-0.5 shrink-0" aria-hidden />
+      <div className="min-w-0 space-y-1 text-sm leading-relaxed text-[var(--mp-fg)]">
+        <p className="break-words">{metrics.health.diagnosis}</p>
+        <p className="text-xs text-[var(--mp-fg-muted)]">
+          Last 7 days: {formatInt(metrics.health.processed_7d)} processed, {formatInt(metrics.health.suspected_mismatch_7d)} rejected with a signature header, {formatInt(metrics.health.probes_7d)} unsigned probe{metrics.health.probes_7d === 1 ? "" : "s"}.
+        </p>
       </div>
     </div>
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// Funnel — created → redirected → webhook → granted
-// ═══════════════════════════════════════════════════════════════════
+// ── Money in ────────────────────────────────────────────────────────────
 
-function FunnelSection({
-  metrics,
-  loading,
-}: {
-  metrics: PaymentFunnelMetrics | null;
-  loading: boolean;
-}) {
-  const top = metrics?.funnel[0]?.count ?? 0;
+function MoneySection({ metrics }: { metrics: PaymentsMetrics }) {
+  const m = metrics.money;
+  const months = [...m.months].reverse();
   return (
-    <section className="space-y-3">
-      <SectionHeading
-        title="The funnel"
-        icon={CreditCard}
-        hint="Each step is a server-recorded event"
-      />
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {(metrics?.funnel ?? PLACEHOLDER_FUNNEL).map((step, i) => {
-          const prev = i === 0 ? null : (metrics?.funnel[i - 1]?.count ?? null);
-          const dropPct =
-            prev && prev > 0 && metrics
-              ? Math.round(((prev - step.count) / prev) * 100)
-              : null;
-          const widthPct = top > 0 ? Math.max(4, Math.round((step.count / top) * 100)) : 0;
-          return (
-            <div
-              key={step.key}
-              className="relative rounded-2xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] p-4 flex flex-col"
-            >
-              <div className="flex items-center gap-2 text-[10px] text-[var(--mp-fg-muted)] uppercase tracking-[0.08em]">
-                <span className="font-mono">{i + 1}</span>
-                <span>{step.label}</span>
-              </div>
-              <div className="mt-2 text-3xl font-semibold text-[var(--mp-fg)] tabular-nums">
-                {loading ? (
-                  <span className="text-[var(--mp-fg-muted)]">—</span>
-                ) : (
-                  <FormatInt value={step.count} />
-                )}
-              </div>
-              {/* mini funnel bar relative to step 1 */}
-              <div className="mt-2 h-1.5 rounded-full bg-[var(--mp-surface-sunken)] overflow-hidden">
-                <div
-                  className="h-full rounded-full transition-[width] duration-500"
-                  style={{
-                    width: `${widthPct}%`,
-                    backgroundColor:
-                      step.key === "grant_succeeded"
-                        ? "var(--mp-viridian)"
-                        : "var(--mp-info)",
-                  }}
-                  aria-hidden
-                />
-              </div>
-              {dropPct != null && dropPct > 0 && (
-                <div className="mt-1.5 text-[10px] text-[var(--mp-fg-subtle)] flex items-center gap-1">
-                  <TrendingDown size={11} />
-                  {dropPct}% drop from prev
-                </div>
-              )}
-            </div>
-          );
-        })}
+    <section id="money" className="scroll-mt-20 space-y-3">
+      <SectionHeading title="Money in" icon={Wallet} hint="Cash basis, Vienna days" />
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <Stat label="This month (cash)" value={money(m.month_to_date.cash_cents)} sub={`${money(m.month_to_date.gross_cents)} paid, ${money(m.month_to_date.refunds_cents)} refunded`} />
+        <Stat label="Today (cash)" value={money(m.today.cash_cents)} sub={`${money(m.today.gross_cents)} paid, ${money(m.today.refunds_cents)} refunded`} />
+        <Stat label="Lifetime (gross)" value={money(m.lifetime_gross_cents)} sub="all EUR payments, before fees and refunds" />
+      </div>
+      <div className="overflow-hidden rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)]">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[560px] border-collapse text-xs">
+            <thead>
+              <tr className="border-b border-[var(--mp-border-subtle)] text-left text-[10px] uppercase tracking-wider text-[var(--mp-fg-muted)]">
+                <th className="px-3 py-2.5 font-medium">Month</th>
+                <th className="px-3 py-2.5 text-right font-medium">Paid</th>
+                <th className="px-3 py-2.5 text-right font-medium">Gross</th>
+                <th className="px-3 py-2.5 text-right font-medium">Whop fees (known)</th>
+                <th className="px-3 py-2.5 text-right font-medium">Refunds</th>
+                <th className="px-3 py-2.5 text-right font-medium">Cash in</th>
+                <th className="px-3 py-2.5 text-right font-medium">Trial starts</th>
+              </tr>
+            </thead>
+            <tbody>
+              {months.map((row) => (
+                <tr key={row.month} className="border-b border-[var(--mp-border-subtle)]/60 last:border-0">
+                  <td className="px-3 py-2 text-[var(--mp-fg)]">{monthLabel(row.month)}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{formatInt(row.paid_payments)}</td>
+                  <td className="px-3 py-2 text-right font-mono tabular-nums">{money(row.gross_cents)}</td>
+                  <td className="px-3 py-2 text-right font-mono tabular-nums text-[var(--mp-fg-muted)]">
+                    {row.payments_with_fee_known > 0 ? `${money(row.fees_known_cents)} (${row.payments_with_fee_known} of ${row.paid_payments})` : "not reported"}
+                  </td>
+                  <td className="px-3 py-2 text-right font-mono tabular-nums">{row.refunds > 0 ? `-${money(row.refunds_cents)}` : money(0)}</td>
+                  <td className="px-3 py-2 text-right font-mono font-semibold tabular-nums">{money(row.cash_cents)}</td>
+                  <td className="px-3 py-2 text-right tabular-nums text-[var(--mp-fg-muted)]">{formatInt(row.trial_starts)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="space-y-1 border-t border-[var(--mp-border-subtle)] px-3 py-2.5 text-[11px] leading-relaxed text-[var(--mp-fg-muted)]">
+          <p>{m.basis}</p>
+          <p>Whop sometimes reports a payment after its fee: a 19.00 EUR charge can arrive as 17.72 EUR. Gross is the charge; the fee column shows only what Whop reported, never a guess.</p>
+          {m.other_currencies.length > 0 && (
+            <p>Not in EUR and not converted: {m.other_currencies.map((o) => `${o.paid_payments} payment${o.paid_payments === 1 ? "" : "s"}, ${money(o.gross_cents, o.currency)}${o.refunds_cents ? `, refunds ${money(o.refunds_cents, o.currency)}` : ""}`).join("; ")}.</p>
+          )}
+          {m.refunds_without_amount > 0 && <p>{m.refunds_without_amount} refund{m.refunds_without_amount === 1 ? "" : "s"} arrived without an amount and are not subtracted.</p>}
+        </div>
       </div>
     </section>
   );
 }
 
-const PLACEHOLDER_FUNNEL: FunnelStep[] = [
-  { key: "checkout_session_created", label: "Checkout started", count: 0 },
-  { key: "checkout_redirected", label: "Redirected to pay", count: 0 },
-  { key: "webhook_received", label: "Webhook received", count: 0 },
-  { key: "grant_succeeded", label: "Pro granted", count: 0 },
-];
+function Stat({ label, value, sub }: { label: string; value: React.ReactNode; sub: string }) {
+  return (
+    <div className="rounded-2xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] p-4">
+      <div className="text-[10px] uppercase tracking-[0.08em] text-[var(--mp-fg-muted)]">{label}</div>
+      <div className="mt-1 text-2xl font-semibold tabular-nums text-[var(--mp-fg)]">{value}</div>
+      <div className="mt-0.5 text-xs text-[var(--mp-fg-muted)]">{sub}</div>
+    </div>
+  );
+}
 
-// ═══════════════════════════════════════════════════════════════════
-// Failures + unmatched — prominent
-// ═══════════════════════════════════════════════════════════════════
+// ── Failures + Unresolved queue ─────────────────────────────────────────
 
 function FailuresSection({
   metrics,
-  loading,
-  hasFailures,
+  canManage,
+  onResolve,
 }: {
-  metrics: PaymentFunnelMetrics | null;
-  loading: boolean;
-  hasFailures: boolean;
+  metrics: PaymentsMetrics;
+  canManage: boolean;
+  onResolve: (payment: UnresolvedPaymentRow, action: ResolveAction) => void;
 }) {
+  const rows = metrics.unresolved;
   return (
-    <section className="space-y-3">
-      <SectionHeading
-        title="Failed & unmatched"
-        icon={AlertTriangle}
-        hint="A silent grant failure shows up here, not in a swallowed log"
-      />
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <FailTile
-          label="Grants failed"
-          value={loading ? "—" : <FormatInt value={metrics?.totals.grant_failed ?? 0} />}
-          tone={(metrics?.totals.grant_failed ?? 0) > 0 ? "danger" : "success"}
-        />
-        <FailTile
-          label="Webhooks unmatched"
-          value={loading ? "—" : <FormatInt value={metrics?.totals.webhook_unmatched ?? 0} />}
-          tone={(metrics?.totals.webhook_unmatched ?? 0) > 0 ? "danger" : "success"}
-        />
-        <FailTile
-          label="Checkouts failed"
-          value={loading ? "—" : <FormatInt value={metrics?.totals.checkout_failed ?? 0} />}
-          tone={(metrics?.totals.checkout_failed ?? 0) > 0 ? "warn" : "success"}
-        />
+    <section id="failures" className="scroll-mt-20 space-y-3">
+      <SectionHeading title="Payment failures" icon={AlertTriangle} hint="Paid but never granted; never ages out" />
+      {!metrics.resolutions_available && (
+        <p className="rounded-xl border border-dashed border-[var(--mp-border-subtle)] px-4 py-3 text-xs text-[var(--mp-fg-muted)]">
+          The resolve actions are switched off until the a14 database changeset is applied. The queue below is still accurate.
+        </p>
+      )}
+      <div id="unresolved" className="overflow-hidden rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)]">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--mp-border-subtle)] px-4 py-2.5">
+          <span className="text-sm font-semibold text-[var(--mp-fg)]">Unresolved payments <span className="tabular-nums text-[var(--mp-fg-muted)]">{rows.length}</span></span>
+          <span className="text-[11px] text-[var(--mp-fg-muted)]">Signature-header rejections (7 days): {formatInt(metrics.health.suspected_mismatch_7d)}</span>
+        </div>
+        {rows.length === 0 ? (
+          <p className="px-4 py-6 text-center text-xs text-[var(--mp-fg-muted)]">Every paid payment granted access or was resolved.</p>
+        ) : (
+          <ul className="divide-y divide-[var(--mp-border-subtle)]">
+            {rows.map((r) => (
+              <li key={r.payment_id} className="space-y-2 px-4 py-3 text-xs" data-testid="unresolved-row">
+                <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                  <span className="text-base font-semibold tabular-nums text-[var(--mp-fg)]">{money(r.gross_cents, r.currency)}</span>
+                  <span className="font-mono text-[var(--mp-fg-muted)]">{when(r.paid_at)} · {r.age_days} day{r.age_days === 1 ? "" : "s"} open</span>
+                </div>
+                <div className="flex flex-wrap gap-x-3 gap-y-1 text-[var(--mp-fg-muted)]">
+                  <span className="break-all font-mono">{r.payment_id}</span>
+                  <span>plan {r.plan_id ?? "unknown"}{r.linkable_tier ? ` (${r.linkable_tier})` : ", not a MedPrüf Pro plan"}</span>
+                  {r.failure_reasons.length > 0 && <span>reason: {r.failure_reasons.join(", ")}</span>}
+                  {r.learner && <Link className="text-[var(--mp-viridian)] underline" href={`/admin/users/${r.learner.id}`}>{r.learner.label ?? `learner ${r.learner.id.slice(0, 8)}`}</Link>}
+                </div>
+                {canManage && metrics.resolutions_available && (
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      className="mp-btn mp-btn--primary mp-btn--sm"
+                      disabled={!r.linkable_tier}
+                      title={r.linkable_tier ? undefined : "Only payments for a MedPrüf Pro plan can be linked."}
+                      onClick={() => onResolve(r, "link")}
+                    >
+                      Link to learner
+                    </button>
+                    <button type="button" className="mp-btn mp-btn--secondary mp-btn--sm" onClick={() => onResolve(r, "test")}>Mark as test</button>
+                    <button type="button" className="mp-btn mp-btn--secondary mp-btn--sm" onClick={() => onResolve(r, "not_ours")}>Mark not ours</button>
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
-
-      {/* Named reasons — the WHY behind each drop. */}
-      {!loading && metrics && (
-        metrics.failure_reasons.length > 0 ? (
-          <div className="rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] divide-y divide-[var(--mp-border-subtle)]/60">
+      {metrics.failure_reasons.length > 0 && (
+        <div className="rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)]">
+          <p className="border-b border-[var(--mp-border-subtle)] px-3 py-2 text-[10px] uppercase tracking-wider text-[var(--mp-fg-muted)]">Failure log rows, last {metrics.window_days} days (a retried payment repeats here)</p>
+          <div className="divide-y divide-[var(--mp-border-subtle)]/60">
             {metrics.failure_reasons.map((r) => (
-              <div
-                key={r.reason}
-                className="flex items-center justify-between px-3 py-2 text-xs"
-              >
+              <div key={r.reason} className="flex items-center justify-between px-3 py-2 text-xs">
                 <span className="font-mono text-[var(--mp-fg)]">{r.reason}</span>
-                <span className="tabular-nums text-[var(--mp-fg-muted)]">
-                  {formatInt(r.count)}
-                </span>
+                <span className="tabular-nums text-[var(--mp-fg-muted)]">{formatInt(r.count)}</span>
               </div>
             ))}
           </div>
-        ) : (
-          <div className="rounded-xl border border-dashed border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] px-4 py-3 text-xs text-[var(--mp-fg-muted)]">
-            {hasFailures
-              ? "No named reasons in window."
-              : "No failed or unmatched payment events. The grant path is clean."}
-          </div>
-        )
+        </div>
+      )}
+      {metrics.resolved_recent.length > 0 && (
+        <details className="rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] px-4 py-2.5 text-xs">
+          <summary className="cursor-pointer font-medium text-[var(--mp-fg)]">Resolved in the last 90 days ({metrics.resolved_recent.length})</summary>
+          <ul className="mt-2 space-y-1.5">
+            {metrics.resolved_recent.map((r) => (
+              <li key={r.payment_id} className="flex flex-wrap gap-x-3 text-[var(--mp-fg-muted)]">
+                <span className="font-medium text-[var(--mp-fg)]">{r.kind.replace("_", " ")}</span>
+                <span>{money(r.gross_cents, r.currency)}</span>
+                <span className="break-all font-mono">{r.payment_id}</span>
+                <span>{when(r.resolved_at)}</span>
+                <span className="break-words">{r.reason}</span>
+              </li>
+            ))}
+          </ul>
+        </details>
       )}
     </section>
   );
 }
 
-function FailTile({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: React.ReactNode;
-  tone: "success" | "warn" | "danger";
-}) {
-  const accent =
-    tone === "success"
-      ? "var(--mp-viridian)"
-      : tone === "warn"
-        ? "var(--mp-warning)"
-        : "var(--mp-error)";
+// ── Funnel ──────────────────────────────────────────────────────────────
+
+function FunnelSection({ metrics }: { metrics: PaymentsMetrics }) {
+  const top = metrics.funnel[0]?.count ?? 0;
   return (
-    <div className="relative rounded-2xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] p-4 min-h-[96px] flex flex-col">
-      <div
-        className="absolute top-0 left-0 right-0 h-[3px] rounded-t-2xl"
-        style={{ backgroundColor: accent, opacity: 0.85 }}
-        aria-hidden
-      />
-      <div className="flex items-center gap-2 text-[10px] text-[var(--mp-fg-muted)] uppercase tracking-[0.1em]">
-        <span>{label}</span>
-        <span className="flex-1" />
-        <StatusDot tone={tone} size={6} />
+    <section className="space-y-3">
+      <SectionHeading title="The funnel" icon={CreditCard} hint={`Distinct sessions and payments, last ${metrics.window_days} days`} />
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {metrics.funnel.map((step, i) => {
+          const prev = i === 0 ? null : metrics.funnel[i - 1]?.count ?? null;
+          const dropPct = prev && prev > 0 ? Math.round(((prev - step.count) / prev) * 100) : null;
+          const widthPct = top > 0 ? Math.max(4, Math.round((step.count / top) * 100)) : 0;
+          return (
+            <div key={step.key} className="flex flex-col rounded-2xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] p-4">
+              <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.08em] text-[var(--mp-fg-muted)]">
+                <span className="font-mono">{i + 1}</span>
+                <span>{step.label}</span>
+              </div>
+              <div className="mt-2 text-3xl font-semibold tabular-nums text-[var(--mp-fg)]"><FormatInt value={step.count} /></div>
+              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[var(--mp-surface-sunken)]">
+                <div className="h-full rounded-full" style={{ width: `${widthPct}%`, backgroundColor: step.key === "grant_succeeded" ? "var(--mp-viridian)" : "var(--mp-info)" }} aria-hidden />
+              </div>
+              <div className="mt-1.5 text-[10px] text-[var(--mp-fg-subtle)]">{step.hint}{step.rows !== step.count ? ` · ${step.rows} log rows` : ""}</div>
+              {dropPct != null && dropPct > 0 && (
+                <div className="mt-0.5 flex items-center gap-1 text-[10px] text-[var(--mp-fg-subtle)]"><TrendingDown size={11} />{dropPct}% drop from previous</div>
+              )}
+            </div>
+          );
+        })}
       </div>
-      <div className="mt-2 flex-1 flex items-center text-2xl font-semibold text-[var(--mp-fg)] tabular-nums">
-        {value}
-      </div>
-    </div>
+      {metrics.totals.checkout_failed > 0 && (
+        <p className="text-xs text-[var(--mp-fg-muted)]">{formatInt(metrics.totals.checkout_failed)} checkout session{metrics.totals.checkout_failed === 1 ? "" : "s"} failed before reaching Whop in this window.</p>
+      )}
+    </section>
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// Webhook delivery truth (webhook_attempts, every delivery)
-// ═══════════════════════════════════════════════════════════════════
+// ── Refunds ─────────────────────────────────────────────────────────────
 
-function DeliveriesSection({
-  metrics,
-  loading,
-}: {
-  metrics: PaymentFunnelMetrics | null;
-  loading: boolean;
-}) {
-  const d = metrics?.webhook_deliveries;
+function RefundsSection({ metrics }: { metrics: PaymentsMetrics }) {
+  const r = metrics.refunds_90d;
+  const amounts = Object.entries(r.amount_by_currency);
   return (
-    <section className="space-y-3">
-      <SectionHeading
-        title="Whop webhook deliveries"
-        icon={Webhook}
-        hint="Every inbound delivery, recorded before signature check"
-      />
-      <div className="rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] px-4 py-3 flex items-center gap-4 flex-wrap">
-        <div className="flex items-baseline gap-1.5">
-          <span className="text-xl font-semibold text-[var(--mp-fg)] tabular-nums">
-            {loading || !d ? "—" : formatInt(d.total)}
-          </span>
-          <span className="text-[10px] uppercase tracking-wider text-[var(--mp-fg-subtle)]">
-            delivered (all time)
-          </span>
-        </div>
-        {d && d.sig_invalid > 0 && (
-          <span
-            className="inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-0.5 rounded border"
-            style={{
-              color: "var(--mp-error)",
-              backgroundColor: "color-mix(in srgb, var(--mp-error) 12%, transparent)",
-              borderColor: "color-mix(in srgb, var(--mp-error) 40%, transparent)",
-            }}
-          >
-            <ShieldAlert size={12} />
-            {formatInt(d.sig_invalid)} signature-rejected
-          </span>
+    <section id="refunds" className="scroll-mt-20 space-y-3">
+      <SectionHeading title="Refunds (90 days)" icon={RotateCcw} hint="Booked on the refund date; access outcome now" />
+      <div className="rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] px-4 py-3 text-xs">
+        <p className="text-sm text-[var(--mp-fg)]">
+          {r.refund_count === 0 ? "No refund in the last 90 days." : `${r.refund_count} refund${r.refund_count === 1 ? "" : "s"}, ${amounts.map(([c, v]) => money(v, c)).join(", ") || "amount not reported"}.`}
+          {r.dispute_count > 0 && ` ${r.dispute_count} dispute${r.dispute_count === 1 ? "" : "s"} (shown, not subtracted).`}
+        </p>
+        {r.refunds.length > 0 && (
+          <ul className="mt-2 space-y-1 text-[var(--mp-fg-muted)]">
+            {r.refunds.map((x) => (
+              <li key={x.refund_id} className="flex flex-wrap gap-x-3">
+                <span>{when(x.refunded_at)}</span>
+                <span className="font-medium text-[var(--mp-fg)]">{x.kind}</span>
+                <span className="font-mono">{money(x.amount_cents, x.currency)}</span>
+                <span className="break-all font-mono">{x.refund_id}</span>
+              </li>
+            ))}
+          </ul>
         )}
-        {d &&
-          Object.entries(d.by_result).map(([result, n]) => (
-            <span
-              key={result}
-              className="inline-flex items-center gap-1 text-[10px] font-mono text-[var(--mp-fg-muted)]"
-            >
-              <StatusDot
-                tone={
-                  result === "processed"
-                    ? "success"
-                    : result === "sig_invalid" || result === "other_error"
-                      ? "danger"
-                      : result === "user_not_found"
-                        ? "warn"
-                        : "neutral"
-                }
-                size={5}
-              />
-              {result}×{n}
-            </span>
-          ))}
-        {d && d.total === 0 && !loading && (
-          <span className="text-xs text-[var(--mp-fg-muted)]">
-            No Whop webhook has ever reached this endpoint. If a real payment
-            was made, the Whop dashboard webhook URL is the suspect.
-          </span>
+        {r.refunded_access.length > 0 && (
+          <div className="mt-3 border-t border-[var(--mp-border-subtle)] pt-2">
+            <p className="mb-1 text-[10px] uppercase tracking-wider text-[var(--mp-fg-muted)]">Refunded subscription rows and what the learner holds now</p>
+            <ul className="space-y-1">
+              {r.refunded_access.map((a) => (
+                <li key={a.subscription_id} className="flex flex-wrap gap-x-3 text-[var(--mp-fg-muted)]">
+                  <span>{when(a.refunded_at)}</span>
+                  <span>{a.tier ?? "no tier"}</span>
+                  <span className="font-medium text-[var(--mp-fg)]">{a.access_now}</span>
+                  {a.learner && <Link className="text-[var(--mp-viridian)] underline" href={`/admin/users/${a.learner.id}`}>{a.learner.label ?? `learner ${a.learner.id.slice(0, 8)}`}</Link>}
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
       </div>
     </section>
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// Recent payment-events feed
-// ═══════════════════════════════════════════════════════════════════
+// ── Deliveries (absorbs /admin/webhooks) ────────────────────────────────
 
-function FeedSection({
-  metrics,
-  loading,
-}: {
-  metrics: PaymentFunnelMetrics | null;
-  loading: boolean;
-}) {
-  const rows = metrics?.recent_events ?? [];
+function DeliveriesSection({ metrics }: { metrics: PaymentsMetrics }) {
+  const d = metrics.deliveries;
+  return (
+    <section id="deliveries" className="scroll-mt-20 space-y-3">
+      <SectionHeading title="Webhook deliveries" icon={Webhook} hint={`Every inbound delivery, last ${d.window_days} days`} />
+      <div className="rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] px-4 py-3">
+        {d.by_provider.length === 0 ? (
+          <p className="text-xs text-[var(--mp-fg-muted)]">No webhook delivery in the last {d.window_days} days.</p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {d.by_provider.map((g) => (
+              <span key={`${g.provider}:${g.result}`} className="inline-flex items-center gap-1.5 rounded border border-[var(--mp-border-subtle)] px-2 py-1 text-[11px] text-[var(--mp-fg)]">
+                <StatusDot tone={g.result === "processed" ? "success" : g.result === "dup" || g.result === "sig_invalid" ? "neutral" : g.result === "user_not_found" ? "warn" : "danger"} size={6} />
+                {g.provider} · {g.result} <span className="tabular-nums text-[var(--mp-fg-muted)]">{g.rows}{g.distinct_events && g.distinct_events !== g.rows ? ` (${g.distinct_events} distinct)` : ""}</span>
+              </span>
+            ))}
+          </div>
+        )}
+        <p className="mt-2 text-[11px] text-[var(--mp-fg-muted)]">
+          sig_invalid is split in the list below: a probe has no signature header and is ignored; a rejection that carried a header points at the webhook secret.
+        </p>
+      </div>
+      {d.recent.length > 0 && (
+        <ul className="divide-y divide-[var(--mp-border-subtle)] rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] text-xs">
+          {d.recent.map((r) => (
+            <li key={r.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2">
+              <span className="font-mono text-[var(--mp-fg-muted)]">{when(r.received_at)}</span>
+              <span className="text-[var(--mp-fg)]">{r.provider}</span>
+              <span className={r.kind === "mismatch" ? "font-semibold text-[var(--mp-error)]" : "text-[var(--mp-fg)]"}>
+                {r.kind === "probe" ? "unsigned probe" : r.kind === "mismatch" ? "rejected with signature header" : r.result}
+              </span>
+              {r.event_id && <span className="break-all font-mono text-[var(--mp-fg-muted)]">{r.event_id}</span>}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+// ── Feed ────────────────────────────────────────────────────────────────
+
+function FeedSection({ metrics }: { metrics: PaymentsMetrics }) {
+  const rows = metrics.recent_events;
   return (
     <section className="space-y-3">
-      <SectionHeading
-        title="Recent payment events"
-        icon={Inbox}
-        hint="Newest first, latest 50 payment events"
-      />
-      <div className="rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] overflow-hidden">
+      <SectionHeading title="Recent payment events" icon={Inbox} hint="Newest first, latest 50 log rows" />
+      <div className="overflow-hidden rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)]">
         <div className="overflow-x-auto">
-          <table className="w-full text-xs border-collapse">
+          <table className="w-full min-w-[640px] border-collapse text-xs">
             <thead>
-              <tr className="text-[10px] uppercase tracking-wider text-[var(--mp-fg-muted)] border-b border-[var(--mp-border-subtle)]">
-                <th className="text-left font-medium px-3 py-2.5">When</th>
-                <th className="text-left font-medium px-3 py-2.5">Event</th>
-                <th className="text-left font-medium px-3 py-2.5">Tier</th>
-                <th className="text-left font-medium px-3 py-2.5">Reason</th>
-                <th className="text-left font-medium px-3 py-2.5">Payment / session</th>
-                <th className="text-left font-medium px-3 py-2.5">User</th>
+              <tr className="border-b border-[var(--mp-border-subtle)] text-left text-[10px] uppercase tracking-wider text-[var(--mp-fg-muted)]">
+                <th className="px-3 py-2.5 font-medium">When</th>
+                <th className="px-3 py-2.5 font-medium">Event</th>
+                <th className="px-3 py-2.5 text-right font-medium">Amount</th>
+                <th className="px-3 py-2.5 font-medium">Reason</th>
+                <th className="px-3 py-2.5 font-medium">Payment / session</th>
+                <th className="px-3 py-2.5 font-medium">Learner</th>
               </tr>
             </thead>
             <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan={6} className="px-3 py-6 text-center text-[var(--mp-fg-muted)]">
-                    Loading…
-                  </td>
-                </tr>
-              ) : rows.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-3 py-6 text-center text-[var(--mp-fg-muted)]">
-                    No payment events recorded yet. Instrumentation is live; the
-                    first checkout or webhook will appear here.
-                  </td>
-                </tr>
-              ) : (
-                rows.map((r) => <FeedRow key={r.id} row={r} />)
-              )}
+              {rows.length === 0 ? (
+                <tr><td colSpan={6} className="px-3 py-6 text-center text-[var(--mp-fg-muted)]">No payment events recorded yet.</td></tr>
+              ) : rows.map((r) => {
+                const fail = r.event === "grant_failed" || r.event === "checkout_failed";
+                const ok = r.event === "grant_succeeded";
+                const ref = r.payment_id ?? r.checkout_session_id;
+                return (
+                  <tr key={r.id} className="border-b border-[var(--mp-border-subtle)]/60 last:border-0">
+                    <td className="whitespace-nowrap px-3 py-2 font-mono text-[10px] text-[var(--mp-fg-muted)]">{when(r.created_at)}</td>
+                    <td className="whitespace-nowrap px-3 py-2">
+                      <span className="inline-flex items-center gap-1.5 font-medium text-[var(--mp-fg)]">
+                        <StatusDot tone={ok ? "success" : fail ? "danger" : "neutral"} size={6} />
+                        {r.event}{r.whop_event && r.event === "webhook_received" ? ` · ${r.whop_event}` : ""}
+                      </span>
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-2 text-right font-mono">{r.amount_cents != null ? money(r.amount_cents, (r.currency ?? "eur").toUpperCase()) : "—"}</td>
+                    <td className="whitespace-nowrap px-3 py-2 font-mono text-[10px] text-[var(--mp-fg-muted)]">{r.reason ?? "—"}</td>
+                    <td className="px-3 py-2 font-mono text-[10px] text-[var(--mp-fg-muted)]">{ref ?? "—"}</td>
+                    <td className="whitespace-nowrap px-3 py-2 text-[10px]">
+                      {r.user_id ? <Link className="text-[var(--mp-viridian)] underline" href={`/admin/users/${r.user_id}`}>{r.user_id.slice(0, 8)}</Link> : "—"}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
       </div>
     </section>
-  );
-}
-
-function FeedRow({ row }: { row: PaymentFeedRow }) {
-  const isFail = row.event === "grant_failed" || row.event === "checkout_failed";
-  const isSuccess = row.event === "grant_succeeded";
-  const isUnmatched = row.event === "webhook_received" && row.matched === false;
-  const eventColor = isSuccess
-    ? "var(--mp-viridian)"
-    : isFail || isUnmatched
-      ? "var(--mp-error)"
-      : "var(--mp-fg)";
-  const idRef = row.payment_id ?? row.checkout_session_id ?? null;
-  return (
-    <tr className="border-b last:border-0 border-[var(--mp-border-subtle)]/60 hover:bg-[var(--mp-surface-sunken)]/50">
-      <td className="px-3 py-2 whitespace-nowrap text-[var(--mp-fg-muted)] font-mono text-[10px]">
-        {new Date(row.created_at).toLocaleString("en-GB", {
-          day: "2-digit",
-          month: "short",
-          hour: "2-digit",
-          minute: "2-digit",
-        })}
-      </td>
-      <td className="px-3 py-2 whitespace-nowrap">
-        <span className="inline-flex items-center gap-1.5 font-medium" style={{ color: eventColor }}>
-          <StatusDot
-            tone={isSuccess ? "success" : isFail || isUnmatched ? "danger" : "neutral"}
-            size={6}
-          />
-          {row.event}
-          {isUnmatched && (
-            <span className="text-[9px] uppercase text-[var(--mp-error)]">unmatched</span>
-          )}
-        </span>
-      </td>
-      <td className="px-3 py-2 whitespace-nowrap text-[var(--mp-fg-muted)]">
-        {row.tier ?? "—"}
-      </td>
-      <td className="px-3 py-2 whitespace-nowrap font-mono text-[10px] text-[var(--mp-fg-muted)]">
-        {row.reason ?? "—"}
-      </td>
-      <td className="px-3 py-2 whitespace-nowrap font-mono text-[10px] text-[var(--mp-fg-muted)]">
-        {idRef ? `${idRef.slice(0, 18)}${idRef.length > 18 ? "…" : ""}` : "—"}
-      </td>
-      <td className="px-3 py-2 whitespace-nowrap font-mono text-[10px] text-[var(--mp-fg-muted)]">
-        {row.user_id ? `${row.user_id.slice(0, 8)}…` : "—"}
-      </td>
-    </tr>
   );
 }
