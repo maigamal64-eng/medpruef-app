@@ -16,14 +16,15 @@ for (const method of ['email', 'telegram'] as const) test(`empty-storage ${metho
   await page.route('**/api/auth', route => route.fulfill({ json: { user, sessionToken: 'fixture-signed-session' } }));
   await page.addInitScript(() => { localStorage.clear(); sessionStorage.clear(); localStorage.setItem('medpruef-lang', 'en'); });
   await page.goto('/login?mode=register&intent=free&exam=pharma&next=%2Fquiz%3FexamSource%3Dpharma%26practiceMode%3Dunseen', { waitUntil: 'domcontentloaded' });
-  await expect(page.getByRole('tab', { name: 'Register', exact: true })).toHaveAttribute('aria-selected', 'true');
+  // a22 (UX-ONB-15): two pressed buttons over one form, no tab roles.
+  await expect(page.getByRole('button', { name: 'Register', exact: true })).toHaveAttribute('aria-pressed', 'true');
   if (method === 'email') {
     await page.getByLabel('First name', { exact: true }).fill('Fixture');
     await page.getByLabel('Email', { exact: true }).fill('fixture@example.test');
     await page.getByLabel('Password', { exact: true }).fill('Fixture-password-123');
     await page.getByRole('button', { name: 'Create account', exact: true }).click();
   } else {
-    await page.getByRole('button', { name: 'Sign in with Telegram code', exact: true }).click();
+    await page.getByRole('button', { name: 'I have a Telegram code', exact: true }).click();
     await page.getByLabel('Telegram code', { exact: true }).fill('00000000-0000-4000-8000-000000000002');
     await page.getByRole('button', { name: 'Redeem code & sign in', exact: true }).click();
   }

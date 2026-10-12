@@ -4,8 +4,13 @@ import { seedSession } from '../fixtures/session';
 // All API/provider traffic is intercepted. These are synthetic UI fixtures,
 // not production/auth/provider acceptance. COMMON requires track-A to run them.
 const userId = '00000000-0000-4000-8000-000000000003';
+// The service worker's first-install controllerchange reloads Home once, which
+// re-runs every request fixture; block it so the counted fixtures stay exact.
+test.use({ serviceWorkers: 'block' });
 async function setup(page: Page, bank = 'pharma', language = 'en', dark = false) {
   await seedSession(page, { userId, tier: 'pro' });
+  // Signed-in visits skip the marketing redirect (the middleware reads this cookie).
+  await page.context().addCookies([{ name: 'mp_skip_landing', value: '1', url: process.env.BASE_URL || 'http://localhost:3000' }]);
   await page.addInitScript(({ bank, language, dark }) => {
     localStorage.setItem('medpruef_exam_source', bank);
     localStorage.setItem('medpruef-lang', language);
@@ -48,7 +53,8 @@ for (const lang of ['de', 'en']) for (const dark of [false, true]) {
     const progress = page.getByRole('progressbar'); await expect(progress).not.toHaveAttribute('aria-valuenow', '0');
     await error.locator('..').getByRole('button', { name: lang === 'de' ? 'Erneut versuchen' : 'Try again' }).click();
     await expect(error).toHaveCount(0); await expect(progress).toHaveAttribute('aria-valuenow', '50');
-    await expect(page.getByRole('link', { name: /Pharmakologie, 40/ })).toContainText(/95\u202F?%/);
+    // a12: the card shows "zuletzt richtig" only when the server sends it; this fixture sends coverage.
+    await expect(page.getByTestId('topic-card').filter({ hasText: 'Pharmakologie' })).toContainText('20/40');
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.screenshot({ path: test.info().outputPath(`home-${lang}-${dark ? 'dark' : 'light'}.png`), fullPage: true });
   });
@@ -62,7 +68,7 @@ for (const kind of ['malformed', 'offline', 'timeout']) {
     await page.goto('/', { waitUntil: 'domcontentloaded' });
     await expect(page.getByText('Topics could not be loaded.', { exact: true })).toBeVisible({ timeout: 10_000 });
     await expect(page).toHaveURL(/\/$/);
-    await expect(page.getByRole('link', { name: 'Study now', exact: true })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Practise new questions', exact: true })).toBeVisible();
   });
 }
 
@@ -90,9 +96,11 @@ for (const bank of ['kenntnispruefung', 'kmp_innsbruck', 'pharma']) {
     await page.route('**/api/questions', route => route.fulfill({ json: [{ topic, count: 40 }] }));
     await page.route('**/api/user/topic-progress?*', route => route.fulfill({ json: [{ topic, total: 40, answered: 20, correct: 19, wrong: 1, accuracy: 95, lastCorrectPct: 95, lastCorrectSample: 20, status: null }] }));
     await page.goto('/', { waitUntil: 'domcontentloaded' });
-    const card = page.getByRole('link', { name: new RegExp(`${topic}, 40`) });
+    // a22 (HOME-28 B): one stretched primary link per card; the state lives on the card.
+    await expect(page.getByRole('link', { name: new RegExp(`${topic}, 40`) })).toBeVisible();
+    const card = page.getByTestId('topic-card').filter({ hasText: topic });
     await expect(card).toContainText('95%'); await expect(card).toContainText('20/40');
-    if (bank !== 'kenntnispruefung') await expect(page.getByRole('link', { name: 'Simulate an exam' })).toHaveAttribute('href', `/exam?examSource=${bank}`);
+    if (bank !== 'kenntnispruefung') await expect(page.getByRole('link', { name: /Start a mock exam/ })).toHaveAttribute('href', `/exam?examSource=${bank}`);
     await page.route('**/api/user/topic-progress?*', route => route.fulfill({ json: [{ topic, total: 40, answered: 0, correct: 0, wrong: 0, accuracy: 0 }] }));
     await page.reload({ waitUntil: 'domcontentloaded' });
     await expect(page.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '0'); await expect(card).not.toContainText('95%');
@@ -105,7 +113,7 @@ test('progress retry replaces unknown metrics without navigation', async ({ page
   // A failed reload has no cached in-memory metrics and must stay unknown.
   await page.route('**/api/user/topic-progress?*', route => route.fulfill({ status: 503, json: {} }));
   await page.reload({ waitUntil: 'domcontentloaded' });
-  const retry = page.getByRole('group', { name: 'Your exam progress' }).getByRole('button', { name: 'Try again' });
+  const retry = page.getByTestId('home-hero').getByRole('button', { name: 'Try again' });
   await expect(retry).toBeVisible(); await expect(page.getByRole('progressbar')).not.toHaveAttribute('aria-valuenow');
   await page.route('**/api/user/topic-progress?*', route => route.fulfill({ json: [{ topic: 'Pharmakologie', total: 40, answered: 20, correct: 19, wrong: 1, accuracy: 95 }] }));
   await retry.focus(); await page.keyboard.press('Enter');
@@ -122,7 +130,7 @@ for (const status of [503, 401]) {
     await page.route('**/api/auth', route => route.fulfill({ status, json: { error: 'fixture' } }));
     await page.goto('/', { waitUntil: 'domcontentloaded' });
     if (status === 503) {
-      await expect(page.getByRole('link', { name: 'Study now', exact: true })).toBeVisible();
+      await expect(page.getByRole('link', { name: 'Practise new questions', exact: true })).toBeVisible();
       expect(await page.evaluate(() => localStorage.getItem('medpruef_session_token'))).toBe('local-test-session-token');
     } else {
       await expect(page.getByRole('link', { name: 'Sign in', exact: true })).toBeVisible();
@@ -156,7 +164,8 @@ for (const answers of [4, 5]) {
     if (answers < 5) await expect(card).toHaveCount(0);
     else {
       await expect(card).toContainText('17.72 €');
-      await expect(card).not.toContainText('cancel');
+      // a21 (pick-ux-pub-14 A): the trial line states the cancel-before condition, never "anytime".
+      await expect(card).not.toContainText('anytime');
       await expect(card.getByRole('button', { name: 'View trial terms' })).toBeVisible();
       const stat = await page.getByText('Answers today', { exact: true }).boundingBox();
       expect((await card.boundingBox())!.y).toBeGreaterThan(stat!.y + stat!.height);

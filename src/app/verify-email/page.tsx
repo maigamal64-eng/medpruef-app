@@ -7,10 +7,12 @@ import { authDestination, readAuthEntry, buildAuthHref } from "@/lib/auth-entry"
 import Link from "next/link";
 import { isUiLanguage, type UiLanguage } from "@/lib/language-model";
 import { getSessionToken } from "@/lib/auth";
+import { safeSessionStorage } from "@/lib/safe-storage";
 import { verifyContent, type VerifyState } from "@/lib/verify-email-content";
 
 // Mirror of SESSION_HEADER from lib/session.ts (node:crypto stays out of the client).
 const SESSION_HEADER = "x-session-token";
+const VERIFY_TOKEN_KEY = "medpruef_verify_token";
 
 
 /**
@@ -37,7 +39,11 @@ export default function VerifyEmailPage() {
     const params = new URLSearchParams(window.location.search);
     const requested = params.get('lang');
     if (isUiLanguage(requested)) setMailLang(requested);
-    tokenRef.current = params.get("token") ?? "";
+    // The token leaves the address bar but survives a reload of this tab (a
+    // first visit can reload once when the service worker takes control).
+    const fromUrl = params.get("token") ?? "";
+    if (fromUrl) safeSessionStorage.setItem(VERIFY_TOKEN_KEY, fromUrl);
+    tokenRef.current = fromUrl || safeSessionStorage.getItem(VERIFY_TOKEN_KEY) || "";
     setSignedIn(!!getSessionToken());
     if (!tokenRef.current) setState("invalid_token");
     // The raw token never stays in the address bar or travels further.
@@ -74,6 +80,8 @@ export default function VerifyEmailPage() {
         body: JSON.stringify({ token: tokenRef.current, lang: getLang() }),
       });
       const data = await res.json().catch(() => ({}));
+      // A final answer from the server ends this token's life in the tab.
+      if (res.status < 500) safeSessionStorage.removeItem(VERIFY_TOKEN_KEY);
       if (res.ok) {
         setLinkedEmail(typeof data.email === "string" ? data.email : null);
         setState(data.already_linked ? "already_linked" : "success");
