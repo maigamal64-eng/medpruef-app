@@ -54,6 +54,7 @@ import {
   useToast,
 } from "@/components/ui";
 import { AdminPageShell } from "../_components/AdminPageShell";
+import { UserLink } from "../_components/UserLink";
 import { getNextExamDate, type PuypExamType } from "@/lib/exam-dates";
 
 type StatusFilter = "pending" | "approved" | "rejected" | "all";
@@ -572,7 +573,7 @@ function AttemptCard({
         <div className="flex-1 min-w-0 space-y-2">
           <div className="flex items-center gap-2 flex-wrap">
             <h3 className="text-sm font-semibold text-[var(--mp-fg)]">
-              {name}
+              <UserLink id={item.user_id} label={name} />
             </h3>
             <span className="text-[10px] px-2 py-0.5 rounded bg-[var(--mp-cta-blue)]/10 text-[var(--mp-cta-blue)] font-mono">
               {item.exam_type}

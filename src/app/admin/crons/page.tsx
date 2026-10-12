@@ -11,6 +11,9 @@ import { AdminPermissionGate } from "../_components/AdminPermissionGate";
 import { useAdminRealtime } from "@/lib/admin/useAdminRealtime";
 import { Alert, BrandedLoader, EmptyState } from "@/components/ui";
 import { AdminPageShell } from "../_components/AdminPageShell";
+import { ListFooter } from "../_components/ListFooter";
+
+const PAGE_ROWS = 200;
 
 interface CronRow {
   id: string;
@@ -28,6 +31,8 @@ export default function AdminCronsPage() {
 
 function AdminCronsPageContent() {
   const [items, setItems] = useState<CronRow[]>([]);
+  const [total, setTotal] = useState<number | null>(null);
+  const [showAll, setShowAll] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -37,7 +42,9 @@ function AdminCronsPageContent() {
     try {
       const res = await fetch("/api/admin/crons");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      setItems((await res.json()).items || []);
+      const body = await res.json();
+      setItems(body.items || []);
+      setTotal(typeof body.total === "number" ? body.total : null);
     } catch (e) {
       setError((e as Error).message || "Failed to load cron runs");
     } finally {
@@ -89,7 +96,7 @@ function AdminCronsPageContent() {
               </tr>
             </thead>
             <tbody>
-              {items.slice(0, 200).map((r) => (
+              {(showAll ? items : items.slice(0, PAGE_ROWS)).map((r) => (
                 <tr
                   key={r.id}
                   className="border-t border-[var(--mp-border-subtle)] text-[var(--mp-fg)]"
@@ -121,6 +128,17 @@ function AdminCronsPageContent() {
               ))}
             </tbody>
           </table>
+          <ListFooter
+            shown={showAll ? items.length : Math.min(items.length, PAGE_ROWS)}
+            total={total ?? items.length}
+            noun="runs from the last 48 hours"
+            note={total !== null && total > items.length ? `The source returns the newest ${items.length}.` : null}
+          />
+          {!showAll && items.length > PAGE_ROWS && (
+            <div className="border-t border-[var(--mp-border-subtle)] p-2 text-center">
+              <button type="button" className="mp-btn mp-btn--secondary mp-btn--sm" onClick={() => setShowAll(true)}>Show all {items.length} loaded runs</button>
+            </div>
+          )}
         </div>
       )}
     </AdminPageShell>

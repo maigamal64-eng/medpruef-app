@@ -18,6 +18,8 @@ import { authFetch as fetch } from "@/lib/authFetch";
 import { useAdminPermissions } from "@/lib/admin/useAdminPermissions";
 import { Alert, BrandedLoader, EmptyState, useToast } from "@/components/ui";
 import { AdminPageShell } from "../_components/AdminPageShell";
+import { ListFooter } from "../_components/ListFooter";
+import { UserLink } from "../_components/UserLink";
 import type { FeedbackItem } from "../_components/types";
 
 const STATUSES = ["needs_action", "all", "new", "reviewed", "resolved", "dismissed"] as const;
@@ -37,6 +39,7 @@ export default function AdminFeedbackPage() {
   const toast = useToast();
   const { can, loading: accessLoading } = useAdminPermissions();
   const [items, setItems] = useState<Row[]>([]);
+  const [total, setTotal] = useState<number | null>(null);
   const [statusFilter, setStatusFilter] = useState<(typeof STATUSES)[number]>("needs_action");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -53,6 +56,8 @@ export default function AdminFeedbackPage() {
       const payload: unknown = await res.json();
       if (!Array.isArray(payload)) throw new Error("Feedback response was not a list");
       setItems(payload as Row[]);
+      const header = Number(res.headers.get("X-Total-Count"));
+      setTotal(res.headers.has("X-Total-Count") && Number.isFinite(header) ? header : null);
     } catch (e) {
       setError((e as Error).message || "Could not load feedback");
     } finally {
@@ -185,7 +190,7 @@ export default function AdminFeedbackPage() {
                   <span className="font-semibold text-[var(--mp-fg)]">{item.status}</span>
                   {item.user_id ? (
                     canUsers ? (
-                      <Link href={`/admin/users/${item.user_id}`} className="text-[var(--mp-cta-blue)] underline underline-offset-2">{sender?.name || "Learner profile"}</Link>
+                      <UserLink id={item.user_id} label={sender?.name || null} />
                     ) : <span>Signed-in learner</span>
                   ) : <span>Anonymous</span>}
                   {item.context?.pathname ? <span>Page: {String(item.context.pathname).slice(0, 80)}</span> : null}
@@ -234,6 +239,9 @@ export default function AdminFeedbackPage() {
               </article>
             );
           })}
+          <div className="rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)]">
+            <ListFooter shown={items.length} total={total} noun="messages in this filter" note={total !== null && total > items.length ? "Narrow the status filter to see older messages." : null} />
+          </div>
         </div>
       ) : null}
     </AdminPageShell>

@@ -167,8 +167,12 @@ export interface PaymentFunnelMetrics {
     window_days: number;
     by_provider: Array<{ provider: string; result: string; rows: number; distinct_events: number }>;
     recent: WebhookDeliveryRow[];
+    /** All delivery rows ever logged (UX-ADM-34 footer); null if unknown. */
+    recent_total: number | null;
   };
   recent_events: PaymentFeedRow[];
+  /** All payment_events rows (UX-ADM-34 footer); null if unknown. */
+  recent_events_total: number | null;
 }
 
 const WINDOW_DAYS = 30;
@@ -233,7 +237,7 @@ export async function computePaymentFunnelMetrics(
       .range(from, to)),
     sb
       .from("payment_events")
-      .select("id, event, provider, user_id, tier, payment_id, checkout_session_id, reason, signature_valid, matched, amount_cents, currency, metadata, created_at")
+      .select("id, event, provider, user_id, tier, payment_id, checkout_session_id, reason, signature_valid, matched, amount_cents, currency, metadata, created_at", { count: "exact" })
       .order("created_at", { ascending: false })
       .limit(FEED_LIMIT),
     readAll<{ provider: string; result: string; event_id: string | null }>((from, to) => sb
@@ -244,7 +248,7 @@ export async function computePaymentFunnelMetrics(
       .range(from, to)),
     sb
       .from("webhook_attempts")
-      .select("id, provider, result, signature_valid, event_id, error, received_at")
+      .select("id, provider, result, signature_valid, event_id, error, received_at", { count: "exact" })
       .order("received_at", { ascending: false })
       .limit(DELIVERY_LIMIT),
     sb
@@ -404,7 +408,9 @@ export async function computePaymentFunnelMetrics(
         .map((g) => ({ provider: g.provider, result: g.result, rows: g.rows, distinct_events: g.events.size }))
         .sort((a, b) => b.rows - a.rows),
       recent: recentDeliveries,
+      recent_total: typeof recentDeliveriesRes.count === "number" ? recentDeliveriesRes.count : null,
     },
     recent_events: feed,
+    recent_events_total: typeof recentRes.count === "number" ? recentRes.count : null,
   };
 }

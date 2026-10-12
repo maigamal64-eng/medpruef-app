@@ -61,6 +61,7 @@ import { authFetch } from "@/lib/authFetch";
 import { AdminAccessProvider, useAdminPermissions, type AdminPermission } from "@/lib/admin/useAdminPermissions";
 import { ShortcutHint } from "./_components/primitives";
 import { SignOutEverywhere } from "./_components/SignOutEverywhere";
+import { FindLearner } from "./_components/FindLearner";
 
 type SectionKey =
   | "overview"
@@ -623,7 +624,9 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
               <Menu size={18} />
             </button>
             {browserOffline && <BrowserOfflineStatus />}
-            <div className="flex-1 min-w-0" />
+            <div className="flex-1 min-w-0 flex justify-end">
+              <FindLearner />
+            </div>
             <Link
               href="/"
               className="text-xs text-[var(--mp-fg-muted)] hover:text-[var(--mp-fg)] px-1 sm:px-2 py-1 shrink-0"

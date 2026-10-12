@@ -239,7 +239,7 @@ export async function GET(req: NextRequest) {
 
     let query = sb
       .from('user_feedback')
-      .select('*')
+      .select('*', { count: 'exact' })
       .order('created_at', { ascending: false })
       .limit(limit)
 
@@ -249,7 +249,7 @@ export async function GET(req: NextRequest) {
       query = query.eq('status', status)
     }
 
-    const { data, error } = await query
+    const { data, error, count } = await query
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
     const rows = (data || []) as Array<Record<string, unknown>>
@@ -264,11 +264,13 @@ export async function GET(req: NextRequest) {
         }
       }
     }
+    // UX-ADM-34: the body stays a list; the matching total rides in a header
+    // so the inbox can say "Showing 100 of 240" instead of cutting silently.
     return NextResponse.json(rows.map((r) => ({
       ...r,
       first_replied_at: typeof (r.context as Record<string, unknown> | null)?.first_replied_at === 'string' ? (r.context as Record<string, unknown>).first_replied_at : null,
       sender: typeof r.user_id === 'string' ? senders.get(r.user_id) ?? null : null,
-    })))
+    })), { headers: typeof count === 'number' ? { 'X-Total-Count': String(count) } : {} })
   } catch (err) {
     captureServerError(err, { route: '/api/feedback', method: 'GET', userId: guard.userId })
     return NextResponse.json({ error: 'Internal error' }, { status: 500 })

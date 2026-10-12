@@ -5,6 +5,7 @@ import { ShieldCheck } from "lucide-react";
 import { authFetch } from "@/lib/authFetch";
 import { useAdminPermissions } from "@/lib/admin/useAdminPermissions";
 import { AdminPageShell } from "../_components/AdminPageShell";
+import { UserLink } from "../_components/UserLink";
 
 interface OpsAction {
   id: string;
@@ -75,7 +76,7 @@ export default function OpsApprovalsPage() {
     <AdminPageShell title="Ops approvals" description="Review the exact access or moderation change prepared by a registered agent." freshness={error || !allowed ? "disconnected" : "near-live"} onRefresh={allowed && !busy ? () => void load() : undefined}>
       <div className="rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] p-4 flex gap-3">
         <ShieldCheck size={22} className="shrink-0 text-[var(--mp-viridian)]" />
-        <p className="text-sm text-[var(--mp-fg-muted)]">Only a current owner can approve. Approval covers this immutable payload until its expiry. It authorizes one execution and does not immediately change learner access.</p>
+        <p className="text-sm text-[var(--mp-fg-muted)]">Only a current owner can approve. Approval covers this immutable payload until its expiry. It authorizes one execution and does not immediately change learner access. Past decisions are in the <a href="/admin/audit?category=ops" className="underline underline-offset-2">audit log</a>.</p>
       </div>
       {access.loading && <p role="status" className="text-sm text-[var(--mp-fg-muted)]">Checking owner access…</p>}
       {!access.loading && !allowed && <p role="alert" className="text-sm text-[var(--mp-fg-muted)]">{access.error ?? "Owner role and operations approval access are required."}</p>}
@@ -94,7 +95,11 @@ export default function OpsApprovalsPage() {
                 <span className="rounded border border-[var(--mp-border-subtle)] px-2 py-1 text-xs text-[var(--mp-fg)]">{action.status}{expires <= now ? " · expired" : ""}</span>
               </div>
               <dl className="grid gap-3 text-sm sm:grid-cols-2 text-[var(--mp-fg)]">
-                <Field label="Target" value={String(action.payload.user_id ?? action.payload.feedback_id ?? action.payload.question_suggestion_id ?? action.payload.report_id ?? "Unavailable")} />
+                {typeof action.payload.user_id === "string" ? (
+                  <div className="min-w-0"><dt className="text-xs text-[var(--mp-fg-muted)]">Target learner</dt><dd className="mt-1 break-words"><UserLink id={action.payload.user_id} /></dd></div>
+                ) : (
+                  <Field label="Target" value={String(action.payload.feedback_id ?? action.payload.question_suggestion_id ?? action.payload.report_id ?? "Unavailable")} />
+                )}
                 <Field label="Access days to add" value={String(action.payload.days ?? "Not applicable")} />
                 <Field label="Decision" value={String(action.payload.status ?? action.payload.decision ?? "Access extension")} />
                 <Field label="Reason" value={String(action.payload.reason ?? "Not provided")} />

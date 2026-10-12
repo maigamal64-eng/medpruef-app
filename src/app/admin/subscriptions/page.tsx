@@ -17,6 +17,7 @@ import { authFetch as fetch } from "@/lib/authFetch";
 import { useAdminRealtime } from "@/lib/admin/useAdminRealtime";
 import { useAdminPermissions } from "@/lib/admin/useAdminPermissions";
 import { AdminPageShell } from "../_components/AdminPageShell";
+import { UserLink } from "../_components/UserLink";
 import { formatEuroFromCents, formatInt } from "../_components/primitives";
 
 type Cadence = "auto_renews" | "one_time" | "unknown";
@@ -288,7 +289,7 @@ function Kpi({ label, value, sub, warn }: { label: string; value: string; sub: s
 function LearnerName({ row }: { row: RosterRow }) {
   return (
     <span className="block min-w-0 break-words font-medium text-[var(--mp-fg)]">
-      {row.label ?? <span className="font-mono text-xs text-[var(--mp-fg-muted)]">Learner {row.user_id.slice(0, 8)}</span>}
+      <UserLink id={row.user_id} />
     </span>
   );
 }
@@ -346,7 +347,7 @@ function PendingList({ rows }: { rows: PendingRow[] }) {
           {rows.map((r) => (
             <li key={r.id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-4 py-2.5 text-xs">
               <span className="min-w-0 break-words text-[var(--mp-fg)]">
-                {r.label ?? (r.user_id ? `Learner ${r.user_id.slice(0, 8)}` : "No learner")}
+                {r.user_id ? <UserLink id={r.user_id} /> : "No learner"}
               </span>
               <span className="text-[var(--mp-fg-muted)]">{r.provider ?? "unknown rail"} · {r.tier ?? "no tier"}</span>
               <span className="font-mono tabular-nums text-[var(--mp-fg-muted)]">

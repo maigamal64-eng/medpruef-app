@@ -30,6 +30,7 @@ import {
   useToast,
 } from "@/components/ui";
 import { AdminPageShell } from "../_components/AdminPageShell";
+import { UserLink } from "../_components/UserLink";
 import {
   FormatEuro,
   StatusDot,
@@ -428,7 +429,7 @@ export default function AdminReferralsPage() {
                   >
                     <td className="px-3 py-2">
                       <div className="font-medium">
-                        {item.referrer_first_name || "—"}
+                        <UserLink id={item.referrer_user_id} label={item.referrer_first_name || null} />
                       </div>
                       <div className="text-[var(--mp-fg-muted)]">
                         {item.referrer_email || "—"}
@@ -450,6 +451,7 @@ export default function AdminReferralsPage() {
                           >
                             <div className="flex items-center gap-1.5 flex-wrap">
                               <span className="font-medium">{r.email || "—"}</span>
+                              {r.referee_user_id && <UserLink id={r.referee_user_id} label="Profile" />}
                               <span className="text-[var(--mp-fg-muted)]">
                                 ({r.email_domain || "—"})
                               </span>
@@ -648,7 +650,7 @@ export default function AdminReferralsPage() {
                     </td>
                     <td className="px-3 py-2">
                       <div className="font-medium">
-                        {r.referrer?.first_name || "—"}
+                        {r.referrer_user_id ? <UserLink id={r.referrer_user_id} label={r.referrer?.first_name || null} /> : "—"}
                       </div>
                       <div className="text-[var(--mp-fg-muted)]">
                         {r.referrer?.email}
@@ -656,7 +658,7 @@ export default function AdminReferralsPage() {
                     </td>
                     <td className="px-3 py-2">
                       <div className="font-medium">
-                        {r.referee?.first_name || "—"}
+                        {r.referee_user_id ? <UserLink id={r.referee_user_id} label={r.referee?.first_name || null} /> : "—"}
                       </div>
                       <div className="text-[var(--mp-fg-muted)]">
                         {r.referee?.email}

@@ -8,15 +8,16 @@ export const dynamic = "force-dynamic";
 export const GET = adminRouteShell(
   async () => {
     const sb = getServiceClient();
-    const { data, error } = await sb
+    const { data, error, count } = await sb
       .from("processed_webhook_events")
-      .select("provider, event_id, processed_at")
+      .select("provider, event_id, processed_at", { count: "exact" })
       .order("processed_at", { ascending: false, nullsFirst: false })
       .limit(200);
     if (error) {
       return adminErrorResponse(error, "/api/admin/webhooks");
     }
-    return NextResponse.json({ items: data || [] });
+    // UX-ADM-34: say how many exist. The page moved to /admin/payments#deliveries (a14).
+    return NextResponse.json({ items: data || [], total: count ?? null, limit: 200 });
   },
   { route: "/api/admin/webhooks" }
 );

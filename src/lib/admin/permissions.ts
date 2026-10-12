@@ -75,6 +75,7 @@ export function permissionForAdminRequest(
   if (path === "/api/admin/users") return verb === "GET" ? "users.read" : verb === "PATCH" ? "users.write" : null;
   if (path === "/api/admin/users/lock" || /^\/api\/admin\/users\/[^/]+\/force-refresh-session$/.test(path)) return verb === "POST" ? "users.sessions.write" : null;
   if (path === "/api/admin/users/grant") return verb === "POST" ? "users.entitlements.write" : null;
+  if (path === "/api/admin/users/names") return verb === "GET" ? "users.read" : null;
   if (path === "/api/admin/subscriptions") return verb === "GET" ? "revenue.read" : null;
   if (path === "/api/admin/subscriptions/reconcile-pending") return verb === "POST" ? "revenue.reconcile" : null;
   if (path === "/api/admin/payments/resolve") return verb === "POST" ? "revenue.manage" : null;

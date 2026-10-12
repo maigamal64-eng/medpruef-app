@@ -89,7 +89,9 @@ export interface PaymentsMetrics {
     window_days: number;
     by_provider: Array<{ provider: string; result: string; rows: number; distinct_events: number }>;
     recent: Array<{ id: string; provider: string; result: string; signature_valid: boolean | null; event_id: string | null; error: string | null; received_at: string; kind: "processed" | "duplicate" | "probe" | "mismatch" | "other" }>;
+    recent_total?: number | null;
   };
+  recent_events_total?: number | null;
   recent_events: Array<{
     id: number;
     event: string;

@@ -20,7 +20,6 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
 import {
   AlertCircle,
   AlertTriangle,
@@ -36,6 +35,8 @@ import {
 import { authFetch as fetch } from "@/lib/authFetch";
 import { useAdminPermissions } from "@/lib/admin/useAdminPermissions";
 import { AdminPageShell } from "../_components/AdminPageShell";
+import { ListFooter } from "../_components/ListFooter";
+import { UserLink } from "../_components/UserLink";
 import { FormatInt, SectionHeading, StatusDot, formatInt } from "../_components/primitives";
 import { ResolveDialog, type ResolveAction } from "./_parts/ResolveDialog";
 import { PaymentTrace } from "./_parts/PaymentTrace";
@@ -272,7 +273,7 @@ function FailuresSection({
                   <span className="break-all font-mono">{r.payment_id}</span>
                   <span>plan {r.plan_id ?? "unknown"}{r.linkable_tier ? ` (${r.linkable_tier})` : ", not a MedPrüf Pro plan"}</span>
                   {r.failure_reasons.length > 0 && <span>reason: {r.failure_reasons.join(", ")}</span>}
-                  {r.learner && <Link className="text-[var(--mp-viridian)] underline" href={`/admin/users/${r.learner.id}`}>{r.learner.label ?? `learner ${r.learner.id.slice(0, 8)}`}</Link>}
+                  {r.learner && <UserLink id={r.learner.id} />}
                 </div>
                 {canManage && metrics.resolutions_available && (
                   <div className="flex flex-wrap gap-2">
@@ -398,7 +399,7 @@ function RefundsSection({ metrics }: { metrics: PaymentsMetrics }) {
                   <span>{when(a.refunded_at)}</span>
                   <span>{a.tier ?? "no tier"}</span>
                   <span className="font-medium text-[var(--mp-fg)]">{a.access_now}</span>
-                  {a.learner && <Link className="text-[var(--mp-viridian)] underline" href={`/admin/users/${a.learner.id}`}>{a.learner.label ?? `learner ${a.learner.id.slice(0, 8)}`}</Link>}
+                  {a.learner && <UserLink id={a.learner.id} />}
                 </li>
               ))}
             </ul>
@@ -434,7 +435,8 @@ function DeliveriesSection({ metrics }: { metrics: PaymentsMetrics }) {
         </p>
       </div>
       {d.recent.length > 0 && (
-        <ul className="divide-y divide-[var(--mp-border-subtle)] rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] text-xs">
+        <div className="overflow-hidden rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)]">
+        <ul className="divide-y divide-[var(--mp-border-subtle)] text-xs">
           {d.recent.map((r) => (
             <li key={r.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2">
               <span className="font-mono text-[var(--mp-fg-muted)]">{when(r.received_at)}</span>
@@ -443,9 +445,17 @@ function DeliveriesSection({ metrics }: { metrics: PaymentsMetrics }) {
                 {r.kind === "probe" ? "unsigned probe" : r.kind === "mismatch" ? "rejected with signature header" : r.result}
               </span>
               {r.event_id && <span className="break-all font-mono text-[var(--mp-fg-muted)]">{r.event_id}</span>}
+              {r.error && (
+                <details className="w-full">
+                  <summary className="cursor-pointer text-[10px] text-[var(--mp-fg-muted)]">Delivery detail</summary>
+                  <pre className="mt-1 max-h-48 overflow-auto whitespace-pre-wrap break-all rounded bg-[var(--mp-surface-sunken)] p-2 font-mono text-[10px] text-[var(--mp-fg)]">{JSON.stringify({ id: r.id, provider: r.provider, result: r.result, signature_valid: r.signature_valid, event_id: r.event_id, error: r.error, received_at: r.received_at }, null, 2)}</pre>
+                </details>
+              )}
             </li>
           ))}
         </ul>
+        <ListFooter shown={d.recent.length} total={d.recent_total ?? null} noun="logged deliveries (newest first)" note={`The counts above cover the last ${d.window_days} days.`} />
+        </div>
       )}
     </section>
   );
@@ -457,7 +467,7 @@ function FeedSection({ metrics }: { metrics: PaymentsMetrics }) {
   const rows = metrics.recent_events;
   return (
     <section className="space-y-3">
-      <SectionHeading title="Recent payment events" icon={Inbox} hint="Newest first, latest 50 log rows" />
+      <SectionHeading title="Recent payment events" icon={Inbox} hint="Newest first" />
       <div className="overflow-hidden rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)]">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[640px] border-collapse text-xs">
@@ -491,7 +501,7 @@ function FeedSection({ metrics }: { metrics: PaymentsMetrics }) {
                     <td className="whitespace-nowrap px-3 py-2 font-mono text-[10px] text-[var(--mp-fg-muted)]">{r.reason ?? "—"}</td>
                     <td className="px-3 py-2 font-mono text-[10px] text-[var(--mp-fg-muted)]">{ref ?? "—"}</td>
                     <td className="whitespace-nowrap px-3 py-2 text-[10px]">
-                      {r.user_id ? <Link className="text-[var(--mp-viridian)] underline" href={`/admin/users/${r.user_id}`}>{r.user_id.slice(0, 8)}</Link> : "—"}
+                      {r.user_id ? <UserLink id={r.user_id} /> : "—"}
                     </td>
                   </tr>
                 );
@@ -499,6 +509,7 @@ function FeedSection({ metrics }: { metrics: PaymentsMetrics }) {
             </tbody>
           </table>
         </div>
+        <ListFooter shown={rows.length} total={metrics.recent_events_total ?? null} noun="payment log rows (newest first)" note="Trace one payment above to see all of its rows." />
       </div>
     </section>
   );
