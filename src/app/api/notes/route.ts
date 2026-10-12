@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { requireUser, isFreeAccess } from "@/lib/auth-guard";
+import { stripReservedNoteMetadata } from "@/lib/notes-review";
 import {
   FREE_NOTE_LIMIT,
   NOTE_SELECT_COLUMNS,
@@ -89,7 +90,8 @@ export async function POST(req: NextRequest) {
       tags: body?.tags,
       exam_type: body?.exam_type,
       topic: body?.topic,
-      metadata: body?.metadata,
+      // a15: trust labels (reviewed_*, curated, guide) are never learner input.
+      metadata: stripReservedNoteMetadata(body?.metadata),
     });
 
     const { data, error } = await sb

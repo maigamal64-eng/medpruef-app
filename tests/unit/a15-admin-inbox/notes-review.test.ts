@@ -28,3 +28,12 @@ describe("TR-08 note review status", () => {
     expect(reviewLang("ar")).toBe("en");
   });
 });
+
+describe("reserved note metadata", () => {
+  it("learner input cannot set trust labels", async () => {
+    const { stripReservedNoteMetadata } = await import("@/lib/notes-review");
+    expect(stripReservedNoteMetadata({ reviewed_on: "2026-10-01", reviewed_by_role: "Fachärztin", curated: true, guide: true, source_model: "x" })).toEqual({ source_model: "x" });
+    expect(stripReservedNoteMetadata(null)).toBeUndefined();
+    expect(stripReservedNoteMetadata(["x"])).toBeUndefined();
+  });
+});

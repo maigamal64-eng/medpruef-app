@@ -112,7 +112,8 @@ export async function POST(req: NextRequest) {
     const { error } = await sb.from('user_feedback').insert({
       user_id: userId,
       message: message.trim(),
-      context: context || {},
+      // a15: the first-reply stamp is admin-owned; never accepted from the learner.
+      context: Object.fromEntries(Object.entries((context || {}) as Record<string, unknown>).filter(([key]) => key !== 'first_replied_at' && key !== 'first_replied_by')),
       status: 'new',
     })
 
@@ -165,12 +166,14 @@ export async function PATCH(req: NextRequest) {
       const context = (row.context && typeof row.context === 'object' ? row.context : {}) as Record<string, unknown>
       if (typeof context.first_replied_at !== 'string') {
         const at = new Date().toISOString()
-        const { error: stampError } = await sb.from('user_feedback')
+        const { data: stamped, error: stampError } = await sb.from('user_feedback')
           .update({ context: { ...context, first_replied_at: at, first_replied_by: guard.userId } })
           .eq('id', id)
           .is('context->>first_replied_at', null)
+          .select('id')
+          .maybeSingle()
         if (stampError) return NextResponse.json({ error: 'Could not record the reply' }, { status: 500 })
-        await logAdminAction({ req, actorId: guard.userId, actorEmail, action: 'feedback_replied', targetType: 'user_feedback', targetId, payload: { first_replied_at: at } })
+        if (stamped) await logAdminAction({ req, actorId: guard.userId, actorEmail, action: 'feedback_replied', targetType: 'user_feedback', targetId, payload: { first_replied_at: at } })
       }
       if (!status) return NextResponse.json({ ok: true })
     }

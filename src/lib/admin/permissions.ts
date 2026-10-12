@@ -34,6 +34,7 @@ export function permissionForAdminRequest(
 
   if (path === "/api/admin/access/me") return null;
   if (path === "/api/admin/session/revoke-all") return null; // self-service, see canAuthorizeAdminRequest
+  if (path === "/api/admin/inbox") return null; // a15: per-count permission checks in the handler, see canAuthorizeAdminRequest
   if (path === "/api/admin/ops/oauth/interaction") return verb === "GET" ? "access.manage" : null;
   if (path === "/api/admin/ops/oauth/consent") return verb === "POST" ? "access.manage" : null;
   if (path === "/api/admin/ops/actions") return verb === "GET" ? "access.manage" : null;
@@ -54,7 +55,7 @@ export function permissionForAdminRequest(
     if (path === "/api/stats/admin/new-users" || path === "/api/stats/admin/activity") return verb === "GET" ? "users.read" : null;
     if (path === "/api/stats/admin/control-plane" || path === "/api/stats/admin/payments" || path === "/api/stats/admin/payments/trace" || path === "/api/stats/admin/growth" || path === "/api/stats/admin/growth/content") return verb === "GET" ? "revenue.read" : null;
     if (path === "/api/stats/admin/clarity") return verb === "GET" ? "system.read" : null;
-    if (["/api/stats/admin/questions", "/api/stats/admin/duplicates", "/api/stats/admin/missing-images", "/api/stats/admin/explanations"].includes(path)) {
+    if (["/api/stats/admin/questions", "/api/stats/admin/duplicates", "/api/stats/admin/missing-images", "/api/stats/admin/explanations", "/api/stats/admin/explanations/downvoted"].includes(path)) {
       if (verb === "GET") return "content.read";
       if (path.endsWith("/questions") && verb === "PATCH") return "content.moderate";
       return null;
@@ -144,6 +145,11 @@ export function canAuthorizeAdminRequest(
   }
   // ADM-17: any admin may end every session of their OWN account.
   if (pathname.replace(/\/+$/, "") === "/api/admin/session/revoke-all" && method.toUpperCase() === "POST") {
+    return snapshot !== null;
+  }
+  // a15: inbox counts; the handler returns only counts the admin may read
+  // (content.read / feedback.read), null for the rest.
+  if (pathname.replace(/\/+$/, "") === "/api/admin/inbox" && method.toUpperCase() === "GET") {
     return snapshot !== null;
   }
   const permission = permissionForAdminRequest(pathname, method);

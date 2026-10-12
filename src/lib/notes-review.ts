@@ -59,3 +59,16 @@ export function noteReviewLabel(review: NoteReview | null | undefined, lang: "de
 export function reviewLang(lang: string): "de" | "en" {
   return lang.startsWith("de") ? "de" : "en";
 }
+
+/**
+ * Metadata keys that grant trust labels. Only server-side review tooling
+ * (service role SQL) may write them; learner input drops them (a15 review).
+ */
+export const RESERVED_NOTE_METADATA_KEYS = ["reviewed_on", "reviewed_by_role", "curated", "guide"] as const;
+
+export function stripReservedNoteMetadata(metadata: unknown): Record<string, unknown> | undefined {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return undefined;
+  const out = { ...(metadata as Record<string, unknown>) };
+  for (const key of RESERVED_NOTE_METADATA_KEYS) delete out[key];
+  return out;
+}

@@ -194,3 +194,53 @@ describe("a15 GET /api/suggestions/mine", () => {
     expect(body.turnaround).toMatchObject({ median_hours: 21, sample: 5 });
   });
 });
+
+describe("a15 review fixes", () => {
+  it("POST never stores server-owned report keys from the learner", async () => {
+    const { calls } = database((c) => (c.op === "insert" ? { data: { id: 9 } } : {}));
+    await POST(req("/api/suggestions", "POST", { questionId: 1, type: "edit", suggestedChanges: { explanation: "x" }, context: { applied_edit: { before: { answer: "B" }, after: {} }, notified_at: "2026-01-01", reporter_outcome: "fixed", viewport: "1x1" } }));
+    const stored = (writes(calls, "question_suggestions")[0].payload as { context: Record<string, unknown> }).context;
+    expect(stored).not.toHaveProperty("applied_edit");
+    expect(stored).not.toHaveProperty("notified_at");
+    expect(stored).not.toHaveProperty("reporter_outcome");
+    expect(stored.viewport).toBe("1x1");
+  });
+
+  it("revert refuses an empty or key-only applied edit and never writes answer or choices", async () => {
+    const { calls } = database((c) => (c.table === "question_suggestions" && c.op === "select" ? { data: row({ type: "edit", status: "approved", context: { applied_edit: { before: { answer: "B", choices: [], is_active: false }, after: {} } } }) } : {}));
+    expect((await PATCH(req("/api/suggestions", "PATCH", { suggestionId: 7, action: "revert" }))).status).toBe(409);
+    expect(writes(calls, "questions")).toHaveLength(0);
+  });
+
+  it("the later Email reporter action leaves an internal note out of the mail", async () => {
+    process.env.SUGGESTION_RESOLVED_EMAIL_ENABLED = "true";
+    database((c) => {
+      if (c.table === "question_suggestions" && c.op === "select") return { data: row({ status: "rejected", admin_note: "internal: reporter is a competitor", context: { reporter_outcome: "not_an_error" } }) };
+      if (c.table === "question_suggestions" && c.op === "update") return { data: { id: 7 } };
+      if (c.table === "users") return { data: { email: "learner@example.invalid", first_name: null, language_code: "de" } };
+      return {};
+    });
+    expect((await PATCH(req("/api/suggestions", "PATCH", { suggestionId: 7, action: "notify" }))).status).toBe(200);
+    expect(mocks.email.mock.calls[0][0].htmlBody).not.toContain("competitor");
+  });
+
+  it("a timed-out send keeps the claim so a retry cannot mail twice", async () => {
+    process.env.SUGGESTION_RESOLVED_EMAIL_ENABLED = "true";
+    vi.useFakeTimers();
+    mocks.email.mockImplementation(() => new Promise(() => {}));
+    const { calls } = database((c) => {
+      if (c.table === "question_suggestions" && c.op === "select") return { data: row() };
+      if (c.table === "question_suggestions" && c.op === "update") return { data: { id: 7 } };
+      if (c.table === "users") return { data: { email: "learner@example.invalid", first_name: null, language_code: "de" } };
+      return {};
+    });
+    const pending = PATCH(req("/api/suggestions", "PATCH", { suggestionId: 7, action: "approve", outcome: "fixed" }));
+    await vi.advanceTimersByTimeAsync(13_000);
+    const res = await pending;
+    vi.useRealTimers();
+    expect((await res.json()).notified).toBe(false);
+    const last = writes(calls, "question_suggestions").at(-1)!;
+    expect((last.payload as { context: Record<string, unknown> }).context.notified_at).toEqual(expect.any(String));
+    expect((last.payload as { context: Record<string, unknown> }).context.notify_error).toMatchObject({ reason: "timeout" });
+  });
+});

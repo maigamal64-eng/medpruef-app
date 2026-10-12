@@ -94,9 +94,15 @@ const URL_MAX = 500;
  * UX-ADM-01 (3): validate the learner-supplied page URL on new reports.
  * A bad value is dropped (never a 400): the report itself still matters.
  * Only http(s) URLs or site paths are kept. Existing rows are not rewritten.
+ * Server-owned keys (applied edit, outcome, notification state) are never
+ * accepted from the learner.
  */
+/** Context keys only the server writes; a learner-supplied value is dropped. */
+export const SERVER_OWNED_REPORT_KEYS = ["applied_edit", "reverted_edit", "reporter_outcome", "reporter_note_shared", "notified_at", "notified_outcome", "notify_error"] as const;
+
 export function sanitizeReportContext(context: Record<string, unknown>): Record<string, unknown> {
   const next = { ...context };
+  for (const key of SERVER_OWNED_REPORT_KEYS) delete next[key];
   if ("url" in next) {
     const raw = next.url;
     let keep: string | null = null;

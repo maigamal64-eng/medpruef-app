@@ -51,7 +51,7 @@ export function EditSuggestionReview({ row, canModerate, onDone }: { row: EditSu
   }
 
   if (!canModerate) return null;
-  if (row.status === "approved" && row.applied_edit?.after) {
+  if (row.status === "approved" && row.applied_edit?.after && Object.keys(row.applied_edit.after).length > 0) {
     return (
       <>
         <button type="button" className="mp-btn mp-btn--secondary mp-btn--sm" onClick={() => setRevertOpen(true)}>Revert edit</button>
@@ -86,13 +86,13 @@ export function EditSuggestionReview({ row, canModerate, onDone }: { row: EditSu
         description="Compare the live text with the learner's proposal. Nothing changes until you apply it."
         footer={(
           <DialogFooter>
-            <button type="button" className="mp-btn mp-btn--secondary" disabled={busy} onClick={() => void send({ action: "reject", outcome: "not_an_error" }, "Report dismissed", () => setOpen(false))}>Dismiss</button>
-            <button type="button" className="mp-btn mp-btn--secondary" disabled={busy} onClick={() => void send({ action: "approve", outcome: "accepted" }, "Report closed, question unchanged", () => setOpen(false))}>Close without applying</button>
+            <button type="button" className="mp-btn mp-btn--secondary" disabled={busy} onClick={() => void send({ action: "reject", outcome: "not_an_error", notifyReporter: false }, "Report dismissed", () => setOpen(false))}>Dismiss</button>
+            <button type="button" className="mp-btn mp-btn--secondary" disabled={busy} onClick={() => void send({ action: "approve", outcome: "accepted", notifyReporter: false }, "Report closed, question unchanged", () => setOpen(false))}>Close without applying</button>
             <button
               type="button"
               className="mp-btn mp-btn--primary"
               disabled={busy || changed.length === 0}
-              onClick={() => void send({ action: "approve", applyEdit: true, expectedBefore: row.current ?? {} }, "Edit applied", () => setOpen(false))}
+              onClick={() => void send({ action: "approve", applyEdit: true, expectedBefore: row.current ?? {}, notifyReporter: false }, "Edit applied", () => setOpen(false))}
             >
               {busy ? "Applying…" : "Apply edit"}
             </button>

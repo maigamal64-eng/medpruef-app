@@ -163,6 +163,8 @@ export function ReviewsQueue({ canModerate, canReadUsers, onCounts }: { canModer
     } finally {
       if (ticket === seq.current) setLoading(false);
     }
+  // onCounts must be stable (the parent passes a state setter); an inline
+  // arrow here would refetch on every render.
   }, [status, page, reportId, onCounts]);
 
   useEffect(() => { void load(); }, [load]);

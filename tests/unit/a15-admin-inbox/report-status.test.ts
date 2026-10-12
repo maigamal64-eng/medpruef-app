@@ -81,3 +81,9 @@ describe("report copy", () => {
     expect(reportsCopy("de")).toBe(REPORTS_COPY.de);
   });
 });
+
+describe("server-owned report keys", () => {
+  it("are dropped from learner context", () => {
+    expect(sanitizeReportContext({ applied_edit: {}, reverted_edit: {}, reporter_outcome: "fixed", reporter_note_shared: true, notified_at: "x", notified_outcome: "x", notify_error: {}, keep: 1 })).toEqual({ keep: 1 });
+  });
+});

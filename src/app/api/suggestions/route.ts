@@ -8,6 +8,7 @@ import { logAdminAction, resolveActorEmail } from "@/lib/admin/audit";
 import { adminErrorResponse } from "@/lib/admin/error-response";
 import { callerIdentity, checkRateLimit, rateKey, rateLimitHeaders } from "@/lib/rate-limit";
 import {
+  EDITABLE_FIELDS,
   asksForKeyChange,
   matches,
   parseSubmission,
@@ -305,7 +306,9 @@ export async function PATCH(req: NextRequest) {
         return NextResponse.json({ error: "Only a confirmed or dismissed report can be emailed." }, { status: 409 });
       }
       const facts = reportContextFacts(context);
-      const result = await notifyReporter(db, { ...suggestion, context }, { outcome: facts.outcome, adminNote: suggestion.admin_note ?? null });
+      // An internal note is only mailed when the decision marked it for the reporter.
+      const sharedNote = context.reporter_note_shared === true ? suggestion.admin_note ?? null : null;
+      const result = await notifyReporter(db, { ...suggestion, context }, { outcome: facts.outcome, adminNote: sharedNote });
       if (!result.notified) {
         const message = {
           anonymous: "This report was sent without an account, so there is no one to email.",
@@ -339,8 +342,8 @@ export async function PATCH(req: NextRequest) {
       if (!Number.isFinite(resolvedAt) || Date.now() - resolvedAt > REOPEN_WINDOW_MS) {
         return NextResponse.json({ error: "Undo is only possible for 10 minutes after a decision." }, { status: 409 });
       }
-      const { reporter_outcome: _dropped, ...reopenedContext } = context;
-      void _dropped;
+      const { reporter_outcome: _dropped, reporter_note_shared: _shared, ...reopenedContext } = context;
+      void _dropped; void _shared;
       const { data: reopened, error: reopenErr } = await db
         .from("question_suggestions")
         .update({ status: "pending", admin_note: null, resolved_by: null, resolved_at: null, context: reopenedContext })
@@ -359,8 +362,20 @@ export async function PATCH(req: NextRequest) {
     }
 
     if (action === "revert") {
-      const applied = context.applied_edit as { before?: StoredValues; after?: EditValues } | undefined;
-      if (suggestion.status !== "approved" || !applied?.before || !applied.after) {
+      const raw = context.applied_edit as { before?: unknown; after?: unknown } | undefined;
+      // Only the editable fields an apply could have written; never answer,
+      // choices or is_active, whatever the stored context says.
+      const pick = (value: unknown) => {
+        const out: Record<string, string | null> = {};
+        if (!value || typeof value !== "object") return out;
+        for (const field of EDITABLE_FIELDS) {
+          const v = (value as Record<string, unknown>)[field];
+          if (typeof v === "string" || v === null) out[field] = v;
+        }
+        return out;
+      };
+      const applied = raw ? { before: pick(raw.before) as StoredValues, after: pick(raw.after) as EditValues } : undefined;
+      if (suggestion.status !== "approved" || !applied || Object.keys(applied.after).length === 0 || Object.keys(applied.before).length === 0) {
         return NextResponse.json({ error: "Only an applied edit can be reverted" }, { status: 409 });
       }
       const { data: live, error: liveErr } = await db
@@ -421,6 +436,9 @@ export async function PATCH(req: NextRequest) {
     const status = action === "approve" ? "approved" : "rejected";
     let nextContext: Record<string, unknown> = plan ? { ...context, applied_edit: { before: plan.before, after: plan.after, at: nowIso, by: adminUserId } } : context;
     if (outcome) nextContext = { ...nextContext, reporter_outcome: outcome };
+    // The note goes to the reporter only when the admin chose to email them now.
+    const noteShared = reportEmailEnabled() && body?.notifyReporter !== false && !!adminNote;
+    if (noteShared) nextContext = { ...nextContext, reporter_note_shared: true };
     const { data: claimed, error: updateErr } = await db
       .from("question_suggestions")
       .update({ status, admin_note: adminNote, resolved_by: adminUserId, resolved_at: nowIso, context: nextContext })
@@ -470,7 +488,7 @@ export async function PATCH(req: NextRequest) {
     let notified = false;
     if (body?.notifyReporter !== false) {
       try {
-        const result = await notifyReporter(db, { ...suggestion, status, context: nextContext }, { outcome, adminNote });
+        const result = await notifyReporter(db, { ...suggestion, status, context: nextContext }, { outcome, adminNote: noteShared ? adminNote : null });
         notified = result.notified;
         if (result.notified) {
           await logAdminAction({

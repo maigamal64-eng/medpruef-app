@@ -80,7 +80,7 @@ export async function notifyReporter(
   });
 
   let ok = false;
-  let failure = "send_failed";
+  let failure: string = "send_failed";
   try {
     const result = await Promise.race([
       sendZohoEmail({ to: email, subject: mail.subject, htmlBody: mail.htmlBody }),
@@ -93,11 +93,24 @@ export async function notifyReporter(
   }
   if (ok) return { notified: true };
 
-  // Release the claim so a retry is possible; keep why it failed.
-  await db
+  if (failure === "timeout") {
+    // The provider may still deliver: keep the claim (one mail per report
+    // ever) and record that the outcome is unknown.
+    const { error: markErr } = await db
+      .from("question_suggestions")
+      .update({ context: { ...base, notified_at: claimedAt, notified_outcome: opts.outcome, notify_error: { at: new Date().toISOString(), reason: "timeout" } } })
+      .eq("id", report.id)
+      .eq("context->>notified_at", claimedAt);
+    if (markErr) console.error("[notify-reporter] could not record timeout", report.id);
+    return { notified: false, reason: "send_failed" };
+  }
+
+  // A definite failure: release the claim so a retry is possible.
+  const { error: releaseErr } = await db
     .from("question_suggestions")
     .update({ context: { ...base, notify_error: { at: new Date().toISOString(), reason: failure } } })
     .eq("id", report.id)
     .eq("context->>notified_at", claimedAt);
+  if (releaseErr) console.error("[notify-reporter] claim release failed; retry stays blocked", report.id);
   return { notified: false, reason: "send_failed" };
 }

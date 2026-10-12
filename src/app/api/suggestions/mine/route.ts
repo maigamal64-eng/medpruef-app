@@ -42,7 +42,19 @@ export async function GET(req: NextRequest) {
   }
 }
 
+// The turnaround is a population aggregate: memoise it per instance for
+// 10 minutes instead of scanning resolved reports on every learner request.
+const TURNAROUND_TTL_MS = 10 * 60_000;
+let turnaroundMemo: { at: number; value: NonNullable<Awaited<ReturnType<typeof readTurnaround>>> } | null = null;
+
 async function loadTurnaround(db: ReturnType<typeof getServiceClient>) {
+  if (turnaroundMemo && Date.now() - turnaroundMemo.at < TURNAROUND_TTL_MS) return turnaroundMemo.value;
+  const value = await readTurnaround(db);
+  if (value) turnaroundMemo = { at: Date.now(), value };
+  return value;
+}
+
+async function readTurnaround(db: ReturnType<typeof getServiceClient>) {
   try {
     const since = new Date(Date.now() - TURNAROUND_WINDOW_DAYS * 86_400_000).toISOString();
     const { data, error } = await db.from("question_suggestions")
