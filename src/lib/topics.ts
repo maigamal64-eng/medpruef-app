@@ -38,6 +38,37 @@ export const TOPIC_CONFIG: Record<string, { icon: string; color: string }> = {
   'Allgemeine Chirurgie': { icon: 'Scissors', color: '#D64545' },
 }
 
+/**
+ * Short subject names for tight chart labels (UX-STU-37, pick-ux-stu-37 A).
+ * A fixed map, never a substring cut; the full name stays the accessible
+ * name and is shown in the text list beside the chart.
+ */
+export const TOPIC_SHORT_NAMES: Readonly<Record<string, string>> = {
+  'Chirurgische Fächer': 'Chirurgie',
+  'Dermatologie und Venerologie': 'Dermatologie',
+  'Innere Medizin': 'Innere',
+  'Neurologie': 'Neurologie',
+  'Psychiatrie': 'Psychiatrie',
+  'Frauenheilkunde/Gynäkologie': 'Gynäkologie',
+  'Kinder- und Jugendheilkunde': 'Pädiatrie',
+  'Augenheilkunde': 'Augen',
+  'Hals-Nasen-Ohrenheilkunde': 'HNO',
+  'Notfall- und Intensivmedizin': 'Notfall',
+  'Pharmakologie': 'Pharmakologie',
+  'Dermatologie': 'Dermatologie',
+  'Gynäkologie und Geburtshilfe': 'Gynäkologie',
+  'HNO': 'HNO',
+  'Kinder und Jugendheilkunde': 'Pädiatrie',
+  'Kinder und Jugendpsychiatrie': 'KJ-Psychiatrie',
+  'Intensivmedizin': 'Intensiv',
+  'chirurgische Spezialfächer und Anästhesie': 'Chir. Spezial',
+  'Allgemeine Chirurgie': 'Allg. Chirurgie',
+}
+
+export function topicShortName(topic: string): string {
+  return TOPIC_SHORT_NAMES[topic] ?? topic
+}
+
 export function getTopicConfig(topic: string) {
   return TOPIC_CONFIG[topic] || { icon: 'ClipboardList', color: '#003A8C' }
 }

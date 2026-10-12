@@ -44,11 +44,17 @@ import { getStoredSession } from "@/lib/auth";
 import { getStoredExamSource } from "@/lib/topics";
 import { useUserTier } from "@/lib/hooks/useUserTier";
 import { canUse } from "@/lib/entitlements";
-import { gateSentence } from "@/lib/entitlement-copy";
-import { signInRequiredHref } from "@/lib/hooks/useSignedInRoute";
-import { weakTopicHref } from "@/lib/next-step";
+import { useSignedInRoute } from "@/lib/hooks/useSignedInRoute";
+import { ts as tsx, studyDate, studyPct, studyNumber } from "@/lib/i18n-study";
+import { rankLabel } from "@/lib/i18n-study-dash";
+import { countdownCopy } from "@/lib/master-learning/weekly-progress";
+import { daysBetween } from "@/lib/master-learning/plan-target";
+import { topicShortName } from "@/lib/topics";
+import WeeklyProgressCard from "./_parts/WeeklyProgressCard";
+import FieldReadinessCard from "./_parts/FieldReadinessCard";
+import MockTrendCard from "./_parts/MockTrendCard";
+import NextStepBlock from "./_parts/NextStepBlock";
 import { MIN_TOPIC_SAMPLE, PRACTICE_MORE_BELOW_PCT } from "@/lib/learning-metrics";
-import { ProPill } from "@/components/ui/ProPill";
 import { listNoteQuestionIds, readNoteText } from "@/lib/notes-store";
 // authFetch sends the signed session token. The bookmark/notes `/api/questions?ids=`
 // lookups (and /api/stats) must be authenticated, or the route treats them as a
@@ -70,15 +76,10 @@ import {
   Star,
   StickyNote,
   GraduationCap,
-  AlertTriangle,
-  ArrowUpRight,
   Flame,
   CheckCircle2,
   Radar as RadarIcon,
-  CalendarDays,
-  BarChart3,
   Layers,
-  CalendarClock,
 } from "lucide-react";
 import { SkeletonCard } from "@/components/Skeleton";
 import {
@@ -101,87 +102,45 @@ function StudyRadar({
   lang,
 }: {
   topics: { topic: string; answered: number; correct: number }[];
-  lang: string;
+  lang: Lang;
 }) {
-  const [isNarrow, setIsNarrow] = useState(false);
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const mq = window.matchMedia("(max-width: 640px)");
-    const onChange = () => setIsNarrow(mq.matches);
-    onChange();
-    mq.addEventListener("change", onChange);
-    return () => mq.removeEventListener("change", onChange);
-  }, []);
-  const labelLen = isNarrow ? 10 : 16;
-
-  const data = topics
+  // UX-STU-37 (pick A): a fixed short-name map, never a substring cut; no
+  // radius ticks; the full names and values sit in the text list below.
+  const rows = topics
     .filter((tp) => tp.answered > 0)
-    .map((tp) => ({
-      subject: tp.topic.split("/")[0].replace("- und ", "/").substring(0, labelLen),
-      accuracy: Math.round((tp.correct / tp.answered) * 100),
-      fullMark: 100,
-    }));
+    .map((tp) => ({ topic: tp.topic, accuracy: Math.round((tp.correct / tp.answered) * 100) }));
+  const data = rows.map((r) => ({ subject: topicShortName(r.topic), accuracy: r.accuracy, fullMark: 100 }));
 
   if (data.length < 3) {
     return (
       <p className="text-sm text-[var(--mp-fg-subtle)] text-center py-12">
-        {lang === "de"
-          ? "Löse mehr Fragen, um den Radar zu sehen"
-          : "Answer more questions to see the radar"}
+        {tsx("radar_more", lang)}
       </p>
     );
   }
 
   return (
-    <ResponsiveContainer width="100%" height={260}>
-      <RadarChart data={data} outerRadius="72%">
-        <PolarGrid stroke="var(--mp-border)" />
-        <PolarAngleAxis
-          dataKey="subject"
-          tick={{ fontSize: 12, fill: "var(--mp-fg-muted)" }}
-        />
-        <PolarRadiusAxis
-          angle={90}
-          domain={[0, 100]}
-          tick={{ fontSize: 12, fill: "var(--mp-fg-muted)" }}
-          axisLine={false}
-        />
-        <Radar
-          name="Accuracy"
-          dataKey="accuracy"
-          stroke="var(--mp-spark)"
-          fill="var(--mp-spark)"
-          fillOpacity={0.18}
-          strokeWidth={2}
-        />
-      </RadarChart>
-    </ResponsiveContainer>
+    <>
+      <div role="img" aria-label={tsx("radar_alt", lang)}>
+        <ResponsiveContainer width="100%" height={260}>
+          <RadarChart data={data} outerRadius="70%">
+            <PolarGrid stroke="var(--mp-border)" />
+            <PolarAngleAxis dataKey="subject" tick={{ fontSize: 12, fill: "var(--mp-fg-muted)" }} />
+            <PolarRadiusAxis angle={90} domain={[0, 100]} tick={false} axisLine={false} />
+            <Radar name="Accuracy" dataKey="accuracy" stroke="var(--mp-spark)" fill="var(--mp-spark)" fillOpacity={0.18} strokeWidth={2} />
+          </RadarChart>
+        </ResponsiveContainer>
+      </div>
+      <details className="mt-2">
+        <summary className="cursor-pointer min-h-11 inline-flex items-center text-[13px] font-semibold text-[var(--mp-cta-blue)]">{tsx("radar_list_title", lang)}</summary>
+        <ul className="mt-1 space-y-1 text-[13px] text-[var(--mp-fg)]">
+          {[...rows].sort((a, b) => a.accuracy - b.accuracy).map((r) => (
+            <li key={r.topic}><span lang="de">{r.topic}</span>: {studyPct(r.accuracy, lang)}</li>
+          ))}
+        </ul>
+      </details>
+    </>
   );
-}
-
-/* ─────────────────────────────────────────────────────────────
-   Weekly performance - reads quiz results from localStorage (7-day
-   window UNCHANGED). Now a calm CSS bar chart (mockup .wchart),
-   cta-blue→teal gradient bars, mono day + value labels.
-   ───────────────────────────────────────────────────────────── */
-function WeeklyChart({ lang }: { lang: string }) {
-  return (
-    <p className="text-sm text-[var(--mp-fg-subtle)] text-center py-10">
-      {lang === "de"
-        ? "Der Wochentrend erscheint, sobald die Aktivität einem Konto zugeordnet werden kann."
-        : "Your weekly trend will appear when activity can be linked to an account."}
-    </p>
-  );
-}
-
-/* ─────────────────────────────────────────────────────────────
-   Activity heatmap - 4 weeks × 7 (28-day window UNCHANGED). Viridian
-   color-mix ramp (intensity = consistency), per SPECS §5.
-   ───────────────────────────────────────────────────────────── */
-function ActivityHeatmap() {
-  // This browser-wide history has no trustworthy account owner, so no
-  // visitor receives an attributed heatmap from the legacy key.
-  return null;
 }
 
 type Lang = "de" | "en";
@@ -245,6 +204,9 @@ export default function ProgressPage() {
   const [showAllBookmarks, setShowAllBookmarks] = useState(false);
   const [showAllNotes, setShowAllNotes] = useState(false);
   const [accuracy, setAccuracy] = useState(0);
+  const [examDate, setExamDate] = useState<string | null>(null);
+  // UX-STU-40: signed-out visitors go to the sign-in page with a return path.
+  const signedIn = useSignedInRoute();
 
   /* ─── Init: load session, lang, localStorage data ─── */
   useEffect(() => {
@@ -284,6 +246,8 @@ export default function ProgressPage() {
               setStoredExamSource(canonicalExam);
               setExamSource(canonicalExam);
             }
+            // LX-09: the countdown reads the same stored date as the plan.
+            setExamDate(typeof data?.examDate === "string" && /^\d{4}-\d{2}-\d{2}$/.test(data.examDate) ? data.examDate : null);
           })
           .catch(() => {
             // Keep the local exam selection when the network is unavailable.
@@ -485,9 +449,6 @@ export default function ProgressPage() {
   const rankTier = Math.min(8, Math.max(1, xpInfo.level)) as 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
   const examQuestionTotal = coverageTopics.reduce((sum, topic) => sum + topic.total, 0);
   const uniqueAnswered = coverageTopics.reduce((sum, topic) => sum + topic.answered, 0);
-  const completionPct = examQuestionTotal > 0
-    ? Math.min(100, Math.round((uniqueAnswered / examQuestionTotal) * 100))
-    : 0;
 
   /* ─── Weak topics: the shared thresholds (UX-GLOBAL-06, ab 10 Fragen, unter 60 %) ─── */
   const weakTopics = topicStats.filter((ts) => {
@@ -495,7 +456,6 @@ export default function ProgressPage() {
     return Math.round((ts.correct / ts.answered) * 100) < PRACTICE_MORE_BELOW_PCT;
   });
 
-  const daysUntilExam: number | null = null;
 
   /* ─── Topic coverage rail - all 10 specialties, sorted ─── */
   const allTopics = coverageTopics.map(({ topic, total, answered, accuracy }) => {
@@ -524,12 +484,19 @@ export default function ProgressPage() {
   // analytics sub-components carry their own calm "answer more" micro-empties
   // inside the full layout. bookmarkIds/noteEntries are hydrated from
   // localStorage in the mount effect before `loading` flips, so no flash.
+  const countdownLine = (() => {
+    if (!examDate) return null;
+    const now = new Date();
+    const todayISO = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    return countdownCopy(daysBetween(todayISO, examDate), studyDate(examDate, lang, { day: "numeric", month: "long" }), lang);
+  })();
+
   const isGenuinelyEmpty =
     !userId ||
     (totalAnswered === 0 && bookmarkIds.length === 0 && noteEntries.length === 0 && !legacyBookmarksAvailable);
 
-  /* ─── Loading skeleton ─── */
-  if (loading) {
+  /* ─── Loading skeleton (also while a signed-out visitor is redirected) ─── */
+  if (loading || !signedIn) {
     return (
       <AppLayout
         sidebar={<Sidebar lang={lang} userId={userId} userName={userName} totalXp={totalXp} streak={streak} accuracy={accuracy} />}
@@ -556,7 +523,6 @@ export default function ProgressPage() {
 
   if (dataError && !hasStatsData) return <main className="min-h-screen px-4 py-12 bg-[var(--mp-surface-sunken)]"><DataRegion error retry={() => setReload(n => n + 1)} /></main>;
 
-  const accuracyTrendUp = accuracy >= 65;
 
   return (
     <AppLayout
@@ -593,109 +559,92 @@ export default function ProgressPage() {
         </div>
 
         <div className={`${styles.page} px-4 lg:px-8 py-6 pb-28`}>
-          {/* Page intro */}
+          {/* Page intro with the learner's own countdown (LX-09, same source as the plan) */}
           <div className="mb-6">
             <h2 className="font-display text-[28px] leading-tight font-extrabold text-[var(--mp-fg)]">
-              {lang === "de" ? "Fortschritt" : "Progress"}
+              {tsx("progress_title", lang)}
             </h2>
-            <p className="text-sm text-[var(--mp-fg-subtle)] mt-1">
-              {lang === "de"
-                ? "Dein Stand auf einen Blick: Wissensprofil, Wochentrend, Aktivität und Abdeckung je Fach."
-                : "Your standing at a glance: knowledge profile, weekly trend, activity and coverage by specialty."}
+            <p className="text-sm text-[var(--mp-fg-muted)] mt-1" data-testid="progress-countdown">
+              {countdownLine ?? (
+                <Link href="/study-plan" className="inline-flex items-center min-h-11 font-semibold text-[var(--mp-cta-blue)] underline underline-offset-2">
+                  {tsx("progress_countdown_set", lang)}
+                </Link>
+              )}
             </p>
           </div>
 
           {coverageError && <div role="status" className="mp-card p-4 mb-5">
-            <p>{lang === "de" ? "Der Fortschritt für dieses Examen konnte nicht geladen werden." : "Progress for this exam could not be loaded."}</p>
-            <button className="mp-btn mp-btn--secondary mt-2" onClick={() => setCoverageRetry(n => n + 1)}>{lang === "de" ? "Erneut versuchen" : "Retry"}</button>
+            <p>{tsx("progress_coverage_error", lang)}</p>
+            <button className="mp-btn mp-btn--secondary mt-2 min-h-11" onClick={() => setCoverageRetry(n => n + 1)}>{tsx("weekly_retry", lang)}</button>
           </div>}
-          {/* ═══ CONTINUITY STAT STRIP (gamification, calm) ═══ */}
-          <div className={`${styles.statStrip} mb-5`}>
-            {/* Questions answered + coverage % */}
-            <div className={styles.stat}>
-              <div className={`${styles.sTop} ${styles.sTopBlue}`}>
-                <CheckCircle2 />
-                <span>{lang === "de" ? "Einzigartige Fragen gesehen" : "Unique questions seen"}</span>
-              </div>
-              <div className={styles.sVal}>{coverageError ? "?" : coverageLoading ? "…" : uniqueAnswered.toLocaleString("de-DE")}</div>
-              <div className={styles.sSub}>
-                {!coverageError && !coverageLoading && <>/ {examQuestionTotal.toLocaleString("de-DE")} {lang === "de" ? "im gewählten Examen" : "in selected exam"} · {completionPct}%</>}
-                <br />
-                {lang === "de" ? "Antwortversuche" : "Answer attempts"}: {totalAnswered.toLocaleString("de-DE")}
-              </div>
-            </div>
-
-            {/* Accuracy */}
-            <div className={styles.stat}>
-              <div className={`${styles.sTop} ${styles.sTopTeal}`}>
-                <TrendingUp />
-                <span>{lang === "de" ? "Trefferquote aller Versuche" : "Accuracy across attempts"}</span>
-              </div>
-              <div className={styles.sVal}>
-                {accuracy}
-                <small>%</small>
-              </div>
-              <div className={styles.sSub} style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                {accuracyTrendUp ? (
-                  <ArrowUpRight className="w-3 h-3 text-[var(--mp-viridian)]" />
-                ) : null}
-                {totalCorrect} {t("correct_of", lang)} {totalAnswered}
-              </div>
-            </div>
-
-            {/* Streak */}
-            <div className={styles.stat}>
-              <div className={`${styles.sTop} ${styles.sTopFire}`}>
-                <Flame />
-                <span>{t("current_streak_label", lang)}</span>
-              </div>
-              <div className={styles.sVal}>
-                {streak}
-                <small>{lang === "de" ? "Tage" : "days"}</small>
-              </div>
-              <div className={styles.sSub}>{lang === "de" ? "aktiv" : "active"}</div>
-            </div>
-
-            {/* Rank + XP (xp.ts) */}
-            <div className={styles.stat}>
-              <div className={`${styles.sTop} ${styles.sTopGreen}`}>
-                <AchievementRank tier={rankTier} variant="inline" size={14} aria-hidden />
-                <span>{t("level_and_xp", lang)}</span>
-              </div>
-              <div className={styles.sVal} style={{ fontSize: 18 }}>
-                {xpInfo.rank}
-              </div>
-              <div className={styles.xpTrack}>
-                <div className={styles.xpFill} style={{ width: `${xpInfo.progress}%` }} />
-              </div>
-              <div className={styles.sSub}>
-                {totalXp.toLocaleString("de-DE")} XP &middot; {lang === "de" ? "Stufe" : "Level"}{" "}
-                {xpInfo.level} {lang === "de" ? "von" : "of"} 8
-              </div>
-            </div>
-          </div>
 
           {!isGenuinelyEmpty ? (
             <>
-              {/* ═══ READINESS (passbox shell + the honest band signal) ═══ */}
+              {/* ═══ READINESS first (UX-STU-36) ═══ */}
               <div className={styles.sectionHead}>
                 <h3>{t("exam_readiness", lang)}</h3>
                 <div className="ln" />
               </div>
-              <div className={`${styles.passbox} mb-6`}>
-                {/* Shared, honest readiness - BAND + verdict, never a pass-%. */}
+              <div className={`${styles.passbox} mb-4`}>
                 <ReadinessSignal lang={lang} />
               </div>
 
-              {/* ═══ SAVED ITEMS (Bookmarks / Notes) ═══
-                   Moved UP from the page bottom (was buried under the specialty
-                   coverage rail) so saved questions are a clear, reachable place
-                   near the top, not hidden. FEEDBACK #5 (discoverability). The
-                   anchor id lets other surfaces deep-link to it (/progress#saved). */}
+              {/* ═══ KPI strip below readiness (UX-STU-07/36) ═══ */}
+              <div className={`${styles.statStrip} mb-6`}>
+                <div className={styles.stat}>
+                  <div className={`${styles.sTop} ${styles.sTopBlue}`}>
+                    <CheckCircle2 />
+                    <span>{tsx("kpi_seen", lang)}</span>
+                  </div>
+                  <div className={styles.sVal}>{coverageError || coverageLoading ? "-" : studyNumber(uniqueAnswered, lang)}</div>
+                  <div className={styles.sSub}>
+                    {coverageError || coverageLoading ? tsx("kpi_unknown", lang) : tsx("kpi_seen_of", lang, { n: studyNumber(uniqueAnswered, lang), total: studyNumber(examQuestionTotal, lang) })}
+                    <br />
+                    {tsx("kpi_seen_sub", lang)}
+                  </div>
+                </div>
+                <div className={styles.stat}>
+                  <div className={`${styles.sTop} ${styles.sTopTeal}`}>
+                    <TrendingUp />
+                    <span>{tsx("kpi_accuracy", lang)}</span>
+                  </div>
+                  <div className={styles.sVal}>{totalAnswered > 0 ? studyPct(accuracy, lang) : "-"}</div>
+                  <div className={styles.sSub}>{tsx("kpi_accuracy_sub", lang, { c: studyNumber(totalCorrect, lang), n: studyNumber(totalAnswered, lang) })}</div>
+                </div>
+                <div className={styles.stat}>
+                  <div className={`${styles.sTop} ${styles.sTopBlue}`}>
+                    <Layers />
+                    <span>{tsx("kpi_answers", lang)}</span>
+                  </div>
+                  <div className={styles.sVal}>{studyNumber(totalAnswered, lang)}</div>
+                  <div className={styles.sSub}>{tsx("kpi_answers_sub", lang)}</div>
+                </div>
+                <div className={styles.stat}>
+                  <div className={`${styles.sTop} ${styles.sTopFire}`}>
+                    <Flame />
+                    <span>{tsx("kpi_streak", lang)}</span>
+                  </div>
+                  <div className={styles.sVal}>
+                    {streak}
+                    <small>{tsx(streak === 1 ? "kpi_day" : "kpi_days", lang)}</small>
+                  </div>
+                  <div className={styles.sSub}>
+                    <AchievementRank tier={rankTier} variant="inline" size={12} aria-hidden /> {rankLabel(xpInfo.level, lang)}
+                  </div>
+                </div>
+              </div>
+
+              {/* ═══ SAVED: one line when empty (UX-STU-36/38), list otherwise ═══ */}
               <div className={styles.sectionHead}>
-                <h3 id="saved">{lang === "de" ? "Gespeichert" : "Saved"}</h3>
+                <h3 id="saved">{tsx("saved_title", lang)}</h3>
                 <div className="ln" />
               </div>
+              {bookmarkIds.length === 0 && noteEntries.length === 0 && !legacyBookmarksAvailable ? (
+                <p className="mp-card p-4 mb-6 text-[14px] text-[var(--mp-fg)] flex flex-wrap items-center gap-x-3 gap-y-1" data-testid="saved-empty">
+                  <span>{tsx("saved_empty", lang)}</span>
+                  <Link href="/library" className="inline-flex items-center min-h-11 font-semibold text-[var(--mp-cta-blue)] underline underline-offset-2">{tsx("saved_library", lang)}</Link>
+                </p>
+              ) : (
               <section className="mp-card p-5 mb-6 scroll-mt-24">
                 <div className="mp-tabs mb-4" role="tablist" style={{ display: "flex", width: "100%" }}>
                   <button
@@ -707,7 +656,7 @@ export default function ProgressPage() {
                     }`}
                   >
                     <Star className="w-3.5 h-3.5" />
-                    {t("bookmarked_questions", lang)} ({bookmarkIds.length})
+                    {tsx("saved_questions", lang)} ({bookmarkIds.length})
                   </button>
                   <button
                     role="tab"
@@ -718,7 +667,7 @@ export default function ProgressPage() {
                     }`}
                   >
                     <StickyNote className="w-3.5 h-3.5" />
-                    {t("my_notes", lang)} ({noteEntries.length})
+                    {tsx("saved_notes", lang)} ({noteEntries.length})
                   </button>
                 </div>
 
@@ -947,46 +896,33 @@ export default function ProgressPage() {
                   </div>
                 )}
               </section>
+              )}
 
-              {/* ═══ 2-COL: RADAR + WEEKLY ═══ */}
-              <div className={`${styles.grid2} mb-6`}>
-                <section className="mp-card p-5">
-                  <h3 className={styles.cardH}>
-                    <RadarIcon />
-                    {lang === "de" ? "Wissensprofil" : "Knowledge Profile"}
-                    <span className={`${styles.meta} ml-auto`}>
-                      {topicStats.filter((s) => s.answered > 0).length}{" "}
-                      {lang === "de" ? "Fächer" : "topics"}
-                    </span>
-                  </h3>
-                  <div className={styles.radarWrap}>
-                    <StudyRadar topics={topicStats} lang={lang} />
-                  </div>
-                </section>
+              {/* ═══ NEXT STEP above the radar (UX-STU-35 A) ═══ */}
+              <NextStepBlock weak={weakTopics} examSource={examSource} audience={tierLive.audience} lang={lang} />
 
-                <section className="mp-card p-5">
-                  <h3 className={styles.cardH}>
-                    <BarChart3 />
-                    {lang === "de" ? "Wochenleistung" : "Weekly Performance"}
-                    <span className={`${styles.meta} ml-auto`}>
-                      {lang === "de" ? "letzte 7 Tage" : "last 7 days"}
-                    </span>
-                  </h3>
-                  <WeeklyChart lang={lang} />
-                </section>
-              </div>
-
-              {/* ═══ ACTIVITY HEATMAP ═══ */}
+              {/* ═══ RADAR with short names and a text list (UX-STU-37 A) ═══ */}
               <section className="mp-card p-5 mb-6">
                 <h3 className={styles.cardH}>
-                  <CalendarDays />
-                  {lang === "de" ? "Aktivität" : "Activity"}
+                  <RadarIcon />
+                  {tsx("radar_title", lang)}
                   <span className={`${styles.meta} ml-auto`}>
-                    {lang === "de" ? "letzte 4 Wochen" : "last 4 weeks"}
+                    {tsx("radar_subjects", lang, { n: topicStats.filter((s) => s.answered > 0).length })}
                   </span>
                 </h3>
-                <ActivityHeatmap />
+                <div className={styles.radarWrap}>
+                  <StudyRadar topics={topicStats} lang={lang} />
+                </div>
               </section>
+
+              {/* ═══ WEEKS (LX-09) ═══ */}
+              <WeeklyProgressCard lang={lang} examSource={examSource} />
+
+              {/* ═══ STATUS BY FIELD (CNT-42) ═══ */}
+              <FieldReadinessCard lang={lang} examSource={examSource} />
+
+              {/* ═══ MOCK EXAMS BY SUBJECT (INF-04, Pro) ═══ */}
+              {canUse("history", tierLive.audience) && <MockTrendCard lang={lang} />}
 
               {/* ═══ TOPIC COVERAGE RAIL (answered/total - progress) ═══ */}
               <section className="mp-card p-5 mb-6">
@@ -1047,130 +983,20 @@ export default function ProgressPage() {
                   })}
                 </div>
               </section>
-
-              {/* ═══ EXAM READINESS CTAs (countdown + weak topics + actions) ═══ */}
-              <section className="mp-card p-5 space-y-4">
-                {daysUntilExam !== null && (
-                  <div className="flex items-center gap-4 p-4 rounded-xl bg-[var(--mp-tint-brand)] border border-[var(--mp-border-soft)]">
-                    <div className="text-center">
-                      <span className="block font-display font-black text-[32px] leading-none tracking-tight text-[var(--mp-cta-blue)] font-mono">
-                        {daysUntilExam}
-                      </span>
-                      <p className="text-xs text-[var(--mp-fg-subtle)] mt-1 flex items-center gap-1 justify-center">
-                        <CalendarClock className="w-3 h-3" />
-                        {t("days_until_exam", lang)}
-                      </p>
-                    </div>
-                    <div className="flex-1">
-                      <div className="h-2 bg-[var(--mp-surface-sunken)] rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-[var(--mp-spark)] rounded-full transition-all"
-                          style={{
-                            width: `${Math.max(5, Math.min(100, 100 - (daysUntilExam / 180) * 100))}%`,
-                            boxShadow: "0 0 10px var(--mp-spark-glow)",
-                          }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {weakTopics.length > 0 && (
-                  <div className="p-3 rounded-xl bg-[var(--mp-warning-bg)] border border-[var(--mp-border-soft)]">
-                    <div className="flex items-start gap-2">
-                      <AlertTriangle className="w-4 h-4 text-[var(--mp-status-warning)] flex-shrink-0 mt-0.5" />
-                      <div>
-                        <p className="text-sm font-medium text-[var(--mp-fg)] mb-1">
-                          {lang === "de"
-                            ? "Fächer unter 60% Genauigkeit"
-                            : "Topics below 60% accuracy"}
-                        </p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {weakTopics.map((wt) => {
-                            const config = getTopicConfig(wt.topic);
-                            const acc = Math.round((wt.correct / wt.answered) * 100);
-                            return (
-                              <span
-                                key={wt.topic}
-                                className="topic-text inline-flex items-center gap-1 text-[13px] font-mono px-2 py-0.5 rounded-full border"
-                                style={{
-                                  ["--topic-color" as string]: config.color,
-                                  borderColor: `color-mix(in srgb, ${config.color} 35%, transparent)`,
-                                  backgroundColor: `color-mix(in srgb, ${config.color} 10%, transparent)`,
-                                }}
-                              >
-                                <TopicIcon name={config.icon} className="w-3 h-3" />
-                                {wt.topic.split("/")[0]} ({acc}%)
-                              </span>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <Link href="/exam" className="mp-btn mp-btn--success mp-btn--lg justify-center">
-                    <GraduationCap className="w-5 h-5" />
-                    {lang === "de" ? "Prüfungssimulation starten" : "Start Exam Simulation"}
-                  </Link>
-                  {weakTopics.length > 0 && (
-                    <Link
-                      href={weakTopicHref(weakTopics[0].topic, examSource, tierLive.audience)}
-                      className="mp-btn mp-btn--secondary mp-btn--lg justify-center"
-                      style={{ borderColor: "var(--mp-viridian)", color: "var(--mp-viridian)" }}
-                    >
-                      <TrendingUp className="w-5 h-5" />
-                      {t("practice_weak", lang)}
-                    </Link>
-                  )}
-                </div>
-                {weakTopics.length > 0 && !canUse("mistake_review", tierLive.audience) && (
-                  /* LX-07: the free button practises the topic; mistake review is named as Pro. */
-                  <p className="mt-3 flex items-center gap-2 text-sm text-[var(--mp-fg-muted)]">
-                    <ProPill label={gateSentence("mistake_review", lang)} href="/pricing?gate=mistakes" />
-                    <span>{gateSentence("mistake_review", lang)}</span>
-                  </p>
-                )}
-              </section>
             </>
           ) : (
-            /* ═══ EMPTY STATE - calm "not enough data yet" (no user OR 0 answers) ═══ */
             <section className="mp-card p-8 text-center mt-2">
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-[var(--mp-tint-teal)] mb-4">
                 <TrendingUp className="w-8 h-8 text-[var(--mp-accent-teal)]" />
               </div>
-              <h3 className="font-display text-lg font-bold text-[var(--mp-fg)] mb-2">
-                {userId
-                  ? lang === "de"
-                    ? "Noch nicht genug Daten"
-                    : "Not enough data yet"
-                  : lang === "de"
-                    ? "Melde dich an, um deinen Fortschritt zu sehen"
-                    : "Sign in to see your progress"}
-              </h3>
-              <p className="text-sm text-[var(--mp-fg-muted)] mb-5 max-w-md mx-auto leading-relaxed">
-                {userId
-                  ? lang === "de"
-                    ? "Sobald du ein paar Fragen gelöst hast, erscheinen hier dein Wissensprofil, der Wochentrend und deine Aktivität."
-                    : "Once you answer a few questions, your knowledge profile, weekly trend and activity show up here."
-                  : lang === "de"
-                    ? "Dein Wissensprofil, Wochentrend und deine Aktivität warten auf dich."
-                    : "Your knowledge profile, weekly trend and activity are waiting for you."}
-              </p>
+              <h3 className="font-display text-lg font-bold text-[var(--mp-fg)] mb-2">{tsx("progress_empty_title", lang)}</h3>
+              <p className="text-sm text-[var(--mp-fg-muted)] mb-5 max-w-md mx-auto leading-relaxed">{tsx("progress_empty_body", lang)}</p>
               <Link
-                href={userId ? buildQuizHref({ topic: "random", examSource: examSource, practiceMode: "unseen" }) : signInRequiredHref("/progress")}
+                href={buildQuizHref({ examSource: examSource, practiceMode: "unseen", returnTo: "/progress" })}
                 className="mp-btn mp-btn--success mp-btn--lg inline-flex"
               >
                 <GraduationCap className="w-5 h-5" />
-                {userId
-                  ? lang === "de"
-                    ? "Erste Fragen lösen"
-                    : "Answer your first questions"
-                  : lang === "de"
-                    ? "Anmelden"
-                    : "Sign in"}
+                {tsx("progress_empty_cta", lang)}
               </Link>
             </section>
           )}

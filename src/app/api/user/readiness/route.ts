@@ -5,6 +5,7 @@ import { generateStudyPlan, type TopicProgress } from "@/lib/studyPlan";
 import { computeReadiness, consistencyFromActivity, type Trend } from "@/lib/readiness";
 import { EXAM_SOURCE_IDS, DEFAULT_EXAM_SOURCE } from "@/lib/topics";
 import { getTopicCountsCached } from "@/lib/free-tier";
+import { buildFieldReadiness } from "@/lib/field-readiness";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +19,12 @@ export const dynamic = "force-dynamic";
  * prediction, which is the liability we are avoiding).
  *
  * Returns: { band, factors:{coverage,accuracy,consistency,pace}, trend,
- *            lowestFactor, hasExamDate, activeExam }
+ *            lowestFactor, hasExamDate, activeExam, fields }
+ *
+ * a25 (CNT-42): `fields` is the per-field status against the 60 percent mark
+ * from the same topic-strength counters (minimum sample stated). It is
+ * additive and does not feed the band; the composite formula is unchanged
+ * (UX-STU-32 waits for [name]'s readiness parameters).
  *
  * Auth: requireUser — userId comes from the session header, not the body.
  */
@@ -176,10 +182,17 @@ export async function GET(req: NextRequest) {
       trend,
     });
 
+    const fields = buildFieldReadiness(
+      activeExam,
+      availableTopics.map((t) => ({ topic: t.topic, answered: t.answered, correct: t.correct })),
+      availableTopics.map((t) => t.topic),
+    );
+
     return NextResponse.json({
       ...result,
       hasExamDate: !!examDate,
       activeExam,
+      fields,
     });
   } catch (err) {
     console.error("[readiness GET]", err);
