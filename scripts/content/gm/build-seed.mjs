@@ -23,7 +23,9 @@ const REPORT_DIR = resolve(ROOT, 'reports/master-plan-2026-10-11/gm-delivery');
 const TAG = '$a44gm$';
 
 function value(col, v) {
-  if (v === null || v === undefined) return 'NULL';
+  // Typed NULLs: the reviewed rows go through a temp table first, whose column
+  // types come from these literals.
+  if (v === null || v === undefined) return col === 'exam_dates' ? 'NULL::text[]' : col === 'explanation' ? 'NULL::text' : 'NULL';
   if (col === 'choices') return `${literal(JSON.stringify(v))}::jsonb`;
   if (Array.isArray(v)) return v.length ? `ARRAY[${v.map(literal).join(', ')}]::text[]` : `'{}'::text[]`;
   if (typeof v === 'boolean') return v ? 'true' : 'false';
@@ -53,17 +55,22 @@ export function build() {
   ].join('\n');
 
   const valuesSql = items.map(({ row }) => `  (${COLUMNS.map((c) => value(c, row[c])).join(', ')})`).join(',\n');
-  const expectedTuples = items.map(({ row }) => `(${row.anki_note_id}::bigint, ${literal(row.content_hash)}, ${literal(row.answer)})`).join(',\n    ');
   const seed = `${header('seed')}
 -- Before: no row with these anki_note_ids. After: ${EXPECTED_ROWS} rows, all is_active = false.
--- A rerun inserts nothing and re-checks the content. Rollback: gm-seed.rollback.sql.
+-- A rerun inserts nothing and re-checks every reviewed column. Rollback: gm-seed.rollback.sql.
 
 BEGIN;
 SET LOCAL lock_timeout = '5s';
 SET LOCAL statement_timeout = '60s';
 
+CREATE TEMP TABLE a44_gm_expected ON COMMIT DROP AS
+SELECT * FROM (VALUES
+${valuesSql}
+) AS v(${COLUMNS.join(', ')});
+
 DO ${TAG}
 BEGIN
+  IF (SELECT count(*) FROM a44_gm_expected) <> ${EXPECTED_ROWS} THEN RAISE EXCEPTION 'a44 seed: expected ${EXPECTED_ROWS} reviewed rows'; END IF;
   IF EXISTS (SELECT 1 FROM public.questions WHERE anki_note_id = ANY(${idArray}) AND source_file IS DISTINCT FROM ${src}) THEN
     RAISE EXCEPTION 'a44 seed: a reserved anki_note_id belongs to another source';
   END IF;
@@ -75,8 +82,8 @@ END
 ${TAG};
 
 INSERT INTO public.questions (${COLUMNS.join(', ')})
-VALUES
-${valuesSql}
+SELECT ${COLUMNS.join(', ')} FROM a44_gm_expected
+ORDER BY anki_note_id
 ON CONFLICT (anki_note_id) DO NOTHING;
 
 DO ${TAG}
@@ -85,11 +92,12 @@ BEGIN
   SELECT count(*) INTO n FROM public.questions
    WHERE anki_note_id = ANY(${idArray}) AND source_file = ${src} AND exam_type = 'pharma' AND topic = ${literal(GM_TOPIC)};
   IF n <> ${EXPECTED_ROWS} THEN RAISE EXCEPTION 'a44 seed: expected ${EXPECTED_ROWS} rows, found %', n; END IF;
-  SELECT count(*) INTO drift FROM (VALUES
-    ${expectedTuples}
-  ) AS e(anki_note_id, content_hash, answer)
+  -- Every reviewed column must still match (a rerun after an edit fails here).
+  SELECT count(*) INTO drift FROM a44_gm_expected e
   LEFT JOIN public.questions q ON q.anki_note_id = e.anki_note_id
-   AND q.content_hash = e.content_hash AND q.answer = e.answer
+   AND q.question = e.question AND q.answer = e.answer AND q.explanation IS NOT DISTINCT FROM e.explanation
+   AND q.choices = e.choices AND q.tags = e.tags AND q.topic = e.topic AND q.exam_type = e.exam_type
+   AND q.source_file = e.source_file AND q.content_hash = e.content_hash
   WHERE q.id IS NULL;
   IF drift <> 0 THEN RAISE EXCEPTION 'a44 seed: % existing rows differ from the reviewed set', drift; END IF;
 END
@@ -100,22 +108,25 @@ COMMIT;
 
   const rollback = `${header('seed rollback')}
 -- Deletes exactly the ${EXPECTED_ROWS} seeded rows and nothing else. Refused while any of them is
--- active (run the b20 batch rollback first) or referenced by learner data or the activation log.
+-- active (run the b20 batch rollback first) or referenced by learner data, ratings or the
+-- activation log (then keep the rows inactive instead).
 
 BEGIN;
 SET LOCAL lock_timeout = '5s';
 
 DO ${TAG}
+DECLARE t text; found boolean;
 BEGIN
   IF EXISTS (SELECT 1 FROM public.questions WHERE anki_note_id = ANY(${idArray}) AND source_file = ${src} AND is_active IS DISTINCT FROM false) THEN
     RAISE EXCEPTION 'a44 seed rollback: a seeded row is active; roll back its activation batch first';
   END IF;
-  IF EXISTS (SELECT 1 FROM public.answer_history h JOIN public.questions q ON q.id = h.question_id
-             WHERE q.anki_note_id = ANY(${idArray}) AND q.source_file = ${src})
-     OR EXISTS (SELECT 1 FROM public.user_question_progress p JOIN public.questions q ON q.id = p.question_id
-             WHERE q.anki_note_id = ANY(${idArray}) AND q.source_file = ${src}) THEN
-    RAISE EXCEPTION 'a44 seed rollback: learner data references a seeded row; keep it inactive instead';
-  END IF;
+  FOREACH t IN ARRAY ARRAY['answer_history', 'user_question_progress', 'question_activation_log', 'explanation_ratings', 'flashcard_reviews'] LOOP
+    IF to_regclass('public.' || t) IS NOT NULL THEN
+      EXECUTE format('SELECT EXISTS (SELECT 1 FROM public.%I x JOIN public.questions q ON q.id = x.question_id WHERE q.anki_note_id = ANY($1) AND q.source_file = $2)', t)
+        INTO found USING ${idArray}, ${src};
+      IF found THEN RAISE EXCEPTION 'a44 seed rollback: % references a seeded row; keep it inactive instead', t; END IF;
+    END IF;
+  END LOOP;
 END
 ${TAG};
 

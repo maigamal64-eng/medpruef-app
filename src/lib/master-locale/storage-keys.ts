@@ -28,6 +28,8 @@ export const ACCOUNT_STATE_KEYS = [
   // a22 Home caches (UX-HOME-07/09): already keyed by user id, cleared here too.
   'medpruef_home_study_v1',
   'medpruef_home_topics_v1',
+  // a44 open Gerichtsmedizin drill (owner id inside, stems and model answers).
+  'medpruef_gm_drill_v1',
 ] as const;
 
 type Store = { getItem(k: string): string | null; setItem(k: string, v: string): boolean; removeItem(k: string): void };

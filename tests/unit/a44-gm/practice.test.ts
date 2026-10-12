@@ -3,8 +3,10 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { GM_DRILL_SECONDS, GM_QUIZ_HREF, isGmPracticeEnabled, isGmRow, isGmTopic } from "@/lib/gm-practice";
 import {
-  finish, parseSession, reveal, score, shuffle, splitSource, startSession, summarize, toDrillItems, type DrillItem,
+  DRILL_STALE_MS, DRILL_STORAGE_KEY, decodeStored, encodeStored, finish, parseSession, reveal, score, shuffle, splitSource,
+  startSession, summarize, toDrillItems, type DrillItem,
 } from "@/lib/gm-practice/drill";
+import { ACCOUNT_STATE_KEYS } from "@/lib/master-locale/storage-keys";
 import { gmCopy } from "@/lib/gm-practice/copy";
 import { getGmAvailability } from "@/lib/gm-practice/availability";
 import { resetTopicCountsCacheForTests } from "@/lib/free-tier";
@@ -56,13 +58,14 @@ describe("a44 subject placement (pick-gm-placement B)", () => {
   });
 });
 
-describe("a44 pharma bank names follow the flag", () => {
+describe("a44 pharma bank bridge line follows the flag", () => {
   afterEach(() => vi.unstubAllEnvs());
-  it("unchanged with the flag off, both subjects named with it on, chip stays Pharma", () => {
+  it("unchanged with the flag off; with it on only the bridge line names both subjects (the exam name and chip stay)", () => {
     vi.stubEnv("NEXT_PUBLIC_GM_PRACTICE", "");
-    expect(getExamLabel("pharma", "full", "de")).toBe("Pharmakologie / Rezeptierkunde");
+    expect(getExamLabel("pharma", "bridge", "de")).toBe("Übungsfragen für Pharmakologie und Rezeptierkunde");
     vi.stubEnv("NEXT_PUBLIC_GM_PRACTICE", "true");
-    expect(getExamLabel("pharma", "full", "de")).toBe("Pharmakologie / Rezeptierkunde und Gerichtsmedizin");
+    expect(getExamLabel("pharma", "full", "de")).toBe("Pharmakologie / Rezeptierkunde");
+    expect(getExamLabel("pharma", "bridge", "de")).toBe("Übungsfragen für Pharmakologie, Rezeptierkunde und Gerichtsmedizin");
     expect(getExamLabel("pharma", "bridge", "en")).toBe("Practice questions for pharmacology, Rezeptierkunde and Gerichtsmedizin");
     expect(getExamLabel("pharma", "short")).toBe("Pharma");
     expect(getExamLabel("kenntnispruefung", "full", "de")).toBe("SIP4a / SIP5a Wien");
@@ -93,6 +96,8 @@ describe("a44 oral drill model (SIM-07)", () => {
     const items = toDrillItems([row(1), row(2, { topic: "Pharmakologie" }), row(1), { id: "x" }, row(3, { question: " " })]);
     expect(items).toEqual([{ id: 1, prompt: "Frage 1?", answer: "Antwort 1", explanation: "Erklärung 1.", source: "StGB § 1, https://www.jusline.at/x" }]);
     expect(toDrillItems({ freeTopicEmpty: true })).toEqual([]);
+    // Stems that need their options stay in the multiple-choice round.
+    expect(toDrillItems([row(4, { question: "Welche Aussage zu Totenflecken trifft zu?" })])).toEqual([]);
     expect(splitSource("Nur Text")).toEqual({ body: "Nur Text", source: null });
   });
 
@@ -125,6 +130,16 @@ describe("a44 oral drill model (SIM-07)", () => {
     expect(parseSession("{")).toBeNull();
     expect(parseSession(JSON.stringify({ ...s, durationS: 60 }))).toBeNull();
     expect(parseSession(JSON.stringify({ ...s, idx: 4 }))).toBeNull();
+  });
+
+  it("the stored run belongs to one account, expires after a day and is cleared with the account mirrors", () => {
+    const s = startSession(toDrillItems([row(1)]), 1_000);
+    const raw = encodeStored("u1", s);
+    expect(decodeStored(raw, "u1", 2_000)).toEqual(s);
+    expect(decodeStored(raw, "u2", 2_000)).toBeNull();
+    expect(decodeStored(raw, "u1", 1_000 + DRILL_STALE_MS + 1)).toBeNull();
+    expect(decodeStored("{", "u1", 2_000)).toBeNull();
+    expect(ACCOUNT_STATE_KEYS).toContain(DRILL_STORAGE_KEY);
   });
 });
 

@@ -20,7 +20,7 @@ export function GmPracticeBlock({ lang }: { lang: string }) {
           <Link href={GM_DRILL_HREF} className="mp-btn mp-btn--primary inline-flex items-center gap-2"><Mic className="size-4" aria-hidden="true" />{c.pageDrill}</Link>
           <Link href={GM_QUIZ_HREF} className="mp-btn mp-btn--secondary inline-flex items-center gap-2"><ListChecks className="size-4" aria-hidden="true" />{c.pageMcq}</Link>
         </div>
-        <p className="mt-4 text-xs leading-relaxed text-[var(--mp-fg-muted)]">{c.pagePro}</p>
+        <p className="mt-4 text-xs leading-relaxed text-[var(--mp-fg-muted)]">{c.pagePro} {c.mcqNote}</p>
       </div>
       <GmFormatCard lang={lang} />
     </section>

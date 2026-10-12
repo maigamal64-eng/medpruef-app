@@ -124,7 +124,7 @@ export function receipt(item, reads) {
     };
   });
   return {
-    anki_note_id: row.anki_note_id, author_key: item.authorKey, ...(GATE_HELD[item.authorKey] ? { held: GATE_HELD[item.authorKey] } : {}), reviews,
+    anki_note_id: row.anki_note_id, content_hash: row.content_hash, author_key: item.authorKey, ...(GATE_HELD[item.authorKey] ? { held: GATE_HELD[item.authorKey] } : {}), reviews,
     rights_basis: { status: 'cleared', basis: 'original-authorship', evidence_ref: `b27-gm-question-set/rights-basis.json sha256:${PINNED['rights-basis.json']}`, recorded_by: 'track-B b27 2026-10-12, verified by track-A a44' },
   };
 }

@@ -10,6 +10,7 @@
  * server: they are not graded answers and must not touch XP, the free
  * allowance or the review schedule.
  */
+import { flashcardSkipReason } from "@/lib/flashcard-eligibility";
 import { GM_DRILL_SECONDS, isGmTopic } from "./index";
 
 export type DrillScore = "known" | "partial" | "unknown";
@@ -45,7 +46,10 @@ export function splitSource(explanation: string): { body: string; source: string
 /**
  * Drill items from an /api/questions response (an array of rows). Only rows
  * of the subject with a non-empty stem and model answer are kept; anything
- * else (a free-allowance object, malformed rows) yields an empty list.
+ * else (a free-allowance object, malformed rows) yields an empty list. Stems
+ * that only make sense next to their options ("Welche Aussage trifft zu?",
+ * the flashcard rule UX-PRA-64) cannot be answered aloud and stay in the
+ * multiple-choice round.
  */
 export function toDrillItems(raw: unknown): DrillItem[] {
   if (!Array.isArray(raw)) return [];
@@ -54,6 +58,7 @@ export function toDrillItems(raw: unknown): DrillItem[] {
     const o = (r ?? {}) as Record<string, unknown>;
     const id = Number(o.id);
     if (!Number.isInteger(id) || id <= 0 || seen.has(id) || !isGmTopic(o.topic as string)) return [];
+    if (flashcardSkipReason({ question: o.question }) === "option_dependent") return [];
     const prompt = typeof o.question === "string" ? o.question.trim() : "";
     const choices = Array.isArray(o.choices) ? (o.choices as { text?: unknown; correct?: unknown }[]) : [];
     const keyed = choices.filter((c) => c?.correct === true && typeof c.text === "string").map((c) => String(c.text).trim());
@@ -117,6 +122,9 @@ export function summarize(s: DrillSession): DrillSummary {
 
 /** A stored session is usable only when it has the current shape. */
 export function parseSession(raw: string | null): DrillSession | null {
+  return validSession(raw);
+}
+function validSession(raw: string | null): DrillSession | null {
   if (!raw) return null;
   try {
     const s = JSON.parse(raw) as DrillSession;
@@ -129,4 +137,27 @@ export function parseSession(raw: string | null): DrillSession | null {
   }
 }
 
-export const drillStorageKey = (userId: string) => `medpruef_gm_drill_v1:${userId}`;
+/**
+ * One device key, listed in ACCOUNT_STATE_KEYS so logout or another account
+ * clears it; the owner id inside is checked again on read.
+ */
+export const DRILL_STORAGE_KEY = "medpruef_gm_drill_v1";
+/** An open run older than this is discarded rather than reopened. */
+export const DRILL_STALE_MS = 24 * 60 * 60 * 1000;
+
+export function encodeStored(userId: string, s: DrillSession): string {
+  return JSON.stringify({ owner: userId, session: s });
+}
+
+export function decodeStored(raw: string | null, userId: string, now: number): DrillSession | null {
+  if (!raw) return null;
+  try {
+    const o = JSON.parse(raw) as { owner?: unknown; session?: unknown };
+    if (o?.owner !== userId) return null;
+    const s = validSession(JSON.stringify(o.session ?? null));
+    if (!s || now - s.startedAt > DRILL_STALE_MS) return null;
+    return s;
+  } catch {
+    return null;
+  }
+}

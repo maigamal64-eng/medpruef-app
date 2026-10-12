@@ -31,7 +31,8 @@ describe("a44 Gerichtsmedizin artifacts", () => {
     expect(seed).toMatch(/ON CONFLICT \(anki_note_id\) DO NOTHING;/);
     expect(seed.match(/E'TRACK_B_AUTHORED_GERICHTSMEDIZIN_2026_10', true,/g)).toBeNull();
     expect(seed.match(/E'TRACK_B_AUTHORED_GERICHTSMEDIZIN_2026_10', false,/g)).toHaveLength(128);
-    expect(seed).not.toMatch(/\bUPDATE\b|\bDELETE\b|\bDROP\b|\bALTER\b|\bGRANT\b/);
+    expect(seed.replace(/ON COMMIT DROP/g, "")).not.toMatch(/\bUPDATE\b|\bDELETE\b|\bDROP\b|\bALTER\b|\bGRANT\b/);
+    expect(seed).toMatch(/CREATE TEMP TABLE a44_gm_expected ON COMMIT DROP AS/);
     expect(rollback).toMatch(/DELETE FROM public\.questions\s+WHERE anki_note_id = ANY\([^)]*\) AND source_file = E'TRACK_B_AUTHORED_GERICHTSMEDIZIN_2026_10' AND is_active = false;/);
     expect(verify).not.toMatch(/\b(INSERT|UPDATE|DELETE)\b/);
     expect(seed + rollback).not.toMatch(/[–—]/);
@@ -56,14 +57,19 @@ describe("a44 Gerichtsmedizin artifacts", () => {
     expect(review.summary).toMatchObject({ rows: 128, anchors_found: 128, explanations_with_source: 128, internal_pairs_unresolved: 0, rows_with_findings: 0, pass: true });
   });
 
-  it("batches respect the 50-row gate cap, leave the held row out and refuse bad input", () => {
-    const map = receipts.rows.map((r: { anki_note_id: number; reviews: { reviewed_content_sha256: string }[] }, i: number) =>
-      `${r.anki_note_id}|${120000 + i}|f|${"a".repeat(64)}`).join("\n");
+  it("batches default to 10 rows under the 50-row gate cap, leave the held row out and refuse bad input", () => {
+    const map = receipts.rows.map((r: { anki_note_id: number; content_hash: string }, i: number) =>
+      `${r.anki_note_id}|${120000 + i}|f|${r.content_hash}`).join("\n");
     const batches = buildBatches(receipts, parseIdMap(map), actor);
-    expect(batches.map((b) => [b.batch_id, b.entries.length])).toEqual([["a44-gm-1", 50], ["a44-gm-2", 50], ["a44-gm-3", 27]]);
+    expect(batches.map((b) => b.entries.length)).toEqual([...Array(12).fill(10), 7]);
+    expect(batches.map((b) => b.batch_id)).toEqual(Array.from({ length: 13 }, (_, i) => `a44-gm-${i + 1}`));
+    expect(buildBatches(receipts, parseIdMap(map), actor, "a44-gm", 50).map((b) => b.entries.length)).toEqual([50, 50, 27]);
+    expect(() => buildBatches(receipts, parseIdMap(map), actor, "a44-gm", 51)).toThrow(/1 to 50/);
     expect(() => buildBatches(receipts, parseIdMap(map), { id: "x", email: "y" })).toThrow(/Actor/);
     expect(() => buildBatches(receipts, parseIdMap(map.replace("|120000|f|", "|120000|t|")), actor)).toThrow(/already active/);
     expect(() => buildBatches(receipts, parseIdMap(map.split("\n").slice(1).join("\n")), actor)).toThrow(/run the seed first/);
     expect(() => parseIdMap("1|2|maybe|x")).toThrow(/Unreadable/);
+    const drifted = map.replace(/\|120000\|f\|[a-f0-9]{64}/, `|120000|f|${"b".repeat(64)}`);
+    expect(() => buildBatches(receipts, parseIdMap(drifted), actor)).toThrow(/stem hash differs/);
   });
 });

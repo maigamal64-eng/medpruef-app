@@ -1,4 +1,3 @@
-
 import CalendarLanguageSync from "@/components/exam-calendar/CalendarLanguageSync";
 import { CalendarShell, GuidanceFacts } from "@/components/exam-calendar/CalendarSurface";
 import { calendarLanguage } from "@/lib/exam-calendar";

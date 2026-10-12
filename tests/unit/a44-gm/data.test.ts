@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { checkBatch, PACKAGE, reviewHash } from "../../../scripts/content/gate/check.mjs";
-import { emitBatch } from "../../../scripts/content/gate/emit.mjs";
+import { emitBatch, literal } from "../../../scripts/content/gate/emit.mjs";
 import { buildBatches, parseIdMap } from "../../../scripts/content/gm/build-batches.mjs";
 
 // a44 proof on a throwaway PostgreSQL 16 cluster: the live questions shape
@@ -126,17 +126,22 @@ describe.skipIf(!databaseEnabled)("a44 Gerichtsmedizin seed and activation on is
   });
 
   it("a seed rerun refuses rows that drifted from the reviewed content", () => {
-    sql(`UPDATE public.questions SET answer = answer || ' (bearbeitet)' WHERE anki_note_id = ${receipts.rows[3].anki_note_id};`);
+    const anki = receipts.rows[3].anki_note_id;
+    sql(`UPDATE public.questions SET answer = answer || ' (bearbeitet)' WHERE anki_note_id = ${anki};`);
     fails(seed, /existing rows differ from the reviewed set/);
-    sql(`UPDATE public.questions SET answer = regexp_replace(answer, ' \\(bearbeitet\\)$', '') WHERE anki_note_id = ${receipts.rows[3].anki_note_id};`);
+    sql(`UPDATE public.questions SET answer = regexp_replace(answer, ' \\(bearbeitet\\)$', '') WHERE anki_note_id = ${anki};`);
+    // An edited explanation or option is drift too, not only the key.
+    sql(`UPDATE public.questions SET explanation = explanation || ' x' WHERE anki_note_id = ${anki};`);
+    fails(seed, /existing rows differ from the reviewed set/);
+    sql(`UPDATE public.questions SET explanation = regexp_replace(explanation, ' x$', '') WHERE anki_note_id = ${anki};`);
     sql(seed);
   });
 
-  it("activates through the b20 gate in batches of at most 50, idempotently, then rolls back", async () => {
+  it("activates through the b20 gate in batches of 10, idempotently, then rolls back", async () => {
     const { checkSql } = await import(/* @vite-ignore */ pathToFileURL(guardPath).href);
     const policy = JSON.parse(read(join(reportRoot, "FREEZE.json")));
     const batches = buildBatches(receipts, parseIdMap(rows(verify)), actor);
-    expect(batches.map((b) => b.entries.length)).toEqual([50, 50, 27]);
+    expect(batches.map((b) => b.entries.length)).toEqual([...Array(12).fill(10), 7]);
     const held = receipts.rows.filter((r) => r.held).map((r) => r.anki_note_id);
     expect(held).toHaveLength(1);
     const emitted: { apply: string; rollback: string; verify: string; verifyBefore: string }[] = [];
@@ -164,11 +169,54 @@ describe.skipIf(!databaseEnabled)("a44 Gerichtsmedizin seed and activation on is
   it("the seed rollback refuses learner references, then deletes exactly the seeded rows", () => {
     const id = rows(`SELECT id FROM public.questions WHERE anki_note_id = ${receipts.rows[0].anki_note_id};`);
     sql(`INSERT INTO public.answer_history (user_id, question_id) VALUES ('00000000-0000-4000-8000-000000000001', ${id});`);
-    fails(seedRollback, /learner data references a seeded row/);
+    fails(seedRollback, /answer_history references a seeded row/);
     sql("DELETE FROM public.answer_history;");
+    sql(`INSERT INTO public.explanation_ratings (user_id, question_id, rating) VALUES ('00000000-0000-4000-8000-000000000001', ${id}, 1);`);
+    fails(seedRollback, /explanation_ratings references a seeded row/);
+    sql("DELETE FROM public.explanation_ratings;");
     sql(seedRollback);
     sql(seedRollback);
     expect(count(`source_file = '${SRC}'`)).toBe(0);
     expect(count("is_active AND topic = 'Pharmakologie'")).toBe(1);
   });
+
+  // Reviewer P2-3: time an emitted apply against the live-size bank (track-B's
+  // read-only 2026-10-11 corpus, 11,395 rows) under the gate's own 30 s
+  // statement timeout. Opt-in: A44_LIVE_CORPUS=<path to live-corpus.json>,
+  // A44_TIME_SIZE=<rows per batch, default 1>. Measured 2026-10-13 on local
+  // PG16: 1 row 25.7 s, 10 rows and 50 rows hit the timeout. The b20
+  // in-transaction overlap recheck normalises the whole bank once per row, so
+  // activation is blocked until it is set-based (release.md). What this test
+  // asserts is the safe failure: a timed-out apply leaves nothing active.
+  it.skipIf(!process.env.A44_LIVE_CORPUS)("an apply on a bank of production size either finishes or aborts with nothing activated", async () => {
+    const corpus = JSON.parse(readFileSync(process.env.A44_LIVE_CORPUS!, "utf8")).rows as Record<string, string | boolean | number | null>[];
+    const text = (v: unknown, fallback = "") => (typeof v === "string" && v !== "None" ? v : fallback);
+    const values = corpus.map((r) => `(${Number(r.id)}, ${literal(text(r.topic, "x"))}, ${literal(text(r.question))}, ${literal(text(r.answer))}, ${literal(text(r.exam_type, "kenntnispruefung"))}, ${r.is_active === true || r.is_active === "True"}, ${text(r.source_file) ? literal(text(r.source_file)) : "NULL"}, ${text(r.content_hash) ? literal(text(r.content_hash)) : "NULL"})`);
+    for (let i = 0; i < values.length; i += 2000) {
+      sql(`INSERT INTO public.questions (id, topic, question, answer, exam_type, is_active, source_file, content_hash) VALUES ${values.slice(i, i + 2000).join(",\n")};`);
+    }
+    expect(count("is_active")).toBeGreaterThan(10_000);
+    sql(seed);
+    const { checkSql } = await import(/* @vite-ignore */ pathToFileURL(guardPath).href);
+    const policy = JSON.parse(read(join(reportRoot, "FREEZE.json")));
+    const [batch] = buildBatches(receipts, parseIdMap(rows(verify)), actor, "a44-gm", Number(process.env.A44_TIME_SIZE ?? 1));
+    const live = liveRows();
+    const candidates = batch.entries.map((e) => live.find((r) => r.id === e.id)!);
+    const results = checkBatch(candidates, batch.entries, live, policy);
+    expect(results.filter((r: { pass: boolean }) => !r.pass).map((r: { id: number; errors: string[] }) => `${r.id}:${r.errors}`)).toEqual([]);
+    const files = emitBatch(batch, candidates, results, guardPath);
+    expect(checkSql({ text: files.apply, packageId: PACKAGE, freeze: policy }).violations).toEqual([]);
+    const started = Date.now();
+    const applied = sql(files.apply, true);
+    const ms = Date.now() - started;
+    console.log(`a44 live-size apply of ${batch.entries.length} rows: ${applied.status === 0 ? "finished" : "aborted"} after ${ms} ms`);
+    if (applied.status === 0) {
+      expect(count(`source_file = '${SRC}' AND is_active`)).toBe(batch.entries.length);
+      sql(files.rollback);
+    } else {
+      expect(applied.stderr).toMatch(/statement timeout/);
+    }
+    expect(count(`source_file = '${SRC}' AND is_active`)).toBe(0);
+    sql(seedRollback);
+  }, 600_000);
 });

@@ -26,7 +26,7 @@ import { remainingSeconds } from "@/lib/examSession";
 import { wallClockRemaining } from "@/lib/practice-exam-state";
 import { GM_BANK, GM_QUIZ_HREF, GM_TOPIC } from "@/lib/gm-practice";
 import {
-  drillStorageKey, finish, parseSession, reveal, score, startSession, summarize, toDrillItems,
+  DRILL_STORAGE_KEY, decodeStored, encodeStored, finish, reveal, score, startSession, summarize, toDrillItems,
   type DrillScore, type DrillSession,
 } from "@/lib/gm-practice/drill";
 import { fill, gmCopy, gmLang, type GmCopy } from "@/lib/gm-practice/copy";
@@ -52,18 +52,17 @@ export default function GmDrill() {
     if (!stored?.user?.id) return;
     setUserId(stored.user.id);
     setUserName(stored.user.first_name ?? "");
-    const saved = parseSession(safeStorage.getItem(drillStorageKey(stored.user.id)));
-    if (saved && !saved.finishedAt) {
-      if (remainingSeconds(saved.startedAt, saved.durationS) > 0) setResumable(saved);
-      else setSession(finish(saved, Date.now(), true));
-    }
+    const saved = decodeStored(safeStorage.getItem(DRILL_STORAGE_KEY), stored.user.id, Date.now());
+    if (!saved || saved.finishedAt) safeStorage.removeItem(DRILL_STORAGE_KEY);
+    else if (remainingSeconds(saved.startedAt, saved.durationS) > 0) setResumable(saved);
+    else setSession(finish(saved, Date.now(), true));
   }, [signedIn]);
 
   // Device-only persistence of the open run (resume after reload); a finished run is cleared.
   useEffect(() => {
     if (!userId || !session) return;
-    if (session.finishedAt) safeStorage.removeItem(drillStorageKey(userId));
-    else safeStorage.setItem(drillStorageKey(userId), JSON.stringify(session));
+    if (session.finishedAt) safeStorage.removeItem(DRILL_STORAGE_KEY);
+    else safeStorage.setItem(DRILL_STORAGE_KEY, encodeStored(userId, session));
   }, [userId, session]);
 
   const start = useCallback(async () => {
@@ -136,6 +135,7 @@ export default function GmDrill() {
                   <Link href={GM_QUIZ_HREF} className="underline underline-offset-4">{c.mcq}</Link>
                   <Link href={`/gerichtsmedizin?lang=${gmLang(lang)}`} className="underline underline-offset-4">{c.backToPage}</Link>
                 </div>
+                <p className="text-xs leading-relaxed text-[var(--mp-fg-muted)]">{c.mcqNote}</p>
               </section>
               <GmFormatCard lang={lang} />
             </>
