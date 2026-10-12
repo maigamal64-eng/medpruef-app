@@ -129,10 +129,15 @@ function StatsContent() {
     }
     // UX-STU-41: the banner survives the query strip below (the remount after
     // router.replace reads this tab-scoped flag until the learner dismisses it).
+    // One-shot and account-scoped: the remount consumes the flag.
     let flagged = examPassed;
     try {
-      if (examPassed) sessionStorage.setItem(PASS_BANNER_KEY, "1");
-      else flagged = sessionStorage.getItem(PASS_BANNER_KEY) === "1";
+      const owner = session?.user.id ?? "";
+      if (examPassed) sessionStorage.setItem(PASS_BANNER_KEY, owner);
+      else {
+        flagged = !!owner && sessionStorage.getItem(PASS_BANNER_KEY) === owner;
+        sessionStorage.removeItem(PASS_BANNER_KEY);
+      }
     } catch { /* storage blocked: the banner shows for this render only */ }
     if (flagged) setCelebrate(true);
     if (flagged && session) {
