@@ -118,7 +118,7 @@ test.describe("Admin smoke — every /admin/* route renders without crashing", (
     { path: "/admin/users", title: "Users" },
     { path: "/admin/subscriptions", title: "Subscriptions" },
     { path: "/admin/referrals", title: "Referrals" },
-    { path: "/admin/waitlist", title: "Waitlist" },
+    { path: "/admin/waitlist", expectFinalUrl: /\/admin\/growth/ },
     { path: "/admin/questions", title: "Questions" },
     { path: "/admin/flagged", title: "Flagged questions" },
     { path: "/admin/media", title: "Media audit" },
@@ -133,11 +133,15 @@ test.describe("Admin smoke — every /admin/* route renders without crashing", (
     { path: "/admin/webhooks", expectFinalUrl: /\/admin\/payments/ },
     { path: "/admin/errors", title: "Errors" },
     { path: "/admin/audit", title: "Audit log" },
-    { path: "/admin/sql", title: "SQL runner" },
+    { path: "/admin/sql", expectFinalUrl: /\/admin\/overview/ },
     { path: "/admin/env", title: "Environment" },
     { path: "/admin/dashboard", expectFinalUrl: /\/admin\/overview/ },
     { path: "/admin/analytics", expectFinalUrl: /\/admin\/overview/ },
-    { path: "/admin/system", expectFinalUrl: /\/admin\/env/ },
+    { path: "/admin/system", expectFinalUrl: /\/admin\/overview/ },
+    { path: "/admin/launch", expectFinalUrl: /\/admin\/overview/ },
+    { path: "/admin/plan", expectFinalUrl: /\/admin\/overview/ },
+    { path: "/admin/actions", expectFinalUrl: /\/admin\/overview/ },
+    { path: "/admin/control-plane", expectFinalUrl: /\/admin\/overview/ },
     { path: "/admin/changelog", expectFinalUrl: /\/admin\/overview/ },
   ];
 
@@ -289,15 +293,6 @@ async function stubAdminApis(page: Page): Promise<void> {
       });
       return;
     }
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({ items: [] }),
-    });
-  });
-
-  // /api/admin/waitlist?format=json&exam_type=...
-  await page.route("**/api/admin/waitlist**", async (route: Route) => {
     await route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -465,29 +460,6 @@ async function stubAdminApis(page: Page): Promise<void> {
           { name: "SUPABASE_SERVICE_ROLE_KEY", present: true, masked: "eyJh…abc (220 chars)" },
         ],
       }),
-    });
-  });
-
-  // /api/admin/sql — GET lists saved queries; POST runs SQL
-  await page.route("**/api/admin/sql", async (route: Route) => {
-    if (route.request().method() === "POST") {
-      await route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify({
-          rows: [],
-          row_count: 0,
-          duration_ms: 1,
-          capped_at: 1000,
-          saved_id: null,
-        }),
-      });
-      return;
-    }
-    await route.fulfill({
-      status: 200,
-      contentType: "application/json",
-      body: JSON.stringify({ items: [] }),
     });
   });
 

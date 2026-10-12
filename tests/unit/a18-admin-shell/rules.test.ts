@@ -37,7 +37,7 @@ describe("a18 freshness rule (UX-ADM-31, ADM-20 A)", () => {
 describe("a18 admin menu (ADM-11 A)", () => {
   const PREVIOUS_ROUTES = [
     "/admin/overview", "/admin/flagged", "/admin/note-reports", "/admin/feedback", "/admin/ops", "/admin/growth",
-    "/admin/users", "/admin/mentor", "/admin/payments", "/admin/subscriptions", "/admin/referrals", "/admin/waitlist",
+    "/admin/users", "/admin/mentor", "/admin/payments", "/admin/subscriptions", "/admin/referrals",
     "/admin/questions", "/admin/media", "/admin/flags", "/admin/puyp", "/admin/crons", "/admin/deploys",
     "/admin/errors", "/admin/audit", "/admin/env", "/admin/access",
   ];
@@ -52,6 +52,8 @@ describe("a18 admin menu (ADM-11 A)", () => {
     for (const route of PREVIOUS_ROUTES) expect(hrefs).toContain(route);
     expect(new Set(hrefs).size).toBe(hrefs.length);
     expect(hrefs).not.toContain("/admin/system");
+    // a20 (ADM-24 A): Waitlist was cut; /admin/waitlist redirects to Growth.
+    expect(hrefs).not.toContain("/admin/waitlist");
   });
 
   it("has unique shortcuts and keeps the old g o, g r, g w working", () => {

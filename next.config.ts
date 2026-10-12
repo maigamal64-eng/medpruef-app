@@ -125,14 +125,26 @@ const nextConfig: NextConfig = {
       { source: "/kmp-innsbruck", destination: "/stichprobentest", permanent: true },
     ];
 
-    // Admin IA revamp (2026-04-23 §2.1) — legacy /admin/* routes → new homes.
-    // Temporary for one release cycle so bookmarked URLs don't 404; remove
-    // these once [name] confirms no-one is hitting them in logs.
+    // Legacy /admin/* routes → their current homes. The page files are gone
+    // (ADM-24 A, UX-ADM-40, a20 2026-10-12): one server redirect each, the
+    // query string is kept, no client stub flashes a blank page. Every target
+    // is readable by any admin role or by the role the old page needed:
+    // /admin/system lands on Today (not /admin/env, which needs system.read),
+    // /admin/waitlist lands on Growth (both revenue.read). Remove once logs
+    // show no hits.
     const adminLegacyRedirects = [
       { source: "/admin/dashboard", destination: "/admin/overview" },
       { source: "/admin/analytics", destination: "/admin/overview" },
-      { source: "/admin/system", destination: "/admin/env" },
+      { source: "/admin/system", destination: "/admin/overview" },
       { source: "/admin/changelog", destination: "/admin/overview" },
+      { source: "/admin/control-plane", destination: "/admin/overview" },
+      { source: "/admin/launch", destination: "/admin/overview" },
+      { source: "/admin/plan", destination: "/admin/overview" },
+      { source: "/admin/actions", destination: "/admin/overview" },
+      { source: "/admin/sql", destination: "/admin/overview" },
+      { source: "/admin/funnels", destination: "/admin/growth" },
+      { source: "/admin/experiments", destination: "/admin/growth" },
+      { source: "/admin/waitlist", destination: "/admin/growth" },
     ].map((r) => ({ ...r, permanent: false }));
 
     if (!IS_PRODUCTION) return [...stichprobentestRedirect, ...adminLegacyRedirects];

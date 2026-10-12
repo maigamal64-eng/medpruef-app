@@ -47,28 +47,25 @@ describe("admin permissions", () => {
     expect(permissionForAdminRequest("/api/stats/admin/users", "GET")).toBe("users.read");
     expect(permissionForAdminRequest("/api/stats/admin/users", "PATCH")).toBe("users.write");
     expect(permissionForAdminRequest("/api/stats/admin/users", "DELETE")).toBeNull();
-    expect(permissionForAdminRequest("/api/admin/subscriptions/reconcile-pending", "POST")).toBe("revenue.reconcile");
-    expect(permissionForAdminRequest("/api/admin/sql", "POST")).toBe("system.manage");
+    // Cut in a20 (ADM-24 A): retired routes are unknown to the map, so they deny.
+    for (const cut of ["/api/admin/subscriptions/reconcile-pending", "/api/admin/sql", "/api/stats/admin/activity", "/api/stats/admin/new-users", "/api/stats/admin/clarity", "/api/stats/admin/control-plane", "/api/stats/admin/explanations", "/api/admin/waitlist", "/api/admin/non-crypto-waitlist", "/api/admin/webhooks/nowpayments/status", "/api/admin/webhooks/nowpayments/self-test", "/api/debug/sentry-test"]) {
+      expect(permissionForAdminRequest(cut, "GET")).toBeNull();
+      expect(permissionForAdminRequest(cut, "POST")).toBeNull();
+    }
     expect(permissionForAdminRequest("/api/admin/access/candidates", "GET")).toBe("access.manage");
     expect(permissionForAdminRequest("/api/stats/admin", "GET")).toBe("overview.read");
-    expect(permissionForAdminRequest("/api/stats/admin/activity", "GET")).toBe("users.read");
-    expect(permissionForAdminRequest("/api/stats/admin/new-users", "GET")).toBe("users.read");
-    expect(permissionForAdminRequest("/api/stats/admin/clarity", "GET")).toBe("system.read");
-    expect(permissionForAdminRequest("/api/stats/admin/control-plane", "GET")).toBe("revenue.read");
     expect(permissionForAdminRequest("/api/stats/admin/growth", "GET")).toBe("revenue.read");
     expect(permissionForAdminRequest("/api/stats/admin/growth/content", "GET")).toBe("revenue.read");
     expect(permissionForAdminRequest("/api/stats/admin/growth/content", "POST")).toBeNull();
     expect(permissionForAdminRequest("/api/stats/admin/payments", "GET")).toBe("revenue.read");
     expect(permissionForAdminRequest("/api/stats/admin/questions", "GET")).toBe("content.read");
     expect(permissionForAdminRequest("/api/stats/admin/questions", "PATCH")).toBe("content.moderate");
-    expect(permissionForAdminRequest("/api/stats/admin/explanations", "GET")).toBe("content.read");
+    expect(permissionForAdminRequest("/api/stats/admin/explanations/downvoted", "GET")).toBe("content.read");
     expect(permissionForAdminRequest("/api/stats/admin/missing-images", "GET")).toBe("content.read");
     expect(permissionForAdminRequest("/api/stats/admin/duplicates", "GET")).toBe("content.read");
     expect(permissionForAdminRequest("/api/feedback", "GET")).toBe("feedback.read");
     expect(permissionForAdminRequest("/api/suggestions", "GET")).toBe("content.read");
     expect(permissionForAdminRequest("/api/puyp/admin", "POST")).toBe("revenue.manage");
-    expect(permissionForAdminRequest("/api/admin/webhooks/nowpayments/self-test", "POST")).toBe("system.manage");
-    expect(permissionForAdminRequest("/api/debug/sentry-test", "GET")).toBe("system.manage");
     expect(permissionForAdminRequest("/api/admin/not-yet-classified", "GET")).toBeNull();
     expect(permissionForAdminRequest("/api/admin/users/future-action", "POST")).toBeNull();
     expect(permissionForAdminRequest("/api/admin/access/future-action", "GET")).toBeNull();

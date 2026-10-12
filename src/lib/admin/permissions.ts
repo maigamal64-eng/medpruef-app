@@ -47,7 +47,6 @@ export function permissionForAdminRequest(
   if (path === "/api/admin/access/candidates") return verb === "GET" ? "access.manage" : null;
   if (/^\/api\/admin\/access\/memberships\/[^/]+$/.test(path)) return verb === "PUT" ? "access.manage" : null;
 
-  if (path === "/api/admin/sql") return ["GET", "POST"].includes(verb) ? "system.manage" : null;
   if (path === "/api/admin/overview") return verb === "GET" ? "overview.read" : null;
   if (path === "/api/stats/admin") return verb === "GET" ? "overview.read" : null;
   if (path.startsWith("/api/stats/admin/")) {
@@ -55,10 +54,8 @@ export function permissionForAdminRequest(
     if (path === "/api/stats/admin/users") {
       return verb === "GET" ? "users.read" : verb === "PATCH" ? "users.write" : null;
     }
-    if (path === "/api/stats/admin/new-users" || path === "/api/stats/admin/activity") return verb === "GET" ? "users.read" : null;
-    if (path === "/api/stats/admin/control-plane" || path === "/api/stats/admin/payments" || path === "/api/stats/admin/payments/trace" || path === "/api/stats/admin/growth" || path === "/api/stats/admin/growth/content") return verb === "GET" ? "revenue.read" : null;
-    if (path === "/api/stats/admin/clarity") return verb === "GET" ? "system.read" : null;
-    if (["/api/stats/admin/questions", "/api/stats/admin/duplicates", "/api/stats/admin/missing-images", "/api/stats/admin/explanations", "/api/stats/admin/explanations/downvoted"].includes(path)) {
+    if (path === "/api/stats/admin/payments" || path === "/api/stats/admin/payments/trace" || path === "/api/stats/admin/growth" || path === "/api/stats/admin/growth/content") return verb === "GET" ? "revenue.read" : null;
+    if (["/api/stats/admin/questions", "/api/stats/admin/duplicates", "/api/stats/admin/missing-images", "/api/stats/admin/explanations/downvoted"].includes(path)) {
       if (verb === "GET") return "content.read";
       if (path.endsWith("/questions") && verb === "PATCH") return "content.moderate";
       return null;
@@ -80,17 +77,13 @@ export function permissionForAdminRequest(
   if (path === "/api/admin/users/grant") return verb === "POST" ? "users.entitlements.write" : null;
   if (path === "/api/admin/users/names") return verb === "GET" ? "users.read" : null;
   if (path === "/api/admin/subscriptions") return verb === "GET" ? "revenue.read" : null;
-  if (path === "/api/admin/subscriptions/reconcile-pending") return verb === "POST" ? "revenue.reconcile" : null;
   if (path === "/api/admin/payments/resolve") return verb === "POST" ? "revenue.manage" : null;
   if (path === "/api/admin/referrals" || path === "/api/admin/referrals/pending-exam-rewards") return verb === "GET" ? "revenue.read" : null;
   if (["/api/admin/referrals/grant-exam-reward", "/api/admin/referrals/mark-paid", "/api/admin/puyp/bulk-approve"].includes(path)) return verb === "POST" ? "revenue.manage" : null;
   if (path === "/api/puyp/admin") return verb === "GET" ? "revenue.read" : verb === "POST" ? "revenue.manage" : null;
-  if (path === "/api/admin/waitlist" || path === "/api/admin/non-crypto-waitlist") return verb === "GET" ? "revenue.read" : null;
   if (path === "/api/admin/note-reports") return verb === "GET" ? "content.read" : verb === "POST" ? "content.moderate" : null;
   if (path === "/api/admin/flags") return verb === "GET" ? "system.read" : null;
-  if (path === "/api/admin/audit" || path === "/api/admin/audit-log/latest" || path === "/api/admin/crons" || path === "/api/admin/system-status" || path === "/api/admin/deploys" || path === "/api/admin/env" || path === "/api/admin/errors" || path === "/api/admin/webhooks" || path === "/api/admin/webhooks/nowpayments/status") return verb === "GET" ? "system.read" : null;
-  if (path === "/api/admin/webhooks/nowpayments/self-test") return verb === "POST" ? "system.manage" : null;
-  if (path === "/api/debug/sentry-test") return verb === "GET" ? "system.manage" : null;
+  if (path === "/api/admin/audit" || path === "/api/admin/audit-log/latest" || path === "/api/admin/crons" || path === "/api/admin/system-status" || path === "/api/admin/deploys" || path === "/api/admin/env" || path === "/api/admin/errors" || path === "/api/admin/webhooks") return verb === "GET" ? "system.read" : null;
   return null;
 }
 

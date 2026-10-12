@@ -17,7 +17,6 @@
 import {
   AlertTriangle,
   BarChart3,
-  BellRing,
   CreditCard,
   Database,
   FileText,
@@ -107,7 +106,6 @@ export const ADMIN_NAV: NavSection[] = [
     shortcut: "u",
     items: [
       { label: "Learners", href: "/admin/users", icon: Users, permission: "users.read" },
-      { label: "Waitlist", href: "/admin/waitlist", icon: BellRing, permission: "revenue.read" },
     ],
   },
   {
