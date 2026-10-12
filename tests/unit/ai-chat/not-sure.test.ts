@@ -188,4 +188,30 @@ describe("citation guard", () => {
     expect(out.text).not.toMatch(/Buch A|Buch B|Quellen:/);
     expect(out.removed).toBe(3);
   });
+
+  it("keeps doses, volumes and abbreviations that sit near a body name (review P2)", () => {
+    for (const text of [
+      "Die Empfehlung lautet 2000 IE Vitamin D täglich.",
+      "Laut WHO liegt der Zielwert bei 2000 kcal.",
+      "Initial 1000 ml, dann 2000 ml über 24 h laut ERC.",
+      "Das Statement der Gruppe: Dosis 2000 mg.",
+      "| Metformin | 2000 mg (ADA) |",
+      "Paracetamol max. 4000 mg/Tag. Danach Pause.",
+    ]) expect(guardCitations(text, "de")).toEqual({ text, removed: 0 });
+  });
+
+  it("drops a cited table row whole and never splits after an abbreviation", () => {
+    const out = guardCitations("| Wert | Quelle |\n| HbA1c | ESC-Leitlinie 2023 |\nGabe z.B. Dr. Meier folgend.", "de");
+    expect(out.text).toContain("| Wert | Quelle |");
+    expect(out.text).not.toContain("ESC-Leitlinie 2023");
+    expect(out.text).toContain("Gabe z.B. Dr. Meier folgend.");
+  });
+
+  it("stays linear on hostile output (review P1 ReDoS)", () => {
+    const hostile = ["(" + "A".repeat(5000), "(" + "Ab ".repeat(2000), "ESC " + "x".repeat(5000), "x".repeat(20000)].join("\n");
+    const start = performance.now();
+    guardCitations(hostile, "de");
+    expect(performance.now() - start).toBeLessThan(200);
+  });
 });
+

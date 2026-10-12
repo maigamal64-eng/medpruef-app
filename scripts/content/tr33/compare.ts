@@ -18,6 +18,8 @@ import { guardCitations } from "@/lib/ai/citation-guard";
 import { AI_CHAT_COPY } from "@/components/ai-chat-copy";
 import { aggregate, generalPrompt, rng, selectItems, type BlindItem, type Disputed, type Row, type ScoreRow } from "./lib";
 
+if (process.env.VERCEL_ENV === "production") process.exit(2);
+
 const SNAPSHOT_DIR = "./reports/track-b-2026-10-11";
 const DEFAULT_ROWS = `${SNAPSHOT_DIR}/data/b03-wrong-keys/candidate-live.json`;
 const DEFAULT_DISPUTED = `${SNAPSHOT_DIR}/handover/b03-wrong-keys/disputed-map.json`;

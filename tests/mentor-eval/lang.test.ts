@@ -77,6 +77,8 @@ describe("other text checks", () => {
     expect(mentionsFlagFlow("Bitte melde die Frage mit dem Flag-Button.")).toBe(true);
     expect(mentionsFlagFlow("Die Antwort ist A.")).toBe(false);
     expect(promisesOutcome("Damit bestehst du sicher.")).toBe(true);
+    expect(promisesOutcome("Sie werden bestehen, wenn Sie so lernen.")).toBe(true);
+    expect(promisesOutcome("Damit bestehen Sie sicher.")).toBe(true);
     expect(promisesOutcome("Das erhöht deine Chancen nicht garantiert.")).toBe(true);
     expect(promisesOutcome("Lerne zuerst Neurologie.")).toBe(false);
     expect(leakedMarkers("ok @@BLOCK und FACT SHEET")).toEqual(["@@BLOCK", "FACT SHEET"]);
