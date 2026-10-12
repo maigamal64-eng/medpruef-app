@@ -3,7 +3,6 @@
  * loads the learner's own answer_history rows for the last 12 weeks and this
  * groups them, so the page never fetches 50,000 rows client side.
  */
-import { t } from "../i18n";
 import { localDayKey } from "./due-summary";
 
 export const WEEKS_SHOWN = 12;
@@ -61,11 +60,4 @@ export function buildWeeklyProgress(
   }
   for (const b of buckets) b.accuracy = b.answered === 0 ? null : b.correct / b.answered;
   return buckets;
-}
-
-/** Header subtitle: "Noch 34 Tage bis zum 13. November" (date text is passed in, never typed here). */
-export function countdownCopy(daysLeft: number, dateLabel: string, lang: "de" | "en"): string {
-  if (daysLeft < 0) return t("a12_countdown_past", lang);
-  if (daysLeft === 0) return t("a12_countdown_today", lang).replace("{date}", dateLabel);
-  return t(daysLeft === 1 ? "a12_countdown_one" : "a12_countdown_days", lang).replace("{n}", String(daysLeft)).replace("{date}", dateLabel);
 }

@@ -6,9 +6,9 @@ import {
   daysBetween,
   nextSittings,
   planTargetShares,
-  provisionalLabel,
   resolvePlanTarget,
 } from "@/lib/master-learning/plan-target";
+import { provisionalLabel } from "@/lib/master-learning/plan-copy";
 
 const NOW = new Date("2026-10-12T09:00:00Z");
 

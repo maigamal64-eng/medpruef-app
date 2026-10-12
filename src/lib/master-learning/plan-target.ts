@@ -8,7 +8,6 @@
  * track-A passes the future sittings of the active bank (getFutureSittings from
  * exam-dates.ts), so no date is typed in this file.
  */
-import { t } from "../i18n";
 
 
 export type PlanTargetSource =
@@ -140,9 +139,4 @@ export function planTargetShares(
     withExamDateShare: share(withExamDate),
     withPlanTargetShare: share(withPlanTarget),
   };
-}
-
-/** Learner-facing label for a provisional target (DE and EN). */
-export function provisionalLabel(lang: "de" | "en"): string {
-  return t("a12_plan_provisional", lang);
 }

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { WEEKS_SHOWN, buildWeeklyProgress, countdownCopy } from "@/lib/master-learning/weekly-progress";
+import { WEEKS_SHOWN, buildWeeklyProgress } from "@/lib/master-learning/weekly-progress";
+import { countdownCopy } from "@/lib/master-learning/plan-copy";
 
 // Monday 2026-10-12, 12:00 Vienna.
 const NOW = new Date("2026-10-12T10:00:00Z");

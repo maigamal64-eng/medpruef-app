@@ -47,7 +47,7 @@ import { canUse } from "@/lib/entitlements";
 import { useSignedInRoute } from "@/lib/hooks/useSignedInRoute";
 import { ts as tsx, studyDate, studyPct, studyNumber } from "@/lib/i18n-study";
 import { rankLabel } from "@/lib/i18n-study-dash";
-import { countdownCopy } from "@/lib/master-learning/weekly-progress";
+import { countdownCopy } from "@/lib/master-learning/plan-copy";
 import { daysBetween } from "@/lib/master-learning/plan-target";
 import { topicShortName } from "@/lib/topics";
 import WeeklyProgressCard from "./_parts/WeeklyProgressCard";

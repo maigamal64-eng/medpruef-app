@@ -7,3 +7,4 @@ export * from "./due-summary-copy";
 export * from "./weekly-progress";
 export * from "./billing-copy-i18n";
 export * from "./telegram-commands";
+export * from "./plan-copy";

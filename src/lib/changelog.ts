@@ -33,6 +33,16 @@ export const CHANGELOG: ChangelogEntry[] = [
     "de": "Antwortet der Server beim Speichern einer Antwort, einer Karteikarten-Bewertung oder eines Simulationsergebnisses nicht rechtzeitig, bleibt der Eintrag auf Ihrem Gerät gespeichert und wird automatisch nachgesendet, auch ohne Verbindungsabbruch. Sie sehen dazu einen Hinweis. Jede Antwort wird dabei nur einmal gezählt, auch für XP und Serie. Außerdem laden Startseite, Lernplan und Übungsstand mit weniger Datenbankabfragen.",
     "en": "If the server does not respond in time while saving an answer, a flashcard rating or an exam simulation result, the entry stays saved on your device and is sent again automatically, even without a lost connection. A note tells you so. Each answer is still counted only once, including XP and streak. Home, the study plan and readiness also load with fewer database reads."
 
+    "de": "Bibliothek: Lernnotizen bearbeiten, melden und Listen üben",
+    "en": "Library: edit and report study notes, practice lists"
+  },
+  "description": {
+    "de": "Lernnotizen lassen sich über ihr Menü bearbeiten und als fehlerhaft melden. Kostenlose Konten sehen, wie viele ihrer 10 Lernnotizen sie verwendet haben. Listen zeigen klare Fehlermeldungen und lassen sich direkt üben. Die Notiz öffnet sich zum Lesen, geübt wird mit „Üben“.",
+    "en": "Study notes can be edited and reported from their menu. Free accounts see how many of their 10 study notes they have used. Lists show clear error messages and can be practiced directly. A note opens for reading; practice starts with Practice."
+  }
+},
+{
+  "date": "2026-10-12",
   "tag": "feature",
   "title": {
     "de": "Lernplan für alle: vorläufiges Ziel, Aufwand pro Tag und Probeprüfungen",
