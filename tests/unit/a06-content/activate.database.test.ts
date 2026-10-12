@@ -76,9 +76,14 @@ database('a06 activation changeset on isolated Postgres 16', () => {
     sql('TRUNCATE question_activation_log, admin_audit_log, questions;'); seed();
     sql(`INSERT INTO questions (id, question, is_active, content_hash, tags) VALUES (70000, ${literal(archiveRow().question + ' x')}, true, 'other', ARRAY[]::text[]);`);
     expect(() => sql(f.apply)).toThrow(/ngram overlap for 114300/);
+    sql('TRUNCATE question_activation_log, admin_audit_log, questions;'); seed();
+    sql(`INSERT INTO questions (id, question, is_active, content_hash, tags) VALUES (70001, 'unrelated inactive stem', false, ${literal(archiveRow().content_hash)}, ARRAY[]::text[]);`);
+    expect(() => sql(f.apply)).toThrow(/duplicate hash for 114300/);
     expect(sql('SELECT count(*) FROM admin_audit_log;')).toBe('0');
   });
   it('edits stem and explanation with audit, replays, rolls back exactly and refuses drift', () => {
+    sql(`CREATE OR REPLACE FUNCTION a06_noop() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RETURN NEW; END $$;
+      CREATE OR REPLACE TRIGGER questions_clear_explanation_translations_on_key_change AFTER UPDATE ON questions FOR EACH ROW EXECUTE FUNCTION a06_noop();`);
     const before = { ...archiveRow(), content_hash_short: null };
     const q = before.question + ' heute';
     const after = { ...before, question: q, explanation: before.explanation + ' Ergänzt.', content_hash: contentHash(q), content_hash_short: contentHash(q).slice(0, 12) };
@@ -91,6 +96,19 @@ database('a06 activation changeset on isolated Postgres 16', () => {
     expect(sql("SELECT count(*) FROM admin_audit_log WHERE action='a06_content_edit_rollback';")).toBe('1');
     sql("UPDATE questions SET tags = tags || ARRAY['x'] WHERE id = 114300;");
     expect(() => sql(e.apply)).toThrow(/Before image changed for 114300/);
+    sql('DROP TRIGGER questions_clear_explanation_translations_on_key_change ON questions;');
+  });
+  it('a later batch containing an already active row writes no second activation log or audit row', () => {
+    sql(files().apply);
+    const again = emitActivation({ ...manifest('archive', rows()), batch_id: 'a06-fixture-again' }, rows(), checkTrackA(rows(), rows().map((r: Record<string, unknown>) => entry(r)), rows(), policy, 'archive'));
+    sql(again.apply);
+    expect(sql('SELECT count(*) FROM question_activation_log;')).toBe('2');
+    expect(sql("SELECT count(*) FROM admin_audit_log WHERE action='a06_content_activation';")).toBe('2');
+  });
+  it('refuses an edit when the translation cache trigger is missing', () => {
+    const before = { ...archiveRow(), content_hash_short: null };
+    const e = emitEdit({ batch_id: 'a06-edit-db2', actor, reason: 'Fixture edit for the a06 proof', edits: [{ before, after: { ...before, explanation: before.explanation + ' X.', content_hash_short: before.content_hash.slice(0, 12) } }] });
+    expect(() => sql(e.apply)).toThrow(/Translation cache trigger missing/);
   });
   it('a dry run (apply ending in ROLLBACK) leaves nothing behind', () => {
     sql(files().apply.replace(/COMMIT;\s*$/, 'ROLLBACK;'));

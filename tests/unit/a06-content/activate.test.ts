@@ -39,6 +39,17 @@ describe('a06 activation gate', () => {
     expect(check([authoredRow({ tags: ['authored-track-b', 'image-needed'], image_urls: ['https://example.invalid/a.webp'] })], 'authored')[0].errors).not.toContain('IMAGE_MISSING');
     const multi = archiveRow({ choices: archiveRow().choices.map((c: Row, i: number) => ({ ...c, correct: i < 2 })) });
     expect(check([multi], 'archive')[0].errors).toContain('MULTI_WITHOUT_N');
+    const stated = (n: number, correct: number) => archiveRow({ question: `Fixture item on shapes drawn on the empty board, which are right? (${n} richtige Antworten)`,
+      choices: archiveRow().choices.map((c: Row, i: number) => ({ ...c, correct: i < correct })) });
+    expect(check([stated(3, 2)], 'archive')[0].errors).toContain('N_MISMATCH');
+    expect(check([stated(2, 1)], 'archive')[0].errors).toContain('N_MISMATCH');
+    expect(check([stated(2, 2)], 'archive')[0].errors).not.toContain('N_MISMATCH');
+    for (const q of ['Fixture: siehe Abb. 1 auf dem leeren Zeichenbrett heute', 'Fixture: welche Abbildungen gehören zu den Formen dort',
+      'Fixture: was ist auf dem Bild zu sehen bei den Formen', 'Fixture: wie lautet die Diagnose für folgendes EKG bei Formen'])
+      expect(check([archiveRow({ question: q })], 'archive')[0].errors).toContain('IMAGE_MISSING');
+    for (const tag of ['missing_image', 'needs_verified_source_media'])
+      expect(check([archiveRow({ tags: ['archive-original', tag] })], 'archive')[0].errors).toContain('IMAGE_MISSING');
+    expect(check([archiveRow({ tags: ['archive-original', 'missing_image'], image_urls: ['https://example.invalid/a.webp'] })], 'archive')[0].errors).toContain('IMAGE_MISSING');
   });
   it('refuses archive rows outside the range, a frozen policy id and an active row', () => {
     expect(check([archiveRow({ id: 114700 })], 'archive')[0].errors).toContain('NOT_ARCHIVE_RANGE');
@@ -90,5 +101,12 @@ describe('a06 guarded content edit', () => {
     const sql = emitEdit({ batch_id: 'a06-edit-fixture', actor: { id: '00000000-0000-4000-8000-0000000000a6', email: 'f@example.invalid' }, reason: 'Fixture edit for the a06 proof', edits: [{ before, after }] });
     expect(sql.apply).toContain("'a06_content_edit'");
     expect(sql.rollback).toContain("'a06_content_edit_rollback'");
+    // Row text can never close a DO block early, even when it contains the default delimiter candidates.
+    const hostile = { ...after, explanation: 'x $a06_image_0$; $a06_image$; $a06_final_0$; COMMIT; DROP TABLE users; --' };
+    const h = emitEdit({ batch_id: 'a06-edit-fixture', actor: { id: '00000000-0000-4000-8000-0000000000a6', email: 'f@example.invalid' }, reason: 'Fixture edit for the a06 proof', edits: [{ before, after: hostile }] });
+    for (const text of [h.apply, h.rollback]) for (const m of text.matchAll(/DO (\$[a-z0-9_]+\$)/g)) {
+      const body = text.slice(text.indexOf(m[0]) + m[0].length);
+      expect(body.indexOf(m[1])).toBeGreaterThan(body.indexOf('END;'));
+    }
   });
 });

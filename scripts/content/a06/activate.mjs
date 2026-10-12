@@ -24,6 +24,14 @@ export const VIENNA_TOPICS = Object.freeze(['Chirurgische Fächer', 'Innere Medi
 // /umfang states these areas are not covered; their rows stay inactive.
 export const UNCOVERED_TOPIC = /public health|medizinrecht|ethik|evidenzbasiert|\bebm\b|umwelt|arbeitsmedizin/i;
 const ARCHIVE_RELAXED = new Set(['ID_NOT_NEW', 'ARCHIVE', 'NOT_AUTHORED']);
+export const COUNT_HINT = /\((\d)\s*richtige/gi;
+// Image markers used across the bank (April audit, free set, qlt02) and track-B (b25).
+export const IMAGE_TAGS = Object.freeze(['missing_image', 'needs_verified_source_media', 'image-needed']);
+// IMAGE_REF from scripts/free-set/build_free_set.py plus explicit references.
+export const IMAGE_REFS = Object.freeze([
+  /(?:^|[^\p{L}])(?:auf dem|im|in dem|dieses?|diesem|folgende[snm]?|abgebildete[snm]?)\s+(?:Bild|Abbildung|Foto|EKG|Röntgen\p{L}*|CT|MRT)(?![\p{L}])/iu,
+  /(?:^|[^\p{L}])(?:abbildung(?:en)?|abb\.|siehe bild|bild zeigt|ekg zeigt|röntgenbild|fotografie)/iu,
+]);
 
 // German labels of the official Stichprobentest fields (STP_FIELDS in src/lib/stp-fields.ts, b21).
 export const STP_FIELD_LABELS = Object.freeze(['Innere Medizin', 'Chirurgie', 'Kinderheilkunde', 'Neurologie', 'Gynäkologie',
@@ -49,11 +57,15 @@ export function laneAErrors(row, kind, corpus) {
   if (Array.isArray(row.choices)) {
     const correct = row.choices.filter((c) => c?.correct === true).length;
     if (correct > 3) errors.push('TOO_MANY_CORRECT');
-    if (correct > 1 && !/\(\s*\d\s*richtige/i.test(row.question ?? '')) errors.push('MULTI_WITHOUT_N');
+    // QLT-01: a multi-answer stem states N, and N equals the number of marked answers.
+    const hints = [...String(row.question ?? '').matchAll(COUNT_HINT)].map((m) => Number(m[1]));
+    if (correct > 1 && !hints.length) errors.push('MULTI_WITHOUT_N');
+    if (hints.some((n) => n !== correct)) errors.push('N_MISMATCH');
   }
   const hasImage = Boolean(row.image_url || (Array.isArray(row.image_urls) && row.image_urls.length));
-  if (!hasImage && (/\b(abbildung|siehe bild|abb\.|bild zeigt|ekg zeigt|röntgenbild)\b/i.test(row.question ?? '') ||
-      (row.tags ?? []).includes('image-needed'))) errors.push('IMAGE_MISSING');
+  if (!hasImage && (IMAGE_REFS.some((re) => re.test(row.question ?? '')) ||
+      (row.tags ?? []).some((t) => IMAGE_TAGS.includes(t)))) errors.push('IMAGE_MISSING');
+  if ((row.tags ?? []).includes('missing_image')) errors.push('IMAGE_MISSING');
   return errors;
 }
 
@@ -78,7 +90,7 @@ export function afterTags(row, rightsBasis) {
 const json = (value) => `${literal(JSON.stringify(value))}::jsonb`;
 const ints = (ids) => `ANY(ARRAY[${ids.join(',')}]::int[])`;
 const textArray = (tags) => `ARRAY[${tags.map(literal).join(',')}]::text[]`;
-function doBlock(label, body) {
+export function doBlock(label, body) {
   let index = 0, delimiter;
   do { delimiter = `$a06_${label}_${index++}$`; } while (body.includes(delimiter));
   return `DO ${delimiter}\n${body}\n${delimiter};`;
@@ -101,6 +113,9 @@ LATERAL generate_series(1, greatest(cardinality(w.words)-${n}, 1)) i
 WHERE c.ngram_scope AND c.nq <> '';
 CREATE INDEX ON a06_grams (gram);
 CREATE TEMP TABLE a06_sizes ON COMMIT DROP AS SELECT id, count(*)::numeric AS n FROM a06_grams GROUP BY id;
+ANALYZE a06_corpus;
+ANALYZE a06_grams;
+ANALYZE a06_sizes;
 ${doBlock('recheck', `DECLARE hit text;
 BEGIN
   SELECT string_agg(DISTINCT c.id::text, ',') INTO hit
@@ -136,6 +151,7 @@ export function emitActivation(manifest, rows, results) {
   if (typeof reason !== 'string' || reason.trim().length < 10) throw new Error('A reason of at least 10 characters is required');
   if (!rows.length || rows.length > RULES.max_batch || results.length !== rows.length ||
       results.some((r, i) => !r.pass || r.id !== rows[i].id || r.kind !== kind)) throw new Error('Cannot emit a failed or mismatched gate');
+  if (rows.some((r) => !Number.isSafeInteger(r.id))) throw new Error('Row ids must be integers');
   const ids = rows.map((r) => r.id).sort((a, b) => a - b);
   const entries = new Map(manifest.entries.map((e) => [e.id, e]));
   const before = (row) => pin(row);
@@ -179,7 +195,8 @@ WHERE EXISTS (SELECT 1 FROM questions q WHERE q.id = ${row.id} AND ${projection(
       reviewed_content_sha256: results.find((r) => r.id === row.id).reviewed_content_sha256 };
     return `INSERT INTO question_activation_log (batch_id, question_id, gate_result, reviewer, rights_basis)
 SELECT ${literal(batchId)}, ${row.id}, ${json(gateResult)}, ${literal(e.reviews.map((r) => r.reviewer).join(' + '))}, ${literal(`${e.rights_basis.basis}: ${e.rights_basis.evidence_ref}`)}
-WHERE NOT EXISTS (SELECT 1 FROM question_activation_log l WHERE l.batch_id = ${literal(batchId)} AND l.question_id = ${row.id});`;
+WHERE NOT EXISTS (SELECT 1 FROM question_activation_log l WHERE l.batch_id = ${literal(batchId)} AND l.question_id = ${row.id})
+  AND EXISTS (SELECT 1 FROM questions q WHERE q.id = ${row.id} AND ${projection()} = ${json(before(row))});`;
   };
   const verifyState = (target, label) => doBlock(label, `BEGIN
 ${rows.map((row) => `  IF NOT EXISTS (SELECT 1 FROM questions q WHERE q.id = ${row.id} AND ${projection()} = ${json(target(row))}) THEN
