@@ -32,6 +32,14 @@ export function reminderSchedule(exam: string, now: Date, sittings = OFFICIAL_SI
   });
 }
 
-export function studyNudgeWindow(now: Date): boolean {
-  return viennaStamp(now).slice(11, 13) === "09";
+/** a30: the learner chooses the Vienna hour (06..22, default 09, as b19). */
+export const STUDY_NUDGE_HOURS = { min: 6, max: 22, fallback: 9 } as const;
+export function viennaHour(now: Date): number {
+  return Number(viennaStamp(now).slice(11, 13));
+}
+export function isStudyNudgeHour(value: unknown): value is number {
+  return Number.isInteger(value) && (value as number) >= STUDY_NUDGE_HOURS.min && (value as number) <= STUDY_NUDGE_HOURS.max;
+}
+export function studyNudgeWindow(now: Date, hour: number = STUDY_NUDGE_HOURS.fallback): boolean {
+  return viennaHour(now) === hour;
 }

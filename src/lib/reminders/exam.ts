@@ -19,7 +19,7 @@ export async function runExamReminders(db: ReminderDb, now: Date, dryRun: boolea
       const group = { rows: [row], delivery: {} as Delivery };
       group.delivery = {
         keys: { recipient_key: identity, sitting_key: sittingKey, offset_days: offset, channel: "email" },
-        mail: { to: normalizeEmail(row.email), ...renderExamReminder(sitting, offset, String(row.locale), dryRun ? SITE : unsubscribeUrl("exam", row.unsub_token)) },
+        mail: { to: normalizeEmail(row.email), ...renderExamReminder(sitting, offset, String(row.locale), dryRun ? SITE : unsubscribeUrl("exam", row.unsub_token, row.locale === "de" ? "de" : "en")) },
         isSubscribed: async () => {
           for (const subscription of group.rows) {
             const { data, error } = await db.from("exam_reminders").select("id").eq("id", subscription.id).eq("confirmed", true).eq("exam_type", subscription.exam_type).eq("email", subscription.email).eq("unsub_token", subscription.unsub_token).is("unsubscribed_at", null).maybeSingle();

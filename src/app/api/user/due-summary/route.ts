@@ -2,8 +2,7 @@
 // Pure logic lives in src/lib/master-learning/due-summary.ts (track-B b35); entitlement
 // from the a12 matrix. Library notes have no Pro gate, so their due count is returned
 // for every signed-in learner.
-// PostgREST caps every select at its max-rows ceiling (1000, see migration 20260623120000), so
-// both reads are paged with .range() and an ORDER BY, and the question filter is chunked.
+// The paged row read lives in src/lib/master-learning/due-rows-server.ts (shared with the study nudge).
 import { NextRequest, NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth-guard";
 import { getServiceClient } from "@/lib/supabase";
@@ -11,14 +10,10 @@ import { audienceOf, canUse } from "@/lib/entitlements";
 import { EXAM_SOURCE_IDS } from "@/lib/topics";
 import { buildDueSummary, type DueRow } from "@/lib/master-learning/due-summary";
 import { withDbUnavailable } from "@/lib/db-unavailable-route";
+import { DueRowsReadError, loadDueRows } from "@/lib/master-learning/due-rows-server";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
-
-const LOOKAHEAD_DAYS = 8;
-const PAGE = 1000;
-const MAX_PAGES = 10;
-const ID_CHUNK = 200;
 
 async function notesDueToday(sb: ReturnType<typeof getServiceClient>, userId: string): Promise<number | null> {
   const { count, error } = await sb
@@ -47,38 +42,13 @@ async function handleGET(req: NextRequest) {
     : await sb.from("users").select("active_exam").eq("id", guard.userId).maybeSingle();
   const exam = (user?.active_exam as string | null) ?? "kenntnispruefung";
 
-  const horizon = new Date(Date.now() + LOOKAHEAD_DAYS * 86_400_000).toISOString();
-  const progress: { question_id: number; next_review_at: string | null; ease_factor: number | null }[] = [];
-  for (let page = 0; page < MAX_PAGES; page++) {
-    const { data, error } = await sb
-      .from("user_question_progress")
-      .select("question_id, next_review_at, ease_factor")
-      .eq("user_id", guard.userId)
-      .not("next_review_at", "is", null)
-      .lte("next_review_at", horizon)
-      .order("question_id", { ascending: true })
-      .range(page * PAGE, page * PAGE + PAGE - 1);
-    if (error) return NextResponse.json({ error: "Failed to load reviews" }, { status: 500 });
-    progress.push(...(data ?? []));
-    if ((data ?? []).length < PAGE) break;
+  let rows: DueRow[];
+  try {
+    rows = await loadDueRows(sb, guard.userId, exam);
+  } catch (err) {
+    if (err instanceof DueRowsReadError) return NextResponse.json({ error: err.message }, { status: 500 });
+    throw err;
   }
-
-  const ids = progress.map((r) => r.question_id);
-  const active = new Set<number>();
-  for (let i = 0; i < ids.length; i += ID_CHUNK) {
-    const { data: qs, error } = await sb
-      .from("questions")
-      .select("id")
-      .in("id", ids.slice(i, i + ID_CHUNK))
-      .eq("exam_type", exam)
-      .eq("is_active", true);
-    if (error) return NextResponse.json({ error: "Failed to load questions" }, { status: 500 });
-    for (const q of qs ?? []) active.add(q.id as number);
-  }
-
-  const rows: DueRow[] = progress
-    .filter((r) => active.has(r.question_id))
-    .map((r) => ({ questionId: r.question_id, nextReviewAt: r.next_review_at, ease: r.ease_factor }));
 
   return NextResponse.json({ ...buildDueSummary(rows, { now: new Date(), entitled: true }), notesDue }, {
     headers: { "Cache-Control": "private, no-store" },

@@ -97,6 +97,7 @@ import {
 } from "@/lib/offlineDb";
 import { MyReportsList } from "@/components/reports/MyReportsList";
 import MentorSettingsCard from "@/components/mentor/entries/MentorSettingsCard";
+import StudyNudgeCard from "@/components/settings/StudyNudgeCard";
 
 type Lang = "de" | "en";
 
@@ -1055,6 +1056,13 @@ export default function SettingsPage() {
                 </div>
               </div>
             </div>
+
+            {/* ═══ Lernerinnerungen (LX-11, a30): renders only while the sender is on ═══ */}
+            {user && !isGuest && (
+              <div className="set-group set-span2 empty:hidden">
+                <StudyNudgeCard lang={lang} />
+              </div>
+            )}
 
             {/* ═══ Offline-Modus ═══ (full-width — a real feature card)
                 Backlog #7 — 6/11 surveys rank this as the #1 improvement.

@@ -153,7 +153,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           error: lang === "de"
-            ? "Für diese E-Mail-Adresse wurde bereits eine Bestätigungs-E-Mail gesendet. Bitte prüfe deinen Posteingang."
+            ? "Für diese E-Mail-Adresse wurde bereits eine Bestätigungs-E-Mail gesendet. Bitte prüfen Sie Ihren Posteingang."
             : "A verification email was already sent to this address. Please check your inbox.",
         },
         { status: 409 },
@@ -190,7 +190,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         error: lang === "de"
-          ? "Die Bestätigungs-E-Mail konnte nicht gesendet werden. Bitte versuche es erneut."
+          ? "Die Bestätigungs-E-Mail konnte nicht gesendet werden. Bitte versuchen Sie es erneut."
           : "Could not send the verification email. Please try again.",
       },
       { status: 502 },
@@ -200,7 +200,7 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ ok: true });
 }
 
-// ── Email template (Shared transactional du style) ────
+// ── Email template (transactional, Sie, pick-copy-register B; UX-GLOBAL-40) ────
 interface LinkEmailArgs {
   lang: "de" | "en";
   verifyUrl: string;
@@ -210,15 +210,15 @@ function renderLinkEmail({ lang, verifyUrl }: LinkEmailArgs): string {
   if (lang === "de") {
     return `<!DOCTYPE html>
 <html lang="de"><body style="font-family:-apple-system,system-ui,Segoe UI,Roboto,sans-serif;color:#1a2b3c;line-height:1.55;max-width:560px;margin:0 auto;padding:24px;">
-<p>Hallo,</p>
+<p>Guten Tag,</p>
 
-<p>Du hast darum gebeten, eine E-Mail-Adresse und ein Passwort zu deinem MedPrüf-Konto hinzuzufügen.</p>
+<p>Sie haben darum gebeten, eine E-Mail-Adresse und ein Passwort zu Ihrem MedPrüf-Konto hinzuzufügen.</p>
 
-<p>Bestätige deine E-Mail-Adresse über diesen Link:</p>
+<p>Bitte bestätigen Sie Ihre E-Mail-Adresse über diesen Link:</p>
 
 <p><a href="${verifyUrl}" style="display:inline-block;background:#007B5F;color:white;padding:11px 20px;border-radius:8px;text-decoration:none;font-weight:600;">E-Mail-Adresse bestätigen</a></p>
 
-<p style="color:#4a5568;font-size:13px;">Dieser Link ist 24 Stunden gültig. Falls du diese Anfrage nicht gestellt hast, kannst du diese E-Mail ignorieren. Dein Konto bleibt unverändert.</p>
+<p style="color:#4a5568;font-size:13px;">Dieser Link ist 24 Stunden gültig. Falls Sie diese Anfrage nicht gestellt haben, können Sie diese E-Mail ignorieren. Ihr Konto bleibt unverändert.</p>
 
 <p style="margin-top:28px;">Viele Grüße,<br>[name]<br>
 <small style="color:#4a5568;">${COMPANY.one_line.de}</small></p>

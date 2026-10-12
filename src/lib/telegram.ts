@@ -76,3 +76,40 @@ export function validateLoginWidget(
     return null
   }
 }
+
+export type CustomerBotSendResult =
+  | { ok: true }
+  | { ok: false; reason: 'not_configured' | 'blocked' | 'rejected' | 'error' }
+
+/**
+ * Send a plain-text message from the learner-facing customer bot
+ * (@MedPruefBot, TELEGRAM_BOT_TOKEN) to a learner's own private chat. Never the
+ * internal ops bot. Buttons are URL buttons only. Logs nothing about the
+ * recipient or the text; the caller records the outcome.
+ * 403 means the learner blocked the bot or never started it ('blocked').
+ */
+export async function sendCustomerBotMessage(
+  chatId: number,
+  text: string,
+  buttons: { text: string; url: string }[] = [],
+): Promise<CustomerBotSendResult> {
+  const token = process.env.TELEGRAM_BOT_TOKEN
+  if (!token) return { ok: false, reason: 'not_configured' }
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text,
+        disable_web_page_preview: true,
+        ...(buttons.length ? { reply_markup: { inline_keyboard: buttons.map((b) => [b]) } } : {}),
+      }),
+      signal: AbortSignal.timeout(10_000),
+    })
+    if (res.ok) return { ok: true }
+    return { ok: false, reason: res.status === 403 ? 'blocked' : res.status >= 500 ? 'error' : 'rejected' }
+  } catch {
+    return { ok: false, reason: 'error' }
+  }
+}

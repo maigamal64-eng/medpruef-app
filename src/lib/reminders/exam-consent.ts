@@ -6,7 +6,9 @@ import { sanitizeAttribution } from "@/lib/attribution";
 import { EXAM_SOURCE_IDS } from "@/lib/topics";
 import { sendUnlessSuppressed } from "@/lib/mail-suppression";
 import { checkRateLimit, callerIdentity, rateKey } from "@/lib/rate-limit";
-import { assertDb, CONFIRMATION_COOLDOWN_MS, confirmationFooter, enabled, noStore, SITE } from "./common";
+import { assertDb, CONFIRMATION_COOLDOWN_MS, enabled, noStore, SITE } from "./common";
+import { renderReminderConfirmation } from "@/lib/email/reminder-confirm-template";
+import { confirmFormPage, linkLang, readConfirmForm, resultPage } from "./link-page";
 import { normalizeEmail, signReminderToken, unsubscribeCredential, verifyReminderToken } from "./tokens";
 
 const exams = new Set<string>([...EXAM_SOURCE_IDS, "all"]);
@@ -43,12 +45,12 @@ export async function subscribeExamReminder(req: NextRequest) {
     // Only possession of the emailed, purpose-bound credential grants consent.
     const alreadyConfirmed = row?.confirmed === true && !row.unsubscribed_at && (row.consent_version == null || row.consent_email === email);
     if (!alreadyConfirmed && enabled("EXAM_REMINDERS_ENABLED") && await claimConfirmationSlot(db, row.id, email)) {
-      const url = `${SITE}/api/reminders?confirm=${encodeURIComponent(signReminderToken("exam-confirm", row.confirmation_token))}`;
-      const de = locale === "de";
+      const lang = locale === "de" ? "de" : "en";
+      const url = `${SITE}/api/reminders?confirm=${encodeURIComponent(signReminderToken("exam-confirm", row.confirmation_token))}&lang=${lang}`;
       // a46: the confirmation answers the visitor's own request (transactional),
       // but a bounced or complained address is still never mailed. A withheld
       // address answers like a sent one, so the form never reveals the list.
-      const sent = await sendUnlessSuppressed(db, "transactional", { to: email, subject: de ? "Prüfungserinnerungen bestätigen" : "Confirm exam reminders", htmlBody: `<p>${de ? "Bitte bestätigen Sie Prüfungserinnerungen für diese E-Mail-Adresse." : "Please confirm exam reminders for this email address."}</p><p><a href="${url}">${de ? "Bestätigen" : "Confirm"}</a></p>${confirmationFooter(de)}` });
+      const sent = await sendUnlessSuppressed(db, "transactional", { to: email, ...renderReminderConfirmation("exam", lang, url) });
       const withheld = !sent.ok && (sent.reason === "suppressed" || sent.reason === "invalid_address");
       if (!sent.ok && !withheld) {
         // Release the slot so a genuine retry is possible; no mail was accepted.
@@ -74,21 +76,33 @@ async function claimConfirmationSlot(db: ReturnType<typeof getServiceClient>, id
 export async function examReminderLink(req: NextRequest) {
   const confirmation = req.nextUrl.searchParams.get("confirm");
   const unsub = req.nextUrl.searchParams.get("unsub");
+  const lang = linkLang(req.nextUrl.searchParams.get("lang"));
   if (confirmation === null && unsub === null) return response({ error: "Missing token" }, 400);
+  if (confirmation !== null) {
+    // a30 (b19 S4): a GET only shows the button; the POST below confirms.
+    try {
+      return verifyReminderToken(confirmation, "exam-confirm") ? confirmFormPage(lang, "exam", "/api/reminders", confirmation) : resultPage(lang, "exam", "invalid");
+    } catch { return resultPage(lang, "exam", "retry"); }
+  }
   try {
-    if (confirmation !== null) {
-      const token = verifyReminderToken(confirmation, "exam-confirm");
-      if (!token) return response({ error: "Invalid or expired confirmation" }, 400);
-      const result = await getServiceClient().rpc("confirm_exam_reminder", { p_token: token });
-      assertDb(result.error);
-      return result.data ? response({ ok: true }) : response({ error: "Invalid or expired confirmation" }, 400);
-    }
     const token = unsubscribeCredential(unsub!, "exam");
-    if (!token) return response({ error: "Invalid link" }, 400);
+    if (!token) return resultPage(lang, "exam", "invalid");
     // The RPC revokes overlapping subscriptions for this normalized address.
     // No recipient address or row-existence signal is returned to this handler.
     const result = await getServiceClient().rpc("unsubscribe_exam_reminders", { p_token: token });
     assertDb(result.error);
-    return new NextResponse("You have been unsubscribed from MedPrüf exam reminders.", { headers: { ...noStore, "Content-Type": "text/plain; charset=utf-8" } });
-  } catch { return response({ error: "Could not unsubscribe or confirm; please retry" }, 503); }
+    return resultPage(lang, "exam", "unsubscribed");
+  } catch { return resultPage(lang, "exam", "retry"); }
+}
+/** Form POST from the confirmation page; null when the request is not that form. */
+export async function confirmExamReminderForm(req: NextRequest) {
+  const form = await readConfirmForm(req);
+  if (!form) return null;
+  try {
+    const token = verifyReminderToken(form.token, "exam-confirm");
+    if (!token) return resultPage(form.lang, "exam", "invalid");
+    const result = await getServiceClient().rpc("confirm_exam_reminder", { p_token: token });
+    assertDb(result.error);
+    return resultPage(form.lang, "exam", result.data ? "confirmed" : "invalid");
+  } catch { return resultPage(form.lang, "exam", "retry"); }
 }

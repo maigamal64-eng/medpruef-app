@@ -1,5 +1,7 @@
 import { randomUUID } from "node:crypto";
-import { assertDb, CONFIRMATION_COOLDOWN_MS, confirmationFooter, SITE, type ReminderDb } from "./common";
+import { assertDb, CONFIRMATION_COOLDOWN_MS, SITE, type ReminderDb } from "./common";
+import { renderReminderConfirmation } from "@/lib/email/reminder-confirm-template";
+import { isUiLanguage, renderLang } from "@/lib/language-model";
 import { normalizeEmail, signReminderToken, verifyReminderToken } from "./tokens";
 import { sendUnlessSuppressed } from "@/lib/mail-suppression";
 
@@ -10,7 +12,7 @@ type EmailOwner = { email?: string | null; email_status?: string | null };
 export function deliverableDestination(owner: EmailOwner | null): string | null {
   return owner?.email && owner.email_status !== "bounced" ? normalizeEmail(owner.email) : null;
 }
-export async function requestStudyConsent(db: ReminderDb, userId: string) {
+export async function requestStudyConsent(db: ReminderDb, userId: string, hour = 9) {
   const owner = await db.from("users").select("email,email_status,language_code").eq("id", userId).maybeSingle();
   assertDb(owner.error);
   const email = deliverableDestination(owner.data);
@@ -20,21 +22,41 @@ export async function requestStudyConsent(db: ReminderDb, userId: string) {
   const current = await db.from("study_nudge_prefs").select("pending_email,confirmation_sent_at").eq("user_id", userId).maybeSingle();
   assertDb(current.error);
   const sentAt = current.data?.confirmation_sent_at ? Date.parse(String(current.data.confirmation_sent_at)) : NaN;
-  if (current.data?.pending_email === email && Date.now() - sentAt < CONFIRMATION_COOLDOWN_MS) return true;
+  if (current.data?.pending_email === email && Date.now() - sentAt < CONFIRMATION_COOLDOWN_MS) {
+    // Inside the cooldown only the chosen hour moves; the outstanding link stays.
+    assertDb((await db.from("study_nudge_prefs").update({ hour }).eq("user_id", userId)).error);
+    return true;
+  }
   const token = randomUUID();
-  const url = `${SITE}/api/nudge?confirm=${encodeURIComponent(signReminderToken("study-confirm", token))}`;
+  const stored = owner.data?.language_code;
+  const lang = isUiLanguage(stored) ? renderLang(stored) : "en";
+  const url = `${SITE}/api/nudge?confirm=${encodeURIComponent(signReminderToken("study-confirm", token))}&lang=${lang}`;
   // Re-enabling requires a fresh destination confirmation, never a session alone.
-  const saved = await db.from("study_nudge_prefs").upsert({ user_id: userId, opt_in: false, channel: "email", pending_email: email, confirmation_token: token, consent_email: null, consent_confirmed_at: null, consent_version: null, confirmation_sent_at: new Date().toISOString() }, { onConflict: "user_id" });
+  const saved = await db.from("study_nudge_prefs").upsert({ user_id: userId, opt_in: false, channel: "email", hour, pending_email: email, confirmation_token: token, consent_email: null, consent_telegram_id: null, consent_confirmed_at: null, consent_version: null, confirmation_sent_at: new Date().toISOString() }, { onConflict: "user_id" });
   assertDb(saved.error);
-  const de = owner.data?.language_code === "de";
   // a46: transactional (the learner's own request); a bounced or complained
   // address is withheld silently, an unreadable list fails like a send failure.
-  const sent = await sendUnlessSuppressed(db, "transactional", { to: email, subject: de ? "Lernerinnerungen bestätigen" : "Confirm study reminders", htmlBody: `<p>${de ? "Bitte bestätigen Sie Lernerinnerungen für diese E-Mail-Adresse." : "Please confirm study reminders for this email address."}</p><p><a href="${url}">${de ? "Bestätigen" : "Confirm"}</a></p>${confirmationFooter(de)}` });
+  const sent = await sendUnlessSuppressed(db, "transactional", { to: email, ...renderReminderConfirmation("study", lang, url) });
   const withheld = !sent.ok && (sent.reason === "suppressed" || sent.reason === "invalid_address");
   if (!sent.ok && !withheld) {
     assertDb((await db.from("study_nudge_prefs").update({ confirmation_sent_at: null }).eq("user_id", userId)).error);
     throw new Error("Could not send confirmation");
   }
+  return true;
+}
+/**
+ * a30 Telegram channel: the customer bot writes to the account's own private
+ * chat. Telegram login proved the id and telegram_chat_id_confirmed proves the
+ * learner started the bot, so the signed-session opt-in is the consent; no
+ * mail link is involved. Returns false when the account has no started chat.
+ */
+export async function grantTelegramConsent(db: ReminderDb, userId: string, hour: number, now = new Date()) {
+  const owner = await db.from("users").select("telegram_id,telegram_chat_id_confirmed,is_banned").eq("id", userId).maybeSingle();
+  assertDb(owner.error);
+  const chat = Number(owner.data?.telegram_id);
+  if (!owner.data?.telegram_chat_id_confirmed || owner.data.is_banned || !Number.isSafeInteger(chat) || chat <= 0) return false;
+  const saved = await db.from("study_nudge_prefs").upsert({ user_id: userId, opt_in: true, channel: "telegram", hour, consent_telegram_id: chat, consent_confirmed_at: now.toISOString(), consent_version: 1, consent_email: null, pending_email: null, confirmation_token: randomUUID() }, { onConflict: "user_id" });
+  assertDb(saved.error);
   return true;
 }
 export async function confirmStudyConsent(db: ReminderDb, signed: string, now = new Date()) {

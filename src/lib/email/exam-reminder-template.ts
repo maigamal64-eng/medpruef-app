@@ -1,13 +1,44 @@
 import type { OfficialSitting } from "@/lib/exam-dates";
+import { formatDate } from "@/lib/master-locale/format";
 import { escapeHtml as e } from "@/lib/reminders/common";
 
+// G04 deadline reminder (b19, a30 copy pass): Sie, MedPrüf in the subject,
+// lang on the HTML, Vienna dates written out, the official source linked.
+// Saved signup locales other than de get English (REVIEWED_LANGS).
+const COPY = {
+  de: {
+    subject: (label: string, n: number) => `MedPrüf: ${label}, Anmeldung endet in ${n} ${n === 1 ? "Tag" : "Tagen"}`,
+    closes: (deadline: string) => `Die Anmeldung endet am ${deadline} (Wiener Zeit).`,
+    sitting: (date: string) => `Prüfung: ${date}.`,
+    check: "Bitte prüfen Sie die offiziellen Voraussetzungen vor der Anmeldung.",
+    source: "Quelle",
+    checked: "geprüft am",
+    at: "um",
+    to: "bis",
+    unsub: "Fristerinnerungen abbestellen",
+  },
+  en: {
+    subject: (label: string, n: number) => `MedPrüf: ${label}, registration closes in ${n} ${n === 1 ? "day" : "days"}`,
+    closes: (deadline: string) => `Registration closes on ${deadline} (Vienna time).`,
+    sitting: (date: string) => `Exam: ${date}.`,
+    check: "Please check the official requirements before you register.",
+    source: "Source",
+    checked: "checked on",
+    at: "at",
+    to: "to",
+    unsub: "Unsubscribe from deadline reminders",
+  },
+} as const;
+
 export function renderExamReminder(s: OfficialSitting, offset: number, locale: string, unsub: string) {
-  const en = locale === "en";
-  const label = s.learner_label[en ? "en" : "de"];
-  const deadline = `${s.registration_closes}${s.closes_at_time ? ` ${s.closes_at_time}` : ""}`;
-  const subject = en ? `${label}: registration closes in ${offset} days` : `${label}: Anmeldung endet in ${offset} Tagen`;
-  const message = en
-    ? `Registration closes on ${deadline} (Vienna time). Sitting: ${s.date}${s.date_end ? ` to ${s.date_end}` : ""}. Please check the official requirements before registering.`
-    : `Die Anmeldung endet am ${deadline} (Wiener Zeit). Prüfung: ${s.date}${s.date_end ? ` bis ${s.date_end}` : ""}. Bitte prüfen Sie die offiziellen Voraussetzungen vor der Anmeldung.`;
-  return { subject, htmlBody: `<h1>${e(label)}</h1><p>${e(message)}</p><p>${en ? "Source" : "Quelle"}: <a href="${e(s.source_url)}">${e(s.publisher)}</a>. ${en ? "Checked on" : "Geprüft am"} ${e(s.read_on)}.</p><p><a href="${e(unsub)}">${en ? "Unsubscribe from exam reminders" : "Prüfungserinnerungen abbestellen"}</a></p>` };
+  const lang = locale === "de" ? "de" : "en";
+  const t = COPY[lang];
+  const day = (iso: string) => formatDate(iso, lang, "long", { withYear: true }) ?? iso;
+  const label = s.learner_label[lang];
+  const deadline = `${day(s.registration_closes!)}${s.closes_at_time ? ` ${t.at} ${s.closes_at_time}` : ""}`;
+  const sitting = `${day(s.date)}${s.date_end ? ` ${t.to} ${day(s.date_end)}` : ""}`;
+  return {
+    subject: t.subject(label, offset),
+    htmlBody: `<!DOCTYPE html><html lang="${lang}"><body style="font-family:-apple-system,system-ui,Segoe UI,Roboto,sans-serif;color:#1a2b3c;line-height:1.55;max-width:560px;margin:0 auto;padding:24px;"><h1 style="font-size:20px;">${e(label)}</h1><p>${e(t.closes(deadline))} ${e(t.sitting(sitting))}</p><p>${e(t.check)}</p><p style="font-size:13px;color:#4a5568;">${e(t.source)}: <a href="${e(s.source_url)}">${e(s.publisher)}</a>, ${e(t.checked)} ${e(day(s.read_on))}.</p><p style="font-size:13px;"><a href="${e(unsub)}">${e(t.unsub)}</a></p></body></html>`,
+  };
 }

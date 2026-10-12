@@ -26,18 +26,25 @@ export function escapeHtml(value: string): string {
 // Use the canonical HTTPS origin, never a caller-supplied Host header.
 export const SITE = "https://medpruf.com";
 export const CONFIRMATION_COOLDOWN_MS = 60 * 60_000;
-export function confirmationFooter(de: boolean): string {
-  return `<p>${de ? "Falls Sie dies nicht angefordert haben, können Sie diese E-Mail ignorieren." : "If you did not request this, you can ignore this email."}</p>`;
-}
-export function unsubscribeUrl(kind: "exam" | "study", token: string): string {
-  return `${SITE}/api/${kind === "exam" ? "reminders" : "nudge"}?unsub=${encodeURIComponent(signReminderToken(`${kind}-unsubscribe`, token))}`;
+export function unsubscribeUrl(kind: "exam" | "study", token: string, lang?: "de" | "en"): string {
+  // a30: links carry the language so the confirmation page answers in it (ONB-54).
+  return `${SITE}/api/${kind === "exam" ? "reminders" : "nudge"}?unsub=${encodeURIComponent(signReminderToken(`${kind}-unsubscribe`, token))}${lang ? `&lang=${lang}` : ""}`;
 }
 
 export interface Delivery {
   keys: Record<string, string | number>;
+  /** Logged with the reservation, not part of the idempotency key (a30: study_nudge_sends.kind). */
+  extra?: Record<string, string>;
   isSubscribed: () => Promise<boolean>;
-  mail: SendZohoEmailArgs;
+  /** Email channel: the do-not-email list is checked and Zoho sends. */
+  mail?: SendZohoEmailArgs;
+  /** Any other channel (a30: the customer Telegram bot). Resolves true only on provider acceptance. */
+  send?: () => Promise<boolean>;
   onSent?: () => Promise<void>;
+}
+// b39: the do-not-email list governs mail only; it has no Telegram identity.
+async function suppressed(db: ReminderDb, delivery: Delivery): Promise<boolean> {
+  return !!delivery.mail && await checkSuppression(db, delivery.mail.to, "marketing") !== "clear";
 }
 export async function deliverBatch(db: ReminderDb, table: string, deliveries: Delivery[], dryRun: boolean, now: Date) {
   const counts = { eligible: deliveries.length, pending: 0, sent: 0, failed: 0, skipped: 0 };
@@ -50,26 +57,29 @@ export async function deliverBatch(db: ReminderDb, table: string, deliveries: De
     // b39: the shared do-not-email list (opt-outs, bounces) wins over any
     // subscription row. An unreadable list throws, aborting the run like any
     // other database failure, so an outage is visible and nothing is sent.
-    if (!await delivery.isSubscribed() || await checkSuppression(db, delivery.mail.to, "marketing") !== "clear") { counts.skipped++; continue; }
+    if (!await delivery.isSubscribed() || await suppressed(db, delivery)) { counts.skipped++; continue; }
     counts.pending++;
     if (dryRun) continue;
 
     // Atomic unique insertion before the provider call fences concurrent cron
     // invocations and crash retries. Claimed/failed rows are NEVER auto-retried:
     // an ambiguous provider response cannot establish non-delivery.
-    const claim = await db.from(table).insert({ ...delivery.keys, status: "claimed" }).select("id").single();
+    const claim = await db.from(table).insert({ ...delivery.keys, ...delivery.extra, status: "claimed" }).select("id").single();
     if (claim.error?.code === "23505") { counts.skipped++; continue; }
     assertDb(claim.error);
     if (!claim.data) throw new Error("Reminder reservation missing");
     // Re-check opt-out after acquiring the reservation, right before sending.
-    if (!await delivery.isSubscribed() || await checkSuppression(db, delivery.mail.to, "marketing") !== "clear") {
+    if (!await delivery.isSubscribed() || await suppressed(db, delivery)) {
       // Nothing reached the provider: drop the reservation so the ledger never
       // shows a held send that could not have gone out.
       assertDb((await db.from(table).delete().eq("id", claim.data.id)).error);
       counts.skipped++; continue;
     }
     let ok = false;
-    try { ok = (await sendZohoEmail(delivery.mail)).ok; } catch { /* held for manual reconciliation */ }
+    try {
+      if (delivery.mail) ok = (await sendZohoEmail(delivery.mail)).ok;
+      else if (delivery.send) ok = await delivery.send();
+    } catch { /* held for manual reconciliation */ }
     const stamp = await db.from(table).update({ status: ok ? "sent" : "failed", sent_at: ok ? now.toISOString() : null }).eq("id", claim.data.id);
     assertDb(stamp.error);
     if (ok) { counts.sent++; await delivery.onSent?.(); } else counts.failed++;
@@ -77,12 +87,13 @@ export async function deliverBatch(db: ReminderDb, table: string, deliveries: De
   return counts;
 }
 
-export async function loadSubscriptions(db: ReminderDb, table: string, columns: string, filter: "exam" | "study") {
+export async function loadSubscriptions(db: ReminderDb, table: string, columns: string, filter: "exam" | "study", hour?: number) {
   const result: Record<string, unknown>[] = [];
   // Explicit pagination avoids PostgREST's default 1000-row truncation.
   for (let page = 0; page < 100; page++) {
     let query = db.from(table).select(columns).order("id").range(page * 100, page * 100 + 99);
-    query = filter === "exam" ? query.eq("confirmed", true).is("unsubscribed_at", null) : query.eq("opt_in", true).eq("channel", "email");
+    // a30: study prefs are read one chosen Vienna hour at a time, both channels.
+    query = filter === "exam" ? query.eq("confirmed", true).is("unsubscribed_at", null) : query.eq("opt_in", true).eq("hour", hour ?? 9);
     const { data, error } = await query;
     assertDb(error);
     const rows = (data ?? []) as unknown as Record<string, unknown>[];

@@ -33,6 +33,8 @@ const DAY = 24 * HOUR;
 export type CronSource =
   | { kind: "event"; eventType: string }
   | { kind: "mentor_job"; job: string }
+  /** a30 senders: Off while the env flag is not 'true'; when on, the send ledger is the record (sends only). */
+  | { kind: "flag"; env: string; ledger: string }
   | { kind: "none" };
 
 export interface CronJobDef {
@@ -55,6 +57,8 @@ export const CRON_JOBS: readonly CronJobDef[] = [
   { key: "admin-action-alert", label: "Admin action alert", schedule: "15 * * * *", every: "hourly", intervalMs: HOUR, typicalMs: MIN, source: { kind: "event", eventType: "cron_admin_action_alert_heartbeat" } },
   { key: "mentor-sweep", label: "Mentor sweep", schedule: "*/15 * * * *", every: "every 15 minutes", intervalMs: 15 * MIN, typicalMs: MIN, source: { kind: "mentor_job", job: "sweep" } },
   { key: "mentor-health", label: "Mentor health check", schedule: "0 * * * *", every: "hourly", intervalMs: HOUR, typicalMs: MIN, source: { kind: "none" } },
+  { key: "exam-reminders", label: "Exam deadline reminders", schedule: "0 7 * * *", every: "daily 07:00 UTC", intervalMs: DAY, typicalMs: MIN, source: { kind: "flag", env: "EXAM_REMINDERS_ENABLED", ledger: "exam_reminder_sends" } },
+  { key: "study-nudge", label: "Study reminders", schedule: "5 * * * *", every: "hourly at :05", intervalMs: HOUR, typicalMs: MIN, source: { kind: "flag", env: "STUDY_NUDGE_ENABLED", ledger: "study_nudge_sends" } },
 ];
 
 export type CronState = "ok" | "late" | "overdue" | "stuck" | "failed" | "never" | "off" | "not_recorded" | "unknown";
@@ -88,6 +92,7 @@ export function assessCronJob(job: Pick<CronJobDef, "intervalMs" | "typicalMs" |
   if (ev.off) return { state: "off", tone: "neutral", text: "Off (feature disabled)" };
   if (!ev.lastStartedAt) {
     if (job.source.kind === "none") return { state: "not_recorded", tone: "neutral", text: "No run record (alerts only)" };
+    if (job.source.kind === "flag") return { state: "not_recorded", tone: "neutral", text: `No run record (sends logged in ${job.source.ledger})` };
     return { state: "never", tone: "danger", text: "No run recorded" };
   }
   const started = Date.parse(ev.lastStartedAt);
@@ -134,7 +139,7 @@ export function latestRunByJob(rows: readonly CronRunRow[]): Map<string, CronRun
 /** Combine the evidence for one job: a newer cron_runs row wins over a heartbeat. */
 export function jobHealth(job: CronJobDef, ev: CronEvidence, run: CronRunRow | undefined, now: Date): CronJobHealth {
   let evidence: CronEvidence = ev;
-  let source = job.source.kind === "event" ? "heartbeat event" : job.source.kind === "mentor_job" ? "mentor job record" : "none";
+  let source = job.source.kind === "event" ? "heartbeat event" : job.source.kind === "mentor_job" ? "mentor job record" : job.source.kind === "flag" ? `${job.source.env} + ${job.source.ledger}` : "none";
   if (run && (!ev.lastStartedAt || Date.parse(run.started_at) >= Date.parse(ev.lastStartedAt))) {
     evidence = { lastStartedAt: run.started_at, lastFinishedAt: run.finished_at, lastStatus: run.status, off: ev.off };
     source = "cron_runs";
@@ -206,6 +211,8 @@ export async function loadCronHealth(
       if (!opts.mentorEnabled) ev = { lastStartedAt: null, off: true };
       else if (mentorJob.error) ev = { lastStartedAt: null, readFailed: true };
       else ev = { lastStartedAt: ((mentorJob.data as { last_run_at?: string } | null)?.last_run_at) ?? null };
+    } else if (job.source.kind === "flag") {
+      ev = { lastStartedAt: null, off: process.env[job.source.env] !== "true" };
     } else {
       ev = { lastStartedAt: null };
     }
