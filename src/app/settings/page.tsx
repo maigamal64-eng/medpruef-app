@@ -52,6 +52,7 @@ import {
   billingAccountSentence,
 } from "@/lib/billing-copy";
 import { EXAM_SOURCES, setStoredExamSource, type ExamSourceId } from "@/lib/topics";
+import { getExamLabel } from "@/lib/master-locale/exam-label";
 import {
   Alert,
   Dialog,
@@ -365,7 +366,7 @@ export default function SettingsPage() {
   };
 
   const handleLogout = () => {
-    clearSession();
+    clearSession({ logout: true });
     window.location.href = "/";
   };
 
@@ -509,9 +510,7 @@ export default function SettingsPage() {
     serverActiveExam ||
     (user as { active_exam?: string } | undefined)?.active_exam ||
     "kenntnispruefung";
-  const activeExamLabel =
-    EXAM_SOURCES.find((e) => e.id === activeExamId)?.label ||
-    "Kenntnisprüfung Wien";
+  const activeExamLabel = getExamLabel(activeExamId, "full", lang);
   const preferenceTargetDate =
     serverExamDate === undefined ? profile.targetDate : serverExamDate || "";
 

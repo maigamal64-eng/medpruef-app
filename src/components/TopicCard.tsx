@@ -5,6 +5,8 @@ import Link from "next/link";
 import { getTopicConfig } from "@/lib/topics";
 import { t , type Lang } from "@/lib/i18n";
 import TopicIcon from "@/components/TopicIcon";
+import { formatCount, formatNumber, formatPercent, formatRelativeDays } from "@/lib/master-locale/format";
+import { renderedLanguage } from "@/lib/master-locale/render";
 
 
 
@@ -25,23 +27,24 @@ function getRelativeTime(dateStr: string, lang: Lang): string {
   const days = Math.floor(diff / 86400000);
   if (days === 0) return t("home_today", lang);
   if (days === 1) return t("home_yesterday", lang);
-  return t("home_days_ago", lang).replace("{n}", String(days));
+  return formatRelativeDays(-days, renderedLanguage(lang).lang);
 }
 
 export default function TopicCard({ topic, count, lang, accuracy, answered, delay = 0, examSource, lastStudied }: TopicCardProps) {
   const config = getTopicConfig(topic);
+  const fmtLang = renderedLanguage(lang).lang;
   const href = buildQuizHref({ topic, examSource, practiceMode: 'unseen' });
 
   // Compose an accessible label — screen readers get topic + count + accuracy at once.
   const accuracyPart =
     accuracy !== undefined && answered !== undefined && answered > 0
-      ? `, ${Math.round(Math.min(accuracy, 100))}% ${t("home_accuracy_28", lang)}`
+      ? `, ${formatPercent(Math.round(Math.min(accuracy, 100)), fmtLang)} ${t("home_accuracy_28", lang)}`
       : "";
   const answeredPart =
     answered !== undefined && answered > 0
-      ? `, ${answered} ${t("home_of", lang)} ${count} ${t("home_practiced", lang)}`
+      ? `, ${formatNumber(answered, fmtLang)} ${t("home_of", lang)} ${formatNumber(count, fmtLang)} ${t("home_practiced", lang)}`
       : "";
-  const ariaLabel = `${topic}, ${count.toLocaleString(lang === "de" ? "de-DE" : "en-US")} ${t("questions", lang)}${accuracyPart}${answeredPart}`;
+  const ariaLabel = `${topic}, ${formatCount(count, "question", fmtLang)}${accuracyPart}${answeredPart}`;
 
   return (
     <div className="relative">
@@ -76,9 +79,9 @@ export default function TopicCard({ topic, count, lang, accuracy, answered, dela
                     ? "var(--mp-warning-dk)"
                     : "var(--mp-error)",
               }}
-              title={`${t("home_improving_this_topic_increases_your_overall_score_by", lang)} ~${Math.round(100 / 10)}%`}
+              title={`${t("home_improving_this_topic_increases_your_overall_score_by", lang)} ${formatPercent(10, fmtLang)}`}
             >
-              {Math.round(Math.min(accuracy, 100))}%
+              {formatPercent(Math.round(Math.min(accuracy, 100)), fmtLang)}
             </span>
             {/* Strength badge */}
             <div className="flex items-center gap-1.5">
@@ -122,14 +125,14 @@ export default function TopicCard({ topic, count, lang, accuracy, answered, dela
 
       {/* Question count */}
       <p className="text-xs text-[var(--mp-fg-subtle)] mb-0.5 font-mono">
-        {count.toLocaleString(lang === "de" ? "de-DE" : "en-US")} {t("questions", lang)}
+        {formatCount(count, "question", fmtLang)}
       </p>
       {lastStudied && (
         <p className="text-[10px] text-[var(--mp-fg-subtle)]/70 mb-0.5">{getRelativeTime(lastStudied, lang)}</p>
       )}
       {answered !== undefined && answered > 0 && (
         <p className="text-[10px] text-[var(--mp-fg-subtle)]/70 mb-0.5 font-mono">
-          <bdi dir="ltr">{answered}/{count}</bdi> {t("home_active_questions_covered", lang)}
+          <bdi dir="ltr">{formatNumber(answered, fmtLang)}/{formatNumber(count, fmtLang)}</bdi> {t("home_active_questions_covered", lang)}
         </p>
       )}
 

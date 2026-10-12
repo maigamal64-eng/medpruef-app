@@ -4,7 +4,7 @@ import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { authFetch } from '@/lib/authFetch';
-import { getLang } from '@/lib/i18n';
+import { t, useLang } from '@/lib/i18n';
 import { BrandedLoader } from '@/components/Logo';
 
 interface Mistake { id: number; question: string; topic: string }
@@ -12,14 +12,14 @@ function MistakeList() {
   const params = useSearchParams();
   const examSource = params.get('examSource') || 'kenntnispruefung';
   const topic = params.get('topic');
-  const [lang, setLang] = useState<'de' | 'en'>('de');
+  // LX-19: the stored preference goes to t(), which renders a reviewed overlay or English.
+  const lang = useLang();
   const [rows, setRows] = useState<Mistake[]>([]);
   const [offset, setOffset] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [paywall, setPaywall] = useState(false);
   const [retry, setRetry] = useState(0);
-  useEffect(() => { setLang(getLang()); }, []);
   useEffect(() => {
     let cancelled = false;
     setLoading(true); setError(false);
@@ -37,14 +37,14 @@ function MistakeList() {
   const quiz = new URLSearchParams({ examSource, practiceMode: 'wrong' });
   if (topic) quiz.set('topic', topic);
   return <main className="max-w-3xl mx-auto px-4 py-8 space-y-5">
-    <Link href="/" className="text-sm underline">← {lang === 'de' ? 'Zur Themenübersicht' : 'Back to topics'}</Link>
-    <h1 className="text-2xl font-semibold">{lang === 'de' ? 'Meine Fehlerliste' : 'My mistake list'}{topic ? `: ${topic}` : ''}</h1>
-    <p className="text-sm text-[var(--mp-fg-muted)]">{lang === 'de' ? 'Hier stehen aktive Fragen, die du mindestens einmal falsch beantwortet hast, auch wenn du sie später richtig beantwortet hast. Du entscheidest selbst, wann und welche du wiederholst.' : 'These are active questions you answered incorrectly at least once, including those you later answered correctly. You choose when and which ones to review.'}</p>
-    {loading ? <div role="status"><BrandedLoader /></div> : paywall ? <div role="status" className="mp-card p-5 rounded-xl space-y-3"><p className="font-semibold">{lang === 'de' ? 'Die Fehlerwiederholung gehört zu Pro.' : 'Mistake review is part of Pro.'}</p><p className="text-sm text-[var(--mp-fg-muted)]">{lang === 'de' ? 'Ihre freien Fragen je Prüfung können Sie weiter üben. Mit Pro wiederholen Sie gezielt jede falsch beantwortete Frage.' : 'You can keep practising your free questions per exam. With Pro you can review every question you answered incorrectly.'}</p><Link className="mp-btn mp-btn--primary min-h-11" href="/pricing?gate=mistakes">{lang === 'de' ? 'Pro-Tarife ansehen' : 'See Pro plans'}</Link></div> : error ? <div role="alert"><p>{lang === 'de' ? 'Die Fehlerliste konnte nicht geladen werden.' : 'Could not load your mistake list.'}</p><button className="mp-btn mp-btn--secondary" onClick={() => setRetry(v => v+1)}>{lang === 'de' ? 'Erneut versuchen' : 'Retry'}</button></div> : <>
-      {rows.length > 0 && <Link className="mp-btn mp-btn--primary" href={`/quiz?${quiz}`}>{lang === 'de' ? 'Fehler wiederholen' : 'Review mistakes'}</Link>}
-      {rows.length === 0 && <p>{lang === 'de' ? 'Keine weiteren Fehler in dieser Auswahl.' : 'No more mistakes in this selection.'}</p>}
-      <ol className="space-y-3">{rows.map(row => <li key={row.id}><Link className="mp-card block p-4 rounded-xl hover:border-[var(--mp-viridian)]" href={`/quiz?${quiz}&questionId=${row.id}`}><span className="block text-xs text-[var(--mp-fg-muted)]">{row.topic} · #{row.id}</span><span className="block mt-1">{row.question}</span><span className="block text-sm underline mt-2">{lang === 'de' ? 'Diese Frage wiederholen' : 'Review this question'}</span></Link></li>)}</ol>
-      <div className="flex gap-3">{offset > 0 && <button className="mp-btn mp-btn--secondary" onClick={() => setOffset(Math.max(0, offset-50))}>{lang === 'de' ? 'Zurück' : 'Previous'}</button>}{rows.length === 50 && <button className="mp-btn mp-btn--secondary" onClick={() => setOffset(offset+50)}>{lang === 'de' ? 'Weitere Fehler' : 'More mistakes'}</button>}</div>
+    <Link href="/" className="text-sm underline"><span aria-hidden className="inline-block rtl:rotate-180">←</span> {t('mistakes_back', lang)}</Link>
+    <h1 className="text-2xl font-semibold">{t('mistakes_title', lang)}{topic ? `: ${topic}` : ''}</h1>
+    <p className="text-sm text-[var(--mp-fg-muted)]">{t('mistakes_intro', lang)}</p>
+    {loading ? <div role="status"><BrandedLoader /></div> : paywall ? <div role="status" className="mp-card p-5 rounded-xl space-y-3"><p className="font-semibold">{t('mistakes_paywall_title', lang)}</p><p className="text-sm text-[var(--mp-fg-muted)]">{t('mistakes_paywall_body', lang)}</p><Link className="mp-btn mp-btn--primary min-h-11" href="/pricing?gate=mistakes">{t('mistakes_see_plans', lang)}</Link></div> : error ? <div role="alert"><p>{t('mistakes_load_error', lang)}</p><button className="mp-btn mp-btn--secondary" onClick={() => setRetry(v => v+1)}>{t('mistakes_retry', lang)}</button></div> : <>
+      {rows.length > 0 && <Link className="mp-btn mp-btn--primary" href={`/quiz?${quiz}`}>{t('mistakes_review_all', lang)}</Link>}
+      {rows.length === 0 && <p>{t('mistakes_none', lang)}</p>}
+      <ol className="space-y-3">{rows.map(row => <li key={row.id}><Link className="mp-card block p-4 rounded-xl hover:border-[var(--mp-viridian)]" href={`/quiz?${quiz}&questionId=${row.id}`}><span className="block text-xs text-[var(--mp-fg-muted)]"><span lang="de" dir="ltr">{row.topic}</span> · <bdi dir="ltr">#{row.id}</bdi></span><span className="block mt-1" lang="de" dir="ltr">{row.question}</span><span className="block text-sm underline mt-2">{t('mistakes_review_one', lang)}</span></Link></li>)}</ol>
+      <div className="flex gap-3">{offset > 0 && <button className="mp-btn mp-btn--secondary" onClick={() => setOffset(Math.max(0, offset-50))}>{t('mistakes_previous', lang)}</button>}{rows.length === 50 && <button className="mp-btn mp-btn--secondary" onClick={() => setOffset(offset+50)}>{t('mistakes_more', lang)}</button>}</div>
     </>}
   </main>;
 }

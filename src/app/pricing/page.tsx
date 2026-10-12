@@ -47,6 +47,7 @@ import TrialActivation from "@/components/TrialActivation";
 import CheckoutStallPrompt from "@/components/CheckoutStallPrompt";
 import { BrandedLoader } from "@/components/ui";
 import { claimsFor, claimText } from "@/lib/learning-claims";
+import { getExamLabel } from "@/lib/master-locale/exam-label";
 
 type Lang = "de" | "en";
 
@@ -302,8 +303,8 @@ export default function PricingPage() {
           </h2>
           <p className="mp-body text-[var(--mp-fg-muted)] max-w-2xl mx-auto">
             {lang === "de"
-              ? "Übe mit den Fragenbanken Kenntnisprüfung Wien, Stichprobentest und Pharmakologie. Über 10.000 kuratierte Übungsfragen aus unterschiedlichen Quellen. Die Wiener Bank enthält SIP4a/SIP5a-basierte MCQ-Übungen, keine Simulation der postgradualen ÖÄK-Arztprüfung Allgemeinmedizin."
-              : "Practise with the Kenntnisprüfung Vienna, Stichprobentest and Pharmakologie question banks. Over 10,000 curated practice questions from different sources. The Vienna bank contains SIP4a/SIP5a-based MCQ exercises, not a simulation of the postgraduate ÖÄK general medicine exam."}
+              ? `Üben Sie mit den Fragenbanken ${getExamLabel("kenntnispruefung", "full", "de")}, ${getExamLabel("kmp_innsbruck", "full", "de")}, ${getExamLabel("pharma", "full", "de")}. Über 10.000 kuratierte Übungsfragen aus unterschiedlichen Quellen. Die Wiener Bank enthält SIP4a/SIP5a-basierte MCQ-Übungen, keine Simulation der postgradualen ÖÄK-Arztprüfung Allgemeinmedizin.`
+              : `Practise with the ${getExamLabel("kenntnispruefung", "full", "en")}, ${getExamLabel("kmp_innsbruck", "full", "en")}, ${getExamLabel("pharma", "full", "en")} question banks. Over 10,000 curated practice questions from different sources. The Vienna bank contains SIP4a/SIP5a-based MCQ exercises, not a simulation of the postgraduate ÖÄK general medicine exam.`}
           </p>
         </section>
 
@@ -484,8 +485,8 @@ export default function PricingPage() {
               }
               a={
                 lang === "de"
-                  ? "Nein, jeder bezahlte Tarif enthält alle drei Prüfungstypen (Kenntnisprüfung Wien, Stichprobentest (Innsbruck), Pharmakologie). Wenn du nur eine Prüfung brauchst, gibt dir der kostenlose Tarif 150 Fragen pro Prüfungstyp."
-                  : "No, every paid tier unlocks all three exam types (Kenntnisprüfung Wien, Stichprobentest (Innsbruck), Pharmakologie). If you only need one exam, the free tier gives you 150 questions per exam type."
+                  ? `Nein, jeder bezahlte Tarif enthält alle drei Fragenbanken (${getExamLabel("kenntnispruefung", "full", "de")}, ${getExamLabel("kmp_innsbruck", "full", "de")}, ${getExamLabel("pharma", "full", "de")}). Wenn Sie nur eine Prüfung brauchen, gibt Ihnen der kostenlose Tarif 150 Fragen pro Fragenbank.`
+                  : `No, every paid plan unlocks all three question banks (${getExamLabel("kenntnispruefung", "full", "en")}, ${getExamLabel("kmp_innsbruck", "full", "en")}, ${getExamLabel("pharma", "full", "en")}). If you only need one exam, the free plan gives you 150 questions per question bank.`
               }
             />
           </div>
@@ -571,11 +572,9 @@ function FreeTierCard({ lang, examSource }: { lang: Lang; examSource: ExamSource
   // The Free CTA used to hard-code Pharma. We now route to whichever exam the
   // user last selected (or kenntnispruefung if they're brand new), so KMP and
   // Kenntnisprüfung cohorts don't get parachuted into a Pharma quiz.
-  const examLabel = examSource === "kenntnispruefung"
-    ? (lang === "de" ? "Kenntnisprüfung-Fragen" : "Kenntnisprüfung questions")
-    : examSource === "kmp_innsbruck"
-    ? (lang === "de" ? "Stichprobentest-Fragen" : "Stichprobentest questions")
-    : (lang === "de" ? "Pharma-Fragen" : "Pharmakologie questions");
+  const examLabel = lang === "de"
+    ? `Fragen für ${getExamLabel(examSource, "full", "de")}`
+    : `${getExamLabel(examSource, "full", "en")} questions`;
   return (
     <article
       className="rounded-[var(--mp-r-card)] overflow-hidden p-6 md:p-7 grid grid-cols-1 md:grid-cols-[1.4fr_1fr] gap-6 items-center"
@@ -606,8 +605,8 @@ function FreeTierCard({ lang, examSource }: { lang: Lang; examSource: ExamSource
         </div>
         <p className="mp-body text-[var(--mp-fg-muted)] mb-4 text-sm leading-relaxed">
           {lang === "de"
-            ? "150 Fragen je Prüfungstyp (Kenntnisprüfung Wien, Stichprobentest (Innsbruck), Pharmakologie), 450 gesamt, mit Erklärungen, wo vorhanden. Nur Qbank-Modus, kein Ablaufdatum."
-            : "150 questions per exam type (Kenntnisprüfung Wien, Stichprobentest (Innsbruck), Pharmakologie), 450 in total, with explanations where available. Qbank-only, no expiry."}
+            ? `150 Fragen je Fragenbank (${getExamLabel("kenntnispruefung", "full", "de")}, ${getExamLabel("kmp_innsbruck", "full", "de")}, ${getExamLabel("pharma", "full", "de")}), 450 gesamt, mit Erklärungen, wo vorhanden. Nur Übungsmodus, kein Ablaufdatum.`
+            : `150 questions per question bank (${getExamLabel("kenntnispruefung", "full", "en")}, ${getExamLabel("kmp_innsbruck", "full", "en")}, ${getExamLabel("pharma", "full", "en")}), 450 in total, with explanations where available. Practice mode only, no expiry.`}
         </p>
         <ul className="space-y-1.5 text-sm text-[var(--mp-fg)]">
           <li className="flex items-start gap-2">

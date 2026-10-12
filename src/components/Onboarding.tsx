@@ -7,6 +7,7 @@ import LanguagePicker from "./LanguagePicker";
 import { safeStorage } from "@/lib/safe-storage";
 import { t as tr, getUiLang } from "@/lib/i18n";
 import { EXAM_SOURCES, type ExamSourceId } from "@/lib/topics";
+import { getExamLabel } from "@/lib/master-locale/exam-label";
 import ExamSittingPicker from "./ExamSittingPicker";
 import { readAuthEntry } from '@/lib/auth-entry';
 
@@ -186,11 +187,6 @@ export default function Onboarding({ lang = "de", onLangChange, onComplete }: On
             <div className="space-y-3 pb-2">
               {EXAM_SOURCES.map((exam) => {
                 const selected = data.examSource === exam.id;
-                const specialtyCount =
-                  exam.id === "kenntnispruefung" ? 10 : exam.id === "kmp_innsbruck" ? 12 : 1;
-                const formattedQuestions = activeLang === "de"
-                  ? exam.questions.toLocaleString("de-DE")
-                  : exam.questions.toLocaleString("en-US");
                 return (
                   <button
                     key={exam.id}
@@ -204,20 +200,19 @@ export default function Onboarding({ lang = "de", onLangChange, onComplete }: On
                     }`}
                   >
                     <span
-                      className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-2xl ${
-                        selected ? "bg-[var(--mp-cta-blue)]" : "bg-[var(--mp-surface-sunken)]"
+                      className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl font-mono text-[11px] font-bold ${
+                        selected ? "bg-[var(--mp-cta-blue)] text-white" : "bg-[var(--mp-surface-sunken)] text-[var(--mp-fg)]"
                       }`}
                       aria-hidden
                     >
-                      {exam.badge}
+                      {getExamLabel(exam.id, "short")}
                     </span>
                     <div className="min-w-0 flex-1">
-                      {/* `label` carries "Stichprobentest (Innsbruck)" (the SoT
-                          display name, never "KMP"); fullName for kmp is
-                          "(Nostrifizierung)" which the design does not show. */}
-                      <h3 className="text-[15px] font-bold text-[var(--mp-fg)]">{exam.label}</h3>
-                      <p className="mt-0.5 font-mono text-xs text-[var(--mp-fg-muted)]">
-                        {specialtyCount} {t("onb_exam_specialties_label")} · {formattedQuestions} {t("onb_exam_questions_label")}
+                      {/* UX-GLOBAL-04: one label helper; the bridge line carries the
+                          practice qualifier instead of hand-typed counts. */}
+                      <h3 className="text-[15px] font-bold text-[var(--mp-fg)]">{getExamLabel(exam.id, "full", activeLang)}</h3>
+                      <p className="mt-0.5 text-xs text-[var(--mp-fg-muted)]">
+                        {getExamLabel(exam.id, "bridge", activeLang)}
                       </p>
                     </div>
                     <span

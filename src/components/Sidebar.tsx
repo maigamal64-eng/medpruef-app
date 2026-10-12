@@ -17,18 +17,9 @@ import {
 import { useUserTier } from "@/lib/hooks/useUserTier";
 import { useMentorAvailability } from "@/components/mentor/useMentorAvailability";
 import { mentorT } from "@/lib/i18n-mentor";
+import { examChipAccessibleName, getExamLabel } from "@/lib/master-locale/exam-label";
 
 
-
-/**
- * Abbreviation shown in the 40px collapsed-rail exam chip.
- * Keep these ≤3 chars — the chip is 40×40 with mono/tabular-nums type.
- */
-const EXAM_ABBR: Record<ExamSourceId, string> = {
-  kenntnispruefung: "SIP",
-  kmp_innsbruck: "STP",
-  pharma: "PHA",
-};
 
 interface SidebarProps {
   lang: Lang;
@@ -85,7 +76,7 @@ function CollapsedExamChip() {
   }
 
   const activeExam = EXAM_SOURCES.find((e) => e.id === active) ?? EXAM_SOURCES[0];
-  const abbr = EXAM_ABBR[activeExam.id as ExamSourceId];
+  const abbr = getExamLabel(activeExam.id, "short");
 
   const switchTo = (id: ExamSourceId) => {
     if (id === active) {
@@ -130,12 +121,12 @@ function CollapsedExamChip() {
                    bg-[var(--mp-viridian)]/15 hover:bg-[var(--mp-viridian)]/25
                    border border-[var(--mp-viridian)]/30
                    text-[var(--mp-accent-teal)]
-                   font-mono tabular-nums text-[11px] font-bold tracking-tight
+                   font-mono tabular-nums text-[10px] font-bold tracking-tight
                    transition-colors"
         aria-haspopup="listbox"
         aria-expanded={open}
-        aria-label={`Prüfung: ${activeExam.fullName}`}
-        title={activeExam.fullName}
+        aria-label={examChipAccessibleName(activeExam.id, lang)}
+        title={getExamLabel(activeExam.id, "full", lang)}
       >
         {abbr}
       </button>
@@ -165,10 +156,9 @@ function CollapsedExamChip() {
                 role="option"
                 aria-selected={isActive}
               >
-                <span className="text-lg mt-0.5 leading-none">{exam.badge}</span>
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium flex items-center gap-2">
-                    <span className="truncate">{exam.label}</span>
+                    <span className="truncate">{getExamLabel(exam.id, "full", lang)}</span>
                     {isActive && (
                       <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor" className="flex-shrink-0">
                         <path d="M7.5 13.5L4 10l1.4-1.4 2.1 2.1 7-7L16 5.1z" />
@@ -176,13 +166,8 @@ function CollapsedExamChip() {
                     )}
                   </div>
                   <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-                    {exam.fullName}
+                    {getExamLabel(exam.id, "bridge", lang)}
                   </div>
-                  {exam.questions > 0 && (
-                    <div className="text-[10px] text-slate-400 dark:text-slate-500 font-mono mt-0.5">
-                      {exam.questions.toLocaleString(lang === "de" ? "de-DE" : "en-US")} {t("questions", lang)}
-                    </div>
-                  )}
                 </div>
               </button>
             );
@@ -197,6 +182,9 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0 }: Sidebar
   const pathname = usePathname();
   const xpInfo = getLevelFromXP(totalXp);
   const [collapsed, setCollapsed] = useState(false);
+  // UX-GLOBAL-04: the subtitle names the learner's active exam, not always Vienna.
+  const [sidebarExam, setSidebarExam] = useState<ExamSourceId | null>(null);
+  useEffect(() => { setSidebarExam(getStoredExamSource()); }, []);
   // Invite-only referral program gate (2026-06-25). The nudge-dot and
   // any referral link text are suppressed for accounts not enrolled.
   const { referralsEnabled } = useUserTier();
@@ -322,7 +310,7 @@ export default function Sidebar({ lang, userId, userName, totalXp = 0 }: Sidebar
               <h1 className="text-base font-bold text-white tracking-tight">
                 <span>Med</span><span className="text-[var(--mp-accent-teal)]">Prüf</span>
               </h1>
-              <p className="text-[10px] text-[var(--mp-sidebar-fg-muted)] leading-tight">{t("exam_prep", lang)}</p>
+              <p className="text-[10px] text-[var(--mp-sidebar-fg-muted)] leading-tight">{sidebarExam ? t("sidebar_preparing_for", lang).replace("{exam}", getExamLabel(sidebarExam, "full", lang)) : t("exam_prep", lang)}</p>
             </div>
           )}
         </div>

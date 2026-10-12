@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { safeStorage } from './safe-storage'
-import { detectLanguage, isUiLanguage, renderLang } from './language-model'
+import { detectLanguage, isUiLanguage, renderLang, REVIEWED_LANGS } from './language-model'
+import { renderedLanguage, resolveString } from './master-locale/render'
 export { renderLang } from './language-model'
 
 /** Stored preference stays separate from the reviewed language rendered on screen. */
@@ -17,6 +18,20 @@ export const LANG_LABELS: Record<Lang, string> = {
 }
 
 const translations = {
+  // /mistakes (a10, LX-19 exemplar: every string through t(), formal Sie).
+  mistakes_back: { de: "Zur Übersicht der Fachgebiete", en: "Back to topics" },
+  mistakes_title: { de: "Meine Fehler", en: "My mistakes" },
+  mistakes_intro: { de: "Hier stehen aktive Fragen, die Sie mindestens einmal falsch beantwortet haben, auch wenn Sie sie später richtig beantwortet haben. Sie entscheiden selbst, wann und welche Sie wiederholen.", en: "These are active questions you answered incorrectly at least once, including those you later answered correctly. You choose when and which ones to review." },
+  mistakes_paywall_title: { de: "Die Wiederholung Ihrer Fehler gehört zu Pro.", en: "Reviewing your mistakes is part of Pro." },
+  mistakes_paywall_body: { de: "Ihre kostenlosen Fragen je Fragenbank können Sie weiter üben. Mit Pro wiederholen Sie gezielt jede falsch beantwortete Frage.", en: "You can keep practising your free questions per question bank. With Pro you can review every question you answered incorrectly." },
+  mistakes_see_plans: { de: "Tarife ansehen", en: "See plans" },
+  mistakes_load_error: { de: "Ihre Fehler konnten nicht geladen werden.", en: "Could not load your mistakes." },
+  mistakes_retry: { de: "Erneut versuchen", en: "Try again" },
+  mistakes_review_all: { de: "Fehler wiederholen", en: "Review mistakes" },
+  mistakes_none: { de: "Keine weiteren Fehler in dieser Auswahl.", en: "No more mistakes in this selection." },
+  mistakes_review_one: { de: "Diese Frage wiederholen", en: "Review this question" },
+  mistakes_previous: { de: "Zurück", en: "Previous" },
+  mistakes_more: { de: "Weitere Fehler", en: "More mistakes" },
   study_edit_date: { de: "Prüfungsdatum ändern", en: "Change exam date" },
   study_pass_congratulation: { de: "Du hast bestanden.", en: "You passed." },
   study_pass_recorded: { de: "Wir haben dein Ergebnis gespeichert.", en: "We have recorded your result." },
@@ -148,8 +163,8 @@ const translations = {
   home_seen_after: { de: "der Fragenbank gesehen", en: "of this question bank" },
   home_topics_error: { de: "Fachgebiete konnten nicht geladen werden.", en: "Topics could not be loaded." },
   home_simulation: { de: "Prüfung simulieren", en: "Simulate an exam" },
-  home_days_until: { de: "Noch {n} Tage bis zur Prüfung", en: "{n} days until the exam" },
-  home_days_short: { de: "noch {n} T", en: "{n} d left" },
+  home_days_until: { de: "Noch {days} bis zur Prüfung", en: "{days} until the exam" },
+  home_days_short: { de: "noch {days}", en: "{days} left" },
   home_focus: { de: "Fokus: {topic}", en: "Focus: {topic}" },
   home_focus_body: { de: "{n}% Genauigkeit, 10 Fragen gezielt üben?", en: "{n}% accuracy, practice 10 focused questions?" },
   home_coach_body: { de: "{n}% Genauigkeit · 10 gezielte Fragen können dich sichtbar voranbringen.", en: "{n}% accuracy · 10 focused questions can move the needle." },
@@ -299,7 +314,7 @@ const translations = {
   handoff_sign_in_here_in_this_browser_instead: { de: "Stattdessen hier im Browser anmelden", en: "Sign in here in this browser instead" },
   handoff_signing_in: { de: "Anmeldung läuft...", en: "Signing in..." },
 
-  auth_contact: { de: 'Probleme beim Anmelden? Schreib uns', en: 'Trouble signing in? Contact us' },
+  auth_contact: { de: 'Probleme beim Einloggen? Schreiben Sie uns', en: 'Trouble signing in? Contact us' },
   auth_existing: { de: 'Ich habe schon ein Konto: Einloggen', en: 'I already have an account: Sign in' },
   auth_cancel: { de: 'So kündigst du', en: 'How to cancel' },
 
@@ -332,7 +347,8 @@ const translations = {
   'quick_start': { de: 'Schnellstart: Zufälliges Thema', en: 'Quick Start: Random Topic' },
   'specialties': { de: 'Fachgebiete', en: 'Specialties' },
   'connection_error': { de: 'Verbindungsfehler', en: 'Connection error' },
-  'exam_prep': { de: 'Österreichische Kenntnisprüfung Vorbereitung (Wien)', en: 'Austrian Kenntnisprüfung Preparation (Vienna)' },
+  'exam_prep': { de: 'Vorbereitung auf Prüfungen in Österreich', en: 'Preparation for exams in Austria' },
+  'sidebar_preparing_for': { de: 'Vorbereitung: {exam}', en: 'Preparing for {exam}' },
   'open_in_telegram': { de: 'Öffne diese App in Telegram für den vollen Zugang.', en: 'Open this app in Telegram for full access.' },
   'questions_in_topics': { de: 'Fragen in', en: 'questions in' },
   'topics_label': { de: 'Fachgebieten', en: 'specialties' },
@@ -441,7 +457,7 @@ const translations = {
   'select_country': { de: 'Land eingeben', en: 'Enter country' },
   'favorites': { de: 'Gemerkte Fragen', en: 'Bookmarked Questions' },
   'no_favorites': { de: 'Noch keine gemerkten Fragen', en: 'No bookmarked questions yet' },
-  'profile_not_logged_in': { de: 'Bitte melde dich an, um dein Profil zu sehen', en: 'Please sign in to view your profile' },
+  'profile_not_logged_in': { de: 'Bitte loggen Sie sich ein, um Ihr Profil zu sehen', en: 'Please sign in to view your profile' },
   'progress_overview': { de: 'Fortschrittsübersicht', en: 'Progress Overview' },
 
   // Materials page
@@ -492,7 +508,7 @@ const translations = {
   'completion_pct': { de: 'Gesamtfortschritt', en: 'Overall Progress' },
   'questions_per_specialty': { de: 'Fragen pro Fachgebiet', en: 'Questions per Specialty' },
   'weekly_activity': { de: 'Wochenaktivität', en: 'Weekly Activity' },
-  'sign_in_for_stats': { de: 'Melde dich an um Statistiken zu sehen', en: 'Sign in to see statistics' },
+  'sign_in_for_stats': { de: 'Bitte loggen Sie sich ein, um Statistiken zu sehen', en: 'Sign in to see statistics' },
 
   // Progress dashboard
   'progress': { de: 'Fortschritt', en: 'Progress' },
@@ -1068,13 +1084,31 @@ const translations = {
 
 export type TranslationKey = keyof typeof translations
 
-export function t(key: TranslationKey, lang: Lang = 'de'): string {
-  const base = translations[key] as Record<string, string> | undefined
-  // Non-DE/EN overlays stay unlisted until reviewed. Never invent medical copy.
-  return base?.[renderLang(lang)] || base?.en || translations.language_fallback.en
+/**
+ * Reviewed overlays for languages beyond de/en, loaded as a separate chunk
+ * only when such a language is both chosen and reviewed (REVIEWED_LANGS), so
+ * de/en learners never download them.
+ */
+const overlays: Partial<Record<Lang, Partial<Record<string, string>>>> = {}
+export function registerOverlay(lang: Lang, dict: Partial<Record<string, string>> | undefined): void {
+  if (dict) overlays[lang] = dict
+}
+function needsOverlay(lang: Lang): boolean {
+  return lang !== 'de' && lang !== 'en' && REVIEWED_LANGS.includes(lang) && !overlays[lang]
+}
+async function loadOverlay(lang: Lang): Promise<void> {
+  if (!needsOverlay(lang)) return
+  const mod = await import('./i18n-extra')
+  registerOverlay(lang, (mod.EXTRA_TRANSLATIONS as Partial<Record<Lang, Partial<Record<string, string>>>>)[lang])
 }
 
-export function isRtl(lang: Lang): boolean { void lang; return false }
+/** Per-key fallback: reviewed overlay, then English, never German for a non-German choice, never a raw key. */
+export function t(key: TranslationKey, lang: Lang = 'de'): string {
+  const base = translations[key] as { de?: string; en?: string } | undefined
+  return resolveString(base, lang, overlays[lang], key, translations.language_fallback.en).text
+}
+
+export function isRtl(lang: Lang): boolean { return renderedLanguage(lang).dir === 'rtl' }
 
 export function getUiLang(): Lang {
   if (typeof window === 'undefined') return 'de'
@@ -1120,23 +1154,30 @@ export function setLang(lang: Lang) {
 export function useLang(): Lang {
   const [lang, setLangLocal] = useState<Lang>('de')
   useEffect(() => {
-    setLangLocal(getUiLang())
+    let alive = true
+    const apply = (next: Lang) => {
+      if (!needsOverlay(next)) { setLangLocal(next); return }
+      // Keep the current strings until the reviewed overlay chunk arrives.
+      void loadOverlay(next).catch(() => undefined).finally(() => { if (alive) setLangLocal(next) })
+    }
+    apply(getUiLang())
     const handler = (e: Event) => {
       const detail = (e as CustomEvent<Lang>).detail
       if (detail && isUiLanguage(detail)) {
-        setLangLocal(detail)
+        apply(detail)
       } else {
-        setLangLocal(getUiLang())
+        apply(getUiLang())
       }
     }
     const storageHandler = (e: StorageEvent) => {
       if (e.key === 'medpruef-lang') {
-        setLangLocal(getUiLang())
+        apply(getUiLang())
       }
     }
     window.addEventListener(LANG_EVENT, handler)
     window.addEventListener('storage', storageHandler)
     return () => {
+      alive = false
       window.removeEventListener(LANG_EVENT, handler)
       window.removeEventListener('storage', storageHandler)
     }

@@ -48,7 +48,7 @@ for (const lang of ['de', 'en']) for (const dark of [false, true]) {
     const progress = page.getByRole('progressbar'); await expect(progress).not.toHaveAttribute('aria-valuenow', '0');
     await error.locator('..').getByRole('button', { name: lang === 'de' ? 'Erneut versuchen' : 'Try again' }).click();
     await expect(error).toHaveCount(0); await expect(progress).toHaveAttribute('aria-valuenow', '50');
-    await expect(page.getByRole('link', { name: /Pharmakologie, 40/ })).toContainText('95%');
+    await expect(page.getByRole('link', { name: /Pharmakologie, 40/ })).toContainText(/95\u202F?%/);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     await page.screenshot({ path: test.info().outputPath(`home-${lang}-${dark ? 'dark' : 'light'}.png`), fullPage: true });
   });

@@ -6,6 +6,7 @@ import { getStoredSession } from '@/lib/auth'
 import { AlertTriangle, UserPlus } from 'lucide-react'
 import Link from 'next/link'
 import { t, useLang } from '@/lib/i18n'
+import { safeSessionStorage } from "@/lib/safe-storage";
 
 /**
  * Persistent banner shown to users logged in as guest_*.
@@ -28,7 +29,7 @@ export default function GuestMigrationBanner() {
     const session = getStoredSession()
     const userId = session?.user?.id || ''
     setIsGuest(userId.startsWith('guest_'))
-    setDismissed(sessionStorage.getItem('medpruef_guest_banner_dismissed') === '1')
+    setDismissed(safeSessionStorage.getItem('medpruef_guest_banner_dismissed') === '1')
   }, [])
 
   const hideOnPath = ['/login', '/landing', '/privacy', '/terms', '/impressum'].some(p =>
@@ -38,7 +39,7 @@ export default function GuestMigrationBanner() {
 
   const handleDismiss = () => {
     setDismissed(true)
-    sessionStorage.setItem('medpruef_guest_banner_dismissed', '1')
+    safeSessionStorage.setItem('medpruef_guest_banner_dismissed', '1')
   }
 
   return (

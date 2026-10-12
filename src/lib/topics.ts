@@ -1,3 +1,4 @@
+import { getExamLabel } from './master-locale/exam-label'
 // Topic + exam configuration for MedPrüf.
 //
 // The app supports multiple exam types via questions.exam_type:
@@ -49,28 +50,32 @@ export function getTopicConfig(topic: string) {
 export const EXAM_SOURCES = [
   {
     id: 'kenntnispruefung',
-    label: 'Kenntnisprüfung',
-    fullName: 'Österreichische Kenntnisprüfung (Wien)',
-    shortLabel: 'KP',
-    badge: '🇦🇹',
+    label: getExamLabel('kenntnispruefung', 'full', 'de'),
+    fullName: getExamLabel('kenntnispruefung', 'full', 'de'),
+    bridge: { de: getExamLabel('kenntnispruefung', 'bridge', 'de'), en: getExamLabel('kenntnispruefung', 'bridge', 'en') },
+    shortLabel: getExamLabel('kenntnispruefung', 'short'),
+    /** Emoji flags render as letters on Windows (UX-GLOBAL-04); no badge. */
+    badge: '',
     questions: 7566,
-    description: { de: 'Wiener Kenntnisprüfung', en: 'Vienna Kenntnisprüfung' },
+    description: { de: 'Übungsfragen für SIP4a und SIP5a an der MedUni Wien', en: 'Practice questions for SIP4a and SIP5a at MedUni Wien' },
   },
   {
     id: 'kmp_innsbruck',
-    label: 'Stichprobentest (Innsbruck)',
-    fullName: 'Stichprobentest (Nostrifizierung)',
-    shortLabel: 'STP',
-    badge: '🏔️',
+    label: getExamLabel('kmp_innsbruck', 'full', 'de'),
+    fullName: getExamLabel('kmp_innsbruck', 'full', 'de'),
+    bridge: { de: getExamLabel('kmp_innsbruck', 'bridge', 'de'), en: getExamLabel('kmp_innsbruck', 'bridge', 'en') },
+    shortLabel: getExamLabel('kmp_innsbruck', 'short'),
+    badge: '',
     questions: 2742,
     description: { de: 'Nationaler MedUni-Stichprobentest, Fragen aus dem Innsbruck-Curriculum', en: 'National MedUni Stichprobentest, questions from the Innsbruck curriculum' },
   },
   {
     id: 'pharma',
-    label: 'Pharma',
-    fullName: 'Pharmakologie Rezeptierkunde',
-    shortLabel: 'Pharma',
-    badge: '💊',
+    label: getExamLabel('pharma', 'full', 'de'),
+    fullName: getExamLabel('pharma', 'full', 'de'),
+    bridge: { de: getExamLabel('pharma', 'bridge', 'de'), en: getExamLabel('pharma', 'bridge', 'en') },
+    shortLabel: getExamLabel('pharma', 'short'),
+    badge: '',
     questions: 335,
     description: { de: 'Rezeptierkunde / Stichpunkte', en: 'Prescription Studies' },
   },

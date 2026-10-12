@@ -1,4 +1,5 @@
 import { safeStorage } from './safe-storage';
+import { bindAccountState, clearAccountState } from './master-locale/storage-keys';
 /**
  * Client-side authentication utilities.
  * Supports Telegram Mini App, Telegram Login Widget, and Email/Password.
@@ -235,6 +236,9 @@ export function storeSession(session: StoredSession): void {
         session.user as unknown as Record<string, unknown>,
       ) as StoredSession['user'],
     };
+    // UX-GLOBAL-39: a different account on this device must not inherit the
+    // previous learner's exam, onboarding or progress mirrors.
+    bindAccountState(safe.user?.id);
     safeStorage.setItem(SESSION_KEY, JSON.stringify(safe));
     // The auth credential is the signed token (see setSessionToken /
     // src/lib/session.ts), persisted separately at the login mint points.
@@ -263,12 +267,15 @@ export function __sanitizeUserForStorageForTests(
 }
 
 /** Remove stored session (logout). */
-export function clearSession(): void {
+export function clearSession(options: { logout?: boolean } = {}): void {
   if (typeof window === 'undefined') return;
   try {
     safeStorage.removeItem(SESSION_KEY);
     safeStorage.removeItem(SESSION_TOKEN_KEY);
     safeStorage.removeItem('medpruef_session_issued_at'); // legacy pre-S-1 key
+    // Explicit logout clears the account mirrors; an expired token (401) keeps
+    // them for the same learner, and an account switch is caught by the owner check.
+    if (options.logout) clearAccountState();
     // Remove the skip-landing cookie so the middleware redirects them to
     // /landing after logout (F6 fix companion).
     document.cookie = 'mp_skip_landing=; path=/; max-age=0; SameSite=Lax';

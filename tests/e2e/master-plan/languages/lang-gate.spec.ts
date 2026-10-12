@@ -14,6 +14,7 @@ import { expect, test } from "@playwright/test";
 import fs from "node:fs";
 import path from "node:path";
 import { findLeaks, LANGS, RTL } from "../../../../scripts/master-language/detect.mjs";
+import { REVIEWED_LANGS } from "../../../../src/lib/language-model";
 
 const allow = JSON.parse(
   fs.readFileSync(path.join(process.cwd(), "scripts/master-language/allowlist.json"), "utf8"),
@@ -57,13 +58,17 @@ for (const lang of LANGS as string[]) {
       await page.waitForTimeout(600);
 
       const htmlLang = await page.evaluate(() => document.documentElement.lang);
-      if (!deOnly(route)) expect(htmlLang, "html lang follows the picker").toBe(lang);
+      // a10 (UX-GLOBAL-02): <html lang dir> name the language actually rendered.
+      // A language whose review gate is closed renders English, so it reads
+      // lang="en" dir="ltr"; rtl appears only for reviewed Arabic copy.
+      const rendered = (REVIEWED_LANGS as readonly string[]).includes(lang) ? lang : "en";
+      if (!deOnly(route)) expect(htmlLang, "html lang names the rendered language").toBe(rendered);
 
       if ((RTL as Set<string>).has(lang)) {
         const dir = await page.evaluate(
           () => document.documentElement.dir || document.body.getAttribute("dir") || "",
         );
-        expect.soft(dir, `RTL dir on ${route}`).toBe("rtl");
+        expect.soft(dir, `dir on ${route}`).toBe((RTL as Set<string>).has(rendered) ? "rtl" : "ltr");
         fs.mkdirSync(RTL_OUT, { recursive: true });
         const name = route === "/" ? "home" : route.replace(/^\//, "").replace(/\//g, "_");
         await page.screenshot({ path: path.join(RTL_OUT, `${name}-ar-375.png`), fullPage: true });

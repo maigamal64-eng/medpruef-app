@@ -400,7 +400,7 @@ export default function QuestionCard({
             style={{ backgroundColor: `${config.color}18`, ["--topic-color" as string]: config.color }}
           >
             <TopicIcon name={config.icon} className="w-4 h-4" />
-            <span className="max-w-[140px] truncate">{question.topic}</span>
+            <span className="max-w-[140px] truncate" lang="de" dir="ltr">{question.topic}</span>
           </span>
           <div className="flex items-center gap-2">
             {!hideActions && !suggestionSubmitted && (
@@ -451,7 +451,7 @@ export default function QuestionCard({
         )}
 
         {/* Question text (selectable for highlighting) */}
-        <h2 id={stemId} tabIndex={-1} data-question-heading className="text-lg md:text-xl leading-relaxed font-medium text-[var(--mp-fg)] mb-4" style={{ userSelect: 'text' }} data-question-text>
+        <h2 id={stemId} tabIndex={-1} data-question-heading lang="de" dir="ltr" className="text-lg md:text-xl leading-relaxed font-medium text-[var(--mp-fg)] mb-4" style={{ userSelect: 'text' }} data-question-text>
           {highlightApi.renderHighlightedText(question.question)}
         </h2>
 
@@ -496,7 +496,7 @@ export default function QuestionCard({
               <p className="text-xs text-[var(--mp-viridian)] uppercase tracking-wider mb-1 font-medium">
                 {lang === "de" ? "Richtige Antwort" : "Correct Answer"}
               </p>
-              <p className="text-[var(--mp-fg)] text-sm leading-relaxed">{question.answer}</p>
+              <p className="text-[var(--mp-fg)] text-sm leading-relaxed" lang="de" dir="ltr">{question.answer}</p>
             </div>
           )}
           {/* KAF recall-first cover: the real Kenntnisprüfung asks open

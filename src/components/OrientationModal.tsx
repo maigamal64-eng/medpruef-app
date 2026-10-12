@@ -36,6 +36,7 @@ import {
 } from "@/lib/announcements/useAnnouncementGate";
 import { t, useLang } from "@/lib/i18n";
 import { getStoredExamSource, type ExamSourceId } from "@/lib/topics";
+import { safeStorage } from "@/lib/safe-storage";
 
 // Versioned key survives `v1` dismissals from the old SoftLaunchWelcomeModal.
 const LEGACY_KEY = "medpruef_soft_launch_welcome_seen";
@@ -87,8 +88,8 @@ export default function OrientationModal() {
     // v1 modal doesn't ghost back if a user rolls back to an older
     // client bundle during the rollout window.
     try {
-      localStorage.setItem(STORAGE_KEY, "1");
-      localStorage.removeItem(LEGACY_KEY);
+      safeStorage.setItem(STORAGE_KEY, "1");
+      safeStorage.removeItem(LEGACY_KEY);
     } catch {
       /* noop */
     }

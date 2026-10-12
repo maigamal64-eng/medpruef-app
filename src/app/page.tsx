@@ -17,6 +17,7 @@ import { DataResponseError, createRequestSequence } from "@/lib/async-data";
 import { completeAuthEntry } from "@/lib/auth-entry-completion";
 import { readAuthEntry, buildAuthHref } from "@/lib/auth-entry";
 import { t, getUiLang, useLang, renderLang, type Lang } from "@/lib/i18n";
+import { getExamLabel } from "@/lib/master-locale/exam-label";
 import { Lightbulb, ClipboardList, CheckCircle, User, ChevronRight, Search, Target, ArrowRight } from "lucide-react";
 import { isTelegramMiniApp, getMiniAppInitData, getStoredSession, storeSession, setSessionToken, clearSession } from "@/lib/auth";
 import { isStandalonePWA, isTouchFirstDevice } from "@/lib/telegram-login";
@@ -54,6 +55,7 @@ import CheckoutStallPrompt from "@/components/CheckoutStallPrompt";
 import UserSurveyModal from "@/components/UserSurveyModal";
 import ResumeSessionCard from "@/components/ResumeSessionCard";
 import { useToast } from "@/components/ui";
+import { safeStorage } from "@/lib/safe-storage";
 
 
 
@@ -150,15 +152,6 @@ function getGreeting(lang: Lang): string {
   if (h < 12) return t("home_good_morning", lang);
   if (h < 18) return t("home_good_afternoon", lang);
   return t("home_good_evening", lang);
-}
-
-/** Human label for the active exam — used in the cohort chip next to the
- *  greeting. Matches the ExamSwitcherInline naming. */
-function getExamLabel(examSource: string, lang: Lang): string {
-  if (examSource === "kenntnispruefung") return t("home_kenntnispr_fung_vienna", lang);
-  if (examSource === "kmp_innsbruck") return t("home_stichprobentest_innsbruck", lang);
-  if (examSource === "pharma") return t("home_pharmakologie", lang);
-  return examSource;
 }
 
 export default function Home() {
@@ -393,7 +386,7 @@ export default function Home() {
           // if it's empty we hit /api/user/onboarding-state, and ONLY
           // show the modal when the server confirms incomplete.
           try {
-            const onboardingData = localStorage.getItem("medpruef_onboarding");
+            const onboardingData = safeStorage.getItem("medpruef_onboarding");
             const parsed = onboardingData ? JSON.parse(onboardingData) : null;
             if (parsed?.completedAt) {
               // Already completed locally — no server call needed.
@@ -407,7 +400,7 @@ export default function Home() {
                     // Server says we already finished. Mirror to
                     // localStorage so future renders skip the network.
                     try {
-                      localStorage.setItem(
+                      safeStorage.setItem(
                         "medpruef_onboarding",
                         JSON.stringify({
                           completedAt: s.completed_at ?? s.skipped_at,
@@ -506,8 +499,8 @@ export default function Home() {
   // guided-path card. Fall back to the legacy `medpruef_onboarding.examDate`.
   useEffect(() => {
     try {
-      const profileRaw = localStorage.getItem("medpruef_profile");
-      const onbRaw = localStorage.getItem("medpruef_onboarding");
+      const profileRaw = safeStorage.getItem("medpruef_profile");
+      const onbRaw = safeStorage.getItem("medpruef_onboarding");
       const profileDate = profileRaw ? JSON.parse(profileRaw)?.targetDate : undefined;
       const onbDate = onbRaw ? JSON.parse(onbRaw)?.examDate : undefined;
       const targetDate = profileDate || onbDate;
@@ -529,8 +522,8 @@ export default function Home() {
   useEffect(() => {
     if (!user?.id || user.id.startsWith("guest_")) return;
     try {
-      if (localStorage.getItem("medpruef_fyp_synced") === "1") return;
-      const onbRaw = localStorage.getItem("medpruef_onboarding");
+      if (safeStorage.getItem("medpruef_fyp_synced") === "1") return;
+      const onbRaw = safeStorage.getItem("medpruef_onboarding");
       const onb = onbRaw ? JSON.parse(onbRaw) : null;
       // Only act on a Find-Your-Path payload that carries an exam source.
       const examSource: string | undefined = onb?.examSource;
@@ -538,7 +531,7 @@ export default function Home() {
       // If the server already knows the user's exam, nothing to sync.
       const serverActiveExam = (user as { active_exam?: string | null }).active_exam;
       if (serverActiveExam) {
-        localStorage.setItem("medpruef_fyp_synced", "1");
+        safeStorage.setItem("medpruef_fyp_synced", "1");
         return;
       }
       const isISODate =
@@ -564,7 +557,7 @@ export default function Home() {
         }),
       }).catch(() => {});
 
-      localStorage.setItem("medpruef_fyp_synced", "1");
+      safeStorage.setItem("medpruef_fyp_synced", "1");
     } catch {
       /* never block the home render on a best-effort sync */
     }
@@ -836,7 +829,7 @@ export default function Home() {
                 <HomeHero
                   greeting={getGreeting(uiLang)}
                   userName={user.first_name}
-                  examLabel={getExamLabel(examSource, uiLang)}
+                  examLabel={getExamLabel(examSource, "full", lang)}
                   answered={answeredCount}
                   total={examTotal}
                   trackingAvailable={trackingAvailable}

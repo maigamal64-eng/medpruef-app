@@ -2,6 +2,8 @@
 import { t, type Lang } from "@/lib/i18n";
 
 import { EXAM_SOURCES, setStoredExamSource, type ExamSourceId } from "@/lib/topics";
+import { getExamLabel } from "@/lib/master-locale/exam-label";
+import { ChevronRight } from "lucide-react";
 
 interface Props {
   lang: Lang;
@@ -38,13 +40,11 @@ export default function ExamSelector({ lang, onSelect }: Props) {
               onClick={() => handle(exam.id)}
               className="w-full flex items-center gap-4 bg-[var(--mp-surface-raised)] border border-[var(--mp-border)] shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-card-hover)] hover:border-[var(--mp-viridian)]/50 hover:bg-[var(--mp-surface-sunken)] rounded-xl p-4 text-left transition-all active:scale-[0.98] group"
             >
-              <span className="text-2xl">{exam.badge}</span>
               <div className="flex-1 min-w-0">
-                <span className="font-semibold text-[var(--mp-fg)] text-sm">{exam.fullName}</span>
+                <span className="block font-semibold text-[var(--mp-fg)] text-sm">{getExamLabel(exam.id, "full", lang)}</span>
+                <span className="block text-xs text-[var(--mp-fg-muted)]">{getExamLabel(exam.id, "bridge", lang)}</span>
               </div>
-              <span className="text-[var(--mp-viridian)] opacity-0 group-hover:opacity-100 transition-opacity text-lg">
-                →
-              </span>
+              <ChevronRight aria-hidden className="h-5 w-5 shrink-0 text-[var(--mp-viridian)] opacity-0 transition-opacity group-hover:opacity-100 rtl:rotate-180" />
             </button>
           ))}
         </div>

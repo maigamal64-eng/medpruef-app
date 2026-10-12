@@ -3,12 +3,13 @@
 import { useState, useEffect } from "react";
 import { t, type Lang } from "@/lib/i18n";
 import { Cookie } from "lucide-react";
+import { safeStorage } from "@/lib/safe-storage";
 
 const COOKIE_KEY = "medpruef_cookies";
 
 export function getCookieConsent(): "accepted" | "declined" | null {
   if (typeof window === "undefined") return null;
-  const val = localStorage.getItem(COOKIE_KEY);
+  const val = safeStorage.getItem(COOKIE_KEY);
   if (val === "accepted" || val === "declined") return val;
   return null;
 }
@@ -27,7 +28,7 @@ export default function CookieBanner({ lang }: CookieBannerProps) {
   }, []);
 
   const handleAccept = () => {
-    localStorage.setItem(COOKIE_KEY, "accepted");
+    safeStorage.setItem(COOKIE_KEY, "accepted");
     // Tell any listening component (ConsentGatedAnalytics) that the
     // user just granted consent — so GA4 and Clarity can lazy-load
     // without a full page reload.
@@ -40,7 +41,7 @@ export default function CookieBanner({ lang }: CookieBannerProps) {
   };
 
   const handleDecline = () => {
-    localStorage.setItem(COOKIE_KEY, "declined");
+    safeStorage.setItem(COOKIE_KEY, "declined");
     try {
       window.dispatchEvent(new CustomEvent("medpruef-consent", { detail: "declined" }));
     } catch {

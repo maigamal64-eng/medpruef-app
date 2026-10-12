@@ -11,6 +11,7 @@ import { fetchAnnouncementState } from '@/lib/announcements/useAnnouncementGate'
 // got written and the cross-device "already saw What's-New" suppression
 // (the whatsNewSeenAt check above) never worked.
 import { authFetch as fetch } from '@/lib/authFetch'
+import { safeStorage } from "@/lib/safe-storage";
 
 const CURRENT_VERSION = '2026-04-22'
 const STORAGE_KEY = 'medpruef_whats_new_seen'
@@ -92,14 +93,14 @@ export default function WhatsNewModal() {
       // locally, OR (review-2026-04-26-A3) the cross-device gate says
       // we already showed it on another device.
       try {
-        const session = JSON.parse(localStorage.getItem('medpruef_session') || '{}')
+        const session = JSON.parse(safeStorage.getItem('medpruef_session') || '{}')
         const userId = session?.user?.id || ''
         if (!userId || userId.startsWith('guest_')) return
 
-        const onboarding = JSON.parse(localStorage.getItem('medpruef_onboarding') || '{}')
+        const onboarding = JSON.parse(safeStorage.getItem('medpruef_onboarding') || '{}')
         if (!onboarding?.completedAt) return
 
-        const lastSeen = localStorage.getItem(STORAGE_KEY)
+        const lastSeen = safeStorage.getItem(STORAGE_KEY)
         if (lastSeen === CURRENT_VERSION) return
 
         // Shared in-flight-deduped fetch (B-09) — was a bare
@@ -110,7 +111,7 @@ export default function WhatsNewModal() {
         try {
           const body = await fetchAnnouncementState()
           if (body?.state?.whatsNewSeenAt) {
-            try { localStorage.setItem(STORAGE_KEY, CURRENT_VERSION) } catch {}
+            try { safeStorage.setItem(STORAGE_KEY, CURRENT_VERSION) } catch {}
             return
           }
         } catch { /* fall through to legacy behaviour */ }
@@ -132,7 +133,7 @@ export default function WhatsNewModal() {
 
   const dismiss = () => {
     setOpen(false)
-    localStorage.setItem(STORAGE_KEY, CURRENT_VERSION)
+    safeStorage.setItem(STORAGE_KEY, CURRENT_VERSION)
     fetch('/api/announcements/seen', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

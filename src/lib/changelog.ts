@@ -38,6 +38,18 @@ export const CHANGELOG: ChangelogEntry[] = [
   "date": "2026-10-12",
   "tag": "improvement",
   "title": {
+    "de": "Klarere Prüfungsnamen und einheitliche Zahlen",
+    "en": "Clearer exam names and consistent numbers"
+  },
+  "description": {
+    "de": "Die Wiener Fragenbank heißt jetzt SIP4a / SIP5a Wien, die Kurzbezeichnungen lauten SIP, SPT und Pharma, und jede Auswahl nennt die Fragenbank als Übungsfragen. Die Seitenleiste zeigt Ihre aktive Prüfung. Zahlen, Prozentwerte und Tage erscheinen auf der Startseite einheitlich formatiert. Prüfungsfragen bleiben auch bei einer anderen App-Sprache als deutscher Text markiert. Hinweise und Einstellungen funktionieren auch in privaten Fenstern, und auf einem geteilten Gerät übernimmt ein neues Konto nicht mehr die Prüfungsauswahl des vorherigen Kontos.",
+    "en": "The Vienna question bank is now called SIP4a / SIP5a Wien, the short names are SIP, SPT and Pharma, and every picker describes the bank as practice questions. The sidebar shows your active exam. Numbers, percentages and days on the home page use one consistent format. Exam questions stay marked as German text in any app language. Notices and settings also work in private windows, and on a shared device a new account no longer inherits the previous account's exam choice."
+  }
+},
+{
+  "date": "2026-10-12",
+  "tag": "improvement",
+  "title": {
     "de": "Genauere Angaben zu Funktionen und SIP-Regeln",
     "en": "More precise feature details and SIP rules"
   },

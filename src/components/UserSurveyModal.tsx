@@ -7,6 +7,7 @@ import { authFetch as fetch } from '@/lib/authFetch'
 import { Dialog, Textarea } from '@/components/ui'
 import { t, useLang, type TranslationKey } from '@/lib/i18n'
 import { fetchAnnouncementState } from '@/lib/announcements/useAnnouncementGate'
+import { safeStorage } from "@/lib/safe-storage";
 
 const STORAGE_COMPLETED = 'medpruef_survey_v1_completed'
 const STORAGE_DISMISSED = 'medpruef_survey_v1_dismissed'
@@ -74,8 +75,8 @@ export default function UserSurveyModal() {
     ;(async () => {
       try {
         // Already completed or dismissed locally — no work to do.
-        if (localStorage.getItem(STORAGE_COMPLETED) === 'true') return
-        if (localStorage.getItem(STORAGE_DISMISSED) === 'true') return
+        if (safeStorage.getItem(STORAGE_COMPLETED) === 'true') return
+        if (safeStorage.getItem(STORAGE_DISMISSED) === 'true') return
 
         const session = getStoredSession()
         const userId = session?.user?.id || ''
@@ -84,7 +85,7 @@ export default function UserSurveyModal() {
         // Must have completed onboarding (legacy localStorage check —
         // the server-side onboarding gate from review-2026-04-26-A2
         // is checked at the route level, not here).
-        const onboarding = JSON.parse(localStorage.getItem('medpruef_onboarding') || '{}')
+        const onboarding = JSON.parse(safeStorage.getItem('medpruef_onboarding') || '{}')
         if (!onboarding?.completedAt) return
 
         // Server-side cross-device gate (review-2026-04-26-A3): enforce
@@ -103,7 +104,7 @@ export default function UserSurveyModal() {
           if (state) {
             // Already shown or dismissed cross-device — skip.
             if (state.feedbackSurveyShownAt || state.feedbackSurveyDismissedAt) {
-              try { localStorage.setItem(STORAGE_DISMISSED, 'true') } catch {}
+              try { safeStorage.setItem(STORAGE_DISMISSED, 'true') } catch {}
               return
             }
             // Cadence gate: require at least 3 sessions AND 25 questions answered.
@@ -140,7 +141,7 @@ export default function UserSurveyModal() {
 
   const dismiss = () => {
     setShow(false)
-    localStorage.setItem(STORAGE_DISMISSED, 'true')
+    safeStorage.setItem(STORAGE_DISMISSED, 'true')
     // Cross-device dismiss (review-2026-04-26-A3) so the next browser
     // / incognito session doesn't re-fire the survey for this user.
     fetch('/api/announcements/seen', {
@@ -241,7 +242,7 @@ export default function UserSurveyModal() {
       // A rejected save (429/413/5xx) must not mark the survey completed.
       if (!response.ok) throw new Error('Survey submission failed')
 
-      localStorage.setItem(STORAGE_COMPLETED, 'true')
+      safeStorage.setItem(STORAGE_COMPLETED, 'true')
       goStep(4) // success screen
 
       // Auto-close after 3 seconds

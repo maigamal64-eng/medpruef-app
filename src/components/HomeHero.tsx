@@ -28,6 +28,8 @@ import Link from "next/link";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Play, CalendarDays } from "lucide-react";
+import { formatCount, formatNumber, formatPercent } from "@/lib/master-locale/format";
+import { renderedLanguage } from "@/lib/master-locale/render";
 
 
 
@@ -63,7 +65,8 @@ export default function HomeHero({
   lang,
   daysLeft,
 }: HomeHeroProps) {
-  const locale = lang === "de" ? "de-DE" : "en-US";
+  // UX-GLOBAL-03: one formatter bound to the rendered language.
+  const fmtLang = renderedLanguage(lang).lang;
   const known = trackingAvailable && answered !== null && total !== null;
   const pct = known && total > 0 ? Math.min(100, Math.round((answered / total) * 100)) : known ? 0 : undefined;
   const fillWidth = known && total > 0 ? Math.min(100, Math.max(0, (answered / total) * 100)) : 0;
@@ -110,14 +113,14 @@ export default function HomeHero({
                 borderRadius: 9999,
                 padding: "3px 10px",
               }}
-              aria-label={t("home_days_until", lang).replace("{n}", String(daysLeft))}
+              aria-label={t("home_days_until", lang).replace("{days}", formatCount(daysLeft, "day", fmtLang))}
             >
               <span
                 className="inline-block"
                 style={{ width: 6, height: 6, borderRadius: 9999, background: "var(--mp-spark)" }}
                 aria-hidden
               />
-              {t("home_days_short", lang).replace("{n}", String(daysLeft))}
+              {t("home_days_short", lang).replace("{days}", formatCount(daysLeft, "day", fmtLang))}
             </span>
           )}
         </div>
@@ -126,7 +129,7 @@ export default function HomeHero({
           style={{ fontSize: 22, color: "#fff", letterSpacing: "-0.01em", minHeight: "2.5em" }}
         >
           {!trackingAvailable ? t("home_start_exploring_this_question_bank", lang) : known ? (
-            <>{t("home_seen_before", lang)} <bdi dir="ltr" style={{ color: "var(--mp-spark)" }}>{pct}%</bdi> {t("home_seen_after", lang)}</>
+            <>{t("home_seen_before", lang)} <bdi dir="ltr" style={{ color: "var(--mp-spark)" }}>{formatPercent(pct, fmtLang)}</bdi> {t("home_seen_after", lang)}</>
           ) : <><span aria-hidden="true">- </span>{progressText}</>}
 
         </h2>
@@ -139,7 +142,7 @@ export default function HomeHero({
           >
             <span className="truncate pr-2">{examLabel}</span>
             <span className="font-mono flex-shrink-0" style={{ color: "#fff", fontWeight: 700 }}>
-              {known ? <span dir="ltr"><bdi dir="ltr">{answered.toLocaleString(locale)}</bdi> / <bdi dir="ltr">{total.toLocaleString(locale)}</bdi></span>
+              {known ? <span dir="ltr"><bdi dir="ltr">{formatNumber(answered, fmtLang)}</bdi> / <bdi dir="ltr">{formatNumber(total, fmtLang)}</bdi></span>
                 : !trackingAvailable ? t("home_sign_in_to_track_progress", lang) : <span aria-hidden="true">- / -</span>}
 
             </span>

@@ -9,6 +9,7 @@ import {
   setStoredExamSource,
   type ExamSourceId,
 } from '@/lib/topics'
+import { examChipAccessibleName, getExamLabel } from '@/lib/master-locale/exam-label'
 
 /**
  * Inline exam-type dropdown. Meant to be dropped into an existing header or
@@ -149,11 +150,11 @@ export default function ExamSwitcherInline({ variant = 'header', className = '' 
         className={btnClass}
         aria-haspopup="listbox"
         aria-expanded={open}
-        title={`${t("home_exam", lang)}: ${activeExam.fullName}`}
+        title={`${t("home_exam", lang)}: ${getExamLabel(activeExam.id, 'full', lang)}`}
+        aria-label={variant === 'compact' ? examChipAccessibleName(activeExam.id, lang) : undefined}
       >
-        <span className="text-base leading-none">{activeExam.badge}</span>
         <span className="truncate">
-          {variant === 'compact' ? activeExam.shortLabel : activeExam.label}
+          {variant === 'compact' ? getExamLabel(activeExam.id, 'short') : getExamLabel(activeExam.id, 'full', lang)}
         </span>
         <svg width="10" height="10" viewBox="0 0 20 20" fill="currentColor" className="opacity-60 flex-shrink-0">
           <path d="M5 7l5 5 5-5H5z" />
@@ -194,10 +195,9 @@ export default function ExamSwitcherInline({ variant = 'header', className = '' 
                 role="option"
                 aria-selected={isActive}
               >
-                <span className="text-lg mt-0.5 leading-none">{exam.badge}</span>
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium flex items-center gap-2">
-                    <span className="truncate">{exam.label}</span>
+                    <span className="truncate">{getExamLabel(exam.id, 'full', lang)}</span>
                     {isActive && (
                       <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor" className="flex-shrink-0">
                         <path d="M7.5 13.5L4 10l1.4-1.4 2.1 2.1 7-7L16 5.1z" />
@@ -210,13 +210,8 @@ export default function ExamSwitcherInline({ variant = 'header', className = '' 
                     )}
                   </div>
                   <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
-                    {exam.fullName}
+                    {getExamLabel(exam.id, 'bridge', lang)}
                   </div>
-                  {exam.questions > 0 && (
-                    <div className="text-[10px] text-slate-400 dark:text-slate-500 font-mono mt-0.5">
-                      {exam.questions.toLocaleString(lang === "de" ? "de-DE" : "en-US")} {t("questions", lang)}
-                    </div>
-                  )}
                 </div>
               </button>
             )
