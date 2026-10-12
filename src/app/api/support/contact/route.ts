@@ -18,6 +18,11 @@ const EMAIL_LIMIT = { limit: 5, windowMs: 24 * 3_600_000 };
  * Zoho and never logged or stored. A honeypot hit answers like a success so a
  * bot learns nothing.
  */
+/** Public availability probe so a page shows the form only when it can be sent. */
+export async function GET() {
+  return NextResponse.json({ enabled: process.env.SUPPORT_CONTACT_ENABLED === "true" }, { headers: { "cache-control": "no-store" } });
+}
+
 export async function POST(req: NextRequest) {
   if (process.env.SUPPORT_CONTACT_ENABLED !== "true") {
     return NextResponse.json({ error: "Contact form unavailable", code: "SUPPORT_CONTACT_DISABLED" }, { status: 503 });
