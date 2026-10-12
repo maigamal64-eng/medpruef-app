@@ -1,6 +1,6 @@
 "use client";
 import PartialTranslationNote from "@/components/PartialTranslationNote";
-import { billingSurfaceText } from "@/lib/billing-copy";
+import { referralDisclosure } from "@/lib/referral-copy";
 
 import { stripLegacyIdentity } from "@/lib/quiz-links";
 import { asPuypExamType } from "@/lib/exam-dates";
@@ -1513,26 +1513,26 @@ function QuizSharePrompt({ lang }: { lang: Lang }) {
       <div className="flex-1 min-w-0 text-left">
         <p className="text-sm font-semibold text-[var(--mp-fg)] leading-snug">
           {lang === "de"
-            ? "Gute Runde! Kennst du jemanden, der auch übt?"
-            : "Nice round! Know someone else prepping?"}
+            ? "Gute Runde! Kennen Sie jemanden, der auch übt?"
+            : "Nice round! Know someone else preparing?"}
         </p>
-        <p className="text-[11px] text-[var(--mp-fg-subtle)] mt-0.5">
-          {lang === "de"
-            ? billingSurfaceText("quiz_page_tsx_0", "de")
-            : billingSurfaceText("quiz_page_tsx_1", "de")}
+        {/* TR-27: disclosure next to the share control (the invite itself
+            is sent from /referrals). */}
+        <p className="text-xs text-[var(--mp-fg-subtle)] mt-0.5">
+          {referralDisclosure(lang)}
         </p>
       </div>
       <Link
         href="/referrals"
         onClick={handleClick}
-        className="mp-btn mp-btn--primary text-xs px-3 py-1.5 flex-shrink-0"
+        className="mp-btn mp-btn--primary text-xs px-3 py-1.5 min-h-[44px] flex-shrink-0"
       >
         {lang === "de" ? "Teilen" : "Share"}
       </Link>
       <button
         type="button"
         onClick={() => setDismissed(true)}
-        className="text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg)] text-xs px-1 flex-shrink-0"
+        className="text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg)] text-xs min-w-[44px] min-h-[44px] flex items-center justify-center flex-shrink-0"
         aria-label={lang === "de" ? "Schließen" : "Dismiss"}
       >
         ✕

@@ -1,5 +1,15 @@
 "use client";
-import { billingSurfaceText } from "@/lib/billing-copy";
+import { BILLING_SUPPORT_EMAIL } from "@/lib/billing-copy";
+import {
+  referralDisclosure,
+  referralEmptyLine,
+  referralInviteMessage,
+  referralRewardBullets,
+  referralRewardSentence,
+  referralRowState,
+  referralWindowDefinition,
+} from "@/lib/referral-copy";
+import { referralNativeSharePayload, referralShareUrls } from "@/lib/referrals";
 
 import { DataRegion } from "@/components/ui/DataRegion";
 
@@ -17,17 +27,15 @@ import { DataRegion } from "@/components/ui/DataRegion";
  * Data source: GET /api/referrals/status (extended 2026-07-11 with
  * qualifiedActivityCount / thresholdN / proUntilExamGrantedAt).
  *
- * Voice rules (binding, MEDPRUF-SOT.md §2.x): Austrian not German, lead
- * with "Stichprobentest, 23. September (Graz)" where the exam is named,
- * no em dashes in any user-facing string, "free through the exam
- * window" never "until your exam date", no 26-Aug deadline, no prices
- * in referral copy.
+ * Copy (a21, 2026-10-12): the reward sentence, the window definition,
+ * the invite message, row states and the empty line all come from
+ * src/lib/referral-copy.ts (UX-ACC-50, TR-27). Formal Sie, no em dashes,
+ * no automation or timing promise, "Wir bestätigen das persönlich".
  *
  * Design: MPDS v2 semantic tokens + primitives throughout — no hex
  * literals, no ad-hoc modal chrome, dark mode is a token flip.
  */
 
-import { billingReferralShare } from "@/lib/billing-copy";
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import {
@@ -105,14 +113,14 @@ interface SocialProofResponse {
 }
 
 function formatDate(iso: string | null, lang: Lang): string {
-  if (!iso) return "—";
+  if (!iso) return "";
   try {
     return new Date(iso).toLocaleDateString(
       lang === "de" ? "de-AT" : "en-GB",
       { day: "numeric", month: "short", year: "numeric" }
     );
   } catch {
-    return "—";
+    return "";
   }
 }
 
@@ -200,10 +208,6 @@ export default function ReferralsPage() {
     try {
       await navigator.clipboard.writeText(data.referralLink);
       setCopied(true);
-      toast.success(
-        lang === "de" ? "Link kopiert" : "Link copied",
-        lang === "de" ? "Jetzt teilen." : "Share it now."
-      );
       setTimeout(() => setCopied(false), 2500);
     } catch {
       toast.error(
@@ -235,20 +239,13 @@ export default function ReferralsPage() {
     }
   };
 
-  // Invite-message copy, one line, per user's UI language, exam-window
-  // framed (MEDPRUF-SOT.md §2.x voice rules): lead with the exam+date,
-  // "free through the exam window" never "until your exam date", no
-  // em dashes, no price for the REFERRER's reward. Code substituted at
-  // the end so the recipient has the exact link.
-  //
-  // Card-trial gate (2026-07-11): the qualification terms must state the
-  // trial honestly per SoT §2 — card on file, 0 € today, 19 €/month
-  // after 7 days unless cancelled during the trial. This is the
-  // REFEREE's trial (the person clicking the link), not a charge on the
-  // referrer — stated plainly so nobody reads it as a hidden fee.
+  // TR-27: every share path (native share, Telegram, WhatsApp, copy
+  // message) sends the one invite from referral-copy.ts: written to the
+  // friend, free path first, the trial with its terms, and the sender's
+  // reward disclosed in the first person.
   const inviteMessage = (): string => {
     if (!data?.referralLink) return "";
-    return billingReferralShare(lang, data.referralLink);
+    return referralInviteMessage(lang, data.referralLink);
   };
 
   const shareNative = async () => {
@@ -257,18 +254,13 @@ export default function ReferralsPage() {
       share?: (d: { title?: string; text?: string; url?: string }) => Promise<void>;
     };
     if (!nav.share) {
-      copyLink();
+      void copyInviteMessage();
       return;
     }
     try {
-      await nav.share({
-        title:
-          lang === "de"
-            ? "MedPrüf: Österreichische Ärzteprüfung"
-            : "MedPrüf: Austrian medical exam prep",
-        text: inviteMessage(),
-        url: data.referralLink,
-      });
+      await nav.share(
+        referralNativeSharePayload(inviteMessage(), "MedPrüf"),
+      );
     } catch {
       // user cancelled; no-op
     }
@@ -280,10 +272,6 @@ export default function ReferralsPage() {
     try {
       await navigator.clipboard.writeText(msg);
       setMessageCopied(true);
-      toast.success(
-        lang === "de" ? "Nachricht kopiert" : "Message copied",
-        lang === "de" ? "Jetzt einfügen und senden." : "Paste it and send."
-      );
       setTimeout(() => setMessageCopied(false), 2500);
     } catch {
       toast.error(
@@ -298,6 +286,7 @@ export default function ReferralsPage() {
   }
 
   const user = session?.user;
+  const copiedWord = lang === "de" ? "Kopiert" : "Copied";
 
   // Invite-only gate: only enrolled accounts may open the referral dashboard.
   // We wait for tierLoading=false so enabled users never see a flash of the
@@ -322,14 +311,37 @@ export default function ReferralsPage() {
                 ? "Empfehlungsprogramm auf Einladung"
                 : "Referral program by invitation"}
             </h2>
-            <p className="text-sm text-[var(--mp-fg-muted)] leading-relaxed max-w-sm">
-              {lang === "de"
-                ? "Das Empfehlungsprogramm ist derzeit auf ausgewählte Nutzer beschränkt. Kontaktiere den Support, wenn du teilnehmen möchtest."
-                : "The referral program is currently limited to selected users. Contact support if you would like to participate."}
-            </p>
-            <Link href="/" className="mp-btn mp-btn--secondary mt-2">
-              {lang === "de" ? "Zurück zum Dashboard" : "Back to dashboard"}
-            </Link>
+            {(() => {
+              // UX-ACC-49 / UX-PUB-39: a real support link, no time promise.
+              const gate = lang === "de"
+                ? {
+                    body: "Das Empfehlungsprogramm ist derzeit auf ausgewählte Konten beschränkt. Wenn Sie teilnehmen möchten, schreiben Sie uns an",
+                    reply: "Wir melden uns per E-Mail.",
+                    home: "Zur Startseite",
+                  }
+                : {
+                    body: "The referral program is currently limited to selected accounts. If you would like to take part, write to us at",
+                    reply: "We will reply by email.",
+                    home: "Go to home",
+                  };
+              return (
+                <>
+                  <p className="text-sm text-[var(--mp-fg-muted)] leading-relaxed max-w-sm">
+                    {gate.body}{" "}
+                    <a
+                      href={`mailto:${BILLING_SUPPORT_EMAIL}?subject=${encodeURIComponent("Empfehlungsprogramm")}`}
+                      className="font-semibold text-[var(--mp-fg)] underline break-all"
+                    >
+                      {BILLING_SUPPORT_EMAIL}
+                    </a>
+                    . {gate.reply}
+                  </p>
+                  <Link href="/" className="mp-btn mp-btn--secondary mt-2 min-h-[44px]">
+                    {gate.home}
+                  </Link>
+                </>
+              );
+            })()}
           </div>
           <BottomNav lang={lang} />
         </main>
@@ -337,41 +349,30 @@ export default function ReferralsPage() {
     );
   }
 
-  // Row status → (badge element, date label). Activity-qualified framing
-  // (2026-07-11): a referral row now qualifies by STUDYING, not paying,
-  // so the badges read "studying" / "qualified" / "Pro granted" instead
-  // of the old hold/claimable/paid cash language.
+  // Row status → (badge, date line), UX-ACC-50 states from referral-copy.
+  // The status API exposes only the referral row status per referee:
+  // `pending` (signed up, conditions not yet met) and `qualified` /
+  // `rewarded` (all three conditions met). "Lernt, Pro-Test fehlt" needs
+  // per-referee trial and activity flags the route does not return, so a
+  // pending row reads "Angemeldet".
   const rowMeta = (r: ReferralRow) => {
-    if (r.status === "rewarded") {
+    if (r.status === "rewarded" || r.status === "qualified") {
       return {
         badge: (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[var(--mp-viridian)]/15 text-[var(--mp-viridian)]">
-            <Check className="w-3 h-3" />
-            {lang === "de" ? "Pro vergeben" : "Pro granted"}
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-[var(--mp-success-bg)] text-[var(--mp-success-text)]">
+            <Check className="w-3 h-3" aria-hidden />
+            {referralRowState("counts", lang)}
           </span>
         ),
         sub:
-          (lang === "de" ? "Vergeben am " : "Granted ") +
-          formatDate(r.rewarded_at, lang),
-      };
-    }
-    if (r.status === "qualified") {
-      return {
-        badge: (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[var(--mp-cta-blue)]/15 text-[var(--mp-cta-blue)]">
-            <GraduationCap className="w-3 h-3" />
-            {lang === "de" ? "Qualifiziert" : "Qualified"}
-          </span>
-        ),
-        sub:
-          (lang === "de" ? "Qualifiziert am " : "Qualified ") +
-          formatDate(r.qualified_at, lang),
+          (lang === "de" ? "Zählt seit " : "Counts since ") +
+          formatDate(r.qualified_at ?? r.rewarded_at, lang),
       };
     }
     return {
       badge: (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-muted)] border border-[var(--mp-border)]">
-          {lang === "de" ? "Lernt gerade" : "Studying"}
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-muted)] border border-[var(--mp-border)]">
+          {referralRowState("signed_up", lang)}
         </span>
       ),
       sub:
@@ -421,13 +422,14 @@ export default function ReferralsPage() {
               <div className="flex-1">
                 <h2 className="text-xl lg:text-2xl font-display font-extrabold text-[var(--mp-fg)] mb-1">
                   {lang === "de"
-                    ? "Lade Kolleg:innen ein, die sich auf eine österreichische Prüfung vorbereiten."
-                    : "Invite colleagues preparing for an Austrian medical exam."}
+                    ? "Laden Sie Kolleginnen und Kollegen ein, die sich auf eine Prüfung in Österreich vorbereiten."
+                    : "Invite colleagues preparing for a medical exam in Austria."}
                 </h2>
                 <p className="text-sm text-[var(--mp-fg-muted)] leading-relaxed">
-                  {lang === "de"
-                    ? billingSurfaceText("referrals_page_tsx_0", "de")
-                    : billingSurfaceText("referrals_page_tsx_1", "de")}
+                  {referralRewardSentence(lang)}
+                </p>
+                <p className="text-xs text-[var(--mp-fg-subtle)] leading-relaxed mt-2">
+                  {referralWindowDefinition(lang)}
                 </p>
               </div>
             </div>
@@ -444,82 +446,44 @@ export default function ReferralsPage() {
                   </div>
                   <button
                     type="button"
-                    onClick={copyLink}
-                    className="mp-btn mp-btn--primary justify-center gap-2"
-                    aria-label={
-                      lang === "de" ? "Link kopieren" : "Copy link"
-                    }
+                    onClick={copyInviteMessage}
+                    className="mp-btn mp-btn--primary justify-center gap-2 min-h-[44px]"
                   >
-                    {copied ? (
-                      <>
-                        <Check className="w-4 h-4" />
-                        {lang === "de" ? "Kopiert" : "Copied"}
-                      </>
+                    {messageCopied ? (
+                      <Check className="w-4 h-4" aria-hidden />
                     ) : (
-                      <>
-                        <Copy className="w-4 h-4" />
-                        {lang === "de" ? "Kopieren" : "Copy"}
-                      </>
+                      <Copy className="w-4 h-4" aria-hidden />
                     )}
+                    {messageCopied
+                      ? copiedWord
+                      : lang === "de" ? "Einladung kopieren" : "Copy invite"}
                   </button>
                   <button
                     type="button"
                     onClick={shareNative}
-                    className="mp-btn mp-btn--secondary justify-center gap-2 sm:hidden"
-                    aria-label={lang === "de" ? "Teilen" : "Share"}
+                    className="mp-btn mp-btn--secondary justify-center gap-2 min-h-[44px] sm:hidden"
                   >
-                    <Share2 className="w-4 h-4" />
+                    <Share2 className="w-4 h-4" aria-hidden />
                     {lang === "de" ? "Teilen" : "Share"}
                   </button>
                 </div>
 
-                {/* Copy-my-invite-message button (spec §4 Step 5): the
-                    localized, exam-window-framed one-liner from
-                    MEDPRUF-SOT.md §2.x with the user's code substituted,
-                    ready to paste into a WhatsApp/Telegram study group. */}
-                {data?.referralLink && (
-                  <button
-                    type="button"
-                    onClick={copyInviteMessage}
-                    className="mp-btn mp-btn--secondary justify-center gap-2 mt-3 w-full sm:w-auto"
-                  >
-                    {messageCopied ? (
-                      <>
-                        <Check className="w-4 h-4" />
-                        {lang === "de" ? "Nachricht kopiert" : "Message copied"}
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-4 h-4" />
-                        {lang === "de"
-                          ? "Meine Einladungsnachricht kopieren"
-                          : "Copy my invite message"}
-                      </>
-                    )}
-                  </button>
-                )}
+                {/* UX-ACC-52: one polite status region announces the copy. */}
+                <span role="status" className="mp-sr-only">
+                  {messageCopied || copied ? copiedWord : ""}
+                </span>
 
-                {/* Direct social-share deeplinks (Telegram / WhatsApp /
-                    X). Web Share API only fires native sheets on
-                    mobile; these explicit buttons let desktop users
-                    one-click into their group chats too. Pre-filled
-                    with the same exam-window-framed invite message. */}
+                {/* Direct share deeplinks (TR-27): the same invite message,
+                    built once by referralShareUrls. No X target: the
+                    invite does not fit a post without losing the
+                    disclosure. */}
                 {data?.referralLink && (
                   <div className="mt-4 flex flex-wrap items-center gap-2">
                     <span className="text-xs font-semibold text-[var(--mp-fg-muted)] uppercase tracking-wider mr-1">
                       {lang === "de" ? "Direkt teilen" : "Share directly"}
                     </span>
                     {(() => {
-                      const shareText = inviteMessage();
-                      const tgUrl = `https://t.me/share/url?url=${encodeURIComponent(
-                        data.referralLink,
-                      )}&text=${encodeURIComponent(shareText)}`;
-                      const waUrl = `https://wa.me/?text=${encodeURIComponent(
-                        shareText,
-                      )}`;
-                      const xUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
-                        shareText,
-                      )}`;
+                      const urls = referralShareUrls(inviteMessage(), data.referralLink);
                       const trackShare = (channel: string) => {
                         void import("@/lib/tracker").then(({ trackEvent }) => {
                           trackEvent("referral_share_clicked", {
@@ -531,43 +495,52 @@ export default function ReferralsPage() {
                       return (
                         <>
                           <a
-                            href={tgUrl}
+                            href={urls.telegram}
                             target="_blank"
                             rel="noopener noreferrer"
                             onClick={() => trackShare("telegram")}
-                            className="mp-btn mp-btn--secondary justify-center gap-2 text-sm"
+                            className="mp-btn mp-btn--secondary justify-center gap-2 text-sm min-h-[44px]"
                           >
-                            <Share2 className="w-3.5 h-3.5" />
+                            <Share2 className="w-3.5 h-3.5" aria-hidden />
                             Telegram
                           </a>
                           <a
-                            href={waUrl}
+                            href={urls.whatsapp}
                             target="_blank"
                             rel="noopener noreferrer"
                             onClick={() => trackShare("whatsapp")}
-                            className="mp-btn mp-btn--secondary justify-center gap-2 text-sm"
+                            className="mp-btn mp-btn--secondary justify-center gap-2 text-sm min-h-[44px]"
                           >
-                            <Share2 className="w-3.5 h-3.5" />
+                            <Share2 className="w-3.5 h-3.5" aria-hidden />
                             WhatsApp
                           </a>
-                          <a
-                            href={xUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={() => trackShare("x")}
-                            className="mp-btn mp-btn--secondary justify-center gap-2 text-sm"
+                          <button
+                            type="button"
+                            onClick={copyLink}
+                            className="mp-btn mp-btn--ghost justify-center gap-2 text-sm min-h-[44px]"
                           >
-                            <Share2 className="w-3.5 h-3.5" />
-                            X
-                          </a>
+                            {copied ? (
+                              <Check className="w-3.5 h-3.5" aria-hidden />
+                            ) : (
+                              <Copy className="w-3.5 h-3.5" aria-hidden />
+                            )}
+                            {copied
+                              ? copiedWord
+                              : lang === "de" ? "Nur Link kopieren" : "Copy link only"}
+                          </button>
                         </>
                       );
                     })()}
                   </div>
                 )}
 
-                <p className="mt-3 text-xs text-[var(--mp-fg-subtle)]">
-                  {lang === "de" ? "Dein Code: " : "Your code: "}
+                {/* The bare link carries no message: say what the invite discloses. */}
+                <p className="mt-3 text-xs text-[var(--mp-fg-muted)] leading-relaxed">
+                  {referralDisclosure(lang)}
+                </p>
+
+                <p className="mt-2 text-xs text-[var(--mp-fg-subtle)]">
+                  {lang === "de" ? "Ihr Code: " : "Your code: "}
                   <span className="font-mono font-bold text-[var(--mp-fg)]">
                     {data?.referralCode}
                   </span>
@@ -583,18 +556,18 @@ export default function ReferralsPage() {
           <section className="mp-card p-5 lg:p-7">
             <div className="flex items-center gap-3 mb-3">
               <GraduationCap className="w-4 h-4 text-[var(--mp-viridian)]" />
-              <h3 className="text-sm font-semibold text-[var(--mp-fg)]">
-                {lang === "de" ? "Dein Fortschritt" : "Your progress"}
+              <h3 id="referral-progress-heading" className="text-sm font-semibold text-[var(--mp-fg)]">
+                {lang === "de" ? "Ihr Fortschritt" : "Your progress"}
               </h3>
             </div>
 
             {data?.proUntilExamGrantedAt ? (
-              <div className="flex items-center gap-3 p-4 rounded-xl bg-[var(--mp-viridian)]/10 border border-[var(--mp-viridian)]/20">
-                <Check className="w-5 h-5 text-[var(--mp-viridian)] flex-shrink-0" />
+              <div className="flex items-center gap-3 p-4 rounded-xl bg-[var(--mp-success-bg)] border border-[var(--mp-border)]">
+                <Check className="w-5 h-5 text-[var(--mp-success-text)] flex-shrink-0" aria-hidden />
                 <p className="text-sm text-[var(--mp-fg)]">
                   {lang === "de"
-                    ? "MedPrüf Pro ist aktiv, kostenlos durch dein Prüfungsfenster."
-                    : "MedPrüf Pro is active, free through your exam window."}
+                    ? "Ihre Empfehlungen zählen: MedPrüf Pro ist bis zum Ende Ihres Prüfungsfensters aktiv."
+                    : "Your referrals count: MedPrüf Pro is active until the end of your exam window."}
                 </p>
               </div>
             ) : (
@@ -605,16 +578,22 @@ export default function ReferralsPage() {
                   </span>
                   <span className="text-sm text-[var(--mp-fg-muted)]">
                     {lang === "de"
-                      ? `von ${data?.thresholdN ?? 2} lernen bereits aktiv`
-                      : `of ${data?.thresholdN ?? 2} invited are studying`}
+                      ? `von ${data?.thresholdN ?? 2} zählen`
+                      : `of ${data?.thresholdN ?? 2} count`}
                   </span>
                 </div>
                 <div
                   className="h-2 rounded-full bg-[var(--mp-surface-sunken)] overflow-hidden"
                   role="progressbar"
+                  aria-labelledby="referral-progress-heading"
                   aria-valuenow={data?.qualifiedActivityCount ?? 0}
                   aria-valuemin={0}
                   aria-valuemax={data?.thresholdN ?? 2}
+                  aria-valuetext={
+                    lang === "de"
+                      ? `${data?.qualifiedActivityCount ?? 0} von ${data?.thresholdN ?? 2} zählen`
+                      : `${data?.qualifiedActivityCount ?? 0} of ${data?.thresholdN ?? 2} count`
+                  }
                 >
                   <div
                     className="h-full bg-[var(--mp-viridian)] transition-all"
@@ -626,11 +605,6 @@ export default function ReferralsPage() {
                     }}
                   />
                 </div>
-                <p className="text-xs text-[var(--mp-fg-muted)] mt-3 leading-relaxed">
-                  {lang === "de"
-                    ? billingSurfaceText("referrals_page_tsx_2", "de")
-                    : billingSurfaceText("referrals_page_tsx_3", "en")}
-                </p>
               </>
             )}
           </section>
@@ -638,7 +612,7 @@ export default function ReferralsPage() {
           {/* ─────────── Referrals list ─────────── */}
           <section className="mp-card p-5 lg:p-7">
             <h3 className="text-sm font-semibold text-[var(--mp-fg)] mb-3">
-              {lang === "de" ? "Deine Empfehlungen" : "Your referrals"}
+              {lang === "de" ? "Ihre Empfehlungen" : "Your referrals"}
             </h3>
 
             {loading ? (
@@ -654,9 +628,7 @@ export default function ReferralsPage() {
               <ul className="divide-y divide-[var(--mp-border)]">
                 {data.referrals.map((r) => {
                   const meta = rowMeta(r);
-                  const initial =
-                    r.referee_first_initial ??
-                    (lang === "de" ? "—" : "—");
+                  const initial = r.referee_first_initial ?? "";
                   const plan = r.referee_plan_humanname;
                   return (
                     <li
@@ -669,13 +641,13 @@ export default function ReferralsPage() {
                             {initial}
                           </span>
                           {plan && (
-                            <span className="text-[11px] text-[var(--mp-fg-muted)] truncate">
+                            <span className="text-xs text-[var(--mp-fg-muted)] truncate">
                               · {plan}
                             </span>
                           )}
                           {meta.badge}
                         </div>
-                        <div className="text-[11px] text-[var(--mp-fg-subtle)]">
+                        <div className="text-xs text-[var(--mp-fg-subtle)]">
                           {meta.sub}
                         </div>
                       </div>
@@ -692,19 +664,15 @@ export default function ReferralsPage() {
                     ? "Noch keine Empfehlungen"
                     : "No referrals yet"
                 }
-                body={
-                  lang === "de"
-                    ? "Teile deinen Link mit anderen Prüflingen. Sobald zwei den kostenlosen Pro-Trial starten und wirklich aktiv lernen, bekommst du Pro kostenlos durch dein Prüfungsfenster."
-                    : "Share your link with fellow candidates. Once two start the free Pro trial and are actively studying, you get Pro free through your exam window."
-                }
+                body={referralEmptyLine(lang)}
                 action={
                   <button
                     type="button"
-                    onClick={copyLink}
-                    className="mp-btn mp-btn--primary gap-2"
+                    onClick={copyInviteMessage}
+                    className="mp-btn mp-btn--primary gap-2 min-h-[44px]"
                   >
-                    <Copy className="w-4 h-4" />
-                    {lang === "de" ? "Link kopieren" : "Copy link"}
+                    <Copy className="w-4 h-4" aria-hidden />
+                    {lang === "de" ? "Einladung kopieren" : "Copy invite"}
                   </button>
                 }
               />
@@ -717,76 +685,23 @@ export default function ReferralsPage() {
               {lang === "de" ? "So funktioniert's" : "How it works"}
             </h3>
             <ol className="space-y-3">
-              <li className="flex gap-3">
-                <div className="w-7 h-7 rounded-full bg-[var(--mp-viridian)]/10 text-[var(--mp-viridian)] text-xs font-bold flex items-center justify-center flex-shrink-0">
-                  1
-                </div>
-                <div>
-                  <div className="text-sm font-semibold text-[var(--mp-fg)] mb-0.5">
-                    {lang === "de" ? "Link teilen" : "Share your link"}
+              {referralRewardBullets(lang).map((step, i) => (
+                <li key={i} className="flex gap-3">
+                  <div
+                    className="w-7 h-7 rounded-full bg-[var(--mp-success-bg)] text-[var(--mp-success-text)] text-xs font-bold flex items-center justify-center flex-shrink-0"
+                    aria-hidden
+                  >
+                    {i + 1}
                   </div>
-                  <p className="text-xs text-[var(--mp-fg-muted)] leading-relaxed">
-                    {lang === "de"
-                      ? "Teile deinen Link mit Kolleginnen und Kollegen, die sich auf eine österreichische Prüfung vorbereiten."
-                      : "Share your link with colleagues preparing for an Austrian medical exam."}
-                  </p>
-                </div>
-              </li>
-              <li className="flex gap-3">
-                <div className="w-7 h-7 rounded-full bg-[var(--mp-viridian)]/10 text-[var(--mp-viridian)] text-xs font-bold flex items-center justify-center flex-shrink-0">
-                  2
-                </div>
-                <div>
-                  <div className="text-sm font-semibold text-[var(--mp-fg)] mb-0.5">
-                    {lang === "de" ? "Beide starten den Pro-Trial" : "Both start the Pro trial"}
-                  </div>
-                  <p className="text-xs text-[var(--mp-fg-muted)] leading-relaxed">
-                    {lang === "de"
-                      ? billingSurfaceText("referrals_page_tsx_4", "de")
-                      : billingSurfaceText("referrals_page_tsx_5", "en")}
-                  </p>
-                </div>
-              </li>
-              <li className="flex gap-3">
-                <div className="w-7 h-7 rounded-full bg-[var(--mp-viridian)]/10 text-[var(--mp-viridian)] text-xs font-bold flex items-center justify-center flex-shrink-0">
-                  3
-                </div>
-                <div>
-                  <div className="text-sm font-semibold text-[var(--mp-fg)] mb-0.5">
-                    {lang === "de" ? "Beide üben aktiv" : "Both start practising"}
-                  </div>
-                  <p className="text-xs text-[var(--mp-fg-muted)] leading-relaxed">
-                    {lang === "de"
-                      ? "Sobald jede Person mindestens 20 verschiedene Fragen an mindestens 2 verschiedenen Tagen beantwortet hat, qualifiziert sich die Empfehlung."
-                      : "Once each person answers at least 20 different questions across at least 2 different days, the referral qualifies."}
-                  </p>
-                </div>
-              </li>
-              <li className="flex gap-3">
-                <div className="w-7 h-7 rounded-full bg-[var(--mp-viridian)]/10 text-[var(--mp-viridian)] text-xs font-bold flex items-center justify-center flex-shrink-0">
-                  4
-                </div>
-                <div>
-                  <div className="text-sm font-semibold text-[var(--mp-fg)] mb-0.5">
-                    {lang === "de"
-                      ? "Pro kostenlos durchs Prüfungsfenster"
-                      : "Pro free through the exam window"}
-                  </div>
-                  <p className="text-xs text-[var(--mp-fg-muted)] leading-relaxed">
-                    {lang === "de"
-                      ? "Nach der zweiten qualifizierten Empfehlung prüft unser Team kurz und schaltet MedPrüf Pro für dich frei, kostenlos bis zum Ende deines Prüfungsfensters. Für dich als Empfehlenden ist das komplett kostenlos."
-                      : "After your second qualified referral, our team does a quick review and unlocks MedPrüf Pro for you, free through the end of your exam window. Completely free for you as the referrer."}
-                  </p>
-                  <p className="text-[11px] text-[var(--mp-fg-subtle)] mt-1">
-                    <Link href="/faq#referrals" className="underline">
-                      {lang === "de"
-                        ? "Mehr in der FAQ"
-                        : "More in the FAQ"}
-                    </Link>
-                  </p>
-                </div>
-              </li>
+                  <p className="text-sm text-[var(--mp-fg-muted)] leading-relaxed">{step}</p>
+                </li>
+              ))}
             </ol>
+            <p className="text-xs text-[var(--mp-fg-subtle)] mt-3">
+              <Link href="/faq#referrals" className="underline">
+                {lang === "de" ? "Mehr in den FAQ" : "More in the FAQ"}
+              </Link>
+            </p>
           </section>
 
         </div>
@@ -857,13 +772,8 @@ function SocialProofStrip({
       >
         <p className="text-sm font-semibold text-[var(--mp-fg)]">
           {lang === "de"
-            ? "Du wärst die erste Empfehlung, der Code ist neu."
-            : "You'd be the first referral; the code is brand new."}
-        </p>
-        <p className="text-xs text-[var(--mp-fg-subtle)] mt-1">
-          {lang === "de"
-            ? "Teile den Code mit jemandem aus deiner Lerngruppe, die Empfehlung zählt, sobald diese Person den kostenlosen Pro-Trial startet und aktiv übt."
-            : "Share the code with someone from your study group; the referral counts once that person starts the free Pro trial and is actively practising."}
+            ? "Das Empfehlungsprogramm ist neu. Noch zählt keine Empfehlung."
+            : "The referral program is new. No referral counts yet."}
         </p>
       </section>
     );
@@ -907,7 +817,7 @@ function SocialProofStrip({
             <div className="text-2xl font-display font-extrabold text-[var(--mp-viridian)] tabular-nums">
               {row.value}
             </div>
-            <div className="text-[11px] text-[var(--mp-fg-subtle)] mt-1 leading-tight">
+            <div className="text-xs text-[var(--mp-fg-subtle)] mt-1 leading-tight">
               {row.label}
             </div>
           </div>

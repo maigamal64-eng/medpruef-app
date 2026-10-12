@@ -182,3 +182,35 @@ export function buildReferralLink(code: string): string {
     REFERRAL_SITE_URL
   return `${base.replace(/\/$/, '')}/login?ref=${encodeURIComponent(code)}`
 }
+
+// ─────────────────────────────────────────────────────────────────────
+// Share targets (TR-27)
+// ─────────────────────────────────────────────────────────────────────
+
+/**
+ * Deep links for every referral share button. The caller passes the one
+ * invite message from `referralInviteMessage(lang, link)` in
+ * src/lib/referral-copy.ts, so the friend always receives the free path,
+ * the trial with its terms and the sender's first-person disclosure.
+ *
+ * Telegram requires a `url` parameter; it shows the link above the text,
+ * so the link may appear twice there (the message already ends with it).
+ * There is no X/Twitter target: the invite is longer than a post allows
+ * and a shortened post would drop the disclosure.
+ */
+export interface ReferralShareUrls {
+  telegram: string
+  whatsapp: string
+}
+
+export function referralShareUrls(message: string, link: string): ReferralShareUrls {
+  return {
+    telegram: `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(message)}`,
+    whatsapp: `https://wa.me/?text=${encodeURIComponent(message)}`,
+  }
+}
+
+/** Payload for `navigator.share`: the message already carries the link. */
+export function referralNativeSharePayload(message: string, title: string): { title: string; text: string } {
+  return { title, text: message }
+}

@@ -35,12 +35,30 @@ import {
   useAnnouncementGate,
   type SurfaceKey,
 } from "@/lib/announcements/useAnnouncementGate";
-import { t, useLang } from "@/lib/i18n";
+import { t, useLang, renderLang } from "@/lib/i18n";
 import { useUserTier } from "@/lib/hooks/useUserTier";
 
 const SURFACE: SurfaceKey = "referral_floater";
 const ALLOWED_PATHS = ["/", "/flashcards", "/quiz"];
 const MOUNT_DELAY_MS = 6000;
+
+/**
+ * Floater copy (a21, Sie). The floater has no share control: it opens
+ * /referrals, where the invite message, its disclosure and the reward
+ * conditions live (referral-copy.ts). It names no reward and no price so
+ * nothing here can drift from that single source. Replaces the du
+ * ref_floater_title / ref_floater_body i18n keys.
+ */
+const FLOATER_COPY = {
+  de: {
+    title: "Kennen Sie jemanden, der sich auch auf die Prüfung vorbereitet?",
+    body: "Unter Details finden Sie Ihren Link, Ihre Einladungsnachricht und die Bedingungen der Empfehlung.",
+  },
+  en: {
+    title: "Know someone else preparing for the exam?",
+    body: "Under Details you find your link, your invite message and the referral conditions.",
+  },
+} as const;
 
 export default function ReferralShareFloater() {
   const pathname = usePathname();
@@ -72,6 +90,7 @@ export default function ReferralShareFloater() {
   const handleDismiss = () => {
     void markSeen(SURFACE);
   };
+  const copy = FLOATER_COPY[renderLang(lang)];
 
   return (
     <div
@@ -102,10 +121,10 @@ export default function ReferralShareFloater() {
           </div>
           <div className="min-w-0">
             <p className="text-sm font-semibold text-[var(--mp-fg)] leading-snug">
-              {t("ref_floater_title", lang)}
+              {copy.title}
             </p>
             <p className="text-xs text-[var(--mp-fg-subtle)] mt-1 leading-relaxed">
-              {t("ref_floater_body", lang)}
+              {copy.body}
             </p>
             <div className="mt-3 flex items-center gap-2">
               <Link
@@ -118,7 +137,7 @@ export default function ReferralShareFloater() {
               <button
                 type="button"
                 onClick={handleDismiss}
-                className="text-xs text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg)] px-2 py-1"
+                className="text-xs text-[var(--mp-fg-subtle)] hover:text-[var(--mp-fg)] px-2 py-1 min-h-[44px]"
               >
                 {t("ref_floater_cta_not_now", lang)}
               </button>

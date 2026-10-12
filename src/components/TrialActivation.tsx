@@ -3,7 +3,7 @@ import { t } from "@/lib/i18n";
 import { FREE_TIER } from "@/lib/content-truth";
 import { createActionGate } from "@/lib/account-request";
 import { PaymentStatus } from "./ui/PaymentStatus";
-import { billingTrialLine } from "@/lib/billing-copy";
+import { BILLING_SUPPORT_EMAIL, billingTrialLine, VERIFIED_CANCEL_PATH } from "@/lib/billing-copy";
 
 /**
  * TrialActivation — the Whop card-on-file Pro trial entry (Notes feature P5,
@@ -40,6 +40,8 @@ interface TrialState {
   trial_days: number;
   price_after_cents: number;
   currency: string;
+  /** First charge if started now (server, start + trial days). */
+  charge_at?: string;
 }
 
 type Phase = "idle" | "working" | "error";
@@ -147,7 +149,9 @@ export default function TrialActivation({
     <Link href={freeStudyDestination(exam)} className="mp-btn mp-btn--secondary min-h-12 w-full justify-center">{lang === 'de' ? 'Ohne Karte weiter' : 'Continue without a card'}</Link>
   </Alert>;
   if (!signedIn || loading || !state) return null;
-  if (!state.eligible) return resume ? <Alert variant="info">
+  // A used trial or paid access always gets one line and the right next step
+  // when the learner came here for the trial; otherwise the card hides.
+  if (!state.eligible) return (resume || state.already_trialed) && state.trial_enabled ? <Alert variant="info">
     <p>{t(state.is_pro ? 'account_trial_paid' : state.already_trialed ? 'account_trial_used' : 'account_trial_load_error', lang)}</p>
     <Link href="/pricing#first-month" className="mp-btn mp-btn--secondary min-h-11">{t('practice_see_plans', lang)}</Link>
     <Link href={freeStudyDestination(exam)} className="mp-btn mp-btn--secondary min-h-11">{t('account_continue', lang)}</Link>
@@ -170,7 +174,7 @@ export default function TrialActivation({
             {t('account_trial_title', lang)}
           </p>
           <p className="text-sm text-[var(--mp-fg-muted)] mt-0.5">
-            {billingTrialLine(lang, { trialDays: state.trial_days, priceAfterCents: state.price_after_cents })}
+            {billingTrialLine(lang, { trialDays: state.trial_days, priceAfterCents: state.price_after_cents, chargeAt: state.charge_at ?? null })}
           </p>
 
           <div className="flex flex-wrap items-center gap-2 mt-3">
@@ -179,7 +183,7 @@ export default function TrialActivation({
               type="button"
               onClick={start}
               aria-disabled={phase === "working" || checkoutBusy}
-              className="mp-btn mp-btn--primary min-h-11 inline-flex items-center gap-1.5 disabled:opacity-60"
+              className="mp-btn mp-btn--primary min-h-12 inline-flex items-center gap-1.5"
             >
               {phase === "working" ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -194,13 +198,21 @@ export default function TrialActivation({
           </div>
 
           <p className="text-sm mt-3 text-[var(--mp-fg-muted)]">{t('account_trial_limit', lang).replace('{n}', String(FREE_TIER.questions_per_exam_type))}</p>
+          {resume && phase === 'idle' && <p role="status" className="text-sm mt-2">{de ? 'Weiter zum Pro-Test: Prüfen Sie die Bedingungen und tippen Sie auf den Knopf, wenn Sie starten möchten.' : 'Continue to the Pro trial: check the terms and tap the button when you want to start.'}</p>}
           {phase === 'working' && <p role="status" className="text-sm mt-2">{t('account_checkout_opening', lang)} {t('account_return', lang)}</p>}
           {slow && <button type="button" className="mp-btn mp-btn--secondary min-h-11 mt-2" onClick={() => { if (phase !== 'working') return; window.location.href = '/checkout/success?trial=1'; }}>{t('account_checkout_retry', lang)}</button>}
-          <Link href="/faq#cancellation" className="inline-flex min-h-11 items-center text-sm text-[var(--mp-accent-text)] underline">{de ? 'So kündigst du' : 'How to cancel'}</Link>
+          {/* Self-serve cancel link only once the path is verified end to end; until then the FAQ explains it. */}
+          <Link href="/faq#cancellation" className="inline-flex min-h-11 items-center text-sm text-[var(--mp-accent-text)] underline">{VERIFIED_CANCEL_PATH ? (de ? 'So kündigen Sie' : 'How to cancel') : (de ? 'So funktioniert die Kündigung' : 'How cancelling works')}</Link>
           {resume && <Link href={freeStudyDestination(exam)} className="mp-btn mp-btn--secondary min-h-12 mt-2 w-full justify-center">{de ? 'Ohne Karte weiter' : 'Continue without a card'}</Link>}
           {pending && <PaymentStatus state="pending" check={() => { window.location.href = "/checkout/success?trial=1"; }} />}
           {phase === "error" && (
-            <p role="alert" className="text-sm text-[var(--mp-error)] mt-2">{t('account_trial_failed', lang)}</p>
+            <div className="mt-2 space-y-1">
+              <p role="alert" className="text-sm text-[var(--mp-error-text)] m-0">{t('account_trial_failed', lang)}</p>
+              <div className="flex flex-wrap gap-3">
+                <button type="button" className="mp-btn mp-btn--secondary min-h-11" onClick={start}>{t('account_checkout_try_again', lang)}</button>
+                <a className="inline-flex min-h-11 items-center text-sm underline" href={`mailto:${BILLING_SUPPORT_EMAIL}?subject=${encodeURIComponent(de ? 'Pro-Test' : 'Pro trial')}`}>{de ? 'Hilfe' : 'Help'}</a>
+              </div>
+            </div>
           )}
         </div>
       </div>

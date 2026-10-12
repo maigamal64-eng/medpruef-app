@@ -1,5 +1,5 @@
 "use client";
-import { billingSurfaceText } from "@/lib/billing-copy";
+import { referralDisclosure, referralRewardSentence } from "@/lib/referral-copy";
 
 
 /**
@@ -21,7 +21,9 @@ import { billingSurfaceText } from "@/lib/billing-copy";
  *
  *   - Code (monospace, big, tap-to-select)
  *   - "Kopieren" button (primary)
- *   - One-line explainer — "Freund wird Pro → beide bekommen Bonus"
+ *   - The one reward sentence (referral-copy.ts) and, next to the copy
+ *     control, the disclosure line: the bare code carries no message,
+ *     so the sharer is told the invite discloses the reward (TR-27).
  *   - "Details" link to /referrals
  *
  * Coexistence with the announcement gate (see
@@ -90,12 +92,12 @@ export default function ReferralCodeCard({
   userId,
   lang,
   initialReferralCode,
-  initialCopiedAt,
 }: ReferralCodeCardProps) {
   const [code, setCode] = useState<string | null>(initialReferralCode ?? null);
   const [loading, setLoading] = useState(!initialReferralCode);
   const [copied, setCopied] = useState(false);
-  const [copiedAt, setCopiedAt] = useState<string | null>(initialCopiedAt ?? null);
+  // Server "copied at" stamp is still written (sidebar nudge-dot); the
+  // card itself no longer varies its copy on it.
   const { activeSurface, state: gateState, markSeen } = useAnnouncementGate();
   // Optimistic local hide (2026-09-21): flipping this before the POST
   // lands means the card vanishes on the very click, not on the next
@@ -127,7 +129,6 @@ export default function ReferralCodeCard({
         const data = await r.json();
         if (cancelled) return;
         setCode(data.referralCode ?? null);
-        setCopiedAt(data.referralCodeCopiedAt ?? null);
       } catch {
         /* non-critical — card silently hides if we can't fetch */
       } finally {
@@ -179,15 +180,11 @@ export default function ReferralCodeCard({
     // Stamp the server-side "copied at" so the sidebar nudge-dot clears
     // on next render. Idempotent — safe to call every time.
     try {
-      const r = await authFetch("/api/referrals/mark-copied", {
+      await authFetch("/api/referrals/mark-copied", {
         method: "POST",
         headers: { "content-type": "application/json" },
         skipAuthRedirect: true,
       });
-      if (r.ok) {
-        const data = await r.json().catch(() => null);
-        if (data?.copiedAt) setCopiedAt(data.copiedAt);
-      }
     } catch {
       /* non-critical */
     }
@@ -237,20 +234,14 @@ export default function ReferralCodeCard({
 
   if (!code) return null;
 
-  const explainer =
-    lang === "de"
-      ? billingSurfaceText("surface_35", "de")
-      : billingSurfaceText("surface_36", "en");
-  const title =
-    lang === "de"
-      ? "Dein Empfehlungscode"
-      : "Your referral code";
-  const detailsLabel =
-    lang === "de" ? "Details" : "Details";
-  const copyLabel =
-    lang === "de" ? "Kopieren" : "Copy";
-  const copiedLabel =
-    lang === "de" ? "Kopiert" : "Copied";
+  const explainer = referralRewardSentence(lang);
+  const ui = lang === "de"
+    ? { title: "Ihr Empfehlungscode", code: "Empfehlungscode", copy: "Kopieren", copied: "Kopiert" }
+    : { title: "Your referral code", code: "Referral code", copy: "Copy", copied: "Copied" };
+  const title = ui.title;
+  const detailsLabel = "Details";
+  const copyLabel = ui.copy;
+  const copiedLabel = ui.copied;
 
   return (
     <section
@@ -298,41 +289,39 @@ export default function ReferralCodeCard({
       <div className="flex flex-col sm:flex-row items-stretch gap-2">
         <div
           className="flex-1 flex items-center gap-2 px-4 py-3 rounded-xl border border-[var(--mp-border)] bg-[var(--mp-surface-sunken)] font-mono text-base font-bold text-[var(--mp-fg)] tracking-wider select-all"
-          aria-label={lang === "de" ? "Empfehlungscode" : "Referral code"}
+          aria-label={ui.code}
         >
           {code}
         </div>
         <button
           type="button"
           onClick={handleCopy}
-          className="mp-btn mp-btn--primary justify-center gap-2"
-          aria-label={copyLabel}
+          className="mp-btn mp-btn--primary justify-center gap-2 min-h-[44px]"
           data-copied={copied ? "true" : "false"}
         >
           {copied ? (
             <>
-              <Check className="w-4 h-4" />
+              <Check className="w-4 h-4" aria-hidden />
               {copiedLabel}
             </>
           ) : (
             <>
-              <Copy className="w-4 h-4" />
+              <Copy className="w-4 h-4" aria-hidden />
               {copyLabel}
             </>
           )}
         </button>
       </div>
+      <span role="status" className="mp-sr-only">
+        {copied ? copiedLabel : ""}
+      </span>
 
-      {/* Subtle "first copy ever" confirmation once they've copied.
-          Uses copiedAt from the server (not the `copied` ephemeral
-          flash flag) so the line persists across renders. */}
-      {copiedAt && (
-        <p className="text-[11px] text-[var(--mp-fg-subtle)] mt-2">
-          {lang === "de"
-            ? billingSurfaceText("surface_37", "de")
-            : billingSurfaceText("surface_38", "en")}
-        </p>
-      )}
+      {/* TR-27: the bare code carries no message, so the disclosure sits
+          visibly next to the copy control. */}
+      <p className="text-xs text-[var(--mp-fg-muted)] mt-2 leading-relaxed">
+        {referralDisclosure(lang)}
+      </p>
+
     </section>
   );
 }
