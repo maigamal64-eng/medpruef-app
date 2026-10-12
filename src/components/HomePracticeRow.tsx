@@ -13,7 +13,9 @@
  *    promoted into the hero.
  */
 import Link from "next/link";
-import { ClipboardList, Bookmark, XCircle, Sparkles, Clock } from "lucide-react";
+import { ClipboardList, Bookmark, XCircle, Sparkles, Clock, GraduationCap } from "lucide-react";
+import { te } from "@/lib/i18n-exam";
+import { trackEvent } from "@/lib/tracker";
 import { t, type Lang } from "@/lib/i18n";
 import { buildQuizHref } from "@/lib/quiz-links";
 import { canUse, type Audience } from "@/lib/entitlements";
@@ -32,6 +34,7 @@ export function HomeOtherModes({ examSource, audience, openMistakes, lang, onSlo
   const fmt = renderedLanguage(lang).lang;
   const proMistakes = canUse("mistake_review", audience);
   const proSaved = canUse("bookmarks", audience);
+  const proMock = canUse("mock_exam", audience);
   const showBadge = proMistakes && typeof openMistakes === "number" && openMistakes > 0;
   const mistakesName = showBadge
     ? t("a22_mode_mistakes_name", lang).replace("{n}", formatNumberText(openMistakes!, fmt))
@@ -58,6 +61,13 @@ export function HomeOtherModes({ examSource, audience, openMistakes, lang, onSlo
           <Link className={SEGMENT} href={savedHref} aria-label={proSaved ? t("a22_mode_saved", lang) : gateSentence("bookmarks", lang)} onClick={() => onSlot?.("saved")}>
             <Bookmark className="w-4 h-4 flex-shrink-0 text-[var(--mp-fg-muted)]" aria-hidden />{t("a22_mode_saved", lang)}
             {!proSaved && <span aria-hidden className="mp-pro-pill">Pro</span>}
+          </Link>
+        </li>
+        <li className="flex flex-1">
+          {/* LX-33: one mock-exam entry in the destination row; free accounts see the Pro tag. */}
+          <Link className={SEGMENT} href={proMock ? `/exam?examSource=${encodeURIComponent(examSource)}` : "/pricing?gate=mock_exam"} aria-label={proMock ? te("mock_entry", lang) : gateSentence("mock_exam", lang)} onClick={() => trackEvent("mock_entry_click", { source: "home", exam: examSource })}>
+            <GraduationCap className="w-4 h-4 flex-shrink-0 text-[var(--mp-fg-muted)]" aria-hidden />{te("mock_entry", lang)}
+            {!proMock && <span aria-hidden className="mp-pro-pill">Pro</span>}
           </Link>
         </li>
       </ul>

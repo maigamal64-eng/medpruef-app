@@ -42,12 +42,14 @@
 // off-by-one from a soft-deleted row that survived a partial archive,
 // and Wien dropped 7,567 → 7,566 in that sweep.
 
+// 2026-10-12 (a24, SIM-06-R): pharma is 322 active rows (13 inactivated in the
+// content-leak repair); the live count is DB-owned and drifts, so copy says "über 300".
 export const QUESTIONS = {
-  total: 10685,
+  total: 10672,
   by_exam_type: {
     kenntnispruefung: 7566,
     kmp_innsbruck: 2784,
-    pharma: 335,
+    pharma: 322,
   },
 } as const;
 

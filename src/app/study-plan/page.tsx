@@ -24,6 +24,7 @@ import StudyReadError from "@/components/StudyReadError";
 import { isStudyPlanResponse, type StudyPlanResponse } from "@/lib/study-p0";
 import { buildStudyPath } from "@/lib/studyPath";
 import StudyPathTimeline from "@/components/StudyPathTimeline";
+import { MockExamLink } from "@/components/exam/MockExamLink";
 import {
   CalendarDays,
   Check,
@@ -305,6 +306,7 @@ export default function StudyPlanPage() {
 
         <div className="px-4 lg:px-8 py-5 max-w-5xl mx-auto pb-28">
           <DataRegion loading={loading && !!resp} retry={() => setReload(n => n + 1)} />
+          <MockExamLink examSource={activeExam} lang={lang} source="plan" />
           {loadError ? <StudyReadError page="plan" error={loadError} retry={() => setReload(n => n + 1)} lang={lang} /> : null}
           {resp?.hasExamDate === false && !rollingSelected && (
             <section className="mp-card max-w-xl mx-auto p-5 space-y-4" aria-busy={saving}>

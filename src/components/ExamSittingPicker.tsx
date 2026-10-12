@@ -56,6 +56,7 @@ import {
 
 import { t } from "@/lib/i18n";
 import { TextField } from "@/components/ui";
+import { SittingFormatNote } from "@/components/exam/SittingFormatNote";
 
 type Lang = "de" | "en";
 
@@ -221,6 +222,7 @@ export default function ExamSittingPicker({
                 <p className="text-sm text-[var(--mp-fg-muted)] mt-0.5">
                   {g.date_end ? formatSittingWhen(g, lang) : formatDate(g.date, lang)}
                 </p>
+                {[...new Set(g.rows.map((r) => r.exam_key))].map((k) => <SittingFormatNote key={k} examKey={k} date={g.date} lang={lang} link={false} />)}
                 <div className="flex items-center gap-2 flex-wrap mt-1.5">
                   {dleft >= 0 && (
                     <span className="inline-flex items-center gap-1 text-[11px] font-mono text-[var(--mp-viridian)]">

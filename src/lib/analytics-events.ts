@@ -46,6 +46,8 @@ export const CANONICAL_EVENTS = {
   home_ready: ['ms', 'connection'],
   // UX-HOME-53: one Home CTA event; `slot` is an enumerated value (HOME_CTA_SLOTS), never free text.
   home_cta: ['slot', 'exam', 'kind'],
+  // LX-33: mock exam entry from Home or the study plan (source is home|plan).
+  mock_entry_click: ['source', 'exam'],
   banner_dismissed: ['surface'],
   tg_token_failed: ['reason'],
   tg_handoff_choice: ['choice'],

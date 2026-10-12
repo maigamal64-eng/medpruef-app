@@ -3,7 +3,7 @@ import { getExamLabel } from './master-locale/exam-label'
 //
 // The app supports multiple exam types via questions.exam_type:
 //   - 'kenntnispruefung' (Vienna Austrian Kenntnisprüfung — the original product)
-//   - 'pharma'           (Pharmakologie Rezeptierkunde — 335 short-answer questions)
+//   - 'pharma'           (Pharmakologie Rezeptierkunde, over 300 questions; live count is DB-owned)
 //   - 'kmp_innsbruck'    (legacy DB key; display label is "Stichprobentest (Innsbruck)":
 //                         the national MedUni Nostrifizierung screening test. NOT the
 //                         domestic "Kumulative Modulprüfung". Questions sourced from the
@@ -66,7 +66,7 @@ export const EXAM_SOURCES = [
     bridge: { de: getExamLabel('kmp_innsbruck', 'bridge', 'de'), en: getExamLabel('kmp_innsbruck', 'bridge', 'en') },
     shortLabel: getExamLabel('kmp_innsbruck', 'short'),
     badge: '',
-    questions: 2742,
+    questions: 2765,
     description: { de: 'Nationaler MedUni-Stichprobentest, Fragen aus dem Innsbruck-Curriculum', en: 'National MedUni Stichprobentest, questions from the Innsbruck curriculum' },
   },
   {
@@ -76,7 +76,7 @@ export const EXAM_SOURCES = [
     bridge: { de: getExamLabel('pharma', 'bridge', 'de'), en: getExamLabel('pharma', 'bridge', 'en') },
     shortLabel: getExamLabel('pharma', 'short'),
     badge: '',
-    questions: 335,
+    questions: 322,
     description: { de: 'Rezeptierkunde / Stichpunkte', en: 'Prescription Studies' },
   },
 ] as const

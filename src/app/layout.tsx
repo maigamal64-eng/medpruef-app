@@ -22,6 +22,7 @@ import PendingExamRecovery from "@/components/exam/PendingExamRecovery";
 import TrackRouteChange from "@/components/TrackRouteChange";
 import SearchModalMount from "@/components/SearchModalMount";
 import StatusRegion, { StatusSlot } from "@/components/shell/StatusRegion";
+import RunningExamChip from "@/components/exam/RunningExamChip";
 import NavigationMarker from "@/components/shell/NavigationMarker";
 import OfflineIndicator from "@/components/OfflineIndicator";
 import { LiveRegions } from "@/components/ui/LiveRegions";
@@ -406,6 +407,7 @@ export default function RootLayout({
                 so headers and focus never sit under it. */}
             <StatusRegion>
               <StatusSlot name="offline"><OfflineIndicator /></StatusSlot>
+              <StatusSlot name="exam"><RunningExamChip /></StatusSlot>
               <StatusSlot name="renewal"><RenewalPrompt /></StatusSlot>
               <StatusSlot name="guest"><GuestMigrationBanner /></StatusSlot>
               <StatusSlot name="cohort"><CohortCountdownBanner /></StatusSlot>

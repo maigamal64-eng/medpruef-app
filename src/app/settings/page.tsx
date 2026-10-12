@@ -58,6 +58,7 @@ import {
 } from "@/lib/billing-copy";
 import { TIERS } from "@/lib/content-truth";
 import ExamSwitcherInline from "@/components/ExamSwitcherInline";
+import { te } from "@/lib/i18n-exam";
 import { settingsBuildLabel } from "@/components/settings/build-label";
 import { EXAM_SOURCES, setStoredExamSource, type ExamSourceId } from "@/lib/topics";
 import {
@@ -71,6 +72,7 @@ import {
 import {
   ArrowRight,
   BookMarked,
+  GraduationCap,
   History,
   CalendarDays,
   CloudDownload,
@@ -1443,6 +1445,22 @@ export default function SettingsPage() {
                     </div>
                   </button>
                 )}
+
+                {/* UX-EXM-44: record the real exam result (Pass-Until-You-Pass). */}
+                <button type="button" className="set-row" onClick={() => router.push("/dashboard/exam-result")}>
+                  <div className="sr-ic">
+                    <GraduationCap aria-hidden />
+                  </div>
+                  <div className="sr-body">
+                    <div className="sr-title">{te("settings_real_result", lang)}</div>
+                    <div className="sr-sub">{te("settings_real_result_sub", lang)}</div>
+                  </div>
+                  <div className="sr-ctrl">
+                    <span className="sr-val">
+                      <ArrowRight aria-hidden />
+                    </span>
+                  </div>
+                </button>
 
                 {/* Saved simulations */}
                 <button type="button" className="set-row" onClick={() => router.push("/history")}>

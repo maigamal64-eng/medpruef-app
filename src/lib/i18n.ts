@@ -1244,7 +1244,7 @@ const translations = {
   'whatsnew_translations_body': { de: 'Du kannst jede Erklärung jetzt auf Russisch, Arabisch, Englisch, Französisch, Türkisch, Ukrainisch oder Serbisch lesen. Medizinische Fachbegriffe, Medikamentennamen und Leitlinien-Bezüge bleiben dabei erhalten.', en: 'You can now read any explanation in Russian, Arabic, English, French, Turkish, Ukrainian, or Serbian. Medical terminology, drug names, and guideline references stay intact.' },
   'whatsnew_kmp_title': { de: 'Stichprobentest: über 2.700 Fragen', en: 'Stichprobentest: over 2,700 questions' },
   'whatsnew_kmp_body': { de: 'Der nationale Stichprobentest (Nostrifizierung) ist jetzt verfügbar, mit Fragen aus dem klinischen Curriculum der Med Uni Innsbruck. Wechsle die Prüfung über die Seitenleiste.', en: 'The national Stichprobentest (nostrification screening) is now available, with questions from the Med Uni Innsbruck clinical curriculum. Switch exams from the sidebar.' },
-  'whatsnew_pharma_title': { de: 'Pharmakologie-Prüfung: 335 Fragen', en: 'Pharmacology exam: 335 questions' },
+  'whatsnew_pharma_title': { de: 'Pharmakologie-Prüfung: über 300 Fragen', en: 'Pharmacology exam: over 300 questions' },
   'whatsnew_pharma_body': { de: 'Kurzantworten zur Pharmakologie für die Rezeptierkunde-Vorbereitung.', en: 'Short-answer pharmacology questions for Rezeptierkunde preparation.' },
   'whatsnew_sip5a_title': { de: 'SIP5a Februar 2026 hinzugefügt', en: 'February 2026 SIP5a exam added' },
   'whatsnew_sip5a_body': { de: '154 frische Fragen aus der neuesten Wiener Prüfung, nach Fachgebiet geordnet.', en: '154 fresh questions from the latest Vienna exam, organized by specialty.' },

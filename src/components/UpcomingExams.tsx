@@ -26,6 +26,7 @@ import Link from "next/link";
 import { CalendarDays, Clock, ArrowRight } from "lucide-react";
 import { MentorEntryLink } from "@/components/mentor/entries/MentorEntryLink";
 import { entryT } from "@/components/mentor/entries/entry-copy";
+import { SittingFormatNote } from "@/components/exam/SittingFormatNote";
 import {
   OFFICIAL_KEYS_BY_BANK,
   getNextOfficialDeadlineGroup,
@@ -178,6 +179,7 @@ function OfficialCard({
             {formatSittingWhen(r, lang)}
           </p>
         ))}
+        {whenLines.map((r) => <SittingFormatNote key={`fmt-${r.exam_key}-${r.date}`} examKey={r.exam_key} date={r.date} lang={lang} link={false} />)}
       </div>
 
       <dl className="space-y-1.5 text-sm text-[var(--mp-fg-muted)] mb-4">

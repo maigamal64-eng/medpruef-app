@@ -39,6 +39,7 @@ export type TrackEventType = MentorClientEvent
   | "note_review"
   | "home_ready"
   | "home_cta"
+  | "mock_entry_click"
   | "banner_dismissed"
   | "tg_token_failed"
   | "tg_handoff_choice"

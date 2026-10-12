@@ -128,19 +128,24 @@ for (const count of [70, 180]) {
     }, { account, attemptId, question, count });
     await page.route('**/api/history/exams', route => route.request().method() === 'POST' ? route.fulfill({ json: { attempt: { id: attemptId, attempt_id: attemptId } } }) : route.fulfill({ json: { attempts: [], total: 0 } }));
     await page.goto('/exam'); await page.getByRole('button', { name: 'View result', exact: true }).click();
-    await expect(page.getByText(new RegExp(`58 / ${count} correct`))).toBeVisible();
-    await expect(page.getByText(/Time expired\./)).toBeVisible();
-    if (count === 70) await expect(page.getByText('Part run · 70', { exact: true })).toBeVisible();
+    // a24 result screen: tiles carry the counts against the actual denominator.
+    await expect(page.locator('.mp-stat').filter({ hasText: 'Correct' })).toContainText('58');
+    await expect(page.locator('.mp-stat').filter({ hasText: 'Open' })).toContainText(String(count - 58));
+    await expect(page.getByText('Time expired', { exact: true })).toBeVisible();
+    if (count === 70) await expect(page.getByText('Result for this selection', { exact: true })).toBeVisible();
     await page.screenshot({ path: test.info().outputPath(`time-up-${count}.png`), fullPage: true });
   });
 }
 
-test('free exam entry and locked history never fetch paid simulation history', async ({ page }) => {
-  await setup(page, false, 'en', false, 'free'); let reads = 0;
-  page.on('request', request => { if (new URL(request.url()).pathname === '/api/history/exams' && request.method() === 'GET') reads++; });
-  await page.goto('/exam'); await expect(page.getByText('Latest simulation', { exact: true })).toHaveCount(0);
-  await page.goto('/settings'); await page.getByRole('link', { name: 'Exam history', exact: true }).click();
-  await expect(page).toHaveURL(/\/history/); await expect(page.getByText(/Pro/).first()).toBeVisible(); expect(reads).toBe(0);
+// pick-ux-exm-38 B ([name], 12 Oct): free and lapsed accounts read a summary list on /history;
+// the exam entry still never loads the paid latest-simulation card.
+test('free exam entry never fetches simulation history; /history shows the read-only list', async ({ page }) => {
+  await setup(page, false, 'en', false, 'free'); let examReads = 0;
+  page.on('request', request => { if (new URL(request.url()).pathname === '/api/history/exams' && request.method() === 'GET' && page.url().includes('/exam')) examReads++; });
+  await page.route('**/api/history/exams**', route => route.fulfill({ json: { attempts: [], total: 0, access: 'summary' } }));
+  await page.goto('/exam'); await expect(page.getByText('Latest simulation', { exact: true })).toHaveCount(0); expect(examReads).toBe(0);
+  await page.goto('/settings'); await page.getByRole('button', { name: /Exam history/ }).first().click();
+  await expect(page).toHaveURL(/\/history/);
 });
 test('exam keyboard respects native activation, unsafe keys, overlays and shortcut off switch', async ({ page }) => {
   await page.setViewportSize({ width: 1366, height: 768 }); await setup(page); await page.goto('/exam');

@@ -104,8 +104,8 @@ const content: ExamLandingContent = {
   ],
   whatYouLearn: [
     {
-      de: "12 Fachgebiete im Überblick: Innere Medizin, Allgemeine Chirurgie, chirurgische Spezialfächer + Anästhesie, Dermatologie, Gynäkologie & Geburtshilfe, HNO, Kinder- und Jugendheilkunde, Kinder- und Jugendpsychiatrie, Neurologie, Psychiatrie, Intensivmedizin, Augenheilkunde.",
-      en: "12 specialties: Internal Medicine, General Surgery, Surgical Specialties + Anesthesiology, Dermatology, Gynecology & Obstetrics, ENT, Pediatrics, Child & Adolescent Psychiatry, Neurology, Psychiatry, Intensive Care Medicine, Ophthalmology.",
+      de: "Der offizielle Stichprobentest prüft zehn Fächer mit 250 Fragen. Die Fragenbank ist noch nach dem Innsbrucker Curriculum gegliedert (Innere Medizin, Allgemeine Chirurgie, chirurgische Spezialfächer und Anästhesie, Dermatologie, Gynäkologie, HNO, Kinder- und Jugendheilkunde, Kinder- und Jugendpsychiatrie, Neurologie, Psychiatrie, Intensivmedizin, Augenheilkunde); die Zuordnung zu den zehn offiziellen Fächern wird gerade geprüft.",
+      en: "The official Stichprobentest covers ten subjects with 250 questions. The question bank is still organised by the Innsbruck curriculum (internal medicine, general surgery, surgical specialties and anaesthesia, dermatology, gynaecology, ENT, paediatrics, child and adolescent psychiatry, neurology, psychiatry, intensive care, ophthalmology); the mapping to the ten official subjects is under review.",
     },
     {
       de: "Klinische Fallvignetten: Diagnose, Differenzialdiagnose, Therapie und Management-Entscheidungen.",
