@@ -27,7 +27,7 @@ function seed(list = rows()) {
     VALUES (${r.id}, ${literal(r.question)}, ${literal(JSON.stringify(r.choices))}::jsonb, ${literal(r.answer)}, ${literal(r.explanation)}, ${literal(r.topic)},
     ${literal(r.exam_type)}, ${literal(r.source_file)}, ${r.is_active}, ARRAY[${r.tags.map(literal).join(',')}]::text[], ${literal(r.content_hash)}, NULL, ARRAY[]::text[], NULL);`);
 }
-const files = (list = rows()) => emitActivation(manifest('archive', list), list, checkTrackA(list, list.map((r: any) => entry(r)), list, policy, 'archive'));
+const files = (list = rows()) => emitActivation(manifest('archive', list), list, checkTrackA(list, list.map((r: Record<string, unknown>) => entry(r)), list, policy, 'archive'));
 const state = () => sql("SELECT string_agg(id || ':' || is_active || ':' || array_to_string(tags, ','), ' ' ORDER BY id) FROM questions;");
 
 database('a06 activation changeset on isolated Postgres 16', () => {

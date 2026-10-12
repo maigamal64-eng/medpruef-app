@@ -7,7 +7,8 @@ import { reviewHash } from '../../../scripts/content/gate/check.mjs';
 // @ts-expect-error untyped fixture module
 import { policy, archiveRow, authoredRow, entry, manifest } from './fixture.mjs';
 
-const check = (rows: any[], kind: string, corpus = rows) => checkTrackA(rows, rows.map((r) => entry(r)), corpus, policy, kind);
+type Row = Record<string, unknown>;
+const check = (rows: Row[], kind: string, corpus = rows) => checkTrackA(rows, rows.map((r) => entry(r)), corpus, policy, kind);
 
 describe('a06 activation gate', () => {
   it('admits a reviewed archive original that the b20 gate refuses', () => {
@@ -34,7 +35,7 @@ describe('a06 activation gate', () => {
     const six = archiveRow({ choices: [...archiveRow().choices, { text: 'white oval', correct: false, position: 5, image_url: null }] });
     expect(check([six], 'archive')[0].errors).toContain('OPTIONS');
     expect(check([archiveRow({ question: 'Fixture item: was zeigt die Abbildung auf dem leeren Zeichenbrett heute' })], 'archive')[0].errors).toContain('IMAGE_MISSING');
-    const multi = archiveRow({ choices: archiveRow().choices.map((c: any, i: number) => ({ ...c, correct: i < 2 })) });
+    const multi = archiveRow({ choices: archiveRow().choices.map((c: Row, i: number) => ({ ...c, correct: i < 2 })) });
     expect(check([multi], 'archive')[0].errors).toContain('MULTI_WITHOUT_N');
   });
   it('refuses archive rows outside the range, a frozen policy id and an active row', () => {
