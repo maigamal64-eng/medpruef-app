@@ -45,10 +45,13 @@ export async function requestStudyConsent(db: ReminderDb, userId: string, hour =
   return true;
 }
 /**
- * a30 Telegram channel: the customer bot writes to the account's own private
- * chat. Telegram login proved the id and telegram_chat_id_confirmed proves the
- * learner started the bot, so the signed-session opt-in is the consent; no
- * mail link is involved. Returns false when the account has no started chat.
+ * a30 Telegram channel: the customer bot writes to the chat linked to this
+ * account (users.telegram_id, with telegram_chat_id_confirmed: that chat
+ * started the bot). The signed-session opt-in from Settings, which shows the
+ * linked @handle before the learner picks it, is the consent; no mail link is
+ * involved. Returns false when the account has no started chat. The link
+ * itself is only as strong as the bot's /start auth_<uuid> binding (see the
+ * a30 release note).
  */
 export async function grantTelegramConsent(db: ReminderDb, userId: string, hour: number, now = new Date()) {
   const owner = await db.from("users").select("telegram_id,telegram_chat_id_confirmed,is_banned").eq("id", userId).maybeSingle();
@@ -62,7 +65,7 @@ export async function grantTelegramConsent(db: ReminderDb, userId: string, hour:
 export async function confirmStudyConsent(db: ReminderDb, signed: string, now = new Date()) {
   const token = verifyReminderToken(signed, "study-confirm", now);
   if (!token) return false;
-  const pref = await db.from("study_nudge_prefs").select("id,user_id,pending_email").eq("confirmation_token", token).maybeSingle();
+  const pref = await db.from("study_nudge_prefs").select("id,user_id,pending_email").eq("confirmation_token", token).eq("channel", "email").maybeSingle();
   assertDb(pref.error);
   if (!pref.data?.pending_email) return false;
   const owner = await db.from("users").select("email,email_status").eq("id", pref.data.user_id).maybeSingle();

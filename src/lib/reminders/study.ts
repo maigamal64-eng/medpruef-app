@@ -2,7 +2,7 @@ import { asPuypExamType, viennaToday } from "@/lib/exam-dates";
 import { audienceOf, canUse } from "@/lib/entitlements";
 import { isUiLanguage, renderLang } from "@/lib/language-model";
 import { buildDueSummary } from "@/lib/master-learning/due-summary";
-import { loadDueRows } from "@/lib/master-learning/due-rows-server";
+import { loadDueRows } from "@/lib/due-rows-server";
 import { renderStudyNudge, renderStudyNudgeTelegram, studyNudgeHref, type NudgeLang } from "@/lib/email/study-nudge-template";
 import { sendCustomerBotMessage } from "@/lib/telegram";
 import { assertDb, deliverBatch, enabled, loadSubscriptions, SITE, unsubscribeUrl, type Delivery, type ReminderDb } from "./common";
@@ -61,6 +61,11 @@ export async function runStudyNudges(db: ReminderDb, now: Date, dryRun: boolean,
     if (!channel || typeof row.unsub_token !== "string") continue;
     if (channel === "telegram" && !telegramOn) continue;
     if (row.last_sent && viennaToday(new Date(String(row.last_sent))) >= day) continue;
+    // One message a day across channels: a held (failed/claimed) send on another
+    // channel today also counts (reviewer P3).
+    const today = await db.from("study_nudge_sends").select("id").eq("pref_id", String(row.id)).eq("nudge_day", day).limit(1);
+    assertDb(today.error);
+    if ((today.data ?? []).length) continue;
     const { data: user, error } = await db.from("users").select(OWNER_COLUMNS).eq("id", row.user_id).maybeSingle();
     assertDb(error);
     const owner = user as Owner | null;

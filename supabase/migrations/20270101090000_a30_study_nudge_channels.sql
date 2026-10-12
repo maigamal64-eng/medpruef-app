@@ -4,10 +4,10 @@
 --
 -- Study nudges (LX-11, pick-nudge-channels A):
 --   * hour: the learner's chosen Vienna hour (06..22), default 09 as in b19.
---   * channel 'telegram': the customer bot writes to the learner's own private
---     chat. The destination proof is the account's Telegram login plus
---     users.telegram_chat_id_confirmed (the learner started the bot); consent is
---     the signed-session opt-in, bound to consent_telegram_id.
+--   * channel 'telegram': the customer bot writes to the chat linked to the
+--     account (users.telegram_id with users.telegram_chat_id_confirmed, i.e. that
+--     chat started the bot); consent is the signed-session opt-in from Settings,
+--     bound to consent_telegram_id.
 --   * study_nudge_sends.kind: which lines the message carried (log only).
 --   * The destination-change trigger now suspends only the consent of the
 --     changed destination: an email change keeps a Telegram consent and a

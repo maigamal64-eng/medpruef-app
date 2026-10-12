@@ -100,7 +100,7 @@ export default function StudyNudgeCard({ lang }: { lang: string }) {
                     <label key={ch} className="inline-flex items-center gap-2 min-h-11 text-sm text-[var(--mp-fg)] cursor-pointer">
                       <input type="radio" name={`${ids}-channel`} value={ch} checked={state.channel === ch} disabled={busy}
                         onChange={() => void save(true, ch, state.hour)} className="w-4 h-4" />
-                      {ch === "telegram" ? c.telegram : c.email}
+                      {ch === "telegram" ? (state.telegram_handle ? `${c.telegram} (${state.telegram_handle})` : c.telegram) : c.email}
                     </label>
                   ))}
                 </div>

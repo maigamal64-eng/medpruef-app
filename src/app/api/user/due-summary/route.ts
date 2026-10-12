@@ -2,7 +2,7 @@
 // Pure logic lives in src/lib/master-learning/due-summary.ts (track-B b35); entitlement
 // from the a12 matrix. Library notes have no Pro gate, so their due count is returned
 // for every signed-in learner.
-// The paged row read lives in src/lib/master-learning/due-rows-server.ts (shared with the study nudge).
+// The paged row read lives in src/lib/due-rows-server.ts (shared with the study nudge).
 import { NextRequest, NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth-guard";
 import { getServiceClient } from "@/lib/supabase";
@@ -10,7 +10,7 @@ import { audienceOf, canUse } from "@/lib/entitlements";
 import { EXAM_SOURCE_IDS } from "@/lib/topics";
 import { buildDueSummary, type DueRow } from "@/lib/master-learning/due-summary";
 import { withDbUnavailable } from "@/lib/db-unavailable-route";
-import { DueRowsReadError, loadDueRows } from "@/lib/master-learning/due-rows-server";
+import { DueRowsReadError, loadDueRows } from "@/lib/due-rows-server";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;

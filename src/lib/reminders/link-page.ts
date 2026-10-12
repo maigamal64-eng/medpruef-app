@@ -54,9 +54,10 @@ export function resultPage(lang: LinkLang, kind: Kind, outcome: "confirmed" | "u
 /** Reads the confirm token and language from a form POST, or null when the body is not a form. */
 export async function readConfirmForm(req: Request): Promise<{ token: string; lang: LinkLang } | null> {
   if (!(req.headers.get("content-type") ?? "").toLowerCase().startsWith("application/x-www-form-urlencoded")) return null;
+  if (Number(req.headers.get("content-length") ?? 0) > 4096) return { token: "", lang: "en" };
   try {
     const form = new URLSearchParams((await req.text()).slice(0, 4096));
     const token = form.get("confirm");
-    return token ? { token, lang: linkLang(form.get("lang")) } : null;
+    return { token: token ?? "", lang: linkLang(form.get("lang")) };
   } catch { return null; }
 }

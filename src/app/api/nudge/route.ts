@@ -45,11 +45,14 @@ export async function GET(req: NextRequest) {
     const db = getServiceClient();
     const { data, error } = await db.from("study_nudge_prefs").select("opt_in,channel,hour,last_sent,pending_email,consent_email,consent_telegram_id,consent_confirmed_at,consent_version").eq("user_id", guard.userId).maybeSingle();
     assertDb(error);
-    const owner = await db.from("users").select("email,email_status,is_banned,telegram_id,telegram_chat_id_confirmed").eq("id", guard.userId).maybeSingle();
+    const owner = await db.from("users").select("email,email_status,is_banned,telegram_id,telegram_chat_id_confirmed,telegram_username").eq("id", guard.userId).maybeSingle();
     assertDb(owner.error);
     const channel = data?.channel === "telegram" ? "telegram" : "email";
-    const active = !!data?.opt_in && consentMatches(data, owner.data);
+    // A Telegram preference sends nothing while its flag is off, so it never reads as on.
+    const active = !!data?.opt_in && consentMatches(data, owner.data) && (channel === "email" || telegramOn());
     const destination = deliverableDestination(owner.data);
+    const telegramAvailable = telegramOn() && telegramDestination(owner.data) != null;
+    const handle = typeof owner.data?.telegram_username === "string" && /^[A-Za-z0-9_]{1,64}$/.test(owner.data.telegram_username) ? `@${owner.data.telegram_username}` : null;
     return json({
       enabled: true,
       opt_in: active,
@@ -58,7 +61,9 @@ export async function GET(req: NextRequest) {
       // A sent confirmation for the account's current address that is not yet clicked.
       confirmation_pending: !active && channel === "email" && !!data?.pending_email && data.pending_email === destination,
       email_available: !!destination,
-      telegram_available: telegramOn() && telegramDestination(owner.data) != null,
+      telegram_available: telegramAvailable,
+      // The learner's own linked Telegram account, shown before they pick it (reviewer P2).
+      telegram_handle: telegramAvailable ? handle : null,
       last_sent: data?.last_sent ?? null,
     });
   } catch { return json({ error: "Could not load preference" }, 503); }
@@ -83,7 +88,7 @@ export async function POST(req: NextRequest) {
   // Disabling remains possible during a rollout hold. No opt-in while OFF.
   if (body.opt_in && !enabled("STUDY_NUDGE_ENABLED")) return json({ error: "Study nudges are not enabled" }, 409);
   if (body.opt_in && channel === "telegram" && !telegramOn()) return json({ error: "Telegram reminders are not enabled" }, 409);
-  if (body.opt_in && !checkRateLimit({ key: rateKey("nudge-optin", guard.userId), limit: 5, windowMs: 60 * 60_000 }).allowed) return json({ error: "Too many requests; please retry later" }, 429);
+  const overLimit = () => !checkRateLimit({ key: rateKey("nudge-optin", guard.userId), limit: 5, windowMs: 60 * 60_000 }).allowed;
   try {
     const db = getServiceClient();
     if (!body.opt_in) {
@@ -102,6 +107,8 @@ export async function POST(req: NextRequest) {
         return json({ ok: true, opt_in: true, channel, hour });
       }
     }
+    // The limit counts new consents and confirmation mails, not hour changes above.
+    if (overLimit()) return json({ error: "Too many requests; please retry later" }, 429);
     if (channel === "telegram") {
       if (!await grantTelegramConsent(db, guard.userId, hour)) return json({ error: "Start the MedPrüf bot in Telegram first" }, 400);
       return json({ ok: true, opt_in: true, channel, hour });

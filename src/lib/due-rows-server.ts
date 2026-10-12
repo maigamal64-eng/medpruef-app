@@ -3,7 +3,7 @@
 // as Home. PostgREST caps every select at 1000 rows, so the progress read is
 // paged with an ORDER BY and the question filter is chunked.
 import type { getServiceClient } from "@/lib/supabase";
-import type { DueRow } from "./due-summary";
+import type { DueRow } from "@/lib/master-learning/due-summary";
 
 type Db = ReturnType<typeof getServiceClient>;
 const LOOKAHEAD_DAYS = 8;
