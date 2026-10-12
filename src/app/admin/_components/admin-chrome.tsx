@@ -22,6 +22,8 @@ export interface InboxState {
   failed: ReadonlySet<InboxKey>;
   status: "idle" | "loading" | "ok" | "error";
   updatedAt: number | null;
+  /** a19 (ADM-12 B): emergency kill switches that are on right now. */
+  killSwitches: Array<{ key: string; effect: string }>;
 }
 
 interface AdminChrome {
@@ -31,7 +33,7 @@ interface AdminChrome {
   setPageTitle: (title: string | null) => void;
 }
 
-const EMPTY: InboxState = { counts: {}, oldest: {}, failed: new Set(), status: "idle", updatedAt: null };
+const EMPTY: InboxState = { counts: {}, oldest: {}, failed: new Set(), status: "idle", updatedAt: null, killSwitches: [] };
 
 const AdminChromeContext = createContext<AdminChrome>({
   inbox: EMPTY,
@@ -46,6 +48,7 @@ export function useAdminChrome(): AdminChrome {
 
 /** Parse the /api/admin/inbox body; anything malformed counts as failed. */
 export function parseInboxBody(body: unknown): Omit<InboxState, "status" | "updatedAt"> {
+  const killSwitches = parseKillSwitches(body);
   const counts: InboxCounts = {};
   const oldest: Partial<Record<InboxKey, string | null>> = {};
   const failed = new Set<InboxKey>();
@@ -59,7 +62,16 @@ export function parseInboxBody(body: unknown): Omit<InboxState, "status" | "upda
     oldest[key] = typeof at === "string" ? at : null;
     if (!record || failedList.includes(key)) failed.add(key);
   }
-  return { counts, oldest, failed };
+  return { counts, oldest, failed, killSwitches };
+}
+
+/** Only well-formed `{ key, effect }` strings survive. */
+export function parseKillSwitches(body: unknown): Array<{ key: string; effect: string }> {
+  const list = body && typeof body === "object" ? (body as Record<string, unknown>).kill_switches_on : null;
+  if (!Array.isArray(list)) return [];
+  return list.flatMap((k) => (k && typeof k === "object" && typeof (k as { key?: unknown }).key === "string" && typeof (k as { effect?: unknown }).effect === "string"
+    ? [{ key: (k as { key: string }).key, effect: (k as { effect: string }).effect }]
+    : []));
 }
 
 export function AdminChromeProvider({ enabled, children }: { enabled: boolean; children: React.ReactNode }) {

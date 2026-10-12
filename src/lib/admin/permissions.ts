@@ -88,7 +88,7 @@ export function permissionForAdminRequest(
   if (path === "/api/admin/waitlist" || path === "/api/admin/non-crypto-waitlist") return verb === "GET" ? "revenue.read" : null;
   if (path === "/api/admin/note-reports") return verb === "GET" ? "content.read" : verb === "POST" ? "content.moderate" : null;
   if (path === "/api/admin/flags") return verb === "GET" ? "system.read" : null;
-  if (path === "/api/admin/audit" || path === "/api/admin/audit-log/latest" || path === "/api/admin/crons" || path === "/api/admin/deploys" || path === "/api/admin/env" || path === "/api/admin/errors" || path === "/api/admin/webhooks" || path === "/api/admin/webhooks/nowpayments/status") return verb === "GET" ? "system.read" : null;
+  if (path === "/api/admin/audit" || path === "/api/admin/audit-log/latest" || path === "/api/admin/crons" || path === "/api/admin/system-status" || path === "/api/admin/deploys" || path === "/api/admin/env" || path === "/api/admin/errors" || path === "/api/admin/webhooks" || path === "/api/admin/webhooks/nowpayments/status") return verb === "GET" ? "system.read" : null;
   if (path === "/api/admin/webhooks/nowpayments/self-test") return verb === "POST" ? "system.manage" : null;
   if (path === "/api/debug/sentry-test") return verb === "GET" ? "system.manage" : null;
   return null;

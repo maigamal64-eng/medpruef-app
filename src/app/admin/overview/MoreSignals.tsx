@@ -16,7 +16,6 @@ import {
   FormatInt,
   Sparkline,
   StatusDot,
-  TileEmptyLabel,
   formatInt,
   formatEuroFromCents,
 } from "../_components/primitives";
@@ -64,7 +63,7 @@ export interface OverviewSnapshot {
     feedback_new?: number | null;
     ai_chat_1h: { requests: number; completed: number; failed: number; avg_latency_ms: number | null } | null;
     telegram_activation: { registered: number; confirmed: number } | null;
-    crons: Record<string, { lastStatus: string; lastStartedAt: string | null }> | null;
+    crons: CronTileJob[] | null;
     recent_events_aggregate: { total_last_24h: number } | null;
   };
   needs?: {
@@ -386,64 +385,29 @@ export function PaymentFailuresTile({ health, restricted }: { health: PaymentHea
   );
 }
 
-export function CronsTile({
-  crons,
-}: {
-  crons: Record<string, { lastStatus: string; lastStartedAt: string | null }>;
-}) {
-  const entries = Object.entries(crons);
-  const anyFail = entries.some(([, v]) => v.lastStatus === "failed");
-  const tone = anyFail ? "danger" : entries.length === 0 ? "warn" : "success";
+export interface CronTileJob {
+  key: string;
+  label: string;
+  state: string;
+  tone: "ok" | "warn" | "danger" | "neutral";
+  text: string;
+}
 
-  const latestAt = entries
-    .map(([, v]) => (v.lastStartedAt ? new Date(v.lastStartedAt).getTime() : 0))
-    .reduce((max, t) => (t > max ? t : max), 0);
-  const latestDate = latestAt > 0 ? new Date(latestAt) : null;
+const CRON_DOT: Record<CronTileJob["tone"], "success" | "warn" | "danger" | "neutral"> = { ok: "success", warn: "warn", danger: "danger", neutral: "neutral" };
 
+/** UX-ADM-09: each job by name with its state in words, judged against its schedule. */
+export function CronsTile({ crons }: { crons: CronTileJob[] }) {
+  const tone = crons.some((c) => c.tone === "danger") ? "danger" : crons.some((c) => c.tone === "warn") ? "warn" : "success";
   return (
-    <Tile
-      label="Cron health (24h)"
-      icon={Gauge}
-      tone={tone}
-      href="/admin/crons"
-      footer={
-        entries.length === 0 ? (
-          <TileEmptyLabel updatedAt={null} tone="warn" />
-        ) : (
-          <div className="flex items-center justify-between">
-            <span>
-              {formatInt(entries.length)}{" "}
-              {entries.length === 1 ? "job tracked" : "jobs tracked"}
-            </span>
-            <TileEmptyLabel updatedAt={latestDate} tone={tone} />
-          </div>
-        )
-      }
-    >
-      <div className="flex flex-wrap gap-1.5 items-center">
-        {entries.length === 0 && (
-          <span className="text-sm text-[var(--mp-fg-muted)]">
-            No cron runs yet
-          </span>
-        )}
-        {entries.slice(0, 10).map(([name, v]) => {
-          const dotTone: "success" | "danger" | "warn" =
-            v.lastStatus === "succeeded"
-              ? "success"
-              : v.lastStatus === "failed"
-                ? "danger"
-                : "warn";
-          return (
-            <span
-              key={name}
-              title={`${name}: ${v.lastStatus}`}
-              className="inline-flex items-center"
-            >
-              <StatusDot tone={dotTone} size={9} />
-            </span>
-          );
-        })}
-      </div>
+    <Tile label="Scheduled jobs" icon={Gauge} tone={tone} href="/admin/crons">
+      <ul className="space-y-1" data-testid="overview-cron-tile">
+        {crons.map((c) => (
+          <li key={c.key} className="flex items-start gap-2 text-xs">
+            <span className="mt-1"><StatusDot tone={CRON_DOT[c.tone]} size={7} /></span>
+            <span className="min-w-0 [overflow-wrap:anywhere]"><span className="font-medium text-[var(--mp-fg)]">{c.label}</span> <span className="text-[var(--mp-fg-muted)]">{c.text}</span></span>
+          </li>
+        ))}
+      </ul>
     </Tile>
   );
 }

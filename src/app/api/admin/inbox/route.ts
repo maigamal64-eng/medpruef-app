@@ -3,6 +3,7 @@ import { getServiceClient } from "@/lib/supabase";
 import { adminRouteShell } from "@/lib/admin/shell";
 import { canAccessAdminPermission, loadAdminPermissionSnapshot } from "@/lib/admin/permissions";
 import { opsWaitingState } from "@/lib/ops/owner";
+import { readKillSwitches } from "@/lib/admin/kill-switches";
 
 export const dynamic = "force-dynamic";
 
@@ -99,6 +100,8 @@ export const GET = adminRouteShell(async ({ actor }) => {
         referral_rewards: referralRewards.oldest,
       },
       failed,
+      // a19 (ADM-12 B): emergency switches that are ON, for the red banner on every admin page. Names only.
+      kill_switches_on: readKillSwitches().filter((k) => k.on).map((k) => ({ key: k.key, effect: k.effect })),
       generated_at: new Date().toISOString(),
     },
     { headers: { "Cache-Control": "private, no-store" } },

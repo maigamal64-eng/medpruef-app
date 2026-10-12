@@ -20,6 +20,7 @@ import {
   EmptyState,
 } from "@/components/ui";
 import { AdminPageShell } from "../_components/AdminPageShell";
+import { orderRepeatsFirst } from "@/lib/reports/report-metrics";
 
 interface DownvotedItem {
   question_id: number;
@@ -44,7 +45,22 @@ interface QuestionFlag {
   context: Record<string, unknown> | null;
   status: string;
   created_at: string | null;
+  /** TR-14: total reports on this question when 2 or more. */
+  repeat_count?: number | null;
 }
+
+interface FixTimes {
+  window_days: number;
+  received: number;
+  decided: number;
+  median_hours: number | null;
+  p90_hours: number | null;
+  acknowledged_on_time: number;
+  open_over_target: number;
+  wrong_key: { decided: number; p90_hours: number | null; target_hours: number; on_target: boolean | null };
+}
+
+
 
 export default function AdminFlaggedPage() {
   const { can, loading: accessLoading } = useAdminPermissions();
@@ -56,6 +72,8 @@ export default function AdminFlaggedPage() {
   const [noteReports, setNoteReports] = useState<number | null>(null);
   const [downvoted, setDownvoted] = useState<{ measured: boolean; items: DownvotedItem[] } | null>(null);
   const [downvotedError, setDownvotedError] = useState<string | null>(null);
+  const [fixTimes, setFixTimes] = useState<FixTimes | null>(null);
+  const [fixTimesError, setFixTimesError] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -75,7 +93,13 @@ export default function AdminFlaggedPage() {
 
   const loadSide = useCallback(async () => {
     setDownvotedError(null);
-    const [inboxRes, votesRes] = await Promise.allSettled([fetch("/api/admin/inbox"), fetch("/api/stats/admin/explanations/downvoted")]);
+    const [inboxRes, votesRes, summaryRes] = await Promise.allSettled([fetch("/api/admin/inbox"), fetch("/api/stats/admin/explanations/downvoted"), fetch("/api/suggestions?summary=1")]);
+    if (summaryRes.status === "fulfilled" && summaryRes.value.ok) {
+      const body = await summaryRes.value.json().catch(() => null);
+      if (body?.summary && typeof body.summary.received === "number") { setFixTimes(body.summary); setFixTimesError(false); } else setFixTimesError(true);
+    } else {
+      setFixTimesError(true);
+    }
     if (inboxRes.status === "fulfilled" && inboxRes.value.ok) {
       const body = await inboxRes.value.json().catch(() => null);
       setNoteReports(typeof body?.note_reports === "number" ? body.note_reports : null);
@@ -118,6 +142,7 @@ export default function AdminFlaggedPage() {
           <span className="font-mono font-semibold text-[var(--mp-fg)]">{downvoted ? (downvoted.measured ? downvoted.items.length : "not measured") : "?"}</span>
         </a>
       </div>
+      <FixTimesStrip data={fixTimes} failed={fixTimesError} onRetry={() => void loadSide()} />
       {error && (
         <Alert variant="error" title="Failed to load">
           {error} <button type="button" className="ml-3 underline" onClick={() => void load()}>Retry</button>
@@ -137,7 +162,7 @@ export default function AdminFlaggedPage() {
         />
       ) : !error ? (
         <ul className="space-y-2">
-          {items.slice(0, 50).map((it) => (
+          {orderRepeatsFirst(items.slice(0, 50)).map((it) => (
             <li
               key={it.id}
               className="rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] p-3"
@@ -149,6 +174,7 @@ export default function AdminFlaggedPage() {
                   </div>
                   <div className="text-sm text-[var(--mp-fg)] mt-1">
                     <span className={`mr-2 rounded-full px-2 py-0.5 text-xs font-semibold ${it.type === "edit" ? "bg-[var(--mp-viridian)]/10 text-[var(--mp-viridian)]" : "bg-[var(--mp-error)]/10 text-[var(--mp-error)]"}`}>{it.type === "edit" ? "Edit" : "Flag"}</span>
+                    {it.repeat_count ? <span className="mr-2 rounded-full bg-[var(--mp-warning-bg)] px-2 py-0.5 text-xs font-semibold text-[var(--mp-warning-text)]" data-testid="repeat-chip">repeat ({it.repeat_count})</span> : null}
                     <Link href={`/admin/questions?tab=browse&questionId=${it.question_id}`} className="font-semibold text-[var(--mp-cta-blue)] underline underline-offset-2">Question #{it.question_id}</Link> · {it.question_topic}
                   </div>
                   <p className="text-sm text-[var(--mp-fg-muted)] mt-1 line-clamp-3">{it.question_text}</p>
@@ -200,5 +226,30 @@ export default function AdminFlaggedPage() {
         )}
       </section>
     </AdminPageShell>
+  );
+}
+
+/** TR-11: how fast reports are decided, last 90 days. */
+function FixTimesStrip({ data, failed, onRetry }: { data: FixTimes | null; failed: boolean; onRetry: () => void }) {
+  if (failed && !data) {
+    return (
+      <p className="text-xs text-[var(--mp-fg-muted)]" data-testid="report-fix-times">
+        Report fix times could not be loaded. <button type="button" className="underline" onClick={onRetry}>Retry</button>
+      </p>
+    );
+  }
+  if (!data) return null;
+  const h = (n: number | null) => (n == null ? "--" : `${n} h`);
+  return (
+    <section aria-label="Report fix times" className="rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] p-3 text-xs text-[var(--mp-fg)]" data-testid="report-fix-times">
+      <p className="font-semibold">Fix times, last {data.window_days} days</p>
+      <ul className="mt-1 grid gap-1 sm:grid-cols-2">
+        <li>{data.decided} of {data.received} reports decided. Median {h(data.median_hours)}, 90th percentile {h(data.p90_hours)}.</li>
+        <li>Decided within 3 working days (public promise): {data.acknowledged_on_time} of {data.decided}.{data.open_over_target > 0 ? ` ${data.open_over_target} open report${data.open_over_target === 1 ? " is" : "s are"} past 3 working days.` : ""}</li>
+        <li className={data.wrong_key.on_target === false ? "text-[var(--mp-error-text)]" : undefined}>
+          Wrong-key reports: 90th percentile {h(data.wrong_key.p90_hours)} over {data.wrong_key.decided} decided (internal target {data.wrong_key.target_hours} h).
+        </li>
+      </ul>
+    </section>
   );
 }

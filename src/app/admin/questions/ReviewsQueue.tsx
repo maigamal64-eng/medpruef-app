@@ -56,6 +56,8 @@ export interface ReviewRow {
   details: string | null;
   status: string;
   admin_note: string | null;
+  /** TR-14 (a19): total reports on this question when 2 or more. */
+  repeat_count?: number | null;
   created_at: string | null;
   resolved_at: string | null;
   question_text: string;
@@ -376,6 +378,7 @@ function ReportRow({
     >
       <div className="flex flex-wrap items-center gap-2 mb-1">
         <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${isEdit ? "bg-[var(--mp-viridian)]/10 text-[var(--mp-viridian)]" : "bg-[var(--mp-error)]/10 text-[var(--mp-error)]"}`}>{isEdit ? "Edit" : "Flag"}</span>
+        {row.repeat_count ? <span className="text-xs px-2 py-0.5 rounded-full font-semibold bg-[var(--mp-warning-bg)] text-[var(--mp-warning-text)]" data-testid="repeat-chip">repeat ({row.repeat_count})</span> : null}
         {row.reason ? <span className="text-xs bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-muted)] px-2 py-0.5 rounded border border-[var(--mp-border)]">{String(row.reason)}</span> : null}
         <span className="text-xs px-2 py-0.5 rounded-full font-semibold bg-[var(--mp-surface-sunken)] text-[var(--mp-fg)]">{String(row.status)}</span>
         {row.reporter_outcome ? <span className="text-xs px-2 py-0.5 rounded-full border border-[var(--mp-border)] text-[var(--mp-fg-muted)]">Reporter sees: {OUTCOME_LABEL[row.reporter_outcome] ?? row.reporter_outcome}</span> : null}

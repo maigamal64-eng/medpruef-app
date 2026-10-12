@@ -200,6 +200,8 @@ export default function AdminOverviewPage() {
         />
       )}
 
+      {can("system.read") && <SystemStatusRow refreshKey={updatedAt} />}
+
       {can("system.read") && <AdminActionsRibbon refreshKey={updatedAt} />}
 
       <details className="group rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)]" data-testid="overview-more-signals">
@@ -237,7 +239,7 @@ export default function AdminOverviewPage() {
             <section className="space-y-3">
               <SectionHeading title="Platform" icon={Activity} hint="Signals without their own page; not links" />
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {can("system.read") && (blockFailed("crons") ? <FailedTile label="Cron health (24h)" icon={Gauge} onRetry={() => void hydrate()} /> : tiles?.crons ? <CronsTile crons={tiles.crons} /> : <TileSkeleton />)}
+                {can("system.read") && (blockFailed("crons") ? <FailedTile label="Scheduled jobs" icon={Gauge} onRetry={() => void hydrate()} /> : tiles?.crons ? <CronsTile crons={tiles.crons} /> : <TileSkeleton />)}
                 {can("system.read") && (blockFailed("ai_chat") ? <FailedTile label="AI chat (60 min)" icon={Bot} onRetry={() => void hydrate()} /> : tiles?.ai_chat_1h ? <AIChatHealthTile initial={tiles.ai_chat_1h} /> : <TileSkeleton />)}
                 {can("system.read") && (blockFailed("telegram") ? <FailedTile label="Telegram bot activation" icon={Activity} onRetry={() => void hydrate()} /> : tiles?.telegram_activation ? <TelegramActivationTile initial={tiles.telegram_activation} /> : <TileSkeleton />)}
                 {can("users.read") && (blockFailed("free_limit") ? <FailedTile label="Free limit reached today" icon={ShieldAlert} onRetry={() => void hydrate()} /> : typeof tiles?.free_limit_hits_today === "number" ? <FreeLimitTile count={tiles.free_limit_hits_today} /> : <TileSkeleton />)}
@@ -392,8 +394,9 @@ function SystemLine({ health, crons, showPayments, showCrons, paymentsFailed, cr
   cronsFailed: boolean;
   onRetry: () => void;
 }) {
-  const cronEntries = crons ? Object.values(crons) : [];
-  const cronFails = cronEntries.filter((c) => c.lastStatus === "failed").length;
+  const failing = (crons ?? []).filter((c) => c.tone === "danger");
+  const late = (crons ?? []).filter((c) => c.tone === "warn");
+  const attention = [...failing, ...late];
   const payTone = health?.level === "alarm" ? "danger" : health?.level === "attention" ? "warn" : health?.level === "ok" ? "success" : "neutral";
   return (
     <section aria-label="System" className="flex flex-col gap-2 rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] px-3 py-2.5 text-xs sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-5" data-testid="overview-system-line">
@@ -409,16 +412,78 @@ function SystemLine({ health, crons, showPayments, showCrons, paymentsFailed, cr
       )}
       {showCrons && (
         cronsFailed ? (
-          <span className="flex items-center gap-2"><span className="font-semibold text-[var(--mp-fg)]">Crons</span><CouldNotLoad onRetry={onRetry} /></span>
+          <span className="flex items-center gap-2"><span className="font-semibold text-[var(--mp-fg)]">Jobs</span><CouldNotLoad onRetry={onRetry} /></span>
         ) : crons ? (
-          <Link href="/admin/crons" className="flex min-h-8 items-center gap-2 text-[var(--mp-fg)] no-underline hover:underline">
-            <StatusDot tone={cronFails > 0 ? "danger" : cronEntries.length === 0 ? "warn" : "success"} size={7} />
-            {cronEntries.length === 0
-              ? "Crons: no runs recorded in 24h"
-              : `Crons: ${formatInt(cronEntries.length)} job${cronEntries.length === 1 ? "" : "s"} ran in 24h${cronFails ? `, ${cronFails} failed` : ""}`}
+          <Link href="/admin/crons" className="flex min-h-8 min-w-0 items-start gap-2 text-[var(--mp-fg)] no-underline hover:underline" data-testid="overview-cron-line">
+            <span className="mt-1"><StatusDot tone={failing.length > 0 ? "danger" : late.length > 0 ? "warn" : "success"} size={7} /></span>
+            <span className="min-w-0 [overflow-wrap:anywhere]">
+              <span className="font-semibold">Jobs: </span>
+              {attention.length === 0 ? "every scheduled job ran on time" : attention.map((c) => `${c.label} (${c.text})`).join("; ")}
+            </span>
           </Link>
         ) : null
       )}
+    </section>
+  );
+}
+
+// ═══ System status row (a19, UX-ADM-09) ══════════════════════════════
+
+interface SystemStatus {
+  deploy: { ok: true; sha: string | null; created_at: number | null; summary: string | null } | { ok: false; reason: string };
+  sentry: { ok: true; unresolved: number } | { ok: false; reason: string };
+}
+
+/** Production deploy age and unresolved Sentry issues; loaded on its own so a slow upstream never holds Today. */
+function SystemStatusRow({ refreshKey }: { refreshKey: number | null }) {
+  const [status, setStatus] = useState<SystemStatus | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const res = await fetch("/api/admin/system-status", { cache: "no-store" });
+        const body = await res.json().catch(() => null);
+        if (!alive) return;
+        if (!res.ok || !body?.deploy || !body?.sentry) throw new Error("status");
+        setStatus(body as SystemStatus);
+        setFailed(false);
+        setNow(Date.now());
+      } catch {
+        if (alive) setFailed(true);
+      }
+    })();
+    return () => { alive = false; };
+  }, [refreshKey, attempt]);
+
+  if (failed && !status) {
+    return (
+      <section aria-label="System status" className="flex items-center gap-2 rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] px-3 py-2.5 text-xs">
+        <span className="font-semibold text-[var(--mp-fg)]">System status</span><CouldNotLoad onRetry={() => setAttempt((n) => n + 1)} />
+      </section>
+    );
+  }
+  if (!status) return null;
+  const d = status.deploy;
+  const e = status.sentry;
+  return (
+    <section aria-label="System status" className="flex flex-col gap-2 rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] px-3 py-2.5 text-xs sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-5" data-testid="overview-system-status">
+      <Link href="/admin/deploys" className="flex min-h-8 min-w-0 items-start gap-2 text-[var(--mp-fg)] no-underline hover:underline">
+        <span className="mt-1"><StatusDot tone={d.ok ? "success" : "neutral"} size={7} /></span>
+        <span className="min-w-0 [overflow-wrap:anywhere]">
+          <span className="font-semibold">Production: </span>
+          {d.ok ? `${d.sha ?? "deploy"}${d.created_at ? `, live for ${waitedFor(new Date(d.created_at).toISOString(), now)}` : ""}` : d.reason}
+        </span>
+      </Link>
+      <Link href="/admin/errors" className="flex min-h-8 min-w-0 items-start gap-2 text-[var(--mp-fg)] no-underline hover:underline">
+        <span className="mt-1"><StatusDot tone={!e.ok ? "neutral" : e.unresolved > 0 ? "warn" : "success"} size={7} /></span>
+        <span className="min-w-0 [overflow-wrap:anywhere]">
+          <span className="font-semibold">Sentry: </span>
+          {e.ok ? `${formatInt(e.unresolved)} unresolved issue${e.unresolved === 1 ? "" : "s"} (14 days)` : e.reason}
+        </span>
+      </Link>
     </section>
   );
 }

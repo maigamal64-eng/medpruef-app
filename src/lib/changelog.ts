@@ -38,6 +38,30 @@ export const CHANGELOG: ChangelogEntry[] = [
   "date": "2026-10-12",
   "tag": "improvement",
   "title": {
+    "de": "Antwortzeiten im Support stehen jetzt in den FAQ",
+    "en": "Support reply times are now stated in the FAQ"
+  },
+  "description": {
+    "de": "Wir antworten in der Regel innerhalb von 1 bis 2 Werktagen, und gemeldete Fragen sehen wir uns innerhalb von 3 Werktagen an. Beides steht jetzt in den FAQ und in den Nutzungsbedingungen.",
+    "en": "We usually reply within 1 to 2 working days, and we look at reported questions within 3 working days. Both are now stated in the FAQ and the terms."
+  }
+},
+{
+  "date": "2026-10-12",
+  "tag": "admin",
+  "title": {
+    "de": "Admin: Jobs nach Zeitplan, Notschalter-Banner, Wiederholungsmeldungen, Aktionsalarm",
+    "en": "Admin: jobs judged by schedule, kill-switch banner, repeat reports, action alert"
+  },
+  "description": {
+    "de": "Crons und Heute zeigen jeden geplanten Job mit Namen und Status (OK, verspätet, überfällig, hängt, fehlgeschlagen) aus seinen Heartbeats. Ein roter Banner erscheint auf jeder Admin-Seite, solange ein Notschalter an ist. Heute zeigt das Produktions-Deployment und offene Sentry-Fehler, Deploys markiert die Version auf medpruf.com. Fragen mit mehreren Meldungen tragen 'repeat (N)' und stehen oben; Bearbeitungszeiten der letzten 90 Tage stehen über der Liste. Ein stündlicher Aktionsalarm an den internen Bot ist vorbereitet und bleibt aus.",
+    "en": "Crons and Today show every scheduled job by name with its state (OK, Late, Overdue, Stuck, Failed) read from its heartbeats. A red banner shows on every admin page while an emergency switch is on. Today shows the production deploy and unresolved Sentry issues; Deploys marks the version serving medpruf.com. Questions reported more than once carry 'repeat (N)' and sort first; 90-day fix times sit above the list. An hourly action alert to the internal bot is prepared and stays off."
+  }
+},
+{
+  "date": "2026-10-12",
+  "tag": "improvement",
+  "title": {
     "de": "Klarere Pro-Hinweise, ehrliche Wiederholungen und weniger Unterbrechungen",
     "en": "Clearer Pro labels, honest reviews and fewer interruptions"
   },

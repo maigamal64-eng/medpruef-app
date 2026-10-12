@@ -44,6 +44,12 @@ export const SUPPORT_REPLY_PROMISE = {
   en: "We usually reply within 1 to 2 working days.",
 } as const;
 
+/** Question reports ([name] 2026-10-11, pick-support-time B): acknowledged within 3 working days. */
+export const REPORT_ACK_PROMISE = {
+  de: "Gemeldete Fragen sehen wir uns innerhalb von 3 Werktagen an.",
+  en: "We look at reported questions within 3 working days.",
+} as const;
+
 /** Which plans renew, which do not. */
 export function billingPlansSummary(lang: BillingLang): string {
   const monthly = billingAmount(TIERS.first_month_19.price_cents, lang);

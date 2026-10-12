@@ -22,6 +22,7 @@ import { Alert, BrandedLoader, EmptyState } from "@/components/ui";
 import { AdminPageShell } from "../_components/AdminPageShell";
 import { StatusDot, type StatusTone } from "../_components/primitives";
 import type { DeploysResult, DeployRow } from "@/lib/admin/opsExternal";
+import { currentProductionDeploy } from "@/lib/admin/deploy-rules";
 
 const VERCEL_PROJECT_URL =
   "https://vercel.com/team/medpruef/deployments";
@@ -109,6 +110,7 @@ function AdminDeploysPageContent() {
 // ─── Table ───────────────────────────────────────────────────────────────────
 
 function DeploysTable({ rows }: { rows: DeployRow[] }) {
+  const serving = currentProductionDeploy(rows)?.uid ?? null;
   return (
     <div className="rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] overflow-hidden">
       <div className="overflow-x-auto">
@@ -149,6 +151,11 @@ function DeploysTable({ rows }: { rows: DeployRow[] }) {
                 </td>
                 <td className="px-3 py-2">
                   <TargetChip target={d.target} />
+                  {d.uid === serving && (
+                    <span className="ml-1.5 inline-block rounded border border-emerald-500/40 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700 dark:text-emerald-400" data-testid="deploy-serving">
+                      Serving medpruf.com
+                    </span>
+                  )}
                 </td>
                 <td className="px-3 py-2 font-mono text-[10px] text-[var(--mp-fg-muted)]">
                   {d.branch ?? "—"}

@@ -131,12 +131,12 @@ describe("a18 GET /api/admin/overview (Today)", () => {
     expect(body.tiles.signups_today).toBe(4);
   });
 
-  it("counts the free-limit event since Vienna midnight, never paywall_hit, and returns no identity", async () => {
+  it("counts the free-limit event (server paywall_hit since a12) since Vienna midnight and returns no identity", async () => {
     const { calls } = database(world(null));
     const body = await (await overview(req("/api/admin/overview"))).json();
-    const free = calls.find((c) => c.table === "user_events" && eqVal(c, "event_type") === "free_quota_cap_hit");
+    const free = calls.find((c) => c.table === "user_events" && eqVal(c, "event_type") === "paywall_hit");
     expect(free).toBeTruthy();
-    expect(calls.some((c) => eqVal(c, "event_type") === "paywall_hit")).toBe(false);
+    expect(calls.some((c) => eqVal(c, "event_type") === "free_quota_cap_hit")).toBe(false);
     const since = free!.filters.find((f) => f.kind === "gte")?.value as string;
     expect(new Date(since).toISOString().endsWith("T22:00:00.000Z") || new Date(since).toISOString().endsWith("T23:00:00.000Z")).toBe(true);
     expect(JSON.stringify(body)).not.toMatch(/learner@gmail\.com/);

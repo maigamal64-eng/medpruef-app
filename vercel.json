@@ -11,6 +11,10 @@
     {
       "path": "/api/cron/mentor-health",
       "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron/admin-action-alert",
+      "schedule": "15 * * * *"
     }
   ]
 }

@@ -517,6 +517,7 @@ function AdminLayoutContent({ children }: { children: React.ReactNode }) {
         </header>
 
         <main className={`flex-1 min-w-0 p-3 sm:p-6 bg-[var(--mp-surface-sunken)] ${compactAdmin ? "pb-[calc(5rem+env(safe-area-inset-bottom))]" : ""}`}>
+          <KillSwitchBanner switches={inbox.killSwitches} />
           {children}
         </main>
       </div>
@@ -827,6 +828,27 @@ function ShortcutRow({ keys, label }: { keys: string; label: string }) {
       <kbd className="font-mono text-[10px] bg-[var(--mp-surface-sunken)] border border-[var(--mp-border-subtle)] rounded px-1.5 py-0.5 text-[var(--mp-fg)]">
         {keys}
       </kbd>
+    </div>
+  );
+}
+
+/**
+ * a19 (ADM-12 B): a red banner on every admin page while an emergency kill
+ * switch is on, so a switched-off writer never reads like a business drop
+ * (17 to 19 Sep 2026). Turning a switch off is a Vercel env change.
+ */
+function KillSwitchBanner({ switches }: { switches: Array<{ key: string; effect: string }> }) {
+  if (switches.length === 0) return null;
+  return (
+    <div role="alert" data-testid="kill-switch-banner" className="mb-3 rounded-xl border border-[var(--mp-error)] bg-[var(--mp-surface-raised)] px-3 py-2.5 text-sm text-[var(--mp-fg)]">
+      <p className="font-semibold text-[var(--mp-error-text)]">
+        {switches.length === 1 ? "An emergency switch is on" : `${switches.length} emergency switches are on`}
+      </p>
+      <ul className="mt-1 space-y-1 text-xs">
+        {switches.map((k) => (
+          <li key={k.key} className="[overflow-wrap:anywhere]"><span className="font-mono font-semibold">{k.key}</span>: {k.effect} Turn it off in the Vercel environment when the incident is over.</li>
+        ))}
+      </ul>
     </div>
   );
 }

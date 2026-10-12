@@ -24,7 +24,7 @@ import { AppLayout } from "@/components/ui";
 import LanguageToggle from "@/components/LanguageToggle";
 import ThemeToggle from "@/components/ThemeToggle";
 import SupportContactForm from "@/components/SupportContactForm";
-import { BILLING_SUPPORT_EMAIL, SUPPORT_REPLY_PROMISE, WHOP_MANAGE_URL } from "@/lib/billing-copy";
+import { BILLING_SUPPORT_EMAIL, REPORT_ACK_PROMISE, SUPPORT_REPLY_PROMISE, WHOP_MANAGE_URL } from "@/lib/billing-copy";
 import {
   FAQ_ACTIVATION,
   FAQ_CONTACT,
@@ -382,7 +382,7 @@ export default function FaqPage() {
               >
                 <h3 className="mp-h3 mb-2">{FAQ_CONTACT.title[lang]}</h3>
                 <p className="mp-body text-[var(--mp-fg-muted)] mb-4 text-sm">
-                  {SUPPORT_REPLY_PROMISE[lang]}
+                  {SUPPORT_REPLY_PROMISE[lang]} {REPORT_ACK_PROMISE[lang]}
                 </p>
                 <div className="flex flex-col sm:flex-row gap-3 items-center justify-center">
                   <a

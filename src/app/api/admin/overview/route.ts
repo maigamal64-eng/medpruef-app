@@ -17,6 +17,8 @@ import {
 } from "@/lib/admin/money-rules";
 import { computeTodayMoneyNeeds, viennaStartOfDay } from "@/lib/admin/today-rules";
 import { classifySubscriptionCadence } from "@/lib/billing-cadence";
+import { loadCronHealth } from "@/lib/admin/cron-health";
+import { readMentorConfig } from "@/lib/mentor/config";
 
 export const dynamic = "force-dynamic";
 
@@ -136,23 +138,13 @@ export const GET = adminRouteShell(
       // New accounts since Vienna midnight (all accounts; the money strip uses real learners only).
       block("signups", true, () => headCount(sb.from("users").select("id", { count: "exact", head: true }).gte("created_at", startOfDay.toISOString()))),
 
-      // Learners who reached the free limit today: the event the quota wall writes (paywall_hit was never emitted).
-      block("free_limit", canReadUsers, () => headCount(sb.from("user_events").select("id", { count: "exact", head: true }).eq("event_type", "free_quota_cap_hit").gte("created_at", startOfDay.toISOString()))),
+      // Learners who reached the free limit today: the server-side paywall_hit the quota wall writes since a12 (src/lib/free-access.ts).
+      block("free_limit", canReadUsers, () => headCount(sb.from("user_events").select("id", { count: "exact", head: true }).eq("event_type", "paywall_hit").gte("created_at", startOfDay.toISOString()))),
 
-      // Cron runs recorded in the last 24 hours, latest per job.
+      // Each scheduled job judged against its schedule (a19, ADM-12 B, UX-ADM-09).
       block("crons", canReadSystem, async () => {
-        const { data } = await checkedRead(sb
-          .from("cron_runs")
-          .select("cron_name, status, started_at")
-          .gte("started_at", twentyFourHoursAgo.toISOString())
-          .order("started_at", { ascending: false })
-          .limit(200));
-        const map: Record<string, { lastStatus: string; lastStartedAt: string | null }> = {};
-        for (const r of data || []) {
-          const n = r.cron_name as string;
-          if (!map[n]) map[n] = { lastStatus: (r.status as string) || "unknown", lastStartedAt: (r.started_at as string) || null };
-        }
-        return map;
+        const health = await loadCronHealth(sb, now, { mentorEnabled: readMentorConfig().enabled, windowHours: 1, runLimit: 50 });
+        return health.jobs.map((j) => ({ key: j.key, label: j.label, state: j.state, tone: j.tone, text: j.text }));
       }),
 
       // Telegram bot activation (review-2026-04-26-B2).

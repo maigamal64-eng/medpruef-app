@@ -11,6 +11,8 @@ export const GET = adminRouteShell(
     const { data, error, count } = await sb
       .from("processed_webhook_events")
       .select("provider, event_id, processed_at", { count: "exact" })
+      // a19: admin alert claims share this table; they are not webhook deliveries.
+      .neq("provider", "admin_alert")
       .order("processed_at", { ascending: false, nullsFirst: false })
       .limit(200);
     if (error) {

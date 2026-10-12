@@ -55,8 +55,8 @@ export default function AdminEnvPage() {
           <BrandedLoader size={48} label="Checking env…" />
         </div>
       ) : error ? null : (
-        <div className="rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] overflow-hidden">
-          <table className="w-full text-xs">
+        <div className="rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] overflow-x-auto">
+          <table className="w-full min-w-[480px] text-xs">
             <thead className="bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-muted)] uppercase text-[10px] tracking-wider">
               <tr>
                 <th className="text-left px-3 py-2">Variable</th>

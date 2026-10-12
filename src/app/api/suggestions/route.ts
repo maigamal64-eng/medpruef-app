@@ -25,6 +25,7 @@ import {
   sanitizeReportContext,
 } from "@/lib/reports/report-status";
 import { notifyReporter, reportEmailEnabled } from "@/lib/reports/notify-reporter";
+import { computeReportFixTimes, repeatCounts, repeatOf, type ReportRow } from "@/lib/reports/report-metrics";
 
 export const dynamic = "force-dynamic";
 
@@ -123,6 +124,21 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Your admin role cannot read question reports." }, { status: 403 });
     }
     const url = new URL(req.url);
+    // TR-11 (a19): report fix times for the last 90 days.
+    if (url.searchParams.get("summary") === "1") {
+      const since = new Date(Date.now() - 90 * 86_400_000).toISOString();
+      const rows: ReportRow[] = [];
+      for (let page = 0; page < 20; page++) {
+        const res = await db.from("question_suggestions").select("reason, status, created_at, resolved_at")
+          .gte("created_at", since).order("created_at", { ascending: true }).order("id", { ascending: true })
+          .range(page * 1000, page * 1000 + 999);
+        assertReadSucceeded(res);
+        rows.push(...((res.data ?? []) as ReportRow[]));
+        if ((res.data ?? []).length < 1000) break;
+        if (page === 19) throw new Error("report summary exceeded the read budget");
+      }
+      return NextResponse.json({ summary: computeReportFixTimes(rows, new Date(), 90) }, { headers: { "Cache-Control": "private, no-store" } });
+    }
     const status = url.searchParams.get("status");
     const type = url.searchParams.get("type");
     const limit = Math.min(Math.max(parseInt(url.searchParams.get("limit") || "50") || 50, 1), 200);
@@ -160,7 +176,7 @@ export async function GET(req: NextRequest) {
     const questionIds = [...new Set((suggestions || []).map((s: { question_id: number }) => s.question_id))];
     const userIds = [...new Set((suggestions || []).filter((s: { user_id: string | null }) => s.user_id).map((s: { user_id: string }) => s.user_id))];
 
-    const [questionsRes, usersRes] = await Promise.all([
+    const [questionsRes, usersRes, repeatRes] = await Promise.all([
       questionIds.length > 0
         ? db.from("questions").select("id, question, topic, choices, answer, explanation, is_active").in("id", questionIds)
         : Promise.resolve({ data: [], error: null }),
@@ -168,10 +184,16 @@ export async function GET(req: NextRequest) {
       canReadUsers && userIds.length > 0
         ? db.from("users").select("id, first_name, last_name, telegram_username, email").in("id", userIds)
         : Promise.resolve({ data: [], error: null }),
+      // TR-14 (a19): every report on these questions, any status, for the "repeat (N)" chip.
+      questionIds.length > 0
+        ? db.from("question_suggestions").select("question_id").in("question_id", questionIds).limit(10_000)
+        : Promise.resolve({ data: [], error: null }),
     ]);
 
     assertReadSucceeded(questionsRes);
     assertReadSucceeded(usersRes);
+    assertReadSucceeded(repeatRes);
+    const repeats = repeatCounts((repeatRes.data || []) as Array<{ question_id: number | null }>);
     type QuestionInfo = { question: string; topic: string; choices: unknown; answer: string | null; explanation: string | null; is_active: boolean | null };
     const questionMap: Record<number, QuestionInfo> = {};
     for (const q of (questionsRes.data || []) as ({ id: number } & QuestionInfo)[]) {
@@ -218,6 +240,8 @@ export async function GET(req: NextRequest) {
           asks_key_change: asksForKeyChange(suggested_changes),
           applied_edit: applied,
         } : {}),
+        // TR-14: total reports on this question when 2 or more, else null.
+        repeat_count: repeatOf(repeats, s.question_id as number),
         question_text: questionMap[s.question_id as number]?.question?.slice(0, 200) || "",
         question_topic: questionMap[s.question_id as number]?.topic || "",
         question_choices: questionMap[s.question_id as number]?.choices || null,

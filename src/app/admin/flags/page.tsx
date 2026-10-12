@@ -74,8 +74,8 @@ export default function AdminFlagsPage() {
           body="No feature-flag records are configured. This empty state does not imply that all application features are disabled."
         />
       ) : (
-        <div className="rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] overflow-hidden">
-          <table className="w-full text-xs">
+        <div className="rounded-xl border border-[var(--mp-border-subtle)] bg-[var(--mp-surface-raised)] overflow-x-auto">
+          <table className="w-full min-w-[480px] text-xs">
             <thead className="bg-[var(--mp-surface-sunken)] text-[var(--mp-fg-muted)] uppercase text-[10px] tracking-wider">
               <tr>
                 <th className="text-left px-3 py-2">Key</th>

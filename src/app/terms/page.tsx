@@ -9,6 +9,8 @@ import {
   WHOP_MANAGE_URL,
   billingSurfaceText,
   billingTrialSummary,
+  REPORT_ACK_PROMISE,
+  SUPPORT_REPLY_PROMISE,
 } from "@/lib/billing-copy";
 import { COMPANY, REFUND } from "@/lib/content-truth";
 import { getExamLabel } from "@/lib/master-locale/exam-label";
@@ -55,8 +57,8 @@ export default function TermsPage() {
         <h2>2. {lang === "de" ? "Leistungsbeschreibung" : "Service Description"}</h2>
         <p>
           {lang === "de"
-            ? `MedPrüf bietet eine digitale Lernplattform mit Übungsmaterial für österreichische Prüfungen in drei Fragenbanken: ${getExamLabel("kenntnispruefung", "full", "de")}, ${getExamLabel("kmp_innsbruck", "full", "de")} und ${getExamLabel("pharma", "full", "de")}. Die Fragen sind Übungsmaterial, keine offiziellen Prüfungsfragen. Die Inhalte dienen ausschließlich Lernzwecken.`
-            : `MedPrüf provides a digital learning platform with practice material for Austrian exams in three question banks: ${getExamLabel("kenntnispruefung", "full", "en")}, ${getExamLabel("kmp_innsbruck", "full", "en")} and ${getExamLabel("pharma", "full", "en")}. The questions are practice material, not official exam questions. Content is for educational purposes only.`}
+            ? `MedPrüf bietet eine digitale Lernplattform mit Übungsmaterial für österreichische Prüfungen in drei Fragenbanken: ${getExamLabel("kenntnispruefung", "full", "de")}, ${getExamLabel("kmp_innsbruck", "full", "de")} und ${getExamLabel("pharma", "full", "de")}. Die Fragen sind Übungsmaterial, keine offiziellen Prüfungsfragen. Die Inhalte dienen ausschließlich Lernzwecken. Support per E-Mail an ${BILLING_SUPPORT_EMAIL}: ${SUPPORT_REPLY_PROMISE.de} ${REPORT_ACK_PROMISE.de}`
+            : `MedPrüf provides a digital learning platform with practice material for Austrian exams in three question banks: ${getExamLabel("kenntnispruefung", "full", "en")}, ${getExamLabel("kmp_innsbruck", "full", "en")} and ${getExamLabel("pharma", "full", "en")}. The questions are practice material, not official exam questions. Content is for educational purposes only. Support by email to ${BILLING_SUPPORT_EMAIL}: ${SUPPORT_REPLY_PROMISE.en} ${REPORT_ACK_PROMISE.en}`}
         </p>
       </section>
 
