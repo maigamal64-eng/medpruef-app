@@ -27,6 +27,7 @@ import {
   TIERS,
 } from "@/lib/whop";
 import { resolveWhopBuyer } from "@/lib/whop-buyer";
+import { trialEndingMembershipId, whopMembershipIdOrNull } from "@/lib/whop-ids";
 import {
   extendOrInsertWhopSubscription,
   reconcileUserTierPro,
@@ -638,7 +639,7 @@ export async function POST(req: NextRequest) {
         amount_cents: f.amountCents ?? TIERS[tier]?.priceCents ?? null,
         currency: (f.currency || "eur").toUpperCase(),
         provider_payment_id: f.paymentId,
-        whop_membership_id: f.membershipId,
+        whop_membership_id: whopMembershipIdOrNull(f.membershipId),
         granted_payment_ids: [
           {
             payment_id: f.paymentId,
@@ -1774,9 +1775,9 @@ async function handleTrialEndingSoon(
   // This provider signal shares the cron's release gate and membership claim.
   if (!prechargeRemindersEnabled()) return NextResponse.json({ ok: true, skipped: "reminders_disabled" });
   const d = rec(data);
-  const member = rec(d.member);
-  const membership = rec(d.membership);
-  const membershipId = str(d.membership_id) ?? str(member.id) ?? str(membership.id) ?? (str(d.id)?.startsWith("mem_") ? str(d.id) : null);
+  // a-stability: only a membership (mem_) id. member.id is the buyer's MEMBER
+  // record (mber_), never a membership, and must not become a pin or a claim key.
+  const membershipId = trialEndingMembershipId(d);
   if (!membershipId) return NextResponse.json({ ok: true, skipped: "no_membership" });
   const metadata = rec(d.metadata);
   const sb = getServiceClient();

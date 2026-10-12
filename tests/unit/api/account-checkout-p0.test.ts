@@ -7,7 +7,7 @@ vi.mock('@/lib/supabase', () => ({ getServiceClient: mocks.client }));
 vi.mock('@/lib/whop', () => ({ tierToWhopPlan: () => 'plan_fixture', createWhopCheckoutSession: mocks.create, TIERS: { first_month_19: { priceCents: 1900 } } }));
 vi.mock('@/lib/paymentEvents', () => ({ logPaymentEvent: mocks.log }));
 vi.mock('@sentry/nextjs', () => ({ captureMessage: vi.fn() }));
-vi.mock('@/lib/whop-subscription-snapshot', async (orig) => ({ ...(await orig<typeof import('@/lib/whop-subscription-snapshot')>()), loadWhopBillingSnapshot: mocks.snapshot }));
+vi.mock('@/lib/whop-subscription-snapshot', async (orig) => ({ ...(await orig<typeof import('@/lib/whop-subscription-snapshot')>()), loadWhopBillingSnapshot: mocks.snapshot, loadWhopBillingRead: async (id: string | null, tier: string) => ({ snapshot: await mocks.snapshot(id, tier), status: 200 }) }));
 import { POST } from '@/app/api/whop/checkout/route';
 import { GET } from '@/app/api/whop/checkout/status/route';
 const request = () => new NextRequest('https://medpruf.com/api/whop/checkout', { method: 'POST', body: JSON.stringify({ tier: 'first_month_19' }) });

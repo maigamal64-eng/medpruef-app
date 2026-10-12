@@ -20,14 +20,55 @@
  *   one_time - only one-time or non-Whop rows, or no active rows
  *
  * Read only: no grant, webhook or revoke behaviour depends on it.
+ *
+ * Reporting (a-stability, Sentry JAVASCRIPT-NEXTJS-13): only a real mem_ pin
+ * is read. A legacy mber_ pin (a Whop MEMBER id stored by pre-2 Oct code) or
+ * no pin counts as "no pin": unknown, never reported. A 401/403 from Whop is
+ * a key permission problem, not a learner problem: one Sentry warning per
+ * hour per server instance names it, instead of one error per read.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { classifySubscriptionCadence } from "@/lib/billing-cadence";
-import { loadWhopBillingSnapshot, type ProviderBillingSnapshot } from "@/lib/whop-subscription-snapshot";
+import { loadWhopBillingRead, type ProviderBillingSnapshot, type WhopBillingRead } from "@/lib/whop-subscription-snapshot";
 import { captureServerError } from "@/lib/sentry-capture";
+import { whopMembershipIdOrNull } from "@/lib/whop-ids";
 
 export type RenewalState = "renews" | "unknown" | "cancelled" | "one_time";
-export type SnapshotLoader = (membershipId: string | null, tier: string) => Promise<ProviderBillingSnapshot | null>;
+/** A loader may return the bare snapshot (status unknown) or the read with its HTTP status. */
+export type SnapshotLoader = (membershipId: string | null, tier: string) => Promise<ProviderBillingSnapshot | WhopBillingRead | null>;
+
+function asRead(value: ProviderBillingSnapshot | WhopBillingRead | null): WhopBillingRead {
+  if (value && "snapshot" in value && "status" in value) return value;
+  return { snapshot: (value as ProviderBillingSnapshot | null) ?? null, status: null };
+}
+
+const AUTH_WARNING_INTERVAL_MS = 60 * 60 * 1000;
+let lastAuthWarningAt = 0;
+
+/** Test seam: forget when the last permission warning was sent. */
+export function resetWhopAuthWarningForTests(): void {
+  lastAuthWarningAt = 0;
+}
+
+/**
+ * The production key was answered "not authorized" by GET /api/v1/memberships
+ * (and /payments). Say so once an hour, not on every learner's read.
+ */
+export function warnWhopKeyUnauthorized(status: number, endpoint: string, now: number = Date.now()): boolean {
+  if (now - lastAuthWarningAt < AUTH_WARNING_INTERVAL_MS) return false;
+  lastAuthWarningAt = now;
+  void (async () => {
+    try {
+      const Sentry = await import("@sentry/nextjs");
+      Sentry.captureMessage(
+        `Whop API key not authorized (HTTP ${status}) for ${endpoint}: the server key (WHOP_API_KEY or WHOP_APP_API_KEY) needs read permission for memberships and payments. Renewal state shows "unknown" until the key is replaced.`,
+        { level: "warning", tags: { route: "renewal-state", step: "whop_key_unauthorized", status: String(status) } },
+      );
+    } catch { /* Sentry unavailable: the console line below still lands in the runtime log */ }
+  })();
+  console.warn(`[renewal-state] Whop API key not authorized (HTTP ${status}) for ${endpoint}; reported at most once per hour`);
+  return true;
+}
 
 /** True only for a provider-confirmed membership that will charge again. */
 export function snapshotRenews(snapshot: ProviderBillingSnapshot | null): boolean {
@@ -43,7 +84,7 @@ export function snapshotRenews(snapshot: ProviderBillingSnapshot | null): boolea
 export async function loadRenewalState(
   sb: SupabaseClient,
   userId: string,
-  loadSnapshot: SnapshotLoader = loadWhopBillingSnapshot,
+  loadSnapshot: SnapshotLoader = loadWhopBillingRead,
 ): Promise<RenewalState> {
   const report = (err: unknown, step: string) => captureServerError(err, { route: "renewal-state", userId, step });
   try {
@@ -75,16 +116,20 @@ export async function loadRenewalState(
       });
       if (cadence === "one_time") continue;
       if (cadence === "unknown") { unknown = true; continue; }
-      const snapshot = await loadSnapshot(row.whop_membership_id ?? null, String(row.tier));
+      // A legacy mber_ member id is not a membership: treat it as no pin.
+      const pin = whopMembershipIdOrNull(row.whop_membership_id);
+      if (!pin) { unknown = true; continue; }
+      const { snapshot, status } = asRead(await loadSnapshot(pin, String(row.tier)));
       if (snapshotRenews(snapshot)) return "renews";
       // A provider-confirmed cancellation will not charge again; anything
       // the provider did not confirm stays unknown.
       if (snapshot?.provider_state_verified && snapshot.cancel_at_period_end) { cancelled = true; continue; }
       unknown = true;
-      // Report only a failed read of a known membership (a missing pin or a
-      // missing key would otherwise report on every subscription read).
-      if (!snapshot && row.whop_membership_id && (process.env.WHOP_API_KEY || process.env.WHOP_APP_API_KEY)) {
-        report(new Error("Whop membership read failed for an auto-renewing row"), "membership_read");
+      // Report only a failed read of a real membership (a missing key would
+      // otherwise report on every subscription read); a refused key once an hour.
+      if (!snapshot && (process.env.WHOP_API_KEY || process.env.WHOP_APP_API_KEY)) {
+        if (status === 401 || status === 403) warnWhopKeyUnauthorized(status, "GET /api/v1/memberships/{id}");
+        else report(new Error(`Whop membership read failed for an auto-renewing row (status ${status ?? "unknown"})`), "membership_read");
       }
     }
     return unknown ? "unknown" : cancelled ? "cancelled" : "one_time";

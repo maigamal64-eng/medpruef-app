@@ -22,6 +22,7 @@
 import { computeExpiry, tierDurationMonths } from "@/lib/whop";
 import { logPaymentEvent } from "@/lib/paymentEvents";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { whopMembershipIdOrNull } from "@/lib/whop-ids";
 
 export interface WhopGrantOutcome {
   mode: "extended" | "inserted" | "failed";
@@ -176,7 +177,8 @@ export async function extendOrInsertWhopSubscription(
         amount_cents: amountCents ?? live.amount_cents ?? null,
         currency: currency || live.currency || "EUR",
         granted_payment_ids: [...history, entry],
-        ...(args.membershipId ? { whop_membership_id: args.membershipId } : {}),
+        // a-stability: only a real membership (mem_) id ever becomes the pin.
+        ...(whopMembershipIdOrNull(args.membershipId) ? { whop_membership_id: whopMembershipIdOrNull(args.membershipId) } : {}),
         updated_at: now.toISOString(),
       })
       .eq("id", live.id);
@@ -216,7 +218,7 @@ export async function extendOrInsertWhopSubscription(
       currency,
       provider_payment_id: paymentId,
       granted_payment_ids: [insertEntry],
-      whop_membership_id: args.membershipId ?? null,
+      whop_membership_id: whopMembershipIdOrNull(args.membershipId),
       started_at: now.toISOString(),
       expires_at: newExpiry.toISOString(),
     })

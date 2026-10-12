@@ -7,7 +7,7 @@ import { getSubscriptionDisplayNames } from "@/lib/subscription-display";
 import { extensionAvailability } from "@/lib/whop-extension";
 import { loadRenewalState } from "@/lib/renewal-state";
 import { loadRenewalOfferSuppression } from "@/lib/billing-cadence";
-import { loadWhopBillingSnapshot, unknownBillingSnapshot } from "@/lib/whop-subscription-snapshot";
+import { loadWhopBillingRead, unknownBillingSnapshot } from "@/lib/whop-subscription-snapshot";
 import { isPaidTier } from "@/lib/free-tier";
 
 export const dynamic = "force-dynamic";
@@ -166,9 +166,10 @@ export async function GET(req: NextRequest) {
         .eq("signature_valid", true).order("created_at", { ascending: false }).limit(1).maybeSingle();
       if (!event.error) loggedPlanId = event.data?.plan_id ?? null;
     }
-    const billing = sub.payment_provider === "whop"
-      ? await loadWhopBillingSnapshot(sub.whop_membership_id ?? null, String(sub.tier))
+    const billingRead = sub.payment_provider === "whop"
+      ? await loadWhopBillingRead(sub.whop_membership_id ?? null, String(sub.tier))
       : null;
+    const billing = billingRead?.snapshot ?? null;
     const snapshot = billing ?? unknownBillingSnapshot({ tier: String(sub.tier), payment_provider: sub.payment_provider, plan_id: loggedPlanId });
     const tierKey = String(sub.tier);
     const tierDef = TIERS[tierKey];
@@ -196,11 +197,11 @@ export async function GET(req: NextRequest) {
     // and can a payment extend now? Reuses the access read above; ended or
     // unread access is never extendable. The latest row's snapshot is reused.
     // One Whop read per membership, failures included (no second 5 s wait).
-    const snapshots = new Map<string, ReturnType<typeof loadWhopBillingSnapshot>>();
-    if (sub.whop_membership_id && sub.payment_provider === "whop") snapshots.set(sub.whop_membership_id, Promise.resolve(billing));
+    const snapshots = new Map<string, ReturnType<typeof loadWhopBillingRead>>();
+    if (sub.whop_membership_id && billingRead) snapshots.set(sub.whop_membership_id, Promise.resolve(billingRead));
     const renewalState = await loadRenewalState(sb, userId, (membershipId, tier) => {
       if (!membershipId) return Promise.resolve(null);
-      if (!snapshots.has(membershipId)) snapshots.set(membershipId, loadWhopBillingSnapshot(membershipId, tier));
+      if (!snapshots.has(membershipId)) snapshots.set(membershipId, loadWhopBillingRead(membershipId, tier));
       return snapshots.get(membershipId)!;
     });
     const ownerExpiresAt = !accessError && accessRow && !accessEnded

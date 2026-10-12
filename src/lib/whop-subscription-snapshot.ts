@@ -1,5 +1,6 @@
 import { classifySubscriptionCadence, type BillingCadence } from "@/lib/billing-cadence";
 import { WHOP_MANAGE_URL } from "@/lib/billing-copy";
+import { isWhopMembershipId } from "@/lib/whop-ids";
 
 /** Whop v1 membership response. No plan list price substitutes for a buyer's charge.
  * https://docs.whop.com/api-reference/memberships/retrieve-membership */
@@ -60,15 +61,25 @@ export function unknownBillingSnapshot(args: { tier: string; payment_provider: s
     provider_state_verified: false,
   };
 }
-/** One bounded read, with no secrets/raw provider payload in the client response. */
-export async function loadWhopBillingSnapshot(membershipId: string | null, tier: string): Promise<ProviderBillingSnapshot | null> {
+/**
+ * One bounded membership read plus how it ended (a-stability): `status` is the
+ * HTTP status, 0 for a network failure or timeout, null when no read was made
+ * (no key, or the pin is not a mem_ membership id).
+ */
+export interface WhopBillingRead { snapshot: ProviderBillingSnapshot | null; status: number | null }
+export async function loadWhopBillingRead(membershipId: string | null, tier: string): Promise<WhopBillingRead> {
   const apiKey = process.env.WHOP_API_KEY || process.env.WHOP_APP_API_KEY;
-  if (!apiKey || !membershipId || !/^mem_[A-Za-z0-9]+$/.test(membershipId)) return null;
+  if (!apiKey || !isWhopMembershipId(membershipId)) return { snapshot: null, status: null };
   try {
     const response = await fetch(`https://api.whop.com/api/v1/memberships/${encodeURIComponent(membershipId)}`, {
       method: "GET", headers: { Authorization: `Bearer ${apiKey}`, Accept: "application/json" },
       cache: "no-store", signal: AbortSignal.timeout(5000),
     });
-    return response.ok ? parseWhopBillingSnapshot(await response.json(), { membershipId, tier }) : null;
-  } catch { return null; }
+    return { snapshot: response.ok ? parseWhopBillingSnapshot(await response.json(), { membershipId, tier }) : null, status: response.status };
+  } catch { return { snapshot: null, status: 0 }; }
+}
+
+/** One bounded read, with no secrets/raw provider payload in the client response. */
+export async function loadWhopBillingSnapshot(membershipId: string | null, tier: string): Promise<ProviderBillingSnapshot | null> {
+  return (await loadWhopBillingRead(membershipId, tier)).snapshot;
 }

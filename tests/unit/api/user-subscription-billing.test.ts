@@ -5,7 +5,7 @@ const h = vi.hoisted(() => ({ status: "active", access: true, provider: {} as Re
 vi.mock("@/lib/auth-guard", () => ({ requireUser: async () => ({ userId: "u1" }) }));
 vi.mock("@/lib/sentry-capture", () => ({ captureServerError: vi.fn() }));
 vi.mock("@/lib/billing-cadence", async (orig) => ({ ...(await orig<typeof import("@/lib/billing-cadence")>()), loadRenewalOfferSuppression: async () => ({ suppressed: true }) }));
-vi.mock("@/lib/whop-subscription-snapshot", () => ({ loadWhopBillingSnapshot: async () => h.provider, unknownBillingSnapshot: () => ({ billing_cadence: "unknown", next_charge_at: null, next_charge_amount_cents: null }) }));
+vi.mock("@/lib/whop-subscription-snapshot", () => ({ loadWhopBillingSnapshot: async () => h.provider, loadWhopBillingRead: async () => ({ snapshot: h.provider, status: h.provider ? 200 : 500 }), unknownBillingSnapshot: () => ({ billing_cadence: "unknown", next_charge_at: null, next_charge_amount_cents: null }) }));
 vi.mock("@/lib/supabase", () => ({ getServiceClient: () => createFakeSupabase(c => {
   if (c.table === "subscriptions") {
     if (!h.activeRow && eqVal(c, "status") === "active") return { data: c.single ? null : [] };
