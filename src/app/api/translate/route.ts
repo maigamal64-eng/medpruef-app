@@ -6,6 +6,7 @@ import { checkRateLimit, rateKey, rateLimitHeaders } from "@/lib/rate-limit";
 import { getLegacyAiLimits } from "@/lib/ai/limits";
 import { anthropicFallbackModel, resolveFallback } from "@/lib/ai/fallback";
 import { legacyGate, logAiCall, meteredClaude, type MeterDb } from "@/lib/notes-safety";
+import { logTranslateCapHit, translateDailyLimit } from "@/lib/ai/translate-cap";
 
 export const dynamic = "force-dynamic";
 
@@ -35,9 +36,10 @@ const TRANSLATE_BURST_LIMIT = { limit: 15, windowMs: 60_000 };
  *   AI_FALLBACK_MODEL, else gpt-4o-mini): a Claude model id is a second
  *   metered Anthropic call through the same wrapper, any other id goes to
  *   OpenAI. Then cache + return.
- * - Rate-limit: DB-backed daily ATTEMPT cap through ai_quota_take (free: 5,
- *   paid: AI_TRANSLATE_DAILY_ATTEMPTS, default 40, Europe/Vienna day). Cache
- *   hits are free and never counted. Every model call (Anthropic and the
+ * - Rate-limit: DB-backed daily ATTEMPT cap through ai_quota_take for free
+ *   callers only (5, Europe/Vienna day); Pro and admin have no daily cap
+ *   (issue 10, 2026-10-12, lib/ai/translate-cap.ts). Cache hits are free
+ *   and never counted. Every model call (Anthropic and the
  *   OpenAI fallback) writes one ai_call_log row; a global spend cap pauses
  *   the route ("resting") and a per-user monthly legacy cost cap limits it.
  * - Prompt preserves medical terminology — drug names, anatomical
@@ -47,9 +49,8 @@ const TRANSLATE_BURST_LIMIT = { limit: 15, windowMs: 60_000 };
  */
 
 const UPSTREAM_TIMEOUT_MS = 20_000;
-const FREE_DAILY_QUOTA = 5;
-// Paid daily cap lives in src/lib/ai/limits.ts (AI_TRANSLATE_DAILY_ATTEMPTS,
-// read at call time). Cache hits are free and never counted.
+// Daily cap: lib/ai/translate-cap.ts (free only; paid callers are unlimited).
+// Cache hits are free and never counted.
 
 // ────────────────────────────────────────────────────────────────────
 // AI kill switch — mirrors /api/ai-chat (GATE 1). Without this, translate
@@ -352,15 +353,16 @@ export async function POST(req: NextRequest) {
   // 3. Gates, in order: global spend (503 resting), per-user monthly legacy
   //    cost cap (429), then the DB-backed daily attempt (429). Any DB error
   //    refuses the call (fail closed). Cache hits returned above, uncounted.
-  //    Free callers keep their 5 a day; paid callers get the env-tunable cap.
+  //    Free callers keep their 5 a day; Pro and admin take no daily attempt.
   const limits = getLegacyAiLimits();
   const free = isFreeAccess(guard);
-  const dailyLimit = free
-    ? Math.min(FREE_DAILY_QUOTA, limits.translateDailyAttempts)
-    : limits.translateDailyAttempts;
+  const dailyLimit = translateDailyLimit(free, limits.translateDailyAttempts);
   const meterDb = db as unknown as MeterDb;
   const gate = await legacyGate(meterDb, userId, "translate", dailyLimit);
   if (!gate.ok) {
+    if (gate.kind === "daily" && dailyLimit !== null) {
+      await logTranslateCapHit(db, { userId, limit: dailyLimit, questionId, lang, field });
+    }
     const body =
       gate.kind === "resting"
         ? { error: "Translations are resting for now. Please try again later.", code: gate.code }

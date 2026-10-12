@@ -38,6 +38,18 @@ export const CHANGELOG: ChangelogEntry[] = [
   "date": "2026-10-12",
   "tag": "fix",
   "title": {
+    "de": "Übersetzungen für Pro wieder ohne Tageslimit",
+    "en": "Translations for Pro have no daily limit again"
+  },
+  "description": {
+    "de": "Mit Pro übersetzen Sie Erklärungen wieder ohne Tageslimit, wie versprochen. Bereits übersetzte Erklärungen werden für niemanden mitgezählt. Im kostenlosen Zugang bleiben es 5 neue Übersetzungen pro Tag.",
+    "en": "With Pro you can translate explanations without a daily limit again, as promised. Explanations that were already translated never count for anyone. The free plan keeps 5 new translations per day."
+  }
+},
+{
+  "date": "2026-10-12",
+  "tag": "fix",
+  "title": {
     "de": "Rückkehr vom Checkout: klare Meldung, wenn keine Zahlung eingegangen ist",
     "en": "Checkout return: a clear message when no payment arrived"
   },

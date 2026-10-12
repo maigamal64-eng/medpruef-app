@@ -68,14 +68,13 @@ describe("POST /api/translate metering", () => {
     expect(logRows()).toHaveLength(0);
   });
 
-  it("success: one attempt (limit 40 for paid), one ai_call_log row with route, provider, status and cost", async () => {
+  it("success: paid takes no daily attempt (issue 10), one ai_call_log row with route, provider, status and cost", async () => {
     const res = await req();
     expect(res.status).toBe(200);
     const j = await res.json();
     expect(j.translatedText).toBe("An English explanation.");
     expect(j.cached).toBe(false);
-    expect(takes()).toHaveLength(1);
-    expect(takes()[0].args).toEqual({ p_user: USER, p_route: "translate", p_limit: 40 });
+    expect(takes()).toHaveLength(0);
     const rows = logRows();
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({
@@ -94,9 +93,15 @@ describe("POST /api/translate metering", () => {
     expect(rowsFor(h.state, "user_events")).toHaveLength(1);
   });
 
-  it("gate order: legacy lane spend (split read, shared fallback before the a38 changeset), then user cap, then the quota take", async () => {
+  it("gate order: legacy lane spend (split read, shared fallback before the a38 changeset), then user cap, then the quota take (free only)", async () => {
+    h.isFreeAccess.mockReturnValue(true);
     await req();
     expect(h.state.rpcCalls.map((c) => c.fn)).toEqual(["ai_spend_month_split", "ai_spend_cap", "ai_spend_month", "ai_legacy_cost_month", "ai_quota_take", "cache_question_translation_if_current"]);
+  });
+
+  it("paid gate order: spend and monthly user cap still apply, no daily quota take", async () => {
+    await req();
+    expect(h.state.rpcCalls.map((c) => c.fn)).toEqual(["ai_spend_month_split", "ai_spend_cap", "ai_spend_month", "ai_legacy_cost_month", "cache_question_translation_if_current"]);
   });
 
   it("MUX-106 A: a legacy surge over the legacy share rests translate; mentor spend does not", async () => {
@@ -112,22 +117,32 @@ describe("POST /api/translate metering", () => {
     expect(takes()[0].args?.p_limit).toBe(5);
   });
 
-  it("the paid cap is env-tunable", async () => {
-    vi.stubEnv("AI_TRANSLATE_DAILY_ATTEMPTS", "7");
+  it("a lower configured cap also lowers the free allowance; paid ignores it", async () => {
+    vi.stubEnv("AI_TRANSLATE_DAILY_ATTEMPTS", "3");
     await req();
-    expect(takes()[0].args?.p_limit).toBe(7);
+    expect(takes()).toHaveLength(0);
+    h.state = makeDbState();
+    h.db = makeDb(h.state);
+    h.isFreeAccess.mockReturnValue(true);
+    await req();
+    expect(takes()[0].args?.p_limit).toBe(3);
   });
 
-  it("daily cap reached: 429 QUOTA_EXCEEDED, no model call", async () => {
-    h.state.rpc.ai_quota_take = () => ({ data: { ok: false, used: 40, reason: "limit_reached" }, error: null });
+  it("free daily cap reached: 429 QUOTA_EXCEEDED, no model call, translate_cap_hit logged", async () => {
+    h.isFreeAccess.mockReturnValue(true);
+    h.state.rpc.ai_quota_take = () => ({ data: { ok: false, used: 5, reason: "limit_reached" }, error: null });
     const res = await req();
     expect(res.status).toBe(429);
     expect((await res.json()).code).toBe("QUOTA_EXCEEDED");
     expect(h.callClaude).not.toHaveBeenCalled();
     expect(logRows()).toHaveLength(0);
+    const events = rowsFor(h.state, "user_events") as { event_type: string; event_data: Record<string, unknown> }[];
+    expect(events.map((e) => e.event_type)).toEqual(["translate_cap_hit"]);
+    expect(events[0].event_data).toMatchObject({ limit: 5, question_id: 42, lang: "en", field: "ai_explanation" });
   });
 
   it("DB error on the quota take refuses the call (fail closed)", async () => {
+    h.isFreeAccess.mockReturnValue(true);
     h.state.rpc.ai_quota_take = () => ({ data: null, error: { message: "boom" } });
     const res = await req();
     expect(res.status).toBe(503);
@@ -185,7 +200,7 @@ describe("POST /api/translate metering", () => {
     expect(Number(rows[0].cost_usd)).toBeGreaterThan(0);
     expect(rows[1]).toMatchObject({ provider: "openai", model: "gpt-4o-mini", route: "translate", status: "ok", in_tokens: 300, out_tokens: 200 });
     expect(Number(rows[1].cost_usd)).toBeGreaterThan(0);
-    expect(takes()).toHaveLength(1);
+    expect(takes()).toHaveLength(0); // paid: no daily attempt (issue 10)
   });
 
   it("both providers fail: 503, both failures logged", async () => {
@@ -259,7 +274,7 @@ describe("POST /api/translate Anthropic fallback (AI_FALLBACK_MODEL is a Claude 
     ]);
     expect(Number(rows[0].cost_usd)).toBeGreaterThan(0);
     expect(Number(rows[1].cost_usd)).toBeCloseTo(costMicroUsd(FALLBACK, OK_USAGE) / 1e6, 9);
-    expect(takes()).toHaveLength(1);
+    expect(takes()).toHaveLength(0); // paid: no daily attempt (issue 10)
     expect(rowsFor(h.state, "question_translations")[0]).toMatchObject({ source_model: FALLBACK });
   });
 
