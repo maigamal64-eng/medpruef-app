@@ -26,6 +26,7 @@
  */
 
 import { MAX_INPUT_BYTES, getModelSpec, measureInputBytes, type TokenUsage } from "./pricing";
+import { OAUTH_REQUEST_BETA, getAnthropicAuth, type AnthropicAuth } from "./credentials";
 
 export const ANTHROPIC_MESSAGES_URL = "https://api.anthropic.com/v1/messages";
 export const ANTHROPIC_VERSION = "2023-06-01";
@@ -111,8 +112,13 @@ export interface CallClaudeParams {
   onTextDelta?: (text: string) => void;
   timeoutMs?: number;
   signal?: AbortSignal;
-  /** Defaults to process.env.ANTHROPIC_API_KEY. */
+  /** Static key override (tests). Ignored when `auth` is given. */
   apiKey?: string;
+  /**
+   * Explicit credentials. Default: getAnthropicAuth() from ./credentials,
+   * which follows ANTHROPIC_AUTH_MODE (api_key = ANTHROPIC_API_KEY as before).
+   */
+  auth?: AnthropicAuth;
   /** Injection point for tests. Defaults to global fetch. */
   fetchImpl?: typeof fetch;
 }
@@ -474,6 +480,22 @@ function finish(
   return { text: text?.text ?? "", blocks, toolUses, usage, stop_reason, model, request_id };
 }
 
+export function authHeaders(auth: AnthropicAuth): Record<string, string> {
+  if (auth.kind === "bearer") {
+    return {
+      "content-type": "application/json",
+      authorization: `Bearer ${auth.value}`,
+      "anthropic-beta": OAUTH_REQUEST_BETA,
+      "anthropic-version": ANTHROPIC_VERSION,
+    };
+  }
+  return {
+    "content-type": "application/json",
+    "x-api-key": auth.value,
+    "anthropic-version": ANTHROPIC_VERSION,
+  };
+}
+
 // ─── Main entry ─────────────────────────────────────────────────────────
 
 /**
@@ -483,8 +505,8 @@ function finish(
  */
 export async function callClaude(params: CallClaudeParams): Promise<CallClaudeResult> {
   validateCallParams(params);
-  const apiKey = params.apiKey ?? process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new AiUpstream("ANTHROPIC_API_KEY is not set", { reachedModel: false, code: "no_api_key" });
+  // getAnthropicAuth, so this call still makes exactly one Messages request.
+  const auth: AnthropicAuth = params.auth ?? (params.apiKey ? { kind: "api_key", value: params.apiKey } : await getAnthropicAuth());
   const doFetch = params.fetchImpl ?? fetch;
   const body = buildRequestBody(params);
 
@@ -517,11 +539,7 @@ export async function callClaude(params: CallClaudeParams): Promise<CallClaudeRe
     try {
       res = await doFetch(ANTHROPIC_MESSAGES_URL, {
         method: "POST",
-        headers: {
-          "content-type": "application/json",
-          "x-api-key": apiKey,
-          "anthropic-version": ANTHROPIC_VERSION,
-        },
+        headers: authHeaders(auth),
         body: JSON.stringify(body),
         signal: controller.signal,
       });

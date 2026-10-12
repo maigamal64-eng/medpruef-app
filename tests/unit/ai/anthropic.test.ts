@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
 import fs from "node:fs";
 import path from "node:path";
 import {
@@ -9,6 +9,8 @@ import {
   AiRefusal,
   AiTimeout,
   AiUpstream,
+  ANTHROPIC_MESSAGES_URL,
+  ANTHROPIC_VERSION,
   buildRequestBody,
   callClaude,
   readSse,
@@ -16,6 +18,7 @@ import {
   type CallClaudeParams,
 } from "@/lib/ai/anthropic";
 import { MAX_INPUT_BYTES, MODEL_IDS } from "@/lib/ai/pricing";
+import { resetAnthropicAuthCacheForTests } from "@/lib/ai/credentials";
 
 // Fixtures are synthesized from the documented API shapes (see fixtures/README.md).
 const FIX = path.join(__dirname, "fixtures");
@@ -425,5 +428,82 @@ describe("callClaude: streaming", () => {
       { event: "a", data: "1" },
       { event: "b", data: "x\ny" },
     ]);
+  });
+});
+
+// ─── Credentials (ANTHROPIC_AUTH_MODE) ──────────────────────────────────
+
+const oidc = vi.hoisted(() => ({ getVercelOidcToken: vi.fn(async () => "eyJ.vercel.identity") }));
+vi.mock("@vercel/oidc", () => oidc);
+
+describe("callClaude: credentials", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+    resetAnthropicAuthCacheForTests();
+    oidc.getVercelOidcToken.mockClear();
+  });
+
+  function sentInit(f: ReturnType<typeof fetchReturning>): RequestInit {
+    return f.mock.calls[0][1] as RequestInit;
+  }
+
+  it("default mode sends exactly the pre-WIF headers with the env key", async () => {
+    vi.stubEnv("ANTHROPIC_AUTH_MODE", "");
+    vi.stubEnv("ANTHROPIC_API_KEY", "sk-ant-api-env");
+    const f = fetchReturning(jsonResponse(thinkingFirst));
+    await callClaude(base({ apiKey: undefined, fetchImpl: f as unknown as typeof fetch }));
+    expect(f).toHaveBeenCalledTimes(1);
+    expect(f.mock.calls[0][0]).toBe(ANTHROPIC_MESSAGES_URL);
+    expect(sentInit(f).headers).toEqual({
+      "content-type": "application/json",
+      "x-api-key": "sk-ant-api-env",
+      "anthropic-version": ANTHROPIC_VERSION,
+    });
+    expect(Object.keys(sentInit(f).headers as object)).toEqual(["content-type", "x-api-key", "anthropic-version"]);
+  });
+
+  it("a bearer token is sent as Authorization with the OAuth beta header, never x-api-key", async () => {
+    const f = fetchReturning(jsonResponse(thinkingFirst));
+    await callClaude(base({ apiKey: undefined, auth: { kind: "bearer", value: "sk-ant-oat01-x", expiresAt: Date.now() + 3600_000 }, fetchImpl: f as unknown as typeof fetch }));
+    const h = sentInit(f).headers as Record<string, string>;
+    expect(h.authorization).toBe("Bearer sk-ant-oat01-x");
+    expect(h["anthropic-beta"]).toBe("oauth-2025-04-20");
+    expect(h["anthropic-version"]).toBe(ANTHROPIC_VERSION);
+    expect(h).not.toHaveProperty("x-api-key");
+  });
+
+  it("wif mode: the exchange is a separate fetch, the Messages call stays one request", async () => {
+    vi.stubEnv("ANTHROPIC_AUTH_MODE", "wif");
+    vi.stubEnv("ANTHROPIC_API_KEY", "");
+    vi.stubEnv("ANTHROPIC_WIF_RULE_ID", "fdrl_t");
+    vi.stubEnv("ANTHROPIC_WIF_ORG_ID", "org");
+    vi.stubEnv("ANTHROPIC_WIF_SERVICE_ACCOUNT_ID", "svac_t");
+    vi.stubEnv("ANTHROPIC_WIF_AUDIENCE", "");
+    const exchange = vi.fn(async () => jsonResponse({ access_token: "sk-ant-oat01-live", token_type: "Bearer", expires_in: 3600 }));
+    vi.stubGlobal("fetch", exchange);
+    const f = fetchReturning(() => jsonResponse(thinkingFirst));
+    await callClaude(base({ apiKey: undefined, fetchImpl: f as unknown as typeof fetch }));
+    await callClaude(base({ apiKey: undefined, fetchImpl: f as unknown as typeof fetch }));
+    expect(f).toHaveBeenCalledTimes(2);
+    expect(exchange).toHaveBeenCalledTimes(1); // cached for the second call
+    expect((exchange.mock.calls[0] as unknown as [string])[0]).toBe("https://api.anthropic.com/v1/oauth/token");
+    expect(oidc.getVercelOidcToken).toHaveBeenCalledWith(expect.objectContaining({ audience: "https://api.anthropic.com", jti: expect.any(String) }));
+    expect((sentInit(f).headers as Record<string, string>).authorization).toBe("Bearer [secret]");
+  });
+
+  it("wif mode with a failed exchange and no key: wif_exchange_failed, nothing sent to Messages", async () => {
+    vi.stubEnv("ANTHROPIC_AUTH_MODE", "wif");
+    vi.stubEnv("ANTHROPIC_API_KEY", "");
+    vi.stubEnv("ANTHROPIC_WIF_RULE_ID", "fdrl_t");
+    vi.stubEnv("ANTHROPIC_WIF_ORG_ID", "org");
+    vi.stubEnv("ANTHROPIC_WIF_SERVICE_ACCOUNT_ID", "svac_t");
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("{}", { status: 401 })));
+    const f = fetchReturning(jsonResponse(thinkingFirst));
+    const err = await callClaude(base({ apiKey: undefined, fetchImpl: f as unknown as typeof fetch })).catch((e) => e);
+    expect(err).toBeInstanceOf(AiUpstream);
+    expect(err.code).toBe("wif_exchange_failed");
+    expect(err.reachedModel).toBe(false);
+    expect(f).not.toHaveBeenCalled();
   });
 });

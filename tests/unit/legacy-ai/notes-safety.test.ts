@@ -91,6 +91,26 @@ describe("scanNoteForPublic metering", () => {
     expect(r.flags.map((f) => f.type).sort()).toEqual(["pii", "quality"]);
   });
 
+  it("WIF mode without a static key still runs the model scan (never silently skipped)", async () => {
+    vi.stubEnv("ANTHROPIC_API_KEY", "");
+    vi.stubEnv("ANTHROPIC_AUTH_MODE", "wif");
+    vi.stubEnv("ANTHROPIC_WIF_RULE_ID", "fdrl_t");
+    vi.stubEnv("ANTHROPIC_WIF_ORG_ID", "org");
+    vi.stubEnv("ANTHROPIC_WIF_SERVICE_ACCOUNT_ID", "svac_t");
+    await scanNoteForPublic(NOTE, { userId: USER, db: h.db as MeterDb });
+    expect(h.callClaude).toHaveBeenCalledTimes(1);
+    expect(logRows()).toHaveLength(1);
+  });
+
+  it("no key and no WIF identifiers: no call, no row", async () => {
+    vi.stubEnv("ANTHROPIC_API_KEY", "");
+    vi.stubEnv("ANTHROPIC_AUTH_MODE", "wif");
+    vi.stubEnv("ANTHROPIC_WIF_RULE_ID", "");
+    await scanNoteForPublic(NOTE, { userId: USER, db: h.db as MeterDb });
+    expect(h.callClaude).not.toHaveBeenCalled();
+    expect(logRows()).toHaveLength(0);
+  });
+
   it("AI paused: no call, no row", async () => {
     vi.stubEnv("AI_FEATURES_ENABLED", "false");
     await scanNoteForPublic(NOTE, { userId: USER, db: h.db as MeterDb });

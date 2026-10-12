@@ -90,7 +90,7 @@ export function permissionForAdminRequest(
   if (path === "/api/mentor/admin/flags") return verb === "GET" ? "system.read" : verb === "POST" ? "system.manage" : null;
   if (path === "/api/mentor/admin/beta") return verb === "GET" || verb === "POST" ? "system.manage" : null;
   if (path === "/api/mentor/admin/beta/cohort") return verb === "GET" ? "revenue.read" : verb === "POST" ? "system.manage" : null;
-  if (path === "/api/admin/audit" || path === "/api/admin/audit-log/latest" || path === "/api/admin/crons" || path === "/api/admin/system-status" || path === "/api/admin/deploys" || path === "/api/admin/env" || path === "/api/admin/errors" || path === "/api/admin/webhooks") return verb === "GET" ? "system.read" : null;
+  if (path === "/api/admin/audit" || path === "/api/admin/audit-log/latest" || path === "/api/admin/crons" || path === "/api/admin/system-status" || path === "/api/admin/ai-auth-check" || path === "/api/admin/deploys" || path === "/api/admin/env" || path === "/api/admin/errors" || path === "/api/admin/webhooks") return verb === "GET" ? "system.read" : null;
   return null;
 }
 

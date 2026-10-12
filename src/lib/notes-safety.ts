@@ -34,6 +34,7 @@ import {
   callClaude,
   type ClaudeUsage,
 } from "@/lib/ai/anthropic";
+import { isClaudeConfigured } from "@/lib/ai/credentials";
 import { readMentorConfig } from "@/lib/mentor/config";
 import {
   checkLaneSpend,
@@ -181,11 +182,10 @@ export interface MeteredArgs {
 
 /**
  * One metered Anthropic call: callClaude plus exactly one ai_call_log row,
- * success or failure. No ANTHROPIC_API_KEY means nothing is sent and nothing
- * is logged (skipped). Never throws.
+ * nothing is sent and nothing is logged (skipped). Never throws.
  */
 export async function meteredClaude(a: MeteredArgs): Promise<MeteredResult> {
-  if (!process.env.ANTHROPIC_API_KEY) return { ok: false, skipped: true };
+  if (!isClaudeConfigured()) return { ok: false, skipped: true };
   const system = [{ type: "text" as const, text: a.system }];
   const messages = [{ role: "user" as const, content: a.user }];
   const inputBytes = measureInputBytes({ system, messages });
@@ -328,11 +328,10 @@ const SAFETY_SYSTEM = [
 ].join("\n");
 
 async function haikuScan(text: string, ctx: ScanContext): Promise<SafetyFlag[] | null> {
-  const key = process.env.ANTHROPIC_API_KEY;
   const aiOff =
     (process.env.AI_FEATURES_ENABLED ?? "true") !== "true" ||
     process.env.AI_PROVIDER_MODE === "disabled";
-  if (!key || aiOff) return null;
+  if (!isClaudeConfigured() || aiOff) return null;
 
   // Never spend unmetered: no attributable user id and no configured house id
   // means the model layer is skipped (the regex layer still runs).

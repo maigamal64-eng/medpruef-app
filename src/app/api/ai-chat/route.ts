@@ -20,6 +20,7 @@ import { readMentorConfig } from "@/lib/mentor/config";
 import { costMicroUsd, measureInputBytes, reserveCeilingMicro, trimHistoryToFit } from "@/lib/ai/pricing";
 import { DEFAULT_FALLBACK_MODEL, anthropicFallbackModel, resolveFallback } from "@/lib/ai/fallback";
 import { guardCitations } from "@/lib/ai/citation-guard";
+import { isClaudeConfigured } from "@/lib/ai/credentials";
 import { buildLegacyExplainPrompt } from "@/lib/ai/legacy-explain-prompt";
 import { billingNeutralLine } from "@/lib/billing-copy";
 import { reportChatFailure, type UpstreamAttempt } from "@/lib/ai/chat-failure";
@@ -635,7 +636,6 @@ export async function POST(req: NextRequest) {
   // ──────────────────────────────────────────────────────────────────
   // GATE 5: provider routing.
   //
-  //   auto         → try Anthropic first if ANTHROPIC_API_KEY is set,
   //                  then the fallback slot on failure (default).
   //   claude_oauth → only Anthropic: the primary and, when the slot holds
   //                  a Claude model, the Anthropic fallback.
@@ -758,7 +758,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  if (tryAnthropic && process.env.ANTHROPIC_API_KEY) {
+  if (tryAnthropic && isClaudeConfigured()) {
     const primary = await attemptAnthropic(config.primaryModel, ANTHROPIC_TIMEOUT_MS, "primary");
     reply = primary.reply;
     truncated = primary.truncated;
@@ -892,7 +892,7 @@ export async function POST(req: NextRequest) {
       level: "error",
       data: { durationMs: Date.now() - startedAt, mode: config.mode, refused },
     });
-    if (!refused && !(tryAnthropic && process.env.ANTHROPIC_API_KEY) && !(tryOpenAI && process.env.OPENAI_API_KEY)) {
+    if (!refused && !(tryAnthropic && isClaudeConfigured()) && !(tryOpenAI && process.env.OPENAI_API_KEY)) {
       await writeCallLog(userId, qidNum, {
         provider: "none",
         model: "none",
