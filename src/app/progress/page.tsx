@@ -55,7 +55,7 @@ import LanguageToggle from "@/components/LanguageToggle";
 import ThemeToggle from "@/components/ThemeToggle";
 import Sidebar from "@/components/Sidebar";
 import BottomNav from "@/components/BottomNav";
-import { AppLayout } from "@/components/ui";
+import { AppLayout, Dialog } from "@/components/ui";
 import TopicIcon from "@/components/TopicIcon";
 import ReadinessSignal from "@/components/ReadinessSignal";
 import { AchievementRank } from "@/components/ui/AchievementRank";
@@ -228,6 +228,7 @@ export default function ProgressPage() {
   const [bookmarkIds, setBookmarkIds] = useState<number[]>([]);
   const [legacyBookmarksAvailable, setLegacyBookmarksAvailable] = useState(false);
   const [legacyImportBusy, setLegacyImportBusy] = useState(false);
+  const [bookmarkConfirmOpen, setBookmarkConfirmOpen] = useState(false);
   const [legacyImportMessage, setLegacyImportMessage] = useState("");
   const [bookmarkQuestions, setBookmarkQuestions] = useState<QuestionItem[]>([]);
   const [noteEntries, setNoteEntries] = useState<{ id: number; note: string }[]>([]);
@@ -458,10 +459,8 @@ export default function ProgressPage() {
 
   const confirmLegacyBookmarkImport = useCallback(() => {
     if (!userId || legacyImportBusy) return;
-    const confirmed = window.confirm(lang === "de"
-      ? "Unzugeordnete Lesezeichen aus diesem Browser in dein aktuelles Konto importieren? Bereits gespeicherte Fragen bleiben erhalten. Die ursprünglichen Browserdaten werden nicht verändert."
-      : "Import unassigned bookmarks from this browser into your current account? Existing saved questions will stay. The original browser data will remain unchanged.");
-    if (!confirmed) return;
+    // UX-GLOBAL-14 / STU-56: confirmed in a ui/Dialog, never window.confirm.
+    setBookmarkConfirmOpen(false);
     setLegacyImportBusy(true);
     setLegacyImportMessage("");
     void importLegacyBookmarks(userId)
@@ -729,7 +728,21 @@ export default function ProgressPage() {
                             ? "Diese älteren Lesezeichen gehören keinem Konto. Sie werden erst nach deiner Bestätigung diesem Konto hinzugefügt."
                             : "These older bookmarks are not linked to an account. They are added to this account only after you confirm."}
                         </p>
-                        <button type="button" className="mp-btn mp-btn--secondary" onClick={confirmLegacyBookmarkImport} disabled={legacyImportBusy}>
+                        <Dialog
+                          open={bookmarkConfirmOpen}
+                          onOpenChange={setBookmarkConfirmOpen}
+                          kind="confirm"
+                          busy={legacyImportBusy}
+                          title={t("progress_bookmark_import_title", lang)}
+                          description={t("progress_bookmark_import_body", lang)}
+                          footer={
+                            <>
+                              <button type="button" data-dialog-safe className="mp-btn mp-btn--secondary" onClick={() => setBookmarkConfirmOpen(false)}>{t("library_legacy_confirm_cancel", lang)}</button>
+                              <button type="button" data-dialog-primary className="mp-btn mp-btn--primary" onClick={confirmLegacyBookmarkImport}>{t("progress_bookmark_import_ok", lang)}</button>
+                            </>
+                          }
+                        />
+                        <button type="button" className="mp-btn mp-btn--secondary" onClick={() => setBookmarkConfirmOpen(true)} disabled={legacyImportBusy}>
                           {legacyImportBusy
                             ? (lang === "de" ? "Import läuft …" : "Importing…")
                             : (lang === "de" ? "Ältere Lesezeichen prüfen und importieren" : "Review and import older bookmarks")}
