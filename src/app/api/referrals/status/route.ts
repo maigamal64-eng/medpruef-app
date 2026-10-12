@@ -8,8 +8,10 @@ import {
 } from '@/lib/referrals'
 import { REFERRAL_ANNUAL_CAP_CENTS, TIERS } from '@/lib/nowpayments'
 import { REFERRAL_EXAM_REWARD_THRESHOLD } from '@/lib/referral-exam-reward'
+import { withDbUnavailable } from "@/lib/db-unavailable-route";
 
 export const dynamic = 'force-dynamic'
+export const maxDuration = 30;
 
 /**
  * GET /api/referrals/status
@@ -30,7 +32,7 @@ export const dynamic = 'force-dynamic'
  * Code generation: if users.referral_code IS NULL or malformed, mint a
  * fresh 8-char uppercase alphanumeric and retry on UNIQUE collision.
  */
-export async function GET(req: NextRequest) {
+async function handleGET(req: NextRequest) {
   const guard = await requireUser(req)
   if ('error' in guard) return guard.error
   const userId = guard.userId
@@ -354,3 +356,5 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Internal error' }, { status: 500 })
   }
 }
+
+export const GET = withDbUnavailable(handleGET);

@@ -5,6 +5,7 @@ import { computePaymentFunnelMetrics } from "@/lib/admin/paymentFunnelMetrics";
 import { canAccessAdminPermission, loadAdminPermissionSnapshot } from "@/lib/admin/permissions";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 /**
  * GET /api/stats/admin/payments — the read-only data behind /admin/payments.

@@ -3,6 +3,7 @@ import { adminRouteShell } from "@/lib/admin/shell";
 import { fetchVercelDeployments } from "@/lib/admin/opsExternal";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 /**
  * GET /api/admin/deploys — recent Vercel deployments for the MedPrüf project.

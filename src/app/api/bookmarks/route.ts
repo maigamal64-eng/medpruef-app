@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth-guard";
 import { audienceOf, canUse } from "@/lib/entitlements";
 import { getServiceClient } from "@/lib/supabase";
+import { withDbUnavailable } from "@/lib/db-unavailable-route";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 const MAX_BOOKMARKS = 10_000;
 
@@ -12,7 +14,7 @@ const MAX_BOOKMARKS = 10_000;
  * Return the signed-in user's bookmarked question IDs. This route is Pro/admin
  * gated because bookmarks are a Pro feature in the learner UI.
  */
-export async function GET(req: NextRequest) {
+async function handleGET(req: NextRequest) {
   const guard = await requireUser(req);
   if ("error" in guard) return guard.error;
   if (!canUse("bookmarks", audienceOf({ signedIn: true, ...guard }))) {
@@ -43,7 +45,7 @@ export async function GET(req: NextRequest) {
  * A new progress row gets database defaults; an existing row only has its
  * bookmark flag changed, preserving all spaced-repetition state.
  */
-export async function PATCH(req: NextRequest) {
+async function handlePATCH(req: NextRequest) {
   const guard = await requireUser(req);
   if ("error" in guard) return guard.error;
   if (!canUse("bookmarks", audienceOf({ signedIn: true, ...guard }))) {
@@ -107,7 +109,7 @@ export async function PATCH(req: NextRequest) {
  * spaced-repetition and answer history. Clearing personal data remains
  * available to any authenticated account, including expired Pro accounts.
  */
-export async function DELETE(req: NextRequest) {
+async function handleDELETE(req: NextRequest) {
   const guard = await requireUser(req);
   if ("error" in guard) return guard.error;
 
@@ -123,3 +125,7 @@ export async function DELETE(req: NextRequest) {
   }
   return NextResponse.json({ ok: true });
 }
+
+export const GET = withDbUnavailable(handleGET);
+export const PATCH = withDbUnavailable(handlePATCH);
+export const DELETE = withDbUnavailable(handleDELETE);

@@ -6,8 +6,10 @@ import { filterFreeAccessibleQuestions, logFreeCapHit } from "@/lib/free-access"
 import { getServiceClient } from "@/lib/supabase";
 import { readKafPool } from "@/app/api/exam/kaf-pool/pool-read";
 import { clampDurationMs, parseAccepted, parseKafAnswers, parseSelfMarks, sanitizeExamConfig } from "@/lib/exam-history-server";
+import { withDbUnavailable } from "@/lib/db-unavailable-route";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 /**
  * /api/history/exams — the exam-simulation history (History feature v1).
@@ -65,7 +67,7 @@ function toSafeInts(v: unknown, max: number, min = 0): number[] {
     .slice(0, max);
 }
 
-export async function POST(req: NextRequest) {
+async function handlePOST(req: NextRequest) {
   const guard = await requireUser(req);
   if ("error" in guard) return guard.error;
   const { userId } = guard;
@@ -332,7 +334,7 @@ export async function POST(req: NextRequest) {
   });
 }
 
-export async function GET(req: NextRequest) {
+async function handleGET(req: NextRequest) {
   const guard = await requireUser(req);
   if ("error" in guard) return guard.error;
 
@@ -364,3 +366,6 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({ attempts: data ?? [], total: count, access: paid ? "full" : "summary" });
 }
+
+export const POST = withDbUnavailable(handlePOST);
+export const GET = withDbUnavailable(handleGET);

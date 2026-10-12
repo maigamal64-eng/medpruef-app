@@ -9,6 +9,7 @@ import { legacyGate, logAiCall, meteredClaude, type MeterDb } from "@/lib/notes-
 import { logTranslateCapHit, translateDailyLimit } from "@/lib/ai/translate-cap";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 // Translation burst guard — the daily quota (5 for free, unlimited
 // for Pro) lives below, but a programmatic caller on Pro could still

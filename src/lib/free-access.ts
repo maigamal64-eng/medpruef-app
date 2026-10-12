@@ -22,6 +22,8 @@
  * new set only. Unknown or inactive ids are always denied.
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { isDbUnavailable } from "@/lib/db-unavailable";
+import { captureServerError } from "@/lib/sentry-capture";
 import { FREE_TIER_QUESTIONS_PER_EXAM, loadFreeAccess } from "@/lib/free-tier";
 import { freeUniverseIds } from "@/lib/free-set";
 
@@ -118,8 +120,18 @@ export async function logFreeCapHit(
   if (last && now - last < CAP_HIT_THROTTLE_MS) return;
   capHitSeen.set(key, now);
   if (capHitSeen.size > 5000) capHitSeen.clear();
+  // a-db-timeouts: PostgREST reports a failed insert in `error`, it does not
+  // throw, so the old try/catch dropped failures silently and the throttle
+  // then suppressed the event for an hour. Read the error and release the
+  // throttle so the next wall hit writes the event.
+  const release = () => {
+    if (capHitSeen.get(key) === now) {
+      if (last === undefined) capHitSeen.delete(key);
+      else capHitSeen.set(key, last);
+    }
+  };
   try {
-    await sb.from("user_events").insert({
+    const { error } = await sb.from("user_events").insert({
       user_id: args.userId,
       event_type: "paywall_hit",
       event_data: {
@@ -134,7 +146,13 @@ export async function logFreeCapHit(
         question_id: args.questionId ?? null,
       },
     });
+    if (error) {
+      release();
+      console.error("[free-access] paywall_hit not stored", { code: error.code, message: error.message, gate: args.gate, route: args.route });
+      if (!isDbUnavailable(error)) captureServerError(error, { route: args.route, phase: "paywall_hit-insert", gate: args.gate });
+    }
   } catch (err) {
+    release();
     console.error("[free-access] cap-hit log failed", err);
   }
 }

@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { requireUser } from "@/lib/auth-guard";
 import { captureServerError } from "@/lib/sentry-capture";
+import { withDbUnavailable } from "@/lib/db-unavailable-route";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 /**
  * POST /api/user/onboarding-complete
@@ -27,7 +29,7 @@ export const dynamic = "force-dynamic";
  * Auth: requireUser. The previous client-only persistence was
  * cross-device-broken — see review-2026-04-26-A2.
  */
-export async function POST(req: NextRequest) {
+async function handlePOST(req: NextRequest) {
   const guard = await requireUser(req);
   if ("error" in guard) return guard.error;
 
@@ -100,3 +102,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 }
+
+export const POST = withDbUnavailable(handlePOST);

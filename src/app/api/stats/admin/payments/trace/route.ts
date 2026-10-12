@@ -7,6 +7,7 @@ import { PAYMENT_ID_RE, buildLedger } from "@/lib/admin/money-rules";
 import { whopPlanToTier } from "@/lib/whop";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 /**
  * GET /api/stats/admin/payments/trace?payment_id=pay_x — one payment end to

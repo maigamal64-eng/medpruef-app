@@ -6,6 +6,7 @@ import { safeEqual } from '@/lib/security/timing-safe'
 import { frageStartQuestionId, handleFrageCallback, handleFrageCommand, isFrageCommand, isFrageEnabled } from '@/lib/telegram-frage'
 
 export const dynamic = 'force-dynamic'
+export const maxDuration = 30;
 
 /**
  * Telegram bot webhook endpoint.

@@ -18,13 +18,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createHash } from "crypto";
 import { analyticsWritesDisabled } from "@/lib/supabase-resilience";
+import { serverSupabaseOptions } from "@/lib/supabase";
+import { dbRecentlyUnavailable } from "@/lib/db-unavailable";
+
+export const maxDuration = 30;
 
 // ---------------------------------------------------------------------------
 // Supabase service-role client (bypasses RLS)
 // ---------------------------------------------------------------------------
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  serverSupabaseOptions,
 );
 
 // ---------------------------------------------------------------------------
@@ -133,7 +138,8 @@ function parseBody(ct: string, raw: unknown): ViolationRow[] {
 // Route handler
 // ---------------------------------------------------------------------------
 export async function POST(req: NextRequest) {
-  if (analyticsWritesDisabled()) {
+  // Also skip while this instance has just seen the database fail (a-db-timeouts).
+  if (analyticsWritesDisabled() || dbRecentlyUnavailable()) {
     return new NextResponse(null, { status: 204 });
   }
 

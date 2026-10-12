@@ -29,6 +29,7 @@ import { computeReportFixTimes, repeatCounts, repeatOf, type ReportRow } from "@
 import { readReportQuestionIds } from "@/lib/reports/report-reads";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 // POST — User submits a flag or edit suggestion.
 //

@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { requireUser } from "@/lib/auth-guard";
 import { captureServerError } from "@/lib/sentry-capture";
+import { withDbUnavailable } from "@/lib/db-unavailable-route";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 /**
  * GET /api/announcements/state
@@ -37,7 +39,7 @@ export const dynamic = "force-dynamic";
 /** A new "session" starts when the user returns after >= 30 min idle. */
 const SESSION_GAP_MINUTES = 30;
 
-export async function GET(req: NextRequest) {
+async function handleGET(req: NextRequest) {
   const guard = await requireUser(req);
   if ("error" in guard) return guard.error;
   const userId = guard.userId;
@@ -173,3 +175,5 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 }
+
+export const GET = withDbUnavailable(handleGET);

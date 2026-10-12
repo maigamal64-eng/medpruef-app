@@ -3,6 +3,7 @@ import { adminRouteShell } from "@/lib/admin/shell";
 import { getServiceClient } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 export const PUT = adminRouteShell(async ({ req, actor }) => {
   const { userId } = await reqRouteParams(req);

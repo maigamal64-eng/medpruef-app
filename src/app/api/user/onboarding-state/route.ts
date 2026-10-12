@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { requireUser } from "@/lib/auth-guard";
 import { captureServerError } from "@/lib/sentry-capture";
+import { withDbUnavailable } from "@/lib/db-unavailable-route";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 /**
  * GET /api/user/onboarding-state
@@ -24,7 +26,7 @@ export const dynamic = "force-dynamic";
  *
  * review-2026-04-26-A2.
  */
-export async function GET(req: NextRequest) {
+async function handleGET(req: NextRequest) {
   const guard = await requireUser(req);
   if ("error" in guard) return guard.error;
 
@@ -55,3 +57,5 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 }
+
+export const GET = withDbUnavailable(handleGET);

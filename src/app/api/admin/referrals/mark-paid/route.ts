@@ -5,6 +5,7 @@ import { adminRouteShell } from "@/lib/admin/shell";
 import { logAdminAction } from "@/lib/admin/audit";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 /**
  * POST /api/admin/referrals/mark-paid

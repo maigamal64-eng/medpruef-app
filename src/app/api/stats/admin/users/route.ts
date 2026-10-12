@@ -11,6 +11,7 @@ import { USER_SEGMENTS, isMissingFunction, segmentNeedsRevenue, type UserSegment
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 
 interface LockedUserRow {

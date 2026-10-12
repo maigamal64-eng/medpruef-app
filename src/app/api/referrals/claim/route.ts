@@ -8,6 +8,7 @@ import {
 import { isReferralExamRewardEnabled } from '@/lib/referral-exam-reward'
 
 export const dynamic = 'force-dynamic'
+export const maxDuration = 30;
 
 /**
  * POST /api/referrals/claim

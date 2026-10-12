@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import { TIERS } from "@/lib/whop";
+import { withDbUnavailable } from "@/lib/db-unavailable-route";
 
 const TRIAL_DAYS = 7;
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 /**
  * GET /api/trial/status — PUBLIC (no auth) trial availability probe.
@@ -14,7 +16,7 @@ export const dynamic = "force-dynamic";
  * the flag: flip NOTES_TRIAL_ENABLED off and the announcement disappears — no
  * stale "free week" promo advertising a disabled trial. Carries no user data.
  */
-export async function GET() {
+async function handleGET() {
   const enabled =
     (process.env.NOTES_TRIAL_ENABLED ?? "false").toLowerCase() === "true";
   return NextResponse.json({
@@ -27,3 +29,5 @@ export async function GET() {
     charge_at: new Date(Date.now() + TRIAL_DAYS * 86_400_000).toISOString(),
   });
 }
+
+export const GET = withDbUnavailable(handleGET);

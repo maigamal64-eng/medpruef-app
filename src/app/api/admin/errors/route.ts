@@ -3,6 +3,7 @@ import { adminRouteShell } from "@/lib/admin/shell";
 import { fetchSentryIssues } from "@/lib/admin/opsExternal";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 /**
  * GET /api/admin/errors — recent unresolved Sentry issues for the JS project

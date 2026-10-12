@@ -15,8 +15,10 @@ import {
   nextCursor,
   parseAfterId,
 } from "@/lib/offline-pack-rules";
+import { withDbUnavailable } from "@/lib/db-unavailable-route";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 const OFFLINE_CHUNK_LIMIT = { limit: 300, windowMs: 60 * 60 * 1000 };
 const OFFLINE_SUMMARY_LIMIT = { limit: 120, windowMs: 60 * 60 * 1000 };
@@ -57,7 +59,7 @@ const OFFLINE_SUMMARY_LIMIT = { limit: 120, windowMs: 60 * 60 * 1000 };
  * Cache-Control: private, no-store — the response is bound to the
  * caller's session. Middle-boxes must not cache.
  */
-export async function GET(req: NextRequest) {
+async function handleGET(req: NextRequest) {
   const guard = await requireUser(req);
   if ("error" in guard) return guard.error;
 
@@ -255,3 +257,5 @@ export async function GET(req: NextRequest) {
     { headers: noStore },
   );
 }
+
+export const GET = withDbUnavailable(handleGET);

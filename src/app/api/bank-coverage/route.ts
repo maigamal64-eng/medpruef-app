@@ -5,6 +5,7 @@ import { readBankCoverage } from "@/lib/bank-coverage";
 import { bankReviews } from "@/lib/bank-freshness";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 const coverage = unstable_cache(() => readBankCoverage(getServiceClient()), ["bank-coverage-v1"], { revalidate: 300 });
 
 // Aggregates only: this route never serves question content or identifiers.

@@ -16,6 +16,7 @@ import { NextResponse } from "next/server";
  * cache and drift from what a CDN edge actually serves).
  */
 export const dynamic = "force-static";
+export const maxDuration = 30;
 
 const OPENAPI_DOCUMENT = {
   openapi: "3.1.0",

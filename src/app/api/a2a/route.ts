@@ -28,6 +28,7 @@ import {
 import { getExamSource } from "@/lib/topics";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 const AGENT_CARD_URL = "https://medpruf.com/.well-known/agent-card.json";
 

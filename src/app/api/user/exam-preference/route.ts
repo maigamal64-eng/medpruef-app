@@ -2,11 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServiceClient } from '@/lib/supabase'
 import { EXAM_SOURCE_IDS } from '@/lib/topics'
 import { requireUser } from '@/lib/auth-guard'
+import { withDbUnavailable } from "@/lib/db-unavailable-route";
 
 export const dynamic = 'force-dynamic'
+export const maxDuration = 30;
 
 /** GET — read the authenticated account's canonical exam selection. */
-export async function GET(req: NextRequest) {
+async function handleGET(req: NextRequest) {
   const guard = await requireUser(req)
   if ('error' in guard) return guard.error
   const { data, error } = await getServiceClient()
@@ -40,7 +42,7 @@ export async function GET(req: NextRequest) {
  * previous version accepted `userId` in the body, which meant any
  * stranger could flip any user's exam preference (BE-P1-012).
  */
-export async function PATCH(req: NextRequest) {
+async function handlePATCH(req: NextRequest) {
   const guard = await requireUser(req)
   if ('error' in guard) return guard.error
   const userId = guard.userId
@@ -117,3 +119,6 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: 'Internal error' }, { status: 500 })
   }
 }
+
+export const GET = withDbUnavailable(handleGET);
+export const PATCH = withDbUnavailable(handlePATCH);

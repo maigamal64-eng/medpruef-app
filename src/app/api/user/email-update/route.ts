@@ -1,15 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireUser, isGuardFailure } from "@/lib/auth-guard";
 import { getServiceClient } from "@/lib/supabase";
+import { withDbUnavailable } from "@/lib/db-unavailable-route";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 /**
  * PATCH /api/user/email-update
  * Allows a user to update their email address (e.g. after bounce detection).
  * Resets email_status to 'unverified' on update.
  */
-export async function PATCH(req: NextRequest) {
+async function handlePATCH(req: NextRequest) {
   const guard = await requireUser(req);
   if (isGuardFailure(guard)) return guard.error;
   const { userId } = guard;
@@ -73,3 +75,5 @@ export async function PATCH(req: NextRequest) {
     );
   }
 }
+
+export const PATCH = withDbUnavailable(handlePATCH);

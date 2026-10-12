@@ -4,8 +4,10 @@ import { requireUser } from "@/lib/auth-guard";
 import { getServiceClient } from "@/lib/supabase";
 import { EXAM_SOURCE_IDS, DEFAULT_EXAM_SOURCE } from "@/lib/topics";
 import { WEEKS_SHOWN, buildWeeklyProgress, type AnswerRow } from "@/lib/master-learning/weekly-progress";
+import { withDbUnavailable } from "@/lib/db-unavailable-route";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 const PAGE = 1000;
 /** Hard stop so one heavy account cannot turn this into a full scan. */
@@ -19,7 +21,7 @@ const MAX_ROWS = 20000;
  * says when MAX_ROWS stopped the read so the page never presents a partial
  * week as complete.
  */
-export async function GET(req: NextRequest) {
+async function handleGET(req: NextRequest) {
   const guard = await requireUser(req);
   if ("error" in guard) return guard.error;
   const sb = getServiceClient();
@@ -63,3 +65,5 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Failed to load weekly progress" }, { status: 500 });
   }
 }
+
+export const GET = withDbUnavailable(handleGET);

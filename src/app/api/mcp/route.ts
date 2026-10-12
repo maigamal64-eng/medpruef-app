@@ -32,6 +32,7 @@ import {
 import { EXAM_SOURCES } from "@/lib/topics";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 const PROTOCOL_VERSION = "2025-06-18";
 const SERVER_NAME = "MedPrüf";

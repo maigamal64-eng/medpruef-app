@@ -5,6 +5,7 @@ import { getTopicCountsCached, loadFreeAccess, loadFreeSetLive } from '@/lib/fre
 import { freeLeftByTopic } from '@/lib/free-set'
 import { topicMetrics } from '@/lib/learning-metrics'
 import { shareInFlight } from '@/lib/inflight'
+import { withDbUnavailable } from "@/lib/db-unavailable-route";
 
 /** The a12 newest-attempt read is optional until 20261221090000 is applied. */
 function missingFunction(error: { code?: string; message?: string } | null): boolean {
@@ -12,6 +13,7 @@ function missingFunction(error: { code?: string; message?: string } | null): boo
 }
 
 export const dynamic = 'force-dynamic'
+export const maxDuration = 30;
 
 /**
  * GET /api/user/topic-progress?examType=...
@@ -28,7 +30,7 @@ export const dynamic = 'force-dynamic'
  * query string. Previously this endpoint accepted `?userId=<uuid>`
  * and returned any user's progress (BE-P1-012 in the 2026-04-15 audit).
  */
-export async function GET(req: NextRequest) {
+async function handleGET(req: NextRequest) {
   const guard = await requireUser(req)
   if ('error' in guard) return guard.error
   const userId = guard.userId
@@ -157,3 +159,5 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Internal error' }, { status: 500 })
   }
 }
+
+export const GET = withDbUnavailable(handleGET);

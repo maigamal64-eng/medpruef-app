@@ -5,6 +5,7 @@ import { captureServerError } from "@/lib/sentry-capture";
 import { checkRateLimit, rateKey, rateLimitHeaders } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 /**
  * POST /api/non-crypto-waitlist

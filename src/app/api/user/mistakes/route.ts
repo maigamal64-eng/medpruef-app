@@ -10,8 +10,10 @@ import { audienceOf, canUse, FEATURE_GATE } from "@/lib/entitlements";
 import { EXAM_SOURCE_IDS } from "@/lib/topics";
 import { captureServerError } from "@/lib/sentry-capture";
 import { isMissingRuleError, MISTAKE_STATES as STATES, MISTAKES_PAGE, type MistakeState } from "@/lib/mistakes";
+import { withDbUnavailable } from "@/lib/db-unavailable-route";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 
 interface RpcRow {
@@ -26,7 +28,7 @@ interface RpcRow {
   corrected_total: number | string;
 }
 
-export async function GET(req: NextRequest) {
+async function handleGET(req: NextRequest) {
   const guard = await requireUser(req);
   if ("error" in guard) return guard.error;
   if (!canUse("mistake_review", audienceOf({ signedIn: true, ...guard }))) {
@@ -106,3 +108,5 @@ async function emptyTotals(
   const row = ((data ?? []) as RpcRow[])[0];
   return row ? { open: Number(row.open_total), corrected: Number(row.corrected_total) } : { open: 0, corrected: 0 };
 }
+
+export const GET = withDbUnavailable(handleGET);

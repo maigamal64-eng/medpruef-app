@@ -10,8 +10,10 @@ import { getServiceClient } from "@/lib/supabase";
 import { audienceOf, canUse } from "@/lib/entitlements";
 import { EXAM_SOURCE_IDS } from "@/lib/topics";
 import { buildDueSummary, type DueRow } from "@/lib/master-learning/due-summary";
+import { withDbUnavailable } from "@/lib/db-unavailable-route";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 const LOOKAHEAD_DAYS = 8;
 const PAGE = 1000;
@@ -28,7 +30,7 @@ async function notesDueToday(sb: ReturnType<typeof getServiceClient>, userId: st
 }
 
 /** GET /api/user/due-summary: own rows only. Question counts for entitled callers only. */
-export async function GET(req: NextRequest) {
+async function handleGET(req: NextRequest) {
   const guard = await requireUser(req);
   if ("error" in guard) return guard.error;
 
@@ -82,3 +84,5 @@ export async function GET(req: NextRequest) {
     headers: { "Cache-Control": "private, no-store" },
   });
 }
+
+export const GET = withDbUnavailable(handleGET);

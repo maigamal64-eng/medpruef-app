@@ -6,6 +6,7 @@ import { checkRateLimit, rateKey } from "@/lib/rate-limit";
 import { saveMentorReport } from "./handler";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 export async function POST(req: NextRequest) {
   const guard = await requireUser(req);
   if ("error" in guard) return guard.error;

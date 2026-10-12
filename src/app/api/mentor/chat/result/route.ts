@@ -6,6 +6,7 @@ import { getServiceClient } from "@/lib/supabase";
 import { checkRateLimit, rateKey } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 export async function GET(req: NextRequest) {
   const guard = await requireUser(req);
   if ("error" in guard) return guard.error;

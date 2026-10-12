@@ -5,6 +5,7 @@ import { captureServerError } from "@/lib/sentry-capture";
 import { readMentorConfig } from "@/lib/mentor/config";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 /** Independent of the sweep schedule: a missing sweep cannot check its own absence. */
 export async function GET(req: NextRequest) {
   const secret = process.env.CRON_SECRET;

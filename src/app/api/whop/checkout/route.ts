@@ -10,6 +10,7 @@ import { tierToWhopPlan, createWhopCheckoutSession, TIERS } from "@/lib/whop";
 import { logPaymentEvent } from "@/lib/paymentEvents";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 /**
  * POST /api/whop/checkout  { tier }

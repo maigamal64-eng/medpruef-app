@@ -5,6 +5,7 @@ import { currentProductionDeploy } from "@/lib/admin/deploy-rules";
 import { readKillSwitches } from "@/lib/admin/kill-switches";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 /**
  * GET /api/admin/system-status (a19, UX-ADM-09 "System status" row, ADM-12 B).

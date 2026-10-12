@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
 import { requireUser, isPaidAccess } from "@/lib/auth-guard";
 import { getServiceClient } from "@/lib/supabase";
+import { withDbUnavailable } from "@/lib/db-unavailable-route";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 /**
  * GET /api/history/answers — browse the caller's own answer history
@@ -18,7 +20,7 @@ export const dynamic = "force-dynamic";
 
 const VALID_EXAM_TYPES = ["kenntnispruefung", "kmp_innsbruck", "pharma"] as const;
 
-export async function GET(req: NextRequest) {
+async function handleGET(req: NextRequest) {
   const guard = await requireUser(req);
   if ("error" in guard) return guard.error;
 
@@ -69,3 +71,5 @@ export async function GET(req: NextRequest) {
     total: count ?? null,
   });
 }
+
+export const GET = withDbUnavailable(handleGET);

@@ -13,6 +13,7 @@ import { MEDPRUF_REFERRAL_GUIDANCE_SKILL } from "../../_skills";
  * long-cacheable like the rest of this discovery surface.
  */
 export const dynamic = "force-static";
+export const maxDuration = 30;
 
 export async function GET() {
   return new Response(MEDPRUF_REFERRAL_GUIDANCE_SKILL, {

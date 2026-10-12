@@ -4,6 +4,7 @@ import { ADMIN_PERMISSION_KEYS } from "@/lib/admin/permissions";
 import { getServiceClient } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 export const GET = adminRouteShell(async () => {
   const { data, error } = await getServiceClient()

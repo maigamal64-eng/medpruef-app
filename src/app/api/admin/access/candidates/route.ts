@@ -3,6 +3,7 @@ import { adminRouteShell } from "@/lib/admin/shell";
 import { getServiceClient } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 export const GET = adminRouteShell(async ({ req }) => {
   const rawQuery = req.nextUrl.searchParams.get("q") ?? "";

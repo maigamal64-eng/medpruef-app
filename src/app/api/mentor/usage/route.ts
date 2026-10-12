@@ -17,6 +17,7 @@ import { loadPackageCatalogue } from "@/lib/mentor/credits/packages";
 import { handleMentorUsage } from "./handler";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 /** 30 reads a minute per user (the page polls; a loop does not get to scan the ledger). */
 const USAGE_LIMIT_PER_MIN = 30;

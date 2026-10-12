@@ -14,6 +14,7 @@ import {
 import { logWebhookAttempt, type WebhookAttemptResult } from "@/lib/webhook-logger";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 /**
  * POST /api/webhooks/nowpayments

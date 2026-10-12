@@ -10,6 +10,7 @@ import { qualifyReferralOnActivity } from "@/lib/referral-exam-reward";
 import { isPaidTier } from "@/lib/free-tier";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 /**
  * POST /api/whop/trial/verify — the PRIMARY grant for the Whop card trial.

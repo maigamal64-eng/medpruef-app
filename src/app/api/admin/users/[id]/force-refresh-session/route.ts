@@ -5,6 +5,7 @@ import { logAdminAction } from "@/lib/admin/audit";
 import { captureServerError } from "@/lib/sentry-capture";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 /**
  * POST /api/admin/users/<id>/force-refresh-session

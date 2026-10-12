@@ -3,6 +3,7 @@ import { getServiceClient } from "@/lib/supabase";
 import { adminRouteShell } from "@/lib/admin/shell";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 /**
  * Admin triage endpoint for questions that reference images

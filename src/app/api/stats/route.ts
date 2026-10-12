@@ -3,8 +3,10 @@ import { getServiceClient } from '@/lib/supabase'
 import { requireUser } from '@/lib/auth-guard'
 import { captureServerError } from '@/lib/sentry-capture'
 import { checkRateLimit, rateKey, rateLimitHeaders } from '@/lib/rate-limit'
+import { withDbUnavailable } from "@/lib/db-unavailable-route";
 
 export const dynamic = 'force-dynamic'
+export const maxDuration = 30;
 
 /**
  * GET /api/stats — returns per-user gamification + per-topic accuracy.
@@ -22,7 +24,7 @@ export const dynamic = 'force-dynamic'
 // at ~1/min. Leaves lots of headroom for a re-mount + a few refetches.
 const STATS_RATE_LIMIT = { limit: 60, windowMs: 60_000 }
 
-export async function GET(req: NextRequest) {
+async function handleGET(req: NextRequest) {
   const guard = await requireUser(req)
   if ('error' in guard) return guard.error
   const userId = guard.userId
@@ -70,3 +72,5 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Internal error' }, { status: 500 })
   }
 }
+
+export const GET = withDbUnavailable(handleGET);

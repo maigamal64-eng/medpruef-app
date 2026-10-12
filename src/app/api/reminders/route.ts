@@ -4,6 +4,7 @@ import { resolveOptionalUser } from "@/lib/auth-guard";
 import { sanitizeAttribution } from "@/lib/attribution";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 /**
  * Exam deadline reminder signup (2026-07-03). The purest lead magnet in this

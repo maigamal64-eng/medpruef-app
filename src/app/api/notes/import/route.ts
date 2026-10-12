@@ -9,8 +9,10 @@ import {
   buildSearchText,
   deriveTitle,
 } from "@/lib/notes";
+import { withDbUnavailable } from "@/lib/db-unavailable-route";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 /**
  * POST /api/notes/import — one-time localStorage → server migration.
@@ -46,7 +48,7 @@ interface Candidate {
   row: Record<string, unknown>;
 }
 
-export async function POST(req: NextRequest) {
+async function handlePOST(req: NextRequest) {
   const guard = await requireUser(req);
   if ("error" in guard) return guard.error;
   const userId = guard.userId;
@@ -206,3 +208,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 }
+
+export const POST = withDbUnavailable(handlePOST);

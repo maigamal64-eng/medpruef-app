@@ -16,6 +16,7 @@
  */
 
 export const dynamic = "force-static";
+export const maxDuration = 30;
 
 const CARD = {
   protocolVersion: "0.3.0",

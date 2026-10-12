@@ -14,6 +14,7 @@ import { qualifyReferralOnActivity } from "@/lib/referral-exam-reward";
 import { sendRedditConversion } from "@/lib/reddit-capi";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 /**
  * POST /api/whop/checkout/verify — deterministic grant when a PAID buyer

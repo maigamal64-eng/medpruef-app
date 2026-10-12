@@ -10,6 +10,7 @@ import { NextResponse } from "next/server";
  * "ok" during a real outage.
  */
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 export async function GET() {
   return NextResponse.json(

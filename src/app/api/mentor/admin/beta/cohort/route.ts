@@ -12,6 +12,7 @@ import { requireMentorAdmin } from "@/lib/mentor/admin/guard";
  * price or provider state changes here.
  */
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 const headers = { "Cache-Control": "no-store" };
 
 export async function GET(req: NextRequest) {

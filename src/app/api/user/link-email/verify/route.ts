@@ -5,6 +5,7 @@ import { createHash } from "node:crypto";
 import { isUiLanguage, renderLang } from "@/lib/language-model";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 /**
  * POST /api/user/link-email/verify  { token, lang }

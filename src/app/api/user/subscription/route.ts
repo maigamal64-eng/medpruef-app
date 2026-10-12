@@ -9,8 +9,10 @@ import { loadRenewalState } from "@/lib/renewal-state";
 import { loadRenewalOfferSuppression } from "@/lib/billing-cadence";
 import { loadWhopBillingRead, unknownBillingSnapshot } from "@/lib/whop-subscription-snapshot";
 import { isPaidTier } from "@/lib/free-tier";
+import { withDbUnavailable } from "@/lib/db-unavailable-route";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 /**
  * GET /api/user/subscription
@@ -55,7 +57,7 @@ export const dynamic = "force-dynamic";
  *     }
  *   }
  */
-export async function GET(req: NextRequest) {
+async function handleGET(req: NextRequest) {
   const guard = await requireUser(req);
   if ("error" in guard) return guard.error;
   const { userId } = guard;
@@ -249,3 +251,5 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 }
+
+export const GET = withDbUnavailable(handleGET);

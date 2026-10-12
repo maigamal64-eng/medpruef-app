@@ -5,6 +5,7 @@ import { adminErrorResponse } from "@/lib/admin/error-response";
 import { logAdminAction } from "@/lib/admin/audit";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 /**
  * POST /api/admin/session/revoke-all (ADM-17)

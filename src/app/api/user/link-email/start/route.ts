@@ -8,6 +8,7 @@ import bcrypt from "bcryptjs";
 import { createHash, randomBytes } from "node:crypto";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 // This route sends email to a user-supplied address, so it needs its own
 // bucket separate from auth routes. 3 attempts per hour per user is generous

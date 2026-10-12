@@ -5,6 +5,7 @@ import { computeGrowthMetrics } from "@/lib/admin/growthMetrics";
 import { parseGrowthWindow } from "@/lib/admin/growth-rules";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 /**
  * GET /api/stats/admin/growth?window=7|30|90|all — the GROWTH FUNNEL behind

@@ -10,6 +10,7 @@ import { validActionKey } from "@/lib/puyp-idempotency";
 const PUYP_FAIL_EVENT = "puyp_result_recorded";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 /**
  * POST /api/puyp/result

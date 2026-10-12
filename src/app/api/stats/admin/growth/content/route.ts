@@ -10,6 +10,7 @@ import {
 } from "@/lib/admin/publishedContent";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 /**
  * GET /api/stats/admin/growth/content — the static channel strategy, published

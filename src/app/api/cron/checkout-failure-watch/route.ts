@@ -5,6 +5,7 @@ import { safeEqual } from "@/lib/security/timing-safe";
 import { checkoutWatchMessage, evaluateCheckoutWatch, type WatchEvent } from "@/lib/checkout-failure-rate";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 /** Internal ops chat on the default [name] bot (workspace Telegram rule). Never a customer bot. */
 const OPS_CHAT_ID = 0;

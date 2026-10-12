@@ -6,6 +6,7 @@ import { captureServerError } from "@/lib/sentry-capture";
 import { supportMail, validateSupportContact } from "@/lib/support-contact";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 const IP_LIMIT = { limit: 3, windowMs: 10 * 60_000 };
 const EMAIL_LIMIT = { limit: 5, windowMs: 24 * 3_600_000 };

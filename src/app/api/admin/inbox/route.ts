@@ -6,6 +6,7 @@ import { opsWaitingState } from "@/lib/ops/owner";
 import { readKillSwitches } from "@/lib/admin/kill-switches";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 type Key =
   | "question_reports"

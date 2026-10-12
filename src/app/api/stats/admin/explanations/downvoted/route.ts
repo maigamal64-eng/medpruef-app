@@ -5,6 +5,7 @@ import { canAccessAdminPermission, loadAdminPermissionSnapshot } from "@/lib/adm
 import { adminErrorResponse } from "@/lib/admin/error-response";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 const MISSING = ["42P01", "PGRST205", "PGRST200"];
 

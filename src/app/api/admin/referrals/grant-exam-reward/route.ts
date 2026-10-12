@@ -5,6 +5,7 @@ import { logAdminAction } from "@/lib/admin/audit";
 import { grantExamRewardToReferrer } from "@/lib/referral-exam-reward";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 /**
  * POST /api/admin/referrals/grant-exam-reward

@@ -13,6 +13,7 @@ import { getMentorPurchase } from "@/lib/mentor/credits/purchases";
 import { isUuid } from "@/lib/mentor/credits/db";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 const LIMIT = 10;
 

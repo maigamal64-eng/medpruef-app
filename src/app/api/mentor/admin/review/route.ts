@@ -3,6 +3,7 @@ import { getServiceClient } from "@/lib/supabase";
 import { parseReviewVerdict } from "@/lib/mentor/review";
 import { requireMentorAdmin } from "@/lib/mentor/admin/guard";
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 const headers = { "Cache-Control": "no-store" };
 export async function GET(req: NextRequest) {
  const gate = await requireMentorAdmin(req); if (!gate.ok) return gate.response;

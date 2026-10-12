@@ -3,6 +3,7 @@ import { getServiceClient } from "@/lib/supabase";
 import { loadMentorLearnerPanel } from "@/lib/mentor/admin-learner";
 import { requireMentorAdmin } from "@/lib/mentor/admin/guard";
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 export async function GET(req: NextRequest) {
   const gate = await requireMentorAdmin(req, ["users.read"]); if (!gate.ok) return gate.response;
   const userId = req.nextUrl.searchParams.get("user_id") ?? "";

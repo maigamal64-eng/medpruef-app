@@ -5,6 +5,7 @@ import { adminErrorResponse } from "@/lib/admin/error-response";
 import { groupDuplicateQuestions, isMissingFunctionError, type DuplicateSourceRow } from "@/lib/admin/duplicates";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 const EXAM_TYPES = ["kenntnispruefung", "kmp_innsbruck", "pharma"];
 const PAGE = 1000; // PostgREST max_rows

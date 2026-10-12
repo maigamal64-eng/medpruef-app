@@ -8,6 +8,7 @@ import { logPaymentEvent } from "@/lib/paymentEvents";
 import { checkRateLimit, rateKey, rateLimitHeaders } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 /**
  * /api/whop/trial — the Whop card-on-file Pro trial (2026-07-01 pivot).

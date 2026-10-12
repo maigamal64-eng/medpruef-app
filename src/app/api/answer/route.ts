@@ -5,8 +5,10 @@ import { canFreeUserReadQuestion, logFreeCapHit } from "@/lib/free-access";
 import { captureServerError } from "@/lib/sentry-capture";
 import { qualifyReferralOnActivity } from "@/lib/referral-exam-reward";
 import { parseGrade, parseKind, readAnswerFlags, resolveAnswerPath, skipSchedule } from "@/lib/answer-request";
+import { withDbUnavailable } from "@/lib/db-unavailable-route";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 /**
  * POST /api/answer
@@ -26,7 +28,7 @@ export const dynamic = "force-dynamic";
  * topic-strength counters are written by one Postgres transaction. The
  * client request ID makes a retry safe if the response was lost.
  */
-export async function POST(req: NextRequest) {
+async function handlePOST(req: NextRequest) {
   const guard = await requireUser(req);
   if ("error" in guard) return guard.error;
   const userId = guard.userId;
@@ -267,3 +269,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 }
+
+export const POST = withDbUnavailable(handlePOST);

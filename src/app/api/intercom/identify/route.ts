@@ -4,6 +4,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { intercomApiBase, signIntercomIdentity } from "@/lib/intercom-identity";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 export const runtime = "nodejs";
 
 /** No user ID, email, or name from the browser is accepted or signed. */

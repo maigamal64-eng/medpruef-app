@@ -4,6 +4,7 @@ import { requireUser, isPaidAccess } from '@/lib/auth-guard'
 import { captureServerError } from '@/lib/sentry-capture'
 
 export const dynamic = 'force-dynamic'
+export const maxDuration = 30;
 
 /**
  * GET /api/checkout-feedback/eligibility — checkout-stall feedback prompt.

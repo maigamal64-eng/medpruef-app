@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { createTimedFetch } from '@/lib/db-unavailable'
 
 // Env-guard: during Next.js build, static analysis / page-data
 // collection may import this module before env vars are available
@@ -16,8 +17,16 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 
+/**
+ * Every server client uses the PostgREST deadline (a-db-timeouts): a frozen
+ * database answers with a typed DbUnavailableError within
+ * SUPABASE_FETCH_TIMEOUT_MS (default 8 s) instead of holding the function
+ * for the platform limit. See src/lib/db-unavailable.ts.
+ */
+export const serverSupabaseOptions = { global: { fetch: createTimedFetch() } } as const
+
 export const supabase: SupabaseClient = supabaseUrl
-  ? createClient(supabaseUrl, supabaseAnonKey)
+  ? createClient(supabaseUrl, supabaseAnonKey, serverSupabaseOptions)
   : (null as unknown as SupabaseClient) // build-time placeholder; never called at runtime
 
 export function getServiceClient(): SupabaseClient {
@@ -29,5 +38,5 @@ export function getServiceClient(): SupabaseClient {
       'Check Vercel env vars (must be scoped to Preview + Production).'
     )
   }
-  return createClient(url, serviceKey)
+  return createClient(url, serviceKey, serverSupabaseOptions)
 }

@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { requireUser } from "@/lib/auth-guard";
+import { withDbUnavailable } from "@/lib/db-unavailable-route";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -19,7 +21,7 @@ type Reason = (typeof REASONS)[number];
  * (note, reporter) while a report is still open (the partial unique index),
  * so re-reporting the same note is a no-op success.
  */
-export async function POST(
+async function handlePOST(
   req: NextRequest,
   ctx: { params: Promise<{ id: string }> },
 ) {
@@ -81,3 +83,5 @@ export async function POST(
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 }
+
+export const POST = withDbUnavailable(handlePOST);

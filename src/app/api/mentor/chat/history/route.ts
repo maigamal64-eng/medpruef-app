@@ -6,6 +6,7 @@ import { checkRateLimit, rateKey } from "@/lib/rate-limit";
 import { loadMentorThread } from "@/lib/mentor/thread";
 import { eraseMentorHistory } from "./erase";
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 export async function GET(req: NextRequest) {
   const auth = await requireUser(req);
   if ("error" in auth) return auth.error;

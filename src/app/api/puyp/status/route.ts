@@ -9,8 +9,10 @@ import {
   PUYP_MAX_EXTENSIONS,
   type PuypExamType,
 } from "@/lib/puyp";
+import { withDbUnavailable } from "@/lib/db-unavailable-route";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 /**
  * GET /api/puyp/status — snapshot of the user's Pass-Until-You-Pass
@@ -35,7 +37,7 @@ export const dynamic = "force-dynamic";
  * never shows an upsell for a load failure and every learner can record a
  * fail; only eligible learners go through the proof claim).
  */
-export async function GET(req: NextRequest) {
+async function handleGET(req: NextRequest) {
   const guard = await requireUser(req);
   if ("error" in guard) return guard.error;
   const { userId } = guard;
@@ -135,3 +137,5 @@ export async function GET(req: NextRequest) {
     );
   }
 }
+
+export const GET = withDbUnavailable(handleGET);

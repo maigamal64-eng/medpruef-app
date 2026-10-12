@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { adminRouteShell } from "@/lib/admin/shell";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 const REQUIRED_VARS = [
   "NEXT_PUBLIC_SUPABASE_URL",

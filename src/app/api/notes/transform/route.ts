@@ -11,8 +11,10 @@ import {
   buildNoteRow,
   type NoteSourceType,
 } from "@/lib/notes";
+import { withDbUnavailable } from "@/lib/db-unavailable-route";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 /**
  * POST /api/notes/transform — turn raw study content into structured flash-notes
@@ -165,7 +167,7 @@ async function callHaiku(
   return res.ok ? { text: res.text, failed: false } : { text: "", failed: true };
 }
 
-export async function POST(req: NextRequest) {
+async function handlePOST(req: NextRequest) {
   // GATE 1: AI kill-switch — same contract as /api/translate + /api/ai-chat.
   if (!AI_FEATURES_ENABLED || AI_PROVIDER_MODE === "disabled") {
     return NextResponse.json(
@@ -495,3 +497,5 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 }
+
+export const POST = withDbUnavailable(handlePOST);

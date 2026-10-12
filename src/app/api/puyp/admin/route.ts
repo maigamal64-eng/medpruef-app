@@ -13,6 +13,7 @@ import {
 } from "@/lib/admin/puyp-decision";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 

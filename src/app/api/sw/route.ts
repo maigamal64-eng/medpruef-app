@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { OFFLINE_IMAGE_CACHE } from "@/lib/master-pwa/offline-images";
 
 export const dynamic = "force-static";
+export const maxDuration = 30;
 export const revalidate = false;
 
 // Service worker served dynamically so that every deploy produces a fresh

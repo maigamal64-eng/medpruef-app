@@ -10,6 +10,7 @@ import { safeEqual } from "@/lib/security/timing-safe";
 import { whopMembershipIdOrNull } from "@/lib/whop-ids";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 /**
  * Daily authenticated sweep: retain legacy one-time renewal offers and access

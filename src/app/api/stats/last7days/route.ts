@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/supabase";
 import { requireUser } from "@/lib/auth-guard";
+import { withDbUnavailable } from "@/lib/db-unavailable-route";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 /**
  * GET /api/stats/last7days
@@ -70,7 +72,7 @@ function last7ViennaDates(now: Date = new Date()): string[] {
   return out;
 }
 
-export async function GET(req: NextRequest) {
+async function handleGET(req: NextRequest) {
   const guard = await requireUser(req);
   if ("error" in guard) return guard.error;
   const userId = guard.userId;
@@ -154,3 +156,5 @@ export async function GET(req: NextRequest) {
     );
   }
 }
+
+export const GET = withDbUnavailable(handleGET);

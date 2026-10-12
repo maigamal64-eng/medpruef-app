@@ -3,6 +3,7 @@ import { requireUser } from '@/lib/auth-guard';
 import { getServiceClient } from '@/lib/supabase';
 import { pendingCheckout } from '@/lib/checkout-pending';
 export const dynamic = 'force-dynamic';
+export const maxDuration = 30;
 /** A signed, bounded ledger read. Redirects are pending, never paid receipts. */
 export async function GET(req: NextRequest) {
   const guard = await requireUser(req);

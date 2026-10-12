@@ -38,6 +38,7 @@ import { sendRedditConversion } from "@/lib/reddit-capi";
 import { routeMentorWhopEvent } from "@/lib/mentor/credits/whop-branch";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 /**
  * POST /api/webhooks/whop

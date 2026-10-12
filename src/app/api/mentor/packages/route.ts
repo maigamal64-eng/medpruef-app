@@ -10,6 +10,7 @@ import { rpcBalance } from "@/lib/mentor/credits/db";
 import { createWallet } from "@/lib/mentor/credits/wallet";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 /**
  * GET /api/mentor/packages -> MentorPackagesResponse (contract C4, W2-CREDITS).

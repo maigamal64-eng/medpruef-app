@@ -4,8 +4,10 @@ import { getServiceClient } from "@/lib/supabase";
 import { parseAccepted } from "@/lib/exam-history-server";
 import { KAF_POOL_MAX_LIMIT, type KafKey } from "@/lib/kaf-run";
 import { guardKaf, readKafPool, unavailableResponse } from "../pool-read";
+import { withDbUnavailable } from "@/lib/db-unavailable-route";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 /**
  * POST /api/exam/kaf-pool/answers { ids: number[] } (max 60): the accepted
@@ -14,7 +16,7 @@ export const dynamic = "force-dynamic";
  * Pro only, dark unless KAF_TIMED_ENABLED. Ids outside the reviewed pool are
  * left out of the response.
  */
-export async function POST(req: NextRequest) {
+async function handlePOST(req: NextRequest) {
   const gate = await guardKaf(req);
   if ("error" in gate) return gate.error;
 
@@ -50,3 +52,5 @@ export async function POST(req: NextRequest) {
   }
   return NextResponse.json(out, { headers: { "Cache-Control": "no-store" } });
 }
+
+export const POST = withDbUnavailable(handlePOST);

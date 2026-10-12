@@ -7,6 +7,7 @@ import { adminRouteShell } from "@/lib/admin/shell";
 import { logAdminAction } from "@/lib/admin/audit";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 // GET — Stats overview OR paginated browse
 export const GET = adminRouteShell(async ({ req }) => {

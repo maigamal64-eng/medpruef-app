@@ -5,6 +5,7 @@ import { adminRouteShell } from "@/lib/admin/shell";
 import { isCardTrialRequired } from "@/lib/referral-exam-reward";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 /**
  * GET /api/admin/referrals/pending-exam-rewards

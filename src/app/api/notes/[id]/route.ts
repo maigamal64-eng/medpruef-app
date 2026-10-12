@@ -8,8 +8,10 @@ import {
   buildSearchText,
   deriveTitle,
 } from "@/lib/notes";
+import { withDbUnavailable } from "@/lib/db-unavailable-route";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -30,7 +32,7 @@ const UUID_RE =
 type Ctx = { params: Promise<{ id: string }> };
 
 // ── GET: owner or active public ──────────────────────────────────────────────
-export async function GET(req: NextRequest, ctx: Ctx) {
+async function handleGET(req: NextRequest, ctx: Ctx) {
   const guard = await requireUser(req);
   if ("error" in guard) return guard.error;
   const userId = guard.userId;
@@ -69,7 +71,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
 }
 
 // ── PATCH: owner-only edit ───────────────────────────────────────────────────
-export async function PATCH(req: NextRequest, ctx: Ctx) {
+async function handlePATCH(req: NextRequest, ctx: Ctx) {
   const guard = await requireUser(req);
   if ("error" in guard) return guard.error;
   const userId = guard.userId;
@@ -156,7 +158,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 }
 
 // ── DELETE: owner-only hard delete ───────────────────────────────────────────
-export async function DELETE(req: NextRequest, ctx: Ctx) {
+async function handleDELETE(req: NextRequest, ctx: Ctx) {
   const guard = await requireUser(req);
   if ("error" in guard) return guard.error;
   const userId = guard.userId;
@@ -207,3 +209,7 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 }
+
+export const GET = withDbUnavailable(handleGET);
+export const PATCH = withDbUnavailable(handlePATCH);
+export const DELETE = withDbUnavailable(handleDELETE);

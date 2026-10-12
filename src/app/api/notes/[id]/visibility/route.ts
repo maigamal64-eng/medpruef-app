@@ -3,8 +3,10 @@ import { getServiceClient } from "@/lib/supabase";
 import { requireUser } from "@/lib/auth-guard";
 import { NOTE_SELECT_COLUMNS, buildSearchText, normalizeContent } from "@/lib/notes";
 import { scanNoteForPublic } from "@/lib/notes-safety";
+import { withDbUnavailable } from "@/lib/db-unavailable-route";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -28,7 +30,7 @@ const UNPUBLISH_GRACE_MS = 24 * 60 * 60 * 1000;
  *           the author re-sends confirm:true.
  * private → author self-unpublish, allowed only within 24h of publishing.
  */
-export async function PATCH(
+async function handlePATCH(
   req: NextRequest,
   ctx: { params: Promise<{ id: string }> },
 ) {
@@ -163,3 +165,5 @@ export async function PATCH(
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 }
+
+export const PATCH = withDbUnavailable(handlePATCH);

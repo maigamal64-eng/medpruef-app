@@ -17,6 +17,7 @@ import { requireMentorAdmin } from "@/lib/mentor/admin/guard";
 const MENTOR_ADMIN_ROUTE = "/api/mentor/admin/summary";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 const NO_STORE = { "Cache-Control": "no-store" } as const;
 

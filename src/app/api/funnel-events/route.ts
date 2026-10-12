@@ -6,6 +6,7 @@ import { normalizeTrackedPath } from "@/lib/telemetry-normalize";
 import { FUNNEL_EVENTS, sanitizeEventData, uaClass } from "@/lib/analytics-events";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 // UX-GLOBAL-32: the anonymous funnel accepts only its part of the one allowlist.
 const EVENTS = new Set<string>(FUNNEL_EVENTS);

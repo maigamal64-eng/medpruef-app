@@ -7,6 +7,7 @@ import { isMissingFunction } from "@/lib/admin/learner-segments";
 import { escapeLike } from "@/lib/admin/profile-edit";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 /**
  * GET /api/admin/audit (system.read). ADM-15 A + UX-ADM-34.

@@ -11,6 +11,7 @@ import { loadMentorRevenue } from "@/lib/mentor/admin/revenue-load";
 import { captureServerError } from "@/lib/sentry-capture";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 const NO_STORE = { "Cache-Control": "no-store" } as const;
 
 // Before the mentor ledger is installed its tables do not exist: expected, not an alert.

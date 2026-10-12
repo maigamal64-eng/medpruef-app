@@ -4,6 +4,7 @@ import { buildMentorFunnel, type FunnelEvent } from "@/lib/mentor/funnel";
 import type { MentorTurnRow } from "@/lib/mentor/outcomes";
 import { requireMentorAdmin } from "@/lib/mentor/admin/guard";
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 const LIMIT = 10_000;
 const HEADERS = {"Cache-Control":"no-store"};
 export async function GET(req: NextRequest) {

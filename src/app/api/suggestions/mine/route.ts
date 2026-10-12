@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth-guard";
 import { getServiceClient } from "@/lib/supabase";
 import { learnerReportState, reportContextFacts, turnaroundFromRows } from "@/lib/reports/report-status";
+import { withDbUnavailable } from "@/lib/db-unavailable-route";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 const headers = { "Cache-Control": "private, no-store", Vary: "x-session-token" };
 const TURNAROUND_WINDOW_DAYS = 180;
 
@@ -13,7 +15,7 @@ const TURNAROUND_WINDOW_DAYS = 180;
 // from the status and the structured reporter outcome; context itself is
 // never returned. `turnaround` is a population median over resolved
 // reports (no identities), computed from data instead of a fixed promise.
-export async function GET(req: NextRequest) {
+async function handleGET(req: NextRequest) {
   const guard = await requireUser(req, { allowCached: false });
   if ("error" in guard) {
     for (const [key, value] of Object.entries(headers)) guard.error.headers.set(key, value);
@@ -69,3 +71,5 @@ async function readTurnaround(db: ReturnType<typeof getServiceClient>) {
     return null;
   }
 }
+
+export const GET = withDbUnavailable(handleGET);

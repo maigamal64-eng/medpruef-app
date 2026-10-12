@@ -21,6 +21,7 @@ import { classifySubscriptionCadence, type BillingCadence } from "@/lib/billing-
 import { tierDurationMonths } from "@/lib/whop";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 const DAY_MS = 86_400_000;
 

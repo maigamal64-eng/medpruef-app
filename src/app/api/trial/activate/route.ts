@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth-guard";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 /**
  * /api/trial/activate — RETIRED 2026-07-09.

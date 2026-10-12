@@ -33,6 +33,7 @@
  * outbound signing is built, without ever having lived in git history.
  */
 export const dynamic = "force-static";
+export const maxDuration = 30;
 
 const JWKS = {
   keys: [

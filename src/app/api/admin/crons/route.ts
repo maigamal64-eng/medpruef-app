@@ -6,6 +6,7 @@ import { loadCronHealth } from "@/lib/admin/cron-health";
 import { readMentorConfig } from "@/lib/mentor/config";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 /**
  * GET /api/admin/crons (a19, ADM-12 B, UX-ADM-09).

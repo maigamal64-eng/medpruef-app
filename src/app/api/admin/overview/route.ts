@@ -21,6 +21,7 @@ import { loadCronHealth } from "@/lib/admin/cron-health";
 import { readMentorConfig } from "@/lib/mentor/config";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 /**
  * GET /api/admin/overview: the Today page (a18, ADM-11 A).

@@ -6,8 +6,10 @@ import { computeReadiness, consistencyFromActivity, type Trend } from "@/lib/rea
 import { EXAM_SOURCE_IDS, DEFAULT_EXAM_SOURCE } from "@/lib/topics";
 import { getTopicCountsCached } from "@/lib/free-tier";
 import { buildFieldReadiness } from "@/lib/field-readiness";
+import { withDbUnavailable } from "@/lib/db-unavailable-route";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 /**
  * GET /api/user/readiness  (Phase A.2)
@@ -31,7 +33,7 @@ export const dynamic = "force-dynamic";
 
 const COVERAGE_MIN_ANSWERED = 10; // a topic "counts" as covered at >=10 answered
 
-export async function GET(req: NextRequest) {
+async function handleGET(req: NextRequest) {
   const guard = await requireUser(req);
   if ("error" in guard) return guard.error;
   const userId = guard.userId;
@@ -199,3 +201,5 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 }
+
+export const GET = withDbUnavailable(handleGET);

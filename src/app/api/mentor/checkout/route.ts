@@ -21,6 +21,7 @@ import { attachWhopCheckout, beginMentorPurchase, clearPendingPurchase, getMento
 import { rpcBalance } from "@/lib/mentor/credits/db";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 const LIMIT = 5;
 

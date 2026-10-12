@@ -193,7 +193,8 @@ export async function getTopicCountsCached(
       const nowMs = Date.now()
       for (const [k, v] of TOPIC_COUNTS_CACHE) if (v.expiresAt <= nowMs) TOPIC_COUNTS_CACHE.delete(k)
       const knownKey = key === '__all__' || (EXAM_SOURCE_IDS as string[]).includes(key)
-      if (knownKey && (TOPIC_COUNTS_CACHE.has(key) || TOPIC_COUNTS_CACHE.size < TOPIC_COUNTS_MAX_KEYS)) {
+      // An empty bank is never real for a known exam: do not keep it for an hour.
+      if (knownKey && rows.length > 0 && (TOPIC_COUNTS_CACHE.has(key) || TOPIC_COUNTS_CACHE.size < TOPIC_COUNTS_MAX_KEYS)) {
         TOPIC_COUNTS_CACHE.set(key, { rows, expiresAt: Date.now() + TOPIC_COUNTS_TTL_MS })
       }
       return rows

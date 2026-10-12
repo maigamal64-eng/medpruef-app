@@ -21,6 +21,7 @@ import { repeatCounts } from "@/lib/reports/report-metrics";
 import { readPendingReports, readReportQuestionIds } from "@/lib/reports/report-reads";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 /**
  * GET /api/cron/admin-action-alert (a19, ADM-03 A, TR-14). Hourly.

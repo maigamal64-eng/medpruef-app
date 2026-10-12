@@ -3,8 +3,10 @@ import * as Sentry from "@sentry/nextjs";
 import { requireUser, isPaidAccess } from "@/lib/auth-guard";
 import { getServiceClient } from "@/lib/supabase";
 import { buildExamTrend, type TrendAttemptInput } from "@/lib/exam-trend";
+import { withDbUnavailable } from "@/lib/db-unavailable-route";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 /** Newest full runs read for the trend; the series shows at most six. */
 const MAX_ATTEMPTS = 60;
@@ -17,7 +19,7 @@ const ID_CHUNK = 400;
  * session. Subjects are joined from questions.topic at read time; removed
  * questions are left out. Counts only, never question content.
  */
-export async function GET(req: NextRequest) {
+async function handleGET(req: NextRequest) {
   const guard = await requireUser(req);
   if ("error" in guard) return guard.error;
   if (!isPaidAccess(guard)) {
@@ -57,3 +59,5 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Failed to load trend" }, { status: 500 });
   }
 }
+
+export const GET = withDbUnavailable(handleGET);

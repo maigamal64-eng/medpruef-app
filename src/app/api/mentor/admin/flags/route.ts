@@ -3,6 +3,7 @@ import { getServiceClient } from "@/lib/supabase";
 import { invalidateFlagCache } from "@/lib/admin/flags";
 import { requireMentorAdmin } from "@/lib/mentor/admin/guard";
 export const dynamic="force-dynamic";
+export const maxDuration = 30;
 const headers={"Cache-Control":"no-store"};
 export async function GET(req:NextRequest){const g=await requireMentorAdmin(req);if(!g.ok)return g.response;
  try {const db=getServiceClient();const [f,c]=await Promise.all([db.from("flags").select("enabled,rollout_pct").eq("key","mentor").maybeSingle(),db.from("ai_mentor_control").select("paused_rollout_pct,paused_at").eq("key","mentor").maybeSingle()]);if(f.error||c.error)throw new Error();return NextResponse.json({flag:f.data,control:c.data},{headers});}

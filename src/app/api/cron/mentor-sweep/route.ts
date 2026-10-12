@@ -5,6 +5,7 @@ import { readMentorConfig } from "@/lib/mentor/config";
 import { handleMentorSweep } from "./handler";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 /** Bearer CRON_SECRET, fail closed. Schedule added to vercel.json at R3. */
 export async function GET(req: NextRequest) {

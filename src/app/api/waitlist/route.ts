@@ -4,6 +4,7 @@ import { callerIp, checkRateLimit, rateKey } from "@/lib/rate-limit";
 import { requireUser, resolveOptionalUser } from "@/lib/auth-guard";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 /**
  * POST /api/waitlist

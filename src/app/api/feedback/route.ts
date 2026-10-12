@@ -15,6 +15,7 @@ import {
 import { callerIp, checkRateLimit, rateKey, rateLimitHeaders, type RateLimitResult } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
+export const maxDuration = 30;
 
 function tooMany(gate: RateLimitResult, opts: { limit: number }) {
   return NextResponse.json(

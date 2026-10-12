@@ -24,6 +24,7 @@
  * builds the Response manually to control the header precisely.
  */
 export const dynamic = "force-static";
+export const maxDuration = 30;
 
 const CATALOG = {
   linkset: [

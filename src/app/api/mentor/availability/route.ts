@@ -6,6 +6,7 @@ import { getServiceClient } from "@/lib/supabase";
 import { mentorBetaAllowed } from "@/lib/mentor/beta";
 import { handleMentorAvailability } from "./handler";
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 export async function GET(req: NextRequest) {
   const config = readMentorConfig();
   return handleMentorAvailability(req, {

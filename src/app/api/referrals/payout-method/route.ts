@@ -10,6 +10,7 @@ import {
 } from '@/lib/referrals'
 
 export const dynamic = 'force-dynamic'
+export const maxDuration = 30;
 
 /**
  * PATCH /api/referrals/payout-method

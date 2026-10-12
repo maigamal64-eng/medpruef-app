@@ -20,6 +20,7 @@ function withCampaign(attr: ReturnType<typeof sanitizeAttribution>) {
 }
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 // Rate limits — review-2026-04-24-C-15. The auth endpoint had no
 // throttle of any kind, so a brute-force attempt against an 8-char

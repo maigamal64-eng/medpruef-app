@@ -5,6 +5,7 @@ import { adminErrorResponse } from "@/lib/admin/error-response";
 import { learnerDisplayName } from "@/lib/admin/learner-names";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 /**
  * GET /api/admin/users/names?ids=<uuid>,<uuid> (users.read). UX-ADM-21.

@@ -3,6 +3,7 @@ import { getServiceClient } from "@/lib/supabase";
 import { requireUser } from "@/lib/auth-guard";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 const headers = { "Cache-Control": "private, no-store", Vary: "x-session-token" };
 
 export async function POST(req: NextRequest) {

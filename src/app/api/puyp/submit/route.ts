@@ -13,6 +13,7 @@ import {
 } from "@/lib/puyp";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 /**
  * POST /api/puyp/submit — upload proof of a failed exam attempt.

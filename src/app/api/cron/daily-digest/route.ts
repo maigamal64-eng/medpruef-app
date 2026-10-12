@@ -4,6 +4,7 @@ import { captureServerError } from "@/lib/sentry-capture";
 import { safeEqual } from "@/lib/security/timing-safe";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 /**
  * GET /api/cron/daily-digest

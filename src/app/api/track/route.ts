@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireUser } from "@/lib/auth-guard";
+import { requireUser, resolveOptionalUser } from "@/lib/auth-guard";
 import { getServiceClient } from "@/lib/supabase";
 import { captureServerError } from "@/lib/sentry-capture";
 import { analyticsWritesDisabled } from "@/lib/supabase-resilience";
+import { dbRecentlyUnavailable, isDbUnavailable } from "@/lib/db-unavailable";
+import { afterResponse } from "@/lib/after-response";
 import { normalizeEventTimestamp, normalizeTrackedPath } from "@/lib/telemetry-normalize";
 import { isMentorClientEvent, mentorEventData } from "@/lib/mentor/telemetry";
 import { isAllowedEvent, sanitizeEventData, uaClass } from "@/lib/analytics-events";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 // Max events accepted per POST. Prevents a malicious client from
 // stuffing the events table with a single 10MB request. Anything
@@ -32,29 +35,54 @@ interface TrackPayload {
 export async function POST(req: NextRequest) {
   // Telemetry is optional. During a Supabase incident this endpoint is hit by
   // every active client, so it must become a cheap no-op before parsing a body
-  // or opening a database connection.
-  if (analyticsWritesDisabled()) {
+  // or opening a database connection. The same holds while this instance has
+  // just seen the database fail (a-db-timeouts).
+  if (analyticsWritesDisabled() || dbRecentlyUnavailable()) {
     return new NextResponse(null, { status: 204 });
   }
 
+  // Only the signature is checked before answering. The account row (ban,
+  // session invalidation) is re-read by requireUser in the deferred write,
+  // and nothing is written when that check fails.
+  if (!resolveOptionalUser(req)) {
+    return NextResponse.json({ error: "Missing or invalid session" }, { status: 401 });
+  }
+
+  let body: TrackPayload;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+  const { sessionId, events } = body ?? ({} as TrackPayload);
+  if (typeof sessionId !== "string" || !sessionId) {
+    return NextResponse.json({ error: "Missing userId or sessionId" }, { status: 400 });
+  }
+  if (Array.isArray(events) && events.length > MAX_EVENTS_PER_BATCH) {
+    return NextResponse.json(
+      { error: `events[] max ${MAX_EVENTS_PER_BATCH}` },
+      { status: 413 },
+    );
+  }
+
+  // a-db-timeouts: the analytics write never holds the response. Losing a
+  // batch under a database freeze is accepted (the tracker never retries).
+  await afterResponse("/api/track", () => writeTrack(req, body));
+  return NextResponse.json({ ok: true, queued: true }, { status: 202 });
+}
+
+/** One phase failed because the database is unavailable: stop quietly. */
+function stopOnOutage(error: unknown): boolean {
+  return isDbUnavailable(error) || dbRecentlyUnavailable();
+}
+
+async function writeTrack(req: NextRequest, body: TrackPayload): Promise<void> {
   const guard = await requireUser(req);
-  if ("error" in guard) return guard.error;
+  if ("error" in guard) return;
   const userId = guard.userId;
+  const { sessionId, events, createSession, endSession, deviceInfo } = body;
 
   try {
-    const body: TrackPayload = await req.json();
-    const { sessionId, events, createSession, endSession, deviceInfo } = body;
-
-    if (!userId || !sessionId) {
-      return NextResponse.json({ error: "Missing userId or sessionId" }, { status: 400 });
-    }
-    if (Array.isArray(events) && events.length > MAX_EVENTS_PER_BATCH) {
-      return NextResponse.json(
-        { error: `events[] max ${MAX_EVENTS_PER_BATCH}` },
-        { status: 413 },
-      );
-    }
-
     const db = getServiceClient();
     const ip = req.headers.get("x-forwarded-for") || req.headers.get("x-real-ip") || "unknown";
     const ua = req.headers.get("user-agent") || "unknown";
@@ -81,14 +109,15 @@ export async function POST(req: NextRequest) {
         },
         { onConflict: "id", ignoreDuplicates: true }
       );
-      if (sessionError) return NextResponse.json({ error: "Session could not be recorded" }, { status: 503 });
+      if (sessionError) return;
     }
     const { data: ownedSession, error: sessionReadError } = await db.from("user_sessions").select("user_id").eq("id", sessionId).maybeSingle();
-    if (sessionReadError) return NextResponse.json({ error: "Session could not be checked" }, { status: 503 });
-    if (ownedSession?.user_id !== userId) return NextResponse.json({ error: "Session does not belong to this account" }, { status: 403 });
+    if (sessionReadError) return;
+    // Visit ownership (UX P0): another account's session id never receives events.
+    if (ownedSession?.user_id !== userId) return;
 
     // Mark session as ended
-    if (endSession) {
+    if (endSession && !dbRecentlyUnavailable()) {
       const { data: session } = await db
         .from("user_sessions")
         .select("started_at")
@@ -123,7 +152,7 @@ export async function POST(req: NextRequest) {
     // recorded as a breadcrumb + console.warn but the batch
     // still returns 200 so the client doesn't infinite-retry
     // a row that will never persist.
-    if (events && events.length > 0) {
+    if (events && events.length > 0 && !dbRecentlyUnavailable()) {
       // Original user_events table
       // UX-GLOBAL-32: one allowlist; unknown names are dropped and properties
       // lose identity and free text. Automation traffic is marked, not counted.
@@ -158,18 +187,16 @@ export async function POST(req: NextRequest) {
             { batchSize: rows.length, message: eventsErr.message.slice(0, 150) },
           );
           // Skip the activity_log insert below too — same FK risk.
-          return NextResponse.json({ ok: true, recorded: 0, swallowed: code });
+          return;
         }
+        if (stopOnOutage(eventsErr)) return;
         captureServerError(eventsErr, {
           route: "/api/track",
           userId,
           phase: "user_events-insert",
           batchSize: rows.length,
         });
-        return NextResponse.json(
-          { error: "Failed to record events", code: "TRACK_INSERT_FAILED" },
-          { status: 500, headers: { "x-track-failed": "1" } },
-        );
+        return;
       }
 
       // Enhanced activity log (only for real UUID users, not guest_xxx)
@@ -209,7 +236,7 @@ export async function POST(req: NextRequest) {
               `[/api/track] swallowed ${aCode} for activity_log user_id=${userId}`,
               { batchSize: activityRows.length, message: activityErr.message.slice(0, 150) },
             );
-          } else {
+          } else if (!stopOnOutage(activityErr)) {
             captureServerError(activityErr, {
               route: "/api/track",
               userId,
@@ -225,12 +252,14 @@ export async function POST(req: NextRequest) {
         .filter((e) => e.type === "page_view" && e.data?.page)
         .map((e) => e.data.page as string);
 
-      if (pageViews.length > 0) {
-        const { data: session } = await db
+      if (pageViews.length > 0 && !dbRecentlyUnavailable()) {
+        const { data: session, error: pagesErr } = await db
           .from("user_sessions")
           .select("pages_visited")
           .eq("id", sessionId)
           .single();
+        // An unread list must not be overwritten with only this batch's pages.
+        if (pagesErr) return;
 
         const existing: string[] = session?.pages_visited || [];
         const merged = Array.from(new Set([...existing, ...pageViews]));
@@ -241,9 +270,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ ok: true });
   } catch (err) {
-    captureServerError(err, { route: "/api/track" });
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    if (!isDbUnavailable(err)) captureServerError(err, { route: "/api/track" });
   }
 }

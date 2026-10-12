@@ -3,8 +3,10 @@ import { getServiceClient } from "@/lib/supabase";
 import { requireUser } from "@/lib/auth-guard";
 import { noteKindFromMetadata } from "@/lib/notes";
 import { noteReviewFromMetadata } from "@/lib/notes-review";
+import { withDbUnavailable } from "@/lib/db-unavailable-route";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 const EXPLORE_ENABLED =
   (process.env.NOTES_EXPLORE_ENABLED ?? "false").toLowerCase() === "true";
@@ -20,7 +22,7 @@ const EXPLORE_ENABLED =
  */
 const PUBLIC_COLUMNS = "id, title, content, tags, exam_type, topic, source_type, published_at, metadata";
 
-export async function GET(req: NextRequest) {
+async function handleGET(req: NextRequest) {
   const guard = await requireUser(req);
   if ("error" in guard) return guard.error;
 
@@ -71,3 +73,5 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Failed to load notes" }, { status: 500 });
   }
 }
+
+export const GET = withDbUnavailable(handleGET);

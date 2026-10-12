@@ -9,6 +9,7 @@ import {
 import { captureServerError } from "@/lib/sentry-capture";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 /**
  * GET /api/referrals/social-proof

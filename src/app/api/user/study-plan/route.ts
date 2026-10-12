@@ -7,8 +7,11 @@ import { EXAM_SOURCE_IDS, DEFAULT_EXAM_SOURCE } from "@/lib/topics";
 import { getTopicCountsCached } from "@/lib/free-tier";
 import { simulationPresetFor, studyPlanTarget } from "@/lib/study-plan-target";
 import { answersToday, viennaDay } from "@/lib/home-study-core";
+import { isDbUnavailable } from "@/lib/db-unavailable";
+import { dbUnavailableResponse, withDbUnavailable } from "@/lib/db-unavailable-route";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 /**
  * GET /api/user/study-plan
@@ -33,7 +36,7 @@ export const dynamic = "force-dynamic";
  *
  * Auth: requireUser — userId comes from the session header, not the body.
  */
-export async function GET(req: NextRequest) {
+async function handleGET(req: NextRequest) {
   const guard = await requireUser(req);
   if ("error" in guard) return guard.error;
   const userId = guard.userId;
@@ -76,11 +79,21 @@ export async function GET(req: NextRequest) {
     // (a-stability). An error only when the read fails and nothing is cached.
     const { data: topicCounts, error: topicErr } = await getTopicCountsCached(sb, activeExam);
 
+    // a-db-timeouts (ERR-05): the plan is built from the bank totals, so a
+    // failed or empty read is a typed error, never a 200 with a partial plan.
     if (topicErr) {
       console.error("[study-plan GET] topic counts error:", topicErr);
+      if (isDbUnavailable(topicErr)) return dbUnavailableResponse();
       return NextResponse.json(
-        { error: "Failed to load topic counts" },
+        { error: "Failed to load topic counts", code: "TOPIC_COUNTS_FAILED" },
         { status: 500 }
+      );
+    }
+    if (!topicCounts || topicCounts.length === 0) {
+      console.error("[study-plan GET] topic counts empty for", activeExam);
+      return NextResponse.json(
+        { error: "Failed to load topic counts", code: "TOPIC_COUNTS_EMPTY" },
+        { status: 503, headers: { "Retry-After": "15" } }
       );
     }
 
@@ -243,3 +256,5 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 }
+
+export const GET = withDbUnavailable(handleGET);

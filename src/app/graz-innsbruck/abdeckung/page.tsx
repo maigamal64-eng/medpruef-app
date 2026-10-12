@@ -8,6 +8,7 @@ import { getCoverage } from "./server";
 const NUMBER_LOCALE: Record<CoverageLanguage, string> = { de: "de-AT", en: "en-GB" };
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 export const metadata: Metadata = {
   title: "Übungsabdeckung: Graz und Innsbruck | MedPrüf",
   description: "Aktueller Übungsbestand nach Fachbereich, ausstehende Zuordnungen und Grenzen für den österreichischen Stichprobentest.",

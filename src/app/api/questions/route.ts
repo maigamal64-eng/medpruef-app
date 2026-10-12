@@ -18,6 +18,7 @@ import {
 import { classifyFreeEmpty, freeOpeningIds, isOpeningDone, markOpeningDone, type FreeAccess } from '@/lib/free-set'
 import { logFreeCapHit } from '@/lib/free-access'
 import { canUse, featureForPracticeMode, FEATURE_GATE } from '@/lib/entitlements'
+import { withDbUnavailable } from "@/lib/db-unavailable-route";
 
 /**
  * Resolve the caller's tier from the verified session token (S-1, via
@@ -69,6 +70,7 @@ async function resolveTier(
 }
 
 export const dynamic = 'force-dynamic'
+export const maxDuration = 30;
 
 /** Due-review rows scanned before the topic filter (UX-STU-21). */
 const DUE_REVIEW_SCAN = 500
@@ -222,7 +224,7 @@ function applyFilters(query: any, p: FilterParams) {
   return query
 }
 
-export async function GET(req: NextRequest) {
+async function handleGET(req: NextRequest) {
   const sb = getServiceClient()
   const sp = req.nextUrl.searchParams
 
@@ -876,7 +878,7 @@ function attachOptions(questions: Record<string, unknown>[]) {
   })
 }
 
-export async function POST(req: NextRequest) {
+async function handlePOST(req: NextRequest) {
   const sb = getServiceClient()
   const body = await req.json()
   const { action, examSource } = body
@@ -909,3 +911,6 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
 }
+
+export const GET = withDbUnavailable(handleGET);
+export const POST = withDbUnavailable(handlePOST);

@@ -3,8 +3,10 @@ import * as Sentry from "@sentry/nextjs";
 import { getServiceClient } from "@/lib/supabase";
 import { clampPoolLimit, clampRequired, sampleItems, type KafItem } from "@/lib/kaf-run";
 import { guardKaf, readKafPool, unavailableResponse } from "./pool-read";
+import { withDbUnavailable } from "@/lib/db-unavailable-route";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 /**
  * GET /api/exam/kaf-pool: items for the timed KAF practice mode (a24, SIM-04 /
@@ -19,7 +21,7 @@ export const dynamic = "force-dynamic";
  *
  * 503 KAF_POOL_UNAVAILABLE while the 20261223090000 changeset is not applied.
  */
-export async function GET(req: NextRequest) {
+async function handleGET(req: NextRequest) {
   const gate = await guardKaf(req);
   if ("error" in gate) return gate.error;
 
@@ -42,3 +44,5 @@ export async function GET(req: NextRequest) {
   });
   return NextResponse.json({ items }, { headers: { "Cache-Control": "no-store" } });
 }
+
+export const GET = withDbUnavailable(handleGET);

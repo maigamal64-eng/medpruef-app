@@ -3,8 +3,10 @@ import { getServiceClient } from "@/lib/supabase";
 import { requireUser } from "@/lib/auth-guard";
 import { captureServerError } from "@/lib/sentry-capture";
 import { loadStudySnapshot } from "@/lib/home-study-server";
+import { withDbUnavailable } from "@/lib/db-unavailable-route";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 /**
  * GET /api/auth/me
@@ -50,7 +52,7 @@ export const dynamic = "force-dynamic";
  * by requireUser; if the admin force-refreshed the session, this route
  * returns the same REFRESH_REQUIRED 401 every other guarded route does.
  */
-export async function GET(req: NextRequest) {
+async function handleGET(req: NextRequest) {
   const guard = await requireUser(req);
   if ("error" in guard) return guard.error;
 
@@ -127,3 +129,5 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Internal error" }, { status: 500 });
   }
 }
+
+export const GET = withDbUnavailable(handleGET);

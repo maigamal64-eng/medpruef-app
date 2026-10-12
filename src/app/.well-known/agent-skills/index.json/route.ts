@@ -27,6 +27,7 @@ import {
  * Runtime stays default (nodejs), not edge, so `crypto` is available.
  */
 export const dynamic = "force-static";
+export const maxDuration = 30;
 
 function sha256Digest(body: string): string {
   return `sha256:${createHash("sha256").update(body, "utf8").digest("hex")}`;
