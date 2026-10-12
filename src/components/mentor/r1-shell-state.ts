@@ -2,6 +2,7 @@ import type { MentorPackageOffer, MentorUsageResponse } from "@/lib/mentor/contr
 import type { MentorUiLang } from "@/lib/i18n-mentor";
 import { formatDate, formatEur } from "./view-model";
 import { shellT } from "./r1-shell-copy";
+import { admissionGapText } from "./a38-copy";
 
 export const TURN_SILENCE_MS = 45_000;
 
@@ -20,7 +21,9 @@ export function exhaustedState(u: MentorUsageResponse, offers: MentorPackageOffe
   const pro = u.sources.includes("pro_included");
   const subscriber = !!u.source_package || u.subscriptions.length > 0;
   // The trial proposal is an open choice. Its branch receives only generic copy.
-  const parts = [pro && u.current_grant ? shellT("pro_exhausted", lang, { n: u.current_grant }) : shellT("exhausted", lang)];
+  // MUX-23: above zero but under the bar, name the bar instead of "used up".
+  const gap = admissionGapText(u.credits_left, u.admit_min_credits, lang);
+  const parts = [gap ?? (pro && u.current_grant ? shellT("pro_exhausted", lang, { n: u.current_grant }) : shellT("exhausted", lang))];
   if (date) parts.push(shellT("renewal", lang, { date }));
   const topup = u.can_buy ? offers.find((p) => p.package_id === "mentor_topup") : undefined;
   const plus = u.can_buy ? offers.find((p) => p.package_id === "mentor_plus") : undefined;

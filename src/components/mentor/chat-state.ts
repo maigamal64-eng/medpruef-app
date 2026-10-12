@@ -52,6 +52,9 @@ export interface AssistantMsg {
   notCharged?: boolean;
   /** MUX-37 A: the learner pressed Hide; the answer arrives collapsed. */
   hidden?: boolean;
+  /** MUX-23: the 402's admission bar and balance. */
+  admitMinCredits?: number;
+  creditsLeft?: number;
 }
 
 export type ChatMsg = UserMsg | AssistantMsg;
@@ -69,7 +72,7 @@ export const INITIAL_CHAT_STATE: ChatState = { messages: [], busy: false, credit
 export type ChatAction =
   | { type: "send"; userId: string; assistantId: string; text: string; request?: MentorChatRequest }
   | { type: "event"; event: MentorSseEvent }
-  | { type: "fail"; error: MentorClientError; retryAfterSeconds?: number; packagesUrl?: string; limit?: "minute" | "day"; reason?: string; notCharged?: boolean }
+  | { type: "fail"; error: MentorClientError; retryAfterSeconds?: number; packagesUrl?: string; limit?: "minute" | "day"; reason?: string; notCharged?: boolean; admitMinCredits?: number; creditsLeft?: number }
   | { type: "restore"; state: ChatState }
   | { type: "slow" }
   | { type: "end" }
@@ -132,6 +135,7 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
         if (action.retryAfterSeconds !== undefined) out.retryAfterSeconds = action.retryAfterSeconds;
         if (action.packagesUrl) out.packagesUrl = action.packagesUrl;
         if (action.notCharged && action.error !== "network") out.notCharged = true;
+        if (action.admitMinCredits !== undefined && action.creditsLeft !== undefined) { out.admitMinCredits = action.admitMinCredits; out.creditsLeft = action.creditsLeft; }
         return out;
       });
       return { ...next, busy: false };

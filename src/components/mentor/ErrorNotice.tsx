@@ -46,7 +46,7 @@ export default function ErrorNotice({
   const vars = view.action === "wait" && view.vars && waitSeconds !== undefined ? { ...view.vars, s: waitSeconds } : view.vars;
   const showWait = view.action === "wait";
   const waiting = showWait && waitSeconds !== undefined && waitSeconds > 0;
-  const text = mentorT(waiting || !showWait ? view.messageKey : "err_rate_limited_nowait", lang, vars);
+  const text = view.text ?? mentorT(waiting || !showWait ? view.messageKey : "err_rate_limited_nowait", lang, vars);
   const [copied, setCopied] = useState(false);
 
   return (

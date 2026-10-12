@@ -378,7 +378,7 @@ export default function MentorChatScreen() {
         setDraft(req.message); setFocusKey(k => k+1); setAnnouncement(r3T("restored",lang));
         if (res.error === "credits_required" || res.error === "credits_exhausted") { trackMentor("mentor_paywall_hit", {entry: "mentor", lang: answerLang, mode, reason: "402"}); trackMentor("mentor_credits_exhausted", {entry: "mentor", lang: answerLang, mode, source: "402"}); }
         if (res.error === "ai_disabled" || res.error === "global_cap" || res.error === "mentor_resting") setPaused(true);
-        dispatch({ type: "fail", error: res.error, retryAfterSeconds: res.retryAfterSeconds, packagesUrl: res.packagesUrl, limit: res.limit, reason: res.reason, notCharged: res.notCharged });
+        dispatch({ type: "fail", error: res.error, retryAfterSeconds: res.retryAfterSeconds, packagesUrl: res.packagesUrl, limit: res.limit, reason: res.reason, notCharged: res.notCharged, admitMinCredits: res.admitMinCredits, creditsLeft: res.creditsLeft });
         if (res.error === "rate_limited" && res.retryAfterSeconds) { setBlockedUntil(Date.now() + res.retryAfterSeconds * 1000); setLimitKind(res.limit ?? "minute"); countdownRef.current = res.retryAfterSeconds; }
       } else if (!ctrl.signal.aborted) {
         if (!res.sawFinal) { setDraft(req.message); setFocusKey(k => k+1); setAnnouncement(r3T("restored",lang)); }

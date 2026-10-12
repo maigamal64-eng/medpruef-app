@@ -14,7 +14,7 @@
 
 import type { CallClaudeFn, Clock, HousePolicy, Meter, MentorDeps, MentorTurnInput, RunMentorTurn } from "@/lib/mentor/seam";
 import type { RpcClient } from "@/lib/ai/limits";
-import type { MentorConfig } from "@/lib/mentor/config";
+import { creditsExactFromMicro, type MentorConfig } from "@/lib/mentor/config";
 import type { MentorFinalEvent, MentorSseEvent } from "@/lib/mentor/contract";
 import type { ConversationStore } from "@/lib/mentor/conversation";
 import {
@@ -231,7 +231,13 @@ export async function handleMentorChat(req: Request, d: ChatHandlerDeps): Promis
   };
 
   const admit = await admitTurn(deps, input);
-  if (!admit.ok) return blocked(mentorError(admit.error));
+  if (!admit.ok) {
+    // MUX-23: the 402 names the same bar /usage shows, with the balance it was compared to.
+    const numbers = admit.error === "credits_exhausted" && admit.admitMinMicro !== undefined && admit.availableMicro !== undefined
+      ? { admit_min_credits: creditsExactFromMicro(admit.admitMinMicro), credits_left: creditsExactFromMicro(admit.availableMicro) }
+      : {};
+    return blocked(mentorError(admit.error, numbers));
+  }
 
   // Only admitted, successfully reserved messages enter the rate counters.
   // Cache the first reserve for the loop; its internal admission already passed.

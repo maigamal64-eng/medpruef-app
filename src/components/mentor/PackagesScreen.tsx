@@ -10,6 +10,7 @@
  */
 
 import Link from "next/link";
+import { admissionGapText } from "./a38-copy";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, Brain, Check, CreditCard, Loader2, Coins, Info } from "lucide-react";
 import { Alert, EmptyState } from "@/components/ui";
@@ -167,7 +168,7 @@ export default function PackagesScreen() {
               <section data-mentor-package-balance aria-label={mentorT("pkg_your_balance", lang)} className={`mt-3 flex min-h-11 flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded-xl border px-3 py-2 ${warningState ? "border-[var(--mp-status-warning)] bg-[var(--mp-warning-bg)] text-[var(--mp-warning-text)]" : uView?.tone === "trial" ? "border-[var(--mp-info)]/40 bg-[var(--mp-info-bg)] text-[var(--mp-info-text)]" : "border-[var(--mp-border)] bg-[var(--mp-surface-raised)]"}`}>
                 <span className="text-[12px] text-[var(--mp-fg-muted)]">{mentorT("pkg_your_balance", lang)}</span>
                 {uView ? <span className="inline-flex items-center gap-1.5 text-[13px] font-semibold tabular-nums">{uView.tone === "trial" && <Info className="h-4 w-4" aria-hidden />}{uView.creditsText}</span> : <span className="h-5 w-24 animate-pulse rounded bg-[var(--mp-surface-sunken)]" role="status" aria-label={mentorT("credits_loading", lang)} />}
-                {warningState && <p className="w-full text-[13px] text-[var(--mp-warning-text)]">{r4PackageCopy(warningState, lang)}</p>}
+                {warningState && <p className="w-full text-[13px] text-[var(--mp-warning-text)]">{(warningState === "exhausted" && usage.status === "ready" ? admissionGapText(usage.value.credits_left, usage.value.admit_min_credits, lang) : null) ?? r4PackageCopy(warningState, lang)}</p>}
                 {usage.status === "ready" && usage.value.credits_left > 0 && usage.value.next_expiry && <p className="w-full text-[12px]">{r4PackageCopy("expiry", lang, { date: formatDate(usage.value.next_expiry, lang) })}</p>}
                 {warningState && cheapest && <Link href={cheapest.package_id === "mentor_topup" ? "#topup" : `#package-${cheapest.package_id}`} className="inline-flex min-h-11 w-full items-center text-[13px] font-semibold underline">{r4PackageCopy("cheapest", lang, { package: mentorT(offerView(cheapest, lang).nameKey, lang), price: offerView(cheapest, lang).priceText })}</Link>}
                 {uView?.trialNoticeText && <p className="w-full text-[12px]">{uView.trialNoticeText}</p>}

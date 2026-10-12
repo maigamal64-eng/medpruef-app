@@ -181,6 +181,9 @@ export interface MentorErrorBody {
   retry_after_seconds?: number;
   /** Present on 402: where to buy. */
   packages_url?: string;
+  /** Present on 402 credits_exhausted (MUX-23): the credits this message needed and the balance. */
+  admit_min_credits?: number;
+  credits_left?: number;
 }
 
 // ─── Usage ──────────────────────────────────────────────────────────────
@@ -188,7 +191,7 @@ export interface MentorErrorBody {
 export const MENTOR_USAGE_STATES = ["ok", "low", "exhausted", "resting", "none"] as const;
 /**
  * ok: credits available. low: below max(10, 15% of current grant). exhausted: had
- * credits, below one reserve. resting: global breaker (503). none: never had
+ * credits, below the admission bar of a new message (admit_min_credits). resting: global breaker (503). none: never had
  * credits (show the packages).
  */
 export type MentorUsageState = (typeof MENTOR_USAGE_STATES)[number];
@@ -206,6 +209,12 @@ export interface MentorUsageResponse {
   source_package?: MentorPackageId;
   renewal_at?: string | null;
   credits_left: number;
+  /**
+   * MUX-23: credits a new message needs before it may start, from the same
+   * admission function the chat route uses (fresh facts question, no
+   * history). null when it cannot be computed.
+   */
+  admit_min_credits?: number | null;
   messages_left_estimate: number;
   /** ISO time the soonest live lot expires, or null. */
   next_expiry: string | null;

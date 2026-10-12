@@ -36,6 +36,9 @@ export interface ApiFailure {
   reason?: string;
   /** The server confirmed nothing was deducted (body credits_deducted:false). */
   notCharged?: boolean;
+  /** MUX-23: the admission bar and balance from a 402 credits_exhausted. */
+  admitMinCredits?: number;
+  creditsLeft?: number;
 }
 
 export type ApiResult<T> = ({ ok: true } & T) | ApiFailure;
@@ -71,6 +74,7 @@ export async function failureFromResponse(res: Response): Promise<ApiFailure> {
   let limit: "minute" | "day" | undefined;
   let reason: string | undefined;
   let notCharged = false;
+  let gap: { admitMinCredits: number; creditsLeft: number } | null = null;
   try {
     const body = (await res.json()) as Partial<MentorErrorBody> | null;
     if (body && typeof body.error === "string" && ERROR_CODES.has(body.error)) error = body.error as MentorErrorCode;
@@ -80,6 +84,7 @@ export async function failureFromResponse(res: Response): Promise<ApiFailure> {
     if (body?.limit === "minute" || body?.limit === "day") limit = body.limit;
     if (typeof body?.reason === "string") reason = body.reason;
     if (body?.credits_deducted === false) notCharged = true;
+    if (typeof body?.admit_min_credits === "number" && Number.isFinite(body.admit_min_credits) && typeof body.credits_left === "number" && Number.isFinite(body.credits_left)) gap = { admitMinCredits: body.admit_min_credits, creditsLeft: body.credits_left };
     if (body && typeof body.packages_url === "string" && body.packages_url.startsWith("/")) packagesUrl = body.packages_url;
   } catch {
     /* non-JSON body: keep the status mapping */
@@ -94,6 +99,7 @@ export async function failureFromResponse(res: Response): Promise<ApiFailure> {
   if (limit) out.limit = limit;
   if (reason) out.reason = reason;
   if (notCharged) out.notCharged = true;
+  if (gap) Object.assign(out, gap);
   return out;
 }
 

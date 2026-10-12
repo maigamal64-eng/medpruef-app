@@ -6,7 +6,7 @@ import { mentorT, type MentorUiLang } from "@/lib/i18n-mentor";
 import type { AssistantMsg, UserMsg } from "./chat-state";
 import ErrorNotice from "./ErrorNotice";
 import { r3T } from "./r3-copy";
-import { a38T } from "./a38-copy";
+import { a38T, admissionGapText } from "./a38-copy";
 import { errorView, safeExternalUrl } from "./view-model";
 import ReportQuestionModal from "@/components/ReportQuestionModal";
 import ReportAnswerSheet from "./ReportAnswerSheet";
@@ -190,7 +190,7 @@ export function AssistantBubble({
   }
   if (msg.status === "error" && msg.error) {
     if (msg.error === "rate_limited") return null; // The composer owns the single live countdown.
-    return <article data-mentor-system-notice>{(msg.error === "credits_required" || msg.error === "credits_exhausted") && <p className="text-[13px] text-[var(--mp-fg)]">{r3T("saved",lang)}</p>}<ErrorNotice view={errorView(msg.error,{retryAfterSeconds:msg.retryAfterSeconds,reason:msg.reason})} lang={lang} packagesHref={msg.packagesUrl ?? packagesHref} waitSeconds={waitSeconds} onRetry={onRetry} onNewChat={onNewChat} onRephrase={onRephrase} diagnostics={{requestId:msg.requestId,code:msg.error,time:msg.errorAt}} billingLine={errorBillingLine(msg, lang)} /></article>;
+    return <article data-mentor-system-notice>{(msg.error === "credits_required" || msg.error === "credits_exhausted") && <p className="text-[13px] text-[var(--mp-fg)]">{r3T("saved",lang)}</p>}<ErrorNotice view={errorViewFor(msg, lang)} lang={lang} packagesHref={msg.packagesUrl ?? packagesHref} waitSeconds={waitSeconds} onRetry={onRetry} onNewChat={onNewChat} onRephrase={onRephrase} diagnostics={{requestId:msg.requestId,code:msg.error,time:msg.errorAt}} billingLine={errorBillingLine(msg, lang)} /></article>;
   }
   const dateBlocks = blocks?.filter(b => b.confirmed_dates?.length) ?? [];
   const dateFooter = visible?.citations.some(c => isOlderSource(c)) ? "older_footer" : dateBlocks.some(b => b.date_type === "deadline") ? "deadline_footer" : "sitting_footer";
@@ -279,4 +279,11 @@ export function errorBillingLine(msg: { error?: string; notCharged?: boolean }, 
   if (msg.error === "network") return a38T("network_check", lang);
   if (msg.notCharged && (msg.error === "upstream_error" || msg.error === "unknown" || msg.error === "input_too_large")) return a38T("not_charged_line", lang);
   return null;
+}
+
+/** errorView plus the MUX-23 admission-gap sentence on a 402 above zero. */
+export function errorViewFor(msg: Pick<AssistantMsg, "error" | "retryAfterSeconds" | "reason" | "admitMinCredits" | "creditsLeft">, lang: MentorUiLang) {
+  const view = errorView(msg.error!, { retryAfterSeconds: msg.retryAfterSeconds, reason: msg.reason });
+  const gap = msg.error === "credits_exhausted" ? admissionGapText(msg.creditsLeft, msg.admitMinCredits, lang) : null;
+  return gap ? { ...view, text: gap } : view;
 }

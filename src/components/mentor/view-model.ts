@@ -212,6 +212,8 @@ export type ErrorAction = "packages" | "retry" | "signin" | "wait" | "new_chat" 
 
 export interface ErrorView {
   messageKey: MentorKey;
+  /** Already formatted line that replaces messageKey (MUX-23 admission gap). */
+  text?: string;
   vars?: Record<string, string | number>;
   tone: BannerTone;
   action: ErrorAction;

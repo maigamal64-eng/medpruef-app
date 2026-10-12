@@ -59,7 +59,7 @@ import {
   type ToolResultBlockParam,
 } from "@/lib/ai/anthropic";
 import { costMicroUsd, reserveCeilingMicro, trimHistoryToFit } from "@/lib/ai/pricing";
-import { canAdmitMessage, creditsExactFromMicro, messagesLeftEstimate } from "./config";
+import { admitMessageMinMicro, canAdmitMessage, creditsExactFromMicro, messagesLeftEstimate } from "./config";
 import type { MentorErrorCode, MentorLang, MentorSseEvent } from "./contract";
 import { trimTruncatedAnswer } from "./prompt/protocol";
 import { nextActions, planItemsFromTool } from "./actions";
@@ -178,7 +178,7 @@ export type PreparedCall =
  * forces a text answer with tool_choice none (tools stay for the cache prefix).
  */
 export function prepareCall(
-  deps: MentorDeps,
+  deps: Pick<MentorDeps, "brain" | "config">,
   ctx: TurnContext,
   messages: MessageParam[],
   isLastRound: boolean,
@@ -224,14 +224,46 @@ export function prepareCall(
 }
 
 /** The reserve ceiling of the FIRST call of this turn, exactly as runMentorTurn will build it. */
-export function firstCallCeiling(deps: MentorDeps, input: MentorTurnInput): PreparedCall {
+export function firstCallCeiling(deps: Pick<MentorDeps, "brain" | "config" | "clock">, input: MentorTurnInput): PreparedCall {
   const ctx = buildTurnContext(input, deps.clock.now());
   return prepareCall(deps, ctx, initialMessages(input), deps.config.maxToolRounds === 1);
 }
 
+/**
+ * MUX-23 (option A, [name] 2026-10-12): the one admission bar. A message may
+ * start only with admitMessageMinMicro(first-call ceiling, maxToolRounds)
+ * available. admitTurn, the 402 body and GET /api/mentor/usage all read this
+ * number from here, so the pill, the banner, the 402 and the packages page
+ * agree. The bar itself is unchanged.
+ */
+export function admissionMinMicro(deps: Pick<MentorDeps, "brain" | "config" | "clock">, input: MentorTurnInput): { ok: true; minMicro: number; ceilingMicro: number } | { ok: false; error: MentorErrorCode; detail?: string } {
+  const first = firstCallCeiling(deps, input);
+  if (!first.ok) return first;
+  return { ok: true, minMicro: admitMessageMinMicro(first.ceilingMicro, deps.config.maxToolRounds), ceilingMicro: first.ceilingMicro };
+}
+
+/** The bar for a fresh short facts question with no history: what /usage shows. */
+export const FRESH_MESSAGE_PROBE = "Wann ist die nächste Prüfung?";
+
+export function freshMessageAdmissionMicro(deps: Pick<MentorDeps, "brain" | "config" | "clock">, userId: string, lang: MentorTurnInput["request"]["lang"] = "de"): number | null {
+  try {
+    const r = admissionMinMicro(deps, {
+      requestId: "00000000-0000-4000-8000-000000000000",
+      userId,
+      conversationId: "00000000-0000-4000-8000-000000000000",
+      request: { message: FRESH_MESSAGE_PROBE, lang, mode: "facts" } as MentorTurnInput["request"],
+      history: [],
+      paidAccess: false,
+    });
+    return r.ok ? r.minMicro : null;
+  } catch {
+    return null;
+  }
+}
+
 export type AdmitResult =
   | { ok: true; ceilingMicro: number; availableMicro: number; everGranted: boolean }
-  | { ok: false; error: MentorErrorCode; availableMicro?: number; detail?: string };
+  | { ok: false; error: MentorErrorCode; availableMicro?: number; admitMinMicro?: number; detail?: string };
 
 /**
  * Frozen admission rule (config.ts canAdmitMessage): a message starts only
@@ -239,7 +271,7 @@ export type AdmitResult =
  * credits_required (never had a lot) or credits_exhausted.
  */
 export async function admitTurn(deps: MentorDeps, input: MentorTurnInput): Promise<AdmitResult> {
-  const first = firstCallCeiling(deps, input);
+  const first = admissionMinMicro(deps, input);
   if (!first.ok) return { ok: false, error: first.error, detail: first.detail };
   let available: number;
   let everGranted: boolean;
@@ -252,7 +284,7 @@ export async function admitTurn(deps: MentorDeps, input: MentorTurnInput): Promi
   }
   if (!Number.isFinite(available)) return { ok: false, error: "reserve_failed", detail: "balance not a number" };
   if (!canAdmitMessage(available, first.ceilingMicro, deps.config.maxToolRounds)) {
-    return { ok: false, error: everGranted ? "credits_exhausted" : "credits_required", availableMicro: available };
+    return { ok: false, error: everGranted ? "credits_exhausted" : "credits_required", availableMicro: available, admitMinMicro: first.minMicro };
   }
   return { ok: true, ceilingMicro: first.ceilingMicro, availableMicro: available, everGranted };
 }

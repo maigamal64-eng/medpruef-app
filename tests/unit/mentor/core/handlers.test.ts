@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import replies from "./fixtures/rpc-replies.json";
 import { handleMentorChat, onlyFreeTasteFunds, sseFrame, type ChatHandlerDeps } from "@/app/api/mentor/chat/handler";
-import { computeCanBuy, computeUsageState, handleMentorUsage, nominalAdmitCeiling, type UsageHandlerDeps } from "@/app/api/mentor/usage/handler";
+import { computeCanBuy, computeUsageState, handleMentorUsage, type UsageHandlerDeps } from "@/app/api/mentor/usage/handler";
+import { freshMessageAdmissionMicro } from "@/lib/mentor/turn";
 import { handleMentorSweep } from "@/app/api/cron/mentor-sweep/handler";
 import type { ConversationStore, AppendTurn } from "@/lib/mentor/conversation";
 import type { MentorSseEvent, MentorUsageResponse } from "@/lib/mentor/contract";
@@ -364,14 +365,32 @@ describe("GET /api/mentor/usage handler", () => {
     expect(computeCanBuy(config({ packagesEnabled: true, topupsEnabled: true }), { WHOP_PLAN_MENTOR_TOPUP: "p" }, new Set(["mentor_topup"]))).toBe(true);
   });
 
-  it("usage state boundaries use the frozen admission rule", () => {
-    const c = nominalAdmitCeiling(config());
+  it("usage state boundaries use the shared admission bar (MUX-23)", () => {
+    const env = makeDeps([], { grantMicro: 0 });
+    const c = freshMessageAdmissionMicro(env.deps, USER);
     expect(c).toBeGreaterThan(0);
-    const base = { resting: false, everGranted: true, nominalCeilingMicro: c, maxToolRounds: 3 };
-    expect(computeUsageState({ ...base, availableMicro: (c as number) * 3 - 1 })).toBe("exhausted");
-    expect(computeUsageState({ ...base, availableMicro: (c as number) * 3 })).toBe("low");
+    const base = { resting: false, everGranted: true, admitMinMicro: c };
+    expect(computeUsageState({ ...base, availableMicro: (c as number) - 1 })).toBe("exhausted");
+    expect(computeUsageState({ ...base, availableMicro: c as number })).toBe("low");
     expect(computeUsageState({ ...base, availableMicro: 100_000 })).toBe("ok");
     expect(computeUsageState({ ...base, availableMicro: -5 })).toBe("exhausted");
+    expect(computeUsageState({ ...base, admitMinMicro: null, availableMicro: 1 })).toBe("low");
+    expect(computeUsageState({ ...base, admitMinMicro: null, availableMicro: 0 })).toBe("exhausted");
+  });
+
+  it("MUX-23: /usage and the 402 report the same bar from the same function", async () => {
+    const env = makeDeps([], { grantMicro: 0 });
+    const bar = freshMessageAdmissionMicro(env.deps, USER) as number;
+    const below = Math.floor(bar / 2); // under the bar, still above zero
+    const usage = (await (await handleMentorUsage(get(), usageSetup(below))).json()) as MentorUsageResponse;
+    expect(usage.state).toBe("exhausted");
+    expect(usage.admit_min_credits).toBe(bar / 5000);
+    expect(usage.credits_left).toBe(below / 5000);
+    const s = chatSetup([{ text: "x" }], {}, { grantMicro: below });
+    const res = await handleMentorChat(post({ ...GOOD, message: "Wann ist die nächste Prüfung?", mode: "facts" }), s.deps);
+    expect(res.status).toBe(402);
+    const body = await res.json();
+    expect(body).toMatchObject({ error: "credits_exhausted", admit_min_credits: bar / 5000, credits_left: below / 5000 });
   });
 });
 

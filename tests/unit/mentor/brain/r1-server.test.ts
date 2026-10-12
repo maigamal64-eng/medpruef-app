@@ -78,7 +78,7 @@ describe('R1 state, structured actions and wire contract',()=>{
  });
  it('relative low threshold fires at first of 15% or 10 without modifying admission',()=>{
   expect(mentorLowThreshold(150)).toBe(22.5);expect(mentorLowThreshold(400)).toBe(60);expect(mentorLowThreshold(50)).toBe(10);
-  const base={resting:false,everGranted:true,nominalCeilingMicro:null,maxToolRounds:3,currentGrantCredits:400};
+  const base={resting:false,everGranted:true,admitMinMicro:null,currentGrantCredits:400};
   expect(computeUsageState({...base,availableMicro:295000})).toBe('low');expect(computeUsageState({...base,availableMicro:300000})).toBe('ok');
  });
  it('plan rows come only from structured progress data and survive SSE recovery',()=>{
