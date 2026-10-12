@@ -37,6 +37,7 @@ import { useLang, t, type Lang } from "@/lib/i18n";
 import Markdown from "@/components/Markdown";
 import { safeStorage } from "@/lib/safe-storage";
 import { getStoredSession } from "@/lib/auth";
+import { isUsableTranslation, needsMachineLabel } from "@/lib/explanation-translation";
 
 /**
  * UX-PRA-30 (regardless part): one translation control, one memory. The
@@ -187,7 +188,7 @@ export default function ExplanationTranslator({
         const next: Partial<Record<TargetLang, string>> = {};
         for (const tg of TARGETS) {
           const txt = data.translations[tg.code];
-          if (txt) next[tg.code] = txt;
+          if (isUsableTranslation(txt)) next[tg.code] = txt;
         }
         if (!cancelled) setCache(next);
       } catch {
@@ -303,8 +304,9 @@ export default function ExplanationTranslator({
           body: JSON.stringify({ questionId, field, lang: code }),
         });
         const data: TranslateResponse = await res.json().catch(() => ({}));
-        if (res.ok && data.translatedText) {
-          setCache((prev) => ({ ...prev, [code]: data.translatedText as string }));
+        if (res.ok && isUsableTranslation(data.translatedText)) {
+          const text = data.translatedText;
+          setCache((prev) => ({ ...prev, [code]: text }));
           trackEvent("feature_use", {
             feature: "translate_explanation",
             lang: code,
@@ -526,9 +528,23 @@ export default function ExplanationTranslator({
               {activeTarget!.flag} {activeTarget!.native}
             </span>
           </div>
-          <Markdown className="text-sm text-[var(--mp-fg)] leading-relaxed">
-            {displayedText}
-          </Markdown>
+          <div lang={activeTarget!.code}>
+            <Markdown className="text-sm text-[var(--mp-fg)] leading-relaxed">
+              {displayedText}
+            </Markdown>
+          </div>
+          {/* pick-translation-label A: no native review is recorded yet, so
+              every shown translation says so, in the UI language. */}
+          {needsMachineLabel(activeTarget!.code) && (
+            <p
+              lang={lang}
+              dir="ltr"
+              data-testid="xlate-machine-label"
+              className="mt-2 border-t border-[var(--mp-cta-blue)]/15 pt-2 text-left text-[12px] text-[var(--mp-fg-muted)]"
+            >
+              {t("a29_xlate_machine", lang)}
+            </p>
+          )}
         </div>
       )}
     </div>

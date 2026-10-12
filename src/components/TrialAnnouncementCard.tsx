@@ -1,7 +1,8 @@
 "use client";
 import { IconButton } from "@/components/ui/IconButton";
 import { t, type Lang } from "@/lib/i18n";
-import { billingTrialLine, VERIFIED_CANCEL_PATH } from "@/lib/billing-copy";
+import { VERIFIED_CANCEL_PATH } from "@/lib/billing-copy";
+import { moneyCopyLang, trialLineFor } from "@/lib/billing-copy-i18n";
 
 /** Returning-free-user trial announcement. Shared queue, feature eligibility and
  * exact terms must all be known. Per-account dismissal persists locally. */
@@ -103,7 +104,7 @@ export default function TrialAnnouncementCard({
           {t("home_trial_title", lang).replace("{n}", String(state.trial_days))}
         </p>
         <p className="text-sm text-[var(--mp-fg-muted)] mt-0.5">
-          {billingTrialLine(lang === "de" ? "de" : "en", { trialDays: state.trial_days, priceAfterCents: state.price_after_cents, chargeAt: state.charge_at })}
+          {trialLineFor(moneyCopyLang(lang), { trialDays: state.trial_days, priceAfterCents: state.price_after_cents, chargeAt: state.charge_at })}
         </p>
 
         <div className="flex flex-wrap items-center gap-2 mt-3">

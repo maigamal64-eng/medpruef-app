@@ -1,5 +1,6 @@
 "use client";
 
+import LocalizedBillingTerms from "@/components/billing/LocalizedBillingTerms";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
@@ -292,6 +293,7 @@ export default function FaqPage() {
 
             {/* Cancellation (UX-PUB-24) */}
             <FaqSection id="cancellation" title={FAQ_TITLES.cancellation[lang]}>
+              <LocalizedBillingTerms className="mb-3" />
               <p>{faqCancelIntro(lang)}</p>
               <ol className="list-decimal pl-5 space-y-1.5 mt-3">
                 {faqCancelSteps(lang).map((step) => (

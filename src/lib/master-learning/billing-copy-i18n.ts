@@ -6,7 +6,10 @@
  * delegate (track-A).
  *
  * Arabic stays empty until [name] signs it off. Native-reviewer sign-off per
- * language is pending: see handover needs-track-a note.
+ * language is pending (pick-native-reviewers A): these strings are drafts and
+ * render only through src/lib/billing-copy-i18n.ts once BILLING_I18N_SIGNED_OFF
+ * and the UI review gate (REVIEWED_LANGS) both lift. a29 removed an unverified
+ * "cancel at any time" claim and added the Whop refund route.
  */
 import { TIERS } from "@/lib/content-truth";
 import { BILLING_SUPPORT_EMAIL, WHOP_MANAGE_TEXT } from "@/lib/billing-copy";
@@ -20,6 +23,13 @@ export const BILLING_KEYS = [
   "neutral",
   "refund",
   "whopEnglish",
+  // Templates (a29): {days} {zero} {amount} {date} are filled by
+  // src/lib/billing-copy-i18n.ts with the language's own number and date format.
+  "trialDated",
+  "trialUndated",
+  "accessEnds",
+  "accessEnded",
+  "continueAfter",
 ] as const;
 export type BillingKey = (typeof BILLING_KEYS)[number];
 
@@ -37,33 +47,51 @@ type Copy = Record<BillingKey, string>;
 
 const ru: Copy = {
   plans: `Тарифы «Месяц» (${MONTHLY} € в месяц) и «3 месяца» (${QUARTERLY} € за квартал) являются подписками: они продлеваются автоматически каждые 30 или 90 дней, и деньги списываются в дату каждого продления, пока вы не отмените подписку. Экзаменационная когорта (${COHORT} € на ${COHORT_MONTHS} месяцев) оплачивается один раз и не продлевается.`,
-  trial: `Пробный период Pro начинается с привязанной картой: сегодня 0 €, ${TRIAL_DAYS} дней Pro. Если вы не отмените подписку в течение пробной недели, дальше будет списываться ${MONTHLY} € в месяц.`,
-  cancel: `Отменить подписку можно в любое время на Whop: ${WHOP_MANAGE_TEXT} (выберите подписку, затем "${WHOP_CANCEL_LABEL}", интерфейс Whop на английском). Отмените до даты следующего продления, чтобы деньги не списались снова. Если нужна помощь, напишите на ${BILLING_SUPPORT_EMAIL}.`,
+  trial: `Пробный период Pro начинается с привязанной картой: сегодня 0 €, ${TRIAL_DAYS} дней Pro. Если вы не отмените подписку во время пробного периода, после него будет списываться ${MONTHLY} € в месяц.`,
+  cancel: `Подпиской вы управляете на Whop: ${WHOP_MANAGE_TEXT} (выберите подписку, затем "${WHOP_CANCEL_LABEL}", интерфейс Whop на английском). Отмените до даты следующего продления, чтобы деньги не списались снова. Если нужна помощь, напишите на ${BILLING_SUPPORT_EMAIL}.`,
   neutral: `Тарифы «Месяц» и «3 месяца» продлеваются автоматически до отмены. Экзаменационная когорта оплачивается один раз.`,
-  refund: `Возврат в течение ${REFUND_DAYS} дней: напишите на ${BILLING_SUPPORT_EMAIL}.`,
+  refund: `Возврат в течение ${REFUND_DAYS} дней после покупки: напишите на ${BILLING_SUPPORT_EMAIL}. Деньги возвращаются через Whop.`,
   whopEnglish: `Whop показывает английский интерфейс, вот как отменить: 1. Откройте ${WHOP_MANAGE_TEXT}. 2. Выберите подписку. 3. Нажмите "${WHOP_CANCEL_LABEL}".`,
+  trialDated: "Pro на {days} дней: нужна карта, сегодня {zero}. {date} будет списано {amount}, далее ежемесячно, если вы не отмените подписку раньше.",
+  trialUndated: "Pro на {days} дней: нужна карта, сегодня {zero}. После пробного периода будет списано {amount}, далее ежемесячно, если вы не отмените подписку раньше.",
+  accessEnds: "Ваш доступ Pro заканчивается {date} и не продлевается.",
+  accessEnded: "Ваш доступ Pro закончился {date} и не продлевается.",
+  continueAfter: "Продолжить учиться после {date}",
 };
 
 const uk: Copy = {
   plans: `Тарифи «Місяць» (${MONTHLY} € на місяць) і «3 місяці» (${QUARTERLY} € за квартал) є підписками: вони продовжуються автоматично кожні 30 або 90 днів, і гроші списуються в дату кожного продовження, доки ви не скасуєте підписку. Екзаменаційна когорта (${COHORT} € на ${COHORT_MONTHS} місяців) оплачується один раз і не продовжується.`,
-  trial: `Пробний період Pro починається з прив'язаною карткою: сьогодні 0 €, ${TRIAL_DAYS} днів Pro. Якщо ви не скасуєте підписку протягом пробного тижня, далі списуватиметься ${MONTHLY} € на місяць.`,
-  cancel: `Скасувати підписку можна будь-коли на Whop: ${WHOP_MANAGE_TEXT} (оберіть підписку, потім "${WHOP_CANCEL_LABEL}", інтерфейс Whop англійською). Скасуйте до дати наступного продовження, щоб гроші не списалися знову. Якщо потрібна допомога, напишіть на ${BILLING_SUPPORT_EMAIL}.`,
+  trial: `Пробний період Pro починається з прив'язаною карткою: сьогодні 0 €, ${TRIAL_DAYS} днів Pro. Якщо ви не скасуєте підписку під час пробного періоду, після нього списуватиметься ${MONTHLY} € на місяць.`,
+  cancel: `Підпискою ви керуєте на Whop: ${WHOP_MANAGE_TEXT} (оберіть підписку, потім "${WHOP_CANCEL_LABEL}", інтерфейс Whop англійською). Скасуйте до дати наступного продовження, щоб гроші не списалися знову. Якщо потрібна допомога, напишіть на ${BILLING_SUPPORT_EMAIL}.`,
   neutral: `Тарифи «Місяць» і «3 місяці» продовжуються автоматично до скасування. Екзаменаційна когорта оплачується один раз.`,
-  refund: `Повернення коштів протягом ${REFUND_DAYS} днів: напишіть на ${BILLING_SUPPORT_EMAIL}.`,
+  refund: `Повернення коштів протягом ${REFUND_DAYS} днів після покупки: напишіть на ${BILLING_SUPPORT_EMAIL}. Гроші повертаються через Whop.`,
   whopEnglish: `Whop показує англійський інтерфейс, ось як скасувати: 1. Відкрийте ${WHOP_MANAGE_TEXT}. 2. Оберіть підписку. 3. Натисніть "${WHOP_CANCEL_LABEL}".`,
+  trialDated: "Pro на {days} днів: потрібна картка, сьогодні {zero}. {date} буде списано {amount}, далі щомісяця, якщо ви не скасуєте підписку раніше.",
+  trialUndated: "Pro на {days} днів: потрібна картка, сьогодні {zero}. Після пробного періоду буде списано {amount}, далі щомісяця, якщо ви не скасуєте підписку раніше.",
+  accessEnds: "Ваш доступ Pro закінчується {date} і не продовжується.",
+  accessEnded: "Ваш доступ Pro закінчився {date} і не продовжується.",
+  continueAfter: "Продовжити навчання після {date}",
 };
 
 const tr: Copy = {
   plans: `"Tek Ay" (ayda ${MONTHLY} €) ve "3 Ay" (çeyrek başına ${QUARTERLY} €) planları aboneliktir: her 30 veya 90 günde otomatik olarak yenilenir ve siz iptal edene kadar her yenileme tarihinde tahsil edilir. Sınav Kohortu (${COHORT_MONTHS} ay için ${COHORT} €) tek seferlik ödemedir ve yenilenmez.`,
-  trial: `Pro denemesi kayıtlı bir kartla başlar: bugün 0 €, ${TRIAL_DAYS} gün Pro. Deneme haftasında iptal etmezseniz, sonrasında ayda ${MONTHLY} € tahsil edilir.`,
-  cancel: `Aboneliği istediğiniz zaman Whop üzerinden iptal edebilirsiniz: ${WHOP_MANAGE_TEXT} (üyeliğinizi seçin, ardından "${WHOP_CANCEL_LABEL}", Whop arayüzü İngilizcedir). Tekrar tahsilat olmaması için bir sonraki yenileme tarihinden önce iptal edin. Yardıma ihtiyacınız olursa ${BILLING_SUPPORT_EMAIL} adresine yazın.`,
+  trial: `Pro denemesi kayıtlı bir kartla başlar: bugün 0 €, ${TRIAL_DAYS} gün Pro. Pro denemesi sırasında iptal etmezseniz, deneme bittikten sonra ayda ${MONTHLY} € tahsil edilir.`,
+  cancel: `Üyeliğinizi Whop üzerinden yönetirsiniz: ${WHOP_MANAGE_TEXT} (üyeliğinizi seçin, ardından "${WHOP_CANCEL_LABEL}", Whop arayüzü İngilizcedir). Tekrar tahsilat olmaması için bir sonraki yenileme tarihinden önce iptal edin. Yardıma ihtiyacınız olursa ${BILLING_SUPPORT_EMAIL} adresine yazın.`,
   neutral: `"Tek Ay" ve "3 Ay" planları iptal edilene kadar otomatik yenilenir. Sınav Kohortu tek seferlik ödemedir.`,
-  refund: `${REFUND_DAYS} gün içinde iade: ${BILLING_SUPPORT_EMAIL} adresine yazın.`,
+  refund: `Satın alımdan sonraki ${REFUND_DAYS} gün içinde iade: ${BILLING_SUPPORT_EMAIL} adresine yazın. Ödeme Whop üzerinden iade edilir.`,
   whopEnglish: `Whop İngilizce gösterir, iptal şöyle yapılır: 1. ${WHOP_MANAGE_TEXT} adresini açın. 2. Üyeliğinizi seçin. 3. "${WHOP_CANCEL_LABEL}" düğmesine basın.`,
+  trialDated: "{days} gün Pro deneyin: kart gerekli, bugün {zero}. {date} tarihinde {amount} tahsil edilir, öncesinde iptal etmezseniz ardından her ay.",
+  trialUndated: "{days} gün Pro deneyin: kart gerekli, bugün {zero}. Deneme süresinden sonra {amount} tahsil edilir, öncesinde iptal etmezseniz ardından her ay.",
+  accessEnds: "Pro erişiminiz {date} tarihinde sona erer ve yenilenmez.",
+  accessEnded: "Pro erişiminiz {date} tarihinde sona erdi ve yenilenmez.",
+  continueAfter: "{date} sonrasında çalışmaya devam edin",
 };
 
 /** Arabic is intentionally empty until [name] signs it off. */
-const ar: Copy = { plans: "", trial: "", cancel: "", neutral: "", refund: "", whopEnglish: "" };
+const ar: Copy = {
+  plans: "", trial: "", cancel: "", neutral: "", refund: "", whopEnglish: "",
+  trialDated: "", trialUndated: "", accessEnds: "", accessEnded: "", continueAfter: "",
+};
 
 export const BILLING_I18N: Record<BillingI18nLang, Copy> = { ru, uk, tr, ar };
 

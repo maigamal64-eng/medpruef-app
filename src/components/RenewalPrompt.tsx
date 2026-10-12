@@ -44,7 +44,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { CalendarClock } from "lucide-react";
 import { useUserTier } from "@/lib/hooks/useUserTier";
-import { useLang, t, type Lang } from "@/lib/i18n";
+import { useLang, t } from "@/lib/i18n";
+import { accessEndLineFor, continueAfterLabelFor, moneyCopyLang, moneyLocale, type MoneyCopyLang } from "@/lib/billing-copy-i18n";
 import { authFetch } from "@/lib/authFetch";
 import {
   evaluateRenewalPrompt,
@@ -62,24 +63,20 @@ const SEEN_KEY = "medpruef_renewal_prompt_seen_on";
  */
 const HIDE_PATHS = ["/login", "/checkout", "/pricing", "/privacy", "/terms", "/impressum"];
 
-const DATE_LOCALE: Record<Lang, string> = {
-  de: "de-AT",
-  en: "en-GB",
-  ru: "ru-RU",
-  uk: "uk-UA",
-  tr: "tr-TR",
-  ar: "en-GB",
-};
 
 function todayStamp(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-/** Local-calendar date label, so the day never shifts by time zone. */
-function formatDate(iso: string, lang: Lang): string {
+/**
+ * Local-calendar date label, so the day never shifts by time zone. Formatted
+ * in the money language (a29): an English sentence never carries a Russian
+ * month name for a learner whose Russian copy is not reviewed yet.
+ */
+function formatDate(iso: string, lang: MoneyCopyLang): string {
   const [y, m, d] = iso.split("-").map(Number);
   return new Date(y, (m ?? 1) - 1, d ?? 1).toLocaleDateString(
-    DATE_LOCALE[lang] ?? "de-AT",
+    lang === "de" ? "de-AT" : lang === "en" ? "en-GB" : moneyLocale(lang),
     { day: "numeric", month: "long" }
   );
 }
@@ -168,7 +165,8 @@ export default function RenewalPrompt() {
     setDismissed(true);
   };
 
-  const date = formatDate(decision.endsOn, lang);
+  const money = moneyCopyLang(lang);
+  const date = formatDate(decision.endsOn, money);
   return (
     <section
       aria-label={t("a22_renewal_region", lang)}
@@ -184,12 +182,12 @@ export default function RenewalPrompt() {
             aria-hidden
           />
           <p className="text-[14px] text-[var(--mp-fg)]">
-            {lang === 'de' ? `Ihr Pro-Zugang ${decision.lapsed ? 'endete' : 'endet'} am ${date} und verlängert sich nicht.` : `Your Pro access ${decision.lapsed ? 'ended' : 'ends'} on ${date} and does not renew.`}
+            {accessEndLineFor(money, date, decision.lapsed)}
           </p>
         </div>
         <div className="flex items-center gap-2 flex-1 sm:flex-none">
           <Link href="/pricing?action=renew#plans" className="mp-btn mp-btn--secondary min-h-11 text-[14px] flex-1 justify-center sm:flex-none">
-            {lang === 'de' ? `Weiterlernen nach dem ${date}` : `Continue studying after ${date}`}
+            {continueAfterLabelFor(money, date)}
           </Link>
           <IconButton label={t("renewal_dismiss", lang)} onClick={handleDismiss} />
         </div>

@@ -3,7 +3,8 @@ import { t } from "@/lib/i18n";
 import { FREE_TIER } from "@/lib/content-truth";
 import { createActionGate } from "@/lib/account-request";
 import { PaymentStatus } from "./ui/PaymentStatus";
-import { BILLING_SUPPORT_EMAIL, billingTrialLine, VERIFIED_CANCEL_PATH } from "@/lib/billing-copy";
+import { BILLING_SUPPORT_EMAIL, VERIFIED_CANCEL_PATH } from "@/lib/billing-copy";
+import { moneyCopyLang, trialLineFor } from "@/lib/billing-copy-i18n";
 
 /**
  * TrialActivation — the Whop card-on-file Pro trial entry (Notes feature P5,
@@ -176,7 +177,7 @@ export default function TrialActivation({
             {t('account_trial_title', lang)}
           </p>
           <p className="text-sm text-[var(--mp-fg-muted)] mt-0.5">
-            {billingTrialLine(lang, { trialDays: state.trial_days, priceAfterCents: state.price_after_cents, chargeAt: state.charge_at ?? null })}
+            {trialLineFor(moneyCopyLang(lang), { trialDays: state.trial_days, priceAfterCents: state.price_after_cents, chargeAt: state.charge_at ?? null })}
           </p>
 
           <div className="flex flex-wrap items-center gap-2 mt-3">

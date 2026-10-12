@@ -56,6 +56,7 @@ import UpcomingExams from "@/components/UpcomingExams";
 import TrialActivation from "@/components/TrialActivation";
 import CheckoutStallPrompt from "@/components/CheckoutStallPrompt";
 import SupportContactForm from "@/components/SupportContactForm";
+import LocalizedBillingTerms from "@/components/billing/LocalizedBillingTerms";
 import PlanCard, { type PlanAction } from "./_parts/PlanCard";
 import PlanCoverBlock from "./_parts/PlanCoverBlock";
 import CheckoutConfirmSheet, { CHECKOUT_CONFIRM_ENABLED } from "./_parts/CheckoutConfirmSheet";
@@ -406,6 +407,11 @@ export default function PricingPage() {
         <section className="max-w-5xl mx-auto px-4 lg:px-8 pb-4">
           <PlanCoverBlock lang={lang} examDate={examDate} />
         </section>
+
+        {/* Full money terms in the learner's language once reviewed (LX-20, a29); renders nothing until then. */}
+        <div className="max-w-5xl mx-auto px-4 lg:px-8 empty:hidden">
+          <LocalizedBillingTerms className="mb-4" />
+        </div>
 
         {/* Payment methods and exclusions (LX-25), support and fine print. */}
         <section className="max-w-5xl mx-auto px-4 lg:px-8 pb-6 space-y-2 text-sm text-[var(--mp-fg-muted)]">
