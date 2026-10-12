@@ -45,6 +45,16 @@ describe('overlay stack (UX-GLOBAL-14)', () => {
     expect(consumeSelfPop()).toBe(false)
   })
 
+  it('skips the Back when the page navigated while the overlay was open', () => {
+    const h = fakeHistory()
+    pushOverlayEntry('nav', h)
+    const location = { href: 'https://medpruf.com/quiz' }
+    expect(closeOverlayEntry('nav', h, location, 'https://medpruf.com/materials')).toBe(true)
+    flush()
+    expect(h.entries.length).toBe(2)
+    expect(consumeSelfPop()).toBe(false)
+  })
+
   it('a dialog that replaces another in the same commit adopts its entry', () => {
     const h = fakeHistory()
     pushOverlayEntry('first', h)

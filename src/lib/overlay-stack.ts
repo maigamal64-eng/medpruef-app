@@ -94,7 +94,7 @@ export function pushOverlayEntry(id: string, history: OverlayHistory): void {
  */
 export function consumeSelfPop(): boolean {
   if (!selfPopArmed) return false
-  schedule(() => { selfPopArmed = false })
+  if (typeof window === 'undefined') schedule(() => { selfPopArmed = false })
   return true
 }
 
@@ -108,16 +108,28 @@ export function ownsCurrentEntry(id: string, history: OverlayHistory): boolean {
  * over the overlay's own entry only while that entry is current.
  * Returns true when it stepped back.
  */
-export function closeOverlayEntry(id: string, history: OverlayHistory): boolean {
+export function closeOverlayEntry(id: string, history: OverlayHistory, location?: { readonly href: string }, hrefAtOpen?: string): boolean {
   if (!ownsCurrentEntry(id, history)) return false
   if (pendingBack !== null) return true
   pendingBack = schedule(() => {
     pendingBack = null
-    // Still ours (no other overlay adopted it): step back over it.
-    if (stateMark(history.state)) {
-      selfPopArmed = true
-      history.back()
-    }
+    // Still ours (no other overlay adopted it) and no navigation happened
+    // since the overlay opened: step back over it.
+    if (!stateMark(history.state)) return
+    if (location && hrefAtOpen !== undefined && location.href !== hrefAtOpen) return
+    armSelfPop()
+    history.back()
   })
   return true
+}
+
+/** Arm the self-pop flag; it clears right after the popstate it belongs to. */
+function armSelfPop(): void {
+  selfPopArmed = true
+  if (typeof window === 'undefined') return
+  const clear = () => {
+    window.removeEventListener('popstate', clear)
+    schedule(() => { selfPopArmed = false })
+  }
+  window.addEventListener('popstate', clear)
 }

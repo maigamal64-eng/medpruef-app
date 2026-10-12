@@ -83,7 +83,11 @@ export interface DialogProps {
   busy?: boolean
   /** No way to dismiss (e.g. the onboarding exam step). */
   mandatory?: boolean
-  /** Close through a pushed history entry on Back. Default true. */
+  /**
+   * Close through a pushed history entry on Back. Default: on for sheets and
+   * fullscreen overlays (the phone placements), opt-in for centred dialogs.
+   * Centred dialogs that navigate programmatically must stay opt-out.
+   */
   closeOnBack?: boolean
   /** Visually hide the title (it still names the dialog). */
   hideTitle?: boolean
@@ -143,7 +147,7 @@ export function Dialog({
   initialFocus,
   busy = false,
   mandatory = false,
-  closeOnBack = true,
+  closeOnBack,
   hideTitle = false,
   className,
 }: DialogProps) {
@@ -196,8 +200,10 @@ export function Dialog({
   useEffect(() => {
     if (!open) return
     setDepth(pushOverlay(overlayId))
-    const usesHistory = closeOnBack && dismissible && typeof window !== 'undefined'
+    const backCloses = closeOnBack ?? placement !== 'center'
+    const usesHistory = backCloses && dismissible && typeof window !== 'undefined'
     skipBackRef.current = false
+    const hrefAtOpen = typeof window !== 'undefined' ? window.location.href : ''
     if (usesHistory) pushOverlayEntry(overlayId, window.history)
     const onPop = () => {
       // Our own programmatic Back (another overlay closed): not a user Back.
@@ -212,11 +218,11 @@ export function Dialog({
     return () => {
       if (usesHistory) {
         window.removeEventListener('popstate', onPop)
-        if (!skipBackRef.current) closeOverlayEntry(overlayId, window.history)
+        if (!skipBackRef.current) closeOverlayEntry(overlayId, window.history, window.location, hrefAtOpen)
       }
       removeOverlay(overlayId)
     }
-  }, [open, overlayId, closeOnBack, dismissible])
+  }, [open, overlayId, closeOnBack, dismissible, placement])
 
   // Escape (topmost only) + focus trap + scroll lock + inert background.
   useEffect(() => {
